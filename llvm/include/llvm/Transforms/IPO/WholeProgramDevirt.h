@@ -214,7 +214,7 @@ void setAfterReturnValues(MutableArrayRef<VirtualCallTarget> Targets,
 } // end namespace wholeprogramdevirt
 
 struct WholeProgramDevirtPass : public PassInfoMixin<WholeProgramDevirtPass> {
-  PreservedAnalyses run(Module &M);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 };
 
 } // end namespace llvm

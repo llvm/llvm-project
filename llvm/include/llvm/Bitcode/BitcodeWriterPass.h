@@ -16,12 +16,12 @@
 #define LLVM_BITCODE_BITCODEWRITERPASS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/IR/PassManager.h"
 
 namespace llvm {
 class Module;
 class ModulePass;
 class raw_ostream;
-class PreservedAnalyses;
 
 /// \brief Create and return a pass that writes the module to the specified
 /// ostream. Note that this pass is designed for use with the legacy pass
@@ -67,7 +67,7 @@ public:
 
   /// \brief Run the bitcode writer pass, and output the module to the selected
   /// output stream.
-  PreservedAnalyses run(Module &M);
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
 
   static StringRef name() { return "BitcodeWriterPass"; }
 };

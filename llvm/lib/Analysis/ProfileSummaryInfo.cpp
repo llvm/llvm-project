@@ -140,7 +140,8 @@ ProfileSummaryInfoWrapperPass::ProfileSummaryInfoWrapperPass()
 }
 
 char ProfileSummaryAnalysis::PassID;
-ProfileSummaryInfo ProfileSummaryAnalysis::run(Module &M) {
+ProfileSummaryInfo ProfileSummaryAnalysis::run(Module &M,
+                                               ModuleAnalysisManager &) {
   return ProfileSummaryInfo(M);
 }
 

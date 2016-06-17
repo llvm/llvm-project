@@ -106,7 +106,9 @@ public:
   AssumptionAnalysis &operator=(const AssumptionAnalysis &RHS) { return *this; }
   AssumptionAnalysis &operator=(AssumptionAnalysis &&RHS) { return *this; }
 
-  AssumptionCache run(Function &F) { return AssumptionCache(F); }
+  AssumptionCache run(Function &F, FunctionAnalysisManager &) {
+    return AssumptionCache(F);
+  }
 };
 
 /// \brief Printer pass for the \c AssumptionAnalysis results.

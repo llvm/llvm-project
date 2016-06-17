@@ -246,19 +246,17 @@ public:
   virtual int getFrameIndexReference(const MachineFunction &MF, int FI,
                                      unsigned &FrameReg) const;
 
-  /// Same as above, except that the 'base register' will always be RSP, not
-  /// RBP on x86. This is generally used for emitting statepoint or EH tables
-  /// that use offsets from RSP.
-  /// If AllowSPAdjustment is true, the returned offset is only guaranteed
-  /// to be valid with respect to the value of SP at the end of the prologue.
-  /// TODO: This should really be a parameterizable choice.
-  virtual Optional<int>
-  getFrameIndexReferenceFromSP(const MachineFunction &MF, int FI,
-                               unsigned &FrameReg,
-                               bool AllowSPAdjustment) const {
-    // default to calling normal version, we override this on x86 only
-    llvm_unreachable("unimplemented for non-x86");
-    return None;
+  /// Same as \c getFrameIndexReference, except that the stack pointer (as
+  /// opposed to the frame pointer) will be the preferred value for \p
+  /// FrameReg. This is generally used for emitting statepoint or EH tables that
+  /// use offsets from RSP.  If \p IgnoreSPUpdates is true, the returned
+  /// offset is only guaranteed to be valid with respect to the value of SP at
+  /// the end of the prologue.
+  virtual int getFrameIndexReferencePreferSP(const MachineFunction &MF, int FI,
+                                             unsigned &FrameReg,
+                                             bool IgnoreSPUpdates) const {
+    // Always safe to dispatch to getFrameIndexReference.
+    return getFrameIndexReference(MF, FI, FrameReg);
   }
 
   /// This method determines which of the registers reported by

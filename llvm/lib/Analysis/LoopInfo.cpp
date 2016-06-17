@@ -670,7 +670,7 @@ PrintLoopPass::PrintLoopPass() : OS(dbgs()) {}
 PrintLoopPass::PrintLoopPass(raw_ostream &OS, const std::string &Banner)
     : OS(OS), Banner(Banner) {}
 
-PreservedAnalyses PrintLoopPass::run(Loop &L) {
+PreservedAnalyses PrintLoopPass::run(Loop &L, AnalysisManager<Loop> &) {
   OS << Banner;
   for (auto *Block : L.blocks())
     if (Block)

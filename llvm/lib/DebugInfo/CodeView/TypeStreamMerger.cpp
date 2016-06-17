@@ -15,6 +15,8 @@
 #include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -49,32 +51,32 @@ namespace {
 /// - If the type record already exists in the destination stream, discard it
 ///   and update the type index map to forward the source type index to the
 ///   existing destination type index.
-class TypeStreamMerger : public CVTypeVisitor<TypeStreamMerger> {
+class TypeStreamMerger : public TypeVisitorCallbacks {
 public:
   TypeStreamMerger(TypeTableBuilder &DestStream) : DestStream(DestStream) {
     assert(!hadError());
   }
 
-  /// CVTypeVisitor overrides.
+/// TypeVisitorCallbacks overrides.
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  void visit##Name(TypeLeafKind LeafType, Name##Record &Record);
-#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
+  Error visit##Name(Name##Record &Record) override;
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  void visit##Name(TypeLeafKind LeafType, Name##Record &Record);
+  TYPE_RECORD(EnumName, EnumVal, Name)
+#define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
-  void visitUnknownType(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData);
+  Error visitUnknownType(const CVRecord<TypeLeafKind> &Record) override;
 
-  void visitTypeBegin(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData);
-  void visitTypeEnd(TypeLeafKind Leaf, ArrayRef<uint8_t> RecordData);
+  Error visitTypeBegin(const CVRecord<TypeLeafKind> &Record) override;
+  Error visitTypeEnd(const CVRecord<TypeLeafKind> &Record) override;
 
-  void visitFieldList(TypeLeafKind Leaf, ArrayRef<uint8_t> FieldData);
+  Error visitFieldListEnd(const CVRecord<TypeLeafKind> &Record) override;
 
   bool mergeStream(const CVTypeArray &Types);
 
 private:
-  bool hadError() { return FoundBadTypeIndex || CVTypeVisitor::hadError(); }
+  bool hadError() { return FoundBadTypeIndex; }
 
   bool FoundBadTypeIndex = false;
 
@@ -91,50 +93,52 @@ private:
 
 } // end anonymous namespace
 
-void TypeStreamMerger::visitTypeBegin(TypeLeafKind Leaf,
-                                      ArrayRef<uint8_t> RecordData) {
+Error TypeStreamMerger::visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) {
   BeginIndexMapSize = IndexMap.size();
+  return Error::success();
 }
 
-void TypeStreamMerger::visitTypeEnd(TypeLeafKind Leaf,
-                                    ArrayRef<uint8_t> RecordData) {
+Error TypeStreamMerger::visitTypeEnd(const CVRecord<TypeLeafKind> &Rec) {
   assert(IndexMap.size() == BeginIndexMapSize + 1);
+  return Error::success();
 }
 
-void TypeStreamMerger::visitFieldList(TypeLeafKind Leaf,
-                                      ArrayRef<uint8_t> FieldData) {
-  CVTypeVisitor::visitFieldList(Leaf, FieldData);
+Error TypeStreamMerger::visitFieldListEnd(const CVRecord<TypeLeafKind> &Rec) {
   IndexMap.push_back(DestStream.writeFieldList(FieldBuilder));
   FieldBuilder.reset();
+  return Error::success();
 }
 
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
-  void TypeStreamMerger::visit##Name(TypeLeafKind LeafType,                    \
-                                     Name##Record &Record) {                   \
+  Error TypeStreamMerger::visit##Name(Name##Record &Record) {                  \
     FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);                   \
     IndexMap.push_back(DestStream.write##Name(Record));                        \
+    return Error::success();                                                   \
   }
 #define TYPE_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #define MEMBER_RECORD(EnumName, EnumVal, Name)                                 \
-  void TypeStreamMerger::visit##Name(TypeLeafKind LeafType,                    \
-                                     Name##Record &Record) {                   \
+  Error TypeStreamMerger::visit##Name(Name##Record &Record) {                  \
     FoundBadTypeIndex |= !Record.remapTypeIndices(IndexMap);                   \
     FieldBuilder.write##Name(Record);                                          \
+    return Error::success();                                                   \
   }
 #define MEMBER_RECORD_ALIAS(EnumName, EnumVal, Name, AliasName)
 #include "llvm/DebugInfo/CodeView/TypeRecords.def"
 
-void TypeStreamMerger::visitUnknownType(TypeLeafKind Leaf,
-                                        ArrayRef<uint8_t> RecordData) {
+Error TypeStreamMerger::visitUnknownType(const CVRecord<TypeLeafKind> &Rec) {
   // We failed to translate a type. Translate this index as "not translated".
   IndexMap.push_back(
       TypeIndex(SimpleTypeKind::NotTranslated, SimpleTypeMode::Direct));
-  parseError();
+  return llvm::make_error<CodeViewError>(cv_error_code::corrupt_record);
 }
 
 bool TypeStreamMerger::mergeStream(const CVTypeArray &Types) {
   assert(IndexMap.empty());
-  visitTypeStream(Types);
+  CVTypeVisitor Visitor(*this);
+  if (auto EC = Visitor.visitTypeStream(Types)) {
+    consumeError(std::move(EC));
+    return false;
+  }
   IndexMap.clear();
   return !hadError();
 }

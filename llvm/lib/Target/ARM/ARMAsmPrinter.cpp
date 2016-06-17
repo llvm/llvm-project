@@ -212,8 +212,6 @@ void ARMAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     GetARMGVSymbol(GV, TF)->print(O, MAI);
 
     printOffset(MO.getOffset(), O);
-    if (TF == ARMII::MO_PLT)
-      O << "(PLT)";
     break;
   }
   case MachineOperand::MO_ConstantPoolIndex:

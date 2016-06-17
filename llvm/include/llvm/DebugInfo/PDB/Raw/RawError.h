@@ -25,6 +25,7 @@ enum class raw_error_code {
   index_out_of_bounds,
   invalid_block_address,
   not_writable,
+  invalid_tpi_hash,
 };
 
 /// Base class for errors originating when parsing raw PDB files

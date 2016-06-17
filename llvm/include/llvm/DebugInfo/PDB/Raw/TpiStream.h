@@ -25,8 +25,6 @@ namespace llvm {
 namespace pdb {
 class PDBFile;
 
-typedef uint32_t (*HashFunctionType)(uint8_t *, uint32_t);
-
 class TpiStream {
   struct HeaderInfo;
 
@@ -52,9 +50,10 @@ public:
   iterator_range<codeview::CVTypeArray::Iterator> types(bool *HadError) const;
 
 private:
+  Error verifyHashValues();
+
   const PDBFile &Pdb;
   std::unique_ptr<MappedBlockStream> Stream;
-  HashFunctionType HashFunction;
 
   codeview::CVTypeArray TypeRecords;
 

@@ -2430,22 +2430,15 @@ bool ARMFastISel::SelectCall(const Instruction *I,
   MachineInstrBuilder MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt,
                                     DbgLoc, TII.get(CallOpc));
 
-  unsigned char OpFlags = 0;
-
-  // Add MO_PLT for global address or external symbol in the PIC relocation
-  // model.
-  if (Subtarget->isTargetELF() && TM.getRelocationModel() == Reloc::PIC_)
-    OpFlags = ARMII::MO_PLT;
-
   // ARM calls don't take a predicate, but tBL / tBLX do.
   if(isThumb2)
     AddDefaultPred(MIB);
   if (UseReg)
     MIB.addReg(CalleeReg);
   else if (!IntrMemName)
-    MIB.addGlobalAddress(GV, 0, OpFlags);
+    MIB.addGlobalAddress(GV, 0, 0);
   else
-    MIB.addExternalSymbol(IntrMemName, OpFlags);
+    MIB.addExternalSymbol(IntrMemName, 0);
 
   // Add implicit physical register uses to the call.
   for (unsigned i = 0, e = RegArgs.size(); i != e; ++i)

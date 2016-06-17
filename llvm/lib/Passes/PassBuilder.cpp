@@ -83,15 +83,14 @@
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
 #include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
-#include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
+#include "llvm/Transforms/Scalar/SLPVectorizer.h"
 #include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/Sink.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
-#include "llvm/Transforms/Scalar/SLPVectorizer.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
@@ -106,7 +105,9 @@ namespace {
 
 /// \brief No-op module pass which does nothing.
 struct NoOpModulePass {
-  PreservedAnalyses run(Module &M) { return PreservedAnalyses::all(); }
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> &) {
+    return PreservedAnalyses::all();
+  }
   static StringRef name() { return "NoOpModulePass"; }
 };
 
@@ -117,13 +118,14 @@ class NoOpModuleAnalysis : public AnalysisInfoMixin<NoOpModuleAnalysis> {
 
 public:
   struct Result {};
-  Result run(Module &) { return Result(); }
+  Result run(Module &, AnalysisManager<Module> &) { return Result(); }
   static StringRef name() { return "NoOpModuleAnalysis"; }
 };
 
 /// \brief No-op CGSCC pass which does nothing.
 struct NoOpCGSCCPass {
-  PreservedAnalyses run(LazyCallGraph::SCC &C) {
+  PreservedAnalyses run(LazyCallGraph::SCC &C,
+                        AnalysisManager<LazyCallGraph::SCC> &) {
     return PreservedAnalyses::all();
   }
   static StringRef name() { return "NoOpCGSCCPass"; }
@@ -136,13 +138,17 @@ class NoOpCGSCCAnalysis : public AnalysisInfoMixin<NoOpCGSCCAnalysis> {
 
 public:
   struct Result {};
-  Result run(LazyCallGraph::SCC &) { return Result(); }
+  Result run(LazyCallGraph::SCC &, AnalysisManager<LazyCallGraph::SCC> &) {
+    return Result();
+  }
   static StringRef name() { return "NoOpCGSCCAnalysis"; }
 };
 
 /// \brief No-op function pass which does nothing.
 struct NoOpFunctionPass {
-  PreservedAnalyses run(Function &F) { return PreservedAnalyses::all(); }
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &) {
+    return PreservedAnalyses::all();
+  }
   static StringRef name() { return "NoOpFunctionPass"; }
 };
 
@@ -153,13 +159,15 @@ class NoOpFunctionAnalysis : public AnalysisInfoMixin<NoOpFunctionAnalysis> {
 
 public:
   struct Result {};
-  Result run(Function &) { return Result(); }
+  Result run(Function &, AnalysisManager<Function> &) { return Result(); }
   static StringRef name() { return "NoOpFunctionAnalysis"; }
 };
 
 /// \brief No-op loop pass which does nothing.
 struct NoOpLoopPass {
-  PreservedAnalyses run(Loop &L) { return PreservedAnalyses::all(); }
+  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &) {
+    return PreservedAnalyses::all();
+  }
   static StringRef name() { return "NoOpLoopPass"; }
 };
 
@@ -170,7 +178,7 @@ class NoOpLoopAnalysis : public AnalysisInfoMixin<NoOpLoopAnalysis> {
 
 public:
   struct Result {};
-  Result run(Loop &) { return Result(); }
+  Result run(Loop &, AnalysisManager<Loop> &) { return Result(); }
   static StringRef name() { return "NoOpLoopAnalysis"; }
 };
 
@@ -182,25 +190,25 @@ char NoOpLoopAnalysis::PassID;
 } // End anonymous namespace.
 
 void PassBuilder::registerModuleAnalyses(ModuleAnalysisManager &MAM) {
-#define MODULE_ANALYSIS(NAME, CREATE_PASS) \
+#define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
   MAM.registerPass([&] { return CREATE_PASS; });
 #include "PassRegistry.def"
 }
 
 void PassBuilder::registerCGSCCAnalyses(CGSCCAnalysisManager &CGAM) {
-#define CGSCC_ANALYSIS(NAME, CREATE_PASS) \
+#define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   CGAM.registerPass([&] { return CREATE_PASS; });
 #include "PassRegistry.def"
 }
 
 void PassBuilder::registerFunctionAnalyses(FunctionAnalysisManager &FAM) {
-#define FUNCTION_ANALYSIS(NAME, CREATE_PASS) \
+#define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   FAM.registerPass([&] { return CREATE_PASS; });
 #include "PassRegistry.def"
 }
 
 void PassBuilder::registerLoopAnalyses(LoopAnalysisManager &LAM) {
-#define LOOP_ANALYSIS(NAME, CREATE_PASS) \
+#define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   LAM.registerPass([&] { return CREATE_PASS; });
 #include "PassRegistry.def"
 }
@@ -242,7 +250,9 @@ static bool isModulePassName(StringRef Name) {
   if (Name.startswith("default") || Name.startswith("lto"))
     return DefaultAliasRegex.match(Name);
 
-#define MODULE_PASS(NAME, CREATE_PASS) if (Name == NAME) return true;
+#define MODULE_PASS(NAME, CREATE_PASS)                                         \
+  if (Name == NAME)                                                            \
+    return true;
 #define MODULE_ANALYSIS(NAME, CREATE_PASS)                                     \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
     return true;
@@ -253,7 +263,9 @@ static bool isModulePassName(StringRef Name) {
 #endif
 
 static bool isCGSCCPassName(StringRef Name) {
-#define CGSCC_PASS(NAME, CREATE_PASS) if (Name == NAME) return true;
+#define CGSCC_PASS(NAME, CREATE_PASS)                                          \
+  if (Name == NAME)                                                            \
+    return true;
 #define CGSCC_ANALYSIS(NAME, CREATE_PASS)                                      \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
     return true;
@@ -263,7 +275,9 @@ static bool isCGSCCPassName(StringRef Name) {
 }
 
 static bool isFunctionPassName(StringRef Name) {
-#define FUNCTION_PASS(NAME, CREATE_PASS) if (Name == NAME) return true;
+#define FUNCTION_PASS(NAME, CREATE_PASS)                                       \
+  if (Name == NAME)                                                            \
+    return true;
 #define FUNCTION_ANALYSIS(NAME, CREATE_PASS)                                   \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
     return true;
@@ -273,7 +287,9 @@ static bool isFunctionPassName(StringRef Name) {
 }
 
 static bool isLoopPassName(StringRef Name) {
-#define LOOP_PASS(NAME, CREATE_PASS) if (Name == NAME) return true;
+#define LOOP_PASS(NAME, CREATE_PASS)                                           \
+  if (Name == NAME)                                                            \
+    return true;
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)                                       \
   if (Name == "require<" NAME ">" || Name == "invalidate<" NAME ">")           \
     return true;
@@ -376,8 +392,7 @@ bool PassBuilder::parseFunctionPassName(FunctionPassManager &FPM,
   return false;
 }
 
-bool PassBuilder::parseLoopPassName(LoopPassManager &FPM,
-                                    StringRef Name) {
+bool PassBuilder::parseLoopPassName(LoopPassManager &FPM, StringRef Name) {
 #define LOOP_PASS(NAME, CREATE_PASS)                                           \
   if (Name == NAME) {                                                          \
     FPM.addPass(CREATE_PASS);                                                  \
@@ -698,7 +713,6 @@ bool PassBuilder::parsePassPipeline(ModulePassManager &MPM,
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
     return true;
   }
-
 
   return false;
 }

@@ -29,7 +29,7 @@ struct LowerExpectIntrinsicPass : PassInfoMixin<LowerExpectIntrinsicPass> {
   /// of the probabilities and frequencies of the CFG. After running this pass,
   /// no more expect intrinsics remain, allowing the rest of the optimizer to
   /// ignore them.
-  PreservedAnalyses run(Function &F);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 };
 
 }

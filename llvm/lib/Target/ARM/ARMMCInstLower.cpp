@@ -49,11 +49,6 @@ MCOperand ARMAsmPrinter::GetSymbolRef(const MachineOperand &MO,
     }
     break;
   }
-
-  case ARMII::MO_PLT:
-    Expr = MCSymbolRefExpr::create(Symbol, MCSymbolRefExpr::VK_PLT,
-                                   OutContext);
-    break;
   }
 
   if (!MO.isJTI() && MO.getOffset())

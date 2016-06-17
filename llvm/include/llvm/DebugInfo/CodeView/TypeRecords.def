@@ -83,6 +83,7 @@ TYPE_RECORD(LF_STRING_ID, 0x1605, StringId)
 TYPE_RECORD(LF_UDT_SRC_LINE, 0x1606, UdtSourceLine)
 TYPE_RECORD(LF_UDT_MOD_SRC_LINE, 0x1607, UdtModSourceLine)
 
+
 TYPE_RECORD(LF_METHODLIST, 0x1206, MethodOverloadList)
 
 
@@ -194,6 +195,8 @@ CV_TYPE(LF_HLSL, 0x1517)
 CV_TYPE(LF_MODIFIER_EX, 0x1518)
 CV_TYPE(LF_VECTOR, 0x151b)
 CV_TYPE(LF_MATRIX, 0x151c)
+
+// ID leaf records. Subsequent leaf types may be referenced from .debug$S.
 
 // Numeric leaf types. These are generally contained in other records, and not
 // encountered in the main type stream.

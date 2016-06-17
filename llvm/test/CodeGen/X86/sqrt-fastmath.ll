@@ -34,12 +34,11 @@ define float @ff(float %f) #0 {
 ; ESTIMATE-LABEL: ff:
 ; ESTIMATE:       # BB#0:
 ; ESTIMATE-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; ESTIMATE-NEXT:    vmulss {{.*}}(%rip), %xmm1, %xmm2
-; ESTIMATE-NEXT:    vmulss %xmm0, %xmm1, %xmm3
-; ESTIMATE-NEXT:    vmulss %xmm3, %xmm1, %xmm1
+; ESTIMATE-NEXT:    vmulss %xmm1, %xmm0, %xmm2
+; ESTIMATE-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; ESTIMATE-NEXT:    vaddss {{.*}}(%rip), %xmm1, %xmm1
-; ESTIMATE-NEXT:    vmulss %xmm0, %xmm2, %xmm2
-; ESTIMATE-NEXT:    vmulss %xmm2, %xmm1, %xmm1
+; ESTIMATE-NEXT:    vmulss {{.*}}(%rip), %xmm2, %xmm2
+; ESTIMATE-NEXT:    vmulss %xmm1, %xmm2, %xmm1
 ; ESTIMATE-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; ESTIMATE-NEXT:    vcmpeqss %xmm2, %xmm0, %xmm0
 ; ESTIMATE-NEXT:    vandnps %xmm1, %xmm0, %xmm0
@@ -78,11 +77,11 @@ define float @reciprocal_square_root(float %x) #0 {
 ; ESTIMATE-LABEL: reciprocal_square_root:
 ; ESTIMATE:       # BB#0:
 ; ESTIMATE-NEXT:    vrsqrtss %xmm0, %xmm0, %xmm1
-; ESTIMATE-NEXT:    vmulss {{.*}}(%rip), %xmm1, %xmm2
-; ESTIMATE-NEXT:    vmulss %xmm0, %xmm1, %xmm0
-; ESTIMATE-NEXT:    vmulss %xmm0, %xmm1, %xmm0
-; ESTIMATE-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
+; ESTIMATE-NEXT:    vmulss %xmm1, %xmm1, %xmm2
 ; ESTIMATE-NEXT:    vmulss %xmm2, %xmm0, %xmm0
+; ESTIMATE-NEXT:    vaddss {{.*}}(%rip), %xmm0, %xmm0
+; ESTIMATE-NEXT:    vmulss {{.*}}(%rip), %xmm1, %xmm1
+; ESTIMATE-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; ESTIMATE-NEXT:    retq
   %sqrt = tail call float @llvm.sqrt.f32(float %x)
   %div = fdiv fast float 1.0, %sqrt
@@ -100,11 +99,11 @@ define <4 x float> @reciprocal_square_root_v4f32(<4 x float> %x) #0 {
 ; ESTIMATE-LABEL: reciprocal_square_root_v4f32:
 ; ESTIMATE:       # BB#0:
 ; ESTIMATE-NEXT:    vrsqrtps %xmm0, %xmm1
-; ESTIMATE-NEXT:    vmulps %xmm0, %xmm1, %xmm0
-; ESTIMATE-NEXT:    vmulps %xmm0, %xmm1, %xmm0
+; ESTIMATE-NEXT:    vmulps %xmm1, %xmm1, %xmm2
+; ESTIMATE-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; ESTIMATE-NEXT:    vaddps {{.*}}(%rip), %xmm0, %xmm0
 ; ESTIMATE-NEXT:    vmulps {{.*}}(%rip), %xmm1, %xmm1
-; ESTIMATE-NEXT:    vmulps %xmm1, %xmm0, %xmm0
+; ESTIMATE-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; ESTIMATE-NEXT:    retq
   %sqrt = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
@@ -125,11 +124,11 @@ define <8 x float> @reciprocal_square_root_v8f32(<8 x float> %x) #0 {
 ; ESTIMATE-LABEL: reciprocal_square_root_v8f32:
 ; ESTIMATE:       # BB#0:
 ; ESTIMATE-NEXT:    vrsqrtps %ymm0, %ymm1
-; ESTIMATE-NEXT:    vmulps %ymm0, %ymm1, %ymm0
-; ESTIMATE-NEXT:    vmulps %ymm0, %ymm1, %ymm0
+; ESTIMATE-NEXT:    vmulps %ymm1, %ymm1, %ymm2
+; ESTIMATE-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; ESTIMATE-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; ESTIMATE-NEXT:    vmulps {{.*}}(%rip), %ymm1, %ymm1
-; ESTIMATE-NEXT:    vmulps %ymm1, %ymm0, %ymm0
+; ESTIMATE-NEXT:    vmulps %ymm0, %ymm1, %ymm0
 ; ESTIMATE-NEXT:    retq
   %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt

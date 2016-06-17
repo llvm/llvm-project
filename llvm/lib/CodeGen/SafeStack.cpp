@@ -606,15 +606,39 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     StaticOffset += Size;
     StaticOffset = alignTo(StaticOffset, Align);
 
-    Value *Off = IRB.CreateGEP(BasePointer, // BasePointer is i8*
-                               ConstantInt::get(Int32Ty, -StaticOffset));
-    Value *NewAI = IRB.CreateBitCast(Off, AI->getType(), AI->getName());
-    if (AI->hasName() && isa<Instruction>(NewAI))
-      cast<Instruction>(NewAI)->takeName(AI);
-
-    // Replace alloc with the new location.
     replaceDbgDeclareForAlloca(AI, BasePointer, DIB, /*Deref=*/true, -StaticOffset);
-    AI->replaceAllUsesWith(NewAI);
+    replaceDbgValueForAlloca(AI, BasePointer, DIB, -StaticOffset);
+
+    // Replace uses of the alloca with the new location.
+    // Insert address calculation close to each use to work around PR27844.
+    std::string Name = std::string(AI->getName()) + ".unsafe";
+    while (!AI->use_empty()) {
+      Use &U = *AI->use_begin();
+      Instruction *User = cast<Instruction>(U.getUser());
+
+      Instruction *InsertBefore;
+      if (auto *PHI = dyn_cast<PHINode>(User))
+        InsertBefore = PHI->getIncomingBlock(U)->getTerminator();
+      else
+        InsertBefore = User;
+
+      IRBuilder<> IRBUser(InsertBefore);
+      Value *Off = IRBUser.CreateGEP(BasePointer, // BasePointer is i8*
+                                     ConstantInt::get(Int32Ty, -StaticOffset));
+      Value *Replacement = IRBUser.CreateBitCast(Off, AI->getType(), Name);
+
+      if (auto *PHI = dyn_cast<PHINode>(User)) {
+        // PHI nodes may have multiple incoming edges from the same BB (why??),
+        // all must be updated at once with the same incoming value.
+        auto *BB = PHI->getIncomingBlock(U);
+        for (unsigned I = 0; I < PHI->getNumIncomingValues(); ++I)
+          if (PHI->getIncomingBlock(I) == BB)
+            PHI->setIncomingValue(I, Replacement);
+      } else {
+        U.set(Replacement);
+      }
+    }
+
     AI->eraseFromParent();
   }
 

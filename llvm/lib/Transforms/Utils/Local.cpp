@@ -1182,6 +1182,38 @@ DbgDeclareInst *llvm::FindAllocaDbgDeclare(Value *V) {
   return nullptr;
 }
 
+static void DIExprAddDeref(SmallVectorImpl<uint64_t> &Expr) {
+  Expr.push_back(dwarf::DW_OP_deref);
+}
+
+static void DIExprAddOffset(SmallVectorImpl<uint64_t> &Expr, int Offset) {
+  if (Offset > 0) {
+    Expr.push_back(dwarf::DW_OP_plus);
+    Expr.push_back(Offset);
+  } else if (Offset < 0) {
+    Expr.push_back(dwarf::DW_OP_minus);
+    Expr.push_back(-Offset);
+  }
+}
+
+static DIExpression *BuildReplacementDIExpr(DIBuilder &Builder,
+                                            DIExpression *DIExpr, bool Deref,
+                                            int Offset) {
+  if (!Deref && !Offset)
+    return DIExpr;
+  // Create a copy of the original DIDescriptor for user variable, prepending
+  // "deref" operation to a list of address elements, as new llvm.dbg.declare
+  // will take a value storing address of the memory for variable, not
+  // alloca itself.
+  SmallVector<uint64_t, 4> NewDIExpr;
+  if (Deref)
+    DIExprAddDeref(NewDIExpr);
+  DIExprAddOffset(NewDIExpr, Offset);
+  if (DIExpr)
+    NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end());
+  return Builder.createExpression(NewDIExpr);
+}
+
 bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
                              Instruction *InsertBefore, DIBuilder &Builder,
                              bool Deref, int Offset) {
@@ -1193,25 +1225,7 @@ bool llvm::replaceDbgDeclare(Value *Address, Value *NewAddress,
   auto *DIExpr = DDI->getExpression();
   assert(DIVar && "Missing variable");
 
-  if (Deref || Offset) {
-    // Create a copy of the original DIDescriptor for user variable, prepending
-    // "deref" operation to a list of address elements, as new llvm.dbg.declare
-    // will take a value storing address of the memory for variable, not
-    // alloca itself.
-    SmallVector<uint64_t, 4> NewDIExpr;
-    if (Deref)
-      NewDIExpr.push_back(dwarf::DW_OP_deref);
-    if (Offset > 0) {
-      NewDIExpr.push_back(dwarf::DW_OP_plus);
-      NewDIExpr.push_back(Offset);
-    } else if (Offset < 0) {
-      NewDIExpr.push_back(dwarf::DW_OP_minus);
-      NewDIExpr.push_back(-Offset);
-    }
-    if (DIExpr)
-      NewDIExpr.append(DIExpr->elements_begin(), DIExpr->elements_end());
-    DIExpr = Builder.createExpression(NewDIExpr);
-  }
+  DIExpr = BuildReplacementDIExpr(Builder, DIExpr, Deref, Offset);
 
   // Insert llvm.dbg.declare immediately after the original alloca, and remove
   // old llvm.dbg.declare.
@@ -1224,6 +1238,46 @@ bool llvm::replaceDbgDeclareForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
                                       DIBuilder &Builder, bool Deref, int Offset) {
   return replaceDbgDeclare(AI, NewAllocaAddress, AI->getNextNode(), Builder,
                            Deref, Offset);
+}
+
+static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
+                                        DIBuilder &Builder, int Offset) {
+  DebugLoc Loc = DVI->getDebugLoc();
+  auto *DIVar = DVI->getVariable();
+  auto *DIExpr = DVI->getExpression();
+  assert(DIVar && "Missing variable");
+
+  // This is an alloca-based llvm.dbg.value. The first thing it should do with
+  // the alloca pointer is dereference it. Otherwise we don't know how to handle
+  // it and give up.
+  if (!DIExpr || DIExpr->getNumElements() < 1 ||
+      DIExpr->getElement(0) != dwarf::DW_OP_deref)
+    return;
+
+  // Insert the offset immediately after the first deref.
+  // We could just change the offset argument of dbg.value, but it's unsigned...
+  if (Offset) {
+    SmallVector<uint64_t, 4> NewDIExpr;
+    DIExprAddDeref(NewDIExpr);
+    DIExprAddOffset(NewDIExpr, Offset);
+    NewDIExpr.append(DIExpr->elements_begin() + 1, DIExpr->elements_end());
+    DIExpr = Builder.createExpression(NewDIExpr);
+  }
+
+  Builder.insertDbgValueIntrinsic(NewAddress, DVI->getOffset(), DIVar, DIExpr,
+                                  Loc, DVI);
+  DVI->eraseFromParent();
+}
+
+void llvm::replaceDbgValueForAlloca(AllocaInst *AI, Value *NewAllocaAddress,
+                                    DIBuilder &Builder, int Offset) {
+  if (auto *L = LocalAsMetadata::getIfExists(AI))
+    if (auto *MDV = MetadataAsValue::getIfExists(AI->getContext(), L))
+      for (auto UI = MDV->use_begin(), UE = MDV->use_end(); UI != UE;) {
+        Use &U = *UI++;
+        if (auto *DVI = dyn_cast<DbgValueInst>(U.getUser()))
+          replaceOneDbgValueForAlloca(DVI, NewAllocaAddress, Builder, Offset);
+      }
 }
 
 unsigned llvm::removeAllNonTerminatorAndEHPadInstructions(BasicBlock *BB) {

@@ -187,7 +187,7 @@ public:
   typedef DominatorTree Result;
 
   /// \brief Run the analysis pass over a function and produce a dominator tree.
-  DominatorTree run(Function &F);
+  DominatorTree run(Function &F, AnalysisManager<Function> &);
 };
 
 /// \brief Printer pass for the \c DominatorTree.

@@ -826,7 +826,7 @@ public:
   PrintLoopPass();
   PrintLoopPass(raw_ostream &OS, const std::string &Banner = "");
 
-  PreservedAnalyses run(Loop &L);
+  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &);
 };
 
 } // End llvm namespace

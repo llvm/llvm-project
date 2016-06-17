@@ -12,7 +12,7 @@ declare void @g(i32, i32, i32, i32)
 
 define void @t1() {
 ; CHECKELF-LABEL: t1:
-; CHECKELF: bl g(PLT)
+; CHECKELF: bl g
         call void @g( i32 1, i32 2, i32 3, i32 4 )
         ret void
 }
@@ -33,7 +33,7 @@ define void @t3() {
 ; CHECKV6-LABEL: t3:
 ; CHECKV6: b _t2
 ; CHECKELF-LABEL: t3:
-; CHECKELF: b t2(PLT)
+; CHECKELF: b t2
 ; CHECKT2D-LABEL: t3:
 ; CHECKT2D: b.w _t2
 
@@ -47,7 +47,7 @@ entry:
 ; CHECKV6-LABEL: t4:
 ; CHECKV6: b _sin
 ; CHECKELF-LABEL: t4:
-; CHECKELF: b sin(PLT)
+; CHECKELF: b sin
   %0 = tail call double @sin(double %a) nounwind readonly ; <double> [#uses=1]
   ret double %0
 }
@@ -57,7 +57,7 @@ entry:
 ; CHECKV6-LABEL: t5:
 ; CHECKV6: b _sinf
 ; CHECKELF-LABEL: t5:
-; CHECKELF: b sinf(PLT)
+; CHECKELF: b sinf
   %0 = tail call float @sinf(float %a) nounwind readonly ; <float> [#uses=1]
   ret float %0
 }
@@ -71,7 +71,7 @@ entry:
 ; CHECKV6-LABEL: t6:
 ; CHECKV6: b ___divsi3
 ; CHECKELF-LABEL: t6:
-; CHECKELF: b __aeabi_idiv(PLT)
+; CHECKELF: b __aeabi_idiv
   %0 = sdiv i32 %a, %b
   ret i32 %0
 }

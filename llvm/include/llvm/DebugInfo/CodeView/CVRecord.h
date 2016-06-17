@@ -24,6 +24,7 @@ template <typename Kind> struct CVRecord {
   uint32_t Length;
   Kind Type;
   ArrayRef<uint8_t> Data;
+  ArrayRef<uint8_t> RawData;
 };
 
 template <typename Kind> struct VarStreamArrayExtractor<CVRecord<Kind>> {
@@ -31,14 +32,20 @@ template <typename Kind> struct VarStreamArrayExtractor<CVRecord<Kind>> {
                    CVRecord<Kind> &Item) const {
     const RecordPrefix *Prefix = nullptr;
     StreamReader Reader(Stream);
+    uint32_t Offset = Reader.getOffset();
+
     if (auto EC = Reader.readObject(Prefix))
       return EC;
     Item.Length = Prefix->RecordLen;
     if (Item.Length < 2)
       return make_error<CodeViewError>(cv_error_code::corrupt_record);
     Item.Type = static_cast<Kind>(uint16_t(Prefix->RecordKind));
-    if (auto EC = Reader.readBytes(Item.Data, Item.Length - 2))
+
+    Reader.setOffset(Offset);
+    if (auto EC =
+            Reader.readBytes(Item.RawData, Item.Length + sizeof(uint16_t)))
       return EC;
+    Item.Data = Item.RawData.slice(sizeof(RecordPrefix));
     Len = Prefix->RecordLen + 2;
     return Error::success();
   }

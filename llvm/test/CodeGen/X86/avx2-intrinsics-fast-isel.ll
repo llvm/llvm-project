@@ -1931,11 +1931,11 @@ define <4 x i64> @test_mm256_max_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %res = call <32 x i8> @llvm.x86.avx2.pmaxs.b(<32 x i8> %arg0, <32 x i8> %arg1)
-  %bc = bitcast <32 x i8> %res to <4 x i64>
+  %cmp = icmp sgt <32 x i8> %arg0, %arg1
+  %sel = select <32 x i1> %cmp, <32 x i8> %arg0, <32 x i8> %arg1
+  %bc = bitcast <32 x i8> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx2.pmaxs.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_max_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_max_epi16:
@@ -1949,11 +1949,11 @@ define <4 x i64> @test_mm256_max_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.pmaxs.w(<16 x i16> %arg0, <16 x i16> %arg1)
-  %bc = bitcast <16 x i16> %res to <4 x i64>
+  %cmp = icmp sgt <16 x i16> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i16> %arg0, <16 x i16> %arg1
+  %bc = bitcast <16 x i16> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.pmaxs.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_max_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_max_epi32:
@@ -1967,11 +1967,11 @@ define <4 x i64> @test_mm256_max_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  %res = call <8 x i32> @llvm.x86.avx2.pmaxs.d(<8 x i32> %arg0, <8 x i32> %arg1)
-  %bc = bitcast <8 x i32> %res to <4 x i64>
+  %cmp = icmp sgt <8 x i32> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i32> %arg0, <8 x i32> %arg1
+  %bc = bitcast <8 x i32> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <8 x i32> @llvm.x86.avx2.pmaxs.d(<8 x i32>, <8 x i32>) nounwind readnone
 
 define <4 x i64> @test_mm256_max_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_max_epu8:
@@ -1985,11 +1985,11 @@ define <4 x i64> @test_mm256_max_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %res = call <32 x i8> @llvm.x86.avx2.pmaxu.b(<32 x i8> %arg0, <32 x i8> %arg1)
-  %bc = bitcast <32 x i8> %res to <4 x i64>
+  %cmp = icmp ugt <32 x i8> %arg0, %arg1
+  %sel = select <32 x i1> %cmp, <32 x i8> %arg0, <32 x i8> %arg1
+  %bc = bitcast <32 x i8> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx2.pmaxu.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_max_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_max_epu16:
@@ -2003,11 +2003,11 @@ define <4 x i64> @test_mm256_max_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.pmaxu.w(<16 x i16> %arg0, <16 x i16> %arg1)
-  %bc = bitcast <16 x i16> %res to <4 x i64>
+  %cmp = icmp ugt <16 x i16> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i16> %arg0, <16 x i16> %arg1
+  %bc = bitcast <16 x i16> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.pmaxu.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_max_epu32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_max_epu32:
@@ -2021,11 +2021,11 @@ define <4 x i64> @test_mm256_max_epu32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  %res = call <8 x i32> @llvm.x86.avx2.pmaxu.d(<8 x i32> %arg0, <8 x i32> %arg1)
-  %bc = bitcast <8 x i32> %res to <4 x i64>
+  %cmp = icmp ugt <8 x i32> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i32> %arg0, <8 x i32> %arg1
+  %bc = bitcast <8 x i32> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <8 x i32> @llvm.x86.avx2.pmaxu.d(<8 x i32>, <8 x i32>) nounwind readnone
 
 define <4 x i64> @test_mm256_min_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_min_epi8:
@@ -2039,11 +2039,11 @@ define <4 x i64> @test_mm256_min_epi8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %res = call <32 x i8> @llvm.x86.avx2.pmins.b(<32 x i8> %arg0, <32 x i8> %arg1)
-  %bc = bitcast <32 x i8> %res to <4 x i64>
+  %cmp = icmp slt <32 x i8> %arg0, %arg1
+  %sel = select <32 x i1> %cmp, <32 x i8> %arg0, <32 x i8> %arg1
+  %bc = bitcast <32 x i8> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx2.pmins.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_min_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_min_epi16:
@@ -2057,11 +2057,11 @@ define <4 x i64> @test_mm256_min_epi16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.pmins.w(<16 x i16> %arg0, <16 x i16> %arg1)
-  %bc = bitcast <16 x i16> %res to <4 x i64>
+  %cmp = icmp slt <16 x i16> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i16> %arg0, <16 x i16> %arg1
+  %bc = bitcast <16 x i16> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.pmins.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_min_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_min_epi32:
@@ -2075,11 +2075,11 @@ define <4 x i64> @test_mm256_min_epi32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  %res = call <8 x i32> @llvm.x86.avx2.pmins.d(<8 x i32> %arg0, <8 x i32> %arg1)
-  %bc = bitcast <8 x i32> %res to <4 x i64>
+  %cmp = icmp slt <8 x i32> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i32> %arg0, <8 x i32> %arg1
+  %bc = bitcast <8 x i32> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <8 x i32> @llvm.x86.avx2.pmins.d(<8 x i32>, <8 x i32>) nounwind readnone
 
 define <4 x i64> @test_mm256_min_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_min_epu8:
@@ -2093,11 +2093,11 @@ define <4 x i64> @test_mm256_min_epu8(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <32 x i8>
   %arg1 = bitcast <4 x i64> %a1 to <32 x i8>
-  %res = call <32 x i8> @llvm.x86.avx2.pminu.b(<32 x i8> %arg0, <32 x i8> %arg1)
-  %bc = bitcast <32 x i8> %res to <4 x i64>
+  %cmp = icmp ult <32 x i8> %arg0, %arg1
+  %sel = select <32 x i1> %cmp, <32 x i8> %arg0, <32 x i8> %arg1
+  %bc = bitcast <32 x i8> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <32 x i8> @llvm.x86.avx2.pminu.b(<32 x i8>, <32 x i8>) nounwind readnone
 
 define <4 x i64> @test_mm256_min_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_min_epu16:
@@ -2111,11 +2111,11 @@ define <4 x i64> @test_mm256_min_epu16(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <16 x i16>
   %arg1 = bitcast <4 x i64> %a1 to <16 x i16>
-  %res = call <16 x i16> @llvm.x86.avx2.pminu.w(<16 x i16> %arg0, <16 x i16> %arg1)
-  %bc = bitcast <16 x i16> %res to <4 x i64>
+  %cmp = icmp ult <16 x i16> %arg0, %arg1
+  %sel = select <16 x i1> %cmp, <16 x i16> %arg0, <16 x i16> %arg1
+  %bc = bitcast <16 x i16> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <16 x i16> @llvm.x86.avx2.pminu.w(<16 x i16>, <16 x i16>) nounwind readnone
 
 define <4 x i64> @test_mm256_min_epu32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X32-LABEL: test_mm256_min_epu32:
@@ -2129,11 +2129,11 @@ define <4 x i64> @test_mm256_min_epu32(<4 x i64> %a0, <4 x i64> %a1) {
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x i64> %a0 to <8 x i32>
   %arg1 = bitcast <4 x i64> %a1 to <8 x i32>
-  %res = call <8 x i32> @llvm.x86.avx2.pminu.d(<8 x i32> %arg0, <8 x i32> %arg1)
-  %bc = bitcast <8 x i32> %res to <4 x i64>
+  %cmp = icmp ult <8 x i32> %arg0, %arg1
+  %sel = select <8 x i1> %cmp, <8 x i32> %arg0, <8 x i32> %arg1
+  %bc = bitcast <8 x i32> %sel to <4 x i64>
   ret <4 x i64> %bc
 }
-declare <8 x i32> @llvm.x86.avx2.pminu.d(<8 x i32>, <8 x i32>) nounwind readnone
 
 define i32 @test_mm256_movemask_epi8(<4 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm256_movemask_epi8:

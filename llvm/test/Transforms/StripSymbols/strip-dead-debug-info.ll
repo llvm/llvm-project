@@ -1,8 +1,8 @@
 ; RUN: opt -strip-dead-debug-info -verify %s -S | FileCheck %s
 
 ; CHECK: ModuleID = '{{.*}}'
-; CHECK-NOT: bar
-; CHECK-NOT: abcd
+; CHECK-NOT: "bar"
+; CHECK-NOT: "abcd"
 
 @xyz = global i32 2
 

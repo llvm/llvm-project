@@ -14,7 +14,7 @@
 ;   double Y;
 ;   struct RT Z;
 ; };
-; 
+;
 ; int *foo(struct ST *s) {
 ;   return &s[1].Z.B[5][13];
 ; }

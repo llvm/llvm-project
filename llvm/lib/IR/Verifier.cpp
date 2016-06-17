@@ -4512,13 +4512,15 @@ FunctionPass *llvm::createVerifierPass(bool FatalErrors) {
 }
 
 char VerifierAnalysis::PassID;
-VerifierAnalysis::Result VerifierAnalysis::run(Module &M) {
+VerifierAnalysis::Result VerifierAnalysis::run(Module &M,
+                                               ModuleAnalysisManager &) {
   Result Res;
   Res.IRBroken = llvm::verifyModule(M, &dbgs(), &Res.DebugInfoBroken);
   return Res;
 }
 
-VerifierAnalysis::Result VerifierAnalysis::run(Function &F) {
+VerifierAnalysis::Result VerifierAnalysis::run(Function &F,
+                                               FunctionAnalysisManager &) {
   return { llvm::verifyFunction(F, &dbgs()), false };
 }
 

@@ -15,16 +15,15 @@ entry:
 
   ; CHECK: store i8* %[[USST]], i8** @__safestack_unsafe_stack_ptr
 
-  ; CHECK: %[[AADDR:.*]] = alloca i8*, align 8
   %a.addr = alloca i8*, align 8
-
-  ; CHECK: %[[BUFPTR:.*]] = getelementptr i8, i8* %[[USP]], i32 -16
-  ; CHECK: %[[BUFPTR2:.*]] = bitcast i8* %[[BUFPTR]] to %struct.foo*
   %buf = alloca %struct.foo, align 1
 
+  ; CHECK: %[[AADDR:.*]] = alloca i8*, align 8
   ; CHECK: store i8* {{.*}}, i8** %[[AADDR]], align 8
   store i8* %a, i8** %a.addr, align 8
 
+  ; CHECK: %[[BUFPTR:.*]] = getelementptr i8, i8* %[[USP]], i32 -16
+  ; CHECK: %[[BUFPTR2:.*]] = bitcast i8* %[[BUFPTR]] to %struct.foo*
   ; CHECK: %[[GEP:.*]] = getelementptr inbounds %struct.foo, %struct.foo* %[[BUFPTR2]], i32 0, i32 0, i32 0
   %gep = getelementptr inbounds %struct.foo, %struct.foo* %buf, i32 0, i32 0, i32 0
 

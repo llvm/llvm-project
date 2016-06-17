@@ -65,8 +65,8 @@ public:
     bool IRBroken, DebugInfoBroken;
   };
   static void *ID() { return (void *)&PassID; }
-  Result run(Module &M);
-  Result run(Function &F);
+  Result run(Module &M, ModuleAnalysisManager &);
+  Result run(Function &F, FunctionAnalysisManager &);
 };
 
 /// Check a module for errors, but report debug info errors separately.

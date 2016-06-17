@@ -91,88 +91,22 @@ void Mips16DAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
       .addReg(V2);
 }
 
-// Insert instructions to initialize the Mips16 SP Alias register in the
-// first MBB of the function.
-//
-void Mips16DAGToDAGISel::initMips16SPAliasReg(MachineFunction &MF) {
-  MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
-
-  if (!MipsFI->mips16SPAliasRegSet())
-    return;
-
-  MachineBasicBlock &MBB = MF.front();
-  MachineBasicBlock::iterator I = MBB.begin();
-  const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = I != MBB.end() ? I->getDebugLoc() : DebugLoc();
-  unsigned Mips16SPAliasReg = MipsFI->getMips16SPAliasReg();
-
-  BuildMI(MBB, I, DL, TII.get(Mips::MoveR3216), Mips16SPAliasReg)
-      .addReg(Mips::SP);
-}
-
 void Mips16DAGToDAGISel::processFunctionAfterISel(MachineFunction &MF) {
   initGlobalBaseReg(MF);
-  initMips16SPAliasReg(MF);
 }
 
-/// getMips16SPAliasReg - Output the instructions required to put the
-/// SP into a Mips16 accessible aliased register.
-SDValue Mips16DAGToDAGISel::getMips16SPAliasReg() {
-  unsigned Mips16SPAliasReg =
-      MF->getInfo<MipsFunctionInfo>()->getMips16SPAliasReg();
-  auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
-  return CurDAG->getRegister(Mips16SPAliasReg, PtrVT);
-}
-
-void Mips16DAGToDAGISel::getMips16SPRefReg(SDNode *Parent, SDValue &AliasReg) {
-  auto PtrVT = getTargetLowering()->getPointerTy(CurDAG->getDataLayout());
-  SDValue AliasFPReg = CurDAG->getRegister(Mips::S0, PtrVT);
-  if (Parent) {
-    switch (Parent->getOpcode()) {
-    case ISD::LOAD: {
-      LoadSDNode *SD = dyn_cast<LoadSDNode>(Parent);
-      switch (SD->getMemoryVT().getSizeInBits()) {
-      case 8:
-      case 16:
-        AliasReg = Subtarget->getFrameLowering()->hasFP(*MF)
-                       ? AliasFPReg
-                       : getMips16SPAliasReg();
-        return;
-      }
-      break;
-    }
-    case ISD::STORE: {
-      StoreSDNode *SD = dyn_cast<StoreSDNode>(Parent);
-      switch (SD->getMemoryVT().getSizeInBits()) {
-      case 8:
-      case 16:
-        AliasReg = Subtarget->getFrameLowering()->hasFP(*MF)
-                       ? AliasFPReg
-                       : getMips16SPAliasReg();
-        return;
-      }
-      break;
-    }
-    }
-  }
-  AliasReg = CurDAG->getRegister(Mips::SP, PtrVT);
-  return;
-}
-
-bool Mips16DAGToDAGISel::selectAddr16(SDNode *Parent, SDValue Addr,
-                                      SDValue &Base, SDValue &Offset,
-                                      SDValue &Alias) {
+bool Mips16DAGToDAGISel::selectAddr(bool SPAllowed, SDValue Addr, SDValue &Base,
+                                    SDValue &Offset) {
   SDLoc DL(Addr);
   EVT ValTy = Addr.getValueType();
 
-  Alias = CurDAG->getTargetConstant(0, DL, ValTy);
-
   // if Address is FI, get the TargetFrameIndex.
-  if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
-    Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-    Offset = CurDAG->getTargetConstant(0, DL, ValTy);
-    getMips16SPRefReg(Parent, Alias);
-    return true;
+  if (SPAllowed) {
+    if (FrameIndexSDNode *FIN = dyn_cast<FrameIndexSDNode>(Addr)) {
+      Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+      Offset = CurDAG->getTargetConstant(0, DL, ValTy);
+      return true;
+    }
   }
   // on PIC code Load GA
   if (Addr.getOpcode() == MipsISD::Wrapper) {
@@ -189,15 +123,17 @@ bool Mips16DAGToDAGISel::selectAddr16(SDNode *Parent, SDValue Addr,
   if (CurDAG->isBaseWithConstantOffset(Addr)) {
     ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Addr.getOperand(1));
     if (isInt<16>(CN->getSExtValue())) {
-
       // If the first operand is a FI, get the TargetFI Node
-      if (FrameIndexSDNode *FIN =
-              dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
-        Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
-        getMips16SPRefReg(Parent, Alias);
-      } else
-        Base = Addr.getOperand(0);
+      if (SPAllowed) {
+        if (FrameIndexSDNode *FIN =
+                dyn_cast<FrameIndexSDNode>(Addr.getOperand(0))) {
+          Base = CurDAG->getTargetFrameIndex(FIN->getIndex(), ValTy);
+          Offset = CurDAG->getTargetConstant(CN->getZExtValue(), DL, ValTy);
+          return true;
+        }
+      }
 
+      Base = Addr.getOperand(0);
       Offset = CurDAG->getTargetConstant(CN->getZExtValue(), DL, ValTy);
       return true;
     }
@@ -222,20 +158,20 @@ bool Mips16DAGToDAGISel::selectAddr16(SDNode *Parent, SDValue Addr,
         return true;
       }
     }
-
-    // If an indexed floating point load/store can be emitted, return false.
-    const LSBaseSDNode *LS = dyn_cast<LSBaseSDNode>(Parent);
-
-    if (LS) {
-      if (LS->getMemoryVT() == MVT::f32 && Subtarget->hasMips4_32r2())
-        return false;
-      if (LS->getMemoryVT() == MVT::f64 && Subtarget->hasMips4_32r2())
-        return false;
-    }
   }
   Base = Addr;
   Offset = CurDAG->getTargetConstant(0, DL, ValTy);
   return true;
+}
+
+bool Mips16DAGToDAGISel::selectAddr16(SDValue Addr, SDValue &Base,
+                                      SDValue &Offset) {
+  return selectAddr(false, Addr, Base, Offset);
+}
+
+bool Mips16DAGToDAGISel::selectAddr16SP(SDValue Addr, SDValue &Base,
+                                        SDValue &Offset) {
+  return selectAddr(true, Addr, Base, Offset);
 }
 
 /// Select instructions not customized! Used for

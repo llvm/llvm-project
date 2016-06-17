@@ -174,6 +174,20 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name.startswith("x86.sse2.pcmpgt.") ||
         Name.startswith("x86.avx2.pcmpeq.") ||
         Name.startswith("x86.avx2.pcmpgt.") ||
+        Name == "x86.sse41.pmaxsb" ||
+        Name == "x86.sse2.pmaxs.w" ||
+        Name == "x86.sse41.pmaxsd" ||
+        Name == "x86.sse2.pmaxu.b" ||
+        Name == "x86.sse41.pmaxuw" ||
+        Name == "x86.sse41.pmaxud" ||
+        Name == "x86.sse41.pminsb" ||
+        Name == "x86.sse2.pmins.w" ||
+        Name == "x86.sse41.pminsd" ||
+        Name == "x86.sse2.pminu.b" ||
+        Name == "x86.sse41.pminuw" ||
+        Name == "x86.sse41.pminud" ||
+        Name.startswith("x86.avx2.pmax") ||
+        Name.startswith("x86.avx2.pmin") ||
         Name.startswith("x86.avx2.vbroadcast") ||
         Name.startswith("x86.avx2.pbroadcast") ||
         Name.startswith("x86.avx.vpermil.") ||
@@ -518,6 +532,14 @@ static Value *UpgradeMaskedLoad(IRBuilder<> &Builder, LLVMContext &C,
   return Builder.CreateMaskedLoad(Ptr, Align, Mask, Passthru);
 }
 
+static Value *upgradeIntMinMax(IRBuilder<> &Builder, CallInst &CI,
+                               ICmpInst::Predicate Pred) {
+  Value *Op0 = CI.getArgOperand(0);
+  Value *Op1 = CI.getArgOperand(1);
+  Value *Cmp = Builder.CreateICmp(Pred, Op0, Op1);
+  return Builder.CreateSelect(Cmp, Op0, Op1);
+}
+
 /// Upgrade a call to an old intrinsic. All argument and return casting must be
 /// provided to seamlessly integrate with existing context.
 void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
@@ -544,6 +566,26 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = Builder.CreateICmpSGT(CI->getArgOperand(0), CI->getArgOperand(1),
                                   "pcmpgt");
       Rep = Builder.CreateSExt(Rep, CI->getType(), "");
+    } else if (Name == "llvm.x86.sse41.pmaxsb" ||
+               Name == "llvm.x86.sse2.pmaxs.w" ||
+               Name == "llvm.x86.sse41.pmaxsd" ||
+               Name.startswith("llvm.x86.avx2.pmaxs")) {
+      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_SGT);
+    } else if (Name == "llvm.x86.sse2.pmaxu.b" ||
+               Name == "llvm.x86.sse41.pmaxuw" ||
+               Name == "llvm.x86.sse41.pmaxud" ||
+               Name.startswith("llvm.x86.avx2.pmaxu")) {
+      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_UGT);
+    } else if (Name == "llvm.x86.sse41.pminsb" ||
+               Name == "llvm.x86.sse2.pmins.w" ||
+               Name == "llvm.x86.sse41.pminsd" ||
+               Name.startswith("llvm.x86.avx2.pmins")) {
+      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_SLT);
+    } else if (Name == "llvm.x86.sse2.pminu.b" ||
+               Name == "llvm.x86.sse41.pminuw" ||
+               Name == "llvm.x86.sse41.pminud" ||
+               Name.startswith("llvm.x86.avx2.pminu")) {
+      Rep = upgradeIntMinMax(Builder, *CI, ICmpInst::ICMP_ULT);
     } else if (Name == "llvm.x86.sse2.cvtdq2pd" ||
                Name == "llvm.x86.sse2.cvtps2pd" ||
                Name == "llvm.x86.avx.cvtdq2.pd.256" ||

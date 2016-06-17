@@ -62,7 +62,7 @@ class ReassociatePass : public PassInfoMixin<ReassociatePass> {
   bool MadeChange;
 
 public:
-  PreservedAnalyses run(Function &F);
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &);
 
 private:
   void BuildRankMap(Function &F, ReversePostOrderTraversal<Function *> &RPOT);

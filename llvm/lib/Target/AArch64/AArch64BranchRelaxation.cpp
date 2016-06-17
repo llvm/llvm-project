@@ -463,7 +463,8 @@ bool AArch64BranchRelaxation::relaxBranchInstructions() {
   bool Changed = false;
   // Relaxing branches involves creating new basic blocks, so re-eval
   // end() for termination.
-  for (auto &MBB : *MF) {
+  for (MachineFunction::iterator I = MF->begin(); I != MF->end(); ++I) {
+    MachineBasicBlock &MBB = *I;
     MachineInstr *MI = MBB.getFirstTerminator();
     if (isConditionalBranch(MI->getOpcode()) &&
         !isBlockInRange(MI, getDestBlock(MI),

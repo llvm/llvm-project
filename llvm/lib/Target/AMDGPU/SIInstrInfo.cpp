@@ -601,7 +601,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
     // SGPRs.
     unsigned Opcode = getSGPRSpillSaveOpcode(RC->getSize());
     BuildMI(MBB, MI, DL, get(Opcode))
-      .addReg(SrcReg)            // src
+      .addReg(SrcReg, getKillRegState(isKill)) // src
       .addFrameIndex(FrameIndex) // frame_idx
       .addMemOperand(MMO);
 
@@ -623,7 +623,7 @@ void SIInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   unsigned Opcode = getVGPRSpillSaveOpcode(RC->getSize());
   MFI->setHasSpilledVGPRs();
   BuildMI(MBB, MI, DL, get(Opcode))
-    .addReg(SrcReg)                   // src
+    .addReg(SrcReg, getKillRegState(isKill)) // src
     .addFrameIndex(FrameIndex)        // frame_idx
     .addReg(MFI->getScratchRSrcReg())       // scratch_rsrc
     .addReg(MFI->getScratchWaveOffsetReg()) // scratch_offset

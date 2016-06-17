@@ -142,9 +142,8 @@ struct TestModulePass {
 
 struct TestSCCPass {
   TestSCCPass(int &RunCount, int &AnalyzedInstrCount,
-                   int &AnalyzedSCCFunctionCount,
-                   int &AnalyzedModuleFunctionCount,
-                   bool OnlyUseCachedResults = false)
+              int &AnalyzedSCCFunctionCount, int &AnalyzedModuleFunctionCount,
+              bool OnlyUseCachedResults = false)
       : RunCount(RunCount), AnalyzedInstrCount(AnalyzedInstrCount),
         AnalyzedSCCFunctionCount(AnalyzedSCCFunctionCount),
         AnalyzedModuleFunctionCount(AnalyzedModuleFunctionCount),
@@ -199,7 +198,7 @@ struct TestSCCPass {
 struct TestFunctionPass {
   TestFunctionPass(int &RunCount) : RunCount(RunCount) {}
 
-  PreservedAnalyses run(Function &M) {
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &) {
     ++RunCount;
     return PreservedAnalyses::none();
   }

@@ -170,7 +170,8 @@ static bool lowerExpectIntrinsic(Function &F) {
   return Changed;
 }
 
-PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F) {
+PreservedAnalyses LowerExpectIntrinsicPass::run(Function &F,
+                                                FunctionAnalysisManager &) {
   if (lowerExpectIntrinsic(F))
     return PreservedAnalyses::none();
 

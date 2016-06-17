@@ -1,4 +1,4 @@
-//===-- MipsastISel.cpp - Mips FastISel implementation --------------------===//
+//===-- MipsFastISel.cpp - Mips FastISel implementation --------------------===//
 //
 // The LLVM Compiler Infrastructure
 //

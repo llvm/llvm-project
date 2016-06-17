@@ -145,7 +145,7 @@ static bool aggressiveDCE(Function& F) {
   return !Worklist.empty();
 }
 
-PreservedAnalyses ADCEPass::run(Function &F) {
+PreservedAnalyses ADCEPass::run(Function &F, FunctionAnalysisManager &) {
   if (!aggressiveDCE(F))
     return PreservedAnalyses::all();
 

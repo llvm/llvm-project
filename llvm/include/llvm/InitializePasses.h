@@ -226,7 +226,7 @@ void initializeMemoryDependenceWrapperPassPass(PassRegistry&);
 void initializeMemorySSAWrapperPassPass(PassRegistry&);
 void initializeMemorySanitizerPass(PassRegistry&);
 void initializeMergeFunctionsPass(PassRegistry&);
-void initializeMergedLoadStoreMotionLegacyPassPass(PassRegistry &);
+void initializeMergedLoadStoreMotionPass(PassRegistry &);
 void initializeMetaRenamerPass(PassRegistry&);
 void initializeModuleDebugInfoPrinterPass(PassRegistry&);
 void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);

@@ -514,7 +514,7 @@ public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const DataLayout &DL,
                  const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                  DominatorTree *DT, LoopInfo *LI,
-                 const ValueToValueMap &Strides);
+                 bool SpeculateSymbolicStrides);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
@@ -575,13 +575,20 @@ public:
     return DepChecker.getInstructionsForAccess(Ptr, isWrite);
   }
 
+  /// \brief If an access has a symbolic strides, this maps the pointer value to
+  /// the stride symbol.
+  const ValueToValueMap &getSymbolicStrides() const { return SymbolicStrides; }
+
+  /// \brief Pointer has a symbolic stride.
+  bool hasStride(Value *V) const { return StrideSet.count(V); }
+
   /// \brief Print the information about the memory accesses in the loop.
   void print(raw_ostream &OS, unsigned Depth = 0) const;
 
   /// \brief Used to ensure that if the analysis was run with speculating the
   /// value of symbolic strides, the client queries it with the same assumption.
   /// Only used in DEBUG build but we don't want NDEBUG-dependent ABI.
-  unsigned NumSymbolicStrides;
+  bool SpeculateSymbolicStrides;
 
   /// \brief Checks existence of store to invariant address inside loop.
   /// If the loop has any store to invariant address, then it returns true,
@@ -598,14 +605,20 @@ public:
   PredicatedScalarEvolution PSE;
 
 private:
-  /// \brief Analyze the loop.  Substitute symbolic strides using Strides.
-  void analyzeLoop(const ValueToValueMap &SymbolicStrides);
+  /// \brief Analyze the loop.
+  void analyzeLoop();
 
   /// \brief Check if the structure of the loop allows it to be analyzed by this
   /// pass.
   bool canAnalyzeLoop();
 
   void emitAnalysis(LoopAccessReport &Message);
+
+  /// \brief Collect memory access with loop invariant strides.
+  ///
+  /// Looks for accesses like "a[i * StrideA]" where "StrideA" is loop
+  /// invariant.
+  void collectStridedAccess(Value *LoadOrStoreInst);
 
   /// We need to check that all of the pointers in this list are disjoint
   /// at runtime.
@@ -637,6 +650,13 @@ private:
   /// \brief The diagnostics report generated for the analysis.  E.g. why we
   /// couldn't analyze the loop.
   Optional<LoopAccessReport> Report;
+
+  /// \brief If an access has a symbolic strides, this maps the pointer value to
+  /// the stride symbol.
+  ValueToValueMap SymbolicStrides;
+
+  /// \brief Set of symbolic strides values.
+  SmallPtrSet<Value *, 8> StrideSet;
 };
 
 Value *stripIntegerCast(Value *V);
@@ -695,12 +715,11 @@ public:
 
   /// \brief Query the result of the loop access information for the loop \p L.
   ///
-  /// If the client speculates (and then issues run-time checks) for the values
-  /// of symbolic strides, \p Strides provides the mapping (see
-  /// replaceSymbolicStrideSCEV).  If there is no cached result available run
-  /// the analysis.
-  const LoopAccessInfo &
-  getInfo(Loop *L, const ValueToValueMap &Strides = ValueToValueMap());
+  /// \p SpeculateSymbolicStrides enables symbolic value speculation.  The
+  /// corresponding run-time checks are collected in LAI::PSE.
+  ///
+  /// If there is no cached result available run the analysis.
+  const LoopAccessInfo &getInfo(Loop *L, bool SpeculateSymbolicStrides = false);
 
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.

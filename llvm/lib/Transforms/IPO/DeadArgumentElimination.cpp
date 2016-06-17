@@ -64,7 +64,8 @@ namespace {
       if (skipModule(M))
         return false;
       DeadArgumentEliminationPass DAEP(ShouldHackArguments());
-      PreservedAnalyses PA = DAEP.run(M);
+      ModuleAnalysisManager DummyMAM;
+      PreservedAnalyses PA = DAEP.run(M, DummyMAM);
       return !PA.areAllPreserved();
     }
 
@@ -1029,7 +1030,8 @@ bool DeadArgumentEliminationPass::RemoveDeadStuffFromFunction(Function *F) {
   return true;
 }
 
-PreservedAnalyses DeadArgumentEliminationPass::run(Module &M) {
+PreservedAnalyses DeadArgumentEliminationPass::run(Module &M,
+                                                   ModuleAnalysisManager &) {
   bool Changed = false;
 
   // First pass: Do a simple check to see if any functions can have their "..."

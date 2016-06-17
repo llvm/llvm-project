@@ -53,18 +53,6 @@ unsigned MipsFunctionInfo::getGlobalBaseReg() {
   return GlobalBaseReg = MF.getRegInfo().createVirtualRegister(RC);
 }
 
-bool MipsFunctionInfo::mips16SPAliasRegSet() const {
-  return Mips16SPAliasReg;
-}
-unsigned MipsFunctionInfo::getMips16SPAliasReg() {
-  // Return if it has already been initialized.
-  if (Mips16SPAliasReg)
-    return Mips16SPAliasReg;
-
-  const TargetRegisterClass *RC = &Mips::CPU16RegsRegClass;
-  return Mips16SPAliasReg = MF.getRegInfo().createVirtualRegister(RC);
-}
-
 void MipsFunctionInfo::createEhDataRegsFI() {
   for (int I = 0; I < 4; ++I) {
     const TargetRegisterClass *RC =
