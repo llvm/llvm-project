@@ -228,6 +228,7 @@ void invoke_malloc_hook(void *ptr, uptr size) {
   if (ctx == 0 || !ctx->initialized || thr->ignore_interceptors)
     return;
   __sanitizer_malloc_hook(ptr, size);
+  RunMallocHooks(ptr, size);
 }
 
 void invoke_free_hook(void *ptr) {
@@ -235,6 +236,7 @@ void invoke_free_hook(void *ptr) {
   if (ctx == 0 || !ctx->initialized || thr->ignore_interceptors)
     return;
   __sanitizer_free_hook(ptr);
+  RunFreeHooks(ptr);
 }
 
 void *internal_alloc(MBlockType typ, uptr sz) {

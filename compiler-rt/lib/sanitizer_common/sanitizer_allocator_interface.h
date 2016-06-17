@@ -29,6 +29,10 @@ SANITIZER_INTERFACE_ATTRIBUTE uptr __sanitizer_get_heap_size();
 SANITIZER_INTERFACE_ATTRIBUTE uptr __sanitizer_get_free_bytes();
 SANITIZER_INTERFACE_ATTRIBUTE uptr __sanitizer_get_unmapped_bytes();
 
+SANITIZER_INTERFACE_ATTRIBUTE int __sanitizer_install_malloc_and_free_hooks(
+    void (*malloc_hook)(const void *, uptr),
+    void (*free_hook)(const void *));
+
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
     /* OPTIONAL */ void __sanitizer_malloc_hook(void *ptr, uptr size);
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE

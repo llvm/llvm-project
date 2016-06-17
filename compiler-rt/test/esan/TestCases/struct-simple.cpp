@@ -143,26 +143,26 @@ int main(int argc, char **argv) {
   // CHECK-NEXT:  Unregister class.C#3#14#13#13:  3 fields
   // CHECK-NEXT:   {{.*}} class C
   // CHECK-NEXT:   {{.*}}  size = 32, count = 5, ratio = 3
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0,  count = 2, type = %struct.anon = type { i32, i32 }
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 8,  count = 2, type = %union.anon = type { double }
-  // CHECK-NEXT:   {{.*}}  # 2: offset = 16, count = 1, type = [10 x i8]
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0,  size = 8,  count = 2, type = %struct.anon = type { i32, i32 }
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 8,  size = 8,  count = 2, type = %union.anon = type { double }
+  // CHECK-NEXT:   {{.*}}  # 2: offset = 16, size = 10, count = 1, type = [10 x i8]
   // CHECK-NEXT:  Unregister struct.anon#2#11#11: 2 fields
   // CHECK-NEXT:   {{.*}} struct anon
   // CHECK-NEXT:   {{.*}}  size = 8, count = 2, ratio = 1
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, count = 1, type = i32
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, count = 1, type = i32
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 1, type = i32
   // CHECK-NEXT:  Unregister union.anon#1#3:      1 fields
   // CHECK-NEXT:  Unregister struct.S#2#11#11:    2 fields
   // CHECK-NEXT:   {{.*}} struct S
   // CHECK-NEXT:   {{.*}}  size = 8, count = 2, ratio = 2
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, count = 2, type = i32
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, count = 0, type = i32
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 2, type = i32
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 0, type = i32
   // CHECK-NEXT:  Unregister struct.D#3#11#11#11: 3 fields
   // CHECK-NEXT:   {{.*}} struct D
   // CHECK-NEXT:   {{.*}}  size = 12, count = 2, ratio = 2
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, count = 1, type = i32
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, count = 1, type = i32
-  // CHECK-NEXT:   {{.*}}  # 2: offset = 8, count = 0, type = i32
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 1, type = i32
+  // CHECK-NEXT:   {{.*}}  # 2: offset = 8, size = 4, count = 0, type = i32
   // CHECK-NEXT: in esan::processCompilationUnitExit
   // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit: {{.*}}struct-simple.cpp with 0 class(es)/struct(s)
   // CHECK-NEXT: in esan::processCompilationUnitExit
@@ -170,20 +170,20 @@ int main(int argc, char **argv) {
   // CHECK-NEXT:  Unregister struct.A#2#11#11:    2 fields
   // CHECK-NEXT:   {{.*}} struct A
   // CHECK-NEXT:   {{.*}}  size = 8, count = 2049, ratio = 2048
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, count = 2048, type = i32
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, count = 1, type = i32
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 2048, type = i32
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 1, type = i32
   // CHECK-NEXT:  Unregister struct.B#2#3#2:      2 fields
   // CHECK-NEXT:   {{.*}} struct B
   // CHECK-NEXT:   {{.*}}  size = 16, count = 2097153, ratio = 2097152
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, count = 1, type = float
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 8, count = 2097152, type = double
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = float
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 8, size = 8, count = 2097152, type = double
   // CHECK-NEXT:  Unregister union.U#1#3:         1 fields
   // CHECK-NEXT:  Duplicated struct.S#2#11#11:    2 fields
   // CHECK-NEXT:  Unregister struct.D#2#11#11:    2 fields
   // CHECK-NEXT:   {{.*}} struct D
   // CHECK-NEXT:   {{.*}}  size = 8, count = 1, ratio = 1
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, count = 1, type = i32
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, count = 0, type = i32
+  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
+  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 0, type = i32
   // CHECK-NEXT: {{.*}}EfficiencySanitizer: total struct field access count = 2099214
 }
 #endif // MAIN

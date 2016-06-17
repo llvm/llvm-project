@@ -29,6 +29,7 @@ struct StructInfo {
   u32 Size;
   u32 NumFields;
   u32 *FieldOffsets;
+  u32 *FieldSize;
   u64 *FieldCounters;
   const char **FieldTypeNames;
 };
@@ -98,9 +99,9 @@ static void reportStructCounter(StructHashMap::Handle &Handle) {
   Report("   size = %u, count = %llu, ratio = %llu\n", Struct->Size,
          Handle->Count, Handle->Ratio);
   for (u32 i = 0; i < Struct->NumFields; ++i) {
-    Report("   #%2u: offset = %u,\t count = %llu,\t type = %.*s\n", i,
-           Struct->FieldOffsets[i], Struct->FieldCounters[i],
-           TypePrintLimit, Struct->FieldTypeNames[i]);
+    Report("   #%2u: offset = %u,\t size = %u,\t count = %llu,\t type = %.*s\n",
+           i, Struct->FieldOffsets[i], Struct->FieldSize[i],
+           Struct->FieldCounters[i], TypePrintLimit, Struct->FieldTypeNames[i]);
   }
 }
 
