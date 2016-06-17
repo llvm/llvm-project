@@ -249,6 +249,11 @@ identified.  The improvements since the 3.8 release include:
   Warns about defaulted constructors and assignment operators that are actually
   deleted.
 
+- Updated `readability-identifier-naming-check
+  <http://clang.llvm.org/extra/clang-tidy/checks/readability-identifier-naming.html>`_
+
+  Added support for enforcing the case of macro statements.
+
 - New `readability-redundant-control-flow
   <http://clang.llvm.org/extra/clang-tidy/checks/readability-redundant-control-flow.html>`_ check
 

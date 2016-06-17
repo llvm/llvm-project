@@ -20,11 +20,16 @@ namespace modernize {
 /// alternatives.
 ///
 /// Before:
-///   #include <header.h>
-/// After:
-///   #include <cheader>
+/// ~~~{.cpp}
+/// #include <header.h>
+/// ~~~
 ///
-/// Example: <stdio.h> => <cstdio>
+/// After:
+/// ~~~{.cpp}
+/// #include <cheader>
+/// ~~~
+///
+/// Example: ``<stdio.h> => <cstdio>``
 ///
 /// For the user-facing documentation see:
 /// http://clang.llvm.org/extra/clang-tidy/checks/modernize-deprecated-headers.html

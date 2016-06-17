@@ -88,7 +88,7 @@ struct Configuration {
   bool Threads;
   bool Trace;
   bool Verbose;
-  bool VersionScript = false;
+  bool VersionScriptGlobalByDefault = true;
   bool WarnCommon;
   bool ZCombreloc;
   bool ZDefs;

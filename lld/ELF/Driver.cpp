@@ -414,7 +414,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->DynamicList.push_back(Arg->getValue());
 
   if (auto *Arg = Args.getLastArg(OPT_version_script)) {
-    Config->VersionScript = true;
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseVersionScript(*Buffer);
   }

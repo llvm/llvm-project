@@ -18,8 +18,8 @@ namespace tidy {
 namespace utils {
 namespace lexer {
 
-// Returns previous non-comment token skipping over any comment text or
-// tok::unknown if not found.
+/// Returns previous non-comment token skipping over any comment text or
+/// ``tok::unknown`` if not found.
 Token getPreviousNonCommentToken(const ASTContext &Context,
                                  SourceLocation Location);
 

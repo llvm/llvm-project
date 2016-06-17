@@ -6,9 +6,9 @@ void freefunc() { }
 
 namespace N {
   int b() { return 0; }
-// CHECK-DAG: "N::b"
+// CHECK-DAG: "b"
   namespace { void func() { } }
-// CHECK-DAG: "N::`anonymous namespace'::func
+// CHECK-DAG: "func"
 }
 
 void _c(void) {
@@ -19,19 +19,19 @@ void _c(void) {
 struct foo {
   int operator+(int);
   foo(){}
-// CHECK-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   ~foo(){}
-// CHECK-DAG: "foo::~foo"
+// CHECK-DAG: "~foo"
 
   foo(int i){}
-// CHECK-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   foo(char *q){}
-// CHECK-DAG: "foo::foo"
+// CHECK-DAG: "foo"
 
   static foo* static_method() { return 0; }
-// CHECK-DAG: "foo::static_method"
+// CHECK-DAG: "static_method"
 
 };
 
@@ -40,7 +40,7 @@ void use_foo() {
   foo::static_method();
 }
 
-// CHECK-DAG: "foo::operator+"
+// CHECK-DAG: "operator+"
 int foo::operator+(int a) { return a; }
 
 // PR17371
@@ -60,14 +60,14 @@ void OverloadedNewDelete::operator delete(void *) { }
 void OverloadedNewDelete::operator delete[](void *) { }
 int OverloadedNewDelete::operator+(int x) { return x; };
 
-// CHECK-DAG: "OverloadedNewDelete::operator new"
-// CHECK-DAG: "OverloadedNewDelete::operator new[]"
-// CHECK-DAG: "OverloadedNewDelete::operator delete"
-// CHECK-DAG: "OverloadedNewDelete::operator delete[]"
-// CHECK-DAG: "OverloadedNewDelete::operator+"
+// CHECK-DAG: "operator new"
+// CHECK-DAG: "operator new[]"
+// CHECK-DAG: "operator delete"
+// CHECK-DAG: "operator delete[]"
+// CHECK-DAG: "operator+"
 
-template <void (*)(void)>
+template <typename T, void (*)(void)>
 void fn_tmpl() {}
 
-template void fn_tmpl<freefunc>();
-// CHECK-DAG: "fn_tmpl"
+template void fn_tmpl<int, freefunc>();
+// CHECK-DAG: "fn_tmpl<int,&freefunc>"
