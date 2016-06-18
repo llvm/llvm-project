@@ -14,6 +14,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -1542,6 +1543,37 @@ PreservedAnalyses LazyCallGraphPrinterPass::run(Module &M,
 
   for (LazyCallGraph::RefSCC &C : G.postorder_ref_sccs())
     printRefSCC(OS, C);
+
+  return PreservedAnalyses::all();
+}
+
+LazyCallGraphDOTPrinterPass::LazyCallGraphDOTPrinterPass(raw_ostream &OS)
+    : OS(OS) {}
+
+static void printNodeDOT(raw_ostream &OS, LazyCallGraph::Node &N) {
+  std::string Name = "\"" + DOT::EscapeString(N.getFunction().getName()) + "\"";
+
+  for (const LazyCallGraph::Edge &E : N) {
+    OS << "  " << Name << " -> \""
+       << DOT::EscapeString(E.getFunction().getName()) << "\"";
+    if (!E.isCall()) // It is a ref edge.
+      OS << " [style=dashed,label=\"ref\"]";
+    OS << ";\n";
+  }
+
+  OS << "\n";
+}
+
+PreservedAnalyses LazyCallGraphDOTPrinterPass::run(Module &M,
+                                                   ModuleAnalysisManager &AM) {
+  LazyCallGraph &G = AM.getResult<LazyCallGraphAnalysis>(M);
+
+  OS << "digraph \"" << DOT::EscapeString(M.getModuleIdentifier()) << "\" {\n";
+
+  for (Function &F : M)
+    printNodeDOT(OS, G.get(F));
+
+  OS << "}\n";
 
   return PreservedAnalyses::all();
 }

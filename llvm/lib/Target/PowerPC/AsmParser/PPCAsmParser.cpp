@@ -1710,7 +1710,7 @@ bool PPCAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   while (getLexer().isNot(AsmToken::EndOfStatement) &&
          getLexer().is(AsmToken::Comma)) {
     // Consume the comma token
-    getLexer().Lex();
+    Lex();
 
     // Parse the next operand
     if (ParseOperand(Operands))

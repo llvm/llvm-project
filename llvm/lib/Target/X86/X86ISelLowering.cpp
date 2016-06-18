@@ -4684,10 +4684,10 @@ static SDValue getOnesVector(EVT VT, const X86Subtarget &Subtarget,
 static SDValue getUnpackl(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
                           SDValue V1, SDValue V2) {
   unsigned NumElems = VT.getVectorNumElements();
-  SmallVector<int, 8> Mask;
+  SmallVector<int, 8> Mask(NumElems);
   for (unsigned i = 0, e = NumElems/2; i != e; ++i) {
-    Mask.push_back(i);
-    Mask.push_back(i + NumElems);
+    Mask[i * 2]     = i;
+    Mask[i * 2 + 1] = i + NumElems;
   }
   return DAG.getVectorShuffle(VT, dl, V1, V2, &Mask[0]);
 }
@@ -4696,10 +4696,10 @@ static SDValue getUnpackl(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
 static SDValue getUnpackh(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
                           SDValue V1, SDValue V2) {
   unsigned NumElems = VT.getVectorNumElements();
-  SmallVector<int, 8> Mask;
+  SmallVector<int, 8> Mask(NumElems);
   for (unsigned i = 0, Half = NumElems/2; i != Half; ++i) {
-    Mask.push_back(i + Half);
-    Mask.push_back(i + NumElems + Half);
+    Mask[i * 2]     = i + Half;
+    Mask[i * 2 + 1] = i + NumElems + Half;
   }
   return DAG.getVectorShuffle(VT, dl, V1, V2, &Mask[0]);
 }
@@ -4708,18 +4708,18 @@ static SDValue getUnpackh(SelectionDAG &DAG, const SDLoc &dl, MVT VT,
 /// This produces a shuffle where the low element of V2 is swizzled into the
 /// zero/undef vector, landing at element Idx.
 /// This produces a shuffle mask like 4,1,2,3 (idx=0) or  0,1,2,4 (idx=3).
-static SDValue getShuffleVectorZeroOrUndef(SDValue V2, unsigned Idx,
+static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
                                            bool IsZero,
                                            const X86Subtarget &Subtarget,
                                            SelectionDAG &DAG) {
   MVT VT = V2.getSimpleValueType();
   SDValue V1 = IsZero
     ? getZeroVector(VT, Subtarget, DAG, SDLoc(V2)) : DAG.getUNDEF(VT);
-  unsigned NumElems = VT.getVectorNumElements();
-  SmallVector<int, 16> MaskVec;
-  for (unsigned i = 0; i != NumElems; ++i)
+  int NumElems = VT.getVectorNumElements();
+  SmallVector<int, 16> MaskVec(NumElems);
+  for (int i = 0; i != NumElems; ++i)
     // If this is the insertion idx, put the low elt of V2 here.
-    MaskVec.push_back(i == Idx ? NumElems : i);
+    MaskVec[i] = (i == Idx) ? NumElems : i;
   return DAG.getVectorShuffle(VT, SDLoc(V2), V1, V2, &MaskVec[0]);
 }
 
@@ -10955,7 +10955,7 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
   }
 
   // Bail if we already have a repeated lane shuffle mask.
-  SmallVector<int, 8> RepeatedShuffleMask((unsigned)NumLaneElts, -1);
+  SmallVector<int, 8> RepeatedShuffleMask;
   if (is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedShuffleMask))
     return SDValue();
 
@@ -11139,7 +11139,7 @@ static SDValue lowerV4F64VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   // we will be able to shuffle even across lanes the other input in a single
   // instruction so skip this pattern.
   if (!(Subtarget.hasAVX2() && (isShuffleMaskInputInPlace(0, Mask) ||
-                                 isShuffleMaskInputInPlace(1, Mask))))
+                                isShuffleMaskInputInPlace(1, Mask))))
     if (SDValue Result = lowerVectorShuffleByMerging128BitLanes(
             DL, MVT::v4f64, V1, V2, Mask, Subtarget, DAG))
       return Result;

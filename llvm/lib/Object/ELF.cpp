@@ -105,6 +105,13 @@ StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type) {
       break;
     }
     break;
+  case ELF::EM_AMDGPU:
+    switch (Type) {
+#include "llvm/Support/ELFRelocs/AMDGPU.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }

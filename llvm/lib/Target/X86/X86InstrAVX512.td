@@ -2112,9 +2112,17 @@ let Predicates = [HasAVX512] in {
   def : Pat<(i64 (zext VK1:$src)),
             (AND64ri8 (SUBREG_TO_REG (i64 0),
              (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), sub_32bit), (i64 1))>;
+  def : Pat<(i64 (anyext VK1:$src)),
+            (SUBREG_TO_REG (i64 0),
+             (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), sub_32bit)>;
+
   def : Pat<(i16 (zext VK1:$src)),
             (EXTRACT_SUBREG
              (AND32ri8 (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)), (i32 1)),
+              sub_16bit)>;
+  def : Pat<(i16 (anyext VK1:$src)),
+            (EXTRACT_SUBREG
+             (KMOVWrk (COPY_TO_REGCLASS VK1:$src, VK16)),
               sub_16bit)>;
 }
 def : Pat<(v16i1 (scalar_to_vector VK1:$src)),

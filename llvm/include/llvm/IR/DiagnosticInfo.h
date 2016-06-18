@@ -632,8 +632,9 @@ public:
   /// copy this message, so this reference must be valid for the whole life time
   /// of the diagnostic.
   DiagnosticInfoUnsupported(const Function &Fn, const Twine &Msg,
-                            DebugLoc DLoc = DebugLoc())
-      : DiagnosticInfoWithDebugLocBase(DK_Unsupported, DS_Error, Fn, DLoc),
+                            DebugLoc DLoc = DebugLoc(),
+                            DiagnosticSeverity Severity = DS_Error)
+      : DiagnosticInfoWithDebugLocBase(DK_Unsupported, Severity, Fn, DLoc),
         Msg(Msg) {}
 
   static bool classof(const DiagnosticInfo *DI) {

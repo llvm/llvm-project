@@ -152,6 +152,7 @@ TEST_CASE(access_denied_on_recursion_test_case)
     const path startDir = testFiles[0];
     const path permDeniedDir = testFiles[1];
     const path otherFile = testFiles[3];
+    auto SkipEPerm = directory_options::skip_permission_denied;
 
     // Change the permissions so we can no longer iterate
     permissions(permDeniedDir, perms::none);
@@ -161,44 +162,57 @@ TEST_CASE(access_denied_on_recursion_test_case)
     // Test that recursion resulting in a "EACCESS" error is not ignored
     // by default.
     {
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         recursive_directory_iterator it(startDir, ec);
+        TEST_REQUIRE(ec != GetTestEC());
         TEST_REQUIRE(!ec);
+        while (it != endIt && it->path() != permDeniedDir)
+            ++it;
         TEST_REQUIRE(it != endIt);
-        const path elem = *it;
-        TEST_REQUIRE(elem == permDeniedDir);
+        TEST_REQUIRE(*it == permDeniedDir);
 
         it.increment(ec);
-        TEST_REQUIRE(ec);
-        TEST_REQUIRE(it == endIt);
+        TEST_CHECK(ec);
+        TEST_CHECK(it == endIt);
     }
     // Same as obove but test operator++().
     {
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         recursive_directory_iterator it(startDir, ec);
         TEST_REQUIRE(!ec);
+        while (it != endIt && it->path() != permDeniedDir)
+            ++it;
         TEST_REQUIRE(it != endIt);
-        const path elem = *it;
-        TEST_REQUIRE(elem == permDeniedDir);
+        TEST_REQUIRE(*it == permDeniedDir);
 
         TEST_REQUIRE_THROW(filesystem_error, ++it);
     }
     // Test that recursion resulting in a "EACCESS" error is ignored when the
     // correct options are given to the constructor.
     {
-        std::error_code ec;
-        recursive_directory_iterator it(
-            startDir,directory_options::skip_permission_denied,
-                                        ec);
+        std::error_code ec = GetTestEC();
+        recursive_directory_iterator it(startDir, SkipEPerm, ec);
         TEST_REQUIRE(!ec);
         TEST_REQUIRE(it != endIt);
-        const path elem = *it;
-        TEST_REQUIRE(elem == permDeniedDir);
 
+        bool seenOtherFile = false;
+        if (*it == otherFile) {
+            ++it;
+            seenOtherFile = true;
+            TEST_REQUIRE (it != endIt);
+        }
+        TEST_REQUIRE(*it == permDeniedDir);
+
+        ec = GetTestEC();
         it.increment(ec);
         TEST_REQUIRE(!ec);
-        TEST_REQUIRE(it != endIt);
-        TEST_CHECK(*it == otherFile);
+
+        if (seenOtherFile) {
+            TEST_CHECK(it == endIt);
+        } else {
+            TEST_CHECK(it != endIt);
+            TEST_CHECK(*it == otherFile);
+        }
     }
     // Test that construction resulting in a "EACCESS" error is not ignored
     // by default.
@@ -216,10 +230,8 @@ TEST_CASE(access_denied_on_recursion_test_case)
     // Test that construction resulting in a "EACCESS" error constructs the
     // end iterator when the correct options are given.
     {
-        std::error_code ec;
-        recursive_directory_iterator it(permDeniedDir,
-                                        directory_options::skip_permission_denied,
-                                        ec);
+        std::error_code ec = GetTestEC();
+        recursive_directory_iterator it(permDeniedDir, SkipEPerm, ec);
         TEST_REQUIRE(!ec);
         TEST_REQUIRE(it == endIt);
     }

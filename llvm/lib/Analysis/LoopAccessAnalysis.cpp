@@ -65,6 +65,21 @@ static cl::opt<unsigned>
                             "loop-access analysis (default = 100)"),
                    cl::init(100));
 
+/// This enables versioning on the strides of symbolically striding memory
+/// accesses in code like the following.
+///   for (i = 0; i < N; ++i)
+///     A[i * Stride1] += B[i * Stride2] ...
+///
+/// Will be roughly translated to
+///    if (Stride1 == 1 && Stride2 == 1) {
+///      for (i = 0; i < N; i+=4)
+///       A[i:i+3] += ...
+///    } else
+///      ...
+static cl::opt<bool> EnableMemAccessVersioning(
+    "enable-mem-access-versioning", cl::init(true), cl::Hidden,
+    cl::desc("Enable symbolic stride memory access versioning"));
+
 /// \brief Enable store-to-load forwarding conflict detection. This option can
 /// be disabled for correctness testing.
 static cl::opt<bool> EnableForwardingConflictDetection(
@@ -1540,7 +1555,7 @@ void LoopAccessInfo::analyzeLoop() {
         NumLoads++;
         Loads.push_back(Ld);
         DepChecker.addAccess(Ld);
-        if (SpeculateSymbolicStrides)
+        if (EnableMemAccessVersioning)
           collectStridedAccess(Ld);
         continue;
       }
@@ -1564,7 +1579,7 @@ void LoopAccessInfo::analyzeLoop() {
         NumStores++;
         Stores.push_back(St);
         DepChecker.addAccess(St);
-        if (SpeculateSymbolicStrides)
+        if (EnableMemAccessVersioning)
           collectStridedAccess(St);
       }
     } // Next instr.
@@ -1904,11 +1919,9 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const DataLayout &DL,
                                const TargetLibraryInfo *TLI, AliasAnalysis *AA,
-                               DominatorTree *DT, LoopInfo *LI,
-                               bool SpeculateSymbolicStrides)
-    : SpeculateSymbolicStrides(SpeculateSymbolicStrides), PSE(*SE, *L),
-      PtrRtChecking(SE), DepChecker(PSE, L), TheLoop(L), DL(DL), TLI(TLI),
-      AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
+                               DominatorTree *DT, LoopInfo *LI)
+    : PSE(*SE, *L), PtrRtChecking(SE), DepChecker(PSE, L), TheLoop(L), DL(DL),
+      TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
       MaxSafeDepDistBytes(-1U), CanVecMem(false),
       StoreToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
@@ -1955,19 +1968,12 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PSE.print(OS, Depth);
 }
 
-const LoopAccessInfo &
-LoopAccessAnalysis::getInfo(Loop *L, bool SpeculateSymbolicStrides) {
+const LoopAccessInfo &LoopAccessAnalysis::getInfo(Loop *L) {
   auto &LAI = LoopAccessInfoMap[L];
-
-#ifndef NDEBUG
-  assert((!LAI || LAI->SpeculateSymbolicStrides == SpeculateSymbolicStrides) &&
-         "Symbolic strides changed for loop");
-#endif
 
   if (!LAI) {
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-    LAI = llvm::make_unique<LoopAccessInfo>(L, SE, DL, TLI, AA, DT, LI,
-                                            SpeculateSymbolicStrides);
+    LAI = llvm::make_unique<LoopAccessInfo>(L, SE, DL, TLI, AA, DT, LI);
   }
   return *LAI.get();
 }

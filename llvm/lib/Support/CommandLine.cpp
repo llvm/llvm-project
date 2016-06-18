@@ -1604,7 +1604,8 @@ protected:
              E = SortedCategories.end();
          Category != E; ++Category) {
       // Hide empty categories for -help, but show for -help-hidden.
-      bool IsEmptyCategory = CategorizedOptions[*Category].size() == 0;
+      const auto &CategoryOptions = CategorizedOptions[*Category];
+      bool IsEmptyCategory = CategoryOptions.empty();
       if (!ShowHidden && IsEmptyCategory)
         continue;
 
@@ -1625,11 +1626,8 @@ protected:
         continue;
       }
       // Loop over the options in the category and print.
-      for (std::vector<Option *>::const_iterator
-               Opt = CategorizedOptions[*Category].begin(),
-               E = CategorizedOptions[*Category].end();
-           Opt != E; ++Opt)
-        (*Opt)->printOptionInfo(MaxArgLen);
+      for (const Option *Opt : CategoryOptions)
+        Opt->printOptionInfo(MaxArgLen);
     }
   }
 };

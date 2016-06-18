@@ -84,7 +84,7 @@ void RecordStreamer::EmitAssignment(MCSymbol *Symbol, const MCExpr *Value) {
 
 bool RecordStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
                                          MCSymbolAttr Attribute) {
-  if (Attribute == MCSA_Global)
+  if (Attribute == MCSA_Global || Attribute == MCSA_Weak)
     markGlobal(*Symbol);
   return true;
 }

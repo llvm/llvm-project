@@ -258,7 +258,6 @@ static bool isIntrinsicSourceOfDivergence(const TargetIntrinsicInfo *TII,
   switch (TII->lookupName((const char *)Name.bytes_begin(), Name.size())) {
   default:
     return false;
-  case AMDGPUIntrinsic::SI_tid:
   case AMDGPUIntrinsic::SI_fs_interp:
   case AMDGPUIntrinsic::SI_fs_constant:
     return true;

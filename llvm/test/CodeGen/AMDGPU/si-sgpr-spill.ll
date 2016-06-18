@@ -114,13 +114,15 @@ main_body:
   %tmp106 = call float @llvm.SI.fs.interp(i32 0, i32 5, i32 %arg4, <2 x i32> %arg6)
   %tmp107 = call float @llvm.SI.fs.interp(i32 1, i32 5, i32 %arg4, <2 x i32> %arg6)
   %tmp108 = call float @llvm.SI.fs.interp(i32 2, i32 5, i32 %arg4, <2 x i32> %arg6)
-  %tmp109 = call i32 @llvm.SI.tid()
+  %mbcnt.lo.0 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tmp109 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.0)
   %tmp110 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp109
   %tmp111 = bitcast float %tmp92 to i32
   store i32 %tmp111, i32 addrspace(3)* %tmp110
   %tmp112 = bitcast float %tmp93 to i32
   store i32 %tmp112, i32 addrspace(3)* %tmp110
-  %tmp113 = call i32 @llvm.SI.tid()
+  %mbcnt.lo.1 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tmp113 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.1)
   %tmp114 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp113
   %tmp115 = and i32 %tmp113, -4
   %tmp116 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp115
@@ -150,7 +152,8 @@ main_body:
   %tmp138 = fmul float %tmp59, %tmp93
   %tmp139 = fmul float %tmp59, %tmp93
   %tmp140 = fmul float %tmp59, %tmp93
-  %tmp141 = call i32 @llvm.SI.tid()
+  %mbcnt.lo.2 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tmp141 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.2)
   %tmp142 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp141
   %tmp143 = bitcast float %tmp137 to i32
   store i32 %tmp143, i32 addrspace(3)* %tmp142
@@ -160,7 +163,8 @@ main_body:
   store i32 %tmp145, i32 addrspace(3)* %tmp142
   %tmp146 = bitcast float %tmp140 to i32
   store i32 %tmp146, i32 addrspace(3)* %tmp142
-  %tmp147 = call i32 @llvm.SI.tid()
+  %mbcnt.lo.3 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %tmp147 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.3)
   %tmp148 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp147
   %tmp149 = and i32 %tmp147, -4
   %tmp150 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp149
@@ -1580,8 +1584,8 @@ declare float @llvm.SI.load.const(<16 x i8>, i32) #2
 ; Function Attrs: nounwind readnone
 declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #2
 
-; Function Attrs: readnone
-declare i32 @llvm.SI.tid() #1
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
+declare i32 @llvm.amdgcn.mbcnt.hi(i32, i32) #1
 
 ; Function Attrs: nounwind readonly
 declare float @ceil(float) #3

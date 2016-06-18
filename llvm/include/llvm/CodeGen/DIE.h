@@ -565,7 +565,7 @@ public:
   typedef iterator_range<value_iterator> value_range;
   typedef iterator_range<const_value_iterator> const_value_range;
 
-  value_iterator addValue(BumpPtrAllocator &Alloc, DIEValue V) {
+  value_iterator addValue(BumpPtrAllocator &Alloc, const DIEValue &V) {
     List.push_back(*new (Alloc) Node(V));
     return value_iterator(ListTy::toIterator(List.back()));
   }

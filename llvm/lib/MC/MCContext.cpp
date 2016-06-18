@@ -25,6 +25,7 @@
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/MC/MCSymbolMachO.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -32,6 +33,13 @@
 #include "llvm/Support/SourceMgr.h"
 
 using namespace llvm;
+
+static cl::opt<char*>
+AsSecureLogFileName("as-secure-log-file-name",
+        cl::desc("As secure log file name (initialized from "
+                 "AS_SECURE_LOG_FILE env variable)"),
+        cl::init(getenv("AS_SECURE_LOG_FILE")), cl::Hidden);
+
 
 MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
                      const MCObjectFileInfo *mofi, const SourceMgr *mgr,
@@ -42,7 +50,7 @@ MCContext::MCContext(const MCAsmInfo *mai, const MCRegisterInfo *mri,
       GenDwarfForAssembly(false), GenDwarfFileNumber(0), DwarfVersion(4),
       AllowTemporaryLabels(true), DwarfCompileUnitID(0),
       AutoReset(DoAutoReset), HadError(false) {
-  SecureLogFile = getenv("AS_SECURE_LOG_FILE");
+  SecureLogFile = AsSecureLogFileName;
   SecureLog = nullptr;
   SecureLogUsed = false;
 

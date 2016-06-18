@@ -669,7 +669,7 @@ void __resize_file(const path& p, std::uintmax_t size, std::error_code *ec) {
 
 space_info __space(const path& p, std::error_code *ec) {
     space_info si;
-    struct statvfs m_svfs;
+    struct statvfs m_svfs = {};
     if (::statvfs(p.c_str(), &m_svfs) == -1)  {
         set_or_throw(ec, "space", p);
         si.capacity = si.free = si.available =
@@ -678,7 +678,7 @@ space_info __space(const path& p, std::error_code *ec) {
     }
     if (ec) ec->clear();
     // Multiply with overflow checking.
-    auto do_mult = [&](std::uintmax_t& out, fsblkcnt_t other) {
+    auto do_mult = [&](std::uintmax_t& out, std::uintmax_t other) {
       out = other * m_svfs.f_frsize;
       if (out / other != m_svfs.f_frsize || other == 0)
           out = static_cast<std::uintmax_t>(-1);

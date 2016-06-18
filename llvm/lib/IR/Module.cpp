@@ -487,7 +487,7 @@ PICLevel::Level Module::getPICLevel() const {
   auto *Val = cast_or_null<ConstantAsMetadata>(getModuleFlag("PIC Level"));
 
   if (!Val)
-    return PICLevel::Default;
+    return PICLevel::NotPIC;
 
   return static_cast<PICLevel::Level>(
       cast<ConstantInt>(Val->getValue())->getZExtValue());

@@ -33,5 +33,9 @@ HANDLE_DI_FLAG((1 << 12), StaticMember)
 HANDLE_DI_FLAG((1 << 13), LValueReference)
 HANDLE_DI_FLAG((1 << 14), RValueReference)
 HANDLE_DI_FLAG((1 << 15), ExternalTypeRef)
+HANDLE_DI_FLAG((1 << 16), SingleInheritance)
+HANDLE_DI_FLAG((2 << 16), MultipleInheritance)
+HANDLE_DI_FLAG((3 << 16), VirtualInheritance)
+// Next flag is 1 << 18
 
 #undef HANDLE_DI_FLAG

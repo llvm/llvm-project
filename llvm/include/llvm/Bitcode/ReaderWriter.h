@@ -71,13 +71,14 @@ namespace llvm {
                                                     LLVMContext &Context);
 
   /// Check if the given bitcode buffer contains a summary block.
-  bool hasGlobalValueSummary(MemoryBufferRef Buffer,
-                             DiagnosticHandlerFunction DiagnosticHandler);
+  bool
+  hasGlobalValueSummary(MemoryBufferRef Buffer,
+                        const DiagnosticHandlerFunction &DiagnosticHandler);
 
   /// Parse the specified bitcode buffer, returning the module summary index.
   ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
   getModuleSummaryIndex(MemoryBufferRef Buffer,
-                        DiagnosticHandlerFunction DiagnosticHandler);
+                        const DiagnosticHandlerFunction &DiagnosticHandler);
 
   /// \brief Write the specified module to the specified raw output stream.
   ///

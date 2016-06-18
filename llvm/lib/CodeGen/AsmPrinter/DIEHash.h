@@ -131,7 +131,7 @@ private:
   void hashLocList(const DIELocList &LocList);
 
   /// \brief Hashes an individual attribute.
-  void hashAttribute(DIEValue Value, dwarf::Tag Tag);
+  void hashAttribute(const DIEValue &Value, dwarf::Tag Tag);
 
   /// \brief Hashes an attribute that refers to another DIE.
   void hashDIEEntry(dwarf::Attribute Attribute, dwarf::Tag Tag,

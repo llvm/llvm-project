@@ -17,7 +17,7 @@ template <class EnumType, EnumType Val1, EnumType Val2,
 struct check_bitmask_type {
 
   static constexpr UT dcast(EnumType e) { return static_cast<UT>(e); }
-  static constexpr UT unpromote(decltype(~UZero) promoted) { return static_cast<UT>(promoted); }
+  static constexpr UT unpromote(decltype((~UZero)) promoted) { return static_cast<UT>(promoted); }
   // We need two values that are non-zero and share at least one bit.
   static_assert(Val1 != Zero && Val2 != Zero, "");
   static_assert(Val1 != Val2, "");
@@ -31,7 +31,7 @@ struct check_bitmask_type {
       ASSERT_SAME_TYPE(EnumType, decltype(Val1 & Val2));
       ASSERT_SAME_TYPE(EnumType, decltype(Val1 | Val2));
       ASSERT_SAME_TYPE(EnumType, decltype(Val1 ^ Val2));
-      ASSERT_SAME_TYPE(EnumType, decltype(~Val1));
+      ASSERT_SAME_TYPE(EnumType, decltype((~Val1)));
       ASSERT_SAME_TYPE(EnumType&, decltype(ValRef &= Val2));
       ASSERT_SAME_TYPE(EnumType&, decltype(ValRef |= Val2));
       ASSERT_SAME_TYPE(EnumType&, decltype(ValRef ^= Val2));

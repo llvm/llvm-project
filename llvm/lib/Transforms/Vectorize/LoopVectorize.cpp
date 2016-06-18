@@ -130,21 +130,6 @@ static cl::opt<bool> MaximizeBandwidth(
     cl::desc("Maximize bandwidth when selecting vectorization factor which "
              "will be determined by the smallest type in loop."));
 
-/// This enables versioning on the strides of symbolically striding memory
-/// accesses in code like the following.
-///   for (i = 0; i < N; ++i)
-///     A[i * Stride1] += B[i * Stride2] ...
-///
-/// Will be roughly translated to
-///    if (Stride1 == 1 && Stride2 == 1) {
-///      for (i = 0; i < N; i+=4)
-///       A[i:i+3] += ...
-///    } else
-///      ...
-static cl::opt<bool> EnableMemAccessVersioning(
-    "enable-mem-access-versioning", cl::init(true), cl::Hidden,
-    cl::desc("Enable symbolic stride memory access versioning"));
-
 static cl::opt<bool> EnableInterleavedMemAccesses(
     "enable-interleaved-mem-accesses", cl::init(false), cl::Hidden,
     cl::desc("Enable vectorization on interleaved memory accesses in a loop"));
@@ -325,8 +310,8 @@ public:
   // can be validly truncated to. The cost model has assumed this truncation
   // will happen when vectorizing.
   void vectorize(LoopVectorizationLegality *L,
-                 MapVector<Instruction *, uint64_t> MinimumBitWidths) {
-    MinBWs = MinimumBitWidths;
+                 const MapVector<Instruction *, uint64_t> &MinimumBitWidths) {
+    MinBWs = &MinimumBitWidths;
     Legal = L;
     // Create a new empty loop. Unlink the old loop and connect the new one.
     createEmptyLoop();
@@ -597,7 +582,7 @@ protected:
   /// Map of scalar integer values to the smallest bitwidth they can be legally
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
-  MapVector<Instruction *, uint64_t> MinBWs;
+  const MapVector<Instruction *, uint64_t> *MinBWs;
   LoopVectorizationLegality *Legal;
 
   // Record whether runtime checks are added.
@@ -1431,7 +1416,7 @@ private:
   /// Updates the vectorization state by adding \p Phi to the inductions list.
   /// This can set \p Phi as the main induction of the loop if \p Phi is a
   /// better choice for the main induction than the existing one.
-  void addInductionPhi(PHINode *Phi, InductionDescriptor ID,
+  void addInductionPhi(PHINode *Phi, const InductionDescriptor &ID,
                        SmallPtrSetImpl<Value *> &AllowedExit);
 
   /// Report an analysis message to assist the user in diagnosing loops that are
@@ -3494,7 +3479,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
   // later and will remove any ext/trunc pairs.
   //
   SmallPtrSet<Value *, 4> Erased;
-  for (auto &KV : MinBWs) {
+  for (const auto &KV : *MinBWs) {
     VectorParts &Parts = WidenMap.get(KV.first);
     for (Value *&I : Parts) {
       if (Erased.count(I) || I->use_empty())
@@ -3589,7 +3574,7 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths() {
   }
 
   // We'll have created a bunch of ZExts that are now parentless. Clean up.
-  for (auto &KV : MinBWs) {
+  for (const auto &KV : *MinBWs) {
     VectorParts &Parts = WidenMap.get(KV.first);
     for (Value *&I : Parts) {
       ZExtInst *Inst = dyn_cast<ZExtInst>(I);
@@ -4724,7 +4709,7 @@ static bool hasOutsideLoopUser(const Loop *TheLoop, Instruction *Inst,
 }
 
 void LoopVectorizationLegality::addInductionPhi(
-    PHINode *Phi, InductionDescriptor ID,
+    PHINode *Phi, const InductionDescriptor &ID,
     SmallPtrSetImpl<Value *> &AllowedExit) {
   Inductions[Phi] = ID;
   Type *PhiTy = Phi->getType();
@@ -4970,7 +4955,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
-  LAI = &LAA->getInfo(TheLoop, EnableMemAccessVersioning);
+  LAI = &LAA->getInfo(TheLoop);
   auto &OptionalReport = LAI->getReport();
   if (OptionalReport)
     emitAnalysis(VectorizationReport(*OptionalReport));

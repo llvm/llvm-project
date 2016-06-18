@@ -98,7 +98,7 @@ namespace llvm {
           GuaranteedTailCallOpt(false), StackAlignmentOverride(0),
           StackSymbolOrdering(true), EnableFastISel(false), UseInitArray(false),
           DisableIntegratedAS(false), CompressDebugSections(false),
-          RelaxELFRelocations(false), FunctionSections(false),
+          RelaxELFRelocations(true), FunctionSections(false),
           DataSections(false), UniqueSectionNames(true), TrapUnreachable(false),
           EmulatedTLS(false), FloatABIType(FloatABI::Default),
           AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),

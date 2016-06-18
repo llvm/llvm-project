@@ -89,20 +89,20 @@ TEST_CASE(basic_permissions_test)
       perms expected;
     } cases[] = {
         // test file
+        {file, perms::none, perms::none},
         {file, perms::owner_all, perms::owner_all},
         {file, perms::group_all | AP, perms::owner_all | perms::group_all},
         {file, perms::group_all | RP, perms::owner_all},
-        {file, perms::none, perms::none},
         // test directory
+        {dir, perms::none, perms::none},
         {dir, perms::owner_all, perms::owner_all},
         {dir, perms::group_all | AP, perms::owner_all | perms::group_all},
         {dir, perms::group_all | RP, perms::owner_all},
-        {dir, perms::none, perms::none},
         // test symlink with resolve symlinks on symlink
+        {sym, perms::none | RS, perms::none},
         {sym, perms::owner_all | RS, perms::owner_all},
         {sym, perms::group_all | AP | RS, perms::owner_all | perms::group_all},
-        {sym, perms::group_all | RP | RS, perms::owner_all},
-        {sym, perms::none | RS, perms::none}
+        {sym, perms::group_all | RP | RS, perms::owner_all}
     };
     for (auto const& TC : cases) {
         TEST_CHECK(status(TC.p).permissions() != TC.expected);

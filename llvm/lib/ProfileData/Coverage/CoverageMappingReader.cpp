@@ -350,11 +350,15 @@ static Expected<bool> isCoverageMappingDummy(uint64_t Hash, StringRef Mapping) {
 
 namespace {
 struct CovMapFuncRecordReader {
-  // The interface to read coverage mapping function records for
-  // a module. \p Buf is a reference to the buffer pointer pointing
-  // to the \c CovHeader of coverage mapping data associated with
-  // the module.
-  virtual Error readFunctionRecords(const char *&Buf, const char *End) = 0;
+  // The interface to read coverage mapping function records for a module.
+  //
+  // \p Buf points to the buffer containing the \c CovHeader of the coverage
+  // mapping data associated with the module.
+  //
+  // Returns a pointer to the next \c CovHeader if it exists, or a pointer
+  // greater than \p End if not.
+  virtual Expected<const char *> readFunctionRecords(const char *Buf,
+                                                     const char *End) = 0;
   virtual ~CovMapFuncRecordReader() {}
   template <class IntPtrT, support::endianness Endian>
   static Expected<std::unique_ptr<CovMapFuncRecordReader>>
@@ -430,7 +434,8 @@ public:
       : ProfileNames(P), Filenames(F), Records(R) {}
   ~VersionedCovMapFuncRecordReader() override {}
 
-  Error readFunctionRecords(const char *&Buf, const char *End) override {
+  Expected<const char *> readFunctionRecords(const char *Buf,
+                                             const char *End) override {
     using namespace support;
     if (Buf + sizeof(CovMapHeader) > End)
       return make_error<CoverageMapError>(coveragemap_error::malformed);
@@ -452,7 +457,7 @@ public:
     size_t FilenamesBegin = Filenames.size();
     RawCoverageFilenamesReader Reader(StringRef(Buf, FilenamesSize), Filenames);
     if (auto Err = Reader.read())
-      return Err;
+      return std::move(Err);
     Buf += FilenamesSize;
 
     // We'll read the coverage mapping records in the loop below.
@@ -479,10 +484,10 @@ public:
 
       if (Error Err =
               insertFunctionRecordIfNeeded(CFR, Mapping, FilenamesBegin))
-        return Err;
+        return std::move(Err);
       CFR++;
     }
-    return Error::success();
+    return Buf;
   }
 };
 } // end anonymous namespace
@@ -526,8 +531,10 @@ static Error readCoverageMappingData(
     return E;
   auto Reader = std::move(ReaderExpected.get());
   for (const char *Buf = Data.data(), *End = Buf + Data.size(); Buf < End;) {
-    if (Error E = Reader->readFunctionRecords(Buf, End))
+    auto NextHeaderOrErr = Reader->readFunctionRecords(Buf, End);
+    if (auto E = NextHeaderOrErr.takeError())
       return E;
+    Buf = NextHeaderOrErr.get();
   }
   return Error::success();
 }

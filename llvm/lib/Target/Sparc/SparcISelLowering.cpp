@@ -1647,6 +1647,8 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   else
     setMaxAtomicSizeInBitsSupported(0);
 
+  setMinCmpXchgSizeInBits(32);
+
   setOperationAction(ISD::ATOMIC_SWAP, MVT::i32, Legal);
 
   setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Legal);

@@ -7776,13 +7776,13 @@ def INSERTQ  : I<0x79, MRMSrcReg, (outs VR128:$dst),
 
 // Non-temporal (unaligned) scalar stores.
 let AddedComplexity = 400 in { // Prefer non-temporal versions
+let mayStore = 1, SchedRW = [WriteStore] in {
 def MOVNTSS : I<0x2B, MRMDestMem, (outs), (ins f32mem:$dst, VR128:$src),
-                "movntss\t{$src, $dst|$dst, $src}",
-                [(int_x86_sse4a_movnt_ss addr:$dst, VR128:$src)]>, XS;
+                "movntss\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVNT>, XS;
 
 def MOVNTSD : I<0x2B, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
-                "movntsd\t{$src, $dst|$dst, $src}",
-                [(int_x86_sse4a_movnt_sd addr:$dst, VR128:$src)]>, XD;
+                "movntsd\t{$src, $dst|$dst, $src}", [], IIC_SSE_MOVNT>, XD;
+} // SchedRW
 
 def : Pat<(nontemporalstore FR32:$src, addr:$dst),
           (MOVNTSS addr:$dst, (COPY_TO_REGCLASS FR32:$src, VR128))>;

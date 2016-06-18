@@ -130,16 +130,33 @@ TEST_CASE(increment_resets_value)
 TEST_CASE(pop_does_not_reset_value)
 {
     const recursive_directory_iterator endIt;
+
+    auto& DE0 = StaticEnv::DirIterationList;
+    std::set<path> notSeenDepth0(std::begin(DE0), std::end(DE0));
+
     recursive_directory_iterator it(StaticEnv::Dir);
+    TEST_REQUIRE(it != endIt);
 
     while (it.depth() == 0) {
+        notSeenDepth0.erase(it->path());
         ++it;
         TEST_REQUIRE(it != endIt);
     }
+    TEST_REQUIRE(it.depth() == 1);
     it.disable_recursion_pending();
     it.pop();
-    TEST_REQUIRE(it != endIt);
-    TEST_CHECK(it.recursion_pending() == false);
+    // Since the order of iteration is unspecified the pop() could result
+    // in the end iterator. When this is the case it is undefined behavior
+    // to call recursion_pending().
+    if (it == endIt) {
+        TEST_CHECK(notSeenDepth0.empty());
+#if defined(_LIBCPP_VERSION)
+        TEST_CHECK(it.recursion_pending() == false);
+#endif
+    } else {
+        TEST_CHECK(! notSeenDepth0.empty());
+        TEST_CHECK(it.recursion_pending() == false);
+    }
 }
 
 TEST_SUITE_END()

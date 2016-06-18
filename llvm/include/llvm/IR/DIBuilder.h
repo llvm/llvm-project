@@ -147,7 +147,8 @@ namespace llvm {
     /// \param Class Type for which this pointer points to members of.
     DIDerivedType *createMemberPointerType(DIType *PointeeTy, DIType *Class,
                                            uint64_t SizeInBits,
-                                           uint64_t AlignInBits = 0);
+                                           uint64_t AlignInBits = 0,
+                                           unsigned Flags = 0);
 
     /// Create debugging information entry for a c++
     /// style reference or rvalue reference type.

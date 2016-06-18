@@ -66,7 +66,7 @@ X86Subtarget::classifyLocalReference(const GlobalValue *GV) const {
 
   // If this is for a position dependent executable, the static linker can
   // figure it out.
-  if (TM.getRelocationModel() != Reloc::PIC_)
+  if (!isPositionIndependent())
     return X86II::MO_NO_FLAG;
 
   // The COFF dynamic linker just patches the executable sections.
@@ -104,7 +104,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
     return X86II::MO_GOTPCREL;
 
   if (isTargetDarwin()) {
-    if (RM != Reloc::PIC_)
+    if (!isPositionIndependent())
       return X86II::MO_DARWIN_NONLAZY;
     return X86II::MO_DARWIN_NONLAZY_PIC_BASE;
   }
@@ -334,7 +334,7 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
   } else if (isTargetCOFF()) {
     setPICStyle(PICStyles::None);
   } else if (isTargetDarwin()) {
-    if (TM.getRelocationModel() == Reloc::PIC_)
+    if (isPositionIndependent())
       setPICStyle(PICStyles::StubPIC);
     else {
       assert(TM.getRelocationModel() == Reloc::DynamicNoPIC);

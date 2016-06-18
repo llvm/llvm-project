@@ -209,6 +209,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "x86.avx2.vinserti128" ||
         Name.startswith("x86.avx.vextractf128.") ||
         Name == "x86.avx2.vextracti128" ||
+        Name.startswith("x86.sse4a.movnt.") ||
         Name.startswith("x86.avx.movnt.") ||
         Name == "x86.sse2.storel.dq" ||
         Name.startswith("x86.sse.storeu.") ||
@@ -616,6 +617,30 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Src = CI->getArgOperand(0);
       VectorType *DstTy = cast<VectorType>(CI->getType());
       Rep = Builder.CreateFPToSI(Src, DstTy, "cvtt");
+    } else if (Name.startswith("llvm.x86.sse4a.movnt.")) {
+      Module *M = F->getParent();
+      SmallVector<Metadata *, 1> Elts;
+      Elts.push_back(
+          ConstantAsMetadata::get(ConstantInt::get(Type::getInt32Ty(C), 1)));
+      MDNode *Node = MDNode::get(C, Elts);
+
+      Value *Arg0 = CI->getArgOperand(0);
+      Value *Arg1 = CI->getArgOperand(1);
+
+      // Nontemporal (unaligned) store of the 0'th element of the float/double
+      // vector.
+      Type *SrcEltTy = cast<VectorType>(Arg1->getType())->getElementType();
+      PointerType *EltPtrTy = PointerType::getUnqual(SrcEltTy);
+      Value *Addr = Builder.CreateBitCast(Arg0, EltPtrTy, "cast");
+      Value *Extract =
+          Builder.CreateExtractElement(Arg1, (uint64_t)0, "extractelement");
+
+      StoreInst *SI = Builder.CreateAlignedStore(Extract, Addr, 1);
+      SI->setMetadata(M->getMDKindID("nontemporal"), Node);
+
+      // Remove intrinsic.
+      CI->eraseFromParent();
+      return;
     } else if (Name.startswith("llvm.x86.avx.movnt.")) {
       Module *M = F->getParent();
       SmallVector<Metadata *, 1> Elts;

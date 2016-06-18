@@ -30,7 +30,8 @@
 
 namespace fs = std::experimental::filesystem;
 
-MultiStringType shortString = MKSTR("abc");
+// the SSO is always triggered for strings of size 2.
+MultiStringType shortString = MKSTR("a");
 MultiStringType longString = MKSTR("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ/123456789/abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ");
 
 template <class CharT>
@@ -42,12 +43,37 @@ void doShortStringTest(MultiStringType const& MS) {
   Ptr value = MS;
   const path p((const char*)MS);
   {
-      DisableAllocationGuard g; // should not allocate
+      DisableAllocationGuard g;
       Str s = p.string<CharT>();
       assert(s == value);
       Str s2 = p.string<CharT>(Alloc{});
       assert(s2 == value);
   }
+  using MAlloc = malloc_allocator<CharT>;
+  MAlloc::reset();
+  {
+      using Traits = std::char_traits<CharT>;
+      using AStr = std::basic_string<CharT, Traits, MAlloc>;
+      DisableAllocationGuard g;
+      AStr s = p.string<CharT, Traits, MAlloc>();
+      assert(s == value);
+      assert(MAlloc::alloc_count == 0);
+      assert(MAlloc::outstanding_alloc() == 0);
+  }
+  MAlloc::reset();
+  { // Other allocator - provided copy
+      using Traits = std::char_traits<CharT>;
+      using AStr = std::basic_string<CharT, Traits, MAlloc>;
+      DisableAllocationGuard g;
+      MAlloc a;
+      // don't allow another allocator to be default constructed.
+      MAlloc::disable_default_constructor = true;
+      AStr s = p.string<CharT, Traits, MAlloc>(a);
+      assert(s == value);
+      assert(MAlloc::alloc_count == 0);
+      assert(MAlloc::outstanding_alloc() == 0);
+  }
+  MAlloc::reset();
 }
 
 template <class CharT>
@@ -59,7 +85,6 @@ void doLongStringTest(MultiStringType const& MS) {
   const path p((const char*)MS);
   { // Default allocator
       using Alloc = std::allocator<CharT>;
-      RequireAllocationGuard g; // should not allocate because
       Str s = p.string<CharT>();
       assert(s == value);
       Str s2 = p.string<CharT>(Alloc{});

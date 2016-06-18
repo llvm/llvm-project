@@ -729,11 +729,10 @@ bool HexagonAsmParser::finishBundle(SMLoc IDLoc, MCStreamer &Out) {
 
 bool HexagonAsmParser::matchBundleOptions() {
   MCAsmParser &Parser = getParser();
-  MCAsmLexer &Lexer = getLexer();
   while (true) {
     if (!Parser.getTok().is(AsmToken::Colon))
       return false;
-    Lexer.Lex();
+    Lex();
     StringRef Option = Parser.getTok().getString();
     if (Option.compare_lower("endloop0") == 0)
       HexagonMCInstrInfo::setInnerLoop(MCB);
@@ -745,7 +744,7 @@ bool HexagonAsmParser::matchBundleOptions() {
       HexagonMCInstrInfo::setMemStoreReorderEnabled(MCB);
     else
       return true;
-    Lexer.Lex();
+    Lex();
   }
 }
 
@@ -1105,7 +1104,7 @@ bool HexagonAsmParser::splitIdentifier(OperandVector &Operands) {
   AsmToken const &Token = getParser().getTok();
   StringRef String = Token.getString();
   SMLoc Loc = Token.getLoc();
-  getLexer().Lex();
+  Lex();
   do {
     std::pair<StringRef, StringRef> HeadTail = String.split('.');
     if (!HeadTail.first.empty())
@@ -1297,7 +1296,7 @@ bool HexagonAsmParser::parseExpression(MCExpr const *& Expr) {
   static char const * Comma = ",";
   do {
     Tokens.emplace_back (Lexer.getTok());
-    Lexer.Lex();
+    Lex();
     switch (Tokens.back().getKind())
     {
     case AsmToken::TokenKind::Hash:
@@ -1346,7 +1345,7 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
     AsmToken const &Token = Parser.getTok();
     switch (Token.getKind()) {
     case AsmToken::EndOfStatement: {
-      Lexer.Lex();
+      Lex();
       return false;
     }
     case AsmToken::LCurly: {
@@ -1354,19 +1353,19 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
         return true;
       Operands.push_back(
           HexagonOperand::CreateToken(Token.getString(), Token.getLoc()));
-      Lexer.Lex();
+      Lex();
       return false;
     }
     case AsmToken::RCurly: {
       if (Operands.empty()) {
         Operands.push_back(
             HexagonOperand::CreateToken(Token.getString(), Token.getLoc()));
-        Lexer.Lex();
+        Lex();
       }
       return false;
     }
     case AsmToken::Comma: {
-      Lexer.Lex();
+      Lex();
       continue;
     }
     case AsmToken::EqualEqual:
@@ -1379,7 +1378,7 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
           Token.getString().substr(0, 1), Token.getLoc()));
       Operands.push_back(HexagonOperand::CreateToken(
           Token.getString().substr(1, 1), Token.getLoc()));
-      Lexer.Lex();
+      Lex();
       continue;
     }
     case AsmToken::Hash: {
@@ -1389,12 +1388,12 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
       if (!ImplicitExpression)
         Operands.push_back(
           HexagonOperand::CreateToken(Token.getString(), Token.getLoc()));
-      Lexer.Lex();
+      Lex();
       bool MustExtend = false;
       bool HiOnly = false;
       bool LoOnly = false;
       if (Lexer.is(AsmToken::Hash)) {
-        Lexer.Lex();
+        Lex();
         MustExtend = true;
       } else if (ImplicitExpression)
         MustNotExtend = true;
@@ -1412,7 +1411,7 @@ bool HexagonAsmParser::parseInstruction(OperandVector &Operands) {
             HiOnly = false;
             LoOnly = false;
           } else {
-            Lexer.Lex();
+            Lex();
           }
         }
       }

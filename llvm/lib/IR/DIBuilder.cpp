@@ -253,10 +253,11 @@ DIDerivedType *DIBuilder::createPointerType(DIType *PointeeTy,
 DIDerivedType *DIBuilder::createMemberPointerType(DIType *PointeeTy,
                                                   DIType *Base,
                                                   uint64_t SizeInBits,
-                                                  uint64_t AlignInBits) {
+                                                  uint64_t AlignInBits,
+                                                  unsigned Flags) {
   return DIDerivedType::get(VMContext, dwarf::DW_TAG_ptr_to_member_type, "",
                             nullptr, 0, nullptr, PointeeTy, SizeInBits,
-                            AlignInBits, 0, 0, Base);
+                            AlignInBits, 0, Flags, Base);
 }
 
 DIDerivedType *DIBuilder::createReferenceType(unsigned Tag, DIType *RTy,

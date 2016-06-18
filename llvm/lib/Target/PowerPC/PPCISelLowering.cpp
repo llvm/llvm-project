@@ -2172,7 +2172,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       GOTPtr = DAG.getNode(PPCISD::ADDIS_TLSGD_HA, dl, PtrVT,
                                    GOTReg, TGA);
     } else {
-      if (picLevel == PICLevel::Small)
+      if (picLevel == PICLevel::SmallPIC)
         GOTPtr = DAG.getNode(PPCISD::GlobalBaseReg, dl, PtrVT);
       else
         GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
@@ -2190,7 +2190,7 @@ SDValue PPCTargetLowering::LowerGlobalTLSAddress(SDValue Op,
       GOTPtr = DAG.getNode(PPCISD::ADDIS_TLSLD_HA, dl, PtrVT,
                            GOTReg, TGA);
     } else {
-      if (picLevel == PICLevel::Small)
+      if (picLevel == PICLevel::SmallPIC)
         GOTPtr = DAG.getNode(PPCISD::GlobalBaseReg, dl, PtrVT);
       else
         GOTPtr = DAG.getNode(PPCISD::PPC32_PICGOT, dl, PtrVT);
@@ -7050,12 +7050,12 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       Constant *NegOne =
         ConstantFP::get(Type::getFloatTy(*DAG.getContext()), -1.0);
 
-      SmallVector<Constant*, 4> CV(4, NegOne);
+      Constant *CV[4];
       for (unsigned i = 0; i < 4; ++i) {
         if (BVN->getOperand(i).isUndef())
           CV[i] = UndefValue::get(Type::getFloatTy(*DAG.getContext()));
         else if (isNullConstant(BVN->getOperand(i)))
-          continue;
+          CV[i] = NegOne;
         else
           CV[i] = One;
       }
@@ -7064,15 +7064,8 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
       SDValue CPIdx = DAG.getConstantPool(CP, getPointerTy(DAG.getDataLayout()),
                                           16 /* alignment */);
 
-      SmallVector<SDValue, 2> Ops;
-      Ops.push_back(DAG.getEntryNode());
-      Ops.push_back(CPIdx);
-
-      SmallVector<EVT, 2> ValueVTs;
-      ValueVTs.push_back(MVT::v4i1);
-      ValueVTs.push_back(MVT::Other); // chain
-      SDVTList VTs = DAG.getVTList(ValueVTs);
-
+      SDValue Ops[] = {DAG.getEntryNode(), CPIdx};
+      SDVTList VTs = DAG.getVTList({MVT::v4i1, /*chain*/ MVT::Other});
       return DAG.getMemIntrinsicNode(
           PPCISD::QVLFSb, dl, VTs, Ops, MVT::v4f32,
           MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
@@ -7115,15 +7108,10 @@ SDValue PPCTargetLowering::LowerBUILD_VECTOR(SDValue Op,
     // is typed as v4f64 because the QPX register integer states are not
     // explicitly represented.
 
-    SmallVector<SDValue, 2> Ops;
-    Ops.push_back(StoreChain);
-    Ops.push_back(DAG.getConstant(Intrinsic::ppc_qpx_qvlfiwz, dl, MVT::i32));
-    Ops.push_back(FIdx);
-
-    SmallVector<EVT, 2> ValueVTs;
-    ValueVTs.push_back(MVT::v4f64);
-    ValueVTs.push_back(MVT::Other); // chain
-    SDVTList VTs = DAG.getVTList(ValueVTs);
+    SDValue Ops[] = {StoreChain,
+                     DAG.getConstant(Intrinsic::ppc_qpx_qvlfiwz, dl, MVT::i32),
+                     FIdx};
+    SDVTList VTs = DAG.getVTList({MVT::v4f64, /*chain*/ MVT::Other});
 
     SDValue LoadedVect = DAG.getMemIntrinsicNode(ISD::INTRINSIC_W_CHAIN,
       dl, VTs, Ops, MVT::v4i32, PtrInfo);
@@ -7836,15 +7824,10 @@ SDValue PPCTargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
   SDValue StoreChain = DAG.getEntryNode();
-  SmallVector<SDValue, 2> Ops;
-  Ops.push_back(StoreChain);
-  Ops.push_back(DAG.getConstant(Intrinsic::ppc_qpx_qvstfiw, dl, MVT::i32));
-  Ops.push_back(Value);
-  Ops.push_back(FIdx);
-
-  SmallVector<EVT, 2> ValueVTs;
-  ValueVTs.push_back(MVT::Other); // chain
-  SDVTList VTs = DAG.getVTList(ValueVTs);
+  SDValue Ops[] = {StoreChain,
+                   DAG.getConstant(Intrinsic::ppc_qpx_qvstfiw, dl, MVT::i32),
+                   Value, FIdx};
+  SDVTList VTs = DAG.getVTList(/*chain*/ MVT::Other);
 
   StoreChain = DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID,
     dl, VTs, Ops, MVT::v4i32, PtrInfo);
@@ -7885,7 +7868,7 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
         ScalarMemVT = MemVT.getScalarType();
     unsigned Stride = ScalarMemVT.getStoreSize();
 
-    SmallVector<SDValue, 8> Vals, LoadChains;
+    SDValue Vals[4], LoadChains[4];
     for (unsigned Idx = 0; Idx < 4; ++Idx) {
       SDValue Load;
       if (ScalarVT != ScalarMemVT)
@@ -7911,8 +7894,8 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
                                   LN->getAddressingMode());
       }
 
-      Vals.push_back(Load);
-      LoadChains.push_back(Load.getValue(1));
+      Vals[Idx] = Load;
+      LoadChains[Idx] = Load.getValue(1);
 
       BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
                             DAG.getConstant(Stride, dl,
@@ -7937,19 +7920,17 @@ SDValue PPCTargetLowering::LowerVectorLoad(SDValue Op,
   // To lower v4i1 from a byte array, we load the byte elements of the
   // vector and then reuse the BUILD_VECTOR logic.
 
-  SmallVector<SDValue, 4> VectElmts, VectElmtChains;
+  SDValue VectElmts[4], VectElmtChains[4];
   for (unsigned i = 0; i < 4; ++i) {
     SDValue Idx = DAG.getConstant(i, dl, BasePtr.getValueType());
     Idx = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr, Idx);
 
-    VectElmts.push_back(DAG.getExtLoad(ISD::EXTLOAD,
-                        dl, MVT::i32, LoadChain, Idx,
-                        LN->getPointerInfo().getWithOffset(i),
-                        MVT::i8 /* memory type */,
-                        LN->isVolatile(), LN->isNonTemporal(),
-                        LN->isInvariant(),
-                        1 /* alignment */, LN->getAAInfo()));
-    VectElmtChains.push_back(VectElmts[i].getValue(1));
+    VectElmts[i] = DAG.getExtLoad(ISD::EXTLOAD, dl, MVT::i32, LoadChain, Idx,
+                                  LN->getPointerInfo().getWithOffset(i),
+                                  MVT::i8 /* memory type */, LN->isVolatile(),
+                                  LN->isNonTemporal(), LN->isInvariant(),
+                                  1 /* alignment */, LN->getAAInfo());
+    VectElmtChains[i] = VectElmts[i].getValue(1);
   }
 
   LoadChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, VectElmtChains);
@@ -7981,7 +7962,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
         ScalarMemVT = MemVT.getScalarType();
     unsigned Stride = ScalarMemVT.getStoreSize();
 
-    SmallVector<SDValue, 8> Stores;
+    SDValue Stores[4];
     for (unsigned Idx = 0; Idx < 4; ++Idx) {
       SDValue Ex = DAG.getNode(
           ISD::EXTRACT_VECTOR_ELT, dl, ScalarVT, Value,
@@ -8010,7 +7991,7 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
       BasePtr = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr,
                             DAG.getConstant(Stride, dl,
                                             BasePtr.getValueType()));
-      Stores.push_back(Store);
+      Stores[Idx] = Store;
     }
 
     SDValue TF =  DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Stores);
@@ -8049,43 +8030,38 @@ SDValue PPCTargetLowering::LowerVectorStore(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDValue FIdx = DAG.getFrameIndex(FrameIdx, PtrVT);
 
-  SmallVector<SDValue, 2> Ops;
-  Ops.push_back(StoreChain);
-  Ops.push_back(DAG.getConstant(Intrinsic::ppc_qpx_qvstfiw, dl, MVT::i32));
-  Ops.push_back(Value);
-  Ops.push_back(FIdx);
-
-  SmallVector<EVT, 2> ValueVTs;
-  ValueVTs.push_back(MVT::Other); // chain
-  SDVTList VTs = DAG.getVTList(ValueVTs);
+  SDValue Ops[] = {StoreChain,
+                   DAG.getConstant(Intrinsic::ppc_qpx_qvstfiw, dl, MVT::i32),
+                   Value, FIdx};
+  SDVTList VTs = DAG.getVTList(/*chain*/ MVT::Other);
 
   StoreChain = DAG.getMemIntrinsicNode(ISD::INTRINSIC_VOID,
     dl, VTs, Ops, MVT::v4i32, PtrInfo);
 
   // Move data into the byte array.
-  SmallVector<SDValue, 4> Loads, LoadChains;
+  SDValue Loads[4], LoadChains[4];
   for (unsigned i = 0; i < 4; ++i) {
     unsigned Offset = 4*i;
     SDValue Idx = DAG.getConstant(Offset, dl, FIdx.getValueType());
     Idx = DAG.getNode(ISD::ADD, dl, FIdx.getValueType(), FIdx, Idx);
 
-    Loads.push_back(DAG.getLoad(MVT::i32, dl, StoreChain, Idx,
-                                   PtrInfo.getWithOffset(Offset),
-                                   false, false, false, 0));
-    LoadChains.push_back(Loads[i].getValue(1));
+    Loads[i] =
+        DAG.getLoad(MVT::i32, dl, StoreChain, Idx,
+                    PtrInfo.getWithOffset(Offset), false, false, false, 0);
+    LoadChains[i] = Loads[i].getValue(1);
   }
 
   StoreChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, LoadChains);
 
-  SmallVector<SDValue, 4> Stores;
+  SDValue Stores[4];
   for (unsigned i = 0; i < 4; ++i) {
     SDValue Idx = DAG.getConstant(i, dl, BasePtr.getValueType());
     Idx = DAG.getNode(ISD::ADD, dl, BasePtr.getValueType(), BasePtr, Idx);
 
-    Stores.push_back(DAG.getTruncStore(
+    Stores[i] = DAG.getTruncStore(
         StoreChain, dl, Loads[i], Idx, SN->getPointerInfo().getWithOffset(i),
         MVT::i8 /* memory type */, SN->isNonTemporal(), SN->isVolatile(),
-        1 /* alignment */, SN->getAAInfo()));
+        1 /* alignment */, SN->getAAInfo());
   }
 
   StoreChain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, Stores);

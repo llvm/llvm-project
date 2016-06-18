@@ -1399,9 +1399,9 @@ bool MemCpyOptPass::runImpl(
   bool MadeChange = false;
   MD = MD_;
   TLI = TLI_;
-  LookupAliasAnalysis = LookupAliasAnalysis_;
-  LookupAssumptionCache = LookupAssumptionCache_;
-  LookupDomTree = LookupDomTree_;
+  LookupAliasAnalysis = std::move(LookupAliasAnalysis_);
+  LookupAssumptionCache = std::move(LookupAssumptionCache_);
+  LookupDomTree = std::move(LookupDomTree_);
 
   // If we don't have at least memset and memcpy, there is little point of doing
   // anything here.  These are required by a freestanding implementation, so if

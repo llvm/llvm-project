@@ -67,33 +67,28 @@ Error LLVMOutputStyle::dumpStreamSummary() {
   if (!opts::DumpStreamSummary)
     return Error::success();
 
+  // It's OK if we fail to load some of these streams, we still attempt to print
+  // what we can.
   auto Dbi = File.getPDBDbiStream();
-  if (!Dbi)
-    return Dbi.takeError();
-
   auto Tpi = File.getPDBTpiStream();
-  if (!Tpi)
-    return Tpi.takeError();
-
   auto Ipi = File.getPDBIpiStream();
-  if (!Ipi)
-    return Ipi.takeError();
-
   auto Info = File.getPDBInfoStream();
-  if (!Info)
-    return Info.takeError();
 
   ListScope L(P, "Streams");
   uint32_t StreamCount = File.getNumStreams();
   std::unordered_map<uint16_t, const ModuleInfoEx *> ModStreams;
   std::unordered_map<uint16_t, std::string> NamedStreams;
 
-  for (auto &ModI : Dbi->modules()) {
-    uint16_t SN = ModI.Info.getModuleStreamIndex();
-    ModStreams[SN] = &ModI;
+  if (Dbi) {
+    for (auto &ModI : Dbi->modules()) {
+      uint16_t SN = ModI.Info.getModuleStreamIndex();
+      ModStreams[SN] = &ModI;
+    }
   }
-  for (auto &NSE : Info->named_streams()) {
-    NamedStreams[NSE.second] = NSE.first();
+  if (Info) {
+    for (auto &NSE : Info->named_streams()) {
+      NamedStreams[NSE.second] = NSE.first();
+    }
   }
 
   for (uint16_t StreamIdx = 0; StreamIdx < StreamCount; ++StreamIdx) {
@@ -110,42 +105,49 @@ Error LLVMOutputStyle::dumpStreamSummary() {
       Value = "TPI Stream";
     else if (StreamIdx == StreamIPI)
       Value = "IPI Stream";
-    else if (StreamIdx == Dbi->getGlobalSymbolStreamIndex())
+    else if (Dbi && StreamIdx == Dbi->getGlobalSymbolStreamIndex())
       Value = "Global Symbol Hash";
-    else if (StreamIdx == Dbi->getPublicSymbolStreamIndex())
+    else if (Dbi && StreamIdx == Dbi->getPublicSymbolStreamIndex())
       Value = "Public Symbol Hash";
-    else if (StreamIdx == Dbi->getSymRecordStreamIndex())
+    else if (Dbi && StreamIdx == Dbi->getSymRecordStreamIndex())
       Value = "Public Symbol Records";
-    else if (StreamIdx == Tpi->getTypeHashStreamIndex())
+    else if (Tpi && StreamIdx == Tpi->getTypeHashStreamIndex())
       Value = "TPI Hash";
-    else if (StreamIdx == Tpi->getTypeHashStreamAuxIndex())
+    else if (Tpi && StreamIdx == Tpi->getTypeHashStreamAuxIndex())
       Value = "TPI Aux Hash";
-    else if (StreamIdx == Ipi->getTypeHashStreamIndex())
+    else if (Ipi && StreamIdx == Ipi->getTypeHashStreamIndex())
       Value = "IPI Hash";
-    else if (StreamIdx == Ipi->getTypeHashStreamAuxIndex())
+    else if (Ipi && StreamIdx == Ipi->getTypeHashStreamAuxIndex())
       Value = "IPI Aux Hash";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Exception))
+    else if (Dbi &&
+             StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Exception))
       Value = "Exception Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Fixup))
+    else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Fixup))
       Value = "Fixup Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::FPO))
+    else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::FPO))
       Value = "FPO Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::NewFPO))
+    else if (Dbi &&
+             StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::NewFPO))
       Value = "New FPO Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::OmapFromSrc))
+    else if (Dbi &&
+             StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::OmapFromSrc))
       Value = "Omap From Source Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::OmapToSrc))
+    else if (Dbi &&
+             StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::OmapToSrc))
       Value = "Omap To Source Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Pdata))
+    else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Pdata))
       Value = "Pdata";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdr))
+    else if (Dbi &&
+             StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdr))
       Value = "Section Header Data";
-    else if (StreamIdx ==
-             Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdrOrig))
+    else if (Dbi &&
+             StreamIdx ==
+                 Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdrOrig))
       Value = "Section Header Original Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::TokenRidMap))
+    else if (Dbi &&
+             StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::TokenRidMap))
       Value = "Token Rid Data";
-    else if (StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Xdata))
+    else if (Dbi && StreamIdx == Dbi->getDebugStreamIndex(DbgHeaderType::Xdata))
       Value = "Xdata";
     else {
       auto ModIter = ModStreams.find(StreamIdx);
@@ -168,6 +170,17 @@ Error LLVMOutputStyle::dumpStreamSummary() {
 
     P.printString(Label, Value);
   }
+
+  // Consume errors from missing streams.
+  if (!Dbi)
+    consumeError(Dbi.takeError());
+  if (!Tpi)
+    consumeError(Tpi.takeError());
+  if (!Ipi)
+    consumeError(Ipi.takeError());
+  if (!Info)
+    consumeError(Info.takeError());
+
   P.flush();
   return Error::success();
 }

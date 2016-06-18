@@ -1122,7 +1122,7 @@ bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   // Parse until end of statement, consuming commas between operands
   while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.is(AsmToken::Comma)) {
     // Consume comma token
-    Lexer.Lex();
+    Lex();
 
     // Parse next operand
     if (parseOperand(&Operands, Mnemonic) != MatchOperand_Success)

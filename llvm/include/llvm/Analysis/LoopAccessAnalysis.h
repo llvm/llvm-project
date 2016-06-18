@@ -513,8 +513,7 @@ class LoopAccessInfo {
 public:
   LoopAccessInfo(Loop *L, ScalarEvolution *SE, const DataLayout &DL,
                  const TargetLibraryInfo *TLI, AliasAnalysis *AA,
-                 DominatorTree *DT, LoopInfo *LI,
-                 bool SpeculateSymbolicStrides);
+                 DominatorTree *DT, LoopInfo *LI);
 
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
@@ -584,11 +583,6 @@ public:
 
   /// \brief Print the information about the memory accesses in the loop.
   void print(raw_ostream &OS, unsigned Depth = 0) const;
-
-  /// \brief Used to ensure that if the analysis was run with speculating the
-  /// value of symbolic strides, the client queries it with the same assumption.
-  /// Only used in DEBUG build but we don't want NDEBUG-dependent ABI.
-  bool SpeculateSymbolicStrides;
 
   /// \brief Checks existence of store to invariant address inside loop.
   /// If the loop has any store to invariant address, then it returns true,
@@ -715,11 +709,8 @@ public:
 
   /// \brief Query the result of the loop access information for the loop \p L.
   ///
-  /// \p SpeculateSymbolicStrides enables symbolic value speculation.  The
-  /// corresponding run-time checks are collected in LAI::PSE.
-  ///
   /// If there is no cached result available run the analysis.
-  const LoopAccessInfo &getInfo(Loop *L, bool SpeculateSymbolicStrides = false);
+  const LoopAccessInfo &getInfo(Loop *L);
 
   void releaseMemory() override {
     // Invalidate the cache when the pass is freed.

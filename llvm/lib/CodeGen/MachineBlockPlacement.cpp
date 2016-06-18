@@ -846,8 +846,8 @@ void MachineBlockPlacement::buildChain(
     SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
     SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
     const BlockFilterSet *BlockFilter) {
-  assert(BB);
-  assert(BlockToChain[BB] == &Chain);
+  assert(BB && "BB must not be null.\n");
+  assert(BlockToChain[BB] == &Chain && "BlockToChainMap mis-match.\n");
   MachineFunction::iterator PrevUnplacedBlockIt = F->begin();
 
   MachineBasicBlock *LoopHeaderBB = BB;

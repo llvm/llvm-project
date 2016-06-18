@@ -257,7 +257,6 @@ private:
   bool parseStatement(ParseStatementInfo &Info,
                       MCAsmParserSemaCallback *SI);
   bool parseCurlyBlockScope(SmallVectorImpl<AsmRewrite>& AsmStrRewrites);
-  void eatToEndOfLine();
   bool parseCppHashLineFilenameComment(SMLoc L);
 
   void checkForBadMacro(SMLoc DirectiveLoc, StringRef Name, StringRef Body,
@@ -628,6 +627,10 @@ const AsmToken &AsmParser::Lex() {
     Error(Lexer.getErrLoc(), Lexer.getErr());
 
   const AsmToken *tok = &Lexer.Lex();
+  // Drop comments here.
+  while (tok->is(AsmToken::Comment)) {
+    tok = &Lexer.Lex();
+  }
 
   if (tok->is(AsmToken::Eof)) {
     // If this is the end of an included file, pop the parent file off the
@@ -635,7 +638,7 @@ const AsmToken &AsmParser::Lex() {
     SMLoc ParentIncludeLoc = SrcMgr.getParentIncludeLoc(CurBuffer);
     if (ParentIncludeLoc != SMLoc()) {
       jumpToLoc(ParentIncludeLoc);
-      tok = &Lexer.Lex();
+      return Lex();
     }
   }
 
@@ -720,8 +723,8 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
           // first referenced for a source location. We need to add something
           // to track that. Currently, we just point to the end of the file.
           HadError |=
-              Error(getLexer().getLoc(), "assembler local symbol '" +
-                                             Sym->getName() + "' not defined");
+              Error(getTok().getLoc(), "assembler local symbol '" +
+                                           Sym->getName() + "' not defined");
       }
     }
 
@@ -766,7 +769,7 @@ StringRef AsmParser::parseStringToEndOfStatement() {
   const char *Start = getTok().getLoc().getPointer();
 
   while (Lexer.isNot(AsmToken::EndOfStatement) && Lexer.isNot(AsmToken::Eof))
-    Lex();
+    Lexer.Lex();
 
   const char *End = getTok().getLoc().getPointer();
   return StringRef(Start, End - Start);
@@ -777,7 +780,7 @@ StringRef AsmParser::parseStringToComma() {
 
   while (Lexer.isNot(AsmToken::EndOfStatement) &&
          Lexer.isNot(AsmToken::Comma) && Lexer.isNot(AsmToken::Eof))
-    Lex();
+    Lexer.Lex();
 
   const char *End = getTok().getLoc().getPointer();
   return StringRef(Start, End - Start);
@@ -859,7 +862,7 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
     if (!MAI.useParensForSymbolVariant()) {
       if (FirstTokenKind == AsmToken::String) {
         if (Lexer.is(AsmToken::At)) {
-          Lexer.Lex(); // eat @
+          Lex(); // eat @
           SMLoc AtLoc = getLexer().getLoc();
           StringRef VName;
           if (parseIdentifier(VName))
@@ -871,14 +874,14 @@ bool AsmParser::parsePrimaryExpr(const MCExpr *&Res, SMLoc &EndLoc) {
         Split = Identifier.split('@');
       }
     } else if (Lexer.is(AsmToken::LParen)) {
-      Lexer.Lex(); // eat (
+      Lex(); // eat '('.
       StringRef VName;
       parseIdentifier(VName);
       if (Lexer.isNot(AsmToken::RParen)) {
           return Error(Lexer.getTok().getLoc(),
                        "unexpected token in variant, expected ')'");
       }
-      Lexer.Lex(); // eat )
+      Lex(); // eat ')'.
       Split = std::make_pair(Identifier, VName);
     }
 
@@ -1343,21 +1346,24 @@ bool AsmParser::parseBinOpRHS(unsigned Precedence, const MCExpr *&Res,
 ///   ::= Label* Identifier OperandList* EndOfStatement
 bool AsmParser::parseStatement(ParseStatementInfo &Info,
                                MCAsmParserSemaCallback *SI) {
+  // Eat initial spaces and comments
+  while (Lexer.is(AsmToken::Space))
+    Lex();
   if (Lexer.is(AsmToken::EndOfStatement)) {
-    Out.AddBlankLine();
+    // if this is a line comment we can drop it safely
+    if (getTok().getString().front() == '\r' ||
+        getTok().getString().front() == '\n')
+      Out.AddBlankLine();
     Lex();
     return false;
   }
-
-  // Statements always start with an identifier or are a full line comment.
+  // Statements always start with an identifier.
   AsmToken ID = getTok();
   SMLoc IDLoc = ID.getLoc();
   StringRef IDVal;
   int64_t LocalLabelVal = -1;
-  // A full line comment is a '#' as the first token.
-  if (Lexer.is(AsmToken::Hash))
+  if (Lexer.is(AsmToken::HashDirective))
     return parseCppHashLineFilenameComment(IDLoc);
-
   // Allow an integer followed by a ':' as a directional local label.
   if (Lexer.is(AsmToken::Integer)) {
     LocalLabelVal = getTok().getIntVal();
@@ -1648,7 +1654,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
       return parseDirectiveIncbin();
     case DK_CODE16:
     case DK_CODE16GCC:
-      return TokError(Twine(IDVal) + " not supported yet");
+      return TokError(Twine(IDVal) +
+                      " not currently supported for this target");
     case DK_REPT:
       return parseDirectiveRept(IDLoc, IDVal);
     case DK_IRP:
@@ -1868,37 +1875,20 @@ AsmParser::parseCurlyBlockScope(SmallVectorImpl<AsmRewrite> &AsmStrRewrites) {
   return true;
 }
 
-/// eatToEndOfLine uses the Lexer to eat the characters to the end of the line
-/// since they may not be able to be tokenized to get to the end of line token.
-void AsmParser::eatToEndOfLine() {
-  if (!Lexer.is(AsmToken::EndOfStatement))
-    Lexer.LexUntilEndOfLine();
-  // Eat EOL.
-  Lex();
-}
-
 /// parseCppHashLineFilenameComment as this:
 ///   ::= # number "filename"
-/// or just as a full line comment if it doesn't have a number and a string.
 bool AsmParser::parseCppHashLineFilenameComment(SMLoc L) {
   Lex(); // Eat the hash token.
-
-  if (getLexer().isNot(AsmToken::Integer)) {
-    // Consume the line since in cases it is not a well-formed line directive,
-    // as if were simply a full line comment.
-    eatToEndOfLine();
-    return false;
-  }
-
+  // Lexer only ever emits HashDirective if it fully formed if it's
+  // done the checking already so this is an internal error.
+  assert(getTok().is(AsmToken::Integer) &&
+         "Lexing Cpp line comment: Expected Integer");
   int64_t LineNumber = getTok().getIntVal();
   Lex();
-
-  if (getLexer().isNot(AsmToken::String)) {
-    eatToEndOfLine();
-    return false;
-  }
-
+  assert(getTok().is(AsmToken::String) &&
+         "Lexing Cpp line comment: Expected String");
   StringRef Filename = getTok().getString();
+  Lex();
   // Get rid of the enclosing quotes.
   Filename = Filename.substr(1, Filename.size() - 2);
 
@@ -1907,9 +1897,6 @@ bool AsmParser::parseCppHashLineFilenameComment(SMLoc L) {
   CppHashInfo.Filename = Filename;
   CppHashInfo.LineNumber = LineNumber;
   CppHashInfo.Buf = CurBuffer;
-
-  // Ignore any trailing characters, they're just comment.
-  eatToEndOfLine();
   return false;
 }
 
@@ -2268,7 +2255,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
           break;
 
       if (FAI >= NParameters) {
-    assert(M && "expected macro to be defined");
+        assert(M && "expected macro to be defined");
         Error(IDLoc,
               "parameter named '" + FA.Name + "' does not exist for macro '" +
               M->Name + "'");
@@ -2426,7 +2413,7 @@ bool AsmParser::parseIdentifier(StringRef &Res) {
     // Construct the joined identifier and consume the token.
     Res =
         StringRef(PrefixLoc.getPointer(), getTok().getIdentifier().size() + 1);
-    Lexer.Lex(); // Lexer's Lex guarantees consecutive token
+    Lex(); // Parser Lex to maintain invariants.
     return false;
   }
 
@@ -2568,16 +2555,16 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
 
   if (Lexer.isNot(AsmToken::Comma))
     return TokError("expected comma");
-  Lexer.Lex();
+  Lex();
 
   if (Lexer.isNot(AsmToken::Identifier))
     return TokError("expected relocation name");
   SMLoc NameLoc = Lexer.getTok().getLoc();
   StringRef Name = Lexer.getTok().getIdentifier();
-  Lexer.Lex();
+  Lex();
 
   if (Lexer.is(AsmToken::Comma)) {
-    Lexer.Lex();
+    Lex();
     SMLoc ExprLoc = Lexer.getLoc();
     if (parseExpression(Expr))
       return true;
@@ -5250,10 +5237,9 @@ static bool isSymbolUsedInExpression(const MCSymbol *Sym, const MCExpr *Value) {
 bool parseAssignmentExpression(StringRef Name, bool allow_redef,
                                MCAsmParser &Parser, MCSymbol *&Sym,
                                const MCExpr *&Value) {
-  MCAsmLexer &Lexer = Parser.getLexer();
 
   // FIXME: Use better location, we should use proper tokens.
-  SMLoc EqualLoc = Lexer.getLoc();
+  SMLoc EqualLoc = Parser.getTok().getLoc();
 
   if (Parser.parseExpression(Value)) {
     Parser.TokError("missing expression");
@@ -5265,7 +5251,7 @@ bool parseAssignmentExpression(StringRef Name, bool allow_redef,
   // a = b
   // b = c
 
-  if (Lexer.isNot(AsmToken::EndOfStatement))
+  if (Parser.getTok().isNot(AsmToken::EndOfStatement))
     return Parser.TokError("unexpected token in assignment");
 
   // Eat the end of statement marker.

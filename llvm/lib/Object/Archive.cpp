@@ -330,8 +330,11 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
   //  seem to create the third member if there's no member whose filename
   //  exceeds 15 characters. So the third member is optional.
 
-  if (Name == "__.SYMDEF") {
-    Format = K_BSD;
+  if (Name == "__.SYMDEF" || Name == "__.SYMDEF_64") {
+    if (Name == "__.SYMDEF")
+      Format = K_BSD;
+    else // Name == "__.SYMDEF_64"
+      Format = K_DARWIN64;
     // We know that the symbol table is not an external file, so we just assert
     // there is no error.
     SymbolTable = *C->getBuffer();
@@ -352,6 +355,14 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
       return;
     Name = NameOrErr.get();
     if (Name == "__.SYMDEF SORTED" || Name == "__.SYMDEF") {
+      // We know that the symbol table is not an external file, so we just
+      // assert there is no error.
+      SymbolTable = *C->getBuffer();
+      if (Increment())
+        return;
+    }
+    else if (Name == "__.SYMDEF_64 SORTED" || Name == "__.SYMDEF_64") {
+      Format = K_DARWIN64;
       // We know that the symbol table is not an external file, so we just
       // assert there is no error.
       SymbolTable = *C->getBuffer();
@@ -462,7 +473,7 @@ StringRef Archive::Symbol::getName() const {
 ErrorOr<Archive::Child> Archive::Symbol::getMember() const {
   const char *Buf = Parent->getSymbolTable().begin();
   const char *Offsets = Buf;
-  if (Parent->kind() == K_MIPS64)
+  if (Parent->kind() == K_MIPS64 || Parent->kind() == K_DARWIN64)
     Offsets += sizeof(uint64_t);
   else
     Offsets += sizeof(uint32_t);
@@ -479,6 +490,14 @@ ErrorOr<Archive::Child> Archive::Symbol::getMember() const {
     // the archive of the member that defines the symbol.  Which is what
     // is needed here.
     Offset = read32le(Offsets + SymbolIndex * 8 + 4);
+  } else if (Parent->kind() == K_DARWIN64) {
+    // The SymbolIndex is an index into the ranlib_64 structs that start at
+    // Offsets (the first uint64_t is the number of bytes of the ranlib_64
+    // structs).  The ranlib_64 structs are a pair of uint64_t's the first
+    // being a string table offset and the second being the offset into
+    // the archive of the member that defines the symbol.  Which is what
+    // is needed here.
+    Offset = read64le(Offsets + SymbolIndex * 16 + 8);
   } else {
     // Skip offsets.
     uint32_t MemberCount = read32le(Buf);
@@ -578,6 +597,22 @@ Archive::symbol_iterator Archive::symbol_begin() const {
     // Skip the byte count of the string table.
     buf += sizeof(uint32_t);
     buf += ran_strx;
+  } else if (kind() == K_DARWIN64) {
+    // The __.SYMDEF_64 or "__.SYMDEF_64 SORTED" member starts with a uint64_t
+    // which is the number of bytes of ranlib_64 structs that follow.  The
+    // ranlib_64 structs are a pair of uint64_t's the first being a string
+    // table offset and the second being the offset into the archive of the
+    // member that define the symbol. After that the next uint64_t is the byte
+    // count of the string table followed by the string table.
+    uint64_t ranlib_count = 0;
+    ranlib_count = read64le(buf) / 16;
+    const char *ranlibs = buf + 8;
+    uint64_t ran_strx = 0;
+    ran_strx = read64le(ranlibs);
+    buf += sizeof(uint64_t) + (ranlib_count * (2 * (sizeof(uint64_t))));
+    // Skip the byte count of the string table.
+    buf += sizeof(uint64_t);
+    buf += ran_strx;
   } else {
     uint32_t member_count = 0;
     uint32_t symbol_count = 0;
@@ -604,6 +639,8 @@ uint32_t Archive::getNumberOfSymbols() const {
     return read64be(buf);
   if (kind() == K_BSD)
     return read32le(buf) / 8;
+  if (kind() == K_DARWIN64)
+    return read64le(buf) / 16;
   uint32_t member_count = 0;
   member_count = read32le(buf);
   buf += 4 + (member_count * 4); // Skip offsets.

@@ -21,11 +21,9 @@
 #include <experimental/filesystem>
 #include <type_traits>
 #include <chrono>
-#include <thread>
 #include <fstream>
 #include <iostream>
 #include <cstdlib>
-#include <cassert>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
@@ -140,7 +138,7 @@ TEST_CASE(get_last_write_time_dynamic_env_test)
     file_time_type dtime = last_write_time(dir);
     TEST_CHECK(Clock::to_time_t(dtime) == dir_write_time);
 
-    std::this_thread::sleep_for(Sec(2));
+    SleepFor(Sec(2));
 
     // update file and add a file to the directory. Make sure the times increase.
     std::ofstream of(file, std::ofstream::app);

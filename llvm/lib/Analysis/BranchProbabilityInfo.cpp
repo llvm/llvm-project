@@ -366,7 +366,9 @@ bool BranchProbabilityInfo::calcLoopBranchHeuristics(const BasicBlock *BB,
 
   // Collect the sum of probabilities of back-edges/in-edges/exiting-edges, and
   // normalize them so that they sum up to one.
-  SmallVector<BranchProbability, 4> Probs(3, BranchProbability::getZero());
+  BranchProbability Probs[] = {BranchProbability::getZero(),
+                               BranchProbability::getZero(),
+                               BranchProbability::getZero()};
   unsigned Denom = (BackEdges.empty() ? 0 : LBH_TAKEN_WEIGHT) +
                    (InEdges.empty() ? 0 : LBH_TAKEN_WEIGHT) +
                    (ExitingEdges.empty() ? 0 : LBH_NONTAKEN_WEIGHT);

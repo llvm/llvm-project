@@ -46,6 +46,7 @@ class SITargetLowering final : public AMDGPUTargetLowering {
 
   SDValue getSegmentAperture(unsigned AS, SelectionDAG &DAG) const;
   SDValue lowerADDRSPACECAST(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerTRAP(SDValue Op, SelectionDAG &DAG) const;
 
   void adjustWritemask(MachineSDNode *&N, SelectionDAG &DAG) const;
 
