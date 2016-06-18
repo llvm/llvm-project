@@ -6207,9 +6207,10 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     }
 
     // Check for well-known libc/libm calls.  If the function is internal, it
-    // can't be a library call.
+    // can't be a library call.  Don't do the check if marked as nobuiltin for
+    // some reason.
     LibFunc::Func Func;
-    if (!F->hasLocalLinkage() && F->hasName() &&
+    if (!I.isNoBuiltin() && !F->hasLocalLinkage() && F->hasName() &&
         LibInfo->getLibFunc(F->getName(), Func) &&
         LibInfo->hasOptimizedCodeGen(Func)) {
       switch (Func) {

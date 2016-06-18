@@ -20,7 +20,6 @@
 #include <experimental/filesystem>
 #include <type_traits>
 #include <chrono>
-#include <thread>
 #include <cassert>
 
 #include "test_macros.h"
@@ -109,10 +108,10 @@ TEST_CASE(copy_file)
         using Sec = std::chrono::seconds;
         const path older = env.create_file("older_file", 1);
 
-        std::this_thread::sleep_for(Sec(2));
+        SleepFor(Sec(2));
         const path from = env.create_file("update_from", 55);
 
-        std::this_thread::sleep_for(Sec(2));
+        SleepFor(Sec(2));
         const path newer = env.create_file("newer_file", 2);
 
         std::error_code ec;

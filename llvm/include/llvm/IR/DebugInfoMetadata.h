@@ -174,7 +174,9 @@ public:
   enum DIFlags {
 #define HANDLE_DI_FLAG(ID, NAME) Flag##NAME = ID,
 #include "llvm/IR/DebugInfoFlags.def"
-    FlagAccessibility = FlagPrivate | FlagProtected | FlagPublic
+    FlagAccessibility = FlagPrivate | FlagProtected | FlagPublic,
+    FlagPtrToMemberRep = FlagSingleInheritance | FlagMultipleInheritance |
+                         FlagVirtualInheritance,
   };
 
   static unsigned getFlag(StringRef Flag);

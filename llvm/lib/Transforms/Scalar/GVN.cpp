@@ -106,7 +106,7 @@ template <> struct DenseMapInfo<GVN::Expression> {
 
   static inline GVN::Expression getTombstoneKey() { return ~1U; }
 
-  static unsigned getHashValue(const GVN::Expression e) {
+  static unsigned getHashValue(const GVN::Expression &e) {
     using llvm::hash_value;
     return static_cast<unsigned>(hash_value(e));
   }

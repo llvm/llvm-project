@@ -925,6 +925,18 @@ public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
+/// A pass which prints the call graph as a DOT file to a \c raw_ostream.
+///
+/// This is primarily useful for visualization purposes.
+class LazyCallGraphDOTPrinterPass
+    : public PassInfoMixin<LazyCallGraphDOTPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit LazyCallGraphDOTPrinterPass(raw_ostream &OS);
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
 }
 
 #endif

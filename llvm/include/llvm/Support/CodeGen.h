@@ -29,7 +29,8 @@ namespace llvm {
   }
 
   namespace PICLevel {
-    enum Level { Default=0, Small=1, Large=2 };
+    // This is used to map -fpic/-fPIC.
+    enum Level { NotPIC=0, SmallPIC=1, BigPIC=2 };
   }
 
   namespace PIELevel {

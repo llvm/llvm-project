@@ -321,18 +321,19 @@ static int merge_main(int argc, const char *argv[]) {
   return 0;
 }
 
-static int showInstrProfile(std::string Filename, bool ShowCounts,
+static int showInstrProfile(const std::string &Filename, bool ShowCounts,
                             bool ShowIndirectCallTargets,
                             bool ShowDetailedSummary,
                             std::vector<uint32_t> DetailedSummaryCutoffs,
-                            bool ShowAllFunctions, std::string ShowFunction,
-                            bool TextFormat, raw_fd_ostream &OS) {
+                            bool ShowAllFunctions,
+                            const std::string &ShowFunction, bool TextFormat,
+                            raw_fd_ostream &OS) {
   auto ReaderOrErr = InstrProfReader::create(Filename);
-  std::vector<uint32_t> Cutoffs(DetailedSummaryCutoffs);
-  if (ShowDetailedSummary && DetailedSummaryCutoffs.empty()) {
+  std::vector<uint32_t> Cutoffs = std::move(DetailedSummaryCutoffs);
+  if (ShowDetailedSummary && Cutoffs.empty()) {
     Cutoffs = {800000, 900000, 950000, 990000, 999000, 999900, 999990};
   }
-  InstrProfSummaryBuilder Builder(Cutoffs);
+  InstrProfSummaryBuilder Builder(std::move(Cutoffs));
   if (Error E = ReaderOrErr.takeError())
     exitWithError(std::move(E), Filename);
 
@@ -438,8 +439,9 @@ static int showInstrProfile(std::string Filename, bool ShowCounts,
   return 0;
 }
 
-static int showSampleProfile(std::string Filename, bool ShowCounts,
-                             bool ShowAllFunctions, std::string ShowFunction,
+static int showSampleProfile(const std::string &Filename, bool ShowCounts,
+                             bool ShowAllFunctions,
+                             const std::string &ShowFunction,
                              raw_fd_ostream &OS) {
   using namespace sampleprof;
   LLVMContext Context;

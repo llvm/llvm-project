@@ -311,11 +311,7 @@ void StructurizeCFG::orderNodes() {
   for (RegionNode *RN : TempOrder) {
     BasicBlock *BB = RN->getEntry();
     Loop *Loop = LI->getLoopFor(BB);
-    if (!LoopBlocks.count(Loop)) {
-      LoopBlocks[Loop] = 1;
-      continue;
-    }
-    LoopBlocks[Loop]++;
+    ++LoopBlocks[Loop];
   }
 
   unsigned CurrentLoopDepth = 0;
@@ -333,11 +329,11 @@ void StructurizeCFG::orderNodes() {
       // the outer loop.
 
       RNVector::iterator LoopI = I;
-      while(LoopBlocks[CurrentLoop]) {
+      while (unsigned &BlockCount = LoopBlocks[CurrentLoop]) {
         LoopI++;
         BasicBlock *LoopBB = (*LoopI)->getEntry();
         if (LI->getLoopFor(LoopBB) == CurrentLoop) {
-          LoopBlocks[CurrentLoop]--;
+          --BlockCount;
           Order.push_back(*LoopI);
         }
       }

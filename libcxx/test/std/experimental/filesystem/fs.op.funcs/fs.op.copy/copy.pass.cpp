@@ -112,26 +112,26 @@ TEST_CASE(from_is_symlink)
     const path dne = env.make_env_path("dne");
 
     { // skip symlinks
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(symlink, dne, copy_options::skip_symlinks, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(!exists(dne));
     }
     {
         const path dest = env.make_env_path("dest");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(symlink, dest, copy_options::copy_symlinks, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(exists(dest));
         TEST_CHECK(is_symlink(dest));
     }
     { // copy symlink but target exists
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(symlink, file, copy_options::copy_symlinks, ec);
         TEST_CHECK(ec);
     }
     { // create symlinks but target exists
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(symlink, file, copy_options::create_symlinks, ec);
         TEST_CHECK(ec);
     }
@@ -144,14 +144,14 @@ TEST_CASE(from_is_regular_file)
     const path dir = env.create_dir("dir");
     { // skip copy because of directory
         const path dest = env.make_env_path("dest1");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(file, dest, CO::directories_only, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(!exists(dest));
     }
     { // create symlink to file
         const path dest = env.make_env_path("sym");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(file, dest, CO::create_symlinks, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(is_symlink(dest));
@@ -160,7 +160,7 @@ TEST_CASE(from_is_regular_file)
     { // create hard link to file
         const path dest = env.make_env_path("hardlink");
         TEST_CHECK(hard_link_count(file) == 1);
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(file, dest, CO::create_hard_links, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(exists(dest));
@@ -169,14 +169,14 @@ TEST_CASE(from_is_regular_file)
     { // is_directory(t)
         const path dest_dir = env.create_dir("dest_dir");
         const path expect_dest = dest_dir / file.filename();
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(file, dest_dir, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(is_regular_file(expect_dest));
     }
     { // otherwise copy_file(from, to, ...)
         const path dest = env.make_env_path("file_copy");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(file, dest, ec);
         TEST_CHECK(!ec);
         TEST_CHECK(is_regular_file(dest));
@@ -203,9 +203,9 @@ TEST_CASE(from_is_directory)
         env.create_file(dir / FI.filename, FI.size);
         env.create_file(nested_dir / FI.filename, FI.size);
     }
-    { // test for non-existant directory
+    { // test for non-existent directory
         const path dest = env.make_env_path("dest_dir1");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(dir, dest, ec);
         TEST_REQUIRE(!ec);
         TEST_CHECK(is_directory(dest));
@@ -218,7 +218,7 @@ TEST_CASE(from_is_directory)
     }
     { // test for existing directory
         const path dest = env.create_dir("dest_dir2");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(dir, dest, ec);
         TEST_REQUIRE(!ec);
         TEST_CHECK(is_directory(dest));
@@ -231,7 +231,7 @@ TEST_CASE(from_is_directory)
     }
     { // test recursive copy
         const path dest = env.make_env_path("dest_dir3");
-        std::error_code ec;
+        std::error_code ec = GetTestEC();
         fs::copy(dir, dest, CO::recursive, ec);
         TEST_REQUIRE(!ec);
         TEST_CHECK(is_directory(dest));

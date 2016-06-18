@@ -201,9 +201,6 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
   const int DirSize = Dir.size();
 
   // Search for matching files.
-  // FIXME:  This assumes the wildcard is only in the file name and not in the
-  // directory portion of the file path.  For example, it doesn't handle
-  // "*\foo.c" nor "s?c\bar.cpp".
   WIN32_FIND_DATAW FileData;
   HANDLE FindHandle = FindFirstFileW(Arg, &FileData);
   if (FindHandle == INVALID_HANDLE_VALUE) {
@@ -218,7 +215,7 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
     if (ec)
       break;
 
-    // Append FileName to Dir, and remove it afterwards.
+    // Push the filename onto Dir, and remove it afterwards.
     llvm::sys::path::append(Dir, StringRef(FileName.data(), FileName.size()));
     AllocateAndPush(Dir, Args, Allocator);
     Dir.resize(DirSize);
@@ -226,23 +223,6 @@ WildcardExpand(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
 
   FindClose(FindHandle);
   return ec;
-}
-
-static std::error_code
-ExpandShortFileName(const wchar_t *Arg, SmallVectorImpl<const char *> &Args,
-  SpecificBumpPtrAllocator<char> &Allocator) {
-  SmallVector<wchar_t, MAX_PATH> LongPath;
-  DWORD Length = GetLongPathNameW(Arg, LongPath.data(), LongPath.capacity());
-  if (Length == 0)
-    return mapWindowsError(GetLastError());
-  if (Length > LongPath.capacity()) {
-    // We're not going to try to deal with paths longer than MAX_PATH, so we'll
-    // treat this as an error.  GetLastError() returns ERROR_SUCCESS, which
-    // isn't useful, so we'll hardcode an appropriate error value.
-    return mapWindowsError(ERROR_INSUFFICIENT_BUFFER);
-  }
-  LongPath.set_size(Length);
-  return ConvertAndPushArg(LongPath.data(), Args, Allocator);
 }
 
 std::error_code
@@ -258,12 +238,7 @@ Process::GetArgumentVector(SmallVectorImpl<const char *> &Args,
   Args.reserve(ArgCount);
   std::error_code ec;
 
-  // If the first argument is a shortenedd (8.3) name, the driver will have
-  // trouble distinguishing it (e.g., clang.exe v. clang++.exe), so make sure
-  // it's a full name.
-  ec = ExpandShortFileName(UnicodeCommandLine[0], Args, ArgAllocator);
-
-  for (int i = 1; i < ArgCount && !ec; ++i) {
+  for (int i = 0; i < ArgCount; ++i) {
     ec = WildcardExpand(UnicodeCommandLine[i], Args, ArgAllocator);
     if (ec)
       break;

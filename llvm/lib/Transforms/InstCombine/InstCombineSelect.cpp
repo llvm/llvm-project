@@ -116,8 +116,7 @@ static Constant *GetSelectFoldableConstant(Instruction *I) {
   }
 }
 
-/// Here we have (select c, TI, FI), and we know that TI and FI
-/// have the same opcode and only one use each.  Try to simplify this.
+/// We have (select c, TI, FI), and we know that TI and FI have the same opcode.
 Instruction *InstCombiner::FoldSelectOpOp(SelectInst &SI, Instruction *TI,
                                           Instruction *FI) {
   // If this is a cast from the same type, merge.
@@ -129,10 +128,30 @@ Instruction *InstCombiner::FoldSelectOpOp(SelectInst &SI, Instruction *TI,
     // The select condition may be a vector. We may only change the operand
     // type if the vector width remains the same (and matches the condition).
     Type *CondTy = SI.getCondition()->getType();
-    if (CondTy->isVectorTy() &&
-        (!FIOpndTy->isVectorTy() ||
-         CondTy->getVectorNumElements() != FIOpndTy->getVectorNumElements()))
+    if (CondTy->isVectorTy()) {
+      if (!FIOpndTy->isVectorTy())
+        return nullptr;
+      if (CondTy->getVectorNumElements() != FIOpndTy->getVectorNumElements())
+        return nullptr;
+
+      // TODO: If the backend knew how to deal with casts better, we could
+      // remove this limitation. For now, there's too much potential to create
+      // worse codegen by promoting the select ahead of size-altering casts
+      // (PR28160).
+      //
+      // Note that ValueTracking's matchSelectPattern() looks through casts
+      // without checking 'hasOneUse' when it matches min/max patterns, so this
+      // transform may end up happening anyway.
+      if (TI->getOpcode() != Instruction::BitCast &&
+          (!TI->hasOneUse() || !FI->hasOneUse()))
+        return nullptr;
+
+    } else if (!TI->hasOneUse() || !FI->hasOneUse()) {
+      // TODO: The one-use restrictions for a scalar select could be eased if
+      // the fold of a select in visitLoadInst() was enhanced to match a pattern
+      // that includes a cast.
       return nullptr;
+    }
 
     // Fold this by inserting a select from the input values.
     Value *NewSI = Builder->CreateSelect(SI.getCondition(), TI->getOperand(0),
@@ -141,8 +160,13 @@ Instruction *InstCombiner::FoldSelectOpOp(SelectInst &SI, Instruction *TI,
                             TI->getType());
   }
 
-  // Only handle binary operators here.
-  if (!isa<BinaryOperator>(TI))
+  // TODO: This function ends awkwardly in unreachable - fix to be more normal.
+
+  // Only handle binary operators with one-use here. As with the cast case
+  // above, it may be possible to relax the one-use constraint, but that needs
+  // be examined carefully since it may not reduce the total number of
+  // instructions.
+  if (!isa<BinaryOperator>(TI) || !TI->hasOneUse() || !FI->hasOneUse())
     return nullptr;
 
   // Figure out if the operations have any operands in common.
@@ -1056,14 +1080,12 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   if (Instruction *Add = foldAddSubSelect(SI, *Builder))
     return Add;
 
+  // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
   auto *TI = dyn_cast<Instruction>(TrueVal);
   auto *FI = dyn_cast<Instruction>(FalseVal);
-  if (TI && FI && TI->hasOneUse() && FI->hasOneUse()) {
-    // Turn (select C, (op X, Y), (op X, Z)) -> (op X, (select C, Y, Z))
-    if (TI->getOpcode() == FI->getOpcode())
-      if (Instruction *IV = FoldSelectOpOp(SI, TI, FI))
-        return IV;
-  }
+  if (TI && FI && TI->getOpcode() == FI->getOpcode())
+    if (Instruction *IV = FoldSelectOpOp(SI, TI, FI))
+      return IV;
 
   // See if we can fold the select into one of our operands.
   if (SI.getType()->isIntOrIntVectorTy() || SI.getType()->isFPOrFPVectorTy()) {

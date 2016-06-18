@@ -100,7 +100,7 @@
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     ClassType: A (0x1005)
-; CHECK:     Representation: Unknown (0x0)
+; CHECK:     Representation: GeneralData (0x4)
 ; CHECK:   }
 ; CHECK:   Pointer (0x1007) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
@@ -140,7 +140,7 @@
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:     ClassType: A (0x1005)
-; CHECK:     Representation: Unknown (0x0)
+; CHECK:     Representation: GeneralFunction (0x8)
 ; CHECK:   }
 ; CHECK:   Modifier (0x100B) {
 ; CHECK:     TypeLeafKind: LF_MODIFIER (0x1001)

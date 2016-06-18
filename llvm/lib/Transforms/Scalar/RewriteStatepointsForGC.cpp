@@ -2616,9 +2616,8 @@ static void recomputeLiveInValues(GCPtrLivenessData &RevisedLivenessData,
   // We may have base pointers which are now live that weren't before.  We need
   // to update the PointerToBase structure to reflect this.
   for (auto V : Updated)
-    if (!Info.PointerToBase.count(V)) {
+    if (Info.PointerToBase.insert(std::make_pair(V, V)).second) {
       assert(Bases.count(V) && "can't find base for unexpected live value");
-      Info.PointerToBase[V] = V;
       continue;
     }
 

@@ -277,9 +277,8 @@ static void scanOneBB(Instruction *Start, Instruction *End,
     if (BBI->isTerminator()) {
       BasicBlock *BB = BBI->getParent();
       for (BasicBlock *Succ : successors(BB)) {
-        if (Seen.count(Succ) == 0) {
+        if (Seen.insert(Succ).second) {
           Worklist.push_back(Succ);
-          Seen.insert(Succ);
         }
       }
     }

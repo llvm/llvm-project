@@ -679,9 +679,9 @@ static void diagnosticHandler(const DiagnosticInfo &DI) {
 
 /// Parse the summary index out of an IR file and return the summary
 /// index object if found, or nullptr if not.
-static std::unique_ptr<ModuleSummaryIndex>
-getModuleSummaryIndexForFile(StringRef Path, std::string &Error,
-                             DiagnosticHandlerFunction DiagnosticHandler) {
+static std::unique_ptr<ModuleSummaryIndex> getModuleSummaryIndexForFile(
+    StringRef Path, std::string &Error,
+    const DiagnosticHandlerFunction &DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buffer;
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFile(Path);

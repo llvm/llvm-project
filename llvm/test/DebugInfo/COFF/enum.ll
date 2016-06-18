@@ -15,7 +15,7 @@
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Enum (0x1001) {
 ; CHECK-NEXT:    TypeLeafKind: LF_ENUM (0x1507)
-; CHECK-NEXT:    NumEnumerators: 0
+; CHECK-NEXT:    NumEnumerators: 1
 ; CHECK-NEXT:    Properties [ (0x0)
 ; CHECK-NEXT:    ]
 ; CHECK-NEXT:    UnderlyingType: int (0x74)

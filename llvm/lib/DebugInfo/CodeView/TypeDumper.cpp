@@ -400,6 +400,7 @@ Error CVTypeDumper::visitPointer(PointerRecord &Ptr) {
   W->printNumber("IsConst", Ptr.isConst());
   W->printNumber("IsVolatile", Ptr.isVolatile());
   W->printNumber("IsUnaligned", Ptr.isUnaligned());
+  W->printNumber("SizeOf", Ptr.getSize());
 
   if (Ptr.isPointerToMember()) {
     const MemberPointerInfo &MI = Ptr.getMemberInfo();

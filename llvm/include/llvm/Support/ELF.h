@@ -615,6 +615,11 @@ enum {
 #include "ELFRelocs/WebAssembly.def"
 };
 
+// ELF Relocation types for AMDGPU
+enum {
+#include "ELFRelocs/AMDGPU.def"
+};
+
 #undef ELF_RELOC
 
 // Section header.

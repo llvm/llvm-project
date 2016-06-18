@@ -316,6 +316,11 @@ Error DbiStream::initializeSectionHeadersData() {
 // Initializes this->Fpos.
 Error DbiStream::initializeFpoRecords() {
   uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::NewFPO);
+
+  // This means there is no FPO data.
+  if (StreamNum == InvalidStreamIndex)
+    return Error::success();
+
   if (StreamNum >= Pdb.getNumStreams())
     return make_error<RawError>(raw_error_code::no_stream);
 

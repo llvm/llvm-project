@@ -4,40 +4,6 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4a | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+sse4a,+avx | FileCheck %s --check-prefix=X64
 
-define void @test_movntss(i8* %p, <4 x float> %a) nounwind optsize ssp {
-; X32-LABEL: test_movntss:
-; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movntss %xmm0, (%eax)
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_movntss:
-; X64:       # BB#0:
-; X64-NEXT:    movntss %xmm0, (%rdi)
-; X64-NEXT:    retq
-  tail call void @llvm.x86.sse4a.movnt.ss(i8* %p, <4 x float> %a) nounwind
-  ret void
-}
-
-declare void @llvm.x86.sse4a.movnt.ss(i8*, <4 x float>)
-
-define void @test_movntsd(i8* %p, <2 x double> %a) nounwind optsize ssp {
-; X32-LABEL: test_movntsd:
-; X32:       # BB#0:
-; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    movntsd %xmm0, (%eax)
-; X32-NEXT:    retl
-;
-; X64-LABEL: test_movntsd:
-; X64:       # BB#0:
-; X64-NEXT:    movntsd %xmm0, (%rdi)
-; X64-NEXT:    retq
-  tail call void @llvm.x86.sse4a.movnt.sd(i8* %p, <2 x double> %a) nounwind
-  ret void
-}
-
-declare void @llvm.x86.sse4a.movnt.sd(i8*, <2 x double>)
-
 define <2 x i64> @test_extrqi(<2 x i64> %x) nounwind uwtable ssp {
 ; X32-LABEL: test_extrqi:
 ; X32:       # BB#0:

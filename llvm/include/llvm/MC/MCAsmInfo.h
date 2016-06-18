@@ -371,7 +371,7 @@ protected:
 
   // If true, emit GOTPCRELX/REX_GOTPCRELX instead of GOTPCREL, on
   // X86_64 ELF.
-  bool RelaxELFRelocations = false;
+  bool RelaxELFRelocations = true;
 
 public:
   explicit MCAsmInfo();

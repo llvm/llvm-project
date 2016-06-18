@@ -830,6 +830,8 @@ TargetLoweringBase::TargetLoweringBase(const TargetMachine &tm) : TM(tm) {
   // with the Target-specific changes necessary.
   MaxAtomicSizeInBitsSupported = 1024;
 
+  MinCmpXchgSizeInBits = 0;
+
   std::fill(std::begin(LibcallRoutineNames), std::end(LibcallRoutineNames), nullptr);
 
   InitLibcallNames(LibcallRoutineNames, TM.getTargetTriple());

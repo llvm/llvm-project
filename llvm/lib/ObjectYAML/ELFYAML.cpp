@@ -531,6 +531,9 @@ void ScalarEnumerationTraits<ELFYAML::ELF_REL>::enumeration(
   case ELF::EM_LANAI:
 #include "llvm/Support/ELFRelocs/Lanai.def"
     break;
+  case ELF::EM_AMDGPU:
+#include "llvm/Support/ELFRelocs/AMDGPU.def"
+    break;
   default:
     llvm_unreachable("Unsupported architecture");
   }

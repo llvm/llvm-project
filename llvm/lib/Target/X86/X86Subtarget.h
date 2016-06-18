@@ -533,6 +533,10 @@ public:
            PICStyle == PICStyles::StubPIC;
   }
 
+  bool isPositionIndependent() const {
+    return TM.getRelocationModel() == Reloc::PIC_;
+  }
+
   bool isCallingConvWin64(CallingConv::ID CC) const {
     switch (CC) {
     // On Win64, all these conventions just use the default convention.

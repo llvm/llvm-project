@@ -49,7 +49,9 @@ TEST_CASE(test_canonical)
     struct TestCase {
         path p;
         path expect;
-        path base = StaticEnv::Root;
+        path base;
+        TestCase(path p1, path e, path b = StaticEnv::Root)
+            : p(p1), expect(e), base(b) {}
     };
     const TestCase testCases[] = {
         { ".", Root, Root},

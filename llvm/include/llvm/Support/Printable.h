@@ -38,7 +38,7 @@ class raw_ostream;
 class Printable {
 public:
   std::function<void(raw_ostream &OS)> Print;
-  Printable(const std::function<void(raw_ostream &OS)> Print)
+  Printable(std::function<void(raw_ostream &OS)> Print)
       : Print(std::move(Print)) {}
 };
 

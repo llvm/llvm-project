@@ -10072,7 +10072,7 @@ bool ARMAsmParser::parseDirectiveObjectArch(SMLoc L) {
 
   StringRef Arch = Parser.getTok().getString();
   SMLoc ArchLoc = Parser.getTok().getLoc();
-  getLexer().Lex();
+  Lex();
 
   unsigned ID = ARM::parseArch(Arch);
 
@@ -10195,7 +10195,7 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
 
   StringRef Name = Parser.getTok().getString();
   SMLoc ExtLoc = Parser.getTok().getLoc();
-  getLexer().Lex();
+  Lex();
 
   bool EnableFeature = true;
   if (Name.startswith_lower("no")) {

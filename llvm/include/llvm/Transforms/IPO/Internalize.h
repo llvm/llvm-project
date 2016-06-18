@@ -53,8 +53,7 @@ class InternalizePass : public PassInfoMixin<InternalizePass> {
 
 public:
   InternalizePass();
-  InternalizePass(
-      const std::function<bool(const GlobalValue &)> MustPreserveGV)
+  InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV)
       : MustPreserveGV(std::move(MustPreserveGV)) {}
 
   /// Run the internalizer on \p TheModule, returns true if any changes was
@@ -68,10 +67,10 @@ public:
 };
 
 /// Helper function to internalize functions and variables in a Module.
-inline bool internalizeModule(
-    Module &TheModule,
-    const std::function<bool(const GlobalValue &)> MustPreserveGV,
-    CallGraph *CG = nullptr) {
+inline bool
+internalizeModule(Module &TheModule,
+                  std::function<bool(const GlobalValue &)> MustPreserveGV,
+                  CallGraph *CG = nullptr) {
   return InternalizePass(std::move(MustPreserveGV))
       .internalizeModule(TheModule, CG);
 }

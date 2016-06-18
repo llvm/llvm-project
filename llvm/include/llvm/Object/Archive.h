@@ -183,6 +183,7 @@ public:
     K_GNU,
     K_MIPS64,
     K_BSD,
+    K_DARWIN64,
     K_COFF
   };
 
@@ -225,7 +226,7 @@ private:
   uint16_t FirstRegularStartOfFile = -1;
   void setFirstRegular(const Child &C);
 
-  unsigned Format : 2;
+  unsigned Format : 3;
   unsigned IsThin : 1;
   mutable std::vector<std::unique_ptr<MemoryBuffer>> ThinBuffers;
 };

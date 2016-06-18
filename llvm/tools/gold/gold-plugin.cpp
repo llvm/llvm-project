@@ -984,6 +984,10 @@ void CodeGen::initTargetMachine() {
   FeaturesString = Features.getString();
   Options = InitTargetOptionsFromCodeGenFlags();
 
+  // Disable the new X86 relax relocations since gold might not support them.
+  // FIXME: Check the gold version or add a new option to enable them.
+  Options.RelaxELFRelocations = false;
+
   TM = createTargetMachine();
 }
 

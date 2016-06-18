@@ -25,10 +25,9 @@
 
 using namespace llvm;
 
-static void
-codegen(Module *M, llvm::raw_pwrite_stream &OS,
-        std::function<std::unique_ptr<TargetMachine>()> TMFactory,
-        TargetMachine::CodeGenFileType FileType) {
+static void codegen(Module *M, llvm::raw_pwrite_stream &OS,
+                    function_ref<std::unique_ptr<TargetMachine>()> TMFactory,
+                    TargetMachine::CodeGenFileType FileType) {
   std::unique_ptr<TargetMachine> TM = TMFactory();
   legacy::PassManager CodeGenPasses;
   if (TM->addPassesToEmitFile(CodeGenPasses, OS, FileType))

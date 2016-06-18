@@ -58,6 +58,10 @@ public:
 
   PDB_Machine getMachineType() const;
 
+  enum { InvalidStreamIndex = 0xffff };
+
+  /// If the given stream type is present, returns its stream index. If it is
+  /// not present, returns InvalidStreamIndex.
   uint32_t getDebugStreamIndex(DbgHeaderType Type) const;
 
   ArrayRef<ModuleInfoEx> modules() const;

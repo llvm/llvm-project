@@ -135,7 +135,9 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
     return I->second;
 
   TypeIndex ParentScope = TypeIndex(0);
-  StringRef DisplayName = SP->getDisplayName();
+  // The display name includes function template arguments. Drop them to match
+  // MSVC.
+  StringRef DisplayName = SP->getDisplayName().split('<').first;
   FuncIdRecord FuncId(ParentScope, getTypeIndex(SP->getType()), DisplayName);
   TypeIndex TI = TypeTable.writeFuncId(FuncId);
 
@@ -453,6 +455,31 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
     emitCodeViewMagicVersion();
 }
 
+static const DISubprogram *getQualifiedNameComponents(
+    const DIScope *Scope, SmallVectorImpl<StringRef> &QualifiedNameComponents) {
+  const DISubprogram *ClosestSubprogram = nullptr;
+  while (Scope != nullptr) {
+    if (ClosestSubprogram == nullptr)
+      ClosestSubprogram = dyn_cast<DISubprogram>(Scope);
+    StringRef ScopeName = Scope->getName();
+    if (!ScopeName.empty())
+      QualifiedNameComponents.push_back(ScopeName);
+    Scope = Scope->getScope().resolve();
+  }
+  return ClosestSubprogram;
+}
+
+static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
+                                    StringRef TypeName) {
+  std::string FullyQualifiedName;
+  for (StringRef QualifiedNameComponent : reverse(QualifiedNameComponents)) {
+    FullyQualifiedName.append(QualifiedNameComponent);
+    FullyQualifiedName.append("::");
+  }
+  FullyQualifiedName.append(TypeName);
+  return FullyQualifiedName;
+}
+
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
                                              FunctionInfo &FI) {
   // For each function there is a separate subsection
@@ -463,11 +490,18 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
   // Switch to the to a comdat section, if appropriate.
   switchToDebugSectionForSymbol(Fn);
 
-  StringRef FuncName;
+  std::string FuncName;
   auto *SP = GV->getSubprogram();
   setCurrentSubprogram(SP);
-  if (SP != nullptr)
-    FuncName = SP->getDisplayName();
+
+  // If we have a display name, build the fully qualified name by walking the
+  // chain of scopes.
+  if (SP != nullptr && !SP->getDisplayName().empty()) {
+    SmallVector<StringRef, 5> QualifiedNameComponents;
+    getQualifiedNameComponents(SP->getScope().resolve(),
+                               QualifiedNameComponents);
+    FuncName = getQualifiedName(QualifiedNameComponents, SP->getDisplayName());
+  }
 
   // If our DISubprogram name is empty, use the mangled name.
   if (FuncName.empty())
@@ -769,31 +803,6 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty) {
   }
 }
 
-static const DISubprogram *getQualifiedNameComponents(
-    const DIScope *Scope, SmallVectorImpl<StringRef> &QualifiedNameComponents) {
-  const DISubprogram *ClosestSubprogram = nullptr;
-  while (Scope != nullptr) {
-    if (ClosestSubprogram == nullptr)
-      ClosestSubprogram = dyn_cast<DISubprogram>(Scope);
-    StringRef ScopeName = Scope->getName();
-    if (!ScopeName.empty())
-      QualifiedNameComponents.push_back(ScopeName);
-    Scope = Scope->getScope().resolve();
-  }
-  return ClosestSubprogram;
-}
-
-static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
-                                    StringRef TypeName) {
-  std::string FullyQualifiedName;
-  for (StringRef QualifiedNameComponent : reverse(QualifiedNameComponents)) {
-    FullyQualifiedName.append(QualifiedNameComponent);
-    FullyQualifiedName.append("::");
-  }
-  FullyQualifiedName.append(TypeName);
-  return FullyQualifiedName;
-}
-
 TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
   DITypeRef UnderlyingTypeRef = Ty->getBaseType();
   TypeIndex UnderlyingTypeIndex = getTypeIndex(UnderlyingTypeRef);
@@ -970,20 +979,54 @@ TypeIndex CodeViewDebug::lowerTypePointer(const DIDerivedType *Ty) {
   return TypeTable.writePointer(PR);
 }
 
+static PointerToMemberRepresentation
+translatePtrToMemberRep(unsigned SizeInBytes, bool IsPMF, unsigned Flags) {
+  // SizeInBytes being zero generally implies that the member pointer type was
+  // incomplete, which can happen if it is part of a function prototype. In this
+  // case, use the unknown model instead of the general model.
+  if (IsPMF) {
+    switch (Flags & DINode::FlagPtrToMemberRep) {
+    case 0:
+      return SizeInBytes == 0 ? PointerToMemberRepresentation::Unknown
+                              : PointerToMemberRepresentation::GeneralFunction;
+    case DINode::FlagSingleInheritance:
+      return PointerToMemberRepresentation::SingleInheritanceFunction;
+    case DINode::FlagMultipleInheritance:
+      return PointerToMemberRepresentation::MultipleInheritanceFunction;
+    case DINode::FlagVirtualInheritance:
+      return PointerToMemberRepresentation::VirtualInheritanceFunction;
+    }
+  } else {
+    switch (Flags & DINode::FlagPtrToMemberRep) {
+    case 0:
+      return SizeInBytes == 0 ? PointerToMemberRepresentation::Unknown
+                              : PointerToMemberRepresentation::GeneralData;
+    case DINode::FlagSingleInheritance:
+      return PointerToMemberRepresentation::SingleInheritanceData;
+    case DINode::FlagMultipleInheritance:
+      return PointerToMemberRepresentation::MultipleInheritanceData;
+    case DINode::FlagVirtualInheritance:
+      return PointerToMemberRepresentation::VirtualInheritanceData;
+    }
+  }
+  llvm_unreachable("invalid ptr to member representation");
+}
+
 TypeIndex CodeViewDebug::lowerTypeMemberPointer(const DIDerivedType *Ty) {
   assert(Ty->getTag() == dwarf::DW_TAG_ptr_to_member_type);
   TypeIndex ClassTI = getTypeIndex(Ty->getClassType());
   TypeIndex PointeeTI = getTypeIndex(Ty->getBaseType());
   PointerKind PK = Asm->MAI->getPointerSize() == 8 ? PointerKind::Near64
                                                    : PointerKind::Near32;
-  PointerMode PM = isa<DISubroutineType>(Ty->getBaseType())
-                       ? PointerMode::PointerToMemberFunction
-                       : PointerMode::PointerToDataMember;
+  bool IsPMF = isa<DISubroutineType>(Ty->getBaseType());
+  PointerMode PM = IsPMF ? PointerMode::PointerToMemberFunction
+                         : PointerMode::PointerToDataMember;
   PointerOptions PO = PointerOptions::None; // FIXME
-  // FIXME: Thread this ABI info through metadata.
-  PointerToMemberRepresentation PMR = PointerToMemberRepresentation::Unknown;
-  MemberPointerInfo MPI(ClassTI, PMR);
-  PointerRecord PR(PointeeTI, PK, PM, PO, Ty->getSizeInBits() / 8, MPI);
+  assert(Ty->getSizeInBits() / 8 <= 0xff && "pointer size too big");
+  uint8_t SizeInBytes = Ty->getSizeInBits() / 8;
+  MemberPointerInfo MPI(
+      ClassTI, translatePtrToMemberRep(SizeInBytes, IsPMF, Ty->getFlags()));
+  PointerRecord PR(PointeeTI, PK, PM, PO, SizeInBytes, MPI);
   return TypeTable.writePointer(PR);
 }
 
@@ -1086,14 +1129,26 @@ static ClassOptions getRecordUniqueNameOption(const DICompositeType *Ty) {
 TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
   ClassOptions CO = ClassOptions::None | getRecordUniqueNameOption(Ty);
   TypeIndex FTI;
-  unsigned FieldCount = 0;
+  unsigned EnumeratorCount = 0;
 
-  if (Ty->isForwardDecl())
+  if (Ty->isForwardDecl()) {
     CO |= ClassOptions::ForwardReference;
-  else
-    std::tie(FTI, FieldCount) = lowerRecordFieldList(Ty);
+  } else {
+    FieldListRecordBuilder Fields;
+    for (const DINode *Element : Ty->getElements()) {
+      // We assume that the frontend provides all members in source declaration
+      // order, which is what MSVC does.
+      if (auto *Enumerator = dyn_cast_or_null<DIEnumerator>(Element)) {
+        Fields.writeEnumerator(EnumeratorRecord(
+            MemberAccess::Public, APSInt::getUnsigned(Enumerator->getValue()),
+            Enumerator->getName()));
+        EnumeratorCount++;
+      }
+    }
+    FTI = TypeTable.writeFieldList(Fields);
+  }
 
-  return TypeTable.writeEnum(EnumRecord(FieldCount, CO, FTI, Ty->getName(),
+  return TypeTable.writeEnum(EnumRecord(EnumeratorCount, CO, FTI, Ty->getName(),
                                         Ty->getIdentifier(),
                                         getTypeIndex(Ty->getBaseType())));
 }
@@ -1189,10 +1244,6 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
       }
       // FIXME: Get clang to emit nested types here and do something with
       // them.
-    } else if (auto *Enumerator = dyn_cast<DIEnumerator>(Element)) {
-      Fields.writeEnumerator(EnumeratorRecord(
-          MemberAccess::Public, APSInt::getUnsigned(Enumerator->getValue()),
-          Enumerator->getName()));
     }
     // Skip other unrecognized kinds of elements.
   }

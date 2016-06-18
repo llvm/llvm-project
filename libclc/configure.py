@@ -91,28 +91,18 @@ if not cxx_compiler:
 
 available_targets = {
   'r600--' : { 'devices' :
-               [{'gpu' : 'cedar',   'aliases' : ['palm', 'sumo', 'sumo2', 'redwood', 'juniper'],
-                 'defines' : {}},
-                {'gpu' : 'cypress', 'aliases' : ['hemlock'],
-                 'defines' : {}},
-                {'gpu' : 'barts',   'aliases' : ['turks', 'caicos'],
-                 'defines' : {}},
-                {'gpu' : 'cayman',  'aliases' : ['aruba'],
-                 'defines' : {}} ]},
+               [{'gpu' : 'cedar',   'aliases' : ['palm', 'sumo', 'sumo2', 'redwood', 'juniper']},
+                {'gpu' : 'cypress', 'aliases' : ['hemlock'] },
+                {'gpu' : 'barts',   'aliases' : ['turks', 'caicos'] },
+                {'gpu' : 'cayman',  'aliases' : ['aruba']} ]},
   'amdgcn--': { 'devices' :
-                [{'gpu' : 'tahiti', 'aliases' : ['pitcairn', 'verde', 'oland', 'hainan', 'bonaire', 'kabini', 'kaveri', 'hawaii','mullins','tonga','carrizo','iceland','fiji','stoney'],
-                 'defines' : {}} ]},
+                [{'gpu' : 'tahiti', 'aliases' : ['pitcairn', 'verde', 'oland', 'hainan', 'bonaire', 'kabini', 'kaveri', 'hawaii','mullins','tonga','carrizo','iceland','fiji','stoney']} ]},
   'amdgcn--amdhsa': { 'devices' :
-                      [{'gpu' : '', 'aliases' : ['bonaire', 'hawaii', 'kabini', 'kaveri', 'mullins', 'carrizo', 'stoney', 'fiji', 'iceland', 'tonga'],
-                       'defines' : {}} ]},
-  'nvptx--'   : { 'devices' : [{'gpu' : '', 'aliases' : [],
-                                'defines' : {'all' : ['cl_khr_fp64']}}]},
-  'nvptx64--' : { 'devices' : [{'gpu' : '', 'aliases' : [],
-                                'defines' : {'all' : ['cl_khr_fp64']}}]},
-  'nvptx--nvidiacl'   : { 'devices' : [{'gpu' : '', 'aliases' : [],
-                                        'defines' : {'all' : ['cl_khr_fp64']}}]},
-  'nvptx64--nvidiacl' : { 'devices' : [{'gpu' : '', 'aliases' : [],
-                                        'defines' : {'all' : ['cl_khr_fp64']}}]},
+                      [{'gpu' : '', 'aliases' : ['bonaire', 'hawaii', 'kabini', 'kaveri', 'mullins', 'carrizo', 'stoney', 'fiji', 'iceland', 'tonga']} ]},
+  'nvptx--'   : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
+  'nvptx64--' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
+  'nvptx--nvidiacl'   : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
+  'nvptx64--nvidiacl' : { 'devices' : [{'gpu' : '', 'aliases' : []} ]},
 }
 
 default_targets = ['nvptx--nvidiacl', 'nvptx64--nvidiacl', 'r600--', 'amdgcn--', 'amdgcn--amdhsa']
@@ -190,17 +180,10 @@ for target in targets:
 
   for device in available_targets[target]['devices']:
     # The rule for building a .bc file for the specified architecture using clang.
-    device_def_list = (device['defines']['all'] if 'all' in device['defines'] else []);
-    if llvm_string_version in device['defines']:
-        device_def_list += (device['defines'][llvm_string_version]);
-    device_defines = ' '.join(["-D%s" % define for define in device_def_list])
     clang_bc_flags = "-target %s -I`dirname $in` %s " \
                      "-fno-builtin " \
-                     "-Dcl_clang_storage_class_specifiers " \
-                     "%s " \
-                     "-Dcles_khr_int64 " \
                      "-D__CLC_INTERNAL " \
-                     "-emit-llvm" % (target, clang_cl_includes, device_defines)
+                     "-emit-llvm" % (target, clang_cl_includes)
     if device['gpu'] != '':
       clang_bc_flags += ' -mcpu=' + device['gpu']
     clang_bc_rule = "CLANG_CL_BC_" + target + "_" + device['gpu']

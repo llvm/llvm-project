@@ -365,9 +365,8 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
       continue;
 
     if (auto *BCI = dyn_cast<BitCastInst>(Ptr)) {
-      if (!Seen.count(BCI->getOperand(0))) {
+      if (Seen.insert(BCI->getOperand(0)).second) {
         LoadOperandsQueue.push_back(BCI->getOperand(0));
-        Seen.insert(BCI->getOperand(0));
       }
     }
 
@@ -377,9 +376,8 @@ MemoryDependenceResults::getInvariantGroupPointerDependency(LoadInst *LI,
         continue;
 
       if (auto *BCI = dyn_cast<BitCastInst>(U)) {
-        if (!Seen.count(BCI)) {
+        if (Seen.insert(BCI).second) {
           LoadOperandsQueue.push_back(BCI);
-          Seen.insert(BCI);
         }
         continue;
       }

@@ -78,11 +78,10 @@ define void @test_stream_sd(double* %p, <2 x double> %a) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movntsd %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %bc = bitcast double* %p to i8*
-  call void @llvm.x86.sse4a.movnt.sd(i8* %bc, <2 x double> %a)
+  %1 = extractelement <2 x double> %a, i64 0
+  store double %1, double* %p, align 1, !nontemporal !1
   ret void
 }
-declare void @llvm.x86.sse4a.movnt.sd(i8*, <2 x double>) nounwind readnone
 
 define void @test_mm_stream_ss(float* %p, <4 x float> %a) {
 ; X32-LABEL: test_mm_stream_ss:
@@ -95,8 +94,9 @@ define void @test_mm_stream_ss(float* %p, <4 x float> %a) {
 ; X64:       # BB#0:
 ; X64-NEXT:    movntss %xmm0, (%rdi)
 ; X64-NEXT:    retq
-  %bc = bitcast float* %p to i8*
-  call void @llvm.x86.sse4a.movnt.ss(i8* %bc, <4 x float> %a)
+  %1 = extractelement <4 x float> %a, i64 0
+  store float %1, float* %p, align 1, !nontemporal !1
   ret void
 }
-declare void @llvm.x86.sse4a.movnt.ss(i8*, <4 x float>) nounwind readnone
+
+!1 = !{i32 1}

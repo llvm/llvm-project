@@ -18,16 +18,23 @@
 
 #include <experimental/filesystem>
 #include <type_traits>
-#include <chrono>
-#include <thread>
 #include <cassert>
 
 #include "test_macros.h"
 #include "rapid-cxx-test.hpp"
 #include "filesystem_test_helper.hpp"
 
+#include <sys/types.h>
+#include <sys/stat.h>
+
 using namespace std::experimental::filesystem;
 namespace fs = std::experimental::filesystem;
+
+fs::perms read_umask() {
+    mode_t old_mask = umask(0);
+    umask(old_mask); // reset the mask to the old value.
+    return static_cast<fs::perms>(old_mask);
+}
 
 TEST_SUITE(filesystem_create_directory_test_suite)
 
@@ -68,15 +75,8 @@ TEST_CASE(create_directory_one_level)
     TEST_CHECK(is_directory(dir));
 
     auto st = status(dir);
-    perms owner_perms = perms::owner_all;
-    perms gperms = perms::group_all;
-    perms other_perms = perms::others_read | perms::others_exec;
-#if defined(__APPLE__) || defined(__FreeBSD__)
-    gperms = perms::group_read | perms::group_exec;
-#endif
-    TEST_CHECK((st.permissions() & perms::owner_all) == owner_perms);
-    TEST_CHECK((st.permissions() & perms::group_all) == gperms);
-    TEST_CHECK((st.permissions() & perms::others_all) == other_perms);
+    const perms expect_perms = perms::all & ~(read_umask());
+    TEST_CHECK((st.permissions() & perms::all) == expect_perms);
 }
 
 TEST_CASE(create_directory_multi_level)

@@ -35,7 +35,6 @@ std::reverse_iterator<It> mkRev(It it) {
   return std::reverse_iterator<It>(it);
 }
 
-
 void checkIteratorConcepts() {
   using namespace fs;
   using It = path::iterator;
@@ -87,14 +86,17 @@ void checkBeginEndBasic() {
     path p("//root_name//first_dir////second_dir");
     const path expect[] = {"//root_name", "/", "first_dir", "second_dir"};
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
-    assert(checkCollectionsEqual(mkRev(p.end()), mkRev(p.begin()), mkRev(std::end(expect)), mkRev(std::begin(expect))));
+    assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
+
   }
   {
     path p("////foo/bar/baz///");
     const path expect[] = {"/", "foo", "bar", "baz", "."};
     assert(checkCollectionsEqual(p.begin(), p.end(), std::begin(expect), std::end(expect)));
-    assert(checkCollectionsEqual(mkRev(p.end()), mkRev(p.begin()), mkRev(std::end(expect)), mkRev(std::begin(expect))));
+    assert(checkCollectionsEqualBackwards(p.begin(), p.end(), std::begin(expect), std::end(expect)));
+
   }
+
 }
 
 int main() {

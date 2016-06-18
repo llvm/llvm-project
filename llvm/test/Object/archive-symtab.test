@@ -99,6 +99,12 @@ MACHO-NEXT: 0000000000000000 t _bar
 MACHO-NEXT: 0000000000000001 T _foo
 MACHO-NEXT: 0000000000000002 T _main
 
+RUN: llvm-nm -M %p/Inputs/macho-toc64-archive-x86_64.a | FileCheck --check-prefix=MACHO-TOC64 %s
+
+MACHO-TOC64: Archive map
+MACHO-TOC64-NEXT: _test in test.o
+MACHO-TOC64-NEXT: _test in xtest.o
+
 RUN: rm -f %t.a
 RUN: llvm-ar --format=gnu rcsU %t.a %p/Inputs/coff-short-import-code %p/Inputs/coff-short-import-data
 RUN: llvm-nm -M %t.a | FileCheck --check-prefix=COFF-SHORT-IMPORT %s

@@ -552,14 +552,14 @@ BitcodeDiagnosticInfo::BitcodeDiagnosticInfo(std::error_code EC,
 
 void BitcodeDiagnosticInfo::print(DiagnosticPrinter &DP) const { DP << Msg; }
 
-static std::error_code error(DiagnosticHandlerFunction DiagnosticHandler,
+static std::error_code error(const DiagnosticHandlerFunction &DiagnosticHandler,
                              std::error_code EC, const Twine &Message) {
   BitcodeDiagnosticInfo DI(EC, DS_Error, Message);
   DiagnosticHandler(DI);
   return EC;
 }
 
-static std::error_code error(DiagnosticHandlerFunction DiagnosticHandler,
+static std::error_code error(const DiagnosticHandlerFunction &DiagnosticHandler,
                              std::error_code EC) {
   return error(DiagnosticHandler, EC, EC.message());
 }
@@ -6572,9 +6572,9 @@ std::string llvm::getBitcodeProducerString(MemoryBufferRef Buffer,
 }
 
 // Parse the specified bitcode buffer, returning the function info index.
-ErrorOr<std::unique_ptr<ModuleSummaryIndex>>
-llvm::getModuleSummaryIndex(MemoryBufferRef Buffer,
-                            DiagnosticHandlerFunction DiagnosticHandler) {
+ErrorOr<std::unique_ptr<ModuleSummaryIndex>> llvm::getModuleSummaryIndex(
+    MemoryBufferRef Buffer,
+    const DiagnosticHandlerFunction &DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
   ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler);
 
@@ -6593,8 +6593,9 @@ llvm::getModuleSummaryIndex(MemoryBufferRef Buffer,
 }
 
 // Check if the given bitcode buffer contains a global value summary block.
-bool llvm::hasGlobalValueSummary(MemoryBufferRef Buffer,
-                                 DiagnosticHandlerFunction DiagnosticHandler) {
+bool llvm::hasGlobalValueSummary(
+    MemoryBufferRef Buffer,
+    const DiagnosticHandlerFunction &DiagnosticHandler) {
   std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
   ModuleSummaryIndexBitcodeReader R(Buf.get(), DiagnosticHandler, true);
 

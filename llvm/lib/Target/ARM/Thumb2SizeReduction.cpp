@@ -461,7 +461,7 @@ Thumb2SizeReduce::ReduceLoadStore(MachineBasicBlock &MBB, MachineInstr *MI,
     MIB.setMIFlags(MI->getFlags());
 
     // Kill the old instruction.
-    MI->eraseFromParent();
+    MI->eraseFromBundle();
     ++NumLdSts;
     return true;
   }

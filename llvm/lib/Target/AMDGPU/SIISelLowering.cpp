@@ -200,6 +200,7 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
 
   // On SI this is s_memtime and s_memrealtime on VI.
   setOperationAction(ISD::READCYCLECOUNTER, MVT::i64, Legal);
+  setOperationAction(ISD::TRAP, MVT::Other, Custom);
 
   setOperationAction(ISD::FMINNUM, MVT::f64, Legal);
   setOperationAction(ISD::FMAXNUM, MVT::f64, Legal);
@@ -1178,6 +1179,7 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INTRINSIC_W_CHAIN: return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID: return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ADDRSPACECAST: return lowerADDRSPACECAST(Op, DAG);
+  case ISD::TRAP: return lowerTRAP(Op, DAG);
   }
   return SDValue();
 }
@@ -1426,7 +1428,7 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
 
   SDLoc DL(GSD);
   const GlobalValue *GV = GSD->getGlobal();
-  MVT PtrVT = getPointerTy(DAG.getDataLayout(), GSD->getAddressSpace());
+  EVT PtrVT = Op.getValueType();
 
   // In order to support pc-relative addressing, the PC_ADD_REL_OFFSET SDNode is
   // lowered to the following code sequence:
@@ -1448,6 +1450,23 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32,
                                           GSD->getOffset() + 4);
   return DAG.getNode(AMDGPUISD::PC_ADD_REL_OFFSET, DL, PtrVT, GA);
+}
+
+SDValue SITargetLowering::lowerTRAP(SDValue Op,
+                                    SelectionDAG &DAG) const {
+  const MachineFunction &MF = DAG.getMachineFunction();
+  DiagnosticInfoUnsupported NoTrap(*MF.getFunction(),
+                                   "trap handler not supported",
+                                   Op.getDebugLoc(),
+                                   DS_Warning);
+  DAG.getContext()->diagnose(NoTrap);
+
+  // Emit s_endpgm.
+
+  // FIXME: This should really be selected to s_trap, but that requires
+  // setting up the trap handler for it o do anything.
+  return DAG.getNode(AMDGPUISD::RET_FLAG, SDLoc(Op), MVT::Other, Op.
+                     getOperand(0));
 }
 
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain,

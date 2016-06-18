@@ -165,6 +165,7 @@ recursive_directory_iterator::recursive_directory_iterator(const path& p,
     directory_options opt, error_code *ec)
     : __imp_(nullptr), __rec_(true)
 {
+    if (ec) ec->clear();
     std::error_code m_ec;
     __dir_stream new_s(p, opt, m_ec);
     if (m_ec) set_or_throw(m_ec, ec, "recursive_directory_iterator", p);
@@ -178,13 +179,12 @@ recursive_directory_iterator::recursive_directory_iterator(const path& p,
 void recursive_directory_iterator::__pop(error_code* ec)
 {
     _LIBCPP_ASSERT(__imp_, "Popping the end iterator");
+    if (ec) ec->clear();
     __imp_->__stack_.pop();
-    if (__imp_->__stack_.size() == 0) {
+    if (__imp_->__stack_.size() == 0)
         __imp_.reset();
-        if (ec) ec->clear();
-    } else {
+    else
         __advance(ec);
-    }
 }
 
 directory_options recursive_directory_iterator::options() const {
@@ -202,6 +202,7 @@ const directory_entry& recursive_directory_iterator::__deref() const {
 recursive_directory_iterator&
 recursive_directory_iterator::__increment(error_code *ec)
 {
+    if (ec) ec->clear();
     if (recursion_pending()) {
         if (__try_recursion(ec) || (ec && *ec))
             return *this;
@@ -212,14 +213,13 @@ recursive_directory_iterator::__increment(error_code *ec)
 }
 
 void recursive_directory_iterator::__advance(error_code* ec) {
+    // REQUIRES: ec must be cleared before calling this function.
     const directory_iterator end_it;
     auto& stack = __imp_->__stack_;
     std::error_code m_ec;
     while (stack.size() > 0) {
-        if (stack.top().advance(m_ec)) {
-            if (ec) ec->clear();
+        if (stack.top().advance(m_ec))
             return;
-        }
         if (m_ec) break;
         stack.pop();
     }
