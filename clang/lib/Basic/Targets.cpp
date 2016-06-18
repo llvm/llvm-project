@@ -1862,6 +1862,19 @@ public:
 
     return GPU != GK_NONE;
   }
+  void setSupportedOpenCLOpts() override {
+    auto &Opts = getSupportedOpenCLOpts();
+    Opts.cl_clang_storage_class_specifiers = 1;
+    Opts.cl_khr_gl_sharing = 1;
+    Opts.cl_khr_icd = 1;
+
+    Opts.cl_khr_fp64 = 1;
+    Opts.cl_khr_byte_addressable_store = 1;
+    Opts.cl_khr_global_int32_base_atomics = 1;
+    Opts.cl_khr_global_int32_extended_atomics = 1;
+    Opts.cl_khr_local_int32_base_atomics = 1;
+    Opts.cl_khr_local_int32_extended_atomics = 1;
+  }
 };
 
 const Builtin::Info NVPTXTargetInfo::BuiltinInfo[] = {

@@ -502,6 +502,13 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
                                                        << A->getAsString(Args);
         }
       }
+    } else if (A->getOption().matches(options::OPT_isystem_after)) {
+      // Handling of paths which must come late.  These entries are handled by
+      // the toolchain itself after the resource dir is inserted in the right
+      // search order.
+      // Do not claim the argument so that the use of the argument does not
+      // silently go unnoticed on toolchains which do not honour the option.
+      continue;
     }
 
     // Not translated, render as usual.

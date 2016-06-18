@@ -1287,6 +1287,9 @@ def isysroot : JoinedOrSeparate<["-"], "isysroot">, Group<clang_i_Group>, Flags<
 def isystem : JoinedOrSeparate<["-"], "isystem">, Group<clang_i_Group>,
   Flags<[CC1Option]>,
   HelpText<"Add directory to SYSTEM include search path">, MetaVarName<"<directory>">;
+def isystem_after : JoinedOrSeparate<["-"], "isystem-after">,
+  Group<clang_i_Group>, Flags<[DriverOption]>, MetaVarName<"<directory>">,
+  HelpText<"Add directory to end of the SYSTEM include search path">;
 def iwithprefixbefore : JoinedOrSeparate<["-"], "iwithprefixbefore">, Group<clang_i_Group>,
   HelpText<"Set directory to include search path with prefix">, MetaVarName<"<dir>">,
   Flags<[CC1Option]>;
