@@ -1457,6 +1457,13 @@ static void ParseAPINotesArgs(APINotesOptions &Opts, ArgList &Args) {
     Opts.ModuleSearchPaths.push_back(A->getValue());
 }
 
+bool isOpenCL(LangStandard::Kind LangStd) {
+  return LangStd == LangStandard::lang_opencl
+    || LangStd == LangStandard::lang_opencl11
+    || LangStd == LangStandard::lang_opencl12
+    || LangStd == LangStandard::lang_opencl20;
+}
+
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
                                          const llvm::Triple &T,
                                          LangStandard::Kind LangStd) {
@@ -1524,7 +1531,7 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
   Opts.ImplicitInt = Std.hasImplicitInt();
 
   // Set OpenCL Version.
-  Opts.OpenCL = LangStd == LangStandard::lang_opencl || IK == IK_OpenCL;
+  Opts.OpenCL = isOpenCL(LangStd) || IK == IK_OpenCL;
   if (LangStd == LangStandard::lang_opencl)
     Opts.OpenCLVersion = 100;
   else if (LangStd == LangStandard::lang_opencl11)
@@ -1596,6 +1603,8 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     LangStd = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
 #define LANGSTANDARD(id, name, desc, features) \
       .Case(name, LangStandard::lang_##id)
+#define LANGSTANDARD_ALIAS(id, alias) \
+      .Case(alias, LangStandard::lang_##id)
 #include "clang/Frontend/LangStandards.def"
       .Default(LangStandard::lang_unspecified);
     if (LangStd == LangStandard::lang_unspecified)
@@ -1623,8 +1632,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
             << A->getAsString(Args) << "C++/ObjC++";
         break;
       case IK_OpenCL:
-        Diags.Report(diag::err_drv_argument_not_allowed_with)
-          << A->getAsString(Args) << "OpenCL";
+        if (!isOpenCL(LangStd))
+          Diags.Report(diag::err_drv_argument_not_allowed_with)
+            << A->getAsString(Args) << "OpenCL";
         break;
       case IK_CUDA:
       case IK_PreprocessedCuda:
@@ -1643,10 +1653,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (const Arg *A = Args.getLastArg(OPT_cl_std_EQ)) {
     LangStandard::Kind OpenCLLangStd
     = llvm::StringSwitch<LangStandard::Kind>(A->getValue())
-    .Case("CL", LangStandard::lang_opencl)
-    .Case("CL1.1", LangStandard::lang_opencl11)
-    .Case("CL1.2", LangStandard::lang_opencl12)
-    .Case("CL2.0", LangStandard::lang_opencl20)
+    .Cases("cl", "CL", LangStandard::lang_opencl)
+    .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
+    .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
+    .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
     .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {

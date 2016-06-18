@@ -84,7 +84,7 @@ struct g13_s0 g13[] = {
    { (long) &g12_tmp }
 };
 
-// CHECK: @g14 = global i8* inttoptr (i64 100 to i8*)
+// CHECK: @g14 = global i8* inttoptr (i32 100 to i8*)
 void *g14 = (void*) 100;
 
 // CHECK: @g15 = global i32 -1

@@ -1172,6 +1172,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DIType *ContainingType = nullptr;
   unsigned Virtuality = 0;
   unsigned VIndex = 0;
+  unsigned Flags = 0;
 
   if (Method->isVirtual()) {
     if (Method->isPure())
@@ -1199,7 +1200,6 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
     ContainingType = RecordTy;
   }
 
-  unsigned Flags = 0;
   if (Method->isImplicit())
     Flags |= llvm::DINode::FlagArtificial;
   Flags |= getAccessFlag(Method->getAccess(), Method->getParent());
@@ -2049,12 +2049,35 @@ llvm::DIType *CGDebugInfo::CreateType(const RValueReferenceType *Ty,
 
 llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
                                       llvm::DIFile *U) {
-  uint64_t Size =
-      !Ty->isIncompleteType() ? CGM.getContext().getTypeSize(Ty) : 0;
+  unsigned Flags = 0;
+  uint64_t Size = 0;
+
+  if (!Ty->isIncompleteType()) {
+    Size = CGM.getContext().getTypeSize(Ty);
+
+    // Set the MS inheritance model. There is no flag for the unspecified model.
+    if (CGM.getTarget().getCXXABI().isMicrosoft()) {
+      switch (Ty->getMostRecentCXXRecordDecl()->getMSInheritanceModel()) {
+      case MSInheritanceAttr::Keyword_single_inheritance:
+        Flags |= llvm::DINode::FlagSingleInheritance;
+        break;
+      case MSInheritanceAttr::Keyword_multiple_inheritance:
+        Flags |= llvm::DINode::FlagMultipleInheritance;
+        break;
+      case MSInheritanceAttr::Keyword_virtual_inheritance:
+        Flags |= llvm::DINode::FlagVirtualInheritance;
+        break;
+      case MSInheritanceAttr::Keyword_unspecified_inheritance:
+        break;
+      }
+    }
+  }
+
   llvm::DIType *ClassType = getOrCreateType(QualType(Ty->getClass(), 0), U);
   if (Ty->isMemberDataPointerType())
     return DBuilder.createMemberPointerType(
-        getOrCreateType(Ty->getPointeeType(), U), ClassType, Size);
+        getOrCreateType(Ty->getPointeeType(), U), ClassType, Size, /*Align=*/0,
+        Flags);
 
   const FunctionProtoType *FPT =
       Ty->getPointeeType()->getAs<FunctionProtoType>();
@@ -2062,7 +2085,7 @@ llvm::DIType *CGDebugInfo::CreateType(const MemberPointerType *Ty,
       getOrCreateInstanceMethodType(CGM.getContext().getPointerType(QualType(
                                         Ty->getClass(), FPT->getTypeQuals())),
                                     FPT, U),
-      ClassType, Size);
+      ClassType, Size, /*Align=*/0, Flags);
 }
 
 llvm::DIType *CGDebugInfo::CreateType(const AtomicType *Ty, llvm::DIFile *U) {
