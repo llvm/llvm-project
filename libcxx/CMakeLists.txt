@@ -310,6 +310,7 @@ add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
     -Wall -W -Wwrite-strings
     -Wno-unused-parameter -Wno-long-long -Wno-user-defined-literals
+    -Wno-covered-switch-default
     -Werror=return-type)
 if (LIBCXX_ENABLE_WERROR)
   add_compile_flags_if_supported(-Werror)

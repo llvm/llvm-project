@@ -2821,9 +2821,7 @@ _mm_movemask_ps(__m128 __a)
 }
 
 
-#ifdef _MSC_VER
-#define _MM_ALIGN16 __declspec(align(16))
-#endif
+#define _MM_ALIGN16 __attribute__((aligned(16)))
 
 #define _MM_SHUFFLE(z, y, x, w) (((z) << 6) | ((y) << 4) | ((x) << 2) | (w))
 
