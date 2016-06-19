@@ -1942,3 +1942,29 @@ bool llvm::recognizeBSwapOrBitReverseIdiom(
   InsertedInsts.push_back(CallInst::Create(F, Res->Provider, "rev", I));
   return true;
 }
+
+// CodeGen has special handling for some string functions that may replace
+// them with target-specific intrinsics.  Since that'd skip our interceptors
+// in ASan/MSan/TSan/DFSan, and thus make us miss some memory accesses,
+// we mark affected calls as NoBuiltin, which will disable optimization
+// in CodeGen.
+void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
+                                          const TargetLibraryInfo *TLI) {
+  Function *F = CI->getCalledFunction();
+  LibFunc::Func Func;
+  if (!F || F->hasLocalLinkage() || !F->hasName() ||
+      !TLI->getLibFunc(F->getName(), Func))
+    return;
+  switch (Func) {
+    default: break;
+    case LibFunc::memcmp:
+    case LibFunc::memchr:
+    case LibFunc::strcpy:
+    case LibFunc::stpcpy:
+    case LibFunc::strcmp:
+    case LibFunc::strlen:
+    case LibFunc::strnlen:
+      CI->addAttribute(AttributeSet::FunctionIndex, Attribute::NoBuiltin);
+      break;
+  }
+}

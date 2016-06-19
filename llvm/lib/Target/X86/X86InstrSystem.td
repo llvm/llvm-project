@@ -562,7 +562,7 @@ let usesCustomInserter = 1 in {
                 [(set GR32:$dst, (int_x86_rdpkru))]>;
 }
 
-let Defs = [EAX, EDX], Uses = [ECX] in 
+let Defs = [EAX, EDX], Uses = [ECX] in
   def RDPKRUr : I<0x01, MRM_EE, (outs), (ins), "rdpkru", []>, TB;
 let Uses = [EAX, ECX, EDX] in
   def WRPKRUr : I<0x01, MRM_EF, (outs), (ins), "wrpkru", []>, TB;

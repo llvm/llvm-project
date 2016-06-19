@@ -486,9 +486,45 @@ bool __fs_is_empty(const path& p, std::error_code *ec)
 }
 
 
+namespace detail { namespace {
+
+template <class CType, class ChronoType>
+bool checked_set(CType* out, ChronoType time) {
+    using Lim = numeric_limits<CType>;
+    if (time > Lim::max() || time < Lim::min())
+        return false;
+    *out = static_cast<CType>(time);
+    return true;
+}
+
+constexpr long long min_seconds = file_time_type::duration::min().count()
+    / file_time_type::period::den;
+
+template <class SubSecDurT, class SubSecT>
+bool set_times_checked(time_t* sec_out, SubSecT* subsec_out, file_time_type tp) {
+    using namespace chrono;
+    auto dur = tp.time_since_epoch();
+    auto sec_dur = duration_cast<seconds>(dur);
+    auto subsec_dur = duration_cast<SubSecDurT>(dur - sec_dur);
+    // The tv_nsec and tv_usec fields must not be negative so adjust accordingly
+    if (subsec_dur.count() < 0) {
+        if (sec_dur.count() > min_seconds) {
+
+            sec_dur -= seconds(1);
+            subsec_dur += seconds(1);
+        } else {
+            subsec_dur = SubSecDurT::zero();
+        }
+    }
+    return checked_set(sec_out, sec_dur.count())
+        && checked_set(subsec_out, subsec_dur.count());
+}
+
+}} // end namespace detail
+
+
 file_time_type __last_write_time(const path& p, std::error_code *ec)
 {
-    using Clock = file_time_type::clock;
     std::error_code m_ec;
     struct ::stat st;
     detail::posix_stat(p, st, &m_ec);
@@ -497,9 +533,8 @@ file_time_type __last_write_time(const path& p, std::error_code *ec)
         return file_time_type::min();
     }
     if (ec) ec->clear();
-    return Clock::from_time_t(static_cast<std::time_t>(st.st_mtime));
+    return file_time_type::clock::from_time_t(st.st_mtime);
 }
-
 
 void __last_write_time(const path& p, file_time_type new_time,
                        std::error_code *ec)
@@ -513,34 +548,38 @@ void __last_write_time(const path& p, file_time_type new_time,
     // This implementation has a race condition between determining the
     // last access time and attempting to set it to the same value using
     // ::utimes
-    using Clock = file_time_type::clock;
     struct ::stat st;
     file_status fst = detail::posix_stat(p, st, &m_ec);
     if (m_ec && !status_known(fst)) {
         set_or_throw(m_ec, ec, "last_write_time", p);
         return;
     }
-    auto write_dur = new_time.time_since_epoch();
-    auto write_sec = duration_cast<seconds>(write_dur);
-    auto access_dur = Clock::from_time_t(st.st_atime).time_since_epoch();
-    auto access_sec = duration_cast<seconds>(access_dur);
     struct ::timeval tbuf[2];
-    tbuf[0].tv_sec = access_sec.count();
-    tbuf[0].tv_usec = duration_cast<microseconds>(access_dur - access_sec).count();
-    tbuf[1].tv_sec = write_sec.count();
-    tbuf[1].tv_usec = duration_cast<microseconds>(write_dur - write_sec).count();
+    tbuf[0].tv_sec = st.st_atime;
+    tbuf[0].tv_usec = 0;
+    const bool overflowed = !detail::set_times_checked<microseconds>(
+        &tbuf[1].tv_sec, &tbuf[1].tv_usec, new_time);
+
+    if (overflowed) {
+        set_or_throw(make_error_code(errc::invalid_argument), ec,
+                     "last_write_time", p);
+        return;
+    }
     if (::utimes(p.c_str(), tbuf) == -1) {
         m_ec = detail::capture_errno();
     }
 #else
-    auto dur_since_epoch = new_time.time_since_epoch();
-    auto sec_since_epoch = duration_cast<seconds>(dur_since_epoch);
-    auto ns_since_epoch = duration_cast<nanoseconds>(dur_since_epoch - sec_since_epoch);
     struct ::timespec tbuf[2];
     tbuf[0].tv_sec = 0;
     tbuf[0].tv_nsec = UTIME_OMIT;
-    tbuf[1].tv_sec = sec_since_epoch.count();
-    tbuf[1].tv_nsec = ns_since_epoch.count();
+
+    const bool overflowed = !detail::set_times_checked<nanoseconds>(
+        &tbuf[1].tv_sec, &tbuf[1].tv_nsec, new_time);
+    if (overflowed) {
+        set_or_throw(make_error_code(errc::invalid_argument),
+            ec, "last_write_time", p);
+        return;
+    }
     if (::utimensat(AT_FDCWD, p.c_str(), tbuf, 0) == -1) {
         m_ec = detail::capture_errno();
     }

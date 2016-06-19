@@ -115,23 +115,25 @@
 ; CHECK:   }
 ; CHECK:   ArgList (0x1008) {
 ; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
-; CHECK:     NumArgs: 1
+; CHECK:     NumArgs: 0
 ; CHECK:     Arguments [
-; CHECK:       ArgType: A* (0x1007)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Procedure (0x1009) {
-; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
-; CHECK:     ReturnType: void (0x3)
-; CHECK:     CallingConvention: NearC (0x0)
-; CHECK:     FunctionOptions [ (0x0)
-; CHECK:     ]
-; CHECK:     NumParameters: 1
-; CHECK:     ArgListType: (A*) (0x1008)
-; CHECK:   }
+; CHECK:  MemberFunction (0x1009) {
+; CHECK:    TypeLeafKind: LF_MFUNCTION (0x1009)
+; CHECK:    ReturnType: void (0x3)
+; CHECK:    ClassType: A (0x1005)
+; CHECK:    ThisType: A* (0x1007)
+; CHECK:    CallingConvention: NearC (0x0)
+; CHECK:    FunctionOptions [ (0x0)
+; CHECK:    ]
+; CHECK:    NumParameters: 0
+; CHECK:    ArgListType: () (0x1008)
+; CHECK:    ThisAdjustment: 0
+; CHECK:  }
 ; CHECK:   Pointer (0x100A) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: void (A*) (0x1009)
+; CHECK:     PointeeType: void A::() (0x1009)
 ; CHECK:     PointerAttributes: 0x1006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
@@ -160,25 +162,19 @@
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:   }
-; CHECK:   ArgList (0x100D) {
-; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
-; CHECK:     NumArgs: 0
-; CHECK:     Arguments [
-; CHECK:     ]
-; CHECK:   }
-; CHECK:   Procedure (0x100E) {
+; CHECK:   Procedure (0x100D) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 0
-; CHECK:     ArgListType: () (0x100D)
+; CHECK:     ArgListType: () (0x1008)
 ; CHECK:   }
-; CHECK:   FuncId (0x100F) {
+; CHECK:   FuncId (0x100E) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void () (0x100E)
+; CHECK:     FunctionType: void () (0x100D)
 ; CHECK:     Name: CharTypes
 ; CHECK:   }
 ; CHECK: ]
@@ -239,7 +235,7 @@
 ; CHECK:       VarName: v4
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: void (A*) A::* (0x100A)
+; CHECK:       Type: void A::() A::* (0x100A)
 ; CHECK:       VarName: v5
 ; CHECK:     }
 ; CHECK:     Local {
@@ -267,7 +263,7 @@
 ; CHECK:   ]
 ; CHECK:   Subsection [
 ; CHECK:     ProcStart {
-; CHECK:       Type: CharTypes (0x100F)
+; CHECK:       Type: CharTypes (0x100E)
 ; CHECK:       DisplayName: CharTypes
 ; CHECK:       LinkageName: ?CharTypes@@YAXXZ
 ; CHECK:     }

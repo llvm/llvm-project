@@ -324,26 +324,22 @@
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:   }
-; CHECK:   ArgList (0x1017) {
-; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
-; CHECK:     NumArgs: 1
-; CHECK:     Arguments [
-; CHECK:       ArgType: DerivedClass* (0x1016)
-; CHECK:     ]
-; CHECK:   }
-; CHECK:   Procedure (0x1018) {
-; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
+; CHECK:   MemberFunction (0x1017) {
+; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: void (0x3)
+; CHECK:     ClassType: DerivedClass (0x100D)
+; CHECK:     ThisType: DerivedClass* (0x1016)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
-; CHECK:     NumParameters: 1
-; CHECK:     ArgListType: (DerivedClass*) (0x1017)
+; CHECK:     NumParameters: 0
+; CHECK:     ArgListType: () (0x1000)
+; CHECK:     ThisAdjustment: 0
 ; CHECK:   }
-; CHECK:   FuncId (0x1019) {
+; CHECK:   FuncId (0x1018) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void (DerivedClass*) (0x1018)
+; CHECK:     FunctionType: void DerivedClass::() (0x1017)
 ; CHECK:     Name: DerivedClass::DerivedClass
 ; CHECK:   }
 ; CHECK: ]

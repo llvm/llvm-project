@@ -40,90 +40,85 @@
 ; CHECK:   }
 ; CHECK:   ArgList (0x1002) {
 ; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
-; CHECK:     NumArgs: 1
-; CHECK:     Arguments [
-; CHECK:       ArgType: A* (0x1001)
-; CHECK:     ]
-; CHECK:   }
-; CHECK:   Procedure (0x1003) {
-; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
-; CHECK:     ReturnType: void (0x3)
-; CHECK:     CallingConvention: ThisCall (0xB)
-; CHECK:     FunctionOptions [ (0x0)
-; CHECK:     ]
-; CHECK:     NumParameters: 1
-; CHECK:     ArgListType: (A*) (0x1002)
-; CHECK:   }
-; CHECK:   FuncId (0x1004) {
-; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
-; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void (A*) (0x1003)
-; CHECK:     Name: A::thiscallcc
-; CHECK:   }
-; CHECK:   ArgList (0x1005) {
-; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
 ; CHECK:     NumArgs: 0
 ; CHECK:     Arguments [
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   Procedure (0x1006) {
+; CHECK:   MemberFunction (0x1003) {
+; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
+; CHECK:     ReturnType: void (0x3)
+; CHECK:     ClassType: A (0x1000)
+; CHECK:     ThisType: A* (0x1001)
+; CHECK:     CallingConvention: ThisCall (0xB)
+; CHECK:     FunctionOptions [ (0x0)
+; CHECK:     ]
+; CHECK:     NumParameters: 0
+; CHECK:     ArgListType: () (0x1002)
+; CHECK:   }
+; CHECK:   FuncId (0x1004) {
+; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
+; CHECK:     ParentScope: 0x0
+; CHECK:     FunctionType: void A::() (0x1003)
+; CHECK:     Name: A::thiscallcc
+; CHECK:   }
+; CHECK:   Procedure (0x1005) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     CallingConvention: NearC (0x0)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 0
-; CHECK:     ArgListType: () (0x1005)
+; CHECK:     ArgListType: () (0x1002)
 ; CHECK:   }
-; CHECK:   FuncId (0x1007) {
+; CHECK:   FuncId (0x1006) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void () (0x1006)
+; CHECK:     FunctionType: void () (0x1005)
 ; CHECK:     Name: cdeclcc
 ; CHECK:   }
-; CHECK:   Procedure (0x1008) {
+; CHECK:   Procedure (0x1007) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     CallingConvention: NearFast (0x4)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 0
-; CHECK:     ArgListType: () (0x1005)
+; CHECK:     ArgListType: () (0x1002)
 ; CHECK:   }
-; CHECK:   FuncId (0x1009) {
+; CHECK:   FuncId (0x1008) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void () (0x1008)
+; CHECK:     FunctionType: void () (0x1007)
 ; CHECK:     Name: fastcallcc
 ; CHECK:   }
-; CHECK:   Procedure (0x100A) {
+; CHECK:   Procedure (0x1009) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     CallingConvention: NearStdCall (0x7)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 0
-; CHECK:     ArgListType: () (0x1005)
+; CHECK:     ArgListType: () (0x1002)
 ; CHECK:   }
-; CHECK:   FuncId (0x100B) {
+; CHECK:   FuncId (0x100A) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void () (0x100A)
+; CHECK:     FunctionType: void () (0x1009)
 ; CHECK:     Name: stdcallcc
 ; CHECK:   }
-; CHECK:   Procedure (0x100C) {
+; CHECK:   Procedure (0x100B) {
 ; CHECK:     TypeLeafKind: LF_PROCEDURE (0x1008)
 ; CHECK:     ReturnType: void (0x3)
 ; CHECK:     CallingConvention: NearVector (0x18)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 0
-; CHECK:     ArgListType: () (0x1005)
+; CHECK:     ArgListType: () (0x1002)
 ; CHECK:   }
-; CHECK:   FuncId (0x100D) {
+; CHECK:   FuncId (0x100C) {
 ; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
 ; CHECK:     ParentScope: 0x0
-; CHECK:     FunctionType: void () (0x100C)
+; CHECK:     FunctionType: void () (0x100B)
 ; CHECK:     Name: vectorcallcc
 ; CHECK:   }
 ; CHECK: ]

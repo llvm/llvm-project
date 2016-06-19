@@ -1,10 +1,14 @@
 ; RUN: llc -march=mipsel -relocation-model=pic < %s | FileCheck %s
 ; RUN: llc -march=mipsel -force-mips-long-branch -O3 -relocation-model=pic < %s \
 ; RUN:   | FileCheck %s -check-prefix=O32
+; RUN: llc -march=mipsel -mcpu=mips32r6 -force-mips-long-branch -O3 \
+; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=O32-R6
 ; RUN: llc -march=mips64el -mcpu=mips4 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
 ; RUN: llc -march=mips64el -mcpu=mips64 -target-abi=n64 -force-mips-long-branch -O3 -relocation-model=pic \
 ; RUN:   < %s | FileCheck %s -check-prefix=N64
+; RUN: llc -march=mips64el -mcpu=mips64r6 -target-abi=n64 -force-mips-long-branch -O3 \
+; RUN:   -relocation-model=pic -asm-show-inst < %s | FileCheck %s -check-prefix=N64-R6
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -mattr=micromips \
 ; RUN:   -force-mips-long-branch -O3 -relocation-model=pic < %s | FileCheck %s -check-prefix=MICROMIPS
 ; RUN: llc -mtriple=mipsel-none-nacl -force-mips-long-branch -O3 -relocation-model=pic < %s \
@@ -72,6 +76,10 @@ end:
 ; O32:        jr      $ra
 ; O32:        nop
 
+; In MIPS32R6 JR is an alias to JALR with $rd=0. As everything else remains the
+; same with the O32 prefix, we use -asm-show-inst in order to make sure that
+; the opcode of the MachineInst is a JALR.
+; O32-R6:     JALR
 
 ; Check the MIPS64 version.
 
@@ -100,6 +108,11 @@ end:
 ; N64:   $[[BB2]]:
 ; N64:        jr      $ra
 ; N64:        nop
+
+; In MIPS64R6 JR is an alias to JALR with $rd=0. As everything else remains the
+; same with the N64 prefix, we use -asm-show-inst in order to make sure that
+; the opcode of the MachineInst is a JALR.
+; N64-R6:     JALR64
 
 
 ; Check the microMIPS version.

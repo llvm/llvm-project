@@ -734,7 +734,7 @@ void MCStreamer::emitAbsoluteSymbolDiff(const MCSymbol *Hi, const MCSymbol *Lo,
                               MCSymbolRefExpr::create(Lo, Context), Context);
 
   const MCAsmInfo *MAI = Context.getAsmInfo();
-  if (!MAI->doesSetDirectiveSuppressesReloc()) {
+  if (!MAI->doesSetDirectiveSuppressReloc()) {
     EmitValue(Diff, Size);
     return;
   }
