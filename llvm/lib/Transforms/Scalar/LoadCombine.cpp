@@ -40,7 +40,7 @@ STATISTIC(NumLoadsCombined, "Number of loads combined");
 namespace {
 struct PointerOffsetPair {
   Value *Pointer;
-  uint64_t Offset;
+  int64_t Offset;
 };
 
 struct LoadPOPPair {
@@ -102,7 +102,7 @@ PointerOffsetPair LoadCombine::getPointerOffsetPair(LoadInst &LI) {
       unsigned BitWidth = DL.getPointerTypeSizeInBits(GEP->getType());
       APInt Offset(BitWidth, 0);
       if (GEP->accumulateConstantOffset(DL, Offset))
-        POP.Offset += Offset.getZExtValue();
+        POP.Offset += Offset.getSExtValue();
       else
         // Can't handle GEPs with variable indices.
         return POP;
@@ -138,28 +138,31 @@ bool LoadCombine::aggregateLoads(SmallVectorImpl<LoadPOPPair> &Loads) {
   LoadInst *BaseLoad = nullptr;
   SmallVector<LoadPOPPair, 8> AggregateLoads;
   bool Combined = false;
-  uint64_t PrevOffset = -1ull;
+  bool ValidPrevOffset = false;
+  int64_t PrevOffset = 0;
   uint64_t PrevSize = 0;
   for (auto &L : Loads) {
-    if (PrevOffset == -1ull) {
+    if (ValidPrevOffset == false) {
       BaseLoad = L.Load;
       PrevOffset = L.POP.Offset;
       PrevSize = L.Load->getModule()->getDataLayout().getTypeStoreSize(
           L.Load->getType());
       AggregateLoads.push_back(L);
+      ValidPrevOffset = true;
       continue;
     }
     if (L.Load->getAlignment() > BaseLoad->getAlignment())
       continue;
-    if (L.POP.Offset > PrevOffset + PrevSize) {
+    int64_t PrevEnd = PrevOffset + PrevSize;
+    if (L.POP.Offset > PrevEnd) {
       // No other load will be combinable
       if (combineLoads(AggregateLoads))
         Combined = true;
       AggregateLoads.clear();
-      PrevOffset = -1;
+      ValidPrevOffset = false;
       continue;
     }
-    if (L.POP.Offset != PrevOffset + PrevSize)
+    if (L.POP.Offset != PrevEnd)
       // This load is offset less than the size of the last load.
       // FIXME: We may want to handle this case.
       continue;

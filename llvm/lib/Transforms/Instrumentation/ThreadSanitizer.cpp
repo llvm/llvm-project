@@ -26,6 +26,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/CaptureTracking.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
@@ -42,6 +43,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -82,6 +84,7 @@ namespace {
 struct ThreadSanitizer : public FunctionPass {
   ThreadSanitizer() : FunctionPass(ID) {}
   const char *getPassName() const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
   static char ID;  // Pass identification, replacement for typeid.
@@ -122,12 +125,22 @@ struct ThreadSanitizer : public FunctionPass {
 }  // namespace
 
 char ThreadSanitizer::ID = 0;
-INITIALIZE_PASS(ThreadSanitizer, "tsan",
+INITIALIZE_PASS_BEGIN(
+    ThreadSanitizer, "tsan",
+    "ThreadSanitizer: detects data races.",
+    false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(
+    ThreadSanitizer, "tsan",
     "ThreadSanitizer: detects data races.",
     false, false)
 
 const char *ThreadSanitizer::getPassName() const {
   return "ThreadSanitizer";
+}
+
+void ThreadSanitizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
 FunctionPass *llvm::createThreadSanitizerPass() {
@@ -368,6 +381,8 @@ bool ThreadSanitizer::runOnFunction(Function &F) {
   bool HasCalls = false;
   bool SanitizeFunction = F.hasFnAttribute(Attribute::SanitizeThread);
   const DataLayout &DL = F.getParent()->getDataLayout();
+  const TargetLibraryInfo *TLI =
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
   // Traverse all instructions, collect loads/stores/returns, check for calls.
   for (auto &BB : F) {
@@ -379,6 +394,8 @@ bool ThreadSanitizer::runOnFunction(Function &F) {
       else if (isa<ReturnInst>(Inst))
         RetVec.push_back(&Inst);
       else if (isa<CallInst>(Inst) || isa<InvokeInst>(Inst)) {
+        if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+          maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
         if (isa<MemIntrinsic>(Inst))
           MemIntrinCalls.push_back(&Inst);
         HasCalls = true;

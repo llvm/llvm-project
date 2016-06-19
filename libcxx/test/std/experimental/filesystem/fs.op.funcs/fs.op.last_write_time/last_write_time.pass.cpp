@@ -22,7 +22,6 @@
 #include <type_traits>
 #include <chrono>
 #include <fstream>
-#include <iostream>
 #include <cstdlib>
 
 #include "test_macros.h"
@@ -30,6 +29,7 @@
 #include "filesystem_test_helper.hpp"
 
 #include <sys/stat.h>
+#include <iostream>
 
 using namespace std::experimental::filesystem;
 
@@ -70,6 +70,13 @@ std::pair<std::time_t, std::time_t> GetSymlinkTimes(path const& p) {
 #endif
     }
     return {st.st_atime, st.st_mtime};
+}
+
+inline bool TimeIsRepresentableAsTimeT(file_time_type tp) {
+    using namespace std::chrono;
+    using Lim = std::numeric_limits<std::time_t>;
+    auto sec = duration_cast<seconds>(tp.time_since_epoch()).count();
+    return (sec >= Lim::min() && sec <= Lim::max());
 }
 
 
@@ -162,37 +169,58 @@ TEST_CASE(set_last_write_time_dynamic_env_test)
     using Sec = std::chrono::seconds;
     using Hours = std::chrono::hours;
     using Minutes = std::chrono::minutes;
-
+    using MicroSec = std::chrono::microseconds;
     scoped_test_env env;
 
     const path file = env.create_file("file", 42);
     const path dir = env.create_dir("dir");
+    const auto now = Clock::now();
+    const file_time_type epoch_time = now - now.time_since_epoch();
 
-    const file_time_type future_time = Clock::now() + Hours(3);
-    const file_time_type past_time = Clock::now() - Minutes(3);
+    const file_time_type future_time = now + Hours(3) + Sec(42) + MicroSec(17);
+    const file_time_type past_time = now - Minutes(3) - Sec(42) - MicroSec(17);
+    const file_time_type before_epoch_time = epoch_time - Minutes(3) - Sec(42) - MicroSec(17);
+    // FreeBSD has a bug in their utimes implementation where the time is not update
+    // when the number of seconds is '-1'.
+#if defined(__FreeBSD__)
+    const file_time_type just_before_epoch_time = epoch_time - Sec(2) - MicroSec(17);
+#else
+    const file_time_type just_before_epoch_time = epoch_time - MicroSec(17);
+#endif
 
     struct TestCase {
       path p;
       file_time_type new_time;
     } cases[] = {
+        {file, epoch_time},
+        {dir, epoch_time},
         {file, future_time},
         {dir, future_time},
         {file, past_time},
-        {dir, past_time}
+        {dir, past_time},
+        {file, before_epoch_time},
+        {dir, before_epoch_time},
+        {file, just_before_epoch_time},
+        {dir, just_before_epoch_time}
     };
     for (const auto& TC : cases) {
         const auto old_times = GetTimes(TC.p);
+        file_time_type old_time(Sec(old_times.second));
 
         std::error_code ec = GetTestEC();
         last_write_time(TC.p, TC.new_time, ec);
         TEST_CHECK(!ec);
 
-        const std::time_t new_time_t = Clock::to_time_t(TC.new_time);
         file_time_type  got_time = last_write_time(TC.p);
-        std::time_t got_time_t = Clock::to_time_t(got_time);
 
-        TEST_CHECK(got_time_t != old_times.second);
-        TEST_CHECK(got_time_t == new_time_t);
+        TEST_CHECK(got_time != old_time);
+        if (TC.new_time < epoch_time) {
+            TEST_CHECK(got_time <= TC.new_time);
+            TEST_CHECK(got_time > TC.new_time - Sec(1));
+        } else {
+            TEST_CHECK(got_time <= TC.new_time + Sec(1));
+            TEST_CHECK(got_time >= TC.new_time - Sec(1));
+        }
         TEST_CHECK(LastAccessTime(TC.p) == old_times.first);
     }
 }
@@ -229,41 +257,79 @@ TEST_CASE(last_write_time_symlink_test)
     TEST_CHECK(GetSymlinkTimes(sym) == old_sym_times);
 }
 
+
+TEST_CASE(test_write_min_time)
+{
+    using Clock = file_time_type::clock;
+    using Sec = std::chrono::seconds;
+    using MicroSec = std::chrono::microseconds;
+    using Lim = std::numeric_limits<std::time_t>;
+    scoped_test_env env;
+    const path p = env.create_file("file", 42);
+
+    std::error_code ec = GetTestEC();
+    file_time_type last_time = last_write_time(p);
+    file_time_type new_time = file_time_type::min();
+
+    last_write_time(p, new_time, ec);
+    file_time_type tt = last_write_time(p);
+
+    if (!TimeIsRepresentableAsTimeT(new_time)) {
+        TEST_CHECK(ec);
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(tt == last_time);
+    } else {
+        TEST_CHECK(!ec);
+        TEST_CHECK(tt >= new_time);
+        TEST_CHECK(tt < new_time + Sec(1));
+    }
+
+    ec = GetTestEC();
+    last_write_time(p, Clock::now());
+    last_time = last_write_time(p);
+
+    new_time = file_time_type::min() + MicroSec(1);
+
+    last_write_time(p, new_time, ec);
+    tt = last_write_time(p);
+
+    if (!TimeIsRepresentableAsTimeT(new_time)) {
+        TEST_CHECK(ec);
+        TEST_CHECK(ec != GetTestEC());
+        TEST_CHECK(tt == last_time);
+    } else {
+        TEST_CHECK(!ec);
+        TEST_CHECK(tt >= new_time);
+        TEST_CHECK(tt < new_time + Sec(1));
+    }
+}
+
+
+
 TEST_CASE(test_write_min_max_time)
 {
     using Clock = file_time_type::clock;
     using Sec = std::chrono::seconds;
     using Hours = std::chrono::hours;
+    using Lim = std::numeric_limits<std::time_t>;
     scoped_test_env env;
     const path p = env.create_file("file", 42);
 
-    file_time_type last_time = last_write_time(p);
-
-    file_time_type new_time = file_time_type::min();
     std::error_code ec = GetTestEC();
-    last_write_time(p, new_time, ec);
-    file_time_type tt = last_write_time(p);
-    if (ec) {
-        TEST_CHECK(ec != GetTestEC());
-        TEST_CHECK(tt == last_time);
-    } else {
-        file_time_type max_allowed = new_time + Sec(1);
-        TEST_CHECK(tt >= new_time);
-        TEST_CHECK(tt < max_allowed);
-    }
+    file_time_type last_time = last_write_time(p);
+    file_time_type new_time = file_time_type::max();
 
-    last_time = tt;
-    new_time = file_time_type::max();
     ec = GetTestEC();
     last_write_time(p, new_time, ec);
+    file_time_type tt = last_write_time(p);
 
-    tt = last_write_time(p);
-    if (ec) {
+    if (!TimeIsRepresentableAsTimeT(new_time)) {
+        TEST_CHECK(ec);
         TEST_CHECK(ec != GetTestEC());
         TEST_CHECK(tt == last_time);
     } else {
-        file_time_type min_allowed = new_time - Sec(1);
-        TEST_CHECK(tt > min_allowed);
+        TEST_CHECK(!ec);
+        TEST_CHECK(tt > new_time - Sec(1));
         TEST_CHECK(tt <= new_time);
     }
 }

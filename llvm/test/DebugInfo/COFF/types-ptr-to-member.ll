@@ -85,7 +85,7 @@
 
 ; CHECK:   Pointer ({{.*}}) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: void (A*)
+; CHECK:     PointeeType: void A::()
 ; CHECK:     PointerAttributes: 0x1006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
@@ -99,7 +99,7 @@
 ; CHECK:   }
 ; CHECK:   Pointer ({{.*}}) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: void (C*)
+; CHECK:     PointeeType: void C::()
 ; CHECK:     PointerAttributes: 0x2006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
@@ -113,7 +113,7 @@
 ; CHECK:   }
 ; CHECK:   Pointer ({{.*}}) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: void (D*)
+; CHECK:     PointeeType: void D::()
 ; CHECK:     PointerAttributes: 0x2006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
@@ -127,7 +127,7 @@
 ; CHECK:   }
 ; CHECK:   Pointer ({{.*}}) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: void (E*)
+; CHECK:     PointeeType: void E::()
 ; CHECK:     PointerAttributes: 0x3006C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)
@@ -159,7 +159,7 @@
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
 ; CHECK:   Pointer ({{.*}}) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: void (Incomplete*)
+; CHECK:     PointeeType: void Incomplete::()
 ; CHECK:     PointerAttributes: 0x6C
 ; CHECK:     PtrType: Near64 (0xC)
 ; CHECK:     PtrMode: PointerToMemberFunction (0x3)

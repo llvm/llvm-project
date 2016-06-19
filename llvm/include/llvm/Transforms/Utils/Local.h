@@ -30,6 +30,7 @@ class BasicBlock;
 class Function;
 class BranchInst;
 class Instruction;
+class CallInst;
 class DbgDeclareInst;
 class StoreInst;
 class LoadInst;
@@ -353,6 +354,17 @@ bool callsGCLeafFunction(ImmutableCallSite CS);
 bool recognizeBSwapOrBitReverseIdiom(
     Instruction *I, bool MatchBSwaps, bool MatchBitReversals,
     SmallVectorImpl<Instruction *> &InsertedInsts);
+
+//===----------------------------------------------------------------------===//
+//  Sanitizer utilities
+//
+
+/// Given a CallInst, check if it calls a string function known to CodeGen,
+/// and mark it with NoBuiltin if so.  To be used by sanitizers that intend
+/// to intercept string functions and want to avoid converting them to target
+/// specific instructions.
+void maybeMarkSanitizerLibraryCallNoBuiltin(CallInst *CI,
+                                            const TargetLibraryInfo *TLI);
 
 } // End llvm namespace
 

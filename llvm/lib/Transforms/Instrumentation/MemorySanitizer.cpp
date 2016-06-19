@@ -317,6 +317,9 @@ class MemorySanitizer : public FunctionPass {
         TrackOrigins(std::max(TrackOrigins, (int)ClTrackOrigins)),
         WarningFn(nullptr) {}
   const char *getPassName() const override { return "MemorySanitizer"; }
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<TargetLibraryInfoWrapperPass>();
+  }
   bool runOnFunction(Function &F) override;
   bool doInitialization(Module &M) override;
   static char ID;  // Pass identification, replacement for typeid.
@@ -384,9 +387,13 @@ class MemorySanitizer : public FunctionPass {
 } // anonymous namespace
 
 char MemorySanitizer::ID = 0;
-INITIALIZE_PASS(MemorySanitizer, "msan",
-                "MemorySanitizer: detects uninitialized reads.",
-                false, false)
+INITIALIZE_PASS_BEGIN(
+    MemorySanitizer, "msan",
+    "MemorySanitizer: detects uninitialized reads.", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(
+    MemorySanitizer, "msan",
+    "MemorySanitizer: detects uninitialized reads.", false, false)
 
 FunctionPass *llvm::createMemorySanitizerPass(int TrackOrigins) {
   return new MemorySanitizer(TrackOrigins);
@@ -618,6 +625,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   SmallVector<PHINode *, 16> ShadowPHINodes, OriginPHINodes;
   ValueMap<Value*, Value*> ShadowMap, OriginMap;
   std::unique_ptr<VarArgHelper> VAHelper;
+  const TargetLibraryInfo *TLI;
 
   // The following flags disable parts of MSan instrumentation based on
   // blacklist contents and command-line options.
@@ -647,6 +655,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // FIXME: Consider using SpecialCaseList to specify a list of functions that
     // must always return fully initialized values. For now, we hardcode "main".
     CheckReturnValue = SanitizeFunction && (F.getName() == "main");
+    TLI = &MS.getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
     DEBUG(if (!InsertChecks)
           dbgs() << "MemorySanitizer is not inserting checks into '"
@@ -2529,6 +2538,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                                  AttributeSet::FunctionIndex,
                                                  B));
       }
+
+      maybeMarkSanitizerLibraryCallNoBuiltin(Call, TLI);
     }
     IRBuilder<> IRB(&I);
 

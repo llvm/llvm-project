@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -32,6 +33,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -149,6 +151,7 @@ public:
       const EfficiencySanitizerOptions &Opts = EfficiencySanitizerOptions())
       : ModulePass(ID), Options(OverrideOptionsFromCL(Opts)) {}
   const char *getPassName() const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
   static char ID;
 
@@ -199,11 +202,20 @@ private:
 } // namespace
 
 char EfficiencySanitizer::ID = 0;
-INITIALIZE_PASS(EfficiencySanitizer, "esan",
-                "EfficiencySanitizer: finds performance issues.", false, false)
+INITIALIZE_PASS_BEGIN(
+    EfficiencySanitizer, "esan",
+    "EfficiencySanitizer: finds performance issues.", false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
+INITIALIZE_PASS_END(
+    EfficiencySanitizer, "esan",
+    "EfficiencySanitizer: finds performance issues.", false, false)
 
 const char *EfficiencySanitizer::getPassName() const {
   return "EfficiencySanitizer";
+}
+
+void EfficiencySanitizer::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
 }
 
 ModulePass *
@@ -544,6 +556,8 @@ bool EfficiencySanitizer::runOnFunction(Function &F, Module &M) {
   SmallVector<Instruction *, 8> GetElementPtrs;
   bool Res = false;
   const DataLayout &DL = M.getDataLayout();
+  const TargetLibraryInfo *TLI =
+      &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
 
   for (auto &BB : F) {
     for (auto &Inst : BB) {
@@ -555,6 +569,8 @@ bool EfficiencySanitizer::runOnFunction(Function &F, Module &M) {
         MemIntrinCalls.push_back(&Inst);
       else if (isa<GetElementPtrInst>(Inst))
         GetElementPtrs.push_back(&Inst);
+      else if (CallInst *CI = dyn_cast<CallInst>(&Inst))
+        maybeMarkSanitizerLibraryCallNoBuiltin(CI, TLI);
     }
   }
 
