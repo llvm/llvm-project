@@ -388,9 +388,13 @@ inline std::error_code GetTestEC() {
 // available in single-threaded mode.
 void SleepFor(std::chrono::seconds dur) {
     using namespace std::chrono;
-    const auto curr_time = system_clock::now();
-    auto wake_time = curr_time + dur;
-    while (system_clock::now() < wake_time)
+#if defined(_LIBCPP_HAS_NO_MONOTONIC_CLOCK)
+    using Clock = system_clock;
+#else
+    using Clock = steady_clock;
+#endif
+    const auto wake_time = Clock::now() + dur;
+    while (Clock::now() < wake_time)
         ;
 }
 
