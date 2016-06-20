@@ -6,12 +6,16 @@
 // Aspects of this library's behavior can be controlled via the 
 // oclc library.  See the oclc header for further information
 
+#define _MANGLE3x(P,N,S) P##_##N##S
+#define MANGLE3x(P,N,S) _MANGLE3x(P,N,S)
 #define _MANGLE3(P,N,S) P##_##N##_##S
 #define MANGLE3(P,N,S) _MANGLE3(P,N,S)
-#define OCKL_MANGLE_I32(N) MANGLE3(__ockl, N, i32)
-#define OCKL_MANGLE_U32(N) MANGLE3(__ockl, N, u32)
-#define OCKL_MANGLE_I64(N) MANGLE3(__ockl, N, i64)
-#define OCKL_MANGLE_U64(N) MANGLE3(__ockl, N, u64)
+#define OCKL_MANGLE_T(N,T) MANGLE3(__ockl, N, T)
+#define OCKL_MANGLE_Tx(N,T) MANGLE3x(__ockl, N, T)
+#define OCKL_MANGLE_I32(N) OCKL_MANGLE_T(N, i32)
+#define OCKL_MANGLE_U32(N) OCKL_MANGLE_T(N, u32)
+#define OCKL_MANGLE_I64(N) OCKL_MANGLE_T(N, i64)
+#define OCKL_MANGLE_U64(N) OCKL_MANGLE_T(N, u64)
 
 #define DECL_OCKL_UNARY_I32(N) extern int OCKL_MANGLE_I32(N)(int);
 #define _DECL_X_OCKL_UNARY_I32(A,N) extern __attribute__((A)) int OCKL_MANGLE_I32(N)(int);
