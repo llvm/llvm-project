@@ -180,6 +180,7 @@ template <class charT> class messages_byname;
 
 #include <__config>
 #include <__locale>
+#include <__debug>
 #include <algorithm>
 #include <memory>
 #include <ios>
@@ -756,6 +757,28 @@ __num_get_unsigned_integral(const char* __a, const char* __a_end,
 }
 
 template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY
+_Tp __do_strtod(const char* __a, char** __p2);
+
+template <>
+inline _LIBCPP_INLINE_VISIBILITY
+float __do_strtod<float>(const char* __a, char** __p2) {
+    return strtof_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
+}
+
+template <>
+inline _LIBCPP_INLINE_VISIBILITY
+double __do_strtod<double>(const char* __a, char** __p2) {
+    return strtod_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
+}
+
+template <>
+inline _LIBCPP_INLINE_VISIBILITY
+long double __do_strtod<long double>(const char* __a, char** __p2) {
+    return strtold_l(__a, __p2, _LIBCPP_GET_C_LOCALE);
+}
+
+template <class _Tp>
 _Tp
 __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
 {
@@ -764,7 +787,7 @@ __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
         typename remove_reference<decltype(errno)>::type __save_errno = errno;
         errno = 0;
         char *__p2;
-        long double __ld = strtold_l(__a, &__p2, _LIBCPP_GET_C_LOCALE);
+        _Tp __ld = __do_strtod<_Tp>(__a, &__p2);
         typename remove_reference<decltype(errno)>::type __current_errno = errno;
         if (__current_errno == 0)
             errno = __save_errno;
@@ -775,7 +798,7 @@ __num_get_float(const char* __a, const char* __a_end, ios_base::iostate& __err)
         }
         else if (__current_errno == ERANGE)
             __err = ios_base::failbit;
-        return static_cast<_Tp>(__ld);
+        return __ld;
     }
     __err = ios_base::failbit;
     return 0;
@@ -3901,7 +3924,9 @@ wbuffer_convert<_Codecvt, _Elem, _Tr>::underflow()
         }
         else
         {
-            memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
+             _LIBCPP_ASSERT(!(__extbufnext_ == NULL && (__extbufend_ != __extbufnext_)), "underflow moving from NULL" );
+             if (__extbufend_ != __extbufnext_)
+                memmove(__extbuf_, __extbufnext_, __extbufend_ - __extbufnext_);
             __extbufnext_ = __extbuf_ + (__extbufend_ - __extbufnext_);
             __extbufend_ = __extbuf_ + (__extbuf_ == __extbuf_min_ ? sizeof(__extbuf_min_) : __ebs_);
             streamsize __nmemb = _VSTD::min(static_cast<streamsize>(this->egptr() - this->eback() - __unget_sz),

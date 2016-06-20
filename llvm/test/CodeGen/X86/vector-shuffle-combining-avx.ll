@@ -51,7 +51,7 @@ define <4 x float> @combine_vpermilvar_4f32_movshdup(<4 x float> %a0) {
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; ALL-NEXT:    retq
-  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 1, i32 1, i32 3, i32 3>)
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 undef, i32 1, i32 3, i32 3>)
   ret <4 x float> %1
 }
 
@@ -60,7 +60,7 @@ define <4 x float> @combine_vpermilvar_4f32_movsldup(<4 x float> %a0) {
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovsldup {{.*#+}} xmm0 = xmm0[0,0,2,2]
 ; ALL-NEXT:    retq
-  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 2, i32 2>)
+  %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 2, i32 undef>)
   ret <4 x float> %1
 }
 
@@ -86,7 +86,7 @@ define <8 x float> @combine_vpermilvar_8f32_identity(<8 x float> %a0) {
 ; ALL-LABEL: combine_vpermilvar_8f32_identity:
 ; ALL:       # BB#0:
 ; ALL-NEXT:    retq
-  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1>)
+  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 undef>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1>)
   ret <8 x float> %2
 }
@@ -114,7 +114,7 @@ define <8 x float> @combine_vpermilvar_8f32_movshdup(<8 x float> %a0) {
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vmovshdup {{.*#+}} ymm0 = ymm0[1,1,3,3,5,5,7,7]
 ; ALL-NEXT:    retq
-  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7>)
+  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 1, i32 1, i32 3, i32 3, i32 undef, i32 5, i32 7, i32 7>)
   ret <8 x float> %1
 }
 

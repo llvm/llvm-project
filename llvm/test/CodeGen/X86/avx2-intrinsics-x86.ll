@@ -1457,8 +1457,23 @@ define <4 x i32> @test_x86_avx2_psrav_d(<4 x i32> %a0, <4 x i32> %a1) {
   %res = call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> %a0, <4 x i32> %a1) ; <<4 x i32>> [#uses=1]
   ret <4 x i32> %res
 }
-declare <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32>, <4 x i32>) nounwind readnone
 
+define <4 x i32> @test_x86_avx2_psrav_d_const(<4 x i32> %a0, <4 x i32> %a1) {
+; AVX2-LABEL: test_x86_avx2_psrav_d_const:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} xmm0 = [2,9,4294967284,23]
+; AVX2-NEXT:    vpsravd LCPI90_1, %xmm0, %xmm0
+; AVX2-NEXT:    retl
+;
+; AVX512VL-LABEL: test_x86_avx2_psrav_d_const:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} xmm0 = [2,9,4294967284,23]
+; AVX512VL-NEXT:    vpsravd LCPI90_1, %xmm0, %xmm0
+; AVX512VL-NEXT:    retl
+  %res = call <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32> <i32 2, i32 9, i32 -12, i32 23>, <4 x i32> <i32 1, i32 18, i32 35, i32 52>)
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.x86.avx2.psrav.d(<4 x i32>, <4 x i32>) nounwind readnone
 
 define <8 x i32> @test_x86_avx2_psrav_d_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX2-LABEL: test_x86_avx2_psrav_d_256:
@@ -1471,6 +1486,22 @@ define <8 x i32> @test_x86_avx2_psrav_d_256(<8 x i32> %a0, <8 x i32> %a1) {
 ; AVX512VL-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
 ; AVX512VL-NEXT:    retl
   %res = call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> %a0, <8 x i32> %a1) ; <<8 x i32>> [#uses=1]
+  ret <8 x i32> %res
+}
+
+define <8 x i32> @test_x86_avx2_psrav_d_256_const(<8 x i32> %a0, <8 x i32> %a1) {
+; AVX2-LABEL: test_x86_avx2_psrav_d_256_const:
+; AVX2:       ## BB#0:
+; AVX2-NEXT:    vmovdqa {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
+; AVX2-NEXT:    vpsravd LCPI92_1, %ymm0, %ymm0
+; AVX2-NEXT:    retl
+;
+; AVX512VL-LABEL: test_x86_avx2_psrav_d_256_const:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vmovdqa32 {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
+; AVX512VL-NEXT:    vpsravd LCPI92_1, %ymm0, %ymm0
+; AVX512VL-NEXT:    retl
+  %res = call <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32> <i32 2, i32 9, i32 -12, i32 23, i32 -26, i32 37, i32 -40, i32 51>, <8 x i32> <i32 1, i32 18, i32 35, i32 52, i32 69, i32 15, i32 32, i32 49>)
   ret <8 x i32> %res
 }
 declare <8 x i32> @llvm.x86.avx2.psrav.d.256(<8 x i32>, <8 x i32>) nounwind readnone

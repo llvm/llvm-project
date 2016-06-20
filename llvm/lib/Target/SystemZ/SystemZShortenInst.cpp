@@ -72,18 +72,20 @@ static void tieOpsIfNeeded(MachineInstr &MI) {
 
 // MI loads one word of a GPR using an IIxF instruction and LLIxL and LLIxH
 // are the halfword immediate loads for the same word.  Try to use one of them
-// instead of IIxF. 
-bool SystemZShortenInst::shortenIIF(MachineInstr &MI,
-                                    unsigned LLIxL, unsigned LLIxH) {
+// instead of IIxF.
+bool SystemZShortenInst::shortenIIF(MachineInstr &MI, unsigned LLIxL,
+                                    unsigned LLIxH) {
   unsigned Reg = MI.getOperand(0).getReg();
   // The new opcode will clear the other half of the GR64 reg, so
   // cancel if that is live.
-  unsigned thisSubRegIdx = (SystemZ::GRH32BitRegClass.contains(Reg) ?
-			    SystemZ::subreg_h32 : SystemZ::subreg_l32);
-  unsigned otherSubRegIdx = (thisSubRegIdx == SystemZ::subreg_l32 ?
-			     SystemZ::subreg_h32 : SystemZ::subreg_l32);
-  unsigned GR64BitReg = TRI->getMatchingSuperReg(Reg, thisSubRegIdx,
-						 &SystemZ::GR64BitRegClass);
+  unsigned thisSubRegIdx =
+      (SystemZ::GRH32BitRegClass.contains(Reg) ? SystemZ::subreg_h32
+                                               : SystemZ::subreg_l32);
+  unsigned otherSubRegIdx =
+      (thisSubRegIdx == SystemZ::subreg_l32 ? SystemZ::subreg_h32
+                                            : SystemZ::subreg_l32);
+  unsigned GR64BitReg =
+      TRI->getMatchingSuperReg(Reg, thisSubRegIdx, &SystemZ::GR64BitRegClass);
   unsigned OtherReg = TRI->getSubReg(GR64BitReg, otherSubRegIdx);
   if (LiveRegs.contains(OtherReg))
     return false;
@@ -139,8 +141,7 @@ bool SystemZShortenInst::shortenOn001(MachineInstr &MI, unsigned Opcode) {
 
 // Calls shortenOn001 if CCLive is false. CC def operand is added in
 // case of success.
-bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI,
-					   unsigned Opcode) {
+bool SystemZShortenInst::shortenOn001AddCC(MachineInstr &MI, unsigned Opcode) {
   if (!LiveRegs.contains(SystemZ::CC) && shortenOn001(MI, Opcode)) {
     MachineInstrBuilder(*MI.getParent()->getParent(), &MI)
       .addReg(SystemZ::CC, RegState::ImplicitDefine | RegState::Dead);

@@ -59,10 +59,10 @@ namespace lld {
 namespace elf {
 
 static bool refersToGotEntry(RelExpr Expr) {
-  return Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT_LOCAL ||
-         Expr == R_MIPS_GOT_LOCAL_PAGE || Expr == R_GOT_PAGE_PC ||
-         Expr == R_GOT_PC || Expr == R_GOT_FROM_END || Expr == R_TLSGD ||
-         Expr == R_TLSGD_PC || Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE;
+  return Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT_LOCAL_PAGE ||
+         Expr == R_MIPS_GOT_OFF || Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC ||
+         Expr == R_GOT_FROM_END || Expr == R_TLSGD || Expr == R_TLSGD_PC ||
+         Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE;
 }
 
 static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
@@ -271,9 +271,9 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      const SymbolBody &Body) {
   // These expressions always compute a constant
   if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
-      E == R_MIPS_GOT_LOCAL || E == R_MIPS_GOT_LOCAL_PAGE ||
-      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC ||
-      E == R_TLSGD || E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE || E == R_HINT)
+      E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF || E == R_GOT_PAGE_PC ||
+      E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC || E == R_TLSGD ||
+      E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE || E == R_HINT)
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -466,8 +466,6 @@ static typename ELFT::uint computeAddend(const elf::ObjectFile<ELFT> &File,
       // For details see p. 4-19 at
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
       Addend += 4;
-    if (Expr == R_GOT_OFF)
-      Addend -= MipsGPOffset;
     if (Expr == R_GOTREL) {
       Addend -= MipsGPOffset;
       if (Body.isLocal())
@@ -574,8 +572,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       // to the GOT entry and reads the GOT entry when it needs to perform
       // a dynamic relocation.
       // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf p.4-19
-      if (Config->EMachine == EM_MIPS && !Body.isInGot())
-        Out<ELFT>::Got->addEntry(Body);
+      if (Config->EMachine == EM_MIPS)
+        Out<ELFT>::Got->addMipsEntry(Body, Addend, Expr);
       continue;
     }
 
@@ -605,18 +603,20 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     }
 
     if (refersToGotEntry(Expr)) {
-      if (Body.isInGot())
-        continue;
-      Out<ELFT>::Got->addEntry(Body);
-
-      if (Config->EMachine == EM_MIPS)
+      if (Config->EMachine == EM_MIPS) {
         // MIPS ABI has special rules to process GOT entries
         // and doesn't require relocation entries for them.
         // See "Global Offset Table" in Chapter 5 in the following document
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
+        Out<ELFT>::Got->addMipsEntry(Body, Addend, Expr);
+        continue;
+      }
+
+      if (Body.isInGot())
         continue;
 
+      Out<ELFT>::Got->addEntry(Body);
       if (Preemptible || (Config->Pic && !isAbsolute<ELFT>(Body))) {
         uint32_t DynType;
         if (Body.isTls())
@@ -644,7 +644,7 @@ template <class ELFT> void scanRelocations(InputSection<ELFT> &C) {
   // of tests to determine if it needs special treatment, such as
   // creating GOT, PLT, copy relocations, etc.
   // Note that relocations for non-alloc sections are directly
-  // processed by InputSection::relocateNative.
+  // processed by InputSection::relocateNonAlloc.
   if (C.getSectionHdr()->sh_flags & SHF_ALLOC)
     for (const Elf_Shdr *RelSec : C.RelocSections)
       scanRelocations(C, *RelSec);

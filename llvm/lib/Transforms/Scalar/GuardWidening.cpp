@@ -419,7 +419,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
           ConstantRange::makeExactICmpRegion(Pred1, RHS1->getValue());
 
       // SubsetIntersect is a subset of the actual mathematical intersection of
-      // CR0 and CR1, while SupersetIntersect is a superset of the the actual
+      // CR0 and CR1, while SupersetIntersect is a superset of the actual
       // mathematical intersection.  If these two ConstantRanges are equal, then
       // we know we were able to represent the actual mathematical intersection
       // of CR0 and CR1, and can use the same to generate an icmp instruction.

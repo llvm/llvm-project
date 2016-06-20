@@ -140,12 +140,12 @@ define <16 x i8> @combine_pshufb_psrldq(<16 x i8> %a0) {
 define <16 x i8> @combine_pshufb_as_unary_unpcklbw(<16 x i8> %a0) {
 ; SSE-LABEL: combine_pshufb_as_unary_unpcklbw:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,u,u,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; SSE-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pshufb_as_unary_unpcklbw:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,u,u,1,2,2,3,3,4,4,5,5,6,6,7,7]
+; AVX-NEXT:    vpunpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
 ; AVX-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 0, i8 undef, i8 undef, i8 1, i8 2, i8 2, i8 3, i8 3, i8 4, i8 4, i8 5, i8 5, i8 6, i8 6, i8 7, i8 7>)
   ret <16 x i8> %1
@@ -154,12 +154,12 @@ define <16 x i8> @combine_pshufb_as_unary_unpcklbw(<16 x i8> %a0) {
 define <16 x i8> @combine_pshufb_as_unary_unpckhwd(<16 x i8> %a0) {
 ; SSE-LABEL: combine_pshufb_as_unary_unpckhwd:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,10,11,10,11,12,13,12,13,14,15,u,u]
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_pshufb_as_unary_unpckhwd:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[8,9,8,9,10,11,10,11,12,13,12,13,14,15,u,u]
+; AVX-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm0[4,4,5,5,6,6,7,7]
 ; AVX-NEXT:    retq
   %1 = tail call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %a0, <16 x i8> <i8 8, i8 9, i8 8, i8 9, i8 10, i8 11, i8 10, i8 11, i8 12, i8 13, i8 12, i8 13, i8 14, i8 15, i8 undef, i8 undef>)
   ret <16 x i8> %1

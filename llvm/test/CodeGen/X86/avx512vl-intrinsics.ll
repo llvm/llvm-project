@@ -7950,6 +7950,19 @@ define <8 x i32>@test_int_x86_avx512_mask_psrav8_si(<8 x i32> %x0, <8 x i32> %x1
   ret <8 x i32> %res4
 }
 
+define <8 x i32>@test_int_x86_avx512_mask_psrav8_si_const() {
+; CHECK-LABEL: test_int_x86_avx512_mask_psrav8_si_const:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovdqa32 {{.*#+}} ymm0 = [2,9,4294967284,23,4294967270,37,4294967256,51]
+; CHECK-NEXT:    ## encoding: [0x62,0xf1,0x7d,0x28,0x6f,0x05,A,A,A,A]
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI510_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    vpsravd {{.*}}(%rip), %ymm0, %ymm0 ## encoding: [0x62,0xf2,0x7d,0x28,0x46,0x05,A,A,A,A]
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI510_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <8 x i32> @llvm.x86.avx512.mask.psrav8.si(<8 x i32> <i32 2, i32 9, i32 -12, i32 23, i32 -26, i32 37, i32 -40, i32 51>, <8 x i32> <i32 1, i32 18, i32 35, i32 52, i32 69, i32 15, i32 32, i32 49>, <8 x i32> zeroinitializer, i8 -1)
+  ret <8 x i32> %res
+}
+
 declare <2 x i64> @llvm.x86.avx512.mask.psrav.q.128(<2 x i64>, <2 x i64>, <2 x i64>, i8)
 
 define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128(<2 x i64> %x0, <2 x i64> %x1, <2 x i64> %x2, i8 %x3) {
@@ -7968,6 +7981,19 @@ define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128(<2 x i64> %x0, <2 x i64> %
   %res3 = add <2 x i64> %res, %res1
   %res4 = add <2 x i64> %res3, %res2
   ret <2 x i64> %res4
+}
+
+define <2 x i64>@test_int_x86_avx512_mask_psrav_q_128_const(i8 %x3) {
+; CHECK-LABEL: test_int_x86_avx512_mask_psrav_q_128_const:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [2,18446744073709551607]
+; CHECK-NEXT:    ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0x05,A,A,A,A]
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI512_0-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    vpsravq {{.*}}(%rip), %xmm0, %xmm0 ## encoding: [0x62,0xf2,0xfd,0x08,0x46,0x05,A,A,A,A]
+; CHECK-NEXT:    ## fixup A - offset: 6, value: LCPI512_1-4, kind: reloc_riprel_4byte
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call <2 x i64> @llvm.x86.avx512.mask.psrav.q.128(<2 x i64> <i64 2, i64 -9>, <2 x i64> <i64 1, i64 90>, <2 x i64> zeroinitializer, i8 -1)
+  ret <2 x i64> %res
 }
 
 declare <4 x i64> @llvm.x86.avx512.mask.psrav.q.256(<4 x i64>, <4 x i64>, <4 x i64>, i8)

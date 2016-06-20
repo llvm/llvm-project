@@ -12,8 +12,8 @@
 
 # CHECK:      Relocations [
 # CHECK-NEXT:   Section ({{.*}}) .rel.dyn {
-# CHECK-NEXT:     0x{{[0-9A-F]+}} R_MIPS_COPY data0 0x0
 # CHECK-NEXT:     0x{{[0-9A-F]+}} R_MIPS_COPY data1 0x0
+# CHECK-NEXT:     0x{{[0-9A-F]+}} R_MIPS_COPY data0 0x0
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section ({{.*}}) .rel.plt {
 # CHECK-NEXT:     0x{{[0-9A-F]+}} R_MIPS_JUMP_SLOT foo0 0x0

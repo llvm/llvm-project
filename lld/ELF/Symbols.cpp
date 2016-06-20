@@ -92,12 +92,14 @@ static typename ELFT::uint getSymVA(const SymbolBody &Body,
 
 SymbolBody::SymbolBody(Kind K, uint32_t NameOffset, uint8_t StOther,
                        uint8_t Type)
-    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(true), Type(Type),
-      StOther(StOther), NameOffset(NameOffset) {}
+    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(true),
+      IsInGlobalMipsGot(false), Type(Type), StOther(StOther),
+      NameOffset(NameOffset) {}
 
 SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
-    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(false), Type(Type),
-      StOther(StOther), Name({Name.data(), Name.size()}) {}
+    : SymbolKind(K), NeedsCopyOrPltAddr(false), IsLocal(false),
+      IsInGlobalMipsGot(false), Type(Type), StOther(StOther),
+      Name({Name.data(), Name.size()}) {}
 
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
@@ -149,8 +151,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
-  return (Out<ELFT>::Got->getMipsLocalEntriesNum() + GotIndex) *
-         sizeof(typename ELFT::uint);
+  return GotIndex * sizeof(typename ELFT::uint);
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {

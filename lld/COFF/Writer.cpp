@@ -59,6 +59,7 @@ private:
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void fixSafeSEHSymbols();
+  void setSectionPermissions();
   void writeSections();
   void sortExceptionTable();
   void applyRelocations();
@@ -114,6 +115,7 @@ public:
   StringRef getName() { return Name; }
   std::vector<Chunk *> &getChunks() { return Chunks; }
   void addPermissions(uint32_t C);
+  void setPermissions(uint32_t C);
   uint32_t getPermissions() { return Header.Characteristics & PermMask; }
   uint32_t getCharacteristics() { return Header.Characteristics; }
   uint64_t getRVA() { return Header.VirtualAddress; }
@@ -176,6 +178,10 @@ void OutputSection::addPermissions(uint32_t C) {
   Header.Characteristics |= C & PermMask;
 }
 
+void OutputSection::setPermissions(uint32_t C) {
+  Header.Characteristics = C & PermMask;
+}
+
 // Write the section header to a given buffer.
 void OutputSection::writeHeaderTo(uint8_t *Buf) {
   auto *Hdr = reinterpret_cast<coff_section *>(Buf);
@@ -222,6 +228,7 @@ void Writer::run() {
     createSection(".reloc");
   assignAddresses();
   removeEmptySections();
+  setSectionPermissions();
   createSymbolAndStringTable();
   openFile(Config->OutputFile);
   if (Config->is64()) {
@@ -655,6 +662,17 @@ void Writer::fixSafeSEHSymbols() {
     return;
   Config->SEHTable->setRVA(SEHTable->getRVA());
   Config->SEHCount->setVA(SEHTable->getSize() / 4);
+}
+
+// Handles /section options to allow users to overwrite
+// section attributes.
+void Writer::setSectionPermissions() {
+  for (auto &P : Config->Section) {
+    StringRef Name = P.first;
+    uint32_t Perm = P.second;
+    if (auto *Sec = findSection(Name))
+      Sec->setPermissions(Perm);
+  }
 }
 
 // Write section contents to a mmap'ed file.

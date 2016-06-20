@@ -127,6 +127,9 @@ public:
   // True if this is a local symbol.
   unsigned IsLocal : 1;
 
+  // True if this symbol has an entry in the global part of MIPS GOT.
+  unsigned IsInGlobalMipsGot : 1;
+
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
   uint8_t StOther; // st_other field value

@@ -169,7 +169,7 @@ template<size_t N>
 template<class... T>
   using index_sequence_for = make_index_sequence<sizeof...(T)>;
 
-template<class T, class U=T> 
+template<class T, class U=T>
     T exchange(T& obj, U&& new_value);
 }  // std
 
@@ -817,7 +817,7 @@ template<size_t _Np>
 
 template<class... _Tp>
     using index_sequence_for = make_index_sequence<sizeof...(_Tp)>;
-  
+
 #endif  // _LIBCPP_STD_VER > 11
 
 #if _LIBCPP_STD_VER > 11
@@ -828,7 +828,7 @@ _T1 exchange(_T1& __obj, _T2 && __new_value)
     _T1 __old_value = _VSTD::move(__obj);
     __obj = _VSTD::forward<_T2>(__new_value);
     return __old_value;
-}    
+}
 #endif  // _LIBCPP_STD_VER > 11
 
 _LIBCPP_END_NAMESPACE_STD

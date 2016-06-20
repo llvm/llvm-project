@@ -1682,7 +1682,7 @@ bool AArch64LoadStoreOpt::optimizeBlock(MachineBasicBlock &MBB,
   //        ldrh w2, [x0, #6]
   //        ; becomes
   //        str w1, [x0, #4]
-  //        lsr	w2, w1, #16
+  //        lsr w2, w1, #16
   for (MachineBasicBlock::iterator MBBI = MBB.begin(), E = MBB.end();
        MBBI != E;) {
     MachineInstr *MI = MBBI;

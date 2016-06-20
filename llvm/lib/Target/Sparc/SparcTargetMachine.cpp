@@ -149,6 +149,18 @@ void SparcPassConfig::addPreEmitPass(){
   {
     addPass(new InsertNOPLoad(getSparcTargetMachine()));
   }
+  if (this->getSparcTargetMachine().getSubtargetImpl()->fixFSMULD())
+  {
+    addPass(new FixFSMULD(getSparcTargetMachine()));
+  }
+  if (this->getSparcTargetMachine().getSubtargetImpl()->replaceFMULS())
+  {
+    addPass(new ReplaceFMULS(getSparcTargetMachine()));
+  }
+  if (this->getSparcTargetMachine().getSubtargetImpl()->fixAllFDIVSQRT())
+  {
+    addPass(new FixAllFDIVSQRT(getSparcTargetMachine()));
+  }
 }
 
 void SparcV8TargetMachine::anchor() { }

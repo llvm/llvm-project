@@ -130,12 +130,12 @@ bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
           }
         }
 
-	// If this instruction defines the splat register, then we cannot move
-	// the previous definition above it. If it reads from the splat
-	// register, then it must already be alive from some previous
-	// definition, and if the splat register is different from the source
-	// register, then this definition must not be the load for which we're
-	// searching.
+        // If this instruction defines the splat register, then we cannot move
+        // the previous definition above it. If it reads from the splat
+        // register, then it must already be alive from some previous
+        // definition, and if the splat register is different from the source
+        // register, then this definition must not be the load for which we're
+        // searching.
         if (MI->modifiesRegister(SplatReg, TRI) ||
             (SrcReg != SplatReg &&
              MI->readsRegister(SplatReg, TRI))) {
@@ -164,4 +164,3 @@ bool PPCQPXLoadSplat::runOnMachineFunction(MachineFunction &MF) {
 
   return MadeChange;
 }
-
