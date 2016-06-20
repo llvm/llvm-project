@@ -246,11 +246,18 @@ def isMacOSTriple(target):
         'i386',
         'x86_64h'
     ]
+
+    names = [
+        'darwin',
+        'macosx'
+    ]
+
     for a in arches:
-        triple = '%s-apple-darwin' % a
-        if triple not in target:
-            continue
-        return True
+        for n in names:
+            triple = '%s-apple-%s' % (a,n)
+            if triple not in target:
+                continue
+            return True
     return False
 
 def usePlatformSdkOnDarwin(config, lit_config):
