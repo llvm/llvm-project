@@ -119,6 +119,9 @@ void LinkerDriver::parseDirectives(StringRef S) {
     case OPT_nodefaultlib:
       Config->NoDefaultLibs.insert(doFindLib(Arg->getValue()));
       break;
+    case OPT_section:
+      parseSection(Arg->getValue());
+      break;
     case OPT_editandcontinue:
     case OPT_fastfail:
     case OPT_guardsym:
@@ -407,6 +410,10 @@ void LinkerDriver::link(llvm::ArrayRef<const char *> ArgsArr) {
   // Handle /merge
   for (auto *Arg : Args.filtered(OPT_merge))
     parseMerge(Arg->getValue());
+
+  // Handle /section
+  for (auto *Arg : Args.filtered(OPT_section))
+    parseSection(Arg->getValue());
 
   // Handle /manifest
   if (auto *Arg = Args.getLastArg(OPT_manifest_colon))

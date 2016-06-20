@@ -17,7 +17,7 @@
 # CHECK-NEXT:    10014:       21 08 90 04     addi    $8, $8, -28668
 # CHECK-NEXT:    10018:       8f 88 80 20     lw      $8, -32736($gp)
 # CHECK-NEXT:    1001c:       21 08 10 04     addi    $8, $8, 4100
-# CHECK-NEXT:    10020:       8f 88 80 24     lw      $8, -32732($gp)
+# CHECK-NEXT:    10020:       8f 88 80 28     lw      $8, -32728($gp)
 # CHECK-NEXT:    10024:       21 08 10 08     addi    $8, $8, 4104
 # CHECK-NEXT:    10028:       8f 88 80 2c     lw      $8, -32724($gp)
 #
@@ -67,14 +67,14 @@
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address: 0x20014
 # GOT-NEXT:       Access: -32732
-# GOT-NEXT:       Initial: 0x51008
-#                          ^-- 'bar' address
+# GOT-NEXT:       Initial: 0x0
+#                          ^-- redundant unused entry
 # GOT-NEXT:     }
 # GOT-NEXT:     Entry {
 # GOT-NEXT:       Address: 0x20018
-# GOT-NEXT:       Access: -32728
-# GOT-NEXT:       Initial: 0x0
-#                          ^-- redundant unused entry
+# GOT-NEXT:       Access: -327
+# GOT-NEXT:       Initial: 0x51008
+#                          ^-- 'bar' address
 # GOT-NEXT:     }
 # GOT-NEXT:   ]
 # GOT-NEXT:   Global entries [

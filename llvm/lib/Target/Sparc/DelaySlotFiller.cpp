@@ -278,6 +278,13 @@ bool Filler::delayHasHazard(MachineBasicBlock::iterator candidate,
       Opcode >=  SP::LDDArr && Opcode <= SP::LDrr)
     return true;
 
+  // Same as above for FDIV and FSQRT on some LEON processors.
+  if (Subtarget->fixAllFDIVSQRT()
+      &&
+      Opcode >=  SP::FDIVD && Opcode <= SP::FSQRTD)
+    return true;
+
+
   return false;
 }
 

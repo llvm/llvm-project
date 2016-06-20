@@ -4297,9 +4297,14 @@ multiclass avx512_var_shift_w<bits<8> opc, string OpcodeStr,
 defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", shl>,
               avx512_var_shift_w<0x12, "vpsllvw", shl>,
               avx512_var_shift_w_lowering<avx512vl_i16_info, shl>;
+
 defm VPSRAV : avx512_var_shift_types<0x46, "vpsrav", sra>,
               avx512_var_shift_w<0x11, "vpsravw", sra>,
               avx512_var_shift_w_lowering<avx512vl_i16_info, sra>;
+let isCodeGenOnly = 1 in
+  defm VPSRAV_Int : avx512_var_shift_types<0x46, "vpsrav", X86vsrav>,
+                    avx512_var_shift_w<0x11, "vpsravw", X86vsrav>;
+
 defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", srl>,
               avx512_var_shift_w<0x10, "vpsrlvw", srl>,
               avx512_var_shift_w_lowering<avx512vl_i16_info, srl>;

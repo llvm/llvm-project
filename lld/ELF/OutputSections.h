@@ -11,6 +11,7 @@
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
 #include "Config.h"
+#include "Relocations.h"
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -113,11 +114,12 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody &Sym);
+  void addMipsEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
-  uintX_t getMipsLocalEntryOffset(uintX_t EntryValue);
+  bool empty() const { return MipsPageEntries == 0 && Entries.empty(); }
   uintX_t getMipsLocalPageOffset(uintX_t Addr);
+  uintX_t getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const;
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
   uintX_t getNumEntries() const { return Entries.size(); }
@@ -142,10 +144,26 @@ public:
 private:
   std::vector<const SymbolBody *> Entries;
   uint32_t TlsIndexOff = -1;
-  uint32_t MipsLocalEntries = 0;
+  uint32_t MipsPageEntries = 0;
   // Output sections referenced by MIPS GOT relocations.
   llvm::SmallPtrSet<const OutputSectionBase<ELFT> *, 10> MipsOutSections;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
+
+  // MIPS ABI requires to create unique GOT entry for each Symbol/Addend
+  // pairs. The `MipsGotMap` maps (S,A) pair to the GOT index in the `MipsLocal`
+  // or `MipsGlobal` vectors. In general it does not have a sence to take in
+  // account addend for preemptible symbols because the corresponding
+  // GOT entries should have one-to-one mapping with dynamic symbols table.
+  // But we use the same container's types for both kind of GOT entries
+  // to handle them uniformly.
+  typedef std::pair<const SymbolBody*, uintX_t> MipsGotEntry;
+  typedef std::vector<MipsGotEntry> MipsGotEntries;
+  llvm::DenseMap<MipsGotEntry, size_t> MipsGotMap;
+  MipsGotEntries MipsLocal;
+  MipsGotEntries MipsGlobal;
+
+  // Write MIPS-specific parts of the GOT.
+  void writeMipsGot(uint8_t *&Buf);
 };
 
 template <class ELFT>

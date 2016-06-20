@@ -10,15 +10,6 @@
 # REQUIRES: mips
 
 # CHECK:      Symbol {
-# CHECK:        Name: foo0@
-# CHECK-NEXT:   Value: 0x0
-# CHECK-NEXT:   Size: 0
-# CHECK-NEXT:   Binding: Global
-# CHECK-NEXT:   Type: Function
-# CHECK-NEXT:   Other: 0
-# CHECK-NEXT:   Section: Undefined
-# CHECK-NEXT: }
-# CHECK:      Symbol {
 # CHECK:        Name: foo1@
 # CHECK-NEXT:   Value: 0x20050
 # CHECK-NEXT:   Size: 0
@@ -27,6 +18,15 @@
 # CHECK-NEXT:   Other [ (0x8)
 # CHECK-NEXT:     STO_MIPS_PLT
 # CHECK-NEXT:   ]
+# CHECK-NEXT:   Section: Undefined
+# CHECK-NEXT: }
+# CHECK:      Symbol {
+# CHECK:        Name: foo0@
+# CHECK-NEXT:   Value: 0x0
+# CHECK-NEXT:   Size: 0
+# CHECK-NEXT:   Binding: Global
+# CHECK-NEXT:   Type: Function
+# CHECK-NEXT:   Other: 0
 # CHECK-NEXT:   Section: Undefined
 # CHECK-NEXT: }
 

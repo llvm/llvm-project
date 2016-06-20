@@ -218,7 +218,6 @@ SITargetLowering::SITargetLowering(TargetMachine &TM,
   setOperationAction(ISD::FDIV, MVT::f32, Custom);
   setOperationAction(ISD::FDIV, MVT::f64, Custom);
 
-
   setTargetDAGCombine(ISD::FADD);
   setTargetDAGCombine(ISD::FSUB);
   setTargetDAGCombine(ISD::FMINNUM);
@@ -496,7 +495,6 @@ bool SITargetLowering::isNoopAddrSpaceCast(unsigned SrcAS,
   return isFlatGlobalAddrSpace(SrcAS) && isFlatGlobalAddrSpace(DestAS);
 }
 
-
 bool SITargetLowering::isMemOpUniform(const SDNode *N) const {
   const MemSDNode *MemNode = cast<MemSDNode>(N);
   const Value *Ptr = MemNode->getMemOperand()->getValue();
@@ -656,8 +654,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   //   enabled too.
   if (CallConv == CallingConv::AMDGPU_PS &&
       ((Info->getPSInputAddr() & 0x7F) == 0 ||
-       ((Info->getPSInputAddr() & 0xF) == 0 &&
-	Info->isPSInputAllocated(11)))) {
+       ((Info->getPSInputAddr() & 0xF) == 0 && Info->isPSInputAllocated(11)))) {
     CCInfo.AllocateReg(AMDGPU::VGPR0);
     CCInfo.AllocateReg(AMDGPU::VGPR1);
     Info->markPSInputAllocated(0);
@@ -2637,7 +2634,6 @@ static SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
   ConstantSDNode *K0 = dyn_cast<ConstantSDNode>(Op0.getOperand(1));
   if (!K0)
     return SDValue();
-
 
   if (Signed) {
     if (K0->getAPIntValue().sge(K1->getAPIntValue()))

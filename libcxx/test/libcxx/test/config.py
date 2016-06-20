@@ -620,12 +620,13 @@ class Configuration(object):
                 blacklist = os.path.join(self.libcxx_src_root,
                                          'test/ubsan_blacklist.txt')
                 self.cxx.flags += ['-fsanitize=undefined',
-                                   '-fno-sanitize=vptr,function',
+                                   '-fno-sanitize=vptr,function,float-divide-by-zero',
                                    '-fno-sanitize-recover=all',
                                    '-fsanitize-blacklist=' + blacklist]
                 self.cxx.compile_flags += ['-O3']
                 self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')
+                self.config.available_features.add('sanitizer-new-delete')
             elif san == 'Thread':
                 self.cxx.flags += ['-fsanitize=thread']
                 self.config.available_features.add('tsan')

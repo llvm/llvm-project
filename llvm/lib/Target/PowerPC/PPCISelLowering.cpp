@@ -923,7 +923,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     break;
   }
 
-
   if (Subtarget.enableMachineScheduler())
     setSchedulingPreference(Sched::Source);
   else
@@ -4746,7 +4745,7 @@ SDValue PPCTargetLowering::LowerCall_32SVR4(
     CCInfo.AnalyzeCallOperands(Outs, CC_PPC32_SVR4);
   }
   CCInfo.clearWasPPCF128();
-  
+
   // Assign locations to all of the outgoing aggregate by value arguments.
   SmallVector<CCValAssign, 16> ByValArgLocs;
   CCState CCByValInfo(CallConv, isVarArg, DAG.getMachineFunction(),
@@ -9848,7 +9847,7 @@ SDValue PPCTargetLowering::DAGCombineTruncBoolExt(SDNode *N,
 
   std::list<HandleSDNode> PromOpHandles;
   for (auto &PromOp : PromOps)
-    PromOpHandles.emplace_back(PromOp); 
+    PromOpHandles.emplace_back(PromOp);
 
   // Replace all operations (these are all the same, but have a different
   // (i1) return type). DAG.getNode will validate that the types of
@@ -10102,7 +10101,7 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
 
   std::list<HandleSDNode> PromOpHandles;
   for (auto &PromOp : PromOps)
-    PromOpHandles.emplace_back(PromOp); 
+    PromOpHandles.emplace_back(PromOp);
 
   // Replace all operations (these are all the same, but have a different
   // (promoted) return type). DAG.getNode will validate that the types of
@@ -10555,7 +10554,7 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
       if (Bitcast->getOpcode() != ISD::BITCAST ||
           Bitcast->getValueType(0) != MVT::f32)
         return false;
-      if (Bitcast2->getOpcode() != ISD::BITCAST ||          
+      if (Bitcast2->getOpcode() != ISD::BITCAST ||
           Bitcast2->getValueType(0) != MVT::f32)
         return false;
 
@@ -10588,8 +10587,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
                     MinAlign(LD->getAlignment(), 4), LD->getAAInfo());
 
       if (LD->isIndexed()) {
-	// Note that DAGCombine should re-form any pre-increment load(s) from
-	// what is produced here if that makes sense.
+        // Note that DAGCombine should re-form any pre-increment load(s) from
+        // what is produced here if that makes sense.
         DAG.ReplaceAllUsesOfValueWith(SDValue(LD, 1), BasePtr);
       }
 

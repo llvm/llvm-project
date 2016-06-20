@@ -851,8 +851,9 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
           // deleteDeadInstruction can delete the current instruction in loop
           // cases, reset BBI.
           BBI = Inst->getIterator();
-          if (BBI != BB.begin())
-            --BBI;
+          auto BBBegin = BB.begin();
+          while (BBI != BBBegin && isa<DbgInfoIntrinsic>(*(--BBI)))
+            ;
           break;
         } else if ((OR == OverwriteEnd && isShortenableAtTheEnd(DepWrite)) ||
                    ((OR == OverwriteBegin &&

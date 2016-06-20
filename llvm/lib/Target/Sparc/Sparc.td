@@ -122,7 +122,7 @@ def : Processor<"leon3", LEON3Itineraries,
 // LEON 3 FT (UT699). Provides features for the UT699 processor
 // - covers all the erratum fixes for LEON3, but does not support the CASA instruction.
 def : Processor<"ut699", LEON3Itineraries, 
-                [FeatureLeon, InsertNOPLoad]>;
+                [FeatureLeon, InsertNOPLoad, FixFSMULD, ReplaceFMULS, FixAllFDIVSQRT]>;
 
 // LEON3 FT (GR712RC). Provides features for the GR712RC processor.
 // - covers all the erratum fixed for LEON3 and support for the CASA instruction. 

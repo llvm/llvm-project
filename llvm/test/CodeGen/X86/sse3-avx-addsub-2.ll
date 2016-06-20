@@ -388,7 +388,7 @@ define <4 x float> @test15(<4 x float> %A, <4 x float> %B) {
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,1,2,3]
 ; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,1,2,3]
 ; AVX-NEXT:    vaddss %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],xmm2[0],xmm0[2,3]
+; AVX-NEXT:    vmovsldup {{.*#+}} xmm1 = xmm2[0,0,2,2]
 ; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm1[0,1,2],xmm0[0]
 ; AVX-NEXT:    retq
   %1 = extractelement <4 x float> %A, i32 1

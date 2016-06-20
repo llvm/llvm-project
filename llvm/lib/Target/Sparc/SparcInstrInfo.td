@@ -57,6 +57,10 @@ def HasLeonCASA : Predicate<"Subtarget->hasLeonCasa()">;
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
 
+def HasNoFdivSqrtFix : Predicate<"!Subtarget->fixAllFDIVSQRT()">;
+def HasNoFmulsFix : Predicate<"!Subtarget->replaceFMULS()">;
+def HasNoFsmuldFix : Predicate<"!Subtarget->fixFSMULD()">;
+
 // UseDeprecatedInsts - This predicate is true when the target processor is a
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
 // to use when appropriate.  In either of these cases, the instruction selector
@@ -1172,6 +1176,9 @@ def FABSS : F3_3u<2, 0b110100, 0b000001001,
 
 
 // Floating-point Square Root Instructions, p.145
+// FSQRTS generates an erratum on LEON processors, so by disabling this instruction
+// this will be promoted to use FSQRTD with doubles instead.
+let Predicates = [HasNoFdivSqrtFix] in 
 def FSQRTS : F3_3u<2, 0b110100, 0b000101001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs2),
                   "fsqrts $rs2, $rd",
@@ -1225,6 +1232,9 @@ def FSUBQ  : F3_3<2, 0b110100, 0b001000111,
 
 
 // Floating-point Multiply and Divide Instructions, p. 147
+// FMULS generates an erratum on LEON processors, so by disabling this instruction
+// this will be promoted to use FMULD with doubles instead.
+let Predicates = [HasNoFmulsFix] in 
 def FMULS  : F3_3<2, 0b110100, 0b001001001,
                   (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fmuls $rs1, $rs2, $rd",
@@ -1241,6 +1251,7 @@ def FMULQ  : F3_3<2, 0b110100, 0b001001011,
                   [(set f128:$rd, (fmul f128:$rs1, f128:$rs2))]>,
                   Requires<[HasHardQuad]>;
 
+let Predicates = [HasNoFsmuldFix] in
 def FSMULD : F3_3<2, 0b110100, 0b001101001,
                   (outs DFPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                   "fsmuld $rs1, $rs2, $rd",
@@ -1254,6 +1265,8 @@ def FDMULQ : F3_3<2, 0b110100, 0b001101110,
                                          (fextend f64:$rs2)))]>,
                   Requires<[HasHardQuad]>;
 
+// FDIVS generates an erratum on LEON processors, so by disabling this instruction
+// this will be promoted to use FDIVD with doubles instead.
 def FDIVS  : F3_3<2, 0b110100, 0b001001101,
                  (outs FPRegs:$rd), (ins FPRegs:$rs1, FPRegs:$rs2),
                  "fdivs $rs1, $rs2, $rd",

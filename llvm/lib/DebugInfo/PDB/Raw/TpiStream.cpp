@@ -64,6 +64,13 @@ TpiStream::TpiStream(const PDBFile &File,
 
 TpiStream::~TpiStream() {}
 
+// Corresponds to `fUDTAnon`.
+template <typename T> static bool isAnonymous(T &Rec) {
+  StringRef Name = Rec.getUniqueName();
+  return Name == "<unnamed-tag>" || Name == "__unnamed" ||
+      Name.endswith("::<unnamed-tag>") || Name.endswith("::__unnamed");
+}
+
 // Computes a hash for a given TPI record.
 template <typename T>
 static uint32_t getTpiHash(T &Rec, const CVRecord<TypeLeafKind> &RawRec) {
@@ -73,10 +80,11 @@ static uint32_t getTpiHash(T &Rec, const CVRecord<TypeLeafKind> &RawRec) {
       Opts & static_cast<uint16_t>(ClassOptions::ForwardReference);
   bool Scoped = Opts & static_cast<uint16_t>(ClassOptions::Scoped);
   bool UniqueName = Opts & static_cast<uint16_t>(ClassOptions::HasUniqueName);
+  bool IsAnon = UniqueName && isAnonymous(Rec);
 
-  if (!ForwardRef && !Scoped)
+  if (!ForwardRef && !Scoped && !IsAnon)
     return hashStringV1(Rec.getName());
-  if (!ForwardRef && UniqueName)
+  if (!ForwardRef && UniqueName && !IsAnon)
     return hashStringV1(Rec.getUniqueName());
   return hashBufferV8(RawRec.RawData);
 }

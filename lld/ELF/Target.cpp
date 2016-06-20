@@ -1745,9 +1745,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   // fallthrough
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
-    if (!S.isPreemptible())
-      return R_MIPS_GOT_LOCAL;
-    return R_GOT_OFF;
+    return R_MIPS_GOT_OFF;
   case R_MIPS_GOT_PAGE:
     return R_MIPS_GOT_LOCAL_PAGE;
   }

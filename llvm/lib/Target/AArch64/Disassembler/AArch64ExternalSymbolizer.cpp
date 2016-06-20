@@ -136,7 +136,7 @@ bool AArch64ExternalSymbolizer::tryAddingSymbolicOperand(
       else if (ReferenceType ==
                LLVMDisassembler_ReferenceType_Out_LitPool_CstrAddr) {
         CommentStream << "literal pool for: \"";
-	CommentStream.write_escaped(ReferenceName);
+        CommentStream.write_escaped(ReferenceName);
         CommentStream << "\"";
       } else if (ReferenceType ==
                LLVMDisassembler_ReferenceType_Out_Objc_CFString_Ref)

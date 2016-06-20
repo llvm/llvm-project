@@ -175,6 +175,47 @@ void parseMerge(StringRef S) {
   }
 }
 
+static uint32_t parseSectionAttributes(StringRef S) {
+  uint32_t Ret = 0;
+  for (char C : S.lower()) {
+    switch (C) {
+    case 'd':
+      Ret |= IMAGE_SCN_MEM_DISCARDABLE;
+      break;
+    case 'e':
+      Ret |= IMAGE_SCN_MEM_EXECUTE;
+      break;
+    case 'k':
+      Ret |= IMAGE_SCN_MEM_NOT_CACHED;
+      break;
+    case 'p':
+      Ret |= IMAGE_SCN_MEM_NOT_PAGED;
+      break;
+    case 'r':
+      Ret |= IMAGE_SCN_MEM_READ;
+      break;
+    case 's':
+      Ret |= IMAGE_SCN_MEM_SHARED;
+      break;
+    case 'w':
+      Ret |= IMAGE_SCN_MEM_WRITE;
+      break;
+    default:
+      error(Twine("/section: invalid argument: ") + S);
+    }
+  }
+  return Ret;
+}
+
+// Parses /section option argument.
+void parseSection(StringRef S) {
+  StringRef Name, Attrs;
+  std::tie(Name, Attrs) = S.split(',');
+  if (Name.empty() || Attrs.empty())
+    error(Twine("/section: invalid argument: ") + S);
+  Config->Section[Name] = parseSectionAttributes(Attrs);
+}
+
 // Parses a string in the form of "EMBED[,=<integer>]|NO".
 // Results are directly written to Config.
 void parseManifest(StringRef Arg) {
