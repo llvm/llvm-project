@@ -1,6 +1,18 @@
 ## OVERVIEW
 
-ROCm OpenCL Library is in early development stages.
+ROCm Device libraries are currently in early development and considered experimental and incomplete.
+
+This repository contains the following libraries:
+
+| **Name** | **Comments** | **Dependencies** |
+| --- | --- | --- |
+| llvm | Utility functions | |
+| ocml | Open Compute Math library. | llvm |
+| ockl | Open Compute Kernel library. | llvm |
+| opencl | OpenCL built-in library | ocml, ockl |
+
+All libraries are compiled to LLVM Bitcode which can be linked. Note that libraries use specific AMDGPU intrinsics.
+
 
 ## BUILDING
 
