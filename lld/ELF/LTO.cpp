@@ -279,6 +279,10 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
   if (!T)
     fatal("target not found: " + Msg);
   TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
+
+  // lld supports the new relocations.
+  Options.RelaxELFRelocations = true;
+
   Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
 
   auto CreateTargetMachine = [&]() {

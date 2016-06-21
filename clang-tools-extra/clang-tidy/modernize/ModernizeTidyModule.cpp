@@ -23,6 +23,7 @@
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseDefaultCheck.h"
+#include "UseEmplaceCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
 
@@ -54,6 +55,7 @@ public:
     CheckFactories.registerCheck<UseBoolLiteralsCheck>(
         "modernize-use-bool-literals");
     CheckFactories.registerCheck<UseDefaultCheck>("modernize-use-default");
+    CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
   }

@@ -186,15 +186,15 @@
         __kmp_omp_debug_struct_info             DATA
     %endif
 
-        # Symbols for MS mutual detection:
-        _You_must_link_with_exactly_one_OpenMP_library    DATA
-        _You_must_link_with_Intel_OpenMP_library          DATA
-        %ifdef msvc_compat
-            _You_must_link_with_Microsoft_OpenMP_library  DATA
-        %endif
+    # Symbols for MS mutual detection:
+    _You_must_link_with_exactly_one_OpenMP_library    DATA
+    _You_must_link_with_Intel_OpenMP_library          DATA
+    %ifdef msvc_compat
+        _You_must_link_with_Microsoft_OpenMP_library  DATA
+    %endif
 
-        __kmp_wait_64
-        __kmp_release_64
+    __kmp_wait_64
+    __kmp_release_64
 
 
 #    VT_getthid                              1

@@ -20,6 +20,7 @@ namespace fs = std::experimental::filesystem;
 namespace StaticEnv {
 
 inline fs::path makePath(fs::path const& p) {
+    // env_path is expected not to contain symlinks.
     static const fs::path env_path = LIBCXX_FILESYSTEM_STATIC_TEST_ROOT;
     return env_path / p;
 }
@@ -236,6 +237,7 @@ private:
     }
 
     static bool checkDynamicTestRoot() {
+        // LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT is expected not to contain symlinks.
         char* fs_root = std::getenv("LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT");
         if (!fs_root) {
             std::printf("ERROR: LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT must be a defined "

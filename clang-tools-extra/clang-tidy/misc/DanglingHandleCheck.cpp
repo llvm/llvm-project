@@ -8,11 +8,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "DanglingHandleCheck.h"
+#include "../utils/Matchers.h"
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang {
 namespace tidy {
@@ -135,7 +137,7 @@ void DanglingHandleCheck::registerMatchersForReturn(MatchFinder *Finder) {
           //   1. Value to Handle conversion.
           //   2. Handle copy construction.
           // We have to match both.
-          has(ignoringParenImpCasts(handleFrom(
+          has(ignoringImplicit(handleFrom(
               IsAHandle,
               handleFrom(IsAHandle, declRefExpr(to(varDecl(
                                         // Is function scope ...

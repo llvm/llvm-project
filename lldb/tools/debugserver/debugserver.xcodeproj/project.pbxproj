@@ -920,7 +920,6 @@
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_RELEASE;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				HEADER_SEARCH_PATHS = /System/Library/Frameworks/System.framework/PrivateHeaders;
 				INSTALL_PATH = /usr/bin;
 				LLDB_COMPRESSION_CFLAGS = "";
 				"LLDB_COMPRESSION_CFLAGS[sdk=appletvos*]" = "-DHAVE_LIBCOMPRESSION=1";

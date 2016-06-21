@@ -475,34 +475,34 @@ void X86TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   // be used with MOVL or ADDL instructions.
   // @indntpoff is similar to @gotntpoff, but for use in
   // position dependent code.
-  uint8_t *Inst = Loc - 2;
-  uint8_t *Op = Loc - 1;
   uint8_t Reg = (Loc[-1] >> 3) & 7;
-  bool IsMov = *Inst == 0x8b;
+
   if (Type == R_386_TLS_IE) {
-    // For R_386_TLS_IE relocation we perform the next transformations:
-    // MOVL foo@INDNTPOFF,%EAX is transformed to MOVL $foo,%EAX
-    // MOVL foo@INDNTPOFF,%REG is transformed to MOVL $foo,%REG
-    // ADDL foo@INDNTPOFF,%REG is transformed to ADDL $foo,%REG
-    // First one is special because when EAX is used the sequence is 5 bytes
-    // long, otherwise it is 6 bytes.
-    if (*Op == 0xa1) {
-      *Op = 0xb8;
+    if (Loc[-1] == 0xa1) {
+      // "movl foo@indntpoff,%eax" -> "movl $foo,%eax"
+      // This case is different from the generic case below because
+      // this is a 5 byte instruction while below is 6 bytes.
+      Loc[-1] = 0xb8;
+    } else if (Loc[-2] == 0x8b) {
+      // "movl foo@indntpoff,%reg" -> "movl $foo,%reg"
+      Loc[-2] = 0xc7;
+      Loc[-1] = 0xc0 | Reg;
     } else {
-      *Inst = IsMov ? 0xc7 : 0x81;
-      *Op = 0xc0 | ((*Op >> 3) & 7);
+      // "addl foo@indntpoff,%reg" -> "addl $foo,%reg"
+      Loc[-2] = 0x81;
+      Loc[-1] = 0xc0 | Reg;
     }
   } else {
-    // R_386_TLS_GOTIE relocation can be optimized to
-    // R_386_TLS_LE so that it does not use GOT.
-    // "MOVL foo@GOTTPOFF(%RIP), %REG" is transformed to "MOVL $foo, %REG".
-    // "ADDL foo@GOTNTPOFF(%RIP), %REG" is transformed to "LEAL foo(%REG), %REG"
-    // Note: gold converts to ADDL instead of LEAL.
-    *Inst = IsMov ? 0xc7 : 0x8d;
-    if (IsMov)
-      *Op = 0xc0 | ((*Op >> 3) & 7);
-    else
-      *Op = 0x80 | Reg | (Reg << 3);
+    assert(Type == R_386_TLS_GOTIE);
+    if (Loc[-2] == 0x8b) {
+      // "movl foo@gottpoff(%rip),%reg" -> "movl $foo,%reg"
+      Loc[-2] = 0xc7;
+      Loc[-1] = 0xc0 | Reg;
+    } else {
+      // "addl foo@gotntpoff(%rip),%reg" -> "leal foo(%reg),%reg"
+      Loc[-2] = 0x8d;
+      Loc[-1] = 0x80 | (Reg << 3) | Reg;
+    }
   }
   relocateOne(Loc, R_386_TLS_LE, Val);
 }
@@ -677,34 +677,42 @@ void X86_64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
 // R_X86_64_TPOFF32 so that it does not use GOT.
 void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
                                       uint64_t Val) const {
-  // Ulrich's document section 6.5 says that @gottpoff(%rip) must be
-  // used in MOVQ or ADDQ instructions only.
-  // "MOVQ foo@GOTTPOFF(%RIP), %REG" is transformed to "MOVQ $foo, %REG".
-  // "ADDQ foo@GOTTPOFF(%RIP), %REG" is transformed to "LEAQ foo(%REG), %REG"
-  // (if the register is not RSP/R12) or "ADDQ $foo, %RSP".
-  // Opcodes info can be found at http://ref.x86asm.net/coder64.html#x48.
-  uint8_t *Prefix = Loc - 3;
-  uint8_t *Inst = Loc - 2;
-  uint8_t *RegSlot = Loc - 1;
+  uint8_t *Inst = Loc - 3;
   uint8_t Reg = Loc[-1] >> 3;
-  bool IsMov = *Inst == 0x8b;
-  bool RspAdd = !IsMov && Reg == 4;
+  uint8_t *RegSlot = Loc - 1;
 
-  // r12 and rsp registers requires special handling.
-  // Problem is that for other registers, for example leaq 0xXXXXXXXX(%r11),%r11
-  // result out is 7 bytes: 4d 8d 9b XX XX XX XX,
-  // but leaq 0xXXXXXXXX(%r12),%r12 is 8 bytes: 4d 8d a4 24 XX XX XX XX.
-  // The same true for rsp. So we convert to addq for them, saving 1 byte that
-  // we dont have.
-  if (RspAdd)
-    *Inst = 0x81;
-  else
-    *Inst = IsMov ? 0xc7 : 0x8d;
-  if (*Prefix == 0x4c)
-    *Prefix = (IsMov || RspAdd) ? 0x49 : 0x4d;
-  *RegSlot = (IsMov || RspAdd) ? (0xc0 | Reg) : (0x80 | Reg | (Reg << 3));
-  // The original code used a pc relative relocation and so we have to
-  // compensate for the -4 in had in the addend.
+  // Note that ADD with RSP or R12 is converted to ADD instead of LEA
+  // because LEA with these registers needs 4 bytes to encode and thus
+  // wouldn't fit the space.
+
+  if (memcmp(Inst, "\x48\x03\x25", 3) == 0) {
+    // "addq foo@gottpoff(%rip),%rsp" -> "addq $foo,%rsp"
+    memcpy(Inst, "\x48\x81\xc4", 3);
+  } else if (memcmp(Inst, "\x4c\x03\x25", 3) == 0) {
+    // "addq foo@gottpoff(%rip),%r12" -> "addq $foo,%r12"
+    memcpy(Inst, "\x49\x81\xc4", 3);
+  } else if (memcmp(Inst, "\x4c\x03", 2) == 0) {
+    // "addq foo@gottpoff(%rip),%r[8-15]" -> "leaq foo(%r[8-15]),%r[8-15]"
+    memcpy(Inst, "\x4d\x8d", 2);
+    *RegSlot = 0x80 | (Reg << 3) | Reg;
+  } else if (memcmp(Inst, "\x48\x03", 2) == 0) {
+    // "addq foo@gottpoff(%rip),%reg -> "leaq foo(%reg),%reg"
+    memcpy(Inst, "\x48\x8d", 2);
+    *RegSlot = 0x80 | (Reg << 3) | Reg;
+  } else if (memcmp(Inst, "\x4c\x8b", 2) == 0) {
+    // "movq foo@gottpoff(%rip),%r[8-15]" -> "movq $foo,%r[8-15]"
+    memcpy(Inst, "\x49\xc7", 2);
+    *RegSlot = 0xc0 | Reg;
+  } else if (memcmp(Inst, "\x48\x8b", 2) == 0) {
+    // "movq foo@gottpoff(%rip),%reg" -> "movq $foo,%reg"
+    memcpy(Inst, "\x48\xc7", 2);
+    *RegSlot = 0xc0 | Reg;
+  } else {
+    fatal("R_X86_64_GOTTPOFF must be used in MOVQ or ADDQ instructions only");
+  }
+
+  // The original code used a PC relative relocation.
+  // Need to compensate for the -4 it had in the addend.
   relocateOne(Loc, R_X86_64_TPOFF32, Val + 4);
 }
 
