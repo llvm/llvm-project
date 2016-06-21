@@ -323,6 +323,10 @@ CodeGenModule::EmitCXXGlobalVarDeclInitFunc(const VarDecl *D,
        D->hasAttr<CUDASharedAttr>()))
     return;
 
+  // DLL imported variables will be initialized by the export side.
+  if (D->hasAttr<DLLImportAttr>())
+    return;
+
   // Check if we've already initialized this decl.
   auto I = DelayedCXXInitPosition.find(D);
   if (I != DelayedCXXInitPosition.end() && I->second == ~0U)

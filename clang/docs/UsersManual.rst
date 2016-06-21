@@ -711,16 +711,19 @@ also allows you to push and pop the current warning state. This is
 particularly useful when writing a header file that will be compiled by
 other people, because you don't know what warning flags they build with.
 
-In the below example :option:`-Wmultichar` is ignored for only a single line of
-code, after which the diagnostics return to whatever state had previously
+In the below example :option:`-Wextra-tokens` is ignored for only a single line
+of code, after which the diagnostics return to whatever state had previously
 existed.
 
 .. code-block:: c
 
-  #pragma clang diagnostic push
-  #pragma clang diagnostic ignored "-Wmultichar"
+  #if foo
+  #endif foo // warning: extra tokens at end of #endif directive
 
-  char b = 'df'; // no warning.
+  #pragma clang diagnostic ignored "-Wextra-tokens"
+
+  #if foo
+  #endif foo // no warning
 
   #pragma clang diagnostic pop
 
@@ -772,11 +775,13 @@ the pragma onwards within the same file.
 
 .. code-block:: c
 
-  char a = 'xy'; // warning
+  #if foo
+  #endif foo // warning: extra tokens at end of #endif directive
 
   #pragma clang system_header
 
-  char b = 'ab'; // no warning
+  #if foo
+  #endif foo // no warning
 
 The :option:`--system-header-prefix=` and :option:`--no-system-header-prefix=`
 command-line arguments can be used to override whether subsets of an include

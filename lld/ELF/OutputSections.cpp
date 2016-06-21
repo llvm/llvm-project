@@ -271,7 +271,8 @@ template <class ELFT> void GotSection<ELFT>::writeMipsGot(uint8_t *&Buf) {
   auto AddEntry = [&](const MipsGotEntry &SA) {
     uint8_t *Entry = Buf;
     Buf += sizeof(uintX_t);
-    uintX_t VA = SA.first->template getVA<ELFT>(SA.second);
+    const SymbolBody* Body = SA.first;
+    uintX_t VA = Body->template getVA<ELFT>(SA.second);
     write<uintX_t, ELFT::TargetEndianness, sizeof(uintX_t)>(Entry, VA);
   };
   std::for_each(std::begin(MipsLocal), std::end(MipsLocal), AddEntry);
@@ -590,6 +591,11 @@ void GnuHashTableSection<ELFT>::addSymbols(
     V.push_back({Sym.Body, Sym.STName});
 }
 
+// Returns the number of version definition entries. Because the first entry
+// is for the version definition itself, it is the number of versioned symbols
+// plus one. Note that we don't support multiple versions yet.
+static unsigned getVerDefNum() { return Config->SymbolVersions.size() + 1; }
+
 template <class ELFT>
 DynamicSection<ELFT>::DynamicSection()
     : OutputSectionBase<ELFT>(".dynamic", SHT_DYNAMIC, SHF_ALLOC | SHF_WRITE) {
@@ -692,10 +698,16 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (!Config->Entry.empty())
     Add({DT_DEBUG, (uint64_t)0});
 
-  if (size_t NeedNum = Out<ELFT>::VerNeed->getNeedNum()) {
+  bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
+  if (HasVerNeed || Out<ELFT>::VerDef)
     Add({DT_VERSYM, Out<ELFT>::VerSym});
+  if (Out<ELFT>::VerDef) {
+    Add({DT_VERDEF, Out<ELFT>::VerDef});
+    Add({DT_VERDEFNUM, getVerDefNum()});
+  }
+  if (HasVerNeed) {
     Add({DT_VERNEED, Out<ELFT>::VerNeed});
-    Add({DT_VERNEEDNUM, NeedNum});
+    Add({DT_VERNEEDNUM, Out<ELFT>::VerNeed->getNeedNum()});
   }
 
   if (Config->EMachine == EM_MIPS) {
@@ -1276,8 +1288,10 @@ static bool sortMipsSymbols(const std::pair<SymbolBody *, unsigned> &L,
                             const std::pair<SymbolBody *, unsigned> &R) {
   // Sort entries related to non-local preemptible symbols by GOT indexes.
   // All other entries go to the first part of GOT in arbitrary order.
-  if (!L.first->IsInGlobalMipsGot || !R.first->IsInGlobalMipsGot)
-    return !L.first->IsInGlobalMipsGot;
+  bool LIsInLocalGot = !L.first->IsInGlobalMipsGot;
+  bool RIsInLocalGot = !R.first->IsInGlobalMipsGot;
+  if (LIsInLocalGot || RIsInLocalGot)
+    return !RIsInLocalGot;
   return L.first->GotIndex < R.first->GotIndex;
 }
 
@@ -1432,6 +1446,68 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
 }
 
 template <class ELFT>
+VersionDefinitionSection<ELFT>::VersionDefinitionSection()
+    : OutputSectionBase<ELFT>(".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC) {}
+
+static StringRef getFileDefName() {
+  if (!Config->SoName.empty())
+    return Config->SoName;
+  return Config->OutputFile;
+}
+
+template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
+  FileDefNameOff = Out<ELFT>::DynStrTab->addString(getFileDefName());
+  for (Version &V : Config->SymbolVersions)
+    V.NameOff = Out<ELFT>::DynStrTab->addString(V.Name);
+
+  this->Header.sh_size =
+      (sizeof(Elf_Verdef) + sizeof(Elf_Verdaux)) * getVerDefNum();
+  this->Header.sh_link = Out<ELFT>::DynStrTab->SectionIndex;
+  this->Header.sh_addralign = sizeof(uint32_t);
+
+  // sh_info should be set to the number of definitions. This fact is missed in
+  // documentation, but confirmed by binutils community:
+  // https://sourceware.org/ml/binutils/2014-11/msg00355.html
+  this->Header.sh_info = getVerDefNum();
+}
+
+template <class Elf_Verdef, class Elf_Verdaux>
+static void writeDefinition(Elf_Verdef *&Verdef, Elf_Verdaux *&Verdaux,
+                            uint32_t Flags, uint32_t Index, StringRef Name,
+                            size_t StrTabOffset) {
+  Verdef->vd_version = 1;
+  Verdef->vd_cnt = 1;
+  Verdef->vd_aux =
+      reinterpret_cast<char *>(Verdaux) - reinterpret_cast<char *>(Verdef);
+  Verdef->vd_next = sizeof(Elf_Verdef);
+
+  Verdef->vd_flags = Flags;
+  Verdef->vd_ndx = Index;
+  Verdef->vd_hash = hashSysv(Name);
+  ++Verdef;
+
+  Verdaux->vda_name = StrTabOffset;
+  Verdaux->vda_next = 0;
+  ++Verdaux;
+}
+
+template <class ELFT>
+void VersionDefinitionSection<ELFT>::writeTo(uint8_t *Buf) {
+  Elf_Verdef *Verdef = reinterpret_cast<Elf_Verdef *>(Buf);
+  Elf_Verdaux *Verdaux =
+      reinterpret_cast<Elf_Verdaux *>(Verdef + getVerDefNum());
+
+  writeDefinition(Verdef, Verdaux, VER_FLG_BASE, 1, getFileDefName(),
+                  FileDefNameOff);
+
+  uint32_t I = 2;
+  for (Version &V : Config->SymbolVersions)
+    writeDefinition(Verdef, Verdaux, 0 /* Flags */, I++, V.Name, V.NameOff);
+
+  Verdef[-1].vd_next = 0;
+}
+
+template <class ELFT>
 VersionTableSection<ELFT>::VersionTableSection()
     : OutputSectionBase<ELFT>(".gnu.version", SHT_GNU_versym, SHF_ALLOC) {
   this->Header.sh_addralign = sizeof(uint16_t);
@@ -1450,10 +1526,7 @@ template <class ELFT> void VersionTableSection<ELFT>::writeTo(uint8_t *Buf) {
   auto *OutVersym = reinterpret_cast<Elf_Versym *>(Buf) + 1;
   for (const std::pair<SymbolBody *, size_t> &P :
        Out<ELFT>::DynSymTab->getSymbols()) {
-    if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(P.first))
-      OutVersym->vs_index = SS->VersionId;
-    else
-      OutVersym->vs_index = VER_NDX_GLOBAL;
+    OutVersym->vs_index = P.first->symbol()->VersionId;
     ++OutVersym;
   }
 }
@@ -1462,12 +1535,17 @@ template <class ELFT>
 VersionNeedSection<ELFT>::VersionNeedSection()
     : OutputSectionBase<ELFT>(".gnu.version_r", SHT_GNU_verneed, SHF_ALLOC) {
   this->Header.sh_addralign = sizeof(uint32_t);
+
+  // Identifiers in verneed section start at 2 because 0 and 1 are reserved
+  // for VER_NDX_LOCAL and VER_NDX_GLOBAL.
+  // First identifiers are reserved by verdef section if it exist.
+  NextIndex = getVerDefNum() + 1;
 }
 
 template <class ELFT>
 void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
   if (!SS->Verdef) {
-    SS->VersionId = VER_NDX_GLOBAL;
+    SS->symbol()->VersionId = VER_NDX_GLOBAL;
     return;
   }
   SharedFile<ELFT> *F = SS->File;
@@ -1485,7 +1563,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
         SS->File->getStringTable().data() + SS->Verdef->getAux()->vda_name);
     NV.Index = NextIndex++;
   }
-  SS->VersionId = NV.Index;
+  SS->symbol()->VersionId = NV.Index;
 }
 
 template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1740,6 +1818,11 @@ template class VersionNeedSection<ELF32LE>;
 template class VersionNeedSection<ELF32BE>;
 template class VersionNeedSection<ELF64LE>;
 template class VersionNeedSection<ELF64BE>;
+
+template class VersionDefinitionSection<ELF32LE>;
+template class VersionDefinitionSection<ELF32BE>;
+template class VersionDefinitionSection<ELF64LE>;
+template class VersionDefinitionSection<ELF64BE>;
 
 template class BuildIdSection<ELF32LE>;
 template class BuildIdSection<ELF32BE>;

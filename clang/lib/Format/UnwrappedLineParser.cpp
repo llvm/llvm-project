@@ -882,10 +882,23 @@ void UnwrappedLineParser::parseStructuralElement() {
                  /*MunchSemi=*/false);
       return;
     }
-    if (Style.Language == FormatStyle::LK_JavaScript &&
-        FormatTok->is(Keywords.kw_import)) {
-      parseJavaScriptEs6ImportExport();
-      return;
+    if (FormatTok->is(Keywords.kw_import)) {
+      if (Style.Language == FormatStyle::LK_JavaScript) {
+        parseJavaScriptEs6ImportExport();
+        return;
+      }
+      if (Style.Language == FormatStyle::LK_Proto) {
+        nextToken();
+        if (FormatTok->is(tok::kw_public))
+          nextToken();
+        if (!FormatTok->is(tok::string_literal))
+          return;
+        nextToken();
+        if (FormatTok->is(tok::semi))
+          nextToken();
+        addUnwrappedLine();
+        return;
+      }
     }
     if (FormatTok->isOneOf(Keywords.kw_signals, Keywords.kw_qsignals,
                            Keywords.kw_slots, Keywords.kw_qslots)) {

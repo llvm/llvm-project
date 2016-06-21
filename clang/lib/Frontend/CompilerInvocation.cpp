@@ -1466,6 +1466,7 @@ bool isOpenCL(LangStandard::Kind LangStd) {
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
                                          const llvm::Triple &T,
+                                         PreprocessorOptions &PPOpts,
                                          LangStandard::Kind LangStd) {
   // Set some properties which depend solely on the input kind; it would be nice
   // to move these to the language standard, and have the driver resolve the
@@ -1550,6 +1551,10 @@ void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,
     Opts.DefaultFPContract = 1;
     Opts.NativeHalfType = 1;
     Opts.NativeHalfArgsAndReturns = 1;
+    // Include default header file for OpenCL.
+    if (Opts.IncludeDefaultHeader) {
+      PPOpts.Includes.push_back("opencl-c.h");
+    }
   }
 
   Opts.CUDA = IK == IK_CUDA || IK == IK_PreprocessedCuda ||
@@ -1596,6 +1601,7 @@ static Visibility parseVisibility(Arg *arg, ArgList &args,
 
 static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
                           const TargetOptions &TargetOpts,
+                          PreprocessorOptions &PPOpts,
                           DiagnosticsEngine &Diags) {
   // FIXME: Cleanup per-file based stuff.
   LangStandard::Kind LangStd = LangStandard::lang_unspecified;
@@ -1667,8 +1673,10 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       LangStd = OpenCLLangStd;
   }
 
+  Opts.IncludeDefaultHeader = Args.hasArg(OPT_finclude_default_header);
+
   llvm::Triple T(TargetOpts.Triple);
-  CompilerInvocation::setLangDefaults(Opts, IK, T, LangStd);
+  CompilerInvocation::setLangDefaults(Opts, IK, T, PPOpts, LangStd);
 
   // We abuse '-f[no-]gnu-keywords' to force overriding all GNU-extension
   // keywords. This behavior is provided by GCC's poorly named '-fasm' flag,
@@ -2341,7 +2349,8 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
                         Diags, LangOpts.Sanitize);
   } else {
     // Other LangOpts are only initialzed when the input is not AST or LLVM IR.
-    ParseLangArgs(LangOpts, Args, DashX, Res.getTargetOpts(), Diags);
+    ParseLangArgs(LangOpts, Args, DashX, Res.getTargetOpts(),
+      Res.getPreprocessorOpts(), Diags);
     if (Res.getFrontendOpts().ProgramAction == frontend::RewriteObjC)
       LangOpts.ObjCExceptions = 1;
 

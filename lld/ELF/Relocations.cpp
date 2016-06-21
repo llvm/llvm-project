@@ -406,7 +406,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     return Expr;
   }
   if (Body.getVisibility() != STV_DEFAULT) {
-    error("Cannot preempt symbol");
+    error("cannot preempt symbol");
     return Expr;
   }
   if (Body.isObject()) {
@@ -440,7 +440,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     Body.NeedsCopyOrPltAddr = true;
     return toPlt(Expr);
   }
-  error("Symbol is missing type");
+  error("symbol is missing type");
 
   return Expr;
 }

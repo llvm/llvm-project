@@ -30,7 +30,7 @@ and line numbers in the warning messages.
 
 Example:
 
-.. code-block:: c++
+.. code-block:: console
 
   % cat projects/compiler-rt/lib/tsan/lit_tests/tiny_race.c
   #include <pthread.h>
