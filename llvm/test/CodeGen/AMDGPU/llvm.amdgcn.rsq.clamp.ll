@@ -38,5 +38,13 @@ define void @rsq_clamp_f64(double addrspace(1)* %out, double %src) #0 {
   ret void
 }
 
+; FUNC-LABEL: {{^}}rsq_clamp_undef_f32:
+; SI-NOT: v_rsq_clamp_f32
+define void @rsq_clamp_undef_f32(float addrspace(1)* %out) #0 {
+  %rsq_clamp = call float @llvm.amdgcn.rsq.clamp.f32(float undef)
+  store float %rsq_clamp, float addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

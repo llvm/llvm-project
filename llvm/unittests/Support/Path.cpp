@@ -1024,6 +1024,39 @@ TEST_F(FileSystemTest, PathFromFD) {
   ::close(FileDescriptor);
 }
 
+TEST_F(FileSystemTest, PathFromFDWin32) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+  ASSERT_NO_ERROR(
+    fs::createTemporaryFile("prefix", "temp", FileDescriptor, TempPath));
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+  
+  SmallVector<char, 8> ResultPath;
+  std::error_code ErrorCode =
+    fs::getPathFromOpenFD(FileDescriptor, ResultPath);
+
+  if (!ErrorCode) {
+    // Now that we know how much space is required for the path, create a path
+    // buffer with exactly enough space (sans null terminator, which should not
+    // be present), and call getPathFromOpenFD again to ensure that the API
+    // properly handles exactly-sized buffers.
+    SmallVector<char, 8> ExactSizedPath(ResultPath.size());
+    ErrorCode = fs::getPathFromOpenFD(FileDescriptor, ExactSizedPath);
+    ResultPath = ExactSizedPath;
+  }
+
+  if (!ErrorCode) {
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+  ::close(FileDescriptor);
+}
+
 TEST_F(FileSystemTest, OpenFileForRead) {
   // Create a temp file.
   int FileDescriptor;

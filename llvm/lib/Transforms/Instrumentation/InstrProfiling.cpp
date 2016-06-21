@@ -13,12 +13,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/InstrProfiling.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/ProfileData/InstrProf.h"
-#include "llvm/Transforms/InstrProfiling.h"
 #include "llvm/Transforms/Utils/ModuleUtils.h"
 
 using namespace llvm;
@@ -78,7 +78,8 @@ INITIALIZE_PASS(InstrProfilingLegacyPass, "instrprof",
                 "Frontend instrumentation-based coverage lowering.", false,
                 false)
 
-ModulePass *llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options) {
+ModulePass *
+llvm::createInstrProfilingLegacyPass(const InstrProfOptions &Options) {
   return new InstrProfilingLegacyPass(Options);
 }
 
@@ -196,7 +197,7 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
   GlobalVariable *Name = Ind->getName();
   auto It = ProfileDataMap.find(Name);
   assert(It != ProfileDataMap.end() && It->second.DataVar &&
-    "value profiling detected in function with no counter incerement");
+         "value profiling detected in function with no counter incerement");
 
   GlobalVariable *DataVar = It->second.DataVar;
   uint64_t ValueKind = Ind->getValueKind()->getZExtValue();
@@ -205,9 +206,9 @@ void InstrProfiling::lowerValueProfileInst(InstrProfValueProfileInst *Ind) {
     Index += It->second.NumValueSites[Kind];
 
   IRBuilder<> Builder(Ind);
-  Value* Args[3] = {Ind->getTargetValue(),
-      Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
-      Builder.getInt32(Index)};
+  Value *Args[3] = {Ind->getTargetValue(),
+                    Builder.CreateBitCast(DataVar, Builder.getInt8PtrTy()),
+                    Builder.getInt32(Index)};
   Ind->replaceAllUsesWith(
       Builder.CreateCall(getOrInsertValueProfilingCall(*M), Args));
   Ind->eraseFromParent();
@@ -262,7 +263,7 @@ static inline bool shouldRecordFunctionAddr(Function *F) {
   // exists, the vtable will only be emitted in the TU where the key method
   // is defined. In a TU where vtable is not available, the function won't
   // be 'addresstaken'. If its address is not recorded here, the profile data
-  // with missing address may be picked by the linker leading  to missing 
+  // with missing address may be picked by the linker leading  to missing
   // indirect call target info.
   return F->hasAddressTaken() || F->hasLinkOnceLinkage();
 }
@@ -385,22 +386,22 @@ InstrProfiling::getOrCreateRegionCounters(InstrProfIncrementInst *Inc) {
   auto *Int16Ty = Type::getInt16Ty(Ctx);
   auto *Int16ArrayTy = ArrayType::get(Int16Ty, IPVK_Last + 1);
   Type *DataTypes[] = {
-    #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
-    #include "llvm/ProfileData/InstrProfData.inc"
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) LLVMType,
+#include "llvm/ProfileData/InstrProfData.inc"
   };
   auto *DataTy = StructType::get(Ctx, makeArrayRef(DataTypes));
 
-  Constant *FunctionAddr = shouldRecordFunctionAddr(Fn) ?
-                           ConstantExpr::getBitCast(Fn, Int8PtrTy) :
-                           ConstantPointerNull::get(Int8PtrTy);
+  Constant *FunctionAddr = shouldRecordFunctionAddr(Fn)
+                               ? ConstantExpr::getBitCast(Fn, Int8PtrTy)
+                               : ConstantPointerNull::get(Int8PtrTy);
 
-  Constant *Int16ArrayVals[IPVK_Last+1];
+  Constant *Int16ArrayVals[IPVK_Last + 1];
   for (uint32_t Kind = IPVK_First; Kind <= IPVK_Last; ++Kind)
     Int16ArrayVals[Kind] = ConstantInt::get(Int16Ty, PD.NumValueSites[Kind]);
 
   Constant *DataVals[] = {
-    #define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
-    #include "llvm/ProfileData/InstrProfData.inc"
+#define INSTR_PROF_DATA(Type, LLVMType, Name, Init) Init,
+#include "llvm/ProfileData/InstrProfData.inc"
   };
   auto *Data = new GlobalVariable(*M, DataTy, false, NamePtr->getLinkage(),
                                   ConstantStruct::get(DataTy, DataVals),
@@ -446,16 +447,16 @@ void InstrProfiling::emitVNodes() {
     return;
 
   uint64_t NumCounters = TotalNS * NumCountersPerValueSite;
-  // Heuristic for small programs with very few total value sites.
-  // The default value of vp-counters-per-site is chosen based on
-  // the observation that large apps usually have a low percentage
-  // of value sites that actually have any profile data, and thus
-  // the average number of counters per site is low. For small
-  // apps with very few sites, this may not be true. Bump up the
-  // number of counters in this case.
+// Heuristic for small programs with very few total value sites.
+// The default value of vp-counters-per-site is chosen based on
+// the observation that large apps usually have a low percentage
+// of value sites that actually have any profile data, and thus
+// the average number of counters per site is low. For small
+// apps with very few sites, this may not be true. Bump up the
+// number of counters in this case.
 #define INSTR_PROF_MIN_VAL_COUNTS 10
   if (NumCounters < INSTR_PROF_MIN_VAL_COUNTS)
-    NumCounters = std::max(INSTR_PROF_MIN_VAL_COUNTS, (int) NumCounters * 2);
+    NumCounters = std::max(INSTR_PROF_MIN_VAL_COUNTS, (int)NumCounters * 2);
 
   auto &Ctx = M->getContext();
   Type *VNodeTypes[] = {
@@ -507,7 +508,8 @@ void InstrProfiling::emitRegistration() {
   auto *RegisterF = Function::Create(RegisterFTy, GlobalValue::InternalLinkage,
                                      getInstrProfRegFuncsName(), M);
   RegisterF->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
-  if (Options.NoRedZone) RegisterF->addFnAttr(Attribute::NoRedZone);
+  if (Options.NoRedZone)
+    RegisterF->addFnAttr(Attribute::NoRedZone);
 
   auto *RuntimeRegisterTy = FunctionType::get(VoidTy, VoidPtrTy, false);
   auto *RuntimeRegisterF =
@@ -541,7 +543,8 @@ void InstrProfiling::emitRuntimeHook() {
     return;
 
   // If the module's provided its own runtime, we don't need to do anything.
-  if (M->getGlobalVariable(getInstrProfRuntimeHookVarName())) return;
+  if (M->getGlobalVariable(getInstrProfRuntimeHookVarName()))
+    return;
 
   // Declare an external variable that will pull in the runtime initialization.
   auto *Int32Ty = Type::getInt32Ty(M->getContext());
@@ -554,7 +557,8 @@ void InstrProfiling::emitRuntimeHook() {
                                 GlobalValue::LinkOnceODRLinkage,
                                 getInstrProfRuntimeHookVarUseFuncName(), M);
   User->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone) User->addFnAttr(Attribute::NoRedZone);
+  if (Options.NoRedZone)
+    User->addFnAttr(Attribute::NoRedZone);
   User->setVisibility(GlobalValue::HiddenVisibility);
   if (Triple(M->getTargetTriple()).supportsCOMDAT())
     User->setComdat(M->getOrInsertComdat(User->getName()));
@@ -599,7 +603,8 @@ void InstrProfiling::emitInitialization() {
   std::string InstrProfileOutput = Options.InstrProfileOutput;
 
   Constant *RegisterF = M->getFunction(getInstrProfRegFuncsName());
-  if (!RegisterF && InstrProfileOutput.empty()) return;
+  if (!RegisterF && InstrProfileOutput.empty())
+    return;
 
   // Create the initialization function.
   auto *VoidTy = Type::getVoidTy(M->getContext());
@@ -608,7 +613,8 @@ void InstrProfiling::emitInitialization() {
                              getInstrProfInitFuncName(), M);
   F->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
   F->addFnAttr(Attribute::NoInline);
-  if (Options.NoRedZone) F->addFnAttr(Attribute::NoRedZone);
+  if (Options.NoRedZone)
+    F->addFnAttr(Attribute::NoRedZone);
 
   // Add the basic block and the necessary calls.
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", F));

@@ -511,18 +511,6 @@ void Module::setPIELevel(PIELevel::Level PL) {
   addModuleFlag(ModFlagBehavior::Error, "PIE Level", PL);
 }
 
-void Module::setMaximumFunctionCount(uint64_t Count) {
-  addModuleFlag(ModFlagBehavior::Error, "MaxFunctionCount", Count);
-}
-
-Optional<uint64_t> Module::getMaximumFunctionCount() {
-  auto *Val =
-      cast_or_null<ConstantAsMetadata>(getModuleFlag("MaxFunctionCount"));
-  if (!Val)
-    return None;
-  return cast<ConstantInt>(Val->getValue())->getZExtValue();
-}
-
 void Module::setProfileSummary(Metadata *M) {
   addModuleFlag(ModFlagBehavior::Error, "ProfileSummary", M);
 }

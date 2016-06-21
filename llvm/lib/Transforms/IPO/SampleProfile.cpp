@@ -27,6 +27,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/IR/Constants.h"
@@ -105,11 +106,13 @@ typedef DenseMap<const BasicBlock *, SmallVector<const BasicBlock *, 8>>
 class SampleProfileLoader {
 public:
   SampleProfileLoader(StringRef Name = SampleProfileFile)
-      : DT(nullptr), PDT(nullptr), LI(nullptr), Reader(), Samples(nullptr),
-        Filename(Name), ProfileIsValid(false), TotalCollectedSamples(0) {}
+      : DT(nullptr), PDT(nullptr), LI(nullptr), ACT(nullptr), Reader(),
+        Samples(nullptr), Filename(Name), ProfileIsValid(false),
+        TotalCollectedSamples(0) {}
 
   bool doInitialization(Module &M);
   bool runOnModule(Module &M);
+  void setACT(AssumptionCacheTracker *A) { ACT = A; }
 
   void dump() { Reader->dump(); }
 
@@ -169,6 +172,8 @@ protected:
   std::unique_ptr<DominatorTreeBase<BasicBlock>> PDT;
   std::unique_ptr<LoopInfo> LI;
 
+  AssumptionCacheTracker *ACT;
+
   /// \brief Predecessors for each basic block in the CFG.
   BlockEdgeMap Predecessors;
 
@@ -213,6 +218,9 @@ public:
   const char *getPassName() const override { return "Sample profile pass"; }
   bool runOnModule(Module &M) override;
 
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addRequired<AssumptionCacheTracker>();
+  }
 private:
   SampleProfileLoader SampleLoader;
 };
@@ -698,7 +706,7 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       }
     }
     for (auto CI : CIS) {
-      InlineFunctionInfo IFI;
+      InlineFunctionInfo IFI(nullptr, ACT);
       Function *CalledFunction = CI->getCalledFunction();
       DebugLoc DLoc = CI->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*CI)->getTotalSamples();
@@ -1226,7 +1234,10 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
 }
 
 char SampleProfileLoaderLegacyPass::ID = 0;
-INITIALIZE_PASS(SampleProfileLoaderLegacyPass, "sample-profile",
+INITIALIZE_PASS_BEGIN(SampleProfileLoaderLegacyPass, "sample-profile",
+                "Sample Profile loader", false, false)
+INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
+INITIALIZE_PASS_END(SampleProfileLoaderLegacyPass, "sample-profile",
                 "Sample Profile loader", false, false)
 
 bool SampleProfileLoader::doInitialization(Module &M) {
@@ -1268,6 +1279,8 @@ bool SampleProfileLoader::runOnModule(Module &M) {
 }
 
 bool SampleProfileLoaderLegacyPass::runOnModule(Module &M) {
+  // FIXME: pass in AssumptionCache correctly for the new pass manager. 
+  SampleLoader.setACT(&getAnalysis<AssumptionCacheTracker>());
   return SampleLoader.runOnModule(M);
 }
 

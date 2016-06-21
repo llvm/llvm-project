@@ -59,7 +59,7 @@ namespace {
 
 class ImplicitNullChecks : public MachineFunctionPass {
   /// Represents one null check that can be made implicit.
-  struct NullCheck {
+  class NullCheck {
     // The memory operation the null check can be folded into.
     MachineInstr *MemOperation;
 
@@ -75,10 +75,7 @@ class ImplicitNullChecks : public MachineFunctionPass {
     // The block branched to if the pointer is null.
     MachineBasicBlock *NullSucc;
 
-    NullCheck()
-        : MemOperation(), CheckOperation(), CheckBlock(), NotNullSucc(),
-          NullSucc() {}
-
+  public:
     explicit NullCheck(MachineInstr *memOperation, MachineInstr *checkOperation,
                        MachineBasicBlock *checkBlock,
                        MachineBasicBlock *notNullSucc,
@@ -86,6 +83,16 @@ class ImplicitNullChecks : public MachineFunctionPass {
         : MemOperation(memOperation), CheckOperation(checkOperation),
           CheckBlock(checkBlock), NotNullSucc(notNullSucc), NullSucc(nullSucc) {
     }
+
+    MachineInstr *getMemOperation() const { return MemOperation; }
+
+    MachineInstr *getCheckOperation() const { return CheckOperation; }
+
+    MachineBasicBlock *getCheckBlock() const { return CheckBlock; }
+
+    MachineBasicBlock *getNotNullSucc() const { return NotNullSucc; }
+
+    MachineBasicBlock *getNullSucc() const { return NullSucc; }
   };
 
   const TargetInstrInfo *TII = nullptr;
@@ -388,7 +395,7 @@ void ImplicitNullChecks::rewriteNullChecks(
 
   for (auto &NC : NullCheckList) {
     // Remove the conditional branch dependent on the null check.
-    unsigned BranchesRemoved = TII->RemoveBranch(*NC.CheckBlock);
+    unsigned BranchesRemoved = TII->RemoveBranch(*NC.getCheckBlock());
     (void)BranchesRemoved;
     assert(BranchesRemoved > 0 && "expected at least one branch!");
 
@@ -396,13 +403,13 @@ void ImplicitNullChecks::rewriteNullChecks(
     // check earlier ensures that this bit of code motion is legal.  We do not
     // touch the successors list for any basic block since we haven't changed
     // control flow, we've just made it implicit.
-    MachineInstr *FaultingLoad =
-        insertFaultingLoad(NC.MemOperation, NC.CheckBlock, NC.NullSucc);
+    MachineInstr *FaultingLoad = insertFaultingLoad(
+        NC.getMemOperation(), NC.getCheckBlock(), NC.getNullSucc());
     // Now the values defined by MemOperation, if any, are live-in of
     // the block of MemOperation.
     // The original load operation may define implicit-defs alongside
     // the loaded value.
-    MachineBasicBlock *MBB = NC.MemOperation->getParent();
+    MachineBasicBlock *MBB = NC.getMemOperation()->getParent();
     for (const MachineOperand &MO : FaultingLoad->operands()) {
       if (!MO.isReg() || !MO.isDef())
         continue;
@@ -411,12 +418,12 @@ void ImplicitNullChecks::rewriteNullChecks(
         continue;
       MBB->addLiveIn(Reg);
     }
-    NC.MemOperation->eraseFromParent();
-    NC.CheckOperation->eraseFromParent();
+    NC.getMemOperation()->eraseFromParent();
+    NC.getCheckOperation()->eraseFromParent();
 
     // Insert an *unconditional* branch to not-null successor.
-    TII->InsertBranch(*NC.CheckBlock, NC.NotNullSucc, nullptr, /*Cond=*/None,
-                      DL);
+    TII->InsertBranch(*NC.getCheckBlock(), NC.getNotNullSucc(), nullptr,
+                      /*Cond=*/None, DL);
 
     NumImplicitNullChecks++;
   }

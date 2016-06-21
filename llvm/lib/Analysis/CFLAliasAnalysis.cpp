@@ -64,14 +64,30 @@ CFLAAResult::CFLAAResult(CFLAAResult &&Arg)
     : AAResultBase(std::move(Arg)), TLI(Arg.TLI) {}
 CFLAAResult::~CFLAAResult() {}
 
-/// Information we have about a function and would like to keep around.
-struct CFLAAResult::FunctionInfo {
-  StratifiedSets<Value *> Sets;
-  // Lots of functions have < 4 returns. Adjust as necessary.
-  SmallVector<Value *, 4> ReturnedValues;
+/// We use ExternalRelation to describe an externally visible interaction
+/// between parameters/return value of a function.
+/// Both From and To are integer indices that represent a single parameter or
+/// return value. When the index is 0, they represent the return value. Non-zero
+/// index i represents the i-th parameter.
+struct ExternalRelation {
+  unsigned From, To;
+};
 
-  FunctionInfo(StratifiedSets<Value *> &&S, SmallVector<Value *, 4> &&RV)
-      : Sets(std::move(S)), ReturnedValues(std::move(RV)) {}
+/// Information we have about a function and would like to keep around.
+class CFLAAResult::FunctionInfo {
+  StratifiedSets<Value *> Sets;
+
+  // RetParamRelations is a collection of ExternalRelations.
+  SmallVector<ExternalRelation, 8> RetParamRelations;
+
+public:
+  FunctionInfo(Function &Fn, const SmallVectorImpl<Value *> &RetVals,
+               StratifiedSets<Value *> S);
+
+  const StratifiedSets<Value *> &getStratifiedSets() const { return Sets; }
+  const SmallVectorImpl<ExternalRelation> &getRetParamRelations() const {
+    return RetParamRelations;
+  }
 };
 
 /// Try to go from a Value* to a Function*. Never returns nullptr.
@@ -100,6 +116,9 @@ LLVM_CONSTEXPR StratifiedAttr AttrNone = 0;
 LLVM_CONSTEXPR StratifiedAttr AttrEscaped = 1 << AttrEscapedIndex;
 LLVM_CONSTEXPR StratifiedAttr AttrUnknown = 1 << AttrUnknownIndex;
 LLVM_CONSTEXPR StratifiedAttr AttrGlobal = 1 << AttrGlobalIndex;
+
+/// The maximum number of arguments we can put into a summary.
+LLVM_CONSTEXPR unsigned MaxSupportedArgsInSummary = 50;
 
 /// StratifiedSets call for knowledge of "direction", so this is how we
 /// represent that locally.
@@ -358,148 +377,46 @@ public:
   }
 
   static bool isFunctionExternal(Function *Fn) {
-    return Fn->isDeclaration() || !Fn->hasLocalLinkage();
+    return !Fn->hasExactDefinition();
   }
 
-  /// Gets whether the sets at Index1 above, below, or equal to the sets at
-  /// Index2. Returns None if they are not in the same set chain.
-  static Optional<Level> getIndexRelation(const StratifiedSets<Value *> &Sets,
-                                          StratifiedIndex Index1,
-                                          StratifiedIndex Index2) {
-    if (Index1 == Index2)
-      return Level::Same;
-
-    const auto *Current = &Sets.getLink(Index1);
-    while (Current->hasBelow()) {
-      if (Current->Below == Index2)
-        return Level::Below;
-      Current = &Sets.getLink(Current->Below);
-    }
-
-    Current = &Sets.getLink(Index1);
-    while (Current->hasAbove()) {
-      if (Current->Above == Index2)
-        return Level::Above;
-      Current = &Sets.getLink(Current->Above);
-    }
-
-    return None;
-  }
-
-  // Encodes the notion of a "use"
-  struct Edge {
-    // Which value the edge is coming from
-    Value *From;
-
-    // Which value the edge is pointing to
-    Value *To;
-
-    // Edge weight
-    EdgeType Weight;
-
-    // Whether we aliased any external values along the way that may be
-    // invisible to the analysis
-    StratifiedAttrs FromAttrs, ToAttrs;
-  };
-
-  bool
-  tryInterproceduralAnalysis(const SmallVectorImpl<Function *> &Fns,
-                             Value *FuncValue,
-                             const iterator_range<User::op_iterator> &Args) {
-    const unsigned ExpectedMaxArgs = 8;
-    const unsigned MaxSupportedArgs = 50;
+  bool tryInterproceduralAnalysis(CallSite CS,
+                                  const SmallVectorImpl<Function *> &Fns) {
     assert(Fns.size() > 0);
 
-    // This algorithm is n^2, so an arbitrary upper-bound of 50 args was
-    // selected, so it doesn't take too long in insane cases.
-    if (std::distance(Args.begin(), Args.end()) > (int)MaxSupportedArgs)
+    if (CS.arg_size() > MaxSupportedArgsInSummary)
       return false;
 
     // Exit early if we'll fail anyway
     for (auto *Fn : Fns) {
       if (isFunctionExternal(Fn) || Fn->isVarArg())
         return false;
+      // Fail if the caller does not provide enough arguments
+      assert(Fn->arg_size() <= CS.arg_size());
       auto &MaybeInfo = AA.ensureCached(Fn);
       if (!MaybeInfo.hasValue())
         return false;
     }
 
-    SmallVector<Edge, 8> Output;
-    SmallVector<Value *, ExpectedMaxArgs> Arguments(Args.begin(), Args.end());
-    SmallVector<StratifiedInfo, ExpectedMaxArgs> Parameters;
     for (auto *Fn : Fns) {
-      auto &Info = *AA.ensureCached(Fn);
-      auto &Sets = Info.Sets;
-      auto &RetVals = Info.ReturnedValues;
+      auto &FnInfo = AA.ensureCached(Fn);
+      assert(FnInfo.hasValue());
 
-      Parameters.clear();
-      for (auto &Param : Fn->args()) {
-        auto MaybeInfo = Sets.find(&Param);
-        // Did a new parameter somehow get added to the function/slip by?
-        if (!MaybeInfo.hasValue())
-          return false;
-        Parameters.push_back(*MaybeInfo);
+      auto &RetParamRelations = FnInfo->getRetParamRelations();
+      for (auto &Relation : RetParamRelations) {
+        auto FromIndex = Relation.From;
+        auto ToIndex = Relation.To;
+        auto FromVal = (FromIndex == 0) ? CS.getInstruction()
+                                        : CS.getArgument(FromIndex - 1);
+        auto ToVal =
+            (ToIndex == 0) ? CS.getInstruction() : CS.getArgument(ToIndex - 1);
+        if (FromVal->getType()->isPointerTy() &&
+            ToVal->getType()->isPointerTy())
+          // Actual arguments must be defined before they are used at callsite.
+          // Therefore by the time we reach here, FromVal and ToVal should
+          // already exist in the graph. We can go ahead and add them directly.
+          Graph.addEdge(FromVal, ToVal, EdgeType::Assign);
       }
-
-      // Adding an edge from argument -> return value for each parameter that
-      // may alias the return value
-      for (unsigned I = 0, E = Parameters.size(); I != E; ++I) {
-        auto &ParamInfo = Parameters[I];
-        auto &ArgVal = Arguments[I];
-        bool AddEdge = false;
-        StratifiedAttrs RetAttrs, ParamAttrs;
-        for (unsigned X = 0, XE = RetVals.size(); X != XE; ++X) {
-          auto MaybeInfo = Sets.find(RetVals[X]);
-          if (!MaybeInfo.hasValue())
-            return false;
-
-          auto &RetInfo = *MaybeInfo;
-          RetAttrs |= Sets.getLink(RetInfo.Index).Attrs;
-          ParamAttrs |= Sets.getLink(ParamInfo.Index).Attrs;
-          auto MaybeRelation =
-              getIndexRelation(Sets, ParamInfo.Index, RetInfo.Index);
-          if (MaybeRelation.hasValue())
-            AddEdge = true;
-        }
-        if (AddEdge)
-          Output.push_back(
-              Edge{FuncValue, ArgVal, EdgeType::Assign, RetAttrs, ParamAttrs});
-      }
-
-      if (Parameters.size() != Arguments.size())
-        return false;
-
-      /// Adding edges between arguments for arguments that may end up aliasing
-      /// each other. This is necessary for functions such as
-      /// void foo(int** a, int** b) { *a = *b; }
-      /// (Technically, the proper sets for this would be those below
-      /// Arguments[I] and Arguments[X], but our algorithm will produce
-      /// extremely similar, and equally correct, results either way)
-      for (unsigned I = 0, E = Arguments.size(); I != E; ++I) {
-        auto &MainVal = Arguments[I];
-        auto &MainInfo = Parameters[I];
-        auto &MainAttrs = Sets.getLink(MainInfo.Index).Attrs;
-        for (unsigned X = I + 1; X != E; ++X) {
-          auto &SubInfo = Parameters[X];
-          auto &SubVal = Arguments[X];
-          auto &SubAttrs = Sets.getLink(SubInfo.Index).Attrs;
-          auto MaybeRelation =
-              getIndexRelation(Sets, MainInfo.Index, SubInfo.Index);
-
-          if (!MaybeRelation.hasValue())
-            continue;
-
-          Output.push_back(
-              Edge{MainVal, SubVal, EdgeType::Assign, MainAttrs, SubAttrs});
-        }
-      }
-    }
-
-    // Commit all edges in Output to CFLGraph
-    for (const auto &Edge : Output) {
-      addEdge(Edge.From, Edge.To, Edge.Weight);
-      Graph.addAttr(Edge.From, Edge.FromAttrs);
-      Graph.addAttr(Edge.To, Edge.ToAttrs);
     }
 
     return true;
@@ -511,7 +428,7 @@ public:
     // Make sure all arguments and return value are added to the graph first
     for (Value *V : CS.args())
       addNode(V);
-    if (!Inst->getType()->isVoidTy())
+    if (Inst->getType()->isPointerTy())
       addNode(Inst);
 
     // Check if Inst is a call to a library function that allocates/deallocates
@@ -526,7 +443,7 @@ public:
     // that we can tack on.
     SmallVector<Function *, 4> Targets;
     if (getPossibleTargets(CS, Targets))
-      if (tryInterproceduralAnalysis(Targets, Inst, CS.args()))
+      if (tryInterproceduralAnalysis(CS, Targets))
         return;
 
     // Because the function is opaque, we need to note that anything
@@ -539,7 +456,7 @@ public:
           Escapes.insert(V);
       }
 
-    if (!Inst->getType()->isVoidTy()) {
+    if (Inst->getType()->isPointerTy()) {
       auto *Fn = CS.getCalledFunction();
       if (Fn == nullptr || !Fn->doesNotAlias(0))
         Graph.addAttr(Inst, AttrUnknown);
@@ -643,8 +560,10 @@ class CFLGraphBuilder {
   void addInstructionToGraph(Instruction &Inst) {
     // We don't want the edges of most "return" instructions, but we *do* want
     // to know what can be returned.
-    if (isa<ReturnInst>(&Inst))
-      ReturnedValues.push_back(&Inst);
+    if (auto RetInst = dyn_cast<ReturnInst>(&Inst))
+      if (auto RetVal = RetInst->getReturnValue())
+        if (RetVal->getType()->isPointerTy())
+          ReturnedValues.push_back(RetVal);
 
     if (!hasUsefulEdges(&Inst))
       return;
@@ -671,12 +590,16 @@ public:
     buildGraphFrom(Fn);
   }
 
-  const CFLGraph &getCFLGraph() { return Graph; }
-  SmallVector<Value *, 4> takeReturnValues() {
-    return std::move(ReturnedValues);
+  const CFLGraph &getCFLGraph() const { return Graph; }
+  const SmallVector<Value *, 4> &getReturnValues() const {
+    return ReturnedValues;
   }
-  const SmallPtrSet<Value *, 8> &getExternalValues() { return ExternalValues; }
-  const SmallPtrSet<Value *, 8> &getEscapedValues() { return EscapedValues; }
+  const SmallPtrSet<Value *, 8> &getExternalValues() const {
+    return ExternalValues;
+  }
+  const SmallPtrSet<Value *, 8> &getEscapedValues() const {
+    return EscapedValues;
+  }
 };
 }
 
@@ -788,6 +711,94 @@ static bool canSkipAddingToSets(Value *Val) {
   return false;
 }
 
+/// Gets whether the sets at Index1 above, below, or equal to the sets at
+/// Index2. Returns None if they are not in the same set chain.
+static Optional<Level> getIndexRelation(const StratifiedSets<Value *> &Sets,
+                                        StratifiedIndex Index1,
+                                        StratifiedIndex Index2) {
+  if (Index1 == Index2)
+    return Level::Same;
+
+  const auto *Current = &Sets.getLink(Index1);
+  while (Current->hasBelow()) {
+    if (Current->Below == Index2)
+      return Level::Below;
+    Current = &Sets.getLink(Current->Below);
+  }
+
+  Current = &Sets.getLink(Index1);
+  while (Current->hasAbove()) {
+    if (Current->Above == Index2)
+      return Level::Above;
+    Current = &Sets.getLink(Current->Above);
+  }
+
+  return None;
+}
+
+CFLAAResult::FunctionInfo::FunctionInfo(Function &Fn,
+                                        const SmallVectorImpl<Value *> &RetVals,
+                                        StratifiedSets<Value *> S)
+    : Sets(std::move(S)) {
+  // Collect StratifiedInfo for each parameter
+  SmallVector<Optional<StratifiedInfo>, 8> ParamInfos;
+  for (auto &Param : Fn.args()) {
+    if (Param.getType()->isPointerTy())
+      ParamInfos.push_back(Sets.find(&Param));
+    else
+      ParamInfos.push_back(None);
+  }
+  // Collect StratifiedInfo for each return value
+  SmallVector<Optional<StratifiedInfo>, 4> RetInfos;
+  RetInfos.reserve(RetVals.size());
+  for (unsigned I = 0, E = RetVals.size(); I != E; ++I)
+    RetInfos.push_back(Sets.find(RetVals[I]));
+
+  // This summary generation algorithm is n^2. An arbitrary upper-bound of 50
+  // args was selected, so it doesn't take too long in insane cases.
+  if (Fn.arg_size() <= MaxSupportedArgsInSummary) {
+    for (unsigned I = 0, E = ParamInfos.size(); I != E; ++I) {
+      auto &MainInfo = ParamInfos[I];
+      if (!MainInfo)
+        continue;
+
+      // Adding edges between arguments for arguments that may end up aliasing
+      // each other. This is necessary for functions such as
+      // void foo(int** a, int** b) { *a = *b; }
+      // (Technically, the proper sets for this would be those below
+      // Arguments[I] and Arguments[X], but our algorithm will produce
+      // extremely similar, and equally correct, results either way)
+      for (unsigned X = I + 1; X != E; ++X) {
+        auto &SubInfo = ParamInfos[X];
+        if (!SubInfo)
+          continue;
+
+        auto MaybeRelation =
+            getIndexRelation(Sets, MainInfo->Index, SubInfo->Index);
+        if (!MaybeRelation.hasValue())
+          continue;
+
+        RetParamRelations.push_back(ExternalRelation{1 + I, 1 + X});
+      }
+
+      // Adding an edge from argument -> return value for each parameter that
+      // may alias the return value
+      for (unsigned X = 0, XE = RetInfos.size(); X != XE; ++X) {
+        auto &RetInfo = RetInfos[X];
+        if (!RetInfo)
+          continue;
+
+        auto MaybeRelation =
+            getIndexRelation(Sets, MainInfo->Index, RetInfo->Index);
+        if (!MaybeRelation.hasValue())
+          continue;
+
+        RetParamRelations.push_back(ExternalRelation{1 + I, 0});
+      }
+    }
+  }
+}
+
 // Builds the graph + StratifiedSets for a function.
 CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
   CFLGraphBuilder GraphBuilder(*this, TLI, *Fn);
@@ -848,7 +859,7 @@ CFLAAResult::FunctionInfo CFLAAResult::buildSetsFrom(Function *Fn) {
     SetBuilder.addAttributesBelow(Escape, AttrUnknown);
   }
 
-  return FunctionInfo(SetBuilder.build(), GraphBuilder.takeReturnValues());
+  return FunctionInfo(*Fn, GraphBuilder.getReturnValues(), SetBuilder.build());
 }
 
 void CFLAAResult::scan(Function *Fn) {
@@ -912,7 +923,7 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
   auto &MaybeInfo = ensureCached(Fn);
   assert(MaybeInfo.hasValue());
 
-  auto &Sets = MaybeInfo->Sets;
+  auto &Sets = MaybeInfo->getStratifiedSets();
   auto MaybeA = Sets.find(ValA);
   if (!MaybeA.hasValue())
     return MayAlias;

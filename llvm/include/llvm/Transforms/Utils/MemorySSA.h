@@ -526,12 +526,12 @@ public:
     return LiveOnEntryDef.get();
   }
 
-  using AccessListType = iplist<MemoryAccess>;
+  using AccessList = iplist<MemoryAccess>;
 
   /// \brief Return the list of MemoryAccess's for a given basic block.
   ///
   /// This list is not modifiable by the user.
-  const AccessListType *getBlockAccesses(const BasicBlock *BB) const {
+  const AccessList *getBlockAccesses(const BasicBlock *BB) const {
     auto It = PerBlockAccesses.find(BB);
     return It == PerBlockAccesses.end() ? nullptr : It->second.get();
   }
@@ -563,8 +563,7 @@ protected:
 
 private:
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
-  using AccessMap =
-      DenseMap<const BasicBlock *, std::unique_ptr<AccessListType>>;
+  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
 
   void
   determineInsertionPoint(const SmallPtrSetImpl<BasicBlock *> &DefiningBlocks);
@@ -578,7 +577,7 @@ private:
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
                   SmallPtrSet<BasicBlock *, 16> &Visited);
-  AccessListType *getOrCreateAccessList(BasicBlock *);
+  AccessList *getOrCreateAccessList(BasicBlock *);
   AliasAnalysis *AA;
   DominatorTree *DT;
   Function &F;

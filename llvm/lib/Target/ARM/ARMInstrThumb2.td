@@ -2593,8 +2593,9 @@ def t2UMLAL : T2MlaLong<0b110, 0b0000,
 
 def t2UMAAL : T2MulLong<0b110, 0b0110,
                   (outs rGPR:$RdLo, rGPR:$RdHi),
-                  (ins rGPR:$Rn, rGPR:$Rm), IIC_iMAC64,
+                  (ins rGPR:$Rn, rGPR:$Rm, rGPR:$RLo, rGPR:$RHi), IIC_iMAC64,
                   "umaal", "\t$RdLo, $RdHi, $Rn, $Rm", []>,
+          RegConstraint<"$RLo = $RdLo, $RHi = $RdHi">,
           Requires<[IsThumb2, HasDSP]>;
 } // hasSideEffects
 

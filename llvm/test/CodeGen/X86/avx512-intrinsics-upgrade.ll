@@ -276,3 +276,95 @@ define <16 x i32>@test_int_x86_avx512_mask_pshuf_d_512(<16 x i32> %x0, i32 %x1, 
 	%res4 = add <16 x i32> %res3, %res2
 	ret <16 x i32> %res4
 }
+
+define i16 @test_pcmpeq_d(<16 x i32> %a, <16 x i32> %b) {
+; CHECK-LABEL: test_pcmpeq_d:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.mask.pcmpeq.d.512(<16 x i32> %a, <16 x i32> %b, i16 -1)
+  ret i16 %res
+}
+
+define i16 @test_mask_pcmpeq_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
+; CHECK-LABEL: test_mask_pcmpeq_d:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.mask.pcmpeq.d.512(<16 x i32> %a, <16 x i32> %b, i16 %mask)
+  ret i16 %res
+}
+
+declare i16 @llvm.x86.avx512.mask.pcmpeq.d.512(<16 x i32>, <16 x i32>, i16)
+
+define i8 @test_pcmpeq_q(<8 x i64> %a, <8 x i64> %b) {
+; CHECK-LABEL: test_pcmpeq_q:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i8 @llvm.x86.avx512.mask.pcmpeq.q.512(<8 x i64> %a, <8 x i64> %b, i8 -1)
+  ret i8 %res
+}
+
+define i8 @test_mask_pcmpeq_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
+; CHECK-LABEL: test_mask_pcmpeq_q:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpeqq %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i8 @llvm.x86.avx512.mask.pcmpeq.q.512(<8 x i64> %a, <8 x i64> %b, i8 %mask)
+  ret i8 %res
+}
+
+declare i8 @llvm.x86.avx512.mask.pcmpeq.q.512(<8 x i64>, <8 x i64>, i8)
+
+define i16 @test_pcmpgt_d(<16 x i32> %a, <16 x i32> %b) {
+; CHECK-LABEL: test_pcmpgt_d:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.mask.pcmpgt.d.512(<16 x i32> %a, <16 x i32> %b, i16 -1)
+  ret i16 %res
+}
+
+define i16 @test_mask_pcmpgt_d(<16 x i32> %a, <16 x i32> %b, i16 %mask) {
+; CHECK-LABEL: test_mask_pcmpgt_d:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i16 @llvm.x86.avx512.mask.pcmpgt.d.512(<16 x i32> %a, <16 x i32> %b, i16 %mask)
+  ret i16 %res
+}
+
+declare i16 @llvm.x86.avx512.mask.pcmpgt.d.512(<16 x i32>, <16 x i32>, i16)
+
+define i8 @test_pcmpgt_q(<8 x i64> %a, <8 x i64> %b) {
+; CHECK-LABEL: test_pcmpgt_q:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i8 @llvm.x86.avx512.mask.pcmpgt.q.512(<8 x i64> %a, <8 x i64> %b, i8 -1)
+  ret i8 %res
+}
+
+define i8 @test_mask_pcmpgt_q(<8 x i64> %a, <8 x i64> %b, i8 %mask) {
+; CHECK-LABEL: test_mask_pcmpgt_q:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1
+; CHECK-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0 {%k1}
+; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    retq
+  %res = call i8 @llvm.x86.avx512.mask.pcmpgt.q.512(<8 x i64> %a, <8 x i64> %b, i8 %mask)
+  ret i8 %res
+}
+
+declare i8 @llvm.x86.avx512.mask.pcmpgt.q.512(<8 x i64>, <8 x i64>, i8)

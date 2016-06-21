@@ -1212,6 +1212,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VTBL2:         return "ARMISD::VTBL2";
   case ARMISD::VMULLs:        return "ARMISD::VMULLs";
   case ARMISD::VMULLu:        return "ARMISD::VMULLu";
+  case ARMISD::UMAAL:         return "ARMISD::UMAAL";
   case ARMISD::UMLAL:         return "ARMISD::UMLAL";
   case ARMISD::SMLAL:         return "ARMISD::SMLAL";
   case ARMISD::BUILD_VECTOR:  return "ARMISD::BUILD_VECTOR";
@@ -1564,6 +1565,10 @@ void ARMTargetLowering::PassF64ArgInRegs(const SDLoc &dl, SelectionDAG &DAG,
   }
 }
 
+bool ARMTargetLowering::isPositionIndependent() const {
+  return getTargetMachine().getRelocationModel() == Reloc::PIC_;
+}
+
 /// LowerCall - Lowering a call into a callseq_start <-
 /// ARMISD:CALL <- callseq_end chain. Also add input and output parameter
 /// nodes.
@@ -1813,9 +1818,8 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((Subtarget->isTargetWindows() ||
-            RM == Reloc::Static) &&
-           "long-calls with non-static relocation model!");
+    assert(!isPositionIndependent() &&
+           "long-calls codegen is not position independent!");
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
     // anything extra.
@@ -2516,9 +2520,9 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
   SDLoc DL(Op);
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   const BlockAddress *BA = cast<BlockAddressSDNode>(Op)->getBlockAddress();
-  Reloc::Model RelocM = getTargetMachine().getRelocationModel();
   SDValue CPAddr;
-  if (RelocM == Reloc::Static) {
+  bool IsPositionIndependent = isPositionIndependent();
+  if (!IsPositionIndependent) {
     CPAddr = DAG.getTargetConstantPool(BA, PtrVT, 4);
   } else {
     unsigned PCAdj = Subtarget->isThumb() ? 4 : 8;
@@ -2533,7 +2537,7 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
       DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), CPAddr,
                   MachinePointerInfo::getConstantPool(DAG.getMachineFunction()),
                   false, false, false, 0);
-  if (RelocM == Reloc::Static)
+  if (!IsPositionIndependent)
     return Result;
   SDValue PICLabel = DAG.getConstant(ARMPCLabelIndex, DL, MVT::i32);
   return DAG.getNode(ARMISD::PIC_ADD, DL, PtrVT, Result, PICLabel);
@@ -2798,7 +2802,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   const TargetMachine &TM = getTargetMachine();
   Reloc::Model RM = TM.getRelocationModel();
   const Triple &TargetTriple = TM.getTargetTriple();
-  if (RM == Reloc::PIC_) {
+  if (isPositionIndependent()) {
     bool UseGOT_PREL =
         !shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV);
 
@@ -2851,7 +2855,6 @@ SDValue ARMTargetLowering::LowerGlobalAddressDarwin(SDValue Op,
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
   SDLoc dl(Op);
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
-  Reloc::Model RelocM = getTargetMachine().getRelocationModel();
 
   if (Subtarget->useMovt(DAG.getMachineFunction()))
     ++NumMovwMovt;
@@ -2859,11 +2862,12 @@ SDValue ARMTargetLowering::LowerGlobalAddressDarwin(SDValue Op,
   // FIXME: Once remat is capable of dealing with instructions with register
   // operands, expand this into multiple nodes
   unsigned Wrapper =
-      RelocM == Reloc::PIC_ ? ARMISD::WrapperPIC : ARMISD::Wrapper;
+      isPositionIndependent() ? ARMISD::WrapperPIC : ARMISD::Wrapper;
 
   SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, ARMII::MO_NONLAZY);
   SDValue Result = DAG.getNode(Wrapper, dl, PtrVT, G);
 
+  Reloc::Model RelocM = getTargetMachine().getRelocationModel();
   if (Subtarget->GVIsIndirectSymbol(GV, RelocM))
     Result = DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                          MachinePointerInfo::getGOT(DAG.getMachineFunction()),
@@ -2942,10 +2946,9 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
     unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
     EVT PtrVT = getPointerTy(DAG.getDataLayout());
-    Reloc::Model RelocM = getTargetMachine().getRelocationModel();
     SDValue CPAddr;
-    unsigned PCAdj = (RelocM != Reloc::PIC_)
-      ? 0 : (Subtarget->isThumb() ? 4 : 8);
+    bool IsPositionIndependent = isPositionIndependent();
+    unsigned PCAdj = IsPositionIndependent ? (Subtarget->isThumb() ? 4 : 8) : 0;
     ARMConstantPoolValue *CPV =
       ARMConstantPoolConstant::Create(MF.getFunction(), ARMPCLabelIndex,
                                       ARMCP::CPLSDA, PCAdj);
@@ -2956,7 +2959,7 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
         MachinePointerInfo::getConstantPool(DAG.getMachineFunction()), false,
         false, false, 0);
 
-    if (RelocM == Reloc::PIC_) {
+    if (IsPositionIndependent) {
       SDValue PICLabel = DAG.getConstant(ARMPCLabelIndex, dl, MVT::i32);
       Result = DAG.getNode(ARMISD::PIC_ADD, dl, PtrVT, Result, PICLabel);
     }
@@ -4001,7 +4004,7 @@ SDValue ARMTargetLowering::LowerBR_JT(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(ARMISD::BR2_JT, dl, MVT::Other, Chain,
                        Addr, Op.getOperand(2), JTI);
   }
-  if (getTargetMachine().getRelocationModel() == Reloc::PIC_) {
+  if (isPositionIndependent()) {
     Addr =
         DAG.getLoad((EVT)MVT::i32, dl, Chain, Addr,
                     MachinePointerInfo::getJumpTable(DAG.getMachineFunction()),
@@ -7325,7 +7328,6 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
   MachineJumpTableInfo *JTI =
     MF->getOrCreateJumpTableInfo(MachineJumpTableInfo::EK_Inline);
   unsigned MJTI = JTI->createJumpTableIndex(LPadList);
-  Reloc::Model RelocM = getTargetMachine().getRelocationModel();
 
   // Create the MBBs for the dispatch code.
 
@@ -7369,6 +7371,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
   // registers being marked as clobbered.
   MIB.addRegMask(RI.getNoPreservedMask());
 
+  bool IsPositionIndependent = isPositionIndependent();
   unsigned NumLPads = LPadList.size();
   if (Subtarget->isThumb2()) {
     unsigned NewVReg1 = MRI->createVirtualRegister(TRC);
@@ -7482,7 +7485,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
                    .addMemOperand(JTMMOLd));
 
     unsigned NewVReg6 = NewVReg5;
-    if (RelocM == Reloc::PIC_) {
+    if (IsPositionIndependent) {
       NewVReg6 = MRI->createVirtualRegister(TRC);
       AddDefaultPred(BuildMI(DispContBB, dl, TII->get(ARM::tADDrr), NewVReg6)
                      .addReg(ARM::CPSR, RegState::Define)
@@ -7565,7 +7568,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
       .addImm(0)
       .addMemOperand(JTMMOLd));
 
-    if (RelocM == Reloc::PIC_) {
+    if (IsPositionIndependent) {
       BuildMI(DispContBB, dl, TII->get(ARM::BR_JTadd))
         .addReg(NewVReg5, RegState::Kill)
         .addReg(NewVReg4)
@@ -8684,11 +8687,6 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddcNode,
                                      TargetLowering::DAGCombinerInfo &DCI,
                                      const ARMSubtarget *Subtarget) {
 
-  if (Subtarget->isThumb1Only()) return SDValue();
-
-  // Only perform the checks after legalize when the pattern is available.
-  if (DCI.isBeforeLegalize()) return SDValue();
-
   // Look for multiply add opportunities.
   // The pattern is a ISD::UMUL_LOHI followed by two add nodes, where
   // each add nodes consumes a value from ISD::UMUL_LOHI and there is
@@ -8816,14 +8814,97 @@ static SDValue AddCombineTo64bitMLAL(SDNode *AddcNode,
   return resNode;
 }
 
+static SDValue AddCombineTo64bitUMAAL(SDNode *AddcNode,
+                                      TargetLowering::DAGCombinerInfo &DCI,
+                                      const ARMSubtarget *Subtarget) {
+  // UMAAL is similar to UMLAL except that it adds two unsigned values.
+  // While trying to combine for the other MLAL nodes, first search for the
+  // chance to use UMAAL. Check if Addc uses another addc node which can first
+  // be combined into a UMLAL. The other pattern is AddcNode being combined
+  // into an UMLAL and then using another addc is handled in ISelDAGToDAG.
+
+  if (!Subtarget->hasV6Ops())
+    return AddCombineTo64bitMLAL(AddcNode, DCI, Subtarget);
+
+  SDNode *PrevAddc = nullptr;
+  if (AddcNode->getOperand(0).getOpcode() == ISD::ADDC)
+    PrevAddc = AddcNode->getOperand(0).getNode();
+  else if (AddcNode->getOperand(1).getOpcode() == ISD::ADDC)
+    PrevAddc = AddcNode->getOperand(1).getNode();
+
+  // If there's no addc chains, just return a search for any MLAL.
+  if (PrevAddc == nullptr)
+    return AddCombineTo64bitMLAL(AddcNode, DCI, Subtarget);
+
+  // Try to convert the addc operand to an MLAL and if that fails try to
+  // combine AddcNode.
+  SDValue MLAL = AddCombineTo64bitMLAL(PrevAddc, DCI, Subtarget);
+  if (MLAL != SDValue(PrevAddc, 0))
+    return AddCombineTo64bitMLAL(AddcNode, DCI, Subtarget);
+
+  // Find the converted UMAAL or quit if it doesn't exist.
+  SDNode *UmlalNode = nullptr;
+  SDValue AddHi;
+  if (AddcNode->getOperand(0).getOpcode() == ARMISD::UMLAL) {
+    UmlalNode = AddcNode->getOperand(0).getNode();
+    AddHi = AddcNode->getOperand(1);
+  } else if (AddcNode->getOperand(1).getOpcode() == ARMISD::UMLAL) {
+    UmlalNode = AddcNode->getOperand(1).getNode();
+    AddHi = AddcNode->getOperand(0);
+  } else {
+    return SDValue();
+  }
+
+  // The ADDC should be glued to an ADDE node, which uses the same UMLAL as
+  // the ADDC as well as Zero.
+  auto *Zero = dyn_cast<ConstantSDNode>(UmlalNode->getOperand(3));
+
+  if (!Zero || Zero->getZExtValue() != 0)
+    return SDValue();
+
+  // Check that we have a glued ADDC node.
+  if (AddcNode->getValueType(1) != MVT::Glue)
+    return SDValue();
+
+  // Look for the glued ADDE.
+  SDNode* AddeNode = AddcNode->getGluedUser();
+  if (!AddeNode)
+    return SDValue();
+
+  if ((AddeNode->getOperand(0).getNode() == Zero &&
+       AddeNode->getOperand(1).getNode() == UmlalNode) ||
+      (AddeNode->getOperand(0).getNode() == UmlalNode &&
+       AddeNode->getOperand(1).getNode() == Zero)) {
+
+    SelectionDAG &DAG = DCI.DAG;
+    SDValue Ops[] = { UmlalNode->getOperand(0), UmlalNode->getOperand(1),
+                      UmlalNode->getOperand(2), AddHi };
+    SDValue UMAAL =  DAG.getNode(ARMISD::UMAAL, SDLoc(AddcNode),
+                                 DAG.getVTList(MVT::i32, MVT::i32), Ops);
+
+    // Replace the ADDs' nodes uses by the UMAAL node's values.
+    DAG.ReplaceAllUsesOfValueWith(SDValue(AddeNode, 0), SDValue(UMAAL.getNode(), 1));
+    DAG.ReplaceAllUsesOfValueWith(SDValue(AddcNode, 0), SDValue(UMAAL.getNode(), 0));
+
+    // Return original node to notify the driver to stop replacing.
+    return SDValue(AddcNode, 0);
+  }
+  return SDValue();
+}
+
 /// PerformADDCCombine - Target-specific dag combine transform from
-/// ISD::ADDC, ISD::ADDE, and ISD::MUL_LOHI to MLAL.
+/// ISD::ADDC, ISD::ADDE, and ISD::MUL_LOHI to MLAL or
+/// ISD::ADDC, ISD::ADDE and ARMISD::UMLAL to ARMISD::UMAAL
 static SDValue PerformADDCCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI,
                                  const ARMSubtarget *Subtarget) {
 
-  return AddCombineTo64bitMLAL(N, DCI, Subtarget);
+  if (Subtarget->isThumb1Only()) return SDValue();
 
+  // Only perform the checks after legalize when the pattern is available.
+  if (DCI.isBeforeLegalize()) return SDValue();
+
+  return AddCombineTo64bitUMAAL(N, DCI, Subtarget);
 }
 
 /// PerformADDCombineWithOperands - Try DAG combinations for an ADD with

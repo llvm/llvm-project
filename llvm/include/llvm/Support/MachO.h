@@ -29,7 +29,9 @@ namespace llvm {
       MH_MAGIC_64 = 0xFEEDFACFu,
       MH_CIGAM_64 = 0xCFFAEDFEu,
       FAT_MAGIC   = 0xCAFEBABEu,
-      FAT_CIGAM   = 0xBEBAFECAu
+      FAT_CIGAM   = 0xBEBAFECAu,
+      FAT_MAGIC_64 = 0xCAFEBABFu,
+      FAT_CIGAM_64 = 0xBFBAFECAu
     };
 
     enum HeaderFileType {
@@ -889,6 +891,15 @@ namespace llvm {
       uint32_t offset;
       uint32_t size;
       uint32_t align;
+    };
+
+    struct fat_arch_64 {
+      uint32_t cputype;
+      uint32_t cpusubtype;
+      uint64_t offset;
+      uint64_t size;
+      uint32_t align;
+      uint32_t reserved;
     };
 
     // Structs from <mach-o/reloc.h>

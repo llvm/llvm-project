@@ -266,3 +266,96 @@ define <16 x i16>@test_int_x86_avx512_mask_pshufl_w_256(<16 x i16> %x0, i32 %x1,
   %res4 = add <16 x i16> %res3, %res2
   ret <16 x i16> %res4
 }
+
+define i32 @test_pcmpeq_b_256(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: test_pcmpeq_b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x74,0xc1]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i32 @llvm.x86.avx512.mask.pcmpeq.b.256(<32 x i8> %a, <32 x i8> %b, i32 -1)
+  ret i32 %res
+}
+
+define i32 @test_mask_pcmpeq_b_256(<32 x i8> %a, <32 x i8> %b, i32 %mask) {
+; CHECK-LABEL: test_mask_pcmpeq_b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqb %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x74,0xc1]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i32 @llvm.x86.avx512.mask.pcmpeq.b.256(<32 x i8> %a, <32 x i8> %b, i32 %mask)
+  ret i32 %res
+}
+
+declare i32 @llvm.x86.avx512.mask.pcmpeq.b.256(<32 x i8>, <32 x i8>, i32)
+
+define i16 @test_pcmpeq_w_256(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: test_pcmpeq_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x75,0xc1]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16> %a, <16 x i16> %b, i16 -1)
+  ret i16 %res
+}
+
+define i16 @test_mask_pcmpeq_w_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
+; CHECK-LABEL: test_mask_pcmpeq_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpeqw %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x75,0xc1]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16> %a, <16 x i16> %b, i16 %mask)
+  ret i16 %res
+}
+
+declare i16 @llvm.x86.avx512.mask.pcmpeq.w.256(<16 x i16>, <16 x i16>, i16)
+
+define i32 @test_pcmpgt_b_256(<32 x i8> %a, <32 x i8> %b) {
+; CHECK-LABEL: test_pcmpgt_b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpgtb %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x64,0xc1]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i32 @llvm.x86.avx512.mask.pcmpgt.b.256(<32 x i8> %a, <32 x i8> %b, i32 -1)
+  ret i32 %res
+}
+
+define i32 @test_mask_pcmpgt_b_256(<32 x i8> %a, <32 x i8> %b, i32 %mask) {
+; CHECK-LABEL: test_mask_pcmpgt_b_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovd %edi, %k1 ## encoding: [0xc5,0xfb,0x92,0xcf]
+; CHECK-NEXT:    vpcmpgtb %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x64,0xc1]
+; CHECK-NEXT:    kmovd %k0, %eax ## encoding: [0xc5,0xfb,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i32 @llvm.x86.avx512.mask.pcmpgt.b.256(<32 x i8> %a, <32 x i8> %b, i32 %mask)
+  ret i32 %res
+}
+
+declare i32 @llvm.x86.avx512.mask.pcmpgt.b.256(<32 x i8>, <32 x i8>, i32)
+
+define i16 @test_pcmpgt_w_256(<16 x i16> %a, <16 x i16> %b) {
+; CHECK-LABEL: test_pcmpgt_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0 ## encoding: [0x62,0xf1,0x7d,0x28,0x65,0xc1]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16> %a, <16 x i16> %b, i16 -1)
+  ret i16 %res
+}
+
+define i16 @test_mask_pcmpgt_w_256(<16 x i16> %a, <16 x i16> %b, i16 %mask) {
+; CHECK-LABEL: test_mask_pcmpgt_w_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    kmovw %edi, %k1 ## encoding: [0xc5,0xf8,0x92,0xcf]
+; CHECK-NEXT:    vpcmpgtw %ymm1, %ymm0, %k0 {%k1} ## encoding: [0x62,0xf1,0x7d,0x29,0x65,0xc1]
+; CHECK-NEXT:    kmovw %k0, %eax ## encoding: [0xc5,0xf8,0x93,0xc0]
+; CHECK-NEXT:    retq ## encoding: [0xc3]
+  %res = call i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16> %a, <16 x i16> %b, i16 %mask)
+  ret i16 %res
+}
+
+declare i16 @llvm.x86.avx512.mask.pcmpgt.w.256(<16 x i16>, <16 x i16>, i16)
+

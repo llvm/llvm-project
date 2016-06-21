@@ -114,6 +114,11 @@ def int_amdgcn_rsq :  Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
 >;
 
+def int_amdgcn_rsq_legacy :  GCCBuiltin<"__builtin_amdgcn_rsq_legacy">,
+  Intrinsic<
+  [llvm_float_ty], [llvm_float_ty], [IntrNoMem]
+>;
+
 def int_amdgcn_rsq_clamp : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 

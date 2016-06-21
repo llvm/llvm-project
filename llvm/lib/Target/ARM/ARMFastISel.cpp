@@ -163,6 +163,7 @@ class ARMFastISel final : public FastISel {
 
     // Utility routines.
   private:
+    bool isPositionIndependent() const;
     bool isTypeLegal(Type *Ty, MVT &VT);
     bool isLoadTypeLegal(Type *Ty, MVT &VT);
     bool ARMEmitCmp(const Value *Src1Value, const Value *Src2Value,
@@ -575,6 +576,10 @@ unsigned ARMFastISel::ARMMaterializeInt(const Constant *C, MVT VT) {
   return ResultReg;
 }
 
+bool ARMFastISel::isPositionIndependent() const {
+  return TM.getRelocationModel() == Reloc::PIC_;
+}
+
 unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
   // For now 32-bit only.
   if (VT != MVT::i32 || GV->isThreadLocal()) return 0;
@@ -590,23 +595,20 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
   bool IsThreadLocal = GVar && GVar->isThreadLocal();
   if (!Subtarget->isTargetMachO() && IsThreadLocal) return 0;
 
+  bool IsPositionIndependent = isPositionIndependent();
   // Use movw+movt when possible, it avoids constant pool entries.
   // Non-darwin targets only support static movt relocations in FastISel.
   if (Subtarget->useMovt(*FuncInfo.MF) &&
-      (Subtarget->isTargetMachO() || RelocM == Reloc::Static)) {
+      (Subtarget->isTargetMachO() || !IsPositionIndependent)) {
     unsigned Opc;
     unsigned char TF = 0;
     if (Subtarget->isTargetMachO())
       TF = ARMII::MO_NONLAZY;
 
-    switch (RelocM) {
-    case Reloc::PIC_:
+    if (IsPositionIndependent)
       Opc = isThumb2 ? ARM::t2MOV_ga_pcrel : ARM::MOV_ga_pcrel;
-      break;
-    default:
+    else
       Opc = isThumb2 ? ARM::t2MOVi32imm : ARM::MOVi32imm;
-      break;
-    }
     AddOptionalDefs(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
                             TII.get(Opc), DestReg).addGlobalAddress(GV, 0, TF));
   } else {
@@ -617,12 +619,11 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
       Align = DL.getTypeAllocSize(GV->getType());
     }
 
-    if (Subtarget->isTargetELF() && RelocM == Reloc::PIC_)
+    if (Subtarget->isTargetELF() && IsPositionIndependent)
       return ARMLowerPICELF(GV, Align, VT);
 
     // Grab index.
-    unsigned PCAdj = (RelocM != Reloc::PIC_) ? 0 :
-      (Subtarget->isThumb() ? 4 : 8);
+    unsigned PCAdj = IsPositionIndependent ? (Subtarget->isThumb() ? 4 : 8) : 0;
     unsigned Id = AFI->createPICLabelUId();
     ARMConstantPoolValue *CPV = ARMConstantPoolConstant::Create(GV, Id,
                                                                 ARMCP::CPValue,
@@ -632,10 +633,10 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
     // Load value.
     MachineInstrBuilder MIB;
     if (isThumb2) {
-      unsigned Opc = (RelocM!=Reloc::PIC_) ? ARM::t2LDRpci : ARM::t2LDRpci_pic;
+      unsigned Opc = IsPositionIndependent ? ARM::t2LDRpci_pic : ARM::t2LDRpci;
       MIB = BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc),
                     DestReg).addConstantPoolIndex(Idx);
-      if (RelocM == Reloc::PIC_)
+      if (IsPositionIndependent)
         MIB.addImm(Id);
       AddOptionalDefs(MIB);
     } else {
@@ -647,7 +648,7 @@ unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {
                 .addImm(0);
       AddOptionalDefs(MIB);
 
-      if (RelocM == Reloc::PIC_) {
+      if (IsPositionIndependent) {
         unsigned Opc = IsIndirect ? ARM::PICLDR : ARM::PICADD;
         unsigned NewDestReg = createResultReg(TLI.getRegClassFor(VT));
 
@@ -930,7 +931,7 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
     // ARM halfword load/stores and signed byte loads need an additional
     // operand.
     if (useAM3) {
-      signed Imm = (Addr.Offset < 0) ? (0x100 | -Addr.Offset) : Addr.Offset;
+      int Imm = (Addr.Offset < 0) ? (0x100 | -Addr.Offset) : Addr.Offset;
       MIB.addReg(0);
       MIB.addImm(Imm);
     } else {
@@ -944,7 +945,7 @@ void ARMFastISel::AddLoadStoreOperands(MVT VT, Address &Addr,
     // ARM halfword load/stores and signed byte loads need an additional
     // operand.
     if (useAM3) {
-      signed Imm = (Addr.Offset < 0) ? (0x100 | -Addr.Offset) : Addr.Offset;
+      int Imm = (Addr.Offset < 0) ? (0x100 | -Addr.Offset) : Addr.Offset;
       MIB.addReg(0);
       MIB.addImm(Imm);
     } else {
@@ -2971,8 +2972,10 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 
 unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV,
                                      unsigned Align, MVT VT) {
+  Reloc::Model RM = TM.getRelocationModel();
+  const Triple &TargetTriple = TM.getTargetTriple();
   bool UseGOT_PREL =
-      !(GV->hasHiddenVisibility() || GV->hasLocalLinkage());
+      !shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV);
 
   LLVMContext *Context = &MF->getFunction()->getContext();
   unsigned ARMPCLabelIndex = AFI->createPICLabelUId();

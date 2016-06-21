@@ -20,7 +20,7 @@
 def ExynosM1Model : SchedMachineModel {
   let IssueWidth            =  4; // Up to 4 uops per cycle.
   let MicroOpBufferSize     = 96; // ROB size.
-  let LoopMicroOpBufferSize = 32; // Instruction queue size.
+  let LoopMicroOpBufferSize = 24; // Based on the instruction queue size.
   let LoadLatency           =  4; // Optimistic load cases.
   let MispredictPenalty     = 14; // Minimum branch misprediction penalty.
   let CompleteModel         =  0; // Use the default model otherwise.

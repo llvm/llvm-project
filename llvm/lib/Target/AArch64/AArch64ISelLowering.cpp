@@ -9475,14 +9475,13 @@ bool checkValueWidth(SDValue V, unsigned width, ISD::LoadExtType &ExtType) {
 // isEquivalentMaskless() is the code for testing if the AND can be removed
 // factored out of the DAG recognition as the DAG can take several forms.
 
-static
-bool isEquivalentMaskless(unsigned CC, unsigned width,
-                          ISD::LoadExtType ExtType, signed AddConstant,
-                          signed CompConstant) {
+static bool isEquivalentMaskless(unsigned CC, unsigned width,
+                                 ISD::LoadExtType ExtType, int AddConstant,
+                                 int CompConstant) {
   // By being careful about our equations and only writing the in term
   // symbolic values and well known constants (0, 1, -1, MaxUInt) we can
   // make them generally applicable to all bit widths.
-  signed MaxUInt = (1 << width);
+  int MaxUInt = (1 << width);
 
   // For the purposes of these comparisons sign extending the type is
   // equivalent to zero extending the add and displacing it by half the integer

@@ -1492,9 +1492,8 @@ static Value *simplifyUnsignedRangeCheck(ICmpInst *ZeroICmp,
   return nullptr;
 }
 
-/// Simplify (and (icmp ...) (icmp ...)) to true when we can tell that the range
-/// of possible values cannot be satisfied.
 static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
+  Type *ITy = Op0->getType();
   ICmpInst::Predicate Pred0, Pred1;
   ConstantInt *CI1, *CI2;
   Value *V;
@@ -1502,14 +1501,24 @@ static Value *SimplifyAndOfICmps(ICmpInst *Op0, ICmpInst *Op1) {
   if (Value *X = simplifyUnsignedRangeCheck(Op0, Op1, /*IsAnd=*/true))
     return X;
 
+  // Look for this pattern: (icmp V, C0) & (icmp V, C1)).
+  const APInt *C0, *C1;
+  if (match(Op0, m_ICmp(Pred0, m_Value(V), m_APInt(C0))) &&
+      match(Op1, m_ICmp(Pred1, m_Specific(V), m_APInt(C1)))) {
+    // Make a constant range that's the intersection of the two icmp ranges.
+    // If the intersection is empty, we know that the result is false.
+    auto Range0 = ConstantRange::makeAllowedICmpRegion(Pred0, *C0);
+    auto Range1 = ConstantRange::makeAllowedICmpRegion(Pred1, *C1);
+    if (Range0.intersectWith(Range1).isEmptySet())
+      return getFalse(ITy);
+  }
+
   if (!match(Op0, m_ICmp(Pred0, m_Add(m_Value(V), m_ConstantInt(CI1)),
                          m_ConstantInt(CI2))))
     return nullptr;
 
   if (!match(Op1, m_ICmp(Pred1, m_Specific(V), m_Specific(CI1))))
     return nullptr;
-
-  Type *ITy = Op0->getType();
 
   auto *AddInst = cast<BinaryOperator>(Op0->getOperand(0));
   bool isNSW = AddInst->hasNoSignedWrap();
@@ -1605,6 +1614,24 @@ static Value *SimplifyAndInst(Value *Op0, Value *Op1, const Query &Q,
         return V;
       if (Value *V = SimplifyAndOfICmps(ICIRHS, ICILHS))
         return V;
+    }
+  }
+
+  // The compares may be hidden behind casts. Look through those and try the
+  // same folds as above.
+  auto *Cast0 = dyn_cast<CastInst>(Op0);
+  auto *Cast1 = dyn_cast<CastInst>(Op1);
+  if (Cast0 && Cast1 && Cast0->getOpcode() == Cast1->getOpcode() &&
+      Cast0->getSrcTy() == Cast1->getSrcTy()) {
+    auto *Cmp0 = dyn_cast<ICmpInst>(Cast0->getOperand(0));
+    auto *Cmp1 = dyn_cast<ICmpInst>(Cast1->getOperand(0));
+    if (Cmp0 && Cmp1) {
+      Instruction::CastOps CastOpc = Cast0->getOpcode();
+      Type *ResultType = Cast0->getType();
+      if (auto *V = dyn_cast_or_null<Constant>(SimplifyAndOfICmps(Cmp0, Cmp1)))
+        return ConstantExpr::getCast(CastOpc, V, ResultType);
+      if (auto *V = dyn_cast_or_null<Constant>(SimplifyAndOfICmps(Cmp1, Cmp0)))
+        return ConstantExpr::getCast(CastOpc, V, ResultType);
     }
   }
 

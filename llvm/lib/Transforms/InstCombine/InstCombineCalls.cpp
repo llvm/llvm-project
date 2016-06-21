@@ -2507,7 +2507,8 @@ Instruction *InstCombiner::visitCallSite(CallSite CS) {
 
   if (Function *CalleeF = dyn_cast<Function>(Callee)) {
     // Remove the convergent attr on calls when the callee is not convergent.
-    if (CS.isConvergent() && !CalleeF->isConvergent()) {
+    if (CS.isConvergent() && !CalleeF->isConvergent() &&
+        !CalleeF->isIntrinsic()) {
       DEBUG(dbgs() << "Removing convergent attr from instr "
                    << CS.getInstruction() << "\n");
       CS.setNotConvergent();

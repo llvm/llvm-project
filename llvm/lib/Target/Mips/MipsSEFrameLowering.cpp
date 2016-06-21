@@ -516,7 +516,7 @@ void MipsSEFrameLowering::emitPrologue(MachineFunction &MF,
       unsigned VR = MF.getRegInfo().createVirtualRegister(RC);
       assert(isInt<16>(MFI->getMaxAlignment()) &&
              "Function's alignment size requirement is not supported.");
-      int MaxAlign = - (signed) MFI->getMaxAlignment();
+      int MaxAlign = -(int)MFI->getMaxAlignment();
 
       BuildMI(MBB, MBBI, dl, TII.get(ADDiu), VR).addReg(ZERO) .addImm(MaxAlign);
       BuildMI(MBB, MBBI, dl, TII.get(AND), SP).addReg(SP).addReg(VR);

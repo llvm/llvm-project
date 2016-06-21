@@ -40,6 +40,16 @@ void SwapStruct(MachO::fat_arch &H) {
   sys::swapByteOrder(H.align);
 }
 
+template<>
+void SwapStruct(MachO::fat_arch_64 &H) {
+  sys::swapByteOrder(H.cputype);
+  sys::swapByteOrder(H.cpusubtype);
+  sys::swapByteOrder(H.offset);
+  sys::swapByteOrder(H.size);
+  sys::swapByteOrder(H.align);
+  sys::swapByteOrder(H.reserved);
+}
+
 template<typename T>
 static T getUniversalBinaryStruct(const char *Ptr) {
   T Res;
@@ -58,11 +68,20 @@ MachOUniversalBinary::ObjectForArch::ObjectForArch(
   } else {
     // Parse object header.
     StringRef ParentData = Parent->getData();
-    const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
-                            Index * sizeof(MachO::fat_arch);
-    Header = getUniversalBinaryStruct<MachO::fat_arch>(HeaderPos);
-    if (ParentData.size() < Header.offset + Header.size) {
-      clear();
+    if (Parent->getMagic() == MachO::FAT_MAGIC) {
+      const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
+                              Index * sizeof(MachO::fat_arch);
+      Header = getUniversalBinaryStruct<MachO::fat_arch>(HeaderPos);
+      if (ParentData.size() < Header.offset + Header.size) {
+        clear();
+      }
+    } else { // Parent->getMagic() == MachO::FAT_MAGIC_64
+      const char *HeaderPos = ParentData.begin() + sizeof(MachO::fat_header) +
+                              Index * sizeof(MachO::fat_arch_64);
+      Header64 = getUniversalBinaryStruct<MachO::fat_arch_64>(HeaderPos);
+      if (ParentData.size() < Header64.offset + Header64.size) {
+        clear();
+      }
     }
   }
 }
@@ -73,7 +92,11 @@ MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
     return errorCodeToError(object_error::parse_failed);
 
   StringRef ParentData = Parent->getData();
-  StringRef ObjectData = ParentData.substr(Header.offset, Header.size);
+  StringRef ObjectData;
+  if (Parent->getMagic() == MachO::FAT_MAGIC)
+    ObjectData = ParentData.substr(Header.offset, Header.size);
+  else // Parent->getMagic() == MachO::FAT_MAGIC_64
+    ObjectData = ParentData.substr(Header64.offset, Header64.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
   return ObjectFile::createMachOObjectFile(ObjBuffer);
@@ -85,7 +108,11 @@ MachOUniversalBinary::ObjectForArch::getAsArchive() const {
     return object_error::parse_failed;
 
   StringRef ParentData = Parent->getData();
-  StringRef ObjectData = ParentData.substr(Header.offset, Header.size);
+  StringRef ObjectData;
+  if (Parent->getMagic() == MachO::FAT_MAGIC)
+    ObjectData = ParentData.substr(Header.offset, Header.size);
+  else // Parent->getMagic() == MachO::FAT_MAGIC_64
+    ObjectData = ParentData.substr(Header64.offset, Header64.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
   return Archive::create(ObjBuffer);
@@ -105,7 +132,8 @@ MachOUniversalBinary::create(MemoryBufferRef Source) {
 
 MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source,
                                            std::error_code &ec)
-    : Binary(Binary::ID_MachOUniversalBinary, Source), NumberOfObjects(0) {
+    : Binary(Binary::ID_MachOUniversalBinary, Source), Magic(0),
+      NumberOfObjects(0) {
   if (Data.getBufferSize() < sizeof(MachO::fat_header)) {
     ec = object_error::invalid_file_type;
     return;
@@ -113,10 +141,18 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source,
   // Check for magic value and sufficient header size.
   StringRef Buf = getData();
   MachO::fat_header H= getUniversalBinaryStruct<MachO::fat_header>(Buf.begin());
+  Magic = H.magic;
   NumberOfObjects = H.nfat_arch;
-  uint32_t MinSize = sizeof(MachO::fat_header) +
-                     sizeof(MachO::fat_arch) * NumberOfObjects;
-  if (H.magic != MachO::FAT_MAGIC || Buf.size() < MinSize) {
+  uint32_t MinSize = sizeof(MachO::fat_header);
+  if (Magic == MachO::FAT_MAGIC)
+    MinSize += sizeof(MachO::fat_arch) * NumberOfObjects;
+  else if (Magic == MachO::FAT_MAGIC_64)
+    MinSize += sizeof(MachO::fat_arch_64) * NumberOfObjects;
+  else {
+    ec = object_error::parse_failed;
+    return;
+  }
+  if (Buf.size() < MinSize) {
     ec = object_error::parse_failed;
     return;
   }

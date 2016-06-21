@@ -1443,8 +1443,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
     }
 
     // Just do a normal add. Pre-expand the operands to suppress folding.
-    return expand(SE.getAddExpr(SE.getUnknown(expand(S->getStart())),
-                                SE.getUnknown(expand(Rest))));
+    //
+    // The LHS and RHS values are factored out of the expand call to make the
+    // output independent of the argument evaluation order.
+    const SCEV *AddExprLHS = SE.getUnknown(expand(S->getStart()));
+    const SCEV *AddExprRHS = SE.getUnknown(expand(Rest));
+    return expand(SE.getAddExpr(AddExprLHS, AddExprRHS));
   }
 
   // If we don't yet have a canonical IV, create one.

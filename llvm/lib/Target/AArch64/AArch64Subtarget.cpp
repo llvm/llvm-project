@@ -71,6 +71,7 @@ void AArch64Subtarget::initializeProperties() {
     MaxInterleaveFactor = 4;
     VectorInsertExtractBaseCost = 2;
     break;
+  case Vulcan: break;
   case CortexA35: break;
   case CortexA53: break;
   case Others: break;

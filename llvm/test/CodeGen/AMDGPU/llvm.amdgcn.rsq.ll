@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 
 declare float @llvm.amdgcn.rsq.f32(float) #0
@@ -53,6 +53,14 @@ define void @rsq_f64_constant_4.0(double addrspace(1)* %out) #1 {
 define void @rsq_f64_constant_100.0(double addrspace(1)* %out) #1 {
   %rsq = call double @llvm.amdgcn.rsq.f64(double 100.0) #0
   store double %rsq, double addrspace(1)* %out, align 4
+  ret void
+}
+
+; FUNC-LABEL: {{^}}rsq_undef_f32:
+; SI-NOT: v_rsq_f32
+define void @rsq_undef_f32(float addrspace(1)* %out) #1 {
+  %rsq = call float @llvm.amdgcn.rsq.f32(float undef)
+  store float %rsq, float addrspace(1)* %out, align 4
   ret void
 }
 

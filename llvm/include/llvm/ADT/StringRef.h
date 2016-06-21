@@ -10,6 +10,7 @@
 #ifndef LLVM_ADT_STRINGREF_H
 #define LLVM_ADT_STRINGREF_H
 
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
 #include <algorithm>
 #include <cassert>
@@ -100,6 +101,9 @@ namespace llvm {
     }
     const unsigned char *bytes_end() const {
       return reinterpret_cast<const unsigned char *>(end());
+    }
+    iterator_range<const unsigned char *> bytes() const {
+      return make_range(bytes_begin(), bytes_end());
     }
 
     /// @}
