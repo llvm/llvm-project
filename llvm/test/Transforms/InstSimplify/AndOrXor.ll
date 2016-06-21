@@ -231,37 +231,115 @@ define i1 @or_icmp3(i32 %x, i32 %y) {
   ret i1 %3
 }
 
+define i1 @disjoint_cmps(i32 %A) {
+; CHECK-LABEL: @disjoint_cmps(
+; CHECK-NEXT:    ret i1 false
+;
+  %B = icmp eq i32 %A, 1
+  %C = icmp sge i32 %A, 3
+  %D = and i1 %B, %C
+  ret i1 %D
+}
+
+define i1 @disjoint_cmps2(i32 %X) {
+; CHECK-LABEL: @disjoint_cmps2(
+; CHECK-NEXT:    ret i1 false
+;
+  %a = icmp ult i32 %X, 31
+  %b = icmp slt i32 %X, 0
+  %c = and i1 %a, %b
+  ret i1 %c
+}
+
+; PR27869 - Look through casts to eliminate cmps and bitwise logic.
+
 define i32 @and_of_zexted_icmps(i32 %i) {
 ; CHECK-LABEL: @and_of_zexted_icmps(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 %i, 0
-; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[CMP]] to i32
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt i32 %i, 4
-; CHECK-NEXT:    [[CONV2:%.*]] = zext i1 [[CMP1]] to i32
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[CONV]], [[CONV2]]
-; CHECK-NEXT:    ret i32 [[AND]]
+; CHECK-NEXT:    ret i32 0
 ;
-  %cmp = icmp eq i32 %i, 0
-  %conv = zext i1 %cmp to i32
+  %cmp0 = icmp eq i32 %i, 0
+  %conv0 = zext i1 %cmp0 to i32
   %cmp1 = icmp ugt i32 %i, 4
-  %conv2 = zext i1 %cmp1 to i32
-  %and = and i32 %conv, %conv2
+  %conv1 = zext i1 %cmp1 to i32
+  %and = and i32 %conv0, %conv1
   ret i32 %and
 }
 
+; Make sure vectors work too.
+
 define <4 x i32> @and_of_zexted_icmps_vec(<4 x i32> %i) {
 ; CHECK-LABEL: @and_of_zexted_icmps_vec(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <4 x i32> %i, zeroinitializer
-; CHECK-NEXT:    [[CONV:%.*]] = zext <4 x i1> [[CMP]] to <4 x i32>
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp slt <4 x i32> %i, zeroinitializer
-; CHECK-NEXT:    [[CONV2:%.*]] = zext <4 x i1> [[CMP1]] to <4 x i32>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[CONV]], [[CONV2]]
-; CHECK-NEXT:    ret <4 x i32> [[AND]]
+; CHECK-NEXT:    ret <4 x i32> zeroinitializer
 ;
-  %cmp = icmp eq <4 x i32> %i, zeroinitializer
-  %conv = zext <4 x i1> %cmp to <4 x i32>
+  %cmp0 = icmp eq <4 x i32> %i, zeroinitializer
+  %conv0 = zext <4 x i1> %cmp0 to <4 x i32>
   %cmp1 = icmp slt <4 x i32> %i, zeroinitializer
-  %conv2 = zext <4 x i1> %cmp1 to <4 x i32>
-  %and = and <4 x i32> %conv, %conv2
+  %conv1 = zext <4 x i1> %cmp1 to <4 x i32>
+  %and = and <4 x i32> %conv0, %conv1
   ret <4 x i32> %and
+}
+
+; Try a different cast and weird types.
+
+define i5 @and_of_sexted_icmps(i3 %i) {
+; CHECK-LABEL: @and_of_sexted_icmps(
+; CHECK-NEXT:    ret i5 0
+;
+  %cmp0 = icmp eq i3 %i, 0
+  %conv0 = sext i1 %cmp0 to i5
+  %cmp1 = icmp ugt i3 %i, 1
+  %conv1 = sext i1 %cmp1 to i5
+  %and = and i5 %conv0, %conv1
+  ret i5 %and
+}
+
+; Try a different cast and weird vector types.
+
+define i3 @and_of_bitcast_icmps_vec(<3 x i65> %i) {
+; CHECK-LABEL: @and_of_bitcast_icmps_vec(
+; CHECK-NEXT:    ret i3 0
+;
+  %cmp0 = icmp sgt <3 x i65> %i, zeroinitializer
+  %conv0 = bitcast <3 x i1> %cmp0 to i3
+  %cmp1 = icmp slt <3 x i65> %i, zeroinitializer
+  %conv1 = bitcast <3 x i1> %cmp1 to i3
+  %and = and i3 %conv0, %conv1
+  ret i3 %and
+}
+
+; We can't do this if the casts are different.
+
+define i16 @and_of_different_cast_icmps(i8 %i) {
+; CHECK-LABEL: @and_of_different_cast_icmps(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i8 %i, 0
+; CHECK-NEXT:    [[CONV0:%.*]] = zext i1 [[CMP0]] to i16
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i8 %i, 1
+; CHECK-NEXT:    [[CONV1:%.*]] = sext i1 [[CMP1]] to i16
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    ret i16 [[AND]]
+;
+  %cmp0 = icmp eq i8 %i, 0
+  %conv0 = zext i1 %cmp0 to i16
+  %cmp1 = icmp eq i8 %i, 1
+  %conv1 = sext i1 %cmp1 to i16
+  %and = and i16 %conv0, %conv1
+  ret i16 %and
+}
+
+define <2 x i3> @and_of_different_cast_icmps_vec(<2 x i8> %i, <2 x i16> %j) {
+; CHECK-LABEL: @and_of_different_cast_icmps_vec(
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq <2 x i8> %i, zeroinitializer
+; CHECK-NEXT:    [[CONV0:%.*]] = zext <2 x i1> [[CMP0]] to <2 x i3>
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ugt <2 x i16> %j, <i16 1, i16 1>
+; CHECK-NEXT:    [[CONV1:%.*]] = zext <2 x i1> [[CMP1]] to <2 x i3>
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i3> [[CONV0]], [[CONV1]]
+; CHECK-NEXT:    ret <2 x i3> [[AND]]
+;
+  %cmp0 = icmp eq <2 x i8> %i, zeroinitializer
+  %conv0 = zext <2 x i1> %cmp0 to <2 x i3>
+  %cmp1 = icmp ugt <2 x i16> %j, <i16 1, i16 1>
+  %conv1 = zext <2 x i1> %cmp1 to <2 x i3>
+  %and = and <2 x i3> %conv0, %conv1
+  ret <2 x i3> %and
 }
 

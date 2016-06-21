@@ -1,5 +1,7 @@
 RUN: llvm-nm -arch all %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ
+RUN: llvm-nm -arch all %p/Inputs/macho-universal64.x86_64.i386 \
+RUN:         | FileCheck %s -check-prefix CHECK-64-OBJ
 RUN: llvm-nm -arch x86_64 %p/Inputs/macho-universal.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ-x86_64
 RUN: not llvm-nm -arch armv7m %p/Inputs/macho-universal.x86_64.i386 2>&1 \
@@ -8,6 +10,8 @@ RUN: not llvm-nm -arch foobar %p/Inputs/macho-universal.x86_64.i386 2>&1 \
 RUN:         | FileCheck %s -check-prefix CHECK-OBJ-foobar
 RUN: llvm-nm -arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-AR
+RUN: llvm-nm -arch all %p/Inputs/macho-universal64-archive.x86_64.i386 \
+RUN:         | FileCheck %s -check-prefix CHECK-64-AR
 RUN: llvm-nm -arch i386 %p/Inputs/macho-universal-archive.x86_64.i386 \
 RUN:         | FileCheck %s -check-prefix CHECK-AR-i386
 RUN: llvm-nm -o -arch all %p/Inputs/macho-universal-archive.x86_64.i386 \
@@ -17,6 +21,11 @@ CHECK-OBJ: macho-universal.x86_64.i386 (for architecture x86_64):
 CHECK-OBJ: 0000000100000f60 T _main
 CHECK-OBJ: macho-universal.x86_64.i386 (for architecture i386):
 CHECK-OBJ: 00001fa0 T _main
+
+CHECK-64-OBJ: macho-universal64.x86_64.i386 (for architecture x86_64):
+CHECK-64-OBJ: 0000000100000f60 T _main
+CHECK-64-OBJ: macho-universal64.x86_64.i386 (for architecture i386):
+CHECK-64-OBJ: 00001fa0 T _main
 
 CHECK-OBJ-x86_64: 0000000100000000 T __mh_execute_header
 CHECK-OBJ-x86_64: 0000000100000f60 T _main
@@ -37,6 +46,16 @@ CHECK-AR:                  U _printf
 CHECK-AR: macho-universal-archive.x86_64.i386(foo.o) (for architecture i386):
 CHECK-AR: 00000008 D _bar
 CHECK-AR: 00000000 T _foo
+
+CHECK-64-AR: macho-universal64-archive.x86_64.i386(foo.o) (for architecture i386):
+CHECK-64-AR: 00000008 D _bar
+CHECK-64-AR: 00000000 T _foo
+CHECK-64-AR: macho-universal64-archive.x86_64.i386(hello.o) (for architecture x86_64):
+CHECK-64-AR: 0000000000000068 s EH_frame0
+CHECK-64-AR: 000000000000003b s L_.str
+CHECK-64-AR: 0000000000000000 T _main
+CHECK-64-AR: 0000000000000080 S _main.eh
+CHECK-64-AR:                  U _printf
 
 CHECK-AR-i386: macho-universal-archive.x86_64.i386(foo.o):
 CHECK-AR-i386: 00000008 D _bar

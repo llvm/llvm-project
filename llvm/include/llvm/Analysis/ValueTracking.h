@@ -65,29 +65,29 @@ template <typename T> class ArrayRef;
                            const Instruction *CxtI = nullptr,
                            const DominatorTree *DT = nullptr);
 
-  /// ComputeSignBit - Determine whether the sign bit is known to be zero or
-  /// one.  Convenience wrapper around computeKnownBits.
+  /// Determine whether the sign bit is known to be zero or one. Convenience
+  /// wrapper around computeKnownBits.
   void ComputeSignBit(Value *V, bool &KnownZero, bool &KnownOne,
                       const DataLayout &DL, unsigned Depth = 0,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
-  /// isKnownToBeAPowerOfTwo - Return true if the given value is known to have
-  /// exactly one bit set when defined. For vectors return true if every
-  /// element is known to be a power of two when defined.  Supports values with
-  /// integer or pointer type and vectors of integers.  If 'OrZero' is set then
-  /// return true if the given value is either a power of two or zero.
+  /// Return true if the given value is known to have exactly one bit set when
+  /// defined. For vectors return true if every element is known to be a power
+  /// of two when defined. Supports values with integer or pointer type and
+  /// vectors of integers. If 'OrZero' is set, then return true if the given
+  /// value is either a power of two or zero.
   bool isKnownToBeAPowerOfTwo(Value *V, const DataLayout &DL,
                               bool OrZero = false, unsigned Depth = 0,
                               AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
                               const DominatorTree *DT = nullptr);
 
-  /// isKnownNonZero - Return true if the given value is known to be non-zero
-  /// when defined.  For vectors return true if every element is known to be
-  /// non-zero when defined.  Supports values with integer or pointer type and
-  /// vectors of integers.
+  /// Return true if the given value is known to be non-zero when defined. For
+  /// vectors, return true if every element is known to be non-zero when
+  /// defined. Supports values with integer or pointer type and vectors of
+  /// integers.
   bool isKnownNonZero(Value *V, const DataLayout &DL, unsigned Depth = 0,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
@@ -113,16 +113,16 @@ template <typename T> class ArrayRef;
                        const Instruction *CxtI = nullptr,
                        const DominatorTree *DT = nullptr);
 
-  /// isKnownNonEqual - Return true if the given values are known to be
-  /// non-equal when defined. Supports scalar integer types only.
+  /// Return true if the given values are known to be non-equal when defined.
+  /// Supports scalar integer types only.
   bool isKnownNonEqual(Value *V1, Value *V2, const DataLayout &DL,
                       AssumptionCache *AC = nullptr,
                       const Instruction *CxtI = nullptr,
                       const DominatorTree *DT = nullptr);
 
-  /// MaskedValueIsZero - Return true if 'V & Mask' is known to be zero.  We use
-  /// this predicate to simplify operations downstream.  Mask is known to be
-  /// zero for bits that V cannot have.
+  /// Return true if 'V & Mask' is known to be zero. We use this predicate to
+  /// simplify operations downstream. Mask is known to be zero for bits that V
+  /// cannot have.
   ///
   /// This function is defined on values with integer type, values with pointer
   /// type, and vectors of integers.  In the case
@@ -134,24 +134,23 @@ template <typename T> class ArrayRef;
                          const Instruction *CxtI = nullptr,
                          const DominatorTree *DT = nullptr);
 
-  /// ComputeNumSignBits - Return the number of times the sign bit of the
-  /// register is replicated into the other bits.  We know that at least 1 bit
-  /// is always equal to the sign bit (itself), but other cases can give us
-  /// information.  For example, immediately after an "ashr X, 2", we know that
-  /// the top 3 bits are all equal to each other, so we return 3.
+  /// Return the number of times the sign bit of the register is replicated into
+  /// the other bits. We know that at least 1 bit is always equal to the sign
+  /// bit (itself), but other cases can give us information. For example,
+  /// immediately after an "ashr X, 2", we know that the top 3 bits are all
+  /// equal to each other, so we return 3.
   ///
   /// 'Op' must have a scalar integer type.
-  ///
   unsigned ComputeNumSignBits(Value *Op, const DataLayout &DL,
                               unsigned Depth = 0, AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,
                               const DominatorTree *DT = nullptr);
 
-  /// ComputeMultiple - This function computes the integer multiple of Base that
-  /// equals V.  If successful, it returns true and returns the multiple in
-  /// Multiple.  If unsuccessful, it returns false.  Also, if V can be
-  /// simplified to an integer, then the simplified V is returned in Val.  Look
-  /// through sext only if LookThroughSExt=true.
+  /// This function computes the integer multiple of Base that equals V. If
+  /// successful, it returns true and returns the multiple in Multiple. If
+  /// unsuccessful, it returns false. Also, if V can be simplified to an
+  /// integer, then the simplified V is returned in Val. Look through sext only
+  /// if LookThroughSExt=true.
   bool ComputeMultiple(Value *V, unsigned Base, Value *&Multiple,
                        bool LookThroughSExt = false,
                        unsigned Depth = 0);
@@ -161,28 +160,26 @@ template <typename T> class ArrayRef;
   Intrinsic::ID getIntrinsicForCallSite(ImmutableCallSite ICS,
                                         const TargetLibraryInfo *TLI);
 
-  /// CannotBeNegativeZero - Return true if we can prove that the specified FP
-  /// value is never equal to -0.0.
-  ///
+  /// Return true if we can prove that the specified FP value is never equal to
+  /// -0.0.
   bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
                             unsigned Depth = 0);
 
-  /// CannotBeOrderedLessThanZero - Return true if we can prove that the
-  /// specified FP value is either a NaN or never less than 0.0.
-  ///
+  /// Return true if we can prove that the specified FP value is either a NaN or
+  /// never less than 0.0.
   bool CannotBeOrderedLessThanZero(const Value *V, const TargetLibraryInfo *TLI,
                                    unsigned Depth = 0);
 
-  /// isBytewiseValue - If the specified value can be set by repeating the same
-  /// byte in memory, return the i8 value that it is represented with.  This is
-  /// true for all i8 values obviously, but is also true for i32 0, i32 -1,
-  /// i16 0xF0F0, double 0.0 etc.  If the value can't be handled with a repeated
-  /// byte store (e.g. i16 0x1234), return null.
+  /// If the specified value can be set by repeating the same byte in memory,
+  /// return the i8 value that it is represented with. This is true for all i8
+  /// values obviously, but is also true for i32 0, i32 -1, i16 0xF0F0, double
+  /// 0.0 etc. If the value can't be handled with a repeated byte store (e.g.
+  /// i16 0x1234), return null.
   Value *isBytewiseValue(Value *V);
 
-  /// FindInsertedValue - Given an aggregrate and an sequence of indices, see if
-  /// the scalar value indexed is already around as a register, for example if
-  /// it were inserted directly into the aggregrate.
+  /// Given an aggregrate and an sequence of indices, see if the scalar value
+  /// indexed is already around as a register, for example if it were inserted
+  /// directly into the aggregrate.
   ///
   /// If InsertBefore is not null, this function will duplicate (modified)
   /// insertvalues when a part of a nested struct is extracted.
@@ -190,9 +187,8 @@ template <typename T> class ArrayRef;
                            ArrayRef<unsigned> idx_range,
                            Instruction *InsertBefore = nullptr);
 
-  /// GetPointerBaseWithConstantOffset - Analyze the specified pointer to see if
-  /// it can be expressed as a base pointer plus a constant offset.  Return the
-  /// base and offset to the caller.
+  /// Analyze the specified pointer to see if it can be expressed as a base
+  /// pointer plus a constant offset. Return the base and offset to the caller.
   Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
                                           const DataLayout &DL);
   static inline const Value *
@@ -206,24 +202,24 @@ template <typename T> class ArrayRef;
   /// and is indexing into this string.
   bool isGEPBasedOnPointerToString(const GEPOperator *GEP);
 
-  /// getConstantStringInfo - This function computes the length of a
-  /// null-terminated C string pointed to by V.  If successful, it returns true
-  /// and returns the string in Str.  If unsuccessful, it returns false.  This
-  /// does not include the trailing nul character by default.  If TrimAtNul is
-  /// set to false, then this returns any trailing nul characters as well as any
-  /// other characters that come after it.
+  /// This function computes the length of a null-terminated C string pointed to
+  /// by V. If successful, it returns true and returns the string in Str. If
+  /// unsuccessful, it returns false. This does not include the trailing null
+  /// character by default. If TrimAtNul is set to false, then this returns any
+  /// trailing null characters as well as any other characters that come after
+  /// it.
   bool getConstantStringInfo(const Value *V, StringRef &Str,
                              uint64_t Offset = 0, bool TrimAtNul = true);
 
-  /// GetStringLength - If we can compute the length of the string pointed to by
-  /// the specified pointer, return 'len+1'.  If we can't, return 0.
+  /// If we can compute the length of the string pointed to by the specified
+  /// pointer, return 'len+1'.  If we can't, return 0.
   uint64_t GetStringLength(Value *V);
 
-  /// GetUnderlyingObject - This method strips off any GEP address adjustments
-  /// and pointer casts from the specified value, returning the original object
-  /// being addressed.  Note that the returned value has pointer type if the
-  /// specified value does.  If the MaxLookup value is non-zero, it limits the
-  /// number of instructions to be stripped off.
+  /// This method strips off any GEP address adjustments and pointer casts from
+  /// the specified value, returning the original object being addressed. Note
+  /// that the returned value has pointer type if the specified value does. If
+  /// the MaxLookup value is non-zero, it limits the number of instructions to
+  /// be stripped off.
   Value *GetUnderlyingObject(Value *V, const DataLayout &DL,
                              unsigned MaxLookup = 6);
   static inline const Value *GetUnderlyingObject(const Value *V,
@@ -264,13 +260,11 @@ template <typename T> class ArrayRef;
                             const DataLayout &DL, LoopInfo *LI = nullptr,
                             unsigned MaxLookup = 6);
 
-  /// onlyUsedByLifetimeMarkers - Return true if the only users of this pointer
-  /// are lifetime markers.
+  /// Return true if the only users of this pointer are lifetime markers.
   bool onlyUsedByLifetimeMarkers(const Value *V);
 
-  /// isSafeToSpeculativelyExecute - Return true if the instruction does not
-  /// have any effects besides calculating the result and does not have
-  /// undefined behavior.
+  /// Return true if the instruction does not have any effects besides
+  /// calculating the result and does not have undefined behavior.
   ///
   /// This method never returns true for an instruction that returns true for
   /// mayHaveSideEffects; however, this method also does some other checks in
@@ -307,14 +301,14 @@ template <typename T> class ArrayRef;
   /// operands are not memory dependent.
   bool mayBeMemoryDependent(const Instruction &I);
 
-  /// isKnownNonNull - Return true if this pointer couldn't possibly be null by
-  /// its definition.  This returns true for allocas, non-extern-weak globals
-  /// and byval arguments.
+  /// Return true if this pointer couldn't possibly be null by its definition.
+  /// This returns true for allocas, non-extern-weak globals, and byval
+  /// arguments.
   bool isKnownNonNull(const Value *V, const TargetLibraryInfo *TLI = nullptr);
 
-  /// isKnownNonNullAt - Return true if this pointer couldn't possibly be null.
-  /// If the context instruction is specified perform context-sensitive analysis
-  /// and return true if the pointer couldn't possibly be null at the specified
+  /// Return true if this pointer couldn't possibly be null. If the context
+  /// instruction is specified, perform context-sensitive analysis and return
+  /// true if the pointer couldn't possibly be null at the specified
   /// instruction.
   bool isKnownNonNullAt(const Value *V,
                         const Instruction *CtxI = nullptr,

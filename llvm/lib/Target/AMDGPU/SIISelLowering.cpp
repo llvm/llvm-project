@@ -1420,7 +1420,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                              SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
 
-  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS)
+  if (GSD->getAddressSpace() != AMDGPUAS::CONSTANT_ADDRESS &&
+      GSD->getAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
 
   SDLoc DL(GSD);
@@ -1494,9 +1495,18 @@ SDValue SITargetLowering::lowerImplicitZextParam(SelectionDAG &DAG,
                      DAG.getValueType(VT));
 }
 
-static SDValue emitNonHSAIntrinsicError(SelectionDAG& DAG, EVT VT) {
+static SDValue emitNonHSAIntrinsicError(SelectionDAG& DAG, SDLoc DL, EVT VT) {
   DiagnosticInfoUnsupported BadIntrin(*DAG.getMachineFunction().getFunction(),
-                                      "non-hsa intrinsic with hsa target");
+                                      "non-hsa intrinsic with hsa target",
+                                      DL.getDebugLoc());
+  DAG.getContext()->diagnose(BadIntrin);
+  return DAG.getUNDEF(VT);
+}
+
+static SDValue emitRemovedIntrinsicError(SelectionDAG& DAG, SDLoc DL, EVT VT) {
+  DiagnosticInfoUnsupported BadIntrin(*DAG.getMachineFunction().getFunction(),
+                                      "intrinsic not supported on subtarget",
+                                      DL.getDebugLoc());
   DAG.getContext()->diagnose(BadIntrin);
   return DAG.getUNDEF(VT);
 }
@@ -1540,6 +1550,12 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   case Intrinsic::amdgcn_rsq:
   case AMDGPUIntrinsic::AMDGPU_rsq: // Legacy name
     return DAG.getNode(AMDGPUISD::RSQ, DL, VT, Op.getOperand(1));
+  case Intrinsic::amdgcn_rsq_legacy: {
+    if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS)
+      return emitRemovedIntrinsicError(DAG, DL, VT);
+
+    return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
+  }
   case Intrinsic::amdgcn_rsq_clamp:
   case AMDGPUIntrinsic::AMDGPU_rsq_clamped: { // Legacy name
     if (Subtarget->getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
@@ -1557,55 +1573,55 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   }
   case Intrinsic::r600_read_ngroups_x:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_X, false);
   case Intrinsic::r600_read_ngroups_y:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_Y, false);
   case Intrinsic::r600_read_ngroups_z:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::NGROUPS_Z, false);
   case Intrinsic::r600_read_global_size_x:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_X, false);
   case Intrinsic::r600_read_global_size_y:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_Y, false);
   case Intrinsic::r600_read_global_size_z:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return LowerParameter(DAG, VT, VT, DL, DAG.getEntryNode(),
                           SI::KernelInputOffsets::GLOBAL_SIZE_Z, false);
   case Intrinsic::r600_read_local_size_x:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_X);
   case Intrinsic::r600_read_local_size_y:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Y);
   case Intrinsic::r600_read_local_size_z:
     if (Subtarget->isAmdHsaOS())
-      return emitNonHSAIntrinsicError(DAG, VT);
+      return emitNonHSAIntrinsicError(DAG, DL, VT);
 
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
@@ -2563,6 +2579,9 @@ SDValue SITargetLowering::performClassCombine(SDNode *N,
       return DAG.getConstant(0, SDLoc(N), MVT::i1);
   }
 
+  if (N->getOperand(0).isUndef())
+    return DAG.getUNDEF(MVT::i1);
+
   return SDValue();
 }
 
@@ -2963,6 +2982,17 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     return performClassCombine(N, DCI);
   case ISD::FCANONICALIZE:
     return performFCanonicalizeCombine(N, DCI);
+  case AMDGPUISD::FRACT:
+  case AMDGPUISD::RCP:
+  case AMDGPUISD::RSQ:
+  case AMDGPUISD::RSQ_LEGACY:
+  case AMDGPUISD::RSQ_CLAMP:
+  case AMDGPUISD::LDEXP: {
+    SDValue Src = N->getOperand(0);
+    if (Src.isUndef())
+      return Src;
+    break;
+  }
   }
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }

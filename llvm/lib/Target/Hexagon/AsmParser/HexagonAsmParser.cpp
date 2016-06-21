@@ -1797,15 +1797,13 @@ int HexagonAsmParser::processInstruction(MCInst &Inst,
     MCOperand &MO = Inst.getOperand(1);
     int64_t Value;
     if (MO.getExpr()->evaluateAsAbsolute(Value)) {
-      unsigned long long u64 = Value;
-      signed int s8 = (u64 >> 32) & 0xFFFFFFFF;
-      if (s8 < -128 || s8 > 127)
+      int s8 = Hi_32(Value);
+      if (!isInt<8>(s8))
         OutOfRange(IDLoc, s8, -128);
       MCOperand imm(MCOperand::createExpr(HexagonMCExpr::create(
           MCConstantExpr::create(s8, Context), Context))); // upper 32
       auto Expr = HexagonMCExpr::create(
-                  MCConstantExpr::create(u64 & 0xFFFFFFFF, Context),
-                  Context);
+          MCConstantExpr::create(Lo_32(Value), Context), Context);
       HexagonMCInstrInfo::setMustExtend(*Expr, HexagonMCInstrInfo::mustExtend(*MO.getExpr()));
       MCOperand imm2(MCOperand::createExpr(Expr)); // lower 32
       Inst = makeCombineInst(Hexagon::A4_combineii, Rdd, imm, imm2);

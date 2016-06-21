@@ -325,24 +325,16 @@ X86Subtarget::X86Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
       TSInfo(), InstrInfo(initializeSubtargetDependencies(CPU, FS)),
       TLInfo(TM, *this), FrameLowering(*this, getStackAlignment()) {
   // Determine the PICStyle based on the target selected.
-  if (TM.getRelocationModel() == Reloc::Static) {
-    // Unless we're in PIC or DynamicNoPIC mode, set the PIC style to None.
+  if (!isPositionIndependent())
     setPICStyle(PICStyles::None);
-  } else if (is64Bit()) {
-    // PIC in 64 bit mode is always rip-rel.
+  else if (is64Bit())
     setPICStyle(PICStyles::RIPRel);
-  } else if (isTargetCOFF()) {
+  else if (isTargetCOFF())
     setPICStyle(PICStyles::None);
-  } else if (isTargetDarwin()) {
-    if (isPositionIndependent())
-      setPICStyle(PICStyles::StubPIC);
-    else {
-      assert(TM.getRelocationModel() == Reloc::DynamicNoPIC);
-      setPICStyle(PICStyles::StubDynamicNoPIC);
-    }
-  } else if (isTargetELF()) {
+  else if (isTargetDarwin())
+    setPICStyle(PICStyles::StubPIC);
+  else if (isTargetELF())
     setPICStyle(PICStyles::GOT);
-  }
 }
 
 bool X86Subtarget::enableEarlyIfConversion() const {

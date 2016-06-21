@@ -10326,21 +10326,22 @@ static SDValue lower128BitVectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 /// a zero-ed lane of a vector.
 static bool canWidenShuffleElements(ArrayRef<int> Mask,
                                     SmallVectorImpl<int> &WidenedMask) {
+  WidenedMask.assign(Mask.size() / 2, 0);
   for (int i = 0, Size = Mask.size(); i < Size; i += 2) {
     // If both elements are undef, its trivial.
     if (Mask[i] == SM_SentinelUndef && Mask[i + 1] == SM_SentinelUndef) {
-      WidenedMask.push_back(SM_SentinelUndef);
+      WidenedMask[i/2] = SM_SentinelUndef;
       continue;
     }
 
     // Check for an undef mask and a mask value properly aligned to fit with
     // a pair of values. If we find such a case, use the non-undef mask's value.
     if (Mask[i] == SM_SentinelUndef && Mask[i + 1] >= 0 && Mask[i + 1] % 2 == 1) {
-      WidenedMask.push_back(Mask[i + 1] / 2);
+      WidenedMask[i/2] = Mask[i + 1] / 2;
       continue;
     }
     if (Mask[i + 1] == SM_SentinelUndef && Mask[i] >= 0 && Mask[i] % 2 == 0) {
-      WidenedMask.push_back(Mask[i] / 2);
+      WidenedMask[i/2] = Mask[i] / 2;
       continue;
     }
 
@@ -10348,7 +10349,7 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
     if (Mask[i] == SM_SentinelZero || Mask[i + 1] == SM_SentinelZero) {
       if ((Mask[i] == SM_SentinelZero || Mask[i] == SM_SentinelUndef) &&
           (Mask[i + 1] == SM_SentinelZero || Mask[i + 1] == SM_SentinelUndef)) {
-        WidenedMask.push_back(SM_SentinelZero);
+        WidenedMask[i/2] = SM_SentinelZero;
         continue;
       }
       return false;
@@ -10357,7 +10358,7 @@ static bool canWidenShuffleElements(ArrayRef<int> Mask,
     // Finally check if the two mask values are adjacent and aligned with
     // a pair.
     if (Mask[i] != SM_SentinelUndef && Mask[i] % 2 == 0 && Mask[i] + 1 == Mask[i + 1]) {
-      WidenedMask.push_back(Mask[i] / 2);
+      WidenedMask[i/2] = Mask[i] / 2;
       continue;
     }
 
@@ -10431,7 +10432,9 @@ static SDValue splitAndLowerVectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
   // Now create two 4-way blends of these half-width vectors.
   auto HalfBlend = [&](ArrayRef<int> HalfMask) {
     bool UseLoV1 = false, UseHiV1 = false, UseLoV2 = false, UseHiV2 = false;
-    SmallVector<int, 32> V1BlendMask, V2BlendMask, BlendMask;
+    SmallVector<int, 32> V1BlendMask((unsigned)SplitNumElements, -1);
+    SmallVector<int, 32> V2BlendMask((unsigned)SplitNumElements, -1);
+    SmallVector<int, 32> BlendMask((unsigned)SplitNumElements, -1);
     for (int i = 0; i < SplitNumElements; ++i) {
       int M = HalfMask[i];
       if (M >= NumElements) {
@@ -10439,21 +10442,15 @@ static SDValue splitAndLowerVectorShuffle(const SDLoc &DL, MVT VT, SDValue V1,
           UseHiV2 = true;
         else
           UseLoV2 = true;
-        V2BlendMask.push_back(M - NumElements);
-        V1BlendMask.push_back(-1);
-        BlendMask.push_back(SplitNumElements + i);
+        V2BlendMask[i] = M - NumElements;
+        BlendMask[i] = SplitNumElements + i;
       } else if (M >= 0) {
         if (M >= SplitNumElements)
           UseHiV1 = true;
         else
           UseLoV1 = true;
-        V2BlendMask.push_back(-1);
-        V1BlendMask.push_back(M);
-        BlendMask.push_back(i);
-      } else {
-        V2BlendMask.push_back(-1);
-        V1BlendMask.push_back(-1);
-        BlendMask.push_back(-1);
+        V1BlendMask[i] = M;
+        BlendMask[i] = i;
       }
     }
 
@@ -24976,7 +24973,6 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
   SmallVector<int, 16> WidenedMask;
   while (Mask.size() > 1 && canWidenShuffleElements(Mask, WidenedMask)) {
     Mask = std::move(WidenedMask);
-    WidenedMask.clear();
   }
 
   return combineX86ShuffleChain(Input0, Root, Mask, Depth, HasPSHUFB, DAG, DCI,
@@ -30035,8 +30031,8 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
     LoadSDNode *Ld = cast<LoadSDNode>(Op0.getNode());
     EVT LdVT = Ld->getValueType(0);
 
-    // This transformation is not supported if the result type is f16
-    if (VT == MVT::f16)
+    // This transformation is not supported if the result type is f16 or f128.
+    if (VT == MVT::f16 || VT == MVT::f128)
       return SDValue();
 
     if (!Ld->isVolatile() && !VT.isVector() &&

@@ -1,5 +1,6 @@
 ; This test checks that we are not instrumenting unwanted acesses to globals:
 ; - Instruction profiler counter instrumentation has known intended races.
+; - The gcov counters array has a known intended race.
 ;
 ; RUN: opt < %s -tsan -S | FileCheck %s
 
@@ -10,11 +11,18 @@ target triple = "x86_64-apple-macosx10.9"
 @__profc_test_bitcast = private global [2 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 @__profc_test_bitcast_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 
+@__llvm_gcov_ctr = internal global [1 x i64] zeroinitializer
+
 define i32 @test_gep() sanitize_thread {
 entry:
   %pgocount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test_gep, i64 0, i64 0)
   %0 = add i64 %pgocount, 1
   store i64 %0, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__profc_test_gep, i64 0, i64 0)
+
+  %gcovcount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0)
+  %1 = add i64 %gcovcount, 1
+  store i64 %1, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0)
+
   ret i32 1
 }
 

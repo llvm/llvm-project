@@ -241,6 +241,9 @@ class CodeGenSchedModels {
   // Any inferred SchedClass has an index greater than NumInstrSchedClassses.
   unsigned NumInstrSchedClasses;
 
+  RecVec ProcResourceDefs;
+  RecVec ProcResGroups;
+
   // Map each instruction to its unique SchedClass index considering the
   // combination of it's itinerary class, SchedRW list, and InstRW records.
   typedef DenseMap<Record*, unsigned> InstClassMapTy;

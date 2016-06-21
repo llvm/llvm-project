@@ -1049,7 +1049,7 @@ file_magic identify_magic(StringRef Magic) {
 
     case 0xCA:
       if (Magic[1] == char(0xFE) && Magic[2] == char(0xBA) &&
-          Magic[3] == char(0xBE)) {
+          (Magic[3] == char(0xBE) || Magic[3] == char(0xBF))) {
         // This is complicated by an overlap with Java class files.
         // See the Mach-O section in /usr/share/file/magic for details.
         if (Magic.size() >= 8 && Magic[7] < 43)

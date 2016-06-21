@@ -28,8 +28,10 @@
 #include "R600RegisterInfo.h"
 #include "SIDefines.h"
 #include "SIMachineFunctionInfo.h"
+#include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCStreamer.h"
@@ -309,6 +311,8 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   bool FlatUsed = false;
   const SIRegisterInfo *RI =
       static_cast<const SIRegisterInfo *>(STM.getRegisterInfo());
+  const SIInstrInfo *TII =
+      static_cast<const SIInstrInfo *>(STM.getInstrInfo());
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -318,8 +322,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       if (MI.isDebugValue())
         continue;
 
-      // FIXME: This is reporting 0 for many instructions.
-      CodeSize += MI.getDesc().Size;
+      CodeSize += TII->getInstSizeInBytes(MI);
 
       unsigned numOperands = MI.getNumOperands();
       for (unsigned op_idx = 0; op_idx < numOperands; op_idx++) {
@@ -452,7 +455,10 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (STM.hasSGPRInitBug()) {
     if (ProgInfo.NumSGPR > AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG) {
       LLVMContext &Ctx = MF.getFunction()->getContext();
-      Ctx.emitError("too many SGPRs used with the SGPR init bug");
+      DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
+                                       "SGPRs with SGPR init bug",
+                                       ProgInfo.NumSGPR, DS_Error);
+      Ctx.diagnose(Diag);
     }
 
     ProgInfo.NumSGPR = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
@@ -460,12 +466,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
 
   if (MFI->NumUserSGPRs > STM.getMaxNumUserSGPRs()) {
     LLVMContext &Ctx = MF.getFunction()->getContext();
-    Ctx.emitError("too many user SGPRs used");
+    DiagnosticInfoResourceLimit Diag(*MF.getFunction(), "user SGPRs",
+                                     MFI->NumUserSGPRs, DS_Error);
+    Ctx.diagnose(Diag);
   }
 
   if (MFI->LDSSize > static_cast<unsigned>(STM.getLocalMemorySize())) {
     LLVMContext &Ctx = MF.getFunction()->getContext();
-    Ctx.emitError("LDS size exceeds device maximum");
+    DiagnosticInfoResourceLimit Diag(*MF.getFunction(), "local memory",
+                                     MFI->LDSSize, DS_Error);
+    Ctx.diagnose(Diag);
   }
 
   ProgInfo.VGPRBlocks = (ProgInfo.NumVGPR - 1) / 4;

@@ -20,5 +20,15 @@ define void @v_fract_f64(double addrspace(1)* %out, double %src) #1 {
   ret void
 }
 
+; GCN-LABEL: {{^}}v_fract_undef_f32:
+; GCN-NOT: v_fract_f32
+; GCN-NOT: v0
+; GCN: buffer_store_dword v0
+define void @v_fract_undef_f32(float addrspace(1)* %out) #1 {
+  %fract = call float @llvm.amdgcn.fract.f32(float undef)
+  store float %fract, float addrspace(1)* %out
+  ret void
+}
+
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

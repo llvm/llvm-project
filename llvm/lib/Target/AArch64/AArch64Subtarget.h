@@ -41,7 +41,8 @@ public:
     CortexA57,
     Cyclone,
     ExynosM1,
-    Kryo
+    Kryo,
+    Vulcan
   };
 
 protected:

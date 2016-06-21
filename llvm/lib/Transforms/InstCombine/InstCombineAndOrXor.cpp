@@ -968,16 +968,6 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
       RHSCC == ICmpInst::ICMP_SGE || RHSCC == ICmpInst::ICMP_SLE)
     return nullptr;
 
-  // Make a constant range that's the intersection of the two icmp ranges.
-  // If the intersection is empty, we know that the result is false.
-  ConstantRange LHSRange =
-      ConstantRange::makeAllowedICmpRegion(LHSCC, LHSCst->getValue());
-  ConstantRange RHSRange =
-      ConstantRange::makeAllowedICmpRegion(RHSCC, RHSCst->getValue());
-
-  if (LHSRange.intersectWith(RHSRange).isEmptySet())
-    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-
   // We can't fold (ugt x, C) & (sgt x, C2).
   if (!PredicatesFoldable(LHSCC, RHSCC))
     return nullptr;

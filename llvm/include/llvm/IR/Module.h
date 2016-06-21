@@ -746,12 +746,6 @@ public:
   /// @name Utility functions for querying and setting PGO summary
   /// @{
 
-  /// \brief Set maximum function count in PGO mode
-  void setMaximumFunctionCount(uint64_t);
-
-  /// \brief Returns maximum function count in PGO mode
-  Optional<uint64_t> getMaximumFunctionCount();
-
   /// \brief Attach profile summary metadata to this module.
   void setProfileSummary(Metadata *M);
 

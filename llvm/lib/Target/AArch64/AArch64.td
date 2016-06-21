@@ -215,6 +215,14 @@ def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    FeaturePredictableSelectIsExpensive
                                    ]>;
 
+def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",
+                                   "Broadcom Vulcan processors", [
+                                   FeatureFPARMv8,
+                                   FeatureNEON,
+                                   FeatureCrypto,
+                                   FeatureCRC,
+                                   HasV8_1aOps]>;
+
 def : ProcessorModel<"generic", NoSchedModel, [
                      FeatureCRC,
                      FeatureFPARMv8,
@@ -233,6 +241,7 @@ def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA57]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"kryo", KryoModel, [ProcKryo]>;
+def : ProcessorModel<"vulcan", NoSchedModel, [ProcVulcan]>;
 
 //===----------------------------------------------------------------------===//
 // Assembly parser

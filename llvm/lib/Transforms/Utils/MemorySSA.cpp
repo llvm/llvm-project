@@ -105,7 +105,7 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
   auto It = PerBlockAccesses.find(BB);
   // Skip most processing if the list is empty.
   if (It != PerBlockAccesses.end()) {
-    AccessListType *Accesses = It->second.get();
+    AccessList *Accesses = It->second.get();
     for (MemoryAccess &L : *Accesses) {
       switch (L.getValueID()) {
       case Value::MemoryUseVal:
@@ -132,7 +132,7 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
     // Rename the phi nodes in our successor block
     if (It == PerBlockAccesses.end() || !isa<MemoryPhi>(It->second->front()))
       continue;
-    AccessListType *Accesses = It->second.get();
+    AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
     assert(std::find(succ_begin(BB), succ_end(BB), S) != succ_end(BB) &&
            "Must be at least one edge from Succ to BB!");
@@ -226,11 +226,11 @@ MemorySSA::~MemorySSA() {
       MA.dropAllReferences();
 }
 
-MemorySSA::AccessListType *MemorySSA::getOrCreateAccessList(BasicBlock *BB) {
+MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(BasicBlock *BB) {
   auto Res = PerBlockAccesses.insert(std::make_pair(BB, nullptr));
 
   if (Res.second)
-    Res.first->second = make_unique<AccessListType>();
+    Res.first->second = make_unique<AccessList>();
   return Res.first->second.get();
 }
 
@@ -259,7 +259,7 @@ MemorySSAWalker *MemorySSA::getWalker() {
   // the accesses.
   for (BasicBlock &B : F) {
     bool InsertIntoDef = false;
-    AccessListType *Accesses = nullptr;
+    AccessList *Accesses = nullptr;
     for (Instruction &I : B) {
       MemoryUseOrDef *MUD = createNewAccess(&I);
       if (!MUD)
@@ -319,7 +319,7 @@ MemorySSAWalker *MemorySSA::getWalker() {
   // Now place MemoryPhi nodes.
   for (auto &BB : IDFBlocks) {
     // Insert phi node
-    AccessListType *Accesses = getOrCreateAccessList(BB);
+    AccessList *Accesses = getOrCreateAccessList(BB);
     MemoryPhi *Phi = new MemoryPhi(F.getContext(), BB, NextID++);
     ValueToMemoryAccess.insert(std::make_pair(BB, Phi));
     // Phi's always are placed at the front of the block.
@@ -340,7 +340,7 @@ MemorySSAWalker *MemorySSA::getWalker() {
     auto AI = PerBlockAccesses.find(BB);
     if (AI == PerBlockAccesses.end())
       continue;
-    AccessListType *Accesses = AI->second.get();
+    AccessList *Accesses = AI->second.get();
     for (auto &MA : *Accesses) {
       if (auto *MU = dyn_cast<MemoryUse>(&MA)) {
         Instruction *Inst = MU->getMemoryInst();
@@ -472,7 +472,7 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   ValueToMemoryAccess.erase(MemoryInst);
 
   auto AccessIt = PerBlockAccesses.find(MA->getBlock());
-  std::unique_ptr<AccessListType> &Accesses = AccessIt->second;
+  std::unique_ptr<AccessList> &Accesses = AccessIt->second;
   Accesses->erase(MA);
   if (Accesses->empty())
     PerBlockAccesses.erase(AccessIt);
@@ -552,7 +552,8 @@ void MemorySSA::verifyDomination(Function &F) const {
         continue;
 
       for (User *U : MD->users()) {
-        BasicBlock *UseBlock; (void)UseBlock;
+        BasicBlock *UseBlock;
+        (void)UseBlock;
         // Things are allowed to flow to phi nodes over their predecessor edge.
         if (auto *P = dyn_cast<MemoryPhi>(U)) {
           for (const auto &Arg : P->operands()) {
@@ -640,8 +641,8 @@ bool MemorySSA::locallyDominates(const MemoryAccess *Dominator,
     return true;
 
   // Get the access list for the block
-  const AccessListType *AccessList = getBlockAccesses(Dominator->getBlock());
-  AccessListType::const_reverse_iterator It(Dominator->getIterator());
+  const AccessList *AccessList = getBlockAccesses(Dominator->getBlock());
+  AccessList::const_reverse_iterator It(Dominator->getIterator());
 
   // If we hit the beginning of the access list before we hit dominatee, we must
   // dominate it

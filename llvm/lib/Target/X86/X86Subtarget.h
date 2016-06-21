@@ -35,11 +35,10 @@ class TargetMachine;
 ///
 namespace PICStyles {
 enum Style {
-  StubPIC,          // Used on i386-darwin in -fPIC mode.
-  StubDynamicNoPIC, // Used on i386-darwin in -mdynamic-no-pic mode.
-  GOT,              // Used on many 32-bit unices in -fPIC mode.
-  RIPRel,           // Used on X86-64 when not in -static mode.
-  None              // Set when in -static mode (not PIC or DynamicNoPIC mode).
+  StubPIC,          // Used on i386-darwin in pic mode.
+  GOT,              // Used on 32 bit elf on when in pic mode.
+  RIPRel,           // Used on X86-64 when in pic mode.
+  None              // Set when not in pic mode.
 };
 }
 
@@ -517,20 +516,11 @@ public:
     return !In64BitMode && (isTargetCygMing() || isTargetKnownWindowsMSVC());
   }
 
-  bool isPICStyleSet() const { return PICStyle != PICStyles::None; }
   bool isPICStyleGOT() const { return PICStyle == PICStyles::GOT; }
   bool isPICStyleRIPRel() const { return PICStyle == PICStyles::RIPRel; }
 
   bool isPICStyleStubPIC() const {
     return PICStyle == PICStyles::StubPIC;
-  }
-
-  bool isPICStyleStubNoDynamic() const {
-    return PICStyle == PICStyles::StubDynamicNoPIC;
-  }
-  bool isPICStyleStubAny() const {
-    return PICStyle == PICStyles::StubDynamicNoPIC ||
-           PICStyle == PICStyles::StubPIC;
   }
 
   bool isPositionIndependent() const {

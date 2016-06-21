@@ -30,8 +30,7 @@ class TargetLibraryInfo;
 
 class CFLAAResult : public AAResultBase<CFLAAResult> {
   friend AAResultBase<CFLAAResult>;
-
-  struct FunctionInfo;
+  class FunctionInfo;
 
 public:
   explicit CFLAAResult(const TargetLibraryInfo &);

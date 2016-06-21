@@ -88,7 +88,7 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
 
   setupAnalyses();
   MemorySSA &MSSA = Analyses->MSSA;
-  MemorySSAWalker *Walker = &*Analyses->Walker;
+  MemorySSAWalker *Walker = Analyses->Walker;
 
   // Before, the load will be a use of a phi<store, liveonentry>. It should be
   // the same after.
@@ -148,7 +148,7 @@ TEST_F(MemorySSATest, TestTripleStore) {
 
   setupAnalyses();
   MemorySSA &MSSA = Analyses->MSSA;
-  MemorySSAWalker *Walker = &*Analyses->Walker;
+  MemorySSAWalker *Walker = Analyses->Walker;
 
   unsigned I = 0;
   for (StoreInst *V : {S1, S2, S3}) {
@@ -180,7 +180,7 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
 
   setupAnalyses();
   MemorySSA &MSSA = Analyses->MSSA;
-  MemorySSAWalker *Walker = &*Analyses->Walker;
+  MemorySSAWalker *Walker = Analyses->Walker;
 
   MemoryAccess *LoadClobber = Walker->getClobberingMemoryAccess(LI);
   EXPECT_EQ(LoadClobber, MSSA.getMemoryAccess(SI));
@@ -210,7 +210,7 @@ TEST_F(MemorySSATest, TestStoreDoubleQuery) {
 
   setupAnalyses();
   MemorySSA &MSSA = Analyses->MSSA;
-  MemorySSAWalker *Walker = &*Analyses->Walker;
+  MemorySSAWalker *Walker = Analyses->Walker;
 
   MemoryAccess *StoreAccess = MSSA.getMemoryAccess(SI);
   MemoryLocation StoreLoc = MemoryLocation::get(SI);

@@ -1997,6 +1997,8 @@ let Predicates = [HasDQI] in {
             (EXTRACT_SUBREG (KMOVBrk VK8:$src), sub_8bit)>;
   def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
             (KMOVBrk VK8:$src)>;
+  def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
+            (KMOVBrk VK8:$src)>;
 }
 let Predicates = [HasAVX512] in {
   def : Pat<(v16i1 (bitconvert (i16 GR16:$src))),
@@ -2004,6 +2006,8 @@ let Predicates = [HasAVX512] in {
   def : Pat<(i16 (bitconvert (v16i1 VK16:$src))),
             (EXTRACT_SUBREG (KMOVWrk VK16:$src), sub_16bit)>;
   def : Pat<(i32 (zext (i16 (bitconvert (v16i1 VK16:$src))))),
+            (KMOVWrk VK16:$src)>;
+  def : Pat<(i32 (anyext (i16 (bitconvert (v16i1 VK16:$src))))),
             (KMOVWrk VK16:$src)>;
 }
 let Predicates = [HasBWI] in {
@@ -2153,6 +2157,8 @@ let Predicates = [HasAVX512, NoDQI] in {
               (KMOVWrk (COPY_TO_REGCLASS VK8:$src, VK16)),
               sub_8bit)>;
   def : Pat<(i32 (zext (i8 (bitconvert (v8i1 VK8:$src))))),
+            (KMOVWrk (COPY_TO_REGCLASS VK8:$src, VK16))>;
+  def : Pat<(i32 (anyext (i8 (bitconvert (v8i1 VK8:$src))))),
             (KMOVWrk (COPY_TO_REGCLASS VK8:$src, VK16))>;
 }
 

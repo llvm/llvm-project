@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=SI -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -march=amdgcn -mcpu=SI -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
-; XUN: llc -march=amdgcn -mcpu=SI -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE-SPDENORM -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
+; XUN: llc -march=amdgcn -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE-SPDENORM -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp32-denormals -enable-unsafe-fp-math -verify-machineinstrs < %s | FileCheck -check-prefix=SI-UNSAFE -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE -check-prefix=SI -check-prefix=FUNC %s
 ; XUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=SI-SAFE-SPDENORM -check-prefix=SI -check-prefix=FUNC %s
@@ -66,6 +66,14 @@ define void @rsq_rcp_pat_f64(double addrspace(1)* %out, double %src) #1 {
   %sqrt = call double @llvm.sqrt.f64(double %src) #0
   %rcp = call double @llvm.amdgcn.rcp.f64(double %sqrt) #0
   store double %rcp, double addrspace(1)* %out, align 8
+  ret void
+}
+
+; FUNC-LABEL: {{^}}rcp_undef_f32:
+; SI-NOT: v_rcp_f32
+define void @rcp_undef_f32(float addrspace(1)* %out) #1 {
+  %rcp = call float @llvm.amdgcn.rcp.f32(float undef) #0
+  store float %rcp, float addrspace(1)* %out, align 4
   ret void
 }
 

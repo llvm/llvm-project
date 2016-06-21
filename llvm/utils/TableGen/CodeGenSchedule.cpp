@@ -1429,6 +1429,9 @@ void CodeGenSchedModels::verifyProcResourceGroups(CodeGenProcModel &PM) {
 
 // Collect and sort WriteRes, ReadAdvance, and ProcResources.
 void CodeGenSchedModels::collectProcResources() {
+  ProcResourceDefs = Records.getAllDerivedDefinitions("ProcResourceUnits");
+  ProcResGroups = Records.getAllDerivedDefinitions("ProcResGroup");
+
   // Add any subtarget-specific SchedReadWrites that are directly associated
   // with processor resources. Refer to the parent SchedClass's ProcIndices to
   // determine which processors they apply to.
@@ -1523,6 +1526,9 @@ void CodeGenSchedModels::collectProcResources() {
       dbgs() << '\n');
     verifyProcResourceGroups(PM);
   }
+
+  ProcResourceDefs.clear();
+  ProcResGroups.clear();
 }
 
 void CodeGenSchedModels::checkCompleteness() {
@@ -1652,8 +1658,8 @@ Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
     return ProcResKind;
 
   Record *ProcUnitDef = nullptr;
-  RecVec ProcResourceDefs =
-    Records.getAllDerivedDefinitions("ProcResourceUnits");
+  assert(!ProcResourceDefs.empty());
+  assert(!ProcResGroups.empty());
 
   for (RecIter RI = ProcResourceDefs.begin(), RE = ProcResourceDefs.end();
        RI != RE; ++RI) {
@@ -1668,7 +1674,6 @@ Record *CodeGenSchedModels::findProcResUnits(Record *ProcResKind,
       ProcUnitDef = *RI;
     }
   }
-  RecVec ProcResGroups = Records.getAllDerivedDefinitions("ProcResGroup");
   for (RecIter RI = ProcResGroups.begin(), RE = ProcResGroups.end();
        RI != RE; ++RI) {
 
