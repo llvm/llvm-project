@@ -30,6 +30,7 @@ class BitcodeFile;
 class InputFile;
 class LazyObjectFile;
 class SymbolBody;
+struct Version;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
@@ -126,6 +127,9 @@ public:
 
   // True if this is a local symbol.
   unsigned IsLocal : 1;
+
+  // True if this symbol has an entry in the global part of MIPS GOT.
+  unsigned IsInGlobalMipsGot : 1;
 
   // The following fields have the same meaning as the ELF symbol attributes.
   uint8_t Type;    // symbol type
@@ -299,13 +303,8 @@ public:
   SharedFile<ELFT> *File;
   const Elf_Sym &Sym;
 
-  // This field is initially a pointer to the symbol's version definition. As
-  // symbols are added to the version table, this field is replaced with the
-  // version identifier to be stored in .gnu.version in the output file.
-  union {
-    const Elf_Verdef *Verdef;
-    uint16_t VersionId;
-  };
+  // This field is a pointer to the symbol's version definition.
+  const Elf_Verdef *Verdef;
 
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;
@@ -404,6 +403,9 @@ struct Symbol {
   // it is weak.
   uint8_t Binding;
 
+  // Version definition index.
+  uint16_t VersionId;
+
   // Symbol visibility. This is the computed minimum visibility of all
   // observed non-DSO symbols.
   unsigned Visibility : 2;
@@ -419,11 +421,6 @@ struct Symbol {
   // executables, by most symbols in DSOs and executables built with
   // --export-dynamic, and by dynamic lists.
   unsigned ExportDynamic : 1;
-
-  // This flag acts as an additional filter on the dynamic symbol list. It is
-  // set if there is no version script, or if the symbol appears in the global
-  // section of the version script.
-  unsigned VersionScriptGlobal : 1;
 
   bool includeInDynsym() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }

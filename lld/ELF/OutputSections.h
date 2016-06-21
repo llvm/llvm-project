@@ -11,6 +11,7 @@
 #define LLD_ELF_OUTPUT_SECTIONS_H
 
 #include "Config.h"
+#include "Relocations.h"
 
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -24,6 +25,7 @@ namespace elf {
 
 class SymbolBody;
 struct SectionPiece;
+struct Version;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
@@ -77,15 +79,15 @@ public:
   void setSize(uintX_t Val) { Header.sh_size = Val; }
   uintX_t getFlags() const { return Header.sh_flags; }
   uintX_t getFileOff() const { return Header.sh_offset; }
-  uintX_t getAlign() const {
+  uintX_t getAlignment() const {
     // The ELF spec states that a value of 0 means the section has no alignment
     // constraits.
     return std::max<uintX_t>(Header.sh_addralign, 1);
   }
   uint32_t getType() const { return Header.sh_type; }
-  void updateAlign(uintX_t Align) {
-    if (Align > Header.sh_addralign)
-      Header.sh_addralign = Align;
+  void updateAlignment(uintX_t Alignment) {
+    if (Alignment > Header.sh_addralign)
+      Header.sh_addralign = Alignment;
   }
 
   // If true, this section will be page aligned on disk.
@@ -113,11 +115,12 @@ public:
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
   void addEntry(SymbolBody &Sym);
+  void addMipsEntry(SymbolBody &Sym, uintX_t Addend, RelExpr Expr);
   bool addDynTlsEntry(SymbolBody &Sym);
   bool addTlsIndex();
-  bool empty() const { return MipsLocalEntries == 0 && Entries.empty(); }
-  uintX_t getMipsLocalEntryOffset(uintX_t EntryValue);
+  bool empty() const { return MipsPageEntries == 0 && Entries.empty(); }
   uintX_t getMipsLocalPageOffset(uintX_t Addr);
+  uintX_t getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const;
   uintX_t getGlobalDynAddr(const SymbolBody &B) const;
   uintX_t getGlobalDynOffset(const SymbolBody &B) const;
   uintX_t getNumEntries() const { return Entries.size(); }
@@ -142,10 +145,26 @@ public:
 private:
   std::vector<const SymbolBody *> Entries;
   uint32_t TlsIndexOff = -1;
-  uint32_t MipsLocalEntries = 0;
+  uint32_t MipsPageEntries = 0;
   // Output sections referenced by MIPS GOT relocations.
   llvm::SmallPtrSet<const OutputSectionBase<ELFT> *, 10> MipsOutSections;
   llvm::DenseMap<uintX_t, size_t> MipsLocalGotPos;
+
+  // MIPS ABI requires to create unique GOT entry for each Symbol/Addend
+  // pairs. The `MipsGotMap` maps (S,A) pair to the GOT index in the `MipsLocal`
+  // or `MipsGlobal` vectors. In general it does not have a sence to take in
+  // account addend for preemptible symbols because the corresponding
+  // GOT entries should have one-to-one mapping with dynamic symbols table.
+  // But we use the same container's types for both kind of GOT entries
+  // to handle them uniformly.
+  typedef std::pair<const SymbolBody*, uintX_t> MipsGotEntry;
+  typedef std::vector<MipsGotEntry> MipsGotEntries;
+  llvm::DenseMap<MipsGotEntry, size_t> MipsGotMap;
+  MipsGotEntries MipsLocal;
+  MipsGotEntries MipsGlobal;
+
+  // Write MIPS-specific parts of the GOT.
+  void writeMipsGot(uint8_t *&Buf);
 };
 
 template <class ELFT>
@@ -230,10 +249,30 @@ private:
 // For more information about .gnu.version and .gnu.version_r see:
 // https://www.akkadia.org/drepper/symbol-versioning
 
+// The .gnu.version_d section which has a section type of SHT_GNU_verdef shall
+// contain symbol version definitions. The number of entries in this section
+// shall be contained in the DT_VERDEFNUM entry of the .dynamic section.
+// The section shall contain an array of Elf_Verdef structures, optionally
+// followed by an array of Elf_Verdaux structures.
+template <class ELFT>
+class VersionDefinitionSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::Verdef Elf_Verdef;
+  typedef typename ELFT::Verdaux Elf_Verdaux;
+
+  unsigned FileDefNameOff;
+
+public:
+  VersionDefinitionSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+};
+
 // The .gnu.version section specifies the required version of each symbol in the
 // dynamic symbol table. It contains one Elf_Versym for each dynamic symbol
 // table entry. An Elf_Versym is just a 16-bit integer that refers to a version
-// identifier defined in the .gnu.version_r section.
+// identifier defined in the either .gnu.version_r or .gnu.version_d section.
+// The values 0 and 1 are reserved. All other values are used for versions in
+// the own object or in any of the dependencies.
 template <class ELFT>
 class VersionTableSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::Versym Elf_Versym;
@@ -258,9 +297,8 @@ class VersionNeedSection final : public OutputSectionBase<ELFT> {
   // string table offsets of their sonames.
   std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
 
-  // The next available version identifier. Identifiers start at 2 because 0 and
-  // 1 are reserved.
-  unsigned NextIndex = 2;
+  // The next available version identifier.
+  unsigned NextIndex;
 
 public:
   VersionNeedSection();
@@ -612,6 +650,7 @@ template <class ELFT> struct Out {
   static StringTableSection<ELFT> *StrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
+  static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
   static Elf_Phdr *TlsPhdr;
@@ -640,6 +679,7 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
+template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
 template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;

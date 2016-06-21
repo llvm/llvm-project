@@ -52,27 +52,23 @@ StringRef getRelName(uint32_t Type) {
 }
 
 template <unsigned N> static void checkInt(int64_t V, uint32_t Type) {
-  if (isInt<N>(V))
-    return;
-  error("relocation " + getRelName(Type) + " out of range");
+  if (!isInt<N>(V))
+    error("relocation " + getRelName(Type) + " out of range");
 }
 
 template <unsigned N> static void checkUInt(uint64_t V, uint32_t Type) {
-  if (isUInt<N>(V))
-    return;
-  error("relocation " + getRelName(Type) + " out of range");
+  if (!isUInt<N>(V))
+    error("relocation " + getRelName(Type) + " out of range");
 }
 
 template <unsigned N> static void checkIntUInt(uint64_t V, uint32_t Type) {
-  if (isInt<N>(V) || isUInt<N>(V))
-    return;
-  error("relocation " + getRelName(Type) + " out of range");
+  if (!isInt<N>(V) && !isUInt<N>(V))
+    error("relocation " + getRelName(Type) + " out of range");
 }
 
 template <unsigned N> static void checkAlignment(uint64_t V, uint32_t Type) {
-  if ((V & (N - 1)) == 0)
-    return;
-  error("improper alignment for relocation " + getRelName(Type));
+  if ((V & (N - 1)) != 0)
+    error("improper alignment for relocation " + getRelName(Type));
 }
 
 static void errorDynRel(uint32_t Type) {
@@ -824,11 +820,11 @@ void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
     // 0x38 == 00 111 000 binary.
     // We transfer reg2 to reg1 here as operand.
     // See "2.1.3 ModR/M and SIB Bytes" (Vol. 2A 2-3).
-    *(Loc - 1) = 0xc0 | (ModRm & 0x38) >> 3; // ModR/M byte.
+    Loc[-1] = 0xc0 | (ModRm & 0x38) >> 3; // ModR/M byte.
 
     // Change opcode from TEST r/m64, r64 to TEST r/m64, imm32
     // See "TEST-Logical Compare" (4-428 Vol. 2B).
-    *(Loc - 2) = 0xf7;
+    Loc[-2] = 0xf7;
 
     // Move R bit to the B bit in REX byte.
     // REX byte is encoded as 0100WRXB, where
@@ -841,7 +837,7 @@ void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
     // REX.B This 1-bit value is an extension to the MODRM.rm field or the
     // SIB.base field.
     // See "2.2.1.2 More on REX Prefix Fields " (2-8 Vol. 2A).
-    *(Loc - 3) = (Rex & ~0x4) | (Rex & 0x4) >> 2;
+    Loc[-3] = (Rex & ~0x4) | (Rex & 0x4) >> 2;
     relocateOne(Loc, R_X86_64_PC32, Val);
     return;
   }
@@ -852,7 +848,7 @@ void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
   // Convert "binop foo@GOTPCREL(%rip), %reg" to "binop $foo, %reg".
   // Logic is close to one for test instruction above, but we also
   // write opcode extension here, see below for details.
-  *(Loc - 1) = 0xc0 | (ModRm & 0x38) >> 3 | (Op & 0x3c); // ModR/M byte.
+  Loc[-1] = 0xc0 | (ModRm & 0x38) >> 3 | (Op & 0x3c); // ModR/M byte.
 
   // Primary opcode is 0x81, opcode extension is one of:
   // 000b = ADD, 001b is OR, 010b is ADC, 011b is SBB,
@@ -861,8 +857,8 @@ void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
   // See "3.2 INSTRUCTIONS (A-M)" (Vol. 2A 3-15),
   // "INSTRUCTION SET REFERENCE, N-Z" (Vol. 2B 4-1) for
   // descriptions about each operation.
-  *(Loc - 2) = 0x81;
-  *(Loc - 3) = (Rex & ~0x4) | (Rex & 0x4) >> 2;
+  Loc[-2] = 0x81;
+  Loc[-3] = (Rex & ~0x4) | (Rex & 0x4) >> 2;
   relocateOne(Loc, R_X86_64_PC32, Val);
 }
 
@@ -870,38 +866,38 @@ void X86_64TargetInfo::relaxGot(uint8_t *Loc, uint64_t Val) const {
   const uint8_t Op = Loc[-2];
   const uint8_t ModRm = Loc[-1];
 
-  // Convert mov foo@GOTPCREL(%rip), %reg to lea foo(%rip), %reg.
+  // Convert "mov foo@GOTPCREL(%rip),%reg" to "lea foo(%rip),%reg".
   if (Op == 0x8b) {
-    *(Loc - 2) = 0x8d;
+    Loc[-2] = 0x8d;
     relocateOne(Loc, R_X86_64_PC32, Val);
+    return;
+  }
+
+  if (Op != 0xff) {
+    // We are relaxing a rip relative to an absolute, so compensate
+    // for the old -4 addend.
+    assert(!Config->Pic);
+    relaxGotNoPic(Loc, Val + 4, Op, ModRm);
     return;
   }
 
   // Convert call/jmp instructions.
-  if (Op == 0xff) {
-    if (ModRm == 0x15) {
-      // ABI says we can convert call *foo@GOTPCREL(%rip) to nop call foo.
-      // Instead we convert to addr32 call foo, where addr32 is instruction
-      // prefix. That makes result expression to be a single instruction.
-      *(Loc - 2) = 0x67; // addr32 prefix
-      *(Loc - 1) = 0xe8; // call
-    } else {
-      assert(ModRm == 0x25);
-      // Convert jmp *foo@GOTPCREL(%rip) to jmp foo nop.
-      // jmp doesn't return, so it is fine to use nop here, it is just a stub.
-      *(Loc - 2) = 0xe9; // jmp
-      *(Loc + 3) = 0x90; // nop
-      Loc -= 1;
-      Val += 1;
-    }
+  if (ModRm == 0x15) {
+    // ABI says we can convert "call *foo@GOTPCREL(%rip)" to "nop; call foo".
+    // Instead we convert to "addr32 call foo" where addr32 is an instruction
+    // prefix. That makes result expression to be a single instruction.
+    Loc[-2] = 0x67; // addr32 prefix
+    Loc[-1] = 0xe8; // call
     relocateOne(Loc, R_X86_64_PC32, Val);
     return;
   }
 
-  assert(!Config->Pic);
-  // We are relaxing a rip relative to an absolute, so compensate
-  // for the old -4 addend.
-  relaxGotNoPic(Loc, Val + 4, Op, ModRm);
+  // Convert "jmp *foo@GOTPCREL(%rip)" to "jmp foo; nop".
+  // jmp doesn't return, so it is fine to use nop here, it is just a stub.
+  assert(ModRm == 0x25);
+  Loc[-2] = 0xe9; // jmp
+  Loc[3] = 0x90;  // nop
+  relocateOne(Loc - 1, R_X86_64_PC32, Val + 1);
 }
 
 // Relocation masks following the #lo(value), #hi(value), #ha(value),
@@ -940,6 +936,7 @@ PPC64TargetInfo::PPC64TargetInfo() {
   PltRel = GotRel = R_PPC64_GLOB_DAT;
   RelativeRel = R_PPC64_RELATIVE;
   PltEntrySize = 32;
+  PltHeaderSize = 0;
 
   // We need 64K pages (at least under glibc/Linux, the loader won't
   // set different permissions on a finer granularity than that).
@@ -1011,21 +1008,24 @@ void PPC64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32be(Buf + 28, 0x4e800420);                   // bctr
 }
 
+static std::pair<uint32_t, uint64_t> toAddr16Rel(uint32_t Type, uint64_t Val) {
+  uint64_t V = Val - PPC64TocOffset;
+  switch (Type) {
+  case R_PPC64_TOC16: return {R_PPC64_ADDR16, V};
+  case R_PPC64_TOC16_DS: return {R_PPC64_ADDR16_DS, V};
+  case R_PPC64_TOC16_HA: return {R_PPC64_ADDR16_HA, V};
+  case R_PPC64_TOC16_HI: return {R_PPC64_ADDR16_HI, V};
+  case R_PPC64_TOC16_LO: return {R_PPC64_ADDR16_LO, V};
+  case R_PPC64_TOC16_LO_DS: return {R_PPC64_ADDR16_LO_DS, V};
+  default: return {Type, Val};
+  }
+}
+
 void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                   uint64_t Val) const {
-  uint64_t TO = PPC64TocOffset;
-
-  // For a TOC-relative relocation,  proceed in terms of the corresponding
+  // For a TOC-relative relocation, proceed in terms of the corresponding
   // ADDR16 relocation type.
-  switch (Type) {
-  case R_PPC64_TOC16:       Type = R_PPC64_ADDR16;       Val -= TO; break;
-  case R_PPC64_TOC16_DS:    Type = R_PPC64_ADDR16_DS;    Val -= TO; break;
-  case R_PPC64_TOC16_HA:    Type = R_PPC64_ADDR16_HA;    Val -= TO; break;
-  case R_PPC64_TOC16_HI:    Type = R_PPC64_ADDR16_HI;    Val -= TO; break;
-  case R_PPC64_TOC16_LO:    Type = R_PPC64_ADDR16_LO;    Val -= TO; break;
-  case R_PPC64_TOC16_LO_DS: Type = R_PPC64_ADDR16_LO_DS; Val -= TO; break;
-  default: break;
-  }
+  std::tie(Type, Val) = toAddr16Rel(Type, Val);
 
   switch (Type) {
   case R_PPC64_ADDR14: {
@@ -1044,9 +1044,11 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write16be(Loc, (read16be(Loc) & 3) | (Val & ~3));
     break;
   case R_PPC64_ADDR16_HA:
+  case R_PPC64_REL16_HA:
     write16be(Loc, applyPPCHa(Val));
     break;
   case R_PPC64_ADDR16_HI:
+  case R_PPC64_REL16_HI:
     write16be(Loc, applyPPCHi(Val));
     break;
   case R_PPC64_ADDR16_HIGHER:
@@ -1065,23 +1067,18 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write16be(Loc, applyPPCLo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
+  case R_PPC64_REL16_LO:
     write16be(Loc, (read16be(Loc) & 3) | (applyPPCLo(Val) & ~3));
     break;
   case R_PPC64_ADDR32:
+  case R_PPC64_REL32:
     checkInt<32>(Val, Type);
     write32be(Loc, Val);
     break;
   case R_PPC64_ADDR64:
+  case R_PPC64_REL64:
+  case R_PPC64_TOC:
     write64be(Loc, Val);
-    break;
-  case R_PPC64_REL16_HA:
-    write16be(Loc, applyPPCHa(Val));
-    break;
-  case R_PPC64_REL16_HI:
-    write16be(Loc, applyPPCHi(Val));
-    break;
-  case R_PPC64_REL16_LO:
-    write16be(Loc, applyPPCLo(Val));
     break;
   case R_PPC64_REL24: {
     uint32_t Mask = 0x03FFFFFC;
@@ -1089,16 +1086,6 @@ void PPC64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
     write32be(Loc, (read32be(Loc) & ~Mask) | (Val & Mask));
     break;
   }
-  case R_PPC64_REL32:
-    checkInt<32>(Val, Type);
-    write32be(Loc, Val);
-    break;
-  case R_PPC64_REL64:
-    write64be(Loc, Val);
-    break;
-  case R_PPC64_TOC:
-    write64be(Loc, Val);
-    break;
   default:
     fatal("unrecognized reloc " + Twine(Type));
   }
@@ -1125,27 +1112,21 @@ RelExpr AArch64TargetInfo::getRelExpr(uint32_t Type,
   switch (Type) {
   default:
     return R_ABS;
-
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     return R_TLSDESC_PAGE;
-
   case R_AARCH64_TLSDESC_LD64_LO12_NC:
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
     return R_TLSDESC;
-
   case R_AARCH64_TLSDESC_CALL:
     return R_HINT;
-
   case R_AARCH64_TLSLE_ADD_TPREL_HI12:
   case R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
     return R_TLS;
-
   case R_AARCH64_CALL26:
   case R_AARCH64_CONDBR19:
   case R_AARCH64_JUMP26:
   case R_AARCH64_TSTBR14:
     return R_PLT_PC;
-
   case R_AARCH64_PREL16:
   case R_AARCH64_PREL32:
   case R_AARCH64_PREL64:
@@ -1357,25 +1338,20 @@ void AArch64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
   //   nop
   checkUInt<32>(Val, Type);
 
-  uint32_t NewInst;
   switch (Type) {
   case R_AARCH64_TLSDESC_ADD_LO12_NC:
   case R_AARCH64_TLSDESC_CALL:
-    // nop
-    NewInst = 0xd503201f;
-    break;
+    write32le(Loc, 0xd503201f); // nop
+    return;
   case R_AARCH64_TLSDESC_ADR_PAGE21:
-    // movz
-    NewInst = 0xd2a00000 | (((Val >> 16) & 0xffff) << 5);
-    break;
+    write32le(Loc, 0xd2a00000 | (((Val >> 16) & 0xffff) << 5)); // movz
+    return;
   case R_AARCH64_TLSDESC_LD64_LO12_NC:
-    // movk
-    NewInst = 0xf2800000 | ((Val & 0xffff) << 5);
-    break;
+    write32le(Loc, 0xf2800000 | ((Val & 0xffff) << 5)); // movk
+    return;
   default:
-    llvm_unreachable("unsupported Relocation for TLS GD to LE relax");
+    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
   }
-  write32le(Loc, NewInst);
 }
 
 void AArch64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
@@ -1406,7 +1382,7 @@ void AArch64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
     relocateOne(Loc, R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC, Val);
     break;
   default:
-    llvm_unreachable("unsupported Relocation for TLS GD to LE relax");
+    llvm_unreachable("unsupported relocation for TLS GD to LE relaxation");
   }
 }
 
@@ -1429,17 +1405,16 @@ void AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-// Implementing relocations for AMDGPU is low priority since most
-// programs don't use relocations now. Thus, this function is not
-// actually called (relocateOne is called for each relocation).
-// That's why the AMDGPU port works without implementing this function.
 void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
-  llvm_unreachable("not implemented");
+  assert(Type == R_AMDGPU_REL32);
+  write32le(Loc, Val);
 }
 
 RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
-  llvm_unreachable("not implemented");
+  if (Type != R_AMDGPU_REL32)
+    error("do not know how to handle relocation");
+  return R_PC;
 }
 
 ARMTargetInfo::ARMTargetInfo() {
@@ -1669,9 +1644,9 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_ARM_JUMP24:
   case R_ARM_PC24:
   case R_ARM_PLT32:
-    return SignExtend64<26>((read32le(Buf) & 0x00ffffff) << 2);
+    return SignExtend64<26>(read32le(Buf) << 2);
   case R_ARM_THM_JUMP11:
-    return SignExtend64<12>((read16le(Buf) & 0x07ff) << 1);
+    return SignExtend64<12>(read16le(Buf) << 1);
   case R_ARM_THM_JUMP19: {
     // Encoding T3: A = S:J2:J1:imm10:imm6:0
     uint16_t Hi = read16le(Buf);
@@ -1769,9 +1744,7 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   // fallthrough
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
-    if (!S.isPreemptible())
-      return R_MIPS_GOT_LOCAL;
-    return R_GOT_OFF;
+    return R_MIPS_GOT_OFF;
   case R_MIPS_GOT_PAGE:
     return R_MIPS_GOT_LOCAL_PAGE;
   }
@@ -1820,10 +1793,6 @@ template <endianness E>
 static void writeMipsLo16(uint8_t *Loc, uint64_t V) {
   uint32_t Instr = read32<E>(Loc);
   write32<E>(Loc, (Instr & 0xffff0000) | (V & 0xffff));
-}
-
-template <endianness E> static int16_t readSignedLo16(const uint8_t *Loc) {
-  return SignExtend32<16>(read32<E>(Loc) & 0xffff);
 }
 
 template <class ELFT>
@@ -1910,7 +1879,7 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
     // FIXME (simon): If the relocation target symbol is not a PLT entry
     // we should use another expression for calculation:
     // ((A << 2) | (P & 0xf0000000)) >> 2
-    return SignExtend64<28>((read32<E>(Buf) & 0x3ffffff) << 2);
+    return SignExtend64<28>(read32<E>(Buf) << 2);
   case R_MIPS_GPREL16:
   case R_MIPS_LO16:
   case R_MIPS_PCLO16:
@@ -1918,7 +1887,7 @@ uint64_t MipsTargetInfo<ELFT>::getImplicitAddend(const uint8_t *Buf,
   case R_MIPS_TLS_DTPREL_LO16:
   case R_MIPS_TLS_TPREL_HI16:
   case R_MIPS_TLS_TPREL_LO16:
-    return readSignedLo16<E>(Buf);
+    return SignExtend64<16>(read32<E>(Buf));
   case R_MIPS_PC16:
     return getPcRelocAddend<E, 16, 2>(Buf);
   case R_MIPS_PC19_S2:

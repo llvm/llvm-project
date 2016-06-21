@@ -75,26 +75,71 @@ public:
   VersionScriptParser(StringRef S) : ScriptParserBase(S) {}
 
   void run();
+
+private:
+  void parseVersion(StringRef Version);
+  void parseLocal();
+  void parseVersionSymbols(StringRef Version);
 };
 
-void VersionScriptParser::run() {
+void VersionScriptParser::parseVersion(StringRef Version) {
   expect("{");
   if (peek() == "global:") {
     next();
-    while (!Error) {
-      Config->VersionScriptGlobals.push_back(next());
-      expect(";");
-      if (peek() == "local:")
-        break;
-    }
+    parseVersionSymbols(Version);
   }
+  if (peek() == "local:")
+    parseLocal();
+  else
+    parseVersionSymbols(Version);
+
+  expect("}");
+  expect(";");
+}
+
+void VersionScriptParser::parseLocal() {
   expect("local:");
   expect("*");
   expect(";");
-  expect("}");
-  expect(";");
-  if (!atEOF())
-    setError("expected EOF");
+  Config->VersionScriptGlobalByDefault = false;
+}
+
+void VersionScriptParser::parseVersionSymbols(StringRef Version) {
+  std::vector<StringRef> *Globals;
+  if (Version.empty()) {
+    Globals = &Config->VersionScriptGlobals;
+  } else {
+    Config->SymbolVersions.push_back(elf::Version(Version));
+    Globals = &Config->SymbolVersions.back().Globals;
+  }
+
+  for (;;) {
+    StringRef Cur = peek();
+    if (Cur == "}" || Cur == "local:" || Error)
+      return;
+    next();
+    Globals->push_back(Cur);
+    expect(";");
+  }
+}
+
+void VersionScriptParser::run() {
+  StringRef Msg = "anonymous version definition is used in "
+                  "combination with other version definitions";
+  if (peek() == "{") {
+    parseVersion("");
+    if (!atEOF())
+      setError(Msg);
+    return;
+  }
+
+  while (!atEOF() && !Error) {
+    if (peek() == "{") {
+      setError(Msg);
+      return;
+    }
+    parseVersion(next());
+  }
 }
 
 void elf::parseVersionScript(MemoryBufferRef MB) {

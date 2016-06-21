@@ -239,14 +239,14 @@ void LinkerScript<ELFT>::assignAddresses(
 
       if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
         uintX_t TVA = Dot + ThreadBssOffset;
-        TVA = alignTo(TVA, Sec->getAlign());
+        TVA = alignTo(TVA, Sec->getAlignment());
         Sec->setVA(TVA);
         ThreadBssOffset = TVA - Dot + Sec->getSize();
         continue;
       }
 
       if (Sec->getFlags() & SHF_ALLOC) {
-        Dot = alignTo(Dot, Sec->getAlign());
+        Dot = alignTo(Dot, Sec->getAlignment());
         Sec->setVA(Dot);
         Dot += Sec->getSize();
         continue;

@@ -512,8 +512,6 @@ put_time(const tm* __tm, const _CharT* __fmt)
     return __iom_t10<_CharT>(__tm, __fmt);
 }
 
-#if _LIBCPP_STD_VER > 11
-
 template <class _CharT, class _Traits, class _ForwardIterator>
 std::basic_ostream<_CharT, _Traits> &
 __quoted_output ( basic_ostream<_CharT, _Traits> &__os, 
@@ -569,7 +567,7 @@ __quoted_input ( basic_istream<_CharT, _Traits> &__is, _String & __string, _Char
 }
 
 
-template <class _CharT, class _Iter, class _Traits=char_traits<_CharT>>
+template <class _CharT, class _Iter, class _Traits=char_traits<_CharT> >
 struct __quoted_output_proxy
 {
     _Iter  __first;
@@ -631,21 +629,42 @@ quoted ( const _CharT *__s, _CharT __delim = _CharT('"'), _CharT __escape =_Char
     return __quoted_output_proxy<_CharT, const _CharT *> ( __s, __end, __delim, __escape );
 }
 
+
+template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_INLINE_VISIBILITY
+__quoted_output_proxy<_CharT, typename basic_string <_CharT, _Traits, _Allocator>::const_iterator>
+__quoted ( const basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+{
+    return __quoted_output_proxy<_CharT,
+            typename basic_string <_CharT, _Traits, _Allocator>::const_iterator>
+                    ( __s.cbegin(), __s.cend (), __delim, __escape );
+}
+
+template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_INLINE_VISIBILITY
+__quoted_proxy<_CharT, _Traits, _Allocator>
+__quoted ( basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
+{
+    return __quoted_proxy<_CharT, _Traits, _Allocator>( __s, __delim, __escape );
+}
+
+
+#if _LIBCPP_STD_VER > 11
+
 template <class _CharT, class _Traits, class _Allocator>
 _LIBCPP_INLINE_VISIBILITY
 __quoted_output_proxy<_CharT, typename basic_string <_CharT, _Traits, _Allocator>::const_iterator>
 quoted ( const basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
 {
-    return __quoted_output_proxy<_CharT, 
-            typename basic_string <_CharT, _Traits, _Allocator>::const_iterator> 
-                    ( __s.cbegin(), __s.cend (), __delim, __escape );
+    return __quoted(__s, __delim, __escape);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
+_LIBCPP_INLINE_VISIBILITY
 __quoted_proxy<_CharT, _Traits, _Allocator>
 quoted ( basic_string <_CharT, _Traits, _Allocator> &__s, _CharT __delim = _CharT('"'), _CharT __escape=_CharT('\\'))
 {
-    return __quoted_proxy<_CharT, _Traits, _Allocator>( __s, __delim, __escape );
+    return __quoted(__s, __delim, __escape);
 }
 #endif
 

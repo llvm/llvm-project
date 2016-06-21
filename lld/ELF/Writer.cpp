@@ -124,7 +124,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   OutputSectionBase<ELFT> ElfHeader("", 0, SHF_ALLOC);
   ElfHeader.setSize(sizeof(Elf_Ehdr));
   OutputSectionBase<ELFT> ProgramHeaders("", 0, SHF_ALLOC);
-  ProgramHeaders.updateAlign(sizeof(uintX_t));
+  ProgramHeaders.updateAlignment(sizeof(uintX_t));
 
   // Instantiate optional output sections if they are needed.
   std::unique_ptr<BuildIdSection<ELFT>> BuildId;
@@ -136,6 +136,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   std::unique_ptr<StringTableSection<ELFT>> StrTab;
   std::unique_ptr<SymbolTableSection<ELFT>> SymTabSec;
   std::unique_ptr<OutputSection<ELFT>> MipsRldMap;
+  std::unique_ptr<VersionDefinitionSection<ELFT>> VerDef;
 
   if (Config->BuildId == BuildIdKind::Fnv1)
     BuildId.reset(new BuildIdFnv1<ELFT>);
@@ -168,8 +169,10 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     MipsRldMap.reset(new OutputSection<ELFT>(".rld_map", SHT_PROGBITS,
                                              SHF_ALLOC | SHF_WRITE));
     MipsRldMap->setSize(sizeof(uintX_t));
-    MipsRldMap->updateAlign(sizeof(uintX_t));
+    MipsRldMap->updateAlignment(sizeof(uintX_t));
   }
+  if (!Config->SymbolVersions.empty())
+    VerDef.reset(new VersionDefinitionSection<ELFT>());
 
   Out<ELFT>::Bss = &Bss;
   Out<ELFT>::BuildId = BuildId.get();
@@ -189,6 +192,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   Out<ELFT>::ShStrTab = &ShStrTab;
   Out<ELFT>::StrTab = StrTab.get();
   Out<ELFT>::SymTab = SymTabSec.get();
+  Out<ELFT>::VerDef = VerDef.get();
   Out<ELFT>::VerSym = &VerSym;
   Out<ELFT>::VerNeed = &VerNeed;
   Out<ELFT>::MipsRldMap = MipsRldMap.get();
@@ -492,7 +496,7 @@ void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
   uintX_t Off = Out<ELFT>::Bss->getSize();
   for (DefinedCommon *C : Syms) {
     Off = alignTo(Off, C->Alignment);
-    Out<ELFT>::Bss->updateAlign(C->Alignment);
+    Out<ELFT>::Bss->updateAlignment(C->Alignment);
     C->OffsetInBss = Off;
     Off += C->Size;
   }
@@ -793,7 +797,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     Sec->forEachInputSection([&](InputSectionBase<ELFT> *S) {
       if (auto *IS = dyn_cast<InputSection<ELFT>>(S)) {
         // Set OutSecOff so that scanRelocations can use it.
-        uintX_t Off = alignTo(Sec->getSize(), S->Align);
+        uintX_t Off = alignTo(Sec->getSize(), S->Alignment);
         IS->OutSecOff = Off;
 
         scanRelocations(*IS);
@@ -904,10 +908,14 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   Add(Out<ELFT>::StrTab);
   if (isOutputDynamic()) {
     Add(Out<ELFT>::DynSymTab);
-    if (Out<ELFT>::VerNeed->getNeedNum() != 0) {
+
+    bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
+    if (Out<ELFT>::VerDef || HasVerNeed)
       Add(Out<ELFT>::VerSym);
+    Add(Out<ELFT>::VerDef);
+    if (HasVerNeed)
       Add(Out<ELFT>::VerNeed);
-    }
+
     Add(Out<ELFT>::GnuHashTab);
     Add(Out<ELFT>::HashTab);
     Add(Out<ELFT>::Dynamic);
@@ -1013,7 +1021,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     Hdr.Last = Sec;
     if (!Hdr.First)
       Hdr.First = Sec;
-    Hdr.H.p_align = std::max<uintX_t>(Hdr.H.p_align, Sec->getAlign());
+    Hdr.H.p_align = std::max<uintX_t>(Hdr.H.p_align, Sec->getAlignment());
   };
 
   // The first phdr entry is PT_PHDR which describes the program header itself.
@@ -1137,18 +1145,18 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 
   uintX_t ThreadBssOffset = 0;
   for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    uintX_t Align = Sec->getAlign();
+    uintX_t Alignment = Sec->getAlignment();
     if (Sec->PageAlign)
-      Align = std::max<uintX_t>(Align, Target->PageSize);
+      Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
 
     // We only assign VAs to allocated sections.
     if (needsPtLoad<ELFT>(Sec)) {
-      VA = alignTo(VA, Align);
+      VA = alignTo(VA, Alignment);
       Sec->setVA(VA);
       VA += Sec->getSize();
     } else if (Sec->getFlags() & SHF_TLS && Sec->getType() == SHT_NOBITS) {
       uintX_t TVA = VA + ThreadBssOffset;
-      TVA = alignTo(TVA, Align);
+      TVA = alignTo(TVA, Alignment);
       Sec->setVA(TVA);
       ThreadBssOffset = TVA - VA + Sec->getSize();
     }
@@ -1161,10 +1169,10 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
 // executables without any address adjustment.
 template <class ELFT, class uintX_t>
 static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
-  uintX_t Align = Sec->getAlign();
+  uintX_t Alignment = Sec->getAlignment();
   if (Sec->PageAlign)
-    Align = std::max<uintX_t>(Align, Target->PageSize);
-  Off = alignTo(Off, Align);
+    Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
+  Off = alignTo(Off, Alignment);
 
   // Relocatable output does not have program headers
   // and does not need any other offset adjusting.
@@ -1260,8 +1268,7 @@ static uint16_t getELFType() {
 // to each section. This function fixes some predefined absolute
 // symbol values that depend on section address and size.
 template <class ELFT> void Writer<ELFT>::fixAbsoluteSymbols() {
-  auto Set = [](DefinedRegular<ELFT> *&S1, DefinedRegular<ELFT> *&S2,
-                uintX_t V) {
+  auto Set = [](DefinedRegular<ELFT> *S1, DefinedRegular<ELFT> *S2, uintX_t V) {
     if (S1)
       S1->Value = V;
     if (S2)

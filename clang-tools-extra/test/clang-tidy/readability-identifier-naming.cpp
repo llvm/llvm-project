@@ -61,6 +61,7 @@
 // RUN:     {key: readability-identifier-naming.VariableCase, value: lower_case}, \
 // RUN:     {key: readability-identifier-naming.VirtualMethodCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.VirtualMethodPrefix, value: 'v_'}, \
+// RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasCase, value: lower_case}, \
 // RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
 // RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: 0} \
@@ -307,6 +308,12 @@ typedef THIS___Structure struct_type;
 // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: invalid case style for typedef 'struct_type'
 // CHECK-FIXES: {{^}}typedef this_structure struct_type_t;{{$}}
 
+struct_type GlobalTypedefTestFunction(struct_type a_argument1) {
+// CHECK-FIXES: {{^}}struct_type_t GlobalTypedefTestFunction(struct_type_t a_argument1) {
+    struct_type typedef_test_1;
+// CHECK-FIXES: {{^}}    struct_type_t typedef_test_1;
+}
+
 using my_struct_type = THIS___Structure;
 // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: invalid case style for type alias 'my_struct_type'
 // CHECK-FIXES: {{^}}using my_struct_type_t = this_structure;{{$}}
@@ -329,5 +336,11 @@ static void static_Function() {
 // CHECK-FIXES: {{^}}  using ::foo_ns::inline_namespace::ce_function;{{$}}
 }
 
+#define MY_TEST_Macro(X) X()
+// CHECK-MESSAGES: :[[@LINE-1]]:9: warning: invalid case style for macro definition 'MY_TEST_Macro'
+// CHECK-FIXES: {{^}}#define MY_TEST_MACRO(X) X()
+
+void MY_TEST_Macro(function) {}
+// CHECK-FIXES: {{^}}void MY_TEST_MACRO(function) {}
 }
 }

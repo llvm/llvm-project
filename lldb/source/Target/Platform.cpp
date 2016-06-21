@@ -1431,7 +1431,7 @@ Platform::PutFile (const FileSpec& source,
 
     uint32_t source_open_options = File::eOpenOptionRead | File::eOpenOptionCloseOnExec;
     if (source.GetFileType() == FileSpec::eFileTypeSymbolicLink)
-        source_open_options |= File::eOpenoptionDontFollowSymlinks;
+        source_open_options |= File::eOpenOptionDontFollowSymlinks;
 
     File source_file(source, source_open_options, lldb::eFilePermissionsUserRW);
     Error error;

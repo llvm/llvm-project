@@ -1,19 +1,15 @@
 include "llvm/Option/OptParser.td"
 
-def Bsymbolic: Flag<["-"], "Bsymbolic">,
-  HelpText<"Bind defined symbols locally">;
+// Flag that takes no arguments.
+// For options whose names are multiple letters, either one dash or
+// two can precede the option name except those that start with 'o'.
+class F<string name, string help>: Flag<["--", "-"], name>, HelpText<help>;
 
-def Bsymbolic_functions: Flag<["-"], "Bsymbolic-functions">,
-  HelpText<"Bind defined function symbols locally">;
-
-def Bdynamic: Flag<["-"], "Bdynamic">,
-  HelpText<"Link against shared libraries">;
-
-def Bstatic: Flag<["-"], "Bstatic">,
-  HelpText<"Do not link against shared libraries">;
-
-def build_id : Flag<["--", "-"], "build-id">,
-  HelpText<"Generate build ID note">;
+def Bsymbolic: F<"Bsymbolic", "Bind defined symbols locally">;
+def Bsymbolic_functions: F<"Bsymbolic-functions", "Bind defined function symbols locally">;
+def Bdynamic: F<"Bdynamic", "Link against shared libraries">;
+def Bstatic: F<"Bstatic", "Do not link against shared libraries">;
+def build_id: F<"build-id", "Generate build ID note">;
 
 def build_id_eq : Joined<["--", "-"], "build-id=">;
 
@@ -22,24 +18,12 @@ def L : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
 
 def O : Joined<["-"], "O">, HelpText<"Optimize">;
 
-def allow_multiple_definition: Flag<["--"], "allow-multiple-definition">,
-  HelpText<"Allow multiple definitions">;
-
-def allow_shlib_undefined : Flag<["--", "-"], "allow-shlib-undefined">;
-
-def as_needed : Flag<["--"], "as-needed">;
-
-def disable_new_dtags : Flag<["--"], "disable-new-dtags">,
-  HelpText<"Disable new dynamic tags">;
-
-def discard_all : Flag<["--", "-"], "discard-all">,
-  HelpText<"Delete all local symbols">;
-
-def discard_locals : Flag<["--", "-"], "discard-locals">,
-  HelpText<"Delete temporary local symbols">;
-
-def discard_none : Flag<["-"], "discard-none">,
-  HelpText<"Keep all symbols in the symbol table">;
+def allow_multiple_definition: F<"allow-multiple-definition", "Allow multiple definitions">;
+def as_needed: F<"as-needed", "Only set DT_NEEDED for shared libraries if used">;
+def disable_new_dtags: F<"disable-new-dtags", "Disable new dynamic tags">;
+def discard_all: F<"discard-all", "Delete all local symbols">;
+def discard_locals: F<"discard-locals", "Delete temporary local symbols">;
+def discard_none: F<"discard-none", "Keep all symbols in the symbol table">;
 
 def dynamic_linker : Separate<["--", "-"], "dynamic-linker">,
   HelpText<"Which dynamic linker to use">;
@@ -47,20 +31,14 @@ def dynamic_linker : Separate<["--", "-"], "dynamic-linker">,
 def dynamic_list : Separate<["--", "-"], "dynamic-list">,
   HelpText<"Read a list of dynamic symbols">;
 
-def eh_frame_hdr : Flag<["--"], "eh-frame-hdr">,
-  HelpText<"Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header">;
-
-def enable_new_dtags : Flag<["--"], "enable-new-dtags">,
-  HelpText<"Enable new dynamic tags">;
-
-def end_lib : Flag<["--"], "end-lib">,
-  HelpText<"End a grouping of objects that should be treated as if they were together in an archive">;
+def eh_frame_hdr: F<"eh-frame-hdr", "Request creation of .eh_frame_hdr section and PT_GNU_EH_FRAME segment header">;
+def enable_new_dtags: F<"enable-new-dtags", "Enable new dynamic tags">;
+def end_lib: F<"end-lib", "End a grouping of objects that should be treated as if they were together in an archive">;
 
 def entry : Separate<["--", "-"], "entry">, MetaVarName<"<entry>">,
   HelpText<"Name of entry point symbol">;
 
-def export_dynamic : Flag<["--", "-"], "export-dynamic">,
-  HelpText<"Put symbols in the dynamic symbol table">;
+def export_dynamic: F<"export-dynamic", "Put symbols in the dynamic symbol table">;
 
 def export_dynamic_symbol : Separate<["--", "-"], "export-dynamic-symbol">,
   HelpText<"Put a symbol in the dynamic symbol table">;
@@ -71,14 +49,9 @@ def fini : Separate<["-"], "fini">, MetaVarName<"<symbol>">,
 def hash_style : Separate<["--", "-"], "hash-style">,
   HelpText<"Specify hash style (sysv, gnu or both)">;
 
-def help : Flag<["--", "-"], "help">,
-  HelpText<"Print option help">;
-
-def icf : Flag<["--"], "icf=all">,
-  HelpText<"Enable identical code folding">;
-
-def gc_sections : Flag<["--"], "gc-sections">,
-  HelpText<"Enable garbage collection of unused sections">;
+def help: F<"help", "Print option help">;
+def icf: F<"icf=all", "Enable identical code folding">;
+def gc_sections: F<"gc-sections", "Enable garbage collection of unused sections">;
 
 def init : Separate<["-"], "init">, MetaVarName<"<symbol>">,
   HelpText<"Specify an initializer function">;
@@ -92,33 +65,18 @@ def lto_O : Joined<["--"], "lto-O">, MetaVarName<"<opt-level>">,
 def m : JoinedOrSeparate<["-"], "m">,
   HelpText<"Set target emulation">;
 
-def no_allow_shlib_undefined : Flag<["--"], "no-allow-shlib-undefined">;
-
-def no_as_needed : Flag<["--"], "no-as-needed">;
-
-def no_demangle: Flag<["--"], "no-demangle">,
-  HelpText<"Do not demangle symbol names">;
-
-def no_gnu_unique : Flag<["--"], "no-gnu-unique">,
-  HelpText<"Disable STB_GNU_UNIQUE symbol binding">;
-
-def no_whole_archive : Flag<["--", "-"], "no-whole-archive">,
-  HelpText<"Restores the default behavior of loading archive members">;
-
-def noinhibit_exec : Flag<["--"], "noinhibit-exec">,
-  HelpText<"Retain the executable output file whenever it is still usable">;
-
-def no_undefined : Flag<["--"], "no-undefined">,
-  HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
+def no_as_needed: F<"no-as-needed", "Always DT_NEEDED for shared libraries">;
+def no_demangle: F<"no-demangle", "Do not demangle symbol names">;
+def no_gnu_unique: F<"no-gnu-unique", "Disable STB_GNU_UNIQUE symbol binding">;
+def no_whole_archive: F<"no-whole-archive", "Restores the default behavior of loading archive members">;
+def noinhibit_exec: F<"noinhibit-exec", "Retain the executable output file whenever it is still usable">;
+def no_undefined: F<"no-undefined", "Report unresolved symbols even if the linker is creating a shared library">;
 
 def o : JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
-def pie : Flag<["-"], "pie">,
-  HelpText<"Create a position independent executable">;
-
-def print_gc_sections: Flag<["--"], "print-gc-sections">,
-  HelpText<"List removed unused sections">;
+def pie: F<"pie", "Create a position independent executable">;
+def print_gc_sections: F<"print-gc-sections", "List removed unused sections">;
 
 def reproduce : Separate<["--"], "reproduce">,
   HelpText<"Dump linker invocation and input files for debugging">;
@@ -126,52 +84,37 @@ def reproduce : Separate<["--"], "reproduce">,
 def rpath : Separate<["-"], "rpath">,
   HelpText<"Add a DT_RUNPATH to the output">;
 
-def relocatable : Flag<["--"], "relocatable">,
-  HelpText<"Create relocatable object file">;
+def relocatable: F<"relocatable", "Create relocatable object file">;
 
 def script : Separate<["--"], "script">,
   HelpText<"Read linker script">;
 
-def shared : Flag<["-"], "shared">,
-  HelpText<"Build a shared object">;
+def shared: F<"shared", "Build a shared object">;
 
-def soname : Joined<["-"], "soname=">,
+def soname : Joined<["-", "--"], "soname=">,
   HelpText<"Set DT_SONAME">;
 
-def start_lib : Flag<["--"], "start-lib">,
-  HelpText<"Start a grouping of objects that should be treated as if they were together in an archive">;
-
-def strip_all : Flag<["--"], "strip-all">,
-  HelpText<"Strip all symbols">;
-
-def strip_debug : Flag<["--"], "strip-debug">,
-  HelpText<"Strip debugging information">;
+def start_lib: F<"start-lib", "Start a grouping of objects that should be treated as if they were together in an archive">;
+def strip_all: F<"strip-all", "Strip all symbols">;
+def strip_debug: F<"strip-debug", "Strip debugging information">;
 
 def sysroot : Joined<["--"], "sysroot=">,
   HelpText<"Set the system root">;
 
-def threads : Flag<["--"], "threads">,
-  HelpText<"Enable use of threads">;
-
-def trace: Flag<["--"], "trace">,
-  HelpText<"Print the names of the input files">;
+def threads: F<"threads", "Enable use of threads">;
+def trace: F<"trace", "Print the names of the input files">;
 
 def undefined : Joined<["--"], "undefined=">,
   HelpText<"Force undefined symbol during linking">;
 
-def verbose : Flag<["--"], "verbose">;
-
-def version : Flag<["--", "-"], "version">,
-  HelpText<"Display the version number">;
+def verbose: F<"verbose", "Verbose mode">;
+def version: F<"version", "Display the version number">;
 
 def version_script : Separate<["--", "-"], "version-script">,
   HelpText<"Read a version script">;
 
-def warn_common : Flag<["--", "-"], "warn-common">,
-  HelpText<"Warn about duplicate common symbols">;
-
-def whole_archive : Flag<["--", "-"], "whole-archive">,
-  HelpText<"Force load of all members in a static library">;
+def warn_common: F<"warn-common", "Warn about duplicate common symbols">;
+def whole_archive: F<"whole-archive", "Force load of all members in a static library">;
 
 def wrap : Separate<["--", "-"], "wrap">, MetaVarName<"<symbol>">,
   HelpText<"Use wrapper functions for symbol">;
@@ -233,28 +176,31 @@ def plugin_opt : Separate<["--", "-"], "plugin-opt">;
 def plugin_opt_eq : Joined<["--", "-"], "plugin-opt=">;
 
 // Options listed below are silently ignored for now for compatibility.
-def define_common : Flag<["-", "--"], "define-common">;
-def detect_odr_violations : Flag<["--"], "detect-odr-violations">;
-def fatal_warnings : Flag<["--"], "fatal-warnings">;
-def no_add_needed : Flag<["--"], "no-add-needed">;
-def no_copy_dt_needed_entries : Flag<["--"], "no-copy-dt-needed-entries">,
-                                Alias<no_add_needed>;
-def no_dynamic_linker : Flag<["--"], "no-dynamic-linker">;
-def no_fatal_warnings : Flag<["--"], "no-fatal-warnings">;
-def no_mmap_output_file : Flag<["--"], "no-mmap-output-file">;
-def no_undefined_version : Flag<["--", "-"], "no-undefined-version">;
-def no_warn_common : Flag<["--", "-"], "no-warn-common">;
-def no_warn_mismatch : Flag<["--"], "no-warn-mismatch">;
+class Ignore<string name>: Flag<["-", "--"], name>;
+
+def allow_shlib_undefined : Ignore<"allow-shlib-undefined">;
+def define_common : Ignore<"define-common">;
+def detect_odr_violations : Ignore<"detect-odr-violations">;
+def fatal_warnings : Ignore<"fatal-warnings">;
+def no_add_needed : Ignore<"no-add-needed">;
+def no_allow_shlib_undefined : Ignore<"no-allow-shlib-undefined">;
+def no_copy_dt_needed_entries : Ignore<"no-copy-dt-needed-entries">, Alias<no_add_needed>;
+def no_dynamic_linker : Ignore<"no-dynamic-linker">;
+def no_fatal_warnings : Ignore<"no-fatal-warnings">;
+def no_mmap_output_file : Ignore<"no-mmap-output-file">;
+def no_undefined_version : Ignore<"no-undefined-version">;
+def no_warn_common : Ignore<"no-warn-common">;
+def no_warn_mismatch : Ignore<"no-warn-mismatch">;
 def rpath_link : Separate<["--", "-"], "rpath-link">;
 def rpath_link_eq : Joined<["--", "-"], "rpath-link=">;
-def warn_execstack : Flag<["--"], "warn-execstack">;
-def warn_shared_textrel : Flag<["--"], "warn-shared-textrel">;
+def warn_execstack : Ignore<"warn-execstack">;
+def warn_shared_textrel : Ignore<"warn-shared-textrel">;
 def G : Separate<["-"], "G">;
 
 // Aliases for ignored options
-def alias_define_common_d : Flag<["-"], "d">, Alias<define_common>;
-def alias_define_common_dc : Flag<["-"], "dc">, Alias<define_common>;
-def alias_define_common_dp : Flag<["-"], "dp">, Alias<define_common>;
+def alias_define_common_d : Ignore<"d">, Alias<define_common>;
+def alias_define_common_dc : Ignore<"dc">, Alias<define_common>;
+def alias_define_common_dp : Ignore<"dp">, Alias<define_common>;
 def alias_version_script_version_script : Joined<["--"], "version-script=">, Alias<version_script>;
 
 // LTO-related options.
