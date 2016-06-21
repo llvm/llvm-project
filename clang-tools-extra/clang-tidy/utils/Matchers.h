@@ -45,6 +45,8 @@ AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
       Node, Finder->getASTContext());
 }
 
+AST_MATCHER(FieldDecl, isBitfield) { return Node.isBitField(); }
+
 } // namespace matchers
 } // namespace tidy
 } // namespace clang

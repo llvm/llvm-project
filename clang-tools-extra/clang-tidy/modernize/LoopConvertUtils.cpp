@@ -156,7 +156,7 @@ bool DeclFinderASTVisitor::VisitTypeLoc(TypeLoc TL) {
 const Expr *digThroughConstructors(const Expr *E) {
   if (!E)
     return nullptr;
-  E = E->IgnoreParenImpCasts();
+  E = E->IgnoreImplicit();
   if (const auto *ConstructExpr = dyn_cast<CXXConstructExpr>(E)) {
     // The initial constructor must take exactly one parameter, but base class
     // and deferred constructors can take more.

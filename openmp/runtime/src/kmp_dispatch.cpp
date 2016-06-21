@@ -738,7 +738,7 @@ __kmp_dispatch_init(
         }
 
         /* guided analytical not safe for too many threads */
-        if ( team->t.t_nproc > 1<<20 && schedule == kmp_sch_guided_analytical_chunked ) {
+        if ( schedule == kmp_sch_guided_analytical_chunked && th->th.th_team_nproc > 1<<20 ) {
             schedule = kmp_sch_guided_iterative_chunked;
             KMP_WARNING( DispatchManyThreads );
         }
@@ -836,7 +836,7 @@ __kmp_dispatch_init(
     #if  ( KMP_STATIC_STEAL_ENABLED && KMP_ARCH_X86_64 )
     case kmp_sch_static_steal:
         {
-            T nproc = team->t.t_nproc;
+            T nproc = th->th.th_team_nproc;
             T ntc, init;
 
             KD_TRACE(100, ("__kmp_dispatch_init: T#%d kmp_sch_static_steal case\n", gtid ) );
@@ -869,7 +869,7 @@ __kmp_dispatch_init(
     #endif
     case kmp_sch_static_balanced:
         {
-            T nproc = team->t.t_nproc;
+            T nproc = th->th.th_team_nproc;
             T init, limit;
 
             KD_TRACE(100, ("__kmp_dispatch_init: T#%d kmp_sch_static_balanced case\n",
@@ -933,7 +933,7 @@ __kmp_dispatch_init(
         } // case
     case kmp_sch_guided_iterative_chunked :
         {
-            T nproc = team->t.t_nproc;
+            T nproc = th->th.th_team_nproc;
             KD_TRACE(100,("__kmp_dispatch_init: T#%d kmp_sch_guided_iterative_chunked case\n",gtid));
 
             if ( nproc > 1 ) {
@@ -956,7 +956,7 @@ __kmp_dispatch_init(
         break;
     case kmp_sch_guided_analytical_chunked:
         {
-            T nproc = team->t.t_nproc;
+            T nproc = th->th.th_team_nproc;
             KD_TRACE(100, ("__kmp_dispatch_init: T#%d kmp_sch_guided_analytical_chunked case\n", gtid));
 
             if ( nproc > 1 ) {
@@ -1074,8 +1074,8 @@ __kmp_dispatch_init(
         break;
     case kmp_sch_static_greedy:
         KD_TRACE(100,("__kmp_dispatch_init: T#%d kmp_sch_static_greedy case\n",gtid));
-            pr->u.p.parm1 = ( team -> t.t_nproc > 1 ) ?
-                ( tc + team->t.t_nproc - 1 ) / team->t.t_nproc :
+            pr->u.p.parm1 = ( th->th.th_team_nproc > 1 ) ?
+                ( tc + th->th.th_team_nproc - 1 ) / th->th.th_team_nproc :
                 tc;
         break;
     case kmp_sch_static_chunked :
@@ -1095,7 +1095,7 @@ __kmp_dispatch_init(
             parm1 = chunk;
 
             /* F : size of the first cycle */
-            parm2 = ( tc / (2 * team->t.t_nproc) );
+            parm2 = ( tc / (2 * th->th.th_team_nproc) );
 
             if ( parm2 < 1 ) {
                 parm2 = 1;
@@ -1793,7 +1793,7 @@ __kmp_dispatch_next(
 
                         if ( p_st != NULL ) *p_st = incr;
 
-                        pr->u.p.count += team->t.t_nproc;
+                        pr->u.p.count += th->th.th_team_nproc;
 
                         if ( incr == 1 ) {
                             *p_lb = start + init;
@@ -1963,8 +1963,8 @@ __kmp_dispatch_next(
 
                     trip  = pr->u.p.tc;
 
-                    KMP_DEBUG_ASSERT(team->t.t_nproc > 1);
-                    KMP_DEBUG_ASSERT((2UL * chunkspec + 1) * (UT)team->t.t_nproc < trip);
+                    KMP_DEBUG_ASSERT(th->th.th_team_nproc > 1);
+                    KMP_DEBUG_ASSERT((2UL * chunkspec + 1) * (UT)th->th.th_team_nproc < trip);
 
                     while(1) { /* this while loop is a safeguard against unexpected zero chunk sizes */
                         chunkIdx = test_then_inc_acq< ST >((volatile ST *) & sh->u.s.iteration );
@@ -2135,7 +2135,7 @@ __kmp_dispatch_next(
             }
             #endif
 
-            if ( (ST)num_done == team->t.t_nproc-1 ) {
+            if ( (ST)num_done == th->th.th_team_nproc - 1 ) {
                 /* NOTE: release this buffer to be reused */
 
                 KMP_MB();       /* Flush all pending memory write invalidates.  */

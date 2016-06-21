@@ -220,6 +220,11 @@ identified.  The improvements since the 3.8 release include:
 
   Finds integer literals which are cast to ``bool``.
 
+- New `modernize-use-emplace
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-emplace.html>`_ check
+
+  Finds calls that could be changed to emplace.
+
 - New `performance-faster-string-find
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-faster-string-find.html>`_ check
 

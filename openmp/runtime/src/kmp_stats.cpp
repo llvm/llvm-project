@@ -356,7 +356,6 @@ kmp_stats_list* kmp_stats_list::iterator::operator*() const {
 /* *************************************************************** */
 /* *************  kmp_stats_output_module functions ************** */
 
-const char* kmp_stats_output_module::outputFileName = NULL;
 const char* kmp_stats_output_module::eventsFileName = NULL;
 const char* kmp_stats_output_module::plotFileName   = NULL;
 int kmp_stats_output_module::printPerThreadFlag       = 0;
@@ -372,7 +371,24 @@ void kmp_stats_output_module::init()
     char * threadEvents   = getenv("KMP_STATS_EVENTS");
 
     // set the stats output filenames based on environment variables and defaults
-    outputFileName = statsFileName;
+    if(statsFileName) {
+        // append the process id to the output filename
+        // events.csv --> events-pid.csv
+        size_t index;
+        std::string baseFileName, pid, suffix;
+        std::stringstream ss;
+        outputFileName = std::string(statsFileName);
+        index = outputFileName.find_last_of('.');
+        if(index == std::string::npos) {
+            baseFileName = outputFileName;
+        } else {
+            baseFileName = outputFileName.substr(0, index);
+            suffix = outputFileName.substr(index);
+        }
+        ss << getpid();
+        pid = ss.str();
+        outputFileName = baseFileName + "-" + pid + suffix;
+    }
     eventsFileName = eventsFileName ? eventsFileName : "events.dat";
     plotFileName   = plotFileName   ? plotFileName   : "events.plt";
 
@@ -573,7 +589,7 @@ void kmp_stats_output_module::outputStats(const char* heading)
     statistic totalStats[TIMER_LAST];           /* Synthesized, cross threads versions of normal timer stats */
     statistic allCounters[COUNTER_LAST];
 
-    FILE * statsOut = outputFileName ? fopen (outputFileName, "a+") : stderr;
+    FILE * statsOut = !outputFileName.empty() ? fopen (outputFileName.c_str(), "a+") : stderr;
     if (!statsOut)
         statsOut = stderr;
 

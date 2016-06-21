@@ -531,7 +531,6 @@ static void __kmp_fini_allocator() {}
 #ifdef KMP_DYNAMIC_LIB
 # if KMP_OS_WINDOWS
 
-
 static void
 __kmp_reset_lock( kmp_bootstrap_lock_t* lck ) {
     // TODO: Change to __kmp_break_bootstrap_lock().
@@ -1460,8 +1459,8 @@ __kmp_fork_call(
 
     // Nested level will be an index in the nested nthreads array
     level         = parent_team->t.t_level;
-#if OMP_40_ENABLED
     active_level  = parent_team->t.t_active_level; // is used to launch non-serial teams even if nested is not allowed
+#if OMP_40_ENABLED
     teams_level    = master_th->th.th_teams_level; // needed to check nesting inside the teams
 #endif
 #if KMP_NESTED_HOT_TEAMS
@@ -2052,7 +2051,7 @@ __kmp_fork_call(
                       __kmp_gtid_from_thread( master_th ), master_th->th.th_task_team,
                       parent_team, team->t.t_task_team[master_th->th.th_task_state], team ) );
 
-        if ( level || master_th->th.th_task_team ) {
+        if ( active_level || master_th->th.th_task_team ) {
             // Take a memo of master's task_state
             KMP_DEBUG_ASSERT(master_th->th.th_task_state_memo_stack);
             if (master_th->th.th_task_state_top >= master_th->th.th_task_state_stack_sz) { // increase size
@@ -2075,7 +2074,7 @@ __kmp_fork_call(
             master_th->th.th_task_state_memo_stack[master_th->th.th_task_state_top] = master_th->th.th_task_state;
             master_th->th.th_task_state_top++;
 #if KMP_NESTED_HOT_TEAMS
-            if (team == master_th->th.th_hot_teams[level].hot_team) { // Restore master's nested state if nested hot team
+            if (team == master_th->th.th_hot_teams[active_level].hot_team) { // Restore master's nested state if nested hot team
                 master_th->th.th_task_state = master_th->th.th_task_state_memo_stack[master_th->th.th_task_state_top];
             }
             else {

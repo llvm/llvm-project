@@ -104,6 +104,7 @@ Clang-Tidy Checks
    modernize-use-auto
    modernize-use-bool-literals
    modernize-use-default
+   modernize-use-emplace
    modernize-use-nullptr
    modernize-use-override
    performance-faster-string-find

@@ -75,7 +75,7 @@ append_list_if(COMPILER_RT_HAS_LIBLOG log ASAN_DYNAMIC_LIBS)
 
 # Compile ASan sources into an object library.
 
-add_compiler_rt_object_libraries(RTAsan_dynamic 
+add_compiler_rt_object_libraries(RTAsan_dynamic
   OS ${SANITIZER_COMMON_SUPPORTED_OS}
   ARCHS ${ASAN_SUPPORTED_ARCH}
   SOURCES ${ASAN_SOURCES} ${ASAN_CXX_SOURCES}
@@ -122,7 +122,7 @@ if(APPLE)
     PARENT_TARGET asan)
 else()
   # Build separate libraries for each target.
-  
+
     set(ASAN_COMMON_RUNTIME_OBJECT_LIBS
       RTInterception
       RTSanitizerCommon
@@ -166,8 +166,8 @@ else()
            -Wl,--version-script,${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
       set_source_files_properties(
         ${CMAKE_CURRENT_BINARY_DIR}/dummy.cc
-	PROPERTIES
-	OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
+        PROPERTIES
+        OBJECT_DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/clang_rt.asan-dynamic-${arch}.vers)
     else()
       set(VERSION_SCRIPT_FLAG)
     endif()

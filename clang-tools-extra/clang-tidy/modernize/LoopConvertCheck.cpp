@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopConvertCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 
@@ -141,10 +142,10 @@ StatementMatcher makeIteratorLoopMatcher() {
   StatementMatcher IteratorComparisonMatcher = expr(
       ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ConditionVarName)))));
 
-  StatementMatcher OverloadedNEQMatcher =
+  auto OverloadedNEQMatcher = matchers::ignoringImplicit(
       cxxOperatorCallExpr(hasOverloadedOperatorName("!="), argumentCountIs(2),
                           hasArgument(0, IteratorComparisonMatcher),
-                          hasArgument(1, IteratorBoundMatcher));
+                          hasArgument(1, IteratorBoundMatcher)));
 
   // This matcher tests that a declaration is a CXXRecordDecl that has an
   // overloaded operator*(). If the operator*() returns by value instead of by
