@@ -1,14 +1,17 @@
-// RUN: %clangxx_msan %s -DSEND -DBUF -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SEND
-// RUN: %clangxx_msan %s -DSENDTO -DBUF -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SENDTO
-// RUN: %clangxx_msan %s -DSENDMSG -DBUF -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SENDMSG
-
-// FIXME: intercept connect() and add a SEND+ADDR test
-// RUN: %clangxx_msan %s -DSENDTO -DADDR -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SENDTO-ADDR
-// RUN: %clangxx_msan %s -DSENDMSG -DADDR -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SENDMSG-ADDR
+// RUN: %clangxx_msan %s -DSEND -DPOISON -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SEND
+// RUN: %clangxx_msan %s -DSENDTO -DPOISON -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SENDTO
+// RUN: %clangxx_msan %s -DSENDMSG -DPOISON -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=SENDMSG
 
 // RUN: %clangxx_msan %s -DSEND -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 // RUN: %clangxx_msan %s -DSENDTO -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 // RUN: %clangxx_msan %s -DSENDMSG -o %t && %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+
+// RUN: %clangxx_msan %s -DSEND -DPOISON -o %t && \
+// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+// RUN: %clangxx_msan %s -DSENDTO -DPOISON -o %t && \
+// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
+// RUN: %clangxx_msan %s -DSENDMSG -DPOISON -o %t && \
+// RUN:   MSAN_OPTIONS=intercept_send=0 %run %t 2>&1 | FileCheck %s --check-prefix=NEGATIVE
 
 // UNSUPPORTED: android
 
@@ -42,21 +45,20 @@ int main() {
   socklen_t addrlen = sizeof(serveraddr);
   getsockname(sockfd, (struct sockaddr *)&serveraddr, &addrlen);
 
-#if defined(ADDR)
-  assert(addrlen > 3);
-  __msan_poison(((char *)&serveraddr) + 3, 1);
-#elif defined(BUF)
+#if defined(POISON)
   __msan_poison(buf + 7, 1);
 #endif
 
 #if defined(SENDMSG)
   struct iovec iov[2] = {{buf, 5}, {buf + 5, 5}};
   struct msghdr msg;
-  memset(&msg, 0, sizeof(msg));
   msg.msg_name = &serveraddr;
   msg.msg_namelen = addrlen;
   msg.msg_iov = iov;
   msg.msg_iovlen = 2;
+  msg.msg_control = 0;
+  msg.msg_controllen = 0;
+  msg.msg_flags = 0;
 #endif
 
 #if defined(SEND)
@@ -69,12 +71,10 @@ int main() {
   ret =
       sendto(sockfd, buf, kBufSize, 0, (struct sockaddr *)&serveraddr, addrlen);
   // SENDTO: Uninitialized bytes in __interceptor_sendto at offset 7 inside [{{.*}}, 10)
-  // SENDTO-ADDR: Uninitialized bytes in __interceptor_sendto at offset 3 inside [{{.*}},
   assert(ret > 0);
 #elif defined(SENDMSG)
   ret = sendmsg(sockfd, &msg, 0);
   // SENDMSG: Uninitialized bytes in {{.*}} at offset 2 inside [{{.*}}, 5)
-  // SENDMSG-ADDR: Uninitialized bytes in {{.*}} at offset 3 inside [{{.*}},
   assert(ret > 0);
 #endif
   fprintf(stderr, "== done\n");
