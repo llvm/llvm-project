@@ -45,6 +45,7 @@
 				AF3059151B4B390800E25622 /* Run Script - remove unneeded Resources and Swift dirs from iOS LLDB.framework bundle */,
 			);
 			dependencies = (
+				AF8587621D18F0B400E6B9EB /* PBXTargetDependency */,
 				26CEF3C214FD5973007286B2 /* PBXTargetDependency */,
 				2687EACF1508116300DD8C2E /* PBXTargetDependency */,
 			);
@@ -1209,6 +1210,13 @@
 			proxyType = 1;
 			remoteGlobalIDString = AF6967871B4609A80014D221;
 			remoteInfo = "install-headers-noop";
+		};
+		AF8587611D18F0B400E6B9EB /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 265E9BE1115C2BAA00D0DCCB /* debugserver.xcodeproj */;
+			proxyType = 1;
+			remoteGlobalIDString = 456F67431AD46CE9002850C2;
+			remoteInfo = "debugserver-mini";
 		};
 /* End PBXContainerItemProxy section */
 
@@ -6751,7 +6759,7 @@
 		AF05B4441AFC1D1900F65880 /* debugserver */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.executable";
-			path = debugserver;
+			path = "debugserver-nonui";
 			remoteRef = AF05B4431AFC1D1900F65880 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
@@ -7943,6 +7951,11 @@
 			isa = PBXTargetDependency;
 			target = AF6967871B4609A80014D221 /* install-headers-mini */;
 			targetProxy = AF6967AA1B46128A0014D221 /* PBXContainerItemProxy */;
+		};
+		AF8587621D18F0B400E6B9EB /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = "debugserver-mini";
+			targetProxy = AF8587611D18F0B400E6B9EB /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
