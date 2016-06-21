@@ -121,6 +121,9 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
       case '\x57':  // 57 : push rdi
         cursor++;
         continue;
+      case '\x90':  // 90 : nop
+        cursor++;
+        continue;
       case '\xb8':  // b8 XX XX XX XX : mov eax, XX XX XX XX
         cursor += 5;
         continue;
@@ -168,11 +171,24 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         continue;
     }
 
+    switch (*(unsigned int*)(code + cursor)) {
+      case 0x24448b48:  // 48 8b 44 24 XX : mov rax, qword ptr [rsp + 0xXX]
+        cursor += 5;
+        continue;
+    }
+
     // Check first 5 bytes.
     switch (0xFFFFFFFFFFull & *(unsigned long long*)(code + cursor)) {
       case 0x08245c8948:    // 48 89 5c 24 08 : mov QWORD PTR [rsp+0x8], rbx
       case 0x1024748948:    // 48 89 74 24 10 : mov QWORD PTR [rsp+0x10], rsi
         cursor += 5;
+        continue;
+    }
+
+    // Check 8 bytes.
+    switch (*(unsigned long long*)(code + cursor)) {
+      case 0x90909090909006EBull:  // JMP +6,  6x NOP
+        cursor += 8;
         continue;
     }
 
