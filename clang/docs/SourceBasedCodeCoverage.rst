@@ -123,7 +123,7 @@ distinct views for ``foo<int>(...)`` and ``foo<float>(...)``.  If
 ``-show-line-counts-or-regions`` is enabled, ``llvm-cov`` displays sub-line
 region counts (even in macro expansions):
 
-.. code-block:: cpp
+.. code-block:: none
 
        20|    1|#define BAR(x) ((x) || (x))
                                ^20     ^2

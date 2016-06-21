@@ -449,7 +449,7 @@ An optional string message can be added to the ``deprecated`` and
 If the deprecated or unavailable declaration is used, the message will be
 incorporated into the appropriate diagnostic:
 
-.. code-block:: c++
+.. code-block:: none
 
   harmless.c:4:3: warning: 'explode' is deprecated: extremely unsafe, use 'combust' instead!!!
         [-Wdeprecated-declarations]

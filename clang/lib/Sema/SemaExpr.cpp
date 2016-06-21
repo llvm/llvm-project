@@ -13012,7 +13012,7 @@ void Sema::MarkFunctionReferenced(SourceLocation Loc, FunctionDecl *Func,
       if (MethodDecl->isDefaulted() && !MethodDecl->isDeleted()) {
         if (MethodDecl->isCopyAssignmentOperator())
           DefineImplicitCopyAssignment(Loc, MethodDecl);
-        else
+        else if (MethodDecl->isMoveAssignmentOperator())
           DefineImplicitMoveAssignment(Loc, MethodDecl);
       }
     } else if (isa<CXXConversionDecl>(MethodDecl) &&

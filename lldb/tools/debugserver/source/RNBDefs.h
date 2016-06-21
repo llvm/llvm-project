@@ -17,16 +17,27 @@
 #include "DNBDefs.h"
 #include <memory>
 
-#define DEBUGSERVER_PROGRAM_NAME "debugserver"
+#define CONCAT2(a,b) a ## b
+#define CONCAT(a,b) CONCAT2(a,b)
+#define STRINGIZE2(x) #x
+#define STRINGIZE(x) STRINGIZE2(x)
+
+#if !defined (DEBUGSERVER_PROGRAM_SYMBOL)
+#define DEBUGSERVER_PROGRAM_SYMBOL debugserver
+#endif
+
+#if !defined (DEBUGSERVER_PROGRAM_NAME)
+#define DEBUGSERVER_PROGRAM_NAME STRINGIZE(DEBUGSERVER_PROGRAM_SYMBOL)
+#endif
 
 #ifndef DEBUGSERVER_VERSION_NUM
-extern "C" const unsigned char debugserverVersionString[];
-#define DEBUGSERVER_VERSION_NUM debugserverVersionNumber
+extern "C" const unsigned char CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionString)[];
+#define DEBUGSERVER_VERSION_NUM CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionNumber)
 #endif
 
 #ifndef DEBUGSERVER_VERSION_STR
-extern "C" const double debugserverVersionNumber;
-#define DEBUGSERVER_VERSION_STR debugserverVersionString
+extern "C" const double CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionNumber);
+#define DEBUGSERVER_VERSION_STR CONCAT(DEBUGSERVER_PROGRAM_SYMBOL, VersionString)
 #endif
 
 #if defined (__i386__)

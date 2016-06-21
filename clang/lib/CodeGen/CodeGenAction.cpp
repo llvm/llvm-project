@@ -415,9 +415,10 @@ BackendConsumer::StackSizeDiagHandler(const llvm::DiagnosticInfoStackSize &D) {
     return false;
 
   if (const Decl *ND = Gen->GetDeclForMangledName(D.getFunction().getName())) {
+    // FIXME: Shouldn't need to truncate to uint32_t
     Diags.Report(ND->getASTContext().getFullLoc(ND->getLocation()),
                  diag::warn_fe_frame_larger_than)
-        << D.getStackSize() << Decl::castToDeclContext(ND);
+      << static_cast<uint32_t>(D.getStackSize()) << Decl::castToDeclContext(ND);
     return true;
   }
 

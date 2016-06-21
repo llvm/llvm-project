@@ -185,6 +185,9 @@ set(DEFAULT_SYSROOT "" CACHE PATH
 
 set(ENABLE_LINKER_BUILD_ID OFF CACHE BOOL "pass --build-id to ld")
 
+set(ENABLE_X86_RELAX_RELOCATIONS OFF CACHE BOOL
+    "enable x86 relax relocations by default")
+
 set(CLANG_DEFAULT_CXX_STDLIB "" CACHE STRING
   "Default C++ stdlib to use (empty for architecture default, \"libstdc++\" or \"libc++\"")
 if (NOT(CLANG_DEFAULT_CXX_STDLIB STREQUAL "" OR

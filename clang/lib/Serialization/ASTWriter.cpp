@@ -5655,10 +5655,6 @@ static bool isImportedDeclContext(ASTReader *Chain, const Decl *D) {
   if (D->isFromASTFile())
     return true;
 
-  // If we've not loaded any modules, this can't be imported.
-  if (!Chain || !Chain->getModuleManager().size())
-    return false;
-
   // The predefined __va_list_tag struct is imported if we imported any decls.
   // FIXME: This is a gross hack.
   return D == D->getASTContext().getVaListTagDecl();

@@ -159,9 +159,10 @@ public:
   /// \param Opts - The LangOptions object to set up.
   /// \param IK - The input language.
   /// \param T - The target triple.
+  /// \param PPOpts - The PreprocessorOptions affected.
   /// \param LangStd - The input language standard.
   static void setLangDefaults(LangOptions &Opts, InputKind IK,
-                   const llvm::Triple &T,
+                   const llvm::Triple &T, PreprocessorOptions &PPOpts,
                    LangStandard::Kind LangStd = LangStandard::lang_unspecified);
   
   /// \brief Retrieve a module hash string that is suitable for uniquely 

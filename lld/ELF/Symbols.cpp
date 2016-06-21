@@ -267,7 +267,7 @@ std::string elf::demangle(StringRef Name) {
 bool Symbol::includeInDynsym() const {
   if (Visibility != STV_DEFAULT && Visibility != STV_PROTECTED)
     return false;
-  return (ExportDynamic && VersionScriptGlobal) || body()->isShared() ||
+  return (ExportDynamic && VersionId != VER_NDX_LOCAL) || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
 

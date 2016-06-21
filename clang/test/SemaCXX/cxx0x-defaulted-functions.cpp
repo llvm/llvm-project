@@ -196,3 +196,15 @@ namespace PR15597 {
   A<int> a;
   B<int> b; // expected-note {{here}}
 }
+
+namespace PR27941 {
+struct ExplicitBool {
+  ExplicitBool &operator=(bool) = default; // expected-error{{only special member functions may be defaulted}}
+  int member;
+};
+
+int fn() {
+  ExplicitBool t;
+  t = true;
+}
+}

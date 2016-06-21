@@ -163,7 +163,7 @@
 		26CF99A21142EB7400011AAB /* DNBArchImplX86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DNBArchImplX86_64.cpp; sourceTree = "<group>"; };
 		26CF99A31142EB7400011AAB /* DNBArchImplX86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DNBArchImplX86_64.h; sourceTree = "<group>"; };
 		26E6B9DA0D1329010037ECDD /* RNBDefs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = RNBDefs.h; sourceTree = "<group>"; };
-		456F67721AD46CE9002850C2 /* debugserver */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = debugserver; sourceTree = BUILT_PRODUCTS_DIR; };
+		456F67721AD46CE9002850C2 /* debugserver-nonui */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = "debugserver-nonui"; sourceTree = BUILT_PRODUCTS_DIR; };
 		4971AE7013D10F4F00649E37 /* HasAVX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = HasAVX.h; sourceTree = "<group>"; };
 		4971AE7113D10F4F00649E37 /* HasAVX.s */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.asm; path = HasAVX.s; sourceTree = "<group>"; };
 		49F530111331519C008956F6 /* MachRegisterStatesI386.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MachRegisterStatesI386.h; sourceTree = "<group>"; };
@@ -216,7 +216,7 @@
 			isa = PBXGroup;
 			children = (
 				26CE0594115C31C20022F371 /* debugserver */,
-				456F67721AD46CE9002850C2 /* debugserver */,
+				456F67721AD46CE9002850C2 /* debugserver-nonui */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -438,7 +438,7 @@
 			);
 			name = "debugserver-mini";
 			productName = "lldb-debugserver";
-			productReference = 456F67721AD46CE9002850C2 /* debugserver */;
+			productReference = 456F67721AD46CE9002850C2 /* debugserver-nonui */;
 			productType = "com.apple.product-type.tool";
 		};
 /* End PBXNativeTarget section */
@@ -1037,7 +1037,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				INSTALL_PATH = /usr/bin;
+				INSTALL_PATH = /usr/local/bin;
 				LLDB_COMPRESSION_CFLAGS = "";
 				"LLDB_COMPRESSION_CFLAGS[sdk=macosx10.11]" = "-DHAVE_LIBCOMPRESSION=1";
 				LLDB_COMPRESSION_LDFLAGS = "";
@@ -1055,6 +1055,7 @@
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1070,7 +1071,7 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
+				PRODUCT_NAME = "debugserver-nonui";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx.internal;
@@ -1109,7 +1110,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/bin;
+				INSTALL_PATH = /usr/local/bin;
 				LLDB_DEBUGSERVER = 1;
 				LLDB_ENERGY_CFLAGS = "";
 				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
@@ -1123,6 +1124,7 @@
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1141,7 +1143,7 @@
 					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
+				PRODUCT_NAME = "debugserver-nonui";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx.internal;
@@ -1177,7 +1179,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_RELEASE;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = /System/Library/Frameworks/System.framework/PrivateHeaders;
-				INSTALL_PATH = /usr/bin;
+				INSTALL_PATH = /usr/local/bin;
 				LLDB_DEBUGSERVER = 1;
 				LLDB_ENERGY_CFLAGS = "";
 				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
@@ -1187,10 +1189,12 @@
 				OTHER_CFLAGS = (
 					"$(LLDB_COMPRESSION_CFLAGS)",
 					"$(LLDB_ZLIB_CFLAGS)",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				OTHER_LDFLAGS = "";
@@ -1210,7 +1214,7 @@
 					"$(LLDB_ZLIB_LDFLAGS)",
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
+				PRODUCT_NAME = "debugserver-nonui";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx.internal;
@@ -1245,8 +1249,8 @@
 				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_BUILDANDINTEGRATION;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
 				HEADER_SEARCH_PATHS = /System/Library/Frameworks/System.framework/PrivateHeaders;
-				INSTALL_PATH = /usr/bin;
-				"INSTALL_PATH[sdk=iphoneos*]" = /Developer/usr/bin/;
+				INSTALL_PATH = /usr/local/bin;
+				"INSTALL_PATH[sdk=iphoneos*]" = /usr/local/bin;
 				LLDB_DEBUGSERVER = 1;
 				LLDB_ENERGY_CFLAGS = "";
 				"LLDB_ENERGY_CFLAGS[sdk=macosx*]" = "-DLLDB_ENERGY";
@@ -1256,10 +1260,12 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -1274,7 +1280,7 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
+				PRODUCT_NAME = "debugserver-nonui";
 				SDKROOT = macosx.internal;
 				SKIP_INSTALL = YES;
 				"SKIP_INSTALL[sdk=iphoneos*]" = NO;
@@ -1582,7 +1588,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = LLDB_DEBUGSERVER_DEBUG;
 				GCC_VERSION = com.apple.compilers.llvm.clang.1_0;
-				INSTALL_PATH = /usr/bin;
+				INSTALL_PATH = /usr/local/bin;
 				LLDB_DEBUGSERVER = 1;
 				LLDB_ENERGY_CFLAGS = "";
 				"LLDB_ENERGY_CFLAGS[sdk=macosx.internal]" = "-DLLDB_ENERGY";
@@ -1592,10 +1598,12 @@
 				OTHER_CFLAGS = (
 					"-Wparentheses",
 					"$(LLDB_ENERGY_CFLAGS)",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-Wparentheses",
 					"-DOS_OBJECT_USE_OBJC=0",
+					"-DDEBUGSERVER_PROGRAM_SYMBOL=debugserver_nonui",
 				);
 				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*][arch=*]" = "$(OTHER_CFLAGS)";
 				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
@@ -1610,7 +1618,7 @@
 					"$(LLDB_ENERGY_LFLAGS)",
 				);
 				OTHER_MIGFLAGS = "-I$(DERIVED_FILE_DIR)";
-				PRODUCT_NAME = debugserver;
+				PRODUCT_NAME = "debugserver-nonui";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				"PROVISIONING_PROFILE[sdk=macosx*]" = "";
 				SDKROOT = macosx.internal;
@@ -1626,14 +1634,14 @@
 		94BA9B361B1A7C5700035A23 /* CustomSwift-Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_NAME = "lldb-debugserver";
+				PRODUCT_NAME = "lldb-debugserver-nonui";
 			};
 			name = "CustomSwift-Debug";
 		};
 		94BA9B371B1A7C5700035A23 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				PRODUCT_NAME = "lldb-debugserver";
+				PRODUCT_NAME = "lldb-debugserver-nonui";
 			};
 			name = "CustomSwift-Release";
 		};

@@ -25,6 +25,7 @@ namespace elf {
 
 class SymbolBody;
 struct SectionPiece;
+struct Version;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
@@ -248,10 +249,30 @@ private:
 // For more information about .gnu.version and .gnu.version_r see:
 // https://www.akkadia.org/drepper/symbol-versioning
 
+// The .gnu.version_d section which has a section type of SHT_GNU_verdef shall
+// contain symbol version definitions. The number of entries in this section
+// shall be contained in the DT_VERDEFNUM entry of the .dynamic section.
+// The section shall contain an array of Elf_Verdef structures, optionally
+// followed by an array of Elf_Verdaux structures.
+template <class ELFT>
+class VersionDefinitionSection final : public OutputSectionBase<ELFT> {
+  typedef typename ELFT::Verdef Elf_Verdef;
+  typedef typename ELFT::Verdaux Elf_Verdaux;
+
+  unsigned FileDefNameOff;
+
+public:
+  VersionDefinitionSection();
+  void finalize() override;
+  void writeTo(uint8_t *Buf) override;
+};
+
 // The .gnu.version section specifies the required version of each symbol in the
 // dynamic symbol table. It contains one Elf_Versym for each dynamic symbol
 // table entry. An Elf_Versym is just a 16-bit integer that refers to a version
-// identifier defined in the .gnu.version_r section.
+// identifier defined in the either .gnu.version_r or .gnu.version_d section.
+// The values 0 and 1 are reserved. All other values are used for versions in
+// the own object or in any of the dependencies.
 template <class ELFT>
 class VersionTableSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::Versym Elf_Versym;
@@ -276,9 +297,8 @@ class VersionNeedSection final : public OutputSectionBase<ELFT> {
   // string table offsets of their sonames.
   std::vector<std::pair<SharedFile<ELFT> *, size_t>> Needed;
 
-  // The next available version identifier. Identifiers start at 2 because 0 and
-  // 1 are reserved.
-  unsigned NextIndex = 2;
+  // The next available version identifier.
+  unsigned NextIndex;
 
 public:
   VersionNeedSection();
@@ -630,6 +650,7 @@ template <class ELFT> struct Out {
   static StringTableSection<ELFT> *StrTab;
   static SymbolTableSection<ELFT> *DynSymTab;
   static SymbolTableSection<ELFT> *SymTab;
+  static VersionDefinitionSection<ELFT> *VerDef;
   static VersionTableSection<ELFT> *VerSym;
   static VersionNeedSection<ELFT> *VerNeed;
   static Elf_Phdr *TlsPhdr;
@@ -658,6 +679,7 @@ template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::ShStrTab;
 template <class ELFT> StringTableSection<ELFT> *Out<ELFT>::StrTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::DynSymTab;
 template <class ELFT> SymbolTableSection<ELFT> *Out<ELFT>::SymTab;
+template <class ELFT> VersionDefinitionSection<ELFT> *Out<ELFT>::VerDef;
 template <class ELFT> VersionTableSection<ELFT> *Out<ELFT>::VerSym;
 template <class ELFT> VersionNeedSection<ELFT> *Out<ELFT>::VerNeed;
 template <class ELFT> typename ELFT::Phdr *Out<ELFT>::TlsPhdr;
