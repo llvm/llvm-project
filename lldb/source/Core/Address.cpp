@@ -678,7 +678,7 @@ Address::Dump (Stream *s, ExecutionContextScope *exe_scope, DumpStyle style, Dum
                 if (module_sp)
                 {
                     SymbolContext sc;
-                    module_sp->ResolveSymbolContextForAddress(*this, eSymbolContextEverything | eSymbolContextVariable, sc);
+                    module_sp->ResolveSymbolContextForAddress(*this, eSymbolContextEverything, sc);
                     if (sc.function || sc.symbol)
                     {
                         bool show_stop_context = true;

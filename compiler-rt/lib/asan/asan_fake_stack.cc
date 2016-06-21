@@ -31,7 +31,7 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
   CHECK_EQ(SHADOW_SCALE, 3);  // This code expects SHADOW_SCALE=3.
   u64 *shadow = reinterpret_cast<u64*>(MemToShadow(ptr));
   if (class_id <= 6) {
-    for (uptr i = 0; i < (1U << class_id); i++) {
+    for (uptr i = 0; i < (((uptr)1) << class_id); i++) {
       shadow[i] = magic;
       // Make sure this does not become memset.
       SanitizerBreakOptimization(nullptr);
@@ -121,7 +121,7 @@ uptr FakeStack::AddrIsInFakeStack(uptr ptr, uptr *frame_beg, uptr *frame_end) {
   uptr class_id = (ptr - beg) >> stack_size_log;
   uptr base = beg + (class_id << stack_size_log);
   CHECK_LE(base, ptr);
-  CHECK_LT(ptr, base + (1UL << stack_size_log));
+  CHECK_LT(ptr, base + (((uptr)1) << stack_size_log));
   uptr pos = (ptr - base) >> (kMinStackFrameSizeLog + class_id);
   uptr res = base + pos * BytesInSizeClass(class_id);
   *frame_end = res + BytesInSizeClass(class_id);

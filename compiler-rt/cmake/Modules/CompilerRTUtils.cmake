@@ -107,6 +107,7 @@ endfunction()
 # If successful, saves target flags for this architecture.
 macro(test_target_arch arch def)
   set(TARGET_${arch}_CFLAGS ${ARGN})
+  set(TARGET_${arch}_LINKFLAGS ${ARGN})
   set(argstring "")
   foreach(arg ${ARGN})
     set(argstring "${argstring} ${arg}")

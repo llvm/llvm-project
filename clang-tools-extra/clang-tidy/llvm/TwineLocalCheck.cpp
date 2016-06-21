@@ -33,7 +33,8 @@ void TwineLocalCheck::check(const MatchFinder::MatchResult &Result) {
   if (VD->hasInit()) {
     // Peel away implicit constructors and casts so we can see the actual type
     // of the initializer.
-    const Expr *C = VD->getInit();
+    const Expr *C = VD->getInit()->IgnoreImplicit();
+
     while (isa<CXXConstructExpr>(C))
       C = cast<CXXConstructExpr>(C)->getArg(0)->IgnoreParenImpCasts();
 

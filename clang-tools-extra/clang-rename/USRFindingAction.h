@@ -25,7 +25,7 @@ class NamedDecl;
 namespace rename {
 
 struct USRFindingAction {
-  USRFindingAction(unsigned Offset) : SymbolOffset(Offset) {
+  USRFindingAction(unsigned Offset, const std::string &Name) : SymbolOffset(Offset), OldName(Name) {
   }
   std::unique_ptr<ASTConsumer> newASTConsumer();
 
@@ -40,6 +40,7 @@ struct USRFindingAction {
 
 private:
   unsigned SymbolOffset;
+  std::string OldName;
   std::string SpellingName;
   std::vector<std::string> USRs;
 };

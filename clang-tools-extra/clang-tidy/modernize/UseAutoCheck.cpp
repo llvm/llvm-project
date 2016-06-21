@@ -42,6 +42,8 @@ AST_MATCHER(VarDecl, hasWrittenNonListInitializer) {
   if (!Init)
     return false;
 
+  Init = Init->IgnoreImplicit();
+
   // The following test is based on DeclPrinter::VisitVarDecl() to find if an
   // initializer is implicit or not.
   if (const auto *Construct = dyn_cast<CXXConstructExpr>(Init)) {

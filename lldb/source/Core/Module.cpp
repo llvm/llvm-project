@@ -542,7 +542,8 @@ Module::ResolveSymbolContextForAddress (const Address& so_addr, uint32_t resolve
         if (resolve_scope & eSymbolContextCompUnit    ||
             resolve_scope & eSymbolContextFunction    ||
             resolve_scope & eSymbolContextBlock       ||
-            resolve_scope & eSymbolContextLineEntry   )
+            resolve_scope & eSymbolContextLineEntry   ||
+            resolve_scope & eSymbolContextVariable    )
         {
             resolved_flags |= sym_vendor->ResolveSymbolContext (so_addr, resolve_scope, sc);
         }

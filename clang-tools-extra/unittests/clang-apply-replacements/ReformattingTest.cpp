@@ -40,13 +40,11 @@ static ReplacementsVec makeReplacements(unsigned Offset, unsigned Length,
 // lookup finds these functions for the EXPECT_EQ macros below.
 namespace clang {
 namespace tooling {
-bool operator==(const Range &A, const Range &B) {
-  return A.getOffset() == B.getOffset() && A.getLength() == B.getLength();
-}
 
 std::ostream &operator<<(std::ostream &os, const Range &R) {
   return os << "Range(" << R.getOffset() << ", " << R.getLength() << ")";
 }
+
 } // namespace tooling
 } // namespace clang
 

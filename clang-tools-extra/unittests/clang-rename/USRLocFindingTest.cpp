@@ -23,7 +23,7 @@ static void testOffsetGroups(const char *Code,
     // useful.
     std::string USR;
     for (const auto &Offset : Group) {
-      USRFindingAction Action(Offset);
+      USRFindingAction Action(Offset, std::string());
       auto Factory = tooling::newFrontendActionFactory(&Action);
       EXPECT_TRUE(tooling::runToolOnCode(Factory->create(), Code));
       const auto &USRs = Action.getUSRs();

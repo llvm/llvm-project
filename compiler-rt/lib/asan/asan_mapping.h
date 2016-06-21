@@ -140,6 +140,7 @@ static const u64 kSystemZ_ShadowOffset64 = 1ULL << 52;
 static const u64 kFreeBSD_ShadowOffset32 = 1ULL << 30;  // 0x40000000
 static const u64 kFreeBSD_ShadowOffset64 = 1ULL << 46;  // 0x400000000000
 static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
+static const u64 kWindowsShadowOffset64 = 1ULL << 45;  // 32TB
 
 #define SHADOW_SCALE kDefaultShadowScale
 
@@ -181,6 +182,8 @@ static const u64 kWindowsShadowOffset32 = 3ULL << 28;  // 0x30000000
 #   define SHADOW_OFFSET kDefaultShadowOffset64
 #  elif defined(__mips64)
 #   define SHADOW_OFFSET kMIPS64_ShadowOffset64
+#  elif SANITIZER_WINDOWS64
+#   define SHADOW_OFFSET kWindowsShadowOffset64
 #  else
 #   define SHADOW_OFFSET kDefaultShort64bitShadowOffset
 #  endif

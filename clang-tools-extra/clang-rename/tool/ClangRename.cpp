@@ -52,6 +52,11 @@ SymbolOffset(
     "offset",
     cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
     cl::cat(ClangRenameCategory));
+static cl::opt<std::string>
+OldName(
+    "old-name",
+    cl::desc("The fully qualified name of the symbol, if -offset is not used."),
+    cl::cat(ClangRenameCategory));
 static cl::opt<bool>
 Inplace(
     "i",
@@ -96,7 +101,7 @@ int main(int argc, const char **argv) {
   // Get the USRs.
   auto Files = OP.getSourcePathList();
   tooling::RefactoringTool Tool(OP.getCompilations(), Files);
-  rename::USRFindingAction USRAction(SymbolOffset);
+  rename::USRFindingAction USRAction(SymbolOffset, OldName);
 
   // Find the USRs.
   Tool.run(tooling::newFrontendActionFactory(&USRAction).get());

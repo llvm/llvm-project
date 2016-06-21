@@ -137,20 +137,22 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/include
   )
 
-install(DIRECTORY include/
-  DESTINATION include
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-  )
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY include/
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
+    )
 
-install(DIRECTORY ${POLLY_BINARY_DIR}/include/
-  DESTINATION include
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN ".svn" EXCLUDE
-  )
+  install(DIRECTORY ${POLLY_BINARY_DIR}/include/
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "CMakeFiles" EXCLUDE
+    PATTERN ".svn" EXCLUDE
+    )
+endif()
 
 add_definitions( -D_GNU_SOURCE )
 
