@@ -723,6 +723,28 @@ struct SomeStruct {
 }
 @end
 
+@interface XCTestCase : NSObject {}
+@end
+
+@interface MyClassXCTest : XCTestCase
+@property (retain) NSObject *ivar;
+@end
+
+@implementation MyClassXCTest
+-(void)tearDown {
+#if NON_ARC
+  [_ivar release];
+#endif
+}
+
+-(void)dealloc; {
+#if NON_ARC
+  [super dealloc]; // no-warning
+#endif
+}
+@end
+
+
 __attribute__((objc_root_class))
 @interface NonNSObjectMissingDealloc
 @property (retain) NSObject *ivar;
