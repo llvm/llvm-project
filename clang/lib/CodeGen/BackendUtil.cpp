@@ -328,7 +328,8 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   switch (Inlining) {
   case CodeGenOptions::NoInlining:
     break;
-  case CodeGenOptions::NormalInlining: {
+  case CodeGenOptions::NormalInlining:
+  case CodeGenOptions::OnlyHintInlining: {
     PMBuilder.Inliner =
         createFunctionInliningPass(OptLevel, CodeGenOpts.OptimizeSize);
     break;

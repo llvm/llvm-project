@@ -7,13 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03, c++11
+// UNSUPPORTED: c++98, c++03
+// UNSUPPORTED: libcpp-no-exceptions
+
 // <list>
 
 // Operations on "NULL" iterators
 
-#if _LIBCPP_DEBUG >= 1
-
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) do { if (!x) throw 1; } while(0)
 
 #include <list>
@@ -56,11 +57,3 @@ int main()
     assert(lib_asserts == 4);
     }
 }
-
-#else
-
-int main()
-{
-}
-
-#endif

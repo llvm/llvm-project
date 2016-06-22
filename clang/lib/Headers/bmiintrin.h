@@ -287,6 +287,22 @@ __tzcnt_u32(unsigned int __X)
   return __X ? __builtin_ctz(__X) : 32;
 }
 
+/// \brief Counts the number of trailing zero bits in the operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c TZCNT instruction.
+///
+/// \param __X
+///    An unsigned 32-bit integer whose trailing zeros are to be counted.
+/// \returns An 32-bit integer containing the number of trailing zero
+///    bits in the operand.
+static __inline__ int __RELAXED_FN_ATTRS
+_mm_tzcnt_32(unsigned int __X)
+{
+  return __X ? __builtin_ctz(__X) : 32;
+}
+
 #ifdef __x86_64__
 
 /// \brief Performs a bitwise AND of the second operand with the one's
@@ -504,6 +520,22 @@ __blsr_u64(unsigned long long __X)
 ///    bits in the operand.
 static __inline__ unsigned long long __RELAXED_FN_ATTRS
 __tzcnt_u64(unsigned long long __X)
+{
+  return __X ? __builtin_ctzll(__X) : 64;
+}
+
+/// \brief Counts the number of trailing zero bits in the operand.
+///
+/// \headerfile <x86intrin.h>
+///
+/// This intrinsic corresponds to the \c TZCNT instruction.
+///
+/// \param __X
+///    An unsigned 64-bit integer whose trailing zeros are to be counted.
+/// \returns An 64-bit integer containing the number of trailing zero
+///    bits in the operand.
+static __inline__ long long __RELAXED_FN_ATTRS
+_mm_tzcnt_64(unsigned long long __X)
 {
   return __X ? __builtin_ctzll(__X) : 64;
 }

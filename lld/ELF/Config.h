@@ -37,6 +37,7 @@ enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring };
 struct Version {
   Version(llvm::StringRef Name) : Name(Name) {}
   llvm::StringRef Name;
+  llvm::StringRef Parent;
   std::vector<llvm::StringRef> Globals;
   size_t NameOff; // Offset in string table.
 };

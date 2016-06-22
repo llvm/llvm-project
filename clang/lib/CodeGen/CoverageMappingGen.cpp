@@ -867,7 +867,12 @@ struct CounterCoverageMappingBuilder
 
   void VisitCXXTryStmt(const CXXTryStmt *S) {
     extendRegion(S);
-    Visit(S->getTryBlock());
+    // Handle macros that generate the "try" but not the rest.
+    extendRegion(S->getTryBlock());
+
+    Counter ParentCount = getRegion().getCounter();
+    propagateCounts(ParentCount, S->getTryBlock());
+
     for (unsigned I = 0, E = S->getNumHandlers(); I < E; ++I)
       Visit(S->getHandler(I));
 

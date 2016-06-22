@@ -1051,8 +1051,8 @@ TEST_F(FormatTestJS, Modules) {
   // ... but not if from is just an identifier.
   verifyFormat("export {\n"
                "  from as from,\n"
-               "  someSurprisinglyLongVariable\n"
-               "      as from\n"
+               "  someSurprisinglyLongVariable as\n"
+               "      from\n"
                "};",
                getGoogleJSStyleWithColumns(20));
   verifyFormat("export class C {\n"
@@ -1205,6 +1205,9 @@ TEST_F(FormatTestJS, TemplateStrings) {
 TEST_F(FormatTestJS, CastSyntax) {
   verifyFormat("var x = <type>foo;");
   verifyFormat("var x = foo as type;");
+  verifyFormat("let x = (a + b) as\n"
+               "    LongTypeIsLong;",
+               getGoogleJSStyleWithColumns(20));
   verifyFormat("foo = <Bar[]>[\n"
                "  1,  //\n"
                "  2\n"

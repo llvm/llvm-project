@@ -94,6 +94,8 @@ void VersionScriptParser::parseVersion(StringRef Version) {
     parseVersionSymbols(Version);
 
   expect("}");
+  if (!Version.empty() && peek() != ";")
+    Config->SymbolVersions.back().Parent = next();
   expect(";");
 }
 
@@ -114,11 +116,11 @@ void VersionScriptParser::parseVersionSymbols(StringRef Version) {
   }
 
   for (;;) {
-    StringRef Cur = peek();
-    if (Cur == "}" || Cur == "local:" || Error)
+    if (peek() == "extern")
+      setError("extern keyword is not supported");
+    if (peek() == "}" || peek() == "local:" || Error)
       return;
-    next();
-    Globals->push_back(Cur);
+    Globals->push_back(next());
     expect(";");
   }
 }

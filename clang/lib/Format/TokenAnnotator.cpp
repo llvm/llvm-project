@@ -2373,6 +2373,8 @@ bool TokenAnnotator::canBreakBefore(const AnnotatedLine &Line,
       return Style.BreakBeforeBinaryOperators == FormatStyle::BOS_None;
     if (Right.is(Keywords.kw_in))
       return Style.BreakBeforeBinaryOperators != FormatStyle::BOS_None;
+    if (Right.is(Keywords.kw_as))
+      return false; // must not break before as in 'x as type' casts
   }
 
   if (Left.is(tok::at))

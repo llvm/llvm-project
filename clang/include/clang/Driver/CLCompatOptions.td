@@ -291,7 +291,6 @@ def _SLASH_FS : CLIgnoredFlag<"FS">, HelpText<"Force synchronous PDB writes">;
 def _SLASH_GF : CLIgnoredFlag<"GF">;
 def _SLASH_kernel_ : CLIgnoredFlag<"kernel-">;
 def _SLASH_nologo : CLIgnoredFlag<"nologo">;
-def _SLASH_Ob1 : CLIgnoredFlag<"Ob1">;
 def _SLASH_Og : CLIgnoredFlag<"Og">;
 def _SLASH_openmp_ : CLIgnoredFlag<"openmp-">;
 def _SLASH_RTC : CLIgnoredJoined<"RTC">;

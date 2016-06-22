@@ -728,7 +728,7 @@ static void TranslateOptArg(Arg *A, llvm::opt::DerivedArgList &DAL,
           DAL.AddFlagArg(A, Opts.getOption(options::OPT_fno_inline));
           break;
         case '1':
-          // TODO: Inline calls to 'inline functions' only.
+          DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_hint_functions));
           break;
         case '2':
           DAL.AddFlagArg(A, Opts.getOption(options::OPT_finline_functions));

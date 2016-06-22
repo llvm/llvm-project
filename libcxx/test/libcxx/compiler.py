@@ -47,9 +47,10 @@ class CXXCompiler(object):
         self.type = compiler_type
         self.version = (major_ver, minor_ver, patchlevel)
 
-    def _basicCmd(self, source_files, out, is_link=False, input_is_cxx=False):
+    def _basicCmd(self, source_files, out, is_link=False, input_is_cxx=False,
+                  disable_ccache=False):
         cmd = []
-        if self.use_ccache and not is_link:
+        if self.use_ccache and not disable_ccache and not is_link:
             cmd += ['ccache']
         cmd += [self.path]
         if out is not None:
@@ -65,12 +66,15 @@ class CXXCompiler(object):
         return cmd
 
     def preprocessCmd(self, source_files, out=None, flags=[]):
-        cmd = self._basicCmd(source_files, out, input_is_cxx=True) + ['-E']
+        cmd = self._basicCmd(source_files, out, input_is_cxx=True,
+                             disable_ccache=True) + ['-E']
         cmd += self.flags + self.compile_flags + flags
         return cmd
 
-    def compileCmd(self, source_files, out=None, flags=[]):
-        cmd = self._basicCmd(source_files, out, input_is_cxx=True) + ['-c']
+    def compileCmd(self, source_files, out=None, flags=[],
+                   disable_ccache=False):
+        cmd = self._basicCmd(source_files, out, input_is_cxx=True,
+                             disable_ccache=disable_ccache) + ['-c']
         cmd += self.flags + self.compile_flags + flags
         return cmd
 
@@ -89,8 +93,10 @@ class CXXCompiler(object):
         out, err, rc = lit.util.executeCommand(cmd, env=env, cwd=cwd)
         return cmd, out, err, rc
 
-    def compile(self, source_files, out=None, flags=[], env=None, cwd=None):
-        cmd = self.compileCmd(source_files, out, flags)
+    def compile(self, source_files, out=None, flags=[], env=None, cwd=None,
+                disable_ccache=False):
+        cmd = self.compileCmd(source_files, out, flags,
+                              disable_ccache=disable_ccache)
         out, err, rc = lit.util.executeCommand(cmd, env=env, cwd=cwd)
         return cmd, out, err, rc
 
@@ -106,7 +112,8 @@ class CXXCompiler(object):
         return cmd, out, err, rc
 
     def compileLinkTwoSteps(self, source_file, out=None, object_file=None,
-                            flags=[], env=None, cwd=None):
+                            flags=[], env=None, cwd=None,
+                            disable_ccache=False):
         if not isinstance(source_file, str):
             raise TypeError('This function only accepts a single input file')
         if object_file is None:
@@ -117,7 +124,8 @@ class CXXCompiler(object):
             with_fn = lambda: libcxx.util.nullContext(object_file)
         with with_fn() as object_file:
             cc_cmd, cc_stdout, cc_stderr, rc = self.compile(
-                    source_file, object_file, flags=flags, env=env, cwd=cwd)
+                    source_file, object_file, flags=flags, env=env, cwd=cwd,
+                    disable_ccache=disable_ccache)
             if rc != 0:
                 return cc_cmd, cc_stdout, cc_stderr, rc
 

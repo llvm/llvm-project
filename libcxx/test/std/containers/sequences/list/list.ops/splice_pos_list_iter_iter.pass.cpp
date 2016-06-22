@@ -11,13 +11,10 @@
 
 // void splice(const_iterator position, list& x, iterator first, iterator last);
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -120,14 +117,6 @@ int main()
         i = l2.begin();
         assert(*i == 4);
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::list<int> v1(3);
-        std::list<int> v2(3);
-        v1.splice(v1.begin(), v2, v2.begin(), v1.end());
-        assert(false);
-    }
-#endif
 #if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l1(a1, a1+3);
@@ -225,13 +214,5 @@ int main()
         i = l2.begin();
         assert(*i == 4);
     }
-#if _LIBCPP_DEBUG >= 1
-    {
-        std::list<int, min_allocator<int>> v1(3);
-        std::list<int, min_allocator<int>> v2(3);
-        v1.splice(v1.begin(), v2, v2.begin(), v1.end());
-        assert(false);
-    }
-#endif
 #endif
 }

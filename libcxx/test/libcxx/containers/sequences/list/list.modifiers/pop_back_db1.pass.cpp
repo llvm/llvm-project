@@ -9,44 +9,25 @@
 
 // <list>
 
-// Call back() on empty const container.
+// void pop_back();
 
-#if _LIBCPP_DEBUG >= 1
-
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <list>
-#include <cassert>
-#include <iterator>
-#include <exception>
 #include <cstdlib>
-
-#include "min_allocator.h"
-
-int main()
-{
-    {
-    typedef int T;
-    typedef std::list<T> C;
-    const C c;
-    assert(c.back() == 0);
-    assert(false);
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef int T;
-    typedef std::list<T, min_allocator<T>> C;
-    const C c;
-    assert(c.back() == 0);
-    assert(false);
-    }
-#endif
-}
-
-#else
+#include <cassert>
 
 int main()
 {
+    int a[] = {1, 2, 3};
+    std::list<int> c(a, a+3);
+    c.pop_back();
+    assert(c == std::list<int>(a, a+2));
+    c.pop_back();
+    assert(c == std::list<int>(a, a+1));
+    c.pop_back();
+    assert(c.empty());
+    c.pop_back(); // operation under test
+    assert(false);
 }
-
-#endif

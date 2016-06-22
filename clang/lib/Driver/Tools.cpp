@@ -5434,6 +5434,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-inline");
 
   if (Arg* InlineArg = Args.getLastArg(options::OPT_finline_functions,
+                                       options::OPT_finline_hint_functions,
                                        options::OPT_fno_inline_functions))
     InlineArg->render(Args, CmdArgs);
 
