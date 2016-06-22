@@ -11,6 +11,10 @@
 
 // UNSUPPORTED: sanitizer-new-delete
 
+// TODO Investigate why UBSAN prevents new from calling our replacement.
+// XFAIL: ubsan
+
+
 #include <new>
 #include <cstddef>
 #include <cstdlib>
@@ -22,7 +26,9 @@ volatile int new_called = 0;
 void* operator new(std::size_t s) throw(std::bad_alloc)
 {
     ++new_called;
-    return std::malloc(s);
+    void* ret = std::malloc(s);
+    if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
+    return  ret;
 }
 
 void  operator delete(void* p) throw()

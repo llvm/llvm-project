@@ -172,7 +172,8 @@ class LibcxxTestFormat(object):
             extra_flags += ['-Xclang', '-verify',
                             '-Xclang', '-verify-ignore-unexpected=note']
         cmd, out, err, rc = self.cxx.compile(source_path, out=os.devnull,
-                                             flags=extra_flags)
+                                             flags=extra_flags,
+                                             disable_ccache=True)
         expected_rc = 0 if use_verify else 1
         if rc == expected_rc:
             return lit.Test.PASS, ''

@@ -11,13 +11,10 @@
 
 // void pop_back();
 
-#if _LIBCPP_DEBUG >= 1
-#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
-#endif
-
 #include <list>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 int main()
@@ -31,10 +28,6 @@ int main()
     assert(c == std::list<int>(a, a+1));
     c.pop_back();
     assert(c.empty());
-#if _LIBCPP_DEBUG >= 1
-        c.pop_back();
-        assert(false);
-#endif
     }
 #if TEST_STD_VER >= 11
     {
@@ -46,10 +39,6 @@ int main()
     assert((c == std::list<int, min_allocator<int>>(a, a+1)));
     c.pop_back();
     assert(c.empty());
-#if _LIBCPP_DEBUG >= 1
-        c.pop_back();
-        assert(false);
-#endif
     }
 #endif
 }

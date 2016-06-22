@@ -662,7 +662,7 @@ public:
 
     template <class _AllocArgT, class _Alloc, bool _Dummy = true, class = typename enable_if<
         __lazy_and<
-            is_base_of<allocator_arg_t, _AllocArgT>,
+            is_same<allocator_arg_t, _AllocArgT>,
             __lazy_all<__dependent_type<is_default_constructible<_Tp>, _Dummy>...>
        >::value
     >::type>

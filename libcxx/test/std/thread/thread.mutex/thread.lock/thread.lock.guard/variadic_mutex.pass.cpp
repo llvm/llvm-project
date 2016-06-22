@@ -28,7 +28,7 @@ struct TestMutex {
     ~TestMutex() { assert(!locked); }
 
     void lock() { assert(!locked); locked = true; }
-    bool try_lock() { if (locked) return false; return locked = true; }
+    bool try_lock() { if (locked) return false; locked = true; return true; }
     void unlock() { assert(locked); locked = false; }
 
     TestMutex(TestMutex const&) = delete;

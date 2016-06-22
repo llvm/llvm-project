@@ -22,9 +22,13 @@ struct A
 
 int main()
 {
-    char buf[3*sizeof(A)];
+    const std::size_t Size = 3;
+    // placement new might require additional space.
+    const std::size_t ExtraSize = 64;
+    char buf[Size*sizeof(A) + ExtraSize];
 
-    A* ap = new(buf) A[3];
-    assert((char*)ap == buf);
-    assert(A_constructed == 3);
+    A* ap = new(buf) A[Size];
+    assert((char*)ap >= buf);
+    assert((char*)ap < (buf + ExtraSize));
+    assert(A_constructed == Size);
 }

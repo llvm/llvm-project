@@ -15,10 +15,6 @@
 #error assert not defined
 #endif
 
-#ifndef _LIBCPP_VERSION
-#error _LIBCPP_VERSION not defined
-#endif
-
 int main()
 {
 }

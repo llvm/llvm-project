@@ -179,23 +179,6 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
   return 0;
 }
 
-// Some targets might require creation of thunks for relocations. Now we
-// support only MIPS which requires LA25 thunk to call PIC code from non-PIC
-// one. Scan relocations to find each one requires thunk.
-template <class ELFT, class RelTy>
-static void scanRelocsForThunks(const elf::ObjectFile<ELFT> &File,
-                                ArrayRef<RelTy> Rels) {
-  for (const RelTy &RI : Rels) {
-    uint32_t Type = RI.getType(Config->Mips64EL);
-    SymbolBody &Body = File.getRelocTargetSym(RI);
-    if (Body.hasThunk() || !Target->needsThunk(Type, File, Body))
-      continue;
-    auto *D = cast<DefinedRegular<ELFT>>(&Body);
-    auto *S = cast<InputSection<ELFT>>(D->Section);
-    S->addThunk(Body);
-  }
-}
-
 template <endianness E> static int16_t readSignedLo16(const uint8_t *Loc) {
   return read32<E>(Loc) & 0xffff;
 }
@@ -577,8 +560,17 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
 
-    if (Expr == R_THUNK)
+    // Some targets might require creation of thunks for relocations.
+    // Now we support only MIPS which requires LA25 thunk to call PIC
+    // code from non-PIC one.
+    if (Expr == R_THUNK) {
+      if (!Body.hasThunk()) {
+        auto *Sec = cast<InputSection<ELFT>>(
+            cast<DefinedRegular<ELFT>>(&Body)->Section);
+        Sec->addThunk(Body);
+      }
       continue;
+    }
 
     // At this point we are done with the relocated position. Some relocations
     // also require us to create a got or plt entry.
@@ -631,10 +623,6 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       continue;
     }
   }
-
-  // Scan relocations for necessary thunks.
-  if (Config->EMachine == EM_MIPS)
-    scanRelocsForThunks<ELFT>(File, Rels);
 }
 
 template <class ELFT> void scanRelocations(InputSection<ELFT> &C) {

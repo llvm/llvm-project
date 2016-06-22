@@ -628,7 +628,6 @@ class Configuration(object):
                 self.cxx.compile_flags += ['-O3']
                 self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')
-                self.config.available_features.add('sanitizer-new-delete')
             elif san == 'Thread':
                 self.cxx.flags += ['-fsanitize=thread']
                 self.config.available_features.add('tsan')

@@ -9,7 +9,6 @@
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.ru_RU.UTF-8
-// UNSUPPORTED: sanitizer-new-delete
 
 // <locale>
 
@@ -19,21 +18,8 @@
 #include <new>
 #include <cassert>
 
+#include "count_new.hpp"
 #include "platform_support.h" // locale name macros
-
-int new_called = 0;
-
-void* operator new(std::size_t s) throw(std::bad_alloc)
-{
-    ++new_called;
-    return std::malloc(s);
-}
-
-void  operator delete(void* p) throw()
-{
-    --new_called;
-    std::free(p);
-}
 
 void check(const std::locale& loc)
 {
@@ -78,5 +64,5 @@ int main()
         std::locale loc2(loc, std::locale(LOCALE_en_US_UTF_8), std::locale::monetary);
         check(loc2);
     }
-    assert(new_called == 0);
+    assert(globalMemCounter.checkOutstandingNewEq(0));
 }

@@ -250,10 +250,10 @@ void constructor_tests()
         using T = MoveOnlyCallable<bool>;
         T value(true);
         using RetT = decltype(std::not_fn(std::move(value)));
-        static_assert(std::is_move_constructible<RetT>::value);
-        static_assert(!std::is_copy_constructible<RetT>::value);
-        static_assert(!std::is_move_assignable<RetT>::value);
-        static_assert(!std::is_copy_assignable<RetT>::value);
+        static_assert(std::is_move_constructible<RetT>::value, "");
+        static_assert(!std::is_copy_constructible<RetT>::value, "");
+        static_assert(!std::is_move_assignable<RetT>::value, "");
+        static_assert(!std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(std::move(value));
         // test it was moved from
         assert(value.value == false);
@@ -271,10 +271,10 @@ void constructor_tests()
         using T = CopyCallable<bool>;
         T value(false);
         using RetT = decltype(std::not_fn(value));
-        static_assert(std::is_move_constructible<RetT>::value);
-        static_assert(std::is_copy_constructible<RetT>::value);
-        static_assert(!std::is_move_assignable<RetT>::value);
-        static_assert(!std::is_copy_assignable<RetT>::value);
+        static_assert(std::is_move_constructible<RetT>::value, "");
+        static_assert(std::is_copy_constructible<RetT>::value, "");
+        static_assert(!std::is_move_assignable<RetT>::value, "");
+        static_assert(!std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(value);
         // test that value is unchanged (copied not moved)
         assert(value.value == false);
@@ -292,10 +292,10 @@ void constructor_tests()
         T value(true);
         T value2(false);
         using RetT = decltype(std::not_fn(value));
-        static_assert(std::is_move_constructible<RetT>::value);
-        static_assert(std::is_copy_constructible<RetT>::value);
-        static_assert(std::is_move_assignable<RetT>::value);
-        static_assert(std::is_copy_assignable<RetT>::value);
+        static_assert(std::is_move_constructible<RetT>::value, "");
+        static_assert(std::is_copy_constructible<RetT>::value, "");
+        static_assert(std::is_move_assignable<RetT>::value, "");
+        static_assert(std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(value);
         assert(ret() == false);
         auto ret2 = std::not_fn(value2);
@@ -309,10 +309,10 @@ void constructor_tests()
         T value(true);
         T value2(false);
         using RetT = decltype(std::not_fn(std::move(value)));
-        static_assert(std::is_move_constructible<RetT>::value);
-        static_assert(!std::is_copy_constructible<RetT>::value);
-        static_assert(std::is_move_assignable<RetT>::value);
-        static_assert(!std::is_copy_assignable<RetT>::value);
+        static_assert(std::is_move_constructible<RetT>::value, "");
+        static_assert(!std::is_copy_constructible<RetT>::value, "");
+        static_assert(std::is_move_assignable<RetT>::value, "");
+        static_assert(!std::is_copy_assignable<RetT>::value, "");
         auto ret = std::not_fn(std::move(value));
         assert(ret() == false);
         auto ret2 = std::not_fn(std::move(value2));
@@ -328,21 +328,21 @@ void return_type_tests()
     {
         using T = CopyCallable<bool>;
         auto ret = std::not_fn(T{false});
-        static_assert(is_same<decltype(ret()), bool>::value);
-        static_assert(is_same<decltype(ret("abc")), bool>::value);
+        static_assert(is_same<decltype(ret()), bool>::value, "");
+        static_assert(is_same<decltype(ret("abc")), bool>::value, "");
         assert(ret() == true);
     }
     {
         using T = CopyCallable<ExplicitBool>;
         auto ret = std::not_fn(T{true});
-        static_assert(is_same<decltype(ret()), bool>::value);
-        static_assert(is_same<decltype(ret(std::string("abc"))), bool>::value);
+        static_assert(is_same<decltype(ret()), bool>::value, "");
+        static_assert(is_same<decltype(ret(std::string("abc"))), bool>::value, "");
         assert(ret() == false);
     }
     {
         using T = CopyCallable<EvilBool>;
         auto ret = std::not_fn(T{false});
-        static_assert(is_same<decltype(ret()), EvilBool>::value);
+        static_assert(is_same<decltype(ret()), EvilBool>::value, "");
         EvilBool::bang_called = 0;
         auto value_ret = ret();
         assert(EvilBool::bang_called == 1);
@@ -420,26 +420,26 @@ void throws_in_constructor_test()
 void call_operator_sfinae_test() {
     { // wrong number of arguments
         using T = decltype(std::not_fn(returns_true));
-        static_assert(std::is_callable<T()>::value); // callable only with no args
-        static_assert(!std::is_callable<T(bool)>::value);
+        static_assert(std::is_callable<T()>::value, ""); // callable only with no args
+        static_assert(!std::is_callable<T(bool)>::value, "");
     }
     { // violates const correctness (member function pointer)
         using T = decltype(std::not_fn(&MemFunCallable::return_value_nc));
-        static_assert(std::is_callable<T(MemFunCallable&)>::value);
-        static_assert(!std::is_callable<T(const MemFunCallable&)>::value);
+        static_assert(std::is_callable<T(MemFunCallable&)>::value, "");
+        static_assert(!std::is_callable<T(const MemFunCallable&)>::value, "");
     }
     { // violates const correctness (call object)
         using Obj = CopyCallable<bool>;
         using NCT = decltype(std::not_fn(Obj{true}));
         using CT = const NCT;
-        static_assert(std::is_callable<NCT()>::value);
-        static_assert(!std::is_callable<CT()>::value);
+        static_assert(std::is_callable<NCT()>::value, "");
+        static_assert(!std::is_callable<CT()>::value, "");
     }
     { // returns bad type with no operator!
         auto fn = [](auto x) { return x; };
         using T = decltype(std::not_fn(fn));
-        static_assert(std::is_callable<T(bool)>::value);
-        static_assert(!std::is_callable<T(std::string)>::value);
+        static_assert(std::is_callable<T(bool)>::value, "");
+        static_assert(!std::is_callable<T(std::string)>::value, "");
     }
 }
 

@@ -70,8 +70,8 @@ int main()
         static_assert(!std::is_swappable<int() &>::value, "");
     }
     {
-        // test for presense of is_swappable_v
-        static_assert(std::is_swappable_v<int>);
-        static_assert(!std::is_swappable_v<M>);
+        // test for presence of is_swappable_v
+        static_assert(std::is_swappable_v<int>, "");
+        static_assert(!std::is_swappable_v<M>, "");
     }
 }

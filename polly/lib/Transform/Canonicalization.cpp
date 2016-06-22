@@ -1,4 +1,4 @@
-//===---- Canonicalization.cpp - Run canonicalization passes ======-------===//
+//===---- Canonicalization.cpp - Run canonicalization passes --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
