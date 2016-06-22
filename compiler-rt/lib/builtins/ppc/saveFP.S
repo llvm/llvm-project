@@ -38,3 +38,6 @@ DEFINE_COMPILERRT_PRIVATE_FUNCTION_UNMANGLED(saveFP)
         stfd    f31,-8(r1)
         stw      r0,8(r1)
         blr
+
+NO_EXEC_STACK_DIRECTIVE
+

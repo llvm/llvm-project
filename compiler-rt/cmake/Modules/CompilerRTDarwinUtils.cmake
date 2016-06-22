@@ -58,8 +58,8 @@ function(darwin_test_archs os valid_archs)
   set(archs ${ARGN})
   if(NOT TEST_COMPILE_ONLY)
     message(STATUS "Finding valid architectures for ${os}...")
-    set(SIMPLE_CPP ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.cpp)
-    file(WRITE ${SIMPLE_CPP} "#include <iostream>\nint main() { std::cout << std::endl; return 0; }\n")
+    set(SIMPLE_C ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.c)
+    file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main() { printf(__FILE__); return 0; }\n")
   
     set(os_linker_flags)
     foreach(flag ${DARWIN_${os}_LINKFLAGS})
@@ -81,7 +81,7 @@ function(darwin_test_archs os valid_archs)
     if(TEST_COMPILE_ONLY)
       try_compile_only(CAN_TARGET_${os}_${arch} -v -arch ${arch} ${DARWIN_${os}_CFLAGS})
     else()
-      try_compile(CAN_TARGET_${os}_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_CPP}
+      try_compile(CAN_TARGET_${os}_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_C}
                   COMPILE_DEFINITIONS "-v -arch ${arch}" ${DARWIN_${os}_CFLAGS}
                   CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS=${arch_linker_flags}"
                   OUTPUT_VARIABLE TEST_OUTPUT)

@@ -26,3 +26,6 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_idivmod)
         add     sp, sp, #4
         pop     { pc }
 END_COMPILERRT_FUNCTION(__aeabi_idivmod)
+
+NO_EXEC_STACK_DIRECTIVE
+

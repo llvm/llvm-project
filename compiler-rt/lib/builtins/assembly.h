@@ -30,6 +30,8 @@
 #define SYMBOL_IS_FUNC(name)
 #define CONST_SECTION .const
 
+#define NO_EXEC_STACK_DIRECTIVE
+
 #elif defined(__ELF__)
 
 #define HIDDEN(name) .hidden name
@@ -42,6 +44,12 @@
 #endif
 #define CONST_SECTION .section .rodata
 
+#if defined(__GNU__) || defined(__ANDROID__) || defined(__FreeBSD__)
+#define NO_EXEC_STACK_DIRECTIVE .section .note.GNU-stack,"",%progbits
+#else
+#define NO_EXEC_STACK_DIRECTIVE
+#endif
+
 #else // !__APPLE__ && !__ELF__
 
 #define HIDDEN(name)
@@ -53,6 +61,8 @@
     .type 32 SEPARATOR                                                         \
   .endef
 #define CONST_SECTION .section .rdata,"rd"
+
+#define NO_EXEC_STACK_DIRECTIVE
 
 #endif
 

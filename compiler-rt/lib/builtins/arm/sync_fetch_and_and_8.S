@@ -21,3 +21,6 @@
 
 SYNC_OP_8(and_8)
 #endif
+
+NO_EXEC_STACK_DIRECTIVE
+
