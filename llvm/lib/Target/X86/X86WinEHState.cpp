@@ -106,6 +106,9 @@ private:
   /// fs:00 chain and the current state.
   AllocaInst *RegNode = nullptr;
 
+  // The allocation containing the EH security guard.
+  AllocaInst *EHGuardNode = nullptr;
+
   /// The index of the state field of RegNode.
   int StateFieldIndex = ~0U;
 
@@ -195,6 +198,9 @@ bool WinEHStatePass::runOnFunction(Function &F) {
   PersonalityFn = nullptr;
   Personality = EHPersonality::Unknown;
   UseStackGuard = false;
+  RegNode = nullptr;
+  EHGuardNode = nullptr;
+
   return true;
 }
 
@@ -274,6 +280,9 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 
   IRBuilder<> Builder(&F->getEntryBlock(), F->getEntryBlock().begin());
   Type *Int8PtrType = Builder.getInt8PtrTy();
+  Type *Int32Ty = Builder.getInt32Ty();
+  Type *VoidTy = Builder.getVoidTy();
+
   if (Personality == EHPersonality::MSVC_CXX) {
     RegNodeTy = getCXXEHRegistrationType();
     RegNode = Builder.CreateAlloca(RegNodeTy);
@@ -292,37 +301,53 @@ void WinEHStatePass::emitExceptionRegistrationRecord(Function *F) {
 
     CxxLongjmpUnwind = TheModule->getOrInsertFunction(
         "__CxxLongjmpUnwind",
-        FunctionType::get(Type::getVoidTy(TheModule->getContext()), Int8PtrType,
-                          /*isVarArg=*/false));
+        FunctionType::get(VoidTy, Int8PtrType, /*isVarArg=*/false));
     cast<Function>(CxxLongjmpUnwind->stripPointerCasts())
         ->setCallingConv(CallingConv::X86_StdCall);
   } else if (Personality == EHPersonality::MSVC_X86SEH) {
     // If _except_handler4 is in use, some additional guard checks and prologue
     // stuff is required.
+    StringRef PersonalityName = PersonalityFn->getName();
+    UseStackGuard = (PersonalityName == "_except_handler4");
+
+    // Allocate local structures.
     RegNodeTy = getSEHRegistrationType();
     RegNode = Builder.CreateAlloca(RegNodeTy);
+    if (UseStackGuard)
+      EHGuardNode = Builder.CreateAlloca(Int32Ty);
+
     // SavedESP = llvm.stacksave()
     Value *SP = Builder.CreateCall(
         Intrinsic::getDeclaration(TheModule, Intrinsic::stacksave), {});
     Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));
     // TryLevel = -2 / -1
     StateFieldIndex = 4;
-    StringRef PersonalityName = PersonalityFn->getName();
-    UseStackGuard = (PersonalityName == "_except_handler4");
     ParentBaseState = UseStackGuard ? -2 : -1;
     insertStateNumberStore(&*Builder.GetInsertPoint(), ParentBaseState);
     // ScopeTable = llvm.x86.seh.lsda(F)
     Value *LSDA = emitEHLSDA(Builder, F);
-    Type *Int32Ty = Type::getInt32Ty(TheModule->getContext());
     LSDA = Builder.CreatePtrToInt(LSDA, Int32Ty);
     // If using _except_handler4, xor the address of the table with
     // __security_cookie.
     if (UseStackGuard) {
       Cookie = TheModule->getOrInsertGlobal("__security_cookie", Int32Ty);
-      Value *Val = Builder.CreateLoad(Int32Ty, Cookie);
+      Value *Val = Builder.CreateLoad(Int32Ty, Cookie, "cookie");
       LSDA = Builder.CreateXor(LSDA, Val);
     }
     Builder.CreateStore(LSDA, Builder.CreateStructGEP(RegNodeTy, RegNode, 3));
+
+    // If using _except_handler4, the EHGuard contains: FramePtr xor Cookie.
+    if (UseStackGuard) {
+      Value *Val = Builder.CreateLoad(Int32Ty, Cookie);
+      Value *FrameAddr = Builder.CreateCall(
+          Intrinsic::getDeclaration(TheModule, Intrinsic::frameaddress),
+          Builder.getInt32(0), "frameaddr");
+      Value *FrameAddrI32 = Builder.CreatePtrToInt(FrameAddr, Int32Ty);
+      FrameAddrI32 = Builder.CreateXor(FrameAddrI32, Val);
+      Builder.CreateStore(FrameAddrI32, EHGuardNode);
+    }
+
+    // Register the exception handler.
     Link = Builder.CreateStructGEP(RegNodeTy, RegNode, 2);
     linkExceptionRegistration(Builder, PersonalityFn);
 
@@ -608,11 +633,20 @@ bool WinEHStatePass::isStateStoreNeeded(EHPersonality Personality,
 void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
   // Mark the registration node. The backend needs to know which alloca it is so
   // that it can recover the original frame pointer.
-  IRBuilder<> Builder(RegNode->getParent(), std::next(RegNode->getIterator()));
+  IRBuilder<> Builder(RegNode->getNextNode());
   Value *RegNodeI8 = Builder.CreateBitCast(RegNode, Builder.getInt8PtrTy());
   Builder.CreateCall(
       Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehregnode),
       {RegNodeI8});
+
+  if (EHGuardNode) {
+    IRBuilder<> Builder(EHGuardNode->getNextNode());
+    Value *EHGuardNodeI8 =
+        Builder.CreateBitCast(EHGuardNode, Builder.getInt8PtrTy());
+    Builder.CreateCall(
+        Intrinsic::getDeclaration(TheModule, Intrinsic::x86_seh_ehguard),
+        {EHGuardNodeI8});
+  }
 
   // Calculate state numbers.
   if (isAsynchronousEHPersonality(Personality))

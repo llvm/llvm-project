@@ -71,6 +71,7 @@ MEMBER_RECORD(LF_MEMBER, 0x150d, DataMember)
 MEMBER_RECORD(LF_NESTTYPE, 0x1510, NestedType)
 MEMBER_RECORD(LF_ONEMETHOD, 0x1511, OneMethod)
 MEMBER_RECORD(LF_ENUMERATE, 0x1502, Enumerator)
+MEMBER_RECORD(LF_INDEX, 0x1404, ListContinuation)
 
 // ID leaf records. Subsequent leaf types may be referenced from .debug$S.
 TYPE_RECORD(LF_FUNC_ID, 0x1601, FuncId)
@@ -168,7 +169,6 @@ CV_TYPE(LF_DIMVARLU, 0x120a)
 // Member type records. These are generally not length prefixed, and appear
 // inside of a field list record.
 CV_TYPE(LF_FRIENDFCN_ST, 0x1403)
-CV_TYPE(LF_INDEX, 0x1404)
 CV_TYPE(LF_MEMBER_ST, 0x1405)
 CV_TYPE(LF_STMEMBER_ST, 0x1406)
 CV_TYPE(LF_METHOD_ST, 0x1407)

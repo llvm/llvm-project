@@ -105,7 +105,7 @@
 ; EMPTY-NEXT:       )
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:     {
-; EMPTY-NEXT:       UnknownLeaf (0x1002) {
+; EMPTY-NEXT:       FieldList (0x1002) {
 ; EMPTY-NEXT:         TypeLeafKind: LF_FIELDLIST (0x1203)
 ; EMPTY-NEXT:         Enumerator {
 ; EMPTY-NEXT:           AccessSpecifier: Public (0x3)
@@ -1112,7 +1112,7 @@
 ; ALL:     {
 ; ALL:       StringId (0x1058) {
 ; ALL:         TypeLeafKind: LF_STRING_ID (0x1605)
-; ALL:         Id: managed (0x100C)
+; ALL:         Id: <field list> (0x100C)
 ; ALL:         StringData:  Kits\8.1\include\um" -I"C:\Program Files (x86)\Windows Kits\8.1\include\winrt" -TP -X
 ; ALL:       }
 ; ALL:     }
@@ -1124,7 +1124,7 @@
 ; ALL:           ArgType: void __vc_attributes::threadingAttribute::(__vc_attributes::threadingAttribute::threading_e) (0x1007)
 ; ALL:           ArgType: void __vc_attributes::threadingAttribute::() (0x1008)
 ; ALL:           ArgType: 0x1009
-; ALL:           ArgType: value (0x100A)
+; ALL:           ArgType: <field list> (0x100A)
 ; ALL:           ArgType: __vc_attributes::event_receiverAttribute::type_e (0x100D)
 ; ALL:         ]
 ; ALL:       }

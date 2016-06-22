@@ -734,6 +734,17 @@ CAMLprim value llvm_get_mdstring(LLVMValueRef V) {
   CAMLreturn(Val_int(0));
 }
 
+CAMLprim value llvm_get_mdnode_operands(LLVMValueRef V) {
+  CAMLparam0();
+  CAMLlocal1(Operands);
+  unsigned int n;
+
+  n = LLVMGetMDNodeNumOperands(V);
+  Operands = alloc(n, 0);
+  LLVMGetMDNodeOperands(V, (LLVMValueRef *)  Operands);
+  CAMLreturn(Operands);
+}
+
 /* llmodule -> string -> llvalue array */
 CAMLprim value llvm_get_namedmd(LLVMModuleRef M, value Name)
 {

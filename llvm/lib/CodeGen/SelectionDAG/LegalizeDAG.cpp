@@ -1768,7 +1768,7 @@ ExpandBVWithShuffles(SDNode *Node, SelectionDAG &DAG,
         SmallVector<int, 16> FinalIndices;
         FinalIndices.reserve(IntermedVals[i].second.size() +
                              IntermedVals[i+1].second.size());
-        
+
         int k = 0;
         for (unsigned j = 0, f = IntermedVals[i].second.size(); j != f;
              ++j, ++k) {
@@ -2176,8 +2176,7 @@ static bool canCombineSinCosLibcall(SDNode *Node, const TargetLowering &TLI,
     return false;
   // GNU sin/cos functions set errno while sincos does not. Therefore
   // combining sin and cos is only safe if unsafe-fpmath is enabled.
-  bool isGNU = Triple(TM.getTargetTriple()).getEnvironment() == Triple::GNU;
-  if (isGNU && !TM.Options.UnsafeFPMath)
+  if (TM.getTargetTriple().isGNUEnvironment() && !TM.Options.UnsafeFPMath)
     return false;
   return true;
 }
@@ -2273,7 +2272,7 @@ SDValue SelectionDAGLegalize::ExpandLegalINT_TO_FP(bool isSigned, SDValue Op0,
                                                    EVT DestVT,
                                                    const SDLoc &dl) {
   // TODO: Should any fast-math-flags be set for the created nodes?
-  
+
   if (Op0.getValueType() == MVT::i32 && TLI.isTypeLegal(MVT::f64)) {
     // simple 32-bit [signed|unsigned] integer to float/double expansion
 
@@ -2573,7 +2572,7 @@ SDValue SelectionDAGLegalize::ExpandBITREVERSE(SDValue Op, const SDLoc &dl) {
     else
       Tmp2 =
           DAG.getNode(ISD::SRL, dl, VT, Op, DAG.getConstant(I - J, dl, SHVT));
-    
+
     APInt Shift(Sz, 1);
     Shift = Shift.shl(J);
     Tmp2 = DAG.getNode(ISD::AND, dl, VT, Tmp2, DAG.getConstant(Shift, dl, VT));
@@ -3152,7 +3151,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Tmp1);
     break;
   }
-    
+
   case ISD::FSIN:
   case ISD::FCOS: {
     EVT VT = Node->getValueType(0);

@@ -63,6 +63,6 @@ int main() {
         E::unknown      == ME(0xFFFF) &&
         E::add_perms        == ME(0x10000) &&
         E::remove_perms     == ME(0x20000) &&
-        E::resolve_symlinks == ME(0x40000),
+        E::symlink_nofollow == ME(0x40000),
         "Expected enumeration values do not match");
 }

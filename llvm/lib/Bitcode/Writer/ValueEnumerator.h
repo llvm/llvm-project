@@ -255,7 +255,7 @@ private:
   /// it's an \a MDNode.
   const MDNode *enumerateMetadataImpl(unsigned F, const Metadata *MD);
 
-  unsigned getMetadataGlobalID(const GlobalObject *GO) const;
+  unsigned getMetadataFunctionID(const Function *F) const;
 
   /// Enumerate reachable metadata in (almost) post-order.
   ///
@@ -272,7 +272,7 @@ private:
   /// \a organizeMetadata() will later partition distinct nodes ahead of
   /// uniqued ones.
   ///{
-  void EnumerateMetadata(const GlobalObject *GO, const Metadata *MD);
+  void EnumerateMetadata(const Function *F, const Metadata *MD);
   void EnumerateMetadata(unsigned F, const Metadata *MD);
   ///}
 

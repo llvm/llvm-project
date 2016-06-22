@@ -151,7 +151,6 @@ public:
   }
   }
 
-  bool mustExtend(OperandVector &Operands);
   bool splitIdentifier(OperandVector &Operands);
   bool parseOperand(OperandVector &Operands);
   bool parseInstruction(OperandVector &Operands);
@@ -815,18 +814,6 @@ bool HexagonAsmParser::matchOneInstruction(MCInst &MCI, SMLoc IDLoc,
     return Error(ErrorLoc, "invalid operand for instruction");
   }
   llvm_unreachable("Implement any new match types added!");
-}
-
-bool HexagonAsmParser::mustExtend(OperandVector &Operands) {
-  unsigned Count = 0;
-  for (std::unique_ptr<MCParsedAsmOperand> &i : Operands)
-    if (i->isImm())
-      if (HexagonMCInstrInfo::mustExtend(
-              *static_cast<HexagonOperand *>(i.get())->Imm.Val))
-        ++Count;
-  // Multiple extenders should have been filtered by iss9Ext et. al.
-  assert(Count < 2 && "Multiple extenders");
-  return Count == 1;
 }
 
 bool HexagonAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,

@@ -65,6 +65,10 @@ TEST_CASE(test_exist_not_found)
 {
     const path p = StaticEnv::DNE;
     TEST_CHECK(exists(p) == false);
+
+    std::error_code ec = GetTestEC();
+    TEST_CHECK(exists(p, ec) == false);
+    TEST_CHECK(!ec);
 }
 
 TEST_CASE(test_exists_fails)

@@ -133,8 +133,8 @@ static std::string computeDataLayout(const Triple &TT, bool LittleEndian) {
   if (TT.isOSBinFormatMachO())
     return "e-m:o-i64:64-i128:128-n32:64-S128";
   if (LittleEndian)
-    return "e-m:e-i64:64-i128:128-n32:64-S128";
-  return "E-m:e-i64:64-i128:128-n32:64-S128";
+    return "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
+  return "E-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128";
 }
 
 // Helper function to set up the defaults for reciprocals.

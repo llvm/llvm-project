@@ -98,7 +98,7 @@ namespace llvm {
       Slot_Block,
 
       /// Early-clobber register use/def slot.  A live range defined at
-      /// Slot_EarlyCLobber interferes with normal live ranges killed at
+      /// Slot_EarlyClobber interferes with normal live ranges killed at
       /// Slot_Register.  Also used as the kill slot for live ranges tied to an
       /// early-clobber def.
       Slot_EarlyClobber,

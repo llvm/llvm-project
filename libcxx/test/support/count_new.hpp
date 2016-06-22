@@ -22,6 +22,17 @@
 #define DISABLE_NEW_COUNT
 #endif
 
+namespace detail
+{
+   inline void throw_bad_alloc_helper() {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+       throw std::bad_alloc();
+#else
+       std::abort();
+#endif
+   }
+}
+
 class MemCounter
 {
 public:
@@ -41,6 +52,11 @@ public:
     // code doesn't perform any allocations.
     bool disable_allocations;
 
+    // number of allocations to throw after. Default (unsigned)-1. If
+    // throw_after has the default value it will never be decremented.
+    static const unsigned never_throw_value = static_cast<unsigned>(-1);
+    unsigned throw_after;
+
     int outstanding_new;
     int new_called;
     int delete_called;
@@ -56,6 +72,12 @@ public:
     {
         assert(disable_allocations == false);
         assert(s);
+        if (throw_after == 0) {
+            throw_after = never_throw_value;
+            detail::throw_bad_alloc_helper();
+        } else if (throw_after != never_throw_value) {
+            --throw_after;
+        }
         ++new_called;
         ++outstanding_new;
         last_new_size = s;
@@ -72,6 +94,12 @@ public:
     {
         assert(disable_allocations == false);
         assert(s);
+        if (throw_after == 0) {
+            throw_after = never_throw_value;
+            detail::throw_bad_alloc_helper();
+        } else {
+            // don't decrement throw_after here. newCalled will end up doing that.
+        }
         ++outstanding_array_new;
         ++new_array_called;
         last_new_array_size = s;
@@ -94,9 +122,11 @@ public:
         disable_allocations = false;
     }
 
+
     void reset()
     {
         disable_allocations = false;
+        throw_after = never_throw_value;
 
         outstanding_new = 0;
         new_called = 0;
@@ -208,7 +238,10 @@ MemCounter globalMemCounter((MemCounter::MemCounterCtorArg_()));
 void* operator new(std::size_t s) throw(std::bad_alloc)
 {
     globalMemCounter.newCalled(s);
-    return std::malloc(s);
+    void* ret = std::malloc(s);
+    if (ret == nullptr)
+        detail::throw_bad_alloc_helper();
+    return ret;
 }
 
 void  operator delete(void* p) throw()

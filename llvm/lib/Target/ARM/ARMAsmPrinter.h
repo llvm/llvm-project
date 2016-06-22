@@ -95,6 +95,8 @@ public:
   bool lowerOperand(const MachineOperand &MO, MCOperand &MCOp);
 
 private:
+  bool isPositionIndependent() const;
+
   // Helpers for EmitStartOfAsmFile() and EmitEndOfAsmFile()
   void emitAttributes();
 

@@ -2709,6 +2709,16 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
               parseMetadataStrings(Record, Blob, NextMetadataNo))
         return EC;
       break;
+    case bitc::METADATA_GLOBAL_DECL_ATTACHMENT: {
+      if (Record.size() % 2 == 0)
+        return error("Invalid record");
+      unsigned ValueID = Record[0];
+      if (ValueID >= ValueList.size())
+        return error("Invalid record");
+      if (auto *GO = dyn_cast<GlobalObject>(ValueList[ValueID]))
+        parseGlobalObjectAttachment(*GO, ArrayRef<uint64_t>(Record).slice(1));
+      break;
+    }
     case bitc::METADATA_KIND: {
       // Support older bitcode files that had METADATA_KIND records in a
       // block with METADATA_BLOCK_ID.
@@ -3855,16 +3865,6 @@ std::error_code BitcodeReader::parseModule(uint64_t ResumeBit,
         NewGV->setComdat(reinterpret_cast<Comdat *>(1));
       }
 
-      break;
-    }
-    case bitc::MODULE_CODE_GLOBALVAR_ATTACHMENT: {
-      if (Record.size() % 2 == 0)
-        return error("Invalid record");
-      unsigned ValueID = Record[0];
-      if (ValueID >= ValueList.size())
-        return error("Invalid record");
-      if (auto *GV = dyn_cast<GlobalVariable>(ValueList[ValueID]))
-        parseGlobalObjectAttachment(*GV, ArrayRef<uint64_t>(Record).slice(1));
       break;
     }
     // FUNCTION:  [type, callingconv, isproto, linkage, paramattr,

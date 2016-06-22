@@ -267,9 +267,7 @@ TypeIndex TypeTableBuilder::writeRecord(TypeRecordBuilder &Builder) {
 }
 
 TypeIndex TypeTableBuilder::writeFieldList(FieldListRecordBuilder &FieldList) {
-  // TODO: Split the list into multiple records if it's longer than 64KB, using
-  // a subrecord of TypeRecordKind::Index to chain the records together.
-  return writeRecord(FieldList.str());
+  return FieldList.writeListRecord(*this);
 }
 
 TypeIndex TypeTableBuilder::writeMethodOverloadList(

@@ -862,16 +862,6 @@ be one ``GCNAME`` record for each garbage collector name referenced in function
 ``gc`` attributes within the module. These records can be referenced by 1-based
 index in the *gc* fields of ``FUNCTION`` records.
 
-MODULE_CODE_GLOBALVAR_ATTACHMENT Record
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-``[GLOBALVAR_ATTACHMENT, valueid, n x [id, mdnode]]``
-
-The ``GLOBALVAR_ATTACHMENT`` record (code 19) describes the metadata
-attachments for a global variable. The ``valueid`` is the value index for
-the global variable, and the remaining fields are pairs of metadata name
-indices and metadata node indices.
-
 .. _PARAMATTR_BLOCK:
 
 PARAMATTR_BLOCK Contents

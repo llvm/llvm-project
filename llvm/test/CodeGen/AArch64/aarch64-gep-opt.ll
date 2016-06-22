@@ -1,6 +1,9 @@
 ; RUN: llc -O3 -aarch64-gep-opt=true -verify-machineinstrs %s -o - | FileCheck %s
+; RUN: llc -O3 -aarch64-gep-opt=true -mattr=-use-aa -print-after=codegenprepare < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
+; RUN: llc -O3 -aarch64-gep-opt=true -mattr=+use-aa -print-after=codegenprepare < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
 ; RUN: llc -O3 -aarch64-gep-opt=true -print-after=codegenprepare -mcpu=cyclone < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-NoAA <%t %s
 ; RUN: llc -O3 -aarch64-gep-opt=true -print-after=codegenprepare -mcpu=cortex-a53 < %s >%t 2>&1 && FileCheck --check-prefix=CHECK-UseAA <%t %s
+
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-linux-gnueabi"
 

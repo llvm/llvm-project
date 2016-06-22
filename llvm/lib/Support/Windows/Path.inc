@@ -820,33 +820,34 @@ std::error_code getPathFromOpenFD(int FD, SmallVectorImpl<char> &ResultPath) {
     return make_error_code(errc::bad_file_descriptor);
 
   DWORD CharCount;
+  SmallVector<wchar_t, 1024> TempPath;
   do {
-    // FIXME: We should be using the W version of this API and converting the
-    // resulting path to UTF-8 to handle non-ASCII file paths.
-    CharCount = ::GetFinalPathNameByHandleA(FileHandle, ResultPath.begin(),
-                                            ResultPath.capacity(),
+    CharCount = ::GetFinalPathNameByHandleW(FileHandle, TempPath.begin(),
+                                            TempPath.capacity(),
                                             FILE_NAME_NORMALIZED);
-    if (CharCount < ResultPath.capacity())
+    if (CharCount < TempPath.capacity())
       break;
 
     // Reserve sufficient space for the path as well as the null character. Even
     // though the API does not document that it is required, if we reserve just
     // CharCount space, the function call will not store the resulting path and
     // still report success.
-    ResultPath.reserve(CharCount + 1);
+    TempPath.reserve(CharCount + 1);
   } while (true);
 
   if (CharCount == 0)
     return mapWindowsError(::GetLastError());
 
-  ResultPath.set_size(CharCount);
+  TempPath.set_size(CharCount);
 
   // On earlier Windows releases, the character count includes the terminating
   // null.
-  if (ResultPath.back() == '\0')
-    ResultPath.pop_back();
+  if (TempPath.back() == L'\0') {
+    --CharCount;
+    TempPath.pop_back();
+  }
 
-  return std::error_code();
+  return windows::UTF16ToUTF8(TempPath.data(), CharCount, ResultPath);
 }
 } // end namespace fs
 

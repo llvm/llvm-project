@@ -52,12 +52,9 @@ public:
                              const MCSubtargetInfo &STI) const override;
 
 private:
-  void EmitByte(unsigned int byte, raw_ostream &OS) const;
-
   void Emit(uint32_t value, raw_ostream &OS) const;
   void Emit(uint64_t value, raw_ostream &OS) const;
 
-  unsigned getHWRegChan(unsigned reg) const;
   unsigned getHWReg(unsigned regNo) const;
 };
 
@@ -143,20 +140,12 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   }
 }
 
-void R600MCCodeEmitter::EmitByte(unsigned int Byte, raw_ostream &OS) const {
-  OS.write((uint8_t) Byte & 0xff);
-}
-
 void R600MCCodeEmitter::Emit(uint32_t Value, raw_ostream &OS) const {
   support::endian::Writer<support::little>(OS).write(Value);
 }
 
 void R600MCCodeEmitter::Emit(uint64_t Value, raw_ostream &OS) const {
   support::endian::Writer<support::little>(OS).write(Value);
-}
-
-unsigned R600MCCodeEmitter::getHWRegChan(unsigned reg) const {
-  return MRI.getEncodingValue(reg) >> HW_CHAN_SHIFT;
 }
 
 unsigned R600MCCodeEmitter::getHWReg(unsigned RegNo) const {

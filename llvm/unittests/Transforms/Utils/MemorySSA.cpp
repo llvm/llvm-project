@@ -6,11 +6,11 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-#include "llvm/IR/DataLayout.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
@@ -64,6 +64,90 @@ public:
   MemorySSATest()
       : M("MemorySSATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
 };
+
+TEST_F(MemorySSATest, CreateALoadAndPhi) {
+  // We create a diamond where there is a store on one side, and then after
+  // running memory ssa, create a load after the merge point, and use it to test
+  // updating by creating an access for the load and a memoryphi.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left);
+  Argument *PointerArg = &*F->arg_begin();
+  StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Merge, Left);
+  BranchInst::Create(Merge, Right);
+
+  setupAnalyses();
+  MemorySSA &MSSA = Analyses->MSSA;
+  // Add the load
+  B.SetInsertPoint(Merge);
+  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+  // Should be no phi to start
+  EXPECT_EQ(MSSA.getMemoryAccess(Merge), nullptr);
+
+  // Create the phi
+  MemoryPhi *MP = MSSA.createMemoryPhi(Merge);
+  MemoryDef *StoreAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreInst));
+  MP->addIncoming(StoreAccess, Left);
+  MP->addIncoming(MSSA.getLiveOnEntryDef(), Right);
+
+  // Create the load memory acccess
+  MemoryUse *LoadAccess = cast<MemoryUse>(
+      MSSA.createMemoryAccessInBB(LoadInst, MP, Merge, MemorySSA::Beginning));
+  MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
+  EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
+  MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, RemoveAPhi) {
+  // We create a diamond where there is a store on one side, and then a load
+  // after the merge point.  This enables us to test a bunch of different
+  // removal cases.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left);
+  Argument *PointerArg = &*F->arg_begin();
+  StoreInst *StoreInst = B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Merge, Left);
+  BranchInst::Create(Merge, Right);
+  B.SetInsertPoint(Merge);
+  LoadInst *LoadInst = B.CreateLoad(PointerArg);
+
+  setupAnalyses();
+  MemorySSA &MSSA = Analyses->MSSA;
+  // Before, the load will be a use of a phi<store, liveonentry>.
+  MemoryUse *LoadAccess = cast<MemoryUse>(MSSA.getMemoryAccess(LoadInst));
+  MemoryDef *StoreAccess = cast<MemoryDef>(MSSA.getMemoryAccess(StoreInst));
+  MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
+  EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
+  // Kill the store
+  MSSA.removeMemoryAccess(StoreAccess);
+  MemoryPhi *MP = cast<MemoryPhi>(DefiningAccess);
+  // Verify the phi ended up as liveonentry, liveonentry
+  for (auto &Op : MP->incoming_values())
+    EXPECT_TRUE(MSSA.isLiveOnEntryDef(cast<MemoryAccess>(Op.get())));
+  // Replace the phi uses with the live on entry def
+  MP->replaceAllUsesWith(MSSA.getLiveOnEntryDef());
+  // Verify the load is now defined by liveOnEntryDef
+  EXPECT_TRUE(MSSA.isLiveOnEntryDef(LoadAccess->getDefiningAccess()));
+  // Remove the PHI
+  MSSA.removeMemoryAccess(MP);
+  MSSA.verifyMemorySSA();
+}
 
 TEST_F(MemorySSATest, RemoveMemoryAccess) {
   // We create a diamond where there is a store on one side, and then a load
@@ -136,9 +220,8 @@ TEST_F(MemorySSATest, RemoveMemoryAccess) {
 //   store i8 2, i8* %A
 // }
 TEST_F(MemorySSATest, TestTripleStore) {
-  F = Function::Create(
-      FunctionType::get(B.getVoidTy(), {}, false),
-      GlobalValue::ExternalLinkage, "F", &M);
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
   B.SetInsertPoint(BasicBlock::Create(C, "", F));
   Type *Int8 = Type::getInt8Ty(C);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
@@ -169,9 +252,8 @@ TEST_F(MemorySSATest, TestTripleStore) {
 // mostly redundant) unless the initial node being walked is a clobber for the
 // query. In that case, we'd cache that the node clobbered itself.
 TEST_F(MemorySSATest, TestStoreAndLoad) {
-  F = Function::Create(
-      FunctionType::get(B.getVoidTy(), {}, false),
-      GlobalValue::ExternalLinkage, "F", &M);
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
   B.SetInsertPoint(BasicBlock::Create(C, "", F));
   Type *Int8 = Type::getInt8Ty(C);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
@@ -200,9 +282,8 @@ TEST_F(MemorySSATest, TestStoreAndLoad) {
 // This test checks that repeated calls to either function returns what they're
 // meant to.
 TEST_F(MemorySSATest, TestStoreDoubleQuery) {
-  F = Function::Create(
-      FunctionType::get(B.getVoidTy(), {}, false),
-      GlobalValue::ExternalLinkage, "F", &M);
+  F = Function::Create(FunctionType::get(B.getVoidTy(), {}, false),
+                       GlobalValue::ExternalLinkage, "F", &M);
   B.SetInsertPoint(BasicBlock::Create(C, "", F));
   Type *Int8 = Type::getInt8Ty(C);
   Value *Alloca = B.CreateAlloca(Int8, ConstantInt::get(Int8, 1), "A");
@@ -214,7 +295,8 @@ TEST_F(MemorySSATest, TestStoreDoubleQuery) {
 
   MemoryAccess *StoreAccess = MSSA.getMemoryAccess(SI);
   MemoryLocation StoreLoc = MemoryLocation::get(SI);
-  MemoryAccess *Clobber = Walker->getClobberingMemoryAccess(StoreAccess, StoreLoc);
+  MemoryAccess *Clobber =
+      Walker->getClobberingMemoryAccess(StoreAccess, StoreLoc);
   MemoryAccess *LiveOnEntry = Walker->getClobberingMemoryAccess(SI);
 
   EXPECT_EQ(Clobber, StoreAccess);

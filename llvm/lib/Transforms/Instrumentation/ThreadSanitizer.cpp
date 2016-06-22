@@ -276,6 +276,15 @@ static bool shouldInstrumentReadWriteFromAddress(Value *Addr) {
     if (GV->getName() == "__llvm_gcov_ctr")
       return false;
   }
+
+  // Do not instrument acesses from different address spaces; we cannot deal
+  // with them.
+  if (Addr) {
+    Type *PtrTy = cast<PointerType>(Addr->getType()->getScalarType());
+    if (PtrTy->getPointerAddressSpace() != 0)
+      return false;
+  }
+
   return true;
 }
 

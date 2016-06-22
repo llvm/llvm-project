@@ -1122,6 +1122,7 @@ let test_builder () =
 
     insist ((has_metadata i) = true);
     insist ((metadata i kind) = Some md);
+    insist ((get_mdnode_operands md) = [| m1; m2 |]);
 
     clear_metadata i kind;
 

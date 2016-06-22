@@ -12,6 +12,7 @@
 // denorm_min()
 
 #include <limits>
+#include <cfloat>
 #include <cassert>
 
 template <class T>
@@ -47,7 +48,17 @@ int main()
     test<__int128_t>(0);
     test<__uint128_t>(0);
 #endif
+#if defined(__FLT_DENORM_MIN__) // guarded because these macros are extensions.
     test<float>(__FLT_DENORM_MIN__);
     test<double>(__DBL_DENORM_MIN__);
     test<long double>(__LDBL_DENORM_MIN__);
+#endif
+#if defined(FLT_TRUE_MIN) // not currently provided on linux.
+    test<float>(FLT_TRUE_MIN);
+    test<double>(DBL_TRUE_MIN);
+    test<long double>(LDBL_TRUE_MIN);
+#endif
+#if !defined(__FLT_DENORM_MIN__) && !defined(FLT_TRUE_MIN)
+#error Test has no expected values for floating point types
+#endif
 }

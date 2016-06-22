@@ -113,10 +113,6 @@ private:
                            uint32_t RelocOffset, uint32_t Offset,
                            StringRef *RelocSym = nullptr);
 
-  void printRelocatedField(StringRef Label, const coff_section *Sec,
-                           StringRef SectionContents, const ulittle32_t *Field,
-                           StringRef *RelocSym = nullptr);
-
   void printBinaryBlockWithRelocs(StringRef Label, const SectionRef &Sec,
                                   StringRef SectionContents, StringRef Block);
 
@@ -262,18 +258,6 @@ void COFFDumper::printRelocatedField(StringRef Label, const coff_section *Sec,
     W.printSymbolOffset(Label, Symbol, Offset);
   else
     W.printHex(Label, RelocOffset);
-}
-
-void COFFDumper::printRelocatedField(StringRef Label, const coff_section *Sec,
-                                     StringRef SectionContents,
-                                     const ulittle32_t *Field,
-                                     StringRef *RelocSym) {
-  StringRef SymStorage;
-  StringRef &Symbol = RelocSym ? *RelocSym : SymStorage;
-  if (!resolveSymbolName(Sec, SectionContents, Field, Symbol))
-    W.printSymbolOffset(Label, Symbol, *Field);
-  else
-    W.printHex(Label, *Field);
 }
 
 void COFFDumper::printBinaryBlockWithRelocs(StringRef Label,

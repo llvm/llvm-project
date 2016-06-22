@@ -14,6 +14,7 @@
 
 namespace llvm {
 namespace codeview {
+class TypeTableBuilder;
 
 class ListRecordBuilder {
 private:
@@ -28,13 +29,16 @@ protected:
 public:
   llvm::StringRef str() { return Builder.str(); }
 
-  void reset(TypeRecordKind K) {
-    Builder.reset(K);
+  void reset() {
+    Builder.reset(Kind);
     ContinuationOffsets.clear();
-    SubrecordCount = 0;
+    SubrecordStart = 0;
   }
 
-  unsigned getSubrecordCount() { return SubrecordCount; }
+  void writeListContinuation(const ListContinuationRecord &R);
+
+  /// Writes this list record as a possible sequence of records.
+  TypeIndex writeListRecord(TypeTableBuilder &Table);
 
 protected:
   void finishSubRecord();
@@ -42,9 +46,18 @@ protected:
   TypeRecordBuilder &getBuilder() { return Builder; }
 
 private:
+  size_t getLastContinuationStart() const {
+    return ContinuationOffsets.empty() ? 0 : ContinuationOffsets.back();
+  }
+  size_t getLastContinuationEnd() const { return Builder.size(); }
+  unsigned getLastContinuationSize() const {
+    return getLastContinuationEnd() - getLastContinuationStart();
+  }
+
+  TypeRecordKind Kind;
   TypeRecordBuilder Builder;
   SmallVector<size_t, 4> ContinuationOffsets;
-  unsigned SubrecordCount = 0;
+  size_t SubrecordStart = 0;
 };
 }
 }

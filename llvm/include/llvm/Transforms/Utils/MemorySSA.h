@@ -398,8 +398,6 @@ public:
   MemoryAccess *getIncomingValue(unsigned I) const { return getOperand(I); }
   void setIncomingValue(unsigned I, MemoryAccess *V) {
     assert(V && "PHI node got a null value!");
-    assert(getType() == V->getType() &&
-           "All operands to PHI node must be the same type as the PHI node!");
     setOperand(I, V);
   }
   static unsigned getOperandNumForIncomingValue(unsigned I) { return I; }
@@ -536,6 +534,40 @@ public:
     return It == PerBlockAccesses.end() ? nullptr : It->second.get();
   }
 
+  /// \brief Create an empty MemoryPhi in MemorySSA
+  MemoryPhi *createMemoryPhi(BasicBlock *BB);
+
+  enum InsertionPlace { Beginning, End };
+
+  /// \brief Create a MemoryAccess in MemorySSA at a specified point in a block,
+  /// with a specified clobbering definition.
+  ///
+  /// Returns the new MemoryAccess.
+  /// This should be called when a memory instruction is created that is being
+  /// used to replace an existing memory instruction. It will *not* create PHI
+  /// nodes, or verify the clobbering definition. The insertion place is used
+  /// solely to determine where in the memoryssa access lists the instruction
+  /// will be placed. The caller is expected to keep ordering the same as
+  /// instructions.
+  /// It will return the new MemoryAccess.
+  MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
+                                       const BasicBlock *BB,
+                                       InsertionPlace Point);
+  /// \brief Create a MemoryAccess in MemorySSA before or after an existing
+  /// MemoryAccess.
+  ///
+  /// Returns the new MemoryAccess.
+  /// This should be called when a memory instruction is created that is being
+  /// used to replace an existing memory instruction. It will *not* create PHI
+  /// nodes, or verify the clobbering definition.  The clobbering definition
+  /// must be non-null.
+  MemoryAccess *createMemoryAccessBefore(Instruction *I,
+                                         MemoryAccess *Definition,
+                                         MemoryAccess *InsertPt);
+  MemoryAccess *createMemoryAccessAfter(Instruction *I,
+                                        MemoryAccess *Definition,
+                                        MemoryAccess *InsertPt);
+
   /// \brief Remove a MemoryAccess from MemorySSA, including updating all
   /// definitions and uses.
   /// This should be called when a memory instruction that has a MemoryAccess
@@ -543,8 +575,6 @@ public:
   /// load is simply erased (not replaced), removeMemoryAccess should be called
   /// on the MemoryAccess for that store/load.
   void removeMemoryAccess(MemoryAccess *);
-
-  enum InsertionPlace { Beginning, End };
 
   /// \brief Given two memory accesses in the same basic block, determine
   /// whether MemoryAccess \p A dominates MemoryAccess \p B.
@@ -560,6 +590,7 @@ protected:
   friend class MemorySSAPrinterLegacyPass;
   void verifyDefUses(Function &F) const;
   void verifyDomination(Function &F) const;
+  void verifyOrdering(Function &F) const;
 
 private:
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
@@ -571,13 +602,14 @@ private:
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   bool dominatesUse(const MemoryAccess *, const MemoryAccess *) const;
   MemoryUseOrDef *createNewAccess(Instruction *);
+  MemoryUseOrDef *createDefinedAccess(Instruction *, MemoryAccess *);
   MemoryAccess *findDominatingDef(BasicBlock *, enum InsertionPlace);
   void removeFromLookups(MemoryAccess *);
 
   MemoryAccess *renameBlock(BasicBlock *, MemoryAccess *);
   void renamePass(DomTreeNode *, MemoryAccess *IncomingVal,
                   SmallPtrSet<BasicBlock *, 16> &Visited);
-  AccessList *getOrCreateAccessList(BasicBlock *);
+  AccessList *getOrCreateAccessList(const BasicBlock *);
   AliasAnalysis *AA;
   DominatorTree *DT;
   Function &F;

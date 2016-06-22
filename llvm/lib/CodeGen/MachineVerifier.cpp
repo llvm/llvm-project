@@ -219,7 +219,6 @@ namespace {
     void report_context(const VNInfo &VNI) const;
     void report_context(SlotIndex Pos) const;
     void report_context_liverange(const LiveRange &LR) const;
-    void report_context_regunit(unsigned RegUnit) const;
     void report_context_lanemask(LaneBitmask LaneMask) const;
     void report_context_vreg(unsigned VReg) const;
     void report_context_vreg_regunit(unsigned VRegOrRegUnit) const;
@@ -493,10 +492,6 @@ void MachineVerifier::report_context(const VNInfo &VNI) const {
 
 void MachineVerifier::report_context_liverange(const LiveRange &LR) const {
   errs() << "- liverange:   " << LR << '\n';
-}
-
-void MachineVerifier::report_context_regunit(unsigned RegUnit) const {
-  errs() << "- regunit:     " << PrintRegUnit(RegUnit, TRI) << '\n';
 }
 
 void MachineVerifier::report_context_vreg(unsigned VReg) const {

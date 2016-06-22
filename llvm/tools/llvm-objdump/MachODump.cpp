@@ -1403,9 +1403,12 @@ static void printCPUType(uint32_t cputype, uint32_t cpusubtype) {
 static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
                                        bool verbose) {
   outs() << "Fat headers\n";
-  if (verbose)
-    outs() << "fat_magic FAT_MAGIC\n";
-  else
+  if (verbose) {
+    if (UB->getMagic() == MachO::FAT_MAGIC)
+      outs() << "fat_magic FAT_MAGIC\n";
+    else // UB->getMagic() == MachO::FAT_MAGIC_64
+      outs() << "fat_magic FAT_MAGIC_64\n";
+  } else
     outs() << "fat_magic " << format("0x%" PRIx32, MachO::FAT_MAGIC) << "\n";
 
   uint32_t nfat_arch = UB->getNumberOfObjects();

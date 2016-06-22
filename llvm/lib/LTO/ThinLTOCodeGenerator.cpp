@@ -13,12 +13,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/ThinLTOCodeGenerator.h"
+#include "llvm/LTO/UpdateCompilerUsed.h"
 
 #ifdef HAVE_LLVM_REVISION
 #include "LLVMLTORevision.h"
 #endif
 
-#include "UpdateCompilerUsed.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ModuleSummaryAnalysis.h"

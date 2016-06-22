@@ -1057,6 +1057,32 @@ TEST_F(FileSystemTest, PathFromFDWin32) {
   ::close(FileDescriptor);
 }
 
+TEST_F(FileSystemTest, PathFromFDUnicode) {
+  // Create a temp file.
+  int FileDescriptor;
+  SmallString<64> TempPath;
+
+  // Test Unicode: "<temp directory>/(pi)r^2<temp rand chars>.aleth.0"
+  ASSERT_NO_ERROR(
+    fs::createTemporaryFile("\xCF\x80r\xC2\xB2",
+                            "\xE2\x84\xB5.0", FileDescriptor, TempPath));
+
+  // Make sure it exists.
+  ASSERT_TRUE(sys::fs::exists(Twine(TempPath)));
+
+  SmallVector<char, 8> ResultPath;
+  std::error_code ErrorCode =
+    fs::getPathFromOpenFD(FileDescriptor, ResultPath);
+
+  if (!ErrorCode) {
+    fs::UniqueID D1, D2;
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), D1));
+    ASSERT_NO_ERROR(fs::getUniqueID(Twine(ResultPath), D2));
+    ASSERT_EQ(D1, D2);
+  }
+  ::close(FileDescriptor);
+}
+
 TEST_F(FileSystemTest, OpenFileForRead) {
   // Create a temp file.
   int FileDescriptor;

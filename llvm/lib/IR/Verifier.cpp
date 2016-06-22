@@ -1956,8 +1956,15 @@ void Verifier::visitFunction(const Function &F) {
     Assert(MDs.empty(), "unmaterialized function cannot have metadata", &F,
            MDs.empty() ? nullptr : MDs.front().second);
   } else if (F.isDeclaration()) {
-    Assert(MDs.empty(), "function without a body cannot have metadata", &F,
-           MDs.empty() ? nullptr : MDs.front().second);
+    for (const auto &I : MDs) {
+      AssertDI(I.first != LLVMContext::MD_dbg,
+               "function declaration may not have a !dbg attachment", &F);
+      Assert(I.first != LLVMContext::MD_prof,
+             "function declaration may not have a !prof attachment", &F);
+
+      // Verify the metadata itself.
+      visitMDNode(*I.second);
+    }
     Assert(!F.hasPersonalityFn(),
            "Function declaration shouldn't have a personality routine", &F);
   } else {

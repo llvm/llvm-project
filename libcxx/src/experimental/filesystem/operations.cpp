@@ -594,7 +594,7 @@ void __last_write_time(const path& p, file_time_type new_time,
 void __permissions(const path& p, perms prms, std::error_code *ec)
 {
 
-    const bool resolve_symlinks = bool(perms::resolve_symlinks & prms);
+    const bool resolve_symlinks = !bool(perms::symlink_nofollow & prms);
     const bool add_perms = bool(perms::add_perms & prms);
     const bool remove_perms = bool(perms::remove_perms & prms);
 
@@ -605,6 +605,8 @@ void __permissions(const path& p, perms prms, std::error_code *ec)
     file_status st = detail::posix_lstat(p, &m_ec);
     if (m_ec) return set_or_throw(m_ec, ec, "permissions", p);
 
+    // AT_SYMLINK_NOFOLLOW can only be used on symlinks, using it on a regular
+    // file will cause fchmodat to report an error on some systems.
     const bool set_sym_perms = is_symlink(st) && !resolve_symlinks;
 
     if ((resolve_symlinks && is_symlink(st)) && (add_perms || remove_perms)) {
@@ -622,14 +624,16 @@ void __permissions(const path& p, perms prms, std::error_code *ec)
 # if defined(AT_SYMLINK_NOFOLLOW) && defined(AT_FDCWD)
     const int flags = set_sym_perms ? AT_SYMLINK_NOFOLLOW : 0;
     if (::fchmodat(AT_FDCWD, p.c_str(), real_perms, flags) == -1) {
+        return set_or_throw(ec, "permissions", p);
+    }
 # else
     if (set_sym_perms)
         return set_or_throw(make_error_code(errc::operation_not_supported),
                             ec, "permissions", p);
     if (::chmod(p.c_str(), real_perms) == -1) {
-# endif
         return set_or_throw(ec, "permissions", p);
     }
+# endif
     if (ec) ec->clear();
 }
 

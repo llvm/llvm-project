@@ -80,8 +80,6 @@ private:
   bool analyzeUses(unsigned DefR, const NodeList &UNodeList,
                    InstrEvalMap &InstrEvalResult, short &SizeInc);
   bool hasRepForm(MachineInstr *MI, unsigned TfrDefR);
-  MachineInstr *getReachedDefMI(NodeAddr<StmtNode *> SN, unsigned OffsetReg,
-                                bool &HasReachingDef);
   bool canRemoveAddasl(NodeAddr<StmtNode *> AddAslSN, MachineInstr *MI,
                        const NodeList &UNodeList);
   void getAllRealUses(NodeAddr<StmtNode *> SN, NodeList &UNodeList);
@@ -126,41 +124,6 @@ bool HexagonOptAddrMode::hasRepForm(MachineInstr *MI, unsigned TfrDefR) {
     return (HII->getAbsoluteForm(MI) >= 0);
 
   return false;
-}
-
-MachineInstr *HexagonOptAddrMode::getReachedDefMI(NodeAddr<StmtNode *> SN,
-                                                  unsigned OffsetReg,
-                                                  bool &HasReachingDef) {
-  MachineInstr *ReachedDefMI = NULL;
-  NodeId RD = 0;
-  for (NodeAddr<UseNode *> UN : SN.Addr->members_if(DFG->IsUse, *DFG)) {
-    RegisterRef UR = UN.Addr->getRegRef();
-    if (OffsetReg == UR.Reg) {
-      RD = UN.Addr->getReachingDef();
-      if (!RD)
-        continue;
-      HasReachingDef = true;
-    }
-  }
-  if (HasReachingDef) {
-    NodeAddr<DefNode *> RDN = DFG->addr<DefNode *>(RD);
-    DEBUG({
-      NodeAddr<StmtNode *> ReachingIA = RDN.Addr->getOwner(*DFG);
-      dbgs() << "\t\t\t[Def Node]: "
-             << Print<NodeAddr<InstrNode *>>(ReachingIA, *DFG) << "\n";
-    });
-    NodeId ReachedID = RDN.Addr->getReachedDef();
-    if (!ReachedID)
-      return ReachedDefMI;
-
-    NodeAddr<DefNode *> ReachedDN = DFG->addr<DefNode *>(ReachedID);
-    NodeAddr<StmtNode *> ReachedIA = ReachedDN.Addr->getOwner(*DFG);
-    DEBUG(dbgs() << "\t\t\t[Reached Def Node]: "
-                 << Print<NodeAddr<InstrNode *>>(ReachedIA, *DFG) << "\n");
-    ReachedDefMI = ReachedIA.Addr->getCode();
-    DEBUG(dbgs() << "\nReached Def MI === " << *ReachedDefMI << "\n");
-  }
-  return ReachedDefMI;
 }
 
 // Check if addasl instruction can be removed. This is possible only

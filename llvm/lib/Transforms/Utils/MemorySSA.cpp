@@ -226,7 +226,7 @@ MemorySSA::~MemorySSA() {
       MA.dropAllReferences();
 }
 
-MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(BasicBlock *BB) {
+MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
   auto Res = PerBlockAccesses.insert(std::make_pair(BB, nullptr));
 
   if (Res.second)
@@ -320,7 +320,7 @@ MemorySSAWalker *MemorySSA::getWalker() {
   for (auto &BB : IDFBlocks) {
     // Insert phi node
     AccessList *Accesses = getOrCreateAccessList(BB);
-    MemoryPhi *Phi = new MemoryPhi(F.getContext(), BB, NextID++);
+    MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
     ValueToMemoryAccess.insert(std::make_pair(BB, Phi));
     // Phi's always are placed at the front of the block.
     Accesses->push_front(Phi);
@@ -356,6 +356,68 @@ MemorySSAWalker *MemorySSA::getWalker() {
       markUnreachableAsLiveOnEntry(&BB);
 
   return Walker.get();
+}
+
+MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
+  assert(!getMemoryAccess(BB) && "MemoryPhi already exists for this BB");
+  AccessList *Accesses = getOrCreateAccessList(BB);
+  MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
+  ValueToMemoryAccess.insert(std::make_pair(BB, Phi));
+  // Phi's always are placed at the front of the block.
+  Accesses->push_front(Phi);
+  return Phi;
+}
+
+MemoryUseOrDef *MemorySSA::createDefinedAccess(Instruction *I,
+                                               MemoryAccess *Definition) {
+  assert(!isa<PHINode>(I) && "Cannot create a defined access for a PHI");
+  MemoryUseOrDef *NewAccess = createNewAccess(I);
+  assert(
+      NewAccess != nullptr &&
+      "Tried to create a memory access for a non-memory touching instruction");
+  NewAccess->setDefiningAccess(Definition);
+  return NewAccess;
+}
+
+MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
+                                                MemoryAccess *Definition,
+                                                const BasicBlock *BB,
+                                                InsertionPlace Point) {
+  MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
+  auto *Accesses = getOrCreateAccessList(BB);
+  if (Point == Beginning) {
+    // It goes after any phi nodes
+    auto AI = std::find_if(
+        Accesses->begin(), Accesses->end(),
+        [](const MemoryAccess &MA) { return !isa<MemoryPhi>(MA); });
+
+    Accesses->insert(AI, NewAccess);
+  } else {
+    Accesses->push_back(NewAccess);
+  }
+
+  return NewAccess;
+}
+MemoryAccess *MemorySSA::createMemoryAccessBefore(Instruction *I,
+                                                  MemoryAccess *Definition,
+                                                  MemoryAccess *InsertPt) {
+  assert(I->getParent() == InsertPt->getBlock() &&
+         "New and old access must be in the same block");
+  MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
+  auto *Accesses = getOrCreateAccessList(InsertPt->getBlock());
+  Accesses->insert(AccessList::iterator(InsertPt), NewAccess);
+  return NewAccess;
+}
+
+MemoryAccess *MemorySSA::createMemoryAccessAfter(Instruction *I,
+                                                 MemoryAccess *Definition,
+                                                 MemoryAccess *InsertPt) {
+  assert(I->getParent() == InsertPt->getBlock() &&
+         "New and old access must be in the same block");
+  MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
+  auto *Accesses = getOrCreateAccessList(InsertPt->getBlock());
+  Accesses->insertAfter(AccessList::iterator(InsertPt), NewAccess);
+  return NewAccess;
 }
 
 /// \brief Helper function to create new memory accesses
@@ -518,6 +580,45 @@ void MemorySSA::dump() const {
 void MemorySSA::verifyMemorySSA() const {
   verifyDefUses(F);
   verifyDomination(F);
+  verifyOrdering(F);
+}
+
+/// \brief Verify that the order and existence of MemoryAccesses matches the
+/// order and existence of memory affecting instructions.
+void MemorySSA::verifyOrdering(Function &F) const {
+  // Walk all the blocks, comparing what the lookups think and what the access
+  // lists think, as well as the order in the blocks vs the order in the access
+  // lists.
+  SmallVector<MemoryAccess *, 32> ActualAccesses;
+  for (BasicBlock &B : F) {
+    const AccessList *AL = getBlockAccesses(&B);
+    MemoryAccess *Phi = getMemoryAccess(&B);
+    if (Phi)
+      ActualAccesses.push_back(Phi);
+    for (Instruction &I : B) {
+      MemoryAccess *MA = getMemoryAccess(&I);
+      assert((!MA || AL) && "We have memory affecting instructions "
+                            "in this block but they are not in the "
+                            "access list");
+      if (MA)
+        ActualAccesses.push_back(MA);
+    }
+    // Either we hit the assert, really have no accesses, or we have both
+    // accesses and an access list
+    if (!AL)
+      continue;
+    assert(AL->size() == ActualAccesses.size() &&
+           "We don't have the same number of accesses in the block as on the "
+           "access list");
+    auto ALI = AL->begin();
+    auto AAI = ActualAccesses.begin();
+    while (ALI != AL->end() && AAI != ActualAccesses.end()) {
+      assert(&*ALI == *AAI && "Not the same accesses in the same order");
+      ++ALI;
+      ++AAI;
+    }
+    ActualAccesses.clear();
+  }
 }
 
 /// \brief Verify the domination properties of MemorySSA by checking that each
@@ -595,9 +696,13 @@ void MemorySSA::verifyUseInDefs(MemoryAccess *Def, MemoryAccess *Use) const {
 void MemorySSA::verifyDefUses(Function &F) const {
   for (BasicBlock &B : F) {
     // Phi nodes are attached to basic blocks
-    if (MemoryPhi *Phi = getMemoryAccess(&B))
+    if (MemoryPhi *Phi = getMemoryAccess(&B)) {
+      assert(Phi->getNumOperands() ==
+                 std::distance(pred_begin(&B), pred_end(&B)) &&
+             "Incomplete MemoryPhi Node");
       for (unsigned I = 0, E = Phi->getNumIncomingValues(); I != E; ++I)
         verifyUseInDefs(Phi->getIncomingValue(I), Phi);
+    }
 
     for (Instruction &I : B) {
       if (MemoryAccess *MA = getMemoryAccess(&I)) {

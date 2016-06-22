@@ -641,8 +641,7 @@ static Error loadBinaryFormat(MemoryBufferRef ObjectBuffer,
 }
 
 Expected<std::unique_ptr<BinaryCoverageReader>>
-BinaryCoverageReader::create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
-                             StringRef Arch) {
+BinaryCoverageReader::create(MemoryBuffer &ObjectBuffer, StringRef Arch) {
   std::unique_ptr<BinaryCoverageReader> Reader(new BinaryCoverageReader());
 
   StringRef Coverage;
@@ -650,12 +649,12 @@ BinaryCoverageReader::create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
   support::endianness Endian;
   Error E;
   consumeError(std::move(E));
-  if (ObjectBuffer->getBuffer().startswith(TestingFormatMagic))
+  if (ObjectBuffer.getBuffer().startswith(TestingFormatMagic))
     // This is a special format used for testing.
-    E = loadTestingFormat(ObjectBuffer->getBuffer(), Reader->ProfileNames,
+    E = loadTestingFormat(ObjectBuffer.getBuffer(), Reader->ProfileNames,
                           Coverage, BytesInAddress, Endian);
   else
-    E = loadBinaryFormat(ObjectBuffer->getMemBufferRef(), Reader->ProfileNames,
+    E = loadBinaryFormat(ObjectBuffer.getMemBufferRef(), Reader->ProfileNames,
                          Coverage, BytesInAddress, Endian, Arch);
   if (E)
     return std::move(E);

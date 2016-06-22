@@ -2260,20 +2260,20 @@ TEST_F(FunctionAttachmentTest, getAll) {
 TEST_F(FunctionAttachmentTest, Verifier) {
   Function *F = getFunction("foo");
   F->setMetadata("attach", getTuple());
-
-  // Confirm this has no body.
-  ASSERT_TRUE(F->empty());
-
-  // Functions without a body cannot have metadata attachments (they also can't
-  // be verified directly, so check that the module fails to verify).
-  EXPECT_TRUE(verifyModule(*F->getParent()));
-
-  // Nor can materializable functions.
   F->setIsMaterializable(true);
-  EXPECT_TRUE(verifyModule(*F->getParent()));
 
-  // Functions with a body can.
+  // Confirm this is materializable.
+  ASSERT_TRUE(F->isMaterializable());
+
+  // Materializable functions cannot have metadata attachments.
+  EXPECT_TRUE(verifyFunction(*F));
+
+  // Function declarations can.
   F->setIsMaterializable(false);
+  EXPECT_FALSE(verifyModule(*F->getParent()));
+  EXPECT_FALSE(verifyFunction(*F));
+
+  // So can definitions.
   (void)new UnreachableInst(Context, BasicBlock::Create(Context, "bb", F));
   EXPECT_FALSE(verifyModule(*F->getParent()));
   EXPECT_FALSE(verifyFunction(*F));
