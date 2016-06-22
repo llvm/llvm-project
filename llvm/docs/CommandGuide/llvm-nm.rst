@@ -126,6 +126,11 @@ OPTIONS
 
  Print only symbols referenced but not defined in this file.
 
+.. option:: --radix=RADIX, -t
+
+ Specify the radix of the symbol address(es). Values accepted d(decimal),
+ x(hexadecomal) and o(octal).
+
 BUGS
 ----
 

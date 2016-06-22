@@ -138,6 +138,15 @@ cl::opt<bool> ArchiveMap("print-armap", cl::desc("Print the archive map"));
 cl::alias ArchiveMaps("M", cl::desc("Alias for --print-armap"),
                       cl::aliasopt(ArchiveMap), cl::Grouping);
 
+enum Radix { d, o, x };
+cl::opt<Radix>
+    AddressRadix("radix", cl::desc("Radix (o/d/x) for printing symbol Values"),
+                 cl::values(clEnumVal(d, "decimal"), clEnumVal(o, "octal"),
+                            clEnumVal(x, "hexadecimal"), clEnumValEnd),
+                 cl::init(x));
+cl::alias RadixAlias("t", cl::desc("Alias for --radix"),
+                     cl::aliasopt(AddressRadix));
+
 cl::opt<bool> JustSymbolName("just-symbol-name",
                              cl::desc("Print just the symbol's name"));
 cl::alias JustSymbolNames("j", cl::desc("Alias for --just-symbol-name"),
@@ -576,11 +585,29 @@ static void sortAndPrintSymbolList(SymbolicFile &Obj, bool printName,
   if (isSymbolList64Bit(Obj)) {
     printBlanks = "                ";
     printDashes = "----------------";
-    printFormat = OutputFormat == posix ? "%" PRIx64 : "%016" PRIx64;
+    switch (AddressRadix) {
+    case Radix::o:
+      printFormat = OutputFormat == posix ? "%" PRIo64 : "%016" PRIo64;
+      break;
+    case Radix::x:
+      printFormat = OutputFormat == posix ? "%" PRIx64 : "%016" PRIx64;
+      break;
+    default:
+      printFormat = OutputFormat == posix ? "%" PRId64 : "%016" PRId64;
+    }
   } else {
     printBlanks = "        ";
     printDashes = "--------";
-    printFormat = OutputFormat == posix ? "%" PRIx64 : "%08" PRIx64;
+    switch (AddressRadix) {
+    case Radix::o:
+      printFormat = OutputFormat == posix ? "%" PRIo64 : "%08" PRIo64;
+      break;
+    case Radix::x:
+      printFormat = OutputFormat == posix ? "%" PRIx64 : "%08" PRIx64;
+      break;
+    default:
+      printFormat = OutputFormat == posix ? "%" PRId64 : "%08" PRId64;
+    }
   }
 
   for (SymbolListT::iterator I = SymbolList.begin(), E = SymbolList.end();
@@ -972,7 +999,7 @@ static void dumpSymbolNamesFromObject(SymbolicFile &Obj, bool printName,
     std::error_code EC = Sym.printName(OS);
     if (EC && MachO)
       OS << "bad string index";
-    else 
+    else
       error(EC);
     OS << '\0';
     S.Sym = Sym;
