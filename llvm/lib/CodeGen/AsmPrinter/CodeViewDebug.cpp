@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CodeViewDebug.h"
+#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/FieldListRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/Line.h"
@@ -1174,12 +1175,6 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   // Lower the containing class type.
   TypeIndex ClassType = getTypeIndex(ClassTy);
 
-  // While processing the class type it is possible we already created this
-  // member function.  If so, we check here and return the existing one.
-  auto I = TypeIndices.find({Ty, ClassTy});
-  if (I != TypeIndices.end())
-    return I->second;
-
   SmallVector<TypeIndex, 8> ReturnAndArgTypeIndices;
   for (DITypeRef ArgTypeRef : Ty->getTypeArray())
     ReturnAndArgTypeIndices.push_back(getTypeIndex(ArgTypeRef));
@@ -1313,12 +1308,7 @@ struct llvm::ClassInfo {
   // [MemberInfo]
   typedef std::vector<MemberInfo> MemberList;
 
-  struct MethodInfo {
-    const DISubprogram *Method;
-    bool Introduced;
-  };
-  // [MethodInfo]
-  typedef std::vector<MethodInfo> MethodsList;
+  typedef TinyPtrVector<const DISubprogram *> MethodsList;
   // MethodName -> MethodsList
   typedef MapVector<MDString *, MethodsList> MethodsMap;
 
@@ -1337,7 +1327,6 @@ void CodeViewDebug::clear() {
   GlobalUDTs.clear();
   TypeIndices.clear();
   CompleteTypeIndices.clear();
-  ClassInfoMap.clear();
 }
 
 void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
@@ -1346,29 +1335,20 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
     Info.Members.push_back({DDTy, 0});
     return;
   }
-  // Member with no name, must be nested structure/union, collects its memebers
+  // An unnamed member must represent a nested struct or union. Add all the
+  // indirect fields to the current record.
   assert((DDTy->getOffsetInBits() % 8) == 0 && "Unnamed bitfield member!");
-  unsigned offset = DDTy->getOffsetInBits() / 8;
+  unsigned Offset = DDTy->getOffsetInBits() / 8;
   const DIType *Ty = DDTy->getBaseType().resolve();
   const DICompositeType *DCTy = cast<DICompositeType>(Ty);
-  ClassInfo &NestedInfo = collectClassInfo(DCTy);
-  ClassInfo::MemberList &Members = NestedInfo.Members;
-  for (unsigned i = 0, e = Members.size(); i != e; ++i)
+  ClassInfo NestedInfo = collectClassInfo(DCTy);
+  for (const ClassInfo::MemberInfo &IndirectField : NestedInfo.Members)
     Info.Members.push_back(
-        {Members[i].MemberTypeNode, Members[i].BaseOffset + offset});
+        {IndirectField.MemberTypeNode, IndirectField.BaseOffset + Offset});
 }
 
-ClassInfo &CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
-  auto Insertion = ClassInfoMap.insert({Ty, std::unique_ptr<ClassInfo>()});
-  ClassInfo *Info = nullptr;
-  {
-    std::unique_ptr<ClassInfo> &InfoEntry = Insertion.first->second;
-    if (!Insertion.second)
-      return *InfoEntry;
-    InfoEntry.reset(new ClassInfo());
-    Info = InfoEntry.get();
-  }
-
+ClassInfo CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
+  ClassInfo Info;
   // Add elements to structure type.
   DINodeArray Elements = Ty->getElements();
   for (auto *Element : Elements) {
@@ -1377,13 +1357,10 @@ ClassInfo &CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
     if (!Element)
       continue;
     if (auto *SP = dyn_cast<DISubprogram>(Element)) {
-      // Non-virtual methods does not need the introduced marker.
-      // Set it to false.
-      bool Introduced = false;
-      Info->Methods[SP->getRawName()].push_back({SP, Introduced});
+      Info.Methods[SP->getRawName()].push_back(SP);
     } else if (auto *DDTy = dyn_cast<DIDerivedType>(Element)) {
       if (DDTy->getTag() == dwarf::DW_TAG_member)
-        collectMemberInfo(*Info, DDTy);
+        collectMemberInfo(Info, DDTy);
       else if (DDTy->getTag() == dwarf::DW_TAG_inheritance) {
         // FIXME: collect class info from inheritance.
       } else if (DDTy->getTag() == dwarf::DW_TAG_friend) {
@@ -1396,8 +1373,7 @@ ClassInfo &CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
     }
     // Skip other unrecognized kinds of elements.
   }
-
-  return *Info;
+  return Info;
 }
 
 TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
@@ -1411,6 +1387,8 @@ TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
   TypeIndex FwdDeclTI = TypeTable.writeClass(ClassRecord(
       Kind, 0, CO, HfaKind::None, WindowsRTClassKind::None, TypeIndex(),
       TypeIndex(), TypeIndex(), 0, FullName, Ty->getIdentifier()));
+  if (!Ty->isForwardDecl())
+    DeferredCompleteTypes.push_back(Ty);
   return FwdDeclTI;
 }
 
@@ -1428,10 +1406,17 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
       getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
 
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
-  return TypeTable.writeClass(ClassRecord(
+
+  TypeIndex ClassTI = TypeTable.writeClass(ClassRecord(
       Kind, FieldCount, CO, HfaKind::None, WindowsRTClassKind::None, FieldTI,
       TypeIndex(), VShapeTI, SizeInBytes, FullName, Ty->getIdentifier()));
-  // FIXME: Make an LF_UDT_SRC_LINE record.
+
+  TypeTable.writeUdtSourceLine(UdtSourceLineRecord(
+      ClassTI, TypeTable.writeStringId(StringIdRecord(
+                   TypeIndex(0x0), getFullFilepath(Ty->getFile()))),
+      Ty->getLine()));
+
+  return ClassTI;
 }
 
 TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
@@ -1442,6 +1427,8 @@ TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
   TypeIndex FwdDeclTI =
       TypeTable.writeUnion(UnionRecord(0, CO, HfaKind::None, TypeIndex(), 0,
                                        FullName, Ty->getIdentifier()));
+  if (!Ty->isForwardDecl())
+    DeferredCompleteTypes.push_back(Ty);
   return FwdDeclTI;
 }
 
@@ -1453,10 +1440,17 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
   std::string FullName =
       getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
-  return TypeTable.writeUnion(UnionRecord(FieldCount, CO, HfaKind::None,
-                                          FieldTI, SizeInBytes, FullName,
-                                          Ty->getIdentifier()));
-  // FIXME: Make an LF_UDT_SRC_LINE record.
+
+  TypeIndex UnionTI = TypeTable.writeUnion(
+      UnionRecord(FieldCount, CO, HfaKind::None, FieldTI, SizeInBytes, FullName,
+                  Ty->getIdentifier()));
+
+  TypeTable.writeUdtSourceLine(UdtSourceLineRecord(
+      UnionTI, TypeTable.writeStringId(StringIdRecord(
+                   TypeIndex(0x0), getFullFilepath(Ty->getFile()))),
+      Ty->getLine()));
+
+  return UnionTI;
 }
 
 std::tuple<TypeIndex, TypeIndex, unsigned>
@@ -1466,7 +1460,7 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   // contributes to this count, even though the overload group is a single field
   // list record.
   unsigned MemberCount = 0;
-  ClassInfo &Info = collectClassInfo(Ty);
+  ClassInfo Info = collectClassInfo(Ty);
   FieldListRecordBuilder Fields;
 
   // Create members.
@@ -1498,11 +1492,9 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
     StringRef Name = MethodItr.first->getString();
 
     std::vector<OneMethodRecord> Methods;
-    for (ClassInfo::MethodInfo &MethodInfo : MethodItr.second) {
-      const DISubprogram *SP = MethodInfo.Method;
-      bool Introduced = MethodInfo.Introduced;
-
-      TypeIndex MethodType = getTypeIndex(SP->getType(), Ty);
+    for (const DISubprogram *SP : MethodItr.second) {
+      TypeIndex MethodType = getMemberFunctionType(SP, Ty);
+      bool Introduced = SP->getFlags() & DINode::FlagIntroducedVirtual;
 
       unsigned VFTableOffset = -1;
       if (Introduced)
@@ -1529,6 +1521,18 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   return std::make_tuple(FieldTI, TypeIndex(), MemberCount);
 }
 
+struct CodeViewDebug::TypeLoweringScope {
+  TypeLoweringScope(CodeViewDebug &CVD) : CVD(CVD) { ++CVD.TypeEmissionLevel; }
+  ~TypeLoweringScope() {
+    // Don't decrement TypeEmissionLevel until after emitting deferred types, so
+    // inner TypeLoweringScopes don't attempt to emit deferred types.
+    if (CVD.TypeEmissionLevel == 1)
+      CVD.emitDeferredCompleteTypes();
+    --CVD.TypeEmissionLevel;
+  }
+  CodeViewDebug &CVD;
+};
+
 TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
   const DIType *Ty = TypeRef.resolve();
   const DIType *ClassTy = ClassTyRef.resolve();
@@ -1544,9 +1548,14 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
   if (I != TypeIndices.end())
     return I->second;
 
-  TypeIndex TI = lowerType(Ty, ClassTy);
+  TypeIndex TI;
+  {
+    TypeLoweringScope S(*this);
+    TI = lowerType(Ty, ClassTy);
+    recordTypeIndexForDINode(Ty, TI, ClassTy);
+  }
 
-  return recordTypeIndexForDINode(Ty, TI, ClassTy);
+  return TI;
 }
 
 TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
@@ -1575,6 +1584,8 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
   if (!InsertResult.second)
     return InsertResult.first->second;
 
+  TypeLoweringScope S(*this);
+
   // Make sure the forward declaration is emitted first. It's unclear if this
   // is necessary, but MSVC does it, and we should follow suit until we can show
   // otherwise.
@@ -1601,6 +1612,19 @@ TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {
 
   InsertResult.first->second = TI;
   return TI;
+}
+
+/// Emit all the deferred complete record types. Try to do this in FIFO order,
+/// and do this until fixpoint, as each complete record type typically references
+/// many other record types.
+void CodeViewDebug::emitDeferredCompleteTypes() {
+  SmallVector<const DICompositeType *, 4> TypesToEmit;
+  while (!DeferredCompleteTypes.empty()) {
+    std::swap(DeferredCompleteTypes, TypesToEmit);
+    for (const DICompositeType *RecordTy : TypesToEmit)
+      getCompleteTypeIndex(RecordTy);
+    TypesToEmit.clear();
+  }
 }
 
 void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {

@@ -140,20 +140,13 @@ BlockFrequency BlockFrequencyInfo::getBlockFreq(const BasicBlock *BB) const {
 
 Optional<uint64_t>
 BlockFrequencyInfo::getBlockProfileCount(const BasicBlock *BB) const {
-  auto EntryCount = getFunction()->getEntryCount();
-  if (!EntryCount)
+  if (!BFI)
     return None;
-  // Use 128 bit APInt to do the arithmetic to avoid overflow.
-  APInt BlockCount(128, EntryCount.getValue());
-  APInt BlockFreq(128, getBlockFreq(BB).getFrequency());
-  APInt EntryFreq(128, getEntryFreq());
-  BlockCount *= BlockFreq;
-  BlockCount = BlockCount.udiv(EntryFreq);
-  return BlockCount.getLimitedValue();
+
+  return BFI->getBlockProfileCount(*getFunction(), BB);
 }
 
-void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB,
-                                      uint64_t Freq) {
+void BlockFrequencyInfo::setBlockFreq(const BasicBlock *BB, uint64_t Freq) {
   assert(BFI && "Expected analysis to be available");
   BFI->setBlockFreq(BB, Freq);
 }

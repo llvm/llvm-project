@@ -662,7 +662,7 @@ void X86DAGToDAGISel::emitSpecialCodeForMain() {
     CLI.setChain(CurDAG->getRoot())
         .setCallee(CallingConv::C, Type::getVoidTy(*CurDAG->getContext()),
                    CurDAG->getExternalSymbol("__main", TLI->getPointerTy(DL)),
-                   std::move(Args), 0);
+                   std::move(Args));
     const TargetLowering &TLI = CurDAG->getTargetLoweringInfo();
     std::pair<SDValue, SDValue> Result = TLI.LowerCallTo(CLI);
     CurDAG->setRoot(Result.second);

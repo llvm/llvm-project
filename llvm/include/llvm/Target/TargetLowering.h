@@ -2533,13 +2533,11 @@ public:
     }
 
     CallLoweringInfo &setCallee(CallingConv::ID CC, Type *ResultType,
-                                SDValue Target, ArgListTy &&ArgsList,
-                                unsigned FixedArgs = -1) {
+                                SDValue Target, ArgListTy &&ArgsList) {
       RetTy = ResultType;
       Callee = Target;
       CallConv = CC;
-      NumFixedArgs =
-        (FixedArgs == static_cast<unsigned>(-1) ? Args.size() : FixedArgs);
+      NumFixedArgs = Args.size();
       Args = std::move(ArgsList);
       return *this;
     }

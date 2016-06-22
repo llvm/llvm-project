@@ -118,7 +118,18 @@
 ; CHECK:     SizeOf: 1
 ; CHECK:     Name: A
 ; CHECK:   }
-; CHECK:   Class (0x1008) {
+; CHECK:   StringId (0x1008) {
+; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
+; CHECK:     Id: 0x0
+; CHECK:     StringData: \t.cpp
+; CHECK:   }
+; CHECK:   UdtSourceLine (0x1009) {
+; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK:     UDT: A (0x1007)
+; CHECK:     SourceFile: \t.cpp (0x1008)
+; CHECK:     LineNumber: 1
+; CHECK:   }
+; CHECK:   Class (0x100A) {
 ; CHECK:     TypeLeafKind: LF_CLASS (0x1504)
 ; CHECK:     MemberCount: 0
 ; CHECK:     Properties [ (0x80)
@@ -130,9 +141,9 @@
 ; CHECK:     SizeOf: 0
 ; CHECK:     Name: B
 ; CHECK:   }
-; CHECK:   Pointer (0x1009) {
+; CHECK:   Pointer (0x100B) {
 ; CHECK:     TypeLeafKind: LF_POINTER (0x1002)
-; CHECK:     PointeeType: B (0x1008)
+; CHECK:     PointeeType: B (0x100A)
 ; CHECK:     PointerAttributes: 0x800A
 ; CHECK:     PtrType: Near32 (0xA)
 ; CHECK:     PtrMode: Pointer (0x0)
@@ -140,12 +151,13 @@
 ; CHECK:     IsConst: 0
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
+; CHECK:     SizeOf: 4
 ; CHECK:   }
-; CHECK:   MemberFunction (0x100A) {
+; CHECK:   MemberFunction (0x100C) {
 ; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: void (0x3)
-; CHECK:     ClassType: B (0x1008)
-; CHECK:     ThisType: B* (0x1009)
+; CHECK:     ClassType: B (0x100A)
+; CHECK:     ThisType: B* (0x100B)
 ; CHECK:     CallingConvention: ThisCall (0xB)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
@@ -153,78 +165,84 @@
 ; CHECK:     ArgListType: () (0x1000)
 ; CHECK:     ThisAdjustment: 0
 ; CHECK:   }
-; CHECK:   ArgList (0x100B) {
+; CHECK:   ArgList (0x100D) {
 ; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
 ; CHECK:     NumArgs: 1
 ; CHECK:     Arguments [
 ; CHECK:       ArgType: float (0x40)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   MemberFunction (0x100C) {
+; CHECK:   MemberFunction (0x100E) {
 ; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: void (0x3)
-; CHECK:     ClassType: B (0x1008)
-; CHECK:     ThisType: B* (0x1009)
+; CHECK:     ClassType: B (0x100A)
+; CHECK:     ThisType: B* (0x100B)
 ; CHECK:     CallingConvention: ThisCall (0xB)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 1
-; CHECK:     ArgListType: (float) (0x100B)
+; CHECK:     ArgListType: (float) (0x100D)
 ; CHECK:     ThisAdjustment: 0
 ; CHECK:   }
-; CHECK:   ArgList (0x100D) {
+; CHECK:   ArgList (0x100F) {
 ; CHECK:     TypeLeafKind: LF_ARGLIST (0x1201)
 ; CHECK:     NumArgs: 1
 ; CHECK:     Arguments [
 ; CHECK:       ArgType: int (0x74)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   MemberFunction (0x100E) {
+; CHECK:   MemberFunction (0x1010) {
 ; CHECK:     TypeLeafKind: LF_MFUNCTION (0x1009)
 ; CHECK:     ReturnType: void (0x3)
-; CHECK:     ClassType: B (0x1008)
-; CHECK:     ThisType: B* (0x1009)
+; CHECK:     ClassType: B (0x100A)
+; CHECK:     ThisType: B* (0x100B)
 ; CHECK:     CallingConvention: ThisCall (0xB)
 ; CHECK:     FunctionOptions [ (0x0)
 ; CHECK:     ]
 ; CHECK:     NumParameters: 1
-; CHECK:     ArgListType: (int) (0x100D)
+; CHECK:     ArgListType: (int) (0x100F)
 ; CHECK:     ThisAdjustment: 0
 ; CHECK:   }
-; CHECK:   MethodOverloadList (0x100F) {
+; CHECK:   MethodOverloadList (0x1011) {
 ; CHECK:     TypeLeafKind: LF_METHODLIST (0x1206)
 ; CHECK:     Method [
 ; CHECK:       AccessSpecifier: Public (0x3)
-; CHECK:       Type: void B::(float) (0x100C)
+; CHECK:       Type: void B::(float) (0x100E)
 ; CHECK:     ]
 ; CHECK:     Method [
 ; CHECK:       AccessSpecifier: Public (0x3)
-; CHECK:       Type: void B::(int) (0x100E)
+; CHECK:       Type: void B::(int) (0x1010)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   FieldList (0x1010) {
+; CHECK:   FieldList (0x1012) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     OneMethod {
 ; CHECK:       AccessSpecifier: Private (0x1)
-; CHECK:       Type: void B::() (0x100A)
+; CHECK:       Type: void B::() (0x100C)
 ; CHECK:       Name: B::f_default_private
 ; CHECK:     }
 ; CHECK:     OverloadedMethod {
 ; CHECK:       MethodCount: 0x2
-; CHECK:       MethodListIndex: 0x100F
+; CHECK:       MethodListIndex: 0x1011
 ; CHECK:       Name: B::f
 ; CHECK:     }
 ; CHECK:   }
-; CHECK:   Class (0x1011) {
+; CHECK:   Class (0x1013) {
 ; CHECK:     TypeLeafKind: LF_CLASS (0x1504)
 ; CHECK:     MemberCount: 3
 ; CHECK:     Properties [ (0x0)
 ; CHECK:     ]
-; CHECK:     FieldList: <field list> (0x1010)
+; CHECK:     FieldList: <field list> (0x1012)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 1
 ; CHECK:     Name: B
+; CHECK:   }
+; CHECK:   UdtSourceLine (0x1014) {
+; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK:     UDT: B (0x1013)
+; CHECK:     SourceFile: \t.cpp (0x1008)
+; CHECK:     LineNumber: 11
 ; CHECK:   }
 ; CHECK: ]
 

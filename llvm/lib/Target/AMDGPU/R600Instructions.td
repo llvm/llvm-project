@@ -1539,8 +1539,9 @@ let isTerminator = 1, usesCustomInserter = 1, isBranch = 1, isBarrier = 1 in {
 //===---------------------------------------------------------------------===//
 let isTerminator = 1, isReturn = 1, hasCtrlDep = 1,
     usesCustomInserter = 1 in {
-  def RETURN          : ILFormat<(outs), (ins variable_ops),
-      "RETURN", [(IL_retflag)]>;
+  def RETURN : ILFormat<(outs), (ins variable_ops),
+    "RETURN", [(AMDGPUendpgm)]
+  >;
 }
 
 //===----------------------------------------------------------------------===//

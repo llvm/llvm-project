@@ -1106,7 +1106,7 @@ DAGTypeLegalizer::ExpandChainLibCall(RTLIB::Libcall LC,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(SDLoc(Node)).setChain(InChain)
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args), 0)
+    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
     .setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);

@@ -97,7 +97,18 @@
 ; CHECK:     SizeOf: 8
 ; CHECK:     Name: A
 ; CHECK:   }
-; CHECK:   FieldList (0x1008) {
+; CHECK:   StringId (0x1008) {
+; CHECK:     TypeLeafKind: LF_STRING_ID (0x1605)
+; CHECK:     Id: 0x0
+; CHECK:     StringData: D:\src\llvm\build\t.cpp
+; CHECK:   }
+; CHECK:   UdtSourceLine (0x1009) {
+; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK:     UDT: A (0x1007)
+; CHECK:     SourceFile: D:\src\llvm\build\t.cpp (0x1008)
+; CHECK:     LineNumber: 2
+; CHECK:   }
+; CHECK:   FieldList (0x100A) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     DataMember {
 ; CHECK:       AccessSpecifier: Public (0x3)
@@ -106,16 +117,22 @@
 ; CHECK:       Name: a
 ; CHECK:     }
 ; CHECK:   }
-; CHECK:   Struct (0x1009) {
+; CHECK:   Struct (0x100B) {
 ; CHECK:     TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:     MemberCount: 1
 ; CHECK:     Properties [ (0x0)
 ; CHECK:     ]
-; CHECK:     FieldList: <field list> (0x1008)
+; CHECK:     FieldList: <field list> (0x100A)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 8
 ; CHECK:     Name: B
+; CHECK:   }
+; CHECK:   UdtSourceLine (0x100C) {
+; CHECK:     TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; CHECK:     UDT: B (0x100B)
+; CHECK:     SourceFile: D:\src\llvm\build\t.cpp (0x1008)
+; CHECK:     LineNumber: 3
 ; CHECK:   }
 ; CHECK: ]
 

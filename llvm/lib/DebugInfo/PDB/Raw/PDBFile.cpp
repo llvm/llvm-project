@@ -171,8 +171,10 @@ Error PDBFile::parseStreamData() {
   if (auto EC = Reader.readArray(StreamSizes, NumStreams))
     return EC;
   for (uint32_t I = 0; I < NumStreams; ++I) {
+    uint32_t StreamSize = getStreamByteSize(I);
+    // FIXME: What does StreamSize ~0U mean?
     uint64_t NumExpectedStreamBlocks =
-        bytesToBlocks(getStreamByteSize(I), SB->BlockSize);
+        StreamSize == UINT32_MAX ? 0 : bytesToBlocks(StreamSize, SB->BlockSize);
 
     // For convenience, we store the block array contiguously.  This is because
     // if someone calls setStreamMap(), it is more convenient to be able to call

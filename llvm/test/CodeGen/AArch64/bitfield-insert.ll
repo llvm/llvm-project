@@ -453,7 +453,7 @@ define i32 @test7(i32 %a) {
 ; to the original ORR are not okay.  In this case we would be replacing the
 ; 'and' with a 'movk', which would decrease ILP while using the same number of
 ; instructions.
-; CHECK: @test8
+; CHECK-LABEL: @test8
 ; CHECK: mov [[REG2:x[0-9]+]], #157599529959424
 ; CHECK: and [[REG1:x[0-9]+]], x0, #0xff000000000000ff
 ; CHECK: movk [[REG2]], #31059, lsl #16
@@ -462,4 +462,21 @@ define i64 @test8(i64 %a) {
   %1 = and i64 %a, -72057594037927681 ; 0xff000000000000ff
   %2 = or i64 %1, 157601565442048     ; 0x00008f5679530000
   ret i64 %2
+}
+
+; This test exposed an issue with an overly aggressive assert.  The bit of code
+; that is expected to catch this case is unable to deal with the trunc, which
+; results in a failing check due to a mismatch between the BFI opcode and
+; the expected value type of the OR.
+; CHECK-LABEL: @test9
+; CHECK: lsr x0, x0, #12
+; CHECK: lsr [[REG:w[0-9]+]], w1, #23
+; CHECK: bfi w0, [[REG]], #23, #9
+define i32 @test9(i64 %b, i32 %e) {
+  %c = lshr i64 %b, 12
+  %d = trunc i64 %c to i32
+  %f = and i32 %d, 8388607
+  %g = and i32 %e, -8388608
+  %h = or i32 %g, %f
+  ret i32 %h
 }

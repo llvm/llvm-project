@@ -112,7 +112,7 @@ private:
 
 } // namespace anonymous
 
-void llvm::UpdateCompilerUsed(Module &TheModule, const TargetMachine &TM,
+void llvm::updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
                               const StringSet<> &AsmUndefinedRefs) {
   SmallPtrSet<const GlobalValue *, 8> UsedValues;
   PreserveLibCallsAndAsmUsed(AsmUndefinedRefs, TM, UsedValues)

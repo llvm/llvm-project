@@ -19463,7 +19463,7 @@ SDValue X86TargetLowering::LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) cons
   CLI.setDebugLoc(dl).setChain(InChain)
     .setCallee(getLibcallCallingConv(LC),
                static_cast<EVT>(MVT::v2i64).getTypeForEVT(*DAG.getContext()),
-               Callee, std::move(Args), 0)
+               Callee, std::move(Args))
     .setInRegister().setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
@@ -21172,7 +21172,7 @@ static SDValue LowerFSINCOS(SDValue Op, const X86Subtarget &Subtarget,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(DAG.getEntryNode())
-    .setCallee(CallingConv::C, RetTy, Callee, std::move(Args), 0);
+    .setCallee(CallingConv::C, RetTy, Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 

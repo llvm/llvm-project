@@ -144,20 +144,6 @@ public:
   /// (not an MDNode, or MDNode::isResolved() returns true).
   Metadata *mapMetadata(const Metadata *MD);
 
-  // Map LocalAsMetadata, which never gets memoized.
-  //
-  // If the referenced local is not mapped, the principled return is nullptr.
-  // However, optimization passes sometimes move metadata operands *before* the
-  // SSA values they reference.  To prevent crashes in \a RemapInstruction(),
-  // return "!{}" when RF_IgnoreMissingLocals is not set.
-  //
-  // \note Adding a mapping for LocalAsMetadata is unsupported.  Add a mapping
-  // to the value map for the SSA value in question instead.
-  //
-  // FIXME: Once we have a verifier check for forward references to SSA values
-  // through metadata operands, always return nullptr on unmapped locals.
-  Metadata *mapLocalAsMetadata(const LocalAsMetadata &LAM);
-
   void scheduleMapGlobalInitializer(GlobalVariable &GV, Constant &Init,
                                     unsigned MCID);
   void scheduleMapAppendingVariable(GlobalVariable &GV, Constant *InitPrefix,
@@ -815,22 +801,6 @@ Optional<Metadata *> Mapper::mapSimpleMetadata(const Metadata *MD) {
   assert(isa<MDNode>(MD) && "Expected a metadata node");
 
   return None;
-}
-
-Metadata *Mapper::mapLocalAsMetadata(const LocalAsMetadata &LAM) {
-  // Lookup the mapping for the value itself, and return the appropriate
-  // metadata.
-  if (Value *V = mapValue(LAM.getValue())) {
-    if (V == LAM.getValue())
-      return const_cast<LocalAsMetadata *>(&LAM);
-    return ValueAsMetadata::get(V);
-  }
-
-  // FIXME: always return nullptr once Verifier::verifyDominatesUse() ensures
-  // metadata operands only reference defined SSA values.
-  return (Flags & RF_IgnoreMissingLocals)
-             ? nullptr
-             : MDTuple::get(LAM.getContext(), None);
 }
 
 Metadata *Mapper::mapMetadata(const Metadata *MD) {

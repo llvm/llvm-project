@@ -14,6 +14,7 @@
 #ifndef LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 #define LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <climits>
@@ -49,6 +50,8 @@ public:
   /// the other block frequencies. We do this to avoid using of floating points.
   ///
   BlockFrequency getBlockFreq(const MachineBasicBlock *MBB) const;
+
+  Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
 
   const MachineFunction *getFunction() const;
   void view() const;

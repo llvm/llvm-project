@@ -583,27 +583,29 @@ static object::Archive::Kind getDefaultForHost() {
 
 static object::Archive::Kind
 getKindFromMember(const NewArchiveIterator &Member) {
+  auto getKindFromMemberInner =
+      [](MemoryBufferRef Buffer) -> object::Archive::Kind {
+    Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
+        object::ObjectFile::createObjectFile(Buffer);
+
+    if (OptionalObject)
+      return isa<object::MachOObjectFile>(**OptionalObject)
+                 ? object::Archive::K_BSD
+                 : object::Archive::K_GNU;
+
+    // squelch the error in case we had a non-object file
+    consumeError(OptionalObject.takeError());
+    return getDefaultForHost();
+  };
+
   if (Member.isNewMember()) {
     object::Archive::Kind Kind = getDefaultForHost();
 
     sys::fs::file_status Status;
     if (auto OptionalFD = Member.getFD(Status)) {
-      auto OptionalMB = MemoryBuffer::getOpenFile(*OptionalFD, Member.getName(),
-                                                  Status.getSize(), false);
-      if (OptionalMB) {
-        MemoryBufferRef MemoryBuffer = (*OptionalMB)->getMemBufferRef();
-
-        Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-            object::ObjectFile::createObjectFile(MemoryBuffer);
-
-        if (OptionalObject)
-          Kind = isa<object::MachOObjectFile>(**OptionalObject)
-              ? object::Archive::K_BSD
-              : object::Archive::K_GNU;
-
-        // squelch the error in case we had a non-object file
-        consumeError(OptionalObject.takeError());
-      }
+      if (auto MB = MemoryBuffer::getOpenFile(*OptionalFD, Member.getName(),
+                                              Status.getSize(), false))
+        Kind = getKindFromMemberInner((*MB)->getMemBufferRef());
 
       if (close(*OptionalFD) != 0)
         failIfError(std::error_code(errno, std::generic_category()),
@@ -619,17 +621,7 @@ getKindFromMember(const NewArchiveIterator &Member) {
     auto OptionalMB = OldMember.getMemoryBufferRef();
     failIfError(OptionalMB.getError());
 
-    Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-        object::ObjectFile::createObjectFile(*OptionalMB);
-
-    if (OptionalObject)
-      return isa<object::MachOObjectFile>(*OptionalObject->get())
-                 ? object::Archive::K_BSD
-                 : object::Archive::K_GNU;
-
-    // squelch the error in case we had a non-object file
-    consumeError(OptionalObject.takeError());
-    return getDefaultForHost();
+    return getKindFromMemberInner(*OptionalMB);
   }
 }
 

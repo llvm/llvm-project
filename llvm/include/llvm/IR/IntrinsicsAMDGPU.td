@@ -373,6 +373,11 @@ def int_amdgcn_mbcnt_hi :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_hi">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
+// llvm.amdgcn.ds.swizzle src offset
+def int_amdgcn_ds_swizzle :
+  GCCBuiltin<"__builtin_amdgcn_ds_swizzle">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//

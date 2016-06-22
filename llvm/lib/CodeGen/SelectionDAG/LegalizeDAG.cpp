@@ -179,8 +179,6 @@ public:
            "Replacing one node with another that produces a different number "
            "of values!");
     DAG.ReplaceAllUsesWith(Old, New);
-    for (unsigned i = 0, e = Old->getNumValues(); i != e; ++i)
-      DAG.TransferDbgValues(SDValue(Old, i), SDValue(New, i));
     if (UpdatedNodes)
       UpdatedNodes->insert(New);
     ReplacedNode(Old);
@@ -190,7 +188,6 @@ public:
           dbgs() << "     with:      "; New->dump(&DAG));
 
     DAG.ReplaceAllUsesWith(Old, New);
-    DAG.TransferDbgValues(Old, New);
     if (UpdatedNodes)
       UpdatedNodes->insert(New.getNode());
     ReplacedNode(Old.getNode());
@@ -203,7 +200,6 @@ public:
       DEBUG(dbgs() << (i == 0 ? "     with:      "
                               : "      and:      ");
             New[i]->dump(&DAG));
-      DAG.TransferDbgValues(SDValue(Old, i), New[i]);
       if (UpdatedNodes)
         UpdatedNodes->insert(New[i].getNode());
     }
@@ -1978,7 +1974,7 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, SDNode *Node,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(SDLoc(Node)).setChain(InChain)
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args), 0)
+    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
     .setTailCall(isTailCall).setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
@@ -2013,7 +2009,7 @@ SDValue SelectionDAGLegalize::ExpandLibCall(RTLIB::Libcall LC, EVT RetVT,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(DAG.getEntryNode())
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args), 0)
+    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
     .setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue,SDValue> CallInfo = TLI.LowerCallTo(CLI);
@@ -2047,7 +2043,7 @@ SelectionDAGLegalize::ExpandChainLibCall(RTLIB::Libcall LC,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(SDLoc(Node)).setChain(InChain)
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args), 0)
+    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
     .setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
@@ -2142,7 +2138,7 @@ SelectionDAGLegalize::ExpandDivRemLibCall(SDNode *Node,
   SDLoc dl(Node);
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(InChain)
-    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args), 0)
+    .setCallee(TLI.getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
     .setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
@@ -2254,7 +2250,7 @@ SelectionDAGLegalize::ExpandSinCosLibCall(SDNode *Node,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(InChain)
     .setCallee(TLI.getLibcallCallingConv(LC),
-               Type::getVoidTy(*DAG.getContext()), Callee, std::move(Args), 0);
+               Type::getVoidTy(*DAG.getContext()), Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallInfo = TLI.LowerCallTo(CLI);
 
@@ -3759,7 +3755,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
         .setCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
                    DAG.getExternalSymbol("__sync_synchronize",
                                          TLI.getPointerTy(DAG.getDataLayout())),
-                   std::move(Args), 0);
+                   std::move(Args));
 
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
@@ -3799,7 +3795,7 @@ void SelectionDAGLegalize::ConvertNodeToLibcall(SDNode *Node) {
         .setCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
                    DAG.getExternalSymbol("abort",
                                          TLI.getPointerTy(DAG.getDataLayout())),
-                   std::move(Args), 0);
+                   std::move(Args));
     std::pair<SDValue, SDValue> CallResult = TLI.LowerCallTo(CLI);
 
     Results.push_back(CallResult.second);

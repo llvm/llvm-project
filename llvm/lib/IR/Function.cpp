@@ -922,6 +922,144 @@ Function *Intrinsic::getDeclaration(Module *M, ID id, ArrayRef<Type*> Tys) {
 #include "llvm/IR/Intrinsics.gen"
 #undef GET_LLVM_INTRINSIC_FOR_MS_BUILTIN
 
+bool Intrinsic::matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
+                                   SmallVectorImpl<Type*> &ArgTys) {
+  using namespace Intrinsic;
+
+  // If we ran out of descriptors, there are too many arguments.
+  if (Infos.empty()) return true;
+  IITDescriptor D = Infos.front();
+  Infos = Infos.slice(1);
+
+  switch (D.Kind) {
+    case IITDescriptor::Void: return !Ty->isVoidTy();
+    case IITDescriptor::VarArg: return true;
+    case IITDescriptor::MMX:  return !Ty->isX86_MMXTy();
+    case IITDescriptor::Token: return !Ty->isTokenTy();
+    case IITDescriptor::Metadata: return !Ty->isMetadataTy();
+    case IITDescriptor::Half: return !Ty->isHalfTy();
+    case IITDescriptor::Float: return !Ty->isFloatTy();
+    case IITDescriptor::Double: return !Ty->isDoubleTy();
+    case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
+    case IITDescriptor::Vector: {
+      VectorType *VT = dyn_cast<VectorType>(Ty);
+      return !VT || VT->getNumElements() != D.Vector_Width ||
+             matchIntrinsicType(VT->getElementType(), Infos, ArgTys);
+    }
+    case IITDescriptor::Pointer: {
+      PointerType *PT = dyn_cast<PointerType>(Ty);
+      return !PT || PT->getAddressSpace() != D.Pointer_AddressSpace ||
+             matchIntrinsicType(PT->getElementType(), Infos, ArgTys);
+    }
+
+    case IITDescriptor::Struct: {
+      StructType *ST = dyn_cast<StructType>(Ty);
+      if (!ST || ST->getNumElements() != D.Struct_NumElements)
+        return true;
+
+      for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
+        if (matchIntrinsicType(ST->getElementType(i), Infos, ArgTys))
+          return true;
+      return false;
+    }
+
+    case IITDescriptor::Argument:
+      // Two cases here - If this is the second occurrence of an argument, verify
+      // that the later instance matches the previous instance.
+      if (D.getArgumentNumber() < ArgTys.size())
+        return Ty != ArgTys[D.getArgumentNumber()];
+
+          // Otherwise, if this is the first instance of an argument, record it and
+          // verify the "Any" kind.
+          assert(D.getArgumentNumber() == ArgTys.size() && "Table consistency error");
+          ArgTys.push_back(Ty);
+
+          switch (D.getArgumentKind()) {
+            case IITDescriptor::AK_Any:        return false; // Success
+            case IITDescriptor::AK_AnyInteger: return !Ty->isIntOrIntVectorTy();
+            case IITDescriptor::AK_AnyFloat:   return !Ty->isFPOrFPVectorTy();
+            case IITDescriptor::AK_AnyVector:  return !isa<VectorType>(Ty);
+            case IITDescriptor::AK_AnyPointer: return !isa<PointerType>(Ty);
+          }
+          llvm_unreachable("all argument kinds not covered");
+
+    case IITDescriptor::ExtendArgument: {
+      // This may only be used when referring to a previous vector argument.
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return true;
+
+      Type *NewTy = ArgTys[D.getArgumentNumber()];
+      if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
+        NewTy = VectorType::getExtendedElementVectorType(VTy);
+      else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
+        NewTy = IntegerType::get(ITy->getContext(), 2 * ITy->getBitWidth());
+      else
+        return true;
+
+      return Ty != NewTy;
+    }
+    case IITDescriptor::TruncArgument: {
+      // This may only be used when referring to a previous vector argument.
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return true;
+
+      Type *NewTy = ArgTys[D.getArgumentNumber()];
+      if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
+        NewTy = VectorType::getTruncatedElementVectorType(VTy);
+      else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
+        NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
+      else
+        return true;
+
+      return Ty != NewTy;
+    }
+    case IITDescriptor::HalfVecArgument:
+      // This may only be used when referring to a previous vector argument.
+      return D.getArgumentNumber() >= ArgTys.size() ||
+             !isa<VectorType>(ArgTys[D.getArgumentNumber()]) ||
+             VectorType::getHalfElementsVectorType(
+                     cast<VectorType>(ArgTys[D.getArgumentNumber()])) != Ty;
+    case IITDescriptor::SameVecWidthArgument: {
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return true;
+      VectorType * ReferenceType =
+              dyn_cast<VectorType>(ArgTys[D.getArgumentNumber()]);
+      VectorType *ThisArgType = dyn_cast<VectorType>(Ty);
+      if (!ThisArgType || !ReferenceType ||
+          (ReferenceType->getVectorNumElements() !=
+           ThisArgType->getVectorNumElements()))
+        return true;
+      return matchIntrinsicType(ThisArgType->getVectorElementType(),
+                                Infos, ArgTys);
+    }
+    case IITDescriptor::PtrToArgument: {
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return true;
+      Type * ReferenceType = ArgTys[D.getArgumentNumber()];
+      PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
+      return (!ThisArgType || ThisArgType->getElementType() != ReferenceType);
+    }
+    case IITDescriptor::VecOfPtrsToElt: {
+      if (D.getArgumentNumber() >= ArgTys.size())
+        return true;
+      VectorType * ReferenceType =
+              dyn_cast<VectorType> (ArgTys[D.getArgumentNumber()]);
+      VectorType *ThisArgVecTy = dyn_cast<VectorType>(Ty);
+      if (!ThisArgVecTy || !ReferenceType ||
+          (ReferenceType->getVectorNumElements() !=
+           ThisArgVecTy->getVectorNumElements()))
+        return true;
+      PointerType *ThisArgEltTy =
+              dyn_cast<PointerType>(ThisArgVecTy->getVectorElementType());
+      if (!ThisArgEltTy)
+        return true;
+      return ThisArgEltTy->getElementType() !=
+             ReferenceType->getVectorElementType();
+    }
+  }
+  llvm_unreachable("unhandled");
+}
+
 /// hasAddressTaken - returns true if there are any uses of this function
 /// other than direct calls or invokes to it.
 bool Function::hasAddressTaken(const User* *PutOffender) const {

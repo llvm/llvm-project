@@ -1008,7 +1008,8 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
   if (Flag.getNode())
     RetOps.push_back(Flag);
 
-  return DAG.getNode(AMDGPUISD::RET_FLAG, DL, MVT::Other, RetOps);
+  unsigned Opc = Info->returnsVoid() ? AMDGPUISD::ENDPGM : AMDGPUISD::RETURN;
+  return DAG.getNode(Opc, DL, MVT::Other, RetOps);
 }
 
 unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
@@ -1469,8 +1470,8 @@ SDValue SITargetLowering::lowerTRAP(SDValue Op,
 
   // FIXME: This should really be selected to s_trap, but that requires
   // setting up the trap handler for it o do anything.
-  return DAG.getNode(AMDGPUISD::RET_FLAG, SDLoc(Op), MVT::Other, Op.
-                     getOperand(0));
+  return DAG.getNode(AMDGPUISD::ENDPGM, SDLoc(Op), MVT::Other,
+                     Op.getOperand(0));
 }
 
 SDValue SITargetLowering::copyToM0(SelectionDAG &DAG, SDValue Chain,

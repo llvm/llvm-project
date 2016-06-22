@@ -419,7 +419,7 @@ void GCNPassConfig::addPreRegAlloc() {
     insertPass(&MachineSchedulerID, &SILoadStoreOptimizerID);
     insertPass(&MachineSchedulerID, &RegisterCoalescerID);
   }
-  addPass(createSIShrinkInstructionsPass(), false);
+  addPass(createSIShrinkInstructionsPass());
   addPass(createSIWholeQuadModePass());
 }
 
@@ -448,8 +448,8 @@ void GCNPassConfig::addPreEmitPass() {
 
   addPass(createSIInsertWaitsPass());
   addPass(createSIShrinkInstructionsPass());
-  addPass(createSILowerControlFlowPass(), false);
-  addPass(createSIDebuggerInsertNopsPass(), false);
+  addPass(createSILowerControlFlowPass());
+  addPass(createSIDebuggerInsertNopsPass());
 }
 
 TargetPassConfig *GCNTargetMachine::createPassConfig(PassManagerBase &PM) {

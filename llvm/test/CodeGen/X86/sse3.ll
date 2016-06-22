@@ -140,7 +140,7 @@ define void @t9(<4 x float>* %r, <2 x i32>* %A) nounwind {
 ; X64-LABEL: t9:
 ; X64:       ## BB#0:
 ; X64-NEXT:    movapd (%rdi), %xmm0
-; X64-NEXT:    movhpd (%rsi), %xmm0
+; X64-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
 ; X64-NEXT:    movapd %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%tmp = load <4 x float>, <4 x float>* %r

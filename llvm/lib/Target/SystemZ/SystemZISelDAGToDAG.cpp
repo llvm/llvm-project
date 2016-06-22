@@ -113,7 +113,8 @@ static uint64_t allOnes(unsigned int Count) {
 //   (and (rotl Input, Rotate), Mask)
 //
 // otherwise.  The output value has BitSize bits, although Input may be
-// narrower (in which case the upper bits are don't care).
+// narrower (in which case the upper bits are don't care), or wider (in which
+// case the result will be truncated as part of the operation).
 struct RxSBGOperands {
   RxSBGOperands(unsigned Op, SDValue N)
     : Opcode(Op), BitSize(N.getValueType().getSizeInBits()),
@@ -745,6 +746,16 @@ bool SystemZDAGToDAGISel::expandRxSBG(RxSBGOperands &RxSBG) const {
   SDValue N = RxSBG.Input;
   unsigned Opcode = N.getOpcode();
   switch (Opcode) {
+  case ISD::TRUNCATE: {
+    if (RxSBG.Opcode == SystemZ::RNSBG)
+      return false;
+    uint64_t BitSize = N.getValueType().getSizeInBits();
+    uint64_t Mask = allOnes(BitSize);
+    if (!refineRxSBGMask(RxSBG, Mask))
+      return false;
+    RxSBG.Input = N.getOperand(0);
+    return true;
+  }
   case ISD::AND: {
     if (RxSBG.Opcode == SystemZ::RNSBG)
       return false;
@@ -916,7 +927,11 @@ bool SystemZDAGToDAGISel::tryRISBGZero(SDNode *N) {
   RxSBGOperands RISBG(SystemZ::RISBG, SDValue(N, 0));
   unsigned Count = 0;
   while (expandRxSBG(RISBG))
-    if (RISBG.Input.getOpcode() != ISD::ANY_EXTEND)
+    // The widening or narrowing is expected to be free.
+    // Counting widening or narrowing as a saved operation will result in
+    // preferring an R*SBG over a simple shift/logical instruction.
+    if (RISBG.Input.getOpcode() != ISD::ANY_EXTEND &&
+        RISBG.Input.getOpcode() != ISD::TRUNCATE)
       Count += 1;
   if (Count == 0)
     return false;
@@ -1004,7 +1019,11 @@ bool SystemZDAGToDAGISel::tryRxSBG(SDNode *N, unsigned Opcode) {
   unsigned Count[] = { 0, 0 };
   for (unsigned I = 0; I < 2; ++I)
     while (expandRxSBG(RxSBG[I]))
-      if (RxSBG[I].Input.getOpcode() != ISD::ANY_EXTEND)
+      // The widening or narrowing is expected to be free.
+      // Counting widening or narrowing as a saved operation will result in
+      // preferring an R*SBG over a simple shift/logical instruction.
+      if (RxSBG[I].Input.getOpcode() != ISD::ANY_EXTEND &&
+          RxSBG[I].Input.getOpcode() != ISD::TRUNCATE)
         Count[I] += 1;
 
   // Do nothing if neither operand is suitable.

@@ -87,7 +87,6 @@ public:
   }
 
 private:
-  MachineLocation getDebugValueLocation(const MachineInstr *MI) const;
   void printOperand(const MachineInstr *MI, unsigned OpNum, raw_ostream &O);
   bool printAsmMRegister(const MachineOperand &MO, char Mode, raw_ostream &O);
   bool printAsmRegInClass(const MachineOperand &MO,
@@ -131,19 +130,6 @@ void AArch64AsmPrinter::EmitEndOfAsmFile(Module &M) {
     OutStreamer->EmitAssemblerFlag(MCAF_SubsectionsViaSymbols);
     SM.serializeToStackMapSection();
   }
-}
-
-MachineLocation
-AArch64AsmPrinter::getDebugValueLocation(const MachineInstr *MI) const {
-  MachineLocation Location;
-  assert(MI->getNumOperands() == 4 && "Invalid no. of machine operands!");
-  // Frame address.  Currently handles register +- offset only.
-  if (MI->getOperand(0).isReg() && MI->getOperand(1).isImm())
-    Location.set(MI->getOperand(0).getReg(), MI->getOperand(1).getImm());
-  else {
-    DEBUG(dbgs() << "DBG_VALUE instruction ignored! " << *MI << "\n");
-  }
-  return Location;
 }
 
 void AArch64AsmPrinter::EmitLOHs() {

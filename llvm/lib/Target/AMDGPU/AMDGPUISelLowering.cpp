@@ -652,7 +652,7 @@ AMDGPUTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
                                   const SmallVectorImpl<ISD::OutputArg> &Outs,
                                   const SmallVectorImpl<SDValue> &OutVals,
                                   const SDLoc &DL, SelectionDAG &DAG) const {
-  return DAG.getNode(AMDGPUISD::RET_FLAG, DL, MVT::Other, Chain);
+  return DAG.getNode(AMDGPUISD::ENDPGM, DL, MVT::Other, Chain);
 }
 
 //===---------------------------------------------------------------------===//
@@ -2722,10 +2722,11 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   // AMDIL DAG nodes
   NODE_NAME_CASE(CALL);
   NODE_NAME_CASE(UMUL);
-  NODE_NAME_CASE(RET_FLAG);
   NODE_NAME_CASE(BRANCH_COND);
 
   // AMDGPU DAG nodes
+  NODE_NAME_CASE(ENDPGM)
+  NODE_NAME_CASE(RETURN)
   NODE_NAME_CASE(DWORDADDR)
   NODE_NAME_CASE(FRACT)
   NODE_NAME_CASE(CLAMP)

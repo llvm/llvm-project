@@ -2703,8 +2703,7 @@ ARMTargetLowering::LowerToTLSGeneralDynamicModel(GlobalAddressSDNode *GA,
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(Chain)
     .setCallee(CallingConv::C, Type::getInt32Ty(*DAG.getContext()),
-               DAG.getExternalSymbol("__tls_get_addr", PtrVT), std::move(Args),
-               0);
+               DAG.getExternalSymbol("__tls_get_addr", PtrVT), std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
   return CallResult.first;
@@ -6837,7 +6836,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(DAG.getEntryNode())
-      .setCallee(CC, RetTy, Callee, std::move(Args), 0)
+      .setCallee(CC, RetTy, Callee, std::move(Args))
       .setDiscardResult(ShouldUseSRet);
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
 
@@ -6890,7 +6889,7 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   CLI.setDebugLoc(dl)
     .setChain(Chain)
     .setCallee(CallingConv::ARM_AAPCS_VFP, VT.getTypeForEVT(*DAG.getContext()),
-               ES, std::move(Args), 0);
+               ES, std::move(Args));
 
   return LowerCallTo(CLI).first;
 }
@@ -11938,7 +11937,7 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(InChain)
-    .setCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args), 0)
+    .setCallee(getLibcallCallingConv(LC), RetTy, Callee, std::move(Args))
     .setInRegister().setSExtResult(isSigned).setZExtResult(!isSigned);
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
@@ -11976,7 +11975,7 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   // Lower call
   CallLoweringInfo CLI(DAG);
   CLI.setChain(InChain)
-     .setCallee(CallingConv::ARM_AAPCS, RetTy, Callee, std::move(Args), 0)
+     .setCallee(CallingConv::ARM_AAPCS, RetTy, Callee, std::move(Args))
      .setSExtResult(isSigned).setZExtResult(!isSigned).setDebugLoc(SDLoc(N));
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
 

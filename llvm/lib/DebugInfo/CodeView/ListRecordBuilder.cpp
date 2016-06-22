@@ -33,9 +33,10 @@ void ListRecordBuilder::writeListContinuation(const ListContinuationRecord &R) {
 }
 
 void ListRecordBuilder::finishSubRecord() {
-  // The builder starts at offset 2 in the actual CodeView buffer, so add an
-  // additional offset of 2 before computing the alignment.
-  uint32_t Remainder = (Builder.size() + 2) % 4;
+  // The type table inserts a 16 bit size field before each list, so factor that
+  // into our alignment padding.
+  uint32_t Remainder =
+      (Builder.size() + 2 * (ContinuationOffsets.size() + 1)) % 4;
   if (Remainder != 0) {
     for (int32_t PaddingBytesLeft = 4 - Remainder; PaddingBytesLeft > 0;
          --PaddingBytesLeft) {
@@ -48,7 +49,8 @@ void ListRecordBuilder::finishSubRecord() {
   // back up and insert a continuation record, sliding the current subrecord
   // down.
   if (getLastContinuationSize() > 65535 - 8) {
-    SmallString<128> SubrecordCopy(Builder.str().slice(SubrecordStart, Builder.size()));
+    SmallString<128> SubrecordCopy(
+        Builder.str().slice(SubrecordStart, Builder.size()));
     Builder.truncate(SubrecordStart);
 
     // Write a placeholder continuation record.

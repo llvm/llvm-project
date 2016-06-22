@@ -107,7 +107,8 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
 
   initializeSubtargetDependencies(TT, GPU, FS);
 
-  const unsigned MaxStackAlign = 64 * 16; // Maximum stack alignment (long16)
+  // Scratch is allocated in 256 dword per wave blocks.
+  const unsigned StackAlign = 4 * 256 / getWavefrontSize();
 
   if (getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS) {
     InstrInfo.reset(new R600InstrInfo(*this));
@@ -116,14 +117,14 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     // FIXME: Should have R600 specific FrameLowering
     FrameLowering.reset(new AMDGPUFrameLowering(
                           TargetFrameLowering::StackGrowsUp,
-                          MaxStackAlign,
+                          StackAlign,
                           0));
   } else {
     InstrInfo.reset(new SIInstrInfo(*this));
     TLInfo.reset(new SITargetLowering(TM, *this));
     FrameLowering.reset(new SIFrameLowering(
                           TargetFrameLowering::StackGrowsUp,
-                          MaxStackAlign,
+                          StackAlign,
                           0));
 #ifndef LLVM_BUILD_GLOBAL_ISEL
     GISelAccessor *GISel = new GISelAccessor();

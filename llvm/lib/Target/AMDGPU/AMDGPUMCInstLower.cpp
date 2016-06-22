@@ -17,7 +17,6 @@
 #include "AMDGPUAsmPrinter.h"
 #include "AMDGPUTargetMachine.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
-#include "R600InstrInfo.h"
 #include "SIInstrInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -107,6 +106,29 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       ++I;
     }
   } else {
+    // We don't want SI_MASK_BRANCH/SI_RETURN encoded. They are placeholder
+    // terminator instructions and should only be printed as comments.
+    if (MI->getOpcode() == AMDGPU::SI_MASK_BRANCH) {
+      if (isVerbose()) {
+        SmallVector<char, 16> BBStr;
+        raw_svector_ostream Str(BBStr);
+
+        const MachineBasicBlock *MBB = MI->getOperand(1).getMBB();
+        const MCSymbolRefExpr *Expr
+          = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
+        Expr->print(Str, MAI);
+        OutStreamer->emitRawComment(" mask branch " + BBStr);
+      }
+
+      return;
+    }
+
+    if (MI->getOpcode() == AMDGPU::SI_RETURN) {
+      if (isVerbose())
+        OutStreamer->emitRawComment(" return");
+      return;
+    }
+
     MCInst TmpInst;
     MCInstLowering.lower(MI, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);

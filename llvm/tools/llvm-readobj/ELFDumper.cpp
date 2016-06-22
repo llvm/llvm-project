@@ -530,21 +530,19 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
                                           const ELFO *Obj,
                                           const typename ELFO::Elf_Shdr *Sec,
                                           ScopedPrinter &W) {
-  DictScope SD(W, "Version definition");
+  typedef typename ELFO::Elf_Verdef VerDef;
+  typedef typename ELFO::Elf_Verdaux VerdAux;
+
+  DictScope SD(W, "SHT_GNU_verdef");
   if (!Sec)
     return;
-  StringRef Name = unwrapOrError(Obj->getSectionName(Sec));
-  W.printNumber("Section Name", Name, Sec->sh_name);
-  W.printHex("Address", Sec->sh_addr);
-  W.printHex("Offset", Sec->sh_offset);
-  W.printNumber("Link", Sec->sh_link);
 
-  unsigned verdef_entries = 0;
   // The number of entries in the section SHT_GNU_verdef
   // is determined by DT_VERDEFNUM tag.
+  unsigned VerDefsNum = 0;
   for (const typename ELFO::Elf_Dyn &Dyn : Dumper->dynamic_table()) {
     if (Dyn.d_tag == DT_VERDEFNUM)
-      verdef_entries = Dyn.d_un.d_val;
+      VerDefsNum = Dyn.d_un.d_val;
   }
   const uint8_t *SecStartAddress =
       (const uint8_t *)Obj->base() + Sec->sh_offset;
@@ -553,22 +551,32 @@ static void printVersionDefinitionSection(ELFDumper<ELFT> *Dumper,
   const typename ELFO::Elf_Shdr *StrTab =
       unwrapOrError(Obj->getSection(Sec->sh_link));
 
-  ListScope Entries(W, "Entries");
-  for (unsigned i = 0; i < verdef_entries; ++i) {
-    if (P + sizeof(typename ELFO::Elf_Verdef) > SecEndAddress)
+  while (VerDefsNum--) {
+    if (P + sizeof(VerDef) > SecEndAddress)
       report_fatal_error("invalid offset in the section");
-    auto *VD = reinterpret_cast<const typename ELFO::Elf_Verdef *>(P);
-    DictScope Entry(W, "Entry");
-    W.printHex("Offset", (uintptr_t)P - (uintptr_t)SecStartAddress);
-    W.printNumber("Rev", VD->vd_version);
-    // FIXME: print something more readable.
-    W.printNumber("Flags", VD->vd_flags);
+
+    auto *VD = reinterpret_cast<const VerDef *>(P);
+    DictScope Def(W, "Definition");
+    W.printNumber("Version", VD->vd_version);
+    W.printEnum("Flags", VD->vd_flags, makeArrayRef(SymVersionFlags));
     W.printNumber("Index", VD->vd_ndx);
-    W.printNumber("Cnt", VD->vd_cnt);
     W.printNumber("Hash", VD->vd_hash);
     W.printString("Name",
                   StringRef((const char *)(Obj->base() + StrTab->sh_offset +
                                            VD->getAux()->vda_name)));
+    if (!VD->vd_cnt)
+      report_fatal_error("at least one definition string must exist");
+    if (VD->vd_cnt > 2)
+      report_fatal_error("more than one predecessor is not expected");
+
+    if (VD->vd_cnt == 2) {
+      const uint8_t *PAux = P + VD->vd_aux + VD->getAux()->vda_next;
+      const VerdAux *Aux = reinterpret_cast<const VerdAux *>(PAux);
+      W.printString("Predecessor",
+                    StringRef((const char *)(Obj->base() + StrTab->sh_offset +
+                                             Aux->vda_name)));
+    }
+
     P += VD->vd_next;
   }
 }

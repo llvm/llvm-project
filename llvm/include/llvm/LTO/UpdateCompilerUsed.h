@@ -17,8 +17,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/GlobalValue.h"
 
-#include <functional>
-
 namespace llvm {
 class Module;
 class TargetMachine;
@@ -27,8 +25,8 @@ class TargetMachine;
 /// \p AsmUndefinedRefs, as well as the user-supplied functions definitions that
 /// are also libcalls, and create or update the magic "llvm.compiler_used"
 /// global in \p TheModule.
-void UpdateCompilerUsed(Module &TheModule, const TargetMachine &TM,
+void updateCompilerUsed(Module &TheModule, const TargetMachine &TM,
                         const StringSet<> &AsmUndefinedRefs);
 }
 
-#endif // LLVM_LTO_LTOINTERNALIZE_H
+#endif // LLVM_LTO_UPDATE_COMPILER_USED_H

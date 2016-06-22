@@ -904,10 +904,8 @@ public:
   StringRef getName() const { return Name; }
 
   bool isIntroducingVirtual() const {
-    const uint8_t K = static_cast<uint8_t>(Kind);
-    const uint8_t V = static_cast<uint8_t>(MethodKind::IntroducingVirtual);
-    const uint8_t PV = static_cast<uint8_t>(MethodKind::PureIntroducingVirtual);
-    return (K & V) || (K & PV);
+    return Kind == MethodKind::IntroducingVirtual ||
+           Kind == MethodKind::PureIntroducingVirtual;
   }
 
 private:

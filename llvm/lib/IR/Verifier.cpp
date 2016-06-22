@@ -441,8 +441,6 @@ private:
   void verifyMustTailCall(CallInst &CI);
   bool performTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
                         unsigned ArgNo, std::string &Suffix);
-  bool verifyIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                           SmallVectorImpl<Type *> &ArgTys);
   bool verifyIntrinsicIsVarArg(bool isVarArg,
                                ArrayRef<Intrinsic::IITDescriptor> &Infos);
   bool verifyAttributeCount(AttributeSet Attrs, unsigned Params);
@@ -3727,150 +3725,6 @@ void Verifier::visitInstruction(Instruction &I) {
   InstsInThisBlock.insert(&I);
 }
 
-/// Verify that the specified type (which comes from an intrinsic argument or
-/// return value) matches the type constraints specified by the .td file (e.g.
-/// an "any integer" argument really is an integer).
-///
-/// This returns true on error but does not print a message.
-bool Verifier::verifyIntrinsicType(Type *Ty,
-                                   ArrayRef<Intrinsic::IITDescriptor> &Infos,
-                                   SmallVectorImpl<Type*> &ArgTys) {
-  using namespace Intrinsic;
-
-  // If we ran out of descriptors, there are too many arguments.
-  if (Infos.empty()) return true;
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
-
-  switch (D.Kind) {
-  case IITDescriptor::Void: return !Ty->isVoidTy();
-  case IITDescriptor::VarArg: return true;
-  case IITDescriptor::MMX:  return !Ty->isX86_MMXTy();
-  case IITDescriptor::Token: return !Ty->isTokenTy();
-  case IITDescriptor::Metadata: return !Ty->isMetadataTy();
-  case IITDescriptor::Half: return !Ty->isHalfTy();
-  case IITDescriptor::Float: return !Ty->isFloatTy();
-  case IITDescriptor::Double: return !Ty->isDoubleTy();
-  case IITDescriptor::Integer: return !Ty->isIntegerTy(D.Integer_Width);
-  case IITDescriptor::Vector: {
-    VectorType *VT = dyn_cast<VectorType>(Ty);
-    return !VT || VT->getNumElements() != D.Vector_Width ||
-           verifyIntrinsicType(VT->getElementType(), Infos, ArgTys);
-  }
-  case IITDescriptor::Pointer: {
-    PointerType *PT = dyn_cast<PointerType>(Ty);
-    return !PT || PT->getAddressSpace() != D.Pointer_AddressSpace ||
-           verifyIntrinsicType(PT->getElementType(), Infos, ArgTys);
-  }
-
-  case IITDescriptor::Struct: {
-    StructType *ST = dyn_cast<StructType>(Ty);
-    if (!ST || ST->getNumElements() != D.Struct_NumElements)
-      return true;
-
-    for (unsigned i = 0, e = D.Struct_NumElements; i != e; ++i)
-      if (verifyIntrinsicType(ST->getElementType(i), Infos, ArgTys))
-        return true;
-    return false;
-  }
-
-  case IITDescriptor::Argument:
-    // Two cases here - If this is the second occurrence of an argument, verify
-    // that the later instance matches the previous instance.
-    if (D.getArgumentNumber() < ArgTys.size())
-      return Ty != ArgTys[D.getArgumentNumber()];
-
-    // Otherwise, if this is the first instance of an argument, record it and
-    // verify the "Any" kind.
-    assert(D.getArgumentNumber() == ArgTys.size() && "Table consistency error");
-    ArgTys.push_back(Ty);
-
-    switch (D.getArgumentKind()) {
-    case IITDescriptor::AK_Any:        return false; // Success
-    case IITDescriptor::AK_AnyInteger: return !Ty->isIntOrIntVectorTy();
-    case IITDescriptor::AK_AnyFloat:   return !Ty->isFPOrFPVectorTy();
-    case IITDescriptor::AK_AnyVector:  return !isa<VectorType>(Ty);
-    case IITDescriptor::AK_AnyPointer: return !isa<PointerType>(Ty);
-    }
-    llvm_unreachable("all argument kinds not covered");
-
-  case IITDescriptor::ExtendArgument: {
-    // This may only be used when referring to a previous vector argument.
-    if (D.getArgumentNumber() >= ArgTys.size())
-      return true;
-
-    Type *NewTy = ArgTys[D.getArgumentNumber()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getExtendedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
-      NewTy = IntegerType::get(ITy->getContext(), 2 * ITy->getBitWidth());
-    else
-      return true;
-
-    return Ty != NewTy;
-  }
-  case IITDescriptor::TruncArgument: {
-    // This may only be used when referring to a previous vector argument.
-    if (D.getArgumentNumber() >= ArgTys.size())
-      return true;
-
-    Type *NewTy = ArgTys[D.getArgumentNumber()];
-    if (VectorType *VTy = dyn_cast<VectorType>(NewTy))
-      NewTy = VectorType::getTruncatedElementVectorType(VTy);
-    else if (IntegerType *ITy = dyn_cast<IntegerType>(NewTy))
-      NewTy = IntegerType::get(ITy->getContext(), ITy->getBitWidth() / 2);
-    else
-      return true;
-
-    return Ty != NewTy;
-  }
-  case IITDescriptor::HalfVecArgument:
-    // This may only be used when referring to a previous vector argument.
-    return D.getArgumentNumber() >= ArgTys.size() ||
-           !isa<VectorType>(ArgTys[D.getArgumentNumber()]) ||
-           VectorType::getHalfElementsVectorType(
-                         cast<VectorType>(ArgTys[D.getArgumentNumber()])) != Ty;
-  case IITDescriptor::SameVecWidthArgument: {
-    if (D.getArgumentNumber() >= ArgTys.size())
-      return true;
-    VectorType * ReferenceType =
-      dyn_cast<VectorType>(ArgTys[D.getArgumentNumber()]);
-    VectorType *ThisArgType = dyn_cast<VectorType>(Ty);
-    if (!ThisArgType || !ReferenceType || 
-        (ReferenceType->getVectorNumElements() !=
-         ThisArgType->getVectorNumElements()))
-      return true;
-    return verifyIntrinsicType(ThisArgType->getVectorElementType(),
-                               Infos, ArgTys);
-  }
-  case IITDescriptor::PtrToArgument: {
-    if (D.getArgumentNumber() >= ArgTys.size())
-      return true;
-    Type * ReferenceType = ArgTys[D.getArgumentNumber()];
-    PointerType *ThisArgType = dyn_cast<PointerType>(Ty);
-    return (!ThisArgType || ThisArgType->getElementType() != ReferenceType);
-  }
-  case IITDescriptor::VecOfPtrsToElt: {
-    if (D.getArgumentNumber() >= ArgTys.size())
-      return true;
-    VectorType * ReferenceType =
-      dyn_cast<VectorType> (ArgTys[D.getArgumentNumber()]);
-    VectorType *ThisArgVecTy = dyn_cast<VectorType>(Ty);
-    if (!ThisArgVecTy || !ReferenceType || 
-        (ReferenceType->getVectorNumElements() !=
-         ThisArgVecTy->getVectorNumElements()))
-      return true;
-    PointerType *ThisArgEltTy =
-      dyn_cast<PointerType>(ThisArgVecTy->getVectorElementType());
-    if (!ThisArgEltTy)
-      return true;
-    return ThisArgEltTy->getElementType() !=
-           ReferenceType->getVectorElementType();
-  }
-  }
-  llvm_unreachable("unhandled");
-}
-
 /// Verify if the intrinsic has variable arguments. This method is intended to
 /// be called after all the fixed arguments have been verified first.
 ///
@@ -3913,10 +3767,12 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
 
   SmallVector<Type *, 4> ArgTys;
-  Assert(!verifyIntrinsicType(IFTy->getReturnType(), TableRef, ArgTys),
+  Assert(!Intrinsic::matchIntrinsicType(IFTy->getReturnType(),
+                                        TableRef, ArgTys),
          "Intrinsic has incorrect return type!", IF);
   for (unsigned i = 0, e = IFTy->getNumParams(); i != e; ++i)
-    Assert(!verifyIntrinsicType(IFTy->getParamType(i), TableRef, ArgTys),
+    Assert(!Intrinsic::matchIntrinsicType(IFTy->getParamType(i),
+                                          TableRef, ArgTys),
            "Intrinsic has incorrect argument type!", IF);
 
   // Verify if the intrinsic call matches the vararg property.

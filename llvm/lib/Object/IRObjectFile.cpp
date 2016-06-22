@@ -116,6 +116,9 @@ void IRObjectFile::CollectAsmUndefinedRefs(
       Res |= BasicSymbolRef::SF_Undefined;
       Res |= BasicSymbolRef::SF_Global;
       break;
+    case RecordStreamer::GlobalWeak:
+      Res |= BasicSymbolRef::SF_Weak;
+      Res |= BasicSymbolRef::SF_Global;
     }
     AsmUndefinedRefs(Key, BasicSymbolRef::Flags(Res));
   }

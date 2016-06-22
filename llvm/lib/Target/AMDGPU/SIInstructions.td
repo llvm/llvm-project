@@ -426,7 +426,7 @@ def S_NOP : SOPP <0x00000000, (ins i16imm:$simm16), "s_nop $simm16">;
 let isTerminator = 1 in {
 
 def S_ENDPGM : SOPP <0x00000001, (ins), "s_endpgm",
-  [(IL_retflag)]> {
+  [(AMDGPUendpgm)]> {
   let simm16 = 0;
   let isBarrier = 1;
   let hasCtrlDep = 1;
@@ -823,7 +823,11 @@ defm DS_CMPST_RTN_B32 : DS_1A2D_RET <0x30, "ds_cmpst_rtn_b32", VGPR_32, "ds_cmps
 defm DS_CMPST_RTN_F32 : DS_1A2D_RET <0x31, "ds_cmpst_rtn_f32", VGPR_32, "ds_cmpst_f32">;
 defm DS_MIN_RTN_F32 : DS_1A2D_RET <0x32, "ds_min_rtn_f32", VGPR_32, "ds_min_f32">;
 defm DS_MAX_RTN_F32 : DS_1A2D_RET <0x33, "ds_max_rtn_f32", VGPR_32, "ds_max_f32">;
+
+let Uses = [EXEC], mayLoad =0, mayStore = 0, isConvergent = 1 in {
 defm DS_SWIZZLE_B32 : DS_1A_RET <0x35, "ds_swizzle_b32", VGPR_32>;
+}
+
 let mayStore = 0 in {
 defm DS_READ_B32 : DS_1A_RET <0x36, "ds_read_b32", VGPR_32>;
 defm DS_READ2_B32 : DS_1A_Off8_RET <0x37, "ds_read2_b32", VReg_64>;
@@ -1908,7 +1912,7 @@ def V_MOV_B64_PSEUDO : InstSI <(outs VReg_64:$vdst), (ins VSrc_64:$src0), "", []
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let hasSideEffects = 1, SALU = 1 in {
-def SGPR_USE : InstSI <(outs),(ins), "", []>;
+def SGPR_USE : InstSI <(outs), (ins)>;
 }
 
 let usesCustomInserter = 1, SALU = 1 in {
@@ -1919,61 +1923,57 @@ def GET_GROUPSTATICSIZE : InstSI <(outs SReg_32:$sdst), (ins), "",
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
-let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in {
+let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1 in {
+
+// Dummy terminator instruction to use after control flow instructions
+// replaced with exec mask operations.
+def SI_MASK_BRANCH : InstSI <
+  (outs SReg_64:$dst), (ins brtarget:$target)> {
+  let isBranch = 1;
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let SALU = 1;
+}
+
 let Uses = [EXEC], Defs = [EXEC] in {
 
 let isBranch = 1, isTerminator = 1 in {
 
 def SI_IF: InstSI <
-  (outs SReg_64:$dst),
-  (ins SReg_64:$vcc, brtarget:$target),
-  "",
+  (outs SReg_64:$dst), (ins SReg_64:$vcc, brtarget:$target), "",
   [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))]
 >;
 
 def SI_ELSE : InstSI <
-  (outs SReg_64:$dst),
-  (ins SReg_64:$src, brtarget:$target),
-  "",
-  [(set i64:$dst, (int_amdgcn_else i64:$src, bb:$target))]
-> {
+  (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target), "",
+  [(set i64:$dst, (int_amdgcn_else i64:$src, bb:$target))]> {
   let Constraints = "$src = $dst";
 }
 
 def SI_LOOP : InstSI <
-  (outs),
-  (ins SReg_64:$saved, brtarget:$target),
-  "si_loop $saved, $target",
+  (outs), (ins SReg_64:$saved, brtarget:$target), "",
   [(int_amdgcn_loop i64:$saved, bb:$target)]
 >;
 
 } // End isBranch = 1, isTerminator = 1
 
 def SI_BREAK : InstSI <
-  (outs SReg_64:$dst),
-  (ins SReg_64:$src),
-  "si_else $dst, $src",
+  (outs SReg_64:$dst), (ins SReg_64:$src), "",
   [(set i64:$dst, (int_amdgcn_break i64:$src))]
 >;
 
 def SI_IF_BREAK : InstSI <
-  (outs SReg_64:$dst),
-  (ins SReg_64:$vcc, SReg_64:$src),
-  "si_if_break $dst, $vcc, $src",
+  (outs SReg_64:$dst),   (ins SReg_64:$vcc, SReg_64:$src), "",
   [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]
 >;
 
 def SI_ELSE_BREAK : InstSI <
-  (outs SReg_64:$dst),
-  (ins SReg_64:$src0, SReg_64:$src1),
-  "si_else_break $dst, $src0, $src1",
+  (outs SReg_64:$dst), (ins SReg_64:$src0, SReg_64:$src1), "",
   [(set i64:$dst, (int_amdgcn_else_break i64:$src0, i64:$src1))]
 >;
 
 def SI_END_CF : InstSI <
-  (outs),
-  (ins SReg_64:$saved),
-  "si_end_cf $saved",
+  (outs), (ins SReg_64:$saved), "",
   [(int_amdgcn_end_cf i64:$saved)]
 >;
 
@@ -1981,30 +1981,24 @@ def SI_END_CF : InstSI <
 
 let Uses = [EXEC], Defs = [EXEC,VCC] in {
 def SI_KILL : InstSI <
-  (outs),
-  (ins VSrc_32:$src),
-  "si_kill $src",
+  (outs), (ins VSrc_32:$src), "",
   [(int_AMDGPU_kill f32:$src)]
 >;
 } // End Uses = [EXEC], Defs = [EXEC,VCC]
 
 } // End mayLoad = 1, mayStore = 1, hasSideEffects = 1
 
-let SALU = 1 in
 def SI_PS_LIVE : InstSI <
-  (outs SReg_64:$dst),
-  (ins),
-  "si_ps_live $dst",
-  [(set i1:$dst, (int_amdgcn_ps_live))]
->;
+  (outs SReg_64:$dst), (ins), "",
+  [(set i1:$dst, (int_amdgcn_ps_live))]> {
+  let SALU = 1;
+}
 
 // Used as an isel pseudo to directly emit initialization with an
 // s_mov_b32 rather than a copy of another initialized
 // register. MachineCSE skips copies, and we don't want to have to
 // fold operands before it runs.
-def SI_INIT_M0 : InstSI <
-  (outs),
-  (ins SSrc_32:$src), "", []> {
+def SI_INIT_M0 : InstSI <(outs), (ins SSrc_32:$src)> {
   let Defs = [M0];
   let usesCustomInserter = 1;
   let isPseudo = 1;
@@ -2014,21 +2008,28 @@ def SI_INIT_M0 : InstSI <
   let isReMaterializable = 1;
 }
 
+def SI_RETURN : InstSI <
+  (outs), (ins variable_ops), "", [(AMDGPUreturn)]> {
+  let isTerminator = 1;
+  let isBarrier = 1;
+  let isReturn = 1;
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
+  let hasSideEffects = 1;
+  let SALU = 1;
+  let hasNoSchedulingInfo = 1;
+}
+
 let Uses = [EXEC], Defs = [EXEC, VCC, M0] in {
 
 class SI_INDIRECT_SRC<RegisterClass rc> : InstSI <
   (outs VGPR_32:$dst, SReg_64:$temp),
-  (ins rc:$src, VSrc_32:$idx, i32imm:$off),
-  "si_indirect_src $dst, $temp, $src, $idx, $off",
-  []
+  (ins rc:$src, VSrc_32:$idx, i32imm:$off)
 >;
 
 class SI_INDIRECT_DST<RegisterClass rc> : InstSI <
   (outs rc:$dst, SReg_64:$temp),
-  (ins unknown:$src, VSrc_32:$idx, i32imm:$off, VGPR_32:$val),
-  "si_indirect_dst $dst, $temp, $src, $idx, $off, $val",
-  []
-> {
+  (ins unknown:$src, VSrc_32:$idx, i32imm:$off, VGPR_32:$val)> {
   let Constraints = "$src = $dst";
 }
 
@@ -2052,16 +2053,14 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1, Uses = [EXEC] in {
     def _SAVE : InstSI <
       (outs),
-      (ins sgpr_class:$src, i32imm:$frame_idx),
-      "", []> {
+      (ins sgpr_class:$src, i32imm:$frame_idx)> {
       let mayStore = 1;
       let mayLoad = 0;
     }
 
     def _RESTORE : InstSI <
       (outs sgpr_class:$dst),
-      (ins i32imm:$frame_idx),
-      "", []> {
+      (ins i32imm:$frame_idx)> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -2082,8 +2081,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
     def _SAVE : InstSI <
       (outs),
       (ins vgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
-           SReg_32:$scratch_offset, i32imm:$offset),
-      "", []> {
+           SReg_32:$scratch_offset, i32imm:$offset)> {
       let mayStore = 1;
       let mayLoad = 0;
     }
@@ -2091,8 +2089,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
     def _RESTORE : InstSI <
       (outs vgpr_class:$dst),
       (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset,
-           i32imm:$offset),
-      "", []> {
+           i32imm:$offset)> {
       let mayStore = 0;
       let mayLoad = 1;
     }
@@ -2343,6 +2340,14 @@ def : Pat<
 def : Pat <
   (int_amdgcn_s_getreg imm:$simm16),
   (S_GETREG_B32 (as_i16imm $simm16))
+>;
+
+//===----------------------------------------------------------------------===//
+// DS_SWIZZLE Intrinsic Pattern.
+//===----------------------------------------------------------------------===//
+def : Pat <
+  (int_amdgcn_ds_swizzle i32:$src, imm:$offset16),
+  (DS_SWIZZLE_B32 $src, (as_i16imm $offset16), (i1 0))
 >;
 
 //===----------------------------------------------------------------------===//

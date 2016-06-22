@@ -2212,7 +2212,7 @@ SparcTargetLowering::LowerF128Op(SDValue Op, SelectionDAG &DAG,
   }
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(SDLoc(Op)).setChain(Chain)
-    .setCallee(CallingConv::C, RetTyABI, Callee, std::move(Args), 0);
+    .setCallee(CallingConv::C, RetTyABI, Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
 
@@ -2267,7 +2267,7 @@ SDValue SparcTargetLowering::LowerF128Compare(SDValue LHS, SDValue RHS,
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(DL).setChain(Chain)
-    .setCallee(CallingConv::C, RetTy, Callee, std::move(Args), 0);
+    .setCallee(CallingConv::C, RetTy, Callee, std::move(Args));
 
   std::pair<SDValue, SDValue> CallInfo = LowerCallTo(CLI);
 

@@ -1308,8 +1308,6 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
     R = CurDAG->getMachineNode(Hexagon::TFR_FIA, DL, MVT::i32, Ops);
   }
 
-  if (N->getHasDebugValue())
-    CurDAG->TransferDbgValues(SDValue(N, 0), SDValue(R, 0));
   ReplaceNode(N, R);
 }
 
@@ -1410,7 +1408,7 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
   // Simplify: (or (select c x 0) z)  ->  (select c (or x z) z)
   //           (or (select c 0 y) z)  ->  (select c z (or y z))
   // This may not be the right thing for all targets, so do it here.
-  for (auto I: Nodes) {
+  for (auto I : Nodes) {
     if (I->getOpcode() != ISD::OR)
       continue;
 
@@ -1446,6 +1444,59 @@ void HexagonDAGToDAGISel::PreprocessISelDAG() {
         DAG.ReplaceAllUsesWith(I, NewSel.getNode());
       }
     }
+  }
+
+  // Transform: (store ch addr (add x (add (shl y c) e)))
+  //        to: (store ch addr (add x (shl (add y d) c))),
+  // where e = (shl d c) for some integer d.
+  // The purpose of this is to enable generation of loads/stores with
+  // shifted addressing mode, i.e. mem(x+y<<#c). For that, the shift
+  // value c must be 0, 1 or 2.
+  for (auto I : Nodes) {
+    if (I->getOpcode() != ISD::STORE)
+      continue;
+
+    // I matched: (store ch addr Off)
+    SDValue Off = I->getOperand(2);
+    // Off needs to match: (add x (add (shl y c) (shl d c))))
+    if (Off.getOpcode() != ISD::ADD)
+      continue;
+    // Off matched: (add x T0)
+    SDValue T0 = Off.getOperand(1);
+    // T0 needs to match: (add T1 T2):
+    if (T0.getOpcode() != ISD::ADD)
+      continue;
+    // T0 matched: (add T1 T2)
+    SDValue T1 = T0.getOperand(0);
+    SDValue T2 = T0.getOperand(1);
+    // T1 needs to match: (shl y c)
+    if (T1.getOpcode() != ISD::SHL)
+      continue;
+    SDValue C = T1.getOperand(1);
+    ConstantSDNode *CN = dyn_cast<ConstantSDNode>(C.getNode());
+    if (CN == nullptr)
+      continue;
+    unsigned CV = CN->getZExtValue();
+    if (CV > 2)
+      continue;
+    // T2 needs to match e, where e = (shl d c) for some d.
+    ConstantSDNode *EN = dyn_cast<ConstantSDNode>(T2.getNode());
+    if (EN == nullptr)
+      continue;
+    unsigned EV = EN->getZExtValue();
+    if (EV % (1 << CV) != 0)
+      continue;
+    unsigned DV = EV / (1 << CV);
+
+    // Replace T0 with: (shl (add y d) c)
+    SDLoc DL = SDLoc(I);
+    EVT VT = T0.getValueType();
+    SDValue D = DAG.getConstant(DV, DL, VT);
+    // NewAdd = (add y d)
+    SDValue NewAdd = DAG.getNode(ISD::ADD, DL, VT, T1.getOperand(0), D);
+    // NewShl = (shl NewAdd c)
+    SDValue NewShl = DAG.getNode(ISD::SHL, DL, VT, NewAdd, C);
+    ReplaceNode(T0.getNode(), NewShl.getNode());
   }
 }
 
