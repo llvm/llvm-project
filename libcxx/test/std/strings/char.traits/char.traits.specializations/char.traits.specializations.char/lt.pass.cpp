@@ -24,7 +24,7 @@ int main()
 	assert(!std::char_traits<char>::lt('a', 'a'));
 	assert( std::char_traits<char>::lt('A', 'a'));
 	assert(!std::char_traits<char>::lt('a', 'A'));
-	
+
 	assert( std::char_traits<char>::lt('a', 'z'));
 	assert( std::char_traits<char>::lt('A', 'Z'));
 

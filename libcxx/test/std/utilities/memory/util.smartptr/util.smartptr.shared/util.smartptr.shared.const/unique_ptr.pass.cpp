@@ -8,11 +8,11 @@
 //===----------------------------------------------------------------------===//
 
 // XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: sanitizer-new-delete
+
 // <memory>
 
 // template <class Y, class D> explicit shared_ptr(unique_ptr<Y, D>&&r);
-
-// UNSUPPORTED: sanitizer-new-delete
 
 #include <memory>
 #include <new>
@@ -20,20 +20,7 @@
 #include <cassert>
 
 #include "test_macros.h"
-
-bool throw_next = false;
-
-void* operator new(std::size_t s) throw(std::bad_alloc)
-{
-    if (throw_next)
-        throw std::bad_alloc();
-    return std::malloc(s);
-}
-
-void  operator delete(void* p) throw()
-{
-    std::free(p);
-}
+#include "count_new.hpp"
 
 struct B
 {
@@ -67,52 +54,46 @@ void assert_deleter ( T * ) { assert(false); }
 int main()
 {
     {
-    std::unique_ptr<A> ptr(new A);
-    A* raw_ptr = ptr.get();
-    std::shared_ptr<B> p(std::move(ptr));
-    assert(A::count == 1);
-    assert(B::count == 1);
-    assert(p.use_count() == 1);
-    assert(p.get() == raw_ptr);
-    assert(ptr.get() == 0);
-    }
-    assert(A::count == 0);
-    {
-    std::unique_ptr<A> ptr(new A);
-    A* raw_ptr = ptr.get();
-    throw_next = true;
-    try
-    {
+        std::unique_ptr<A> ptr(new A);
+        A* raw_ptr = ptr.get();
         std::shared_ptr<B> p(std::move(ptr));
-        assert(false);
-    }
-    catch (...)
-    {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
         assert(A::count == 1);
         assert(B::count == 1);
-        assert(ptr.get() == raw_ptr);
-#else
-        assert(A::count == 0);
-        assert(B::count == 0);
+        assert(p.use_count() == 1);
+        assert(p.get() == raw_ptr);
         assert(ptr.get() == 0);
-#endif
-    }
     }
     assert(A::count == 0);
-
-    // LWG 2399
     {
-    throw_next = false;
-    fn(std::unique_ptr<int>(new int));
+        std::unique_ptr<A> ptr(new A);
+        A* raw_ptr = ptr.get();
+        globalMemCounter.throw_after = 0;
+        try
+        {
+            std::shared_ptr<B> p(std::move(ptr));
+            assert(false);
+        }
+        catch (...)
+        {
+#if TEST_STD_VER >= 11
+            assert(A::count == 1);
+            assert(B::count == 1);
+            assert(ptr.get() == raw_ptr);
+#else
+            assert(A::count == 0);
+            assert(B::count == 0);
+            assert(ptr.get() == 0);
+#endif
+        }
     }
-
+    assert(A::count == 0);
+    { // LWG 2399
+        fn(std::unique_ptr<int>(new int));
+    }
 #if TEST_STD_VER >= 14
-    // LWG 2415
-    {
-    std::unique_ptr<int, void (*)(int*)> p(nullptr, assert_deleter<int>);
-    std::shared_ptr<int> p2(std::move(p)); // should not call deleter when going out of scope
+    { // LWG 2415
+        std::unique_ptr<int, void (*)(int*)> p(nullptr, assert_deleter<int>);
+        std::shared_ptr<int> p2(std::move(p)); // should not call deleter when going out of scope
     }
 #endif
-
 }

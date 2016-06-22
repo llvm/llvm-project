@@ -67,9 +67,9 @@ TEST_CASE(test_error_reporting)
     }
     {
         std::error_code ec;
-        fs::permissions(dne_sym, perms::resolve_symlinks, ec);
+        fs::permissions(dne_sym, fs::perms{}, ec);
         TEST_REQUIRE(ec);
-        TEST_CHECK(checkThrow(dne_sym, perms::resolve_symlinks, ec));
+        TEST_CHECK(checkThrow(dne_sym, fs::perms{}, ec));
     }
 }
 
@@ -82,7 +82,7 @@ TEST_CASE(basic_permissions_test)
     const path sym = env.create_symlink(file_for_sym, "sym");
     const perms AP = perms::add_perms;
     const perms RP = perms::remove_perms;
-    const perms RS = perms::resolve_symlinks;
+    const perms NF = perms::symlink_nofollow;
     struct TestCase {
       path p;
       perms set_perms;
@@ -98,11 +98,15 @@ TEST_CASE(basic_permissions_test)
         {dir, perms::owner_all, perms::owner_all},
         {dir, perms::group_all | AP, perms::owner_all | perms::group_all},
         {dir, perms::group_all | RP, perms::owner_all},
-        // test symlink with resolve symlinks on symlink
-        {sym, perms::none | RS, perms::none},
-        {sym, perms::owner_all | RS, perms::owner_all},
-        {sym, perms::group_all | AP | RS, perms::owner_all | perms::group_all},
-        {sym, perms::group_all | RP | RS, perms::owner_all}
+        // test symlink without symlink_nofollow
+        {sym, perms::none, perms::none},
+        {sym, perms::owner_all, perms::owner_all},
+        {sym, perms::group_all | AP, perms::owner_all | perms::group_all},
+        {sym, perms::group_all | RP , perms::owner_all},
+        // test non-symlink with symlink_nofollow. The last test on file/dir
+        // will have set their permissions to perms::owner_all
+        {file, perms::group_all | AP | NF, perms::owner_all | perms::group_all},
+        {dir,  perms::group_all | AP | NF, perms::owner_all | perms::group_all}
     };
     for (auto const& TC : cases) {
         TEST_CHECK(status(TC.p).permissions() != TC.expected);
@@ -144,7 +148,7 @@ TEST_CASE(test_no_resolve_symlink_on_symlink)
         std::error_code expected_ec = std::make_error_code(std::errc::operation_not_supported);
 #endif
         std::error_code ec = std::make_error_code(std::errc::bad_address);
-        permissions(sym, TC.set_perms, ec);
+        permissions(sym, TC.set_perms | perms::symlink_nofollow, ec);
         TEST_CHECK(ec == expected_ec);
         TEST_CHECK(status(file).permissions() == file_perms);
         TEST_CHECK(symlink_status(sym).permissions() == expected_link_perms);

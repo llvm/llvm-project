@@ -225,72 +225,71 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
   if (TII->isTransOnly(MI))
     return AluTrans;
 
-    switch (MI->getOpcode()) {
-    case AMDGPU::PRED_X:
-      return AluPredX;
-    case AMDGPU::INTERP_PAIR_XY:
-    case AMDGPU::INTERP_PAIR_ZW:
-    case AMDGPU::INTERP_VEC_LOAD:
-    case AMDGPU::DOT_4:
-      return AluT_XYZW;
-    case AMDGPU::COPY:
-      if (MI->getOperand(1).isUndef()) {
-        // MI will become a KILL, don't considers it in scheduling
-        return AluDiscarded;
-      }
-    default:
-      break;
+  switch (MI->getOpcode()) {
+  case AMDGPU::PRED_X:
+    return AluPredX;
+  case AMDGPU::INTERP_PAIR_XY:
+  case AMDGPU::INTERP_PAIR_ZW:
+  case AMDGPU::INTERP_VEC_LOAD:
+  case AMDGPU::DOT_4:
+    return AluT_XYZW;
+  case AMDGPU::COPY:
+    if (MI->getOperand(1).isUndef()) {
+      // MI will become a KILL, don't considers it in scheduling
+      return AluDiscarded;
     }
+  default:
+    break;
+  }
 
-    // Does the instruction take a whole IG ?
-    // XXX: Is it possible to add a helper function in R600InstrInfo that can
-    // be used here and in R600PacketizerList::isSoloInstruction() ?
-    if(TII->isVector(*MI) ||
-        TII->isCubeOp(MI->getOpcode()) ||
-        TII->isReductionOp(MI->getOpcode()) ||
-        MI->getOpcode() == AMDGPU::GROUP_BARRIER) {
-      return AluT_XYZW;
-    }
+  // Does the instruction take a whole IG ?
+  // XXX: Is it possible to add a helper function in R600InstrInfo that can
+  // be used here and in R600PacketizerList::isSoloInstruction() ?
+  if(TII->isVector(*MI) ||
+     TII->isCubeOp(MI->getOpcode()) ||
+     TII->isReductionOp(MI->getOpcode()) ||
+     MI->getOpcode() == AMDGPU::GROUP_BARRIER) {
+    return AluT_XYZW;
+  }
 
-    if (TII->isLDSInstr(MI->getOpcode())) {
-      return AluT_X;
-    }
+  if (TII->isLDSInstr(MI->getOpcode())) {
+    return AluT_X;
+  }
 
-    // Is the result already assigned to a channel ?
-    unsigned DestSubReg = MI->getOperand(0).getSubReg();
-    switch (DestSubReg) {
-    case AMDGPU::sub0:
-      return AluT_X;
-    case AMDGPU::sub1:
-      return AluT_Y;
-    case AMDGPU::sub2:
-      return AluT_Z;
-    case AMDGPU::sub3:
-      return AluT_W;
-    default:
-      break;
-    }
+  // Is the result already assigned to a channel ?
+  unsigned DestSubReg = MI->getOperand(0).getSubReg();
+  switch (DestSubReg) {
+  case AMDGPU::sub0:
+    return AluT_X;
+  case AMDGPU::sub1:
+    return AluT_Y;
+  case AMDGPU::sub2:
+    return AluT_Z;
+  case AMDGPU::sub3:
+    return AluT_W;
+  default:
+    break;
+  }
 
-    // Is the result already member of a X/Y/Z/W class ?
-    unsigned DestReg = MI->getOperand(0).getReg();
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_XRegClass) ||
-        regBelongsToClass(DestReg, &AMDGPU::R600_AddrRegClass))
-      return AluT_X;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_YRegClass))
-      return AluT_Y;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_ZRegClass))
-      return AluT_Z;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_WRegClass))
-      return AluT_W;
-    if (regBelongsToClass(DestReg, &AMDGPU::R600_Reg128RegClass))
-      return AluT_XYZW;
+  // Is the result already member of a X/Y/Z/W class ?
+  unsigned DestReg = MI->getOperand(0).getReg();
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_XRegClass) ||
+      regBelongsToClass(DestReg, &AMDGPU::R600_AddrRegClass))
+    return AluT_X;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_YRegClass))
+    return AluT_Y;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_ZRegClass))
+    return AluT_Z;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_TReg32_WRegClass))
+    return AluT_W;
+  if (regBelongsToClass(DestReg, &AMDGPU::R600_Reg128RegClass))
+    return AluT_XYZW;
 
-    // LDS src registers cannot be used in the Trans slot.
-    if (TII->readsLDSSrcReg(MI))
-      return AluT_XYZW;
+  // LDS src registers cannot be used in the Trans slot.
+  if (TII->readsLDSSrcReg(MI))
+    return AluT_XYZW;
 
-    return AluAny;
-
+  return AluAny;
 }
 
 int R600SchedStrategy::getInstKind(SUnit* SU) {

@@ -77,7 +77,7 @@
 ; CHECK:     IsVolatile: 0
 ; CHECK:     IsUnaligned: 0
 ; CHECK:   }
-; CHECK:   UnknownLeaf (0x1006) {
+; CHECK:   FieldList (0x1006) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     DataMember {
 ; CHECK:       AccessSpecifier: Public (0x3)
@@ -91,13 +91,13 @@
 ; CHECK:     MemberCount: 1
 ; CHECK:     Properties [ (0x0)
 ; CHECK:     ]
-; CHECK:     FieldList: b (0x1006)
+; CHECK:     FieldList: <field list> (0x1006)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 8
 ; CHECK:     Name: A
 ; CHECK:   }
-; CHECK:   UnknownLeaf (0x1008) {
+; CHECK:   FieldList (0x1008) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     DataMember {
 ; CHECK:       AccessSpecifier: Public (0x3)
@@ -111,7 +111,7 @@
 ; CHECK:     MemberCount: 1
 ; CHECK:     Properties [ (0x0)
 ; CHECK:     ]
-; CHECK:     FieldList: a (0x1008)
+; CHECK:     FieldList: <field list> (0x1008)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 8

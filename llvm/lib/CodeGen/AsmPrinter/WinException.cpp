@@ -954,15 +954,42 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
     //   ScopeTableEntry ScopeRecord[];
     // };
     //
-    // Only the EHCookieOffset field appears to vary, and it appears to be the
-    // offset from the final saved SP value to the retaddr.
+    // Offsets are %ebp relative.
+    //
+    // The GS cookie is present only if the function needs stack protection.
+    // GSCookieOffset = -2 means that GS cookie is not used.
+    //
+    // The EH cookie is always present.
+    //
+    // Check is done the following way:
+    //    (ebp+CookieXOROffset) ^ [ebp+CookieOffset] == _security_cookie
+
+    // Retrieve the Guard Stack slot.
+    int GSCookieOffset = -2;
+    const MachineFrameInfo *MFI = MF->getFrameInfo();
+    if (MFI->hasStackProtectorIndex()) {
+      unsigned UnusedReg;
+      const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+      int SSPIdx = MFI->getStackProtectorIndex();
+      GSCookieOffset = TFI->getFrameIndexReference(*MF, SSPIdx, UnusedReg);
+    }
+
+    // Retrieve the EH Guard slot.
+    // TODO(etienneb): Get rid of this value and change it for and assertion.
+    int EHCookieOffset = 9999;
+    if (FuncInfo.EHGuardFrameIndex != INT_MAX) {
+      unsigned UnusedReg;
+      const TargetFrameLowering *TFI = MF->getSubtarget().getFrameLowering();
+      int EHGuardIdx = FuncInfo.EHGuardFrameIndex;
+      EHCookieOffset = TFI->getFrameIndexReference(*MF, EHGuardIdx, UnusedReg);
+    }
+
     AddComment("GSCookieOffset");
-    OS.EmitIntValue(-2, 4);
+    OS.EmitIntValue(GSCookieOffset, 4);
     AddComment("GSCookieXOROffset");
     OS.EmitIntValue(0, 4);
-    // FIXME: Calculate.
     AddComment("EHCookieOffset");
-    OS.EmitIntValue(9999, 4);
+    OS.EmitIntValue(EHCookieOffset, 4);
     AddComment("EHCookieXOROffset");
     OS.EmitIntValue(0, 4);
     BaseState = -2;

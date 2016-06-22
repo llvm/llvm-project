@@ -236,11 +236,13 @@ CoverageMapping::load(CoverageMappingReader &CoverageReader,
 Expected<std::unique_ptr<CoverageMapping>>
 CoverageMapping::load(StringRef ObjectFilename, StringRef ProfileFilename,
                       StringRef Arch) {
-  auto CounterMappingBuff = MemoryBuffer::getFileOrSTDIN(ObjectFilename);
-  if (std::error_code EC = CounterMappingBuff.getError())
+  auto CounterMappingBufOrErr = MemoryBuffer::getFileOrSTDIN(ObjectFilename);
+  if (std::error_code EC = CounterMappingBufOrErr.getError())
     return errorCodeToError(EC);
+  std::unique_ptr<MemoryBuffer> ObjectBuffer =
+      std::move(CounterMappingBufOrErr.get());
   auto CoverageReaderOrErr =
-      BinaryCoverageReader::create(CounterMappingBuff.get(), Arch);
+      BinaryCoverageReader::create(*ObjectBuffer.get(), Arch);
   if (Error E = CoverageReaderOrErr.takeError())
     return std::move(E);
   auto CoverageReader = std::move(CoverageReaderOrErr.get());

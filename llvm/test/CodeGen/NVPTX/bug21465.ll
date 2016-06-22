@@ -15,7 +15,7 @@ entry:
   %b = getelementptr inbounds %struct.S, %struct.S* %input, i64 0, i32 1
   %0 = load i32, i32* %b, align 4
 ; PTX-NOT: ld.param.u32 {{%r[0-9]+}}, [{{%rd[0-9]+}}]
-; PTX: ld.param.u32 [[value:%r[0-9]+]], [{{%rd[0-9]+}}+4]
+; PTX: ld.param.u32 [[value:%r[0-9]+]], [_Z11TakesStruct1SPi_param_0+4]
   store i32 %0, i32* %output, align 4
 ; PTX-NEXT: st.global.u32 [{{%rd[0-9]+}}], [[value]]
   ret void

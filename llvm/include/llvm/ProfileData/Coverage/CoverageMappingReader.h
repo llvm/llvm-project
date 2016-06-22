@@ -181,8 +181,7 @@ private:
 
 public:
   static Expected<std::unique_ptr<BinaryCoverageReader>>
-  create(std::unique_ptr<MemoryBuffer> &ObjectBuffer,
-         StringRef Arch);
+  create(MemoryBuffer &ObjectBuffer, StringRef Arch);
 
   Error readNextRecord(CoverageMappingRecord &Record) override;
 };

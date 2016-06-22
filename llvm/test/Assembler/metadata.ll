@@ -1,7 +1,8 @@
-; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck --check-prefix=CHECK --check-prefix=CHECK-UNMAT %s
+; RUN: llvm-as < %s | llvm-dis -materialize-metadata | FileCheck --check-prefix=CHECK-UNMAT %s
 ; RUN: verify-uselistorder %s
 
-; CHECK: @global = global i32 0, !foo [[M2:![0-9]+]], !foo [[M3:![0-9]+]], !baz [[M3]]
+; CHECK-UNMAT: @global = global i32 0, !foo [[M2:![0-9]+]], !foo [[M3:![0-9]+]], !baz [[M3]]
 @global = global i32 0, !foo !2, !foo !3, !baz !3
 
 ; CHECK-LABEL: @test
@@ -32,8 +33,8 @@ define void @test_attachment_name() {
   unreachable, !\34\32abc !4
 }
 
-; CHECK: [[M2]] = distinct !{}
-; CHECK: [[M3]] = distinct !{}
+; CHECK-UNMAT: [[M2]] = distinct !{}
+; CHECK-UNMAT: [[M3]] = distinct !{}
 ; CHECK: [[M0]] = !DILocation
 ; CHECK: [[M1]] = distinct !DISubprogram
 ; CHECK: [[M4]] = distinct !{}

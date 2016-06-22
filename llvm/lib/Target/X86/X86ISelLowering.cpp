@@ -18193,6 +18193,24 @@ static SDValue MarkEHRegistrationNode(SDValue Op, SelectionDAG &DAG) {
   return Chain;
 }
 
+static SDValue MarkEHGuard(SDValue Op, SelectionDAG &DAG) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SDValue Chain = Op.getOperand(0);
+  SDValue EHGuard = Op.getOperand(2);
+  WinEHFuncInfo *EHInfo = MF.getWinEHFuncInfo();
+  if (!EHInfo)
+    report_fatal_error("EHGuard only live in functions using WinEH");
+
+  // Cast the operand to an alloca, and remember the frame index.
+  auto *FINode = dyn_cast<FrameIndexSDNode>(EHGuard);
+  if (!FINode)
+    report_fatal_error("llvm.x86.seh.ehguard expects a static alloca");
+  EHInfo->EHGuardFrameIndex = FINode->getIndex();
+
+  // Return the chain operand without making any DAG nodes.
+  return Chain;
+}
+
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
                                       SelectionDAG &DAG) {
   unsigned IntNo = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
@@ -18201,6 +18219,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
   if (!IntrData) {
     if (IntNo == llvm::Intrinsic::x86_seh_ehregnode)
       return MarkEHRegistrationNode(Op, DAG);
+    if (IntNo == llvm::Intrinsic::x86_seh_ehguard)
+      return MarkEHGuard(Op, DAG);
     if (IntNo == llvm::Intrinsic::x86_flags_read_u32 ||
         IntNo == llvm::Intrinsic::x86_flags_read_u64 ||
         IntNo == llvm::Intrinsic::x86_flags_write_u32 ||

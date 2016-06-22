@@ -109,7 +109,6 @@ public:
   relocations Relocations;
 
   COFFSection(StringRef name);
-  static size_t size();
 };
 
 class WinCOFFObjectWriter : public MCObjectWriter {
@@ -223,8 +222,6 @@ COFFSection::COFFSection(StringRef name)
     : Name(name), MCSection(nullptr), Symbol(nullptr) {
   memset(&Header, 0, sizeof(Header));
 }
-
-size_t COFFSection::size() { return COFF::SectionSize; }
 
 //------------------------------------------------------------------------------
 // WinCOFFObjectWriter class implementation

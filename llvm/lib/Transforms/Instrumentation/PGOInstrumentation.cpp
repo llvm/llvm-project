@@ -879,7 +879,6 @@ static bool annotateAllFunctions(
 
   std::vector<Function *> HotFunctions;
   std::vector<Function *> ColdFunctions;
-  InstrProfSummaryBuilder Builder(ProfileSummaryBuilder::DefaultCutoffs);
   for (auto &F : M) {
     if (F.isDeclaration())
       continue;
@@ -891,15 +890,13 @@ static bool annotateAllFunctions(
     Func.populateCounters();
     Func.setBranchWeights();
     Func.annotateIndirectCallSites();
-    if (!Func.getProfileRecord().Counts.empty())
-      Builder.addRecord(Func.getProfileRecord());
     PGOUseFunc::FuncFreqAttr FreqAttr = Func.getFuncFreqAttr();
     if (FreqAttr == PGOUseFunc::FFA_Cold)
       ColdFunctions.push_back(&F);
     else if (FreqAttr == PGOUseFunc::FFA_Hot)
       HotFunctions.push_back(&F);
   }
-  M.setProfileSummary(Builder.getSummary()->getMD(M.getContext()));
+  M.setProfileSummary(PGOReader->getSummary().getMD(M.getContext()));
   // Set function hotness attribute from the profile.
   // We have to apply these attributes at the end because their presence
   // can affect the BranchProbabilityInfo of any callers, resulting in an

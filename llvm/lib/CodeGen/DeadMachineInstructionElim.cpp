@@ -42,6 +42,11 @@ namespace {
      initializeDeadMachineInstructionElimPass(*PassRegistry::getPassRegistry());
     }
 
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      AU.setPreservesCFG();
+      MachineFunctionPass::getAnalysisUsage(AU);
+    }
+
   private:
     bool isDead(const MachineInstr *MI) const;
   };

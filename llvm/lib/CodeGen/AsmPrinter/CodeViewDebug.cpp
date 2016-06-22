@@ -123,6 +123,57 @@ CodeViewDebug::getInlineSite(const DILocation *InlinedAt,
   return *Site;
 }
 
+static const DISubprogram *getQualifiedNameComponents(
+    const DIScope *Scope, SmallVectorImpl<StringRef> &QualifiedNameComponents) {
+  const DISubprogram *ClosestSubprogram = nullptr;
+  while (Scope != nullptr) {
+    if (ClosestSubprogram == nullptr)
+      ClosestSubprogram = dyn_cast<DISubprogram>(Scope);
+    StringRef ScopeName = Scope->getName();
+    if (!ScopeName.empty())
+      QualifiedNameComponents.push_back(ScopeName);
+    Scope = Scope->getScope().resolve();
+  }
+  return ClosestSubprogram;
+}
+
+static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
+                                    StringRef TypeName) {
+  std::string FullyQualifiedName;
+  for (StringRef QualifiedNameComponent : reverse(QualifiedNameComponents)) {
+    FullyQualifiedName.append(QualifiedNameComponent);
+    FullyQualifiedName.append("::");
+  }
+  FullyQualifiedName.append(TypeName);
+  return FullyQualifiedName;
+}
+
+static std::string getFullyQualifiedName(const DIScope *Scope, StringRef Name) {
+  SmallVector<StringRef, 5> QualifiedNameComponents;
+  getQualifiedNameComponents(Scope, QualifiedNameComponents);
+  return getQualifiedName(QualifiedNameComponents, Name);
+}
+
+TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
+  // No scope means global scope and that uses the zero index.
+  if (!Scope || isa<DIFile>(Scope))
+    return TypeIndex();
+
+  assert(!isa<DIType>(Scope) && "shouldn't make a namespace scope for a type");
+
+  // Check if we've already translated this scope.
+  auto I = TypeIndices.find({Scope, nullptr});
+  if (I != TypeIndices.end())
+    return I->second;
+
+  // Build the fully qualified name of the scope.
+  std::string ScopeName =
+      getFullyQualifiedName(Scope->getScope().resolve(), Scope->getName());
+  TypeIndex TI =
+      TypeTable.writeStringId(StringIdRecord(TypeIndex(), ScopeName));
+  return recordTypeIndexForDINode(Scope, TI);
+}
+
 TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   // It's possible to ask for the FuncId of a function which doesn't have a
   // subprogram: inlining a function with debug info into a function with none.
@@ -134,22 +185,51 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
   if (I != TypeIndices.end())
     return I->second;
 
-  TypeIndex ParentScope = TypeIndex(0);
   // The display name includes function template arguments. Drop them to match
   // MSVC.
   StringRef DisplayName = SP->getDisplayName().split('<').first;
-  FuncIdRecord FuncId(ParentScope, lowerSubprogramType(SP), DisplayName);
-  TypeIndex TI = TypeTable.writeFuncId(FuncId);
 
-  recordTypeIndexForDINode(SP, TI);
-  return TI;
+  const DIScope *Scope = SP->getScope().resolve();
+  TypeIndex TI;
+  if (const auto *Class = dyn_cast_or_null<DICompositeType>(Scope)) {
+    // If the scope is a DICompositeType, then this must be a method. Member
+    // function types take some special handling, and require access to the
+    // subprogram.
+    TypeIndex ClassType = getTypeIndex(Class);
+    MemberFuncIdRecord MFuncId(ClassType, getMemberFunctionType(SP, Class),
+                               DisplayName);
+    TI = TypeTable.writeMemberFuncId(MFuncId);
+  } else {
+    // Otherwise, this must be a free function.
+    TypeIndex ParentScope = getScopeIndex(Scope);
+    FuncIdRecord FuncId(ParentScope, getTypeIndex(SP->getType()), DisplayName);
+    TI = TypeTable.writeFuncId(FuncId);
+  }
+
+  return recordTypeIndexForDINode(SP, TI);
 }
 
-void CodeViewDebug::recordTypeIndexForDINode(const DINode *Node, TypeIndex TI,
+TypeIndex CodeViewDebug::getMemberFunctionType(const DISubprogram *SP,
+                                               const DICompositeType *Class) {
+  // Key the MemberFunctionRecord into the map as {SP, Class}. It won't collide
+  // with the MemberFuncIdRecord, which is keyed in as {SP, nullptr}.
+  auto I = TypeIndices.find({SP, nullptr});
+  if (I != TypeIndices.end())
+    return I->second;
+
+  // FIXME: Get the ThisAdjustment off of SP when it is available.
+  TypeIndex TI =
+      lowerTypeMemberFunction(SP->getType(), Class, /*ThisAdjustment=*/0);
+
+  return recordTypeIndexForDINode(SP, TI, Class);
+}
+
+TypeIndex CodeViewDebug::recordTypeIndexForDINode(const DINode *Node, TypeIndex TI,
                                              const DIType *ClassTy) {
   auto InsertResult = TypeIndices.insert({{Node, ClassTy}, TI});
   (void)InsertResult;
   assert(InsertResult.second && "DINode was already assigned a type index");
+  return TI;
 }
 
 unsigned CodeViewDebug::getPointerSizeInBytes() {
@@ -458,31 +538,6 @@ void CodeViewDebug::switchToDebugSectionForSymbol(const MCSymbol *GVSym) {
     emitCodeViewMagicVersion();
 }
 
-static const DISubprogram *getQualifiedNameComponents(
-    const DIScope *Scope, SmallVectorImpl<StringRef> &QualifiedNameComponents) {
-  const DISubprogram *ClosestSubprogram = nullptr;
-  while (Scope != nullptr) {
-    if (ClosestSubprogram == nullptr)
-      ClosestSubprogram = dyn_cast<DISubprogram>(Scope);
-    StringRef ScopeName = Scope->getName();
-    if (!ScopeName.empty())
-      QualifiedNameComponents.push_back(ScopeName);
-    Scope = Scope->getScope().resolve();
-  }
-  return ClosestSubprogram;
-}
-
-static std::string getQualifiedName(ArrayRef<StringRef> QualifiedNameComponents,
-                                    StringRef TypeName) {
-  std::string FullyQualifiedName;
-  for (StringRef QualifiedNameComponent : reverse(QualifiedNameComponents)) {
-    FullyQualifiedName.append(QualifiedNameComponent);
-    FullyQualifiedName.append("::");
-  }
-  FullyQualifiedName.append(TypeName);
-  return FullyQualifiedName;
-}
-
 void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
                                              FunctionInfo &FI) {
   // For each function there is a separate subsection
@@ -499,12 +554,9 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   // If we have a display name, build the fully qualified name by walking the
   // chain of scopes.
-  if (SP != nullptr && !SP->getDisplayName().empty()) {
-    SmallVector<StringRef, 5> QualifiedNameComponents;
-    getQualifiedNameComponents(SP->getScope().resolve(),
-                               QualifiedNameComponents);
-    FuncName = getQualifiedName(QualifiedNameComponents, SP->getDisplayName());
-  }
+  if (SP != nullptr && !SP->getDisplayName().empty())
+    FuncName =
+        getFullyQualifiedName(SP->getScope().resolve(), SP->getDisplayName());
 
   // If our DISubprogram name is empty, use the mangled name.
   if (FuncName.empty())
@@ -792,8 +844,12 @@ TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   case dwarf::DW_TAG_volatile_type:
     return lowerTypeModifier(cast<DIDerivedType>(Ty));
   case dwarf::DW_TAG_subroutine_type:
-    if (ClassTy)
-      return lowerTypeMemberFunction(cast<DISubroutineType>(Ty), ClassTy);
+    if (ClassTy) {
+      // The member function type of a member function pointer has no
+      // ThisAdjustment.
+      return lowerTypeMemberFunction(cast<DISubroutineType>(Ty), ClassTy,
+                                     /*ThisAdjustment=*/0);
+    }
     return lowerTypeFunction(cast<DISubroutineType>(Ty));
   case dwarf::DW_TAG_enumeration_type:
     return lowerTypeEnum(cast<DICompositeType>(Ty));
@@ -1113,7 +1169,8 @@ TypeIndex CodeViewDebug::lowerTypeFunction(const DISubroutineType *Ty) {
 }
 
 TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
-                                                 const DIType *ClassTy) {
+                                                 const DIType *ClassTy,
+                                                 int ThisAdjustment) {
   // Lower the containing class type.
   TypeIndex ClassType = getTypeIndex(ClassTy);
 
@@ -1150,14 +1207,7 @@ TypeIndex CodeViewDebug::lowerTypeMemberFunction(const DISubroutineType *Ty,
   //       ThisPointerAdjustment.
   TypeIndex TI = TypeTable.writeMemberFunction(MemberFunctionRecord(
       ReturnTypeIndex, ClassType, ThisTypeIndex, CC, FunctionOptions::None,
-      ArgTypeIndices.size(), ArgListIndex, 0));
-
-  return TI;
-}
-
-TypeIndex CodeViewDebug::lowerSubprogramType(const DISubprogram *SP) {
-  auto ClassType = dyn_cast_or_null<DIType>(SP->getScope().resolve());
-  TypeIndex TI = getTypeIndex(SP->getType(), ClassType);
+      ArgTypeIndices.size(), ArgListIndex, ThisAdjustment));
 
   return TI;
 }
@@ -1243,7 +1293,10 @@ TypeIndex CodeViewDebug::lowerTypeEnum(const DICompositeType *Ty) {
     FTI = TypeTable.writeFieldList(Fields);
   }
 
-  return TypeTable.writeEnum(EnumRecord(EnumeratorCount, CO, FTI, Ty->getName(),
+  std::string FullName =
+      getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
+
+  return TypeTable.writeEnum(EnumRecord(EnumeratorCount, CO, FTI, FullName,
                                         Ty->getIdentifier(),
                                         getTypeIndex(Ty->getBaseType())));
 }
@@ -1297,8 +1350,7 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
   assert((DDTy->getOffsetInBits() % 8) == 0 && "Unnamed bitfield member!");
   unsigned offset = DDTy->getOffsetInBits() / 8;
   const DIType *Ty = DDTy->getBaseType().resolve();
-  assert(dyn_cast<DICompositeType>(Ty) && "Expects structure or union type");
-  const DICompositeType *DCTy = dyn_cast<DICompositeType>(Ty);
+  const DICompositeType *DCTy = cast<DICompositeType>(Ty);
   ClassInfo &NestedInfo = collectClassInfo(DCTy);
   ClassInfo::MemberList &Members = NestedInfo.Members;
   for (unsigned i = 0, e = Members.size(); i != e; ++i)
@@ -1308,10 +1360,14 @@ void CodeViewDebug::collectMemberInfo(ClassInfo &Info,
 
 ClassInfo &CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
   auto Insertion = ClassInfoMap.insert({Ty, std::unique_ptr<ClassInfo>()});
-  std::unique_ptr<ClassInfo> &Info = Insertion.first->second;
-  if (!Insertion.second)
-    return *Info;
-  Info.reset(new ClassInfo());
+  ClassInfo *Info = nullptr;
+  {
+    std::unique_ptr<ClassInfo> &InfoEntry = Insertion.first->second;
+    if (!Insertion.second)
+      return *InfoEntry;
+    InfoEntry.reset(new ClassInfo());
+    Info = InfoEntry.get();
+  }
 
   // Add elements to structure type.
   DINodeArray Elements = Ty->getElements();
@@ -1350,9 +1406,11 @@ TypeIndex CodeViewDebug::lowerTypeClass(const DICompositeType *Ty) {
   TypeRecordKind Kind = getRecordKind(Ty);
   ClassOptions CO =
       ClassOptions::ForwardReference | getRecordUniqueNameOption(Ty);
+  std::string FullName =
+      getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
   TypeIndex FwdDeclTI = TypeTable.writeClass(ClassRecord(
       Kind, 0, CO, HfaKind::None, WindowsRTClassKind::None, TypeIndex(),
-      TypeIndex(), TypeIndex(), 0, Ty->getName(), Ty->getIdentifier()));
+      TypeIndex(), TypeIndex(), 0, FullName, Ty->getIdentifier()));
   return FwdDeclTI;
 }
 
@@ -1366,19 +1424,24 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
   unsigned FieldCount;
   std::tie(FieldTI, VShapeTI, FieldCount) = lowerRecordFieldList(Ty);
 
+  std::string FullName =
+      getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
+
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
   return TypeTable.writeClass(ClassRecord(
       Kind, FieldCount, CO, HfaKind::None, WindowsRTClassKind::None, FieldTI,
-      TypeIndex(), VShapeTI, SizeInBytes, Ty->getName(), Ty->getIdentifier()));
+      TypeIndex(), VShapeTI, SizeInBytes, FullName, Ty->getIdentifier()));
   // FIXME: Make an LF_UDT_SRC_LINE record.
 }
 
 TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
   ClassOptions CO =
       ClassOptions::ForwardReference | getRecordUniqueNameOption(Ty);
+  std::string FullName =
+      getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
   TypeIndex FwdDeclTI =
       TypeTable.writeUnion(UnionRecord(0, CO, HfaKind::None, TypeIndex(), 0,
-                                       Ty->getName(), Ty->getIdentifier()));
+                                       FullName, Ty->getIdentifier()));
   return FwdDeclTI;
 }
 
@@ -1388,8 +1451,10 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
   unsigned FieldCount;
   std::tie(FieldTI, std::ignore, FieldCount) = lowerRecordFieldList(Ty);
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
+  std::string FullName =
+      getFullyQualifiedName(Ty->getScope().resolve(), Ty->getName());
   return TypeTable.writeUnion(UnionRecord(FieldCount, CO, HfaKind::None,
-                                          FieldTI, SizeInBytes, Ty->getName(),
+                                          FieldTI, SizeInBytes, FullName,
                                           Ty->getIdentifier()));
   // FIXME: Make an LF_UDT_SRC_LINE record.
 }
@@ -1481,8 +1546,7 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
 
   TypeIndex TI = lowerType(Ty, ClassTy);
 
-  recordTypeIndexForDINode(Ty, TI, ClassTy);
-  return TI;
+  return recordTypeIndexForDINode(Ty, TI, ClassTy);
 }
 
 TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {

@@ -670,6 +670,12 @@ macro(add_llvm_executable name)
   if(NOT ARG_IGNORE_EXTERNALIZE_DEBUGINFO)
     llvm_externalize_debuginfo(${name})
   endif()
+  if (PTHREAD_LIB)
+    # libpthreads overrides some standard library symbols, so main
+    # executable must be linked with it in order to provide consistent
+    # API for all shared libaries loaded by this executable.
+    target_link_libraries(${name} ${PTHREAD_LIB})
+  endif()
 endmacro(add_llvm_executable name)
 
 function(export_executable_symbols target)
@@ -953,7 +959,10 @@ function(add_unittest test_suite test_name)
   add_llvm_executable(${test_name} IGNORE_EXTERNALIZE_DEBUGINFO ${ARGN})
   set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
   set_output_directory(${test_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
-  target_link_libraries(${test_name} gtest_main gtest)
+  # libpthreads overrides some standard library symbols, so main
+  # executable must be linked with it in order to provide consistent
+  # API for all shared libaries loaded by this executable.
+  target_link_libraries(${test_name} gtest_main gtest ${PTHREAD_LIB})
 
   add_dependencies(${test_suite} ${test_name})
   get_target_property(test_suite_folder ${test_suite} FOLDER)

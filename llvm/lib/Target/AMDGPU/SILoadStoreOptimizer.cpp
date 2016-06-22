@@ -69,10 +69,6 @@ private:
   MachineBasicBlock::iterator findMatchingDSInst(MachineBasicBlock::iterator I,
                                                  unsigned EltSize);
 
-  void updateRegDefsUses(unsigned SrcReg,
-                         unsigned DstReg,
-                         unsigned SubIdx);
-
   MachineBasicBlock::iterator mergeRead2Pair(
     MachineBasicBlock::iterator I,
     MachineBasicBlock::iterator Paired,
@@ -191,17 +187,6 @@ SILoadStoreOptimizer::findMatchingDSInst(MachineBasicBlock::iterator I,
   }
 
   return E;
-}
-
-void SILoadStoreOptimizer::updateRegDefsUses(unsigned SrcReg,
-                                             unsigned DstReg,
-                                             unsigned SubIdx) {
-  for (MachineRegisterInfo::reg_iterator I = MRI->reg_begin(SrcReg),
-         E = MRI->reg_end(); I != E; ) {
-    MachineOperand &O = *I;
-    ++I;
-    O.substVirtReg(DstReg, SubIdx, *TRI);
-  }
 }
 
 MachineBasicBlock::iterator  SILoadStoreOptimizer::mergeRead2Pair(

@@ -5,7 +5,7 @@
 ; E e;
 
 ; CHECK:     CodeViewTypes [
-; CHECK:       UnknownLeaf (0x1000) {
+; CHECK:       FieldList (0x1000) {
 ; CHECK-NEXT:    TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK-NEXT:    Enumerator {
 ; CHECK-NEXT:      AccessSpecifier: Public (0x3)
@@ -19,7 +19,7 @@
 ; CHECK-NEXT:    Properties [ (0x0)
 ; CHECK-NEXT:    ]
 ; CHECK-NEXT:    UnderlyingType: int (0x74)
-; CHECK-NEXT:    FieldListType: BLAH (0x1000)
+; CHECK-NEXT:    FieldListType: <field list> (0x1000)
 ; CHECK-NEXT:    Name: E
 ; CHECK-NEXT:  }
 

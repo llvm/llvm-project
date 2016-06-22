@@ -473,7 +473,7 @@ static void InitLibcallNames(const char **Names, const Triple &TT) {
   Names[RTLIB::ATOMIC_FETCH_NAND_8] = "__atomic_fetch_nand_8";
   Names[RTLIB::ATOMIC_FETCH_NAND_16] = "__atomic_fetch_nand_16";
 
-  if (TT.getEnvironment() == Triple::GNU) {
+  if (TT.isGNUEnvironment()) {
     Names[RTLIB::SINCOS_F32] = "sincosf";
     Names[RTLIB::SINCOS_F64] = "sincos";
     Names[RTLIB::SINCOS_F80] = "sincosl";

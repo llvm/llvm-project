@@ -1169,6 +1169,29 @@ private:
   uint64_t VTableIndex;
 };
 
+/// LF_INDEX - Used to chain two large LF_FIELDLIST or LF_METHODLIST records
+/// together. The first will end in an LF_INDEX record that points to the next.
+class ListContinuationRecord : public TypeRecord {
+public:
+  ListContinuationRecord(TypeIndex ContinuationIndex)
+      : TypeRecord(TypeRecordKind::ListContinuation),
+        ContinuationIndex(ContinuationIndex) {}
+
+  TypeIndex getContinuationIndex() const { return ContinuationIndex; }
+
+  bool remapTypeIndices(ArrayRef<TypeIndex> IndexMap);
+
+  static ErrorOr<ListContinuationRecord> deserialize(TypeRecordKind Kind,
+                                                     ArrayRef<uint8_t> &Data);
+
+private:
+  struct Layout {
+    ulittle16_t Pad0;
+    TypeIndex ContinuationIndex;
+  };
+  TypeIndex ContinuationIndex;
+};
+
 typedef CVRecord<TypeLeafKind> CVType;
 typedef VarStreamArray<CVType> CVTypeArray;
 }

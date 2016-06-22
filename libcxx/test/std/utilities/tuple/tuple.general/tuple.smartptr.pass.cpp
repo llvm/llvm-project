@@ -29,5 +29,5 @@ int main () {
     }
     // Smart pointers of type 'T[N]' are not tested here since they are not
     // supported by the standard nor by libc++'s implementation.
-    // See http://reviews.llvm.org/D21320 for move information.
+    // See http://reviews.llvm.org/D21320 for more information.
 }

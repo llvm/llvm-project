@@ -84,7 +84,7 @@
 ; CHECK:     ArgListType: () (0x1000)
 ; CHECK:     ThisAdjustment: 0
 ; CHECK:   }
-; CHECK:   UnknownLeaf (0x1006) {
+; CHECK:   FieldList (0x1006) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     OneMethod {
 ; CHECK:       AccessSpecifier: Public (0x3)
@@ -112,7 +112,7 @@
 ; CHECK:     MemberCount: 4
 ; CHECK:     Properties [ (0x0)
 ; CHECK:     ]
-; CHECK:     FieldList: A::f_public (0x1006)
+; CHECK:     FieldList: <field list> (0x1006)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 1
@@ -202,7 +202,7 @@
 ; CHECK:       Type: void B::(int) (0x100E)
 ; CHECK:     ]
 ; CHECK:   }
-; CHECK:   UnknownLeaf (0x1010) {
+; CHECK:   FieldList (0x1010) {
 ; CHECK:     TypeLeafKind: LF_FIELDLIST (0x1203)
 ; CHECK:     OneMethod {
 ; CHECK:       AccessSpecifier: Private (0x1)
@@ -220,7 +220,7 @@
 ; CHECK:     MemberCount: 3
 ; CHECK:     Properties [ (0x0)
 ; CHECK:     ]
-; CHECK:     FieldList: B::f (0x1010)
+; CHECK:     FieldList: <field list> (0x1010)
 ; CHECK:     DerivedFrom: 0x0
 ; CHECK:     VShape: 0x0
 ; CHECK:     SizeOf: 1

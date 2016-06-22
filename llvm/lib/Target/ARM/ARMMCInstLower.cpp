@@ -78,7 +78,7 @@ bool ARMAsmPrinter::lowerOperand(const MachineOperand &MO,
     break;
   }
   case MachineOperand::MO_ExternalSymbol:
-   MCOp = GetSymbolRef(MO,
+    MCOp = GetSymbolRef(MO,
                         GetExternalSymbolSymbol(MO.getSymbolName()));
     break;
   case MachineOperand::MO_JumpTableIndex:

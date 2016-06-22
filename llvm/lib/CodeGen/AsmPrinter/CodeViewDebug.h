@@ -218,6 +218,11 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex getTypeIndex(DITypeRef TypeRef,
                                    DITypeRef ClassTyRef = DITypeRef());
 
+  codeview::TypeIndex getMemberFunctionType(const DISubprogram *SP,
+                                            const DICompositeType *Class);
+
+  codeview::TypeIndex getScopeIndex(const DIScope *Scope);
+
   codeview::TypeIndex lowerType(const DIType *Ty, const DIType *ClassTy);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeArray(const DICompositeType *Ty);
@@ -227,7 +232,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex lowerTypeModifier(const DIDerivedType *Ty);
   codeview::TypeIndex lowerTypeFunction(const DISubroutineType *Ty);
   codeview::TypeIndex lowerTypeMemberFunction(const DISubroutineType *Ty,
-                                              const DIType *ClassTy);
+                                              const DIType *ClassTy,
+                                              int ThisAdjustment);
   codeview::TypeIndex lowerTypeEnum(const DICompositeType *Ty);
   codeview::TypeIndex lowerTypeClass(const DICompositeType *Ty);
   codeview::TypeIndex lowerTypeUnion(const DICompositeType *Ty);
@@ -242,8 +248,6 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   codeview::TypeIndex lowerCompleteTypeClass(const DICompositeType *Ty);
   codeview::TypeIndex lowerCompleteTypeUnion(const DICompositeType *Ty);
 
-  codeview::TypeIndex lowerSubprogramType(const DISubprogram *SP);
-
   void collectMemberInfo(ClassInfo &Info, const DIDerivedType *DDTy);
   ClassInfo &collectClassInfo(const DICompositeType *Ty);
 
@@ -254,8 +258,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   lowerRecordFieldList(const DICompositeType *Ty);
 
   /// Inserts {{Node, ClassTy}, TI} into TypeIndices and checks for duplicates.
-  void recordTypeIndexForDINode(const DINode *Node, codeview::TypeIndex TI,
-                                const DIType *ClassTy = nullptr);
+  codeview::TypeIndex recordTypeIndexForDINode(const DINode *Node,
+                                               codeview::TypeIndex TI,
+                                               const DIType *ClassTy = nullptr);
 
   unsigned getPointerSizeInBytes();
 

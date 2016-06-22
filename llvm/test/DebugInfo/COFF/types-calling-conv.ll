@@ -56,8 +56,8 @@
 ; CHECK:     ArgListType: () (0x1002)
 ; CHECK:   }
 ; CHECK:   FuncId (0x1004) {
-; CHECK:     TypeLeafKind: LF_FUNC_ID (0x1601)
-; CHECK:     ParentScope: 0x0
+; CHECK:     TypeLeafKind: LF_MFUNC_ID (0x1602)
+; CHECK:     ClassType: A (0x1000)
 ; CHECK:     FunctionType: void A::() (0x1003)
 ; CHECK:     Name: A::thiscallcc
 ; CHECK:   }

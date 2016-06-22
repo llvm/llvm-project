@@ -101,6 +101,11 @@ namespace {
 class NVPTXLowerKernelArgs : public FunctionPass {
   bool runOnFunction(Function &F) override;
 
+  // Kernels and regular device functions treat byval arguments
+  // differently.
+  bool runOnKernelFunction(Function &F);
+  bool runOnDeviceFunction(Function &F);
+
   // handle byval parameters
   void handleByValParam(Argument *Arg);
   // Knowing Ptr must point to the global address space, this function
@@ -192,11 +197,7 @@ void NVPTXLowerKernelArgs::markPointerAsGlobal(Value *Ptr) {
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerKernelArgs::runOnFunction(Function &F) {
-  // Skip non-kernels. See the comments at the top of this file.
-  if (!isKernelFunction(F))
-    return false;
-
+bool NVPTXLowerKernelArgs::runOnKernelFunction(Function &F) {
   if (TM && TM->getDrvInterface() == NVPTX::CUDA) {
     // Mark pointers in byval structs as global.
     for (auto &B : F) {
@@ -226,6 +227,19 @@ bool NVPTXLowerKernelArgs::runOnFunction(Function &F) {
     }
   }
   return true;
+}
+
+// See comments in NVPTXDAGToDAGISel::SelectAddrSpaceCast() for the
+// details on why we need to spill byval arguments into local memory.
+bool NVPTXLowerKernelArgs::runOnDeviceFunction(Function &F) {
+  for (Argument &Arg : F.args())
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
+      handleByValParam(&Arg);
+  return true;
+}
+
+bool NVPTXLowerKernelArgs::runOnFunction(Function &F) {
+  return isKernelFunction(F) ? runOnKernelFunction(F) : runOnDeviceFunction(F);
 }
 
 FunctionPass *

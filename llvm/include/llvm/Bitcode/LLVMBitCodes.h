@@ -113,9 +113,6 @@ enum ModuleCodes {
 
   // IFUNC: [ifunc value type, addrspace, resolver val#, linkage, visibility]
   MODULE_CODE_IFUNC = 18,
-
-  // GLOBALVAR_ATTACHMENT: [valueid, n x [id, mdnode]]
-  MODULE_CODE_GLOBALVAR_ATTACHMENT = 19,
 };
 
 /// PARAMATTR blocks have code for defining a parameter attribute set.
@@ -260,6 +257,7 @@ enum MetadataCodes {
   METADATA_MACRO = 33,           // [distinct, macinfo, line, name, value]
   METADATA_MACRO_FILE = 34,      // [distinct, macinfo, line, file, ...]
   METADATA_STRINGS = 35,         // [count, offset] blob([lengths][chars])
+  METADATA_GLOBAL_DECL_ATTACHMENT = 36, // [valueid, n x [id, mdnode]]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each

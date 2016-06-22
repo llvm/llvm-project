@@ -534,24 +534,29 @@ bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {
   return TargetLowering::isTypeDesirableForOp(Op, VT);
 }
 
-SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
-                                         const SDLoc &SL, SDValue Chain,
-                                         unsigned Offset, bool Signed) const {
+SDValue SITargetLowering::LowerParameterPtr(SelectionDAG &DAG,
+                                            const SDLoc &SL, SDValue Chain,
+                                            unsigned Offset) const {
   const DataLayout &DL = DAG.getDataLayout();
   MachineFunction &MF = DAG.getMachineFunction();
   const SIRegisterInfo *TRI =
       static_cast<const SIRegisterInfo*>(Subtarget->getRegisterInfo());
   unsigned InputPtrReg = TRI->getPreloadedValue(MF, SIRegisterInfo::KERNARG_SEGMENT_PTR);
 
-  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
-
   MachineRegisterInfo &MRI = DAG.getMachineFunction().getRegInfo();
   MVT PtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
-  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
   SDValue BasePtr = DAG.getCopyFromReg(Chain, SL,
                                        MRI.getLiveInVirtReg(InputPtrReg), PtrVT);
-  SDValue Ptr = DAG.getNode(ISD::ADD, SL, PtrVT, BasePtr,
-                            DAG.getConstant(Offset, SL, PtrVT));
+  return DAG.getNode(ISD::ADD, SL, PtrVT, BasePtr,
+                     DAG.getConstant(Offset, SL, PtrVT));
+}
+SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
+                                         const SDLoc &SL, SDValue Chain,
+                                         unsigned Offset, bool Signed) const {
+  const DataLayout &DL = DAG.getDataLayout();
+  Type *Ty = VT.getTypeForEVT(*DAG.getContext());
+  MVT PtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
+  PointerType *PtrTy = PointerType::get(Ty, AMDGPUAS::CONSTANT_ADDRESS);
   SDValue PtrOffset = DAG.getUNDEF(PtrVT);
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
 
@@ -561,6 +566,7 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
   if (MemVT.isFloatingPoint())
     ExtTy = ISD::EXTLOAD;
 
+  SDValue Ptr = LowerParameterPtr(DAG, SL, Chain, Offset);
   return DAG.getLoad(ISD::UNINDEXED, ExtTy,
                      VT, SL, Chain, Ptr, PtrOffset, PtrInfo, MemVT,
                      false, // isVolatile
@@ -1539,6 +1545,10 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SIRegisterInfo::DISPATCH_PTR : SIRegisterInfo::QUEUE_PTR;
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_64RegClass,
                                 TRI->getPreloadedValue(MF, Reg), VT);
+  }
+  case Intrinsic::amdgcn_implicitarg_ptr: {
+    unsigned offset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
+    return LowerParameterPtr(DAG, DL, DAG.getEntryNode(), offset);
   }
   case Intrinsic::amdgcn_kernarg_segment_ptr: {
     unsigned Reg

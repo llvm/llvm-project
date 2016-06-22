@@ -70,7 +70,6 @@ public:
 };
 
 class ELFObjectWriter : public MCObjectWriter {
-  static bool isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind);
   static uint64_t SymbolValue(const MCSymbol &Sym, const MCAsmLayout &Layout);
   static bool isInSymtab(const MCAsmLayout &Layout, const MCSymbolELF &Symbol,
                          bool Used, bool Renamed);
@@ -296,13 +295,6 @@ void SymbolTableWriter::writeSymbol(uint32_t name, uint8_t info, uint64_t value,
   }
 
   ++NumWritten;
-}
-
-bool ELFObjectWriter::isFixupKindPCRel(const MCAssembler &Asm, unsigned Kind) {
-  const MCFixupKindInfo &FKI =
-    Asm.getBackend().getFixupKindInfo((MCFixupKind) Kind);
-
-  return FKI.Flags & MCFixupKindInfo::FKF_IsPCRel;
 }
 
 ELFObjectWriter::~ELFObjectWriter()

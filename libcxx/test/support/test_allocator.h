@@ -87,7 +87,11 @@ public:
     template <class U> void construct(pointer p, U&& val)
         {::new(static_cast<void*>(p)) T(std::forward<U>(val));}
 #endif
-    void destroy(pointer p) {p->~T();}
+    void destroy(pointer p)
+        {
+            p->~T();
+            ((void)p); // Prevent MSVC's spurious unused warning
+        }
     friend bool operator==(const test_allocator& x, const test_allocator& y)
         {return x.data_ == y.data_;}
     friend bool operator!=(const test_allocator& x, const test_allocator& y)

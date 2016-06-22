@@ -1,5 +1,7 @@
 ; RUN: llc < %s -mtriple=aarch64 -mattr=neon -recip=!sqrt,!vec-sqrt | FileCheck %s --check-prefix=FAULT
 ; RUN: llc < %s -mtriple=aarch64 -mattr=neon -recip=sqrt,vec-sqrt   | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64 -mattr=neon,-use-reverse-square-root  | FileCheck %s --check-prefix=FAULT
+; RUN: llc < %s -mtriple=aarch64 -mattr=neon,+use-reverse-square-root | FileCheck %s
 
 declare float @llvm.sqrt.f32(float) #1
 declare double @llvm.sqrt.f64(double) #1

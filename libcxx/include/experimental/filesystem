@@ -292,7 +292,7 @@ enum class _LIBCPP_TYPE_VIS perms : unsigned
 
     add_perms        = 0x10000,
     remove_perms     = 0x20000,
-    resolve_symlinks = 0x40000
+    symlink_nofollow = 0x40000
 };
 
 _LIBCPP_INLINE_VISIBILITY
@@ -1393,7 +1393,9 @@ bool exists(const path& __p) {
 
 inline _LIBCPP_INLINE_VISIBILITY
 bool exists(const path& __p, error_code& __ec) _NOEXCEPT {
-    return exists(__status(__p, &__ec));
+    auto __s = __status(__p, &__ec);
+    if (status_known(__s)) __ec.clear();
+    return exists(__s);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
