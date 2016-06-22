@@ -423,7 +423,7 @@ __kmp_affinity_determine_capable(const char *env_var)
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
-#if KMP_USE_FUTEX && !KMP_OS_CNK
+#if KMP_USE_FUTEX
 
 int
 __kmp_futex_determine_capable()
@@ -440,7 +440,7 @@ __kmp_futex_determine_capable()
     return retval;
 }
 
-#endif // KMP_USE_FUTEX && !KMP_OS_CNK
+#endif // KMP_USE_FUTEX
 
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */

@@ -25,6 +25,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
+#include "llvm/LTO/UpdateCompilerUsed.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/StringSaver.h"
@@ -153,6 +154,21 @@ static void undefine(Symbol *S) {
   replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type);
 }
 
+static void handleUndefinedAsmRefs(const BasicSymbolRef &Sym, GlobalValue *GV,
+                                   StringSet<> &AsmUndefinedRefs) {
+  // GV associated => not an assembly symbol, bail out.
+  if (GV)
+    return;
+
+  // This is an undefined reference to a symbol in asm. We put that in
+  // compiler.used, so that we can preserve it from being dropped from
+  // the output, without necessarily preventing its internalization.
+  SmallString<64> Name;
+  raw_svector_ostream OS(Name);
+  Sym.printName(OS);
+  AsmUndefinedRefs.insert(Name.str());
+}
+
 void BitcodeCompiler::add(BitcodeFile &F) {
   std::unique_ptr<IRObjectFile> Obj = std::move(F.Obj);
   std::vector<GlobalValue *> Keep;
@@ -181,8 +197,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     if (BitcodeFile::shouldSkip(Flags))
       continue;
     Symbol *S = Syms[BodyIndex++];
-    if (Flags & BasicSymbolRef::SF_Undefined)
+    if (Flags & BasicSymbolRef::SF_Undefined) {
+      handleUndefinedAsmRefs(Sym, GV, AsmUndefinedRefs);
       continue;
+    }
     auto *B = dyn_cast<DefinedBitcode>(S->body());
     if (!B || B->File != &F)
       continue;
@@ -271,9 +289,6 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
     internalize(*GV);
   }
 
-  if (Config->SaveTemps)
-    saveBCFile(*Combined, ".lto.bc");
-
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(TheTriple, Msg);
   if (!T)
@@ -291,6 +306,14 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
   };
 
   std::unique_ptr<TargetMachine> TM = CreateTargetMachine();
+
+  // Update llvm.compiler.used so that optimizations won't strip
+  // off AsmUndefinedReferences.
+  updateCompilerUsed(*Combined, *TM, AsmUndefinedRefs);
+
+  if (Config->SaveTemps)
+    saveBCFile(*Combined, ".lto.bc");
+
   runLTOPasses(*Combined, *TM);
   if (HasError)
     return {};

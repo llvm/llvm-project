@@ -31,6 +31,7 @@ add_lld_library(lldELF
   Core
   IPO
   Linker
+  LTO
   Object
   Option
   Passes

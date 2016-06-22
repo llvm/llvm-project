@@ -9,44 +9,19 @@
 
 // <list>
 
-// Call front() on empty const container.
+// iterator insert(const_iterator position, value_type&& x);
 
-#if _LIBCPP_DEBUG >= 1
-
+#define _LIBCPP_DEBUG 1
 #define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
 
 #include <list>
-#include <cassert>
-#include <iterator>
-#include <exception>
 #include <cstdlib>
-
-#include "min_allocator.h"
-
-int main()
-{
-    {
-    typedef int T;
-    typedef std::list<T> C;
-    const C c;
-    assert(c.front() == 0);
-    assert(false);
-    }
-#if TEST_STD_VER >= 11
-    {
-    typedef int T;
-    typedef std::list<T, min_allocator<T>> C;
-    const C c;
-    assert(c.front() == 0);
-    assert(false);
-    }
-#endif
-}
-
-#else
+#include <cassert>
 
 int main()
 {
+    std::list<int> v1(3);
+    std::list<int> v2(3);
+    v1.insert(v2.begin(), 4);
+    assert(false);
 }
-
-#endif

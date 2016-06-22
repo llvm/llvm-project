@@ -113,6 +113,10 @@
 // Ob2-NOT: warning: argument unused during compilation: '/O2'
 // Ob2: -finline-functions
 
+// RUN: %clang_cl /Ob1 -### -- %s 2>&1 | FileCheck -check-prefix=Ob1 %s
+// RUN: %clang_cl /Odb1 -### -- %s 2>&1 | FileCheck -check-prefix=Ob1 %s
+// Ob1: -finline-hint-functions
+
 // RUN: %clang_cl /Od -### -- %s 2>&1 | FileCheck -check-prefix=Od %s
 // Od: -O0
 
@@ -280,7 +284,6 @@
 // RUN:    /GS- \
 // RUN:    /kernel- \
 // RUN:    /nologo \
-// RUN:    /Ob1 \
 // RUN:    /openmp- \
 // RUN:    /RTC1 \
 // RUN:    /sdl \

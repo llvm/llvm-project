@@ -36,49 +36,35 @@
 # DSO-NEXT:     }
 # DSO-NEXT:   ]
 # DSO-NEXT: }
-# DSO-NEXT: Version definition {
-# DSO-NEXT:   Section Name: .gnu.version_d
-# DSO-NEXT:   Address: 0x230
-# DSO-NEXT:   Offset: 0x230
-# DSO-NEXT:   Link: 5
-# DSO-NEXT:   Entries [
-# DSO-NEXT:     Entry {
-# DSO-NEXT:       Offset: 0x0
-# DSO-NEXT:       Rev: 1
-# DSO-NEXT:       Flags: 1
-# DSO-NEXT:       Index: 1
-# DSO-NEXT:       Cnt: 1
-# DSO-NEXT:       Hash: 127830196
-# DSO-NEXT:       Name:
-# DSO-NEXT:     }
-# DSO-NEXT:     Entry {
-# DSO-NEXT:       Offset: 0x14
-# DSO-NEXT:       Rev: 1
-# DSO-NEXT:       Flags: 0
-# DSO-NEXT:       Index: 2
-# DSO-NEXT:       Cnt: 1
-# DSO-NEXT:       Hash: 98457184
-# DSO-NEXT:       Name: LIBSAMPLE_1.0
-# DSO-NEXT:     }
-# DSO-NEXT:     Entry {
-# DSO-NEXT:       Offset: 0x28
-# DSO-NEXT:       Rev: 1
-# DSO-NEXT:       Flags: 0
-# DSO-NEXT:       Index: 3
-# DSO-NEXT:       Cnt: 1
-# DSO-NEXT:       Hash: 98456416
-# DSO-NEXT:       Name: LIBSAMPLE_2.0
-# DSO-NEXT:     }
-# DSO-NEXT:     Entry {
-# DSO-NEXT:       Offset: 0x3C
-# DSO-NEXT:       Rev: 1
-# DSO-NEXT:       Flags: 0
-# DSO-NEXT:       Index: 4
-# DSO-NEXT:       Cnt: 1
-# DSO-NEXT:       Hash: 98456672
-# DSO-NEXT:       Name: LIBSAMPLE_3.0
-# DSO-NEXT:     }
-# DSO-NEXT:   ]
+# DSO-NEXT: SHT_GNU_verdef {
+# DSO-NEXT:   Definition {
+# DSO-NEXT:     Version: 1
+# DSO-NEXT:     Flags: Base
+# DSO-NEXT:     Index: 1
+# DSO-NEXT:     Hash: 127830196
+# DSO-NEXT:     Name: shared
+# DSO-NEXT:   }
+# DSO-NEXT:   Definition {
+# DSO-NEXT:     Version: 1
+# DSO-NEXT:     Flags: 0x0
+# DSO-NEXT:     Index: 2
+# DSO-NEXT:     Hash: 98457184
+# DSO-NEXT:     Name: LIBSAMPLE_1.0
+# DSO-NEXT:   }
+# DSO-NEXT:   Definition {
+# DSO-NEXT:     Version: 1
+# DSO-NEXT:     Flags: 0x0
+# DSO-NEXT:     Index: 3
+# DSO-NEXT:     Hash: 98456416
+# DSO-NEXT:     Name: LIBSAMPLE_2.0
+# DSO-NEXT:   }
+# DSO-NEXT:   Definition {
+# DSO-NEXT:     Version: 1
+# DSO-NEXT:     Flags: 0x0
+# DSO-NEXT:     Index: 4
+# DSO-NEXT:     Hash: 98456672
+# DSO-NEXT:     Name: LIBSAMPLE_3.0
+# DSO-NEXT:   }
 # DSO-NEXT: }
 # DSO-NEXT: SHT_GNU_verneed {
 # DSO-NEXT: }
@@ -112,7 +98,7 @@
 # MAIN-NEXT:     }
 # MAIN-NEXT:   ]
 # MAIN-NEXT: }
-# MAIN-NEXT: Version definition {
+# MAIN-NEXT: SHT_GNU_verdef {
 # MAIN-NEXT: }
 
 .globl a

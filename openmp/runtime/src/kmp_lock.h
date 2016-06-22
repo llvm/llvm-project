@@ -178,7 +178,9 @@ extern void __kmp_destroy_nested_tas_lock( kmp_tas_lock_t *lck );
 #define KMP_LOCK_ACQUIRED_FIRST 1
 #define KMP_LOCK_ACQUIRED_NEXT  0
 
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#define KMP_USE_FUTEX (KMP_OS_LINUX && !KMP_OS_CNK && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64))
+
+#if KMP_USE_FUTEX
 
 // ----------------------------------------------------------------------------
 // futex locks.  futex locks are only available on Linux* OS.
@@ -228,7 +230,7 @@ extern int __kmp_release_nested_futex_lock( kmp_futex_lock_t *lck, kmp_int32 gti
 extern void __kmp_init_nested_futex_lock( kmp_futex_lock_t *lck );
 extern void __kmp_destroy_nested_futex_lock( kmp_futex_lock_t *lck );
 
-#endif // KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#endif // KMP_USE_FUTEX
 
 
 // ----------------------------------------------------------------------------
@@ -625,7 +627,7 @@ __kmp_destroy_lock( kmp_lock_t *lck )
 enum kmp_lock_kind {
     lk_default = 0,
     lk_tas,
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     lk_futex,
 #endif
 #if KMP_USE_DYNAMIC_LOCK && KMP_USE_TSX
@@ -646,7 +648,7 @@ extern kmp_lock_kind_t __kmp_user_lock_kind;
 
 union kmp_user_lock {
     kmp_tas_lock_t     tas;
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     kmp_futex_lock_t   futex;
 #endif
     kmp_ticket_lock_t  ticket;
@@ -1101,9 +1103,8 @@ extern void __kmp_cleanup_user_locks();
 #include <stdint.h> // for uintptr_t
 
 // Shortcuts
-#define KMP_USE_FUTEX          (KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64))
-#define KMP_USE_INLINED_TAS    (KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)) && 1
-#define KMP_USE_INLINED_FUTEX  KMP_USE_FUTEX && 0
+#define KMP_USE_INLINED_TAS   (KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM)) && 1
+#define KMP_USE_INLINED_FUTEX KMP_USE_FUTEX && 0
 
 // List of lock definitions; all nested locks are indirect locks.
 // hle lock is xchg lock prefixed with XACQUIRE/XRELEASE.

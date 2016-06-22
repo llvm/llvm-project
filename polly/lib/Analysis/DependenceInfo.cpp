@@ -244,7 +244,7 @@ void Dependences::addPrivatizationDependences() {
   // dependency cycles in the privatization dependences. To make sure this
   // will not happen we remove all negative dependences after we computed
   // the transitive closure.
-  TC_RED = isl_union_map_transitive_closure(isl_union_map_copy(RED), 0);
+  TC_RED = isl_union_map_transitive_closure(isl_union_map_copy(RED), nullptr);
 
   // FIXME: Apply the current schedule instead of assuming the identity schedule
   //        here. The current approach is only valid as long as we compute the

@@ -1195,6 +1195,15 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       MicrosoftVTableContext::MethodVFTableLocation ML =
           CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
       VIndex = ML.Index;
+
+      // CodeView only records the vftable offset in the class that introduces
+      // the virtual method. This is possible because, unlike Itanium, the MS
+      // C++ ABI does not include all virtual methods from non-primary bases in
+      // the vtable for the most derived class. For example, if C inherits from
+      // A and B, C's primary vftable will not include B's virtual methods.
+      if (Method->begin_overridden_methods() == Method->end_overridden_methods())
+        Flags |= llvm::DINode::FlagIntroducedVirtual;
+
       // FIXME: Pass down ML.VFPtrOffset and ML.VBTableIndex. The debugger needs
       // these to synthesize a call to a virtual method in a complex inheritance
       // hierarchy.

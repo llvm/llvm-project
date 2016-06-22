@@ -597,29 +597,25 @@ void __permissions(const path& p, perms prms, std::error_code *ec)
     const bool resolve_symlinks = !bool(perms::symlink_nofollow & prms);
     const bool add_perms = bool(perms::add_perms & prms);
     const bool remove_perms = bool(perms::remove_perms & prms);
-
     _LIBCPP_ASSERT(!(add_perms && remove_perms),
                    "Both add_perms and remove_perms are set");
 
-    std::error_code m_ec;
-    file_status st = detail::posix_lstat(p, &m_ec);
-    if (m_ec) return set_or_throw(m_ec, ec, "permissions", p);
-
-    // AT_SYMLINK_NOFOLLOW can only be used on symlinks, using it on a regular
-    // file will cause fchmodat to report an error on some systems.
-    const bool set_sym_perms = is_symlink(st) && !resolve_symlinks;
-
-    if ((resolve_symlinks && is_symlink(st)) && (add_perms || remove_perms)) {
-        st = detail::posix_stat(p, &m_ec);
+    bool set_sym_perms = false;
+    prms &= perms::mask;
+    if (!resolve_symlinks || (add_perms || remove_perms)) {
+        std::error_code m_ec;
+        file_status st = resolve_symlinks ? detail::posix_stat(p, &m_ec)
+                                          : detail::posix_lstat(p, &m_ec);
+        set_sym_perms = is_symlink(st);
         if (m_ec) return set_or_throw(m_ec, ec, "permissions", p);
+        _LIBCPP_ASSERT(st.permissions() != perms::unknown,
+                       "Permissions unexpectedly unknown");
+        if (add_perms)
+            prms |= st.permissions();
+        else if (remove_perms)
+           prms = st.permissions() & ~prms;
     }
-
-    prms = prms & perms::mask;
-    if (add_perms)
-        prms |= st.permissions();
-    else if (remove_perms)
-        prms = st.permissions() & ~prms;
-    auto real_perms = detail::posix_convert_perms(prms);
+    const auto real_perms = detail::posix_convert_perms(prms);
 
 # if defined(AT_SYMLINK_NOFOLLOW) && defined(AT_FDCWD)
     const int flags = set_sym_perms ? AT_SYMLINK_NOFOLLOW : 0;

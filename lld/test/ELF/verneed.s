@@ -133,7 +133,7 @@
 # CHECK-NEXT:      }
 # CHECK-NEXT:    ]
 # CHECK-NEXT:  }
-# CHECK-NEXT:  Version definition {
+# CHECK-NEXT:  SHT_GNU_verdef {
 # CHECK-NEXT:  }
 # CHECK-NEXT:  SHT_GNU_verneed {
 # CHECK-NEXT:    Dependency {

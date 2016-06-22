@@ -23,7 +23,7 @@ void func(int i) {                    // CHECK-NEXT: File 0, [[@LINE]]:18 -> {{[
                                       // CHECK-NEXT: main
 int main() {                          // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE+13]]:2 = #0
   int j = 1;
-  try {
+  try {                               // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE+2]]:4 = #0
     func(j);
   } catch(const Error &e) {           // CHECK-NEXT: File 0, [[@LINE]]:27 -> [[@LINE+2]]:4 = #2
     j = 1;

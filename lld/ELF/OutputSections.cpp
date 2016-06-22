@@ -1462,6 +1462,10 @@ template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
 
   this->Header.sh_size =
       (sizeof(Elf_Verdef) + sizeof(Elf_Verdaux)) * getVerDefNum();
+  for (Version &V : Config->SymbolVersions)
+    if (!V.Parent.empty())
+      this->Header.sh_size += sizeof(Elf_Verdaux);
+
   this->Header.sh_link = Out<ELFT>::DynStrTab->SectionIndex;
   this->Header.sh_addralign = sizeof(uint32_t);
 
@@ -1471,12 +1475,22 @@ template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
   this->Header.sh_info = getVerDefNum();
 }
 
+static size_t getVersionNameStrTabOffset(StringRef Name) {
+  for (Version &V : Config->SymbolVersions)
+    if (V.Name == Name)
+      return V.NameOff;
+  error("unknown version name " + Name + " used as a dependency");
+  return 0;
+}
+
 template <class Elf_Verdef, class Elf_Verdaux>
 static void writeDefinition(Elf_Verdef *&Verdef, Elf_Verdaux *&Verdaux,
                             uint32_t Flags, uint32_t Index, StringRef Name,
-                            size_t StrTabOffset) {
+                            size_t StrTabOffset, StringRef ParentName) {
+  bool HasParent = !ParentName.empty();
+
   Verdef->vd_version = 1;
-  Verdef->vd_cnt = 1;
+  Verdef->vd_cnt = HasParent ? 2 : 1;
   Verdef->vd_aux =
       reinterpret_cast<char *>(Verdaux) - reinterpret_cast<char *>(Verdef);
   Verdef->vd_next = sizeof(Elf_Verdef);
@@ -1487,6 +1501,12 @@ static void writeDefinition(Elf_Verdef *&Verdef, Elf_Verdaux *&Verdaux,
   ++Verdef;
 
   Verdaux->vda_name = StrTabOffset;
+  if (HasParent) {
+    Verdaux->vda_next = sizeof(Elf_Verdaux);
+    ++Verdaux;
+    Verdaux->vda_name = getVersionNameStrTabOffset(ParentName);
+  }
+
   Verdaux->vda_next = 0;
   ++Verdaux;
 }
@@ -1498,11 +1518,12 @@ void VersionDefinitionSection<ELFT>::writeTo(uint8_t *Buf) {
       reinterpret_cast<Elf_Verdaux *>(Verdef + getVerDefNum());
 
   writeDefinition(Verdef, Verdaux, VER_FLG_BASE, 1, getFileDefName(),
-                  FileDefNameOff);
+                  FileDefNameOff, "" /* Parent */);
 
   uint32_t I = 2;
   for (Version &V : Config->SymbolVersions)
-    writeDefinition(Verdef, Verdaux, 0 /* Flags */, I++, V.Name, V.NameOff);
+    writeDefinition(Verdef, Verdaux, 0 /* Flags */, I++, V.Name, V.NameOff,
+                    V.Parent);
 
   Verdef[-1].vd_next = 0;
 }

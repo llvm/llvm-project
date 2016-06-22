@@ -13,6 +13,7 @@
 #define POLLY_SCHEDULE_OPTIMIZER_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "isl/ctx.h"
 
 struct isl_schedule;
@@ -37,9 +38,11 @@ public:
   ///
   /// @param Schedule The schedule object the transformations will be applied
   ///                 to.
+  /// @param TTI      Target Transform Info.
   /// @returns        The transformed schedule.
   static __isl_give isl_schedule *
-  optimizeSchedule(__isl_take isl_schedule *Schedule);
+  optimizeSchedule(__isl_take isl_schedule *Schedule,
+                   const llvm::TargetTransformInfo *TTI = nullptr);
 
   /// @brief Apply schedule tree transformations.
   ///
@@ -51,9 +54,11 @@ public:
   ///   - Prevectorization
   ///
   /// @param Node The schedule object post-transformations will be applied to.
+  /// @param TTI  Target Transform Info.
   /// @returns    The transformed schedule.
   static __isl_give isl_schedule_node *
-  optimizeScheduleNode(__isl_take isl_schedule_node *Node);
+  optimizeScheduleNode(__isl_take isl_schedule_node *Node,
+                       const llvm::TargetTransformInfo *TTI = nullptr);
 
   /// @brief Decide if the @p NewSchedule is profitable for @p S.
   ///
@@ -99,6 +104,32 @@ private:
   static __isl_give isl_schedule_node *
   applyRegisterTiling(__isl_take isl_schedule_node *Node,
                       llvm::ArrayRef<int> TileSizes, int DefaultTileSize);
+
+  /// @brief Apply the BLIS matmul optimization pattern
+  ///
+  /// Apply the BLIS matmul optimization pattern
+  /// (http://www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf).
+  /// BLIS implements gemm as three nested loops around a macro-kernel,
+  /// plus two packing routines. The macro-kernel is implemented in terms
+  /// of two additional loops around a micro-kernel. The micro-kernel
+  /// is a loop around a rank-1 (i.e., outer product) update.
+  ///
+  /// We create the BLIS micro-kernel by applying a combination of tiling
+  /// and unrolling. In subsequent changes we will add the extraction
+  /// of the BLIS macro-kernel and implement the packing transformation.
+  ///
+  /// It is assumed that the Node is successfully checked
+  /// by ScheduleTreeOptimizer::isMatrMultPattern. Consequently
+  /// in case of matmul kernels the application of optimizeMatMulPattern
+  /// can lead to close-to-peak performance. Maybe it can be generalized
+  /// to effectively optimize the whole class of successfully checked
+  /// statements.
+  ///
+  /// @param Node the node that contains a band to be optimized.
+  /// @return Modified isl_schedule_node.
+  static __isl_give isl_schedule_node *
+  optimizeMatMulPattern(__isl_take isl_schedule_node *Node,
+                        const llvm::TargetTransformInfo *TTI);
 
   /// @brief Check if this node is a band node we want to tile.
   ///
