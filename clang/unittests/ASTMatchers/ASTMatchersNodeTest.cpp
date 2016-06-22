@@ -999,8 +999,8 @@ TEST(ExprWithCleanups, MatchesExprWithCleanups) {
   EXPECT_TRUE(matches("struct Foo { ~Foo(); };"
                         "const Foo f = Foo();",
                       varDecl(hasInitializer(exprWithCleanups()))));
-  EXPECT_FALSE(matches("struct Foo { };"
-                         "const Foo f = Foo();",
+  EXPECT_FALSE(matches("struct Foo { }; Foo a;"
+                       "const Foo f = a;",
                        varDecl(hasInitializer(exprWithCleanups()))));
 }
 

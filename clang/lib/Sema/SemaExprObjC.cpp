@@ -4067,7 +4067,7 @@ Sema::CheckObjCARCConversion(SourceRange castRange, QualType castType,
     castExpr = ImplicitCastExpr::Create(Context, castExpr->getType(),
                                         CK_ARCConsumeObject, castExpr,
                                         nullptr, VK_RValue);
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
     return ACR_okay;
   }
 
@@ -4310,7 +4310,7 @@ ExprResult Sema::BuildObjCBridgedCast(SourceLocation LParenLoc,
                                                    TSInfo, SubExpr);
   
   if (MustConsume) {
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
     Result = ImplicitCastExpr::Create(Context, T, CK_ARCConsumeObject, Result, 
                                       nullptr, VK_RValue);
   }

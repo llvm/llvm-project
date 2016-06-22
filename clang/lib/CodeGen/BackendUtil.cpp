@@ -488,6 +488,7 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
     PMBuilder.PGOInstrUse = CodeGenOpts.ProfileInstrumentUsePath;
 
   if (!CodeGenOpts.SampleProfileFile.empty()) {
+    MPM->add(createPruneEHPass());
     MPM->add(createSampleProfileLoaderPass(CodeGenOpts.SampleProfileFile));
     PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
                            addInstructionCombiningPass);

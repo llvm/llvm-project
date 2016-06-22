@@ -366,7 +366,6 @@ namespace {
     Stmt *RewriteContinueStmt(ContinueStmt *S);
     void RewriteCastExpr(CStyleCastExpr *CE);
     void RewriteImplicitCastObjCExpr(CastExpr *IE);
-    void RewriteLinkageSpec(LinkageSpecDecl *LSD);
     
     // Computes ivar bitfield group no.
     unsigned ObjCIvarBitfieldGroupNo(ObjCIvarDecl *IV);
@@ -447,9 +446,6 @@ namespace {
                                     std::string &Result);
     void RewriteObjCProtocolMetaData(ObjCProtocolDecl *Protocol,
                                      std::string &Result);
-    void RewriteObjCProtocolListMetaData(
-                   const ObjCList<ObjCProtocolDecl> &Prots,
-                   StringRef prefix, StringRef ClassName, std::string &Result);
     void RewriteObjCClassMetaData(ObjCImplementationDecl *IDecl,
                                           std::string &Result);
     void RewriteClassSetupInitHook(std::string &Result);
@@ -522,7 +518,6 @@ namespace {
     QualType getSuperStructType();
     QualType getConstantStringStructType();
     QualType convertFunctionTypeOfBlocks(const FunctionType *FT);
-    bool BufferContainsPPDirectives(const char *startBuf, const char *endBuf);
     
     void convertToUnqualifiedObjCType(QualType &T) {
       if (T->isObjCQualifiedIdType()) {
@@ -742,10 +737,6 @@ void RewriteModernObjC::HandleTopLevelSingleDecl(Decl *D) {
     if (PD->isThisDeclarationADefinition())
       RewriteProtocolDecl(PD);
   } else if (LinkageSpecDecl *LSD = dyn_cast<LinkageSpecDecl>(D)) {
-    // FIXME. This will not work in all situations and leaving it out
-    // is harmless.
-    // RewriteLinkageSpec(LSD);
-    
     // Recurse into linkage specifications
     for (DeclContext::decl_iterator DI = LSD->decls_begin(),
                                  DIEnd = LSD->decls_end();
@@ -1208,22 +1199,6 @@ RewriteModernObjC::RewriteForwardProtocolDecl(const SmallVectorImpl<Decl *> &DG)
     llvm_unreachable("Invalid SourceLocation");
   // FIXME: handle forward protocol that are declared across multiple lines.
   ReplaceText(LocStart, 0, "// ");
-}
-
-void 
-RewriteModernObjC::RewriteLinkageSpec(LinkageSpecDecl *LSD) {
-  SourceLocation LocStart = LSD->getExternLoc();
-  if (LocStart.isInvalid())
-    llvm_unreachable("Invalid extern SourceLocation");
-  
-  ReplaceText(LocStart, 0, "// ");
-  if (!LSD->hasBraces())
-    return;
-  // FIXME. We don't rewrite well if '{' is not on same line as 'extern'.
-  SourceLocation LocRBrace = LSD->getRBraceLoc();
-  if (LocRBrace.isInvalid())
-    llvm_unreachable("Invalid rbrace SourceLocation");
-  ReplaceText(LocRBrace, 0, "// ");
 }
 
 void RewriteModernObjC::RewriteTypeIntoString(QualType T, std::string &ResultStr,
@@ -3627,32 +3602,6 @@ Stmt *RewriteModernObjC::RewriteObjCProtocolExpr(ObjCProtocolExpr *Exp) {
   ProtocolExprDecls.insert(Exp->getProtocol()->getCanonicalDecl());
   // delete Exp; leak for now, see RewritePropertyOrImplicitSetter() usage for more info.
   return castExpr;
-}
-
-bool RewriteModernObjC::BufferContainsPPDirectives(const char *startBuf,
-                                             const char *endBuf) {
-  while (startBuf < endBuf) {
-    if (*startBuf == '#') {
-      // Skip whitespace.
-      for (++startBuf; startBuf[0] == ' ' || startBuf[0] == '\t'; ++startBuf)
-        ;
-      if (!strncmp(startBuf, "if", strlen("if")) ||
-          !strncmp(startBuf, "ifdef", strlen("ifdef")) ||
-          !strncmp(startBuf, "ifndef", strlen("ifndef")) ||
-          !strncmp(startBuf, "define", strlen("define")) ||
-          !strncmp(startBuf, "undef", strlen("undef")) ||
-          !strncmp(startBuf, "else", strlen("else")) ||
-          !strncmp(startBuf, "elif", strlen("elif")) ||
-          !strncmp(startBuf, "endif", strlen("endif")) ||
-          !strncmp(startBuf, "pragma", strlen("pragma")) ||
-          !strncmp(startBuf, "include", strlen("include")) ||
-          !strncmp(startBuf, "import", strlen("import")) ||
-          !strncmp(startBuf, "include_next", strlen("include_next")))
-        return true;
-    }
-    startBuf++;
-  }
-  return false;
 }
 
 /// IsTagDefinedInsideClass - This routine checks that a named tagged type 
@@ -7046,51 +6995,6 @@ void RewriteModernObjC::RewriteObjCProtocolMetaData(ObjCProtocolDecl *PDecl,
   // Mark this protocol as having been generated.
   if (!ObjCSynthesizedProtocols.insert(PDecl->getCanonicalDecl()).second)
     llvm_unreachable("protocol already synthesized");
-}
-
-void RewriteModernObjC::RewriteObjCProtocolListMetaData(
-                                const ObjCList<ObjCProtocolDecl> &Protocols,
-                                StringRef prefix, StringRef ClassName,
-                                std::string &Result) {
-  if (Protocols.empty()) return;
-  
-  for (unsigned i = 0; i != Protocols.size(); i++)
-    RewriteObjCProtocolMetaData(Protocols[i], Result);
-  
-  // Output the top lovel protocol meta-data for the class.
-  /* struct _objc_protocol_list {
-   struct _objc_protocol_list *next;
-   int    protocol_count;
-   struct _objc_protocol *class_protocols[];
-   }
-   */
-  Result += "\n";
-  if (LangOpts.MicrosoftExt)
-    Result += "__declspec(allocate(\".cat_cls_meth$B\")) ";
-  Result += "static struct {\n";
-  Result += "\tstruct _objc_protocol_list *next;\n";
-  Result += "\tint    protocol_count;\n";
-  Result += "\tstruct _objc_protocol *class_protocols[";
-  Result += utostr(Protocols.size());
-  Result += "];\n} _OBJC_";
-  Result += prefix;
-  Result += "_PROTOCOLS_";
-  Result += ClassName;
-  Result += " __attribute__ ((used, section (\"__OBJC, __cat_cls_meth\")))= "
-  "{\n\t0, ";
-  Result += utostr(Protocols.size());
-  Result += "\n";
-  
-  Result += "\t,{&_OBJC_PROTOCOL_";
-  Result += Protocols[0]->getNameAsString();
-  Result += " \n";
-  
-  for (unsigned i = 1; i != Protocols.size(); i++) {
-    Result += "\t ,&_OBJC_PROTOCOL_";
-    Result += Protocols[i]->getNameAsString();
-    Result += "\n";
-  }
-  Result += "\t }\n};\n";
 }
 
 /// hasObjCExceptionAttribute - Return true if this class or any super

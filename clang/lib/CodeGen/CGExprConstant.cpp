@@ -764,6 +764,12 @@ public:
     return Visit(DIE->getExpr());
   }
 
+  llvm::Constant *VisitExprWithCleanups(ExprWithCleanups *E) {
+    if (!E->cleanupsHaveSideEffects())
+      return Visit(E->getSubExpr());
+    return nullptr;
+  }
+
   llvm::Constant *VisitMaterializeTemporaryExpr(MaterializeTemporaryExpr *E) {
     return Visit(E->GetTemporaryExpr());
   }

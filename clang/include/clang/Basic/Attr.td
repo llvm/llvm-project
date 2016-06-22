@@ -738,7 +738,7 @@ def OpenCLNoSVM : Attr {
 def RenderScriptKernel : Attr {
   let Spellings = [GNU<"kernel">];
   let Subjects = SubjectList<[Function]>;
-  let Documentation = [Undocumented];
+  let Documentation = [RenderScriptKernelAttributeDocs];
   let LangOpts = [RenderScript];
 }
 

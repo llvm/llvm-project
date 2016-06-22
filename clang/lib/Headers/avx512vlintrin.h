@@ -30,9 +30,10 @@
 
 #define __DEFAULT_FN_ATTRS __attribute__((__always_inline__, __nodebug__, __target__("avx512vl")))
 
-static  __inline __v2di __DEFAULT_FN_ATTRS
+/* Doesn't require avx512vl, used in avx512dqintrin.h */
+static  __inline __m128i __attribute__((__always_inline__, __nodebug__, __target__("avx512f")))
 _mm_setzero_di(void) {
-  return (__v2di){ 0, 0};
+  return (__m128i)(__v2di){ 0LL, 0LL};
 }
 
 /* Integer compare */

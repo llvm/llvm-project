@@ -462,13 +462,96 @@ TEST(Range, CalculateRangesOfReplacements) {
 
   std::vector<Range> Ranges = calculateChangedRanges(Replaces);
 
-  EXPECT_EQ(3ul, Ranges.size());
+  EXPECT_EQ(2ul, Ranges.size());
   EXPECT_TRUE(Ranges[0].getOffset() == 0);
   EXPECT_TRUE(Ranges[0].getLength() == 0);
   EXPECT_TRUE(Ranges[1].getOffset() == 6);
-  EXPECT_TRUE(Ranges[1].getLength() == 6);
-  EXPECT_TRUE(Ranges[2].getOffset() == 12);
-  EXPECT_TRUE(Ranges[2].getLength() == 16);
+  EXPECT_TRUE(Ranges[1].getLength() == 22);
+}
+
+TEST(Range, RangesAfterReplacements) {
+  std::vector<Range> Ranges = {Range(5, 2), Range(10, 5)};
+  Replacements Replaces = {Replacement("foo", 0, 2, "1234")};
+  std::vector<Range> Expected = {Range(0, 4), Range(7, 2), Range(12, 5)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, RangesBeforeReplacements) {
+  std::vector<Range> Ranges = {Range(5, 2), Range(10, 5)};
+  Replacements Replaces = {Replacement("foo", 20, 2, "1234")};
+  std::vector<Range> Expected = {Range(5, 2), Range(10, 5), Range(20, 4)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, NotAffectedByReplacements) {
+  std::vector<Range> Ranges = {Range(0, 2), Range(5, 2), Range(10, 5)};
+  Replacements Replaces = {Replacement("foo", 3, 2, "12"),
+                           Replacement("foo", 12, 2, "12"),
+                           Replacement("foo", 20, 5, "")};
+  std::vector<Range> Expected = {Range(0, 2), Range(3, 4), Range(10, 5),
+                                 Range(20, 0)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, RangesWithNonOverlappingReplacements) {
+  std::vector<Range> Ranges = {Range(0, 2), Range(5, 2), Range(10, 5)};
+  Replacements Replaces = {Replacement("foo", 3, 1, ""),
+                           Replacement("foo", 6, 1, "123"),
+                           Replacement("foo", 20, 2, "12345")};
+  std::vector<Range> Expected = {Range(0, 2), Range(3, 0), Range(4, 4),
+                                 Range(11, 5), Range(21, 5)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, RangesWithOverlappingReplacements) {
+  std::vector<Range> Ranges = {Range(0, 2), Range(5, 2), Range(15, 5),
+                               Range(30, 5)};
+  Replacements Replaces = {
+      Replacement("foo", 1, 3, ""), Replacement("foo", 6, 1, "123"),
+      Replacement("foo", 13, 3, "1"), Replacement("foo", 25, 15, "")};
+  std::vector<Range> Expected = {Range(0, 1), Range(2, 4), Range(12, 5),
+                                 Range(22, 0)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, MergeIntoOneRange) {
+  std::vector<Range> Ranges = {Range(0, 2), Range(5, 2), Range(15, 5)};
+  Replacements Replaces = {Replacement("foo", 1, 15, "1234567890")};
+  std::vector<Range> Expected = {Range(0, 15)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, ReplacementsStartingAtRangeOffsets) {
+  std::vector<Range> Ranges = {Range(0, 2), Range(5, 5), Range(15, 5)};
+  Replacements Replaces = {
+      Replacement("foo", 0, 2, "12"), Replacement("foo", 5, 1, "123"),
+      Replacement("foo", 7, 4, "12345"), Replacement("foo", 15, 10, "12")};
+  std::vector<Range> Expected = {Range(0, 2), Range(5, 9), Range(18, 2)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, ReplacementsEndingAtRangeEnds) {
+  std::vector<Range> Ranges = {Range(0, 2), Range(5, 2), Range(15, 5)};
+  Replacements Replaces = {Replacement("foo", 6, 1, "123"),
+                           Replacement("foo", 17, 3, "12")};
+  std::vector<Range> Expected = {Range(0, 2), Range(5, 4), Range(17, 4)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, AjacentReplacements) {
+  std::vector<Range> Ranges = {Range(0, 0), Range(15, 5)};
+  Replacements Replaces = {Replacement("foo", 1, 2, "123"),
+                           Replacement("foo", 12, 3, "1234")};
+  std::vector<Range> Expected = {Range(0, 0), Range(1, 3), Range(13, 9)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
+}
+
+TEST(Range, MergeRangesAfterReplacements) {
+  std::vector<Range> Ranges = {Range(8, 0), Range(5, 2), Range(9, 0), Range(0, 1)};
+  Replacements Replaces = {Replacement("foo", 1, 3, ""),
+                           Replacement("foo", 7, 0, "12"), Replacement("foo", 9, 2, "")};
+  std::vector<Range> Expected = {Range(0, 1), Range(2, 4), Range(7, 0), Range(8, 0)};
+  EXPECT_EQ(Expected, calculateRangesAfterReplacements(Replaces, Ranges));
 }
 
 TEST(DeduplicateTest, removesDuplicates) {

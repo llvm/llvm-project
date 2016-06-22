@@ -33,7 +33,7 @@
 
 static  __inline __m128i __DEFAULT_FN_ATTRS
 _mm_setzero_hi(void){
-    return (__m128i){ 0LL, 0LL };
+    return (__m128i)(__v8hi){ 0, 0, 0, 0, 0, 0, 0, 0 };
 }
 
 /* Integer compare */
@@ -2408,22 +2408,22 @@ _mm256_maskz_cvtepu8_epi16 (__mmask16 __U, __m128i __A)
 
 #define _mm_mask_shufflehi_epi16(W, U, A, imm) __extension__ ({ \
   (__m128i)__builtin_ia32_selectw_128((__mmask8)(U), \
-                                      _mm_shufflehi_epi16((A), (imm)), \
+                                      (__v8hi)_mm_shufflehi_epi16((A), (imm)), \
                                       (__v8hi)(__m128i)(W)); })
 
 #define _mm_maskz_shufflehi_epi16(U, A, imm) __extension__ ({ \
   (__m128i)__builtin_ia32_selectw_128((__mmask8)(U), \
-                                      _mm_shufflehi_epi16((A), (imm)), \
+                                      (__v8hi)_mm_shufflehi_epi16((A), (imm)), \
                                       (__v8hi)_mm_setzero_hi()); })
 
 #define _mm256_mask_shufflehi_epi16(W, U, A, imm) __extension__ ({ \
   (__m256i)__builtin_ia32_selectw_256((__mmask16)(U), \
-                                      _mm256_shufflehi_epi16((A), (imm)), \
+                                      (__v16hi)_mm256_shufflehi_epi16((A), (imm)), \
                                       (__v16hi)(__m256i)(W)); })
 
 #define _mm256_maskz_shufflehi_epi16(U, A, imm) __extension__ ({ \
   (__m256i)__builtin_ia32_selectw_256((__mmask16)(U), \
-                                      _mm256_shufflehi_epi16((A), (imm)), \
+                                      (__v16hi)_mm256_shufflehi_epi16((A), (imm)), \
                                       (__v16hi)_mm256_setzero_si256()); })
 
 #define _mm_mask_shufflelo_epi16(W, U, A, imm) __extension__ ({ \

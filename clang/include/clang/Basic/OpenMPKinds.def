@@ -455,6 +455,7 @@ OPENMP_TARGET_UPDATE_CLAUSE(device)
 OPENMP_TARGET_UPDATE_CLAUSE(to)
 OPENMP_TARGET_UPDATE_CLAUSE(from)
 OPENMP_TARGET_UPDATE_CLAUSE(nowait)
+OPENMP_TARGET_UPDATE_CLAUSE(depend)
 
 // Clauses allowed for OpenMP directive 'teams'.
 // TODO More clauses for 'teams' directive.

@@ -1500,7 +1500,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
   SourceRange IntroducerRange;
   bool ExplicitParams;
   bool ExplicitResultType;
-  bool LambdaExprNeedsCleanups;
+  CleanupInfo LambdaCleanup;
   bool ContainsUnexpandedParameterPack;
   SmallVector<VarDecl *, 4> ArrayIndexVars;
   SmallVector<unsigned, 4> ArrayIndexStarts;
@@ -1510,7 +1510,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     IntroducerRange = LSI->IntroducerRange;
     ExplicitParams = LSI->ExplicitParams;
     ExplicitResultType = !LSI->HasImplicitReturnType;
-    LambdaExprNeedsCleanups = LSI->ExprNeedsCleanups;
+    LambdaCleanup = LSI->Cleanup;
     ContainsUnexpandedParameterPack = LSI->ContainsUnexpandedParameterPack;
     
     CallOperator->setLexicalDeclContext(Class);
@@ -1591,9 +1591,8 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
     CheckCompletedCXXClass(Class);
   }
 
-  if (LambdaExprNeedsCleanups)
-    ExprNeedsCleanups = true;
-  
+  Cleanup.mergeFrom(LambdaCleanup);
+
   LambdaExpr *Lambda = LambdaExpr::Create(Context, Class, IntroducerRange, 
                                           CaptureDefault, CaptureDefaultLoc,
                                           Captures, 
@@ -1714,7 +1713,7 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
   // Create the block literal expression.
   Expr *BuildBlock = new (Context) BlockExpr(Block, Conv->getConversionType());
   ExprCleanupObjects.push_back(Block);
-  ExprNeedsCleanups = true;
+  Cleanup.setExprNeedsCleanups(true);
 
   return BuildBlock;
 }

@@ -712,7 +712,7 @@ ExprResult Sema::DefaultLvalueConversion(Expr *E) {
   // balance that.
   if (getLangOpts().ObjCAutoRefCount &&
       E->getType().getObjCLifetime() == Qualifiers::OCL_Weak)
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
 
   ExprResult Res = ImplicitCastExpr::Create(Context, T, CK_LValueToRValue, E,
                                             nullptr, VK_RValue);
@@ -4580,15 +4580,15 @@ ExprResult Sema::BuildCXXDefaultArgExpr(SourceLocation CallLoc,
   // bound temporaries; see the comment in PR5810.
   // We don't need to do that with block decls, though, because
   // blocks in default argument expression can never capture anything.
-  if (isa<ExprWithCleanups>(Param->getInit())) {
+  if (auto Init = dyn_cast<ExprWithCleanups>(Param->getInit())) {
     // Set the "needs cleanups" bit regardless of whether there are
     // any explicit objects.
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(Init->cleanupsHaveSideEffects());
 
     // Append all the objects to the cleanup list.  Right now, this
     // should always be a no-op, because blocks in default argument
     // expressions should never be able to capture anything.
-    assert(!cast<ExprWithCleanups>(Param->getInit())->getNumObjects() &&
+    assert(!Init->getNumObjects() &&
            "default argument expression has capturing blocks?");
   }
 
@@ -5603,7 +5603,7 @@ void Sema::maybeExtendBlockObject(ExprResult &E) {
   E = ImplicitCastExpr::Create(Context, E.get()->getType(),
                                CK_ARCExtendBlockObject, E.get(),
                                /*base path*/ nullptr, VK_RValue);
-  ExprNeedsCleanups = true;
+  Cleanup.setExprNeedsCleanups(true);
 }
 
 /// Prepare a conversion of the given expression to an ObjC object
@@ -10389,8 +10389,8 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
     if (sfinae)
       return QualType();
     // Materialize the temporary as an lvalue so that we can take its address.
-    OrigOp = op = new (Context)
-        MaterializeTemporaryExpr(op->getType(), OrigOp.get(), true);
+    OrigOp = op =
+        CreateMaterializeTemporaryExpr(op->getType(), OrigOp.get(), true);
   } else if (isa<ObjCSelectorExpr>(op)) {
     return Context.getPointerType(op->getType());
   } else if (lval == Expr::LV_MemberFunction) {
@@ -11603,7 +11603,8 @@ Sema::ActOnStmtExpr(SourceLocation LPLoc, Stmt *SubStmt,
 
   if (hasAnyUnrecoverableErrorsInThisFunction())
     DiscardCleanupsInEvaluationContext();
-  assert(!ExprNeedsCleanups && "cleanups within StmtExpr not correctly bound!");
+  assert(!Cleanup.exprNeedsCleanups() &&
+         "cleanups within StmtExpr not correctly bound!");
   PopExpressionEvaluationContext();
 
   // FIXME: there are a variety of strange constraints to enforce here, for
@@ -12071,7 +12072,8 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   // Leave the expression-evaluation context.
   if (hasAnyUnrecoverableErrorsInThisFunction())
     DiscardCleanupsInEvaluationContext();
-  assert(!ExprNeedsCleanups && "cleanups within block not correctly bound!");
+  assert(!Cleanup.exprNeedsCleanups() &&
+         "cleanups within block not correctly bound!");
   PopExpressionEvaluationContext();
 
   BlockScopeInfo *BSI = cast<BlockScopeInfo>(FunctionScopes.back());
@@ -12162,7 +12164,7 @@ ExprResult Sema::ActOnBlockStmtExpr(SourceLocation CaretLoc,
   if (Result->getBlockDecl()->hasCaptures()) {
     // First, this expression has a new cleanup object.
     ExprCleanupObjects.push_back(Result->getBlockDecl());
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
 
     // It also gets a branch-protected scope if any of the captured
     // variables needs destruction.
@@ -12799,10 +12801,9 @@ void
 Sema::PushExpressionEvaluationContext(ExpressionEvaluationContext NewContext,
                                       Decl *LambdaContextDecl,
                                       bool IsDecltype) {
-  ExprEvalContexts.emplace_back(NewContext, ExprCleanupObjects.size(),
-                                ExprNeedsCleanups, LambdaContextDecl,
-                                IsDecltype);
-  ExprNeedsCleanups = false;
+  ExprEvalContexts.emplace_back(NewContext, ExprCleanupObjects.size(), Cleanup,
+                                LambdaContextDecl, IsDecltype);
+  Cleanup.reset();
   if (!MaybeODRUseExprs.empty())
     std::swap(MaybeODRUseExprs, ExprEvalContexts.back().SavedMaybeODRUseExprs);
 }
@@ -12853,12 +12854,12 @@ void Sema::PopExpressionEvaluationContext() {
   if (Rec.isUnevaluated() || Rec.Context == ConstantEvaluated) {
     ExprCleanupObjects.erase(ExprCleanupObjects.begin() + Rec.NumCleanupObjects,
                              ExprCleanupObjects.end());
-    ExprNeedsCleanups = Rec.ParentNeedsCleanups;
+    Cleanup = Rec.ParentCleanup;
     CleanupVarDeclMarking();
     std::swap(MaybeODRUseExprs, Rec.SavedMaybeODRUseExprs);
   // Otherwise, merge the contexts together.
   } else {
-    ExprNeedsCleanups |= Rec.ParentNeedsCleanups;
+    Cleanup.mergeFrom(Rec.ParentCleanup);
     MaybeODRUseExprs.insert(Rec.SavedMaybeODRUseExprs.begin(),
                             Rec.SavedMaybeODRUseExprs.end());
   }
@@ -12877,7 +12878,7 @@ void Sema::DiscardCleanupsInEvaluationContext() {
   ExprCleanupObjects.erase(
          ExprCleanupObjects.begin() + ExprEvalContexts.back().NumCleanupObjects,
          ExprCleanupObjects.end());
-  ExprNeedsCleanups = false;
+  Cleanup.reset();
   MaybeODRUseExprs.clear();
 }
 

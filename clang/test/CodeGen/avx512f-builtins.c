@@ -1098,290 +1098,314 @@ __m128 test_mm512_maskz_extractf32x4_ps( __mmask8  __U,__m512d __A){
 
 __mmask16 test_mm512_cmpeq_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpeq_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 0, i16 -1)
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpeq_epu32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmpeq_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpeq_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 0, i16 {{.*}})
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmpeq_epu32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmpeq_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpeq_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 0, i8 -1)
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpeq_epu64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmpeq_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpeq_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 0, i8 {{.*}})
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmpeq_epu64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmpge_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpge_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 5, i16 -1)
+  // CHECK: icmp sge <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpge_epi32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmpge_epi32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpge_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 5, i16 {{.*}})
+  // CHECK: icmp sge <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmpge_epi32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmpge_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpge_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 5, i8 -1)
+  // CHECK: icmp sge <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpge_epi64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmpge_epi64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpge_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 5, i8 {{.*}})
+  // CHECK: icmp sge <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmpge_epi64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmpge_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpge_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 5, i16 -1)
+  // CHECK: icmp uge <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpge_epu32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmpge_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpge_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 5, i16 {{.*}})
+  // CHECK: icmp uge <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmpge_epu32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmpge_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpge_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 5, i8 -1)
+  // CHECK: icmp uge <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpge_epu64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmpge_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpge_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 5, i8 {{.*}})
+  // CHECK: icmp uge <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmpge_epu64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmpgt_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpgt_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 6, i16 -1)
+  // CHECK: icmp ugt <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpgt_epu32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmpgt_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpgt_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 6, i16 {{.*}})
+  // CHECK: icmp ugt <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmpgt_epu32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmpgt_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpgt_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 6, i8 -1)
+  // CHECK: icmp ugt <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpgt_epu64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmpgt_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpgt_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 6, i8 {{.*}})
+  // CHECK: icmp ugt <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmpgt_epu64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmple_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmple_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 2, i16 -1)
+  // CHECK: icmp sle <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmple_epi32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmple_epi32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmple_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 2, i16 {{.*}})
+  // CHECK: icmp sle <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmple_epi32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmple_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmple_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 2, i8 -1)
+  // CHECK: icmp sle <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmple_epi64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmple_epi64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmple_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 2, i8 {{.*}})
+  // CHECK: icmp sle <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmple_epi64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmple_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmple_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 2, i16 -1)
+  // CHECK: icmp ule <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmple_epu32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmple_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmple_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 2, i16 {{.*}})
+  // CHECK: icmp ule <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmple_epu32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmple_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmple_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 2, i8 -1)
+  // CHECK: icmp ule <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmple_epu64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmple_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmple_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 2, i8 {{.*}})
+  // CHECK: icmp ule <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmple_epu64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmplt_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmplt_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 1, i16 -1)
+  // CHECK: icmp slt <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmplt_epi32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmplt_epi32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmplt_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 1, i16 {{.*}})
+  // CHECK: icmp slt <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmplt_epi32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmplt_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmplt_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 1, i8 -1)
+  // CHECK: icmp slt <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmplt_epi64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmplt_epi64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmplt_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 1, i8 {{.*}})
+  // CHECK: icmp slt <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmplt_epi64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmplt_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmplt_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 1, i16 -1)
+  // CHECK: icmp ult <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmplt_epu32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmplt_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmplt_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 1, i16 {{.*}})
+  // CHECK: icmp ult <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmplt_epu32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmplt_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmplt_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 1, i8 -1)
+  // CHECK: icmp ult <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmplt_epu64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmplt_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmplt_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 1, i8 {{.*}})
+  // CHECK: icmp ult <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmplt_epu64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmpneq_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpneq_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 4, i16 -1)
+  // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpneq_epi32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmpneq_epi32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpneq_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 4, i16 {{.*}})
+  // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmpneq_epi32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmpneq_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpneq_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 4, i8 -1)
+  // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpneq_epi64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmpneq_epi64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpneq_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 4, i8 {{.*}})
+  // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmpneq_epi64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmpneq_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpneq_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 4, i16 -1)
+  // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_cmpneq_epu32_mask(__a, __b);
 }
 
 __mmask16 test_mm512_mask_cmpneq_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpneq_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 4, i16 {{.*}})
+  // CHECK: icmp ne <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
   return (__mmask16)_mm512_mask_cmpneq_epu32_mask(__u, __a, __b);
 }
 
 __mmask8 test_mm512_cmpneq_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmpneq_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 4, i8 -1)
+  // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_cmpneq_epu64_mask(__a, __b);
 }
 
 __mmask8 test_mm512_mask_cmpneq_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmpneq_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 4, i8 {{.*}})
+  // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
   return (__mmask8)_mm512_mask_cmpneq_epu64_mask(__u, __a, __b);
 }
 
 __mmask16 test_mm512_cmp_epi32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmp_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 3, i16 -1)
-  return (__mmask16)_mm512_cmp_epi32_mask(__a, __b, 3);
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
+  return (__mmask16)_mm512_cmp_epi32_mask(__a, __b, 0);
 }
 
 __mmask16 test_mm512_mask_cmp_epi32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_epi32_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 3, i16 {{.*}})
-  return (__mmask16)_mm512_mask_cmp_epi32_mask(__u, __a, __b, 3);
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
+  return (__mmask16)_mm512_mask_cmp_epi32_mask(__u, __a, __b, 0);
 }
 
 __mmask8 test_mm512_cmp_epi64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmp_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 3, i8 -1)
-  return (__mmask8)_mm512_cmp_epi64_mask(__a, __b, 3);
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
+  return (__mmask8)_mm512_cmp_epi64_mask(__a, __b, 0);
 }
 
 __mmask8 test_mm512_mask_cmp_epi64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_epi64_mask
-  // CHECK: @llvm.x86.avx512.mask.cmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 3, i8 {{.*}})
-  return (__mmask8)_mm512_mask_cmp_epi64_mask(__u, __a, __b, 3);
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
+  return (__mmask8)_mm512_mask_cmp_epi64_mask(__u, __a, __b, 0);
 }
 
 __mmask16 test_mm512_cmp_epu32_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmp_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 3, i16 -1)
-  return (__mmask16)_mm512_cmp_epu32_mask(__a, __b, 3);
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
+  return (__mmask16)_mm512_cmp_epu32_mask(__a, __b, 0);
 }
 
 __mmask16 test_mm512_mask_cmp_epu32_mask(__mmask16 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_epu32_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.d.512(<16 x i32> {{.*}}, <16 x i32> {{.*}}, i32 3, i16 {{.*}})
-  return (__mmask16)_mm512_mask_cmp_epu32_mask(__u, __a, __b, 3);
+  // CHECK: icmp eq <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: and <16 x i1> %{{.*}}, %{{.*}}
+  return (__mmask16)_mm512_mask_cmp_epu32_mask(__u, __a, __b, 0);
 }
 
 __mmask8 test_mm512_cmp_epu64_mask(__m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_cmp_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 3, i8 -1)
-  return (__mmask8)_mm512_cmp_epu64_mask(__a, __b, 3);
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
+  return (__mmask8)_mm512_cmp_epu64_mask(__a, __b, 0);
 }
 
 __mmask8 test_mm512_mask_cmp_epu64_mask(__mmask8 __u, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_cmp_epu64_mask
-  // CHECK: @llvm.x86.avx512.mask.ucmp.q.512(<8 x i64> {{.*}}, <8 x i64> {{.*}}, i32 3, i8 {{.*}})
-  return (__mmask8)_mm512_mask_cmp_epu64_mask(__u, __a, __b, 3);
+  // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: and <8 x i1> %{{.*}}, %{{.*}}
+  return (__mmask8)_mm512_mask_cmp_epu64_mask(__u, __a, __b, 0);
 }
 
 __m512i test_mm512_mask_and_epi32(__m512i __src,__mmask16 __k, __m512i __a, __m512i __b) {

@@ -192,7 +192,10 @@ protected:
 
     unsigned : NumExprBits;
 
-    unsigned NumObjects : 32 - NumExprBits;
+    // When false, it must not have side effects.
+    unsigned CleanupsHaveSideEffects : 1;
+
+    unsigned NumObjects : 32 - 1 - NumExprBits;
   };
 
   class PseudoObjectExprBitfields {

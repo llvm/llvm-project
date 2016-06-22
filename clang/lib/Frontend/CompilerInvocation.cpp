@@ -2391,59 +2391,6 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   return Success;
 }
 
-namespace {
-
-  class ModuleSignature {
-    SmallVector<uint64_t, 16> Data;
-    unsigned CurBit;
-    uint64_t CurValue;
-
-  public:
-    ModuleSignature() : CurBit(0), CurValue(0) { }
-
-    void add(uint64_t Value, unsigned Bits);
-    void add(StringRef Value);
-    void flush();
-
-    llvm::APInt getAsInteger() const;
-  };
-}
-
-void ModuleSignature::add(uint64_t Value, unsigned int NumBits) {
-  CurValue |= Value << CurBit;
-  if (CurBit + NumBits < 64) {
-    CurBit += NumBits;
-    return;
-  }
-
-  // Add the current word.
-  Data.push_back(CurValue);
-
-  if (CurBit)
-    CurValue = Value >> (64-CurBit);
-  else
-    CurValue = 0;
-  CurBit = (CurBit+NumBits) & 63;
-}
-
-void ModuleSignature::flush() {
-  if (CurBit == 0)
-    return;
-
-  Data.push_back(CurValue);
-  CurBit = 0;
-  CurValue = 0;
-}
-
-void ModuleSignature::add(StringRef Value) {
-  for (auto &c : Value)
-    add(c, 8);
-}
-
-llvm::APInt ModuleSignature::getAsInteger() const {
-  return llvm::APInt(Data.size() * 64, Data);
-}
-
 std::string CompilerInvocation::getModuleHash() const {
   // Note: For QoI reasons, the things we use as a hash here should all be
   // dumped via the -module-info flag.
