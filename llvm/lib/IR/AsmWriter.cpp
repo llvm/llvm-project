@@ -2126,11 +2126,8 @@ AssemblyWriter::AssemblyWriter(formatted_raw_ostream &o, SlotTracker &Mac,
   if (!TheModule)
     return;
   TypePrinter.incorporateTypes(*TheModule);
-  for (const Function &F : *TheModule)
-    if (const Comdat *C = F.getComdat())
-      Comdats.insert(C);
-  for (const GlobalVariable &GV : TheModule->globals())
-    if (const Comdat *C = GV.getComdat())
+  for (const GlobalObject &GO : TheModule->global_objects())
+    if (const Comdat *C = GO.getComdat())
       Comdats.insert(C);
 }
 

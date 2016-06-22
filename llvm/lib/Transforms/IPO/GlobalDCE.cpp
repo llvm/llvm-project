@@ -96,21 +96,14 @@ PreservedAnalyses GlobalDCEPass::run(Module &M, ModuleAnalysisManager &) {
       ComdatMembers.insert(std::make_pair(C, &GA));
 
   // Loop over the module, adding globals which are obviously necessary.
-  for (Function &F : M) {
-    Changed |= RemoveUnusedGlobalValue(F);
-    // Functions with external linkage are needed if they have a body
-    if (!F.isDeclaration() && !F.hasAvailableExternallyLinkage())
-      if (!F.isDiscardableIfUnused())
-        GlobalIsNeeded(&F);
-  }
-
-  for (GlobalVariable &GV : M.globals()) {
-    Changed |= RemoveUnusedGlobalValue(GV);
+  for (GlobalObject &GO : M.global_objects()) {
+    Changed |= RemoveUnusedGlobalValue(GO);
+    // Functions with external linkage are needed if they have a body.
     // Externally visible & appending globals are needed, if they have an
     // initializer.
-    if (!GV.isDeclaration() && !GV.hasAvailableExternallyLinkage())
-      if (!GV.isDiscardableIfUnused())
-        GlobalIsNeeded(&GV);
+    if (!GO.isDeclaration() && !GO.hasAvailableExternallyLinkage())
+      if (!GO.isDiscardableIfUnused())
+        GlobalIsNeeded(&GO);
   }
 
   for (GlobalAlias &GA : M.aliases()) {

@@ -99,8 +99,6 @@ private:
   Constant *getEmitFunctionFunc();
   Constant *getEmitArcsFunc();
   Constant *getSummaryInfoFunc();
-  Constant *getDeleteWriteoutFunctionListFunc();
-  Constant *getDeleteFlushFunctionListFunc();
   Constant *getEndFileFunc();
 
   // Create or retrieve an i32 state value that is used to represent the
@@ -815,16 +813,6 @@ Constant *GCOVProfiler::getEmitArcsFunc() {
 Constant *GCOVProfiler::getSummaryInfoFunc() {
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
   return M->getOrInsertFunction("llvm_gcda_summary_info", FTy);
-}
-
-Constant *GCOVProfiler::getDeleteWriteoutFunctionListFunc() {
-  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  return M->getOrInsertFunction("llvm_delete_writeout_function_list", FTy);
-}
-
-Constant *GCOVProfiler::getDeleteFlushFunctionListFunc() {
-  FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), false);
-  return M->getOrInsertFunction("llvm_delete_flush_function_list", FTy);
 }
 
 Constant *GCOVProfiler::getEndFileFunc() {

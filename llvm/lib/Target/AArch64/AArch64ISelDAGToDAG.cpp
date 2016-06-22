@@ -2256,11 +2256,6 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
       APInt(BitWidth, Mask0Imm) == ~APInt(BitWidth, Mask1Imm) &&
       (isShiftedMask(Mask0Imm, VT) || isShiftedMask(Mask1Imm, VT))) {
 
-    // We should have already caught the case where we extract hi and low parts.
-    // E.g. BFXIL from 'or (and X, 0xffff0000), (and Y, 0x0000ffff)'.
-    assert(!(isShiftedMask(Mask0Imm, VT) && isShiftedMask(Mask1Imm, VT)) &&
-           "BFXIL should have already been optimized.");
-
     // ORR is commutative, so canonicalize to the form 'or (and X, Mask0Imm),
     // (and Y, Mask1Imm)' where Mask1Imm is the shifted mask masking off the
     // bits to be inserted.

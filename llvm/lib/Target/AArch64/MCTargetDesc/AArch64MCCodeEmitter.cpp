@@ -154,24 +154,6 @@ public:
                                 SmallVectorImpl<MCFixup> &Fixups,
                                 const MCSubtargetInfo &STI) const;
 
-  /// getSIMDShift64OpValue - Return the encoded value for the
-  // shift-by-immediate AdvSIMD instructions.
-  uint32_t getSIMDShift64OpValue(const MCInst &MI, unsigned OpIdx,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
-
-  uint32_t getSIMDShift64_32OpValue(const MCInst &MI, unsigned OpIdx,
-                                    SmallVectorImpl<MCFixup> &Fixups,
-                                    const MCSubtargetInfo &STI) const;
-
-  uint32_t getSIMDShift32OpValue(const MCInst &MI, unsigned OpIdx,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
-
-  uint32_t getSIMDShift16OpValue(const MCInst &MI, unsigned OpIdx,
-                                 SmallVectorImpl<MCFixup> &Fixups,
-                                 const MCSubtargetInfo &STI) const;
-
   unsigned fixMOVZ(const MCInst &MI, unsigned EncodedValue,
                    const MCSubtargetInfo &STI) const;
 
@@ -426,41 +408,6 @@ AArch64MCCodeEmitter::getVecShifterOpValue(const MCInst &MI, unsigned OpIdx,
   }
 
   llvm_unreachable("Invalid value for vector shift amount!");
-}
-
-uint32_t
-AArch64MCCodeEmitter::getSIMDShift64OpValue(const MCInst &MI, unsigned OpIdx,
-                                            SmallVectorImpl<MCFixup> &Fixups,
-                                            const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpIdx);
-  assert(MO.isImm() && "Expected an immediate value for the shift amount!");
-  return 64 - (MO.getImm());
-}
-
-uint32_t AArch64MCCodeEmitter::getSIMDShift64_32OpValue(
-    const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
-    const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpIdx);
-  assert(MO.isImm() && "Expected an immediate value for the shift amount!");
-  return 64 - (MO.getImm() | 32);
-}
-
-uint32_t
-AArch64MCCodeEmitter::getSIMDShift32OpValue(const MCInst &MI, unsigned OpIdx,
-                                            SmallVectorImpl<MCFixup> &Fixups,
-                                            const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpIdx);
-  assert(MO.isImm() && "Expected an immediate value for the shift amount!");
-  return 32 - (MO.getImm() | 16);
-}
-
-uint32_t
-AArch64MCCodeEmitter::getSIMDShift16OpValue(const MCInst &MI, unsigned OpIdx,
-                                            SmallVectorImpl<MCFixup> &Fixups,
-                                            const MCSubtargetInfo &STI) const {
-  const MCOperand &MO = MI.getOperand(OpIdx);
-  assert(MO.isImm() && "Expected an immediate value for the shift amount!");
-  return 16 - (MO.getImm() | 8);
 }
 
 /// getFixedPointScaleOpValue - Return the encoded value for the

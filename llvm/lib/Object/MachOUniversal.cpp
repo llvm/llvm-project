@@ -23,40 +23,12 @@ using namespace llvm;
 using namespace object;
 
 template<typename T>
-static void SwapStruct(T &Value);
-
-template<>
-void SwapStruct(MachO::fat_header &H) {
-  sys::swapByteOrder(H.magic);
-  sys::swapByteOrder(H.nfat_arch);
-}
-
-template<>
-void SwapStruct(MachO::fat_arch &H) {
-  sys::swapByteOrder(H.cputype);
-  sys::swapByteOrder(H.cpusubtype);
-  sys::swapByteOrder(H.offset);
-  sys::swapByteOrder(H.size);
-  sys::swapByteOrder(H.align);
-}
-
-template<>
-void SwapStruct(MachO::fat_arch_64 &H) {
-  sys::swapByteOrder(H.cputype);
-  sys::swapByteOrder(H.cpusubtype);
-  sys::swapByteOrder(H.offset);
-  sys::swapByteOrder(H.size);
-  sys::swapByteOrder(H.align);
-  sys::swapByteOrder(H.reserved);
-}
-
-template<typename T>
 static T getUniversalBinaryStruct(const char *Ptr) {
   T Res;
   memcpy(&Res, Ptr, sizeof(T));
   // Universal binary headers have big-endian byte order.
   if (sys::IsLittleEndianHost)
-    SwapStruct(Res);
+    swapStruct(Res);
   return Res;
 }
 

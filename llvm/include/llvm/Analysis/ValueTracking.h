@@ -138,9 +138,9 @@ template <typename T> class ArrayRef;
   /// the other bits. We know that at least 1 bit is always equal to the sign
   /// bit (itself), but other cases can give us information. For example,
   /// immediately after an "ashr X, 2", we know that the top 3 bits are all
-  /// equal to each other, so we return 3.
-  ///
-  /// 'Op' must have a scalar integer type.
+  /// equal to each other, so we return 3. For vectors, return the number of
+  /// sign bits for the vector element with the mininum number of known sign
+  /// bits.
   unsigned ComputeNumSignBits(Value *Op, const DataLayout &DL,
                               unsigned Depth = 0, AssumptionCache *AC = nullptr,
                               const Instruction *CxtI = nullptr,

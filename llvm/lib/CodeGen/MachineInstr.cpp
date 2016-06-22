@@ -1754,6 +1754,8 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       OS << " [mayload]";
     if (ExtraInfo & InlineAsm::Extra_MayStore)
       OS << " [maystore]";
+    if (ExtraInfo & InlineAsm::Extra_IsConvergent)
+      OS << " [isconvergent]";
     if (ExtraInfo & InlineAsm::Extra_IsAlignStack)
       OS << " [alignstack]";
     if (getInlineAsmDialect() == InlineAsm::AD_ATT)

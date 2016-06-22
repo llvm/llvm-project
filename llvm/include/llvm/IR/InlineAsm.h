@@ -223,6 +223,7 @@ public:
     Extra_AsmDialect = 4,
     Extra_MayLoad = 8,
     Extra_MayStore = 16,
+    Extra_IsConvergent = 32,
 
     // Inline asm operands map to multiple SDNode / MachineInstr operands.
     // The first operand is an immediate describing the asm operand, the low

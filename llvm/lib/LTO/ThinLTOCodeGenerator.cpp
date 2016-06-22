@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/LTO/ThinLTOCodeGenerator.h"
-#include "llvm/LTO/UpdateCompilerUsed.h"
 
 #ifdef HAVE_LLVM_REVISION
 #include "LLVMLTORevision.h"

@@ -23,6 +23,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/ADT/Triple.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -2465,7 +2466,7 @@ SDValue PPCTargetLowering::LowerINIT_TRAMPOLINE(SDValue Op,
   CLI.setDebugLoc(dl).setChain(Chain)
     .setCallee(CallingConv::C, Type::getVoidTy(*DAG.getContext()),
                DAG.getExternalSymbol("__trampoline_setup", PtrVT),
-               std::move(Args), 0);
+               std::move(Args));
 
   std::pair<SDValue, SDValue> CallResult = LowerCallTo(CLI);
   return CallResult.second;
@@ -4284,13 +4285,13 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
     // A call to a TLS address is actually an indirect call to a
     // thread-specific pointer.
     unsigned OpFlags = 0;
-    if ((DAG.getTarget().getRelocationModel() != Reloc::Static &&
-         (Subtarget.getTargetTriple().isMacOSX() &&
-          Subtarget.getTargetTriple().isMacOSXVersionLT(10, 5)) &&
-         !G->getGlobal()->isStrongDefinitionForLinker()) ||
-        (Subtarget.isTargetELF() && !isPPC64 &&
-         !G->getGlobal()->hasLocalLinkage() &&
-         DAG.getTarget().getRelocationModel() == Reloc::PIC_)) {
+    Reloc::Model RM = DAG.getTarget().getRelocationModel();
+    const Triple &TargetTriple = Subtarget.getTargetTriple();
+    const GlobalValue *GV = G->getGlobal();
+    bool OldMachOLinker =
+        TargetTriple.isMacOSX() && TargetTriple.isMacOSXVersionLT(10, 5);
+    if (!shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV) &&
+        (OldMachOLinker || (Subtarget.isTargetELF() && !isPPC64))) {
       // PC-relative references to external symbols should go through $stub,
       // unless we're building with the leopard linker or later, which
       // automatically synthesizes these stubs.

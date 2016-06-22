@@ -526,6 +526,11 @@ public:
   /// Convergent instructions can not be made control-dependent on any
   /// additional values.
   bool isConvergent(QueryType Type = AnyInBundle) const {
+    if (isInlineAsm()) {
+      unsigned ExtraInfo = getOperand(InlineAsm::MIOp_ExtraInfo).getImm();
+      if (ExtraInfo & InlineAsm::Extra_IsConvergent)
+        return true;
+    }
     return hasProperty(MCID::Convergent, Type);
   }
 

@@ -281,7 +281,6 @@ class BitcodeReader : public GVMaterializer {
 
 public:
   std::error_code error(BitcodeError E, const Twine &Message);
-  std::error_code error(BitcodeError E);
   std::error_code error(const Twine &Message);
 
   BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context);
@@ -506,15 +505,10 @@ class ModuleSummaryIndexBitcodeReader {
   std::string SourceFileName;
 
 public:
-  std::error_code error(BitcodeError E, const Twine &Message);
-  std::error_code error(BitcodeError E);
   std::error_code error(const Twine &Message);
 
   ModuleSummaryIndexBitcodeReader(
       MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
-      bool CheckGlobalValSummaryPresenceOnly = false);
-  ModuleSummaryIndexBitcodeReader(
-      DiagnosticHandlerFunction DiagnosticHandler,
       bool CheckGlobalValSummaryPresenceOnly = false);
   ~ModuleSummaryIndexBitcodeReader() { freeState(); }
 
@@ -559,19 +553,10 @@ static std::error_code error(const DiagnosticHandlerFunction &DiagnosticHandler,
   return EC;
 }
 
-static std::error_code error(const DiagnosticHandlerFunction &DiagnosticHandler,
-                             std::error_code EC) {
-  return error(DiagnosticHandler, EC, EC.message());
-}
-
 static std::error_code error(LLVMContext &Context, std::error_code EC,
                              const Twine &Message) {
   return error([&](const DiagnosticInfo &DI) { Context.diagnose(DI); }, EC,
                Message);
-}
-
-static std::error_code error(LLVMContext &Context, std::error_code EC) {
-  return error(Context, EC, EC.message());
 }
 
 static std::error_code error(LLVMContext &Context, const Twine &Message) {
@@ -596,10 +581,6 @@ std::error_code BitcodeReader::error(const Twine &Message) {
   }
   return ::error(Context, make_error_code(BitcodeError::CorruptedBitcode),
                  Message);
-}
-
-std::error_code BitcodeReader::error(BitcodeError E) {
-  return ::error(Context, make_error_code(E));
 }
 
 BitcodeReader::BitcodeReader(MemoryBuffer *Buffer, LLVMContext &Context)
@@ -5754,30 +5735,15 @@ BitcodeReader::initLazyStream(std::unique_ptr<DataStreamer> Streamer) {
   return std::error_code();
 }
 
-std::error_code ModuleSummaryIndexBitcodeReader::error(BitcodeError E,
-                                                       const Twine &Message) {
-  return ::error(DiagnosticHandler, make_error_code(E), Message);
-}
-
 std::error_code ModuleSummaryIndexBitcodeReader::error(const Twine &Message) {
   return ::error(DiagnosticHandler,
                  make_error_code(BitcodeError::CorruptedBitcode), Message);
-}
-
-std::error_code ModuleSummaryIndexBitcodeReader::error(BitcodeError E) {
-  return ::error(DiagnosticHandler, make_error_code(E));
 }
 
 ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
     MemoryBuffer *Buffer, DiagnosticHandlerFunction DiagnosticHandler,
     bool CheckGlobalValSummaryPresenceOnly)
     : DiagnosticHandler(std::move(DiagnosticHandler)), Buffer(Buffer),
-      CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
-
-ModuleSummaryIndexBitcodeReader::ModuleSummaryIndexBitcodeReader(
-    DiagnosticHandlerFunction DiagnosticHandler,
-    bool CheckGlobalValSummaryPresenceOnly)
-    : DiagnosticHandler(std::move(DiagnosticHandler)), Buffer(nullptr),
       CheckGlobalValSummaryPresenceOnly(CheckGlobalValSummaryPresenceOnly) {}
 
 void ModuleSummaryIndexBitcodeReader::freeState() { Buffer = nullptr; }

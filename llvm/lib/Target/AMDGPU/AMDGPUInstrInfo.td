@@ -261,5 +261,8 @@ def IL_brcond      : SDNode<"AMDGPUISD::BRANCH_COND", SDTIL_BRCond, [SDNPHasChai
 //===----------------------------------------------------------------------===//
 // Call/Return DAG Nodes
 //===----------------------------------------------------------------------===//
-def IL_retflag       : SDNode<"AMDGPUISD::RET_FLAG", SDTNone,
+def AMDGPUendpgm : SDNode<"AMDGPUISD::ENDPGM", SDTNone,
+    [SDNPHasChain, SDNPOptInGlue]>;
+
+def AMDGPUreturn : SDNode<"AMDGPUISD::RETURN", SDTNone,
     [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;

@@ -138,8 +138,9 @@ public:
     }
   }
 
-  /// getDFSNumIn/getDFSNumOut - These are an internal implementation detail, do
-  /// not call them.
+  /// getDFSNumIn/getDFSNumOut - These return the DFS visitation order for nodes
+  /// in the dominator tree. They are only guaranteed valid if
+  /// updateDFSNumbers() has been called.
   unsigned getDFSNumIn() const { return DFSNumIn; }
   unsigned getDFSNumOut() const { return DFSNumOut; }
 

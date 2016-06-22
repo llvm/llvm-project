@@ -1,17 +1,22 @@
 ; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-target triple = "amdgcn--"
+; This should end with an no-op sequence of exec mask manipulations
+; Mask should be in original state after executed unreachable block
 
 ; GCN-LABEL: {{^}}main:
-; GCN: BB0_3:
-; GCN-NEXT: s_branch [[LASTBB:BB[0-9]*_[0-9]*]]
-; GCN-NEXT: BB0_
-; GCN: [[LASTBB]]
-; GCN-NEXT: .Lfunc_end0:
-; ModuleID = 'bugpoint-reduced-simplified.bc'
-target triple = "amdgcn--"
+; GCN: s_cbranch_vccnz [[RET_BB:BB[0-9]+_[0-9]+]]
 
+; GCN: s_and_saveexec_b64 [[SAVE_EXEC:s\[[0-9]+:[0-9]+\]]], vcc
+; GCN-NEXT: s_xor_b64 [[XOR_EXEC:s\[[0-9]+:[0-9]+\]]], exec, [[SAVE_EXEC]]
+; GCN-NEXT: ; mask branch [[UNREACHABLE_BB:BB[0-9]+_[0-9]+]]
+
+; GCN: [[RET_BB]]:
+; GCN-NEXT: ; return
+
+; GCN-NEXT: [[UNREACHABLE_BB]]:
+; GCN-NEXT: s_or_b64 exec, exec, [[XOR_EXEC]]
+; GCN-NEXT: .Lfunc_end0
 define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <8 x i32>] addrspace(2)* byval, i32 addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #0 {
 main_body:
   %p83 = call float @llvm.SI.fs.interp(i32 1, i32 0, i32 %5, <2 x i32> %7)

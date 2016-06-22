@@ -13,6 +13,7 @@
 
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/ADT/SCCIterator.h"
+#include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
 #include <numeric>
 
@@ -527,6 +528,21 @@ BlockFrequencyInfoImplBase::getBlockFreq(const BlockNode &Node) const {
   if (!Node.isValid())
     return 0;
   return Freqs[Node.Index].Integer;
+}
+
+Optional<uint64_t>
+BlockFrequencyInfoImplBase::getBlockProfileCount(const Function &F,
+                                                 const BlockNode &Node) const {
+  auto EntryCount = F.getEntryCount();
+  if (!EntryCount)
+    return None;
+  // Use 128 bit APInt to do the arithmetic to avoid overflow.
+  APInt BlockCount(128, EntryCount.getValue());
+  APInt BlockFreq(128, getBlockFreq(Node).getFrequency());
+  APInt EntryFreq(128, getEntryFreq());
+  BlockCount *= BlockFreq;
+  BlockCount = BlockCount.udiv(EntryFreq);
+  return BlockCount.getLimitedValue();
 }
 
 Scaled64

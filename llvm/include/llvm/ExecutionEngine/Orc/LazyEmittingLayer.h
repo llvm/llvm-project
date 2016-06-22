@@ -195,13 +195,8 @@ private:
       for (const auto &M : Ms) {
         Mangler Mang;
 
-        for (const auto &V : M->globals())
-          if (auto GV = addGlobalValue(*Symbols, V, Mang, SearchName,
-                                       ExportedSymbolsOnly))
-            return GV;
-
-        for (const auto &F : *M)
-          if (auto GV = addGlobalValue(*Symbols, F, Mang, SearchName,
+        for (const auto &GO : M->global_objects())
+          if (auto GV = addGlobalValue(*Symbols, GO, Mang, SearchName,
                                        ExportedSymbolsOnly))
             return GV;
       }

@@ -58,7 +58,6 @@ namespace {
     // operators inevitably call FAddendCoef's constructor which is not cheap.
     void operator=(const FAddendCoef &A);
     void operator+=(const FAddendCoef &A);
-    void operator-=(const FAddendCoef &A);
     void operator*=(const FAddendCoef &S);
 
     bool isOne() const { return isInt() && IntVal == 1; }
@@ -277,27 +276,6 @@ void FAddendCoef::operator+=(const FAddendCoef &That) {
 
   APFloat &T = getFpVal();
   T.add(createAPFloatFromInt(T.getSemantics(), That.IntVal), RndMode);
-}
-
-void FAddendCoef::operator-=(const FAddendCoef &That) {
-  enum APFloat::roundingMode RndMode = APFloat::rmNearestTiesToEven;
-  if (isInt() == That.isInt()) {
-    if (isInt())
-      IntVal -= That.IntVal;
-    else
-      getFpVal().subtract(That.getFpVal(), RndMode);
-    return;
-  }
-
-  if (isInt()) {
-    const APFloat &T = That.getFpVal();
-    convertToFpType(T.getSemantics());
-    getFpVal().subtract(T, RndMode);
-    return;
-  }
-
-  APFloat &T = getFpVal();
-  T.subtract(createAPFloatFromInt(T.getSemantics(), IntVal), RndMode);
 }
 
 void FAddendCoef::operator*=(const FAddendCoef &That) {

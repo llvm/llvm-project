@@ -17,6 +17,7 @@
 #include "HexagonSubtarget.h"
 #include "HexagonTargetMachine.h"
 #include "HexagonTargetObjectFile.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -1057,8 +1058,8 @@ HexagonTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue AC = DAG.getConstant(A, dl, MVT::i32);
   SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
   SDValue AA = DAG.getNode(HexagonISD::ALLOCA, dl, VTs, Chain, Size, AC);
-  if (Op.getNode()->getHasDebugValue())
-    DAG.TransferDbgValues(Op, AA);
+
+  DAG.ReplaceAllUsesOfValueWith(Op, AA);
   return AA;
 }
 
@@ -1503,8 +1504,8 @@ HexagonTargetLowering::LowerGLOBALADDRESS(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getNode(HexagonISD::CONST32, dl, PtrVT, GA);
   }
 
-  bool UsePCRel = GV->hasInternalLinkage() || GV->hasHiddenVisibility() ||
-                  (GV->hasLocalLinkage() && !isa<Function>(GV));
+  const Triple &TargetTriple = HTM.getTargetTriple();
+  bool UsePCRel = shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV);
   if (UsePCRel) {
     SDValue GA = DAG.getTargetGlobalAddress(GV, dl, PtrVT, Offset,
                                             HexagonII::MO_PCREL);
@@ -1714,6 +1715,9 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
   setPrefFunctionAlignment(4);
   setMinFunctionAlignment(2);
   setStackPointerRegisterToSaveRestore(HRI.getStackRegister());
+
+  setMaxAtomicSizeInBitsSupported(64);
+  setMinCmpXchgSizeInBits(32);
 
   if (EnableHexSDNodeSched)
     setSchedulingPreference(Sched::VLIW);
@@ -3120,4 +3124,11 @@ HexagonTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 bool HexagonTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
   // Do not expand loads and stores that don't exceed 64 bits.
   return SI->getValueOperand()->getType()->getPrimitiveSizeInBits() > 64;
+}
+
+bool HexagonTargetLowering::shouldExpandAtomicCmpXchgInIR(
+      AtomicCmpXchgInst *AI) const {
+  const DataLayout &DL = AI->getModule()->getDataLayout();
+  unsigned Size = DL.getTypeStoreSize(AI->getCompareOperand()->getType());
+  return Size >= 4 && Size <= 8;
 }

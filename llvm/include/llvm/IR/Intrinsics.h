@@ -134,6 +134,15 @@ namespace Intrinsic {
   /// of IITDescriptors.
   void getIntrinsicInfoTableEntries(ID id, SmallVectorImpl<IITDescriptor> &T);
 
+  /// Match the specified type (which comes from an intrinsic argument or return
+  /// value) with the type constraints specified by the .td file. If the given
+  /// type is an overloaded type it is pushed to the ArgTys vector.
+  ///
+  /// Returns false if the given type matches with the constraints, true
+  /// otherwise.
+  bool matchIntrinsicType(Type *Ty, ArrayRef<IITDescriptor> &Infos,
+                          SmallVectorImpl<Type*> &ArgTys);
+
 } // End Intrinsic namespace
 
 } // End llvm namespace

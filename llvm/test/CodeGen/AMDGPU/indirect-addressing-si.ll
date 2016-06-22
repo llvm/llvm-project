@@ -174,6 +174,213 @@ entry:
   ret void
 }
 
+; When the block is split to insert the loop, make sure any other
+; places that need to be expanded in the same block are also handled.
+
+; CHECK-LABEL: {{^}}extract_vgpr_offset_multiple_in_block:
+
+; CHECK: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; CHECK-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
+; CHECK-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], [[S_ELT1]]
+; CHECK: s_waitcnt vmcnt(0)
+
+; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
+
+; CHECK: [[LOOP0:BB[0-9]+_[0-9]+]]:
+; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
+; CHECK: s_mov_b32 m0, vcc_lo
+; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK: s_and_saveexec_b64 vcc, vcc
+; CHECK-NEXT: v_movrels_b32_e32 [[MOVREL0:v[0-9]+]], [[VEC_ELT0]]
+; CHECK-NEXT: s_xor_b64 exec, exec, vcc
+; CHECK: s_cbranch_execnz [[LOOP0]]
+
+; FIXME: Redundant copy
+; CHECK: s_mov_b64 exec, [[MASK]]
+; CHECK: s_mov_b64 [[MASK]], exec
+
+; CHECK: [[LOOP1:BB[0-9]+_[0-9]+]]:
+; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
+; CHECK: s_mov_b32 m0, vcc_lo
+; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK: s_and_saveexec_b64 vcc, vcc
+; CHECK-NEXT: v_movrels_b32_e32 [[MOVREL1:v[0-9]+]], [[VEC_ELT1]]
+; CHECK-NEXT: s_xor_b64 exec, exec, vcc
+; CHECK: s_cbranch_execnz [[LOOP1]]
+
+; CHECK: buffer_store_dword [[MOVREL0]]
+; CHECK: buffer_store_dword [[MOVREL1]]
+define void @extract_vgpr_offset_multiple_in_block(i32 addrspace(1)* %out0, i32 addrspace(1)* %out1, i32 addrspace(1)* %in) #0 {
+entry:
+  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id.ext = zext i32 %id to i64
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %id.ext
+  %idx0 = load volatile i32, i32 addrspace(1)* %gep
+  %idx1 = add i32 %idx0, 1
+  %val0 = extractelement <4 x i32> <i32 7, i32 9, i32 11, i32 13>, i32 %idx0
+  %val1 = extractelement <4 x i32> <i32 7, i32 9, i32 11, i32 13>, i32 %idx1
+  store volatile i32 %val0, i32 addrspace(1)* %out0
+  store volatile i32 %val1, i32 addrspace(1)* %out0
+  ret void
+}
+
+; CHECK-LABEL: {{^}}insert_vgpr_offset_multiple_in_block:
+; CHECK-DAG: s_load_dwordx4 s{{\[}}[[S_ELT0:[0-9]+]]:[[S_ELT3:[0-9]+]]{{\]}}
+; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], s[[S_ELT0]]
+; CHECK-DAG: v_mov_b32_e32 [[INS0:v[0-9]+]], 62
+; CHECK-DAG: s_waitcnt vmcnt(0)
+
+; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
+
+; CHECK: [[LOOP0:BB[0-9]+_[0-9]+]]:
+; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
+; CHECK: s_mov_b32 m0, vcc_lo
+; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK: s_and_saveexec_b64 vcc, vcc
+; CHECK-NEXT: v_movreld_b32_e32 v[[MOVREL0:[0-9]+]], [[INS0]]
+; CHECK-NEXT: s_xor_b64 exec, exec, vcc
+; CHECK: s_cbranch_execnz [[LOOP0]]
+
+; FIXME: Redundant copy
+; CHECK: s_mov_b64 exec, [[MASK]]
+; CHECK: v_mov_b32_e32 [[INS1:v[0-9]+]], 63
+; CHECK: s_mov_b64 [[MASK]], exec
+
+; CHECK: [[LOOP1:BB[0-9]+_[0-9]+]]:
+; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
+; CHECK: s_mov_b32 m0, vcc_lo
+; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK: s_and_saveexec_b64 vcc, vcc
+; CHECK-NEXT: v_movreld_b32_e32 v[[MOVREL1:[0-9]+]], [[INS1]]
+; CHECK-NEXT: s_xor_b64 exec, exec, vcc
+; CHECK: s_cbranch_execnz [[LOOP1]]
+
+; CHECK: buffer_store_dwordx4 v{{\[}}[[MOVREL0]]:
+define void @insert_vgpr_offset_multiple_in_block(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, i32 addrspace(1)* %in, <4 x i32> %vec0) #0 {
+entry:
+  %id = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %id.ext = zext i32 %id to i64
+  %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %id.ext
+  %idx0 = load volatile i32, i32 addrspace(1)* %gep
+  %idx1 = add i32 %idx0, 1
+  %vec1 = insertelement <4 x i32> %vec0, i32 62, i32 %idx0
+  %vec2 = insertelement <4 x i32> %vec1, i32 63, i32 %idx1
+  store volatile <4 x i32> %vec2, <4 x i32> addrspace(1)* %out0
+  ret void
+}
+
+; CHECK-LABEL: {{^}}extract_adjacent_blocks:
+; CHECK: s_load_dword [[ARG:s[0-9]+]]
+; CHECK: s_cmp_lg_i32
+; CHECK: s_cbranch_scc0 [[BB4:BB[0-9]+_[0-9]+]]
+
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movrels_b32_e32
+; CHECK: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[BB4]]:
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movrels_b32_e32
+
+; CHECK: [[ENDBB]]:
+; CHECK: buffer_store_dword
+; CHECK: s_endpgm
+define void @extract_adjacent_blocks(i32 %arg) #0 {
+bb:
+  %tmp = icmp eq i32 %arg, 0
+  br i1 %tmp, label %bb1, label %bb4
+
+bb1:
+  %tmp2 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp3 = extractelement <4 x float> %tmp2, i32 undef
+  br label %bb7
+
+bb4:
+  %tmp5 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp6 = extractelement <4 x float> %tmp5, i32 undef
+  br label %bb7
+
+bb7:
+  %tmp8 = phi float [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
+  store volatile float %tmp8, float addrspace(1)* undef
+  ret void
+}
+
+; CHECK-LABEL: {{^}}insert_adjacent_blocks:
+; CHECK: s_load_dword [[ARG:s[0-9]+]]
+; CHECK: s_cmp_lg_i32
+; CHECK: s_cbranch_scc0 [[BB4:BB[0-9]+_[0-9]+]]
+
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movreld_b32_e32
+; CHECK: s_branch [[ENDBB:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[BB4]]:
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK: v_movreld_b32_e32
+
+; CHECK: [[ENDBB]]:
+; CHECK: buffer_store_dword
+; CHECK: s_endpgm
+define void @insert_adjacent_blocks(i32 %arg, float %val0) #0 {
+bb:
+  %tmp = icmp eq i32 %arg, 0
+  br i1 %tmp, label %bb1, label %bb4
+
+bb1:                                              ; preds = %bb
+  %tmp2 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp3 = insertelement <4 x float> %tmp2, float %val0, i32 undef
+  br label %bb7
+
+bb4:                                              ; preds = %bb
+  %tmp5 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp6 = insertelement <4 x float> %tmp5, float %val0, i32 undef
+  br label %bb7
+
+bb7:                                              ; preds = %bb4, %bb1
+  %tmp8 = phi <4 x float> [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
+  store volatile <4 x float> %tmp8, <4 x float> addrspace(1)* undef
+  ret void
+}
+
+; FIXME: Should be able to fold zero input to movreld to inline imm?
+
+; CHECK-LABEL: {{^}}multi_same_block:
+; CHECK: s_load_dword [[ARG:s[0-9]+]]
+; CHECK-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
+; CHECK-DAG: s_add_i32 m0, [[ARG]], -16
+; CHECK: v_movreld_b32_e32 v{{[0-9]+}}, [[ZERO]]
+
+; CHECK: s_add_i32 m0, [[ARG]], -14
+; CHECK: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+
+; CHECK: s_mov_b32 m0, -1
+; CHECK: ds_write_b32
+; CHECK: ds_write_b32
+; CHECK: s_endpgm
+define void @multi_same_block(i32 %arg) #0 {
+bb:
+  %tmp1 = add i32 %arg, -16
+  %tmp2 = insertelement <6 x float> <float 1.700000e+01, float 1.800000e+01, float 1.900000e+01, float 2.000000e+01, float 2.100000e+01, float 2.200000e+01>, float 0.000000e+00, i32 %tmp1
+  %tmp3 = add i32 %arg, -16
+  %tmp4 = insertelement <6 x float> <float 0x40311999A0000000, float 0x40321999A0000000, float 0x40331999A0000000, float 0x40341999A0000000, float 0x40351999A0000000, float 0x40361999A0000000>, float 0x3FB99999A0000000, i32 %tmp3
+  %tmp5 = bitcast <6 x float> %tmp2 to <6 x i32>
+  %tmp6 = extractelement <6 x i32> %tmp5, i32 1
+  %tmp7 = bitcast <6 x float> %tmp4 to <6 x i32>
+  %tmp8 = extractelement <6 x i32> %tmp7, i32 5
+  store volatile i32 %tmp6, i32 addrspace(3)* undef, align 4
+  store volatile i32 %tmp8, i32 addrspace(3)* undef, align 4
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

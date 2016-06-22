@@ -455,7 +455,7 @@ void LTOCodeGenerator::applyScopeRestrictions() {
 
   // Update the llvm.compiler_used globals to force preserving libcalls and
   // symbols referenced from asm
-  UpdateCompilerUsed(*MergedModule, *TargetMach, AsmUndefinedRefs);
+  updateCompilerUsed(*MergedModule, *TargetMach, AsmUndefinedRefs);
 
   internalizeModule(*MergedModule, mustPreserveGV);
 
