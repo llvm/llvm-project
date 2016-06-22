@@ -914,7 +914,10 @@ static const Expr *peelOffOuterExpr(const Expr *Ex,
   if (auto *POE = dyn_cast<PseudoObjectExpr>(Ex)) {
     auto *PropRef = dyn_cast<ObjCPropertyRefExpr>(POE->getSyntacticForm());
     if (PropRef && PropRef->isMessagingGetter()) {
-      return peelOffOuterExpr(POE->getSemanticExpr(1), N);
+      const Expr *GetterMessageSend =
+          POE->getSemanticExpr(POE->getNumSemanticExprs() - 1);
+      assert(isa<ObjCMessageExpr>(GetterMessageSend));
+      return peelOffOuterExpr(GetterMessageSend, N);
     }
   }
 

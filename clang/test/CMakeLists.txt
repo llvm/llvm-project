@@ -68,6 +68,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     FileCheck count not
     llc
     llvm-bcanalyzer
+    llvm-nm
     llvm-objdump
     llvm-profdata
     llvm-readobj

@@ -4807,8 +4807,8 @@ static void checkIndirectCopyRestoreSource(Sema &S, Expr *src) {
   // If isWeakAccess to true, there will be an implicit 
   // load which requires a cleanup.
   if (S.getLangOpts().ObjCAutoRefCount && isWeakAccess)
-    S.ExprNeedsCleanups = true;
-  
+    S.Cleanup.setExprNeedsCleanups(true);
+
   if (iik == IIK_okay) return;
 
   S.Diag(src->getExprLoc(), diag::err_arc_nonlocal_writeback)
@@ -6182,6 +6182,22 @@ static void CheckForNullPointerDereference(Sema &S, const Expr *E) {
   }
 }
 
+MaterializeTemporaryExpr *
+Sema::CreateMaterializeTemporaryExpr(QualType T, Expr *Temporary,
+                                     bool BoundToLvalueReference) {
+  auto MTE = new (Context)
+      MaterializeTemporaryExpr(T, Temporary, BoundToLvalueReference);
+
+  // Order an ExprWithCleanups for lifetime marks.
+  //
+  // TODO: It'll be good to have a single place to check the access of the
+  // destructor and generate ExprWithCleanups for various uses. Currently these
+  // are done in both CreateMaterializeTemporaryExpr and MaybeBindToTemporary,
+  // but there may be a chance to merge them.
+  Cleanup.setExprNeedsCleanups(false);
+  return MTE;
+}
+
 ExprResult
 InitializationSequence::Perform(Sema &S,
                                 const InitializedEntity &Entity,
@@ -6446,7 +6462,7 @@ InitializationSequence::Perform(Sema &S,
         return ExprError();
 
       // Materialize the temporary into memory.
-      MaterializeTemporaryExpr *MTE = new (S.Context) MaterializeTemporaryExpr(
+      MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
           Entity.getType().getNonReferenceType(), CurInit.get(),
           Entity.getType()->isLValueReferenceType());
 
@@ -6466,7 +6482,7 @@ InitializationSequence::Perform(Sema &S,
            MTE->getType()->isObjCLifetimeType()) ||
           (MTE->getStorageDuration() == SD_Automatic &&
            MTE->getType().isDestructedType()))
-        S.ExprNeedsCleanups = true;
+        S.Cleanup.setExprNeedsCleanups(true);
 
       CurInit = MTE;
       break;
@@ -6858,9 +6874,9 @@ InitializationSequence::Perform(Sema &S,
         << CurInit.get()->getSourceRange();
 
       // Materialize the temporary into memory.
-      MaterializeTemporaryExpr *MTE = new (S.Context)
-          MaterializeTemporaryExpr(CurInit.get()->getType(), CurInit.get(),
-                                   /*BoundToLvalueReference=*/false);
+      MaterializeTemporaryExpr *MTE = S.CreateMaterializeTemporaryExpr(
+          CurInit.get()->getType(), CurInit.get(),
+          /*BoundToLvalueReference=*/false);
 
       // Maybe lifetime-extend the array temporary's subobjects to match the
       // entity's lifetime.

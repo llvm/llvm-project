@@ -1448,6 +1448,7 @@ void ASTStmtReader::VisitExprWithCleanups(ExprWithCleanups *E) {
     E->getTrailingObjects<BlockDecl *>()[i] =
         ReadDeclAs<BlockDecl>(Record, Idx);
 
+  E->ExprWithCleanupsBits.CleanupsHaveSideEffects = Record[Idx++];
   E->SubExpr = Reader.ReadSubExpr();
 }
 

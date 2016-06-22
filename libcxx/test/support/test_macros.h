@@ -71,11 +71,13 @@
 #define TEST_NOEXCEPT
 #endif
 
-#if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cxx_rtti)
+#if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
+    && !defined(__GXX_RTTI)
 #define TEST_HAS_NO_RTTI
 #endif
 
-#if !TEST_HAS_FEATURE(cxx_exceptions) && !defined(__cxx_exceptions)
+#if !TEST_HAS_FEATURE(cxx_exceptions) && !defined(__cpp_exceptions) \
+     && !defined(__EXCEPTIONS)
 #define TEST_HAS_NO_EXCEPTIONS
 #endif
 

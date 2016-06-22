@@ -84,6 +84,11 @@ C Language Changes in Clang
 ---------------------------
 The -faltivec and -maltivec flags no longer silently include altivec.h on Power platforms.
 
+`RenderScript
+<https://developer.android.com/guide/topics/renderscript/compute.html>`_
+support added to the Frontend and enabled by the '-x renderscript' option or
+the '.rs' file extension.
+
 ...
 
 C11 Feature Support

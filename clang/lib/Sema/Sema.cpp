@@ -89,7 +89,7 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
     ConstSegStack(nullptr), CodeSegStack(nullptr), CurInitSeg(nullptr),
     VisContext(nullptr),
     IsBuildingRecoveryCallExpr(false),
-    ExprNeedsCleanups(false), LateTemplateParser(nullptr),
+    Cleanup{}, LateTemplateParser(nullptr),
     LateTemplateParserCleanup(nullptr),
     OpaqueParser(nullptr), IdResolver(pp), StdInitializerList(nullptr),
     CXXTypeInfoDecl(nullptr), MSVCGuidDecl(nullptr),
@@ -125,7 +125,8 @@ Sema::Sema(Preprocessor &pp, ASTContext &ctxt, ASTConsumer &consumer,
   // Tell diagnostics how to render things from the AST library.
   Diags.SetArgToStringFn(&FormatASTNodeDiagnosticArgument, &Context);
 
-  ExprEvalContexts.emplace_back(PotentiallyEvaluated, 0, false, nullptr, false);
+  ExprEvalContexts.emplace_back(PotentiallyEvaluated, 0, CleanupInfo{}, nullptr,
+                                false);
 
   FunctionScopes.push_back(new FunctionScopeInfo(Diags));
 

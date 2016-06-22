@@ -141,7 +141,7 @@
 
 // RUN: %clang_cc1 -triple arm64-unknown -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=AARCH64
-// AARCH64: target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
+// AARCH64: target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 // RUN: %clang_cc1 -triple thumb-unknown-gnueabi -o - -emit-llvm %s | \
 // RUN: FileCheck %s -check-prefix=THUMB

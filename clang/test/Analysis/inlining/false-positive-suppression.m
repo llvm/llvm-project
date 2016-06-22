@@ -49,12 +49,22 @@ __attribute__((objc_root_class))
 
 @end
 
+@interface SubOfSomeClass : SomeClass
+@end
+
+@implementation SubOfSomeClass
+@end
+
 @implementation SomeClass
 -(int *)methodReturningNull {
   return 0;
 }
 
 -(int *)propertyReturningNull {
+  return 0;
+}
+
++(int *)classPropertyReturningNull {
   return 0;
 }
 @end
@@ -69,6 +79,24 @@ void testMethodReturningNull(SomeClass *sc) {
 
 void testPropertyReturningNull(SomeClass *sc) {
   int *result = sc.propertyReturningNull;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+
+@implementation SubOfSomeClass (ForTestOfSuperProperty)
+-(void)testSuperPropertyReturningNull {
+  int *result = super.propertyReturningNull;
+  *result = 1;
+#ifndef SUPPRESSED
+  // expected-warning@-2 {{Dereference of null pointer}}
+#endif
+}
+@end
+
+void testClassPropertyReturningNull() {
+  int *result = SomeClass.classPropertyReturningNull;
   *result = 1;
 #ifndef SUPPRESSED
   // expected-warning@-2 {{Dereference of null pointer}}

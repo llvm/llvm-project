@@ -57,6 +57,11 @@ public:
     return RHS.Offset >= Offset &&
            (RHS.Offset + RHS.Length) <= (Offset + Length);
   }
+
+  /// \brief Whether this range equals to \p RHS or not.
+  bool operator==(const Range &RHS) const {
+    return Offset == RHS.getOffset() && Length == RHS.getLength();
+  }
   /// @}
 
 private:
@@ -222,10 +227,24 @@ bool applyAllReplacements(const std::vector<Replacement> &Replaces,
 std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
 
 /// \brief Calculates the ranges in a single file that are affected by the
-/// Replacements.
+/// Replacements. Overlapping ranges will be merged.
 ///
 /// \pre Replacements must be for the same file.
+///
+/// \returns a non-overlapping and sorted ranges.
 std::vector<Range> calculateChangedRanges(const Replacements &Replaces);
+
+/// \brief Calculates the new ranges after \p Replaces are applied. These
+/// include both the original \p Ranges and the affected ranges of \p Replaces
+/// in the new code.
+///
+/// \pre Replacements must be for the same file.
+///
+/// \return The new ranges after \p Replaces are applied. The new ranges will be
+/// sorted and non-overlapping.
+std::vector<Range>
+calculateRangesAfterReplacements(const Replacements &Replaces,
+                                 const std::vector<Range> &Ranges);
 
 /// \brief Groups a random set of replacements by file path. Replacements
 /// related to the same file entry are put into the same vector.

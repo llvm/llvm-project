@@ -1023,6 +1023,7 @@ bool LambdaExpr::isMutable() const {
 }
 
 ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
+                                   bool CleanupsHaveSideEffects,
                                    ArrayRef<CleanupObject> objects)
   : Expr(ExprWithCleanupsClass, subexpr->getType(),
          subexpr->getValueKind(), subexpr->getObjectKind(),
@@ -1030,16 +1031,19 @@ ExprWithCleanups::ExprWithCleanups(Expr *subexpr,
          subexpr->isInstantiationDependent(),
          subexpr->containsUnexpandedParameterPack()),
     SubExpr(subexpr) {
+  ExprWithCleanupsBits.CleanupsHaveSideEffects = CleanupsHaveSideEffects;
   ExprWithCleanupsBits.NumObjects = objects.size();
   for (unsigned i = 0, e = objects.size(); i != e; ++i)
     getTrailingObjects<CleanupObject>()[i] = objects[i];
 }
 
 ExprWithCleanups *ExprWithCleanups::Create(const ASTContext &C, Expr *subexpr,
+                                           bool CleanupsHaveSideEffects,
                                            ArrayRef<CleanupObject> objects) {
   void *buffer = C.Allocate(totalSizeToAlloc<CleanupObject>(objects.size()),
                             llvm::alignOf<ExprWithCleanups>());
-  return new (buffer) ExprWithCleanups(subexpr, objects);
+  return new (buffer)
+      ExprWithCleanups(subexpr, CleanupsHaveSideEffects, objects);
 }
 
 ExprWithCleanups::ExprWithCleanups(EmptyShell empty, unsigned numObjects)

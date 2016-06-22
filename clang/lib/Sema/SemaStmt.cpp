@@ -1518,6 +1518,10 @@ namespace {
   // variables Increment and DRE.
   bool ProcessIterationStmt(Sema &S, Stmt* Statement, bool &Increment,
                             DeclRefExpr *&DRE) {
+    if (auto Cleanups = dyn_cast<ExprWithCleanups>(Statement))
+      if (!Cleanups->cleanupsHaveSideEffects())
+        Statement = Cleanups->getSubExpr();
+
     if (UnaryOperator *UO = dyn_cast<UnaryOperator>(Statement)) {
       switch (UO->getOpcode()) {
         default: return false;
@@ -2471,6 +2475,10 @@ static void DiagnoseForRangeReferenceVariableCopies(Sema &SemaRef,
     return;
 
   QualType VariableType = VD->getType();
+
+  if (auto Cleanups = dyn_cast<ExprWithCleanups>(InitExpr))
+    if (!Cleanups->cleanupsHaveSideEffects())
+      InitExpr = Cleanups->getSubExpr();
 
   const MaterializeTemporaryExpr *MTE =
       dyn_cast<MaterializeTemporaryExpr>(InitExpr);

@@ -5644,7 +5644,7 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
     if (!ReturnsRetained && E->getType()->isObjCARCImplicitlyUnretainedType())
       return E;
 
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
 
     CastKind ck = (ReturnsRetained ? CK_ARCConsumeObject
                                    : CK_ARCReclaimReturnedObject);
@@ -5697,7 +5697,7 @@ ExprResult Sema::MaybeBindToTemporary(Expr *E) {
       return E;
 
     // We need a cleanup, but we don't need to remember the temporary.
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
   }
 
   CXXTemporary *Temp = CXXTemporary::Create(Context, Destructor);
@@ -5724,14 +5724,16 @@ Expr *Sema::MaybeCreateExprWithCleanups(Expr *SubExpr) {
 
   unsigned FirstCleanup = ExprEvalContexts.back().NumCleanupObjects;
   assert(ExprCleanupObjects.size() >= FirstCleanup);
-  assert(ExprNeedsCleanups || ExprCleanupObjects.size() == FirstCleanup);
-  if (!ExprNeedsCleanups)
+  assert(Cleanup.exprNeedsCleanups() ||
+         ExprCleanupObjects.size() == FirstCleanup);
+  if (!Cleanup.exprNeedsCleanups())
     return SubExpr;
 
   auto Cleanups = llvm::makeArrayRef(ExprCleanupObjects.begin() + FirstCleanup,
                                      ExprCleanupObjects.size() - FirstCleanup);
 
-  Expr *E = ExprWithCleanups::Create(Context, SubExpr, Cleanups);
+  auto *E = ExprWithCleanups::Create(
+      Context, SubExpr, Cleanup.cleanupsHaveSideEffects(), Cleanups);
   DiscardCleanupsInEvaluationContext();
 
   return E;
@@ -5742,7 +5744,7 @@ Stmt *Sema::MaybeCreateStmtWithCleanups(Stmt *SubStmt) {
 
   CleanupVarDeclMarking();
 
-  if (!ExprNeedsCleanups)
+  if (!Cleanup.exprNeedsCleanups())
     return SubStmt;
 
   // FIXME: In order to attach the temporaries, wrap the statement into
@@ -5848,7 +5850,7 @@ ExprResult Sema::ActOnDecltypeExpression(Expr *E) {
       return ExprError();
 
     // We need a cleanup, but we don't need to remember the temporary.
-    ExprNeedsCleanups = true;
+    Cleanup.setExprNeedsCleanups(true);
   }
 
   // Possibly strip off the top CXXBindTemporaryExpr.
