@@ -27,3 +27,6 @@ DEFINE_COMPILERRT_FUNCTION(__aeabi_uidivmod)
         add     sp, sp, #4
         pop     { pc }
 END_COMPILERRT_FUNCTION(__aeabi_uidivmod)
+
+NO_EXEC_STACK_DIRECTIVE
+

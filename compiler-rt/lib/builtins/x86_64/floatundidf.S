@@ -47,3 +47,6 @@ DEFINE_COMPILERRT_FUNCTION(__floatundidf)
 END_COMPILERRT_FUNCTION(__floatundidf)
 
 #endif // __x86_64__
+
+NO_EXEC_STACK_DIRECTIVE
+

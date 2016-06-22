@@ -56,3 +56,6 @@ END_COMPILERRT_FUNCTION(__ashldi3)
 
 #endif // __SSE2__
 #endif // __i386__
+
+NO_EXEC_STACK_DIRECTIVE
+

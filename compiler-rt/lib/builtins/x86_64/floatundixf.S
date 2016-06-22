@@ -66,3 +66,6 @@ END_COMPILERRT_FUNCTION(__floatundixf)
 #endif // __x86_64__
 
 */
+
+NO_EXEC_STACK_DIRECTIVE
+

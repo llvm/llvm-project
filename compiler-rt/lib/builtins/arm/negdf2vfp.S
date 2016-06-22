@@ -21,3 +21,6 @@ DEFINE_COMPILERRT_FUNCTION(__negdf2vfp)
 	eor	r1, r1, #-2147483648	// flip sign bit on double in r0/r1 pair
 	bx	lr
 END_COMPILERRT_FUNCTION(__negdf2vfp)
+
+NO_EXEC_STACK_DIRECTIVE
+

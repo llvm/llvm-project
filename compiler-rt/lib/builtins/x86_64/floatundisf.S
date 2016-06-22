@@ -33,3 +33,6 @@ DEFINE_COMPILERRT_FUNCTION(__floatundisf)
 END_COMPILERRT_FUNCTION(__floatundisf)
 
 #endif // __x86_64__
+
+NO_EXEC_STACK_DIRECTIVE
+
