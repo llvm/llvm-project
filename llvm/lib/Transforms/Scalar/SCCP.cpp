@@ -1419,10 +1419,10 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
 
         // Shifting by the bitwidth or more is undefined.
         if (Op1LV.isConstant()) {
-          auto *ShiftAmt = Op1LV.getConstantInt();
-          if (ShiftAmt->getLimitedValue() >=
-              ShiftAmt->getType()->getScalarSizeInBits())
-            break;
+          if (auto *ShiftAmt = Op1LV.getConstantInt())
+            if (ShiftAmt->getLimitedValue() >=
+                ShiftAmt->getType()->getScalarSizeInBits())
+              break;
         }
 
         // undef >>a X -> all ones
@@ -1436,10 +1436,10 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
 
         // Shifting by the bitwidth or more is undefined.
         if (Op1LV.isConstant()) {
-          auto *ShiftAmt = Op1LV.getConstantInt();
-          if (ShiftAmt->getLimitedValue() >=
-              ShiftAmt->getType()->getScalarSizeInBits())
-            break;
+          if (auto *ShiftAmt = Op1LV.getConstantInt())
+            if (ShiftAmt->getLimitedValue() >=
+                ShiftAmt->getType()->getScalarSizeInBits())
+              break;
         }
 
         // undef << X -> 0

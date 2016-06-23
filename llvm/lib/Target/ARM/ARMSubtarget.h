@@ -218,6 +218,24 @@ protected:
   /// particularly effective at zeroing a VFP register.
   bool HasZeroCycleZeroing;
 
+  /// If true, if conversion may decide to leave some instructions unpredicated.
+  bool IsProfitableToUnpredicate;
+
+  /// If true, VMOV will be favored over VGETLNi32.
+  bool HasSlowVGETLNi32;
+
+  /// If true, VMOV will be favored over VDUP.
+  bool HasSlowVDUP32;
+
+  /// If true, VMOVSR will be favored over VMOVDRR.
+  bool PreferVMOVSR;
+
+  /// If true, ISHST barriers will be used for Release semantics.
+  bool PreferISHST;
+
+  /// If true, VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
+  bool UseNEONForFPMovs;
+
   /// StrictAlign - If true, the subtarget disallows unaligned memory
   /// accesses for some types.  For details, see
   /// ARMTargetLowering::allowsMisalignedMemoryAccesses().
@@ -376,6 +394,12 @@ public:
   bool hasTrustZone() const { return HasTrustZone; }
   bool has8MSecExt() const { return Has8MSecExt; }
   bool hasZeroCycleZeroing() const { return HasZeroCycleZeroing; }
+  bool isProfitableToUnpredicate() const { return IsProfitableToUnpredicate; }
+  bool hasSlowVGETLNi32() const { return HasSlowVGETLNi32; }
+  bool hasSlowVDUP32() const { return HasSlowVDUP32; }
+  bool preferVMOVSR() const { return PreferVMOVSR; }
+  bool preferISHSTBarriers() const { return PreferISHST; }
+  bool useNEONForFPMovs() const { return UseNEONForFPMovs; }
   bool prefers32BitThumb() const { return Pref32BitThumb; }
   bool avoidCPSRPartialUpdate() const { return AvoidCPSRPartialUpdate; }
   bool avoidMOVsShifterOperand() const { return AvoidMOVsShifterOperand; }

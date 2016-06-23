@@ -1631,6 +1631,29 @@ static unsigned findImplicitSGPRRead(const MachineInstr &MI) {
   return AMDGPU::NoRegister;
 }
 
+static bool shouldReadExec(const MachineInstr &MI) {
+  if (SIInstrInfo::isVALU(MI)) {
+    switch (MI.getOpcode()) {
+    case AMDGPU::V_READLANE_B32:
+    case AMDGPU::V_READLANE_B32_si:
+    case AMDGPU::V_READLANE_B32_vi:
+    case AMDGPU::V_WRITELANE_B32:
+    case AMDGPU::V_WRITELANE_B32_si:
+    case AMDGPU::V_WRITELANE_B32_vi:
+      return false;
+    }
+
+    return true;
+  }
+
+  if (SIInstrInfo::isGenericOpcode(MI.getOpcode()) ||
+      SIInstrInfo::isSALU(MI) ||
+      SIInstrInfo::isSMRD(MI))
+    return false;
+
+  return true;
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI->getOpcode();
@@ -1751,7 +1774,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr *MI,
 
   // Make sure we aren't losing exec uses in the td files. This mostly requires
   // being careful when using let Uses to try to add other use registers.
-  if (!isGenericOpcode(Opcode) && !isSALU(Opcode) && !isSMRD(Opcode)) {
+  if (shouldReadExec(*MI)) {
     if (!MI->hasRegisterImplicitUseOperand(AMDGPU::EXEC)) {
       ErrInfo = "VALU instruction does not implicitly read exec mask";
       return false;

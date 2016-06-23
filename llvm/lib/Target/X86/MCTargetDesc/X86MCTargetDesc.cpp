@@ -84,7 +84,9 @@ void X86_MC::initLLVMToSEHAndCVRegMapping(MCRegisterInfo *MRI) {
   for (unsigned I = 0; I < array_lengthof(LowCVRegs); ++I)
     MRI->mapLLVMRegToCVReg(LowCVRegs[I], I + CVLowRegStart);
 
-  // The x86 registers start at 128 and are numbered sequentially.
+  MRI->mapLLVMRegToCVReg(X86::EFLAGS, 34);
+
+  // The x87 registers start at 128 and are numbered sequentially.
   unsigned FP0Start = 128;
   for (unsigned I = 0; I < 8; ++I)
     MRI->mapLLVMRegToCVReg(X86::FP0 + I, FP0Start + I);

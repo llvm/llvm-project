@@ -1308,6 +1308,8 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
     R = CurDAG->getMachineNode(Hexagon::TFR_FIA, DL, MVT::i32, Ops);
   }
 
+  if (N->getHasDebugValue())
+    CurDAG->TransferDbgValues(SDValue(N, 0), SDValue(R, 0));
   ReplaceNode(N, R);
 }
 

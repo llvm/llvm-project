@@ -197,6 +197,10 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name.startswith("x86.avx512.mask.pshuf.d.") ||
         Name.startswith("x86.avx512.mask.pshufl.w.") ||
         Name.startswith("x86.avx512.mask.pshufh.w.") ||
+        Name.startswith("x86.avx512.mask.punpckl") ||
+        Name.startswith("x86.avx512.mask.punpckh") ||
+        Name.startswith("x86.avx512.mask.unpckl.") ||
+        Name.startswith("x86.avx512.mask.unpckh.") ||
         Name.startswith("x86.sse41.pmovsx") ||
         Name.startswith("x86.sse41.pmovzx") ||
         Name.startswith("x86.avx2.pmovsx") ||
@@ -1034,6 +1038,38 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 4)
         Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
+    } else if (Name.startswith("llvm.x86.avx512.mask.punpckl") ||
+               Name.startswith("llvm.x86.avx512.mask.unpckl.")) {
+      Value *Op0 = CI->getArgOperand(0);
+      Value *Op1 = CI->getArgOperand(1);
+      int NumElts = CI->getType()->getVectorNumElements();
+      int NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
+
+      SmallVector<uint32_t, 64> Idxs(NumElts);
+      for (int l = 0; l != NumElts; l += NumLaneElts)
+        for (int i = 0; i != NumLaneElts; ++i)
+          Idxs[i + l] = l + (i / 2) + NumElts * (i % 2);
+
+      Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
+
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
+    } else if (Name.startswith("llvm.x86.avx512.mask.punpckh") ||
+               Name.startswith("llvm.x86.avx512.mask.unpckh.")) {
+      Value *Op0 = CI->getArgOperand(0);
+      Value *Op1 = CI->getArgOperand(1);
+      int NumElts = CI->getType()->getVectorNumElements();
+      int NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
+
+      SmallVector<uint32_t, 64> Idxs(NumElts);
+      for (int l = 0; l != NumElts; l += NumLaneElts)
+        for (int i = 0; i != NumLaneElts; ++i)
+          Idxs[i + l] = (NumLaneElts / 2) + l + (i / 2) + NumElts * (i % 2);
+
+      Rep = Builder.CreateShuffleVector(Op0, Op1, Idxs);
+
+      Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
+                          CI->getArgOperand(2));
     } else {
       llvm_unreachable("Unknown function for CallInst upgrade.");
     }

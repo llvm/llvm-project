@@ -427,6 +427,14 @@ auto count_if(R &&Range, UnaryPredicate &&P)
   return std::count_if(Range.begin(), Range.end(), P);
 }
 
+/// Wrapper function around std::transform to apply a function to a range and
+/// store the result elsewhere.
+template <typename R, class OutputIt, typename UnaryPredicate>
+OutputIt transform(R &&Range, OutputIt d_first, UnaryPredicate &&P) {
+  return std::transform(Range.begin(), Range.end(), d_first,
+                        std::forward<UnaryPredicate>(P));
+}
+
 //===----------------------------------------------------------------------===//
 //     Extra additions to <memory>
 //===----------------------------------------------------------------------===//

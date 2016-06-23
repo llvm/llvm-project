@@ -1586,7 +1586,8 @@ defm V_SUBBREV_U32 : VOP2bInst <vop2<0x2a, 0x1e>, "v_subbrev_u32",
 
 } // End isCommutable = 1
 
-let isConvergent = 1 in {
+// These are special and do not read the exec mask.
+let isConvergent = 1, Uses = []<Register> in {
 
 defm V_READLANE_B32 : VOP2SI_3VI_m <
   vop3 <0x001, 0x289>,
@@ -2020,17 +2021,18 @@ def SI_RETURN : InstSI <
   let hasNoSchedulingInfo = 1;
 }
 
-let Uses = [EXEC], Defs = [EXEC, VCC, M0] in {
+let Uses = [EXEC], Defs = [EXEC, VCC, M0],
+  UseNamedOperandTable = 1 in {
 
 class SI_INDIRECT_SRC<RegisterClass rc> : InstSI <
-  (outs VGPR_32:$dst, SReg_64:$temp),
-  (ins rc:$src, VSrc_32:$idx, i32imm:$off)
+  (outs VGPR_32:$vdst, SReg_64:$sdst),
+  (ins rc:$src, VSrc_32:$idx, i32imm:$offset)
 >;
 
 class SI_INDIRECT_DST<RegisterClass rc> : InstSI <
-  (outs rc:$dst, SReg_64:$temp),
-  (ins unknown:$src, VSrc_32:$idx, i32imm:$off, VGPR_32:$val)> {
-  let Constraints = "$src = $dst";
+  (outs rc:$vdst, SReg_64:$sdst),
+  (ins unknown:$src, VSrc_32:$idx, i32imm:$offset, VGPR_32:$val)> {
+  let Constraints = "$src = $vdst";
 }
 
 // TODO: We can support indirect SGPR access.

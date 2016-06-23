@@ -1,5 +1,5 @@
-; RUN: not llc -verify-machineinstrs -march=amdgcn -mcpu=SI -exit-on-error %s -o /dev/null 2>&1 | FileCheck %s
-; RUN: not llc -verify-machineinstrs -march=amdgcn -mcpu=tonga -exit-on-error %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -verify-machineinstrs -march=amdgcn %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: not llc -verify-machineinstrs -march=amdgcn -mcpu=tonga %s -o /dev/null 2>&1 | FileCheck %s
 
 ; Make sure promote alloca pass doesn't crash
 

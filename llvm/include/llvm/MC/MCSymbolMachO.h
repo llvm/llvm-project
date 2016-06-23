@@ -9,6 +9,7 @@
 #ifndef LLVM_MC_MCSYMBOLMACHO_H
 #define LLVM_MC_MCSYMBOLMACHO_H
 
+#include "llvm/ADT/Twine.h"
 #include "llvm/MC/MCSymbol.h"
 
 namespace llvm {

@@ -17,7 +17,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/MC/MCAssembler.h"
+#include "llvm/MC/MCFragment.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {

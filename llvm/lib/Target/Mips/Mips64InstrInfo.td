@@ -308,17 +308,19 @@ let AdditionalPredicates = [NotInMicroMips] in {
   // The 'pos + size' constraints are enforced by the code that lowers into
   // MipsISD::Ext.
   def DEXT : ExtBase<"dext", GPR64Opnd, uimm5_report_uimm6, uimm5_plus1,
-                     immZExt5, immZExt5Plus1, MipsExt>, EXT_FM<3>;
+                     immZExt5, immZExt5Plus1, MipsExt>, EXT_FM<3>,
+                     ISA_MIPS64R2;
   def DEXTM : ExtBase<"dextm", GPR64Opnd, uimm5, uimm5_plus33, immZExt5,
-                      immZExt5Plus33, MipsExt>, EXT_FM<1>;
+                      immZExt5Plus33, MipsExt>, EXT_FM<1>, ISA_MIPS64R2;
   def DEXTU : ExtBase<"dextu", GPR64Opnd, uimm5_plus32, uimm5_plus1,
-                      immZExt5Plus32, immZExt5Plus1, MipsExt>, EXT_FM<2>;
+                      immZExt5Plus32, immZExt5Plus1, MipsExt>, EXT_FM<2>,
+                      ISA_MIPS64R2;
   def DINS : InsBase<"dins", GPR64Opnd, uimm6, uimm5_inssize_plus1, MipsIns>,
-             EXT_FM<7>;
+             EXT_FM<7>, ISA_MIPS64R2;
   def DINSU : InsBase<"dinsu", GPR64Opnd, uimm5_plus32, uimm5_inssize_plus1>,
-              EXT_FM<6>;
+              EXT_FM<6>, ISA_MIPS64R2;
   def DINSM : InsBase<"dinsm", GPR64Opnd, uimm5, uimm5_inssize_plus1>,
-              EXT_FM<5>;
+              EXT_FM<5>, ISA_MIPS64R2;
 }
 
 let isCodeGenOnly = 1, rs = 0, shamt = 0 in {

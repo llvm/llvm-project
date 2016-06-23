@@ -1766,9 +1766,9 @@ isProfitableToIfCvt(MachineBasicBlock &TMBB,
 bool
 ARMBaseInstrInfo::isProfitableToUnpredicate(MachineBasicBlock &TMBB,
                                             MachineBasicBlock &FMBB) const {
-  // Reduce false anti-dependencies to let Swift's out-of-order execution
+  // Reduce false anti-dependencies to let the target's out-of-order execution
   // engine do its thing.
-  return Subtarget.isSwift();
+  return Subtarget.isProfitableToUnpredicate();
 }
 
 /// getInstrPredicate - If instruction is predicated, returns its predicate
@@ -4178,7 +4178,7 @@ ARMBaseInstrInfo::getExecutionDomain(const MachineInstr *MI) const {
 
     // CortexA9 is particularly picky about mixing the two and wants these
     // converted.
-    if (Subtarget.isCortexA9() && !isPredicated(*MI) &&
+    if (Subtarget.useNEONForFPMovs() && !isPredicated(*MI) &&
         (MI->getOpcode() == ARM::VMOVRS || MI->getOpcode() == ARM::VMOVSR ||
          MI->getOpcode() == ARM::VMOVS))
       return std::make_pair(ExeVFP, (1 << ExeVFP) | (1 << ExeNEON));

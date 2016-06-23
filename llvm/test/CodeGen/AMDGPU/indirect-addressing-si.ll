@@ -220,9 +220,18 @@ entry:
   %idx0 = load volatile i32, i32 addrspace(1)* %gep
   %idx1 = add i32 %idx0, 1
   %val0 = extractelement <4 x i32> <i32 7, i32 9, i32 11, i32 13>, i32 %idx0
+  %live.out.reg = call i32 asm sideeffect "s_mov_b32 $0, 17", "={SGPR4}" ()
   %val1 = extractelement <4 x i32> <i32 7, i32 9, i32 11, i32 13>, i32 %idx1
   store volatile i32 %val0, i32 addrspace(1)* %out0
   store volatile i32 %val1, i32 addrspace(1)* %out0
+  %cmp = icmp eq i32 %id, 0
+  br i1 %cmp, label %bb1, label %bb2
+
+bb1:
+  store volatile i32 %live.out.reg, i32 addrspace(1)* undef
+  br label %bb2
+
+bb2:
   ret void
 }
 
@@ -230,7 +239,7 @@ entry:
 ; CHECK-DAG: s_load_dwordx4 s{{\[}}[[S_ELT0:[0-9]+]]:[[S_ELT3:[0-9]+]]{{\]}}
 ; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
 ; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], s[[S_ELT0]]
-; CHECK-DAG: v_mov_b32_e32 [[INS0:v[0-9]+]], 62
+; CHECK-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
 ; CHECK-DAG: s_waitcnt vmcnt(0)
 
 ; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
@@ -259,6 +268,8 @@ entry:
 ; CHECK: s_cbranch_execnz [[LOOP1]]
 
 ; CHECK: buffer_store_dwordx4 v{{\[}}[[MOVREL0]]:
+
+; CHECK: buffer_store_dword [[INS0]]
 define void @insert_vgpr_offset_multiple_in_block(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, i32 addrspace(1)* %in, <4 x i32> %vec0) #0 {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -266,9 +277,18 @@ entry:
   %gep = getelementptr inbounds i32, i32 addrspace(1)* %in, i64 %id.ext
   %idx0 = load volatile i32, i32 addrspace(1)* %gep
   %idx1 = add i32 %idx0, 1
-  %vec1 = insertelement <4 x i32> %vec0, i32 62, i32 %idx0
+  %live.out.val = call i32 asm sideeffect "v_mov_b32 $0, 62", "=v"()
+  %vec1 = insertelement <4 x i32> %vec0, i32 %live.out.val, i32 %idx0
   %vec2 = insertelement <4 x i32> %vec1, i32 63, i32 %idx1
   store volatile <4 x i32> %vec2, <4 x i32> addrspace(1)* %out0
+  %cmp = icmp eq i32 %id, 0
+  br i1 %cmp, label %bb1, label %bb2
+
+bb1:
+  store volatile i32 %live.out.val, i32 addrspace(1)* undef
+  br label %bb2
+
+bb2:
   ret void
 }
 

@@ -1221,11 +1221,9 @@ public:
     return DbgInfo->getSDDbgValues(SD);
   }
 
-private:
-  /// Transfer SDDbgValues. Called via ReplaceAllUses{OfValue}?With
+  /// Transfer SDDbgValues.
   void TransferDbgValues(SDValue From, SDValue To);
 
-public:
   /// Return true if there are any SDDbgValue nodes associated
   /// with this SelectionDAG.
   bool hasDebugValues() const { return !DbgInfo->empty(); }
