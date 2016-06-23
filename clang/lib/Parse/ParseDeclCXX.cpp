@@ -3422,10 +3422,11 @@ Parser::tryParseExceptionSpecification(bool Delayed,
     NoexceptExpr = ParseConstantExpression();
     T.consumeClose();
     // The argument must be contextually convertible to bool. We use
-    // ActOnBooleanCondition for this purpose.
+    // CheckBooleanCondition for this purpose.
+    // FIXME: Add a proper Sema entry point for this.
     if (!NoexceptExpr.isInvalid()) {
-      NoexceptExpr = Actions.ActOnBooleanCondition(getCurScope(), KeywordLoc,
-                                                   NoexceptExpr.get());
+      NoexceptExpr =
+          Actions.CheckBooleanCondition(KeywordLoc, NoexceptExpr.get());
       NoexceptRange = SourceRange(KeywordLoc, T.getCloseLocation());
     } else {
       NoexceptType = EST_None;

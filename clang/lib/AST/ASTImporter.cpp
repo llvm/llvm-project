@@ -5430,19 +5430,17 @@ Expr *ASTNodeImporter::VisitDesignatedInitExpr(DesignatedInitExpr *DIE) {
   }
 
   SmallVector<Designator, 4> Designators(DIE->size());
-  std::transform(DIE->designators_begin(), DIE->designators_end(),
-                 Designators.begin(),
-    [this](const Designator &D) -> Designator {
-      return ImportDesignator(D);
-    });
+  llvm::transform(DIE->designators(), Designators.begin(),
+                  [this](const Designator &D) -> Designator {
+                    return ImportDesignator(D);
+                  });
 
-  for (auto I = DIE->designators_begin(), E = DIE->designators_end(); I != E;
-       ++I)
-    if (I->isFieldDesignator() && !I->getFieldName())
+  for (const Designator &D : DIE->designators())
+    if (D.isFieldDesignator() && !D.getFieldName())
       return nullptr;
 
   return DesignatedInitExpr::Create(
-        Importer.getToContext(), Designators.data(), Designators.size(),
+        Importer.getToContext(), Designators,
         IndexExprs, Importer.Import(DIE->getEqualOrColonLoc()),
         DIE->usesGNUSyntax(), Init);
 }

@@ -8935,12 +8935,11 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
       Self.ModAsSideEffect = &ModAsSideEffect;
     }
     ~SequencedSubexpression() {
-      for (auto MI = ModAsSideEffect.rbegin(), ME = ModAsSideEffect.rend();
-           MI != ME; ++MI) {
-        UsageInfo &U = Self.UsageMap[MI->first];
+      for (auto &M : llvm::reverse(ModAsSideEffect)) {
+        UsageInfo &U = Self.UsageMap[M.first];
         auto &SideEffectUsage = U.Uses[UK_ModAsSideEffect];
-        Self.addUsage(U, MI->first, SideEffectUsage.Use, UK_ModAsValue);
-        SideEffectUsage = MI->second;
+        Self.addUsage(U, M.first, SideEffectUsage.Use, UK_ModAsValue);
+        SideEffectUsage = M.second;
       }
       Self.ModAsSideEffect = OldModAsSideEffect;
     }

@@ -898,22 +898,20 @@ void StmtProfiler::VisitInitListExpr(const InitListExpr *S) {
 void StmtProfiler::VisitDesignatedInitExpr(const DesignatedInitExpr *S) {
   VisitExpr(S);
   ID.AddBoolean(S->usesGNUSyntax());
-  for (DesignatedInitExpr::const_designators_iterator D =
-         S->designators_begin(), DEnd = S->designators_end();
-       D != DEnd; ++D) {
-    if (D->isFieldDesignator()) {
+  for (const DesignatedInitExpr::Designator &D : S->designators()) {
+    if (D.isFieldDesignator()) {
       ID.AddInteger(0);
-      VisitName(D->getFieldName());
+      VisitName(D.getFieldName());
       continue;
     }
 
-    if (D->isArrayDesignator()) {
+    if (D.isArrayDesignator()) {
       ID.AddInteger(1);
     } else {
-      assert(D->isArrayRangeDesignator());
+      assert(D.isArrayRangeDesignator());
       ID.AddInteger(2);
     }
-    ID.AddInteger(D->getFirstExprIndex());
+    ID.AddInteger(D.getFirstExprIndex());
   }
 }
 

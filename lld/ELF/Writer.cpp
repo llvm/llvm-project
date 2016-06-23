@@ -793,23 +793,23 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
-    Sec->forEachInputSection([&](InputSectionBase<ELFT> *S) {
-      if (auto *IS = dyn_cast<InputSection<ELFT>>(S)) {
-        // Set OutSecOff so that scanRelocations can use it.
-        uintX_t Off = alignTo(Sec->getSize(), S->Alignment);
-        IS->OutSecOff = Off;
-
-        scanRelocations(*IS);
-
-        // Now that scan relocs possibly changed the size, update the offset.
-        Sec->setSize(Off + S->getSize());
-      } else if (auto *EH = dyn_cast<EhInputSection<ELFT>>(S)) {
-        if (EH->RelocSection)
-          scanRelocations(*EH, *EH->RelocSection);
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles()) {
+    for (InputSectionBase<ELFT> *C : F->getSections()) {
+      if (isDiscarded(C))
+        continue;
+      if (auto *S = dyn_cast<InputSection<ELFT>>(C)) {
+        scanRelocations(*S);
+        continue;
       }
-    });
+      if (auto *S = dyn_cast<EhInputSection<ELFT>>(C))
+        if (S->RelocSection)
+          scanRelocations(*S, *S->RelocSection);
+    }
   }
+
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    Sec->assignOffsets();
 
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.

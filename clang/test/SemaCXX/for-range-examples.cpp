@@ -176,9 +176,9 @@ namespace test4 {
 
     // Make sure these don't crash. Better diagnostics would be nice.
     for (: {1, 2, 3}) {} // expected-error {{expected expression}} expected-error {{expected ';'}}
-    for (1 : {1, 2, 3}) {} // expected-error {{must declare a variable}} expected-warning {{result unused}}
+    for (1 : {1, 2, 3}) {} // expected-error {{must declare a variable}}
     for (+x : {1, 2, 3}) {} // expected-error {{undeclared identifier}} expected-error {{expected ';'}}
-    for (+y : {1, 2, 3}) {} // expected-error {{must declare a variable}} expected-warning {{result unused}}
+    for (+y : {1, 2, 3}) {} // expected-error {{must declare a variable}}
   }
 }
 

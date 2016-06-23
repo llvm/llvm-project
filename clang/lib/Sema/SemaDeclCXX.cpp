@@ -10095,10 +10095,10 @@ buildSingleCopyAssignRecursively(Sema &S, SourceLocation Loc, QualType T,
                                     SizeType, VK_LValue, OK_Ordinary, Loc);
 
   // Construct the loop that copies all elements of this array.
-  return S.ActOnForStmt(Loc, Loc, InitStmt, 
-                        S.MakeFullExpr(Comparison),
-                        nullptr, S.MakeFullDiscardedValueExpr(Increment),
-                        Loc, Copy.get());
+  return S.ActOnForStmt(
+      Loc, Loc, InitStmt,
+      S.ActOnCondition(nullptr, Loc, Comparison, Sema::ConditionKind::Boolean),
+      S.MakeFullDiscardedValueExpr(Increment), Loc, Copy.get());
 }
 
 static StmtResult

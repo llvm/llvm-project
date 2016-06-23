@@ -1976,8 +1976,8 @@ static DesignatedInitExpr *CloneDesignatedInitExpr(Sema &SemaRef,
   SmallVector<Expr*, 4> IndexExprs(NumIndexExprs);
   for (unsigned I = 0; I < NumIndexExprs; ++I)
     IndexExprs[I] = DIE->getSubExpr(I + 1);
-  return DesignatedInitExpr::Create(SemaRef.Context, DIE->designators_begin(),
-                                    DIE->size(), IndexExprs,
+  return DesignatedInitExpr::Create(SemaRef.Context, DIE->designators(),
+                                    IndexExprs,
                                     DIE->getEqualOrColonLoc(),
                                     DIE->usesGNUSyntax(), DIE->getInit());
 }
@@ -2837,7 +2837,7 @@ ExprResult Sema::ActOnDesignatedInitializer(Designation &Desig,
 
   DesignatedInitExpr *DIE
     = DesignatedInitExpr::Create(Context,
-                                 Designators.data(), Designators.size(),
+                                 Designators,
                                  InitExpressions, Loc, GNUSyntax,
                                  Init.getAs<Expr>());
 

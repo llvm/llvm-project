@@ -74,8 +74,11 @@ TEST_F(FormatTestProto, FormatsEnums) {
                "  TYPE_B = 2;\n"
                "};");
   verifyFormat("enum Type {\n"
+               "  UNKNOWN = 0 [(some_options) = {a: aa, b: bb}];\n"
+               "};");
+  verifyFormat("enum Type {\n"
                "  UNKNOWN = 0 [(some_options) = {\n"
-               "    a: aa,\n"
+               "    a: aa,  // wrap\n"
                "    b: bb\n"
                "  }];\n"
                "};");
@@ -153,10 +156,7 @@ TEST_F(FormatTestProto, FormatsOptions) {
                "  field_a: OK\n"
                "  field_b: \"OK\"\n"
                "  field_c: \"OK\"\n"
-               "  msg_field: {\n"
-               "    field_d: 123\n"
-               "    field_e: OK\n"
-               "  }\n"
+               "  msg_field: {field_d: 123 field_e: OK}\n"
                "};");
   verifyFormat("option (MyProto.options) = {\n"
                "  field_a: OK  // Comment\n"

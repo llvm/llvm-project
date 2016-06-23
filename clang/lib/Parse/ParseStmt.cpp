@@ -1052,29 +1052,28 @@ StmtResult Parser::ParseCompoundStatementBody(bool isStmtExpr) {
 /// should try to recover harder.  It returns false if the condition is
 /// successfully parsed.  Note that a successful parse can still have semantic
 /// errors in the condition.
-bool Parser::ParseParenExprOrCondition(ExprResult &ExprResult,
-                                       Decl *&DeclResult,
+bool Parser::ParseParenExprOrCondition(Sema::ConditionResult &Cond,
                                        SourceLocation Loc,
-                                       bool ConvertToBoolean) {
+                                       Sema::ConditionKind CK) {
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
   if (getLangOpts().CPlusPlus)
-    ParseCXXCondition(ExprResult, DeclResult, Loc, ConvertToBoolean);
+    Cond = ParseCXXCondition(Loc, CK);
   else {
-    ExprResult = ParseExpression();
-    DeclResult = nullptr;
+    ExprResult CondExpr = ParseExpression();
 
     // If required, convert to a boolean value.
-    if (!ExprResult.isInvalid() && ConvertToBoolean)
-      ExprResult
-        = Actions.ActOnBooleanCondition(getCurScope(), Loc, ExprResult.get());
+    if (CondExpr.isInvalid())
+      Cond = Sema::ConditionError();
+    else
+      Cond = Actions.ActOnCondition(getCurScope(), Loc, CondExpr.get(), CK);
   }
 
   // If the parser was confused by the condition and we don't have a ')', try to
   // recover by skipping ahead to a semi and bailing out.  If condexp is
   // semantically invalid but we have well formed code, keep going.
-  if (ExprResult.isInvalid() && !DeclResult && Tok.isNot(tok::r_paren)) {
+  if (Cond.isInvalid() && Tok.isNot(tok::r_paren)) {
     SkipUntil(tok::semi);
     // Skipping may have stopped if it found the containing ')'.  If so, we can
     // continue parsing the if statement.
@@ -1132,12 +1131,9 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   ParseScope IfScope(this, Scope::DeclScope | Scope::ControlScope, C99orCXX);
 
   // Parse the condition.
-  ExprResult CondExp;
-  Decl *CondVar = nullptr;
-  if (ParseParenExprOrCondition(CondExp, CondVar, IfLoc, true))
+  Sema::ConditionResult Cond;
+  if (ParseParenExprOrCondition(Cond, IfLoc, Sema::ConditionKind::Boolean))
     return StmtError();
-
-  FullExprArg FullCondExp(Actions.MakeFullExpr(CondExp.get(), IfLoc));
 
   // C99 6.8.4p3 - In C99, the body of the if statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1221,8 +1217,8 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   if (ElseStmt.isInvalid())
     ElseStmt = Actions.ActOnNullStmt(ElseStmtLoc);
 
-  return Actions.ActOnIfStmt(IfLoc, FullCondExp, CondVar, ThenStmt.get(),
-                             ElseLoc, ElseStmt.get());
+  return Actions.ActOnIfStmt(IfLoc, Cond, ThenStmt.get(), ElseLoc,
+                             ElseStmt.get());
 }
 
 /// ParseSwitchStatement
@@ -1259,13 +1255,11 @@ StmtResult Parser::ParseSwitchStatement(SourceLocation *TrailingElseLoc) {
   ParseScope SwitchScope(this, ScopeFlags);
 
   // Parse the condition.
-  ExprResult Cond;
-  Decl *CondVar = nullptr;
-  if (ParseParenExprOrCondition(Cond, CondVar, SwitchLoc, false))
+  Sema::ConditionResult Cond;
+  if (ParseParenExprOrCondition(Cond, SwitchLoc, Sema::ConditionKind::Switch))
     return StmtError();
 
-  StmtResult Switch
-    = Actions.ActOnStartOfSwitchStmt(SwitchLoc, Cond.get(), CondVar);
+  StmtResult Switch = Actions.ActOnStartOfSwitchStmt(SwitchLoc, Cond);
 
   if (Switch.isInvalid()) {
     // Skip the switch body.
@@ -1347,12 +1341,9 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   ParseScope WhileScope(this, ScopeFlags);
 
   // Parse the condition.
-  ExprResult Cond;
-  Decl *CondVar = nullptr;
-  if (ParseParenExprOrCondition(Cond, CondVar, WhileLoc, true))
+  Sema::ConditionResult Cond;
+  if (ParseParenExprOrCondition(Cond, WhileLoc, Sema::ConditionKind::Boolean))
     return StmtError();
-
-  FullExprArg FullCond(Actions.MakeFullExpr(Cond.get(), WhileLoc));
 
   // C99 6.8.5p5 - In C99, the body of the while statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1374,10 +1365,10 @@ StmtResult Parser::ParseWhileStatement(SourceLocation *TrailingElseLoc) {
   InnerScope.Exit();
   WhileScope.Exit();
 
-  if ((Cond.isInvalid() && !CondVar) || Body.isInvalid())
+  if (Cond.isInvalid() || Body.isInvalid())
     return StmtError();
 
-  return Actions.ActOnWhileStmt(WhileLoc, FullCond, CondVar, Body.get());
+  return Actions.ActOnWhileStmt(WhileLoc, Cond, Body.get());
 }
 
 /// ParseDoStatement
@@ -1535,12 +1526,10 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   bool ForEach = false, ForRange = false;
   StmtResult FirstPart;
-  bool SecondPartIsInvalid = false;
-  FullExprArg SecondPart(Actions);
+  Sema::ConditionResult SecondPart;
   ExprResult Collection;
   ForRangeInit ForRangeInit;
   FullExprArg ThirdPart(Actions);
-  Decl *SecondVar = nullptr;
 
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteOrdinaryName(getCurScope(),
@@ -1645,7 +1634,7 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       Diag(Tok, diag::err_for_range_expected_decl)
         << FirstPart.get()->getSourceRange();
       SkipUntil(tok::r_paren, StopBeforeMatch);
-      SecondPartIsInvalid = true;
+      SecondPart = Sema::ConditionError();
     } else {
       if (!Value.isInvalid()) {
         Diag(Tok, diag::err_expected_semi_for);
@@ -1660,29 +1649,28 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
 
   // Parse the second part of the for specifier.
   getCurScope()->AddFlags(Scope::BreakScope | Scope::ContinueScope);
-  if (!ForEach && !ForRange) {
-    assert(!SecondPart.get() && "Shouldn't have a second expression yet.");
+  if (!ForEach && !ForRange && !SecondPart.isInvalid()) {
     // Parse the second part of the for specifier.
     if (Tok.is(tok::semi)) {  // for (...;;
       // no second part.
     } else if (Tok.is(tok::r_paren)) {
       // missing both semicolons.
     } else {
-      ExprResult Second;
       if (getLangOpts().CPlusPlus)
-        ParseCXXCondition(Second, SecondVar, ForLoc, true);
+        SecondPart = ParseCXXCondition(ForLoc, Sema::ConditionKind::Boolean);
       else {
-        Second = ParseExpression();
-        if (!Second.isInvalid())
-          Second = Actions.ActOnBooleanCondition(getCurScope(), ForLoc,
-                                                 Second.get());
+        ExprResult SecondExpr = ParseExpression();
+        if (SecondExpr.isInvalid())
+          SecondPart = Sema::ConditionError();
+        else
+          SecondPart =
+              Actions.ActOnCondition(getCurScope(), ForLoc, SecondExpr.get(),
+                                     Sema::ConditionKind::Boolean);
       }
-      SecondPartIsInvalid = Second.isInvalid();
-      SecondPart = Actions.MakeFullExpr(Second.get(), ForLoc);
     }
 
     if (Tok.isNot(tok::semi)) {
-      if (!SecondPartIsInvalid || SecondVar)
+      if (!SecondPart.isInvalid())
         Diag(Tok, diag::err_expected_semi_for);
       else
         // Skip until semicolon or rparen, don't consume it.
@@ -1781,8 +1769,8 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
     return Actions.FinishCXXForRangeStmt(ForRangeStmt.get(), Body.get());
 
   return Actions.ActOnForStmt(ForLoc, T.getOpenLocation(), FirstPart.get(),
-                              SecondPart, SecondVar, ThirdPart,
-                              T.getCloseLocation(), Body.get());
+                              SecondPart, ThirdPart, T.getCloseLocation(),
+                              Body.get());
 }
 
 /// ParseGotoStatement

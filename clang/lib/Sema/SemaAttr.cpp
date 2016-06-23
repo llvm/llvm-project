@@ -222,8 +222,9 @@ void Sema::PragmaStack<ValueType>::Act(SourceLocation PragmaLocation,
   else if (Action & PSK_Pop) {
     if (!StackSlotLabel.empty()) {
       // If we've got a label, try to find it and jump there.
-      auto I = std::find_if(Stack.rbegin(), Stack.rend(),
-        [&](const Slot &x) { return x.StackSlotLabel == StackSlotLabel; });
+      auto I = llvm::find_if(llvm::reverse(Stack), [&](const Slot &x) {
+        return x.StackSlotLabel == StackSlotLabel;
+      });
       // If we found the label so pop from there.
       if (I != Stack.rend()) {
         CurrentValue = I->Value;

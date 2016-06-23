@@ -2332,9 +2332,6 @@ bool TokenAnnotator::mustBreakBefore(const AnnotatedLine &Line,
     return (Line.startsWith(tok::kw_enum) && Style.BraceWrapping.AfterEnum) ||
            (Line.startsWith(tok::kw_class) && Style.BraceWrapping.AfterClass) ||
            (Line.startsWith(tok::kw_struct) && Style.BraceWrapping.AfterStruct);
-  if (Style.Language == FormatStyle::LK_Proto && Left.isNot(tok::l_brace) &&
-      Right.is(TT_SelectorName))
-    return true;
   if (Left.is(TT_ObjCBlockLBrace) && !Style.AllowShortBlocksOnASingleLine)
     return true;
 

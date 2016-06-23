@@ -6826,12 +6826,11 @@ OMPClause *Sema::ActOnOpenMPIfClause(OpenMPDirectiveKind NameModifier,
   if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
       !Condition->isInstantiationDependent() &&
       !Condition->containsUnexpandedParameterPack()) {
-    ExprResult Val = ActOnBooleanCondition(DSAStack->getCurScope(),
-                                           Condition->getExprLoc(), Condition);
+    ExprResult Val = CheckBooleanCondition(StartLoc, Condition);
     if (Val.isInvalid())
       return nullptr;
 
-    ValExpr = Val.get();
+    ValExpr = MakeFullExpr(Val.get()).get();
   }
 
   return new (Context) OMPIfClause(NameModifier, ValExpr, StartLoc, LParenLoc,
@@ -6846,12 +6845,11 @@ OMPClause *Sema::ActOnOpenMPFinalClause(Expr *Condition,
   if (!Condition->isValueDependent() && !Condition->isTypeDependent() &&
       !Condition->isInstantiationDependent() &&
       !Condition->containsUnexpandedParameterPack()) {
-    ExprResult Val = ActOnBooleanCondition(DSAStack->getCurScope(),
-                                           Condition->getExprLoc(), Condition);
+    ExprResult Val = CheckBooleanCondition(StartLoc, Condition);
     if (Val.isInvalid())
       return nullptr;
 
-    ValExpr = Val.get();
+    ValExpr = MakeFullExpr(Val.get()).get();
   }
 
   return new (Context) OMPFinalClause(ValExpr, StartLoc, LParenLoc, EndLoc);

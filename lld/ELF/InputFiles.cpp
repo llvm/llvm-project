@@ -313,6 +313,14 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
   return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
 }
 
+// Print the module names which reference the notified
+// symbols provided through -y or --trace-symbol option.
+template <class ELFT>
+void elf::ObjectFile<ELFT>::traceUndefined(StringRef Name) {
+  if (!Config->TraceSymbol.empty() && Config->TraceSymbol.count(Name))
+    outs() << getFilename(this) << ": reference to " << Name << "\n";
+}
+
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
   this->initStringTable();
   Elf_Sym_Range Syms = this->getElfSymbols(false);
@@ -350,6 +358,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
+    traceUndefined(Name);
     return elf::Symtab<ELFT>::X
         ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
                        /*CanOmitFromDynSym*/ false, this)

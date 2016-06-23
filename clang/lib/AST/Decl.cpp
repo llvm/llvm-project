@@ -1422,16 +1422,15 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
     Ctx = Ctx->getParent();
   }
 
-  for (ContextsTy::reverse_iterator I = Contexts.rbegin(), E = Contexts.rend();
-       I != E; ++I) {
-    if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(*I)) {
+  for (const DeclContext *DC : reverse(Contexts)) {
+    if (const auto *Spec = dyn_cast<ClassTemplateSpecializationDecl>(DC)) {
       OS << Spec->getName();
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
       TemplateSpecializationType::PrintTemplateArgumentList(OS,
                                                             TemplateArgs.data(),
                                                             TemplateArgs.size(),
                                                             P);
-    } else if (const auto *ND = dyn_cast<NamespaceDecl>(*I)) {
+    } else if (const auto *ND = dyn_cast<NamespaceDecl>(DC)) {
       if (P.SuppressUnwrittenScope &&
           (ND->isAnonymousNamespace() || ND->isInline()))
         continue;
@@ -1441,12 +1440,12 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
       }
       else
         OS << *ND;
-    } else if (const auto *RD = dyn_cast<RecordDecl>(*I)) {
+    } else if (const auto *RD = dyn_cast<RecordDecl>(DC)) {
       if (!RD->getIdentifier())
         OS << "(anonymous " << RD->getKindName() << ')';
       else
         OS << *RD;
-    } else if (const auto *FD = dyn_cast<FunctionDecl>(*I)) {
+    } else if (const auto *FD = dyn_cast<FunctionDecl>(DC)) {
       const FunctionProtoType *FT = nullptr;
       if (FD->hasWrittenPrototype())
         FT = dyn_cast<FunctionProtoType>(FD->getType()->castAs<FunctionType>());
@@ -1467,7 +1466,7 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
         }
       }
       OS << ')';
-    } else if (const auto *ED = dyn_cast<EnumDecl>(*I)) {
+    } else if (const auto *ED = dyn_cast<EnumDecl>(DC)) {
       // C++ [dcl.enum]p10: Each enum-name and each unscoped
       // enumerator is declared in the scope that immediately contains
       // the enum-specifier. Each scoped enumerator is declared in the
@@ -1477,7 +1476,7 @@ void NamedDecl::printQualifiedName(raw_ostream &OS,
       else
         continue;
     } else {
-      OS << *cast<NamedDecl>(*I);
+      OS << *cast<NamedDecl>(DC);
     }
     OS << "::";
   }
