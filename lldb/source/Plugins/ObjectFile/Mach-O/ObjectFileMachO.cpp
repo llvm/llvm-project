@@ -5114,7 +5114,7 @@ ObjectFileMachO::GetUUID (const llvm::MachO::mach_header &header,
             
             if (uuid_bytes)
             {
-                // OpenCL on Mac OS X uses the same UUID for each of its object files.
+                // OpenCL on macOS uses the same UUID for each of its object files.
                 // We pretend these object files have no UUID to prevent crashing.
                 
                 const uint8_t opencl_uuid[] = { 0x8c, 0x8e, 0xb3, 0x9b,
@@ -5358,8 +5358,8 @@ ObjectFileMachO::GetEntryPointAddress ()
     //
     // So we just keep reading the various register flavors till we find the GPR one, then read the PC out of there.
     // FIXME: We will need to have a "RegisterContext data provider" class at some point that can get all the registers
-    // out of data in this form & attach them to a given thread.  That should underlie the MacOS X User process plugin,
-    // and we'll also need it for the MacOS X Core File process plugin.  When we have that we can also use it here.
+    // out of data in this form & attach them to a given thread.  That should underlie the macOS User process plugin,
+    // and we'll also need it for the macOS Core File process plugin.  When we have that we can also use it here.
     //
     // For now we hard-code the offsets and flavors we need:
     //

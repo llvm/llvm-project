@@ -1002,7 +1002,7 @@ SystemRuntimeMacOSX::GetPluginNameStatic()
 const char *
 SystemRuntimeMacOSX::GetPluginDescriptionStatic()
 {
-    return "System runtime plugin for Mac OS X native libraries.";
+    return "System runtime plugin for macOS native libraries.";
 }
 
 

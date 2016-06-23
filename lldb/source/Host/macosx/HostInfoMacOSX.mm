@@ -160,7 +160,7 @@ HostInfoMacOSX::ComputeSupportExeDirectory(FileSpec &file_spec)
     else
     {
         // Find the bin path relative to the lib path where the cmake-based
-        // OS X .dylib lives.  This is not going to work if the bin and lib
+        // macOS .dylib lives.  This is not going to work if the bin and lib
         // dir are not both in the same dir.
         //
         // It is not going to work to do it by the executable path either,

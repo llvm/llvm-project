@@ -21,7 +21,7 @@
 # vim swap files
 .*.swp
 .sw?
-# OS X specific files.
+# macOS specific files.
 .DS_store
 DerivedData/
 

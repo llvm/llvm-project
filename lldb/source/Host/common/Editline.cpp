@@ -25,7 +25,7 @@
 using namespace lldb_private;
 using namespace lldb_private::line_editor;
 
-// Workaround for what looks like an OS X-specific issue, but other platforms
+// Workaround for what looks like an macOS-specific issue, but other platforms
 // may benefit from something similar if issues arise.  The libedit library
 // doesn't explicitly initialize the curses termcap library, which it gets away
 // with until TERM is set to VT100 where it stumbles over an implementation

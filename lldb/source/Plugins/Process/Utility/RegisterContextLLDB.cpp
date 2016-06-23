@@ -855,7 +855,7 @@ RegisterContextLLDB::GetFullUnwindPlanForFrame ()
         return arch_default_unwind_plan_sp;
     }
 
-    // If we're in _sigtramp(), unwinding past this frame requires special knowledge.  On Mac OS X this knowledge
+    // If we're in _sigtramp(), unwinding past this frame requires special knowledge.  On macOS this knowledge
     // is properly encoded in the eh_frame section, so prefer that if available.
     // On other platforms we may need to provide a platform-specific UnwindPlan which encodes the details of
     // how to unwind out of sigtramp.

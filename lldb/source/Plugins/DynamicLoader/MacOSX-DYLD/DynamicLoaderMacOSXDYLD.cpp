@@ -493,7 +493,7 @@ DynamicLoaderMacOSXDYLD::UpdateImageLoadAddress (Module *module, DYLDImageInfo& 
                         else
                         {
                             Host::SystemLog (Host::eSystemLogWarning, 
-                                             "warning: unable to find and load segment named '%s' at 0x%" PRIx64 " in '%s' in macosx dynamic loader plug-in.\n",
+                                             "warning: unable to find and load segment named '%s' at 0x%" PRIx64 " in '%s' in macOS dynamic loader plug-in.\n",
                                              info.segments[i].name.AsCString("<invalid>"),
                                              (uint64_t)new_section_load_addr,
                                              image_object_file->GetFileSpec().GetPath().c_str());
@@ -572,7 +572,7 @@ DynamicLoaderMacOSXDYLD::UnloadImageLoadAddress (Module *module, DYLDImageInfo& 
                     else
                     {
                         Host::SystemLog (Host::eSystemLogWarning, 
-                                         "warning: unable to find and unload segment named '%s' in '%s' in macosx dynamic loader plug-in.\n",
+                                         "warning: unable to find and unload segment named '%s' in '%s' in macOS dynamic loader plug-in.\n",
                                          info.segments[i].name.AsCString("<invalid>"),
                                          image_object_file->GetFileSpec().GetPath().c_str());
                     }
@@ -1541,7 +1541,7 @@ DynamicLoaderMacOSXDYLD::UpdateImageInfosHeaderAndLoadCommands(DYLDImageInfo::co
 }
 
 //----------------------------------------------------------------------
-// On Mac OS X libobjc (the Objective-C runtime) has several critical dispatch
+// On macOS libobjc (the Objective-C runtime) has several critical dispatch
 // functions written in hand-written assembly, and also have hand-written unwind
 // information in the eh_frame section.  Normally we prefer analyzing the 
 // assembly instructions of a currently executing frame to unwind from that frame --
@@ -2007,7 +2007,7 @@ DynamicLoaderMacOSXDYLD::GetPluginNameStatic()
 const char *
 DynamicLoaderMacOSXDYLD::GetPluginDescriptionStatic()
 {
-    return "Dynamic loader plug-in that watches for shared library loads/unloads in MacOSX user processes.";
+    return "Dynamic loader plug-in that watches for shared library loads/unloads in macOS user processes.";
 }
 
 

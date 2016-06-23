@@ -317,7 +317,7 @@ PlatformDarwinKernel::GetStatus (Stream &strm)
     if (m_ios_debug_session == eLazyBoolYes)
         strm.Printf ("iOS kernel debugging\n");
     else if (m_ios_debug_session == eLazyBoolNo)
-        strm.Printf ("Mac OS X kernel debugging\n");
+        strm.Printf ("macOS kernel debugging\n");
     else
             strm.Printf ("unknown kernel debugging\n");
     const uint32_t num_kext_dirs = m_search_directories.size();

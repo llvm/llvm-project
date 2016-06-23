@@ -937,7 +937,7 @@ void
 ABIMacOSX_arm::Initialize()
 {
     PluginManager::RegisterPlugin (GetPluginNameStatic(),
-                                   "Mac OS X ABI for arm targets",
+                                   "Darwin ABI for arm targets",
                                    CreateInstance);    
 }
 

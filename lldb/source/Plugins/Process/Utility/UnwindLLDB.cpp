@@ -224,7 +224,7 @@ UnwindLLDB::GetOneMoreFrame (ABI* abi)
     }
     if (abi && !abi->CallFrameAddressIsValid(cursor_sp->cfa))
     {
-        // On Mac OS X, the _sigtramp asynchronous signal trampoline frame may not have
+        // On macOS, the _sigtramp asynchronous signal trampoline frame may not have
         // its (constructed) CFA aligned correctly -- don't do the abi alignment check for
         // these.
         if (reg_ctx_sp->IsTrapHandlerFrame() == false)

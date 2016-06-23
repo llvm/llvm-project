@@ -2882,9 +2882,9 @@ ProcessGDBRemote::DoDestroy ()
                 if (packet_cmd == 'W' || packet_cmd == 'X')
                 {
 #if defined(__APPLE__)
-                    // For Native processes on Mac OS X, we launch through the Host Platform, then hand the process off
+                    // For Native processes on macOS, we launch through the Host Platform, then hand the process off
                     // to debugserver, which becomes the parent process through "PT_ATTACH".  Then when we go to kill
-                    // the process on Mac OS X we call ptrace(PT_KILL) to kill it, then we call waitpid which returns
+                    // the process on macOS we call ptrace(PT_KILL) to kill it, then we call waitpid which returns
                     // with no error and the correct status.  But amusingly enough that doesn't seem to actually reap
                     // the process, but instead it is left around as a Zombie.  Probably the kernel is in the process of
                     // switching ownership back to lldb which was the original parent, and gets confused in the handoff.
