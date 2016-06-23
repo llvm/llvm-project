@@ -103,7 +103,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
           {Target->TlsDescRel, Out<ELFT>::Got, Off, false, &Body, 0});
     }
     if (Expr != R_HINT)
-      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
     return 1;
   }
 
@@ -111,21 +111,21 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     // Local-Dynamic relocs can be relaxed to Local-Exec.
     if (!Config->Shared) {
       C.Relocations.push_back(
-          {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
+          {R_RELAX_TLS_LD_TO_LE, Type, &C, Offset, Addend, &Body});
       return 2;
     }
     if (Out<ELFT>::Got->addTlsIndex())
       Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
                                     Out<ELFT>::Got->getTlsIndexOff(), false,
                                     nullptr, 0});
-    C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+    C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
     return 1;
   }
 
   // Local-Dynamic relocs can be relaxed to Local-Exec.
   if (Target->isTlsLocalDynamicRel(Type) && !Config->Shared) {
     C.Relocations.push_back(
-        {R_RELAX_TLS_LD_TO_LE, Type, Offset, Addend, &Body});
+        {R_RELAX_TLS_LD_TO_LE, Type, &C, Offset, Addend, &Body});
     return 1;
   }
 
@@ -144,7 +144,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
                                         Off + (uintX_t)sizeof(uintX_t), false,
                                         &Body, 0});
       }
-      C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+      C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
       return 1;
     }
 
@@ -153,7 +153,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     if (isPreemptible(Body, Type)) {
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_IE), Type,
-           Offset, Addend, &Body});
+           &C, Offset, Addend, &Body});
       if (!Body.isInGot()) {
         Out<ELFT>::Got->addEntry(Body);
         Out<ELFT>::RelaDyn->addReloc({Target->TlsGotRel, Out<ELFT>::Got,
@@ -163,7 +163,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
       return Target->TlsGdRelaxSkip;
     }
     C.Relocations.push_back(
-        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type,
+        {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_GD_TO_LE), Type, &C,
          Offset, Addend, &Body});
     return Target->TlsGdRelaxSkip;
   }
@@ -173,7 +173,7 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
   if (Target->isTlsInitialExecRel(Type) && !Config->Shared &&
       !isPreemptible(Body, Type)) {
     C.Relocations.push_back(
-        {R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Body});
+        {R_RELAX_TLS_IE_TO_LE, Type, &C, Offset, Addend, &Body});
     return 1;
   }
   return 0;
@@ -497,8 +497,9 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (HasError)
       continue;
 
-    uintX_t Offset = C.getOffset(RI.r_offset);
-    if (Offset == (uintX_t)-1)
+    // Skip a relocation that points to a dead piece
+    // in a mergeable section.
+    if (C.getOffset(RI.r_offset) == (uintX_t)-1)
       continue;
 
     // This relocation does not require got entry, but it is relative to got and
@@ -508,8 +509,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     uintX_t Addend = computeAddend(File, Buf, E, RI, Expr, Body);
 
-    if (unsigned Processed =
-            handleTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr)) {
+    if (unsigned Processed = handleTlsRelocation<ELFT>(
+            Type, Body, C, RI.r_offset, Addend, Expr)) {
       I += (Processed - 1);
       continue;
     }
@@ -529,17 +530,17 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
       // relocation. We can process some of it and and just ask the dynamic
       // linker to add the load address.
       if (!Constant)
-        AddDyn({Target->RelativeRel, C.OutSec, Offset, true, &Body, Addend});
+        AddDyn({Target->RelativeRel, &C, RI.r_offset, true, &Body, Addend});
 
       // If the produced value is a constant, we just remember to write it
       // when outputting this section. We also have to do it if the format
       // uses Elf_Rel, since in that case the written value is the addend.
       if (Constant || !RelTy::IsRela)
-        C.Relocations.push_back({Expr, Type, Offset, Addend, &Body});
+        C.Relocations.push_back({Expr, Type, &C, RI.r_offset, Addend, &Body});
     } else {
       // We don't know anything about the finaly symbol. Just ask the dynamic
       // linker to handle the relocation for us.
-      AddDyn({Target->getDynRel(Type), C.OutSec, Offset, false, &Body, Addend});
+      AddDyn({Target->getDynRel(Type), &C, RI.r_offset, false, &Body, Addend});
       // MIPS ABI turns using of GOT and dynamic relocations inside out.
       // While regular ABI uses dynamic relocations to fill up GOT entries
       // MIPS ABI requires dynamic linker to fills up GOT entries using

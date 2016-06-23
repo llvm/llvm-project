@@ -215,7 +215,7 @@ void FunctionScopeInfo::markSafeWeakUse(const Expr *E) {
 
   // Has there been a read from the object using this Expr?
   FunctionScopeInfo::WeakUseVector::reverse_iterator ThisUse =
-    std::find(Uses->second.rbegin(), Uses->second.rend(), WeakUseTy(E, true));
+      llvm::find(llvm::reverse(Uses->second), WeakUseTy(E, true));
   if (ThisUse == Uses->second.rend())
     return;
 

@@ -140,6 +140,8 @@ public:
 
   const Elf_Shdr *getSymbolTable() const { return this->Symtab; };
 
+  void traceUndefined(StringRef Name);
+
   // Get MIPS GP0 value defined by this file. This value represents the gp value
   // used to create the relocatable object and required to support
   // R_MIPS_GPREL16 / R_MIPS_GPREL32 relocations.

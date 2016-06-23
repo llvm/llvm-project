@@ -541,6 +541,17 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   }
 }
 
+// Print the module names which define the notified
+// symbols provided through -y or --trace-symbol option.
+template <class ELFT> void SymbolTable<ELFT>::traceDefined() {
+  for (const auto &Symbol : Config->TraceSymbol)
+    if (SymbolBody *B = find(Symbol.getKey()))
+      if (B->isDefined() || B->isCommon())
+        if (InputFile *File = B->getSourceFile<ELFT>())
+          outs() << getFilename(File) << ": definition of "
+                 << B->getName() << "\n";
+}
+
 template class elf::SymbolTable<ELF32LE>;
 template class elf::SymbolTable<ELF32BE>;
 template class elf::SymbolTable<ELF64LE>;

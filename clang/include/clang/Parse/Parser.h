@@ -1588,8 +1588,8 @@ private:
 
   //===--------------------------------------------------------------------===//
   // C++ if/switch/while condition expression.
-  bool ParseCXXCondition(ExprResult &ExprResult, Decl *&DeclResult,
-                         SourceLocation Loc, bool ConvertToBoolean);
+  Sema::ConditionResult ParseCXXCondition(SourceLocation Loc,
+                                          Sema::ConditionKind CK);
 
   //===--------------------------------------------------------------------===//
   // C++ Coroutines
@@ -1680,10 +1680,9 @@ private:
                                     unsigned ScopeFlags);
   void ParseCompoundStatementLeadingPragmas();
   StmtResult ParseCompoundStatementBody(bool isStmtExpr = false);
-  bool ParseParenExprOrCondition(ExprResult &ExprResult,
-                                 Decl *&DeclResult,
+  bool ParseParenExprOrCondition(Sema::ConditionResult &CondResult,
                                  SourceLocation Loc,
-                                 bool ConvertToBoolean);
+                                 Sema::ConditionKind CK);
   StmtResult ParseIfStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseSwitchStatement(SourceLocation *TrailingElseLoc);
   StmtResult ParseWhileStatement(SourceLocation *TrailingElseLoc);

@@ -2447,6 +2447,14 @@ public:
     }
 
     virtual Error
+    GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>&)
+    {
+        Error error;
+        error.SetErrorString ("Process::GetMemoryRegions() not supported");
+        return error;
+    }
+
+    virtual Error
     GetWatchpointSupportInfo (uint32_t &num)
     {
         Error error;

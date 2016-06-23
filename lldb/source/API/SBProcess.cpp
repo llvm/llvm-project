@@ -23,6 +23,7 @@
 #include "lldb/Core/State.h"
 #include "lldb/Core/Stream.h"
 #include "lldb/Core/StreamFile.h"
+#include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/SystemRuntime.h"
@@ -36,6 +37,8 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBMemoryRegionInfo.h"
+#include "lldb/API/SBMemoryRegionInfoList.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/API/SBThreadCollection.h"
 #include "lldb/API/SBStream.h"
@@ -1475,4 +1478,75 @@ SBProcess::SaveCore(const char *file_name)
     FileSpec core_file(file_name, false);
     error.ref() = PluginManager::SaveCore(process_sp, core_file);
     return error;
+}
+
+lldb::SBError
+SBProcess::GetMemoryRegionInfo (lldb::addr_t load_addr, SBMemoryRegionInfo &sb_region_info)
+{
+    lldb::SBError sb_error;
+    ProcessSP process_sp(GetSP());
+    MemoryRegionInfoSP region_info_sp = std::make_shared<lldb_private::MemoryRegionInfo>();
+    if (process_sp)
+    {
+        Process::StopLocker stop_locker;
+        if (stop_locker.TryLock(&process_sp->GetRunLock()))
+        {
+            std::lock_guard<std::recursive_mutex> guard(process_sp->GetTarget().GetAPIMutex());
+            sb_error.ref() = process_sp->GetMemoryRegionInfo(load_addr, *region_info_sp);
+            if( sb_error.Success() ) {
+                sb_region_info.ref() = *region_info_sp;
+            }
+        }
+        else
+        {
+            Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+            if (log)
+                log->Printf ("SBProcess(%p)::GetMemoryRegionInfo() => error: process is running",
+                             static_cast<void*>(process_sp.get()));
+            sb_error.SetErrorString("process is running");
+        }
+    }
+    else
+    {
+        sb_error.SetErrorString ("SBProcess is invalid");
+    }
+    return sb_error;
+}
+
+lldb::SBMemoryRegionInfoList
+SBProcess::GetMemoryRegions()
+{
+    lldb::SBError sb_error;
+    lldb::SBMemoryRegionInfoList sb_region_list;
+    ProcessSP process_sp(GetSP());
+    if (process_sp)
+    {
+        Process::StopLocker stop_locker;
+        if (stop_locker.TryLock(&process_sp->GetRunLock()))
+        {
+            std::lock_guard<std::recursive_mutex> guard(process_sp->GetTarget().GetAPIMutex());
+            std::vector<MemoryRegionInfoSP> region_list;
+            sb_error.ref() = process_sp->GetMemoryRegions(region_list);
+            if( sb_error.Success() ) {
+                std::vector<MemoryRegionInfoSP>::iterator end = region_list.end();
+                for( std::vector<MemoryRegionInfoSP>::iterator it = region_list.begin(); it != end; it++ ) {
+                    SBMemoryRegionInfo sb_region_info(it->get());
+                    sb_region_list.Append(sb_region_info);
+                }
+            }
+        }
+        else
+        {
+            Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+            if (log)
+                log->Printf ("SBProcess(%p)::GetMemoryRegionInfo() => error: process is running",
+                             static_cast<void*>(process_sp.get()));
+            sb_error.SetErrorString("process is running");
+        }
+    }
+    else
+    {
+        sb_error.SetErrorString ("SBProcess is invalid");
+    }
+    return sb_region_list;
 }

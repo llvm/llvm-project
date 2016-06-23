@@ -2400,21 +2400,20 @@ void EnqueueVisitor::VisitDeclStmt(const DeclStmt *S) {
 }
 void EnqueueVisitor::VisitDesignatedInitExpr(const DesignatedInitExpr *E) {
   AddStmt(E->getInit());
-  for (DesignatedInitExpr::const_reverse_designators_iterator
-         D = E->designators_rbegin(), DEnd = E->designators_rend();
-         D != DEnd; ++D) {
-    if (D->isFieldDesignator()) {
-      if (FieldDecl *Field = D->getField())
-        AddMemberRef(Field, D->getFieldLoc());
+  for (const DesignatedInitExpr::Designator &D :
+       llvm::reverse(E->designators())) {
+    if (D.isFieldDesignator()) {
+      if (FieldDecl *Field = D.getField())
+        AddMemberRef(Field, D.getFieldLoc());
       continue;
     }
-    if (D->isArrayDesignator()) {
-      AddStmt(E->getArrayIndex(*D));
+    if (D.isArrayDesignator()) {
+      AddStmt(E->getArrayIndex(D));
       continue;
     }
-    assert(D->isArrayRangeDesignator() && "Unknown designator kind");
-    AddStmt(E->getArrayRangeEnd(*D));
-    AddStmt(E->getArrayRangeStart(*D));
+    assert(D.isArrayRangeDesignator() && "Unknown designator kind");
+    AddStmt(E->getArrayRangeEnd(D));
+    AddStmt(E->getArrayRangeStart(D));
   }
 }
 void EnqueueVisitor::VisitExplicitCastExpr(const ExplicitCastExpr *E) {

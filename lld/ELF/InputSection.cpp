@@ -56,7 +56,7 @@ ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
 }
 
 template <class ELFT>
-typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
+typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   switch (SectionKind) {
   case Regular:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
@@ -80,7 +80,7 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) {
 
 template <class ELFT>
 typename ELFT::uint
-InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) {
+InputSectionBase<ELFT>::getOffset(const DefinedRegular<ELFT> &Sym) const {
   return getOffset(Sym.Value);
 }
 
@@ -297,8 +297,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
   }
 
   const unsigned Bits = sizeof(uintX_t) * 8;
-  for (const Relocation &Rel : Relocations) {
-    uintX_t Offset = Rel.Offset;
+  for (const Relocation<ELFT> &Rel : Relocations) {
+    uintX_t Offset = Rel.InputSec->getOffset(Rel.Offset);
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
     uintX_t A = Rel.Addend;
@@ -422,13 +422,13 @@ void EhInputSection<ELFT>::split() {
 }
 
 template <class ELFT>
-typename ELFT::uint EhInputSection<ELFT>::getOffset(uintX_t Offset) {
+typename ELFT::uint EhInputSection<ELFT>::getOffset(uintX_t Offset) const {
   // The file crtbeginT.o has relocations pointing to the start of an empty
   // .eh_frame that is known to be the first in the link. It does that to
   // identify the start of the output .eh_frame. Handle this special case.
   if (this->getSectionHdr()->sh_size == 0)
     return Offset;
-  SectionPiece *Piece = this->getSectionPiece(Offset);
+  const SectionPiece *Piece = this->getSectionPiece(Offset);
   if (Piece->OutputOff == size_t(-1))
     return -1; // Not in the output
 
@@ -506,6 +506,13 @@ bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 // Do binary search to get a section piece at a given input offset.
 template <class ELFT>
 SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
+  auto *This = static_cast<const SplitInputSection<ELFT> *>(this);
+  return const_cast<SectionPiece *>(This->getSectionPiece(Offset));
+}
+
+template <class ELFT>
+const SectionPiece *
+SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
@@ -524,14 +531,14 @@ SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
 // Because contents of a mergeable section is not contiguous in output,
 // it is not just an addition to a base output offset.
 template <class ELFT>
-typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) {
+typename ELFT::uint MergeInputSection<ELFT>::getOffset(uintX_t Offset) const {
   auto It = OffsetMap.find(Offset);
   if (It != OffsetMap.end())
     return It->second;
 
   // If Offset is not at beginning of a section piece, it is not in the map.
   // In that case we need to search from the original section piece vector.
-  SectionPiece &Piece = *this->getSectionPiece(Offset);
+  const SectionPiece &Piece = *this->getSectionPiece(Offset);
   assert(Piece.Live);
   uintX_t Addend = Offset - Piece.InputOff;
   return Piece.OutputOff + Addend;

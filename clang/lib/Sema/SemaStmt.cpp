@@ -504,39 +504,30 @@ public:
 }
 
 StmtResult
-Sema::ActOnIfStmt(SourceLocation IfLoc, FullExprArg CondVal, Decl *CondVar,
+Sema::ActOnIfStmt(SourceLocation IfLoc, ConditionResult Cond,
                   Stmt *thenStmt, SourceLocation ElseLoc,
                   Stmt *elseStmt) {
-  ExprResult CondResult(CondVal.release());
-
-  VarDecl *ConditionVar = nullptr;
-  if (CondVar) {
-    ConditionVar = cast<VarDecl>(CondVar);
-    CondResult = CheckConditionVariable(ConditionVar, IfLoc, true);
-    CondResult = ActOnFinishFullExpr(CondResult.get(), IfLoc);
-  }
-  Expr *ConditionExpr = CondResult.getAs<Expr>();
-  if (ConditionExpr) {
-
-    if (!Diags.isIgnored(diag::warn_comma_operator,
-                         ConditionExpr->getExprLoc()))
-      CommaVisitor(*this).Visit(ConditionExpr);
-
-    DiagnoseUnusedExprResult(thenStmt);
-
-    if (!elseStmt) {
-      DiagnoseEmptyStmtBody(ConditionExpr->getLocEnd(), thenStmt,
-                            diag::warn_empty_if_body);
-    }
-
-    DiagnoseUnusedExprResult(elseStmt);
-  } else {
-    // Create a dummy Expr for the condition for error recovery
-    ConditionExpr = new (Context) OpaqueValueExpr(SourceLocation(),
-                                                  Context.BoolTy, VK_RValue);
+  auto CondVal = Cond.get();
+  if (Cond.isInvalid()) {
+    CondVal.first = nullptr;
+    CondVal.second = new (Context)
+        OpaqueValueExpr(SourceLocation(), Context.BoolTy, VK_RValue);
   }
 
-  return new (Context) IfStmt(Context, IfLoc, ConditionVar, ConditionExpr,
+  if (!Diags.isIgnored(diag::warn_comma_operator,
+                       CondVal.second->getExprLoc()))
+    CommaVisitor(*this).Visit(CondVal.second);
+
+  DiagnoseUnusedExprResult(thenStmt);
+
+  if (!elseStmt) {
+    DiagnoseEmptyStmtBody(CondVal.second->getLocEnd(), thenStmt,
+                          diag::warn_empty_if_body);
+  }
+
+  DiagnoseUnusedExprResult(elseStmt);
+
+  return new (Context) IfStmt(Context, IfLoc, CondVal.first, CondVal.second,
                               thenStmt, ElseLoc, elseStmt);
 }
 
@@ -599,24 +590,7 @@ static QualType GetTypeBeforeIntegralPromotion(Expr *&expr) {
   return expr->getType();
 }
 
-StmtResult
-Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc, Expr *Cond,
-                             Decl *CondVar) {
-  ExprResult CondResult;
-
-  VarDecl *ConditionVar = nullptr;
-  if (CondVar) {
-    ConditionVar = cast<VarDecl>(CondVar);
-    CondResult = CheckConditionVariable(ConditionVar, SourceLocation(), false);
-    if (CondResult.isInvalid())
-      return StmtError();
-
-    Cond = CondResult.get();
-  }
-
-  if (!Cond)
-    return StmtError();
-
+ExprResult Sema::CheckSwitchCondition(SourceLocation SwitchLoc, Expr *Cond) {
   class SwitchConvertDiagnoser : public ICEConvertDiagnoser {
     Expr *Cond;
 
@@ -664,24 +638,24 @@ Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc, Expr *Cond,
     }
   } SwitchDiagnoser(Cond);
 
-  CondResult =
+  ExprResult CondResult =
       PerformContextualImplicitConversion(SwitchLoc, Cond, SwitchDiagnoser);
-  if (CondResult.isInvalid()) return StmtError();
-  Cond = CondResult.get();
+  if (CondResult.isInvalid())
+    return ExprError();
 
   // C99 6.8.4.2p5 - Integer promotions are performed on the controlling expr.
-  CondResult = UsualUnaryConversions(Cond);
-  if (CondResult.isInvalid()) return StmtError();
-  Cond = CondResult.get();
+  return UsualUnaryConversions(CondResult.get());
+}
 
-  CondResult = ActOnFinishFullExpr(Cond, SwitchLoc);
-  if (CondResult.isInvalid())
+StmtResult
+Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc, ConditionResult Cond) {
+  if (Cond.isInvalid())
     return StmtError();
-  Cond = CondResult.get();
 
   getCurFunction()->setHasBranchIntoScope();
 
-  SwitchStmt *SS = new (Context) SwitchStmt(Context, ConditionVar, Cond);
+  SwitchStmt *SS =
+      new (Context) SwitchStmt(Context, Cond.get().first, Cond.get().second);
   getCurFunction()->SwitchStack.push_back(SS);
   return SS;
 }
@@ -1242,27 +1216,17 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
     }
 }
 
-StmtResult
-Sema::ActOnWhileStmt(SourceLocation WhileLoc, FullExprArg Cond,
-                     Decl *CondVar, Stmt *Body) {
-  ExprResult CondResult(Cond.release());
-
-  VarDecl *ConditionVar = nullptr;
-  if (CondVar) {
-    ConditionVar = cast<VarDecl>(CondVar);
-    CondResult = CheckConditionVariable(ConditionVar, WhileLoc, true);
-    CondResult = ActOnFinishFullExpr(CondResult.get(), WhileLoc);
-    if (CondResult.isInvalid())
-      return StmtError();
-  }
-  Expr *ConditionExpr = CondResult.get();
-  if (!ConditionExpr)
+StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc, ConditionResult Cond,
+                                Stmt *Body) {
+  if (Cond.isInvalid())
     return StmtError();
-  CheckBreakContinueBinding(ConditionExpr);
 
-  if (ConditionExpr &&
-      !Diags.isIgnored(diag::warn_comma_operator, ConditionExpr->getExprLoc()))
-    CommaVisitor(*this).Visit(ConditionExpr);
+  auto CondVal = Cond.get();
+  CheckBreakContinueBinding(CondVal.second);
+
+  if (CondVal.second &&
+      !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
+    CommaVisitor(*this).Visit(CondVal.second);
 
   DiagnoseUnusedExprResult(Body);
 
@@ -1270,7 +1234,7 @@ Sema::ActOnWhileStmt(SourceLocation WhileLoc, FullExprArg Cond,
     getCurCompoundScope().setHasEmptyLoopBodies();
 
   return new (Context)
-      WhileStmt(Context, ConditionVar, ConditionExpr, Body, WhileLoc);
+      WhileStmt(Context, CondVal.first, CondVal.second, Body, WhileLoc);
 }
 
 StmtResult
@@ -1280,7 +1244,7 @@ Sema::ActOnDoStmt(SourceLocation DoLoc, Stmt *Body,
   assert(Cond && "ActOnDoStmt(): missing expression");
 
   CheckBreakContinueBinding(Cond);
-  ExprResult CondResult = CheckBooleanCondition(Cond, DoLoc);
+  ExprResult CondResult = CheckBooleanCondition(DoLoc, Cond);
   if (CondResult.isInvalid())
     return StmtError();
   Cond = CondResult.get();
@@ -1644,11 +1608,13 @@ void Sema::CheckBreakContinueBinding(Expr *E) {
   }
 }
 
-StmtResult
-Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
-                   Stmt *First, FullExprArg second, Decl *secondVar,
-                   FullExprArg third,
-                   SourceLocation RParenLoc, Stmt *Body) {
+StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
+                              Stmt *First, ConditionResult Second,
+                              FullExprArg third, SourceLocation RParenLoc,
+                              Stmt *Body) {
+  if (Second.isInvalid())
+    return StmtError();
+
   if (!getLangOpts().CPlusPlus) {
     if (DeclStmt *DS = dyn_cast_or_null<DeclStmt>(First)) {
       // C99 6.8.5p3: The declaration part of a 'for' statement shall only
@@ -1666,26 +1632,17 @@ Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
     }
   }
 
-  CheckBreakContinueBinding(second.get());
+  CheckBreakContinueBinding(Second.get().second);
   CheckBreakContinueBinding(third.get());
 
-  CheckForLoopConditionalStatement(*this, second.get(), third.get(), Body);
+  CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
+                                   Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
-  ExprResult SecondResult(second.release());
-  VarDecl *ConditionVar = nullptr;
-  if (secondVar) {
-    ConditionVar = cast<VarDecl>(secondVar);
-    SecondResult = CheckConditionVariable(ConditionVar, ForLoc, true);
-    SecondResult = ActOnFinishFullExpr(SecondResult.get(), ForLoc);
-    if (SecondResult.isInvalid())
-      return StmtError();
-  }
-
-  if (SecondResult.get() &&
+  if (Second.get().second &&
       !Diags.isIgnored(diag::warn_comma_operator,
-                       SecondResult.get()->getExprLoc()))
-    CommaVisitor(*this).Visit(SecondResult.get());
+                       Second.get().second->getExprLoc()))
+    CommaVisitor(*this).Visit(Second.get().second);
 
   Expr *Third  = third.release().getAs<Expr>();
 
@@ -1696,8 +1653,9 @@ Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
   if (isa<NullStmt>(Body))
     getCurCompoundScope().setHasEmptyLoopBodies();
 
-  return new (Context) ForStmt(Context, First, SecondResult.get(), ConditionVar,
-                               Third, Body, ForLoc, LParenLoc, RParenLoc);
+  return new (Context)
+      ForStmt(Context, First, Second.get().second, Second.get().first, Third,
+              Body, ForLoc, LParenLoc, RParenLoc);
 }
 
 /// In an Objective C collection iteration statement:
@@ -2384,8 +2342,10 @@ Sema::BuildCXXForRangeStmt(SourceLocation ForLoc, SourceLocation CoawaitLoc,
     // Build and check __begin != __end expression.
     NotEqExpr = ActOnBinOp(S, ColonLoc, tok::exclaimequal,
                            BeginRef.get(), EndRef.get());
-    NotEqExpr = ActOnBooleanCondition(S, ColonLoc, NotEqExpr.get());
-    NotEqExpr = ActOnFinishFullExpr(NotEqExpr.get());
+    if (!NotEqExpr.isInvalid())
+      NotEqExpr = CheckBooleanCondition(ColonLoc, NotEqExpr.get());
+    if (!NotEqExpr.isInvalid())
+      NotEqExpr = ActOnFinishFullExpr(NotEqExpr.get());
     if (NotEqExpr.isInvalid()) {
       Diag(RangeLoc, diag::note_for_range_invalid_iterator)
         << RangeLoc << 0 << BeginRangeRef.get()->getType();
