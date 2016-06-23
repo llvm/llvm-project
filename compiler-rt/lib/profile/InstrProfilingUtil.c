@@ -103,8 +103,9 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
 
   f = fdopen(fd, "r+b");
 #elif defined(_WIN32)
-  HANDLE h = CreateFile(ProfileName, GENERIC_READ | GENERIC_WRITE, 0, 0,
-                        OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
+  // FIXME: Use the wide variants to handle Unicode filenames.
+  HANDLE h = CreateFileA(ProfileName, GENERIC_READ | GENERIC_WRITE, 0, 0,
+                         OPEN_ALWAYS, FILE_ATTRIBUTE_NORMAL, 0);
   if (h == INVALID_HANDLE_VALUE)
     return NULL;
 

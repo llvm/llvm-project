@@ -533,14 +533,15 @@ __declspec(allocate(".CRT$XID")) int (*__run_atexit)() = RunAtexit;
 
 // ------------------ sanitizer_libc.h
 fd_t OpenFile(const char *filename, FileAccessMode mode, error_t *last_error) {
+  // FIXME: Use the wide variants to handle Unicode filenames.
   fd_t res;
   if (mode == RdOnly) {
-    res = CreateFile(filename, GENERIC_READ,
-                     FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                     nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
+    res = CreateFileA(filename, GENERIC_READ,
+                      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                      nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
   } else if (mode == WrOnly) {
-    res = CreateFile(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
-                     FILE_ATTRIBUTE_NORMAL, nullptr);
+    res = CreateFileA(filename, GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS,
+                      FILE_ATTRIBUTE_NORMAL, nullptr);
   } else {
     UNIMPLEMENTED();
   }
