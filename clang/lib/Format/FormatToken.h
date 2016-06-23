@@ -586,6 +586,7 @@ struct AdditionalKeywords {
     kw_import = &IdentTable.get("import");
     kw_is = &IdentTable.get("is");
     kw_let = &IdentTable.get("let");
+    kw_type = &IdentTable.get("type");
     kw_var = &IdentTable.get("var");
     kw_yield = &IdentTable.get("yield");
 
@@ -637,6 +638,7 @@ struct AdditionalKeywords {
   IdentifierInfo *kw_import;
   IdentifierInfo *kw_is;
   IdentifierInfo *kw_let;
+  IdentifierInfo *kw_type;
   IdentifierInfo *kw_var;
   IdentifierInfo *kw_yield;
 

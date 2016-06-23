@@ -336,6 +336,14 @@ ExplodedNode *ExplodedGraph::getNode(const ProgramPoint &L,
   return V;
 }
 
+ExplodedNode *ExplodedGraph::createUncachedNode(const ProgramPoint &L,
+                                                ProgramStateRef State,
+                                                bool IsSink) {
+  NodeTy *V = (NodeTy *) getAllocator().Allocate<NodeTy>();
+  new (V) NodeTy(L, State, IsSink);
+  return V;
+}
+
 std::unique_ptr<ExplodedGraph>
 ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
                     InterExplodedGraphMap *ForwardMap,
@@ -395,8 +403,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
 
     // Create the corresponding node in the new graph and record the mapping
     // from the old node to the new node.
-    ExplodedNode *NewN = G->getNode(N->getLocation(), N->State, N->isSink(),
-                                    nullptr);
+    ExplodedNode *NewN = G->createUncachedNode(N->getLocation(), N->State, N->isSink());
     Pass2[N] = NewN;
 
     // Also record the reverse mapping from the new node to the old node.

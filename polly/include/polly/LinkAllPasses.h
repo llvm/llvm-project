@@ -23,7 +23,7 @@ class Pass;
 class PassInfo;
 class PassRegistry;
 class RegionPass;
-}
+} // namespace llvm
 
 namespace polly {
 llvm::Pass *createCodePreparationPass();
@@ -43,7 +43,7 @@ llvm::Pass *createCodeGenerationPass();
 llvm::Pass *createIslScheduleOptimizerPass();
 
 extern char &CodePreparationID;
-}
+} // namespace polly
 
 namespace {
 struct PollyForcePassLinking {
@@ -72,7 +72,7 @@ struct PollyForcePassLinking {
     polly::createIslScheduleOptimizerPass();
   }
 } PollyForcePassLinking; // Force link by creating a global definition.
-}
+} // namespace
 
 namespace llvm {
 class PassRegistry;
@@ -84,6 +84,6 @@ void initializeIslAstInfoPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
 void initializeIslScheduleOptimizerPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
-}
+} // namespace llvm
 
 #endif

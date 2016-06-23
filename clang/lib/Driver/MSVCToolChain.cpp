@@ -95,23 +95,31 @@ bool MSVCToolChain::isPICDefaultForced() const {
 #ifdef USE_WIN32
 static bool readFullStringValue(HKEY hkey, const char *valueName,
                                 std::string &value) {
-  // FIXME: We should be using the W versions of the registry functions, but
-  // doing so requires UTF8 / UTF16 conversions similar to how we handle command
-  // line arguments.  The UTF8 conversion functions are not exposed publicly
-  // from LLVM though, so in order to do this we will probably need to create
-  // a registry abstraction in LLVMSupport that is Windows only.
+  std::wstring WideValueName;
+  if (!llvm::ConvertUTF8toWide(valueName, WideValueName))
+    return false;
+
   DWORD result = 0;
   DWORD valueSize = 0;
   DWORD type = 0;
   // First just query for the required size.
-  result = RegQueryValueEx(hkey, valueName, NULL, &type, NULL, &valueSize);
-  if (result != ERROR_SUCCESS || type != REG_SZ)
+  result = RegQueryValueExW(hkey, WideValueName.c_str(), NULL, &type, NULL,
+                            &valueSize);
+  if (result != ERROR_SUCCESS || type != REG_SZ || !valueSize)
     return false;
   std::vector<BYTE> buffer(valueSize);
-  result = RegQueryValueEx(hkey, valueName, NULL, NULL, &buffer[0], &valueSize);
-  if (result == ERROR_SUCCESS)
-    value.assign(reinterpret_cast<const char *>(buffer.data()));
-  return result;
+  result = RegQueryValueExW(hkey, WideValueName.c_str(), NULL, NULL, &buffer[0],
+                            &valueSize);
+  if (result == ERROR_SUCCESS) {
+    std::wstring WideValue(reinterpret_cast<const wchar_t *>(buffer.data()),
+                           valueSize / sizeof(wchar_t));
+    // The destination buffer must be empty as an invariant of the conversion
+    // function; but this function is sometimes called in a loop that passes in
+    // the same buffer, however. Simply clear it out so we can overwrite it.
+    value.clear();
+    return llvm::convertWideToUTF8(WideValue, value);
+  }
+  return false;
 }
 #endif
 
@@ -152,14 +160,15 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
     strncpy(partialKey, keyPath, partialKeyLength);
     partialKey[partialKeyLength] = '\0';
     HKEY hTopKey = NULL;
-    lResult = RegOpenKeyEx(hRootKey, partialKey, 0, KEY_READ | KEY_WOW64_32KEY,
-                           &hTopKey);
+    lResult = RegOpenKeyExA(hRootKey, partialKey, 0, KEY_READ | KEY_WOW64_32KEY,
+                            &hTopKey);
     if (lResult == ERROR_SUCCESS) {
       char keyName[256];
       double bestValue = 0.0;
       DWORD index, size = sizeof(keyName) - 1;
-      for (index = 0; RegEnumKeyEx(hTopKey, index, keyName, &size, NULL,
-          NULL, NULL, NULL) == ERROR_SUCCESS; index++) {
+      for (index = 0; RegEnumKeyExA(hTopKey, index, keyName, &size, NULL, NULL,
+                                    NULL, NULL) == ERROR_SUCCESS;
+           index++) {
         const char *sp = keyName;
         while (*sp && !isDigit(*sp))
           sp++;
@@ -178,8 +187,8 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
           bestName = keyName;
           // Append rest of key.
           bestName.append(nextKey);
-          lResult = RegOpenKeyEx(hTopKey, bestName.c_str(), 0,
-                                 KEY_READ | KEY_WOW64_32KEY, &hKey);
+          lResult = RegOpenKeyExA(hTopKey, bestName.c_str(), 0,
+                                  KEY_READ | KEY_WOW64_32KEY, &hKey);
           if (lResult == ERROR_SUCCESS) {
             lResult = readFullStringValue(hKey, valueName, value);
             if (lResult == ERROR_SUCCESS) {
@@ -197,7 +206,7 @@ static bool getSystemRegistryString(const char *keyPath, const char *valueName,
     }
   } else {
     lResult =
-        RegOpenKeyEx(hRootKey, keyPath, 0, KEY_READ | KEY_WOW64_32KEY, &hKey);
+        RegOpenKeyExA(hRootKey, keyPath, 0, KEY_READ | KEY_WOW64_32KEY, &hKey);
     if (lResult == ERROR_SUCCESS) {
       lResult = readFullStringValue(hKey, valueName, value);
       if (lResult == ERROR_SUCCESS)

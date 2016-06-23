@@ -1108,6 +1108,14 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   assert(Tok.is(tok::kw_if) && "Not an if stmt!");
   SourceLocation IfLoc = ConsumeToken();  // eat the 'if'.
 
+  bool IsConstexpr = false;
+  if (Tok.is(tok::kw_constexpr)) {
+    Diag(Tok, getLangOpts().CPlusPlus1z ? diag::warn_cxx14_compat_constexpr_if
+                                        : diag::ext_constexpr_if);
+    IsConstexpr = true;
+    ConsumeToken();
+  }
+
   if (Tok.isNot(tok::l_paren)) {
     Diag(Tok, diag::err_expected_lparen_after) << "if";
     SkipUntil(tok::semi);
@@ -1132,8 +1140,14 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
 
   // Parse the condition.
   Sema::ConditionResult Cond;
-  if (ParseParenExprOrCondition(Cond, IfLoc, Sema::ConditionKind::Boolean))
+  if (ParseParenExprOrCondition(Cond, IfLoc,
+                                IsConstexpr ? Sema::ConditionKind::ConstexprIf
+                                            : Sema::ConditionKind::Boolean))
     return StmtError();
+
+  llvm::Optional<bool> ConstexprCondition;
+  if (IsConstexpr)
+    ConstexprCondition = Cond.getKnownValue();
 
   // C99 6.8.4p3 - In C99, the body of the if statement is a scope, even if
   // there is no compound stmt.  C90 does not have this clause.  We only do this
@@ -1159,7 +1173,13 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   SourceLocation ThenStmtLoc = Tok.getLocation();
 
   SourceLocation InnerStatementTrailingElseLoc;
-  StmtResult ThenStmt(ParseStatement(&InnerStatementTrailingElseLoc));
+  StmtResult ThenStmt;
+  {
+    EnterExpressionEvaluationContext PotentiallyDiscarded(
+        Actions, Sema::DiscardedStatement, nullptr, false,
+        /*ShouldEnter=*/ConstexprCondition && !*ConstexprCondition);
+    ThenStmt = ParseStatement(&InnerStatementTrailingElseLoc);
+  }
 
   // Pop the 'if' scope if needed.
   InnerScope.Exit();
@@ -1185,8 +1205,12 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
     // The substatement in a selection-statement (each substatement, in the else
     // form of the if statement) implicitly defines a local scope.
     //
-    ParseScope InnerScope(this, Scope::DeclScope, C99orCXX, Tok.is(tok::l_brace));
+    ParseScope InnerScope(this, Scope::DeclScope, C99orCXX,
+                          Tok.is(tok::l_brace));
 
+    EnterExpressionEvaluationContext PotentiallyDiscarded(
+        Actions, Sema::DiscardedStatement, nullptr, false,
+        /*ShouldEnter=*/ConstexprCondition && *ConstexprCondition);
     ElseStmt = ParseStatement();
 
     // Pop the 'else' scope if needed.
@@ -1217,7 +1241,7 @@ StmtResult Parser::ParseIfStatement(SourceLocation *TrailingElseLoc) {
   if (ElseStmt.isInvalid())
     ElseStmt = Actions.ActOnNullStmt(ElseStmtLoc);
 
-  return Actions.ActOnIfStmt(IfLoc, Cond, ThenStmt.get(), ElseLoc,
+  return Actions.ActOnIfStmt(IfLoc, IsConstexpr, Cond, ThenStmt.get(), ElseLoc,
                              ElseStmt.get());
 }
 

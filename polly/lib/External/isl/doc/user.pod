@@ -3457,6 +3457,12 @@ be created.
 	__isl_give isl_printer *isl_printer_to_str(isl_ctx *ctx);
 	__isl_null isl_printer *isl_printer_free(
 		__isl_take isl_printer *printer);
+
+C<isl_printer_to_file> prints to the given file, while
+C<isl_printer_to_str> prints to a string that can be extracted
+using the following function.
+
+	#include <isl/printer.h>
 	__isl_give char *isl_printer_get_str(
 		__isl_keep isl_printer *printer);
 
@@ -8189,6 +8195,9 @@ Several node types have their own functions for querying
 	isl_schedule_node_band_set_ast_build_options(
 		__isl_take isl_schedule_node *node,
 		__isl_take isl_union_set *options);
+	__isl_give isl_set *
+	isl_schedule_node_band_get_ast_isolate_option(
+		__isl_keep isl_schedule_node *node);
 
 The function C<isl_schedule_node_band_get_space> returns the space
 of the partial schedule of the band.
@@ -8217,6 +8226,9 @@ may return C<isl_ast_loop_error> if an error occurs.
 The AST build options govern how an AST is generated for
 the individual schedule dimensions during AST generation.
 See L</"AST Generation Options (Schedule Tree)">.
+The isolate option for the given node can be extracted from these
+AST build options using the function
+C<isl_schedule_node_band_get_ast_isolate_option>.
 
 	#include <isl/schedule_node.h>
 	__isl_give isl_set *
@@ -8498,6 +8510,8 @@ using the following function.
 The resulting outer band node contains the first C<pos> dimensions of
 the schedule of C<node> while the inner band contains the remaining dimensions.
 The schedules of the two band nodes live in anonymous spaces.
+The loop AST generation type options and the isolate option
+are split over the the two band nodes.
 
 A band node can be moved down to the leaves of the subtree rooted
 at the band node using the following function.

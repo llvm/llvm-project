@@ -1635,6 +1635,7 @@ ExprResult Sema::BuildLambdaExpr(SourceLocation StartLoc, SourceLocation EndLoc,
       ExprEvalContexts.back().Lambdas.push_back(Lambda);
       break;
 
+    case DiscardedStatement:
     case PotentiallyEvaluated:
     case PotentiallyEvaluatedIfUsed:
       break;

@@ -3061,7 +3061,8 @@ Sema::ConditionResult Sema::ActOnConditionVariable(Decl *ConditionVar,
       CheckConditionVariable(cast<VarDecl>(ConditionVar), StmtLoc, CK);
   if (E.isInvalid())
     return ConditionError();
-  return ConditionResult(ConditionVar, MakeFullExpr(E.get(), StmtLoc));
+  return ConditionResult(*this, ConditionVar, MakeFullExpr(E.get(), StmtLoc),
+                         CK == ConditionKind::ConstexprIf);
 }
 
 /// \brief Check the use of the given variable as a C++ condition in an if,
@@ -3096,6 +3097,9 @@ ExprResult Sema::CheckConditionVariable(VarDecl *ConditionVar,
   case ConditionKind::Boolean:
     return CheckBooleanCondition(StmtLoc, Condition.get());
 
+  case ConditionKind::ConstexprIf:
+    return CheckBooleanCondition(StmtLoc, Condition.get(), true);
+
   case ConditionKind::Switch:
     return CheckSwitchCondition(StmtLoc, Condition.get());
   }
@@ -3104,7 +3108,7 @@ ExprResult Sema::CheckConditionVariable(VarDecl *ConditionVar,
 }
 
 /// CheckCXXBooleanCondition - Returns true if a conversion to bool is invalid.
-ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr) {
+ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr, bool IsConstexpr) {
   // C++ 6.4p4:
   // The value of a condition that is an initialized declaration in a statement
   // other than a switch statement is the value of the declared variable
@@ -3113,7 +3117,12 @@ ExprResult Sema::CheckCXXBooleanCondition(Expr *CondExpr) {
   // The value of a condition that is an expression is the value of the
   // expression, implicitly converted to bool.
   //
-  return PerformContextuallyConvertToBool(CondExpr);
+  // FIXME: Return this value to the caller so they don't need to recompute it.
+  llvm::APSInt Value(/*BitWidth*/1);
+  return (IsConstexpr && !CondExpr->isValueDependent())
+             ? CheckConvertedConstantExpression(CondExpr, Context.BoolTy, Value,
+                                                CCEK_ConstexprIf)
+             : PerformContextuallyConvertToBool(CondExpr);
 }
 
 /// Helper function to determine whether this is the (deprecated) C++

@@ -914,6 +914,12 @@ TEST_F(FormatTestJS, UnionIntersectionTypes) {
   verifyFormat("function(x: A|B = A | B): C&D {}");
   verifyFormat("function x(path: number|string) {}");
   verifyFormat("function x(): string|number {}");
+  verifyFormat("type Foo = Bar|Baz;");
+  verifyFormat("type Foo = Bar<X>|Baz;");
+  verifyFormat("type Foo = (Bar<X>|Baz);");
+  verifyFormat("let x: Bar|Baz;");
+  verifyFormat("let x: Bar<X>|Baz;");
+  verifyFormat("let x: (Foo|Bar)[];");
 }
 
 TEST_F(FormatTestJS, ClassDeclarations) {
@@ -1247,7 +1253,6 @@ TEST_F(FormatTestJS, OptionalTypes) {
   verifyFormat("interface X {\n"
                "  y?(): z;\n"
                "}");
-  verifyFormat("x ? 1 : 2;");
   verifyFormat("constructor({aa}: {\n"
                "  aa?: string,\n"
                "  aaaaaaaa?: string,\n"
@@ -1342,6 +1347,15 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
   verifyFormat("let x = foo[0]!;\n");
   verifyFormat("let x = (foo)!;\n");
   verifyFormat("let x = {foo: 1}!;\n");
+}
+
+TEST_F(FormatTestJS, Conditional) {
+  verifyFormat("y = x ? 1 : 2;");
+  verifyFormat("x ? 1 : 2;");
+  verifyFormat("class Foo {\n"
+               "  field = true ? 1 : 2;\n"
+               "  method(a = true ? 1 : 2) {}\n"
+               "}");
 }
 
 } // end namespace tooling

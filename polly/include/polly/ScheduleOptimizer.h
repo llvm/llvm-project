@@ -23,7 +23,7 @@ struct isl_union_map;
 namespace polly {
 extern bool DisablePollyTiling;
 class Scop;
-}
+} // namespace polly
 
 class ScheduleTreeOptimizer {
 public:

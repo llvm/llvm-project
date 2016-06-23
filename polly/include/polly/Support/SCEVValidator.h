@@ -23,7 +23,7 @@ class ScalarEvolution;
 class Value;
 class Loop;
 class LoadInst;
-}
+} // namespace llvm
 
 namespace polly {
 /// @brief Find the loops referenced from a SCEV expression.
@@ -73,6 +73,6 @@ ParameterSetTy getParamsInAffineExpr(const llvm::Region *R, llvm::Loop *Scope,
 /// @returns The constant factor in @p M and the rest of @p M.
 std::pair<const llvm::SCEVConstant *, const llvm::SCEV *>
 extractConstantFactor(const llvm::SCEV *M, llvm::ScalarEvolution &SE);
-}
+} // namespace polly
 
 #endif

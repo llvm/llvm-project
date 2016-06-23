@@ -24,7 +24,7 @@
 
 // Can use the module if -fPIC/-fPIE flags change.
 // RUN: %clang_cc1 -fmodules -DBAR=2 -pic-level 2 -x c++ -fmodule-map-file=%t/map -fmodule-file=%t/tmp.pcm -verify -I%t %s
-// RUN: %clang_cc1 -fmodules -DBAR=2 -pie-level 1 -x c++ -fmodule-map-file=%t/map -fmodule-file=%t/tmp.pcm -verify -I%t %s
+// RUN: %clang_cc1 -fmodules -DBAR=2 -pic-level 1 -pic-is-pie -x c++ -fmodule-map-file=%t/map -fmodule-file=%t/tmp.pcm -verify -I%t %s
 
 // Can use the module if -static flag changes.
 // RUN: %clang_cc1 -fmodules -DBAR=2 -static-define -x c++ -fmodule-map-file=%t/map -fmodule-file=%t/tmp.pcm -verify -I%t %s

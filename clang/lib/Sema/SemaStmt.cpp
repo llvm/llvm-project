@@ -504,31 +504,43 @@ public:
 }
 
 StmtResult
-Sema::ActOnIfStmt(SourceLocation IfLoc, ConditionResult Cond,
+Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, ConditionResult Cond,
                   Stmt *thenStmt, SourceLocation ElseLoc,
                   Stmt *elseStmt) {
-  auto CondVal = Cond.get();
-  if (Cond.isInvalid()) {
-    CondVal.first = nullptr;
-    CondVal.second = new (Context)
-        OpaqueValueExpr(SourceLocation(), Context.BoolTy, VK_RValue);
-  }
+  if (Cond.isInvalid())
+    Cond = ConditionResult(
+        *this, nullptr,
+        MakeFullExpr(new (Context) OpaqueValueExpr(SourceLocation(),
+                                                   Context.BoolTy, VK_RValue),
+                     IfLoc),
+        false);
 
+  Expr *CondExpr = Cond.get().second;
   if (!Diags.isIgnored(diag::warn_comma_operator,
-                       CondVal.second->getExprLoc()))
-    CommaVisitor(*this).Visit(CondVal.second);
+                       CondExpr->getExprLoc()))
+    CommaVisitor(*this).Visit(CondExpr);
+
+  if (!elseStmt)
+    DiagnoseEmptyStmtBody(CondExpr->getLocEnd(), thenStmt,
+                          diag::warn_empty_if_body);
+
+  return BuildIfStmt(IfLoc, IsConstexpr, Cond, thenStmt, ElseLoc, elseStmt);
+}
+
+StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
+                             ConditionResult Cond, Stmt *thenStmt,
+                             SourceLocation ElseLoc, Stmt *elseStmt) {
+  if (Cond.isInvalid())
+    return StmtError();
+
+  if (IsConstexpr)
+    getCurFunction()->setHasBranchProtectedScope();
 
   DiagnoseUnusedExprResult(thenStmt);
-
-  if (!elseStmt) {
-    DiagnoseEmptyStmtBody(CondVal.second->getLocEnd(), thenStmt,
-                          diag::warn_empty_if_body);
-  }
-
   DiagnoseUnusedExprResult(elseStmt);
 
-  return new (Context) IfStmt(Context, IfLoc, CondVal.first, CondVal.second,
-                              thenStmt, ElseLoc, elseStmt);
+  return new (Context) IfStmt(Context, IfLoc, IsConstexpr, Cond.get().first,
+                              Cond.get().second, thenStmt, ElseLoc, elseStmt);
 }
 
 namespace {
@@ -1635,8 +1647,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
   CheckBreakContinueBinding(Second.get().second);
   CheckBreakContinueBinding(third.get());
 
-  CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
-                                   Body);
+  if (!Second.get().first)
+    CheckForLoopConditionalStatement(*this, Second.get().second, third.get(),
+                                     Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
   if (Second.get().second &&
@@ -2835,8 +2848,21 @@ Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
   CapturingScopeInfo *CurCap = cast<CapturingScopeInfo>(getCurFunction());
   QualType FnRetType = CurCap->ReturnType;
   LambdaScopeInfo *CurLambda = dyn_cast<LambdaScopeInfo>(CurCap);
+  bool HasDeducedReturnType =
+      CurLambda && hasDeducedReturnType(CurLambda->CallOperator);
 
-  if (CurLambda && hasDeducedReturnType(CurLambda->CallOperator)) {
+  if (ExprEvalContexts.back().Context == DiscardedStatement &&
+      (HasDeducedReturnType || CurCap->HasImplicitReturnType)) {
+    if (RetValExp) {
+      ExprResult ER = ActOnFinishFullExpr(RetValExp, ReturnLoc);
+      if (ER.isInvalid())
+        return StmtError();
+      RetValExp = ER.get();
+    }
+    return new (Context) ReturnStmt(ReturnLoc, RetValExp, nullptr);
+  }
+
+  if (HasDeducedReturnType) {
     // In C++1y, the return type may involve 'auto'.
     // FIXME: Blocks might have a return type of 'auto' explicitly specified.
     FunctionDecl *FD = CurLambda->CallOperator;
@@ -3117,9 +3143,8 @@ StmtResult
 Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                       Scope *CurScope) {
   StmtResult R = BuildReturnStmt(ReturnLoc, RetValExp);
-  if (R.isInvalid()) {
+  if (R.isInvalid() || ExprEvalContexts.back().Context == DiscardedStatement)
     return R;
-  }
 
   if (VarDecl *VD =
       const_cast<VarDecl*>(cast<ReturnStmt>(R.get())->getNRVOCandidate())) {
@@ -3167,6 +3192,19 @@ StmtResult Sema::BuildReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp) {
     }
   } else // If we don't have a function/method context, bail.
     return StmtError();
+
+  // C++1z: discarded return statements are not considered when deducing a
+  // return type.
+  if (ExprEvalContexts.back().Context == DiscardedStatement &&
+      FnRetType->getContainedAutoType()) {
+    if (RetValExp) {
+      ExprResult ER = ActOnFinishFullExpr(RetValExp, ReturnLoc);
+      if (ER.isInvalid())
+        return StmtError();
+      RetValExp = ER.get();
+    }
+    return new (Context) ReturnStmt(ReturnLoc, RetValExp, nullptr);
+  }
 
   // FIXME: Add a flag to the ScopeInfo to indicate whether we're performing
   // deduction.

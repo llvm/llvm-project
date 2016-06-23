@@ -220,6 +220,12 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
     // should be applied to the GOT entry content not to the GOT entry offset.
     // That is why we use separate expression type.
     return Out<ELFT>::Got->getMipsGotOffset(Body, A);
+  case R_MIPS_TLSGD:
+    return Out<ELFT>::Got->getGlobalDynOffset(Body) +
+           Out<ELFT>::Got->getMipsTlsOffset() - MipsGPOffset;
+  case R_MIPS_TLSLD:
+    return Out<ELFT>::Got->getTlsIndexOff() +
+           Out<ELFT>::Got->getMipsTlsOffset() - MipsGPOffset;
   case R_PPC_OPD: {
     uint64_t SymVA = Body.getVA<ELFT>(A);
     // If we have an undefined weak symbol, we might get here with a symbol

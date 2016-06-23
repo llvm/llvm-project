@@ -190,6 +190,8 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
   uint32_t getDynRel(uint32_t Type) const override;
+  bool isTlsLocalDynamicRel(uint32_t Type) const override;
+  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
@@ -1706,10 +1708,17 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   ThunkSize = 16;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
-  if (ELFT::Is64Bits)
+  if (ELFT::Is64Bits) {
     RelativeRel = (R_MIPS_64 << 8) | R_MIPS_REL32;
-  else
+    TlsGotRel = R_MIPS_TLS_TPREL64;
+    TlsModuleIndexRel = R_MIPS_TLS_DTPMOD64;
+    TlsOffsetRel = R_MIPS_TLS_DTPREL64;
+  } else {
     RelativeRel = R_MIPS_REL32;
+    TlsGotRel = R_MIPS_TLS_TPREL32;
+    TlsModuleIndexRel = R_MIPS_TLS_DTPMOD32;
+    TlsOffsetRel = R_MIPS_TLS_DTPREL32;
+  }
 }
 
 template <class ELFT>
@@ -1752,9 +1761,14 @@ RelExpr MipsTargetInfo<ELFT>::getRelExpr(uint32_t Type,
   // fallthrough
   case R_MIPS_CALL16:
   case R_MIPS_GOT_DISP:
+  case R_MIPS_TLS_GOTTPREL:
     return R_MIPS_GOT_OFF;
   case R_MIPS_GOT_PAGE:
     return R_MIPS_GOT_LOCAL_PAGE;
+  case R_MIPS_TLS_GD:
+    return R_MIPS_TLSGD;
+  case R_MIPS_TLS_LDM:
+    return R_MIPS_TLSLD;
   }
 }
 
@@ -1765,6 +1779,16 @@ uint32_t MipsTargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   // Keep it going with a dummy value so that we can find more reloc errors.
   errorDynRel(Type);
   return R_MIPS_32;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::isTlsLocalDynamicRel(uint32_t Type) const {
+  return Type == R_MIPS_TLS_LDM;
+}
+
+template <class ELFT>
+bool MipsTargetInfo<ELFT>::isTlsGlobalDynamicRel(uint32_t Type) const {
+  return Type == R_MIPS_TLS_GD;
 }
 
 template <class ELFT>
@@ -1961,6 +1985,8 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_GOT_PAGE:
   case R_MIPS_GOT16:
   case R_MIPS_GPREL16:
+  case R_MIPS_TLS_GD:
+  case R_MIPS_TLS_LDM:
     checkInt<16>(Val, Type);
   // fallthrough
   case R_MIPS_CALL16:
@@ -1968,6 +1994,7 @@ void MipsTargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_MIPS_LO16:
   case R_MIPS_PCLO16:
   case R_MIPS_TLS_DTPREL_LO16:
+  case R_MIPS_TLS_GOTTPREL:
   case R_MIPS_TLS_TPREL_LO16:
     writeMipsLo16<E>(Loc, Val);
     break;
