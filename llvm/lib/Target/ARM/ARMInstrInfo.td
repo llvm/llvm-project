@@ -321,19 +321,16 @@ def DontUseFusedMAC  : Predicate<"!(TM.Options.AllowFPOpFusion =="
                                  " Subtarget->hasVFP4()) || "
                                  "Subtarget->isTargetDarwin()">;
 
-// VGETLNi32 is microcoded on Swift - prefer VMOV.
-def HasFastVGETLNi32 : Predicate<"!Subtarget->isSwift()">;
-def HasSlowVGETLNi32 : Predicate<"Subtarget->isSwift()">;
+def HasFastVGETLNi32 : Predicate<"!Subtarget->hasSlowVGETLNi32()">;
+def HasSlowVGETLNi32 : Predicate<"Subtarget->hasSlowVGETLNi32()">;
 
-// VDUP.32 is microcoded on Swift - prefer VMOV.
-def HasFastVDUP32 : Predicate<"!Subtarget->isSwift()">;
-def HasSlowVDUP32 : Predicate<"Subtarget->isSwift()">;
+def HasFastVDUP32 : Predicate<"!Subtarget->hasSlowVDUP32()">;
+def HasSlowVDUP32 : Predicate<"Subtarget->hasSlowVDUP32()">;
 
-// Cortex-A9 prefers VMOVSR to VMOVDRR even when using NEON for scalar FP, as
-// this allows more effective execution domain optimization. See
-// setExecutionDomain().
-def UseVMOVSR : Predicate<"Subtarget->isCortexA9() || !Subtarget->useNEONForSinglePrecisionFP()">;
-def DontUseVMOVSR : Predicate<"!Subtarget->isCortexA9() && Subtarget->useNEONForSinglePrecisionFP()">;
+def UseVMOVSR : Predicate<"Subtarget->preferVMOVSR() ||"
+                          "!Subtarget->useNEONForSinglePrecisionFP()">;
+def DontUseVMOVSR : Predicate<"!Subtarget->preferVMOVSR() &&"
+                              "Subtarget->useNEONForSinglePrecisionFP()">;
 
 def IsLE             : Predicate<"MF->getDataLayout().isLittleEndian()">;
 def IsBE             : Predicate<"MF->getDataLayout().isBigEndian()">;

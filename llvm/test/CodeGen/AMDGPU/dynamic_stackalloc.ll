@@ -1,6 +1,6 @@
-; RUN: not llc -march=amdgcn -mcpu=tahiti -mattr=+promote-alloca -verify-machineinstrs -exit-on-error < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs -exit-on-error < %s 2>&1 | FileCheck %s
-; RUN: not llc -march=r600 -mcpu=cypress -exit-on-error < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tahiti -mattr=+promote-alloca -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=amdgcn -mcpu=tahiti -mattr=-promote-alloca -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -march=r600 -mcpu=cypress < %s 2>&1 | FileCheck %s
 
 ; CHECK: in function test_dynamic_stackalloc{{.*}}: unsupported dynamic alloca
 

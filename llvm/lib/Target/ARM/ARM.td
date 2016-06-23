@@ -106,6 +106,44 @@ def FeatureRAS : SubtargetFeature<"ras", "HasRAS", "true",
 def FeatureZCZeroing : SubtargetFeature<"zcz", "HasZeroCycleZeroing", "true",
                                         "Has zero-cycle zeroing instructions">;
 
+// Whether or not it may be profitable to unpredicate certain instructions
+// during if conversion.
+def FeatureProfUnpredicate : SubtargetFeature<"prof-unpr",
+                                              "IsProfitableToUnpredicate",
+                                              "true",
+                                              "Is profitable to unpredicate">;
+
+// Some targets (e.g. Swift) have microcoded VGETLNi32.
+def FeatureSlowVGETLNi32 : SubtargetFeature<"slow-vgetlni32",
+                                            "HasSlowVGETLNi32", "true",
+                                            "Has slow VGETLNi32 - prefer VMOV">;
+
+// Some targets (e.g. Swift) have microcoded VDUP32.
+def FeatureSlowVDUP32 : SubtargetFeature<"slow-vdup32", "HasSlowVDUP32", "true",
+                                         "Has slow VDUP32 - prefer VMOV">;
+
+// Some targets (e.g. Cortex-A9) prefer VMOVSR to VMOVDRR even when using NEON
+// for scalar FP, as this allows more effective execution domain optimization.
+def FeaturePreferVMOVSR : SubtargetFeature<"prefer-vmovsr", "PreferVMOVSR",
+                                           "true", "Prefer VMOVSR">;
+
+// Swift has ISHST barriers compatible with Atomic Release semantics but weaker
+// than ISH
+def FeaturePrefISHSTBarrier : SubtargetFeature<"prefer-ishst", "PreferISHST",
+                                           "true", "Prefer ISHST barriers">;
+
+// Some targets (e.g. Cortex-A9) want to convert VMOVRS, VMOVSR and VMOVS from
+// VFP to NEON, as an execution domain optimization.
+def FeatureNEONForFPMovs : SubtargetFeature<"neon-fpmovs", "UseNEONForFPMovs",
+                              "true", "Convert VMOVSR, VMOVRS, VMOVS to NEON">;
+
+// Some processors benefit from using NEON instructions for scalar
+// single-precision FP operations. This affects instruction selection and should
+// only be enabled if the handling of denormals is not important.
+def FeatureNEONForFP : SubtargetFeature<"neonfp", "UseNEONForSinglePrecisionFP",
+                                        "true",
+                                        "Use NEON for single precision FP">;
+
 // Some processors have FP multiply-accumulate instructions that don't
 // play nicely with other VFP / NEON instructions, and it's generally better
 // to just not use them.
@@ -116,12 +154,6 @@ def FeatureHasSlowFPVMLx : SubtargetFeature<"slowfpvmlx", "SlowFPVMLx", "true",
 def FeatureVMLxForwarding : SubtargetFeature<"vmlx-forwarding",
                                        "HasVMLxForwarding", "true",
                                        "Has multiplier accumulator forwarding">;
-
-// Some processors benefit from using NEON instructions for scalar
-// single-precision FP operations.
-def FeatureNEONForFP : SubtargetFeature<"neonfp", "UseNEONForSinglePrecisionFP",
-                                        "true",
-                                        "Use NEON for single precision FP">;
 
 // Disable 32-bit to 16-bit narrowing for experimentation.
 def FeaturePref32BitThumb : SubtargetFeature<"32bit", "Pref32BitThumb", "true",
@@ -533,6 +565,8 @@ def : ProcessorModel<"cortex-a9",   CortexA9Model,      [ARMv7a, ProcA9,
                                                          FeatureT2XtPk,
                                                          FeatureFP16,
                                                          FeatureAvoidPartialCPSR,
+                                                         FeaturePreferVMOVSR,
+                                                         FeatureNEONForFPMovs,
                                                          FeatureMP]>;
 
 // FIXME: A12 has currently the same Schedule model as A9
@@ -596,7 +630,11 @@ def : ProcessorModel<"swift",       SwiftModel,         [ARMv7a, ProcSwift,
                                                          FeatureHWDivARM,
                                                          FeatureAvoidPartialCPSR,
                                                          FeatureAvoidMOVsShOp,
-                                                         FeatureHasSlowFPVMLx]>;
+                                                         FeatureHasSlowFPVMLx,
+                                                         FeatureProfUnpredicate,
+                                                         FeaturePrefISHSTBarrier,
+                                                         FeatureSlowVGETLNi32,
+                                                         FeatureSlowVDUP32]>;
 
 // FIXME: R4 has currently the same ProcessorModel as A8.
 def : ProcessorModel<"cortex-r4",   CortexA8Model,      [ARMv7r, ProcR4,

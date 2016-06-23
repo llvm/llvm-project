@@ -3024,7 +3024,8 @@ static SDValue LowerATOMIC_FENCE(SDValue Op, SelectionDAG &DAG,
   if (Subtarget->isMClass()) {
     // Only a full system barrier exists in the M-class architectures.
     Domain = ARM_MB::SY;
-  } else if (Subtarget->isSwift() && Ord == AtomicOrdering::Release) {
+  } else if (Subtarget->preferISHSTBarriers() &&
+             Ord == AtomicOrdering::Release) {
     // Swift happens to implement ISHST barriers in a way that's compatible with
     // Release semantics but weaker than ISH so we'd be fools not to use
     // it. Beware: other processors probably don't!
@@ -12236,7 +12237,7 @@ Instruction* ARMTargetLowering::emitLeadingFence(IRBuilder<> &Builder,
     /*FALLTHROUGH*/
   case AtomicOrdering::Release:
   case AtomicOrdering::AcquireRelease:
-    if (Subtarget->isSwift())
+    if (Subtarget->preferISHSTBarriers())
       return makeDMB(Builder, ARM_MB::ISHST);
     // FIXME: add a comment with a link to documentation justifying this.
     else

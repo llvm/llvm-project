@@ -1017,11 +1017,10 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &cache) {
     assert(BDV && base);
     assert(!isKnownBaseResult(BDV) && "why did it get added?");
 
-    std::string fromstr = cache.count(BDV) ? cache[BDV]->getName() : "none";
     DEBUG(dbgs() << "Updating base value cache"
-          << " for: " << BDV->getName()
-          << " from: " << fromstr
-          << " to: " << base->getName() << "\n");
+                 << " for: " << BDV->getName() << " from: "
+                 << (cache.count(BDV) ? cache[BDV]->getName().str() : "none")
+                 << " to: " << base->getName() << "\n");
 
     if (cache.count(BDV)) {
       assert(isKnownBaseResult(base) &&

@@ -520,13 +520,13 @@ public:
   bool canVectorizeMemory() const { return CanVecMem; }
 
   const RuntimePointerChecking *getRuntimePointerChecking() const {
-    return &PtrRtChecking;
+    return PtrRtChecking.get();
   }
 
   /// \brief Number of memchecks required to prove independence of otherwise
   /// may-alias pointers.
   unsigned getNumRuntimePointerChecks() const {
-    return PtrRtChecking.getNumberOfChecks();
+    return PtrRtChecking->getNumberOfChecks();
   }
 
   /// Return true if the block BB needs to be predicated in order for the loop
@@ -565,13 +565,13 @@ public:
 
   /// \brief the Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
-  const MemoryDepChecker &getDepChecker() const { return DepChecker; }
+  const MemoryDepChecker &getDepChecker() const { return *DepChecker; }
 
   /// \brief Return the list of instructions that use \p Ptr to read or write
   /// memory.
   SmallVector<Instruction *, 4> getInstructionsForAccess(Value *Ptr,
                                                          bool isWrite) const {
-    return DepChecker.getInstructionsForAccess(Ptr, isWrite);
+    return DepChecker->getInstructionsForAccess(Ptr, isWrite);
   }
 
   /// \brief If an access has a symbolic strides, this maps the pointer value to
@@ -615,12 +615,12 @@ private:
   void collectStridedAccess(Value *LoadOrStoreInst);
 
   /// We need to check that all of the pointers in this list are disjoint
-  /// at runtime.
-  RuntimePointerChecking PtrRtChecking;
+  /// at runtime. Using std::unique_ptr to make using move ctor simpler.
+  std::unique_ptr<RuntimePointerChecking> PtrRtChecking;
 
   /// \brief the Memory Dependence Checker which can determine the
   /// loop-independent and loop-carried dependences between memory accesses.
-  MemoryDepChecker DepChecker;
+  std::unique_ptr<MemoryDepChecker> DepChecker;
 
   Loop *TheLoop;
   const DataLayout &DL;

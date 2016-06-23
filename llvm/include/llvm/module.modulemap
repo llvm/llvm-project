@@ -95,7 +95,6 @@ module LLVM_ExecutionEngine {
 
   // Exclude these; they're intended to be included into only a single
   // translation unit (or none) and aren't part of this module.
-  exclude header "ExecutionEngine/JIT.h"
   exclude header "ExecutionEngine/MCJIT.h"
   exclude header "ExecutionEngine/Interpreter.h"
   exclude header "ExecutionEngine/OrcMCJITReplacement.h"

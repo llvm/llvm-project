@@ -103,7 +103,9 @@ int AMDGPUInstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
   const MachineFrameInfo *MFI = MF.getFrameInfo();
 
   // Variable sized objects are not supported
-  assert(!MFI->hasVarSizedObjects());
+  if (MFI->hasVarSizedObjects()) {
+    return -1;
+  }
 
   if (MFI->getNumObjects() == 0) {
     return -1;

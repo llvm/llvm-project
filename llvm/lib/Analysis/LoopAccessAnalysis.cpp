@@ -1514,8 +1514,8 @@ void LoopAccessInfo::analyzeLoop() {
   unsigned NumReads = 0;
   unsigned NumReadWrites = 0;
 
-  PtrRtChecking.Pointers.clear();
-  PtrRtChecking.Need = false;
+  PtrRtChecking->Pointers.clear();
+  PtrRtChecking->Need = false;
 
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
@@ -1554,7 +1554,7 @@ void LoopAccessInfo::analyzeLoop() {
         }
         NumLoads++;
         Loads.push_back(Ld);
-        DepChecker.addAccess(Ld);
+        DepChecker->addAccess(Ld);
         if (EnableMemAccessVersioning)
           collectStridedAccess(Ld);
         continue;
@@ -1578,7 +1578,7 @@ void LoopAccessInfo::analyzeLoop() {
         }
         NumStores++;
         Stores.push_back(St);
-        DepChecker.addAccess(St);
+        DepChecker->addAccess(St);
         if (EnableMemAccessVersioning)
           collectStridedAccess(St);
       }
@@ -1676,7 +1676,7 @@ void LoopAccessInfo::analyzeLoop() {
 
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
-  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(PtrRtChecking, PSE.getSE(),
+  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE.getSE(),
                                                   TheLoop, SymbolicStrides);
   if (!CanDoRTIfNeeded) {
     emitAnalysis(LoopAccessReport() << "cannot identify array bounds");
@@ -1691,21 +1691,21 @@ void LoopAccessInfo::analyzeLoop() {
   CanVecMem = true;
   if (Accesses.isDependencyCheckNeeded()) {
     DEBUG(dbgs() << "LAA: Checking memory dependencies\n");
-    CanVecMem = DepChecker.areDepsSafe(
+    CanVecMem = DepChecker->areDepsSafe(
         DependentAccesses, Accesses.getDependenciesToCheck(), SymbolicStrides);
-    MaxSafeDepDistBytes = DepChecker.getMaxSafeDepDistBytes();
+    MaxSafeDepDistBytes = DepChecker->getMaxSafeDepDistBytes();
 
-    if (!CanVecMem && DepChecker.shouldRetryWithRuntimeCheck()) {
+    if (!CanVecMem && DepChecker->shouldRetryWithRuntimeCheck()) {
       DEBUG(dbgs() << "LAA: Retrying with memory checks\n");
 
       // Clear the dependency checks. We assume they are not needed.
-      Accesses.resetDepChecks(DepChecker);
+      Accesses.resetDepChecks(*DepChecker);
 
-      PtrRtChecking.reset();
-      PtrRtChecking.Need = true;
+      PtrRtChecking->reset();
+      PtrRtChecking->Need = true;
 
       auto *SE = PSE.getSE();
-      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(PtrRtChecking, SE, TheLoop,
+      CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, SE, TheLoop,
                                                  SymbolicStrides, true);
 
       // Check that we found the bounds for the pointer.
@@ -1723,7 +1723,7 @@ void LoopAccessInfo::analyzeLoop() {
 
   if (CanVecMem)
     DEBUG(dbgs() << "LAA: No unsafe dependent memory operations in loop.  We"
-                 << (PtrRtChecking.Need ? "" : " don't")
+                 << (PtrRtChecking->Need ? "" : " don't")
                  << " need runtime memory checks.\n");
   else {
     emitAnalysis(
@@ -1835,7 +1835,7 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
   auto *SE = PSE.getSE();
   SCEVExpander Exp(*SE, DL, "induction");
   auto ExpandedChecks =
-      expandBounds(PointerChecks, TheLoop, Loc, SE, Exp, PtrRtChecking);
+      expandBounds(PointerChecks, TheLoop, Loc, SE, Exp, *PtrRtChecking);
 
   LLVMContext &Ctx = Loc->getContext();
   Instruction *FirstInst = nullptr;
@@ -1891,10 +1891,10 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
 
 std::pair<Instruction *, Instruction *>
 LoopAccessInfo::addRuntimeChecks(Instruction *Loc) const {
-  if (!PtrRtChecking.Need)
+  if (!PtrRtChecking->Need)
     return std::make_pair(nullptr, nullptr);
 
-  return addRuntimeChecks(Loc, PtrRtChecking.getChecks());
+  return addRuntimeChecks(Loc, PtrRtChecking->getChecks());
 }
 
 void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
@@ -1920,8 +1920,10 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const DataLayout &DL,
                                const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                                DominatorTree *DT, LoopInfo *LI)
-    : PSE(*SE, *L), PtrRtChecking(SE), DepChecker(PSE, L), TheLoop(L), DL(DL),
-      TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
+    : PSE(*SE, *L),
+      PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
+      DepChecker(llvm::make_unique<MemoryDepChecker>(PSE, L)), TheLoop(L),
+      DL(DL), TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
       MaxSafeDepDistBytes(-1U), CanVecMem(false),
       StoreToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
@@ -1934,7 +1936,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
     if (MaxSafeDepDistBytes != -1U)
       OS << " with a maximum dependence distance of " << MaxSafeDepDistBytes
          << " bytes";
-    if (PtrRtChecking.Need)
+    if (PtrRtChecking->Need)
       OS << " with run-time checks";
     OS << "\n";
   }
@@ -1942,17 +1944,17 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   if (Report)
     OS.indent(Depth) << "Report: " << Report->str() << "\n";
 
-  if (auto *Dependences = DepChecker.getDependences()) {
+  if (auto *Dependences = DepChecker->getDependences()) {
     OS.indent(Depth) << "Dependences:\n";
     for (auto &Dep : *Dependences) {
-      Dep.print(OS, Depth + 2, DepChecker.getMemoryInstructions());
+      Dep.print(OS, Depth + 2, DepChecker->getMemoryInstructions());
       OS << "\n";
     }
   } else
     OS.indent(Depth) << "Too many dependences, not recorded\n";
 
   // List the pair of accesses need run-time checks to prove independence.
-  PtrRtChecking.print(OS, Depth);
+  PtrRtChecking->print(OS, Depth);
   OS << "\n";
 
   OS.indent(Depth) << "Store to invariant address was "

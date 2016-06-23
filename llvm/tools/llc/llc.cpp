@@ -113,11 +113,6 @@ static cl::opt<bool> DiscardValueNames(
     cl::desc("Discard names from Value (other than GlobalValue)."),
     cl::init(false), cl::Hidden);
 
-static cl::opt<bool> ExitOnError(
-    "exit-on-error",
-    cl::desc("Exit as soon as an error is encountered."),
-    cl::init(false), cl::Hidden);
-
 namespace {
 static ManagedStatic<std::vector<std::string>> RunPassNames;
 
@@ -257,8 +252,7 @@ int main(int argc, char **argv) {
 
   // Set a diagnostic handler that doesn't exit on the first error
   bool HasError = false;
-  if (!ExitOnError)
-    Context.setDiagnosticHandler(DiagnosticHandler, &HasError);
+  Context.setDiagnosticHandler(DiagnosticHandler, &HasError);
 
   // Compile the module TimeCompilations times to give better compile time
   // metrics.
@@ -486,11 +480,9 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     PM.run(*M);
 
-    if (!ExitOnError) {
-      auto HasError = *static_cast<bool *>(Context.getDiagnosticContext());
-      if (HasError)
-        return 1;
-    }
+    auto HasError = *static_cast<bool *>(Context.getDiagnosticContext());
+    if (HasError)
+      return 1;
 
     // Compare the two outputs and make sure they're the same
     if (CompileTwice) {

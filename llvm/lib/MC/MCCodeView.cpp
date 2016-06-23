@@ -21,6 +21,7 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/EndianStream.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

@@ -3,13 +3,6 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32"
 target triple = "i686-apple-darwin"
 ; PR 9817
 
-; There should be a DEBUG_VALUE for each call to llvm.dbg.value
-
-; CHECK:  ##DEBUG_VALUE: __OpenCL_test_kernel:ip <- 
-; CHECK:  ##DEBUG_VALUE: xxx <- 0
-; CHECK:  ##DEBUG_VALUE: gid <- %E{{..$}}
-; CHECK:  ##DEBUG_VALUE: idx <- %E{{..$}}
-; CHECK-NOT:  ##DEBUG_VALUE:
 
 declare <4 x i32> @__amdil_get_global_id_int()
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
@@ -19,9 +12,10 @@ entry:
   %0 = call <4 x i32> @__amdil_get_global_id_int() nounwind
   %1 = extractelement <4 x i32> %0, i32 0
   call void @llvm.dbg.value(metadata i32 %1, i64 0, metadata !9, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !21, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !13, metadata !DIExpression()), !dbg !14
   %tmp2 = load i32, i32 addrspace(1)* %ip, align 4, !dbg !15
   %tmp3 = add i32 0, %tmp2, !dbg !15
+; CHECK:  ##DEBUG_VALUE: idx <- %E{{..$}}
   call void @llvm.dbg.value(metadata i32 %tmp3, i64 0, metadata !13, metadata !DIExpression()), !dbg !15
   %arrayidx = getelementptr i32, i32 addrspace(1)* %ip, i32 %1, !dbg !16
   store i32 %tmp3, i32 addrspace(1)* %arrayidx, align 4, !dbg !16
@@ -50,4 +44,3 @@ entry:
 !17 = !DILocation(line: 7, column: 1, scope: !0)
 !19 = !DIFile(filename: "OCL6368.tmp.cl", directory: "E:\5CUsers\5Cmvillmow.AMD\5CAppData\5CLocal\5CTemp")
 !20 = !{i32 1, !"Debug Info Version", i32 3}
-!21 = !DILocalVariable(name: "xxx", line: 4, scope: !10, file: !1, type: !6)

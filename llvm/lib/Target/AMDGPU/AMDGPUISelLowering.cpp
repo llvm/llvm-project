@@ -690,7 +690,8 @@ SDValue AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   DiagnosticInfoUnsupported NoDynamicAlloca(Fn, "unsupported dynamic alloca",
                                             SDLoc(Op).getDebugLoc());
   DAG.getContext()->diagnose(NoDynamicAlloca);
-  return SDValue();
+  auto Ops = {DAG.getConstant(0, SDLoc(), Op.getValueType()), Op.getOperand(0)};
+  return DAG.getMergeValues(Ops, SDLoc());
 }
 
 SDValue AMDGPUTargetLowering::LowerOperation(SDValue Op,

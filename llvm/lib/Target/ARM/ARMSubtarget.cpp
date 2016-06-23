@@ -154,6 +154,12 @@ void ARMSubtarget::initializeEnvironment() {
   HasCRC = false;
   HasRAS = false;
   HasZeroCycleZeroing = false;
+  IsProfitableToUnpredicate = false;
+  HasSlowVGETLNi32 = false;
+  HasSlowVDUP32 = false;
+  PreferVMOVSR = false;
+  PreferISHST = false;
+  UseNEONForFPMovs = false;
   StrictAlign = false;
   HasDSP = false;
   UseNaClTrap = false;
