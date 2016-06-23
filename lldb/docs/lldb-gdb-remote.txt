@@ -896,7 +896,7 @@ tuples to return are:
 If the address requested is not in a mapped region (e.g. we've jumped through
 a NULL pointer and are at 0x0) currently lldb expects to get back the size 
 of the unmapped region -- that is, the distance to the next valid region.
-For instance, with a macOS process which has nothing mapped in the first
+For instance, with a Mac OS X process which has nothing mapped in the first
 4GB of its address space, if we're asking about address 0x2,
 
   qMemoryRegionInfo:2
@@ -1399,7 +1399,7 @@ for this region.
 //
 // Because this is a JSON string, the thread number is provided in base10.
 // Additional key-value pairs may be provided by lldb to the gdb remote
-// stub.  For instance, on some versions of macOS, lldb can read offset
+// stub.  For instance, on some versions of Mac OS X, lldb can read offset
 // information out of the system libraries.  Using those offsets, debugserver
 // is able to find the Thread Specific Address (TSD) for a thread and include
 // that in the return information.  So lldb will send these additional fields
@@ -1562,7 +1562,7 @@ for this region.
 // quite a bit to provide all the information that the DynamicLoaderMacOSX
 // would need to work correctly on this platform.
 //
-// On macOS / iOS, when libraries are added or removed, a stub
+// On Mac OS X / iOS, when libraries are added or removed, a stub
 // function is called which lldb puts a breakpoint on.  The arguments
 // to the stub function include the number of libraries being added
 // or removed and the address where the list of libraries can be

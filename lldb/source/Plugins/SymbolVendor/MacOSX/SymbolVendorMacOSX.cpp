@@ -141,7 +141,7 @@ SymbolVendorMacOSX::CreateInstance (const lldb::ModuleSP &module_sp, lldb_privat
         char path[PATH_MAX];
         path[0] = '\0';
 
-        // Try and locate the dSYM file on macOS
+        // Try and locate the dSYM file on Mac OS X
         Timer scoped_timer2 ("SymbolVendorMacOSX::CreateInstance () locate dSYM",
                              "SymbolVendorMacOSX::CreateInstance (module = %s) locate dSYM",
                              module_sp->GetFileSpec().GetPath().c_str());

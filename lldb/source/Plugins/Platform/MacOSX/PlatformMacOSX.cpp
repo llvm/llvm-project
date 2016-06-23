@@ -167,9 +167,9 @@ const char *
 PlatformMacOSX::GetDescriptionStatic (bool is_host)
 {
     if (is_host)
-        return "Local macOS user platform plug-in.";
+        return "Local Mac OS X user platform plug-in.";
     else
-        return "Remote macOS user platform plug-in.";
+        return "Remote Mac OS X user platform plug-in.";
 }
 
 //------------------------------------------------------------------

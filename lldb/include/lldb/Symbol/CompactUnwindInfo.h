@@ -29,7 +29,7 @@ namespace lldb_private {
 // i386/x86_64 for instance.  When a function is too complex to be represented in
 // the compact unwind format, it calls out to eh_frame unwind instructions.
 
-// On macOS / iOS, a function will have either a compact unwind representation 
+// On Mac OS X / iOS, a function will have either a compact unwind representation 
 // or an eh_frame representation.  If lldb is going to benefit  from the compiler's 
 // description about saved register locations, it must be able to read both 
 // sources of information.

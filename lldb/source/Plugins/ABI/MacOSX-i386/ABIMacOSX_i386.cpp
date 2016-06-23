@@ -609,7 +609,7 @@ void
 ABIMacOSX_i386::Initialize()
 {
     PluginManager::RegisterPlugin (GetPluginNameStatic(),
-                                   "macOS ABI for i386 targets",
+                                   "Mac OS X ABI for i386 targets",
                                    CreateInstance);    
 }
 

@@ -336,7 +336,7 @@ public:
     //------------------------------------------------------------------
     /// Retrieve a dictionary of information about this thread 
     ///
-    /// On macOS systems there may be voucher information.
+    /// On Mac OS X systems there may be voucher information.
     /// The top level dictionary returned will have an "activity" key and the
     /// value of the activity is a dictionary.  Keys in that dictionary will 
     /// be "name" and "id", among others.

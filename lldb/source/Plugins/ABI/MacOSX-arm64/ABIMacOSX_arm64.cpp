@@ -38,7 +38,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static const char *pluginDesc = "Darwin ABI for arm64 targets";
+static const char *pluginDesc = "Mac OS X ABI for arm64 targets";
 
 static RegisterInfo g_register_infos[] = 
 {
