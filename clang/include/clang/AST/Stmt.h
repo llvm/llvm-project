@@ -93,6 +93,13 @@ protected:
     unsigned NumStmts : 32 - NumStmtBits;
   };
 
+  class IfStmtBitfields {
+    friend class IfStmt;
+    unsigned : NumStmtBits;
+
+    unsigned IsConstexpr : 1;
+  };
+
   class ExprBitfields {
     friend class Expr;
     friend class DeclRefExpr; // computeDependence
@@ -248,6 +255,7 @@ protected:
   union {
     StmtBitfields StmtBits;
     CompoundStmtBitfields CompoundStmtBits;
+    IfStmtBitfields IfStmtBits;
     ExprBitfields ExprBits;
     CharacterLiteralBitfields CharacterLiteralBits;
     FloatingLiteralBitfields FloatingLiteralBits;
@@ -878,7 +886,8 @@ class IfStmt : public Stmt {
   SourceLocation ElseLoc;
 
 public:
-  IfStmt(const ASTContext &C, SourceLocation IL, VarDecl *var, Expr *cond,
+  IfStmt(const ASTContext &C, SourceLocation IL,
+         bool IsConstexpr, VarDecl *var, Expr *cond,
          Stmt *then, SourceLocation EL = SourceLocation(),
          Stmt *elsev = nullptr);
 
@@ -917,6 +926,9 @@ public:
   void setIfLoc(SourceLocation L) { IfLoc = L; }
   SourceLocation getElseLoc() const { return ElseLoc; }
   void setElseLoc(SourceLocation L) { ElseLoc = L; }
+
+  bool isConstexpr() const { return IfStmtBits.IsConstexpr; }
+  void setConstexpr(bool C) { IfStmtBits.IsConstexpr = C; }
 
   SourceLocation getLocStart() const LLVM_READONLY { return IfLoc; }
   SourceLocation getLocEnd() const LLVM_READONLY {

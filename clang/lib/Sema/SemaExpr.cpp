@@ -12903,6 +12903,11 @@ static bool IsPotentiallyEvaluatedContext(Sema &SemaRef) {
       // definition of a null pointer constant is completely crazy.)
       return false;
 
+    case Sema::DiscardedStatement:
+      // These are technically a potentially evaluated but they have the effect
+      // of suppressing use marking.
+      return false;
+
     case Sema::ConstantEvaluated:
     case Sema::PotentiallyEvaluated:
       // We are in a potentially evaluated expression (or a constant-expression
@@ -14192,6 +14197,7 @@ bool Sema::DiagRuntimeBehavior(SourceLocation Loc, const Stmt *Statement,
   switch (ExprEvalContexts.back().Context) {
   case Unevaluated:
   case UnevaluatedAbstract:
+  case DiscardedStatement:
     // The argument will never be evaluated, so don't complain.
     break;
 
@@ -14341,7 +14347,8 @@ void Sema::DiagnoseEqualityWithExtraParens(ParenExpr *ParenE) {
     }
 }
 
-ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E) {
+ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E,
+                                       bool IsConstexpr) {
   DiagnoseAssignmentAsCondition(E);
   if (ParenExpr *parenE = dyn_cast<ParenExpr>(E))
     DiagnoseEqualityWithExtraParens(parenE);
@@ -14352,7 +14359,7 @@ ExprResult Sema::CheckBooleanCondition(SourceLocation Loc, Expr *E) {
 
   if (!E->isTypeDependent()) {
     if (getLangOpts().CPlusPlus)
-      return CheckCXXBooleanCondition(E); // C++ 6.4p4
+      return CheckCXXBooleanCondition(E, IsConstexpr); // C++ 6.4p4
 
     ExprResult ERes = DefaultFunctionArrayLvalueConversion(E);
     if (ERes.isInvalid())
@@ -14383,6 +14390,10 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
     Cond = CheckBooleanCondition(Loc, SubExpr);
     break;
 
+  case ConditionKind::ConstexprIf:
+    Cond = CheckBooleanCondition(Loc, SubExpr, true);
+    break;
+
   case ConditionKind::Switch:
     Cond = CheckSwitchCondition(Loc, SubExpr);
     break;
@@ -14390,7 +14401,8 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
   if (Cond.isInvalid())
     return ConditionError();
 
-  return ConditionResult(nullptr, MakeFullExpr(Cond.get(), Loc));
+  return ConditionResult(*this, nullptr, MakeFullExpr(Cond.get(), Loc),
+                         CK == ConditionKind::ConstexprIf);
 }
 
 namespace {

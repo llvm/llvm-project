@@ -158,7 +158,7 @@ VALUE_LANGOPT(MaxTypeAlign  , 32, 0,
               "default maximum alignment for types")
 VALUE_LANGOPT(AlignDouble            , 1, 0, "Controls if doubles should be aligned to 8 bytes (x86 only)")
 COMPATIBLE_VALUE_LANGOPT(PICLevel    , 2, 0, "__PIC__ level")
-COMPATIBLE_VALUE_LANGOPT(PIELevel    , 2, 0, "__PIE__ level")
+COMPATIBLE_VALUE_LANGOPT(PIE         , 1, 0, "is pie")
 COMPATIBLE_LANGOPT(GNUInline         , 1, 0, "GNU inline semantics")
 COMPATIBLE_LANGOPT(NoInlineDefine    , 1, 0, "__NO_INLINE__ predefined macro")
 COMPATIBLE_LANGOPT(Deprecated        , 1, 0, "__DEPRECATED predefined macro")

@@ -23,6 +23,6 @@ enum VectorizerChoice {
   VECTORIZER_POLLY,
 };
 extern VectorizerChoice PollyVectorizerChoice;
-}
+} // namespace polly
 
 #endif // POLLY_CODEGENERATION_H

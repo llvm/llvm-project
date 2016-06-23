@@ -58,7 +58,7 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
 
   return LHS.concat(Buf).str();
 }
-}
+} // namespace polly
 
 namespace llvm {
 // @brief Lexicographic order on (line, col) of our debug locations.
@@ -66,7 +66,7 @@ static bool operator<(const llvm::DebugLoc &LHS, const llvm::DebugLoc &RHS) {
   return LHS.getLine() < RHS.getLine() ||
          (LHS.getLine() == RHS.getLine() && LHS.getCol() < RHS.getCol());
 }
-}
+} // namespace llvm
 
 namespace polly {
 BBPair getBBPairForRegion(const Region *R) {

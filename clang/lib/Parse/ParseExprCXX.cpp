@@ -1729,9 +1729,6 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 /// \param Loc The location of the start of the statement that requires this
 /// condition, e.g., the "for" in a for loop.
 ///
-/// \param ConvertToBoolean Whether the condition expression should be
-/// converted to a boolean value.
-///
 /// \returns The parsed condition.
 Sema::ConditionResult Parser::ParseCXXCondition(SourceLocation Loc,
                                                 Sema::ConditionKind CK) {

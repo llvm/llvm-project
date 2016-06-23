@@ -1,7 +1,10 @@
 // Test this without pch.
+// RUN: %clang_cc1 %s -Wunknown-pragmas -Werror -triple thumbv7-windows -fms-extensions -emit-llvm -include %s -o - | FileCheck %s
 // RUN: %clang_cc1 %s -Wunknown-pragmas -Werror -triple x86_64-pc-win32 -fms-extensions -emit-llvm -include %s -o - | FileCheck %s
 
 // Test with pch.
+// RUN: %clang_cc1 %s -Wunknown-pragmas -Werror -triple thumbv7-windows -fms-extensions -emit-pch -o %t
+// RUN: %clang_cc1 %s -Wunknown-pragmas -Werror -triple thumbv7-windows -fms-extensions -emit-llvm -include-pch %t -o - | FileCheck %s
 // RUN: %clang_cc1 %s -Wunknown-pragmas -Werror -triple x86_64-pc-win32 -fms-extensions -emit-pch -o %t
 // RUN: %clang_cc1 %s -Wunknown-pragmas -Werror -triple x86_64-pc-win32 -fms-extensions -emit-llvm -include-pch %t -o - | FileCheck %s
 

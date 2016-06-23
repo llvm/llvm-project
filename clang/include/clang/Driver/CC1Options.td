@@ -546,8 +546,8 @@ def fencode_extended_block_signature : Flag<["-"], "fencode-extended-block-signa
   HelpText<"enable extended encoding of block type signature">;
 def pic_level : Separate<["-"], "pic-level">,
   HelpText<"Value for __PIC__">;
-def pie_level : Separate<["-"], "pie-level">,
-  HelpText<"Value for __PIE__">;
+def pic_is_pie : Flag<["-"], "pic-is-pie">,
+  HelpText<"File is for a position independent executable">;
 def fno_validate_pch : Flag<["-"], "fno-validate-pch">,
   HelpText<"Disable validation of precompiled headers">;
 def dump_deserialized_pch_decls : Flag<["-"], "dump-deserialized-decls">,

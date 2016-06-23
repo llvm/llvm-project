@@ -249,7 +249,7 @@ public:
     AU.addPreserved<ScopInfoRegionPass>();
   }
 };
-}
+} // namespace
 
 char CodeGeneration::ID = 1;
 

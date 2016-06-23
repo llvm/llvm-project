@@ -1174,9 +1174,10 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  StmtResult RebuildIfStmt(SourceLocation IfLoc, Sema::ConditionResult Cond,
-                           Stmt *Then, SourceLocation ElseLoc, Stmt *Else) {
-    return getSema().ActOnIfStmt(IfLoc, Cond, Then, ElseLoc, Else);
+  StmtResult RebuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
+                           Sema::ConditionResult Cond, Stmt *Then,
+                           SourceLocation ElseLoc, Stmt *Else) {
+    return getSema().ActOnIfStmt(IfLoc, IsConstexpr, Cond, Then, ElseLoc, Else);
   }
 
   /// \brief Start building a new switch statement.
@@ -6228,19 +6229,33 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   // Transform the condition
   Sema::ConditionResult Cond = getDerived().TransformCondition(
       S->getIfLoc(), S->getConditionVariable(), S->getCond(),
-      Sema::ConditionKind::Boolean);
+      S->isConstexpr() ? Sema::ConditionKind::ConstexprIf
+                       : Sema::ConditionKind::Boolean);
   if (Cond.isInvalid())
     return StmtError();
 
+  // If this is a constexpr if, determine which arm we should instantiate.
+  llvm::Optional<bool> ConstexprConditionValue;
+  if (S->isConstexpr())
+    ConstexprConditionValue = Cond.getKnownValue();
+
   // Transform the "then" branch.
-  StmtResult Then = getDerived().TransformStmt(S->getThen());
-  if (Then.isInvalid())
-    return StmtError();
+  StmtResult Then;
+  if (!ConstexprConditionValue || *ConstexprConditionValue) {
+    Then = getDerived().TransformStmt(S->getThen());
+    if (Then.isInvalid())
+      return StmtError();
+  } else {
+    Then = new (getSema().Context) NullStmt(S->getThen()->getLocStart());
+  }
 
   // Transform the "else" branch.
-  StmtResult Else = getDerived().TransformStmt(S->getElse());
-  if (Else.isInvalid())
-    return StmtError();
+  StmtResult Else;
+  if (!ConstexprConditionValue || !*ConstexprConditionValue) {
+    Else = getDerived().TransformStmt(S->getElse());
+    if (Else.isInvalid())
+      return StmtError();
+  }
 
   if (!getDerived().AlwaysRebuild() &&
       Cond.get() == std::make_pair(S->getConditionVariable(), S->getCond()) &&
@@ -6248,8 +6263,8 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
       Else.get() == S->getElse())
     return S;
 
-  return getDerived().RebuildIfStmt(S->getIfLoc(), Cond, Then.get(),
-                                    S->getElseLoc(), Else.get());
+  return getDerived().RebuildIfStmt(S->getIfLoc(), S->isConstexpr(), Cond,
+                                    Then.get(), S->getElseLoc(), Else.get());
 }
 
 template<typename Derived>

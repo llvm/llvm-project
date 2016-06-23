@@ -480,11 +480,8 @@ void CodeGenModule::Release() {
   if (uint32_t PLevel = Context.getLangOpts().PICLevel) {
     assert(PLevel < 3 && "Invalid PIC Level");
     getModule().setPICLevel(static_cast<llvm::PICLevel::Level>(PLevel));
-  }
-
-  if (uint32_t PLevel = Context.getLangOpts().PIELevel) {
-    assert(PLevel < 3 && "Invalid PIE Level");
-    getModule().setPIELevel(static_cast<llvm::PIELevel::Level>(PLevel));
+    if (Context.getLangOpts().PIE)
+      getModule().setPIELevel(static_cast<llvm::PIELevel::Level>(PLevel));
   }
 
   SimplifyPersonality();

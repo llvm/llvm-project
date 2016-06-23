@@ -184,6 +184,7 @@ void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
 
 void ASTStmtReader::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
+  S->setConstexpr(Record[Idx++]);
   S->setConditionVariable(Reader.getContext(),
                           ReadDeclAs<VarDecl>(Record, Idx));
   S->setCond(Reader.ReadSubExpr());

@@ -134,6 +134,10 @@ public:
   // the number of reserved entries. This method is MIPS-specific.
   unsigned getMipsLocalEntriesNum() const;
 
+  // Returns offset of TLS part of the MIPS GOT table. This part goes
+  // after 'local' and 'global' entries.
+  uintX_t getMipsTlsOffset();
+
   uintX_t getTlsIndexVA() { return Base::getVA() + TlsIndexOff; }
   uint32_t getTlsIndexOff() { return TlsIndexOff; }
 
@@ -215,6 +219,7 @@ public:
   uintX_t getOffset() const;
   uintX_t getAddend() const;
   uint32_t getSymIndex() const;
+  const OutputSectionBase<ELFT> *getOutputSec() const { return OutputSec; }
 
   uint32_t Type;
 

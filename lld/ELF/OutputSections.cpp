@@ -135,6 +135,14 @@ void GotSection<ELFT>::addMipsEntry(SymbolBody &Sym, uintX_t Addend,
     MipsOutSections.insert(OutSec);
     return;
   }
+  if (Sym.isTls()) {
+    // GOT entries created for MIPS TLS relocations behave like
+    // almost GOT entries from other ABIs. They go to the end
+    // of the global offset table.
+    Sym.GotIndex = Entries.size();
+    Entries.push_back(&Sym);
+    return;
+  }
   auto AddEntry = [&](SymbolBody &S, uintX_t A, MipsGotEntries &Items) {
     if (S.isInGot() && !A)
       return;
@@ -192,7 +200,9 @@ template <class ELFT>
 typename GotSection<ELFT>::uintX_t
 GotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
   uintX_t Off = MipsPageEntries;
-  if (B.IsInGlobalMipsGot)
+  if (B.isTls())
+    Off += MipsLocal.size() + MipsGlobal.size() + B.GotIndex;
+  else if (B.IsInGlobalMipsGot)
     Off += MipsLocal.size() + B.GotIndex;
   else if (B.isInGot())
     Off += B.GotIndex;
@@ -202,6 +212,12 @@ GotSection<ELFT>::getMipsGotOffset(const SymbolBody &B, uintX_t Addend) const {
     Off += It->second;
   }
   return Off * sizeof(uintX_t) - MipsGPOffset;
+}
+
+template <class ELFT>
+typename GotSection<ELFT>::uintX_t GotSection<ELFT>::getMipsTlsOffset() {
+  return (MipsPageEntries + MipsLocal.size() + MipsGlobal.size()) *
+         sizeof(uintX_t);
 }
 
 template <class ELFT>
@@ -355,6 +371,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
     if (Config->Rela)
       P->r_addend = Rel.getAddend();
     P->r_offset = Rel.getOffset();
+    if (Config->EMachine == EM_MIPS && Rel.getOutputSec() == Out<ELFT>::Got)
+      // Dynamic relocation against MIPS GOT section make deal TLS entries
+      // allocated in the end of the GOT. We need to adjust the offset to take
+      // in account 'local' and 'global' GOT entries.
+      P->r_offset += Out<ELFT>::Got->getMipsTlsOffset();
     P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->Mips64EL);
   }
 

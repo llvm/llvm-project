@@ -2922,7 +2922,7 @@ bool TrimmedGraph::popNextReportGraph(ReportGraph &GraphWrapper) {
   while (true) {
     // Create the equivalent node in the new graph with the same state
     // and location.
-    ExplodedNode *NewN = GNew->getNode(OrigN->getLocation(), OrigN->getState(),
+    ExplodedNode *NewN = GNew->createUncachedNode(OrigN->getLocation(), OrigN->getState(),
                                        OrigN->isSink());
 
     // Store the mapping to the original node.

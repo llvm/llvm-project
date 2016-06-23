@@ -5083,6 +5083,16 @@ public:
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
+
+  void getDependentLibraryOption(llvm::StringRef Lib,
+                                 llvm::SmallString<24> &Opt) const override {
+    Opt = "/DEFAULTLIB:" + qualifyWindowsLibrary(Lib);
+  }
+
+  void getDetectMismatchOption(llvm::StringRef Name, llvm::StringRef Value,
+                               llvm::SmallString<32> &Opt) const override {
+    Opt = "/FAILIFMISMATCH:\"" + Name.str() + "=" + Value.str() + "\"";
+  }
 };
 
 void WindowsARMTargetCodeGenInfo::setTargetAttributes(

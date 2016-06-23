@@ -1107,9 +1107,10 @@ bool CodeGenFunction::containsBreak(const Stmt *S) {
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the boolean result in Result.
 bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
-                                                   bool &ResultBool) {
+                                                   bool &ResultBool,
+                                                   bool AllowLabels) {
   llvm::APSInt ResultInt;
-  if (!ConstantFoldsToSimpleInteger(Cond, ResultInt))
+  if (!ConstantFoldsToSimpleInteger(Cond, ResultInt, AllowLabels))
     return false;
 
   ResultBool = ResultInt.getBoolValue();
@@ -1119,15 +1120,16 @@ bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
 /// ConstantFoldsToSimpleInteger - If the specified expression does not fold
 /// to a constant, or if it does but contains a label, return false.  If it
 /// constant folds return true and set the folded value.
-bool CodeGenFunction::
-ConstantFoldsToSimpleInteger(const Expr *Cond, llvm::APSInt &ResultInt) {
+bool CodeGenFunction::ConstantFoldsToSimpleInteger(const Expr *Cond,
+                                                   llvm::APSInt &ResultInt,
+                                                   bool AllowLabels) {
   // FIXME: Rename and handle conversion of other evaluatable things
   // to bool.
   llvm::APSInt Int;
   if (!Cond->EvaluateAsInt(Int, getContext()))
     return false;  // Not foldable, not integer or not fully evaluatable.
 
-  if (CodeGenFunction::ContainsLabel(Cond))
+  if (!AllowLabels && CodeGenFunction::ContainsLabel(Cond))
     return false;  // Contains a label.
 
   ResultInt = Int;

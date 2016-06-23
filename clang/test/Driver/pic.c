@@ -3,26 +3,26 @@
 //
 // CHECK-NO-PIC: "-mrelocation-model" "static"
 // CHECK-NO-PIC-NOT: "-pic-level"
-// CHECK-NO-PIC-NOT: "-pie-level"
+// CHECK-NO-PIC-NOT: "-pic-is-pie"
 //
 // CHECK-PIC1: "-mrelocation-model" "pic"
 // CHECK-PIC1: "-pic-level" "1"
-// CHECK-PIC1-NOT: "-pie-level"
+// CHECK-PIC1-NOT: "-pic-is-pie"
 //
 // CHECK-PIC2: "-mrelocation-model" "pic"
 // CHECK-PIC2: "-pic-level" "2"
-// CHECK-PIC2-NOT: "-pie-level"
+// CHECK-PIC2-NOT: "-pic-is-pie"
 //
 // CHECK-STATIC: "-static"
 // CHECK-NO-STATIC-NOT: "-static"
 //
 // CHECK-PIE1: "-mrelocation-model" "pic"
 // CHECK-PIE1: "-pic-level" "1"
-// CHECK-PIE1: "-pie-level" "1"
+// CHECK-PIE1: "-pic-is-pie"
 //
 // CHECK-PIE2: "-mrelocation-model" "pic"
 // CHECK-PIE2: "-pic-level" "2"
-// CHECK-PIE2: "-pie-level" "2"
+// CHECK-PIE2: "-pic-is-pie"
 //
 // CHECK-PIE-LD: "{{.*}}ld{{(.exe)?}}"
 // CHECK-PIE-LD: "-pie"
@@ -33,11 +33,11 @@
 //
 // CHECK-DYNAMIC-NO-PIC-32: "-mrelocation-model" "dynamic-no-pic"
 // CHECK-DYNAMIC-NO-PIC-32-NOT: "-pic-level"
-// CHECK-DYNAMIC-NO-PIC-32-NOT: "-pie-level"
+// CHECK-DYNAMIC-NO-PIC-32-NOT: "-pic-is-pie"
 //
 // CHECK-DYNAMIC-NO-PIC-64: "-mrelocation-model" "dynamic-no-pic"
 // CHECK-DYNAMIC-NO-PIC-64: "-pic-level" "2"
-// CHECK-DYNAMIC-NO-PIC-64-NOT: "-pie-level"
+// CHECK-DYNAMIC-NO-PIC-64-NOT: "-pic-is-pie"
 //
 // CHECK-NON-DARWIN-DYNAMIC-NO-PIC: error: unsupported option '-mdynamic-no-pic' for target 'i386-unknown-unknown'
 //

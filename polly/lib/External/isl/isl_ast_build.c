@@ -2387,9 +2387,6 @@ enum isl_ast_loop_type isl_ast_build_get_loop_type(
 __isl_give isl_ast_build *isl_ast_build_extract_isolated(
 	__isl_take isl_ast_build *build)
 {
-	isl_space *space, *space2;
-	isl_union_set *options;
-	int n, n2;
 	isl_set *isolated;
 
 	if (!build)
@@ -2403,27 +2400,7 @@ __isl_give isl_ast_build *isl_ast_build_extract_isolated(
 	if (!build)
 		return NULL;
 
-	options = isl_schedule_node_band_get_ast_build_options(build->node);
-
-	space = isl_multi_aff_get_space(build->internal2input);
-	space = isl_space_range(space);
-	space2 = isl_set_get_space(build->domain);
-	if (isl_space_is_wrapping(space2))
-		space2 = isl_space_range(isl_space_unwrap(space2));
-	n2 = isl_space_dim(space2, isl_dim_set);
-	n = isl_space_dim(space, isl_dim_set);
-	if (n < n2)
-		isl_die(isl_ast_build_get_ctx(build), isl_error_internal,
-			"total input space dimension cannot be smaller "
-			"than dimension of innermost band",
-			space = isl_space_free(space));
-	space = isl_space_drop_dims(space, isl_dim_set, n - n2, n2);
-	space = isl_space_map_from_domain_and_range(space, space2);
-	space = isl_space_wrap(space);
-	space = isl_space_set_tuple_name(space, isl_dim_set, "isolate");
-	isolated = isl_union_set_extract_set(options, space);
-	isl_union_set_free(options);
-
+	isolated = isl_schedule_node_band_get_ast_isolate_option(build->node);
 	isolated = isl_set_flatten(isolated);
 	isolated = isl_set_preimage_multi_aff(isolated,
 				    isl_multi_aff_copy(build->internal2input));

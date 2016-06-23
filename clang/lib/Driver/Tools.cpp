@@ -4016,10 +4016,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (PICLevel > 0) {
     CmdArgs.push_back("-pic-level");
     CmdArgs.push_back(PICLevel == 1 ? "1" : "2");
-    if (IsPIE) {
-      CmdArgs.push_back("-pie-level");
-      CmdArgs.push_back(PICLevel == 1 ? "1" : "2");
-    }
+    if (IsPIE)
+      CmdArgs.push_back("-pic-is-pie");
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_meabi)) {

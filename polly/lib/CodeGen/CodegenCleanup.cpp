@@ -118,7 +118,7 @@ public:
 };
 
 char CodegenCleanup::ID;
-}
+} // namespace
 
 FunctionPass *polly::createCodegenCleanupPass() { return new CodegenCleanup(); }
 

@@ -65,7 +65,7 @@ public:
   virtual void print(raw_ostream &OS, const Module *) const;
   //@}
 };
-}
+} // namespace
 
 PollyCanonicalize::~PollyCanonicalize() {}
 

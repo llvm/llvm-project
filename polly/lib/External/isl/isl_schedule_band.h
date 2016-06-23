@@ -80,6 +80,11 @@ __isl_give isl_union_set *isl_schedule_band_get_ast_build_options(
 	__isl_keep isl_schedule_band *band);
 __isl_give isl_schedule_band *isl_schedule_band_set_ast_build_options(
 	__isl_take isl_schedule_band *band, __isl_take isl_union_set *options);
+__isl_give isl_set *isl_schedule_band_get_ast_isolate_option(
+	__isl_keep isl_schedule_band *band, int depth);
+__isl_give isl_schedule_band *isl_schedule_band_replace_ast_build_option(
+	__isl_take isl_schedule_band *band, __isl_take isl_set *drop,
+	__isl_take isl_set *add);
 
 int isl_schedule_band_n_member(__isl_keep isl_schedule_band *band);
 isl_bool isl_schedule_band_member_get_coincident(

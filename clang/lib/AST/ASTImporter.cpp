@@ -4981,7 +4981,8 @@ Stmt *ASTNodeImporter::VisitIfStmt(IfStmt *S) {
   if (!ToElseStmt && S->getElse())
     return nullptr;
   return new (Importer.getToContext()) IfStmt(Importer.getToContext(),
-                                              ToIfLoc, ToConditionVariable,
+                                              ToIfLoc, S->isConstexpr(),
+                                              ToConditionVariable,
                                               ToCondition, ToThenStmt,
                                               ToElseLoc, ToElseStmt);
 }

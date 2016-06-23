@@ -22,6 +22,6 @@ namespace polly {
 /// of Polly. The set of optimization passes scheduled here is probably not yet
 /// optimal. TODO: Optimize the set of canonicalization passes.
 void registerCanonicalicationPasses(llvm::legacy::PassManagerBase &PM);
-}
+} // namespace polly
 
 #endif

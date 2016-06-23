@@ -60,7 +60,8 @@ namespace elf {
 
 static bool refersToGotEntry(RelExpr Expr) {
   return Expr == R_GOT || Expr == R_GOT_OFF || Expr == R_MIPS_GOT_LOCAL_PAGE ||
-         Expr == R_MIPS_GOT_OFF || Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC ||
+         Expr == R_MIPS_GOT_OFF || Expr == R_MIPS_TLSGD ||
+         Expr == R_MIPS_TLSLD || Expr == R_GOT_PAGE_PC || Expr == R_GOT_PC ||
          Expr == R_GOT_FROM_END || Expr == R_TLSGD || Expr == R_TLSGD_PC ||
          Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE;
 }
@@ -81,6 +82,39 @@ static bool isPreemptible(const SymbolBody &Body, uint32_t Type) {
   return Body.isPreemptible();
 }
 
+// This function is similar to the `handleTlsRelocation`. MIPS does not support
+// any relaxations for TLS relocations so by factoring out MIPS handling into
+// the separate function we can simplify the code and does not pollute
+// `handleTlsRelocation` by MIPS `ifs` statements.
+template <class ELFT>
+static unsigned
+handleMipsTlsRelocation(uint32_t Type, SymbolBody &Body,
+                        InputSectionBase<ELFT> &C, typename ELFT::uint Offset,
+                        typename ELFT::uint Addend, RelExpr Expr) {
+  if (Expr == R_MIPS_TLSLD) {
+    if (Out<ELFT>::Got->addTlsIndex())
+      Out<ELFT>::RelaDyn->addReloc({Target->TlsModuleIndexRel, Out<ELFT>::Got,
+                                    Out<ELFT>::Got->getTlsIndexOff(), false,
+                                    nullptr, 0});
+    C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+    return 1;
+  }
+  if (Target->isTlsGlobalDynamicRel(Type)) {
+    if (Out<ELFT>::Got->addDynTlsEntry(Body)) {
+      typedef typename ELFT::uint uintX_t;
+      uintX_t Off = Out<ELFT>::Got->getGlobalDynOffset(Body);
+      Out<ELFT>::RelaDyn->addReloc(
+          {Target->TlsModuleIndexRel, Out<ELFT>::Got, Off, false, &Body, 0});
+      Out<ELFT>::RelaDyn->addReloc({Target->TlsOffsetRel, Out<ELFT>::Got,
+                                    Off + (uintX_t)sizeof(uintX_t), false,
+                                    &Body, 0});
+    }
+    C.Relocations.push_back({Expr, Type, &C, Offset, Addend, &Body});
+    return 1;
+  }
+  return 0;
+}
+
 // Returns the number of relocations processed.
 template <class ELFT>
 static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
@@ -94,6 +128,9 @@ static unsigned handleTlsRelocation(uint32_t Type, SymbolBody &Body,
     return 0;
 
   typedef typename ELFT::uint uintX_t;
+
+  if (Config->EMachine == EM_MIPS)
+    return handleMipsTlsRelocation<ELFT>(Type, Body, C, Offset, Addend, Expr);
 
   if ((Expr == R_TLSDESC || Expr == R_TLSDESC_PAGE || Expr == R_HINT) &&
       Config->Shared) {
@@ -254,9 +291,9 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
                                      const SymbolBody &Body) {
   // These expressions always compute a constant
   if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
-      E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF || E == R_GOT_PAGE_PC ||
-      E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC || E == R_TLSGD ||
-      E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE || E == R_HINT)
+      E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF || E == R_MIPS_TLSGD ||
+      E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC ||
+      E == R_TLSGD || E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE || E == R_HINT)
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -603,6 +640,9 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
         // for detailed description:
         // ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
         Out<ELFT>::Got->addMipsEntry(Body, Addend, Expr);
+        if (Body.isTls())
+          AddDyn({Target->TlsGotRel, Out<ELFT>::Got, Body.getGotOffset<ELFT>(),
+                  !Preemptible, &Body, 0});
         continue;
       }
 

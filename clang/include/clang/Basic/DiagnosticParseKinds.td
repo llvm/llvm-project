@@ -512,6 +512,11 @@ def err_function_is_not_record : Error<
   "unexpected %0 in function call; perhaps remove the %0?">;
 def err_super_in_using_declaration : Error<
   "'__super' cannot be used with a using declaration">;
+def ext_constexpr_if : ExtWarn<
+  "constexpr if is a C++1z extension">, InGroup<CXX1z>;
+def warn_cxx14_compat_constexpr_if : Warning<
+  "constexpr if is incompatible with C++ standards before C++1z">,
+  DefaultIgnore, InGroup<CXXPre1zCompat>;
 
 // C++ derived classes
 def err_dup_virtual : Error<"duplicate 'virtual' in base specifier">;

@@ -75,10 +75,12 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "conversion from %0 to %1 in converted constant expression would "
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
-  "%select{case value|enumerator value|non-type template argument|array size}0 "
+  "%select{case value|enumerator value|non-type template argument|"
+  "array size|constexpr if condition}0 "
   "is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
-  "%select{case value|enumerator value|non-type template argument|array size}0 "
+  "%select{case value|enumerator value|non-type template argument|"
+  "array size|constexpr if condition}0 "
   "%select{cannot be narrowed from type %2 to %3|"
   "evaluates to %2, which cannot be narrowed to type %3}1">,
   InGroup<CXX11Narrowing>, DefaultError, SFINAEFailure;
@@ -4711,6 +4713,8 @@ def note_protected_by_vla_typedef : Note<
   "jump bypasses initialization of VLA typedef">;
 def note_protected_by_vla_type_alias : Note<
   "jump bypasses initialization of VLA type alias">;
+def note_protected_by_constexpr_if : Note<
+  "jump enters controlled statement of constexpr if">;
 def note_protected_by_vla : Note<
   "jump bypasses initialization of variable length array">;
 def note_protected_by_objc_try : Note<

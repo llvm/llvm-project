@@ -178,8 +178,14 @@ static void addAddDiscriminatorsPass(const PassManagerBuilder &Builder,
   PM.add(createAddDiscriminatorsPass());
 }
 
-static void addInstructionCombiningPass(const PassManagerBuilder &Builder,
-                                        legacy::PassManagerBase &PM) {
+static void addCleanupPassesForSampleProfiler(
+    const PassManagerBuilder &Builder, legacy::PassManagerBase &PM) {
+  // instcombine is needed before sample profile annotation because it converts
+  // certain function calls to be inlinable. simplifycfg and sroa are needed
+  // before instcombine for necessary preparation. E.g. load store is eliminated
+  // properly so that instcombine will not introduce unecessary liverange.
+  PM.add(createCFGSimplificationPass());
+  PM.add(createSROAPass());
   PM.add(createInstructionCombiningPass());
 }
 
@@ -492,7 +498,7 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
     MPM->add(createPruneEHPass());
     MPM->add(createSampleProfileLoaderPass(CodeGenOpts.SampleProfileFile));
     PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
-                           addInstructionCombiningPass);
+                           addCleanupPassesForSampleProfiler);
   }
 
   PMBuilder.populateFunctionPassManager(*FPM);

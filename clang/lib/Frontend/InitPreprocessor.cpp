@@ -873,10 +873,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   if (unsigned PICLevel = LangOpts.PICLevel) {
     Builder.defineMacro("__PIC__", Twine(PICLevel));
     Builder.defineMacro("__pic__", Twine(PICLevel));
-  }
-  if (unsigned PIELevel = LangOpts.PIELevel) {
-    Builder.defineMacro("__PIE__", Twine(PIELevel));
-    Builder.defineMacro("__pie__", Twine(PIELevel));
+    if (LangOpts.PIE) {
+      Builder.defineMacro("__PIE__", Twine(PICLevel));
+      Builder.defineMacro("__pie__", Twine(PICLevel));
+    }
   }
 
   // Macros to control C99 numerics and <float.h>

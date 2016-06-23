@@ -763,10 +763,11 @@ void MSAsmStmt::initialize(const ASTContext &C, StringRef asmstr,
                  });
 }
 
-IfStmt::IfStmt(const ASTContext &C, SourceLocation IL, VarDecl *var, Expr *cond,
-               Stmt *then, SourceLocation EL, Stmt *elsev)
-  : Stmt(IfStmtClass), IfLoc(IL), ElseLoc(EL)
-{
+IfStmt::IfStmt(const ASTContext &C, SourceLocation IL, bool IsConstexpr,
+               VarDecl *var, Expr *cond, Stmt *then, SourceLocation EL,
+               Stmt *elsev)
+    : Stmt(IfStmtClass), IfLoc(IL), ElseLoc(EL) {
+  setConstexpr(IsConstexpr);
   setConditionVariable(C, var);
   SubExprs[COND] = cond;
   SubExprs[THEN] = then;

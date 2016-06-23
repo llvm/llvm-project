@@ -336,4 +336,4 @@ static llvm::RegisterStandardPasses
 static llvm::RegisterStandardPasses RegisterPollyOptimizerScalarLate(
     llvm::PassManagerBuilder::EP_VectorizerStart,
     registerPollyScalarOptimizerLatePasses);
-}
+} // namespace polly
