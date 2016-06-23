@@ -96,8 +96,7 @@ public:
 
   virtual void finalize() {}
   virtual void finalizePieces() {}
-  virtual void
-  forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) {}
+  virtual void assignOffsets() {}
   virtual void writeTo(uint8_t *Buf) {}
   virtual ~OutputSectionBase() = default;
 
@@ -197,21 +196,35 @@ private:
   std::vector<std::pair<const SymbolBody *, unsigned>> Entries;
 };
 
-template <class ELFT> struct DynamicReloc {
+template <class ELFT> class DynamicReloc {
   typedef typename ELFT::uint uintX_t;
+
+public:
+  DynamicReloc(uint32_t Type, const InputSectionBase<ELFT> *InputSec,
+               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
+               uintX_t Addend)
+      : Type(Type), Sym(Sym), InputSec(InputSec), OffsetInSec(OffsetInSec),
+        UseSymVA(UseSymVA), Addend(Addend) {}
+
+  DynamicReloc(uint32_t Type, const OutputSectionBase<ELFT> *OutputSec,
+               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
+               uintX_t Addend)
+      : Type(Type), Sym(Sym), OutputSec(OutputSec), OffsetInSec(OffsetInSec),
+        UseSymVA(UseSymVA), Addend(Addend) {}
+
+  uintX_t getOffset() const;
+  uintX_t getAddend() const;
+  uint32_t getSymIndex() const;
+
   uint32_t Type;
 
+private:
   SymbolBody *Sym;
-  const OutputSectionBase<ELFT> *OffsetSec;
+  const InputSectionBase<ELFT> *InputSec = nullptr;
+  const OutputSectionBase<ELFT> *OutputSec = nullptr;
   uintX_t OffsetInSec;
   bool UseSymVA;
   uintX_t Addend;
-
-  DynamicReloc(uint32_t Type, const OutputSectionBase<ELFT> *OffsetSec,
-               uintX_t OffsetInSec, bool UseSymVA, SymbolBody *Sym,
-               uintX_t Addend)
-      : Type(Type), Sym(Sym), OffsetSec(OffsetSec), OffsetInSec(OffsetInSec),
-        UseSymVA(UseSymVA), Addend(Addend) {}
 };
 
 template <class ELFT>
@@ -343,8 +356,7 @@ public:
   void sortCtorsDtors();
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
-  void
-  forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
+  void assignOffsets() override;
   std::vector<InputSection<ELFT> *> Sections;
 };
 
@@ -385,8 +397,6 @@ public:
   void writeTo(uint8_t *Buf) override;
   void finalize() override;
   bool empty() const { return Sections.empty(); }
-  void
-  forEachInputSection(std::function<void(InputSectionBase<ELFT> *)> F) override;
 
   void addSection(InputSectionBase<ELFT> *S) override;
 

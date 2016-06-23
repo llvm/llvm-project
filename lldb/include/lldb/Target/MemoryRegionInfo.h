@@ -122,6 +122,21 @@ namespace lldb_private
             m_execute = (permissions & lldb::ePermissionsExecutable) ? eYes : eNo;
         }
 
+        bool
+        operator == (const MemoryRegionInfo &rhs) const
+        {
+            return m_range == rhs.m_range &&
+                   m_read == rhs.m_read &&
+                   m_write == rhs.m_write &&
+                   m_execute == rhs.m_execute;
+        }
+        
+        bool
+        operator != (const MemoryRegionInfo &rhs) const
+        {
+            return !(*this == rhs);
+        }
+        
     protected:
         RangeType m_range;
         OptionalBool m_read;

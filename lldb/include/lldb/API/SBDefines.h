@@ -59,6 +59,8 @@ class LLDB_API SBLanguageRuntime;
 class LLDB_API SBLaunchInfo;
 class LLDB_API SBLineEntry;
 class LLDB_API SBListener;
+class LLDB_API SBMemoryRegionInfo;
+class LLDB_API SBMemoryRegionInfoList;
 class LLDB_API SBModule;
 class LLDB_API SBModuleSpec;
 class LLDB_API SBModuleSpecList;

@@ -417,6 +417,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseVersionScript(*Buffer);
   }
+
+  for (auto *Arg : Args.filtered(OPT_trace_symbol))
+    Config->TraceSymbol.insert(Arg->getValue());
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
@@ -499,6 +502,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanShlibUndefined();
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
+  Symtab.traceDefined();
 
   Symtab.addCombinedLtoObject();
   if (HasError)

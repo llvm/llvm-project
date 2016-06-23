@@ -142,6 +142,8 @@ def threads: F<"threads">, HelpText<"Enable use of threads">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;
 
+def trace_symbol : J<"trace-symbol=">, HelpText<"Trace references to symbols">;
+
 def undefined: J<"undefined=">,
   HelpText<"Force undefined symbol during linking">;
 
@@ -194,6 +196,7 @@ def alias_soname_soname: S<"soname">, Alias<soname>;
 def alias_strip_all: F<"s">, Alias<strip_all>;
 def alias_strip_debug_S: F<"S">, Alias<strip_debug>;
 def alias_trace: F<"t">, Alias<trace>;
+def alias_trace_symbol_y : JS<"y">, Alias<trace_symbol>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_wrap_wrap: J<"wrap=">, Alias<wrap>;
 

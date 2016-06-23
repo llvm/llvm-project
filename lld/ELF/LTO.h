@@ -47,6 +47,7 @@ private:
   llvm::IRMover Mover;
   std::vector<SmallString<0>> OwningData;
   llvm::StringSet<> InternalizedSyms;
+  llvm::StringSet<> AsmUndefinedRefs;
   std::string TheTriple;
 };
 }

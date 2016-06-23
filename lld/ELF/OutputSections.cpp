@@ -351,13 +351,11 @@ template <class ELFT> void RelocationSection<ELFT>::writeTo(uint8_t *Buf) {
   for (const DynamicReloc<ELFT> &Rel : Relocs) {
     auto *P = reinterpret_cast<Elf_Rela *>(Buf);
     Buf += Config->Rela ? sizeof(Elf_Rela) : sizeof(Elf_Rel);
-    SymbolBody *Sym = Rel.Sym;
 
     if (Config->Rela)
-      P->r_addend = Rel.UseSymVA ? Sym->getVA<ELFT>(Rel.Addend) : Rel.Addend;
-    P->r_offset = Rel.OffsetInSec + Rel.OffsetSec->getVA();
-    uint32_t SymIdx = (!Rel.UseSymVA && Sym) ? Sym->DynsymIndex : 0;
-    P->setSymbolAndType(SymIdx, Rel.Type, Config->Mips64EL);
+      P->r_addend = Rel.getAddend();
+    P->r_offset = Rel.getOffset();
+    P->setSymbolAndType(Rel.getSymIndex(), Rel.Type, Config->Mips64EL);
   }
 
   if (Sort) {
@@ -836,11 +834,16 @@ static int getPriority(StringRef S) {
   return V;
 }
 
-template <class ELFT>
-void OutputSection<ELFT>::forEachInputSection(
-    std::function<void(InputSectionBase<ELFT> *)> F) {
-  for (InputSection<ELFT> *S : Sections)
-    F(S);
+// This function is called after we sort input sections
+// and scan relocations to setup sections' offsets.
+template <class ELFT> void OutputSection<ELFT>::assignOffsets() {
+  uintX_t Off = this->Header.sh_size;
+  for (InputSection<ELFT> *S : Sections) {
+    Off = alignTo(Off, S->Alignment);
+    S->OutSecOff = Off;
+    Off += S->getSize();
+  }
+  this->Header.sh_size = Off;
 }
 
 // Sorts input sections by section name suffixes, so that .foo.N comes
@@ -946,13 +949,6 @@ template <class ELFT> void OutputSection<ELFT>::writeTo(uint8_t *Buf) {
 template <class ELFT>
 EhOutputSection<ELFT>::EhOutputSection()
     : OutputSectionBase<ELFT>(".eh_frame", SHT_PROGBITS, SHF_ALLOC) {}
-
-template <class ELFT>
-void EhOutputSection<ELFT>::forEachInputSection(
-    std::function<void(InputSectionBase<ELFT> *)> F) {
-  for (EhInputSection<ELFT> *S : Sections)
-    F(S);
-}
 
 // Returns the first relocation that points to a region
 // between Begin and Begin+Size.
@@ -1266,6 +1262,26 @@ template <class ELFT> void StringTableSection<ELFT>::writeTo(uint8_t *Buf) {
     memcpy(Buf, S.data(), S.size());
     Buf += S.size() + 1;
   }
+}
+
+template <class ELFT>
+typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
+  if (OutputSec)
+    return OutputSec->getVA() + OffsetInSec;
+  return InputSec->OutSec->getVA() + InputSec->getOffset(OffsetInSec);
+}
+
+template <class ELFT>
+typename ELFT::uint DynamicReloc<ELFT>::getAddend() const {
+  if (UseSymVA)
+    return Sym->getVA<ELFT>(Addend);
+  return Addend;
+}
+
+template <class ELFT> uint32_t DynamicReloc<ELFT>::getSymIndex() const {
+  if (Sym && !UseSymVA)
+    return Sym->DynsymIndex;
+  return 0;
 }
 
 template <class ELFT>

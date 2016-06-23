@@ -60,9 +60,10 @@ enum RelExpr {
   R_TLSLD_PC
 };
 
-struct Relocation {
+template <class ELFT> struct Relocation {
   RelExpr Expr;
   uint32_t Type;
+  InputSectionBase<ELFT> *InputSec;
   uint64_t Offset;
   uint64_t Addend;
   SymbolBody *Sym;
