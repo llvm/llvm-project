@@ -16,6 +16,7 @@
 #if MAIN_FILE
 
 #include <dlfcn.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 extern char buffer2[1];
@@ -31,12 +32,16 @@ int main(int argc, char *argv[]) {
     // ASAN-CHECK-2: {{0x.* is located 1 bytes .* 'buffer2'}}
   } else if (n == 3) {
     void *handle = dlopen(DYNAMICLIB, RTLD_NOW);
-    if (!handle)
+    if (!handle) {
+      fprintf(stderr, "dlopen: %s\n", dlerror());
       return 1;
+    }
     
     char *buffer = (char *)dlsym(handle, "buffer3");
-    if (!buffer)
+    if (!buffer) {
+      fprintf(stderr, "dlsym: %s\n", dlerror());
       return 1;
+    }
     
     buffer[argc] = 0;
     // ASAN-CHECK-3: {{0x.* is located 1 bytes .* 'buffer3'}}
