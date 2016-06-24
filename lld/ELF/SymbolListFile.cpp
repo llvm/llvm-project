@@ -90,7 +90,7 @@ void VersionScriptParser::parseVersion(StringRef Version) {
   }
   if (peek() == "local:")
     parseLocal();
-  else
+  else if (peek() != "}")
     parseVersionSymbols(Version);
 
   expect("}");

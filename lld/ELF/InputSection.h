@@ -41,6 +41,9 @@ protected:
   // The file this section is from.
   ObjectFile<ELFT> *File;
 
+  // If a section is compressed, this vector has uncompressed section data.
+  SmallVector<char, 0> Uncompressed;
+
 public:
   enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions };
   Kind SectionKind;
@@ -78,8 +81,12 @@ public:
 
   ArrayRef<uint8_t> getSectionData() const;
 
+  void uncompress();
+
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
   std::vector<Relocation<ELFT>> Relocations;
+
+  bool Compressed;
 };
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;

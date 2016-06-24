@@ -569,3 +569,7 @@ void testBOComma() {
 
 }
 
+void testVolatile() {
+    volatile int v;
+    v = 0; // no warning
+}

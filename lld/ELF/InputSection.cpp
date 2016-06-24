@@ -15,6 +15,7 @@
 #include "OutputSections.h"
 #include "Target.h"
 
+#include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
@@ -29,7 +30,8 @@ template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Header,
                                          Kind SectionKind)
-    : Header(Header), File(File), SectionKind(SectionKind), Repl(this) {
+    : Header(Header), File(File), SectionKind(SectionKind), Repl(this),
+      Compressed(Header->sh_flags & SHF_COMPRESSED) {
   // The garbage collector sets sections' Live bits.
   // If GC is disabled, all sections are considered live by default.
   Live = !Config->GcSections;
@@ -52,6 +54,9 @@ template <class ELFT> StringRef InputSectionBase<ELFT>::getSectionName() const {
 
 template <class ELFT>
 ArrayRef<uint8_t> InputSectionBase<ELFT>::getSectionData() const {
+  if (Compressed)
+    return ArrayRef<uint8_t>((const uint8_t *)Uncompressed.data(),
+                             Uncompressed.size());
   return check(this->File->getObj().getSectionContents(this->Header));
 }
 
@@ -76,6 +81,27 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
     return this->OutSec->getVA();
   }
   llvm_unreachable("invalid section kind");
+}
+
+template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
+  typedef typename std::conditional<ELFT::Is64Bits, Elf64_Chdr,
+                                    Elf32_Chdr>::type Elf_Chdr;
+  const endianness E = ELFT::TargetEndianness;
+
+  if (!zlib::isAvailable())
+    fatal("build lld with zlib to enable compressed sections support");
+
+  ArrayRef<uint8_t> Data =
+      check(this->File->getObj().getSectionContents(this->Header));
+  if (read32<E>(Data.data()) != ELFCOMPRESS_ZLIB)
+    fatal("unsupported elf compression type");
+
+  size_t UncompressedSize =
+      reinterpret_cast<const Elf_Chdr *>(Data.data())->ch_size;
+  size_t HdrSize = sizeof(Elf_Chdr);
+  StringRef Buf((const char *)Data.data() + HdrSize, Data.size() - HdrSize);
+  if (zlib::uncompress(Buf, Uncompressed, UncompressedSize) != zlib::StatusOK)
+    fatal("error uncompressing section");
 }
 
 template <class ELFT>
