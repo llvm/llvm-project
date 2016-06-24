@@ -3293,6 +3293,23 @@ ClangASTContext::IsIntegerType (lldb::opaque_compiler_type_t type, bool &is_sign
 }
 
 bool
+ClangASTContext::IsEnumerationType(lldb::opaque_compiler_type_t type, bool &is_signed)
+{
+    if (type)
+    {
+        const clang::EnumType *enum_type = llvm::dyn_cast<clang::EnumType>(GetCanonicalQualType(type)->getCanonicalTypeInternal());
+
+        if (enum_type)
+        {
+            IsIntegerType(enum_type->getDecl()->getIntegerType().getAsOpaquePtr(), is_signed);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool
 ClangASTContext::IsPointerType (lldb::opaque_compiler_type_t type, CompilerType *pointee_type)
 {
     if (type)
@@ -3615,6 +3632,14 @@ ClangASTContext::IsPossibleDynamicType (lldb::opaque_compiler_type_t type, Compi
             case clang::Type::ObjCObjectPointer:
                 if (check_objc)
                 {
+                    if (auto objc_pointee_type = qual_type->getPointeeType().getTypePtrOrNull())
+                    {
+                        if (auto objc_object_type = llvm::dyn_cast_or_null<clang::ObjCObjectType>(objc_pointee_type))
+                        {
+                            if (objc_object_type->isObjCClass())
+                                return false;
+                        }
+                    }
                     if (dynamic_pointee_type)
                         dynamic_pointee_type->SetCompilerType(getASTContext(), llvm::cast<clang::ObjCObjectPointerType>(qual_type)->getPointeeType());
                     return true;

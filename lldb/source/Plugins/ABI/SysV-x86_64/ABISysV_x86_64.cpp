@@ -432,7 +432,7 @@ ABISysV_x86_64::GetArgumentValues (Thread &thread,
             return false;
         bool is_signed;
         
-        if (compiler_type.IsIntegerType (is_signed))
+        if (compiler_type.IsIntegerOrEnumerationType (is_signed))
         {
             ReadIntegerArgument(value->GetScalar(),
                                 compiler_type.GetBitSize(&thread),
@@ -483,7 +483,7 @@ ABISysV_x86_64::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueOb
     RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
     bool set_it_simple = false;
-    if (compiler_type.IsIntegerType (is_signed) || compiler_type.IsPointerType())
+    if (compiler_type.IsIntegerOrEnumerationType (is_signed) || compiler_type.IsPointerType())
     {
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("rax", 0);
 
@@ -844,7 +844,7 @@ ABISysV_x86_64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                 DataExtractor *copy_from_extractor = nullptr;
                 uint32_t       copy_from_offset    = 0;
                 
-                if (field_compiler_type.IsIntegerType (is_signed) || field_compiler_type.IsPointerType ())
+                if (field_compiler_type.IsIntegerOrEnumerationType (is_signed) || field_compiler_type.IsPointerType ())
                 {
                     if (integer_bytes < 8)
                     {
@@ -914,7 +914,7 @@ ABISysV_x86_64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                                                                                                         &next_field_bit_offset,
                                                                                                         nullptr,
                                                                                                         nullptr);
-                                if (next_field_compiler_type.IsIntegerType (is_signed))
+                                if (next_field_compiler_type.IsIntegerOrEnumerationType (is_signed))
                                     in_gpr = true;
                                 else
                                 {
@@ -937,7 +937,7 @@ ABISysV_x86_64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                                                                                                         &prev_field_bit_offset,
                                                                                                         nullptr,
                                                                                                         nullptr);
-                                if (prev_field_compiler_type.IsIntegerType (is_signed))
+                                if (prev_field_compiler_type.IsIntegerOrEnumerationType (is_signed))
                                     in_gpr = true;
                                 else
                                 {

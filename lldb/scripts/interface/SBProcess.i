@@ -401,6 +401,12 @@ public:
     lldb::SBError
     SaveCore(const char *file_name);
 
+    lldb::SBError
+    GetMemoryRegionInfo(lldb::addr_t load_addr, lldb::SBMemoryRegionInfo &region_info);
+
+    lldb::SBMemoryRegionInfoList
+    GetMemoryRegions();
+
     %pythoncode %{
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''

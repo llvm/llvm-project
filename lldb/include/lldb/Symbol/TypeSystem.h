@@ -208,7 +208,14 @@ public:
     
     virtual bool
     IsIntegerType (lldb::opaque_compiler_type_t type, bool &is_signed) = 0;
-    
+
+    virtual bool
+    IsEnumerationType (lldb::opaque_compiler_type_t type, bool &is_signed)
+    {
+        is_signed = false;
+        return false;
+    }
+
     virtual bool
     IsPossibleDynamicType (lldb::opaque_compiler_type_t type,
                            CompilerType *target_type, // Can pass NULL

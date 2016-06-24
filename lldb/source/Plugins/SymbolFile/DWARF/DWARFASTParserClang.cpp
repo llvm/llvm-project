@@ -1995,8 +1995,7 @@ DWARFASTParserClang::ParseTemplateDIE (const DWARFDIE &die,
         {
             DWARFAttributes attributes;
             const size_t num_attributes = die.GetAttributes (attributes);
-            const char *name = NULL;
-            Type *lldb_type = NULL;
+            const char *name = nullptr;
             CompilerType clang_type;
             uint64_t uval64 = 0;
             bool uval64_valid = false;
@@ -2017,7 +2016,7 @@ DWARFASTParserClang::ParseTemplateDIE (const DWARFDIE &die,
                         case DW_AT_type:
                             if (attributes.ExtractFormValueAtIndex(i, form_value))
                             {
-                                lldb_type = die.ResolveTypeUID(DIERef(form_value));
+                                Type *lldb_type = die.ResolveTypeUID(DIERef(form_value));
                                 if (lldb_type)
                                     clang_type = lldb_type->GetForwardCompilerType ();
                             }
@@ -2047,12 +2046,12 @@ DWARFASTParserClang::ParseTemplateDIE (const DWARFDIE &die,
                     else
                         template_param_infos.names.push_back(NULL);
 
-                    if (tag == DW_TAG_template_value_parameter &&
-                        lldb_type != NULL &&
-                        clang_type.IsIntegerType (is_signed) &&
-                        uval64_valid)
+                    // Get the signed value for any integer or enumeration if available
+                    clang_type.IsIntegerOrEnumerationType (is_signed);
+
+                    if (tag == DW_TAG_template_value_parameter && uval64_valid)
                     {
-                        llvm::APInt apint (lldb_type->GetByteSize() * 8, uval64, is_signed);
+                        llvm::APInt apint (clang_type.GetBitSize(nullptr), uval64, is_signed);
                         template_param_infos.args.push_back(
                             clang::TemplateArgument(*ast, llvm::APSInt(apint, !is_signed), ClangUtil::GetQualType(clang_type)));
                     }
