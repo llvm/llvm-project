@@ -160,7 +160,7 @@ public:
   bool prepare();
 
   bool runOnMachineFunction(MachineFunction &MF) override {
-    TII = static_cast<const R600InstrInfo *>(MF.getSubtarget().getInstrInfo());
+    TII = MF.getSubtarget<R600Subtarget>().getInstrInfo();
     TRI = &TII->getRegisterInfo();
     DEBUG(MF.dump(););
     OrderedBlks.clear();

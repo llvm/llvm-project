@@ -619,3 +619,42 @@ if:
 else:
   ret void
 }
+
+; Form a switch when or'ing a power of two
+; CHECK-LABEL: define void @test21
+; CHECK: i32 32, label %else
+; CHECK: i32 13, label %else
+; CHECK: i32 12, label %else
+define void @test21(i32 %arg) {
+  %and = or i32 %arg, 1
+  %cmp1 = icmp ne i32 %and, 13
+  %cmp2 = icmp ne i32 %arg, 32
+  %pred = and i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}
+
+; Since %cmp1 is always false, a switch is never formed
+; CHECK-LABEL: define void @test22
+; CHECK-NOT: switch
+; CHECK: ret void
+define void @test22(i32 %arg) {
+  %and = or i32 %arg, 1
+  %cmp1 = icmp ne i32 %and, 12
+  %cmp2 = icmp ne i32 %arg, 32
+  %pred = and i1 %cmp1, %cmp2
+  br i1 %pred, label %if, label %else
+
+if:
+  call void @foo1()
+  ret void
+
+else:
+  ret void
+}

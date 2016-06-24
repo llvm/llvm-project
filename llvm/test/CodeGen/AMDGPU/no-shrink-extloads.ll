@@ -201,3 +201,15 @@ entry:
   store i32 %mask, i32 addrspace(1)* %out
   ret void
 }
+
+; FUNC-LABEL: {{^}}extract_hi_i64_bitcast_v2i32:
+; SI: buffer_load_dword v
+; SI: buffer_store_dword v
+define void @extract_hi_i64_bitcast_v2i32(i32 addrspace(1)* %out, <2 x i32> addrspace(1)* %in) nounwind {
+  %ld = load <2 x i32>, <2 x i32> addrspace(1)* %in
+  %bc = bitcast <2 x i32> %ld to i64
+  %hi = lshr i64 %bc, 32
+  %trunc = trunc i64 %hi to i32
+  store i32 %trunc, i32 addrspace(1)* %out
+  ret void
+}

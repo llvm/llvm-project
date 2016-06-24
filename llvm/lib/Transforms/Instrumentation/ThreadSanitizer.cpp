@@ -326,9 +326,7 @@ void ThreadSanitizer::chooseInstructionsToInstrument(
     const DataLayout &DL) {
   SmallSet<Value*, 8> WriteTargets;
   // Iterate from the end.
-  for (SmallVectorImpl<Instruction*>::reverse_iterator It = Local.rbegin(),
-       E = Local.rend(); It != E; ++It) {
-    Instruction *I = *It;
+  for (Instruction *I : reverse(Local)) {
     if (StoreInst *Store = dyn_cast<StoreInst>(I)) {
       Value *Addr = Store->getPointerOperand();
       if (!shouldInstrumentReadWriteFromAddress(Addr))

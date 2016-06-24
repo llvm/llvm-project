@@ -177,7 +177,7 @@ AMDGPUDAGToDAGISel::AMDGPUDAGToDAGISel(TargetMachine &TM)
     : SelectionDAGISel(TM) {}
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
-  Subtarget = &static_cast<const AMDGPUSubtarget &>(MF.getSubtarget());
+  Subtarget = &MF.getSubtarget<AMDGPUSubtarget>();
   return SelectionDAGISel::runOnMachineFunction(MF);
 }
 

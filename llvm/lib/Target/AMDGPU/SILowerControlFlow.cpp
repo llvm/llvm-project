@@ -590,9 +590,10 @@ bool SILowerControlFlow::indirectDst(MachineInstr &MI) {
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  TRI =
-      static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  TII = ST.getInstrInfo();
+  TRI = &TII->getRegisterInfo();
+
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   bool HaveKill = false;

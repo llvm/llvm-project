@@ -12,7 +12,8 @@
 //===----------------------------------------------------------------------===//
 #include "AMDGPUFrameLowering.h"
 #include "AMDGPURegisterInfo.h"
-#include "R600MachineFunctionInfo.h"
+#include "AMDGPUSubtarget.h"
+
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Instructions.h"
@@ -75,7 +76,8 @@ int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                 int FI,
                                                 unsigned &FrameReg) const {
   const MachineFrameInfo *MFI = MF.getFrameInfo();
-  const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
+  const AMDGPURegisterInfo *RI
+    = MF.getSubtarget<AMDGPUSubtarget>().getRegisterInfo();
 
   // Fill in FrameReg output argument.
   FrameReg = RI->getFrameRegister(MF);
@@ -100,19 +102,3 @@ int AMDGPUFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   return OffsetBytes / (getStackWidth(MF) * 4);
 }
 
-const TargetFrameLowering::SpillSlot *
-AMDGPUFrameLowering::getCalleeSavedSpillSlots(unsigned &NumEntries) const {
-  NumEntries = 0;
-  return nullptr;
-}
-void AMDGPUFrameLowering::emitPrologue(MachineFunction &MF,
-                                       MachineBasicBlock &MBB) const {}
-void
-AMDGPUFrameLowering::emitEpilogue(MachineFunction &MF,
-                                  MachineBasicBlock &MBB) const {
-}
-
-bool
-AMDGPUFrameLowering::hasFP(const MachineFunction &MF) const {
-  return false;
-}

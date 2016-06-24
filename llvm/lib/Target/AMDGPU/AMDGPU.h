@@ -51,6 +51,7 @@ FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSICodeEmitterPass(formatted_raw_ostream &OS);
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
+FunctionPass *createAMDGPUCodeGenPreparePass(const TargetMachine *TM = nullptr);
 
 ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C);
 
@@ -97,6 +98,9 @@ extern char &SIFixControlFlowLiveIntervalsID;
 
 void initializeAMDGPUAnnotateUniformValuesPass(PassRegistry&);
 extern char &AMDGPUAnnotateUniformValuesPassID;
+
+void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
+extern char &AMDGPUCodeGenPrepareID;
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;

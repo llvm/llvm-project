@@ -15,6 +15,7 @@
 #include "SIRegisterInfo.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/RegisterScavenging.h"
@@ -24,8 +25,8 @@
 using namespace llvm;
 
 static unsigned getMaxWaveCountPerSIMD(const MachineFunction &MF) {
-  const SIMachineFunctionInfo& MFI = *MF.getInfo<SIMachineFunctionInfo>();
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const SIMachineFunctionInfo &MFI = *MF.getInfo<SIMachineFunctionInfo>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   unsigned SIMDPerCU = 4;
 
   unsigned MaxInvocationsPerWave = SIMDPerCU * ST.getWavefrontSize();
@@ -34,13 +35,13 @@ static unsigned getMaxWaveCountPerSIMD(const MachineFunction &MF) {
 }
 
 static unsigned getMaxWorkGroupSGPRCount(const MachineFunction &MF) {
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   unsigned MaxWaveCountPerSIMD = getMaxWaveCountPerSIMD(MF);
 
   unsigned TotalSGPRCountPerSIMD, AddressableSGPRCount, SGPRUsageAlignment;
   unsigned ReservedSGPRCount;
 
-  if (ST.getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+  if (ST.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
     TotalSGPRCountPerSIMD = 800;
     AddressableSGPRCount = 102;
     SGPRUsageAlignment = 16;
@@ -56,7 +57,7 @@ static unsigned getMaxWorkGroupSGPRCount(const MachineFunction &MF) {
   MaxSGPRCount = alignDown(MaxSGPRCount, SGPRUsageAlignment);
 
   if (ST.hasSGPRInitBug())
-    MaxSGPRCount = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+    MaxSGPRCount = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
 
   return std::min(MaxSGPRCount - ReservedSGPRCount, AddressableSGPRCount);
 }
@@ -195,7 +196,7 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
   // Reserve registers for debugger usage if "amdgpu-debugger-reserve-trap-regs"
   // attribute was specified.
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   if (ST.debuggerReserveRegs()) {
     unsigned ReservedVGPRFirst =
       MaxWorkGroupVGPRCount - MFI->getDebuggerReservedVGPRCount();
@@ -210,10 +211,9 @@ BitVector SIRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 
 unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
                                                 unsigned Idx) const {
-  const AMDGPUSubtarget &STI = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &STI = MF.getSubtarget<SISubtarget>();
   // FIXME: We should adjust the max number of waves based on LDS size.
-  unsigned SGPRLimit = getNumSGPRsAllowed(STI.getGeneration(),
-                                          STI.getMaxWavesPerCU());
+  unsigned SGPRLimit = getNumSGPRsAllowed(STI, STI.getMaxWavesPerCU());
   unsigned VGPRLimit = getNumVGPRsAllowed(STI.getMaxWavesPerCU());
 
   unsigned VSLimit = SGPRLimit + VGPRLimit;
@@ -274,8 +274,8 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
     DL = Ins->getDebugLoc();
 
   MachineFunction *MF = MBB->getParent();
-  const AMDGPUSubtarget &Subtarget = MF->getSubtarget<AMDGPUSubtarget>();
-  const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  const SISubtarget &Subtarget = MF->getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = Subtarget.getInstrInfo();
 
   if (Offset == 0) {
     BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::V_MOV_B32_e32), BaseReg)
@@ -297,9 +297,8 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
 
   MachineBasicBlock *MBB = MI.getParent();
   MachineFunction *MF = MBB->getParent();
-  const AMDGPUSubtarget &Subtarget = MF->getSubtarget<AMDGPUSubtarget>();
-  const SIInstrInfo *TII
-    = static_cast<const SIInstrInfo *>(Subtarget.getInstrInfo());
+  const SISubtarget &Subtarget = MF->getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = Subtarget.getInstrInfo();
 
 #ifndef NDEBUG
   // FIXME: Is it possible to be storing a frame index to itself?
@@ -409,10 +408,11 @@ void SIRegisterInfo::buildScratchLoadStore(MachineBasicBlock::iterator MI,
   bool IsKill = SrcDst->isKill();
   MachineBasicBlock *MBB = MI->getParent();
   MachineFunction *MF = MI->getParent()->getParent();
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  const SISubtarget &ST =  MF->getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
   DebugLoc DL = MI->getDebugLoc();
-  bool IsStore = TII->get(LoadStoreOp).mayStore();
+  bool IsStore = MI->mayStore();
 
   bool RanOutOfSGPRs = false;
   bool Scavenged = false;
@@ -489,8 +489,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   MachineBasicBlock *MBB = MI->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo *FrameInfo = MF->getFrameInfo();
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(MF->getSubtarget().getInstrInfo());
+  const SISubtarget &ST =  MF->getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
   DebugLoc DL = MI->getDebugLoc();
 
   MachineOperand &FIOp = MI->getOperand(FIOperandNum);
@@ -660,10 +660,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
       }
     }
   }
-}
-
-unsigned SIRegisterInfo::getHWRegIndex(unsigned Reg) const {
-  return getEncodingValue(Reg) & 0xff;
 }
 
 // FIXME: This is very slow. It might be worth creating a map from physreg to
@@ -900,7 +896,7 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
                                            enum PreloadedValue Value) const {
 
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   (void)ST;
   switch (Value) {
   case SIRegisterInfo::WORKGROUP_ID_X:
@@ -971,9 +967,9 @@ unsigned SIRegisterInfo::getNumVGPRsAllowed(unsigned WaveCount) const {
   }
 }
 
-unsigned SIRegisterInfo::getNumSGPRsAllowed(AMDGPUSubtarget::Generation gen,
+unsigned SIRegisterInfo::getNumSGPRsAllowed(const SISubtarget &ST,
                                             unsigned WaveCount) const {
-  if (gen >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+  if (ST.getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
     switch (WaveCount) {
       case 10: return 80;
       case 9:  return 80;

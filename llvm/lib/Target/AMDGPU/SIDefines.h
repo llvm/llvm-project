@@ -48,7 +48,7 @@ namespace llvm {
 namespace AMDGPU {
   enum OperandType {
     /// Operand with register or 32-bit immediate
-    OPERAND_REG_IMM32 = llvm::MCOI::OPERAND_FIRST_TARGET,
+    OPERAND_REG_IMM32 = MCOI::OPERAND_FIRST_TARGET,
     /// Operand with register or inline constant
     OPERAND_REG_INLINE_C
   };

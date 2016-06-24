@@ -32,13 +32,18 @@ public:
   /// \returns The number of 32-bit sub-registers that are used when storing
   /// values to the stack.
   unsigned getStackWidth(const MachineFunction &MF) const;
+
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
-  const SpillSlot *
-    getCalleeSavedSpillSlots(unsigned &NumEntries) const override;
-  void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
-  bool hasFP(const MachineFunction &MF) const override;
+
+  const SpillSlot *getCalleeSavedSpillSlots(unsigned &NumEntries) const override {
+    NumEntries = 0;
+    return nullptr;
+  }
+
+  bool hasFP(const MachineFunction &MF) const override {
+    return false;
+  }
 };
 } // namespace llvm
 #endif

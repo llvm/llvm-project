@@ -9951,10 +9951,8 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
 ///
 /// \returns N above, or the number of times even elements must be dropped if
 /// there is such a number. Otherwise returns zero.
-static int canLowerByDroppingEvenElements(ArrayRef<int> Mask) {
-  // Figure out whether we're looping over two inputs or just one.
-  bool IsSingleInput = isSingleInputShuffleMask(Mask);
-
+static int canLowerByDroppingEvenElements(ArrayRef<int> Mask,
+                                          bool IsSingleInput) {
   // The modulus for the shuffle vector entries is based on whether this is
   // a single input or not.
   int ShuffleModulus = Mask.size() * (IsSingleInput ? 1 : 2);
@@ -10204,11 +10202,11 @@ static SDValue lowerV16I8VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
   // We special case these as they can be particularly efficiently handled with
   // the PACKUSB instruction on x86 and they show up in common patterns of
   // rearranging bytes to truncate wide elements.
-  if (int NumEvenDrops = canLowerByDroppingEvenElements(Mask)) {
+  bool IsSingleInput = isSingleInputShuffleMask(Mask);
+  if (int NumEvenDrops = canLowerByDroppingEvenElements(Mask, IsSingleInput)) {
     // NumEvenDrops is the power of two stride of the elements. Another way of
     // thinking about it is that we need to drop the even elements this many
     // times to get the original input.
-    bool IsSingleInput = isSingleInputShuffleMask(Mask);
 
     // First we need to zero all the dropped bytes.
     assert(NumEvenDrops <= 3 &&
@@ -24004,7 +24002,7 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
     // 'implicit defined' so that they're spilled.  This prevents code from
     // moving instructions to before the EH block, where they will never be
     // executed.
-    for (auto &II : make_range(MBB->rbegin(), MBB->rend())) {
+    for (auto &II : reverse(*MBB)) {
       if (!II.isCall())
         continue;
 

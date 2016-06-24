@@ -87,7 +87,7 @@ protected:
   /// IsUsed - True if this symbol has been used.
   mutable unsigned IsUsed : 1;
 
-  mutable bool IsRegistered : 1;
+  mutable unsigned IsRegistered : 1;
 
   /// This symbol is visible outside this translation unit.
   mutable unsigned IsExternal : 1;

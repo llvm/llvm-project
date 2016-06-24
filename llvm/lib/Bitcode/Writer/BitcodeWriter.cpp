@@ -3271,9 +3271,6 @@ static const uint64_t INDEX_VERSION = 1;
 /// Emit the per-module summary section alongside the rest of
 /// the module's bitcode.
 void ModuleBitcodeWriter::writePerModuleGlobalValueSummary() {
-  if (M.empty())
-    return;
-
   if (Index->begin() == Index->end())
     return;
 

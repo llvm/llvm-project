@@ -246,7 +246,7 @@ void Float2Int::walkBackwards(const SmallPtrSetImpl<Instruction*> &Roots) {
 // Walk forwards down the list of seen instructions, so we visit defs before
 // uses.
 void Float2Int::walkForwards() {
-  for (auto &It : make_range(SeenInsts.rbegin(), SeenInsts.rend())) {
+  for (auto &It : reverse(SeenInsts)) {
     if (It.second != unknownRange())
       continue;
 
@@ -511,7 +511,7 @@ Value *Float2Int::convert(Instruction *I, Type *ToTy) {
 
 // Perform dead code elimination on the instructions we just modified.
 void Float2Int::cleanup() {
-  for (auto &I : make_range(ConvertedInsts.rbegin(), ConvertedInsts.rend()))
+  for (auto &I : reverse(ConvertedInsts))
     I.first->eraseFromParent();
 }
 

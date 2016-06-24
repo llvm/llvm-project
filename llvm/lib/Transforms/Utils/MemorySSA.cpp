@@ -469,10 +469,9 @@ MemoryAccess *MemorySSA::findDominatingDef(BasicBlock *UseBlock,
     auto It = PerBlockAccesses.find(CurrNode->getBlock());
     if (It != PerBlockAccesses.end()) {
       auto &Accesses = It->second;
-      for (auto RAI = Accesses->rbegin(), RAE = Accesses->rend(); RAI != RAE;
-           ++RAI) {
-        if (isa<MemoryDef>(*RAI) || isa<MemoryPhi>(*RAI))
-          return &*RAI;
+      for (MemoryAccess &RA : reverse(*Accesses)) {
+        if (isa<MemoryDef>(RA) || isa<MemoryPhi>(RA))
+          return &RA;
       }
     }
     CurrNode = CurrNode->getIDom();

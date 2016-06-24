@@ -171,7 +171,7 @@ public:
 
   struct LiveOutInfo {
     unsigned NumSignBits : 31;
-    bool IsValid : 1;
+    unsigned IsValid : 1;
     APInt KnownOne, KnownZero;
     LiveOutInfo() : NumSignBits(0), IsValid(true), KnownOne(1, 0),
                     KnownZero(1, 0) {}

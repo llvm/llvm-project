@@ -55,6 +55,7 @@ typedef std::pair<unsigned, unsigned> RegInterval;
 class SIInsertWaits : public MachineFunctionPass {
 
 private:
+  const SISubtarget *ST;
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   const MachineRegisterInfo *MRI;
@@ -136,6 +137,7 @@ public:
 
   SIInsertWaits() :
     MachineFunctionPass(ID),
+    ST(nullptr),
     TII(nullptr),
     TRI(nullptr),
     ExpInstrTypesSeen(0),
@@ -303,8 +305,7 @@ void SIInsertWaits::pushInstruction(MachineBasicBlock &MBB,
     return;
   }
 
-  if (MBB.getParent()->getSubtarget<AMDGPUSubtarget>().getGeneration() >=
-      AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+  if (ST->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS) {
     // Any occurrence of consecutive VMEM or SMEM instructions forms a VMEM
     // or SMEM clause, respectively.
     //
@@ -486,8 +487,7 @@ Counters SIInsertWaits::handleOperands(MachineInstr &MI) {
 
 void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
                                   MachineBasicBlock::iterator I) {
-  if (MBB.getParent()->getSubtarget<AMDGPUSubtarget>().getGeneration() <
-      AMDGPUSubtarget::VOLCANIC_ISLANDS)
+  if (ST->getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
     return;
 
   // There must be "S_NOP 0" between an instruction writing M0 and S_SENDMSG.
@@ -514,11 +514,9 @@ void SIInsertWaits::handleSendMsg(MachineBasicBlock &MBB,
 bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
   bool Changes = false;
 
-  TII = static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  TRI =
-      static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
-
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  ST = &MF.getSubtarget<SISubtarget>();
+  TII = ST->getInstrInfo();
+  TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
   WaitedOn = ZeroCounts;
@@ -540,7 +538,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
          I != E; ++I) {
 
-      if (ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS) {
+      if (ST->getGeneration() <= SISubtarget::SEA_ISLANDS) {
         // There is a hardware bug on CI/SI where SMRD instruction may corrupt
         // vccz bit, so when we detect that an instruction may read from a
         // corrupt vccz bit, we need to:

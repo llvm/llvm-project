@@ -12,16 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #ifndef LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_SIREGISTERINFO_H
 
 #include "AMDGPURegisterInfo.h"
-#include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/Support/Debug.h"
 
 namespace llvm {
+
+class SISubtarget;
+class MachineRegisterInfo;
 
 struct SIRegisterInfo final : public AMDGPURegisterInfo {
 private:
@@ -80,7 +80,9 @@ public:
                            unsigned FIOperandNum,
                            RegScavenger *RS) const override;
 
-  unsigned getHWRegIndex(unsigned Reg) const override;
+  unsigned getHWRegIndex(unsigned Reg) const {
+    return getEncodingValue(Reg) & 0xff;
+  }
 
   /// \brief Return the 'base' register class for this register.
   /// e.g. SGPR0 => SReg_32, VGPR => VGPR_32 SGPR0_SGPR1 -> SReg_32, etc.
@@ -179,8 +181,7 @@ public:
 
   /// \brief Give the maximum number of SGPRs that can be used by \p WaveCount
   ///        concurrent waves.
-  unsigned getNumSGPRsAllowed(AMDGPUSubtarget::Generation gen,
-                              unsigned WaveCount) const;
+  unsigned getNumSGPRsAllowed(const SISubtarget &ST, unsigned WaveCount) const;
 
   unsigned findUnusedRegister(const MachineRegisterInfo &MRI,
                               const TargetRegisterClass *RC) const;

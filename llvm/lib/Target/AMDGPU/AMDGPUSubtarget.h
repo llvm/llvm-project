@@ -16,10 +16,12 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
 #include "AMDGPU.h"
-#include "AMDGPUFrameLowering.h"
-#include "AMDGPUISelLowering.h"
-#include "AMDGPUInstrInfo.h"
-#include "AMDGPUSubtarget.h"
+#include "R600InstrInfo.h"
+#include "R600ISelLowering.h"
+#include "R600FrameLowering.h"
+#include "SIInstrInfo.h"
+#include "SIISelLowering.h"
+#include "SIFrameLowering.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelAccessor.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
@@ -29,11 +31,10 @@
 
 namespace llvm {
 
-class StringRef;
 class SIMachineFunctionInfo;
+class StringRef;
 
 class AMDGPUSubtarget : public AMDGPUGenSubtargetInfo {
-
 public:
   enum Generation {
     R600 = 0,
@@ -46,10 +47,6 @@ public:
   };
 
   enum {
-    FIXED_SGPR_COUNT_FOR_INIT_BUG = 80
-  };
-
-  enum {
     ISAVersion0_0_0,
     ISAVersion7_0_0,
     ISAVersion7_0_1,
@@ -58,113 +55,103 @@ public:
     ISAVersion8_0_3
   };
 
-private:
-  bool DumpCode;
-  bool R600ALUInst;
-  bool HasVertexCache;
-  short TexVTXClauseSize;
+protected:
+  // Basic subtarget description.
+  Triple TargetTriple;
   Generation Gen;
-  bool FP64;
-  bool FP64Denormals;
-  bool FP32Denormals;
-  bool FPExceptions;
+  unsigned IsaVersion;
+  unsigned WavefrontSize;
+  int LocalMemorySize;
+  int LDSBankCount;
+  unsigned MaxPrivateElementSize;
+
+  // Possibly statically set by tablegen, but may want to be overridden.
   bool FastFMAF32;
   bool HalfRate64Ops;
-  bool CaymanISA;
-  bool FlatAddressSpace;
+
+  // Dynamially set bits that enable features.
+  bool FP32Denormals;
+  bool FP64Denormals;
+  bool FPExceptions;
   bool FlatForGlobal;
-  bool EnableIRStructurizer;
+  bool EnableXNACK;
+  bool DebuggerInsertNops;
+  bool DebuggerReserveRegs;
+
+  // Used as options.
+  bool EnableVGPRSpilling;
   bool EnablePromoteAlloca;
   bool EnableIfCvt;
   bool EnableLoadStoreOpt;
   bool EnableUnsafeDSOffsetFolding;
-  bool EnableXNACK;
-  unsigned WavefrontSize;
-  bool CFALUBug;
-  int LocalMemorySize;
-  unsigned MaxPrivateElementSize;
-  bool EnableVGPRSpilling;
-  bool SGPRInitBug;
+  bool EnableSIScheduler;
+  bool DumpCode;
+
+  // Subtarget statically properties set by tablegen
+  bool FP64;
   bool IsGCN;
   bool GCN1Encoding;
   bool GCN3Encoding;
   bool CIInsts;
+  bool SGPRInitBug;
   bool HasSMemRealTime;
   bool Has16BitInsts;
-  bool FeatureDisable;
-  int LDSBankCount;
-  unsigned IsaVersion;
-  bool EnableSIScheduler;
-  bool DebuggerInsertNops;
-  bool DebuggerReserveRegs;
+  bool FlatAddressSpace;
+  bool R600ALUInst;
+  bool CaymanISA;
+  bool CFALUBug;
+  bool HasVertexCache;
+  short TexVTXClauseSize;
 
-  std::unique_ptr<AMDGPUFrameLowering> FrameLowering;
-  std::unique_ptr<AMDGPUTargetLowering> TLInfo;
-  std::unique_ptr<AMDGPUInstrInfo> InstrInfo;
-  std::unique_ptr<GISelAccessor> GISel;
+  // Dummy feature to use for assembler in tablegen.
+  bool FeatureDisable;
+
   InstrItineraryData InstrItins;
-  Triple TargetTriple;
 
 public:
-  AMDGPUSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
-                  TargetMachine &TM);
+  AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
+                  const TargetMachine &TM);
+  virtual ~AMDGPUSubtarget();
   AMDGPUSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
 
-  void setGISelAccessor(GISelAccessor &GISel) {
-    this->GISel.reset(&GISel);
-  }
+  const AMDGPUInstrInfo *getInstrInfo() const override;
+  const AMDGPUFrameLowering *getFrameLowering() const override;
+  const AMDGPUTargetLowering *getTargetLowering() const override;
+  const AMDGPURegisterInfo *getRegisterInfo() const override;
 
-  const AMDGPUFrameLowering *getFrameLowering() const override {
-    return FrameLowering.get();
-  }
-  const AMDGPUInstrInfo *getInstrInfo() const override {
-    return InstrInfo.get();
-  }
-  const AMDGPURegisterInfo *getRegisterInfo() const override {
-    return &InstrInfo->getRegisterInfo();
-  }
-  AMDGPUTargetLowering *getTargetLowering() const override {
-    return TLInfo.get();
-  }
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
   }
 
-  const CallLowering *getCallLowering() const override;
-
   void ParseSubtargetFeatures(StringRef CPU, StringRef FS);
 
-  bool hasVertexCache() const {
-    return HasVertexCache;
-  }
-
-  short getTexVTXClauseSize() const {
-    return TexVTXClauseSize;
+  bool isAmdHsaOS() const {
+    return TargetTriple.getOS() == Triple::AMDHSA;
   }
 
   Generation getGeneration() const {
     return Gen;
   }
 
+  unsigned getWavefrontSize() const {
+    return WavefrontSize;
+  }
+
+  int getLocalMemorySize() const {
+    return LocalMemorySize;
+  }
+
+  int getLDSBankCount() const {
+    return LDSBankCount;
+  }
+
+  unsigned getMaxPrivateElementSize() const {
+    return MaxPrivateElementSize;
+  }
+
   bool hasHWFP64() const {
     return FP64;
-  }
-
-  bool hasCaymanISA() const {
-    return CaymanISA;
-  }
-
-  bool hasFP32Denormals() const {
-    return FP32Denormals;
-  }
-
-  bool hasFP64Denormals() const {
-    return FP64Denormals;
-  }
-
-  bool hasFPExceptions() const {
-    return FPExceptions;
   }
 
   bool hasFastFMAF32() const {
@@ -173,22 +160,6 @@ public:
 
   bool hasHalfRate64Ops() const {
     return HalfRate64Ops;
-  }
-
-  bool hasFlatAddressSpace() const {
-    return FlatAddressSpace;
-  }
-
-  bool hasSMemRealTime() const {
-    return HasSMemRealTime;
-  }
-
-  bool has16BitInsts() const {
-    return Has16BitInsts;
-  }
-
-  bool useFlatForGlobal() const {
-    return FlatForGlobal;
   }
 
   bool hasAddr64() const {
@@ -242,8 +213,8 @@ public:
     return (getGeneration() >= EVERGREEN);
   }
 
-  bool IsIRStructurizerEnabled() const {
-    return EnableIRStructurizer;
+  bool hasCaymanISA() const {
+    return CaymanISA;
   }
 
   bool isPromoteAllocaEnabled() const {
@@ -254,23 +225,12 @@ public:
     return EnableIfCvt;
   }
 
-  bool loadStoreOptEnabled() const {
-    return EnableLoadStoreOpt;
-  }
-
   bool unsafeDSOffsetFoldingEnabled() const {
     return EnableUnsafeDSOffsetFolding;
   }
 
-  unsigned getWavefrontSize() const {
-    return WavefrontSize;
-  }
-
-  unsigned getStackEntrySize() const;
-
-  bool hasCFAluBug() const {
-    assert(getGeneration() <= NORTHERN_ISLANDS);
-    return CFALUBug;
+  bool dumpCode() const {
+    return DumpCode;
   }
 
   /// Return the amount of LDS that can be used that will not restrict the
@@ -282,37 +242,160 @@ public:
   unsigned getOccupancyWithLocalMemSize(uint32_t Bytes) const;
 
 
-  int getLocalMemorySize() const {
-    return LocalMemorySize;
+  bool hasFP32Denormals() const {
+    return FP32Denormals;
   }
 
-  unsigned getMaxPrivateElementSize() const {
-    return MaxPrivateElementSize;
+  bool hasFP64Denormals() const {
+    return FP64Denormals;
   }
 
-  bool hasSGPRInitBug() const {
-    return SGPRInitBug;
+  bool hasFPExceptions() const {
+    return FPExceptions;
   }
 
-  int getLDSBankCount() const {
-    return LDSBankCount;
+  bool useFlatForGlobal() const {
+    return FlatForGlobal;
   }
 
-  unsigned getAmdKernelCodeChipID() const;
+  bool isXNACKEnabled() const {
+    return EnableXNACK;
+  }
 
-  AMDGPU::IsaVersion getIsaVersion() const;
+  unsigned getMaxWavesPerCU() const {
+    if (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS)
+      return 10;
+
+    // FIXME: Not sure what this is for other subtagets.
+    return 8;
+  }
+
+  /// \brief Returns the offset in bytes from the start of the input buffer
+  ///        of the first explicit kernel argument.
+  unsigned getExplicitKernelArgOffset() const {
+    return isAmdHsaOS() ? 0 : 36;
+  }
+
+  unsigned getStackAlignment() const {
+    // Scratch is allocated in 256 dword per wave blocks.
+    return 4 * 256 / getWavefrontSize();
+  }
 
   bool enableMachineScheduler() const override {
     return true;
   }
 
+  bool enableSubRegLiveness() const override {
+    return true;
+  }
+};
+
+class R600Subtarget final : public AMDGPUSubtarget {
+private:
+  R600InstrInfo InstrInfo;
+  R600FrameLowering FrameLowering;
+  R600TargetLowering TLInfo;
+
+public:
+  R600Subtarget(const Triple &TT, StringRef CPU, StringRef FS,
+                const TargetMachine &TM);
+
+  const R600InstrInfo *getInstrInfo() const override {
+    return &InstrInfo;
+  }
+
+  const R600FrameLowering *getFrameLowering() const override {
+    return &FrameLowering;
+  }
+
+  const R600TargetLowering *getTargetLowering() const override {
+    return &TLInfo;
+  }
+
+  const R600RegisterInfo *getRegisterInfo() const override {
+    return &InstrInfo.getRegisterInfo();
+  }
+
+  bool hasCFAluBug() const {
+    return CFALUBug;
+  }
+
+  bool hasVertexCache() const {
+    return HasVertexCache;
+  }
+
+  short getTexVTXClauseSize() const {
+    return TexVTXClauseSize;
+  }
+
+  unsigned getStackEntrySize() const;
+};
+
+class SISubtarget final : public AMDGPUSubtarget {
+public:
+  enum {
+    FIXED_SGPR_COUNT_FOR_INIT_BUG = 80
+  };
+
+private:
+  SIInstrInfo InstrInfo;
+  SIFrameLowering FrameLowering;
+  SITargetLowering TLInfo;
+  std::unique_ptr<GISelAccessor> GISel;
+
+public:
+  SISubtarget(const Triple &TT, StringRef CPU, StringRef FS,
+              const TargetMachine &TM);
+
+  const SIInstrInfo *getInstrInfo() const override {
+    return &InstrInfo;
+  }
+
+  const SIFrameLowering *getFrameLowering() const override {
+    return &FrameLowering;
+  }
+
+  const SITargetLowering *getTargetLowering() const override {
+    return &TLInfo;
+  }
+
+  const CallLowering *getCallLowering() const override {
+    assert(GISel && "Access to GlobalISel APIs not set");
+    return GISel->getCallLowering();
+  }
+
+  const SIRegisterInfo *getRegisterInfo() const override {
+    return &InstrInfo.getRegisterInfo();
+  }
+
+  void setGISelAccessor(GISelAccessor &GISel) {
+    this->GISel.reset(&GISel);
+  }
+
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           MachineInstr *begin, MachineInstr *end,
+                           MachineInstr *Begin, MachineInstr *End,
                            unsigned NumRegionInstrs) const override;
 
-  // Helper functions to simplify if statements
-  bool isTargetELF() const {
-    return false;
+  bool isVGPRSpillingEnabled(const Function& F) const;
+
+  unsigned getAmdKernelCodeChipID() const;
+
+  AMDGPU::IsaVersion getIsaVersion() const;
+
+  unsigned getMaxNumUserSGPRs() const {
+    return 16;
+  }
+
+  bool hasFlatAddressSpace() const {
+    return FlatAddressSpace;
+  }
+
+  bool hasSMemRealTime() const {
+    return HasSMemRealTime;
+  }
+
+  bool has16BitInsts() const {
+    return Has16BitInsts;
   }
 
   bool enableSIScheduler() const {
@@ -327,43 +410,43 @@ public:
     return DebuggerReserveRegs;
   }
 
-  bool dumpCode() const {
-    return DumpCode;
-  }
-  bool r600ALUEncoding() const {
-    return R600ALUInst;
-  }
-  bool isAmdHsaOS() const {
-    return TargetTriple.getOS() == Triple::AMDHSA;
-  }
-  bool isVGPRSpillingEnabled(const Function& F) const;
-
-  bool isXNACKEnabled() const {
-    return EnableXNACK;
+  bool loadStoreOptEnabled() const {
+    return EnableLoadStoreOpt;
   }
 
-  unsigned getMaxWavesPerCU() const {
-    if (getGeneration() >= AMDGPUSubtarget::SOUTHERN_ISLANDS)
-      return 10;
-
-    // FIXME: Not sure what this is for other subtagets.
-    return 8;
-  }
-
-  bool enableSubRegLiveness() const override {
-    return true;
-  }
-
-  /// \brief Returns the offset in bytes from the start of the input buffer
-  ///        of the first explicit kernel argument.
-  unsigned getExplicitKernelArgOffset() const {
-    return isAmdHsaOS() ? 0 : 36;
-  }
-
-  unsigned getMaxNumUserSGPRs() const {
-    return 16;
+  bool hasSGPRInitBug() const {
+    return SGPRInitBug;
   }
 };
+
+
+inline const AMDGPUInstrInfo *AMDGPUSubtarget::getInstrInfo() const {
+  if (getGeneration() >= SOUTHERN_ISLANDS)
+    return static_cast<const SISubtarget *>(this)->getInstrInfo();
+
+  return static_cast<const R600Subtarget *>(this)->getInstrInfo();
+}
+
+inline const AMDGPUFrameLowering *AMDGPUSubtarget::getFrameLowering() const  {
+  if (getGeneration() >= SOUTHERN_ISLANDS)
+    return static_cast<const SISubtarget *>(this)->getFrameLowering();
+
+  return static_cast<const R600Subtarget *>(this)->getFrameLowering();
+}
+
+inline const AMDGPUTargetLowering *AMDGPUSubtarget::getTargetLowering() const  {
+  if (getGeneration() >= SOUTHERN_ISLANDS)
+    return static_cast<const SISubtarget *>(this)->getTargetLowering();
+
+  return static_cast<const R600Subtarget *>(this)->getTargetLowering();
+}
+
+inline const AMDGPURegisterInfo *AMDGPUSubtarget::getRegisterInfo() const  {
+  if (getGeneration() >= SOUTHERN_ISLANDS)
+    return static_cast<const SISubtarget *>(this)->getRegisterInfo();
+
+  return static_cast<const R600Subtarget *>(this)->getRegisterInfo();
+}
 
 } // End namespace llvm
 

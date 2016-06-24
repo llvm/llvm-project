@@ -28,8 +28,8 @@ R600RegisterInfo::R600RegisterInfo() : AMDGPURegisterInfo() {
 BitVector R600RegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   BitVector Reserved(getNumRegs());
 
-  const R600InstrInfo *TII =
-      static_cast<const R600InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+  const R600InstrInfo *TII = ST.getInstrInfo();
 
   Reserved.set(AMDGPU::ZERO);
   Reserved.set(AMDGPU::HALF);

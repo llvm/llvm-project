@@ -79,7 +79,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkItemIDX(false),
     WorkItemIDY(false),
     WorkItemIDZ(false) {
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const Function *F = MF.getFunction();
 
   PSInputAddr = AMDGPU::getInitialPSInputAddr(*F);
@@ -129,7 +129,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   // We don't need to worry about accessing spills with flat instructions.
   // TODO: On VI where we must use flat for global, we should be able to omit
   // this if it is never used for generic access.
-  if (HasStackObjects && ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS &&
+  if (HasStackObjects && ST.getGeneration() >= SISubtarget::SEA_ISLANDS &&
       ST.isAmdHsaOS())
     FlatScratchInit = true;
 
@@ -178,16 +178,17 @@ unsigned SIMachineFunctionInfo::addFlatScratchInit(const SIRegisterInfo &TRI) {
   return FlatScratchInitUserSGPR;
 }
 
-SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
+SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg (
                                                        MachineFunction *MF,
                                                        unsigned FrameIndex,
                                                        unsigned SubIdx) {
   if (!EnableSpillSGPRToVGPR)
     return SpilledReg();
 
+  const SISubtarget &ST = MF->getSubtarget<SISubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
   MachineFrameInfo *FrameInfo = MF->getFrameInfo();
-  const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(
-      MF->getSubtarget<AMDGPUSubtarget>().getRegisterInfo());
   MachineRegisterInfo &MRI = MF->getRegInfo();
   int64_t Offset = FrameInfo->getObjectOffset(FrameIndex);
   Offset += SubIdx * 4;

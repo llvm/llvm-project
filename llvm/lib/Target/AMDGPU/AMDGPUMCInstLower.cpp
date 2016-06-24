@@ -15,6 +15,7 @@
 
 #include "AMDGPUMCInstLower.h"
 #include "AMDGPUAsmPrinter.h"
+#include "AMDGPUSubtarget.h"
 #include "AMDGPUTargetMachine.h"
 #include "InstPrinter/AMDGPUInstPrinter.h"
 #include "SIInstrInfo.h"
@@ -36,8 +37,7 @@
 using namespace llvm;
 
 AMDGPUMCInstLower::AMDGPUMCInstLower(MCContext &ctx, const AMDGPUSubtarget &st):
-  Ctx(ctx), ST(st)
-{ }
+  Ctx(ctx), ST(st) { }
 
 void AMDGPUMCInstLower::lower(const MachineInstr *MI, MCInst &OutMI) const {
 
@@ -140,10 +140,9 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
       raw_string_ostream DisasmStream(DisasmLine);
 
       AMDGPUInstPrinter InstPrinter(*TM.getMCAsmInfo(),
-                                    *MF->getSubtarget().getInstrInfo(),
-                                    *MF->getSubtarget().getRegisterInfo());
-      InstPrinter.printInst(&TmpInst, DisasmStream, StringRef(),
-                            MF->getSubtarget());
+                                    *STI.getInstrInfo(),
+                                    *STI.getRegisterInfo());
+      InstPrinter.printInst(&TmpInst, DisasmStream, StringRef(), STI);
 
       // Disassemble instruction/operands to hex representation.
       SmallVector<MCFixup, 4> Fixups;

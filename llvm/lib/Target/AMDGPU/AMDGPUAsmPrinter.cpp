@@ -63,7 +63,7 @@ using namespace llvm;
 // instructions to run at the double precision rate for the device so it's
 // probably best to just report no single precision denormals.
 static uint32_t getFPMode(const MachineFunction &F) {
-  const AMDGPUSubtarget& ST = F.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget& ST = F.getSubtarget<SISubtarget>();
   // TODO: Is there any real use for the flush in only / flush out only modes?
 
   uint32_t FP32Denormals =
@@ -243,9 +243,8 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
 void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   unsigned MaxGPR = 0;
   bool killPixel = false;
-  const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
-  const R600RegisterInfo *RI =
-      static_cast<const R600RegisterInfo *>(STM.getRegisterInfo());
+  const R600Subtarget &STM = MF.getSubtarget<R600Subtarget>();
+  const R600RegisterInfo *RI = STM.getRegisterInfo();
   const R600MachineFunctionInfo *MFI = MF.getInfo<R600MachineFunctionInfo>();
 
   for (const MachineBasicBlock &MBB : MF) {
@@ -268,7 +267,7 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
   }
 
   unsigned RsrcReg;
-  if (STM.getGeneration() >= AMDGPUSubtarget::EVERGREEN) {
+  if (STM.getGeneration() >= R600Subtarget::EVERGREEN) {
     // Evergreen / Northern Islands
     switch (MF.getFunction()->getCallingConv()) {
     default: // Fall through
@@ -302,17 +301,15 @@ void AMDGPUAsmPrinter::EmitProgramInfoR600(const MachineFunction &MF) {
 
 void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
                                         const MachineFunction &MF) const {
-  const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   uint64_t CodeSize = 0;
   unsigned MaxSGPR = 0;
   unsigned MaxVGPR = 0;
   bool VCCUsed = false;
   bool FlatUsed = false;
-  const SIRegisterInfo *RI =
-      static_cast<const SIRegisterInfo *>(STM.getRegisterInfo());
-  const SIInstrInfo *TII =
-      static_cast<const SIInstrInfo *>(STM.getInstrInfo());
+  const SIRegisterInfo *RI = STM.getRegisterInfo();
+  const SIInstrInfo *TII = STM.getInstrInfo();
 
   for (const MachineBasicBlock &MBB : MF) {
     for (const MachineInstr &MI : MBB) {
@@ -425,7 +422,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   if (VCCUsed)
     ExtraSGPRs = 2;
 
-  if (STM.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+  if (STM.getGeneration() < SISubtarget::VOLCANIC_ISLANDS) {
     if (FlatUsed)
       ExtraSGPRs = 4;
   } else {
@@ -453,7 +450,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.NumSGPR = MaxSGPR + 1;
 
   if (STM.hasSGPRInitBug()) {
-    if (ProgInfo.NumSGPR > AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG) {
+    if (ProgInfo.NumSGPR > SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG) {
       LLVMContext &Ctx = MF.getFunction()->getContext();
       DiagnosticInfoResourceLimit Diag(*MF.getFunction(),
                                        "SGPRs with SGPR init bug",
@@ -461,7 +458,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
       Ctx.diagnose(Diag);
     }
 
-    ProgInfo.NumSGPR = AMDGPUSubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
+    ProgInfo.NumSGPR = SISubtarget::FIXED_SGPR_COUNT_FOR_INIT_BUG;
   }
 
   if (MFI->NumUserSGPRs > STM.getMaxNumUserSGPRs()) {
@@ -497,7 +494,7 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
   ProgInfo.CodeLen = CodeSize;
 
   unsigned LDSAlignShift;
-  if (STM.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS) {
+  if (STM.getGeneration() < SISubtarget::SEA_ISLANDS) {
     // LDS is allocated in 64 dword blocks.
     LDSAlignShift = 8;
   } else {
@@ -564,7 +561,7 @@ static unsigned getRsrcReg(CallingConv::ID CallConv) {
 
 void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
                                          const SIProgramInfo &KernelInfo) {
-  const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   unsigned RsrcReg = getRsrcReg(MF.getFunction()->getCallingConv());
 
@@ -618,7 +615,7 @@ static amd_element_byte_size_t getElementByteSizeValue(unsigned Size) {
 void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
                                          const SIProgramInfo &KernelInfo) const {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  const AMDGPUSubtarget &STM = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
   amd_kernel_code_t header;
 
   AMDGPU::initDefaultAMDKernelCodeT(header, STM.getFeatureBits());

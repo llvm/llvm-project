@@ -71,7 +71,9 @@ class SITargetLowering final : public AMDGPUTargetLowering {
 
   bool isCFIntrinsic(const SDNode *Intr) const;
 public:
-  SITargetLowering(TargetMachine &tm, const AMDGPUSubtarget &STI);
+  SITargetLowering(const TargetMachine &tm, const SISubtarget &STI);
+
+  const SISubtarget *getSubtarget() const;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
                           unsigned IntrinsicID) const override;
