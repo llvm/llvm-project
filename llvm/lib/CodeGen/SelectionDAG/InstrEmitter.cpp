@@ -320,7 +320,6 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
          "Chain and glue operands should occur at end of operand list!");
   // Get/emit the operand.
   unsigned VReg = getVR(Op, VRBaseMap);
-  assert(TargetRegisterInfo::isVirtualRegister(VReg) && "Not a vreg?");
 
   const MCInstrDesc &MCID = MIB->getDesc();
   bool isOptDef = IIOpNum < MCID.getNumOperands() &&
@@ -334,6 +333,8 @@ InstrEmitter::AddRegisterOperand(MachineInstrBuilder &MIB,
     const TargetRegisterClass *DstRC = nullptr;
     if (IIOpNum < II->getNumOperands())
       DstRC = TRI->getAllocatableClass(TII->getRegClass(*II,IIOpNum,TRI,*MF));
+    assert((!DstRC || TargetRegisterInfo::isVirtualRegister(VReg)) &&
+           "Expected VReg");
     if (DstRC && !MRI->constrainRegClass(VReg, DstRC, MinRCSize)) {
       unsigned NewVReg = MRI->createVirtualRegister(DstRC);
       BuildMI(*MBB, InsertPos, Op.getNode()->getDebugLoc(),

@@ -17,7 +17,7 @@
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MMR6 \
 ; RUN:    -check-prefix=MM32R6
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips | FileCheck %s \
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MMR6 \
 ; RUN:    -check-prefix=MM64R6
 

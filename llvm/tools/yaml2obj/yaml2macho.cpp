@@ -32,10 +32,6 @@ public:
     is64Bit = Obj.Header.magic == MachO::MH_MAGIC_64 ||
               Obj.Header.magic == MachO::MH_CIGAM_64;
     memset(reinterpret_cast<void *>(&Header), 0, sizeof(MachO::mach_header_64));
-    assert((is64Bit || Obj.Header.reserved == 0xDEADBEEFu) &&
-           "32-bit MachO has reserved in header");
-    assert((!is64Bit || Obj.Header.reserved != 0xDEADBEEFu) &&
-           "64-bit MachO has missing reserved in header");
   }
 
   Error writeMachO(raw_ostream &OS);

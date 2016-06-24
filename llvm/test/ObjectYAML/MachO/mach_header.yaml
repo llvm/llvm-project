@@ -20,4 +20,5 @@ FileHeader:
 # CHECK:   ncmds:           0
 # CHECK:   sizeofcmds:      0
 # CHECK:   flags:           0x00218085
+# CHECK-NOT: reserved:
 # CHECK: ...

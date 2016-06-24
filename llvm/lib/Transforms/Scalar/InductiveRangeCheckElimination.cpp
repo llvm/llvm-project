@@ -637,7 +637,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
     return None;
   }
 
-  BranchInst *LatchBr = dyn_cast<BranchInst>(&*Latch->rbegin());
+  BranchInst *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
   if (!LatchBr || LatchBr->isUnconditional()) {
     FailureReason = "latch terminator not conditional branch";
     return None;
@@ -763,7 +763,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
         return None;
       }
 
-      IRBuilder<> B(&*Preheader->rbegin());
+      IRBuilder<> B(Preheader->getTerminator());
       RightValue = B.CreateAdd(RightValue, One);
     }
 
@@ -785,7 +785,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
         return None;
       }
 
-      IRBuilder<> B(&*Preheader->rbegin());
+      IRBuilder<> B(Preheader->getTerminator());
       RightValue = B.CreateSub(RightValue, One);
     }
   }
@@ -804,7 +804,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
   const DataLayout &DL = Preheader->getModule()->getDataLayout();
   Value *IndVarStartV =
       SCEVExpander(SE, DL, "irce")
-          .expandCodeFor(IndVarStart, IndVarTy, &*Preheader->rbegin());
+          .expandCodeFor(IndVarStart, IndVarTy, Preheader->getTerminator());
   IndVarStartV->setName("indvar.start");
 
   LoopStructure Result;
@@ -1026,7 +1026,7 @@ LoopConstrainer::RewrittenRangeInfo LoopConstrainer::changeIterationSpaceEnd(
   RRI.PseudoExit = BasicBlock::Create(Ctx, Twine(LS.Tag) + ".pseudo.exit", &F,
                                       &*BBInsertLocation);
 
-  BranchInst *PreheaderJump = cast<BranchInst>(&*Preheader->rbegin());
+  BranchInst *PreheaderJump = cast<BranchInst>(Preheader->getTerminator());
   bool Increasing = LS.IndVarIncreasing;
 
   IRBuilder<> B(PreheaderJump);

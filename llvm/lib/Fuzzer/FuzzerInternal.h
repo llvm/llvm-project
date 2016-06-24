@@ -203,9 +203,43 @@ private:
   size_t Size = 0;
 };
 
+struct FuzzingOptions {
+  int Verbosity = 1;
+  size_t MaxLen = 0;
+  int UnitTimeoutSec = 300;
+  int TimeoutExitCode = 77;
+  int ErrorExitCode = 77;
+  int MaxTotalTimeSec = 0;
+  int RssLimitMb = 0;
+  bool DoCrossOver = true;
+  int MutateDepth = 5;
+  bool UseCounters = false;
+  bool UseIndirCalls = true;
+  bool UseTraces = false;
+  bool UseMemcmp = true;
+  bool UseFullCoverageSet = false;
+  bool Reload = true;
+  bool ShuffleAtStartUp = true;
+  bool PreferSmall = true;
+  size_t MaxNumberOfRuns = ULONG_MAX;
+  int ReportSlowUnits = 10;
+  bool OnlyASCII = false;
+  std::string OutputCorpus;
+  std::string ArtifactPrefix = "./";
+  std::string ExactArtifactPath;
+  bool SaveArtifacts = true;
+  bool PrintNEW = true; // Print a status line when new units are found;
+  bool OutputCSV = false;
+  bool PrintNewCovPcs = false;
+  bool PrintFinalStats = false;
+  bool DetectLeaks = true;
+  bool TruncateUnits = false;
+  bool PruneCorpus = true;
+};
+
 class MutationDispatcher {
 public:
-  MutationDispatcher(Random &Rand);
+  MutationDispatcher(Random &Rand, const FuzzingOptions &Options);
   ~MutationDispatcher() {}
   /// Indicate that we are about to start a new sequence of mutations.
   void StartMutationSequence();
@@ -280,6 +314,8 @@ private:
                     const std::vector<Mutator> &Mutators);
 
   Random &Rand;
+  const FuzzingOptions Options;
+
   // Dictionary provided by the user via -dict=DICT_FILE.
   Dictionary ManualDictionary;
   // Temporary dictionary modified by the fuzzer itself,
@@ -299,39 +335,6 @@ private:
 
 class Fuzzer {
 public:
-  struct FuzzingOptions {
-    int Verbosity = 1;
-    size_t MaxLen = 0;
-    int UnitTimeoutSec = 300;
-    int TimeoutExitCode = 77;
-    int ErrorExitCode = 77;
-    int MaxTotalTimeSec = 0;
-    int RssLimitMb = 0;
-    bool DoCrossOver = true;
-    int MutateDepth = 5;
-    bool UseCounters = false;
-    bool UseIndirCalls = true;
-    bool UseTraces = false;
-    bool UseMemcmp = true;
-    bool UseFullCoverageSet = false;
-    bool Reload = true;
-    bool ShuffleAtStartUp = true;
-    bool PreferSmall = true;
-    size_t MaxNumberOfRuns = ULONG_MAX;
-    int ReportSlowUnits = 10;
-    bool OnlyASCII = false;
-    std::string OutputCorpus;
-    std::string ArtifactPrefix = "./";
-    std::string ExactArtifactPath;
-    bool SaveArtifacts = true;
-    bool PrintNEW = true; // Print a status line when new units are found;
-    bool OutputCSV = false;
-    bool PrintNewCovPcs = false;
-    bool PrintFinalStats = false;
-    bool DetectLeaks = true;
-    bool TruncateUnits = false;
-    bool PruneCorpus = true;
-  };
 
   // Aggregates all available coverage measurements.
   struct Coverage {

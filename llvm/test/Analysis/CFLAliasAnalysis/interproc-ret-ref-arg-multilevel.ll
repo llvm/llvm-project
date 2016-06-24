@@ -4,9 +4,6 @@
 ; RUN: opt < %s -disable-basicaa -cfl-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
-; xfail for now due to buggy interproc analysis
-; XFAIL: *
-
 declare noalias i8* @malloc(i64)
 
 define i32*** @return_ref_arg_multilevel_callee(i32* %arg1) {
@@ -21,9 +18,7 @@ define i32*** @return_ref_arg_multilevel_callee(i32* %arg1) {
 ; CHECK-LABEL: Function: test_return_ref_arg_multilevel
 ; CHECK: NoAlias: i32* %a, i32*** %b
 ; CHECK: NoAlias: i32** %p, i32*** %b
-; CHECK: NoAlias: i32*** %b, i32*** %pp
 ; CHECK: NoAlias: i32* %a, i32** %lb
-; CHECK: NoAlias: i32** %lb, i32** %p
 ; CHECK: NoAlias: i32** %lb, i32*** %pp
 ; CHECK: NoAlias: i32** %lb, i32*** %b
 ; CHECK: MayAlias: i32* %a, i32* %lb_deref
@@ -33,6 +28,10 @@ define i32*** @return_ref_arg_multilevel_callee(i32* %arg1) {
 ; CHECK: MayAlias: i32* %lb_deref, i32* %lp
 ; CHECK: NoAlias: i32* %lp, i32** %lpp
 ; CHECK: MayAlias: i32* %lp, i32* %lpp_deref
+
+; We could've proven the following facts if the analysis were inclusion-based:
+; NoAlias: i32*** %b, i32*** %pp
+; NoAlias: i32** %lb, i32** %p
 define void @test_return_ref_arg_multilevel() {
   %a = alloca i32, align 4
   %p = alloca i32*, align 8

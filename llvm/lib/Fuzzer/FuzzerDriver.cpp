@@ -297,7 +297,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
 
   const size_t kMaxSaneLen = 1 << 20;
   const size_t kMinDefaultLen = 64;
-  Fuzzer::FuzzingOptions Options;
+  FuzzingOptions Options;
   Options.Verbosity = Flags.verbosity;
   Options.MaxLen = Flags.max_len;
   Options.UnitTimeoutSec = Flags.timeout;
@@ -347,7 +347,7 @@ int FuzzerDriver(int *argc, char ***argv, UserCallback Callback) {
     Printf("INFO: Seed: %u\n", Seed);
 
   Random Rand(Seed);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, Options);
   Fuzzer F(Callback, MD, Options);
 
   for (auto &U: Dictionary)

@@ -17,6 +17,7 @@
 namespace llvm {
 
 class MCAsmLexer;
+class MCAsmParser;
 class raw_ostream;
 class StringRef;
 
@@ -29,7 +30,7 @@ void dumpAmdKernelCode(const amd_kernel_code_t *C,
   const char *tab);
 
 bool parseAmdKernelCodeField(StringRef ID,
-  MCAsmLexer &Lexer,
+  MCAsmParser &Parser,
   amd_kernel_code_t &C,
   raw_ostream &Err);
 

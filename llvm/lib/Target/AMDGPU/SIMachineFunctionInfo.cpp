@@ -1,11 +1,10 @@
-//===-- SIMachineFunctionInfo.cpp - SI Machine Function Info -------===//
+//===-- SIMachineFunctionInfo.cpp -------- SI Machine Function Info -------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
 // This file is distributed under the University of Illinois Open Source
 // License. See LICENSE.TXT for details.
 //
-/// \file
 //===----------------------------------------------------------------------===//
 
 
@@ -22,6 +21,11 @@
 
 using namespace llvm;
 
+static cl::opt<bool> EnableSpillSGPRToVGPR(
+  "amdgpu-spill-sgpr-to-vgpr",
+  cl::desc("Enable spilling VGPRs to SGPRs"),
+  cl::ReallyHidden,
+  cl::init(true));
 
 // Pin the vtable to this file.
 void SIMachineFunctionInfo::anchor() {}
@@ -178,6 +182,9 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg(
                                                        MachineFunction *MF,
                                                        unsigned FrameIndex,
                                                        unsigned SubIdx) {
+  if (!EnableSpillSGPRToVGPR)
+    return SpilledReg();
+
   MachineFrameInfo *FrameInfo = MF->getFrameInfo();
   const SIRegisterInfo *TRI = static_cast<const SIRegisterInfo *>(
       MF->getSubtarget<AMDGPUSubtarget>().getRegisterInfo());

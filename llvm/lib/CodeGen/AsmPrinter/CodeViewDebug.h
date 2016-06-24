@@ -191,6 +191,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
 
   void emitDebugInfoForGlobals();
 
+  void emitDebugInfoForRetainedTypes();
+
   void emitDebugInfoForUDTs(
       ArrayRef<std::pair<std::string, codeview::TypeIndex>> UDTs);
 
@@ -227,6 +229,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
                                             const DICompositeType *Class);
 
   codeview::TypeIndex getScopeIndex(const DIScope *Scope);
+
+  void addToUDTs(const DIType *Ty, codeview::TypeIndex TI);
 
   codeview::TypeIndex lowerType(const DIType *Ty, const DIType *ClassTy);
   codeview::TypeIndex lowerTypeAlias(const DIDerivedType *Ty);

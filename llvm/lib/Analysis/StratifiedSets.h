@@ -395,21 +395,44 @@ public:
     return addAtMerging(ToAdd, Below);
   }
 
-  /// \brief Set the StratifiedAttrs of the set below "Main". If there is no set
-  /// below "Main", create one for it.
-  void addAttributesBelow(const T &Main, StratifiedAttrs Attr) {
+  /// \brief Set the StratifiedAttrs of the set "Level"-levels below "Main". If
+  /// there is no set below "Main", create one for it.
+  void addAttributesBelow(const T &Main, unsigned Level, StratifiedAttrs Attr) {
     assert(has(Main));
     auto Index = *indexOf(Main);
-    auto Link = linksAt(Index);
+    auto *Link = &linksAt(Index);
 
-    auto BelowIndex = Link.hasBelow() ? Link.getBelow() : addLinkBelow(Index);
-    linksAt(BelowIndex).setAttrs(Attr);
+    for (unsigned I = 0; I < Level; ++I) {
+      Index = Link->hasBelow() ? Link->getBelow() : addLinkBelow(Index);
+      Link = &linksAt(Index);
+    }
+    Link->setAttrs(Attr);
   }
 
   bool addWith(const T &Main, const T &ToAdd) {
     assert(has(Main));
     auto MainIndex = *indexOf(Main);
     return addAtMerging(ToAdd, MainIndex);
+  }
+
+  /// \brief Merge the set "MainBelow"-levels below "Main" and the set
+  /// "ToAddBelow"-levels below "ToAdd".
+  void addBelowWith(const T &Main, unsigned MainBelow, const T &ToAdd,
+                    unsigned ToAddBelow) {
+    assert(has(Main));
+    assert(has(ToAdd));
+
+    auto GetIndexBelow = [&](StratifiedIndex Index, unsigned NumLevel) {
+      for (unsigned I = 0; I < NumLevel; ++I) {
+        auto Link = linksAt(Index);
+        Index = Link.hasBelow() ? Link.getBelow() : addLinkBelow(Index);
+      }
+      return Index;
+    };
+    auto MainIndex = GetIndexBelow(*indexOf(Main), MainBelow);
+    auto ToAddIndex = GetIndexBelow(*indexOf(ToAdd), ToAddBelow);
+    if (&linksAt(MainIndex) != &linksAt(ToAddIndex))
+      merge(MainIndex, ToAddIndex);
   }
 
   void noteAttributes(const T &Main, const StratifiedAttrs &NewAttrs) {

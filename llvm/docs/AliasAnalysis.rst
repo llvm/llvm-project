@@ -31,8 +31,7 @@ well together.
 
 This document contains information necessary to successfully implement this
 interface, use it, and to test both sides.  It also explains some of the finer
-points about what exactly results mean.  If you feel that something is unclear
-or should be added, please `let me know <mailto:sabre@nondot.org>`_.
+points about what exactly results mean.  
 
 ``AliasAnalysis`` Class Overview
 ================================

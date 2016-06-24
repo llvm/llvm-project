@@ -1058,8 +1058,8 @@ HexagonTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   SDValue AC = DAG.getConstant(A, dl, MVT::i32);
   SDVTList VTs = DAG.getVTList(MVT::i32, MVT::Other);
   SDValue AA = DAG.getNode(HexagonISD::ALLOCA, dl, VTs, Chain, Size, AC);
-  if (Op.getNode()->getHasDebugValue())
-    DAG.TransferDbgValues(Op, AA);
+
+  DAG.ReplaceAllUsesOfValueWith(Op, AA);
   return AA;
 }
 

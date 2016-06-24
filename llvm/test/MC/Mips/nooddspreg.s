@@ -8,7 +8,7 @@
 # RUN: not llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 2> %t1
 # RUN: FileCheck %s -check-prefix=INVALID < %t1
 #
-# RUN: not llvm-mc %s -arch=mips -mcpu=mips64 2> %t2
+# RUN: not llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n64 2> %t2
 # RUN: FileCheck %s -check-prefix=INVALID < %t2
 #
 # CHECK-ASM: .module nooddspreg

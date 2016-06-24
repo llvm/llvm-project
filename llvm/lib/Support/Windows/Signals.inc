@@ -588,9 +588,9 @@ void llvm::sys::RunInterruptHandlers() {
 /// \returns a valid HKEY if the location exists, else NULL.
 static HKEY FindWERKey(const llvm::Twine &RegistryLocation) {
   HKEY Key;
-  if (ERROR_SUCCESS != ::RegOpenKeyEx(HKEY_LOCAL_MACHINE,
-                                      RegistryLocation.str().c_str(), 0,
-                                      KEY_QUERY_VALUE | KEY_READ, &Key))
+  if (ERROR_SUCCESS != ::RegOpenKeyExA(HKEY_LOCAL_MACHINE,
+                                       RegistryLocation.str().c_str(), 0,
+                                       KEY_QUERY_VALUE | KEY_READ, &Key))
     return NULL;
 
   return Key;

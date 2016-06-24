@@ -28,7 +28,7 @@
 ; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MM32
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MM32
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips64r6 -target-abi n64 -mattr=+micromips | FileCheck %s \
 ; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MM64
 
 define signext i1 @or_i1(i1 signext %a, i1 signext %b) {

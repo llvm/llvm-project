@@ -60,14 +60,13 @@ struct CoverageController {
     PcMapResetCurrent();
   }
 
-  static void ResetCounters(const Fuzzer::FuzzingOptions &Options) {
+  static void ResetCounters(const FuzzingOptions &Options) {
     if (Options.UseCounters) {
       EF->__sanitizer_update_counter_bitset_and_clear_counters(0);
     }
   }
 
-  static void Prepare(const Fuzzer::FuzzingOptions &Options,
-                      Fuzzer::Coverage *C) {
+  static void Prepare(const FuzzingOptions &Options, Fuzzer::Coverage *C) {
     if (Options.UseCounters) {
       size_t NumCounters = EF->__sanitizer_get_number_of_counters();
       C->CounterBitmap.resize(NumCounters);
@@ -76,8 +75,7 @@ struct CoverageController {
 
   // Records data to a maximum coverage tracker. Returns true if additional
   // coverage was discovered.
-  static bool RecordMax(const Fuzzer::FuzzingOptions &Options,
-                        Fuzzer::Coverage *C) {
+  static bool RecordMax(const FuzzingOptions &Options, Fuzzer::Coverage *C) {
     bool Res = false;
 
     uint64_t NewBlockCoverage = EF->__sanitizer_get_total_unique_coverage();
@@ -675,8 +673,6 @@ void Fuzzer::MutateAndTestOne() {
     assert(NewSize <= Options.MaxLen &&
            "Mutator return overisized unit");
     Size = NewSize;
-    if (Options.OnlyASCII)
-      ToASCII(CurrentUnitData, Size);
     if (i == 0)
       StartTraceRecording();
     RunOneAndUpdateCorpus(CurrentUnitData, Size);

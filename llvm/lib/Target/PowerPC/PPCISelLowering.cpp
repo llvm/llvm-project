@@ -4280,23 +4280,28 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
       needIndirectCall = false;
     }
 
+  // PC-relative references to external symbols should go through $stub, unless
+  // we're building with the leopard linker or later, which automatically
+  // synthesizes these stubs.
+  Reloc::Model RM = DAG.getTarget().getRelocationModel();
+  const Triple &TargetTriple = Subtarget.getTargetTriple();
+  bool OldMachOLinker =
+      TargetTriple.isMacOSX() && TargetTriple.isMacOSXVersionLT(10, 5);
+  const Module *Mod = DAG.getMachineFunction().getFunction()->getParent();
+  const GlobalValue *GV = nullptr;
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
+    GV = G->getGlobal();
+  bool Local = shouldAssumeDSOLocal(RM, TargetTriple, *Mod, GV);
+  bool UsePlt =
+      !Local && (OldMachOLinker || (Subtarget.isTargetELF() && !isPPC64));
+
   if (isFunctionGlobalAddress(Callee)) {
     GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
     // A call to a TLS address is actually an indirect call to a
     // thread-specific pointer.
     unsigned OpFlags = 0;
-    Reloc::Model RM = DAG.getTarget().getRelocationModel();
-    const Triple &TargetTriple = Subtarget.getTargetTriple();
-    const GlobalValue *GV = G->getGlobal();
-    bool OldMachOLinker =
-        TargetTriple.isMacOSX() && TargetTriple.isMacOSXVersionLT(10, 5);
-    if (!shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV) &&
-        (OldMachOLinker || (Subtarget.isTargetELF() && !isPPC64))) {
-      // PC-relative references to external symbols should go through $stub,
-      // unless we're building with the leopard linker or later, which
-      // automatically synthesizes these stubs.
+    if (UsePlt)
       OpFlags = PPCII::MO_PLT_OR_STUB;
-    }
 
     // If the callee is a GlobalAddress/ExternalSymbol node (quite common,
     // every direct call is) turn it into a TargetGlobalAddress /
@@ -4309,16 +4314,8 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
   if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     unsigned char OpFlags = 0;
 
-    if ((DAG.getTarget().getRelocationModel() != Reloc::Static &&
-         (Subtarget.getTargetTriple().isMacOSX() &&
-          Subtarget.getTargetTriple().isMacOSXVersionLT(10, 5))) ||
-        (Subtarget.isTargetELF() && !isPPC64 &&
-         DAG.getTarget().getRelocationModel() == Reloc::PIC_)) {
-      // PC-relative references to external symbols should go through $stub,
-      // unless we're building with the leopard linker or later, which
-      // automatically synthesizes these stubs.
+    if (UsePlt)
       OpFlags = PPCII::MO_PLT_OR_STUB;
-    }
 
     Callee = DAG.getTargetExternalSymbol(S->getSymbol(), Callee.getValueType(),
                                          OpFlags);

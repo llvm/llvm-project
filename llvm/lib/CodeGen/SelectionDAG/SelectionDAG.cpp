@@ -6333,6 +6333,9 @@ void SelectionDAG::ReplaceAllUsesWith(SDValue FromN, SDValue To) {
     AddModifiedNodeToCSEMaps(User);
   }
 
+  // Preserve Debug Values
+  TransferDbgValues(FromN, To);
+
   // If we just RAUW'd the root, take note.
   if (FromN == getRoot())
     setRoot(To);
@@ -6355,6 +6358,13 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
   // Handle the trivial case.
   if (From == To)
     return;
+
+  // Preserve Debug Info. Only do this if there's a use.
+  for (unsigned i = 0, e = From->getNumValues(); i != e; ++i)
+    if (From->hasAnyUseOfValue(i)) {
+      assert((i < To->getNumValues()) && "Invalid To location");
+      TransferDbgValues(SDValue(From, i), SDValue(To, i));
+    }
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.
@@ -6394,6 +6404,10 @@ void SelectionDAG::ReplaceAllUsesWith(SDNode *From, SDNode *To) {
 void SelectionDAG::ReplaceAllUsesWith(SDNode *From, const SDValue *To) {
   if (From->getNumValues() == 1)  // Handle the simple case efficiently.
     return ReplaceAllUsesWith(SDValue(From, 0), To[0]);
+
+  // Preserve Debug Info.
+  for (unsigned i = 0, e = From->getNumValues(); i != e; ++i)
+    TransferDbgValues(SDValue(From, i), *To);
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.
@@ -6438,6 +6452,9 @@ void SelectionDAG::ReplaceAllUsesOfValueWith(SDValue From, SDValue To){
     ReplaceAllUsesWith(From, To);
     return;
   }
+
+  // Preserve Debug Info.
+  TransferDbgValues(From, To);
 
   // Iterate over just the existing users of From. See the comments in
   // the ReplaceAllUsesWith above.
@@ -6512,6 +6529,8 @@ void SelectionDAG::ReplaceAllUsesOfValuesWith(const SDValue *From,
   // Handle the simple, trivial case efficiently.
   if (Num == 1)
     return ReplaceAllUsesOfValueWith(*From, *To);
+
+  TransferDbgValues(*From, *To);
 
   // Read up all the uses and make records of them. This helps
   // processing new uses that are introduced during the
@@ -6661,28 +6680,26 @@ void SelectionDAG::AddDbgValue(SDDbgValue *DB, SDNode *SD, bool isParameter) {
   DbgInfo->add(DB, SD, isParameter);
 }
 
-/// TransferDbgValues - Transfer SDDbgValues.
+/// TransferDbgValues - Transfer SDDbgValues. Called in replace nodes.
 void SelectionDAG::TransferDbgValues(SDValue From, SDValue To) {
   if (From == To || !From.getNode()->getHasDebugValue())
     return;
   SDNode *FromNode = From.getNode();
   SDNode *ToNode = To.getNode();
   ArrayRef<SDDbgValue *> DVs = GetDbgValues(FromNode);
-  SmallVector<SDDbgValue *, 2> ClonedDVs;
   for (ArrayRef<SDDbgValue *>::iterator I = DVs.begin(), E = DVs.end();
        I != E; ++I) {
     SDDbgValue *Dbg = *I;
-    if (Dbg->getKind() == SDDbgValue::SDNODE) {
+    // Only add Dbgvalues attached to same ResNo.
+    if (Dbg->getKind() == SDDbgValue::SDNODE &&
+        Dbg->getResNo() == From.getResNo()) {
       SDDbgValue *Clone =
           getDbgValue(Dbg->getVariable(), Dbg->getExpression(), ToNode,
                       To.getResNo(), Dbg->isIndirect(), Dbg->getOffset(),
                       Dbg->getDebugLoc(), Dbg->getOrder());
-      ClonedDVs.push_back(Clone);
+      AddDbgValue(Clone, ToNode, false);
     }
   }
-  for (SmallVectorImpl<SDDbgValue *>::iterator I = ClonedDVs.begin(),
-         E = ClonedDVs.end(); I != E; ++I)
-    AddDbgValue(*I, ToNode, false);
 }
 
 //===----------------------------------------------------------------------===//

@@ -23,13 +23,13 @@
 ; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+micromips -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE32R2-MICROMIPS %s
 ; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+micromips %s -o - | FileCheck -check-prefix=CHECK-LE32R2-MICROMIPS_PIC %s
 
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips4 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE64 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips4 %s -o - | FileCheck -check-prefix=CHECK-LE64_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips4 -target-abi n64 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE64 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips4 -target-abi n64 %s -o - | FileCheck -check-prefix=CHECK-LE64_PIC %s
 
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE64 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 %s -o - | FileCheck -check-prefix=CHECK-LE64_PIC %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE64R2 %s
-; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 %s -o - | FileCheck -check-prefix=CHECK-LE64R2_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 -target-abi n64 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE64 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64 -target-abi n64 %s -o - | FileCheck -check-prefix=CHECK-LE64_PIC %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 -target-abi n64 -relocation-model=static %s -o - | FileCheck -check-prefix=CHECK-LE64R2 %s
+; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips64r2 -target-abi n64 %s -o - | FileCheck -check-prefix=CHECK-LE64R2_PIC %s
 
 ; RUN: llc -mtriple mipsel-unknown-linux -mcpu=mips32r2 -mattr=+mips16 -relocation-model=pic %s -o - | FileCheck -check-prefix=CHECK-LE32R2-MIPS16 %s
 

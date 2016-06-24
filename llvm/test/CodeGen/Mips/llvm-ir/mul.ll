@@ -26,7 +26,7 @@
 ; RUN:    -check-prefix=MM32 -check-prefix=MM32R3
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefix=MM32 -check-prefix=MM32R6
-; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -relocation-model=pic | FileCheck %s \
+; RUN: llc < %s -march=mips -mcpu=mips64r6 -mattr=+micromips -target-abi n64 -relocation-model=pic | FileCheck %s \
 ; RUN:    -check-prefix=64R6
 
 define signext i1 @mul_i1(i1 signext %a, i1 signext %b) {

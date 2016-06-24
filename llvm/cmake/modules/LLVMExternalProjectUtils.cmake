@@ -19,6 +19,8 @@ endfunction()
 #     Exclude this project from the all target
 #   NO_INSTALL
 #     Don't generate install targets for this project
+#   ALWAYS_CLEAN
+#     Always clean the sub-project before building
 #   CMAKE_ARGS arguments...
 #     Optional cmake arguments to pass when configuring the project
 #   TOOLCHAIN_TOOLS targets...
@@ -27,11 +29,15 @@ endfunction()
 #     Targets that this project depends on
 #   EXTRA_TARGETS targets...
 #     Extra targets in the subproject to generate targets for
+#   PASSTHROUGH_PREFIXES prefix...
+#     Extra variable prefixes (name is always included) to pass down
 #   )
 function(llvm_ExternalProject_Add name source_dir)
-  cmake_parse_arguments(ARG "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL"
+  cmake_parse_arguments(ARG
+    "USE_TOOLCHAIN;EXCLUDE_FROM_ALL;NO_INSTALL;ALWAYS_CLEAN"
     "SOURCE_DIR"
-    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS" ${ARGN})
+    "CMAKE_ARGS;TOOLCHAIN_TOOLS;RUNTIME_LIBRARIES;DEPENDS;EXTRA_TARGETS;PASSTHROUGH_PREFIXES"
+    ${ARGN})
   canonicalize_tool_name(${name} nameCanon)
   if(NOT ARG_TOOLCHAIN_TOOLS)
     set(ARG_TOOLCHAIN_TOOLS clang lld)
@@ -52,6 +58,10 @@ function(llvm_ExternalProject_Add name source_dir)
     endif()
   endforeach()
 
+  if(ARG_ALWAYS_CLEAN)
+    set(always_clean clean)
+  endif()
+
   list(FIND TOOLCHAIN_TOOLS clang FOUND_CLANG)
   if(FOUND_CLANG GREATER -1)
     set(CLANG_IN_TOOLCHAIN On)
@@ -71,15 +81,18 @@ function(llvm_ExternalProject_Add name source_dir)
     USES_TERMINAL
     )
 
-  # Find all variables that start with COMPILER_RT and populate a variable with
-  # them.
+  # Find all variables that start with a prefix and propagate them through
   get_cmake_property(variableNames VARIABLES)
-  foreach(variableName ${variableNames})
-    if(variableName MATCHES "^${nameCanon}")
-      string(REPLACE ";" "\;" value "${${variableName}}")
-      list(APPEND PASSTHROUGH_VARIABLES
-        -D${variableName}=${value})
-    endif()
+
+  list(APPEND ARG_PASSTHROUGH_PREFIXES ${nameCanon})
+  foreach(prefix ${ARG_PASSTHROUGH_PREFIXES})
+    foreach(variableName ${variableNames})
+      if(variableName MATCHES "^${prefix}")
+        string(REPLACE ";" "\;" value "${${variableName}}")
+        list(APPEND PASSTHROUGH_VARIABLES
+          -D${variableName}=${value})
+      endif()
+    endforeach()
   endforeach()
 
   if(ARG_USE_TOOLCHAIN)
@@ -117,6 +130,12 @@ function(llvm_ExternalProject_Add name source_dir)
     CMAKE_ARGS ${${nameCanon}_CMAKE_ARGS}
                ${compiler_args}
                -DCMAKE_INSTALL_PREFIX=${CMAKE_INSTALL_PREFIX}
+               -DLLVM_BINARY_DIR=${PROJECT_BINARY_DIR}
+               -DLLVM_CONFIG_PATH=$<TARGET_FILE:llvm-config>
+               -DLLVM_ENABLE_WERROR=${LLVM_ENABLE_WERROR}
+               -DPACKAGE_VERSION=${PACKAGE_VERSION}
+               -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
+               -DCMAKE_MAKE_PROGRAM=${CMAKE_MAKE_PROGRAM}
                ${ARG_CMAKE_ARGS}
                ${PASSTHROUGH_VARIABLES}
     INSTALL_COMMAND ""
@@ -138,6 +157,7 @@ function(llvm_ExternalProject_Add name source_dir)
     DEPENDEES configure
     ${force_deps}
     WORKING_DIRECTORY ${BINARY_DIR}
+    EXCLUDE_FROM_MAIN 1
     USES_TERMINAL 1
     )
   ExternalProject_Add_StepTargets(${name} clean)

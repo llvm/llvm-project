@@ -300,8 +300,9 @@ llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
            "to scan backward from a given instruction, when searching for "
            "available loaded value"));
 
-/// \brief Scan the ScanBB block backwards to see if we have the value at the
-/// memory address *Ptr locally available within a small number of instructions.
+/// Scan the ScanBB block backwards checking to see if we have the value at
+/// the memory address \p Ptr of type \p AccessTy locally available within a
+/// small number of instructions. If the value is available, return it.
 ///
 /// The scan starts from \c ScanFrom. \c MaxInstsToScan specifies the maximum
 /// instructions to scan in the block. If it is set to \c 0, it will scan the whole
@@ -318,25 +319,24 @@ llvm::DefMaxInstsToScan("available-load-scan-limit", cl::init(6), cl::Hidden,
 ///
 /// If \c AATags is non-null and a load or store is found, the AA tags from the
 /// load or store are recorded there. If there are no AA tags or if no access is
-/// found, it is left unmodified.
-Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
+/// is found, it is left unmodified.
+///
+/// IsAtomicMemOp specifies the atomicity of the memory operation that accesses
+/// \p *Ptr. We verify atomicity constraints are satisfied when value forwarding
+/// from another memory operation that has value \p *Ptr available.
+///
+/// Note that we assume the \p *Ptr is accessed through a non-volatile but
+/// potentially atomic load. Any other constraints should be verified at the
+/// caller.
+Value *llvm::FindAvailableLoadedValue(Value *Ptr, Type *AccessTy, bool IsAtomicMemOp,
+                                      BasicBlock *ScanBB,
                                       BasicBlock::iterator &ScanFrom,
                                       unsigned MaxInstsToScan,
                                       AliasAnalysis *AA, AAMDNodes *AATags,
                                       bool *IsLoadCSE) {
+
   if (MaxInstsToScan == 0)
     MaxInstsToScan = ~0U;
-
-  Value *Ptr = Load->getPointerOperand();
-  Type *AccessTy = Load->getType();
-
-  // We can never remove a volatile load
-  if (Load->isVolatile())
-    return nullptr;
-
-  // Anything stronger than unordered is currently unimplemented.
-  if (!Load->isUnordered())
-    return nullptr;
 
   const DataLayout &DL = ScanBB->getModule()->getDataLayout();
 
@@ -363,14 +363,14 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
     // If this is a load of Ptr, the loaded value is available.
     // (This is true even if the load is volatile or atomic, although
     // those cases are unlikely.)
-    if (LoadInst *LI = dyn_cast<LoadInst>(Inst))
-      if (AreEquivalentAddressValues(
-              LI->getPointerOperand()->stripPointerCasts(), StrippedPtr) &&
+    if (LoadInst *LI = dyn_cast<LoadInst>(Inst)) {
+      Value *LoadPtr = LI->getPointerOperand()->stripPointerCasts();
+      if (AreEquivalentAddressValues(LoadPtr, StrippedPtr) &&
           CastInst::isBitOrNoopPointerCastable(LI->getType(), AccessTy, DL)) {
 
         // We can value forward from an atomic to a non-atomic, but not the
         // other way around.
-        if (LI->isAtomic() < Load->isAtomic())
+        if (LI->isAtomic() < IsAtomicMemOp)
           return nullptr;
 
         if (AATags)
@@ -379,6 +379,8 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
             *IsLoadCSE = true;
         return LI;
       }
+
+    }
 
     if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
       Value *StorePtr = SI->getPointerOperand()->stripPointerCasts();
@@ -391,7 +393,7 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
 
         // We can value forward from an atomic to a non-atomic, but not the
         // other way around.
-        if (SI->isAtomic() < Load->isAtomic())
+        if (SI->isAtomic() < IsAtomicMemOp)
           return nullptr;
 
         if (AATags)
@@ -434,4 +436,44 @@ Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
   // Got to the start of the block, we didn't find it, but are done for this
   // block.
   return nullptr;
+
+}
+
+/// \brief Scan the ScanBB block backwards to see if we have the value at the
+/// memory address *Ptr locally available within a small number of instructions.
+///
+/// The scan starts from \c ScanFrom. \c MaxInstsToScan specifies the maximum
+/// instructions to scan in the block. If it is set to \c 0, it will scan the whole
+/// block.
+///
+/// If the value is available, this function returns it. If not, it returns the
+/// iterator for the last validated instruction that the value would be live
+/// through. If we scanned the entire block and didn't find something that
+/// invalidates \c *Ptr or provides it, \c ScanFrom is left at the last
+/// instruction processed and this returns null.
+///
+/// You can also optionally specify an alias analysis implementation, which
+/// makes this more precise.
+///
+/// If \c AATags is non-null and a load or store is found, the AA tags from the
+/// load or store are recorded there. If there are no AA tags or if no access is
+/// is found, it is left unmodified.
+Value *llvm::FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
+                                      BasicBlock::iterator &ScanFrom,
+                                      unsigned MaxInstsToScan,
+                                      AliasAnalysis *AA, AAMDNodes *AATags,
+                                      bool *IsLoadCSE) {
+
+  // We can never remove a volatile load
+  if (Load->isVolatile())
+    return nullptr;
+
+  // Anything stronger than unordered is currently unimplemented.
+  if (!Load->isUnordered())
+    return nullptr;
+
+  // Return the full value of the load if available.
+  return FindAvailableLoadedValue(Load->getPointerOperand(), Load->getType(),
+                                  Load->isAtomic(), ScanBB, ScanFrom,
+                                  MaxInstsToScan, AA, AATags, IsLoadCSE);
 }

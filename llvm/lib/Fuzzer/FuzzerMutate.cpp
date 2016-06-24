@@ -18,7 +18,9 @@ namespace fuzzer {
 
 const size_t Dictionary::kMaxDictSize;
 
-MutationDispatcher::MutationDispatcher(Random &Rand) : Rand(Rand) {
+MutationDispatcher::MutationDispatcher(Random &Rand,
+                                       const FuzzingOptions &Options)
+    : Rand(Rand), Options(Options) {
   DefaultMutators.insert(
       DefaultMutators.begin(),
       {
@@ -285,6 +287,8 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
   if (Size == 0) {
     for (size_t i = 0; i < MaxSize; i++)
       Data[i] = RandCh(Rand);
+    if (Options.OnlyASCII)
+      ToASCII(Data, MaxSize);
     return MaxSize;
   }
   assert(Size > 0);
@@ -295,6 +299,8 @@ size_t MutationDispatcher::MutateImpl(uint8_t *Data, size_t Size,
     auto M = Mutators[Rand(Mutators.size())];
     size_t NewSize = (this->*(M.Fn))(Data, Size, MaxSize);
     if (NewSize) {
+      if (Options.OnlyASCII)
+        ToASCII(Data, NewSize);
       CurrentMutatorSequence.push_back(M);
       return NewSize;
     }

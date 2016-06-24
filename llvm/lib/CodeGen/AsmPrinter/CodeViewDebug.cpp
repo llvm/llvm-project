@@ -344,6 +344,9 @@ void CodeViewDebug::endModule() {
   setCurrentSubprogram(nullptr);
   emitDebugInfoForGlobals();
 
+  // Emit retained types.
+  emitDebugInfoForRetainedTypes();
+
   // Switch back to the generic .debug$S section after potentially processing
   // comdat symbol sections.
   switchToDebugSectionForSymbol(nullptr);
@@ -826,6 +829,27 @@ void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   }
 }
 
+void CodeViewDebug::addToUDTs(const DIType *Ty, TypeIndex TI) {
+  SmallVector<StringRef, 5> QualifiedNameComponents;
+  const DISubprogram *ClosestSubprogram = getQualifiedNameComponents(
+      Ty->getScope().resolve(), QualifiedNameComponents);
+
+  std::string FullyQualifiedName =
+      getQualifiedName(QualifiedNameComponents, Ty->getName());
+
+  if (ClosestSubprogram == nullptr)
+    GlobalUDTs.emplace_back(std::move(FullyQualifiedName), TI);
+  else if (ClosestSubprogram == CurrentSubprogram)
+    LocalUDTs.emplace_back(std::move(FullyQualifiedName), TI);
+
+  // TODO: What if the ClosestSubprogram is neither null or the current
+  // subprogram?  Currently, the UDT just gets dropped on the floor.
+  //
+  // The current behavior is not desirable.  To get maximal fidelity, we would
+  // need to perform all type translation before beginning emission of .debug$S
+  // and then make LocalUDTs a member of FunctionInfo
+}
+
 TypeIndex CodeViewDebug::lowerType(const DIType *Ty, const DIType *ClassTy) {
   // Generic dispatch for lowering an unknown type.
   switch (Ty->getTag()) {
@@ -870,25 +894,7 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
   TypeIndex UnderlyingTypeIndex = getTypeIndex(UnderlyingTypeRef);
   StringRef TypeName = Ty->getName();
 
-  SmallVector<StringRef, 5> QualifiedNameComponents;
-  const DISubprogram *ClosestSubprogram = getQualifiedNameComponents(
-      Ty->getScope().resolve(), QualifiedNameComponents);
-
-  if (ClosestSubprogram == nullptr) {
-    std::string FullyQualifiedName =
-        getQualifiedName(QualifiedNameComponents, TypeName);
-    GlobalUDTs.emplace_back(std::move(FullyQualifiedName), UnderlyingTypeIndex);
-  } else if (ClosestSubprogram == CurrentSubprogram) {
-    std::string FullyQualifiedName =
-        getQualifiedName(QualifiedNameComponents, TypeName);
-    LocalUDTs.emplace_back(std::move(FullyQualifiedName), UnderlyingTypeIndex);
-  }
-  // TODO: What if the ClosestSubprogram is neither null or the current
-  // subprogram?  Currently, the UDT just gets dropped on the floor.
-  //
-  // The current behavior is not desirable.  To get maximal fidelity, we would
-  // need to perform all type translation before beginning emission of .debug$S
-  // and then make LocalUDTs a member of FunctionInfo
+  addToUDTs(Ty, UnderlyingTypeIndex);
 
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::Int32Long) &&
       TypeName == "HRESULT")
@@ -896,6 +902,7 @@ TypeIndex CodeViewDebug::lowerTypeAlias(const DIDerivedType *Ty) {
   if (UnderlyingTypeIndex == TypeIndex(SimpleTypeKind::UInt16Short) &&
       TypeName == "wchar_t")
     return TypeIndex(SimpleTypeKind::WideCharacter);
+
   return UnderlyingTypeIndex;
 }
 
@@ -1416,6 +1423,8 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
                    TypeIndex(0x0), getFullFilepath(Ty->getFile()))),
       Ty->getLine()));
 
+  addToUDTs(Ty, ClassTI);
+
   return ClassTI;
 }
 
@@ -1449,6 +1458,8 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
       UnionTI, TypeTable.writeStringId(StringIdRecord(
                    TypeIndex(0x0), getFullFilepath(Ty->getFile()))),
       Ty->getLine()));
+
+  addToUDTs(Ty, UnionTI);
 
   return UnionTI;
 }
@@ -1797,6 +1808,18 @@ void CodeViewDebug::emitDebugInfoForGlobals() {
           emitDebugInfoForGlobal(G, GVSym);
           endCVSubsection(EndLabel);
         }
+      }
+    }
+  }
+}
+
+void CodeViewDebug::emitDebugInfoForRetainedTypes() {
+  NamedMDNode *CUs = MMI->getModule()->getNamedMetadata("llvm.dbg.cu");
+  for (const MDNode *Node : CUs->operands()) {
+    for (auto *Ty : cast<DICompileUnit>(Node)->getRetainedTypes()) {
+      if (DIType *RT = dyn_cast<DIType>(Ty)) {
+        getTypeIndex(RT);
+        // FIXME: Add to global/local DTU list.
       }
     }
   }

@@ -155,15 +155,15 @@ namespace llvm {
     }
 
     bool hasNoUnsignedWrap() const {
-      return getNoWrapFlags(SCEV::FlagNUW) != SCEV::FlagAnyWrap;
+      return getNoWrapFlags(FlagNUW) != FlagAnyWrap;
     }
 
     bool hasNoSignedWrap() const {
-      return getNoWrapFlags(SCEV::FlagNSW) != SCEV::FlagAnyWrap;
+      return getNoWrapFlags(FlagNSW) != FlagAnyWrap;
     }
 
     bool hasNoSelfWrap() const {
-      return getNoWrapFlags(SCEV::FlagNW) != SCEV::FlagAnyWrap;
+      return getNoWrapFlags(FlagNW) != FlagAnyWrap;
     }
 
     /// Methods for support type inquiry through isa, cast, and dyn_cast:

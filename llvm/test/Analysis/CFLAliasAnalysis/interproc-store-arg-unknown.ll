@@ -4,9 +4,6 @@
 ; RUN: opt < %s -disable-basicaa -cfl-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
-; xfail for now due to buggy interproc analysis
-; XFAIL: *
-
 @g = external global i32
 
 define void @store_arg_unknown_callee(i32** %arg1) {
@@ -20,7 +17,7 @@ define void @store_arg_unknown_callee(i32** %arg1) {
 ; CHECK: MayAlias: i32* %lp, i32* %x
 ; CHECK: MayAlias: i32* %a, i32* %lp
 ; CHECK: NoAlias: i32* %b, i32* %lp
-; CHECK: MayAlias: 32* %lp, i32** %p
+; CHECK: NoAlias: i32* %lp, i32** %p
 define void @test_store_arg_unknown(i32* %x) {
   %a = alloca i32, align 4
   %b = alloca i32, align 4

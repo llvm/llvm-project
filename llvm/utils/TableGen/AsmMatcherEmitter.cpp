@@ -579,8 +579,8 @@ struct MatchableInfo {
   /// operator< - Compare two matchables.
   bool operator<(const MatchableInfo &RHS) const {
     // The primary comparator is the instruction mnemonic.
-    if (Mnemonic != RHS.Mnemonic)
-      return Mnemonic < RHS.Mnemonic;
+    if (int Cmp = Mnemonic.compare(RHS.Mnemonic))
+      return Cmp == -1;
 
     if (AsmOperands.size() != RHS.AsmOperands.size())
       return AsmOperands.size() < RHS.AsmOperands.size();
