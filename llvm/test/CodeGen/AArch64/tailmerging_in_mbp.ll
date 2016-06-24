@@ -1,4 +1,4 @@
-; RUN: llc <%s -march=aarch64 | FileCheck %s
+; RUN: llc <%s -march=aarch64 -verify-machine-dom-info | FileCheck %s
 
 ; CHECK-LABEL: test:
 ; CHECK:       LBB0_7:

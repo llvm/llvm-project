@@ -1,17 +1,17 @@
-; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=PRE-R6
-; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | FileCheck %s \
-; RUN:   -check-prefix=ALL -check-prefix=R6
+; RUN: llc < %s -march=mips64 -mcpu=mips3 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips4 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64r3 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64r5 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,PRE-R6
+; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | \
+; RUN:   FileCheck %s -check-prefixes=ALL,R6
 
 ; Check that we don't emit redundant SLLs for sequences of
 ; (AssertZext:i32 (trunc:i32 (AssertZext:i64 X, i32)), i8)

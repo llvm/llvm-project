@@ -1,7 +1,7 @@
 // RUN: llvm-mc -triple mips-unknown-linux < %s -show-encoding \
-// RUN:     | FileCheck -check-prefix=ENCBE -check-prefix=FIXUP %s
+// RUN:     | FileCheck -check-prefixes=ENCBE,FIXUP %s
 // RUN: llvm-mc -triple mipsel-unknown-linux < %s -show-encoding \
-// RUN:     | FileCheck -check-prefix=ENCLE -check-prefix=FIXUP %s
+// RUN:     | FileCheck -check-prefixes=ENCLE,FIXUP %s
 // RUN: llvm-mc -filetype=obj -triple mipsel-unknown-linux < %s \
 // RUN:     | llvm-readobj -r | FileCheck -check-prefix=RELOC %s
 // RUN: llvm-mc -filetype=obj -triple mips-unknown-linux < %s \

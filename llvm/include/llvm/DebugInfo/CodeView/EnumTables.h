@@ -23,7 +23,7 @@ ArrayRef<EnumEntry<SymbolKind>> getSymbolTypeNames();
 ArrayRef<EnumEntry<uint16_t>> getRegisterNames();
 ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames();
 ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames();
-ArrayRef<EnumEntry<uint32_t>> getFrameCookieKindNames();
+ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames();
 ArrayRef<EnumEntry<SourceLanguage>> getSourceLanguageNames();
 ArrayRef<EnumEntry<uint32_t>> getCompileSym2FlagNames();
 ArrayRef<EnumEntry<uint32_t>> getCompileSym3FlagNames();

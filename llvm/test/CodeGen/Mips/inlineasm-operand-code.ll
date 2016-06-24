@@ -1,15 +1,15 @@
 ; Positive test for inline register constraints
 ;
 ; RUN: llc -no-integrated-as -march=mipsel -relocation-model=pic < %s | \
-; RUN:     FileCheck -check-prefix=ALL -check-prefix=LE32 -check-prefix=GAS %s
+; RUN:     FileCheck -check-prefixes=ALL,LE32,GAS %s
 ; RUN: llc -no-integrated-as -march=mips -relocation-model=pic < %s | \
-; RUN:     FileCheck -check-prefix=ALL -check-prefix=BE32 -check-prefix=GAS %s
+; RUN:     FileCheck -check-prefixes=ALL,BE32,GAS %s
 
 ; IAS might not print in the same way since it parses the assembly.
 ; RUN: llc -march=mipsel -relocation-model=pic < %s | \
-; RUN:     FileCheck -check-prefix=ALL -check-prefix=LE32 -check-prefix=IAS %s
+; RUN:     FileCheck -check-prefixes=ALL,LE32,IAS %s
 ; RUN: llc -march=mips -relocation-model=pic < %s | \
-; RUN:     FileCheck -check-prefix=ALL -check-prefix=BE32 -check-prefix=IAS %s
+; RUN:     FileCheck -check-prefixes=ALL,BE32,IAS %s
 
 %union.u_tag = type { i64 }
 %struct.anon = type { i32, i32 }

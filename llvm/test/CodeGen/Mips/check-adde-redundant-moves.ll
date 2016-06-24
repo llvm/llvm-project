@@ -1,15 +1,9 @@
-; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=GP32
-; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=GP32
+; RUN: llc < %s -march=mips -mcpu=mips2 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r2 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r3 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r5 | FileCheck %s -check-prefixes=ALL,GP32
+; RUN: llc < %s -march=mips -mcpu=mips32r6 | FileCheck %s -check-prefixes=ALL,GP32
 ; RUN: llc < %s -march=mips64 -mcpu=mips3 | FileCheck %s -check-prefix=ALL
 ; RUN: llc < %s -march=mips64 -mcpu=mips4 | FileCheck %s -check-prefix=ALL
 ; RUN: llc < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefix=ALL

@@ -3,14 +3,14 @@
 #
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=+fp64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
-# RUN:     FileCheck %s -check-prefix=CHECK-OBJ-ALL -check-prefix=CHECK-OBJ-O32
+# RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-O32
 #
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
-# RUN:     FileCheck %s -check-prefix=CHECK-OBJ-ALL -check-prefix=CHECK-OBJ-N32
+# RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N32
 
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
@@ -19,19 +19,19 @@
 # output should be unchanged.
 # RUN: llvm-mc /dev/null -arch=mips64 -mcpu=mips64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
-# RUN:     FileCheck %s -check-prefix=CHECK-OBJ-ALL -check-prefix=CHECK-OBJ-N64
+# RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N64
 
 # RUN: llvm-mc /dev/null -arch=mips -mcpu=mips32 -mattr=+fp64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
-# RUN:     FileCheck %s -check-prefix=CHECK-OBJ-ALL -check-prefix=CHECK-OBJ-O32
+# RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-O32
 #
 # RUN: llvm-mc /dev/null -arch=mips64 -mcpu=mips64 -target-abi n32 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
-# RUN:     FileCheck %s -check-prefix=CHECK-OBJ-ALL -check-prefix=CHECK-OBJ-N32
+# RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N32
 
 # RUN: llvm-mc /dev/null -arch=mips64 -mcpu=mips64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
-# RUN:     FileCheck %s -check-prefix=CHECK-OBJ-ALL -check-prefix=CHECK-OBJ-N64
+# RUN:     FileCheck %s -check-prefixes=CHECK-OBJ-ALL,CHECK-OBJ-N64
 
 # CHECK-ASM: .module oddspreg
 

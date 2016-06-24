@@ -1213,7 +1213,8 @@ public:
   struct Hdr {
     ulittle32_t CodeOffset;
     ulittle16_t Register;
-    ulittle32_t CookieKind;
+    uint8_t CookieKind;
+    uint8_t Flags;
   };
 
   FrameCookieSym(uint32_t RecordOffset, const Hdr *H)

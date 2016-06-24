@@ -441,8 +441,6 @@ private:
   void verifyMustTailCall(CallInst &CI);
   bool performTypeCheck(Intrinsic::ID ID, Function *F, Type *Ty, int VT,
                         unsigned ArgNo, std::string &Suffix);
-  bool verifyIntrinsicIsVarArg(bool isVarArg,
-                               ArrayRef<Intrinsic::IITDescriptor> &Infos);
   bool verifyAttributeCount(AttributeSet Attrs, unsigned Params);
   void verifyAttributeTypes(AttributeSet Attrs, unsigned Idx, bool isFunction,
                             const Value *V);
@@ -3725,32 +3723,6 @@ void Verifier::visitInstruction(Instruction &I) {
   InstsInThisBlock.insert(&I);
 }
 
-/// Verify if the intrinsic has variable arguments. This method is intended to
-/// be called after all the fixed arguments have been verified first.
-///
-/// This method returns true on error and does not print an error message.
-bool
-Verifier::verifyIntrinsicIsVarArg(bool isVarArg,
-                                  ArrayRef<Intrinsic::IITDescriptor> &Infos) {
-  using namespace Intrinsic;
-
-  // If there are no descriptors left, then it can't be a vararg.
-  if (Infos.empty())
-    return isVarArg;
-
-  // There should be only one descriptor remaining at this point.
-  if (Infos.size() != 1)
-    return true;
-
-  // Check and verify the descriptor.
-  IITDescriptor D = Infos.front();
-  Infos = Infos.slice(1);
-  if (D.Kind == IITDescriptor::VarArg)
-    return !isVarArg;
-
-  return true;
-}
-
 /// Allow intrinsics to be verified in different ways.
 void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
   Function *IF = CS.getCalledFunction();
@@ -3777,10 +3749,10 @@ void Verifier::visitIntrinsicCallSite(Intrinsic::ID ID, CallSite CS) {
 
   // Verify if the intrinsic call matches the vararg property.
   if (IsVarArg)
-    Assert(!verifyIntrinsicIsVarArg(IsVarArg, TableRef),
+    Assert(!Intrinsic::matchIntrinsicVarArg(IsVarArg, TableRef),
            "Intrinsic was not defined with variable arguments!", IF);
   else
-    Assert(!verifyIntrinsicIsVarArg(IsVarArg, TableRef),
+    Assert(!Intrinsic::matchIntrinsicVarArg(IsVarArg, TableRef),
            "Callsite was not defined with variable arguments!", IF);
 
   // All descriptors should be absorbed by now.

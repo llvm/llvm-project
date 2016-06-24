@@ -1,25 +1,23 @@
 ; RUN: llc < %s -march=mips -mcpu=mips32 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-C
+; RUN:    FileCheck %s -check-prefixes=ALL,32-C
 ; RUN: llc < %s -march=mips -mcpu=mips32r2 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-C
+; RUN:    FileCheck %s -check-prefixes=ALL,32-C
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=32-CMP
+; RUN:    FileCheck %s -check-prefixes=ALL,32-CMP
 ; RUN: llc < %s -march=mips64 -mcpu=mips4 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C
 ; RUN: llc < %s -march=mips64 -mcpu=mips64 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r2 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-C
+; RUN:    FileCheck %s -check-prefixes=ALL,64-C
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 | \
-; RUN:    FileCheck %s -check-prefix=ALL -check-prefix=64-CMP
+; RUN:    FileCheck %s -check-prefixes=ALL,64-CMP
 ; RUN: llc < %s -march=mips -mcpu=mips32r3 -mattr=+micromips | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MM32R3
+; RUN:    -check-prefixes=ALL,MM,MM32R3
 ; RUN: llc < %s -march=mips -mcpu=mips32r6 -mattr=+micromips | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MMR6 \
-; RUN:    -check-prefix=MM32R6
+; RUN:    -check-prefixes=ALL,MM,MMR6,MM32R6
 ; RUN: llc < %s -march=mips64 -mcpu=mips64r6 -mattr=+micromips | FileCheck %s \
-; RUN:    -check-prefix=ALL -check-prefix=MM -check-prefix=MMR6 \
-; RUN:    -check-prefix=MM64R6
+; RUN:    -check-prefixes=ALL,MM,MMR6,MM64R6
 
 define i32 @false_f32(float %a, float %b) nounwind {
 ; ALL-LABEL: false_f32:

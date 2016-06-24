@@ -465,7 +465,7 @@ enum class BinaryAnnotationsOpCode : uint32_t {
 };
 
 // Corresponds to CV_cookietype_e enum.
-enum class FrameCookieKind : uint32_t {
+enum class FrameCookieKind : uint8_t {
   Copy,
   XorStackPointer,
   XorFramePointer,

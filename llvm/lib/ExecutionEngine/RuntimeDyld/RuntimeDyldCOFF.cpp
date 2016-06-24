@@ -13,6 +13,7 @@
 
 #include "RuntimeDyldCOFF.h"
 #include "Targets/RuntimeDyldCOFFI386.h"
+#include "Targets/RuntimeDyldCOFFThumb.h"
 #include "Targets/RuntimeDyldCOFFX86_64.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Triple.h"
@@ -45,11 +46,11 @@ llvm::RuntimeDyldCOFF::create(Triple::ArchType Arch,
                               RuntimeDyld::MemoryManager &MemMgr,
                               RuntimeDyld::SymbolResolver &Resolver) {
   switch (Arch) {
-  default:
-    llvm_unreachable("Unsupported target for RuntimeDyldCOFF.");
-    break;
+  default: llvm_unreachable("Unsupported target for RuntimeDyldCOFF.");
   case Triple::x86:
     return make_unique<RuntimeDyldCOFFI386>(MemMgr, Resolver);
+  case Triple::thumb:
+    return make_unique<RuntimeDyldCOFFThumb>(MemMgr, Resolver);
   case Triple::x86_64:
     return make_unique<RuntimeDyldCOFFX86_64>(MemMgr, Resolver);
   }
@@ -57,9 +58,9 @@ llvm::RuntimeDyldCOFF::create(Triple::ArchType Arch,
 
 std::unique_ptr<RuntimeDyld::LoadedObjectInfo>
 RuntimeDyldCOFF::loadObject(const object::ObjectFile &O) {
-  if (auto ObjSectionToIDOrErr = loadObjectImpl(O))
+  if (auto ObjSectionToIDOrErr = loadObjectImpl(O)) {
     return llvm::make_unique<LoadedCOFFObjectInfo>(*this, *ObjSectionToIDOrErr);
-  else {
+  } else {
     HasError = true;
     raw_string_ostream ErrStream(ErrorStr);
     logAllUnhandledErrors(ObjSectionToIDOrErr.takeError(), ErrStream, "");

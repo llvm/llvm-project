@@ -16,6 +16,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticPrinter.h"
 #include "llvm/IR/GVMaterializer.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -901,6 +902,14 @@ Expected<Constant *> IRLinker::linkGlobalValueProto(GlobalValue *SGV,
     if (ShouldLink || !ForAlias)
       forceRenaming(NewGV, SGV->getName());
   }
+
+  // Overloaded intrinsics have overloaded types names as part of their
+  // names. If we renamed overloaded types we should rename the intrinsic
+  // as well.
+  if (Function *F = dyn_cast<Function>(NewGV))
+    if (auto Remangled = Intrinsic::remangleIntrinsicFunction(F))
+      NewGV = Remangled.getValue();
+
   if (ShouldLink || ForAlias) {
     if (const Comdat *SC = SGV->getComdat()) {
       if (auto *GO = dyn_cast<GlobalObject>(NewGV)) {

@@ -295,6 +295,11 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
     return;
   child_iterator E = child_end();
 
+  // This is at least a valid empty archive. Since an empty archive is the
+  // same in all formats, just claim it to be gnu to make sure Format is
+  // initialized.
+  Format = K_GNU;
+
   if (I == E) {
     ec = std::error_code();
     return;

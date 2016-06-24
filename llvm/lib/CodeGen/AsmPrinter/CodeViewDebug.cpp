@@ -1319,6 +1319,9 @@ struct llvm::ClassInfo {
   // MethodName -> MethodsList
   typedef MapVector<MDString *, MethodsList> MethodsMap;
 
+  /// Base classes.
+  std::vector<const DIDerivedType *> Inheritance;
+
   /// Direct members.
   MemberList Members;
   // Direct overloaded methods gathered by name.
@@ -1366,10 +1369,10 @@ ClassInfo CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
     if (auto *SP = dyn_cast<DISubprogram>(Element)) {
       Info.Methods[SP->getRawName()].push_back(SP);
     } else if (auto *DDTy = dyn_cast<DIDerivedType>(Element)) {
-      if (DDTy->getTag() == dwarf::DW_TAG_member)
+      if (DDTy->getTag() == dwarf::DW_TAG_member) {
         collectMemberInfo(Info, DDTy);
-      else if (DDTy->getTag() == dwarf::DW_TAG_inheritance) {
-        // FIXME: collect class info from inheritance.
+      } else if (DDTy->getTag() == dwarf::DW_TAG_inheritance) {
+        Info.Inheritance.push_back(DDTy);
       } else if (DDTy->getTag() == dwarf::DW_TAG_friend) {
         // Ignore friend members. It appears that MSVC emitted info about
         // friends in the past, but modern versions do not.
@@ -1474,6 +1477,27 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   ClassInfo Info = collectClassInfo(Ty);
   FieldListRecordBuilder Fields;
 
+  // Create base classes.
+  for (const DIDerivedType *I : Info.Inheritance) {
+    if (I->getFlags() & DINode::FlagVirtual) {
+      // Virtual base.
+      // FIXME: Emit VBPtrOffset when the frontend provides it.
+      unsigned VBPtrOffset = 0;
+      // FIXME: Despite the accessor name, the offset is really in bytes.
+      unsigned VBTableIndex = I->getOffsetInBits() / 4;
+      Fields.writeVirtualBaseClass(VirtualBaseClassRecord(
+          translateAccessFlags(Ty->getTag(), I->getFlags()),
+          getTypeIndex(I->getBaseType()), getVBPTypeIndex(), VBPtrOffset,
+          VBTableIndex));
+    } else {
+      assert(I->getOffsetInBits() % 8 == 0 &&
+             "bases must be on byte boundaries");
+      Fields.writeBaseClass(BaseClassRecord(
+          translateAccessFlags(Ty->getTag(), I->getFlags()),
+          getTypeIndex(I->getBaseType()), I->getOffsetInBits() / 8));
+    }
+  }
+
   // Create members.
   for (ClassInfo::MemberInfo &MemberInfo : Info.Members) {
     const DIDerivedType *Member = MemberInfo.MemberTypeNode;
@@ -1530,6 +1554,24 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   }
   TypeIndex FieldTI = TypeTable.writeFieldList(Fields);
   return std::make_tuple(FieldTI, TypeIndex(), MemberCount);
+}
+
+TypeIndex CodeViewDebug::getVBPTypeIndex() {
+  if (!VBPType.getIndex()) {
+    // Make a 'const int *' type.
+    ModifierRecord MR(TypeIndex::Int32(), ModifierOptions::Const);
+    TypeIndex ModifiedTI = TypeTable.writeModifier(MR);
+
+    PointerKind PK = getPointerSizeInBytes() == 8 ? PointerKind::Near64
+                                                  : PointerKind::Near32;
+    PointerMode PM = PointerMode::Pointer;
+    PointerOptions PO = PointerOptions::None;
+    PointerRecord PR(ModifiedTI, PK, PM, PO, getPointerSizeInBytes());
+
+    VBPType = TypeTable.writePointer(PR);
+  }
+
+  return VBPType;
 }
 
 struct CodeViewDebug::TypeLoweringScope {

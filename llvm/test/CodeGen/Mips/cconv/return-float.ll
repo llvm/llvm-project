@@ -1,14 +1,14 @@
-; RUN: llc -mtriple=mips-linux-gnu -mattr=+soft-float -relocation-model=static < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN: llc -mtriple=mipsel-linux-gnu -mattr=+soft-float -relocation-model=static < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN: llc -mtriple=mips-linux-gnu -mattr=+soft-float -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -mtriple=mipsel-linux-gnu -mattr=+soft-float -relocation-model=static < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN-TODO: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN-TODO: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN-TODO: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
-; RUN: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
+; RUN: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 
-; RUN: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
-; RUN: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
+; RUN: llc -mtriple=mips64-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -mtriple=mips64el-linux-gnu -mattr=+soft-float -relocation-model=static -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
 
 ; Test the float returns for all ABI's and byte orders as specified by
 ; section 5 of MD00305 (MIPS ABIs Described).

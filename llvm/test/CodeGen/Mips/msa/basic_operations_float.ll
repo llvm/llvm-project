@@ -1,9 +1,9 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefix=ALL -check-prefix=O32 %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefix=ALL -check-prefix=O32 %s
-; RUN: llc -march=mips64 -target-abi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefix=ALL -check-prefix=N32 %s
-; RUN: llc -march=mips64el -target-abi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefix=ALL -check-prefix=N32 %s
-; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefix=ALL -check-prefix=N64 %s
-; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefix=ALL -check-prefix=N64 %s
+; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,O32 %s
+; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,O32 %s
+; RUN: llc -march=mips64 -target-abi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64el -target-abi=n32 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,N64 %s
 
 @v4f32 = global <4 x float> <float 0.0, float 0.0, float 0.0, float 0.0>
 @v2f64 = global <2 x double> <double 0.0, double 0.0>
