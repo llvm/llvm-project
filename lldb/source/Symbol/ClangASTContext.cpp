@@ -3648,6 +3648,14 @@ ClangASTContext::IsPossibleDynamicType (lldb::opaque_compiler_type_t type,
             case clang::Type::ObjCObjectPointer:
                 if (check_objc)
                 {
+                    if (auto objc_pointee_type = qual_type->getPointeeType().getTypePtrOrNull())
+                    {
+                        if (auto objc_object_type = llvm::dyn_cast_or_null<clang::ObjCObjectType>(objc_pointee_type))
+                        {
+                            if (objc_object_type->isObjCClass())
+                                return false;
+                        }
+                    }
                     if (dynamic_pointee_type)
                         dynamic_pointee_type->SetCompilerType(getASTContext(), llvm::cast<clang::ObjCObjectPointerType>(qual_type)->getPointeeType());
                     return true;
