@@ -3344,6 +3344,23 @@ ClangASTContext::IsIntegerType (lldb::opaque_compiler_type_t type, bool &is_sign
 }
 
 bool
+ClangASTContext::IsEnumerationType(lldb::opaque_compiler_type_t type, bool &is_signed)
+{
+    if (type)
+    {
+        const clang::EnumType *enum_type = llvm::dyn_cast<clang::EnumType>(GetCanonicalQualType(type)->getCanonicalTypeInternal());
+
+        if (enum_type)
+        {
+            IsIntegerType(enum_type->getDecl()->getIntegerType().getAsOpaquePtr(), is_signed);
+            return true;
+        }
+    }
+
+    return false;
+}
+
+bool
 ClangASTContext::IsPointerType (lldb::opaque_compiler_type_t type, CompilerType *pointee_type)
 {
     if (type)

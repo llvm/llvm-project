@@ -155,7 +155,13 @@ public:
     
     bool
     IsIntegerType (bool &is_signed) const;
-    
+
+    bool
+    IsEnumerationType (bool &is_signed) const;
+
+    bool
+    IsIntegerOrEnumerationType (bool &is_signed) const;
+
     bool
     IsPolymorphicClass () const;
 
