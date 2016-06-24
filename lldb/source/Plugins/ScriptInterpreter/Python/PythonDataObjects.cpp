@@ -1109,13 +1109,37 @@ PythonCallable::Reset(PyRefType type, PyObject *py_obj)
 PythonCallable::ArgInfo
 PythonCallable::GetNumArguments() const
 {
-    ArgInfo result = { 0, false, false };
+    ArgInfo result = { 0, false, false, false };
     if (!IsValid())
         return result;
 
     PyObject *py_func_obj = m_py_obj;
     if (PyMethod_Check(py_func_obj))
+    {
         py_func_obj = PyMethod_GET_FUNCTION(py_func_obj);
+        PythonObject im_self = GetAttributeValue("im_self");
+        if (im_self.IsValid() && !im_self.IsNone())
+            result.is_bound_method = true;
+    }
+    else
+    {
+        // see if this is a callable object with an __call__ method
+        if (!PyFunction_Check(py_func_obj))
+        {
+            PythonObject __call__ = GetAttributeValue("__call__");
+            if (__call__.IsValid())
+            {
+                auto __callable__ = __call__.AsType<PythonCallable>();
+                if (__callable__.IsValid())
+                {
+                    py_func_obj = PyMethod_GET_FUNCTION(__callable__.get());
+                    PythonObject im_self = GetAttributeValue("im_self");
+                    if (im_self.IsValid() && !im_self.IsNone())
+                        result.is_bound_method = true;
+                }
+            }
+        }
+    }
 
     if (!py_func_obj)
         return result;
