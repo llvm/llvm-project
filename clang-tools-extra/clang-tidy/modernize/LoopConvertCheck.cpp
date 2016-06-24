@@ -142,7 +142,7 @@ StatementMatcher makeIteratorLoopMatcher() {
   StatementMatcher IteratorComparisonMatcher = expr(
       ignoringParenImpCasts(declRefExpr(to(varDecl().bind(ConditionVarName)))));
 
-  auto OverloadedNEQMatcher = matchers::ignoringImplicit(
+  auto OverloadedNEQMatcher = ignoringImplicit(
       cxxOperatorCallExpr(hasOverloadedOperatorName("!="), argumentCountIs(2),
                           hasArgument(0, IteratorComparisonMatcher),
                           hasArgument(1, IteratorBoundMatcher)));

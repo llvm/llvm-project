@@ -8,7 +8,7 @@
 # RUN:          local: *; }LIBSAMPLE_1.0; \
 # RUN:       LIBSAMPLE_3.0{               \
 # RUN:          global: c;                \
-# RUN:          local: *; }LIBSAMPLE_2.0;" > %t.script
+# RUN:       }LIBSAMPLE_2.0;" > %t.script
 # RUN: ld.lld --version-script %t.script -shared -soname shared %t.o -o %t.so
 # RUN: llvm-readobj -V -dyn-symbols %t.so | FileCheck --check-prefix=DSO %s
 

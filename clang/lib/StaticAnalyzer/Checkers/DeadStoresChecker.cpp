@@ -278,6 +278,8 @@ public:
           RHS = RHS->IgnoreParenCasts();
 
           QualType T = VD->getType();
+          if (T.isVolatileQualified())
+            return;
           if (T->isPointerType() || T->isObjCObjectPointerType()) {
             if (RHS->isNullPointerConstant(Ctx, Expr::NPC_ValueDependentIsNull))
               return;
