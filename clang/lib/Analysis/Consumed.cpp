@@ -1362,7 +1362,7 @@ void ConsumedAnalyzer::run(AnalysisDeclContext &AC) {
   ConsumedStmtVisitor Visitor(AC, *this, CurrStates.get());
 
   // Add all trackable parameters to the state map.
-  for (const auto *PI : D->params())
+  for (const auto *PI : D->parameters())
     Visitor.VisitParmVarDecl(PI);
   
   // Visit all of the function's basic blocks.

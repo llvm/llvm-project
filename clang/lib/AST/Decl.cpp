@@ -2793,7 +2793,7 @@ unsigned FunctionDecl::getMinRequiredArguments() const {
     return getNumParams();
 
   unsigned NumRequiredArgs = 0;
-  for (auto *Param : params())
+  for (auto *Param : parameters())
     if (!Param->isParameterPack() && !Param->hasDefaultArg())
       ++NumRequiredArgs;
   return NumRequiredArgs;
@@ -4099,8 +4099,10 @@ void IndirectFieldDecl::anchor() { }
 
 IndirectFieldDecl::IndirectFieldDecl(ASTContext &C, DeclContext *DC,
                                      SourceLocation L, DeclarationName N,
-                                     QualType T, NamedDecl **CH, unsigned CHS)
-    : ValueDecl(IndirectField, DC, L, N, T), Chaining(CH), ChainingSize(CHS) {
+                                     QualType T,
+                                     MutableArrayRef<NamedDecl *> CH)
+    : ValueDecl(IndirectField, DC, L, N, T), Chaining(CH.data()),
+      ChainingSize(CH.size()) {
   // In C++, indirect field declarations conflict with tag declarations in the
   // same scope, so add them to IDNS_Tag so that tag redeclaration finds them.
   if (C.getLangOpts().CPlusPlus)
@@ -4109,16 +4111,15 @@ IndirectFieldDecl::IndirectFieldDecl(ASTContext &C, DeclContext *DC,
 
 IndirectFieldDecl *
 IndirectFieldDecl::Create(ASTContext &C, DeclContext *DC, SourceLocation L,
-                          IdentifierInfo *Id, QualType T, NamedDecl **CH,
-                          unsigned CHS) {
-  return new (C, DC) IndirectFieldDecl(C, DC, L, Id, T, CH, CHS);
+                          IdentifierInfo *Id, QualType T,
+                          llvm::MutableArrayRef<NamedDecl *> CH) {
+  return new (C, DC) IndirectFieldDecl(C, DC, L, Id, T, CH);
 }
 
 IndirectFieldDecl *IndirectFieldDecl::CreateDeserialized(ASTContext &C,
                                                          unsigned ID) {
   return new (C, ID) IndirectFieldDecl(C, nullptr, SourceLocation(),
-                                       DeclarationName(), QualType(), nullptr,
-                                       0);
+                                       DeclarationName(), QualType(), None);
 }
 
 SourceRange EnumConstantDecl::getSourceRange() const {

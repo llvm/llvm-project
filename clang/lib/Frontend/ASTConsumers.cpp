@@ -268,7 +268,7 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     // Print the parameters.
     Out << "(";
     bool PrintComma = false;
-    for (auto I : FD->params()) {
+    for (auto I : FD->parameters()) {
       if (PrintComma)
         Out << ", ";
       else
@@ -290,13 +290,12 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     // Print the parameters.
     Out << "(";
     bool PrintComma = false;
-    for (FunctionDecl::param_const_iterator I = D->param_begin(),
-           E = D->param_end(); I != E; ++I) {
+    for (ParmVarDecl *Parameter : D->parameters()) {
       if (PrintComma)
         Out << ", ";
       else
         PrintComma = true;
-      Out << **I;
+      Out << *Parameter;
     }
     Out << ")";
 
@@ -320,13 +319,12 @@ void DeclContextPrinter::PrintDeclContext(const DeclContext* DC,
     // Print the parameters.
     Out << "(";
     bool PrintComma = false;
-    for (FunctionDecl::param_const_iterator I = D->param_begin(),
-           E = D->param_end(); I != E; ++I) {
+    for (ParmVarDecl *Parameter : D->parameters()) {
       if (PrintComma)
         Out << ", ";
       else
         PrintComma = true;
-      Out << **I;
+      Out << *Parameter;
     }
     Out << ")";
 

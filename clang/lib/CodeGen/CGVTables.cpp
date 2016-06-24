@@ -284,7 +284,7 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Value *Callee,
     CGM.getCXXABI().adjustCallArgsForDestructorThunk(*this, CurGD, CallArgs);
 
   // Add the rest of the arguments.
-  for (const ParmVarDecl *PD : MD->params())
+  for (const ParmVarDecl *PD : MD->parameters())
     EmitDelegateCallArg(CallArgs, PD, PD->getLocStart());
 
   const FunctionProtoType *FPT = MD->getType()->getAs<FunctionProtoType>();

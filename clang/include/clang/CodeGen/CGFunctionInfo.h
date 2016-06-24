@@ -400,10 +400,10 @@ public:
                                        const FunctionDecl *FD) {
     if (!prototype->isVariadic()) return All;
     if (FD)
-      additional += std::count_if(FD->param_begin(), FD->param_end(),
-                                  [](const ParmVarDecl *PVD) {
-                                    return PVD->hasAttr<PassObjectSizeAttr>();
-                                  });
+      additional +=
+          llvm::count_if(FD->parameters(), [](const ParmVarDecl *PVD) {
+            return PVD->hasAttr<PassObjectSizeAttr>();
+          });
     return RequiredArgs(prototype->getNumParams() + additional);
   }
 

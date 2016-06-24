@@ -935,7 +935,7 @@ bool CursorVisitor::VisitObjCMethodDecl(ObjCMethodDecl *ND) {
     if (Visit(TSInfo->getTypeLoc()))
       return true;
 
-  for (const auto *P : ND->params()) {
+  for (const auto *P : ND->parameters()) {
     if (Visit(MakeCXCursor(P, TU, RegionOfInterest)))
       return true;
   }
@@ -6278,7 +6278,7 @@ AnnotateTokensWorker::Visit(CXCursor cursor, CXCursor parent) {
         if (Method->getObjCDeclQualifier())
           HasContextSensitiveKeywords = true;
         else {
-          for (const auto *P : Method->params()) {
+          for (const auto *P : Method->parameters()) {
             if (P->getObjCDeclQualifier()) {
               HasContextSensitiveKeywords = true;
               break;

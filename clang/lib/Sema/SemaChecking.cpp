@@ -2992,11 +2992,11 @@ bool Sema::SemaBuiltinVAStartImpl(CallExpr *TheCall) {
       // Get the last formal in the current function.
       const ParmVarDecl *LastArg;
       if (CurBlock)
-        LastArg = *(CurBlock->TheDecl->param_end()-1);
+        LastArg = CurBlock->TheDecl->parameters().back();
       else if (FunctionDecl *FD = getCurFunctionDecl())
-        LastArg = *(FD->param_end()-1);
+        LastArg = FD->parameters().back();
       else
-        LastArg = *(getCurMethodDecl()->param_end()-1);
+        LastArg = getCurMethodDecl()->parameters().back();
       SecondArgIsLastNamedArgument = PV == LastArg;
 
       Type = PV->getType();
@@ -8664,7 +8664,7 @@ void Sema::DiagnoseAlwaysNonNullPointer(Expr *E,
       }
 
       if (const auto *FD = dyn_cast<FunctionDecl>(PV->getDeclContext())) {
-        auto ParamIter = std::find(FD->param_begin(), FD->param_end(), PV);
+        auto ParamIter = llvm::find(FD->parameters(), PV);
         assert(ParamIter != FD->param_end());
         unsigned ParamNo = std::distance(FD->param_begin(), ParamIter);
 
@@ -9351,13 +9351,10 @@ static void diagnoseArrayStarInParamType(Sema &S, QualType PType,
 /// takes care of any checks that cannot be performed on the
 /// declaration itself, e.g., that the types of each of the function
 /// parameters are complete.
-bool Sema::CheckParmsForFunctionDef(ParmVarDecl *const *P,
-                                    ParmVarDecl *const *PEnd,
+bool Sema::CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
                                     bool CheckParameterNames) {
   bool HasInvalidParm = false;
-  for (; P != PEnd; ++P) {
-    ParmVarDecl *Param = *P;
-    
+  for (ParmVarDecl *Param : Parameters) {
     // C99 6.7.5.3p4: the parameters in a parameter type list in a
     // function declarator that is part of a function definition of
     // that function shall not have incomplete type.

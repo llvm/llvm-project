@@ -1088,6 +1088,16 @@ TEST(HasImplicitDestinationType, DoesNotMatchIncorrectly) {
                            unless(anything())))));
 }
 
+TEST(IgnoringImplicit, MatchesImplicit) {
+  EXPECT_TRUE(matches("class C {}; C a = C();",
+                      varDecl(has(ignoringImplicit(cxxConstructExpr())))));
+}
+
+TEST(IgnoringImplicit, DoesNotMatchIncorrectly) {
+  EXPECT_TRUE(
+      notMatches("class C {}; C a = C();", varDecl(has(cxxConstructExpr()))));
+}
+
 TEST(IgnoringImpCasts, MatchesImpCasts) {
   // This test checks that ignoringImpCasts matches when implicit casts are
   // present and its inner matcher alone does not match.

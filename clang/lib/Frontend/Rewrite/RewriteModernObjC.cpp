@@ -1286,7 +1286,7 @@ void RewriteModernObjC::RewriteObjCMethodDecl(const ObjCInterfaceDecl *IDecl,
   ResultStr += " _cmd";
 
   // Method arguments.
-  for (const auto *PDecl : OMD->params()) {
+  for (const auto *PDecl : OMD->parameters()) {
     ResultStr += ", ";
     if (PDecl->getType()->isObjCQualifiedIdType()) {
       ResultStr += "id ";
@@ -2785,7 +2785,7 @@ Stmt *RewriteModernObjC::RewriteObjCArrayLiteralExpr(ObjCArrayLiteral *Exp) {
   SmallVector<QualType, 4> ArgTypes;
   ArgTypes.push_back(Context->getObjCClassType());
   ArgTypes.push_back(Context->getObjCSelType());
-  for (const auto *PI : ArrayMethod->params())
+  for (const auto *PI : ArrayMethod->parameters())
     ArgTypes.push_back(PI->getType());
   
   QualType returnType = Exp->getType();
@@ -2932,7 +2932,7 @@ Stmt *RewriteModernObjC::RewriteObjCDictionaryLiteralExpr(ObjCDictionaryLiteral 
   SmallVector<QualType, 8> ArgTypes;
   ArgTypes.push_back(Context->getObjCClassType());
   ArgTypes.push_back(Context->getObjCSelType());
-  for (const auto *PI : DictMethod->params()) {
+  for (const auto *PI : DictMethod->parameters()) {
     QualType T = PI->getType();
     if (const PointerType* PT = T->getAs<PointerType>()) {
       QualType PointeeTy = PT->getPointeeType();
@@ -3497,7 +3497,7 @@ Stmt *RewriteModernObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
   ArgTypes.push_back(Context->getObjCSelType());
   if (ObjCMethodDecl *OMD = Exp->getMethodDecl()) {
     // Push any user argument types.
-    for (const auto *PI : OMD->params()) {
+    for (const auto *PI : OMD->parameters()) {
       QualType t = PI->getType()->isObjCQualifiedIdType()
                      ? Context->getObjCIdType()
                      : PI->getType();

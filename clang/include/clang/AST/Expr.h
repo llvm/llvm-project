@@ -3956,7 +3956,7 @@ private:
 
   /// Whether this designated initializer used the GNU deprecated
   /// syntax rather than the C99 '=' syntax.
-  bool GNUSyntax : 1;
+  unsigned GNUSyntax : 1;
 
   /// The number of designators in this initializer expression.
   unsigned NumDesignators : 15;

@@ -1154,10 +1154,8 @@ void ASTDumper::VisitFunctionDecl(const FunctionDecl *D) {
   if (!D->param_begin() && D->getNumParams())
     dumpChild([=] { OS << "<<NULL params x " << D->getNumParams() << ">>"; });
   else
-    for (FunctionDecl::param_const_iterator I = D->param_begin(),
-                                            E = D->param_end();
-         I != E; ++I)
-      dumpDecl(*I);
+    for (const ParmVarDecl *Parameter : D->parameters())
+      dumpDecl(Parameter);
 
   if (const CXXConstructorDecl *C = dyn_cast<CXXConstructorDecl>(D))
     for (CXXConstructorDecl::init_const_iterator I = C->init_begin(),
@@ -1548,10 +1546,8 @@ void ASTDumper::VisitObjCMethodDecl(const ObjCMethodDecl *D) {
   if (D->isThisDeclarationADefinition()) {
     dumpDeclContext(D);
   } else {
-    for (ObjCMethodDecl::param_const_iterator I = D->param_begin(),
-                                              E = D->param_end();
-         I != E; ++I)
-      dumpDecl(*I);
+    for (const ParmVarDecl *Parameter : D->parameters())
+      dumpDecl(Parameter);
   }
 
   if (D->isVariadic())
@@ -1681,7 +1677,7 @@ void ASTDumper::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
 }
 
 void ASTDumper::VisitBlockDecl(const BlockDecl *D) {
-  for (auto I : D->params())
+  for (auto I : D->parameters())
     dumpDecl(I);
 
   if (D->isVariadic())

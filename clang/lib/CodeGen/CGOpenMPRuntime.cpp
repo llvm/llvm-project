@@ -6405,7 +6405,7 @@ void CGOpenMPRuntime::emitDeclareSimdFunction(const FunctionDecl *FD,
   if (isa<CXXMethodDecl>(FD))
     ParamPositions.insert({FD, 0});
   unsigned ParamPos = ParamPositions.size();
-  for (auto *P : FD->params()) {
+  for (auto *P : FD->parameters()) {
     ParamPositions.insert({P->getCanonicalDecl(), ParamPos});
     ++ParamPos;
   }

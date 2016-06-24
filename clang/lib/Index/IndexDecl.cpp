@@ -67,7 +67,7 @@ public:
         }
       } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
         if (FD->isThisDeclarationADefinition()) {
-          for (auto PI : FD->params()) {
+          for (auto PI : FD->parameters()) {
             IndexCtx.handleDecl(PI);
           }
         }
@@ -79,7 +79,7 @@ public:
     if (!IndexCtx.handleDecl(D, (unsigned)SymbolRole::Dynamic))
       return false;
     IndexCtx.indexTypeSourceInfo(D->getReturnTypeSourceInfo(), D);
-    for (const auto *I : D->params())
+    for (const auto *I : D->parameters())
       handleDeclarator(I, D);
 
     if (D->isThisDeclarationADefinition()) {

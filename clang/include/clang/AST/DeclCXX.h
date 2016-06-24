@@ -165,13 +165,13 @@ class CXXBaseSpecifier {
   SourceLocation EllipsisLoc;
 
   /// \brief Whether this is a virtual base class or not.
-  bool Virtual : 1;
+  unsigned Virtual : 1;
 
   /// \brief Whether this is the base of a class (true) or of a struct (false).
   ///
   /// This determines the mapping from the access specifier as written in the
   /// source code to the access specifier used for semantic analysis.
-  bool BaseOfClass : 1;
+  unsigned BaseOfClass : 1;
 
   /// \brief Access specifier as written in the source code (may be AS_none).
   ///
@@ -181,7 +181,7 @@ class CXXBaseSpecifier {
 
   /// \brief Whether the class contains a using declaration
   /// to inherit the named class's constructors.
-  bool InheritConstructors : 1;
+  unsigned InheritConstructors : 1;
 
   /// \brief The type of the base class.
   ///
@@ -1943,15 +1943,15 @@ class CXXCtorInitializer final
 
   /// \brief If the initializee is a type, whether that type makes this
   /// a delegating initialization.
-  bool IsDelegating : 1;
+  unsigned IsDelegating : 1;
 
   /// \brief If the initializer is a base initializer, this keeps track
   /// of whether the base is virtual or not.
-  bool IsVirtual : 1;
+  unsigned IsVirtual : 1;
 
   /// \brief Whether or not the initializer is explicitly written
   /// in the sources.
-  bool IsWritten : 1;
+  unsigned IsWritten : 1;
 
   /// If IsWritten is true, then this number keeps track of the textual order
   /// of this initializer in the original sources, counting from 0; otherwise,
