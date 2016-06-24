@@ -5,10 +5,10 @@
 // the third is loaded at runtime. We make sure that out-of-bounds accesses
 // are caught for all three buffers.
 
-// RUN: %clang_asan -c -o %t-one.o -DDYNAMICLIB=\"%t-dynamic.so\" -DMAIN_FILE %s
+// RUN: %clang_asan -c -o %t-one.o -DMAIN_FILE %s
 // RUN: %clang_asan -c -o %t-two.o -DSECONDARY_FILE %s
 // RUN: %clang_asan -o %t %t-one.o %t-two.o
-// RUN: %clang_asan -shared -fPIC -o %t-dynamic.so -DSHARED_LIBRARY_FILE %s
+// RUN: %clang_asan -o %t-dynamic.so -shared -fPIC %libdl -DSHARED_LIBRARY_FILE %s
 // RUN: not %run %t 1 2>&1 | FileCheck --check-prefix ASAN-CHECK-1 %s
 // RUN: not %run %t 2 2>&1 | FileCheck --check-prefix ASAN-CHECK-2 %s
 // RUN: not %run %t 3 2>&1 | FileCheck --check-prefix ASAN-CHECK-3 %s
@@ -31,7 +31,10 @@ int main(int argc, char *argv[]) {
     buffer2[argc] = 0;
     // ASAN-CHECK-2: {{0x.* is located 1 bytes .* 'buffer2'}}
   } else if (n == 3) {
-    void *handle = dlopen(DYNAMICLIB, RTLD_NOW);
+    char *libpath;
+    asprintf(&libpath, "%s-dynamic.so", argv[0]);
+    
+    void *handle = dlopen(libpath, RTLD_NOW);
     if (!handle) {
       fprintf(stderr, "dlopen: %s\n", dlerror());
       return 1;
