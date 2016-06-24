@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=mipsel-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
+# RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-LE
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
+# RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-BE
 
 # Check that the IAS expands macro instructions in the same way as GAS.
 

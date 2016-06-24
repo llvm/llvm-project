@@ -1,10 +1,10 @@
-; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck %s -check-prefix=ALL -check-prefix=FCC
-; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=FCC
-; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR -check-prefix=32-GPR
-; RUN: llc -march=mips64 -mcpu=mips4    < %s | FileCheck %s -check-prefix=ALL -check-prefix=FCC
-; RUN: llc -march=mips64 -mcpu=mips64   < %s | FileCheck %s -check-prefix=ALL -check-prefix=FCC
-; RUN: llc -march=mips64 -mcpu=mips64r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=FCC
-; RUN: llc -march=mips64 -mcpu=mips64r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR -check-prefix=64-GPR
+; RUN: llc -march=mips -mcpu=mips32   < %s | FileCheck %s -check-prefixes=ALL,FCC
+; RUN: llc -march=mips -mcpu=mips32r2 < %s | FileCheck %s -check-prefixes=ALL,FCC
+; RUN: llc -march=mips -mcpu=mips32r6 < %s | FileCheck %s -check-prefixes=ALL,GPR,32-GPR
+; RUN: llc -march=mips64 -mcpu=mips4    < %s | FileCheck %s -check-prefixes=ALL,FCC
+; RUN: llc -march=mips64 -mcpu=mips64   < %s | FileCheck %s -check-prefixes=ALL,FCC
+; RUN: llc -march=mips64 -mcpu=mips64r2 < %s | FileCheck %s -check-prefixes=ALL,FCC
+; RUN: llc -march=mips64 -mcpu=mips64r6 < %s | FileCheck %s -check-prefixes=ALL,GPR,64-GPR
 
 define double @foo(double %a, double %b) nounwind readnone {
 entry:

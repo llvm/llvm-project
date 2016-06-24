@@ -832,8 +832,9 @@ private:
 class InterleavedAccessInfo {
 public:
   InterleavedAccessInfo(PredicatedScalarEvolution &PSE, Loop *L,
-                        DominatorTree *DT)
-      : PSE(PSE), TheLoop(L), DT(DT), RequiresScalarEpilogue(false) {}
+                        DominatorTree *DT, LoopInfo *LI)
+      : PSE(PSE), TheLoop(L), DT(DT), LI(LI), LAI(nullptr),
+        RequiresScalarEpilogue(false) {}
 
   ~InterleavedAccessInfo() {
     SmallSet<InterleaveGroup *, 4> DelSet;
@@ -874,6 +875,9 @@ public:
   /// out-of-bounds requires a scalar epilogue iteration for correctness.
   bool requiresScalarEpilogue() const { return RequiresScalarEpilogue; }
 
+  /// \brief Initialize the LoopAccessInfo used for dependence checking.
+  void setLAI(const LoopAccessInfo *Info) { LAI = Info; }
+
 private:
   /// A wrapper around ScalarEvolution, used to add runtime SCEV checks.
   /// Simplifies SCEV expressions in the context of existing SCEV assumptions.
@@ -882,6 +886,8 @@ private:
   PredicatedScalarEvolution &PSE;
   Loop *TheLoop;
   DominatorTree *DT;
+  LoopInfo *LI;
+  const LoopAccessInfo *LAI;
 
   /// True if the loop may contain non-reversed interleaved groups with
   /// out-of-bounds accesses. We ensure we don't speculatively access memory
@@ -890,6 +896,10 @@ private:
 
   /// Holds the relationships between the members and the interleave group.
   DenseMap<Instruction *, InterleaveGroup *> InterleaveGroupMap;
+
+  /// Holds dependences among the memory accesses in the loop. It maps a source
+  /// access to a set of dependent sink accesses.
+  DenseMap<Instruction *, SmallPtrSet<Instruction *, 2>> Dependences;
 
   /// \brief The descriptor for a strided memory access.
   struct StrideDescriptor {
@@ -904,6 +914,9 @@ private:
     unsigned Size;    // The size of the memory object.
     unsigned Align;   // The alignment of this access.
   };
+
+  /// \brief A type for holding instructions and their stride descriptors.
+  typedef std::pair<Instruction *, StrideDescriptor> StrideEntry;
 
   /// \brief Create a new interleave group with the given instruction \p Instr,
   /// stride \p Stride and alignment \p Align.
@@ -930,6 +943,78 @@ private:
   void collectConstStridedAccesses(
       MapVector<Instruction *, StrideDescriptor> &StrideAccesses,
       const ValueToValueMap &Strides);
+
+  /// \brief Returns true if \p Stride is allowed in an interleaved group.
+  static bool isStrided(int Stride) {
+    unsigned Factor = std::abs(Stride);
+    return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
+  }
+
+  /// \brief Returns true if LoopAccessInfo can be used for dependence queries.
+  bool areDependencesValid() const {
+    return LAI && LAI->getDepChecker().getDependences();
+  }
+
+  /// \brief Returns true if memory accesses \p B and \p A can be reordered, if
+  /// necessary, when constructing interleaved groups.
+  ///
+  /// \p B must precede \p A in program order. We return false if reordering is
+  /// not necessary or is prevented because \p B and \p A may be dependent.
+  bool canReorderMemAccessesForInterleavedGroups(StrideEntry *B,
+                                                 StrideEntry *A) const {
+
+    // Code motion for interleaved accesses can potentially hoist strided loads
+    // and sink strided stores. The code below checks the legality of the
+    // following two conditions:
+    //
+    // 1. Potentially moving a strided load (A) before any store (B) that
+    //    precedes A, or
+    //
+    // 2. Potentially moving a strided store (B) after any load or store (A)
+    //    that B precedes.
+    //
+    // It's legal to reorder B and A if we know there isn't a dependence from B
+    // to A. Note that this determination is conservative since some
+    // dependences could potentially be reordered safely.
+
+    // B is potentially the source of a dependence.
+    auto *Src = B->first;
+    auto SrcDes = B->second;
+
+    // A is potentially the sink of a dependence.
+    auto *Sink = A->first;
+    auto SinkDes = A->second;
+
+    // Code motion for interleaved accesses can't violate WAR dependences.
+    // Thus, reordering is legal if the source isn't a write.
+    if (!Src->mayWriteToMemory())
+      return true;
+
+    // At least one of the accesses must be strided.
+    if (!isStrided(SrcDes.Stride) && !isStrided(SinkDes.Stride))
+      return true;
+
+    // If dependence information is not available from LoopAccessInfo,
+    // conservatively assume the instructions can't be reordered.
+    if (!areDependencesValid())
+      return false;
+
+    // If we know there is a dependence from source to sink, assume the
+    // instructions can't be reordered. Otherwise, reordering is legal.
+    return !Dependences.count(Src) || !Dependences.lookup(Src).count(Sink);
+  }
+
+  /// \brief Collect the dependences from LoopAccessInfo.
+  ///
+  /// We process the dependences once during the interleaved access analysis to
+  /// enable constant-time dependence queries.
+  void collectDependences() {
+    if (!areDependencesValid())
+      return;
+    auto *Deps = LAI->getDepChecker().getDependences();
+    for (auto Dep : *Deps)
+      Dependences[Dep.getSource(*LAI)].insert(Dep.getDestination(*LAI));
+  }
 };
 
 /// Utility class for getting and setting loop vectorizer hints in the form
@@ -1260,13 +1345,14 @@ public:
                             DominatorTree *DT, TargetLibraryInfo *TLI,
                             AliasAnalysis *AA, Function *F,
                             const TargetTransformInfo *TTI,
-                            LoopAccessAnalysis *LAA,
+                            LoopAccessAnalysis *LAA, LoopInfo *LI,
                             LoopVectorizationRequirements *R,
                             LoopVectorizeHints *H)
       : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TheFunction(F),
-        TTI(TTI), DT(DT), LAA(LAA), LAI(nullptr), InterleaveInfo(PSE, L, DT),
-        Induction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
-        Requirements(R), Hints(H) {}
+        TTI(TTI), DT(DT), LAA(LAA), LAI(nullptr),
+        InterleaveInfo(PSE, L, DT, LI), Induction(nullptr),
+        WidestIndTy(nullptr), HasFunNoNaNAttr(false), Requirements(R),
+        Hints(H) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -1872,7 +1958,7 @@ struct LoopVectorize : public FunctionPass {
 
     // Check if it is legal to vectorize the loop.
     LoopVectorizationRequirements Requirements;
-    LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, LAA,
+    LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, LAA, LI,
                                   &Requirements, &Hints);
     if (!LVL.canVectorize()) {
       DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
@@ -4956,6 +5042,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
   LAI = &LAA->getInfo(TheLoop);
+  InterleaveInfo.setLAI(LAI);
   auto &OptionalReport = LAI->getReport();
   if (OptionalReport)
     emitAnalysis(VectorizationReport(*OptionalReport));
@@ -5070,7 +5157,17 @@ void InterleavedAccessInfo::collectConstStridedAccesses(
   // Holds load/store instructions in program order.
   SmallVector<Instruction *, 16> AccessList;
 
-  for (auto *BB : TheLoop->getBlocks()) {
+  // Since it's desired that the load/store instructions be maintained in
+  // "program order" for the interleaved access analysis, we have to visit the
+  // blocks in the loop in reverse postorder (i.e., in a topological order).
+  // Such an ordering will ensure that any load/store that may be executed
+  // before a second load/store will precede the second load/store in the
+  // AccessList.
+  LoopBlocksDFS DFS(TheLoop);
+  DFS.perform(LI);
+  for (LoopBlocksDFS::RPOIterator I = DFS.beginRPO(), E = DFS.endRPO(); I != E;
+       ++I) {
+    BasicBlock *BB = *I;
     bool IsPred = LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
 
     for (auto &I : *BB) {
@@ -5095,13 +5192,6 @@ void InterleavedAccessInfo::collectConstStridedAccesses(
     Value *Ptr = LI ? LI->getPointerOperand() : SI->getPointerOperand();
     int Stride = getPtrStride(PSE, Ptr, TheLoop, Strides);
 
-    // The factor of the corresponding interleave group.
-    unsigned Factor = std::abs(Stride);
-
-    // Ignore the access if the factor is too small or too large.
-    if (Factor < 2 || Factor > MaxInterleaveGroupFactor)
-      continue;
-
     const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
     PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
     unsigned Size = DL.getTypeAllocSize(PtrTy->getElementType());
@@ -5115,26 +5205,42 @@ void InterleavedAccessInfo::collectConstStridedAccesses(
   }
 }
 
-// Analyze interleaved accesses and collect them into interleave groups.
+// Analyze interleaved accesses and collect them into interleaved load and
+// store groups.
 //
-// Notice that the vectorization on interleaved groups will change instruction
-// orders and may break dependences. But the memory dependence check guarantees
-// that there is no overlap between two pointers of different strides, element
-// sizes or underlying bases.
+// When generating code for an interleaved load group, we effectively hoist all
+// loads in the group to the location of the first load in program order. When
+// generating code for an interleaved store group, we sink all stores to the
+// location of the last store. This code motion can change the order of load
+// and store instructions and may break dependences.
 //
-// For pointers sharing the same stride, element size and underlying base, no
-// need to worry about Read-After-Write dependences and Write-After-Read
+// The code generation strategy mentioned above ensures that we won't violate
+// any write-after-read (WAR) dependences.
+//
+// E.g., for the WAR dependence:  a = A[i];      // (1)
+//                                A[i] = b;      // (2)
+//
+// The store group of (2) is always inserted at or below (2), and the load
+// group of (1) is always inserted at or above (1). Thus, the instructions will
+// never be reordered. All other dependences are checked to ensure the
+// correctness of the instruction reordering.
+//
+// The algorithm visits all memory accesses in the loop in bottom-up program
+// order. Program order is established by traversing the blocks in the loop in
+// reverse postorder when collecting the accesses.
+//
+// We visit the memory accesses in bottom-up order because it can simplify the
+// construction of store groups in the presence of write-after-write (WAW)
 // dependences.
 //
-// E.g. The RAW dependence:  A[i] = a;
-//                           b = A[i];
-// This won't exist as it is a store-load forwarding conflict, which has
-// already been checked and forbidden in the dependence check.
+// E.g., for the WAW dependence:  A[i] = a;      // (1)
+//                                A[i] = b;      // (2)
+//                                A[i + 1] = c;  // (3)
 //
-// E.g. The WAR dependence:  a = A[i];  // (1)
-//                           A[i] = b;  // (2)
-// The store group of (2) is always inserted at or below (2), and the load group
-// of (1) is always inserted at or above (1). The dependence is safe.
+// We will first create a store group with (3) and (2). (1) can't be added to
+// this group because it and (2) are dependent. However, (1) can be grouped
+// with other accesses that may precede it in program order. Note that a
+// bottom-up order does not imply that WAW dependences should not be checked.
 void InterleavedAccessInfo::analyzeInterleaving(
     const ValueToValueMap &Strides) {
   DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
@@ -5146,6 +5252,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
   if (StrideAccesses.empty())
     return;
 
+  // Collect the dependences in the loop.
+  collectDependences();
+
   // Holds all interleaved store groups temporarily.
   SmallSetVector<InterleaveGroup *, 4> StoreGroups;
   // Holds all interleaved load groups temporarily.
@@ -5156,33 +5265,75 @@ void InterleavedAccessInfo::analyzeInterleaving(
   //   1. A and B have the same stride.
   //   2. A and B have the same memory object size.
   //   3. B belongs to the group according to the distance.
-  //
-  // The bottom-up order can avoid breaking the Write-After-Write dependences
-  // between two pointers of the same base.
-  // E.g.  A[i]   = a;   (1)
-  //       A[i]   = b;   (2)
-  //       A[i+1] = c    (3)
-  // We form the group (2)+(3) in front, so (1) has to form groups with accesses
-  // above (1), which guarantees that (1) is always above (2).
-  for (auto I = StrideAccesses.rbegin(), E = StrideAccesses.rend(); I != E;
-       ++I) {
-    Instruction *A = I->first;
-    StrideDescriptor DesA = I->second;
+  for (auto AI = StrideAccesses.rbegin(), E = StrideAccesses.rend(); AI != E;
+       ++AI) {
+    Instruction *A = AI->first;
+    StrideDescriptor DesA = AI->second;
 
-    InterleaveGroup *Group = getInterleaveGroup(A);
-    if (!Group) {
-      DEBUG(dbgs() << "LV: Creating an interleave group with:" << *A << '\n');
-      Group = createInterleaveGroup(A, DesA.Stride, DesA.Align);
+    // Initialize a group for A if it has an allowable stride. Even if we don't
+    // create a group for A, we continue with the bottom-up algorithm to ensure
+    // we don't break any of A's dependences.
+    InterleaveGroup *Group = nullptr;
+    if (isStrided(DesA.Stride)) {
+      Group = getInterleaveGroup(A);
+      if (!Group) {
+        DEBUG(dbgs() << "LV: Creating an interleave group with:" << *A << '\n');
+        Group = createInterleaveGroup(A, DesA.Stride, DesA.Align);
+      }
+      if (A->mayWriteToMemory())
+        StoreGroups.insert(Group);
+      else
+        LoadGroups.insert(Group);
     }
 
-    if (A->mayWriteToMemory())
-      StoreGroups.insert(Group);
-    else
-      LoadGroups.insert(Group);
+    for (auto BI = std::next(AI); BI != E; ++BI) {
+      Instruction *B = BI->first;
+      StrideDescriptor DesB = BI->second;
 
-    for (auto II = std::next(I); II != E; ++II) {
-      Instruction *B = II->first;
-      StrideDescriptor DesB = II->second;
+      // Our code motion strategy implies that we can't have dependences
+      // between accesses in an interleaved group and other accesses located
+      // between the first and last member of the group. Note that this also
+      // means that a group can't have more than one member at a given offset.
+      // The accesses in a group can have dependences with other accesses, but
+      // we must ensure we don't extend the boundaries of the group such that
+      // we encompass those dependent accesses.
+      //
+      // For example, assume we have the sequence of accesses shown below in a
+      // stride-2 loop:
+      //
+      //  (1, 2) is a group | A[i]   = a;  // (1)
+      //                    | A[i-1] = b;  // (2) |
+      //                      A[i-3] = c;  // (3)
+      //                      A[i]   = d;  // (4) | (2, 4) is not a group
+      //
+      // Because accesses (2) and (3) are dependent, we can group (2) with (1)
+      // but not with (4). If we did, the dependent access (3) would be within
+      // the boundaries of the (2, 4) group.
+      if (!canReorderMemAccessesForInterleavedGroups(&*BI, &*AI)) {
+
+        // If a dependence exists and B is already in a group, we know that B
+        // must be a store since B precedes A and WAR dependences are allowed.
+        // Thus, B would be sunk below A. We release B's group to prevent this
+        // illegal code motion. B will then be free to form another group with
+        // instructions that precede it.
+        if (isInterleaved(B)) {
+          InterleaveGroup *StoreGroup = getInterleaveGroup(B);
+          StoreGroups.remove(StoreGroup);
+          releaseGroup(StoreGroup);
+        }
+
+        // If a dependence exists and B is not already in a group (or it was
+        // and we just released it), A might be hoisted above B (if A is a
+        // load) or another store might be sunk below B (if A is a store). In
+        // either case, we can't add additional instructions to A's group. A
+        // will only form a group with instructions that it precedes.
+        break;
+      }
+
+      // At this point, we've checked for illegal code motion. If either A or B
+      // isn't strided, there's nothing left to do.
+      if (!isStrided(DesA.Stride) || !isStrided(DesB.Stride))
+        continue;
 
       // Ignore if B is already in a group or B is a different memory operation.
       if (isInterleaved(B) || A->mayReadFromMemory() != B->mayReadFromMemory())

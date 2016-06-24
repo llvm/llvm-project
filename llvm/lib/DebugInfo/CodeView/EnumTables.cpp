@@ -101,7 +101,7 @@ static const EnumEntry<uint16_t> LocalFlags[] = {
     CV_ENUM_CLASS_ENT(LocalSymFlags, IsEnregisteredStatic),
 };
 
-static const EnumEntry<uint32_t> FrameCookieKinds[] = {
+static const EnumEntry<uint8_t> FrameCookieKinds[] = {
     CV_ENUM_CLASS_ENT(FrameCookieKind, Copy),
     CV_ENUM_CLASS_ENT(FrameCookieKind, XorStackPointer),
     CV_ENUM_CLASS_ENT(FrameCookieKind, XorFramePointer),
@@ -334,7 +334,7 @@ ArrayRef<EnumEntry<uint8_t>> getProcSymFlagNames() {
 ArrayRef<EnumEntry<uint16_t>> getLocalFlagNames() {
   return makeArrayRef(LocalFlags);
 }
-ArrayRef<EnumEntry<uint32_t>> getFrameCookieKindNames() {
+ArrayRef<EnumEntry<uint8_t>> getFrameCookieKindNames() {
   return makeArrayRef(FrameCookieKinds);
 }
 ArrayRef<EnumEntry<SourceLanguage>> getSourceLanguageNames() {

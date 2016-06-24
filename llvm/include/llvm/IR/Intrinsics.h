@@ -18,6 +18,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/None.h"
+#include "llvm/ADT/Optional.h"
 #include <string>
 
 namespace llvm {
@@ -142,6 +143,16 @@ namespace Intrinsic {
   /// otherwise.
   bool matchIntrinsicType(Type *Ty, ArrayRef<IITDescriptor> &Infos,
                           SmallVectorImpl<Type*> &ArgTys);
+
+  /// Verify if the intrinsic has variable arguments. This method is intended to
+  /// be called after all the fixed arguments have been matched first.
+  ///
+  /// This method returns true on error.
+  bool matchIntrinsicVarArg(bool isVarArg, ArrayRef<IITDescriptor> &Infos);
+
+  // Checks if the intrinsic name matches with its signature and if not
+  // returns the declaration with the same signature and remangled name.
+  llvm::Optional<Function*> remangleIntrinsicFunction(Function *F);
 
 } // End Intrinsic namespace
 

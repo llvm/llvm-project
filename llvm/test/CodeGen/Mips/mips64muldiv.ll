@@ -1,7 +1,7 @@
-; RUN: llc -march=mips64el -mcpu=mips4 < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC
-; RUN: llc -march=mips64el -mcpu=mips64 < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC
-; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck %s -check-prefix=ALL -check-prefix=ACC
-; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck %s -check-prefix=ALL -check-prefix=GPR
+; RUN: llc -march=mips64el -mcpu=mips4 < %s | FileCheck %s -check-prefixes=ALL,ACC
+; RUN: llc -march=mips64el -mcpu=mips64 < %s | FileCheck %s -check-prefixes=ALL,ACC
+; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck %s -check-prefixes=ALL,ACC
+; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck %s -check-prefixes=ALL,GPR
 
 ; FileCheck prefixes:
 ;   ALL - All targets

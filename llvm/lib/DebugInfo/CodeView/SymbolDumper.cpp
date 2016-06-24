@@ -396,6 +396,7 @@ void CVSymbolDumperImpl::visitFrameCookieSym(SymbolKind Kind,
   W.printHex("Register", FrameCookie.Header.Register);
   W.printEnum("CookieKind", uint16_t(FrameCookie.Header.CookieKind),
               getFrameCookieKindNames());
+  W.printHex("Flags", FrameCookie.Header.Flags);
 }
 
 void CVSymbolDumperImpl::visitFrameProcSym(SymbolKind Kind,

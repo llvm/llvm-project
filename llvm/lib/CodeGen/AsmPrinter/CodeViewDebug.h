@@ -157,6 +157,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Number of type lowering frames active on the stack.
   unsigned TypeEmissionLevel = 0;
 
+  codeview::TypeIndex VBPType;
+
   const DISubprogram *CurrentSubprogram = nullptr;
 
   // The UDTs we have seen while processing types; each entry is a pair of type
@@ -229,6 +231,8 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
                                             const DICompositeType *Class);
 
   codeview::TypeIndex getScopeIndex(const DIScope *Scope);
+
+  codeview::TypeIndex getVBPTypeIndex();
 
   void addToUDTs(const DIType *Ty, codeview::TypeIndex TI);
 

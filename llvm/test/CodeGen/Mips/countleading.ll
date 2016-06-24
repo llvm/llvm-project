@@ -1,11 +1,11 @@
-; RUN: llc -march=mipsel -mcpu=mips32   < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32-R1-R2 -check-prefix=MIPS32-GT-R1 %s
-; RUN: llc -march=mipsel -mcpu=mips32r2 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32-R1-R2 -check-prefix=MIPS32-GT-R1 %s
-; RUN: llc -march=mipsel -mcpu=mips32r6 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS32-R6    -check-prefix=MIPS32-GT-R1 %s
-; RUN: llc -march=mips64el -mcpu=mips4    < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS4 %s
-; RUN: llc -march=mips64el -mcpu=mips64   < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
-; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck -check-prefix=ALL -check-prefix=MIPS64-GT-R1 %s
-; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=micromips < %s | FileCheck -check-prefix=ALL -check-prefix=MICROMIPS64 %s
+; RUN: llc -march=mipsel -mcpu=mips32   < %s | FileCheck -check-prefixes=ALL,MIPS32-R1-R2,MIPS32-GT-R1 %s
+; RUN: llc -march=mipsel -mcpu=mips32r2 < %s | FileCheck -check-prefixes=ALL,MIPS32-R1-R2,MIPS32-GT-R1 %s
+; RUN: llc -march=mipsel -mcpu=mips32r6 < %s | FileCheck -check-prefixes=ALL,MIPS32-R6,MIPS32-GT-R1 %s
+; RUN: llc -march=mips64el -mcpu=mips4    < %s | FileCheck -check-prefixes=ALL,MIPS4 %s
+; RUN: llc -march=mips64el -mcpu=mips64   < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
+; RUN: llc -march=mips64el -mcpu=mips64r2 < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
+; RUN: llc -march=mips64el -mcpu=mips64r6 < %s | FileCheck -check-prefixes=ALL,MIPS64-GT-R1 %s
+; RUN: llc -march=mips64el -mcpu=mips64r6 -mattr=micromips < %s | FileCheck -check-prefixes=ALL,MICROMIPS64 %s
 
 ; Prefixes:
 ;   ALL      - All

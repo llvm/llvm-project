@@ -1,5 +1,5 @@
-; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon | FileCheck %s -check-prefix=ALL -check-prefix=OCTEON
-; RUN: llc -O1 < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefix=ALL -check-prefix=MIPS64
+; RUN: llc -O1 < %s -march=mips64 -mcpu=octeon | FileCheck %s -check-prefixes=ALL,OCTEON
+; RUN: llc -O1 < %s -march=mips64 -mcpu=mips64 | FileCheck %s -check-prefixes=ALL,MIPS64
 
 define i64 @addi64(i64 %a, i64 %b) nounwind {
 entry:

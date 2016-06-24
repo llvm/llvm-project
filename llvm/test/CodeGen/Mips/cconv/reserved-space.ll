@@ -1,14 +1,14 @@
-; RUN: llc -march=mips < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN: llc -march=mipsel < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN: llc -march=mips < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN: llc -march=mipsel < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
-; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefix=ALL --check-prefix=O32 %s
+; RUN-TODO: llc -march=mips64 -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
+; RUN-TODO: llc -march=mips64el -target-abi o32 < %s | FileCheck --check-prefixes=ALL,O32 %s
 
-; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
-; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefix=ALL --check-prefix=N32 %s
+; RUN: llc -march=mips64 -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
+; RUN: llc -march=mips64el -target-abi n32 < %s | FileCheck --check-prefixes=ALL,N32 %s
 
-; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
-; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefix=ALL --check-prefix=N64 %s
+; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
+; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefixes=ALL,N64 %s
 
 ; Test that O32 correctly reserved space for the four arguments, even when
 ; there aren't any as per section 5 of MD00305 (MIPS ABIs Described).

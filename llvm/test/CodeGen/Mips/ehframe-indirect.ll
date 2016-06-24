@@ -1,9 +1,9 @@
-; RUN: llc -mtriple=mipsel-linux-gnu < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefix=ALL -check-prefix=O32 %s
-; RUN: llc -mtriple=mipsel-linux-android < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefix=ALL -check-prefix=O32 %s
-; RUN: llc -mtriple=mips64el-linux-gnu -target-abi=n32 < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefix=ALL -check-prefix=N32 %s
-; RUN: llc -mtriple=mips64el-linux-android -target-abi=n32 < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefix=ALL -check-prefix=N32 %s
-; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefix=ALL -check-prefix=N64 %s
-; RUN: llc -mtriple=mips64el-linux-android < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefix=ALL -check-prefix=N64 %s
+; RUN: llc -mtriple=mipsel-linux-gnu < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefixes=ALL,O32 %s
+; RUN: llc -mtriple=mipsel-linux-android < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefixes=ALL,O32 %s
+; RUN: llc -mtriple=mips64el-linux-gnu -target-abi=n32 < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefixes=ALL,N32 %s
+; RUN: llc -mtriple=mips64el-linux-android -target-abi=n32 < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefixes=ALL,N32 %s
+; RUN: llc -mtriple=mips64el-linux-gnu < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefixes=ALL,N64 %s
+; RUN: llc -mtriple=mips64el-linux-android < %s -asm-verbose -relocation-model=pic | FileCheck -check-prefixes=ALL,N64 %s
 
 @_ZTISt9exception = external constant i8*
 

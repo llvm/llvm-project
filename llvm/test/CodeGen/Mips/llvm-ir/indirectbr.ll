@@ -1,16 +1,16 @@
 ; Test all important variants of the unconditional 'br' instruction.
 
-; RUN: llc -march=mips   -mcpu=mips32   -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r2 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r3 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r5 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips   -mcpu=mips32r6 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=R6C
-; RUN: llc -march=mips64 -mcpu=mips4    -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64   -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r2 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r3 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r5 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=NOT-R6
-; RUN: llc -march=mips64 -mcpu=mips64r6 -asm-show-inst < %s | FileCheck %s -check-prefix=ALL -check-prefix=R6
+; RUN: llc -march=mips   -mcpu=mips32   -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips   -mcpu=mips32r2 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips   -mcpu=mips32r3 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips   -mcpu=mips32r5 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips   -mcpu=mips32r6 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,R6C
+; RUN: llc -march=mips64 -mcpu=mips4    -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips64 -mcpu=mips64   -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips64 -mcpu=mips64r2 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips64 -mcpu=mips64r3 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips64 -mcpu=mips64r5 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,NOT-R6
+; RUN: llc -march=mips64 -mcpu=mips64r6 -asm-show-inst < %s | FileCheck %s -check-prefixes=ALL,R6
 
 define i32 @br(i8 *%addr) {
 ; ALL-LABEL: br:

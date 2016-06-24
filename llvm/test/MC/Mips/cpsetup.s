@@ -1,22 +1,22 @@
 # RUN: llvm-mc -triple mips64-unknown-linux -target-abi o32 -filetype=obj -o - %s | \
-# RUN:   llvm-objdump -d -r - | FileCheck -check-prefix=ALL -check-prefix=O32 %s
+# RUN:   llvm-objdump -d -r - | FileCheck -check-prefixes=ALL,O32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown -target-abi o32 %s | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux -target-abi n32 -filetype=obj -o - %s | \
 # RUN:   llvm-objdump -d -r - | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=NXX -check-prefix=N32 %s
+# RUN:   FileCheck -check-prefixes=ALL,NXX,N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown -target-abi n32 %s | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux %s -filetype=obj -o - | \
 # RUN:   llvm-objdump -d -r - | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=NXX -check-prefix=N64 %s
+# RUN:   FileCheck -check-prefixes=ALL,NXX,N64 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown %s | \
-# RUN:   FileCheck -check-prefix=ALL -check-prefix=ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM %s
 
         .text
         .option pic2
