@@ -37,7 +37,7 @@ class Region;
 class BasicBlock;
 class DataLayout;
 class ScalarEvolution;
-}
+} // namespace llvm
 
 namespace polly {
 class Scop;
@@ -130,6 +130,6 @@ private:
 
   friend struct llvm::SCEVVisitor<SCEVAffinator, PWACtx>;
 };
-}
+} // namespace polly
 
 #endif

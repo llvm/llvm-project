@@ -34,7 +34,7 @@ struct isl_space;
 
 namespace llvm {
 class Value;
-}
+} // namespace llvm
 
 namespace polly {
 __isl_give isl_val *isl_valFromAPInt(isl_ctx *Ctx, const llvm::APInt Int,

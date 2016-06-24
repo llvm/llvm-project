@@ -29,7 +29,7 @@ class Region;
 class Pass;
 class DominatorTree;
 class RegionInfo;
-}
+} // namespace llvm
 
 namespace polly {
 class Scop;
@@ -275,7 +275,7 @@ private:
     return llvm::cast<llvm::MemTransferInst>(I);
   }
 };
-}
+} // namespace polly
 
 namespace llvm {
 /// @brief Specialize simplify_type for MemAccInst to enable dyn_cast and cast
@@ -286,7 +286,7 @@ template <> struct simplify_type<polly::MemAccInst> {
     return I.asInstruction();
   }
 };
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -414,5 +414,5 @@ bool canSynthesize(const llvm::Value *V, const Scop &S,
 /// Non-instructions do not use operands at a specific point such that in this
 /// case this function returns nullptr.
 llvm::BasicBlock *getUseBlock(llvm::Use &U);
-}
+} // namespace polly
 #endif

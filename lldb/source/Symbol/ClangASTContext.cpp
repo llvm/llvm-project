@@ -8331,7 +8331,8 @@ ClangASTContext::AddMethodToObjCObjectType (const CompilerType& type,
                                             const char *name,  // the full symbol name as seen in the symbol table (lldb::opaque_compiler_type_t type, "-[NString stringWithCString:]")
                                             const CompilerType &method_clang_type,
                                             lldb::AccessType access,
-                                            bool is_artificial)
+                                            bool is_artificial,
+                                            bool is_variadic)
 {
     if (!type || !method_clang_type.IsValid())
         return nullptr;
@@ -8391,7 +8392,6 @@ ClangASTContext::AddMethodToObjCObjectType (const CompilerType& type,
         return nullptr;
     
     
-    bool is_variadic = false;
     bool is_synthesized = false;
     bool is_defined = false;
     clang::ObjCMethodDecl::ImplementationControl imp_control = clang::ObjCMethodDecl::None;

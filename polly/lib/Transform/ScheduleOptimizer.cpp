@@ -606,7 +606,7 @@ public:
 private:
   isl_schedule *LastSchedule;
 };
-}
+} // namespace
 
 char IslScheduleOptimizer::ID = 0;
 

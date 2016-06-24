@@ -39,7 +39,7 @@ class SCEV;
 class BasicBlock;
 class Value;
 class Region;
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -134,9 +134,7 @@ public:
   /// regions amenable to Polly.
   ///
   /// @return A short message representing this error.
-  virtual std::string getEndUserMessage() const {
-    return "Unspecified error.";
-  };
+  virtual std::string getEndUserMessage() const { return "Unspecified error."; }
 
   /// @brief Get the source location of this error.
   ///
@@ -254,7 +252,7 @@ public:
   //@{
   virtual const DebugLoc &getDebugLoc() const override {
     return Inst->getDebugLoc();
-  };
+  }
   //@}
 };
 

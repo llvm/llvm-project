@@ -1352,7 +1352,8 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                                                                                                                type_name_cstr,
                                                                                                                clang_type,
                                                                                                                accessibility,
-                                                                                                               is_artificial);
+                                                                                                               is_artificial,
+                                                                                                               is_variadic);
                                     type_handled = objc_method_decl != NULL;
                                     if (type_handled)
                                     {

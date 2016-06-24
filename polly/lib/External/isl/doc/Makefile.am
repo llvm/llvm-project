@@ -9,7 +9,9 @@ CLEANFILES = \
 	manual.out \
 	manual.blg \
 	manual.log \
-	manual.brf
+	manual.brf \
+	manual.bcf \
+	manual.run.xml
 
 if GENERATE_DOC
 export TEXINPUTS := $(srcdir):$(TEXINPUTS)

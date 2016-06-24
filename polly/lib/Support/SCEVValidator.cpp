@@ -32,7 +32,7 @@ enum TYPE {
   // An invalid expression.
   INVALID
 };
-}
+} // namespace SCEVType
 
 /// @brief The result the validator returns for a SCEV expression.
 class ValidatorResult {
@@ -635,4 +635,4 @@ extractConstantFactor(const SCEV *S, ScalarEvolution &SE) {
 
   return std::make_pair(ConstPart, LeftOver);
 }
-}
+} // namespace polly

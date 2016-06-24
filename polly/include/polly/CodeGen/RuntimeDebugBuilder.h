@@ -20,7 +20,7 @@
 namespace llvm {
 class Value;
 class Function;
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -147,6 +147,6 @@ private:
   static std::vector<llvm::Value *>
   getGPUThreadIdentifiers(PollyIRBuilder &Builder);
 };
-}
+} // namespace polly
 
 #endif

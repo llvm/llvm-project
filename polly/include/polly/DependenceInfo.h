@@ -232,11 +232,11 @@ private:
   std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
 };
 
-} // End polly namespace.
+} // namespace polly
 
 namespace llvm {
 class PassRegistry;
 void initializeDependenceInfoPass(llvm::PassRegistry &);
-}
+} // namespace llvm
 
 #endif
