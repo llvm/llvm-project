@@ -29,7 +29,6 @@ using namespace llvm;
 namespace {
 
 class R600ExpandSpecialInstrsPass : public MachineFunctionPass {
-
 private:
   static char ID;
   const R600InstrInfo *TII;
@@ -66,7 +65,8 @@ void R600ExpandSpecialInstrsPass::SetFlagInNewMI(MachineInstr *NewMI,
 }
 
 bool R600ExpandSpecialInstrsPass::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const R600InstrInfo *>(MF.getSubtarget().getInstrInfo());
+  const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+  TII = ST.getInstrInfo();
 
   const R600RegisterInfo &TRI = TII->getRegisterInfo();
 

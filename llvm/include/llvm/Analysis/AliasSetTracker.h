@@ -151,7 +151,7 @@ class AliasSet : public ilist_node<AliasSet> {
   unsigned Alias : 1;
 
   /// True if this alias set contains volatile loads or stores.
-  bool Volatile : 1;
+  unsigned Volatile : 1;
 
   void addRef() { ++RefCount; }
   void dropRef(AliasSetTracker &AST) {

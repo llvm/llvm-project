@@ -1460,17 +1460,13 @@ bool ObjCARCOpt::Visit(Function &F,
 
   // Use reverse-postorder on the reverse CFG for bottom-up.
   bool BottomUpNestingDetected = false;
-  for (SmallVectorImpl<BasicBlock *>::const_reverse_iterator I =
-       ReverseCFGPostOrder.rbegin(), E = ReverseCFGPostOrder.rend();
-       I != E; ++I)
-    BottomUpNestingDetected |= VisitBottomUp(*I, BBStates, Retains);
+  for (BasicBlock *BB : reverse(ReverseCFGPostOrder))
+    BottomUpNestingDetected |= VisitBottomUp(BB, BBStates, Retains);
 
   // Use reverse-postorder for top-down.
   bool TopDownNestingDetected = false;
-  for (SmallVectorImpl<BasicBlock *>::const_reverse_iterator I =
-       PostOrder.rbegin(), E = PostOrder.rend();
-       I != E; ++I)
-    TopDownNestingDetected |= VisitTopDown(*I, BBStates, Releases);
+  for (BasicBlock *BB : reverse(PostOrder))
+    TopDownNestingDetected |= VisitTopDown(BB, BBStates, Releases);
 
   return TopDownNestingDetected && BottomUpNestingDetected;
 }

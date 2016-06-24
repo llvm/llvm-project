@@ -24,15 +24,16 @@ class MachineFunction;
 class MachineInstr;
 class ScheduleDAG;
 class SIInstrInfo;
+class SISubtarget;
 
 class GCNHazardRecognizer final : public ScheduleHazardRecognizer {
-
-  // This variable stores the instruction that has been emitted this cycle.
-  // It will be added to EmittedInstrs, when AdvanceCycle() or RecedeCycle() is
+  // This variable stores the instruction that has been emitted this cycle. It
+  // will be added to EmittedInstrs, when AdvanceCycle() or RecedeCycle() is
   // called.
   MachineInstr *CurrCycleInstr;
   std::list<MachineInstr*> EmittedInstrs;
   const MachineFunction &MF;
+  const SISubtarget &ST;
 
   int getWaitStatesSinceDef(unsigned Reg,
                             function_ref<bool(MachineInstr *)> IsHazardDef =

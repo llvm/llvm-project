@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "R600MachineScheduler.h"
+#include "R600InstrInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Pass.h"
@@ -26,7 +27,7 @@ using namespace llvm;
 void R600SchedStrategy::initialize(ScheduleDAGMI *dag) {
   assert(dag->hasVRegLiveness() && "R600SchedStrategy needs vreg liveness");
   DAG = static_cast<ScheduleDAGMILive*>(dag);
-  const AMDGPUSubtarget &ST = DAG->MF.getSubtarget<AMDGPUSubtarget>();
+  const R600Subtarget &ST = DAG->MF.getSubtarget<R600Subtarget>();
   TII = static_cast<const R600InstrInfo*>(DAG->TII);
   TRI = static_cast<const R600RegisterInfo*>(DAG->TRI);
   VLIW5 = !ST.hasCaymanISA();
@@ -48,8 +49,7 @@ void R600SchedStrategy::MoveUnits(std::vector<SUnit *> &QSrc,
   QSrc.clear();
 }
 
-static
-unsigned getWFCountLimitedByGPR(unsigned GPRCount) {
+static unsigned getWFCountLimitedByGPR(unsigned GPRCount) {
   assert (GPRCount && "GPRCount cannot be 0");
   return 248 / GPRCount;
 }
@@ -349,7 +349,7 @@ void R600SchedStrategy::PrepareNextSlot() {
   DEBUG(dbgs() << "New Slot\n");
   assert (OccupedSlotsMask && "Slot wasn't filled");
   OccupedSlotsMask = 0;
-//  if (HwGen == AMDGPUSubtarget::NORTHERN_ISLANDS)
+//  if (HwGen == R600Subtarget::NORTHERN_ISLANDS)
 //    OccupedSlotsMask |= 16;
   InstructionsGroupCandidate.clear();
   LoadAlu();

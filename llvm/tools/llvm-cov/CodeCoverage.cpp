@@ -423,9 +423,9 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
       auto mainView = createFunctionView(Function, *Coverage);
       if (!mainView) {
-        ViewOpts.colored_ostream(outs(), raw_ostream::RED)
-            << "warning: Could not read coverage for '" << Function.Name;
-        outs() << "\n";
+        ViewOpts.colored_ostream(errs(), raw_ostream::RED)
+            << "warning: Could not read coverage for '" << Function.Name << "'."
+            << "\n";
         continue;
       }
       mainView->renderSourceName(outs());
@@ -446,9 +446,9 @@ int CodeCoverageTool::show(int argc, const char **argv,
   for (const auto &SourceFile : SourceFiles) {
     auto mainView = createSourceFileView(SourceFile, *Coverage);
     if (!mainView) {
-      ViewOpts.colored_ostream(outs(), raw_ostream::RED)
+      ViewOpts.colored_ostream(errs(), raw_ostream::RED)
           << "warning: The file '" << SourceFile << "' isn't covered.";
-      outs() << "\n";
+      errs() << "\n";
       continue;
     }
 

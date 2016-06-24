@@ -30,12 +30,8 @@ using namespace llvm;
 // Pin the vtable to this file.
 void AMDGPUInstrInfo::anchor() {}
 
-AMDGPUInstrInfo::AMDGPUInstrInfo(const AMDGPUSubtarget &st)
-    : AMDGPUGenInstrInfo(-1, -1), ST(st) {}
-
-const AMDGPURegisterInfo &AMDGPUInstrInfo::getRegisterInfo() const {
-  return RI;
-}
+AMDGPUInstrInfo::AMDGPUInstrInfo(const AMDGPUSubtarget &ST)
+  : AMDGPUGenInstrInfo(-1, -1), ST(ST) {}
 
 bool AMDGPUInstrInfo::enableClusterLoads() const {
   return true;
@@ -111,9 +107,11 @@ int AMDGPUInstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
     return -1;
   }
 
+  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const AMDGPUFrameLowering *TFL = ST.getFrameLowering();
+
   unsigned IgnoredFrameReg;
-  Offset = MF.getSubtarget().getFrameLowering()->getFrameIndexReference(
-      MF, -1, IgnoredFrameReg);
+  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg);
 
   return getIndirectIndexBegin(MF) + Offset;
 }
@@ -127,35 +125,42 @@ int AMDGPUInstrInfo::getMaskedMIMGOp(uint16_t Opcode, unsigned Channels) const {
   }
 }
 
+// This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+enum SIEncodingFamily {
+  SI = 0,
+  VI = 1
+};
+
 // Wrapper for Tablegen'd function.  enum Subtarget is not defined in any
 // header files, so we need to wrap it in a function that takes unsigned
 // instead.
 namespace llvm {
 namespace AMDGPU {
 static int getMCOpcode(uint16_t Opcode, unsigned Gen) {
-  return getMCOpcodeGen(Opcode, (enum Subtarget)Gen);
+  return getMCOpcodeGen(Opcode, static_cast<Subtarget>(Gen));
 }
 }
 }
 
-// This must be kept in sync with the SISubtarget class in SIInstrInfo.td
-enum SISubtarget {
-  SI = 0,
-  VI = 1
-};
-
-static enum SISubtarget AMDGPUSubtargetToSISubtarget(unsigned Gen) {
-  switch (Gen) {
-  default:
-    return SI;
+static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
+  switch (ST.getGeneration()) {
+  case AMDGPUSubtarget::SOUTHERN_ISLANDS:
+  case AMDGPUSubtarget::SEA_ISLANDS:
+    return SIEncodingFamily::SI;
   case AMDGPUSubtarget::VOLCANIC_ISLANDS:
-    return VI;
+    return SIEncodingFamily::VI;
+
+  // FIXME: This should never be called for r600 GPUs.
+  case AMDGPUSubtarget::R600:
+  case AMDGPUSubtarget::R700:
+  case AMDGPUSubtarget::EVERGREEN:
+  case AMDGPUSubtarget::NORTHERN_ISLANDS:
+    return SIEncodingFamily::SI;
   }
 }
 
 int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {
-  int MCOp = AMDGPU::getMCOpcode(
-      Opcode, AMDGPUSubtargetToSISubtarget(ST.getGeneration()));
+  int MCOp = AMDGPU::getMCOpcode(Opcode, subtargetEncodingFamily(ST));
 
   // -1 means that Opcode is already a native instruction.
   if (MCOp == -1)

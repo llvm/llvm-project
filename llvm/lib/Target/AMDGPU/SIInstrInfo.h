@@ -25,6 +25,7 @@ namespace llvm {
 class SIInstrInfo final : public AMDGPUInstrInfo {
 private:
   const SIRegisterInfo RI;
+  const SISubtarget &ST;
 
   // The the inverse predicate should have the negative value.
   enum BranchPredicate {
@@ -91,9 +92,9 @@ protected:
                                        unsigned OpIdx1) const override;
 
 public:
-  explicit SIInstrInfo(const AMDGPUSubtarget &st);
+  explicit SIInstrInfo(const SISubtarget &);
 
-  const SIRegisterInfo &getRegisterInfo() const override {
+  const SIRegisterInfo &getRegisterInfo() const {
     return RI;
   }
 

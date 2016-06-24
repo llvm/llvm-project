@@ -377,11 +377,8 @@ StoreInst *MergedLoadStoreMotion::canSinkFromBlock(BasicBlock *BB1,
                                                    StoreInst *Store0) {
   DEBUG(dbgs() << "can Sink? : "; Store0->dump(); dbgs() << "\n");
   BasicBlock *BB0 = Store0->getParent();
-  for (BasicBlock::reverse_iterator RBI = BB1->rbegin(), RBE = BB1->rend();
-       RBI != RBE; ++RBI) {
-    Instruction *Inst = &*RBI;
-
-    auto *Store1 = dyn_cast<StoreInst>(Inst);
+  for (Instruction &Inst : reverse(*BB1)) {
+    auto *Store1 = dyn_cast<StoreInst>(&Inst);
     if (!Store1)
       continue;
 

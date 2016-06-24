@@ -189,6 +189,10 @@ struct CodeGenProcModel {
   // This list is empty if no ItinRW refers to this Processor.
   RecVec ItinRWDefs;
 
+  // List of unsupported feature.
+  // This list is empty if the Processor has no UnsupportedFeatures.
+  RecVec UnsupportedFeaturesDefs;
+
   // All read/write resources associated with this processor.
   RecVec WriteResDefs;
   RecVec ReadAdvanceDefs;
@@ -210,6 +214,8 @@ struct CodeGenProcModel {
   }
 
   unsigned getProcResourceIdx(Record *PRDef) const;
+
+  bool isUnsupported(const CodeGenInstruction &Inst) const;
 
 #ifndef NDEBUG
   void dump() const;
@@ -401,6 +407,8 @@ private:
   void collectProcItins();
 
   void collectProcItinRW();
+
+  void collectProcUnsupportedFeatures();
 
   void inferSchedClasses();
 

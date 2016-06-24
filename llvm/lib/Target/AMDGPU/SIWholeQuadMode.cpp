@@ -476,8 +476,10 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   ExecExports.clear();
   LiveMaskQueries.clear();
 
-  TII = static_cast<const SIInstrInfo *>(MF.getSubtarget().getInstrInfo());
-  TRI = static_cast<const SIRegisterInfo *>(MF.getSubtarget().getRegisterInfo());
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+
+  TII = ST.getInstrInfo();
+  TRI = &TII->getRegisterInfo();
   MRI = &MF.getRegInfo();
 
   char GlobalFlags = analyzeFunction(MF);

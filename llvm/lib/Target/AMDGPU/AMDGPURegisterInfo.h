@@ -29,17 +29,7 @@ class AMDGPUSubtarget;
 class TargetInstrInfo;
 
 struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
-  static const MCPhysReg CalleeSavedReg;
-
   AMDGPURegisterInfo();
-
-  BitVector getReservedRegs(const MachineFunction &MF) const override {
-    assert(!"Unimplemented");  return BitVector();
-  }
-
-  virtual unsigned getHWRegIndex(unsigned Reg) const {
-    assert(!"Unimplemented"); return 0;
-  }
 
   /// \returns the sub reg enum value for the given \p Channel
   /// (e.g. getSubRegFromChannel(0) -> AMDGPU::sub0)
@@ -52,7 +42,6 @@ struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
   unsigned getFrameRegister(const MachineFunction &MF) const override;
 
   unsigned getIndirectSubReg(unsigned IndirectIndex) const;
-
 };
 
 } // End namespace llvm

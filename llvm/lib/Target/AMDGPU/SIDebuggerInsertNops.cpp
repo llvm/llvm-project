@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SIInstrInfo.h"
+#include "AMDGPUSubtarget.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -61,7 +62,7 @@ FunctionPass *llvm::createSIDebuggerInsertNopsPass() {
 bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
   // Skip this pass if "amdgpu-debugger-insert-nops" attribute was not
   // specified.
-  const AMDGPUSubtarget &ST = MF.getSubtarget<AMDGPUSubtarget>();
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   if (!ST.debuggerInsertNops())
     return false;
 
@@ -70,8 +71,7 @@ bool SIDebuggerInsertNops::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   // Target instruction info.
-  const SIInstrInfo *TII =
-    static_cast<const SIInstrInfo*>(MF.getSubtarget().getInstrInfo());
+  const SIInstrInfo *TII = ST.getInstrInfo();
 
   // Set containing line numbers that have nop inserted.
   DenseSet<unsigned> NopInserted;

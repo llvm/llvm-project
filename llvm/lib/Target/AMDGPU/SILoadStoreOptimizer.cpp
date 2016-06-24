@@ -36,6 +36,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIRegisterInfo.h"
 #include "llvm/CodeGen/LiveIntervalAnalysis.h"
@@ -60,7 +61,6 @@ private:
   const SIRegisterInfo *TRI;
   MachineRegisterInfo *MRI;
   LiveIntervals *LIS;
-
 
   static bool offsetsCanBeCombined(unsigned Offset0,
                                    unsigned Offset1,
@@ -411,9 +411,10 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
 
-  const TargetSubtargetInfo &STM = MF.getSubtarget();
-  TRI = static_cast<const SIRegisterInfo *>(STM.getRegisterInfo());
-  TII = static_cast<const SIInstrInfo *>(STM.getInstrInfo());
+  const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  TII = STM.getInstrInfo();
+  TRI = &TII->getRegisterInfo();
+
   MRI = &MF.getRegInfo();
 
   LIS = &getAnalysis<LiveIntervals>();
