@@ -2785,7 +2785,7 @@ void CodeGenFunction::EmitLambdaBlockInvokeBody() {
   CallArgs.add(RValue::get(ThisPtr.getPointer()), ThisType);
 
   // Add the rest of the parameters.
-  for (auto param : BD->params())
+  for (auto param : BD->parameters())
     EmitDelegateCallArg(CallArgs, param, param->getLocStart());
 
   assert(!Lambda->isGenericLambda() &&
@@ -2815,7 +2815,7 @@ void CodeGenFunction::EmitLambdaDelegatingInvokeBody(const CXXMethodDecl *MD) {
   CallArgs.add(RValue::get(ThisPtr), ThisType);
 
   // Add the rest of the parameters.
-  for (auto Param : MD->params())
+  for (auto Param : MD->parameters())
     EmitDelegateCallArg(CallArgs, Param, Param->getLocStart());
 
   const CXXMethodDecl *CallOp = Lambda->getLambdaCallOperator();

@@ -351,11 +351,6 @@ public:
   typedef llvm::iterator_range<param_iterator> param_range;
   typedef llvm::iterator_range<param_const_iterator> param_const_range;
 
-  param_range params() { return param_range(param_begin(), param_end()); }
-  param_const_range params() const {
-    return param_const_range(param_begin(), param_end());
-  }
-
   param_const_iterator param_begin() const {
     return param_const_iterator(getParams());
   }

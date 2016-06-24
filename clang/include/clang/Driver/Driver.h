@@ -196,7 +196,7 @@ public:
 
 private:
   /// Certain options suppress the 'no input files' warning.
-  bool SuppressMissingInputWarning : 1;
+  unsigned SuppressMissingInputWarning : 1;
 
   std::list<std::string> TempFiles;
   std::list<std::string> ResultFiles;

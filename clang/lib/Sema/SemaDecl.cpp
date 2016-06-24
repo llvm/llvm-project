@@ -4140,7 +4140,7 @@ InjectAnonymousStructOrUnionMembers(Sema &SemaRef, Scope *S, DeclContext *Owner,
 
         IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
             SemaRef.Context, Owner, VD->getLocation(), VD->getIdentifier(),
-            VD->getType(), NamedChain, Chaining.size());
+            VD->getType(), {NamedChain, Chaining.size()});
 
         for (const auto *Attr : VD->attrs())
           IndirectField->addAttr(Attr->clone(SemaRef.Context));
@@ -8535,12 +8535,10 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     }
 
     llvm::SmallPtrSet<const Type *, 16> ValidTypes;
-    for (auto Param : NewFD->params())
+    for (auto Param : NewFD->parameters())
       checkIsValidOpenCLKernelParameter(*this, D, Param, ValidTypes);
   }
-  for (FunctionDecl::param_iterator PI = NewFD->param_begin(),
-       PE = NewFD->param_end(); PI != PE; ++PI) {
-    ParmVarDecl *Param = *PI;
+  for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
 
     // OpenCL 2.0 pipe restrictions forbids pipe packet types to be non-value
@@ -10872,26 +10870,23 @@ ParmVarDecl *Sema::BuildParmVarDeclForTypedef(DeclContext *DC,
   return Param;
 }
 
-void Sema::DiagnoseUnusedParameters(ParmVarDecl * const *Param,
-                                    ParmVarDecl * const *ParamEnd) {
+void Sema::DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters) {
   // Don't diagnose unused-parameter errors in template instantiations; we
   // will already have done so in the template itself.
   if (!ActiveTemplateInstantiations.empty())
     return;
 
-  for (; Param != ParamEnd; ++Param) {
-    if (!(*Param)->isReferenced() && (*Param)->getDeclName() &&
-        !(*Param)->hasAttr<UnusedAttr>()) {
-      Diag((*Param)->getLocation(), diag::warn_unused_parameter)
-        << (*Param)->getDeclName();
+  for (const ParmVarDecl *Parameter : Parameters) {
+    if (!Parameter->isReferenced() && Parameter->getDeclName() &&
+        !Parameter->hasAttr<UnusedAttr>()) {
+      Diag(Parameter->getLocation(), diag::warn_unused_parameter)
+        << Parameter->getDeclName();
     }
   }
 }
 
-void Sema::DiagnoseSizeOfParametersAndReturnValue(ParmVarDecl * const *Param,
-                                                  ParmVarDecl * const *ParamEnd,
-                                                  QualType ReturnTy,
-                                                  NamedDecl *D) {
+void Sema::DiagnoseSizeOfParametersAndReturnValue(
+    ArrayRef<ParmVarDecl *> Parameters, QualType ReturnTy, NamedDecl *D) {
   if (LangOpts.NumLargeByValueCopy == 0) // No check.
     return;
 
@@ -10906,14 +10901,14 @@ void Sema::DiagnoseSizeOfParametersAndReturnValue(ParmVarDecl * const *Param,
 
   // Warn if any parameter is pass-by-value and larger than the specified
   // threshold.
-  for (; Param != ParamEnd; ++Param) {
-    QualType T = (*Param)->getType();
+  for (const ParmVarDecl *Parameter : Parameters) {
+    QualType T = Parameter->getType();
     if (T->isDependentType() || !T.isPODType(Context))
       continue;
     unsigned Size = Context.getTypeSizeInChars(T).getQuantity();
     if (Size > LangOpts.NumLargeByValueCopy)
-      Diag((*Param)->getLocation(), diag::warn_parameter_size)
-          << (*Param)->getDeclName() << Size;
+      Diag(Parameter->getLocation(), diag::warn_parameter_size)
+          << Parameter->getDeclName() << Size;
   }
 }
 
@@ -11255,11 +11250,11 @@ Decl *Sema::ActOnStartOfFunctionDef(Scope *FnBodyScope, Decl *D,
     PushDeclContext(FnBodyScope, FD);
 
   // Check the validity of our function parameters
-  CheckParmsForFunctionDef(FD->param_begin(), FD->param_end(),
+  CheckParmsForFunctionDef(FD->parameters(),
                            /*CheckParameterNames=*/true);
 
   // Introduce our parameters into the function scope
-  for (auto Param : FD->params()) {
+  for (auto Param : FD->parameters()) {
     Param->setOwningFunction(FD);
 
     // If this has an identifier, add it to the scope stack.
@@ -11473,8 +11468,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     if (!FD->isInvalidDecl()) {
       // Don't diagnose unused parameters of defaulted or deleted functions.
       if (!FD->isDeleted() && !FD->isDefaulted())
-        DiagnoseUnusedParameters(FD->param_begin(), FD->param_end());
-      DiagnoseSizeOfParametersAndReturnValue(FD->param_begin(), FD->param_end(),
+        DiagnoseUnusedParameters(FD->parameters());
+      DiagnoseSizeOfParametersAndReturnValue(FD->parameters(),
                                              FD->getReturnType(), FD);
 
       // If this is a structor, we need a vtable.
@@ -11545,8 +11540,8 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     assert(MD == getCurMethodDecl() && "Method parsing confused");
     MD->setBody(Body);
     if (!MD->isInvalidDecl()) {
-      DiagnoseUnusedParameters(MD->param_begin(), MD->param_end());
-      DiagnoseSizeOfParametersAndReturnValue(MD->param_begin(), MD->param_end(),
+      DiagnoseUnusedParameters(MD->parameters());
+      DiagnoseSizeOfParametersAndReturnValue(MD->parameters(),
                                              MD->getReturnType(), MD);
 
       if (Body)

@@ -1847,16 +1847,14 @@ public:
 
   /// \brief Diagnose any unused parameters in the given sequence of
   /// ParmVarDecl pointers.
-  void DiagnoseUnusedParameters(ParmVarDecl * const *Begin,
-                                ParmVarDecl * const *End);
+  void DiagnoseUnusedParameters(ArrayRef<ParmVarDecl *> Parameters);
 
   /// \brief Diagnose whether the size of parameters or return value of a
   /// function or obj-c method definition is pass-by-value and larger than a
   /// specified threshold.
-  void DiagnoseSizeOfParametersAndReturnValue(ParmVarDecl * const *Begin,
-                                              ParmVarDecl * const *End,
-                                              QualType ReturnTy,
-                                              NamedDecl *D);
+  void
+  DiagnoseSizeOfParametersAndReturnValue(ArrayRef<ParmVarDecl *> Parameters,
+                                         QualType ReturnTy, NamedDecl *D);
 
   void DiagnoseInvalidJumps(Stmt *Body);
   Decl *ActOnFileScopeAsmDecl(Expr *expr,
@@ -2688,8 +2686,7 @@ public:
                            CallExpr *CE, FunctionDecl *FD);
 
   /// Helpers for dealing with blocks and functions.
-  bool CheckParmsForFunctionDef(ParmVarDecl *const *Param,
-                                ParmVarDecl *const *ParamEnd,
+  bool CheckParmsForFunctionDef(ArrayRef<ParmVarDecl *> Parameters,
                                 bool CheckParameterNames);
   void CheckCXXDefaultArguments(FunctionDecl *FD);
   void CheckExtraCXXDefaultArguments(Declarator &D);
@@ -7170,8 +7167,7 @@ public:
                                 int indexAdjustment,
                                 Optional<unsigned> NumExpansions,
                                 bool ExpectParameterPack);
-  bool SubstParmTypes(SourceLocation Loc,
-                      ParmVarDecl **Params, unsigned NumParams,
+  bool SubstParmTypes(SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
                       const FunctionProtoType::ExtParameterInfo *ExtParamInfos,
                       const MultiLevelTemplateArgumentList &TemplateArgs,
                       SmallVectorImpl<QualType> &ParamTypes,

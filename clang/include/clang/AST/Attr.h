@@ -51,11 +51,11 @@ protected:
   /// An index into the spelling list of an
   /// attribute defined in Attr.td file.
   unsigned SpellingListIndex : 4;
-  bool Inherited : 1;
-  bool IsPackExpansion : 1;
-  bool Implicit : 1;
-  bool IsLateParsed : 1;
-  bool DuplicatesAllowed : 1;
+  unsigned Inherited : 1;
+  unsigned IsPackExpansion : 1;
+  unsigned Implicit : 1;
+  unsigned IsLateParsed : 1;
+  unsigned DuplicatesAllowed : 1;
 
   void *operator new(size_t bytes) LLVM_NOEXCEPT {
     llvm_unreachable("Attrs cannot be allocated with regular 'new'.");

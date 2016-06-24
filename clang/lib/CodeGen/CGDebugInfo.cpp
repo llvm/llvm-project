@@ -2766,7 +2766,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     Elts.push_back(DBuilder.createArtificialType(
         getOrCreateType(CGM.getContext().getObjCSelType(), F)));
     // Get rest of the arguments.
-    for (const auto *PI : OMethod->params())
+    for (const auto *PI : OMethod->parameters())
       Elts.push_back(getOrCreateType(PI->getType(), F));
     // Variadic methods need a special marker at the end of the type list.
     if (OMethod->isVariadic())

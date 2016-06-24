@@ -944,7 +944,7 @@ static bool treatUnusedNewEscaped(const CXXNewExpr *NE) {
   const CXXConstructorDecl *CtorD = ConstructE->getConstructor();
 
   // Iterate over the constructor parameters.
-  for (const auto *CtorParam : CtorD->params()) {
+  for (const auto *CtorParam : CtorD->parameters()) {
 
     QualType CtorParamPointeeT = CtorParam->getType()->getPointeeType();
     if (CtorParamPointeeT.isNull())

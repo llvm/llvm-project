@@ -265,6 +265,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasUnarySelector);
   REGISTER_MATCHER(hasValueType);
   REGISTER_MATCHER(ifStmt);
+  REGISTER_MATCHER(ignoringImplicit);
   REGISTER_MATCHER(ignoringImpCasts);
   REGISTER_MATCHER(ignoringParenCasts);
   REGISTER_MATCHER(ignoringParenImpCasts);

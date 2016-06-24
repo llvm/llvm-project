@@ -397,7 +397,7 @@ namespace clang {
 
     /// \brief Whether the target is really a std::initializer_list, and the
     /// sequence only represents the worst element conversion.
-    bool StdInitializerListElement : 1;
+    unsigned StdInitializerListElement : 1;
 
     void setKind(Kind K) {
       destruct();

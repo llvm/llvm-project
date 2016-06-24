@@ -548,6 +548,32 @@ AST_POLYMORPHIC_MATCHER_P(
                              Builder);
 }
 
+/// \brief Matches expressions that match InnerMatcher after any implicit AST
+/// nodes are stripped off.
+///
+/// Parentheses and explicit casts are not discarded.
+/// Given
+/// \code
+///   class C {};
+///   C a = C();
+///   C b;
+///   C c = b;
+/// \endcode
+/// The matchers
+/// \code
+///    varDecl(hasInitializer(ignoringImplicit(cxxConstructExpr())))
+/// \endcode
+/// would match the declarations for a, b, and c.
+/// While
+/// \code
+///    varDecl(hasInitializer(cxxConstructExpr()))
+/// \endcode
+/// only match the declarations for b and c.
+AST_MATCHER_P(Expr, ignoringImplicit, ast_matchers::internal::Matcher<Expr>,
+              InnerMatcher) {
+  return InnerMatcher.matches(*Node.IgnoreImplicit(), Finder, Builder);
+}
+
 /// \brief Matches expressions that match InnerMatcher after any implicit casts
 /// are stripped off.
 ///

@@ -1118,7 +1118,7 @@ void RewriteObjC::RewriteObjCMethodDecl(const ObjCInterfaceDecl *IDecl,
   ResultStr += " _cmd";
 
   // Method arguments.
-  for (const auto *PDecl : OMD->params()) {
+  for (const auto *PDecl : OMD->parameters()) {
     ResultStr += ", ";
     if (PDecl->getType()->isObjCQualifiedIdType()) {
       ResultStr += "id ";
@@ -2917,7 +2917,7 @@ Stmt *RewriteObjC::SynthMessageExpr(ObjCMessageExpr *Exp,
   ArgTypes.push_back(Context->getObjCSelType());
   if (ObjCMethodDecl *OMD = Exp->getMethodDecl()) {
     // Push any user argument types.
-    for (const auto *PI : OMD->params()) {
+    for (const auto *PI : OMD->parameters()) {
       QualType t = PI->getType()->isObjCQualifiedIdType()
                      ? Context->getObjCIdType()
                      : PI->getType();

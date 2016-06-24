@@ -3010,7 +3010,7 @@ Decl *ASTNodeImporter::VisitFunctionDecl(FunctionDecl *D) {
 
   // Import the function parameters.
   SmallVector<ParmVarDecl *, 8> Parameters;
-  for (auto P : D->params()) {
+  for (auto P : D->parameters()) {
     ParmVarDecl *ToP = cast_or_null<ParmVarDecl>(Importer.Import(P));
     if (!ToP)
       return nullptr;
@@ -3276,7 +3276,7 @@ Decl *ASTNodeImporter::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
 
   IndirectFieldDecl *ToIndirectField = IndirectFieldDecl::Create(
       Importer.getToContext(), DC, Loc, Name.getAsIdentifierInfo(), T,
-      NamedChain, D->getChainingSize());
+      {NamedChain, D->getChainingSize()});
 
   for (const auto *Attr : D->attrs())
     ToIndirectField->addAttr(Attr->clone(Importer.getToContext()));
@@ -3619,7 +3619,7 @@ Decl *ASTNodeImporter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
 
   // Import the parameters
   SmallVector<ParmVarDecl *, 5> ToParams;
-  for (auto *FromP : D->params()) {
+  for (auto *FromP : D->parameters()) {
     ParmVarDecl *ToP = cast_or_null<ParmVarDecl>(Importer.Import(FromP));
     if (!ToP)
       return nullptr;

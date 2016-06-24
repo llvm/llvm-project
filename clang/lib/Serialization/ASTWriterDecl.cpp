@@ -597,7 +597,7 @@ void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
   }
 
   Record.push_back(D->param_size());
-  for (auto P : D->params())
+  for (auto P : D->parameters())
     Record.AddDeclRef(P);
   Code = serialization::DECL_FUNCTION;
 }
@@ -637,7 +637,7 @@ void ASTDeclWriter::VisitObjCMethodDecl(ObjCMethodDecl *D) {
   Record.AddTypeSourceInfo(D->getReturnTypeSourceInfo());
   Record.AddSourceLocation(D->getLocEnd());
   Record.push_back(D->param_size());
-  for (const auto *P : D->params())
+  for (const auto *P : D->parameters())
     Record.AddDeclRef(P);
 
   Record.push_back(D->SelLocsKind);
@@ -1019,9 +1019,8 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.AddStmt(D->getBody());
   Record.AddTypeSourceInfo(D->getSignatureAsWritten());
   Record.push_back(D->param_size());
-  for (FunctionDecl::param_iterator P = D->param_begin(), PEnd = D->param_end();
-       P != PEnd; ++P)
-    Record.AddDeclRef(*P);
+  for (ParmVarDecl *P : D->parameters())
+    Record.AddDeclRef(P);
   Record.push_back(D->isVariadic());
   Record.push_back(D->blockMissingReturnType());
   Record.push_back(D->isConversionFromLambda());

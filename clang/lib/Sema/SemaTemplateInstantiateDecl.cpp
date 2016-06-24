@@ -803,7 +803,7 @@ Decl *TemplateDeclInstantiator::VisitIndirectFieldDecl(IndirectFieldDecl *D) {
   QualType T = cast<FieldDecl>(NamedChain[i-1])->getType();
   IndirectFieldDecl *IndirectField = IndirectFieldDecl::Create(
       SemaRef.Context, Owner, D->getLocation(), D->getIdentifier(), T,
-      NamedChain, D->getChainingSize());
+      {NamedChain, D->getChainingSize()});
 
   for (const auto *Attr : D->attrs())
     IndirectField->addAttr(Attr->clone(SemaRef.Context));
@@ -3301,9 +3301,9 @@ TemplateDeclInstantiator::SubstFunctionType(FunctionDecl *D,
     // synthesized in the method declaration.
     SmallVector<QualType, 4> ParamTypes;
     Sema::ExtParameterInfoBuilder ExtParamInfos;
-    if (SemaRef.SubstParmTypes(D->getLocation(), D->param_begin(),
-                               D->getNumParams(), nullptr, TemplateArgs,
-                               ParamTypes, &Params, ExtParamInfos))
+    if (SemaRef.SubstParmTypes(D->getLocation(), D->parameters(), nullptr,
+                               TemplateArgs, ParamTypes, &Params,
+                               ExtParamInfos))
       return nullptr;
   }
 

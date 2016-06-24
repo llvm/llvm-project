@@ -612,13 +612,12 @@ public:
   /// variables vector are acceptable.
   ///
   /// Return true on error.
-  bool TransformFunctionTypeParams(SourceLocation Loc,
-                                   ParmVarDecl **Params, unsigned NumParams,
-                                   const QualType *ParamTypes,
-                     const FunctionProtoType::ExtParameterInfo *ParamInfos,
-                                   SmallVectorImpl<QualType> &PTypes,
-                                   SmallVectorImpl<ParmVarDecl*> *PVars,
-                                   Sema::ExtParameterInfoBuilder &PInfos);
+  bool TransformFunctionTypeParams(
+      SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+      const QualType *ParamTypes,
+      const FunctionProtoType::ExtParameterInfo *ParamInfos,
+      SmallVectorImpl<QualType> &PTypes, SmallVectorImpl<ParmVarDecl *> *PVars,
+      Sema::ExtParameterInfoBuilder &PInfos);
 
   /// \brief Transforms a single function-type parameter.  Return null
   /// on error.
@@ -4663,17 +4662,17 @@ ParmVarDecl *TreeTransform<Derived>::TransformFunctionTypeParam(
   return newParm;
 }
 
-template<typename Derived>
-bool TreeTransform<Derived>::
-  TransformFunctionTypeParams(SourceLocation Loc,
-                              ParmVarDecl **Params, unsigned NumParams,
-                              const QualType *ParamTypes,
-                        const FunctionProtoType::ExtParameterInfo *ParamInfos,
-                              SmallVectorImpl<QualType> &OutParamTypes,
-                              SmallVectorImpl<ParmVarDecl*> *PVars,
-                              Sema::ExtParameterInfoBuilder &PInfos) {
+template <typename Derived>
+bool TreeTransform<Derived>::TransformFunctionTypeParams(
+    SourceLocation Loc, ArrayRef<ParmVarDecl *> Params,
+    const QualType *ParamTypes,
+    const FunctionProtoType::ExtParameterInfo *ParamInfos,
+    SmallVectorImpl<QualType> &OutParamTypes,
+    SmallVectorImpl<ParmVarDecl *> *PVars,
+    Sema::ExtParameterInfoBuilder &PInfos) {
   int indexAdjustment = 0;
 
+  unsigned NumParams = Params.size();
   for (unsigned i = 0; i != NumParams; ++i) {
     if (ParmVarDecl *OldParm = Params[i]) {
       assert(OldParm->getFunctionScopeIndex() == i);
@@ -4908,7 +4907,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
 
   if (T->hasTrailingReturn()) {
     if (getDerived().TransformFunctionTypeParams(
-            TL.getBeginLoc(), TL.getParmArray(), TL.getNumParams(),
+            TL.getBeginLoc(), TL.getParams(),
             TL.getTypePtr()->param_type_begin(),
             T->getExtParameterInfosOrNull(),
             ParamTypes, &ParamDecls, ExtParamInfos))
@@ -4934,7 +4933,7 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
       return QualType();
 
     if (getDerived().TransformFunctionTypeParams(
-            TL.getBeginLoc(), TL.getParmArray(), TL.getNumParams(),
+            TL.getBeginLoc(), TL.getParams(),
             TL.getTypePtr()->param_type_begin(),
             T->getExtParameterInfosOrNull(),
             ParamTypes, &ParamDecls, ExtParamInfos))
@@ -11196,13 +11195,10 @@ TreeTransform<Derived>::TransformBlockExpr(BlockExpr *E) {
 
   // Parameter substitution.
   Sema::ExtParameterInfoBuilder extParamInfos;
-  if (getDerived().TransformFunctionTypeParams(E->getCaretLocation(),
-                                               oldBlock->param_begin(),
-                                               oldBlock->param_size(),
-                                               nullptr,
-                             exprFunctionType->getExtParameterInfosOrNull(),
-                                               paramTypes, &params,
-                                               extParamInfos)) {
+  if (getDerived().TransformFunctionTypeParams(
+          E->getCaretLocation(), oldBlock->parameters(), nullptr,
+          exprFunctionType->getExtParameterInfosOrNull(), paramTypes, &params,
+          extParamInfos)) {
     getSema().ActOnBlockError(E->getCaretLocation(), /*Scope=*/nullptr);
     return ExprError();
   }

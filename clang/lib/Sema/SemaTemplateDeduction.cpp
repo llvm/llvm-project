@@ -2480,7 +2480,7 @@ Sema::SubstituteExplicitTemplateArguments(
   if (ExplicitTemplateArgs.size() == 0) {
     // No arguments to substitute; just copy over the parameter types and
     // fill in the function type.
-    for (auto P : Function->params())
+    for (auto P : Function->parameters())
       ParamTypes.push_back(P->getType());
 
     if (FunctionType)
@@ -2563,8 +2563,7 @@ Sema::SubstituteExplicitTemplateArguments(
   // return type, substitute it after the arguments to ensure we substitute
   // in lexical order.
   if (Proto->hasTrailingReturn()) {
-    if (SubstParmTypes(Function->getLocation(),
-                       Function->param_begin(), Function->getNumParams(),
+    if (SubstParmTypes(Function->getLocation(), Function->parameters(),
                        Proto->getExtParameterInfosOrNull(),
                        MultiLevelTemplateArgumentList(*ExplicitArgumentList),
                        ParamTypes, /*params*/ nullptr, ExtParamInfos))
@@ -2601,8 +2600,7 @@ Sema::SubstituteExplicitTemplateArguments(
   // Instantiate the types of each of the function parameters given the
   // explicitly-specified template arguments if we didn't do so earlier.
   if (!Proto->hasTrailingReturn() &&
-      SubstParmTypes(Function->getLocation(),
-                     Function->param_begin(), Function->getNumParams(),
+      SubstParmTypes(Function->getLocation(), Function->parameters(),
                      Proto->getExtParameterInfosOrNull(),
                      MultiLevelTemplateArgumentList(*ExplicitArgumentList),
                      ParamTypes, /*params*/ nullptr, ExtParamInfos))

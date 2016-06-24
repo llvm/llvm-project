@@ -949,7 +949,7 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     CGM.getCXXABI().buildThisParam(*this, Args);
   }
 
-  for (auto *Param : FD->params()) {
+  for (auto *Param : FD->parameters()) {
     Args.push_back(Param);
     if (!Param->hasAttr<PassObjectSizeAttr>())
       continue;

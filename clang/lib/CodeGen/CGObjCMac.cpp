@@ -1944,7 +1944,7 @@ CGObjCCommonMac::EmitMessageSend(CodeGen::CodeGenFunction &CGF,
   // Emit a null-check if there's a consumed argument other than the receiver.
   bool RequiresNullCheck = false;
   if (ReceiverCanBeNull && CGM.getLangOpts().ObjCAutoRefCount && Method) {
-    for (const auto *ParamDecl : Method->params()) {
+    for (const auto *ParamDecl : Method->parameters()) {
       if (ParamDecl->hasAttr<NSConsumedAttr>()) {
         if (!nullReturn.NullBB)
           nullReturn.init(CGF, Arg0);
@@ -6840,7 +6840,7 @@ CGObjCNonFragileABIMac::EmitVTableMessageSend(CodeGenFunction &CGF,
   
   bool requiresnullCheck = false;
   if (CGM.getLangOpts().ObjCAutoRefCount && method)
-    for (const auto *ParamDecl : method->params()) {
+    for (const auto *ParamDecl : method->parameters()) {
       if (ParamDecl->hasAttr<NSConsumedAttr>()) {
         if (!nullReturn.NullBB)
           nullReturn.init(CGF, arg0);

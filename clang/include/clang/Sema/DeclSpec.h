@@ -1155,10 +1155,10 @@ struct DeclaratorChunk {
     unsigned TypeQuals : 5;
 
     /// True if this dimension included the 'static' keyword.
-    bool hasStatic : 1;
+    unsigned hasStatic : 1;
 
     /// True if this dimension was [*].  In this case, NumElts is null.
-    bool isStar : 1;
+    unsigned isStar : 1;
 
     /// This is the size of the array, or null if [] or [*] was specified.
     /// Since the parser is multi-purpose, and we don't want to impose a root
@@ -1663,10 +1663,10 @@ private:
   SmallVector<DeclaratorChunk, 8> DeclTypeInfo;
 
   /// InvalidType - Set by Sema::GetTypeForDeclarator().
-  bool InvalidType : 1;
+  unsigned InvalidType : 1;
 
   /// GroupingParens - Set by Parser::ParseParenDeclarator().
-  bool GroupingParens : 1;
+  unsigned GroupingParens : 1;
 
   /// FunctionDefinition - Is this Declarator for a function or member 
   /// definition and, if so, what kind?
@@ -1675,7 +1675,7 @@ private:
   unsigned FunctionDefinition : 2;
 
   /// \brief Is this Declarator a redeclaration?
-  bool Redeclaration : 1;
+  unsigned Redeclaration : 1;
 
   /// Attrs - Attributes.
   ParsedAttributes Attrs;
