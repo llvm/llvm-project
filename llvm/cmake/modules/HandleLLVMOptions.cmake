@@ -249,6 +249,12 @@ if( MSVC )
     -D_SCL_SECURE_NO_WARNINGS
     )
 
+  # Tell MSVC to use the Unicode version of the Win32 APIs instead of ANSI.
+  add_llvm_definitions(
+    -DUNICODE
+    -D_UNICODE
+  )
+
   set(msvc_warning_flags
     # Disabled warnings.
     -wd4141 # Suppress ''modifier' : used more than once' (because of __forceinline combined with inline)

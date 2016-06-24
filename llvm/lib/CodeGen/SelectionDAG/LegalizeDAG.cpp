@@ -179,8 +179,6 @@ public:
            "Replacing one node with another that produces a different number "
            "of values!");
     DAG.ReplaceAllUsesWith(Old, New);
-    for (unsigned i = 0, e = Old->getNumValues(); i != e; ++i)
-      DAG.TransferDbgValues(SDValue(Old, i), SDValue(New, i));
     if (UpdatedNodes)
       UpdatedNodes->insert(New);
     ReplacedNode(Old);
@@ -190,7 +188,6 @@ public:
           dbgs() << "     with:      "; New->dump(&DAG));
 
     DAG.ReplaceAllUsesWith(Old, New);
-    DAG.TransferDbgValues(Old, New);
     if (UpdatedNodes)
       UpdatedNodes->insert(New.getNode());
     ReplacedNode(Old.getNode());
@@ -203,7 +200,6 @@ public:
       DEBUG(dbgs() << (i == 0 ? "     with:      "
                               : "      and:      ");
             New[i]->dump(&DAG));
-      DAG.TransferDbgValues(SDValue(Old, i), New[i]);
       if (UpdatedNodes)
         UpdatedNodes->insert(New[i].getNode());
     }

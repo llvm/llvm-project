@@ -1,5 +1,5 @@
 ; RUN: llc -march=mipsel -mcpu=mips32r6 -relocation-model=static -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=STATIC32
-; RUN: llc -march=mipsel -mcpu=mips64r6 -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=PIC
+; RUN: llc -march=mipsel -mcpu=mips64r6 -target-abi n64 -disable-mips-delay-filler < %s | FileCheck %s -check-prefix=PIC
 
 ; Function Attrs: nounwind
 define void @l()  {

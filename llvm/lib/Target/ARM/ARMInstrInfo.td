@@ -129,6 +129,8 @@ def ARMintretflag    : SDNode<"ARMISD::INTRET_FLAG", SDT_ARMcall,
 def ARMcmov          : SDNode<"ARMISD::CMOV", SDT_ARMCMov,
                               [SDNPInGlue]>;
 
+def ARMssatnoshift   : SDNode<"ARMISD::SSAT", SDTIntSatNoShOp, []>;
+
 def ARMbrcond        : SDNode<"ARMISD::BRCOND", SDT_ARMBrcond,
                               [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
 
@@ -3713,6 +3715,8 @@ def : ARMV6Pat<(int_arm_ssat GPRnopc:$a, imm1_32:$pos),
                (SSAT imm1_32:$pos, GPRnopc:$a, 0)>;
 def : ARMV6Pat<(int_arm_usat GPRnopc:$a, imm0_31:$pos),
                (USAT imm0_31:$pos, GPRnopc:$a, 0)>;
+def : ARMPat<(ARMssatnoshift GPRnopc:$Rn, imm0_31:$imm),
+             (SSAT imm0_31:$imm, GPRnopc:$Rn, 0)>;
 
 //===----------------------------------------------------------------------===//
 //  Bitwise Instructions.

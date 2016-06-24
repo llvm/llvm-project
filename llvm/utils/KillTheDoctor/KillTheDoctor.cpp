@@ -337,7 +337,7 @@ int main(int argc, char **argv) {
     errs() << ToolName << ": Program Image Path: " << ProgramToRun << '\n'
            << ToolName << ": Command Line: " << CommandLine << '\n';
 
-  STARTUPINFO StartupInfo;
+  STARTUPINFOA StartupInfo;
   PROCESS_INFORMATION ProcessInfo;
   std::memset(&StartupInfo, 0, sizeof(StartupInfo));
   StartupInfo.cb = sizeof(StartupInfo);

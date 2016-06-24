@@ -36,9 +36,10 @@ void SourceCoverageView::renderLine(
   for (const auto *S : Segments) {
     unsigned End = std::min(S->Col, static_cast<unsigned>(Line.size()) + 1);
     colored_ostream(OS, Highlight ? *Highlight : raw_ostream::SAVEDCOLOR,
-                    Options.Colors && Highlight, /*Bold=*/false, /*BG=*/true)
+                    getOptions().Colors && Highlight, /*Bold=*/false,
+                    /*BG=*/true)
         << Line.substr(Col - 1, End - Col);
-    if (Options.Debug && Highlight)
+    if (getOptions().Debug && Highlight)
       HighlightedRanges.push_back(std::make_pair(Col, End));
     Col = End;
     if (Col == ExpansionCol)
@@ -51,11 +52,11 @@ void SourceCoverageView::renderLine(
 
   // Show the rest of the line
   colored_ostream(OS, Highlight ? *Highlight : raw_ostream::SAVEDCOLOR,
-                  Options.Colors && Highlight, /*Bold=*/false, /*BG=*/true)
+                  getOptions().Colors && Highlight, /*Bold=*/false, /*BG=*/true)
       << Line.substr(Col - 1, Line.size() - Col + 1);
   OS << "\n";
 
-  if (Options.Debug) {
+  if (getOptions().Debug) {
     for (const auto &Range : HighlightedRanges)
       errs() << "Highlighted line " << LineNumber << ", " << Range.first
              << " -> " << Range.second << "\n";
@@ -96,7 +97,7 @@ static std::string formatCount(uint64_t N) {
 
 void
 SourceCoverageView::renderLineCoverageColumn(raw_ostream &OS,
-                                             const LineCoverageInfo &Line) {
+                                             const LineCoverageStats &Line) {
   if (!Line.isMapped()) {
     OS.indent(LineCoverageColumnWidth) << '|';
     return;
@@ -104,7 +105,7 @@ SourceCoverageView::renderLineCoverageColumn(raw_ostream &OS,
   std::string C = formatCount(Line.ExecutionCount);
   OS.indent(LineCoverageColumnWidth - C.size());
   colored_ostream(OS, raw_ostream::MAGENTA,
-                  Line.hasMultipleRegions() && Options.Colors)
+                  Line.hasMultipleRegions() && getOptions().Colors)
       << C;
   OS << '|';
 }
@@ -136,7 +137,7 @@ void SourceCoverageView::renderRegionMarkers(
   }
   OS << "\n";
 
-  if (Options.Debug)
+  if (getOptions().Debug)
     for (const auto *S : Segments)
       errs() << "Marker at " << S->Line << ":" << S->Col << " = "
              << formatCount(S->Count) << (S->IsRegionEntry ? "\n" : " (pop)\n");
@@ -146,8 +147,8 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
                                 unsigned IndentLevel) {
   // The width of the leading columns
   unsigned CombinedColumnWidth =
-      (Options.ShowLineStats ? LineCoverageColumnWidth + 1 : 0) +
-      (Options.ShowLineNumbers ? LineNumberColumnWidth + 1 : 0);
+      (getOptions().ShowLineStats ? LineCoverageColumnWidth + 1 : 0) +
+      (getOptions().ShowLineNumbers ? LineNumberColumnWidth + 1 : 0);
   // The width of the line that is used to divide between the view and the
   // subviews.
   unsigned DividerWidth = CombinedColumnWidth + 4;
@@ -186,7 +187,7 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
       LineSegments.push_back(&*NextSegment++);
 
     // Calculate a count to be for the line as a whole.
-    LineCoverageInfo LineCount;
+    LineCoverageStats LineCount;
     if (WrappedSegment && WrappedSegment->HasCount)
       LineCount.addRegionCount(WrappedSegment->Count);
     for (const auto *S : LineSegments)
@@ -195,15 +196,15 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
 
     // Render the line prefix.
     renderIndent(OS, IndentLevel);
-    if (Options.ShowLineStats)
+    if (getOptions().ShowLineStats)
       renderLineCoverageColumn(OS, LineCount);
-    if (Options.ShowLineNumbers)
+    if (getOptions().ShowLineNumbers)
       renderLineNumberColumn(OS, LI.line_number());
 
     // If there are expansion subviews, we want to highlight the first one.
     unsigned ExpansionColumn = 0;
     if (NextESV != EndESV && NextESV->getLine() == LI.line_number() &&
-        Options.Colors)
+        getOptions().Colors)
       ExpansionColumn = NextESV->getStartCol();
 
     // Display the source code for the current line.
@@ -211,8 +212,9 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
                ExpansionColumn);
 
     // Show the region markers.
-    if (Options.ShowRegionMarkers && (!Options.ShowLineStatsOrRegionMarkers ||
-                                      LineCount.hasMultipleRegions()) &&
+    if (getOptions().ShowRegionMarkers &&
+        (!getOptions().ShowLineStatsOrRegionMarkers ||
+         LineCount.hasMultipleRegions()) &&
         !LineSegments.empty()) {
       renderIndent(OS, IndentLevel);
       OS.indent(CombinedColumnWidth);
@@ -238,7 +240,7 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
         OS << "\n";
       }
       // Render the child subview
-      if (Options.Debug)
+      if (getOptions().Debug)
         errs() << "Expansion at line " << NextESV->getLine() << ", "
                << NextESV->getStartCol() << " -> " << NextESV->getEndCol()
                << "\n";
@@ -250,9 +252,7 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
       OS << "\n";
       renderIndent(OS, NestedIndent);
       OS << ' ';
-      Options.colored_ostream(OS, raw_ostream::CYAN) << NextISV->FunctionName
-                                                     << ":";
-      OS << "\n";
+      NextISV->View->renderSourceName(OS);
       NextISV->View->render(OS, false, NestedIndent);
       RenderedSubView = true;
     }
@@ -261,4 +261,9 @@ void SourceCoverageView::render(raw_ostream &OS, bool WholeFile,
       OS << "\n";
     }
   }
+}
+
+void SourceCoverageView::renderSourceName(raw_ostream &OS) {
+  getOptions().colored_ostream(OS, raw_ostream::CYAN) << getSourceName()
+                                                      << ":\n";
 }

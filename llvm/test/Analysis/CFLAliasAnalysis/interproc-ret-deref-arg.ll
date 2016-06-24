@@ -4,9 +4,6 @@
 ; RUN: opt < %s -disable-basicaa -cfl-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
-; xfail for now due to buggy interproc analysis
-; XFAIL: *
-
 define i32* @return_deref_arg_callee(i32** %arg1) {
 	%deref = load i32*, i32** %arg1
 	ret i32* %deref

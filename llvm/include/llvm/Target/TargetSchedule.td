@@ -55,8 +55,6 @@ include "llvm/Target/TargetItinerary.td"
 
 class Instruction; // Forward def
 
-class Predicate; // Forward def
-
 // DAG operator that interprets the DAG args as Instruction defs.
 def instrs;
 
@@ -98,20 +96,6 @@ class SchedMachineModel {
   // or there will be no way to catch simple errors in the model
   // resulting from changes to the instruction definitions.
   bit CompleteModel = 1;
-
-  // A processor may only implement part of published ISA, due to either new ISA
-  // extensions, (e.g. Pentium 4 doesn't have AVX) or implementation
-  // (ARM/MIPS/PowerPC/SPARC soft float cores).
-  //
-  // For a processor which doesn't support some feature(s), the schedule model
-  // can use:
-  //
-  // let<Predicate> UnsupportedFeatures = [HaveA,..,HaveY];
-  //
-  // to skip the checks for scheduling information when building LLVM for
-  // instructions which have any of the listed predicates in their Predicates
-  // field.
-  list<Predicate> UnsupportedFeatures = [];
 
   bit NoModel = 0; // Special tag to indicate missing machine model.
 }

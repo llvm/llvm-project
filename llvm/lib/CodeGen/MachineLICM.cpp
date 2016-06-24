@@ -1171,7 +1171,6 @@ MachineInstr *MachineLICM::ExtractHoistableLoad(MachineInstr *MI) {
                                     &LoadRegIndex);
   if (NewOpc == 0) return nullptr;
   const MCInstrDesc &MID = TII->get(NewOpc);
-  if (MID.getNumDefs() != 1) return nullptr;
   MachineFunction &MF = *MI->getParent()->getParent();
   const TargetRegisterClass *RC = TII->getRegClass(MID, LoadRegIndex, TRI, MF);
   // Ok, we're unfolding. Create a temporary register and do the unfold.

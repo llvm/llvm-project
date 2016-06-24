@@ -133,7 +133,8 @@ CodeCoverageTool::attachExpansionSubViews(SourceCoverageView &View,
 
     auto SubViewExpansions = ExpansionCoverage.getExpansions();
     auto SubView = llvm::make_unique<SourceCoverageView>(
-        SourceBuffer.get(), ViewOpts, std::move(ExpansionCoverage));
+        Expansion.Function.Name, SourceBuffer.get(), ViewOpts,
+        std::move(ExpansionCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
     View.addExpansion(Expansion.Region, std::move(SubView));
   }
@@ -151,7 +152,7 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
 
   auto Expansions = FunctionCoverage.getExpansions();
   auto View = llvm::make_unique<SourceCoverageView>(
-      SourceBuffer.get(), ViewOpts, std::move(FunctionCoverage));
+      Function.Name, SourceBuffer.get(), ViewOpts, std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   return View;
@@ -169,14 +170,15 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
 
   auto Expansions = FileCoverage.getExpansions();
   auto View = llvm::make_unique<SourceCoverageView>(
-      SourceBuffer.get(), ViewOpts, std::move(FileCoverage));
+      SourceFile, SourceBuffer.get(), ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   for (auto Function : Coverage.getInstantiations(SourceFile)) {
     auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
     auto SubViewExpansions = SubViewCoverage.getExpansions();
     auto SubView = llvm::make_unique<SourceCoverageView>(
-        SourceBuffer.get(), ViewOpts, std::move(SubViewCoverage));
+        Function->Name, SourceBuffer.get(), ViewOpts,
+        std::move(SubViewCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
 
     if (SubView) {
@@ -426,9 +428,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
         outs() << "\n";
         continue;
       }
-      ViewOpts.colored_ostream(outs(), raw_ostream::CYAN) << Function.Name
-                                                          << ":";
-      outs() << "\n";
+      mainView->renderSourceName(outs());
       mainView->render(outs(), /*WholeFile=*/false);
       outs() << "\n";
     }
@@ -452,10 +452,9 @@ int CodeCoverageTool::show(int argc, const char **argv,
       continue;
     }
 
-    if (ShowFilenames) {
-      ViewOpts.colored_ostream(outs(), raw_ostream::CYAN) << SourceFile << ":";
-      outs() << "\n";
-    }
+    if (ShowFilenames)
+      mainView->renderSourceName(outs());
+
     mainView->render(outs(), /*Wholefile=*/true);
     if (SourceFiles.size() > 1)
       outs() << "\n";

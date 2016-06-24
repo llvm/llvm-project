@@ -73,38 +73,51 @@ struct InstantiationView {
   }
 };
 
+/// \brief Coverage statistics for a single line.
+struct LineCoverageStats {
+  uint64_t ExecutionCount;
+  unsigned RegionCount;
+  bool Mapped;
+
+  LineCoverageStats() : ExecutionCount(0), RegionCount(0), Mapped(false) {}
+
+  bool isMapped() const { return Mapped; }
+
+  bool hasMultipleRegions() const { return RegionCount > 1; }
+
+  void addRegionStartCount(uint64_t Count) {
+    // The max of all region starts is the most interesting value.
+    addRegionCount(RegionCount ? std::max(ExecutionCount, Count) : Count);
+    ++RegionCount;
+  }
+
+  void addRegionCount(uint64_t Count) {
+    Mapped = true;
+    ExecutionCount = Count;
+  }
+};
+
 /// \brief A code coverage view of a specific source file.
 /// It can have embedded coverage views.
 class SourceCoverageView {
 private:
-  /// \brief Coverage information for a single line.
-  struct LineCoverageInfo {
-    uint64_t ExecutionCount;
-    unsigned RegionCount;
-    bool Mapped;
+  /// A function or file name.
+  StringRef SourceName;
 
-    LineCoverageInfo() : ExecutionCount(0), RegionCount(0), Mapped(false) {}
-
-    bool isMapped() const { return Mapped; }
-
-    bool hasMultipleRegions() const { return RegionCount > 1; }
-
-    void addRegionStartCount(uint64_t Count) {
-      // The max of all region starts is the most interesting value.
-      addRegionCount(RegionCount ? std::max(ExecutionCount, Count) : Count);
-      ++RegionCount;
-    }
-
-    void addRegionCount(uint64_t Count) {
-      Mapped = true;
-      ExecutionCount = Count;
-    }
-  };
-
+  /// A memory buffer backing the source on display.
   const MemoryBuffer &File;
+
+  /// Various options to guide the coverage renderer.
   const CoverageViewOptions &Options;
+
+  /// Complete coverage information about the source on display.
   coverage::CoverageData CoverageInfo;
+
+  /// A container for all expansions (e.g macros) in the source on display.
   std::vector<ExpansionView> ExpansionSubViews;
+
+  /// A container for all instantiations (e.g template functions) in the source
+  /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
   /// \brief Render a source line with highlighting.
@@ -118,7 +131,7 @@ private:
   void renderViewDivider(unsigned Offset, unsigned Length, raw_ostream &OS);
 
   /// \brief Render the line's execution count column.
-  void renderLineCoverageColumn(raw_ostream &OS, const LineCoverageInfo &Line);
+  void renderLineCoverageColumn(raw_ostream &OS, const LineCoverageStats &Line);
 
   /// \brief Render the line number column.
   void renderLineNumberColumn(raw_ostream &OS, unsigned LineNo);
@@ -132,10 +145,13 @@ private:
   static const unsigned LineNumberColumnWidth = 5;
 
 public:
-  SourceCoverageView(const MemoryBuffer &File,
+  SourceCoverageView(StringRef SourceName, const MemoryBuffer &File,
                      const CoverageViewOptions &Options,
                      coverage::CoverageData &&CoverageInfo)
-      : File(File), Options(Options), CoverageInfo(std::move(CoverageInfo)) {}
+      : SourceName(SourceName), File(File), Options(Options),
+        CoverageInfo(std::move(CoverageInfo)) {}
+
+  StringRef getSourceName() const { return SourceName; }
 
   const CoverageViewOptions &getOptions() const { return Options; }
 
@@ -154,6 +170,9 @@ public:
   /// \brief Print the code coverage information for a specific
   /// portion of a source file to the output stream.
   void render(raw_ostream &OS, bool WholeFile, unsigned IndentLevel = 0);
+
+  /// \brief Print the source name corresponding to this view.
+  void renderSourceName(raw_ostream &OS);
 };
 
 } // namespace llvm

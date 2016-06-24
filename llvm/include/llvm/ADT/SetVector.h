@@ -124,7 +124,7 @@ public:
   }
 
   /// \brief Insert a new element into the SetVector.
-  /// \returns true iff the element was inserted into the SetVector.
+  /// \returns true if the element was inserted into the SetVector.
   bool insert(const value_type &X) {
     bool result = set_.insert(X).second;
     if (result)

@@ -4461,12 +4461,6 @@ bool MipsAsmParser::searchSymbolAlias(OperandVector &Operands) {
           llvm_unreachable("Should never ParseFail");
         return false;
       }
-    } else if (Expr->getKind() == MCExpr::Constant) {
-      Parser.Lex();
-      const MCConstantExpr *Const = static_cast<const MCConstantExpr *>(Expr);
-      Operands.push_back(
-          MipsOperand::CreateImm(Const, S, Parser.getTok().getLoc(), *this));
-      return true;
     }
   }
   return false;

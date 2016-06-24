@@ -9,6 +9,7 @@
 
 #include "SystemZSubtarget.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
@@ -44,15 +45,6 @@ SystemZSubtarget::SystemZSubtarget(const Triple &TT, const std::string &CPU,
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this),
       TSInfo(), FrameLowering() {}
 
-// Return true if GV binds locally under reloc model RM.
-static bool bindsLocally(const GlobalValue *GV, Reloc::Model RM) {
-  // For non-PIC, all symbols bind locally.
-  if (RM == Reloc::Static)
-    return true;
-
-  return GV->hasLocalLinkage() || !GV->hasDefaultVisibility();
-}
-
 bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
                                        Reloc::Model RM,
                                        CodeModel::Model CM) const {
@@ -63,7 +55,7 @@ bool SystemZSubtarget::isPC32DBLSymbol(const GlobalValue *GV,
 
   // For the small model, all locally-binding symbols are in range.
   if (CM == CodeModel::Small)
-    return bindsLocally(GV, RM);
+    return shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV);
 
   // For Medium and above, assume that the symbol is not within the 4GB range.
   // Taking the address of locally-defined text would be OK, but that

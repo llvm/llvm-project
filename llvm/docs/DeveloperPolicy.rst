@@ -338,7 +338,7 @@ Obtaining Commit Access
 
 We grant commit access to contributors with a track record of submitting high
 quality patches.  If you would like commit access, please send an email to
-`Chris <mailto:sabre@nondot.org>`_ with the following information:
+`Chris <mailto:clattner@llvm.org>`_ with the following information:
 
 #. The user name you want to commit with, e.g. "hacker".
 

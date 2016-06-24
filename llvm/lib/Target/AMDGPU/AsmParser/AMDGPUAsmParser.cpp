@@ -1277,7 +1277,7 @@ bool AMDGPUAsmParser::ParseAMDKernelCodeTValue(StringRef ID,
                                                amd_kernel_code_t &Header) {
   SmallString<40> ErrStr;
   raw_svector_ostream Err(ErrStr);
-  if (!parseAmdKernelCodeField(ID, getLexer(), Header, Err)) {
+  if (!parseAmdKernelCodeField(ID, getParser(), Header, Err)) {
     return TokError(Err.str());
   }
   Lex();
@@ -1290,9 +1290,6 @@ bool AMDGPUAsmParser::ParseDirectiveAMDKernelCodeT() {
   AMDGPU::initDefaultAMDKernelCodeT(Header, getSTI().getFeatureBits());
 
   while (true) {
-
-    if (getLexer().isNot(AsmToken::EndOfStatement))
-      return TokError("amd_kernel_code_t values must begin on a new line");
 
     // Lex EndOfStatement.  This is in a while loop, because lexing a comment
     // will set the current token to EndOfStatement.

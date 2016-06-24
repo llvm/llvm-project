@@ -160,3 +160,33 @@ t5:
 
 # ALL-NEXT: nop
 
+t1b:
+IMM_8 = 8
+        .cpsetup $25, IMM_8, __cerror
+        nop
+        .cpreturn
+        nop
+
+# ALL-LABEL: t1b:
+# ASM-NEXT: IMM_8 = 8
+
+# O32-NOT: __cerror
+
+# NXX-NEXT: sd       $gp, 8($sp)
+# NXX-NEXT: lui      $gp, 0
+# N32-NEXT: R_MIPS_HI16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_HI16  __cerror
+# NXX-NEXT: addiu    $gp, $gp, 0
+# N32-NEXT: R_MIPS_LO16/R_MIPS_NONE/R_MIPS_NONE __gnu_local_gp
+# N64-NEXT: R_MIPS_GPREL16/R_MIPS_SUB/R_MIPS_LO16  __cerror
+# N64-NEXT: daddu    $gp, $gp, $25
+
+# ASM-NEXT: .cpsetup $25, 8, __cerror
+
+# ALL-NEXT: nop
+
+# ASM-NEXT: .cpreturn
+# NXX-NEXT: ld $gp, 8($sp)
+
+# ALL-NEXT: nop
+

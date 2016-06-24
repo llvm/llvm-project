@@ -2676,6 +2676,9 @@ Following notations are used for specifying relocation calculations:
 
 * **A** --- Represents the addend used to compute the value of the relocatable
   field
+* **G** --- Represents the offset into the global offset table at which the
+  relocation entry’s symbol will reside during execution.
+* **GOT** --- Represents the address of the global offset table.
 * **P** --- Represents the place (section offset or address) of the storage unit
   being relocated (computed using ``r_offset``)
 * **S** --- Represents the value of the symbol whose index resides in the
@@ -2694,4 +2697,5 @@ supported relocation types:
   ``R_AMDGPU_REL32``     4      ``word32``  S + A - P
   ``R_AMDGPU_REL64``     5      ``word64``  S + A - P
   ``R_AMDGPU_ABS32``     6      ``word32``  S + A
+  ``R_AMDGPU_GOTPCREL``  7      ``word32``  G + GOT + A - P
   =====================  =====  ==========  ====================

@@ -16,6 +16,7 @@
 #include "AMDKernelCodeTUtils.h"
 #include "SIDefines.h"
 #include <llvm/MC/MCParser/MCAsmLexer.h>
+#include <llvm/MC/MCParser/MCAsmParser.h>
 #include <llvm/Support/raw_ostream.h>
 
 using namespace llvm;
@@ -101,41 +102,45 @@ void llvm::dumpAmdKernelCode(const amd_kernel_code_t *C,
 
 // Field parsing
 
-static bool expectEqualInt(MCAsmLexer &Lexer, raw_ostream &Err) {
-  if (Lexer.isNot(AsmToken::Equal)) {
+static bool expectAbsExpression(MCAsmParser &MCParser, int64_t &Value, raw_ostream& Err) {
+
+  if (MCParser.getLexer().isNot(AsmToken::Equal)) {
     Err << "expected '='";
     return false;
   }
-  Lexer.Lex();
-  if (Lexer.isNot(AsmToken::Integer)) {
-    Err << "integer literal expected";
+  MCParser.getLexer().Lex();
+
+  if (MCParser.parseAbsoluteExpression(Value)) {
+    Err << "integer absolute expression expected";
     return false;
   }
   return true;
 }
 
 template <typename T, T amd_kernel_code_t::*ptr>
-static bool parseField(amd_kernel_code_t &C, MCAsmLexer &Lexer,
+static bool parseField(amd_kernel_code_t &C, MCAsmParser &MCParser,
                        raw_ostream &Err) {
-  if (!expectEqualInt(Lexer, Err))
+  int64_t Value = 0;
+  if (!expectAbsExpression(MCParser, Value, Err))
     return false;
-  C.*ptr = (T)Lexer.getTok().getIntVal();
+  C.*ptr = (T)Value;
   return true;
 }
 
 template <typename T, T amd_kernel_code_t::*ptr, int shift, int width = 1>
-static bool parseBitField(amd_kernel_code_t &C, MCAsmLexer &Lexer,
+static bool parseBitField(amd_kernel_code_t &C, MCAsmParser &MCParser,
                           raw_ostream &Err) {
-  if (!expectEqualInt(Lexer, Err))
+  int64_t Value = 0;
+  if (!expectAbsExpression(MCParser, Value, Err))
     return false;
   const uint64_t Mask = ((UINT64_C(1)  << width) - 1) << shift;
   C.*ptr &= (T)~Mask;
-  C.*ptr |= (T)((Lexer.getTok().getIntVal() << shift) & Mask);
+  C.*ptr |= (T)((Value << shift) & Mask);
   return true;
 }
 
 typedef bool(*ParseFx)(amd_kernel_code_t &,
-                       MCAsmLexer &Lexer,
+                       MCAsmParser &MCParser,
                        raw_ostream &Err);
 
 static ArrayRef<ParseFx> getParserTable() {
@@ -148,7 +153,7 @@ static ArrayRef<ParseFx> getParserTable() {
 }
 
 bool llvm::parseAmdKernelCodeField(StringRef ID,
-                                   MCAsmLexer &Lexer,
+                                   MCAsmParser &MCParser,
                                    amd_kernel_code_t &C,
                                    raw_ostream &Err) {
   const int Idx = get_amd_kernel_code_t_FieldIndex(ID);
@@ -157,5 +162,5 @@ bool llvm::parseAmdKernelCodeField(StringRef ID,
     return false;
   }
   auto Parser = getParserTable()[Idx];
-  return Parser ? Parser(C, Lexer, Err) : false;
+  return Parser ? Parser(C, MCParser, Err) : false;
 }

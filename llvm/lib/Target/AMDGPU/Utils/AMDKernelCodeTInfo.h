@@ -37,15 +37,15 @@
 
 // have to define these lambdas because of Set/GetMacro
 #define PRINTCOMP(GetMacro, Shift) \
-[](StringRef Name, const amd_kernel_code_t& C, raw_ostream& OS) { \
+[](StringRef Name, const amd_kernel_code_t &C, raw_ostream &OS) { \
    printName(OS, Name) << \
      (int)GetMacro(C.compute_pgm_resource_registers >> Shift); \
 }
 #define PARSECOMP(SetMacro, Shift) \
-[](amd_kernel_code_t& C, MCAsmLexer& Lexer, raw_ostream& Err) { \
-   if (!expectEqualInt(Lexer, Err)) \
+[](amd_kernel_code_t &C, MCAsmParser &MCParser, raw_ostream &Err) { \
+   int64_t Value = 0; \
+   if (!expectAbsExpression(MCParser, Value, Err)) \
      return false; \
-   const uint64_t Value = Lexer.getTok().getIntVal(); \
    C.compute_pgm_resource_registers |= SetMacro(Value) << Shift; \
    return true; \
 }

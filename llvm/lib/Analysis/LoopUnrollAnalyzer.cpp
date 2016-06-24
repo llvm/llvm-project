@@ -115,7 +115,7 @@ bool UnrolledInstAnalyzer::visitLoad(LoadInst &I) {
   // We might have a vector load from an array. FIXME: for now we just bail
   // out in this case, but we should be able to resolve and simplify such
   // loads.
-  if(!CDS->isElementTypeCompatible(I.getType()))
+  if(CDS->getElementType() != I.getType())
     return false;
 
   int ElemSize = CDS->getElementType()->getPrimitiveSizeInBits() / 8U;

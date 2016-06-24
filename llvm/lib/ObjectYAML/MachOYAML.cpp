@@ -14,6 +14,7 @@
 #include "llvm/ObjectYAML/MachOYAML.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MachO.h"
 
 #include <string.h> // For memcpy, memset and strnlen.
 
@@ -79,8 +80,9 @@ void MappingTraits<MachOYAML::FileHeader>::mapping(
   IO.mapRequired("ncmds", FileHdr.ncmds);
   IO.mapRequired("sizeofcmds", FileHdr.sizeofcmds);
   IO.mapRequired("flags", FileHdr.flags);
-  IO.mapOptional("reserved", FileHdr.reserved,
-                 static_cast<llvm::yaml::Hex32>(0xDEADBEEFu));
+  if (FileHdr.magic == MachO::MH_MAGIC_64 ||
+      FileHdr.magic == MachO::MH_CIGAM_64)
+    IO.mapRequired("reserved", FileHdr.reserved);
 }
 
 void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
@@ -180,8 +182,10 @@ void mapLoadCommandData<MachO::dylinker_command>(
 
 void MappingTraits<MachOYAML::LoadCommand>::mapping(
     IO &IO, MachOYAML::LoadCommand &LoadCommand) {
-  IO.mapRequired(
-      "cmd", (MachO::LoadCommandType &)LoadCommand.Data.load_command_data.cmd);
+  MachO::LoadCommandType TempCmd = static_cast<MachO::LoadCommandType>(
+      LoadCommand.Data.load_command_data.cmd);
+  IO.mapRequired("cmd", TempCmd);
+  LoadCommand.Data.load_command_data.cmd = TempCmd;
   IO.mapRequired("cmdsize", LoadCommand.Data.load_command_data.cmdsize);
 
 #define HANDLE_LOAD_COMMAND(LCName, LCValue, LCStruct)                         \

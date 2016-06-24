@@ -4,9 +4,6 @@
 ; RUN: opt < %s -disable-basicaa -cfl-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
-; xfail for now due to buggy interproc analysis
-; XFAIL: *
-
 declare noalias i8* @malloc(i64)
 
 define void @store_arg_multilevel_callee(i32*** %arg1, i32* %arg2) {
@@ -17,7 +14,6 @@ define void @store_arg_multilevel_callee(i32*** %arg1, i32* %arg2) {
 	ret void
 }
 ; CHECK-LABEL: Function: test_store_arg_multilevel
-; CHECK: NoAlias: i32* %a, i32* %b
 ; CHECK: NoAlias: i32* %a, i32** %lpp
 ; CHECK: NoAlias: i32* %b, i32** %lpp
 ; CHECK: MayAlias: i32** %lpp, i32** %p
@@ -27,10 +23,13 @@ define void @store_arg_multilevel_callee(i32*** %arg1, i32* %arg2) {
 ; CHECK: NoAlias: i32* %lpp_deref, i32*** %pp
 ; CHECK: NoAlias: i32* %lpp_deref, i32** %lpp
 ; CHECK: MayAlias: i32* %a, i32* %lp
-; CHECK: NoAlias: i32* %b, i32* %lp
 ; CHECK: NoAlias: i32* %lp, i32*** %pp
 ; CHECK: NoAlias: i32* %lp, i32** %lpp
 ; CHECK: MayAlias: i32* %lp, i32* %lpp_deref
+
+; We could've proven the following facts if the analysis were inclusion-based:
+; NoAlias: i32* %a, i32* %b
+; NoAlias: i32* %b, i32* %lp
 define void @test_store_arg_multilevel() {
   %a = alloca i32, align 4
   %b = alloca i32, align 4

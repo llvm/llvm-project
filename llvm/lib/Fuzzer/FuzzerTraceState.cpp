@@ -173,8 +173,8 @@ static bool RecordingTraces = false;
 static bool RecordingMemcmp = false;
 
 class TraceState {
- public:
-  TraceState(MutationDispatcher &MD, const Fuzzer::FuzzingOptions &Options,
+public:
+  TraceState(MutationDispatcher &MD, const FuzzingOptions &Options,
              const Fuzzer *F)
       : MD(MD), Options(Options), F(F) {}
 
@@ -209,7 +209,8 @@ class TraceState {
   }
 
   void StopTraceRecording() {
-    if (!RecordingTraces && !RecordingMemcmp) return;
+    if (!RecordingTraces && !RecordingMemcmp)
+      return;
     RecordingTraces = false;
     RecordingMemcmp = false;
     for (size_t i = 0; i < NumMutations; i++) {
@@ -287,7 +288,7 @@ class TraceState {
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
   size_t LastDfsanLabel = 0;
   MutationDispatcher &MD;
-  const Fuzzer::FuzzingOptions &Options;
+  const FuzzingOptions Options;
   const Fuzzer *F;
   std::map<Word, size_t> AutoDictUnitCounts;
   size_t AutoDictAdds = 0;

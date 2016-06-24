@@ -2153,25 +2153,18 @@ unsigned ComputeNumSignBits(Value *V, unsigned Depth, const Query &Q) {
     return VecSignBits;
 
   APInt KnownZero(TyBits, 0), KnownOne(TyBits, 0);
-  APInt Mask;
   computeKnownBits(V, KnownZero, KnownOne, Depth, Q);
 
-  if (KnownZero.isNegative()) {        // sign bit is 0
-    Mask = KnownZero;
-  } else if (KnownOne.isNegative()) {  // sign bit is 1;
-    Mask = KnownOne;
-  } else {
-    // Nothing known.
-    return FirstAnswer;
-  }
+  // If we know that the sign bit is either zero or one, determine the number of
+  // identical bits in the top of the input value.
+  if (KnownZero.isNegative())
+    return std::max(FirstAnswer, KnownZero.countLeadingOnes());
 
-  // Okay, we know that the sign bit in Mask is set.  Use CLZ to determine
-  // the number of identical bits in the top of the input value.
-  Mask = ~Mask;
-  Mask <<= Mask.getBitWidth()-TyBits;
-  // Return # leading zeros.  We use 'min' here in case Val was zero before
-  // shifting.  We don't want to return '64' as for an i32 "0".
-  return std::max(FirstAnswer, std::min(TyBits, Mask.countLeadingZeros()));
+  if (KnownOne.isNegative())
+    return std::max(FirstAnswer, KnownOne.countLeadingOnes());
+
+  // computeKnownBits gave us no extra information about the top bits.
+  return FirstAnswer;
 }
 
 /// This function computes the integer multiple of Base that equals V.

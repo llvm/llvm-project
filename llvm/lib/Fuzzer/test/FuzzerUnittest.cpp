@@ -22,7 +22,7 @@ TEST(Fuzzer, CrossOver) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   Unit A({0, 1, 2}), B({5, 6, 7});
   Unit C;
   Unit Expected[] = {
@@ -100,7 +100,7 @@ void TestEraseByte(Mutator M, int NumIter) {
   uint8_t REM6[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x77};
   uint8_t REM7[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   int FoundMask = 0;
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[8] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
@@ -128,7 +128,7 @@ void TestInsertByte(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   int FoundMask = 0;
   uint8_t INS0[8] = {0xF1, 0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
   uint8_t INS1[8] = {0x00, 0xF2, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66};
@@ -164,7 +164,7 @@ void TestChangeByte(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   int FoundMask = 0;
   uint8_t CH0[8] = {0xF0, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
   uint8_t CH1[8] = {0x00, 0xF1, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
@@ -200,7 +200,7 @@ void TestChangeBit(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   int FoundMask = 0;
   uint8_t CH0[8] = {0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
   uint8_t CH1[8] = {0x00, 0x13, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77};
@@ -236,7 +236,7 @@ void TestShuffleBytes(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   int FoundMask = 0;
   uint8_t CH0[7] = {0x00, 0x22, 0x11, 0x33, 0x44, 0x55, 0x66};
   uint8_t CH1[7] = {0x11, 0x00, 0x33, 0x22, 0x44, 0x55, 0x66};
@@ -266,7 +266,7 @@ void TestAddWordFromDictionary(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   uint8_t Word1[4] = {0xAA, 0xBB, 0xCC, 0xDD};
   uint8_t Word2[3] = {0xFF, 0xEE, 0xEF};
   MD.AddWordToManualDictionary(Word(Word1, sizeof(Word1)));
@@ -308,7 +308,7 @@ void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
   uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
   size_t PosHint = 7777;
   MD.AddWordToAutoDictionary(Word(W, sizeof(W)), PosHint);
@@ -337,7 +337,7 @@ void TestChangeASCIIInteger(Mutator M, int NumIter) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
+  MutationDispatcher MD(Rand, {});
 
   uint8_t CH0[8] = {'1', '2', '3', '4', '5', '6', '7', '7'};
   uint8_t CH1[8] = {'1', '2', '3', '4', '5', '6', '7', '9'};
@@ -431,9 +431,8 @@ TEST(Corpus, Distribution) {
   std::unique_ptr<ExternalFunctions> t(new ExternalFunctions());
   fuzzer::EF = t.get();
   Random Rand(0);
-  MutationDispatcher MD(Rand);
-  Fuzzer::FuzzingOptions Options;
-  Fuzzer Fuzz(LLVMFuzzerTestOneInput, MD, Options);
+  MutationDispatcher MD(Rand, {});
+  Fuzzer Fuzz(LLVMFuzzerTestOneInput, MD, {});
   size_t N = 10;
   size_t TriesPerUnit = 1<<20;
   for (size_t i = 0; i < N; i++) {

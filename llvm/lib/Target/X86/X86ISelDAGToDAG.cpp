@@ -2223,24 +2223,32 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     if (foldedLoad) {
       SDValue Chain;
+      MachineSDNode *CNode = nullptr;
       SDValue Ops[] = { Tmp0, Tmp1, Tmp2, Tmp3, Tmp4, N1.getOperand(0),
                         InFlag };
       if (MOpc == X86::MULX32rm || MOpc == X86::MULX64rm) {
         SDVTList VTs = CurDAG->getVTList(NVT, NVT, MVT::Other, MVT::Glue);
-        SDNode *CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+        CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
         ResHi = SDValue(CNode, 0);
         ResLo = SDValue(CNode, 1);
         Chain = SDValue(CNode, 2);
         InFlag = SDValue(CNode, 3);
       } else {
         SDVTList VTs = CurDAG->getVTList(MVT::Other, MVT::Glue);
-        SDNode *CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
+        CNode = CurDAG->getMachineNode(MOpc, dl, VTs, Ops);
         Chain = SDValue(CNode, 0);
         InFlag = SDValue(CNode, 1);
       }
 
       // Update the chain.
       ReplaceUses(N1.getValue(1), Chain);
+      // Record the mem-refs
+      LoadSDNode *LoadNode = cast<LoadSDNode>(N1);
+      if (LoadNode) {
+        MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+        MemOp[0] = LoadNode->getMemOperand();
+        CNode->setMemRefs(MemOp, MemOp + 1);
+      }
     } else {
       SDValue Ops[] = { N1, InFlag };
       if (Opc == X86::MULX32rr || Opc == X86::MULX64rr) {

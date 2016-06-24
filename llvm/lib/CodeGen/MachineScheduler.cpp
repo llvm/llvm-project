@@ -2218,7 +2218,6 @@ void SchedBoundary::releasePending() {
     Pending.remove(Pending.begin()+i);
     --i; --e;
   }
-  DEBUG(if (!Pending.empty()) Pending.dump());
   CheckPending = false;
 }
 
@@ -2258,6 +2257,10 @@ SUnit *SchedBoundary::pickOnlyChoice() {
     bumpCycle(CurrCycle + 1);
     releasePending();
   }
+
+  DEBUG(Pending.dump());
+  DEBUG(Available.dump());
+
   if (Available.size() == 1)
     return *Available.begin();
   return nullptr;
@@ -2886,13 +2889,10 @@ void GenericScheduler::tryCandidate(SchedCandidate &Cand,
 void GenericScheduler::pickNodeFromQueue(SchedBoundary &Zone,
                                          const RegPressureTracker &RPTracker,
                                          SchedCandidate &Cand) {
-  ReadyQueue &Q = Zone.Available;
-
-  DEBUG(Q.dump());
-
   // getMaxPressureDelta temporarily modifies the tracker.
   RegPressureTracker &TempTracker = const_cast<RegPressureTracker&>(RPTracker);
 
+  ReadyQueue &Q = Zone.Available;
   for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
 
     SchedCandidate TryCand(Cand.Policy);
@@ -2933,6 +2933,7 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
   setPolicy(TopCand.Policy, /*IsPostRA=*/false, Top, &Bot);
 
   // Prefer bottom scheduling when heuristics are silent.
+  DEBUG(dbgs() << "Picking from Bot:\n");
   pickNodeFromQueue(Bot, DAG->getBotRPTracker(), BotCand);
   assert(BotCand.Reason != NoCand && "failed to find the first candidate");
 
@@ -2951,6 +2952,7 @@ SUnit *GenericScheduler::pickNodeBidirectional(bool &IsTopNode) {
     return BotCand.SU;
   }
   // Check if the top Q has a better candidate.
+  DEBUG(dbgs() << "Picking from Top:\n");
   pickNodeFromQueue(Top, DAG->getTopRPTracker(), TopCand);
   assert(TopCand.Reason != NoCand && "failed to find the first candidate");
 
@@ -3160,9 +3162,6 @@ void PostGenericScheduler::tryCandidate(SchedCandidate &Cand,
 
 void PostGenericScheduler::pickNodeFromQueue(SchedCandidate &Cand) {
   ReadyQueue &Q = Top.Available;
-
-  DEBUG(Q.dump());
-
   for (ReadyQueue::iterator I = Q.begin(), E = Q.end(); I != E; ++I) {
     SchedCandidate TryCand(Cand.Policy);
     TryCand.SU = *I;

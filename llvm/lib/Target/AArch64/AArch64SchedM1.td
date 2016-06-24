@@ -187,6 +187,10 @@ def M1WriteNEONH   : SchedWriteRes<[M1UnitNALU,
                                     M1UnitFST]>    { let Latency = 3; }
 def M1WriteNEONI   : SchedWriteRes<[M1UnitFST,
                                     M1UnitL]>      { let Latency = 9; }
+def M1WriteNEONJ   : SchedWriteRes<[M1UnitNMISC,
+                                    M1UnitFMAC]>   { let Latency = 6; }
+def M1WriteNEONK   : SchedWriteRes<[M1UnitNMISC,
+                                    M1UnitFMAC]>   { let Latency = 7; }
 def M1WriteALU1    : SchedWriteRes<[M1UnitALU]>    { let Latency = 1; }
 def M1WriteB       : SchedWriteRes<[M1UnitB]>      { let Latency = 1; }
 // FIXME: This is the worst case, conditional branch and link.
@@ -305,7 +309,9 @@ def : InstRW<[M1WriteFVAR15], (instregex "FSQRTv.f32")>;
 def : InstRW<[M1WriteFVAR23], (instregex "FSQRTv2f64")>;
 def : InstRW<[M1WriteNMISC1], (instregex "^F(MAX|MIN)(NM)?V?v")>;
 def : InstRW<[M1WriteNMISC2], (instregex "^F(MAX|MIN)(NM)?Pv")>;
+def : InstRW<[M1WriteNEONJ],  (instregex "^FMULX?v.+_indexed")>;
 def : InstRW<[M1WriteFMAC4],  (instregex "^FMULX?v")>;
+def : InstRW<[M1WriteNEONK],  (instregex "^FML[AS]v.+_indexed")>;
 def : InstRW<[M1WriteFMAC5],  (instregex "^FML[AS]v")>;
 def : InstRW<[M1WriteFCVT3],  (instregex "^FRINT[AIMNPXZ]v")>;
 

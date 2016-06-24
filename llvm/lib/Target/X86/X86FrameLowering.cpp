@@ -2298,6 +2298,28 @@ void X86FrameLowering::adjustForSegmentedStacks(
 #endif
 }
 
+/// Lookup an ERTS parameter in the !hipe.literals named metadata node.
+/// HiPE provides Erlang Runtime System-internal parameters, such as PCB offsets
+/// to fields it needs, through a named metadata node "hipe.literals" containing
+/// name-value pairs.
+static unsigned getHiPELiteral(
+    NamedMDNode *HiPELiteralsMD, const StringRef LiteralName) {
+  for (int i = 0, e = HiPELiteralsMD->getNumOperands(); i != e; ++i) {
+    MDNode *Node = HiPELiteralsMD->getOperand(i);
+    if (Node->getNumOperands() != 2) continue;
+    MDString *NodeName = dyn_cast<MDString>(Node->getOperand(0));
+    ValueAsMetadata *NodeVal = dyn_cast<ValueAsMetadata>(Node->getOperand(1));
+    if (!NodeName || !NodeVal) continue;
+    ConstantInt *ValConst = dyn_cast_or_null<ConstantInt>(NodeVal->getValue());
+    if (ValConst && NodeName->getString() == LiteralName) {
+      return ValConst->getZExtValue();
+    }
+  }
+
+  report_fatal_error("HiPE literal " + LiteralName
+                     + " required but not provided");
+}
+
 /// Erlang programs may need a special prologue to handle the stack size they
 /// might need at runtime. That is because Erlang/OTP does not implement a C
 /// stack but uses a custom implementation of hybrid stack/heap architecture.
@@ -2323,7 +2345,14 @@ void X86FrameLowering::adjustForHiPEPrologue(
   assert(&(*MF.begin()) == &PrologueMBB && "Shrink-wrapping not supported yet");
 
   // HiPE-specific values
-  const unsigned HipeLeafWords = 24;
+  NamedMDNode *HiPELiteralsMD = MF.getMMI().getModule()
+    ->getNamedMetadata("hipe.literals");
+  if (!HiPELiteralsMD)
+    report_fatal_error(
+        "Can't generate HiPE prologue without runtime parameters");
+  const unsigned HipeLeafWords
+    = getHiPELiteral(HiPELiteralsMD,
+                     Is64Bit ? "AMD64_LEAF_WORDS" : "X86_LEAF_WORDS");
   const unsigned CCRegisteredArgs = Is64Bit ? 6 : 5;
   const unsigned Guaranteed = HipeLeafWords * SlotSize;
   unsigned CallerStkArity = MF.getFunction()->arg_size() > CCRegisteredArgs ?
@@ -2395,20 +2424,19 @@ void X86FrameLowering::adjustForHiPEPrologue(
 
     unsigned ScratchReg, SPReg, PReg, SPLimitOffset;
     unsigned LEAop, CMPop, CALLop;
+    SPLimitOffset = getHiPELiteral(HiPELiteralsMD, "P_NSP_LIMIT");
     if (Is64Bit) {
       SPReg = X86::RSP;
       PReg  = X86::RBP;
       LEAop = X86::LEA64r;
       CMPop = X86::CMP64rm;
       CALLop = X86::CALL64pcrel32;
-      SPLimitOffset = 0x90;
     } else {
       SPReg = X86::ESP;
       PReg  = X86::EBP;
       LEAop = X86::LEA32r;
       CMPop = X86::CMP32rm;
       CALLop = X86::CALLpcrel32;
-      SPLimitOffset = 0x4c;
     }
 
     ScratchReg = GetScratchRegister(Is64Bit, IsLP64, MF, true);

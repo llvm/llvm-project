@@ -60,6 +60,8 @@ namespace llvm {
 
       CMOV,         // ARM conditional move instructions.
 
+      SSAT,         // Signed saturation
+
       BCC_i64,
 
       SRL_FLAG,     // V,Flag = srl_flag X -> srl X, 1 + save carry out.

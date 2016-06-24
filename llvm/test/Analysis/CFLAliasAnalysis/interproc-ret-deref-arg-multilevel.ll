@@ -4,9 +4,6 @@
 ; RUN: opt < %s -disable-basicaa -cfl-aa -aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 ; RUN: opt < %s -aa-pipeline=cfl-aa -passes=aa-eval -print-all-alias-modref-info -disable-output 2>&1 | FileCheck %s
 
-; xfail for now due to buggy interproc analysis
-; XFAIL: *
-
 define i32* @return_deref_arg_multilevel_callee(i32*** %arg1) {
 	%deref = load i32**, i32*** %arg1
 	%deref2 = load i32*, i32** %deref
@@ -23,7 +20,6 @@ define i32* @return_deref_arg_multilevel_callee(i32*** %arg1) {
 ; CHECK: NoAlias: i32* %c, i32** %lpp
 ; CHECK: MayAlias: i32* %a, i32* %lpp_deref
 ; CHECK: NoAlias: i32* %b, i32* %lpp_deref
-; CHECK: MayAlias: i32* %lpp_deref, i32** %p
 ; CHECK: NoAlias: i32* %lpp_deref, i32*** %pp
 ; CHECK: MayAlias: i32* %a, i32* %lp
 ; CHECK: NoAlias: i32* %b, i32* %lp

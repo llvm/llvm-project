@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64r3 | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips64r3 -target-abi n64 | \
 # RUN:   FileCheck %s -check-prefix=CHECK-ASM
 #
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64r3 -filetype=obj -o - | \
+# RUN: llvm-mc %s -arch=mips -mcpu=mips64r3 -target-abi n64 -filetype=obj -o - | \
 # RUN:   llvm-readobj -sections -section-data -section-relocations - | \
 # RUN:     FileCheck %s -check-prefix=CHECK-OBJ
 

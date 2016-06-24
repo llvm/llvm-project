@@ -732,6 +732,8 @@ if( LLVM_INCLUDE_TOOLS )
   add_subdirectory(tools)
 endif()
 
+add_subdirectory(runtimes)
+
 if( LLVM_INCLUDE_EXAMPLES )
   add_subdirectory(examples)
 endif()
@@ -742,7 +744,8 @@ if( LLVM_INCLUDE_TESTS )
     llvm_ExternalProject_Add(test-suite ${LLVM_MAIN_SRC_DIR}/projects/test-suite
       USE_TOOLCHAIN
       EXCLUDE_FROM_ALL
-      NO_INSTALL)
+      NO_INSTALL
+      ALWAYS_CLEAN)
   endif()
   add_subdirectory(test)
   add_subdirectory(unittests)
