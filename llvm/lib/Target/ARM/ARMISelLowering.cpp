@@ -410,17 +410,19 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setLibcallName(RTLIB::UDIVREM_I32, "__udivmodsi4");
   }
 
-  // The half <-> float conversion functions are always soft-float, but are
-  // needed for some targets which use a hard-float calling convention by
-  // default.
-  if (Subtarget->isAAPCS_ABI()) {
-    setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
-    setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
-    setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
-  } else {
-    setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
-    setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
-    setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
+  // The half <-> float conversion functions are always soft-float on
+  // non-watchos platforms, but are needed for some targets which use a
+  // hard-float calling convention by default.
+  if (!Subtarget->isTargetWatchABI()) {
+    if (Subtarget->isAAPCS_ABI()) {
+      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_AAPCS);
+      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_AAPCS);
+      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_AAPCS);
+    } else {
+      setLibcallCallingConv(RTLIB::FPROUND_F32_F16, CallingConv::ARM_APCS);
+      setLibcallCallingConv(RTLIB::FPROUND_F64_F16, CallingConv::ARM_APCS);
+      setLibcallCallingConv(RTLIB::FPEXT_F16_F32, CallingConv::ARM_APCS);
+    }
   }
 
   // In EABI, these functions have an __aeabi_ prefix, but in GNUEABI they have
