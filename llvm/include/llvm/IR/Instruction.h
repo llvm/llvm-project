@@ -394,21 +394,13 @@ public:
   /// Return true if this instruction may throw an exception.
   bool mayThrow() const;
 
-  /// Return true if this is a function that may return.
-  /// This is true for all normal instructions. The only exception
-  /// is functions that are marked with the 'noreturn' attribute.
-  ///
-  bool mayReturn() const;
-
   /// Return true if the instruction may have side effects.
   ///
   /// Note that this does not consider malloc and alloca to have side
   /// effects because the newly allocated memory is completely invisible to
   /// instructions which don't use the returned value.  For cases where this
   /// matters, isSafeToSpeculativelyExecute may be more appropriate.
-  bool mayHaveSideEffects() const {
-    return mayWriteToMemory() || mayThrow() || !mayReturn();
-  }
+  bool mayHaveSideEffects() const { return mayWriteToMemory() || mayThrow(); }
 
   /// Return true if the instruction is a variety of EH-block.
   bool isEHPad() const {

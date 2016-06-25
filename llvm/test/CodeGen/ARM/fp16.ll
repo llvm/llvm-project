@@ -1,8 +1,10 @@
 ; RUN: llc -mtriple=armv7a--none-eabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-HARDFLOAT-EABI %s
 ; RUN: llc -mtriple=armv7a--none-gnueabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-HARDFLOAT-GNU %s
+; RUN: llc -mtriple=armv7a--none-musleabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-HARDFLOAT-GNU %s
 ; RUN: llc -mtriple=armv8-eabihf < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ARMV8 %s
 ; RUN: llc -mtriple=thumbv7m-eabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SOFTFLOAT-EABI %s
 ; RUN: llc -mtriple=thumbv7m-gnueabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SOFTFLOAT-GNU %s
+; RUN: llc -mtriple=thumbv7m-musleabi < %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-SOFTFLOAT-GNU %s
 
 ;; +fp16 is special: it has f32->f16 (unlike v7), but not f64->f16 (unlike v8).
 ;; This exposes unsafe-fp-math optimization opportunities; test that.

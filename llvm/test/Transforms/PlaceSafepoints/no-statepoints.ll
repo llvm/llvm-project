@@ -1,5 +1,7 @@
 ; RUN: opt -S -place-safepoints < %s | FileCheck %s
 
+declare void @callee()
+
 define void @test() gc "statepoint-example" {
 ; CHECK-LABEL: test(
 entry:
@@ -9,7 +11,7 @@ entry:
 
 other:
 ; CHECK: other:
-  call void undef() "gc-leaf-function"
+  call void @callee() "gc-leaf-function"
 ; CHECK: call void @do_safepoint()
   br label %other
 }

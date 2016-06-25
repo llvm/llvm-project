@@ -23,8 +23,8 @@ define <8 x i8> @fptosi_v4f64_to_v4i8(<8 x double>* %ptr) {
 ; CHECK-DAG:  xtn2  v[[NA2]].4s, v[[CONV3]].2d
 ; CHECK-DAG:  xtn  v[[NA0:[0-9]+]].2s, v[[CONV0]].2d
 ; CHECK-DAG:  xtn2  v[[NA0]].4s, v[[CONV1]].2d
-; CHECK-DAG:  xtn  v[[TMP1:[0-9]+]].4h, v[[NA0]].4s
-; CHECK-DAG:  xtn2  v[[TMP1]].8h, v[[NA2]].4s
+; CHECK-DAG:  xtn  v[[TMP1:[0-9]+]].4h, v[[NA2]].4s
+; CHECK-DAG:  xtn2  v[[TMP1]].8h, v[[NA0]].4s
 ; CHECK:      xtn  v0.8b, v[[TMP1]].8h
   %tmp1 = load <8 x double>, <8 x double>* %ptr
   %tmp2 = fptosi <8 x double> %tmp1 to <8 x i8>

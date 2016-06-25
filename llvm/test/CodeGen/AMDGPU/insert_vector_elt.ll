@@ -10,13 +10,13 @@
 ; not just directly into the vector component?
 
 ; GCN-LABEL: {{^}}insertelement_v4f32_0:
-; GCN: s_load_dwordx4 s{{\[}}[[LOW_REG:[0-9]+]]:
+; GCN: s_load_dwordx4
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 [[CONSTREG:v[0-9]+]], 0x40a00000
-; GCN-DAG: v_mov_b32_e32 v[[LOW_REG]], [[CONSTREG]]
+; GCN-DAG: v_mov_b32_e32 v[[LOW_REG:[0-9]+]], [[CONSTREG]]
 ; GCN: buffer_store_dwordx4 v{{\[}}[[LOW_REG]]:
 define void @insertelement_v4f32_0(<4 x float> addrspace(1)* %out, <4 x float> %a) nounwind {
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 0

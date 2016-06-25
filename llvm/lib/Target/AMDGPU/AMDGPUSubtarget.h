@@ -77,6 +77,7 @@ protected:
   bool EnableXNACK;
   bool DebuggerInsertNops;
   bool DebuggerReserveRegs;
+  bool DebuggerEmitPrologue;
 
   // Used as options.
   bool EnableVGPRSpilling;
@@ -402,12 +403,21 @@ public:
     return EnableSIScheduler;
   }
 
+  bool debuggerSupported() const {
+    return debuggerInsertNops() && debuggerReserveRegs() &&
+      debuggerEmitPrologue();
+  }
+
   bool debuggerInsertNops() const {
     return DebuggerInsertNops;
   }
 
   bool debuggerReserveRegs() const {
     return DebuggerReserveRegs;
+  }
+
+  bool debuggerEmitPrologue() const {
+    return DebuggerEmitPrologue;
   }
 
   bool loadStoreOptEnabled() const {

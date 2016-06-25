@@ -5,9 +5,11 @@
 ; RUN: llc -mtriple=x86_64-scei-ps4 < %s | FileCheck -check-prefix=PS4 %s
 
 ; X64_DARWIN: orq
+; X64_DARWIN-NEXT: jne
 ; X64_DARWIN-NEXT: %bb8.i329
 
 ; X64_LINUX: orq %rax, %rcx
+; X64_LINUX-NEXT: jne
 ; X64_LINUX-NEXT: %bb8.i329
 
 ; X64_WINDOWS: orq %rax, %rcx

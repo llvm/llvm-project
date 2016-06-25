@@ -1885,14 +1885,19 @@ static bool FoldCondBranchOnPHI(BranchInst *BI, const DataLayout &DL) {
 
       // Check for trivial simplification.
       if (Value *V = SimplifyInstruction(N, DL)) {
-        TranslateMap[&*BBI] = V;
-        delete N; // Instruction folded away, don't need actual inst
+        if (!BBI->use_empty())
+          TranslateMap[&*BBI] = V;
+        if (!N->mayHaveSideEffects()) {
+          delete N; // Instruction folded away, don't need actual inst
+          N = nullptr;
+        }
       } else {
-        // Insert the new instruction into its new home.
-        EdgeBB->getInstList().insert(InsertPt, N);
         if (!BBI->use_empty())
           TranslateMap[&*BBI] = N;
       }
+      // Insert the new instruction into its new home.
+      if (N)
+        EdgeBB->getInstList().insert(InsertPt, N);
     }
 
     // Loop over all of the edges from PredBB to BB, changing them to branch
@@ -5383,7 +5388,7 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
   if (I->use_empty())
     return false;
 
-  if (C->isNullValue()) {
+  if (C->isNullValue() || isa<UndefValue>(C)) {
     // Only look at the first use, avoid hurting compile time with long uselists
     User *Use = *I->user_begin();
 
@@ -5412,6 +5417,10 @@ static bool passingValueIsAlwaysUndefined(Value *V, Instruction *I) {
       if (!SI->isVolatile())
         return SI->getPointerAddressSpace() == 0 &&
                SI->getPointerOperand() == I;
+
+    // A call to null is undefined.
+    if (auto CS = CallSite(Use))
+      return CS.getCalledValue() == I;
   }
   return false;
 }

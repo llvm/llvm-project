@@ -446,14 +446,21 @@ public:
             TargetTriple.getEnvironment() == Triple::GNUEABIHF) &&
            !isTargetDarwin() && !isTargetWindows();
   }
+  bool isTargetMuslAEABI() const {
+    return (TargetTriple.getEnvironment() == Triple::MuslEABI ||
+            TargetTriple.getEnvironment() == Triple::MuslEABIHF) &&
+           !isTargetDarwin() && !isTargetWindows();
+  }
 
   // ARM Targets that support EHABI exception handling standard
   // Darwin uses SjLj. Other targets might need more checks.
   bool isTargetEHABICompatible() const {
     return (TargetTriple.getEnvironment() == Triple::EABI ||
             TargetTriple.getEnvironment() == Triple::GNUEABI ||
+            TargetTriple.getEnvironment() == Triple::MuslEABI ||
             TargetTriple.getEnvironment() == Triple::EABIHF ||
             TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+            TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
             isTargetAndroid()) &&
            !isTargetDarwin() && !isTargetWindows();
   }
@@ -461,6 +468,7 @@ public:
   bool isTargetHardFloat() const {
     // FIXME: this is invalid for WindowsCE
     return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
+           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
            TargetTriple.getEnvironment() == Triple::EABIHF ||
            isTargetWindows() || isAAPCS16_ABI();
   }

@@ -3,6 +3,7 @@
 ; All "eabi" (Bare, GNU and Android) must lower SREM/UREM to __aeabi_{u,i}divmod
 ; RUN: llc -mtriple armv7-linux-androideabi %s -o - | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-linux-gnueabi %s -o - | FileCheck %s --check-prefix=EABI
+; RUN: llc -mtriple armv7-linux-musleabi %s -o - | FileCheck %s --check-prefix=EABI
 ; RUN: llc -mtriple armv7-apple-darwin %s -o - | FileCheck %s --check-prefix=DARWIN
 ; FIXME: long-term, we will use "-apple-macho" and won't need this exception:
 ; RUN: llc -mtriple armv7-apple-darwin-eabi %s -o - | FileCheck %s --check-prefix=DARWIN

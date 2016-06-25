@@ -1,4 +1,4 @@
-//===- LowerBitSets.cpp - Unit tests for bitset lowering ------------------===//
+//===- LowerTypeTests.cpp - Unit tests for type test lowering -------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO/LowerBitSets.h"
+#include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
-using namespace lowerbitsets;
+using namespace lowertypetests;
 
-TEST(LowerBitSets, BitSetBuilder) {
+TEST(LowerTypeTests, BitSetBuilder) {
   struct {
     std::vector<uint64_t> Offsets;
     std::set<uint64_t> Bits;
@@ -80,7 +80,7 @@ TEST(LowerBitSets, BitSetBuilder) {
   }
 }
 
-TEST(LowerBitSets, GlobalLayoutBuilder) {
+TEST(LowerTypeTests, GlobalLayoutBuilder) {
   struct {
     uint64_t NumObjects;
     std::vector<std::set<uint64_t>> Fragments;
@@ -107,7 +107,7 @@ TEST(LowerBitSets, GlobalLayoutBuilder) {
   }
 }
 
-TEST(LowerBitSets, ByteArrayBuilder) {
+TEST(LowerTypeTests, ByteArrayBuilder) {
   struct BABAlloc {
     std::set<uint64_t> Bits;
     uint64_t BitSize;

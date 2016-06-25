@@ -207,7 +207,7 @@ protected:
 
   void moveSymbolNext(DataRefImpl &Symb) const override;
   Expected<StringRef> getSymbolName(DataRefImpl Symb) const override;
-  ErrorOr<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
+  Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const override;
   uint64_t getSymbolValueImpl(DataRefImpl Symb) const override;
   uint32_t getSymbolAlignment(DataRefImpl Symb) const override;
   uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const override;
@@ -397,7 +397,7 @@ uint64_t ELFObjectFile<ELFT>::getSymbolValueImpl(DataRefImpl Symb) const {
 }
 
 template <class ELFT>
-ErrorOr<uint64_t>
+Expected<uint64_t>
 ELFObjectFile<ELFT>::getSymbolAddress(DataRefImpl Symb) const {
   uint64_t Result = getSymbolValue(Symb);
   const Elf_Sym *ESym = getSymbol(Symb);
@@ -415,7 +415,7 @@ ELFObjectFile<ELFT>::getSymbolAddress(DataRefImpl Symb) const {
     ErrorOr<const Elf_Shdr *> SectionOrErr =
         EF.getSection(ESym, SymTab, ShndxTable);
     if (std::error_code EC = SectionOrErr.getError())
-      return EC;
+      return errorCodeToError(EC);
     const Elf_Shdr *Section = *SectionOrErr;
     if (Section)
       Result += Section->sh_addr;

@@ -638,6 +638,12 @@ GlobalValue *IRLinker::copyGlobalValueProto(const GlobalValue *SGV,
 
   NewGV->copyAttributesFrom(SGV);
 
+  if (auto *NewGO = dyn_cast<GlobalObject>(NewGV)) {
+    // Metadata for global variables and function declarations is copied eagerly.
+    if (isa<GlobalVariable>(SGV) || SGV->isDeclaration())
+      NewGO->copyMetadata(cast<GlobalObject>(SGV), 0);
+  }
+
   // Remove these copied constants in case this stays a declaration, since
   // they point to the source module. If the def is linked the values will
   // be mapped in during linkFunctionBody.
@@ -961,10 +967,7 @@ Error IRLinker::linkFunctionBody(Function &Dst, Function &Src) {
     Dst.setPersonalityFn(Src.getPersonalityFn());
 
   // Copy over the metadata attachments without remapping.
-  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
-  Src.getAllMetadata(MDs);
-  for (const auto &I : MDs)
-    Dst.setMetadata(I.first, I.second);
+  Dst.copyMetadata(&Src, 0);
 
   // Steal arguments and splice the body of Src into Dst.
   Dst.stealArgumentListFrom(Src);

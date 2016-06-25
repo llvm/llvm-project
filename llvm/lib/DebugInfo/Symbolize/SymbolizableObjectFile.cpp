@@ -125,9 +125,9 @@ std::error_code SymbolizableObjectFile::addSymbol(const SymbolRef &Symbol,
   SymbolRef::Type SymbolType = *SymbolTypeOrErr;
   if (SymbolType != SymbolRef::ST_Function && SymbolType != SymbolRef::ST_Data)
     return std::error_code();
-  ErrorOr<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
-  if (auto EC = SymbolAddressOrErr.getError())
-    return EC;
+  Expected<uint64_t> SymbolAddressOrErr = Symbol.getAddress();
+  if (!SymbolAddressOrErr)
+    return errorToErrorCode(SymbolAddressOrErr.takeError());
   uint64_t SymbolAddress = *SymbolAddressOrErr;
   if (OpdExtractor) {
     // For big-endian PowerPC64 ELF, symbols in the .opd section refer to

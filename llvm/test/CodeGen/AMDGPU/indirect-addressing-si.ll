@@ -179,7 +179,7 @@ entry:
 
 ; CHECK-LABEL: {{^}}extract_vgpr_offset_multiple_in_block:
 
-; CHECK: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
+; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
 ; CHECK-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
 ; CHECK-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
 ; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
@@ -199,7 +199,7 @@ entry:
 
 ; FIXME: Redundant copy
 ; CHECK: s_mov_b64 exec, [[MASK]]
-; CHECK: s_mov_b64 [[MASK]], exec
+; CHECK: s_mov_b64 [[MASK2:s\[[0-9]+:[0-9]+\]]], exec
 
 ; CHECK: [[LOOP1:BB[0-9]+_[0-9]+]]:
 ; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]

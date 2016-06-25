@@ -1487,6 +1487,7 @@ void MachineBlockPlacement::buildCFGChains() {
 
   // Splice the blocks into place.
   MachineFunction::iterator InsertPos = F->begin();
+  DEBUG(dbgs() << "[MBP] Function: "<< F->getName() << "\n");
   for (MachineBasicBlock *ChainBB : FunctionChain) {
     DEBUG(dbgs() << (ChainBB == *FunctionChain.begin() ? "Placing chain "
                                                        : "          ... ")

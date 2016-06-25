@@ -99,32 +99,33 @@ struct VTableBits {
   AccumBitVector After;
 };
 
-// Information about an entry in a particular bitset.
-struct BitSetInfo {
+// Information about a member of a particular type identifier.
+struct TypeMemberInfo {
   // The VTableBits for the vtable.
   VTableBits *Bits;
 
   // The offset in bytes from the start of the vtable (i.e. the address point).
   uint64_t Offset;
 
-  bool operator<(const BitSetInfo &other) const {
+  bool operator<(const TypeMemberInfo &other) const {
     return Bits < other.Bits || (Bits == other.Bits && Offset < other.Offset);
   }
 };
 
 // A virtual call target, i.e. an entry in a particular vtable.
 struct VirtualCallTarget {
-  VirtualCallTarget(Function *Fn, const BitSetInfo *BS);
+  VirtualCallTarget(Function *Fn, const TypeMemberInfo *TM);
 
   // For testing only.
-  VirtualCallTarget(const BitSetInfo *BS, bool IsBigEndian)
-      : Fn(nullptr), BS(BS), IsBigEndian(IsBigEndian) {}
+  VirtualCallTarget(const TypeMemberInfo *TM, bool IsBigEndian)
+      : Fn(nullptr), TM(TM), IsBigEndian(IsBigEndian) {}
 
   // The function stored in the vtable.
   Function *Fn;
 
-  // A pointer to the bitset through which the pointer to Fn is accessed.
-  const BitSetInfo *BS;
+  // A pointer to the type identifier member through which the pointer to Fn is
+  // accessed.
+  const TypeMemberInfo *TM;
 
   // When doing virtual constant propagation, this stores the return value for
   // the function when passed the currently considered argument list.
@@ -137,37 +138,37 @@ struct VirtualCallTarget {
   // the vtable object before the address point (e.g. RTTI, access-to-top,
   // vtables for other base classes) and is equal to the offset from the start
   // of the vtable object to the address point.
-  uint64_t minBeforeBytes() const { return BS->Offset; }
+  uint64_t minBeforeBytes() const { return TM->Offset; }
 
   // The minimum byte offset after the address point. This covers the bytes in
   // the vtable object after the address point (e.g. the vtable for the current
   // class and any later base classes) and is equal to the size of the vtable
   // object minus the offset from the start of the vtable object to the address
   // point.
-  uint64_t minAfterBytes() const { return BS->Bits->ObjectSize - BS->Offset; }
+  uint64_t minAfterBytes() const { return TM->Bits->ObjectSize - TM->Offset; }
 
   // The number of bytes allocated (for the vtable plus the byte array) before
   // the address point.
   uint64_t allocatedBeforeBytes() const {
-    return minBeforeBytes() + BS->Bits->Before.Bytes.size();
+    return minBeforeBytes() + TM->Bits->Before.Bytes.size();
   }
 
   // The number of bytes allocated (for the vtable plus the byte array) after
   // the address point.
   uint64_t allocatedAfterBytes() const {
-    return minAfterBytes() + BS->Bits->After.Bytes.size();
+    return minAfterBytes() + TM->Bits->After.Bytes.size();
   }
 
   // Set the bit at position Pos before the address point to RetVal.
   void setBeforeBit(uint64_t Pos) {
     assert(Pos >= 8 * minBeforeBytes());
-    BS->Bits->Before.setBit(Pos - 8 * minBeforeBytes(), RetVal);
+    TM->Bits->Before.setBit(Pos - 8 * minBeforeBytes(), RetVal);
   }
 
   // Set the bit at position Pos after the address point to RetVal.
   void setAfterBit(uint64_t Pos) {
     assert(Pos >= 8 * minAfterBytes());
-    BS->Bits->After.setBit(Pos - 8 * minAfterBytes(), RetVal);
+    TM->Bits->After.setBit(Pos - 8 * minAfterBytes(), RetVal);
   }
 
   // Set the bytes at position Pos before the address point to RetVal.
@@ -176,18 +177,18 @@ struct VirtualCallTarget {
   void setBeforeBytes(uint64_t Pos, uint8_t Size) {
     assert(Pos >= 8 * minBeforeBytes());
     if (IsBigEndian)
-      BS->Bits->Before.setLE(Pos - 8 * minBeforeBytes(), RetVal, Size);
+      TM->Bits->Before.setLE(Pos - 8 * minBeforeBytes(), RetVal, Size);
     else
-      BS->Bits->Before.setBE(Pos - 8 * minBeforeBytes(), RetVal, Size);
+      TM->Bits->Before.setBE(Pos - 8 * minBeforeBytes(), RetVal, Size);
   }
 
   // Set the bytes at position Pos after the address point to RetVal.
   void setAfterBytes(uint64_t Pos, uint8_t Size) {
     assert(Pos >= 8 * minAfterBytes());
     if (IsBigEndian)
-      BS->Bits->After.setBE(Pos - 8 * minAfterBytes(), RetVal, Size);
+      TM->Bits->After.setBE(Pos - 8 * minAfterBytes(), RetVal, Size);
     else
-      BS->Bits->After.setLE(Pos - 8 * minAfterBytes(), RetVal, Size);
+      TM->Bits->After.setLE(Pos - 8 * minAfterBytes(), RetVal, Size);
   }
 };
 

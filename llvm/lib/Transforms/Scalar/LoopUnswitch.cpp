@@ -389,7 +389,11 @@ Pass *llvm::createLoopUnswitchPass(bool Os) {
 
 /// Cond is a condition that occurs in L. If it is invariant in the loop, or has
 /// an invariant piece, return the invariant. Otherwise, return null.
-static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed) {
+static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed,
+                                   DenseMap<Value *, Value *> &Cache) {
+  auto CacheIt = Cache.find(Cond);
+  if (CacheIt != Cache.end())
+    return CacheIt->second;
 
   // We started analyze new instruction, increment scanned instructions counter.
   ++TotalInsts;
@@ -404,8 +408,10 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed) {
   // TODO: Handle: br (VARIANT|INVARIANT).
 
   // Hoist simple values out.
-  if (L->makeLoopInvariant(Cond, Changed))
+  if (L->makeLoopInvariant(Cond, Changed)) {
+    Cache[Cond] = Cond;
     return Cond;
+  }
 
   if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Cond))
     if (BO->getOpcode() == Instruction::And ||
@@ -413,13 +419,25 @@ static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed) {
       // If either the left or right side is invariant, we can unswitch on this,
       // which will cause the branch to go away in one loop and the condition to
       // simplify in the other one.
-      if (Value *LHS = FindLIVLoopCondition(BO->getOperand(0), L, Changed))
+      if (Value *LHS =
+              FindLIVLoopCondition(BO->getOperand(0), L, Changed, Cache)) {
+        Cache[Cond] = LHS;
         return LHS;
-      if (Value *RHS = FindLIVLoopCondition(BO->getOperand(1), L, Changed))
+      }
+      if (Value *RHS =
+              FindLIVLoopCondition(BO->getOperand(1), L, Changed, Cache)) {
+        Cache[Cond] = RHS;
         return RHS;
+      }
     }
 
+  Cache[Cond] = nullptr;
   return nullptr;
+}
+
+static Value *FindLIVLoopCondition(Value *Cond, Loop *L, bool &Changed) {
+  DenseMap<Value *, Value *> Cache;
+  return FindLIVLoopCondition(Cond, L, Changed, Cache);
 }
 
 bool LoopUnswitch::runOnLoop(Loop *L, LPPassManager &LPM_Ref) {

@@ -1,7 +1,10 @@
 ; RUN: llc -mtriple=armv7-linux-gnueabihf %s -o - | FileCheck %s --check-prefix=CHECK-HARD
+; RUN: llc -mtriple=armv7-linux-musleabihf %s -o - | FileCheck %s --check-prefix=CHECK-HARD
 ; RUN: llc -mtriple=armv7-linux-eabihf %s -o - | FileCheck %s --check-prefix=CHECK-HARD
 ; RUN: llc -mtriple=armv7-linux-gnueabihf -float-abi=soft %s -o - | FileCheck %s --check-prefix=CHECK-SOFT
+; RUN: llc -mtriple=armv7-linux-musleabihf -float-abi=soft %s -o - | FileCheck %s --check-prefix=CHECK-SOFT
 ; RUN: llc -mtriple=armv7-linux-gnueabi %s -o - | FileCheck %s --check-prefix=CHECK-SOFT
+; RUN: llc -mtriple=armv7-linux-musleabi %s -o - | FileCheck %s --check-prefix=CHECK-SOFT
 ; RUN: llc -mtriple=armv7-linux-eabi -float-abi=hard %s -o - | FileCheck %s --check-prefix=CHECK-HARD
 ; RUN: llc -mtriple=thumbv7-apple-ios6.0 %s -o - | FileCheck %s --check-prefix=CHECK-SOFT
 

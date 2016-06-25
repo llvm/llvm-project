@@ -132,9 +132,9 @@ CodeCoverageTool::attachExpansionSubViews(SourceCoverageView &View,
       continue;
 
     auto SubViewExpansions = ExpansionCoverage.getExpansions();
-    auto SubView = llvm::make_unique<SourceCoverageView>(
-        Expansion.Function.Name, SourceBuffer.get(), ViewOpts,
-        std::move(ExpansionCoverage));
+    auto SubView =
+        SourceCoverageView::create(Expansion.Function.Name, SourceBuffer.get(),
+                                   ViewOpts, std::move(ExpansionCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
     View.addExpansion(Expansion.Region, std::move(SubView));
   }
@@ -151,8 +151,8 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
     return nullptr;
 
   auto Expansions = FunctionCoverage.getExpansions();
-  auto View = llvm::make_unique<SourceCoverageView>(
-      Function.Name, SourceBuffer.get(), ViewOpts, std::move(FunctionCoverage));
+  auto View = SourceCoverageView::create(Function.Name, SourceBuffer.get(),
+                                         ViewOpts, std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   return View;
@@ -169,16 +169,16 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
     return nullptr;
 
   auto Expansions = FileCoverage.getExpansions();
-  auto View = llvm::make_unique<SourceCoverageView>(
-      SourceFile, SourceBuffer.get(), ViewOpts, std::move(FileCoverage));
+  auto View = SourceCoverageView::create(SourceFile, SourceBuffer.get(),
+                                         ViewOpts, std::move(FileCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   for (auto Function : Coverage.getInstantiations(SourceFile)) {
     auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
     auto SubViewExpansions = SubViewCoverage.getExpansions();
-    auto SubView = llvm::make_unique<SourceCoverageView>(
-        Function->Name, SourceBuffer.get(), ViewOpts,
-        std::move(SubViewCoverage));
+    auto SubView =
+        SourceCoverageView::create(Function->Name, SourceBuffer.get(), ViewOpts,
+                                   std::move(SubViewCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
 
     if (SubView) {
@@ -428,8 +428,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
             << "\n";
         continue;
       }
-      mainView->renderSourceName(outs());
-      mainView->render(outs(), /*WholeFile=*/false);
+      mainView->print(outs(), /*WholeFile=*/false, /*ShowSourceName=*/true);
       outs() << "\n";
     }
     return 0;
@@ -452,10 +451,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
       continue;
     }
 
-    if (ShowFilenames)
-      mainView->renderSourceName(outs());
-
-    mainView->render(outs(), /*Wholefile=*/true);
+    mainView->print(outs(), /*Wholefile=*/true, /*ShowSourceName=*/ShowFilenames);
     if (SourceFiles.size() > 1)
       outs() << "\n";
   }

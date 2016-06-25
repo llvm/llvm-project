@@ -90,13 +90,6 @@ def SDTBinaryArithWithFlagsInOut : SDTypeProfile<2, 3,
                                              SDTCisVT<1, i32>,
                                              SDTCisVT<4, i32>]>;
 
-def SDT_ARM64bitmlal : SDTypeProfile<2,4, [ SDTCisVT<0, i32>, SDTCisVT<1, i32>,
-                                        SDTCisVT<2, i32>, SDTCisVT<3, i32>,
-                                        SDTCisVT<4, i32>, SDTCisVT<5, i32> ] >;
-def ARMUmlal         : SDNode<"ARMISD::UMLAL", SDT_ARM64bitmlal>;
-def ARMSmlal         : SDNode<"ARMISD::SMLAL", SDT_ARM64bitmlal>;
-def ARMUmaal         : SDNode<"ARMISD::UMAAL", SDT_ARM64bitmlal>;
-
 // Node definitions.
 def ARMWrapper       : SDNode<"ARMISD::Wrapper",     SDTIntUnaryOp>;
 def ARMWrapperPIC    : SDNode<"ARMISD::WrapperPIC",  SDTIntUnaryOp>;

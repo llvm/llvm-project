@@ -96,9 +96,9 @@ public:
                           unsigned PieceOffsetInBits = 0);
 
   /// Emit a signed constant.
-  void AddSignedConstant(int Value);
+  void AddSignedConstant(int64_t Value);
   /// Emit an unsigned constant.
-  void AddUnsignedConstant(unsigned Value);
+  void AddUnsignedConstant(uint64_t Value);
   /// Emit an unsigned constant.
   void AddUnsignedConstant(const APInt &Value);
 

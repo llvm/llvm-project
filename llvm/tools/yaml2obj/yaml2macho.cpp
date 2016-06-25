@@ -424,17 +424,120 @@ Error MachOWriter::writeStringTable(raw_ostream &OS) {
   return Error::success();
 }
 
+class UniversalWriter {
+public:
+  UniversalWriter(MachOYAML::MachFile &MachFile)
+      : MachFile(MachFile), fileStart(0) {}
+
+  Error writeMachO(raw_ostream &OS);
+
+private:
+  Error writeFatHeader(raw_ostream &OS);
+  Error writeFatArchs(raw_ostream &OS);
+
+  void ZeroToOffset(raw_ostream &OS, size_t offset);
+
+  MachOYAML::MachFile &MachFile;
+  uint64_t fileStart;
+};
+
+Error UniversalWriter::writeMachO(raw_ostream &OS) {
+  fileStart = OS.tell();
+  if (!MachFile.isFat) {
+    MachOWriter Writer(MachFile.ThinFile);
+    return Writer.writeMachO(OS);
+  }
+  if (auto Err = writeFatHeader(OS))
+    return Err;
+  if (auto Err = writeFatArchs(OS))
+    return Err;
+  auto &FatFile = MachFile.FatFile;
+  assert(FatFile.FatArchs.size() == FatFile.Slices.size());
+  for (size_t i = 0; i < FatFile.Slices.size(); i++) {
+    ZeroToOffset(OS, FatFile.FatArchs[i].offset);
+    MachOWriter Writer(FatFile.Slices[i]);
+    if (auto Err = Writer.writeMachO(OS))
+      return Err;
+    auto SliceEnd = FatFile.FatArchs[i].offset + FatFile.FatArchs[i].size;
+    ZeroToOffset(OS, SliceEnd);
+  }
+  return Error::success();
+}
+
+Error UniversalWriter::writeFatHeader(raw_ostream &OS) {
+  auto &FatFile = MachFile.FatFile;
+  MachO::fat_header header;
+  header.magic = FatFile.Header.magic;
+  header.nfat_arch = FatFile.Header.nfat_arch;
+  if (sys::IsLittleEndianHost)
+    swapStruct(header);
+  OS.write(reinterpret_cast<const char *>(&header), sizeof(MachO::fat_header));
+  return Error::success();
+}
+
+template <typename FatArchType>
+FatArchType constructFatArch(MachOYAML::FatArch &Arch) {
+  FatArchType FatArch;
+  FatArch.cputype = Arch.cputype;
+  FatArch.cpusubtype = Arch.cpusubtype;
+  FatArch.offset = Arch.offset;
+  FatArch.size = Arch.size;
+  FatArch.align = Arch.align;
+  return FatArch;
+}
+
+template <typename StructType>
+void writeFatArch(MachOYAML::FatArch &LC, raw_ostream &OS) {}
+
+template <>
+void writeFatArch<MachO::fat_arch>(MachOYAML::FatArch &Arch, raw_ostream &OS) {
+  auto FatArch = constructFatArch<MachO::fat_arch>(Arch);
+  if (sys::IsLittleEndianHost)
+    swapStruct(FatArch);
+  OS.write(reinterpret_cast<const char *>(&FatArch), sizeof(MachO::fat_arch));
+}
+
+template <>
+void writeFatArch<MachO::fat_arch_64>(MachOYAML::FatArch &Arch,
+                                      raw_ostream &OS) {
+  auto FatArch = constructFatArch<MachO::fat_arch_64>(Arch);
+  FatArch.reserved = Arch.reserved;
+  if (sys::IsLittleEndianHost)
+    swapStruct(FatArch);
+  OS.write(reinterpret_cast<const char *>(&FatArch),
+           sizeof(MachO::fat_arch_64));
+}
+
+Error UniversalWriter::writeFatArchs(raw_ostream &OS) {
+  auto &FatFile = MachFile.FatFile;
+  bool is64Bit = FatFile.Header.magic == MachO::FAT_MAGIC_64;
+  for (auto Arch : FatFile.FatArchs) {
+    if (is64Bit)
+      writeFatArch<MachO::fat_arch_64>(Arch, OS);
+    else
+      writeFatArch<MachO::fat_arch>(Arch, OS);
+  }
+
+  return Error::success();
+}
+
+void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
+  auto currOffset = OS.tell() - fileStart;
+  if (currOffset < Offset)
+    ZeroFillBytes(OS, Offset - currOffset);
+}
+
 } // end anonymous namespace
 
 int yaml2macho(yaml::Input &YIn, raw_ostream &Out) {
-  MachOYAML::Object Doc;
+  MachOYAML::MachFile Doc;
   YIn >> Doc;
   if (YIn.error()) {
     errs() << "yaml2obj: Failed to parse YAML file!\n";
     return 1;
   }
 
-  MachOWriter Writer(Doc);
+  UniversalWriter Writer(Doc);
   if (auto Err = Writer.writeMachO(Out)) {
     errs() << toString(std::move(Err));
     return 1;

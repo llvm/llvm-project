@@ -515,8 +515,6 @@ namespace llvm {
       // Memory barriers.
       MEMBARRIER,
       MFENCE,
-      SFENCE,
-      LFENCE,
 
       // Store FP status word into i16 register.
       FNSTSW16r,

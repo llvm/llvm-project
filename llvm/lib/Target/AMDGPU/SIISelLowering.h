@@ -70,6 +70,8 @@ class SITargetLowering final : public AMDGPUTargetLowering {
   bool isLegalMUBUFAddressingMode(const AddrMode &AM) const;
 
   bool isCFIntrinsic(const SDNode *Intr) const;
+
+  void createDebuggerPrologueStackObjects(MachineFunction &MF) const;
 public:
   SITargetLowering(const TargetMachine &tm, const SISubtarget &STI);
 
@@ -104,6 +106,8 @@ public:
                                         Type *Ty) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   SDValue LowerFormalArguments(SDValue Chain, CallingConv::ID CallConv,
                                bool isVarArg,

@@ -61,56 +61,34 @@ bool isSafeToLoadUnconditionally(Value *V, unsigned Align,
 /// to scan in the block, used by FindAvailableLoadedValue().
 extern cl::opt<unsigned> DefMaxInstsToScan;
 
-/// Scan the ScanBB block backwards checking to see if we have the value at
-/// the memory address \p Ptr of type \p AccessTy locally available within a
-/// small number of instructions. If the value is available, return it.
+/// \brief Scan backwards to see if we have the value of the given load
+/// available locally within a small number of instructions.
 ///
-/// If not, return the iterator for the last validated instruction that the
-/// value would be live through.  If we scanned the entire block and didn't
-/// find something that invalidates *Ptr or provides it, ScanFrom would be
-/// left at begin() and this returns null.  ScanFrom could also be left
+/// You can use this function to scan across multiple blocks: after you call
+/// this function, if ScanFrom points at the beginning of the block, it's safe
+/// to continue scanning the predecessors.
 ///
-/// MaxInstsToScan specifies the maximum instructions to scan in the block.
-/// If it is set to 0, it will scan the whole block. You can also optionally
-/// specify an alias analysis implementation, which makes this more precise.
+/// Note that performing load CSE requires special care to make sure the
+/// metadata is set appropriately.  In particular, aliasing metadata needs
+/// to be merged.  (This doesn't matter for store-to-load forwarding because
+/// the only relevant load gets deleted.)
 ///
-/// If AATags is non-null and a load or store is found, the AA tags from the
-/// load or store are recorded there.  If there are no AA tags or if no access
-/// is found, it is left unmodified.
+/// \param Load The load we want to replace.
+/// \param ScanBB The basic block to scan. FIXME: This is redundant.
+/// \param [in,out] ScanFrom The location to start scanning from. When this
+/// function returns, it points at the last instruction scanned.
+/// \param MaxInstsToScan The maximum number of instructions to scan. If this
+/// is zero, the whole block will be scanned.
+/// \param AA Optional pointer to alias analysis, to make the scan more
+/// precise.
+/// \param [out] AATags The aliasing metadata for the operation which produced
+/// the value. FIXME: This is basically useless.
+/// \param [out] IsLoadCSE Whether the returned value is a load from the same
+/// location in memory, as opposed to the value operand of a store.
 ///
-/// IsAtomicMemOp specifies the atomicity of the memory operation that accesses
-/// \p *Ptr. We verify atomicity constraints are satisfied when value forwarding
-/// from another memory operation that has value \p *Ptr available.
-///
-/// Note that we assume the \p *Ptr is accessed through a non-volatile but
-/// potentially atomic load. Any other constraints should be verified at the
-/// caller.
-Value *FindAvailableLoadedValue(Value *Ptr, Type *AccessTy, bool IsAtomicMemOp,
+/// \returns The found value, or nullptr if no value is found.
+Value *FindAvailableLoadedValue(LoadInst *Load,
                                 BasicBlock *ScanBB,
-                                BasicBlock::iterator &ScanFrom,
-                                unsigned MaxInstsToScan,
-                                AliasAnalysis *AA = nullptr,
-                                AAMDNodes *AATags = nullptr,
-                                bool *IsLoadCSE = nullptr);
-
-/// FindAvailableLoadedValue - Scan the ScanBB block backwards (starting at
-/// the instruction before ScanFrom) checking to see if we have the value at
-/// the memory address *Ptr locally available within a small number of
-///  instructions. If the value is available, return it.
-///
-/// If not, return the iterator for the last validated instruction that the
-/// value would be live through.  If we scanned the entire block and didn't
-/// find something that invalidates *Ptr or provides it, ScanFrom would be
-/// left at begin() and this returns null.  ScanFrom could also be left
-///
-/// MaxInstsToScan specifies the maximum instructions to scan in the block.
-/// If it is set to 0, it will scan the whole block. You can also optionally
-/// specify an alias analysis implementation, which makes this more precise.
-///
-/// If AATags is non-null and a load or store is found, the AA tags from the
-/// load or store are recorded there.  If there are no AA tags or if no access
-/// is found, it is left unmodified.
-Value *FindAvailableLoadedValue(LoadInst *Load, BasicBlock *ScanBB,
                                 BasicBlock::iterator &ScanFrom,
                                 unsigned MaxInstsToScan = DefMaxInstsToScan,
                                 AliasAnalysis *AA = nullptr,

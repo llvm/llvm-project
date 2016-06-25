@@ -473,7 +473,7 @@ uint64_t MachOObjectFile::getSymbolValueImpl(DataRefImpl Sym) const {
   return getNValue(Sym);
 }
 
-ErrorOr<uint64_t> MachOObjectFile::getSymbolAddress(DataRefImpl Sym) const {
+Expected<uint64_t> MachOObjectFile::getSymbolAddress(DataRefImpl Sym) const {
   return getSymbolValue(Sym);
 }
 

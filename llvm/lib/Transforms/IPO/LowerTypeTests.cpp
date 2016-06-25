@@ -1,4 +1,4 @@
-//===-- LowerBitSets.cpp - Bitset lowering pass ---------------------------===//
+//===-- LowerTypeTests.cpp - type metadata lowering pass ------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,12 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This pass lowers bitset metadata and calls to the llvm.bitset.test intrinsic.
-// See http://llvm.org/docs/LangRef.html#bitsets for more information.
+// This pass lowers type metadata and calls to the llvm.type.test intrinsic.
+// See http://llvm.org/docs/TypeMetadata.html for more information.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO/LowerBitSets.h"
+#include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Statistic.h"
@@ -33,18 +33,18 @@
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
-using namespace lowerbitsets;
+using namespace lowertypetests;
 
-#define DEBUG_TYPE "lowerbitsets"
+#define DEBUG_TYPE "lowertypetests"
 
 STATISTIC(ByteArraySizeBits, "Byte array size in bits");
 STATISTIC(ByteArraySizeBytes, "Byte array size in bytes");
 STATISTIC(NumByteArraysCreated, "Number of byte arrays created");
-STATISTIC(NumBitSetCallsLowered, "Number of bitset calls lowered");
-STATISTIC(NumBitSetDisjointSets, "Number of disjoint sets of bitsets");
+STATISTIC(NumTypeTestCallsLowered, "Number of type test calls lowered");
+STATISTIC(NumTypeIdDisjointSets, "Number of disjoint sets of type identifiers");
 
 static cl::opt<bool> AvoidReuse(
-    "lowerbitsets-avoid-reuse",
+    "lowertypetests-avoid-reuse",
     cl::desc("Try to avoid reuse of byte array addresses using aliases"),
     cl::Hidden, cl::init(true));
 
@@ -204,10 +204,10 @@ struct ByteArrayInfo {
   Constant *Mask;
 };
 
-struct LowerBitSets : public ModulePass {
+struct LowerTypeTests : public ModulePass {
   static char ID;
-  LowerBitSets() : ModulePass(ID) {
-    initializeLowerBitSetsPass(*PassRegistry::getPassRegistry());
+  LowerTypeTests() : ModulePass(ID) {
+    initializeLowerTypeTestsPass(*PassRegistry::getPassRegistry());
   }
 
   Module *M;
@@ -222,41 +222,37 @@ struct LowerBitSets : public ModulePass {
   IntegerType *Int64Ty;
   IntegerType *IntPtrTy;
 
-  // The llvm.bitsets named metadata.
-  NamedMDNode *BitSetNM;
-
-  // Mapping from bitset identifiers to the call sites that test them.
-  DenseMap<Metadata *, std::vector<CallInst *>> BitSetTestCallSites;
+  // Mapping from type identifiers to the call sites that test them.
+  DenseMap<Metadata *, std::vector<CallInst *>> TypeTestCallSites;
 
   std::vector<ByteArrayInfo> ByteArrayInfos;
 
   BitSetInfo
-  buildBitSet(Metadata *BitSet,
+  buildBitSet(Metadata *TypeId,
               const DenseMap<GlobalObject *, uint64_t> &GlobalLayout);
   ByteArrayInfo *createByteArray(BitSetInfo &BSI);
   void allocateByteArrays();
   Value *createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI, ByteArrayInfo *&BAI,
                           Value *BitOffset);
-  void lowerBitSetCalls(ArrayRef<Metadata *> BitSets,
-                        Constant *CombinedGlobalAddr,
-                        const DenseMap<GlobalObject *, uint64_t> &GlobalLayout);
+  void
+  lowerTypeTestCalls(ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
+                     const DenseMap<GlobalObject *, uint64_t> &GlobalLayout);
   Value *
   lowerBitSetCall(CallInst *CI, BitSetInfo &BSI, ByteArrayInfo *&BAI,
                   Constant *CombinedGlobal,
                   const DenseMap<GlobalObject *, uint64_t> &GlobalLayout);
-  void buildBitSetsFromGlobalVariables(ArrayRef<Metadata *> BitSets,
+  void buildBitSetsFromGlobalVariables(ArrayRef<Metadata *> TypeIds,
                                        ArrayRef<GlobalVariable *> Globals);
   unsigned getJumpTableEntrySize();
   Type *getJumpTableEntryType();
   Constant *createJumpTableEntry(GlobalObject *Src, Function *Dest,
                                  unsigned Distance);
-  void verifyBitSetMDNode(MDNode *Op);
-  void buildBitSetsFromFunctions(ArrayRef<Metadata *> BitSets,
+  void verifyTypeMDNode(GlobalObject *GO, MDNode *Type);
+  void buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
                                  ArrayRef<Function *> Functions);
-  void buildBitSetsFromDisjointSet(ArrayRef<Metadata *> BitSets,
+  void buildBitSetsFromDisjointSet(ArrayRef<Metadata *> TypeIds,
                                    ArrayRef<GlobalObject *> Globals);
-  bool buildBitSets();
-  bool eraseBitSetMetadata();
+  bool lower();
 
   bool doInitialization(Module &M) override;
   bool runOnModule(Module &M) override;
@@ -264,15 +260,13 @@ struct LowerBitSets : public ModulePass {
 
 } // anonymous namespace
 
-INITIALIZE_PASS_BEGIN(LowerBitSets, "lowerbitsets",
-                "Lower bitset metadata", false, false)
-INITIALIZE_PASS_END(LowerBitSets, "lowerbitsets",
-                "Lower bitset metadata", false, false)
-char LowerBitSets::ID = 0;
+INITIALIZE_PASS(LowerTypeTests, "lowertypetests", "Lower type metadata", false,
+                false)
+char LowerTypeTests::ID = 0;
 
-ModulePass *llvm::createLowerBitSetsPass() { return new LowerBitSets; }
+ModulePass *llvm::createLowerTypeTestsPass() { return new LowerTypeTests; }
 
-bool LowerBitSets::doInitialization(Module &Mod) {
+bool LowerTypeTests::doInitialization(Module &Mod) {
   M = &Mod;
   const DataLayout &DL = Mod.getDataLayout();
 
@@ -288,39 +282,31 @@ bool LowerBitSets::doInitialization(Module &Mod) {
   Int64Ty = Type::getInt64Ty(M->getContext());
   IntPtrTy = DL.getIntPtrType(M->getContext(), 0);
 
-  BitSetNM = M->getNamedMetadata("llvm.bitsets");
-
-  BitSetTestCallSites.clear();
+  TypeTestCallSites.clear();
 
   return false;
 }
 
-/// Build a bit set for BitSet using the object layouts in
+/// Build a bit set for TypeId using the object layouts in
 /// GlobalLayout.
-BitSetInfo LowerBitSets::buildBitSet(
-    Metadata *BitSet,
+BitSetInfo LowerTypeTests::buildBitSet(
+    Metadata *TypeId,
     const DenseMap<GlobalObject *, uint64_t> &GlobalLayout) {
   BitSetBuilder BSB;
 
-  // Compute the byte offset of each element of this bitset.
-  if (BitSetNM) {
-    for (MDNode *Op : BitSetNM->operands()) {
-      if (Op->getOperand(0) != BitSet || !Op->getOperand(1))
-        continue;
-      Constant *OpConst =
-          cast<ConstantAsMetadata>(Op->getOperand(1))->getValue();
-      if (auto GA = dyn_cast<GlobalAlias>(OpConst))
-        OpConst = GA->getAliasee();
-      auto OpGlobal = dyn_cast<GlobalObject>(OpConst);
-      if (!OpGlobal)
+  // Compute the byte offset of each address associated with this type
+  // identifier.
+  SmallVector<MDNode *, 2> Types;
+  for (auto &GlobalAndOffset : GlobalLayout) {
+    Types.clear();
+    GlobalAndOffset.first->getMetadata(LLVMContext::MD_type, Types);
+    for (MDNode *Type : Types) {
+      if (Type->getOperand(1) != TypeId)
         continue;
       uint64_t Offset =
-          cast<ConstantInt>(cast<ConstantAsMetadata>(Op->getOperand(2))
+          cast<ConstantInt>(cast<ConstantAsMetadata>(Type->getOperand(0))
                                 ->getValue())->getZExtValue();
-
-      Offset += GlobalLayout.find(OpGlobal)->second;
-
-      BSB.addOffset(Offset);
+      BSB.addOffset(GlobalAndOffset.second + Offset);
     }
   }
 
@@ -342,7 +328,7 @@ static Value *createMaskedBitTest(IRBuilder<> &B, Value *Bits,
   return B.CreateICmpNE(MaskedBits, ConstantInt::get(BitsType, 0));
 }
 
-ByteArrayInfo *LowerBitSets::createByteArray(BitSetInfo &BSI) {
+ByteArrayInfo *LowerTypeTests::createByteArray(BitSetInfo &BSI) {
   // Create globals to stand in for byte arrays and masks. These never actually
   // get initialized, we RAUW and erase them later in allocateByteArrays() once
   // we know the offset and mask to use.
@@ -361,7 +347,7 @@ ByteArrayInfo *LowerBitSets::createByteArray(BitSetInfo &BSI) {
   return BAI;
 }
 
-void LowerBitSets::allocateByteArrays() {
+void LowerTypeTests::allocateByteArrays() {
   std::stable_sort(ByteArrayInfos.begin(), ByteArrayInfos.end(),
                    [](const ByteArrayInfo &BAI1, const ByteArrayInfo &BAI2) {
                      return BAI1.BitSize > BAI2.BitSize;
@@ -414,8 +400,8 @@ void LowerBitSets::allocateByteArrays() {
 
 /// Build a test that bit BitOffset is set in BSI, where
 /// BitSetGlobal is a global containing the bits in BSI.
-Value *LowerBitSets::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
-                                      ByteArrayInfo *&BAI, Value *BitOffset) {
+Value *LowerTypeTests::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
+                                        ByteArrayInfo *&BAI, Value *BitOffset) {
   if (BSI.BitSize <= 64) {
     // If the bit set is sufficiently small, we can avoid a load by bit testing
     // a constant.
@@ -455,9 +441,9 @@ Value *LowerBitSets::createBitSetTest(IRBuilder<> &B, BitSetInfo &BSI,
   }
 }
 
-/// Lower a llvm.bitset.test call to its implementation. Returns the value to
+/// Lower a llvm.type.test call to its implementation. Returns the value to
 /// replace the call with.
-Value *LowerBitSets::lowerBitSetCall(
+Value *LowerTypeTests::lowerBitSetCall(
     CallInst *CI, BitSetInfo &BSI, ByteArrayInfo *&BAI,
     Constant *CombinedGlobalIntAddr,
     const DenseMap<GlobalObject *, uint64_t> &GlobalLayout) {
@@ -525,10 +511,10 @@ Value *LowerBitSets::lowerBitSetCall(
   return P;
 }
 
-/// Given a disjoint set of bitsets and globals, layout the globals, build the
-/// bit sets and lower the llvm.bitset.test calls.
-void LowerBitSets::buildBitSetsFromGlobalVariables(
-    ArrayRef<Metadata *> BitSets, ArrayRef<GlobalVariable *> Globals) {
+/// Given a disjoint set of type identifiers and globals, lay out the globals,
+/// build the bit sets and lower the llvm.type.test calls.
+void LowerTypeTests::buildBitSetsFromGlobalVariables(
+    ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalVariable *> Globals) {
   // Build a new global with the combined contents of the referenced globals.
   // This global is a struct whose even-indexed elements contain the original
   // contents of the referenced globals and whose odd-indexed elements contain
@@ -566,7 +552,7 @@ void LowerBitSets::buildBitSetsFromGlobalVariables(
     // Multiply by 2 to account for padding elements.
     GlobalLayout[Globals[I]] = CombinedGlobalLayout->getElementOffset(I * 2);
 
-  lowerBitSetCalls(BitSets, CombinedGlobal, GlobalLayout);
+  lowerTypeTestCalls(TypeIds, CombinedGlobal, GlobalLayout);
 
   // Build aliases pointing to offsets into the combined global for each
   // global from which we built the combined global, and replace references
@@ -592,19 +578,19 @@ void LowerBitSets::buildBitSetsFromGlobalVariables(
   }
 }
 
-void LowerBitSets::lowerBitSetCalls(
-    ArrayRef<Metadata *> BitSets, Constant *CombinedGlobalAddr,
+void LowerTypeTests::lowerTypeTestCalls(
+    ArrayRef<Metadata *> TypeIds, Constant *CombinedGlobalAddr,
     const DenseMap<GlobalObject *, uint64_t> &GlobalLayout) {
   Constant *CombinedGlobalIntAddr =
       ConstantExpr::getPtrToInt(CombinedGlobalAddr, IntPtrTy);
 
-  // For each bitset in this disjoint set...
-  for (Metadata *BS : BitSets) {
+  // For each type identifier in this disjoint set...
+  for (Metadata *TypeId : TypeIds) {
     // Build the bitset.
-    BitSetInfo BSI = buildBitSet(BS, GlobalLayout);
+    BitSetInfo BSI = buildBitSet(TypeId, GlobalLayout);
     DEBUG({
-      if (auto BSS = dyn_cast<MDString>(BS))
-        dbgs() << BSS->getString() << ": ";
+      if (auto MDS = dyn_cast<MDString>(TypeId))
+        dbgs() << MDS->getString() << ": ";
       else
         dbgs() << "<unnamed>: ";
       BSI.print(dbgs());
@@ -612,9 +598,9 @@ void LowerBitSets::lowerBitSetCalls(
 
     ByteArrayInfo *BAI = nullptr;
 
-    // Lower each call to llvm.bitset.test for this bitset.
-    for (CallInst *CI : BitSetTestCallSites[BS]) {
-      ++NumBitSetCallsLowered;
+    // Lower each call to llvm.type.test for this type identifier.
+    for (CallInst *CI : TypeTestCallSites[TypeId]) {
+      ++NumTypeTestCallsLowered;
       Value *Lowered =
           lowerBitSetCall(CI, BSI, BAI, CombinedGlobalIntAddr, GlobalLayout);
       CI->replaceAllUsesWith(Lowered);
@@ -623,40 +609,32 @@ void LowerBitSets::lowerBitSetCalls(
   }
 }
 
-void LowerBitSets::verifyBitSetMDNode(MDNode *Op) {
-  if (Op->getNumOperands() != 3)
+void LowerTypeTests::verifyTypeMDNode(GlobalObject *GO, MDNode *Type) {
+  if (Type->getNumOperands() != 2)
     report_fatal_error(
-        "All operands of llvm.bitsets metadata must have 3 elements");
-  if (!Op->getOperand(1))
-    return;
+        "All operands of type metadata must have 2 elements");
 
-  auto OpConstMD = dyn_cast<ConstantAsMetadata>(Op->getOperand(1));
-  if (!OpConstMD)
-    report_fatal_error("Bit set element must be a constant");
-  auto OpGlobal = dyn_cast<GlobalObject>(OpConstMD->getValue());
-  if (!OpGlobal)
-    return;
-
-  if (OpGlobal->isThreadLocal())
+  if (GO->isThreadLocal())
     report_fatal_error("Bit set element may not be thread-local");
-  if (isa<GlobalVariable>(OpGlobal) && OpGlobal->hasSection())
+  if (isa<GlobalVariable>(GO) && GO->hasSection())
     report_fatal_error(
-        "Bit set global var element may not have an explicit section");
+        "A member of a type identifier may not have an explicit section");
 
-  if (isa<GlobalVariable>(OpGlobal) && OpGlobal->isDeclarationForLinker())
-    report_fatal_error("Bit set global var element must be a definition");
+  if (isa<GlobalVariable>(GO) && GO->isDeclarationForLinker())
+    report_fatal_error(
+        "A global var member of a type identifier must be a definition");
 
-  auto OffsetConstMD = dyn_cast<ConstantAsMetadata>(Op->getOperand(2));
+  auto OffsetConstMD = dyn_cast<ConstantAsMetadata>(Type->getOperand(0));
   if (!OffsetConstMD)
-    report_fatal_error("Bit set element offset must be a constant");
+    report_fatal_error("Type offset must be a constant");
   auto OffsetInt = dyn_cast<ConstantInt>(OffsetConstMD->getValue());
   if (!OffsetInt)
-    report_fatal_error("Bit set element offset must be an integer constant");
+    report_fatal_error("Type offset must be an integer constant");
 }
 
 static const unsigned kX86JumpTableEntrySize = 8;
 
-unsigned LowerBitSets::getJumpTableEntrySize() {
+unsigned LowerTypeTests::getJumpTableEntrySize() {
   if (Arch != Triple::x86 && Arch != Triple::x86_64)
     report_fatal_error("Unsupported architecture for jump tables");
 
@@ -667,8 +645,9 @@ unsigned LowerBitSets::getJumpTableEntrySize() {
 // consists of an instruction sequence containing a relative branch to Dest. The
 // constant will be laid out at address Src+(Len*Distance) where Len is the
 // target-specific jump table entry size.
-Constant *LowerBitSets::createJumpTableEntry(GlobalObject *Src, Function *Dest,
-                                             unsigned Distance) {
+Constant *LowerTypeTests::createJumpTableEntry(GlobalObject *Src,
+                                               Function *Dest,
+                                               unsigned Distance) {
   if (Arch != Triple::x86 && Arch != Triple::x86_64)
     report_fatal_error("Unsupported architecture for jump tables");
 
@@ -695,7 +674,7 @@ Constant *LowerBitSets::createJumpTableEntry(GlobalObject *Src, Function *Dest,
   return ConstantStruct::getAnon(Fields, /*Packed=*/true);
 }
 
-Type *LowerBitSets::getJumpTableEntryType() {
+Type *LowerTypeTests::getJumpTableEntryType() {
   if (Arch != Triple::x86 && Arch != Triple::x86_64)
     report_fatal_error("Unsupported architecture for jump tables");
 
@@ -704,10 +683,10 @@ Type *LowerBitSets::getJumpTableEntryType() {
                          /*Packed=*/true);
 }
 
-/// Given a disjoint set of bitsets and functions, build a jump table for the
-/// functions, build the bit sets and lower the llvm.bitset.test calls.
-void LowerBitSets::buildBitSetsFromFunctions(ArrayRef<Metadata *> BitSets,
-                                             ArrayRef<Function *> Functions) {
+/// Given a disjoint set of type identifiers and functions, build a jump table
+/// for the functions, build the bit sets and lower the llvm.type.test calls.
+void LowerTypeTests::buildBitSetsFromFunctions(ArrayRef<Metadata *> TypeIds,
+                                               ArrayRef<Function *> Functions) {
   // Unlike the global bitset builder, the function bitset builder cannot
   // re-arrange functions in a particular order and base its calculations on the
   // layout of the functions' entry points, as we have no idea how large a
@@ -721,8 +700,7 @@ void LowerBitSets::buildBitSetsFromFunctions(ArrayRef<Metadata *> BitSets,
   // verification done inside the module.
   //
   // In more concrete terms, suppose we have three functions f, g, h which are
-  // members of a single bitset, and a function foo that returns their
-  // addresses:
+  // of the same type, and a function foo that returns their addresses:
   //
   // f:
   // mov 0, %eax
@@ -805,7 +783,7 @@ void LowerBitSets::buildBitSetsFromFunctions(ArrayRef<Metadata *> BitSets,
   JumpTable->setSection(ObjectFormat == Triple::MachO
                             ? "__TEXT,__text,regular,pure_instructions"
                             : ".text");
-  lowerBitSetCalls(BitSets, JumpTable, GlobalLayout);
+  lowerTypeTestCalls(TypeIds, JumpTable, GlobalLayout);
 
   // Build aliases pointing to offsets into the jump table, and replace
   // references to the original functions with references to the aliases.
@@ -840,39 +818,32 @@ void LowerBitSets::buildBitSetsFromFunctions(ArrayRef<Metadata *> BitSets,
       ConstantArray::get(JumpTableType, JumpTableEntries));
 }
 
-void LowerBitSets::buildBitSetsFromDisjointSet(
-    ArrayRef<Metadata *> BitSets, ArrayRef<GlobalObject *> Globals) {
-  llvm::DenseMap<Metadata *, uint64_t> BitSetIndices;
-  llvm::DenseMap<GlobalObject *, uint64_t> GlobalIndices;
-  for (unsigned I = 0; I != BitSets.size(); ++I)
-    BitSetIndices[BitSets[I]] = I;
-  for (unsigned I = 0; I != Globals.size(); ++I)
-    GlobalIndices[Globals[I]] = I;
+void LowerTypeTests::buildBitSetsFromDisjointSet(
+    ArrayRef<Metadata *> TypeIds, ArrayRef<GlobalObject *> Globals) {
+  llvm::DenseMap<Metadata *, uint64_t> TypeIdIndices;
+  for (unsigned I = 0; I != TypeIds.size(); ++I)
+    TypeIdIndices[TypeIds[I]] = I;
 
-  // For each bitset, build a set of indices that refer to globals referenced by
-  // the bitset.
-  std::vector<std::set<uint64_t>> BitSetMembers(BitSets.size());
-  if (BitSetNM) {
-    for (MDNode *Op : BitSetNM->operands()) {
-      // Op = { bitset name, global, offset }
-      if (!Op->getOperand(1))
-        continue;
-      auto I = BitSetIndices.find(Op->getOperand(0));
-      if (I == BitSetIndices.end())
-        continue;
-
-      auto OpGlobal = dyn_cast<GlobalObject>(
-          cast<ConstantAsMetadata>(Op->getOperand(1))->getValue());
-      if (!OpGlobal)
-        continue;
-      BitSetMembers[I->second].insert(GlobalIndices[OpGlobal]);
+  // For each type identifier, build a set of indices that refer to members of
+  // the type identifier.
+  std::vector<std::set<uint64_t>> TypeMembers(TypeIds.size());
+  SmallVector<MDNode *, 2> Types;
+  unsigned GlobalIndex = 0;
+  for (GlobalObject *GO : Globals) {
+    Types.clear();
+    GO->getMetadata(LLVMContext::MD_type, Types);
+    for (MDNode *Type : Types) {
+      // Type = { offset, type identifier }
+      unsigned TypeIdIndex = TypeIdIndices[Type->getOperand(1)];
+      TypeMembers[TypeIdIndex].insert(GlobalIndex);
     }
+    GlobalIndex++;
   }
 
   // Order the sets of indices by size. The GlobalLayoutBuilder works best
   // when given small index sets first.
   std::stable_sort(
-      BitSetMembers.begin(), BitSetMembers.end(),
+      TypeMembers.begin(), TypeMembers.end(),
       [](const std::set<uint64_t> &O1, const std::set<uint64_t> &O2) {
         return O1.size() < O2.size();
       });
@@ -881,7 +852,7 @@ void LowerBitSets::buildBitSetsFromDisjointSet(
   // fragments. The GlobalLayoutBuilder tries to lay out members of fragments as
   // close together as possible.
   GlobalLayoutBuilder GLB(Globals.size());
-  for (auto &&MemSet : BitSetMembers)
+  for (auto &&MemSet : TypeMembers)
     GLB.addFragment(MemSet);
 
   // Build the bitsets from this disjoint set.
@@ -893,13 +864,13 @@ void LowerBitSets::buildBitSetsFromDisjointSet(
       for (auto &&Offset : F) {
         auto GV = dyn_cast<GlobalVariable>(Globals[Offset]);
         if (!GV)
-          report_fatal_error(
-              "Bit set may not contain both global variables and functions");
+          report_fatal_error("Type identifier may not contain both global "
+                             "variables and functions");
         *OGI++ = GV;
       }
     }
 
-    buildBitSetsFromGlobalVariables(BitSets, OrderedGVs);
+    buildBitSetsFromGlobalVariables(TypeIds, OrderedGVs);
   } else {
     // Build a vector of functions with the computed layout.
     std::vector<Function *> OrderedFns(Globals.size());
@@ -908,102 +879,97 @@ void LowerBitSets::buildBitSetsFromDisjointSet(
       for (auto &&Offset : F) {
         auto Fn = dyn_cast<Function>(Globals[Offset]);
         if (!Fn)
-          report_fatal_error(
-              "Bit set may not contain both global variables and functions");
+          report_fatal_error("Type identifier may not contain both global "
+                             "variables and functions");
         *OFI++ = Fn;
       }
     }
 
-    buildBitSetsFromFunctions(BitSets, OrderedFns);
+    buildBitSetsFromFunctions(TypeIds, OrderedFns);
   }
 }
 
-/// Lower all bit sets in this module.
-bool LowerBitSets::buildBitSets() {
-  Function *BitSetTestFunc =
-      M->getFunction(Intrinsic::getName(Intrinsic::bitset_test));
-  if (!BitSetTestFunc || BitSetTestFunc->use_empty())
+/// Lower all type tests in this module.
+bool LowerTypeTests::lower() {
+  Function *TypeTestFunc =
+      M->getFunction(Intrinsic::getName(Intrinsic::type_test));
+  if (!TypeTestFunc || TypeTestFunc->use_empty())
     return false;
 
-  // Equivalence class set containing bitsets and the globals they reference.
-  // This is used to partition the set of bitsets in the module into disjoint
-  // sets.
+  // Equivalence class set containing type identifiers and the globals that
+  // reference them. This is used to partition the set of type identifiers in
+  // the module into disjoint sets.
   typedef EquivalenceClasses<PointerUnion<GlobalObject *, Metadata *>>
       GlobalClassesTy;
   GlobalClassesTy GlobalClasses;
 
-  // Verify the bitset metadata and build a mapping from bitset identifiers to
-  // their last observed index in BitSetNM. This will used later to
-  // deterministically order the list of bitset identifiers.
-  llvm::DenseMap<Metadata *, unsigned> BitSetIdIndices;
-  if (BitSetNM) {
-    for (unsigned I = 0, E = BitSetNM->getNumOperands(); I != E; ++I) {
-      MDNode *Op = BitSetNM->getOperand(I);
-      verifyBitSetMDNode(Op);
-      BitSetIdIndices[Op->getOperand(0)] = I;
+  // Verify the type metadata and build a mapping from type identifiers to their
+  // last observed index in the list of globals. This will be used later to
+  // deterministically order the list of type identifiers.
+  llvm::DenseMap<Metadata *, unsigned> TypeIdIndices;
+  unsigned I = 0;
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalObject &GO : M->global_objects()) {
+    Types.clear();
+    GO.getMetadata(LLVMContext::MD_type, Types);
+    for (MDNode *Type : Types) {
+      verifyTypeMDNode(&GO, Type);
+      TypeIdIndices[cast<MDNode>(Type)->getOperand(1)] = ++I;
     }
   }
 
-  for (const Use &U : BitSetTestFunc->uses()) {
+  for (const Use &U : TypeTestFunc->uses()) {
     auto CI = cast<CallInst>(U.getUser());
 
     auto BitSetMDVal = dyn_cast<MetadataAsValue>(CI->getArgOperand(1));
     if (!BitSetMDVal)
       report_fatal_error(
-          "Second argument of llvm.bitset.test must be metadata");
+          "Second argument of llvm.type.test must be metadata");
     auto BitSet = BitSetMDVal->getMetadata();
 
-    // Add the call site to the list of call sites for this bit set. We also use
-    // BitSetTestCallSites to keep track of whether we have seen this bit set
-    // before. If we have, we don't need to re-add the referenced globals to the
-    // equivalence class.
-    std::pair<DenseMap<Metadata *, std::vector<CallInst *>>::iterator,
-              bool> Ins =
-        BitSetTestCallSites.insert(
+    // Add the call site to the list of call sites for this type identifier. We
+    // also use TypeTestCallSites to keep track of whether we have seen this
+    // type identifier before. If we have, we don't need to re-add the
+    // referenced globals to the equivalence class.
+    std::pair<DenseMap<Metadata *, std::vector<CallInst *>>::iterator, bool>
+        Ins = TypeTestCallSites.insert(
             std::make_pair(BitSet, std::vector<CallInst *>()));
     Ins.first->second.push_back(CI);
     if (!Ins.second)
       continue;
 
-    // Add the bitset to the equivalence class.
+    // Add the type identifier to the equivalence class.
     GlobalClassesTy::iterator GCI = GlobalClasses.insert(BitSet);
     GlobalClassesTy::member_iterator CurSet = GlobalClasses.findLeader(GCI);
 
-    if (!BitSetNM)
-      continue;
-
-    // Add the referenced globals to the bitset's equivalence class.
-    for (MDNode *Op : BitSetNM->operands()) {
-      if (Op->getOperand(0) != BitSet || !Op->getOperand(1))
-        continue;
-
-      auto OpGlobal = dyn_cast<GlobalObject>(
-          cast<ConstantAsMetadata>(Op->getOperand(1))->getValue());
-      if (!OpGlobal)
-        continue;
-
-      CurSet = GlobalClasses.unionSets(
-          CurSet, GlobalClasses.findLeader(GlobalClasses.insert(OpGlobal)));
+    // Add the referenced globals to the type identifier's equivalence class.
+    for (GlobalObject &GO : M->global_objects()) {
+      Types.clear();
+      GO.getMetadata(LLVMContext::MD_type, Types);
+      for (MDNode *Type : Types)
+        if (Type->getOperand(1) == BitSet)
+          CurSet = GlobalClasses.unionSets(
+              CurSet, GlobalClasses.findLeader(GlobalClasses.insert(&GO)));
     }
   }
 
   if (GlobalClasses.empty())
     return false;
 
-  // Build a list of disjoint sets ordered by their maximum BitSetNM index
-  // for determinism.
+  // Build a list of disjoint sets ordered by their maximum global index for
+  // determinism.
   std::vector<std::pair<GlobalClassesTy::iterator, unsigned>> Sets;
   for (GlobalClassesTy::iterator I = GlobalClasses.begin(),
                                  E = GlobalClasses.end();
        I != E; ++I) {
     if (!I->isLeader()) continue;
-    ++NumBitSetDisjointSets;
+    ++NumTypeIdDisjointSets;
 
     unsigned MaxIndex = 0;
     for (GlobalClassesTy::member_iterator MI = GlobalClasses.member_begin(I);
          MI != GlobalClasses.member_end(); ++MI) {
       if ((*MI).is<Metadata *>())
-        MaxIndex = std::max(MaxIndex, BitSetIdIndices[MI->get<Metadata *>()]);
+        MaxIndex = std::max(MaxIndex, TypeIdIndices[MI->get<Metadata *>()]);
     }
     Sets.emplace_back(I, MaxIndex);
   }
@@ -1015,26 +981,26 @@ bool LowerBitSets::buildBitSets() {
 
   // For each disjoint set we found...
   for (const auto &S : Sets) {
-    // Build the list of bitsets in this disjoint set.
-    std::vector<Metadata *> BitSets;
+    // Build the list of type identifiers in this disjoint set.
+    std::vector<Metadata *> TypeIds;
     std::vector<GlobalObject *> Globals;
     for (GlobalClassesTy::member_iterator MI =
              GlobalClasses.member_begin(S.first);
          MI != GlobalClasses.member_end(); ++MI) {
       if ((*MI).is<Metadata *>())
-        BitSets.push_back(MI->get<Metadata *>());
+        TypeIds.push_back(MI->get<Metadata *>());
       else
         Globals.push_back(MI->get<GlobalObject *>());
     }
 
-    // Order bitsets by BitSetNM index for determinism. This ordering is stable
-    // as there is a one-to-one mapping between metadata and indices.
-    std::sort(BitSets.begin(), BitSets.end(), [&](Metadata *M1, Metadata *M2) {
-      return BitSetIdIndices[M1] < BitSetIdIndices[M2];
+    // Order type identifiers by global index for determinism. This ordering is
+    // stable as there is a one-to-one mapping between metadata and indices.
+    std::sort(TypeIds.begin(), TypeIds.end(), [&](Metadata *M1, Metadata *M2) {
+      return TypeIdIndices[M1] < TypeIdIndices[M2];
     });
 
-    // Lower the bitsets in this disjoint set.
-    buildBitSetsFromDisjointSet(BitSets, Globals);
+    // Build bitsets for this disjoint set.
+    buildBitSetsFromDisjointSet(TypeIds, Globals);
   }
 
   allocateByteArrays();
@@ -1042,19 +1008,9 @@ bool LowerBitSets::buildBitSets() {
   return true;
 }
 
-bool LowerBitSets::eraseBitSetMetadata() {
-  if (!BitSetNM)
-    return false;
-
-  M->eraseNamedMetadata(BitSetNM);
-  return true;
-}
-
-bool LowerBitSets::runOnModule(Module &M) {
+bool LowerTypeTests::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
-  bool Changed = buildBitSets();
-  Changed |= eraseBitSetMetadata();
-  return Changed;
+  return lower();
 }

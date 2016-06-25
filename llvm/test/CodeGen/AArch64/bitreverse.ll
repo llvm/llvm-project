@@ -52,7 +52,7 @@ define <8 x i8> @g_vec(<8 x i8> %a) {
 ; CHECK-DAG: movi [[M2:v.*]], #64
 ; CHECK-DAG: movi [[M3:v.*]], #32
 ; CHECK-DAG: movi [[M4:v.*]], #16
-; CHECK-DAG: movi [[M5:v.*]], #8
+; CHECK-DAG: movi [[M5:v.*]], #8{{$}}
 ; CHECK-DAG: movi [[M6:v.*]], #4{{$}}
 ; CHECK-DAG: movi [[M7:v.*]], #2{{$}}
 ; CHECK-DAG: movi [[M8:v.*]], #1{{$}}

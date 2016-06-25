@@ -91,10 +91,6 @@ struct PromoteLegacyPass : public FunctionPass {
     AU.addRequired<AssumptionCacheTracker>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.setPreservesCFG();
-    // This is a cluster of orthogonal Transforms
-    AU.addPreserved<UnifyFunctionExitNodes>();
-    AU.addPreservedID(LowerSwitchID);
-    AU.addPreservedID(LowerInvokePassID);
   }
   };
 }  // end of anonymous namespace

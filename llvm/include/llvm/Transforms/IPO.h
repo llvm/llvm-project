@@ -214,14 +214,14 @@ ModulePass *createMetaRenamerPass();
 /// manager.
 ModulePass *createBarrierNoopPass();
 
-/// \brief This pass lowers bitset metadata and the llvm.bitset.test intrinsic
-/// to bitsets.
-ModulePass *createLowerBitSetsPass();
+/// \brief This pass lowers type metadata and the llvm.type.test intrinsic to
+/// bitsets.
+ModulePass *createLowerTypeTestsPass();
 
 /// \brief This pass export CFI checks for use by external modules.
 ModulePass *createCrossDSOCFIPass();
 
-/// \brief This pass implements whole-program devirtualization using bitset
+/// \brief This pass implements whole-program devirtualization using type
 /// metadata.
 ModulePass *createWholeProgramDevirtPass();
 

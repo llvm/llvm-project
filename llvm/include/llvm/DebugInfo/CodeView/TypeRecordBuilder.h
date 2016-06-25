@@ -40,7 +40,6 @@ public:
   void writeEncodedInteger(int64_t Value);
   void writeEncodedSignedInteger(int64_t Value);
   void writeEncodedUnsignedInteger(uint64_t Value);
-  void writeNullTerminatedString(const char *Value);
   void writeNullTerminatedString(StringRef Value);
   void writeGuid(StringRef Guid);
   void writeBytes(StringRef Value) { Stream << Value; }

@@ -230,11 +230,11 @@
 ; CHECK:       LinkageName: ?f@@YAXMN_J@Z
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: __int64 (0x13)
+; CHECK:       Type: float (0x40)
 ; CHECK:       Flags [ (0x1)
 ; CHECK:         IsParameter (0x1)
 ; CHECK:       ]
-; CHECK:       VarName: p3
+; CHECK:       VarName: p1
 ; CHECK:     }
 ; CHECK:     Local {
 ; CHECK:       Type: double (0x41)
@@ -244,11 +244,11 @@
 ; CHECK:       VarName: p2
 ; CHECK:     }
 ; CHECK:     Local {
-; CHECK:       Type: float (0x40)
+; CHECK:       Type: __int64 (0x13)
 ; CHECK:       Flags [ (0x1)
 ; CHECK:         IsParameter (0x1)
 ; CHECK:       ]
-; CHECK:       VarName: p1
+; CHECK:       VarName: p3
 ; CHECK:     }
 ; CHECK:     Local {
 ; CHECK:       Type: int (0x74)

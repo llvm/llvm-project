@@ -312,13 +312,18 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     if (V && LI->replacementPreservesLCSSAForm(C, V)) {
       // If so, then delete the temporary instruction and stick the folded value
       // in the map.
-      delete C;
       ValueMap[Inst] = V;
+      if (!C->mayHaveSideEffects()) {
+        delete C;
+        C = nullptr;
+      }
     } else {
+      ValueMap[Inst] = C;
+    }
+    if (C) {
       // Otherwise, stick the new instruction into the new block!
       C->setName(Inst->getName());
       C->insertBefore(LoopEntryBranch);
-      ValueMap[Inst] = C;
     }
   }
 

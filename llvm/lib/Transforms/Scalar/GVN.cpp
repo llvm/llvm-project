@@ -2056,12 +2056,21 @@ bool GVN::processInstruction(Instruction *I) {
   // "%z = and i32 %x, %y" becomes "%z = and i32 %x, %x" which we now simplify.
   const DataLayout &DL = I->getModule()->getDataLayout();
   if (Value *V = SimplifyInstruction(I, DL, TLI, DT, AC)) {
-    I->replaceAllUsesWith(V);
-    if (MD && V->getType()->getScalarType()->isPointerTy())
-      MD->invalidateCachedPointerInfo(V);
-    markInstructionForDeletion(I);
-    ++NumGVNSimpl;
-    return true;
+    bool Changed = false;
+    if (!I->use_empty()) {
+      I->replaceAllUsesWith(V);
+      Changed = true;
+    }
+    if (isInstructionTriviallyDead(I, TLI)) {
+      markInstructionForDeletion(I);
+      Changed = true;
+    }
+    if (Changed) {
+      if (MD && V->getType()->getScalarType()->isPointerTy())
+        MD->invalidateCachedPointerInfo(V);
+      ++NumGVNSimpl;
+      return true;
+    }
   }
 
   if (IntrinsicInst *IntrinsicI = dyn_cast<IntrinsicInst>(I))

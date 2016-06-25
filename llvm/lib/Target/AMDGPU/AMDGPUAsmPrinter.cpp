@@ -200,6 +200,13 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
       OutStreamer->emitRawComment(" ReservedVGPRCount: " + Twine(KernelInfo.ReservedVGPRCount),
                                   false);
 
+      if (MF.getSubtarget<SISubtarget>().debuggerEmitPrologue()) {
+        OutStreamer->emitRawComment(" DebuggerWavefrontPrivateSegmentOffsetSGPR: s" +
+                                    Twine(KernelInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR), false);
+        OutStreamer->emitRawComment(" DebuggerPrivateSegmentBufferSGPR: s" +
+                                    Twine(KernelInfo.DebuggerPrivateSegmentBufferSGPR), false);
+      }
+
       OutStreamer->emitRawComment(" COMPUTE_PGM_RSRC2:USER_SGPR: " +
                                   Twine(G_00B84C_USER_SGPR(KernelInfo.ComputePGMRSrc2)),
                                   false);
@@ -444,6 +451,16 @@ void AMDGPUAsmPrinter::getSIProgramInfo(SIProgramInfo &ProgInfo,
     MaxVGPR += MFI->getDebuggerReservedVGPRCount();
   }
 
+  // Update DebuggerWavefrontPrivateSegmentOffsetSGPR and
+  // DebuggerPrivateSegmentBufferSGPR fields if "amdgpu-debugger-emit-prologue"
+  // attribute was specified.
+  if (STM.debuggerEmitPrologue()) {
+    ProgInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR =
+      RI->getHWRegIndex(MFI->getScratchWaveOffsetReg());
+    ProgInfo.DebuggerPrivateSegmentBufferSGPR =
+      RI->getHWRegIndex(MFI->getScratchRSrcReg());
+  }
+
   // We found the maximum register index. They start at 0, so add one to get the
   // number of registers.
   ProgInfo.NumVGPR = MaxVGPR + 1;
@@ -670,6 +687,9 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
   if (MFI->hasDispatchPtr())
     header.code_properties |= AMD_CODE_PROPERTY_ENABLE_SGPR_DISPATCH_PTR;
 
+  if (STM.debuggerSupported())
+    header.code_properties |= AMD_CODE_PROPERTY_IS_DEBUG_SUPPORTED;
+
   if (STM.isXNACKEnabled())
     header.code_properties |= AMD_CODE_PROPERTY_IS_XNACK_SUPPORTED;
 
@@ -680,6 +700,13 @@ void AMDGPUAsmPrinter::EmitAmdKernelCodeT(const MachineFunction &MF,
   header.workgroup_group_segment_byte_size = KernelInfo.LDSSize;
   header.reserved_vgpr_first = KernelInfo.ReservedVGPRFirst;
   header.reserved_vgpr_count = KernelInfo.ReservedVGPRCount;
+
+  if (STM.debuggerEmitPrologue()) {
+    header.debug_wavefront_private_segment_offset_sgpr =
+      KernelInfo.DebuggerWavefrontPrivateSegmentOffsetSGPR;
+    header.debug_private_segment_buffer_sgpr =
+      KernelInfo.DebuggerPrivateSegmentBufferSGPR;
+  }
 
   AMDGPUTargetStreamer *TS =
       static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());

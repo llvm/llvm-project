@@ -141,6 +141,12 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::UnknownOS, T.getOS());
   EXPECT_EQ(Triple::EABI, T.getEnvironment());
 
+  T = Triple("arm-none-linux-musleabi");
+  EXPECT_EQ(Triple::arm, T.getArch());
+  EXPECT_EQ(Triple::UnknownVendor, T.getVendor());
+  EXPECT_EQ(Triple::Linux, T.getOS());
+  EXPECT_EQ(Triple::MuslEABI, T.getEnvironment());
+
   T = Triple("armv6hl-none-linux-gnueabi");
   EXPECT_EQ(Triple::arm, T.getArch());
   EXPECT_EQ(Triple::Linux, T.getOS());

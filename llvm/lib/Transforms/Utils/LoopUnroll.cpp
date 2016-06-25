@@ -623,18 +623,17 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   // go.
   const DataLayout &DL = Header->getModule()->getDataLayout();
   const std::vector<BasicBlock*> &NewLoopBlocks = L->getBlocks();
-  for (BasicBlock *BB : NewLoopBlocks)
+  for (BasicBlock *BB : NewLoopBlocks) {
     for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ) {
       Instruction *Inst = &*I++;
 
+      if (Value *V = SimplifyInstruction(Inst, DL))
+        if (LI->replacementPreservesLCSSAForm(Inst, V))
+          Inst->replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(Inst))
         BB->getInstList().erase(Inst);
-      else if (Value *V = SimplifyInstruction(Inst, DL))
-        if (LI->replacementPreservesLCSSAForm(Inst, V)) {
-          Inst->replaceAllUsesWith(V);
-          BB->getInstList().erase(Inst);
-        }
     }
+  }
 
   NumCompletelyUnrolled += CompletelyUnroll;
   ++NumUnrolled;

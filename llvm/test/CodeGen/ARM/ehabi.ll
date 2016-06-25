@@ -34,6 +34,22 @@
 ; RUN:     -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
 
+; RUN: llc -mtriple arm-unknown-linux-musleabi \
+; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:   | FileCheck %s --check-prefix=CHECK-FP
+
+; RUN: llc -mtriple arm-unknown-linux-musleabi \
+; RUN:     -filetype=asm -o - %s \
+; RUN:   | FileCheck %s --check-prefix=CHECK-FP-ELIM
+
+; RUN: llc -mtriple armv7-unknown-linux-musleabi \
+; RUN:     -disable-fp-elim -filetype=asm -o - %s \
+; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP
+
+; RUN: llc -mtriple armv7-unknown-linux-musleabi \
+; RUN:     -filetype=asm -o - %s \
+; RUN:   | FileCheck %s --check-prefix=CHECK-V7-FP-ELIM
+
 ; RUN: llc -mtriple arm-unknown-linux-androideabi \
 ; RUN:     -disable-fp-elim -filetype=asm -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=CHECK-FP

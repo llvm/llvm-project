@@ -4839,12 +4839,6 @@ the loop identifier metadata node directly:
    !1 = !{!1} ; an identifier for the inner loop
    !2 = !{!2} ; an identifier for the outer loop
 
-'``llvm.bitsets``'
-^^^^^^^^^^^^^^^^^^
-
-The ``llvm.bitsets`` global metadata is used to implement
-:doc:`bitsets <BitSets>`.
-
 '``invariant.group``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -12274,9 +12268,9 @@ sufficient overall improvement in code quality. For this reason,
 that the optimizer can otherwise deduce or facts that are of little use to the
 optimizer.
 
-.. _bitset.test:
+.. _type.test:
 
-'``llvm.bitset.test``' Intrinsic
+'``llvm.type.test``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 Syntax:
@@ -12284,20 +12278,74 @@ Syntax:
 
 ::
 
-      declare i1 @llvm.bitset.test(i8* %ptr, metadata %bitset) nounwind readnone
+      declare i1 @llvm.type.test(i8* %ptr, metadata %type) nounwind readnone
 
 
 Arguments:
 """"""""""
 
 The first argument is a pointer to be tested. The second argument is a
-metadata object representing an identifier for a :doc:`bitset <BitSets>`.
+metadata object representing a :doc:`type identifier <TypeMetadata>`.
 
 Overview:
 """""""""
 
-The ``llvm.bitset.test`` intrinsic tests whether the given pointer is a
-member of the given bitset.
+The ``llvm.type.test`` intrinsic tests whether the given pointer is associated
+with the given type identifier.
+
+'``llvm.type.checked.load``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare {i8*, i1} @llvm.type.checked.load(i8* %ptr, i32 %offset, metadata %type) argmemonly nounwind readonly
+
+
+Arguments:
+""""""""""
+
+The first argument is a pointer from which to load a function pointer. The
+second argument is the byte offset from which to load the function pointer. The
+third argument is a metadata object representing a :doc:`type identifier
+<TypeMetadata>`.
+
+Overview:
+"""""""""
+
+The ``llvm.type.checked.load`` intrinsic safely loads a function pointer from a
+virtual table pointer using type metadata. This intrinsic is used to implement
+control flow integrity in conjunction with virtual call optimization. The
+virtual call optimization pass will optimize away ``llvm.type.checked.load``
+intrinsics associated with devirtualized calls, thereby removing the type
+check in cases where it is not needed to enforce the control flow integrity
+constraint.
+
+If the given pointer is associated with a type metadata identifier, this
+function returns true as the second element of its return value. (Note that
+the function may also return true if the given pointer is not associated
+with a type metadata identifier.) If the function's return value's second
+element is true, the following rules apply to the first element:
+
+- If the given pointer is associated with the given type metadata identifier,
+  it is the function pointer loaded from the given byte offset from the given
+  pointer.
+
+- If the given pointer is not associated with the given type metadata
+  identifier, it is one of the following (the choice of which is unspecified):
+
+  1. The function pointer that would have been loaded from an arbitrarily chosen
+     (through an unspecified mechanism) pointer associated with the type
+     metadata.
+
+  2. If the function has a non-void return type, a pointer to a function that
+     returns an unspecified value without causing side effects.
+
+If the function's return value's second element is false, the value of the
+first element is undefined.
+
 
 '``llvm.donothing``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

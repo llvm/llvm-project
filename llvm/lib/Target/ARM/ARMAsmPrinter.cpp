@@ -562,7 +562,8 @@ void ARMAsmPrinter::EmitEndOfAsmFile(Module &M) {
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);
 
   if (OptimizationGoals > 0 &&
-      (Subtarget->isTargetAEABI() || Subtarget->isTargetGNUAEABI()))
+      (Subtarget->isTargetAEABI() || Subtarget->isTargetGNUAEABI() ||
+       Subtarget->isTargetMuslAEABI()))
     ATS.emitAttribute(ARMBuildAttrs::ABI_optimization_goals, OptimizationGoals);
   OptimizationGoals = -1;
 

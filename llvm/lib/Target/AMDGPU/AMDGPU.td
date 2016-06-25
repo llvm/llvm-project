@@ -329,6 +329,13 @@ def FeatureDebuggerReserveRegs : SubtargetFeature<
   "Reserve registers for debugger usage"
 >;
 
+def FeatureDebuggerEmitPrologue : SubtargetFeature<
+  "amdgpu-debugger-emit-prologue",
+  "DebuggerEmitPrologue",
+  "true",
+  "Emit debugger prologue"
+>;
+
 //===----------------------------------------------------------------------===//
 
 def AMDGPUInstrInfo : InstrInfo {

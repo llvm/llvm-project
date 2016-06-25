@@ -1369,7 +1369,6 @@ void GlobalObject::clearMetadata() {
   setHasMetadataHashEntry(false);
 }
 
-
 void GlobalObject::setMetadata(unsigned KindID, MDNode *N) {
   eraseMetadata(KindID);
   if (N)
@@ -1391,6 +1390,34 @@ MDNode *GlobalObject::getMetadata(unsigned KindID) const {
 
 MDNode *GlobalObject::getMetadata(StringRef Kind) const {
   return getMetadata(getContext().getMDKindID(Kind));
+}
+
+void GlobalObject::copyMetadata(const GlobalObject *Other, unsigned Offset) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MDs;
+  Other->getAllMetadata(MDs);
+  for (auto &MD : MDs) {
+    // We need to adjust the type metadata offset.
+    if (Offset != 0 && MD.first == LLVMContext::MD_type) {
+      auto *OffsetConst = cast<ConstantInt>(
+          cast<ConstantAsMetadata>(MD.second->getOperand(0))->getValue());
+      Metadata *TypeId = MD.second->getOperand(1);
+      auto *NewOffsetMD = ConstantAsMetadata::get(ConstantInt::get(
+          OffsetConst->getType(), OffsetConst->getValue() + Offset));
+      addMetadata(LLVMContext::MD_type,
+                  *MDNode::get(getContext(), {NewOffsetMD, TypeId}));
+      continue;
+    }
+    addMetadata(MD.first, *MD.second);
+  }
+}
+
+void GlobalObject::addTypeMetadata(unsigned Offset, Metadata *TypeID) {
+  addMetadata(
+      LLVMContext::MD_type,
+      *MDTuple::get(getContext(),
+                    {llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
+                         Type::getInt64Ty(getContext()), Offset)),
+                     TypeID}));
 }
 
 void Function::setSubprogram(DISubprogram *SP) {

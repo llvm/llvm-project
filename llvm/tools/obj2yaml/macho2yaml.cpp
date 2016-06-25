@@ -473,23 +473,52 @@ Error macho2yaml(raw_ostream &Out, const object::MachOObjectFile &Obj) {
 }
 
 Error macho2yaml(raw_ostream &Out, const object::MachOUniversalBinary &Obj) {
-  return make_error<Obj2YamlError>(obj2yaml_error::not_implemented);
+  MachOYAML::MachFile YAMLFile;
+  YAMLFile.isFat = true;
+  MachOYAML::UniversalBinary &YAML = YAMLFile.FatFile;
+  YAML.Header.magic = Obj.getMagic();
+  YAML.Header.nfat_arch = Obj.getNumberOfObjects();
+
+  for (auto Slice : Obj.objects()) {
+    MachOYAML::FatArch arch;
+    arch.cputype = Slice.getCPUType();
+    arch.cpusubtype = Slice.getCPUSubType();
+    arch.offset = Slice.getOffset();
+    arch.size = Slice.getSize();
+    arch.align = Slice.getAlign();
+    arch.reserved = Slice.getReserved();
+    YAML.FatArchs.push_back(arch);
+
+    auto SliceObj = Slice.getAsObjectFile();
+    if (!SliceObj)
+      return SliceObj.takeError();
+
+    MachODumper Dumper(*SliceObj.get());
+    Expected<std::unique_ptr<MachOYAML::Object>> YAMLObj = Dumper.dump();
+    if (!YAMLObj)
+      return YAMLObj.takeError();
+    YAML.Slices.push_back(*YAMLObj.get());
+  }
+
+  yaml::Output Yout(Out);
+  Yout << YAML;
+  return Error::success();
 }
 
-std::error_code macho2yaml(raw_ostream &Out, const object::ObjectFile &Obj) {
-  if (const auto *MachOObj = dyn_cast<object::MachOUniversalBinary>(&Obj)) {
+std::error_code macho2yaml(raw_ostream &Out, const object::Binary &Binary) {
+  if (const auto *MachOObj = dyn_cast<object::MachOUniversalBinary>(&Binary)) {
     if (auto Err = macho2yaml(Out, *MachOObj)) {
       return errorToErrorCode(std::move(Err));
     }
     return obj2yaml_error::success;
   }
 
-  if (const auto *MachOObj = dyn_cast<object::MachOObjectFile>(&Obj)) {
+  if (const auto *MachOObj = dyn_cast<object::MachOObjectFile>(&Binary)) {
     if (auto Err = macho2yaml(Out, *MachOObj)) {
       return errorToErrorCode(std::move(Err));
     }
     return obj2yaml_error::success;
   }
-
+  
   return obj2yaml_error::unsupported_obj_file_format;
 }

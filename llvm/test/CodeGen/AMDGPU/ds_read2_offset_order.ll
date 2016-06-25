@@ -8,7 +8,6 @@
 
 ; SI-LABEL: {{^}}offset_order:
 
-; SI: ds_read2st64_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:4{{$}}
 ; SI: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:2 offset1:3
 ; SI: ds_read2_b32 v[{{[0-9]+}}:{{[0-9]+}}], v{{[0-9]+}} offset0:14 offset1:12
 ; SI: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:44

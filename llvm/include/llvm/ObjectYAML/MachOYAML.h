@@ -109,6 +109,32 @@ struct Object {
   LinkEditData LinkEdit;
 };
 
+struct FatHeader {
+  llvm::yaml::Hex32 magic;
+  uint32_t nfat_arch;
+};
+
+struct FatArch {
+  llvm::yaml::Hex32 cputype;
+  llvm::yaml::Hex32 cpusubtype;
+  llvm::yaml::Hex64 offset;
+  uint64_t size;
+  uint32_t align;
+  llvm::yaml::Hex32 reserved;
+};
+
+struct UniversalBinary {
+  FatHeader Header;
+  std::vector<FatArch> FatArchs;
+  std::vector<Object> Slices;
+};
+
+struct MachFile {
+  bool isFat;
+  UniversalBinary FatFile;
+  Object ThinFile;
+};
+
 } // namespace llvm::MachOYAML
 } // namespace llvm
 
@@ -122,6 +148,8 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::BindOpcode)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::ExportEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::NListEntry)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::Object)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::MachOYAML::FatArch)
 
 namespace llvm {
 namespace yaml {
@@ -132,6 +160,22 @@ template <> struct MappingTraits<MachOYAML::FileHeader> {
 
 template <> struct MappingTraits<MachOYAML::Object> {
   static void mapping(IO &IO, MachOYAML::Object &Object);
+};
+
+template <> struct MappingTraits<MachOYAML::FatHeader> {
+  static void mapping(IO &IO, MachOYAML::FatHeader &FatHeader);
+};
+
+template <> struct MappingTraits<MachOYAML::FatArch> {
+  static void mapping(IO &IO, MachOYAML::FatArch &FatArch);
+};
+
+template <> struct MappingTraits<MachOYAML::UniversalBinary> {
+  static void mapping(IO &IO, MachOYAML::UniversalBinary &UniversalBinary);
+};
+
+template <> struct MappingTraits<MachOYAML::MachFile> {
+  static void mapping(IO &IO, MachOYAML::MachFile &MachFile);
 };
 
 template <> struct MappingTraits<MachOYAML::LoadCommand> {

@@ -309,10 +309,10 @@ def : InstRW<[M1WriteFVAR15], (instregex "FSQRTv.f32")>;
 def : InstRW<[M1WriteFVAR23], (instregex "FSQRTv2f64")>;
 def : InstRW<[M1WriteNMISC1], (instregex "^F(MAX|MIN)(NM)?V?v")>;
 def : InstRW<[M1WriteNMISC2], (instregex "^F(MAX|MIN)(NM)?Pv")>;
-def : InstRW<[M1WriteNEONJ],  (instregex "^FMULX?v.+_indexed")>;
-def : InstRW<[M1WriteFMAC4],  (instregex "^FMULX?v")>;
-def : InstRW<[M1WriteNEONK],  (instregex "^FML[AS]v.+_indexed")>;
-def : InstRW<[M1WriteFMAC5],  (instregex "^FML[AS]v")>;
+def : InstRW<[M1WriteNEONJ],  (instregex "^FMULX?v.i")>;
+def : InstRW<[M1WriteFMAC4],  (instregex "^FMULX?v.f")>;
+def : InstRW<[M1WriteNEONK],  (instregex "^FML[AS]v.i")>;
+def : InstRW<[M1WriteFMAC5],  (instregex "^FML[AS]v.f")>;
 def : InstRW<[M1WriteFCVT3],  (instregex "^FRINT[AIMNPXZ]v")>;
 
 // ASIMD miscellaneous instructions.

@@ -663,9 +663,14 @@ def int_masked_scatter: Intrinsic<[],
                                    LLVMVectorSameWidth<0, llvm_i1_ty>],
                                   [IntrArgMemOnly]>;
 
-// Intrinsics to support bit sets.
-def int_bitset_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
-                                [IntrNoMem]>;
+// Test whether a pointer is associated with a type metadata identifier.
+def int_type_test : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_metadata_ty],
+                              [IntrNoMem]>;
+
+// Safely loads a function pointer from a virtual table pointer using type metadata.
+def int_type_checked_load : Intrinsic<[llvm_ptr_ty, llvm_i1_ty],
+                                      [llvm_ptr_ty, llvm_i32_ty, llvm_metadata_ty],
+                                      [IntrNoMem]>;
 
 def int_load_relative: Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_anyint_ty],
                                  [IntrReadMem, IntrArgMemOnly]>;

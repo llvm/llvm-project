@@ -64,6 +64,10 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
 
   // Number of reserved VGPRs for debugger usage.
   unsigned DebuggerReservedVGPRCount;
+  // Stack object indices for work group IDs.
+  int DebuggerWorkGroupIDStackObjectIndices[3];
+  // Stack object indices for work item IDs.
+  int DebuggerWorkItemIDStackObjectIndices[3];
 
 public:
   // FIXME: Make private
@@ -332,6 +336,62 @@ public:
   /// \returns Number of reserved VGPRs for debugger usage.
   unsigned getDebuggerReservedVGPRCount() const {
     return DebuggerReservedVGPRCount;
+  }
+
+  /// \returns Stack object index for \p Dim's work group ID.
+  int getDebuggerWorkGroupIDStackObjectIndex(unsigned Dim) const {
+    assert(Dim < 3);
+    return DebuggerWorkGroupIDStackObjectIndices[Dim];
+  }
+
+  /// \brief Sets stack object index for \p Dim's work group ID to \p ObjectIdx.
+  void setDebuggerWorkGroupIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
+    assert(Dim < 3);
+    DebuggerWorkGroupIDStackObjectIndices[Dim] = ObjectIdx;
+  }
+
+  /// \returns Stack object index for \p Dim's work item ID.
+  int getDebuggerWorkItemIDStackObjectIndex(unsigned Dim) const {
+    assert(Dim < 3);
+    return DebuggerWorkItemIDStackObjectIndices[Dim];
+  }
+
+  /// \brief Sets stack object index for \p Dim's work item ID to \p ObjectIdx.
+  void setDebuggerWorkItemIDStackObjectIndex(unsigned Dim, int ObjectIdx) {
+    assert(Dim < 3);
+    DebuggerWorkItemIDStackObjectIndices[Dim] = ObjectIdx;
+  }
+
+  /// \returns SGPR used for \p Dim's work group ID.
+  unsigned getWorkGroupIDSGPR(unsigned Dim) const {
+    switch (Dim) {
+    case 0:
+      assert(hasWorkGroupIDX());
+      return WorkGroupIDXSystemSGPR;
+    case 1:
+      assert(hasWorkGroupIDY());
+      return WorkGroupIDYSystemSGPR;
+    case 2:
+      assert(hasWorkGroupIDZ());
+      return WorkGroupIDZSystemSGPR;
+    }
+    llvm_unreachable("unexpected dimension");
+  }
+
+  /// \returns VGPR used for \p Dim' work item ID.
+  unsigned getWorkItemIDVGPR(unsigned Dim) const {
+    switch (Dim) {
+    case 0:
+      assert(hasWorkItemIDX());
+      return AMDGPU::VGPR0;
+    case 1:
+      assert(hasWorkItemIDY());
+      return AMDGPU::VGPR1;
+    case 2:
+      assert(hasWorkItemIDZ());
+      return AMDGPU::VGPR2;
+    }
+    llvm_unreachable("unexpected dimension");
   }
 
   unsigned getMaximumWorkGroupSize(const MachineFunction &MF) const;

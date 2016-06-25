@@ -195,9 +195,14 @@ const char *LLVMGetSymbolName(LLVMSymbolIteratorRef SI) {
 }
 
 uint64_t LLVMGetSymbolAddress(LLVMSymbolIteratorRef SI) {
-  ErrorOr<uint64_t> Ret = (*unwrap(SI))->getAddress();
-  if (std::error_code EC = Ret.getError())
-    report_fatal_error(EC.message());
+  Expected<uint64_t> Ret = (*unwrap(SI))->getAddress();
+  if (!Ret) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    logAllUnhandledErrors(Ret.takeError(), OS, "");
+    OS.flush();
+    report_fatal_error(Buf);
+  }
   return *Ret;
 }
 

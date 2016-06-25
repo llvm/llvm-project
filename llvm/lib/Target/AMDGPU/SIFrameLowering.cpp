@@ -39,6 +39,12 @@ static ArrayRef<MCPhysReg> getAllSGPRs() {
 
 void SIFrameLowering::emitPrologue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
+  // Emit debugger prologue if "amdgpu-debugger-emit-prologue" attribute was
+  // specified.
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  if (ST.debuggerEmitPrologue())
+    emitDebuggerPrologue(MF, MBB);
+
   if (!MF.getFrameInfo()->hasStackObjects())
     return;
 
@@ -54,7 +60,6 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (hasOnlySGPRSpills(MFI, MF.getFrameInfo()))
     return;
 
-  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo *TRI = &TII->getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -87,6 +92,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
     // pointer. Because we only detect if flat instructions are used at all,
     // this will be used more often than necessary on VI.
 
+    // Debug location must be unknown since the first debug location is used to
+    // determine the end of the prologue.
     DebugLoc DL;
 
     unsigned FlatScratchInitReg
@@ -287,5 +294,46 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
       AMDGPU::SGPR_32RegClass.getSize(),
       AMDGPU::SGPR_32RegClass.getAlignment());
     RS->addScavengingFrameIndex(ScavengeFI);
+  }
+}
+
+void SIFrameLowering::emitDebuggerPrologue(MachineFunction &MF,
+                                           MachineBasicBlock &MBB) const {
+  const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  const SIRegisterInfo *TRI = &TII->getRegisterInfo();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  MachineBasicBlock::iterator I = MBB.begin();
+  DebugLoc DL;
+
+  // For each dimension:
+  for (unsigned i = 0; i < 3; ++i) {
+    // Get work group ID SGPR, and make it live-in again.
+    unsigned WorkGroupIDSGPR = MFI->getWorkGroupIDSGPR(i);
+    MF.getRegInfo().addLiveIn(WorkGroupIDSGPR);
+    MBB.addLiveIn(WorkGroupIDSGPR);
+
+    // Since SGPRs are spilled into VGPRs, copy work group ID SGPR to VGPR in
+    // order to spill it to scratch.
+    unsigned WorkGroupIDVGPR =
+      MF.getRegInfo().createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(MBB, I, DL, TII->get(AMDGPU::V_MOV_B32_e32), WorkGroupIDVGPR)
+      .addReg(WorkGroupIDSGPR);
+
+    // Spill work group ID.
+    int WorkGroupIDObjectIdx = MFI->getDebuggerWorkGroupIDStackObjectIndex(i);
+    TII->storeRegToStackSlot(MBB, I, WorkGroupIDVGPR, false,
+      WorkGroupIDObjectIdx, &AMDGPU::VGPR_32RegClass, TRI);
+
+    // Get work item ID VGPR, and make it live-in again.
+    unsigned WorkItemIDVGPR = MFI->getWorkItemIDVGPR(i);
+    MF.getRegInfo().addLiveIn(WorkItemIDVGPR);
+    MBB.addLiveIn(WorkItemIDVGPR);
+
+    // Spill work item ID.
+    int WorkItemIDObjectIdx = MFI->getDebuggerWorkItemIDStackObjectIndex(i);
+    TII->storeRegToStackSlot(MBB, I, WorkItemIDVGPR, false,
+      WorkItemIDObjectIdx, &AMDGPU::VGPR_32RegClass, TRI);
   }
 }

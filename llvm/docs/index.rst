@@ -261,7 +261,7 @@ For API clients and LLVM developers.
    CoverageMappingFormat
    Statepoints
    MergeFunctions
-   BitSets
+   TypeMetadata
    FaultMaps
    MIRLangRef
 
