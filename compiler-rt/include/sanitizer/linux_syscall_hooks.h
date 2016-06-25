@@ -1835,6 +1835,17 @@
   __sanitizer_syscall_pre_impl_vfork()
 #define __sanitizer_syscall_post_vfork(res) \
   __sanitizer_syscall_post_impl_vfork(res)
+#define __sanitizer_syscall_pre_sigaction(signum, act, oldact)                 \
+  __sanitizer_syscall_pre_impl_sigaction((long)signum, (long)act, (long)oldact)
+#define __sanitizer_syscall_post_sigaction(res, signum, act, oldact)           \
+  __sanitizer_syscall_post_impl_sigaction(res, (long)signum, (long)act,        \
+                                          (long)oldact)
+#define __sanitizer_syscall_pre_rt_sigaction(signum, act, oldact, sz)          \
+  __sanitizer_syscall_pre_impl_rt_sigaction((long)signum, (long)act,           \
+                                            (long)oldact, (long)sz)
+#define __sanitizer_syscall_post_rt_sigaction(res, signum, act, oldact, sz)    \
+  __sanitizer_syscall_post_impl_rt_sigaction(res, (long)signum, (long)act,     \
+                                             (long)oldact, (long)sz)
 
 // And now a few syscalls we don't handle yet.
 #define __sanitizer_syscall_pre_afs_syscall(...)
@@ -1889,7 +1900,6 @@
 #define __sanitizer_syscall_pre_query_module(...)
 #define __sanitizer_syscall_pre_readahead(...)
 #define __sanitizer_syscall_pre_readdir(...)
-#define __sanitizer_syscall_pre_rt_sigaction(...)
 #define __sanitizer_syscall_pre_rt_sigreturn(...)
 #define __sanitizer_syscall_pre_rt_sigsuspend(...)
 #define __sanitizer_syscall_pre_security(...)
@@ -1903,7 +1913,6 @@
 #define __sanitizer_syscall_pre_setreuid32(...)
 #define __sanitizer_syscall_pre_set_thread_area(...)
 #define __sanitizer_syscall_pre_setuid32(...)
-#define __sanitizer_syscall_pre_sigaction(...)
 #define __sanitizer_syscall_pre_sigaltstack(...)
 #define __sanitizer_syscall_pre_sigreturn(...)
 #define __sanitizer_syscall_pre_sigsuspend(...)
@@ -1971,7 +1980,6 @@
 #define __sanitizer_syscall_post_query_module(res, ...)
 #define __sanitizer_syscall_post_readahead(res, ...)
 #define __sanitizer_syscall_post_readdir(res, ...)
-#define __sanitizer_syscall_post_rt_sigaction(res, ...)
 #define __sanitizer_syscall_post_rt_sigreturn(res, ...)
 #define __sanitizer_syscall_post_rt_sigsuspend(res, ...)
 #define __sanitizer_syscall_post_security(res, ...)
@@ -1985,7 +1993,6 @@
 #define __sanitizer_syscall_post_setreuid32(res, ...)
 #define __sanitizer_syscall_post_set_thread_area(res, ...)
 #define __sanitizer_syscall_post_setuid32(res, ...)
-#define __sanitizer_syscall_post_sigaction(res, ...)
 #define __sanitizer_syscall_post_sigaltstack(res, ...)
 #define __sanitizer_syscall_post_sigreturn(res, ...)
 #define __sanitizer_syscall_post_sigsuspend(res, ...)
@@ -3062,7 +3069,13 @@ void __sanitizer_syscall_pre_impl_fork();
 void __sanitizer_syscall_post_impl_fork(long res);
 void __sanitizer_syscall_pre_impl_vfork();
 void __sanitizer_syscall_post_impl_vfork(long res);
-
+void __sanitizer_syscall_pre_impl_sigaction(long signum, long act, long oldact);
+void __sanitizer_syscall_post_impl_sigaction(long res, long signum, long act,
+                                             long oldact);
+void __sanitizer_syscall_pre_impl_rt_sigaction(long signum, long act,
+                                               long oldact, long sz);
+void __sanitizer_syscall_post_impl_rt_sigaction(long res, long signum, long act,
+                                                long oldact, long sz);
 #ifdef __cplusplus
 }  // extern "C"
 #endif
