@@ -5667,6 +5667,35 @@ INTERCEPTOR(SSIZE_T, sendto, int fd, void *buf, SIZE_T len, int flags,
 #define INIT_SEND_SENDTO
 #endif
 
+#if SANITIZER_INTERCEPT_EVENTFD_READ_WRITE
+INTERCEPTOR(int, eventfd_read, int fd, u64 *value) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, eventfd_read, fd, value);
+  COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+  int res = REAL(eventfd_read)(fd, value);
+  if (res == 0) {
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, value, sizeof(*value));
+    if (fd >= 0) COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd);
+  }
+  return res;
+}
+INTERCEPTOR(int, eventfd_write, int fd, u64 value) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, eventfd_write, fd, value);
+  if (fd >= 0) {
+    COMMON_INTERCEPTOR_FD_ACCESS(ctx, fd);
+    COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd);
+  }
+  int res = REAL(eventfd_write)(fd, value);
+  return res;
+}
+#define INIT_EVENTFD_READ_WRITE            \
+  COMMON_INTERCEPT_FUNCTION(eventfd_read); \
+  COMMON_INTERCEPT_FUNCTION(eventfd_write)
+#else
+#define INIT_EVENTFD_READ_WRITE
+#endif
+
 #if SANITIZER_INTERCEPT_STAT
 INTERCEPTOR(int, stat, const char *path, void *buf) {
   void *ctx;
@@ -5937,6 +5966,7 @@ static void InitializeCommonInterceptors() {
   INIT_RECV_RECVFROM;
   INIT_SEND_SENDTO;
   INIT_STAT;
+  INIT_EVENTFD_READ_WRITE;
   INIT___XSTAT;
   INIT___XSTAT64;
   INIT___LXSTAT;

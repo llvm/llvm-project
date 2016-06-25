@@ -1,6 +1,7 @@
 // RUN: %clang_profgen -o %t -O3 %s
 // RUN: env LLVM_PROFILE_FILE=%h.%t-%h.profraw_%h %run %t
-// RUN: llvm-profdata merge -o %t.profdata `uname -n`.%t-`uname -n`.profraw_`uname -n`
+// RUN: %run uname -n > %t.n
+// RUN: llvm-profdata merge -o %t.profdata `cat %t.n`.%t-`cat %t.n`.profraw_`cat %t.n`
 // RUN: %clang_profuse=%t.profdata -o - -S -emit-llvm %s | FileCheck %s
 // REQUIRES: shell
 

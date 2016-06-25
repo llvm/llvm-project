@@ -325,7 +325,7 @@ ABISysV_i386::GetArgumentValues (Thread &thread,
         if (compiler_type)
         {
             bool is_signed;
-            if (compiler_type.IsIntegerType (is_signed))
+            if (compiler_type.IsIntegerOrEnumerationType (is_signed))
             {
                 ReadIntegerArgument(value->GetScalar(),
                                     compiler_type.GetBitSize(&thread),

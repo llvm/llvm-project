@@ -517,7 +517,11 @@ public:
     constexpr value_type const& value() const
     {
         if (!this->__engaged_)
+#ifndef _LIBCPP_NO_EXCEPTIONS
             throw bad_optional_access();
+#else
+            assert(!"bad optional access");
+#endif
         return this->__val_;
     }
 
@@ -525,7 +529,11 @@ public:
     value_type& value()
     {
         if (!this->__engaged_)
+#ifndef _LIBCPP_NO_EXCEPTIONS
             throw bad_optional_access();
+#else
+            assert(!"bad optional access");
+#endif
         return this->__val_;
     }
 

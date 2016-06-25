@@ -396,7 +396,7 @@ ABISysV_s390x::GetArgumentValues(Thread &thread, ValueList &values) const
             return false;
         bool is_signed;
 
-        if (compiler_type.IsIntegerType(is_signed))
+        if (compiler_type.IsIntegerOrEnumerationType(is_signed))
         {
             ReadIntegerArgument(value->GetScalar(), compiler_type.GetBitSize(&thread), is_signed, thread,
                                 argument_register_ids, current_argument_register, current_stack_argument);
@@ -437,7 +437,7 @@ ABISysV_s390x::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueObj
     RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
     bool set_it_simple = false;
-    if (compiler_type.IsIntegerType(is_signed) || compiler_type.IsPointerType())
+    if (compiler_type.IsIntegerOrEnumerationType(is_signed) || compiler_type.IsPointerType())
     {
         const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
 

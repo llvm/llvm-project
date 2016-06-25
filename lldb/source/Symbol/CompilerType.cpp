@@ -196,6 +196,20 @@ CompilerType::IsIntegerType (bool &is_signed) const
 }
 
 bool
+CompilerType::IsEnumerationType (bool &is_signed) const
+{
+    if (IsValid())
+        return m_type_system->IsEnumerationType(m_type, is_signed);
+    return false;
+}
+
+bool
+CompilerType::IsIntegerOrEnumerationType (bool &is_signed) const
+{
+    return IsIntegerType(is_signed) || IsEnumerationType(is_signed);
+}
+
+bool
 CompilerType::IsPointerType (CompilerType *pointee_type) const
 {
     if (IsValid())

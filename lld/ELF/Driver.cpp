@@ -23,6 +23,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cstdlib>
 #include <utility>
 
 using namespace llvm;
@@ -234,6 +235,12 @@ static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
   return V;
 }
 
+static const char *getReproduceOption(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_reproduce))
+    return Args.getLastArg(OPT_reproduce)->getValue();
+  return getenv("LLD_REPRODUCE");
+}
+
 static bool hasZOption(opt::InputArgList &Args, StringRef Key) {
   for (auto *Arg : Args.filtered(OPT_z))
     if (Key == Arg->getValue())
@@ -253,10 +260,10 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
     return;
   }
 
-  if (auto *Arg = Args.getLastArg(OPT_reproduce)) {
+  if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
-    Cpio.reset(CpioFile::create(Arg->getValue()));
+    Cpio.reset(CpioFile::create(Path));
     if (Cpio) {
       Cpio->append("response.txt", createResponseFile(Args));
       Cpio->append("version.txt", getVersionString());

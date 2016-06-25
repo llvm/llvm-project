@@ -686,7 +686,7 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
 
                 uint32_t field_byte_offset = field_bit_offset/8;
 
-                if (field_compiler_type.IsIntegerType (is_signed)
+                if (field_compiler_type.IsIntegerOrEnumerationType (is_signed)
                     || field_compiler_type.IsPointerType ()
                     || field_compiler_type.IsFloatingPointType (count, is_complex))
                 {

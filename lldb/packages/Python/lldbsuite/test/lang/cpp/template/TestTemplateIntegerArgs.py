@@ -47,6 +47,7 @@ class TemplateIntegerArgsTestCase(TestBase):
         testpos = frame.FindVariable('testpos') 
         self.assertTrue(testpos.IsValid(), 'make sure we find a local variabble named "testpos"')
         self.assertTrue(testpos.GetType().GetName() == 'TestObj<1>')
+        
         expr_result = frame.EvaluateExpression("testpos.getArg()")
         self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "testpos.getArg()"');
         self.assertTrue(expr_result.GetValue() == "1", "testpos.getArg() == 1")
@@ -60,3 +61,23 @@ class TemplateIntegerArgsTestCase(TestBase):
         self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "testneg.getArg()"');
         self.assertTrue(expr_result.GetValue() == "-1", "testneg.getArg() == -1")
         self.assertTrue(expr_result.GetType().GetName() == "int", 'expr_result.GetType().GetName() == "int"')
+
+        # Make sure "member" can be displayed and also used in an expression correctly
+        member = frame.FindVariable('member') 
+        self.assertTrue(member.IsValid(), 'make sure we find a local variabble named "member"')
+        self.assertTrue(member.GetType().GetName() == 'EnumTemplate<EnumType::Member>')
+        
+        expr_result = frame.EvaluateExpression("member.getMember()")
+        self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "member.getMember()"');
+        self.assertTrue(expr_result.GetValue() == "123", "member.getMember() == 123")
+        self.assertTrue(expr_result.GetType().GetName() == "int", 'expr_result.GetType().GetName() == "int"')     
+
+        # Make sure "subclass" can be displayed and also used in an expression correctly
+        subclass = frame.FindVariable('subclass') 
+        self.assertTrue(subclass.IsValid(), 'make sure we find a local variabble named "subclass"')
+        self.assertTrue(subclass.GetType().GetName() == 'EnumTemplate<EnumType::Subclass>')
+        
+        expr_result = frame.EvaluateExpression("subclass.getMember()")
+        self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "subclass.getMember()"');
+        self.assertTrue(expr_result.GetValue() == "246", "subclass.getMember() == 246")
+        self.assertTrue(expr_result.GetType().GetName() == "int", 'expr_result.GetType().GetName() == "int"')     

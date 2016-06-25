@@ -150,6 +150,8 @@
 		263E949F13661AEA00E7D1CE /* UnwindAssembly-x86.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263E949D13661AE400E7D1CE /* UnwindAssembly-x86.cpp */; };
 		263FDE601A79A01500E68013 /* FormatEntity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263FDE5F1A79A01500E68013 /* FormatEntity.cpp */; };
 		2640E19F15DC78FD00F23B50 /* Property.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2640E19E15DC78FD00F23B50 /* Property.cpp */; };
+		264297571D1DF247003F2BF4 /* SBMemoryRegionInfoList.h in Headers */ = {isa = PBXBuildFile; fileRef = 264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		264297581D1DF250003F2BF4 /* SBMemoryRegionInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 264297531D1DF209003F2BF4 /* SBMemoryRegionInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2642FBAE13D003B400ED6808 /* CommunicationKDP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBA813D003B400ED6808 /* CommunicationKDP.cpp */; };
 		2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBAA13D003B400ED6808 /* ProcessKDP.cpp */; };
 		2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBAC13D003B400ED6808 /* ProcessKDPLog.cpp */; };
@@ -1461,6 +1463,10 @@
 		2640E19E15DC78FD00F23B50 /* Property.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Property.cpp; path = source/Interpreter/Property.cpp; sourceTree = "<group>"; };
 		26424E3C125986CB0016D82C /* ValueObjectConstResult.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectConstResult.cpp; path = source/Core/ValueObjectConstResult.cpp; sourceTree = "<group>"; };
 		26424E3E125986D30016D82C /* ValueObjectConstResult.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResult.h; path = include/lldb/Core/ValueObjectConstResult.h; sourceTree = "<group>"; };
+		264297531D1DF209003F2BF4 /* SBMemoryRegionInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBMemoryRegionInfo.h; path = include/lldb/API/SBMemoryRegionInfo.h; sourceTree = "<group>"; };
+		264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBMemoryRegionInfoList.h; path = include/lldb/API/SBMemoryRegionInfoList.h; sourceTree = "<group>"; };
+		264297591D1DF2AA003F2BF4 /* SBMemoryRegionInfo.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBMemoryRegionInfo.i; sourceTree = "<group>"; };
+		2642975A1D1DF2AA003F2BF4 /* SBMemoryRegionInfoList.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBMemoryRegionInfoList.i; sourceTree = "<group>"; };
 		2642FBA813D003B400ED6808 /* CommunicationKDP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CommunicationKDP.cpp; sourceTree = "<group>"; };
 		2642FBA913D003B400ED6808 /* CommunicationKDP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommunicationKDP.h; sourceTree = "<group>"; };
 		2642FBAA13D003B400ED6808 /* ProcessKDP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessKDP.cpp; sourceTree = "<group>"; };
@@ -3492,6 +3498,8 @@
 				2611FF03142D83060017FEA3 /* SBInstructionList.i */,
 				2611FF04142D83060017FEA3 /* SBLineEntry.i */,
 				2611FF05142D83060017FEA3 /* SBListener.i */,
+				264297591D1DF2AA003F2BF4 /* SBMemoryRegionInfo.i */,
+				2642975A1D1DF2AA003F2BF4 /* SBMemoryRegionInfoList.i */,
 				2611FF06142D83060017FEA3 /* SBModule.i */,
 				263C493B178B61CC0070F12D /* SBModuleSpec.i */,
 				262F12B8183546C900AEB384 /* SBPlatform.i */,
@@ -3602,7 +3610,9 @@
 				26DE20621161904200A093E2 /* SBLineEntry.cpp */,
 				9A9831021125FC5800A56CB0 /* SBListener.h */,
 				9A9831011125FC5800A56CB0 /* SBListener.cpp */,
+				264297531D1DF209003F2BF4 /* SBMemoryRegionInfo.h */,
 				23DCEA421D1C4C6900A602B4 /* SBMemoryRegionInfo.cpp */,
+				264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */,
 				23DCEA431D1C4C6900A602B4 /* SBMemoryRegionInfoList.cpp */,
 				26DE204E11618E9800A093E2 /* SBModule.h */,
 				26DE204C11618E7A00A093E2 /* SBModule.cpp */,
@@ -6000,8 +6010,10 @@
 				26680225115FD13D008E1FE4 /* SBFrame.h in Headers */,
 				26DE205311618FAC00A093E2 /* SBFunction.h in Headers */,
 				9A3576A8116E9AB700E8ED2F /* SBHostOS.h in Headers */,
+				264297571D1DF247003F2BF4 /* SBMemoryRegionInfoList.h in Headers */,
 				9AC7038E117674FB0086C050 /* SBInstruction.h in Headers */,
 				9AC70390117675270086C050 /* SBInstructionList.h in Headers */,
+				264297581D1DF250003F2BF4 /* SBMemoryRegionInfo.h in Headers */,
 				26DE205911618FE700A093E2 /* SBLineEntry.h in Headers */,
 				254FBB971A81B03100BD6378 /* SBLaunchInfo.h in Headers */,
 				AF0EBBED185941360059E52F /* SBQueueItem.h in Headers */,

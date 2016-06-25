@@ -322,7 +322,7 @@ ABISysV_mips::SetReturnValueObject(lldb::StackFrameSP &frame_sp, lldb::ValueObje
     RegisterContext *reg_ctx = thread->GetRegisterContext().get();
 
     bool set_it_simple = false;
-    if (compiler_type.IsIntegerType (is_signed) || compiler_type.IsPointerType())
+    if (compiler_type.IsIntegerOrEnumerationType (is_signed) || compiler_type.IsPointerType())
     {
         DataExtractor data;
         Error data_error;
@@ -414,7 +414,7 @@ ABISysV_mips::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_com
     // In MIPS register "r2" (v0) holds the integer function return values
     const RegisterInfo *r2_reg_info = reg_ctx->GetRegisterInfoByName("r2", 0);
     size_t bit_width = return_compiler_type.GetBitSize(&thread); 
-    if (return_compiler_type.IsIntegerType (is_signed))
+    if (return_compiler_type.IsIntegerOrEnumerationType (is_signed))
     {
         switch (bit_width)
         {

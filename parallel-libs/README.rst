@@ -82,8 +82,8 @@ Mailing List and Bugs
 ----------------------------------------------
 Two mailing lists will be set up for the project:
 
-1. parallel-libs-dev@lists.llvm.org for discussions among project developers, and
-2. parallel-libs-commits@lists.llvm.org for patches and commits to the project.
+1. parallel_libs-dev@lists.llvm.org for discussions among project developers, and
+2. parallel_libs-commits@lists.llvm.org for patches and commits to the project.
 
 Each subproject library will manage its own components in Bugzilla. So, for
 example, there can be several Bugzilla components for different parts of

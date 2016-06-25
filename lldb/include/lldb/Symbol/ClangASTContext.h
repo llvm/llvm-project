@@ -689,7 +689,10 @@ public:
     
     bool
     IsIntegerType (lldb::opaque_compiler_type_t type, bool &is_signed) override;
-    
+
+    bool
+    IsEnumerationType (lldb::opaque_compiler_type_t type, bool &is_signed) override;
+
     static bool
     IsObjCClassType (const CompilerType& type);
     

@@ -21,6 +21,7 @@ class TestImageListMultiArchitecture(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @no_debug_info_test
+    @skipIfRemote
     def test_image_list_shows_multiple_architectures(self):
         """Test that image list properly shows the correct architecture for a set of different architecture object files."""
         images = {

@@ -593,10 +593,10 @@ lldb_private::formatters::NSDictionary1SyntheticFrontEnd::GetChildAtIndex (size_
     
     Error error;
     
-    lldb::addr_t key_at_idx = process_sp->ReadPointerFromMemory(key_ptr, error);
+    lldb::addr_t value_at_idx = process_sp->ReadPointerFromMemory(key_ptr, error);
     if (error.Fail())
         return nullptr;
-    lldb::addr_t value_at_idx = process_sp->ReadPointerFromMemory(value_ptr, error);
+    lldb::addr_t key_at_idx = process_sp->ReadPointerFromMemory(value_ptr, error);
     if (error.Fail())
         return nullptr;
     
