@@ -42,6 +42,8 @@ private:
       FlatUsed(false),
       ReservedVGPRFirst(0),
       ReservedVGPRCount(0),
+      DebuggerWavefrontPrivateSegmentOffsetSGPR((uint16_t)-1),
+      DebuggerPrivateSegmentBufferSGPR((uint16_t)-1),
       VCCUsed(false),
       CodeLen(0) {}
 
@@ -74,6 +76,14 @@ private:
     uint16_t ReservedVGPRFirst;
     // The number of consecutive VGPRs reserved.
     uint16_t ReservedVGPRCount;
+
+    // Fixed SGPR number used to hold wave scratch offset for entire kernel
+    // execution, or uint16_t(-1) if the register is not used or not known.
+    uint16_t DebuggerWavefrontPrivateSegmentOffsetSGPR;
+    // Fixed SGPR number of the first 4 SGPRs used to hold scratch V# for entire
+    // kernel execution, or uint16_t(-1) if the register is not used or not
+    // known.
+    uint16_t DebuggerPrivateSegmentBufferSGPR;
 
     // Bonus information for debugging.
     bool VCCUsed;

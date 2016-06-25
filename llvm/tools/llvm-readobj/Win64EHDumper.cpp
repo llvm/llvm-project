@@ -148,9 +148,9 @@ static std::error_code resolveRelocation(const Dumper::Context &Ctx,
           Ctx.ResolveSymbol(Section, Offset, Symbol, Ctx.UserData))
     return EC;
 
-  ErrorOr<uint64_t> ResolvedAddressOrErr = Symbol.getAddress();
-  if (std::error_code EC = ResolvedAddressOrErr.getError())
-    return EC;
+  Expected<uint64_t> ResolvedAddressOrErr = Symbol.getAddress();
+  if (!ResolvedAddressOrErr)
+    return errorToErrorCode(ResolvedAddressOrErr.takeError());
   ResolvedAddress = *ResolvedAddressOrErr;
 
   Expected<section_iterator> SI = Symbol.getSection();

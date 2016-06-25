@@ -94,11 +94,6 @@ public:
   void SelectLoad(SDNode *N);
   void SelectBaseOffsetLoad(LoadSDNode *LD, SDLoc dl);
   void SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl);
-  void SelectIndexedLoadZeroExtend64(LoadSDNode *LD, unsigned Opcode,
-                                     const SDLoc &dl);
-  void SelectIndexedLoadSignExtend64(LoadSDNode *LD, unsigned Opcode,
-                                     const SDLoc &dl);
-  void SelectBaseOffsetStore(StoreSDNode *ST, SDLoc dl);
   void SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl);
   void SelectStore(SDNode *N);
   void SelectSHL(SDNode *N);
@@ -241,128 +236,11 @@ static bool doesIntrinsicReturnPredicate(unsigned ID) {
   }
 }
 
-void HexagonDAGToDAGISel::SelectIndexedLoadSignExtend64(LoadSDNode *LD,
-                                                        unsigned Opcode,
-                                                        const SDLoc &dl) {
-  SDValue Chain = LD->getChain();
-  EVT LoadedVT = LD->getMemoryVT();
-  SDValue Base = LD->getBasePtr();
-  SDValue Offset = LD->getOffset();
-  SDNode *OffsetNode = Offset.getNode();
-  int32_t Val = cast<ConstantSDNode>(OffsetNode)->getSExtValue();
-
-  if (HII->isValidAutoIncImm(LoadedVT, Val)) {
-    SDValue TargetConst = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-    SDNode *Result_1 = CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::i32,
-                                              MVT::Other, Base, TargetConst,
-                                              Chain);
-    SDNode *Result_2 = CurDAG->getMachineNode(Hexagon::A2_sxtw, dl, MVT::i64,
-                                              SDValue(Result_1, 0));
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = LD->getMemOperand();
-    cast<MachineSDNode>(Result_1)->setMemRefs(MemOp, MemOp + 1);
-    const SDValue Froms[] = { SDValue(LD, 0),
-                              SDValue(LD, 1),
-                              SDValue(LD, 2) };
-    const SDValue Tos[]   = { SDValue(Result_2, 0),
-                              SDValue(Result_1, 1),
-                              SDValue(Result_1, 2) };
-    ReplaceUses(Froms, Tos, 3);
-    CurDAG->RemoveDeadNode(LD);
-    return;
-  }
-
-  SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
-  SDValue TargetConstVal = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-  SDNode *Result_1 = CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::Other,
-                                            Base, TargetConst0, Chain);
-  SDNode *Result_2 = CurDAG->getMachineNode(Hexagon::A2_sxtw, dl, MVT::i64,
-                                            SDValue(Result_1, 0));
-  SDNode* Result_3 = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
-                                            Base, TargetConstVal,
-                                            SDValue(Result_1, 1));
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = LD->getMemOperand();
-  cast<MachineSDNode>(Result_1)->setMemRefs(MemOp, MemOp + 1);
-  const SDValue Froms[] = { SDValue(LD, 0),
-                            SDValue(LD, 1),
-                            SDValue(LD, 2) };
-  const SDValue Tos[]   = { SDValue(Result_2, 0),
-                            SDValue(Result_3, 0),
-                            SDValue(Result_1, 1) };
-  ReplaceUses(Froms, Tos, 3);
-  CurDAG->RemoveDeadNode(LD);
-}
-
-void HexagonDAGToDAGISel::SelectIndexedLoadZeroExtend64(LoadSDNode *LD,
-                                                        unsigned Opcode,
-                                                        const SDLoc &dl) {
-  SDValue Chain = LD->getChain();
-  EVT LoadedVT = LD->getMemoryVT();
-  SDValue Base = LD->getBasePtr();
-  SDValue Offset = LD->getOffset();
-  SDNode *OffsetNode = Offset.getNode();
-  int32_t Val = cast<ConstantSDNode>(OffsetNode)->getSExtValue();
-
-  if (HII->isValidAutoIncImm(LoadedVT, Val)) {
-    SDValue TargetConstVal = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-    SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
-    SDNode *Result_1 = CurDAG->getMachineNode(Opcode, dl, MVT::i32,
-                                              MVT::i32, MVT::Other, Base,
-                                              TargetConstVal, Chain);
-    SDNode *Result_2 = CurDAG->getMachineNode(Hexagon::A4_combineir, dl,
-                                              MVT::i64, MVT::Other,
-                                              TargetConst0,
-                                              SDValue(Result_1,0));
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = LD->getMemOperand();
-    cast<MachineSDNode>(Result_1)->setMemRefs(MemOp, MemOp + 1);
-    const SDValue Froms[] = { SDValue(LD, 0),
-                              SDValue(LD, 1),
-                              SDValue(LD, 2) };
-    const SDValue Tos[]   = { SDValue(Result_2, 0),
-                              SDValue(Result_1, 1),
-                              SDValue(Result_1, 2) };
-    ReplaceUses(Froms, Tos, 3);
-    CurDAG->RemoveDeadNode(LD);
-    return;
-  }
-
-  // Generate an indirect load.
-  SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
-  SDValue TargetConstVal = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-  SDNode *Result_1 = CurDAG->getMachineNode(Opcode, dl, MVT::i32,
-                                            MVT::Other, Base, TargetConst0,
-                                            Chain);
-  SDNode *Result_2 = CurDAG->getMachineNode(Hexagon::A4_combineir, dl,
-                                            MVT::i64, MVT::Other,
-                                            TargetConst0,
-                                            SDValue(Result_1,0));
-  // Add offset to base.
-  SDNode* Result_3 = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
-                                            Base, TargetConstVal,
-                                            SDValue(Result_1, 1));
-  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-  MemOp[0] = LD->getMemOperand();
-  cast<MachineSDNode>(Result_1)->setMemRefs(MemOp, MemOp + 1);
-  const SDValue Froms[] = { SDValue(LD, 0),
-                            SDValue(LD, 1),
-                            SDValue(LD, 2) };
-  const SDValue Tos[]   = { SDValue(Result_2, 0), // Load value.
-                            SDValue(Result_3, 0), // New address.
-                            SDValue(Result_1, 1) };
-  ReplaceUses(Froms, Tos, 3);
-  CurDAG->RemoveDeadNode(LD);
-  return;
-}
-
 void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   SDValue Chain = LD->getChain();
   SDValue Base = LD->getBasePtr();
   SDValue Offset = LD->getOffset();
-  SDNode *OffsetNode = Offset.getNode();
-  // Get the constant value.
-  int32_t Val = cast<ConstantSDNode>(OffsetNode)->getSExtValue();
+  int32_t Inc = cast<ConstantSDNode>(Offset.getNode())->getSExtValue();
   EVT LoadedVT = LD->getMemoryVT();
   unsigned Opcode = 0;
 
@@ -370,119 +248,110 @@ void HexagonDAGToDAGISel::SelectIndexedLoad(LoadSDNode *LD, const SDLoc &dl) {
   // loads.
   ISD::LoadExtType ExtType = LD->getExtensionType();
   bool IsZeroExt = (ExtType == ISD::ZEXTLOAD || ExtType == ISD::EXTLOAD);
-  bool HasVecOffset = false;
+  bool IsValidInc = HII->isValidAutoIncImm(LoadedVT, Inc);
 
-  // Figure out the opcode.
-  if (LoadedVT == MVT::i64) {
-    if (HII->isValidAutoIncImm(LoadedVT, Val))
-      Opcode = Hexagon::L2_loadrd_pi;
+  assert(LoadedVT.isSimple());
+  switch (LoadedVT.getSimpleVT().SimpleTy) {
+  case MVT::i8:
+    if (IsZeroExt)
+      Opcode = IsValidInc ? Hexagon::L2_loadrub_pi : Hexagon::L2_loadrub_io;
     else
-      Opcode = Hexagon::L2_loadrd_io;
-  } else if (LoadedVT == MVT::i32) {
-    if (HII->isValidAutoIncImm(LoadedVT, Val))
-      Opcode = Hexagon::L2_loadri_pi;
+      Opcode = IsValidInc ? Hexagon::L2_loadrb_pi : Hexagon::L2_loadrb_io;
+    break;
+  case MVT::i16:
+    if (IsZeroExt)
+      Opcode = IsValidInc ? Hexagon::L2_loadruh_pi : Hexagon::L2_loadruh_io;
     else
-      Opcode = Hexagon::L2_loadri_io;
-  } else if (LoadedVT == MVT::i16) {
-    if (HII->isValidAutoIncImm(LoadedVT, Val))
-      Opcode = IsZeroExt ? Hexagon::L2_loadruh_pi : Hexagon::L2_loadrh_pi;
+      Opcode = IsValidInc ? Hexagon::L2_loadrh_pi : Hexagon::L2_loadrh_io;
+    break;
+  case MVT::i32:
+    Opcode = IsValidInc ? Hexagon::L2_loadri_pi : Hexagon::L2_loadri_io;
+    break;
+  case MVT::i64:
+    Opcode = IsValidInc ? Hexagon::L2_loadrd_pi : Hexagon::L2_loadrd_io;
+    break;
+  // 64B
+  case MVT::v64i8:
+  case MVT::v32i16:
+  case MVT::v16i32:
+  case MVT::v8i64:
+    if (isAlignedMemNode(LD))
+      Opcode = IsValidInc ? Hexagon::V6_vL32b_pi : Hexagon::V6_vL32b_ai;
     else
-      Opcode = IsZeroExt ? Hexagon::L2_loadruh_io : Hexagon::L2_loadrh_io;
-  } else if (LoadedVT == MVT::i8) {
-    if (HII->isValidAutoIncImm(LoadedVT, Val))
-      Opcode = IsZeroExt ? Hexagon::L2_loadrub_pi : Hexagon::L2_loadrb_pi;
-    else
-      Opcode = IsZeroExt ? Hexagon::L2_loadrub_io : Hexagon::L2_loadrb_io;
-  } else if (LoadedVT == MVT::v16i32 || LoadedVT == MVT::v8i64 ||
-             LoadedVT == MVT::v32i16 || LoadedVT == MVT::v64i8) {
-    HasVecOffset = true;
-    bool Aligned = isAlignedMemNode(LD);
-    if (HII->isValidAutoIncImm(LoadedVT, Val))
-      Opcode = Aligned ? Hexagon::V6_vL32b_pi : Hexagon::V6_vL32Ub_pi;
-    else
-      Opcode = Aligned ? Hexagon::V6_vL32b_ai : Hexagon::V6_vL32Ub_ai;
+      Opcode = IsValidInc ? Hexagon::V6_vL32Ub_pi : Hexagon::V6_vL32Ub_ai;
+    break;
   // 128B
-  } else if (LoadedVT == MVT::v32i32 || LoadedVT == MVT::v16i64 ||
-             LoadedVT == MVT::v64i16 || LoadedVT == MVT::v128i8) {
-    if (HST->useHVXOps()) {
-      bool Aligned = isAlignedMemNode(LD);
-      HasVecOffset = true;
-      if (HII->isValidAutoIncImm(LoadedVT, Val))
-        Opcode = Aligned ? Hexagon::V6_vL32b_pi_128B
-                         : Hexagon::V6_vL32Ub_pi_128B;
-      else
-        Opcode = Aligned ? Hexagon::V6_vL32b_ai_128B
-                         : Hexagon::V6_vL32Ub_ai_128B;
-    }
-  } else
-    llvm_unreachable("unknown memory type");
-
-  // For zero extended i64 loads, we need to add combine instructions.
-  if (LD->getValueType(0) == MVT::i64 && IsZeroExt) {
-    SelectIndexedLoadZeroExtend64(LD, Opcode, dl);
-    return;
-  }
-  // Handle sign extended i64 loads.
-  if (LD->getValueType(0) == MVT::i64 && ExtType == ISD::SEXTLOAD) {
-    SelectIndexedLoadSignExtend64(LD, Opcode, dl);
-    return;
+  case MVT::v128i8:
+  case MVT::v64i16:
+  case MVT::v32i32:
+  case MVT::v16i64:
+    if (isAlignedMemNode(LD))
+      Opcode = IsValidInc ? Hexagon::V6_vL32b_pi_128B
+                          : Hexagon::V6_vL32b_ai_128B;
+    else
+      Opcode = IsValidInc ? Hexagon::V6_vL32Ub_pi_128B
+                          : Hexagon::V6_vL32Ub_ai_128B;
+    break;
+  default:
+    llvm_unreachable("Unexpected memory type in indexed load");
   }
 
-  if (HII->isValidAutoIncImm(LoadedVT, Val)) {
-    SDValue TargetConstVal = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-    SDNode* Result = CurDAG->getMachineNode(Opcode, dl,
-                                            LD->getValueType(0),
-                                            MVT::i32, MVT::Other, Base,
-                                            TargetConstVal, Chain);
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = LD->getMemOperand();
-    cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
-    if (HasVecOffset) {
-      const SDValue Froms[] = { SDValue(LD, 0),
-                                SDValue(LD, 2)
-      };
-      const SDValue Tos[]   = { SDValue(Result, 0),
-                                SDValue(Result, 2)
-      };
-      ReplaceUses(Froms, Tos, 2);
-    } else {
-      const SDValue Froms[] = { SDValue(LD, 0),
-                                SDValue(LD, 1),
-                                SDValue(LD, 2)
-      };
-      const SDValue Tos[]   = { SDValue(Result, 0),
-                                SDValue(Result, 1),
-                                SDValue(Result, 2)
-      };
-      ReplaceUses(Froms, Tos, 3);
+  SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
+  MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
+  MemOp[0] = LD->getMemOperand();
+
+  auto getExt64 = [this,ExtType] (MachineSDNode *N, const SDLoc &dl)
+        -> MachineSDNode* {
+    if (ExtType == ISD::ZEXTLOAD || ExtType == ISD::EXTLOAD) {
+      SDValue Zero = CurDAG->getTargetConstant(0, dl, MVT::i32);
+      return CurDAG->getMachineNode(Hexagon::A4_combineir, dl, MVT::i64,
+                                    Zero, SDValue(N, 0));
     }
-    CurDAG->RemoveDeadNode(LD);
-    return;
+    if (ExtType == ISD::SEXTLOAD)
+      return CurDAG->getMachineNode(Hexagon::A2_sxtw, dl, MVT::i64,
+                                    SDValue(N, 0));
+    return N;
+  };
+
+  //                  Loaded value   Next address   Chain
+  SDValue From[3] = { SDValue(LD,0), SDValue(LD,1), SDValue(LD,2) };
+  SDValue To[3];
+
+  EVT ValueVT = LD->getValueType(0);
+  if (ValueVT == MVT::i64 && ExtType != ISD::NON_EXTLOAD) {
+    // A load extending to i64 will actually produce i32, which will then
+    // need to be extended to i64.
+    assert(LoadedVT.getSizeInBits() <= 32);
+    ValueVT = MVT::i32;
+  }
+
+  if (IsValidInc) {
+    MachineSDNode *L = CurDAG->getMachineNode(Opcode, dl, ValueVT,
+                                              MVT::i32, MVT::Other, Base,
+                                              IncV, Chain);
+    L->setMemRefs(MemOp, MemOp+1);
+    To[1] = SDValue(L, 1); // Next address.
+    To[2] = SDValue(L, 2); // Chain.
+    // Handle special case for extension to i64.
+    if (LD->getValueType(0) == MVT::i64)
+      L = getExt64(L, dl);
+    To[0] = SDValue(L, 0); // Loaded (extended) value.
   } else {
-    SDValue TargetConst0 = CurDAG->getTargetConstant(0, dl, MVT::i32);
-    SDValue TargetConstVal = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-    SDNode* Result_1 = CurDAG->getMachineNode(Opcode, dl,
-                                              LD->getValueType(0),
-                                              MVT::Other, Base, TargetConst0,
-                                              Chain);
-    SDNode* Result_2 = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
-                                              Base, TargetConstVal,
-                                              SDValue(Result_1, 1));
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = LD->getMemOperand();
-    cast<MachineSDNode>(Result_1)->setMemRefs(MemOp, MemOp + 1);
-    const SDValue Froms[] = { SDValue(LD, 0),
-                              SDValue(LD, 1),
-                              SDValue(LD, 2)
-    };
-    const SDValue Tos[]   = { SDValue(Result_1, 0),
-                              SDValue(Result_2, 0),
-                              SDValue(Result_1, 1)
-    };
-    ReplaceUses(Froms, Tos, 3);
-    CurDAG->RemoveDeadNode(LD);
-    return;
+    SDValue Zero = CurDAG->getTargetConstant(0, dl, MVT::i32);
+    MachineSDNode *L = CurDAG->getMachineNode(Opcode, dl, ValueVT, MVT::Other,
+                                              Base, Zero, Chain);
+    L->setMemRefs(MemOp, MemOp+1);
+    To[2] = SDValue(L, 1); // Chain.
+    MachineSDNode *A = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
+                                              Base, IncV);
+    To[1] = SDValue(A, 0); // Next address.
+    // Handle special case for extension to i64.
+    if (LD->getValueType(0) == MVT::i64)
+      L = getExt64(L, dl);
+    To[0] = SDValue(L, 0); // Loaded (extended) value.
   }
+  ReplaceUses(From, To, 3);
+  CurDAG->RemoveDeadNode(LD);
 }
 
 
@@ -644,7 +513,6 @@ bool HexagonDAGToDAGISel::tryLoadOfLoadIntrinsic(LoadSDNode *N) {
   return false;
 }
 
-
 void HexagonDAGToDAGISel::SelectLoad(SDNode *N) {
   SDLoc dl(N);
   LoadSDNode *LD = cast<LoadSDNode>(N);
@@ -668,104 +536,89 @@ void HexagonDAGToDAGISel::SelectIndexedStore(StoreSDNode *ST, const SDLoc &dl) {
   SDValue Base = ST->getBasePtr();
   SDValue Offset = ST->getOffset();
   SDValue Value = ST->getValue();
-  SDNode *OffsetNode = Offset.getNode();
   // Get the constant value.
-  int32_t Val = cast<ConstantSDNode>(OffsetNode)->getSExtValue();
+  int32_t Inc = cast<ConstantSDNode>(Offset.getNode())->getSExtValue();
   EVT StoredVT = ST->getMemoryVT();
   EVT ValueVT = Value.getValueType();
 
-  // Offset value must be within representable range
-  // and must have correct alignment properties.
-  if (HII->isValidAutoIncImm(StoredVT, Val)) {
-    unsigned Opcode = 0;
-
-    // Figure out the post inc version of opcode.
-    if (StoredVT == MVT::i64) Opcode = Hexagon::S2_storerd_pi;
-    else if (StoredVT == MVT::i32) Opcode = Hexagon::S2_storeri_pi;
-    else if (StoredVT == MVT::i16) Opcode = Hexagon::S2_storerh_pi;
-    else if (StoredVT == MVT::i8) Opcode = Hexagon::S2_storerb_pi;
-    else if (StoredVT == MVT::v16i32 || StoredVT == MVT::v8i64 ||
-             StoredVT == MVT::v32i16 || StoredVT == MVT::v64i8) {
-      if (isAlignedMemNode(ST))
-        Opcode = Hexagon::V6_vS32b_pi;
-      else
-        Opcode = Hexagon::V6_vS32Ub_pi;
-    }
-    // 128B
-    else if (StoredVT == MVT::v32i32 || StoredVT == MVT::v16i64 ||
-             StoredVT == MVT::v64i16 || StoredVT == MVT::v128i8) {
-      if (HST->useHVXOps())
-        Opcode = isAlignedMemNode(ST) ? Hexagon::V6_vS32b_pi_128B
-                                      : Hexagon::V6_vS32Ub_pi_128B;
-    } else
-      llvm_unreachable("unknown memory type");
-
-    if (ST->isTruncatingStore() && ValueVT.getSizeInBits() == 64) {
-      assert(StoredVT.getSizeInBits() < 64 && "Not a truncating store");
-      Value = CurDAG->getTargetExtractSubreg(Hexagon::subreg_loreg,
-                                             dl, MVT::i32, Value);
-    }
-    SDValue Ops[] = {Base, CurDAG->getTargetConstant(Val, dl, MVT::i32), Value,
-                     Chain};
-    // Build post increment store.
-    SDNode* Result = CurDAG->getMachineNode(Opcode, dl, MVT::i32,
-                                            MVT::Other, Ops);
-    MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
-    MemOp[0] = ST->getMemOperand();
-    cast<MachineSDNode>(Result)->setMemRefs(MemOp, MemOp + 1);
-
-    ReplaceUses(ST, Result);
-    ReplaceUses(SDValue(ST,1), SDValue(Result,1));
-    CurDAG->RemoveDeadNode(ST);
-    return;
-  }
-
-  // Note: Order of operands matches the def of instruction:
-  // def S2_storerd_io
-  //   : STInst<(outs), (ins IntRegs:$base, imm:$offset, DoubleRegs:$src1), ...
-  // and it differs for POST_ST* for instance.
-  SDValue Ops[] = { Base, CurDAG->getTargetConstant(0, dl, MVT::i32), Value,
-                    Chain};
+  bool IsValidInc = HII->isValidAutoIncImm(StoredVT, Inc);
   unsigned Opcode = 0;
 
-  // Figure out the opcode.
-  if (StoredVT == MVT::i64) Opcode = Hexagon::S2_storerd_io;
-  else if (StoredVT == MVT::i32) Opcode = Hexagon::S2_storeri_io;
-  else if (StoredVT == MVT::i16) Opcode = Hexagon::S2_storerh_io;
-  else if (StoredVT == MVT::i8) Opcode = Hexagon::S2_storerb_io;
-  else if (StoredVT == MVT::v16i32 || StoredVT == MVT::v8i64 ||
-           StoredVT == MVT::v32i16 || StoredVT == MVT::v64i8) {
+  assert(StoredVT.isSimple());
+  switch (StoredVT.getSimpleVT().SimpleTy) {
+  case MVT::i8:
+    Opcode = IsValidInc ? Hexagon::S2_storerb_pi : Hexagon::S2_storerb_io;
+    break;
+  case MVT::i16:
+    Opcode = IsValidInc ? Hexagon::S2_storerh_pi : Hexagon::S2_storerh_io;
+    break;
+  case MVT::i32:
+    Opcode = IsValidInc ? Hexagon::S2_storeri_pi : Hexagon::S2_storeri_io;
+    break;
+  case MVT::i64:
+    Opcode = IsValidInc ? Hexagon::S2_storerd_pi : Hexagon::S2_storerd_io;
+    break;
+  // 64B
+  case MVT::v64i8:
+  case MVT::v32i16:
+  case MVT::v16i32:
+  case MVT::v8i64:
     if (isAlignedMemNode(ST))
-      Opcode = Hexagon::V6_vS32b_ai;
+      Opcode = IsValidInc ? Hexagon::V6_vS32b_pi : Hexagon::V6_vS32b_ai;
     else
-      Opcode = Hexagon::V6_vS32Ub_ai;
-  }
+      Opcode = IsValidInc ? Hexagon::V6_vS32Ub_pi : Hexagon::V6_vS32Ub_ai;
+    break;
   // 128B
-  else if (StoredVT == MVT::v32i32 || StoredVT == MVT::v16i64 ||
-           StoredVT == MVT::v64i16 || StoredVT == MVT::v128i8) {
+  case MVT::v128i8:
+  case MVT::v64i16:
+  case MVT::v32i32:
+  case MVT::v16i64:
     if (isAlignedMemNode(ST))
-      Opcode = Hexagon::V6_vS32b_ai_128B;
+      Opcode = IsValidInc ? Hexagon::V6_vS32b_pi_128B
+                          : Hexagon::V6_vS32b_ai_128B;
     else
-      Opcode = Hexagon::V6_vS32Ub_ai_128B;
+      Opcode = IsValidInc ? Hexagon::V6_vS32Ub_pi_128B
+                          : Hexagon::V6_vS32Ub_ai_128B;
+    break;
+  default:
+    llvm_unreachable("Unexpected memory type in indexed store");
   }
-  else llvm_unreachable("unknown memory type");
 
-  // Build regular store.
-  SDValue TargetConstVal = CurDAG->getTargetConstant(Val, dl, MVT::i32);
-  SDNode* Result_1 = CurDAG->getMachineNode(Opcode, dl, MVT::Other, Ops);
-  // Build splitted incriment instruction.
-  SDNode* Result_2 = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
-                                            Base,
-                                            TargetConstVal,
-                                            SDValue(Result_1, 0));
+  if (ST->isTruncatingStore() && ValueVT.getSizeInBits() == 64) {
+    assert(StoredVT.getSizeInBits() < 64 && "Not a truncating store");
+    Value = CurDAG->getTargetExtractSubreg(Hexagon::subreg_loreg,
+                                           dl, MVT::i32, Value);
+  }
+
+  SDValue IncV = CurDAG->getTargetConstant(Inc, dl, MVT::i32);
   MachineSDNode::mmo_iterator MemOp = MF->allocateMemRefsArray(1);
   MemOp[0] = ST->getMemOperand();
-  cast<MachineSDNode>(Result_1)->setMemRefs(MemOp, MemOp + 1);
 
-  ReplaceUses(SDValue(ST,0), SDValue(Result_2,0));
-  ReplaceUses(SDValue(ST,1), SDValue(Result_1,0));
+  //                  Next address   Chain
+  SDValue From[2] = { SDValue(ST,0), SDValue(ST,1) };
+  SDValue To[2];
+
+  if (IsValidInc) {
+    // Build post increment store.
+    SDValue Ops[] = { Base, IncV, Value, Chain };
+    MachineSDNode *S = CurDAG->getMachineNode(Opcode, dl, MVT::i32, MVT::Other,
+                                              Ops);
+    S->setMemRefs(MemOp, MemOp + 1);
+    To[0] = SDValue(S, 0);
+    To[1] = SDValue(S, 1);
+  } else {
+    SDValue Zero = CurDAG->getTargetConstant(0, dl, MVT::i32);
+    SDValue Ops[] = { Base, Zero, Value, Chain };
+    MachineSDNode *S = CurDAG->getMachineNode(Opcode, dl, MVT::Other, Ops);
+    S->setMemRefs(MemOp, MemOp + 1);
+    To[1] = SDValue(S, 0);
+    MachineSDNode *A = CurDAG->getMachineNode(Hexagon::A2_addi, dl, MVT::i32,
+                                              Base, IncV);
+    To[0] = SDValue(A, 0);
+  }
+
+  ReplaceUses(From, To, 2);
   CurDAG->RemoveDeadNode(ST);
-  return;
 }
 
 void HexagonDAGToDAGISel::SelectStore(SDNode *N) {

@@ -349,9 +349,12 @@ static int printLineInfoForInput(bool LoadObjects, bool UseDebugObj) {
           consumeError(Name.takeError());
           continue;
         }
-        ErrorOr<uint64_t> AddrOrErr = Sym.getAddress();
-        if (!AddrOrErr)
+        Expected<uint64_t> AddrOrErr = Sym.getAddress();
+        if (!AddrOrErr) {
+          // TODO: Actually report errors helpfully.
+          consumeError(AddrOrErr.takeError());
           continue;
+        }
         uint64_t Addr = *AddrOrErr;
 
         uint64_t Size = P.second;

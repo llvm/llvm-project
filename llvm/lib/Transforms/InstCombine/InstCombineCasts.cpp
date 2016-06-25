@@ -14,10 +14,9 @@
 #include "InstCombineInternal.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/ConstantFolding.h"
-#include "llvm/Analysis/Loads.h"
-#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 using namespace llvm;
 using namespace PatternMatch;
 
@@ -577,24 +576,6 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   if (Instruction *I = foldVecTruncToExtElt(CI, *this, DL))
     return I;
 
-  // When trunc operand is a widened load, see if we can get the value from a
-  // previous store/load
-  if (auto *LI = dyn_cast<LoadInst>(Src)) {
-    BasicBlock::iterator BBI(*LI);
-
-    // Scan a few instructions up from LI and if we find a partial load/store
-    // of Type DestTy that feeds into LI, we can replace all uses of the trunc
-    // with the load/store value.
-    // This replacement can be done only in the case of non-volatile loads. If
-    // the load is atomic, its only use should be the trunc instruction. We
-    // don't want to allow other users of LI to see a value that is out of sync
-    // with the value we're folding the trunc to (in case of a race).
-    if (!LI->isVolatile() && (!LI->isAtomic() || LI->hasOneUse()))
-      if (Value *AvailableVal = FindAvailableLoadedValue(
-              LI->getPointerOperand(), DestTy, LI->isAtomic(), LI->getParent(),
-              BBI, DefMaxInstsToScan))
-        return replaceInstUsesWith(CI, AvailableVal);
-  }
   return nullptr;
 }
 

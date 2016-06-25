@@ -101,6 +101,7 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     EnableXNACK(false),
     DebuggerInsertNops(false),
     DebuggerReserveRegs(false),
+    DebuggerEmitPrologue(false),
 
     EnableVGPRSpilling(false),
     EnablePromoteAlloca(false),

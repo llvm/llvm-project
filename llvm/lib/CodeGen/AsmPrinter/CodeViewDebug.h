@@ -220,6 +220,10 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// particular, locals from inlined code live inside the inlining site.
   void recordLocalVariable(LocalVariable &&Var, const DILocation *Loc);
 
+  /// Emits local variables in the appropriate order.
+  void emitLocalVariableList(ArrayRef<LocalVariable> Locals);
+
+  /// Emits an S_LOCAL record and its associated defined ranges.
   void emitLocalVariable(const LocalVariable &Var);
 
   /// Translates the DIType to codeview if necessary and returns a type index

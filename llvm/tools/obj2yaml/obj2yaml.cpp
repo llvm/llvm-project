@@ -24,8 +24,6 @@ static std::error_code dumpObject(const ObjectFile &Obj) {
     return coff2yaml(outs(), cast<COFFObjectFile>(Obj));
   if (Obj.isELF())
     return elf2yaml(outs(), Obj);
-  if (Obj.isMachO() || Obj.isMachOUniversalBinary())
-    return macho2yaml(outs(), Obj);
 
   return obj2yaml_error::unsupported_obj_file_format;
 }
@@ -36,6 +34,10 @@ static std::error_code dumpInput(StringRef File) {
     return errorToErrorCode(BinaryOrErr.takeError());
 
   Binary &Binary = *BinaryOrErr.get().getBinary();
+  // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
+  // here with the other binary types.
+  if (Binary.isMachO() || Binary.isMachOUniversalBinary())
+    return macho2yaml(outs(), Binary);
   // TODO: If this is an archive, then burst it and dump each entry
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
     return dumpObject(*Obj);

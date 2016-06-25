@@ -54,6 +54,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     ReturnsVoid(true),
     MaximumWorkGroupSize(0),
     DebuggerReservedVGPRCount(0),
+    DebuggerWorkGroupIDStackObjectIndices{0, 0, 0},
+    DebuggerWorkItemIDStackObjectIndices{0, 0, 0},
     LDSWaveSpillSize(0),
     PSInputEna(0),
     NumUserSGPRs(0),
@@ -92,16 +94,16 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     WorkItemIDX = true;
   }
 
-  if (F->hasFnAttribute("amdgpu-work-group-id-y"))
+  if (F->hasFnAttribute("amdgpu-work-group-id-y") || ST.debuggerEmitPrologue())
     WorkGroupIDY = true;
 
-  if (F->hasFnAttribute("amdgpu-work-group-id-z"))
+  if (F->hasFnAttribute("amdgpu-work-group-id-z") || ST.debuggerEmitPrologue())
     WorkGroupIDZ = true;
 
-  if (F->hasFnAttribute("amdgpu-work-item-id-y"))
+  if (F->hasFnAttribute("amdgpu-work-item-id-y") || ST.debuggerEmitPrologue())
     WorkItemIDY = true;
 
-  if (F->hasFnAttribute("amdgpu-work-item-id-z"))
+  if (F->hasFnAttribute("amdgpu-work-item-id-z") || ST.debuggerEmitPrologue())
     WorkItemIDZ = true;
 
   // X, XY, and XYZ are the only supported combinations, so make sure Y is

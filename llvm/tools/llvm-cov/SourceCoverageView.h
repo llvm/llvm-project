@@ -6,9 +6,9 @@
 // License. See LICENSE.TXT for details.
 //
 //===----------------------------------------------------------------------===//
-//
-// This class implements rendering for code coverage of source code.
-//
+///
+/// \file This class implements rendering for code coverage of source code.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_COV_SOURCECOVERAGEVIEW_H
@@ -16,6 +16,7 @@
 
 #include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
@@ -23,7 +24,7 @@ namespace llvm {
 
 class SourceCoverageView;
 
-/// \brief A view that represents a macro or include expansion
+/// \brief A view that represents a macro or include expansion.
 struct ExpansionView {
   coverage::CounterMappingRegion Region;
   std::unique_ptr<SourceCoverageView> View;
@@ -48,7 +49,7 @@ struct ExpansionView {
   }
 };
 
-/// \brief A view that represents a function instantiation
+/// \brief A view that represents a function instantiation.
 struct InstantiationView {
   StringRef FunctionName;
   unsigned Line;
@@ -97,10 +98,12 @@ struct LineCoverageStats {
   }
 };
 
-/// \brief A code coverage view of a specific source file.
-/// It can have embedded coverage views.
+/// \brief A code coverage view of a source file or function.
+///
+/// A source coverage view and its nested sub-views form a file-oriented
+/// representation of code coverage data. This view can be printed out by a
+/// renderer which implements the Rendering Interface.
 class SourceCoverageView {
-private:
   /// A function or file name.
   StringRef SourceName;
 
@@ -120,36 +123,78 @@ private:
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
+protected:
+  struct LineRef {
+    StringRef Line;
+    int64_t LineNo;
+
+    LineRef(StringRef Line, int64_t LineNo) : Line(Line), LineNo(LineNo) {}
+  };
+
+  using CoverageSegmentArray = ArrayRef<const coverage::CoverageSegment *>;
+
+  /// @name Rendering Interface
+  /// @{
+
+  /// \brief Render the source name for the view.
+  virtual void renderSourceName(raw_ostream &OS) = 0;
+
+  /// \brief Render the line prefix at the given \p ViewDepth.
+  virtual void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) = 0;
+
+  /// \brief Render a view divider at the given \p ViewDepth.
+  virtual void renderViewDivider(raw_ostream &OS, unsigned ViewDepth) = 0;
+
   /// \brief Render a source line with highlighting.
-  void renderLine(raw_ostream &OS, StringRef Line, int64_t LineNumber,
-                  const coverage::CoverageSegment *WrappedSegment,
-                  ArrayRef<const coverage::CoverageSegment *> Segments,
-                  unsigned ExpansionCol);
-
-  void renderIndent(raw_ostream &OS, unsigned Level);
-
-  void renderViewDivider(unsigned Offset, unsigned Length, raw_ostream &OS);
+  virtual void renderLine(raw_ostream &OS, LineRef L,
+                          const coverage::CoverageSegment *WrappedSegment,
+                          CoverageSegmentArray Segments, unsigned ExpansionCol,
+                          unsigned ViewDepth) = 0;
 
   /// \brief Render the line's execution count column.
-  void renderLineCoverageColumn(raw_ostream &OS, const LineCoverageStats &Line);
+  virtual void renderLineCoverageColumn(raw_ostream &OS,
+                                        const LineCoverageStats &Line) = 0;
 
   /// \brief Render the line number column.
-  void renderLineNumberColumn(raw_ostream &OS, unsigned LineNo);
+  virtual void renderLineNumberColumn(raw_ostream &OS, unsigned LineNo) = 0;
 
   /// \brief Render all the region's execution counts on a line.
-  void
-  renderRegionMarkers(raw_ostream &OS,
-                      ArrayRef<const coverage::CoverageSegment *> Segments);
+  virtual void renderRegionMarkers(raw_ostream &OS,
+                                   CoverageSegmentArray Segments,
+                                   unsigned ViewDepth) = 0;
 
-  static const unsigned LineCoverageColumnWidth = 7;
-  static const unsigned LineNumberColumnWidth = 5;
+  /// \brief Render an expansion view. If the expansion site must be re-rendered
+  /// for clarity, it is passed in via \p FirstLine.
+  virtual unsigned
+  renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
+                      Optional<LineRef> FirstLine,
+                      const coverage::CoverageSegment *WrappedSegment,
+                      CoverageSegmentArray Segments, unsigned ExpansionCol,
+                      unsigned ViewDepth) = 0;
 
-public:
+  /// \brief Render an instantiation view.
+  virtual void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
+                                       unsigned ViewDepth) = 0;
+
+  /// @}
+
+  /// \brief Format a count using engineering notation with 3 significant
+  /// digits.
+  static std::string formatCount(uint64_t N);
+
   SourceCoverageView(StringRef SourceName, const MemoryBuffer &File,
                      const CoverageViewOptions &Options,
                      coverage::CoverageData &&CoverageInfo)
       : SourceName(SourceName), File(File), Options(Options),
         CoverageInfo(std::move(CoverageInfo)) {}
+
+public:
+  static std::unique_ptr<SourceCoverageView>
+  create(StringRef SourceName, const MemoryBuffer &File,
+         const CoverageViewOptions &Options,
+         coverage::CoverageData &&CoverageInfo);
+
+  virtual ~SourceCoverageView() {}
 
   StringRef getSourceName() const { return SourceName; }
 
@@ -157,22 +202,16 @@ public:
 
   /// \brief Add an expansion subview to this view.
   void addExpansion(const coverage::CounterMappingRegion &Region,
-                    std::unique_ptr<SourceCoverageView> View) {
-    ExpansionSubViews.emplace_back(Region, std::move(View));
-  }
+                    std::unique_ptr<SourceCoverageView> View);
 
   /// \brief Add a function instantiation subview to this view.
   void addInstantiation(StringRef FunctionName, unsigned Line,
-                        std::unique_ptr<SourceCoverageView> View) {
-    InstantiationSubViews.emplace_back(FunctionName, Line, std::move(View));
-  }
+                        std::unique_ptr<SourceCoverageView> View);
 
-  /// \brief Print the code coverage information for a specific
-  /// portion of a source file to the output stream.
-  void render(raw_ostream &OS, bool WholeFile, unsigned IndentLevel = 0);
-
-  /// \brief Print the source name corresponding to this view.
-  void renderSourceName(raw_ostream &OS);
+  /// \brief Print the code coverage information for a specific portion of a
+  /// source file to the output stream.
+  void print(raw_ostream &OS, bool WholeFile, bool ShowSourceName,
+             unsigned ViewDepth = 0);
 };
 
 } // namespace llvm

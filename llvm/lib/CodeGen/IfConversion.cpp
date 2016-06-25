@@ -1046,19 +1046,8 @@ void IfConverter::RemoveExtraEdges(BBInfo &BBI) {
 }
 
 /// Behaves like LiveRegUnits::StepForward() but also adds implicit uses to all
-/// values defined in MI which are also live/used by MI.
+/// values defined in MI which are not live/used by MI.
 static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
-  const TargetRegisterInfo *TRI = MI.getParent()->getParent()
-    ->getSubtarget().getRegisterInfo();
-
-  // Before stepping forward past MI, remember which regs were live
-  // before MI. This is needed to set the Undef flag only when reg is
-  // dead.
-  SparseSet<unsigned> LiveBeforeMI;
-  LiveBeforeMI.setUniverse(TRI->getNumRegs());
-  for (auto &Reg : Redefs)
-    LiveBeforeMI.insert(Reg);
-
   SmallVector<std::pair<unsigned, const MachineOperand*>, 4> Clobbers;
   Redefs.stepForward(MI, Clobbers);
 
@@ -1072,8 +1061,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
     if (Op.isRegMask()) {
       // First handle regmasks.  They clobber any entries in the mask which
       // means that we need a def for those registers.
-      if (LiveBeforeMI.count(Reg.first))
-        MIB.addReg(Reg.first, RegState::Implicit);
+      MIB.addReg(Reg.first, RegState::Implicit | RegState::Undef);
 
       // We also need to add an implicit def of this register for the later
       // use to read from.
@@ -1090,8 +1078,7 @@ static void UpdatePredRedefs(MachineInstr &MI, LivePhysRegs &Redefs) {
       if (Redefs.contains(Op.getReg()))
         Op.setIsDead(false);
     }
-    if (LiveBeforeMI.count(Reg.first))
-      MIB.addReg(Reg.first, RegState::Implicit);
+    MIB.addReg(Reg.first, RegState::Implicit | RegState::Undef);
   }
 }
 

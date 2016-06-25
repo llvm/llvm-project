@@ -11,6 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+def : PredicateProlog<[{
+  const SIInstrInfo *TII =
+    static_cast<const SIInstrInfo*>(SchedModel->getInstrInfo());
+  (void)TII;
+}]>;
+
 def WriteBranch : SchedWrite;
 def WriteExport : SchedWrite;
 def WriteLDS    : SchedWrite;
@@ -96,6 +102,12 @@ multiclass SICommonWriteRes {
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
 }
 
+def PredIsVGPR32Copy : SchedPredicate<[{TII->isVGPRCopy(*MI) && TII->getOpSize(*MI, 0) <= 32}]>;
+def PredIsVGPR64Copy : SchedPredicate<[{TII->isVGPRCopy(*MI) && TII->getOpSize(*MI, 0) > 32}]>;
+def WriteCopy : SchedWriteVariant<[
+    SchedVar<PredIsVGPR32Copy, [Write32Bit]>,
+    SchedVar<PredIsVGPR64Copy, [Write64Bit]>,
+    SchedVar<NoSchedPred, [WriteSALU]>]>;
 
 let SchedModel = SIFullSpeedModel in {
 
@@ -104,6 +116,8 @@ defm : SICommonWriteRes;
 def : HWVALUWriteRes<WriteFloatFMA,   1>;
 def : HWVALUWriteRes<WriteDouble,     4>;
 def : HWVALUWriteRes<WriteDoubleAdd,  2>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
 
 } // End SchedModel = SIFullSpeedModel
 
@@ -114,5 +128,7 @@ defm : SICommonWriteRes;
 def : HWVALUWriteRes<WriteFloatFMA, 16>;
 def : HWVALUWriteRes<WriteDouble,   16>;
 def : HWVALUWriteRes<WriteDoubleAdd, 8>;
+
+def : InstRW<[WriteCopy], (instrs COPY)>;
 
 }  // End SchedModel = SIQuarterSpeedModel

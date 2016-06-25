@@ -8,5 +8,6 @@ add_llvm_tool(llvm-cov
   CoverageReport.cpp
   CoverageSummaryInfo.cpp
   SourceCoverageView.cpp
+  SourceCoverageViewText.cpp
   TestingSupport.cpp
   )

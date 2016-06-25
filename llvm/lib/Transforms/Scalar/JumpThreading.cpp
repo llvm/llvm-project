@@ -1746,13 +1746,18 @@ bool JumpThreadingPass::DuplicateCondBranchOnPHIIntoPred(
     // phi translation.
     if (Value *IV =
             SimplifyInstruction(New, BB->getModule()->getDataLayout())) {
-      delete New;
       ValueMapping[&*BI] = IV;
+      if (!New->mayHaveSideEffects()) {
+        delete New;
+        New = nullptr;
+      }
     } else {
+      ValueMapping[&*BI] = New;
+    }
+    if (New) {
       // Otherwise, insert the new instruction into the block.
       New->setName(BI->getName());
       PredBB->getInstList().insert(OldPredBranch->getIterator(), New);
-      ValueMapping[&*BI] = New;
     }
   }
 

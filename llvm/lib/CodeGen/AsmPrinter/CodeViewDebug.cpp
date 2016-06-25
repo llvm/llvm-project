@@ -504,8 +504,7 @@ void CodeViewDebug::emitInlinedCallSite(const FunctionInfo &FI,
 
   OS.EmitLabel(InlineEnd);
 
-  for (const LocalVariable &Var : Site.InlinedLocals)
-    emitLocalVariable(Var);
+  emitLocalVariableList(Site.InlinedLocals);
 
   // Recurse on child inlined call sites before closing the scope.
   for (const DILocation *ChildSite : Site.ChildSites) {
@@ -608,8 +607,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     emitNullTerminatedSymbolName(OS, FuncName);
     OS.EmitLabel(ProcRecordEnd);
 
-    for (const LocalVariable &Var : FI.Locals)
-      emitLocalVariable(Var);
+    emitLocalVariableList(FI.Locals);
 
     // Emit inlined call site information. Only emit functions inlined directly
     // into the parent function. We'll emit the other sites recursively as part
@@ -1678,6 +1676,25 @@ void CodeViewDebug::emitDeferredCompleteTypes() {
       getCompleteTypeIndex(RecordTy);
     TypesToEmit.clear();
   }
+}
+
+void CodeViewDebug::emitLocalVariableList(ArrayRef<LocalVariable> Locals) {
+  // Get the sorted list of parameters and emit them first.
+  SmallVector<const LocalVariable *, 6> Params;
+  for (const LocalVariable &L : Locals)
+    if (L.DIVar->isParameter())
+      Params.push_back(&L);
+  std::sort(Params.begin(), Params.end(),
+            [](const LocalVariable *L, const LocalVariable *R) {
+              return L->DIVar->getArg() < R->DIVar->getArg();
+            });
+  for (const LocalVariable *L : Params)
+    emitLocalVariable(*L);
+
+  // Next emit all non-parameters in the order that we found them.
+  for (const LocalVariable &L : Locals)
+    if (!L.DIVar->isParameter())
+      emitLocalVariable(L);
 }
 
 void CodeViewDebug::emitLocalVariable(const LocalVariable &Var) {

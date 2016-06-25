@@ -25,11 +25,11 @@ TEST(WholeProgramDevirt, findLowestOffset) {
   VT2.Before.BytesUsed = {1 << 1};
   VT2.After.BytesUsed = {1 << 0};
 
-  BitSetInfo BS1{&VT1, 0};
-  BitSetInfo BS2{&VT2, 0};
+  TypeMemberInfo TM1{&VT1, 0};
+  TypeMemberInfo TM2{&VT2, 0};
   VirtualCallTarget Targets[] = {
-    {&BS1, /*IsBigEndian=*/false},
-    {&BS2, /*IsBigEndian=*/false},
+    {&TM1, /*IsBigEndian=*/false},
+    {&TM2, /*IsBigEndian=*/false},
   };
 
   EXPECT_EQ(2ull, findLowestOffset(Targets, /*IsAfter=*/false, 1));
@@ -38,15 +38,15 @@ TEST(WholeProgramDevirt, findLowestOffset) {
   EXPECT_EQ(8ull, findLowestOffset(Targets, /*IsAfter=*/false, 8));
   EXPECT_EQ(72ull, findLowestOffset(Targets, /*IsAfter=*/true, 8));
 
-  BS1.Offset = 4;
+  TM1.Offset = 4;
   EXPECT_EQ(33ull, findLowestOffset(Targets, /*IsAfter=*/false, 1));
   EXPECT_EQ(65ull, findLowestOffset(Targets, /*IsAfter=*/true, 1));
 
   EXPECT_EQ(40ull, findLowestOffset(Targets, /*IsAfter=*/false, 8));
   EXPECT_EQ(72ull, findLowestOffset(Targets, /*IsAfter=*/true, 8));
 
-  BS1.Offset = 8;
-  BS2.Offset = 8;
+  TM1.Offset = 8;
+  TM2.Offset = 8;
   EXPECT_EQ(66ull, findLowestOffset(Targets, /*IsAfter=*/false, 1));
   EXPECT_EQ(2ull, findLowestOffset(Targets, /*IsAfter=*/true, 1));
 
@@ -66,15 +66,15 @@ TEST(WholeProgramDevirt, setReturnValues) {
   VTableBits VT2;
   VT2.ObjectSize = 8;
 
-  BitSetInfo BS1{&VT1, 0};
-  BitSetInfo BS2{&VT2, 0};
+  TypeMemberInfo TM1{&VT1, 0};
+  TypeMemberInfo TM2{&VT2, 0};
   VirtualCallTarget Targets[] = {
-    {&BS1, /*IsBigEndian=*/false},
-    {&BS2, /*IsBigEndian=*/false},
+    {&TM1, /*IsBigEndian=*/false},
+    {&TM2, /*IsBigEndian=*/false},
   };
 
-  BS1.Offset = 4;
-  BS2.Offset = 4;
+  TM1.Offset = 4;
+  TM2.Offset = 4;
 
   int64_t OffsetByte;
   uint64_t OffsetBit;

@@ -91,15 +91,10 @@ void TypeRecordBuilder::writeEncodedUnsignedInteger(uint64_t Value) {
   }
 }
 
-void TypeRecordBuilder::writeNullTerminatedString(const char *Value) {
-  assert(Value != nullptr);
-
-  size_t Length = strlen(Value);
-  Stream.write(Value, Length);
-  writeUInt8(0);
-}
-
 void TypeRecordBuilder::writeNullTerminatedString(StringRef Value) {
+  // Microsoft's linker seems to have trouble with symbol names longer than
+  // 0xffd8 bytes.
+  Value = Value.substr(0, 0xffd8);
   Stream.write(Value.data(), Value.size());
   writeUInt8(0);
 }

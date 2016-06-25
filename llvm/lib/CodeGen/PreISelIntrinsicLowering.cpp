@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/PreISelIntrinsicLowering.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
@@ -63,23 +64,31 @@ bool lowerIntrinsics(Module &M) {
   return Changed;
 }
 
-class PreISelIntrinsicLowering : public ModulePass {
+class PreISelIntrinsicLoweringLegacyPass : public ModulePass {
 public:
   static char ID;
-  PreISelIntrinsicLowering() : ModulePass(ID) {}
+  PreISelIntrinsicLoweringLegacyPass() : ModulePass(ID) {}
 
-  bool runOnModule(Module &M) {
-    return lowerIntrinsics(M);
-  }
+  bool runOnModule(Module &M) { return lowerIntrinsics(M); }
 };
 
-char PreISelIntrinsicLowering::ID;
-
+char PreISelIntrinsicLoweringLegacyPass::ID;
 }
 
-INITIALIZE_PASS(PreISelIntrinsicLowering, "pre-isel-intrinsic-lowering",
-                "Pre-ISel Intrinsic Lowering", false, false)
+INITIALIZE_PASS(PreISelIntrinsicLoweringLegacyPass,
+                "pre-isel-intrinsic-lowering", "Pre-ISel Intrinsic Lowering",
+                false, false)
 
-ModulePass *llvm::createPreISelIntrinsicLoweringPass() {
-  return new PreISelIntrinsicLowering;
+namespace llvm {
+ModulePass *createPreISelIntrinsicLoweringPass() {
+  return new PreISelIntrinsicLoweringLegacyPass;
 }
+
+PreservedAnalyses PreISelIntrinsicLoweringPass::run(Module &M,
+                                                    ModuleAnalysisManager &AM) {
+  if (!lowerIntrinsics(M))
+    return PreservedAnalyses::all();
+  else
+    return PreservedAnalyses::none();
+}
+} // End llvm namespace

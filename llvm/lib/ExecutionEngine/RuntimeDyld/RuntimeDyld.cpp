@@ -163,9 +163,9 @@ void RuntimeDyldImpl::mapSectionAddress(const void *LocalAddress,
 
 static Error getOffset(const SymbolRef &Sym, SectionRef Sec,
                        uint64_t &Result) {
-  ErrorOr<uint64_t> AddressOrErr = Sym.getAddress();
-  if (std::error_code EC = AddressOrErr.getError())
-    return errorCodeToError(EC);
+  Expected<uint64_t> AddressOrErr = Sym.getAddress();
+  if (!AddressOrErr)
+    return AddressOrErr.takeError();
   Result = *AddressOrErr - Sec.getAddress();
   return Error::success();
 }
@@ -236,7 +236,7 @@ RuntimeDyldImpl::loadObjectImpl(const object::ObjectFile &Obj) {
         if (auto AddrOrErr = I->getAddress())
           Addr = *AddrOrErr;
         else
-          return errorCodeToError(AddrOrErr.getError());
+          return AddrOrErr.takeError();
 
         unsigned SectionID = AbsoluteSymbolSection;
 

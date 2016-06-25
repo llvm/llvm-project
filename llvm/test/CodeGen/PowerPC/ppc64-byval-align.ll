@@ -35,8 +35,7 @@ entry:
   ret i64 %0
 }
 ; CHECK-LABEL: @callee2
-; CHECK: ld [[REG:[0-9]+]], 128(1)
-; CHECK: mr 3, [[REG]]
+; CHECK: ld 3, 128(1)
 ; CHECK: blr
 
 declare i64 @test2(%struct.pad* byval, i32 signext, %struct.test* byval align 16)

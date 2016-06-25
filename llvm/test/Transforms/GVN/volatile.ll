@@ -152,6 +152,16 @@ exit:
   ret i32 %add
 }
 
+define i32 @test9(i32* %V) {
+entry:
+  %load = load volatile i32, i32* %V, !range !0
+  ret i32 %load
+}
+; CHECK-LABEL: test9
+; CHECK: load volatile
+; CHECK: ret i32 0
+
 declare void @use(i32) readonly
 declare void @clobber(i32* %p, i32* %q)
 
+!0 = !{ i32 0, i32 1 }

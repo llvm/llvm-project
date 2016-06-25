@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass implements whole program optimization of virtual calls in cases
-// where we know (via bitset information) that the list of callee is fixed. This
+// where we know (via !type metadata) that the list of callees is fixed. This
 // includes the following:
 // - Single implementation devirtualization: if a virtual call has a single
 //   possible callee, replace all calls with a direct call to that callee.
@@ -31,7 +31,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/Analysis/BitSetUtils.h"
+#include "llvm/Analysis/TypeMetadataUtils.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
@@ -89,8 +89,8 @@ wholeprogramdevirt::findLowestOffset(ArrayRef<VirtualCallTarget> Targets,
   // at MinByte.
   std::vector<ArrayRef<uint8_t>> Used;
   for (const VirtualCallTarget &Target : Targets) {
-    ArrayRef<uint8_t> VTUsed = IsAfter ? Target.BS->Bits->After.BytesUsed
-                                       : Target.BS->Bits->Before.BytesUsed;
+    ArrayRef<uint8_t> VTUsed = IsAfter ? Target.TM->Bits->After.BytesUsed
+                                       : Target.TM->Bits->Before.BytesUsed;
     uint64_t Offset = IsAfter ? MinByte - Target.minAfterBytes()
                               : MinByte - Target.minBeforeBytes();
 
@@ -163,17 +163,17 @@ void wholeprogramdevirt::setAfterReturnValues(
   }
 }
 
-VirtualCallTarget::VirtualCallTarget(Function *Fn, const BitSetInfo *BS)
-    : Fn(Fn), BS(BS),
+VirtualCallTarget::VirtualCallTarget(Function *Fn, const TypeMemberInfo *TM)
+    : Fn(Fn), TM(TM),
       IsBigEndian(Fn->getParent()->getDataLayout().isBigEndian()) {}
 
 namespace {
 
-// A slot in a set of virtual tables. The BitSetID identifies the set of virtual
+// A slot in a set of virtual tables. The TypeID identifies the set of virtual
 // tables, and the ByteOffset is the offset in bytes from the address point to
 // the virtual function pointer.
 struct VTableSlot {
-  Metadata *BitSetID;
+  Metadata *TypeID;
   uint64_t ByteOffset;
 };
 
@@ -191,12 +191,12 @@ template <> struct DenseMapInfo<VTableSlot> {
             DenseMapInfo<uint64_t>::getTombstoneKey()};
   }
   static unsigned getHashValue(const VTableSlot &I) {
-    return DenseMapInfo<Metadata *>::getHashValue(I.BitSetID) ^
+    return DenseMapInfo<Metadata *>::getHashValue(I.TypeID) ^
            DenseMapInfo<uint64_t>::getHashValue(I.ByteOffset);
   }
   static bool isEqual(const VTableSlot &LHS,
                       const VTableSlot &RHS) {
-    return LHS.BitSetID == RHS.BitSetID && LHS.ByteOffset == RHS.ByteOffset;
+    return LHS.TypeID == RHS.TypeID && LHS.ByteOffset == RHS.ByteOffset;
   }
 };
 
@@ -210,6 +210,11 @@ struct VirtualCallSite {
   Value *VTable;
   CallSite CS;
 
+  // If non-null, this field points to the associated unsafe use count stored in
+  // the DevirtModule::NumUnsafeUsesForTypeTest map below. See the description
+  // of that field for details.
+  unsigned *NumUnsafeUses;
+
   void replaceAndErase(Value *New) {
     CS->replaceAllUsesWith(New);
     if (auto II = dyn_cast<InvokeInst>(CS.getInstruction())) {
@@ -217,6 +222,9 @@ struct VirtualCallSite {
       II->getUnwindDest()->removePredecessor(II->getParent());
     }
     CS->eraseFromParent();
+    // This use is no longer unsafe.
+    if (NumUnsafeUses)
+      --*NumUnsafeUses;
   }
 };
 
@@ -228,16 +236,31 @@ struct DevirtModule {
 
   MapVector<VTableSlot, std::vector<VirtualCallSite>> CallSlots;
 
+  // This map keeps track of the number of "unsafe" uses of a loaded function
+  // pointer. The key is the associated llvm.type.test intrinsic call generated
+  // by this pass. An unsafe use is one that calls the loaded function pointer
+  // directly. Every time we eliminate an unsafe use (for example, by
+  // devirtualizing it or by applying virtual constant propagation), we
+  // decrement the value stored in this map. If a value reaches zero, we can
+  // eliminate the type check by RAUWing the associated llvm.type.test call with
+  // true.
+  std::map<CallInst *, unsigned> NumUnsafeUsesForTypeTest;
+
   DevirtModule(Module &M)
       : M(M), Int8Ty(Type::getInt8Ty(M.getContext())),
         Int8PtrTy(Type::getInt8PtrTy(M.getContext())),
         Int32Ty(Type::getInt32Ty(M.getContext())) {}
 
-  void buildBitSets(std::vector<VTableBits> &Bits,
-                    DenseMap<Metadata *, std::set<BitSetInfo>> &BitSets);
-  bool tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
-                                 const std::set<BitSetInfo> &BitSetInfos,
-                                 uint64_t ByteOffset);
+  void scanTypeTestUsers(Function *TypeTestFunc, Function *AssumeFunc);
+  void scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc);
+
+  void buildTypeIdentifierMap(
+      std::vector<VTableBits> &Bits,
+      DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap);
+  bool
+  tryFindVirtualCallTargets(std::vector<VirtualCallTarget> &TargetsForSlot,
+                            const std::set<TypeMemberInfo> &TypeMemberInfos,
+                            uint64_t ByteOffset);
   bool trySingleImplDevirt(ArrayRef<VirtualCallTarget> TargetsForSlot,
                            MutableArrayRef<VirtualCallSite> CallSites);
   bool tryEvaluateFunctionsWithArgs(
@@ -287,60 +310,55 @@ PreservedAnalyses WholeProgramDevirtPass::run(Module &M,
   return PreservedAnalyses::none();
 }
 
-void DevirtModule::buildBitSets(
+void DevirtModule::buildTypeIdentifierMap(
     std::vector<VTableBits> &Bits,
-    DenseMap<Metadata *, std::set<BitSetInfo>> &BitSets) {
-  NamedMDNode *BitSetNM = M.getNamedMetadata("llvm.bitsets");
-  if (!BitSetNM)
-    return;
-
+    DenseMap<Metadata *, std::set<TypeMemberInfo>> &TypeIdMap) {
   DenseMap<GlobalVariable *, VTableBits *> GVToBits;
-  Bits.reserve(BitSetNM->getNumOperands());
-  for (auto Op : BitSetNM->operands()) {
-    auto OpConstMD = dyn_cast_or_null<ConstantAsMetadata>(Op->getOperand(1));
-    if (!OpConstMD)
-      continue;
-    auto BitSetID = Op->getOperand(0).get();
-
-    Constant *OpConst = OpConstMD->getValue();
-    if (auto GA = dyn_cast<GlobalAlias>(OpConst))
-      OpConst = GA->getAliasee();
-    auto OpGlobal = dyn_cast<GlobalVariable>(OpConst);
-    if (!OpGlobal)
+  Bits.reserve(M.getGlobalList().size());
+  SmallVector<MDNode *, 2> Types;
+  for (GlobalVariable &GV : M.globals()) {
+    Types.clear();
+    GV.getMetadata(LLVMContext::MD_type, Types);
+    if (Types.empty())
       continue;
 
-    uint64_t Offset =
-        cast<ConstantInt>(
-            cast<ConstantAsMetadata>(Op->getOperand(2))->getValue())
-            ->getZExtValue();
-
-    VTableBits *&BitsPtr = GVToBits[OpGlobal];
+    VTableBits *&BitsPtr = GVToBits[&GV];
     if (!BitsPtr) {
       Bits.emplace_back();
-      Bits.back().GV = OpGlobal;
-      Bits.back().ObjectSize = M.getDataLayout().getTypeAllocSize(
-          OpGlobal->getInitializer()->getType());
+      Bits.back().GV = &GV;
+      Bits.back().ObjectSize =
+          M.getDataLayout().getTypeAllocSize(GV.getInitializer()->getType());
       BitsPtr = &Bits.back();
     }
-    BitSets[BitSetID].insert({BitsPtr, Offset});
+
+    for (MDNode *Type : Types) {
+      auto TypeID = Type->getOperand(1).get();
+
+      uint64_t Offset =
+          cast<ConstantInt>(
+              cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
+              ->getZExtValue();
+
+      TypeIdMap[TypeID].insert({BitsPtr, Offset});
+    }
   }
 }
 
 bool DevirtModule::tryFindVirtualCallTargets(
     std::vector<VirtualCallTarget> &TargetsForSlot,
-    const std::set<BitSetInfo> &BitSetInfos, uint64_t ByteOffset) {
-  for (const BitSetInfo &BS : BitSetInfos) {
-    if (!BS.Bits->GV->isConstant())
+    const std::set<TypeMemberInfo> &TypeMemberInfos, uint64_t ByteOffset) {
+  for (const TypeMemberInfo &TM : TypeMemberInfos) {
+    if (!TM.Bits->GV->isConstant())
       return false;
 
-    auto Init = dyn_cast<ConstantArray>(BS.Bits->GV->getInitializer());
+    auto Init = dyn_cast<ConstantArray>(TM.Bits->GV->getInitializer());
     if (!Init)
       return false;
     ArrayType *VTableTy = Init->getType();
 
     uint64_t ElemSize =
         M.getDataLayout().getTypeAllocSize(VTableTy->getElementType());
-    uint64_t GlobalSlotOffset = BS.Offset + ByteOffset;
+    uint64_t GlobalSlotOffset = TM.Offset + ByteOffset;
     if (GlobalSlotOffset % ElemSize != 0)
       return false;
 
@@ -357,7 +375,7 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (Fn->getName() == "__cxa_pure_virtual")
       continue;
 
-    TargetsForSlot.push_back({Fn, &BS});
+    TargetsForSlot.push_back({Fn, &TM});
   }
 
   // Give up if we couldn't find any targets.
@@ -378,6 +396,9 @@ bool DevirtModule::trySingleImplDevirt(
   for (auto &&VCallSite : CallSites) {
     VCallSite.CS.setCalledFunction(ConstantExpr::getBitCast(
         TheFn, VCallSite.CS.getCalledValue()->getType()));
+    // This use is no longer unsafe.
+    if (VCallSite.NumUnsafeUses)
+      --*VCallSite.NumUnsafeUses;
   }
   return true;
 }
@@ -430,24 +451,24 @@ bool DevirtModule::tryUniqueRetValOpt(
     MutableArrayRef<VirtualCallSite> CallSites) {
   // IsOne controls whether we look for a 0 or a 1.
   auto tryUniqueRetValOptFor = [&](bool IsOne) {
-    const BitSetInfo *UniqueBitSet = 0;
+    const TypeMemberInfo *UniqueMember = 0;
     for (const VirtualCallTarget &Target : TargetsForSlot) {
       if (Target.RetVal == (IsOne ? 1 : 0)) {
-        if (UniqueBitSet)
+        if (UniqueMember)
           return false;
-        UniqueBitSet = Target.BS;
+        UniqueMember = Target.TM;
       }
     }
 
-    // We should have found a unique bit set or bailed out by now. We already
+    // We should have found a unique member or bailed out by now. We already
     // checked for a uniform return value in tryUniformRetValOpt.
-    assert(UniqueBitSet);
+    assert(UniqueMember);
 
     // Replace each call with the comparison.
     for (auto &&Call : CallSites) {
       IRBuilder<> B(Call.CS.getInstruction());
-      Value *OneAddr = B.CreateBitCast(UniqueBitSet->Bits->GV, Int8PtrTy);
-      OneAddr = B.CreateConstGEP1_64(OneAddr, UniqueBitSet->Offset);
+      Value *OneAddr = B.CreateBitCast(UniqueMember->Bits->GV, Int8PtrTy);
+      OneAddr = B.CreateConstGEP1_64(OneAddr, UniqueMember->Offset);
       Value *Cmp = B.CreateICmp(IsOne ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
                                 Call.VTable, OneAddr);
       Call.replaceAndErase(Cmp);
@@ -526,7 +547,8 @@ bool DevirtModule::tryVirtualConstProp(
     if (tryUniqueRetValOpt(BitWidth, TargetsForSlot, CSByConstantArg.second))
       continue;
 
-    // Find an allocation offset in bits in all vtables in the bitset.
+    // Find an allocation offset in bits in all vtables associated with the
+    // type.
     uint64_t AllocBefore =
         findLowestOffset(TargetsForSlot, /*IsAfter=*/false, BitWidth);
     uint64_t AllocAfter =
@@ -603,6 +625,10 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
   NewGV->setSection(B.GV->getSection());
   NewGV->setComdat(B.GV->getComdat());
 
+  // Copy the original vtable's metadata to the anonymous global, adjusting
+  // offsets as required.
+  NewGV->copyMetadata(B.GV, B.Before.Bytes.size());
+
   // Build an alias named after the original global, pointing at the second
   // element (the original initializer).
   auto Alias = GlobalAlias::create(
@@ -619,22 +645,15 @@ void DevirtModule::rebuildGlobal(VTableBits &B) {
   B.GV->eraseFromParent();
 }
 
-bool DevirtModule::run() {
-  Function *BitSetTestFunc =
-      M.getFunction(Intrinsic::getName(Intrinsic::bitset_test));
-  if (!BitSetTestFunc || BitSetTestFunc->use_empty())
-    return false;
-
-  Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
-  if (!AssumeFunc || AssumeFunc->use_empty())
-    return false;
-
+void DevirtModule::scanTypeTestUsers(Function *TypeTestFunc,
+                                     Function *AssumeFunc) {
   // Find all virtual calls via a virtual table pointer %p under an assumption
-  // of the form llvm.assume(llvm.bitset.test(%p, %md)). This indicates that %p
-  // points to a vtable in the bitset %md. Group calls by (bitset, offset) pair
-  // (effectively the identity of the virtual function) and store to CallSlots.
+  // of the form llvm.assume(llvm.type.test(%p, %md)). This indicates that %p
+  // points to a member of the type identifier %md. Group calls by (type ID,
+  // offset) pair (effectively the identity of the virtual function) and store
+  // to CallSlots.
   DenseSet<Value *> SeenPtrs;
-  for (auto I = BitSetTestFunc->use_begin(), E = BitSetTestFunc->use_end();
+  for (auto I = TypeTestFunc->use_begin(), E = TypeTestFunc->use_end();
        I != E;) {
     auto CI = dyn_cast<CallInst>(I->getUser());
     ++I;
@@ -644,24 +663,24 @@ bool DevirtModule::run() {
     // Search for virtual calls based on %p and add them to DevirtCalls.
     SmallVector<DevirtCallSite, 1> DevirtCalls;
     SmallVector<CallInst *, 1> Assumes;
-    findDevirtualizableCalls(DevirtCalls, Assumes, CI);
+    findDevirtualizableCallsForTypeTest(DevirtCalls, Assumes, CI);
 
     // If we found any, add them to CallSlots. Only do this if we haven't seen
     // the vtable pointer before, as it may have been CSE'd with pointers from
     // other call sites, and we don't want to process call sites multiple times.
     if (!Assumes.empty()) {
-      Metadata *BitSet =
+      Metadata *TypeId =
           cast<MetadataAsValue>(CI->getArgOperand(1))->getMetadata();
       Value *Ptr = CI->getArgOperand(0)->stripPointerCasts();
       if (SeenPtrs.insert(Ptr).second) {
         for (DevirtCallSite Call : DevirtCalls) {
-          CallSlots[{BitSet, Call.Offset}].push_back(
-              {CI->getArgOperand(0), Call.CS});
+          CallSlots[{TypeId, Call.Offset}].push_back(
+              {CI->getArgOperand(0), Call.CS, nullptr});
         }
       }
     }
 
-    // We no longer need the assumes or the bitset test.
+    // We no longer need the assumes or the type test.
     for (auto Assume : Assumes)
       Assume->eraseFromParent();
     // We can't use RecursivelyDeleteTriviallyDeadInstructions here because we
@@ -669,21 +688,120 @@ bool DevirtModule::run() {
     if (CI->use_empty())
       CI->eraseFromParent();
   }
+}
 
-  // Rebuild llvm.bitsets metadata into a map for easy lookup.
+void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
+  Function *TypeTestFunc = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
+
+  for (auto I = TypeCheckedLoadFunc->use_begin(),
+            E = TypeCheckedLoadFunc->use_end();
+       I != E;) {
+    auto CI = dyn_cast<CallInst>(I->getUser());
+    ++I;
+    if (!CI)
+      continue;
+
+    Value *Ptr = CI->getArgOperand(0);
+    Value *Offset = CI->getArgOperand(1);
+    Value *TypeIdValue = CI->getArgOperand(2);
+    Metadata *TypeId = cast<MetadataAsValue>(TypeIdValue)->getMetadata();
+
+    SmallVector<DevirtCallSite, 1> DevirtCalls;
+    SmallVector<Instruction *, 1> LoadedPtrs;
+    SmallVector<Instruction *, 1> Preds;
+    bool HasNonCallUses = false;
+    findDevirtualizableCallsForTypeCheckedLoad(DevirtCalls, LoadedPtrs, Preds,
+                                               HasNonCallUses, CI);
+
+    // Start by generating "pessimistic" code that explicitly loads the function
+    // pointer from the vtable and performs the type check. If possible, we will
+    // eliminate the load and the type check later.
+
+    // If possible, only generate the load at the point where it is used.
+    // This helps avoid unnecessary spills.
+    IRBuilder<> LoadB(
+        (LoadedPtrs.size() == 1 && !HasNonCallUses) ? LoadedPtrs[0] : CI);
+    Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
+    Value *GEPPtr = LoadB.CreateBitCast(GEP, PointerType::getUnqual(Int8PtrTy));
+    Value *LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEPPtr);
+
+    for (Instruction *LoadedPtr : LoadedPtrs) {
+      LoadedPtr->replaceAllUsesWith(LoadedValue);
+      LoadedPtr->eraseFromParent();
+    }
+
+    // Likewise for the type test.
+    IRBuilder<> CallB((Preds.size() == 1 && !HasNonCallUses) ? Preds[0] : CI);
+    CallInst *TypeTestCall = CallB.CreateCall(TypeTestFunc, {Ptr, TypeIdValue});
+
+    for (Instruction *Pred : Preds) {
+      Pred->replaceAllUsesWith(TypeTestCall);
+      Pred->eraseFromParent();
+    }
+
+    // We have already erased any extractvalue instructions that refer to the
+    // intrinsic call, but the intrinsic may have other non-extractvalue uses
+    // (although this is unlikely). In that case, explicitly build a pair and
+    // RAUW it.
+    if (!CI->use_empty()) {
+      Value *Pair = UndefValue::get(CI->getType());
+      IRBuilder<> B(CI);
+      Pair = B.CreateInsertValue(Pair, LoadedValue, {0});
+      Pair = B.CreateInsertValue(Pair, TypeTestCall, {1});
+      CI->replaceAllUsesWith(Pair);
+    }
+
+    // The number of unsafe uses is initially the number of uses.
+    auto &NumUnsafeUses = NumUnsafeUsesForTypeTest[TypeTestCall];
+    NumUnsafeUses = DevirtCalls.size();
+
+    // If the function pointer has a non-call user, we cannot eliminate the type
+    // check, as one of those users may eventually call the pointer. Increment
+    // the unsafe use count to make sure it cannot reach zero.
+    if (HasNonCallUses)
+      ++NumUnsafeUses;
+    for (DevirtCallSite Call : DevirtCalls) {
+      CallSlots[{TypeId, Call.Offset}].push_back(
+          {Ptr, Call.CS, &NumUnsafeUses});
+    }
+
+    CI->eraseFromParent();
+  }
+}
+
+bool DevirtModule::run() {
+  Function *TypeTestFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_test));
+  Function *TypeCheckedLoadFunc =
+      M.getFunction(Intrinsic::getName(Intrinsic::type_checked_load));
+  Function *AssumeFunc = M.getFunction(Intrinsic::getName(Intrinsic::assume));
+
+  if ((!TypeTestFunc || TypeTestFunc->use_empty() || !AssumeFunc ||
+       AssumeFunc->use_empty()) &&
+      (!TypeCheckedLoadFunc || TypeCheckedLoadFunc->use_empty()))
+    return false;
+
+  if (TypeTestFunc && AssumeFunc)
+    scanTypeTestUsers(TypeTestFunc, AssumeFunc);
+
+  if (TypeCheckedLoadFunc)
+    scanTypeCheckedLoadUsers(TypeCheckedLoadFunc);
+
+  // Rebuild type metadata into a map for easy lookup.
   std::vector<VTableBits> Bits;
-  DenseMap<Metadata *, std::set<BitSetInfo>> BitSets;
-  buildBitSets(Bits, BitSets);
-  if (BitSets.empty())
+  DenseMap<Metadata *, std::set<TypeMemberInfo>> TypeIdMap;
+  buildTypeIdentifierMap(Bits, TypeIdMap);
+  if (TypeIdMap.empty())
     return true;
 
-  // For each (bitset, offset) pair:
+  // For each (type, offset) pair:
   bool DidVirtualConstProp = false;
   for (auto &S : CallSlots) {
-    // Search each of the vtables in the bitset for the virtual function
-    // implementation at offset S.first.ByteOffset, and add to TargetsForSlot.
+    // Search each of the members of the type identifier for the virtual
+    // function implementation at offset S.first.ByteOffset, and add to
+    // TargetsForSlot.
     std::vector<VirtualCallTarget> TargetsForSlot;
-    if (!tryFindVirtualCallTargets(TargetsForSlot, BitSets[S.first.BitSetID],
+    if (!tryFindVirtualCallTargets(TargetsForSlot, TypeIdMap[S.first.TypeID],
                                    S.first.ByteOffset))
       continue;
 
@@ -691,6 +809,18 @@ bool DevirtModule::run() {
       continue;
 
     DidVirtualConstProp |= tryVirtualConstProp(TargetsForSlot, S.second);
+  }
+
+  // If we were able to eliminate all unsafe uses for a type checked load,
+  // eliminate the type test by replacing it with true.
+  if (TypeCheckedLoadFunc) {
+    auto True = ConstantInt::getTrue(M.getContext());
+    for (auto &&U : NumUnsafeUsesForTypeTest) {
+      if (U.second == 0) {
+        U.first->replaceAllUsesWith(True);
+        U.first->eraseFromParent();
+      }
+    }
   }
 
   // Rebuild each global we touched as part of virtual constant propagation to

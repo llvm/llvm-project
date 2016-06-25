@@ -49,8 +49,10 @@ void ListRecordBuilder::finishSubRecord() {
   // back up and insert a continuation record, sliding the current subrecord
   // down.
   if (getLastContinuationSize() > 65535 - 8) {
+    assert(SubrecordStart != 0 && "can't slide from the start!");
     SmallString<128> SubrecordCopy(
         Builder.str().slice(SubrecordStart, Builder.size()));
+    assert(SubrecordCopy.size() < 65530 && "subrecord is too large to slide!");
     Builder.truncate(SubrecordStart);
 
     // Write a placeholder continuation record.

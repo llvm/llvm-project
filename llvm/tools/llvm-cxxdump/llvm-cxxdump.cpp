@@ -190,8 +190,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
       continue;
     StringRef SecContents;
     error(Sec.getContents(SecContents));
-    ErrorOr<uint64_t> SymAddressOrErr = Sym.getAddress();
-    error(SymAddressOrErr.getError());
+    Expected<uint64_t> SymAddressOrErr = Sym.getAddress();
+    error(errorToErrorCode(SymAddressOrErr.takeError()));
     uint64_t SymAddress = *SymAddressOrErr;
     uint64_t SecAddress = Sec.getAddress();
     uint64_t SecSize = Sec.getSize();

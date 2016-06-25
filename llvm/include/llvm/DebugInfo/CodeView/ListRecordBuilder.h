@@ -50,7 +50,7 @@ private:
     return ContinuationOffsets.empty() ? 0 : ContinuationOffsets.back();
   }
   size_t getLastContinuationEnd() const { return Builder.size(); }
-  unsigned getLastContinuationSize() const {
+  size_t getLastContinuationSize() const {
     return getLastContinuationEnd() - getLastContinuationStart();
   }
 

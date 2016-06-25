@@ -223,16 +223,7 @@ SectionKind TargetLoweringObjectFile::getKindForGlobal(const GlobalValue *GV,
     }
   }
 
-  // Okay, this isn't a constant.  If the initializer for the global is going
-  // to require a runtime relocation by the dynamic linker, put it into a more
-  // specific section to improve startup time of the app.  This coalesces these
-  // globals together onto fewer pages, improving the locality of the dynamic
-  // linker.
-  if (ReloModel == Reloc::Static)
-    return SectionKind::getData();
-
-  if (C->needsRelocation())
-    return SectionKind::getData();
+  // Okay, this isn't a constant.
   return SectionKind::getData();
 }
 

@@ -94,21 +94,21 @@ define <4 x float> @test_copysign_v4f32_v4f32(<4 x float> %a, <4 x float> %b) #0
 define <4 x float> @test_copysign_v4f32_v4f64(<4 x float> %a, <4 x double> %b) #0 {
 ; CHECK-LABEL: test_copysign_v4f32_v4f64:
 ; CHECK-NEXT:    mov s3, v0[1]
-; CHECK-NEXT:    mov d4, v1[1]
-; CHECK-NEXT:    movi.4s v5, #128, lsl #24
-; CHECK-NEXT:    fcvt s1, d1
+; CHECK-NEXT:    movi.4s v4, #128, lsl #24
+; CHECK-NEXT:    fcvt s5, d1
 ; CHECK-NEXT:    mov s6, v0[2]
 ; CHECK-NEXT:    mov s7, v0[3]
-; CHECK-NEXT:    fcvt s16, d2
-; CHECK-NEXT:    bit.16b v0, v1, v5
-; CHECK-NEXT:    bit.16b v6, v16, v5
-; CHECK-NEXT:    fcvt s1, d4
-; CHECK-NEXT:    bit.16b v3, v1, v5
+; CHECK-NEXT:    bit.16b v0, v5, v4
+; CHECK-NEXT:    fcvt s5, d2
+; CHECK-NEXT:    bit.16b v6, v5, v4
+; CHECK-NEXT:    mov d1, v1[1]
+; CHECK-NEXT:    fcvt s1, d1
+; CHECK-NEXT:    bit.16b v3, v1, v4
 ; CHECK-NEXT:    mov d1, v2[1]
 ; CHECK-NEXT:    fcvt s1, d1
 ; CHECK-NEXT:    ins.s v0[1], v3[0]
 ; CHECK-NEXT:    ins.s v0[2], v6[0]
-; CHECK-NEXT:    bit.16b v7, v1, v5
+; CHECK-NEXT:    bit.16b v7, v1, v4
 ; CHECK-NEXT:    ins.s v0[3], v7[0]
 ; CHECK-NEXT:    ret
   %tmp0 = fptrunc <4 x double> %b to <4 x float>

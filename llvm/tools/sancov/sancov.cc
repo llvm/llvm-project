@@ -321,8 +321,8 @@ findSanitizerCovFunctions(const object::ObjectFile &O) {
   std::set<uint64_t> Result;
 
   for (const object::SymbolRef &Symbol : O.symbols()) {
-    ErrorOr<uint64_t> AddressOrErr = Symbol.getAddress();
-    FailIfError(AddressOrErr);
+    Expected<uint64_t> AddressOrErr = Symbol.getAddress();
+    FailIfError(errorToErrorCode(AddressOrErr.takeError()));
 
     Expected<StringRef> NameOrErr = Symbol.getName();
     FailIfError(errorToErrorCode(NameOrErr.takeError()));

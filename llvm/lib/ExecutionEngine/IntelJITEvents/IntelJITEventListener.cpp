@@ -130,9 +130,12 @@ void IntelJITEventListener::NotifyObjectEmitted(
       continue;
     }
 
-    ErrorOr<uint64_t> AddrOrErr = Sym.getAddress();
-    if (AddrOrErr.getError())
+    Expected<uint64_t> AddrOrErr = Sym.getAddress();
+    if (!AddrOrErr) {
+      // TODO: Actually report errors helpfully.
+      consumeError(AddrOrErr.takeError());
       continue;
+    }
     uint64_t Addr = *AddrOrErr;
     uint64_t Size = P.second;
 

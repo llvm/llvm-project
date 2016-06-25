@@ -486,8 +486,8 @@ define void @s_and_inline_imm_neg_4.0_i64(i64 addrspace(1)* %out, i64 addrspace(
 ; low 32-bits, which is not a valid 64-bit inline immmediate.
 
 ; FUNC-LABEL: {{^}}s_and_inline_imm_f32_4.0_i64:
-; SI: s_load_dwordx2
 ; SI: s_load_dword s
+; SI: s_load_dwordx2
 ; SI-NOT: and
 ; SI: s_and_b32 s[[K_HI:[0-9]+]], s{{[0-9]+}}, 4.0
 ; SI-NOT: and

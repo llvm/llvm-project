@@ -100,6 +100,8 @@ computeTargetABI(const Triple &TT, StringRef CPU,
     case llvm::Triple::Android:
     case llvm::Triple::GNUEABI:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABI:
+    case llvm::Triple::MuslEABIHF:
     case llvm::Triple::EABIHF:
     case llvm::Triple::EABI:
       TargetABI = ARMBaseTargetMachine::ARM_ABI_AAPCS;
@@ -208,7 +210,8 @@ ARMBaseTargetMachine::ARMBaseTargetMachine(const Target &T, const Triple &TT,
   // Default to triple-appropriate EABI
   if (Options.EABIVersion == EABI::Default ||
       Options.EABIVersion == EABI::Unknown) {
-    if (Subtarget.isTargetGNUAEABI())
+    // musl is compatible with glibc with regard to EABI version
+    if (Subtarget.isTargetGNUAEABI() || Subtarget.isTargetMuslAEABI())
       this->Options.EABIVersion = EABI::GNU;
     else
       this->Options.EABIVersion = EABI::EABI5;

@@ -1,4 +1,4 @@
-//===- BitSetUtils.cpp - Utilities related to pointer bitsets -------------===//
+//===- TypeMetadataUtils.cpp - Utilities related to type metadata ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,12 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains functions that make it easier to manipulate bitsets for
-// devirtualization.
+// This file contains functions that make it easier to manipulate type metadata
+// for devirtualization.
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/BitSetUtils.h"
+#include "llvm/Analysis/TypeMetadataUtils.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 
@@ -21,15 +22,17 @@ using namespace llvm;
 // Search for virtual calls that call FPtr and add them to DevirtCalls.
 static void
 findCallsAtConstantOffset(SmallVectorImpl<DevirtCallSite> &DevirtCalls,
-                          Value *FPtr, uint64_t Offset) {
+                          bool *HasNonCallUses, Value *FPtr, uint64_t Offset) {
   for (const Use &U : FPtr->uses()) {
     Value *User = U.getUser();
     if (isa<BitCastInst>(User)) {
-      findCallsAtConstantOffset(DevirtCalls, User, Offset);
+      findCallsAtConstantOffset(DevirtCalls, HasNonCallUses, User, Offset);
     } else if (auto CI = dyn_cast<CallInst>(User)) {
       DevirtCalls.push_back({Offset, CI});
     } else if (auto II = dyn_cast<InvokeInst>(User)) {
       DevirtCalls.push_back({Offset, II});
+    } else if (HasNonCallUses) {
+      *HasNonCallUses = true;
     }
   }
 }
@@ -44,7 +47,7 @@ findLoadCallsAtConstantOffset(Module *M,
     if (isa<BitCastInst>(User)) {
       findLoadCallsAtConstantOffset(M, DevirtCalls, User, Offset);
     } else if (isa<LoadInst>(User)) {
-      findCallsAtConstantOffset(DevirtCalls, User, Offset);
+      findCallsAtConstantOffset(DevirtCalls, nullptr, User, Offset);
     } else if (auto GEP = dyn_cast<GetElementPtrInst>(User)) {
       // Take into account the GEP offset.
       if (VPtr == GEP->getPointerOperand() && GEP->hasAllConstantIndices()) {
@@ -57,14 +60,14 @@ findLoadCallsAtConstantOffset(Module *M,
   }
 }
 
-void llvm::findDevirtualizableCalls(
+void llvm::findDevirtualizableCallsForTypeTest(
     SmallVectorImpl<DevirtCallSite> &DevirtCalls,
     SmallVectorImpl<CallInst *> &Assumes, CallInst *CI) {
-  assert(CI->getCalledFunction()->getIntrinsicID() == Intrinsic::bitset_test);
+  assert(CI->getCalledFunction()->getIntrinsicID() == Intrinsic::type_test);
 
   Module *M = CI->getParent()->getParent()->getParent();
 
-  // Find llvm.assume intrinsics for this llvm.bitset.test call.
+  // Find llvm.assume intrinsics for this llvm.type.test call.
   for (const Use &CIU : CI->uses()) {
     auto AssumeCI = dyn_cast<CallInst>(CIU.getUser());
     if (AssumeCI) {
@@ -79,4 +82,37 @@ void llvm::findDevirtualizableCalls(
   if (!Assumes.empty())
     findLoadCallsAtConstantOffset(M, DevirtCalls,
                                   CI->getArgOperand(0)->stripPointerCasts(), 0);
+}
+
+void llvm::findDevirtualizableCallsForTypeCheckedLoad(
+    SmallVectorImpl<DevirtCallSite> &DevirtCalls,
+    SmallVectorImpl<Instruction *> &LoadedPtrs,
+    SmallVectorImpl<Instruction *> &Preds, bool &HasNonCallUses, CallInst *CI) {
+  assert(CI->getCalledFunction()->getIntrinsicID() ==
+         Intrinsic::type_checked_load);
+
+  auto *Offset = dyn_cast<ConstantInt>(CI->getArgOperand(1));
+  if (!Offset) {
+    HasNonCallUses = true;
+    return;
+  }
+
+  for (Use &U : CI->uses()) {
+    auto CIU = U.getUser();
+    if (auto EVI = dyn_cast<ExtractValueInst>(CIU)) {
+      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 0) {
+        LoadedPtrs.push_back(EVI);
+        continue;
+      }
+      if (EVI->getNumIndices() == 1 && EVI->getIndices()[0] == 1) {
+        Preds.push_back(EVI);
+        continue;
+      }
+    }
+    HasNonCallUses = true;
+  }
+
+  for (Value *LoadedPtr : LoadedPtrs)
+    findCallsAtConstantOffset(DevirtCalls, &HasNonCallUses, LoadedPtr,
+                              Offset->getZExtValue());
 }

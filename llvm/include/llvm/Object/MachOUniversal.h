@@ -84,6 +84,12 @@ public:
       else // Parent->getMagic() == MachO::FAT_MAGIC_64
         return Header64.align;
     }
+    uint32_t getReserved() const {
+      if (Parent->getMagic() == MachO::FAT_MAGIC)
+        return 0;
+      else // Parent->getMagic() == MachO::FAT_MAGIC_64
+        return Header64.reserved;
+    }
     std::string getArchTypeName() const {
       if (Parent->getMagic() == MachO::FAT_MAGIC) {
         Triple T =

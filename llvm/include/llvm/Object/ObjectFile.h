@@ -135,7 +135,7 @@ public:
   Expected<StringRef> getName() const;
   /// Returns the symbol virtual address (i.e. address at which it will be
   /// mapped).
-  ErrorOr<uint64_t> getAddress() const;
+  Expected<uint64_t> getAddress() const;
 
   /// Return the value of the symbol depending on the object this can be an
   /// offset or a virtual address.
@@ -198,7 +198,7 @@ protected:
   virtual Expected<StringRef> getSymbolName(DataRefImpl Symb) const = 0;
   std::error_code printSymbolName(raw_ostream &OS,
                                   DataRefImpl Symb) const override;
-  virtual ErrorOr<uint64_t> getSymbolAddress(DataRefImpl Symb) const = 0;
+  virtual Expected<uint64_t> getSymbolAddress(DataRefImpl Symb) const = 0;
   virtual uint64_t getSymbolValueImpl(DataRefImpl Symb) const = 0;
   virtual uint32_t getSymbolAlignment(DataRefImpl Symb) const;
   virtual uint64_t getCommonSymbolSizeImpl(DataRefImpl Symb) const = 0;
@@ -312,7 +312,7 @@ inline Expected<StringRef> SymbolRef::getName() const {
   return getObject()->getSymbolName(getRawDataRefImpl());
 }
 
-inline ErrorOr<uint64_t> SymbolRef::getAddress() const {
+inline Expected<uint64_t> SymbolRef::getAddress() const {
   return getObject()->getSymbolAddress(getRawDataRefImpl());
 }
 

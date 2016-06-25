@@ -596,6 +596,11 @@ SDValue SITargetLowering::LowerFormalArguments(
     return DAG.getEntryNode();
   }
 
+  // Create stack objects that are used for emitting debugger prologue if
+  // "amdgpu-debugger-emit-prologue" attribute was specified.
+  if (ST.debuggerEmitPrologue())
+    createDebuggerPrologueStackObjects(MF);
+
   SmallVector<ISD::InputArg, 16> Splits;
   BitVector Skipped(Ins.size());
 
@@ -1258,6 +1263,32 @@ bool SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   }
 }
 
+void SITargetLowering::createDebuggerPrologueStackObjects(
+    MachineFunction &MF) const {
+  // Create stack objects that are used for emitting debugger prologue.
+  //
+  // Debugger prologue writes work group IDs and work item IDs to scratch memory
+  // at fixed location in the following format:
+  //   offset 0:  work group ID x
+  //   offset 4:  work group ID y
+  //   offset 8:  work group ID z
+  //   offset 16: work item ID x
+  //   offset 20: work item ID y
+  //   offset 24: work item ID z
+  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  int ObjectIdx = 0;
+
+  // For each dimension:
+  for (unsigned i = 0; i < 3; ++i) {
+    // Create fixed stack object for work group ID.
+    ObjectIdx = MF.getFrameInfo()->CreateFixedObject(4, i * 4, true);
+    Info->setDebuggerWorkGroupIDStackObjectIndex(i, ObjectIdx);
+    // Create fixed stack object for work item ID.
+    ObjectIdx = MF.getFrameInfo()->CreateFixedObject(4, i * 4 + 16, true);
+    Info->setDebuggerWorkItemIDStackObjectIndex(i, ObjectIdx);
+  }
+}
+
 /// This transforms the control flow intrinsics to get the branch destination as
 /// last parameter, also switches branch target with BR if the need arise
 SDValue SITargetLowering::LowerBRCOND(SDValue BRCOND,
@@ -1420,6 +1451,14 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   DAG.getContext()->diagnose(InvalidAddrSpaceCast);
 
   return DAG.getUNDEF(ASC->getValueType(0));
+}
+
+bool
+SITargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
+  if (GA->getAddressSpace() != AMDGPUAS::GLOBAL_ADDRESS)
+    return false;
+
+  return TargetLowering::isOffsetFoldingLegal(GA);
 }
 
 SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,

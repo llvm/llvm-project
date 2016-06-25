@@ -1,4 +1,4 @@
-//===- LowerBitSets.h - Bitset lowering pass --------------------*- C++ -*-===//
+//===- LowerTypeTests.h - type metadata lowering pass -----------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file defines parts of the bitset lowering pass implementation that may
-// be usefully unit tested.
+// This file defines parts of the type test lowering pass implementation that
+// may be usefully unit tested.
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_IPO_LOWERBITSETS_H
-#define LLVM_TRANSFORMS_IPO_LOWERBITSETS_H
+#ifndef LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
+#define LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -31,7 +31,7 @@ class GlobalObject;
 class Value;
 class raw_ostream;
 
-namespace lowerbitsets {
+namespace lowertypetests {
 
 struct BitSetInfo {
   // The indices of the set bits in the bitset.
@@ -199,7 +199,7 @@ struct ByteArrayBuilder {
                 uint64_t &AllocByteOffset, uint8_t &AllocMask);
 };
 
-} // end namespace lowerbitsets
+} // end namespace lowertypetests
 } // end namespace llvm
 
-#endif // LLVM_TRANSFORMS_IPO_LOWERBITSETS_H
+#endif // LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H

@@ -55,7 +55,7 @@ define void @fneg_fabs_fn_free_f64(double addrspace(1)* %out, i64 %in) {
 }
 
 ; GCN-LABEL: {{^}}fneg_fabs_f64:
-; GCN: s_load_dwordx2
+; GCN-DAG: s_load_dwordx2
 ; GCN-DAG: v_bfrev_b32_e32 [[IMMREG:v[0-9]+]], 1{{$}}
 ; SI-DAG: s_load_dwordx2 s{{\[}}[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0xb
 ; VI-DAG: s_load_dwordx2 s{{\[}}[[LO_X:[0-9]+]]:[[HI_X:[0-9]+]]{{\]}}, s[{{[0-9]+:[0-9]+}}], 0x2c

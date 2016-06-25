@@ -204,9 +204,9 @@ ErrorOr<object::SymbolRef> Decoder::getSymbol(const COFFObjectFile &COFF,
     if (FunctionOnly && *Type != SymbolRef::ST_Function)
       continue;
 
-    ErrorOr<uint64_t> Address = Symbol.getAddress();
-    if (std::error_code EC = Address.getError())
-      return EC;
+    Expected<uint64_t> Address = Symbol.getAddress();
+    if (!Address)
+      return errorToErrorCode(Address.takeError());
     if (*Address == VA)
       return Symbol;
   }
@@ -618,9 +618,14 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       report_fatal_error(Buf);
     }
     FunctionName = *FunctionNameOrErr;
-    ErrorOr<uint64_t> FunctionAddressOrErr = Function->getAddress();
-    if (std::error_code EC = FunctionAddressOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    if (!FunctionAddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionAddress = *FunctionAddressOrErr;
   } else {
     const pe32_header *PEHeader;
@@ -641,9 +646,14 @@ bool Decoder::dumpUnpackedEntry(const COFFObjectFile &COFF,
       report_fatal_error(Buf);
     }
 
-    ErrorOr<uint64_t> AddressOrErr = XDataRecord->getAddress();
-    if (std::error_code EC = AddressOrErr.getError())
-      report_fatal_error(EC.message());
+    Expected<uint64_t> AddressOrErr = XDataRecord->getAddress();
+    if (!AddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(AddressOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     uint64_t Address = *AddressOrErr;
 
     SW.printString("ExceptionRecord", formatSymbol(*Name, Address));
@@ -698,7 +708,14 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
       report_fatal_error(Buf);
     }
     FunctionName = *FunctionNameOrErr;
-    ErrorOr<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    Expected<uint64_t> FunctionAddressOrErr = Function->getAddress();
+    if (!FunctionAddressOrErr) {
+      std::string Buf;
+      llvm::raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(FunctionAddressOrErr.takeError(), OS, "");
+      OS.flush();
+      report_fatal_error(Buf);
+    }
     FunctionAddress = *FunctionAddressOrErr;
   } else {
     const pe32_header *PEHeader;

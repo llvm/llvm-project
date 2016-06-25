@@ -59,12 +59,6 @@ namespace {
 
     bool runOnFunction(Function &F) override;
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      // This is a cluster of orthogonal Transforms
-      AU.addPreserved<UnifyFunctionExitNodes>();
-      AU.addPreservedID(LowerInvokePassID);
-    }
-
     struct CaseRange {
       ConstantInt* Low;
       ConstantInt* High;

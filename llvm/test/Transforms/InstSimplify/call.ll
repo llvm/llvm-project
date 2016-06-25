@@ -187,4 +187,20 @@ cast.end:                                         ; preds = %cast.notnull, %entr
 ; CHECK: br i1 %cmp, label %cast.end, label %cast.notnull
 }
 
+define i32 @call_null() {
+entry:
+  %call = call i32 null()
+  ret i32 %call
+}
+; CHECK-LABEL: define i32 @call_null(
+; CHECK: ret i32 undef
+
+define i32 @call_undef() {
+entry:
+  %call = call i32 undef()
+  ret i32 %call
+}
+; CHECK-LABEL: define i32 @call_undef(
+; CHECK: ret i32 undef
+
 declare noalias i8* @malloc(i64)

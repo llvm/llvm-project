@@ -545,12 +545,6 @@ bool Instruction::mayThrow() const {
   return isa<ResumeInst>(this);
 }
 
-bool Instruction::mayReturn() const {
-  if (const CallInst *CI = dyn_cast<CallInst>(this))
-    return !CI->doesNotReturn();
-  return true;
-}
-
 /// isAssociative - Return true if the instruction is associative:
 ///
 ///   Associative operators satisfy:  x op (y op z) === (x op y) op z

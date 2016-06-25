@@ -145,7 +145,7 @@ endif:
 ; FUNC-LABEL: {{^}}s_ctpop_i128:
 ; GCN: s_bcnt1_i32_b64 [[SRESULT0:s[0-9]+]],
 ; GCN: s_bcnt1_i32_b64 [[SRESULT1:s[0-9]+]],
-; GCN: s_add_i32 s{{[0-9]+}}, [[SRESULT0]], [[SRESULT1]]
+; GCN: s_add_i32 s{{[0-9]+}}, [[SRESULT1]], [[SRESULT0]]
 ; GCN: s_endpgm
 define void @s_ctpop_i128(i32 addrspace(1)* noalias %out, i128 %val) nounwind {
   %ctpop = call i128 @llvm.ctpop.i128(i128 %val) nounwind readnone
@@ -155,10 +155,10 @@ define void @s_ctpop_i128(i32 addrspace(1)* noalias %out, i128 %val) nounwind {
 }
 
 ; FUNC-LABEL: {{^}}s_ctpop_i65:
-; GCN: s_bcnt1_i32_b64
 ; GCN: s_and_b32
-; GCN: s_bcnt1_i32_b64
-; GCN: s_add_i32
+; GCN: s_bcnt1_i32_b64 [[REG0:s[0-9]+]],
+; GCN: s_bcnt1_i32_b64 [[REG1:s[0-9]+]],
+; GCN: s_add_i32 {{s[0-9]+}}, [[REG0]], [[REG1]]
 ; GCN: s_endpgm
 define void @s_ctpop_i65(i32 addrspace(1)* noalias %out, i65 %val) nounwind {
   %ctpop = call i65 @llvm.ctpop.i65(i65 %val) nounwind readnone

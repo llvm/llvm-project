@@ -593,6 +593,8 @@ protected:
   void verifyOrdering(Function &F) const;
 
 private:
+  class CachingWalker;
+
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
 
@@ -620,7 +622,7 @@ private:
   std::unique_ptr<MemoryAccess> LiveOnEntryDef;
 
   // Memory SSA building info
-  std::unique_ptr<MemorySSAWalker> Walker;
+  std::unique_ptr<CachingWalker> Walker;
   unsigned NextID;
 };
 
@@ -750,74 +752,6 @@ public:
 
 using MemoryAccessPair = std::pair<MemoryAccess *, MemoryLocation>;
 using ConstMemoryAccessPair = std::pair<const MemoryAccess *, MemoryLocation>;
-
-/// \brief A MemorySSAWalker that does AA walks and caching of lookups to
-/// disambiguate accesses.
-///
-/// FIXME: The current implementation of this can take quadratic space in rare
-/// cases. This can be fixed, but it is something to note until it is fixed.
-///
-/// In order to trigger this behavior, you need to store to N distinct locations
-/// (that AA can prove don't alias), perform M stores to other memory
-/// locations that AA can prove don't alias any of the initial N locations, and
-/// then load from all of the N locations. In this case, we insert M cache
-/// entries for each of the N loads.
-///
-/// For example:
-/// define i32 @foo() {
-///   %a = alloca i32, align 4
-///   %b = alloca i32, align 4
-///   store i32 0, i32* %a, align 4
-///   store i32 0, i32* %b, align 4
-///
-///   ; Insert M stores to other memory that doesn't alias %a or %b here
-///
-///   %c = load i32, i32* %a, align 4 ; Caches M entries in
-///                                   ; CachedUpwardsClobberingAccess for the
-///                                   ; MemoryLocation %a
-///   %d = load i32, i32* %b, align 4 ; Caches M entries in
-///                                   ; CachedUpwardsClobberingAccess for the
-///                                   ; MemoryLocation %b
-///
-///   ; For completeness' sake, loading %a or %b again would not cache *another*
-///   ; M entries.
-///   %r = add i32 %c, %d
-///   ret i32 %r
-/// }
-class CachingMemorySSAWalker final : public MemorySSAWalker {
-public:
-  CachingMemorySSAWalker(MemorySSA *, AliasAnalysis *, DominatorTree *);
-  ~CachingMemorySSAWalker() override;
-
-  MemoryAccess *getClobberingMemoryAccess(const Instruction *) override;
-  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
-                                          MemoryLocation &) override;
-  void invalidateInfo(MemoryAccess *) override;
-
-protected:
-  struct UpwardsMemoryQuery;
-  MemoryAccess *doCacheLookup(const MemoryAccess *, const UpwardsMemoryQuery &,
-                              const MemoryLocation &);
-
-  void doCacheInsert(const MemoryAccess *, MemoryAccess *,
-                     const UpwardsMemoryQuery &, const MemoryLocation &);
-
-  void doCacheRemove(const MemoryAccess *, const UpwardsMemoryQuery &,
-                     const MemoryLocation &);
-
-private:
-  MemoryAccessPair UpwardsDFSWalk(MemoryAccess *, const MemoryLocation &,
-                                  UpwardsMemoryQuery &, bool);
-  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *, UpwardsMemoryQuery &);
-  bool instructionClobbersQuery(const MemoryDef *, UpwardsMemoryQuery &,
-                                const MemoryLocation &Loc) const;
-  void verifyRemoved(MemoryAccess *);
-  SmallDenseMap<ConstMemoryAccessPair, MemoryAccess *>
-      CachedUpwardsClobberingAccess;
-  DenseMap<const MemoryAccess *, MemoryAccess *> CachedUpwardsClobberingCall;
-  AliasAnalysis *AA;
-  DominatorTree *DT;
-};
 
 /// \brief Iterator base class used to implement const and non-const iterators
 /// over the defining accesses of a MemoryAccess.
