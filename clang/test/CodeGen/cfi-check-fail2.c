@@ -23,7 +23,7 @@ void caller(void (*f)()) {
 // CHECK:   %[[A:.*]] = bitcast i8* %[[DATA]] to { i8, { i8*, i32, i32 }, i8* }*
 // CHECK:   %[[KINDPTR:.*]] = getelementptr {{.*}} %[[A]], i32 0, i32 0
 // CHECK:   %[[KIND:.*]] = load i8, i8* %[[KINDPTR]], align 4
-// CHECK:   %[[VTVALID0:.*]] = call i1 @llvm.bitset.test(i8* %[[ADDR]], metadata !"all-vtables")
+// CHECK:   %[[VTVALID0:.*]] = call i1 @llvm.type.test(i8* %[[ADDR]], metadata !"all-vtables")
 // CHECK:   %[[VTVALID:.*]] = zext i1 %[[VTVALID0]] to i64
 // CHECK:   %[[NOT_0:.*]] = icmp ne i8 %[[KIND]], 0
 // CHECK:   br i1 %[[NOT_0]], label %[[CONT1:.*]], label %[[HANDLE0:.*]], !prof

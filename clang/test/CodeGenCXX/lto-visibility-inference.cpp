@@ -67,41 +67,41 @@ struct C11 {
 
 void f(C1 *c1, C2 *c2, C3 *c3, C4 *c4, C5 *c5, C6 *c6, std::C7 *c7,
        std::C7::C8 *c8, stdext::C9 *c9, other::C10 *c10) {
-  // ITANIUM: bitset.test{{.*}}!"_ZTS2C1"
-  // MS: bitset.test{{.*}}!"?AUC1@@"
+  // ITANIUM: type.test{{.*}}!"_ZTS2C1"
+  // MS: type.test{{.*}}!"?AUC1@@"
   c1->f();
-  // ITANIUM-NOT: bitset.test{{.*}}!"_ZTS2C2"
-  // MS: bitset.test{{.*}}!"?AUC2@@"
+  // ITANIUM-NOT: type.test{{.*}}!"_ZTS2C2"
+  // MS: type.test{{.*}}!"?AUC2@@"
   c2->f();
-  // ITANIUM: bitset.test{{.*}}!"_ZTS2C3"
-  // MS-NOT: bitset.test{{.*}}!"?AUC3@@"
+  // ITANIUM: type.test{{.*}}!"_ZTS2C3"
+  // MS-NOT: type.test{{.*}}!"?AUC3@@"
   c3->f();
-  // ITANIUM: bitset.test{{.*}}!"_ZTS2C4"
-  // MS-NOT: bitset.test{{.*}}!"?AUC4@@"
+  // ITANIUM: type.test{{.*}}!"_ZTS2C4"
+  // MS-NOT: type.test{{.*}}!"?AUC4@@"
   c4->f();
-  // ITANIUM-NOT: bitset.test{{.*}}!"_ZTS2C5"
-  // MS-NOT: bitset.test{{.*}}!"?AUC5@@"
+  // ITANIUM-NOT: type.test{{.*}}!"_ZTS2C5"
+  // MS-NOT: type.test{{.*}}!"?AUC5@@"
   c5->f();
-  // ITANIUM-NOT: bitset.test{{.*}}!"_ZTS2C6"
-  // MS-NOT: bitset.test{{.*}}!"?AUC6@@"
+  // ITANIUM-NOT: type.test{{.*}}!"_ZTS2C6"
+  // MS-NOT: type.test{{.*}}!"?AUC6@@"
   c6->f();
-  // ITANIUM: bitset.test{{.*}}!"_ZTSSt2C7"
-  // MS-STD: bitset.test{{.*}}!"?AUC7@std@@"
-  // MS-NOSTD-NOT: bitset.test{{.*}}!"?AUC7@std@@"
+  // ITANIUM: type.test{{.*}}!"_ZTSSt2C7"
+  // MS-STD: type.test{{.*}}!"?AUC7@std@@"
+  // MS-NOSTD-NOT: type.test{{.*}}!"?AUC7@std@@"
   c7->f();
-  // ITANIUM: bitset.test{{.*}}!"_ZTSNSt2C72C8E"
-  // MS-STD: bitset.test{{.*}}!"?AUC8@C7@std@@"
-  // MS-NOSTD-NOT: bitset.test{{.*}}!"?AUC8@C7@std@@"
+  // ITANIUM: type.test{{.*}}!"_ZTSNSt2C72C8E"
+  // MS-STD: type.test{{.*}}!"?AUC8@C7@std@@"
+  // MS-NOSTD-NOT: type.test{{.*}}!"?AUC8@C7@std@@"
   c8->f();
-  // ITANIUM: bitset.test{{.*}}!"_ZTSN6stdext2C9E"
-  // MS-STD: bitset.test{{.*}}!"?AUC9@stdext@@"
-  // MS-NOSTD-NOT: bitset.test{{.*}}!"?AUC9@stdext@@"
+  // ITANIUM: type.test{{.*}}!"_ZTSN6stdext2C9E"
+  // MS-STD: type.test{{.*}}!"?AUC9@stdext@@"
+  // MS-NOSTD-NOT: type.test{{.*}}!"?AUC9@stdext@@"
   c9->f();
-  // ITANIUM: bitset.test{{.*}}!"_ZTSN5other3C10E"
-  // MS: bitset.test{{.*}}!"?AUC10@other@@"
+  // ITANIUM: type.test{{.*}}!"_ZTSN5other3C10E"
+  // MS: type.test{{.*}}!"?AUC10@other@@"
   c10->f();
-  // ITANIUM: bitset.test{{.*}}!{{[0-9]}}
-  // MS: bitset.test{{.*}}!{{[0-9]}}
+  // ITANIUM: type.test{{.*}}!{{[0-9]}}
+  // MS: type.test{{.*}}!{{[0-9]}}
   C11 *c11;
   c11->f();
 }

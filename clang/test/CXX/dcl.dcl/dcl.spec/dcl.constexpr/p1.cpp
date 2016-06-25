@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++1z %s
 
 struct notlit { // expected-note {{not literal because}}
   notlit() {}
@@ -26,7 +28,12 @@ void f2(constexpr int i) {} // expected-error {{function parameter cannot be con
 // non-static member
 struct s2 {
   constexpr int mi1; // expected-error {{non-static data member cannot be constexpr; did you intend to make it const?}}
-  static constexpr int mi2; // expected-error {{requires an initializer}}
+  static constexpr int mi2;
+#if __cplusplus <= 201402L
+  // expected-error@-2 {{requires an initializer}}
+#else
+  // expected-error@-4 {{default initialization of an object of const}}
+#endif
   mutable constexpr int mi3 = 3; // expected-error-re {{non-static data member cannot be constexpr{{$}}}} expected-error {{'mutable' and 'const' cannot be mixed}}
 };
 // typedef
@@ -71,7 +78,7 @@ struct ConstexprDtor {
 template <typename T> constexpr T ft(T t) { return t; }
 template <typename T> T gt(T t) { return t; }
 struct S {
-  template<typename T> constexpr T f(); // expected-warning {{C++14}}
+  template<typename T> constexpr T f(); // expected-warning 0-1{{C++14}} expected-note 0-1{{candidate}}
   template <typename T>
   T g() const; // expected-note-re {{candidate template ignored: could not match 'T (){{( __attribute__\(\(thiscall\)\))?}} const' against 'char (){{( __attribute__\(\(thiscall\)\))?}}'}}
 };
@@ -82,7 +89,15 @@ template <> char ft(char c) { return c; } // expected-note {{previous}}
 template <> constexpr char ft(char nl); // expected-error {{constexpr declaration of 'ft<char>' follows non-constexpr declaration}}
 template <> constexpr int gt(int nl) { return nl; }
 template <> notlit S::f() const { return notlit(); }
-template <> constexpr int S::g() { return 0; } // expected-note {{previous}} expected-warning {{C++14}}
+#if __cplusplus >= 201402L
+// expected-error@-2 {{no function template matches}}
+#endif
+template <> constexpr int S::g() { return 0; } // expected-note {{previous}}
+#if __cplusplus < 201402L
+// expected-warning@-2 {{C++14}}
+#else
+// expected-error@-4 {{does not match any declaration in 'S'}}
+#endif
 template <> int S::g() const; // expected-error {{non-constexpr declaration of 'g<int>' follows constexpr declaration}}
 // specializations can drop the 'constexpr' but not the implied 'const'.
 template <> char S::g() { return 0; } // expected-error {{no function template matches}}
@@ -123,3 +138,11 @@ int next(constexpr int x) { // expected-error {{function parameter cannot be con
 }
 
 extern constexpr int memsz; // expected-error {{constexpr variable declaration must be a definition}}
+
+namespace {
+  struct A {
+    static constexpr int n = 0;
+  };
+  // FIXME: We should diagnose this prior to C++17.
+  const int &r = A::n;
+}

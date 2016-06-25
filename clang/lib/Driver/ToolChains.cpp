@@ -4157,8 +4157,23 @@ std::string Linux::getDynamicLinker(const ArgList &Args) const {
 
   if (Triple.isAndroid())
     return Triple.isArch64Bit() ? "/system/bin/linker64" : "/system/bin/linker";
-  else if (Triple.getEnvironment() == llvm::Triple::Musl)
-    return "/lib/ld-musl-" + Triple.getArchName().str() + ".so.1";
+  else if (Triple.isMusl()) {
+    std::string ArchName;
+    switch (Arch) {
+    case llvm::Triple::thumb:
+      ArchName = "arm";
+      break;
+    case llvm::Triple::thumbeb:
+      ArchName = "armeb";
+      break;
+    default:
+      ArchName = Triple.getArchName().str();
+    }
+    if (Triple.getEnvironment() == llvm::Triple::MuslEABIHF)
+      ArchName += "hf";
+
+    return "/lib/ld-musl-" + ArchName + ".so.1";
+  }
 
   std::string LibDir;
   std::string Loader;

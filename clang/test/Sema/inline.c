@@ -49,7 +49,7 @@ inline int useConst () {
 #include "inline.c"
 
 // Check that we don't allow illegal uses of inline
-inline int a; // expected-error{{'inline' can only appear on functions}}
+inline int a; // expected-warning{{inline variables are a C++1z extension}}
 typedef inline int b; // expected-error{{'inline' can only appear on functions}}
 int d(inline int a); // expected-error{{'inline' can only appear on functions}}
 

@@ -254,8 +254,8 @@ public:
                           CXXDtorType Type, bool ForVirtualBase,
                           bool Delegating, Address This) override;
 
-  void emitVTableBitSetEntries(VPtrInfo *Info, const CXXRecordDecl *RD,
-                               llvm::GlobalVariable *VTable);
+  void emitVTableTypeMetadata(VPtrInfo *Info, const CXXRecordDecl *RD,
+                              llvm::GlobalVariable *VTable);
 
   void emitVTableDefinitions(CodeGenVTables &CGVT,
                              const CXXRecordDecl *RD) override;
@@ -1502,14 +1502,11 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                             getFromDtorType(Type));
 }
 
-void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
-                                              const CXXRecordDecl *RD,
-                                              llvm::GlobalVariable *VTable) {
+void MicrosoftCXXABI::emitVTableTypeMetadata(VPtrInfo *Info,
+                                             const CXXRecordDecl *RD,
+                                             llvm::GlobalVariable *VTable) {
   if (!CGM.getCodeGenOpts().PrepareForLTO)
     return;
-
-  llvm::NamedMDNode *BitsetsMD =
-      CGM.getModule().getOrInsertNamedMetadata("llvm.bitsets");
 
   // The location of the first virtual function pointer in the virtual table,
   // aka the "address point" on Itanium. This is at offset 0 if RTTI is
@@ -1521,13 +1518,13 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
           : CharUnits::Zero();
 
   if (Info->PathToBaseWithVPtr.empty()) {
-    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
+    CGM.AddVTableTypeMetadata(VTable, AddressPoint, RD);
     return;
   }
 
   // Add a bitset entry for the least derived base belonging to this vftable.
-  CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint,
-                              Info->PathToBaseWithVPtr.back());
+  CGM.AddVTableTypeMetadata(VTable, AddressPoint,
+                            Info->PathToBaseWithVPtr.back());
 
   // Add a bitset entry for each derived class that is laid out at the same
   // offset as the least derived base.
@@ -1545,12 +1542,12 @@ void MicrosoftCXXABI::emitVTableBitSetEntries(VPtrInfo *Info,
       Offset = VBI->second.VBaseOffset;
     if (!Offset.isZero())
       return;
-    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, DerivedRD);
+    CGM.AddVTableTypeMetadata(VTable, AddressPoint, DerivedRD);
   }
 
   // Finally do the same for the most derived class.
   if (Info->FullOffsetInMDC.isZero())
-    CGM.CreateVTableBitSetEntry(BitsetsMD, VTable, AddressPoint, RD);
+    CGM.AddVTableTypeMetadata(VTable, AddressPoint, RD);
 }
 
 void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
@@ -1578,7 +1575,7 @@ void MicrosoftCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
 
     VTable->setInitializer(Init);
 
-    emitVTableBitSetEntries(Info, RD, VTable);
+    emitVTableTypeMetadata(Info, RD, VTable);
   }
 }
 
@@ -1818,13 +1815,20 @@ llvm::Value *MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
   MicrosoftVTableContext::MethodVFTableLocation ML =
       CGM.getMicrosoftVTableContext().getMethodVFTableLocation(GD);
-  if (CGM.getCodeGenOpts().PrepareForLTO)
-    CGF.EmitBitSetCodeForVCall(getClassAtVTableLocation(getContext(), GD, ML),
-                               VTable, Loc);
 
-  llvm::Value *VFuncPtr =
-      Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
-  return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  if (CGF.ShouldEmitVTableTypeCheckedLoad(MethodDecl->getParent())) {
+    return CGF.EmitVTableTypeCheckedLoad(
+        getClassAtVTableLocation(getContext(), GD, ML), VTable,
+        ML.Index * CGM.getContext().getTargetInfo().getPointerWidth(0) / 8);
+  } else {
+    if (CGM.getCodeGenOpts().PrepareForLTO)
+      CGF.EmitTypeMetadataCodeForVCall(
+          getClassAtVTableLocation(getContext(), GD, ML), VTable, Loc);
+
+    llvm::Value *VFuncPtr =
+        Builder.CreateConstInBoundsGEP1_64(VTable, ML.Index, "vfn");
+    return Builder.CreateAlignedLoad(VFuncPtr, CGF.getPointerAlign());
+  }
 }
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(

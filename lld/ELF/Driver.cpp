@@ -236,8 +236,8 @@ static int getInteger(opt::InputArgList &Args, unsigned Key, int Default) {
 }
 
 static const char *getReproduceOption(opt::InputArgList &Args) {
-  if (Args.hasArg(OPT_reproduce))
-    return Args.getLastArg(OPT_reproduce)->getValue();
+  if (auto *Arg = Args.getLastArg(OPT_reproduce))
+    return Arg->getValue();
   return getenv("LLD_REPRODUCE");
 }
 
