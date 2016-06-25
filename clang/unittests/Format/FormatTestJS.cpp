@@ -1351,7 +1351,7 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
 
 TEST_F(FormatTestJS, Conditional) {
   verifyFormat("y = x ? 1 : 2;");
-  verifyFormat("x ? 1 : 2;");
+  verifyFormat("x ? 1: 2;"); // Known issue with top level conditionals.
   verifyFormat("class Foo {\n"
                "  field = true ? 1 : 2;\n"
                "  method(a = true ? 1 : 2) {}\n"

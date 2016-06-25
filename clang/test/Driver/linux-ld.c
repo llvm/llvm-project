@@ -1606,11 +1606,47 @@
 // RUN: %clang %s -### -o %t.o 2>&1 \
 // RUN:     --target=powerpc64-pc-linux-musl \
 // RUN:   | FileCheck --check-prefix=CHECK-MUSL-PPC64 %s
-// CHECK-MUSL-X86:      "-dynamic-linker" "/lib/ld-musl-i386.so.1"
-// CHECK-MUSL-X86_64:   "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
-// CHECK-MUSL-MIPS:     "-dynamic-linker" "/lib/ld-musl-mips.so.1"
-// CHECK-MUSL-MIPSEL:   "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
-// CHECK-MUSL-MIPS64:   "-dynamic-linker" "/lib/ld-musl-mips64.so.1"
-// CHECK-MUSL-MIPS64EL: "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
-// CHECK-MUSL-PPC:      "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
-// CHECK-MUSL-PPC64:    "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=thumb-pc-linux-musleabi \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARM %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=thumb-pc-linux-musleabihf \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=thumbeb-pc-linux-musleabi \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEB %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=thumbeb-pc-linux-musleabihf \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=arm-pc-linux-musleabi \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARM %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=arm-pc-linux-musleabihf \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armeb-pc-linux-musleabi \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEB %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=armeb-pc-linux-musleabihf \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-ARMEBHF %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=aarch64-pc-linux-musleabi \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64 %s
+// RUN: %clang %s -### -o %t.o 2>&1 \
+// RUN:     --target=aarch64_be-pc-linux-musleabi \
+// RUN:   | FileCheck --check-prefix=CHECK-MUSL-AARCH64_BE %s
+// CHECK-MUSL-X86:        "-dynamic-linker" "/lib/ld-musl-i386.so.1"
+// CHECK-MUSL-X86_64:     "-dynamic-linker" "/lib/ld-musl-x86_64.so.1"
+// CHECK-MUSL-MIPS:       "-dynamic-linker" "/lib/ld-musl-mips.so.1"
+// CHECK-MUSL-MIPSEL:     "-dynamic-linker" "/lib/ld-musl-mipsel.so.1"
+// CHECK-MUSL-MIPS64:     "-dynamic-linker" "/lib/ld-musl-mips64.so.1"
+// CHECK-MUSL-MIPS64EL:   "-dynamic-linker" "/lib/ld-musl-mips64el.so.1"
+// CHECK-MUSL-PPC:        "-dynamic-linker" "/lib/ld-musl-powerpc.so.1"
+// CHECK-MUSL-PPC64:      "-dynamic-linker" "/lib/ld-musl-powerpc64.so.1"
+// CHECK-MUSL-ARM:        "-dynamic-linker" "/lib/ld-musl-arm.so.1"
+// CHECK-MUSL-ARMHF:      "-dynamic-linker" "/lib/ld-musl-armhf.so.1"
+// CHECK-MUSL-ARMEB:      "-dynamic-linker" "/lib/ld-musl-armeb.so.1"
+// CHECK-MUSL-ARMEBHF:    "-dynamic-linker" "/lib/ld-musl-armebhf.so.1"
+// CHECK-MUSL-AARCH64:    "-dynamic-linker" "/lib/ld-musl-aarch64.so.1"
+// CHECK-MUSL-AARCH64_BE: "-dynamic-linker" "/lib/ld-musl-aarch64_be.so.1"

@@ -247,6 +247,8 @@ private:
     offAndAtom.atom   = atom;
      _sectionAtoms[inSection].push_back(offAndAtom);
     addAtom(*atom);
+//     llvm::dbgs() << "In " << inSection->sectionName << ": Added "
+//                  << atom << " (" << atom->name() << ")\n";
   }
 
   typedef llvm::DenseMap<const normalized::Section *,

@@ -30,8 +30,8 @@ void g() {
 
 // CHECK:   %[[VT:.*]] = load void (%struct.A*)**, void (%struct.A*)***
 // CHECK:   %[[VT2:.*]] = bitcast {{.*}}%[[VT]] to i8*, !nosanitize
-// ITANIUM:   %[[TEST:.*]] = call i1 @llvm.bitset.test(i8* %[[VT2]], metadata !"_ZTS1A"), !nosanitize
-// MS:   %[[TEST:.*]] = call i1 @llvm.bitset.test(i8* %[[VT2]], metadata !"?AUA@@"), !nosanitize
+// ITANIUM:   %[[TEST:.*]] = call i1 @llvm.type.test(i8* %[[VT2]], metadata !"_ZTS1A"), !nosanitize
+// MS:   %[[TEST:.*]] = call i1 @llvm.type.test(i8* %[[VT2]], metadata !"?AUA@@"), !nosanitize
 // CHECK:   br i1 %[[TEST]], label %[[CONT:.*]], label %[[SLOW:.*]], {{.*}} !nosanitize
 // CHECK: [[SLOW]]
 // ITANIUM:   call void @__cfi_slowpath_diag(i64 7004155349499253778, i8* %[[VT2]], {{.*}}) {{.*}} !nosanitize

@@ -1413,15 +1413,24 @@ public:
                                  CFITypeCheckKind TCK, SourceLocation Loc);
 
   /// EmitVTablePtrCheck - Emit a check that VTable is a valid virtual table for
-  /// RD using llvm.bitset.test.
+  /// RD using llvm.type.test.
   void EmitVTablePtrCheck(const CXXRecordDecl *RD, llvm::Value *VTable,
                           CFITypeCheckKind TCK, SourceLocation Loc);
 
   /// If whole-program virtual table optimization is enabled, emit an assumption
-  /// that VTable is a member of the type's bitset. Or, if vptr CFI is enabled,
-  /// emit a check that VTable is a member of the type's bitset.
-  void EmitBitSetCodeForVCall(const CXXRecordDecl *RD, llvm::Value *VTable,
-                              SourceLocation Loc);
+  /// that VTable is a member of RD's type identifier. Or, if vptr CFI is
+  /// enabled, emit a check that VTable is a member of RD's type identifier.
+  void EmitTypeMetadataCodeForVCall(const CXXRecordDecl *RD,
+                                    llvm::Value *VTable, SourceLocation Loc);
+
+  /// Returns whether we should perform a type checked load when loading a
+  /// virtual function for virtual calls to members of RD. This is generally
+  /// true when both vcall CFI and whole-program-vtables are enabled.
+  bool ShouldEmitVTableTypeCheckedLoad(const CXXRecordDecl *RD);
+
+  /// Emit a type checked load from the given vtable.
+  llvm::Value *EmitVTableTypeCheckedLoad(const CXXRecordDecl *RD, llvm::Value *VTable,
+                                         uint64_t VTableByteOffset);
 
   /// CanDevirtualizeMemberFunctionCalls - Checks whether virtual calls on given
   /// expr can be devirtualized.

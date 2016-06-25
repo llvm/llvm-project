@@ -592,12 +592,14 @@ static LinkageInfo getLVForNamespaceScopeDecl(const NamedDecl *D,
     if (Var->getStorageClass() == SC_Static)
       return LinkageInfo::internal();
 
-    // - a non-volatile object or reference that is explicitly declared const
-    //   or constexpr and neither explicitly declared extern nor previously
-    //   declared to have external linkage; or (there is no equivalent in C99)
+    // - a non-inline, non-volatile object or reference that is explicitly
+    //   declared const or constexpr and neither explicitly declared extern
+    //   nor previously declared to have external linkage; or (there is no
+    //   equivalent in C99)
     if (Context.getLangOpts().CPlusPlus &&
         Var->getType().isConstQualified() && 
-        !Var->getType().isVolatileQualified()) {
+        !Var->getType().isVolatileQualified() &&
+        !Var->isInline()) {
       const VarDecl *PrevVar = Var->getPreviousDecl();
       if (PrevVar)
         return getLVForDecl(PrevVar, computation);
@@ -1912,7 +1914,9 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // C++ [basic.def]p2:
   //   A declaration is a definition unless [...] it contains the 'extern'
   //   specifier or a linkage-specification and neither an initializer [...],
-  //   it declares a static data member in a class declaration [...].
+  //   it declares a non-inline static data member in a class declaration [...],
+  //   it declares a static data member outside a class definition and the variable
+  //   was defined within the class with the constexpr specifier [...],
   // C++1y [temp.expl.spec]p15:
   //   An explicit specialization of a static data member or an explicit
   //   specialization of a static data member template is a definition if the
@@ -1922,6 +1926,8 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
   // a static data member template outside the containing class?
   if (isStaticDataMember()) {
     if (isOutOfLine() &&
+        !(getCanonicalDecl()->isInline() &&
+          getCanonicalDecl()->isConstexpr()) &&
         (hasInit() ||
          // If the first declaration is out-of-line, this may be an
          // instantiation of an out-of-line partial specialization of a variable
@@ -1931,6 +1937,8 @@ VarDecl::isThisDeclarationADefinition(ASTContext &C) const {
               : getTemplateSpecializationKind() !=
                     TSK_ExplicitSpecialization) ||
          isa<VarTemplatePartialSpecializationDecl>(this)))
+      return Definition;
+    else if (!isOutOfLine() && isInline())
       return Definition;
     else
       return DeclarationOnly;
@@ -2070,18 +2078,6 @@ bool VarDecl::isOutOfLine() const {
     return VD->isOutOfLine();
   
   return false;
-}
-
-VarDecl *VarDecl::getOutOfLineDefinition() {
-  if (!isStaticDataMember())
-    return nullptr;
-
-  for (auto RD : redecls()) {
-    if (RD->getLexicalDeclContext()->isFileContext())
-      return RD;
-  }
-
-  return nullptr;
 }
 
 void VarDecl::setInit(Expr *I) {

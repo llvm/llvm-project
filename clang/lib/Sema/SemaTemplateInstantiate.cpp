@@ -2520,8 +2520,7 @@ Sema::InstantiateClassMembers(SourceLocation PointOfInstantiation,
           //   specialization and is only an explicit instantiation definition 
           //   of members whose definition is visible at the point of 
           //   instantiation.
-          if (!Var->getInstantiatedFromStaticDataMember()
-                                                     ->getOutOfLineDefinition())
+          if (!Var->getInstantiatedFromStaticDataMember()->getDefinition())
             continue;
           
           Var->setTemplateSpecializationKind(TSK, PointOfInstantiation);

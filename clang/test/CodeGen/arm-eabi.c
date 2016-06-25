@@ -7,6 +7,14 @@
 // RUN: %clang -target arm-none-gnueabi -S -meabi 5 -o - %s | FileCheck -check-prefix=CHECK-EABI %s
 // RUN: %clang -target arm-none-gnueabihf -S -o - %s | FileCheck -check-prefix=CHECK-GNUEABI %s
 // RUN: %clang -target arm-none-gnueabihf -S -meabi 5 -o - %s | FileCheck -check-prefix=CHECK-EABI %s
+// RUN: %clang -target arm-none-musleabi -S -o - %s \
+// RUN:   | FileCheck -check-prefix=CHECK-GNUEABI %s
+// RUN: %clang -target arm-none-musleabi -S -o - %s -meabi 5 \
+// RUN:   | FileCheck -check-prefix=CHECK-EABI %s
+// RUN: %clang -target arm-none-musleabihf -S -o - %s \
+// RUN:   | FileCheck -check-prefix=CHECK-GNUEABI %s
+// RUN: %clang -target arm-none-musleabihf -S -o - %s -meabi 5 \
+// RUN:   | FileCheck -check-prefix=CHECK-EABI %s
 
 struct my_s {
   unsigned long a[18];

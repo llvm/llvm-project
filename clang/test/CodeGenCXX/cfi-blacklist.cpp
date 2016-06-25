@@ -15,15 +15,15 @@ struct S2 {
 }
 
 // CHECK: define{{.*}}s1f
-// NOBL: llvm.bitset.test
-// NOSTD: llvm.bitset.test
+// NOBL: llvm.type.test
+// NOSTD: llvm.type.test
 void s1f(S1 *s1) {
   s1->f();
 }
 
 // CHECK: define{{.*}}s2f
-// NOBL: llvm.bitset.test
-// NOSTD-NOT: llvm.bitset.test
+// NOBL: llvm.type.test
+// NOSTD-NOT: llvm.type.test
 void s2f(std::S2 *s2) {
   s2->f();
 }

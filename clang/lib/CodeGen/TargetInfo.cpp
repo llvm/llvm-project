@@ -4963,6 +4963,8 @@ public:
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABI:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABI:
+    case llvm::Triple::MuslEABIHF:
       return true;
     default:
       return false;
@@ -4973,6 +4975,7 @@ public:
     switch (getTarget().getTriple().getEnvironment()) {
     case llvm::Triple::EABIHF:
     case llvm::Triple::GNUEABIHF:
+    case llvm::Triple::MuslEABIHF:
       return true;
     default:
       return false;
@@ -7933,6 +7936,7 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
     else if (CodeGenOpts.FloatABI == "hard" ||
              (CodeGenOpts.FloatABI != "soft" &&
               (Triple.getEnvironment() == llvm::Triple::GNUEABIHF ||
+               Triple.getEnvironment() == llvm::Triple::MuslEABIHF ||
                Triple.getEnvironment() == llvm::Triple::EABIHF)))
       Kind = ARMABIInfo::AAPCS_VFP;
 
