@@ -20,6 +20,7 @@ add_clang_library(clangTidyModernizeModule
   UseEmplaceCheck.cpp
   UseNullptrCheck.cpp
   UseOverrideCheck.cpp
+  UseUsingCheck.cpp
 
   LINK_LIBS
   clangAST

@@ -31,12 +31,13 @@ class SourceCoverageViewText : public SourceCoverageView {
                   CoverageSegmentArray Segments, unsigned ExpansionCol,
                   unsigned ViewDepth) override;
 
-  unsigned renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
-                               Optional<LineRef> FirstLine,
-                               const coverage::CoverageSegment *WrappedSegment,
-                               CoverageSegmentArray Segments,
-                               unsigned ExpansionCol,
-                               unsigned ViewDepth) override;
+  void renderExpansionSite(raw_ostream &OS, ExpansionView &ESV, LineRef L,
+                           const coverage::CoverageSegment *WrappedSegment,
+                           CoverageSegmentArray Segments, unsigned ExpansionCol,
+                           unsigned ViewDepth) override;
+
+  void renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
+                           unsigned ViewDepth) override;
 
   void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
                                unsigned ViewDepth) override;

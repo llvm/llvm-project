@@ -1936,6 +1936,10 @@ public:
   Value *getTrueValue() { return Op<1>(); }
   Value *getFalseValue() { return Op<2>(); }
 
+  void setCondition(Value *V) { Op<0>() = V; }
+  void setTrueValue(Value *V) { Op<1>() = V; }
+  void setFalseValue(Value *V) { Op<2>() = V; }
+
   /// areInvalidOperands - Return a string if the specified operands are invalid
   /// for a select operation, otherwise return null.
   static const char *areInvalidOperands(Value *Cond, Value *True, Value *False);

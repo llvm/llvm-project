@@ -65,6 +65,7 @@ using namespace llvm;
 
 STATISTIC(NumBranches, "Number of branches unswitched");
 STATISTIC(NumSwitches, "Number of switches unswitched");
+STATISTIC(NumGuards,   "Number of guards unswitched");
 STATISTIC(NumSelects , "Number of selects unswitched");
 STATISTIC(NumTrivial , "Number of unswitches that are trivial");
 STATISTIC(NumSimplify, "Number of simplifications of unswitched code");
@@ -514,22 +515,34 @@ bool LoopUnswitch::processCurrentLoop() {
     return true;
   }
 
-  // Do not unswitch loops containing convergent operations, as we might be
-  // making them control dependent on the unswitch value when they were not
-  // before.
-  // FIXME: This could be refined to only bail if the convergent operation is
-  // not already control-dependent on the unswitch value.
+  // Run through the instructions in the loop, keeping track of three things:
+  //
+  //  - That we do not unswitch loops containing convergent operations, as we
+  //    might be making them control dependent on the unswitch value when they
+  //    were not before.
+  //    FIXME: This could be refined to only bail if the convergent operation is
+  //    not already control-dependent on the unswitch value.
+  //
+  //  - That basic blocks in the loop contain invokes whose predecessor edges we
+  //    cannot split.
+  //
+  //  - The set of guard intrinsics encountered (these are non terminator
+  //    instructions that are also profitable to be unswitched).
+
+  SmallVector<IntrinsicInst *, 4> Guards;
+
   for (const auto BB : currentLoop->blocks()) {
     for (auto &I : *BB) {
       auto CS = CallSite(&I);
       if (!CS) continue;
       if (CS.hasFnAttr(Attribute::Convergent))
         return false;
-      // Return false if any loop blocks contain invokes whose predecessor edges
-      // we cannot split.
       if (auto *II = dyn_cast<InvokeInst>(&I))
         if (!II->getUnwindDest()->canSplitPredecessors())
           return false;
+      if (auto *II = dyn_cast<IntrinsicInst>(&I))
+        if (II->getIntrinsicID() == Intrinsic::experimental_guard)
+          Guards.push_back(II);
     }
   }
 
@@ -547,6 +560,19 @@ bool LoopUnswitch::processCurrentLoop() {
     BlockFrequency LoopEntryFreq = BFI.getBlockFreq(loopHeader);
     if (LoopEntryFreq < ColdEntryFreq)
       return false;
+  }
+
+  for (IntrinsicInst *Guard : Guards) {
+    Value *LoopCond =
+        FindLIVLoopCondition(Guard->getOperand(0), currentLoop, Changed);
+    if (LoopCond &&
+        UnswitchIfProfitable(LoopCond, ConstantInt::getTrue(Context))) {
+      // NB! Unswitching (if successful) could have erased some of the
+      // instructions in Guards leaving dangling pointers there.  This is fine
+      // because we're returning now, and won't look at Guards again.
+      ++NumGuards;
+      return true;
+    }
   }
 
   // Loop over all of the basic blocks in the loop.  If we find an interior

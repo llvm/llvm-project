@@ -129,14 +129,22 @@ void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,
     for (; NextESV != EndESV && NextESV->getLine() == LI.line_number();
          ++NextESV) {
       renderViewDivider(OS, ViewDepth + 1);
-      ExpansionColumn = renderExpansionView(
-          OS, *NextESV,
-          RenderedSubView ? Optional<LineRef>({*LI, LI.line_number()})
-                          : Optional<LineRef>(),
-          WrappedSegment, LineSegments, ExpansionColumn, ViewDepth);
+
+      // Re-render the current line and highlight the expansion range for
+      // this subview.
+      if (RenderedSubView) {
+        ExpansionColumn = NextESV->getStartCol();
+        renderExpansionSite(
+            OS, *NextESV, {*LI, LI.line_number()}, WrappedSegment, LineSegments,
+            ExpansionColumn, ViewDepth);
+        renderViewDivider(OS, ViewDepth + 1);
+      }
+
+      renderExpansionView(OS, *NextESV, ViewDepth + 1);
       RenderedSubView = true;
     }
     for (; NextISV != EndISV && NextISV->Line == LI.line_number(); ++NextISV) {
+      renderViewDivider(OS, ViewDepth + 1);
       renderInstantiationView(OS, *NextISV, ViewDepth + 1);
       RenderedSubView = true;
     }

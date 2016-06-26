@@ -225,6 +225,11 @@ identified.  The improvements since the 3.8 release include:
 
   Finds calls that could be changed to emplace.
 
+- New `modernize-use-using
+  <http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-using.html>`_ check
+
+  Finds typedefs and replaces it with usings.
+
 - New `performance-faster-string-find
   <http://clang.llvm.org/extra/clang-tidy/checks/performance-faster-string-find.html>`_ check
 

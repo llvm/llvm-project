@@ -342,6 +342,51 @@ public:
                        TrailingTys, size_t>::type... Counts) {
     return sizeof(BaseTy) + ParentType::additionalSizeToAllocImpl(0, Counts...);
   }
+
+  /// A type where its ::with_counts template member has a ::type member
+  /// suitable for use as uninitialized storage for an object with the given
+  /// trailing object counts. The template arguments are similar to those
+  /// of additionalSizeToAlloc.
+  ///
+  /// Use with FixedSizeStorageOwner, e.g.:
+  ///
+  /// \code{.cpp}
+  ///
+  /// MyObj::FixedSizeStorage<void *>::with_counts<1u>::type myStackObjStorage;
+  /// MyObj::FixedSizeStorageOwner
+  ///     myStackObjOwner(new ((void *)&myStackObjStorage) MyObj);
+  /// MyObj *const myStackObjPtr = myStackObjOwner.get();
+  ///
+  /// \endcode
+  template <typename... Tys> struct FixedSizeStorage {
+    template <size_t... Counts> struct with_counts {
+      enum { Size = totalSizeToAlloc<Tys...>(Counts...) };
+      typedef llvm::AlignedCharArray<
+          llvm::AlignOf<BaseTy>::Alignment, Size
+          > type;
+    };
+  };
+
+  /// A type that acts as the owner for an object placed into fixed storage.
+  class FixedSizeStorageOwner {
+  public:
+    FixedSizeStorageOwner(BaseTy *p) : p(p) {}
+    ~FixedSizeStorageOwner() {
+      assert(p && "FixedSizeStorageOwner owns null?");
+      p->~BaseTy();
+    }
+
+    BaseTy *get() { return p; }
+    const BaseTy *get() const { return p; }
+
+  private:
+    FixedSizeStorageOwner(const FixedSizeStorageOwner &) = delete;
+    FixedSizeStorageOwner(FixedSizeStorageOwner &&) = delete;
+    FixedSizeStorageOwner &operator=(const FixedSizeStorageOwner &) = delete;
+    FixedSizeStorageOwner &operator=(FixedSizeStorageOwner &&) = delete;
+
+    BaseTy *const p;
+  };
 };
 
 } // end namespace llvm
