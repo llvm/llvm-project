@@ -529,14 +529,13 @@ std::error_code COFFObjectFile::initImportTablePtr() {
     return std::error_code();
 
   uint32_t ImportTableRva = DataEntry->RelativeVirtualAddress;
-  // -1 because the last entry is the null entry.
-  NumberOfImportDirectory = DataEntry->Size /
-      sizeof(import_directory_table_entry) - 1;
 
   // Find the section that contains the RVA. This is needed because the RVA is
   // the import table's memory address which is different from its file offset.
   uintptr_t IntPtr = 0;
   if (std::error_code EC = getRvaPtr(ImportTableRva, IntPtr))
+    return EC;
+  if (std::error_code EC = checkOffset(Data, IntPtr, DataEntry->Size))
     return EC;
   ImportDirectory = reinterpret_cast<
       const import_directory_table_entry *>(IntPtr);
@@ -631,7 +630,7 @@ COFFObjectFile::COFFObjectFile(MemoryBufferRef Object, std::error_code &EC)
       COFFBigObjHeader(nullptr), PE32Header(nullptr), PE32PlusHeader(nullptr),
       DataDirectory(nullptr), SectionTable(nullptr), SymbolTable16(nullptr),
       SymbolTable32(nullptr), StringTable(nullptr), StringTableSize(0),
-      ImportDirectory(nullptr), NumberOfImportDirectory(0),
+      ImportDirectory(nullptr),
       DelayImportDirectory(nullptr), NumberOfDelayImportDirectory(0),
       ExportDirectory(nullptr), BaseRelocHeader(nullptr), BaseRelocEnd(nullptr),
       DebugDirectoryBegin(nullptr), DebugDirectoryEnd(nullptr) {
@@ -771,13 +770,17 @@ basic_symbol_iterator COFFObjectFile::symbol_end_impl() const {
 }
 
 import_directory_iterator COFFObjectFile::import_directory_begin() const {
+  if (!ImportDirectory)
+    return import_directory_end();
+  if (ImportDirectory[0].ImportLookupTableRVA == 0)
+    return import_directory_end();
   return import_directory_iterator(
       ImportDirectoryEntryRef(ImportDirectory, 0, this));
 }
 
 import_directory_iterator COFFObjectFile::import_directory_end() const {
   return import_directory_iterator(
-      ImportDirectoryEntryRef(ImportDirectory, NumberOfImportDirectory, this));
+      ImportDirectoryEntryRef(nullptr, -1, this));
 }
 
 delay_import_directory_iterator
@@ -1198,12 +1201,15 @@ operator==(const ImportDirectoryEntryRef &Other) const {
 
 void ImportDirectoryEntryRef::moveNext() {
   ++Index;
+  if (ImportTable[Index].ImportLookupTableRVA == 0) {
+    Index = -1;
+    ImportTable = nullptr;
+  }
 }
 
 std::error_code ImportDirectoryEntryRef::getImportTableEntry(
     const import_directory_table_entry *&Result) const {
-  Result = ImportTable + Index;
-  return std::error_code();
+  return getObject(Result, OwningObject->Data, ImportTable + Index);
 }
 
 static imported_symbol_iterator
@@ -1277,16 +1283,6 @@ ImportDirectoryEntryRef::getImportLookupTableRVA(uint32_t  &Result) const {
 std::error_code
 ImportDirectoryEntryRef::getImportAddressTableRVA(uint32_t &Result) const {
   Result = ImportTable[Index].ImportAddressTableRVA;
-  return std::error_code();
-}
-
-std::error_code ImportDirectoryEntryRef::getImportLookupEntry(
-    const import_lookup_table_entry32 *&Result) const {
-  uintptr_t IntPtr = 0;
-  uint32_t RVA = ImportTable[Index].ImportLookupTableRVA;
-  if (std::error_code EC = OwningObject->getRvaPtr(RVA, IntPtr))
-    return EC;
-  Result = reinterpret_cast<const import_lookup_table_entry32 *>(IntPtr);
   return std::error_code();
 }
 
@@ -1470,6 +1466,22 @@ ImportedSymbolRef::getSymbolName(StringRef &Result) const {
     return EC;
   // +2 because the first two bytes is hint.
   Result = StringRef(reinterpret_cast<const char *>(IntPtr + 2));
+  return std::error_code();
+}
+
+std::error_code ImportedSymbolRef::isOrdinal(bool &Result) const {
+  if (Entry32)
+    Result = Entry32[Index].isOrdinal();
+  else
+    Result = Entry64[Index].isOrdinal();
+  return std::error_code();
+}
+
+std::error_code ImportedSymbolRef::getHintNameRVA(uint32_t &Result) const {
+  if (Entry32)
+    Result = Entry32[Index].getHintNameRVA();
+  else
+    Result = Entry64[Index].getHintNameRVA();
   return std::error_code();
 }
 

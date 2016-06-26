@@ -634,7 +634,6 @@ private:
   const char *StringTable;
   uint32_t StringTableSize;
   const import_directory_table_entry *ImportDirectory;
-  uint32_t NumberOfImportDirectory;
   const delay_import_directory_table_entry *DelayImportDirectory;
   uint32_t NumberOfDelayImportDirectory;
   const export_directory_table_entry *ExportDirectory;
@@ -911,9 +910,6 @@ public:
   std::error_code
   getImportTableEntry(const import_directory_table_entry *&Result) const;
 
-  std::error_code
-  getImportLookupEntry(const import_lookup_table_entry32 *&Result) const;
-
 private:
   const import_directory_table_entry *ImportTable;
   uint32_t Index;
@@ -985,7 +981,9 @@ public:
   void moveNext();
 
   std::error_code getSymbolName(StringRef &Result) const;
+  std::error_code isOrdinal(bool &Result) const;
   std::error_code getOrdinal(uint16_t &Result) const;
+  std::error_code getHintNameRVA(uint32_t &Result) const;
 
 private:
   const import_lookup_table_entry32 *Entry32;

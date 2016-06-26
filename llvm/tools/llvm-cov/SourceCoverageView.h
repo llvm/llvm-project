@@ -16,7 +16,6 @@
 
 #include "CoverageViewOptions.h"
 #include "llvm/ProfileData/Coverage/CoverageMapping.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <vector>
 
@@ -163,16 +162,18 @@ protected:
                                    CoverageSegmentArray Segments,
                                    unsigned ViewDepth) = 0;
 
-  /// \brief Render an expansion view. If the expansion site must be re-rendered
-  /// for clarity, it is passed in via \p FirstLine.
-  virtual unsigned
-  renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
-                      Optional<LineRef> FirstLine,
+  /// \brief Render the site of an expansion.
+  virtual void
+  renderExpansionSite(raw_ostream &OS, ExpansionView &ESV, LineRef L,
                       const coverage::CoverageSegment *WrappedSegment,
                       CoverageSegmentArray Segments, unsigned ExpansionCol,
                       unsigned ViewDepth) = 0;
 
-  /// \brief Render an instantiation view.
+  /// \brief Render an expansion view and any nested views.
+  virtual void renderExpansionView(raw_ostream &OS, ExpansionView &ESV,
+                                   unsigned ViewDepth) = 0;
+
+  /// \brief Render an instantiation view and any nested views.
   virtual void renderInstantiationView(raw_ostream &OS, InstantiationView &ISV,
                                        unsigned ViewDepth) = 0;
 

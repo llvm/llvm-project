@@ -163,7 +163,6 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
   }
 
   if (MO.isExpr()) {
-    const MCSymbolRefExpr *Expr = cast<MCSymbolRefExpr>(MO.getExpr());
     // We put rodata at the end of code section, then map the entire
     // code secetion as vtx buf. Thus the section relative address is the
     // correct one.
@@ -171,7 +170,7 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
     // We can't easily get the order of the current one, so compare against
     // the first one and adjust offset.
     const unsigned offset = (&MO == &MI.getOperand(0)) ? 0 : 4;
-    Fixups.push_back(MCFixup::create(offset, Expr, FK_SecRel_4, MI.getLoc()));
+    Fixups.push_back(MCFixup::create(offset, MO.getExpr(), FK_SecRel_4, MI.getLoc()));
     return 0;
   }
 
