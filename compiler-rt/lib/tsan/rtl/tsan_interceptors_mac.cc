@@ -273,6 +273,52 @@ TSAN_INTERCEPTOR(void, xpc_connection_send_message_with_reply,
   (connection, message, replyq, new_handler);
 }
 
+// On macOS, libc++ is always linked dynamically, so intercepting works the
+// usual way.
+#define STDCXX_INTERCEPTOR TSAN_INTERCEPTOR
+
+namespace {
+struct fake_shared_weak_count {
+  volatile a64 shared_owners;
+  volatile a64 shared_weak_owners;
+  virtual void _unused_0x0() = 0;
+  virtual void _unused_0x8() = 0;
+  virtual void on_zero_shared() = 0;
+  virtual void _unused_0x18() = 0;
+  virtual void on_zero_shared_weak() = 0;
+};
+}  // namespace
+
+// This adds a libc++ interceptor for:
+//     void __shared_weak_count::__release_shared() _NOEXCEPT;
+// Shared and weak pointers in C++ maintain reference counts via atomics in
+// libc++.dylib, which are TSan-invisible, and this leads to false positives in
+// destructor code.  This interceptor re-implements the whole function so that
+// the mo_acq_rel semantics of the atomic decrement are visible.
+//
+// Unfortunately, this interceptor cannot simply Acquire/Release some sync
+// object and call the original function, because it would have a race between
+// the sync and the destruction of the object.  Calling both under a lock will
+// not work because the destructor can invoke this interceptor again (and even
+// in a different thread, so recursive locks don't help).
+STDCXX_INTERCEPTOR(void, _ZNSt3__119__shared_weak_count16__release_sharedEv,
+                   fake_shared_weak_count *o) {
+  if (!flags()->shared_ptr_interceptor)
+    return REAL(_ZNSt3__119__shared_weak_count16__release_sharedEv)(o);
+
+  SCOPED_TSAN_INTERCEPTOR(_ZNSt3__119__shared_weak_count16__release_sharedEv,
+                          o);
+  if (__tsan_atomic64_fetch_add(&o->shared_owners, -1, mo_release) == 0) {
+    Acquire(thr, pc, (uptr)&o->shared_owners);
+    o->on_zero_shared();
+    if (__tsan_atomic64_fetch_add(&o->shared_weak_owners, -1, mo_release) ==
+        0) {
+      Acquire(thr, pc, (uptr)&o->shared_weak_owners);
+      o->on_zero_shared_weak();
+    }
+  }
+}
+
 }  // namespace __tsan
 
 #endif  // SANITIZER_MAC
