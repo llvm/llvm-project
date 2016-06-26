@@ -78,3 +78,5 @@ TSAN_FLAG(bool, die_after_fork, true,
 TSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
 TSAN_FLAG(bool, ignore_interceptors_accesses, false,
           "Ignore reads and writes from all interceptors.")
+TSAN_FLAG(bool, shared_ptr_interceptor, true,
+          "Track atomic reference counting in libc++ shared_ptr and weak_ptr.")
