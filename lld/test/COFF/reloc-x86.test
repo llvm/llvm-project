@@ -10,7 +10,7 @@
 # CHECK: 1014: a1 00 00 02 00
 # CHECK: 1019: a1 03 00 00 00
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: []

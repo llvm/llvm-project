@@ -63,7 +63,12 @@ INLINE int Verbosity() {
 }
 
 uptr GetPageSize();
-uptr GetPageSizeCached();
+extern uptr PageSizeCached;
+INLINE uptr GetPageSizeCached() {
+  if (!PageSizeCached)
+    PageSizeCached = GetPageSize();
+  return PageSizeCached;
+}
 uptr GetMmapGranularity();
 uptr GetMaxVirtualAddress();
 // Threads

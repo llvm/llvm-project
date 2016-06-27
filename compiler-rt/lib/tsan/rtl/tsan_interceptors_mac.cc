@@ -27,6 +27,14 @@ typedef long long_t;  // NOLINT
 
 namespace __tsan {
 
+// The non-barrier versions of OSAtomic* functions are semantically mo_relaxed,
+// but the two variants (e.g. OSAtomicAdd32 and OSAtomicAdd32Barrier) are
+// actually aliases of each other, and we cannot have different interceptors for
+// them, because they're actually the same function.  Thus, we have to stay
+// conservative and treat the non-barrier versions as mo_acq_rel.
+static const morder kMacOrderBarrier = mo_acq_rel;
+static const morder kMacOrderNonBarrier = mo_acq_rel;
+
 #define OSATOMIC_INTERCEPTOR(return_t, t, tsan_t, f, tsan_atomic_f, mo) \
   TSAN_INTERCEPTOR(return_t, f, t x, volatile t *ptr) {                 \
     SCOPED_TSAN_INTERCEPTOR(f, x, ptr);                                 \
@@ -53,23 +61,24 @@ namespace __tsan {
   }
 
 #define OSATOMIC_INTERCEPTORS_ARITHMETIC(f, tsan_atomic_f, m)                  \
-  m(int32_t, int32_t, a32, f##32, __tsan_atomic32_##tsan_atomic_f, mo_relaxed) \
+  m(int32_t, int32_t, a32, f##32, __tsan_atomic32_##tsan_atomic_f,             \
+    kMacOrderNonBarrier)                                                       \
   m(int32_t, int32_t, a32, f##32##Barrier, __tsan_atomic32_##tsan_atomic_f,    \
-    mo_acq_rel)                                                                \
+    kMacOrderBarrier)                                                          \
   m(int64_t, int64_t, a64, f##64, __tsan_atomic64_##tsan_atomic_f,             \
-    mo_relaxed)                                                                \
+    kMacOrderNonBarrier)                                                       \
   m(int64_t, int64_t, a64, f##64##Barrier, __tsan_atomic64_##tsan_atomic_f,    \
-    mo_acq_rel)
+    kMacOrderBarrier)
 
 #define OSATOMIC_INTERCEPTORS_BITWISE(f, tsan_atomic_f, m, m_orig)             \
   m(int32_t, uint32_t, a32, f##32, __tsan_atomic32_##tsan_atomic_f,            \
-    mo_relaxed)                                                                \
+    kMacOrderNonBarrier)                                                       \
   m(int32_t, uint32_t, a32, f##32##Barrier, __tsan_atomic32_##tsan_atomic_f,   \
-    mo_acq_rel)                                                                \
+    kMacOrderBarrier)                                                          \
   m_orig(int32_t, uint32_t, a32, f##32##Orig, __tsan_atomic32_##tsan_atomic_f, \
-    mo_relaxed)                                                                \
+    kMacOrderNonBarrier)                                                       \
   m_orig(int32_t, uint32_t, a32, f##32##OrigBarrier,                           \
-    __tsan_atomic32_##tsan_atomic_f, mo_acq_rel)
+    __tsan_atomic32_##tsan_atomic_f, kMacOrderBarrier)
 
 OSATOMIC_INTERCEPTORS_ARITHMETIC(OSAtomicAdd, fetch_add,
                                  OSATOMIC_INTERCEPTOR_PLUS_X)
@@ -88,16 +97,16 @@ OSATOMIC_INTERCEPTORS_BITWISE(OSAtomicXor, fetch_xor,
   TSAN_INTERCEPTOR(bool, f, t old_value, t new_value, t volatile *ptr) {    \
     SCOPED_TSAN_INTERCEPTOR(f, old_value, new_value, ptr);                  \
     return tsan_atomic_f##_compare_exchange_strong(                         \
-        (tsan_t *)ptr, (tsan_t *)&old_value, (tsan_t)new_value, mo_relaxed, \
-        mo_relaxed);                                                        \
+        (tsan_t *)ptr, (tsan_t *)&old_value, (tsan_t)new_value,             \
+        kMacOrderNonBarrier, kMacOrderNonBarrier);                          \
   }                                                                         \
                                                                             \
   TSAN_INTERCEPTOR(bool, f##Barrier, t old_value, t new_value,              \
                    t volatile *ptr) {                                       \
     SCOPED_TSAN_INTERCEPTOR(f##Barrier, old_value, new_value, ptr);         \
     return tsan_atomic_f##_compare_exchange_strong(                         \
-        (tsan_t *)ptr, (tsan_t *)&old_value, (tsan_t)new_value, mo_acq_rel, \
-        mo_relaxed);                                                        \
+        (tsan_t *)ptr, (tsan_t *)&old_value, (tsan_t)new_value,             \
+        kMacOrderBarrier, kMacOrderNonBarrier);                             \
   }
 
 OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwapInt, __tsan_atomic32, a32, int)
@@ -120,9 +129,9 @@ OSATOMIC_INTERCEPTORS_CAS(OSAtomicCompareAndSwap64, __tsan_atomic64, a64,
     return orig_byte & mask;                                  \
   }
 
-#define OSATOMIC_INTERCEPTORS_BITOP(f, op, m)      \
-  OSATOMIC_INTERCEPTOR_BITOP(f, op, m, mo_relaxed) \
-  OSATOMIC_INTERCEPTOR_BITOP(f##Barrier, op, m, mo_acq_rel)
+#define OSATOMIC_INTERCEPTORS_BITOP(f, op, m)                     \
+  OSATOMIC_INTERCEPTOR_BITOP(f, op, m, kMacOrderNonBarrier)       \
+  OSATOMIC_INTERCEPTOR_BITOP(f##Barrier, op, m, kMacOrderBarrier)
 
 OSATOMIC_INTERCEPTORS_BITOP(OSAtomicTestAndSet, __tsan_atomic8_fetch_or,
                             0x80u >> bit_index)

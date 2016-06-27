@@ -273,7 +273,7 @@ u64 ScopedReport::AddMutex(u64 id) {
   u64 uid = 0;
   u64 mid = id;
   uptr addr = SyncVar::SplitId(id, &uid);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   // Check that the mutex is still alive.
   // Another mutex can be created at the same address,
   // so check uid as well.

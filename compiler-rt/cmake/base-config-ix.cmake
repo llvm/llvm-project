@@ -61,10 +61,6 @@ else()
   set(COMPILER_RT_TEST_COMPILER_ID GNU)
 endif()
 
-if ("${COMPILER_RT_DEFAULT_TARGET_ABI}" STREQUAL "androideabi")
-  set(ANDROID 1)
-endif()
-
 string(TOLOWER ${CMAKE_SYSTEM_NAME} COMPILER_RT_OS_DIR)
 set(COMPILER_RT_LIBRARY_OUTPUT_DIR
   ${COMPILER_RT_OUTPUT_DIR}/lib/${COMPILER_RT_OS_DIR})
@@ -118,7 +114,6 @@ macro(test_targets)
   if(ANDROID)
     # Examine compiler output to determine target architecture.
     detect_target_arch()
-    set(COMPILER_RT_OS_SUFFIX "-android")
   elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
     if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "i[2-6]86|x86|amd64")
       if(NOT MSVC)

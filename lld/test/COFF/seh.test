@@ -5,7 +5,7 @@
 # CHECK: Contents of section .rdata:
 # CHECK:  1000 00200000 02200000
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [  ]
