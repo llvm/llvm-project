@@ -289,7 +289,7 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
 }
 
 // Returns true if S matches T. S can contain glob meta-characters.
-// The asterisk ('*') matches zero or more characacters, and the question
+// The asterisk ('*') matches zero or more characters, and the question
 // mark ('?') matches one character.
 static bool matchStr(StringRef S, StringRef T) {
   for (;;) {

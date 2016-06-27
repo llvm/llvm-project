@@ -16,14 +16,13 @@
 
 #include "test_macros.h"
 
-#if  TEST_HAS_FEATURE(address_sanitizer) \
-  || TEST_HAS_FEATURE(memory_sanitizer) \
-  || TEST_HAS_FEATURE(thread_sanitizer)
+#if defined(TEST_HAS_SANITIZERS)
 #define DISABLE_NEW_COUNT
 #endif
 
 namespace detail
 {
+   TEST_NORETURN
    inline void throw_bad_alloc_helper() {
 #ifndef TEST_HAS_NO_EXCEPTIONS
        throw std::bad_alloc();

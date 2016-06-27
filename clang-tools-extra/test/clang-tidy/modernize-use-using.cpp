@@ -32,7 +32,7 @@ class Class {
 
 typedef void (Class::*MyPtrType)(Bla) const;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using MyPtrType = void (Class::*)(Bla) const;
+// CHECK-FIXES: using MyPtrType = void (Class::*)(Bla)[[ATTR:( __attribute__\(\(thiscall\)\))?]] const;
 
 class Iterable {
 public:
@@ -52,7 +52,7 @@ union A {};
 
 typedef void (A::*PtrType)(int, int) const;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using PtrType = void (A::*)(int, int) const;
+// CHECK-FIXES: using PtrType = void (A::*)(int, int)[[ATTR]] const;
 
 typedef Class some_class;
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
@@ -70,7 +70,7 @@ class cclass {};
 
 typedef void (cclass::*MyPtrType3)(Bla);
 // CHECK-MESSAGES: :[[@LINE-1]]:1: warning: use 'using' instead of 'typedef'
-// CHECK-FIXES: using MyPtrType3 = void (cclass::*)(Bla);
+// CHECK-FIXES: using MyPtrType3 = void (cclass::*)(Bla)[[ATTR]];
 
 using my_class = int;
 

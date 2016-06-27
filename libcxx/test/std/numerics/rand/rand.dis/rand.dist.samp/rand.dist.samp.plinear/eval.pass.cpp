@@ -243,6 +243,7 @@ test4()
             a = 0;
             for (int j = 0; j < k; ++j)
                 a += areas[j];
+            assert(k < Np);
             m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
             bk = b[k];
             c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
@@ -281,6 +282,7 @@ test5()
     double S = 0;
     for (int i = 0; i < areas.size(); ++i)
     {
+        assert(i < Np);
         areas[i] = (p[i]+p[i+1])*(b[i+1]-b[i])/2;
         S += areas[i];
     }
@@ -296,6 +298,7 @@ test5()
             a = 0;
             for (int j = 0; j < k; ++j)
                 a += areas[j];
+            assert(k < Np);
             m = (p[k+1] - p[k]) / (b[k+1] - b[k]);
             bk = b[k];
             c = (b[k+1]*p[k] - b[k]*p[k+1]) / (b[k+1] - b[k]);
