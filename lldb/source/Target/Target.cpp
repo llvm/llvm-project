@@ -2946,10 +2946,10 @@ Target::Install (ProcessLaunchInfo *launch_info)
                 const size_t num_images = modules.GetSize();
                 for (size_t idx = 0; idx < num_images; ++idx)
                 {
-                    const bool is_main_executable = idx == 0;
                     ModuleSP module_sp(modules.GetModuleAtIndex(idx));
                     if (module_sp)
                     {
+                        const bool is_main_executable = module_sp == GetExecutableModule();
                         FileSpec local_file (module_sp->GetFileSpec());
                         if (local_file)
                         {
