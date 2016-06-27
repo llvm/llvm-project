@@ -24,6 +24,6 @@ namespace ex = std::experimental::pmr;
 int main()
 {
     typedef ex::polymorphic_allocator<void> T;
-    static_assert(std::is_copy_assignable<T>::value, "");
-    static_assert(std::is_move_assignable<T>::value, "");
+    static_assert(!std::is_copy_assignable<T>::value, "");
+    static_assert(!std::is_move_assignable<T>::value, "");
 }

@@ -5391,10 +5391,25 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   bool IsMSVC2015Compatible = MSVT.getMajor() >= 19;
   if (ImplyVCPPCXXVer) {
-    if (IsMSVC2015Compatible)
-      CmdArgs.push_back("-std=c++14");
-    else
-      CmdArgs.push_back("-std=c++11");
+    StringRef LanguageStandard;
+    if (const Arg *StdArg = Args.getLastArg(options::OPT__SLASH_std)) {
+      LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
+                             .Case("c++14", "-std=c++14")
+                             .Case("c++latest", "-std=c++1z")
+                             .Default("");
+      if (LanguageStandard.empty())
+        D.Diag(clang::diag::warn_drv_unused_argument)
+            << StdArg->getAsString(Args);
+    }
+
+    if (LanguageStandard.empty()) {
+      if (IsMSVC2015Compatible)
+        LanguageStandard = "-std=c++14";
+      else
+        LanguageStandard = "-std=c++11";
+    }
+
+    CmdArgs.push_back(LanguageStandard.data());
   }
 
   // -fno-borland-extensions is default.

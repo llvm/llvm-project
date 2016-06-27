@@ -505,6 +505,16 @@ _mm_loadu_pd(double const *__dp)
   return ((struct __loadu_pd*)__dp)->__v;
 }
 
+static __inline__ __m128i __DEFAULT_FN_ATTRS
+_mm_loadu_si64(void const *__a)
+{
+  struct __loadu_si64 {
+    long long __v;
+  } __attribute__((__packed__, __may_alias__));
+  long long __u = ((struct __loadu_si64*)__a)->__v;
+  return (__m128i){__u, 0L};
+}
+
 static __inline__ __m128d __DEFAULT_FN_ATTRS
 _mm_load_sd(double const *__dp)
 {
