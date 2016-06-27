@@ -165,6 +165,10 @@ namespace clang {
       void *OldDiagnosticContext = Ctx.getDiagnosticContext();
       Ctx.setDiagnosticHandler(DiagnosticHandler, this);
 
+      PerformPrelinkPasses(Diags, CodeGenOpts, TargetOpts, LangOpts,
+                           C.getTargetInfo().getDataLayout(),
+                           getModule(), Action);
+
       // Link LinkModule into this module if present, preserving its validity.
       for (auto &I : LinkModules) {
         unsigned LinkFlags = I.first;
@@ -177,7 +181,8 @@ namespace clang {
 
       EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
                         C.getTargetInfo().getDataLayout(),
-                        getModule(), Action, AsmOutStream);
+                        getModule(), Action, AsmOutStream,
+                        false /* SetLLVMOpts */);
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 

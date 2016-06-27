@@ -37,10 +37,15 @@ namespace clang {
   void EmitBackendOutput(DiagnosticsEngine &Diags, const CodeGenOptions &CGOpts,
                          const TargetOptions &TOpts, const LangOptions &LOpts,
                          const llvm::DataLayout &TDesc, llvm::Module *M,
-                         BackendAction Action, raw_pwrite_stream *OS);
+                         BackendAction Action, raw_pwrite_stream *OS,
+                         bool SetLLVMOpts = true);
 
   void EmbedBitcode(llvm::Module *M, const CodeGenOptions &CGOpts,
                     llvm::MemoryBufferRef Buf);
-}
 
+  void PerformPrelinkPasses(DiagnosticsEngine &Diags, const CodeGenOptions &CGOpts,
+                            const TargetOptions &TOpts, const LangOptions &LOpts,
+                            const llvm::DataLayout &TDesc, llvm::Module *M,
+                            BackendAction Action);
+}
 #endif
