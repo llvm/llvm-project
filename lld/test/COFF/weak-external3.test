@@ -13,7 +13,7 @@
 # CHECK2-NOT: :
 # CHECK2: {{ f$}}
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [  ]

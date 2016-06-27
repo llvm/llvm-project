@@ -32,6 +32,7 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Host.h"
@@ -71,6 +72,12 @@ static cl::opt<bool>
 PrintLocations(
     "pl",
     cl::desc("Print the locations affected by renaming to stderr."),
+    cl::cat(ClangRenameCategory));
+static cl::opt<std::string>
+ExportFixes(
+    "export-fixes",
+    cl::desc("YAML file to store suggested fixes in."),
+    cl::value_desc("filename"),
     cl::cat(ClangRenameCategory));
 
 #define CLANG_RENAME_VERSION "0.0.1"
@@ -125,6 +132,26 @@ int main(int argc, const char **argv) {
     res = Tool.runAndSave(Factory.get());
   } else {
     res = Tool.run(Factory.get());
+
+    if (!ExportFixes.empty()) {
+      std::error_code EC;
+      llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::F_None);
+      if (EC) {
+        llvm::errs() << "Error opening output file: " << EC.message() << '\n';
+        exit(1);
+      }
+
+      // Export replacements.
+      tooling::TranslationUnitReplacements TUR;
+      const tooling::Replacements &Replacements = Tool.getReplacements();
+      TUR.Replacements.insert(TUR.Replacements.end(), Replacements.begin(),
+                              Replacements.end());
+
+      yaml::Output YAML(OS);
+      YAML << TUR;
+      OS.close();
+      exit(0);
+    }
 
     // Write every file to stdout. Right now we just barf the files without any
     // indication of which files start where, other than that we print the files

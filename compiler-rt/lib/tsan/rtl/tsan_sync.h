@@ -79,7 +79,7 @@ class MetaMap {
 
   SyncVar* GetOrCreateAndLock(ThreadState *thr, uptr pc,
                               uptr addr, bool write_lock);
-  SyncVar* GetIfExistsAndLock(uptr addr);
+  SyncVar* GetIfExistsAndLock(uptr addr, bool write_lock);
 
   void MoveMemory(uptr src, uptr dst, uptr sz);
 

@@ -18,7 +18,7 @@
 # AFTER:     1004: 20 20         movs r0, #32
 # AFTER:     1006: ff f7 fb bf   b.w #-10
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_ARMNT
   Characteristics: []
