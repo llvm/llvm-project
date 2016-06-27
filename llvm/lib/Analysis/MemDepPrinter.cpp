@@ -111,10 +111,9 @@ bool MemDepPrinter::runOnFunction(Function &F) {
         MDA.getNonLocalCallDependency(CS);
 
       DepSet &InstDeps = Deps[Inst];
-      for (MemoryDependenceResults::NonLocalDepInfo::const_iterator
-           I = NLDI.begin(), E = NLDI.end(); I != E; ++I) {
-        const MemDepResult &Res = I->getResult();
-        InstDeps.insert(std::make_pair(getInstTypePair(Res), I->getBB()));
+      for (const NonLocalDepEntry &I : NLDI) {
+        const MemDepResult &Res = I.getResult();
+        InstDeps.insert(std::make_pair(getInstTypePair(Res), I.getBB()));
       }
     } else {
       SmallVector<NonLocalDepResult, 4> NLDI;
@@ -123,10 +122,9 @@ bool MemDepPrinter::runOnFunction(Function &F) {
       MDA.getNonLocalPointerDependency(Inst, NLDI);
 
       DepSet &InstDeps = Deps[Inst];
-      for (SmallVectorImpl<NonLocalDepResult>::const_iterator
-           I = NLDI.begin(), E = NLDI.end(); I != E; ++I) {
-        const MemDepResult &Res = I->getResult();
-        InstDeps.insert(std::make_pair(getInstTypePair(Res), I->getBB()));
+      for (const NonLocalDepResult &I : NLDI) {
+        const MemDepResult &Res = I.getResult();
+        InstDeps.insert(std::make_pair(getInstTypePair(Res), I.getBB()));
       }
     }
   }

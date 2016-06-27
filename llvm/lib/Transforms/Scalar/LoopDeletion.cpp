@@ -115,9 +115,8 @@ bool LoopDeletion::isLoopDead(Loop *L, ScalarEvolution &SE,
   // information to identify readonly and readnone calls.
   for (Loop::block_iterator LI = L->block_begin(), LE = L->block_end();
        LI != LE; ++LI) {
-    for (BasicBlock::iterator BI = (*LI)->begin(), BE = (*LI)->end();
-         BI != BE; ++BI) {
-      if (BI->mayHaveSideEffects())
+    for (Instruction &I : **LI) {
+      if (I.mayHaveSideEffects())
         return false;
     }
   }
@@ -217,9 +216,8 @@ bool LoopDeletion::runOnLoop(Loop *L, LPPassManager &) {
     // Move all of the block's children to be children of the preheader, which
     // allows us to remove the domtree entry for the block.
     ChildNodes.insert(ChildNodes.begin(), DT[*LI]->begin(), DT[*LI]->end());
-    for (SmallVectorImpl<DomTreeNode *>::iterator DI = ChildNodes.begin(),
-         DE = ChildNodes.end(); DI != DE; ++DI) {
-      DT.changeImmediateDominator(*DI, DT[preheader]);
+    for (DomTreeNode *ChildNode : ChildNodes) {
+      DT.changeImmediateDominator(ChildNode, DT[preheader]);
     }
 
     ChildNodes.clear();

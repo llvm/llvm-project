@@ -397,18 +397,17 @@ bool LoopRotate::rotateLoop(Loop *L, bool SimplifiedLatch) {
     // be split.
     SmallVector<BasicBlock *, 4> ExitPreds(pred_begin(Exit), pred_end(Exit));
     bool SplitLatchEdge = false;
-    for (SmallVectorImpl<BasicBlock *>::iterator PI = ExitPreds.begin(),
-                                                 PE = ExitPreds.end();
-         PI != PE; ++PI) {
+    for (BasicBlock *ExitPred : ExitPreds) {
       // We only need to split loop exit edges.
-      Loop *PredLoop = LI->getLoopFor(*PI);
+      Loop *PredLoop = LI->getLoopFor(ExitPred);
       if (!PredLoop || PredLoop->contains(Exit))
         continue;
-      if (isa<IndirectBrInst>((*PI)->getTerminator()))
+      if (isa<IndirectBrInst>(ExitPred->getTerminator()))
         continue;
-      SplitLatchEdge |= L->getLoopLatch() == *PI;
+      SplitLatchEdge |= L->getLoopLatch() == ExitPred;
       BasicBlock *ExitSplit = SplitCriticalEdge(
-          *PI, Exit, CriticalEdgeSplittingOptions(DT, LI).setPreserveLCSSA());
+          ExitPred, Exit,
+          CriticalEdgeSplittingOptions(DT, LI).setPreserveLCSSA());
       ExitSplit->moveBefore(Exit);
     }
     assert(SplitLatchEdge &&

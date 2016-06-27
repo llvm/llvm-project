@@ -705,12 +705,11 @@ CallGraphNode *ArgPromotion::DoPromotion(Function *F,
       }
 
       // Add a parameter to the function for each element passed in.
-      for (ScalarizeTable::iterator SI = ArgIndices.begin(),
-             E = ArgIndices.end(); SI != E; ++SI) {
+      for (const auto &ArgIndex : ArgIndices) {
         // not allowed to dereference ->begin() if size() is 0
         Params.push_back(GetElementPtrInst::getIndexedType(
             cast<PointerType>(I->getType()->getScalarType())->getElementType(),
-            SI->second));
+            ArgIndex.second));
         assert(Params.back());
       }
 
@@ -805,27 +804,25 @@ CallGraphNode *ArgPromotion::DoPromotion(Function *F,
         // Store the Value* version of the indices in here, but declare it now
         // for reuse.
         std::vector<Value*> Ops;
-        for (ScalarizeTable::iterator SI = ArgIndices.begin(),
-               E = ArgIndices.end(); SI != E; ++SI) {
+        for (const auto &ArgIndex : ArgIndices) {
           Value *V = *AI;
-          LoadInst *OrigLoad = OriginalLoads[std::make_pair(&*I, SI->second)];
-          if (!SI->second.empty()) {
-            Ops.reserve(SI->second.size());
+          LoadInst *OrigLoad =
+              OriginalLoads[std::make_pair(&*I, ArgIndex.second)];
+          if (!ArgIndex.second.empty()) {
+            Ops.reserve(ArgIndex.second.size());
             Type *ElTy = V->getType();
-            for (IndicesVector::const_iterator II = SI->second.begin(),
-                                               IE = SI->second.end();
-                 II != IE; ++II) {
+            for (unsigned long II : ArgIndex.second) {
               // Use i32 to index structs, and i64 for others (pointers/arrays).
               // This satisfies GEP constraints.
               Type *IdxTy = (ElTy->isStructTy() ?
                     Type::getInt32Ty(F->getContext()) : 
                     Type::getInt64Ty(F->getContext()));
-              Ops.push_back(ConstantInt::get(IdxTy, *II));
+              Ops.push_back(ConstantInt::get(IdxTy, II));
               // Keep track of the type we're currently indexing.
-              ElTy = cast<CompositeType>(ElTy)->getTypeAtIndex(*II);
+              ElTy = cast<CompositeType>(ElTy)->getTypeAtIndex(II);
             }
             // And create a GEP to extract those indices.
-            V = GetElementPtrInst::Create(SI->first, V, Ops,
+            V = GetElementPtrInst::Create(ArgIndex.first, V, Ops,
                                           V->getName() + ".idx", Call);
             Ops.clear();
           }

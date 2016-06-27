@@ -522,16 +522,15 @@ void CostModelAnalysis::print(raw_ostream &OS, const Module*) const {
   if (!F)
     return;
 
-  for (Function::iterator B = F->begin(), BE = F->end(); B != BE; ++B) {
-    for (BasicBlock::iterator it = B->begin(), e = B->end(); it != e; ++it) {
-      Instruction *Inst = &*it;
-      unsigned Cost = getInstructionCost(Inst);
+  for (BasicBlock &B : *F) {
+    for (Instruction &Inst : B) {
+      unsigned Cost = getInstructionCost(&Inst);
       if (Cost != (unsigned)-1)
         OS << "Cost Model: Found an estimated cost of " << Cost;
       else
         OS << "Cost Model: Unknown cost";
 
-      OS << " for instruction: "<< *Inst << "\n";
+      OS << " for instruction: " << Inst << "\n";
     }
   }
 }

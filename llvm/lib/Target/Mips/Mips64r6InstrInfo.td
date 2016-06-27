@@ -71,7 +71,7 @@ class DMUHU_DESC   : MUL_R6_DESC_BASE<"dmuhu", GPR64Opnd, II_DMUHU, mulhu>;
 class DMUL_R6_DESC : MUL_R6_DESC_BASE<"dmul", GPR64Opnd, II_DMUL, mul>;
 class DMULU_DESC   : MUL_R6_DESC_BASE<"dmulu", GPR64Opnd, II_DMUL>;
 class LDPC_DESC    : PCREL_DESC_BASE<"ldpc", GPR64Opnd, simm18_lsl3, II_LDPC>;
-class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, II_LLD>;
+class LLD_R6_DESC   : LL_R6_DESC_BASE<"lld", GPR64Opnd, mem_simm16, II_LLD>;
 class SCD_R6_DESC   : SC_R6_DESC_BASE<"scd", GPR64Opnd, II_SCD>;
 class SELEQZ64_DESC : SELEQNE_Z_DESC_BASE<"seleqz", GPR64Opnd>;
 class SELNEZ64_DESC : SELEQNE_Z_DESC_BASE<"selnez", GPR64Opnd>;
@@ -88,7 +88,7 @@ class JIC64_DESC : JMP_IDX_COMPACT_DESC_BASE<"jic", jmpoffset16, GPR64Opnd> {
   list<Register> Defs = [AT];
 }
 
-class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, II_LL>;
+class LL64_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9, II_LL>;
 class SC64_R6_DESC : SC_R6_DESC_BASE<"sc", GPR32Opnd, II_SC>;
 //===----------------------------------------------------------------------===//
 //
@@ -117,9 +117,9 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def DMUHU: DMUHU_ENC, DMUHU_DESC, ISA_MIPS64R6;
   def DMUL_R6: DMUL_R6_ENC, DMUL_R6_DESC, ISA_MIPS64R6;
   def DMULU: DMULU_ENC, DMULU_DESC, ISA_MIPS64R6;
+  def LLD_R6 : R6MMR6Rel, LLD_R6_ENC, LLD_R6_DESC, ISA_MIPS64R6;
 }
 def LDPC: R6MMR6Rel, LDPC_ENC, LDPC_DESC, ISA_MIPS64R6;
-def LLD_R6 : LLD_R6_ENC, LLD_R6_DESC, ISA_MIPS32R6;
 def SCD_R6 : SCD_R6_ENC, SCD_R6_DESC, ISA_MIPS32R6;
 let DecoderNamespace = "Mips32r6_64r6_GP64" in {
   def SELEQZ64 : SELEQZ_ENC, SELEQZ64_DESC, ISA_MIPS32R6, GPR_64;

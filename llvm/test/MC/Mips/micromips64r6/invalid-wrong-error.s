@@ -3,6 +3,14 @@
 # RUN: FileCheck %s < %t1
 
 
+  # The LLD instruction with invalid memory operand should emit "expected memory with 12-bit signed offset".
+  lld $31, 4096($31)       # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  lld $31, 2048($31)       # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  lld $31, -2049($31)      # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  # The LWU instruction with invalid memory operand should emit "expected memory with 12-bit signed offset".
+  lwu $31, 4096($31)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  lwu $31, 2048($31)           # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
+  lwu $31, -2049($31)          # CHECK: :[[@LINE]]:3: error: instruction requires a CPU feature not currently enabled
   # The 10-bit immediate supported by the standard encodings cause us to emit
   # the diagnostic for the 10-bit form. This isn't exactly wrong but it is
   # misleading. Ideally, we'd emit every way to achieve a valid match instead

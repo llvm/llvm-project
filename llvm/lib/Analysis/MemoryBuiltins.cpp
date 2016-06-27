@@ -661,8 +661,8 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute(Value *V) {
     // erase everything that was computed in this iteration from the cache, so
     // that no dangling references are left behind. We could be a bit smarter if
     // we kept a dependency graph. It's probably not worth the complexity.
-    for (PtrSetTy::iterator I=SeenVals.begin(), E=SeenVals.end(); I != E; ++I) {
-      CacheMapTy::iterator CacheIt = CacheMap.find(*I);
+    for (const Value *SeenVal : SeenVals) {
+      CacheMapTy::iterator CacheIt = CacheMap.find(SeenVal);
       // non-computable results can be safely cached
       if (CacheIt != CacheMap.end() && anyKnown(CacheIt->second))
         CacheMap.erase(CacheIt);

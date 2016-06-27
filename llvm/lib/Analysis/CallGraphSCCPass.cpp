@@ -261,10 +261,10 @@ bool CGPassManager::RefreshCallGraph(CallGraphSCC &CurSCC,
     // Loop over all of the instructions in the function, getting the callsites.
     // Keep track of the number of direct/indirect calls added.
     unsigned NumDirectAdded = 0, NumIndirectAdded = 0;
-    
-    for (Function::iterator BB = F->begin(), E = F->end(); BB != E; ++BB)
-      for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I) {
-        CallSite CS(cast<Value>(I));
+
+    for (BasicBlock &BB : *F)
+      for (Instruction &I : BB) {
+        CallSite CS(&I);
         if (!CS) continue;
         Function *Callee = CS.getCalledFunction();
         if (Callee && Callee->isIntrinsic()) continue;

@@ -901,8 +901,8 @@ bool llvm::promoteLoopAccessesToScalars(
   // cannot (yet) promote a memory location that is loaded and stored in
   // different sizes.  While we are at it, collect alignment and AA info.
   bool Changed = false;
-  for (AliasSet::iterator ASI = AS.begin(), E = AS.end(); ASI != E; ++ASI) {
-    Value *ASIV = ASI->getValue();
+  for (const auto &ASI : AS) {
+    Value *ASIV = ASI.getValue();
     PointerMustAliases.insert(ASIV);
 
     // Check that all of the pointers in the alias set have the same type.  We

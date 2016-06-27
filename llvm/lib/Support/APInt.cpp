@@ -75,7 +75,7 @@ inline static unsigned getDigit(char cdigit, uint8_t radix) {
 }
 
 
-void APInt::initSlowCase(unsigned numBits, uint64_t val, bool isSigned) {
+void APInt::initSlowCase(uint64_t val, bool isSigned) {
   pVal = getClearedMemory(getNumWords());
   pVal[0] = val;
   if (isSigned && int64_t(val) < 0)

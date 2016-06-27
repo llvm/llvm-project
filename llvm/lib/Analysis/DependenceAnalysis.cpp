@@ -781,9 +781,9 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
 
   // Go through each pair and find the widest bit to which we need
   // to extend all of them.
-  for (unsigned i = 0; i < Pairs.size(); i++) {
-    const SCEV *Src = Pairs[i]->Src;
-    const SCEV *Dst = Pairs[i]->Dst;
+  for (Subscript *Pair : Pairs) {
+    const SCEV *Src = Pair->Src;
+    const SCEV *Dst = Pair->Dst;
     IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
     IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
     if (SrcTy == nullptr || DstTy == nullptr) {
@@ -806,9 +806,9 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
   assert(widestWidthSeen > 0);
 
   // Now extend each pair to the widest seen.
-  for (unsigned i = 0; i < Pairs.size(); i++) {
-    const SCEV *Src = Pairs[i]->Src;
-    const SCEV *Dst = Pairs[i]->Dst;
+  for (Subscript *Pair : Pairs) {
+    const SCEV *Src = Pair->Src;
+    const SCEV *Dst = Pair->Dst;
     IntegerType *SrcTy = dyn_cast<IntegerType>(Src->getType());
     IntegerType *DstTy = dyn_cast<IntegerType>(Dst->getType());
     if (SrcTy == nullptr || DstTy == nullptr) {
@@ -819,10 +819,10 @@ void DependenceInfo::unifySubscriptType(ArrayRef<Subscript *> Pairs) {
     }
     if (SrcTy->getBitWidth() < widestWidthSeen)
       // Sign-extend Src to widestType
-      Pairs[i]->Src = SE->getSignExtendExpr(Src, widestType);
+      Pair->Src = SE->getSignExtendExpr(Src, widestType);
     if (DstTy->getBitWidth() < widestWidthSeen) {
       // Sign-extend Dst to widestType
-      Pairs[i]->Dst = SE->getSignExtendExpr(Dst, widestType);
+      Pair->Dst = SE->getSignExtendExpr(Dst, widestType);
     }
   }
 }

@@ -2174,10 +2174,8 @@ static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
     DEBUG(dbgs() << "FULLY EVALUATED GLOBAL CTOR FUNCTION '"
           << F->getName() << "' to " << Eval.getMutatedMemory().size()
           << " stores.\n");
-    for (DenseMap<Constant*, Constant*>::const_iterator I =
-           Eval.getMutatedMemory().begin(), E = Eval.getMutatedMemory().end();
-         I != E; ++I)
-      CommitValueTo(I->second, I->first);
+    for (const auto &I : Eval.getMutatedMemory())
+      CommitValueTo(I.second, I.first);
     for (GlobalVariable *GV : Eval.getInvariants())
       GV->setConstant(true);
   }

@@ -144,6 +144,17 @@ def FeatureNEONForFP : SubtargetFeature<"neonfp", "UseNEONForSinglePrecisionFP",
                                         "true",
                                         "Use NEON for single precision FP">;
 
+// On some processors, VLDn instructions that access unaligned data take one
+// extra cycle. Take that into account when computing operand latencies.
+def FeatureCheckVLDnAlign : SubtargetFeature<"vldn-align", "CheckVLDnAlign",
+                                             "true",
+                                             "Check for VLDn unaligned access">;
+
+// Some processors have a nonpipelined VFP coprocessor.
+def FeatureNonpipelinedVFP : SubtargetFeature<"nonpipelined-vfp",
+                                              "NonpipelinedVFP", "true",
+                                          "VFP instructions are not pipelined">;
+
 // Some processors have FP multiply-accumulate instructions that don't
 // play nicely with other VFP / NEON instructions, and it's generally better
 // to just not use them.
@@ -552,6 +563,7 @@ def : ProcessorModel<"cortex-a7",   CortexA8Model,      [ARMv7a, ProcA7,
 
 def : ProcessorModel<"cortex-a8",   CortexA8Model,      [ARMv7a, ProcA8,
                                                          FeatureHasRetAddrStack,
+                                                         FeatureNonpipelinedVFP,
                                                          FeatureTrustZone,
                                                          FeatureSlowFPBrcc,
                                                          FeatureHasSlowFPVMLx,
@@ -567,6 +579,7 @@ def : ProcessorModel<"cortex-a9",   CortexA9Model,      [ARMv7a, ProcA9,
                                                          FeatureAvoidPartialCPSR,
                                                          FeaturePreferVMOVSR,
                                                          FeatureNEONForFPMovs,
+                                                         FeatureCheckVLDnAlign,
                                                          FeatureMP]>;
 
 // FIXME: A12 has currently the same Schedule model as A9
@@ -589,6 +602,7 @@ def : ProcessorModel<"cortex-a15",  CortexA9Model,      [ARMv7a, ProcA15,
                                                          FeatureT2XtPk,
                                                          FeatureVFP4,
                                                          FeatureMP,
+                                                         FeatureCheckVLDnAlign,
                                                          FeatureHWDiv,
                                                          FeatureHWDivARM,
                                                          FeatureAvoidPartialCPSR,
@@ -612,6 +626,7 @@ def : ProcessorModel<"cortex-a17",  CortexA9Model,      [ARMv7a, ProcA17,
 //        division features.
 def : ProcessorModel<"krait",       CortexA9Model,      [ARMv7a, ProcKrait,
                                                          FeatureHasRetAddrStack,
+                                                         FeatureCheckVLDnAlign,
                                                          FeatureVMLxForwarding,
                                                          FeatureT2XtPk,
                                                          FeatureFP16,

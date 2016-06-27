@@ -347,8 +347,8 @@ void Function::setParent(Module *parent) {
 void Function::dropAllReferences() {
   setIsMaterializable(false);
 
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    I->dropAllReferences();
+  for (BasicBlock &BB : *this)
+    BB.dropAllReferences();
 
   // Delete all basic blocks. They are now unused, except possibly by
   // blockaddresses, but BasicBlock's destructor takes care of those.
@@ -531,11 +531,9 @@ static std::string getMangledTypeStr(Type* Ty) {
 
 std::string Intrinsic::getName(ID id, ArrayRef<Type*> Tys) {
   assert(id < num_intrinsics && "Invalid intrinsic ID!");
-  if (Tys.empty())
-    return IntrinsicNameTable[id];
   std::string Result(IntrinsicNameTable[id]);
-  for (unsigned i = 0; i < Tys.size(); ++i) {
-    Result += "." + getMangledTypeStr(Tys[i]);
+  for (Type *Ty : Tys) {
+    Result += "." + getMangledTypeStr(Ty);
   }
   return Result;
 }

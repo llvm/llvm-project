@@ -8510,6 +8510,13 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
   SDValue V = V1;
   for (;;) {
     switch (V.getOpcode()) {
+    case ISD::BITCAST: {
+      SDValue VSrc = V.getOperand(0);
+      if (NumElts != VSrc.getSimpleValueType().getVectorNumElements())
+        break;
+      V = VSrc;
+      continue;
+    }
     case ISD::CONCAT_VECTORS: {
       int OperandSize = Mask.size() / V.getNumOperands();
       V = V.getOperand(BroadcastIdx / OperandSize);
@@ -12976,10 +12983,6 @@ static SDValue LowerToTLSExecModel(GlobalAddressSDNode *GA, SelectionDAG &DAG,
   // The address of the thread local variable is the add of the thread
   // pointer with the offset of the variable.
   return DAG.getNode(ISD::ADD, dl, PtrVT, ThreadPointer, Offset);
-}
-
-bool X86TargetLowering::isPositionIndependent() const {
-  return getTargetMachine().getRelocationModel() == Reloc::PIC_;
 }
 
 SDValue

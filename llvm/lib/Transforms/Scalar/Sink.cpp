@@ -241,9 +241,8 @@ static bool iterativelySinkInstructions(Function &F, DominatorTree &DT,
     MadeChange = false;
     DEBUG(dbgs() << "Sinking iteration " << NumSinkIter << "\n");
     // Process all basic blocks.
-    for (Function::iterator I = F.begin(), E = F.end();
-         I != E; ++I)
-      MadeChange |= ProcessBlock(*I, DT, LI, AA);
+    for (BasicBlock &I : F)
+      MadeChange |= ProcessBlock(I, DT, LI, AA);
     EverMadeChange |= MadeChange;
     NumSinkIter++;
   } while (MadeChange);

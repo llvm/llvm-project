@@ -109,13 +109,13 @@ public:
       return true;
 
     SmallPtrSet<const NodeT *, 4> OtherChildren;
-    for (const_iterator I = Other->begin(), E = Other->end(); I != E; ++I) {
-      const NodeT *Nd = (*I)->getBlock();
+    for (const DomTreeNodeBase *I : *Other) {
+      const NodeT *Nd = I->getBlock();
       OtherChildren.insert(Nd);
     }
 
-    for (const_iterator I = begin(), E = end(); I != E; ++I) {
-      const NodeT *N = (*I)->getBlock();
+    for (const DomTreeNodeBase *I : *this) {
+      const NodeT *N = I->getBlock();
       if (OtherChildren.count(N) == 0)
         return true;
     }
@@ -349,17 +349,14 @@ public:
     if (DomTreeNodes.size() != OtherDomTreeNodes.size())
       return true;
 
-    for (typename DomTreeNodeMapType::const_iterator
-             I = this->DomTreeNodes.begin(),
-             E = this->DomTreeNodes.end();
-         I != E; ++I) {
-      NodeT *BB = I->first;
+    for (const auto &DomTreeNode : this->DomTreeNodes) {
+      NodeT *BB = DomTreeNode.first;
       typename DomTreeNodeMapType::const_iterator OI =
           OtherDomTreeNodes.find(BB);
       if (OI == OtherDomTreeNodes.end())
         return true;
 
-      DomTreeNodeBase<NodeT> &MyNd = *I->second;
+      DomTreeNodeBase<NodeT> &MyNd = *DomTreeNode.second;
       DomTreeNodeBase<NodeT> &OtherNd = *OI->second;
 
       if (MyNd.compare(&OtherNd))

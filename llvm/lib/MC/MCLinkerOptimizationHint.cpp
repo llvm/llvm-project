@@ -28,9 +28,8 @@ void MCLOHDirective::emit_impl(raw_ostream &OutStream,
                                const MCAsmLayout &Layout) const {
   encodeULEB128(Kind, OutStream);
   encodeULEB128(Args.size(), OutStream);
-  for (LOHArgs::const_iterator It = Args.begin(), EndIt = Args.end();
-       It != EndIt; ++It)
-    encodeULEB128(ObjWriter.getSymbolAddress(**It, Layout), OutStream);
+  for (const MCSymbol *Arg : Args)
+    encodeULEB128(ObjWriter.getSymbolAddress(*Arg, Layout), OutStream);
 }
 
 void MCLOHDirective::emit(MachObjectWriter &ObjWriter,

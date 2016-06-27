@@ -666,9 +666,9 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
 
   for (Loop::block_iterator BI = L->block_begin(), E = L->block_end(); BI != E;
        ++BI)
-    for (BasicBlock::iterator I = (*BI)->begin(), E = (*BI)->end(); I != E; ++I)
-      if (IgnoredStores.count(&*I) == 0 &&
-          (AA.getModRefInfo(&*I, StoreLoc) & Access))
+    for (Instruction &I : **BI)
+      if (IgnoredStores.count(&I) == 0 &&
+          (AA.getModRefInfo(&I, StoreLoc) & Access))
         return true;
 
   return false;

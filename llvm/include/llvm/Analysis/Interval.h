@@ -67,8 +67,9 @@ public:
 
   /// contains - Find out if a basic block is in this interval
   inline bool contains(BasicBlock *BB) const {
-    for (unsigned i = 0; i < Nodes.size(); ++i)
-      if (Nodes[i] == BB) return true;
+    for (BasicBlock *Node : Nodes)
+      if (Node == BB)
+        return true;
     return false;
     // I don't want the dependency on <algorithm>
     //return find(Nodes.begin(), Nodes.end(), BB) != Nodes.end();
@@ -76,8 +77,9 @@ public:
 
   /// isSuccessor - find out if a basic block is a successor of this Interval
   inline bool isSuccessor(BasicBlock *BB) const {
-    for (unsigned i = 0; i < Successors.size(); ++i)
-      if (Successors[i] == BB) return true;
+    for (BasicBlock *Successor : Successors)
+      if (Successor == BB)
+        return true;
     return false;
     // I don't want the dependency on <algorithm>
     //return find(Successors.begin(), Successors.end(), BB) != Successors.end();

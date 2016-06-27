@@ -393,9 +393,9 @@ bool CorrelatedValuePropagation::runOnFunction(Function &F) {
 
   bool FnChanged = false;
 
-  for (Function::iterator FI = F.begin(), FE = F.end(); FI != FE; ++FI) {
+  for (BasicBlock &BB : F) {
     bool BBChanged = false;
-    for (BasicBlock::iterator BI = FI->begin(), BE = FI->end(); BI != BE; ) {
+    for (BasicBlock::iterator BI = BB.begin(), BE = BB.end(); BI != BE;) {
       Instruction *II = &*BI++;
       switch (II->getOpcode()) {
       case Instruction::Select:
@@ -422,7 +422,7 @@ bool CorrelatedValuePropagation::runOnFunction(Function &F) {
       }
     }
 
-    Instruction *Term = FI->getTerminator();
+    Instruction *Term = BB.getTerminator();
     switch (Term->getOpcode()) {
     case Instruction::Switch:
       BBChanged |= processSwitch(cast<SwitchInst>(Term), LVI);

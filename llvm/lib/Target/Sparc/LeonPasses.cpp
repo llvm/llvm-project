@@ -169,10 +169,9 @@ bool FixFSMULD::runOnMachineFunction(MachineFunction& MF)
         Reg3Index = MI.getOperand(2).getReg();
       }
       else if (MI.isInlineAsm()) {
-        std::string AsmString (MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
-        std::string FMULSOpCoode ("fsmuld");
-        std::transform(AsmString.begin(), AsmString.end(), AsmString.begin(), ::tolower);
-        if (AsmString.find(FMULSOpCoode) == 0) { // this is an inline FSMULD instruction
+        StringRef AsmString(
+            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
+        if (AsmString.startswith_lower("fsmuld")) {
           //errs() << "Detected InlineAsm FSMULD\n";
 
           unsigned StartOp = InlineAsm::MIOp_FirstOperand;
@@ -281,10 +280,9 @@ bool ReplaceFMULS::runOnMachineFunction(MachineFunction& MF)
         Reg3Index = MI.getOperand(2).getReg();
       }
       else if (MI.isInlineAsm()) {
-        std::string AsmString (MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
-        std::string FMULSOpCoode ("fmuls");
-        std::transform(AsmString.begin(), AsmString.end(), AsmString.begin(), ::tolower);
-        if (AsmString.find(FMULSOpCoode) == 0) { // this is an inline FMULS instruction
+        StringRef AsmString(
+            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
+        if (AsmString.startswith_lower("fmuls")) {
           //errs() << "Detected InlineAsm FMULS\n";
 
           unsigned StartOp = InlineAsm::MIOp_FirstOperand;
@@ -377,15 +375,12 @@ bool FixAllFDIVSQRT::runOnMachineFunction(MachineFunction& MF)
       unsigned Opcode = MI.getOpcode();
 
       if (MI.isInlineAsm()) {
-        std::string AsmString (MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
-        std::string FSQRTDOpCode ("fsqrtd");
-        std::string FDIVDOpCode ("fdivd");
-        std::transform(AsmString.begin(), AsmString.end(), AsmString.begin(), ::tolower);
-        if (AsmString.find(FSQRTDOpCode) == 0) { // this is an inline fsqrts instruction
+        StringRef AsmString(
+            MI.getOperand(InlineAsm::MIOp_AsmString).getSymbolName());
+        if (AsmString.startswith_lower("fsqrtd")) {
           //errs() << "Detected InlineAsm FSQRTD\n";
           Opcode = SP::FSQRTD;
-        }
-        else if (AsmString.find(FDIVDOpCode) == 0) { // this is an inline fsqrts instruction
+        } else if (AsmString.startswith_lower("fdivd")) {
           //errs() << "Detected InlineAsm FDIVD\n";
           Opcode = SP::FDIVD;
         }

@@ -675,7 +675,7 @@ class TEQI_FM_MM<bits<5> funct> : MMArch {
   let Inst{15-0}  = imm16;
 }
 
-class LL_FM_MM<bits<4> funct> {
+class LL_FM_MM<bits<4> funct> : MMArch {
   bits<5> rt;
   bits<21> addr;
 

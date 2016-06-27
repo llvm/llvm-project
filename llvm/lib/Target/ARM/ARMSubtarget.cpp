@@ -109,10 +109,13 @@ ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
       Has8MSecExt(false), HasCrypto(false), HasCRC(false), HasRAS(false),
       HasZeroCycleZeroing(false), IsProfitableToUnpredicate(false),
       HasSlowVGETLNi32(false), HasSlowVDUP32(false), PreferVMOVSR(false),
-      PreferISHST(false), UseNEONForFPMovs(false), StrictAlign(false),
-      RestrictIT(false), HasDSP(false), UseNaClTrap(false), GenLongCalls(false),
+      PreferISHST(false), UseNEONForFPMovs(false), CheckVLDnAlign(false),
+      NonpipelinedVFP(false), StrictAlign(false), RestrictIT(false),
+      HasDSP(false), UseNaClTrap(false), GenLongCalls(false),
       UnsafeFPMath(false), UseSjLjEH(false), stackAlignment(4), CPUString(CPU),
-      IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options), TM(TM),
+      MaxInterleaveFactor(1), LdStMultipleTiming(SingleIssue),
+      PreISelOperandLatencyAdjustment(2), IsLittle(IsLittle), TargetTriple(TT),
+      Options(TM.Options), TM(TM),
       FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
@@ -221,6 +224,51 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
       (Options.UnsafeFPMath || isTargetDarwin()))
     UseNEONForSinglePrecisionFP = true;
+
+  // FIXME: Teach TableGen to deal with these instead of doing it manually here.
+  switch (ARMProcFamily) {
+  case Others:
+  case CortexA5:
+    break;
+  case CortexA7:
+    LdStMultipleTiming = DoubleIssue;
+    break;
+  case CortexA8:
+    LdStMultipleTiming = DoubleIssue;
+    break;
+  case CortexA9:
+    LdStMultipleTiming = DoubleIssueCheckUnalignedAccess;
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  case CortexA12:
+    break;
+  case CortexA15:
+    MaxInterleaveFactor = 2;
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  case CortexA17:
+  case CortexA32:
+  case CortexA35:
+  case CortexA53:
+  case CortexA57:
+  case CortexA72:
+  case CortexA73:
+  case CortexR4:
+  case CortexR4F:
+  case CortexR5:
+  case CortexR7:
+  case CortexM3:
+  case ExynosM1:
+    break;
+  case Krait:
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  case Swift:
+    MaxInterleaveFactor = 2;
+    LdStMultipleTiming = SingleIssuePlusExtras;
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  }
 }
 
 bool ARMSubtarget::isAPCS_ABI() const {

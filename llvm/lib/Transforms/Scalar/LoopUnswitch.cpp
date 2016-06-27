@@ -685,8 +685,8 @@ static bool isTrivialLoopExitBlockHelper(Loop *L, BasicBlock *BB,
 
   // Okay, everything after this looks good, check to make sure that this block
   // doesn't include any side effects.
-  for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-    if (I->mayHaveSideEffects())
+  for (Instruction &I : *BB)
+    if (I.mayHaveSideEffects())
       return false;
 
   return true;
@@ -736,8 +736,8 @@ static Loop *CloneLoop(Loop *L, Loop *PL, ValueToValueMapTy &VM,
       New.addBasicBlockToLoop(cast<BasicBlock>(VM[*I]), *LI);
 
   // Add all of the subloops to the new loop.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-    CloneLoop(*I, &New, VM, LI, LPM);
+  for (Loop *I : *L)
+    CloneLoop(I, &New, VM, LI, LPM);
 
   return &New;
 }
@@ -1132,9 +1132,8 @@ void LoopUnswitch::UnswitchNontrivialCondition(Value *LIC, Constant *Val,
 
   // Rewrite the code to refer to itself.
   for (unsigned i = 0, e = NewBlocks.size(); i != e; ++i)
-    for (BasicBlock::iterator I = NewBlocks[i]->begin(),
-           E = NewBlocks[i]->end(); I != E; ++I)
-      RemapInstruction(&*I, VMap,
+    for (Instruction &I : *NewBlocks[i])
+      RemapInstruction(&I, VMap,
                        RF_NoModuleLevelChanges | RF_IgnoreMissingLocals);
 
   // Rewrite the original preheader to select between versions of the loop.
@@ -1237,9 +1236,8 @@ void LoopUnswitch::RewriteLoopBodyWithConditionConstant(Loop *L, Value *LIC,
       Worklist.push_back(UI);
     }
 
-    for (std::vector<Instruction*>::iterator UI = Worklist.begin(),
-         UE = Worklist.end(); UI != UE; ++UI)
-      (*UI)->replaceUsesOfWith(LIC, Replacement);
+    for (Instruction *UI : Worklist)
+      UI->replaceUsesOfWith(LIC, Replacement);
 
     SimplifyCode(Worklist, L);
     return;

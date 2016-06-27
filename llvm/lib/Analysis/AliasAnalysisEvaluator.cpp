@@ -175,29 +175,27 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
 
   if (EvalAAMD) {
     // iterate over all pairs of load, store
-    for (SetVector<Value *>::iterator I1 = Loads.begin(), E = Loads.end();
-         I1 != E; ++I1) {
-      for (SetVector<Value *>::iterator I2 = Stores.begin(), E2 = Stores.end();
-           I2 != E2; ++I2) {
-        switch (AA.alias(MemoryLocation::get(cast<LoadInst>(*I1)),
-                         MemoryLocation::get(cast<StoreInst>(*I2)))) {
+    for (Value *Load : Loads) {
+      for (Value *Store : Stores) {
+        switch (AA.alias(MemoryLocation::get(cast<LoadInst>(Load)),
+                         MemoryLocation::get(cast<StoreInst>(Store)))) {
         case NoAlias:
-          PrintLoadStoreResults("NoAlias", PrintNoAlias, *I1, *I2,
+          PrintLoadStoreResults("NoAlias", PrintNoAlias, Load, Store,
                                 F.getParent());
           ++NoAliasCount;
           break;
         case MayAlias:
-          PrintLoadStoreResults("MayAlias", PrintMayAlias, *I1, *I2,
+          PrintLoadStoreResults("MayAlias", PrintMayAlias, Load, Store,
                                 F.getParent());
           ++MayAliasCount;
           break;
         case PartialAlias:
-          PrintLoadStoreResults("PartialAlias", PrintPartialAlias, *I1, *I2,
+          PrintLoadStoreResults("PartialAlias", PrintPartialAlias, Load, Store,
                                 F.getParent());
           ++PartialAliasCount;
           break;
         case MustAlias:
-          PrintLoadStoreResults("MustAlias", PrintMustAlias, *I1, *I2,
+          PrintLoadStoreResults("MustAlias", PrintMustAlias, Load, Store,
                                 F.getParent());
           ++MustAliasCount;
           break;
@@ -237,30 +235,31 @@ void AAEvaluator::runInternal(Function &F, AAResults &AA) {
   }
 
   // Mod/ref alias analysis: compare all pairs of calls and values
-  for (auto C = CallSites.begin(), Ce = CallSites.end(); C != Ce; ++C) {
-    Instruction *I = C->getInstruction();
+  for (CallSite C : CallSites) {
+    Instruction *I = C.getInstruction();
 
-    for (SetVector<Value *>::iterator V = Pointers.begin(), Ve = Pointers.end();
-         V != Ve; ++V) {
+    for (auto Pointer : Pointers) {
       uint64_t Size = MemoryLocation::UnknownSize;
-      Type *ElTy = cast<PointerType>((*V)->getType())->getElementType();
+      Type *ElTy = cast<PointerType>(Pointer->getType())->getElementType();
       if (ElTy->isSized()) Size = DL.getTypeStoreSize(ElTy);
 
-      switch (AA.getModRefInfo(*C, *V, Size)) {
+      switch (AA.getModRefInfo(C, Pointer, Size)) {
       case MRI_NoModRef:
-        PrintModRefResults("NoModRef", PrintNoModRef, I, *V, F.getParent());
+        PrintModRefResults("NoModRef", PrintNoModRef, I, Pointer,
+                           F.getParent());
         ++NoModRefCount;
         break;
       case MRI_Mod:
-        PrintModRefResults("Just Mod", PrintMod, I, *V, F.getParent());
+        PrintModRefResults("Just Mod", PrintMod, I, Pointer, F.getParent());
         ++ModCount;
         break;
       case MRI_Ref:
-        PrintModRefResults("Just Ref", PrintRef, I, *V, F.getParent());
+        PrintModRefResults("Just Ref", PrintRef, I, Pointer, F.getParent());
         ++RefCount;
         break;
       case MRI_ModRef:
-        PrintModRefResults("Both ModRef", PrintModRef, I, *V, F.getParent());
+        PrintModRefResults("Both ModRef", PrintModRef, I, Pointer,
+                           F.getParent());
         ++ModRefCount;
         break;
       }

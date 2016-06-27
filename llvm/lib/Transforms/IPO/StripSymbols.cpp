@@ -215,11 +215,11 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
         I->setName("");     // Internal symbols can't participate in linkage
   }
 
-  for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I) {
-    if (I->hasLocalLinkage() && llvmUsedValues.count(&*I) == 0)
-      if (!PreserveDbgInfo || !I->getName().startswith("llvm.dbg"))
-        I->setName("");     // Internal symbols can't participate in linkage
-    StripSymtab(I->getValueSymbolTable(), PreserveDbgInfo);
+  for (Function &I : M) {
+    if (I.hasLocalLinkage() && llvmUsedValues.count(&I) == 0)
+      if (!PreserveDbgInfo || !I.getName().startswith("llvm.dbg"))
+        I.setName(""); // Internal symbols can't participate in linkage
+    StripSymtab(I.getValueSymbolTable(), PreserveDbgInfo);
   }
 
   // Remove all names from types.

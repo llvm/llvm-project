@@ -162,9 +162,9 @@ class AttributeSetNode final
     // There's memory after the node where we can store the entries in.
     std::copy(Attrs.begin(), Attrs.end(), getTrailingObjects<Attribute>());
 
-    for (iterator I = begin(), E = end(); I != E; ++I) {
-      if (!I->isStringAttribute()) {
-        AvailableAttrs |= ((uint64_t)1) << I->getKindAsEnum();
+    for (Attribute I : *this) {
+      if (!I.isStringAttribute()) {
+        AvailableAttrs |= ((uint64_t)1) << I.getKindAsEnum();
       }
     }
   }
@@ -265,10 +265,9 @@ public:
       const std::pair<unsigned, AttributeSetNode *> &Last = Slots.back();
       if (Last.first == AttributeSet::FunctionIndex) {
         const AttributeSetNode *Node = Last.second;
-        for (AttributeSetNode::iterator I = Node->begin(), E = Node->end();
-             I != E; ++I) {
-          if (!I->isStringAttribute())
-            AvailableFunctionAttrs |= ((uint64_t)1) << I->getKindAsEnum();
+        for (Attribute I : *Node) {
+          if (!I.isStringAttribute())
+            AvailableFunctionAttrs |= ((uint64_t)1) << I.getKindAsEnum();
         }
       }
     }

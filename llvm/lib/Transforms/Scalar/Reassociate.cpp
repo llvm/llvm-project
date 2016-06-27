@@ -155,17 +155,15 @@ void ReassociatePass::BuildRankMap(
     DEBUG(dbgs() << "Calculated Rank[" << I->getName() << "] = " << i << "\n");
   }
 
-  for (ReversePostOrderTraversal<Function*>::rpo_iterator I = RPOT.begin(),
-         E = RPOT.end(); I != E; ++I) {
-    BasicBlock *BB = *I;
+  for (BasicBlock *BB : RPOT) {
     unsigned BBRank = RankMap[BB] = ++i << 16;
 
     // Walk the basic block, adding precomputed ranks for any instructions that
     // we cannot move.  This ensures that the ranks for these instructions are
     // all different in the block.
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-      if (mayBeMemoryDependent(*I))
-        ValueRankMap[&*I] = ++BBRank;
+    for (Instruction &I : *BB)
+      if (mayBeMemoryDependent(I))
+        ValueRankMap[&I] = ++BBRank;
   }
 }
 

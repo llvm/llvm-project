@@ -152,10 +152,8 @@ bool llvm::MergeBlockIntoPredecessor(BasicBlock *BB, DominatorTree *DT,
     if (DomTreeNode *DTN = DT->getNode(BB)) {
       DomTreeNode *PredDTN = DT->getNode(PredBB);
       SmallVector<DomTreeNode *, 8> Children(DTN->begin(), DTN->end());
-      for (SmallVectorImpl<DomTreeNode *>::iterator DI = Children.begin(),
-                                                    DE = Children.end();
-           DI != DE; ++DI)
-        DT->changeImmediateDominator(*DI, PredDTN);
+      for (DomTreeNode *DI : Children)
+        DT->changeImmediateDominator(DI, PredDTN);
 
       DT->eraseNode(BB);
     }
@@ -240,8 +238,8 @@ unsigned
 llvm::SplitAllCriticalEdges(Function &F,
                             const CriticalEdgeSplittingOptions &Options) {
   unsigned NumBroken = 0;
-  for (Function::iterator I = F.begin(), E = F.end(); I != E; ++I) {
-    TerminatorInst *TI = I->getTerminator();
+  for (BasicBlock &BB : F) {
+    TerminatorInst *TI = BB.getTerminator();
     if (TI->getNumSuccessors() > 1 && !isa<IndirectBrInst>(TI))
       for (unsigned i = 0, e = TI->getNumSuccessors(); i != e; ++i)
         if (SplitCriticalEdge(TI, i, Options))
@@ -266,15 +264,11 @@ BasicBlock *llvm::SplitBlock(BasicBlock *Old, Instruction *SplitPt,
   if (DT)
     // Old dominates New. New node dominates all other nodes dominated by Old.
     if (DomTreeNode *OldNode = DT->getNode(Old)) {
-      std::vector<DomTreeNode *> Children;
-      for (DomTreeNode::iterator I = OldNode->begin(), E = OldNode->end();
-           I != E; ++I)
-        Children.push_back(*I);
+      std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
 
       DomTreeNode *NewNode = DT->addNewBlock(New, Old);
-      for (std::vector<DomTreeNode *>::iterator I = Children.begin(),
-             E = Children.end(); I != E; ++I)
-        DT->changeImmediateDominator(*I, NewNode);
+      for (DomTreeNode *I : Children)
+        DT->changeImmediateDominator(I, NewNode);
     }
 
   return New;
@@ -299,10 +293,7 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
   // this split will affect loops.
   bool IsLoopEntry = !!L;
   bool SplitMakesNewLoopHeader = false;
-  for (ArrayRef<BasicBlock *>::iterator i = Preds.begin(), e = Preds.end();
-       i != e; ++i) {
-    BasicBlock *Pred = *i;
-
+  for (BasicBlock *Pred : Preds) {
     // If we need to preserve LCSSA, determine if any of the preds is a loop
     // exit.
     if (PreserveLCSSA)
@@ -330,9 +321,7 @@ static void UpdateAnalysisInformation(BasicBlock *OldBB, BasicBlock *NewBB,
     // loops enclose them, and select the most-nested loop which contains the
     // loop containing the block being split.
     Loop *InnermostPredLoop = nullptr;
-    for (ArrayRef<BasicBlock*>::iterator
-           i = Preds.begin(), e = Preds.end(); i != e; ++i) {
-      BasicBlock *Pred = *i;
+    for (BasicBlock *Pred : Preds) {
       if (Loop *PredLoop = LI->getLoopFor(Pred)) {
         // Seek a loop which actually contains the block being split (to avoid
         // adjacent loops).
@@ -543,9 +532,8 @@ void llvm::SplitLandingPadPredecessors(BasicBlock *OrigBB,
     BI2->setDebugLoc(OrigBB->getFirstNonPHI()->getDebugLoc());
 
     // Move the remaining edges from OrigBB to point to NewBB2.
-    for (SmallVectorImpl<BasicBlock*>::iterator
-           i = NewBB2Preds.begin(), e = NewBB2Preds.end(); i != e; ++i)
-      (*i)->getTerminator()->replaceUsesOfWith(OrigBB, NewBB2);
+    for (BasicBlock *NewBB2Pred : NewBB2Preds)
+      NewBB2Pred->getTerminator()->replaceUsesOfWith(OrigBB, NewBB2);
 
     // Update DominatorTree, LoopInfo, and LCCSA analysis information.
     HasLoopExit = false;
@@ -649,7 +637,7 @@ llvm::SplitBlockAndInsertIfThen(Value *Cond, Instruction *SplitBefore,
       std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
 
       DomTreeNode *NewNode = DT->addNewBlock(Tail, Head);
-      for (auto Child : Children)
+      for (DomTreeNode *Child : Children)
         DT->changeImmediateDominator(Child, NewNode);
 
       // Head dominates ThenBlock.

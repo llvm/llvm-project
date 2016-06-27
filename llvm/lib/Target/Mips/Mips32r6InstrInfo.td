@@ -677,16 +677,17 @@ class LSA_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
 class LSA_R6_DESC : LSA_R6_DESC_BASE<"lsa", GPR32Opnd, uimm2_plus1, II_LSA>;
 
 class LL_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
-                      InstrItinClass itin> {
+                      Operand MemOpnd, InstrItinClass itin>
+      : MipsR6Arch<instr_asm> {
   dag OutOperandList = (outs GPROpnd:$rt);
-  dag InOperandList = (ins mem_simm9:$addr);
+  dag InOperandList = (ins MemOpnd:$addr);
   string AsmString = !strconcat(instr_asm, "\t$rt, $addr");
   list<dag> Pattern = [];
   bit mayLoad = 1;
   InstrItinClass Itinerary = itin;
 }
 
-class LL_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, II_LL>;
+class LL_R6_DESC : LL_R6_DESC_BASE<"ll", GPR32Opnd, mem_simm9, II_LL>;
 
 class SC_R6_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
                       InstrItinClass itin> {

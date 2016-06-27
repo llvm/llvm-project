@@ -536,12 +536,9 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
             // then it must be calling into another function in our SCC. Save
             // its particulars for Argument-SCC analysis later.
             ArgumentGraphNode *Node = AG[&*A];
-            for (SmallVectorImpl<Argument *>::iterator
-                     UI = Tracker.Uses.begin(),
-                     UE = Tracker.Uses.end();
-                 UI != UE; ++UI) {
-              Node->Uses.push_back(AG[*UI]);
-              if (*UI != &*A)
+            for (Argument *Use : Tracker.Uses) {
+              Node->Uses.push_back(AG[Use]);
+              if (Use != &*A)
                 HasNonLocalUses = true;
             }
           }
@@ -606,17 +603,15 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
     SmallPtrSet<Argument *, 8> ArgumentSCCNodes;
     // Fill ArgumentSCCNodes with the elements of the ArgumentSCC.  Used for
     // quickly looking up whether a given Argument is in this ArgumentSCC.
-    for (auto I = ArgumentSCC.begin(), E = ArgumentSCC.end(); I != E; ++I) {
-      ArgumentSCCNodes.insert((*I)->Definition);
+    for (ArgumentGraphNode *I : ArgumentSCC) {
+      ArgumentSCCNodes.insert(I->Definition);
     }
 
     for (auto I = ArgumentSCC.begin(), E = ArgumentSCC.end();
          I != E && !SCCCaptured; ++I) {
       ArgumentGraphNode *N = *I;
-      for (SmallVectorImpl<ArgumentGraphNode *>::iterator UI = N->Uses.begin(),
-                                                          UE = N->Uses.end();
-           UI != UE; ++UI) {
-        Argument *A = (*UI)->Definition;
+      for (ArgumentGraphNode *Use : N->Uses) {
+        Argument *A = Use->Definition;
         if (A->hasNoCaptureAttr() || ArgumentSCCNodes.count(A))
           continue;
         SCCCaptured = true;
@@ -682,8 +677,8 @@ static bool addArgumentAttrs(const SCCNodeSet &SCCNodes) {
 /// doesn't alias any other pointer visible to the caller.
 static bool isFunctionMallocLike(Function *F, const SCCNodeSet &SCCNodes) {
   SmallSetVector<Value *, 8> FlowsToReturn;
-  for (Function::iterator I = F->begin(), E = F->end(); I != E; ++I)
-    if (ReturnInst *Ret = dyn_cast<ReturnInst>(I->getTerminator()))
+  for (BasicBlock &BB : *F)
+    if (ReturnInst *Ret = dyn_cast<ReturnInst>(BB.getTerminator()))
       FlowsToReturn.insert(Ret->getReturnValue());
 
   for (unsigned i = 0; i != FlowsToReturn.size(); ++i) {
@@ -1109,8 +1104,8 @@ bool PostOrderFunctionAttrsLegacyPass::runOnSCC(CallGraphSCC &SCC) {
   // part of the SCC.
   SCCNodeSet SCCNodes;
   bool ExternalNode = false;
-  for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I) {
-    Function *F = (*I)->getFunction();
+  for (CallGraphNode *I : SCC) {
+    Function *F = I->getFunction();
     if (!F || F->hasFnAttribute(Attribute::OptimizeNone)) {
       // External node or function we're trying not to optimize - we both avoid
       // transform them and avoid leveraging information they provide.
