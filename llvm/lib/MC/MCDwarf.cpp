@@ -109,47 +109,44 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
   MCSymbol *LastLabel = nullptr;
 
   // Loop through each MCDwarfLineEntry and encode the dwarf line number table.
-  for (auto it = LineEntries.begin(),
-            ie = LineEntries.end();
-       it != ie; ++it) {
+  for (const MCDwarfLineEntry &LineEntry : LineEntries) {
+    int64_t LineDelta = static_cast<int64_t>(LineEntry.getLine()) - LastLine;
 
-    int64_t LineDelta = static_cast<int64_t>(it->getLine()) - LastLine;
-
-    if (FileNum != it->getFileNum()) {
-      FileNum = it->getFileNum();
+    if (FileNum != LineEntry.getFileNum()) {
+      FileNum = LineEntry.getFileNum();
       MCOS->EmitIntValue(dwarf::DW_LNS_set_file, 1);
       MCOS->EmitULEB128IntValue(FileNum);
     }
-    if (Column != it->getColumn()) {
-      Column = it->getColumn();
+    if (Column != LineEntry.getColumn()) {
+      Column = LineEntry.getColumn();
       MCOS->EmitIntValue(dwarf::DW_LNS_set_column, 1);
       MCOS->EmitULEB128IntValue(Column);
     }
-    if (Discriminator != it->getDiscriminator()) {
-      Discriminator = it->getDiscriminator();
+    if (Discriminator != LineEntry.getDiscriminator()) {
+      Discriminator = LineEntry.getDiscriminator();
       unsigned Size = getULEB128Size(Discriminator);
       MCOS->EmitIntValue(dwarf::DW_LNS_extended_op, 1);
       MCOS->EmitULEB128IntValue(Size + 1);
       MCOS->EmitIntValue(dwarf::DW_LNE_set_discriminator, 1);
       MCOS->EmitULEB128IntValue(Discriminator);
     }
-    if (Isa != it->getIsa()) {
-      Isa = it->getIsa();
+    if (Isa != LineEntry.getIsa()) {
+      Isa = LineEntry.getIsa();
       MCOS->EmitIntValue(dwarf::DW_LNS_set_isa, 1);
       MCOS->EmitULEB128IntValue(Isa);
     }
-    if ((it->getFlags() ^ Flags) & DWARF2_FLAG_IS_STMT) {
-      Flags = it->getFlags();
+    if ((LineEntry.getFlags() ^ Flags) & DWARF2_FLAG_IS_STMT) {
+      Flags = LineEntry.getFlags();
       MCOS->EmitIntValue(dwarf::DW_LNS_negate_stmt, 1);
     }
-    if (it->getFlags() & DWARF2_FLAG_BASIC_BLOCK)
+    if (LineEntry.getFlags() & DWARF2_FLAG_BASIC_BLOCK)
       MCOS->EmitIntValue(dwarf::DW_LNS_set_basic_block, 1);
-    if (it->getFlags() & DWARF2_FLAG_PROLOGUE_END)
+    if (LineEntry.getFlags() & DWARF2_FLAG_PROLOGUE_END)
       MCOS->EmitIntValue(dwarf::DW_LNS_set_prologue_end, 1);
-    if (it->getFlags() & DWARF2_FLAG_EPILOGUE_BEGIN)
+    if (LineEntry.getFlags() & DWARF2_FLAG_EPILOGUE_BEGIN)
       MCOS->EmitIntValue(dwarf::DW_LNS_set_epilogue_begin, 1);
 
-    MCSymbol *Label = it->getLabel();
+    MCSymbol *Label = LineEntry.getLabel();
 
     // At this point we want to emit/create the sequence to encode the delta in
     // line numbers and the increment of the address from the previous Label
@@ -159,7 +156,7 @@ EmitDwarfLineTable(MCObjectStreamer *MCOS, MCSection *Section,
                                    asmInfo->getPointerSize());
 
     Discriminator = 0;
-    LastLine = it->getLine();
+    LastLine = LineEntry.getLine();
     LastLabel = Label;
   }
 
@@ -1162,8 +1159,7 @@ void FrameEmitterImpl::EmitCFIInstruction(const MCCFIInstruction &Instr) {
 /// Emit frame instructions to describe the layout of the frame.
 void FrameEmitterImpl::EmitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
                                            MCSymbol *BaseLabel) {
-  for (unsigned i = 0, N = Instrs.size(); i < N; ++i) {
-    const MCCFIInstruction &Instr = Instrs[i];
+  for (const MCCFIInstruction &Instr : Instrs) {
     MCSymbol *Label = Instr.getLabel();
     // Throw out move if the label is invalid.
     if (Label && !Label->isDefined()) continue; // Not emitted, in dead code.
@@ -1500,8 +1496,7 @@ void MCDwarfFrameEmitter::Emit(MCObjectStreamer &Streamer, MCAsmBackend *MAB,
   bool NeedsEHFrameSection = !MOFI->getSupportsCompactUnwindWithoutEHFrame();
   if (IsEH && MOFI->getCompactUnwindSection()) {
     bool SectionEmitted = false;
-    for (unsigned i = 0, n = FrameArray.size(); i < n; ++i) {
-      const MCDwarfFrameInfo &Frame = FrameArray[i];
+    for (const MCDwarfFrameInfo &Frame : FrameArray) {
       if (Frame.CompactUnwindEncoding == 0) continue;
       if (!SectionEmitted) {
         Streamer.SwitchSection(MOFI->getCompactUnwindSection());

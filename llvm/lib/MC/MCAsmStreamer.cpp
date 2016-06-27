@@ -352,12 +352,11 @@ void MCAsmStreamer::EmitLOHDirective(MCLOHType Kind, const MCLOHArgs &Args) {
 
   OS << "\t" << MCLOHDirectiveName() << " " << str << "\t";
   bool IsFirst = true;
-  for (MCLOHArgs::const_iterator It = Args.begin(), EndIt = Args.end();
-       It != EndIt; ++It) {
+  for (const MCSymbol *Arg : Args) {
     if (!IsFirst)
       OS << ", ";
     IsFirst = false;
-    (*It)->print(OS, MAI);
+    Arg->print(OS, MAI);
   }
   EmitEOL();
 }

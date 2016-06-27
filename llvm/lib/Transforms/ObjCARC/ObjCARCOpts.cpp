@@ -1551,9 +1551,7 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
   unsigned NewCount = 0;
   bool FirstRelease = true;
   for (;;) {
-    for (SmallVectorImpl<Instruction *>::const_iterator
-           NI = NewRetains.begin(), NE = NewRetains.end(); NI != NE; ++NI) {
-      Instruction *NewRetain = *NI;
+    for (Instruction *NewRetain : NewRetains) {
       auto It = Retains.find(NewRetain);
       assert(It != Retains.end());
       const RRInfo &NewRetainRRI = It->second;
@@ -1627,9 +1625,7 @@ bool ObjCARCOpt::PairUpRetainsAndReleases(
     if (NewReleases.empty()) break;
 
     // Back the other way.
-    for (SmallVectorImpl<Instruction *>::const_iterator
-           NI = NewReleases.begin(), NE = NewReleases.end(); NI != NE; ++NI) {
-      Instruction *NewRelease = *NI;
+    for (Instruction *NewRelease : NewReleases) {
       auto It = Releases.find(NewRelease);
       assert(It != Releases.end());
       const RRInfo &NewReleaseRRI = It->second;

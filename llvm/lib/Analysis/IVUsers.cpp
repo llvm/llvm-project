@@ -290,21 +290,18 @@ void IVUsers::print(raw_ostream &OS, const Module *M) const {
   }
   OS << ":\n";
 
-  for (ilist<IVStrideUse>::const_iterator UI = IVUses.begin(),
-       E = IVUses.end(); UI != E; ++UI) {
+  for (const IVStrideUse &IVUse : IVUses) {
     OS << "  ";
-    UI->getOperandValToReplace()->printAsOperand(OS, false);
-    OS << " = " << *getReplacementExpr(*UI);
-    for (PostIncLoopSet::const_iterator
-         I = UI->PostIncLoops.begin(),
-         E = UI->PostIncLoops.end(); I != E; ++I) {
+    IVUse.getOperandValToReplace()->printAsOperand(OS, false);
+    OS << " = " << *getReplacementExpr(IVUse);
+    for (auto PostIncLoop : IVUse.PostIncLoops) {
       OS << " (post-inc with loop ";
-      (*I)->getHeader()->printAsOperand(OS, false);
+      PostIncLoop->getHeader()->printAsOperand(OS, false);
       OS << ")";
     }
     OS << " in  ";
-    if (UI->getUser())
-      UI->getUser()->print(OS);
+    if (IVUse.getUser())
+      IVUse.getUser()->print(OS);
     else
       OS << "Printing <null> User";
     OS << '\n';

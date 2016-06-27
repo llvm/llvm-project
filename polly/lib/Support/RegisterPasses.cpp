@@ -155,6 +155,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializePollyCanonicalizePass(Registry);
   initializeScopDetectionPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
+  initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
 }
 

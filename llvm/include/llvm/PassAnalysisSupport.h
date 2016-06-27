@@ -153,9 +153,9 @@ public:
   /// Find pass that is implementing PI.
   Pass *findImplPass(AnalysisID PI) {
     Pass *ResultPass = nullptr;
-    for (unsigned i = 0; i < AnalysisImpls.size() ; ++i) {
-      if (AnalysisImpls[i].first == PI) {
-        ResultPass = AnalysisImpls[i].second;
+    for (const auto &AnalysisImpl : AnalysisImpls) {
+      if (AnalysisImpl.first == PI) {
+        ResultPass = AnalysisImpl.second;
         break;
       }
     }

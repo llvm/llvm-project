@@ -335,12 +335,9 @@ void Scalarizer::transferMetadata(Instruction *Op, const ValueVector &CV) {
   Op->getAllMetadataOtherThanDebugLoc(MDs);
   for (unsigned I = 0, E = CV.size(); I != E; ++I) {
     if (Instruction *New = dyn_cast<Instruction>(CV[I])) {
-      for (SmallVectorImpl<std::pair<unsigned, MDNode *>>::iterator
-               MI = MDs.begin(),
-               ME = MDs.end();
-           MI != ME; ++MI)
-        if (canTransferMetadata(MI->first))
-          New->setMetadata(MI->first, MI->second);
+      for (const auto &MD : MDs)
+        if (canTransferMetadata(MD.first))
+          New->setMetadata(MD.first, MD.second);
       if (Op->getDebugLoc() && !New->getDebugLoc())
         New->setDebugLoc(Op->getDebugLoc());
     }
@@ -648,10 +645,9 @@ bool Scalarizer::finish() {
   // made to the Function.
   if (Gathered.empty() && Scattered.empty())
     return false;
-  for (GatherList::iterator GMI = Gathered.begin(), GME = Gathered.end();
-       GMI != GME; ++GMI) {
-    Instruction *Op = GMI->first;
-    ValueVector &CV = *GMI->second;
+  for (const auto &GMI : Gathered) {
+    Instruction *Op = GMI.first;
+    ValueVector &CV = *GMI.second;
     if (!Op->use_empty()) {
       // The value is still needed, so recreate it using a series of
       // InsertElements.

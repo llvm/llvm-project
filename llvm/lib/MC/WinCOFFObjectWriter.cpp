@@ -536,48 +536,47 @@ void WinCOFFObjectWriter::WriteSymbol(const COFFSymbol &S) {
 
 void WinCOFFObjectWriter::WriteAuxiliarySymbols(
     const COFFSymbol::AuxiliarySymbols &S) {
-  for (COFFSymbol::AuxiliarySymbols::const_iterator i = S.begin(), e = S.end();
-       i != e; ++i) {
-    switch (i->AuxType) {
+  for (const AuxSymbol &i : S) {
+    switch (i.AuxType) {
     case ATFunctionDefinition:
-      writeLE32(i->Aux.FunctionDefinition.TagIndex);
-      writeLE32(i->Aux.FunctionDefinition.TotalSize);
-      writeLE32(i->Aux.FunctionDefinition.PointerToLinenumber);
-      writeLE32(i->Aux.FunctionDefinition.PointerToNextFunction);
-      WriteZeros(sizeof(i->Aux.FunctionDefinition.unused));
+      writeLE32(i.Aux.FunctionDefinition.TagIndex);
+      writeLE32(i.Aux.FunctionDefinition.TotalSize);
+      writeLE32(i.Aux.FunctionDefinition.PointerToLinenumber);
+      writeLE32(i.Aux.FunctionDefinition.PointerToNextFunction);
+      WriteZeros(sizeof(i.Aux.FunctionDefinition.unused));
       if (UseBigObj)
         WriteZeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;
     case ATbfAndefSymbol:
-      WriteZeros(sizeof(i->Aux.bfAndefSymbol.unused1));
-      writeLE16(i->Aux.bfAndefSymbol.Linenumber);
-      WriteZeros(sizeof(i->Aux.bfAndefSymbol.unused2));
-      writeLE32(i->Aux.bfAndefSymbol.PointerToNextFunction);
-      WriteZeros(sizeof(i->Aux.bfAndefSymbol.unused3));
+      WriteZeros(sizeof(i.Aux.bfAndefSymbol.unused1));
+      writeLE16(i.Aux.bfAndefSymbol.Linenumber);
+      WriteZeros(sizeof(i.Aux.bfAndefSymbol.unused2));
+      writeLE32(i.Aux.bfAndefSymbol.PointerToNextFunction);
+      WriteZeros(sizeof(i.Aux.bfAndefSymbol.unused3));
       if (UseBigObj)
         WriteZeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;
     case ATWeakExternal:
-      writeLE32(i->Aux.WeakExternal.TagIndex);
-      writeLE32(i->Aux.WeakExternal.Characteristics);
-      WriteZeros(sizeof(i->Aux.WeakExternal.unused));
+      writeLE32(i.Aux.WeakExternal.TagIndex);
+      writeLE32(i.Aux.WeakExternal.Characteristics);
+      WriteZeros(sizeof(i.Aux.WeakExternal.unused));
       if (UseBigObj)
         WriteZeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;
     case ATFile:
       writeBytes(
-          StringRef(reinterpret_cast<const char *>(&i->Aux),
+          StringRef(reinterpret_cast<const char *>(&i.Aux),
                     UseBigObj ? COFF::Symbol32Size : COFF::Symbol16Size));
       break;
     case ATSectionDefinition:
-      writeLE32(i->Aux.SectionDefinition.Length);
-      writeLE16(i->Aux.SectionDefinition.NumberOfRelocations);
-      writeLE16(i->Aux.SectionDefinition.NumberOfLinenumbers);
-      writeLE32(i->Aux.SectionDefinition.CheckSum);
-      writeLE16(static_cast<int16_t>(i->Aux.SectionDefinition.Number));
-      write8(i->Aux.SectionDefinition.Selection);
-      WriteZeros(sizeof(i->Aux.SectionDefinition.unused));
-      writeLE16(static_cast<int16_t>(i->Aux.SectionDefinition.Number >> 16));
+      writeLE32(i.Aux.SectionDefinition.Length);
+      writeLE16(i.Aux.SectionDefinition.NumberOfRelocations);
+      writeLE16(i.Aux.SectionDefinition.NumberOfLinenumbers);
+      writeLE32(i.Aux.SectionDefinition.CheckSum);
+      writeLE16(static_cast<int16_t>(i.Aux.SectionDefinition.Number));
+      write8(i.Aux.SectionDefinition.Selection);
+      WriteZeros(sizeof(i.Aux.SectionDefinition.unused));
+      writeLE16(static_cast<int16_t>(i.Aux.SectionDefinition.Number >> 16));
       if (UseBigObj)
         WriteZeros(COFF::Symbol32Size - COFF::Symbol16Size);
       break;

@@ -732,12 +732,11 @@ static void CloneAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap) {
   // inter-procedural alias analysis passes. We can revisit this if it becomes
   // an efficiency or overhead problem.
 
-  for (Function::const_iterator I = CalledFunc->begin(), IE = CalledFunc->end();
-       I != IE; ++I)
-    for (BasicBlock::const_iterator J = I->begin(), JE = I->end(); J != JE; ++J) {
-      if (const MDNode *M = J->getMetadata(LLVMContext::MD_alias_scope))
+  for (const BasicBlock &I : *CalledFunc)
+    for (const Instruction &J : I) {
+      if (const MDNode *M = J.getMetadata(LLVMContext::MD_alias_scope))
         MD.insert(M);
-      if (const MDNode *M = J->getMetadata(LLVMContext::MD_noalias))
+      if (const MDNode *M = J.getMetadata(LLVMContext::MD_noalias))
         MD.insert(M);
     }
 
@@ -759,20 +758,18 @@ static void CloneAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap) {
   // the noalias scopes and the lists of those scopes.
   SmallVector<TempMDTuple, 16> DummyNodes;
   DenseMap<const MDNode *, TrackingMDNodeRef> MDMap;
-  for (SetVector<const MDNode *>::iterator I = MD.begin(), IE = MD.end();
-       I != IE; ++I) {
+  for (const MDNode *I : MD) {
     DummyNodes.push_back(MDTuple::getTemporary(CalledFunc->getContext(), None));
-    MDMap[*I].reset(DummyNodes.back().get());
+    MDMap[I].reset(DummyNodes.back().get());
   }
 
   // Create new metadata nodes to replace the dummy nodes, replacing old
   // metadata references with either a dummy node or an already-created new
   // node.
-  for (SetVector<const MDNode *>::iterator I = MD.begin(), IE = MD.end();
-       I != IE; ++I) {
+  for (const MDNode *I : MD) {
     SmallVector<Metadata *, 4> NewOps;
-    for (unsigned i = 0, ie = (*I)->getNumOperands(); i != ie; ++i) {
-      const Metadata *V = (*I)->getOperand(i);
+    for (unsigned i = 0, ie = I->getNumOperands(); i != ie; ++i) {
+      const Metadata *V = I->getOperand(i);
       if (const MDNode *M = dyn_cast<MDNode>(V))
         NewOps.push_back(MDMap[M]);
       else
@@ -780,7 +777,7 @@ static void CloneAliasScopeMetadata(CallSite CS, ValueToValueMapTy &VMap) {
     }
 
     MDNode *NewM = MDNode::get(CalledFunc->getContext(), NewOps);
-    MDTuple *TempM = cast<MDTuple>(MDMap[*I]);
+    MDTuple *TempM = cast<MDTuple>(MDMap[I]);
     assert(TempM->isTemporary() && "Expected temporary node");
 
     TempM->replaceAllUsesWith(NewM);

@@ -262,3 +262,120 @@ define <2 x i64> @bitcast_select_swap7(<4 x i1> %cmp, <2 x double> %a, <2 x doub
   ret <2 x i64> %or
 }
 
+; FIXME: Missed conversions to select below here.
+
+define i1 @bools(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @bools(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 %c, true
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], %a
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 %c, %b
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %not = xor i1 %c, -1
+  %and1 = and i1 %not, %a
+  %and2 = and i1 %c, %b
+  %or = or i1 %and1, %and2
+  ret i1 %or
+}
+
+define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
+; CHECK-LABEL: @vec_of_bools(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i1> [[NOT]], %a
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i1> %b, %c
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i1> [[AND2]], [[AND1]]
+; CHECK-NEXT:    ret <4 x i1> [[OR]]
+;
+  %not = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
+  %and1 = and <4 x i1> %not, %a
+  %and2 = and <4 x i1> %b, %c
+  %or = or <4 x i1> %and2, %and1
+  ret <4 x i1> %or
+}
+
+define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
+; CHECK-LABEL: @vec_of_casted_bools(
+; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i1> [[NOT]] to i4
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <4 x i1> %c to i4
+; CHECK-NEXT:    [[AND1:%.*]] = and i4 [[BC1]], %a
+; CHECK-NEXT:    [[AND2:%.*]] = and i4 [[BC2]], %b
+; CHECK-NEXT:    [[OR:%.*]] = or i4 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i4 [[OR]]
+;
+  %not = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
+  %bc1 = bitcast <4 x i1> %not to i4
+  %bc2 = bitcast <4 x i1> %c to i4
+  %and1 = and i4 %a, %bc1
+  %and2 = and i4 %bc2, %b
+  %or = or i4 %and1, %and2
+  ret i4 %or
+}
+
+; Inverted 'and' constants mean this is a select.
+
+define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @vec_sel_consts(
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 -1>
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> %b, <i32 0, i32 -1, i32 -1, i32 0>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %and1 = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 -1>
+  %and2 = and <4 x i32> %b, <i32 0, i32 -1, i32 -1, i32 0>
+  %or = or <4 x i32> %and1, %and2
+  ret <4 x i32> %or
+}
+
+; The select condition constant is always derived from the first operand of the 'or'.
+
+define <3 x i129> @vec_sel_consts_weird(<3 x i129> %a, <3 x i129> %b) {
+; CHECK-LABEL: @vec_sel_consts_weird(
+; CHECK-NEXT:    [[AND1:%.*]] = and <3 x i129> %a, <i129 -1, i129 0, i129 -1>
+; CHECK-NEXT:    [[AND2:%.*]] = and <3 x i129> %b, <i129 0, i129 -1, i129 0>
+; CHECK-NEXT:    [[OR:%.*]] = or <3 x i129> [[AND2]], [[AND1]]
+; CHECK-NEXT:    ret <3 x i129> [[OR]]
+;
+  %and1 = and <3 x i129> %a, <i129 -1, i129 0, i129 -1>
+  %and2 = and <3 x i129> %b, <i129 0, i129 -1, i129 0>
+  %or = or <3 x i129> %and2, %and1
+  ret <3 x i129> %or
+}
+
+; The mask elements must be inverted for this to be a select.
+
+define <4 x i32> @vec_not_sel_consts(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: @vec_not_sel_consts(
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> %b, <i32 0, i32 -1, i32 0, i32 -1>
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %and1 = and <4 x i32> %a, <i32 -1, i32 0, i32 0, i32 0>
+  %and2 = and <4 x i32> %b, <i32 0, i32 -1, i32 0, i32 -1>
+  %or = or <4 x i32> %and1, %and2
+  ret <4 x i32> %or
+}
+
+; The inverted constants may be operands of xor instructions.
+
+define <4 x i32> @vec_sel_xor(<4 x i32> %a, <4 x i32> %b, <4 x i1> %c) {
+; CHECK-LABEL: @vec_sel_xor(
+; CHECK-NEXT:    [[MASK:%.*]] = sext <4 x i1> %c to <4 x i32>
+; CHECK-NEXT:    [[MASK_FLIP1:%.*]] = xor <4 x i32> [[MASK]], <i32 -1, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    [[NOT_MASK_FLIP1:%.*]] = xor <4 x i32> [[MASK]], <i32 0, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i32> [[NOT_MASK_FLIP1]], %a
+; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i32> [[MASK_FLIP1]], %b
+; CHECK-NEXT:    [[OR:%.*]] = or <4 x i32> [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret <4 x i32> [[OR]]
+;
+  %mask = sext <4 x i1> %c to <4 x i32>
+  %mask_flip1 = xor <4 x i32> %mask, <i32 -1, i32 0, i32 0, i32 0>
+  %not_mask_flip1 = xor <4 x i32> %mask, <i32 0, i32 -1, i32 -1, i32 -1>
+  %and1 = and <4 x i32> %not_mask_flip1, %a
+  %and2 = and <4 x i32> %mask_flip1, %b
+  %or = or <4 x i32> %and1, %and2
+  ret <4 x i32> %or
+}
+

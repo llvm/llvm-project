@@ -173,6 +173,37 @@ class POOL32S_2RSA5B0_FM_MMR6<string instr_asm, bits<9> funct>
   let Inst{8-0} = funct;
 }
 
+class LD_SD_32_2R_OFFSET16_FM_MMR6<string instr_asm, bits<6> op>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  bits<5> rt;
+  bits<21> addr;
+  bits<5> base = addr{20-16};
+  bits<16> offset = addr{15-0};
+
+  bits<32> Inst;
+
+  let Inst{31-26} = op;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = base;
+  let Inst{15-0}  = offset;
+}
+
+class POOL32C_2R_OFFSET12_FM_MMR6<string instr_asm, bits<4> funct>
+    : MMR6Arch<instr_asm>, MipsR6Inst {
+  bits<5> rt;
+  bits<21> addr;
+  bits<5> base = addr{20-16};
+  bits<12> offset = addr{11-0};
+
+  bits<32> Inst;
+
+  let Inst{31-26} = 0b011000;
+  let Inst{25-21} = rt;
+  let Inst{20-16} = base;
+  let Inst{15-12} = funct;
+  let Inst{11-0}  = offset;
+}
+
 class POOL32S_3R_FM_MMR6<string instr_asm, bits<9> funct>
     : MMR6Arch<instr_asm>, MipsR6Inst {
   bits<5> rt;
@@ -185,6 +216,6 @@ class POOL32S_3R_FM_MMR6<string instr_asm, bits<9> funct>
   let Inst{25-21} = rt;
   let Inst{20-16} = rs;
   let Inst{15-11} = rd;
-  let Inst{10-9} = 0b00;
-  let Inst{8-0} = funct;
+  let Inst{10-9}  = 0b00;
+  let Inst{8-0}   = funct;
 }

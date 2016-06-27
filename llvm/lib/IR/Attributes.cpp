@@ -570,61 +570,61 @@ AttributeSetNode *AttributeSetNode::get(LLVMContext &C,
 }
 
 bool AttributeSetNode::hasAttribute(StringRef Kind) const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Kind))
+  for (Attribute I : *this)
+    if (I.hasAttribute(Kind))
       return true;
   return false;
 }
 
 Attribute AttributeSetNode::getAttribute(Attribute::AttrKind Kind) const {
   if (hasAttribute(Kind)) {
-    for (iterator I = begin(), E = end(); I != E; ++I)
-      if (I->hasAttribute(Kind))
-        return *I;
+    for (Attribute I : *this)
+      if (I.hasAttribute(Kind))
+        return I;
   }
   return Attribute();
 }
 
 Attribute AttributeSetNode::getAttribute(StringRef Kind) const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Kind))
-      return *I;
+  for (Attribute I : *this)
+    if (I.hasAttribute(Kind))
+      return I;
   return Attribute();
 }
 
 unsigned AttributeSetNode::getAlignment() const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Attribute::Alignment))
-      return I->getAlignment();
+  for (Attribute I : *this)
+    if (I.hasAttribute(Attribute::Alignment))
+      return I.getAlignment();
   return 0;
 }
 
 unsigned AttributeSetNode::getStackAlignment() const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Attribute::StackAlignment))
-      return I->getStackAlignment();
+  for (Attribute I : *this)
+    if (I.hasAttribute(Attribute::StackAlignment))
+      return I.getStackAlignment();
   return 0;
 }
 
 uint64_t AttributeSetNode::getDereferenceableBytes() const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Attribute::Dereferenceable))
-      return I->getDereferenceableBytes();
+  for (Attribute I : *this)
+    if (I.hasAttribute(Attribute::Dereferenceable))
+      return I.getDereferenceableBytes();
   return 0;
 }
 
 uint64_t AttributeSetNode::getDereferenceableOrNullBytes() const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Attribute::DereferenceableOrNull))
-      return I->getDereferenceableOrNullBytes();
+  for (Attribute I : *this)
+    if (I.hasAttribute(Attribute::DereferenceableOrNull))
+      return I.getDereferenceableOrNullBytes();
   return 0;
 }
 
 std::pair<unsigned, Optional<unsigned>>
 AttributeSetNode::getAllocSizeArgs() const {
-  for (iterator I = begin(), E = end(); I != E; ++I)
-    if (I->hasAttribute(Attribute::AllocSize))
-      return I->getAllocSizeArgs();
+  for (Attribute I : *this)
+    if (I.hasAttribute(Attribute::AllocSize))
+      return I.getAllocSizeArgs();
   return std::make_pair(0, 0);
 }
 

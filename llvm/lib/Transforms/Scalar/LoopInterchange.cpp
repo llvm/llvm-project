@@ -471,8 +471,7 @@ struct LoopInterchange : public FunctionPass {
   }
 
   bool isComputableLoopNest(LoopVector LoopList) {
-    for (auto I = LoopList.begin(), E = LoopList.end(); I != E; ++I) {
-      Loop *L = *I;
+    for (Loop *L : LoopList) {
       const SCEV *ExitCountOuter = SE->getBackedgeTakenCount(L);
       if (ExitCountOuter == SE->getCouldNotCompute()) {
         DEBUG(dbgs() << "Couldn't compute Backedge count\n");
@@ -901,8 +900,7 @@ int LoopInterchangeProfitability::getInstrOrderCost() {
   BadOrder = GoodOrder = 0;
   for (auto BI = InnerLoop->block_begin(), BE = InnerLoop->block_end();
        BI != BE; ++BI) {
-    for (auto I = (*BI)->begin(), E = (*BI)->end(); I != E; ++I) {
-      const Instruction &Ins = *I;
+    for (Instruction &Ins : **BI) {
       if (const GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&Ins)) {
         unsigned NumOp = GEP->getNumOperands();
         bool FoundInnerInduction = false;
@@ -1093,8 +1091,7 @@ void LoopInterchangeTransform::splitInnerLoopHeader() {
       PHI->replaceAllUsesWith(V);
       PHIVec.push_back((PHI));
     }
-    for (auto I = PHIVec.begin(), E = PHIVec.end(); I != E; ++I) {
-      PHINode *P = *I;
+    for (PHINode *P : PHIVec) {
       P->eraseFromParent();
     }
   } else {
@@ -1211,8 +1208,7 @@ bool LoopInterchangeTransform::adjustLoopBranches() {
     PHINode *LcssaPhi = cast<PHINode>(I);
     LcssaVec.push_back(LcssaPhi);
   }
-  for (auto I = LcssaVec.begin(), E = LcssaVec.end(); I != E; ++I) {
-    PHINode *P = *I;
+  for (PHINode *P : LcssaVec) {
     Value *Incoming = P->getIncomingValueForBlock(InnerLoopLatch);
     P->replaceAllUsesWith(Incoming);
     P->eraseFromParent();

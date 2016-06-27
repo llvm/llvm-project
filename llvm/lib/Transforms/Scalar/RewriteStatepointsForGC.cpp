@@ -1553,9 +1553,8 @@ static void relocationViaAlloca(
   // record initial number of (static) allocas; we'll check we have the same
   // number when we get done.
   int InitialAllocaNum = 0;
-  for (auto I = F.getEntryBlock().begin(), E = F.getEntryBlock().end(); I != E;
-       I++)
-    if (isa<AllocaInst>(*I))
+  for (Instruction &I : F.getEntryBlock())
+    if (isa<AllocaInst>(I))
       InitialAllocaNum++;
 #endif
 

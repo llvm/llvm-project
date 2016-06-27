@@ -5485,8 +5485,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
 
   // Forget all contained loops too, to avoid dangling entries in the
   // ValuesAtScopes map.
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-    forgetLoop(*I);
+  for (Loop *I : *L)
+    forgetLoop(I);
 
   LoopHasNoAbnormalExits.erase(L);
 }
@@ -9534,8 +9534,8 @@ bool ScalarEvolution::hasLoopInvariantBackedgeTakenCount(const Loop *L) {
 static void PrintLoopInfo(raw_ostream &OS, ScalarEvolution *SE,
                           const Loop *L) {
   // Print all inner loops first
-  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
-    PrintLoopInfo(OS, SE, *I);
+  for (Loop *I : *L)
+    PrintLoopInfo(OS, SE, I);
 
   OS << "Loop ";
   L->getHeader()->printAsOperand(OS, /*PrintType=*/false);
@@ -9676,8 +9676,8 @@ void ScalarEvolution::print(raw_ostream &OS) const {
   OS << "Determining loop execution counts for: ";
   F.printAsOperand(OS, /*PrintType=*/false);
   OS << "\n";
-  for (LoopInfo::iterator I = LI.begin(), E = LI.end(); I != E; ++I)
-    PrintLoopInfo(OS, &SE, *I);
+  for (Loop *I : LI)
+    PrintLoopInfo(OS, &SE, I);
 }
 
 ScalarEvolution::LoopDisposition
@@ -10429,8 +10429,8 @@ PredicatedScalarEvolution::PredicatedScalarEvolution(
     const PredicatedScalarEvolution &Init)
     : RewriteMap(Init.RewriteMap), SE(Init.SE), L(Init.L), Preds(Init.Preds),
       Generation(Init.Generation), BackedgeCount(Init.BackedgeCount) {
-  for (auto I = Init.FlagsMap.begin(), E = Init.FlagsMap.end(); I != E; ++I)
-    FlagsMap.insert(*I);
+  for (const auto &I : Init.FlagsMap)
+    FlagsMap.insert(I);
 }
 
 void PredicatedScalarEvolution::print(raw_ostream &OS, unsigned Depth) const {

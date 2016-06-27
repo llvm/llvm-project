@@ -72,13 +72,13 @@ bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
 
   // Fill SCCNodes with the elements of the SCC.  Used for quickly
   // looking up whether a given CallGraphNode is in this SCC.
-  for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I)
-    SCCNodes.insert(*I);
+  for (CallGraphNode *I : SCC)
+    SCCNodes.insert(I);
 
   // First pass, scan all of the functions in the SCC, simplifying them
   // according to what we know.
-  for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I)
-    if (Function *F = (*I)->getFunction())
+  for (CallGraphNode *I : SCC)
+    if (Function *F = I->getFunction())
       MadeChange |= SimplifyFunction(F);
 
   // Next, check to see if any callees might throw or if there are any external
@@ -158,8 +158,8 @@ bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
 
   // If the SCC doesn't unwind or doesn't throw, note this fact.
   if (!SCCMightUnwind || !SCCMightReturn)
-    for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I) {
-      Function *F = (*I)->getFunction();
+    for (CallGraphNode *I : SCC) {
+      Function *F = I->getFunction();
 
       if (!SCCMightUnwind && !F->hasFnAttribute(Attribute::NoUnwind)) {
         F->addFnAttr(Attribute::NoUnwind);
@@ -172,11 +172,11 @@ bool PruneEH::runOnSCC(CallGraphSCC &SCC) {
       }
     }
 
-  for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I) {
+  for (CallGraphNode *I : SCC) {
     // Convert any invoke instructions to non-throwing functions in this node
     // into call instructions with a branch.  This makes the exception blocks
     // dead.
-    if (Function *F = (*I)->getFunction())
+    if (Function *F = I->getFunction())
       MadeChange |= SimplifyFunction(F);
   }
 

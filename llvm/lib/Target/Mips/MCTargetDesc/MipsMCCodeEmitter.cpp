@@ -81,6 +81,9 @@ static void LowerLargeShift(MCInst& Inst) {
   case Mips::DSLL_MM64R6:
     Inst.setOpcode(Mips::DSLL32_MM64R6);
     return;
+  case Mips::DSRL_MM64R6:
+    Inst.setOpcode(Mips::DSRL32_MM64R6);
+    return;
   case Mips::DSRA_MM64R6:
     Inst.setOpcode(Mips::DSRA32_MM64R6);
     return;
@@ -195,6 +198,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   case Mips::DSRA:
   case Mips::DROTR:
   case Mips::DSLL_MM64R6:
+  case Mips::DSRL_MM64R6:
   case Mips::DSRA_MM64R6:
   case Mips::DROTR_MM64R6:
     LowerLargeShift(TmpInst);

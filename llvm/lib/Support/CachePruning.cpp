@@ -88,9 +88,9 @@ bool CachePruning::prune() {
   std::set<std::pair<uint64_t, std::string>> FileSizes;
   uint64_t TotalSize = 0;
   // Helper to add a path to the set of files to consider for size-based
-  // pruning, sorted by last accessed time.
+  // pruning, sorted by size.
   auto AddToFileListForSizePruning =
-      [&](StringRef Path, sys::TimeValue FileAccessTime) {
+      [&](StringRef Path) {
         if (!ShouldComputeSize)
           return;
         TotalSize += FileStatus.getSize();
@@ -128,7 +128,7 @@ bool CachePruning::prune() {
     }
 
     // Leave it here for now, but add it to the list of size-based pruning.
-    AddToFileListForSizePruning(File->path(), FileAccessTime);
+    AddToFileListForSizePruning(File->path());
   }
 
   // Prune for size now if needed

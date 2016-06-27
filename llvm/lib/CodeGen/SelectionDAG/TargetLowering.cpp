@@ -44,6 +44,10 @@ const char *TargetLowering::getTargetNodeName(unsigned Opcode) const {
   return nullptr;
 }
 
+bool TargetLowering::isPositionIndependent() const {
+  return getTargetMachine().getRelocationModel() == Reloc::PIC_;
+}
+
 /// Check whether a given call node is in tail position within its function. If
 /// so, it sets Chain to the input chain of the tail call.
 bool TargetLowering::isInTailCallPosition(SelectionDAG &DAG, SDNode *Node,
@@ -277,7 +281,7 @@ void TargetLowering::softenSetCCOperands(SelectionDAG &DAG, EVT VT,
 /// returned value is a member of the MachineJumpTableInfo::JTEntryKind enum.
 unsigned TargetLowering::getJumpTableEncoding() const {
   // In non-pic modes, just use the address of a block.
-  if (getTargetMachine().getRelocationModel() != Reloc::PIC_)
+  if (!isPositionIndependent())
     return MachineJumpTableInfo::EK_BlockAddress;
 
   // In PIC mode, if the target supports a GPRel32 directive, use it.
@@ -322,7 +326,7 @@ TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
     return false;
 
   // If the code is position independent we will have to add a base register.
-  if (RM == Reloc::PIC_)
+  if (isPositionIndependent())
     return false;
 
   // Otherwise we can do it.

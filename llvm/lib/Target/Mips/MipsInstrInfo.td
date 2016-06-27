@@ -880,6 +880,15 @@ def MipsMemSimm10AsmOperand : AsmOperandClass {
   let DiagnosticType = "MemSImm10";
 }
 
+def MipsMemSimm12AsmOperand : AsmOperandClass {
+  let Name = "MemOffsetSimm12";
+  let SuperClasses = [MipsMemAsmOperand];
+  let RenderMethod = "addMemOperands";
+  let ParserMethod = "parseMemOperand";
+  let PredicateMethod = "isMemWithSimmOffset<12>";
+  let DiagnosticType = "MemSImm12";
+}
+
 foreach I = {1, 2, 3} in
   def MipsMemSimm10Lsl # I # AsmOperand : AsmOperandClass {
     let Name = "MemOffsetSimm10_" # I;
@@ -939,6 +948,10 @@ def mem_msa : mem_generic {
   let EncoderMethod = "getMSAMemEncoding";
 }
 
+def simm12 : Operand<i32> {
+  let DecoderMethod = "DecodeSimm12";
+}
+
 def mem_simm9 : mem_generic {
   let MIOperandInfo = (ops ptr_rc, simm9);
   let EncoderMethod = "getMemEncoding";
@@ -963,6 +976,12 @@ def mem_simm11 : mem_generic {
   let MIOperandInfo = (ops ptr_rc, simm11);
   let EncoderMethod = "getMemEncoding";
   let ParserMatchClass = MipsMemSimm11AsmOperand;
+}
+
+def mem_simm12 : mem_generic {
+  let MIOperandInfo = (ops ptr_rc, simm12);
+  let EncoderMethod = "getMemEncoding";
+  let ParserMatchClass = MipsMemSimm12AsmOperand;
 }
 
 def mem_simm16 : mem_generic {
@@ -1167,8 +1186,9 @@ class StoreMemory<string opstr, DAGOperand RO, DAGOperand MO,
 }
 
 class Store<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-            InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr> :
-  StoreMemory<opstr, RO, mem, OpNode, Itin, Addr>;
+            InstrItinClass Itin = NoItinerary, ComplexPattern Addr = addr,
+            DAGOperand MO = mem> :
+  StoreMemory<opstr, RO, MO, OpNode, Itin, Addr>;
 
 // Load/Store Left/Right
 let canFoldAsLoad = 1 in
@@ -1540,9 +1560,9 @@ class AtomicCmpSwap<PatFrag Op, RegisterClass DRC> :
   PseudoSE<(outs DRC:$dst), (ins PtrRC:$ptr, DRC:$cmp, DRC:$swap),
            [(set DRC:$dst, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]>;
 
-class LLBase<string opstr, RegisterOperand RO> :
-  InstSE<(outs RO:$rt), (ins mem:$addr), !strconcat(opstr, "\t$rt, $addr"),
-         [], II_LL, FrmI> {
+class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = mem> :
+  InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
+         [], II_LL, FrmI, opstr> {
   let DecoderMethod = "DecodeMem";
   let mayLoad = 1;
 }

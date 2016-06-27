@@ -217,8 +217,8 @@ BasicBlock::iterator BasicBlock::getFirstInsertionPt() {
 }
 
 void BasicBlock::dropAllReferences() {
-  for(iterator I = begin(), E = end(); I != E; ++I)
-    I->dropAllReferences();
+  for (Instruction &I : *this)
+    I.dropAllReferences();
 }
 
 /// If this basic block has a single predecessor block,

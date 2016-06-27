@@ -131,8 +131,8 @@ static BasicBlock *getSameBlock(ArrayRef<Value *> VL) {
 
 /// \returns True if all of the values in \p VL are constants.
 static bool allConstant(ArrayRef<Value *> VL) {
-  for (unsigned i = 0, e = VL.size(); i < e; ++i)
-    if (!isa<Constant>(VL[i]))
+  for (Value *i : VL)
+    if (!isa<Constant>(i))
       return false;
   return true;
 }
@@ -958,8 +958,8 @@ void BoUpSLP::buildTree(ArrayRef<Value *> Roots,
   buildTree_rec(Roots, 0);
 
   // Collect the values that we need to extract from the tree.
-  for (int EIdx = 0, EE = VectorizableTree.size(); EIdx < EE; ++EIdx) {
-    TreeEntry *Entry = &VectorizableTree[EIdx];
+  for (TreeEntry &EIdx : VectorizableTree) {
+    TreeEntry *Entry = &EIdx;
 
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
@@ -1159,8 +1159,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = PH->getNumIncomingValues(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j)
-          Operands.push_back(cast<PHINode>(VL[j])->getIncomingValueForBlock(
+        for (Value *j : VL)
+          Operands.push_back(cast<PHINode>(j)->getIncomingValueForBlock(
               PH->getIncomingBlock(i)));
 
         buildTree_rec(Operands, Depth + 1);
@@ -1248,8 +1248,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j)
-          Operands.push_back(cast<Instruction>(VL[j])->getOperand(i));
+        for (Value *j : VL)
+          Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
         buildTree_rec(Operands, Depth+1);
       }
@@ -1277,8 +1277,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j)
-          Operands.push_back(cast<Instruction>(VL[j])->getOperand(i));
+        for (Value *j : VL)
+          Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
         buildTree_rec(Operands, Depth+1);
       }
@@ -1319,8 +1319,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j)
-          Operands.push_back(cast<Instruction>(VL[j])->getOperand(i));
+        for (Value *j : VL)
+          Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
         buildTree_rec(Operands, Depth+1);
       }
@@ -1367,8 +1367,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = 2; i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j)
-          Operands.push_back(cast<Instruction>(VL[j])->getOperand(i));
+        for (Value *j : VL)
+          Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
         buildTree_rec(Operands, Depth + 1);
       }
@@ -1388,8 +1388,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       DEBUG(dbgs() << "SLP: added a vector of stores.\n");
 
       ValueList Operands;
-      for (unsigned j = 0; j < VL.size(); ++j)
-        Operands.push_back(cast<Instruction>(VL[j])->getOperand(0));
+      for (Value *j : VL)
+        Operands.push_back(cast<Instruction>(j)->getOperand(0));
 
       buildTree_rec(Operands, Depth + 1);
       return;
@@ -1451,8 +1451,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = CI->getNumArgOperands(); i != e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j) {
-          CallInst *CI2 = dyn_cast<CallInst>(VL[j]);
+        for (Value *j : VL) {
+          CallInst *CI2 = dyn_cast<CallInst>(j);
           Operands.push_back(CI2->getArgOperand(i));
         }
         buildTree_rec(Operands, Depth + 1);
@@ -1483,8 +1483,8 @@ void BoUpSLP::buildTree_rec(ArrayRef<Value *> VL, unsigned Depth) {
       for (unsigned i = 0, e = VL0->getNumOperands(); i < e; ++i) {
         ValueList Operands;
         // Prepare the operand vector.
-        for (unsigned j = 0; j < VL.size(); ++j)
-          Operands.push_back(cast<Instruction>(VL[j])->getOperand(i));
+        for (Value *j : VL)
+          Operands.push_back(cast<Instruction>(j)->getOperand(i));
 
         buildTree_rec(Operands, Depth + 1);
       }
@@ -1770,8 +1770,8 @@ int BoUpSLP::getEntryCost(TreeEntry *E) {
           TargetTransformInfo::OK_AnyValue;
       int ScalarCost = 0;
       int VecCost = 0;
-      for (unsigned i = 0; i < VL.size(); ++i) {
-        Instruction *I = cast<Instruction>(VL[i]);
+      for (Value *i : VL) {
+        Instruction *I = cast<Instruction>(i);
         if (!I)
           break;
         ScalarCost +=
@@ -1826,8 +1826,8 @@ int BoUpSLP::getSpillCost() {
   SmallPtrSet<Instruction*, 4> LiveValues;
   Instruction *PrevInst = nullptr;
 
-  for (unsigned N = 0; N < VectorizableTree.size(); ++N) {
-    Instruction *Inst = dyn_cast<Instruction>(VectorizableTree[N].Scalars[0]);
+  for (const auto &N : VectorizableTree) {
+    Instruction *Inst = dyn_cast<Instruction>(N.Scalars[0]);
     if (!Inst)
       continue;
 
@@ -1967,9 +1967,9 @@ void BoUpSLP::reorderAltShuffleOperands(ArrayRef<Value *> VL,
                                         SmallVectorImpl<Value *> &Left,
                                         SmallVectorImpl<Value *> &Right) {
   // Push left and right operands of binary operation into Left and Right
-  for (unsigned i = 0, e = VL.size(); i < e; ++i) {
-    Left.push_back(cast<Instruction>(VL[i])->getOperand(0));
-    Right.push_back(cast<Instruction>(VL[i])->getOperand(1));
+  for (Value *i : VL) {
+    Left.push_back(cast<Instruction>(i)->getOperand(0));
+    Right.push_back(cast<Instruction>(i)->getOperand(1));
   }
 
   // Reorder if we have a commutative operation and consecutive access
@@ -2656,10 +2656,9 @@ Value *BoUpSLP::vectorizeTree() {
   DEBUG(dbgs() << "SLP: Extracting " << ExternalUses.size() << " values .\n");
 
   // Extract all of the elements with the external uses.
-  for (UserList::iterator it = ExternalUses.begin(), e = ExternalUses.end();
-       it != e; ++it) {
-    Value *Scalar = it->Scalar;
-    llvm::User *User = it->User;
+  for (const auto &ExternalUse : ExternalUses) {
+    Value *Scalar = ExternalUse.Scalar;
+    llvm::User *User = ExternalUse.User;
 
     // Skip users that we already RAUW. This happens when one instruction
     // has multiple uses of the same value.
@@ -2675,7 +2674,7 @@ Value *BoUpSLP::vectorizeTree() {
     Value *Vec = E->VectorizedValue;
     assert(Vec && "Can't find vectorizable value");
 
-    Value *Lane = Builder.getInt32(it->Lane);
+    Value *Lane = Builder.getInt32(ExternalUse.Lane);
     // Generate extracts for out-of-tree users.
     // Find the insertion point for the extractelement lane.
     if (auto *VecI = dyn_cast<Instruction>(Vec)) {
@@ -2718,8 +2717,8 @@ Value *BoUpSLP::vectorizeTree() {
   }
 
   // For each vectorized value:
-  for (int EIdx = 0, EE = VectorizableTree.size(); EIdx < EE; ++EIdx) {
-    TreeEntry *Entry = &VectorizableTree[EIdx];
+  for (TreeEntry &EIdx : VectorizableTree) {
+    TreeEntry *Entry = &EIdx;
 
     // For each lane:
     for (int Lane = 0, LE = Entry->Scalars.size(); Lane != LE; ++Lane) {
@@ -2760,9 +2759,8 @@ void BoUpSLP::optimizeGatherSequence() {
   DEBUG(dbgs() << "SLP: Optimizing " << GatherSeq.size()
         << " gather sequences instructions.\n");
   // LICM InsertElementInst sequences.
-  for (SetVector<Instruction *>::iterator it = GatherSeq.begin(),
-       e = GatherSeq.end(); it != e; ++it) {
-    InsertElementInst *Insert = dyn_cast<InsertElementInst>(*it);
+  for (Instruction *it : GatherSeq) {
+    InsertElementInst *Insert = dyn_cast<InsertElementInst>(it);
 
     if (!Insert)
       continue;
@@ -2823,12 +2821,10 @@ void BoUpSLP::optimizeGatherSequence() {
 
       // Check if we can replace this instruction with any of the
       // visited instructions.
-      for (SmallVectorImpl<Instruction *>::iterator v = Visited.begin(),
-                                                    ve = Visited.end();
-           v != ve; ++v) {
-        if (In->isIdenticalTo(*v) &&
-            DT->dominates((*v)->getParent(), In->getParent())) {
-          In->replaceAllUsesWith(*v);
+      for (Instruction *v : Visited) {
+        if (In->isIdenticalTo(v) &&
+            DT->dominates(v->getParent(), In->getParent())) {
+          In->replaceAllUsesWith(v);
           eraseInstruction(In);
           In = nullptr;
           break;

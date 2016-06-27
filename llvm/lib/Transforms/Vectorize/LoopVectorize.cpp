@@ -5018,9 +5018,9 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   for (Loop::block_iterator B = TheLoop->block_begin(),
                             BE = TheLoop->block_end();
        B != BE; ++B)
-    for (BasicBlock::iterator I = (*B)->begin(), IE = (*B)->end(); I != IE; ++I)
-      if (I->getType()->isPointerTy() && isConsecutivePtr(&*I))
-        Worklist.insert(Worklist.end(), I->op_begin(), I->op_end());
+    for (Instruction &I : **B)
+      if (I.getType()->isPointerTy() && isConsecutivePtr(&I))
+        Worklist.insert(Worklist.end(), I.op_begin(), I.op_end());
 
   while (!Worklist.empty()) {
     Instruction *I = dyn_cast<Instruction>(Worklist.back());

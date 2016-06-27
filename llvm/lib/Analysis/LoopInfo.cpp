@@ -434,17 +434,16 @@ void UnloopUpdater::updateBlockParents() {
     // Perform a post order CFG traversal of all blocks within this loop,
     // propagating the nearest loop from sucessors to predecessors.
     LoopBlocksTraversal Traversal(DFS, LI);
-    for (LoopBlocksTraversal::POTIterator POI = Traversal.begin(),
-           POE = Traversal.end(); POI != POE; ++POI) {
+    for (BasicBlock *POI : Traversal) {
 
-      Loop *L = LI->getLoopFor(*POI);
-      Loop *NL = getNearestLoop(*POI, L);
+      Loop *L = LI->getLoopFor(POI);
+      Loop *NL = getNearestLoop(POI, L);
 
       if (NL != L) {
         // For reducible loops, NL is now an ancestor of Unloop.
         assert((NL != &Unloop && (!NL || NL->contains(&Unloop))) &&
                "uninitialized successor");
-        LI->changeLoopFor(*POI, NL);
+        LI->changeLoopFor(POI, NL);
       }
       else {
         // Or the current block is part of a subloop, in which case its parent

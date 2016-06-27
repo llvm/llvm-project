@@ -147,8 +147,8 @@ static bool PropagateConstantReturn(Function &F) {
     RetVals.push_back(UndefValue::get(F.getReturnType()));
 
   unsigned NumNonConstant = 0;
-  for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB->getTerminator())) {
+  for (BasicBlock &BB : F)
+    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator())) {
       for (unsigned i = 0, e = RetVals.size(); i != e; ++i) {
         // Already found conflicting return values?
         Value *RV = RetVals[i];
@@ -266,13 +266,13 @@ bool IPCP::runOnModule(Module &M) {
   // making changes.
   while (LocalChange) {
     LocalChange = false;
-    for (Module::iterator I = M.begin(), E = M.end(); I != E; ++I)
-      if (!I->isDeclaration()) {
+    for (Function &F : M)
+      if (!F.isDeclaration()) {
         // Delete any klingons.
-        I->removeDeadConstantUsers();
-        if (I->hasLocalLinkage())
-          LocalChange |= PropagateConstantsIntoArguments(*I);
-        Changed |= PropagateConstantReturn(*I);
+        F.removeDeadConstantUsers();
+        if (F.hasLocalLinkage())
+          LocalChange |= PropagateConstantsIntoArguments(F);
+        Changed |= PropagateConstantReturn(F);
       }
     Changed |= LocalChange;
   }

@@ -1010,9 +1010,9 @@ void AddressSanitizer::instrumentPointerComparisonOrSubtraction(
   IRBuilder<> IRB(I);
   Function *F = isa<ICmpInst>(I) ? AsanPtrCmpFunction : AsanPtrSubFunction;
   Value *Param[2] = {I->getOperand(0), I->getOperand(1)};
-  for (int i = 0; i < 2; i++) {
-    if (Param[i]->getType()->isPointerTy())
-      Param[i] = IRB.CreatePointerCast(Param[i], IntptrTy);
+  for (Value *&i : Param) {
+    if (i->getType()->isPointerTy())
+      i = IRB.CreatePointerCast(i, IntptrTy);
   }
   IRB.CreateCall(F, Param);
 }

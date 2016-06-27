@@ -1764,7 +1764,7 @@ SDValue MipsTargetLowering::lowerGlobalAddress(SDValue Op,
     return getAddrNonPIC(N, SDLoc(N), Ty, DAG);
   }
 
-  if (GV->hasInternalLinkage() || (GV->hasLocalLinkage() && !isa<Function>(GV)))
+  if (GV->hasLocalLinkage())
     return getAddrLocal(N, SDLoc(N), Ty, DAG, ABI.IsN32() || ABI.IsN64());
 
   if (LargeGOT)

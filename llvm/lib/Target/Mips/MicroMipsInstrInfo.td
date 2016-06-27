@@ -1,10 +1,6 @@
 def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddrMM", [frameindex]>;
 def addrimm4lsl2 : ComplexPattern<iPTR, 2, "selectIntAddrLSL2MM", [frameindex]>;
 
-def simm12 : Operand<i32> {
-  let DecoderMethod = "DecodeSimm12";
-}
-
 def simm9_addiusp : Operand<i32> {
   let EncoderMethod = "getSImm9AddiuspValue";
   let DecoderMethod = "DecodeSimm9SP";
@@ -140,21 +136,6 @@ def mem_mm_4sp : Operand<i32> {
   let EncoderMethod = "getMemEncodingMMImm4sp";
   let ParserMatchClass = MipsMemUimm4AsmOperand;
   let OperandType = "OPERAND_MEMORY";
-}
-
-def MipsMemSimm12AsmOperand : AsmOperandClass {
-  let Name = "MemOffsetSimm12";
-  let SuperClasses = [MipsMemAsmOperand];
-  let RenderMethod = "addMemOperands";
-  let ParserMethod = "parseMemOperand";
-  let PredicateMethod = "isMemWithSimmOffset<12>";
-  let DiagnosticType = "MemSImm12";
-}
-
-def mem_simm12 : mem_generic {
-  let MIOperandInfo = (ops ptr_rc, simm12);
-  let EncoderMethod = "getMemEncoding";
-  let ParserMatchClass = MipsMemSimm12AsmOperand;
 }
 
 def jmptarget_mm : Operand<OtherVT> {
@@ -304,10 +285,10 @@ class SCEBaseMM<string opstr, RegisterOperand RO> :
 }
 
 class LoadMM<string opstr, DAGOperand RO, SDPatternOperator OpNode = null_frag,
-             InstrItinClass Itin = NoItinerary> :
-  InstSE<(outs RO:$rt), (ins mem_mm_12:$addr),
+             InstrItinClass Itin = NoItinerary, DAGOperand MO = mem_mm_12> :
+  InstSE<(outs RO:$rt), (ins MO:$addr),
          !strconcat(opstr, "\t$rt, $addr"),
-         [(set RO:$rt, (OpNode addrimm12:$addr))], Itin, FrmI> {
+         [(set RO:$rt, (OpNode addrimm12:$addr))], Itin, FrmI, opstr> {
   let DecoderMethod = "DecodeMemMMImm12";
   let canFoldAsLoad = 1;
   let mayLoad = 1;
@@ -790,8 +771,6 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   def LWXS_MM : LoadWordIndexedScaledMM<"lwxs", GPR32Opnd>, LWXS_FM_MM<0x118>;
 
-  def LWU_MM : LoadMM<"lwu", GPR32Opnd, zextloadi32, II_LWU>, LL_FM_MM<0xe>;
-
   /// Load and Store Instructions - unaligned
   def LWL_MM : LoadLeftRightMM<"lwl", MipsLWL, GPR32Opnd, mem_mm_12>,
                LWL_FM_MM<0x0>;
@@ -983,6 +962,9 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 let DecoderNamespace = "MicroMips" in {
   def RDHWR_MM : MMRel, R6MMR6Rel, ReadHardware<GPR32Opnd, HWRegsOpnd>,
                  RDHWR_FM_MM, ISA_MICROMIPS32_NOT_MIPS32R6;
+  def LWU_MM : MMRel, LoadMM<"lwu", GPR32Opnd, zextloadi32, II_LWU,
+                             mem_simm12>, LL_FM_MM<0xe>,
+               ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 
 //===----------------------------------------------------------------------===//

@@ -3046,11 +3046,11 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   // Do a quick scan over the function.  If we find any blocks that are
   // unreachable, remove any instructions inside of them.  This prevents
   // the instcombine code from having to deal with some bad special cases.
-  for (Function::iterator BB = F.begin(), E = F.end(); BB != E; ++BB) {
-    if (Visited.count(&*BB))
+  for (BasicBlock &BB : F) {
+    if (Visited.count(&BB))
       continue;
 
-    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&*BB);
+    unsigned NumDeadInstInBB = removeAllNonTerminatorAndEHPadInstructions(&BB);
     MadeIRChange |= NumDeadInstInBB > 0;
     NumDeadInst += NumDeadInstInBB;
   }

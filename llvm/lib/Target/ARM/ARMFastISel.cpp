@@ -540,7 +540,7 @@ unsigned ARMFastISel::ARMMaterializeInt(const Constant *C, MVT VT) {
 }
 
 bool ARMFastISel::isPositionIndependent() const {
-  return TM.getRelocationModel() == Reloc::PIC_;
+  return TLI.isPositionIndependent();
 }
 
 unsigned ARMFastISel::ARMMaterializeGV(const GlobalValue *GV, MVT VT) {

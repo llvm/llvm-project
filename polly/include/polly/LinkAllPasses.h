@@ -38,6 +38,7 @@ llvm::Pass *createJSONImporterPass();
 llvm::Pass *createPollyCanonicalizePass();
 llvm::Pass *createScopDetectionPass();
 llvm::Pass *createScopInfoRegionPassPass();
+llvm::Pass *createScopInfoWrapperPassPass();
 llvm::Pass *createIslAstInfoPass();
 llvm::Pass *createCodeGenerationPass();
 llvm::Pass *createIslScheduleOptimizerPass();

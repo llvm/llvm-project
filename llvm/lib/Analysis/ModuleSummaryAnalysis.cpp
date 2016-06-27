@@ -76,24 +76,23 @@ void ModuleSummaryIndexBuilder::computeFunctionSummary(
   DenseSet<const Value *> RefEdges;
 
   SmallPtrSet<const User *, 8> Visited;
-  for (Function::const_iterator BB = F.begin(), E = F.end(); BB != E; ++BB)
-    for (BasicBlock::const_iterator I = BB->begin(), E = BB->end(); I != E;
-         ++I) {
+  for (const BasicBlock &BB : F)
+    for (const Instruction &I : BB) {
       if (!isa<DbgInfoIntrinsic>(I))
         ++NumInsts;
 
-      if (auto CS = ImmutableCallSite(&*I)) {
+      if (auto CS = ImmutableCallSite(&I)) {
         auto *CalledFunction = CS.getCalledFunction();
         if (CalledFunction && CalledFunction->hasName() &&
             !CalledFunction->isIntrinsic()) {
-          auto ScaledCount = BFI ? BFI->getBlockProfileCount(&*BB) : None;
+          auto ScaledCount = BFI ? BFI->getBlockProfileCount(&BB) : None;
           auto *CalleeId =
               M->getValueSymbolTable().lookup(CalledFunction->getName());
           CallGraphEdges[CalleeId] +=
               (ScaledCount ? ScaledCount.getValue() : 0);
         }
       }
-      findRefEdges(&*I, RefEdges, Visited);
+      findRefEdges(&I, RefEdges, Visited);
     }
 
   GlobalValueSummary::GVFlags Flags(F);

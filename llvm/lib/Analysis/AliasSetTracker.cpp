@@ -234,15 +234,15 @@ AliasSet *AliasSetTracker::mergeAliasSetsForPointer(const Value *Ptr,
 /// alias sets.
 bool AliasSetTracker::containsPointer(const Value *Ptr, uint64_t Size,
                                       const AAMDNodes &AAInfo) const {
-  for (const_iterator I = begin(), E = end(); I != E; ++I)
-    if (!I->Forward && I->aliasesPointer(Ptr, Size, AAInfo, AA))
+  for (const AliasSet &AS : *this)
+    if (!AS.Forward && AS.aliasesPointer(Ptr, Size, AAInfo, AA))
       return true;
   return false;
 }
 
 bool AliasSetTracker::containsUnknown(const Instruction *Inst) const {
-  for (const_iterator I = begin(), E = end(); I != E; ++I)
-    if (!I->Forward && I->aliasesUnknownInst(Inst, AA))
+  for (const AliasSet &AS : *this)
+    if (!AS.Forward && AS.aliasesUnknownInst(Inst, AA))
       return true;
   return false;
 }
@@ -409,10 +409,9 @@ void AliasSetTracker::add(const AliasSetTracker &AST) {
   // Loop over all of the alias sets in AST, adding the pointers contained
   // therein into the current alias sets.  This can cause alias sets to be
   // merged together in the current AST.
-  for (const_iterator I = AST.begin(), E = AST.end(); I != E; ++I) {
-    if (I->Forward) continue;   // Ignore forwarding alias sets
-    
-    AliasSet &AS = const_cast<AliasSet&>(*I);
+  for (const AliasSet &AS : AST) {
+    if (AS.Forward)
+      continue; // Ignore forwarding alias sets
 
     // If there are any call sites in the alias set, add them to this AST.
     for (unsigned i = 0, e = AS.UnknownInsts.size(); i != e; ++i)
@@ -648,8 +647,8 @@ void AliasSet::print(raw_ostream &OS) const {
 void AliasSetTracker::print(raw_ostream &OS) const {
   OS << "Alias Set Tracker: " << AliasSets.size() << " alias sets for "
      << PointerMap.size() << " pointer values.\n";
-  for (const_iterator I = begin(), E = end(); I != E; ++I)
-    I->print(OS);
+  for (const AliasSet &AS : *this)
+    AS.print(OS);
   OS << "\n";
 }
 

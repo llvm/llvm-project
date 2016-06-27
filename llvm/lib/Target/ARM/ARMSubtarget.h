@@ -56,6 +56,22 @@ protected:
     ARMv7m, ARMv7em, ARMv8a, ARMv81a, ARMv82a, ARMv8mMainline, ARMv8mBaseline
   };
 
+public:
+  /// What kind of timing do load multiple/store multiple instructions have.
+  enum ARMLdStMultipleTiming {
+    /// Can load/store 2 registers/cycle.
+    DoubleIssue,
+    /// Can load/store 2 registers/cycle, but needs an extra cycle if the access
+    /// is not 64-bit aligned.
+    DoubleIssueCheckUnalignedAccess,
+    /// Can load/store 1 register/cycle.
+    SingleIssue,
+    /// Can load/store 1 register/cycle, but needs an extra cycle for address
+    /// computation and potentially also for register writeback.
+    SingleIssuePlusExtras,
+  };
+
+protected:
   /// ARMProcFamily - ARM processor family: Cortex-A8, Cortex-A9, and others.
   ARMProcFamilyEnum ARMProcFamily;
 
@@ -236,6 +252,12 @@ protected:
   /// If true, VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
   bool UseNEONForFPMovs;
 
+  /// If true, VLDn instructions take an extra cycle for unaligned accesses.
+  bool CheckVLDnAlign;
+
+  /// If true, VFP instructions are not pipelined.
+  bool NonpipelinedVFP;
+
   /// StrictAlign - If true, the subtarget disallows unaligned memory
   /// accesses for some types.  For details, see
   /// ARMTargetLowering::allowsMisalignedMemoryAccesses().
@@ -267,6 +289,16 @@ protected:
 
   /// CPUString - String name of used CPU.
   std::string CPUString;
+
+  unsigned MaxInterleaveFactor;
+
+  /// What kind of timing do load multiple/store multiple have (double issue,
+  /// single issue etc).
+  ARMLdStMultipleTiming LdStMultipleTiming;
+
+  /// The adjustment that we need to apply to get the operand latency from the
+  /// operand cycle returned by the itinerary data for pre-ISel operands.
+  int PreISelOperandLatencyAdjustment;
 
   /// IsLittle - The target is Little Endian
   bool IsLittle;
@@ -400,6 +432,8 @@ public:
   bool preferVMOVSR() const { return PreferVMOVSR; }
   bool preferISHSTBarriers() const { return PreferISHST; }
   bool useNEONForFPMovs() const { return UseNEONForFPMovs; }
+  bool checkVLDnAccessAlignment() const { return CheckVLDnAlign; }
+  bool nonpipelinedVFP() const { return NonpipelinedVFP; }
   bool prefers32BitThumb() const { return Pref32BitThumb; }
   bool avoidCPSRPartialUpdate() const { return AvoidCPSRPartialUpdate; }
   bool avoidMOVsShifterOperand() const { return AvoidMOVsShifterOperand; }
@@ -537,6 +571,16 @@ public:
   /// stack frame on entry to the function and which must be maintained by every
   /// function for this subtarget.
   unsigned getStackAlignment() const { return stackAlignment; }
+
+  unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+
+  ARMLdStMultipleTiming getLdStMultipleTiming() const {
+    return LdStMultipleTiming;
+  }
+
+  int getPreISelOperandLatencyAdjustment() const {
+    return PreISelOperandLatencyAdjustment;
+  }
 
   /// GVIsIndirectSymbol - true if the GV will be accessed via an indirect
   /// symbol.

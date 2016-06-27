@@ -2011,8 +2011,8 @@ unsigned LLVMCountBasicBlocks(LLVMValueRef FnRef) {
 
 void LLVMGetBasicBlocks(LLVMValueRef FnRef, LLVMBasicBlockRef *BasicBlocksRefs){
   Function *Fn = unwrap<Function>(FnRef);
-  for (Function::iterator I = Fn->begin(), E = Fn->end(); I != E; I++)
-    *BasicBlocksRefs++ = wrap(&*I);
+  for (BasicBlock &BB : *Fn)
+    *BasicBlocksRefs++ = wrap(&BB);
 }
 
 LLVMBasicBlockRef LLVMGetEntryBasicBlock(LLVMValueRef Fn) {

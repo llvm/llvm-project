@@ -110,11 +110,10 @@ Function* PartialInliner::unswitchFunction(Function* F) {
   // Gather up the blocks that we're going to extract.
   std::vector<BasicBlock*> toExtract;
   toExtract.push_back(newNonReturnBlock);
-  for (Function::iterator FI = duplicateFunction->begin(),
-       FE = duplicateFunction->end(); FI != FE; ++FI)
-    if (&*FI != newEntryBlock && &*FI != newReturnBlock &&
-        &*FI != newNonReturnBlock)
-      toExtract.push_back(&*FI);
+  for (BasicBlock &BB : *duplicateFunction)
+    if (&BB != newEntryBlock && &BB != newReturnBlock &&
+        &BB != newNonReturnBlock)
+      toExtract.push_back(&BB);
 
   // The CodeExtractor needs a dominator tree.
   DominatorTree DT;
@@ -129,11 +128,10 @@ Function* PartialInliner::unswitchFunction(Function* F) {
   // Inline the top-level if test into all callers.
   std::vector<User *> Users(duplicateFunction->user_begin(),
                             duplicateFunction->user_end());
-  for (std::vector<User*>::iterator UI = Users.begin(), UE = Users.end();
-       UI != UE; ++UI)
-    if (CallInst *CI = dyn_cast<CallInst>(*UI))
+  for (User *User : Users)
+    if (CallInst *CI = dyn_cast<CallInst>(User))
       InlineFunction(CI, IFI);
-    else if (InvokeInst *II = dyn_cast<InvokeInst>(*UI))
+    else if (InvokeInst *II = dyn_cast<InvokeInst>(User))
       InlineFunction(II, IFI);
   
   // Ditch the duplicate, since we're done with it, and rewrite all remaining
@@ -152,10 +150,10 @@ bool PartialInliner::runOnModule(Module& M) {
 
   std::vector<Function*> worklist;
   worklist.reserve(M.size());
-  for (Module::iterator FI = M.begin(), FE = M.end(); FI != FE; ++FI)
-    if (!FI->use_empty() && !FI->isDeclaration())
-      worklist.push_back(&*FI);
-    
+  for (Function &F : M)
+    if (!F.use_empty() && !F.isDeclaration())
+      worklist.push_back(&F);
+
   bool changed = false;
   while (!worklist.empty()) {
     Function* currFunc = worklist.back();

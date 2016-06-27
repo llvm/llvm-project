@@ -1083,13 +1083,10 @@ bool SimplifyCFGOpt::FoldValueComparisonIntoPredecessors(TerminatorInst *TI,
 
         // If there are any constants vectored to BB that TI doesn't handle,
         // they must go to the default destination of TI.
-        for (std::set<ConstantInt *, ConstantIntOrdering>::iterator
-                 I = PTIHandled.begin(),
-                 E = PTIHandled.end();
-             I != E; ++I) {
+        for (ConstantInt *I : PTIHandled) {
           if (PredHasWeights || SuccHasWeights)
-            Weights.push_back(WeightsForHandled[*I]);
-          PredCases.push_back(ValueEqualityComparisonCase(*I, BBDefault));
+            Weights.push_back(WeightsForHandled[I]);
+          PredCases.push_back(ValueEqualityComparisonCase(I, BBDefault));
           NewSuccessors.push_back(BBDefault);
         }
       }
@@ -2150,8 +2147,8 @@ static bool SimplifyCondBranchToTwoReturns(BranchInst *BI,
 static bool checkCSEInPredecessor(Instruction *Inst, BasicBlock *PB) {
   if (!isa<BinaryOperator>(Inst) && !isa<CmpInst>(Inst))
     return false;
-  for (BasicBlock::iterator I = PB->begin(), E = PB->end(); I != E; I++) {
-    Instruction *PBI = &*I;
+  for (Instruction &I : *PB) {
+    Instruction *PBI = &I;
     // Check whether Inst and PBI generate the same value.
     if (Inst->isIdenticalTo(PBI)) {
       Inst->replaceAllUsesWith(PBI);
@@ -2465,9 +2462,9 @@ bool llvm::FoldBranchToCommonDest(BranchInst *BI, unsigned BonusInstThreshold) {
     // could replace PBI's branch probabilities with BI's.
 
     // Copy any debug value intrinsics into the end of PredBlock.
-    for (BasicBlock::iterator I = BB->begin(), E = BB->end(); I != E; ++I)
-      if (isa<DbgInfoIntrinsic>(*I))
-        I->clone()->insertBefore(PBI);
+    for (Instruction &I : *BB)
+      if (isa<DbgInfoIntrinsic>(I))
+        I.clone()->insertBefore(PBI);
 
     return true;
   }

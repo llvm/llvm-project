@@ -693,9 +693,8 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
       // Stores to stack values are valid candidates for removal.
       bool AllDead = true;
-      for (SmallVectorImpl<Value *>::iterator I = Pointers.begin(),
-           E = Pointers.end(); I != E; ++I)
-        if (!DeadStackObjects.count(*I)) {
+      for (Value *Pointer : Pointers)
+        if (!DeadStackObjects.count(Pointer)) {
           AllDead = false;
           break;
         }

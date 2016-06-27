@@ -563,8 +563,8 @@ void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
   if (ODI != OverDefinedCache.end())
     OverDefinedCache.erase(ODI);
 
-  for (auto I = ValueCache.begin(), E = ValueCache.end(); I != E; ++I)
-    I->second.erase(BB);
+  for (auto &I : ValueCache)
+    I.second.erase(BB);
 }
 
 void LazyValueInfoCache::solve() {
