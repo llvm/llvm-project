@@ -254,6 +254,9 @@ public:
     return true;
   }
 
+  /// Add target-specific pre-linking passes to the specified pass manager.
+  virtual void addPreLinkPasses(PassManagerBase &) {}
+
   /// True if subtarget inserts the final scheduling pass on its own.
   ///
   /// Branch relaxation, which must happen after block placement, can
