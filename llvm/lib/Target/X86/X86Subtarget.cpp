@@ -93,8 +93,7 @@ unsigned char X86Subtarget::classifyGlobalReference(const GlobalValue *GV,
   if (TM.getCodeModel() == CodeModel::Large)
     return X86II::MO_NO_FLAG;
 
-  Reloc::Model RM = TM.getRelocationModel();
-  if (shouldAssumeDSOLocal(RM, TargetTriple, M, GV))
+  if (TM.shouldAssumeDSOLocal(M, GV))
     return classifyLocalReference(GV);
 
   if (isTargetCOFF())
@@ -120,7 +119,7 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV) const {
 unsigned char
 X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
                                               const Module &M) const {
-  if (shouldAssumeDSOLocal(TM.getRelocationModel(), TargetTriple, M, GV))
+  if (TM.shouldAssumeDSOLocal(M, GV))
     return X86II::MO_NO_FLAG;
 
   assert(!isTargetCOFF());

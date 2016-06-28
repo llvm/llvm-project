@@ -2318,19 +2318,18 @@ class LDI_W_DESC : MSA_I10_LDI_DESC_BASE<"ldi.w", MSA128WOpnd>;
 class LDI_D_DESC : MSA_I10_LDI_DESC_BASE<"ldi.d", MSA128DOpnd>;
 
 class LSA_DESC_BASE<string instr_asm, RegisterOperand RORD,
-                    RegisterOperand RORS = RORD, RegisterOperand RORT = RORD,
-                    InstrItinClass itin = NoItinerary > {
+                    InstrItinClass itin = NoItinerary> {
   dag OutOperandList = (outs RORD:$rd);
-  dag InOperandList = (ins RORS:$rs, RORT:$rt, uimm2_plus1:$sa);
+  dag InOperandList = (ins RORD:$rs, RORD:$rt, uimm2_plus1:$sa);
   string AsmString = !strconcat(instr_asm, "\t$rd, $rs, $rt, $sa");
-  list<dag> Pattern = [(set RORD:$rd, (add RORT:$rt,
-                                                (shl RORS:$rs,
+  list<dag> Pattern = [(set RORD:$rd, (add RORD:$rt,
+                                                (shl RORD:$rs,
                                                      immZExt2Lsa:$sa)))];
   InstrItinClass Itinerary = itin;
 }
 
-class LSA_DESC : LSA_DESC_BASE<"lsa", GPR32Opnd>;
-class DLSA_DESC : LSA_DESC_BASE<"dlsa", GPR64Opnd>;
+class LSA_DESC : LSA_DESC_BASE<"lsa", GPR32Opnd, II_LSA>;
+class DLSA_DESC : LSA_DESC_BASE<"dlsa", GPR64Opnd, II_DLSA>;
 
 class MADD_Q_H_DESC : MSA_3RF_4RF_DESC_BASE<"madd_q.h", int_mips_madd_q_h,
                                             MSA128HOpnd>;

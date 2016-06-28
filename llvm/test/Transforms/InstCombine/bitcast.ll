@@ -262,3 +262,10 @@ define <2 x i64> @test7(<2 x i8*>* %arg) nounwind {
 ; CHECK: bitcast
 ; CHECK: load
 }
+
+define i8 @test8() {
+  %res = bitcast <8 x i1> <i1 true, i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true> to i8
+  ret i8 %res
+; CHECK: @test8
+; CHECK: ret i8 -85
+}

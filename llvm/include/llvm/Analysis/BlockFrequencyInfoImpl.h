@@ -16,13 +16,16 @@
 #define LLVM_ANALYSIS_BLOCKFREQUENCYINFOIMPL_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/Support/BlockFrequency.h"
 #include "llvm/Support/BranchProbability.h"
+#include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/ScaledNumber.h"
 #include "llvm/Support/raw_ostream.h"
 #include <deque>
@@ -927,6 +930,8 @@ public:
     return BlockFrequencyInfoImplBase::getFloatingBlockFreq(getNode(BB));
   }
 
+  const BranchProbabilityInfoT &getBPI() const { return *BPI; }
+
   /// \brief Print the frequencies for the current function.
   ///
   /// Prints the frequencies for the blocks in the current function.
@@ -1228,6 +1233,70 @@ raw_ostream &BlockFrequencyInfoImpl<BT>::print(raw_ostream &OS) const {
   OS << "\n";
   return OS;
 }
+
+// Graph trait base class for block frequency information graph
+// viewer.
+
+enum GVDAGType { GVDT_None, GVDT_Fraction, GVDT_Integer, GVDT_Count };
+
+template <class BlockFrequencyInfoT, class BranchProbabilityInfoT>
+struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
+  explicit BFIDOTGraphTraitsBase(bool isSimple = false)
+      : DefaultDOTGraphTraits(isSimple) {}
+
+  typedef GraphTraits<BlockFrequencyInfoT *> GTraits;
+  typedef typename GTraits::NodeType NodeType;
+  typedef typename GTraits::ChildIteratorType EdgeIter;
+  typedef typename GTraits::nodes_iterator NodeIter;
+
+  static std::string getGraphName(const BlockFrequencyInfoT *G) {
+    return G->getFunction()->getName();
+  }
+
+  std::string getNodeLabel(const NodeType *Node,
+                           const BlockFrequencyInfoT *Graph, GVDAGType GType) {
+    std::string Result;
+    raw_string_ostream OS(Result);
+
+    OS << Node->getName().str() << " : ";
+    switch (GType) {
+    case GVDT_Fraction:
+      Graph->printBlockFreq(OS, Node);
+      break;
+    case GVDT_Integer:
+      OS << Graph->getBlockFreq(Node).getFrequency();
+      break;
+    case GVDT_Count: {
+      auto Count = Graph->getBlockProfileCount(Node);
+      if (Count)
+        OS << Count.getValue();
+      else
+        OS << "Unknown";
+      break;
+    }
+    case GVDT_None:
+      llvm_unreachable("If we are not supposed to render a graph we should "
+                       "never reach this point.");
+    }
+    return Result;
+  }
+
+  std::string getEdgeAttributes(const NodeType *Node, EdgeIter EI,
+                                const BranchProbabilityInfoT *BPI) {
+    std::string Str;
+    if (!BPI)
+      return Str;
+
+    BranchProbability BP = BPI->getEdgeProbability(Node, EI);
+    uint32_t N = BP.getNumerator();
+    uint32_t D = BP.getDenominator();
+    double Percent = 100.0 * N / D;
+    raw_string_ostream OS(Str);
+    OS << format("label=\"%.1f%%\"", Percent);
+    OS.flush();
+    return Str;
+  }
+};
 
 } // end namespace llvm
 

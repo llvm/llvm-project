@@ -22,6 +22,13 @@
 using namespace llvm;
 using namespace object;
 
+static Error
+malformedError(Twine Msg) {
+  std::string StringMsg = "truncated or malformed fat file (" + Msg.str() + ")";
+  return make_error<GenericBinaryError>(std::move(StringMsg),
+                                        object_error::parse_failed);
+}
+
 template<typename T>
 static T getUniversalBinaryStruct(const char *Ptr) {
   T Res;
@@ -92,22 +99,24 @@ MachOUniversalBinary::ObjectForArch::getAsArchive() const {
 
 void MachOUniversalBinary::anchor() { }
 
-ErrorOr<std::unique_ptr<MachOUniversalBinary>>
+Expected<std::unique_ptr<MachOUniversalBinary>>
 MachOUniversalBinary::create(MemoryBufferRef Source) {
-  std::error_code EC;
+  Error Err;
   std::unique_ptr<MachOUniversalBinary> Ret(
-      new MachOUniversalBinary(Source, EC));
-  if (EC)
-    return EC;
+      new MachOUniversalBinary(Source, Err));
+  if (Err)
+    return std::move(Err);
   return std::move(Ret);
 }
 
-MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source,
-                                           std::error_code &ec)
+MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_MachOUniversalBinary, Source), Magic(0),
       NumberOfObjects(0) {
+  ErrorAsOutParameter ErrAsOutParam(Err);
   if (Data.getBufferSize() < sizeof(MachO::fat_header)) {
-    ec = object_error::invalid_file_type;
+    Err = make_error<GenericBinaryError>("File too small to be a Mach-O "
+                                         "universal file",
+                                         object_error::invalid_file_type);
     return;
   }
   // Check for magic value and sufficient header size.
@@ -121,14 +130,16 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source,
   else if (Magic == MachO::FAT_MAGIC_64)
     MinSize += sizeof(MachO::fat_arch_64) * NumberOfObjects;
   else {
-    ec = object_error::parse_failed;
+    Err = malformedError("bad magic number");
     return;
   }
   if (Buf.size() < MinSize) {
-    ec = object_error::parse_failed;
+    Err = malformedError("fat_arch" +
+                         Twine(Magic == MachO::FAT_MAGIC ? "" : "_64") +
+                         " structs would extend past the end of the file");
     return;
   }
-  ec = std::error_code();
+  Err = Error::success();
 }
 
 Expected<std::unique_ptr<MachOObjectFile>>

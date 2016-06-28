@@ -25,7 +25,7 @@
 # AFTER:     1010: 01 30         adds r0, #1
 # AFTER:     1012: bd e8 00 88   pop.w {r11, pc}
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_ARMNT
   Characteristics: [  ]

@@ -1,5 +1,5 @@
-# RUN: yaml2obj -format=elf %s > %t1.o
-# RUN: yaml2obj -format=elf %s > %t2.o
+# RUN: yaml2obj %s > %t1.o
+# RUN: yaml2obj %s > %t2.o
 
 # RUN: echo -ne "\x04" > %t.stats
 
@@ -39,7 +39,7 @@
 # CHECK: /tmp{{[/\\]}}f.c:2 f2 cfi-icall 12
 # CHECK: /tmp{{[/\\]}}f.c:1 f1 <unknown> 14
 
----
+--- !ELF
 FileHeader:      
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB

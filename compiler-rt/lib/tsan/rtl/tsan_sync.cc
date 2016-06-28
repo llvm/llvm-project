@@ -198,8 +198,8 @@ SyncVar* MetaMap::GetOrCreateAndLock(ThreadState *thr, uptr pc,
   return GetAndLock(thr, pc, addr, write_lock, true);
 }
 
-SyncVar* MetaMap::GetIfExistsAndLock(uptr addr) {
-  return GetAndLock(0, 0, addr, true, false);
+SyncVar* MetaMap::GetIfExistsAndLock(uptr addr, bool write_lock) {
+  return GetAndLock(0, 0, addr, write_lock, false);
 }
 
 SyncVar* MetaMap::GetAndLock(ThreadState *thr, uptr pc,

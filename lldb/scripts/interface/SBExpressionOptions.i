@@ -119,11 +119,11 @@ public:
     void
     SetPrefix (const char *prefix);
     
-    %feature("docstring", "Sets whether to auto-apply FixIt hints to the expression being evaluated.") SetAutoApplyFixIts;
+    %feature("docstring", "Sets whether to auto-apply fix-it hints to the expression being evaluated.") SetAutoApplyFixIts;
     void
     SetAutoApplyFixIts(bool b = true);
     
-    %feature("docstring", "Gets whether to auto-apply FixIt hints to an expression.") GetAutoApplyFixIts;
+    %feature("docstring", "Gets whether to auto-apply fix-it hints to an expression.") GetAutoApplyFixIts;
     bool
     GetAutoApplyFixIts();
 

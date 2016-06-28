@@ -1,7 +1,7 @@
 # RUN: yaml2obj %s > %t.obj
 # RUN: lld-link /out:%t.exe /entry:main /subsystem:console %t.obj
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

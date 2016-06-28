@@ -27,12 +27,6 @@ using namespace llvm;
 #define DEBUG_TYPE "block-freq"
 
 #ifndef NDEBUG
-enum GVDAGType {
-  GVDT_None,
-  GVDT_Fraction,
-  GVDT_Integer
-};
-
 static cl::opt<GVDAGType>
 ViewBlockFreqPropagationDAG("view-block-freq-propagation-dags", cl::Hidden,
           cl::desc("Pop up a window to show a dag displaying how block "
@@ -71,34 +65,24 @@ struct GraphTraits<BlockFrequencyInfo *> {
   }
 };
 
-template<>
-struct DOTGraphTraits<BlockFrequencyInfo*> : public DefaultDOTGraphTraits {
-  explicit DOTGraphTraits(bool isSimple=false) :
-    DefaultDOTGraphTraits(isSimple) {}
+typedef BFIDOTGraphTraitsBase<BlockFrequencyInfo, BranchProbabilityInfo>
+    BFIDOTGTraitsBase;
 
-  static std::string getGraphName(const BlockFrequencyInfo *G) {
-    return G->getFunction()->getName();
-  }
+template <>
+struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
+  explicit DOTGraphTraits(bool isSimple = false)
+      : BFIDOTGTraitsBase(isSimple) {}
 
   std::string getNodeLabel(const BasicBlock *Node,
                            const BlockFrequencyInfo *Graph) {
-    std::string Result;
-    raw_string_ostream OS(Result);
 
-    OS << Node->getName() << ":";
-    switch (ViewBlockFreqPropagationDAG) {
-    case GVDT_Fraction:
-      Graph->printBlockFreq(OS, Node);
-      break;
-    case GVDT_Integer:
-      OS << Graph->getBlockFreq(Node).getFrequency();
-      break;
-    case GVDT_None:
-      llvm_unreachable("If we are not supposed to render a graph we should "
-                       "never reach this point.");
-    }
+    return BFIDOTGTraitsBase::getNodeLabel(Node, Graph,
+                                           ViewBlockFreqPropagationDAG);
+  }
 
-    return Result;
+  std::string getEdgeAttributes(const BasicBlock *Node, EdgeIter EI,
+                                const BlockFrequencyInfo *BFI) {
+    return BFIDOTGTraitsBase::getEdgeAttributes(Node, EI, BFI->getBPI());
   }
 };
 
@@ -165,6 +149,10 @@ void BlockFrequencyInfo::view() const {
 
 const Function *BlockFrequencyInfo::getFunction() const {
   return BFI ? BFI->getFunction() : nullptr;
+}
+
+const BranchProbabilityInfo *BlockFrequencyInfo::getBPI() const {
+  return BFI ? &BFI->getBPI() : nullptr;
 }
 
 raw_ostream &BlockFrequencyInfo::

@@ -461,3 +461,22 @@ relative line number references, for example:
    // CHECK-NEXT: {{^     ;}}
    int a
 
+Matching Newline Characters
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To match newline characters in regular expressions the character class
+``[[:space:]]`` can be used. For example, the following pattern:
+
+.. code-block:: c++
+
+   // CHECK: DW_AT_location [DW_FORM_sec_offset] ([[DLOC:0x[0-9a-f]+]]){{[[:space:]].*}}"intd"
+
+matches output of the form (from llvm-dwarfdump):
+
+.. code-block:: llvm
+
+       DW_AT_location [DW_FORM_sec_offset]   (0x00000233)
+       DW_AT_name [DW_FORM_strp]  ( .debug_str[0x000000c9] = "intd")
+
+letting us set the :program:`FileCheck` variable ``DLOC`` to the desired value 
+``0x00000233``, extracted from the line immediately preceding "``intd``".

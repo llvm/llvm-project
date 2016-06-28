@@ -338,7 +338,7 @@ protected:
     Address                                     m_address;              ///< The address the process is stopped in.
     std::string                                 m_expr_text;            ///< The text of the expression, as typed by the user
     std::string                                 m_expr_prefix;          ///< The text of the translation-level definitions, as provided by the user
-    std::string                                 m_fixed_text;           ///< The text of the expression with fixits applied - this won't be set if the fixed text doesn't parse.
+    std::string                                 m_fixed_text;           ///< The text of the expression with fix-its applied - this won't be set if the fixed text doesn't parse.
     lldb::LanguageType                          m_language;             ///< The language to use when parsing (eLanguageTypeUnknown means use defaults)
     ResultType                                  m_desired_type;         ///< The type to coerce the expression's result to.  If eResultTypeAny, inferred from the expression.
     EvaluateExpressionOptions                   m_options;              ///< Additional options provided by the user.

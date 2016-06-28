@@ -71,11 +71,11 @@
 // RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -o - -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MOD %s
 // RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
 // RUN: %clang_cc1 -triple amdgcn--amdhsa -emit-llvm -o - -cl-std=CL2.0  -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
-// RUN: chmod u-w %t/* 
+// RUN: chmod u-w %t 
 // RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -o - -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK --check-prefix=CHECK-MOD %s
 // RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
 // RUN: %clang_cc1 -triple amdgcn--amdhsa -emit-llvm -o - -cl-std=CL2.0 -finclude-default-header -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -ftime-report %s 2>&1 | FileCheck --check-prefix=CHECK20 --check-prefix=CHECK-MOD %s
-// RUN: chmod u+w %t/*
+// RUN: chmod u+w %t
 
 char f(char x) {
 #if __OPENCL_C_VERSION__ != CL_VERSION_2_0

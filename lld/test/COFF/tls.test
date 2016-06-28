@@ -5,7 +5,7 @@
 # CHECK: TLSTableRVA: 0x1000
 # CHECK: TLSTableSize: 0x28
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

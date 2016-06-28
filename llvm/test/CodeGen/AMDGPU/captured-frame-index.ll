@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}stored_fi_to_lds:
 ; GCN: s_load_dword [[LDSPTR:s[0-9]+]]

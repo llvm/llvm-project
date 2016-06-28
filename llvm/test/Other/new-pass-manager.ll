@@ -22,6 +22,7 @@
 ; CHECK-CGSCC-PASS-NEXT: Running pass: ModuleToPostOrderCGSCCPassAdaptor
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: InnerAnalysisManagerProxy<{{.*}}>
 ; CHECK-CGSCC-PASS-NEXT: Running analysis: LazyCallGraphAnalysis
+; CHECK-CGSCC-PASS-NEXT: Running an SCC pass across the RefSCC: [(foo)]
 ; CHECK-CGSCC-PASS-NEXT: Starting llvm::LazyCallGraph::SCC pass manager run
 ; CHECK-CGSCC-PASS-NEXT: Running pass: NoOpCGSCCPass
 ; CHECK-CGSCC-PASS-NEXT: Finished llvm::LazyCallGraph::SCC pass manager run

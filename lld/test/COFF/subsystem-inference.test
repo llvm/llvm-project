@@ -19,7 +19,7 @@
 # WINMAIN:  Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI
 # WWINMAIN: Subsystem: IMAGE_SUBSYSTEM_WINDOWS_GUI
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

@@ -532,7 +532,7 @@ PreservedAnalyses Float2IntPass::run(Function &F, FunctionAnalysisManager &) {
   if (!runImpl(F))
     return PreservedAnalyses::all();
   else {
-    //FIXME: setPreservesCFG is not currently supported in the new PM.
+    // FIXME: This should also 'preserve the CFG'.
     PreservedAnalyses PA;
     PA.preserve<GlobalsAA>();
     return PA;

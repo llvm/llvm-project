@@ -291,3 +291,9 @@
   drotr $5, $10, -1            # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 6-bit unsigned immediate
   drotr32 $1, $2, 32           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
   drotr32 $1, $2, -1           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected 5-bit unsigned immediate
+  ld $31, 65536($31)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+  ld $31, 32768($31)           # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+  ld $31, -32769($31)          # CHECK: :[[@LINE]]:{{[0-9]+}}: error: expected memory with 16-bit signed offset
+  sd $31, 65536($31)           # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  sd $31, 32768($31)           # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  sd $31, -32769($31)          # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset

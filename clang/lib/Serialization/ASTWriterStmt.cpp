@@ -2170,6 +2170,10 @@ void ASTStmtWriter::VisitOMPLoopDirective(OMPLoopDirective *D) {
     Record.AddStmt(D->getNextUpperBound());
     Record.AddStmt(D->getNumIterations());
   }
+  if (isOpenMPLoopBoundSharingDirective(D->getDirectiveKind())) {
+    Record.AddStmt(D->getPrevLowerBoundVariable());
+    Record.AddStmt(D->getPrevUpperBoundVariable());
+  }
   for (auto I : D->counters()) {
     Record.AddStmt(I);
   }
@@ -2415,6 +2419,12 @@ void ASTStmtWriter::VisitOMPTargetUpdateDirective(OMPTargetUpdateDirective *D) {
   Record.push_back(D->getNumClauses());
   VisitOMPExecutableDirective(D);
   Code = serialization::STMT_OMP_TARGET_UPDATE_DIRECTIVE;
+}
+
+void ASTStmtWriter::VisitOMPDistributeParallelForDirective(
+    OMPDistributeParallelForDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_DISTRIBUTE_PARALLEL_FOR_DIRECTIVE;
 }
 
 //===----------------------------------------------------------------------===//

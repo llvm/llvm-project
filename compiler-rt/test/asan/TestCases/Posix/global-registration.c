@@ -7,8 +7,8 @@
 
 // RUN: %clang_asan -c -o %t-one.o -DMAIN_FILE %s
 // RUN: %clang_asan -c -o %t-two.o -DSECONDARY_FILE %s
-// RUN: %clang_asan -o %t %t-one.o %t-two.o
-// RUN: %clang_asan -o %t-dynamic.so -shared -fPIC -DSHARED_LIBRARY_FILE %s %libdl
+// RUN: %clang_asan -o %t %t-one.o %t-two.o %libdl
+// RUN: %clang_asan -o %t-dynamic.so -shared -fPIC -DSHARED_LIBRARY_FILE %s
 // RUN: not %run %t 1 2>&1 | FileCheck --check-prefix ASAN-CHECK-1 %s
 // RUN: not %run %t 2 2>&1 | FileCheck --check-prefix ASAN-CHECK-2 %s
 // RUN: not %run %t 3 2>&1 | FileCheck --check-prefix ASAN-CHECK-3 %s

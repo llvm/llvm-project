@@ -120,9 +120,6 @@ bool returnTypeIsEligibleForTailCall(const Function *F,
 // or we are in LTO.
 bool canBeOmittedFromSymbolTable(const GlobalValue *GV);
 
-bool shouldAssumeDSOLocal(Reloc::Model RM, const Triple &TT, const Module &M,
-                          const GlobalValue *GV);
-
 DenseMap<const MachineBasicBlock *, int>
 getFuncletMembership(const MachineFunction &MF);
 

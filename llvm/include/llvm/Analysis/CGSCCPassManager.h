@@ -67,19 +67,20 @@ template <typename CGSCCPassT>
 class ModuleToPostOrderCGSCCPassAdaptor
     : public PassInfoMixin<ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>> {
 public:
-  explicit ModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass)
-      : Pass(std::move(Pass)) {}
+  explicit ModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass, bool DebugLogging = false)
+      : Pass(std::move(Pass)), DebugLogging(DebugLogging) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   ModuleToPostOrderCGSCCPassAdaptor(
       const ModuleToPostOrderCGSCCPassAdaptor &Arg)
-      : Pass(Arg.Pass) {}
+      : Pass(Arg.Pass), DebugLogging(Arg.DebugLogging) {}
   ModuleToPostOrderCGSCCPassAdaptor(ModuleToPostOrderCGSCCPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
+      : Pass(std::move(Arg.Pass)), DebugLogging(Arg.DebugLogging) {}
   friend void swap(ModuleToPostOrderCGSCCPassAdaptor &LHS,
                    ModuleToPostOrderCGSCCPassAdaptor &RHS) {
     using std::swap;
     swap(LHS.Pass, RHS.Pass);
+    swap(LHS.DebugLogging, RHS.DebugLogging);
   }
   ModuleToPostOrderCGSCCPassAdaptor &
   operator=(ModuleToPostOrderCGSCCPassAdaptor RHS) {
@@ -97,8 +98,11 @@ public:
     LazyCallGraph &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
     PreservedAnalyses PA = PreservedAnalyses::all();
-    for (LazyCallGraph::RefSCC &OuterC : CG.postorder_ref_sccs())
-      for (LazyCallGraph::SCC &C : OuterC) {
+    for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
+      if (DebugLogging)
+        dbgs() << "Running an SCC pass across the RefSCC: " << RC << "\n";
+
+      for (LazyCallGraph::SCC &C : RC) {
         PreservedAnalyses PassPA = Pass.run(C, CGAM);
 
         // We know that the CGSCC pass couldn't have invalidated any other
@@ -115,6 +119,7 @@ public:
         // analyses will eventually occur when the module pass completes.
         PA.intersect(std::move(PassPA));
       }
+    }
 
     // By definition we preserve the proxy. This precludes *any* invalidation
     // of CGSCC analyses by the proxy, but that's OK because we've taken
@@ -126,14 +131,15 @@ public:
 
 private:
   CGSCCPassT Pass;
+  bool DebugLogging;
 };
 
 /// \brief A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename CGSCCPassT>
 ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>
-createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass) {
-  return ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>(std::move(Pass));
+createModuleToPostOrderCGSCCPassAdaptor(CGSCCPassT Pass, bool DebugLogging = false) {
+  return ModuleToPostOrderCGSCCPassAdaptor<CGSCCPassT>(std::move(Pass), DebugLogging);
 }
 
 extern template class InnerAnalysisManagerProxy<FunctionAnalysisManager,
@@ -159,18 +165,19 @@ template <typename FunctionPassT>
 class CGSCCToFunctionPassAdaptor
     : public PassInfoMixin<CGSCCToFunctionPassAdaptor<FunctionPassT>> {
 public:
-  explicit CGSCCToFunctionPassAdaptor(FunctionPassT Pass)
-      : Pass(std::move(Pass)) {}
+  explicit CGSCCToFunctionPassAdaptor(FunctionPassT Pass, bool DebugLogging = false)
+      : Pass(std::move(Pass)), DebugLogging(DebugLogging) {}
   // We have to explicitly define all the special member functions because MSVC
   // refuses to generate them.
   CGSCCToFunctionPassAdaptor(const CGSCCToFunctionPassAdaptor &Arg)
-      : Pass(Arg.Pass) {}
+      : Pass(Arg.Pass), DebugLogging(Arg.DebugLogging) {}
   CGSCCToFunctionPassAdaptor(CGSCCToFunctionPassAdaptor &&Arg)
-      : Pass(std::move(Arg.Pass)) {}
+      : Pass(std::move(Arg.Pass)), DebugLogging(Arg.DebugLogging) {}
   friend void swap(CGSCCToFunctionPassAdaptor &LHS,
                    CGSCCToFunctionPassAdaptor &RHS) {
     using std::swap;
     swap(LHS.Pass, RHS.Pass);
+    swap(LHS.DebugLogging, RHS.DebugLogging);
   }
   CGSCCToFunctionPassAdaptor &operator=(CGSCCToFunctionPassAdaptor RHS) {
     swap(*this, RHS);
@@ -182,6 +189,9 @@ public:
     // Setup the function analysis manager from its proxy.
     FunctionAnalysisManager &FAM =
         AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C).getManager();
+
+    if (DebugLogging)
+      dbgs() << "Running function passes across an SCC: " << C << "\n";
 
     PreservedAnalyses PA = PreservedAnalyses::all();
     for (LazyCallGraph::Node &N : C) {
@@ -211,14 +221,16 @@ public:
 
 private:
   FunctionPassT Pass;
+  bool DebugLogging;
 };
 
 /// \brief A function to deduce a function pass type and wrap it in the
 /// templated adaptor.
 template <typename FunctionPassT>
 CGSCCToFunctionPassAdaptor<FunctionPassT>
-createCGSCCToFunctionPassAdaptor(FunctionPassT Pass) {
-  return CGSCCToFunctionPassAdaptor<FunctionPassT>(std::move(Pass));
+createCGSCCToFunctionPassAdaptor(FunctionPassT Pass, bool DebugLogging = false) {
+  return CGSCCToFunctionPassAdaptor<FunctionPassT>(std::move(Pass),
+                                                   DebugLogging);
 }
 }
 

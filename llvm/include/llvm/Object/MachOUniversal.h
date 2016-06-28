@@ -128,8 +128,8 @@ public:
     }
   };
 
-  MachOUniversalBinary(MemoryBufferRef Souce, std::error_code &EC);
-  static ErrorOr<std::unique_ptr<MachOUniversalBinary>>
+  MachOUniversalBinary(MemoryBufferRef Souce, Error &Err);
+  static Expected<std::unique_ptr<MachOUniversalBinary>>
   create(MemoryBufferRef Source);
 
   object_iterator begin_objects() const {

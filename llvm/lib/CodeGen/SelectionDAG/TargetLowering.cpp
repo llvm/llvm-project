@@ -316,13 +316,11 @@ TargetLowering::getPICJumpTableRelocBaseExpr(const MachineFunction *MF,
 bool
 TargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
   const TargetMachine &TM = getTargetMachine();
-  Reloc::Model RM = TM.getRelocationModel();
   const GlobalValue *GV = GA->getGlobal();
-  const Triple &TargetTriple = TM.getTargetTriple();
 
   // If the address is not even local to this DSO we will have to load it from
   // a got and then add the offset.
-  if (!shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return false;
 
   // If the code is position independent we will have to add a base register.

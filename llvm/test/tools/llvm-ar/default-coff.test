@@ -1,4 +1,4 @@
-RUN: yaml2obj -format coff %S/Inputs/coff.yaml -o %t.obj
+RUN: yaml2obj %S/Inputs/coff.yaml -o %t.obj
 
 RUN: rm -f %t.ar
 RUN: llvm-ar crs %t.ar %t.obj

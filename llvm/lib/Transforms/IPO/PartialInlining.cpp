@@ -12,13 +12,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Pass.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/CodeExtractor.h"
 using namespace llvm;
@@ -28,27 +29,34 @@ using namespace llvm;
 STATISTIC(NumPartialInlined, "Number of functions partially inlined");
 
 namespace {
-  struct PartialInliner : public ModulePass {
-    void getAnalysisUsage(AnalysisUsage &AU) const override { }
-    static char ID; // Pass identification, replacement for typeid
-    PartialInliner() : ModulePass(ID) {
-      initializePartialInlinerPass(*PassRegistry::getPassRegistry());
-    }
+struct PartialInlinerLegacyPass : public ModulePass {
+  static char ID; // Pass identification, replacement for typeid
+  PartialInlinerLegacyPass() : ModulePass(ID) {
+    initializePartialInlinerLegacyPassPass(*PassRegistry::getPassRegistry());
+  }
 
-    bool runOnModule(Module& M) override;
+  bool runOnModule(Module &M) override {
+    if (skipModule(M))
+      return false;
+    ModuleAnalysisManager DummyMAM;
+    auto PA = Impl.run(M, DummyMAM);
+    return !PA.areAllPreserved();
+  }
 
-  private:
-    Function* unswitchFunction(Function* F);
+private:
+  PartialInlinerPass Impl;
   };
 }
 
-char PartialInliner::ID = 0;
-INITIALIZE_PASS(PartialInliner, "partial-inliner",
-                "Partial Inliner", false, false)
+char PartialInlinerLegacyPass::ID = 0;
+INITIALIZE_PASS(PartialInlinerLegacyPass, "partial-inliner", "Partial Inliner",
+                false, false)
 
-ModulePass* llvm::createPartialInliningPass() { return new PartialInliner(); }
+ModulePass *llvm::createPartialInliningPass() {
+  return new PartialInlinerLegacyPass();
+}
 
-Function* PartialInliner::unswitchFunction(Function* F) {
+Function *PartialInlinerPass::unswitchFunction(Function *F) {
   // First, verify that this function is an unswitching candidate...
   BasicBlock *entryBlock = &F->front();
   BranchInst *BR = dyn_cast<BranchInst>(entryBlock->getTerminator());
@@ -144,10 +152,7 @@ Function* PartialInliner::unswitchFunction(Function* F) {
   return extractedFunction;
 }
 
-bool PartialInliner::runOnModule(Module& M) {
-  if (skipModule(M))
-    return false;
-
+PreservedAnalyses PartialInlinerPass::run(Module &M, ModuleAnalysisManager &) {
   std::vector<Function*> worklist;
   worklist.reserve(M.size());
   for (Function &F : M)
@@ -177,6 +182,8 @@ bool PartialInliner::runOnModule(Module& M) {
     }
     
   }
-  
-  return changed;
+
+  if (changed)
+    return PreservedAnalyses::none();
+  return PreservedAnalyses::all();
 }

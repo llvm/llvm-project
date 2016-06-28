@@ -1394,6 +1394,28 @@ define <4 x double> @splat128_mem_v4f64_from_v2f64(<2 x double>* %ptr) {
   ret <4 x double> %shuffle
 }
 
+define <4 x double> @broadcast_v4f64_0000_from_v2i64(<2 x i64> %a0) {
+; AVX1-LABEL: broadcast_v4f64_0000_from_v2i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: broadcast_v4f64_0000_from_v2i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX2-NEXT:    retq
+;
+; AVX512VL-LABEL: broadcast_v4f64_0000_from_v2i64:
+; AVX512VL:       # BB#0:
+; AVX512VL-NEXT:    vbroadcastsd %xmm0, %ymm0
+; AVX512VL-NEXT:    retq
+  %1 = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %2 = bitcast <4 x i64> %1 to <4 x double>
+  %3 = shufflevector <4 x double> %2, <4 x double> undef, <4 x i32> zeroinitializer
+  ret <4 x double> %3
+}
+
 define <4 x double> @bitcast_v4f64_0426(<4 x double> %a, <4 x double> %b) {
 ; AVX1-LABEL: bitcast_v4f64_0426:
 ; AVX1:       # BB#0:

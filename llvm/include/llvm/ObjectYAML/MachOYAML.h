@@ -129,12 +129,6 @@ struct UniversalBinary {
   std::vector<Object> Slices;
 };
 
-struct MachFile {
-  bool isFat;
-  UniversalBinary FatFile;
-  Object ThinFile;
-};
-
 } // namespace llvm::MachOYAML
 } // namespace llvm
 
@@ -172,10 +166,6 @@ template <> struct MappingTraits<MachOYAML::FatArch> {
 
 template <> struct MappingTraits<MachOYAML::UniversalBinary> {
   static void mapping(IO &IO, MachOYAML::UniversalBinary &UniversalBinary);
-};
-
-template <> struct MappingTraits<MachOYAML::MachFile> {
-  static void mapping(IO &IO, MachOYAML::MachFile &MachFile);
 };
 
 template <> struct MappingTraits<MachOYAML::LoadCommand> {

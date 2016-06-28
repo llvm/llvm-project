@@ -454,18 +454,19 @@ struct AddressSanitizer : public FunctionPass {
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
   uint64_t getAllocaSizeInBytes(AllocaInst *AI) const {
+    uint64_t ArraySize = 1;
+    if (AI->isArrayAllocation()) {
+      ConstantInt *CI = dyn_cast<ConstantInt>(AI->getArraySize());
+      assert(CI && "non-constant array size");
+      ArraySize = CI->getZExtValue();
+    }
     Type *Ty = AI->getAllocatedType();
     uint64_t SizeInBytes =
         AI->getModule()->getDataLayout().getTypeAllocSize(Ty);
-    return SizeInBytes;
+    return SizeInBytes * ArraySize;
   }
   /// Check if we want (and can) handle this alloca.
   bool isInterestingAlloca(AllocaInst &AI);
-
-  // Check if we have dynamic alloca.
-  bool isDynamicAlloca(AllocaInst &AI) const {
-    return AI.isArrayAllocation() || !AI.isStaticAlloca();
-  }
 
   /// If it is an interesting memory access, return the PointerOperand
   /// and set IsWrite/Alignment. Otherwise return nullptr.
@@ -721,7 +722,7 @@ struct FunctionStackPoisoner : public InstVisitor<FunctionStackPoisoner> {
     }
 
     StackAlignment = std::max(StackAlignment, AI.getAlignment());
-    if (ASan.isDynamicAlloca(AI))
+    if (!AI.isStaticAlloca())
       DynamicAllocaVec.push_back(&AI);
     else
       AllocaVec.push_back(&AI);
@@ -912,7 +913,7 @@ bool AddressSanitizer::isInterestingAlloca(AllocaInst &AI) {
   bool IsInteresting =
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
-       getAllocaSizeInBytes(&AI) > 0 &&
+       ((!AI.isStaticAlloca()) || getAllocaSizeInBytes(&AI) > 0) &&
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
@@ -2013,7 +2014,7 @@ void FunctionStackPoisoner::poisonStack() {
     assert(APC.InsBefore);
     assert(APC.AI);
     assert(ASan.isInterestingAlloca(*APC.AI));
-    bool IsDynamicAlloca = ASan.isDynamicAlloca(*APC.AI);
+    bool IsDynamicAlloca = !(*APC.AI).isStaticAlloca();
     if (!ClInstrumentAllocas && IsDynamicAlloca)
       continue;
 

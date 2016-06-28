@@ -71,6 +71,7 @@ static cl::list<std::string>
                cl::desc("[relpos] [count] <archive-file> [members]..."));
 
 static cl::opt<bool> MRI("M", cl::desc(""));
+static cl::opt<std::string> Plugin("plugin", cl::desc("plugin (ignored for compatibility"));
 
 namespace {
 enum Format { Default, GNU, BSD };

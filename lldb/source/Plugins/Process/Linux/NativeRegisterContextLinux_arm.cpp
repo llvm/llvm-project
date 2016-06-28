@@ -592,7 +592,7 @@ NativeRegisterContextLinux_arm::NumSupportedHardwareWatchpoints ()
     error = ReadHardwareDebugInfo ();
 
     if (error.Fail())
-        return LLDB_INVALID_INDEX32;
+        return 0;
 
     return m_max_hwp_supported;
 }
@@ -614,6 +614,7 @@ NativeRegisterContextLinux_arm::SetHardwareWatchpoint (lldb::addr_t addr, size_t
         return LLDB_INVALID_INDEX32;
 		
     uint32_t control_value = 0, wp_index = 0, addr_word_offset = 0, byte_mask = 0;
+    lldb::addr_t real_addr = addr;
 
     // Check if we are setting watchpoint other than read/write/access
     // Also update watchpoint flag to match Arm write-read bit configuration.
@@ -637,7 +638,24 @@ NativeRegisterContextLinux_arm::SetHardwareWatchpoint (lldb::addr_t addr, size_t
     if (size == 0 || size > 4)
         return LLDB_INVALID_INDEX32;
 
-    // We can only watch up to four bytes that follow a 4 byte aligned address
+    // Check 4-byte alignment for hardware watchpoint target address.
+    // Below is a hack to recalculate address and size in order to
+    // make sure we can watch non 4-byte alligned addresses as well.
+    if (addr & 0x03)
+    {
+        uint8_t watch_mask = (addr & 0x03) + size;
+
+        if (watch_mask > 0x04)
+            return LLDB_INVALID_INDEX32;
+        else if (watch_mask <= 0x02)
+            size = 2;
+        else if (watch_mask <= 0x04)
+            size = 4;
+
+        addr = addr & (~0x03);
+    }
+
+	// We can only watch up to four bytes that follow a 4 byte aligned address
     // per watchpoint register pair, so make sure we can properly encode this.
     addr_word_offset = addr % 4;
     byte_mask = ((1u << size) - 1u) << addr_word_offset;
@@ -682,6 +700,7 @@ NativeRegisterContextLinux_arm::SetHardwareWatchpoint (lldb::addr_t addr, size_t
     if ((m_hwp_regs[wp_index].control & 1) == 0)
     {
         // Update watchpoint in local cache
+        m_hwp_regs[wp_index].real_addr = real_addr;
         m_hwp_regs[wp_index].address = addr;
         m_hwp_regs[wp_index].control = control_value;
         m_hwp_regs[wp_index].refcount = 1;
@@ -864,6 +883,7 @@ NativeRegisterContextLinux_arm::GetWatchpointHitIndex(uint32_t &wp_index, lldb::
         if (m_hwp_regs[wp_index].refcount >= 1 && WatchpointIsEnabled(wp_index)
             && trap_addr >= watch_addr && trap_addr < watch_addr + watch_size)
         {
+            m_hwp_regs[wp_index].hit_addr = trap_addr;
             return Error();
         }
     }
@@ -884,7 +904,24 @@ NativeRegisterContextLinux_arm::GetWatchpointAddress (uint32_t wp_index)
         return LLDB_INVALID_ADDRESS;
 
     if (WatchpointIsEnabled(wp_index))
-        return m_hwp_regs[wp_index].address;
+        return m_hwp_regs[wp_index].real_addr;
+    else
+        return LLDB_INVALID_ADDRESS;
+}
+
+lldb::addr_t
+NativeRegisterContextLinux_arm::GetWatchpointHitAddress (uint32_t wp_index)
+{
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_WATCHPOINTS));
+
+    if (log)
+        log->Printf ("NativeRegisterContextLinux_arm::%s()", __FUNCTION__);
+
+    if (wp_index >= m_max_hwp_supported)
+        return LLDB_INVALID_ADDRESS;
+
+    if (WatchpointIsEnabled(wp_index))
+        return m_hwp_regs[wp_index].hit_addr;
     else
         return LLDB_INVALID_ADDRESS;
 }

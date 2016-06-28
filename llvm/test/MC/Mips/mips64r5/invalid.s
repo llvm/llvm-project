@@ -18,3 +18,4 @@
         dmtc0  $4, $3, 8     # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
         dmfc0  $4, $3, -1    # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
         dmfc0  $4, $3, 8     # CHECK: :[[@LINE]]:24: error: expected 3-bit unsigned immediate
+        sd $32, 65536($32)   # CHECK: :[[@LINE]]:{{[0-9]+}}: error: invalid operand for instruction

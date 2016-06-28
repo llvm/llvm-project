@@ -43,7 +43,14 @@ public:
 };
 extern ostream cout;
 ostream &endl(ostream &os);
-}
+
+enum Color {
+  Green,
+  Red,
+  Yellow
+};
+
+}  // namespace n
 
 // ----- Using declarations -----
 // eol-comments aren't removed (yet)
@@ -119,6 +126,12 @@ void IgnoreFunctionScope() {
 using n::H;
 }
 
+using n::Color;
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'Color' is unused
+using n::Green;
+// CHECK-MESSAGES: :[[@LINE-1]]:10: warning: using decl 'Green' is unused
+using n::Red;
+
 // ----- Usages -----
 void f(B b);
 void g() {
@@ -131,4 +144,5 @@ void g() {
   UsedFunc();
   UsedTemplateFunc<int>();
   cout << endl;
+  int t = Red;
 }

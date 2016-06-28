@@ -643,7 +643,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       : Shadow(S), Origin(O), OrigIns(I) { }
   };
   SmallVector<ShadowOriginAndInsertPoint, 16> InstrumentationList;
-  SmallVector<Instruction*, 16> StoreList;
+  SmallVector<StoreInst *, 16> StoreList;
 
   MemorySanitizerVisitor(Function &F, MemorySanitizer &MS)
       : F(F), MS(MS), VAHelper(CreateVarArgHelper(F, MS, *this)) {
@@ -752,26 +752,26 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   void materializeStores(bool InstrumentWithCalls) {
-    for (auto Inst : StoreList) {
-      StoreInst &SI = *dyn_cast<StoreInst>(Inst);
-
-      IRBuilder<> IRB(&SI);
-      Value *Val = SI.getValueOperand();
-      Value *Addr = SI.getPointerOperand();
-      Value *Shadow = SI.isAtomic() ? getCleanShadow(Val) : getShadow(Val);
+    for (StoreInst *SI : StoreList) {
+      IRBuilder<> IRB(SI);
+      Value *Val = SI->getValueOperand();
+      Value *Addr = SI->getPointerOperand();
+      Value *Shadow = SI->isAtomic() ? getCleanShadow(Val) : getShadow(Val);
       Value *ShadowPtr = getShadowPtr(Addr, Shadow->getType(), IRB);
 
       StoreInst *NewSI =
-          IRB.CreateAlignedStore(Shadow, ShadowPtr, SI.getAlignment());
+          IRB.CreateAlignedStore(Shadow, ShadowPtr, SI->getAlignment());
       DEBUG(dbgs() << "  STORE: " << *NewSI << "\n");
       (void)NewSI;
 
-      if (ClCheckAccessAddress) insertShadowCheck(Addr, &SI);
+      if (ClCheckAccessAddress)
+        insertShadowCheck(Addr, SI);
 
-      if (SI.isAtomic()) SI.setOrdering(addReleaseOrdering(SI.getOrdering()));
+      if (SI->isAtomic())
+        SI->setOrdering(addReleaseOrdering(SI->getOrdering()));
 
-      if (MS.TrackOrigins && !SI.isAtomic())
-        storeOrigin(IRB, Addr, Shadow, getOrigin(Val), SI.getAlignment(),
+      if (MS.TrackOrigins && !SI->isAtomic())
+        storeOrigin(IRB, Addr, Shadow, getOrigin(Val), SI->getAlignment(),
                     InstrumentWithCalls);
     }
   }

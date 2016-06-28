@@ -523,9 +523,7 @@ public:
     return PICStyle == PICStyles::StubPIC;
   }
 
-  bool isPositionIndependent() const {
-    return TM.getRelocationModel() == Reloc::PIC_;
-  }
+  bool isPositionIndependent() const { return TM.isPositionIndependent(); }
 
   bool isCallingConvWin64(CallingConv::ID CC) const {
     switch (CC) {

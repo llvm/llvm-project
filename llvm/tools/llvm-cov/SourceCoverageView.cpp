@@ -15,7 +15,9 @@
 #include "SourceCoverageViewText.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/LineIterator.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
 
@@ -34,6 +36,51 @@ std::string SourceCoverageView::formatCount(uint64_t N) {
   return Result;
 }
 
+void SourceCoverageView::StreamDestructor::operator()(raw_ostream *OS) const {
+  if (OS == &outs())
+    return;
+  delete OS;
+}
+
+/// \brief Create a file at ``Dir/ToplevelDir/@Path.Extension``. If
+/// \p ToplevelDir is empty, its path component is skipped.
+static Expected<SourceCoverageView::OwnedStream>
+createFileInDirectory(StringRef Dir, StringRef ToplevelDir, StringRef Path,
+                      StringRef Extension) {
+  assert(Extension.size() && "The file extension may not be empty");
+
+  SmallString<256> FullPath(Dir);
+  if (!ToplevelDir.empty())
+    sys::path::append(FullPath, ToplevelDir);
+
+  auto PathBaseDir = sys::path::relative_path(sys::path::parent_path(Path));
+  sys::path::append(FullPath, PathBaseDir);
+
+  if (auto E = sys::fs::create_directories(FullPath))
+    return errorCodeToError(E);
+
+  auto PathFilename = (sys::path::filename(Path) + "." + Extension).str();
+  sys::path::append(FullPath, PathFilename);
+
+  std::error_code E;
+  auto OS = SourceCoverageView::OwnedStream(
+      new raw_fd_ostream(FullPath, E, sys::fs::F_RW));
+  if (E)
+    return errorCodeToError(E);
+  return std::move(OS);
+}
+
+Expected<SourceCoverageView::OwnedStream>
+SourceCoverageView::createOutputStream(const CoverageViewOptions &Opts,
+                                       StringRef Path, StringRef Extension,
+                                       bool InToplevel) {
+  if (Opts.ShowOutputDirectory == "")
+    return OwnedStream(&outs());
+
+  return createFileInDirectory(Opts.ShowOutputDirectory,
+                               InToplevel ? "" : "coverage", Path, Extension);
+}
+
 void SourceCoverageView::addExpansion(
     const coverage::CounterMappingRegion &Region,
     std::unique_ptr<SourceCoverageView> View) {
@@ -50,8 +97,11 @@ std::unique_ptr<SourceCoverageView>
 SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
                            const CoverageViewOptions &Options,
                            coverage::CoverageData &&CoverageInfo) {
-  return llvm::make_unique<SourceCoverageViewText>(SourceName, File, Options,
-                                                   std::move(CoverageInfo));
+  switch (Options.ShowFormat) {
+  case CoverageViewOptions::OutputFormat::Text:
+    return llvm::make_unique<SourceCoverageViewText>(SourceName, File, Options,
+                                                     std::move(CoverageInfo));
+  }
 }
 
 void SourceCoverageView::print(raw_ostream &OS, bool WholeFile,

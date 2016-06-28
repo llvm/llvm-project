@@ -16,6 +16,7 @@
 
 #include "AMDGPUMachineFunction.h"
 #include "SIRegisterInfo.h"
+#include <array>
 #include <map>
 
 namespace llvm {
@@ -65,9 +66,9 @@ class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // Number of reserved VGPRs for debugger usage.
   unsigned DebuggerReservedVGPRCount;
   // Stack object indices for work group IDs.
-  int DebuggerWorkGroupIDStackObjectIndices[3];
+  std::array<int, 3> DebuggerWorkGroupIDStackObjectIndices;
   // Stack object indices for work item IDs.
-  int DebuggerWorkItemIDStackObjectIndices[3];
+  std::array<int, 3> DebuggerWorkItemIDStackObjectIndices;
 
 public:
   // FIXME: Make private
@@ -105,7 +106,6 @@ private:
   bool WorkItemIDX : 1; // Always initialized.
   bool WorkItemIDY : 1;
   bool WorkItemIDZ : 1;
-
 
   MCPhysReg getNextUserSGPR() const {
     assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");

@@ -594,7 +594,7 @@ protected:
 
 private:
   class CachingWalker;
-
+  void buildMemorySSA();
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
 

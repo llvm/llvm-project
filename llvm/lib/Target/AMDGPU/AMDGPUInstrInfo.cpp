@@ -157,6 +157,8 @@ static SIEncodingFamily subtargetEncodingFamily(const AMDGPUSubtarget &ST) {
   case AMDGPUSubtarget::NORTHERN_ISLANDS:
     return SIEncodingFamily::SI;
   }
+
+  llvm_unreachable("Unknown subtarget generation!");
 }
 
 int AMDGPUInstrInfo::pseudoToMCOpcode(int Opcode) const {

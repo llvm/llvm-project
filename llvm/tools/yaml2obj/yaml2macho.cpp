@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "yaml2obj.h"
-#include "llvm/ObjectYAML/MachOYAML.h"
+#include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MachO.h"
@@ -426,8 +426,8 @@ Error MachOWriter::writeStringTable(raw_ostream &OS) {
 
 class UniversalWriter {
 public:
-  UniversalWriter(MachOYAML::MachFile &MachFile)
-      : MachFile(MachFile), fileStart(0) {}
+  UniversalWriter(yaml::YamlObjectFile &ObjectFile)
+      : ObjectFile(ObjectFile), fileStart(0) {}
 
   Error writeMachO(raw_ostream &OS);
 
@@ -437,21 +437,21 @@ private:
 
   void ZeroToOffset(raw_ostream &OS, size_t offset);
 
-  MachOYAML::MachFile &MachFile;
+  yaml::YamlObjectFile &ObjectFile;
   uint64_t fileStart;
 };
 
 Error UniversalWriter::writeMachO(raw_ostream &OS) {
   fileStart = OS.tell();
-  if (!MachFile.isFat) {
-    MachOWriter Writer(MachFile.ThinFile);
+  if (ObjectFile.MachO) {
+    MachOWriter Writer(*ObjectFile.MachO);
     return Writer.writeMachO(OS);
   }
   if (auto Err = writeFatHeader(OS))
     return Err;
   if (auto Err = writeFatArchs(OS))
     return Err;
-  auto &FatFile = MachFile.FatFile;
+  auto &FatFile = *ObjectFile.FatMachO;
   assert(FatFile.FatArchs.size() == FatFile.Slices.size());
   for (size_t i = 0; i < FatFile.Slices.size(); i++) {
     ZeroToOffset(OS, FatFile.FatArchs[i].offset);
@@ -465,7 +465,7 @@ Error UniversalWriter::writeMachO(raw_ostream &OS) {
 }
 
 Error UniversalWriter::writeFatHeader(raw_ostream &OS) {
-  auto &FatFile = MachFile.FatFile;
+  auto &FatFile = *ObjectFile.FatMachO;
   MachO::fat_header header;
   header.magic = FatFile.Header.magic;
   header.nfat_arch = FatFile.Header.nfat_arch;
@@ -509,7 +509,7 @@ void writeFatArch<MachO::fat_arch_64>(MachOYAML::FatArch &Arch,
 }
 
 Error UniversalWriter::writeFatArchs(raw_ostream &OS) {
-  auto &FatFile = MachFile.FatFile;
+  auto &FatFile = *ObjectFile.FatMachO;
   bool is64Bit = FatFile.Header.magic == MachO::FAT_MAGIC_64;
   for (auto Arch : FatFile.FatArchs) {
     if (is64Bit)
@@ -529,14 +529,7 @@ void UniversalWriter::ZeroToOffset(raw_ostream &OS, size_t Offset) {
 
 } // end anonymous namespace
 
-int yaml2macho(yaml::Input &YIn, raw_ostream &Out) {
-  MachOYAML::MachFile Doc;
-  YIn >> Doc;
-  if (YIn.error()) {
-    errs() << "yaml2obj: Failed to parse YAML file!\n";
-    return 1;
-  }
-
+int yaml2macho(yaml::YamlObjectFile &Doc, raw_ostream &Out) {
   UniversalWriter Writer(Doc);
   if (auto Err = Writer.writeMachO(Out)) {
     errs() << toString(std::move(Err));

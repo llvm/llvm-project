@@ -49,13 +49,6 @@ public:
   /// emit the final object file.
   virtual MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const = 0;
 
-  /// Create a new ELFObjectTargetWriter to enable non-standard
-  /// ELFObjectWriters.
-  virtual MCELFObjectTargetWriter *createELFObjectTargetWriter() const {
-    llvm_unreachable("createELFObjectTargetWriter is not supported by asm "
-                     "backend");
-  }
-
   /// \name Target Fixup Interfaces
   /// @{
 
