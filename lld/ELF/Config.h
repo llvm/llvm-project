@@ -105,7 +105,6 @@ struct Configuration {
   bool VersionScriptGlobalByDefault = true;
   bool WarnCommon;
   bool ZCombreloc;
-  bool ZDefs;
   bool ZExecStack;
   bool ZNodelete;
   bool ZNow;

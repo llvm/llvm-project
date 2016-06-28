@@ -73,10 +73,10 @@ public:
 private:
   // Build the followOn atoms chain as specified by the kindLayoutAfter
   // reference type
-  void buildFollowOnTable(const SimpleFile::DefinedAtomRange &range);
+  void buildFollowOnTable(const File::AtomRange<DefinedAtom> &range);
 
   // Build a map of Atoms to ordinals for sorting the atoms
-  void buildOrdinalOverrideMap(const SimpleFile::DefinedAtomRange &range);
+  void buildOrdinalOverrideMap(const File::AtomRange<DefinedAtom> &range);
 
   const Registry &_registry;
   SortOverride _customSorter;
@@ -104,13 +104,13 @@ private:
 
   void setChainRoot(const DefinedAtom *targetAtom, const DefinedAtom *root);
 
-  std::vector<SortKey> decorate(SimpleFile::DefinedAtomRange &atomRange) const;
+  std::vector<SortKey> decorate(File::AtomRange<DefinedAtom> &atomRange) const;
 
-  void undecorate(SimpleFile::DefinedAtomRange &atomRange,
+  void undecorate(File::AtomRange<DefinedAtom> &atomRange,
                   std::vector<SortKey> &keys) const;
 
   // Check if the follow-on graph is a correct structure. For debugging only.
-  void checkFollowonChain(const SimpleFile::DefinedAtomRange &range);
+  void checkFollowonChain(const File::AtomRange<DefinedAtom> &range);
 };
 
 } // namespace mach_o

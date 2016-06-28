@@ -101,6 +101,14 @@ SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
       IsInGlobalMipsGot(false), Type(Type), StOther(StOther),
       Name({Name.data(), Name.size()}) {}
 
+StringRef SymbolBody::getName() const {
+  assert(!isLocal());
+  StringRef S = StringRef(Name.S, Name.Len);
+  if (!symbol()->VersionedName)
+    return S;
+  return S.substr(0, S.find('@'));
+}
+
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
 bool SymbolBody::isPreemptible() const {

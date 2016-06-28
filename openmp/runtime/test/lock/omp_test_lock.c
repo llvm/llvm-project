@@ -1,4 +1,6 @@
 // RUN: %libomp-compile-and-run
+// RUN: env KMP_LOCK_KIND=tas %libomp-run
+// RUN: env KMP_LOCK_KIND=futex %libomp-run
 #include <stdio.h>
 #include "omp_testsuite.h"
 
