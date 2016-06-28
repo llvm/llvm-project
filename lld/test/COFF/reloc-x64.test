@@ -15,7 +15,7 @@
 # CHECK: 1051: a1 02 00 00 00 00 00 00 00
 # CHECK: 105a: a1 03 00 00 00 00 00 00 00
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

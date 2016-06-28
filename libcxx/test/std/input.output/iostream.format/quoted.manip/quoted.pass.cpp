@@ -65,7 +65,7 @@ void round_trip_ws ( const CharT *p ) {
 template <class CharT, class Traits = std::char_traits<CharT>>
 void round_trip_d ( const CharT *p, char delim ) {
     std::basic_stringstream<CharT, Traits> ss;
-    CharT d{delim};
+    CharT d(delim);
 
     ss << std::quoted(p, d);
     std::basic_string<CharT, Traits> s;
@@ -76,7 +76,7 @@ void round_trip_d ( const CharT *p, char delim ) {
 template <class CharT, class Traits = std::char_traits<CharT>>
 void round_trip_e ( const CharT *p, char escape ) {
     std::basic_stringstream<CharT, Traits> ss;
-    CharT e{escape};
+    CharT e(escape);
 
     ss << std::quoted(p, CharT('"'), e );
     std::basic_string<CharT, Traits> s;
@@ -88,8 +88,8 @@ void round_trip_e ( const CharT *p, char escape ) {
 template <class CharT, class Traits = std::char_traits<CharT>>
 std::basic_string<CharT, Traits> quote ( const CharT *p, char delim='"', char escape='\\' ) {
     std::basic_stringstream<CharT, Traits> ss;
-    CharT d{delim};
-    CharT e{escape};
+    CharT d(delim);
+    CharT e(escape);
     ss << std::quoted(p, d, e);
     std::basic_string<CharT, Traits> s;
     ss >> s;    // no quote
@@ -101,8 +101,8 @@ std::basic_string<CharT, Traits> unquote ( const CharT *p, char delim='"', char 
     std::basic_stringstream<CharT, Traits> ss;
     ss << p;
 
-    CharT d{delim};
-    CharT e{escape};
+    CharT d(delim);
+    CharT e(escape);
     std::basic_string<CharT, Traits> s;
     ss >> std::quoted(s, d, e);
     return s;

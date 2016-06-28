@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-scops -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-function-scops -analyze < %s | FileCheck %s
 
 ;void f(long a[][128], long N, long M) {
 ;  long i, j;

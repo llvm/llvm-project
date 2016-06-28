@@ -123,7 +123,7 @@ do_test()
     {
         _ALIGNAS_TYPE(A) char storage[sizeof(A)] = {23};
         A& zero = *new (storage) A();
-        assert(zero == 0);
+        assert(zero == T(0));
         zero.~A();
     }
 }

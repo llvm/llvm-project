@@ -111,7 +111,7 @@
 
 # NO: Symbols [
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

@@ -55,7 +55,7 @@
 # UNWIND:       0x07: UOP_AllocLarge 8190
 # UNWIND:       0x00: UOP_PushMachFrame w/o error code
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [  ]

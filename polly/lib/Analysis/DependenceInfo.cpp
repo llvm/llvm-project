@@ -804,3 +804,59 @@ INITIALIZE_PASS_BEGIN(DependenceInfo, "polly-dependences",
 INITIALIZE_PASS_DEPENDENCY(ScopInfoRegionPass);
 INITIALIZE_PASS_END(DependenceInfo, "polly-dependences",
                     "Polly - Calculate dependences", false, false)
+
+//===----------------------------------------------------------------------===//
+const Dependences &
+DependenceInfoWrapperPass::getDependences(Scop *S,
+                                          Dependences::AnalyisLevel Level) {
+  auto It = ScopToDepsMap.find(S);
+  if (It != ScopToDepsMap.end())
+    if (It->second) {
+      if (It->second->getDependenceLevel() == Level)
+        return *It->second.get();
+    }
+  return recomputeDependences(S, Level);
+}
+
+const Dependences &DependenceInfoWrapperPass::recomputeDependences(
+    Scop *S, Dependences::AnalyisLevel Level) {
+  std::unique_ptr<Dependences> D(new Dependences(S->getSharedIslCtx(), Level));
+  D->calculateDependences(*S);
+  auto Inserted = ScopToDepsMap.insert(std::make_pair(S, std::move(D)));
+  return *Inserted.first->second;
+}
+
+bool DependenceInfoWrapperPass::runOnFunction(Function &F) {
+  auto &SI = getAnalysis<ScopInfoWrapperPass>();
+  for (auto &It : SI)
+    recomputeDependences(It.second.get(), Dependences::AL_Access);
+  return false;
+}
+
+void DependenceInfoWrapperPass::print(raw_ostream &OS, const Module *M) const {
+  for (auto &It : ScopToDepsMap) {
+    assert((It.first && It.second) && "Invalid Scop or Dependence object!\n");
+    It.second->print(OS);
+  }
+}
+
+void DependenceInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.addRequiredTransitive<ScopInfoWrapperPass>();
+  AU.setPreservesAll();
+}
+
+char DependenceInfoWrapperPass::ID = 0;
+
+Pass *polly::createDependenceInfoWrapperPassPass() {
+  return new DependenceInfoWrapperPass();
+}
+
+INITIALIZE_PASS_BEGIN(
+    DependenceInfoWrapperPass, "polly-function-dependences",
+    "Polly - Calculate dependences for all the SCoPs of a function", false,
+    false)
+INITIALIZE_PASS_DEPENDENCY(ScopInfoWrapperPass);
+INITIALIZE_PASS_END(
+    DependenceInfoWrapperPass, "polly-function-dependences",
+    "Polly - Calculate dependences for all the SCoPs of a function", false,
+    false)

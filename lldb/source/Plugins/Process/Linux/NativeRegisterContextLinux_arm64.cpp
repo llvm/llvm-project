@@ -544,7 +544,7 @@ NativeRegisterContextLinux_arm64::NumSupportedHardwareWatchpoints ()
     error = ReadHardwareDebugInfo ();
 
     if (error.Fail())
-        return LLDB_INVALID_INDEX32;
+        return 0;
 
     return m_max_hwp_supported;
 }

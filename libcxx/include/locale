@@ -3634,7 +3634,7 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
         : __byte_err_string_(_VSTD::move(__wc.__byte_err_string_)),
           __wide_err_string_(_VSTD::move(__wc.__wide_err_string_)),
           __cvtptr_(__wc.__cvtptr_),
-          __cvtstate_(__wc.__cvtstate_), __cvtcount_(__wc.__cvtstate_)
+          __cvtstate_(__wc.__cvtstate_), __cvtcount_(__wc.__cvtcount_)
 {
     __wc.__cvtptr_ = nullptr;
 }

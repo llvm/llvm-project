@@ -2060,7 +2060,7 @@ ProcessGDBRemote::SetThreadStopInfo (lldb::tid_t tid,
                                 WatchpointSP wp_sp;
                                 ArchSpec::Core core = GetTarget().GetArchitecture().GetCore();
                                 if ((core >= ArchSpec::kCore_mips_first && core <= ArchSpec::kCore_mips_last) ||
-                                    (core >= ArchSpec::eCore_arm_arm64 && core <= ArchSpec::eCore_arm_aarch64))
+                                    (core >= ArchSpec::eCore_arm_generic && core <= ArchSpec::eCore_arm_aarch64))
                                     wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_hit_addr);
                                 if (!wp_sp)
                                     wp_sp = GetTarget().GetWatchpointList().FindByAddress(wp_addr);

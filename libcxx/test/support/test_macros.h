@@ -43,7 +43,7 @@
 #elif __cplusplus <= 201402L
 # define TEST_STD_VER 14
 #else
-# define TEST_STD_VER 99    // greater than current standard
+# define TEST_STD_VER 16    // current year; greater than current standard
 #endif
 #endif
 
@@ -84,6 +84,12 @@
 #if TEST_HAS_FEATURE(address_sanitizer) || TEST_HAS_FEATURE(memory_sanitizer) || \
     TEST_HAS_FEATURE(thread_sanitizer)
 #define TEST_HAS_SANITIZERS
+#endif
+
+#if defined(_LIBCPP_NORETURN)
+#define TEST_NORETURN _LIBCPP_NORETURN
+#else
+#define TEST_NORETURN [[noreturn]]
 #endif
 
 /* Macros for testing libc++ specific behavior and extensions */

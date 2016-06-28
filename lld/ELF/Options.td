@@ -198,6 +198,8 @@ def alias_strip_debug_S: F<"S">, Alias<strip_debug>;
 def alias_trace: F<"t">, Alias<trace>;
 def alias_trace_symbol_y : JS<"y">, Alias<trace_symbol>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
+def alias_version_V: Flag<["-"], "V">, Alias<version>;
+def alias_version_v: Flag<["-"], "v">, Alias<version>;
 def alias_wrap_wrap: J<"wrap=">, Alias<wrap>;
 
 // Our symbol resolution algorithm handles symbols in archive files differently
@@ -237,6 +239,7 @@ def no_warn_common: F<"no-warn-common">;
 def no_warn_mismatch: F<"no-warn-mismatch">;
 def rpath_link: S<"rpath-link">;
 def rpath_link_eq: J<"rpath-link=">;
+def sort_common: F<"sort-common">;
 def warn_execstack: F<"warn-execstack">;
 def warn_shared_textrel: F<"warn-shared-textrel">;
 def G: S<"G">;
