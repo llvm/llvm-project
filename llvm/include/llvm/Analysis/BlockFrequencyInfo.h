@@ -44,6 +44,7 @@ public:
   BlockFrequencyInfo &operator=(BlockFrequencyInfo &&RHS);
 
   const Function *getFunction() const;
+  const BranchProbabilityInfo *getBPI() const;
   void view() const;
 
   /// getblockFreq - Return block frequency. Return 0 if we don't have the

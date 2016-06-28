@@ -29,6 +29,9 @@ protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   AMDGPUIntrinsicInfo IntrinsicInfo;
 
+  StringRef getGPUName(const Function &F) const;
+  StringRef getFeatureString(const Function &F) const;
+
 public:
   AMDGPUTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
                       StringRef FS, TargetOptions Options,
@@ -55,7 +58,7 @@ public:
 
 class R600TargetMachine final : public AMDGPUTargetMachine {
 private:
-  R600Subtarget Subtarget;
+  mutable StringMap<std::unique_ptr<R600Subtarget>> SubtargetMap;
 
 public:
   R600TargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -65,13 +68,7 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  const R600Subtarget *getSubtargetImpl() const {
-    return &Subtarget;
-  }
-
-  const R600Subtarget *getSubtargetImpl(const Function &) const override {
-    return &Subtarget;
-  }
+  const R600Subtarget *getSubtargetImpl(const Function &) const override;
 };
 
 //===----------------------------------------------------------------------===//
@@ -80,7 +77,7 @@ public:
 
 class GCNTargetMachine final : public AMDGPUTargetMachine {
 private:
-    SISubtarget Subtarget;
+  mutable StringMap<std::unique_ptr<SISubtarget>> SubtargetMap;
 
 public:
   GCNTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -90,20 +87,8 @@ public:
 
   TargetPassConfig *createPassConfig(PassManagerBase &PM) override;
 
-  const SISubtarget *getSubtargetImpl() const {
-    return &Subtarget;
-  }
-
-  const SISubtarget *getSubtargetImpl(const Function &) const override {
-    return &Subtarget;
-  }
+  const SISubtarget *getSubtargetImpl(const Function &) const override;
 };
-
-inline const AMDGPUSubtarget *AMDGPUTargetMachine::getSubtargetImpl() const {
-  if (getTargetTriple().getArch() == Triple::amdgcn)
-    return static_cast<const GCNTargetMachine *>(this)->getSubtargetImpl();
-  return static_cast<const R600TargetMachine *>(this)->getSubtargetImpl();
-}
 
 inline const AMDGPUSubtarget *AMDGPUTargetMachine::getSubtargetImpl(
   const Function &F) const {

@@ -54,6 +54,7 @@ public:
   Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
 
   const MachineFunction *getFunction() const;
+  const MachineBranchProbabilityInfo *getMBPI() const;
   void view() const;
 
   // Print the block frequency Freq to OS using the current functions entry

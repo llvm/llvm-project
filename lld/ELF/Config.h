@@ -86,6 +86,7 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoGnuUnique;
   bool NoUndefined;
+  bool NoUndefinedVersion;
   bool NoinhibitExec;
   bool Pic;
   bool Pie;

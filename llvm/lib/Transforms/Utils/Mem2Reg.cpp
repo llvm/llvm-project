@@ -59,11 +59,7 @@ PreservedAnalyses PromotePass::run(Function &F, AnalysisManager<Function> &AM) {
   if (!promoteMemoryToRegister(F, DT, AC))
     return PreservedAnalyses::all();
 
-  // FIXME: This pass should preserve the CFG.
-  // There's currently no way to do it in the new PM.
-  // In the old PM this pass preserved a fair amount of "orthogonal"
-  // transformation passes. This concept has no sense in the new PM,
-  // therefore we don't preserve them here.
+  // FIXME: This should also 'preserve the CFG'.
   return PreservedAnalyses::none();
 }
 

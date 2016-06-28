@@ -148,6 +148,8 @@ public:
   DwarfDebug *getDwarfDebug() { return DD; }
   DwarfDebug *getDwarfDebug() const { return DD; }
 
+  bool isPositionIndependent() const;
+
   /// Return true if assembly output should contain comments.
   ///
   bool isVerbose() const { return VerboseAsm; }

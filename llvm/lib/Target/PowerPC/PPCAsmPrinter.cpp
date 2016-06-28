@@ -459,7 +459,7 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
          "GETtls[ld]ADDR[32] must read GPR3");
 
   if (!Subtarget->isPPC64() && !Subtarget->isDarwin() &&
-      TM.getRelocationModel() == Reloc::PIC_)
+      isPositionIndependent())
     Kind = MCSymbolRefExpr::VK_PLT;
   const MCSymbolRefExpr *TlsRef =
     MCSymbolRefExpr::create(TlsGetAddr, Kind, OutContext);
@@ -1027,7 +1027,7 @@ void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
   }
 
   if (static_cast<const PPCTargetMachine &>(TM).isPPC64() ||
-      TM.getRelocationModel() != Reloc::PIC_)
+      !isPositionIndependent())
     return AsmPrinter::EmitStartOfAsmFile(M);
 
   if (M.getPICLevel() == PICLevel::SmallPIC)
@@ -1056,7 +1056,7 @@ void PPCLinuxAsmPrinter::EmitStartOfAsmFile(Module &M) {
 void PPCLinuxAsmPrinter::EmitFunctionEntryLabel() {
   // linux/ppc32 - Normal entry label.
   if (!Subtarget->isPPC64() &&
-      (TM.getRelocationModel() != Reloc::PIC_ ||
+      (!isPositionIndependent() ||
        MF->getFunction()->getParent()->getPICLevel() == PICLevel::SmallPIC))
     return AsmPrinter::EmitFunctionEntryLabel();
 

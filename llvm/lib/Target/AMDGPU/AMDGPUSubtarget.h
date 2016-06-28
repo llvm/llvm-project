@@ -82,7 +82,6 @@ protected:
   // Used as options.
   bool EnableVGPRSpilling;
   bool EnablePromoteAlloca;
-  bool EnableIfCvt;
   bool EnableLoadStoreOpt;
   bool EnableUnsafeDSOffsetFolding;
   bool EnableSIScheduler;
@@ -220,10 +219,6 @@ public:
 
   bool isPromoteAllocaEnabled() const {
     return EnablePromoteAlloca;
-  }
-
-  bool isIfCvtEnabled() const {
-    return EnableIfCvt;
   }
 
   bool unsafeDSOffsetFoldingEnabled() const {

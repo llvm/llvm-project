@@ -48,6 +48,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Allocator.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iterator>
 #include <utility>
 
@@ -222,6 +223,12 @@ public:
     /// Internal helper to remove the edge to the given function.
     void removeEdgeInternal(Function &ChildF);
 
+    /// Print the name of this node's function.
+    friend raw_ostream &operator<<(raw_ostream &OS, const Node &N);
+
+    /// Dump the name of this node's function to stderr.
+    void dump() const;
+
   public:
     LazyCallGraph &getGraph() const { return *G; }
 
@@ -353,6 +360,15 @@ public:
       Nodes.clear();
     }
 
+    /// Print a short descrtiption useful for debugging or logging.
+    ///
+    /// We print the function names in the SCC wrapped in '()'s and skipping
+    /// the middle functions if there are a large number.
+    friend raw_ostream &operator<<(raw_ostream &OS, const SCC &C);
+
+    /// Dump a short description of this SCC to stderr.
+    void dump() const;
+
 #ifndef NDEBUG
     /// Verify invariants about the SCC.
     ///
@@ -373,25 +389,15 @@ public:
 
     RefSCC &getOuterRefSCC() const { return *OuterRefSCC; }
 
-    /// Short name useful for debugging or logging.
+    /// Provide a short name by printing this SCC to a std::string.
     ///
-    /// We use the name of the first function in the SCC to name the SCC for
-    /// the purposes of debugging and logging.
+    /// This copes with the fact that we don't have a name per-se for an SCC
+    /// while still making the use of this in debugging and logging useful.
     std::string getName() const {
       std::string Name;
-      int i = 0;
-      for (Node &N : *this) {
-        if (i > 0)
-          Name += ", ";
-        // Elide the inner elements if there are too many.
-        if (i > 8) {
-          Name += "..., ";
-          Name += Nodes.back()->getFunction().getName().str();
-          break;
-        }
-        Name += N.getFunction().getName().str();
-        ++i;
-      }
+      raw_string_ostream OS(Name);
+      OS << *this;
+      OS.flush();
       return Name;
     }
   };
@@ -425,6 +431,15 @@ public:
     /// Fast-path constructor. RefSCCs should instead be constructed by calling
     /// formRefSCCFast on the graph itself.
     RefSCC(LazyCallGraph &G);
+
+    /// Print a short description useful for debugging or logging.
+    ///
+    /// We print the SCCs wrapped in '[]'s and skipping the middle SCCs if
+    /// there are a large number.
+    friend raw_ostream &operator<<(raw_ostream &OS, const RefSCC &RC);
+
+    /// Dump a short description of this RefSCC to stderr.
+    void dump() const;
 
 #ifndef NDEBUG
     /// Verify invariants about the RefSCC and all its SCCs.
@@ -477,12 +492,16 @@ public:
     /// Test if this RefSCC is a descendant of \a C.
     bool isDescendantOf(const RefSCC &C) const;
 
-    /// Short name useful for debugging or logging.
+    /// Provide a short name by printing this SCC to a std::string.
     ///
-    /// We use the name of the first function in the SCC to name the SCC for
-    /// the purposes of debugging and logging.
-    StringRef getName() const {
-      return begin()->begin()->getFunction().getName();
+    /// This copes with the fact that we don't have a name per-se for an SCC
+    /// while still making the use of this in debugging and logging useful.
+    std::string getName() const {
+      std::string Name;
+      raw_string_ostream OS(Name);
+      OS << *this;
+      OS.flush();
+      return Name;
     }
 
     ///@{

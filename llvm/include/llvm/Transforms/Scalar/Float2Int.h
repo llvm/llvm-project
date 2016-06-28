@@ -22,7 +22,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-/// Pass to remove unused function declarations.
 class Float2IntPass : public PassInfoMixin<Float2IntPass> {
 public:
   PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);

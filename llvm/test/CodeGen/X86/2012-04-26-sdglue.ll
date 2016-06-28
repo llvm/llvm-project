@@ -10,9 +10,9 @@ define void @func() nounwind ssp {
 ; CHECK-NEXT:    vmovups 0, %xmm0
 ; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
 ; CHECK-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1,2,3],ymm1[4,5,6,7]
-; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,2,3,3]
-; CHECK-NEXT:    vpbroadcastd 32, %xmm3
-; CHECK-NEXT:    vinserti128 $1, %xmm3, %ymm0, %ymm0
+; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,2,3,3]
+; CHECK-NEXT:    vbroadcastss 32, %xmm3
+; CHECK-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
 ; CHECK-NEXT:    vmulps %ymm0, %ymm2, %ymm2
 ; CHECK-NEXT:    vmulps %ymm0, %ymm0, %ymm0
 ; CHECK-NEXT:    vaddps %ymm0, %ymm2, %ymm0

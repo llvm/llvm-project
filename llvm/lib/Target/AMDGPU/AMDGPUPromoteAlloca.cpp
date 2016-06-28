@@ -124,6 +124,10 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
   if (!TM || skipFunction(F))
     return false;
 
+  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
+  if (!ST.isPromoteAllocaEnabled())
+    return false;
+
   FunctionType *FTy = F.getFunctionType();
 
   // If the function has any arguments in the local address space, then it's
@@ -138,8 +142,6 @@ bool AMDGPUPromoteAlloca::runOnFunction(Function &F) {
       return false;
     }
   }
-
-  const AMDGPUSubtarget &ST = TM->getSubtarget<AMDGPUSubtarget>(F);
 
   LocalMemLimit = ST.getLocalMemorySize();
   if (LocalMemLimit == 0)

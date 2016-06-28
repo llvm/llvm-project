@@ -94,3 +94,6 @@ INCOMPLETE-SEGMENT-LOADC-FAT: macho-universal-bad2.x86_64.i386 (for architecture
 
 RUN: not llvm-objdump -macho -private-headers -arch all %p/Inputs/macho-universal-archive-bad2.x86_64.i386 2>&1 | FileCheck -check-prefix INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE %s
 INCOMPLETE-SEGMENT-LOADC-FAT-ARCHIVE: macho-universal-archive-bad2.x86_64.i386(macho64-invalid-incomplete-segment-load-command) (for architecture x86_64) truncated or malformed object (load commands extend past the end of the file)
+
+RUN: not llvm-objdump -macho -universal-headers %p/Inputs/macho-invalid-fat 2>&1 | FileCheck -check-prefix INVALID-FAT %s
+INVALID-FAT: truncated or malformed fat file (fat_arch_64 structs would extend past the end of the file)

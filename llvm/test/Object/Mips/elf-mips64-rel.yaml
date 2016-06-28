@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=elf %s > %t
+# RUN: yaml2obj %s > %t
 # RUN: llvm-readobj -r %t | FileCheck -check-prefix=OBJ %s
 # RUN: obj2yaml %t | FileCheck -check-prefix=YAML %s
 
@@ -41,7 +41,7 @@
 # YAML-NEXT:     Type2:       R_MIPS_LO16
 # YAML-NEXT:     SpecSym:     RSS_GP0
 
----
+--- !ELF
 FileHeader:
   Class:           ELFCLASS64
   Data:            ELFDATA2LSB

@@ -255,3 +255,30 @@ define zeroext i1 @test19(i32 %L) {
 ; CHECK:  testl   %edi, %edi
 ; CHECK:  setns   %al
 }
+
+@d = global i8 0, align 1
+
+; This test failed due to incorrect handling of "shift + icmp" sequence
+define void @test20(i32 %bf.load, i8 %x1, i8* %b_addr) {
+  %bf.shl = shl i32 %bf.load, 8
+  %bf.ashr = ashr exact i32 %bf.shl, 8
+  %tobool4 = icmp ne i32 %bf.ashr, 0
+  %conv = zext i1 %tobool4 to i32
+  %conv6 = zext i8 %x1 to i32
+  %add = add nuw nsw i32 %conv, %conv6
+  %tobool7 = icmp ne i32 %add, 0
+  %frombool = zext i1 %tobool7 to i8
+  store i8 %frombool, i8* %b_addr, align 1
+  %tobool14 = icmp ne i32 %bf.shl, 0
+  %frombool15 = zext i1 %tobool14 to i8
+  store i8 %frombool15, i8* @d, align 1
+  ret void
+
+; CHECK-LABEL: test20
+; CHECK: andl
+; CHECK: setne
+; CHECK: addl
+; CHECK: setne
+; CHECK: testl
+; CHECK: setne
+}

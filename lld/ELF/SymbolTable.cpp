@@ -530,13 +530,20 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // assign version references for each symbol.
   size_t I = 2;
   for (Version &V : Config->SymbolVersions) {
-    for (StringRef Name : V.Globals)
-      if (SymbolBody *B = find(Name)) {
-        if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
-            B->symbol()->VersionId != VER_NDX_LOCAL)
-          warning("duplicate symbol " + Name + " in version script");
-        B->symbol()->VersionId = I;
+    for (StringRef Name : V.Globals) {
+      SymbolBody *B = find(Name);
+      if (!B || B->isUndefined()) {
+        if (Config->NoUndefinedVersion)
+          error("version script assignment of " + V.Name + " to symbol " +
+                Name + " failed: symbol not defined");
+        continue;
       }
+
+      if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
+          B->symbol()->VersionId != VER_NDX_LOCAL)
+        warning("duplicate symbol " + Name + " in version script");
+      B->symbol()->VersionId = I;
+    }
     ++I;
   }
 }

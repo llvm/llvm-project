@@ -3111,7 +3111,7 @@ PreservedAnalyses InstCombinePass::run(Function &F,
     return PreservedAnalyses::all();
 
   // Mark all the analyses that instcombine updates as preserved.
-  // FIXME: Need a way to preserve CFG analyses here!
+  // FIXME: This should also 'preserve the CFG'.
   PreservedAnalyses PA;
   PA.preserve<DominatorTreeAnalysis>();
   return PA;

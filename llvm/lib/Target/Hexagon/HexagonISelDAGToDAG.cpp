@@ -104,6 +104,7 @@ public:
   void SelectConstant(SDNode *N);
   void SelectConstantFP(SDNode *N);
   void SelectAdd(SDNode *N);
+  void SelectBitcast(SDNode *N);
   void SelectBitOp(SDNode *N);
 
   // XformMskToBitPosU5Imm - Returns the bit position which
@@ -1165,6 +1166,22 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
 }
 
 
+void HexagonDAGToDAGISel::SelectBitcast(SDNode *N) {
+  EVT SVT = N->getOperand(0).getValueType();
+  EVT DVT = N->getValueType(0);
+  if (!SVT.isVector() || !DVT.isVector() ||
+      SVT.getVectorElementType() == MVT::i1 ||
+      DVT.getVectorElementType() == MVT::i1 ||
+      SVT.getSizeInBits() != DVT.getSizeInBits()) {
+    SelectCode(N);
+    return;
+  }
+
+  CurDAG->ReplaceAllUsesOfValueWith(SDValue(N,0), N->getOperand(0));
+  CurDAG->RemoveDeadNode(N);
+}
+
+
 void HexagonDAGToDAGISel::Select(SDNode *N) {
   if (N->isMachineOpcode()) {
     N->setNodeId(-1);
@@ -1186,6 +1203,10 @@ void HexagonDAGToDAGISel::Select(SDNode *N) {
 
   case ISD::ADD:
     SelectAdd(N);
+    return;
+
+  case ISD::BITCAST:
+    SelectBitcast(N);
     return;
 
   case ISD::SHL:
