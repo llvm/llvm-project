@@ -244,12 +244,17 @@ std::string elf::findFromSearchPaths(StringRef Path) {
 std::string elf::searchLibrary(StringRef Path) {
   if (Path.startswith(":"))
     return findFromSearchPaths(Path.substr(1));
-  if (!Config->Static) {
-    std::string S = findFromSearchPaths(("lib" + Path + ".so").str());
-    if (!S.empty())
+  for (StringRef Dir : Config->SearchPaths) {
+    if (!Config->Static) {
+      std::string S = buildSysrootedPath(Dir, ("lib" + Path + ".so").str());
+      if (fs::exists(S))
+        return S;
+    }
+    std::string S = buildSysrootedPath(Dir, ("lib" + Path + ".a").str());
+    if (fs::exists(S))
       return S;
   }
-  return findFromSearchPaths(("lib" + Path + ".a").str());
+  return "";
 }
 
 // Makes a path by concatenating Dir and File.

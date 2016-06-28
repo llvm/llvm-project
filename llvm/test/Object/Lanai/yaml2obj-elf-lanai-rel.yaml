@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=elf %s > %t
+# RUN: yaml2obj %s > %t
 # RUN: llvm-readobj -r %t | FileCheck %s
 
 # CHECK:      Relocations [
@@ -13,6 +13,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
+!ELF
 FileHeader:
   Class:           ELFCLASS32
   Data:            ELFDATA2LSB

@@ -1,4 +1,4 @@
-RUN: yaml2obj -format macho %S/Inputs/macho.yaml -o %t.o
+RUN: yaml2obj %S/Inputs/macho.yaml -o %t.o
 
 RUN: rm -f %t.ar
 RUN: llvm-ar crs %t.ar %t.o

@@ -927,6 +927,8 @@ public:
     return BlockFrequencyInfoImplBase::getFloatingBlockFreq(getNode(BB));
   }
 
+  const BranchProbabilityInfoT &getBPI() const { return *BPI; }
+
   /// \brief Print the frequencies for the current function.
   ///
   /// Prints the frequencies for the blocks in the current function.

@@ -18,7 +18,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Object/COFF.h"
-#include "llvm/ObjectYAML/COFFYAML.h"
+#include "llvm/ObjectYAML/ObjectYAML.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
@@ -532,14 +532,7 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
   return true;
 }
 
-int yaml2coff(yaml::Input &YIn, raw_ostream &Out) {
-  COFFYAML::Object Doc;
-  YIn >> Doc;
-  if (YIn.error()) {
-    errs() << "yaml2obj: Failed to parse YAML file!\n";
-    return 1;
-  }
-
+int yaml2coff(llvm::COFFYAML::Object &Doc, raw_ostream &Out) {
   COFFParser CP(Doc);
   if (!CP.parse()) {
     errs() << "yaml2obj: Failed to parse YAML file!\n";

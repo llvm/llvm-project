@@ -181,7 +181,7 @@ class APInt {
                      unsigned rhsWords, APInt *Quotient, APInt *Remainder);
 
   /// out-of-line slow case for inline constructor
-  void initSlowCase(unsigned numBits, uint64_t val, bool isSigned);
+  void initSlowCase(uint64_t val, bool isSigned);
 
   /// shared code between two array constructors
   void initFromArray(ArrayRef<uint64_t> array);
@@ -239,7 +239,7 @@ public:
     if (isSingleWord())
       VAL = val;
     else
-      initSlowCase(numBits, val, isSigned);
+      initSlowCase(val, isSigned);
     clearUnusedBits();
   }
 

@@ -340,8 +340,7 @@ PreservedAnalyses LCSSAPass::run(Function &F, AnalysisManager<Function> &AM) {
   if (!formLCSSAOnAllLoops(&LI, DT, SE))
     return PreservedAnalyses::all();
 
-  // FIXME: There is no setPreservesCFG in the new PM. When that becomes
-  // available, it should be used here.
+  // FIXME: This should also 'preserve the CFG'.
   PreservedAnalyses PA;
   PA.preserve<BasicAA>();
   PA.preserve<GlobalsAA>();

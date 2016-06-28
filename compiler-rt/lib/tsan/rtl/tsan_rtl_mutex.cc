@@ -84,7 +84,7 @@ void MutexCreate(ThreadState *thr, uptr pc, uptr addr,
 void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: MutexDestroy %zx\n", thr->tid, addr);
   StatInc(thr, StatMutexDestroy);
-  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
   if (s == 0)
     return;
   if (s->is_linker_init) {
@@ -122,7 +122,7 @@ void MutexDestroy(ThreadState *thr, uptr pc, uptr addr) {
     rep.AddLocation(addr, 1);
     OutputReport(thr, rep);
 
-    SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr);
+    SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, true);
     if (s != 0) {
       s->Reset(thr->proc());
       s->mtx.Unlock();
@@ -363,7 +363,9 @@ void Acquire(ThreadState *thr, uptr pc, uptr addr) {
   DPrintf("#%d: Acquire %zx\n", thr->tid, addr);
   if (thr->ignore_sync)
     return;
-  SyncVar *s = ctx->metamap.GetOrCreateAndLock(thr, pc, addr, false);
+  SyncVar *s = ctx->metamap.GetIfExistsAndLock(addr, false);
+  if (!s)
+    return;
   AcquireImpl(thr, pc, &s->clock);
   s->mtx.ReadUnlock();
 }

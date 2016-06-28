@@ -2458,11 +2458,10 @@ SDValue SystemZTargetLowering::lowerGlobalAddress(GlobalAddressSDNode *Node,
   const GlobalValue *GV = Node->getGlobal();
   int64_t Offset = Node->getOffset();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
-  Reloc::Model RM = DAG.getTarget().getRelocationModel();
   CodeModel::Model CM = DAG.getTarget().getCodeModel();
 
   SDValue Result;
-  if (Subtarget.isPC32DBLSymbol(GV, RM, CM)) {
+  if (Subtarget.isPC32DBLSymbol(GV, CM)) {
     // Assign anchors at 1<<12 byte boundaries.
     uint64_t Anchor = Offset & ~uint64_t(0xfff);
     Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT, Anchor);

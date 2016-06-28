@@ -26,5 +26,11 @@ int main() {                             // CHECK:   161| [[@LINE]]|int main(
 // after coverage                   // WHOLE-FILE:      | [[@LINE]]|// after
                                     // FILTER-NOT:      | [[@LINE-1]]|// after
 
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefix=CHECK -check-prefix=WHOLE-FILE %s
-// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence -name=main %s | FileCheck -check-prefix=CHECK -check-prefix=FILTER %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence %s | FileCheck -check-prefixes=CHECK,WHOLE-FILE %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -filename-equivalence -name=main %s | FileCheck -check-prefixes=CHECK,FILTER %s
+
+// Test -output-dir.
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -filename-equivalence %s
+// RUN: llvm-cov show %S/Inputs/lineExecutionCounts.covmapping -output-dir %t.dir -instr-profile %t.profdata -filename-equivalence -name=main %s
+// RUN: FileCheck -check-prefixes=CHECK,WHOLE-FILE -input-file %t.dir/coverage/tmp/showLineExecutionCounts.cpp.txt %s
+// RUN: FileCheck -check-prefixes=CHECK,FILTER -input-file %t.dir/functions.txt %s

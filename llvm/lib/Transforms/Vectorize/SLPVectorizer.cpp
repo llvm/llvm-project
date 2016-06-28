@@ -3765,6 +3765,8 @@ void SLPVectorizerPass::collectSeedInstructions(BasicBlock *BB) {
         continue;
       if (!isValidElementType(Idx->getType()))
         continue;
+      if (GEP->getType()->isVectorTy())
+        continue;
       GEPs[GetUnderlyingObject(GEP->getPointerOperand(), *DL)].push_back(GEP);
     }
   }

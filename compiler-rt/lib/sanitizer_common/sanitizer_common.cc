@@ -25,13 +25,7 @@ namespace __sanitizer {
 const char *SanitizerToolName = "SanitizerTool";
 
 atomic_uint32_t current_verbosity;
-
-uptr GetPageSizeCached() {
-  static uptr PageSize;
-  if (!PageSize)
-    PageSize = GetPageSize();
-  return PageSize;
-}
+uptr PageSizeCached;
 
 StaticSpinMutex report_file_mu;
 ReportFile report_file = {&report_file_mu, kStderrFd, "", "", 0};

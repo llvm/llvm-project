@@ -19,6 +19,15 @@ define i32 @sdiv2(i32 %x) {
   ret i32 %y
 }
 
+define <2 x i32> @sdiv2_vec(<2 x i32> %x) {
+; CHECK-LABEL: @sdiv2_vec(
+; CHECK-NEXT:    [[Y:%.*]] = ashr exact <2 x i32> %x, <i32 7, i32 7>
+; CHECK-NEXT:    ret <2 x i32> [[Y]]
+;
+  %y = sdiv exact <2 x i32> %x, <i32 128, i32 128>
+  ret <2 x i32> %y
+}
+
 define i32 @sdiv3(i32 %x) {
 ; CHECK-LABEL: @sdiv3(
 ; CHECK-NEXT:    [[Y:%.*]] = srem i32 %x, 3

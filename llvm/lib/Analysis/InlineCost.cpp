@@ -339,9 +339,10 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   if (I.isArrayAllocation()) {
     Constant *Size = SimplifiedValues.lookup(I.getArraySize());
     if (auto *AllocSize = dyn_cast_or_null<ConstantInt>(Size)) {
+      const DataLayout &DL = F.getParent()->getDataLayout();
       Type *Ty = I.getAllocatedType();
-      // FIXME: This can't be right. AllocatedSize is in *bytes*.
-      AllocatedSize += Ty->getPrimitiveSizeInBits() * AllocSize->getZExtValue();
+      AllocatedSize = SaturatingMultiplyAdd(
+          AllocSize->getLimitedValue(), DL.getTypeAllocSize(Ty), AllocatedSize);
       return Base::visitAlloca(I);
     }
   }
@@ -350,7 +351,7 @@ bool CallAnalyzer::visitAlloca(AllocaInst &I) {
   if (I.isStaticAlloca()) {
     const DataLayout &DL = F.getParent()->getDataLayout();
     Type *Ty = I.getAllocatedType();
-    AllocatedSize += DL.getTypeAllocSize(Ty);
+    AllocatedSize = SaturatingAdd(DL.getTypeAllocSize(Ty), AllocatedSize);
   }
 
   // We will happily inline static alloca instructions.

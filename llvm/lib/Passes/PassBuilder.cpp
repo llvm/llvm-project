@@ -62,6 +62,7 @@
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
@@ -560,7 +561,8 @@ bool PassBuilder::parseCGSCCPassPipeline(CGSCCPassManager &CGPM,
       PipelineText = PipelineText.substr(1);
 
       // Add the nested pass manager with the appropriate adaptor.
-      CGPM.addPass(createCGSCCToFunctionPassAdaptor(std::move(NestedFPM)));
+      CGPM.addPass(
+          createCGSCCToFunctionPassAdaptor(std::move(NestedFPM), DebugLogging));
     } else {
       // Otherwise try to parse a pass name.
       size_t End = PipelineText.find_first_of(",)");
@@ -626,8 +628,8 @@ bool PassBuilder::parseModulePassPipeline(ModulePassManager &MPM,
       PipelineText = PipelineText.substr(1);
 
       // Add the nested pass manager with the appropriate adaptor.
-      MPM.addPass(
-          createModuleToPostOrderCGSCCPassAdaptor(std::move(NestedCGPM)));
+      MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(NestedCGPM),
+                                                          DebugLogging));
     } else if (PipelineText.startswith("function(")) {
       FunctionPassManager NestedFPM(DebugLogging);
 
@@ -688,7 +690,7 @@ bool PassBuilder::parsePassPipeline(ModulePassManager &MPM,
                                 DebugLogging) ||
         !PipelineText.empty())
       return false;
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM)));
+    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM), DebugLogging));
     return true;
   }
 

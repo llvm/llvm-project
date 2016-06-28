@@ -493,6 +493,7 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
 }
 
 void MappingTraits<COFFYAML::Object>::mapping(IO &IO, COFFYAML::Object &Obj) {
+  IO.mapTag("!COFF", true);
   IO.mapOptional("OptionalHeader", Obj.OptionalHeader);
   IO.mapRequired("header", Obj.Header);
   IO.mapRequired("sections", Obj.Sections);

@@ -29,6 +29,7 @@ namespace polly {
 llvm::Pass *createCodePreparationPass();
 llvm::Pass *createDeadCodeElimPass();
 llvm::Pass *createDependenceInfoPass();
+llvm::Pass *createDependenceInfoWrapperPassPass();
 llvm::Pass *createDOTOnlyPrinterPass();
 llvm::Pass *createDOTOnlyViewerPass();
 llvm::Pass *createDOTPrinterPass();
@@ -38,6 +39,7 @@ llvm::Pass *createJSONImporterPass();
 llvm::Pass *createPollyCanonicalizePass();
 llvm::Pass *createScopDetectionPass();
 llvm::Pass *createScopInfoRegionPassPass();
+llvm::Pass *createScopInfoWrapperPassPass();
 llvm::Pass *createIslAstInfoPass();
 llvm::Pass *createCodeGenerationPass();
 llvm::Pass *createIslScheduleOptimizerPass();

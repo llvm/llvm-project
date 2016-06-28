@@ -2563,7 +2563,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   const TargetFrameLowering &TFI = *Subtarget.getFrameLowering();
 
-  const Function* Fn = MF.getFunction();
+  const Function *Fn = MF.getFunction();
   if (Fn->hasExternalLinkage() &&
       Subtarget.isTargetCygMing() &&
       Fn->getName() == "main")
@@ -2760,7 +2760,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
     } else {
       // For X86-64, if there are vararg parameters that are passed via
       // registers, then we must store them to their spots on the stack so
-      // they may be loaded by deferencing the result of va_next.
+      // they may be loaded by dereferencing the result of va_next.
       FuncInfo->setVarArgsGPOffset(NumIntRegs * 8);
       FuncInfo->setVarArgsFPOffset(ArgGPRs.size() * 8 + NumXMMRegs * 16);
       FuncInfo->setRegSaveFrameIndex(MFI->CreateStackObject(
@@ -14597,10 +14597,8 @@ SDValue X86TargetLowering::EmitTest(SDValue Op, unsigned X86CC, const SDLoc &dl,
                        : APInt::getLowBitsSet(BitWidth, BitWidth - ShAmt);
       if (!Mask.isSignedIntN(32)) // Avoid large immediates.
         break;
-      SDValue New = DAG.getNode(ISD::AND, dl, VT, Op->getOperand(0),
-                                DAG.getConstant(Mask, dl, VT));
-      DAG.ReplaceAllUsesWith(Op, New);
-      Op = New;
+      Op = DAG.getNode(ISD::AND, dl, VT, Op->getOperand(0),
+                       DAG.getConstant(Mask, dl, VT));
     }
     break;
 

@@ -31,7 +31,7 @@
 # S-NEXT:   IMAGE_SCN_MEM_SHARED
 # S-NEXT: ]
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

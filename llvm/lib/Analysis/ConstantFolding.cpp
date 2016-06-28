@@ -81,7 +81,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
 
     // Now that we know that the input value is a vector of integers, just shift
     // and insert them into our result.
-    unsigned BitShift = DL.getTypeAllocSizeInBits(SrcEltTy);
+    unsigned BitShift = DL.getTypeSizeInBits(SrcEltTy);
     APInt Result(IT->getBitWidth(), 0);
     for (unsigned i = 0; i != NumSrcElts; ++i) {
       Constant *Element;

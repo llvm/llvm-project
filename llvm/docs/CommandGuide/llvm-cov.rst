@@ -236,6 +236,18 @@ OPTIONS
 
  Show code coverage only for functions that match the given regular expression.
 
+.. option:: -format=<FORMAT>
+
+ Use the specified output format. The supported formats are: "text".
+
+.. option:: -output-dir=PATH
+
+ Specify a directory to write coverage reports into. If the directory does not
+ exist, it is created. When used in function view mode (i.e when -name or
+ -name-regex are used to select specific functions), the report is written to
+ PATH/functions.EXTENSION. When used in file view mode, a report for each file
+ is written to PATH/REL_PATH_TO_FILE.EXTENSION.
+
 .. option:: -line-coverage-gt=<N>
 
  Show code coverage only for functions with line coverage greater than the

@@ -614,10 +614,6 @@ static ARMBuildAttrs::CPUArch getArchForCPU(StringRef CPU,
     return ARMBuildAttrs::v4;
 }
 
-bool ARMAsmPrinter::isPositionIndependent() const {
-  return TM.getRelocationModel() == Reloc::PIC_;
-}
-
 void ARMAsmPrinter::emitAttributes() {
   MCTargetStreamer &TS = *OutStreamer->getTargetStreamer();
   ARMTargetStreamer &ATS = static_cast<ARMTargetStreamer &>(TS);

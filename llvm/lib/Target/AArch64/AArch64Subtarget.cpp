@@ -112,8 +112,7 @@ AArch64Subtarget::ClassifyGlobalReference(const GlobalValue *GV,
   if (TM.getCodeModel() == CodeModel::Large && isTargetMachO())
     return AArch64II::MO_GOT;
 
-  Reloc::Model RM = TM.getRelocationModel();
-  if (!shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return AArch64II::MO_GOT;
 
   // The small code mode's direct accesses use ADRP, which cannot necessarily

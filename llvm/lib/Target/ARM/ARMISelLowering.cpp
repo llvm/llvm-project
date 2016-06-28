@@ -1802,15 +1802,12 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isDirect = false;
 
   const TargetMachine &TM = getTargetMachine();
-  Reloc::Model RM = TM.getRelocationModel();
-  const Triple &TargetTriple = TM.getTargetTriple();
   const Module *Mod = MF.getFunction()->getParent();
   const GlobalValue *GV = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GV = G->getGlobal();
   bool isStub =
-    !shouldAssumeDSOLocal(RM, TargetTriple, *Mod, GV) &&
-    Subtarget->isTargetMachO();
+      !TM.shouldAssumeDSOLocal(*Mod, GV) && Subtarget->isTargetMachO();
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
@@ -2799,11 +2796,8 @@ SDValue ARMTargetLowering::LowerGlobalAddressELF(SDValue Op,
   SDLoc dl(Op);
   const GlobalValue *GV = cast<GlobalAddressSDNode>(Op)->getGlobal();
   const TargetMachine &TM = getTargetMachine();
-  Reloc::Model RM = TM.getRelocationModel();
-  const Triple &TargetTriple = TM.getTargetTriple();
   if (isPositionIndependent()) {
-    bool UseGOT_PREL =
-        !shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV);
+    bool UseGOT_PREL = !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
 
     MachineFunction &MF = DAG.getMachineFunction();
     ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
@@ -3188,7 +3182,7 @@ void ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
   // Try to store any remaining integer argument regs
-  // to their spots on the stack so that they may be loaded by deferencing
+  // to their spots on the stack so that they may be loaded by dereferencing
   // the result of va_next.
   // If there is no regs to be stored, just point address after last
   // argument passed via stack.

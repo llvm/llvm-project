@@ -10,6 +10,7 @@
 // This file implements the MemorySSA class.
 //
 //===----------------------------------------------------------------===//
+#include "llvm/Transforms/Utils/MemorySSA.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -38,7 +39,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Transforms/Scalar.h"
-#include "llvm/Transforms/Utils/MemorySSA.h"
 #include <algorithm>
 
 #define DEBUG_TYPE "memoryssa"
@@ -272,7 +272,7 @@ void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
 MemorySSA::MemorySSA(Function &Func, AliasAnalysis *AA, DominatorTree *DT)
     : AA(AA), DT(DT), F(Func), LiveOnEntryDef(nullptr), Walker(nullptr),
       NextID(0) {
-  getWalker(); // Ensure MemorySSA has been built.
+  buildMemorySSA();
 }
 
 MemorySSA::MemorySSA(MemorySSA &&MSSA)
@@ -301,12 +301,7 @@ MemorySSA::AccessList *MemorySSA::getOrCreateAccessList(const BasicBlock *BB) {
   return Res.first->second.get();
 }
 
-MemorySSAWalker *MemorySSA::getWalker() {
-  if (Walker)
-    return Walker.get();
-
-  Walker = make_unique<CachingWalker>(this, AA, DT);
-
+void MemorySSA::buildMemorySSA() {
   // We create an access to represent "live on entry", for things like
   // arguments or users of globals, where the memory they use is defined before
   // the beginning of the function. We do not actually insert it into the IR.
@@ -398,6 +393,8 @@ MemorySSAWalker *MemorySSA::getWalker() {
   SmallPtrSet<BasicBlock *, 16> Visited;
   renamePass(DT->getRootNode(), LiveOnEntryDef.get(), Visited);
 
+  MemorySSAWalker *Walker = getWalker();
+
   // Now optimize the MemoryUse's defining access to point to the nearest
   // dominating clobbering def.
   // This ensures that MemoryUse's that are killed by the same store are
@@ -421,7 +418,13 @@ MemorySSAWalker *MemorySSA::getWalker() {
   for (auto &BB : F)
     if (!Visited.count(&BB))
       markUnreachableAsLiveOnEntry(&BB);
+}
 
+MemorySSAWalker *MemorySSA::getWalker() {
+  if (Walker)
+    return Walker.get();
+
+  Walker = make_unique<CachingWalker>(this, AA, DT);
   return Walker.get();
 }
 

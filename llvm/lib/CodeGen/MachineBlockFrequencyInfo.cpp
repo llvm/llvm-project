@@ -120,13 +120,14 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
   static std::string getEdgeAttributes(const MachineBasicBlock *Node,
                                        EdgeIter EI,
                                        const MachineBlockFrequencyInfo *MBFI) {
-    MachineBranchProbabilityInfo &MBPI =
-        MBFI->getAnalysis<MachineBranchProbabilityInfo>();
-    BranchProbability BP = MBPI.getEdgeProbability(Node, EI);
+    std::string Str;
+    const MachineBranchProbabilityInfo *MBPI = MBFI->getMBPI();
+    if (!MBPI)
+      return Str;
+    BranchProbability BP = MBPI->getEdgeProbability(Node, EI);
     uint32_t N = BP.getNumerator();
     uint32_t D = BP.getDenominator();
     double Percent = 100.0 * N / D;
-    std::string Str;
     raw_string_ostream OS(Str);
     OS << format("label=\"%.1f%%\"", Percent);
     OS.flush();
@@ -205,6 +206,10 @@ Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
 
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {
   return MBFI ? MBFI->getFunction() : nullptr;
+}
+
+const MachineBranchProbabilityInfo *MachineBlockFrequencyInfo::getMBPI() const {
+  return MBFI ? &MBFI->getBPI() : nullptr;
 }
 
 raw_ostream &

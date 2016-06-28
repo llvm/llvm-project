@@ -94,6 +94,27 @@ entry:
   ret void
 }
 
+; CHECK-LABEL: {{^}}extract_undef_offset_sgpr:
+define void @extract_undef_offset_sgpr(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+entry:
+  %ld = load volatile <4 x i32>, <4  x i32> addrspace(1)* %in
+  %value = extractelement <4 x i32> %ld, i32 undef
+  store i32 %value, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK-LABEL: {{^}}insert_undef_offset_sgpr_vector_src:
+; CHECK: buffer_load_dwordx4
+; CHECK: s_mov_b32 m0,
+; CHECK-NEXT: v_movreld_b32
+define void @insert_undef_offset_sgpr_vector_src(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+entry:
+  %ld = load <4 x i32>, <4  x i32> addrspace(1)* %in
+  %value = insertelement <4 x i32> %ld, i32 5, i32 undef
+  store <4 x i32> %value, <4 x i32> addrspace(1)* %out
+  ret void
+}
+
 ; CHECK-LABEL: {{^}}insert_w_offset:
 ; CHECK: s_mov_b32 m0
 ; CHECK-NEXT: v_movreld_b32_e32
@@ -397,6 +418,37 @@ bb:
   %tmp8 = extractelement <6 x i32> %tmp7, i32 5
   store volatile i32 %tmp6, i32 addrspace(3)* undef, align 4
   store volatile i32 %tmp8, i32 addrspace(3)* undef, align 4
+  ret void
+}
+
+; offset puts outside of superegister bounaries, so clamp to 1st element.
+; CHECK-LABEL: {{^}}extract_largest_inbounds_offset:
+; CHECK: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
+; CHECK: s_load_dword [[IDX:s[0-9]+]]
+; CHECK: s_mov_b32 m0, [[IDX]]
+; CHECK-NEXT: v_movrels_b32_e32 [[EXTRACT:v[0-9]+]], v[[HI_ELT]]
+; CHECK: buffer_store_dword [[EXTRACT]]
+define void @extract_largest_inbounds_offset(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx) {
+entry:
+  %ld = load volatile <4 x i32>, <4  x i32> addrspace(1)* %in
+  %offset = add i32 %idx, 3
+  %value = extractelement <4 x i32> %ld, i32 %offset
+  store i32 %value, i32 addrspace(1)* %out
+  ret void
+}
+
+; CHECK-LABL: {{^}}extract_out_of_bounds_offset:
+; CHECK: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
+; CHECK: s_load_dword [[IDX:s[0-9]+]]
+; CHECK: s_add_i32 m0, [[IDX]], 4
+; CHECK-NEXT: v_movrels_b32_e32 [[EXTRACT:v[0-9]+]], v[[LO_ELT]]
+; CHECK: buffer_store_dword [[EXTRACT]]
+define void @extract_out_of_bounds_offset(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx) {
+entry:
+  %ld = load volatile <4 x i32>, <4  x i32> addrspace(1)* %in
+  %offset = add i32 %idx, 4
+  %value = extractelement <4 x i32> %ld, i32 %offset
+  store i32 %value, i32 addrspace(1)* %out
   ret void
 }
 

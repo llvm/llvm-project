@@ -61,7 +61,7 @@ CommandObjectExpression::CommandOptions::g_option_table[] =
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "unwind-on-error",    'u', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Clean up program state if the expression causes a crash, or raises a signal.  Note, unlike gdb hitting a breakpoint is controlled by another option (-i)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "debug",              'g', OptionParser::eNoArgument      , nullptr, nullptr, 0, eArgTypeNone,       "When specified, debug the JIT code by setting a breakpoint on the first instruction and forcing breakpoints to not be ignored (-i0) and no unwinding to happen on error (-u0)."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "language",           'l', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "Specifies the Language to use when parsing the expression.  If not set the target.language setting is used." },
-    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",       'X', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "If true, simple FixIt hints will be automatically applied to the expression." },
+    { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "apply-fixits",       'X', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeLanguage,   "If true, simple fix-it hints will be automatically applied to the expression." },
     { LLDB_OPT_SET_1, false, "description-verbosity", 'v', OptionParser::eOptionalArgument, nullptr, g_description_verbosity_type, 0, eArgTypeDescriptionVerbosity,        "How verbose should the output of this expression be, if the object description is asked for."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "top-level",          'p', OptionParser::eNoArgument      , NULL, NULL, 0, eArgTypeNone,       "Interpret the expression as top-level definitions rather than code to be immediately executed."},
     { LLDB_OPT_SET_1 | LLDB_OPT_SET_2, false, "allow-jit",          'j', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBoolean,    "Controls whether the expression can fall back to being JITted if it's not supported by the interpreter (defaults to true)."}
@@ -371,7 +371,7 @@ CommandObjectExpression::EvaluateExpression(const char *expr,
         if (error_stream && !m_fixed_expression.empty() && target->GetEnableNotifyAboutFixIts())
         {
             if (success == eExpressionCompleted)
-                error_stream->Printf ("  Fixit applied, fixed expression was: \n    %s\n", m_fixed_expression.c_str());
+                error_stream->Printf ("  Fix-it applied, fixed expression was: \n    %s\n", m_fixed_expression.c_str());
         }
 
         if (result_valobj_sp)

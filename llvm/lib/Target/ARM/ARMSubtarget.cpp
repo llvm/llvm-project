@@ -89,31 +89,9 @@ ARMFrameLowering *ARMSubtarget::initializeFrameLowering(StringRef CPU,
 ARMSubtarget::ARMSubtarget(const Triple &TT, const std::string &CPU,
                            const std::string &FS,
                            const ARMBaseTargetMachine &TM, bool IsLittle)
-    : ARMGenSubtargetInfo(TT, CPU, FS), ARMProcFamily(Others),
-      ARMProcClass(None), ARMArch(ARMv4t), HasV4TOps(false), HasV5TOps(false),
-      HasV5TEOps(false), HasV6Ops(false), HasV6MOps(false), HasV6KOps(false),
-      HasV6T2Ops(false), HasV7Ops(false), HasV8Ops(false), HasV8_1aOps(false),
-      HasV8_2aOps(false), HasV8MBaselineOps(false), HasV8MMainlineOps(false),
-      HasVFPv2(false), HasVFPv3(false), HasVFPv4(false), HasFPARMv8(false),
-      HasNEON(false), UseNEONForSinglePrecisionFP(false),
-      UseMulOps(UseFusedMulOps), SlowFPVMLx(false), HasVMLxForwarding(false),
-      SlowFPBrcc(false), InThumbMode(false), UseSoftFloat(false),
-      HasThumb2(false), NoARM(false), ReserveR9(false), NoMovt(false),
-      SupportsTailCall(false), HasFP16(false), HasFullFP16(false),
-      HasD16(false), HasHardwareDivide(false), HasHardwareDivideInARM(false),
-      HasT2ExtractPack(false), HasDataBarrier(false), HasV7Clrex(false),
-      HasAcquireRelease(false), Pref32BitThumb(false),
-      AvoidCPSRPartialUpdate(false), AvoidMOVsShifterOperand(false),
-      HasRetAddrStack(false), HasMPExtension(false), HasVirtualization(false),
-      FPOnlySP(false), HasPerfMon(false), HasTrustZone(false),
-      Has8MSecExt(false), HasCrypto(false), HasCRC(false), HasRAS(false),
-      HasZeroCycleZeroing(false), IsProfitableToUnpredicate(false),
-      HasSlowVGETLNi32(false), HasSlowVDUP32(false), PreferVMOVSR(false),
-      PreferISHST(false), UseNEONForFPMovs(false), StrictAlign(false),
-      RestrictIT(false), HasDSP(false), UseNaClTrap(false), GenLongCalls(false),
-      UnsafeFPMath(false), UseSjLjEH(false), stackAlignment(4), CPUString(CPU),
-      IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options), TM(TM),
-      FrameLowering(initializeFrameLowering(CPU, FS)),
+    : ARMGenSubtargetInfo(TT, CPU, FS), UseMulOps(UseFusedMulOps),
+      CPUString(CPU), IsLittle(IsLittle), TargetTriple(TT), Options(TM.Options),
+      TM(TM), FrameLowering(initializeFrameLowering(CPU, FS)),
       // At this point initializeSubtargetDependencies has been called so
       // we can query directly.
       InstrInfo(isThumb1Only()
@@ -221,6 +199,51 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   if ((Bits[ARM::ProcA5] || Bits[ARM::ProcA8]) && // Where this matters
       (Options.UnsafeFPMath || isTargetDarwin()))
     UseNEONForSinglePrecisionFP = true;
+
+  // FIXME: Teach TableGen to deal with these instead of doing it manually here.
+  switch (ARMProcFamily) {
+  case Others:
+  case CortexA5:
+    break;
+  case CortexA7:
+    LdStMultipleTiming = DoubleIssue;
+    break;
+  case CortexA8:
+    LdStMultipleTiming = DoubleIssue;
+    break;
+  case CortexA9:
+    LdStMultipleTiming = DoubleIssueCheckUnalignedAccess;
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  case CortexA12:
+    break;
+  case CortexA15:
+    MaxInterleaveFactor = 2;
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  case CortexA17:
+  case CortexA32:
+  case CortexA35:
+  case CortexA53:
+  case CortexA57:
+  case CortexA72:
+  case CortexA73:
+  case CortexR4:
+  case CortexR4F:
+  case CortexR5:
+  case CortexR7:
+  case CortexM3:
+  case ExynosM1:
+    break;
+  case Krait:
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  case Swift:
+    MaxInterleaveFactor = 2;
+    LdStMultipleTiming = SingleIssuePlusExtras;
+    PreISelOperandLatencyAdjustment = 1;
+    break;
+  }
 }
 
 bool ARMSubtarget::isAPCS_ABI() const {
@@ -241,7 +264,7 @@ bool ARMSubtarget::isAAPCS16_ABI() const {
 bool
 ARMSubtarget::GVIsIndirectSymbol(const GlobalValue *GV,
                                  Reloc::Model RelocM) const {
-  if (!shouldAssumeDSOLocal(RelocM, TargetTriple, *GV->getParent(), GV))
+  if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return true;
 
   // 32 bit macho has no relocation for a-b if a is undefined, even if b is in

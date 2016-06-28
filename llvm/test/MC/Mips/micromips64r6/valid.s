@@ -300,5 +300,12 @@ a:
         drotr $5, $10, 8         # CHECK: drotr $5, $10, 8        # encoding: [0x58,0xaa,0x40,0xc0]
         drotr32 $1, $2, 4        # CHECK: drotr32 $1, $2, 4       # encoding: [0x58,0x22,0x20,0xc8]
         drotrv $3, $6, $4        # CHECK: drotrv $3, $6, $4       # encoding: [0x58,0xc4,0x18,0xd0]
+        ld $4, 5($2)             # CHECK: ld $4, 5($2)            # encoding: [0xdc,0x82,0x00,0x05]
+        lld $2, 3($8)            # CHECK: lld $2, 3($8)           # encoding: [0x60,0x48,0x70,0x03]
+        lwu $1, 10($2)           # CHECK: lwu $1, 10($2)          # encoding: [0x60,0x22,0xe0,0x0a]
+        sd $4, 5($3)             # CHECK: sd $4, 5($3)            # encoding: [0xd8,0x83,0x00,0x05]
+        dsrl $1, $2, 2           # CHECK: dsrl $1, $2, 2          # encoding: [0x58,0x22,0x10,0x40]
+        dsrl32 $3, $4, 5         # CHECK: dsrl32 $3, $4, 5        # encoding: [0x58,0x64,0x28,0x48]
+        dsrlv $1, $3, $3         # CHECK: dsrlv $1, $3, $3        # encoding: [0x58,0x63,0x08,0x50]
 
 1:

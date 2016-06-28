@@ -1456,10 +1456,10 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
 }
 
 bool isOpenCL(LangStandard::Kind LangStd) {
-  return LangStd == LangStandard::lang_opencl
-    || LangStd == LangStandard::lang_opencl11
-    || LangStd == LangStandard::lang_opencl12
-    || LangStd == LangStandard::lang_opencl20;
+  return LangStd == LangStandard::lang_opencl ||
+         LangStd == LangStandard::lang_opencl11 ||
+         LangStd == LangStandard::lang_opencl12 ||
+         LangStd == LangStandard::lang_opencl20;
 }
 
 void CompilerInvocation::setLangDefaults(LangOptions &Opts, InputKind IK,

@@ -148,6 +148,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializeCodePreparationPass(Registry);
   initializeDeadCodeElimPass(Registry);
   initializeDependenceInfoPass(Registry);
+  initializeDependenceInfoWrapperPassPass(Registry);
   initializeJSONExporterPass(Registry);
   initializeJSONImporterPass(Registry);
   initializeIslAstInfoPass(Registry);
@@ -155,6 +156,7 @@ void initializePollyPasses(PassRegistry &Registry) {
   initializePollyCanonicalizePass(Registry);
   initializeScopDetectionPass(Registry);
   initializeScopInfoRegionPassPass(Registry);
+  initializeScopInfoWrapperPassPass(Registry);
   initializeCodegenCleanupPass(Registry);
 }
 

@@ -2935,10 +2935,7 @@ bool ARMFastISel::tryToFoldLoadIntoMI(MachineInstr *MI, unsigned OpNo,
 
 unsigned ARMFastISel::ARMLowerPICELF(const GlobalValue *GV,
                                      unsigned Align, MVT VT) {
-  Reloc::Model RM = TM.getRelocationModel();
-  const Triple &TargetTriple = TM.getTargetTriple();
-  bool UseGOT_PREL =
-      !shouldAssumeDSOLocal(RM, TargetTriple, *GV->getParent(), GV);
+  bool UseGOT_PREL = !TM.shouldAssumeDSOLocal(*GV->getParent(), GV);
 
   LLVMContext *Context = &MF->getFunction()->getContext();
   unsigned ARMPCLabelIndex = AFI->createPICLabelUId();

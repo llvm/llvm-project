@@ -595,7 +595,10 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
                        COFF::IMAGE_SCN_MEM_READ | COFF::IMAGE_SCN_MEM_WRITE,
       SectionKind::getData());
 
-  bool IsWoA = T.getArch() == Triple::arm || T.getArch() == Triple::thumb;
+  // Set the `IMAGE_SCN_MEM_16BIT` flag when compiling for thumb mode.  This is
+  // used to indicate to the linker that the text segment contains thumb instructions
+  // and to set the ISA selection bit for calls accordingly.
+  const bool IsThumb = T.getArch() == Triple::thumb;
 
   CommDirectiveSupportsAlignment = true;
 
@@ -606,7 +609,7 @@ void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
       SectionKind::getBSS());
   TextSection = Ctx->getCOFFSection(
       ".text",
-      (IsWoA ? COFF::IMAGE_SCN_MEM_16BIT : (COFF::SectionCharacteristics)0) |
+      (IsThumb ? COFF::IMAGE_SCN_MEM_16BIT : (COFF::SectionCharacteristics)0) |
           COFF::IMAGE_SCN_CNT_CODE | COFF::IMAGE_SCN_MEM_EXECUTE |
           COFF::IMAGE_SCN_MEM_READ,
       SectionKind::getText());

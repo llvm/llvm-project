@@ -1139,17 +1139,33 @@ Instruction *InstCombiner::visitSDiv(BinaryOperator &I) {
   if (Instruction *Common = commonIDivTransforms(I))
     return Common;
 
-  // sdiv X, -1 == -X
-  if (match(Op1, m_AllOnes()))
-    return BinaryOperator::CreateNeg(Op0);
+  const APInt *Op1C;
+  if (match(Op1, m_APInt(Op1C))) {
+    // sdiv X, -1 == -X
+    if (Op1C->isAllOnesValue())
+      return BinaryOperator::CreateNeg(Op0);
 
-  if (ConstantInt *RHS = dyn_cast<ConstantInt>(Op1)) {
-    // sdiv X, C  -->  ashr exact X, log2(C)
-    if (I.isExact() && RHS->getValue().isNonNegative() &&
-        RHS->getValue().isPowerOf2()) {
-      Value *ShAmt = llvm::ConstantInt::get(RHS->getType(),
-                                            RHS->getValue().exactLogBase2());
+    // sdiv exact X, C  -->  ashr exact X, log2(C)
+    if (I.isExact() && Op1C->isNonNegative() && Op1C->isPowerOf2()) {
+      Value *ShAmt = ConstantInt::get(Op1->getType(), Op1C->exactLogBase2());
       return BinaryOperator::CreateExactAShr(Op0, ShAmt, I.getName());
+    }
+
+    // If the dividend is sign-extended and the constant divisor is small enough
+    // to fit in the source type, shrink the division to the narrower type:
+    // (sext X) sdiv C --> sext (X sdiv C)
+    Value *Op0Src;
+    if (match(Op0, m_OneUse(m_SExt(m_Value(Op0Src)))) &&
+        Op0Src->getType()->getScalarSizeInBits() >= Op1C->getMinSignedBits()) {
+
+      // In the general case, we need to make sure that the dividend is not the
+      // minimum signed value because dividing that by -1 is UB. But here, we
+      // know that the -1 divisor case is already handled above.
+
+      Constant *NarrowDivisor =
+          ConstantExpr::getTrunc(cast<Constant>(Op1), Op0Src->getType());
+      Value *NarrowOp = Builder->CreateSDiv(Op0Src, NarrowDivisor);
+      return new SExtInst(NarrowOp, Op0->getType());
     }
   }
 

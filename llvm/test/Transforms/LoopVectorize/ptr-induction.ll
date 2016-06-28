@@ -18,6 +18,7 @@ while.body.preheader:                             ; preds = %entry
 while.body:                                       ; preds = %while.body.preheader, %while.body
   %a.pn = phi i32* [ %incdec.ptr8, %while.body ], [ %a, %while.body.preheader ]
   %acc.07 = phi i32 [ %add, %while.body ], [ 0, %while.body.preheader ]
+  %a1.pn = getelementptr inbounds i32, i32* %a.pn, i64 0
   %incdec.ptr8 = getelementptr inbounds i32, i32* %a.pn, i64 1
   %0 = load i32, i32* %incdec.ptr8, align 1
   %add = add nuw nsw i32 %0, %acc.07

@@ -1680,6 +1680,11 @@ def : Pat<(sra (shl (i64 (anyext (i32 (z_select_ccmask 1, 0, imm32zx4:$valid,
                (i32 63)),
           (Select64 (LGHI -1), (LGHI 0), imm32zx4:$valid, imm32zx4:$cc)>;
 
+// Avoid generating 2 XOR instructions. (xor (and x, y), y) is
+// equivalent to (and (xor x, -1), y)
+def : Pat<(and (xor GR64:$x, (i64 -1)), GR64:$y),
+                          (XGR GR64:$y, (NGR GR64:$y, GR64:$x))>;
+
 // Peepholes for turning scalar operations into block operations.
 defm : BlockLoadStore<anyextloadi8, i32, MVCSequence, NCSequence, OCSequence,
                       XCSequence, 1>;

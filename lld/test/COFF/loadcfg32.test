@@ -5,7 +5,7 @@
 # CHECK: LoadConfigTableRVA: 0x1000
 # CHECK: LoadConfigTableSize: 0x40
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: []

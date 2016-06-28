@@ -629,7 +629,7 @@ end:
 declare double @llvm.pow.f64(double, double)
 
 ; This function needs to spill floating point registers to
-; exerce the path where we were deferencing the end iterator
+; exercise the path where we were dereferencing the end iterator
 ; to access debug info location while inserting the spill code
 ; during PEI with shrink-wrapping enable.
 ; CHECK-LABEL: debug_info:

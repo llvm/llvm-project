@@ -3650,7 +3650,9 @@ Value *CodeGenFunction::GetValueForARMHint(unsigned BuiltinID) {
 static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
                                          const CallExpr *E,
                                          llvm::Type *RegisterType,
-                                         llvm::Type *ValueType, bool IsRead) {
+                                         llvm::Type *ValueType,
+                                         bool IsRead,
+                                         StringRef SysReg = "") {
   // write and register intrinsics only support 32 and 64 bit operations.
   assert((RegisterType->isIntegerTy(32) || RegisterType->isIntegerTy(64))
           && "Unsupported size for register.");
@@ -3659,8 +3661,10 @@ static Value *EmitSpecialRegisterBuiltin(CodeGenFunction &CGF,
   CodeGen::CodeGenModule &CGM = CGF.CGM;
   LLVMContext &Context = CGM.getLLVMContext();
 
-  const Expr *SysRegStrExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef SysReg = cast<StringLiteral>(SysRegStrExpr)->getString();
+  if (SysReg.empty()) {
+    const Expr *SysRegStrExpr = E->getArg(0)->IgnoreParenCasts();
+    SysReg = cast<StringLiteral>(SysRegStrExpr)->getString();
+  }
 
   llvm::Metadata *Ops[] = { llvm::MDString::get(Context, SysReg) };
   llvm::MDNode *RegName = llvm::MDNode::get(Context, Ops);
@@ -7413,7 +7417,13 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   case AMDGPU::BI__builtin_amdgcn_classf:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_class);
 
-    // Legacy amdgpu prefix
+  case AMDGPU::BI__builtin_amdgcn_read_exec: {
+    CallInst *CI = cast<CallInst>(
+      EmitSpecialRegisterBuiltin(*this, E, Int64Ty, Int64Ty, true, "exec"));
+    CI->setConvergent();
+    return CI;
+  }
+  // Legacy amdgpu prefix
   case AMDGPU::BI__builtin_amdgpu_rsq:
   case AMDGPU::BI__builtin_amdgpu_rsqf: {
     if (getTarget().getTriple().getArch() == Triple::amdgcn)

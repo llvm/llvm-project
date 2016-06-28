@@ -412,6 +412,9 @@ bool SILoadStoreOptimizer::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   const SISubtarget &STM = MF.getSubtarget<SISubtarget>();
+  if (!STM.loadStoreOptEnabled())
+    return false;
+
   TII = STM.getInstrInfo();
   TRI = &TII->getRegisterInfo();
 

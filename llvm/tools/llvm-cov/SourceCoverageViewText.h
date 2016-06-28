@@ -20,6 +20,13 @@ namespace llvm {
 
 /// \brief A code coverage view which supports text-based rendering.
 class SourceCoverageViewText : public SourceCoverageView {
+public:
+  Expected<OwnedStream> createOutputFile(StringRef Path,
+                                         bool InToplevel) override;
+
+  void closeOutputFile(OwnedStream OS) override;
+
+private:
   void renderSourceName(raw_ostream &OS) override;
 
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;

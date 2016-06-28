@@ -1,5 +1,7 @@
 ; RUN: opt -S %loadPolly -polly-dependences \
 ; RUN:                   -analyze < %s | FileCheck %s
+; RUN: opt -S %loadPolly -polly-function-dependences \
+; RUN:                   -analyze < %s | FileCheck %s -check-prefix=FUNC
 
 ; CHECK: RAW dependences:
 ; CHECK:   { Stmt_bb9[0] -> Stmt_bb10[0] }
@@ -9,6 +11,15 @@
 ; CHECK:   { Stmt_bb3[0] -> Stmt_bb10[0] }
 ; CHECK: Reduction dependences:
 ; CHECK:   {  }
+
+; FUNC: RAW dependences:
+; FUNC-NEXT:   { Stmt_bb9[0] -> Stmt_bb10[0]; [Stmt_bb9[0] -> Stmt_bb9_Write0_MemRef_tmp11[]] -> [Stmt_bb10[0] -> Stmt_bb10_Read0_MemRef_tmp11[]] }
+; FUNC-NEXT: WAR dependences:
+; FUNC-NEXT:   {  }
+; FUNC-NEXT: WAW dependences:
+; FUNC-NEXT:   { Stmt_bb3[0] -> Stmt_bb10[0]; [Stmt_bb3[0] -> Stmt_bb3_Write1_MemRef_arg1[]] -> [Stmt_bb10[0] -> Stmt_bb10_Write1_MemRef_arg1[]] }
+; FUNC-NEXT: Reduction dependences:
+; FUNC-NEXT:   {  }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
