@@ -29,7 +29,6 @@ using namespace llvm;
 #define DEBUG_TYPE "block-freq"
 
 #ifndef NDEBUG
-enum GVDAGType { GVDT_None, GVDT_Fraction, GVDT_Integer, GVDT_Count };
 
 static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
     "view-machine-block-freq-propagation-dags", cl::Hidden,
@@ -47,8 +46,8 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
 
                clEnumValEnd));
 
-static cl::opt<std::string> ViewMachineBlockFreqFuncName("view-mbfi-func-name",
-                                                         cl::Hidden);
+extern cl::opt<std::string> ViewBlockFreqFuncName;
+extern cl::opt<uint64_t> ViewHotFreqPercent;
 
 namespace llvm {
 
@@ -79,58 +78,31 @@ template <> struct GraphTraits<MachineBlockFrequencyInfo *> {
   }
 };
 
+typedef BFIDOTGraphTraitsBase<MachineBlockFrequencyInfo,
+                              MachineBranchProbabilityInfo>
+    MBFIDOTGraphTraitsBase;
 template <>
 struct DOTGraphTraits<MachineBlockFrequencyInfo *>
-    : public DefaultDOTGraphTraits {
+    : public MBFIDOTGraphTraitsBase {
   explicit DOTGraphTraits(bool isSimple = false)
-      : DefaultDOTGraphTraits(isSimple) {}
-
-  typedef MachineBasicBlock::const_succ_iterator EdgeIter;
-  static std::string getGraphName(const MachineBlockFrequencyInfo *G) {
-    return G->getFunction()->getName();
-  }
+      : MBFIDOTGraphTraitsBase(isSimple) {}
 
   std::string getNodeLabel(const MachineBasicBlock *Node,
                            const MachineBlockFrequencyInfo *Graph) {
-    std::string Result;
-    raw_string_ostream OS(Result);
-
-    OS << Node->getName().str() << " : ";
-    switch (ViewMachineBlockFreqPropagationDAG) {
-    case GVDT_Fraction:
-      Graph->printBlockFreq(OS, Node);
-      break;
-    case GVDT_Integer:
-      OS << Graph->getBlockFreq(Node).getFrequency();
-      break;
-    case GVDT_Count: {
-      auto Count = Graph->getBlockProfileCount(Node);
-      if (Count)
-        OS << Count.getValue();
-      else
-        OS << "Unknown";
-      break;
-    }
-    case GVDT_None:
-      llvm_unreachable("If we are not supposed to render a graph we should "
-                       "never reach this point.");
-    }
-    return Result;
+    return MBFIDOTGraphTraitsBase::getNodeLabel(
+        Node, Graph, ViewMachineBlockFreqPropagationDAG);
   }
-  static std::string getEdgeAttributes(const MachineBasicBlock *Node,
-                                       EdgeIter EI,
-                                       const MachineBlockFrequencyInfo *MBFI) {
-    MachineBranchProbabilityInfo &MBPI =
-        MBFI->getAnalysis<MachineBranchProbabilityInfo>();
-    BranchProbability BP = MBPI.getEdgeProbability(Node, EI);
-    uint32_t N = BP.getNumerator();
-    uint32_t D = BP.getDenominator();
-    double Percent = 100.0 * N / D;
-    std::string Str;
-    raw_string_ostream OS(Str);
-    OS << format("label=\"%.1f%%\"", Percent);
-    OS.flush();
-    return Str;
+
+  std::string getNodeAttributes(const MachineBasicBlock *Node,
+                                const MachineBlockFrequencyInfo *Graph) {
+    return MBFIDOTGraphTraitsBase::getNodeAttributes(Node, Graph,
+                                                     ViewHotFreqPercent);
+  }
+
+  std::string getEdgeAttributes(const MachineBasicBlock *Node, EdgeIter EI,
+                                const MachineBlockFrequencyInfo *MBFI) {
+    return MBFIDOTGraphTraitsBase::getEdgeAttributes(
+        Node, EI, MBFI, MBFI->getMBPI(), ViewHotFreqPercent);
   }
 };
 
@@ -169,8 +141,8 @@ bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
   MBFI->calculate(F, MBPI, MLI);
 #ifndef NDEBUG
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
-      (ViewMachineBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewMachineBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() ||
+       F.getName().equals(ViewBlockFreqFuncName))) {
     view();
   }
 #endif
@@ -205,6 +177,10 @@ Optional<uint64_t> MachineBlockFrequencyInfo::getBlockProfileCount(
 
 const MachineFunction *MachineBlockFrequencyInfo::getFunction() const {
   return MBFI ? MBFI->getFunction() : nullptr;
+}
+
+const MachineBranchProbabilityInfo *MachineBlockFrequencyInfo::getMBPI() const {
+  return MBFI ? &MBFI->getBPI() : nullptr;
 }
 
 raw_ostream &

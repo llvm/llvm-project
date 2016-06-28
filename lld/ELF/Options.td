@@ -108,6 +108,9 @@ def noinhibit_exec: F<"noinhibit-exec">,
 def no_undefined: F<"no-undefined">,
   HelpText<"Report unresolved symbols even if the linker is creating a shared library">;
 
+def no_undefined_version: F<"no-undefined-version">,
+  HelpText<"Report version scripts that refer undefined symbols">;
+
 def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 
@@ -234,7 +237,6 @@ def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
 def no_dynamic_linker: F<"no-dynamic-linker">;
 def no_fatal_warnings: F<"no-fatal-warnings">;
 def no_mmap_output_file: F<"no-mmap-output-file">;
-def no_undefined_version: F<"no-undefined-version">;
 def no_warn_common: F<"no-warn-common">;
 def no_warn_mismatch: F<"no-warn-mismatch">;
 def rpath_link: S<"rpath-link">;

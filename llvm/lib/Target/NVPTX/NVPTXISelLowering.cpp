@@ -1311,9 +1311,9 @@ SDValue NVPTXTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                                  InFlag };
 
       unsigned opcode = NVPTXISD::StoreParam;
-      if (Outs[OIdx].Flags.isZExt())
+      if (Outs[OIdx].Flags.isZExt() && VT.getSizeInBits() < 32)
         opcode = NVPTXISD::StoreParamU32;
-      else if (Outs[OIdx].Flags.isSExt())
+      else if (Outs[OIdx].Flags.isSExt() && VT.getSizeInBits() < 32)
         opcode = NVPTXISD::StoreParamS32;
       Chain = DAG.getMemIntrinsicNode(opcode, dl, CopyParamVTs, CopyParamOps,
                                       VT, MachinePointerInfo());

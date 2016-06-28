@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-
 #include "SIMachineFunctionInfo.h"
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
-#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
@@ -54,8 +53,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     ReturnsVoid(true),
     MaximumWorkGroupSize(0),
     DebuggerReservedVGPRCount(0),
-    DebuggerWorkGroupIDStackObjectIndices{0, 0, 0},
-    DebuggerWorkItemIDStackObjectIndices{0, 0, 0},
+    DebuggerWorkGroupIDStackObjectIndices({{0, 0, 0}}),
+    DebuggerWorkItemIDStackObjectIndices({{0, 0, 0}}),
     LDSWaveSpillSize(0),
     PSInputEna(0),
     NumUserSGPRs(0),
@@ -207,7 +206,6 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg (
     if (LaneVGPR == AMDGPU::NoRegister)
       // We have no VGPRs left for spilling SGPRs.
       return Spill;
-
 
     LaneVGPRs[LaneVGPRIdx] = LaneVGPR;
 

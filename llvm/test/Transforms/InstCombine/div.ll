@@ -408,3 +408,91 @@ lor.end:                                          ; preds = %lor.rhs, %entry
   %div = sdiv i32 %t.0, 2
   ret i32 %div
 }
+
+; We can perform the division in the smaller type.
+
+define i32 @shrink(i8 %x) {
+; CHECK-LABEL: @shrink(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv i8 %x, 127
+; CHECK-NEXT:    [[DIV:%.*]] = sext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %conv = sext i8 %x to i32
+  %div = sdiv i32 %conv, 127
+  ret i32 %div
+}
+
+; Division in the smaller type can lead to more optimizations.
+
+define i32 @zap(i8 %x) {
+; CHECK-LABEL: @zap(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 %x, -128
+; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %conv = sext i8 %x to i32
+  %div = sdiv i32 %conv, -128
+  ret i32 %div
+}
+
+; Splat constant divisors should get the same folds.
+
+define <3 x i32> @shrink_vec(<3 x i8> %x) {
+; CHECK-LABEL: @shrink_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = sdiv <3 x i8> %x, <i8 127, i8 127, i8 127>
+; CHECK-NEXT:    [[DIV:%.*]] = sext <3 x i8> [[TMP1]] to <3 x i32>
+; CHECK-NEXT:    ret <3 x i32> [[DIV]]
+;
+  %conv = sext <3 x i8> %x to <3 x i32>
+  %div = sdiv <3 x i32> %conv, <i32 127, i32 127, i32 127>
+  ret <3 x i32> %div
+}
+
+define <2 x i32> @zap_vec(<2 x i8> %x) {
+; CHECK-LABEL: @zap_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> %x, <i8 -128, i8 -128>
+; CHECK-NEXT:    [[DIV:%.*]] = zext <2 x i1> [[TMP1]] to <2 x i32>
+; CHECK-NEXT:    ret <2 x i32> [[DIV]]
+;
+  %conv = sext <2 x i8> %x to <2 x i32>
+  %div = sdiv <2 x i32> %conv, <i32 -128, i32 -128>
+  ret <2 x i32> %div
+}
+
+; But we can't do this if the signed constant won't fit in the original type.
+
+define i32 @shrink_no(i8 %x) {
+; CHECK-LABEL: @shrink_no(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 %x to i32
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[CONV]], 128
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %conv = sext i8 %x to i32
+  %div = sdiv i32 %conv, 128
+  ret i32 %div
+}
+
+define i32 @shrink_no2(i8 %x) {
+; CHECK-LABEL: @shrink_no2(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i8 %x to i32
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[CONV]], -129
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %conv = sext i8 %x to i32
+  %div = sdiv i32 %conv, -129
+  ret i32 %div
+}
+
+; 17 bits are needed to represent 65535 as a signed value, so this shouldn't fold.
+
+define i32 @shrink_no3(i16 %x) {
+; CHECK-LABEL: @shrink_no3(
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 %x to i32
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[CONV]], 65535
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %conv = sext i16 %x to i32
+  %div = sdiv i32 %conv, 65535
+  ret i32 %div
+}
+

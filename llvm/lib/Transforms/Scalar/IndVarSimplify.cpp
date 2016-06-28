@@ -2233,8 +2233,7 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, AnalysisManager<Loop> &AM) {
   if (!IVS.run(&L))
     return PreservedAnalyses::all();
 
-  // FIXME: once we have an equivalent of AU.setPreservesCFG() in the
-  // new pass manager, we should use that here.
+  // FIXME: This should also 'preserve the CFG'.
   return getLoopPassPreservedAnalyses();
 }
 

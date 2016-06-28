@@ -260,16 +260,15 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->needsFP(MF))
     Reserved.set(PPC::R31);
 
+  bool IsPositionIndependent = TM.getRelocationModel() == Reloc::PIC_;
   if (hasBasePointer(MF)) {
-    if (Subtarget.isSVR4ABI() && !TM.isPPC64() &&
-        TM.getRelocationModel() == Reloc::PIC_)
+    if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
       Reserved.set(PPC::R29);
     else
       Reserved.set(PPC::R30);
   }
 
-  if (Subtarget.isSVR4ABI() && !TM.isPPC64() &&
-      TM.getRelocationModel() == Reloc::PIC_)
+  if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
     Reserved.set(PPC::R30);
 
   // Reserve Altivec registers when Altivec is unavailable.

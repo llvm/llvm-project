@@ -183,7 +183,7 @@ void SparcAsmPrinter::LowerGETPCXAndEmitMCInsts(const MachineInstr *MI,
   MCOperand MCRegOP = MCOperand::createReg(MO.getReg());
 
 
-  if (TM.getRelocationModel() != Reloc::PIC_) {
+  if (!isPositionIndependent()) {
     // Just load the address of GOT to MCRegOP.
     switch(TM.getCodeModel()) {
     default:

@@ -809,8 +809,9 @@ void TargetLoweringObjectFileMachO::getNameWithPrefix(
 //===----------------------------------------------------------------------===//
 
 static unsigned
-getCOFFSectionFlags(SectionKind K) {
+getCOFFSectionFlags(SectionKind K, const TargetMachine &TM) {
   unsigned Flags = 0;
+  bool isThumb = TM.getTargetTriple().getArch() == Triple::thumb;
 
   if (K.isMetadata())
     Flags |=
@@ -819,7 +820,8 @@ getCOFFSectionFlags(SectionKind K) {
     Flags |=
       COFF::IMAGE_SCN_MEM_EXECUTE |
       COFF::IMAGE_SCN_MEM_READ |
-      COFF::IMAGE_SCN_CNT_CODE;
+      COFF::IMAGE_SCN_CNT_CODE |
+      (isThumb ? COFF::IMAGE_SCN_MEM_16BIT : (COFF::SectionCharacteristics)0);
   else if (K.isBSS())
     Flags |=
       COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA |
@@ -889,7 +891,7 @@ MCSection *TargetLoweringObjectFileCOFF::getExplicitSectionGlobal(
     const GlobalValue *GV, SectionKind Kind, Mangler &Mang,
     const TargetMachine &TM) const {
   int Selection = 0;
-  unsigned Characteristics = getCOFFSectionFlags(Kind);
+  unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
   StringRef Name = GV->getSection();
   StringRef COMDATSymName = "";
   if (GV->hasComdat()) {
@@ -938,7 +940,7 @@ MCSection *TargetLoweringObjectFileCOFF::SelectSectionForGlobal(
 
   if ((EmitUniquedSection && !Kind.isCommon()) || GV->hasComdat()) {
     const char *Name = getCOFFSectionNameForUniqueGlobal(Kind);
-    unsigned Characteristics = getCOFFSectionFlags(Kind);
+    unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
 
     Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
     int Selection = getSelectionForCOFF(GV);
@@ -1015,7 +1017,7 @@ MCSection *TargetLoweringObjectFileCOFF::getSectionForJumpTable(
 
   SectionKind Kind = SectionKind::getReadOnly();
   const char *Name = getCOFFSectionNameForUniqueGlobal(Kind);
-  unsigned Characteristics = getCOFFSectionFlags(Kind);
+  unsigned Characteristics = getCOFFSectionFlags(Kind, TM);
   Characteristics |= COFF::IMAGE_SCN_LNK_COMDAT;
   unsigned UniqueID = NextUniqueID++;
 

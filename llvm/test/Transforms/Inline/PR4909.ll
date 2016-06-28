@@ -1,4 +1,5 @@
 ; RUN: opt < %s -partial-inliner -disable-output
+; RUN: opt < %s -passes=partial-inliner -disable-output
 
 define i32 @f() {
 entry:

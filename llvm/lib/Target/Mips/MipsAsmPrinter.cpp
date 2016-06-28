@@ -691,12 +691,11 @@ void MipsAsmPrinter::EmitStartOfAsmFile(Module &M) {
   const MipsABIInfo &ABI = MTM.getABI();
   if (IsABICalls) {
     TS.emitDirectiveAbiCalls();
-    Reloc::Model RM = TM.getRelocationModel();
     // FIXME: This condition should be a lot more complicated that it is here.
     //        Ideally it should test for properties of the ABI and not the ABI
     //        itself.
     //        For the moment, I'm only correcting enough to make MIPS-IV work.
-    if (RM == Reloc::Static && !ABI.IsN64())
+    if (!isPositionIndependent() && !ABI.IsN64())
       TS.emitDirectiveOptionPic0();
   }
 
@@ -969,7 +968,7 @@ void MipsAsmPrinter::EmitFPCallStub(
   OutStreamer->EmitLabel(Stub);
 
   // Only handle non-pic for now.
-  assert(TM.getRelocationModel() != Reloc::PIC_ &&
+  assert(!isPositionIndependent() &&
          "should not be here if we are compiling pic");
   TS.emitDirectiveSetReorder();
   //

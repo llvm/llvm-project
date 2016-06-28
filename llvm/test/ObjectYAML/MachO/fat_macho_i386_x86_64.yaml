@@ -1,4 +1,4 @@
-# RUN: yaml2obj -format=macho %s | obj2yaml | FileCheck %s
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s
 
 --- !fat-mach-o
 FatHeader:       

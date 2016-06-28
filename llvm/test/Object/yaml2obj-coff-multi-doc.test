@@ -1,15 +1,15 @@
-# RUN: yaml2obj -format=coff -docnum=1 %s \
+# RUN: yaml2obj -docnum=1 %s \
 # RUN:   | llvm-readobj -symbols - | FileCheck -check-prefix=DOC1 %s
-# RUN: yaml2obj -format=coff -docnum=2 %s \
+# RUN: yaml2obj -docnum=2 %s \
 # RUN:   | llvm-readobj -symbols - | FileCheck -check-prefix=DOC2 %s
-# RUN: not yaml2obj -format=coff -docnum=3 %s 2>&1 \
+# RUN: not yaml2obj -docnum=3 %s 2>&1 \
 # RUN:   | FileCheck -check-prefix=DOC3 %s
 
 # DOC1: Name: _sym1
 # DOC2: Name: _sym2
 # DOC3: yaml2obj: Cannot find the 3rd document
 
----
+--- !COFF
 header:
   Machine: IMAGE_FILE_MACHINE_I386
   Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
@@ -49,7 +49,7 @@ symbols:
     ComplexType: IMAGE_SYM_DTYPE_NULL
     StorageClass: IMAGE_SYM_CLASS_EXTERNAL
 
----
+--- !COFF
 header:
   Machine: IMAGE_FILE_MACHINE_I386
   Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]

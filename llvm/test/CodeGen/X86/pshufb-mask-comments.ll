@@ -39,9 +39,9 @@ define <16 x i8> @test3(<16 x i8> %V) {
 define <16 x i8> @test4(<16 x i8> %V, <2 x i64>* %P) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = [1084818905618843912,506097522914230528]
-; CHECK-NEXT:    movdqa %xmm1, (%rdi)
-; CHECK-NEXT:    pshufb %xmm1, %xmm0
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [1084818905618843912,506097522914230528]
+; CHECK-NEXT:    movaps %xmm1, (%rdi)
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %1 = insertelement <2 x i64> undef, i64 1084818905618843912, i32 0
   %2 = insertelement <2 x i64>    %1, i64  506097522914230528, i32 1

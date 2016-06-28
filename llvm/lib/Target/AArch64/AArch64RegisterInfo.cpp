@@ -404,8 +404,6 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(FIOperandNum).ChangeToRegister(ScratchReg, false, false, true);
 }
 
-namespace llvm {
-
 unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
                                                   MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
@@ -445,5 +443,3 @@ unsigned AArch64RegisterInfo::getRegPressureLimit(const TargetRegisterClass *RC,
     return 16;
   }
 }
-
-} // namespace llvm

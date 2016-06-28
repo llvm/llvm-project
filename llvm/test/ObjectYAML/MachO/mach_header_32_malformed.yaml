@@ -1,4 +1,4 @@
-# RUN: not yaml2obj -format=macho %s 2>&1 | FileCheck %s
+# RUN: not yaml2obj %s 2>&1 | FileCheck %s
 
 --- !mach-o
 FileHeader:      

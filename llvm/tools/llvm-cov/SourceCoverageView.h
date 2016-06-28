@@ -101,7 +101,7 @@ struct LineCoverageStats {
 ///
 /// A source coverage view and its nested sub-views form a file-oriented
 /// representation of code coverage data. This view can be printed out by a
-/// renderer which implements the Rendering Interface.
+/// renderer which implements both the File Creation and Rendering interfaces.
 class SourceCoverageView {
   /// A function or file name.
   StringRef SourceName;
@@ -121,6 +121,25 @@ class SourceCoverageView {
   /// A container for all instantiations (e.g template functions) in the source
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
+
+public:
+  struct StreamDestructor {
+    void operator()(raw_ostream *OS) const;
+  };
+
+  using OwnedStream = std::unique_ptr<raw_ostream, StreamDestructor>;
+
+  /// @name File Creation Interface
+  /// @{
+
+  /// \brief Create a file to print a coverage view into.
+  virtual Expected<OwnedStream> createOutputFile(StringRef Path,
+                                                 bool InToplevel) = 0;
+
+  /// \brief Close a file which has been used to print a coverage view.
+  virtual void closeOutputFile(OwnedStream OS) = 0;
+
+  /// @}
 
 protected:
   struct LineRef {
@@ -182,6 +201,12 @@ protected:
   /// \brief Format a count using engineering notation with 3 significant
   /// digits.
   static std::string formatCount(uint64_t N);
+
+  /// \brief If directory output is enabled, create a file with \p Path as the
+  /// suffix. Otherwise, return stdout.
+  static Expected<OwnedStream>
+  createOutputStream(const CoverageViewOptions &Opts, StringRef Path,
+                     StringRef Extension, bool InToplevel);
 
   SourceCoverageView(StringRef SourceName, const MemoryBuffer &File,
                      const CoverageViewOptions &Options,

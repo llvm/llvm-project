@@ -13,6 +13,7 @@
 
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalAlias.h"
@@ -50,6 +51,10 @@ TargetMachine::~TargetMachine() {
   delete MRI;
   delete MII;
   delete STI;
+}
+
+bool TargetMachine::isPositionIndependent() const {
+  return getRelocationModel() == Reloc::PIC_;
 }
 
 /// \brief Reset the target options based on the function's attributes.
@@ -105,23 +110,65 @@ static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   llvm_unreachable("invalid TLS model");
 }
 
+// FIXME: make this a proper option
+static bool CanUseCopyRelocWithPIE = false;
+
+bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
+                                         const GlobalValue *GV) const {
+  Reloc::Model RM = getRelocationModel();
+  const Triple &TT = getTargetTriple();
+
+  // DLLImport explicitly marks the GV as external.
+  if (GV && GV->hasDLLImportStorageClass())
+    return false;
+
+  // Every other GV is local on COFF
+  if (TT.isOSBinFormatCOFF())
+    return true;
+
+  if (GV && (GV->hasLocalLinkage() || !GV->hasDefaultVisibility()))
+    return true;
+
+  if (TT.isOSBinFormatMachO()) {
+    if (RM == Reloc::Static)
+      return true;
+    return GV && GV->isStrongDefinitionForLinker();
+  }
+
+  assert(TT.isOSBinFormatELF());
+  assert(RM != Reloc::DynamicNoPIC);
+
+  bool IsExecutable =
+      RM == Reloc::Static || M.getPIELevel() != PIELevel::Default;
+  if (IsExecutable) {
+    // If the symbol is defined, it cannot be preempted.
+    if (GV && !GV->isDeclarationForLinker())
+      return true;
+
+    bool IsTLS = GV && GV->isThreadLocal();
+    // Check if we can use copy relocations.
+    if (!IsTLS && (RM == Reloc::Static || CanUseCopyRelocWithPIE))
+      return true;
+  }
+
+  // ELF supports preemption of other symbols.
+  return false;
+}
+
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
-  bool isLocal = GV->hasLocalLinkage();
-  bool isDeclaration = GV->isDeclaration();
-  bool isPIC = getRelocationModel() == Reloc::PIC_;
-  bool isPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
-  // FIXME: what should we do for protected and internal visibility?
-  // For variables, is internal different from hidden?
-  bool isHidden = GV->hasHiddenVisibility();
+  bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;
+  Reloc::Model RM = getRelocationModel();
+  bool IsSharedLibrary = RM == Reloc::PIC_ && !IsPIE;
+  bool IsLocal = shouldAssumeDSOLocal(*GV->getParent(), GV);
 
   TLSModel::Model Model;
-  if (isPIC && !isPIE) {
-    if (isLocal || isHidden)
+  if (IsSharedLibrary) {
+    if (IsLocal)
       Model = TLSModel::LocalDynamic;
     else
       Model = TLSModel::GeneralDynamic;
   } else {
-    if (!isDeclaration || isHidden)
+    if (IsLocal)
       Model = TLSModel::LocalExec;
     else
       Model = TLSModel::InitialExec;

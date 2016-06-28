@@ -1,5 +1,5 @@
-RUN: yaml2obj -format macho %S/Inputs/macho.yaml -o %t-macho.o
-RUN: yaml2obj -format coff %S/Inputs/coff.yaml -o %t-coff.o
+RUN: yaml2obj %S/Inputs/macho.yaml -o %t-macho.o
+RUN: yaml2obj %S/Inputs/coff.yaml -o %t-coff.o
 
 RUN: rm -f %t.ar
 RUN: llvm-ar crs %t.ar %t-macho.o

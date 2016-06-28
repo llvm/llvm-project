@@ -13,9 +13,9 @@
 #ifndef LLVM_LIB_TARGET_SPARC_LEON_PASSES_H
 #define LLVM_LIB_TARGET_SPARC_LEON_PASSES_H
 
-#include "llvm/CodeGen/Passes.h"
-#include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/Passes.h"
 
 #include "Sparc.h"
 #include "SparcSubtarget.h"
@@ -27,17 +27,21 @@ protected:
   const SparcSubtarget *Subtarget;
   const int LAST_OPERAND = -1;
 
-  //this vector holds free registers that we allocate in groups for some of the LEON passes
-  std::vector <int> UsedRegisters;
+  // this vector holds free registers that we allocate in groups for some of the
+  // LEON passes
+  std::vector<int> UsedRegisters;
 
 protected:
-  LEONMachineFunctionPass(TargetMachine &tm, char& ID);
-  LEONMachineFunctionPass(char& ID);
+  LEONMachineFunctionPass(TargetMachine &tm, char &ID);
+  LEONMachineFunctionPass(char &ID);
 
-  int GetRegIndexForOperand(MachineInstr& MI, int OperandIndex);
-  void clearUsedRegisterList();
-  void markRegisterUsed(int registerIndex);
-  int getUnusedFPRegister(MachineRegisterInfo& MRI);
+  int GetRegIndexForOperand(MachineInstr &MI, int OperandIndex);
+  void clearUsedRegisterList() { UsedRegisters.clear(); }
+
+  void markRegisterUsed(int registerIndex) {
+    UsedRegisters.push_back(registerIndex);
+  }
+  int getUnusedFPRegister(MachineRegisterInfo &MRI);
 };
 
 class LLVM_LIBRARY_VISIBILITY InsertNOPLoad : public LEONMachineFunctionPass {
@@ -45,10 +49,12 @@ public:
   static char ID;
 
   InsertNOPLoad(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction& MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "InsertNOPLoad: Erratum Fix LBR35: insert a NOP instruction after every single-cycle load instruction when the next instruction is another load/store instruction";
+    return "InsertNOPLoad: Erratum Fix LBR35: insert a NOP instruction after "
+           "every single-cycle load instruction when the next instruction is "
+           "another load/store instruction";
   }
 };
 
@@ -57,7 +63,7 @@ public:
   static char ID;
 
   FixFSMULD(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction& MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
     return "FixFSMULD: Erratum Fix LBR31: do not select FSMULD";
@@ -69,10 +75,12 @@ public:
   static char ID;
 
   ReplaceFMULS(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction& MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "ReplaceFMULS: Erratum Fix LBR32: replace FMULS instruction with a routine using conversions/double precision operations to replace FMULS";
+    return "ReplaceFMULS: Erratum Fix LBR32: replace FMULS instruction with a "
+           "routine using conversions/double precision operations to replace "
+           "FMULS";
   }
 };
 
@@ -81,12 +89,13 @@ public:
   static char ID;
 
   FixAllFDIVSQRT(TargetMachine &tm);
-  bool runOnMachineFunction(MachineFunction& MF) override;
+  bool runOnMachineFunction(MachineFunction &MF) override;
 
   const char *getPassName() const override {
-    return "FixAllFDIVSQRT: Erratum Fix LBR34: fix FDIVS/FDIVD/FSQRTS/FSQRTD instructions with NOPs and floating-point store";
+    return "FixAllFDIVSQRT: Erratum Fix LBR34: fix FDIVS/FDIVD/FSQRTS/FSQRTD "
+           "instructions with NOPs and floating-point store";
   }
 };
 } // namespace llvm
 
-#endif
+#endif // LLVM_LIB_TARGET_SPARC_LEON_PASSES_H

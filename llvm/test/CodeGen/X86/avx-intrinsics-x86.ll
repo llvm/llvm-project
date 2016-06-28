@@ -4036,7 +4036,7 @@ define <4 x double> @test_x86_avx_vpermilvar_pd_256_2(<4 x double> %a0) {
 ;
 ; AVX512VL-LABEL: test_x86_avx_vpermilvar_pd_256_2:
 ; AVX512VL:       ## BB#0:
-; AVX512VL-NEXT:    vpermilpd LCPI227_0, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[1,0,2,3]
 ; AVX512VL-NEXT:    retl
   %res = call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 0, i64 2>) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
