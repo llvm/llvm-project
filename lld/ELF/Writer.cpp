@@ -277,9 +277,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (!Config->NoUndefined) {
     if (Config->Relocatable)
       return;
-    if (Config->Shared && !Config->ZDefs)
-      if (Sym->symbol()->Visibility == STV_DEFAULT)
-        return;
+    if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT)
+      return;
   }
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();

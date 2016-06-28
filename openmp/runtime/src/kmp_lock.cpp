@@ -91,7 +91,7 @@ __kmp_acquire_tas_lock_timed_template( kmp_tas_lock_t *lck, kmp_int32 gtid )
     KMP_MB();
 
 #ifdef USE_LOCK_PROFILE
-    kmp_uint32 curr = TCR_4( lck->lk.poll );
+    kmp_uint32 curr = KMP_LOCK_STRIP( TCR_4( lck->lk.poll ) );
     if ( ( curr != 0 ) && ( curr != gtid + 1 ) )
         __kmp_printf( "LOCK CONTENTION: %p\n", lck );
     /* else __kmp_printf( "." );*/
@@ -393,7 +393,7 @@ __kmp_acquire_futex_lock_timed_template( kmp_futex_lock_t *lck, kmp_int32 gtid )
     KMP_MB();
 
 #ifdef USE_LOCK_PROFILE
-    kmp_uint32 curr = TCR_4( lck->lk.poll );
+    kmp_uint32 curr = KMP_LOCK_STRIP( TCR_4( lck->lk.poll ) );
     if ( ( curr != 0 ) && ( curr != gtid_code ) )
         __kmp_printf( "LOCK CONTENTION: %p\n", lck );
     /* else __kmp_printf( "." );*/
@@ -487,7 +487,7 @@ __kmp_acquire_futex_lock_with_checks( kmp_futex_lock_t *lck, kmp_int32 gtid )
 int
 __kmp_test_futex_lock( kmp_futex_lock_t *lck, kmp_int32 gtid )
 {
-    if ( KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(futex), KMP_LOCK_BUSY(gtid+1, futex) << 1 ) ) {
+    if ( KMP_COMPARE_AND_STORE_ACQ32( & ( lck->lk.poll ), KMP_LOCK_FREE(futex), KMP_LOCK_BUSY((gtid+1) << 1, futex) ) ) {
         KMP_FSYNC_ACQUIRED( lck );
         return TRUE;
     }

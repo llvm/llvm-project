@@ -32,10 +32,14 @@ SourceRange getTypeRange(const ParmVarDecl &Param) {
 void AvoidConstParamsInDecls::registerMatchers(MatchFinder *Finder) {
   const auto ConstParamDecl =
       parmVarDecl(hasType(qualType(isConstQualified()))).bind("param");
-  Finder->addMatcher(functionDecl(unless(isDefinition()),
-                                  has(typeLoc(forEach(ConstParamDecl))))
-                         .bind("func"),
-                     this);
+  Finder->addMatcher(
+      functionDecl(unless(isDefinition()),
+                   // Lambdas are always their own definition, but they
+                   // generate a non-definition FunctionDecl too. Ignore those.
+                   unless(cxxMethodDecl(ofClass(cxxRecordDecl(isLambda())))),
+                   has(typeLoc(forEach(ConstParamDecl))))
+          .bind("func"),
+      this);
 }
 
 // Re-lex the tokens to get precise location of last 'const'

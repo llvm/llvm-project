@@ -104,9 +104,6 @@ public:
     _absolute.clear();
   }
 
-  typedef AtomRange<DefinedAtom> DefinedAtomRange;
-  DefinedAtomRange definedAtoms() { return _defined; }
-
 private:
   AtomVector<DefinedAtom> _defined;
   AtomVector<UndefinedAtom> _undefined;

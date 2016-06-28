@@ -3683,7 +3683,7 @@ Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp)
             StateType private_state = m_private_state.GetValue();
             if (private_state != eStateStopped)
             {
-                return error;
+                return Error("Attempt to stop the target in order to detach timed out. State = %s", StateAsCString(GetState()));
             }
         }
     }

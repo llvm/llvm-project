@@ -163,6 +163,32 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
+// A symbol version may be included in a symbol name as a prefix after '@'.
+// This function parses that part and returns a version ID number.
+static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
+  size_t VersionBegin = Name.find('@');
+  if (VersionBegin == StringRef::npos)
+    return Config->VersionScriptGlobalByDefault ? VER_NDX_GLOBAL
+                                                : VER_NDX_LOCAL;
+
+  // If symbol name contains '@' or '@@' we can assign its version id right
+  // here. '@@' means version by default. It is usually the most recent one.
+  // VERSYM_HIDDEN flag should be set for all non-default versions.
+  StringRef Version = Name.drop_front(VersionBegin + 1);
+  bool Default = Version.startswith("@");
+  if (Default)
+    Version = Version.drop_front();
+
+  size_t I = 2;
+  for (elf::Version &V : Config->SymbolVersions) {
+    if (V.Name == Version)
+      return Default ? I : (I | VERSYM_HIDDEN);
+    ++I;
+  }
+  error("symbol " + Name + " has undefined version " + Version);
+  return 0;
+}
+
 // Find an existing symbol or create and insert a new one.
 template <class ELFT>
 std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
@@ -175,10 +201,9 @@ std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
     Sym->Visibility = STV_DEFAULT;
     Sym->IsUsedInRegularObj = false;
     Sym->ExportDynamic = false;
-    if (Config->VersionScriptGlobalByDefault)
-      Sym->VersionId = VER_NDX_GLOBAL;
-    else
-      Sym->VersionId = VER_NDX_LOCAL;
+    Sym->VersionId = getVersionId(Sym, Name);
+    Sym->VersionedName =
+        Sym->VersionId != VER_NDX_LOCAL && Sym->VersionId != VER_NDX_GLOBAL;
     SymVector.push_back(Sym);
   } else {
     Sym = SymVector[P.first->second];

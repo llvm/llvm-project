@@ -114,6 +114,7 @@ macro(test_targets)
   if(ANDROID)
     # Examine compiler output to determine target architecture.
     detect_target_arch()
+    set(COMPILER_RT_OS_SUFFIX "-android")
   elseif(NOT APPLE) # Supported archs for Apple platforms are generated later
     if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "i[2-6]86|x86|amd64")
       if(NOT MSVC)

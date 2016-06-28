@@ -90,3 +90,7 @@ void ConstNotVisible(CONCAT(cons, t) int i);
 // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: parameter 'i'
 // We warn, but we can't give a fix
 // CHECK-FIXES: void ConstNotVisible(CONCAT(cons, t) int i);
+
+// Regression test. We should not warn (or crash) on lambda expressions
+auto lambda_with_name = [](const int n) {};
+auto lambda_without_name = [](const int) {};
