@@ -252,6 +252,15 @@ public:
 
   /// Return true if we're compiling for diagnostics.
   bool isForDiagnostics() const { return ForDiagnostics; }
+
+  /// Redirect - Redirect output of this compilation. Can only be done once.
+  ///
+  /// \param Redirects - array of pointers to paths. The array
+  /// should have a size of three. The inferior process's
+  /// stdin(0), stdout(1), and stderr(2) will be redirected to the
+  /// corresponding paths. This compilation instance becomes
+  /// the owner of Redirects and will delete the array and StringRef's.
+  void Redirect(const StringRef** Redirects);
 };
 
 } // end namespace driver

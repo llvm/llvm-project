@@ -253,6 +253,14 @@ void test_cubema(global float* out, float a, float b, float c) {
   *out = __builtin_amdgcn_cubema(a, b, c);
 }
 
+// CHECK-LABEL: @test_read_exec(
+// CHECK: call i64 @llvm.read_register.i64(metadata ![[EXEC:[0-9]+]]) #[[READ_EXEC_ATTRS:[0-9]+]]
+void test_read_exec(global ulong* out) {
+  *out = __builtin_amdgcn_read_exec();
+}
+
+// CHECK: declare i64 @llvm.read_register.i64(metadata) #[[NOUNWIND_READONLY:[0-9]+]]
+
 // Legacy intrinsics with AMDGPU prefix
 
 // CHECK-LABEL: @test_legacy_rsq_f32
@@ -282,3 +290,7 @@ void test_legacy_ldexp_f64(global double* out, double a, int b)
 {
   *out = __builtin_amdgpu_ldexp(a, b);
 }
+
+// CHECK-DAG: attributes #[[NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
+// CHECK-DAG: attributes #[[READ_EXEC_ATTRS]] = { convergent }
+// CHECK: ![[EXEC]] = !{!"exec"}
