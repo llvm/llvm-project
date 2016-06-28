@@ -6540,25 +6540,32 @@ static const Expr *ignorePointerCastsAndParens(const Expr *E) {
 ///
 /// Please note: this function is specialized for how __builtin_object_size
 /// views "objects".
+///
+/// If this encounters an invalid RecordDecl, it will always return true.
 static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
   assert(!LVal.Designator.Invalid);
 
-  auto IsLastFieldDecl = [&Ctx](const FieldDecl *FD) {
-    if (FD->getParent()->isUnion())
+  auto IsLastOrInvalidFieldDecl = [&Ctx](const FieldDecl *FD, bool &Invalid) {
+    const RecordDecl *Parent = FD->getParent();
+    Invalid = Parent->isInvalidDecl();
+    if (Invalid || Parent->isUnion())
       return true;
-    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(FD->getParent());
+    const ASTRecordLayout &Layout = Ctx.getASTRecordLayout(Parent);
     return FD->getFieldIndex() + 1 == Layout.getFieldCount();
   };
 
   auto &Base = LVal.getLValueBase();
   if (auto *ME = dyn_cast_or_null<MemberExpr>(Base.dyn_cast<const Expr *>())) {
     if (auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl())) {
-      if (!IsLastFieldDecl(FD))
-        return false;
+      bool Invalid;
+      if (!IsLastOrInvalidFieldDecl(FD, Invalid))
+        return Invalid;
     } else if (auto *IFD = dyn_cast<IndirectFieldDecl>(ME->getMemberDecl())) {
-      for (auto *FD : IFD->chain())
-        if (!IsLastFieldDecl(cast<FieldDecl>(FD)))
-          return false;
+      for (auto *FD : IFD->chain()) {
+        bool Invalid;
+        if (!IsLastOrInvalidFieldDecl(cast<FieldDecl>(FD), Invalid))
+          return Invalid;
+      }
     }
   }
 
@@ -6581,8 +6588,9 @@ static bool isDesignatorAtObjectEnd(const ASTContext &Ctx, const LValue &LVal) {
         return false;
       BaseType = CT->getElementType();
     } else if (auto *FD = getAsField(LVal.Designator.Entries[I])) {
-      if (!IsLastFieldDecl(FD))
-        return false;
+      bool Invalid;
+      if (!IsLastOrInvalidFieldDecl(FD, Invalid))
+        return Invalid;
       BaseType = FD->getType();
     } else {
       assert(getAsBaseClass(LVal.Designator.Entries[I]) != nullptr &&

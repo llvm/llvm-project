@@ -534,7 +534,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
       if (SymbolBody *B = find(Name)) {
         if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
             B->symbol()->VersionId != VER_NDX_LOCAL)
-          error("duplicate symbol " + Name + " in version script");
+          warning("duplicate symbol " + Name + " in version script");
         B->symbol()->VersionId = I;
       }
     ++I;

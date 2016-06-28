@@ -1,10 +1,11 @@
 // This test verifies that the correct macros are predefined.
 //
-// RUN: %clang_cc1 %s -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=13.00 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS
+// RUN: %clang_cc1 %s -x c++ -E -dM -triple i686-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.00 -std=c++1z -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS
 // CHECK-MS: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS: #define _MSC_EXTENSIONS 1
-// CHECK-MS: #define _MSC_VER 1300
+// CHECK-MS: #define _MSC_VER 1900
+// CHECK-MS: #define _MSVC_LANG 201403L
 // CHECK-MS: #define _M_IX86 600
 // CHECK-MS: #define _M_IX86_FP 0
 // CHECK-MS: #define _WIN32 1
@@ -13,11 +14,12 @@
 // CHECK-MS-NOT: GNU
 // CHECK-MS-NOT: GXX
 //
-// RUN: %clang_cc1 %s -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
-// RUN:     -fms-compatibility-version=13.00 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS64
+// RUN: %clang_cc1 %s -x c++ -E -dM -triple x86_64-pc-win32 -fms-extensions -fms-compatibility \
+// RUN:     -fms-compatibility-version=19.00 -std=c++14 -o - | FileCheck -match-full-lines %s --check-prefix=CHECK-MS64
 // CHECK-MS64: #define _INTEGRAL_MAX_BITS 64
 // CHECK-MS64: #define _MSC_EXTENSIONS 1
-// CHECK-MS64: #define _MSC_VER 1300
+// CHECK-MS64: #define _MSC_VER 1900
+// CHECK-MS64: #define _MSVC_LANG 201402L
 // CHECK-MS64: #define _M_AMD64 100
 // CHECK-MS64: #define _M_X64 100
 // CHECK-MS64: #define _WIN64 1

@@ -29,6 +29,7 @@ add_polly_library(Polly
   Analysis/ScopDetection.cpp
   Analysis/ScopDetectionDiagnostic.cpp
   Analysis/ScopInfo.cpp
+  Analysis/ScopBuilder.cpp
   Analysis/ScopGraphPrinter.cpp
   Analysis/ScopPass.cpp
   CodeGen/BlockGenerators.cpp
