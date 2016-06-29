@@ -4,5 +4,11 @@
 # uses LLVM's. When it does, we should move this file to ClangConfig.cmake.in
 # and call configure_file() on it.
 
+find_package(LLVM REQUIRED CONFIG)
+
+@CLANG_CONFIG_CODE@
+
+set(CLANG_CMAKE_DIR "@CLANG_CONFIG_CMAKE_DIR@")
+
 # Provide all our library targets to users.
-include("${CMAKE_CURRENT_LIST_DIR}/ClangTargets.cmake")
+include("@CLANG_CONFIG_EXPORTS_FILE@")
