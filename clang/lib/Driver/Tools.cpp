@@ -2247,12 +2247,10 @@ void Clang::AddX86TargetArgs(const ArgList &Args,
   }
 
   // Set flags to support MCU ABI.
-  if (Arg *A = Args.getLastArg(options::OPT_miamcu, options::OPT_mno_iamcu)) {
-    if (A->getOption().matches(options::OPT_miamcu)) {
-      CmdArgs.push_back("-mfloat-abi");
-      CmdArgs.push_back("soft");
-      CmdArgs.push_back("-mstack-alignment=4");
-    }
+  if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false)) {
+    CmdArgs.push_back("-mfloat-abi");
+    CmdArgs.push_back("soft");
+    CmdArgs.push_back("-mstack-alignment=4");
   }
 }
 
@@ -2352,7 +2350,7 @@ static bool DecodeAArch64Mcpu(const Driver &D, StringRef Mcpu, StringRef &CPU,
   CPU = Split.first;
   if (CPU == "cortex-a53" || CPU == "cortex-a57" ||
       CPU == "cortex-a72" || CPU == "cortex-a35" || CPU == "exynos-m1" ||
-      CPU == "kryo"       || CPU == "cortex-a73") {
+      CPU == "kryo"       || CPU == "cortex-a73" || CPU == "vulcan") {
     Features.push_back("+neon");
     Features.push_back("+crc");
     Features.push_back("+crypto");
@@ -5109,6 +5107,40 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     // Windows on ARM expects restricted IT blocks
     CmdArgs.push_back("-backend-option");
     CmdArgs.push_back("-arm-restrict-it");
+  }
+
+  // Forward -cl options to -cc1
+  if (Args.getLastArg(options::OPT_cl_opt_disable)) {
+    CmdArgs.push_back("-cl-opt-disable");
+  }
+  if (Args.getLastArg(options::OPT_cl_strict_aliasing)) {
+    CmdArgs.push_back("-cl-strict-aliasing");
+  }
+  if (Args.getLastArg(options::OPT_cl_single_precision_constant)) {
+    CmdArgs.push_back("-cl-single-precision-constant");
+  }
+  if (Args.getLastArg(options::OPT_cl_finite_math_only)) {
+    CmdArgs.push_back("-cl-finite-math-only");
+  }
+  if (Args.getLastArg(options::OPT_cl_kernel_arg_info)) {
+    CmdArgs.push_back("-cl-kernel-arg-info");
+  }
+  if (Args.getLastArg(options::OPT_cl_unsafe_math_optimizations)) {
+    CmdArgs.push_back("-cl-unsafe-math-optimizations");
+  }
+  if (Args.getLastArg(options::OPT_cl_fast_relaxed_math)) {
+    CmdArgs.push_back("-cl-fast-relaxed-math");
+  }
+  if (Args.getLastArg(options::OPT_cl_mad_enable)) {
+    CmdArgs.push_back("-cl-mad-enable");
+  }
+  if (Arg *A = Args.getLastArg(options::OPT_cl_std_EQ)) {
+    std::string CLStdStr = "-cl-std=";
+    CLStdStr += A->getValue();
+    CmdArgs.push_back(Args.MakeArgString(CLStdStr));
+  }
+  if (Args.getLastArg(options::OPT_cl_denorms_are_zero)) {
+    CmdArgs.push_back("-cl-denorms-are-zero");
   }
 
   // Forward -f options with positive and negative forms; we translate

@@ -280,9 +280,8 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
   }
 
   // Enforce -static if -miamcu is present.
-  if (Arg *Ar = Args.getLastArg(options::OPT_miamcu, options::OPT_mno_iamcu))
-    if (Ar->getOption().matches(options::OPT_miamcu))
-      DAL->AddFlagArg(0, Opts->getOption(options::OPT_static));
+  if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false))
+    DAL->AddFlagArg(0, Opts->getOption(options::OPT_static));
 
 // Add a default value of -mlinker-version=, if one was given and the user
 // didn't specify one.
@@ -376,24 +375,22 @@ static llvm::Triple computeTargetTriple(const Driver &D,
   }
 
   // Handle -miamcu flag.
-  if (Arg *Ar = Args.getLastArg(options::OPT_miamcu, options::OPT_mno_iamcu)) {
-    if (Ar->getOption().matches(options::OPT_miamcu)) {
-      if (Target.get32BitArchVariant().getArch() != llvm::Triple::x86)
-        D.Diag(diag::err_drv_unsupported_opt_for_target) << "-miamcu"
-                                                         << Target.str();
+  if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false)) {
+    if (Target.get32BitArchVariant().getArch() != llvm::Triple::x86)
+      D.Diag(diag::err_drv_unsupported_opt_for_target) << "-miamcu"
+                                                       << Target.str();
 
-      if (A && !A->getOption().matches(options::OPT_m32))
-        D.Diag(diag::err_drv_argument_not_allowed_with)
-            << "-miamcu" << A->getBaseArg().getAsString(Args);
+    if (A && !A->getOption().matches(options::OPT_m32))
+      D.Diag(diag::err_drv_argument_not_allowed_with)
+          << "-miamcu" << A->getBaseArg().getAsString(Args);
 
-      Target.setArch(llvm::Triple::x86);
-      Target.setArchName("i586");
-      Target.setEnvironment(llvm::Triple::UnknownEnvironment);
-      Target.setEnvironmentName("");
-      Target.setOS(llvm::Triple::ELFIAMCU);
-      Target.setVendor(llvm::Triple::UnknownVendor);
-      Target.setVendorName("intel");
-    }
+    Target.setArch(llvm::Triple::x86);
+    Target.setArchName("i586");
+    Target.setEnvironment(llvm::Triple::UnknownEnvironment);
+    Target.setEnvironmentName("");
+    Target.setOS(llvm::Triple::ELFIAMCU);
+    Target.setVendor(llvm::Triple::UnknownVendor);
+    Target.setVendorName("intel");
   }
 
   return Target;
