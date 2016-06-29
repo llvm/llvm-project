@@ -402,7 +402,7 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   bool isInvariantLoad = false;
 
   // We must be careful with atomic accesses, as they may allow another thread
-  //   to touch this location, cloberring it. We are conservative: if the
+  //   to touch this location, clobbering it. We are conservative: if the
   //   QueryInst is not a simple (non-atomic) memory access, we automatically
   //   return getClobber.
   // If it is simple, we know based on the results of
@@ -423,9 +423,9 @@ MemDepResult MemoryDependenceResults::getSimplePointerDependencyFrom(
   // with synchronization from 1 to 2 and from 3 to 4, resulting in %val
   // being 42. A key property of this program however is that if either
   // 1 or 4 were missing, there would be a race between the store of 42
-  // either the store of 0 or the load (making the whole progam racy).
+  // either the store of 0 or the load (making the whole program racy).
   // The paper mentioned above shows that the same property is respected
-  // by every program that can detect any optimisation of that kind: either
+  // by every program that can detect any optimization of that kind: either
   // it is racy (undefined) or there is a release followed by an acquire
   // between the pair of accesses under consideration.
 

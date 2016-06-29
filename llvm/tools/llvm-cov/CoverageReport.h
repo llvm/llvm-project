@@ -32,7 +32,7 @@ public:
                  std::unique_ptr<coverage::CoverageMapping> Coverage)
       : Options(Options), Coverage(std::move(Coverage)) {}
 
-  void renderFunctionReports(ArrayRef<std::string> Files, raw_ostream &OS);
+  void renderFunctionReports(ArrayRef<StringRef> Files, raw_ostream &OS);
 
   void renderFileReports(raw_ostream &OS);
 };

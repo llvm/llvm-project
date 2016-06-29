@@ -163,7 +163,7 @@ void MipsSEDAGToDAGISel::initGlobalBaseReg(MachineFunction &MF) {
     return;
   }
 
-  if (MF.getTarget().getRelocationModel() == Reloc::Static) {
+  if (!MF.getTarget().isPositionIndependent()) {
     // Set global register to __gnu_local_gp.
     //
     // lui   $v0, %hi(__gnu_local_gp)
@@ -331,7 +331,7 @@ bool MipsSEDAGToDAGISel::selectAddrRegImm(SDValue Addr, SDValue &Base,
     return true;
   }
 
-  if (TM.getRelocationModel() != Reloc::PIC_) {
+  if (!TM.isPositionIndependent()) {
     if ((Addr.getOpcode() == ISD::TargetExternalSymbol ||
         Addr.getOpcode() == ISD::TargetGlobalAddress))
       return false;

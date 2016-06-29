@@ -442,8 +442,7 @@ define <2 x i64> @load_splat_2i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X32-LABEL: load_splat_2i64_2i64_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; X32-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_2i64_2i64_1111:

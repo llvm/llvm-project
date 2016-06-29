@@ -171,7 +171,7 @@ void CoverageReport::render(const FunctionCoverageSummary &Function,
   OS << "\n";
 }
 
-void CoverageReport::renderFunctionReports(ArrayRef<std::string> Files,
+void CoverageReport::renderFunctionReports(ArrayRef<StringRef> Files,
                                            raw_ostream &OS) {
   adjustColumnWidths(Coverage.get());
   bool isFirst = true;

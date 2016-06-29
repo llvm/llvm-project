@@ -90,3 +90,20 @@ loop:
 end:
   ret void
 }
+
+;PR 28282: even when data type is larger than 64-bit, the bit width of the
+;constant operand could be smaller than 64-bit. In this case, there is no
+;benefit to hoist the constant.
+define i32 @struct_type_test(i96 %a0, i96 %a1) {
+;CHECK-LABEL: @struct_type_test
+entry:
+;CHECK-NOT: %const = bitcast i96 32 to i96
+;CHECK: lshr0 = lshr i96 %a0, 32
+  %lshr0 = lshr i96 %a0, 32
+  %cast0 = trunc i96 %lshr0 to i32
+;CHECK: lshr1 = lshr i96 %a1, 32
+  %lshr1 = lshr i96 %a1, 32
+  %cast1 = trunc i96 %lshr1 to i32
+  %ret = add i32 %cast0, %cast1
+  ret i32 %ret
+}

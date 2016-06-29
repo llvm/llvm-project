@@ -91,7 +91,7 @@ int llvm::getNextAvailablePluginDiagnosticKind() {
   return ++PluginKindID;
 }
 
-const char *DiagnosticInfo::AlwaysPrint = "";
+const char *DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint = "";
 
 DiagnosticInfoInlineAsm::DiagnosticInfoInlineAsm(const Instruction &I,
                                                  const Twine &MsgStr,
@@ -185,7 +185,7 @@ bool DiagnosticInfoOptimizationRemarkMissed::isEnabled() const {
 }
 
 bool DiagnosticInfoOptimizationRemarkAnalysis::isEnabled() const {
-  return getPassName() == DiagnosticInfo::AlwaysPrint ||
+  return shouldAlwaysPrint() ||
          (PassRemarksAnalysisOptLoc.Pattern &&
           PassRemarksAnalysisOptLoc.Pattern->match(getPassName()));
 }

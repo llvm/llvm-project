@@ -1,7 +1,7 @@
 ; REQUIRES: x86
 
 ; RUN: llvm-as %s -o %t.o
-; RUN: ld.lld %t.o -m elf_x86_64 -o %t.so -shared
+; RUN: ld.lld %t.o -o %t.so -shared
 ; RUN: llvm-readobj -r %t.so | FileCheck %s
 
 ; CHECK:      Relocations [

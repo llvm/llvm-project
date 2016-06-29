@@ -161,6 +161,7 @@ class MipsSubtarget : public MipsGenSubtargetInfo {
   std::unique_ptr<const MipsTargetLowering> TLInfo;
 
 public:
+  bool isPositionIndependent() const;
   /// This overrides the PostRAScheduler bit in the SchedModel for each CPU.
   bool enablePostRAScheduler() const override;
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;

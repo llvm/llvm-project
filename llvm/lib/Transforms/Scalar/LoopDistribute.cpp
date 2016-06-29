@@ -765,8 +765,9 @@ public:
     // With Rpass-analysis report why.  This is on by default if distribution
     // was requested explicitly.
     emitOptimizationRemarkAnalysis(
-        Ctx, Forced ? DiagnosticInfo::AlwaysPrint : LDIST_NAME, *F,
-        L->getStartLoc(), Twine("loop not distributed: ") + Message);
+        Ctx, Forced ? DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint
+                    : LDIST_NAME,
+        *F, L->getStartLoc(), Twine("loop not distributed: ") + Message);
 
     // Also issue a warning if distribution was requested explicitly but it
     // failed.

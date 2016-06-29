@@ -910,8 +910,8 @@ getModifierVariantKind(ARMCP::ARMCPModifier Modifier) {
 MCSymbol *ARMAsmPrinter::GetARMGVSymbol(const GlobalValue *GV,
                                         unsigned char TargetFlags) {
   if (Subtarget->isTargetMachO()) {
-    bool IsIndirect = (TargetFlags & ARMII::MO_NONLAZY) &&
-      Subtarget->GVIsIndirectSymbol(GV, TM.getRelocationModel());
+    bool IsIndirect =
+        (TargetFlags & ARMII::MO_NONLAZY) && Subtarget->isGVIndirectSymbol(GV);
 
     if (!IsIndirect)
       return getSymbol(GV);

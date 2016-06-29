@@ -47,7 +47,7 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
                clEnumValEnd));
 
 extern cl::opt<std::string> ViewBlockFreqFuncName;
-extern cl::opt<uint64_t> ViewHotFreqPercent;
+extern cl::opt<unsigned> ViewHotFreqPercent;
 
 namespace llvm {
 

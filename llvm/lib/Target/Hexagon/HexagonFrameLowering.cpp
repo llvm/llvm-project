@@ -1058,7 +1058,7 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
     const char *SpillFun = getSpillFunctionFor(MaxReg, SK_ToMem,
                                                StkOvrFlowEnabled);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
-    bool IsPIC = HTM.getRelocationModel() == Reloc::PIC_;
+    bool IsPIC = HTM.isPositionIndependent();
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
@@ -1112,7 +1112,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     SpillKind Kind = HasTC ? SK_FromMemTailcall : SK_FromMem;
     const char *RestoreFn = getSpillFunctionFor(MaxR, Kind);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
-    bool IsPIC = HTM.getRelocationModel() == Reloc::PIC_;
+    bool IsPIC = HTM.isPositionIndependent();
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc()

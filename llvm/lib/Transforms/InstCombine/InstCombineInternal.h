@@ -396,7 +396,6 @@ private:
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Value *EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
-  Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
 
 public:
   /// \brief Inserts an instruction \p New before instruction \p Old

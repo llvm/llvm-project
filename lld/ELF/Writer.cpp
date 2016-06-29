@@ -1304,7 +1304,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
   EHdr->e_ident[EI_OSABI] = FirstObj.getOSABI();
   EHdr->e_type = getELFType();
-  EHdr->e_machine = FirstObj.getEMachine();
+  EHdr->e_machine = FirstObj.EMachine;
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr<ELFT>();
   EHdr->e_shoff = SectionHeaderOff;

@@ -23,6 +23,19 @@
 namespace llvm {
 namespace coverage {
 
+/// \brief Writer of the filenames section for the instrumentation
+/// based code coverage.
+class CoverageFilenamesSectionWriter {
+  ArrayRef<StringRef> Filenames;
+
+public:
+  CoverageFilenamesSectionWriter(ArrayRef<StringRef> Filenames)
+      : Filenames(Filenames) {}
+
+  /// \brief Write encoded filenames to the given output stream.
+  void write(raw_ostream &OS);
+};
+
 /// \brief Writer for instrumentation based coverage mapping data.
 class CoverageMappingWriter {
   ArrayRef<unsigned> VirtualFileMapping;
@@ -43,17 +56,6 @@ public:
   /// \brief Write encoded coverage mapping data to the given output stream.
   void write(raw_ostream &OS);
 };
-
-/// \brief Encode a list of filenames and raw coverage mapping data using the
-/// latest coverage data format.
-///
-/// Set \p FilenamesSize to the size of the filenames section.
-///
-/// Set \p CoverageMappingsSize to the size of the coverage mapping section
-/// (including any necessary padding bytes).
-Expected<std::string> encodeFilenamesAndRawMappings(
-    ArrayRef<std::string> Filenames, ArrayRef<std::string> CoverageMappings,
-    size_t &FilenamesSize, size_t &CoverageMappingsSize);
 
 } // end namespace coverage
 } // end namespace llvm

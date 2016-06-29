@@ -16,6 +16,9 @@
 #define LLVM_CODEGEN_PBQP_GRAPH_H
 
 #include "llvm/Support/Debug.h"
+#include <algorithm>
+#include <cassert>
+#include <limits>
 #include <utility>
 #include <vector>
 

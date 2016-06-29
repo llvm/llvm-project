@@ -676,6 +676,11 @@ public:
   /// string then the triple's arch name is used.
   StringRef getARMCPUForArch(StringRef Arch = StringRef()) const;
 
+  /// Tests whether the target triple is little endian.
+  ///
+  /// \returns true if the triple is little endian, false otherwise.
+  bool isLittleEndian() const;
+
   /// @}
   /// @name Static helpers for IDs.
   /// @{

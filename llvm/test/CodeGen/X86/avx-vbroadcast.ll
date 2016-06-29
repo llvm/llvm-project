@@ -173,14 +173,12 @@ define <8 x i32> @load_splat_8i32_4i32_33333333(<4 x i32>* %ptr) nounwind uwtabl
 ; X32-LABEL: load_splat_8i32_4i32_33333333:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = mem[3,3,3,3]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastss 12(%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_8i32_4i32_33333333:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = mem[3,3,3,3]
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcastss 12(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
   %ld = load <4 x i32>, <4 x i32>* %ptr
@@ -277,14 +275,12 @@ define <4 x i64> @load_splat_4i64_2i64_1111(<2 x i64>* %ptr) nounwind uwtable re
 ; X32-LABEL: load_splat_4i64_2i64_1111:
 ; X32:       ## BB#0: ## %entry
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastsd 8(%eax), %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: load_splat_4i64_2i64_1111:
 ; X64:       ## BB#0: ## %entry
-; X64-NEXT:    vpshufd {{.*#+}} xmm0 = mem[2,3,2,3]
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcastsd 8(%rdi), %ymm0
 ; X64-NEXT:    retq
 entry:
   %ld = load <2 x i64>, <2 x i64>* %ptr

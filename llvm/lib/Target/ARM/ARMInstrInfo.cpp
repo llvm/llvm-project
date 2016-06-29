@@ -90,29 +90,29 @@ unsigned ARMInstrInfo::getUnindexedOpcode(unsigned Opc) const {
   return 0;
 }
 
-void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                                        Reloc::Model RM) const {
+void ARMInstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI) const {
   MachineFunction &MF = *MI->getParent()->getParent();
   const ARMSubtarget &Subtarget = MF.getSubtarget<ARMSubtarget>();
+  const TargetMachine &TM = MF.getTarget();
 
   if (!Subtarget.useMovt(MF)) {
-    if (RM == Reloc::PIC_)
-      expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_pcrel, ARM::LDRi12, RM);
+    if (TM.isPositionIndependent())
+      expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_pcrel, ARM::LDRi12);
     else
-      expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_abs, ARM::LDRi12, RM);
+      expandLoadStackGuardBase(MI, ARM::LDRLIT_ga_abs, ARM::LDRi12);
     return;
   }
 
-  if (RM != Reloc::PIC_) {
-    expandLoadStackGuardBase(MI, ARM::MOVi32imm, ARM::LDRi12, RM);
+  if (!TM.isPositionIndependent()) {
+    expandLoadStackGuardBase(MI, ARM::MOVi32imm, ARM::LDRi12);
     return;
   }
 
   const GlobalValue *GV =
       cast<GlobalValue>((*MI->memoperands_begin())->getValue());
 
-  if (!Subtarget.GVIsIndirectSymbol(GV, RM)) {
-    expandLoadStackGuardBase(MI, ARM::MOV_ga_pcrel, ARM::LDRi12, RM);
+  if (!Subtarget.isGVIndirectSymbol(GV)) {
+    expandLoadStackGuardBase(MI, ARM::MOV_ga_pcrel, ARM::LDRi12);
     return;
   }
 

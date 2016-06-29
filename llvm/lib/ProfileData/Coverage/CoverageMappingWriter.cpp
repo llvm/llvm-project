@@ -18,6 +18,14 @@
 using namespace llvm;
 using namespace coverage;
 
+void CoverageFilenamesSectionWriter::write(raw_ostream &OS) {
+  encodeULEB128(Filenames.size(), OS);
+  for (const auto &Filename : Filenames) {
+    encodeULEB128(Filename.size(), OS);
+    OS << Filename;
+  }
+}
+
 namespace {
 /// \brief Gather only the expressions that are used by the mapping
 /// regions in this function.
@@ -173,52 +181,3 @@ void CoverageMappingWriter::write(raw_ostream &OS) {
   // Ensure that all file ids have at least one mapping region.
   assert(CurrentFileID == (VirtualFileMapping.size() - 1));
 }
-
-/// \brief Encode coverage data into \p OS.
-static void encodeCoverageData(ArrayRef<std::string> Filenames,
-                               ArrayRef<std::string> CoverageMappings,
-                               size_t &FilenamesSize,
-                               size_t &CoverageMappingsSize, raw_ostream &OS) {
-  size_t OSOffset = OS.GetNumBytesInBuffer();
-
-  // Encode the filenames.
-  encodeULEB128(Filenames.size(), OS);
-  for (const auto &Filename : Filenames) {
-    encodeULEB128(Filename.size(), OS);
-    OS << Filename;
-  }
-
-  FilenamesSize = OS.GetNumBytesInBuffer() - OSOffset;
-
-  // Encode the coverage mappings.
-  for (const auto &RawMapping : CoverageMappings)
-    OS << RawMapping;
-
-  // Pad the output stream to an 8-byte boundary. Account for the padding bytes
-  // in \p CoverageMappingsSize.
-  if (size_t Rem = OS.GetNumBytesInBuffer() % 8) {
-    CoverageMappingsSize += 8 - Rem;
-    for (size_t I = 0, S = 8 - Rem; I < S; ++I)
-      OS << '\0';
-  }
-
-  CoverageMappingsSize = OS.GetNumBytesInBuffer() - FilenamesSize - OSOffset;
-}
-
-namespace llvm {
-namespace coverage {
-
-Expected<std::string> encodeFilenamesAndRawMappings(
-    ArrayRef<std::string> Filenames, ArrayRef<std::string> CoverageMappings,
-    size_t &FilenamesSize, size_t &CoverageMappingsSize) {
-  std::string CoverageData;
-  {
-    raw_string_ostream OS{CoverageData};
-    encodeCoverageData(Filenames, CoverageMappings, FilenamesSize,
-                       CoverageMappingsSize, OS);
-  }
-  return std::move(CoverageData);
-}
-
-} // end namespace coverage
-} // end namespace llvm

@@ -14,16 +14,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUTargetMachine.h"
-#include "AMDGPUTargetObjectFile.h"
 #include "AMDGPU.h"
+#include "AMDGPUCallLowering.h"
+#include "AMDGPUTargetObjectFile.h"
 #include "AMDGPUTargetTransformInfo.h"
 #include "R600ISelLowering.h"
 #include "R600InstrInfo.h"
 #include "R600MachineScheduler.h"
 #include "SIISelLowering.h"
 #include "SIInstrInfo.h"
+
 #include "llvm/Analysis/Passes.h"
-#include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -198,8 +199,8 @@ const R600Subtarget *R600TargetMachine::getSubtargetImpl(
 #ifdef LLVM_BUILD_GLOBAL_ISEL
 namespace {
 struct SIGISelActualAccessor : public GISelAccessor {
-  std::unique_ptr<CallLowering> CallLoweringInfo;
-  const CallLowering *getCallLowering() const override {
+  std::unique_ptr<AMDGPUCallLowering> CallLoweringInfo;
+  const AMDGPUCallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
 };
@@ -232,6 +233,8 @@ const SISubtarget *GCNTargetMachine::getSubtargetImpl(const Function &F) const {
     GISelAccessor *GISel = new GISelAccessor();
 #else
     SIGISelActualAccessor *GISel = new SIGISelActualAccessor();
+    GISel->CallLoweringInfo.reset(
+      new AMDGPUCallLowering(*I->getTargetLowering()));
 #endif
 
     I->setGISelAccessor(*GISel);
@@ -535,15 +538,14 @@ void GCNPassConfig::addPreSched2() {
 }
 
 void GCNPassConfig::addPreEmitPass() {
-
   // The hazard recognizer that runs as part of the post-ra scheduler does not
-  // gaurantee to be able handle all hazards correctly.  This is because
-  // if there are multiple scheduling regions in a basic block, the regions
-  // are scheduled bottom up, so when we begin to schedule a region we don't
-  // know what instructions were emitted directly before it.
+  // guarantee to be able handle all hazards correctly. This is because if there
+  // are multiple scheduling regions in a basic block, the regions are scheduled
+  // bottom up, so when we begin to schedule a region we don't know what
+  // instructions were emitted directly before it.
   //
-  // Here we add a stand-alone hazard recognizer pass which can handle all cases.
-  // hazard recognizer pass.
+  // Here we add a stand-alone hazard recognizer pass which can handle all
+  // cases.
   addPass(&PostRAHazardRecognizerID);
 
   addPass(createSIInsertWaitsPass());

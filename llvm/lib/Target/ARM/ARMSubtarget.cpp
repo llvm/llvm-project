@@ -260,17 +260,14 @@ bool ARMSubtarget::isAAPCS16_ABI() const {
   return TM.TargetABI == ARMBaseTargetMachine::ARM_ABI_AAPCS16;
 }
 
-/// true if the GV will be accessed via an indirect symbol.
-bool
-ARMSubtarget::GVIsIndirectSymbol(const GlobalValue *GV,
-                                 Reloc::Model RelocM) const {
+bool ARMSubtarget::isGVIndirectSymbol(const GlobalValue *GV) const {
   if (!TM.shouldAssumeDSOLocal(*GV->getParent(), GV))
     return true;
 
   // 32 bit macho has no relocation for a-b if a is undefined, even if b is in
   // the section that is being relocated. This means we have to use o load even
   // for GVs that are known to be local to the dso.
-  if (isTargetDarwin() && RelocM == Reloc::PIC_ &&
+  if (isTargetDarwin() && TM.isPositionIndependent() &&
       (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
     return true;
 

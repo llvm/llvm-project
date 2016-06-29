@@ -125,7 +125,7 @@ AsmPrinter::~AsmPrinter() {
 }
 
 bool AsmPrinter::isPositionIndependent() const {
-  return TM.getRelocationModel() == Reloc::PIC_;
+  return TM.isPositionIndependent();
 }
 
 /// getFunctionNumber - Return a unique ID for the current function.

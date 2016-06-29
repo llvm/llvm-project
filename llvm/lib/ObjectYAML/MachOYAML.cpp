@@ -91,8 +91,8 @@ void MappingTraits<MachOYAML::Object>::mapping(IO &IO,
   // For Fat files there will be a different tag so they can be differentiated.
   if (!IO.getContext()) {
     IO.setContext(&Object);
-    IO.mapTag("!mach-o", true);
   }
+  IO.mapTag("!mach-o", true);
   IO.mapRequired("FileHeader", Object.Header);
   IO.mapOptional("LoadCommands", Object.LoadCommands);
   IO.mapOptional("LinkEditData", Object.LinkEdit);
