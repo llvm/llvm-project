@@ -17,6 +17,7 @@
 #include "SymbolTable.h"
 #include "Config.h"
 #include "Error.h"
+#include "LinkerScript.h"
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/StringSaver.h"
@@ -35,7 +36,7 @@ template <class ELFT> static bool isCompatible(InputFile *FileP) {
   auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
   if (!F)
     return true;
-  if (F->getELFKind() == Config->EKind && F->getEMachine() == Config->EMachine)
+  if (F->EKind == Config->EKind && F->EMachine == Config->EMachine)
     return true;
   StringRef A = F->getName();
   StringRef B = Config->Emulation;
@@ -456,6 +457,28 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   return SymVector[It->second]->body();
 }
 
+// Returns a list of defined symbols that match with a given glob pattern.
+template <class ELFT>
+std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(StringRef Pattern) {
+  // Fast-path. Fallback to find() if Pattern doesn't contain any wildcard
+  // characters.
+  if (Pattern.find_first_of("?*") == StringRef::npos) {
+    if (SymbolBody *B = find(Pattern))
+      if (!B->isUndefined())
+        return {B};
+    return {};
+  }
+
+  std::vector<SymbolBody *> Res;
+  for (auto &It : Symtab) {
+    StringRef Name = It.first.Val;
+    SymbolBody *B = SymVector[It.second]->body();
+    if (!B->isUndefined() && globMatch(Pattern, Name))
+      Res.push_back(B);
+  }
+  return Res;
+}
+
 template <class ELFT>
 void SymbolTable<ELFT>::addLazyArchive(
     ArchiveFile *F, const llvm::object::Archive::Symbol Sym) {
@@ -556,18 +579,20 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   size_t I = 2;
   for (Version &V : Config->SymbolVersions) {
     for (StringRef Name : V.Globals) {
-      SymbolBody *B = find(Name);
-      if (!B || B->isUndefined()) {
+      std::vector<SymbolBody *> Syms = findAll(Name);
+      if (Syms.empty()) {
         if (Config->NoUndefinedVersion)
           error("version script assignment of " + V.Name + " to symbol " +
                 Name + " failed: symbol not defined");
         continue;
       }
 
-      if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
-          B->symbol()->VersionId != VER_NDX_LOCAL)
-        warning("duplicate symbol " + Name + " in version script");
-      B->symbol()->VersionId = I;
+      for (SymbolBody *B : Syms) {
+        if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
+            B->symbol()->VersionId != VER_NDX_LOCAL)
+          warning("duplicate symbol " + Name + " in version script");
+        B->symbol()->VersionId = I;
+      }
     }
     ++I;
   }

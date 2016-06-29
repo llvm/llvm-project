@@ -209,13 +209,13 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   ARMBaseInstrInfo::loadRegFromStackSlot(MBB, I, DestReg, FI, RC, TRI);
 }
 
-void
-Thumb2InstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                                      Reloc::Model RM) const {
-  if (RM == Reloc::PIC_)
-    expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12, RM);
+void Thumb2InstrInfo::expandLoadStackGuard(
+    MachineBasicBlock::iterator MI) const {
+  MachineFunction &MF = *MI->getParent()->getParent();
+  if (MF.getTarget().isPositionIndependent())
+    expandLoadStackGuardBase(MI, ARM::t2MOV_ga_pcrel, ARM::t2LDRi12);
   else
-    expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12, RM);
+    expandLoadStackGuardBase(MI, ARM::t2MOVi32imm, ARM::t2LDRi12);
 }
 
 void llvm::emitT2RegPlusImmediate(MachineBasicBlock &MBB,

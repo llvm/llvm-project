@@ -48,6 +48,9 @@ public:
   /// \brief Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
+  /// \brief Append a reference to a private copy of \p Path into SourceFiles.
+  void addCollectedPath(const std::string &Path);
+
   /// \brief Return a memory buffer for the given source file.
   ErrorOr<const MemoryBuffer &> getSourceFile(StringRef SourceFile);
 
@@ -81,12 +84,15 @@ public:
   CoverageViewOptions ViewOpts;
   std::string PGOFilename;
   CoverageFiltersMatchAll Filters;
-  std::vector<std::string> SourceFiles;
+  std::vector<StringRef> SourceFiles;
   std::vector<std::pair<std::string, std::unique_ptr<MemoryBuffer>>>
       LoadedSourceFiles;
   bool CompareFilenamesOnly;
   StringMap<std::string> RemappedFilenames;
   std::string CoverageArch;
+
+private:
+  std::vector<std::string> CollectedPaths;
 };
 }
 
@@ -95,6 +101,11 @@ void CodeCoverageTool::error(const Twine &Message, StringRef Whence) {
   if (!Whence.empty())
     errs() << Whence << ": ";
   errs() << Message << "\n";
+}
+
+void CodeCoverageTool::addCollectedPath(const std::string &Path) {
+  CollectedPaths.push_back(Path);
+  SourceFiles.emplace_back(CollectedPaths.back());
 }
 
 ErrorOr<const MemoryBuffer &>
@@ -257,6 +268,13 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
   cl::opt<bool> DebugDump("dump", cl::Optional,
                           cl::desc("Show internal debug dump"));
 
+  cl::opt<CoverageViewOptions::OutputFormat> Format(
+      "format", cl::desc("Output format for line-based coverage reports"),
+      cl::values(clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
+                            "Text output"),
+                 clEnumValEnd),
+      cl::init(CoverageViewOptions::OutputFormat::Text));
+
   cl::opt<bool> FilenameEquivalence(
       "filename-equivalence", cl::Optional,
       cl::desc("Treat source files as equivalent to paths in the coverage data "
@@ -308,9 +326,14 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
     ViewOpts.Debug = DebugDump;
     CompareFilenamesOnly = FilenameEquivalence;
 
-    ViewOpts.Colors = UseColor == cl::BOU_UNSET
-                          ? sys::Process::StandardOutHasColors()
-                          : UseColor == cl::BOU_TRUE;
+    ViewOpts.Format = Format;
+    switch (ViewOpts.Format) {
+    case CoverageViewOptions::OutputFormat::Text:
+      ViewOpts.Colors = UseColor == cl::BOU_UNSET
+                            ? sys::Process::StandardOutHasColors()
+                            : UseColor == cl::BOU_TRUE;
+      break;
+    }
 
     // Create the function filters
     if (!NameFilters.empty() || !NameRegexFilters.empty()) {
@@ -356,7 +379,7 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
           errs() << "error: " << File << ": " << EC.message();
           return 1;
         }
-      SourceFiles.push_back(Path.str());
+      addCollectedPath(Path.str());
     }
     return 0;
   };
@@ -399,13 +422,6 @@ int CodeCoverageTool::show(int argc, const char **argv,
                                    cl::desc("Show function instantiations"),
                                    cl::cat(ViewCategory));
 
-  cl::opt<CoverageViewOptions::OutputFormat> ShowFormat(
-      "format", cl::desc("Output format for line-based coverage reports"),
-      cl::values(clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
-                            "Text output"),
-                 clEnumValEnd),
-      cl::init(CoverageViewOptions::OutputFormat::Text));
-
   cl::opt<std::string> ShowOutputDirectory(
       "output-dir", cl::init(""),
       cl::desc("Directory in which coverage information is written out"));
@@ -423,10 +439,9 @@ int CodeCoverageTool::show(int argc, const char **argv,
   ViewOpts.ShowLineStatsOrRegionMarkers = ShowBestLineRegionsCounts;
   ViewOpts.ShowExpandedRegions = ShowExpansions;
   ViewOpts.ShowFunctionInstantiations = ShowInstantiations;
-  ViewOpts.ShowFormat = ShowFormat;
   ViewOpts.ShowOutputDirectory = ShowOutputDirectory;
 
-  if (ViewOpts.ShowOutputDirectory != "") {
+  if (ViewOpts.hasOutputDirectory()) {
     if (auto E = sys::fs::create_directories(ViewOpts.ShowOutputDirectory)) {
       error("Could not create output directory!", E.message());
       return 1;
@@ -437,8 +452,17 @@ int CodeCoverageTool::show(int argc, const char **argv,
   if (!Coverage)
     return 1;
 
+  auto Printer = CoveragePrinter::create(ViewOpts);
+
   if (!Filters.empty()) {
-    // Show functions
+    auto OSOrErr = Printer->createViewFile("functions", /*InToplevel=*/true);
+    if (Error E = OSOrErr.takeError()) {
+      error(toString(std::move(E)));
+      return 1;
+    }
+    auto OS = std::move(OSOrErr.get());
+
+    // Show functions.
     for (const auto &Function : Coverage->getCoveredFunctions()) {
       if (!Filters.matches(Function))
         continue;
@@ -451,16 +475,10 @@ int CodeCoverageTool::show(int argc, const char **argv,
         continue;
       }
 
-      auto OSOrErr =
-          mainView->createOutputFile("functions", /*InToplevel=*/true);
-      if (Error E = OSOrErr.takeError()) {
-        error(toString(std::move(E)));
-        return 1;
-      }
-      auto OS = std::move(OSOrErr.get());
       mainView->print(*OS.get(), /*WholeFile=*/false, /*ShowSourceName=*/true);
-      mainView->closeOutputFile(std::move(OS));
     }
+
+    Printer->closeViewFile(std::move(OS));
     return 0;
   }
 
@@ -468,9 +486,17 @@ int CodeCoverageTool::show(int argc, const char **argv,
   bool ShowFilenames = SourceFiles.size() != 1;
 
   if (SourceFiles.empty())
-    // Get the source files from the function coverage mapping
+    // Get the source files from the function coverage mapping.
     for (StringRef Filename : Coverage->getUniqueSourceFiles())
       SourceFiles.push_back(Filename);
+
+  // Create an index out of the source files.
+  if (ViewOpts.hasOutputDirectory()) {
+    if (Error E = Printer->createIndexFile(SourceFiles)) {
+      error(toString(std::move(E)));
+      return 1;
+    }
+  }
 
   for (const auto &SourceFile : SourceFiles) {
     auto mainView = createSourceFileView(SourceFile, *Coverage);
@@ -481,7 +507,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
       continue;
     }
 
-    auto OSOrErr = mainView->createOutputFile(SourceFile, /*InToplevel=*/false);
+    auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
     if (Error E = OSOrErr.takeError()) {
       error(toString(std::move(E)));
       return 1;
@@ -489,7 +515,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
     auto OS = std::move(OSOrErr.get());
     mainView->print(*OS.get(), /*Wholefile=*/true,
                     /*ShowSourceName=*/ShowFilenames);
-    mainView->closeOutputFile(std::move(OS));
+    Printer->closeViewFile(std::move(OS));
   }
 
   return 0;

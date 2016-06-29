@@ -35,8 +35,6 @@ using namespace lld::elf;
 
 ScriptConfiguration *elf::ScriptConfig;
 
-static bool matchStr(StringRef S, StringRef T);
-
 // This is an operator-precedence parser to parse and evaluate
 // a linker script expression. For each linker script arithmetic
 // expression (e.g. ". = . + 0x1000"), a new instance of ExprParser
@@ -188,7 +186,7 @@ uint64_t ExprParser::parseExpr() { return parseExpr1(parsePrimary(), 0); }
 template <class ELFT>
 StringRef LinkerScript<ELFT>::getOutputSection(InputSectionBase<ELFT> *S) {
   for (SectionRule &R : Opt.Sections)
-    if (matchStr(R.SectionPattern, S->getSectionName()))
+    if (globMatch(R.SectionPattern, S->getSectionName()))
       return R.Dest;
   return "";
 }
@@ -201,7 +199,7 @@ bool LinkerScript<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) {
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   for (StringRef Pat : Opt.KeptSections)
-    if (matchStr(Pat, S->getSectionName()))
+    if (globMatch(Pat, S->getSectionName()))
       return true;
   return false;
 }
@@ -291,7 +289,7 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
 // Returns true if S matches T. S can contain glob meta-characters.
 // The asterisk ('*') matches zero or more characters, and the question
 // mark ('?') matches one character.
-static bool matchStr(StringRef S, StringRef T) {
+bool elf::globMatch(StringRef S, StringRef T) {
   for (;;) {
     if (S.empty())
       return T.empty();
@@ -301,7 +299,7 @@ static bool matchStr(StringRef S, StringRef T) {
         // Fast path. If a pattern is '*', it matches anything.
         return true;
       for (size_t I = 0, E = T.size(); I < E; ++I)
-        if (matchStr(S, T.substr(I)))
+        if (globMatch(S, T.substr(I)))
           return true;
       return false;
     }

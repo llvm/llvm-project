@@ -1406,6 +1406,10 @@ Triple Triple::getLittleEndianArchVariant() const {
   return T;
 }
 
+bool Triple::isLittleEndian() const {
+  return *this == getLittleEndianArchVariant();
+}
+
 StringRef Triple::getARMCPUForArch(StringRef MArch) const {
   if (MArch.empty())
     MArch = getArchName();

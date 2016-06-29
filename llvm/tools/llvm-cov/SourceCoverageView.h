@@ -97,11 +97,59 @@ struct LineCoverageStats {
   }
 };
 
+/// \brief A file manager that handles format-aware file creation.
+class CoveragePrinter {
+  const CoverageViewOptions &Opts;
+
+public:
+  struct StreamDestructor {
+    void operator()(raw_ostream *OS) const;
+  };
+
+  using OwnedStream = std::unique_ptr<raw_ostream, StreamDestructor>;
+
+protected:
+  CoveragePrinter(const CoverageViewOptions &Opts) : Opts(Opts) {}
+
+  /// \brief Return `OutputDir/ToplevelDir/Path.Extension`.
+  std::string getOutputPath(StringRef Path, StringRef Extension,
+                            bool InToplevel);
+
+  /// \brief If directory output is enabled, create a file in that directory
+  /// at the path given by getOutputPath(). Otherwise, return stdout.
+  Expected<OwnedStream> createOutputStream(StringRef Path, StringRef Extension,
+                                           bool InToplevel);
+
+  /// \brief Return the sub-directory name for file coverage reports.
+  static StringRef getCoverageDir() { return "coverage"; }
+
+public:
+  static std::unique_ptr<CoveragePrinter>
+  create(const CoverageViewOptions &Opts);
+
+  virtual ~CoveragePrinter() {}
+
+  /// @name File Creation Interface
+  /// @{
+
+  /// \brief Create a file to print a coverage view into.
+  virtual Expected<OwnedStream> createViewFile(StringRef Path,
+                                               bool InToplevel) = 0;
+
+  /// \brief Close a file which has been used to print a coverage view.
+  virtual void closeViewFile(OwnedStream OS) = 0;
+
+  /// \brief Create an index which lists reports for the given source files.
+  virtual Error createIndexFile(ArrayRef<StringRef> SourceFiles) = 0;
+
+  /// @}
+};
+
 /// \brief A code coverage view of a source file or function.
 ///
 /// A source coverage view and its nested sub-views form a file-oriented
 /// representation of code coverage data. This view can be printed out by a
-/// renderer which implements both the File Creation and Rendering interfaces.
+/// renderer which implements the Rendering Interface.
 class SourceCoverageView {
   /// A function or file name.
   StringRef SourceName;
@@ -122,25 +170,6 @@ class SourceCoverageView {
   /// on display.
   std::vector<InstantiationView> InstantiationSubViews;
 
-public:
-  struct StreamDestructor {
-    void operator()(raw_ostream *OS) const;
-  };
-
-  using OwnedStream = std::unique_ptr<raw_ostream, StreamDestructor>;
-
-  /// @name File Creation Interface
-  /// @{
-
-  /// \brief Create a file to print a coverage view into.
-  virtual Expected<OwnedStream> createOutputFile(StringRef Path,
-                                                 bool InToplevel) = 0;
-
-  /// \brief Close a file which has been used to print a coverage view.
-  virtual void closeOutputFile(OwnedStream OS) = 0;
-
-  /// @}
-
 protected:
   struct LineRef {
     StringRef Line;
@@ -154,11 +183,20 @@ protected:
   /// @name Rendering Interface
   /// @{
 
+  /// \brief Render a header for the view.
+  virtual void renderViewHeader(raw_ostream &OS) = 0;
+
+  /// \brief Render a footer for the view.
+  virtual void renderViewFooter(raw_ostream &OS) = 0;
+
   /// \brief Render the source name for the view.
   virtual void renderSourceName(raw_ostream &OS) = 0;
 
   /// \brief Render the line prefix at the given \p ViewDepth.
   virtual void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) = 0;
+
+  /// \brief Render the line suffix at the given \p ViewDepth.
+  virtual void renderLineSuffix(raw_ostream &OS, unsigned ViewDepth) = 0;
 
   /// \brief Render a view divider at the given \p ViewDepth.
   virtual void renderViewDivider(raw_ostream &OS, unsigned ViewDepth) = 0;
@@ -183,7 +221,7 @@ protected:
 
   /// \brief Render the site of an expansion.
   virtual void
-  renderExpansionSite(raw_ostream &OS, ExpansionView &ESV, LineRef L,
+  renderExpansionSite(raw_ostream &OS, LineRef L,
                       const coverage::CoverageSegment *WrappedSegment,
                       CoverageSegmentArray Segments, unsigned ExpansionCol,
                       unsigned ViewDepth) = 0;
@@ -202,11 +240,11 @@ protected:
   /// digits.
   static std::string formatCount(uint64_t N);
 
-  /// \brief If directory output is enabled, create a file with \p Path as the
-  /// suffix. Otherwise, return stdout.
-  static Expected<OwnedStream>
-  createOutputStream(const CoverageViewOptions &Opts, StringRef Path,
-                     StringRef Extension, bool InToplevel);
+  /// \brief Check if region marker output is expected for a line.
+  bool shouldRenderRegionMarkers(bool LineHasMultipleRegions) const;
+
+  /// \brief Check if there are any sub-views attached to this view.
+  bool hasSubViews() const;
 
   SourceCoverageView(StringRef SourceName, const MemoryBuffer &File,
                      const CoverageViewOptions &Options,

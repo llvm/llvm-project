@@ -1276,13 +1276,10 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MBBI) const {
 
 bool
 ARMBaseInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
-  MachineFunction &MF = *MI->getParent()->getParent();
-  Reloc::Model RM = MF.getTarget().getRelocationModel();
-
   if (MI->getOpcode() == TargetOpcode::LOAD_STACK_GUARD) {
     assert(getSubtarget().getTargetTriple().isOSBinFormatMachO() &&
            "LOAD_STACK_GUARD currently supported only for MachO.");
-    expandLoadStackGuard(MI, RM);
+    expandLoadStackGuard(MI);
     MI->getParent()->erase(MI);
     return true;
   }
@@ -4110,8 +4107,7 @@ bool ARMBaseInstrInfo::verifyInstruction(const MachineInstr *MI,
 // sequence is needed for other targets.
 void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
                                                 unsigned LoadImmOpc,
-                                                unsigned LoadOpc,
-                                                Reloc::Model RM) const {
+                                                unsigned LoadOpc) const {
   MachineBasicBlock &MBB = *MI->getParent();
   DebugLoc DL = MI->getDebugLoc();
   unsigned Reg = MI->getOperand(0).getReg();
@@ -4122,7 +4118,7 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
   BuildMI(MBB, MI, DL, get(LoadImmOpc), Reg)
       .addGlobalAddress(GV, 0, ARMII::MO_NONLAZY);
 
-  if (Subtarget.GVIsIndirectSymbol(GV, RM)) {
+  if (Subtarget.isGVIndirectSymbol(GV)) {
     MIB = BuildMI(MBB, MI, DL, get(LoadOpc), Reg);
     MIB.addReg(Reg, RegState::Kill).addImm(0);
     unsigned Flag = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;

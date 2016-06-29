@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl --show-mc-encoding| FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-apple-darwin -mcpu=knl --show-mc-encoding -verify-machineinstrs | FileCheck %s
 declare i32 @llvm.x86.rdpkru()
 declare void @llvm.x86.wrpkru(i32)
 

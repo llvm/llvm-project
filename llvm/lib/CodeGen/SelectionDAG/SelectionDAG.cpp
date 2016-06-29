@@ -1478,7 +1478,7 @@ SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
 // commuteShuffle - swaps the values of N1 and N2, and swaps all indices in
 // the shuffle mask M that point at N1 to point at N2, and indices that point
 // N2 to point at N1.
-static void commuteShuffle(SDValue &N1, SDValue &N2, SmallVectorImpl<int> &M) {
+static void commuteShuffle(SDValue &N1, SDValue &N2, MutableArrayRef<int> M) {
   std::swap(N1, N2);
   ShuffleVectorSDNode::commuteMask(M);
 }

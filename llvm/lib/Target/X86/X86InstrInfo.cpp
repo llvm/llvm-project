@@ -58,6 +58,17 @@ static cl::opt<bool>
 ReMatPICStubLoad("remat-pic-stub-load",
                  cl::desc("Re-materialize load from stub in PIC mode"),
                  cl::init(false), cl::Hidden);
+static cl::opt<unsigned>
+PartialRegUpdateClearance("partial-reg-update-clearance",
+                          cl::desc("Clearance between two register writes "
+                                   "for inserting XOR to avoid partial "
+                                   "register update"),
+                          cl::init(64), cl::Hidden);
+static cl::opt<unsigned>
+UndefRegClearance("undef-reg-clearance",
+                  cl::desc("How many idle instructions we would like before "
+                           "certain undef register reads"),
+                  cl::init(64), cl::Hidden);
 
 enum {
   // Select which memory operand is being unfolded.
@@ -5972,10 +5983,10 @@ getPartialRegUpdateClearance(const MachineInstr *MI, unsigned OpNum,
       return 0;
   }
 
-  // If any of the preceding 16 instructions are reading Reg, insert a
-  // dependency breaking instruction.  The magic number is based on a few
-  // Nehalem experiments.
-  return 16;
+  // If any instructions in the clearance range are reading Reg, insert a
+  // dependency breaking instruction, which is inexpensive and is likely to
+  // be hidden in other instruction's cycles.
+  return PartialRegUpdateClearance;
 }
 
 // Return true for any instruction the copies the high bits of the first source
@@ -6060,8 +6071,7 @@ getUndefRegClearance(const MachineInstr *MI, unsigned &OpNum,
 
   const MachineOperand &MO = MI->getOperand(OpNum);
   if (MO.isUndef() && TargetRegisterInfo::isPhysicalRegister(MO.getReg())) {
-    // Use the same magic number as getPartialRegUpdateClearance.
-    return 16;
+    return UndefRegClearance;
   }
   return 0;
 }

@@ -18,18 +18,31 @@
 
 namespace llvm {
 
+/// \brief A coverage printer for text output.
+class CoveragePrinterText : public CoveragePrinter {
+public:
+  Expected<OwnedStream> createViewFile(StringRef Path,
+                                       bool InToplevel) override;
+
+  void closeViewFile(OwnedStream OS) override;
+
+  Error createIndexFile(ArrayRef<StringRef> SourceFiles) override;
+
+  CoveragePrinterText(const CoverageViewOptions &Opts)
+      : CoveragePrinter(Opts) {}
+};
+
 /// \brief A code coverage view which supports text-based rendering.
 class SourceCoverageViewText : public SourceCoverageView {
-public:
-  Expected<OwnedStream> createOutputFile(StringRef Path,
-                                         bool InToplevel) override;
+  void renderViewHeader(raw_ostream &OS) override;
 
-  void closeOutputFile(OwnedStream OS) override;
+  void renderViewFooter(raw_ostream &OS) override;
 
-private:
   void renderSourceName(raw_ostream &OS) override;
 
   void renderLinePrefix(raw_ostream &OS, unsigned ViewDepth) override;
+
+  void renderLineSuffix(raw_ostream &OS, unsigned ViewDepth) override;
 
   void renderViewDivider(raw_ostream &OS, unsigned ViewDepth) override;
 
@@ -38,7 +51,7 @@ private:
                   CoverageSegmentArray Segments, unsigned ExpansionCol,
                   unsigned ViewDepth) override;
 
-  void renderExpansionSite(raw_ostream &OS, ExpansionView &ESV, LineRef L,
+  void renderExpansionSite(raw_ostream &OS, LineRef L,
                            const coverage::CoverageSegment *WrappedSegment,
                            CoverageSegmentArray Segments, unsigned ExpansionCol,
                            unsigned ViewDepth) override;

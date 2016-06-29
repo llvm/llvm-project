@@ -19,7 +19,7 @@ int ARMTTIImpl::getIntImmCost(const APInt &Imm, Type *Ty) {
   assert(Ty->isIntegerTy());
 
  unsigned Bits = Ty->getPrimitiveSizeInBits();
- if (Bits == 0 || Bits > 64)
+ if (Bits == 0 || Imm.getActiveBits() >= 64)
    return 4;
 
   int64_t SImmVal = Imm.getSExtValue();

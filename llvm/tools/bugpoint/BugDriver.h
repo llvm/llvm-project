@@ -130,12 +130,6 @@ public:
   ///
   bool isExecutingJIT();
 
-  /// runPasses - Run all of the passes in the "PassesToRun" list, discard the
-  /// output, and return true if any of the passes crashed.
-  bool runPasses(Module *M) const {
-    return runPasses(M, PassesToRun);
-  }
-
   Module *getProgram() const { return Program; }
 
   /// swapProgramIn - Set the current module to the specified module, returning
@@ -243,12 +237,8 @@ public:
 
   /// Carefully run the specified set of pass on the specified/ module,
   /// returning the transformed module on success, or a null pointer on failure.
-  /// If AutoDebugCrashes is set to true, then bugpoint will automatically
-  /// attempt to track down a crashing pass if one exists, and this method will
-  /// never return null.
   std::unique_ptr<Module> runPassesOn(Module *M,
                                       const std::vector<std::string> &Passes,
-                                      bool AutoDebugCrashes = false,
                                       unsigned NumExtraArgs = 0,
                                       const char *const *ExtraArgs = nullptr);
 
@@ -266,6 +256,16 @@ public:
                  std::string &OutputFilename, bool DeleteOutput = false,
                  bool Quiet = false, unsigned NumExtraArgs = 0,
                  const char * const *ExtraArgs = nullptr) const;
+
+  /// runPasses - Just like the method above, but this just returns true or
+  /// false indicating whether or not the optimizer crashed on the specified
+  /// input (true = crashed).  Does not produce any output.
+  ///
+  bool runPasses(Module *M,
+                 const std::vector<std::string> &PassesToRun) const {
+    std::string Filename;
+    return runPasses(M, PassesToRun, Filename, true);
+  }
                  
   /// runManyPasses - Take the specified pass list and create different 
   /// combinations of passes to compile the program with. Compile the program with
@@ -285,17 +285,6 @@ public:
                           const Module *M) const;
 
 private:
-  /// runPasses - Just like the method above, but this just returns true or
-  /// false indicating whether or not the optimizer crashed on the specified
-  /// input (true = crashed).
-  ///
-  bool runPasses(Module *M,
-                 const std::vector<std::string> &PassesToRun,
-                 bool DeleteOutput = true) const {
-    std::string Filename;
-    return runPasses(M, PassesToRun, Filename, DeleteOutput);
-  }
-
   /// initializeExecutionEnvironment - This method is used to set up the
   /// environment for executing LLVM programs.
   ///

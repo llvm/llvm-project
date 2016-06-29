@@ -459,7 +459,7 @@ static void dumpMachOUniversalBinary(const MachOUniversalBinary *UBinary) {
       OS.flush();
       reportError(UBinary->getFileName(), Buf);
     }
-    else if (ErrorOr<std::unique_ptr<Archive>> AOrErr = Obj.getAsArchive())
+    else if (Expected<std::unique_ptr<Archive>> AOrErr = Obj.getAsArchive())
       dumpArchive(&*AOrErr.get());
   }
 }

@@ -68,7 +68,8 @@ MachOUniversalBinary::ObjectForArch::ObjectForArch(
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
   if (!Parent)
-    return errorCodeToError(object_error::parse_failed);
+    report_fatal_error("MachOUniversalBinary::ObjectForArch::getAsObjectFile() "
+                       "called when Parent is a nullptr");
 
   StringRef ParentData = Parent->getData();
   StringRef ObjectData;
@@ -81,10 +82,11 @@ MachOUniversalBinary::ObjectForArch::getAsObjectFile() const {
   return ObjectFile::createMachOObjectFile(ObjBuffer);
 }
 
-ErrorOr<std::unique_ptr<Archive>>
+Expected<std::unique_ptr<Archive>>
 MachOUniversalBinary::ObjectForArch::getAsArchive() const {
   if (!Parent)
-    return object_error::parse_failed;
+    report_fatal_error("MachOUniversalBinary::ObjectForArch::getAsArchive() "
+                       "called when Parent is a nullptr");
 
   StringRef ParentData = Parent->getData();
   StringRef ObjectData;
@@ -94,7 +96,7 @@ MachOUniversalBinary::ObjectForArch::getAsArchive() const {
     ObjectData = ParentData.substr(Header64.offset, Header64.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
-  return Archive::create(ObjBuffer);
+  return errorOrToExpected(Archive::create(ObjBuffer));
 }
 
 void MachOUniversalBinary::anchor() { }
@@ -121,7 +123,8 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
   }
   // Check for magic value and sufficient header size.
   StringRef Buf = getData();
-  MachO::fat_header H= getUniversalBinaryStruct<MachO::fat_header>(Buf.begin());
+  MachO::fat_header H =
+      getUniversalBinaryStruct<MachO::fat_header>(Buf.begin());
   Magic = H.magic;
   NumberOfObjects = H.nfat_arch;
   uint32_t MinSize = sizeof(MachO::fat_header);
@@ -145,11 +148,17 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
 Expected<std::unique_ptr<MachOObjectFile>>
 MachOUniversalBinary::getObjectForArch(StringRef ArchName) const {
   if (Triple(ArchName).getArch() == Triple::ArchType::UnknownArch)
-    return errorCodeToError(object_error::arch_not_found);
+    return make_error<GenericBinaryError>("Unknown architecture "
+                                          "named: " +
+                                              ArchName,
+                                          object_error::arch_not_found);
 
   for (object_iterator I = begin_objects(), E = end_objects(); I != E; ++I) {
     if (I->getArchTypeName() == ArchName)
       return I->getAsObjectFile();
   }
-  return errorCodeToError(object_error::arch_not_found);
+  return make_error<GenericBinaryError>("fat file does not "
+                                        "contain " +
+                                            ArchName,
+                                        object_error::arch_not_found);
 }

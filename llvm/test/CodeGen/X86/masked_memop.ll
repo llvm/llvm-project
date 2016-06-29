@@ -40,7 +40,7 @@ define <16 x i32> @test1(<16 x i32> %trigger, <16 x i32>* %addr) {
 ; AVX512-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
-  %res = call <16 x i32> @llvm.masked.load.v16i32(<16 x i32>* %addr, i32 4, <16 x i1>%mask, <16 x i32>undef)
+  %res = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* %addr, i32 4, <16 x i1>%mask, <16 x i32>undef)
   ret <16 x i32> %res
 }
 
@@ -76,7 +76,7 @@ define <16 x i32> @test2(<16 x i32> %trigger, <16 x i32>* %addr) {
 ; AVX512-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
-  %res = call <16 x i32> @llvm.masked.load.v16i32(<16 x i32>* %addr, i32 4, <16 x i1>%mask, <16 x i32>zeroinitializer)
+  %res = call <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>* %addr, i32 4, <16 x i1>%mask, <16 x i32>zeroinitializer)
   ret <16 x i32> %res
 }
 
@@ -114,7 +114,7 @@ define void @test3(<16 x i32> %trigger, <16 x i32>* %addr, <16 x i32> %val) {
 ; AVX512-NEXT:    vmovdqu32 %zmm1, (%rdi) {%k1}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v16i32(<16 x i32>%val, <16 x i32>* %addr, i32 4, <16 x i1>%mask)
+  call void @llvm.masked.store.v16i32.p0v16i32(<16 x i32>%val, <16 x i32>* %addr, i32 4, <16 x i1>%mask)
   ret void
 }
 
@@ -155,7 +155,7 @@ define <16 x float> @test4(<16 x i32> %trigger, <16 x float>* %addr, <16 x float
 ; AVX512-NEXT:    vmovaps %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
-  %res = call <16 x float> @llvm.masked.load.v16f32(<16 x float>* %addr, i32 4, <16 x i1>%mask, <16 x float> %dst)
+  %res = call <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>* %addr, i32 4, <16 x i1>%mask, <16 x float> %dst)
   ret <16 x float> %res
 }
 
@@ -210,7 +210,7 @@ define <8 x double> @test5(<8 x i32> %trigger, <8 x double>* %addr, <8 x double>
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
-  %res = call <8 x double> @llvm.masked.load.v8f64(<8 x double>* %addr, i32 4, <8 x i1>%mask, <8 x double>%dst)
+  %res = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %addr, i32 4, <8 x i1>%mask, <8 x double>%dst)
   ret <8 x double> %res
 }
 
@@ -239,7 +239,7 @@ define <2 x double> @test6(<2 x i64> %trigger, <2 x double>* %addr, <2 x double>
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i64> %trigger, zeroinitializer
-  %res = call <2 x double> @llvm.masked.load.v2f64(<2 x double>* %addr, i32 4, <2 x i1>%mask, <2 x double>%dst)
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1>%mask, <2 x double>%dst)
   ret <2 x double> %res
 }
 
@@ -268,7 +268,7 @@ define <4 x float> @test7(<4 x i32> %trigger, <4 x float>* %addr, <4 x float> %d
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 4, <4 x i1>%mask, <4 x float>%dst)
+  %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1>%mask, <4 x float>%dst)
   ret <4 x float> %res
 }
 
@@ -305,7 +305,7 @@ define <4 x i32> @test8(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) {
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %addr, i32 4, <4 x i1>%mask, <4 x i32>%dst)
+  %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1>%mask, <4 x i32>%dst)
   ret <4 x i32> %res
 }
 
@@ -338,7 +338,7 @@ define void @test9(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ; SKX-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v4i32(<4 x i32>%val, <4 x i32>* %addr, i32 4, <4 x i1>%mask)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>%val, <4 x i32>* %addr, i32 4, <4 x i1>%mask)
   ret void
 }
 
@@ -381,7 +381,7 @@ define <4 x double> @test10(<4 x i32> %trigger, <4 x double>* %addr, <4 x double
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 32, <4 x i1>%mask, <4 x double>%dst)
+  %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 32, <4 x i1>%mask, <4 x double>%dst)
   ret <4 x double> %res
 }
 
@@ -420,7 +420,7 @@ define <4 x double> @test10b(<4 x i32> %trigger, <4 x double>* %addr, <4 x doubl
 ; SKX-NEXT:    vmovapd (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 32, <4 x i1>%mask, <4 x double>zeroinitializer)
+  %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 32, <4 x i1>%mask, <4 x double>zeroinitializer)
   ret <4 x double> %res
 }
 
@@ -462,7 +462,7 @@ define <8 x float> @test11a(<8 x i32> %trigger, <8 x float>* %addr, <8 x float> 
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
-  %res = call <8 x float> @llvm.masked.load.v8f32(<8 x float>* %addr, i32 32, <8 x i1>%mask, <8 x float>%dst)
+  %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 32, <8 x i1>%mask, <8 x float>%dst)
   ret <8 x float> %res
 }
 
@@ -507,7 +507,7 @@ define <8 x i32> @test11b(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %dst) {
 ; SKX-NEXT:    vmovdqu32 (%rdi), %ymm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
-  %res = call <8 x i32> @llvm.masked.load.v8i32(<8 x i32>* %addr, i32 4, <8 x i1>%mask, <8 x i32>%dst)
+  %res = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %addr, i32 4, <8 x i1>%mask, <8 x i32>%dst)
   ret <8 x i32> %res
 }
 
@@ -548,7 +548,7 @@ define <8 x float> @test11c(<8 x i1> %mask, <8 x float>* %addr) {
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vmovaps (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <8 x float> @llvm.masked.load.v8f32(<8 x float>* %addr, i32 32, <8 x i1> %mask, <8 x float> zeroinitializer)
+  %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 32, <8 x i1> %mask, <8 x float> zeroinitializer)
   ret <8 x float> %res
 }
 
@@ -589,7 +589,7 @@ define <8 x i32> @test11d(<8 x i1> %mask, <8 x i32>* %addr) {
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <8 x i32> @llvm.masked.load.v8i32(<8 x i32>* %addr, i32 4, <8 x i1> %mask, <8 x i32> zeroinitializer)
+  %res = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %addr, i32 4, <8 x i1> %mask, <8 x i32> zeroinitializer)
   ret <8 x i32> %res
 }
 
@@ -629,7 +629,7 @@ define void @test12(<8 x i32> %trigger, <8 x i32>* %addr, <8 x i32> %val) {
 ; SKX-NEXT:    vmovdqu32 %ymm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <8 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v8i32(<8 x i32>%val, <8 x i32>* %addr, i32 4, <8 x i1>%mask)
+  call void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>%val, <8 x i32>* %addr, i32 4, <8 x i1>%mask)
   ret void
 }
 
@@ -667,7 +667,7 @@ define void @test13(<16 x i32> %trigger, <16 x float>* %addr, <16 x float> %val)
 ; AVX512-NEXT:    vmovups %zmm1, (%rdi) {%k1}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v16f32(<16 x float>%val, <16 x float>* %addr, i32 4, <16 x i1>%mask)
+  call void @llvm.masked.store.v16f32.p0v16f32(<16 x float>%val, <16 x float>* %addr, i32 4, <16 x i1>%mask)
   ret void
 }
 
@@ -712,7 +712,7 @@ define void @test14(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %val) {
 ; SKX-NEXT:    vmovups %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v2f32(<2 x float>%val, <2 x float>* %addr, i32 4, <2 x i1>%mask)
+  call void @llvm.masked.store.v2f32.p0v2f32(<2 x float>%val, <2 x float>* %addr, i32 4, <2 x i1>%mask)
   ret void
 }
 
@@ -758,7 +758,7 @@ define void @test15(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %val) {
 ; SKX-NEXT:    vpmovqd %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v2i32(<2 x i32>%val, <2 x i32>* %addr, i32 4, <2 x i1>%mask)
+  call void @llvm.masked.store.v2i32.p0v2i32(<2 x i32>%val, <2 x i32>* %addr, i32 4, <2 x i1>%mask)
   ret void
 }
 
@@ -807,7 +807,7 @@ define <2 x float> @test16(<2 x i32> %trigger, <2 x float>* %addr, <2 x float> %
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  %res = call <2 x float> @llvm.masked.load.v2f32(<2 x float>* %addr, i32 4, <2 x i1>%mask, <2 x float>%dst)
+  %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1>%mask, <2 x float>%dst)
   ret <2 x float> %res
 }
 
@@ -863,7 +863,7 @@ define <2 x i32> @test17(<2 x i32> %trigger, <2 x i32>* %addr, <2 x i32> %dst) {
 ; SKX-NEXT:    vpmovsxdq %xmm0, %xmm0
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  %res = call <2 x i32> @llvm.masked.load.v2i32(<2 x i32>* %addr, i32 4, <2 x i1>%mask, <2 x i32>%dst)
+  %res = call <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>* %addr, i32 4, <2 x i1>%mask, <2 x i32>%dst)
   ret <2 x i32> %res
 }
 
@@ -908,7 +908,7 @@ define <2 x float> @test18(<2 x i32> %trigger, <2 x float>* %addr) {
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  %res = call <2 x float> @llvm.masked.load.v2f32(<2 x float>* %addr, i32 4, <2 x i1>%mask, <2 x float>undef)
+  %res = call <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>* %addr, i32 4, <2 x i1>%mask, <2 x float>undef)
   ret <2 x float> %res
 }
 
@@ -930,7 +930,7 @@ define <4 x float> @load_all(<4 x i32> %trigger, <4 x float>* %addr) {
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 4, <4 x i1><i1 true, i1 true, i1 true, i1 true>, <4 x float>undef)
+  %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1><i1 true, i1 true, i1 true, i1 true>, <4 x float>undef)
   ret <4 x float> %res
 }
 
@@ -957,7 +957,7 @@ define <4 x float> @mload_constmask_v4f32(<4 x float>* %addr, <4 x float> %dst) 
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovups (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
-  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x float> %dst)
+  %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 1, i1 1>, <4 x float> %dst)
   ret <4 x float> %res
 }
 
@@ -991,7 +991,7 @@ define <4 x i32> @mload_constmask_v4i32(<4 x i32>* %addr, <4 x i32> %dst) {
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %xmm0 {%k1}
 ; SKX-NEXT:    retq
-  %res = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %dst)
+  %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x i32> %dst)
   ret <4 x i32> %res
 }
 
@@ -1018,7 +1018,7 @@ define <8 x float> @mload_constmask_v8f32(<8 x float>* %addr, <8 x float> %dst) 
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovups (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
-  %res = call <8 x float> @llvm.masked.load.v8f32(<8 x float>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x float> %dst)
+  %res = call <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 0>, <8 x float> %dst)
   ret <8 x float> %res
 }
 
@@ -1043,7 +1043,7 @@ define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %ds
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovupd (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
-  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> %dst)
+  %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> %dst)
   ret <4 x double> %res
 }
 
@@ -1073,7 +1073,7 @@ define <8 x i32> @mload_constmask_v8i32(<8 x i32>* %addr, <8 x i32> %dst) {
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
-  %res = call <8 x i32> @llvm.masked.load.v8i32(<8 x i32>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i32> %dst)
+  %res = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x i32> %dst)
   ret <8 x i32> %res
 }
 
@@ -1101,7 +1101,7 @@ define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1}
 ; SKX-NEXT:    retq
-  %res = call <4 x i64> @llvm.masked.load.v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i64> %dst)
+  %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 1, i1 0, i1 0, i1 1>, <4 x i64> %dst)
   ret <4 x i64> %res
 }
 
@@ -1120,7 +1120,7 @@ define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %ds
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vmovupd (%rdi), %zmm0 {%k1}
 ; AVX512-NEXT:    retq
-  %res = call <8 x double> @llvm.masked.load.v8f64(<8 x double>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x double> %dst)
+  %res = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %addr, i32 4, <8 x i1> <i1 1, i1 1, i1 1, i1 0, i1 0, i1 0, i1 0, i1 1>, <8 x double> %dst)
   ret <8 x double> %res
 }
 
@@ -1145,7 +1145,7 @@ define <4 x double> @mload_constmask_v4f64_undef_passthrough(<4 x double>* %addr
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovupd (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> undef)
+  %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 1, i1 1, i1 1, i1 0>, <4 x double> undef)
   ret <4 x double> %res
 }
 
@@ -1174,7 +1174,7 @@ define <4 x i64> @mload_constmask_v4i64_undef_passthrough(<4 x i64>* %addr) {
 ; SKX-NEXT:    kmovw %eax, %k1
 ; SKX-NEXT:    vmovdqu64 (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <4 x i64> @llvm.masked.load.v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x i64> undef)
+  %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1> <i1 0, i1 1, i1 1, i1 0>, <4 x i64> undef)
   ret <4 x i64> %res
 }
 
@@ -1203,7 +1203,7 @@ define void @test21(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %val) {
 ; SKX-NEXT:    vmovdqu32 %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.store.v4i32(<4 x i32>%val, <4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>%val, <4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
 
@@ -1219,7 +1219,7 @@ define void @one_mask_bit_set1(<4 x i32>* %addr, <4 x i32> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vmovd %xmm0, (%rdi)
 ; AVX512-NEXT:    retq
-  call void @llvm.masked.store.v4i32(<4 x i32> %val, <4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 false, i1 false, i1 false>)
+  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %val, <4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 false, i1 false, i1 false>)
   ret void
 }
 
@@ -1235,7 +1235,7 @@ define void @one_mask_bit_set2(<4 x float>* %addr, <4 x float> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vextractps $2, %xmm0, 8(%rdi)
 ; AVX512-NEXT:    retq
-  call void @llvm.masked.store.v4f32(<4 x float> %val, <4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
+  call void @llvm.masked.store.v4f32.p0v4f32(<4 x float> %val, <4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
   ret void
 }
 
@@ -1260,7 +1260,7 @@ define void @one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; SKX-NEXT:    vextracti32x4 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vmovq %xmm0, 16(%rdi)
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v4i64(<4 x i64> %val, <4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
+  call void @llvm.masked.store.v4i64.p0v4i64(<4 x i64> %val, <4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>)
   ret void
 }
 
@@ -1285,7 +1285,7 @@ define void @one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
 ; SKX-NEXT:    vextractf32x4 $1, %ymm0, %xmm0
 ; SKX-NEXT:    vmovhpd %xmm0, 24(%rdi)
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v4f64(<4 x double> %val, <4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
+  call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %val, <4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
   ret void
 }
 
@@ -1304,7 +1304,7 @@ define void @one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm0
 ; AVX512-NEXT:    vmovlpd %xmm0, 48(%rdi)
 ; AVX512-NEXT:    retq
-  call void @llvm.masked.store.v8f64(<8 x double> %val, <8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false>)
+  call void @llvm.masked.store.v8f64.p0v8f64(<8 x double> %val, <8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true, i1 false>)
   ret void
 }
 
@@ -1320,7 +1320,7 @@ define <4 x i32> @load_one_mask_bit_set1(<4 x i32>* %addr, <4 x i32> %val) {
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vpinsrd $0, (%rdi), %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %res = call <4 x i32> @llvm.masked.load.v4i32(<4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 false, i1 false, i1 false>, <4 x i32> %val)
+  %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1><i1 true, i1 false, i1 false, i1 false>, <4 x i32> %val)
   ret <4 x i32> %res
 }
 
@@ -1336,7 +1336,7 @@ define <4 x float> @load_one_mask_bit_set2(<4 x float>* %addr, <4 x float> %val)
 ; AVX512:       ## BB#0:
 ; AVX512-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0,1],mem[0],xmm0[3]
 ; AVX512-NEXT:    retq
-  %res = call <4 x float> @llvm.masked.load.v4f32(<4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x float> %val)
+  %res = call <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x float> %val)
   ret <4 x float> %res
 }
 
@@ -1370,7 +1370,7 @@ define <4 x i64> @load_one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; SKX-NEXT:    vpinsrq $0, 16(%rdi), %xmm1, %xmm1
 ; SKX-NEXT:    vinserti32x4 $1, %xmm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
-  %res = call <4 x i64> @llvm.masked.load.v4i64(<4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x i64> %val)
+  %res = call <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 true, i1 false>, <4 x i64> %val)
   ret <4 x i64> %res
 }
 
@@ -1397,7 +1397,7 @@ define <4 x double> @load_one_mask_bit_set4(<4 x double>* %addr, <4 x double> %v
 ; SKX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; SKX-NEXT:    vinsertf32x4 $1, %xmm1, %ymm0, %ymm0
 ; SKX-NEXT:    retq
-  %res = call <4 x double> @llvm.masked.load.v4f64(<4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>, <4 x double> %val)
+  %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>, <4 x double> %val)
   ret <4 x double> %res
 }
 
@@ -1418,37 +1418,36 @@ define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %v
 ; AVX512-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; AVX512-NEXT:    vinsertf32x4 $3, %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
-  %res = call <8 x double> @llvm.masked.load.v8f64(<8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x double> %val)
+  %res = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x double> %val)
   ret <8 x double> %res
 }
 
-declare <16 x i32> @llvm.masked.load.v16i32(<16 x i32>*, i32, <16 x i1>, <16 x i32>)
-declare <4 x i32> @llvm.masked.load.v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
-declare <2 x i32> @llvm.masked.load.v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
-declare <4 x i64> @llvm.masked.load.v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)
-declare void @llvm.masked.store.v16i32(<16 x i32>, <16 x i32>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v4i64(<4 x i64>, <4 x i64>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v2f32(<2 x float>, <2 x float>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v2i32(<2 x i32>, <2 x i32>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v16f32(<16 x float>, <16 x float>*, i32, <16 x i1>)
-declare void @llvm.masked.store.v16f32p(<16 x float>*, <16 x float>**, i32, <16 x i1>)
-declare <16 x float> @llvm.masked.load.v16f32(<16 x float>*, i32, <16 x i1>, <16 x float>)
-declare <8 x float> @llvm.masked.load.v8f32(<8 x float>*, i32, <8 x i1>, <8 x float>)
-declare <8 x i32> @llvm.masked.load.v8i32(<8 x i32>*, i32, <8 x i1>, <8 x i32>)
-declare <4 x float> @llvm.masked.load.v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
-declare <2 x float> @llvm.masked.load.v2f32(<2 x float>*, i32, <2 x i1>, <2 x float>)
-declare <8 x double> @llvm.masked.load.v8f64(<8 x double>*, i32, <8 x i1>, <8 x double>)
-declare <4 x double> @llvm.masked.load.v4f64(<4 x double>*, i32, <4 x i1>, <4 x double>)
-declare <2 x double> @llvm.masked.load.v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
-declare void @llvm.masked.store.v8f64(<8 x double>, <8 x double>*, i32, <8 x i1>)
-declare void @llvm.masked.store.v4f64(<4 x double>, <4 x double>*, i32, <4 x i1>)
-declare void @llvm.masked.store.v2f64(<2 x double>, <2 x double>*, i32, <2 x i1>)
-declare void @llvm.masked.store.v2i64(<2 x i64>, <2 x i64>*, i32, <2 x i1>)
+declare <16 x i32> @llvm.masked.load.v16i32.p0v16i32(<16 x i32>*, i32, <16 x i1>, <16 x i32>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)
+declare <2 x i32> @llvm.masked.load.v2i32.p0v2i32(<2 x i32>*, i32, <2 x i1>, <2 x i32>)
+declare <4 x i64> @llvm.masked.load.v4i64.p0v4i64(<4 x i64>*, i32, <4 x i1>, <4 x i64>)
+declare void @llvm.masked.store.v16i32.p0v16i32(<16 x i32>, <16 x i32>*, i32, <16 x i1>)
+declare void @llvm.masked.store.v8i32.p0v8i32(<8 x i32>, <8 x i32>*, i32, <8 x i1>)
+declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v4i64.p0v4i64(<4 x i64>, <4 x i64>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v2f32.p0v2f32(<2 x float>, <2 x float>*, i32, <2 x i1>)
+declare void @llvm.masked.store.v2i32.p0v2i32(<2 x i32>, <2 x i32>*, i32, <2 x i1>)
+declare void @llvm.masked.store.v4f32.p0v4f32(<4 x float>, <4 x float>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v16f32.p0v16f32(<16 x float>, <16 x float>*, i32, <16 x i1>)
+declare <16 x float> @llvm.masked.load.v16f32.p0v16f32(<16 x float>*, i32, <16 x i1>, <16 x float>)
+declare <8 x float> @llvm.masked.load.v8f32.p0v8f32(<8 x float>*, i32, <8 x i1>, <8 x float>)
+declare <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>*, i32, <8 x i1>, <8 x i32>)
+declare <4 x float> @llvm.masked.load.v4f32.p0v4f32(<4 x float>*, i32, <4 x i1>, <4 x float>)
+declare <2 x float> @llvm.masked.load.v2f32.p0v2f32(<2 x float>*, i32, <2 x i1>, <2 x float>)
+declare <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>*, i32, <8 x i1>, <8 x double>)
+declare <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>*, i32, <4 x i1>, <4 x double>)
+declare <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>*, i32, <2 x i1>, <2 x double>)
+declare void @llvm.masked.store.v8f64.p0v8f64(<8 x double>, <8 x double>*, i32, <8 x i1>)
+declare void @llvm.masked.store.v4f64.p0v4f64(<4 x double>, <4 x double>*, i32, <4 x i1>)
+declare void @llvm.masked.store.v2f64.p0v2f64(<2 x double>, <2 x double>*, i32, <2 x i1>)
+declare void @llvm.masked.store.v2i64.p0v2i64(<2 x i64>, <2 x i64>*, i32, <2 x i1>)
 
-declare <16 x i32*> @llvm.masked.load.v16p0i32(<16 x i32*>*, i32, <16 x i1>, <16 x i32*>)
+declare <16 x i32*> @llvm.masked.load.v16p0i32.p0v16p0i32(<16 x i32*>*, i32, <16 x i1>, <16 x i32*>)
 
 define <16 x i32*> @test23(<16 x i32*> %trigger, <16 x i32*>* %addr) {
 ; AVX1-LABEL: test23:
@@ -1498,13 +1497,13 @@ define <16 x i32*> @test23(<16 x i32*> %trigger, <16 x i32*>* %addr) {
 ; AVX512-NEXT:    vmovdqu64 (%rdi), %zmm0 {%k1} {z}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <16 x i32*> %trigger, zeroinitializer
-  %res = call <16 x i32*> @llvm.masked.load.v16p0i32(<16 x i32*>* %addr, i32 4, <16 x i1>%mask, <16 x i32*>zeroinitializer)
+  %res = call <16 x i32*> @llvm.masked.load.v16p0i32.p0v16p0i32(<16 x i32*>* %addr, i32 4, <16 x i1>%mask, <16 x i32*>zeroinitializer)
   ret <16 x i32*> %res
 }
 
 %mystruct = type { i16, i16, [1 x i8*] }
 
-declare <16 x %mystruct*> @llvm.masked.load.v16p0mystruct(<16 x %mystruct*>*, i32, <16 x i1>, <16 x %mystruct*>)
+declare <16 x %mystruct*> @llvm.masked.load.v16p0mystruct.p0v16p0mystruct(<16 x %mystruct*>*, i32, <16 x i1>, <16 x %mystruct*>)
 
 define <16 x %mystruct*> @test24(<16 x i1> %mask, <16 x %mystruct*>* %addr) {
 ; AVX1-LABEL: test24:
@@ -1593,7 +1592,7 @@ define <16 x %mystruct*> @test24(<16 x i1> %mask, <16 x %mystruct*>* %addr) {
 ; SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; SKX-NEXT:    vmovdqu64 64(%rdi), %zmm1 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <16 x %mystruct*> @llvm.masked.load.v16p0mystruct(<16 x %mystruct*>* %addr, i32 4, <16 x i1>%mask, <16 x %mystruct*>zeroinitializer)
+  %res = call <16 x %mystruct*> @llvm.masked.load.v16p0mystruct.p0v16p0mystruct(<16 x %mystruct*>* %addr, i32 4, <16 x i1>%mask, <16 x %mystruct*>zeroinitializer)
   ret <16 x %mystruct*> %res
 }
 
@@ -1684,10 +1683,10 @@ define void @test_store_16i64(<16 x i64>* %ptrs, <16 x i1> %mask, <16 x i64> %sr
 ; SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; SKX-NEXT:    vmovdqu64 %zmm2, 64(%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v16i64(<16 x i64> %src0, <16 x i64>* %ptrs, i32 4, <16 x i1> %mask)
+  call void @llvm.masked.store.v16i64.p0v16i64(<16 x i64> %src0, <16 x i64>* %ptrs, i32 4, <16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v16i64(<16 x i64> %src0, <16 x i64>* %ptrs, i32, <16 x i1> %mask)
+declare void @llvm.masked.store.v16i64.p0v16i64(<16 x i64> %src0, <16 x i64>* %ptrs, i32, <16 x i1> %mask)
 
 define void @test_store_16f64(<16 x double>* %ptrs, <16 x i1> %mask, <16 x double> %src0)  {
 ; AVX1-LABEL: test_store_16f64:
@@ -1776,10 +1775,10 @@ define void @test_store_16f64(<16 x double>* %ptrs, <16 x i1> %mask, <16 x doubl
 ; SKX-NEXT:    kshiftrw $8, %k1, %k1
 ; SKX-NEXT:    vmovupd %zmm2, 64(%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v16f64(<16 x double> %src0, <16 x double>* %ptrs, i32 4, <16 x i1> %mask)
+  call void @llvm.masked.store.v16f64.p0v16f64(<16 x double> %src0, <16 x double>* %ptrs, i32 4, <16 x i1> %mask)
   ret void
 }
-declare void @llvm.masked.store.v16f64(<16 x double> %src0, <16 x double>* %ptrs, i32, <16 x i1> %mask)
+declare void @llvm.masked.store.v16f64.p0v16f64(<16 x double> %src0, <16 x double>* %ptrs, i32, <16 x i1> %mask)
 
 define <16 x i64> @test_load_16i64(<16 x i64>* %ptrs, <16 x i1> %mask, <16 x i64> %src0)  {
 ; AVX1-LABEL: test_load_16i64:
@@ -1880,10 +1879,10 @@ define <16 x i64> @test_load_16i64(<16 x i64>* %ptrs, <16 x i1> %mask, <16 x i64
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    vmovaps %zmm2, %zmm1
 ; SKX-NEXT:    retq
-  %res = call <16 x i64> @llvm.masked.load.v16i64(<16 x i64>* %ptrs, i32 4, <16 x i1> %mask, <16 x i64> %src0)
+  %res = call <16 x i64> @llvm.masked.load.v16i64.p0v16i64(<16 x i64>* %ptrs, i32 4, <16 x i1> %mask, <16 x i64> %src0)
   ret <16 x i64> %res
 }
-declare <16 x i64> @llvm.masked.load.v16i64(<16 x i64>* %ptrs, i32, <16 x i1> %mask, <16 x i64> %src0)
+declare <16 x i64> @llvm.masked.load.v16i64.p0v16i64(<16 x i64>* %ptrs, i32, <16 x i1> %mask, <16 x i64> %src0)
 
 define <16 x double> @test_load_16f64(<16 x double>* %ptrs, <16 x i1> %mask, <16 x double> %src0)  {
 ; AVX1-LABEL: test_load_16f64:
@@ -1984,10 +1983,10 @@ define <16 x double> @test_load_16f64(<16 x double>* %ptrs, <16 x i1> %mask, <16
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    vmovaps %zmm2, %zmm1
 ; SKX-NEXT:    retq
-  %res = call <16 x double> @llvm.masked.load.v16f64(<16 x double>* %ptrs, i32 4, <16 x i1> %mask, <16 x double> %src0)
+  %res = call <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %ptrs, i32 4, <16 x i1> %mask, <16 x double> %src0)
   ret <16 x double> %res
 }
-declare <16 x double> @llvm.masked.load.v16f64(<16 x double>* %ptrs, i32, <16 x i1> %mask, <16 x double> %src0)
+declare <16 x double> @llvm.masked.load.v16f64.p0v16f64(<16 x double>* %ptrs, i32, <16 x i1> %mask, <16 x double> %src0)
 
 define <32 x double> @test_load_32f64(<32 x double>* %ptrs, <32 x i1> %mask, <32 x double> %src0)  {
 ; AVX1-LABEL: test_load_32f64:
@@ -2215,10 +2214,11 @@ define <32 x double> @test_load_32f64(<32 x double>* %ptrs, <32 x i1> %mask, <32
 ; SKX-NEXT:    vmovaps %zmm3, %zmm2
 ; SKX-NEXT:    vmovaps %zmm4, %zmm3
 ; SKX-NEXT:    retq
-  %res = call <32 x double> @llvm.masked.load.v32f64(<32 x double>* %ptrs, i32 4, <32 x i1> %mask, <32 x double> %src0)
+  %res = call <32 x double> @llvm.masked.load.v32f64.p0v32f64(<32 x double>* %ptrs, i32 4, <32 x i1> %mask, <32 x double> %src0)
   ret <32 x double> %res
 }
-declare <32 x double> @llvm.masked.load.v32f64(<32 x double>* %ptrs, i32, <32 x i1> %mask, <32 x double> %src0)
+
+declare <32 x double> @llvm.masked.load.v32f64.p0v32f64(<32 x double>* %ptrs, i32, <32 x i1> %mask, <32 x double> %src0)
 
 define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> %val) {
 ; SKX-LABEL: test_mask_load_16xi8:
@@ -2227,10 +2227,10 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu8 (%rdi), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <16 x i8> @llvm.masked.load.v16i8(<16 x i8>* %addr, i32 4, <16 x i1>%mask, <16 x i8> undef)
+  %res = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %addr, i32 4, <16 x i1>%mask, <16 x i8> undef)
   ret <16 x i8> %res
 }
-declare <16 x i8> @llvm.masked.load.v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
+declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32, <16 x i1>, <16 x i8>)
 
 define <32 x i8> @test_mask_load_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> %val) {
 ; SKX-LABEL: test_mask_load_32xi8:
@@ -2239,10 +2239,10 @@ define <32 x i8> @test_mask_load_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x 
 ; SKX-NEXT:    vpmovb2m %ymm0, %k1
 ; SKX-NEXT:    vmovdqu8 (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <32 x i8> @llvm.masked.load.v32i8(<32 x i8>* %addr, i32 4, <32 x i1>%mask, <32 x i8> zeroinitializer)
+  %res = call <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>* %addr, i32 4, <32 x i1>%mask, <32 x i8> zeroinitializer)
   ret <32 x i8> %res
 }
-declare <32 x i8> @llvm.masked.load.v32i8(<32 x i8>*, i32, <32 x i1>, <32 x i8>)
+declare <32 x i8> @llvm.masked.load.v32i8.p0v32i8(<32 x i8>*, i32, <32 x i1>, <32 x i8>)
 
 define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> %val) {
 ; SKX-LABEL: test_mask_load_64xi8:
@@ -2252,10 +2252,10 @@ define <64 x i8> @test_mask_load_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x 
 ; SKX-NEXT:    vmovdqu8 (%rdi), %zmm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
-  %res = call <64 x i8> @llvm.masked.load.v64i8(<64 x i8>* %addr, i32 4, <64 x i1>%mask, <64 x i8> %val)
+  %res = call <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>* %addr, i32 4, <64 x i1>%mask, <64 x i8> %val)
   ret <64 x i8> %res
 }
-declare <64 x i8> @llvm.masked.load.v64i8(<64 x i8>*, i32, <64 x i1>, <64 x i8>)
+declare <64 x i8> @llvm.masked.load.v64i8.p0v64i8(<64 x i8>*, i32, <64 x i1>, <64 x i8>)
 
 define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %val) {
 ; SKX-LABEL: test_mask_load_8xi16:
@@ -2264,10 +2264,10 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu16 (%rdi), %xmm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <8 x i16> @llvm.masked.load.v8i16(<8 x i16>* %addr, i32 4, <8 x i1>%mask, <8 x i16> undef)
+  %res = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %addr, i32 4, <8 x i1>%mask, <8 x i16> undef)
   ret <8 x i16> %res
 }
-declare <8 x i16> @llvm.masked.load.v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
+declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32, <8 x i1>, <8 x i16>)
 
 define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i16> %val) {
 ; SKX-LABEL: test_mask_load_16xi16:
@@ -2276,10 +2276,10 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu16 (%rdi), %ymm0 {%k1} {z}
 ; SKX-NEXT:    retq
-  %res = call <16 x i16> @llvm.masked.load.v16i16(<16 x i16>* %addr, i32 4, <16 x i1>%mask, <16 x i16> zeroinitializer)
+  %res = call <16 x i16> @llvm.masked.load.v16i16.p0v16i16(<16 x i16>* %addr, i32 4, <16 x i1>%mask, <16 x i16> zeroinitializer)
   ret <16 x i16> %res
 }
-declare <16 x i16> @llvm.masked.load.v16i16(<16 x i16>*, i32, <16 x i1>, <16 x i16>)
+declare <16 x i16> @llvm.masked.load.v16i16.p0v16i16(<16 x i16>*, i32, <16 x i1>, <16 x i16>)
 
 define <32 x i16> @test_mask_load_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i16> %val) {
 ; SKX-LABEL: test_mask_load_32xi16:
@@ -2289,10 +2289,10 @@ define <32 x i16> @test_mask_load_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32
 ; SKX-NEXT:    vmovdqu16 (%rdi), %zmm1 {%k1}
 ; SKX-NEXT:    vmovaps %zmm1, %zmm0
 ; SKX-NEXT:    retq
-  %res = call <32 x i16> @llvm.masked.load.v32i16(<32 x i16>* %addr, i32 4, <32 x i1>%mask, <32 x i16> %val)
+  %res = call <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>* %addr, i32 4, <32 x i1>%mask, <32 x i16> %val)
   ret <32 x i16> %res
 }
-declare <32 x i16> @llvm.masked.load.v32i16(<32 x i16>*, i32, <32 x i1>, <32 x i16>)
+declare <32 x i16> @llvm.masked.load.v32i16.p0v32i16(<32 x i16>*, i32, <32 x i1>, <32 x i16>)
 
 define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> %val) {
 ; SKX-LABEL: test_mask_store_16xi8:
@@ -2301,10 +2301,10 @@ define void @test_mask_store_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x i8> 
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu8 %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v16i8(<16 x i8> %val, <16 x i8>* %addr, i32 4, <16 x i1>%mask)
+  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %val, <16 x i8>* %addr, i32 4, <16 x i1>%mask)
   ret void
 }
-declare void @llvm.masked.store.v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
+declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32, <16 x i1>)
 
 define void @test_mask_store_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> %val) {
 ; SKX-LABEL: test_mask_store_32xi8:
@@ -2313,10 +2313,10 @@ define void @test_mask_store_32xi8(<32 x i1> %mask, <32 x i8>* %addr, <32 x i8> 
 ; SKX-NEXT:    vpmovb2m %ymm0, %k1
 ; SKX-NEXT:    vmovdqu8 %ymm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v32i8(<32 x i8> %val, <32 x i8>* %addr, i32 4, <32 x i1>%mask)
+  call void @llvm.masked.store.v32i8.p0v32i8(<32 x i8> %val, <32 x i8>* %addr, i32 4, <32 x i1>%mask)
   ret void
 }
-declare void @llvm.masked.store.v32i8(<32 x i8>, <32 x i8>*, i32, <32 x i1>)
+declare void @llvm.masked.store.v32i8.p0v32i8(<32 x i8>, <32 x i8>*, i32, <32 x i1>)
 
 define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> %val) {
 ; SKX-LABEL: test_mask_store_64xi8:
@@ -2325,10 +2325,10 @@ define void @test_mask_store_64xi8(<64 x i1> %mask, <64 x i8>* %addr, <64 x i8> 
 ; SKX-NEXT:    vpmovb2m %zmm0, %k1
 ; SKX-NEXT:    vmovdqu8 %zmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v64i8(<64 x i8> %val, <64 x i8>* %addr, i32 4, <64 x i1>%mask)
+  call void @llvm.masked.store.v64i8.p0v64i8(<64 x i8> %val, <64 x i8>* %addr, i32 4, <64 x i1>%mask)
   ret void
 }
-declare void @llvm.masked.store.v64i8(<64 x i8>, <64 x i8>*, i32, <64 x i1>)
+declare void @llvm.masked.store.v64i8.p0v64i8(<64 x i8>, <64 x i8>*, i32, <64 x i1>)
 
 define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %val) {
 ; SKX-LABEL: test_mask_store_8xi16:
@@ -2337,10 +2337,10 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; SKX-NEXT:    vpmovw2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu16 %xmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v8i16(<8 x i16> %val, <8 x i16>* %addr, i32 4, <8 x i1>%mask)
+  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %val, <8 x i16>* %addr, i32 4, <8 x i1>%mask)
   ret void
 }
-declare void @llvm.masked.store.v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
+declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32, <8 x i1>)
 
 define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i16> %val) {
 ; SKX-LABEL: test_mask_store_16xi16:
@@ -2349,10 +2349,10 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; SKX-NEXT:    vpmovb2m %xmm0, %k1
 ; SKX-NEXT:    vmovdqu16 %ymm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v16i16(<16 x i16> %val, <16 x i16>* %addr, i32 4, <16 x i1>%mask)
+  call void @llvm.masked.store.v16i16.p0v16i16(<16 x i16> %val, <16 x i16>* %addr, i32 4, <16 x i1>%mask)
   ret void
 }
-declare void @llvm.masked.store.v16i16(<16 x i16>, <16 x i16>*, i32, <16 x i1>)
+declare void @llvm.masked.store.v16i16.p0v16i16(<16 x i16>, <16 x i16>*, i32, <16 x i1>)
 
 define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i16> %val) {
 ; SKX-LABEL: test_mask_store_32xi16:
@@ -2361,7 +2361,8 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; SKX-NEXT:    vpmovb2m %ymm0, %k1
 ; SKX-NEXT:    vmovdqu16 %zmm1, (%rdi) {%k1}
 ; SKX-NEXT:    retq
-  call void @llvm.masked.store.v32i16(<32 x i16> %val, <32 x i16>* %addr, i32 4, <32 x i1>%mask)
+  call void @llvm.masked.store.v32i16.p0v32i16(<32 x i16> %val, <32 x i16>* %addr, i32 4, <32 x i1>%mask)
   ret void
 }
-declare void @llvm.masked.store.v32i16(<32 x i16>, <32 x i16>*, i32, <32 x i1>)
+
+declare void @llvm.masked.store.v32i16.p0v32i16(<32 x i16>, <32 x i16>*, i32, <32 x i1>)

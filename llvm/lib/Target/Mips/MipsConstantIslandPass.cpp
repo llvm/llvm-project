@@ -332,8 +332,6 @@ namespace {
   /// the branch fix up pass.
   bool HasFarJump;
 
-  const TargetMachine &TM;
-  bool IsPIC;
   const MipsSubtarget *STI;
   const Mips16InstrInfo *TII;
   MipsFunctionInfo *MFI;
@@ -354,10 +352,9 @@ namespace {
 
   public:
     static char ID;
-    MipsConstantIslands(TargetMachine &tm)
-        : MachineFunctionPass(ID), TM(tm),
-          IsPIC(TM.getRelocationModel() == Reloc::PIC_), STI(nullptr),
-          MF(nullptr), MCP(nullptr), PrescannedForConstants(false) {}
+    MipsConstantIslands()
+        : MachineFunctionPass(ID), STI(nullptr), MF(nullptr), MCP(nullptr),
+          PrescannedForConstants(false) {}
 
     const char *getPassName() const override {
       return "Mips Constant Islands";
@@ -432,10 +429,9 @@ void MipsConstantIslands::dumpBBs() {
     }
   });
 }
-/// createMipsLongBranchPass - Returns a pass that converts branches to long
-/// branches.
-FunctionPass *llvm::createMipsConstantIslandPass(MipsTargetMachine &tm) {
-  return new MipsConstantIslands(tm);
+/// Returns a pass that converts branches to long branches.
+FunctionPass *llvm::createMipsConstantIslandPass() {
+  return new MipsConstantIslands();
 }
 
 bool MipsConstantIslands::runOnMachineFunction(MachineFunction &mf) {

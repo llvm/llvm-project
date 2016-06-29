@@ -1162,7 +1162,7 @@ public:
       return LV_NAME;
     if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth() == 0)
       return LV_NAME;
-    return DiagnosticInfo::AlwaysPrint;
+    return DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint;
   }
 
   bool allowReordering() const {

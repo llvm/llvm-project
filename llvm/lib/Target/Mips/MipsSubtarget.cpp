@@ -114,7 +114,7 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, const std::string &CPU,
       report_fatal_error(ISA + " is not compatible with the DSP ASE", false);
   }
 
-  if (NoABICalls && TM.getRelocationModel() == Reloc::PIC_)
+  if (NoABICalls && TM.isPositionIndependent())
     report_fatal_error("position-independent code requires '-mabicalls'");
 
   // Set UseSmallSection.
@@ -124,6 +124,10 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, const std::string &CPU,
            << "\n";
     UseSmallSection = false;
   }
+}
+
+bool MipsSubtarget::isPositionIndependent() const {
+  return TM.isPositionIndependent();
 }
 
 /// This overrides the PostRAScheduler bit in the SchedModel for any CPU.

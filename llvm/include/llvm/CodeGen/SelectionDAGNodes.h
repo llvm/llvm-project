@@ -1255,7 +1255,7 @@ public:
 
   /// Change values in a shuffle permute mask assuming
   /// the two vector operands have swapped position.
-  static void commuteMask(SmallVectorImpl<int> &Mask) {
+  static void commuteMask(MutableArrayRef<int> Mask) {
     unsigned NumElems = Mask.size();
     for (unsigned i = 0; i != NumElems; ++i) {
       int idx = Mask[i];

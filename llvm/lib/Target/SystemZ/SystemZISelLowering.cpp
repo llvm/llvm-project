@@ -4684,6 +4684,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(ATOMIC_CMP_SWAPW);
     OPCODE(LRV);
     OPCODE(STRV);
+    OPCODE(TDC);
     OPCODE(PREFETCH);
   }
   return nullptr;

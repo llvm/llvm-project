@@ -261,7 +261,7 @@ static std::string swapFPIntParams(FPParamVariant PV, Module *M, bool LE,
 static void assureFPCallStub(Function &F, Module *M,
                              const MipsTargetMachine &TM) {
   // for now we only need them for static relocation
-  if (TM.getRelocationModel() == Reloc::PIC_)
+  if (TM.isPositionIndependent())
     return;
   LLVMContext &Context = M->getContext();
   bool LE = TM.isLittleEndian();
@@ -439,7 +439,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
             Modified=true;
             F.addFnAttr("saveS2");
           }
-          if (TM.getRelocationModel() != Reloc::PIC_ ) {
+          if (!TM.isPositionIndependent()) {
             if (needsFPHelperFromSig(*F_)) {
               assureFPCallStub(*F_, M, TM);
               Modified=true;
@@ -453,7 +453,7 @@ static bool fixupFPReturnAndCall(Function &F, Module *M,
 
 static void createFPFnStub(Function *F, Module *M, FPParamVariant PV,
                            const MipsTargetMachine &TM) {
-  bool PicMode = TM.getRelocationModel() == Reloc::PIC_;
+  bool PicMode = TM.isPositionIndependent();
   bool LE = TM.isLittleEndian();
   LLVMContext &Context = M->getContext();
   std::string Name = F->getName();

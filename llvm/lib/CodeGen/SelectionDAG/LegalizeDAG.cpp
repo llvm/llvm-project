@@ -3510,7 +3510,7 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
         MachinePointerInfo::getJumpTable(DAG.getMachineFunction()), MemVT,
         false, false, false, 0);
     Addr = LD;
-    if (TM.getRelocationModel() == Reloc::PIC_) {
+    if (TM.isPositionIndependent()) {
       // For PIC, the sequence is:
       // BRIND(load(Jumptable + index) + RelocBase)
       // RelocBase can be JumpTable, GOT or some sort of global base.

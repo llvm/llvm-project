@@ -324,6 +324,12 @@ enum NodeType : unsigned {
   // Operand 2: the type of store (i16, i32, i64)
   STRV,
 
+  // Test Data Class.
+  //
+  // Operand 0: the value to test
+  // Operand 1: the bit mask
+  TDC,
+
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for
   // a store prefetch.

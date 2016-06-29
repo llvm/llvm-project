@@ -267,18 +267,11 @@ bool BugDriver::runPasses(Module *Program,
 
 std::unique_ptr<Module>
 BugDriver::runPassesOn(Module *M, const std::vector<std::string> &Passes,
-                       bool AutoDebugCrashes, unsigned NumExtraArgs,
+                       unsigned NumExtraArgs,
                        const char *const *ExtraArgs) {
   std::string BitcodeResult;
   if (runPasses(M, Passes, BitcodeResult, false/*delete*/, true/*quiet*/,
                 NumExtraArgs, ExtraArgs)) {
-    if (AutoDebugCrashes) {
-      errs() << " Error running this sequence of passes"
-             << " on the input program!\n";
-      delete swapProgramIn(M);
-      EmitProgressBitcode(M, "pass-error",  false);
-      exit(debugOptimizerCrash());
-    }
     return nullptr;
   }
 

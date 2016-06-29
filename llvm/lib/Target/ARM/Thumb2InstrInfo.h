@@ -62,8 +62,7 @@ public:
   const ThumbRegisterInfo &getRegisterInfo() const override { return RI; }
 
 private:
-  void expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                            Reloc::Model RM) const override;
+  void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
 
 /// getITInstrPredicate - Valid only in Thumb2 mode. This function is identical
