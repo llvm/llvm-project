@@ -7344,7 +7344,6 @@ X86InstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_NTPOFF, "x86-ntpoff"},
       {MO_GOTNTPOFF, "x86-gotntpoff"},
       {MO_DLLIMPORT, "x86-dllimport"},
-      {MO_DARWIN_STUB, "x86-darwin-stub"},
       {MO_DARWIN_NONLAZY, "x86-darwin-nonlazy"},
       {MO_DARWIN_NONLAZY_PIC_BASE, "x86-darwin-nonlazy-pic-base"},
       {MO_TLVP, "x86-tlvp"},

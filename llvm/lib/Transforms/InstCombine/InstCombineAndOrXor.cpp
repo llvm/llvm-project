@@ -39,30 +39,29 @@ static inline Value *dyn_castNotVal(Value *V) {
 }
 
 /// Similar to getICmpCode but for FCmpInst. This encodes a fcmp predicate into
-/// a three bit mask. It also returns whether it is an ordered predicate by
-/// reference.
-static unsigned getFCmpCode(FCmpInst::Predicate CC, bool &isOrdered) {
-  isOrdered = false;
-  switch (CC) {
-  case FCmpInst::FCMP_ORD: isOrdered = true; return 0;  // 000
-  case FCmpInst::FCMP_UNO:                   return 0;  // 000
-  case FCmpInst::FCMP_OGT: isOrdered = true; return 1;  // 001
-  case FCmpInst::FCMP_UGT:                   return 1;  // 001
-  case FCmpInst::FCMP_OEQ: isOrdered = true; return 2;  // 010
-  case FCmpInst::FCMP_UEQ:                   return 2;  // 010
-  case FCmpInst::FCMP_OGE: isOrdered = true; return 3;  // 011
-  case FCmpInst::FCMP_UGE:                   return 3;  // 011
-  case FCmpInst::FCMP_OLT: isOrdered = true; return 4;  // 100
-  case FCmpInst::FCMP_ULT:                   return 4;  // 100
-  case FCmpInst::FCMP_ONE: isOrdered = true; return 5;  // 101
-  case FCmpInst::FCMP_UNE:                   return 5;  // 101
-  case FCmpInst::FCMP_OLE: isOrdered = true; return 6;  // 110
-  case FCmpInst::FCMP_ULE:                   return 6;  // 110
-    // True -> 7
-  default:
-    // Not expecting FCMP_FALSE and FCMP_TRUE;
-    llvm_unreachable("Unexpected FCmp predicate!");
-  }
+/// a four bit mask.
+static unsigned getFCmpCode(FCmpInst::Predicate CC) {
+  assert(FCmpInst::FCMP_FALSE <= CC && CC <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  // Take advantage of the bit pattern of FCmpInst::Predicate here.
+  //                                                 U L G E
+  static_assert(FCmpInst::FCMP_FALSE ==  0, "");  // 0 0 0 0
+  static_assert(FCmpInst::FCMP_OEQ   ==  1, "");  // 0 0 0 1
+  static_assert(FCmpInst::FCMP_OGT   ==  2, "");  // 0 0 1 0
+  static_assert(FCmpInst::FCMP_OGE   ==  3, "");  // 0 0 1 1
+  static_assert(FCmpInst::FCMP_OLT   ==  4, "");  // 0 1 0 0
+  static_assert(FCmpInst::FCMP_OLE   ==  5, "");  // 0 1 0 1
+  static_assert(FCmpInst::FCMP_ONE   ==  6, "");  // 0 1 1 0
+  static_assert(FCmpInst::FCMP_ORD   ==  7, "");  // 0 1 1 1
+  static_assert(FCmpInst::FCMP_UNO   ==  8, "");  // 1 0 0 0
+  static_assert(FCmpInst::FCMP_UEQ   ==  9, "");  // 1 0 0 1
+  static_assert(FCmpInst::FCMP_UGT   == 10, "");  // 1 0 1 0
+  static_assert(FCmpInst::FCMP_UGE   == 11, "");  // 1 0 1 1
+  static_assert(FCmpInst::FCMP_ULT   == 12, "");  // 1 1 0 0
+  static_assert(FCmpInst::FCMP_ULE   == 13, "");  // 1 1 0 1
+  static_assert(FCmpInst::FCMP_UNE   == 14, "");  // 1 1 1 0
+  static_assert(FCmpInst::FCMP_TRUE  == 15, "");  // 1 1 1 1
+  return CC;
 }
 
 /// This is the complement of getICmpCode, which turns an opcode and two
@@ -78,26 +77,16 @@ static Value *getNewICmpValue(bool Sign, unsigned Code, Value *LHS, Value *RHS,
 }
 
 /// This is the complement of getFCmpCode, which turns an opcode and two
-/// operands into either a FCmp instruction. isordered is passed in to determine
-/// which kind of predicate to use in the new fcmp instruction.
-static Value *getFCmpValue(bool isordered, unsigned code,
-                           Value *LHS, Value *RHS,
+/// operands into either a FCmp instruction, or a true/false constant.
+static Value *getFCmpValue(unsigned Code, Value *LHS, Value *RHS,
                            InstCombiner::BuilderTy *Builder) {
-  CmpInst::Predicate Pred;
-  switch (code) {
-  default: llvm_unreachable("Illegal FCmp code!");
-  case 0: Pred = isordered ? FCmpInst::FCMP_ORD : FCmpInst::FCMP_UNO; break;
-  case 1: Pred = isordered ? FCmpInst::FCMP_OGT : FCmpInst::FCMP_UGT; break;
-  case 2: Pred = isordered ? FCmpInst::FCMP_OEQ : FCmpInst::FCMP_UEQ; break;
-  case 3: Pred = isordered ? FCmpInst::FCMP_OGE : FCmpInst::FCMP_UGE; break;
-  case 4: Pred = isordered ? FCmpInst::FCMP_OLT : FCmpInst::FCMP_ULT; break;
-  case 5: Pred = isordered ? FCmpInst::FCMP_ONE : FCmpInst::FCMP_UNE; break;
-  case 6: Pred = isordered ? FCmpInst::FCMP_OLE : FCmpInst::FCMP_ULE; break;
-  case 7:
-    if (!isordered)
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
-    Pred = FCmpInst::FCMP_ORD; break;
-  }
+  const auto Pred = static_cast<FCmpInst::Predicate>(Code);
+  assert(FCmpInst::FCMP_FALSE <= Pred && Pred <= FCmpInst::FCMP_TRUE &&
+         "Unexpected FCmp predicate!");
+  if (Pred == FCmpInst::FCMP_FALSE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
+  if (Pred == FCmpInst::FCMP_TRUE)
+    return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
   return Builder->CreateFCmp(Pred, LHS, RHS);
 }
 
@@ -1107,6 +1096,29 @@ Value *InstCombiner::FoldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS) {
 /// Optimize (fcmp)&(fcmp).  NOTE: Unlike the rest of instcombine, this returns
 /// a Value which should already be inserted into the function.
 Value *InstCombiner::FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
+  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
+  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
+  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
+
+  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
+    // Swap RHS operands to match LHS.
+    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
+    std::swap(Op1LHS, Op1RHS);
+  }
+
+  // Simplify (fcmp cc0 x, y) & (fcmp cc1 x, y).
+  // Suppose the relation between x and y is R, where R is one of
+  // U(1000), L(0100), G(0010) or E(0001), and CC0 and CC1 are the bitmasks for
+  // testing the desired relations.
+  //
+  // Since (R & CC0) and (R & CC1) are either R or 0, we actually have this:
+  //    bool(R & CC0) && bool(R & CC1)
+  //  = bool((R & CC0) & (R & CC1))
+  //  = bool(R & (CC0 & CC1)) <= by re-association, commutation, and idempotency
+  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS)
+    return getFCmpValue(getFCmpCode(Op0CC) & getFCmpCode(Op1CC), Op0LHS, Op0RHS,
+                        Builder);
+
   if (LHS->getPredicate() == FCmpInst::FCMP_ORD &&
       RHS->getPredicate() == FCmpInst::FCMP_ORD) {
     if (LHS->getOperand(0)->getType() != RHS->getOperand(0)->getType())
@@ -1128,56 +1140,6 @@ Value *InstCombiner::FoldAndOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
         isa<ConstantAggregateZero>(RHS->getOperand(1)))
       return Builder->CreateFCmpORD(LHS->getOperand(0), RHS->getOperand(0));
     return nullptr;
-  }
-
-  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
-  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
-  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
-
-
-  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
-    // Swap RHS operands to match LHS.
-    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
-    std::swap(Op1LHS, Op1RHS);
-  }
-
-  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS) {
-    // Simplify (fcmp cc0 x, y) & (fcmp cc1 x, y).
-    if (Op0CC == Op1CC)
-      return Builder->CreateFCmp((FCmpInst::Predicate)Op0CC, Op0LHS, Op0RHS);
-    if (Op0CC == FCmpInst::FCMP_FALSE || Op1CC == FCmpInst::FCMP_FALSE)
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    if (Op0CC == FCmpInst::FCMP_TRUE)
-      return RHS;
-    if (Op1CC == FCmpInst::FCMP_TRUE)
-      return LHS;
-
-    bool Op0Ordered;
-    bool Op1Ordered;
-    unsigned Op0Pred = getFCmpCode(Op0CC, Op0Ordered);
-    unsigned Op1Pred = getFCmpCode(Op1CC, Op1Ordered);
-    // uno && ord -> false
-    if (Op0Pred == 0 && Op1Pred == 0 && Op0Ordered != Op1Ordered)
-        return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-    if (Op1Pred == 0) {
-      std::swap(LHS, RHS);
-      std::swap(Op0Pred, Op1Pred);
-      std::swap(Op0Ordered, Op1Ordered);
-    }
-    if (Op0Pred == 0) {
-      // uno && ueq -> uno && (uno || eq) -> uno
-      // ord && olt -> ord && (ord && lt) -> olt
-      if (!Op0Ordered && (Op0Ordered == Op1Ordered))
-        return LHS;
-      if (Op0Ordered && (Op0Ordered == Op1Ordered))
-        return RHS;
-
-      // uno && oeq -> uno && (ord && eq) -> false
-      if (!Op0Ordered)
-        return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 0);
-      // ord && ueq -> ord && (uno || eq) -> oeq
-      return getFCmpValue(true, Op1Pred, Op0LHS, Op0RHS, Builder);
-    }
   }
 
   return nullptr;
@@ -1996,6 +1958,27 @@ Value *InstCombiner::FoldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
 /// Optimize (fcmp)|(fcmp).  NOTE: Unlike the rest of instcombine, this returns
 /// a Value which should already be inserted into the function.
 Value *InstCombiner::FoldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
+  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
+  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
+  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
+
+  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
+    // Swap RHS operands to match LHS.
+    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
+    std::swap(Op1LHS, Op1RHS);
+  }
+
+  // Simplify (fcmp cc0 x, y) | (fcmp cc1 x, y).
+  // This is a similar transformation to the one in FoldAndOfFCmps.
+  //
+  // Since (R & CC0) and (R & CC1) are either R or 0, we actually have this:
+  //    bool(R & CC0) || bool(R & CC1)
+  //  = bool((R & CC0) | (R & CC1))
+  //  = bool(R & (CC0 | CC1)) <= by reversed distribution (contribution? ;)
+  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS)
+    return getFCmpValue(getFCmpCode(Op0CC) | getFCmpCode(Op1CC), Op0LHS, Op0RHS,
+                        Builder);
+
   if (LHS->getPredicate() == FCmpInst::FCMP_UNO &&
       RHS->getPredicate() == FCmpInst::FCMP_UNO &&
       LHS->getOperand(0)->getType() == RHS->getOperand(0)->getType()) {
@@ -2020,35 +2003,6 @@ Value *InstCombiner::FoldOrOfFCmps(FCmpInst *LHS, FCmpInst *RHS) {
     return nullptr;
   }
 
-  Value *Op0LHS = LHS->getOperand(0), *Op0RHS = LHS->getOperand(1);
-  Value *Op1LHS = RHS->getOperand(0), *Op1RHS = RHS->getOperand(1);
-  FCmpInst::Predicate Op0CC = LHS->getPredicate(), Op1CC = RHS->getPredicate();
-
-  if (Op0LHS == Op1RHS && Op0RHS == Op1LHS) {
-    // Swap RHS operands to match LHS.
-    Op1CC = FCmpInst::getSwappedPredicate(Op1CC);
-    std::swap(Op1LHS, Op1RHS);
-  }
-  if (Op0LHS == Op1LHS && Op0RHS == Op1RHS) {
-    // Simplify (fcmp cc0 x, y) | (fcmp cc1 x, y).
-    if (Op0CC == Op1CC)
-      return Builder->CreateFCmp((FCmpInst::Predicate)Op0CC, Op0LHS, Op0RHS);
-    if (Op0CC == FCmpInst::FCMP_TRUE || Op1CC == FCmpInst::FCMP_TRUE)
-      return ConstantInt::get(CmpInst::makeCmpResultType(LHS->getType()), 1);
-    if (Op0CC == FCmpInst::FCMP_FALSE)
-      return RHS;
-    if (Op1CC == FCmpInst::FCMP_FALSE)
-      return LHS;
-    bool Op0Ordered;
-    bool Op1Ordered;
-    unsigned Op0Pred = getFCmpCode(Op0CC, Op0Ordered);
-    unsigned Op1Pred = getFCmpCode(Op1CC, Op1Ordered);
-    if (Op0Ordered == Op1Ordered) {
-      // If both are ordered or unordered, return a new fcmp with
-      // or'ed predicates.
-      return getFCmpValue(Op0Ordered, Op0Pred|Op1Pred, Op0LHS, Op0RHS, Builder);
-    }
-  }
   return nullptr;
 }
 

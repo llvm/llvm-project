@@ -88,10 +88,8 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     const GlobalValue *GV = MO.getGlobal();
 
     MCSymbol *GVSym;
-    if (MO.getTargetFlags() == X86II::MO_DARWIN_STUB)
-      GVSym = P.getSymbolWithGlobalValueBase(GV, "$stub");
-    else if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
-             MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE)
+    if (MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY ||
+        MO.getTargetFlags() == X86II::MO_DARWIN_NONLAZY_PIC_BASE)
       GVSym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
     else
       GVSym = P.getSymbol(GV);
@@ -106,13 +104,6 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
       MCSymbol *Sym = P.getSymbolWithGlobalValueBase(GV, "$non_lazy_ptr");
       MachineModuleInfoImpl::StubValueTy &StubSym =
           P.MMI->getObjFileInfo<MachineModuleInfoMachO>().getGVStubEntry(Sym);
-      if (!StubSym.getPointer())
-        StubSym = MachineModuleInfoImpl::
-          StubValueTy(P.getSymbol(GV), !GV->hasInternalLinkage());
-    } else if (MO.getTargetFlags() == X86II::MO_DARWIN_STUB) {
-      MCSymbol *Sym = P.getSymbolWithGlobalValueBase(GV, "$stub");
-      MachineModuleInfoImpl::StubValueTy &StubSym =
-          P.MMI->getObjFileInfo<MachineModuleInfoMachO>().getFnStubEntry(Sym);
       if (!StubSym.getPointer())
         StubSym = MachineModuleInfoImpl::
           StubValueTy(P.getSymbol(GV), !GV->hasInternalLinkage());
@@ -139,7 +130,6 @@ static void printSymbolOperand(X86AsmPrinter &P, const MachineOperand &MO,
     break;
   case X86II::MO_DARWIN_NONLAZY:
   case X86II::MO_DLLIMPORT:
-  case X86II::MO_DARWIN_STUB:
     // These affect the name of the symbol, not any suffix.
     break;
   case X86II::MO_GOT_ABSOLUTE_ADDRESS:
@@ -592,30 +582,6 @@ void X86AsmPrinter::EmitEndOfAsmFile(Module &M) {
 
     // Output stubs for dynamically-linked functions.
     MachineModuleInfoMachO::SymbolListTy Stubs;
-
-    Stubs = MMIMacho.GetFnStubList();
-    if (!Stubs.empty()) {
-      MCSection *TheSection = OutContext.getMachOSection(
-          "__IMPORT", "__jump_table",
-          MachO::S_SYMBOL_STUBS | MachO::S_ATTR_SELF_MODIFYING_CODE |
-              MachO::S_ATTR_PURE_INSTRUCTIONS,
-          5, SectionKind::getMetadata());
-      OutStreamer->SwitchSection(TheSection);
-
-      for (const auto &Stub : Stubs) {
-        // L_foo$stub:
-        OutStreamer->EmitLabel(Stub.first);
-        //   .indirect_symbol _foo
-        OutStreamer->EmitSymbolAttribute(Stub.second.getPointer(),
-                                         MCSA_IndirectSymbol);
-        // hlt; hlt; hlt; hlt; hlt     hlt = 0xf4.
-        const char HltInsts[] = "\xf4\xf4\xf4\xf4\xf4";
-        OutStreamer->EmitBytes(StringRef(HltInsts, 5));
-      }
-
-      Stubs.clear();
-      OutStreamer->AddBlankLine();
-    }
 
     // Output stubs for external and common global variables.
     Stubs = MMIMacho.GetGVStubList();

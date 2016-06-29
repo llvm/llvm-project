@@ -28,38 +28,20 @@ define void @kernel2(float addrspace(1)* %input, float addrspace(1)* %output) {
 
 %struct.S = type { i32*, i32* }
 
-define void @ptr_in_byval_kernel(%struct.S* byval %input, i32* %output) {
-; CHECK-LABEL: .visible .entry ptr_in_byval_kernel(
-; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_kernel_param_1]
-; CHECK: cvta.to.global.u64 %[[optr_g:.*]], %[[optr]];
-; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_kernel_param_0+8]
-; CHECK: cvta.to.global.u64 %[[iptr_g:.*]], %[[iptr]];
+define void @ptr_in_byval(%struct.S* byval %input, i32* %output) {
+; CHECK-LABEL: .visible .entry ptr_in_byval(
+; CHECK: cvta.to.global.u64
+; CHECK: cvta.to.global.u64
   %b_ptr = getelementptr inbounds %struct.S, %struct.S* %input, i64 0, i32 1
   %b = load i32*, i32** %b_ptr, align 4
   %v = load i32, i32* %b, align 4
-; CHECK: ld.global.u32 %[[val:.*]], [%[[iptr_g]]]
+; CHECK: ld.global.u32
   store i32 %v, i32* %output, align 4
-; CHECK: st.global.u32 [%[[optr_g]]], %[[val]]
-  ret void
-}
-
-; Regular functions lower byval arguments differently. We need to make
-; sure that we're loading byval argument data using [symbol+offset].
-; There's also no assumption that all pointers within are in global space.
-define void @ptr_in_byval_func(%struct.S* byval %input, i32* %output) {
-; CHECK-LABEL: .visible .func ptr_in_byval_func(
-; CHECK: ld.param.u64 	%[[optr:rd.*]], [ptr_in_byval_func_param_1]
-; CHECK: ld.param.u64 	%[[iptr:rd.*]], [ptr_in_byval_func_param_0+8]
-  %b_ptr = getelementptr inbounds %struct.S, %struct.S* %input, i64 0, i32 1
-  %b = load i32*, i32** %b_ptr, align 4
-  %v = load i32, i32* %b, align 4
-; CHECK: ld.u32 %[[val:.*]], [%[[iptr]]]
-  store i32 %v, i32* %output, align 4
-; CHECK: st.u32 [%[[optr]]], %[[val]]
+; CHECK: st.global.u32
   ret void
 }
 
 !nvvm.annotations = !{!0, !1, !2}
 !0 = !{void (float*, float*)* @kernel, !"kernel", i32 1}
 !1 = !{void (float addrspace(1)*, float addrspace(1)*)* @kernel2, !"kernel", i32 1}
-!2 = !{void (%struct.S*, i32*)* @ptr_in_byval_kernel, !"kernel", i32 1}
+!2 = !{void (%struct.S*, i32*)* @ptr_in_byval, !"kernel", i32 1}

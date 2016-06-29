@@ -1288,6 +1288,9 @@ Triple Triple::get64BitArchVariant() const {
 
 Triple Triple::getBigEndianArchVariant() const {
   Triple T(*this);
+  // Already big endian.
+  if (!isLittleEndian())
+    return T;
   switch (getArch()) {
   case Triple::UnknownArch:
   case Triple::amdgcn:
@@ -1320,34 +1323,23 @@ Triple Triple::getBigEndianArchVariant() const {
     T.setArch(UnknownArch);
     break;
 
-  case Triple::aarch64_be:
-  case Triple::armeb:
-  case Triple::bpfeb:
-  case Triple::lanai:
-  case Triple::mips64:
-  case Triple::mips:
-  case Triple::ppc64:
-  case Triple::ppc:
-  case Triple::sparc:
-  case Triple::sparcv9:
-  case Triple::systemz:
-  case Triple::tce:
-  case Triple::thumbeb:
-    // Already big endian.
-    break;
-
   case Triple::aarch64: T.setArch(Triple::aarch64_be); break;
   case Triple::bpfel:   T.setArch(Triple::bpfeb);      break;
   case Triple::mips64el:T.setArch(Triple::mips64);     break;
   case Triple::mipsel:  T.setArch(Triple::mips);       break;
   case Triple::ppc64le: T.setArch(Triple::ppc64);      break;
   case Triple::sparcel: T.setArch(Triple::sparc);      break;
+  default:
+    llvm_unreachable("getBigEndianArchVariant: unknown triple.");
   }
   return T;
 }
 
 Triple Triple::getLittleEndianArchVariant() const {
   Triple T(*this);
+  if (isLittleEndian())
+    return T;
+
   switch (getArch()) {
   case Triple::UnknownArch:
   case Triple::lanai:
@@ -1363,6 +1355,20 @@ Triple Triple::getLittleEndianArchVariant() const {
     T.setArch(UnknownArch);
     break;
 
+  case Triple::aarch64_be: T.setArch(Triple::aarch64);  break;
+  case Triple::bpfeb:      T.setArch(Triple::bpfel);    break;
+  case Triple::mips64:     T.setArch(Triple::mips64el); break;
+  case Triple::mips:       T.setArch(Triple::mipsel);   break;
+  case Triple::ppc64:      T.setArch(Triple::ppc64le);  break;
+  case Triple::sparc:      T.setArch(Triple::sparcel);  break;
+  default:
+    llvm_unreachable("getLittleEndianArchVariant: unknown triple.");
+  }
+  return T;
+}
+
+bool Triple::isLittleEndian() const {
+  switch (getArch()) {
   case Triple::aarch64:
   case Triple::amdgcn:
   case Triple::amdil64:
@@ -1393,21 +1399,10 @@ Triple Triple::getLittleEndianArchVariant() const {
   case Triple::x86:
   case Triple::x86_64:
   case Triple::xcore:
-    // Already little endian.
-    break;
-
-  case Triple::aarch64_be: T.setArch(Triple::aarch64);  break;
-  case Triple::bpfeb:      T.setArch(Triple::bpfel);    break;
-  case Triple::mips64:     T.setArch(Triple::mips64el); break;
-  case Triple::mips:       T.setArch(Triple::mipsel);   break;
-  case Triple::ppc64:      T.setArch(Triple::ppc64le);  break;
-  case Triple::sparc:      T.setArch(Triple::sparcel);  break;
+    return true;
+  default:
+    return false;
   }
-  return T;
-}
-
-bool Triple::isLittleEndian() const {
-  return *this == getLittleEndianArchVariant();
 }
 
 StringRef Triple::getARMCPUForArch(StringRef MArch) const {

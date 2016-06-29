@@ -299,7 +299,10 @@ static bool linkFiles(const char *argv0, LLVMContext &Context, Linker &L,
       return false;
     }
 
-    if (verifyModule(*M, &errs())) {
+    // Note that when ODR merging types cannot verify input files in here When
+    // doing that debug metadata in the src module might already be pointing to
+    // the destination.
+    if (DisableDITypeMap && verifyModule(*M, &errs())) {
       errs() << argv0 << ": " << File << ": error: input module is broken!\n";
       return false;
     }

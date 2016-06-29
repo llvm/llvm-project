@@ -65,6 +65,18 @@ static void failIfError(std::error_code EC, Twine Context = "") {
   fail(Context + ": " + EC.message());
 }
 
+static void failIfError(Error E, Twine Context = "") {
+  if (!E)
+    return;
+
+  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    std::string ContextStr = Context.str();
+    if (ContextStr == "")
+      fail(EIB.message());
+    fail(Context + ": " + EIB.message());
+  });
+}
+
 // llvm-ar/llvm-ranlib remaining positional arguments.
 static cl::list<std::string>
     RestOfArgs(cl::Positional, cl::ZeroOrMore,
@@ -429,25 +441,28 @@ static void performReadOperation(ArchiveOperation Operation,
   std::exit(1);
 }
 
-static void addMember(std::vector<NewArchiveIterator> &Members,
+static void addMember(std::vector<NewArchiveMember> &Members,
                       StringRef FileName, int Pos = -1) {
-  NewArchiveIterator NI(FileName);
+  Expected<NewArchiveMember> NMOrErr =
+      NewArchiveMember::getFile(FileName, Deterministic);
+  failIfError(NMOrErr.takeError(), FileName);
   if (Pos == -1)
-    Members.push_back(NI);
+    Members.push_back(std::move(*NMOrErr));
   else
-    Members[Pos] = NI;
+    Members[Pos] = std::move(*NMOrErr);
 }
 
-static void addMember(std::vector<NewArchiveIterator> &Members,
-                      const object::Archive::Child &M, StringRef Name,
-                      int Pos = -1) {
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      const object::Archive::Child &M, int Pos = -1) {
   if (Thin && !M.getParent()->isThin())
     fail("Cannot convert a regular archive to a thin one");
-  NewArchiveIterator NI(M, Name);
+  Expected<NewArchiveMember> NMOrErr =
+      NewArchiveMember::getOldMember(M, Deterministic);
+  failIfError(NMOrErr.takeError());
   if (Pos == -1)
-    Members.push_back(NI);
+    Members.push_back(std::move(*NMOrErr));
   else
-    Members[Pos] = NI;
+    Members[Pos] = std::move(*NMOrErr);
 }
 
 enum InsertAction {
@@ -508,11 +523,11 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
 
 // We have to walk this twice and computing it is not trivial, so creating an
 // explicit std::vector is actually fairly efficient.
-static std::vector<NewArchiveIterator>
+static std::vector<NewArchiveMember>
 computeNewArchiveMembers(ArchiveOperation Operation,
                          object::Archive *OldArchive) {
-  std::vector<NewArchiveIterator> Ret;
-  std::vector<NewArchiveIterator> Moved;
+  std::vector<NewArchiveMember> Ret;
+  std::vector<NewArchiveMember> Moved;
   int InsertPos = -1;
   StringRef PosName = sys::path::filename(RelPos);
   if (OldArchive) {
@@ -536,7 +551,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
           computeInsertAction(Operation, Child, Name, MemberI);
       switch (Action) {
       case IA_AddOldMember:
-        addMember(Ret, Child, Name);
+        addMember(Ret, Child);
         break;
       case IA_AddNewMeber:
         addMember(Ret, *MemberI);
@@ -544,7 +559,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       case IA_Delete:
         break;
       case IA_MoveOldMember:
-        addMember(Moved, Child, Name);
+        addMember(Moved, Child);
         break;
       case IA_MoveNewMember:
         addMember(Moved, *MemberI);
@@ -565,10 +580,15 @@ computeNewArchiveMembers(ArchiveOperation Operation,
     InsertPos = Ret.size();
 
   assert(unsigned(InsertPos) <= Ret.size());
-  Ret.insert(Ret.begin() + InsertPos, Moved.begin(), Moved.end());
-
-  Ret.insert(Ret.begin() + InsertPos, Members.size(), NewArchiveIterator(""));
   int Pos = InsertPos;
+  for (auto &M : Moved) {
+    Ret.insert(Ret.begin() + Pos, std::move(M));
+    ++Pos;
+  }
+
+  for (unsigned I = 0; I != Members.size(); ++I)
+    Ret.insert(Ret.begin() + InsertPos, NewArchiveMember());
+  Pos = InsertPos;
   for (auto &Member : Members) {
     addMember(Ret, Member, Pos);
     ++Pos;
@@ -582,56 +602,26 @@ static object::Archive::Kind getDefaultForHost() {
                                                       : object::Archive::K_GNU;
 }
 
-static object::Archive::Kind
-getKindFromMember(const NewArchiveIterator &Member) {
-  auto getKindFromMemberInner =
-      [](MemoryBufferRef Buffer) -> object::Archive::Kind {
-    Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
-        object::ObjectFile::createObjectFile(Buffer);
+static object::Archive::Kind getKindFromMember(const NewArchiveMember &Member) {
+  Expected<std::unique_ptr<object::ObjectFile>> OptionalObject =
+      object::ObjectFile::createObjectFile(Member.Buf->getMemBufferRef());
 
-    if (OptionalObject)
-      return isa<object::MachOObjectFile>(**OptionalObject)
-                 ? object::Archive::K_BSD
-                 : object::Archive::K_GNU;
+  if (OptionalObject)
+    return isa<object::MachOObjectFile>(**OptionalObject)
+               ? object::Archive::K_BSD
+               : object::Archive::K_GNU;
 
-    // squelch the error in case we had a non-object file
-    consumeError(OptionalObject.takeError());
-    return getDefaultForHost();
-  };
-
-  if (Member.isNewMember()) {
-    object::Archive::Kind Kind = getDefaultForHost();
-
-    sys::fs::file_status Status;
-    if (auto OptionalFD = Member.getFD(Status)) {
-      if (auto MB = MemoryBuffer::getOpenFile(*OptionalFD, Member.getName(),
-                                              Status.getSize(), false))
-        Kind = getKindFromMemberInner((*MB)->getMemBufferRef());
-
-      if (close(*OptionalFD) != 0)
-        failIfError(std::error_code(errno, std::generic_category()),
-                    "failed to close file");
-    }
-
-    return Kind;
-  } else {
-    const object::Archive::Child &OldMember = Member.getOld();
-    if (OldMember.getParent()->isThin())
-      return object::Archive::Kind::K_GNU;
-
-    auto OptionalMB = OldMember.getMemoryBufferRef();
-    failIfError(OptionalMB.getError());
-
-    return getKindFromMemberInner(*OptionalMB);
-  }
+  // squelch the error in case we had a non-object file
+  consumeError(OptionalObject.takeError());
+  return getDefaultForHost();
 }
 
 static void
 performWriteOperation(ArchiveOperation Operation,
                       object::Archive *OldArchive,
                       std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                      std::vector<NewArchiveIterator> *NewMembersP) {
-  std::vector<NewArchiveIterator> NewMembers;
+                      std::vector<NewArchiveMember> *NewMembersP) {
+  std::vector<NewArchiveMember> NewMembers;
   if (!NewMembersP)
     NewMembers = computeNewArchiveMembers(Operation, OldArchive);
 
@@ -681,7 +671,7 @@ static void createSymbolTable(object::Archive *OldArchive) {
 static void performOperation(ArchiveOperation Operation,
                              object::Archive *OldArchive,
                              std::unique_ptr<MemoryBuffer> OldArchiveBuf,
-                             std::vector<NewArchiveIterator> *NewMembers) {
+                             std::vector<NewArchiveMember> *NewMembers) {
   switch (Operation) {
   case Print:
   case DisplayTable:
@@ -704,7 +694,7 @@ static void performOperation(ArchiveOperation Operation,
 }
 
 static int performOperation(ArchiveOperation Operation,
-                            std::vector<NewArchiveIterator> *NewMembers) {
+                            std::vector<NewArchiveMember> *NewMembers) {
   // Create or open the archive object.
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
       MemoryBuffer::getFile(ArchiveName, -1, false);
@@ -713,7 +703,9 @@ static int performOperation(ArchiveOperation Operation,
     fail("error opening '" + ArchiveName + "': " + EC.message() + "!");
 
   if (!EC) {
-    object::Archive Archive(Buf.get()->getMemBufferRef(), EC);
+    Error Err;
+    object::Archive Archive(Buf.get()->getMemBufferRef(), Err);
+    EC = errorToErrorCode(std::move(Err));
     failIfError(EC,
                 "error loading '" + ArchiveName + "': " + EC.message() + "!");
     performOperation(Operation, &Archive, std::move(Buf.get()), NewMembers);
@@ -742,7 +734,7 @@ static void runMRIScript() {
   failIfError(Buf.getError());
   const MemoryBuffer &Ref = *Buf.get();
   bool Saved = false;
-  std::vector<NewArchiveIterator> NewMembers;
+  std::vector<NewArchiveMember> NewMembers;
   std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
   std::vector<std::unique_ptr<object::Archive>> Archives;
 
@@ -768,15 +760,13 @@ static void runMRIScript() {
       ArchiveBuffers.push_back(std::move(*BufOrErr));
       auto LibOrErr =
           object::Archive::create(ArchiveBuffers.back()->getMemBufferRef());
-      failIfError(LibOrErr.getError(), "Could not parse library");
+      failIfError(errorToErrorCode(LibOrErr.takeError()),
+                  "Could not parse library");
       Archives.push_back(std::move(*LibOrErr));
       object::Archive &Lib = *Archives.back();
       for (auto &MemberOrErr : Lib.children()) {
         failIfError(MemberOrErr.getError());
-        auto &Member = MemberOrErr.get();
-        ErrorOr<StringRef> NameOrErr = Member.getName();
-        failIfError(NameOrErr.getError());
-        addMember(NewMembers, Member, *NameOrErr);
+        addMember(NewMembers, *MemberOrErr);
       }
       break;
     }

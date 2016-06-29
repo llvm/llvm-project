@@ -2364,10 +2364,11 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     static_cast<X86Operand &>(*Operands[0]).setTokenValue(Repl);
   }
 
-  // This is a terrible hack to handle "out[bwl]? %al, (%dx)" ->
+  // This is a terrible hack to handle "out[s]?[bwl]? %al, (%dx)" ->
   // "outb %al, %dx".  Out doesn't take a memory form, but this is a widely
   // documented form in various unofficial manuals, so a lot of code uses it.
-  if ((Name == "outb" || Name == "outw" || Name == "outl" || Name == "out") &&
+  if ((Name == "outb" || Name == "outsb" || Name == "outw" || Name == "outsw" ||
+       Name == "outl" || Name == "outsl" || Name == "out" || Name == "outs") &&
       Operands.size() == 3) {
     X86Operand &Op = (X86Operand &)*Operands.back();
     if (Op.isMem() && Op.Mem.SegReg == 0 &&
@@ -2378,8 +2379,9 @@ bool X86AsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
       Operands.back() = X86Operand::CreateReg(Op.Mem.BaseReg, Loc, Loc);
     }
   }
-  // Same hack for "in[bwl]? (%dx), %al" -> "inb %dx, %al".
-  if ((Name == "inb" || Name == "inw" || Name == "inl" || Name == "in") &&
+  // Same hack for "in[s]?[bwl]? (%dx), %al" -> "inb %dx, %al".
+  if ((Name == "inb" || Name == "insb" || Name == "inw" || Name == "insw" ||
+       Name == "inl" || Name == "insl" || Name == "in" || Name == "ins") &&
       Operands.size() == 3) {
     X86Operand &Op = (X86Operand &)*Operands[1];
     if (Op.isMem() && Op.Mem.SegReg == 0 &&

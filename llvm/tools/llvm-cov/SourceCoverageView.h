@@ -111,9 +111,11 @@ public:
 protected:
   CoveragePrinter(const CoverageViewOptions &Opts) : Opts(Opts) {}
 
-  /// \brief Return `OutputDir/ToplevelDir/Path.Extension`.
+  /// \brief Return `OutputDir/ToplevelDir/Path.Extension`. If \p InToplevel is
+  /// false, skip the ToplevelDir component. If \p Relative is false, skip the
+  /// OutputDir component.
   std::string getOutputPath(StringRef Path, StringRef Extension,
-                            bool InToplevel);
+                            bool InToplevel, bool Relative = true);
 
   /// \brief If directory output is enabled, create a file in that directory
   /// at the path given by getOutputPath(). Otherwise, return stdout.

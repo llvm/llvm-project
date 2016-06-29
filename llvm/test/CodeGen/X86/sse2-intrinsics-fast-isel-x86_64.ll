@@ -53,6 +53,17 @@ define i64 @test_mm_cvttsd_si64(<2 x double> %a0) nounwind {
   ret i64 %res
 }
 
+define <2 x i64> @test_mm_loadu_si64(i64* %a0) nounwind {
+; X64-LABEL: test_mm_loadu_si64:
+; X64:       # BB#0:
+; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; X64-NEXT:    retq
+  %ld = load i64, i64* %a0, align 1
+  %res0 = insertelement <2 x i64> undef, i64 %ld, i32 0
+  %res1 = insertelement <2 x i64> %res0, i64 0, i32 1
+  ret <2 x i64> %res1
+}
+
 define void @test_mm_stream_si64(i64 *%a0, i64 %a1) {
 ; X64-LABEL: test_mm_stream_si64:
 ; X64:       # BB#0:
