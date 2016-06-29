@@ -2,9 +2,10 @@
 #include "llvm.h"
 #include "ockl.h"
 
-__attribute__((always_inline, const)) int
-OCKL_MANGLE_I32(ctz)(int i)
+__attribute__((always_inline, const)) uint
+OCKL_MANGLE_U32(ctz)(uint i)
 {
-    return i ? __llvm_cttz_i32(i) : 32;
+    uint r = (uint)__llvm_cttz_i32((int)i);
+    return i ? r : 32u;
 }
 

@@ -172,7 +172,11 @@ extern void __llvm_amdgcn_s_sleep(uint) __asm("llvm.amdgcn.s.sleep");
 extern ulong __llvm_amdgcn_s_memtime(void) __asm("llvm.amdgcn.s.memtime");
 extern ulong __llvm_amdgcn_s_memrealtime(void) __asm("llvm.amdgcn.s.memrealtime");
 
-extern uint __attribute__((pure)) __llvm_amdgcn_ds_bpermute(uint, uint) __asm("llvm.amdgcn.ds.bpermute");
+extern uint __llvm_amdgcn_ds_bpermute(uint, uint) __asm("llvm.amdgcn.ds.bpermute");
+extern uint __llvm_amdgcn_ds_swizzle(uint, uint) __asm("llvm.amdgcn.ds.swizzle");
+
+// llvm.amdgcn.mov.dpp.i32 <src> <dpp_ctrl> <row_mask> <bank_mask> <bound_ctrl>
+extern uint __llvm_amdgcn_mov_dpp_i32(uint, uint, uint, uint, bool) __asm("llvm.amdgcn.mov.dpp.i32");
 
 // Operand bits: [0..3]=VM_CNT, [4..6]=EXP_CNT (Export), [8..11]=LGKM_CNT (LDS, GDS, Konstant, Message)
 extern void __llvm_amdgcn_s_waitcount(int) __asm("llvm.amdgcn.s.waitcount");
@@ -186,6 +190,9 @@ extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_lo(uint, uint) __asm("llv
 extern __attribute__((const)) uint __llvm_amdgcn_mbcnt_hi(uint, uint) __asm("llvm.amdgcn.mbcnt.hi");
 
 extern ulong __llvm_amdgcn_read_exec(void);
+extern uint __llvm_amdgcn_read_exec_lo(void);
+extern uint __llvm_amdgcn_read_exec_hi(void);
+
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H

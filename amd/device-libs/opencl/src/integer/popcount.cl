@@ -15,50 +15,50 @@ UEXP(ulong,popcount)
 UEXPATTR char
 popcount(char x)
 {
-    return (char)__ockl_popcount_i32((int)(uchar)x);
+    return (char)__ockl_popcount_u32((uint)(uchar)x);
 }
 
 UEXPATTR uchar
 popcount(uchar x)
 {
-    return (uchar)__ockl_popcount_i32((int)x);
+    return (uchar)__ockl_popcount_u32((uint)x);
 }
 
 UEXPATTR short
 popcount(short x)
 {
-    return (short)__ockl_popcount_i32((int)(ushort)x);
+    return (short)__ockl_popcount_u32((uint)(ushort)x);
 }
 
 UEXPATTR ushort
 popcount(ushort x)
 {
-    return (ushort)__ockl_popcount_i32((int)x);
+    return (ushort)__ockl_popcount_u32((uint)x);
 }
 
 UEXPATTR int
 popcount(int x)
 {
-    return __ockl_popcount_i32(x);
+    return (int)__ockl_popcount_u32((uint)x);
 }
 
 UEXPATTR uint
 popcount(uint x)
 {
-    return (uint)__ockl_popcount_i32((int)x);
+    return __ockl_popcount_u32(x);
 }
 
 UEXPATTR long
 popcount(long x)
 {
-    int2 y = as_int2(x);
-    return (long)(__ockl_popcount_i32(y.lo) + __ockl_popcount_i32(y.hi));
+    uint2 y = as_uint2(x);
+    return (long)(__ockl_popcount_u32(y.lo) + __ockl_popcount_u32(y.hi));
 }
 
 UEXPATTR ulong
 popcount(ulong x)
 {
-    int2 y = as_int2(x);
-    return (ulong)(__ockl_popcount_i32(y.lo) + __ockl_popcount_i32(y.hi));
+    uint2 y = as_uint2(x);
+    return (ulong)(__ockl_popcount_u32(y.lo) + __ockl_popcount_u32(y.hi));
 }
 

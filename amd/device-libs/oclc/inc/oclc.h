@@ -20,7 +20,7 @@
 //        - the application allows subnormal inputs or outputs to be flushed to zero
 //
 //    int __oclc_amd_opt(void)
-//        - teh applicaiton is running on an AMD device
+//        - the applicaiton is running on an AMD device
 //
 //    int __oclc_correctly_rounded_sqrt32(void)
 //        - the application is expecting sqrt(float) to produce a correctly rounded result

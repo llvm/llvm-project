@@ -14,54 +14,54 @@ UEXP(ulong,clz)
 UEXPATTR char
 clz(char x)
 {
-    int y = (int)(uchar)x;
-    int z = __ockl_clz_i32(y);
-    return (char)(z - 24);
+    uint y = (uint)(uchar)x;
+    uint z = __ockl_clz_u32(y);
+    return (char)(z - 24u);
 }
 
 UEXPATTR uchar
 clz(uchar x)
 {
-    int y = (int)x;
-    int z = __ockl_clz_i32(y);
-    return (char)(z - 24);
+    uint y = (uint)x;
+    uint z = __ockl_clz_u32(y);
+    return (uchar)(z - 24u);
 }
 
 UEXPATTR short
 clz(short x)
 {
-    int y = (int)(ushort)x;
-    int z = __ockl_clz_i32(y);
-    return (char)(z - 16);
+    uint y = (uint)(ushort)x;
+    uint z = __ockl_clz_u32(y);
+    return (short)(z - 16u);
 }
 
 UEXPATTR ushort
 clz(ushort x)
 {
-    int y = (int)x;
-    int z = __ockl_clz_i32(y);
-    return (char)(z - 16);
+    uint y = (uint)x;
+    uint z = __ockl_clz_u32(y);
+    return (ushort)(z - 16u);
 }
 
 UEXPATTR int
 clz(int x)
 {
-    return __ockl_clz_i32(x);
+    return (int)__ockl_clz_u32((uint)x);
 }
 
 UEXPATTR uint
 clz(uint x)
 {
-    return __ockl_clz_i32((int)x);
+    return __ockl_clz_u32(x);
 }
 
 __attribute__((always_inline, const)) static ulong
 clz_u64(ulong x)
 {
-    int xlo = (int)x;
-    int xhi = (int)(x >> 32);
-    int zlo = __ockl_clz_i32(xlo) + 32;
-    int zhi = __ockl_clz_i32(xhi);
+    uint xlo = (uint)x;
+    uint xhi = (uint)(x >> 32);
+    uint zlo = __ockl_clz_u32(xlo) + 32u;
+    uint zhi = __ockl_clz_u32(xhi);
     return (ulong)(xhi == 0 ? zlo : zhi);
 }
 

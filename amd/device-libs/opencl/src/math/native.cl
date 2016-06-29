@@ -81,13 +81,14 @@ native_powr(float x, float y)
 ATTR float
 native_tan(float x)
 {
+    x *= 0x1.45f306p-3f;
     return native_sin(x) * native_recip(native_cos(x));
 }
 
 ATTR float
 native_cos(float x)
 {
-    return __llvm_amdgcn_cos_f32(x);
+    return __llvm_amdgcn_cos_f32(x*0x1.45f306p-3f);
 }
 
 ATTR float
@@ -137,7 +138,7 @@ native_rsqrt(float x)
 
 ATTR float
 native_sin(float x) {
-    return __llvm_amdgcn_sin_f32(x);
+    return __llvm_amdgcn_sin_f32(x*0x1.45f306p-3f);
 }
 
 ATTR float

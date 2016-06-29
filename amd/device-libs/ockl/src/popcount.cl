@@ -2,9 +2,9 @@
 #include "llvm.h"
 #include "ockl.h"
 
-__attribute__((always_inline, const)) int
-OCKL_MANGLE_I32(popcount)(int i)
+__attribute__((always_inline, const)) uint
+OCKL_MANGLE_U32(popcount)(uint i)
 {
-    return __llvm_ctpop_i32(i);
+    return (uint)__llvm_ctpop_i32((int)i);
 }
 

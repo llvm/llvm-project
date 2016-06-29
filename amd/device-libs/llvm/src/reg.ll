@@ -9,8 +9,20 @@ define i64 @__llvm_amdgcn_read_exec() #1 {
     ret i64 %1
 }
 
+define i32 @__llvm_amdgcn_read_exec_lo() #1 {
+    %1 = call i32 @llvm.read_register.i32(metadata !1) #2
+    ret i32 %1
+}
+
+define i32 @__llvm_amdgcn_read_exec_hi() #1 {
+    %1 = call i32 @llvm.read_register.i32(metadata !2) #2
+    ret i32 %1
+}
+
 attributes #0 = { nounwind }
 attributes #1 = { alwaysinline nounwind }
 attributes #2 = { nounwind convergent }
 
 !0 = !{!"exec"}
+!1 = !{!"exec_lo"}
+!2 = !{!"exec_hi"}
