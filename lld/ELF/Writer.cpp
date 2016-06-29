@@ -12,6 +12,7 @@
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Relocations.h"
+#include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
 
@@ -274,17 +275,17 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 
 template <class ELFT>
 static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
-  if (!Config->NoUndefined) {
-    if (Config->Relocatable)
-      return;
-    if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT)
-      return;
-  }
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
+    return;
+
+  if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT &&
+      Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
+    return;
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
   if (InputFile *File = Sym->getSourceFile<ELFT>())
     Msg += " in " + getFilename(File);
-  if (Config->NoinhibitExec)
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
     warning(Msg);
   else
     error(Msg);

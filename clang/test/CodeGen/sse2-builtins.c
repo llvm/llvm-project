@@ -701,6 +701,14 @@ __m128i test_mm_loadu_si128(__m128i const* A) {
   return _mm_loadu_si128(A);
 }
 
+__m128i test_mm_loadu_si64(void const* A) {
+  // CHECK-LABEL: test_mm_loadu_si64
+  // CHECK: load i64, i64* %{{.*}}, align 1{{$}}
+  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
+  // CHECK: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
+  return _mm_loadu_si64(A);
+}
+
 __m128i test_mm_madd_epi16(__m128i A, __m128i B) {
   // CHECK-LABEL: test_mm_madd_epi16
   // CHECK: call <4 x i32> @llvm.x86.sse2.pmadd.wd(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
@@ -1532,12 +1540,3 @@ __m128i test_mm_xor_si128(__m128i A, __m128i B) {
   // CHECK: xor <2 x i64> %{{.*}}, %{{.*}}
   return _mm_xor_si128(A, B);
 }
-
-__m128i test_mm_loadu_si64(void const* A) {
-  // CHECK-LABEL: test_mm_loadu_si64
-  // CHECK: load i64, i64* %{{.*}}, align 1{{$}}
-  // CHECK: insertelement <2 x i64> undef, i64 %{{.*}}, i32 0
-  // CHECK: insertelement <2 x i64> %{{.*}}, i64 0, i32 1
-  return _mm_loadu_si64(A);
-}
-

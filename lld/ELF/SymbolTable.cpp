@@ -33,9 +33,8 @@ using namespace lld::elf;
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT> static bool isCompatible(InputFile *FileP) {
-  auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
-  if (!F)
+template <class ELFT> static bool isCompatible(InputFile *F) {
+  if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
     return true;
   if (F->EKind == Config->EKind && F->EMachine == Config->EMachine)
     return true;
@@ -165,7 +164,7 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
-// A symbol version may be included in a symbol name as a prefix after '@'.
+// A symbol version may be included in a symbol name as a suffix after '@'.
 // This function parses that part and returns a version ID number.
 static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
   size_t VersionBegin = Name.find('@');
@@ -174,7 +173,7 @@ static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
                                                 : VER_NDX_LOCAL;
 
   // If symbol name contains '@' or '@@' we can assign its version id right
-  // here. '@@' means version by default. It is usually the most recent one.
+  // here. '@@' means the default version. It is usually the most recent one.
   // VERSYM_HIDDEN flag should be set for all non-default versions.
   StringRef Version = Name.drop_front(VersionBegin + 1);
   bool Default = Version.startswith("@");

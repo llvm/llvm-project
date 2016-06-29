@@ -11,6 +11,7 @@
 #include "Error.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include <algorithm>
 
 using namespace llvm;
 using namespace lld;
@@ -54,4 +55,16 @@ std::vector<uint8_t> elf::parseHex(StringRef S) {
     Hex.push_back(H);
   }
   return Hex;
+}
+
+static bool isAlpha(char C) {
+  return ('a' <= C && C <= 'z') || ('A' <= C && C <= 'Z') || C == '_';
+}
+
+static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
+
+// Returns true if S is valid as a C language identifier.
+bool elf::isValidCIdentifier(StringRef S) {
+  return !S.empty() && isAlpha(S[0]) &&
+         std::all_of(S.begin() + 1, S.end(), isAlnum);
 }

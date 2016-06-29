@@ -583,7 +583,7 @@ static uint8_t getMachineKind(MemoryBufferRef MB) {
     case Triple::x86_64:
       return EM_X86_64;
     default:
-      fatal("unsupported architecture: " + TripleStr);
+      fatal("could not infer e_machine from bitcode target triple " + TripleStr);
   }
 }
 

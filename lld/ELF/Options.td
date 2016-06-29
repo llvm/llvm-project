@@ -150,6 +150,9 @@ def trace_symbol : J<"trace-symbol=">, HelpText<"Trace references to symbols">;
 def undefined: J<"undefined=">,
   HelpText<"Force undefined symbol during linking">;
 
+def unresolved_symbols: J<"unresolved-symbols=">,
+  HelpText<"Determine how to handle unresolved symbols">;
+
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def version: F<"version">, HelpText<"Display the version number">;

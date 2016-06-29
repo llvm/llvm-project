@@ -3661,6 +3661,14 @@ public:
     getParams()[i] = P;
   }
 
+  // ArrayRef interface to parameters.
+  ArrayRef<ImplicitParamDecl *> parameters() const {
+    return {getParams(), getNumParams()};
+  }
+  MutableArrayRef<ImplicitParamDecl *> parameters() {
+    return {getParams(), getNumParams()};
+  }
+
   /// \brief Retrieve the parameter containing captured variables.
   ImplicitParamDecl *getContextParam() const {
     assert(ContextParam < NumParams);

@@ -17,6 +17,7 @@ namespace lld {
 namespace elf {
 bool globMatch(StringRef S, StringRef T);
 std::vector<uint8_t> parseHex(StringRef S);
+bool isValidCIdentifier(StringRef S);
 }
 }
 

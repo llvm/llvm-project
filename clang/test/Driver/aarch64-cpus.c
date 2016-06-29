@@ -114,6 +114,20 @@
 // RUN: %clang -target arm64 -mlittle-endian -mtune=kryo -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-KRYO %s
 // ARM64-KRYO: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "kryo"
 
+// RUN: %clang -target aarch64 -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64 -mlittle-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64_be -mlittle-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64 -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64 -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// RUN: %clang -target aarch64_be -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN %s
+// VULCAN: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "vulcan"
+
+// RUN: %clang -target arm64 -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
+// RUN: %clang -target arm64 -mlittle-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
+// RUN: %clang -target arm64 -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
+// RUN: %clang -target arm64 -mlittle-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=ARM64-VULCAN %s
+// ARM64-VULCAN: "-cc1"{{.*}} "-triple" "arm64{{.*}}" "-target-cpu" "vulcan"
+
 // RUN: %clang -target aarch64_be -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64 -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
 // RUN: %clang -target aarch64_be -mbig-endian -### -c %s 2>&1 | FileCheck -check-prefix=GENERIC-BE %s
@@ -167,11 +181,21 @@
 // RUN: %clang -target aarch64_be -mbig-endian -mtune=exynos-m1 -### -c %s 2>&1 | FileCheck -check-prefix=M1-BE %s
 // M1-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "exynos-m1"
 
+// RUN: %clang -target aarch64_be -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -mcpu=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
+// RUN: %clang -target aarch64_be -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
+// RUN: %clang -target aarch64 -mbig-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
+// RUN: %clang -target aarch64_be -mbig-endian -mtune=vulcan -### -c %s 2>&1 | FileCheck -check-prefix=VULCAN-BE %s
+// VULCAN-BE: "-cc1"{{.*}} "-triple" "aarch64_be{{.*}}" "-target-cpu" "vulcan"
+
 // RUN: %clang -target aarch64 -mcpu=cortex-a57 -mtune=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
 // RUN: %clang -target aarch64 -mtune=cortex-a53 -mcpu=cortex-a57  -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
 // RUN: %clang -target aarch64 -mcpu=cortex-a72 -mtune=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
 // RUN: %clang -target aarch64 -mtune=cortex-a53 -mcpu=cortex-a72  -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
 // RUN: %clang -target aarch64 -mtune=cortex-a53 -mcpu=cortex-a73     -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
+// RUN: %clang -target aarch64 -mcpu=vulcan -mtune=cortex-a53 -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
+// RUN: %clang -target aarch64 -mtune=cortex-a53 -mcpu=vulcan  -### -c %s 2>&1 | FileCheck -check-prefix=MCPU-MTUNE %s
 // MCPU-MTUNE: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "cortex-a53"
 
 // RUN: %clang -target aarch64 -march=armv8.1a -### -c %s 2>&1 | FileCheck -check-prefix=GENERICV81A %s

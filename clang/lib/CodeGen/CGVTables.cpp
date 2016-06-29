@@ -794,6 +794,10 @@ CodeGenModule::getVTableLinkage(const CXXRecordDecl *RD) {
       return DiscardableODRLinkage;
 
     case TSK_ExplicitInstantiationDeclaration:
+      // Explicit instantiations in MSVC do not provide vtables, so we must emit
+      // our own.
+      if (getTarget().getCXXABI().isMicrosoft())
+        return DiscardableODRLinkage;
       return shouldEmitAvailableExternallyVTable(*this, RD)
                  ? llvm::GlobalVariable::AvailableExternallyLinkage
                  : llvm::GlobalVariable::ExternalLinkage;
@@ -839,9 +843,9 @@ CodeGenVTables::GenerateClassData(const CXXRecordDecl *RD) {
 bool CodeGenVTables::isVTableExternal(const CXXRecordDecl *RD) {
   assert(RD->isDynamicClass() && "Non-dynamic classes have no VTable.");
 
-  // We always synthesize vtables on the import side regardless of whether or
-  // not it is an explicit instantiation declaration.
-  if (CGM.getTarget().getCXXABI().isMicrosoft() && RD->hasAttr<DLLImportAttr>())
+  // We always synthesize vtables if they are needed in the MS ABI. MSVC doesn't
+  // emit them even if there is an explicit template instantiation.
+  if (CGM.getTarget().getCXXABI().isMicrosoft())
     return false;
 
   // If we have an explicit instantiation declaration (and not a
