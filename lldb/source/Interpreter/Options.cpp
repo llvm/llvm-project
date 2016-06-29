@@ -964,6 +964,13 @@ Options::HandleOptionArgumentCompletion
         for (size_t i = 0; i < opt_element_vector.size(); i++)
         {
             int cur_defs_index = opt_element_vector[i].opt_defs_index;
+            
+            // trying to use <0 indices will definitely cause problems
+            if (cur_defs_index == OptionArgElement::eUnrecognizedArg ||
+                cur_defs_index == OptionArgElement::eBareDash ||
+                cur_defs_index == OptionArgElement::eBareDoubleDash)
+                continue;
+            
             int cur_arg_pos    = opt_element_vector[i].opt_arg_pos;
             const char *cur_opt_name = opt_defs[cur_defs_index].long_option;
 
