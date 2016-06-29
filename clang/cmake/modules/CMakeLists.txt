@@ -12,11 +12,11 @@ install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
 
 install(FILES
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake
-  DESTINATION lib${LLVM_LIBDIR_SUFFIX}/cmake/clang)
+  DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
 
 # Also copy ClangConfig.cmake to the build directory so that dependent projects
 # can build against a build directory of Clang more easily.
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake
-  ${CLANG_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/clang/ClangConfig.cmake
+  ${CLANG_BINARY_DIR}/${CLANG_INSTALL_PACKAGE_DIR}/ClangConfig.cmake
   COPYONLY)
