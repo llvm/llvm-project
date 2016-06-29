@@ -537,6 +537,12 @@ TEST(DeclarationMatcher, ClassIsDerived) {
     cxxRecordDecl(isDerivedFrom(namedDecl(hasName("X"))))));
 }
 
+TEST(DeclarationMatcher, IsLambda) {
+  const auto IsLambda = cxxMethodDecl(ofClass(cxxRecordDecl(isLambda())));
+  EXPECT_TRUE(matches("auto x = []{};", IsLambda));
+  EXPECT_TRUE(notMatches("struct S { void operator()() const; };", IsLambda));
+}
+
 TEST(Matcher, BindMatchedNodes) {
   DeclarationMatcher ClassX = has(recordDecl(hasName("::X")).bind("x"));
 

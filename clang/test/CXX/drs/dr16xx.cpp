@@ -18,8 +18,8 @@ namespace dr1684 { // dr1684: 3.6
 #endif
 }
 
+namespace dr1631 {  // dr1631: 3.7
 #if __cplusplus >= 201103L
-namespace dr1631 {  // dr1631: 3.7 c++11
   // Incorrect overload resolution for single-element initializer-list
 
   struct A { int a[1]; };
@@ -41,5 +41,22 @@ namespace dr1631 {  // dr1631: 3.7 c++11
       f({0}, {{1}});        // expected-error{{call to 'f' is ambiguous}}
     }
   }
-} // dr1631
 #endif
+}
+
+namespace dr1645 { // dr1645: 3.9
+#if __cplusplus >= 201103L
+  struct A { // expected-note 2{{candidate}}
+    constexpr A(int, float = 0); // expected-note 2{{candidate}}
+    explicit A(int, int = 0); // expected-note 2{{candidate}}
+    A(int, int, int = 0) = delete; // expected-note {{candidate}}
+  };
+
+  struct B : A { // expected-note 2{{candidate}}
+    using A::A; // expected-note 7{{inherited here}}
+  };
+
+  constexpr B a(0); // expected-error {{ambiguous}}
+  constexpr B b(0, 0); // expected-error {{ambiguous}}
+#endif
+}

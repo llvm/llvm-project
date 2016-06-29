@@ -502,3 +502,7 @@ namespace PR24989 {
   using T = decltype(x);
   void (T::*p)(int) const = &T::operator();
 }
+
+void forinit_decltypeauto() {
+  for (decltype(auto) forinit_decltypeauto_inner();;) {} // expected-warning {{interpreted as a function}} expected-note {{replace}}
+}

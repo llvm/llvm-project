@@ -1287,6 +1287,12 @@ void StmtProfiler::VisitCXXConstructExpr(const CXXConstructExpr *S) {
   ID.AddBoolean(S->isElidable());
 }
 
+void StmtProfiler::VisitCXXInheritedCtorInitExpr(
+    const CXXInheritedCtorInitExpr *S) {
+  VisitExpr(S);
+  VisitDecl(S->getConstructor());
+}
+
 void StmtProfiler::VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *S) {
   VisitExplicitCastExpr(S);
 }

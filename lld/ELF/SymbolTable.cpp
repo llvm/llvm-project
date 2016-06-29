@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
+#include "Strings.h"
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/StringSaver.h"

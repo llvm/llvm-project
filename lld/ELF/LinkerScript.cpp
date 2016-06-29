@@ -19,6 +19,7 @@
 #include "InputSection.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
+#include "Strings.h"
 #include "SymbolTable.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ELF.h"
@@ -284,30 +285,6 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
   if (I == INT_MAX && J == INT_MAX)
     return 0;
   return I < J ? -1 : 1;
-}
-
-// Returns true if S matches T. S can contain glob meta-characters.
-// The asterisk ('*') matches zero or more characters, and the question
-// mark ('?') matches one character.
-bool elf::globMatch(StringRef S, StringRef T) {
-  for (;;) {
-    if (S.empty())
-      return T.empty();
-    if (S[0] == '*') {
-      S = S.substr(1);
-      if (S.empty())
-        // Fast path. If a pattern is '*', it matches anything.
-        return true;
-      for (size_t I = 0, E = T.size(); I < E; ++I)
-        if (globMatch(S, T.substr(I)))
-          return true;
-      return false;
-    }
-    if (T.empty() || (S[0] != T[0] && S[0] != '?'))
-      return false;
-    S = S.substr(1);
-    T = T.substr(1);
-  }
 }
 
 class elf::ScriptParser : public ScriptParserBase {

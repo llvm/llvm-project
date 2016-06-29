@@ -161,18 +161,3 @@ size_t ScriptParserBase::getPos() {
   const char *Tok = Tokens[Pos - 1].data();
   return StringRef(Begin, Tok - Begin).count('\n') + 1;
 }
-
-std::vector<uint8_t> ScriptParserBase::parseHex(StringRef S) {
-  std::vector<uint8_t> Hex;
-  while (!S.empty()) {
-    StringRef B = S.substr(0, 2);
-    S = S.substr(2);
-    uint8_t H;
-    if (B.getAsInteger(16, H)) {
-      setError("not a hexadecimal value: " + B);
-      return {};
-    }
-    Hex.push_back(H);
-  }
-  return Hex;
-}

@@ -22,6 +22,31 @@ namespace dr1560 { // dr1560: 3.5
   const X &x = true ? get() : throw 0;
 }
 
+namespace dr1573 { // dr1573: 3.9
+#if __cplusplus >= 201103L
+  // ellipsis is inherited (p0136r1 supersedes this part).
+  struct A { A(); A(int, char, ...); };
+  struct B : A { using A::A; };
+  B b(1, 'x', 4.0, "hello"); // ok
+
+  // inherited constructor is effectively constexpr if the user-written constructor would be
+  struct C { C(); constexpr C(int) {} };
+  struct D : C { using C::C; };
+  constexpr D d = D(0); // ok
+  struct E : C { using C::C; A a; }; // expected-note {{non-literal type}}
+  constexpr E e = E(0); // expected-error {{non-literal type}}
+  // FIXME: This diagnostic is pretty bad; we should explain that the problem
+  // is that F::c would be initialized by a non-constexpr constructor.
+  struct F : C { using C::C; C c; }; // expected-note {{here}}
+  constexpr F f = F(0); // expected-error {{constant expression}} expected-note {{constructor inherited from base class 'C'}}
+
+  // inherited constructor is effectively deleted if the user-written constructor would be
+  struct G { G(int); };
+  struct H : G { using G::G; G g; }; // expected-note {{constructor inherited by 'H' is implicitly deleted because field 'g' has no default constructor}}
+  H h(0); // expected-error {{constructor inherited by 'H' from base class 'G' is implicitly deleted}}
+#endif
+}
+
 #if __cplusplus >= 201103L
 namespace std {
   typedef decltype(sizeof(int)) size_t;

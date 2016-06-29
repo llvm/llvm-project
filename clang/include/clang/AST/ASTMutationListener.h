@@ -17,6 +17,7 @@ namespace clang {
   class Attr;
   class ClassTemplateDecl;
   class ClassTemplateSpecializationDecl;
+  class ConstructorUsingShadowDecl;
   class CXXDestructorDecl;
   class CXXRecordDecl;
   class Decl;

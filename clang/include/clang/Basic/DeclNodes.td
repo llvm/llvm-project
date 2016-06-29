@@ -66,6 +66,7 @@ def Named : Decl<1>;
     def BuiltinTemplate : DDecl<Template>;
   def Using : DDecl<Named>;
   def UsingShadow : DDecl<Named>;
+    def ConstructorUsingShadow : DDecl<UsingShadow>;
   def ObjCMethod : DDecl<Named>, DeclContext;
   def ObjCContainer : DDecl<Named, 1>, DeclContext;
     def ObjCCategory : DDecl<ObjCContainer>;

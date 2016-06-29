@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Strings.h"
 #include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -402,7 +403,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->BuildId = BuildIdKind::None;
     } else if (S.startswith("0x")) {
       Config->BuildId = BuildIdKind::Hexstring;
-      Config->BuildIdVector = parseHexstring(S.substr(2));
+      Config->BuildIdVector = parseHex(S.substr(2));
     } else {
       error("unknown --build-id style: " + S);
     }

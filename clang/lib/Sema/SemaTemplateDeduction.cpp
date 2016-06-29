@@ -103,12 +103,12 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
                                    bool PartialOrdering = false);
 
 static Sema::TemplateDeductionResult
-DeduceTemplateArguments(Sema &S,
-                        TemplateParameterList *TemplateParams,
+DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
                         const TemplateArgument *Params, unsigned NumParams,
                         const TemplateArgument *Args, unsigned NumArgs,
                         TemplateDeductionInfo &Info,
-                        SmallVectorImpl<DeducedTemplateArgument> &Deduced);
+                        SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+                        bool NumberOfArgumentsMustMatch);
 
 /// \brief If the given expression is of a form that permits the deduction
 /// of a non-type template parameter, return the declaration of that
@@ -453,10 +453,10 @@ DeduceTemplateArguments(Sema &S,
     // Perform template argument deduction on each template
     // argument. Ignore any missing/extra arguments, since they could be
     // filled in by default arguments.
-    return DeduceTemplateArguments(S, TemplateParams,
-                                   Param->getArgs(), Param->getNumArgs(),
-                                   SpecArg->getArgs(), SpecArg->getNumArgs(),
-                                   Info, Deduced);
+    return DeduceTemplateArguments(S, TemplateParams, Param->getArgs(),
+                                   Param->getNumArgs(), SpecArg->getArgs(),
+                                   SpecArg->getNumArgs(), Info, Deduced,
+                                   /*NumberOfArgumentsMustMatch=*/false);
   }
 
   // If the argument type is a class template specialization, we
@@ -487,11 +487,10 @@ DeduceTemplateArguments(Sema &S,
     return Result;
 
   // Perform template argument deduction for the template arguments.
-  return DeduceTemplateArguments(S, TemplateParams,
-                                 Param->getArgs(), Param->getNumArgs(),
-                                 SpecArg->getTemplateArgs().data(),
-                                 SpecArg->getTemplateArgs().size(),
-                                 Info, Deduced);
+  return DeduceTemplateArguments(
+      S, TemplateParams, Param->getArgs(), Param->getNumArgs(),
+      SpecArg->getTemplateArgs().data(), SpecArg->getTemplateArgs().size(),
+      Info, Deduced, /*NumberOfArgumentsMustMatch=*/true);
 }
 
 /// \brief Determines whether the given type is an opaque type that
@@ -1461,6 +1460,7 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
       SmallVector<const RecordType *, 8> ToVisit;
       ToVisit.push_back(RecordT);
       bool Successful = false;
+      SmallVector<DeducedTemplateArgument, 8> SuccessfulDeduced;
       while (!ToVisit.empty()) {
         // Retrieve the next class in the inheritance hierarchy.
         const RecordType *NextT = ToVisit.pop_back_val();
@@ -1481,14 +1481,20 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
           // note that we had some success. Otherwise, ignore any deductions
           // from this base class.
           if (BaseResult == Sema::TDK_Success) {
+            // If we've already seen some success, then deduction fails due to
+            // an ambiguity (temp.deduct.call p5).
+            if (Successful)
+              return Sema::TDK_MiscellaneousDeductionFailure;
+
             Successful = true;
-            DeducedOrig.clear();
-            DeducedOrig.append(Deduced.begin(), Deduced.end());
+            std::swap(SuccessfulDeduced, Deduced);
+
             Info.Param = BaseInfo.Param;
             Info.FirstArg = BaseInfo.FirstArg;
             Info.SecondArg = BaseInfo.SecondArg;
-          } else
-            Deduced = DeducedOrig;
+          }
+
+          Deduced = DeducedOrig;
         }
 
         // Visit base classes
@@ -1500,8 +1506,10 @@ DeduceTemplateArgumentsByTypeMatch(Sema &S,
         }
       }
 
-      if (Successful)
+      if (Successful) {
+        std::swap(SuccessfulDeduced, Deduced);
         return Sema::TDK_Success;
+      }
 
       return Result;
     }
@@ -1825,12 +1833,12 @@ static bool hasPackExpansionBeforeEnd(const TemplateArgument *Args,
 }
 
 static Sema::TemplateDeductionResult
-DeduceTemplateArguments(Sema &S,
-                        TemplateParameterList *TemplateParams,
+DeduceTemplateArguments(Sema &S, TemplateParameterList *TemplateParams,
                         const TemplateArgument *Params, unsigned NumParams,
                         const TemplateArgument *Args, unsigned NumArgs,
                         TemplateDeductionInfo &Info,
-                        SmallVectorImpl<DeducedTemplateArgument> &Deduced) {
+                        SmallVectorImpl<DeducedTemplateArgument> &Deduced,
+                        bool NumberOfArgumentsMustMatch) {
   // C++0x [temp.deduct.type]p9:
   //   If the template argument list of P contains a pack expansion that is not
   //   the last template argument, the entire template argument list is a
@@ -1850,7 +1858,8 @@ DeduceTemplateArguments(Sema &S,
 
       // Check whether we have enough arguments.
       if (!hasTemplateArgumentForDeduction(Args, ArgIdx, NumArgs))
-        return Sema::TDK_Success;
+        return NumberOfArgumentsMustMatch ? Sema::TDK_TooFewArguments
+                                          : Sema::TDK_Success;
 
       if (Args[ArgIdx].isPackExpansion()) {
         // FIXME: We follow the logic of C++0x [temp.deduct.type]p22 here,
@@ -1921,7 +1930,7 @@ DeduceTemplateArguments(Sema &S,
   return DeduceTemplateArguments(S, TemplateParams,
                                  ParamList.data(), ParamList.size(),
                                  ArgList.data(), ArgList.size(),
-                                 Info, Deduced);
+                                 Info, Deduced, false);
 }
 
 /// \brief Determine whether two template arguments are the same.

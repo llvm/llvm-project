@@ -1065,6 +1065,61 @@ public:
     CharUnits OldCXXThisAlignment;
   };
 
+  class InlinedInheritingConstructorScope {
+  public:
+    InlinedInheritingConstructorScope(CodeGenFunction &CGF, GlobalDecl GD)
+        : CGF(CGF), OldCurGD(CGF.CurGD), OldCurFuncDecl(CGF.CurFuncDecl),
+          OldCurCodeDecl(CGF.CurCodeDecl),
+          OldCXXABIThisDecl(CGF.CXXABIThisDecl),
+          OldCXXABIThisValue(CGF.CXXABIThisValue),
+          OldCXXThisValue(CGF.CXXThisValue),
+          OldCXXABIThisAlignment(CGF.CXXABIThisAlignment),
+          OldCXXThisAlignment(CGF.CXXThisAlignment),
+          OldReturnValue(CGF.ReturnValue), OldFnRetTy(CGF.FnRetTy),
+          OldCXXInheritedCtorInitExprArgs(
+              std::move(CGF.CXXInheritedCtorInitExprArgs)) {
+      CGF.CurGD = GD;
+      CGF.CurFuncDecl = CGF.CurCodeDecl =
+          cast<CXXConstructorDecl>(GD.getDecl());
+      CGF.CXXABIThisDecl = nullptr;
+      CGF.CXXABIThisValue = nullptr;
+      CGF.CXXThisValue = nullptr;
+      CGF.CXXABIThisAlignment = CharUnits();
+      CGF.CXXThisAlignment = CharUnits();
+      CGF.ReturnValue = Address::invalid();
+      CGF.FnRetTy = QualType();
+      CGF.CXXInheritedCtorInitExprArgs.clear();
+    }
+    ~InlinedInheritingConstructorScope() {
+      CGF.CurGD = OldCurGD;
+      CGF.CurFuncDecl = OldCurFuncDecl;
+      CGF.CurCodeDecl = OldCurCodeDecl;
+      CGF.CXXABIThisDecl = OldCXXABIThisDecl;
+      CGF.CXXABIThisValue = OldCXXABIThisValue;
+      CGF.CXXThisValue = OldCXXThisValue;
+      CGF.CXXABIThisAlignment = OldCXXABIThisAlignment;
+      CGF.CXXThisAlignment = OldCXXThisAlignment;
+      CGF.ReturnValue = OldReturnValue;
+      CGF.FnRetTy = OldFnRetTy;
+      CGF.CXXInheritedCtorInitExprArgs =
+          std::move(OldCXXInheritedCtorInitExprArgs);
+    }
+
+  private:
+    CodeGenFunction &CGF;
+    GlobalDecl OldCurGD;
+    const Decl *OldCurFuncDecl;
+    const Decl *OldCurCodeDecl;
+    ImplicitParamDecl *OldCXXABIThisDecl;
+    llvm::Value *OldCXXABIThisValue;
+    llvm::Value *OldCXXThisValue;
+    CharUnits OldCXXABIThisAlignment;
+    CharUnits OldCXXThisAlignment;
+    Address OldReturnValue;
+    QualType OldFnRetTy;
+    CallArgList OldCXXInheritedCtorInitExprArgs;
+  };
+
 private:
   /// CXXThisDecl - When generating code for a C++ member function,
   /// this will hold the implicit 'this' declaration.
@@ -1077,6 +1132,10 @@ private:
   /// The value of 'this' to use when evaluating CXXDefaultInitExprs within
   /// this expression.
   Address CXXDefaultInitExprThis = Address::invalid();
+
+  /// The values of function arguments to use when evaluating
+  /// CXXInheritedCtorInitExprs within this context.
+  CallArgList CXXInheritedCtorInitExprArgs;
 
   /// CXXStructorImplicitParamDecl - When generating code for a constructor or
   /// destructor, this will hold the implicit argument (e.g. VTT).
@@ -1300,6 +1359,8 @@ public:
                                 const llvm::Twine &name);
 
   const BlockByrefInfo &getBlockByrefInfo(const VarDecl *var);
+
+  QualType BuildFunctionArgList(GlobalDecl GD, FunctionArgList &Args);
 
   void GenerateCode(GlobalDecl GD, llvm::Function *Fn,
                     const CGFunctionInfo &FnInfo);
@@ -1874,9 +1935,31 @@ public:
   void EmitDelegatingCXXConstructorCall(const CXXConstructorDecl *Ctor,
                                         const FunctionArgList &Args);
 
+  /// Emit a call to an inheriting constructor (that is, one that invokes a
+  /// constructor inherited from a base class) by inlining its definition. This
+  /// is necessary if the ABI does not support forwarding the arguments to the
+  /// base class constructor (because they're variadic or similar).
+  void EmitInlinedInheritingCXXConstructorCall(const CXXConstructorDecl *Ctor,
+                                               CXXCtorType CtorType,
+                                               bool ForVirtualBase,
+                                               bool Delegating,
+                                               CallArgList &Args);
+
+  /// Emit a call to a constructor inherited from a base class, passing the
+  /// current constructor's arguments along unmodified (without even making
+  /// a copy).
+  void EmitInheritedCXXConstructorCall(const CXXConstructorDecl *D,
+                                       bool ForVirtualBase, Address This,
+                                       bool InheritedFromVBase,
+                                       const CXXInheritedCtorInitExpr *E);
+
   void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
                               bool ForVirtualBase, bool Delegating,
                               Address This, const CXXConstructExpr *E);
+
+  void EmitCXXConstructorCall(const CXXConstructorDecl *D, CXXCtorType Type,
+                              bool ForVirtualBase, bool Delegating,
+                              Address This, CallArgList &Args);
 
   /// Emit assumption load for all bases. Requires to be be called only on
   /// most-derived class and not under construction of the object.

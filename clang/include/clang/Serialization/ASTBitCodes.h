@@ -1083,6 +1083,8 @@ namespace clang {
       DECL_USING,
       /// \brief A UsingShadowDecl record.
       DECL_USING_SHADOW,
+      /// \brief A ConstructorUsingShadowDecl record.
+      DECL_CONSTRUCTOR_USING_SHADOW,
       /// \brief A UsingDirecitveDecl record.
       DECL_USING_DIRECTIVE,
       /// \brief An UnresolvedUsingValueDecl record.
@@ -1097,6 +1099,8 @@ namespace clang {
       DECL_CXX_METHOD,
       /// \brief A CXXConstructorDecl record.
       DECL_CXX_CONSTRUCTOR,
+      /// \brief A CXXConstructorDecl record for an inherited constructor.
+      DECL_CXX_INHERITED_CONSTRUCTOR,
       /// \brief A CXXDestructorDecl record.
       DECL_CXX_DESTRUCTOR,
       /// \brief A CXXConversionDecl record.
@@ -1360,6 +1364,8 @@ namespace clang {
       EXPR_CXX_MEMBER_CALL,
       /// \brief A CXXConstructExpr record.
       EXPR_CXX_CONSTRUCT,
+      /// \brief A CXXInheritedCtorInitExpr record.
+      EXPR_CXX_INHERITED_CTOR_INIT,
       /// \brief A CXXTemporaryObjectExpr record.
       EXPR_CXX_TEMPORARY_OBJECT,
       /// \brief A CXXStaticCastExpr record.

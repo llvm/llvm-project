@@ -1,4 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 -verify %s
+//
+// Note: [class.inhctor] was removed by P0136R1. This tests the new behavior
+// for the wording that used to be there.
 
 template<int> struct X {};
 
@@ -8,10 +11,10 @@ template<int> struct X {};
 //   - absence or presence of explicit
 //   - absence or presence of constexpr
 struct A {
-  A(X<0>) {} // expected-note 2{{here}}
+  A(X<0>) {} // expected-note 4{{here}}
   constexpr A(X<1>) {}
-  explicit A(X<2>) {} // expected-note 3{{here}}
-  explicit constexpr A(X<3>) {} // expected-note 2{{here}}
+  explicit A(X<2>) {} // expected-note 6{{here}}
+  explicit constexpr A(X<3>) {} // expected-note 4{{here}}
 };
 
 A a0 { X<0>{} };
@@ -36,7 +39,7 @@ constexpr A a3ic = { X<3>{} }; // expected-error {{constructor is explicit}}
 
 
 struct B : A {
-  using A::A; // expected-note 7{{here}}
+  using A::A;
 };
 
 B b0 { X<0>{} };
@@ -62,14 +65,19 @@ constexpr B b3ic = { X<3>{} }; // expected-error {{constructor is explicit}}
 
 // 'constexpr' is OK even if the constructor doesn't obey the constraints.
 struct NonLiteral { NonLiteral(); };
-struct NonConstexpr { NonConstexpr(); constexpr NonConstexpr(int); }; // expected-note {{here}}
+struct NonConstexpr { NonConstexpr(); constexpr NonConstexpr(int); };
 struct Constexpr { constexpr Constexpr(int) {} };
 
 struct BothNonLiteral : NonLiteral, Constexpr { using Constexpr::Constexpr; }; // expected-note {{base class 'NonLiteral' of non-literal type}}
 constexpr BothNonLiteral bothNL{42}; // expected-error {{constexpr variable cannot have non-literal type 'const BothNonLiteral'}}
 
-struct BothNonConstexpr : NonConstexpr, Constexpr { using Constexpr::Constexpr; }; // expected-note {{non-constexpr constructor 'NonConstexpr}}
-constexpr BothNonConstexpr bothNC{42}; // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'BothNonConstexpr(42)'}}
+// FIXME: This diagnostic is not very good. We should explain that the problem is that base class NonConstexpr cannot be initialized.
+struct BothNonConstexpr
+    : NonConstexpr,
+      Constexpr {
+  using Constexpr::Constexpr; // expected-note {{here}}
+};
+constexpr BothNonConstexpr bothNC{42}; // expected-error {{must be initialized by a constant expression}} expected-note {{inherited from base class 'Constexpr'}}
 
 
 struct ConstexprEval {
@@ -87,25 +95,25 @@ static_assert(ce.k == 'a', "");
 static_assert(ce.k2 == 'x', "");
 
 
-struct TemplateCtors {
-  constexpr TemplateCtors() {}
-  template<template<int> class T> TemplateCtors(X<0>, T<0>);
-  template<int N> TemplateCtors(X<1>, X<N>);
-  template<typename T> TemplateCtors(X<2>, T);
+struct TemplateCtors { // expected-note 2{{candidate constructor (the implicit}}
+  constexpr TemplateCtors() {} // expected-note {{candidate inherited constructor}}
+  template<template<int> class T> TemplateCtors(X<0>, T<0>); // expected-note {{here}} expected-note {{candidate inherited constructor}}
+  template<int N> TemplateCtors(X<1>, X<N>); // expected-note {{here}} expected-note {{candidate inherited constructor}}
+  template<typename T> TemplateCtors(X<2>, T); // expected-note {{here}} expected-note {{candidate inherited constructor}}
 
-  template<typename T = int> TemplateCtors(int, int = 0, int = 0); // expected-note {{inherited from here}}
+  template<typename T = int> TemplateCtors(int, int = 0, int = 0);
 };
 
-struct UsingTemplateCtors : TemplateCtors {  // expected-note 2{{candidate is the implicit}}
-  using TemplateCtors::TemplateCtors; // expected-note 4{{here}} expected-note {{candidate}}
+struct UsingTemplateCtors : TemplateCtors { // expected-note 2{{candidate constructor (the implicit}}
+  using TemplateCtors::TemplateCtors; // expected-note 6{{inherited here}}
 
-  constexpr UsingTemplateCtors(X<0>, X<0>) {}
-  constexpr UsingTemplateCtors(X<1>, X<1>) {}
-  constexpr UsingTemplateCtors(X<2>, X<2>) {}
+  constexpr UsingTemplateCtors(X<0>, X<0>) {} // expected-note {{not viable}}
+  constexpr UsingTemplateCtors(X<1>, X<1>) {} // expected-note {{not viable}}
+  constexpr UsingTemplateCtors(X<2>, X<2>) {} // expected-note {{not viable}}
 
-  template<int = 0> constexpr UsingTemplateCtors(int) {} // expected-note {{candidate}}
-  template<typename T = void> constexpr UsingTemplateCtors(int, int) {}
-  template<typename T, typename U> constexpr UsingTemplateCtors(int, int, int) {}
+  template<int = 0> constexpr UsingTemplateCtors(int) {} // expected-note {{not viable}}
+  template<typename T = void> constexpr UsingTemplateCtors(int, int) {} // expected-note {{not viable}}
+  template<typename T, typename U> constexpr UsingTemplateCtors(int, int, int) {} // expected-note {{couldn't infer}}
 };
 
 template<int> struct Y {};
@@ -116,6 +124,10 @@ constexpr UsingTemplateCtors uct4{ X<1>{}, X<1>{} };
 constexpr UsingTemplateCtors uct5{ X<2>{}, 0 }; // expected-error {{must be initialized by a constant expression}} expected-note {{non-constexpr}}
 constexpr UsingTemplateCtors uct6{ X<2>{}, X<2>{} };
 
-constexpr UsingTemplateCtors utc7{ 0 }; // expected-error {{ambiguous}}
+constexpr UsingTemplateCtors utc7{ 0 }; // ok
 constexpr UsingTemplateCtors utc8{ 0, 0 }; // ok
-constexpr UsingTemplateCtors utc9{ 0, 0, 0 }; // expected-error {{must be initialized by a constant expression}} expected-note {{non-constexpr}}
+// FIXME: The standard says that UsingTemplateCtors' (int, int, int) constructor
+// hides the one from TemplateCtors, even though the template parameter lists
+// don't match. It's not clear that that's *really* the intent, and it's not
+// what other compilers do.
+constexpr UsingTemplateCtors utc9{ 0, 0, 0 }; // expected-error {{no matching constructor}}

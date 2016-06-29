@@ -1466,6 +1466,8 @@ DEF_TRAVERSE_DECL(UsingDirectiveDecl, {
 
 DEF_TRAVERSE_DECL(UsingShadowDecl, {})
 
+DEF_TRAVERSE_DECL(ConstructorUsingShadowDecl, {})
+
 DEF_TRAVERSE_DECL(OMPThreadPrivateDecl, {
   for (auto *I : D->varlists()) {
     TRY_TO(TraverseStmt(I));
@@ -2266,6 +2268,7 @@ DEF_TRAVERSE_STMT(CXXDefaultArgExpr, {})
 DEF_TRAVERSE_STMT(CXXDefaultInitExpr, {})
 DEF_TRAVERSE_STMT(CXXDeleteExpr, {})
 DEF_TRAVERSE_STMT(ExprWithCleanups, {})
+DEF_TRAVERSE_STMT(CXXInheritedCtorInitExpr, {})
 DEF_TRAVERSE_STMT(CXXNullPtrLiteralExpr, {})
 DEF_TRAVERSE_STMT(CXXStdInitializerListExpr, {})
 DEF_TRAVERSE_STMT(CXXPseudoDestructorExpr, {

@@ -160,3 +160,16 @@ int fn() {
 }
 
 }
+
+namespace PR28195 {
+
+template<int N> struct B {};
+struct D : B<0>, B<1> {};
+
+template<int N> int callee(B<N>); // expected-note{{failed template argument deduction}}
+
+int caller() {
+  callee(D()); // expected-error{{no matching function}}
+}
+
+}
