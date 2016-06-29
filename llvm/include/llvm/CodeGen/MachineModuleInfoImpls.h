@@ -23,10 +23,6 @@ class MCSymbol;
 /// MachineModuleInfoMachO - This is a MachineModuleInfoImpl implementation
 /// for MachO targets.
 class MachineModuleInfoMachO : public MachineModuleInfoImpl {
-  /// FnStubs - Darwin '$stub' stubs.  The key is something like "Lfoo$stub",
-  /// the value is something like "_foo".
-  DenseMap<MCSymbol *, StubValueTy> FnStubs;
-
   /// GVStubs - Darwin '$non_lazy_ptr' stubs.  The key is something like
   /// "Lfoo$non_lazy_ptr", the value is something like "_foo". The extra bit
   /// is true if this GV is external.
@@ -41,11 +37,6 @@ class MachineModuleInfoMachO : public MachineModuleInfoImpl {
 public:
   MachineModuleInfoMachO(const MachineModuleInfo &) {}
 
-  StubValueTy &getFnStubEntry(MCSymbol *Sym) {
-    assert(Sym && "Key cannot be null");
-    return FnStubs[Sym];
-  }
-
   StubValueTy &getGVStubEntry(MCSymbol *Sym) {
     assert(Sym && "Key cannot be null");
     return GVStubs[Sym];
@@ -57,7 +48,6 @@ public:
   }
 
   /// Accessor methods to return the set of stubs in sorted order.
-  SymbolListTy GetFnStubList() { return getSortedStubs(FnStubs); }
   SymbolListTy GetGVStubList() { return getSortedStubs(GVStubs); }
   SymbolListTy GetThreadLocalGVStubList() {
     return getSortedStubs(ThreadLocalGVStubs);

@@ -1,7 +1,7 @@
 ; RUN: llc %s -o - -enable-shrink-wrap=true -no-x86-call-frame-opt | FileCheck %s --check-prefix=CHECK --check-prefix=ENABLE
 ; RUN: llc %s -o - -enable-shrink-wrap=false -no-x86-call-frame-opt | FileCheck %s --check-prefix=CHECK --check-prefix=DISABLE
 target datalayout = "e-m:e-p:32:32-f64:32:64-f80:32-n8:16:32-S128"
-target triple = "i386-apple-macosx"
+target triple = "i386-apple-macosx10.5"
 
 @a = common global i32 0, align 4
 @d = internal unnamed_addr global i1 false
@@ -64,7 +64,7 @@ target triple = "i386-apple-macosx"
 ; CHECK-NEXT: cmovnel {{%[a-z]+}}, [[CONV]]
 ;
 ; Skip all the crust of vaarg lowering.
-; CHECK: calll L_varfunc$stub
+; CHECK: calll _varfunc
 ; Set the return value to 0.
 ; CHECK-NEXT: xorl %eax, %eax
 ; CHECK-NEXT: addl $20, %esp

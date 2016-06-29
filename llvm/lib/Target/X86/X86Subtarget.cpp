@@ -137,13 +137,6 @@ X86Subtarget::classifyGlobalFunctionReference(const GlobalValue *GV,
     return X86II::MO_NO_FLAG;
   }
 
-  // PC-relative references to external symbols should go through $stub,
-  // unless we're building with the leopard linker or later, which
-  // automatically synthesizes these stubs.
-  if (!getTargetTriple().isMacOSX() ||
-      getTargetTriple().isMacOSXVersionLT(10, 5))
-    return X86II::MO_DARWIN_STUB;
-
   return X86II::MO_NO_FLAG;
 }
 

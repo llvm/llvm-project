@@ -1,4 +1,4 @@
-; RUN: not llvm-link -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not llvm-link -disable-debug-info-type-map -o /dev/null %s 2>&1 | FileCheck %s
 
 ; CHECK: broken.ll: error: input module is broken!
 define i32 @foo(i32 %v) {

@@ -281,6 +281,27 @@ inw	(%dx), %ax
 in	(%dx), %eax
 inl	(%dx), %eax
 
+//PR15455
+
+// permitted invalid memory forms	
+outs	(%rsi), (%dx) 
+// CHECK: outsw	(%rsi), %dx
+outsb	(%rsi), (%dx)
+// CHECK: outsb	(%rsi), %dx
+outsw	(%rsi), (%dx)
+// CHECK: outsw	(%rsi), %dx
+outsl	(%rsi), (%dx)
+// CHECK: outsl	(%rsi), %dx
+
+ins	(%dx), %es:(%rdi)
+// CHECK: insw	%dx, %es:(%rdi)
+insb	(%dx), %es:(%rdi)
+// CHECK: insb	%dx, %es:(%rdi)
+insw	(%dx), %es:(%rdi)
+// CHECK: insw	%dx, %es:(%rdi)
+insl	(%dx), %es:(%rdi)
+// CHECK: insl	%dx, %es:(%rdi)	
+
 // rdar://8431422
 
 // CHECK: fxch %st(1)

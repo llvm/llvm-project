@@ -263,11 +263,11 @@ Archive::Child::getAsBinary(LLVMContext *Context) const {
   return BinaryOrErr.takeError();
 }
 
-ErrorOr<std::unique_ptr<Archive>> Archive::create(MemoryBufferRef Source) {
-  std::error_code EC;
-  std::unique_ptr<Archive> Ret(new Archive(Source, EC));
-  if (EC)
-    return EC;
+Expected<std::unique_ptr<Archive>> Archive::create(MemoryBufferRef Source) {
+  Error Err;
+  std::unique_ptr<Archive> Ret(new Archive(Source, Err));
+  if (Err)
+    return std::move(Err);
   return std::move(Ret);
 }
 
@@ -276,8 +276,9 @@ void Archive::setFirstRegular(const Child &C) {
   FirstRegularStartOfFile = C.StartOfFile;
 }
 
-Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
+Archive::Archive(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_Archive, Source) {
+  ErrorAsOutParameter ErrAsOutParam(Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
   if (Buffer.startswith(ThinMagic)) {
@@ -285,14 +286,18 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
   } else if (Buffer.startswith(Magic)) {
     IsThin = false;
   } else {
-    ec = object_error::invalid_file_type;
+    Err = make_error<GenericBinaryError>("File too small to be an archive",
+                                         object_error::invalid_file_type);
     return;
   }
 
   // Get the special members.
   child_iterator I = child_begin(false);
-  if ((ec = I->getError()))
+  std::error_code ec;
+  if ((ec = I->getError())) {
+    Err = errorCodeToError(ec);
     return;
+  }
   child_iterator E = child_end();
 
   // This is at least a valid empty archive. Since an empty archive is the
@@ -301,14 +306,14 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
   Format = K_GNU;
 
   if (I == E) {
-    ec = std::error_code();
+    Err = Error::success();
     return;
   }
   const Child *C = &**I;
 
   auto Increment = [&]() {
     ++I;
-    if ((ec = I->getError()))
+    if ((Err = errorCodeToError(I->getError())))
       return true;
     C = &**I;
     return false;
@@ -347,7 +352,7 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
       return;
     setFirstRegular(*C);
 
-    ec = std::error_code();
+    Err = Error::success();
     return;
   }
 
@@ -356,8 +361,10 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
     // We know this is BSD, so getName will work since there is no string table.
     ErrorOr<StringRef> NameOrErr = C->getName();
     ec = NameOrErr.getError();
-    if (ec)
+    if (ec) {
+      Err = errorCodeToError(ec);
       return;
+    }
     Name = NameOrErr.get();
     if (Name == "__.SYMDEF SORTED" || Name == "__.SYMDEF") {
       // We know that the symbol table is not an external file, so we just
@@ -394,7 +401,7 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
     if (Increment())
       return;
     if (I == E) {
-      ec = std::error_code();
+      Err = Error::success();
       return;
     }
     Name = C->getRawName();
@@ -408,19 +415,19 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
     if (Increment())
       return;
     setFirstRegular(*C);
-    ec = std::error_code();
+    Err = Error::success();
     return;
   }
 
   if (Name[0] != '/') {
     Format = has64SymTable ? K_MIPS64 : K_GNU;
     setFirstRegular(*C);
-    ec = std::error_code();
+    Err = Error::success();
     return;
   }
 
   if (Name != "/") {
-    ec = object_error::parse_failed;
+    Err = errorCodeToError(object_error::parse_failed);
     return;
   }
 
@@ -434,7 +441,7 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
 
   if (I == E) {
     setFirstRegular(*C);
-    ec = std::error_code();
+    Err = Error::success();
     return;
   }
 
@@ -449,7 +456,7 @@ Archive::Archive(MemoryBufferRef Source, std::error_code &ec)
   }
 
   setFirstRegular(*C);
-  ec = std::error_code();
+  Err = Error::success();
 }
 
 Archive::child_iterator Archive::child_begin(bool SkipInternal) const {
