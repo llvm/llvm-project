@@ -14,6 +14,8 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${clang_cmake_builddir}/ClangConfig.cmake
   @ONLY)
+set(CLANG_CONFIG_CMAKE_DIR)
+set(CLANG_CONFIG_EXPORTS_FILE)
 
 # Generate ClangConfig.cmake for the install tree.
 set(CLANG_CONFIG_CODE "
@@ -32,6 +34,9 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/ClangConfig.cmake
   @ONLY)
+set(CLANG_CONFIG_CODE)
+set(CLANG_CONFIG_CMAKE_DIR)
+set(CLANG_CONFIG_EXPORTS_FILE)
 
 if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
   install(EXPORT ClangTargets DESTINATION ${CLANG_INSTALL_PACKAGE_DIR})
