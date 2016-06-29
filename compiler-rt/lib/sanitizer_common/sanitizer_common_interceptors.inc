@@ -2499,6 +2499,34 @@ INTERCEPTOR(SSIZE_T, recvmsg, int fd, struct __sanitizer_msghdr *msg,
 #endif
 
 #if SANITIZER_INTERCEPT_SENDMSG
+static void read_msghdr_control(void *ctx, void *control, uptr controllen) {
+  const unsigned kCmsgDataOffset =
+      RoundUpTo(sizeof(__sanitizer_cmsghdr), sizeof(uptr));
+
+  char *p = (char *)control;
+  char *const control_end = p + controllen;
+  while (true) {
+    if (p + sizeof(__sanitizer_cmsghdr) > control_end) break;
+    __sanitizer_cmsghdr *cmsg = (__sanitizer_cmsghdr *)p;
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &cmsg->cmsg_len, sizeof(cmsg->cmsg_len));
+
+    if (p + RoundUpTo(cmsg->cmsg_len, sizeof(uptr)) > control_end) break;
+
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &cmsg->cmsg_level,
+                                  sizeof(cmsg->cmsg_level));
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, &cmsg->cmsg_type,
+                                  sizeof(cmsg->cmsg_type));
+
+    if (cmsg->cmsg_len > kCmsgDataOffset) {
+      char *data = p + kCmsgDataOffset;
+      unsigned data_len = cmsg->cmsg_len - kCmsgDataOffset;
+      if (data_len > 0) COMMON_INTERCEPTOR_READ_RANGE(ctx, data, data_len);
+    }
+
+    p += RoundUpTo(cmsg->cmsg_len, sizeof(uptr));
+  }
+}
+
 static void read_msghdr(void *ctx, struct __sanitizer_msghdr *msg,
                         SSIZE_T maxlen) {
 #define R(f) \
@@ -2518,7 +2546,7 @@ static void read_msghdr(void *ctx, struct __sanitizer_msghdr *msg,
                                   sizeof(*msg->msg_iov) * msg->msg_iovlen);
   read_iovec(ctx, msg->msg_iov, msg->msg_iovlen, maxlen);
   if (msg->msg_control && msg->msg_controllen)
-    COMMON_INTERCEPTOR_READ_RANGE(ctx, msg->msg_control, msg->msg_controllen);
+    read_msghdr_control(ctx, msg->msg_control, msg->msg_controllen);
 }
 
 INTERCEPTOR(SSIZE_T, sendmsg, int fd, struct __sanitizer_msghdr *msg,

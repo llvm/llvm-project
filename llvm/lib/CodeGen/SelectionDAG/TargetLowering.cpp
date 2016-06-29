@@ -45,7 +45,7 @@ const char *TargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 bool TargetLowering::isPositionIndependent() const {
-  return getTargetMachine().getRelocationModel() == Reloc::PIC_;
+  return getTargetMachine().isPositionIndependent();
 }
 
 /// Check whether a given call node is in tail position within its function. If

@@ -17,6 +17,8 @@ set(sources
   X86CallFrameOptimization.cpp
   X86ExpandPseudo.cpp
   X86FastISel.cpp
+  X86FixupBWInsts.cpp
+  X86FixupLEAs.cpp
   X86FloatingPoint.cpp
   X86FrameLowering.cpp
   X86ISelDAGToDAG.cpp
@@ -24,6 +26,7 @@ set(sources
   X86InstrInfo.cpp
   X86MCInstLower.cpp
   X86MachineFunctionInfo.cpp
+  X86OptimizeLEAs.cpp
   X86PadShortFunction.cpp
   X86RegisterInfo.cpp
   X86SelectionDAGInfo.cpp
@@ -33,11 +36,8 @@ set(sources
   X86TargetObjectFile.cpp
   X86TargetTransformInfo.cpp
   X86VZeroUpper.cpp
-  X86FixupLEAs.cpp
-  X86WinEHState.cpp
-  X86OptimizeLEAs.cpp
-  X86FixupBWInsts.cpp
   X86WinAllocaExpander.cpp
+  X86WinEHState.cpp
   )
 
 add_llvm_target(X86CodeGen ${sources})

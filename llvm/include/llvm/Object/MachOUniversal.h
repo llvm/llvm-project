@@ -19,7 +19,6 @@
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
-#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MachO.h"
 
 namespace llvm {
@@ -105,7 +104,7 @@ public:
 
     Expected<std::unique_ptr<MachOObjectFile>> getAsObjectFile() const;
 
-    ErrorOr<std::unique_ptr<Archive>> getAsArchive() const;
+    Expected<std::unique_ptr<Archive>> getAsArchive() const;
   };
 
   class object_iterator {

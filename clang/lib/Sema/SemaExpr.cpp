@@ -216,25 +216,14 @@ void Sema::NoteDeletedFunction(FunctionDecl *Decl) {
     // deleted. This might fail, if that reason no longer applies.
     CXXSpecialMember CSM = getSpecialMember(Method);
     if (CSM != CXXInvalid)
-      ShouldDeleteSpecialMember(Method, CSM, /*Diagnose=*/true);
+      ShouldDeleteSpecialMember(Method, CSM, nullptr, /*Diagnose=*/true);
 
     return;
   }
 
-  if (CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(Decl)) {
-    if (CXXConstructorDecl *BaseCD =
-            const_cast<CXXConstructorDecl*>(CD->getInheritedConstructor())) {
-      Diag(Decl->getLocation(), diag::note_inherited_deleted_here);
-      if (BaseCD->isDeleted()) {
-        NoteDeletedFunction(BaseCD);
-      } else {
-        // FIXME: An explanation of why exactly it can't be inherited
-        // would be nice.
-        Diag(BaseCD->getLocation(), diag::note_cannot_inherit);
-      }
-      return;
-    }
-  }
+  auto *Ctor = dyn_cast<CXXConstructorDecl>(Decl);
+  if (Ctor && Ctor->isInheritingConstructor())
+    return NoteDeletedInheritingConstructor(Ctor);
 
   Diag(Decl->getLocation(), diag::note_availability_specified_here)
     << Decl << true;
@@ -361,7 +350,13 @@ bool Sema::DiagnoseUseOfDecl(NamedDecl *D, SourceLocation Loc,
   // See if this is a deleted function.
   if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
     if (FD->isDeleted()) {
-      Diag(Loc, diag::err_deleted_function_use);
+      auto *Ctor = dyn_cast<CXXConstructorDecl>(FD);
+      if (Ctor && Ctor->isInheritingConstructor())
+        Diag(Loc, diag::err_deleted_inherited_ctor_use)
+            << Ctor->getParent()
+            << Ctor->getInheritedConstructor().getConstructor()->getParent();
+      else 
+        Diag(Loc, diag::err_deleted_function_use);
       NoteDeletedFunction(FD);
       return true;
     }

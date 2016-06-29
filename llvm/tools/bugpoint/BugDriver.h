@@ -248,7 +248,6 @@ public:
   /// never return null.
   std::unique_ptr<Module> runPassesOn(Module *M,
                                       const std::vector<std::string> &Passes,
-                                      bool AutoDebugCrashes = false,
                                       unsigned NumExtraArgs = 0,
                                       const char *const *ExtraArgs = nullptr);
 

@@ -201,8 +201,8 @@ def InMips16Mode :    Predicate<"Subtarget->inMips16Mode()">,
                       AssemblerPredicate<"FeatureMips16">;
 def HasCnMips    :    Predicate<"Subtarget->hasCnMips()">,
                       AssemblerPredicate<"FeatureCnMips">;
-def RelocStatic :     Predicate<"TM.getRelocationModel() == Reloc::Static">;
-def RelocPIC    :     Predicate<"TM.getRelocationModel() == Reloc::PIC_">;
+def RelocNotPIC :     Predicate<"!TM.isPositionIndependent()">;
+def RelocPIC    :     Predicate<"TM.isPositionIndependent()">;
 def NoNaNsFPMath :    Predicate<"TM.Options.NoNaNsFPMath">;
 def HasStdEnc :       Predicate<"Subtarget->hasStandardEncoding()">,
                       AssemblerPredicate<"!FeatureMips16">;
@@ -1854,7 +1854,7 @@ def SC : SCBase<"sc", GPR32Opnd>, LW_FM<0x38>, PTR_32, ISA_MIPS2_NOT_32R6_64R6;
 
 /// Jump and Branch Instructions
 def J       : MMRel, JumpFJ<jmptarget, "j", br, bb, "j">, FJ<2>,
-              AdditionalRequires<[RelocStatic]>, IsBranch;
+              AdditionalRequires<[RelocNotPIC]>, IsBranch;
 def JR      : MMRel, IndirectBranch<"jr", GPR32Opnd>, MTLO_FM<8>, ISA_MIPS1_NOT_32R6_64R6; 
 def BEQ     : MMRel, CBranch<"beq", brtarget, seteq, GPR32Opnd>, BEQ_FM<4>;
 def BEQL    : MMRel, CBranch<"beql", brtarget, seteq, GPR32Opnd, 0>,

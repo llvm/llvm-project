@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_USELISTORDER_H
 #define LLVM_IR_USELISTORDER_H
 
+#include <cstddef>
 #include <vector>
 
 namespace llvm {

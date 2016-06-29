@@ -697,8 +697,14 @@ static bool TestOptimizer(BugDriver &BD, std::unique_ptr<Module> Test,
   // of the functions being tested.
   outs() << "  Optimizing functions being tested: ";
   std::unique_ptr<Module> Optimized =
-      BD.runPassesOn(Test.get(), BD.getPassesToRun(),
-                     /*AutoDebugCrashes*/ true);
+      BD.runPassesOn(Test.get(), BD.getPassesToRun());
+  if (!Optimized) {
+    errs() << " Error running this sequence of passes"
+           << " on the input program!\n";
+    delete BD.swapProgramIn(Test.get());
+    BD.EmitProgressBitcode(Test.get(), "pass-error",  false);
+    return BD.debugOptimizerCrash();
+  }
   outs() << "done.\n";
 
   outs() << "  Checking to see if the merged program executes correctly: ";

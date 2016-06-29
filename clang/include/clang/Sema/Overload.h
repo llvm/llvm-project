@@ -803,6 +803,7 @@ namespace clang {
     DeclAccessPair FoundDecl;
     CXXConstructorDecl *Constructor;
     FunctionTemplateDecl *ConstructorTmpl;
+    explicit operator bool() const { return Constructor; }
   };
   // FIXME: Add an AddOverloadCandidate / AddTemplateOverloadCandidate overload
   // that takes one of these.
@@ -818,7 +819,7 @@ namespace clang {
     Info.ConstructorTmpl = dyn_cast<FunctionTemplateDecl>(D);
     if (Info.ConstructorTmpl)
       D = Info.ConstructorTmpl->getTemplatedDecl();
-    Info.Constructor = cast<CXXConstructorDecl>(D);
+    Info.Constructor = dyn_cast<CXXConstructorDecl>(D);
     return Info;
   }
 } // end namespace clang

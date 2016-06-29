@@ -330,7 +330,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->GcSections = Args.hasArg(OPT_gc_sections);
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
-  Config->NoUndefined = Args.hasArg(OPT_no_undefined);
+  Config->NoUndefined =
+      Args.hasArg(OPT_no_undefined) || hasZOption(Args, "defs");
+  Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Pie = Args.hasArg(OPT_pie);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
@@ -363,7 +365,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     error("number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
-  Config->ZDefs = hasZOption(Args, "defs");
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");

@@ -30,32 +30,32 @@
 @interface B : A
 - (void)method; // NOTE: we expect 'method' to *not* inherit availability.
 - (void)partialMethod; // Likewise.
-- (void)overridden __attribute__((availability(macosx,introduced=10.4))); // expected-warning{{overriding method introduced after overridden method on OS X (10.4 vs. 10.3)}}
+- (void)overridden __attribute__((availability(macosx,introduced=10.4))); // expected-warning{{overriding method introduced after overridden method on macOS (10.4 vs. 10.3)}}
 - (void)overridden2 __attribute__((availability(macosx,introduced=10.2)));
 - (void)overridden3 __attribute__((availability(macosx,deprecated=10.4)));
-- (void)overridden4 __attribute__((availability(macosx,deprecated=10.2))); // expected-warning{{overriding method deprecated before overridden method on OS X (10.3 vs. 10.2)}}
+- (void)overridden4 __attribute__((availability(macosx,deprecated=10.2))); // expected-warning{{overriding method deprecated before overridden method on macOS (10.3 vs. 10.2)}}
 - (void)overridden5 __attribute__((availability(macosx,introduced=10.3)));
-- (void)overridden6 __attribute__((availability(macosx,unavailable))); // expected-warning{{overriding method cannot be unavailable on OS X when its overridden method is available}}
+- (void)overridden6 __attribute__((availability(macosx,unavailable))); // expected-warning{{overriding method cannot be unavailable on macOS when its overridden method is available}}
 - (void)unavailableMethod; // does *not* inherit unavailability
 @end
 
 void f(A *a, B *b) {
-  [a method]; // expected-warning{{'method' is deprecated: first deprecated in OS X 10.2}}
+  [a method]; // expected-warning{{'method' is deprecated: first deprecated in macOS 10.2}}
   [b method]; // no-warning
-  [a proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in OS X 10.2}}
-  [b proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in OS X 10.2}}
+  [a proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in macOS 10.2}}
+  [b proto_method]; // expected-warning{{'proto_method' is deprecated: first deprecated in macOS 10.2}}
 
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'partialMethod' is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'partialMethod' to silence this warning}}
+  // expected-warning@+2 {{'partialMethod' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'partialMethod' to silence this warning}}
 #endif
   [a partialMethod];
   [b partialMethod];  // no warning
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'partial_proto_method' is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'partial_proto_method' to silence this warning}}
+  // expected-warning@+2 {{'partial_proto_method' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'partial_proto_method' to silence this warning}}
 #endif
   [a partial_proto_method];
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'partial_proto_method' is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'partial_proto_method' to silence this warning}}
+  // expected-warning@+2 {{'partial_proto_method' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'partial_proto_method' to silence this warning}}
 #endif
   [b partial_proto_method];
 }
@@ -89,7 +89,7 @@ void f_after_redecl(A *a, B *b) {
 
 @implementation D
 - (void) method {
-  [super method]; // expected-warning {{'method' is deprecated: first deprecated in OS X 10.2}}
+  [super method]; // expected-warning {{'method' is deprecated: first deprecated in macOS 10.2}}
 }
 @end
 
@@ -163,14 +163,14 @@ void partialfun(PartialI* a) {
   [a partialMethod]; // no warning
   [a ipartialMethod1]; // no warning
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'ipartialMethod2' is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'ipartialMethod2' to silence this warning}}
+  // expected-warning@+2 {{'ipartialMethod2' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'ipartialMethod2' to silence this warning}}
 #endif
   [a ipartialMethod2];
   [a ppartialMethod]; // no warning
   [PartialI partialMethod]; // no warning
   [PartialI ipartialMethod1]; // no warning
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'ipartialMethod2' is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'ipartialMethod2' to silence this warning}}
+  // expected-warning@+2 {{'ipartialMethod2' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'ipartialMethod2' to silence this warning}}
 #endif
   [PartialI ipartialMethod2];
   [PartialI ppartialMethod]; // no warning
@@ -183,7 +183,7 @@ __attribute__((availability(macosx, introduced = 10.8))) @interface PartialI2
 @end
 
 #if defined(WARN_PARTIAL)
-  // expected-warning@+2 {{'PartialI2' is partial: introduced in OS X 10.8}} expected-note@+2 {{explicitly redeclare 'PartialI2' to silence this warning}}
+  // expected-warning@+2 {{'PartialI2' is partial: introduced in macOS 10.8}} expected-note@+2 {{explicitly redeclare 'PartialI2' to silence this warning}}
 #endif
 void partialinter1(PartialI2* p) {
 }
@@ -220,7 +220,7 @@ void use_myEnum() {
 @end
 
 void testAvailabilityP2(id<AvailabilityP2> obj) {
-  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in OS X 10.2}}
+  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in macOS 10.2}}
   [obj methodB]; // expected-error{{'methodB' is unavailable}}
 }
 
@@ -242,13 +242,13 @@ __attribute__((objc_root_class))
 -(void)methodA {
   // Make sure we're not inheriting availability.
   id<AvailabilityP2> obj = self;
-  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in OS X 10.2}}
+  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in macOS 10.2}}
   [obj methodB]; // expected-error{{'methodB' is unavailable}}
 }
 -(void)methodB {
   // Make sure we're not inheriting unavailability.
   id<AvailabilityP2> obj = self;
-  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in OS X 10.2}}
+  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in macOS 10.2}}
   [obj methodB]; // expected-error{{'methodB' is unavailable}}
 }
 
@@ -257,13 +257,13 @@ __attribute__((objc_root_class))
 void testImplementsAvailabilityP2b(ImplementsAvailabilityP2b *obj) {
   // still get warnings/errors because we see the protocol version.
 
-  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in OS X 10.2}}
+  [obj methodA]; // expected-warning{{'methodA' is deprecated: first deprecated in macOS 10.2}}
   [obj methodB]; // expected-error{{'methodB' is unavailable}}
 }
 
 __attribute__((objc_root_class))
 @interface ImplementsAvailabilityP2c <AvailabilityP2>
--(void)methodA __attribute__((availability(macosx,introduced=10.2))); // expected-warning{{method introduced after the protocol method it implements on OS X (10.2 vs. 10.1)}}
+-(void)methodA __attribute__((availability(macosx,introduced=10.2))); // expected-warning{{method introduced after the protocol method it implements on macOS (10.2 vs. 10.1)}}
 -(void)methodB __attribute__((unavailable));
 @end
 
@@ -272,7 +272,7 @@ __attribute__((objc_root_class))
 @end
 
 @implementation ImplementsAvailabilityP2d
--(void)methodA __attribute__((availability(macosx,introduced=10.2))) // expected-warning{{method introduced after the protocol method it implements on OS X (10.2 vs. 10.1)}}
+-(void)methodA __attribute__((availability(macosx,introduced=10.2))) // expected-warning{{method introduced after the protocol method it implements on macOS (10.2 vs. 10.1)}}
 {
 }
 -(void)methodB __attribute__((unavailable)) {

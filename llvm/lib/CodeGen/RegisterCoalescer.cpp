@@ -2099,7 +2099,7 @@ JoinVals::analyzeValue(unsigned ValNo, JoinVals &Other) {
   // IMPLICIT_DEF instructions behind, and there is nothing wrong with it
   // technically.
   //
-  // WHen it happens, treat that IMPLICIT_DEF as a normal value, and don't try
+  // When it happens, treat that IMPLICIT_DEF as a normal value, and don't try
   // to erase the IMPLICIT_DEF instruction.
   if (OtherV.ErasableImplicitDef && DefMI &&
       DefMI->getParent() != Indexes->getMBBFromIndex(V.OtherVNI->def)) {

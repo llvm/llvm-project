@@ -11565,12 +11565,12 @@ This is an overloaded intrinsic. The loaded data is a vector of any integer, flo
 
 ::
 
-      declare <16 x float>  @llvm.masked.load.v16f32 (<16 x float>* <ptr>, i32 <alignment>, <16 x i1> <mask>, <16 x float> <passthru>)
-      declare <2 x double>  @llvm.masked.load.v2f64  (<2 x double>* <ptr>, i32 <alignment>, <2 x i1>  <mask>, <2 x double> <passthru>)
+      declare <16 x float>  @llvm.masked.load.v16f32.p0v16f32 (<16 x float>* <ptr>, i32 <alignment>, <16 x i1> <mask>, <16 x float> <passthru>)
+      declare <2 x double>  @llvm.masked.load.v2f64.p0v2f64  (<2 x double>* <ptr>, i32 <alignment>, <2 x i1>  <mask>, <2 x double> <passthru>)
       ;; The data is a vector of pointers to double
-      declare <8 x double*> @llvm.masked.load.v8p0f64    (<8 x double*>* <ptr>, i32 <alignment>, <8 x i1> <mask>, <8 x double*> <passthru>)
+      declare <8 x double*> @llvm.masked.load.v8p0f64.p0v8p0f64    (<8 x double*>* <ptr>, i32 <alignment>, <8 x i1> <mask>, <8 x double*> <passthru>)
       ;; The data is a vector of function pointers
-      declare <8 x i32 ()*> @llvm.masked.load.v8p0f_i32f (<8 x i32 ()*>* <ptr>, i32 <alignment>, <8 x i1> <mask>, <8 x i32 ()*> <passthru>)
+      declare <8 x i32 ()*> @llvm.masked.load.v8p0f_i32f.p0v8p0f_i32f (<8 x i32 ()*>* <ptr>, i32 <alignment>, <8 x i1> <mask>, <8 x i32 ()*> <passthru>)
 
 Overview:
 """""""""
@@ -11593,7 +11593,7 @@ The result of this operation is equivalent to a regular vector load instruction 
 
 ::
 
-       %res = call <16 x float> @llvm.masked.load.v16f32 (<16 x float>* %ptr, i32 4, <16 x i1>%mask, <16 x float> %passthru)
+       %res = call <16 x float> @llvm.masked.load.v16f32.p0v16f32 (<16 x float>* %ptr, i32 4, <16 x i1>%mask, <16 x float> %passthru)
 
        ;; The result of the two following instructions is identical aside from potential memory access exception
        %loadlal = load <16 x float>, <16 x float>* %ptr, align 4
@@ -11610,12 +11610,12 @@ This is an overloaded intrinsic. The data stored in memory is a vector of any in
 
 ::
 
-       declare void @llvm.masked.store.v8i32  (<8  x i32>   <value>, <8  x i32>*   <ptr>, i32 <alignment>,  <8  x i1> <mask>)
-       declare void @llvm.masked.store.v16f32 (<16 x float> <value>, <16 x float>* <ptr>, i32 <alignment>,  <16 x i1> <mask>)
+       declare void @llvm.masked.store.v8i32.p0v8i32  (<8  x i32>   <value>, <8  x i32>*   <ptr>, i32 <alignment>,  <8  x i1> <mask>)
+       declare void @llvm.masked.store.v16f32.p0v16f32 (<16 x float> <value>, <16 x float>* <ptr>, i32 <alignment>,  <16 x i1> <mask>)
        ;; The data is a vector of pointers to double
-       declare void @llvm.masked.store.v8p0f64    (<8 x double*> <value>, <8 x double*>* <ptr>, i32 <alignment>, <8 x i1> <mask>)
+       declare void @llvm.masked.store.v8p0f64.p0v8p0f64    (<8 x double*> <value>, <8 x double*>* <ptr>, i32 <alignment>, <8 x i1> <mask>)
        ;; The data is a vector of function pointers
-       declare void @llvm.masked.store.v4p0f_i32f (<4 x i32 ()*> <value>, <4 x i32 ()*>* <ptr>, i32 <alignment>, <4 x i1> <mask>)
+       declare void @llvm.masked.store.v4p0f_i32f.p0v4p0f_i32f (<4 x i32 ()*> <value>, <4 x i32 ()*>* <ptr>, i32 <alignment>, <4 x i1> <mask>)
 
 Overview:
 """""""""
@@ -11636,7 +11636,7 @@ The result of this operation is equivalent to a load-modify-store sequence. Howe
 
 ::
 
-       call void @llvm.masked.store.v16f32(<16 x float> %value, <16 x float>* %ptr, i32 4,  <16 x i1> %mask)
+       call void @llvm.masked.store.v16f32.p0v16f32(<16 x float> %value, <16 x float>* %ptr, i32 4,  <16 x i1> %mask)
 
        ;; The result of the following instructions is identical aside from potential data races and memory access exceptions
        %oldval = load <16 x float>, <16 x float>* %ptr, align 4

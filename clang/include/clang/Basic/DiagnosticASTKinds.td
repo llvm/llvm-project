@@ -26,6 +26,9 @@ def note_constexpr_lshift_discards : Note<"signed left shift discards bits">;
 def note_constexpr_invalid_function : Note<
   "%select{non-constexpr|undefined}0 %select{function|constructor}1 %2 cannot "
   "be used in a constant expression">;
+def note_constexpr_invalid_inhctor : Note<
+  "constructor inherited from base class %0 cannot be used in a "
+  "constant expression; derived class cannot be implicitly initialized">;
 def note_constexpr_no_return : Note<
   "control reached end of constexpr function">;
 def note_constexpr_virtual_call : Note<
@@ -141,6 +144,8 @@ def note_constexpr_calls_suppressed : Note<
   "(skipping %0 call%s0 in backtrace; use -fconstexpr-backtrace-limit=0 to "
   "see all)">;
 def note_constexpr_call_here : Note<"in call to '%0'">;
+def note_constexpr_inherited_ctor_call_here : Note<
+  "in implicit initialization for inherited constructor of %0">;
 def note_constexpr_baa_insufficient_alignment : Note<
   "%select{alignment of|offset of the aligned pointer from}0 the base pointee "
   "object (%1 %plural{1:byte|:bytes}1) is %select{less than|not a multiple of}0 the "

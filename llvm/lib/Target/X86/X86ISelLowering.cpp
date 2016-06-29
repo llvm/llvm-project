@@ -7148,8 +7148,7 @@ static bool isTargetShuffleEquivalent(ArrayRef<int> Mask,
 /// example.
 ///
 /// NB: We rely heavily on "undef" masks preserving the input lane.
-static SDValue getV4X86ShuffleImm8ForMask(ArrayRef<int> Mask, const SDLoc &DL,
-                                          SelectionDAG &DAG) {
+static unsigned getV4X86ShuffleImm(ArrayRef<int> Mask) {
   assert(Mask.size() == 4 && "Only 4-lane shuffle masks");
   assert(Mask[0] >= -1 && Mask[0] < 4 && "Out of bound mask element!");
   assert(Mask[1] >= -1 && Mask[1] < 4 && "Out of bound mask element!");
@@ -7161,7 +7160,12 @@ static SDValue getV4X86ShuffleImm8ForMask(ArrayRef<int> Mask, const SDLoc &DL,
   Imm |= (Mask[1] < 0 ? 1 : Mask[1]) << 2;
   Imm |= (Mask[2] < 0 ? 2 : Mask[2]) << 4;
   Imm |= (Mask[3] < 0 ? 3 : Mask[3]) << 6;
-  return DAG.getConstant(Imm, DL, MVT::i8);
+  return Imm;
+}
+
+static SDValue getV4X86ShuffleImm8ForMask(ArrayRef<int> Mask, SDLoc DL,
+                                          SelectionDAG &DAG) {
+  return DAG.getConstant(getV4X86ShuffleImm(Mask), DL, MVT::i8);
 }
 
 /// \brief Compute whether each element of a shuffle is zeroable.
@@ -8510,13 +8514,20 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
   SDValue V = V1;
   for (;;) {
     switch (V.getOpcode()) {
+    case ISD::BITCAST: {
+      SDValue VSrc = V.getOperand(0);
+      MVT SrcVT = VSrc.getSimpleValueType();
+      if (VT.getScalarSizeInBits() != SrcVT.getScalarSizeInBits())
+        break;
+      V = VSrc;
+      continue;
+    }
     case ISD::CONCAT_VECTORS: {
       int OperandSize = Mask.size() / V.getNumOperands();
       V = V.getOperand(BroadcastIdx / OperandSize);
       BroadcastIdx %= OperandSize;
       continue;
     }
-
     case ISD::INSERT_SUBVECTOR: {
       SDValue VOuter = V.getOperand(0), VInner = V.getOperand(1);
       auto ConstantIdx = dyn_cast<ConstantSDNode>(V.getOperand(2));
@@ -8563,8 +8574,10 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
       return SDValue();
   } else if (MayFoldLoad(BC) && !cast<LoadSDNode>(BC)->isVolatile()) {
     // 32-bit targets need to load i64 as a f64 and then bitcast the result.
-    if (!Subtarget.is64Bit() && VT.getScalarType() == MVT::i64)
+    if (!Subtarget.is64Bit() && VT.getScalarType() == MVT::i64) {
       BroadcastVT = MVT::getVectorVT(MVT::f64, VT.getVectorNumElements());
+      Opcode = (BroadcastVT.is128BitVector() ? X86ISD::MOVDDUP : Opcode);
+    }
 
     // If we are broadcasting a load that is only used by the shuffle
     // then we can reduce the vector load to the broadcasted scalar load.
@@ -8601,7 +8614,22 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
   }
 
   if (Opcode == X86ISD::MOVDDUP && !V.getValueType().isVector())
-    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64, V);
+    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v2f64,
+                    DAG.getBitcast(MVT::f64, V));
+
+  // Bitcast back to the same scalar type as BroadcastVT.
+  MVT SrcVT = V.getSimpleValueType();
+  if (SrcVT.getScalarType() != BroadcastVT.getScalarType()) {
+    assert(SrcVT.getScalarSizeInBits() == BroadcastVT.getScalarSizeInBits() &&
+           "Unexpected vector element size");
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      SrcVT = MVT::getVectorVT(BroadcastVT.getScalarType(), NumSrcElts);
+    } else {
+      SrcVT = BroadcastVT.getScalarType();
+    }
+    V = DAG.getBitcast(SrcVT, V);
+  }
 
   return DAG.getBitcast(VT, DAG.getNode(Opcode, DL, BroadcastVT, V));
 }
@@ -22519,13 +22547,11 @@ static MachineBasicBlock *emitWRPKRU(MachineInstr *MI, MachineBasicBlock *BB,
   BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY), X86::EAX)
                            .addReg(MI->getOperand(0).getReg());
   // insert zero to ECX
-  BuildMI(*BB, MI, dl, TII->get(X86::XOR32rr), X86::ECX)
-                           .addReg(X86::ECX)
-                           .addReg(X86::ECX);
+  BuildMI(*BB, MI, dl, TII->get(X86::MOV32r0), X86::ECX);
+
   // insert zero to EDX
-  BuildMI(*BB, MI, dl, TII->get(X86::XOR32rr), X86::EDX)
-                           .addReg(X86::EDX)
-                           .addReg(X86::EDX);
+  BuildMI(*BB, MI, dl, TII->get(X86::MOV32r0), X86::EDX);
+
   // insert WRPKRU instruction
   BuildMI(*BB, MI, dl, TII->get(X86::WRPKRUr));
 
@@ -22539,9 +22565,8 @@ static MachineBasicBlock *emitRDPKRU(MachineInstr *MI, MachineBasicBlock *BB,
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
 
   // insert zero to ECX
-  BuildMI(*BB, MI, dl, TII->get(X86::XOR32rr), X86::ECX)
-                           .addReg(X86::ECX)
-                           .addReg(X86::ECX);
+  BuildMI(*BB, MI, dl, TII->get(X86::MOV32r0), X86::ECX);
+
   // insert RDPKRU instruction
   BuildMI(*BB, MI, dl, TII->get(X86::RDPKRUr));
   BuildMI(*BB, MI, dl, TII->get(TargetOpcode::COPY), MI->getOperand(0).getReg())
@@ -24529,7 +24554,8 @@ static SDValue combineShuffle256(SDNode *N, SelectionDAG &DAG,
 static bool matchUnaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
                                     const X86Subtarget &Subtarget,
                                     unsigned &Shuffle, MVT &ShuffleVT) {
-  bool FloatDomain = SrcVT.isFloatingPoint();
+  bool FloatDomain = SrcVT.isFloatingPoint() ||
+                     (!Subtarget.hasAVX2() && SrcVT.is256BitVector());
 
   // Match a 128-bit integer vector against a VZEXT_MOVL (MOVQ) instruction.
   if (!FloatDomain && SrcVT.is128BitVector() &&
@@ -24605,6 +24631,83 @@ static bool matchUnaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
   }
 
   return false;
+}
+
+// Attempt to match a combined shuffle mask against supported unary immediate
+// permute instructions.
+// TODO: Investigate sharing more of this with shuffle lowering.
+static bool matchPermuteVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
+                                      const X86Subtarget &Subtarget,
+                                      unsigned &Shuffle, MVT &ShuffleVT,
+                                      unsigned &PermuteImm) {
+  // Ensure we don't contain any zero elements.
+  for (int M : Mask) {
+    if (M == SM_SentinelZero)
+      return false;
+    assert(SM_SentinelUndef <= M && M < (int)Mask.size() &&
+           "Expected unary shuffle");
+  }
+
+  // We only support permutation of 32/64 bit elements.
+  // TODO - support PSHUFLW/PSHUFHW.
+  unsigned MaskScalarSizeInBits = SrcVT.getSizeInBits() / Mask.size();
+  if (MaskScalarSizeInBits != 32 && MaskScalarSizeInBits != 64)
+    return false;
+  MVT MaskEltVT = MVT::getIntegerVT(MaskScalarSizeInBits);
+
+  // AVX introduced the VPERMILPD/VPERMILPS float permutes, before then we
+  // had to use 2-input SHUFPD/SHUFPS shuffles (not handled here).
+  bool FloatDomain = SrcVT.isFloatingPoint();
+  if (FloatDomain && !Subtarget.hasAVX())
+    return false;
+
+  // Pre-AVX2 we must use float shuffles on 256-bit vectors.
+  if (SrcVT.is256BitVector() && !Subtarget.hasAVX2())
+    FloatDomain = true;
+
+  // TODO - support LaneCrossing for AVX2 PERMQ/PERMPD
+  if (is128BitLaneCrossingShuffleMask(MaskEltVT, Mask))
+    return false;
+
+  // VPERMILPD can permute with a non-repeating shuffle.
+  if (FloatDomain && MaskScalarSizeInBits == 64) {
+    Shuffle = X86ISD::VPERMILPI;
+    ShuffleVT = MVT::getVectorVT(MVT::f64, Mask.size());
+    PermuteImm = 0;
+    for (int i = 0, e = Mask.size(); i != e; ++i) {
+      int M = Mask[i];
+      if (M == SM_SentinelUndef)
+        continue;
+      assert(((M / 2) == (i / 2)) && "Out of range shuffle mask index");
+      PermuteImm |= (M & 1) << i;
+    }
+    return true;
+  }
+
+  // We need a repeating shuffle mask for VPERMILPS/PSHUFD.
+  SmallVector<int, 4> RepeatedMask;
+  if (!is128BitLaneRepeatedShuffleMask(MaskEltVT, Mask, RepeatedMask))
+    return false;
+
+  // Narrow the repeated mask for 32-bit element permutes.
+  SmallVector<int, 4> WordMask = RepeatedMask;
+  if (MaskScalarSizeInBits == 64) {
+    WordMask.clear();
+    for (int M : RepeatedMask) {
+      if (M == SM_SentinelUndef) {
+        WordMask.append(2, SM_SentinelUndef);
+        continue;
+      }
+      WordMask.push_back((M * 2) + 0);
+      WordMask.push_back((M * 2) + 1);
+    }
+  }
+
+  Shuffle = (FloatDomain ? X86ISD::VPERMILPI : X86ISD::PSHUFD);
+  ShuffleVT = (FloatDomain ? MVT::f32 : MVT::i32);
+  ShuffleVT = MVT::getVectorVT(ShuffleVT, SrcVT.getSizeInBits() / 32);
+  PermuteImm = getV4X86ShuffleImm(WordMask);
+  return true;
 }
 
 // Attempt to match a combined unary shuffle mask against supported binary
@@ -24708,7 +24811,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 
   // Attempt to match the mask against known shuffle patterns.
   MVT ShuffleVT;
-  unsigned Shuffle;
+  unsigned Shuffle, PermuteImm;
 
   if (matchUnaryVectorShuffle(VT, Mask, Subtarget, Shuffle, ShuffleVT)) {
     if (Depth == 1 && Root.getOpcode() == Shuffle)
@@ -24716,6 +24819,20 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
     Res = DAG.getBitcast(ShuffleVT, Input);
     DCI.AddToWorklist(Res.getNode());
     Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res);
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
+  }
+
+  if (matchPermuteVectorShuffle(VT, Mask, Subtarget, Shuffle, ShuffleVT,
+                                PermuteImm)) {
+    if (Depth == 1 && Root.getOpcode() == Shuffle)
+      return false; // Nothing to do!
+    Res = DAG.getBitcast(ShuffleVT, Input);
+    DCI.AddToWorklist(Res.getNode());
+    Res = DAG.getNode(Shuffle, DL, ShuffleVT, Res,
+                      DAG.getConstant(PermuteImm, DL, MVT::i8));
     DCI.AddToWorklist(Res.getNode());
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
                   /*AddTo*/ true);

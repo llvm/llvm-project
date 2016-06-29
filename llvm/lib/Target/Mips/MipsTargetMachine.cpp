@@ -270,5 +270,5 @@ void MipsPassConfig::addPreEmitPass() {
   addPass(createMipsDelaySlotFillerPass(TM));
   addPass(createMipsHazardSchedule());
   addPass(createMipsLongBranchPass(TM));
-  addPass(createMipsConstantIslandPass(TM));
+  addPass(createMipsConstantIslandPass());
 }

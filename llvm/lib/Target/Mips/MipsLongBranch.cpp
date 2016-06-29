@@ -63,8 +63,7 @@ namespace {
   public:
     static char ID;
     MipsLongBranch(TargetMachine &tm)
-        : MachineFunctionPass(ID), TM(tm),
-          IsPIC(TM.getRelocationModel() == Reloc::PIC_),
+        : MachineFunctionPass(ID), TM(tm), IsPIC(TM.isPositionIndependent()),
           ABI(static_cast<const MipsTargetMachine &>(TM).getABI()) {}
 
     const char *getPassName() const override {
@@ -187,9 +186,7 @@ void MipsLongBranch::initMBBInfo() {
     ReverseIter Br = getNonDebugInstr(MBB->rbegin(), End);
 
     if ((Br != End) && !Br->isIndirectBranch() &&
-        (Br->isConditionalBranch() ||
-         (Br->isUnconditionalBranch() &&
-          TM.getRelocationModel() == Reloc::PIC_)))
+        (Br->isConditionalBranch() || (Br->isUnconditionalBranch() && IsPIC)))
       MBBInfos[I].Br = (++Br).base();
   }
 }
@@ -471,8 +468,7 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
 
   if (STI.inMips16Mode() || !STI.enableLongBranchPass())
     return false;
-  if ((TM.getRelocationModel() == Reloc::PIC_) &&
-      static_cast<const MipsTargetMachine &>(TM).getABI().IsO32() &&
+  if (IsPIC && static_cast<const MipsTargetMachine &>(TM).getABI().IsO32() &&
       F.getInfo<MipsFunctionInfo>()->globalBaseRegSet())
     emitGPDisp(F, TII);
 
@@ -520,7 +516,7 @@ bool MipsLongBranch::runOnMachineFunction(MachineFunction &F) {
     return true;
 
   // Compute basic block addresses.
-  if (TM.getRelocationModel() == Reloc::PIC_) {
+  if (IsPIC) {
     uint64_t Address = 0;
 
     for (I = MBBInfos.begin(); I != E; Address += I->Size, ++I)

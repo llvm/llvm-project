@@ -39,8 +39,7 @@ public:
   const ARMRegisterInfo &getRegisterInfo() const override { return RI; }
 
 private:
-  void expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                            Reloc::Model RM) const override;
+  void expandLoadStackGuard(MachineBasicBlock::iterator MI) const override;
 };
 
 }

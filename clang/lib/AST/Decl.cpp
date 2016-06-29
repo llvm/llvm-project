@@ -222,7 +222,7 @@ static Optional<Visibility> getVisibilityOf(const NamedDecl *D,
   // implies visibility(default).
   if (D->getASTContext().getTargetInfo().getTriple().isOSDarwin()) {
     for (const auto *A : D->specific_attrs<AvailabilityAttr>())
-      if (A->getPlatform()->getName().equals("macosx"))
+      if (A->getPlatform()->getName().equals("macos"))
         return DefaultVisibility;
   }
 

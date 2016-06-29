@@ -260,7 +260,7 @@ BitVector PPCRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   if (TFI->needsFP(MF))
     Reserved.set(PPC::R31);
 
-  bool IsPositionIndependent = TM.getRelocationModel() == Reloc::PIC_;
+  bool IsPositionIndependent = TM.isPositionIndependent();
   if (hasBasePointer(MF)) {
     if (Subtarget.isSVR4ABI() && !TM.isPPC64() && IsPositionIndependent)
       Reserved.set(PPC::R29);
@@ -934,8 +934,7 @@ unsigned PPCRegisterInfo::getBaseRegister(const MachineFunction &MF) const {
   if (TM.isPPC64())
     return PPC::X30;
 
-  if (Subtarget.isSVR4ABI() &&
-      TM.getRelocationModel() == Reloc::PIC_)
+  if (Subtarget.isSVR4ABI() && TM.isPositionIndependent())
     return PPC::R29;
 
   return PPC::R30;

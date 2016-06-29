@@ -3008,6 +3008,13 @@ bool Expr::HasSideEffects(const ASTContext &Ctx,
     break;
   }
 
+  case CXXInheritedCtorInitExprClass: {
+    const auto *ICIE = cast<CXXInheritedCtorInitExpr>(this);
+    if (!ICIE->getConstructor()->isTrivial() && IncludePossibleEffects)
+      return true;
+    break;
+  }
+
   case LambdaExprClass: {
     const LambdaExpr *LE = cast<LambdaExpr>(this);
     for (LambdaExpr::capture_iterator I = LE->capture_begin(),

@@ -26,8 +26,7 @@
 using namespace llvm;
 
 MipsSEInstrInfo::MipsSEInstrInfo(const MipsSubtarget &STI)
-    : MipsInstrInfo(STI, STI.getRelocationModel() == Reloc::PIC_ ? Mips::B
-                                                                 : Mips::J),
+    : MipsInstrInfo(STI, STI.isPositionIndependent() ? Mips::B : Mips::J),
       RI() {}
 
 const MipsRegisterInfo &MipsSEInstrInfo::getRegisterInfo() const {
@@ -720,7 +719,7 @@ void MipsSEInstrInfo::expandEhReturn(MachineBasicBlock &MBB,
   // addu $sp, $sp, $v1
   // jr   $ra (via RetRA)
   const TargetMachine &TM = MBB.getParent()->getTarget();
-  if (TM.getRelocationModel() == Reloc::PIC_)
+  if (TM.isPositionIndependent())
     BuildMI(MBB, I, I->getDebugLoc(), get(ADDU), T9)
         .addReg(TargetReg)
         .addReg(ZERO);

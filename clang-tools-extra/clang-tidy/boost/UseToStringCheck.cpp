@@ -64,7 +64,7 @@ void UseToStringCheck::check(const MatchFinder::MatchResult &Result) {
 
   Diag << FixItHint::CreateReplacement(
       CharSourceRange::getCharRange(Call->getLocStart(),
-                                    Call->getArg(0)->getExprLoc()),
+                                    Call->getArg(0)->getLocStart()),
       (llvm::Twine("std::to_") + StringType + "(").str());
 }
 

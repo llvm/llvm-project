@@ -2860,8 +2860,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressDarwin(SDValue Op,
   SDValue G = DAG.getTargetGlobalAddress(GV, dl, PtrVT, 0, ARMII::MO_NONLAZY);
   SDValue Result = DAG.getNode(Wrapper, dl, PtrVT, G);
 
-  Reloc::Model RelocM = getTargetMachine().getRelocationModel();
-  if (Subtarget->GVIsIndirectSymbol(GV, RelocM))
+  if (Subtarget->isGVIndirectSymbol(GV))
     Result = DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), Result,
                          MachinePointerInfo::getGOT(DAG.getMachineFunction()),
                          false, false, false, 0);

@@ -803,7 +803,7 @@ def warn_expected_consistent_version_separator : Warning<
 def err_zero_version : Error<
   "version number must have non-zero major, minor, or sub-minor version">;
 def err_availability_expected_platform : Error<
-  "expected a platform name, e.g., 'macosx'">;
+  "expected a platform name, e.g., 'macos'">;
   
 // objc_bridge_related attribute
 def err_objcbridge_related_expected_related_class : Error<

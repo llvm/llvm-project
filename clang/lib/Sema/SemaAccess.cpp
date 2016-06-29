@@ -1610,10 +1610,10 @@ Sema::AccessResult Sema::CheckDestructorAccess(SourceLocation Loc,
 /// Checks access to a constructor.
 Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
                                                 CXXConstructorDecl *Constructor,
+                                                DeclAccessPair Found,
                                                 const InitializedEntity &Entity,
-                                                AccessSpecifier Access,
                                                 bool IsCopyBindingRefToTemp) {
-  if (!getLangOpts().AccessControl || Access == AS_public)
+  if (!getLangOpts().AccessControl || Found.getAccess() == AS_public)
     return AR_accessible;
 
   PartialDiagnostic PD(PDiag());
@@ -1647,17 +1647,17 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
 
   }
 
-  return CheckConstructorAccess(UseLoc, Constructor, Entity, Access, PD);
+  return CheckConstructorAccess(UseLoc, Constructor, Found, Entity, PD);
 }
 
 /// Checks access to a constructor.
 Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
                                                 CXXConstructorDecl *Constructor,
+                                                DeclAccessPair Found,
                                                 const InitializedEntity &Entity,
-                                                AccessSpecifier Access,
                                                 const PartialDiagnostic &PD) {
   if (!getLangOpts().AccessControl ||
-      Access == AS_public)
+      Found.getAccess() == AS_public)
     return AR_accessible;
 
   CXXRecordDecl *NamingClass = Constructor->getParent();
@@ -1670,15 +1670,23 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
   // in aggregate initialization. It's not clear whether the object class
   // should be the base class or the derived class in that case.
   CXXRecordDecl *ObjectClass;
-  if (Entity.getKind() == InitializedEntity::EK_Base && !Entity.getParent()) {
+  if ((Entity.getKind() == InitializedEntity::EK_Base ||
+       Entity.getKind() == InitializedEntity::EK_Delegating) &&
+      !Entity.getParent()) {
     ObjectClass = cast<CXXConstructorDecl>(CurContext)->getParent();
+  } else if (auto *Shadow =
+                 dyn_cast<ConstructorUsingShadowDecl>(Found.getDecl())) {
+    // If we're using an inheriting constructor to construct an object,
+    // the object class is the derived class, not the base class.
+    ObjectClass = Shadow->getParent();
   } else {
     ObjectClass = NamingClass;
   }
 
-  AccessTarget AccessEntity(Context, AccessTarget::Member, NamingClass,
-                            DeclAccessPair::make(Constructor, Access),
-                            Context.getTypeDeclType(ObjectClass));
+  AccessTarget AccessEntity(
+      Context, AccessTarget::Member, NamingClass,
+      DeclAccessPair::make(Constructor, Found.getAccess()),
+      Context.getTypeDeclType(ObjectClass));
   AccessEntity.setDiag(PD);
 
   return CheckAccess(*this, UseLoc, AccessEntity);

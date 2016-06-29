@@ -264,6 +264,12 @@ void llvm::error(std::error_code EC) {
   exit(1);
 }
 
+LLVM_ATTRIBUTE_NORETURN void llvm::error(Twine Message) {
+  errs() << ToolName << ": " << Message << ".\n";
+  errs().flush();
+  exit(1);
+}
+
 LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef File,
                                                 std::error_code EC) {
   assert(EC);

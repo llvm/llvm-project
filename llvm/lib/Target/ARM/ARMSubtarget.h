@@ -582,9 +582,8 @@ public:
     return PreISelOperandLatencyAdjustment;
   }
 
-  /// GVIsIndirectSymbol - true if the GV will be accessed via an indirect
-  /// symbol.
-  bool GVIsIndirectSymbol(const GlobalValue *GV, Reloc::Model RelocM) const;
+  /// True if the GV will be accessed via an indirect symbol.
+  bool isGVIndirectSymbol(const GlobalValue *GV) const;
 
   /// True if fast-isel is used.
   bool useFastISel() const;

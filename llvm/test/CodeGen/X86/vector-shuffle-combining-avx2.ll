@@ -51,7 +51,7 @@ define <4 x i64> @combine_permq_pshufb(<4 x i64> %a0) {
 ; CHECK-LABEL: combine_permq_pshufb:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
-; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[8,9,10,11,12,13,14,15,0,1,2,3,4,5,6,7,24,25,26,27,28,29,30,31,16,17,18,19,20,21,22,23]
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %2 = bitcast <4 x i64> %1 to <32 x i8>

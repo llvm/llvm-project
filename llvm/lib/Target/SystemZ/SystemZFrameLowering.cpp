@@ -81,6 +81,12 @@ void SystemZFrameLowering::determineCalleeSaves(MachineFunction &MF,
     for (unsigned I = MFI->getVarArgsFirstGPR(); I < SystemZ::NumArgGPRs; ++I)
       SavedRegs.set(SystemZ::ArgGPRs[I]);
 
+  // If there are any landing pads, entering them will modify r6/r7.
+  if (!MF.getMMI().getLandingPads().empty()) {
+    SavedRegs.set(SystemZ::R6D);
+    SavedRegs.set(SystemZ::R7D);
+  }
+
   // If the function requires a frame pointer, record that the hard
   // frame pointer will be clobbered.
   if (HasFP)

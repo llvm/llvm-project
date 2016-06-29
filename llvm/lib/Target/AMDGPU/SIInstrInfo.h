@@ -475,12 +475,6 @@ public:
 
   const TargetRegisterClass *getIndirectAddrRegClass() const override;
 
-  void reserveIndirectRegisters(BitVector &Reserved,
-                                const MachineFunction &MF) const;
-
-  void LoadM0(MachineInstr *MoveRel, MachineBasicBlock::iterator I,
-              unsigned SavReg, unsigned IndexReg) const;
-
   void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
                         int Count) const;
 
