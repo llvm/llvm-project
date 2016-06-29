@@ -283,8 +283,10 @@ TSAN_INTERCEPTOR(void, dispatch_group_async, dispatch_group_t group,
   SCOPED_TSAN_INTERCEPTOR(dispatch_group_async, group, queue, block);
   dispatch_retain(group);
   dispatch_group_enter(group);
+  __block dispatch_block_t block_copy = (dispatch_block_t)_Block_copy(block);
   WRAP(dispatch_async)(queue, ^(void) {
-    block();
+    block_copy();
+    _Block_release(block_copy);
     WRAP(dispatch_group_leave)(group);
     dispatch_release(group);
   });

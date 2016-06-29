@@ -706,9 +706,9 @@ static std::string replace(StringRef S, StringRef From, StringRef To) {
 // import files to that file.
 void writeImportLibrary() {
   std::unique_ptr<MemoryBuffer> Buf = createEmptyImportLibrary();
-  std::error_code EC;
-  object::Archive Archive(Buf->getMemBufferRef(), EC);
-  error(EC, "Error reading an empty import file");
+  llvm::Error Err;
+  object::Archive Archive(Buf->getMemBufferRef(), Err);
+  error(errorToErrorCode(std::move(Err)), "Error reading an empty import file");
   std::vector<NewArchiveIterator> Members = readMembers(Archive);
 
   std::string DLLName = llvm::sys::path::filename(Config->OutputFile);
