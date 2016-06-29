@@ -535,7 +535,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
 
-  if (D.getPassName() == llvm::DiagnosticInfo::AlwaysPrint ||
+  if (D.shouldAlwaysPrint() ||
       (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
        CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
     EmitOptimizationMessage(
@@ -548,7 +548,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
 
-  if (D.getPassName() == llvm::DiagnosticInfo::AlwaysPrint ||
+  if (D.shouldAlwaysPrint() ||
       (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
        CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
     EmitOptimizationMessage(
@@ -561,7 +561,7 @@ void BackendConsumer::OptimizationRemarkHandler(
   // llvm::DiagnosticInfo::AlwasyPrint or if the -Rpass-analysis flag has a
   // regular expression that matches the name of the pass name in \p D.
 
-  if (D.getPassName() == llvm::DiagnosticInfo::AlwaysPrint ||
+  if (D.shouldAlwaysPrint() ||
       (CodeGenOpts.OptimizationRemarkAnalysisPattern &&
        CodeGenOpts.OptimizationRemarkAnalysisPattern->match(D.getPassName())))
     EmitOptimizationMessage(

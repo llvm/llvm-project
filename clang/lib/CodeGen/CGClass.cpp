@@ -2048,6 +2048,62 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                                              bool ForVirtualBase,
                                              bool Delegating, Address This,
                                              const CXXConstructExpr *E) {
+  CallArgList Args;
+
+  // Push the this ptr.
+  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
+
+  // If this is a trivial constructor, emit a memcpy now before we lose
+  // the alignment information on the argument.
+  // FIXME: It would be better to preserve alignment information into CallArg.
+  if (isMemcpyEquivalentSpecialMember(D)) {
+    assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+
+    const Expr *Arg = E->getArg(0);
+    QualType SrcTy = Arg->getType();
+    Address Src = EmitLValue(Arg).getAddress();
+    QualType DestTy = getContext().getTypeDeclType(D->getParent());
+    EmitAggregateCopyCtor(This, Src, DestTy, SrcTy);
+    return;
+  }
+
+  // Add the rest of the user-supplied arguments.
+  const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
+  EmitCallArgs(Args, FPT, E->arguments(), E->getConstructor());
+
+  EmitCXXConstructorCall(D, Type, ForVirtualBase, Delegating, This, Args);
+}
+
+static bool canEmitDelegateCallArgs(CodeGenFunction &CGF,
+                                    const CXXConstructorDecl *Ctor,
+                                    CXXCtorType Type, CallArgList &Args) {
+  // We can't forward a variadic call.
+  if (Ctor->isVariadic())
+    return false;
+
+  if (CGF.getTarget().getCXXABI().areArgsDestroyedLeftToRightInCallee()) {
+    // If the parameters are callee-cleanup, it's not safe to forward.
+    for (auto *P : Ctor->parameters())
+      if (P->getType().isDestructedType())
+        return false;
+
+    // Likewise if they're inalloca.
+    const CGFunctionInfo &Info =
+        CGF.CGM.getTypes().arrangeCXXConstructorCall(Args, Ctor, Type, 0);
+    if (Info.usesInAlloca())
+      return false;
+  }
+
+  // Anything else should be OK.
+  return true;
+}
+
+void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
+                                             CXXCtorType Type,
+                                             bool ForVirtualBase,
+                                             bool Delegating,
+                                             Address This,
+                                             CallArgList &Args) {
   const CXXRecordDecl *ClassDecl = D->getParent();
 
   // C++11 [class.mfct.non-static]p2:
@@ -2058,7 +2114,7 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
                 This.getPointer(), getContext().getRecordType(ClassDecl));
 
   if (D->isTrivial() && D->isDefaultConstructor()) {
-    assert(E->getNumArgs() == 0 && "trivial default ctor with args");
+    assert(Args.size() == 1 && "trivial default ctor with args");
     return;
   }
 
@@ -2066,24 +2122,24 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
   // union copy constructor, we must emit a memcpy, because the AST does not
   // model that copy.
   if (isMemcpyEquivalentSpecialMember(D)) {
-    assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
+    assert(Args.size() == 2 && "unexpected argcount for trivial ctor");
 
-    const Expr *Arg = E->getArg(0);
-    QualType SrcTy = Arg->getType();
-    Address Src = EmitLValue(Arg).getAddress();
+    QualType SrcTy = D->getParamDecl(0)->getType().getNonReferenceType();
+    Address Src(Args[1].RV.getScalarVal(), getNaturalTypeAlignment(SrcTy));
     QualType DestTy = getContext().getTypeDeclType(ClassDecl);
     EmitAggregateCopyCtor(This, Src, DestTy, SrcTy);
     return;
   }
 
-  CallArgList Args;
-
-  // Push the this ptr.
-  Args.add(RValue::get(This.getPointer()), D->getThisType(getContext()));
-
-  // Add the rest of the user-supplied arguments.
-  const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
-  EmitCallArgs(Args, FPT, E->arguments(), E->getConstructor());
+  // Check whether we can actually emit the constructor before trying to do so.
+  if (auto Inherited = D->getInheritedConstructor()) {
+    if (getTypes().inheritingCtorHasParams(Inherited, Type) &&
+        !canEmitDelegateCallArgs(*this, D, Type, Args)) {
+      EmitInlinedInheritingCXXConstructorCall(D, Type, ForVirtualBase,
+                                              Delegating, Args);
+      return;
+    }
+  }
 
   // Insert any ABI-specific implicit constructor arguments.
   unsigned ExtraArgs = CGM.getCXXABI().addImplicitConstructorArgs(
@@ -2111,6 +2167,95 @@ void CodeGenFunction::EmitCXXConstructorCall(const CXXConstructorDecl *D,
       CGM.getCXXABI().canSpeculativelyEmitVTable(ClassDecl) &&
       CGM.getCodeGenOpts().StrictVTablePointers)
     EmitVTableAssumptionLoads(ClassDecl, This);
+}
+
+void CodeGenFunction::EmitInheritedCXXConstructorCall(
+    const CXXConstructorDecl *D, bool ForVirtualBase, Address This,
+    bool InheritedFromVBase, const CXXInheritedCtorInitExpr *E) {
+  CallArgList Args;
+  CallArg ThisArg(RValue::get(This.getPointer()), D->getThisType(getContext()),
+                  /*NeedsCopy=*/false);
+
+  // Forward the parameters.
+  if (InheritedFromVBase &&
+      CGM.getTarget().getCXXABI().hasConstructorVariants()) {
+    // Nothing to do; this construction is not responsible for constructing
+    // the base class containing the inherited constructor.
+    // FIXME: Can we just pass undef's for the remaining arguments if we don't
+    // have constructor variants?
+    Args.push_back(ThisArg);
+  } else if (!CXXInheritedCtorInitExprArgs.empty()) {
+    // The inheriting constructor was inlined; just inject its arguments.
+    assert(CXXInheritedCtorInitExprArgs.size() >= D->getNumParams() &&
+           "wrong number of parameters for inherited constructor call");
+    Args = CXXInheritedCtorInitExprArgs;
+    Args[0] = ThisArg;
+  } else {
+    // The inheriting constructor was not inlined. Emit delegating arguments.
+    Args.push_back(ThisArg);
+    const auto *OuterCtor = cast<CXXConstructorDecl>(CurCodeDecl);
+    assert(OuterCtor->getNumParams() == D->getNumParams());
+    assert(!OuterCtor->isVariadic() && "should have been inlined");
+
+    for (const auto *Param : OuterCtor->parameters()) {
+      assert(getContext().hasSameUnqualifiedType(
+          OuterCtor->getParamDecl(Param->getFunctionScopeIndex())->getType(),
+          Param->getType()));
+      EmitDelegateCallArg(Args, Param, E->getLocation());
+
+      // Forward __attribute__(pass_object_size).
+      if (Param->hasAttr<PassObjectSizeAttr>()) {
+        auto *POSParam = SizeArguments[Param];
+        assert(POSParam && "missing pass_object_size value for forwarding");
+        EmitDelegateCallArg(Args, POSParam, E->getLocation());
+      }
+    }
+  }
+
+  EmitCXXConstructorCall(D, Ctor_Base, ForVirtualBase, /*Delegating*/false,
+                         This, Args);
+}
+
+void CodeGenFunction::EmitInlinedInheritingCXXConstructorCall(
+    const CXXConstructorDecl *Ctor, CXXCtorType CtorType, bool ForVirtualBase,
+    bool Delegating, CallArgList &Args) {
+  InlinedInheritingConstructorScope Scope(*this, GlobalDecl(Ctor, CtorType));
+
+  // Save the arguments to be passed to the inherited constructor.
+  CXXInheritedCtorInitExprArgs = Args;
+
+  FunctionArgList Params;
+  QualType RetType = BuildFunctionArgList(CurGD, Params);
+  FnRetTy = RetType;
+
+  // Insert any ABI-specific implicit constructor arguments.
+  CGM.getCXXABI().addImplicitConstructorArgs(*this, Ctor, CtorType,
+                                             ForVirtualBase, Delegating, Args);
+
+  // Emit a simplified prolog. We only need to emit the implicit params.
+  assert(Args.size() >= Params.size() && "too few arguments for call");
+  for (unsigned I = 0, N = Args.size(); I != N; ++I) {
+    if (I < Params.size() && isa<ImplicitParamDecl>(Params[I])) {
+      const RValue &RV = Args[I].RV;
+      assert(!RV.isComplex() && "complex indirect params not supported");
+      ParamValue Val = RV.isScalar()
+                           ? ParamValue::forDirect(RV.getScalarVal())
+                           : ParamValue::forIndirect(RV.getAggregateAddress());
+      EmitParmDecl(*Params[I], Val, I + 1);
+    }
+  }
+
+  // Create a return value slot if the ABI implementation wants one.
+  // FIXME: This is dumb, we should ask the ABI not to try to set the return
+  // value instead.
+  if (!RetType->isVoidType())
+    ReturnValue = CreateIRTemp(RetType, "retval.inhctor");
+
+  CGM.getCXXABI().EmitInstanceFunctionProlog(*this);
+  CXXThisValue = CXXABIThisValue;
+
+  // Directly emit the constructor initializers.
+  EmitCtorPrologue(Ctor, CtorType, Params);
 }
 
 void CodeGenFunction::EmitVTableAssumptionLoad(const VPtr &Vptr, Address This) {
@@ -2145,19 +2290,6 @@ void
 CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
                                                 Address This, Address Src,
                                                 const CXXConstructExpr *E) {
-  if (isMemcpyEquivalentSpecialMember(D)) {
-    assert(E->getNumArgs() == 1 && "unexpected argcount for trivial ctor");
-    assert(D->isCopyOrMoveConstructor() &&
-           "trivial 1-arg ctor not a copy/move ctor");
-    EmitAggregateCopyCtor(This, Src,
-                          getContext().getTypeDeclType(D->getParent()),
-                          (*E->arg_begin())->getType());
-    return;
-  }
-  llvm::Value *Callee = CGM.getAddrOfCXXStructor(D, StructorType::Complete);
-  assert(D->isInstance() &&
-         "Trying to emit a member call expr on a static method!");
-
   const FunctionProtoType *FPT = D->getType()->castAs<FunctionProtoType>();
 
   CallArgList Args;
@@ -2175,8 +2307,7 @@ CodeGenFunction::EmitSynthesizedCXXCopyCtorCall(const CXXConstructorDecl *D,
   EmitCallArgs(Args, FPT, drop_begin(E->arguments(), 1), E->getConstructor(),
                /*ParamsToSkip*/ 1);
 
-  EmitCall(CGM.getTypes().arrangeCXXMethodCall(Args, FPT, RequiredArgs::All),
-           Callee, ReturnValueSlot(), Args, D);
+  EmitCXXConstructorCall(D, Ctor_Complete, false, false, This, Args);
 }
 
 void
@@ -2190,21 +2321,17 @@ CodeGenFunction::EmitDelegateCXXConstructorCall(const CXXConstructorDecl *Ctor,
   assert(I != E && "no parameters to constructor");
 
   // this
-  DelegateArgs.add(RValue::get(LoadCXXThis()), (*I)->getType());
+  Address This = LoadCXXThisAddress();
+  DelegateArgs.add(RValue::get(This.getPointer()), (*I)->getType());
   ++I;
 
-  // vtt
-  if (llvm::Value *VTT = GetVTTParameter(GlobalDecl(Ctor, CtorType),
-                                         /*ForVirtualBase=*/false,
-                                         /*Delegating=*/true)) {
-    QualType VoidPP = getContext().getPointerType(getContext().VoidPtrTy);
-    DelegateArgs.add(RValue::get(VTT), VoidPP);
-
-    if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
-      assert(I != E && "cannot skip vtt parameter, already done with args");
-      assert((*I)->getType() == VoidPP && "skipping parameter not of vtt type");
-      ++I;
-    }
+  // FIXME: The location of the VTT parameter in the parameter list is
+  // specific to the Itanium ABI and shouldn't be hardcoded here.
+  if (CGM.getCXXABI().NeedsVTTParameter(CurGD)) {
+    assert(I != E && "cannot skip vtt parameter, already done with args");
+    assert((*I)->getType()->isPointerType() &&
+           "skipping parameter not of vtt type");
+    ++I;
   }
 
   // Explicit arguments.
@@ -2214,11 +2341,8 @@ CodeGenFunction::EmitDelegateCXXConstructorCall(const CXXConstructorDecl *Ctor,
     EmitDelegateCallArg(DelegateArgs, param, Loc);
   }
 
-  llvm::Value *Callee =
-      CGM.getAddrOfCXXStructor(Ctor, getFromCtorType(CtorType));
-  EmitCall(CGM.getTypes()
-               .arrangeCXXStructorDeclaration(Ctor, getFromCtorType(CtorType)),
-           Callee, ReturnValueSlot(), DelegateArgs, Ctor);
+  EmitCXXConstructorCall(Ctor, CtorType, /*ForVirtualBase=*/false,
+                         /*Delegating=*/true, This, DelegateArgs);
 }
 
 namespace {

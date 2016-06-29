@@ -19,6 +19,6 @@ void new2(int);
 void test() {
   f_8(0); // expected-warning{{'f_8' is deprecated}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:6}:"new8"
-  f_2(0); // expected-warning{{'f_2' is deprecated: first deprecated in OS X 9.0}}
+  f_2(0); // expected-warning{{'f_2' is deprecated: first deprecated in macOS 9.0}}
   // CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:3-[[@LINE-1]]:6}:"new2"
 }

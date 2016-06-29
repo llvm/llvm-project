@@ -2119,9 +2119,9 @@ public:
     case FileContext:
     case MemberContext:
     case BlockContext:
+    case ForContext:
       return true;
 
-    case ForContext:
     case ConditionContext:
     case KNRTypeListContext:
     case TypeNameContext:

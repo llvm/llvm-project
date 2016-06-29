@@ -33,5 +33,5 @@ int * __uptr __ptr32 p32_3;
 // CHECK: int * __sptr * __ptr32 ppsp32;
 int * __sptr * __ptr32 ppsp32;
 
-// CHECK: __attribute__((availability(macosx, strict, introduced=10.6)));
+// CHECK: __attribute__((availability(macos, strict, introduced=10.6)));
 void f6(int) __attribute__((availability(macosx,strict,introduced=10.6)));

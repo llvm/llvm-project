@@ -1250,6 +1250,14 @@ void ASTStmtReader::VisitCXXConstructExpr(CXXConstructExpr *E) {
   E->ParenOrBraceRange = ReadSourceRange(Record, Idx);
 }
 
+void ASTStmtReader::VisitCXXInheritedCtorInitExpr(CXXInheritedCtorInitExpr *E) {
+  VisitExpr(E);
+  E->Constructor = ReadDeclAs<CXXConstructorDecl>(Record, Idx);
+  E->Loc = ReadSourceLocation(Record, Idx);
+  E->ConstructsVirtualBase = Record[Idx++];
+  E->InheritedFromVirtualBase = Record[Idx++];
+}
+
 void ASTStmtReader::VisitCXXTemporaryObjectExpr(CXXTemporaryObjectExpr *E) {
   VisitCXXConstructExpr(E);
   E->Type = GetTypeSourceInfo(Record, Idx);
@@ -3405,6 +3413,10 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
 
     case EXPR_CXX_CONSTRUCT:
       S = new (Context) CXXConstructExpr(Empty);
+      break;
+
+    case EXPR_CXX_INHERITED_CTOR_INIT:
+      S = new (Context) CXXInheritedCtorInitExpr(Empty);
       break;
 
     case EXPR_CXX_TEMPORARY_OBJECT:

@@ -171,10 +171,19 @@ NamespaceAliasDecl *NestedNameSpecifier::getAsNamespaceAlias() const {
 
 /// \brief Retrieve the record declaration stored in this nested name specifier.
 CXXRecordDecl *NestedNameSpecifier::getAsRecordDecl() const {
-  if (Prefix.getInt() == StoredDecl)
+  switch (Prefix.getInt()) {
+  case StoredIdentifier:
+    return nullptr;
+
+  case StoredDecl:
     return dyn_cast<CXXRecordDecl>(static_cast<NamedDecl *>(Specifier));
 
-  return nullptr;
+  case StoredTypeSpec:
+  case StoredTypeSpecWithTemplate:
+    return getAsType()->getAsCXXRecordDecl();
+  }
+
+  llvm_unreachable("Invalid NNS Kind!");
 }
 
 /// \brief Whether this nested name specifier refers to a dependent
