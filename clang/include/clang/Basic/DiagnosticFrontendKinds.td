@@ -218,7 +218,6 @@ def err_invalid_vfs_overlay : Error<
 def err_no_apinotes_cache_path : Error<
   "-fapinotes was provided without -fapinotes-cache-path=<directory>">,
   DefaultFatal;
-}
 
 def warn_option_invalid_ocl_version : Warning<
   "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;
