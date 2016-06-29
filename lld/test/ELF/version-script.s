@@ -86,7 +86,7 @@
 # DSO-NEXT:     Binding: Global (0x1)
 # DSO-NEXT:     Type: None (0x0)
 # DSO-NEXT:     Other: 0
-# DSO-NEXT:     Section: .text (0x5)
+# DSO-NEXT:     Section: .text
 # DSO-NEXT:   }
 # DSO-NEXT:   Symbol {
 # DSO-NEXT:     Name: foo3@ (10)
@@ -95,7 +95,7 @@
 # DSO-NEXT:     Binding: Global (0x1)
 # DSO-NEXT:     Type: None (0x0)
 # DSO-NEXT:     Other: 0
-# DSO-NEXT:     Section: .text (0x5)
+# DSO-NEXT:     Section: .text
 # DSO-NEXT:   }
 # DSO-NEXT: ]
 
@@ -146,7 +146,7 @@
 # EXE-NEXT:     Binding: Global (0x1)
 # EXE-NEXT:     Type: None (0x0)
 # EXE-NEXT:     Other: 0
-# EXE-NEXT:     Section: .text (0x5)
+# EXE-NEXT:     Section: .text
 # EXE-NEXT:   }
 # EXE-NEXT: ]
 

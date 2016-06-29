@@ -3186,9 +3186,8 @@ static ExprResult BuildCXXCastArgument(Sema &S,
     if (S.CompleteConstructorCall(Constructor, From, CastLoc, ConstructorArgs))
       return ExprError();
 
-    S.CheckConstructorAccess(CastLoc, Constructor,
-                             InitializedEntity::InitializeTemporary(Ty),
-                             Constructor->getAccess());
+    S.CheckConstructorAccess(CastLoc, Constructor, FoundDecl,
+                             InitializedEntity::InitializeTemporary(Ty));
     if (S.DiagnoseUseOfDecl(Method, CastLoc))
       return ExprError();
 

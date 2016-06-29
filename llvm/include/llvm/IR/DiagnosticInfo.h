@@ -1,4 +1,4 @@
-//===- llvm/Support/DiagnosticInfo.h - Diagnostic Declaration ---*- C++ -*-===//
+//===- llvm/IR/DiagnosticInfo.h - Diagnostic Declaration --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //

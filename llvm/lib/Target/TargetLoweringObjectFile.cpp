@@ -43,8 +43,7 @@ using namespace llvm;
 void TargetLoweringObjectFile::Initialize(MCContext &ctx,
                                           const TargetMachine &TM) {
   Ctx = &ctx;
-  InitMCObjectFileInfo(TM.getTargetTriple(),
-                       TM.getRelocationModel() == Reloc::PIC_,
+  InitMCObjectFileInfo(TM.getTargetTriple(), TM.isPositionIndependent(),
                        TM.getCodeModel(), *Ctx);
 }
 

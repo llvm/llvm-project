@@ -2690,6 +2690,16 @@ public:
                                            ParenRange);
   }
 
+  /// \brief Build a new implicit construction via inherited constructor
+  /// expression.
+  ExprResult RebuildCXXInheritedCtorInitExpr(QualType T, SourceLocation Loc,
+                                             CXXConstructorDecl *Constructor,
+                                             bool ConstructsVBase,
+                                             bool InheritedFromVBase) {
+    return new (getSema().Context) CXXInheritedCtorInitExpr(
+        Loc, T, Constructor, ConstructsVBase, InheritedFromVBase);
+  }
+
   /// \brief Build a new object-construction expression.
   ///
   /// By default, performs semantic analysis to build the new expression.
@@ -9935,6 +9945,32 @@ TreeTransform<Derived>::TransformCXXConstructExpr(CXXConstructExpr *E) {
                                               E->requiresZeroInitialization(),
                                               E->getConstructionKind(),
                                               E->getParenOrBraceRange());
+}
+
+template<typename Derived>
+ExprResult TreeTransform<Derived>::TransformCXXInheritedCtorInitExpr(
+    CXXInheritedCtorInitExpr *E) {
+  QualType T = getDerived().TransformType(E->getType());
+  if (T.isNull())
+    return ExprError();
+
+  CXXConstructorDecl *Constructor = cast_or_null<CXXConstructorDecl>(
+      getDerived().TransformDecl(E->getLocStart(), E->getConstructor()));
+  if (!Constructor)
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() &&
+      T == E->getType() &&
+      Constructor == E->getConstructor()) {
+    // Mark the constructor as referenced.
+    // FIXME: Instantiation-specific
+    SemaRef.MarkFunctionReferenced(E->getLocStart(), Constructor);
+    return E;
+  }
+
+  return getDerived().RebuildCXXInheritedCtorInitExpr(
+      T, E->getLocation(), Constructor,
+      E->constructsVBase(), E->inheritedFromVBase());
 }
 
 /// \brief Transform a C++ temporary-binding expression.

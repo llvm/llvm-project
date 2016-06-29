@@ -27,18 +27,34 @@ using namespace llvm;
 #define DEBUG_TYPE "block-freq"
 
 #ifndef NDEBUG
-static cl::opt<GVDAGType>
-ViewBlockFreqPropagationDAG("view-block-freq-propagation-dags", cl::Hidden,
-          cl::desc("Pop up a window to show a dag displaying how block "
-                   "frequencies propagation through the CFG."),
-          cl::values(
-            clEnumValN(GVDT_None, "none",
-                       "do not display graphs."),
-            clEnumValN(GVDT_Fraction, "fraction", "display a graph using the "
-                       "fractional block frequency representation."),
-            clEnumValN(GVDT_Integer, "integer", "display a graph using the raw "
-                       "integer fractional block frequency representation."),
-            clEnumValEnd));
+static cl::opt<GVDAGType> ViewBlockFreqPropagationDAG(
+    "view-block-freq-propagation-dags", cl::Hidden,
+    cl::desc("Pop up a window to show a dag displaying how block "
+             "frequencies propagation through the CFG."),
+    cl::values(clEnumValN(GVDT_None, "none", "do not display graphs."),
+               clEnumValN(GVDT_Fraction, "fraction",
+                          "display a graph using the "
+                          "fractional block frequency representation."),
+               clEnumValN(GVDT_Integer, "integer",
+                          "display a graph using the raw "
+                          "integer fractional block frequency representation."),
+               clEnumValN(GVDT_Count, "count", "display a graph using the real "
+                                               "profile count if available."),
+               clEnumValEnd));
+
+cl::opt<std::string>
+    ViewBlockFreqFuncName("view-bfi-func-name", cl::Hidden,
+                          cl::desc("The option to specify "
+                                   "the name of the function "
+                                   "whose CFG will be displayed."));
+
+cl::opt<unsigned>
+    ViewHotFreqPercent("view-hot-freq-percent", cl::init(10), cl::Hidden,
+                       cl::desc("An integer in percent used to specify "
+                                "the hot blocks/edges to be displayed "
+                                "in red: a block or edge whose frequency "
+                                "is no less than the max frequency of the "
+                                "function multiplied by this percent."));
 
 namespace llvm {
 
@@ -80,9 +96,16 @@ struct DOTGraphTraits<BlockFrequencyInfo *> : public BFIDOTGTraitsBase {
                                            ViewBlockFreqPropagationDAG);
   }
 
+  std::string getNodeAttributes(const BasicBlock *Node,
+                                const BlockFrequencyInfo *Graph) {
+    return BFIDOTGTraitsBase::getNodeAttributes(Node, Graph,
+                                                ViewHotFreqPercent);
+  }
+
   std::string getEdgeAttributes(const BasicBlock *Node, EdgeIter EI,
                                 const BlockFrequencyInfo *BFI) {
-    return BFIDOTGTraitsBase::getEdgeAttributes(Node, EI, BFI->getBPI());
+    return BFIDOTGTraitsBase::getEdgeAttributes(Node, EI, BFI, BFI->getBPI(),
+                                                ViewHotFreqPercent);
   }
 };
 
@@ -113,8 +136,11 @@ void BlockFrequencyInfo::calculate(const Function &F,
     BFI.reset(new ImplType);
   BFI->calculate(F, BPI, LI);
 #ifndef NDEBUG
-  if (ViewBlockFreqPropagationDAG != GVDT_None)
+  if (ViewBlockFreqPropagationDAG != GVDT_None &&
+      (ViewBlockFreqFuncName.empty() ||
+       F.getName().equals(ViewBlockFreqFuncName))) {
     view();
+  }
 #endif
 }
 

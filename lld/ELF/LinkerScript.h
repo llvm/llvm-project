@@ -19,6 +19,8 @@
 namespace lld {
 namespace elf {
 
+bool matchStr(StringRef S, StringRef T);
+
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
 void readLinkerScript(MemoryBufferRef MB);

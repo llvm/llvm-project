@@ -760,7 +760,7 @@ define <4 x float> @merge_4f32_f32_X0YY(float* %ptr0, float* %ptr1) nounwind uwt
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; AVX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm1[0,0,1,1]
+; AVX-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[0,0,1,1]
 ; AVX-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
 ; AVX-NEXT:    retq
 ;

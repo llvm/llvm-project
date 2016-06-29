@@ -691,7 +691,7 @@ the function declaration for a hypothetical function ``f``:
 
 .. code-block:: c++
 
-  void f(void) __attribute__((availability(macosx,introduced=10.4,deprecated=10.6,obsoleted=10.7)));
+  void f(void) __attribute__((availability(macos,introduced=10.4,deprecated=10.6,obsoleted=10.7)));
 
 The availability attribute states that ``f`` was introduced in Mac OS X 10.4,
 deprecated in Mac OS X 10.6, and obsoleted in Mac OS X 10.7.  This information
@@ -743,7 +743,7 @@ are:
   the ``-mios-version-min=*version*`` or ``-miphoneos-version-min=*version*``
   command-line arguments.
 
-``macosx``
+``macos``
   Apple's Mac OS X operating system.  The minimum deployment target is
   specified by the ``-mmacosx-version-min=*version*`` command-line argument.
 
@@ -777,24 +777,24 @@ platform. For example:
 
 .. code-block:: c
 
-  void g(void) __attribute__((availability(macosx,introduced=10.4)));
-  void g(void) __attribute__((availability(macosx,introduced=10.4))); // okay, matches
+  void g(void) __attribute__((availability(macos,introduced=10.4)));
+  void g(void) __attribute__((availability(macos,introduced=10.4))); // okay, matches
   void g(void) __attribute__((availability(ios,introduced=4.0))); // okay, adds a new platform
-  void g(void); // okay, inherits both macosx and ios availability from above.
-  void g(void) __attribute__((availability(macosx,introduced=10.5))); // error: mismatch
+  void g(void); // okay, inherits both macos and ios availability from above.
+  void g(void) __attribute__((availability(macos,introduced=10.5))); // error: mismatch
 
 When one method overrides another, the overriding method can be more widely available than the overridden method, e.g.,:
 
 .. code-block:: objc
 
   @interface A
-  - (id)method __attribute__((availability(macosx,introduced=10.4)));
-  - (id)method2 __attribute__((availability(macosx,introduced=10.4)));
+  - (id)method __attribute__((availability(macos,introduced=10.4)));
+  - (id)method2 __attribute__((availability(macos,introduced=10.4)));
   @end
 
   @interface B : A
-  - (id)method __attribute__((availability(macosx,introduced=10.3))); // okay: method moved into base class later
-  - (id)method __attribute__((availability(macosx,introduced=10.5))); // error: this method was available via the base class in 10.4
+  - (id)method __attribute__((availability(macos,introduced=10.3))); // okay: method moved into base class later
+  - (id)method __attribute__((availability(macos,introduced=10.5))); // error: this method was available via the base class in 10.4
   @end
   }];
 }

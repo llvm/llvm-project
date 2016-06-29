@@ -1240,6 +1240,18 @@ static void computeKnownBitsFromOperator(Operator *I, APInt &KnownZero,
           KnownZero = APInt::getLowBitsSet(BitWidth,
                                            std::min(KnownZero2.countTrailingOnes(),
                                                     KnownZero3.countTrailingOnes()));
+
+          // If the operation is an addition that can't have signed overflow,
+          // then the sign bit is known to be zero if both input sign bits
+          // are zero. Similar for two negative inputs.
+          if (Opcode == Instruction::Add &&
+              cast<OverflowingBinaryOperator>(LU)->hasNoSignedWrap()) {
+            if (KnownZero2.isNegative() && KnownZero3.isNegative())
+              KnownZero.setBit(BitWidth-1);
+            if (KnownOne2.isNegative() && KnownOne3.isNegative())
+              KnownOne.setBit(BitWidth-1);
+          }
+
           break;
         }
       }

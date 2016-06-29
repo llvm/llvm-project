@@ -1249,8 +1249,40 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
   typedef typename GTraits::ChildIteratorType EdgeIter;
   typedef typename GTraits::nodes_iterator NodeIter;
 
+  uint64_t MaxFrequency = 0;
   static std::string getGraphName(const BlockFrequencyInfoT *G) {
     return G->getFunction()->getName();
+  }
+
+  std::string getNodeAttributes(const NodeType *Node,
+                                const BlockFrequencyInfoT *Graph,
+                                unsigned HotPercentThreshold = 0) {
+    std::string Result;
+    if (!HotPercentThreshold)
+      return Result;
+
+    // Compute MaxFrequency on the fly:
+    if (!MaxFrequency) {
+      for (NodeIter I = GTraits::nodes_begin(Graph),
+                    E = GTraits::nodes_end(Graph);
+           I != E; ++I) {
+        NodeType &N = *I;
+        MaxFrequency =
+            std::max(MaxFrequency, Graph->getBlockFreq(&N).getFrequency());
+      }
+    }
+    BlockFrequency Freq = Graph->getBlockFreq(Node);
+    BlockFrequency HotFreq =
+        (BlockFrequency(MaxFrequency) *
+         BranchProbability::getBranchProbability(HotPercentThreshold, 100));
+
+    if (Freq < HotFreq)
+      return Result;
+
+    raw_string_ostream OS(Result);
+    OS << "color=\"red\"";
+    OS.flush();
+    return Result;
   }
 
   std::string getNodeLabel(const NodeType *Node,
@@ -1282,7 +1314,9 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
   }
 
   std::string getEdgeAttributes(const NodeType *Node, EdgeIter EI,
-                                const BranchProbabilityInfoT *BPI) {
+                                const BlockFrequencyInfoT *BFI,
+                                const BranchProbabilityInfoT *BPI,
+                                unsigned HotPercentThreshold = 0) {
     std::string Str;
     if (!BPI)
       return Str;
@@ -1293,6 +1327,17 @@ struct BFIDOTGraphTraitsBase : public DefaultDOTGraphTraits {
     double Percent = 100.0 * N / D;
     raw_string_ostream OS(Str);
     OS << format("label=\"%.1f%%\"", Percent);
+
+    if (HotPercentThreshold) {
+      BlockFrequency EFreq = BFI->getBlockFreq(Node) * BP;
+      BlockFrequency HotFreq = BlockFrequency(MaxFrequency) *
+                               BranchProbability(HotPercentThreshold, 100);
+
+      if (EFreq >= HotFreq) {
+        OS << ",color=\"red\"";
+      }
+    }
+
     OS.flush();
     return Str;
   }

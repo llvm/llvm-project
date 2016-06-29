@@ -44,15 +44,17 @@ static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   return F;
 }
 
-template <class ELFT>
-ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB)
-    : InputFile(K, MB), ELFObj(createELFObj<ELFT>(MB)) {}
-
-template <class ELFT>
-ELFKind ELFFileBase<ELFT>::getELFKind() {
+template <class ELFT> static ELFKind getELFKind() {
   if (ELFT::TargetEndianness == support::little)
     return ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
   return ELFT::Is64Bits ? ELF64BEKind : ELF32BEKind;
+}
+
+template <class ELFT>
+ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB)
+    : InputFile(K, MB), ELFObj(createELFObj<ELFT>(MB)) {
+  EKind = getELFKind<ELFT>();
+  EMachine = ELFObj.getHeader()->e_machine;
 }
 
 template <class ELFT>
@@ -644,23 +646,6 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
       Symbols.push_back(createSymbol<ELFT>(KeptComdats, *Obj, Sym));
 }
 
-template <typename T>
-static std::unique_ptr<InputFile> createELFFileAux(MemoryBufferRef MB) {
-  std::unique_ptr<T> Ret = llvm::make_unique<T>(MB);
-
-  if (!Config->FirstElf)
-    Config->FirstElf = Ret.get();
-
-  if (Config->EKind == ELFNoneKind) {
-    Config->EKind = Ret->getELFKind();
-    Config->EMachine = Ret->getEMachine();
-    if (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind)
-      Config->Mips64EL = true;
-  }
-
-  return std::move(Ret);
-}
-
 template <template <class> class T>
 static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   unsigned char Size;
@@ -669,17 +654,21 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
     fatal("invalid data encoding: " + MB.getBufferIdentifier());
 
-  if (Size == ELFCLASS32) {
-    if (Endian == ELFDATA2LSB)
-      return createELFFileAux<T<ELF32LE>>(MB);
-    return createELFFileAux<T<ELF32BE>>(MB);
-  }
-  if (Size == ELFCLASS64) {
-    if (Endian == ELFDATA2LSB)
-      return createELFFileAux<T<ELF64LE>>(MB);
-    return createELFFileAux<T<ELF64BE>>(MB);
-  }
-  fatal("invalid file class: " + MB.getBufferIdentifier());
+  std::unique_ptr<InputFile> Obj;
+  if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
+    Obj.reset(new T<ELF32LE>(MB));
+  else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
+    Obj.reset(new T<ELF32BE>(MB));
+  else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
+    Obj.reset(new T<ELF64LE>(MB));
+  else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
+    Obj.reset(new T<ELF64BE>(MB));
+  else
+    fatal("invalid file class: " + MB.getBufferIdentifier());
+
+  if (!Config->FirstElf)
+    Config->FirstElf = Obj.get();
+  return Obj;
 }
 
 static bool isBitcode(MemoryBufferRef MB) {

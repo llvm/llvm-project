@@ -313,9 +313,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->Emulation = S;
   }
 
-  if (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind)
-    Config->Mips64EL = true;
-
   Config->AllowMultipleDefinition = Args.hasArg(OPT_allow_multiple_definition);
   Config->Bsymbolic = Args.hasArg(OPT_Bsymbolic);
   Config->BsymbolicFunctions = Args.hasArg(OPT_Bsymbolic_functions);
@@ -330,7 +327,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->GcSections = Args.hasArg(OPT_gc_sections);
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
-  Config->NoUndefined = Args.hasArg(OPT_no_undefined);
+  Config->NoUndefined =
+      Args.hasArg(OPT_no_undefined) || hasZOption(Args, "defs");
+  Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
   Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Pie = Args.hasArg(OPT_pie);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
@@ -363,7 +362,6 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     error("number of threads must be > 0");
 
   Config->ZCombreloc = !hasZOption(Args, "nocombreloc");
-  Config->ZDefs = hasZOption(Args, "defs");
   Config->ZExecStack = hasZOption(Args, "execstack");
   Config->ZNodelete = hasZOption(Args, "nodelete");
   Config->ZNow = hasZOption(Args, "now");
@@ -469,6 +467,17 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 
   if (Files.empty() && !HasError)
     error("no input files.");
+
+  // If -m <machine_type> was not given, infer it from object files.
+  if (Config->EKind == ELFNoneKind) {
+    for (std::unique_ptr<InputFile> &F : Files) {
+      if (F->EKind == ELFNoneKind)
+        continue;
+      Config->EKind = F->EKind;
+      Config->EMachine = F->EMachine;
+      break;
+    }
+  }
 }
 
 // Do actual linking. Note that when this function is called,
@@ -483,6 +492,8 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Script<ELFT>::X = &LS;
 
   Config->Rela = ELFT::Is64Bits;
+  Config->Mips64EL =
+      (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
 
   // Add entry symbol. Note that AMDGPU binaries have no entry points.
   if (Config->Entry.empty() && !Config->Shared && !Config->Relocatable &&

@@ -126,6 +126,7 @@ def ArrayTypeTraitExpr : DStmt<Expr>;
 def ExpressionTraitExpr : DStmt<Expr>;
 def DependentScopeDeclRefExpr : DStmt<Expr>;
 def CXXConstructExpr : DStmt<Expr>;
+def CXXInheritedCtorInitExpr : DStmt<Expr>;
 def CXXBindTemporaryExpr : DStmt<Expr>;
 def ExprWithCleanups : DStmt<Expr>;
 def CXXTemporaryObjectExpr : DStmt<CXXConstructExpr>;

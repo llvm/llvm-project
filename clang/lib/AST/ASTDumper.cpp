@@ -474,6 +474,7 @@ namespace  {
     void VisitUnresolvedUsingTypenameDecl(const UnresolvedUsingTypenameDecl *D);
     void VisitUnresolvedUsingValueDecl(const UnresolvedUsingValueDecl *D);
     void VisitUsingShadowDecl(const UsingShadowDecl *D);
+    void VisitConstructorUsingShadowDecl(const ConstructorUsingShadowDecl *D);
     void VisitLinkageSpecDecl(const LinkageSpecDecl *D);
     void VisitAccessSpecDecl(const AccessSpecDecl *D);
     void VisitFriendDecl(const FriendDecl *D);
@@ -713,6 +714,12 @@ void ASTDumper::dumpTypeAsChild(const Type *T) {
 }
 
 void ASTDumper::dumpBareDeclRef(const Decl *D) {
+  if (!D) {
+    ColorScope Color(*this, NullColor);
+    OS << "<<<NULL>>>";
+    return;
+  }
+
   {
     ColorScope Color(*this, DeclKindNameColor);
     OS << D->getDeclKindName();
@@ -1489,6 +1496,31 @@ void ASTDumper::VisitUsingShadowDecl(const UsingShadowDecl *D) {
   dumpBareDeclRef(D->getTargetDecl());
   if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
     dumpTypeAsChild(TD->getTypeForDecl());
+}
+
+void ASTDumper::VisitConstructorUsingShadowDecl(
+    const ConstructorUsingShadowDecl *D) {
+  if (D->constructsVirtualBase())
+    OS << " virtual";
+
+  dumpChild([=] {
+    OS << "target ";
+    dumpBareDeclRef(D->getTargetDecl());
+  });
+
+  dumpChild([=] {
+    OS << "nominated ";
+    dumpBareDeclRef(D->getNominatedBaseClass());
+    OS << ' ';
+    dumpBareDeclRef(D->getNominatedBaseClassShadowDecl());
+  });
+
+  dumpChild([=] {
+    OS << "constructed ";
+    dumpBareDeclRef(D->getConstructedBaseClass());
+    OS << ' ';
+    dumpBareDeclRef(D->getConstructedBaseClassShadowDecl());
+  });
 }
 
 void ASTDumper::VisitLinkageSpecDecl(const LinkageSpecDecl *D) {

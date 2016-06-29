@@ -402,7 +402,9 @@ void PPCPassConfig::addPreRegAlloc() {
     insertPass(VSXFMAMutateEarly ? &RegisterCoalescerID : &MachineSchedulerID,
                &PPCVSXFMAMutateID);
   }
-  if (getPPCTargetMachine().getRelocationModel() == Reloc::PIC_) {
+
+  // FIXME: We probably don't need to run these for -fPIE.
+  if (getPPCTargetMachine().isPositionIndependent()) {
     // FIXME: LiveVariables should not be necessary here!
     // PPCTLSDYnamicCallPass uses LiveIntervals which previously dependet on
     // LiveVariables. This (unnecessary) dependency has been removed now,

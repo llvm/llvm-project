@@ -35,8 +35,6 @@ using namespace lld::elf;
 
 ScriptConfiguration *elf::ScriptConfig;
 
-static bool matchStr(StringRef S, StringRef T);
-
 // This is an operator-precedence parser to parse and evaluate
 // a linker script expression. For each linker script arithmetic
 // expression (e.g. ". = . + 0x1000"), a new instance of ExprParser
@@ -291,7 +289,7 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
 // Returns true if S matches T. S can contain glob meta-characters.
 // The asterisk ('*') matches zero or more characters, and the question
 // mark ('?') matches one character.
-static bool matchStr(StringRef S, StringRef T) {
+bool elf::matchStr(StringRef S, StringRef T) {
   for (;;) {
     if (S.empty())
       return T.empty();

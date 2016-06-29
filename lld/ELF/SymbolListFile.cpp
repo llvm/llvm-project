@@ -84,6 +84,7 @@ private:
 
 void VersionScriptParser::parseVersion(StringRef Version) {
   expect("{");
+  Config->SymbolVersions.push_back(elf::Version(Version));
   if (peek() == "global:") {
     next();
     parseVersionSymbols(Version);
@@ -108,12 +109,10 @@ void VersionScriptParser::parseLocal() {
 
 void VersionScriptParser::parseVersionSymbols(StringRef Version) {
   std::vector<StringRef> *Globals;
-  if (Version.empty()) {
+  if (Version.empty())
     Globals = &Config->VersionScriptGlobals;
-  } else {
-    Config->SymbolVersions.push_back(elf::Version(Version));
+  else
     Globals = &Config->SymbolVersions.back().Globals;
-  }
 
   for (;;) {
     StringRef Cur = peek();

@@ -28,7 +28,7 @@ define <4 x i64> @funcC(i64 %q) nounwind uwtable readnone ssp {
 ; CHECK-LABEL: funcC:
 ; CHECK:       ## BB#0: ## %entry
 ; CHECK-NEXT:    vmovq %rdi, %xmm0
-; CHECK-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,1,0,1]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
 entry:

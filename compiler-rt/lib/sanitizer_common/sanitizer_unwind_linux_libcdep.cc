@@ -109,6 +109,9 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = Unwind_GetIP(ctx);
   const uptr kPageSize = GetPageSizeCached();
+  // Let's assume that any pointer in the 0th page (i.e. <0x1000 on i386 and
+  // x86_64) is invalid and stop unwinding here.  If we're adding support for
+  // a platform where this isn't true, we need to reconsider this check.
   if (pc < kPageSize) return UNWIND_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
   if (arg->stack->size == arg->max_depth) return UNWIND_STOP;

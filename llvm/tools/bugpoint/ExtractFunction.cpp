@@ -411,7 +411,7 @@ BugDriver::extractMappedBlocksFromModule(const std::vector<BasicBlock *> &BBs,
 
   std::vector<std::string> PI;
   PI.push_back("extract-blocks");
-  std::unique_ptr<Module> Ret = runPassesOn(M, PI, false, 1, &ExtraArg);
+  std::unique_ptr<Module> Ret = runPassesOn(M, PI, 1, &ExtraArg);
 
   sys::fs::remove(Filename.c_str());
 

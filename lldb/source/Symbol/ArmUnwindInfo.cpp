@@ -103,7 +103,7 @@ ArmUnwindInfo::GetULEB128(const uint32_t* data, uint16_t& offset, uint16_t max_o
     while (offset < max_offset)
     {
         uint8_t byte = GetByteAtOffset(data, offset++);
-        result |= (byte & 0x7f) << shift;
+        result |= (uint64_t)(byte & 0x7f) << shift;
         if ((byte & 0x80) == 0)
             break;
         shift += 7;

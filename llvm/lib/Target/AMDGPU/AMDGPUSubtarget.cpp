@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPUSubtarget.h"
-#include "AMDGPUCallLowering.h"
 #include "R600ISelLowering.h"
 #include "R600InstrInfo.h"
 #include "SIFrameLowering.h"
@@ -190,7 +189,8 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   AMDGPUSubtarget(TT, GPU, FS, TM),
   InstrInfo(*this),
   FrameLowering(TargetFrameLowering::StackGrowsUp, getStackAlignment(), 0),
-  TLInfo(TM, *this) {}
+  TLInfo(TM, *this),
+  GISel() {}
 
 unsigned R600Subtarget::getStackEntrySize() const {
   switch (getWavefrontSize()) {

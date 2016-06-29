@@ -36,8 +36,7 @@ protected:
   explicit ARMBaseInstrInfo(const ARMSubtarget &STI);
 
   void expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
-                                unsigned LoadImmOpc, unsigned LoadOpc,
-                                Reloc::Model RM) const;
+                                unsigned LoadImmOpc, unsigned LoadOpc) const;
 
   /// Build the equivalent inputs of a REG_SEQUENCE for the given \p MI
   /// and \p DefIdx.
@@ -349,8 +348,7 @@ private:
   bool verifyInstruction(const MachineInstr *MI,
                          StringRef &ErrInfo) const override;
 
-  virtual void expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                                    Reloc::Model RM) const = 0;
+  virtual void expandLoadStackGuard(MachineBasicBlock::iterator MI) const = 0;
 
   void expandMEMCPY(MachineBasicBlock::iterator) const;
 

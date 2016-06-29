@@ -928,18 +928,11 @@ static void TryMarkNoThrow(llvm::Function *F) {
   F->setDoesNotThrow();
 }
 
-void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
-                                   const CGFunctionInfo &FnInfo) {
+QualType CodeGenFunction::BuildFunctionArgList(GlobalDecl GD,
+                                               FunctionArgList &Args) {
   const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
-
-  // Check if we should generate debug info for this function.
-  if (FD->hasAttr<NoDebugAttr>())
-    DebugInfo = nullptr; // disable debug info indefinitely for this function
-
-  FunctionArgList Args;
   QualType ResTy = FD->getReturnType();
 
-  CurGD = GD;
   const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(FD);
   if (MD && MD->isInstance()) {
     if (CGM.getCXXABI().HasThisReturn(GD))
@@ -949,21 +942,47 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     CGM.getCXXABI().buildThisParam(*this, Args);
   }
 
-  for (auto *Param : FD->parameters()) {
-    Args.push_back(Param);
-    if (!Param->hasAttr<PassObjectSizeAttr>())
-      continue;
+  // The base version of an inheriting constructor whose constructed base is a
+  // virtual base is not passed any arguments (because it doesn't actually call
+  // the inherited constructor).
+  bool PassedParams = true;
+  if (const CXXConstructorDecl *CD = dyn_cast<CXXConstructorDecl>(FD))
+    if (auto Inherited = CD->getInheritedConstructor())
+      PassedParams =
+          getTypes().inheritingCtorHasParams(Inherited, GD.getCtorType());
 
-    IdentifierInfo *NoID = nullptr;
-    auto *Implicit = ImplicitParamDecl::Create(
-        getContext(), Param->getDeclContext(), Param->getLocation(), NoID,
-        getContext().getSizeType());
-    SizeArguments[Param] = Implicit;
-    Args.push_back(Implicit);
+  if (PassedParams) {
+    for (auto *Param : FD->parameters()) {
+      Args.push_back(Param);
+      if (!Param->hasAttr<PassObjectSizeAttr>())
+        continue;
+
+      IdentifierInfo *NoID = nullptr;
+      auto *Implicit = ImplicitParamDecl::Create(
+          getContext(), Param->getDeclContext(), Param->getLocation(), NoID,
+          getContext().getSizeType());
+      SizeArguments[Param] = Implicit;
+      Args.push_back(Implicit);
+    }
   }
 
   if (MD && (isa<CXXConstructorDecl>(MD) || isa<CXXDestructorDecl>(MD)))
     CGM.getCXXABI().addImplicitStructorParams(*this, ResTy, Args);
+
+  return ResTy;
+}
+
+void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
+                                   const CGFunctionInfo &FnInfo) {
+  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+  CurGD = GD;
+
+  FunctionArgList Args;
+  QualType ResTy = BuildFunctionArgList(GD, Args);
+
+  // Check if we should generate debug info for this function.
+  if (FD->hasAttr<NoDebugAttr>())
+    DebugInfo = nullptr; // disable debug info indefinitely for this function
 
   SourceRange BodyRange;
   if (Stmt *Body = FD->getBody()) BodyRange = Body->getSourceRange();

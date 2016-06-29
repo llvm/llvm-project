@@ -29,7 +29,7 @@ struct CoverageViewOptions {
   bool ShowExpandedRegions;
   bool ShowFunctionInstantiations;
   bool ShowFullFilenames;
-  OutputFormat ShowFormat;
+  OutputFormat Format;
   std::string ShowOutputDirectory;
 
   /// \brief Change the output's stream color if the colors are enabled.
@@ -37,6 +37,9 @@ struct CoverageViewOptions {
                                     raw_ostream::Colors Color) const {
     return llvm::colored_ostream(OS, Color, Colors);
   }
+
+  /// \brief Check if an output directory has been specified.
+  bool hasOutputDirectory() const { return ShowOutputDirectory != ""; }
 };
 }
 

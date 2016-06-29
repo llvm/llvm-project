@@ -3055,7 +3055,7 @@ IsInitializerListConstructorConversion(Sema &S, Expr *From, QualType ToType,
                                        bool AllowExplicit) {
   for (auto *D : S.LookupConstructors(To)) {
     auto Info = getConstructorInfo(D);
-    if (!Info.Constructor)
+    if (!Info)
       continue;
 
     bool Usable = !Info.Constructor->isInvalidDecl() &&
@@ -3174,7 +3174,7 @@ IsUserDefinedConversion(Sema &S, Expr *From, QualType ToType,
 
       for (auto *D : S.LookupConstructors(ToRecordDecl)) {
         auto Info = getConstructorInfo(D);
-        if (!Info.Constructor)
+        if (!Info)
           continue;
 
         bool Usable = !Info.Constructor->isInvalidDecl();
@@ -8646,6 +8646,25 @@ bool clang::isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,
       return BetterTemplate == Cand1.Function->getPrimaryTemplate();
   }
 
+  // FIXME: Work around a defect in the C++17 inheriting constructor wording.
+  // A derived-class constructor beats an (inherited) base class constructor.
+  bool Cand1IsInherited =
+      dyn_cast_or_null<ConstructorUsingShadowDecl>(Cand1.FoundDecl.getDecl());
+  bool Cand2IsInherited =
+      dyn_cast_or_null<ConstructorUsingShadowDecl>(Cand2.FoundDecl.getDecl());
+  if (Cand1IsInherited != Cand2IsInherited)
+    return Cand2IsInherited;
+  else if (Cand1IsInherited) {
+    assert(Cand2IsInherited);
+    auto *Cand1Class = cast<CXXRecordDecl>(Cand1.Function->getDeclContext());
+    auto *Cand2Class = cast<CXXRecordDecl>(Cand2.Function->getDeclContext());
+    if (Cand1Class->isDerivedFrom(Cand2Class))
+      return true;
+    if (Cand2Class->isDerivedFrom(Cand1Class))
+      return false;
+    // Inherited from sibling base classes: still ambiguous.
+  }
+
   // Check for enable_if value-based overload resolution.
   if (Cand1.Function && Cand2.Function) {
     Comparison Cmp = compareEnableIfAttrs(S, Cand1.Function, Cand2.Function);
@@ -8837,7 +8856,8 @@ enum OverloadCandidateKind {
   oc_implicit_move_constructor,
   oc_implicit_copy_assignment,
   oc_implicit_move_assignment,
-  oc_implicit_inherited_constructor
+  oc_inherited_constructor,
+  oc_inherited_constructor_template
 };
 
 OverloadCandidateKind ClassifyOverloadCandidate(Sema &S,
@@ -8853,11 +8873,13 @@ OverloadCandidateKind ClassifyOverloadCandidate(Sema &S,
   }
 
   if (CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(Fn)) {
-    if (!Ctor->isImplicit())
-      return isTemplate ? oc_constructor_template : oc_constructor;
-
-    if (Ctor->getInheritedConstructor())
-      return oc_implicit_inherited_constructor;
+    if (!Ctor->isImplicit()) {
+      if (isa<ConstructorUsingShadowDecl>(Found))
+        return isTemplate ? oc_inherited_constructor_template
+                          : oc_inherited_constructor;
+      else
+        return isTemplate ? oc_constructor_template : oc_constructor;
+    }
 
     if (Ctor->isDefaultConstructor())
       return oc_implicit_default_constructor;
@@ -8889,14 +8911,13 @@ OverloadCandidateKind ClassifyOverloadCandidate(Sema &S,
   return isTemplate ? oc_function_template : oc_function;
 }
 
-void MaybeEmitInheritedConstructorNote(Sema &S, Decl *Fn) {
-  const CXXConstructorDecl *Ctor = dyn_cast<CXXConstructorDecl>(Fn);
-  if (!Ctor) return;
-
-  Ctor = Ctor->getInheritedConstructor();
-  if (!Ctor) return;
-
-  S.Diag(Ctor->getLocation(), diag::note_ovl_candidate_inherited_constructor);
+void MaybeEmitInheritedConstructorNote(Sema &S, Decl *FoundDecl) {
+  // FIXME: It'd be nice to only emit a note once per using-decl per overload
+  // set.
+  if (auto *Shadow = dyn_cast<ConstructorUsingShadowDecl>(FoundDecl))
+    S.Diag(FoundDecl->getLocation(),
+           diag::note_ovl_candidate_inherited_constructor)
+      << Shadow->getNominatedBaseClass();
 }
 
 } // end anonymous namespace
@@ -8982,7 +9003,7 @@ void Sema::NoteOverloadCandidate(NamedDecl *Found, FunctionDecl *Fn,
 
   HandleFunctionTypeMismatch(PD, Fn->getType(), DestType);
   Diag(Fn->getLocation(), PD);
-  MaybeEmitInheritedConstructorNote(*this, Fn);
+  MaybeEmitInheritedConstructorNote(*this, Found);
 }
 
 // Notes the location of all overload candidates designated through
@@ -9070,7 +9091,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       << (unsigned) FnKind << FnDesc
       << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
       << ToTy << Name << I+1;
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9101,7 +9122,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << FromTy
         << FromQs.getAddressSpace() << ToQs.getAddressSpace()
         << (unsigned) isObjectArgument << I+1;
-      MaybeEmitInheritedConstructorNote(S, Fn);
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
 
@@ -9112,7 +9133,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << FromTy
         << FromQs.getObjCLifetime() << ToQs.getObjCLifetime()
         << (unsigned) isObjectArgument << I+1;
-      MaybeEmitInheritedConstructorNote(S, Fn);
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
 
@@ -9123,7 +9144,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       << FromTy
       << FromQs.getObjCGCAttr() << ToQs.getObjCGCAttr()
       << (unsigned) isObjectArgument << I+1;
-      MaybeEmitInheritedConstructorNote(S, Fn);
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
 
@@ -9132,7 +9153,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << (unsigned) FnKind << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
         << FromTy << FromQs.hasUnaligned() << I+1;
-      MaybeEmitInheritedConstructorNote(S, Fn);
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
 
@@ -9150,7 +9171,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
         << FromTy << (CVR - 1) << I+1;
     }
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9161,7 +9182,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       << (unsigned) FnKind << FnDesc
       << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
       << FromTy << ToTy << (unsigned) isObjectArgument << I+1;
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9179,7 +9200,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       << FromTy << ToTy << (unsigned) isObjectArgument << I+1
       << (unsigned) (Cand->Fix.Kind);
       
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9218,7 +9239,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << (unsigned) FnKind << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
         << (unsigned) isObjectArgument << I + 1;
-      MaybeEmitInheritedConstructorNote(S, Fn);
+      MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
       return;
     }
   }
@@ -9230,7 +9251,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
       << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
       << (BaseToDerivedConversion - 1)
       << FromTy << ToTy << I+1;
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9243,7 +9264,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
         << (unsigned) FnKind << FnDesc
         << (FromExpr ? FromExpr->getSourceRange() : SourceRange())
         << FromTy << ToTy << (unsigned) isObjectArgument << I+1;
-        MaybeEmitInheritedConstructorNote(S, Fn);
+        MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
         return;
       }
   }
@@ -9265,7 +9286,7 @@ static void DiagnoseBadConversion(Sema &S, OverloadCandidate *Cand,
     FDiag << *HI;
   S.Diag(Fn->getLocation(), FDiag);
 
-  MaybeEmitInheritedConstructorNote(S, Fn);
+  MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
 }
 
 /// Additional arity mismatch diagnosis specific to a function overload
@@ -9341,7 +9362,7 @@ static void DiagnoseArityMismatch(Sema &S, NamedDecl *Found, Decl *D,
     S.Diag(Fn->getLocation(), diag::note_ovl_candidate_arity)
       << (unsigned) FnKind << (Fn->getDescribedFunctionTemplate() != nullptr)
       << mode << modeCount << NumFormalArgs;
-  MaybeEmitInheritedConstructorNote(S, Fn);
+  MaybeEmitInheritedConstructorNote(S, Found);
 }
 
 /// Arity mismatch diagnosis specific to a function overload candidate.
@@ -9377,7 +9398,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_incomplete_deduction)
         << ParamD->getDeclName();
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }
 
@@ -9402,7 +9423,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
 
     S.Diag(Templated->getLocation(), diag::note_ovl_candidate_underqualified)
         << ParamD->getDeclName() << Arg << NonCanonParam;
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }
 
@@ -9421,7 +9442,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
            diag::note_ovl_candidate_inconsistent_deduction)
         << which << ParamD->getDeclName() << *DeductionFailure.getFirstArg()
         << *DeductionFailure.getSecondArg();
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }
 
@@ -9444,7 +9465,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
              diag::note_ovl_candidate_explicit_arg_mismatch_unnamed)
           << (index + 1);
     }
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
 
   case Sema::TDK_TooManyArguments:
@@ -9455,7 +9476,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   case Sema::TDK_InstantiationDepth:
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_instantiation_depth);
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
 
   case Sema::TDK_SubstitutionFailure: {
@@ -9493,7 +9514,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
     S.Diag(Templated->getLocation(),
            diag::note_ovl_candidate_substitution_failure)
         << TemplateArgString << SFINAEArgString << R;
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }
 
@@ -9565,7 +9586,7 @@ static void DiagnoseBadDeduction(Sema &S, NamedDecl *Found, Decl *Templated,
   // note_ovl_candidate_bad_deduction, which is uselessly vague.
   case Sema::TDK_MiscellaneousDeductionFailure:
     S.Diag(Templated->getLocation(), diag::note_ovl_candidate_bad_deduction);
-    MaybeEmitInheritedConstructorNote(S, Templated);
+    MaybeEmitInheritedConstructorNote(S, Found);
     return;
   }
 }
@@ -9676,7 +9697,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
     S.Diag(Fn->getLocation(), diag::note_ovl_candidate_deleted)
       << FnKind << FnDesc
       << (Fn->isDeleted() ? (Fn->isDeletedAsWritten() ? 1 : 2) : 0);
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9698,7 +9719,7 @@ static void NoteFunctionCandidate(Sema &S, OverloadCandidate *Cand,
   case ovl_fail_illegal_constructor: {
     S.Diag(Fn->getLocation(), diag::note_ovl_candidate_illegal_constructor)
       << (Fn->getPrimaryTemplate() ? 1 : 0);
-    MaybeEmitInheritedConstructorNote(S, Fn);
+    MaybeEmitInheritedConstructorNote(S, Cand->FoundDecl);
     return;
   }
 
@@ -9764,7 +9785,6 @@ static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
 
   S.Diag(Cand->Surrogate->getLocation(), diag::note_ovl_surrogate_cand)
     << FnType;
-  MaybeEmitInheritedConstructorNote(S, Cand->Surrogate);
 }
 
 static void NoteBuiltinOperatorCandidate(Sema &S, StringRef Opc,
@@ -10531,9 +10551,10 @@ private:
     UnresolvedSetIterator Result = S.getMostSpecialized(
         MatchesCopy.begin(), MatchesCopy.end(), FailedCandidates,
         SourceExpr->getLocStart(), S.PDiag(),
-        S.PDiag(diag::err_addr_ovl_ambiguous) << Matches[0]
-                                                     .second->getDeclName(),
-        S.PDiag(diag::note_ovl_candidate) << (unsigned)oc_function_template,
+        S.PDiag(diag::err_addr_ovl_ambiguous)
+          << Matches[0].second->getDeclName(),
+        S.PDiag(diag::note_ovl_candidate)
+          << (unsigned)oc_function_template,
         Complain, TargetFunctionType);
 
     if (Result != MatchesCopy.end()) {

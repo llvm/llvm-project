@@ -504,6 +504,7 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::CXXMemberCallExprClass:
   case Stmt::CUDAKernelCallExprClass:
   case Stmt::CXXConstructExprClass:  
+  case Stmt::CXXInheritedCtorInitExprClass:  
   case Stmt::CXXTemporaryObjectExprClass:
   case Stmt::CXXUnresolvedConstructExprClass:
   case Stmt::UserDefinedLiteralClass:

@@ -46,8 +46,8 @@ static cl::opt<GVDAGType> ViewMachineBlockFreqPropagationDAG(
 
                clEnumValEnd));
 
-static cl::opt<std::string> ViewMachineBlockFreqFuncName("view-mbfi-func-name",
-                                                         cl::Hidden);
+extern cl::opt<std::string> ViewBlockFreqFuncName;
+extern cl::opt<unsigned> ViewHotFreqPercent;
 
 namespace llvm {
 
@@ -93,9 +93,16 @@ struct DOTGraphTraits<MachineBlockFrequencyInfo *>
         Node, Graph, ViewMachineBlockFreqPropagationDAG);
   }
 
+  std::string getNodeAttributes(const MachineBasicBlock *Node,
+                                const MachineBlockFrequencyInfo *Graph) {
+    return MBFIDOTGraphTraitsBase::getNodeAttributes(Node, Graph,
+                                                     ViewHotFreqPercent);
+  }
+
   std::string getEdgeAttributes(const MachineBasicBlock *Node, EdgeIter EI,
                                 const MachineBlockFrequencyInfo *MBFI) {
-    return MBFIDOTGraphTraitsBase::getEdgeAttributes(Node, EI, MBFI->getMBPI());
+    return MBFIDOTGraphTraitsBase::getEdgeAttributes(
+        Node, EI, MBFI, MBFI->getMBPI(), ViewHotFreqPercent);
   }
 };
 
@@ -134,8 +141,8 @@ bool MachineBlockFrequencyInfo::runOnMachineFunction(MachineFunction &F) {
   MBFI->calculate(F, MBPI, MLI);
 #ifndef NDEBUG
   if (ViewMachineBlockFreqPropagationDAG != GVDT_None &&
-      (ViewMachineBlockFreqFuncName.empty() ||
-       F.getName().equals(ViewMachineBlockFreqFuncName))) {
+      (ViewBlockFreqFuncName.empty() ||
+       F.getName().equals(ViewBlockFreqFuncName))) {
     view();
   }
 #endif

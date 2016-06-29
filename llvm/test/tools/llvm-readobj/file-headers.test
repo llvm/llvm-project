@@ -353,7 +353,7 @@ ELF-LANAI-NEXT:     ABIVersion: 0
 ELF-LANAI-NEXT:     Unused: (00 00 00 00 00 00 00)
 ELF-LANAI-NEXT:   }
 ELF-LANAI-NEXT:   Type: Relocatable (0x1)
-ELF-LANAI-NEXT:   Machine: EM_LANAI (0x8123)
+ELF-LANAI-NEXT:   Machine: EM_LANAI (0xF4)
 ELF-LANAI-NEXT:   Version: 1
 ELF-LANAI-NEXT:   Entry: 0x0
 ELF-LANAI-NEXT:   ProgramHeaderOffset: 0x0

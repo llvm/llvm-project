@@ -244,6 +244,15 @@ CodeGenTypes::arrangeCXXMethodDeclaration(const CXXMethodDecl *MD) {
   return arrangeFreeFunctionType(prototype, MD);
 }
 
+bool CodeGenTypes::inheritingCtorHasParams(
+    const InheritedConstructor &Inherited, CXXCtorType Type) {
+  // Parameters are unnecessary if we're constructing a base class subobject
+  // and the inherited constructor lives in a virtual base.
+  return Type == Ctor_Complete ||
+         !Inherited.getShadowDecl()->constructsVirtualBase() ||
+         !Target.getCXXABI().hasConstructorVariants();
+  }
+
 const CGFunctionInfo &
 CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
                                             StructorType Type) {
@@ -252,9 +261,16 @@ CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
   SmallVector<FunctionProtoType::ExtParameterInfo, 16> paramInfos;
   argTypes.push_back(GetThisType(Context, MD->getParent()));
 
+  bool PassParams = true;
+
   GlobalDecl GD;
   if (auto *CD = dyn_cast<CXXConstructorDecl>(MD)) {
     GD = GlobalDecl(CD, toCXXCtorType(Type));
+
+    // A base class inheriting constructor doesn't get forwarded arguments
+    // needed to construct a virtual base (or base class thereof).
+    if (auto Inherited = CD->getInheritedConstructor())
+      PassParams = inheritingCtorHasParams(Inherited, toCXXCtorType(Type));
   } else {
     auto *DD = dyn_cast<CXXDestructorDecl>(MD);
     GD = GlobalDecl(DD, toCXXDtorType(Type));
@@ -263,12 +279,14 @@ CodeGenTypes::arrangeCXXStructorDeclaration(const CXXMethodDecl *MD,
   CanQual<FunctionProtoType> FTP = GetFormalType(MD);
 
   // Add the formal parameters.
-  appendParameterTypes(*this, argTypes, paramInfos, FTP, MD);
+  if (PassParams)
+    appendParameterTypes(*this, argTypes, paramInfos, FTP, MD);
 
   TheCXXABI.buildStructorSignature(MD, Type, argTypes);
 
   RequiredArgs required =
-      (MD->isVariadic() ? RequiredArgs(argTypes.size()) : RequiredArgs::All);
+      (PassParams && MD->isVariadic() ? RequiredArgs(argTypes.size())
+                                      : RequiredArgs::All);
 
   FunctionType::ExtInfo extInfo = FTP->getExtInfo();
   CanQualType resultType = TheCXXABI.HasThisReturn(GD)
@@ -3186,10 +3204,10 @@ void CodeGenFunction::EmitCallArgs(
     size_t CallArgsStart = Args.size();
     for (int I = ArgTypes.size() - 1; I >= 0; --I) {
       CallExpr::const_arg_iterator Arg = ArgRange.begin() + I;
+      MaybeEmitImplicitObjectSize(I, *Arg);
       EmitCallArg(Args, *Arg, ArgTypes[I]);
       EmitNonNullArgCheck(Args.back().RV, ArgTypes[I], (*Arg)->getExprLoc(),
                           CalleeDecl, ParamsToSkip + I);
-      MaybeEmitImplicitObjectSize(I, *Arg);
     }
 
     // Un-reverse the arguments we just evaluated so they match up with the LLVM

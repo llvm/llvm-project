@@ -2137,6 +2137,17 @@ matches A and C::f, but not B, C, or B::f
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isLambda0')"><a name="isLambda0Anchor">isLambda</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isLambda0"><pre>Matches the generated class of lambda expressions.
+
+Given:
+  auto x = []{};
+
+cxxRecordDecl(isLambda()) matches the implicit class declaration of
+decltype(x)
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom1')"><a name="isSameOrDerivedFrom1Anchor">isSameOrDerivedFrom</a></td><td>std::string BaseName</td></tr>
 <tr><td colspan="4" class="doc" id="isSameOrDerivedFrom1"><pre>Overloaded method as shortcut for
 isSameOrDerivedFrom(hasName(...)).

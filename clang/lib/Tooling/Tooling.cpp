@@ -482,7 +482,6 @@ public:
     return true;
   }
 };
-
 }
 
 int ClangTool::buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs) {

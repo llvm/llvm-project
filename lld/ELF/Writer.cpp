@@ -277,9 +277,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (!Config->NoUndefined) {
     if (Config->Relocatable)
       return;
-    if (Config->Shared && !Config->ZDefs)
-      if (Sym->symbol()->Visibility == STV_DEFAULT)
-        return;
+    if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT)
+      return;
   }
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
@@ -1305,7 +1304,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_ident[EI_VERSION] = EV_CURRENT;
   EHdr->e_ident[EI_OSABI] = FirstObj.getOSABI();
   EHdr->e_type = getELFType();
-  EHdr->e_machine = FirstObj.getEMachine();
+  EHdr->e_machine = FirstObj.EMachine;
   EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr<ELFT>();
   EHdr->e_shoff = SectionHeaderOff;

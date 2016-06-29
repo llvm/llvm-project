@@ -1621,7 +1621,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
               report_error(Filename, StringRef(), std::move(E),
                            ArchitectureName);
               continue;
-            } else if (ErrorOr<std::unique_ptr<Archive>> AOrErr =
+            } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                            I->getAsArchive()) {
               std::unique_ptr<Archive> &A = *AOrErr;
               outs() << "Archive : " << Filename;
@@ -1646,6 +1646,11 @@ void llvm::ParseInputMachO(StringRef Filename) {
                         dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
                   ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
               }
+            } else {
+              consumeError(AOrErr.takeError());
+              error("Mach-O universal file: " + Filename + " for " +
+                    "architecture " + StringRef(I->getArchTypeName()) +
+                    " is not a Mach-O file or an archive file");
             }
           }
         }
@@ -1676,7 +1681,7 @@ void llvm::ParseInputMachO(StringRef Filename) {
                      ObjOrErr.takeError())) {
             report_error(Filename, std::move(E));
             continue;
-          } else if (ErrorOr<std::unique_ptr<Archive>> AOrErr =
+          } else if (Expected<std::unique_ptr<Archive>> AOrErr =
                          I->getAsArchive()) {
             std::unique_ptr<Archive> &A = *AOrErr;
             outs() << "Archive : " << Filename << "\n";
@@ -1698,6 +1703,11 @@ void llvm::ParseInputMachO(StringRef Filename) {
                       dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
                 ProcessMachO(Filename, O, O->getFileName());
             }
+          } else {
+            consumeError(AOrErr.takeError());
+            error("Mach-O universal file: " + Filename + " for architecture " +
+                  StringRef(I->getArchTypeName()) +
+                  " is not a Mach-O file or an archive file");
           }
           return;
         }
@@ -1721,7 +1731,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
                  ObjOrErr.takeError())) {
         report_error(StringRef(), Filename, std::move(E), ArchitectureName);
         continue;
-      } else if (ErrorOr<std::unique_ptr<Archive>> AOrErr = I->getAsArchive()) {
+      } else if (Expected<std::unique_ptr<Archive>> AOrErr =
+                   I->getAsArchive()) {
         std::unique_ptr<Archive> &A = *AOrErr;
         outs() << "Archive : " << Filename;
         if (!ArchitectureName.empty())
@@ -1747,6 +1758,11 @@ void llvm::ParseInputMachO(StringRef Filename) {
                            ArchitectureName);
           }
         }
+      } else {
+        consumeError(AOrErr.takeError());
+        error("Mach-O universal file: " + Filename + " for architecture " +
+              StringRef(I->getArchTypeName()) +
+              " is not a Mach-O file or an archive file");
       }
     }
     return;

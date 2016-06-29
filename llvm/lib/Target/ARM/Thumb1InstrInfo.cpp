@@ -118,11 +118,12 @@ loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   }
 }
 
-void
-Thumb1InstrInfo::expandLoadStackGuard(MachineBasicBlock::iterator MI,
-                                      Reloc::Model RM) const {
-  if (RM == Reloc::PIC_)
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi, RM);
+void Thumb1InstrInfo::expandLoadStackGuard(
+    MachineBasicBlock::iterator MI) const {
+  MachineFunction &MF = *MI->getParent()->getParent();
+  const TargetMachine &TM = MF.getTarget();
+  if (TM.isPositionIndependent())
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_pcrel, ARM::tLDRi);
   else
-    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi, RM);
+    expandLoadStackGuardBase(MI, ARM::tLDRLIT_ga_abs, ARM::tLDRi);
 }

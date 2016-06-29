@@ -21,8 +21,6 @@ set(COMPILER_RT_ENABLE_IOS ON CACHE BOOL "Build iOS Compiler-RT libraries")
 
 # Make unit tests (if present) part of the ALL target
 set(LLVM_BUILD_TESTS ON CACHE BOOL "")
-# Don't build or run the compiler-rt tests
-set(COMPILER_RT_INCLUDE_TESTS OFF CACHE BOOL "")
 
 set(LLVM_ENABLE_LTO ON CACHE BOOL "")
 set(CMAKE_C_FLAGS "-fno-stack-protector -fno-common -Wno-profile-instr-unprofiled" CACHE STRING "")

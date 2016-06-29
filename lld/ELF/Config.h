@@ -86,6 +86,7 @@ struct Configuration {
   bool Mips64EL = false;
   bool NoGnuUnique;
   bool NoUndefined;
+  bool NoUndefinedVersion;
   bool NoinhibitExec;
   bool Pic;
   bool Pie;
@@ -104,7 +105,6 @@ struct Configuration {
   bool VersionScriptGlobalByDefault = true;
   bool WarnCommon;
   bool ZCombreloc;
-  bool ZDefs;
   bool ZExecStack;
   bool ZNodelete;
   bool ZNow;

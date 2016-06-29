@@ -307,6 +307,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isInteger);
   REGISTER_MATCHER(isIntegral);
   REGISTER_MATCHER(isInTemplateInstantiation);
+  REGISTER_MATCHER(isLambda);
   REGISTER_MATCHER(isListInitialization);
   REGISTER_MATCHER(isMemberInitializer);
   REGISTER_MATCHER(isMoveAssignmentOperator);
