@@ -18,5 +18,5 @@ install(FILES
 # can build against a build directory of Clang more easily.
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/ClangConfig.cmake
-  ${CLANG_BINARY_DIR}/${CLANG_INSTALL_PACKAGE_DIR}/ClangConfig.cmake
+  ${clang_cmake_builddir}/ClangConfig.cmake
   COPYONLY)
