@@ -25,6 +25,18 @@
 // typedef atomic<char16_t>           atomic_char16_t;
 // typedef atomic<char32_t>           atomic_char32_t;
 // typedef atomic<wchar_t>            atomic_wchar_t;
+//
+// typedef atomic<intptr_t>           atomic_intptr_t;
+// typedef atomic<uintptr_t>          atomic_uintptr_t;
+//
+// typedef atomic<int8_t>             atomic_int8_t;
+// typedef atomic<uint8_t>            atomic_uint8_t;
+// typedef atomic<int16_t>            atomic_int16_t;
+// typedef atomic<uint16_t>           atomic_uint16_t;
+// typedef atomic<int32_t>            atomic_int32_t;
+// typedef atomic<uint32_t>           atomic_uint32_t;
+// typedef atomic<int64_t>            atomic_int64_t;
+// typedef atomic<uint64_t>           atomic_uint64_t;
 
 #include <atomic>
 #include <type_traits>
@@ -47,4 +59,17 @@ int main()
     static_assert((std::is_same<std::atomic<char16_t>, std::atomic_char16_t>::value), "");
     static_assert((std::is_same<std::atomic<char32_t>, std::atomic_char32_t>::value), "");
 #endif  // _LIBCPP_HAS_NO_UNICODE_CHARS
+
+//  Added by LWG 2441
+    static_assert((std::is_same<std::atomic<intptr_t>,  std::atomic_intptr_t>::value), "");
+    static_assert((std::is_same<std::atomic<uintptr_t>, std::atomic_uintptr_t>::value), "");
+
+    static_assert((std::is_same<std::atomic<int8_t>,    std::atomic_int8_t>::value), "");
+    static_assert((std::is_same<std::atomic<uint8_t>,   std::atomic_uint8_t>::value), "");
+    static_assert((std::is_same<std::atomic<int16_t>,   std::atomic_int16_t>::value), "");
+    static_assert((std::is_same<std::atomic<uint16_t>,  std::atomic_uint16_t>::value), "");
+    static_assert((std::is_same<std::atomic<int32_t>,   std::atomic_int32_t>::value), "");
+    static_assert((std::is_same<std::atomic<uint32_t>,  std::atomic_uint32_t>::value), "");
+    static_assert((std::is_same<std::atomic<int64_t>,   std::atomic_int64_t>::value), "");
+    static_assert((std::is_same<std::atomic<uint64_t>,  std::atomic_uint64_t>::value), "");
 }

@@ -12,6 +12,8 @@
 // Check that std::multimap and it's iterators can be instantiated with an incomplete
 // type.
 
+// XFAIL: gcc
+
 #include <map>
 
 struct A {

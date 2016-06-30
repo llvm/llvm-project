@@ -515,6 +515,15 @@ typedef atomic<uint_fast32_t> atomic_uint_fast32_t;
 typedef atomic<int_fast64_t>  atomic_int_fast64_t;
 typedef atomic<uint_fast64_t> atomic_uint_fast64_t;
 
+typedef atomic<int8_t>   atomic_int8_t;
+typedef atomic<uint8_t>  atomic_uint8_t;
+typedef atomic<int16_t>  atomic_int16_t;
+typedef atomic<uint16_t> atomic_uint16_t;
+typedef atomic<int32_t>  atomic_int32_t;
+typedef atomic<uint32_t> atomic_uint32_t;
+typedef atomic<int64_t>  atomic_int64_t;
+typedef atomic<uint64_t> atomic_uint64_t;
+
 typedef atomic<intptr_t>  atomic_intptr_t;
 typedef atomic<uintptr_t> atomic_uintptr_t;
 typedef atomic<size_t>    atomic_size_t;
@@ -1810,6 +1819,15 @@ typedef atomic<int_fast32_t>  atomic_int_fast32_t;
 typedef atomic<uint_fast32_t> atomic_uint_fast32_t;
 typedef atomic<int_fast64_t>  atomic_int_fast64_t;
 typedef atomic<uint_fast64_t> atomic_uint_fast64_t;
+
+typedef atomic< int8_t>  atomic_int8_t;
+typedef atomic<uint8_t>  atomic_uint8_t;
+typedef atomic< int16_t> atomic_int16_t;
+typedef atomic<uint16_t> atomic_uint16_t;
+typedef atomic< int32_t> atomic_int32_t;
+typedef atomic<uint32_t> atomic_uint32_t;
+typedef atomic< int64_t> atomic_int64_t;
+typedef atomic<uint64_t> atomic_uint64_t;
 
 typedef atomic<intptr_t>  atomic_intptr_t;
 typedef atomic<uintptr_t> atomic_uintptr_t;
