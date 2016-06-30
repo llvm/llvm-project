@@ -504,9 +504,13 @@ public:
 }
 
 StmtResult
-Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, ConditionResult Cond,
+Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, Stmt *InitStmt,
+                  ConditionResult Cond,
                   Stmt *thenStmt, SourceLocation ElseLoc,
                   Stmt *elseStmt) {
+  if (InitStmt)
+    Diag(InitStmt->getLocStart(), diag::err_init_stmt_not_supported);
+
   if (Cond.isInvalid())
     Cond = ConditionResult(
         *this, nullptr,
@@ -659,10 +663,13 @@ ExprResult Sema::CheckSwitchCondition(SourceLocation SwitchLoc, Expr *Cond) {
   return UsualUnaryConversions(CondResult.get());
 }
 
-StmtResult
-Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc, ConditionResult Cond) {
+StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
+                                        Stmt *InitStmt, ConditionResult Cond) {
   if (Cond.isInvalid())
     return StmtError();
+
+  if (InitStmt)
+    Diag(InitStmt->getLocStart(), diag::err_init_stmt_not_supported);
 
   getCurFunction()->setHasBranchIntoScope();
 

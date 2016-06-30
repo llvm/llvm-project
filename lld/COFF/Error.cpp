@@ -26,5 +26,13 @@ void error(std::error_code EC, const Twine &Prefix) {
   error(Prefix + ": " + EC.message());
 }
 
+void error(llvm::Error E, const Twine &Prefix) {
+  if (!E)
+    return;
+  handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    error(Prefix + ": " + EIB.message());
+  });
+}
+
 } // namespace coff
 } // namespace lld

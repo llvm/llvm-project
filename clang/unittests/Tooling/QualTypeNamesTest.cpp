@@ -14,6 +14,7 @@ using namespace clang;
 namespace {
 struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
   llvm::StringMap<std::string> ExpectedQualTypeNames;
+  bool WithGlobalNsPrefix = false;
 
   // ValueDecls are the least-derived decl with both a qualtype and a
   // name.
@@ -26,7 +27,8 @@ struct TypeNameVisitor : TestVisitor<TypeNameVisitor> {
         ExpectedQualTypeNames.lookup(VD->getNameAsString());
     if (ExpectedName != "") {
       std::string ActualName =
-          TypeName::getFullyQualifiedName(VD->getType(), *Context);
+          TypeName::getFullyQualifiedName(VD->getType(), *Context,
+                                          WithGlobalNsPrefix);
       if (ExpectedName != ActualName) {
         // A custom message makes it much easier to see what declaration
         // failed compared to EXPECT_EQ.
@@ -179,6 +181,42 @@ TEST(QualTypeNameTest, getFullyQualifiedName) {
       "  TX CheckTX;"
       "  struct A { typedef int X; };"
       "}");
+
+  TypeNameVisitor GlobalNsPrefix;
+  GlobalNsPrefix.WithGlobalNsPrefix = true;
+  GlobalNsPrefix.ExpectedQualTypeNames["IntVal"] = "int";
+  GlobalNsPrefix.ExpectedQualTypeNames["BoolVal"] = "bool";
+  GlobalNsPrefix.ExpectedQualTypeNames["XVal"] = "::A::B::X";
+  GlobalNsPrefix.ExpectedQualTypeNames["IntAliasVal"] = "::A::B::Alias<int>";
+  GlobalNsPrefix.ExpectedQualTypeNames["ZVal"] = "::A::B::Y::Z";
+  GlobalNsPrefix.ExpectedQualTypeNames["GlobalZVal"] = "::Z";
+  GlobalNsPrefix.ExpectedQualTypeNames["CheckK"] = "D::aStruct";
+  GlobalNsPrefix.runOver(
+      "namespace A {\n"
+      "  namespace B {\n"
+      "    int IntVal;\n"
+      "    bool BoolVal;\n"
+      "    struct X {};\n"
+      "    X XVal;\n"
+      "    template <typename T> class CCC { };\n"
+      "    template <typename T>\n"
+      "    using Alias = CCC<T>;\n"
+      "    Alias<int> IntAliasVal;\n"
+      "    struct Y { struct Z {}; };\n"
+      "    Y::Z ZVal;\n"
+      "  }\n"
+      "}\n"
+      "struct Z {};\n"
+      "Z GlobalZVal;\n"
+      "namespace {\n"
+      "  namespace D {\n"
+      "    namespace {\n"
+      "      class aStruct {};\n"
+      "      aStruct CheckK;\n"
+      "    }\n"
+      "  }\n"
+      "}\n"
+  );
 }
 
 }  // end anonymous namespace

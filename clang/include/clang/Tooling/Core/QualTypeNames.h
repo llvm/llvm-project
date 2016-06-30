@@ -69,8 +69,11 @@ namespace TypeName {
 /// \param[in] QT - the type for which the fully qualified name will be
 /// returned.
 /// \param[in] Ctx - the ASTContext to be used.
+/// \param[in] WithGlobalNsPrefix - If true, then the global namespace
+/// specifier "::" will be prepended to the fully qualified name.
 std::string getFullyQualifiedName(QualType QT,
-                                  const ASTContext &Ctx);
+                                  const ASTContext &Ctx,
+                                  bool WithGlobalNsPrefix = false);
 }  // end namespace TypeName
 }  // end namespace clang
 #endif  // LLVM_CLANG_TOOLING_CORE_QUALTYPENAMES_H
