@@ -30,6 +30,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
+#include "lldb/Utility/LLDBAssert.h"
 
 #include "swift/AST/Type.h"
 #include "swift/AST/Types.h"
@@ -335,6 +336,16 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                     log->Printf("    [SUE::SC] Argument name: %s", template_arg_name.AsCString());
 
                 CompilerType concrete_type = exe_ctx.GetProcessRef().GetSwiftLanguageRuntime()->GetConcreteType(frame, template_arg_name);
+                
+                lldbassert(concrete_type.IsValid());
+                
+                if (!concrete_type.IsValid())
+                {
+                    if (log)
+                        log->Printf("  [SUE::SC] Concrete type of generic parameter is invalid");
+                    
+                    continue;
+                }
 
                 if (log)
                     log->Printf("    [SUE::SC] Argument type: %s", concrete_type.GetTypeName().AsCString());
