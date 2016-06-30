@@ -158,13 +158,13 @@ namespace {
     /// True if the subobject was named in a manner not supported by C++11. Such
     /// lvalues can still be folded, but they are not core constant expressions
     /// and we cannot perform lvalue-to-rvalue conversions on them.
-    bool Invalid : 1;
+    unsigned Invalid : 1;
 
     /// Is this a pointer one past the end of an object?
-    bool IsOnePastTheEnd : 1;
+    unsigned IsOnePastTheEnd : 1;
 
     /// Indicator of whether the most-derived object is an array element.
-    bool MostDerivedIsArrayElement : 1;
+    unsigned MostDerivedIsArrayElement : 1;
 
     /// The length of the path to the most-derived object of which this is a
     /// subobject.
@@ -1058,7 +1058,7 @@ namespace {
   struct LValue {
     APValue::LValueBase Base;
     CharUnits Offset;
-    bool InvalidBase : 1;
+    unsigned InvalidBase : 1;
     unsigned CallIndex : 31;
     SubobjectDesignator Designator;
 

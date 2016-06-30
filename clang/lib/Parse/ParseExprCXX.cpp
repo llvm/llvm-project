@@ -1726,11 +1726,18 @@ Parser::ParseCXXTypeConstructExpression(const DeclSpec &DS) {
 /// [GNU]   type-specifier-seq declarator simple-asm-expr[opt] attributes[opt]
 ///             '=' assignment-expression
 ///
+/// In C++1z, a condition may in some contexts be preceded by an
+/// optional init-statement. This function will parse that too.
+///
+/// \param InitStmt If non-null, an init-statement is permitted, and if present
+/// will be parsed and stored here.
+///
 /// \param Loc The location of the start of the statement that requires this
 /// condition, e.g., the "for" in a for loop.
 ///
 /// \returns The parsed condition.
-Sema::ConditionResult Parser::ParseCXXCondition(SourceLocation Loc,
+Sema::ConditionResult Parser::ParseCXXCondition(StmtResult *InitStmt,
+                                                SourceLocation Loc,
                                                 Sema::ConditionKind CK) {
   if (Tok.is(tok::code_completion)) {
     Actions.CodeCompleteOrdinaryName(getCurScope(), Sema::PCC_Condition);
@@ -1741,7 +1748,9 @@ Sema::ConditionResult Parser::ParseCXXCondition(SourceLocation Loc,
   ParsedAttributesWithRange attrs(AttrFactory);
   MaybeParseCXX11Attributes(attrs);
 
-  if (!isCXXConditionDeclaration()) {
+  // Determine what kind of thing we have.
+  switch (isCXXConditionDeclarationOrInitStatement(InitStmt)) {
+  case ConditionOrInitStatement::Expression: {
     ProhibitAttributes(attrs);
 
     // Parse the expression.
@@ -1749,7 +1758,26 @@ Sema::ConditionResult Parser::ParseCXXCondition(SourceLocation Loc,
     if (Expr.isInvalid())
       return Sema::ConditionError();
 
+    if (InitStmt && Tok.is(tok::semi)) {
+      *InitStmt = Actions.ActOnExprStmt(Expr.get());
+      ConsumeToken();
+      return ParseCXXCondition(nullptr, Loc, CK);
+    }
+
     return Actions.ActOnCondition(getCurScope(), Loc, Expr.get(), CK);
+  }
+
+  case ConditionOrInitStatement::InitStmtDecl: {
+    SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
+    DeclGroupPtrTy DG = ParseSimpleDeclaration(
+        Declarator::InitStmtContext, DeclEnd, attrs, /*RequireSemi=*/true);
+    *InitStmt = Actions.ActOnDeclStmt(DG, DeclStart, DeclEnd);
+    return ParseCXXCondition(nullptr, Loc, CK);
+  }
+
+  case ConditionOrInitStatement::ConditionDecl:
+  case ConditionOrInitStatement::Error:
+    break;
   }
 
   // type-specifier-seq
@@ -1813,9 +1841,6 @@ Sema::ConditionResult Parser::ParseCXXCondition(SourceLocation Loc,
                                  DS.containsPlaceholderType());
   else
     Actions.ActOnInitializerError(DeclOut);
-
-  // FIXME: Build a reference to this declaration? Convert it to bool?
-  // (This is currently handled by Sema).
 
   Actions.FinalizeDeclaration(DeclOut);
   return Actions.ActOnConditionVariable(DeclOut, Loc, CK);

@@ -621,15 +621,16 @@ static std::unique_ptr<MemoryBuffer> createEmptyImportLibrary() {
   return MemoryBuffer::getMemBufferCopy((*BufOrErr)->getBuffer());
 }
 
-static std::vector<NewArchiveIterator>
+static std::vector<NewArchiveMember>
 readMembers(const object::Archive &Archive) {
-  std::vector<NewArchiveIterator> V;
+  std::vector<NewArchiveMember> V;
   for (const auto &ChildOrErr : Archive.children()) {
     error(ChildOrErr, "Archive::Child::getName failed");
     const object::Archive::Child C(*ChildOrErr);
-    ErrorOr<StringRef> NameOrErr = C.getName();
-    error(NameOrErr, "Archive::Child::getName failed");
-    V.emplace_back(C, *NameOrErr);
+    NewArchiveMember M =
+        check(NewArchiveMember::getOldMember(C, /*Deterministic=*/true),
+              "NewArchiveMember::getOldMember failed");
+    V.emplace_back(std::move(M));
   }
   return V;
 }
@@ -638,26 +639,15 @@ readMembers(const object::Archive &Archive) {
 // PE/COFF spec 7. Import Library Format.
 class ShortImportCreator {
 public:
-  ShortImportCreator(object::Archive *A, StringRef S) : Parent(A), DLLName(S) {}
+  ShortImportCreator(StringRef S) : DLLName(S) {}
 
-  NewArchiveIterator create(StringRef Sym, uint16_t Ordinal,
-                            ImportNameType NameType, bool isData) {
+  NewArchiveMember create(StringRef Sym, uint16_t Ordinal,
+                          ImportNameType NameType, bool isData) {
     size_t ImpSize = DLLName.size() + Sym.size() + 2; // +2 for NULs
-    size_t Size = sizeof(object::ArchiveMemberHeader) +
-                  sizeof(coff_import_header) + ImpSize;
+    size_t Size = sizeof(coff_import_header) + ImpSize;
     char *Buf = Alloc.Allocate<char>(Size);
     memset(Buf, 0, Size);
     char *P = Buf;
-
-    // Write archive member header
-    auto *Hdr = reinterpret_cast<object::ArchiveMemberHeader *>(P);
-    P += sizeof(*Hdr);
-    sprintf(Hdr->Name, "%-12s", "dummy");
-    sprintf(Hdr->LastModified, "%-12d", 0);
-    sprintf(Hdr->UID, "%-6d", 0);
-    sprintf(Hdr->GID, "%-6d", 0);
-    sprintf(Hdr->AccessMode, "%-8d", 0644);
-    sprintf(Hdr->Size, "%-10d", int(sizeof(coff_import_header) + ImpSize));
 
     // Write short import library.
     auto *Imp = reinterpret_cast<coff_import_header *>(P);
@@ -675,15 +665,11 @@ public:
     P += Sym.size() + 1;
     memcpy(P, DLLName.data(), DLLName.size());
 
-    std::error_code EC;
-    object::Archive::Child C(Parent, Buf, &EC);
-    assert(!EC && "We created an invalid buffer");
-    return NewArchiveIterator(C, DLLName);
+    return NewArchiveMember(MemoryBufferRef(StringRef(Buf, Size), DLLName));
   }
 
 private:
   BumpPtrAllocator Alloc;
-  object::Archive *Parent;
   StringRef DLLName;
 };
 
@@ -708,11 +694,11 @@ void writeImportLibrary() {
   std::unique_ptr<MemoryBuffer> Buf = createEmptyImportLibrary();
   llvm::Error Err;
   object::Archive Archive(Buf->getMemBufferRef(), Err);
-  error(errorToErrorCode(std::move(Err)), "Error reading an empty import file");
-  std::vector<NewArchiveIterator> Members = readMembers(Archive);
+  error(std::move(Err), "Error reading an empty import file");
+  std::vector<NewArchiveMember> Members = readMembers(Archive);
 
   std::string DLLName = llvm::sys::path::filename(Config->OutputFile);
-  ShortImportCreator ShortImport(&Archive, DLLName);
+  ShortImportCreator ShortImport(DLLName);
   for (Export &E : Config->Exports) {
     if (E.Private)
       continue;

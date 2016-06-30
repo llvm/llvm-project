@@ -2883,6 +2883,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::FileContext:
     case Declarator::BlockContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::ConditionContext:
       break;
     case Declarator::CXXNewContext:
@@ -2968,6 +2969,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::MemberContext:
     case Declarator::BlockContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::BlockLiteralContext:
     case Declarator::LambdaExprContext:
       // C++11 [dcl.type]p3:
@@ -3715,6 +3717,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case Declarator::CXXCatchContext:
     case Declarator::CXXNewContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::LambdaExprContext:
     case Declarator::LambdaExprParameterContext:
     case Declarator::ObjCCatchContext:
@@ -4527,6 +4530,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case Declarator::MemberContext:
     case Declarator::BlockContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::ConditionContext:
     case Declarator::CXXCatchContext:
     case Declarator::ObjCCatchContext:
