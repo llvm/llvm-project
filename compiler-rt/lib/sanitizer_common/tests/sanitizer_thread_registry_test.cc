@@ -224,6 +224,10 @@ static void ThreadedTestRegistry(ThreadRegistry *registry) {
 }
 
 TEST(SanitizerCommon, ThreadRegistryThreadedTest) {
+  memset(&num_created, 0, sizeof(num_created));
+  memset(&num_started, 0, sizeof(num_created));
+  memset(&num_joined, 0, sizeof(num_created));
+
   ThreadRegistry registry(GetThreadContext<TestThreadContext>,
                           kThreadsPerShard * kNumShards + 1, 10);
   ThreadedTestRegistry(&registry);
