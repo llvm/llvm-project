@@ -4654,6 +4654,21 @@ AST_TYPELOC_TRAVERSE_MATCHER(pointee, getPointee,
 ///   matches "typedef int X"
 AST_TYPE_MATCHER(TypedefType, typedefType);
 
+/// \brief Matches enum types.
+///
+/// Given
+/// \code
+///   enum C { Green };
+///   enum class S { Red };
+///
+///   C c;
+///   S s;
+/// \endcode
+//
+/// \c enumType() matches the type of the variable declarations of both \c c and
+/// \c s.
+AST_TYPE_MATCHER(EnumType, enumType);
+
 /// \brief Matches template specialization types.
 ///
 /// Given

@@ -725,7 +725,7 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
       OS << " __attribute__((sysv_abi))";
       break;
     case CC_SpirFunction:
-    case CC_SpirKernel:
+    case CC_OpenCLKernel:
       // Do nothing. These CCs are not available as attributes.
       break;
     case CC_Swift:
