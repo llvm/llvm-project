@@ -532,8 +532,6 @@ ClangUserExpression::Parse (DiagnosticManager &diagnostic_manager,
                     m_fixed_text = fixed_expression.substr(fixed_start, fixed_end - fixed_start);
             }
         }
-        diagnostic_manager.Printf(eDiagnosticSeverityError, "%u error%s parsing expression", num_errors,
-                                  num_errors == 1 ? "" : "s");
 
         ResetDeclMap(); // We are being careful here in the case of breakpoint conditions.
 

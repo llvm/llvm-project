@@ -115,9 +115,6 @@ ClangUtilityFunction::Install(DiagnosticManager &diagnostic_manager, ExecutionCo
 
     if (num_errors)
     {
-        diagnostic_manager.Printf(eDiagnosticSeverityError, "%d error%s parsing expression", num_errors,
-                                  num_errors == 1 ? "" : "s");
-
         ResetDeclMap();
 
         return false;
