@@ -1842,15 +1842,29 @@ public:
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
 
+  typedef ArrayInfoMapTy::iterator array_iterator;
+  typedef ArrayInfoMapTy::const_iterator const_array_iterator;
   typedef iterator_range<ArrayInfoMapTy::iterator> array_range;
   typedef iterator_range<ArrayInfoMapTy::const_iterator> const_array_range;
 
+  inline array_iterator array_begin() { return ScopArrayInfoMap.begin(); }
+
+  inline array_iterator array_end() { return ScopArrayInfoMap.end(); }
+
+  inline const_array_iterator array_begin() const {
+    return ScopArrayInfoMap.begin();
+  }
+
+  inline const_array_iterator array_end() const {
+    return ScopArrayInfoMap.end();
+  }
+
   inline array_range arrays() {
-    return array_range(ScopArrayInfoMap.begin(), ScopArrayInfoMap.end());
+    return array_range(array_begin(), array_end());
   }
 
   inline const_array_range arrays() const {
-    return const_array_range(ScopArrayInfoMap.begin(), ScopArrayInfoMap.end());
+    return const_array_range(array_begin(), array_end());
   }
 
   /// @brief Return the isl_id that represents a certain parameter.

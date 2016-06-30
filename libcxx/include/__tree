@@ -946,6 +946,8 @@ private:
     typedef allocator_traits<__node_base_allocator> __node_base_traits;
     static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
                  "Allocator does not rebind pointers in a sane manner.");
+    static_assert((is_copy_constructible<value_compare>::value),
+                 "Comparator must be copy-constructible.");
 
 private:
     __node_pointer                                     __begin_node_;

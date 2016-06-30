@@ -9,23 +9,21 @@
 
 // <map>
 
-// class multimap
-
-// multimap();
-
-// XFAIL: gcc
+// Check that std::map fails to instantiate if the comparison predicate is 
+// not copy-constructible. This is LWG issue 2436
 
 #include <map>
 
-struct X
-{
-    std::multimap<int, X> m;
-    std::multimap<int, X>::iterator i;
-    std::multimap<int, X>::const_iterator ci;
-    std::multimap<int, X>::reverse_iterator ri;
-    std::multimap<int, X>::const_reverse_iterator cri;
-};
+template <class T>
+struct Comp {
+	bool operator () (const T& lhs, const T& rhs) const { return lhs < rhs; }
 
-int main()
-{
+	Comp () {}
+private:
+	Comp (const Comp &); // declared but not defined
+	};
+
+
+int main() {
+	std::map<int, int, Comp<int> > m;
 }

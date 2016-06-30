@@ -9,23 +9,21 @@
 
 // <map>
 
-// Check that std::map and it's iterators can be instantiated with an incomplete
-// type.
-
-// XFAIL: gcc
+// Check that std::multimap fails to instantiate if the comparison predicate is 
+// not copy-constructible. This is LWG issue 2436
 
 #include <map>
 
-struct A {
-    typedef std::map<A, A> Map;
-    int data;
-    Map m;
-    Map::iterator it;
-    Map::const_iterator cit;
-};
+template <class T>
+struct Comp {
+	bool operator () (const T& lhs, const T& rhs) const { return lhs < rhs; }
 
-inline bool operator==(A const& L, A const& R) { return &L == &R; }
-inline bool operator<(A const& L, A const& R)  { return L.data < R.data; }
+	Comp () {}
+private:
+	Comp (const Comp &); // declared but not defined
+	};
+
+
 int main() {
-    A a;
+	std::multimap<int, int, Comp<int> > m;
 }

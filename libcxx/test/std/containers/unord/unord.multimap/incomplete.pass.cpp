@@ -13,6 +13,8 @@
 // Check that std::unordered_multimap and it's iterators can be instantiated with an incomplete
 // type.
 
+// XFAIL: gcc
+
 #include <unordered_map>
 
 template <class Tp>

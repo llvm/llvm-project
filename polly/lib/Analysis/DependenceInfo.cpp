@@ -368,6 +368,8 @@ void Dependences::calculateDependences(Scop &S) {
   long MaxOpsOld = isl_ctx_get_max_operations(IslCtx.get());
   if (OptComputeOut)
     isl_ctx_set_max_operations(IslCtx.get(), OptComputeOut);
+
+  auto OnErrorStatus = isl_options_get_on_error(IslCtx.get());
   isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_CONTINUE);
 
   DEBUG(dbgs() << "Read: " << Read << "\n";
@@ -436,7 +438,7 @@ void Dependences::calculateDependences(Scop &S) {
     RAW = WAW = WAR = nullptr;
     isl_ctx_reset_error(IslCtx.get());
   }
-  isl_options_set_on_error(IslCtx.get(), ISL_ON_ERROR_ABORT);
+  isl_options_set_on_error(IslCtx.get(), OnErrorStatus);
   isl_ctx_reset_operations(IslCtx.get());
   isl_ctx_set_max_operations(IslCtx.get(), MaxOpsOld);
 

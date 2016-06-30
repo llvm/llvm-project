@@ -20,10 +20,10 @@ def build_id: F<"build-id">, HelpText<"Generate build ID note">;
 
 def build_id_eq: J<"build-id=">, HelpText<"Generate build ID note">;
 
-def L: JS<"L">, MetaVarName<"<dir>">,
+def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 
-def O: J<"O">, HelpText<"Optimize output file size">;
+def O: Joined<["-"], "O">, HelpText<"Optimize output file size">;
 
 def allow_multiple_definition: F<"allow-multiple-definition">,
   HelpText<"Allow multiple definitions">;
@@ -82,13 +82,13 @@ def gc_sections: F<"gc-sections">,
 def init: S<"init">, MetaVarName<"<symbol>">,
   HelpText<"Specify an initializer function">;
 
-def l: JS<"l">, MetaVarName<"<libName>">,
+def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 
 def lto_O: J<"lto-O">, MetaVarName<"<opt-level>">,
   HelpText<"Optimization level for LTO">;
 
-def m: JS<"m">, HelpText<"Set target emulation">;
+def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
 
 def no_as_needed: F<"no-as-needed">,
   HelpText<"Always DT_NEEDED for shared libraries">;
@@ -169,7 +169,7 @@ def whole_archive: F<"whole-archive">,
 def wrap: S<"wrap">, MetaVarName<"<symbol>">,
   HelpText<"Use wrapper functions for symbol">;
 
-def z: JS<"z">, MetaVarName<"<option>">,
+def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
 // Aliases
@@ -179,11 +179,11 @@ def alias_Bstatic_dn: F<"dn">, Alias<Bstatic>;
 def alias_Bstatic_non_shared: F<"non_shared">, Alias<Bstatic>;
 def alias_Bstatic_static: F<"static">, Alias<Bstatic>;
 def alias_L__library_path: J<"library-path=">, Alias<L>;
-def alias_discard_all_x: F<"x">, Alias<discard_all>;
-def alias_discard_locals_X: F<"X">, Alias<discard_locals>;
+def alias_discard_all_x: Flag<["-"], "x">, Alias<discard_all>;
+def alias_discard_locals_X: Flag<["-"], "X">, Alias<discard_locals>;
 def alias_dynamic_list: J<"dynamic-list=">, Alias<dynamic_list>;
-def alias_entry_e: JS<"e">, Alias<entry>;
-def alias_export_dynamic_E: F<"E">, Alias<export_dynamic>;
+def alias_entry_e: JoinedOrSeparate<["-"], "e">, Alias<entry>;
+def alias_export_dynamic_E: Flag<["-"], "E">, Alias<export_dynamic>;
 def alias_export_dynamic_symbol: J<"export-dynamic-symbol=">,
   Alias<export_dynamic_symbol>;
 def alias_fini_fini: J<"fini=">, Alias<fini>;
@@ -192,17 +192,17 @@ def alias_init_init: J<"init=">, Alias<init>;
 def alias_l__library: J<"library=">, Alias<l>;
 def alias_o_output: Joined<["--"], "output=">, Alias<o>;
 def alias_pie_pic_executable: F<"pic-executable">, Alias<pie>;
-def alias_relocatable_r: F<"r">, Alias<relocatable>;
-def alias_rpath_R: J<"R">, Alias<rpath>;
+def alias_relocatable_r: Flag<["-"], "r">, Alias<relocatable>;
+def alias_rpath_R: Joined<["-"], "R">, Alias<rpath>;
 def alias_rpath_rpath: J<"rpath=">, Alias<rpath>;
-def alias_script_T: JS<"T">, Alias<script>;
+def alias_script_T: JoinedOrSeparate<["-"], "T">, Alias<script>;
 def alias_shared_Bshareable: F<"Bshareable">, Alias<shared>;
-def alias_soname_h: JS<"h">, Alias<soname>;
+def alias_soname_h: JoinedOrSeparate<["-"], "h">, Alias<soname>;
 def alias_soname_soname: S<"soname">, Alias<soname>;
-def alias_strip_all: F<"s">, Alias<strip_all>;
-def alias_strip_debug_S: F<"S">, Alias<strip_debug>;
-def alias_trace: F<"t">, Alias<trace>;
-def alias_trace_symbol_y : JS<"y">, Alias<trace_symbol>;
+def alias_strip_all: Flag<["-"], "s">, Alias<strip_all>;
+def alias_strip_debug_S: Flag<["-"], "S">, Alias<strip_debug>;
+def alias_trace: Flag<["-"], "t">, Alias<trace>;
+def alias_trace_symbol_y : JoinedOrSeparate<["-"], "y">, Alias<trace_symbol>;
 def alias_undefined_u: JoinedOrSeparate<["-"], "u">, Alias<undefined>;
 def alias_version_V: Flag<["-"], "V">, Alias<version>;
 def alias_version_v: Flag<["-"], "v">, Alias<version>;
@@ -212,9 +212,9 @@ def alias_wrap_wrap: J<"wrap=">, Alias<wrap>;
 // than traditional linkers, so we don't need --start-group and --end-group.
 // These options are recongized for compatibility but ignored.
 def end_group: F<"end-group">;
-def end_group_paren: F<")">;
+def end_group_paren: Flag<["-"], ")">;
 def start_group: F<"start-group">;
-def start_group_paren: F<"(">;
+def start_group_paren: Flag<["-"], "(">;
 
 // Ignore LTO plugin-related options.
 // clang -flto passes -plugin and -plugin-opt to the linker. This is required
@@ -247,10 +247,10 @@ def rpath_link_eq: J<"rpath-link=">;
 def sort_common: F<"sort-common">;
 def warn_execstack: F<"warn-execstack">;
 def warn_shared_textrel: F<"warn-shared-textrel">;
-def G: S<"G">;
+def G: Separate<["-"], "G">;
 
 // Aliases for ignored options
-def alias_define_common_d: F<"d">, Alias<define_common>;
+def alias_define_common_d: Flag<["-"], "d">, Alias<define_common>;
 def alias_define_common_dc: F<"dc">, Alias<define_common>;
 def alias_define_common_dp: F<"dp">, Alias<define_common>;
 def alias_version_script_version_script: J<"version-script=">,
