@@ -9,8 +9,8 @@ MATH_MANGLE(ilogb)(double x)
     if (AMD_OPT()) {
         r = BUILTIN_FREXP_EXP_F64(x) - 1;
     } else {
-        r = ((as_int2(x).hi >> 20) & 0x7ff) - EXPBIAS_DP64;
-        int rs = -1011 - (int)MATH_CLZL(as_long(x) & MANTBITS_DP64);
+        r = ((AS_INT2(x).hi >> 20) & 0x7ff) - EXPBIAS_DP64;
+        int rs = -1011 - (int)MATH_CLZL(AS_LONG(x) & MANTBITS_DP64);
         r = BUILTIN_CLASS_F64(x, CLASS_PSUB|CLASS_NSUB) ? rs : r;
     }
 

@@ -16,7 +16,7 @@ MATH_MANGLE(expm1)(double x)
     double z;
 
     if (x > log_OneMinus_OneByFour & x < log_OnePlus_OneByFour) {
-        double u = as_double(as_ulong(x) & 0xffffffffff000000UL);
+        double u = AS_DOUBLE(AS_ULONG(x) & 0xffffffffff000000UL);
         double v = x - u;
         double y = u * u * 0.5;
         double t = v * (x + u) * 0.5;
@@ -63,15 +63,15 @@ MATH_MANGLE(expm1)(double x)
 	                5.00000000000000008883e-01);
         q = MATH_MAD(r*r, q, r);
 
-        double twopm = as_double((long)(EXPBIAS_DP64 + m) << EXPSHIFTBITS_DP64);
-        double twopmm = as_double((long)(EXPBIAS_DP64 - m) << EXPSHIFTBITS_DP64);
+        double twopm = AS_DOUBLE((long)(EXPBIAS_DP64 + m) << EXPSHIFTBITS_DP64);
+        double twopmm = AS_DOUBLE((long)(EXPBIAS_DP64 - m) << EXPSHIFTBITS_DP64);
 
         // Computations for m > 52, including where result is close to Inf
-        ulong uval = as_ulong(0x1.0p+1023 * (f1 + (f * q + (f2))));
+        ulong uval = AS_ULONG(0x1.0p+1023 * (f1 + (f * q + (f2))));
         int e = (int)(uval >> EXPSHIFTBITS_DP64) + 1;
 
-        double zme1024 = as_double(((long)e << EXPSHIFTBITS_DP64) | (uval & MANTBITS_DP64));
-        zme1024 = e == 2047 ? as_double(PINFBITPATT_DP64) : zme1024;
+        double zme1024 = AS_DOUBLE(((long)e << EXPSHIFTBITS_DP64) | (uval & MANTBITS_DP64));
+        zme1024 = e == 2047 ? AS_DOUBLE(PINFBITPATT_DP64) : zme1024;
 
         double zmg52 = twopm * (f1 + MATH_MAD(f, q, f2 - twopmm));
         zmg52 = m == 1024 ? zme1024 : zmg52;
@@ -87,7 +87,7 @@ MATH_MANGLE(expm1)(double x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        z = x > max_expm1_arg ? as_double(PINFBITPATT_DP64) : z;
+        z = x > max_expm1_arg ? AS_DOUBLE(PINFBITPATT_DP64) : z;
     }
 
     z = x < min_expm1_arg ? -1.0 : z;

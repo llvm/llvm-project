@@ -158,7 +158,7 @@ MATH_MANGLE(lgamma_r)(double x, __private int *signp)
     const double z5  = -0x1.a8b9c17aa6149p-3;
 
     double ax = BUILTIN_ABS_F64(x);
-    uint hax = as_uint2(ax).hi;
+    uint hax = AS_UINT2(ax).hi;
     double ret;
 
     if (hax < 0x3f700000) {
@@ -265,14 +265,14 @@ MATH_MANGLE(lgamma_r)(double x, __private int *signp)
         double negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F64(t * x)));
         ret = negadj - ret;
         bool z = BUILTIN_FRACTION_F64(x) == 0.0;
-        ret = z ? as_double(PINFBITPATT_DP64) : ret;
+        ret = z ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         s = t < 0.0 ? -1 : 1;
         s = z ? 0 : s;
     }
 
     if (!FINITE_ONLY_OPT()) {
         // Handle negative integer, Inf, NaN
-        ret = BUILTIN_CLASS_F64(ax, CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? as_double(PINFBITPATT_DP64) : ret;
+        ret = BUILTIN_CLASS_F64(ax, CLASS_PINF) | (x < 0.0f & hax >= 0x43300000) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) ? x : ret;
     }
 

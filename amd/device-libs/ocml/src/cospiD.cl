@@ -13,7 +13,7 @@ MATH_MANGLE(cospi)(double x)
 
     // 2^53 <= |x| < Inf, the result is always even integer
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? as_double(QNANBITPATT_DP64) : 1.0;
+        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? AS_DOUBLE(QNANBITPATT_DP64) : 1.0;
     } else {
 	ret = 1.0;
     }

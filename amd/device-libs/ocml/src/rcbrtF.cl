@@ -13,7 +13,7 @@ MATH_MANGLE(rcbrt)(float x)
         x = BUILTIN_CANONICALIZE_F32(x);
     }
 
-    uint xi = as_uint(x);
+    uint xi = AS_UINT(x);
     uint axi = xi & EXSIGNBIT_SP32;
     uint xsign = axi ^ xi;
     xi = axi;
@@ -22,7 +22,7 @@ MATH_MANGLE(rcbrt)(float x)
 
     if (!DAZ_OPT()) {
         // Treat subnormals
-        uint xis = as_uint(as_float(xi | 0x3f800000) - 1.0f);
+        uint xis = AS_UINT(AS_FLOAT(xi | 0x3f800000) - 1.0f);
         int ms = (xis >> EXPSHIFTBITS_SP32) - 253;
         int c = m == -127;
         xi = c ? xis : xi;
@@ -31,10 +31,10 @@ MATH_MANGLE(rcbrt)(float x)
 
     int m3 = m / 3;
     int rem = m - m3*3;
-    float mf = as_float((EXPBIAS_SP32 - m3) << EXPSHIFTBITS_SP32);
+    float mf = AS_FLOAT((EXPBIAS_SP32 - m3) << EXPSHIFTBITS_SP32);
 
     uint indx = (xi & 0x007f0000) + ((xi & 0x00008000) << 1);
-    float f = as_float((xi & MANTBITS_SP32) | 0x3f000000) - as_float(indx | 0x3f000000);
+    float f = AS_FLOAT((xi & MANTBITS_SP32) | 0x3f000000) - AS_FLOAT(indx | 0x3f000000);
 
     indx >>= 16;
     float r = f * p_log_inv[indx];
@@ -67,12 +67,12 @@ MATH_MANGLE(rcbrt)(float x)
     z *= mf;
 
     if (!FINITE_ONLY_OPT()) {
-        z = axi == 0 ? as_float(PINFBITPATT_SP32) : z;
+        z = axi == 0 ? AS_FLOAT(PINFBITPATT_SP32) : z;
         z = axi == PINFBITPATT_SP32 ? 0.0f : z;
         z = axi > PINFBITPATT_SP32 ? axi : z;
     }
     
-    z = as_float(as_uint(z) | xsign);
+    z = AS_FLOAT(AS_UINT(z) | xsign);
 
     return z;
 }

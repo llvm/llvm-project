@@ -4,11 +4,11 @@
 CONSTATTR INLINEATTR float
 MATH_MANGLE(nextafter)(float x, float y)
 {
-    int ix = as_int(x);
+    int ix = AS_INT(x);
     int ax = ix & EXSIGNBIT_SP32;
     int mx = SIGNBIT_SP32 - ix;
     mx = ix < 0 ? mx : ix;
-    int iy = as_int(y);
+    int iy = AS_INT(y);
     int ay = iy & EXSIGNBIT_SP32;
     int my = SIGNBIT_SP32 - iy;
     my = iy < 0 ? my : iy;
@@ -20,6 +20,6 @@ MATH_MANGLE(nextafter)(float x, float y)
         r = ay > PINFBITPATT_SP32 ? iy : r;
     }
     r = (ax | ay) == 0 | ix == iy ? iy : r;
-    return as_float(r);
+    return AS_FLOAT(r);
 }
 

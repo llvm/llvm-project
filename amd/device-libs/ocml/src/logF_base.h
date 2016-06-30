@@ -100,7 +100,7 @@ MATH_MANGLE(log)(float x)
                     const float ch = 0x1.62e000p-1f;
                     const float ct = 0x1.0bfbe8p-15f; // ch + ct is ln(2) to more than 36 bits
 #endif
-                    float yh = as_float(as_uint(y) & 0xfffff000);
+                    float yh = AS_FLOAT(AS_UINT(y) & 0xfffff000);
                     float yt = y - yh;
 	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
                 }
@@ -148,7 +148,7 @@ MATH_MANGLE(log)(float x)
                     const float ch = 0x1.62e000p-1f;
                     const float ct = 0x1.0bfbe8p-15f; // ch + ct is ln(2) to more than 36 bits
 #endif
-                    float yh = as_float(as_uint(y) & 0xfffff000);
+                    float yh = AS_FLOAT(AS_UINT(y) & 0xfffff000);
                     float yt = y - yh;
 	            r = MATH_MAD(yh, ch, MATH_MAD(yt, ch, MATH_MAD(yh, ct, yt*ct)));
                 }
@@ -196,11 +196,11 @@ MATH_MANGLE(log)(float x)
             if (!DAZ_OPT()) {
                 float xs = x * 0x1.0p+30f;
                 bool c = x < 0x1.0p-96f;
-                xi = as_uint(c ? xs : x);
+                xi = AS_UINT(c ? xs : x);
                 m = (int)(xi >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32 - (c ? 30 : 0);
             } else {
                 x = BUILTIN_CANONICALIZE_F32(x);
-                xi = as_uint(x);
+                xi = AS_UINT(x);
                 m = (int)(xi >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
             }
 
@@ -208,7 +208,7 @@ MATH_MANGLE(log)(float x)
             uint indx = (xi & 0x007f0000) + ((xi & 0x00008000) << 1);
 
             // F - Y
-            float f = as_float(0x3f000000 | indx) - as_float(0x3f000000 | (xi & MANTBITS_SP32));
+            float f = AS_FLOAT(0x3f000000 | indx) - AS_FLOAT(0x3f000000 | (xi & MANTBITS_SP32));
 
             indx = indx >> 16;
             r = f * p_inv[indx];
@@ -243,11 +243,11 @@ MATH_MANGLE(log)(float x)
             z2 = MATH_MAD(u, MATH_MAD(v, 0x1.99999ap-7f, 0x1.555556p-4f)*v, -corr);
 
 #if defined COMPILING_LOG2
-            z1 = as_float(as_int(r) & 0xffff0000);
+            z1 = AS_FLOAT(AS_INT(r) & 0xffff0000);
             z2 = z2 + (r - z1);
             z = MATH_MAD(z1, LOG2E_HEAD, MATH_MAD(z2, LOG2E_HEAD, MATH_MAD(z1, LOG2E_TAIL, z2*LOG2E_TAIL)));
 #elif defined COMPILING_LOG10
-            z1 = as_float(as_int(r) & 0xffff0000);
+            z1 = AS_FLOAT(AS_INT(r) & 0xffff0000);
             z2 = z2 + (r - z1);
             z = MATH_MAD(z1, LOG10E_HEAD, MATH_MAD(z2, LOG10E_HEAD, MATH_MAD(z1, LOG10E_TAIL, z2*LOG10E_TAIL)));
 #else
@@ -257,11 +257,11 @@ MATH_MANGLE(log)(float x)
 
         // Corner cases
         if (!FINITE_ONLY_OPT()) {
-            uint xi = as_uint(x);
+            uint xi = AS_UINT(x);
             uint ax = xi & EXSIGNBIT_SP32;
             z = ax >= PINFBITPATT_SP32 ? x : z;
-            z = xi != ax ? as_float(QNANBITPATT_SP32) : z;
-            z = ax == 0 ? as_float(NINFBITPATT_SP32) : z;
+            z = xi != ax ? AS_FLOAT(QNANBITPATT_SP32) : z;
+            z = ax == 0 ? AS_FLOAT(NINFBITPATT_SP32) : z;
         }
 
         return z;

@@ -7,7 +7,7 @@ MATH_MANGLE(acosh)(double x)
     double ret;
 
     if (x < 1.0) {
-        ret = as_double(QNANBITPATT_DP64);
+        ret = AS_DOUBLE(QNANBITPATT_DP64);
     } else if (x < 2.5) {
         // Use x+sqrt(x^2-1) = 1 + t+sqrt(t^2+2t), where t=x-1
         // Use extra precision

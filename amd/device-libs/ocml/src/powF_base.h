@@ -76,15 +76,15 @@ MATH_MANGLE(pow)(float x, float y)
         
         if (AMD_OPT()) {
             mfn = (float)(BUILTIN_FREXP_EXP_F32(ax) - 1);
-            ixn = as_int(BUILTIN_FREXP_MANT_F32(ax)) + (1 << EXPSHIFTBITS_SP32);
+            ixn = AS_INT(BUILTIN_FREXP_MANT_F32(ax)) + (1 << EXPSHIFTBITS_SP32);
         } else {
             if (DAZ_OPT()) {
-                mfn = (float)((as_int(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32);
-                ixn = as_int(ax);
+                mfn = (float)((AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32);
+                ixn = AS_INT(ax);
             } else {
-                m = (as_int(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+                m = (AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
                 float mf = (float)m;
-                int ixs = as_int(as_float(as_int(ax) | ONEEXPBITS_SP32) - 1.0f);
+                int ixs = AS_INT(AS_FLOAT(AS_INT(ax) | ONEEXPBITS_SP32) - 1.0f);
                 float mfs = (float)((ixs >> EXPSHIFTBITS_SP32) - 253);
                 bool c = m == -127;
                 ixn = c ? ixs : ax;
@@ -95,7 +95,7 @@ MATH_MANGLE(pow)(float x, float y)
         int indx = (ixn & 0x007f0000) + ((ixn & 0x00008000) << 1);
 
         // F - Y
-        float f = as_float(HALFEXPBITS_SP32 | indx) - as_float(HALFEXPBITS_SP32 | (ixn & MANTBITS_SP32));
+        float f = AS_FLOAT(HALFEXPBITS_SP32 | indx) - AS_FLOAT(HALFEXPBITS_SP32 | (ixn & MANTBITS_SP32));
 
         indx >>= 16;
         tv = p_inv[indx];
@@ -135,17 +135,17 @@ MATH_MANGLE(pow)(float x, float y)
     }
     
     // Final split of log
-    float gh = as_float(as_int(l) & 0xfffff000);
+    float gh = AS_FLOAT(AS_INT(l) & 0xfffff000);
     float gt = ((ltt - (lt - lth)) + ((lh - l) + lt)) + (l - gh);
 
     // Now split y
-    float yh = as_float(as_int(y) & 0xfffff000);
+    float yh = AS_FLOAT(AS_INT(y) & 0xfffff000);
 
 #if defined(COMPILING_POWN)
     float yt = (float)(ny - (int)yh);
 #elif defined(COMPILING_ROOTN)
     float fny = (float)ny;
-    float fnyh = as_float(as_int(fny) & 0xfffff000);
+    float fnyh = AS_FLOAT(AS_INT(fny) & 0xfffff000);
     float fnyt = (float)(ny - (int)fnyh);
     float yt = MATH_FAST_DIV(MATH_MAD(-fnyt, yh, MATH_MAD(-fnyh, yh, 1.0f)), fny);
 #else
@@ -179,13 +179,13 @@ MATH_MANGLE(pow)(float x, float y)
     if (AMD_OPT()) {
         expylnx = BUILTIN_FLDEXP_F32(expylnx, m);
     } else {
-        float sexpylnx = expylnx * as_float(0x1 << (m + 149));
-        float texpylnx = as_float(as_int(expylnx) + (m << EXPSHIFTBITS_SP32));
+        float sexpylnx = expylnx * AS_FLOAT(0x1 << (m + 149));
+        float texpylnx = AS_FLOAT(AS_INT(expylnx) + (m << EXPSHIFTBITS_SP32));
         expylnx = m < -125 ? sexpylnx : texpylnx;
     }
 
     // Result is +-Inf if (ylogx + ylogx_t) > 128*log2
-    expylnx = (ylogx > 0x1.62e430p+6f) | (ylogx == 0x1.62e430p+6f & ylogx_t > -0x1.05c610p-22f) ? as_float(PINFBITPATT_SP32) : expylnx;
+    expylnx = (ylogx > 0x1.62e430p+6f) | (ylogx == 0x1.62e430p+6f & ylogx_t > -0x1.05c610p-22f) ? AS_FLOAT(PINFBITPATT_SP32) : expylnx;
 
     // Result is 0 if ylogx < -149*log2
     expylnx = ylogx <  -0x1.9d1da0p+6f ? 0.0f : expylnx;
@@ -229,21 +229,21 @@ MATH_MANGLE(pow)(float x, float y)
     bool y_pos = BUILTIN_CLASS_F32(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ax_lt_1 & y_eq_ninf ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_lt_1 & y_eq_ninf ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_lt_1 & y_eq_pinf ? 0.0f : ret;
         ret = ax_eq_1 & ay_lt_inf ? 1.0f : ret;
-        ret = ax_eq_1 & ay_eq_pinf ? as_float(QNANBITPATT_SP32) : ret;
+        ret = ax_eq_1 & ay_eq_pinf ? AS_FLOAT(QNANBITPATT_SP32) : ret;
         ret = ax_gt_1 & y_eq_ninf ? 0.0f : ret;
-        ret = ax_gt_1 & y_eq_pinf ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_gt_1 & y_eq_pinf ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_lt_pinf & ay_eq_0 ? 1.0f : ret;
         ret = ax_eq_pinf & !y_pos ? 0.0f : ret;
-        ret = ax_eq_pinf & y_pos ? as_float(PINFBITPATT_SP32) : ret;
-        ret = ax_eq_pinf & y_eq_pinf ? as_float(PINFBITPATT_SP32) : ret;
-        ret = ax_eq_pinf & ay_eq_0 ? as_float(QNANBITPATT_SP32) : ret;
-        ret = ax_eq_0 & !y_pos ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_pinf & y_pos ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_pinf & y_eq_pinf ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_pinf & ay_eq_0 ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        ret = ax_eq_0 & !y_pos ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_eq_0 & y_pos ? 0.0f : ret;
-        ret = ax_eq_0 & ay_eq_0 ? as_float(QNANBITPATT_SP32) : ret;
-        ret = ax_ne_0 & !x_pos ? as_float(QNANBITPATT_SP32) : ret;
+        ret = ax_eq_0 & ay_eq_0 ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        ret = ax_ne_0 & !x_pos ? AS_FLOAT(QNANBITPATT_SP32) : ret;
         ret = ax_eq_nan ? x : ret;
         ret = ay_eq_nan ? y : ret;
     } else {
@@ -262,18 +262,18 @@ MATH_MANGLE(pow)(float x, float y)
     bool y_pos = ny >= 0;
 
     if (!FINITE_ONLY_OPT()) {
-        float xinf = BUILTIN_COPYSIGN_F32(as_float(PINFBITPATT_SP32), x);
+        float xinf = BUILTIN_COPYSIGN_F32(AS_FLOAT(PINFBITPATT_SP32), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty == 2) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_0 & !y_pos & (inty == 2) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_eq_0 & y_pos & (inty == 2) ? 0.0f : ret;
         float xzero = BUILTIN_COPYSIGN_F32(0.0f, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0f : ret;
         ret = x_eq_ninf & !y_pos & (inty != 1) ? 0.0f : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_float(NINFBITPATT_SP32) : ret;
-        ret = x_eq_ninf & y_pos & (inty != 1) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_FLOAT(NINFBITPATT_SP32) : ret;
+        ret = x_eq_ninf & y_pos & (inty != 1) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = x_eq_pinf & !y_pos ? 0.0f : ret;
-        ret = x_eq_pinf & y_pos ? as_float(PINFBITPATT_SP32) : ret;
+        ret = x_eq_pinf & y_pos ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_eq_nan ? x : ret;
     } else {
         float xzero = BUILTIN_COPYSIGN_F32(0.0f, x);
@@ -292,19 +292,19 @@ MATH_MANGLE(pow)(float x, float y)
     bool y_pos = ny >= 0;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = !x_pos & (inty == 2) ? as_float(QNANBITPATT_SP32) : ret;
-        float xinf = BUILTIN_COPYSIGN_F32(as_float(PINFBITPATT_SP32), x);
+        ret = !x_pos & (inty == 2) ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        float xinf = BUILTIN_COPYSIGN_F32(AS_FLOAT(PINFBITPATT_SP32), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty == 2) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_0 & !y_pos & (inty == 2) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_eq_0 & y_pos & (inty == 2) ? 0.0f : ret;
         float xzero = BUILTIN_COPYSIGN_F32(0.0f, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_float(NINFBITPATT_SP32) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_FLOAT(NINFBITPATT_SP32) : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0f : ret;
         ret = x_eq_pinf & !y_pos ? 0.0f : ret;
-        ret = x_eq_pinf & y_pos ? as_float(PINFBITPATT_SP32) : ret;
+        ret = x_eq_pinf & y_pos ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_eq_nan ? x : ret;
-        ret = ny == 0 ? as_float(QNANBITPATT_SP32) : ret;
+        ret = ny == 0 ? AS_FLOAT(QNANBITPATT_SP32) : ret;
     } else {
         float xzero = BUILTIN_COPYSIGN_F32(0.0f, x);
 	ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
@@ -331,32 +331,32 @@ MATH_MANGLE(pow)(float x, float y)
     bool y_pos = BUILTIN_CLASS_F32(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = !x_pos & (inty == 0) ? as_float(QNANBITPATT_SP32) : ret;
-        ret = ax_lt_1 & y_eq_ninf ? as_float(PINFBITPATT_SP32) : ret;
+        ret = !x_pos & (inty == 0) ? AS_FLOAT(QNANBITPATT_SP32) : ret;
+        ret = ax_lt_1 & y_eq_ninf ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_gt_1 & y_eq_ninf ? 0.0f : ret;
         ret = ax_lt_1 & y_eq_pinf ? 0.0f : ret;
-        ret = ax_gt_1 & y_eq_pinf ? as_float(PINFBITPATT_SP32) : ret;
-        float xinf = BUILTIN_COPYSIGN_F32(as_float(PINFBITPATT_SP32), x);
+        ret = ax_gt_1 & y_eq_pinf ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        float xinf = BUILTIN_COPYSIGN_F32(AS_FLOAT(PINFBITPATT_SP32), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty != 1) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_0 & !y_pos & (inty != 1) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         float xzero = BUILTIN_COPYSIGN_F32(0.0f, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
         ret = ax_eq_0 & y_pos & (inty != 1) ? 0.0f : ret;
-        ret = ax_eq_0 & y_eq_ninf ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_0 & y_eq_ninf ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = (x == -1.0f) & ay_eq_pinf ? 1.0f : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0f : ret;
         ret = x_eq_ninf & !y_pos & (inty != 1) ? 0.0f : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_float(NINFBITPATT_SP32) : ret;
-        ret = x_eq_ninf & y_pos & (inty != 1) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_FLOAT(NINFBITPATT_SP32) : ret;
+        ret = x_eq_ninf & y_pos & (inty != 1) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = x_eq_pinf & !y_pos ? 0.0f : ret;
-        ret = x_eq_pinf & y_pos ? as_float(PINFBITPATT_SP32) : ret;
+        ret = x_eq_pinf & y_pos ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = ax_eq_nan ? x : ret;
         ret = ay_eq_nan ? y : ret;
     } else {
         // XXX work around conformance test incorrectly checking these cases
-        float xinf = BUILTIN_COPYSIGN_F32(as_float(PINFBITPATT_SP32), x);
+        float xinf = BUILTIN_COPYSIGN_F32(AS_FLOAT(PINFBITPATT_SP32), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty != 1) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = ax_eq_0 & !y_pos & (inty != 1) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
 
         float xzero = BUILTIN_COPYSIGN_F32(0.0f, x);
 	ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;

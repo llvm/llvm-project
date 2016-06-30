@@ -4,7 +4,7 @@
 CONSTATTR INLINEATTR float
 MATH_MANGLE(logb)(float x)
 {
-    int ax = as_int(x) & EXSIGNBIT_SP32;
+    int ax = AS_INT(x) & EXSIGNBIT_SP32;
     float ret;
 
     if (AMD_OPT()) {
@@ -18,8 +18,8 @@ MATH_MANGLE(logb)(float x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ax >= PINFBITPATT_SP32 ? as_float(ax) : ret;
-        ret = x == 0.0f ? as_float(NINFBITPATT_SP32) : ret;
+        ret = ax >= PINFBITPATT_SP32 ? AS_FLOAT(ax) : ret;
+        ret = x == 0.0f ? AS_FLOAT(NINFBITPATT_SP32) : ret;
     }
 
     return ret;

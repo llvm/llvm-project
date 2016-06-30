@@ -42,7 +42,7 @@ MATH_MANGLE(atan2)(half y, half x)
 
         ret = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN) |
               BUILTIN_CLASS_F16(y, CLASS_SNAN|CLASS_QNAN) ?
-              as_half((short)QNANBITPATT_HP16) : ret;
+              AS_HALF((short)QNANBITPATT_HP16) : ret;
     }
 
     return ret;

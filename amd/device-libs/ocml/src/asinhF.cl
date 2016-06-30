@@ -4,7 +4,7 @@
 PUREATTR float
 MATH_MANGLE(asinh)(float x)
 {
-    uint ux = as_uint(x);
+    uint ux = AS_UINT(x);
     uint ax = ux & EXSIGNBIT_SP32;
     uint xsgn = ax ^ ux;
     float z;
@@ -37,12 +37,12 @@ MATH_MANGLE(asinh)(float x)
         // approximated by asinhf(x) = ln(abs(x) + sqrt(x*x+1))
         // with the sign of x (see Abramowitz and Stegun 4.6.20)
 
-        float absx = as_float(ax);
+        float absx = AS_FLOAT(ax);
         int hi = ax > 0x46000000U;
         float y = MATH_FAST_SQRT(MATH_MAD(absx, absx, 1.0f)) + absx;
         y = hi ? absx : y;
         float r = MATH_MANGLE(log)(y) + (hi ? 0x1.62e430p-1f : 0.0f);
-        z = as_float(xsgn | as_uint(r));
+        z = AS_FLOAT(xsgn | AS_UINT(r));
     }
 
     if (!FINITE_ONLY_OPT()) {

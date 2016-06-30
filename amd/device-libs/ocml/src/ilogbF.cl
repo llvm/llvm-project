@@ -4,7 +4,7 @@
 CONSTATTR INLINEATTR int
 MATH_MANGLE(ilogb)(float x)
 {
-    uint ux = as_uint(x) & EXSIGNBIT_SP32;
+    uint ux = AS_UINT(x) & EXSIGNBIT_SP32;
     int r;
     if (AMD_OPT()) {
         r = BUILTIN_FREXP_EXP_F32(x) - 1;

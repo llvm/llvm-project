@@ -5,11 +5,11 @@
 CONSTATTR INLINEATTR float
 MATH_MANGLE(tanpi)(float x)
 {
-    int ix = as_int(x); 
+    int ix = AS_INT(x); 
     int xsgn = ix & SIGNBIT_SP32;
     int xnsgn = xsgn ^ SIGNBIT_SP32;
     ix ^= xsgn;
-    float ax = as_float(ix);
+    float ax = AS_FLOAT(ix);
     int iax = (int)ax;
     float r = BUILTIN_FRACTION_F32(ax);
     int xodd = xsgn ^ (iax & 0x1 ? SIGNBIT_SP32 : 0);
@@ -51,12 +51,12 @@ MATH_MANGLE(tanpi)(float x)
 
     const float pi = 0x1.921fb6p+1f;
     float t = MATH_PRIVATE(tanred)(a * pi, e);
-    int jr = s ^ as_int(t);
+    int jr = s ^ AS_INT(t);
 
     jr = r == 0.5f ? xodd | PINFBITPATT_SP32 : jr;
 
     ir = ix < 0x4b000000 ? jr : ir;
 
-    return as_float(ir);
+    return AS_FLOAT(ir);
 }
 

@@ -37,12 +37,12 @@ MATH_MANGLE(cbrt)(double x)
     USE_TABLE(double2, p_cbrt, M64_CBRT);
     USE_TABLE(double2, p_rem, M64_CBRT_REM);
 
-    ulong ux = as_ulong(BUILTIN_ABS_F64(x));
-    int m = (as_int2(ux).hi >> 20) - EXPBIAS_DP64;
+    ulong ux = AS_ULONG(BUILTIN_ABS_F64(x));
+    int m = (AS_INT2(ux).hi >> 20) - EXPBIAS_DP64;
 
     // Treat subnormals
-    ulong uxs = as_ulong(as_double(ONEEXPBITS_DP64 | ux) - 1.0);
-    int ms = (as_int2(uxs).hi >> 20) - (2 * EXPBIAS_DP64 - 1);
+    ulong uxs = AS_ULONG(AS_DOUBLE(ONEEXPBITS_DP64 | ux) - 1.0);
+    int ms = (AS_INT2(uxs).hi >> 20) - (2 * EXPBIAS_DP64 - 1);
 
     bool c = m == -EXPBIAS_DP64;
     ux = c ? uxs : ux;
@@ -51,13 +51,13 @@ MATH_MANGLE(cbrt)(double x)
     int mby3 = m / 3;
     int rem = m - 3*mby3;
 
-    double mf = as_double((ulong)(mby3 + EXPBIAS_DP64) << EXPSHIFTBITS_DP64);
+    double mf = AS_DOUBLE((ulong)(mby3 + EXPBIAS_DP64) << EXPSHIFTBITS_DP64);
 
     ux &= MANTBITS_DP64;
-    double Y = as_double(HALFEXPBITS_DP64 | ux);
+    double Y = AS_DOUBLE(HALFEXPBITS_DP64 | ux);
 
     // nearest integer
-    int index = as_int2(ux).hi >> 11;
+    int index = AS_INT2(ux).hi >> 11;
     index = (0x100 | (index >> 1)) + (index & 1);
     double F = (double)index * 0x1.0p-9;
     

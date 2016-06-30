@@ -49,10 +49,10 @@ MATH_PRIVATE(tanred2)(double x, double xx, int sel)
     } else {
         if (sel) {
             // Compute -1.0/(t1 + t2) accurately
-            double z1 = as_double(as_long(tp) & 0xffffffff00000000L);
+            double z1 = AS_DOUBLE(AS_LONG(tp) & 0xffffffff00000000L);
             double z2 = t2 - (z1 - t1);
             double trec = -MATH_FAST_RCP(tp);
-            double trec_top = as_double(as_long(trec) & 0xffffffff00000000L);
+            double trec_top = AS_DOUBLE(AS_LONG(trec) & 0xffffffff00000000L);
             ret = MATH_MAD(MATH_MAD(trec_top, z2, MATH_MAD(trec_top, z1, 1.0)), trec, trec_top);
         } else {
             ret = tp;

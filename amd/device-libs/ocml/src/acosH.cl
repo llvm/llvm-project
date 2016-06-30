@@ -40,7 +40,7 @@ MATH_MANGLE(acos)(half x)
     z = ax < 0x1.0p-11h ? piby2 : z;
     z = x == 1.0h ? 0.0h : z;
     z = x == -1.0h ? pi : z;
-    z = ax > 1.0h ? as_half((short)QNANBITPATT_HP16) : z;
+    z = ax > 1.0h ? AS_HALF((short)QNANBITPATT_HP16) : z;
     return z;
 }
 

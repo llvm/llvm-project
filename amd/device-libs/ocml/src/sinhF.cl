@@ -16,7 +16,7 @@ MATH_MANGLE(sinh)(float x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        z = y >= 0x1.65a9fap+6f ? as_float(PINFBITPATT_SP32) : z;
+        z = y >= 0x1.65a9fap+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
         z = BUILTIN_CLASS_F32(y, CLASS_QNAN|CLASS_SNAN) | (y < 0x1.0p-14) ? y : z;
     } else {
         z =  y < 0x1.0p-14 ? y : z;

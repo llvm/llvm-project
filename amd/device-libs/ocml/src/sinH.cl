@@ -18,7 +18,7 @@ MATH_MANGLE(sin)(half x)
     s = (regn > 1) ^ (x < 0.0h) ? ns : s;
 
     if (!FINITE_ONLY_OPT()) {
-        s = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? as_half((short)QNANBITPATT_HP16) : s;
+        s = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_HALF((short)QNANBITPATT_HP16) : s;
     }
 
     return s;

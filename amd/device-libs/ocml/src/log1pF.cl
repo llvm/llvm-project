@@ -8,7 +8,7 @@ MATH_MANGLE(log1p)(float x)
     USE_TABLE(float, p_inv, M32_LOG_INV);
 
     float w = x;
-    uint ux = as_uint(x);
+    uint ux = AS_UINT(x);
     uint ax = ux & EXSIGNBIT_SP32;
 
     // |x| < 2^-4
@@ -20,23 +20,23 @@ MATH_MANGLE(log1p)(float x)
 
     // |x| >= 2^-4
     x = x + 1.0f;
-    ux = as_uint(x);
+    ux = AS_UINT(x);
 
     int m = (int)((ux >> EXPSHIFTBITS_SP32) & 0xff) - EXPBIAS_SP32;
     float mf = (float)m;
     uint indx = (ux & 0x007f0000) + ((ux & 0x00008000) << 1);
-    float F = as_float(indx | 0x3f000000);
+    float F = AS_FLOAT(indx | 0x3f000000);
 
     // x > 2^24
-    float fg24 = F - as_float(0x3f000000 | (ux & MANTBITS_SP32));
+    float fg24 = F - AS_FLOAT(0x3f000000 | (ux & MANTBITS_SP32));
 
     // x <= 2^24
     uint xhi = ux & 0xffff8000;
-    float xh = as_float(xhi);
+    float xh = AS_FLOAT(xhi);
     float xt = (1.0f - xh) + w;
     uint xnm = ((~(xhi & 0x7f800000)) - 0x00800000) & 0x7f800000;
-    xt = xt * as_float(xnm) * 0.5f;
-    float fl24 = F - as_float(0x3f000000 | (xhi & MANTBITS_SP32)) - xt;
+    xt = xt * AS_FLOAT(xnm) * 0.5f;
+    float fl24 = F - AS_FLOAT(0x3f000000 | (xhi & MANTBITS_SP32)) - xt;
 
     float f = mf > 24.0f ? fg24 : fl24;
 
@@ -59,8 +59,8 @@ MATH_MANGLE(log1p)(float x)
     // Edge cases
     if (!FINITE_ONLY_OPT()) {
         z = ax >= PINFBITPATT_SP32 ? w : z;
-        z = w  < -1.0f ? as_float(QNANBITPATT_SP32) : z;
-        z = w == -1.0f ? as_float(NINFBITPATT_SP32) : z;
+        z = w  < -1.0f ? AS_FLOAT(QNANBITPATT_SP32) : z;
+        z = w == -1.0f ? AS_FLOAT(NINFBITPATT_SP32) : z;
     }
 
     return z;

@@ -19,7 +19,7 @@ MATH_MANGLE(hypot)(half x, half y)
     if (!FINITE_ONLY_OPT()) {
         ret = BUILTIN_CLASS_F16(x, CLASS_PINF|CLASS_NINF) |
               BUILTIN_CLASS_F16(y, CLASS_PINF|CLASS_NINF) ?
-              as_half((ushort)PINFBITPATT_HP16) : ret;
+              AS_HALF((ushort)PINFBITPATT_HP16) : ret;
     }
 
     return ret;

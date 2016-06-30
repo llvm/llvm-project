@@ -152,10 +152,10 @@ MATH_MANGLE(lgamma_r)(float x, __private int *signp)
     const float z3  = -0x1.9a4d56p-2f;
     const float z4  =  0x1.151322p-2f;
 
-    uint ux = as_uint(x);
+    uint ux = AS_UINT(x);
     uint uax = ux & EXSIGNBIT_SP32;
 
-    float ax = as_float(uax);
+    float ax = AS_FLOAT(uax);
     float ret;
 
     if (ax < 0x1.0p-8) {
@@ -258,14 +258,14 @@ MATH_MANGLE(lgamma_r)(float x, __private int *signp)
         float negadj = MATH_MANGLE(log)(MATH_DIV(pi, BUILTIN_ABS_F32(t * x)));
         ret = negadj - ret;
         bool z = BUILTIN_FRACTION_F32(x) == 0.0f;
-        ret = z ? as_float(PINFBITPATT_SP32) : ret;
+        ret = z ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         s = t < 0.0f ? -1 : 1;
         s = z ? 0 : s;
     }
 
     if (!FINITE_ONLY_OPT()) {
         // Handle negative integer, Inf, NaN
-        ret = (uax == PINFBITPATT_SP32) | (x < 0.0f & uax >= 0x4b000000) ? as_float(PINFBITPATT_SP32) : ret;
+        ret = (uax == PINFBITPATT_SP32) | (x < 0.0f & uax >= 0x4b000000) ? AS_FLOAT(PINFBITPATT_SP32) : ret;
         ret = uax > PINFBITPATT_SP32 ? x : ret;
     }
 

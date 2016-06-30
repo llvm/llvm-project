@@ -61,8 +61,8 @@ MATH_MANGLE(erfinv)(double x)
     double ret = p*ax;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ax > 1.0 ? as_double(QNANBITPATT_DP64) : ret;
-        ret = ax == 1.0 ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax > 1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = ax == 1.0 ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
     }
 
     return BUILTIN_COPYSIGN_F64(ret, x);

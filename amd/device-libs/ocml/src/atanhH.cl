@@ -12,8 +12,8 @@ MATH_MANGLE(atanh)(half hx)
         ret = (half)(BUILTIN_LOG2_F32(t) * 0x1.62e430p-2f);
         ret = x < 0x1.0p-7f ? x : ret;
         if (!FINITE_ONLY_OPT()) {
-            ret = x == 1.0f ? as_half((short)PINFBITPATT_HP16) : ret;
-            ret = (x > 1.0f) | BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN) ? as_half((short)QNANBITPATT_HP16) : ret;
+            ret = x == 1.0f ? AS_HALF((short)PINFBITPATT_HP16) : ret;
+            ret = (x > 1.0f) | BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN) ? AS_HALF((short)QNANBITPATT_HP16) : ret;
         }
         ret = BUILTIN_COPYSIGN_F16(ret, hx);
     } else {

@@ -6,10 +6,10 @@ MATH_MANGLE(atan)(float x)
 {
     const float piby2 = 0x1.921fb6p+0f;
 
-    uint ux = as_uint(x);
+    uint ux = AS_UINT(x);
     uint aux = ux & EXSIGNBIT_SP32;
     uint sx = ux ^ aux;
-    float v = as_float(aux);
+    float v = AS_FLOAT(aux);
     float ret;
 
     // 2^26 <= |x| <= Inf => atan(x) is close to piby2
@@ -69,6 +69,6 @@ MATH_MANGLE(atan)(float x)
     ret = aux < 0x4c800000 ? r : ret;
     ret = aux < 0x39000000 ? v : ret;
 
-    return as_float(sx | as_uint(ret));
+    return AS_FLOAT(sx | AS_UINT(ret));
 }
 

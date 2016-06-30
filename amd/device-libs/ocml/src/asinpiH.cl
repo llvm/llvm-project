@@ -33,7 +33,7 @@ MATH_MANGLE(asinpi)(half x)
     half xux = piinv*MATH_MAD(ax, u, ax);
     ret = ax < 0.5h ? xux : ret;
 
-    ret = ax > 1.0h ? as_half((short)QNANBITPATT_HP16) : ret;
+    ret = ax > 1.0h ? AS_HALF((short)QNANBITPATT_HP16) : ret;
     ret = ax == 1.0h ? 0.5h : ret;
     ret = BUILTIN_COPYSIGN_F16(ret, x);
     return ret;

@@ -4,7 +4,7 @@
 PUREATTR INLINEATTR float
 MATH_MANGLE(atanh)(float x)
 {
-    uint ux = as_uint(x);
+    uint ux = AS_UINT(x);
     uint ax = ux & EXSIGNBIT_SP32;
     uint xs = ux ^ ax;
 
@@ -12,10 +12,10 @@ MATH_MANGLE(atanh)(float x)
 
     if ((ax >= 0x3f000000U) & (ax < 0x3f800000U)) {
         // 1/2 <= |x| < 1
-        t = as_float(ax);
+        t = AS_FLOAT(ax);
         t = MATH_FAST_DIV(2.0f*t, 1.0f - t);
         t = 0.5f * MATH_MANGLE(log1p)(t);
-        z = as_float(xs | as_uint(t));
+        z = AS_FLOAT(xs | AS_UINT(t));
     } else {
         // |x| < 1/2
         t = x * x;
@@ -28,11 +28,11 @@ MATH_MANGLE(atanh)(float x)
 
     if (!FINITE_ONLY_OPT()) {
         // |x| == 1
-        t = as_float(xs | PINFBITPATT_SP32);
+        t = AS_FLOAT(xs | PINFBITPATT_SP32);
         z = ax == 0x3f800000U ? t : z;
 
         // |x| > 1 or NaN
-        z = ax > 0x3f800000U ? as_float(QNANBITPATT_SP32) : z;
+        z = ax > 0x3f800000U ? AS_FLOAT(QNANBITPATT_SP32) : z;
     }
 
     return z;

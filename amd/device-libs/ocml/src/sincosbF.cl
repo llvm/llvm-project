@@ -18,9 +18,9 @@
 INLINEATTR float
 MATH_PRIVATE(sincosb)(float x, int n, __private float *cp)
 {
-    int ix = as_int(x);
+    int ix = AS_INT(x);
     int ax = ix & 0x7fffffff;
-    float dx = as_float(ax);
+    float dx = AS_FLOAT(ax);
 
     const float piby4h = 0x1.921fb6p-1f;
     const float piby4t = -0x1.777a5cp-26f;
@@ -61,14 +61,14 @@ MATH_PRIVATE(sincosb)(float x, int n, __private float *cp)
 
     int flip = (regn > 1) << 31;
     float s = (regn & 1) != 0 ? cc : ss;
-    s = as_float(as_int(s) ^ flip ^ (ax ^ ix));
+    s = AS_FLOAT(AS_INT(s) ^ flip ^ (ax ^ ix));
     ss = -ss;
     float c = (regn & 1) != 0 ? ss : cc;
-    c = as_float(as_int(c) ^ flip);
+    c = AS_FLOAT(AS_INT(c) ^ flip);
 
     if (!FINITE_ONLY_OPT()) {
-        c = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : c;
-        s = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : s;
+        c = ax >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : c;
+        s = ax >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : s;
     }
 
     *cp = c;

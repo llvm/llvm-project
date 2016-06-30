@@ -57,7 +57,7 @@ MATH_PRIVATE(sinhcosh)(double y, int which)
 
     double z;
     if (which == 0) {
-        double sdy1 = as_double(as_ulong(dy) & 0xfffffffff8000000UL);
+        double sdy1 = AS_DOUBLE(AS_ULONG(dy) & 0xfffffffff8000000UL);
         double sdy2 = sdy + (dy - sdy1);
         z = MATH_MAD(cl, sdy1, MATH_MAD(sl, cdy, MATH_MAD(cl, sdy2, MATH_MAD(ct, sdy1, MATH_MAD(st, cdy, ct*sdy2)) + st))) + sl;
     } else {

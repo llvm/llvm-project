@@ -4,7 +4,7 @@
 CONSTATTR static inline bool
 samesign(half x, half y)
 {
-    return (as_ushort(x) & (ushort)SIGNBIT_HP16) == (as_ushort(y) & (ushort)SIGNBIT_HP16);
+    return (AS_USHORT(x) & (ushort)SIGNBIT_HP16) == (AS_USHORT(y) & (ushort)SIGNBIT_HP16);
 }
 
 #if defined(COMPILING_FMOD)
@@ -37,12 +37,12 @@ MATH_MANGLE(remainder)(half x, half y)
             ey = BUILTIN_FREXP_EXP_F32(ay) - 1;
             ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
         } else {
-            ex = (as_int(ax) >> 23) - 127;
-            ax = as_float(((127+bits-1) << 23) | (as_int(ax) & 0x007fffff));
+            ex = (AS_INT(ax) >> 23) - 127;
+            ax = AS_FLOAT(((127+bits-1) << 23) | (AS_INT(ax) & 0x007fffff));
             ax = x == 0.0f ? 0.0f : ax;
             ex = x == 0.0f ? 0 : ex;
-            ey = (as_int(ay) >> 23) - 127;
-            ay = as_float((127 << 23) | (as_int(ay) & 0x007fffff));
+            ey = (AS_INT(ay) >> 23) - 127;
+            ay = AS_FLOAT((127 << 23) | (AS_INT(ay) & 0x007fffff));
             ey = y == 0.0f ? ex : ey;
         }
 
@@ -73,7 +73,7 @@ MATH_MANGLE(remainder)(half x, half y)
             if (AMD_OPT()) {
                 ax = BUILTIN_FLDEXP_F32(ax, bits); 
             } else {
-                ax *= as_float((127 + bits) << 23);
+                ax *= AS_FLOAT((127 + bits) << 23);
             }
             nb -= bits;
         }
@@ -81,7 +81,7 @@ MATH_MANGLE(remainder)(half x, half y)
         if (AMD_OPT()) {
             ax = BUILTIN_FLDEXP_F32(ax, nb - bits + 1);
         } else {
-            ax *= as_float((127 + nb - bits + 1) << 23);
+            ax *= AS_FLOAT((127 + nb - bits + 1) << 23);
         }
 
         // Final iteration
@@ -117,12 +117,12 @@ MATH_MANGLE(remainder)(half x, half y)
         if (AMD_OPT()) {
             ax = BUILTIN_FLDEXP_F32(ax, ey);
         } else {
-            ax *= as_float((127 + ey) << 23);
+            ax *= AS_FLOAT((127 + ey) << 23);
         }
 
-        short ir = as_short((half)ax);
-        ir ^= as_short(x) & (short)SIGNBIT_HP16;
-        ret = as_half(ir);
+        short ir = AS_SHORT((half)ax);
+        ir ^= AS_SHORT(x) & (short)SIGNBIT_HP16;
+        ret = AS_HALF(ir);
     } else {
         ret = x;
 #if defined(COMPILING_REMQUO)
@@ -147,14 +147,14 @@ MATH_MANGLE(remainder)(half x, half y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = y == 0.0h ? as_half((short)QNANBITPATT_HP16) : ret;
+        ret = y == 0.0h ? AS_HALF((short)QNANBITPATT_HP16) : ret;
 #if defined(COMPILING_REMQUO)
         q7 = y == 0.0h ? 0 : q7;
 #endif
 
         bool c = BUILTIN_CLASS_F16(y, CLASS_QNAN|CLASS_SNAN) |
                  BUILTIN_CLASS_F16(x, CLASS_NINF|CLASS_PINF|CLASS_SNAN|CLASS_QNAN);
-        ret = c ? as_half((short)QNANBITPATT_HP16) : ret;
+        ret = c ? AS_HALF((short)QNANBITPATT_HP16) : ret;
 #if defined(COMPILING_REMQUO)
         q7 = c ? 0 : q7;
 #endif

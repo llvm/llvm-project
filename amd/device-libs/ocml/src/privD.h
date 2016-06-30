@@ -8,7 +8,7 @@
 
 #define MATH_CLZL(U) ({ \
     ulong _clzl_u = U; \
-    uint2 _clzl_u2 = as_uint2(_clzl_u); \
+    uint2 _clzl_u2 = AS_UINT2(_clzl_u); \
     uint _clzl_zlo = BUILTIN_FIRSTBIT_U32(_clzl_u2.lo); \
     uint _clzl_zhi = BUILTIN_FIRSTBIT_U32(_clzl_u2.hi); \
     uint _clzl_clo = (_clzl_u2.lo == 0 ? 32 : _clzl_zlo) + 32; \

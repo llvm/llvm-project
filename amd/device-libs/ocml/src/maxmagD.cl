@@ -5,13 +5,13 @@ CONSTATTR INLINEATTR double
 MATH_MANGLE(maxmag)(double x, double y)
 {
 #if 0
-    long ix = as_long(x);
-    long iy = as_long(y);
+    long ix = AS_LONG(x);
+    long iy = AS_LONG(y);
     long ax = ix & 0x7fffffffffffffffL;
     long ay = iy & 0x7fffffffffffffffL;
     ax |= -(ax > 0x7ff0000000000000L);
     ay |= -(ay > 0x7ff0000000000000L);
-    return as_double((-(ax > ay) & ix) |
+    return AS_DOUBLE((-(ax > ay) & ix) |
 	             (-(ay > ax) & iy) |
 		     (-(ax == ay) & ((ix & iy) | (ax & 0x0008000000000000L))));
 #else

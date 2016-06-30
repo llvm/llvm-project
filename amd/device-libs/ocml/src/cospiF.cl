@@ -5,8 +5,8 @@
 INLINEATTR float
 MATH_MANGLE(cospi)(float x)
 {
-    int ix = as_int(x) & EXSIGNBIT_SP32; 
-    float ax = as_float(ix);
+    int ix = AS_INT(x) & EXSIGNBIT_SP32; 
+    float ax = AS_FLOAT(ix);
     int iax = (int)ax;
     float r = BUILTIN_FRACTION_F32(ax);
     int xodd = iax & 0x1 ? SIGNBIT_SP32 : 0;
@@ -50,10 +50,10 @@ MATH_MANGLE(cospi)(float x)
     float ca;
     float sa = MATH_PRIVATE(sincosred)(a*pi, &ca);
 
-    int jr = s ^ as_int(e ? ca : sa);
+    int jr = s ^ AS_INT(e ? ca : sa);
 
     ir = ix < 0x4b000000 ? jr : ir;
 
-    return as_float(ir);
+    return AS_FLOAT(ir);
 }
 

@@ -6,10 +6,10 @@ MATH_MANGLE(fdim)(float x, float y)
 {
     if (!FINITE_ONLY_OPT()) {
         int n = -(MATH_MANGLE(isnan)(x) | MATH_MANGLE(isnan)(y)) & QNANBITPATT_SP32;
-        int r = -(x > y) & as_int(x - y);
-        return as_float(n | r);
+        int r = -(x > y) & AS_INT(x - y);
+        return AS_FLOAT(n | r);
     } else {
-	return as_float(-(x > y) & as_int(x - y));
+	return AS_FLOAT(-(x > y) & AS_INT(x - y));
     }
 }
 

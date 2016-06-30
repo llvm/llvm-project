@@ -4,9 +4,9 @@
 // The arguments must only be variable names
 #define FULL_MUL(A, B, CHI, CLO) \
     do { \
-        float __ha = as_float(as_uint(A) & 0xfffff000U); \
+        float __ha = AS_FLOAT(AS_UINT(A) & 0xfffff000U); \
         float __ta = A - __ha; \
-        float __hb = as_float(as_uint(B) & 0xfffff000U); \
+        float __hb = AS_FLOAT(AS_UINT(B) & 0xfffff000U); \
         float __tb = B - __hb; \
         CHI = A * B; \
         CLO = MATH_MAD(__ta, __tb, MATH_MAD(__ta, __hb, MATH_MAD(__ha, __tb, MATH_MAD(__ha, __hb, -CHI)))); \
@@ -63,30 +63,30 @@ MATH_MANGLE(remainder)(float x, float y)
             ay = BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(ay), 1);
         } else {
             if (!DAZ_OPT()) {
-                int exs = -118 - (int)MATH_CLZI(as_int(ax));
-                float axs = as_float(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) |
-                                     ((as_int(ax) << (-126 - exs)) & MANTBITS_SP32));
-                ex = (as_int(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ax = as_float(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) | (as_int(ax) & MANTBITS_SP32));
+                int exs = -118 - (int)MATH_CLZI(AS_INT(ax));
+                float axs = AS_FLOAT(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) |
+                                     ((AS_INT(ax) << (-126 - exs)) & MANTBITS_SP32));
+                ex = (AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+                ax = AS_FLOAT(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) | (AS_INT(ax) & MANTBITS_SP32));
                 ax = ex == -EXPBIAS_SP32 ? axs : ax;
                 ex = ex == -EXPBIAS_SP32 ? exs : ex;
             } else {
-                ex = (as_int(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ax = as_float(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) | (as_int(ax) & MANTBITS_SP32));
+                ex = (AS_INT(ax) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+                ax = AS_FLOAT(((EXPBIAS_SP32+bits-1) << EXPSHIFTBITS_SP32) | (AS_INT(ax) & MANTBITS_SP32));
             }
             ax = x == 0.0f ? 0.0f : ax;
             ex = x == 0.0f ? 0 : ex;
 
             if (!DAZ_OPT()) {
-                int eys = -118 - (int)MATH_CLZI(as_int(ay));
-                float ays = as_float((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (as_int(ay) << (-126 - eys)));
-                ey = (as_int(ay) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ay = as_float((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (as_int(ay) & MANTBITS_SP32));
+                int eys = -118 - (int)MATH_CLZI(AS_INT(ay));
+                float ays = AS_FLOAT((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (AS_INT(ay) << (-126 - eys)));
+                ey = (AS_INT(ay) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+                ay = AS_FLOAT((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (AS_INT(ay) & MANTBITS_SP32));
                 ay = ey == -EXPBIAS_SP32 ? ays : ay;
                 ey = ey == -EXPBIAS_SP32 ? eys : ey;
             } else {
-                ey = (as_int(ay) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
-                ay = as_float((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (as_int(ay) & MANTBITS_SP32));
+                ey = (AS_INT(ay) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+                ay = AS_FLOAT((EXPBIAS_SP32 << EXPSHIFTBITS_SP32) | (AS_INT(ay) & MANTBITS_SP32));
             }
             ey = y == 0.0f ? ex : ey;
         }
@@ -112,7 +112,7 @@ MATH_MANGLE(remainder)(float x, float y)
             if (AMD_OPT()) {
                 ax = BUILTIN_FLDEXP_F32(ax, bits); 
             } else {
-                ax *= as_float((EXPBIAS_SP32 + bits) << EXPSHIFTBITS_SP32);
+                ax *= AS_FLOAT((EXPBIAS_SP32 + bits) << EXPSHIFTBITS_SP32);
             }
             nb -= bits;
         }
@@ -120,7 +120,7 @@ MATH_MANGLE(remainder)(float x, float y)
         if (AMD_OPT()) {
             ax = BUILTIN_FLDEXP_F32(ax, nb - bits + 1);
         } else {
-            ax *= as_float((EXPBIAS_SP32 + nb - bits + 1) << EXPSHIFTBITS_SP32);
+            ax *= AS_FLOAT((EXPBIAS_SP32 + nb - bits + 1) << EXPSHIFTBITS_SP32);
         }
 
         // Final iteration
@@ -148,7 +148,7 @@ MATH_MANGLE(remainder)(float x, float y)
         ax = ax - (aq ? ay : 0.0f);
 #if defined(COMPILING_REMQUO)
         qacc += aq;
-        int qneg = (as_int(x) ^ as_int(y)) >> 31;
+        int qneg = (AS_INT(x) ^ AS_INT(y)) >> 31;
         q7 = ((qacc & 0x7f) ^ qneg) - qneg;
 #endif
 #endif
@@ -157,12 +157,12 @@ MATH_MANGLE(remainder)(float x, float y)
             ax = BUILTIN_FLDEXP_F32(ax, ey);
         } else {
             int ey2 = ey >> 1;
-            float xsc1 = as_float((EXPBIAS_SP32 + ey2) << EXPSHIFTBITS_SP32);
-            float xsc2 = as_float((EXPBIAS_SP32 + (ey - ey2)) << EXPSHIFTBITS_SP32);
+            float xsc1 = AS_FLOAT((EXPBIAS_SP32 + ey2) << EXPSHIFTBITS_SP32);
+            float xsc2 = AS_FLOAT((EXPBIAS_SP32 + (ey - ey2)) << EXPSHIFTBITS_SP32);
             ax = (ax * xsc1) * xsc2;
         }
 
-        ret = as_float((as_int(x) & SIGNBIT_SP32) ^ as_int(ax));
+        ret = AS_FLOAT((AS_INT(x) & SIGNBIT_SP32) ^ AS_INT(ax));
     } else {
         ret = x;
 #if defined(COMPILING_REMQUO)
@@ -172,7 +172,7 @@ MATH_MANGLE(remainder)(float x, float y)
 #if !defined(COMPILING_FMOD)
         bool c = (ay < 0x1.0p+127f & 2.0f*ax > ay) | (ax > 0.5f*ay);
 
-        int qsgn = 1 + (((as_int(x) ^ as_int(y)) >> 31) << 1);
+        int qsgn = 1 + (((AS_INT(x) ^ AS_INT(y)) >> 31) << 1);
         float t = MATH_MAD(y, -(float)qsgn, x);
         ret = c ? t : ret;
 #if defined(COMPILING_REMQUO)
@@ -187,14 +187,14 @@ MATH_MANGLE(remainder)(float x, float y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = y == 0.0f ? as_float(QNANBITPATT_SP32) : ret;
+        ret = y == 0.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
 #if defined(COMPILING_REMQUO)
         q7 = y == 0.0f ? 0 : q7;
 #endif
 
         bool c = BUILTIN_CLASS_F32(y, CLASS_QNAN|CLASS_SNAN) |
                  BUILTIN_CLASS_F32(x, CLASS_NINF|CLASS_PINF|CLASS_SNAN|CLASS_QNAN);
-        ret = c ? as_float(QNANBITPATT_SP32) : ret;
+        ret = c ? AS_FLOAT(QNANBITPATT_SP32) : ret;
 #if defined(COMPILING_REMQUO)
         q7 = c ? 0 : q7;
 #endif

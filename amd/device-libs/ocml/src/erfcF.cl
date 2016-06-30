@@ -139,7 +139,7 @@ MATH_MANGLE(erfc)(float x)
                     1.0f);
         }
 
-        float z = as_float(as_uint(x) & 0xffffe000);
+        float z = AS_FLOAT(AS_UINT(x) & 0xffffe000);
         float r = MATH_MANGLE(exp)(MATH_MAD(-z, z, -0.5625f)) *
                   MATH_MANGLE(exp)(MATH_MAD(z-x, z+x, MATH_FAST_DIV(R, S)));
         r *= MATH_FAST_RCP(ax);

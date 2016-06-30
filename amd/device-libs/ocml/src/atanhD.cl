@@ -39,7 +39,7 @@ MATH_MANGLE(atanh)(double x)
         double r = 0.5 * MATH_MANGLE(log1p)(MATH_FAST_DIV(2.0*ax, 1.0 - ax));
 
         if (!FINITE_ONLY_OPT()) {
-            ret = ax == 1.0 ? as_double(PINFBITPATT_DP64) : as_double(QNANBITPATT_DP64);
+            ret = ax == 1.0 ? AS_DOUBLE(PINFBITPATT_DP64) : AS_DOUBLE(QNANBITPATT_DP64);
             ret = ax < 1.0 ? r : ret;
         } else {
 	    ret = r;

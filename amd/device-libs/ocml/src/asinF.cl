@@ -41,7 +41,7 @@ MATH_MANGLE(asin)(float x)
     float xux = MATH_MAD(ax, u, ax);
     ret = ax < 0.5f ? xux : ret;
 
-    ret = ax > 1.0f ? as_float(QNANBITPATT_SP32) : ret;
+    ret = ax > 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
     ret = ax == 1.0f ? piby2 : ret;
     ret = BUILTIN_COPYSIGN_F32(ret, x);
     return ret;

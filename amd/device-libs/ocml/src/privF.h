@@ -28,8 +28,8 @@
     float _sqrt_s; \
     if (!DAZ_OPT() & AMD_OPT()) { \
         _sqrt_s = BUILTIN_SQRT_F32(_sqrt_x); \
-        float _sqrt_sp = as_float(as_int(_sqrt_s) - 1); \
-        float _sqrt_ss = as_float(as_int(_sqrt_s) + 1); \
+        float _sqrt_sp = AS_FLOAT(AS_INT(_sqrt_s) - 1); \
+        float _sqrt_ss = AS_FLOAT(AS_INT(_sqrt_s) + 1); \
         float _sqrt_vp = BUILTIN_FMA_F32(-_sqrt_sp, _sqrt_s, _sqrt_x); \
         float _sqrt_vs = BUILTIN_FMA_F32(-_sqrt_ss, _sqrt_s, _sqrt_x); \
         _sqrt_s = _sqrt_vp <= 0.0f ? _sqrt_sp : _sqrt_s; \

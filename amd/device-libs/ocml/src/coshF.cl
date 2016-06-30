@@ -16,7 +16,7 @@ MATH_MANGLE(cosh)(float x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        z = y >= 0x1.65a9fap+6f ? as_float(PINFBITPATT_SP32) : z;
+        z = y >= 0x1.65a9fap+6f ? AS_FLOAT(PINFBITPATT_SP32) : z;
         z = BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN) ? x : z;
     }
 

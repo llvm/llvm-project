@@ -25,8 +25,8 @@ MATH_MANGLE(sincos)(half x, __private half *cp)
 
     if (!FINITE_ONLY_OPT()) {
         bool b = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF);
-        c = b ? as_half((short)QNANBITPATT_HP16) : c;
-        s = b ? as_half((short)QNANBITPATT_HP16) : s;
+        c = b ? AS_HALF((short)QNANBITPATT_HP16) : c;
+        s = b ? AS_HALF((short)QNANBITPATT_HP16) : s;
     }
 
     *cp = c;

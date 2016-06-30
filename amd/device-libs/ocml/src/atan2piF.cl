@@ -50,7 +50,7 @@ MATH_MANGLE(atan2pi)(float y, float x)
     a = x < 0.0F ? at : a;
 
     // y == 0 => 0 for x >= 0, pi for x < 0
-    at = as_int(x) < 0 ? 1.0f : 0.0f;
+    at = AS_INT(x) < 0 ? 1.0f : 0.0f;
     a = y == 0.0f ? at : a;
 
     if (!FINITE_ONLY_OPT()) {
@@ -63,7 +63,7 @@ MATH_MANGLE(atan2pi)(float y, float x)
         // x or y is NaN
         a = BUILTIN_CLASS_F32(x, CLASS_SNAN|CLASS_QNAN) |
             BUILTIN_CLASS_F32(y, CLASS_SNAN|CLASS_QNAN) ?
-            as_float(QNANBITPATT_SP32) : a;
+            AS_FLOAT(QNANBITPATT_SP32) : a;
     }
 
     // Fixup sign and return
@@ -79,14 +79,14 @@ MATH_MANGLE(atan2pi)(float y, float x)
     x = FTZ(x);
     y = FTZ(y);
 
-    uint uy = as_uint(y);
-    uint ux = as_uint(x);
+    uint uy = AS_UINT(y);
+    uint ux = AS_UINT(x);
     uint aux = ux & EXSIGNBIT_SP32;
     uint auy = uy & EXSIGNBIT_SP32;
 
     // General case: take absolute values of arguments
-    float u = as_float(aux);
-    float v = as_float(auy);
+    float u = AS_FLOAT(aux);
+    float v = AS_FLOAT(auy);
 
     // Swap u and v if necessary to obtain 0 < v < u
     int swap_vu = u < v;
@@ -125,18 +125,18 @@ MATH_MANGLE(atan2pi)(float y, float x)
     q = xneg ? qt : q;
 
     uint ysign = uy ^ auy;
-    q = as_float(ysign | as_uint(q));
+    q = AS_FLOAT(ysign | AS_UINT(q));
 
     // Now handle a few special cases
     // Zero y gives +-0 for positive x and +-pi for negative x
-    qt = as_float(ysign | 0x3f800000);
+    qt = AS_FLOAT(ysign | 0x3f800000);
     qt = xneg ? qt : y;
     q = y == 0.0f ? qt : q;
 
     if (!FINITE_ONLY_OPT()) {
         // If abs(x) and abs(y) are both infinity return +-pi/4 or +- 3pi/4 according to signs
         qt = xneg ? 0.75f : 0.25f;
-        qt = as_float(ysign | as_uint(qt));
+        qt = AS_FLOAT(ysign | AS_UINT(qt));
         q = auy == PINFBITPATT_SP32 & aux == PINFBITPATT_SP32 ? qt : q;
     
         // If either arg was NaN, return it

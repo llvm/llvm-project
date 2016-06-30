@@ -18,7 +18,7 @@ MATH_MANGLE(cos)(half x)
     c = regn > 1 ? nc : c;
 
     if (!FINITE_ONLY_OPT()) {
-        c = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? as_half((short)QNANBITPATT_HP16) : c;
+        c = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_HALF((short)QNANBITPATT_HP16) : c;
     }
 
     return c;

@@ -46,7 +46,7 @@ MATH_MANGLE(acos)(float x)
     z = ax <= 0.5f ? zb : z;
 
     z = ax < 0x1.0p-28f ? piby2 : z;
-    z = ax > 1.0f ? as_float(QNANBITPATT_SP32) : z;
+    z = ax > 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : z;
     z = x == 1.0f ? 0.0f : z;
     z = x == -1.0f ? pi : z;
     return z;

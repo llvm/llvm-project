@@ -69,7 +69,7 @@ MATH_MANGLE(exp)(float x)
                     const float ch = 0x1.a92000p+1f;
                     const float cl = 0x1.4f0978p-11f;
 #endif
-                    float xh = as_float(as_int(x) & 0xfffff000);
+                    float xh = AS_FLOAT(AS_INT(x) & 0xfffff000);
                     float xl = x - xh;
                     ph = xh * ch;
                     pl = MATH_MAD(xh, cl, MATH_MAD(xl, ch, xl*cl));
@@ -79,10 +79,10 @@ MATH_MANGLE(exp)(float x)
 
 #if defined COMPILING_EXP
                 r = x < -0x1.5d58a0p+6f ? 0.0f : r;
-                r = x > 0x1.62e430p+6f ? as_float(PINFBITPATT_SP32) : r;
+                r = x > 0x1.62e430p+6f ? AS_FLOAT(PINFBITPATT_SP32) : r;
 #else
                 r = x < -0x1.2f7030p+5f ? 0.0f : r;
-                r = x > 0x1.344136p+5f ? as_float(PINFBITPATT_SP32): r;
+                r = x > 0x1.344136p+5f ? AS_FLOAT(PINFBITPATT_SP32): r;
 #endif
                 return r;
 #endif
@@ -135,7 +135,7 @@ MATH_MANGLE(exp)(float x)
                     const float ch = 0x1.a92000p+1f;
                     const float cl = 0x1.4f0978p-11f;
 #endif
-                    float xh = as_float(as_int(x) & 0xfffff000);
+                    float xh = AS_FLOAT(AS_INT(x) & 0xfffff000);
                     float xl = x - xh;
                     ph = xh * ch;
                     pl = MATH_MAD(xh, cl, MATH_MAD(xl, ch, xl*cl));
@@ -146,11 +146,11 @@ MATH_MANGLE(exp)(float x)
 #if defined COMPILING_EXP
                 r *= s ? 0x1.969d48p-93f : 1.0f;
                 r = x < -0x1.9d1da0p+6f ? 0.0f : r;
-                r = x > 0x1.62e430p+6f ? as_float(PINFBITPATT_SP32) : r;
+                r = x > 0x1.62e430p+6f ? AS_FLOAT(PINFBITPATT_SP32) : r;
 #else
                 r *= s ? 0x1.9f623ep-107f : 1.0f;
                 r = x < -0x1.66d3e8p+5f ? 0.0f : r;
-                r = x > 0x1.344136p+5f ? as_float(PINFBITPATT_SP32): r;
+                r = x > 0x1.344136p+5f ? AS_FLOAT(PINFBITPATT_SP32): r;
 #endif
                 return r;
 #endif
@@ -199,11 +199,11 @@ MATH_MANGLE(exp)(float x)
         if (AMD_OPT()) {
             r = BUILTIN_FLDEXP_F32(y, p);
         } else if (DAZ_OPT()) {
-            r = as_float(as_int(y) + (p << 23));
+            r = AS_FLOAT(AS_INT(y) + (p << 23));
         } else {
             int p2 = p >> 1;
-            float sc1 = as_float((p2 + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
-            float sc2 = as_float(((p - p2) + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
+            float sc1 = AS_FLOAT((p2 + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
+            float sc2 = AS_FLOAT(((p - p2) + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
             r = (y * sc1) * sc2;
         }
 
@@ -229,7 +229,7 @@ MATH_MANGLE(exp)(float x)
 #else
             const float ulim = 128.0f;
 #endif
-            r = x < ulim ? r : as_float(PINFBITPATT_SP32);
+            r = x < ulim ? r : AS_FLOAT(PINFBITPATT_SP32);
             r = MATH_MANGLE(isnan)(x) ? x : r;
         }
         return r;
@@ -291,13 +291,13 @@ MATH_MANGLE(exp)(float x)
         float two_to_jby64 = p_tbl[j];
         z2 = MATH_MAD(two_to_jby64, z2, two_to_jby64);
 
-        float z2s = z2 * as_float(0x1 << (m + 149));
-        float z2n = as_float(as_int(z2) + (m <<EXPSHIFTBITS_SP32));
+        float z2s = z2 * AS_FLOAT(0x1 << (m + 149));
+        float z2n = AS_FLOAT(AS_INT(z2) + (m <<EXPSHIFTBITS_SP32));
         z2 = m <= -126 ? z2s : z2n;
 
         if (!FINITE_ONLY_OPT()) {
             z2 = MATH_MANGLE(isnan)(x) ? x : z2;
-            z2 = x > X_MAX ? as_float(PINFBITPATT_SP32) : z2;
+            z2 = x > X_MAX ? AS_FLOAT(PINFBITPATT_SP32) : z2;
         }
 
         z2 = x < X_MIN ? 0.0f : z2;

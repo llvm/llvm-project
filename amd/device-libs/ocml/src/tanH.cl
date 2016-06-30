@@ -15,7 +15,7 @@ MATH_MANGLE(tan)(half x)
     t = x < 0.0h ? nt : t;
 
     if (!FINITE_ONLY_OPT()) {
-        t = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? as_half((short)QNANBITPATT_HP16) : t;
+        t = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_PINF) ? AS_HALF((short)QNANBITPATT_HP16) : t;
     }
 
     return t;

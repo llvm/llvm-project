@@ -38,7 +38,7 @@ MATH_MANGLE(atan2pi)(double y, double x)
 
     ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) |
           BUILTIN_CLASS_F64(y, CLASS_SNAN|CLASS_QNAN) ?
-          as_double(QNANBITPATT_DP64) : ret;
+          AS_DOUBLE(QNANBITPATT_DP64) : ret;
 
     return ret;
 }

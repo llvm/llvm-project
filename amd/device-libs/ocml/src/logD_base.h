@@ -87,11 +87,11 @@ MATH_MANGLE(log)(double x)
         double xs = x * 0x1.0p+60;
         int c = x < 0x1.0p-962;
         int expadjust = c ? 60 : 0;
-        ulong ux = as_ulong(c ? xs : x);
+        ulong ux = AS_ULONG(c ? xs : x);
 
-        int xexp = ((as_int2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64 - expadjust;
-        double f = as_double(HALFEXPBITS_DP64 | (ux & MANTBITS_DP64));
-        int index = as_int2(ux).hi >> 13;
+        int xexp = ((AS_INT2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64 - expadjust;
+        double f = AS_DOUBLE(HALFEXPBITS_DP64 | (ux & MANTBITS_DP64));
+        int index = AS_INT2(ux).hi >> 13;
         index = ((0x80 | (index & 0x7e)) >> 1) + (index & 0x1);
 
         double2 tv = p_tbl[index - 64];
@@ -137,12 +137,12 @@ MATH_MANGLE(log)(double x)
 
 #if defined(COMPILING_LOG10)
         r = r1;
-        r1 = as_double(as_ulong(r1) & 0xffffffff00000000UL);
+        r1 = AS_DOUBLE(AS_ULONG(r1) & 0xffffffff00000000UL);
         r2 = r2 + (r - r1);
         ret = MATH_MAD(log10e_lead, r1, MATH_MAD(log10e_lead, r2, MATH_MAD(log10e_tail, r1, log10e_tail * r2)));
 #elif defined(COMPILING_LOG2)
         r = r1;
-        r1 = as_double(as_ulong(r1) & 0xffffffff00000000UL);
+        r1 = AS_DOUBLE(AS_ULONG(r1) & 0xffffffff00000000UL);
         r2 = r2 + (r - r1);
         ret = MATH_MAD(log2e_lead, r1, MATH_MAD(log2e_lead, r2, MATH_MAD(log2e_tail, r1, log2e_tail*r2)));
 #else
@@ -152,8 +152,8 @@ MATH_MANGLE(log)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         ret = MATH_MANGLE(isinf)(x) ? x : ret;
-        ret = MATH_MANGLE(isnan)(x) | (x < 0.0) ? as_double(QNANBITPATT_DP64) : ret;
-        ret = x == 0.0 ? as_double(NINFBITPATT_DP64) : ret;
+        ret = MATH_MANGLE(isnan)(x) | (x < 0.0) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = x == 0.0 ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
     }
 
     return ret;

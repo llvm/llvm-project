@@ -61,7 +61,7 @@ MATH_MANGLE(acos)(double x)
             z =  MATH_MAD(-2.0, (s + MATH_MAD(s, u, -piby2_tail)), pi);
         } else {
             // Compute higer precision square root
-            double sh = as_double(as_ulong(s) & 0xffffffff00000000UL);
+            double sh = AS_DOUBLE(AS_ULONG(s) & 0xffffffff00000000UL);
             double st = MATH_FAST_DIV(MATH_MAD(-sh, sh, r), s + sh);
             z = 2.0 * (sh + MATH_MAD(s, u, st));
         }
@@ -72,7 +72,7 @@ MATH_MANGLE(acos)(double x)
     // z = y < 0x1.0p-56 ? piby2 : z;
 
     if (!FINITE_ONLY_OPT()) {
-        z = y > 1.0 ? as_double(QNANBITPATT_DP64) : z;
+        z = y > 1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : z;
     }
     z = x == 1.0 ? 0.0 : z;
     z = x == -1.0 ? pi : z;

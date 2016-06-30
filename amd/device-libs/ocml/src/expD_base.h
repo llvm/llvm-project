@@ -101,14 +101,14 @@ MATH_MANGLE(exp)(double x)
     if (AMD_OPT()) {
         z2 = BUILTIN_FLDEXP_F64(z2, m);
     } else {
-        double ss = as_double(0x1L << (m + 1074));
-        double sn = as_double((long)(m + EXPBIAS_DP64) << EXPSHIFTBITS_DP64);
+        double ss = AS_DOUBLE(0x1L << (m + 1074));
+        double sn = AS_DOUBLE((long)(m + EXPBIAS_DP64) << EXPSHIFTBITS_DP64);
         z2 *= m < -1022 ? ss : sn;
     }
 
     if (!FINITE_ONLY_OPT()) {
         z2 = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN) ? x : z2;
-        z2 = x > X_MAX ? as_double(PINFBITPATT_DP64) : z2;
+        z2 = x > X_MAX ? AS_DOUBLE(PINFBITPATT_DP64) : z2;
     }
 
     z2 = x < X_MIN ? 0.0 : z2;

@@ -17,7 +17,7 @@ MATH_MANGLE(sinh)(double x)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        z = y >= 0x1.633ce8fb9f87ep+9 ? as_double(PINFBITPATT_DP64) : z;
+        z = y >= 0x1.633ce8fb9f87ep+9 ? AS_DOUBLE(PINFBITPATT_DP64) : z;
         z = BUILTIN_CLASS_F64(y, CLASS_PINF|CLASS_QNAN|CLASS_SNAN) ? y : z;
     }
 

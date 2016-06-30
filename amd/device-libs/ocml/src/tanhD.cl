@@ -8,9 +8,9 @@
             CHI = A * B; \
             CLO = BUILTIN_FMA_F64(A, B, -CHI); \
         } else { \
-            double __ha = as_double(as_ulong(A) & 0xfffffffff8000000UL); \
+            double __ha = AS_DOUBLE(AS_ULONG(A) & 0xfffffffff8000000UL); \
             double __ta = A - __ha; \
-            double __hb = as_double(as_ulong(B) & 0xfffffffff8000000UL); \
+            double __hb = AS_DOUBLE(AS_ULONG(B) & 0xfffffffff8000000UL); \
             double __tb = B - __hb; \
             CHI = A * B; \
             CLO = MATH_MAD(__ta, __tb, MATH_MAD(__ta, __hb, MATH_MAD(__ha, __tb, MATH_MAD(__ha, __hb, -CHI)))); \

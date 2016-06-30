@@ -28,24 +28,24 @@ MATH_MANGLE(pow)(double x, double y)
     // Extended precision y * ln(x)
     double ylnx_h, ylnx_t;
     {
-        int e = (as_int2(ax).hi >> 20) - EXPBIAS_DP64;
+        int e = (AS_INT2(ax).hi >> 20) - EXPBIAS_DP64;
         bool c = e == -1023;
-        double tx = as_double(ONEEXPBITS_DP64 | as_long(ax)) - 1.0;
-        int es = (as_int2(tx).hi >> 20) - (2*EXPBIAS_DP64 - 1);
+        double tx = AS_DOUBLE(ONEEXPBITS_DP64 | AS_LONG(ax)) - 1.0;
+        int es = (AS_INT2(tx).hi >> 20) - (2*EXPBIAS_DP64 - 1);
         e = c ? es : e;
 
-        long mant = as_long(c ? tx : ax) & MANTBITS_DP64;
-        int index = as_int2(mant).hi;
+        long mant = AS_LONG(c ? tx : ax) & MANTBITS_DP64;
+        int index = AS_INT2(mant).hi;
         index = (index & 0x000ff000) + ((index & 0x00000800) << 1);
-        double F = as_double(HALFEXPBITS_DP64 | (long)index << 32);
-        double f = F - as_double(HALFEXPBITS_DP64 | mant);
+        double F = AS_DOUBLE(HALFEXPBITS_DP64 | (long)index << 32);
+        double f = F - AS_DOUBLE(HALFEXPBITS_DP64 | mant);
         index >>= 12;
 
         double2 tv = p_Finv_tbl[index];
         double inv_h = tv.s0;
         double inv_t = tv.s1;
         double f_inv = (inv_h + inv_t) * f;
-        double r1 = as_double(as_long(f_inv) & 0xfffffffff8000000L);
+        double r1 = AS_DOUBLE(AS_LONG(f_inv) & 0xfffffffff8000000L);
         double r2 = MATH_MAD(-F, r1, f) * (inv_h + inv_t);
         double r = r1 + r2;
 
@@ -77,11 +77,11 @@ MATH_MANGLE(pow)(double x, double y)
         double tlnx_t_h = poly0h;
 
         double lnx_h = tlnx_t + tlnx_h;
-        double lnx_hh = as_double(as_long(lnx_h) & 0xfffffffff8000000L);
+        double lnx_hh = AS_DOUBLE(AS_LONG(lnx_h) & 0xfffffffff8000000L);
         double lnx_t = (tlnx_h - lnx_h + tlnx_t) + (tlnx_tt - (tlnx_t + tlnx_t_h)) + (lnx_h - lnx_hh);
         lnx_h = lnx_hh;
 
-        double y_h = as_double(as_long(y) & 0xfffffffff8000000L);
+        double y_h = AS_DOUBLE(AS_LONG(y) & 0xfffffffff8000000L);
         double y_t = y - y_h;
 
 #if defined(COMPILING_POWN)
@@ -89,7 +89,7 @@ MATH_MANGLE(pow)(double x, double y)
 #endif
 
 #if defined(COMPILING_ROOTN)
-        double dnyh = as_double(as_long(dny) & 0xfffffffffff00000L);
+        double dnyh = AS_DOUBLE(AS_LONG(dny) & 0xfffffffffff00000L);
         double dnyt = (double)(ny - (int)dnyh);
         y_t = MATH_DIV(MATH_MAD(-dnyt, y_h, MATH_MAD(-dnyh, y_h, 1.0)), dny);
 #endif
@@ -136,13 +136,13 @@ MATH_MANGLE(pow)(double x, double y)
             expylnx = BUILTIN_FLDEXP_F64(expylnx, m);
         } else {
             int mh = m >> 1;
-            expylnx = expylnx * as_double((long)(mh + 1023) << 52) *
-                                as_double((long)(m - mh + 1023) << 52);
+            expylnx = expylnx * AS_DOUBLE((long)(mh + 1023) << 52) *
+                                AS_DOUBLE((long)(m - mh + 1023) << 52);
         }
 
         const double max_exp_arg = 0x1.62e42fefa39efp+9;
         const double min_exp_arg = -0x1.74910d52d3051p+9;
-        expylnx = ylnx_h > max_exp_arg ? as_double(PINFBITPATT_DP64) : expylnx;
+        expylnx = ylnx_h > max_exp_arg ? AS_DOUBLE(PINFBITPATT_DP64) : expylnx;
         expylnx = ylnx_h < min_exp_arg ? 0.0 : expylnx;
     }
 
@@ -185,21 +185,21 @@ MATH_MANGLE(pow)(double x, double y)
     bool y_pos = BUILTIN_CLASS_F64(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ax_lt_1 & y_eq_ninf ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_lt_1 & y_eq_ninf ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_lt_1 & y_eq_pinf ? 0.0 : ret;
         ret = ax_eq_1 & ay_lt_inf ? 1.0 : ret;
-        ret = ax_eq_1 & ay_eq_pinf ? as_double(QNANBITPATT_DP64) : ret;
+        ret = ax_eq_1 & ay_eq_pinf ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
         ret = ax_gt_1 & y_eq_ninf ? 0.0 : ret;
-        ret = ax_gt_1 & y_eq_pinf ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_gt_1 & y_eq_pinf ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_lt_pinf & ay_eq_0 ? 1.0 : ret;
         ret = ax_eq_pinf & !y_pos ? 0.0 : ret;
-        ret = ax_eq_pinf & y_pos ? as_double(PINFBITPATT_DP64) : ret;
-        ret = ax_eq_pinf & y_eq_pinf ? as_double(PINFBITPATT_DP64) : ret;
-        ret = ax_eq_pinf & ay_eq_0 ? as_double(QNANBITPATT_DP64) : ret;
-        ret = ax_eq_0 & !y_pos ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_pinf & y_pos ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_pinf & y_eq_pinf ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_pinf & ay_eq_0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = ax_eq_0 & !y_pos ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_eq_0 & y_pos ? 0.0 : ret;
-        ret = ax_eq_0 & ay_eq_0 ? as_double(QNANBITPATT_DP64) : ret;
-        ret = ax_ne_0 & !x_pos ? as_double(QNANBITPATT_DP64) : ret;
+        ret = ax_eq_0 & ay_eq_0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = ax_ne_0 & !x_pos ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
         ret = ax_eq_nan ? x : ret;
         ret = ay_eq_nan ? y : ret;
     } else {
@@ -218,18 +218,18 @@ MATH_MANGLE(pow)(double x, double y)
     bool y_pos = ny >= 0;
 
     if (!FINITE_ONLY_OPT()) {
-        double xinf = BUILTIN_COPYSIGN_F64(as_double(PINFBITPATT_DP64), x);
+        double xinf = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty == 2) ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_0 & !y_pos & (inty == 2) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_eq_0 & y_pos & (inty == 2) ? 0.0 : ret;
         double xzero = BUILTIN_COPYSIGN_F64(0.0, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0 : ret;
         ret = x_eq_ninf & !y_pos & (inty != 1) ? 0.0 : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_double(NINFBITPATT_DP64) : ret;
-        ret = x_eq_ninf & y_pos & (inty != 1) ? as_double(PINFBITPATT_DP64) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
+        ret = x_eq_ninf & y_pos & (inty != 1) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = x_eq_pinf & !y_pos ? 0.0 : ret;
-        ret = x_eq_pinf & y_pos ? as_double(PINFBITPATT_DP64) : ret;
+        ret = x_eq_pinf & y_pos ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_eq_nan ? x : ret;
     } else {
         double xzero = BUILTIN_COPYSIGN_F64(0.0, x);
@@ -248,19 +248,19 @@ MATH_MANGLE(pow)(double x, double y)
     bool y_pos = ny >= 0;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = !x_pos & (inty == 2) ? as_double(QNANBITPATT_DP64) : ret;
-        double xinf = BUILTIN_COPYSIGN_F64(as_double(PINFBITPATT_DP64), x);
+        ret = !x_pos & (inty == 2) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        double xinf = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty == 2) ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_0 & !y_pos & (inty == 2) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_eq_0 & y_pos & (inty == 2) ? 0.0 : ret;
         double xzero = BUILTIN_COPYSIGN_F64(0.0, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_double(NINFBITPATT_DP64) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0 : ret;
         ret = x_eq_pinf & !y_pos ? 0.0 : ret;
-        ret = x_eq_pinf & y_pos ? as_double(PINFBITPATT_DP64) : ret;
+        ret = x_eq_pinf & y_pos ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_eq_nan ? x : ret;
-        ret = ny == 0 ? as_double(QNANBITPATT_DP64) : ret;
+        ret = ny == 0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
     } else {
         double xzero = BUILTIN_COPYSIGN_F64(0.0, x);
 	ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
@@ -287,25 +287,25 @@ MATH_MANGLE(pow)(double x, double y)
     bool y_pos = BUILTIN_CLASS_F64(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = !x_pos & (inty == 0) ? as_double(QNANBITPATT_DP64) : ret;
-        ret = ax_lt_1 & y_eq_ninf ? as_double(PINFBITPATT_DP64) : ret;
+        ret = !x_pos & (inty == 0) ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = ax_lt_1 & y_eq_ninf ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_gt_1 & y_eq_ninf ? 0.0 : ret;
         ret = ax_lt_1 & y_eq_pinf ? 0.0 : ret;
-        ret = ax_gt_1 & y_eq_pinf ? as_double(PINFBITPATT_DP64) : ret;
-        double xinf = BUILTIN_COPYSIGN_F64(as_double(PINFBITPATT_DP64), x);
+        ret = ax_gt_1 & y_eq_pinf ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
+        double xinf = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty != 1) ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_0 & !y_pos & (inty != 1) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         double xzero = BUILTIN_COPYSIGN_F64(0.0, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
         ret = ax_eq_0 & y_pos & (inty != 1) ? 0.0 : ret;
-        ret = ax_eq_0 & y_eq_ninf ? as_double(PINFBITPATT_DP64) : ret;
+        ret = ax_eq_0 & y_eq_ninf ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = (x == -1.0) & ay_eq_pinf ? 1.0 : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0 : ret;
         ret = x_eq_ninf & !y_pos & (inty != 1) ? 0.0 : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_double(NINFBITPATT_DP64) : ret;
-        ret = x_eq_ninf & y_pos & (inty != 1) ? as_double(PINFBITPATT_DP64) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
+        ret = x_eq_ninf & y_pos & (inty != 1) ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = x_eq_pinf & !y_pos ? 0.0 : ret;
-        ret = x_eq_pinf & y_pos ? as_double(PINFBITPATT_DP64) : ret;
+        ret = x_eq_pinf & y_pos ? AS_DOUBLE(PINFBITPATT_DP64) : ret;
         ret = ax_eq_nan ? x : ret;
         ret = ay_eq_nan ? y : ret;
     } else {

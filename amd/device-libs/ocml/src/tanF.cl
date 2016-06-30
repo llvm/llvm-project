@@ -5,9 +5,9 @@
 INLINEATTR float
 MATH_MANGLE(tan)(float x)
 {
-    int ix = as_int(x);
+    int ix = AS_INT(x);
     int ax = ix & 0x7fffffff;
-    float dx = as_float(ax);
+    float dx = AS_FLOAT(ax);
 
 #if defined EXTRA_PRECISION
     float r0, r1;
@@ -21,10 +21,10 @@ MATH_MANGLE(tan)(float x)
     float t = MATH_PRIVATE(tanred)(r, regn);
 #endif
 
-    t = as_float(as_int(t) ^ (ix ^ ax));
+    t = AS_FLOAT(AS_INT(t) ^ (ix ^ ax));
 
     if (!FINITE_ONLY_OPT()) {
-        t = ax >= PINFBITPATT_SP32 ? as_float(QNANBITPATT_SP32) : t;
+        t = ax >= PINFBITPATT_SP32 ? AS_FLOAT(QNANBITPATT_SP32) : t;
     }
 
     return t;

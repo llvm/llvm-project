@@ -37,7 +37,7 @@ MATH_MANGLE(expm1)(float x)
         // Truncated Taylor series
         float z2 = MATH_MAD(r*r, MATH_MAD(r, MATH_MAD(r, 0x1.555556p-5f,  0x1.555556p-3f), 0.5f), r);
 
-        float m2 = as_float((m + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
+        float m2 = AS_FLOAT((m + EXPBIAS_SP32) << EXPSHIFTBITS_SP32);
         float2 tv = p_tbl[j];
         float two_to_jby64_h = tv.s0 * m2;
         float two_to_jby64_t = tv.s1 * m2;
@@ -48,7 +48,7 @@ MATH_MANGLE(expm1)(float x)
         z2 = x < X_MIN | m < -24 ? -1.0f : z2;
 
         if (!FINITE_ONLY_OPT()) {
-            z2 = x > X_MAX ? as_float(PINFBITPATT_SP32) : z2;
+            z2 = x > X_MAX ? AS_FLOAT(PINFBITPATT_SP32) : z2;
             z2 = MATH_MANGLE(isnan)(x) ? x : z2;
         }
 

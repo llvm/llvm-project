@@ -94,35 +94,35 @@ native_cos(float x)
 ATTR float
 native_exp2(float x)
 {
-    return __llvm_amdgcn_exp_f32(x);
+    return __llvm_exp2_f32(x);
 }
 
 ATTR float
 native_exp(float f) {
-    return __llvm_amdgcn_exp_f32(M_LOG2E_F * f);
+    return __llvm_exp2_f32(M_LOG2E_F * f);
 }
 
 ATTR float
 native_exp10(float f)
 {
-    return __llvm_amdgcn_exp_f32(M_LOG2_10_F * f);
+    return __llvm_exp2_f32(M_LOG2_10_F * f);
 }
 
 ATTR float
 native_log2(float x) {
-    return __llvm_amdgcn_log_f32(x);
+    return __llvm_log2_f32(x);
 }
 
 ATTR float
 native_log(float f)
 {
-    return __llvm_amdgcn_log_f32(f) * M_RLOG2_E_F;
+    return __llvm_log2_f32(f) * M_RLOG2_E_F;
 }
 
 ATTR float
 native_log10(float f)
 {
-    return __llvm_amdgcn_log_f32(f) * M_RLOG2_10_F;
+    return __llvm_log2_f32(f) * M_RLOG2_10_F;
 }
 
 ATTR float

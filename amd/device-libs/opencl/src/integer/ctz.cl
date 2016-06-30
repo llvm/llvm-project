@@ -42,13 +42,13 @@ ctz(ushort x)
 UEXPATTR int
 ctz(int x)
 {
-    return (int)__ockl_ctz_i32((uint)x);
+    return (int)__ockl_ctz_u32((uint)x);
 }
 
 UEXPATTR uint
 ctz(uint x)
 {
-    return __ockl_ctz_i32(x);
+    return __ockl_ctz_u32(x);
 }
 
 __attribute__((always_inline, const)) static ulong

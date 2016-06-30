@@ -11,16 +11,16 @@ MATH_MANGLE(frexp)(double x, __private int *ep)
         *ep = c ? 0 : e;
         return c ? x : r;
     } else {
-        long i = as_long(x);
+        long i = AS_LONG(x);
         long ai = i & EXSIGNBIT_DP64;
         bool d = ai > 0 & ai < IMPBIT_DP64;
-        double s = as_double(ONEEXPBITS_DP64 | ai) - 1.0;
-        ai = d ? as_long(s) : ai;
-        int e = (int)(as_int2(ai).hi >> 20) - (d ? 2044 : 1022);
+        double s = AS_DOUBLE(ONEEXPBITS_DP64 | ai) - 1.0;
+        ai = d ? AS_LONG(s) : ai;
+        int e = (int)(AS_INT2(ai).hi >> 20) - (d ? 2044 : 1022);
         bool t = ai == 0 | e == 1025;
         i = (i & SIGNBIT_DP64) | HALFEXPBITS_DP64 | (ai & MANTBITS_DP64);
         *ep = t ? 0 : e;
-        return t ? x : as_double(i);
+        return t ? x : AS_DOUBLE(i);
     }
 }
 

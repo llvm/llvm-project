@@ -14,20 +14,20 @@ MATH_MANGLE(rsqrt)(double x)
     } else {
         USE_TABLE(double, p_tbl, M64_RSQRT);
         double y = x * (x < 0x1.0p-1000 ? 0x1.0p+1000 : 1.0);
-        int e = (as_int2(y).hi >> 20) - EXPBIAS_DP64;
-        int i = ((e & 1) << 6) + ((as_int2(y).hi >> 14) & 0x3f);
-        double r = p_tbl[i] * as_double((long)(EXPBIAS_DP64 - (e >> 1)) << EXPSHIFTBITS_DP64);
+        int e = (AS_INT2(y).hi >> 20) - EXPBIAS_DP64;
+        int i = ((e & 1) << 6) + ((AS_INT2(y).hi >> 14) & 0x3f);
+        double r = p_tbl[i] * AS_DOUBLE((long)(EXPBIAS_DP64 - (e >> 1)) << EXPSHIFTBITS_DP64);
         r = r * MATH_MAD(-y*r*0.5, r, 1.5);
         r = r * MATH_MAD(-y*r*0.5, r, 1.5);
         r = r * MATH_MAD(-y*r*0.5, r, 1.5);
         r = r * MATH_MAD(-y*r*0.5, r, 1.5);
         ret = r * (x < 0x1.0p-1000 ? 0x1.0p+500 : 1.0);
         if (!FINITE_ONLY_OPT()) {
-            double inf = BUILTIN_COPYSIGN_F64(as_double(PINFBITPATT_DP64), x);
+            double inf = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), x);
             ret = x == 0.0 ? inf : ret;
             ret = BUILTIN_CLASS_F64(x, CLASS_PINF) ? 0.0 : ret;
             ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_NINF|CLASS_NNOR|CLASS_NSUB) ?
-                  as_double(QNANBITPATT_DP64) : ret;
+                  AS_DOUBLE(QNANBITPATT_DP64) : ret;
         }
     }
 

@@ -251,7 +251,7 @@ MATH_MANGLE(erfc)(double x)
                     1.0);
         }
         
-        double z = as_double(as_long(ax) & 0xfffffffff8000000L);
+        double z = AS_DOUBLE(AS_LONG(ax) & 0xfffffffff8000000L);
         double r = MATH_MANGLE(exp)(MATH_MAD(z, -z, -0.5625)) *
                    MATH_MANGLE(exp)(MATH_MAD(z - ax,  z + ax, MATH_DIV(R , S)));
         r = MATH_DIV(r, ax);

@@ -4,11 +4,11 @@
 CONSTATTR INLINEATTR half
 MATH_MANGLE(nextafter)(half x, half y)
 {
-    short ix = as_short(x);
+    short ix = AS_SHORT(x);
     short ax = ix & (short)EXSIGNBIT_HP16;
     short mx = (short)SIGNBIT_HP16 - ix;
     mx = ix < (short)0 ? mx : ix;
-    short iy = as_short(y);
+    short iy = AS_SHORT(y);
     short ay = iy & (short)EXSIGNBIT_HP16;
     short my = (short)SIGNBIT_HP16 - iy;
     my = iy < (short)0 ? my : iy;
@@ -20,6 +20,6 @@ MATH_MANGLE(nextafter)(half x, half y)
         r = ay > (short)PINFBITPATT_HP16 ? iy : r;
     }
     r = (ax | ay) == (short)0 | ix == iy ? iy : r;
-    return as_half(r);
+    return AS_HALF(r);
 }
 

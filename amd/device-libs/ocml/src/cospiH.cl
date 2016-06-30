@@ -13,7 +13,7 @@ MATH_MANGLE(cospi)(half x)
 
     // 2^11 <= |x| < Inf, the result is always even integer
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? as_half((short)QNANBITPATT_HP16) : 1.0h;
+        ret = BUILTIN_CLASS_F16(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? AS_HALF((short)QNANBITPATT_HP16) : 1.0h;
     } else {
 	ret = 1.0h;
     }

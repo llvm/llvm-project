@@ -9,7 +9,7 @@ MATH_MANGLE(ilogb)(half x)
     if (AMD_OPT()) {
         r = BUILTIN_FREXP_EXP_F16(x) - 1;
     } else {
-        int ix = (int)as_ushort(x);
+        int ix = (int)AS_USHORT(x);
         r = ((ix >> 10) & 0x1f) - EXPBIAS_HP16;
         int rs = 7 - (int)MATH_CLZI(ix & MANTBITS_HP16);
         r = BUILTIN_CLASS_F16(x, CLASS_PSUB|CLASS_NSUB) ? rs : r;

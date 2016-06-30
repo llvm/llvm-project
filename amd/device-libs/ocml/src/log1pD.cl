@@ -22,17 +22,17 @@ MATH_MANGLE(log1p)(double x)
     double ret;
 
     if (x < log1p_thresh1 | x > log1p_thresh2) {
-        ulong ux = as_ulong(1.0 + x);
-        int xexp = ((as_int2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64;
-        double f = as_double(ONEEXPBITS_DP64 | (ux & MANTBITS_DP64));
+        ulong ux = AS_ULONG(1.0 + x);
+        int xexp = ((AS_INT2(ux).hi >> 20) & 0x7ff) - EXPBIAS_DP64;
+        double f = AS_DOUBLE(ONEEXPBITS_DP64 | (ux & MANTBITS_DP64));
 
-        int j = as_int2(ux).hi >> 13;
+        int j = AS_INT2(ux).hi >> 13;
         j = ((0x80 | (j & 0x7e)) >> 1) + (j & 0x1);
         double f1 = (double)j * 0x1.0p-6;
         j -= 64;
 
         double f2temp = f - f1;
-        double m2 = as_double((ulong)(0x3ff - xexp) << EXPSHIFTBITS_DP64);
+        double m2 = AS_DOUBLE((ulong)(0x3ff - xexp) << EXPSHIFTBITS_DP64);
         double f2l = MATH_MAD(m2, x, m2 - f1);
         double f2g = MATH_MAD(m2, x, -f1) + m2;
         double f2 = xexp <= MANTLENGTH_DP64-1 ? f2l : f2g;
@@ -79,8 +79,8 @@ MATH_MANGLE(log1p)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         ret = MATH_MANGLE(isinf)(x) ? x : ret;
-        ret = x < -1.0 ? as_double(QNANBITPATT_DP64) : ret;
-        ret = x == -1.0 ? as_double(NINFBITPATT_DP64) : ret;
+        ret = x < -1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
+        ret = x == -1.0 ? AS_DOUBLE(NINFBITPATT_DP64) : ret;
     }
 
     return ret;

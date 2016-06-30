@@ -80,7 +80,7 @@ get_twobypi_bits(int start, int scale)
     b = 11 - z;
     w1 = (w1 >> b) | (w2 << (32-b));
     w2 >>= b;
-    return as_double(((ulong)(1022 + scale - start - z) << 52) | ((ulong)(w2 & 0x000fffff) << 32) | (ulong)w1);
+    return AS_DOUBLE(((ulong)(1022 + scale - start - z) << 52) | ((ulong)(w2 & 0x000fffff) << 32) | (ulong)w1);
 }
 
 int
@@ -95,7 +95,7 @@ MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x)
         p0 = BUILTIN_TRIG_PREOP_F64(x, 2);
     } else {
         const int e_clamp = 1077;
-        int e = as_int2(x).y >> 20;
+        int e = AS_INT2(x).y >> 20;
         int shift = e > e_clamp ?  e - e_clamp : 0;
         int scale = e >= 0x7b0 ? 128 : 0;
 
@@ -151,7 +151,7 @@ MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x)
         rh = f2 * pio2h;
         rt = BUILTIN_FMA_F64(f1, pio2h, BUILTIN_FMA_F64(f2, pio2t, BUILTIN_FMA_F64(f2, pio2h, -rh)));
     } else { 
-        double f2h = as_double(as_ulong(f2) & 0xfffffffff8000000UL);
+        double f2h = AS_DOUBLE(AS_ULONG(f2) & 0xfffffffff8000000UL);
         double f2t = f2 - f2h;
 
         rh = f2 * pio2h;

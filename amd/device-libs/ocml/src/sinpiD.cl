@@ -15,7 +15,7 @@ MATH_MANGLE(sinpi)(double x)
 
     // 2^52 <= |x| < Inf, the result is always integer
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? as_double(QNANBITPATT_DP64) : z;
+        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? AS_DOUBLE(QNANBITPATT_DP64) : z;
     } else {
 	ret = z;
     }

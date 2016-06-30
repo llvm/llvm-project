@@ -34,7 +34,7 @@ mad_reduce(__private float *hi, float x)
     const float twobypi = 0x1.45f306p-1f;
 
     float fn = BUILTIN_RINT_F32(x * twobypi);
-    float fnh = as_float(as_uint(fn) & 0xfffff000U);
+    float fnh = AS_FLOAT(AS_UINT(fn) & 0xfffff000U);
     float fnt = fn - fnh;
 
     // subtract n * pi/2 from x

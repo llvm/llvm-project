@@ -14,7 +14,7 @@ MATH_MANGLE(tanpi)(double x)
 
     // 2^53 <= |x| < Inf, the result is always even integer
     if (!FINITE_ONLY_OPT()) {
-        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? as_double(QNANBITPATT_DP64) : z;
+        ret = BUILTIN_CLASS_F64(x, CLASS_SNAN|CLASS_QNAN|CLASS_PINF) ? AS_DOUBLE(QNANBITPATT_DP64) : z;
     } else {
 	ret = z;
     }
@@ -50,7 +50,7 @@ MATH_MANGLE(tanpi)(double x)
 
     const double pi = 0x1.921fb54442d18p+1;
     double tret = MATH_PRIVATE(tanred2)(a * pi, 0.0, e) * BUILTIN_COPYSIGN_F64(1.0, s);
-    double tinf = BUILTIN_COPYSIGN_F64(as_double(PINFBITPATT_DP64), sgn);
+    double tinf = BUILTIN_COPYSIGN_F64(AS_DOUBLE(PINFBITPATT_DP64), sgn);
     tret = r == 0.5 ? tinf : tret;
 
     ret = x < 0x1.0p+52 ? tret : ret;

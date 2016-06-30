@@ -4,6 +4,6 @@
 CONSTATTR INLINEATTR int
 MATH_MANGLE(signbit)(double x)
 {
-    return as_int2(x).hi < 0;
+    return AS_INT2(x).hi < 0;
 }
 

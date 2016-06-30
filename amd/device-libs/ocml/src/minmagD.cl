@@ -5,11 +5,11 @@ CONSTATTR INLINEATTR double
 MATH_MANGLE(minmag)(double x, double y)
 {
 #if 0
-    long ix = as_long(x);
-    long iy = as_long(y);
+    long ix = AS_LONG(x);
+    long iy = AS_LONG(y);
     long ax = ix & 0x7fffffffffffffffL;
     long ay = iy & 0x7fffffffffffffffL;
-    return as_double((-(ax < ay) & ix) |
+    return AS_DOUBLE((-(ax < ay) & ix) |
 	            (-(ay < ax) & iy) |
 		    (-(ax == ay) & (ix | iy)));
 #else

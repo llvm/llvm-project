@@ -4,7 +4,7 @@
 PUREATTR float
 MATH_MANGLE(acosh)(float x)
 {
-    uint ux = as_uint(x);
+    uint ux = AS_UINT(x);
 
     // Arguments greater than 1/sqrt(epsilon) in magnitude are
     // approximated by acosh(x) = ln(2) + ln(x)
@@ -22,7 +22,7 @@ MATH_MANGLE(acosh)(float x)
 
     if (!FINITE_ONLY_OPT()) {
         z = ux >= PINFBITPATT_SP32 ? x : z;
-        z = x < 1.0f ? as_float(QNANBITPATT_SP32) : z;
+        z = x < 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : z;
     }
 
     return z;

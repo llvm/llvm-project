@@ -41,7 +41,7 @@ MATH_MANGLE(asinpi)(float x)
     float xux = piinv * MATH_MAD(ax, u, ax);
     ret = ax < 0.5f ? xux : ret;
 
-    ret = ax > 1.0f ? as_float(QNANBITPATT_SP32) : ret;
+    ret = ax > 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
     ret = ax == 1.0f ? 0.5f : ret;
     ret = BUILTIN_COPYSIGN_F32(ret, x);
     return ret;

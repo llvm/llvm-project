@@ -11,16 +11,16 @@ MATH_MANGLE(frexp)(half x, __private int *ep)
         *ep = c ? 0 : e;
         return c ? x : r;
     } else {
-        int i = (int)as_ushort(x);
+        int i = (int)AS_USHORT(x);
         int ai = i & EXSIGNBIT_HP16;
         bool d = ai > 0 & ai < IMPBIT_HP16;
-        int s = (int)as_ushort(as_half((ushort)(ONEEXPBITS_HP16 | ai)) - 1.0h);
+        int s = (int)AS_USHORT(AS_HALF((ushort)(ONEEXPBITS_HP16 | ai)) - 1.0h);
         ai = d ? s : ai;
         int e = (ai >> 10) - (d ? 28 : 14);
         bool t = ai == 0 | e == 17;
         i = (i & SIGNBIT_HP16) | HALFEXPBITS_HP16 | (ai & MANTBITS_HP16);
         *ep = t ? 0 : e;
-        return t ? x : as_half((ushort)i);
+        return t ? x : AS_HALF((ushort)i);
     }
 }
 

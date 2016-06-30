@@ -1,4 +1,20 @@
 
+// Bitcasting
+
+#define AS_SHORT(X) __builtin_astype(X, short)
+#define AS_SHORT2(X) __builtin_astype(X, short2)
+#define AS_USHORT(X) __builtin_astype(X, ushort)
+#define AS_USHORT2(X) __builtin_astype(X, ushort2)
+#define AS_INT(X) __builtin_astype(X, int)
+#define AS_INT2(X) __builtin_astype(X, int2)
+#define AS_UINT(X) __builtin_astype(X, uint)
+#define AS_UINT2(X) __builtin_astype(X, uint2)
+#define AS_LONG(X) __builtin_astype(X, long)
+#define AS_ULONG(X) __builtin_astype(X, ulong)
+#define AS_DOUBLE(X) __builtin_astype(X, double)
+#define AS_FLOAT(X) __builtin_astype(X, float)
+#define AS_HALF(X) __builtin_astype(X, half)
+
 // Class mask bits
 #define CLASS_SNAN 0x001
 #define CLASS_QNAN 0x002
@@ -65,11 +81,11 @@
 
 #define BUILTIN_COS_F32 __llvm_amdgcn_cos_f32
 
-#define BUILTIN_EXP2_F32 __llvm_amdgcn_exp_f32
-#define BUILTIN_EXP2_F16 __llvm_amdgcn_exp_f16
+#define BUILTIN_EXP2_F32 __llvm_exp2_f32
+#define BUILTIN_EXP2_F16 __llvm_exp2_f16
 
-#define BUILTIN_LOG2_F32 __llvm_amdgcn_log_f32
-#define BUILTIN_LOG2_F16 __llvm_amdgcn_log_f16
+#define BUILTIN_LOG2_F32 __llvm_log2_f32
+#define BUILTIN_LOG2_F16 __llvm_log2_f16
 
 #define BUILTIN_RCP_F32 __llvm_amdgcn_rcp_f32
 #define BUILTIN_RCP_F64 __llvm_amdgcn_rcp_f64
@@ -154,19 +170,19 @@
 
 #define BUILTIN_TRIG_PREOP_F64 __llvm_amdgcn_trig_preop_f64
 
-#define BUILTIN_MAX3_F32 __llvm_amdgcn_max3_f32
-#define BUILTIN_MEDIAN3_F32 __llvm_amdgcn_med3_f32
-#define BUILTIN_MIN3_F32 __llvm_amdgcn_min3_f32
-
-#define BUILTIN_MAX3_S32 __llvm_amdgcn_max3_i32
-#define BUILTIN_MEDIAN3_S32 __llvm_amdgcn_med3_i32
-#define BUILTIN_MIN3_S32 __llvm_amdgcn_min3_i32
-
-#define BUILTIN_MAX3_U32 __llvm_amdgcn_max3u_i32
-#define BUILTIN_MEDIAN3_U32 __llvm_amdgcn_med3u_i32
-#define BUILTIN_MIN3_U32 __llvm_amdgcn_min3u_i32
-
 #define BUILTIN_MAD_F32 __llvm_fmuladd_f32
 #define BUILTIN_MAD_F64 __llvm_fmuladd_f64
 #define BUILTIN_MAD_F16 __llvm_fmuladd_f16
+
+// HW has ISA for max3, median3, and min3, median3 can be used to clamp
+#define BUILTIN_CLAMP_S32(X,L,H) ({ \
+    int _clamp_x = X; \
+    int _clamp_l = L; \
+    int _clamp_h = H; \
+    int _clamp_r = _clamp_x > _clamp_l ? _clamp_x : _clamp_l; \
+    _clamp_r = _clamp_r < _clamp_h ? _clamp_r : _clamp_h; \
+    _clamp_r; \
+})
+
+#define BUILTIN_CLAMP_F32(X,L,H) __llvm_minnum_f32(__llvm_maxnum_f32(X, L), H)
 

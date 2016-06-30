@@ -149,7 +149,7 @@ MATH_MANGLE(y1)(float x)
                 ret = MATH_DIV(-twobypi, x);
             else
                 ret = MATH_MAD(ret, x, twobypi*(MATH_MANGLE(j1)(x) * MATH_MANGLE(log)(x) - MATH_RCP(x)));
-            ret = x < 0.0f ? as_float(QNANBITPATT_SP32) : ret;
+            ret = x < 0.0f ? AS_FLOAT(QNANBITPATT_SP32) : ret;
         }
     } else {
         // y1(x) ~ sqrt(2 / (pi*x)) * (P1(x) sin(x-3pi/4) + Q1(x) cos(x-3pi/4))

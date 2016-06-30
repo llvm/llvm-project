@@ -4,5 +4,5 @@
 CONSTATTR INLINEATTR int
 MATH_MANGLE(signbit)(half x)
 {
-    return as_short(x) < 0;
+    return AS_SHORT(x) < 0;
 }

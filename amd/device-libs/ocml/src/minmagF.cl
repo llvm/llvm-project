@@ -5,11 +5,11 @@ CONSTATTR INLINEATTR float
 MATH_MANGLE(minmag)(float x, float y)
 {
 #if 0
-    int ix = as_int(x);
-    int iy = as_int(y);
+    int ix = AS_INT(x);
+    int iy = AS_INT(y);
     int ax = ix & 0x7fffffff;
     int ay = iy & 0x7fffffff;
-    return as_float((-(ax < ay) & ix) |
+    return AS_FLOAT((-(ax < ay) & ix) |
 	            (-(ay < ax) & iy) |
 		    (-(ax == ay) & (ix | iy)));
 #else

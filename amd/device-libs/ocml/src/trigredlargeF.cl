@@ -18,8 +18,8 @@ MATH_PRIVATE(trigredlarge)(__private float *r, __private float *rr, float x)
 MATH_PRIVATE(trigredlarge)(__private float *r, float x)
 #endif
 {
-    int xe = (int)(as_uint(x) >> 23) - 127;
-    uint xm = 0x00800000U | (as_uint(x) & 0x7fffffU);
+    int xe = (int)(AS_UINT(x) >> 23) - 127;
+    uint xm = 0x00800000U | (AS_UINT(x) & 0x7fffffU);
 
     // 224 bits of 2/PI: . A2F9836E 4E441529 FC2757D1 F534DDC0 DB629599 3C439041 FE5163AB
     const uint b6 = 0xA2F9836EU;
@@ -113,7 +113,7 @@ MATH_PRIVATE(trigredlarge)(__private float *r, float x)
     p6 = BUILTIN_BITALIGN_B32(p6, p5, shift);
 
     // Most significant part of fraction
-    float q1 = as_float(sign | ((127 - xe) << 23) | (p7 >> 9));
+    float q1 = AS_FLOAT(sign | ((127 - xe) << 23) | (p7 >> 9));
 
     // Shift out bits we captured on q1
     p7 = BUILTIN_BITALIGN_B32(p7, p6, 32-23);
@@ -121,7 +121,7 @@ MATH_PRIVATE(trigredlarge)(__private float *r, float x)
     // Get 24 more bits of fraction in another float, there are not long strings of zeroes here
     int xxe = MATH_CLZI(p7) + 1;
     p7 = BUILTIN_BITALIGN_B32(p7, p6, 32-xxe);
-    float q0 = as_float(sign | ((127 - (xe + 23 + xxe)) << 23) | (p7 >> 9));
+    float q0 = AS_FLOAT(sign | ((127 - (xe + 23 + xxe)) << 23) | (p7 >> 9));
 
     // At this point, the fraction q1 + q0 is correct to at least 48 bits
     // Now we need to multiply the fraction by pi/2
@@ -139,7 +139,7 @@ MATH_PRIVATE(trigredlarge)(__private float *r, float x)
         rh = q1 * pio2h;
         rt = BUILTIN_FMA_F32(q0, pio2h, BUILTIN_FMA_F32(q1, pio2t, BUILTIN_FMA_F32(q1, pio2h, -rh)));
     } else {
-        float q1h = as_float(as_uint(q1) & 0xfffff000);
+        float q1h = AS_FLOAT(AS_UINT(q1) & 0xfffff000);
         float q1t = q1 - q1h;
         rh = q1 * pio2h;
         rt = MATH_MAD(q1t, pio2ht, MATH_MAD(q1t, pio2hh, MATH_MAD(q1h, pio2ht, MATH_MAD(q1h, pio2hh, -rh)))) +

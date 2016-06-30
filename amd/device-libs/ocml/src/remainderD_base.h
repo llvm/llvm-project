@@ -3,9 +3,9 @@
 
 #define FULL_MUL(A, B, CHI, CLO) \
     do { \
-        double __ha = as_double(as_ulong(A) & 0xfffffffff8000000UL); \
+        double __ha = AS_DOUBLE(AS_ULONG(A) & 0xfffffffff8000000UL); \
         double __ta = A - __ha; \
-        double __hb = as_double(as_ulong(B) & 0xfffffffff8000000UL); \
+        double __hb = AS_DOUBLE(AS_ULONG(B) & 0xfffffffff8000000UL); \
         double __tb = B - __hb; \
         CHI = A * B; \
         CLO = MATH_MAD(__ta, __tb, MATH_MAD(__ta, __hb, MATH_MAD(__ha, __tb, MATH_MAD(__ha, __hb, -CHI)))); \
@@ -56,20 +56,20 @@ MATH_MANGLE(remainder)(double x, double y)
             ey = BUILTIN_FREXP_EXP_F64(ay) - 1;
             ay = BUILTIN_FLDEXP_F64(BUILTIN_FREXP_MANT_F64(ay), 1);
         } else {
-            ex = (as_int2(ax).hi >> 20) - EXPBIAS_DP64;
-            int exs = -1011 - (int)MATH_CLZL(as_ulong(ax));
-            double axs = as_double(((ulong)(EXPBIAS_DP64+bits-1) << EXPSHIFTBITS_DP64) |
-                               ((as_ulong(ax) << (-1022 - exs)) & MANTBITS_DP64));
-            ax = as_double(((ulong)(EXPBIAS_DP64+bits-1) << EXPSHIFTBITS_DP64) | (as_ulong(ax) & MANTBITS_DP64));
+            ex = (AS_INT2(ax).hi >> 20) - EXPBIAS_DP64;
+            int exs = -1011 - (int)MATH_CLZL(AS_ULONG(ax));
+            double axs = AS_DOUBLE(((ulong)(EXPBIAS_DP64+bits-1) << EXPSHIFTBITS_DP64) |
+                               ((AS_ULONG(ax) << (-1022 - exs)) & MANTBITS_DP64));
+            ax = AS_DOUBLE(((ulong)(EXPBIAS_DP64+bits-1) << EXPSHIFTBITS_DP64) | (AS_ULONG(ax) & MANTBITS_DP64));
             ax = ex == -EXPBIAS_DP64 ? axs : ax;
             ex = ex == -EXPBIAS_DP64 ? exs : ex;
             ax = x == 0.0 ? 0.0 : ax;
             ex = x == 0.0 ? 0 : ex;
 
-            ey = (as_int2(ay).hi >> 20) - EXPBIAS_DP64;
-            int eys = -1011 - (int)MATH_CLZL(as_ulong(ay));
-            double ays = as_double(((ulong)EXPBIAS_DP64 << EXPSHIFTBITS_DP64) | (as_ulong(ay) << (-1022 - eys)));
-            ay = as_double(((ulong)EXPBIAS_DP64 << EXPSHIFTBITS_DP64) | (as_ulong(ay) & MANTBITS_DP64));
+            ey = (AS_INT2(ay).hi >> 20) - EXPBIAS_DP64;
+            int eys = -1011 - (int)MATH_CLZL(AS_ULONG(ay));
+            double ays = AS_DOUBLE(((ulong)EXPBIAS_DP64 << EXPSHIFTBITS_DP64) | (AS_ULONG(ay) << (-1022 - eys)));
+            ay = AS_DOUBLE(((ulong)EXPBIAS_DP64 << EXPSHIFTBITS_DP64) | (AS_ULONG(ay) & MANTBITS_DP64));
             ay = ey == -EXPBIAS_DP64 ? ays : ay;
             ey = ey == -EXPBIAS_DP64 ? eys : ey;
             ey = y == 0.0 ? ex : ey;
@@ -96,7 +96,7 @@ MATH_MANGLE(remainder)(double x, double y)
             if (AMD_OPT()) {
                 ax = BUILTIN_FLDEXP_F64(ax, bits); 
             } else {
-                ax *= as_double((ulong)(EXPBIAS_DP64 + bits) << EXPSHIFTBITS_DP64);
+                ax *= AS_DOUBLE((ulong)(EXPBIAS_DP64 + bits) << EXPSHIFTBITS_DP64);
             }
             nb -= bits;
         }
@@ -104,7 +104,7 @@ MATH_MANGLE(remainder)(double x, double y)
         if (AMD_OPT()) {
             ax = BUILTIN_FLDEXP_F64(ax, nb - bits + 1);
         } else {
-            ax *= as_double((ulong)(EXPBIAS_DP64 + nb - bits + 1) << EXPSHIFTBITS_DP64);
+            ax *= AS_DOUBLE((ulong)(EXPBIAS_DP64 + nb - bits + 1) << EXPSHIFTBITS_DP64);
         }
 
         // Final iteration
@@ -132,7 +132,7 @@ MATH_MANGLE(remainder)(double x, double y)
         ax = ax - (aq ? ay : 0.0f);
 #if defined(COMPILING_REMQUO)
         qacc += aq;
-        int qneg = (as_int2(x).hi ^ as_int2(y).hi) >> 31;
+        int qneg = (AS_INT2(x).hi ^ AS_INT2(y).hi) >> 31;
         q7 = ((qacc & 0x7f) ^ qneg) - qneg;
 #endif
 #endif
@@ -141,12 +141,12 @@ MATH_MANGLE(remainder)(double x, double y)
             ax = BUILTIN_FLDEXP_F64(ax, ey);
         } else {
             int ey2 = ey >> 1;
-            double xsc1 = as_double((ulong)(EXPBIAS_DP64 + ey2) << EXPSHIFTBITS_DP64);
-            double xsc2 = as_double((ulong)(EXPBIAS_DP64 + (ey - ey2)) << EXPSHIFTBITS_DP64);
+            double xsc1 = AS_DOUBLE((ulong)(EXPBIAS_DP64 + ey2) << EXPSHIFTBITS_DP64);
+            double xsc2 = AS_DOUBLE((ulong)(EXPBIAS_DP64 + (ey - ey2)) << EXPSHIFTBITS_DP64);
             ax = (ax * xsc1) * xsc2;
         }
 
-        ret =  as_double((as_ulong(x) & SIGNBIT_DP64) ^ as_ulong(ax));
+        ret =  AS_DOUBLE((AS_ULONG(x) & SIGNBIT_DP64) ^ AS_ULONG(ax));
     } else {
         ret = x;
 #if defined(COMPILING_REMQUO)
@@ -156,7 +156,7 @@ MATH_MANGLE(remainder)(double x, double y)
 #if !defined(COMPILING_FMOD)
         int c = (ay < 0x1.0p+1023 & 2.0*ax > ay) | (ax > 0.5*ay);
 
-        int qsgn = 1 + (((as_int2(x).hi ^ as_int2(y).hi) >> 31) << 1);
+        int qsgn = 1 + (((AS_INT2(x).hi ^ AS_INT2(y).hi) >> 31) << 1);
         double t = MATH_MAD(y, -(double)qsgn, x);
         ret = c ? t : ret;
 #if defined(COMPILING_REMQUO)
@@ -170,14 +170,14 @@ MATH_MANGLE(remainder)(double x, double y)
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = y == 0.0 ? as_double(QNANBITPATT_DP64) : ret;
+        ret = y == 0.0 ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
 #if defined(COMPILING_REMQUO)
         q7 = y == 0.0 ? 0 : q7;
 #endif
 
         bool c = BUILTIN_CLASS_F64(y, CLASS_QNAN|CLASS_SNAN) |
                  BUILTIN_CLASS_F64(x, CLASS_NINF|CLASS_PINF|CLASS_QNAN|CLASS_SNAN);
-        ret = c ? as_double(QNANBITPATT_DP64) : ret;
+        ret = c ? AS_DOUBLE(QNANBITPATT_DP64) : ret;
 #if defined(COMPILING_REMQUO)
         q7 = c ? 0 : q7;
 #endif

@@ -5,10 +5,10 @@
 INLINEATTR float
 MATH_MANGLE(sinpi)(float x)
 {
-    int ix = as_int(x); 
+    int ix = AS_INT(x); 
     int xsgn = ix & SIGNBIT_SP32;
     ix ^= xsgn;
-    float ax = as_float(ix);
+    float ax = AS_FLOAT(ix);
     int iax = (int)ax;
     float r = BUILTIN_FRACTION_F32(ax);
     int xodd = xsgn ^ (iax & 0x1 ? SIGNBIT_SP32 : 0);
@@ -47,9 +47,9 @@ MATH_MANGLE(sinpi)(float x)
     float ca;
     float sa = MATH_PRIVATE(sincosred)(a*pi, &ca);
 
-    int jr = xodd ^ as_int(e ? ca : sa);
+    int jr = xodd ^ AS_INT(e ? ca : sa);
     ir = ix < 0x4b000000 ? jr : ir;
 
-    return as_float(ir);
+    return AS_FLOAT(ir);
 }
 

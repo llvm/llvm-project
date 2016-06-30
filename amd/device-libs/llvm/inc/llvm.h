@@ -114,12 +114,6 @@ extern __attribute__((const)) double __llvm_amdgcn_fract_f64(double) __asm("llvm
 
 extern __attribute__((const)) float __llvm_amdgcn_cos_f32(float) __asm("llvm.amdgcn.cos.f32");
 
-extern __attribute__((const)) half __llvm_amdgcn_exp_f16(float) __asm("llvm.amdgcn.exp.f16");
-extern __attribute__((const)) float __llvm_amdgcn_exp_f32(float) __asm("llvm.amdgcn.exp.f32");
-
-extern __attribute__((const)) half __llvm_amdgcn_log_f16(float) __asm("llvm.amdgcn.log.f16");
-extern __attribute__((const)) float __llvm_amdgcn_log_f32(float) __asm("llvm.amdgcn.log.f32");
-
 extern __attribute__((const)) half __llvm_amdgcn_rcp_f16(half) __asm("llvm.amdgcn.rcp.f16");
 extern __attribute__((const)) float __llvm_amdgcn_rcp_f32(float) __asm("llvm.amdgcn.rcp.f32");
 extern __attribute__((const)) double __llvm_amdgcn_rcp_f64(double) __asm("llvm.amdgcn.rcp.f64");
@@ -143,18 +137,6 @@ extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f32(float) __asm("llvm
 extern __attribute__((const)) int __llvm_amdgcn_frexp_exp_f64(double) __asm("llvm.amdgcn.frexp.exp.f64");
 
 extern __attribute__((const)) double __llvm_amdgcn_trig_preop_f64(double, int) __asm("llvm.amdgcn.trig.preop.f64");
-
-extern __attribute__((const)) float __llvm_amdgcn_max3_f32(float, float, float) __asm("llvm.amdgcn.max3.f32");
-extern __attribute__((const)) float __llvm_amdgcn_med3_f32(float, float, float) __asm("llvm.amdgcn.med3.f32");
-extern __attribute__((const)) float __llvm_amdgcn_min3_f32(float, float, float) __asm("llvm.amdgcn.min3.f32");
-
-extern __attribute__((const)) int __llvm_amdgcn_max3_i32(int, int, int) __asm("llvm.amdgcn.max3.i32");
-extern __attribute__((const)) int __llvm_amdgcn_med3_i32(int, int, int) __asm("llvm.amdgcn.med3.i32");
-extern __attribute__((const)) int __llvm_amdgcn_min3_i32(int, int, int) __asm("llvm.amdgcn.min3.i32");
-
-extern __attribute__((const)) uint __llvm_amdgcn_max3u_i32(uint, uint, uint) __asm("llvm.amdgcn.max3u.i32");
-extern __attribute__((const)) uint __llvm_amdgcn_med3u_i32(uint, uint, uint) __asm("llvm.amdgcn.med3u.i32");
-extern __attribute__((const)) uint __llvm_amdgcn_min3u_i32(uint, uint, uint) __asm("llvm.amdgcn.min3u.i32");
 
 extern void __llvm_amdgcn_s_barrier(void) __asm("llvm.amdgcn.s.barrier");
 

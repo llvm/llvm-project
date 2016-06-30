@@ -73,21 +73,21 @@ MATH_MANGLE(pow)(half x, half y)
     bool y_pos = BUILTIN_CLASS_F16(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ax_lt_1 & y_eq_ninf ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_lt_1 & y_eq_ninf ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_lt_1 & y_eq_pinf ? 0.0h : ret;
         ret = ax_eq_1 & ay_lt_inf ? 1.0h : ret;
-        ret = ax_eq_1 & ay_eq_pinf ? as_half((ushort)QNANBITPATT_HP16) : ret;
+        ret = ax_eq_1 & ay_eq_pinf ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
         ret = ax_gt_1 & y_eq_ninf ? 0.0h : ret;
-        ret = ax_gt_1 & y_eq_pinf ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_gt_1 & y_eq_pinf ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_lt_pinf & ay_eq_0 ? 1.0h : ret;
         ret = ax_eq_pinf & !y_pos ? 0.0h : ret;
-        ret = ax_eq_pinf & y_pos ? as_half((ushort)PINFBITPATT_HP16) : ret;
-        ret = ax_eq_pinf & y_eq_pinf ? as_half((ushort)PINFBITPATT_HP16) : ret;
-        ret = ax_eq_pinf & ay_eq_0 ? as_half((ushort)QNANBITPATT_HP16) : ret;
-        ret = ax_eq_0 & !y_pos ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_pinf & y_pos ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_pinf & y_eq_pinf ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_pinf & ay_eq_0 ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
+        ret = ax_eq_0 & !y_pos ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_eq_0 & y_pos ? 0.0h : ret;
-        ret = ax_eq_0 & ay_eq_0 ? as_half((ushort)QNANBITPATT_HP16) : ret;
-        ret = ax_ne_0 & !x_pos ? as_half((ushort)QNANBITPATT_HP16) : ret;
+        ret = ax_eq_0 & ay_eq_0 ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
+        ret = ax_ne_0 & !x_pos ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
         ret = ax_eq_nan ? x : ret;
         ret = ay_eq_nan ? y : ret;
     } else {
@@ -106,18 +106,18 @@ MATH_MANGLE(pow)(half x, half y)
     bool y_pos = ny >= 0;
 
     if (!FINITE_ONLY_OPT()) {
-        half xinf = BUILTIN_COPYSIGN_F16(as_half((ushort)PINFBITPATT_HP16), x);
+        half xinf = BUILTIN_COPYSIGN_F16(AS_HALF((ushort)PINFBITPATT_HP16), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty == 2) ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_0 & !y_pos & (inty == 2) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_eq_0 & y_pos & (inty == 2) ? 0.0h : ret;
         half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0h : ret;
         ret = x_eq_ninf & !y_pos & (inty != 1) ? 0.0h : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_half((ushort)NINFBITPATT_HP16) : ret;
-        ret = x_eq_ninf & y_pos & (inty != 1) ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_HALF((ushort)NINFBITPATT_HP16) : ret;
+        ret = x_eq_ninf & y_pos & (inty != 1) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = x_eq_pinf & !y_pos ? 0.0h : ret;
-        ret = x_eq_pinf & y_pos ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = x_eq_pinf & y_pos ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_eq_nan ? x : ret;
     } else {
         half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
@@ -136,19 +136,19 @@ MATH_MANGLE(pow)(half x, half y)
     bool y_pos = ny >= 0;
 
     if (!FINITE_ONLY_OPT()) {
-        ret = !x_pos & (inty == 2) ? as_half((ushort)QNANBITPATT_HP16) : ret;
-        half xinf = BUILTIN_COPYSIGN_F16(as_half((ushort)PINFBITPATT_HP16), x);
+        ret = !x_pos & (inty == 2) ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
+        half xinf = BUILTIN_COPYSIGN_F16(AS_HALF((ushort)PINFBITPATT_HP16), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty == 2) ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_0 & !y_pos & (inty == 2) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_eq_0 & y_pos & (inty == 2) ? 0.0h : ret;
         half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_half((ushort)NINFBITPATT_HP16) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_HALF((ushort)NINFBITPATT_HP16) : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0h : ret;
         ret = x_eq_pinf & !y_pos ? 0.0h : ret;
-        ret = x_eq_pinf & y_pos ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = x_eq_pinf & y_pos ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_eq_nan ? x : ret;
-        ret = ny == 0 ? as_half((ushort)QNANBITPATT_HP16) : ret;
+        ret = ny == 0 ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
     } else {
         half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
 	ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
@@ -175,32 +175,32 @@ MATH_MANGLE(pow)(half x, half y)
     bool y_pos = BUILTIN_CLASS_F16(y, CLASS_PZER|CLASS_PSUB|CLASS_PNOR|CLASS_PINF);
 
     if (!FINITE_ONLY_OPT()) {
-        ret = !x_pos & (inty == 0) ? as_half((ushort)QNANBITPATT_HP16) : ret;
-        ret = ax_lt_1 & y_eq_ninf ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = !x_pos & (inty == 0) ? AS_HALF((ushort)QNANBITPATT_HP16) : ret;
+        ret = ax_lt_1 & y_eq_ninf ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_gt_1 & y_eq_ninf ? 0.0h : ret;
         ret = ax_lt_1 & y_eq_pinf ? 0.0h : ret;
-        ret = ax_gt_1 & y_eq_pinf ? as_half((ushort)PINFBITPATT_HP16) : ret;
-        half xinf = BUILTIN_COPYSIGN_F16(as_half((ushort)PINFBITPATT_HP16), x);
+        ret = ax_gt_1 & y_eq_pinf ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
+        half xinf = BUILTIN_COPYSIGN_F16(AS_HALF((ushort)PINFBITPATT_HP16), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty != 1) ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_0 & !y_pos & (inty != 1) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
         ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
         ret = ax_eq_0 & y_pos & (inty != 1) ? 0.0h : ret;
-        ret = ax_eq_0 & y_eq_ninf ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_0 & y_eq_ninf ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = (x == -1.0h) & ay_eq_pinf ? 1.0h : ret;
         ret = x_eq_ninf & !y_pos & (inty == 1) ? -0.0h : ret;
         ret = x_eq_ninf & !y_pos & (inty != 1) ? 0.0h : ret;
-        ret = x_eq_ninf & y_pos & (inty == 1) ? as_half((ushort)NINFBITPATT_HP16) : ret;
-        ret = x_eq_ninf & y_pos & (inty != 1) ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = x_eq_ninf & y_pos & (inty == 1) ? AS_HALF((ushort)NINFBITPATT_HP16) : ret;
+        ret = x_eq_ninf & y_pos & (inty != 1) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = x_eq_pinf & !y_pos ? 0.0h : ret;
-        ret = x_eq_pinf & y_pos ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = x_eq_pinf & y_pos ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
         ret = ax_eq_nan ? x : ret;
         ret = ay_eq_nan ? y : ret;
     } else {
         // XXX work around conformance test incorrectly checking these cases
-        half xinf = BUILTIN_COPYSIGN_F16(as_half((ushort)PINFBITPATT_HP16), x);
+        half xinf = BUILTIN_COPYSIGN_F16(AS_HALF((ushort)PINFBITPATT_HP16), x);
         ret = ax_eq_0 & !y_pos & (inty == 1) ? xinf : ret;
-        ret = ax_eq_0 & !y_pos & (inty != 1) ? as_half((ushort)PINFBITPATT_HP16) : ret;
+        ret = ax_eq_0 & !y_pos & (inty != 1) ? AS_HALF((ushort)PINFBITPATT_HP16) : ret;
 
         half xzero = BUILTIN_COPYSIGN_F16(0.0h, x);
 	ret = ax_eq_0 & y_pos & (inty == 1) ? xzero : ret;
