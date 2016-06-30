@@ -222,7 +222,7 @@ bool R600SchedStrategy::regBelongsToClass(unsigned Reg,
 R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
   MachineInstr *MI = SU->getInstr();
 
-  if (TII->isTransOnly(MI))
+  if (TII->isTransOnly(*MI))
     return AluTrans;
 
   switch (MI->getOpcode()) {
@@ -286,7 +286,7 @@ R600SchedStrategy::AluKind R600SchedStrategy::getAluKind(SUnit *SU) const {
     return AluT_XYZW;
 
   // LDS src registers cannot be used in the Trans slot.
-  if (TII->readsLDSSrcReg(MI))
+  if (TII->readsLDSSrcReg(*MI))
     return AluT_XYZW;
 
   return AluAny;
@@ -323,9 +323,8 @@ SUnit *R600SchedStrategy::PopInst(std::vector<SUnit *> &Q, bool AnyALU) {
       It != E; ++It) {
     SUnit *SU = *It;
     InstructionsGroupCandidate.push_back(SU->getInstr());
-    if (TII->fitsConstReadLimitations(InstructionsGroupCandidate)
-        && (!AnyALU || !TII->isVectorOnly(SU->getInstr()))
-    ) {
+    if (TII->fitsConstReadLimitations(InstructionsGroupCandidate) &&
+        (!AnyALU || !TII->isVectorOnly(*SU->getInstr()))) {
       InstructionsGroupCandidate.pop_back();
       Q.erase((It + 1).base());
       return SU;

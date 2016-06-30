@@ -823,7 +823,7 @@ bool HexagonExpandCondsets::canMoveMemTo(MachineInstr *TheI, MachineInstr *ToI,
   bool IsLoad = TheI->mayLoad(), IsStore = TheI->mayStore();
   if (!IsLoad && !IsStore)
     return true;
-  if (HII->areMemAccessesTriviallyDisjoint(TheI, ToI))
+  if (HII->areMemAccessesTriviallyDisjoint(*TheI, *ToI))
     return true;
   if (TheI->hasUnmodeledSideEffects())
     return false;

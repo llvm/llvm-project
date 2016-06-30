@@ -421,14 +421,14 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 
   for (auto MII = NotNullSucc->begin(), MIE = NotNullSucc->end(); MII != MIE;
        ++MII) {
-    MachineInstr *MI = &*MII;
+    MachineInstr &MI = *MII;
     unsigned BaseReg;
     int64_t Offset;
     MachineInstr *Dependency = nullptr;
     if (TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
-      if (MI->mayLoad() && !MI->isPredicable() && BaseReg == PointerReg &&
-          Offset < PageSize && MI->getDesc().getNumDefs() <= 1 &&
-          HD.isSafeToHoist(MI, Dependency)) {
+      if (MI.mayLoad() && !MI.isPredicable() && BaseReg == PointerReg &&
+          Offset < PageSize && MI.getDesc().getNumDefs() <= 1 &&
+          HD.isSafeToHoist(&MI, Dependency)) {
 
         auto DependencyOperandIsOk = [&](MachineOperand &MO) {
           assert(!(MO.isReg() && MO.isUse()) &&
@@ -463,13 +463,13 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
             all_of(Dependency->operands(), DependencyOperandIsOk);
 
         if (DependencyOperandsAreOk) {
-          NullCheckList.emplace_back(MI, MBP.ConditionDef, &MBB, NotNullSucc,
+          NullCheckList.emplace_back(&MI, MBP.ConditionDef, &MBB, NotNullSucc,
                                      NullSucc, Dependency);
           return true;
         }
       }
 
-    HD.rememberInstruction(MI);
+    HD.rememberInstruction(&MI);
     if (HD.isClobbered())
       return false;
   }

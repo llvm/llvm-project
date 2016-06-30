@@ -92,7 +92,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
   AMDGPUMCInstLower MCInstLowering(OutContext, STI);
 
   StringRef Err;
-  if (!STI.getInstrInfo()->verifyInstruction(MI, Err)) {
+  if (!STI.getInstrInfo()->verifyInstruction(*MI, Err)) {
     LLVMContext &C = MI->getParent()->getParent()->getFunction()->getContext();
     C.emitError("Illegal instruction detected: " + Err);
     MI->dump();

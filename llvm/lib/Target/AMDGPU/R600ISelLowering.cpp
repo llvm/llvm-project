@@ -242,7 +242,7 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
                                                    AMDGPU::MOV,
                                                    MI->getOperand(0).getReg(),
                                                    MI->getOperand(1).getReg());
-    TII->addFlag(NewMI, 0, MO_FLAG_CLAMP);
+    TII->addFlag(*NewMI, 0, MO_FLAG_CLAMP);
     break;
   }
 
@@ -251,7 +251,7 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
                                                     AMDGPU::MOV,
                                                     MI->getOperand(0).getReg(),
                                                     MI->getOperand(1).getReg());
-    TII->addFlag(NewMI, 0, MO_FLAG_ABS);
+    TII->addFlag(*NewMI, 0, MO_FLAG_ABS);
     break;
   }
 
@@ -260,7 +260,7 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
                                                     AMDGPU::MOV,
                                                     MI->getOperand(0).getReg(),
                                                     MI->getOperand(1).getReg());
-    TII->addFlag(NewMI, 0, MO_FLAG_NEG);
+    TII->addFlag(*NewMI, 0, MO_FLAG_NEG);
     break;
   }
 
@@ -268,7 +268,7 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
     unsigned maskedRegister = MI->getOperand(0).getReg();
     assert(TargetRegisterInfo::isVirtualRegister(maskedRegister));
     MachineInstr * defInstr = MRI.getVRegDef(maskedRegister);
-    TII->addFlag(defInstr, 0, MO_FLAG_MASK);
+    TII->addFlag(*defInstr, 0, MO_FLAG_MASK);
     break;
   }
 
@@ -294,8 +294,8 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
   case AMDGPU::CONST_COPY: {
     MachineInstr *NewMI = TII->buildDefaultInstruction(*BB, MI, AMDGPU::MOV,
         MI->getOperand(0).getReg(), AMDGPU::ALU_CONST);
-    TII->setImmOperand(NewMI, AMDGPU::OpName::src0_sel,
-        MI->getOperand(1).getImm());
+    TII->setImmOperand(*NewMI, AMDGPU::OpName::src0_sel,
+                       MI->getOperand(1).getImm());
     break;
   }
 
@@ -532,7 +532,7 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
               .addOperand(MI->getOperand(1))
               .addImm(OPCODE_IS_NOT_ZERO)
               .addImm(0); // Flags
-    TII->addFlag(NewMI, 0, MO_FLAG_PUSH);
+    TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
             .addOperand(MI->getOperand(0))
             .addReg(AMDGPU::PREDICATE_BIT, RegState::Kill);
@@ -546,7 +546,7 @@ MachineBasicBlock * R600TargetLowering::EmitInstrWithCustomInserter(
             .addOperand(MI->getOperand(1))
             .addImm(OPCODE_IS_NOT_ZERO_INT)
             .addImm(0); // Flags
-    TII->addFlag(NewMI, 0, MO_FLAG_PUSH);
+    TII->addFlag(*NewMI, 0, MO_FLAG_PUSH);
     BuildMI(*BB, I, BB->findDebugLoc(I), TII->get(AMDGPU::JUMP_COND))
            .addOperand(MI->getOperand(0))
             .addReg(AMDGPU::PREDICATE_BIT, RegState::Kill);

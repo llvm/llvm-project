@@ -177,7 +177,7 @@ void AArch64BranchRelaxation::scanFunction() {
 void AArch64BranchRelaxation::computeBlockSize(const MachineBasicBlock &MBB) {
   unsigned Size = 0;
   for (const MachineInstr &MI : MBB)
-    Size += TII->GetInstSizeInBytes(&MI);
+    Size += TII->GetInstSizeInBytes(MI);
   BlockInfo[MBB.getNumber()].Size = Size;
 }
 
@@ -195,7 +195,7 @@ unsigned AArch64BranchRelaxation::getInstrOffset(MachineInstr *MI) const {
   // Sum instructions before MI in MBB.
   for (MachineBasicBlock::iterator I = MBB->begin(); &*I != MI; ++I) {
     assert(I != MBB->end() && "Didn't find MI in its own basic block?");
-    Offset += TII->GetInstSizeInBytes(I);
+    Offset += TII->GetInstSizeInBytes(*I);
   }
   return Offset;
 }
@@ -420,7 +420,7 @@ bool AArch64BranchRelaxation::fixupConditionalBranch(MachineInstr *MI) {
     MachineBasicBlock *NewBB = splitBlockBeforeInstr(MI);
     // No need for the branch to the next block. We're adding an unconditional
     // branch to the destination.
-    int delta = TII->GetInstSizeInBytes(&MBB->back());
+    int delta = TII->GetInstSizeInBytes(MBB->back());
     BlockInfo[MBB->getNumber()].Size -= delta;
     MBB->back().eraseFromParent();
     // BlockInfo[SplitBB].Offset is wrong temporarily, fixed below
@@ -446,12 +446,12 @@ bool AArch64BranchRelaxation::fixupConditionalBranch(MachineInstr *MI) {
   if (MI->getOpcode() == AArch64::Bcc)
     invertBccCondition(MIB);
   MIB.addMBB(NextBB);
-  BlockInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(&MBB->back());
+  BlockInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(MBB->back());
   BuildMI(MBB, DebugLoc(), TII->get(AArch64::B)).addMBB(DestBB);
-  BlockInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(&MBB->back());
+  BlockInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(MBB->back());
 
   // Remove the old conditional branch.  It may or may not still be in MBB.
-  BlockInfo[MI->getParent()->getNumber()].Size -= TII->GetInstSizeInBytes(MI);
+  BlockInfo[MI->getParent()->getNumber()].Size -= TII->GetInstSizeInBytes(*MI);
   MI->eraseFromParent();
 
   // Finally, keep the block offsets up to date.

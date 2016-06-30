@@ -3223,7 +3223,7 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
 
   if (TII->isVOP3(MI->getOpcode())) {
     // Make sure constant bus requirements are respected.
-    TII->legalizeOperandsVOP3(MRI, MI);
+    TII->legalizeOperandsVOP3(MRI, *MI);
     return;
   }
 

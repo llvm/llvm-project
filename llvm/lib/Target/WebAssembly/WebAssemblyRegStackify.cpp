@@ -217,10 +217,9 @@ static void Query(const MachineInstr *MI, AliasAnalysis &AA,
 }
 
 // Test whether Def is safe and profitable to rematerialize.
-static bool ShouldRematerialize(const MachineInstr *Def, AliasAnalysis &AA,
+static bool ShouldRematerialize(const MachineInstr &Def, AliasAnalysis &AA,
                                 const WebAssemblyInstrInfo *TII) {
-  return Def->isAsCheapAsAMove() &&
-         TII->isTriviallyReMaterializable(Def, &AA);
+  return Def.isAsCheapAsAMove() && TII->isTriviallyReMaterializable(Def, &AA);
 }
 
 // Identify the definition for this register at this point. This is a
@@ -475,19 +474,18 @@ static MachineInstr *MoveForSingleUse(unsigned Reg, MachineOperand& Op,
 
 /// A trivially cloneable instruction; clone it and nest the new copy with the
 /// current instruction.
-static MachineInstr *
-RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
-                      MachineBasicBlock &MBB, MachineInstr *Insert,
-                      LiveIntervals &LIS, WebAssemblyFunctionInfo &MFI,
-                      MachineRegisterInfo &MRI, const WebAssemblyInstrInfo *TII,
-                      const WebAssemblyRegisterInfo *TRI) {
-  DEBUG(dbgs() << "Rematerializing cheap def: "; Def->dump());
+static MachineInstr *RematerializeCheapDef(
+    unsigned Reg, MachineOperand &Op, MachineInstr &Def, MachineBasicBlock &MBB,
+    MachineBasicBlock::instr_iterator Insert, LiveIntervals &LIS,
+    WebAssemblyFunctionInfo &MFI, MachineRegisterInfo &MRI,
+    const WebAssemblyInstrInfo *TII, const WebAssemblyRegisterInfo *TRI) {
+  DEBUG(dbgs() << "Rematerializing cheap def: "; Def.dump());
   DEBUG(dbgs() << " - for use in "; Op.getParent()->dump());
 
   unsigned NewReg = MRI.createVirtualRegister(MRI.getRegClass(Reg));
   TII->reMaterialize(MBB, Insert, NewReg, 0, Def, *TRI);
   Op.setReg(NewReg);
-  MachineInstr *Clone = &*std::prev(MachineBasicBlock::instr_iterator(Insert));
+  MachineInstr *Clone = &*std::prev(Insert);
   LIS.InsertMachineInstrInMaps(*Clone);
   LIS.createAndComputeVirtRegInterval(NewReg);
   MFI.stackifyVReg(NewReg);
@@ -500,17 +498,17 @@ RematerializeCheapDef(unsigned Reg, MachineOperand &Op, MachineInstr *Def,
   if (!IsDead) {
     LiveInterval &LI = LIS.getInterval(Reg);
     ShrinkToUses(LI, LIS);
-    IsDead = !LI.liveAt(LIS.getInstructionIndex(*Def).getDeadSlot());
+    IsDead = !LI.liveAt(LIS.getInstructionIndex(Def).getDeadSlot());
   }
 
   // If that was the last use of the original, delete the original.
   if (IsDead) {
     DEBUG(dbgs() << " - Deleting original\n");
-    SlotIndex Idx = LIS.getInstructionIndex(*Def).getRegSlot();
+    SlotIndex Idx = LIS.getInstructionIndex(Def).getRegSlot();
     LIS.removePhysRegDefAt(WebAssembly::ARGUMENTS, Idx);
     LIS.removeInterval(Reg);
-    LIS.RemoveMachineInstrFromMaps(*Def);
-    Def->eraseFromParent();
+    LIS.RemoveMachineInstrFromMaps(Def);
+    Def.eraseFromParent();
   }
 
   return Clone;
@@ -678,15 +676,15 @@ public:
       assert(!Declined &&
              "Don't decline commuting until you've finished trying it");
       // Commuting didn't help. Revert it.
-      TII->commuteInstruction(Insert, /*NewMI=*/false, Operand0, Operand1);
+      TII->commuteInstruction(*Insert, /*NewMI=*/false, Operand0, Operand1);
       TentativelyCommuting = false;
       Declined = true;
     } else if (!Declined && TreeWalker.HasRemainingOperands(Insert)) {
       Operand0 = TargetInstrInfo::CommuteAnyOperandIndex;
       Operand1 = TargetInstrInfo::CommuteAnyOperandIndex;
-      if (TII->findCommutedOpIndices(Insert, Operand0, Operand1)) {
+      if (TII->findCommutedOpIndices(*Insert, Operand0, Operand1)) {
         // Tentatively commute the operands and try again.
-        TII->commuteInstruction(Insert, /*NewMI=*/false, Operand0, Operand1);
+        TII->commuteInstruction(*Insert, /*NewMI=*/false, Operand0, Operand1);
         TreeWalker.ResetTopOperands(Insert);
         TentativelyCommuting = true;
         Declined = false;
@@ -782,9 +780,10 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
                        !TreeWalker.IsOnStack(Reg);
         if (CanMove && HasOneUse(Reg, Def, MRI, MDT, LIS)) {
           Insert = MoveForSingleUse(Reg, Op, Def, MBB, Insert, LIS, MFI, MRI);
-        } else if (ShouldRematerialize(Def, AA, TII)) {
-          Insert = RematerializeCheapDef(Reg, Op, Def, MBB, Insert, LIS, MFI,
-                                         MRI, TII, TRI);
+        } else if (ShouldRematerialize(*Def, AA, TII)) {
+          Insert =
+              RematerializeCheapDef(Reg, Op, *Def, MBB, Insert->getIterator(),
+                                    LIS, MFI, MRI, TII, TRI);
         } else if (CanMove &&
                    OneUseDominatesOtherUses(Reg, Op, MBB, MRI, MDT, LIS, MFI)) {
           Insert = MoveAndTeeForMultiUse(Reg, Op, Def, MBB, Insert, LIS, MFI,

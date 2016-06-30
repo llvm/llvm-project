@@ -1926,8 +1926,8 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
 
     for (auto &In : B) {
       int LFI, SFI;
-      bool Load = HII.isLoadFromStackSlot(&In, LFI) && !HII.isPredicated(In);
-      bool Store = HII.isStoreToStackSlot(&In, SFI) && !HII.isPredicated(In);
+      bool Load = HII.isLoadFromStackSlot(In, LFI) && !HII.isPredicated(In);
+      bool Store = HII.isStoreToStackSlot(In, SFI) && !HII.isPredicated(In);
       if (Load && Store) {
         // If it's both a load and a store, then we won't handle it.
         BadFIs.insert(LFI);
@@ -2146,7 +2146,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           MachineInstr *MI = &*It;
           NextIt = std::next(It);
           int TFI;
-          if (!HII.isLoadFromStackSlot(MI, TFI) || TFI != FI)
+          if (!HII.isLoadFromStackSlot(*MI, TFI) || TFI != FI)
             continue;
           unsigned DstR = MI->getOperand(0).getReg();
           assert(MI->getOperand(0).getSubReg() == 0);
@@ -2156,9 +2156,9 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
             unsigned MemSize = (1U << (HII.getMemAccessSize(MI) - 1));
             assert(HII.getAddrMode(MI) == HexagonII::BaseImmOffset);
             unsigned CopyOpc = TargetOpcode::COPY;
-            if (HII.isSignExtendingLoad(MI))
+            if (HII.isSignExtendingLoad(*MI))
               CopyOpc = (MemSize == 1) ? Hexagon::A2_sxtb : Hexagon::A2_sxth;
-            else if (HII.isZeroExtendingLoad(MI))
+            else if (HII.isZeroExtendingLoad(*MI))
               CopyOpc = (MemSize == 1) ? Hexagon::A2_zxtb : Hexagon::A2_zxth;
             CopyOut = BuildMI(B, It, DL, HII.get(CopyOpc), DstR)
                         .addReg(FoundR, getKillRegState(MI == EI));

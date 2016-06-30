@@ -29,6 +29,25 @@
 #include <iterator>
 #include <type_traits>
 
+#include "test_macros.h"
+
+template <class C>
+void test_iterators() {
+    typedef std::iterator_traits<typename C::iterator> ItT;
+    typedef std::iterator_traits<typename C::const_iterator> CItT;
+    static_assert((std::is_same<typename ItT::iterator_category, std::random_access_iterator_tag>::value), "");
+    static_assert((std::is_same<typename ItT::value_type, typename C::value_type>::value), "");
+    static_assert((std::is_same<typename ItT::reference, typename C::reference>::value), "");
+    static_assert((std::is_same<typename ItT::pointer, typename C::pointer>::value), "");
+    static_assert((std::is_same<typename ItT::difference_type, typename C::difference_type>::value), "");
+
+    static_assert((std::is_same<typename CItT::iterator_category, std::random_access_iterator_tag>::value), "");
+    static_assert((std::is_same<typename CItT::value_type, typename C::value_type>::value), "");
+    static_assert((std::is_same<typename CItT::reference, typename C::const_reference>::value), "");
+    static_assert((std::is_same<typename CItT::pointer, typename C::const_pointer>::value), "");
+    static_assert((std::is_same<typename CItT::difference_type, typename C::difference_type>::value), "");
+}
+
 int main()
 {
     {
@@ -36,8 +55,9 @@ int main()
         typedef std::array<T, 10> C;
         static_assert((std::is_same<C::reference, T&>::value), "");
         static_assert((std::is_same<C::const_reference, const T&>::value), "");
-        static_assert((std::is_same<C::iterator, T*>::value), "");
-        static_assert((std::is_same<C::const_iterator, const T*>::value), "");
+        LIBCPP_STATIC_ASSERT((std::is_same<C::iterator, T*>::value), "");
+        LIBCPP_STATIC_ASSERT((std::is_same<C::const_iterator, const T*>::value), "");
+        test_iterators<C>();
         static_assert((std::is_same<C::pointer, T*>::value), "");
         static_assert((std::is_same<C::const_pointer, const T*>::value), "");
         static_assert((std::is_same<C::size_type, std::size_t>::value), "");
@@ -57,8 +77,9 @@ int main()
         typedef std::array<T, 0> C;
         static_assert((std::is_same<C::reference, T&>::value), "");
         static_assert((std::is_same<C::const_reference, const T&>::value), "");
-        static_assert((std::is_same<C::iterator, T*>::value), "");
-        static_assert((std::is_same<C::const_iterator, const T*>::value), "");
+        LIBCPP_STATIC_ASSERT((std::is_same<C::iterator, T*>::value), "");
+        LIBCPP_STATIC_ASSERT((std::is_same<C::const_iterator, const T*>::value), "");
+        test_iterators<C>();
         static_assert((std::is_same<C::pointer, T*>::value), "");
         static_assert((std::is_same<C::const_pointer, const T*>::value), "");
         static_assert((std::is_same<C::size_type, std::size_t>::value), "");

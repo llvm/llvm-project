@@ -318,15 +318,15 @@ private:
     MachineBasicBlock::iterator ClauseHead = I;
     std::vector<MachineInstr *> ClauseContent;
     unsigned AluInstCount = 0;
-    bool IsTex = TII->usesTextureCache(ClauseHead);
+    bool IsTex = TII->usesTextureCache(*ClauseHead);
     std::set<unsigned> DstRegs;
     for (MachineBasicBlock::iterator E = MBB.end(); I != E; ++I) {
       if (IsTrivialInst(I))
         continue;
       if (AluInstCount >= MaxFetchInst)
         break;
-      if ((IsTex && !TII->usesTextureCache(I)) ||
-          (!IsTex && !TII->usesVertexCache(I)))
+      if ((IsTex && !TII->usesTextureCache(*I)) ||
+          (!IsTex && !TII->usesVertexCache(*I)))
         break;
       if (!isCompatibleWithClause(I, DstRegs))
         break;
@@ -347,8 +347,8 @@ private:
       AMDGPU::ALU_LITERAL_Z,
       AMDGPU::ALU_LITERAL_W
     };
-    const SmallVector<std::pair<MachineOperand *, int64_t>, 3 > Srcs =
-        TII->getSrcs(MI);
+    const SmallVector<std::pair<MachineOperand *, int64_t>, 3> Srcs =
+        TII->getSrcs(*MI);
     for (const auto &Src:Srcs) {
       if (Src.first->getReg() != AMDGPU::ALU_LITERAL_X)
         continue;
@@ -516,7 +516,7 @@ public:
 
       for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end();
           I != E;) {
-        if (TII->usesTextureCache(I) || TII->usesVertexCache(I)) {
+        if (TII->usesTextureCache(*I) || TII->usesVertexCache(*I)) {
           DEBUG(dbgs() << CfCount << ":"; I->dump(););
           FetchClauses.push_back(MakeFetchClause(MBB, I));
           CfCount++;

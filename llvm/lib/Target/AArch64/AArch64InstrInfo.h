@@ -45,65 +45,65 @@ public:
   /// always be able to get register info as well (through this method).
   const AArch64RegisterInfo &getRegisterInfo() const { return RI; }
 
-  unsigned GetInstSizeInBytes(const MachineInstr *MI) const;
+  unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
-  bool isAsCheapAsAMove(const MachineInstr *MI) const override;
+  bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 
   bool isCoalescableExtInstr(const MachineInstr &MI, unsigned &SrcReg,
                              unsigned &DstReg, unsigned &SubIdx) const override;
 
   bool
-  areMemAccessesTriviallyDisjoint(MachineInstr *MIa, MachineInstr *MIb,
+  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                   AliasAnalysis *AA = nullptr) const override;
 
-  unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr *MI,
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   /// Returns true if there is a shiftable register and that the shift value
   /// is non-zero.
-  bool hasShiftedReg(const MachineInstr *MI) const;
+  bool hasShiftedReg(const MachineInstr &MI) const;
 
   /// Returns true if there is an extendable register and that the extending
   /// value is non-zero.
-  bool hasExtendedReg(const MachineInstr *MI) const;
+  bool hasExtendedReg(const MachineInstr &MI) const;
 
   /// \brief Does this instruction set its full destination register to zero?
-  bool isGPRZero(const MachineInstr *MI) const;
+  bool isGPRZero(const MachineInstr &MI) const;
 
   /// \brief Does this instruction rename a GPR without modifying bits?
-  bool isGPRCopy(const MachineInstr *MI) const;
+  bool isGPRCopy(const MachineInstr &MI) const;
 
   /// \brief Does this instruction rename an FPR without modifying bits?
-  bool isFPRCopy(const MachineInstr *MI) const;
+  bool isFPRCopy(const MachineInstr &MI) const;
 
   /// Return true if this is load/store scales or extends its register offset.
   /// This refers to scaling a dynamic index as opposed to scaled immediates.
   /// MI should be a memory op that allows scaled addressing.
-  bool isScaledAddr(const MachineInstr *MI) const;
+  bool isScaledAddr(const MachineInstr &MI) const;
 
   /// Return true if pairing the given load or store is hinted to be
   /// unprofitable.
-  bool isLdStPairSuppressed(const MachineInstr *MI) const;
+  bool isLdStPairSuppressed(const MachineInstr &MI) const;
 
   /// Return true if this is an unscaled load/store.
   bool isUnscaledLdSt(unsigned Opc) const;
 
   /// Return true if this is an unscaled load/store.
-  bool isUnscaledLdSt(MachineInstr *MI) const;
+  bool isUnscaledLdSt(MachineInstr &MI) const;
 
   /// Return true if this is a load/store that can be potentially paired/merged.
-  bool isCandidateToMergeOrPair(MachineInstr *MI) const;
+  bool isCandidateToMergeOrPair(MachineInstr &MI) const;
 
   /// Hint that pairing the given load or store is unprofitable.
-  void suppressLdStPair(MachineInstr *MI) const;
+  void suppressLdStPair(MachineInstr &MI) const;
 
-  bool getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
+  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
                              int64_t &Offset,
                              const TargetRegisterInfo *TRI) const override;
 
-  bool getMemOpBaseRegImmOfsWidth(MachineInstr *LdSt, unsigned &BaseReg,
+  bool getMemOpBaseRegImmOfsWidth(MachineInstr &LdSt, unsigned &BaseReg,
                                   int64_t &Offset, unsigned &Width,
                                   const TargetRegisterInfo *TRI) const;
 
@@ -111,11 +111,11 @@ public:
 
   bool enableClusterStores() const override { return true; }
 
-  bool shouldClusterMemOps(MachineInstr *FirstLdSt, MachineInstr *SecondLdSt,
-                          unsigned NumLoads) const override;
+  bool shouldClusterMemOps(MachineInstr &FirstLdSt, MachineInstr &SecondLdSt,
+                           unsigned NumLoads) const override;
 
-  bool shouldScheduleAdjacent(MachineInstr *First,
-                              MachineInstr *Second) const override;
+  bool shouldScheduleAdjacent(MachineInstr &First,
+                              MachineInstr &Second) const override;
 
   MachineInstr *emitFrameIndexDebugValue(MachineFunction &MF, int FrameIx,
                                          uint64_t Offset, const MDNode *Var,
@@ -141,11 +141,11 @@ public:
                             const TargetRegisterInfo *TRI) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;
-  MachineInstr *foldMemoryOperandImpl(MachineFunction &MF, MachineInstr *MI,
-                                      ArrayRef<unsigned> Ops,
-                                      MachineBasicBlock::iterator InsertPt,
-                                      int FrameIndex,
-                                      LiveIntervals *LIS = nullptr) const override;
+  MachineInstr *
+  foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
+                        ArrayRef<unsigned> Ops,
+                        MachineBasicBlock::iterator InsertPt, int FrameIndex,
+                        LiveIntervals *LIS = nullptr) const override;
 
   bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
@@ -168,15 +168,15 @@ public:
   /// analyzeCompare - For a comparison instruction, return the source registers
   /// in SrcReg and SrcReg2, and the value it compares against in CmpValue.
   /// Return true if the comparison instruction can be analyzed.
-  bool analyzeCompare(const MachineInstr *MI, unsigned &SrcReg,
+  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
                       unsigned &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
   /// optimizeCompareInstr - Convert the instruction supplying the argument to
   /// the comparison into one that sets the zero bit in the flags register.
-  bool optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
                             unsigned SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
-  bool optimizeCondBranch(MachineInstr *MI) const override;
+  bool optimizeCondBranch(MachineInstr &MI) const override;
 
   /// Return true when a code sequence can improve throughput. It
   /// should be called only for instructions in loops.
@@ -201,7 +201,7 @@ public:
   /// AArch64 supports MachineCombiner.
   bool useMachineCombiner() const override;
 
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   std::pair<unsigned, unsigned>
   decomposeMachineOperandsTargetFlags(unsigned TF) const override;
@@ -214,8 +214,8 @@ private:
   void instantiateCondBranch(MachineBasicBlock &MBB, const DebugLoc &DL,
                              MachineBasicBlock *TBB,
                              ArrayRef<MachineOperand> Cond) const;
-  bool substituteCmpToZero(MachineInstr *CmpInstr,
-                        unsigned SrcReg, const MachineRegisterInfo *MRI) const;
+  bool substituteCmpToZero(MachineInstr &CmpInstr, unsigned SrcReg,
+                           const MachineRegisterInfo *MRI) const;
 };
 
 /// emitFrameOffset - Emit instructions as needed to set DestReg to SrcReg

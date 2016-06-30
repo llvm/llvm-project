@@ -181,7 +181,7 @@ bool R600ClauseMergePass::runOnMachineFunction(MachineFunction &MF) {
     MachineBasicBlock::iterator LatestCFAlu = E;
     while (I != E) {
       MachineInstr *MI = I++;
-      if ((!TII->canBeConsideredALU(MI) && !isCFAlu(MI)) ||
+      if ((!TII->canBeConsideredALU(*MI) && !isCFAlu(MI)) ||
           TII->mustBeLastInClause(MI->getOpcode()))
         LatestCFAlu = E;
       if (!isCFAlu(MI))

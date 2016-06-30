@@ -569,7 +569,7 @@ static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
           "Dependency checked between two loads");
 
   // Let the target decide if memory accesses cannot possibly overlap.
-  if (TII->areMemAccessesTriviallyDisjoint(MIa, MIb, AA))
+  if (TII->areMemAccessesTriviallyDisjoint(*MIa, *MIb, AA))
     return false;
 
   // To this point analysis is generic. From here on we do need AA.

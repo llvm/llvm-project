@@ -108,7 +108,7 @@ def WriteX : SchedWriteRes<[]> { let Latency = 0; }
 // The move is replaced by a single nop micro-op.
 // MOVZ Rd, #0
 // AND Rd, Rzr, #imm
-def WriteZPred : SchedPredicate<[{TII->isGPRZero(MI)}]>;
+def WriteZPred : SchedPredicate<[{TII->isGPRZero(*MI)}]>;
 def WriteImmZ  : SchedWriteVariant<[
                    SchedVar<WriteZPred, [WriteX]>,
                    SchedVar<NoSchedPred, [WriteImm]>]>;
@@ -117,8 +117,8 @@ def : InstRW<[WriteImmZ], (instrs MOVZWi,MOVZXi,ANDWri,ANDXri)>;
 // Move GPR is a register rename and single nop micro-op.
 // ORR Xd, XZR, Xm
 // ADD Xd, Xn, #0
-def WriteIMovPred : SchedPredicate<[{TII->isGPRCopy(MI)}]>;
-def WriteVMovPred : SchedPredicate<[{TII->isFPRCopy(MI)}]>;
+def WriteIMovPred : SchedPredicate<[{TII->isGPRCopy(*MI)}]>;
+def WriteVMovPred : SchedPredicate<[{TII->isFPRCopy(*MI)}]>;
 def WriteMov      : SchedWriteVariant<[
                       SchedVar<WriteIMovPred, [WriteX]>,
                       SchedVar<WriteVMovPred, [WriteX]>,

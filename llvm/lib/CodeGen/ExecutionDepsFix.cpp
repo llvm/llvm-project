@@ -320,7 +320,7 @@ void ExeDepsFix::collapse(DomainValue *dv, unsigned domain) {
 
   // Collapse all the instructions.
   while (!dv->Instrs.empty())
-    TII->setExecutionDomain(dv->Instrs.pop_back_val(), domain);
+    TII->setExecutionDomain(*dv->Instrs.pop_back_val(), domain);
   dv->setSingleDomain(domain);
 
   // If there are multiple users, give them new, unique DomainValues.
@@ -460,7 +460,7 @@ void ExeDepsFix::visitInstr(MachineInstr *MI) {
     return;
 
   // Update instructions with explicit execution domains.
-  std::pair<uint16_t, uint16_t> DomP = TII->getExecutionDomain(MI);
+  std::pair<uint16_t, uint16_t> DomP = TII->getExecutionDomain(*MI);
   if (DomP.first) {
     if (DomP.second)
       visitSoftInstr(MI, DomP.second);
@@ -508,7 +508,7 @@ void ExeDepsFix::processDefs(MachineInstr *MI, bool Kill) {
 
   // Break dependence on undef uses. Do this before updating LiveRegs below.
   unsigned OpNum;
-  unsigned Pref = TII->getUndefRegClearance(MI, OpNum, TRI);
+  unsigned Pref = TII->getUndefRegClearance(*MI, OpNum, TRI);
   if (Pref) {
     if (shouldBreakDependence(MI, OpNum, Pref))
       UndefReads.push_back(std::make_pair(MI, OpNum));
@@ -531,9 +531,9 @@ void ExeDepsFix::processDefs(MachineInstr *MI, bool Kill) {
 
       // Check clearance before partial register updates.
       // Call breakDependence before setting LiveRegs[rx].Def.
-      unsigned Pref = TII->getPartialRegUpdateClearance(MI, i, TRI);
+      unsigned Pref = TII->getPartialRegUpdateClearance(*MI, i, TRI);
       if (Pref && shouldBreakDependence(MI, i, Pref))
-        TII->breakPartialRegDependency(MI, i, TRI);
+        TII->breakPartialRegDependency(*MI, i, TRI);
 
       // How many instructions since rx was last written?
       LiveRegs[rx].Def = CurInstr;
@@ -571,7 +571,7 @@ void ExeDepsFix::processUndefReads(MachineBasicBlock *MBB) {
 
     if (UndefMI == &I) {
       if (!LiveRegSet.contains(UndefMI->getOperand(OpIdx).getReg()))
-        TII->breakPartialRegDependency(UndefMI, OpIdx, TRI);
+        TII->breakPartialRegDependency(*UndefMI, OpIdx, TRI);
 
       UndefReads.pop_back();
       if (UndefReads.empty())
@@ -645,7 +645,7 @@ void ExeDepsFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
   // If the collapsed operands force a single domain, propagate the collapse.
   if (isPowerOf2_32(available)) {
     unsigned domain = countTrailingZeros(available);
-    TII->setExecutionDomain(mi, domain);
+    TII->setExecutionDomain(*mi, domain);
     visitHardInstr(mi, domain);
     return;
   }

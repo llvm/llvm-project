@@ -647,7 +647,7 @@ bool TwoAddressInstructionPass::commuteInstruction(MachineInstr *MI,
                                                    unsigned Dist) {
   unsigned RegC = MI->getOperand(RegCIdx).getReg();
   DEBUG(dbgs() << "2addr: COMMUTING  : " << *MI);
-  MachineInstr *NewMI = TII->commuteInstruction(MI, false, RegBIdx, RegCIdx);
+  MachineInstr *NewMI = TII->commuteInstruction(*MI, false, RegBIdx, RegCIdx);
 
   if (NewMI == nullptr) {
     DEBUG(dbgs() << "2addr: COMMUTING FAILED!\n");
@@ -695,7 +695,7 @@ TwoAddressInstructionPass::convertInstTo3Addr(MachineBasicBlock::iterator &mi,
                                               unsigned Dist) {
   // FIXME: Why does convertToThreeAddress() need an iterator reference?
   MachineFunction::iterator MFI = MBB->getIterator();
-  MachineInstr *NewMI = TII->convertToThreeAddress(MFI, mi, LV);
+  MachineInstr *NewMI = TII->convertToThreeAddress(MFI, *mi, LV);
   assert(MBB->getIterator() == MFI &&
          "convertToThreeAddress changed iterator reference");
   if (!NewMI)
@@ -861,7 +861,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   if (!MI->isSafeToMove(AA, SeenStore))
     return false;
 
-  if (TII->getInstrLatency(InstrItins, MI) > 1)
+  if (TII->getInstrLatency(InstrItins, *MI) > 1)
     // FIXME: Needs more sophisticated heuristics.
     return false;
 
@@ -993,7 +993,7 @@ bool TwoAddressInstructionPass::isDefTooClose(unsigned Reg, unsigned Dist,
       return true;  // Below MI
     unsigned DefDist = DDI->second;
     assert(Dist > DefDist && "Visited def already?");
-    if (TII->getInstrLatency(InstrItins, &DefMI) > (Dist - DefDist))
+    if (TII->getInstrLatency(InstrItins, DefMI) > (Dist - DefDist))
       return true;
   }
   return false;
@@ -1174,7 +1174,7 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
     // other commutable operands and does not change the values of passed
     // variables.
     if (OtherOpIdx == BaseOpIdx ||
-        !TII->findCommutedOpIndices(MI, BaseOpIdx, OtherOpIdx))
+        !TII->findCommutedOpIndices(*MI, BaseOpIdx, OtherOpIdx))
       continue;
 
     unsigned OtherOpReg = MI->getOperand(OtherOpIdx).getReg();
@@ -1307,9 +1307,9 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
             TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF));
         unsigned Reg = MRI->createVirtualRegister(RC);
         SmallVector<MachineInstr *, 2> NewMIs;
-        if (!TII->unfoldMemoryOperand(*MF, &MI, Reg,
-                                      /*UnfoldLoad=*/true,/*UnfoldStore=*/false,
-                                      NewMIs)) {
+        if (!TII->unfoldMemoryOperand(*MF, MI, Reg,
+                                      /*UnfoldLoad=*/true,
+                                      /*UnfoldStore=*/false, NewMIs)) {
           DEBUG(dbgs() << "2addr: ABANDONING UNFOLD\n");
           return false;
         }

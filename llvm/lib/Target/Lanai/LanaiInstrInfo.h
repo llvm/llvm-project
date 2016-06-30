@@ -35,16 +35,16 @@ public:
     return RegisterInfo;
   }
 
-  bool areMemAccessesTriviallyDisjoint(MachineInstr *MIa, MachineInstr *MIb,
+  bool areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
                                        AliasAnalysis *AA) const override;
 
-  unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
 
-  unsigned isLoadFromStackSlotPostFE(const MachineInstr *MI,
+  unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
 
-  unsigned isStoreToStackSlot(const MachineInstr *MI,
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
@@ -65,13 +65,13 @@ public:
                        const TargetRegisterClass *RegisterClass,
                        const TargetRegisterInfo *RegisterInfo) const override;
 
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
-  bool getMemOpBaseRegImmOfs(MachineInstr *LdSt, unsigned &BaseReg,
+  bool getMemOpBaseRegImmOfs(MachineInstr &LdSt, unsigned &BaseReg,
                              int64_t &Offset,
                              const TargetRegisterInfo *TRI) const override;
 
-  bool getMemOpBaseRegImmOfsWidth(MachineInstr *LdSt, unsigned &BaseReg,
+  bool getMemOpBaseRegImmOfsWidth(MachineInstr &LdSt, unsigned &BaseReg,
                                   int64_t &Offset, unsigned &Width,
                                   const TargetRegisterInfo *TRI) const;
 

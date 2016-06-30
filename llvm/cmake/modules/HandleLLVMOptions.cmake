@@ -465,7 +465,16 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   endif()
   if (LLVM_ENABLE_MODULES)
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -fmodules -Xclang -fmodules-local-submodule-visibility -fmodules-cache-path=module.cache")
+    set(module_flags "-fmodules -Xclang -fmodules-cache-path=module.cache")
+    if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+      # On Darwin -fmodules does not imply -fcxx-modules.
+      set(module_flags "${module_flags} -fcxx-modules")
+    endif()
+    if (LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
+      set(module_flags "${module_flags} -fmodules-local-submodule-visibility")
+    endif()
+    set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${module_flags}")
+
     # Check that we can build code with modules enabled, and that repeatedly
     # including <cassert> still manages to respect NDEBUG properly.
     CHECK_CXX_SOURCE_COMPILES("#undef NDEBUG
@@ -476,7 +485,7 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
                                CXX_SUPPORTS_MODULES)
     set(CMAKE_REQUIRED_FLAGS ${OLD_CMAKE_REQUIRED_FLAGS})
     if (CXX_SUPPORTS_MODULES)
-      append_if(CXX_SUPPORTS_MODULES "-fmodules -Xclang -fmodules-local-submodule-visibility -fmodules-cache-path=module.cache" CMAKE_CXX_FLAGS)
+      append("${module_flags}" CMAKE_CXX_FLAGS)
     else()
       message(FATAL_ERROR "LLVM_ENABLE_MODULES is not supported by this compiler")
     endif()

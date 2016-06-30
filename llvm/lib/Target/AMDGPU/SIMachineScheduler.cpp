@@ -1694,7 +1694,7 @@ void SIScheduleDAGMI::moveLowLatencies() {
 
     for (SDep& PredDep : SU->Preds) {
       SUnit *Pred = PredDep.getSUnit();
-      if (SITII->isLowLatencyInstruction(Pred->getInstr())) {
+      if (SITII->isLowLatencyInstruction(*Pred->getInstr())) {
         IsLowLatencyUser = true;
       }
       if (Pred->NodeNum >= DAGSize)
@@ -1704,7 +1704,7 @@ void SIScheduleDAGMI::moveLowLatencies() {
         MinPos = PredPos + 1;
     }
 
-    if (SITII->isLowLatencyInstruction(SU->getInstr())) {
+    if (SITII->isLowLatencyInstruction(*SU->getInstr())) {
       unsigned BestPos = LastLowLatencyUser + 1;
       if ((int)BestPos <= LastLowLatencyPos)
         BestPos = LastLowLatencyPos + 1;
@@ -1729,7 +1729,7 @@ void SIScheduleDAGMI::moveLowLatencies() {
       bool CopyForLowLat = false;
       for (SDep& SuccDep : SU->Succs) {
         SUnit *Succ = SuccDep.getSUnit();
-        if (SITII->isLowLatencyInstruction(Succ->getInstr())) {
+        if (SITII->isLowLatencyInstruction(*Succ->getInstr())) {
           CopyForLowLat = true;
         }
       }
@@ -1814,12 +1814,12 @@ void SIScheduleDAGMI::schedule()
     SUnit *SU = &SUnits[i];
     unsigned BaseLatReg;
     int64_t OffLatReg;
-    if (SITII->isLowLatencyInstruction(SU->getInstr())) {
+    if (SITII->isLowLatencyInstruction(*SU->getInstr())) {
       IsLowLatencySU[i] = 1;
-      if (SITII->getMemOpBaseRegImmOfs(SU->getInstr(), BaseLatReg,
-                                      OffLatReg, TRI))
+      if (SITII->getMemOpBaseRegImmOfs(*SU->getInstr(), BaseLatReg, OffLatReg,
+                                       TRI))
         LowLatencyOffset[i] = OffLatReg;
-    } else if (SITII->isHighLatencyInstruction(SU->getInstr()))
+    } else if (SITII->isHighLatencyInstruction(*SU->getInstr()))
       IsHighLatencySU[i] = 1;
   }
 

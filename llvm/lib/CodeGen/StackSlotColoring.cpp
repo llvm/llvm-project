@@ -386,8 +386,7 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
       break;
 
     int FirstSS, SecondSS;
-    if (TII->isStackSlotCopy(I, FirstSS, SecondSS) &&
-        FirstSS == SecondSS &&
+    if (TII->isStackSlotCopy(*I, FirstSS, SecondSS) && FirstSS == SecondSS &&
         FirstSS != -1) {
       ++NumDead;
       changed = true;
@@ -400,8 +399,10 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     unsigned LoadReg = 0;
     unsigned StoreReg = 0;
-    if (!(LoadReg = TII->isLoadFromStackSlot(I, FirstSS))) continue;
-    if (!(StoreReg = TII->isStoreToStackSlot(NextMI, SecondSS))) continue;
+    if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS)))
+      continue;
+    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS)))
+      continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1) continue;
 
     ++NumDead;

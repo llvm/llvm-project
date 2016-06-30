@@ -265,6 +265,12 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   return MachineInstrBuilder(MF, MI).addReg(DestReg, RegState::Define);
 }
 
+/// This version of the builder inserts the newly-built instruction before
+/// the given position in the given MachineBasicBlock, and sets up the first
+/// operand as a destination virtual register.
+///
+/// If \c I is inside a bundle, then the newly inserted \a MachineInstr is
+/// added to the same bundle.
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
                                    MachineBasicBlock::instr_iterator I,
                                    const DebugLoc &DL, const MCInstrDesc &MCID,
@@ -275,16 +281,20 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   return MachineInstrBuilder(MF, MI).addReg(DestReg, RegState::Define);
 }
 
+inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,
+                                   const DebugLoc &DL, const MCInstrDesc &MCID,
+                                   unsigned DestReg) {
+  // Calling the overload for instr_iterator is always correct.  However, the
+  // definition is not available in headers, so inline the check.
+  if (I.isInsideBundle())
+    return BuildMI(BB, MachineBasicBlock::instr_iterator(I), DL, MCID, DestReg);
+  return BuildMI(BB, MachineBasicBlock::iterator(I), DL, MCID, DestReg);
+}
+
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr *I,
                                    const DebugLoc &DL, const MCInstrDesc &MCID,
                                    unsigned DestReg) {
-  if (I->isInsideBundle()) {
-    MachineBasicBlock::instr_iterator MII(I);
-    return BuildMI(BB, MII, DL, MCID, DestReg);
-  }
-
-  MachineBasicBlock::iterator MII = I;
-  return BuildMI(BB, MII, DL, MCID, DestReg);
+  return BuildMI(BB, *I, DL, MCID, DestReg);
 }
 
 /// This version of the builder inserts the newly-built instruction before the

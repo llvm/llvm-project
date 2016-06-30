@@ -366,7 +366,7 @@ bool MachineSinking::isWorthBreakingCriticalEdge(MachineInstr *MI,
   if (!CEBCandidates.insert(std::make_pair(From, To)).second)
     return true;
 
-  if (!MI->isCopy() && !TII->isAsCheapAsAMove(MI))
+  if (!MI->isCopy() && !TII->isAsCheapAsAMove(*MI))
     return true;
 
   // MI is cheap, we probably don't want to break the critical edge for it.
@@ -700,7 +700,7 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr *MI,
 
   unsigned BaseReg;
   int64_t Offset;
-  if (!TII->getMemOpBaseRegImmOfs(MI, BaseReg, Offset, TRI))
+  if (!TII->getMemOpBaseRegImmOfs(*MI, BaseReg, Offset, TRI))
     return false;
 
   if (!(MI->mayLoad() && !MI->isPredicable()))
