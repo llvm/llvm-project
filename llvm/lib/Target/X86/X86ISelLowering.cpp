@@ -8771,10 +8771,10 @@ static SDValue lowerV2I64VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
   assert(Mask[0] < 2 && "We sort V1 to be the first input.");
   assert(Mask[1] >= 2 && "We sort V2 to be the second input.");
 
-  // If we have a blend of two PACKUS operations an the blend aligns with the
-  // low and half halves, we can just merge the PACKUS operations. This is
-  // particularly important as it lets us merge shuffles that this routine itself
-  // creates.
+  // If we have a blend of two same-type PACKUS operations and the blend aligns
+  // with the low and high halves, we can just merge the PACKUS operations.
+  // This is particularly important as it lets us merge shuffles that this
+  // routine itself creates.
   auto GetPackNode = [](SDValue V) {
     while (V.getOpcode() == ISD::BITCAST)
       V = V.getOperand(0);
@@ -8782,13 +8782,16 @@ static SDValue lowerV2I64VectorShuffle(SDValue Op, SDValue V1, SDValue V2,
     return V.getOpcode() == X86ISD::PACKUS ? V : SDValue();
   };
   if (SDValue V1Pack = GetPackNode(V1))
-    if (SDValue V2Pack = GetPackNode(V2))
-      return DAG.getBitcast(MVT::v2i64,
-                            DAG.getNode(X86ISD::PACKUS, DL, MVT::v16i8,
-                                        Mask[0] == 0 ? V1Pack.getOperand(0)
-                                                     : V1Pack.getOperand(1),
-                                        Mask[1] == 2 ? V2Pack.getOperand(0)
-                                                     : V2Pack.getOperand(1)));
+    if (SDValue V2Pack = GetPackNode(V2)) {
+      EVT PackVT = V1Pack.getValueType();
+      if (PackVT == V2Pack.getValueType())
+        return DAG.getBitcast(MVT::v2i64,
+                              DAG.getNode(X86ISD::PACKUS, DL, PackVT,
+                                          Mask[0] == 0 ? V1Pack.getOperand(0)
+                                                       : V1Pack.getOperand(1),
+                                          Mask[1] == 2 ? V2Pack.getOperand(0)
+                                                       : V2Pack.getOperand(1)));
+    }
 
   // Try to use shift instructions.
   if (SDValue Shift =
