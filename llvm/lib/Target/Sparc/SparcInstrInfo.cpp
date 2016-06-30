@@ -41,17 +41,15 @@ SparcInstrInfo::SparcInstrInfo(SparcSubtarget &ST)
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned SparcInstrInfo::isLoadFromStackSlot(const MachineInstr *MI,
+unsigned SparcInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
-  if (MI->getOpcode() == SP::LDri ||
-      MI->getOpcode() == SP::LDXri ||
-      MI->getOpcode() == SP::LDFri ||
-      MI->getOpcode() == SP::LDDFri ||
-      MI->getOpcode() == SP::LDQFri) {
-    if (MI->getOperand(1).isFI() && MI->getOperand(2).isImm() &&
-        MI->getOperand(2).getImm() == 0) {
-      FrameIndex = MI->getOperand(1).getIndex();
-      return MI->getOperand(0).getReg();
+  if (MI.getOpcode() == SP::LDri || MI.getOpcode() == SP::LDXri ||
+      MI.getOpcode() == SP::LDFri || MI.getOpcode() == SP::LDDFri ||
+      MI.getOpcode() == SP::LDQFri) {
+    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+        MI.getOperand(2).getImm() == 0) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
     }
   }
   return 0;
@@ -62,17 +60,15 @@ unsigned SparcInstrInfo::isLoadFromStackSlot(const MachineInstr *MI,
 /// the source reg along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than storing to the stack slot.
-unsigned SparcInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
+unsigned SparcInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
-  if (MI->getOpcode() == SP::STri ||
-      MI->getOpcode() == SP::STXri ||
-      MI->getOpcode() == SP::STFri ||
-      MI->getOpcode() == SP::STDFri ||
-      MI->getOpcode() == SP::STQFri) {
-    if (MI->getOperand(0).isFI() && MI->getOperand(1).isImm() &&
-        MI->getOperand(1).getImm() == 0) {
-      FrameIndex = MI->getOperand(0).getIndex();
-      return MI->getOperand(2).getReg();
+  if (MI.getOpcode() == SP::STri || MI.getOpcode() == SP::STXri ||
+      MI.getOpcode() == SP::STFri || MI.getOpcode() == SP::STDFri ||
+      MI.getOpcode() == SP::STQFri) {
+    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+        MI.getOperand(1).getImm() == 0) {
+      FrameIndex = MI.getOperand(0).getIndex();
+      return MI.getOperand(2).getReg();
     }
   }
   return 0;
@@ -492,16 +488,17 @@ unsigned SparcInstrInfo::getGlobalBaseReg(MachineFunction *MF) const
   return GlobalBaseReg;
 }
 
-bool SparcInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
-  switch (MI->getOpcode()) {
+bool SparcInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
   case TargetOpcode::LOAD_STACK_GUARD: {
     assert(Subtarget.isTargetLinux() &&
            "Only Linux target is expected to contain LOAD_STACK_GUARD");
     // offsetof(tcbhead_t, stack_guard) from sysdeps/sparc/nptl/tls.h in glibc.
     const int64_t Offset = Subtarget.is64Bit() ? 0x28 : 0x14;
-    MI->setDesc(get(Subtarget.is64Bit() ? SP::LDXri : SP::LDri));
-    MachineInstrBuilder(*MI->getParent()->getParent(), MI)
-        .addReg(SP::G7).addImm(Offset);
+    MI.setDesc(get(Subtarget.is64Bit() ? SP::LDXri : SP::LDri));
+    MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+        .addReg(SP::G7)
+        .addImm(Offset);
     return true;
   }
   }

@@ -4842,154 +4842,199 @@ SDValue SystemZTargetLowering::combineTruncateExtract(
   return SDValue();
 }
 
-SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
-                                                 DAGCombinerInfo &DCI) const {
+SDValue SystemZTargetLowering::combineSIGN_EXTEND(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  // Convert (sext (ashr (shl X, C1), C2)) to
+  // (ashr (shl (anyext X), C1'), C2')), since wider shifts are as
+  // cheap as narrower ones.
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue N0 = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  if (N0.hasOneUse() && N0.getOpcode() == ISD::SRA) {
+    auto *SraAmt = dyn_cast<ConstantSDNode>(N0.getOperand(1));
+    SDValue Inner = N0.getOperand(0);
+    if (SraAmt && Inner.hasOneUse() && Inner.getOpcode() == ISD::SHL) {
+      if (auto *ShlAmt = dyn_cast<ConstantSDNode>(Inner.getOperand(1))) {
+        unsigned Extra = (VT.getSizeInBits() -
+                          N0.getValueType().getSizeInBits());
+        unsigned NewShlAmt = ShlAmt->getZExtValue() + Extra;
+        unsigned NewSraAmt = SraAmt->getZExtValue() + Extra;
+        EVT ShiftVT = N0.getOperand(1).getValueType();
+        SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, SDLoc(Inner), VT,
+                                  Inner.getOperand(0));
+        SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(Inner), VT, Ext,
+                                  DAG.getConstant(NewShlAmt, SDLoc(Inner),
+                                                  ShiftVT));
+        return DAG.getNode(ISD::SRA, SDLoc(N0), VT, Shl,
+                           DAG.getConstant(NewSraAmt, SDLoc(N0), ShiftVT));
+      }
+    }
+  }
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineMERGE(
+    SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
   unsigned Opcode = N->getOpcode();
-  if (Opcode == ISD::SIGN_EXTEND) {
-    // Convert (sext (ashr (shl X, C1), C2)) to
-    // (ashr (shl (anyext X), C1'), C2')), since wider shifts are as
-    // cheap as narrower ones.
-    SDValue N0 = N->getOperand(0);
-    EVT VT = N->getValueType(0);
-    if (N0.hasOneUse() && N0.getOpcode() == ISD::SRA) {
-      auto *SraAmt = dyn_cast<ConstantSDNode>(N0.getOperand(1));
-      SDValue Inner = N0.getOperand(0);
-      if (SraAmt && Inner.hasOneUse() && Inner.getOpcode() == ISD::SHL) {
-        if (auto *ShlAmt = dyn_cast<ConstantSDNode>(Inner.getOperand(1))) {
-          unsigned Extra = (VT.getSizeInBits() -
-                            N0.getValueType().getSizeInBits());
-          unsigned NewShlAmt = ShlAmt->getZExtValue() + Extra;
-          unsigned NewSraAmt = SraAmt->getZExtValue() + Extra;
-          EVT ShiftVT = N0.getOperand(1).getValueType();
-          SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, SDLoc(Inner), VT,
-                                    Inner.getOperand(0));
-          SDValue Shl = DAG.getNode(ISD::SHL, SDLoc(Inner), VT, Ext,
-                                    DAG.getConstant(NewShlAmt, SDLoc(Inner),
-                                                    ShiftVT));
-          return DAG.getNode(ISD::SRA, SDLoc(N0), VT, Shl,
-                             DAG.getConstant(NewSraAmt, SDLoc(N0), ShiftVT));
-        }
+  SDValue Op0 = N->getOperand(0);
+  SDValue Op1 = N->getOperand(1);
+  if (Op0.getOpcode() == ISD::BITCAST)
+    Op0 = Op0.getOperand(0);
+  if (Op0.getOpcode() == SystemZISD::BYTE_MASK &&
+      cast<ConstantSDNode>(Op0.getOperand(0))->getZExtValue() == 0) {
+    // (z_merge_* 0, 0) -> 0.  This is mostly useful for using VLLEZF
+    // for v4f32.
+    if (Op1 == N->getOperand(0))
+      return Op1;
+    // (z_merge_? 0, X) -> (z_unpackl_? 0, X).
+    EVT VT = Op1.getValueType();
+    unsigned ElemBytes = VT.getVectorElementType().getStoreSize();
+    if (ElemBytes <= 4) {
+      Opcode = (Opcode == SystemZISD::MERGE_HIGH ?
+                SystemZISD::UNPACKL_HIGH : SystemZISD::UNPACKL_LOW);
+      EVT InVT = VT.changeVectorElementTypeToInteger();
+      EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(ElemBytes * 16),
+                                   SystemZ::VectorBytes / ElemBytes / 2);
+      if (VT != InVT) {
+        Op1 = DAG.getNode(ISD::BITCAST, SDLoc(N), InVT, Op1);
+        DCI.AddToWorklist(Op1.getNode());
       }
+      SDValue Op = DAG.getNode(Opcode, SDLoc(N), OutVT, Op1);
+      DCI.AddToWorklist(Op.getNode());
+      return DAG.getNode(ISD::BITCAST, SDLoc(N), VT, Op);
     }
   }
-  if (Opcode == SystemZISD::MERGE_HIGH ||
-      Opcode == SystemZISD::MERGE_LOW) {
-    SDValue Op0 = N->getOperand(0);
-    SDValue Op1 = N->getOperand(1);
-    if (Op0.getOpcode() == ISD::BITCAST)
-      Op0 = Op0.getOperand(0);
-    if (Op0.getOpcode() == SystemZISD::BYTE_MASK &&
-        cast<ConstantSDNode>(Op0.getOperand(0))->getZExtValue() == 0) {
-      // (z_merge_* 0, 0) -> 0.  This is mostly useful for using VLLEZF
-      // for v4f32.
-      if (Op1 == N->getOperand(0))
-        return Op1;
-      // (z_merge_? 0, X) -> (z_unpackl_? 0, X).
-      EVT VT = Op1.getValueType();
-      unsigned ElemBytes = VT.getVectorElementType().getStoreSize();
-      if (ElemBytes <= 4) {
-        Opcode = (Opcode == SystemZISD::MERGE_HIGH ?
-                  SystemZISD::UNPACKL_HIGH : SystemZISD::UNPACKL_LOW);
-        EVT InVT = VT.changeVectorElementTypeToInteger();
-        EVT OutVT = MVT::getVectorVT(MVT::getIntegerVT(ElemBytes * 16),
-                                     SystemZ::VectorBytes / ElemBytes / 2);
-        if (VT != InVT) {
-          Op1 = DAG.getNode(ISD::BITCAST, SDLoc(N), InVT, Op1);
-          DCI.AddToWorklist(Op1.getNode());
-        }
-        SDValue Op = DAG.getNode(Opcode, SDLoc(N), OutVT, Op1);
-        DCI.AddToWorklist(Op.getNode());
-        return DAG.getNode(ISD::BITCAST, SDLoc(N), VT, Op);
-      }
-    }
-  }
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineSTORE(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
+  auto *SN = cast<StoreSDNode>(N);
+  auto &Op1 = N->getOperand(1);
+  EVT MemVT = SN->getMemoryVT();
   // If we have (truncstoreiN (extract_vector_elt X, Y), Z) then it is better
   // for the extraction to be done on a vMiN value, so that we can use VSTE.
   // If X has wider elements then convert it to:
   // (truncstoreiN (extract_vector_elt (bitcast X), Y2), Z).
-  if (Opcode == ISD::STORE) {
-    auto *SN = cast<StoreSDNode>(N);
-    EVT MemVT = SN->getMemoryVT();
-    if (MemVT.isInteger()) {
-      if (SDValue Value =
-              combineTruncateExtract(SDLoc(N), MemVT, SN->getValue(), DCI)) {
-        DCI.AddToWorklist(Value.getNode());
+  if (MemVT.isInteger()) {
+    if (SDValue Value =
+            combineTruncateExtract(SDLoc(N), MemVT, SN->getValue(), DCI)) {
+      DCI.AddToWorklist(Value.getNode());
 
-        // Rewrite the store with the new form of stored value.
-        return DAG.getTruncStore(SN->getChain(), SDLoc(SN), Value,
-                                 SN->getBasePtr(), SN->getMemoryVT(),
-                                 SN->getMemOperand());
-      }
+      // Rewrite the store with the new form of stored value.
+      return DAG.getTruncStore(SN->getChain(), SDLoc(SN), Value,
+                               SN->getBasePtr(), SN->getMemoryVT(),
+                               SN->getMemOperand());
     }
   }
+  // Combine STORE (BSWAP) into STRVH/STRV/STRVG
+  // See comment in combineBSWAP about volatile accesses.
+  if (!SN->isVolatile() &&
+      Op1.getOpcode() == ISD::BSWAP &&
+      Op1.getNode()->hasOneUse() &&
+      (Op1.getValueType() == MVT::i16 ||
+       Op1.getValueType() == MVT::i32 ||
+       Op1.getValueType() == MVT::i64)) {
+
+      SDValue BSwapOp = Op1.getOperand(0);
+
+      if (BSwapOp.getValueType() == MVT::i16)
+        BSwapOp = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), MVT::i32, BSwapOp);
+
+      SDValue Ops[] = {
+        N->getOperand(0), BSwapOp, N->getOperand(2),
+        DAG.getValueType(Op1.getValueType())
+      };
+
+      return
+        DAG.getMemIntrinsicNode(SystemZISD::STRV, SDLoc(N), DAG.getVTList(MVT::Other),
+                                Ops, MemVT, SN->getMemOperand());
+    }
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
+    SDNode *N, DAGCombinerInfo &DCI) const {
   // Try to simplify a vector extraction.
-  if (Opcode == ISD::EXTRACT_VECTOR_ELT) {
-    if (auto *IndexN = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
-      SDValue Op0 = N->getOperand(0);
-      EVT VecVT = Op0.getValueType();
-      return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
-                            IndexN->getZExtValue(), DCI, false);
-    }
+  if (auto *IndexN = dyn_cast<ConstantSDNode>(N->getOperand(1))) {
+    SDValue Op0 = N->getOperand(0);
+    EVT VecVT = Op0.getValueType();
+    return combineExtract(SDLoc(N), N->getValueType(0), VecVT, Op0,
+                          IndexN->getZExtValue(), DCI, false);
   }
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineJOIN_DWORDS(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
   // (join_dwords X, X) == (replicate X)
-  if (Opcode == SystemZISD::JOIN_DWORDS &&
-      N->getOperand(0) == N->getOperand(1))
+  if (N->getOperand(0) == N->getOperand(1))
     return DAG.getNode(SystemZISD::REPLICATE, SDLoc(N), N->getValueType(0),
                        N->getOperand(0));
+  return SDValue();
+}
+
+SDValue SystemZTargetLowering::combineFP_ROUND(
+    SDNode *N, DAGCombinerInfo &DCI) const {
   // (fround (extract_vector_elt X 0))
   // (fround (extract_vector_elt X 1)) ->
   // (extract_vector_elt (VROUND X) 0)
   // (extract_vector_elt (VROUND X) 1)
   //
   // This is a special case since the target doesn't really support v2f32s.
-  if (Opcode == ISD::FP_ROUND) {
-    SDValue Op0 = N->getOperand(0);
-    if (N->getValueType(0) == MVT::f32 &&
-        Op0.hasOneUse() &&
-        Op0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-        Op0.getOperand(0).getValueType() == MVT::v2f64 &&
-        Op0.getOperand(1).getOpcode() == ISD::Constant &&
-        cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue() == 0) {
-      SDValue Vec = Op0.getOperand(0);
-      for (auto *U : Vec->uses()) {
-        if (U != Op0.getNode() &&
-            U->hasOneUse() &&
-            U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-            U->getOperand(0) == Vec &&
-            U->getOperand(1).getOpcode() == ISD::Constant &&
-            cast<ConstantSDNode>(U->getOperand(1))->getZExtValue() == 1) {
-          SDValue OtherRound = SDValue(*U->use_begin(), 0);
-          if (OtherRound.getOpcode() == ISD::FP_ROUND &&
-              OtherRound.getOperand(0) == SDValue(U, 0) &&
-              OtherRound.getValueType() == MVT::f32) {
-            SDValue VRound = DAG.getNode(SystemZISD::VROUND, SDLoc(N),
-                                         MVT::v4f32, Vec);
-            DCI.AddToWorklist(VRound.getNode());
-            SDValue Extract1 =
-              DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(U), MVT::f32,
-                          VRound, DAG.getConstant(2, SDLoc(U), MVT::i32));
-            DCI.AddToWorklist(Extract1.getNode());
-            DAG.ReplaceAllUsesOfValueWith(OtherRound, Extract1);
-            SDValue Extract0 =
-              DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Op0), MVT::f32,
-                          VRound, DAG.getConstant(0, SDLoc(Op0), MVT::i32));
-            return Extract0;
-          }
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Op0 = N->getOperand(0);
+  if (N->getValueType(0) == MVT::f32 &&
+      Op0.hasOneUse() &&
+      Op0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+      Op0.getOperand(0).getValueType() == MVT::v2f64 &&
+      Op0.getOperand(1).getOpcode() == ISD::Constant &&
+      cast<ConstantSDNode>(Op0.getOperand(1))->getZExtValue() == 0) {
+    SDValue Vec = Op0.getOperand(0);
+    for (auto *U : Vec->uses()) {
+      if (U != Op0.getNode() &&
+          U->hasOneUse() &&
+          U->getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
+          U->getOperand(0) == Vec &&
+          U->getOperand(1).getOpcode() == ISD::Constant &&
+          cast<ConstantSDNode>(U->getOperand(1))->getZExtValue() == 1) {
+        SDValue OtherRound = SDValue(*U->use_begin(), 0);
+        if (OtherRound.getOpcode() == ISD::FP_ROUND &&
+            OtherRound.getOperand(0) == SDValue(U, 0) &&
+            OtherRound.getValueType() == MVT::f32) {
+          SDValue VRound = DAG.getNode(SystemZISD::VROUND, SDLoc(N),
+                                       MVT::v4f32, Vec);
+          DCI.AddToWorklist(VRound.getNode());
+          SDValue Extract1 =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(U), MVT::f32,
+                        VRound, DAG.getConstant(2, SDLoc(U), MVT::i32));
+          DCI.AddToWorklist(Extract1.getNode());
+          DAG.ReplaceAllUsesOfValueWith(OtherRound, Extract1);
+          SDValue Extract0 =
+            DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SDLoc(Op0), MVT::f32,
+                        VRound, DAG.getConstant(0, SDLoc(Op0), MVT::i32));
+          return Extract0;
         }
       }
     }
   }
+  return SDValue();
+}
 
+SDValue SystemZTargetLowering::combineBSWAP(
+    SDNode *N, DAGCombinerInfo &DCI) const {
+  SelectionDAG &DAG = DCI.DAG;
   // Combine BSWAP (LOAD) into LRVH/LRV/LRVG
   // These loads are allowed to access memory multiple times, and so we must check
   // that the loads are not volatile before performing the combine.
-  if (Opcode == ISD::BSWAP &&
-       ISD::isNON_EXTLoad(N->getOperand(0).getNode()) &&
-        N->getOperand(0).hasOneUse() &&
-         (N->getValueType(0) == MVT::i16 || N->getValueType(0) == MVT::i32 ||
-          N->getValueType(0) == MVT::i64) &&
-          !cast<LoadSDNode>(N->getOperand(0))->isVolatile()) {
+  if (ISD::isNON_EXTLoad(N->getOperand(0).getNode()) &&
+      N->getOperand(0).hasOneUse() &&
+      (N->getValueType(0) == MVT::i16 || N->getValueType(0) == MVT::i32 ||
+       N->getValueType(0) == MVT::i64) &&
+       !cast<LoadSDNode>(N->getOperand(0))->isVolatile()) {
       SDValue Load = N->getOperand(0);
       LoadSDNode *LD = cast<LoadSDNode>(Load);
 
@@ -5021,33 +5066,22 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
       // Return N so it doesn't get rechecked!
       return SDValue(N, 0);
     }
+  return SDValue();
+}
 
-  // Combine STORE (BSWAP) into STRVH/STRV/STRVG
-  // See comment above about volatile accesses.
-  if (Opcode == ISD::STORE &&
-       !cast<StoreSDNode>(N)->isVolatile() &&
-        N->getOperand(1).getOpcode() == ISD::BSWAP &&
-        N->getOperand(1).getNode()->hasOneUse() &&
-        (N->getOperand(1).getValueType() == MVT::i16 ||
-         N->getOperand(1).getValueType() == MVT::i32 ||
-         N->getOperand(1).getValueType() == MVT::i64)) {
-
-      SDValue BSwapOp = N->getOperand(1).getOperand(0);
-
-      if (BSwapOp.getValueType() == MVT::i16)
-        BSwapOp = DAG.getNode(ISD::ANY_EXTEND, SDLoc(N), MVT::i32, BSwapOp);
-
-      SDValue Ops[] = {
-        N->getOperand(0), BSwapOp, N->getOperand(2),
-        DAG.getValueType(N->getOperand(1).getValueType())
-      };
-
-      return
-        DAG.getMemIntrinsicNode(SystemZISD::STRV, SDLoc(N), DAG.getVTList(MVT::Other),
-                                Ops, cast<StoreSDNode>(N)->getMemoryVT(),
-                                cast<StoreSDNode>(N)->getMemOperand());
-    }
-
+SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  switch(N->getOpcode()) {
+  default: break;
+  case ISD::SIGN_EXTEND:        return combineSIGN_EXTEND(N, DCI);
+  case SystemZISD::MERGE_HIGH:
+  case SystemZISD::MERGE_LOW:   return combineMERGE(N, DCI);
+  case ISD::STORE:              return combineSTORE(N, DCI);
+  case ISD::EXTRACT_VECTOR_ELT: return combineEXTRACT_VECTOR_ELT(N, DCI);
+  case SystemZISD::JOIN_DWORDS: return combineJOIN_DWORDS(N, DCI);
+  case ISD::FP_ROUND:           return combineFP_ROUND(N, DCI);
+  case ISD::BSWAP:              return combineBSWAP(N, DCI);
+  }
   return SDValue();
 }
 

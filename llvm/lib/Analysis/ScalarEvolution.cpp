@@ -5948,11 +5948,6 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
         return ItCnt;
     }
 
-  ExitLimit ShiftEL = computeShiftCompareExitLimit(
-      ExitCond->getOperand(0), ExitCond->getOperand(1), L, Cond);
-  if (ShiftEL.hasAnyInfo())
-    return ShiftEL;
-
   const SCEV *LHS = getSCEV(ExitCond->getOperand(0));
   const SCEV *RHS = getSCEV(ExitCond->getOperand(1));
 
@@ -6018,7 +6013,15 @@ ScalarEvolution::computeExitLimitFromICmp(const Loop *L,
   default:
     break;
   }
-  return computeExitCountExhaustively(L, ExitCond, !L->contains(TBB));
+
+  auto *ExhaustiveCount =
+      computeExitCountExhaustively(L, ExitCond, !L->contains(TBB));
+
+  if (!isa<SCEVCouldNotCompute>(ExhaustiveCount))
+    return ExhaustiveCount;
+
+  return computeShiftCompareExitLimit(ExitCond->getOperand(0),
+                                      ExitCond->getOperand(1), L, Cond);
 }
 
 ScalarEvolution::ExitLimit

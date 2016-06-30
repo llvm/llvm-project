@@ -11126,7 +11126,7 @@ unsigned PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
     uint64_t LoopSize = 0;
     for (auto I = ML->block_begin(), IE = ML->block_end(); I != IE; ++I)
       for (auto J = (*I)->begin(), JE = (*I)->end(); J != JE; ++J) {
-        LoopSize += TII->GetInstSizeInBytes(J);
+        LoopSize += TII->GetInstSizeInBytes(*J);
         if (LoopSize > 32)
           break;
       }

@@ -1281,7 +1281,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup)) {
-    const MachineInstr *FrameInstr = &*MBBI;
+    const MachineInstr &FrameInstr = *MBBI;
     ++MBBI;
 
     if (NeedsWinCFI) {

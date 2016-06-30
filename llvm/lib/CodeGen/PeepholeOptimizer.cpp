@@ -564,13 +564,13 @@ bool PeepholeOptimizer::optimizeCmpInstr(MachineInstr *MI,
   // physical register, we can try to optimize it.
   unsigned SrcReg, SrcReg2;
   int CmpMask, CmpValue;
-  if (!TII->analyzeCompare(MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
+  if (!TII->analyzeCompare(*MI, SrcReg, SrcReg2, CmpMask, CmpValue) ||
       TargetRegisterInfo::isPhysicalRegister(SrcReg) ||
       (SrcReg2 != 0 && TargetRegisterInfo::isPhysicalRegister(SrcReg2)))
     return false;
 
   // Attempt to optimize the comparison instruction.
-  if (TII->optimizeCompareInstr(MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
+  if (TII->optimizeCompareInstr(*MI, SrcReg, SrcReg2, CmpMask, CmpValue, MRI)) {
     ++NumCmps;
     return true;
   }
@@ -585,11 +585,11 @@ bool PeepholeOptimizer::optimizeSelect(MachineInstr *MI,
   unsigned FalseOp = 0;
   bool Optimizable = false;
   SmallVector<MachineOperand, 4> Cond;
-  if (TII->analyzeSelect(MI, Cond, TrueOp, FalseOp, Optimizable))
+  if (TII->analyzeSelect(*MI, Cond, TrueOp, FalseOp, Optimizable))
     return false;
   if (!Optimizable)
     return false;
-  if (!TII->optimizeSelect(MI, LocalMIs))
+  if (!TII->optimizeSelect(*MI, LocalMIs))
     return false;
   MI->eraseFromParent();
   ++NumSelects;
@@ -599,7 +599,7 @@ bool PeepholeOptimizer::optimizeSelect(MachineInstr *MI,
 /// \brief Check if a simpler conditional branch can be
 // generated
 bool PeepholeOptimizer::optimizeCondBranch(MachineInstr *MI) {
-  return TII->optimizeCondBranch(MI);
+  return TII->optimizeCondBranch(*MI);
 }
 
 /// \brief Try to find the next source that share the same register file
@@ -1351,7 +1351,7 @@ bool PeepholeOptimizer::foldImmediate(
       continue;
     DenseMap<unsigned, MachineInstr*>::iterator II = ImmDefMIs.find(Reg);
     assert(II != ImmDefMIs.end() && "couldn't find immediate definition");
-    if (TII->FoldImmediate(MI, II->second, Reg, MRI)) {
+    if (TII->FoldImmediate(*MI, *II->second, Reg, MRI)) {
       ++NumImmFold;
       return true;
     }
@@ -1636,10 +1636,8 @@ bool PeepholeOptimizer::runOnMachineFunction(MachineFunction &MF) {
             // we need it for markUsesInDebugValueAsUndef().
             unsigned FoldedReg = FoldAsLoadDefReg;
             MachineInstr *DefMI = nullptr;
-            MachineInstr *FoldMI = TII->optimizeLoadInstr(MI, MRI,
-                                                          FoldAsLoadDefReg,
-                                                          DefMI);
-            if (FoldMI) {
+            if (MachineInstr *FoldMI =
+                    TII->optimizeLoadInstr(*MI, MRI, FoldAsLoadDefReg, DefMI)) {
               // Update LocalMIs since we replaced MI with FoldMI and deleted
               // DefMI.
               DEBUG(dbgs() << "Replacing: " << *MI);

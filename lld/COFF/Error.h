@@ -25,7 +25,7 @@ template <typename T> void error(const ErrorOr<T> &V, const Twine &Prefix) {
 }
 
 template <class T> T check(Expected<T> E, const Twine &Prefix) {
-  if (!E)
+  if (E)
     return std::move(*E);
   error(E.takeError(), Prefix);
   return T();

@@ -880,7 +880,7 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
   }
 
   StringRef ErrorInfo;
-  if (!TII->verifyInstruction(MI, ErrorInfo))
+  if (!TII->verifyInstruction(*MI, ErrorInfo))
     report(ErrorInfo.data(), MI);
 }
 

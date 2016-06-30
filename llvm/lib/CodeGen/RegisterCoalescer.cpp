@@ -684,7 +684,7 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   // operands then all possible variants (i.e. op#1<->op#2, op#1<->op#3,
   // op#2<->op#3) of commute transformation should be considered/tried here.
   unsigned NewDstIdx = TargetInstrInfo::CommuteAnyOperandIndex;
-  if (!TII->findCommutedOpIndices(DefMI, UseOpIdx, NewDstIdx))
+  if (!TII->findCommutedOpIndices(*DefMI, UseOpIdx, NewDstIdx))
     return false;
 
   MachineOperand &NewDstMO = DefMI->getOperand(NewDstIdx);
@@ -718,7 +718,7 @@ bool RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
   // transformation.  Start by commuting the instruction.
   MachineBasicBlock *MBB = DefMI->getParent();
   MachineInstr *NewMI =
-      TII->commuteInstruction(DefMI, false, UseOpIdx, NewDstIdx);
+      TII->commuteInstruction(*DefMI, false, UseOpIdx, NewDstIdx);
   if (!NewMI)
     return false;
   if (TargetRegisterInfo::isVirtualRegister(IntA.reg) &&
@@ -901,9 +901,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     IsDefCopy = true;
     return false;
   }
-  if (!TII->isAsCheapAsAMove(DefMI))
+  if (!TII->isAsCheapAsAMove(*DefMI))
     return false;
-  if (!TII->isTriviallyReMaterializable(DefMI, AA))
+  if (!TII->isTriviallyReMaterializable(*DefMI, AA))
     return false;
   if (!definesFullReg(*DefMI, SrcReg))
     return false;
@@ -953,7 +953,7 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   MachineBasicBlock *MBB = CopyMI->getParent();
   MachineBasicBlock::iterator MII =
     std::next(MachineBasicBlock::iterator(CopyMI));
-  TII->reMaterialize(*MBB, MII, DstReg, SrcIdx, DefMI, *TRI);
+  TII->reMaterialize(*MBB, MII, DstReg, SrcIdx, *DefMI, *TRI);
   MachineInstr *NewMI = std::prev(MII);
   NewMI->setDebugLoc(DL);
 

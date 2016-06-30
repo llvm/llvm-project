@@ -75,7 +75,9 @@ void AArch64Subtarget::initializeProperties() {
     MinPrefetchStride = 1024;
     MaxPrefetchIterationsAhead = 11;
     break;
-  case Vulcan: break;
+  case Vulcan: 
+    MaxInterleaveFactor = 4;
+    break;
   case CortexA35: break;
   case CortexA53: break;
   case CortexA72: break;

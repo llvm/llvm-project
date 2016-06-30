@@ -194,6 +194,22 @@ namespace llvm {
                                     uint64_t OffsetInBits, unsigned Flags,
                                     DIType *Ty);
 
+    /// Create debugging information entry for a bit field member.
+    /// \param Scope               Member scope.
+    /// \param Name                Member name.
+    /// \param File                File where this member is defined.
+    /// \param LineNo              Line number.
+    /// \param SizeInBits          Member size.
+    /// \param AlignInBits         Member alignment.
+    /// \param OffsetInBits        Member offset.
+    /// \param StorageOffsetInBits Member storage offset.
+    /// \param Flags               Flags to encode member attribute.
+    /// \param Ty                  Parent type.
+    DIDerivedType *createBitFieldMemberType(
+        DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNo,
+        uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+        uint64_t StorageOffsetInBits, unsigned Flags, DIType *Ty);
+
     /// Create debugging information entry for a
     /// C++ static data member.
     /// \param Scope      Member scope.

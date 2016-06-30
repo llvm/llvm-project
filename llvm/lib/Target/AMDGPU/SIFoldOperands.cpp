@@ -132,7 +132,7 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
                              MachineInstr *MI, unsigned OpNo,
                              MachineOperand *OpToFold,
                              const SIInstrInfo *TII) {
-  if (!TII->isOperandLegal(MI, OpNo, OpToFold)) {
+  if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
 
     // Special case for v_mac_f32_e64 if we are trying to fold into src2
     unsigned Opc = MI->getOpcode();
@@ -159,7 +159,7 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
     // see if this makes it possible to fold.
     unsigned CommuteIdx0 = TargetInstrInfo::CommuteAnyOperandIndex;
     unsigned CommuteIdx1 = TargetInstrInfo::CommuteAnyOperandIndex;
-    bool CanCommute = TII->findCommutedOpIndices(MI, CommuteIdx0, CommuteIdx1);
+    bool CanCommute = TII->findCommutedOpIndices(*MI, CommuteIdx0, CommuteIdx1);
 
     if (CanCommute) {
       if (CommuteIdx0 == OpNo)
@@ -177,10 +177,10 @@ static bool tryAddToFoldList(std::vector<FoldCandidate> &FoldList,
       return false;
 
     if (!CanCommute ||
-        !TII->commuteInstruction(MI, false, CommuteIdx0, CommuteIdx1))
+        !TII->commuteInstruction(*MI, false, CommuteIdx0, CommuteIdx1))
       return false;
 
-    if (!TII->isOperandLegal(MI, OpNo, OpToFold))
+    if (!TII->isOperandLegal(*MI, OpNo, OpToFold))
       return false;
   }
 

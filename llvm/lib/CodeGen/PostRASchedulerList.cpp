@@ -340,7 +340,7 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
       // Calls are not scheduling boundaries before register allocation, but
       // post-ra we don't gain anything by scheduling across calls since we
       // don't need to worry about register pressure.
-      if (MI->isCall() || TII->isSchedulingBoundary(MI, &MBB, Fn)) {
+      if (MI->isCall() || TII->isSchedulingBoundary(*MI, &MBB, Fn)) {
         Scheduler.enterRegion(&MBB, I, Current, CurrentCount - Count);
         Scheduler.setEndIndex(CurrentCount);
         Scheduler.schedule();

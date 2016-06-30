@@ -92,8 +92,7 @@ protected:
   /// non-commutable pair of operand indices OpIdx1 and OpIdx2.
   /// Even though the instruction is commutable, the method may still
   /// fail to commute the operands, null pointer is returned in such cases.
-  MachineInstr *commuteInstructionImpl(MachineInstr *MI,
-                                       bool NewMI,
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
@@ -106,7 +105,7 @@ public:
   virtual unsigned getUnindexedOpcode(unsigned Opc) const =0;
 
   MachineInstr *convertToThreeAddress(MachineFunction::iterator &MFI,
-                                      MachineBasicBlock::iterator &MBBI,
+                                      MachineInstr &MI,
                                       LiveVariables *LV) const override;
 
   virtual const ARMBaseRegisterInfo &getRegisterInfo() const = 0;
@@ -155,15 +154,15 @@ public:
 
   /// GetInstSize - Returns the size of the specified MachineInstr.
   ///
-  virtual unsigned GetInstSizeInBytes(const MachineInstr* MI) const;
+  virtual unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
-  unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr *MI,
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
-  unsigned isLoadFromStackSlotPostFE(const MachineInstr *MI,
+  unsigned isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                      int &FrameIndex) const override;
-  unsigned isStoreToStackSlotPostFE(const MachineInstr *MI,
+  unsigned isStoreToStackSlotPostFE(const MachineInstr &MI,
                                     int &FrameIndex) const override;
 
   void copyToCPSR(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -189,21 +188,21 @@ public:
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   void reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                      unsigned DestReg, unsigned SubIdx,
-                     const MachineInstr *Orig,
+                     const MachineInstr &Orig,
                      const TargetRegisterInfo &TRI) const override;
 
-  MachineInstr *duplicate(MachineInstr *Orig,
+  MachineInstr *duplicate(MachineInstr &Orig,
                           MachineFunction &MF) const override;
 
   const MachineInstrBuilder &AddDReg(MachineInstrBuilder &MIB, unsigned Reg,
                                      unsigned SubIdx, unsigned State,
                                      const TargetRegisterInfo *TRI) const;
 
-  bool produceSameValue(const MachineInstr *MI0, const MachineInstr *MI1,
+  bool produceSameValue(const MachineInstr &MI0, const MachineInstr &MI1,
                         const MachineRegisterInfo *MRI) const override;
 
   /// areLoadsFromSameBasePtr - This is used by the pre-regalloc scheduler to
@@ -226,7 +225,7 @@ public:
                                int64_t Offset1, int64_t Offset2,
                                unsigned NumLoads) const override;
 
-  bool isSchedulingBoundary(const MachineInstr *MI,
+  bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;
 
@@ -251,7 +250,7 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  bool analyzeCompare(const MachineInstr *MI, unsigned &SrcReg,
+  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
                       unsigned &SrcReg2, int &CmpMask,
                       int &CmpValue) const override;
 
@@ -259,30 +258,29 @@ public:
   /// that we can remove a "comparison with zero"; Remove a redundant CMP
   /// instruction if the flags can be updated in the same way by an earlier
   /// instruction such as SUB.
-  bool optimizeCompareInstr(MachineInstr *CmpInstr, unsigned SrcReg,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
                             unsigned SrcReg2, int CmpMask, int CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
-  bool analyzeSelect(const MachineInstr *MI,
-                     SmallVectorImpl<MachineOperand> &Cond,
-                     unsigned &TrueOp, unsigned &FalseOp,
-                     bool &Optimizable) const override;
+  bool analyzeSelect(const MachineInstr &MI,
+                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
+                     unsigned &FalseOp, bool &Optimizable) const override;
 
-  MachineInstr *optimizeSelect(MachineInstr *MI,
+  MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
                                bool) const override;
 
   /// FoldImmediate - 'Reg' is known to be defined by a move immediate
   /// instruction, try to fold the immediate into the use instruction.
-  bool FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
-                     unsigned Reg, MachineRegisterInfo *MRI) const override;
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+                     MachineRegisterInfo *MRI) const override;
 
   unsigned getNumMicroOps(const InstrItineraryData *ItinData,
-                          const MachineInstr *MI) const override;
+                          const MachineInstr &MI) const override;
 
   int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MachineInstr *DefMI, unsigned DefIdx,
-                        const MachineInstr *UseMI,
+                        const MachineInstr &DefMI, unsigned DefIdx,
+                        const MachineInstr &UseMI,
                         unsigned UseIdx) const override;
   int getOperandLatency(const InstrItineraryData *ItinData,
                         SDNode *DefNode, unsigned DefIdx,
@@ -290,19 +288,20 @@ public:
 
   /// VFP/NEON execution domains.
   std::pair<uint16_t, uint16_t>
-  getExecutionDomain(const MachineInstr *MI) const override;
-  void setExecutionDomain(MachineInstr *MI, unsigned Domain) const override;
+  getExecutionDomain(const MachineInstr &MI) const override;
+  void setExecutionDomain(MachineInstr &MI, unsigned Domain) const override;
 
-  unsigned getPartialRegUpdateClearance(const MachineInstr*, unsigned,
-                                      const TargetRegisterInfo*) const override;
-  void breakPartialRegDependency(MachineBasicBlock::iterator, unsigned,
+  unsigned
+  getPartialRegUpdateClearance(const MachineInstr &, unsigned,
+                               const TargetRegisterInfo *) const override;
+  void breakPartialRegDependency(MachineInstr &, unsigned,
                                  const TargetRegisterInfo *TRI) const override;
 
   /// Get the number of addresses by LDM or VLDM or zero for unknown.
-  unsigned getNumLDMAddresses(const MachineInstr *MI) const;
+  unsigned getNumLDMAddresses(const MachineInstr &MI) const;
 
 private:
-  unsigned getInstBundleLength(const MachineInstr *MI) const;
+  unsigned getInstBundleLength(const MachineInstr &MI) const;
 
   int getVLDMDefCycle(const InstrItineraryData *ItinData,
                       const MCInstrDesc &DefMCID,
@@ -326,10 +325,17 @@ private:
                         const MCInstrDesc &UseMCID,
                         unsigned UseIdx, unsigned UseAlign) const;
 
+  int getOperandLatencyImpl(const InstrItineraryData *ItinData,
+                            const MachineInstr &DefMI, unsigned DefIdx,
+                            const MCInstrDesc &DefMCID, unsigned DefAdj,
+                            const MachineOperand &DefMO, unsigned Reg,
+                            const MachineInstr &UseMI, unsigned UseIdx,
+                            const MCInstrDesc &UseMCID, unsigned UseAdj) const;
+
   unsigned getPredicationCost(const MachineInstr &MI) const override;
 
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
-                           const MachineInstr *MI,
+                           const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
   int getInstrLatency(const InstrItineraryData *ItinData,
@@ -337,15 +343,15 @@ private:
 
   bool hasHighOperandLatency(const TargetSchedModel &SchedModel,
                              const MachineRegisterInfo *MRI,
-                             const MachineInstr *DefMI, unsigned DefIdx,
-                             const MachineInstr *UseMI,
+                             const MachineInstr &DefMI, unsigned DefIdx,
+                             const MachineInstr &UseMI,
                              unsigned UseIdx) const override;
   bool hasLowDefLatency(const TargetSchedModel &SchedModel,
-                        const MachineInstr *DefMI,
+                        const MachineInstr &DefMI,
                         unsigned DefIdx) const override;
 
   /// verifyInstruction - Perform target specific instruction verification.
-  bool verifyInstruction(const MachineInstr *MI,
+  bool verifyInstruction(const MachineInstr &MI,
                          StringRef &ErrInfo) const override;
 
   virtual void expandLoadStackGuard(MachineBasicBlock::iterator MI) const = 0;

@@ -26,6 +26,17 @@ struct NewArchiveMember {
   unsigned UID = 0, GID = 0, Perms = 0644;
 
   NewArchiveMember() = default;
+  NewArchiveMember(NewArchiveMember &&Other)
+      : Buf(std::move(Other.Buf)), ModTime(Other.ModTime), UID(Other.UID),
+        GID(Other.GID), Perms(Other.Perms) {}
+  NewArchiveMember &operator=(NewArchiveMember &&Other) {
+    Buf = std::move(Other.Buf);
+    ModTime = Other.ModTime;
+    UID = Other.UID;
+    GID = Other.GID;
+    Perms = Other.Perms;
+    return *this;
+  }
   NewArchiveMember(MemoryBufferRef BufRef);
 
   static Expected<NewArchiveMember>

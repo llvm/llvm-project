@@ -20,6 +20,7 @@
 #include "llvm/DebugInfo/CodeView/TypeDumper.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/IR/Constants.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
@@ -1500,23 +1501,32 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   for (ClassInfo::MemberInfo &MemberInfo : Info.Members) {
     const DIDerivedType *Member = MemberInfo.MemberTypeNode;
     TypeIndex MemberBaseType = getTypeIndex(Member->getBaseType());
+    StringRef MemberName = Member->getName();
+    MemberAccess Access =
+        translateAccessFlags(Ty->getTag(), Member->getFlags());
 
     if (Member->isStaticMember()) {
-      Fields.writeStaticDataMember(StaticDataMemberRecord(
-          translateAccessFlags(Ty->getTag(), Member->getFlags()),
-          MemberBaseType, Member->getName()));
+      Fields.writeStaticDataMember(
+          StaticDataMemberRecord(Access, MemberBaseType, MemberName));
       MemberCount++;
       continue;
     }
 
-    uint64_t OffsetInBytes = MemberInfo.BaseOffset;
-
-    // FIXME: Handle bitfield type memeber.
-    OffsetInBytes += Member->getOffsetInBits() / 8;
-
-    Fields.writeDataMember(
-        DataMemberRecord(translateAccessFlags(Ty->getTag(), Member->getFlags()),
-                         MemberBaseType, OffsetInBytes, Member->getName()));
+    // Data member.
+    uint64_t MemberOffsetInBits = Member->getOffsetInBits();
+    if (Member->isBitField()) {
+      uint64_t StartBitOffset = MemberOffsetInBits;
+      if (const auto *CI =
+              dyn_cast_or_null<ConstantInt>(Member->getStorageOffsetInBits())) {
+        MemberOffsetInBits = CI->getZExtValue();
+      }
+      StartBitOffset -= MemberOffsetInBits;
+      MemberBaseType = TypeTable.writeBitField(BitFieldRecord(
+          MemberBaseType, Member->getSizeInBits(), StartBitOffset));
+    }
+    uint64_t MemberOffsetInBytes = MemberOffsetInBits / 8;
+    Fields.writeDataMember(DataMemberRecord(Access, MemberBaseType,
+                                            MemberOffsetInBytes, MemberName));
     MemberCount++;
   }
 

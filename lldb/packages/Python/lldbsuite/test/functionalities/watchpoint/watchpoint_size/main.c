@@ -27,7 +27,7 @@ int main(int argc, char** argv) {
     {
         printf("About to write byteArray[%d] ...\n", i); // About to write byteArray
         pad0++;
-        byteArray[i]++;
+        byteArray[i] = 7;
         pad1++;
         localByte = byteArray[i]; // Here onwards we should'nt be stopped in loop
         byteArray[i]++;
@@ -41,7 +41,7 @@ int main(int argc, char** argv) {
     {
         printf("About to write wordArray[%d] ...\n", i); // About to write wordArray
         pad0++;
-        wordArray[i]++;
+        wordArray[i] = 7;
         pad1++;
         localWord = wordArray[i]; // Here onwards we should'nt be stopped in loop
         wordArray[i]++;
@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     {
         printf("About to write dwordArray[%d] ...\n", i); // About to write dwordArray
         pad0++;
-        dwordArray[i]++;
+        dwordArray[i] = 7;
         pad1++;
         localDword = dwordArray[i]; // Here onwards we shouldn't be stopped in loop
         dwordArray[i]++;

@@ -17,7 +17,7 @@
 #include <string>
 #include <strstream>
 
-int main(int, char const **argv) {
+int main() {
   std::ostrstream oss;
   std::string s;
 

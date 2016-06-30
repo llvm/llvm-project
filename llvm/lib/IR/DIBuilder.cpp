@@ -308,6 +308,18 @@ static ConstantAsMetadata *getConstantOrNull(Constant *C) {
   return nullptr;
 }
 
+DIDerivedType *DIBuilder::createBitFieldMemberType(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    uint64_t StorageOffsetInBits, unsigned Flags, DIType *Ty) {
+  Flags |= DINode::FlagBitField;
+  return DIDerivedType::get(
+      VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
+      getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
+      Flags, ConstantAsMetadata::get(ConstantInt::get(
+                 IntegerType::get(VMContext, 64), StorageOffsetInBits)));
+}
+
 DIDerivedType *DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name,
                                                  DIFile *File,
                                                  unsigned LineNumber,

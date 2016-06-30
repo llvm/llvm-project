@@ -581,6 +581,7 @@ public:
     return getFlags() & FlagObjcClassComplete;
   }
   bool isVector() const { return getFlags() & FlagVector; }
+  bool isBitField() const { return getFlags() & FlagBitField; }
   bool isStaticMember() const { return getFlags() & FlagStaticMember; }
   bool isLValueReference() const { return getFlags() & FlagLValueReference; }
   bool isRValueReference() const { return getFlags() & FlagRValueReference; }
@@ -739,6 +740,12 @@ public:
   }
   DIObjCProperty *getObjCProperty() const {
     return dyn_cast_or_null<DIObjCProperty>(getExtraData());
+  }
+  Constant *getStorageOffsetInBits() const {
+    assert(getTag() == dwarf::DW_TAG_member && isBitField());
+    if (auto *C = cast_or_null<ConstantAsMetadata>(getExtraData()))
+      return C->getValue();
+    return nullptr;
   }
   Constant *getConstant() const {
     assert(getTag() == dwarf::DW_TAG_member && isStaticMember());
