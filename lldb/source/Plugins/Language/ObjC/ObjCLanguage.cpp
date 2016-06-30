@@ -538,6 +538,7 @@ LoadObjCFormatters(TypeCategoryImplSP objc_category_sp)
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSStringSummaryProvider, "NSString summary provider", ConstString("NSCFConstantString"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSStringSummaryProvider, "NSString summary provider", ConstString("NSCFString"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSStringSummaryProvider, "NSString summary provider", ConstString("NSPathStore2"), appkit_flags);
+    AddCXXSummary(objc_category_sp, lldb_private::formatters::NSStringSummaryProvider, "NSString summary provider", ConstString("NSTaggedPointerString"), appkit_flags);
     
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSAttributedStringSummaryProvider, "NSAttributedString summary provider", ConstString("NSAttributedString"), appkit_flags);
     AddCXXSummary(objc_category_sp, lldb_private::formatters::NSMutableAttributedStringSummaryProvider, "NSMutableAttributedString summary provider", ConstString("NSMutableAttributedString"), appkit_flags);

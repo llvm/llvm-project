@@ -31,6 +31,11 @@ add_custom_command(
 )
 
 # Set the -D definitions for all sources
+# UNICODE and _UNICODE are set in LLVM's CMake system.  They affect the
+# ittnotify code and should only be set when compiling ittnotify_static.c
+# on Windows (done below).
+# TODO: Fix the UNICODE usage in ittnotify code for Windows.
+remove_definitions(-DUNICODE -D_UNICODE)
 libomp_get_definitions_flags(LIBOMP_CONFIGURED_DEFINITIONS_FLAGS)
 add_definitions(${LIBOMP_CONFIGURED_DEFINITIONS_FLAGS})
 
@@ -192,7 +197,7 @@ if(WIN32)
   libomp_append(LIBOMP_MASM_DEFINITIONS "-DOMPT_SUPPORT" IF_TRUE_1_0 LIBOMP_OMPT_SUPPORT)
   libomp_list_to_string("${LIBOMP_MASM_DEFINITIONS}" LIBOMP_MASM_DEFINITIONS)
   set_property(SOURCE z_Windows_NT-586_asm.asm APPEND_STRING PROPERTY COMPILE_FLAGS " ${LIBOMP_MASM_DEFINITIONS}")
-  #set_source_files_properties(thirdparty/ittnotify/ittnotify_static.c PROPERTIES COMPILE_DEFINITIONS "UNICODE")
+  set_source_files_properties(thirdparty/ittnotify/ittnotify_static.c PROPERTIES COMPILE_DEFINITIONS "UNICODE")
 
   # Create Windows import library
   # the import library is "re-linked" to include kmp_import.c which prevents

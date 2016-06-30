@@ -88,6 +88,7 @@ public:
   void wrap(StringRef Name);
 
 private:
+  std::vector<SymbolBody *> findAll(StringRef Pattern);
   std::pair<Symbol *, bool> insert(StringRef Name);
   std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,

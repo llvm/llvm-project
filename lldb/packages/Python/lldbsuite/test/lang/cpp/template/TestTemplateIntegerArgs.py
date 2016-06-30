@@ -10,6 +10,7 @@ class TemplateIntegerArgsTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(bugnumber="llvm.org/pr28354", compiler="gcc", oslist=["linux"])
     def test_with_run_command(self):
         """Test that C++ template classes that have integer parameters work correctly.
            

@@ -20,20 +20,10 @@
 #include "Plugins/ObjectContainer/Universal-Mach-O/ObjectContainerUniversalMachO.h"
 #include "Plugins/ObjectFile/ELF/ObjectFileELF.h"
 #include "Plugins/ObjectFile/PECOFF/ObjectFilePECOFF.h"
-#include "Plugins/Platform/Android/PlatformAndroid.h"
-#include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"
-#include "Plugins/Platform/Kalimba/PlatformKalimba.h"
-#include "Plugins/Platform/Linux/PlatformLinux.h"
-#include "Plugins/Platform/MacOSX/PlatformMacOSX.h"
-#include "Plugins/Platform/MacOSX/PlatformRemoteiOS.h"
-#include "Plugins/Platform/NetBSD/PlatformNetBSD.h"
-#include "Plugins/Platform/Windows/PlatformWindows.h"
 #include "Plugins/Process/gdb-remote/ProcessGDBRemoteLog.h"
 
 #if defined(__APPLE__)
-#include "Plugins/Platform/MacOSX/PlatformiOSSimulator.h"
 #include "Plugins/ObjectFile/Mach-O/ObjectFileMachO.h"
-#include "Plugins/Platform/MacOSX/PlatformDarwinKernel.h"
 #endif
 
 #if defined(__linux__)
@@ -99,12 +89,6 @@ SystemInitializerCommon::Initialize()
     ObjectContainerBSDArchive::Initialize();
     ObjectFileELF::Initialize();
     ObjectFilePECOFF::Initialize();
-    platform_freebsd::PlatformFreeBSD::Initialize();
-    platform_linux::PlatformLinux::Initialize();
-    platform_netbsd::PlatformNetBSD::Initialize();
-    PlatformWindows::Initialize();
-    PlatformKalimba::Initialize();
-    platform_android::PlatformAndroid::Initialize();
 
     EmulateInstructionARM::Initialize();
     EmulateInstructionMIPS::Initialize();
@@ -115,12 +99,8 @@ SystemInitializerCommon::Initialize()
     //----------------------------------------------------------------------
     ObjectContainerUniversalMachO::Initialize();
 
-    PlatformRemoteiOS::Initialize();
-    PlatformMacOSX::Initialize();
 
 #if defined(__APPLE__)
-    PlatformiOSSimulator::Initialize();
-    PlatformDarwinKernel::Initialize();
     ObjectFileMachO::Initialize();
 #endif
 #if defined(__linux__)
@@ -139,24 +119,14 @@ SystemInitializerCommon::Terminate()
     ObjectContainerBSDArchive::Terminate();
     ObjectFileELF::Terminate();
     ObjectFilePECOFF::Terminate();
-    platform_freebsd::PlatformFreeBSD::Terminate();
-    platform_linux::PlatformLinux::Terminate();
-    platform_netbsd::PlatformNetBSD::Terminate();
-    PlatformWindows::Terminate();
-    PlatformKalimba::Terminate();
-    platform_android::PlatformAndroid::Terminate();
-    ObjectContainerUniversalMachO::Terminate();
-    PlatformMacOSX::Terminate();
-    PlatformRemoteiOS::Terminate();
 
     EmulateInstructionARM::Terminate();
     EmulateInstructionMIPS::Terminate();
     EmulateInstructionMIPS64::Terminate();
 
+    ObjectContainerUniversalMachO::Terminate();
 #if defined(__APPLE__)
-    PlatformiOSSimulator::Terminate();
     ObjectFileMachO::Terminate();
-    PlatformDarwinKernel::Terminate();
 #endif
 
 #if defined(_MSC_VER)

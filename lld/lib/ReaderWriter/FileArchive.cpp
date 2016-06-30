@@ -114,10 +114,11 @@ public:
 protected:
   std::error_code doParse() override {
     // Make Archive object which will be owned by FileArchive object.
+    llvm::Error Err;
+    _archive.reset(new Archive(_mb->getMemBufferRef(), Err));
+    if (Err)
+      return errorToErrorCode(std::move(Err));
     std::error_code ec;
-    _archive.reset(new Archive(_mb->getMemBufferRef(), ec));
-    if (ec)
-      return ec;
     if ((ec = buildTableOfContents()))
       return ec;
     return std::error_code();
