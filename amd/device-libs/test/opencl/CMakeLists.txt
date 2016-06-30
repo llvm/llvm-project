@@ -42,3 +42,4 @@
 
 include_directories(${CMAKE_SOURCE_DIR}/test/inc)
 clang_opencl_test(test_workitem ${CMAKE_CURRENT_SOURCE_DIR})
+#clang_opencl_test(test_math ${CMAKE_CURRENT_SOURCE_DIR})
