@@ -13,6 +13,7 @@
 
 #include "CGDebugInfo.h"
 #include "CGBlocks.h"
+#include "CGRecordLayout.h"
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
@@ -847,7 +848,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_AAPCS_VFP:
   case CC_IntelOclBicc:
   case CC_SpirFunction:
-  case CC_SpirKernel:
+  case CC_OpenCLKernel:
   case CC_Swift:
   case CC_PreserveMost:
   case CC_PreserveAll:
@@ -905,10 +906,38 @@ static unsigned getAccessFlag(AccessSpecifier Access, const RecordDecl *RD) {
   llvm_unreachable("unexpected access enumerator");
 }
 
-llvm::DIType *CGDebugInfo::createFieldType(
-    StringRef name, QualType type, uint64_t sizeInBitsOverride,
-    SourceLocation loc, AccessSpecifier AS, uint64_t offsetInBits,
-    llvm::DIFile *tunit, llvm::DIScope *scope, const RecordDecl *RD) {
+llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
+                                              llvm::DIScope *RecordTy,
+                                              const RecordDecl *RD) {
+  StringRef Name = BitFieldDecl->getName();
+  QualType Ty = BitFieldDecl->getType();
+  SourceLocation Loc = BitFieldDecl->getLocation();
+  llvm::DIFile *VUnit = getOrCreateFile(Loc);
+  llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
+
+  // Get the location for the field.
+  llvm::DIFile *File = getOrCreateFile(Loc);
+  unsigned Line = getLineNumber(Loc);
+
+  const CGBitFieldInfo &BitFieldInfo =
+      CGM.getTypes().getCGRecordLayout(RD).getBitFieldInfo(BitFieldDecl);
+  uint64_t SizeInBits = BitFieldInfo.Size;
+  assert(SizeInBits > 0 && "found named 0-width bitfield");
+  unsigned AlignInBits = CGM.getContext().getTypeAlign(Ty);
+  uint64_t StorageOffsetInBits =
+      CGM.getContext().toBits(BitFieldInfo.StorageOffset);
+  uint64_t OffsetInBits = StorageOffsetInBits + BitFieldInfo.Offset;
+  unsigned Flags = getAccessFlag(BitFieldDecl->getAccess(), RD);
+  return DBuilder.createBitFieldMemberType(
+      RecordTy, Name, File, Line, SizeInBits, AlignInBits, OffsetInBits,
+      StorageOffsetInBits, Flags, DebugType);
+}
+
+llvm::DIType *
+CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
+                             AccessSpecifier AS, uint64_t offsetInBits,
+                             llvm::DIFile *tunit, llvm::DIScope *scope,
+                             const RecordDecl *RD) {
   llvm::DIType *debugType = getOrCreateType(type, tunit);
 
   // Get the location for the field.
@@ -921,9 +950,6 @@ llvm::DIType *CGDebugInfo::createFieldType(
     TypeInfo TI = CGM.getContext().getTypeInfo(type);
     SizeInBits = TI.Width;
     AlignInBits = TI.Align;
-
-    if (sizeInBitsOverride)
-      SizeInBits = sizeInBitsOverride;
   }
 
   unsigned flags = getAccessFlag(AS, RD);
@@ -945,19 +971,15 @@ void CGDebugInfo::CollectRecordLambdaFields(
        I != E; ++I, ++Field, ++fieldno) {
     const LambdaCapture &C = *I;
     if (C.capturesVariable()) {
+      SourceLocation Loc = C.getLocation();
+      assert(!Field->isBitField() && "lambdas don't have bitfield members!");
       VarDecl *V = C.getCapturedVar();
-      llvm::DIFile *VUnit = getOrCreateFile(C.getLocation());
       StringRef VName = V->getName();
-      uint64_t SizeInBitsOverride = 0;
-      if (Field->isBitField()) {
-        SizeInBitsOverride = Field->getBitWidthValue(CGM.getContext());
-        assert(SizeInBitsOverride && "found named 0-width bitfield");
-      }
-      llvm::DIType *fieldType = createFieldType(
-          VName, Field->getType(), SizeInBitsOverride, C.getLocation(),
-          Field->getAccess(), layout.getFieldOffset(fieldno), VUnit, RecordTy,
-          CXXDecl);
-      elements.push_back(fieldType);
+      llvm::DIFile *VUnit = getOrCreateFile(Loc);
+      llvm::DIType *FieldType = createFieldType(
+          VName, Field->getType(), Loc, Field->getAccess(),
+          layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
+      elements.push_back(FieldType);
     } else if (C.capturesThis()) {
       // TODO: Need to handle 'this' in some way by probably renaming the
       // this of the lambda class and having a field member of 'this' or
@@ -967,7 +989,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
       llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
       QualType type = f->getType();
       llvm::DIType *fieldType = createFieldType(
-          "this", type, 0, f->getLocation(), f->getAccess(),
+          "this", type, f->getLocation(), f->getAccess(),
           layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
 
       elements.push_back(fieldType);
@@ -1015,17 +1037,16 @@ void CGDebugInfo::CollectRecordNormalField(
   if (name.empty() && !type->isRecordType())
     return;
 
-  uint64_t SizeInBitsOverride = 0;
+  llvm::DIType *FieldType;
   if (field->isBitField()) {
-    SizeInBitsOverride = field->getBitWidthValue(CGM.getContext());
-    assert(SizeInBitsOverride && "found named 0-width bitfield");
+    FieldType = createBitFieldType(field, RecordTy, RD);
+  } else {
+    FieldType =
+        createFieldType(name, type, field->getLocation(), field->getAccess(),
+                        OffsetInBits, tunit, RecordTy, RD);
   }
 
-  llvm::DIType *fieldType =
-      createFieldType(name, type, SizeInBitsOverride, field->getLocation(),
-                      field->getAccess(), OffsetInBits, tunit, RecordTy, RD);
-
-  elements.push_back(fieldType);
+  elements.push_back(FieldType);
 }
 
 void CGDebugInfo::CollectRecordFields(
@@ -3299,25 +3320,25 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       CGM.getDataLayout().getStructLayout(block.StructureType);
 
   SmallVector<llvm::Metadata *, 16> fields;
-  fields.push_back(createFieldType("__isa", C.VoidPtrTy, 0, loc, AS_public,
+  fields.push_back(createFieldType("__isa", C.VoidPtrTy, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(0),
                                    tunit, tunit));
-  fields.push_back(createFieldType("__flags", C.IntTy, 0, loc, AS_public,
+  fields.push_back(createFieldType("__flags", C.IntTy, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(1),
                                    tunit, tunit));
-  fields.push_back(createFieldType("__reserved", C.IntTy, 0, loc, AS_public,
+  fields.push_back(createFieldType("__reserved", C.IntTy, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(2),
                                    tunit, tunit));
   auto *FnTy = block.getBlockExpr()->getFunctionType();
   auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
-  fields.push_back(createFieldType("__FuncPtr", FnPtrType, 0, loc, AS_public,
+  fields.push_back(createFieldType("__FuncPtr", FnPtrType, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(3),
                                    tunit, tunit));
   fields.push_back(createFieldType(
       "__descriptor", C.getPointerType(block.NeedsCopyDispose
                                            ? C.getBlockDescriptorExtendedType()
                                            : C.getBlockDescriptorType()),
-      0, loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
+      loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
 
   // We want to sort the captures by offset, not because DWARF
   // requires this, but because we're paranoid about debuggers.
@@ -3368,7 +3389,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       else
         llvm_unreachable("unexpected block declcontext");
 
-      fields.push_back(createFieldType("this", type, 0, loc, AS_public,
+      fields.push_back(createFieldType("this", type, loc, AS_public,
                                        offsetInBits, tunit, tunit));
       continue;
     }
@@ -3388,7 +3409,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
           DBuilder.createMemberType(tunit, name, tunit, line, PtrInfo.Width,
                                     PtrInfo.Align, offsetInBits, 0, fieldType);
     } else {
-      fieldType = createFieldType(name, variable->getType(), 0, loc, AS_public,
+      fieldType = createFieldType(name, variable->getType(), loc, AS_public,
                                   offsetInBits, tunit, tunit);
     }
     fields.push_back(fieldType);

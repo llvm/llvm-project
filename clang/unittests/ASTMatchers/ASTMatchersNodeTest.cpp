@@ -1299,6 +1299,13 @@ TEST(TypeMatching, AutoRefTypes) {
                                         hasType(rValueReferenceType()))));
 }
 
+TEST(TypeMatching, MatchesEnumTypes) {
+  EXPECT_TRUE(matches("enum Color { Green }; Color color;",
+                      loc(enumType())));
+  EXPECT_TRUE(matches("enum class Color { Green }; Color color;",
+                      loc(enumType())));
+}
+
 TEST(TypeMatching, MatchesPointersToConstTypes) {
   EXPECT_TRUE(matches("int b; int * const a = &b;",
                       loc(pointerType())));

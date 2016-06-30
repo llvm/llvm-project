@@ -1,3 +1,4 @@
+// XFAIL: *
 // RUN: %clang -S -### -cl-std=CL %s | FileCheck --check-prefix=CHECK-CL %s
 // RUN: %clang -S -### -cl-std=CL1.1 %s | FileCheck --check-prefix=CHECK-CL11 %s
 // RUN: %clang -S -### -cl-std=CL1.2 %s | FileCheck --check-prefix=CHECK-CL12 %s

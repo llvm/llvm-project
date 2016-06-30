@@ -671,6 +671,42 @@ __m128 test_mm512_maskz_range_round_ss(__mmask8 __U, __m128 __A, __m128 __B) {
   return _mm_maskz_range_round_ss(__U, __A, __B, 4, 8); 
 }
 
+__m128d test_mm_range_sd(__m128d __A, __m128d __B) {
+  // CHECK-LABEL: @test_mm_range_sd
+  // CHECK: @llvm.x86.avx512.mask.range.sd
+  return _mm_range_sd(__A, __B, 4); 
+}
+
+__m128d test_mm_mask_range_sd(__m128d __W, __mmask8 __U, __m128d __A, __m128d __B) {
+  // CHECK-LABEL: test_mm_mask_range_sd
+  // CHECK: @llvm.x86.avx512.mask.range.sd
+  return _mm_mask_range_sd(__W, __U, __A, __B, 4); 
+}
+
+__m128d test_mm_maskz_range_sd(__mmask8 __U, __m128d __A, __m128d __B) {
+  // CHECK-LABEL: @test_mm_maskz_range_sd
+  // CHECK: @llvm.x86.avx512.mask.range.sd
+  return _mm_maskz_range_sd(__U, __A, __B, 4); 
+}
+
+__m128d test_mm_range_ss(__m128d __A, __m128d __B) {
+  // CHECK-LABEL: @test_mm_range_ss
+  // CHECK: @llvm.x86.avx512.mask.range.ss
+  return _mm_range_ss(__A, __B, 4); 
+}
+
+__m128d test_mm_mask_range_ss(__m128 __W, __mmask8 __U, __m128 __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm_mask_range_ss
+  // CHECK: @llvm.x86.avx512.mask.range.ss
+  return _mm_mask_range_ss(__W, __U, __A, __B, 4); 
+}
+
+__m128 test_mm_maskz_range_ss(__mmask8 __U, __m128 __A, __m128 __B) {
+  // CHECK-LABEL: @test_mm_maskz_range_ss
+  // CHECK: @llvm.x86.avx512.mask.range.ss
+  return _mm_maskz_range_ss(__U, __A, __B, 4); 
+}
+
 __m512 test_mm512_range_ps(__m512 __A, __m512 __B) {
   // CHECK-LABEL: @test_mm512_range_ps
   // CHECK: @llvm.x86.avx512.mask.range.ps.512

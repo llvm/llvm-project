@@ -2148,6 +2148,16 @@ public:
       Opts.cl_khr_3d_image_writes = 1;
     }
   }
+
+  CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
+    switch (CC) {
+      default:
+        return CCCR_Warning;
+      case CC_C:
+      case CC_OpenCLKernel:
+        return CCCR_OK;
+    }
+  }
 };
 
 const Builtin::Info AMDGPUTargetInfo::BuiltinInfo[] = {
@@ -7938,8 +7948,8 @@ public:
   }
 
   CallingConvCheckResult checkCallingConvention(CallingConv CC) const override {
-    return (CC == CC_SpirFunction || CC == CC_SpirKernel) ? CCCR_OK
-                                                          : CCCR_Warning;
+    return (CC == CC_SpirFunction || CC == CC_OpenCLKernel) ? CCCR_OK
+                                                            : CCCR_Warning;
   }
 
   CallingConv getDefaultCallingConv(CallingConvMethodType MT) const override {
