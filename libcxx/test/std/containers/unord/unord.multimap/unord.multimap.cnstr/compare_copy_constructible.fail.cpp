@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+// The test requires access control SFINAE.
+
 // <unordered_map>
 
 // Check that std::unordered_multimap fails to instantiate if the comparison predicate is 

@@ -118,5 +118,5 @@ void cxx_unresolved_expr() {
   // CXXUnresolvedConstructExpr, and the missing ')' gives it an invalid source
   // location for its rparen.  Check that emitting a diag on the range of the
   // expr doesn't assert.
-  return int(undeclared, 4; // expected-error {{expected ')'}} expected-note{{to match this '('}} expected-error {{void function 'cxx_unresolved_expr' should not return a value}} expected-error {{use of undeclared identifier 'undeclared'}}
+  return int(undeclared, 4; // expected-error {{expected ')'}} expected-note{{to match this '('}} expected-error {{use of undeclared identifier 'undeclared'}}
 }

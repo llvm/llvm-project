@@ -938,10 +938,6 @@ private:
     typedef allocator_traits<__node_base_allocator> __node_base_traits;
     static_assert((is_same<__node_base_pointer, typename __node_base_traits::pointer>::value),
                  "Allocator does not rebind pointers in a sane manner.");
-    static_assert((is_copy_constructible<key_equal>::value),
-                 "Predicate must be copy-constructible.");
-    static_assert((is_copy_constructible<hasher>::value),
-                 "Hasher must be copy-constructible.");
 
 private:
 
@@ -1479,6 +1475,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
 {
+    static_assert((is_copy_constructible<key_equal>::value),
+                 "Predicate must be copy-constructible.");
+    static_assert((is_copy_constructible<hasher>::value),
+                 "Hasher must be copy-constructible.");
     __deallocate(__p1_.first().__next_);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);

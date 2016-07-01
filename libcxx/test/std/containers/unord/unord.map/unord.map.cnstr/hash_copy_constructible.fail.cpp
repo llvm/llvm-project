@@ -7,6 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+// The test requires access control SFINAE.
+
 // <unordered_map>
 
 // Check that std::unordered_map fails to instantiate if the hash function is 
@@ -21,7 +24,7 @@ struct Hash {
 	Hash () {}
 private:
 	Hash (const Hash &); // declared but not defined
-	};
+};
 
 
 int main() {

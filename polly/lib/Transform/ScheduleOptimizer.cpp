@@ -712,15 +712,17 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
     IslOuterCoincidence = 0;
   }
 
-  isl_options_set_schedule_outer_coincidence(S.getIslCtx(),
-                                             IslOuterCoincidence);
-  isl_options_set_schedule_serialize_sccs(S.getIslCtx(), IslSerializeSCCs);
-  isl_options_set_schedule_maximize_band_depth(S.getIslCtx(), IslMaximizeBands);
-  isl_options_set_schedule_max_constant_term(S.getIslCtx(), MaxConstantTerm);
-  isl_options_set_schedule_max_coefficient(S.getIslCtx(), MaxCoefficient);
-  isl_options_set_tile_scale_tile_loops(S.getIslCtx(), 0);
+  isl_ctx *Ctx = S.getIslCtx();
 
-  isl_options_set_on_error(S.getIslCtx(), ISL_ON_ERROR_CONTINUE);
+  isl_options_set_schedule_outer_coincidence(Ctx, IslOuterCoincidence);
+  isl_options_set_schedule_serialize_sccs(Ctx, IslSerializeSCCs);
+  isl_options_set_schedule_maximize_band_depth(Ctx, IslMaximizeBands);
+  isl_options_set_schedule_max_constant_term(Ctx, MaxConstantTerm);
+  isl_options_set_schedule_max_coefficient(Ctx, MaxCoefficient);
+  isl_options_set_tile_scale_tile_loops(Ctx, 0);
+
+  auto OnErrorStatus = isl_options_get_on_error(Ctx);
+  isl_options_set_on_error(Ctx, ISL_ON_ERROR_CONTINUE);
 
   isl_schedule_constraints *ScheduleConstraints;
   ScheduleConstraints = isl_schedule_constraints_on_domain(Domain);
@@ -732,7 +734,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
       isl_schedule_constraints_set_coincidence(ScheduleConstraints, Validity);
   isl_schedule *Schedule;
   Schedule = isl_schedule_constraints_compute_schedule(ScheduleConstraints);
-  isl_options_set_on_error(S.getIslCtx(), ISL_ON_ERROR_ABORT);
+  isl_options_set_on_error(Ctx, OnErrorStatus);
 
   // In cases the scheduler is not able to optimize the code, we just do not
   // touch the schedule.
@@ -740,7 +742,7 @@ bool IslScheduleOptimizer::runOnScop(Scop &S) {
     return false;
 
   DEBUG({
-    auto *P = isl_printer_to_str(S.getIslCtx());
+    auto *P = isl_printer_to_str(Ctx);
     P = isl_printer_set_yaml_style(P, ISL_YAML_STYLE_BLOCK);
     P = isl_printer_print_schedule(P, Schedule);
     dbgs() << "NewScheduleTree: \n" << isl_printer_get_str(P) << "\n";

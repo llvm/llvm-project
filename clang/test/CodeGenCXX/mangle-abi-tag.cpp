@@ -1,6 +1,7 @@
 // RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -std=c++11 -o - | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -triple i686-linux-gnu -std=c++11 -o - | FileCheck %s
 // RUN: %clang_cc1 %s -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple powerpc64le-unknown-linux-gnu -std=c++11 -o - | FileCheck %s
 
 struct __attribute__((abi_tag("A", "B"))) A { };
 
@@ -159,7 +160,7 @@ A14 A14::f14() {
   return A14();
 }
 // A14[abi:TAG]::f14()
-// CHECK-DAG: define void @_ZN3A14B3TAG3f14Ev(
+// CHECK-DAG: define {{.+}} @_ZN3A14B3TAG3f14Ev(
 
 template<class T>
 T f15() {
@@ -169,7 +170,7 @@ void f15_test() {
   f15<A14>();
 }
 // A14[abi:TAG] f15<A14[abi:TAG]>()
-// CHECK-DAG: define linkonce_odr void @_Z3f15I3A14B3TAGET_v(
+// CHECK-DAG: define linkonce_odr {{.+}} @_Z3f15I3A14B3TAGET_v(
 
 template<class T>
 A14 f16() {
@@ -179,7 +180,7 @@ void f16_test() {
   f16<int>();
 }
 // A14[abi:TAG] f16<int>()
-// CHECK-DAG: define linkonce_odr void @_Z3f16IiE3A14B3TAGv(
+// CHECK-DAG: define linkonce_odr {{.+}} @_Z3f16IiE3A14B3TAGv(
 
 template<class T>
 struct __attribute__((abi_tag("TAG"))) A17 {
@@ -192,7 +193,7 @@ void f17_test() {
   a + b;
 }
 // A17[abi:TAG]<int>::operator+(A17[abi:TAG]<int> const&)
-// CHECK-DAG: define linkonce_odr void @_ZN3A17B3TAGIiEplERKS0_(
+// CHECK-DAG: define linkonce_odr {{.+}} @_ZN3A17B3TAGIiEplERKS0_(
 
 struct A18 {
   operator A() { return A(); }
@@ -201,4 +202,4 @@ void f18_test() {
   A a = A18();
 }
 // A18::operator A[abi:A][abi:B]() but GCC adds the same tags twice!
-// CHECK-DAG: define linkonce_odr void @_ZN3A18cv1AB1AB1BEv(
+// CHECK-DAG: define linkonce_odr {{.+}} @_ZN3A18cv1AB1AB1BEv(

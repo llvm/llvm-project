@@ -14394,7 +14394,12 @@ Sema::ConditionResult Sema::ActOnCondition(Scope *S, SourceLocation Loc,
   if (Cond.isInvalid())
     return ConditionError();
 
-  return ConditionResult(*this, nullptr, MakeFullExpr(Cond.get(), Loc),
+  // FIXME: FullExprArg doesn't have an invalid bit, so check nullness instead.
+  FullExprArg FullExpr = MakeFullExpr(Cond.get(), Loc);
+  if (!FullExpr.get())
+    return ConditionError();
+
+  return ConditionResult(*this, nullptr, FullExpr,
                          CK == ConditionKind::ConstexprIf);
 }
 
