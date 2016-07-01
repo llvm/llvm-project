@@ -29,6 +29,12 @@
 #include <fstream>
 #include <sstream>
 
+// On Windows, transitive dependencies pull in <Windows.h>, which defines a
+// macro that clashes with a method name.
+#ifdef SendMessage
+#undef SendMessage
+#endif
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::platform_android;

@@ -33,6 +33,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 
+#include <iterator>
 using namespace clang;
 using namespace sema;
 
@@ -2043,7 +2044,7 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
                            TemplateArgumentListInfo &TemplateArgs) {
   ASTContext &Context = SemaRef.getASTContext();
   switch (BTD->getBuiltinTemplateKind()) {
-  case BTK__make_integer_seq:
+  case BTK__make_integer_seq: {
     // Specializations of __make_integer_seq<S, T, N> are treated like
     // S<T, 0, ..., N-1>.
 
@@ -2084,6 +2085,29 @@ checkBuiltinTemplateIdType(Sema &SemaRef, BuiltinTemplateDecl *BTD,
     // our synthetic template arguments will be applied to.
     return SemaRef.CheckTemplateIdType(Converted[0].getAsTemplate(),
                                        TemplateLoc, SyntheticTemplateArgs);
+  }
+
+  case BTK__type_pack_element:
+    // Specializations of
+    //    __type_pack_element<Index, T_1, ..., T_N>
+    // are treated like T_Index.
+    assert(Converted.size() == 2 &&
+      "__type_pack_element should be given an index and a parameter pack");
+
+    // If the Index is out of bounds, the program is ill-formed.
+    TemplateArgument IndexArg = Converted[0], Ts = Converted[1];
+    llvm::APSInt Index = IndexArg.getAsIntegral();
+    assert(Index >= 0 && "the index used with __type_pack_element should be of "
+                         "type std::size_t, and hence be non-negative");
+    if (Index >= Ts.pack_size()) {
+      SemaRef.Diag(TemplateArgs[0].getLocation(),
+                   diag::err_type_pack_element_out_of_bounds);
+      return QualType();
+    }
+
+    // We simply return the type at index `Index`.
+    auto Nth = std::next(Ts.pack_begin(), Index.getExtValue());
+    return Nth->getAsType();
   }
   llvm_unreachable("unexpected BuiltinTemplateDecl!");
 }

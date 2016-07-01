@@ -10,6 +10,7 @@ int f() {
   if (T(f()), g, h; f()) {} // expected-error {{not yet supported}}
   if (T f(); f()) {} // expected-error {{not yet supported}}
   if (T f(), g, h; f()) {} // expected-error {{not yet supported}}
+  if (T(n) = 0; n) {} // expected-error {{not yet supported}}
 
   // init-statement expressions
   if (T{f()}; f()) {} // expected-error {{not yet supported}}
@@ -20,6 +21,7 @@ int f() {
   if (T(n){g}) {}
   if (T f()) {} // expected-error {{function type}}
   if (T f(), g, h) {} // expected-error {{function type}}
+  if (T(n) = 0) {}
 
   // condition expressions
   if (T(f())) {}
@@ -27,9 +29,9 @@ int f() {
   if (T(f()), g, h) {} // expected-warning 2{{unused}}
   if (T{f()}, g, h) {} // expected-warning 2{{unused}}
 
-  // none of the above
-  // FIXME: This causes a typo-correction crash, as does "void f() { +T(n)(g); }"
-  //if (T(n)(g)) {} // expected-err-FIXME {{not a function}}
+  // none of the above, disambiguated as expression (can't be a declaration)
+  if (T(n)(g)) {} // expected-error {{undeclared identifier 'n'}}
+  if (T(n)(int())) {} // expected-error {{undeclared identifier 'n'}}
 
   // Likewise for 'switch'
   switch (int n; n) {} // expected-error {{not yet supported}}

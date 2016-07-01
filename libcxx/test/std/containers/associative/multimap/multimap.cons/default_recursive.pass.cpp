@@ -13,8 +13,6 @@
 
 // multimap();
 
-// XFAIL: gcc
-
 #include <map>
 
 struct X
