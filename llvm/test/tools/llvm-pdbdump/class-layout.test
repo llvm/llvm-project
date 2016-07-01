@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump -all %p/Inputs/ClassLayoutTest.pdb > %t
+; RUN: llvm-pdbdump pretty -all %p/Inputs/ClassLayoutTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBALS_TEST
 ; RUN: FileCheck -input-file=%t %s -check-prefix=MEMBERS_TEST
 ; RUN: FileCheck -input-file=%t %s -check-prefix=BASE_CLASS_A

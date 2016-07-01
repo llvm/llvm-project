@@ -303,8 +303,6 @@ public:
   void getCriticalPathRCs(RegClassVector &CriticalPathRCs) const override;
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           MachineInstr *begin,
-                           MachineInstr *end,
                            unsigned NumRegionInstrs) const override;
   bool useAA() const override;
 

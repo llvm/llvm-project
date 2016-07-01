@@ -45,6 +45,8 @@ public:
   virtual Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const = 0;
 
   virtual uint32_t getLength() const = 0;
+
+  virtual Error commit() const = 0;
 };
 
 } // end namespace codeview

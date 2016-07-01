@@ -206,8 +206,6 @@ unsigned R600Subtarget::getStackEntrySize() const {
 }
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                      MachineInstr *begin,
-                                      MachineInstr *end,
                                       unsigned NumRegionInstrs) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by

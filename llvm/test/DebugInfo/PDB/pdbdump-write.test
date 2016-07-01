@@ -1,0 +1,13 @@
+; This testcase checks to make sure that we can write PDB files.  It
+; works by first reading a known good PDB file and dumping the contents
+; to YAML.  Then it tries to reconstruct as much of the original PDB as
+; possible, although depending on what flags are specified when generating
+; the YAML, the PDB might be missing data required for any standard tool
+; to recognize it.  Finally, it dumps the same set of fields from the newly
+; constructed PDB to YAML, and verifies that the YAML is the same as the
+; original YAML generated from the good PDB.
+;
+; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory %p/Inputs/empty.pdb > %t.1
+; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
+; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory %t.2 > %t.3
+; RUN: diff %t.1 %t.3

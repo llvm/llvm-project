@@ -1062,24 +1062,25 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
       continue;
     }
 
-    MachineInstr *MI = I;
+    MachineInstr &MI = *I;
     bool DoIncr = true;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      if (!MI->getOperand(i).isFI())
+    bool DidFinishLoop = true;
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      if (!MI.getOperand(i).isFI())
         continue;
 
       // Frame indices in debug values are encoded in a target independent
       // way with simply the frame index and offset rather than any
       // target-specific addressing mode.
-      if (MI->isDebugValue()) {
+      if (MI.isDebugValue()) {
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
         unsigned Reg;
-        MachineOperand &Offset = MI->getOperand(1);
-        Offset.setImm(Offset.getImm() +
-                      TFI->getFrameIndexReference(
-                          Fn, MI->getOperand(0).getIndex(), Reg));
-        MI->getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
+        MachineOperand &Offset = MI.getOperand(1);
+        Offset.setImm(
+            Offset.getImm() +
+            TFI->getFrameIndexReference(Fn, MI.getOperand(0).getIndex(), Reg));
+        MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
         continue;
       }
 
@@ -1088,16 +1089,16 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
       // implementation other than historical accident.  The only
       // remaining difference is the unconditional use of the stack
       // pointer as the base register.
-      if (MI->getOpcode() == TargetOpcode::STATEPOINT) {
-        assert((!MI->isDebugValue() || i == 0) &&
+      if (MI.getOpcode() == TargetOpcode::STATEPOINT) {
+        assert((!MI.isDebugValue() || i == 0) &&
                "Frame indicies can only appear as the first operand of a "
                "DBG_VALUE machine instruction");
         unsigned Reg;
-        MachineOperand &Offset = MI->getOperand(i + 1);
+        MachineOperand &Offset = MI.getOperand(i + 1);
         int refOffset = TFI->getFrameIndexReferencePreferSP(
-            Fn, MI->getOperand(i).getIndex(), Reg, /*IgnoreSPUpdates*/ false);
+            Fn, MI.getOperand(i).getIndex(), Reg, /*IgnoreSPUpdates*/ false);
         Offset.setImm(Offset.getImm() + refOffset);
-        MI->getOperand(i).ChangeToRegister(Reg, false /*isDef*/);
+        MI.getOperand(i).ChangeToRegister(Reg, false /*isDef*/);
         continue;
       }
 
@@ -1123,7 +1124,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
         DoIncr = false;
       }
 
-      MI = nullptr;
+      DidFinishLoop = false;
       break;
     }
 
@@ -1134,13 +1135,14 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
     // Note that this must come after eliminateFrameIndex, because 
     // if I itself referred to a frame index, we shouldn't count its own
     // adjustment.
-    if (MI && InsideCallSequence)
-      SPAdj += TII.getSPAdjust(*MI);
+    if (DidFinishLoop && InsideCallSequence)
+      SPAdj += TII.getSPAdjust(MI);
 
     if (DoIncr && I != BB->end()) ++I;
 
     // Update register states.
-    if (RS && !FrameIndexVirtualScavenging && MI) RS->forward(MI);
+    if (RS && !FrameIndexVirtualScavenging && DidFinishLoop)
+      RS->forward(MI);
   }
 }
 

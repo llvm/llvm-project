@@ -156,6 +156,18 @@ static std::string getFullyQualifiedName(const DIScope *Scope, StringRef Name) {
   return getQualifiedName(QualifiedNameComponents, Name);
 }
 
+struct CodeViewDebug::TypeLoweringScope {
+  TypeLoweringScope(CodeViewDebug &CVD) : CVD(CVD) { ++CVD.TypeEmissionLevel; }
+  ~TypeLoweringScope() {
+    // Don't decrement TypeEmissionLevel until after emitting deferred types, so
+    // inner TypeLoweringScopes don't attempt to emit deferred types.
+    if (CVD.TypeEmissionLevel == 1)
+      CVD.emitDeferredCompleteTypes();
+    --CVD.TypeEmissionLevel;
+  }
+  CodeViewDebug &CVD;
+};
+
 TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
   // No scope means global scope and that uses the zero index.
   if (!Scope || isa<DIFile>(Scope))
@@ -213,16 +225,24 @@ TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
 
 TypeIndex CodeViewDebug::getMemberFunctionType(const DISubprogram *SP,
                                                const DICompositeType *Class) {
+  // Always use the method declaration as the key for the function type. The
+  // method declaration contains the this adjustment.
+  if (SP->getDeclaration())
+    SP = SP->getDeclaration();
+  assert(!SP->getDeclaration() && "should use declaration as key");
+
   // Key the MemberFunctionRecord into the map as {SP, Class}. It won't collide
   // with the MemberFuncIdRecord, which is keyed in as {SP, nullptr}.
-  auto I = TypeIndices.find({SP, nullptr});
+  auto I = TypeIndices.find({SP, Class});
   if (I != TypeIndices.end())
     return I->second;
 
-  // FIXME: Get the ThisAdjustment off of SP when it is available.
+  // Make sure complete type info for the class is emitted *after* the member
+  // function type, as the complete class type is likely to reference this
+  // member function type.
+  TypeLoweringScope S(*this);
   TypeIndex TI =
-      lowerTypeMemberFunction(SP->getType(), Class, /*ThisAdjustment=*/0);
-
+      lowerTypeMemberFunction(SP->getType(), Class, SP->getThisAdjustment());
   return recordTypeIndexForDINode(SP, TI, Class);
 }
 
@@ -1582,18 +1602,6 @@ TypeIndex CodeViewDebug::getVBPTypeIndex() {
   return VBPType;
 }
 
-struct CodeViewDebug::TypeLoweringScope {
-  TypeLoweringScope(CodeViewDebug &CVD) : CVD(CVD) { ++CVD.TypeEmissionLevel; }
-  ~TypeLoweringScope() {
-    // Don't decrement TypeEmissionLevel until after emitting deferred types, so
-    // inner TypeLoweringScopes don't attempt to emit deferred types.
-    if (CVD.TypeEmissionLevel == 1)
-      CVD.emitDeferredCompleteTypes();
-    --CVD.TypeEmissionLevel;
-  }
-  CodeViewDebug &CVD;
-};
-
 TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
   const DIType *Ty = TypeRef.resolve();
   const DIType *ClassTy = ClassTyRef.resolve();
@@ -1609,14 +1617,9 @@ TypeIndex CodeViewDebug::getTypeIndex(DITypeRef TypeRef, DITypeRef ClassTyRef) {
   if (I != TypeIndices.end())
     return I->second;
 
-  TypeIndex TI;
-  {
-    TypeLoweringScope S(*this);
-    TI = lowerType(Ty, ClassTy);
-    recordTypeIndexForDINode(Ty, TI, ClassTy);
-  }
-
-  return TI;
+  TypeLoweringScope S(*this);
+  TypeIndex TI = lowerType(Ty, ClassTy);
+  return recordTypeIndexForDINode(Ty, TI, ClassTy);
 }
 
 TypeIndex CodeViewDebug::getCompleteTypeIndex(DITypeRef TypeRef) {

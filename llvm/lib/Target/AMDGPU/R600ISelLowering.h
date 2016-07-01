@@ -28,8 +28,9 @@ public:
 
   const R600Subtarget *getSubtarget() const;
 
-  MachineBasicBlock * EmitInstrWithCustomInserter(MachineInstr *MI,
-      MachineBasicBlock * BB) const override;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
   void ReplaceNodeResults(SDNode * N,

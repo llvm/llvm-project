@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump -types %p/Inputs/ClassLayoutTest.pdb > %t
+; RUN: llvm-pdbdump pretty -types %p/Inputs/ClassLayoutTest.pdb > %t
 ; RUN: FileCheck -input-file=%t %s -check-prefix=GLOBAL_ENUM
 ; RUN: FileCheck -input-file=%t %s -check-prefix=MEMBER_ENUM
 

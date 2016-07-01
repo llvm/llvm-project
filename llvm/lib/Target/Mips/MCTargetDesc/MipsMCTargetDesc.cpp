@@ -18,7 +18,6 @@
 #include "MipsMCNaCl.h"
 #include "MipsTargetStreamer.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -80,14 +79,6 @@ static MCAsmInfo *createMipsMCAsmInfo(const MCRegisterInfo &MRI,
   MAI->addInitialFrameState(Inst);
 
   return MAI;
-}
-
-static MCCodeGenInfo *createMipsMCCodeGenInfo(const Triple &TT, Reloc::Model RM,
-                                              CodeModel::Model CM,
-                                              CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
 }
 
 static MCInstPrinter *createMipsMCInstPrinter(const Triple &T,
@@ -162,9 +153,6 @@ extern "C" void LLVMInitializeMipsTargetMC() {
                     &TheMips64elTarget}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createMipsMCAsmInfo);
-
-    // Register the MC codegen info.
-    TargetRegistry::RegisterMCCodeGenInfo(*T, createMipsMCCodeGenInfo);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createMipsMCInstrInfo);

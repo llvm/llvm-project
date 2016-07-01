@@ -1064,15 +1064,16 @@ unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
                            + StringRef(RegName) + "\"."));
 }
 
-MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
-  MachineInstr *MI, MachineBasicBlock *BB) const {
-  switch (MI->getOpcode()) {
+MachineBasicBlock *
+SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
+                                              MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
   case AMDGPU::SI_INIT_M0: {
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-    BuildMI(*BB, MI->getIterator(), MI->getDebugLoc(),
+    BuildMI(*BB, MI.getIterator(), MI.getDebugLoc(),
             TII->get(AMDGPU::S_MOV_B32), AMDGPU::M0)
-      .addOperand(MI->getOperand(0));
-    MI->eraseFromParent();
+        .addOperand(MI.getOperand(0));
+    MI.eraseFromParent();
     break;
   }
   case AMDGPU::BRANCH:
@@ -1082,11 +1083,11 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
 
     MachineFunction *MF = BB->getParent();
     SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-    DebugLoc DL = MI->getDebugLoc();
-    BuildMI (*BB, MI, DL, TII->get(AMDGPU::S_MOVK_I32))
-      .addOperand(MI->getOperand(0))
-      .addImm(MFI->LDSSize);
-    MI->eraseFromParent();
+    DebugLoc DL = MI.getDebugLoc();
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOVK_I32))
+        .addOperand(MI.getOperand(0))
+        .addImm(MFI->LDSSize);
+    MI.eraseFromParent();
     return BB;
   }
   default:
@@ -3215,22 +3216,22 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
 
 /// \brief Assign the register class depending on the number of
 /// bits set in the writemask
-void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
+void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                      SDNode *Node) const {
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
 
-  MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
+  MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
 
-  if (TII->isVOP3(MI->getOpcode())) {
+  if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
-    TII->legalizeOperandsVOP3(MRI, *MI);
+    TII->legalizeOperandsVOP3(MRI, MI);
     return;
   }
 
-  if (TII->isMIMG(*MI)) {
-    unsigned VReg = MI->getOperand(0).getReg();
-    unsigned DmaskIdx = MI->getNumOperands() == 12 ? 3 : 4;
-    unsigned Writemask = MI->getOperand(DmaskIdx).getImm();
+  if (TII->isMIMG(MI)) {
+    unsigned VReg = MI.getOperand(0).getReg();
+    unsigned DmaskIdx = MI.getNumOperands() == 12 ? 3 : 4;
+    unsigned Writemask = MI.getOperand(DmaskIdx).getImm();
     unsigned BitsSet = 0;
     for (unsigned i = 0; i < 4; ++i)
       BitsSet += Writemask & (1 << i) ? 1 : 0;
@@ -3243,18 +3244,18 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
     case 3:  RC = &AMDGPU::VReg_96RegClass; break;
     }
 
-    unsigned NewOpcode = TII->getMaskedMIMGOp(MI->getOpcode(), BitsSet);
-    MI->setDesc(TII->get(NewOpcode));
+    unsigned NewOpcode = TII->getMaskedMIMGOp(MI.getOpcode(), BitsSet);
+    MI.setDesc(TII->get(NewOpcode));
     MRI.setRegClass(VReg, RC);
     return;
   }
 
   // Replace unused atomics with the no return version.
-  int NoRetAtomicOp = AMDGPU::getAtomicNoRetOp(MI->getOpcode());
+  int NoRetAtomicOp = AMDGPU::getAtomicNoRetOp(MI.getOpcode());
   if (NoRetAtomicOp != -1) {
     if (!Node->hasAnyUseOfValue(0)) {
-      MI->setDesc(TII->get(NoRetAtomicOp));
-      MI->RemoveOperand(0);
+      MI.setDesc(TII->get(NoRetAtomicOp));
+      MI.RemoveOperand(0);
       return;
     }
 
@@ -3268,17 +3269,17 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
          Node->use_begin()->isMachineOpcode() &&
          Node->use_begin()->getMachineOpcode() == AMDGPU::EXTRACT_SUBREG &&
          !Node->use_begin()->hasAnyUseOfValue(0))) {
-      unsigned Def = MI->getOperand(0).getReg();
+      unsigned Def = MI.getOperand(0).getReg();
 
       // Change this into a noret atomic.
-      MI->setDesc(TII->get(NoRetAtomicOp));
-      MI->RemoveOperand(0);
+      MI.setDesc(TII->get(NoRetAtomicOp));
+      MI.RemoveOperand(0);
 
       // If we only remove the def operand from the atomic instruction, the
       // extract_subreg will be left with a use of a vreg without a def.
       // So we need to insert an implicit_def to avoid machine verifier
       // errors.
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(),
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
               TII->get(AMDGPU::IMPLICIT_DEF), Def);
     }
     return;

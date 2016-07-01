@@ -123,8 +123,9 @@ public:
   unsigned getRegisterByName(const char* RegName, EVT VT,
                              SelectionDAG &DAG) const override;
 
-  MachineBasicBlock * EmitInstrWithCustomInserter(MachineInstr * MI,
-                                      MachineBasicBlock * BB) const override;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
                          EVT VT) const override;
@@ -133,7 +134,7 @@ public:
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
   SDNode *PostISelFolding(MachineSDNode *N, SelectionDAG &DAG) const override;
-  void AdjustInstrPostInstrSelection(MachineInstr *MI,
+  void AdjustInstrPostInstrSelection(MachineInstr &MI,
                                      SDNode *Node) const override;
 
   int32_t analyzeImmediate(const SDNode *N) const;

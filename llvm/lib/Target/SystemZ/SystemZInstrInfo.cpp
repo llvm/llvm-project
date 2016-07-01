@@ -760,7 +760,7 @@ static MachineInstr *finishConvertToThreeAddress(MachineInstr *OldMI,
     for (unsigned I = 1; I < NumOps; ++I) {
       MachineOperand &Op = OldMI->getOperand(I);
       if (Op.isReg() && Op.isKill())
-        LV->replaceKillInstruction(Op.getReg(), OldMI, NewMI);
+        LV->replaceKillInstruction(Op.getReg(), *OldMI, *NewMI);
     }
   }
   transferDeadCC(OldMI, NewMI);

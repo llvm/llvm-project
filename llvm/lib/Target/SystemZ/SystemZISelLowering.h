@@ -452,9 +452,9 @@ public:
   void insertSSPDeclarations(Module &M) const override {
   }
 
-  MachineBasicBlock *EmitInstrWithCustomInserter(MachineInstr *MI,
-                                                 MachineBasicBlock *BB) const
-    override;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   bool allowTruncateForTailCall(Type *, Type *) const override;
   bool mayBeEmittedAsTailCall(CallInst *CI) const override;
@@ -563,40 +563,33 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
-  MachineBasicBlock *emitSelect(MachineInstr *MI,
-                                MachineBasicBlock *BB) const;
-  MachineBasicBlock *emitCondStore(MachineInstr *MI,
-                                   MachineBasicBlock *BB,
+  MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;
-  MachineBasicBlock *emitExt128(MachineInstr *MI,
-                                MachineBasicBlock *MBB,
+  MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
                                 bool ClearEven, unsigned SubReg) const;
-  MachineBasicBlock *emitAtomicLoadBinary(MachineInstr *MI,
+  MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode, unsigned BitSize,
                                           bool Invert = false) const;
-  MachineBasicBlock *emitAtomicLoadMinMax(MachineInstr *MI,
+  MachineBasicBlock *emitAtomicLoadMinMax(MachineInstr &MI,
                                           MachineBasicBlock *MBB,
                                           unsigned CompareOpcode,
                                           unsigned KeepOldMask,
                                           unsigned BitSize) const;
-  MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr *MI,
+  MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
-  MachineBasicBlock *emitMemMemWrapper(MachineInstr *MI,
-                                       MachineBasicBlock *BB,
+  MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
-  MachineBasicBlock *emitStringWrapper(MachineInstr *MI,
-                                       MachineBasicBlock *BB,
+  MachineBasicBlock *emitStringWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
-  MachineBasicBlock *emitTransactionBegin(MachineInstr *MI,
+  MachineBasicBlock *emitTransactionBegin(MachineInstr &MI,
                                           MachineBasicBlock *MBB,
-                                          unsigned Opcode,
-                                          bool NoFloat) const;
-  MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr *MI,
+                                          unsigned Opcode, bool NoFloat) const;
+  MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
-
 };
 } // end namespace llvm
 

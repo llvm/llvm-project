@@ -515,6 +515,44 @@ public:
                  const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                  DominatorTree *DT, LoopInfo *LI);
 
+  // FIXME:
+  // Hack for MSVC 2013 which sems like it can't synthesize this even 
+  // with default keyword:
+  // LoopAccessInfo(LoopAccessInfo &&LAI) = default;
+  LoopAccessInfo(LoopAccessInfo &&LAI)
+      : PSE(std::move(LAI.PSE)), PtrRtChecking(std::move(LAI.PtrRtChecking)),
+        DepChecker(std::move(LAI.DepChecker)), TheLoop(LAI.TheLoop), DL(LAI.DL),
+        TLI(LAI.TLI), AA(LAI.AA), DT(LAI.DT), LI(LAI.LI),
+        NumLoads(LAI.NumLoads), NumStores(LAI.NumStores),
+        MaxSafeDepDistBytes(LAI.MaxSafeDepDistBytes), CanVecMem(LAI.CanVecMem),
+        StoreToLoopInvariantAddress(LAI.StoreToLoopInvariantAddress),
+        Report(std::move(LAI.Report)),
+        SymbolicStrides(std::move(LAI.SymbolicStrides)),
+        StrideSet(std::move(LAI.StrideSet)) {}
+  // LoopAccessInfo &operator=(LoopAccessInfo &&LAI) = default;
+  LoopAccessInfo &operator=(LoopAccessInfo &&LAI) {
+    assert(this != &LAI);
+
+    PSE = std::move(LAI.PSE);
+    PtrRtChecking = std::move(LAI.PtrRtChecking);
+    DepChecker = std::move(LAI.DepChecker);
+    TheLoop = LAI.TheLoop;
+    DL = LAI.DL;
+    TLI = LAI.TLI;
+    AA = LAI.AA;
+    DT = LAI.DT;
+    LI = LAI.LI;
+    NumLoads = LAI.NumLoads;
+    NumStores = LAI.NumStores;
+    MaxSafeDepDistBytes = LAI.MaxSafeDepDistBytes;
+    CanVecMem = LAI.CanVecMem;
+    StoreToLoopInvariantAddress = LAI.StoreToLoopInvariantAddress;
+    Report = std::move(LAI.Report);
+    SymbolicStrides = std::move(LAI.SymbolicStrides);
+    StrideSet = std::move(LAI.StrideSet);
+    return *this;
+  }
+
   /// Return true we can analyze the memory accesses in the loop and there are
   /// no memory dependence cycles.
   bool canVectorizeMemory() const { return CanVecMem; }
@@ -596,7 +634,7 @@ public:
   /// should be re-written (and therefore simplified) according to PSE.
   /// A user of LoopAccessAnalysis will need to emit the runtime checks
   /// associated with this predicate.
-  PredicatedScalarEvolution PSE;
+  const PredicatedScalarEvolution &getPSE() const { return *PSE; }
 
 private:
   /// \brief Analyze the loop.
@@ -614,6 +652,8 @@ private:
   /// invariant.
   void collectStridedAccess(Value *LoadOrStoreInst);
 
+  std::unique_ptr<PredicatedScalarEvolution> PSE;
+
   /// We need to check that all of the pointers in this list are disjoint
   /// at runtime. Using std::unique_ptr to make using move ctor simpler.
   std::unique_ptr<RuntimePointerChecking> PtrRtChecking;
@@ -623,7 +663,7 @@ private:
   std::unique_ptr<MemoryDepChecker> DepChecker;
 
   Loop *TheLoop;
-  const DataLayout &DL;
+  const DataLayout *DL;
   const TargetLibraryInfo *TLI;
   AliasAnalysis *AA;
   DominatorTree *DT;

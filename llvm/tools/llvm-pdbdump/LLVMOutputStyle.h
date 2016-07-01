@@ -21,23 +21,25 @@ class LLVMOutputStyle : public OutputStyle {
 public:
   LLVMOutputStyle(PDBFile &File);
 
-  Error dumpFileHeaders() override;
-  Error dumpStreamSummary() override;
-  Error dumpStreamBlocks() override;
-  Error dumpStreamData() override;
-  Error dumpInfoStream() override;
-  Error dumpNamedStream() override;
-  Error dumpTpiStream(uint32_t StreamIdx) override;
-  Error dumpDbiStream() override;
-  Error dumpSectionContribs() override;
-  Error dumpSectionMap() override;
-  Error dumpPublicsStream() override;
-  Error dumpSectionHeaders() override;
-  Error dumpFpoStream() override;
-
-  void flush() override;
+  Error dump() override;
 
 private:
+  Error dumpFileHeaders();
+  Error dumpStreamSummary();
+  Error dumpStreamBlocks();
+  Error dumpStreamData();
+  Error dumpInfoStream();
+  Error dumpNamedStream();
+  Error dumpTpiStream(uint32_t StreamIdx);
+  Error dumpDbiStream();
+  Error dumpSectionContribs();
+  Error dumpSectionMap();
+  Error dumpPublicsStream();
+  Error dumpSectionHeaders();
+  Error dumpFpoStream();
+
+  void flush();
+
   PDBFile &File;
   ScopedPrinter P;
   codeview::CVTypeDumper TD;

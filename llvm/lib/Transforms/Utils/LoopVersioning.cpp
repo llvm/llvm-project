@@ -39,7 +39,7 @@ LoopVersioning::LoopVersioning(const LoopAccessInfo &LAI, Loop *L, LoopInfo *LI,
   assert(L->getLoopPreheader() && "No preheader");
   if (UseLAIChecks) {
     setAliasChecks(LAI.getRuntimePointerChecking()->getChecks());
-    setSCEVChecks(LAI.PSE.getUnionPredicate());
+    setSCEVChecks(LAI.getPSE().getUnionPredicate());
   }
 }
 
@@ -64,7 +64,7 @@ void LoopVersioning::versionLoop(
   std::tie(FirstCheckInst, MemRuntimeCheck) =
       LAI.addRuntimeChecks(RuntimeCheckBB->getTerminator(), AliasChecks);
 
-  const SCEVUnionPredicate &Pred = LAI.PSE.getUnionPredicate();
+  const SCEVUnionPredicate &Pred = LAI.getPSE().getUnionPredicate();
   SCEVExpander Exp(*SE, RuntimeCheckBB->getModule()->getDataLayout(),
                    "scev.check");
   SCEVRuntimeCheck =
@@ -279,7 +279,7 @@ public:
     for (Loop *L : Worklist) {
       const LoopAccessInfo &LAI = LAA->getInfo(L);
       if (LAI.getNumRuntimePointerChecks() ||
-          !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
+          !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
         LoopVersioning LVer(LAI, L, LI, DT, SE);
         LVer.versionLoop();
         LVer.annotateLoopWithNoAlias();

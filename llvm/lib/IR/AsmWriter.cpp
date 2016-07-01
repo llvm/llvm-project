@@ -1720,6 +1720,7 @@ static void writeDISubprogram(raw_ostream &Out, const DISubprogram *N,
   if (N->getVirtuality() != dwarf::DW_VIRTUALITY_none ||
       N->getVirtualIndex() != 0)
     Printer.printInt("virtualIndex", N->getVirtualIndex(), false);
+  Printer.printInt("thisAdjustment", N->getThisAdjustment());
   Printer.printDIFlags("flags", N->getFlags());
   Printer.printBool("isOptimized", N->isOptimized());
   Printer.printMetadata("unit", N->getRawUnit());

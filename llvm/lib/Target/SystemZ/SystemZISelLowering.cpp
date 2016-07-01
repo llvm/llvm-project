@@ -5099,7 +5099,7 @@ static MachineBasicBlock *emitBlockAfter(MachineBasicBlock *MBB) {
 
 // Split MBB after MI and return the new block (the one that contains
 // instructions after MI).
-static MachineBasicBlock *splitBlockAfter(MachineInstr *MI,
+static MachineBasicBlock *splitBlockAfter(MachineBasicBlock::iterator MI,
                                           MachineBasicBlock *MBB) {
   MachineBasicBlock *NewMBB = emitBlockAfter(MBB);
   NewMBB->splice(NewMBB->begin(), MBB,
@@ -5109,7 +5109,7 @@ static MachineBasicBlock *splitBlockAfter(MachineInstr *MI,
 }
 
 // Split MBB before MI and return the new block (the one that contains MI).
-static MachineBasicBlock *splitBlockBefore(MachineInstr *MI,
+static MachineBasicBlock *splitBlockBefore(MachineBasicBlock::iterator MI,
                                            MachineBasicBlock *MBB) {
   MachineBasicBlock *NewMBB = emitBlockAfter(MBB);
   NewMBB->splice(NewMBB->begin(), MBB, MI, MBB->end());
@@ -5118,34 +5118,36 @@ static MachineBasicBlock *splitBlockBefore(MachineInstr *MI,
 }
 
 // Force base value Base into a register before MI.  Return the register.
-static unsigned forceReg(MachineInstr *MI, MachineOperand &Base,
+static unsigned forceReg(MachineInstr &MI, MachineOperand &Base,
                          const SystemZInstrInfo *TII) {
   if (Base.isReg())
     return Base.getReg();
 
-  MachineBasicBlock *MBB = MI->getParent();
+  MachineBasicBlock *MBB = MI.getParent();
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-  BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(SystemZ::LA), Reg)
-    .addOperand(Base).addImm(0).addReg(0);
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LA), Reg)
+      .addOperand(Base)
+      .addImm(0)
+      .addReg(0);
   return Reg;
 }
 
 // Implement EmitInstrWithCustomInserter for pseudo Select* instruction MI.
 MachineBasicBlock *
-SystemZTargetLowering::emitSelect(MachineInstr *MI,
+SystemZTargetLowering::emitSelect(MachineInstr &MI,
                                   MachineBasicBlock *MBB) const {
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
 
-  unsigned DestReg  = MI->getOperand(0).getReg();
-  unsigned TrueReg  = MI->getOperand(1).getReg();
-  unsigned FalseReg = MI->getOperand(2).getReg();
-  unsigned CCValid  = MI->getOperand(3).getImm();
-  unsigned CCMask   = MI->getOperand(4).getImm();
-  DebugLoc DL       = MI->getDebugLoc();
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned TrueReg = MI.getOperand(1).getReg();
+  unsigned FalseReg = MI.getOperand(2).getReg();
+  unsigned CCValid = MI.getOperand(3).getImm();
+  unsigned CCMask = MI.getOperand(4).getImm();
+  DebugLoc DL = MI.getDebugLoc();
 
   MachineBasicBlock *StartMBB = MBB;
   MachineBasicBlock *JoinMBB  = splitBlockBefore(MI, MBB);
@@ -5173,7 +5175,7 @@ SystemZTargetLowering::emitSelect(MachineInstr *MI,
     .addReg(TrueReg).addMBB(StartMBB)
     .addReg(FalseReg).addMBB(FalseMBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return JoinMBB;
 }
 
@@ -5181,21 +5183,21 @@ SystemZTargetLowering::emitSelect(MachineInstr *MI,
 // StoreOpcode is the store to use and Invert says whether the store should
 // happen when the condition is false rather than true.  If a STORE ON
 // CONDITION is available, STOCOpcode is its opcode, otherwise it is 0.
-MachineBasicBlock *
-SystemZTargetLowering::emitCondStore(MachineInstr *MI,
-                                     MachineBasicBlock *MBB,
-                                     unsigned StoreOpcode, unsigned STOCOpcode,
-                                     bool Invert) const {
+MachineBasicBlock *SystemZTargetLowering::emitCondStore(MachineInstr &MI,
+                                                        MachineBasicBlock *MBB,
+                                                        unsigned StoreOpcode,
+                                                        unsigned STOCOpcode,
+                                                        bool Invert) const {
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
 
-  unsigned SrcReg     = MI->getOperand(0).getReg();
-  MachineOperand Base = MI->getOperand(1);
-  int64_t Disp        = MI->getOperand(2).getImm();
-  unsigned IndexReg   = MI->getOperand(3).getReg();
-  unsigned CCValid    = MI->getOperand(4).getImm();
-  unsigned CCMask     = MI->getOperand(5).getImm();
-  DebugLoc DL         = MI->getDebugLoc();
+  unsigned SrcReg = MI.getOperand(0).getReg();
+  MachineOperand Base = MI.getOperand(1);
+  int64_t Disp = MI.getOperand(2).getImm();
+  unsigned IndexReg = MI.getOperand(3).getReg();
+  unsigned CCValid = MI.getOperand(4).getImm();
+  unsigned CCMask = MI.getOperand(5).getImm();
+  DebugLoc DL = MI.getDebugLoc();
 
   StoreOpcode = TII->getOpcodeForOffset(StoreOpcode, Disp);
 
@@ -5208,7 +5210,7 @@ SystemZTargetLowering::emitCondStore(MachineInstr *MI,
     BuildMI(*MBB, MI, DL, TII->get(STOCOpcode))
       .addReg(SrcReg).addOperand(Base).addImm(Disp)
       .addImm(CCValid).addImm(CCMask);
-    MI->eraseFromParent();
+    MI.eraseFromParent();
     return MBB;
   }
 
@@ -5237,7 +5239,7 @@ SystemZTargetLowering::emitCondStore(MachineInstr *MI,
     .addReg(SrcReg).addOperand(Base).addImm(Disp).addReg(IndexReg);
   MBB->addSuccessor(JoinMBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return JoinMBB;
 }
 
@@ -5248,12 +5250,9 @@ SystemZTargetLowering::emitCondStore(MachineInstr *MI,
 // ATOMIC_LOADW_* or ATOMIC_SWAPW instruction, in which case the bitsize
 // is one of the operands.  Invert says whether the field should be
 // inverted after performing BinOpcode (e.g. for NAND).
-MachineBasicBlock *
-SystemZTargetLowering::emitAtomicLoadBinary(MachineInstr *MI,
-                                            MachineBasicBlock *MBB,
-                                            unsigned BinOpcode,
-                                            unsigned BitSize,
-                                            bool Invert) const {
+MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadBinary(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned BinOpcode,
+    unsigned BitSize, bool Invert) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
@@ -5262,15 +5261,15 @@ SystemZTargetLowering::emitAtomicLoadBinary(MachineInstr *MI,
 
   // Extract the operands.  Base can be a register or a frame index.
   // Src2 can be a register or immediate.
-  unsigned Dest        = MI->getOperand(0).getReg();
-  MachineOperand Base  = earlyUseOperand(MI->getOperand(1));
-  int64_t Disp         = MI->getOperand(2).getImm();
-  MachineOperand Src2  = earlyUseOperand(MI->getOperand(3));
-  unsigned BitShift    = (IsSubWord ? MI->getOperand(4).getReg() : 0);
-  unsigned NegBitShift = (IsSubWord ? MI->getOperand(5).getReg() : 0);
-  DebugLoc DL          = MI->getDebugLoc();
+  unsigned Dest = MI.getOperand(0).getReg();
+  MachineOperand Base = earlyUseOperand(MI.getOperand(1));
+  int64_t Disp = MI.getOperand(2).getImm();
+  MachineOperand Src2 = earlyUseOperand(MI.getOperand(3));
+  unsigned BitShift = (IsSubWord ? MI.getOperand(4).getReg() : 0);
+  unsigned NegBitShift = (IsSubWord ? MI.getOperand(5).getReg() : 0);
+  DebugLoc DL = MI.getDebugLoc();
   if (IsSubWord)
-    BitSize = MI->getOperand(6).getImm();
+    BitSize = MI.getOperand(6).getImm();
 
   // Subword operations use 32-bit registers.
   const TargetRegisterClass *RC = (BitSize <= 32 ?
@@ -5358,7 +5357,7 @@ SystemZTargetLowering::emitAtomicLoadBinary(MachineInstr *MI,
   MBB->addSuccessor(LoopMBB);
   MBB->addSuccessor(DoneMBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return DoneMBB;
 }
 
@@ -5368,12 +5367,9 @@ SystemZTargetLowering::emitAtomicLoadBinary(MachineInstr *MI,
 // minimum or maximum value.  KeepOldMask is the BRC condition-code mask
 // for when the current field should be kept.  BitSize is the width of
 // the field in bits, or 0 if this is a partword ATOMIC_LOADW_* instruction.
-MachineBasicBlock *
-SystemZTargetLowering::emitAtomicLoadMinMax(MachineInstr *MI,
-                                            MachineBasicBlock *MBB,
-                                            unsigned CompareOpcode,
-                                            unsigned KeepOldMask,
-                                            unsigned BitSize) const {
+MachineBasicBlock *SystemZTargetLowering::emitAtomicLoadMinMax(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned CompareOpcode,
+    unsigned KeepOldMask, unsigned BitSize) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
@@ -5381,15 +5377,15 @@ SystemZTargetLowering::emitAtomicLoadMinMax(MachineInstr *MI,
   bool IsSubWord = (BitSize < 32);
 
   // Extract the operands.  Base can be a register or a frame index.
-  unsigned Dest        = MI->getOperand(0).getReg();
-  MachineOperand Base  = earlyUseOperand(MI->getOperand(1));
-  int64_t  Disp        = MI->getOperand(2).getImm();
-  unsigned Src2        = MI->getOperand(3).getReg();
-  unsigned BitShift    = (IsSubWord ? MI->getOperand(4).getReg() : 0);
-  unsigned NegBitShift = (IsSubWord ? MI->getOperand(5).getReg() : 0);
-  DebugLoc DL          = MI->getDebugLoc();
+  unsigned Dest = MI.getOperand(0).getReg();
+  MachineOperand Base = earlyUseOperand(MI.getOperand(1));
+  int64_t Disp = MI.getOperand(2).getImm();
+  unsigned Src2 = MI.getOperand(3).getReg();
+  unsigned BitShift = (IsSubWord ? MI.getOperand(4).getReg() : 0);
+  unsigned NegBitShift = (IsSubWord ? MI.getOperand(5).getReg() : 0);
+  DebugLoc DL = MI.getDebugLoc();
   if (IsSubWord)
-    BitSize = MI->getOperand(6).getImm();
+    BitSize = MI.getOperand(6).getImm();
 
   // Subword operations use 32-bit registers.
   const TargetRegisterClass *RC = (BitSize <= 32 ?
@@ -5477,14 +5473,14 @@ SystemZTargetLowering::emitAtomicLoadMinMax(MachineInstr *MI,
   MBB->addSuccessor(LoopMBB);
   MBB->addSuccessor(DoneMBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return DoneMBB;
 }
 
 // Implement EmitInstrWithCustomInserter for pseudo ATOMIC_CMP_SWAPW
 // instruction MI.
 MachineBasicBlock *
-SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr *MI,
+SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr &MI,
                                           MachineBasicBlock *MBB) const {
 
   MachineFunction &MF = *MBB->getParent();
@@ -5493,15 +5489,15 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr *MI,
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Extract the operands.  Base can be a register or a frame index.
-  unsigned Dest        = MI->getOperand(0).getReg();
-  MachineOperand Base  = earlyUseOperand(MI->getOperand(1));
-  int64_t  Disp        = MI->getOperand(2).getImm();
-  unsigned OrigCmpVal  = MI->getOperand(3).getReg();
-  unsigned OrigSwapVal = MI->getOperand(4).getReg();
-  unsigned BitShift    = MI->getOperand(5).getReg();
-  unsigned NegBitShift = MI->getOperand(6).getReg();
-  int64_t  BitSize     = MI->getOperand(7).getImm();
-  DebugLoc DL          = MI->getDebugLoc();
+  unsigned Dest = MI.getOperand(0).getReg();
+  MachineOperand Base = earlyUseOperand(MI.getOperand(1));
+  int64_t Disp = MI.getOperand(2).getImm();
+  unsigned OrigCmpVal = MI.getOperand(3).getReg();
+  unsigned OrigSwapVal = MI.getOperand(4).getReg();
+  unsigned BitShift = MI.getOperand(5).getReg();
+  unsigned NegBitShift = MI.getOperand(6).getReg();
+  int64_t BitSize = MI.getOperand(7).getImm();
+  DebugLoc DL = MI.getDebugLoc();
 
   const TargetRegisterClass *RC = &SystemZ::GR32BitRegClass;
 
@@ -5592,7 +5588,7 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr *MI,
   MBB->addSuccessor(LoopMBB);
   MBB->addSuccessor(DoneMBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return DoneMBB;
 }
 
@@ -5600,18 +5596,18 @@ SystemZTargetLowering::emitAtomicCmpSwapW(MachineInstr *MI,
 // if the high register of the GR128 value must be cleared or false if
 // it's "don't care".  SubReg is subreg_l32 when extending a GR32
 // and subreg_l64 when extending a GR64.
-MachineBasicBlock *
-SystemZTargetLowering::emitExt128(MachineInstr *MI,
-                                  MachineBasicBlock *MBB,
-                                  bool ClearEven, unsigned SubReg) const {
+MachineBasicBlock *SystemZTargetLowering::emitExt128(MachineInstr &MI,
+                                                     MachineBasicBlock *MBB,
+                                                     bool ClearEven,
+                                                     unsigned SubReg) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest  = MI->getOperand(0).getReg();
-  unsigned Src   = MI->getOperand(1).getReg();
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
   unsigned In128 = MRI.createVirtualRegister(&SystemZ::GR128BitRegClass);
 
   BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), In128);
@@ -5628,25 +5624,23 @@ SystemZTargetLowering::emitExt128(MachineInstr *MI,
   BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::INSERT_SUBREG), Dest)
     .addReg(In128).addReg(Src).addImm(SubReg);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return MBB;
 }
 
-MachineBasicBlock *
-SystemZTargetLowering::emitMemMemWrapper(MachineInstr *MI,
-                                         MachineBasicBlock *MBB,
-                                         unsigned Opcode) const {
+MachineBasicBlock *SystemZTargetLowering::emitMemMemWrapper(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  MachineOperand DestBase = earlyUseOperand(MI->getOperand(0));
-  uint64_t       DestDisp = MI->getOperand(1).getImm();
-  MachineOperand SrcBase  = earlyUseOperand(MI->getOperand(2));
-  uint64_t       SrcDisp  = MI->getOperand(3).getImm();
-  uint64_t       Length   = MI->getOperand(4).getImm();
+  MachineOperand DestBase = earlyUseOperand(MI.getOperand(0));
+  uint64_t DestDisp = MI.getOperand(1).getImm();
+  MachineOperand SrcBase = earlyUseOperand(MI.getOperand(2));
+  uint64_t SrcDisp = MI.getOperand(3).getImm();
+  uint64_t Length = MI.getOperand(4).getImm();
 
   // When generating more than one CLC, all but the last will need to
   // branch to the end when a difference is found.
@@ -5654,10 +5648,10 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr *MI,
                                splitBlockAfter(MI, MBB) : nullptr);
 
   // Check for the loop form, in which operand 5 is the trip count.
-  if (MI->getNumExplicitOperands() > 5) {
+  if (MI.getNumExplicitOperands() > 5) {
     bool HaveSingleBase = DestBase.isIdenticalTo(SrcBase);
 
-    uint64_t StartCountReg = MI->getOperand(5).getReg();
+    uint64_t StartCountReg = MI.getOperand(5).getReg();
     uint64_t StartSrcReg   = forceReg(MI, SrcBase, TII);
     uint64_t StartDestReg  = (HaveSingleBase ? StartSrcReg :
                               forceReg(MI, DestBase, TII));
@@ -5760,15 +5754,19 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr *MI,
     // Apply them using LAY if so.
     if (!isUInt<12>(DestDisp)) {
       unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(SystemZ::LAY), Reg)
-        .addOperand(DestBase).addImm(DestDisp).addReg(0);
+      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
+          .addOperand(DestBase)
+          .addImm(DestDisp)
+          .addReg(0);
       DestBase = MachineOperand::CreateReg(Reg, false);
       DestDisp = 0;
     }
     if (!isUInt<12>(SrcDisp)) {
       unsigned Reg = MRI.createVirtualRegister(&SystemZ::ADDR64BitRegClass);
-      BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(SystemZ::LAY), Reg)
-        .addOperand(SrcBase).addImm(SrcDisp).addReg(0);
+      BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(SystemZ::LAY), Reg)
+          .addOperand(SrcBase)
+          .addImm(SrcDisp)
+          .addReg(0);
       SrcBase = MachineOperand::CreateReg(Reg, false);
       SrcDisp = 0;
     }
@@ -5796,26 +5794,24 @@ SystemZTargetLowering::emitMemMemWrapper(MachineInstr *MI,
     MBB->addLiveIn(SystemZ::CC);
   }
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return MBB;
 }
 
 // Decompose string pseudo-instruction MI into a loop that continually performs
 // Opcode until CC != 3.
-MachineBasicBlock *
-SystemZTargetLowering::emitStringWrapper(MachineInstr *MI,
-                                         MachineBasicBlock *MBB,
-                                         unsigned Opcode) const {
+MachineBasicBlock *SystemZTargetLowering::emitStringWrapper(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode) const {
   MachineFunction &MF = *MBB->getParent();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  uint64_t End1Reg   = MI->getOperand(0).getReg();
-  uint64_t Start1Reg = MI->getOperand(1).getReg();
-  uint64_t Start2Reg = MI->getOperand(2).getReg();
-  uint64_t CharReg   = MI->getOperand(3).getReg();
+  uint64_t End1Reg = MI.getOperand(0).getReg();
+  uint64_t Start1Reg = MI.getOperand(1).getReg();
+  uint64_t Start2Reg = MI.getOperand(2).getReg();
+  uint64_t CharReg = MI.getOperand(3).getReg();
 
   const TargetRegisterClass *RC = &SystemZ::GR64BitRegClass;
   uint64_t This1Reg = MRI.createVirtualRegister(RC);
@@ -5858,26 +5854,24 @@ SystemZTargetLowering::emitStringWrapper(MachineInstr *MI,
 
   DoneMBB->addLiveIn(SystemZ::CC);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return DoneMBB;
 }
 
 // Update TBEGIN instruction with final opcode and register clobbers.
-MachineBasicBlock *
-SystemZTargetLowering::emitTransactionBegin(MachineInstr *MI,
-                                            MachineBasicBlock *MBB,
-                                            unsigned Opcode,
-                                            bool NoFloat) const {
+MachineBasicBlock *SystemZTargetLowering::emitTransactionBegin(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode,
+    bool NoFloat) const {
   MachineFunction &MF = *MBB->getParent();
   const TargetFrameLowering *TFI = Subtarget.getFrameLowering();
   const SystemZInstrInfo *TII = Subtarget.getInstrInfo();
 
   // Update opcode.
-  MI->setDesc(TII->get(Opcode));
+  MI.setDesc(TII->get(Opcode));
 
   // We cannot handle a TBEGIN that clobbers the stack or frame pointer.
   // Make sure to add the corresponding GRSM bits if they are missing.
-  uint64_t Control = MI->getOperand(2).getImm();
+  uint64_t Control = MI.getOperand(2).getImm();
   static const unsigned GPRControlBit[16] = {
     0x8000, 0x8000, 0x4000, 0x4000, 0x2000, 0x2000, 0x1000, 0x1000,
     0x0800, 0x0800, 0x0400, 0x0400, 0x0200, 0x0200, 0x0100, 0x0100
@@ -5885,13 +5879,13 @@ SystemZTargetLowering::emitTransactionBegin(MachineInstr *MI,
   Control |= GPRControlBit[15];
   if (TFI->hasFP(MF))
     Control |= GPRControlBit[11];
-  MI->getOperand(2).setImm(Control);
+  MI.getOperand(2).setImm(Control);
 
   // Add GPR clobbers.
   for (int I = 0; I < 16; I++) {
     if ((Control & GPRControlBit[I]) == 0) {
       unsigned Reg = SystemZMC::GR64Regs[I];
-      MI->addOperand(MachineOperand::CreateReg(Reg, true, true));
+      MI.addOperand(MachineOperand::CreateReg(Reg, true, true));
     }
   }
 
@@ -5900,12 +5894,12 @@ SystemZTargetLowering::emitTransactionBegin(MachineInstr *MI,
     if (Subtarget.hasVector()) {
       for (int I = 0; I < 32; I++) {
         unsigned Reg = SystemZMC::VR128Regs[I];
-        MI->addOperand(MachineOperand::CreateReg(Reg, true, true));
+        MI.addOperand(MachineOperand::CreateReg(Reg, true, true));
       }
     } else {
       for (int I = 0; I < 16; I++) {
         unsigned Reg = SystemZMC::FP64Regs[I];
-        MI->addOperand(MachineOperand::CreateReg(Reg, true, true));
+        MI.addOperand(MachineOperand::CreateReg(Reg, true, true));
       }
     }
   }
@@ -5913,17 +5907,15 @@ SystemZTargetLowering::emitTransactionBegin(MachineInstr *MI,
   return MBB;
 }
 
-MachineBasicBlock *
-SystemZTargetLowering::emitLoadAndTestCmp0(MachineInstr *MI,
-                                          MachineBasicBlock *MBB,
-                                          unsigned Opcode) const {
+MachineBasicBlock *SystemZTargetLowering::emitLoadAndTestCmp0(
+    MachineInstr &MI, MachineBasicBlock *MBB, unsigned Opcode) const {
   MachineFunction &MF = *MBB->getParent();
   MachineRegisterInfo *MRI = &MF.getRegInfo();
   const SystemZInstrInfo *TII =
       static_cast<const SystemZInstrInfo *>(Subtarget.getInstrInfo());
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  unsigned SrcReg = MI->getOperand(0).getReg();
+  unsigned SrcReg = MI.getOperand(0).getReg();
 
   // Create new virtual register of the same class as source.
   const TargetRegisterClass *RC = MRI->getRegClass(SrcReg);
@@ -5933,14 +5925,14 @@ SystemZTargetLowering::emitLoadAndTestCmp0(MachineInstr *MI,
   // well.
   BuildMI(*MBB, MI, DL, TII->get(Opcode), DstReg)
     .addReg(SrcReg);
-  MI->eraseFromParent();
+  MI.eraseFromParent();
 
   return MBB;
 }
 
-MachineBasicBlock *SystemZTargetLowering::
-EmitInstrWithCustomInserter(MachineInstr *MI, MachineBasicBlock *MBB) const {
-  switch (MI->getOpcode()) {
+MachineBasicBlock *SystemZTargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *MBB) const {
+  switch (MI.getOpcode()) {
   case SystemZ::Select32Mux:
   case SystemZ::Select32:
   case SystemZ::SelectF32:

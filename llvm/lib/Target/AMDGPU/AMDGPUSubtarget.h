@@ -369,7 +369,6 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           MachineInstr *Begin, MachineInstr *End,
                            unsigned NumRegionInstrs) const override;
 
   bool isVGPRSpillingEnabled(const Function& F) const;

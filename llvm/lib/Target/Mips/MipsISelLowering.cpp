@@ -935,7 +935,7 @@ addLiveIn(MachineFunction &MF, unsigned PReg, const TargetRegisterClass *RC)
   return VReg;
 }
 
-static MachineBasicBlock *insertDivByZeroTrap(MachineInstr *MI,
+static MachineBasicBlock *insertDivByZeroTrap(MachineInstr &MI,
                                               MachineBasicBlock &MBB,
                                               const TargetInstrInfo &TII,
                                               bool Is64Bit, bool IsMicroMips) {
@@ -945,11 +945,12 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr *MI,
   // Insert instruction "teq $divisor_reg, $zero, 7".
   MachineBasicBlock::iterator I(MI);
   MachineInstrBuilder MIB;
-  MachineOperand &Divisor = MI->getOperand(2);
-  MIB = BuildMI(MBB, std::next(I), MI->getDebugLoc(),
+  MachineOperand &Divisor = MI.getOperand(2);
+  MIB = BuildMI(MBB, std::next(I), MI.getDebugLoc(),
                 TII.get(IsMicroMips ? Mips::TEQ_MM : Mips::TEQ))
-    .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
-    .addReg(Mips::ZERO).addImm(7);
+            .addReg(Divisor.getReg(), getKillRegState(Divisor.isKill()))
+            .addReg(Mips::ZERO)
+            .addImm(7);
 
   // Use the 32-bit sub-register if this is a 64-bit division.
   if (Is64Bit)
@@ -965,9 +966,9 @@ static MachineBasicBlock *insertDivByZeroTrap(MachineInstr *MI,
 }
 
 MachineBasicBlock *
-MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
+MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                 MachineBasicBlock *BB) const {
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   default:
     llvm_unreachable("Unexpected instr type to insert");
   case Mips::ATOMIC_LOAD_ADD_I8:
@@ -1097,10 +1098,11 @@ MipsTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
 
 // This function also handles Mips::ATOMIC_SWAP_I32 (when BinOpcode == 0), and
 // Mips::ATOMIC_LOAD_NAND_I32 (when Nand == true)
-MachineBasicBlock *
-MipsTargetLowering::emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
-                                     unsigned Size, unsigned BinOpcode,
-                                     bool Nand) const {
+MachineBasicBlock *MipsTargetLowering::emitAtomicBinary(MachineInstr &MI,
+                                                        MachineBasicBlock *BB,
+                                                        unsigned Size,
+                                                        unsigned BinOpcode,
+                                                        bool Nand) const {
   assert((Size == 4 || Size == 8) && "Unsupported size for EmitAtomicBinary.");
 
   MachineFunction *MF = BB->getParent();
@@ -1108,7 +1110,7 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
   const TargetRegisterClass *RC = getRegClassFor(MVT::getIntegerVT(Size * 8));
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const bool ArePtrs64bit = ABI.ArePtrs64bit();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   unsigned LL, SC, AND, NOR, ZERO, BEQ;
 
   if (Size == 4) {
@@ -1137,9 +1139,9 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
     BEQ = Mips::BEQ64;
   }
 
-  unsigned OldVal = MI->getOperand(0).getReg();
-  unsigned Ptr = MI->getOperand(1).getReg();
-  unsigned Incr = MI->getOperand(2).getReg();
+  unsigned OldVal = MI.getOperand(0).getReg();
+  unsigned Ptr = MI.getOperand(1).getReg();
+  unsigned Incr = MI.getOperand(2).getReg();
 
   unsigned StoreVal = RegInfo.createVirtualRegister(RC);
   unsigned AndRes = RegInfo.createVirtualRegister(RC);
@@ -1186,16 +1188,16 @@ MipsTargetLowering::emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
   BuildMI(BB, DL, TII->get(SC), Success).addReg(StoreVal).addReg(Ptr).addImm(0);
   BuildMI(BB, DL, TII->get(BEQ)).addReg(Success).addReg(ZERO).addMBB(loopMBB);
 
-  MI->eraseFromParent(); // The instruction is gone now.
+  MI.eraseFromParent(); // The instruction is gone now.
 
   return exitMBB;
 }
 
 MachineBasicBlock *MipsTargetLowering::emitSignExtendToI32InReg(
-    MachineInstr *MI, MachineBasicBlock *BB, unsigned Size, unsigned DstReg,
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned Size, unsigned DstReg,
     unsigned SrcReg) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  const DebugLoc &DL = MI->getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
 
   if (Subtarget.hasMips32r2() && Size == 1) {
     BuildMI(BB, DL, TII->get(Mips::SEB), DstReg).addReg(SrcReg);
@@ -1222,7 +1224,7 @@ MachineBasicBlock *MipsTargetLowering::emitSignExtendToI32InReg(
 }
 
 MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
-    MachineInstr *MI, MachineBasicBlock *BB, unsigned Size, unsigned BinOpcode,
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned Size, unsigned BinOpcode,
     bool Nand) const {
   assert((Size == 1 || Size == 2) &&
          "Unsupported size for EmitAtomicBinaryPartial.");
@@ -1234,11 +1236,11 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
   const TargetRegisterClass *RCp =
     getRegClassFor(ArePtrs64bit ? MVT::i64 : MVT::i32);
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest = MI->getOperand(0).getReg();
-  unsigned Ptr = MI->getOperand(1).getReg();
-  unsigned Incr = MI->getOperand(2).getReg();
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Ptr = MI.getOperand(1).getReg();
+  unsigned Incr = MI.getOperand(2).getReg();
 
   unsigned AlignedAddr = RegInfo.createVirtualRegister(RCp);
   unsigned ShiftAmt = RegInfo.createVirtualRegister(RC);
@@ -1381,14 +1383,14 @@ MachineBasicBlock *MipsTargetLowering::emitAtomicBinaryPartword(
       .addReg(MaskedOldVal1).addReg(ShiftAmt);
   BB = emitSignExtendToI32InReg(MI, BB, Size, Dest, SrlRes);
 
-  MI->eraseFromParent(); // The instruction is gone now.
+  MI.eraseFromParent(); // The instruction is gone now.
 
   return exitMBB;
 }
 
-MachineBasicBlock * MipsTargetLowering::emitAtomicCmpSwap(MachineInstr *MI,
-                                                          MachineBasicBlock *BB,
-                                                          unsigned Size) const {
+MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwap(MachineInstr &MI,
+                                                         MachineBasicBlock *BB,
+                                                         unsigned Size) const {
   assert((Size == 4 || Size == 8) && "Unsupported size for EmitAtomicCmpSwap.");
 
   MachineFunction *MF = BB->getParent();
@@ -1396,7 +1398,7 @@ MachineBasicBlock * MipsTargetLowering::emitAtomicCmpSwap(MachineInstr *MI,
   const TargetRegisterClass *RC = getRegClassFor(MVT::getIntegerVT(Size * 8));
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const bool ArePtrs64bit = ABI.ArePtrs64bit();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   unsigned LL, SC, ZERO, BNE, BEQ;
 
   if (Size == 4) {
@@ -1423,10 +1425,10 @@ MachineBasicBlock * MipsTargetLowering::emitAtomicCmpSwap(MachineInstr *MI,
     BEQ = Mips::BEQ64;
   }
 
-  unsigned Dest    = MI->getOperand(0).getReg();
-  unsigned Ptr     = MI->getOperand(1).getReg();
-  unsigned OldVal  = MI->getOperand(2).getReg();
-  unsigned NewVal  = MI->getOperand(3).getReg();
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Ptr = MI.getOperand(1).getReg();
+  unsigned OldVal = MI.getOperand(2).getReg();
+  unsigned NewVal = MI.getOperand(3).getReg();
 
   unsigned Success = RegInfo.createVirtualRegister(RC);
 
@@ -1471,15 +1473,13 @@ MachineBasicBlock * MipsTargetLowering::emitAtomicCmpSwap(MachineInstr *MI,
   BuildMI(BB, DL, TII->get(BEQ))
     .addReg(Success).addReg(ZERO).addMBB(loop1MBB);
 
-  MI->eraseFromParent(); // The instruction is gone now.
+  MI.eraseFromParent(); // The instruction is gone now.
 
   return exitMBB;
 }
 
-MachineBasicBlock *
-MipsTargetLowering::emitAtomicCmpSwapPartword(MachineInstr *MI,
-                                              MachineBasicBlock *BB,
-                                              unsigned Size) const {
+MachineBasicBlock *MipsTargetLowering::emitAtomicCmpSwapPartword(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned Size) const {
   assert((Size == 1 || Size == 2) &&
       "Unsupported size for EmitAtomicCmpSwapPartial.");
 
@@ -1490,12 +1490,12 @@ MipsTargetLowering::emitAtomicCmpSwapPartword(MachineInstr *MI,
   const TargetRegisterClass *RCp =
     getRegClassFor(ArePtrs64bit ? MVT::i64 : MVT::i32);
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  unsigned Dest    = MI->getOperand(0).getReg();
-  unsigned Ptr     = MI->getOperand(1).getReg();
-  unsigned CmpVal  = MI->getOperand(2).getReg();
-  unsigned NewVal  = MI->getOperand(3).getReg();
+  unsigned Dest = MI.getOperand(0).getReg();
+  unsigned Ptr = MI.getOperand(1).getReg();
+  unsigned CmpVal = MI.getOperand(2).getReg();
+  unsigned NewVal = MI.getOperand(3).getReg();
 
   unsigned AlignedAddr = RegInfo.createVirtualRegister(RCp);
   unsigned ShiftAmt = RegInfo.createVirtualRegister(RC);
@@ -1628,21 +1628,21 @@ MipsTargetLowering::emitAtomicCmpSwapPartword(MachineInstr *MI,
       .addReg(MaskedOldVal0).addReg(ShiftAmt);
   BB = emitSignExtendToI32InReg(MI, BB, Size, Dest, SrlRes);
 
-  MI->eraseFromParent();   // The instruction is gone now.
+  MI.eraseFromParent(); // The instruction is gone now.
 
   return exitMBB;
 }
 
-MachineBasicBlock *MipsTargetLowering::emitSEL_D(MachineInstr *MI,
+MachineBasicBlock *MipsTargetLowering::emitSEL_D(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
   MachineFunction *MF = BB->getParent();
   const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = MF->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   MachineBasicBlock::iterator II(MI);
 
-  unsigned Fc = MI->getOperand(1).getReg();
+  unsigned Fc = MI.getOperand(1).getReg();
   const auto &FGR64RegClass = TRI->getRegClass(Mips::FGR64RegClassID);
 
   unsigned Fc2 = RegInfo.createVirtualRegister(FGR64RegClass);
@@ -1654,7 +1654,7 @@ MachineBasicBlock *MipsTargetLowering::emitSEL_D(MachineInstr *MI,
 
   // We don't erase the original instruction, we just replace the condition
   // register with the 64-bit super-register.
-  MI->getOperand(1).setReg(Fc2);
+  MI.getOperand(1).setReg(Fc2);
 
   return BB;
 }
@@ -3956,16 +3956,17 @@ void MipsTargetLowering::HandleByVal(CCState *State, unsigned &Size,
   State->addInRegsParamInfo(FirstReg, FirstReg + NumRegs);
 }
 
-MachineBasicBlock *
-MipsTargetLowering::emitPseudoSELECT(MachineInstr *MI, MachineBasicBlock *BB,
-                                     bool isFPCmp, unsigned Opc) const {
+MachineBasicBlock *MipsTargetLowering::emitPseudoSELECT(MachineInstr &MI,
+                                                        MachineBasicBlock *BB,
+                                                        bool isFPCmp,
+                                                        unsigned Opc) const {
   assert(!(Subtarget.hasMips4() || Subtarget.hasMips32()) &&
          "Subtarget already supports SELECT nodes with the use of"
          "conditional-move instructions.");
 
   const TargetInstrInfo *TII =
       Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
   // To "insert" a SELECT instruction, we actually have to insert the
   // diamond control-flow pattern.  The incoming instruction knows the
@@ -3999,14 +4000,14 @@ MipsTargetLowering::emitPseudoSELECT(MachineInstr *MI, MachineBasicBlock *BB,
   if (isFPCmp) {
     // bc1[tf] cc, sinkMBB
     BuildMI(BB, DL, TII->get(Opc))
-      .addReg(MI->getOperand(1).getReg())
-      .addMBB(sinkMBB);
+        .addReg(MI.getOperand(1).getReg())
+        .addMBB(sinkMBB);
   } else {
     // bne rs, $0, sinkMBB
     BuildMI(BB, DL, TII->get(Opc))
-      .addReg(MI->getOperand(1).getReg())
-      .addReg(Mips::ZERO)
-      .addMBB(sinkMBB);
+        .addReg(MI.getOperand(1).getReg())
+        .addReg(Mips::ZERO)
+        .addMBB(sinkMBB);
   }
 
   //  copy0MBB:
@@ -4022,12 +4023,13 @@ MipsTargetLowering::emitPseudoSELECT(MachineInstr *MI, MachineBasicBlock *BB,
   //  ...
   BB = sinkMBB;
 
-  BuildMI(*BB, BB->begin(), DL,
-          TII->get(Mips::PHI), MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(2).getReg()).addMBB(thisMBB)
-    .addReg(MI->getOperand(3).getReg()).addMBB(copy0MBB);
+  BuildMI(*BB, BB->begin(), DL, TII->get(Mips::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(thisMBB)
+      .addReg(MI.getOperand(3).getReg())
+      .addMBB(copy0MBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
 
   return BB;
 }

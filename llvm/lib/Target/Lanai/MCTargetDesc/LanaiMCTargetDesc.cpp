@@ -15,7 +15,6 @@
 
 #include "InstPrinter/LanaiInstPrinter.h"
 #include "LanaiMCAsmInfo.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -53,15 +52,6 @@ createLanaiMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
     CPUName = "generic";
 
   return createLanaiMCSubtargetInfoImpl(TT, CPUName, FS);
-}
-
-static MCCodeGenInfo *createLanaiMCCodeGenInfo(const Triple &TT,
-                                               Reloc::Model RM,
-                                               CodeModel::Model CM,
-                                               CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
 }
 
 static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
@@ -124,10 +114,6 @@ static MCInstrAnalysis *createLanaiInstrAnalysis(const MCInstrInfo *Info) {
 extern "C" void LLVMInitializeLanaiTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<LanaiMCAsmInfo> X(TheLanaiTarget);
-
-  // Register the MC codegen info.
-  TargetRegistry::RegisterMCCodeGenInfo(TheLanaiTarget,
-                                        createLanaiMCCodeGenInfo);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(TheLanaiTarget, createLanaiMCInstrInfo);

@@ -534,20 +534,21 @@ namespace llvm {
                                    bool IsStore, bool IsLoad) const override;
 
     MachineBasicBlock *
-      EmitInstrWithCustomInserter(MachineInstr *MI,
-                                  MachineBasicBlock *MBB) const override;
-    MachineBasicBlock *EmitAtomicBinary(MachineInstr *MI,
+    EmitInstrWithCustomInserter(MachineInstr &MI,
+                                MachineBasicBlock *MBB) const override;
+    MachineBasicBlock *EmitAtomicBinary(MachineInstr &MI,
                                         MachineBasicBlock *MBB,
                                         unsigned AtomicSize,
                                         unsigned BinOpcode) const;
-    MachineBasicBlock *EmitPartwordAtomicBinary(MachineInstr *MI,
+    MachineBasicBlock *EmitPartwordAtomicBinary(MachineInstr &MI,
                                                 MachineBasicBlock *MBB,
-                                            bool is8bit, unsigned Opcode) const;
+                                                bool is8bit,
+                                                unsigned Opcode) const;
 
-    MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr *MI,
+    MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;
 
-    MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr *MI,
+    MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                          MachineBasicBlock *MBB) const;
 
     ConstraintType getConstraintType(StringRef Constraint) const override;

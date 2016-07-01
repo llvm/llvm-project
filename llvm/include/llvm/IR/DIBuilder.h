@@ -560,6 +560,9 @@ namespace llvm {
     ///                      virtual function.
     /// \param VTableIndex   Index no of this method in virtual table, or -1u if
     ///                      unrepresentable.
+    /// \param ThisAdjustment
+    ///                      MS ABI-specific adjustment of 'this' that occurs
+    ///                      in the prologue.
     /// \param VTableHolder  Type that holds vtable.
     /// \param Flags         e.g. is this function prototyped or not.
     ///                      This flags are used to emit dwarf attributes.
@@ -569,8 +572,9 @@ namespace llvm {
     createMethod(DIScope *Scope, StringRef Name, StringRef LinkageName,
                  DIFile *File, unsigned LineNo, DISubroutineType *Ty,
                  bool isLocalToUnit, bool isDefinition, unsigned Virtuality = 0,
-                 unsigned VTableIndex = 0, DIType *VTableHolder = nullptr,
-                 unsigned Flags = 0, bool isOptimized = false,
+                 unsigned VTableIndex = 0, int ThisAdjustment = 0,
+                 DIType *VTableHolder = nullptr, unsigned Flags = 0,
+                 bool isOptimized = false,
                  DITemplateParameterArray TParams = nullptr);
 
     /// This creates new descriptor for a namespace with the specified

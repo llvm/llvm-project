@@ -521,6 +521,7 @@ bool SILowerControlFlow::loadM0(MachineInstr &MI, MachineInstr *MovRel, int Offs
   // Move the rest of the block into a new block.
   RemainderBB->transferSuccessors(&MBB);
   RemainderBB->splice(RemainderBB->begin(), &MBB, I, MBB.end());
+  MBB.addSuccessor(LoopBB);
 
   emitLoadM0FromVGPRLoop(*LoopBB, DL, MovRel, *Idx, Offset);
 

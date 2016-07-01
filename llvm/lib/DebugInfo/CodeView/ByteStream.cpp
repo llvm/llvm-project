@@ -62,6 +62,10 @@ template <bool Writable> uint32_t ByteStream<Writable>::getLength() const {
   return Data.size();
 }
 
+template <bool Writable> Error ByteStream<Writable>::commit() const {
+  return Error::success();
+}
+
 template <bool Writable> StringRef ByteStream<Writable>::str() const {
   const char *CharData = reinterpret_cast<const char *>(Data.data());
   return StringRef(CharData, Data.size());
