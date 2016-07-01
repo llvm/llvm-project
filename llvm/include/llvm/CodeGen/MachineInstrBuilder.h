@@ -320,16 +320,20 @@ inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB,
   return MachineInstrBuilder(MF, MI);
 }
 
+inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr &I,
+                                   const DebugLoc &DL,
+                                   const MCInstrDesc &MCID) {
+  // Calling the overload for instr_iterator is always correct.  However, the
+  // definition is not available in headers, so inline the check.
+  if (I.isInsideBundle())
+    return BuildMI(BB, MachineBasicBlock::instr_iterator(I), DL, MCID);
+  return BuildMI(BB, MachineBasicBlock::iterator(I), DL, MCID);
+}
+
 inline MachineInstrBuilder BuildMI(MachineBasicBlock &BB, MachineInstr *I,
                                    const DebugLoc &DL,
                                    const MCInstrDesc &MCID) {
-  if (I->isInsideBundle()) {
-    MachineBasicBlock::instr_iterator MII(I);
-    return BuildMI(BB, MII, DL, MCID);
-  }
-
-  MachineBasicBlock::iterator MII = I;
-  return BuildMI(BB, MII, DL, MCID);
+  return BuildMI(BB, *I, DL, MCID);
 }
 
 /// This version of the builder inserts the newly-built instruction at the end

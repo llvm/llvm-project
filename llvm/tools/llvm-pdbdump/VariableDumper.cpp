@@ -33,7 +33,7 @@ VariableDumper::VariableDumper(LinePrinter &P)
     : PDBSymDumper(true), Printer(P) {}
 
 void VariableDumper::start(const PDBSymbolData &Var) {
-  if (Var.isCompilerGenerated() && opts::ExcludeCompilerGenerated)
+  if (Var.isCompilerGenerated() && opts::pretty::ExcludeCompilerGenerated)
     return;
   if (Printer.IsSymbolExcluded(Var.getName()))
     return;

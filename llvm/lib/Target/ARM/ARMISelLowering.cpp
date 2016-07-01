@@ -24,7 +24,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -6046,7 +6045,7 @@ SDValue ARMTargetLowering::ReconstructShuffle(SDValue Op,
     ShuffleOps[i] = Sources[i].ShuffleVec;
 
   SDValue Shuffle = DAG.getVectorShuffle(ShuffleVT, dl, ShuffleOps[0],
-                                         ShuffleOps[1], &Mask[0]);
+                                         ShuffleOps[1], Mask);
   return DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
 }
 
@@ -7275,11 +7274,12 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
 
 /// SetupEntryBlockForSjLj - Insert code into the entry block that creates and
 /// registers the function context.
-void ARMTargetLowering::
-SetupEntryBlockForSjLj(MachineInstr *MI, MachineBasicBlock *MBB,
-                       MachineBasicBlock *DispatchBB, int FI) const {
+void ARMTargetLowering::SetupEntryBlockForSjLj(MachineInstr &MI,
+                                               MachineBasicBlock *MBB,
+                                               MachineBasicBlock *DispatchBB,
+                                               int FI) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  DebugLoc dl = MI->getDebugLoc();
+  DebugLoc dl = MI.getDebugLoc();
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   MachineConstantPool *MCP = MF->getConstantPool();
@@ -7390,10 +7390,10 @@ SetupEntryBlockForSjLj(MachineInstr *MI, MachineBasicBlock *MBB,
   }
 }
 
-void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
+void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
                                               MachineBasicBlock *MBB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  DebugLoc dl = MI->getDebugLoc();
+  DebugLoc dl = MI.getDebugLoc();
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   MachineFrameInfo *MFI = MF->getFrameInfo();
@@ -7775,7 +7775,7 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr *MI,
     (*I)->setIsEHPad(false);
 
   // The instruction is gone now.
-  MI->eraseFromParent();
+  MI.eraseFromParent();
 }
 
 static
@@ -7827,7 +7827,7 @@ static unsigned getStOpcode(unsigned StSize, bool IsThumb1, bool IsThumb2) {
 
 /// Emit a post-increment load operation with given size. The instructions
 /// will be added to BB at Pos.
-static void emitPostLd(MachineBasicBlock *BB, MachineInstr *Pos,
+static void emitPostLd(MachineBasicBlock *BB, MachineBasicBlock::iterator Pos,
                        const TargetInstrInfo *TII, const DebugLoc &dl,
                        unsigned LdSize, unsigned Data, unsigned AddrIn,
                        unsigned AddrOut, bool IsThumb1, bool IsThumb2) {
@@ -7859,7 +7859,7 @@ static void emitPostLd(MachineBasicBlock *BB, MachineInstr *Pos,
 
 /// Emit a post-increment store operation with given size. The instructions
 /// will be added to BB at Pos.
-static void emitPostSt(MachineBasicBlock *BB, MachineInstr *Pos,
+static void emitPostSt(MachineBasicBlock *BB, MachineBasicBlock::iterator Pos,
                        const TargetInstrInfo *TII, const DebugLoc &dl,
                        unsigned StSize, unsigned Data, unsigned AddrIn,
                        unsigned AddrOut, bool IsThumb1, bool IsThumb2) {
@@ -7888,7 +7888,7 @@ static void emitPostSt(MachineBasicBlock *BB, MachineInstr *Pos,
 }
 
 MachineBasicBlock *
-ARMTargetLowering::EmitStructByval(MachineInstr *MI,
+ARMTargetLowering::EmitStructByval(MachineInstr &MI,
                                    MachineBasicBlock *BB) const {
   // This pseudo instruction has 3 operands: dst, src, size
   // We expand it to a loop if size > Subtarget->getMaxInlineSizeThreshold().
@@ -7897,11 +7897,11 @@ ARMTargetLowering::EmitStructByval(MachineInstr *MI,
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   MachineFunction::iterator It = ++BB->getIterator();
 
-  unsigned dest = MI->getOperand(0).getReg();
-  unsigned src = MI->getOperand(1).getReg();
-  unsigned SizeVal = MI->getOperand(2).getImm();
-  unsigned Align = MI->getOperand(3).getImm();
-  DebugLoc dl = MI->getDebugLoc();
+  unsigned dest = MI.getOperand(0).getReg();
+  unsigned src = MI.getOperand(1).getReg();
+  unsigned SizeVal = MI.getOperand(2).getImm();
+  unsigned Align = MI.getOperand(3).getImm();
+  DebugLoc dl = MI.getDebugLoc();
 
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -7973,7 +7973,7 @@ ARMTargetLowering::EmitStructByval(MachineInstr *MI,
       srcIn = srcOut;
       destIn = destOut;
     }
-    MI->eraseFromParent();   // The instruction is gone now.
+    MI.eraseFromParent(); // The instruction is gone now.
     return BB;
   }
 
@@ -8117,16 +8117,16 @@ ARMTargetLowering::EmitStructByval(MachineInstr *MI,
     destIn = destOut;
   }
 
-  MI->eraseFromParent();   // The instruction is gone now.
+  MI.eraseFromParent(); // The instruction is gone now.
   return BB;
 }
 
 MachineBasicBlock *
-ARMTargetLowering::EmitLowered__chkstk(MachineInstr *MI,
+ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const {
   const TargetMachine &TM = getTargetMachine();
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
   assert(Subtarget->isTargetWindows() &&
          "__chkstk is only supported on Windows");
@@ -8185,14 +8185,14 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr *MI,
                          .addReg(ARM::R4, RegState::Kill)
                          .setMIFlags(MachineInstr::FrameSetup)));
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return MBB;
 }
 
 MachineBasicBlock *
-ARMTargetLowering::EmitLowered__dbzchk(MachineInstr *MI,
+ARMTargetLowering::EmitLowered__dbzchk(MachineInstr &MI,
                                        MachineBasicBlock *MBB) const {
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = MBB->getParent();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
 
@@ -8208,76 +8208,76 @@ ARMTargetLowering::EmitLowered__dbzchk(MachineInstr *MI,
   MBB->addSuccessor(TrapBB);
 
   BuildMI(*MBB, MI, DL, TII->get(ARM::tCBZ))
-      .addReg(MI->getOperand(0).getReg())
+      .addReg(MI.getOperand(0).getReg())
       .addMBB(TrapBB);
   AddDefaultPred(BuildMI(*MBB, MI, DL, TII->get(ARM::t2B)).addMBB(ContBB));
   MBB->addSuccessor(ContBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return ContBB;
 }
 
 MachineBasicBlock *
-ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
+ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
-  DebugLoc dl = MI->getDebugLoc();
+  DebugLoc dl = MI.getDebugLoc();
   bool isThumb2 = Subtarget->isThumb2();
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   default: {
-    MI->dump();
+    MI.dump();
     llvm_unreachable("Unexpected instr type to insert");
   }
   // The Thumb2 pre-indexed stores have the same MI operands, they just
   // define them differently in the .td files from the isel patterns, so
   // they need pseudos.
   case ARM::t2STR_preidx:
-    MI->setDesc(TII->get(ARM::t2STR_PRE));
+    MI.setDesc(TII->get(ARM::t2STR_PRE));
     return BB;
   case ARM::t2STRB_preidx:
-    MI->setDesc(TII->get(ARM::t2STRB_PRE));
+    MI.setDesc(TII->get(ARM::t2STRB_PRE));
     return BB;
   case ARM::t2STRH_preidx:
-    MI->setDesc(TII->get(ARM::t2STRH_PRE));
+    MI.setDesc(TII->get(ARM::t2STRH_PRE));
     return BB;
 
   case ARM::STRi_preidx:
   case ARM::STRBi_preidx: {
-    unsigned NewOpc = MI->getOpcode() == ARM::STRi_preidx ?
-      ARM::STR_PRE_IMM : ARM::STRB_PRE_IMM;
+    unsigned NewOpc = MI.getOpcode() == ARM::STRi_preidx ? ARM::STR_PRE_IMM
+                                                         : ARM::STRB_PRE_IMM;
     // Decode the offset.
-    unsigned Offset = MI->getOperand(4).getImm();
+    unsigned Offset = MI.getOperand(4).getImm();
     bool isSub = ARM_AM::getAM2Op(Offset) == ARM_AM::sub;
     Offset = ARM_AM::getAM2Offset(Offset);
     if (isSub)
       Offset = -Offset;
 
-    MachineMemOperand *MMO = *MI->memoperands_begin();
+    MachineMemOperand *MMO = *MI.memoperands_begin();
     BuildMI(*BB, MI, dl, TII->get(NewOpc))
-      .addOperand(MI->getOperand(0))  // Rn_wb
-      .addOperand(MI->getOperand(1))  // Rt
-      .addOperand(MI->getOperand(2))  // Rn
-      .addImm(Offset)                 // offset (skip GPR==zero_reg)
-      .addOperand(MI->getOperand(5))  // pred
-      .addOperand(MI->getOperand(6))
-      .addMemOperand(MMO);
-    MI->eraseFromParent();
+        .addOperand(MI.getOperand(0)) // Rn_wb
+        .addOperand(MI.getOperand(1)) // Rt
+        .addOperand(MI.getOperand(2)) // Rn
+        .addImm(Offset)               // offset (skip GPR==zero_reg)
+        .addOperand(MI.getOperand(5)) // pred
+        .addOperand(MI.getOperand(6))
+        .addMemOperand(MMO);
+    MI.eraseFromParent();
     return BB;
   }
   case ARM::STRr_preidx:
   case ARM::STRBr_preidx:
   case ARM::STRH_preidx: {
     unsigned NewOpc;
-    switch (MI->getOpcode()) {
+    switch (MI.getOpcode()) {
     default: llvm_unreachable("unexpected opcode!");
     case ARM::STRr_preidx: NewOpc = ARM::STR_PRE_REG; break;
     case ARM::STRBr_preidx: NewOpc = ARM::STRB_PRE_REG; break;
     case ARM::STRH_preidx: NewOpc = ARM::STRH_PRE; break;
     }
     MachineInstrBuilder MIB = BuildMI(*BB, MI, dl, TII->get(NewOpc));
-    for (unsigned i = 0; i < MI->getNumOperands(); ++i)
-      MIB.addOperand(MI->getOperand(i));
-    MI->eraseFromParent();
+    for (unsigned i = 0; i < MI.getNumOperands(); ++i)
+      MIB.addOperand(MI.getOperand(i));
+    MI.eraseFromParent();
     return BB;
   }
 
@@ -8310,8 +8310,10 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     BB->addSuccessor(copy0MBB);
     BB->addSuccessor(sinkMBB);
 
-    BuildMI(BB, dl, TII->get(ARM::tBcc)).addMBB(sinkMBB)
-      .addImm(MI->getOperand(3).getImm()).addReg(MI->getOperand(4).getReg());
+    BuildMI(BB, dl, TII->get(ARM::tBcc))
+        .addMBB(sinkMBB)
+        .addImm(MI.getOperand(3).getImm())
+        .addReg(MI.getOperand(4).getReg());
 
     //  copy0MBB:
     //   %FalseValue = ...
@@ -8325,12 +8327,13 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     //   %Result = phi [ %FalseValue, copy0MBB ], [ %TrueValue, thisMBB ]
     //  ...
     BB = sinkMBB;
-    BuildMI(*BB, BB->begin(), dl,
-            TII->get(ARM::PHI), MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(1).getReg()).addMBB(copy0MBB)
-      .addReg(MI->getOperand(2).getReg()).addMBB(thisMBB);
+    BuildMI(*BB, BB->begin(), dl, TII->get(ARM::PHI), MI.getOperand(0).getReg())
+        .addReg(MI.getOperand(1).getReg())
+        .addMBB(copy0MBB)
+        .addReg(MI.getOperand(2).getReg())
+        .addMBB(thisMBB);
 
-    MI->eraseFromParent();   // The pseudo instruction is gone now.
+    MI.eraseFromParent(); // The pseudo instruction is gone now.
     return BB;
   }
 
@@ -8341,10 +8344,10 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
 
     // Compare both parts that make up the double comparison separately for
     // equality.
-    bool RHSisZero = MI->getOpcode() == ARM::BCCZi64;
+    bool RHSisZero = MI.getOpcode() == ARM::BCCZi64;
 
-    unsigned LHS1 = MI->getOperand(1).getReg();
-    unsigned LHS2 = MI->getOperand(2).getReg();
+    unsigned LHS1 = MI.getOperand(1).getReg();
+    unsigned LHS2 = MI.getOperand(2).getReg();
     if (RHSisZero) {
       AddDefaultPred(BuildMI(BB, dl,
                              TII->get(isThumb2 ? ARM::t2CMPri : ARM::CMPri))
@@ -8353,8 +8356,8 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
         .addReg(LHS2).addImm(0)
         .addImm(ARMCC::EQ).addReg(ARM::CPSR);
     } else {
-      unsigned RHS1 = MI->getOperand(3).getReg();
-      unsigned RHS2 = MI->getOperand(4).getReg();
+      unsigned RHS1 = MI.getOperand(3).getReg();
+      unsigned RHS2 = MI.getOperand(4).getReg();
       AddDefaultPred(BuildMI(BB, dl,
                              TII->get(isThumb2 ? ARM::t2CMPrr : ARM::CMPrr))
                      .addReg(LHS1).addReg(RHS1));
@@ -8363,9 +8366,9 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
         .addImm(ARMCC::EQ).addReg(ARM::CPSR);
     }
 
-    MachineBasicBlock *destMBB = MI->getOperand(RHSisZero ? 3 : 5).getMBB();
+    MachineBasicBlock *destMBB = MI.getOperand(RHSisZero ? 3 : 5).getMBB();
     MachineBasicBlock *exitMBB = OtherSucc(BB, destMBB);
-    if (MI->getOperand(0).getImm() == ARMCC::NE)
+    if (MI.getOperand(0).getImm() == ARMCC::NE)
       std::swap(destMBB, exitMBB);
 
     BuildMI(BB, dl, TII->get(isThumb2 ? ARM::t2Bcc : ARM::Bcc))
@@ -8375,7 +8378,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     else
       BuildMI(BB, dl, TII->get(ARM::B)) .addMBB(exitMBB);
 
-    MI->eraseFromParent();   // The pseudo instruction is gone now.
+    MI.eraseFromParent(); // The pseudo instruction is gone now.
     return BB;
   }
 
@@ -8412,9 +8415,9 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     Fn->insert(BBI, RSBBB);
     Fn->insert(BBI, SinkBB);
 
-    unsigned int ABSSrcReg = MI->getOperand(1).getReg();
-    unsigned int ABSDstReg = MI->getOperand(0).getReg();
-    bool ABSSrcKIll = MI->getOperand(1).isKill();
+    unsigned int ABSSrcReg = MI.getOperand(1).getReg();
+    unsigned int ABSDstReg = MI.getOperand(0).getReg();
+    bool ABSSrcKIll = MI.getOperand(1).isKill();
     bool isThumb2 = Subtarget->isThumb2();
     MachineRegisterInfo &MRI = Fn->getRegInfo();
     // In Thumb mode S must not be specified if source register is the SP or
@@ -8459,7 +8462,7 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
       .addReg(ABSSrcReg).addMBB(BB);
 
     // remove ABS instruction
-    MI->eraseFromParent();
+    MI.eraseFromParent();
 
     // return last added BB
     return SinkBB;
@@ -8478,38 +8481,38 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
 /// when it is expanded into LDM/STM. This is done as a post-isel lowering
 /// instead of as a custom inserter because we need the use list from the SDNode.
 static void attachMEMCPYScratchRegs(const ARMSubtarget *Subtarget,
-                                   MachineInstr *MI, const SDNode *Node) {
+                                    MachineInstr &MI, const SDNode *Node) {
   bool isThumb1 = Subtarget->isThumb1Only();
 
-  DebugLoc DL = MI->getDebugLoc();
-  MachineFunction *MF = MI->getParent()->getParent();
+  DebugLoc DL = MI.getDebugLoc();
+  MachineFunction *MF = MI.getParent()->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineInstrBuilder MIB(*MF, MI);
 
   // If the new dst/src is unused mark it as dead.
   if (!Node->hasAnyUseOfValue(0)) {
-    MI->getOperand(0).setIsDead(true);
+    MI.getOperand(0).setIsDead(true);
   }
   if (!Node->hasAnyUseOfValue(1)) {
-    MI->getOperand(1).setIsDead(true);
+    MI.getOperand(1).setIsDead(true);
   }
 
   // The MEMCPY both defines and kills the scratch registers.
-  for (unsigned I = 0; I != MI->getOperand(4).getImm(); ++I) {
+  for (unsigned I = 0; I != MI.getOperand(4).getImm(); ++I) {
     unsigned TmpReg = MRI.createVirtualRegister(isThumb1 ? &ARM::tGPRRegClass
                                                          : &ARM::GPRRegClass);
     MIB.addReg(TmpReg, RegState::Define|RegState::Dead);
   }
 }
 
-void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
+void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                       SDNode *Node) const {
-  if (MI->getOpcode() == ARM::MEMCPY) {
+  if (MI.getOpcode() == ARM::MEMCPY) {
     attachMEMCPYScratchRegs(Subtarget, MI, Node);
     return;
   }
 
-  const MCInstrDesc *MCID = &MI->getDesc();
+  const MCInstrDesc *MCID = &MI.getDesc();
   // Adjust potentially 's' setting instructions after isel, i.e. ADC, SBC, RSB,
   // RSC. Coming out of isel, they have an implicit CPSR def, but the optional
   // operand is still set to noreg. If needed, set the optional operand's
@@ -8518,24 +8521,24 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
   // e.g. ADCS (..., CPSR<imp-def>) -> ADC (... opt:CPSR<def>).
 
   // Rename pseudo opcodes.
-  unsigned NewOpc = convertAddSubFlagsOpcode(MI->getOpcode());
+  unsigned NewOpc = convertAddSubFlagsOpcode(MI.getOpcode());
   if (NewOpc) {
     const ARMBaseInstrInfo *TII = Subtarget->getInstrInfo();
     MCID = &TII->get(NewOpc);
 
-    assert(MCID->getNumOperands() == MI->getDesc().getNumOperands() + 1 &&
+    assert(MCID->getNumOperands() == MI.getDesc().getNumOperands() + 1 &&
            "converted opcode should be the same except for cc_out");
 
-    MI->setDesc(*MCID);
+    MI.setDesc(*MCID);
 
     // Add the optional cc_out operand
-    MI->addOperand(MachineOperand::CreateReg(0, /*isDef=*/true));
+    MI.addOperand(MachineOperand::CreateReg(0, /*isDef=*/true));
   }
   unsigned ccOutIdx = MCID->getNumOperands() - 1;
 
   // Any ARM instruction that sets the 's' bit should specify an optional
   // "cc_out" operand in the last operand position.
-  if (!MI->hasOptionalDef() || !MCID->OpInfo[ccOutIdx].isOptionalDef()) {
+  if (!MI.hasOptionalDef() || !MCID->OpInfo[ccOutIdx].isOptionalDef()) {
     assert(!NewOpc && "Optional cc_out operand required");
     return;
   }
@@ -8543,14 +8546,14 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
   // since we already have an optional CPSR def.
   bool definesCPSR = false;
   bool deadCPSR = false;
-  for (unsigned i = MCID->getNumOperands(), e = MI->getNumOperands();
-       i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = MCID->getNumOperands(), e = MI.getNumOperands(); i != e;
+       ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (MO.isReg() && MO.isDef() && MO.getReg() == ARM::CPSR) {
       definesCPSR = true;
       if (MO.isDead())
         deadCPSR = true;
-      MI->RemoveOperand(i);
+      MI.RemoveOperand(i);
       break;
     }
   }
@@ -8560,14 +8563,14 @@ void ARMTargetLowering::AdjustInstrPostInstrSelection(MachineInstr *MI,
   }
   assert(deadCPSR == !Node->hasAnyUseOfValue(1) && "inconsistent dead flag");
   if (deadCPSR) {
-    assert(!MI->getOperand(ccOutIdx).getReg() &&
+    assert(!MI.getOperand(ccOutIdx).getReg() &&
            "expect uninitialized optional cc_out operand");
     return;
   }
 
   // If this instruction was defined with an optional CPSR def and its dag node
   // had a live implicit CPSR def, then activate the optional CPSR def.
-  MachineOperand &MO = MI->getOperand(ccOutIdx);
+  MachineOperand &MO = MI.getOperand(ccOutIdx);
   MO.setReg(ARM::CPSR);
   MO.setIsDef(true);
 }
@@ -9876,7 +9879,7 @@ static SDValue PerformVECTOR_SHUFFLECombine(SDNode *N, SelectionDAG &DAG) {
     NewMask.push_back(NewElt);
   }
   return DAG.getVectorShuffle(VT, SDLoc(N), NewConcat,
-                              DAG.getUNDEF(VT), NewMask.data());
+                              DAG.getUNDEF(VT), NewMask);
 }
 
 /// CombineBaseUpdate - Target-specific DAG combine function for VLDDUP,
@@ -10272,7 +10275,7 @@ static SDValue PerformSTORECombine(SDNode *N,
 
     SDValue Shuff = DAG.getVectorShuffle(WideVecVT, DL, WideVec,
                                 DAG.getUNDEF(WideVec.getValueType()),
-                                ShuffleVec.data());
+                                ShuffleVec);
     // At this point all of the data is stored at the bottom of the
     // register. We now need to save it to mem.
 

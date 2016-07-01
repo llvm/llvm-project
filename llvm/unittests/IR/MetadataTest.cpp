@@ -85,7 +85,7 @@ protected:
   DISubprogram *getSubprogram() {
     return DISubprogram::getDistinct(Context, nullptr, "", "", nullptr, 0,
                                      nullptr, false, false, 0, nullptr,
-                                     0, 0, 0, false, nullptr);
+                                     0, 0, 0, 0, false, nullptr);
   }
   DIFile *getFile() {
     return DIFile::getDistinct(Context, "file.c", "/path/to/dir");
@@ -1422,6 +1422,7 @@ TEST_F(DISubprogramTest, get) {
   DIType *ContainingType = getCompositeType();
   unsigned Virtuality = 2;
   unsigned VirtualIndex = 5;
+  int ThisAdjustment = -3;
   unsigned Flags = 6;
   unsigned NotFlags = (~Flags) & ((1 << 27) - 1);
   bool IsOptimized = false;
@@ -1430,10 +1431,11 @@ TEST_F(DISubprogramTest, get) {
   MDTuple *Variables = getTuple();
   DICompileUnit *Unit = getUnit();
 
-  auto *N = DISubprogram::get(
-      Context, Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit,
-      IsDefinition, ScopeLine, ContainingType, Virtuality, VirtualIndex, Flags,
-      IsOptimized, Unit, TemplateParams, Declaration, Variables);
+  auto *N = DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
+                              Type, IsLocalToUnit, IsDefinition, ScopeLine,
+                              ContainingType, Virtuality, VirtualIndex,
+                              ThisAdjustment, Flags, IsOptimized, Unit,
+                              TemplateParams, Declaration, Variables);
 
   EXPECT_EQ(dwarf::DW_TAG_subprogram, N->getTag());
   EXPECT_EQ(Scope, N->getScope());
@@ -1448,6 +1450,7 @@ TEST_F(DISubprogramTest, get) {
   EXPECT_EQ(ContainingType, N->getContainingType());
   EXPECT_EQ(Virtuality, N->getVirtuality());
   EXPECT_EQ(VirtualIndex, N->getVirtualIndex());
+  EXPECT_EQ(ThisAdjustment, N->getThisAdjustment());
   EXPECT_EQ(Flags, N->getFlags());
   EXPECT_EQ(IsOptimized, N->isOptimized());
   EXPECT_EQ(Unit, N->getUnit());
@@ -1457,99 +1460,100 @@ TEST_F(DISubprogramTest, get) {
   EXPECT_EQ(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
 
-  EXPECT_NE(N, DISubprogram::get(Context, getCompositeType(), Name, LinkageName,
-                                 File, Line, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized, Unit,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, "other", LinkageName, File,
-                                 Line, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized, Unit,
-                                 TemplateParams, Declaration, Variables));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, getCompositeType(), Name, LinkageName, File, Line,
+                   Type, IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, "other", LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, "other", File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, getFile(),
-                                 Line, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized, Unit,
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
                                  TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File,
-                                 Line + 1, Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized, Unit,
-                                 TemplateParams, Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 getSubroutineType(), IsLocalToUnit,
-                                 IsDefinition, ScopeLine, ContainingType,
-                                 Virtuality, VirtualIndex, Flags, IsOptimized,
-                                 Unit, TemplateParams, Declaration, Variables));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, getFile(), Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line + 1, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables));
+  EXPECT_NE(N,
+            DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
+                              getSubroutineType(), IsLocalToUnit, IsDefinition,
+                              ScopeLine, ContainingType, Virtuality,
+                              VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                              Unit, TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, !IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, !IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
-  EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
-                                 Type, IsLocalToUnit, IsDefinition,
-                                 ScopeLine + 1, ContainingType, Virtuality,
-                                 VirtualIndex, Flags, IsOptimized, Unit,
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
                                  TemplateParams, Declaration, Variables));
+  EXPECT_NE(N, DISubprogram::get(
+                   Context, Scope, Name, LinkageName, File, Line, Type,
+                   IsLocalToUnit, IsDefinition, ScopeLine + 1, ContainingType,
+                   Virtuality, VirtualIndex, ThisAdjustment, Flags, IsOptimized,
+                   Unit, TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  getCompositeType(), Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality + 1, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex + 1,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 NotFlags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, NotFlags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, !IsOptimized, Unit, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, !IsOptimized, Unit,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, nullptr, TemplateParams,
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, nullptr,
+                                 TemplateParams, Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, getTuple(),
-                                 Declaration, Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 getTuple(), Declaration, Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 getSubprogram(), Variables));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, getSubprogram(), Variables));
   EXPECT_NE(N, DISubprogram::get(Context, Scope, Name, LinkageName, File, Line,
                                  Type, IsLocalToUnit, IsDefinition, ScopeLine,
                                  ContainingType, Virtuality, VirtualIndex,
-                                 Flags, IsOptimized, Unit, TemplateParams,
-                                 Declaration, getTuple()));
+                                 ThisAdjustment, Flags, IsOptimized, Unit,
+                                 TemplateParams, Declaration, getTuple()));
 
   TempDISubprogram Temp = N->clone();
   EXPECT_EQ(N, MDNode::replaceWithUniqued(std::move(Temp)));

@@ -274,7 +274,7 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
         if (MO.isDef()) {
           MachineInstr *NewMI = (Reg == WBReg) ? UpdateMI : MemMI;
           if (MO.isDead())
-            LV->addVirtualRegisterDead(Reg, NewMI);
+            LV->addVirtualRegisterDead(Reg, *NewMI);
         }
         if (MO.isUse() && MO.isKill()) {
           for (unsigned j = 0; j < 2; ++j) {
@@ -282,8 +282,8 @@ MachineInstr *ARMBaseInstrInfo::convertToThreeAddress(
             MachineInstr *NewMI = NewMIs[j];
             if (!NewMI->readsRegister(Reg))
               continue;
-            LV->addVirtualRegisterKilled(Reg, NewMI);
-            if (VI.removeKill(&MI))
+            LV->addVirtualRegisterKilled(Reg, *NewMI);
+            if (VI.removeKill(MI))
               VI.Kills.push_back(NewMI);
             break;
           }

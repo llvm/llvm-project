@@ -93,7 +93,7 @@ public:
   bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
   MachineBasicBlock *
-  EmitInstrWithCustomInserter(MachineInstr *MI,
+  EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
   ConstraintType getConstraintType(StringRef Constraint) const override;

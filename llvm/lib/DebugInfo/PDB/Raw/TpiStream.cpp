@@ -118,7 +118,7 @@ private:
   template <typename T> Error verify(T &Rec) {
     uint32_t Hash = getTpiHash(Rec, *RawRecord);
     if (Hash % NumHashBuckets != HashValues[Index])
-      return make_error<RawError>(raw_error_code::invalid_tpi_hash);
+      return errorInvalidHash();
     return Error::success();
   }
 
@@ -127,8 +127,14 @@ private:
     support::endian::write32le(Buf, Rec.getUDT().getIndex());
     uint32_t Hash = hashStringV1(StringRef(Buf, 4));
     if (Hash % NumHashBuckets != HashValues[Index])
-      return make_error<RawError>(raw_error_code::invalid_tpi_hash);
+      return errorInvalidHash();
     return Error::success();
+  }
+
+  Error errorInvalidHash() {
+    return make_error<RawError>(
+        raw_error_code::invalid_tpi_hash,
+        "Type index is 0x" + utohexstr(TypeIndex::FirstNonSimpleIndex + Index));
   }
 
   FixedStreamArray<support::ulittle32_t> HashValues;

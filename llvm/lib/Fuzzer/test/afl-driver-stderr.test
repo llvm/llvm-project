@@ -1,4 +1,4 @@
-; Test that not specifying a file isn't broken.
+; Test that not specifying a stderr file isn't broken.
 RUN: unset AFL_DRIVER_STDERR_DUPLICATE_FILENAME
 RUN: AFLDriverTest
 

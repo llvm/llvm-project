@@ -40,6 +40,8 @@ public:
 
   uint32_t getLength() const override;
 
+  Error commit() const override;
+
   ArrayRef<uint8_t> data() const { return Data; }
   StringRef str() const;
 

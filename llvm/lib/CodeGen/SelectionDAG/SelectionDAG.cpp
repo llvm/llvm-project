@@ -1484,7 +1484,9 @@ static void commuteShuffle(SDValue &N1, SDValue &N2, MutableArrayRef<int> M) {
 }
 
 SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
-                                       SDValue N2, const int *Mask) {
+                                       SDValue N2, ArrayRef<int> Mask) {
+  assert(VT.getVectorNumElements() == Mask.size() &&
+           "Must have the same number of vector elements as mask elements!");
   assert(VT == N1.getValueType() && VT == N2.getValueType() &&
          "Invalid VECTOR_SHUFFLE");
 
@@ -1494,18 +1496,18 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
 
   // Validate that all indices in Mask are within the range of the elements
   // input to the shuffle.
-  unsigned NElts = VT.getVectorNumElements();
-  SmallVector<int, 8> MaskVec;
-  for (unsigned i = 0; i != NElts; ++i) {
-    assert(Mask[i] < (int)(NElts * 2) && "Index out of range");
-    MaskVec.push_back(Mask[i]);
-  }
+  int NElts = Mask.size();
+  assert(all_of(Mask, [&](int M) { return M < (NElts * 2); }) &&
+         "Index out of range");
+
+  // Copy the mask so we can do any needed cleanup.
+  SmallVector<int, 8> MaskVec(Mask.begin(), Mask.end());
 
   // Canonicalize shuffle v, v -> v, undef
   if (N1 == N2) {
     N2 = getUNDEF(VT);
-    for (unsigned i = 0; i != NElts; ++i)
-      if (MaskVec[i] >= (int)NElts) MaskVec[i] -= NElts;
+    for (int i = 0; i != NElts; ++i)
+      if (MaskVec[i] >= NElts) MaskVec[i] -= NElts;
   }
 
   // Canonicalize shuffle undef, v -> v, undef.  Commute the shuffle mask.
@@ -1520,8 +1522,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
     if (!Splat)
       return;
 
-    for (int i = 0; i < (int)NElts; ++i) {
-      if (MaskVec[i] < Offset || MaskVec[i] >= (Offset + (int)NElts))
+    for (int i = 0; i < NElts; ++i) {
+      if (MaskVec[i] < Offset || MaskVec[i] >= (Offset + NElts))
         continue;
 
       // If this input comes from undef, mark it as such.
@@ -1544,8 +1546,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   // Canonicalize all index into rhs, -> shuffle rhs, undef
   bool AllLHS = true, AllRHS = true;
   bool N2Undef = N2.isUndef();
-  for (unsigned i = 0; i != NElts; ++i) {
-    if (MaskVec[i] >= (int)NElts) {
+  for (int i = 0; i != NElts; ++i) {
+    if (MaskVec[i] >= NElts) {
       if (N2Undef)
         MaskVec[i] = -1;
       else
@@ -1570,8 +1572,8 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
 
   // If Identity shuffle return that node.
   bool Identity = true, AllSame = true;
-  for (unsigned i = 0; i != NElts; ++i) {
-    if (MaskVec[i] >= 0 && MaskVec[i] != (int)i) Identity = false;
+  for (int i = 0; i != NElts; ++i) {
+    if (MaskVec[i] >= 0 && MaskVec[i] != i) Identity = false;
     if (MaskVec[i] != MaskVec[0]) AllSame = false;
   }
   if (Identity && NElts)
@@ -1627,7 +1629,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   FoldingSetNodeID ID;
   SDValue Ops[2] = { N1, N2 };
   AddNodeIDNode(ID, ISD::VECTOR_SHUFFLE, getVTList(VT), Ops);
-  for (unsigned i = 0; i != NElts; ++i)
+  for (int i = 0; i != NElts; ++i)
     ID.AddInteger(MaskVec[i]);
 
   void* IP = nullptr;
@@ -1638,7 +1640,7 @@ SDValue SelectionDAG::getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1,
   // SDNode doesn't have access to it.  This memory will be "leaked" when
   // the node is deallocated, but recovered when the NodeAllocator is released.
   int *MaskAlloc = OperandAllocator.Allocate<int>(NElts);
-  memcpy(MaskAlloc, &MaskVec[0], NElts * sizeof(int));
+  std::copy(MaskVec.begin(), MaskVec.end(), MaskAlloc);
 
   auto *N = newSDNode<ShuffleVectorSDNode>(VT, dl.getIROrder(),
                                            dl.getDebugLoc(), MaskAlloc);
@@ -1656,7 +1658,7 @@ SDValue SelectionDAG::getCommutedVectorShuffle(const ShuffleVectorSDNode &SV) {
 
   SDValue Op0 = SV.getOperand(0);
   SDValue Op1 = SV.getOperand(1);
-  return getVectorShuffle(VT, SDLoc(&SV), Op1, Op0, &MaskVec[0]);
+  return getVectorShuffle(VT, SDLoc(&SV), Op1, Op0, MaskVec);
 }
 
 SDValue SelectionDAG::getConvertRndSat(EVT VT, const SDLoc &dl, SDValue Val,

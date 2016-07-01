@@ -165,9 +165,9 @@ Mips16TargetLowering::allowsMisalignedMemoryAccesses(EVT VT,
 }
 
 MachineBasicBlock *
-Mips16TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
+Mips16TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                   MachineBasicBlock *BB) const {
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   default:
     return MipsTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case Mips::SelBeqZ:
@@ -517,12 +517,13 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
                                   Chain);
 }
 
-MachineBasicBlock *Mips16TargetLowering::
-emitSel16(unsigned Opc, MachineInstr *MI, MachineBasicBlock *BB) const {
+MachineBasicBlock *
+Mips16TargetLowering::emitSel16(unsigned Opc, MachineInstr &MI,
+                                MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   // To "insert" a SELECT_CC instruction, we actually have to insert the
   // diamond control-flow pattern.  The incoming instruction knows the
   // destination vreg to set, the condition code register to branch on, the
@@ -552,8 +553,9 @@ emitSel16(unsigned Opc, MachineInstr *MI, MachineBasicBlock *BB) const {
   BB->addSuccessor(copy0MBB);
   BB->addSuccessor(sinkMBB);
 
-  BuildMI(BB, DL, TII->get(Opc)).addReg(MI->getOperand(3).getReg())
-    .addMBB(sinkMBB);
+  BuildMI(BB, DL, TII->get(Opc))
+      .addReg(MI.getOperand(3).getReg())
+      .addMBB(sinkMBB);
 
   //  copy0MBB:
   //   %FalseValue = ...
@@ -568,22 +570,23 @@ emitSel16(unsigned Opc, MachineInstr *MI, MachineBasicBlock *BB) const {
   //  ...
   BB = sinkMBB;
 
-  BuildMI(*BB, BB->begin(), DL,
-          TII->get(Mips::PHI), MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(1).getReg()).addMBB(thisMBB)
-    .addReg(MI->getOperand(2).getReg()).addMBB(copy0MBB);
+  BuildMI(*BB, BB->begin(), DL, TII->get(Mips::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(thisMBB)
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(copy0MBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
 MachineBasicBlock *
-Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr *MI,
+Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr &MI,
                                  MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   // To "insert" a SELECT_CC instruction, we actually have to insert the
   // diamond control-flow pattern.  The incoming instruction knows the
   // destination vreg to set, the condition code register to branch on, the
@@ -613,8 +616,9 @@ Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr *MI,
   BB->addSuccessor(copy0MBB);
   BB->addSuccessor(sinkMBB);
 
-  BuildMI(BB, DL, TII->get(Opc2)).addReg(MI->getOperand(3).getReg())
-    .addReg(MI->getOperand(4).getReg());
+  BuildMI(BB, DL, TII->get(Opc2))
+      .addReg(MI.getOperand(3).getReg())
+      .addReg(MI.getOperand(4).getReg());
   BuildMI(BB, DL, TII->get(Opc1)).addMBB(sinkMBB);
 
   //  copy0MBB:
@@ -630,24 +634,25 @@ Mips16TargetLowering::emitSelT16(unsigned Opc1, unsigned Opc2, MachineInstr *MI,
   //  ...
   BB = sinkMBB;
 
-  BuildMI(*BB, BB->begin(), DL,
-          TII->get(Mips::PHI), MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(1).getReg()).addMBB(thisMBB)
-    .addReg(MI->getOperand(2).getReg()).addMBB(copy0MBB);
+  BuildMI(*BB, BB->begin(), DL, TII->get(Mips::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(thisMBB)
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(copy0MBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 
 }
 
 MachineBasicBlock *
 Mips16TargetLowering::emitSeliT16(unsigned Opc1, unsigned Opc2,
-                                  MachineInstr *MI,
+                                  MachineInstr &MI,
                                   MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   // To "insert" a SELECT_CC instruction, we actually have to insert the
   // diamond control-flow pattern.  The incoming instruction knows the
   // destination vreg to set, the condition code register to branch on, the
@@ -677,8 +682,9 @@ Mips16TargetLowering::emitSeliT16(unsigned Opc1, unsigned Opc2,
   BB->addSuccessor(copy0MBB);
   BB->addSuccessor(sinkMBB);
 
-  BuildMI(BB, DL, TII->get(Opc2)).addReg(MI->getOperand(3).getReg())
-    .addImm(MI->getOperand(4).getImm());
+  BuildMI(BB, DL, TII->get(Opc2))
+      .addReg(MI.getOperand(3).getReg())
+      .addImm(MI.getOperand(4).getImm());
   BuildMI(BB, DL, TII->get(Opc1)).addMBB(sinkMBB);
 
   //  copy0MBB:
@@ -694,42 +700,44 @@ Mips16TargetLowering::emitSeliT16(unsigned Opc1, unsigned Opc2,
   //  ...
   BB = sinkMBB;
 
-  BuildMI(*BB, BB->begin(), DL,
-          TII->get(Mips::PHI), MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(1).getReg()).addMBB(thisMBB)
-    .addReg(MI->getOperand(2).getReg()).addMBB(copy0MBB);
+  BuildMI(*BB, BB->begin(), DL, TII->get(Mips::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(thisMBB)
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(copy0MBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 
 }
 
 MachineBasicBlock *
 Mips16TargetLowering::emitFEXT_T8I816_ins(unsigned BtOpc, unsigned CmpOpc,
-                                          MachineInstr *MI,
+                                          MachineInstr &MI,
                                           MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned regX = MI->getOperand(0).getReg();
-  unsigned regY = MI->getOperand(1).getReg();
-  MachineBasicBlock *target = MI->getOperand(2).getMBB();
-  BuildMI(*BB, MI, MI->getDebugLoc(), TII->get(CmpOpc)).addReg(regX)
-    .addReg(regY);
-  BuildMI(*BB, MI, MI->getDebugLoc(), TII->get(BtOpc)).addMBB(target);
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  unsigned regX = MI.getOperand(0).getReg();
+  unsigned regY = MI.getOperand(1).getReg();
+  MachineBasicBlock *target = MI.getOperand(2).getMBB();
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(CmpOpc))
+      .addReg(regX)
+      .addReg(regY);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(BtOpc)).addMBB(target);
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
 MachineBasicBlock *Mips16TargetLowering::emitFEXT_T8I8I16_ins(
     unsigned BtOpc, unsigned CmpiOpc, unsigned CmpiXOpc, bool ImmSigned,
-    MachineInstr *MI, MachineBasicBlock *BB) const {
+    MachineInstr &MI, MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned regX = MI->getOperand(0).getReg();
-  int64_t imm = MI->getOperand(1).getImm();
-  MachineBasicBlock *target = MI->getOperand(2).getMBB();
+  unsigned regX = MI.getOperand(0).getReg();
+  int64_t imm = MI.getOperand(1).getImm();
+  MachineBasicBlock *target = MI.getOperand(2).getMBB();
   unsigned CmpOpc;
   if (isUInt<8>(imm))
     CmpOpc = CmpiOpc;
@@ -738,10 +746,9 @@ MachineBasicBlock *Mips16TargetLowering::emitFEXT_T8I8I16_ins(
     CmpOpc = CmpiXOpc;
   else
     llvm_unreachable("immediate field not usable");
-  BuildMI(*BB, MI, MI->getDebugLoc(), TII->get(CmpOpc)).addReg(regX)
-    .addImm(imm);
-  BuildMI(*BB, MI, MI->getDebugLoc(), TII->get(BtOpc)).addMBB(target);
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(CmpOpc)).addReg(regX).addImm(imm);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(BtOpc)).addMBB(target);
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -756,38 +763,38 @@ static unsigned Mips16WhichOp8uOr16simm
 }
 
 MachineBasicBlock *
-Mips16TargetLowering::emitFEXT_CCRX16_ins(unsigned SltOpc, MachineInstr *MI,
+Mips16TargetLowering::emitFEXT_CCRX16_ins(unsigned SltOpc, MachineInstr &MI,
                                           MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned CC = MI->getOperand(0).getReg();
-  unsigned regX = MI->getOperand(1).getReg();
-  unsigned regY = MI->getOperand(2).getReg();
-  BuildMI(*BB, MI, MI->getDebugLoc(), TII->get(SltOpc)).addReg(regX).addReg(
-      regY);
-  BuildMI(*BB, MI, MI->getDebugLoc(),
-          TII->get(Mips::MoveR3216), CC).addReg(Mips::T8);
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  unsigned CC = MI.getOperand(0).getReg();
+  unsigned regX = MI.getOperand(1).getReg();
+  unsigned regY = MI.getOperand(2).getReg();
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SltOpc))
+      .addReg(regX)
+      .addReg(regY);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Mips::MoveR3216), CC)
+      .addReg(Mips::T8);
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
 MachineBasicBlock *
 Mips16TargetLowering::emitFEXT_CCRXI16_ins(unsigned SltiOpc, unsigned SltiXOpc,
-                                           MachineInstr *MI,
+                                           MachineInstr &MI,
                                            MachineBasicBlock *BB) const {
   if (DontExpandCondPseudos16)
     return BB;
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  unsigned CC = MI->getOperand(0).getReg();
-  unsigned regX = MI->getOperand(1).getReg();
-  int64_t Imm = MI->getOperand(2).getImm();
+  unsigned CC = MI.getOperand(0).getReg();
+  unsigned regX = MI.getOperand(1).getReg();
+  int64_t Imm = MI.getOperand(2).getImm();
   unsigned SltOpc = Mips16WhichOp8uOr16simm(SltiOpc, SltiXOpc, Imm);
-  BuildMI(*BB, MI, MI->getDebugLoc(),
-          TII->get(SltOpc)).addReg(regX).addImm(Imm);
-  BuildMI(*BB, MI, MI->getDebugLoc(),
-          TII->get(Mips::MoveR3216), CC).addReg(Mips::T8);
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(SltOpc)).addReg(regX).addImm(Imm);
+  BuildMI(*BB, MI, MI.getDebugLoc(), TII->get(Mips::MoveR3216), CC)
+      .addReg(Mips::T8);
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 
 }

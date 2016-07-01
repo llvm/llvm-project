@@ -2713,7 +2713,7 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
       addRegReg(MIB, leaInReg, true, leaInReg2, true);
     }
     if (LV && isKill2 && InsMI2)
-      LV->replaceKillInstruction(Src2, &MI, InsMI2);
+      LV->replaceKillInstruction(Src2, MI, *InsMI2);
     break;
   }
   }
@@ -2729,9 +2729,9 @@ MachineInstr *X86InstrInfo::convertToThreeAddressWithLEA(
     LV->getVarInfo(leaInReg).Kills.push_back(NewMI);
     LV->getVarInfo(leaOutReg).Kills.push_back(ExtMI);
     if (isKill)
-      LV->replaceKillInstruction(Src, &MI, InsMI);
+      LV->replaceKillInstruction(Src, MI, *InsMI);
     if (isDead)
-      LV->replaceKillInstruction(Dest, &MI, ExtMI);
+      LV->replaceKillInstruction(Dest, MI, *ExtMI);
   }
 
   return ExtMI;
@@ -2944,7 +2944,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     NewMI->getOperand(3).setIsUndef(isUndef2);
 
     if (LV && Src2.isKill())
-      LV->replaceKillInstruction(SrcReg2, &MI, NewMI);
+      LV->replaceKillInstruction(SrcReg2, MI, *NewMI);
     break;
   }
   case X86::ADD16rr:
@@ -2966,7 +2966,7 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
     NewMI->getOperand(3).setIsUndef(isUndef2);
 
     if (LV && isKill2)
-      LV->replaceKillInstruction(Src2, &MI, NewMI);
+      LV->replaceKillInstruction(Src2, MI, *NewMI);
     break;
   }
   case X86::ADD64ri32:
@@ -3022,9 +3022,9 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 
   if (LV) {  // Update live variables
     if (Src.isKill())
-      LV->replaceKillInstruction(Src.getReg(), &MI, NewMI);
+      LV->replaceKillInstruction(Src.getReg(), MI, *NewMI);
     if (Dest.isDead())
-      LV->replaceKillInstruction(Dest.getReg(), &MI, NewMI);
+      LV->replaceKillInstruction(Dest.getReg(), MI, *NewMI);
   }
 
   MFI->insert(MI.getIterator(), NewMI); // Insert the new inst

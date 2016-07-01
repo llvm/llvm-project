@@ -465,13 +465,18 @@ elseif( LLVM_COMPILER_IS_GCC_COMPATIBLE )
   endif()
   if (LLVM_ENABLE_MODULES)
     set(OLD_CMAKE_REQUIRED_FLAGS ${CMAKE_REQUIRED_FLAGS})
-    set(module_flags "-fmodules -Xclang -fmodules-cache-path=module.cache")
+    set(module_flags "-fmodules -fmodules-cache-path=module.cache")
     if (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
       # On Darwin -fmodules does not imply -fcxx-modules.
       set(module_flags "${module_flags} -fcxx-modules")
     endif()
     if (LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
-      set(module_flags "${module_flags} -fmodules-local-submodule-visibility")
+      set(module_flags "${module_flags} -Xclang -fmodules-local-submodule-visibility")
+    endif()
+    if (LLVM_ENABLE_MODULE_DEBUGGING AND
+        ((uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG") OR
+         (uppercase_CMAKE_BUILD_TYPE STREQUAL "RELWITHDEBINFO")))
+      set(module_flags "${module_flags} -gmodules")
     endif()
     set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} ${module_flags}")
 

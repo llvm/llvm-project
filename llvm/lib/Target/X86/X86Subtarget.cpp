@@ -14,7 +14,6 @@
 #include "X86Subtarget.h"
 #include "X86InstrInfo.h"
 #include "X86TargetMachine.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"

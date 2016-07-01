@@ -345,7 +345,8 @@ private:
     if (E1.isA<ErrorList>()) {
       auto &E1List = static_cast<ErrorList &>(*E1.getPtr());
       if (E2.isA<ErrorList>()) {
-        auto &E2List = static_cast<ErrorList &>(*E2.getPtr());
+        auto E2Payload = E2.takePayload();
+        auto &E2List = static_cast<ErrorList &>(*E2Payload);
         for (auto &Payload : E2List.Payloads)
           E1List.Payloads.push_back(std::move(Payload));
       } else

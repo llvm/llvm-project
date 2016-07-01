@@ -276,11 +276,11 @@ public:
 
   SDValue ReconstructShuffle(SDValue Op, SelectionDAG &DAG) const;
 
-  MachineBasicBlock *EmitF128CSEL(MachineInstr *MI,
+  MachineBasicBlock *EmitF128CSEL(MachineInstr &MI,
                                   MachineBasicBlock *BB) const;
 
   MachineBasicBlock *
-  EmitInstrWithCustomInserter(MachineInstr *MI,
+  EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *MBB) const override;
 
   bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,

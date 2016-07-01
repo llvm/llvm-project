@@ -1422,7 +1422,7 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
       SDValue Op1 = InputUsed[1] == -1U ?
         DAG.getUNDEF(NewVT) : Inputs[InputUsed[1]];
       // At least one input vector was used.  Create a new shuffle vector.
-      Output =  DAG.getVectorShuffle(NewVT, dl, Op0, Op1, &Ops[0]);
+      Output =  DAG.getVectorShuffle(NewVT, dl, Op0, Op1, Ops);
     }
 
     Ops.clear();
@@ -2685,7 +2685,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_CONCAT_VECTORS(SDNode *N) {
         return DAG.getVectorShuffle(WidenVT, dl,
                                     GetWidenedVector(N->getOperand(0)),
                                     GetWidenedVector(N->getOperand(1)),
-                                    &MaskOps[0]);
+                                    MaskOps);
       }
     }
   }
@@ -3019,7 +3019,7 @@ SDValue DAGTypeLegalizer::WidenVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N) {
   }
   for (unsigned i = NumElts; i != WidenNumElts; ++i)
     NewMask.push_back(-1);
-  return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, &NewMask[0]);
+  return DAG.getVectorShuffle(WidenVT, dl, InOp1, InOp2, NewMask);
 }
 
 SDValue DAGTypeLegalizer::WidenVecRes_VSETCC(SDNode *N) {

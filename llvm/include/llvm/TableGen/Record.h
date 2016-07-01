@@ -1167,9 +1167,9 @@ class Record {
   // Location where record was instantiated, followed by the location of
   // multiclass prototypes used.
   SmallVector<SMLoc, 4> Locs;
-  std::vector<Init *> TemplateArgs;
-  std::vector<RecordVal> Values;
-  std::vector<std::pair<Record *, SMRange>> SuperClasses;
+  SmallVector<Init *, 0> TemplateArgs;
+  SmallVector<RecordVal, 0> Values;
+  SmallVector<std::pair<Record *, SMRange>, 0> SuperClasses;
 
   // Tracks Record instances. Not owned by Record.
   RecordKeeper &TrackedRecords;

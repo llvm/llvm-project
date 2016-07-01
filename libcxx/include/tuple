@@ -379,11 +379,6 @@ template <class ..._Tp>
 _LIBCPP_INLINE_VISIBILITY
 void __swallow(_Tp&&...) _NOEXCEPT {}
 
-template <bool ..._Pred>
-struct __all
-    : is_same<__all<_Pred...>, __all<(_Pred, true)...>>
-{ };
-
 template <class ..._Tp>
 struct __lazy_all : __all<_Tp::value...> {};
 

@@ -245,8 +245,7 @@ public:
   /// returns null.
   const char *getBZeroEntry() const;
 
-  void overrideSchedPolicy(MachineSchedPolicy &Policy, MachineInstr *begin,
-                           MachineInstr *end,
+  void overrideSchedPolicy(MachineSchedPolicy &Policy,
                            unsigned NumRegionInstrs) const override;
 
   bool enableEarlyIfConversion() const override;

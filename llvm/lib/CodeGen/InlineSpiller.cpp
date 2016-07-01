@@ -120,9 +120,9 @@ public:
         MBFI(pass.getAnalysis<MachineBlockFrequencyInfo>()),
         IPA(LIS, mf.getNumBlockIDs()) {}
 
-  void addToMergeableSpills(MachineInstr *Spill, int StackSlot,
+  void addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                             unsigned Original);
-  bool rmFromMergeableSpills(MachineInstr *Spill, int StackSlot);
+  bool rmFromMergeableSpills(MachineInstr &Spill, int StackSlot);
   void hoistAllSpills();
   void LRE_DidCloneVirtReg(unsigned, unsigned) override;
 };
@@ -394,7 +394,7 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   LIS.InsertMachineInstrInMaps(*MII);
   DEBUG(dbgs() << "\thoisted: " << SrcVNI->def << '\t' << *MII);
 
-  HSpiller.addToMergeableSpills(&(*MII), StackSlot, Original);
+  HSpiller.addToMergeableSpills(*MII, StackSlot, Original);
   ++NumSpills;
   return true;
 }
@@ -453,7 +453,7 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
         MI.setDesc(TII.get(TargetOpcode::KILL));
         DeadDefs.push_back(&MI);
         ++NumSpillsRemoved;
-        if (HSpiller.rmFromMergeableSpills(&MI, StackSlot))
+        if (HSpiller.rmFromMergeableSpills(MI, StackSlot))
           --NumSpills;
       }
     }
@@ -666,7 +666,7 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, unsigned Reg) {
     return false;
 
   if (!IsLoad)
-    HSpiller.rmFromMergeableSpills(MI, StackSlot);
+    HSpiller.rmFromMergeableSpills(*MI, StackSlot);
 
   DEBUG(dbgs() << "Coalescing stack access: " << *MI);
   LIS.RemoveMachineInstrFromMaps(*MI);
@@ -793,7 +793,8 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
   }
 
   int FI;
-  if (TII.isStoreToStackSlot(*MI, FI) && HSpiller.rmFromMergeableSpills(MI, FI))
+  if (TII.isStoreToStackSlot(*MI, FI) &&
+      HSpiller.rmFromMergeableSpills(*MI, FI))
     --NumSpills;
   LIS.ReplaceMachineInstrInMaps(*MI, *FoldMI);
   MI->eraseFromParent();
@@ -822,7 +823,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr*, unsigned> > Ops,
     ++NumFolded;
   else if (Ops.front().second == 0) {
     ++NumSpills;
-    HSpiller.addToMergeableSpills(FoldMI, StackSlot, Original);
+    HSpiller.addToMergeableSpills(*FoldMI, StackSlot, Original);
   } else
     ++NumReloads;
   return true;
@@ -858,7 +859,7 @@ void InlineSpiller::insertSpill(unsigned NewVReg, bool isKill,
   DEBUG(dumpMachineInstrRangeWithSlotIndex(std::next(MI), MIS.end(), LIS,
                                            "spill"));
   ++NumSpills;
-  HSpiller.addToMergeableSpills(std::next(MI), StackSlot, Original);
+  HSpiller.addToMergeableSpills(*std::next(MI), StackSlot, Original);
 }
 
 /// spillAroundUses - insert spill code around each use of Reg.
@@ -1050,27 +1051,27 @@ void InlineSpiller::postOptimization() { HSpiller.hoistAllSpills(); }
 
 /// When a spill is inserted, add the spill to MergeableSpills map.
 ///
-void HoistSpillHelper::addToMergeableSpills(MachineInstr *Spill, int StackSlot,
+void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
                                             unsigned Original) {
   StackSlotToReg[StackSlot] = Original;
-  SlotIndex Idx = LIS.getInstructionIndex(*Spill);
+  SlotIndex Idx = LIS.getInstructionIndex(Spill);
   VNInfo *OrigVNI = LIS.getInterval(Original).getVNInfoAt(Idx.getRegSlot());
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
-  MergeableSpills[MIdx].insert(Spill);
+  MergeableSpills[MIdx].insert(&Spill);
 }
 
 /// When a spill is removed, remove the spill from MergeableSpills map.
 /// Return true if the spill is removed successfully.
 ///
-bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr *Spill,
+bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr &Spill,
                                              int StackSlot) {
   int Original = StackSlotToReg[StackSlot];
   if (!Original)
     return false;
-  SlotIndex Idx = LIS.getInstructionIndex(*Spill);
+  SlotIndex Idx = LIS.getInstructionIndex(Spill);
   VNInfo *OrigVNI = LIS.getInterval(Original).getVNInfoAt(Idx.getRegSlot());
   std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
-  return MergeableSpills[MIdx].erase(Spill);
+  return MergeableSpills[MIdx].erase(&Spill);
 }
 
 /// Check BB to see if it is a possible target BB to place a hoisted spill,

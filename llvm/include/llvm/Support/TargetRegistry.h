@@ -34,7 +34,6 @@ class MCAsmBackend;
 class MCAsmInfo;
 class MCAsmParser;
 class MCCodeEmitter;
-class MCCodeGenInfo;
 class MCContext;
 class MCDisassembler;
 class MCInstrAnalysis;
@@ -93,10 +92,9 @@ public:
 
   typedef MCAsmInfo *(*MCAsmInfoCtorFnTy)(const MCRegisterInfo &MRI,
                                           const Triple &TT);
-  typedef MCCodeGenInfo *(*MCCodeGenInfoCtorFnTy)(const Triple &TT,
-                                                  Reloc::Model RM,
-                                                  CodeModel::Model CM,
-                                                  CodeGenOpt::Level OL);
+  typedef void (*MCAdjustCodeGenOptsFnTy)(const Triple &TT, Reloc::Model RM,
+                                          CodeModel::Model &CM);
+
   typedef MCInstrInfo *(*MCInstrInfoCtorFnTy)(void);
   typedef MCInstrAnalysis *(*MCInstrAnalysisCtorFnTy)(const MCInstrInfo *Info);
   typedef MCRegisterInfo *(*MCRegInfoCtorFnTy)(const Triple &TT);
@@ -178,9 +176,7 @@ private:
   /// registered.
   MCAsmInfoCtorFnTy MCAsmInfoCtorFn;
 
-  /// MCCodeGenInfoCtorFn - Constructor function for this target's
-  /// MCCodeGenInfo, if registered.
-  MCCodeGenInfoCtorFnTy MCCodeGenInfoCtorFn;
+  MCAdjustCodeGenOptsFnTy MCAdjustCodeGenOptsFn;
 
   /// MCInstrInfoCtorFn - Constructor function for this target's MCInstrInfo,
   /// if registered.
@@ -301,14 +297,10 @@ public:
     return MCAsmInfoCtorFn(MRI, Triple(TheTriple));
   }
 
-  /// createMCCodeGenInfo - Create a MCCodeGenInfo implementation.
-  ///
-  MCCodeGenInfo *createMCCodeGenInfo(StringRef TT, Reloc::Model RM,
-                                     CodeModel::Model CM,
-                                     CodeGenOpt::Level OL) const {
-    if (!MCCodeGenInfoCtorFn)
-      return nullptr;
-    return MCCodeGenInfoCtorFn(Triple(TT), RM, CM, OL);
+  void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
+                         CodeModel::Model &CM) const {
+    if (MCAdjustCodeGenOptsFn)
+      MCAdjustCodeGenOptsFn(TT, RM, CM);
   }
 
   /// createMCInstrInfo - Create a MCInstrInfo implementation.
@@ -646,18 +638,9 @@ struct TargetRegistry {
     T.MCAsmInfoCtorFn = Fn;
   }
 
-  /// RegisterMCCodeGenInfo - Register a MCCodeGenInfo implementation for the
-  /// given target.
-  ///
-  /// Clients are responsible for ensuring that registration doesn't occur
-  /// while another thread is attempting to access the registry. Typically
-  /// this is done by initializing all targets at program startup.
-  ///
-  /// @param T - The target being registered.
-  /// @param Fn - A function to construct a MCCodeGenInfo for the target.
-  static void RegisterMCCodeGenInfo(Target &T,
-                                    Target::MCCodeGenInfoCtorFnTy Fn) {
-    T.MCCodeGenInfoCtorFn = Fn;
+  static void registerMCAdjustCodeGenOpts(Target &T,
+                                          Target::MCAdjustCodeGenOptsFnTy Fn) {
+    T.MCAdjustCodeGenOptsFn = Fn;
   }
 
   /// RegisterMCInstrInfo - Register a MCInstrInfo implementation for the
@@ -914,39 +897,9 @@ struct RegisterMCAsmInfoFn {
   }
 };
 
-/// RegisterMCCodeGenInfo - Helper template for registering a target codegen
-/// info
-/// implementation.  This invokes the static "Create" method on the class
-/// to actually do the construction.  Usage:
-///
-/// extern "C" void LLVMInitializeFooTarget() {
-///   extern Target TheFooTarget;
-///   RegisterMCCodeGenInfo<FooMCCodeGenInfo> X(TheFooTarget);
-/// }
-template <class MCCodeGenInfoImpl> struct RegisterMCCodeGenInfo {
-  RegisterMCCodeGenInfo(Target &T) {
-    TargetRegistry::RegisterMCCodeGenInfo(T, &Allocator);
-  }
-
-private:
-  static MCCodeGenInfo *Allocator(const Triple & /*TT*/, Reloc::Model /*RM*/,
-                                  CodeModel::Model /*CM*/,
-                                  CodeGenOpt::Level /*OL*/) {
-    return new MCCodeGenInfoImpl();
-  }
-};
-
-/// RegisterMCCodeGenInfoFn - Helper template for registering a target codegen
-/// info implementation.  This invokes the specified function to do the
-/// construction.  Usage:
-///
-/// extern "C" void LLVMInitializeFooTarget() {
-///   extern Target TheFooTarget;
-///   RegisterMCCodeGenInfoFn X(TheFooTarget, TheFunction);
-/// }
-struct RegisterMCCodeGenInfoFn {
-  RegisterMCCodeGenInfoFn(Target &T, Target::MCCodeGenInfoCtorFnTy Fn) {
-    TargetRegistry::RegisterMCCodeGenInfo(T, Fn);
+struct RegisterMCAdjustCodeGenOptsFn {
+  RegisterMCAdjustCodeGenOptsFn(Target &T, Target::MCAdjustCodeGenOptsFnTy Fn) {
+    TargetRegistry::registerMCAdjustCodeGenOpts(T, Fn);
   }
 };
 

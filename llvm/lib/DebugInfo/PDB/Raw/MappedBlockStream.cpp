@@ -147,6 +147,8 @@ Error MappedBlockStream::readLongestContiguousChunk(
 
 uint32_t MappedBlockStream::getLength() const { return Data->getLength(); }
 
+Error MappedBlockStream::commit() const { return Error::success(); }
+
 bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
                                             ArrayRef<uint8_t> &Buffer) const {
   // Attempt to fulfill the request with a reference directly into the stream.

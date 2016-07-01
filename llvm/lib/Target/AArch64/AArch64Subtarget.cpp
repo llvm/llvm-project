@@ -14,7 +14,6 @@
 #include "AArch64Subtarget.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64PBQPRegAlloc.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -139,8 +138,7 @@ const char *AArch64Subtarget::getBZeroEntry() const {
 }
 
 void AArch64Subtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                         MachineInstr *begin, MachineInstr *end,
-                                         unsigned NumRegionInstrs) const {
+                                           unsigned NumRegionInstrs) const {
   // LNT run (at least on Cyclone) showed reasonably significant gains for
   // bi-directional scheduling. 253.perlbmk.
   Policy.OnlyTopDown = false;
