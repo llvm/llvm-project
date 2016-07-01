@@ -95,8 +95,13 @@ void VersionScriptParser::parseVersion(StringRef Version) {
     parseVersionSymbols(Version);
 
   expect("}");
+
+  // Each version may have a parent version. For example, "Ver2" defined as
+  // "Ver2 { global: foo; local: *; } Ver1;" has "Ver1" as a parent. This
+  // version hierarchy is, probably against your instinct, purely for human; the
+  // runtime doesn't care about them at all. In LLD, we simply skip the token.
   if (!Version.empty() && peek() != ";")
-    Config->SymbolVersions.back().Parent = next();
+    next();
   expect(";");
 }
 

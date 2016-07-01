@@ -21,6 +21,7 @@
 #include "ScriptParser.h"
 #include "Strings.h"
 #include "SymbolTable.h"
+#include "Target.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
@@ -221,6 +222,7 @@ void LinkerScript<ELFT>::assignAddresses(
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  uintX_t MinVA = std::numeric_limits<uintX_t>::max();
   uintX_t ThreadBssOffset = 0;
 
   for (SectionsCommand &Cmd : Opt.Commands) {
@@ -247,11 +249,20 @@ void LinkerScript<ELFT>::assignAddresses(
       if (Sec->getFlags() & SHF_ALLOC) {
         Dot = alignTo(Dot, Sec->getAlignment());
         Sec->setVA(Dot);
+        MinVA = std::min(MinVA, Dot);
         Dot += Sec->getSize();
         continue;
       }
     }
   }
+
+  // ELF and Program headers need to be right before the first section in memory.
+  // Set their addresses accordingly.
+  MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
+                        Out<ELFT>::ProgramHeaders->getSize(),
+                    Target->PageSize);
+  Out<ELFT>::ElfHeader->setVA(MinVA);
+  Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
 }
 
 template <class ELFT>

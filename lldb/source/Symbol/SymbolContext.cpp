@@ -365,6 +365,10 @@ SymbolContext::GetDescription(Stream *s, lldb::DescriptionLevel level, Target *t
                 s->PutCString("kind = local, ");
                 break;
 
+            case eValueTypeVariableThreadLocal:
+                s->PutCString("kind = thread local, ");
+                break;
+
             default:
                 break;
         }

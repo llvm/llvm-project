@@ -795,6 +795,11 @@ public:
                     s.PutCString(" LOCAL: ");
                 break;
 
+            case eValueTypeVariableThreadLocal:
+                if (m_option_variable.show_scope)
+                    s.PutCString("THREAD: ");
+                break;
+
             default:
                 break;
         }

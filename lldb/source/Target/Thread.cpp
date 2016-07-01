@@ -2090,13 +2090,13 @@ Thread::GetThreadPointer ()
 }
 
 addr_t
-Thread::GetThreadLocalData (const ModuleSP module)
+Thread::GetThreadLocalData(const ModuleSP module, lldb::addr_t tls_file_addr)
 {
     // The default implementation is to ask the dynamic loader for it.
     // This can be overridden for specific platforms.
     DynamicLoader *loader = GetProcess()->GetDynamicLoader();
     if (loader)
-        return loader->GetThreadLocalData (module, shared_from_this());
+        return loader->GetThreadLocalData(module, shared_from_this(), tls_file_addr);
     else
         return LLDB_INVALID_ADDRESS;
 }

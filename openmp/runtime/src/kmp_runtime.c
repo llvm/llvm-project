@@ -777,8 +777,10 @@ __kmp_enter_single( int gtid, ident_t *id_ref, int push_ws )
            single block
         */
         /* TODO: Should this be acquire or release? */
-        status = KMP_COMPARE_AND_STORE_ACQ32(&team->t.t_construct, old_this,
-                                             th->th.th_local.this_construct);
+        if (team->t.t_construct == old_this) {
+            status = KMP_COMPARE_AND_STORE_ACQ32(&team->t.t_construct, old_this,
+                                                 th->th.th_local.this_construct);
+        }
 #if USE_ITT_BUILD
         if ( __itt_metadata_add_ptr && __kmp_forkjoin_frames_mode == 3 && KMP_MASTER_GTID(gtid) &&
 #if OMP_40_ENABLED
@@ -1122,22 +1124,15 @@ propagateFPControl(kmp_team_t * team)
         // So, this code achieves what we need whether or not t_fp_control_saved is true.
         // By checking whether the value needs updating we avoid unnecessary writes that would put the
         // cache-line into a written state, causing all threads in the team to have to read it again.
-        if ( team->t.t_x87_fpu_control_word != x87_fpu_control_word ) {
-            team->t.t_x87_fpu_control_word = x87_fpu_control_word;
-        }
-        if ( team->t.t_mxcsr != mxcsr ) {
-            team->t.t_mxcsr = mxcsr;
-        }
+        KMP_CHECK_UPDATE(team->t.t_x87_fpu_control_word, x87_fpu_control_word);
+        KMP_CHECK_UPDATE(team->t.t_mxcsr, mxcsr);
         // Although we don't use this value, other code in the runtime wants to know whether it should restore them.
         // So we must ensure it is correct.
-        if (!team->t.t_fp_control_saved) {
-            team->t.t_fp_control_saved = TRUE;
-        }
+        KMP_CHECK_UPDATE(team->t.t_fp_control_saved, TRUE);
     }
     else {
         // Similarly here. Don't write to this cache-line in the team structure unless we have to.
-        if (team->t.t_fp_control_saved)
-            team->t.t_fp_control_saved = FALSE;
+        KMP_CHECK_UPDATE(team->t.t_fp_control_saved, FALSE);
     }
 }
 
@@ -2030,7 +2025,7 @@ __kmp_fork_call(
     }
 #endif /* OMP_40_ENABLED */
     kmp_r_sched_t new_sched = get__sched_2(parent_team, master_tid);
-    if (team->t.t_sched.r_sched_type != new_sched.r_sched_type || new_sched.chunk != new_sched.chunk)
+    if (team->t.t_sched.r_sched_type != new_sched.r_sched_type || team->t.t_sched.chunk != new_sched.chunk)
         team->t.t_sched = new_sched; // set master's schedule as new run-time schedule
 
 #if OMP_40_ENABLED
@@ -4798,7 +4793,8 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
 
             // TODO???: team->t.t_max_active_levels = new_max_active_levels;
             kmp_r_sched_t new_sched = new_icvs->sched;
-            if (team->t.t_sched.r_sched_type != new_sched.r_sched_type || new_sched.chunk != new_sched.chunk)
+            if (team->t.t_sched.r_sched_type != new_sched.r_sched_type ||
+                team->t.t_sched.chunk != new_sched.chunk)
                 team->t.t_sched = new_sched; // set master's schedule as new run-time schedule
 
             __kmp_reinitialize_team( team, new_icvs, root->r.r_uber_thread->th.th_ident );
@@ -4823,9 +4819,7 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
                 __kmp_partition_places( team );
             }
 # else
-            if ( team->t.t_proc_bind != new_proc_bind ) {
-                team->t.t_proc_bind = new_proc_bind;
-            }
+            KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
 # endif /* KMP_AFFINITY_SUPPORTED */
 #endif /* OMP_40_ENABLED */
         }
@@ -4855,7 +4849,9 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
 #endif // KMP_NESTED_HOT_TEAMS
             team->t.t_nproc =  new_nproc;
             // TODO???: team->t.t_max_active_levels = new_max_active_levels;
-            team->t.t_sched =  new_icvs->sched;
+            if (team->t.t_sched.r_sched_type != new_icvs->sched.r_sched_type ||
+                team->t.t_sched.chunk != new_icvs->sched.chunk)
+                team->t.t_sched = new_icvs->sched;
             __kmp_reinitialize_team( team, new_icvs, root->r.r_uber_thread->th.th_ident );
 
             /* update the remaining threads */
@@ -4876,7 +4872,7 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
 #endif
 
 #if OMP_40_ENABLED
-            team->t.t_proc_bind = new_proc_bind;
+            KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
 # if KMP_AFFINITY_SUPPORTED
             __kmp_partition_places( team );
 # endif
@@ -5001,7 +4997,7 @@ __kmp_allocate_team( kmp_root_t *root, int new_nproc, int max_nproc,
 #endif
 
 #if OMP_40_ENABLED
-            team->t.t_proc_bind = new_proc_bind;
+            KMP_CHECK_UPDATE(team->t.t_proc_bind, new_proc_bind);
 # if KMP_AFFINITY_SUPPORTED
             __kmp_partition_places( team );
 # endif

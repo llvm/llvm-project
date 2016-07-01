@@ -13,8 +13,6 @@
 
 // map();
 
-// XFAIL: gcc
-
 #include <map>
 
 struct X
