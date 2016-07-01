@@ -4685,6 +4685,7 @@ SymbolFileDWARF::ParseVariableDIE
                         GetObjectFile()->GetModule()->ReportError ("0x%8.8x: %s has an invalid location: %s", die.GetOffset(), die.GetTagAsCString(), strm.GetString().c_str());
                     }
                 }
+                SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
 
                 if (location_DW_OP_addr != LLDB_INVALID_ADDRESS)
                 {
@@ -4692,9 +4693,6 @@ SymbolFileDWARF::ParseVariableDIE
                         scope = eValueTypeVariableGlobal;
                     else
                         scope = eValueTypeVariableStatic;
-                    
-                    
-                    SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
                     
                     if (debug_map_symfile)
                     {
@@ -4773,7 +4771,22 @@ SymbolFileDWARF::ParseVariableDIE
                     if (location_is_const_value_data)
                         scope = eValueTypeVariableStatic;
                     else
+                    {
                         scope = eValueTypeVariableLocal;
+                        if (debug_map_symfile)
+                        {
+                            // We need to check for TLS addresses that we need to fixup
+                            if (location.ContainsThreadLocalStorage())
+                            {
+                                location.LinkThreadLocalStorage(
+                                    debug_map_symfile->GetObjectFile()->GetModule(),
+                                    [this, debug_map_symfile](lldb::addr_t unlinked_file_addr) -> lldb::addr_t {
+                                        return debug_map_symfile->LinkOSOFileAddress(this, unlinked_file_addr);
+                                    });
+                                scope = eValueTypeVariableThreadLocal;
+                            }
+                        }
+                    }
                 }
             }
 

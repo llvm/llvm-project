@@ -599,7 +599,8 @@ DynamicLoaderPOSIXDYLD::GetEntryPoint()
 }
 
 lldb::addr_t
-DynamicLoaderPOSIXDYLD::GetThreadLocalData (const lldb::ModuleSP module, const lldb::ThreadSP thread)
+DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module, const lldb::ThreadSP thread,
+                                           lldb::addr_t tls_file_addr)
 {
     auto it = m_loaded_modules.find (module);
     if (it == m_loaded_modules.end())
@@ -641,7 +642,7 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData (const lldb::ModuleSP module, const l
                     "module=%s, link_map=0x%" PRIx64 ", tp=0x%" PRIx64 ", modid=%" PRId64 ", tls_block=0x%" PRIx64 "\n",
                     mod->GetObjectName().AsCString(""), link_map, tp, (int64_t)modid, tls_block);
 
-    return tls_block;
+    return tls_block + tls_file_addr;
 }
 
 void

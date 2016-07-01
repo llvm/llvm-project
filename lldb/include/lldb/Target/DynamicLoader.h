@@ -238,7 +238,7 @@ public:
     ///     LLDB_INVALID_ADDRESS is returned.
     //------------------------------------------------------------------
     virtual lldb::addr_t
-    GetThreadLocalData (const lldb::ModuleSP module, const lldb::ThreadSP thread)
+    GetThreadLocalData(const lldb::ModuleSP module, const lldb::ThreadSP thread, lldb::addr_t tls_file_addr)
     {
         return LLDB_INVALID_ADDRESS;
     }

@@ -1003,7 +1003,128 @@ DWARFExpression::Update_DW_OP_addr (lldb::addr_t file_addr)
 }
 
 bool
-DWARFExpression::LocationListContainsAddress (lldb::addr_t loclist_base_addr, lldb::addr_t addr) const
+DWARFExpression::ContainsThreadLocalStorage() const
+{
+    // We are assuming for now that any thread local variable will not
+    // have a location list. This has been true for all thread local
+    // variables we have seen so far produced by any compiler.
+    if (IsLocationList())
+        return false;
+    lldb::offset_t offset = 0;
+    while (m_data.ValidOffset(offset))
+    {
+        const uint8_t op = m_data.GetU8(&offset);
+
+        if (op == DW_OP_form_tls_address || op == DW_OP_GNU_push_tls_address)
+            return true;
+        const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
+        if (op_arg_size == LLDB_INVALID_OFFSET)
+            return false;
+        else
+            offset += op_arg_size;
+    }
+    return false;
+}
+bool
+DWARFExpression::LinkThreadLocalStorage(
+    lldb::ModuleSP new_module_sp, std::function<lldb::addr_t(lldb::addr_t file_addr)> const &link_address_callback)
+{
+    // We are assuming for now that any thread local variable will not
+    // have a location list. This has been true for all thread local
+    // variables we have seen so far produced by any compiler.
+    if (IsLocationList())
+        return false;
+
+    const uint32_t addr_byte_size = m_data.GetAddressByteSize();
+    // We have to make a copy of the data as we don't know if this
+    // data is from a read only memory mapped buffer, so we duplicate
+    // all of the data first, then modify it, and if all goes well,
+    // we then replace the data for this expression
+
+    // So first we copy the data into a heap buffer
+    std::shared_ptr<DataBufferHeap> heap_data_sp(new DataBufferHeap(m_data.GetDataStart(), m_data.GetByteSize()));
+
+    // Make en encoder so we can write the address into the buffer using
+    // the correct byte order (endianness)
+    DataEncoder encoder(heap_data_sp->GetBytes(), heap_data_sp->GetByteSize(), m_data.GetByteOrder(), addr_byte_size);
+
+    lldb::offset_t offset = 0;
+    lldb::offset_t const_offset = 0;
+    lldb::addr_t const_value = 0;
+    size_t const_byte_size = 0;
+    while (m_data.ValidOffset(offset))
+    {
+        const uint8_t op = m_data.GetU8(&offset);
+
+        bool decoded_data = false;
+        switch (op)
+        {
+            case DW_OP_const4u:
+                // Remember the const offset in case we later have a DW_OP_form_tls_address
+                // or DW_OP_GNU_push_tls_address
+                const_offset = offset;
+                const_value = m_data.GetU32(&offset);
+                decoded_data = true;
+                const_byte_size = 4;
+                break;
+
+            case DW_OP_const8u:
+                // Remember the const offset in case we later have a DW_OP_form_tls_address
+                // or DW_OP_GNU_push_tls_address
+                const_offset = offset;
+                const_value = m_data.GetU64(&offset);
+                decoded_data = true;
+                const_byte_size = 8;
+                break;
+
+            case DW_OP_form_tls_address:
+            case DW_OP_GNU_push_tls_address:
+                // DW_OP_form_tls_address and DW_OP_GNU_push_tls_address must be preceded by
+                // a file address on the stack. We assume that DW_OP_const4u or DW_OP_const8u
+                // is used for these values, and we check that the last opcode we got before
+                // either of these was DW_OP_const4u or DW_OP_const8u. If so, then we can link
+                // the value accodingly. For Darwin, the value in the DW_OP_const4u or
+                // DW_OP_const8u is the file address of a structure that contains a function
+                // pointer, the pthread key and the offset into the data pointed to by the
+                // pthread key. So we must link this address and also set the module of this
+                // expression to the new_module_sp so we can resolve the file address correctly
+                if (const_byte_size > 0)
+                {
+                    lldb::addr_t linked_file_addr = link_address_callback(const_value);
+                    if (linked_file_addr == LLDB_INVALID_ADDRESS)
+                        return false;
+                    // Replace the address in the new buffer
+                    if (encoder.PutMaxU64(const_offset, const_byte_size, linked_file_addr) == UINT32_MAX)
+                        return false;
+                }
+                break;
+
+            default:
+                const_offset = 0;
+                const_value = 0;
+                const_byte_size = 0;
+                break;
+        }
+
+        if (!decoded_data)
+        {
+            const offset_t op_arg_size = GetOpcodeDataSize(m_data, offset, op);
+            if (op_arg_size == LLDB_INVALID_OFFSET)
+                return false;
+            else
+                offset += op_arg_size;
+        }
+    }
+
+    // If we linked the TLS address correctly, update the module so that when the expression
+    // is evaluated it can resolve the file address to a load address and read the TLS data
+    m_module_wp = new_module_sp;
+    m_data.SetData(heap_data_sp);
+    return true;
+}
+
+bool
+DWARFExpression::LocationListContainsAddress(lldb::addr_t loclist_base_addr, lldb::addr_t addr) const
 {
     if (addr == LLDB_INVALID_ADDRESS)
         return false;
@@ -2845,18 +2966,17 @@ DWARFExpression::Evaluate
                 }
 
                 // Lookup the TLS block address for this thread and module.
-                addr_t tls_addr = thread->GetThreadLocalData (module_sp);
+                const addr_t tls_file_addr = stack.back().GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
+                const addr_t tls_load_addr = thread->GetThreadLocalData(module_sp, tls_file_addr);
 
-                if (tls_addr == LLDB_INVALID_ADDRESS)
+                if (tls_load_addr == LLDB_INVALID_ADDRESS)
                 {
                     if (error_ptr)
                         error_ptr->SetErrorString ("No TLS data currently exists for this thread.");
                     return false;
                 }
 
-                // Convert the TLS offset into the absolute address.
-                Scalar tmp = stack.back().ResolveValue(exe_ctx);
-                stack.back() = tmp + tls_addr;
+                stack.back().GetScalar() = tls_load_addr;
                 stack.back().SetValueType (Value::eValueTypeLoadAddress);
             }
             break;
