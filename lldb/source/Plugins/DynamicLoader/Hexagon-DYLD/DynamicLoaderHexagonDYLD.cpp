@@ -688,5 +688,8 @@ DynamicLoaderHexagonDYLD::GetThreadLocalData(const lldb::ModuleSP module, const 
                     "module=%s, link_map=0x%" PRIx64 ", tp=0x%" PRIx64 ", modid=%i, tls_block=0x%" PRIx64,
                     mod->GetObjectName().AsCString(""), link_map, tp, modid, tls_block);
 
-    return tls_block + tls_file_addr;
+    if (tls_block == LLDB_INVALID_ADDRESS)
+        return LLDB_INVALID_ADDRESS;
+    else
+        return tls_block + tls_file_addr;
 }
