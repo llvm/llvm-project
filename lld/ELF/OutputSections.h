@@ -40,18 +40,6 @@ template <class ELFT> class SharedFile;
 template <class ELFT> class SharedSymbol;
 template <class ELFT> class DefinedRegular;
 
-template <class ELFT>
-static inline typename ELFT::uint getAddend(const typename ELFT::Rel &Rel) {
-  return 0;
-}
-
-template <class ELFT>
-static inline typename ELFT::uint getAddend(const typename ELFT::Rela &Rel) {
-  return Rel.r_addend;
-}
-
-bool isValidCIdentifier(StringRef S);
-
 // This represents a section in an output file.
 // Different sub classes represent different types of sections. Some contain
 // input sections, others are created by the linker.

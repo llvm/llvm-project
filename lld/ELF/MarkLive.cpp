@@ -23,6 +23,7 @@
 #include "InputSection.h"
 #include "LinkerScript.h"
 #include "OutputSections.h"
+#include "Strings.h"
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "Target.h"
