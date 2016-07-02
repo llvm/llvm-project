@@ -236,13 +236,11 @@ public:
     CodeGen::CodeGenTypes &Types = CGM.getTypes();
     ASTContext &Ctx = CGM.getContext();
     // id objc_getProperty (id, SEL, ptrdiff_t, bool)
-    SmallVector<CanQualType,4> Params;
     CanQualType IdType = Ctx.getCanonicalParamType(Ctx.getObjCIdType());
     CanQualType SelType = Ctx.getCanonicalParamType(Ctx.getObjCSelType());
-    Params.push_back(IdType);
-    Params.push_back(SelType);
-    Params.push_back(Ctx.getPointerDiffType()->getCanonicalTypeUnqualified());
-    Params.push_back(Ctx.BoolTy);
+    CanQualType Params[] = {
+        IdType, SelType,
+        Ctx.getPointerDiffType()->getCanonicalTypeUnqualified(), Ctx.BoolTy};
     llvm::FunctionType *FTy =
         Types.GetFunctionType(
           Types.arrangeBuiltinFunctionDeclaration(IdType, Params));
@@ -253,15 +251,15 @@ public:
     CodeGen::CodeGenTypes &Types = CGM.getTypes();
     ASTContext &Ctx = CGM.getContext();
     // void objc_setProperty (id, SEL, ptrdiff_t, id, bool, bool)
-    SmallVector<CanQualType,6> Params;
     CanQualType IdType = Ctx.getCanonicalParamType(Ctx.getObjCIdType());
     CanQualType SelType = Ctx.getCanonicalParamType(Ctx.getObjCSelType());
-    Params.push_back(IdType);
-    Params.push_back(SelType);
-    Params.push_back(Ctx.getPointerDiffType()->getCanonicalTypeUnqualified());
-    Params.push_back(IdType);
-    Params.push_back(Ctx.BoolTy);
-    Params.push_back(Ctx.BoolTy);
+    CanQualType Params[] = {
+        IdType,
+        SelType,
+        Ctx.getPointerDiffType()->getCanonicalTypeUnqualified(),
+        IdType,
+        Ctx.BoolTy,
+        Ctx.BoolTy};
     llvm::FunctionType *FTy =
         Types.GetFunctionType(
           Types.arrangeBuiltinFunctionDeclaration(Ctx.VoidTy, Params));

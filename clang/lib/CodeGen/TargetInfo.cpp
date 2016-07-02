@@ -7493,9 +7493,8 @@ void XCoreTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   SmallStringEnc Enc;
   if (getTypeString(Enc, D, CGM, TSC)) {
     llvm::LLVMContext &Ctx = CGM.getModule().getContext();
-    llvm::SmallVector<llvm::Metadata *, 2> MDVals;
-    MDVals.push_back(llvm::ConstantAsMetadata::get(GV));
-    MDVals.push_back(llvm::MDString::get(Ctx, Enc.str()));
+    llvm::Metadata *MDVals[] = {llvm::ConstantAsMetadata::get(GV),
+                                llvm::MDString::get(Ctx, Enc.str())};
     llvm::NamedMDNode *MD =
       CGM.getModule().getOrInsertNamedMetadata("xcore.typestrings");
     MD->addOperand(llvm::MDNode::get(Ctx, MDVals));
