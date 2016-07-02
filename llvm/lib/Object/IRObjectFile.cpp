@@ -38,20 +38,17 @@ using namespace object;
 IRObjectFile::IRObjectFile(MemoryBufferRef Object, std::unique_ptr<Module> Mod)
     : SymbolicFile(Binary::ID_IR, Object), M(std::move(Mod)) {
   Mang.reset(new Mangler());
-  CollectAsmUndefinedRefs(
-      Triple(M->getTargetTriple()), M->getModuleInlineAsm(),
-      [this](StringRef Name, BasicSymbolRef::Flags Flags) {
-        AsmSymbols.push_back(
-            std::make_pair<std::string, uint32_t>(Name, std::move(Flags)));
-      });
+  CollectAsmUndefinedRefs(Triple(M->getTargetTriple()), M->getModuleInlineAsm(),
+                          [this](StringRef Name, BasicSymbolRef::Flags Flags) {
+                            AsmSymbols.emplace_back(Name, std::move(Flags));
+                          });
 }
 
 // Parse inline ASM and collect the list of symbols that are not defined in
 // the current module. This is inspired from IRObjectFile.
 void IRObjectFile::CollectAsmUndefinedRefs(
     const Triple &TT, StringRef InlineAsm,
-    const std::function<void(StringRef, BasicSymbolRef::Flags)> &
-        AsmUndefinedRefs) {
+    function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmUndefinedRefs) {
   if (InlineAsm.empty())
     return;
 

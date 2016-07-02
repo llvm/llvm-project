@@ -79,21 +79,25 @@ unsigned TargetInstrInfo::getInlineAsmLength(const char *Str,
                                              const MCAsmInfo &MAI) const {
   // Count the number of instructions in the asm.
   bool atInsnStart = true;
-  unsigned Length = 0;
+  unsigned InstCount = 0;
   for (; *Str; ++Str) {
     if (*Str == '\n' || strncmp(Str, MAI.getSeparatorString(),
-                                strlen(MAI.getSeparatorString())) == 0)
+                                strlen(MAI.getSeparatorString())) == 0) {
       atInsnStart = true;
-    if (atInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
-      Length += MAI.getMaxInstLength();
+    } else if (strncmp(Str, MAI.getCommentString(),
+                       strlen(MAI.getCommentString())) == 0) {
+      // Stop counting as an instruction after a comment until the next
+      // separator.
       atInsnStart = false;
     }
-    if (atInsnStart && strncmp(Str, MAI.getCommentString(),
-                               strlen(MAI.getCommentString())) == 0)
+
+    if (atInsnStart && !std::isspace(static_cast<unsigned char>(*Str))) {
+      ++InstCount;
       atInsnStart = false;
+    }
   }
 
-  return Length;
+  return InstCount * MAI.getMaxInstLength();
 }
 
 /// ReplaceTailWithBranchTo - Delete the instruction OldInst and everything
@@ -552,7 +556,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     storeRegToStackSlot(*MBB, Pos, MO.getReg(), MO.isKill(), FI, RC, TRI);
   else
     loadRegFromStackSlot(*MBB, Pos, MO.getReg(), FI, RC, TRI);
-  return --Pos;
+  return &*--Pos;
 }
 
 bool TargetInstrInfo::hasReassociableOperands(
@@ -793,7 +797,7 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
     // Fold stackmap/patchpoint.
     NewMI = foldPatchpoint(MF, MI, Ops, FrameIndex, *this);
     if (NewMI)
-      NewMI = MBB.insert(MI, NewMI);
+      NewMI = &*MBB.insert(MI, NewMI);
   } else {
     // Ask the target to do the actual folding.
     NewMI = foldMemoryOperandImpl(MF, MI, Ops, MI, LoadMI, LIS);

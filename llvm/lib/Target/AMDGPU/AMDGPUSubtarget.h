@@ -74,6 +74,7 @@ protected:
   bool FP64Denormals;
   bool FPExceptions;
   bool FlatForGlobal;
+  bool UnalignedBufferAccess;
   bool EnableXNACK;
   bool DebuggerInsertNops;
   bool DebuggerReserveRegs;
@@ -252,6 +253,10 @@ public:
 
   bool useFlatForGlobal() const {
     return FlatForGlobal;
+  }
+
+  bool hasUnalignedBufferAccess() const {
+    return UnalignedBufferAccess;
   }
 
   bool isXNACKEnabled() const {

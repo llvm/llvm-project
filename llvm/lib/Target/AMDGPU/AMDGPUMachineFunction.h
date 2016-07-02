@@ -44,10 +44,7 @@ public:
   /// Start of implicit kernel args
   unsigned ABIArgOffset;
 
-  bool isKernel() const {
-    // FIXME: Assume everything is a kernel until function calls are supported.
-    return true;
-  }
+  bool isKernel() const;
 
   unsigned ScratchSize;
   bool IsKernel;

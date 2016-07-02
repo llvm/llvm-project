@@ -32,17 +32,14 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}global_load_v3i64:
-; GCN-NOHSA-DAG: buffer_load_dwordx4
-; GCN-NOHSA-DAG: buffer_load_dwordx2
-; GCN-HSA-DAG: flat_load_dwordx4
-; GCN-HSA-DAG: flat_load_dwordx2
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
 
-; EG-DAG: VTX_READ_32
-; EG-DAG: VTX_READ_32
-; EG-DAG: VTX_READ_32
-; EG-DAG: VTX_READ_32
-; EG-DAG: VTX_READ_32
-; EG-DAG: VTX_READ_32
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+
+; EG: VTX_READ_128
+; EG: VTX_READ_128
 define void @global_load_v3i64(<3 x i64> addrspace(1)* %out, <3 x i64> addrspace(1)* %in) #0 {
 entry:
   %ld = load <3 x i64>, <3 x i64> addrspace(1)* %in

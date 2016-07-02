@@ -155,14 +155,14 @@ public:
 }
 
 INITIALIZE_PASS_BEGIN(LoadStoreVectorizer, DEBUG_TYPE,
-                      "Vectorize load and Store instructions", false, false);
+                      "Vectorize load and Store instructions", false, false)
 INITIALIZE_PASS_DEPENDENCY(SCEVAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_END(LoadStoreVectorizer, DEBUG_TYPE,
-                    "Vectorize load and store instructions", false, false);
+                    "Vectorize load and store instructions", false, false)
 
 char LoadStoreVectorizer::ID = 0;
 
@@ -331,6 +331,7 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
 }
 
 void Vectorizer::reorder(Instruction *I) {
+  Instruction *InsertAfter = I;
   for (User *U : I->users()) {
     Instruction *User = dyn_cast<Instruction>(U);
     if (!User || User->getOpcode() == Instruction::PHI)
@@ -338,7 +339,8 @@ void Vectorizer::reorder(Instruction *I) {
 
     if (!DT.dominates(I, User)) {
       User->removeFromParent();
-      User->insertAfter(I);
+      User->insertAfter(InsertAfter);
+      InsertAfter = User;
       reorder(User);
     }
   }
@@ -359,13 +361,15 @@ Vectorizer::getBoundaryInstrs(ArrayRef<Value *> Chain) {
     ++NumFound;
     if (NumFound == 1) {
       FirstInstr = I.getIterator();
-    } else if (NumFound == Chain.size()) {
+    }
+    if (NumFound == Chain.size()) {
       LastInstr = I.getIterator();
       break;
     }
   }
 
-  return std::make_pair(FirstInstr, LastInstr);
+  // Range is [first, last).
+  return std::make_pair(FirstInstr, ++LastInstr);
 }
 
 void Vectorizer::eraseInstructions(ArrayRef<Value *> Chain) {
@@ -414,6 +418,9 @@ bool Vectorizer::isVectorizable(ArrayRef<Value *> Chain,
       return false;
     }
   }
+
+  assert(Chain.size() == ChainInstrs.size() &&
+         "All instructions in the Chain must exist in [From, To).");
 
   for (auto EntryMem : MemoryInstrs) {
     Value *V = EntryMem.first;

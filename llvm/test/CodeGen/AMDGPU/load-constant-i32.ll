@@ -78,8 +78,9 @@ entry:
 ; GCN-DAG: v_mov_b32_e32 v[[SHI:[0-9]+]], 0{{$}}
 ; GCN: store_dwordx2
 
-; EG: MEM_RAT
-; EG: MEM_RAT
+; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
+; EG: CF_END
+; EG: VTX_READ_32
 define void @constant_zextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(2)* %in) #0 {
   %ld = load i32, i32 addrspace(2)* %in
   %ext = zext i32 %ld to i64
@@ -92,9 +93,10 @@ define void @constant_zextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(
 ; GCN: s_ashr_i32 s[[HI:[0-9]+]], s[[SLO]], 31
 ; GCN: store_dwordx2
 
-; EG: MEM_RAT
-; EG: MEM_RAT
-; EG: ASHR {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}},  literal.x
+; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
+; EG: CF_END
+; EG: VTX_READ_32
+; EG: ASHR {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}},  literal.
 ; EG: 31
 define void @constant_sextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(2)* %in) #0 {
   %ld = load i32, i32 addrspace(2)* %in

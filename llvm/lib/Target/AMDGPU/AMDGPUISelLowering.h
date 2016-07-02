@@ -66,6 +66,8 @@ protected:
   SDValue LowerSIGN_EXTEND_INREG(SDValue Op, SelectionDAG &DAG) const;
 
 protected:
+  bool shouldCombineMemoryType(EVT VT) const;
+  SDValue performLoadCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performStoreCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performAndCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performShlCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -78,6 +80,7 @@ protected:
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
   static EVT getEquivalentLoadRegType(LLVMContext &Context, EVT VT);
+  static EVT getEquivalentBitType(LLVMContext &Context, EVT VT);
 
   virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;
@@ -138,7 +141,7 @@ public:
                              ISD::LoadExtType ExtType,
                              EVT ExtVT) const override;
 
-  bool isLoadBitCastBeneficial(EVT, EVT) const override;
+  bool isLoadBitCastBeneficial(EVT, EVT) const final;
 
   bool storeOfVectorConstantIsCheap(EVT MemVT,
                                     unsigned NumElem,

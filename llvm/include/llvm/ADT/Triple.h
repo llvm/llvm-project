@@ -46,50 +46,52 @@ public:
   enum ArchType {
     UnknownArch,
 
-    arm,        // ARM (little endian): arm, armv.*, xscale
-    armeb,      // ARM (big endian): armeb
-    aarch64,    // AArch64 (little endian): aarch64
-    aarch64_be, // AArch64 (big endian): aarch64_be
-    avr,        // AVR: Atmel AVR microcontroller
-    bpfel,      // eBPF or extended BPF or 64-bit BPF (little endian)
-    bpfeb,      // eBPF or extended BPF or 64-bit BPF (big endian)
-    hexagon,    // Hexagon: hexagon
-    mips,       // MIPS: mips, mipsallegrex
-    mipsel,     // MIPSEL: mipsel, mipsallegrexel
-    mips64,     // MIPS64: mips64
-    mips64el,   // MIPS64EL: mips64el
-    msp430,     // MSP430: msp430
-    ppc,        // PPC: powerpc
-    ppc64,      // PPC64: powerpc64, ppu
-    ppc64le,    // PPC64LE: powerpc64le
-    r600,       // R600: AMD GPUs HD2XXX - HD6XXX
-    amdgcn,     // AMDGCN: AMD GCN GPUs
-    sparc,      // Sparc: sparc
-    sparcv9,    // Sparcv9: Sparcv9
-    sparcel,    // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
-    systemz,    // SystemZ: s390x
-    tce,        // TCE (http://tce.cs.tut.fi/): tce
-    thumb,      // Thumb (little endian): thumb, thumbv.*
-    thumbeb,    // Thumb (big endian): thumbeb
-    x86,        // X86: i[3-9]86
-    x86_64,     // X86-64: amd64, x86_64
-    xcore,      // XCore: xcore
-    nvptx,      // NVPTX: 32-bit
-    nvptx64,    // NVPTX: 64-bit
-    le32,       // le32: generic little-endian 32-bit CPU (PNaCl)
-    le64,       // le64: generic little-endian 64-bit CPU (PNaCl)
-    amdil,      // AMDIL
-    amdil64,    // AMDIL with 64-bit pointers
-    hsail,      // AMD HSAIL
-    hsail64,    // AMD HSAIL with 64-bit pointers
-    spir,       // SPIR: standard portable IR for OpenCL 32-bit version
-    spir64,     // SPIR: standard portable IR for OpenCL 64-bit version
-    kalimba,    // Kalimba: generic kalimba
-    shave,      // SHAVE: Movidius vector VLIW processors
-    lanai,      // Lanai: Lanai 32-bit
-    wasm32,     // WebAssembly with 32-bit pointers
-    wasm64,     // WebAssembly with 64-bit pointers
-    LastArchType = wasm64
+    arm,            // ARM (little endian): arm, armv.*, xscale
+    armeb,          // ARM (big endian): armeb
+    aarch64,        // AArch64 (little endian): aarch64
+    aarch64_be,     // AArch64 (big endian): aarch64_be
+    avr,            // AVR: Atmel AVR microcontroller
+    bpfel,          // eBPF or extended BPF or 64-bit BPF (little endian)
+    bpfeb,          // eBPF or extended BPF or 64-bit BPF (big endian)
+    hexagon,        // Hexagon: hexagon
+    mips,           // MIPS: mips, mipsallegrex
+    mipsel,         // MIPSEL: mipsel, mipsallegrexel
+    mips64,         // MIPS64: mips64
+    mips64el,       // MIPS64EL: mips64el
+    msp430,         // MSP430: msp430
+    ppc,            // PPC: powerpc
+    ppc64,          // PPC64: powerpc64, ppu
+    ppc64le,        // PPC64LE: powerpc64le
+    r600,           // R600: AMD GPUs HD2XXX - HD6XXX
+    amdgcn,         // AMDGCN: AMD GCN GPUs
+    sparc,          // Sparc: sparc
+    sparcv9,        // Sparcv9: Sparcv9
+    sparcel,        // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
+    systemz,        // SystemZ: s390x
+    tce,            // TCE (http://tce.cs.tut.fi/): tce
+    thumb,          // Thumb (little endian): thumb, thumbv.*
+    thumbeb,        // Thumb (big endian): thumbeb
+    x86,            // X86: i[3-9]86
+    x86_64,         // X86-64: amd64, x86_64
+    xcore,          // XCore: xcore
+    nvptx,          // NVPTX: 32-bit
+    nvptx64,        // NVPTX: 64-bit
+    le32,           // le32: generic little-endian 32-bit CPU (PNaCl)
+    le64,           // le64: generic little-endian 64-bit CPU (PNaCl)
+    amdil,          // AMDIL
+    amdil64,        // AMDIL with 64-bit pointers
+    hsail,          // AMD HSAIL
+    hsail64,        // AMD HSAIL with 64-bit pointers
+    spir,           // SPIR: standard portable IR for OpenCL 32-bit version
+    spir64,         // SPIR: standard portable IR for OpenCL 64-bit version
+    kalimba,        // Kalimba: generic kalimba
+    shave,          // SHAVE: Movidius vector VLIW processors
+    lanai,          // Lanai: Lanai 32-bit
+    wasm32,         // WebAssembly with 32-bit pointers
+    wasm64,         // WebAssembly with 64-bit pointers
+    renderscript32, // 32-bit RenderScript
+    renderscript64, // 64-bit RenderScript
+    LastArchType = renderscript64
   };
   enum SubArchType {
     NoSubArch,

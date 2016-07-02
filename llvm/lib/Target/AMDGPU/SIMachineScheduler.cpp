@@ -1826,7 +1826,7 @@ void SIScheduleDAGMI::schedule()
   SIScheduler Scheduler(this);
   Best = Scheduler.scheduleVariant(SISchedulerBlockCreatorVariant::LatenciesAlone,
                                    SISchedulerBlockSchedulerVariant::BlockLatencyRegUsage);
-#if 0 // To enable when handleMove fix lands
+
   // if VGPR usage is extremely high, try other good performing variants
   // which could lead to lower VGPR usage
   if (Best.MaxVGPRUsage > 180) {
@@ -1865,7 +1865,7 @@ void SIScheduleDAGMI::schedule()
         Best = Temp;
     }
   }
-#endif
+
   ScheduledSUnits = Best.SUs;
   ScheduledSUnitsInv.resize(SUnits.size());
 
