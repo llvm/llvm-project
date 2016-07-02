@@ -20,6 +20,9 @@ void test_bad_index() {
     (void)std::get<long>(t1); // expected-note {{requested here}}
     (void)std::get<char>(t1); // expected-note {{requested here}}
         // expected-error@tuple:* 2 {{type occurs more than once}}
+    std::tuple<> t0;
+    (void)std::get<char*>(t0); // expected-node {{requested here}}
+        // expected-error@tuple:* 1 {{type not in empty type list}}
 }
 
 void test_bad_return_type() {
