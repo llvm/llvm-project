@@ -12,6 +12,7 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
+#include "llvm/ADT/SmallPtrSet.h"
 
 namespace clang {
 namespace tidy {
@@ -26,6 +27,25 @@ namespace decl_ref_expr {
 /// ``callExpr()``.
 bool isOnlyUsedAsConst(const VarDecl &Var, const Stmt &Stmt,
                        ASTContext &Context);
+
+// Returns set of all DeclRefExprs to VarDecl in Stmt.
+llvm::SmallPtrSet<const DeclRefExpr *, 16>
+allDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt, ASTContext &Context);
+
+// Returns set of all DeclRefExprs where VarDecl is guaranteed to be accessed in
+// a const fashion.
+llvm::SmallPtrSet<const DeclRefExpr *, 16>
+constReferenceDeclRefExprs(const VarDecl &VarDecl, const Stmt &Stmt,
+                           ASTContext &Context);
+
+// Returns true if DeclRefExpr is the argument of a copy-constructor call expr.
+bool isCopyConstructorArgument(const DeclRefExpr &DeclRef, const Stmt &Stmt,
+                               ASTContext &Context);
+
+// Returns true if DeclRefExpr is the argument of a copy-assignment operator
+// call expr.
+bool isCopyAssignmentArgument(const DeclRefExpr &DeclRef, const Stmt &Stmt,
+                              ASTContext &Context);
 
 } // namespace decl_ref_expr
 } // namespace utils

@@ -294,6 +294,7 @@ SBBlock::GetVariables (lldb::SBFrame& frame,
                         {
                             case eValueTypeVariableGlobal:
                             case eValueTypeVariableStatic:
+                            case eValueTypeVariableThreadLocal:
                                 add_variable = statics;
                                 break;
                                 
@@ -356,6 +357,7 @@ SBBlock::GetVariables (lldb::SBTarget& target,
                         {
                             case eValueTypeVariableGlobal:
                             case eValueTypeVariableStatic:
+                            case eValueTypeVariableThreadLocal:
                                 add_variable = statics;
                                 break;
                                 

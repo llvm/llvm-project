@@ -265,6 +265,9 @@ public:
   bool RunVisitorWorkList(VisitorWorkList &WL);
   void EnqueueWorkList(VisitorWorkList &WL, const Stmt *S);
   LLVM_ATTRIBUTE_NOINLINE bool Visit(const Stmt *S);
+
+private:
+  Optional<bool> handleDeclForVisitation(const Decl *D);
 };
 
 }

@@ -124,6 +124,18 @@ bool isTriviallyDefaultConstructible(QualType Type,
   return false;
 }
 
+bool hasNonTrivialMoveConstructor(QualType Type) {
+  auto *Record = Type->getAsCXXRecordDecl();
+  return Record && Record->hasDefinition() &&
+         Record->hasNonTrivialMoveConstructor();
+}
+
+bool hasNonTrivialMoveAssignment(QualType Type) {
+  auto *Record = Type->getAsCXXRecordDecl();
+  return Record && Record->hasDefinition() &&
+         Record->hasNonTrivialMoveAssignment();
+}
+
 } // namespace type_traits
 } // namespace utils
 } // namespace tidy

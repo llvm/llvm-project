@@ -11,6 +11,10 @@
 #include <unistd.h>
 
 void shared_check();
+// On some OS's (darwin) you must actually access a thread local variable
+// before you can read it
+int
+touch_shared();
 
 // Create some TLS storage within the static executable.
 __thread int var_static = 44;
@@ -28,9 +32,11 @@ int main (int argc, char const *argv[])
 {
 	pthread_t handle;
 	pthread_create(&handle, NULL, &fn_static, NULL);
+        touch_shared();
+        for (; var_static;)
+        {
+            usleep(1); // main breakpoint
+        }
 
-	for(;;)
-		usleep(1); // main breakpoint
-
-	return 0;
+        return 0;
 }

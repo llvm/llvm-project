@@ -70,7 +70,7 @@
 // CHECK-NOT: properties-class-extensions.m:16:25: ObjCInstanceMethodDecl=bar:16:25 Extent=[16:25 - 16:28]
 // CHECK: properties-class-extensions.m:19:26: ObjCInstanceMethodDecl=setBar::19:26 Extent=[19:26 - 19:29]
 // CHECK: properties-class-extensions.m:19:26: ParmDecl=bar:19:26 (Definition) Extent=[19:26 - 19:29]
-// CHECK: properties-class-extensions.m:24:8: ObjCInterfaceDecl=Rdar8467189_Bar:24:8 Extent=[24:1 - 24:23]
+// CHECK-NOT: properties-class-extensions.m:24:8: ObjCInterfaceDecl=Rdar8467189_Bar:24:8
 // CHECK: properties-class-extensions.m:24:8: ObjCClassRef=Rdar8467189_Bar:24:8 Extent=[24:8 - 24:23]
 // CHECK: properties-class-extensions.m:25:11: ObjCProtocolDecl=Rdar8467189_FooProtocol:25:11 (Definition) Extent=[25:1 - 27:5]
 // CHECK: properties-class-extensions.m:26:39: ObjCPropertyDecl=Rdar8467189_Bar:26:39 [readonly,] Extent=[26:1 - 26:54]

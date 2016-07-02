@@ -13,7 +13,10 @@
 _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
 _LIBCPP_CONSTEXPR path::value_type path::preferred_separator;
-
+// Make preferred_separator non-discardable in C++17
+// See PR28395 (https://llvm.org/bugs/show_bug.cgi?id=28395)
+static const path::value_type&
+    __preferred_sep_force_use __attribute__((used)) = path::preferred_separator;
 
 namespace { namespace parser
 {

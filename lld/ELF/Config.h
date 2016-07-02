@@ -40,7 +40,6 @@ enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
 struct Version {
   Version(llvm::StringRef Name) : Name(Name) {}
   llvm::StringRef Name;
-  llvm::StringRef Parent;
   std::vector<llvm::StringRef> Globals;
   size_t NameOff; // Offset in string table.
 };

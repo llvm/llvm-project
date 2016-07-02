@@ -901,33 +901,31 @@ SBFrame::FindValue (const char *name, ValueType value_type, lldb::DynamicValueTy
                 case eValueTypeVariableStatic:      // static variable
                 case eValueTypeVariableArgument:    // function argument variables
                 case eValueTypeVariableLocal:       // function local variables
+                case eValueTypeVariableThreadLocal: // thread local variables
+                {
+                    SymbolContext sc(frame->GetSymbolContext(eSymbolContextBlock));
+
+                    const bool can_create = true;
+                    const bool get_parent_variables = true;
+                    const bool stop_if_block_is_inlined_function = true;
+
+                    if (sc.block)
+                        sc.block->AppendVariables(can_create, get_parent_variables, stop_if_block_is_inlined_function,
+                                                  [frame](Variable *v) { return v->IsInScope(frame); }, &variable_list);
+                    if (value_type == eValueTypeVariableGlobal)
                     {
-                        SymbolContext sc(frame->GetSymbolContext(eSymbolContextBlock));
-
-                        const bool can_create = true;
-                        const bool get_parent_variables = true;
-                        const bool stop_if_block_is_inlined_function = true;
-
-                        if (sc.block)
-                            sc.block->AppendVariables(can_create,
-                                                      get_parent_variables,
-                                                      stop_if_block_is_inlined_function,
-                                                      [frame](Variable* v) { return v->IsInScope(frame); },
-                                                      &variable_list);
-                        if (value_type == eValueTypeVariableGlobal)
-                        {
-                            const bool get_file_globals = true;
-                            VariableList *frame_vars = frame->GetVariableList(get_file_globals);
-                            if (frame_vars)
-                                frame_vars->AppendVariablesIfUnique(variable_list);
-                        }
-                        ConstString const_name(name);
-                        VariableSP variable_sp(variable_list.FindVariable(const_name, value_type));
-                        if (variable_sp)
-                        {
-                            value_sp = frame->GetValueObjectForFrameVariable(variable_sp, eNoDynamicValues);
-                            sb_value.SetSP(value_sp, use_dynamic);
-                        }
+                        const bool get_file_globals = true;
+                        VariableList *frame_vars = frame->GetVariableList(get_file_globals);
+                        if (frame_vars)
+                            frame_vars->AppendVariablesIfUnique(variable_list);
+                    }
+                    ConstString const_name(name);
+                    VariableSP variable_sp(variable_list.FindVariable(const_name, value_type));
+                    if (variable_sp)
+                    {
+                        value_sp = frame->GetValueObjectForFrameVariable(variable_sp, eNoDynamicValues);
+                        sb_value.SetSP(value_sp, use_dynamic);
+                    }
                     }
                     break;
 
@@ -1201,6 +1199,7 @@ SBFrame::GetVariables (const lldb::SBVariablesOptions& options)
                                 {
                                 case eValueTypeVariableGlobal:
                                 case eValueTypeVariableStatic:
+                                case eValueTypeVariableThreadLocal:
                                     add_variable = statics;
                                     break;
 
