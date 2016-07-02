@@ -33,20 +33,20 @@
 // %0 = load i64* inttoptr (i64 big_constant to i64*)
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/Dominators.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include <tuple>
 
 using namespace llvm;
+using namespace consthoist;
 
 #define DEBUG_TYPE "consthoist"
 
@@ -54,75 +54,12 @@ STATISTIC(NumConstantsHoisted, "Number of constants hoisted");
 STATISTIC(NumConstantsRebased, "Number of constants rebased");
 
 namespace {
-struct ConstantUser;
-struct RebasedConstantInfo;
-
-typedef SmallVector<ConstantUser, 8> ConstantUseListType;
-typedef SmallVector<RebasedConstantInfo, 4> RebasedConstantListType;
-
-/// \brief Keeps track of the user of a constant and the operand index where the
-/// constant is used.
-struct ConstantUser {
-  Instruction *Inst;
-  unsigned OpndIdx;
-
-  ConstantUser(Instruction *Inst, unsigned Idx) : Inst(Inst), OpndIdx(Idx) { }
-};
-
-/// \brief Keeps track of a constant candidate and its uses.
-struct ConstantCandidate {
-  ConstantUseListType Uses;
-  ConstantInt *ConstInt;
-  unsigned CumulativeCost;
-
-  ConstantCandidate(ConstantInt *ConstInt)
-    : ConstInt(ConstInt), CumulativeCost(0) { }
-
-  /// \brief Add the user to the use list and update the cost.
-  void addUser(Instruction *Inst, unsigned Idx, unsigned Cost) {
-    CumulativeCost += Cost;
-    Uses.push_back(ConstantUser(Inst, Idx));
-  }
-};
-
-/// \brief This represents a constant that has been rebased with respect to a
-/// base constant. The difference to the base constant is recorded in Offset.
-struct RebasedConstantInfo {
-  ConstantUseListType Uses;
-  Constant *Offset;
-
-  RebasedConstantInfo(ConstantUseListType &&Uses, Constant *Offset)
-    : Uses(std::move(Uses)), Offset(Offset) { }
-};
-
-/// \brief A base constant and all its rebased constants.
-struct ConstantInfo {
-  ConstantInt *BaseConstant;
-  RebasedConstantListType RebasedConstants;
-};
-
 /// \brief The constant hoisting pass.
-class ConstantHoisting : public FunctionPass {
-  typedef DenseMap<ConstantInt *, unsigned> ConstCandMapType;
-  typedef std::vector<ConstantCandidate> ConstCandVecType;
-
-  const TargetTransformInfo *TTI;
-  DominatorTree *DT;
-  BasicBlock *Entry;
-
-  /// Keeps track of constant candidates found in the function.
-  ConstCandVecType ConstCandVec;
-
-  /// Keep track of cast instructions we already cloned.
-  SmallDenseMap<Instruction *, Instruction *> ClonedCastMap;
-
-  /// These are the final constants we decided to hoist.
-  SmallVector<ConstantInfo, 8> ConstantVec;
+class ConstantHoistingLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
-  ConstantHoisting() : FunctionPass(ID), TTI(nullptr), DT(nullptr),
-                       Entry(nullptr) {
-    initializeConstantHoistingPass(*PassRegistry::getPassRegistry());
+  ConstantHoistingLegacyPass() : FunctionPass(ID) {
+    initializeConstantHoistingLegacyPassPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &Fn) override;
@@ -135,67 +72,36 @@ public:
     AU.addRequired<TargetTransformInfoWrapperPass>();
   }
 
+  void releaseMemory() override { Impl.releaseMemory(); }
+
 private:
-  /// \brief Initialize the pass.
-  void setup(Function &Fn) {
-    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn);
-    Entry = &Fn.getEntryBlock();
-  }
-
-  /// \brief Cleanup.
-  void cleanup() {
-    ConstantVec.clear();
-    ClonedCastMap.clear();
-    ConstCandVec.clear();
-
-    TTI = nullptr;
-    DT = nullptr;
-    Entry = nullptr;
-  }
-
-  Instruction *findMatInsertPt(Instruction *Inst, unsigned Idx = ~0U) const;
-  Instruction *findConstantInsertionPoint(const ConstantInfo &ConstInfo) const;
-  void collectConstantCandidates(ConstCandMapType &ConstCandMap,
-                                 Instruction *Inst, unsigned Idx,
-                                 ConstantInt *ConstInt);
-  void collectConstantCandidates(ConstCandMapType &ConstCandMap,
-                                 Instruction *Inst);
-  void collectConstantCandidates(Function &Fn);
-  void findAndMakeBaseConstant(ConstCandVecType::iterator S,
-                               ConstCandVecType::iterator E);
-  void findBaseConstants();
-  void emitBaseConstants(Instruction *Base, Constant *Offset,
-                         const ConstantUser &ConstUser);
-  bool emitBaseConstants();
-  void deleteDeadCastInst() const;
-  bool optimizeConstants(Function &Fn);
+  ConstantHoistingPass Impl;
 };
 }
 
-char ConstantHoisting::ID = 0;
-INITIALIZE_PASS_BEGIN(ConstantHoisting, "consthoist", "Constant Hoisting",
-                      false, false)
+char ConstantHoistingLegacyPass::ID = 0;
+INITIALIZE_PASS_BEGIN(ConstantHoistingLegacyPass, "consthoist",
+                      "Constant Hoisting", false, false)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_END(ConstantHoisting, "consthoist", "Constant Hoisting",
-                    false, false)
+INITIALIZE_PASS_END(ConstantHoistingLegacyPass, "consthoist",
+                    "Constant Hoisting", false, false)
 
 FunctionPass *llvm::createConstantHoistingPass() {
-  return new ConstantHoisting();
+  return new ConstantHoistingLegacyPass();
 }
 
 /// \brief Perform the constant hoisting optimization for the given function.
-bool ConstantHoisting::runOnFunction(Function &Fn) {
+bool ConstantHoistingLegacyPass::runOnFunction(Function &Fn) {
   if (skipFunction(Fn))
     return false;
 
   DEBUG(dbgs() << "********** Begin Constant Hoisting **********\n");
   DEBUG(dbgs() << "********** Function: " << Fn.getName() << '\n');
 
-  setup(Fn);
-
-  bool MadeChange = optimizeConstants(Fn);
+  bool MadeChange = Impl.runImpl(
+      Fn, getAnalysis<TargetTransformInfoWrapperPass>().getTTI(Fn),
+      getAnalysis<DominatorTreeWrapperPass>().getDomTree(), Fn.getEntryBlock());
 
   if (MadeChange) {
     DEBUG(dbgs() << "********** Function after Constant Hoisting: "
@@ -204,15 +110,13 @@ bool ConstantHoisting::runOnFunction(Function &Fn) {
   }
   DEBUG(dbgs() << "********** End Constant Hoisting **********\n");
 
-  cleanup();
-
   return MadeChange;
 }
 
 
 /// \brief Find the constant materialization insertion point.
-Instruction *ConstantHoisting::findMatInsertPt(Instruction *Inst,
-                                               unsigned Idx) const {
+Instruction *ConstantHoistingPass::findMatInsertPt(Instruction *Inst,
+                                                   unsigned Idx) const {
   // If the operand is a cast instruction, then we have to materialize the
   // constant before the cast instruction.
   if (Idx != ~0U) {
@@ -237,8 +141,8 @@ Instruction *ConstantHoisting::findMatInsertPt(Instruction *Inst,
 }
 
 /// \brief Find an insertion point that dominates all uses.
-Instruction *ConstantHoisting::
-findConstantInsertionPoint(const ConstantInfo &ConstInfo) const {
+Instruction *ConstantHoistingPass::findConstantInsertionPoint(
+    const ConstantInfo &ConstInfo) const {
   assert(!ConstInfo.RebasedConstants.empty() && "Invalid constant info entry.");
   // Collect all basic blocks.
   SmallPtrSet<BasicBlock *, 8> BBs;
@@ -272,10 +176,9 @@ findConstantInsertionPoint(const ConstantInfo &ConstInfo) const {
 /// The operand at index Idx is not necessarily the constant integer itself. It
 /// could also be a cast instruction or a constant expression that uses the
 // constant integer.
-void ConstantHoisting::collectConstantCandidates(ConstCandMapType &ConstCandMap,
-                                                 Instruction *Inst,
-                                                 unsigned Idx,
-                                                 ConstantInt *ConstInt) {
+void ConstantHoistingPass::collectConstantCandidates(
+    ConstCandMapType &ConstCandMap, Instruction *Inst, unsigned Idx,
+    ConstantInt *ConstInt) {
   unsigned Cost;
   // Ask the target about the cost of materializing the constant for the given
   // instruction and operand index.
@@ -309,8 +212,8 @@ void ConstantHoisting::collectConstantCandidates(ConstCandMapType &ConstCandMap,
 
 /// \brief Scan the instruction for expensive integer constants and record them
 /// in the constant candidate vector.
-void ConstantHoisting::collectConstantCandidates(ConstCandMapType &ConstCandMap,
-                                                 Instruction *Inst) {
+void ConstantHoistingPass::collectConstantCandidates(
+    ConstCandMapType &ConstCandMap, Instruction *Inst) {
   // Skip all cast instructions. They are visited indirectly later on.
   if (Inst->isCast())
     return;
@@ -375,7 +278,7 @@ void ConstantHoisting::collectConstantCandidates(ConstCandMapType &ConstCandMap,
 
 /// \brief Collect all integer constants in the function that cannot be folded
 /// into an instruction itself.
-void ConstantHoisting::collectConstantCandidates(Function &Fn) {
+void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
   ConstCandMapType ConstCandMap;
   for (BasicBlock &BB : Fn)
     for (Instruction &Inst : BB)
@@ -384,8 +287,8 @@ void ConstantHoisting::collectConstantCandidates(Function &Fn) {
 
 /// \brief Find the base constant within the given range and rebase all other
 /// constants with respect to the base constant.
-void ConstantHoisting::findAndMakeBaseConstant(ConstCandVecType::iterator S,
-                                               ConstCandVecType::iterator E) {
+void ConstantHoistingPass::findAndMakeBaseConstant(
+    ConstCandVecType::iterator S, ConstCandVecType::iterator E) {
   auto MaxCostItr = S;
   unsigned NumUses = 0;
   // Use the constant that has the maximum cost as base constant.
@@ -416,7 +319,7 @@ void ConstantHoisting::findAndMakeBaseConstant(ConstCandVecType::iterator S,
 
 /// \brief Finds and combines constant candidates that can be easily
 /// rematerialized with an add from a common base constant.
-void ConstantHoisting::findBaseConstants() {
+void ConstantHoistingPass::findBaseConstants() {
   // Sort the constants by value and type. This invalidates the mapping!
   std::sort(ConstCandVec.begin(), ConstCandVec.end(),
             [](const ConstantCandidate &LHS, const ConstantCandidate &RHS) {
@@ -478,8 +381,9 @@ static bool updateOperand(Instruction *Inst, unsigned Idx, Instruction *Mat) {
 
 /// \brief Emit materialization code for all rebased constants and update their
 /// users.
-void ConstantHoisting::emitBaseConstants(Instruction *Base, Constant *Offset,
-                                         const ConstantUser &ConstUser) {
+void ConstantHoistingPass::emitBaseConstants(Instruction *Base,
+                                             Constant *Offset,
+                                             const ConstantUser &ConstUser) {
   Instruction *Mat = Base;
   if (Offset) {
     Instruction *InsertionPt = findMatInsertPt(ConstUser.Inst,
@@ -550,7 +454,7 @@ void ConstantHoisting::emitBaseConstants(Instruction *Base, Constant *Offset,
 
 /// \brief Hoist and hide the base constant behind a bitcast and emit
 /// materialization code for derived constants.
-bool ConstantHoisting::emitBaseConstants() {
+bool ConstantHoistingPass::emitBaseConstants() {
   bool MadeChange = false;
   for (auto const &ConstInfo : ConstantVec) {
     // Hoist and hide the base constant behind a bitcast.
@@ -584,14 +488,18 @@ bool ConstantHoisting::emitBaseConstants() {
 
 /// \brief Check all cast instructions we made a copy of and remove them if they
 /// have no more users.
-void ConstantHoisting::deleteDeadCastInst() const {
+void ConstantHoistingPass::deleteDeadCastInst() const {
   for (auto const &I : ClonedCastMap)
     if (I.first->use_empty())
       I.first->eraseFromParent();
 }
 
 /// \brief Optimize expensive integer constants in the given function.
-bool ConstantHoisting::optimizeConstants(Function &Fn) {
+bool ConstantHoistingPass::runImpl(Function &Fn, TargetTransformInfo &TTI,
+                                   DominatorTree &DT, BasicBlock &Entry) {
+  this->TTI = &TTI;
+  this->DT = &DT;
+  this->Entry = &Entry;  
   // Collect all constant candidates.
   collectConstantCandidates(Fn);
 
@@ -615,4 +523,15 @@ bool ConstantHoisting::optimizeConstants(Function &Fn) {
   deleteDeadCastInst();
 
   return MadeChange;
+}
+
+PreservedAnalyses ConstantHoistingPass::run(Function &F,
+                                            FunctionAnalysisManager &AM) {
+  auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+  if (!runImpl(F, TTI, DT, F.getEntryBlock()))
+    return PreservedAnalyses::all();
+
+  // FIXME: This should also 'preserve the CFG'.
+  return PreservedAnalyses::none();
 }

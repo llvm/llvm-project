@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=SI -verify-machineinstrs -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs -mattr=+load-store-opt -enable-misched < %s | FileCheck %s
 
 ; This test is for a bug in the machine scheduler where stores without
@@ -17,10 +17,10 @@ bb:
   %tmp10 = getelementptr inbounds i32, i32 addrspace(1)* %arg2, i64 %tmp9
   %tmp13 = load i32, i32 addrspace(1)* %tmp10, align 2
   %tmp14 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(3)* %arg, i32 %tmp13
-  %tmp15 = load <2 x i8>, <2 x i8> addrspace(3)* %tmp14, align 2
+  %tmp15 = load <2 x i8>, <2 x i8> addrspace(3)* %tmp14, align 1
   %tmp16 = add i32 %tmp13, 1
   %tmp17 = getelementptr inbounds <2 x i8>, <2 x i8> addrspace(3)* %arg, i32 %tmp16
-  store <2 x i8> %tmp15, <2 x i8> addrspace(3)* %tmp17, align 2
+  store <2 x i8> %tmp15, <2 x i8> addrspace(3)* %tmp17, align 1
   tail call void @llvm.amdgcn.s.barrier()
   %tmp25 = load i32, i32 addrspace(1)* %tmp10, align 4
   %tmp26 = sext i32 %tmp25 to i64

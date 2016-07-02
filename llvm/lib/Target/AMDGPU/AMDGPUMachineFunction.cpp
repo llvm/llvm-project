@@ -12,4 +12,12 @@ AMDGPUMachineFunction::AMDGPUMachineFunction(const MachineFunction &MF) :
   LDSSize(0),
   ABIArgOffset(0),
   ScratchSize(0),
-  IsKernel(true) {}
+  IsKernel(MF.getFunction()->getCallingConv() == llvm::CallingConv::AMDGPU_KERNEL ||
+           MF.getFunction()->getCallingConv() == llvm::CallingConv::SPIR_KERNEL)
+{
+}
+
+bool AMDGPUMachineFunction::isKernel() const
+{
+  return IsKernel;
+}

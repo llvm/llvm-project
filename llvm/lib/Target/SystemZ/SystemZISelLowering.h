@@ -278,6 +278,12 @@ enum NodeType : unsigned {
   VSTRC_CC,
   VSTRCZ_CC,
 
+  // Test Data Class.
+  //
+  // Operand 0: the value to test
+  // Operand 1: the bit mask
+  TDC,
+
   // Wrappers around the inner loop of an 8- or 16-bit ATOMIC_SWAP or
   // ATOMIC_LOAD_<op>.
   //
@@ -323,12 +329,6 @@ enum NodeType : unsigned {
   // Operand 1: the address to store to
   // Operand 2: the type of store (i16, i32, i64)
   STRV,
-
-  // Test Data Class.
-  //
-  // Operand 0: the value to test
-  // Operand 1: the bit mask
-  TDC,
 
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for

@@ -1,9 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-HSA -check-prefix=FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=GCN-NOHSA -check-prefix=FUNC %s
-
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
-; RUN: llc -march=r600 -mcpu=cayman < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 
 ; FUNC-LABEL: {{^}}global_load_i32:
@@ -99,8 +97,7 @@ entry:
 ; GCN-NOHSA: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]]
 ; GCN-HSA: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]]
 
-; EG: MEM_RAT
-; EG: MEM_RAT
+; EG: MEM_RAT_CACHELESS STORE_RAW T{{[0-9]+}}.XY
 define void @global_zextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %ld = load i32, i32 addrspace(1)* %in
   %ext = zext i32 %ld to i64
@@ -115,9 +112,10 @@ define void @global_zextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)
 ; GCN-NOHSA: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GCN-HSA: flat_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 
+
 ; EG: MEM_RAT
-; EG: MEM_RAT
-; EG: ASHR {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}},  literal.x
+; EG: VTX_READ_32
+; EG: ASHR {{[* ]*}}T{{[0-9]\.[XYZW]}}, T{{[0-9]\.[XYZW]}},  literal.
 ; EG: 31
 define void @global_sextload_i32_to_i64(i64 addrspace(1)* %out, i32 addrspace(1)* %in) #0 {
   %ld = load i32, i32 addrspace(1)* %in

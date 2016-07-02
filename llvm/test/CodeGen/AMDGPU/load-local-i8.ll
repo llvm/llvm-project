@@ -122,8 +122,7 @@ define void @local_sextload_v1i8_to_v1i32(<1 x i32> addrspace(3)* %out, <1 x i8>
 }
 
 ; FUNC-LABEL: {{^}}local_zextload_v2i8_to_v2i32:
-; GCN: ds_read_u8
-; GCN: ds_read_u8
+; GCN: ds_read_u16
 
 ; EG: LDS_UBYTE_READ_RET
 ; EG: LDS_UBYTE_READ_RET
@@ -137,8 +136,9 @@ define void @local_zextload_v2i8_to_v2i32(<2 x i32> addrspace(3)* %out, <2 x i8>
 ; FUNC-LABEL: {{^}}local_sextload_v2i8_to_v2i32:
 ; GCN-NOT: s_wqm_b64
 ; GCN: s_mov_b32 m0
-; GCN: ds_read_i8
-; GCN: ds_read_i8
+; GCN: ds_read_u16
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 8, 8
+; GCN-DAG: v_bfe_i32 v{{[0-9]+}}, v{{[0-9]+}}, 0, 8
 
 ; EG-DAG: LDS_UBYTE_READ_RET
 ; EG-DAG: LDS_UBYTE_READ_RET
@@ -189,10 +189,7 @@ entry:
 ; FUNC-LABEL: {{^}}local_zextload_v4i8_to_v4i32:
 ; GCN-NOT: s_wqm_b64
 ; GCN: s_mov_b32 m0
-; GCN: ds_read_u8
-; GCN: ds_read_u8
-; GCN: ds_read_u8
-; GCN: ds_read_u8
+; GCN: ds_read_b32
 
 ; EG: LDS_UBYTE_READ_RET
 ; EG: LDS_UBYTE_READ_RET
@@ -208,10 +205,7 @@ define void @local_zextload_v4i8_to_v4i32(<4 x i32> addrspace(3)* %out, <4 x i8>
 ; FUNC-LABEL: {{^}}local_sextload_v4i8_to_v4i32:
 ; GCN-NOT: s_wqm_b64
 ; GCN: s_mov_b32 m0
-; GCN: ds_read_i8
-; GCN: ds_read_i8
-; GCN: ds_read_i8
-; GCN: ds_read_i8
+; GCN: ds_read_b32
 
 ; EG-DAG: LDS_UBYTE_READ_RET
 ; EG-DAG: LDS_UBYTE_READ_RET

@@ -112,6 +112,10 @@ v_mov_b32_sdwa v1, sext(v0)
 // VI: v_and_b32_sdwa v0, sext(v0), sext(v0) dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:BYTE_2 ; encoding: [0xf9,0x00,0x00,0x26,0x00,0x06,0x0e,0x0a]
 v_and_b32 v0, sext(v0), sext(v0) dst_unused:UNUSED_PAD src1_sel:BYTE_2
 
+// NOSICI: error:
+// VI: v_cmp_class_f32 vcc, -v1, sext(v2) src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x20,0x7c,0x01,0x16,0x12,0x0c]
+v_cmp_class_f32 vcc, -v1, sext(v2) src0_sel:BYTE_2 src1_sel:WORD_0
+
 //===----------------------------------------------------------------------===//
 // Check VOP1 opcodes
 //===----------------------------------------------------------------------===//
@@ -496,3 +500,62 @@ v_min_i16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_se
 // VI: v_ldexp_f16_sdwa v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2 ; encoding: [0xf9,0x06,0x02,0x66,0x02,0x06,0x05,0x02]
 v_ldexp_f16 v1, v2, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1 src1_sel:BYTE_2
 
+//===----------------------------------------------------------------------===//
+// Check VOPC opcodes
+//===----------------------------------------------------------------------===//
+
+// NOSICI: error:
+// VI: v_cmp_eq_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x84,0x7c,0x01,0x16,0x02,0x04]
+v_cmp_eq_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmp_nle_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x98,0x7c,0x01,0x16,0x02,0x04]
+v_cmp_nle_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_gt_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0xa8,0x7c,0x01,0x16,0x02,0x04]
+v_cmpx_gt_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_nlt_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0xbc,0x7c,0x01,0x16,0x02,0x04]
+v_cmpx_nlt_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmp_lt_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x82,0x7d,0x01,0x16,0x02,0x04]
+v_cmp_lt_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmp_t_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x8e,0x7d,0x01,0x16,0x02,0x04]
+v_cmp_t_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_eq_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0xa4,0x7d,0x01,0x16,0x02,0x04]
+v_cmpx_eq_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_ne_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0xaa,0x7d,0x01,0x16,0x02,0x04]
+v_cmpx_ne_i32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmp_f_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x90,0x7d,0x01,0x16,0x02,0x04]
+v_cmp_f_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmp_gt_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x98,0x7d,0x01,0x16,0x02,0x04]
+v_cmp_gt_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_le_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0xb6,0x7d,0x01,0x16,0x02,0x04]
+v_cmpx_le_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_ne_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0xba,0x7d,0x01,0x16,0x02,0x04]
+v_cmpx_ne_u32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmp_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x20,0x7c,0x01,0x16,0x02,0x04]
+v_cmp_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0
+
+// NOSICI: error:
+// VI: v_cmpx_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0 ; encoding: [0xf9,0x04,0x22,0x7c,0x01,0x16,0x02,0x04]
+v_cmpx_class_f32 vcc, v1, v2 src0_sel:BYTE_2 src1_sel:WORD_0

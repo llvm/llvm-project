@@ -282,6 +282,10 @@ class VOPC_SDWAe <bits<8> op> : VOP_SDWAe {
   let Inst{16-9} = src1;
   let Inst{24-17} = op;
   let Inst{31-25} = 0x3e; // encoding
+
+  // VOPC disallows dst_sel and dst_unused as they have no effect on destination
+  let Inst{42-40} = 0x6;
+  let Inst{44-43} = 0x2;
 }
 
 class EXPe_vi : EXPe {

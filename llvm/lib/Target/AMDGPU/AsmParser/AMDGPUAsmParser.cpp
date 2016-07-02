@@ -724,7 +724,9 @@ public:
   OperandMatchResultTy parseSDWADstUnused(OperandVector &Operands);
   void cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands);
   void cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands);
-  void cvtSDWA(MCInst &Inst, const OperandVector &Operands, bool IsVOP1);
+  void cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands);
+  void cvtSDWA(MCInst &Inst, const OperandVector &Operands,
+               uint64_t BasicInstType);
 };
 
 struct OptionalOperand {
@@ -2677,15 +2679,19 @@ AMDGPUAsmParser::parseSDWADstUnused(OperandVector &Operands) {
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP1(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, true);
+  cvtSDWA(Inst, Operands, SIInstrFlags::VOP1);
 }
 
 void AMDGPUAsmParser::cvtSdwaVOP2(MCInst &Inst, const OperandVector &Operands) {
-  cvtSDWA(Inst, Operands, false);
+  cvtSDWA(Inst, Operands, SIInstrFlags::VOP2);
+}
+
+void AMDGPUAsmParser::cvtSdwaVOPC(MCInst &Inst, const OperandVector &Operands) {
+  cvtSDWA(Inst, Operands, SIInstrFlags::VOPC);
 }
 
 void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
-                              bool IsVOP1) {
+                              uint64_t BasicInstType) {
   OptionalImmIndexMap OptionalIdx;
 
   unsigned I = 1;
@@ -2697,7 +2703,12 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
   for (unsigned E = Operands.size(); I != E; ++I) {
     AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[I]);
     // Add the register arguments
-    if (Op.isRegOrImmWithInputMods()) {
+    if (BasicInstType == SIInstrFlags::VOPC &&
+        Op.isReg() &&
+        Op.Reg.RegNo == AMDGPU::VCC) {
+      // VOPC sdwa use "vcc" token as dst. Skip it.
+      continue;
+    } else if (Op.isRegOrImmWithInputMods()) {
        Op.addRegOrImmWithInputModsOperands(Inst, 2);
     } else if (Op.isImm()) {
       // Handle optional arguments
@@ -2713,15 +2724,27 @@ void AMDGPUAsmParser::cvtSDWA(MCInst &Inst, const OperandVector &Operands,
     // V_NOP_sdwa has no optional sdwa arguments
     return;
   }
-  if (IsVOP1) {
+  switch (BasicInstType) {
+  case SIInstrFlags::VOP1: {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstSel, 6);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstUnused, 2);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, 6);
-  } else { // VOP2
+    break;
+  }
+  case SIInstrFlags::VOP2: {
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstSel, 6);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaDstUnused, 2);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, 6);
     addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc1Sel, 6);
+    break;
+  }
+  case SIInstrFlags::VOPC: {
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc0Sel, 6);
+    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTySdwaSrc1Sel, 6);
+    break;
+  }
+  default:
+    llvm_unreachable("Invalid instruction type. Only VOP1, VOP2 and VOPC allowed");
   }
 }
 
