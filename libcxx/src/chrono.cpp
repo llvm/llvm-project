@@ -32,9 +32,6 @@ namespace chrono
 // system_clock
 
 const bool system_clock::is_steady;
-// Make is_steady non-discardable in C++17
-// See PR28395 (https://llvm.org/bugs/show_bug.cgi?id=28395)
-static const bool& __is_steady_force_use1 __attribute__((used)) = system_clock::is_steady;
 
 system_clock::time_point
 system_clock::now() _NOEXCEPT
@@ -71,10 +68,6 @@ system_clock::from_time_t(time_t t) _NOEXCEPT
 //  instead.
 
 const bool steady_clock::is_steady;
-// Make is_steady non-discardable in C++17
-// See PR28395 (https://llvm.org/bugs/show_bug.cgi?id=28395)
-static const bool& __is_steady_force_use2 __attribute__((used)) = steady_clock::is_steady;
-
 
 #ifdef CLOCK_MONOTONIC
 

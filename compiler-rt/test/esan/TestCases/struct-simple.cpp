@@ -43,6 +43,11 @@ struct S {
 struct D {
   int d1;
   int d2;
+  struct {
+    int x;
+    int y;
+    int z;
+  } ds[10];
 };
 
 void part1()
@@ -56,8 +61,10 @@ void part1()
     a.x = 0;
   a.y = 1;
   b.m = 2.0;
-  for (int i = 0; i < (1 << 21); i++)
+  for (int i = 0; i < (1 << 21); i++) {
     b.n = 3.0;
+    d.ds[3].y = 0;
+  }
   u.f = 0.0;
   u.d = 1.0;
   s.s1 = 0;
@@ -107,12 +114,13 @@ int main(int argc, char **argv) {
   // CHECK:      in esan::initializeLibrary
   // CHECK:      in esan::initializeCacheFrag
   // CHECK-NEXT: in esan::processCompilationUnitInit
-  // CHECK-NEXT: in esan::processCacheFragCompilationUnitInit: {{.*}}struct-simple.cpp with 5 class(es)/struct(s)
+  // CHECK-NEXT: in esan::processCacheFragCompilationUnitInit: {{.*}}struct-simple.cpp with 6 class(es)/struct(s)
   // CHECK-NEXT:  Register struct.A#2#11#11: 2 fields
   // CHECK-NEXT:  Register struct.B#2#3#2:   2 fields
   // CHECK-NEXT:  Register union.U#1#3:      1 fields
   // CHECK-NEXT:  Register struct.S#2#11#11: 2 fields
-  // CHECK-NEXT:  Register struct.D#2#11#11: 2 fields
+  // CHECK-NEXT:  Register struct.D#3#14#11#11: 3 fields
+  // CHECK-NEXT:  Register struct.anon#3#11#11#11: 3 fields
   // CHECK-NEXT: in esan::processCompilationUnitInit
   // CHECK-NEXT: in esan::processCacheFragCompilationUnitInit: {{.*}}struct-simple.cpp with 0 class(es)/struct(s)
   // CHECK-NEXT: in esan::processCompilationUnitInit
@@ -142,48 +150,55 @@ int main(int argc, char **argv) {
   // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit: {{.*}}struct-simple.cpp with 5 class(es)/struct(s)
   // CHECK-NEXT:  Unregister class.C#3#14#13#13:  3 fields
   // CHECK-NEXT:   {{.*}} class C
-  // CHECK-NEXT:   {{.*}}  size = 32, count = 5, ratio = 3
+  // CHECK-NEXT:   {{.*}}  size = 32, count = 5, ratio = 3, array access = 5
   // CHECK-NEXT:   {{.*}}  # 0: offset = 0,  size = 8,  count = 2, type = %struct.anon = type { i32, i32 }
   // CHECK-NEXT:   {{.*}}  # 1: offset = 8,  size = 8,  count = 2, type = %union.anon = type { double }
   // CHECK-NEXT:   {{.*}}  # 2: offset = 16, size = 10, count = 1, type = [10 x i8]
   // CHECK-NEXT:  Unregister struct.anon#2#11#11: 2 fields
   // CHECK-NEXT:   {{.*}} struct anon
-  // CHECK-NEXT:   {{.*}}  size = 8, count = 2, ratio = 1
+  // CHECK-NEXT:   {{.*}}  size = 8, count = 2, ratio = 1, array access = 0
   // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
   // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 1, type = i32
   // CHECK-NEXT:  Unregister union.anon#1#3:      1 fields
   // CHECK-NEXT:  Unregister struct.S#2#11#11:    2 fields
   // CHECK-NEXT:   {{.*}} struct S
-  // CHECK-NEXT:   {{.*}}  size = 8, count = 2, ratio = 2
+  // CHECK-NEXT:   {{.*}}  size = 8, count = 2, ratio = 2, array access = 0
   // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 2, type = i32
   // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 0, type = i32
   // CHECK-NEXT:  Unregister struct.D#3#11#11#11: 3 fields
   // CHECK-NEXT:   {{.*}} struct D
-  // CHECK-NEXT:   {{.*}}  size = 12, count = 2, ratio = 2
+  // CHECK-NEXT:   {{.*}}  size = 12, count = 2, ratio = 2, array access = 0
   // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
   // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 1, type = i32
   // CHECK-NEXT:   {{.*}}  # 2: offset = 8, size = 4, count = 0, type = i32
   // CHECK-NEXT: in esan::processCompilationUnitExit
   // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit: {{.*}}struct-simple.cpp with 0 class(es)/struct(s)
   // CHECK-NEXT: in esan::processCompilationUnitExit
-  // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit: {{.*}}struct-simple.cpp with 5 class(es)/struct(s)
+  // CHECK-NEXT: in esan::processCacheFragCompilationUnitExit: {{.*}}struct-simple.cpp with 6 class(es)/struct(s)
   // CHECK-NEXT:  Unregister struct.A#2#11#11:    2 fields
   // CHECK-NEXT:   {{.*}} struct A
-  // CHECK-NEXT:   {{.*}}  size = 8, count = 2049, ratio = 2048
+  // CHECK-NEXT:   {{.*}}  size = 8, count = 2049, ratio = 2048, array access = 0
   // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 2048, type = i32
   // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 1, type = i32
   // CHECK-NEXT:  Unregister struct.B#2#3#2:      2 fields
   // CHECK-NEXT:   {{.*}} struct B
-  // CHECK-NEXT:   {{.*}}  size = 16, count = 2097153, ratio = 2097152
+  // CHECK-NEXT:   {{.*}}  size = 16, count = 2097153, ratio = 2097152, array access = 0
   // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = float
   // CHECK-NEXT:   {{.*}}  # 1: offset = 8, size = 8, count = 2097152, type = double
   // CHECK-NEXT:  Unregister union.U#1#3:         1 fields
   // CHECK-NEXT:  Duplicated struct.S#2#11#11:    2 fields
-  // CHECK-NEXT:  Unregister struct.D#2#11#11:    2 fields
-  // CHECK-NEXT:   {{.*}} struct D
-  // CHECK-NEXT:   {{.*}}  size = 8, count = 1, ratio = 1
-  // CHECK-NEXT:   {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
-  // CHECK-NEXT:   {{.*}}  # 1: offset = 4, size = 4, count = 0, type = i32
-  // CHECK-NEXT: {{.*}}EfficiencySanitizer: total struct field access count = 2099214
+  // CHECK-NEXT:  Unregister struct.D#3#14#11#11: 3 fields
+  // CHECK-NEXT:  {{.*}} struct D
+  // CHECK-NEXT:  {{.*}}  size = 128, count = 2097153, ratio = 2097153, array access = 0
+  // CHECK-NEXT:  {{.*}}  # 0: offset = 0, size = 4, count = 1, type = i32
+  // CHECK-NEXT:  {{.*}}  # 1: offset = 4, size = 4, count = 0, type = i32
+  // CHECK-NEXT:  {{.*}}  # 2: offset = 8, size = 120, count = 2097152, type = [10 x %struct.anon]
+  // CHECK-NEXT:  Unregister struct.anon#3#11#11#11: 3 fields
+  // CHECK-NEXT:  {{.*}} struct anon
+  // CHECK-NEXT:  {{.*}}  size = 12, count = 2097152, ratio = 4194304, array access = 2097152
+  // CHECK-NEXT:  {{.*}}  # 0: offset = 0, size = 4, count = 0, type = i32
+  // CHECK-NEXT:  {{.*}}  # 1: offset = 4, size = 4, count = 2097152, type = i32
+  // CHECK-NEXT:  {{.*}}  # 2: offset = 8, size = 4, count = 0, type = i32
+  // CHECK-NEXT: {{.*}}EfficiencySanitizer: total struct field access count = 6293518
 }
 #endif // MAIN
