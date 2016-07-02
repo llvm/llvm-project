@@ -1738,9 +1738,6 @@ static void getSparcTargetFeatures(const Driver &D, const ArgList &Args,
 
 void Clang::AddSparcTargetArgs(const ArgList &Args,
                                ArgStringList &CmdArgs) const {
-  //const Driver &D = getToolChain().getDriver();
-  std::string Triple = getToolChain().ComputeEffectiveClangTriple(Args);
-
   sparc::FloatABI FloatABI =
       sparc::getSparcFloatABI(getToolChain().getDriver(), Args);
 
@@ -9978,6 +9975,10 @@ void visualstudio::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString(std::string("-libpath:") +
                                            WindowsSdkLibPath.c_str()));
   }
+
+  if (!C.getDriver().IsCLMode() && Args.hasArg(options::OPT_L))
+    for (const auto &LibPath : Args.getAllArgValues(options::OPT_L))
+      CmdArgs.push_back(Args.MakeArgString("-libpath:" + LibPath));
 
   CmdArgs.push_back("-nologo");
 

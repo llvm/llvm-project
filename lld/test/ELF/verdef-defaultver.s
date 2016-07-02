@@ -106,7 +106,6 @@
 # DSO-NEXT:      Index: 3
 # DSO-NEXT:      Hash: 98456416
 # DSO-NEXT:      Name: LIBSAMPLE_2.0
-# DSO-NEXT:      Predecessor: LIBSAMPLE_1.0
 # DSO-NEXT:    }
 # DSO-NEXT:  }
 

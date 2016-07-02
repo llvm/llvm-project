@@ -8082,6 +8082,42 @@ public:
     return true;
   }
 };
+
+// 32-bit RenderScript is armv7 with width and align of 'long' set to 8-bytes
+class RenderScript32TargetInfo : public ARMleTargetInfo {
+public:
+  RenderScript32TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : ARMleTargetInfo(llvm::Triple("armv7", Triple.getVendorName(),
+                                     Triple.getOSName(),
+                                     Triple.getEnvironmentName()),
+                        Opts) {
+    LongWidth = LongAlign = 64;
+  }
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override {
+    Builder.defineMacro("__RENDERSCRIPT__");
+    ARMleTargetInfo::getTargetDefines(Opts, Builder);
+  }
+};
+
+// 64-bit RenderScript is aarch64
+class RenderScript64TargetInfo : public AArch64leTargetInfo {
+public:
+  RenderScript64TargetInfo(const llvm::Triple &Triple,
+                           const TargetOptions &Opts)
+      : AArch64leTargetInfo(llvm::Triple("aarch64", Triple.getVendorName(),
+                                         Triple.getOSName(),
+                                         Triple.getEnvironmentName()),
+                            Opts) {}
+
+  void getTargetDefines(const LangOptions &Opts,
+                        MacroBuilder &Builder) const override {
+    Builder.defineMacro("__RENDERSCRIPT__");
+    AArch64leTargetInfo::getTargetDefines(Opts, Builder);
+  }
+};
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
@@ -8510,6 +8546,11 @@ static TargetInfo *AllocateTarget(const llvm::Triple &Triple,
     if (!(Triple == llvm::Triple("wasm64-unknown-unknown")))
       return nullptr;
     return new WebAssemblyOSTargetInfo<WebAssembly64TargetInfo>(Triple, Opts);
+
+  case llvm::Triple::renderscript32:
+    return new LinuxTargetInfo<RenderScript32TargetInfo>(Triple, Opts);
+  case llvm::Triple::renderscript64:
+    return new LinuxTargetInfo<RenderScript64TargetInfo>(Triple, Opts);
   }
 }
 

@@ -2528,7 +2528,21 @@ public:
   /// \brief Returns true if this is an inline-initialized static data member
   /// which is treated as a definition for MSVC compatibility.
   bool isMSStaticDataMemberInlineDefinition(const VarDecl *VD) const;
-  
+
+  enum class InlineVariableDefinitionKind {
+    None,        ///< Not an inline variable.
+    Weak,        ///< Weak definition of inline variable.
+    WeakUnknown, ///< Weak for now, might become strong later in this TU.
+    Strong       ///< Strong definition.
+  };
+  /// \brief Determine whether a definition of this inline variable should
+  /// be treated as a weak or strong definition. For compatibility with
+  /// C++14 and before, for a constexpr static data member, if there is an
+  /// out-of-line declaration of the member, we may promote it from weak to
+  /// strong.
+  InlineVariableDefinitionKind
+  getInlineVariableDefinitionKind(const VarDecl *VD) const;
+
 private:
   const ASTRecordLayout &
   getObjCLayout(const ObjCInterfaceDecl *D,

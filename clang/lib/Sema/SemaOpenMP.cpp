@@ -2940,15 +2940,19 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       ShouldBeInTargetRegion,
       ShouldBeInTeamsRegion
     } Recommend = NoRecommend;
-    if (isOpenMPSimdDirective(ParentRegion) && CurrentRegion != OMPD_ordered &&
-        CurrentRegion != OMPD_simd) {
+    if (isOpenMPSimdDirective(ParentRegion) && CurrentRegion != OMPD_ordered) {
       // OpenMP [2.16, Nesting of Regions]
       // OpenMP constructs may not be nested inside a simd region.
       // OpenMP [2.8.1,simd Construct, Restrictions]
-      // An ordered construct with the simd clause is the only OpenMP construct
-      // that can appear in the simd region.
-      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region_simd);
-      return true;
+      // An ordered construct with the simd clause is the only OpenMP
+      // construct that can appear in the simd region.
+      // Allowing a SIMD consruct nested in another SIMD construct is an
+      // extension. The OpenMP 4.5 spec does not allow it. Issue a warning
+      // message.
+      SemaRef.Diag(StartLoc, (CurrentRegion != OMPD_simd)
+                                 ? diag::err_omp_prohibited_region_simd
+                                 : diag::warn_omp_nesting_simd);
+      return CurrentRegion != OMPD_simd;
     }
     if (ParentRegion == OMPD_atomic) {
       // OpenMP [2.16, Nesting of Regions]

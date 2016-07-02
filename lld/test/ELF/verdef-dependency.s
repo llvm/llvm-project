@@ -33,7 +33,6 @@
 # DSO-NEXT:     Index: 3
 # DSO-NEXT:     Hash: 98456416
 # DSO-NEXT:     Name: LIBSAMPLE_2.0
-# DSO-NEXT:     Predecessor: LIBSAMPLE_1.0
 # DSO-NEXT:   }
 # DSO-NEXT:   Definition {
 # DSO-NEXT:     Version: 1
@@ -41,16 +40,5 @@
 # DSO-NEXT:     Index: 4
 # DSO-NEXT:     Hash: 98456672
 # DSO-NEXT:     Name: LIBSAMPLE_3.0
-# DSO-NEXT:     Predecessor: LIBSAMPLE_2.0
 # DSO-NEXT:   }
 # DSO-NEXT: }
-
-# RUN: echo "LIBSAMPLE_1.0{               \
-# RUN:          global: a;                \
-# RUN:          local: *; };              \
-# RUN:       LIBSAMPLE_2.0{               \
-# RUN:          global: b;                \
-# RUN:          local: *; }LIBSAMPLE_X.X; " > %t.script
-# RUN: not ld.lld --version-script %t.script -shared %t.o -o %t.so 2>&1 \
-# RUN:   | FileCheck -check-prefix=ERR %s
-# ERR: unknown version name LIBSAMPLE_X.X used as a dependency
