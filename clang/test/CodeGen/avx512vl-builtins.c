@@ -4610,50 +4610,58 @@ __m256 test_mm256_maskz_rcp14_ps(__mmask8 __U, __m256 __A) {
 
 __m128d test_mm_mask_permute_pd(__m128d __W, __mmask8 __U, __m128d __X) {
   // CHECK-LABEL: @test_mm_mask_permute_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermil.pd
-  return _mm_mask_permute_pd(__W, __U, __X, 2); 
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  return _mm_mask_permute_pd(__W, __U, __X, 1); 
 }
 
 __m128d test_mm_maskz_permute_pd(__mmask8 __U, __m128d __X) {
   // CHECK-LABEL: @test_mm_maskz_permute_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermil.pd
-  return _mm_maskz_permute_pd(__U, __X, 2); 
+  // CHECK: shufflevector <2 x double> %{{.*}}, <2 x double> %{{.*}}, <2 x i32> <i32 1, i32 0>
+  // CHECK: select <2 x i1> %{{.*}}, <2 x double> %{{.*}}, <2 x double> %{{.*}}
+  return _mm_maskz_permute_pd(__U, __X, 1); 
 }
 
 __m256d test_mm256_mask_permute_pd(__m256d __W, __mmask8 __U, __m256d __X) {
   // CHECK-LABEL: @test_mm256_mask_permute_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermil.pd.256
-  return _mm256_mask_permute_pd(__W, __U, __X, 2); 
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  return _mm256_mask_permute_pd(__W, __U, __X, 5); 
 }
 
 __m256d test_mm256_maskz_permute_pd(__mmask8 __U, __m256d __X) {
   // CHECK-LABEL: @test_mm256_maskz_permute_pd
-  // CHECK: @llvm.x86.avx512.mask.vpermil.pd.256
-  return _mm256_maskz_permute_pd(__U, __X, 2); 
+  // CHECK: shufflevector <4 x double> %{{.*}}, <4 x double> %{{.*}}, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x double> %{{.*}}, <4 x double> %{{.*}}
+  return _mm256_maskz_permute_pd(__U, __X, 5); 
 }
 
 __m128 test_mm_mask_permute_ps(__m128 __W, __mmask8 __U, __m128 __X) {
   // CHECK-LABEL: @test_mm_mask_permute_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermil.ps
-  return _mm_mask_permute_ps(__W, __U, __X, 2); 
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  return _mm_mask_permute_ps(__W, __U, __X, 0x1b); 
 }
 
 __m128 test_mm_maskz_permute_ps(__mmask8 __U, __m128 __X) {
   // CHECK-LABEL: @test_mm_maskz_permute_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermil.ps
-  return _mm_maskz_permute_ps(__U, __X, 2); 
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  // CHECK: select <4 x i1> %{{.*}}, <4 x float> %{{.*}}, <4 x float> %{{.*}}
+  return _mm_maskz_permute_ps(__U, __X, 0x1b); 
 }
 
 __m256 test_mm256_mask_permute_ps(__m256 __W, __mmask8 __U, __m256 __X) {
   // CHECK-LABEL: @test_mm256_mask_permute_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermil.ps.256
-  return _mm256_mask_permute_ps(__W, __U, __X, 2); 
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  return _mm256_mask_permute_ps(__W, __U, __X, 0x1b); 
 }
 
 __m256 test_mm256_maskz_permute_ps(__mmask8 __U, __m256 __X) {
   // CHECK-LABEL: @test_mm256_maskz_permute_ps
-  // CHECK: @llvm.x86.avx512.mask.vpermil.ps.256
-  return _mm256_maskz_permute_ps(__U, __X, 2); 
+  // CHECK: shufflevector <8 x float> %{{.*}}, <8 x float> %{{.*}}, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  // CHECK: select <8 x i1> %{{.*}}, <8 x float> %{{.*}}, <8 x float> %{{.*}}
+  return _mm256_maskz_permute_ps(__U, __X, 0x1b); 
 }
 
 __m128d test_mm_mask_permutevar_pd(__m128d __W, __mmask8 __U, __m128d __A, __m128i __C) {

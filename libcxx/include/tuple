@@ -1013,6 +1013,11 @@ struct __find_exactly_one_checked {
     static_assert(value != __ambiguous,"type occurs more than once in type list");
 };
 
+template <class _T1>
+struct __find_exactly_one_checked<_T1> {
+    static_assert(!is_same<_T1, _T1>::value, "type not in empty type list");
+};
+
 } // namespace __find_detail;
 
 template <typename _T1, typename... _Args>
