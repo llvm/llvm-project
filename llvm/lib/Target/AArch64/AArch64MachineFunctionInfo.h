@@ -166,15 +166,15 @@ public:
     SmallVector<const MachineInstr *, 3> Args;
 
   public:
-    typedef SmallVectorImpl<const MachineInstr *> LOHArgs;
+    typedef ArrayRef<const MachineInstr *> LOHArgs;
 
-    MILOHDirective(MCLOHType Kind, const LOHArgs &Args)
+    MILOHDirective(MCLOHType Kind, LOHArgs Args)
         : Kind(Kind), Args(Args.begin(), Args.end()) {
       assert(isValidMCLOHType(Kind) && "Invalid LOH directive type!");
     }
 
     MCLOHType getKind() const { return Kind; }
-    const LOHArgs &getArgs() const { return Args; }
+    LOHArgs getArgs() const { return Args; }
   };
 
   typedef MILOHDirective::LOHArgs MILOHArgs;
@@ -183,7 +183,7 @@ public:
   const MILOHContainer &getLOHContainer() const { return LOHContainerSet; }
 
   /// Add a LOH directive of this @p Kind and this @p Args.
-  void addLOHDirective(MCLOHType Kind, const MILOHArgs &Args) {
+  void addLOHDirective(MCLOHType Kind, MILOHArgs Args) {
     LOHContainerSet.push_back(MILOHDirective(Kind, Args));
     LOHRelated.insert(Args.begin(), Args.end());
   }

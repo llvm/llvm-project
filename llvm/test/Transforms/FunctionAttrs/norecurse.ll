@@ -1,5 +1,5 @@
 ; RUN: opt < %s -basicaa -functionattrs -rpo-functionattrs -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<targetlibinfo>,cgscc(function-attrs),rpo-functionattrs' -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs),rpo-functionattrs' -S | FileCheck %s
 
 ; CHECK: define i32 @leaf() #0
 define i32 @leaf() {

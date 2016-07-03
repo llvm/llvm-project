@@ -1,5 +1,5 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
-; RUN: opt < %s -aa-pipeline=basic-aa -passes='require<targetlibinfo>,cgscc(function-attrs)' -S | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa -passes='cgscc(function-attrs)' -S | FileCheck %s
 @x = global i32 0
 
 declare void @test1_1(i8* %x1_1, i8* readonly %y1_1, ...)

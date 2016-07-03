@@ -731,5 +731,5 @@ Here is the code:
 .. literalinclude:: ../../examples/Kaleidoscope/Chapter2/toy.cpp
    :language: c++
 
-`Next: Implementing Code Generation to LLVM IR <LangImpl3.html>`_
+`Next: Implementing Code Generation to LLVM IR <LangImpl03.html>`_
 

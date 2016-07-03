@@ -633,11 +633,8 @@ bool GCOVProfiler::emitProfileArcs() {
             Value *Sel = Builder.CreateSelect(BI->getCondition(),
                                               Builder.getInt64(Edge),
                                               Builder.getInt64(Edge + 1));
-            SmallVector<Value *, 2> Idx;
-            Idx.push_back(Builder.getInt64(0));
-            Idx.push_back(Sel);
-            Value *Counter = Builder.CreateInBoundsGEP(Counters->getValueType(),
-                                                       Counters, Idx);
+            Value *Counter = Builder.CreateInBoundsGEP(
+                Counters->getValueType(), Counters, {Builder.getInt64(0), Sel});
             Value *Count = Builder.CreateLoad(Counter);
             Count = Builder.CreateAdd(Count, Builder.getInt64(1));
             Builder.CreateStore(Count, Counter);

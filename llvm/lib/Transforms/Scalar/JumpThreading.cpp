@@ -151,9 +151,10 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
   if (!Changed)
     return PreservedAnalyses::all();
   PreservedAnalyses PA;
-  PA.preserve<LazyValueAnalysis>();
+  // FIXME: Not preserving LVI! We need it to be invalidated so that we
+  // don't run into issues like PR28400. Is there a better solution?
   PA.preserve<GlobalsAA>();
-  return PreservedAnalyses::none();
+  return PA;
 }
 
 bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,

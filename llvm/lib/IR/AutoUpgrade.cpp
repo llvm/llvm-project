@@ -219,6 +219,9 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name.startswith("x86.avx2.pbroadcast") ||
         Name.startswith("x86.avx.vpermil.") ||
         Name.startswith("x86.sse2.pshuf") ||
+        Name.startswith("x86.avx512.mask.movddup") ||
+        Name.startswith("x86.avx512.mask.movshdup") ||
+        Name.startswith("x86.avx512.mask.movsldup") ||
         Name.startswith("x86.avx512.mask.pshuf.d.") ||
         Name.startswith("x86.avx512.mask.pshufl.w.") ||
         Name.startswith("x86.avx512.mask.pshufh.w.") ||
@@ -1063,6 +1066,28 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       if (CI->getNumArgOperands() == 4)
         Rep = EmitX86Select(Builder, CI->getArgOperand(3), Rep,
                             CI->getArgOperand(2));
+    } else if (Name.startswith("llvm.x86.avx512.mask.movddup") ||
+               Name.startswith("llvm.x86.avx512.mask.movshdup") ||
+               Name.startswith("llvm.x86.avx512.mask.movsldup")) {
+      Value *Op0 = CI->getArgOperand(0);
+      unsigned NumElts = CI->getType()->getVectorNumElements();
+      unsigned NumLaneElts = 128/CI->getType()->getScalarSizeInBits();
+
+      unsigned Offset = 0;
+      if (Name.startswith("llvm.x86.avx512.mask.movshdup."))
+        Offset = 1;
+
+      SmallVector<uint32_t, 16> Idxs(NumElts);
+      for (unsigned l = 0; l != NumElts; l += NumLaneElts)
+        for (unsigned i = 0; i != NumLaneElts; i += 2) {
+          Idxs[i + l + 0] = i + l + Offset;
+          Idxs[i + l + 1] = i + l + Offset;
+        }
+
+      Rep = Builder.CreateShuffleVector(Op0, Op0, Idxs);
+
+      Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                          CI->getArgOperand(1));
     } else if (Name.startswith("llvm.x86.avx512.mask.punpckl") ||
                Name.startswith("llvm.x86.avx512.mask.unpckl.")) {
       Value *Op0 = CI->getArgOperand(0);

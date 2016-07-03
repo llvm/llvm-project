@@ -286,7 +286,7 @@ these choices will have different performance characteristics: Doing work
 eagerly means the JIT takes longer up-front, but proceeds smoothly once this is
 done. Deferring work allows the JIT to get up-and-running quickly, but will
 force the JIT to pause and wait whenever some code or data is needed that hasn't
-already been procesed.
+already been processed.
 
 Our current REPL is eager: Each function definition is optimized and compiled as
 soon as it's typed in. If we were to make the transform layer lazy (but not

@@ -2076,16 +2076,15 @@ SDValue SparcTargetLowering::LowerGlobalTLSAddress(SDValue Op,
     SDValue Symbol = withTargetFlags(Op, callTF, DAG);
 
     SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
-    SmallVector<SDValue, 4> Ops;
-    Ops.push_back(Chain);
-    Ops.push_back(Callee);
-    Ops.push_back(Symbol);
-    Ops.push_back(DAG.getRegister(SP::O0, PtrVT));
     const uint32_t *Mask = Subtarget->getRegisterInfo()->getCallPreservedMask(
         DAG.getMachineFunction(), CallingConv::C);
     assert(Mask && "Missing call preserved mask for calling convention");
-    Ops.push_back(DAG.getRegisterMask(Mask));
-    Ops.push_back(InFlag);
+    SDValue Ops[] = {Chain,
+                     Callee,
+                     Symbol,
+                     DAG.getRegister(SP::O0, PtrVT),
+                     DAG.getRegisterMask(Mask),
+                     InFlag};
     Chain = DAG.getNode(SPISD::TLS_CALL, DL, NodeTys, Ops);
     InFlag = Chain.getValue(1);
     Chain = DAG.getCALLSEQ_END(Chain, DAG.getIntPtrConstant(1, DL, true),

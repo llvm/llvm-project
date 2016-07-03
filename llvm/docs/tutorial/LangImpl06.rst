@@ -764,5 +764,5 @@ Here is the code:
    :language: c++
 
 `Next: Extending the language: mutable variables / SSA
-construction <LangImpl7.html>`_
+construction <LangImpl07.html>`_
 

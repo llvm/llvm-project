@@ -5,11 +5,11 @@ Kaleidoscope: Adding Debug Information
 .. contents::
    :local:
 
-Chapter 8 Introduction
+Chapter 9 Introduction
 ======================
 
-Welcome to Chapter 8 of the "`Implementing a language with
-LLVM <index.html>`_" tutorial. In chapters 1 through 7, we've built a
+Welcome to Chapter 9 of the "`Implementing a language with
+LLVM <index.html>`_" tutorial. In chapters 1 through 8, we've built a
 decent little programming language with functions and variables.
 What happens if something goes wrong though, how do you debug your
 program?
@@ -149,7 +149,7 @@ command line:
 
 .. code-block:: bash
 
-  Kaleidoscope-Ch8 < fib.ks | & clang -x ir -
+  Kaleidoscope-Ch9 < fib.ks | & clang -x ir -
 
 which gives an a.out/a.exe in the current working directory.
 
@@ -455,8 +455,8 @@ debug information. To build this example, use:
 
 Here is the code:
 
-.. literalinclude:: ../../examples/Kaleidoscope/Chapter8/toy.cpp
+.. literalinclude:: ../../examples/Kaleidoscope/Chapter9/toy.cpp
    :language: c++
 
-`Next: Conclusion and other useful LLVM tidbits <LangImpl9.html>`_
+`Next: Conclusion and other useful LLVM tidbits <LangImpl10.html>`_
 

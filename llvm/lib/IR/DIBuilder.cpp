@@ -24,40 +24,6 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
-namespace {
-class HeaderBuilder {
-  /// \brief Whether there are any fields yet.
-  ///
-  /// Note that this is not equivalent to \c Chars.empty(), since \a concat()
-  /// may have been called already with an empty string.
-  bool IsEmpty;
-  SmallVector<char, 256> Chars;
-
-public:
-  HeaderBuilder() : IsEmpty(true) {}
-  HeaderBuilder(const HeaderBuilder &X) : IsEmpty(X.IsEmpty), Chars(X.Chars) {}
-  HeaderBuilder(HeaderBuilder &&X)
-      : IsEmpty(X.IsEmpty), Chars(std::move(X.Chars)) {}
-
-  template <class Twineable> HeaderBuilder &concat(Twineable &&X) {
-    if (IsEmpty)
-      IsEmpty = false;
-    else
-      Chars.push_back(0);
-    Twine(X).toVector(Chars);
-    return *this;
-  }
-
-  MDString *get(LLVMContext &Context) const {
-    return MDString::get(Context, StringRef(Chars.begin(), Chars.size()));
-  }
-
-  static HeaderBuilder get(unsigned Tag) {
-    return HeaderBuilder().concat("0x" + Twine::utohexstr(Tag));
-  }
-};
-}
-
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes)
   : M(m), VMContext(M.getContext()), CUNode(nullptr),
       DeclareFn(nullptr), ValueFn(nullptr),
