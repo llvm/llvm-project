@@ -606,5 +606,5 @@ Here is the code:
 .. literalinclude:: ../../examples/Kaleidoscope/Chapter4/toy.cpp
    :language: c++
 
-`Next: Extending the language: control flow <LangImpl5.html>`_
+`Next: Extending the language: control flow <LangImpl05.html>`_
 

@@ -182,11 +182,8 @@ Value *GenericToNVVM::getOrInsertCVTA(Module *M, Function *F,
     // Insert the address space conversion.
     Type *ResultType =
         PointerType::get(Type::getInt8Ty(Context), llvm::ADDRESS_SPACE_GENERIC);
-    SmallVector<Type *, 2> ParamTypes;
-    ParamTypes.push_back(ResultType);
-    ParamTypes.push_back(DestTy);
     Function *CVTAFunction = Intrinsic::getDeclaration(
-        M, Intrinsic::nvvm_ptr_global_to_gen, ParamTypes);
+        M, Intrinsic::nvvm_ptr_global_to_gen, {ResultType, DestTy});
     CVTA = Builder.CreateCall(CVTAFunction, CVTA, "cvta");
     // Another bitcast from i8 * to <the element type of GVType> * is
     // required.

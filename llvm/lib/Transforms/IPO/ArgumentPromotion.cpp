@@ -80,25 +80,29 @@ namespace {
       initializeArgPromotionPass(*PassRegistry::getPassRegistry());
     }
 
-    /// A vector used to hold the indices of a single GEP instruction
-    typedef std::vector<uint64_t> IndicesVector;
-
   private:
-    bool isDenselyPacked(Type *type, const DataLayout &DL);
-    bool canPaddingBeAccessed(Argument *Arg);
-    CallGraphNode *PromoteArguments(CallGraphNode *CGN);
-    bool isSafeToPromoteArgument(Argument *Arg, bool isByVal,
-                                 AAResults &AAR) const;
-    CallGraphNode *DoPromotion(Function *F,
-                              SmallPtrSetImpl<Argument*> &ArgsToPromote,
-                              SmallPtrSetImpl<Argument*> &ByValArgsToTransform);
-    
+
     using llvm::Pass::doInitialization;
     bool doInitialization(CallGraph &CG) override;
     /// The maximum number of elements to expand, or 0 for unlimited.
     unsigned maxElements;
   };
 }
+
+/// A vector used to hold the indices of a single GEP instruction
+typedef std::vector<uint64_t> IndicesVector;
+
+static CallGraphNode *
+PromoteArguments(CallGraphNode *CGN, CallGraph &CG,
+                 std::function<AAResults &(Function &F)> AARGetter,
+                 unsigned MaxElements);
+static bool isDenselyPacked(Type *type, const DataLayout &DL);
+static bool canPaddingBeAccessed(Argument *Arg);
+static bool isSafeToPromoteArgument(Argument *Arg, bool isByVal, AAResults &AAR,
+                                    unsigned MaxElements);
+static CallGraphNode *
+DoPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
+            SmallPtrSetImpl<Argument *> &ByValArgsToTransform, CallGraph &CG);
 
 char ArgPromotion::ID = 0;
 INITIALIZE_PASS_BEGIN(ArgPromotion, "argpromotion",
@@ -113,17 +117,17 @@ Pass *llvm::createArgumentPromotionPass(unsigned maxElements) {
   return new ArgPromotion(maxElements);
 }
 
-bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
-  if (skipSCC(SCC))
-    return false;
-
+static bool runImpl(CallGraphSCC &SCC, CallGraph &CG,
+                    std::function<AAResults &(Function &F)> &AARGetter,
+                    unsigned MaxElements) {
   bool Changed = false, LocalChange;
 
   do {  // Iterate until we stop promoting from this SCC.
     LocalChange = false;
     // Attempt to promote arguments from all functions in this SCC.
     for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I) {
-      if (CallGraphNode *CGN = PromoteArguments(*I)) {
+      if (CallGraphNode *CGN =
+              PromoteArguments(*I, CG, AARGetter, MaxElements)) {
         LocalChange = true;
         SCC.ReplaceNode(*I, CGN);
       }
@@ -134,8 +138,31 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
   return Changed;
 }
 
+bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
+  if (skipSCC(SCC))
+    return false;
+
+  // Get the callgraph information that we need to update to reflect our
+  // changes.
+  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+
+  // We compute dedicated AA results for each function in the SCC as needed. We
+  // use a lambda referencing external objects so that they live long enough to
+  // be queried, but we re-use them each time.
+  Optional<BasicAAResult> BAR;
+  Optional<AAResults> AAR;
+  std::function<AAResults &(Function & F)> AARGetter = [&](
+      Function &F) -> AAResults & {
+    BAR.emplace(createLegacyPMBasicAAResult(*this, F));
+    AAR.emplace(createLegacyPMAAResults(*this, F, *BAR));
+    return *AAR;
+  };
+
+  return runImpl(SCC, CG, AARGetter, maxElements);
+}
+
 /// \brief Checks if a type could have padding bytes.
-bool ArgPromotion::isDenselyPacked(Type *type, const DataLayout &DL) {
+static bool isDenselyPacked(Type *type, const DataLayout &DL) {
 
   // There is no size information, so be conservative.
   if (!type->isSized())
@@ -171,7 +198,7 @@ bool ArgPromotion::isDenselyPacked(Type *type, const DataLayout &DL) {
 }
 
 /// \brief Checks if the padding bytes of an argument could be accessed.
-bool ArgPromotion::canPaddingBeAccessed(Argument *arg) {
+static bool canPaddingBeAccessed(Argument *arg) {
 
   assert(arg->hasByValAttr());
 
@@ -212,7 +239,10 @@ bool ArgPromotion::canPaddingBeAccessed(Argument *arg) {
 /// example, all callers are direct).  If safe to promote some arguments, it
 /// calls the DoPromotion method.
 ///
-CallGraphNode *ArgPromotion::PromoteArguments(CallGraphNode *CGN) {
+static CallGraphNode *
+PromoteArguments(CallGraphNode *CGN, CallGraph &CG,
+                 std::function<AAResults &(Function &F)> AARGetter,
+                 unsigned MaxElements) {
   Function *F = CGN->getFunction();
 
   // Make sure that it is local to this module.
@@ -247,13 +277,7 @@ CallGraphNode *ArgPromotion::PromoteArguments(CallGraphNode *CGN) {
   
   const DataLayout &DL = F->getParent()->getDataLayout();
 
-  // We need to manually construct BasicAA directly in order to disable its use
-  // of other function analyses.
-  BasicAAResult BAR(createLegacyPMBasicAAResult(*this, *F));
-
-  // Construct our own AA results for this function. We do this manually to
-  // work around the limitations of the legacy pass manager.
-  AAResults AAR(createLegacyPMAAResults(*this, *F, BAR));
+  AAResults &AAR = AARGetter(*F);
 
   // Check to see which arguments are promotable.  If an argument is promotable,
   // add it to ArgsToPromote.
@@ -290,10 +314,10 @@ CallGraphNode *ArgPromotion::PromoteArguments(CallGraphNode *CGN) {
         (isDenselyPacked(AgTy, DL) || !canPaddingBeAccessed(PtrArg));
     if (isSafeToPromote) {
       if (StructType *STy = dyn_cast<StructType>(AgTy)) {
-        if (maxElements > 0 && STy->getNumElements() > maxElements) {
+        if (MaxElements > 0 && STy->getNumElements() > MaxElements) {
           DEBUG(dbgs() << "argpromotion disable promoting argument '"
                 << PtrArg->getName() << "' because it would require adding more"
-                << " than " << maxElements << " arguments to the function.\n");
+                << " than " << MaxElements << " arguments to the function.\n");
           continue;
         }
         
@@ -333,7 +357,8 @@ CallGraphNode *ArgPromotion::PromoteArguments(CallGraphNode *CGN) {
     }
     
     // Otherwise, see if we can promote the pointer to its value.
-    if (isSafeToPromoteArgument(PtrArg, PtrArg->hasByValOrInAllocaAttr(), AAR))
+    if (isSafeToPromoteArgument(PtrArg, PtrArg->hasByValOrInAllocaAttr(), AAR,
+                                MaxElements))
       ArgsToPromote.insert(PtrArg);
   }
 
@@ -341,7 +366,7 @@ CallGraphNode *ArgPromotion::PromoteArguments(CallGraphNode *CGN) {
   if (ArgsToPromote.empty() && ByValArgsToTransform.empty()) 
     return nullptr;
 
-  return DoPromotion(F, ArgsToPromote, ByValArgsToTransform);
+  return DoPromotion(F, ArgsToPromote, ByValArgsToTransform, CG);
 }
 
 /// AllCallersPassInValidPointerForArgument - Return true if we can prove that
@@ -369,8 +394,7 @@ static bool AllCallersPassInValidPointerForArgument(Argument *Arg) {
 /// elements in Prefix is the same as the corresponding elements in Longer.
 ///
 /// This means it also returns true when Prefix and Longer are equal!
-static bool IsPrefix(const ArgPromotion::IndicesVector &Prefix,
-                     const ArgPromotion::IndicesVector &Longer) {
+static bool IsPrefix(const IndicesVector &Prefix, const IndicesVector &Longer) {
   if (Prefix.size() > Longer.size())
     return false;
   return std::equal(Prefix.begin(), Prefix.end(), Longer.begin());
@@ -378,9 +402,9 @@ static bool IsPrefix(const ArgPromotion::IndicesVector &Prefix,
 
 
 /// Checks if Indices, or a prefix of Indices, is in Set.
-static bool PrefixIn(const ArgPromotion::IndicesVector &Indices,
-                     std::set<ArgPromotion::IndicesVector> &Set) {
-    std::set<ArgPromotion::IndicesVector>::iterator Low;
+static bool PrefixIn(const IndicesVector &Indices,
+                     std::set<IndicesVector> &Set) {
+    std::set<IndicesVector>::iterator Low;
     Low = Set.upper_bound(Indices);
     if (Low != Set.begin())
       Low--;
@@ -397,9 +421,9 @@ static bool PrefixIn(const ArgPromotion::IndicesVector &Indices,
 /// is already a prefix of Indices in Safe, Indices are implicitely marked safe
 /// already. Furthermore, any indices that Indices is itself a prefix of, are
 /// removed from Safe (since they are implicitely safe because of Indices now).
-static void MarkIndicesSafe(const ArgPromotion::IndicesVector &ToMark,
-                            std::set<ArgPromotion::IndicesVector> &Safe) {
-  std::set<ArgPromotion::IndicesVector>::iterator Low;
+static void MarkIndicesSafe(const IndicesVector &ToMark,
+                            std::set<IndicesVector> &Safe) {
+  std::set<IndicesVector>::iterator Low;
   Low = Safe.upper_bound(ToMark);
   // Guard against the case where Safe is empty
   if (Low != Safe.begin())
@@ -420,9 +444,9 @@ static void MarkIndicesSafe(const ArgPromotion::IndicesVector &ToMark,
   Low = Safe.insert(Low, ToMark);
   ++Low;
   // If there we're a prefix of longer index list(s), remove those
-  std::set<ArgPromotion::IndicesVector>::iterator End = Safe.end();
+  std::set<IndicesVector>::iterator End = Safe.end();
   while (Low != End && IsPrefix(ToMark, *Low)) {
-    std::set<ArgPromotion::IndicesVector>::iterator Remove = Low;
+    std::set<IndicesVector>::iterator Remove = Low;
     ++Low;
     Safe.erase(Remove);
   }
@@ -433,9 +457,8 @@ static void MarkIndicesSafe(const ArgPromotion::IndicesVector &ToMark,
 /// This method limits promotion of aggregates to only promote up to three
 /// elements of the aggregate in order to avoid exploding the number of
 /// arguments passed in.
-bool ArgPromotion::isSafeToPromoteArgument(Argument *Arg,
-                                           bool isByValOrInAlloca,
-                                           AAResults &AAR) const {
+static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
+                                    AAResults &AAR, unsigned MaxElements) {
   typedef std::set<IndicesVector> GEPIndicesSet;
 
   // Quick exit for unused arguments
@@ -523,7 +546,8 @@ bool ArgPromotion::isSafeToPromoteArgument(Argument *Arg,
         // TODO: This runs the above loop over and over again for dead GEPs
         // Couldn't we just do increment the UI iterator earlier and erase the
         // use?
-        return isSafeToPromoteArgument(Arg, isByValOrInAlloca, AAR);
+        return isSafeToPromoteArgument(Arg, isByValOrInAlloca, AAR,
+                                       MaxElements);
       }
 
       // Ensure that all of the indices are constants.
@@ -557,10 +581,10 @@ bool ArgPromotion::isSafeToPromoteArgument(Argument *Arg,
     // to make sure that we aren't promoting too many elements.  If so, nothing
     // to do.
     if (ToPromote.find(Operands) == ToPromote.end()) {
-      if (maxElements > 0 && ToPromote.size() == maxElements) {
+      if (MaxElements > 0 && ToPromote.size() == MaxElements) {
         DEBUG(dbgs() << "argpromotion not promoting argument '"
               << Arg->getName() << "' because it would require adding more "
-              << "than " << maxElements << " arguments to the function.\n");
+              << "than " << MaxElements << " arguments to the function.\n");
         // We limit aggregate promotion to only promoting up to a fixed number
         // of elements of the aggregate.
         return false;
@@ -609,9 +633,9 @@ bool ArgPromotion::isSafeToPromoteArgument(Argument *Arg,
 /// DoPromotion - This method actually performs the promotion of the specified
 /// arguments, and returns the new function.  At this point, we know that it's
 /// safe to do so.
-CallGraphNode *ArgPromotion::DoPromotion(Function *F,
-                             SmallPtrSetImpl<Argument*> &ArgsToPromote,
-                             SmallPtrSetImpl<Argument*> &ByValArgsToTransform) {
+static CallGraphNode *
+DoPromotion(Function *F, SmallPtrSetImpl<Argument *> &ArgsToPromote,
+            SmallPtrSetImpl<Argument *> &ByValArgsToTransform, CallGraph &CG) {
 
   // Start by computing a new prototype for the function, which is the same as
   // the old function, but has modified arguments.
@@ -748,10 +772,6 @@ CallGraphNode *ArgPromotion::DoPromotion(Function *F,
 
   F->getParent()->getFunctionList().insert(F->getIterator(), NF);
   NF->takeName(F);
-
-  // Get the callgraph information that we need to update to reflect our
-  // changes.
-  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
 
   // Get a new callgraph node for NF.
   CallGraphNode *NF_CGN = CG.getOrInsertFunction(NF);

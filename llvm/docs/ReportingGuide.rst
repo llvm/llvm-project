@@ -33,7 +33,7 @@ needed) email conduct@llvm.org.
    intended to discourage this self enforcement of community norms. Instead,
    the mechanisms described here are intended to supplement any self
    enforcement within the community. They provide avenues for handling severe
-   cases or cases where the reporting party does not whish to respond directly
+   cases or cases where the reporting party does not wish to respond directly
    for any reason.
 
 Filing a report

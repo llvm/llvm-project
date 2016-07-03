@@ -14,6 +14,7 @@
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -2021,6 +2023,32 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LoopAccessAnalysis, LAA_NAME, laa_name, false, true)
+
+char LoopAccessInfoAnalysis::PassID;
+
+LoopAccessInfo LoopAccessInfoAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
+  // FIXME: ugly const cast
+  AnalysisManager<Function> &FAM = const_cast<FunctionAnalysisManager &>(
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager());
+  Function &F = *L.getHeader()->getParent();
+  auto *SE = &FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *TLI = FAM.getCachedResult<TargetLibraryAnalysis>(F);
+  auto *AA = &FAM.getResult<AAManager>(F);
+  auto *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto *LI = &FAM.getResult<LoopAnalysis>(F);
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  return LoopAccessInfo(&L, SE, DL, TLI, AA, DT, LI);
+}
+
+PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,
+                                                 AnalysisManager<Loop> &AM) {
+  Function &F = *L.getHeader()->getParent();
+  auto &LAI = AM.getResult<LoopAccessInfoAnalysis>(L);
+  OS << "Loop access info in function '" << F.getName() << "':\n";
+  OS.indent(2) << L.getHeader()->getName() << ":\n";
+  LAI.print(OS, 4);
+  return PreservedAnalyses::all();
+}
 
 namespace llvm {
   Pass *createLAAPass() {

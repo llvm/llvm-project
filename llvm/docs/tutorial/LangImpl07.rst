@@ -877,5 +877,5 @@ Here is the code:
 .. literalinclude:: ../../examples/Kaleidoscope/Chapter7/toy.cpp
    :language: c++
 
-`Next: Adding Debug Information <LangImpl8.html>`_
+`Next: Compiling to Object Code <LangImpl08.html>`_
 

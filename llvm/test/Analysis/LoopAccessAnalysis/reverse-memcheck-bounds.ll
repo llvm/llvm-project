@@ -1,4 +1,5 @@
 ; RUN: opt -loop-accesses -analyze < %s | FileCheck %s
+; RUN: opt -passes='loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; The runtime memory check code and the access grouping
 ; algorithm both assume that the start and end values

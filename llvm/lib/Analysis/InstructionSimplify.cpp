@@ -1975,7 +1975,7 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
   RHS = RHS->stripPointerCasts();
 
   // A non-null pointer is not equal to a null pointer.
-  if (llvm::isKnownNonNull(LHS, TLI) && isa<ConstantPointerNull>(RHS) &&
+  if (llvm::isKnownNonNull(LHS) && isa<ConstantPointerNull>(RHS) &&
       (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE))
     return ConstantInt::get(GetCompareTy(LHS),
                             !CmpInst::isTrueWhenEqual(Pred));
@@ -2130,10 +2130,9 @@ computePointerICmp(const DataLayout &DL, const TargetLibraryInfo *TLI,
     // cannot be elided. We cannot fold malloc comparison to null. Also, the
     // dynamic allocation call could be either of the operands.
     Value *MI = nullptr;
-    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonNullAt(RHS, CxtI, DT, TLI))
+    if (isAllocLikeFn(LHS, TLI) && llvm::isKnownNonNullAt(RHS, CxtI, DT))
       MI = LHS;
-    else if (isAllocLikeFn(RHS, TLI) &&
-             llvm::isKnownNonNullAt(LHS, CxtI, DT, TLI))
+    else if (isAllocLikeFn(RHS, TLI) && llvm::isKnownNonNullAt(LHS, CxtI, DT))
       MI = RHS;
     // FIXME: We should also fold the compare when the pointer escapes, but the
     // compare dominates the pointer escape

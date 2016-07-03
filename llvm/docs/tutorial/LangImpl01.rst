@@ -42,45 +42,48 @@ in the various pieces. The structure of the tutorial is:
    to implement everything in C++ instead of using lexer and parser
    generators. LLVM obviously works just fine with such tools, feel free
    to use one if you prefer.
--  `Chapter #2 <LangImpl2.html>`_: Implementing a Parser and AST -
+-  `Chapter #2 <LangImpl02.html>`_: Implementing a Parser and AST -
    With the lexer in place, we can talk about parsing techniques and
    basic AST construction. This tutorial describes recursive descent
    parsing and operator precedence parsing. Nothing in Chapters 1 or 2
    is LLVM-specific, the code doesn't even link in LLVM at this point.
    :)
--  `Chapter #3 <LangImpl3.html>`_: Code generation to LLVM IR - With
+-  `Chapter #3 <LangImpl03.html>`_: Code generation to LLVM IR - With
    the AST ready, we can show off how easy generation of LLVM IR really
    is.
--  `Chapter #4 <LangImpl4.html>`_: Adding JIT and Optimizer Support
+-  `Chapter #4 <LangImpl04.html>`_: Adding JIT and Optimizer Support
    - Because a lot of people are interested in using LLVM as a JIT,
    we'll dive right into it and show you the 3 lines it takes to add JIT
    support. LLVM is also useful in many other ways, but this is one
    simple and "sexy" way to show off its power. :)
--  `Chapter #5 <LangImpl5.html>`_: Extending the Language: Control
+-  `Chapter #5 <LangImpl05.html>`_: Extending the Language: Control
    Flow - With the language up and running, we show how to extend it
    with control flow operations (if/then/else and a 'for' loop). This
    gives us a chance to talk about simple SSA construction and control
    flow.
--  `Chapter #6 <LangImpl6.html>`_: Extending the Language:
+-  `Chapter #6 <LangImpl06.html>`_: Extending the Language:
    User-defined Operators - This is a silly but fun chapter that talks
    about extending the language to let the user program define their own
    arbitrary unary and binary operators (with assignable precedence!).
    This lets us build a significant piece of the "language" as library
    routines.
--  `Chapter #7 <LangImpl7.html>`_: Extending the Language: Mutable
+-  `Chapter #7 <LangImpl07.html>`_: Extending the Language: Mutable
    Variables - This chapter talks about adding user-defined local
    variables along with an assignment operator. The interesting part
    about this is how easy and trivial it is to construct SSA form in
    LLVM: no, LLVM does *not* require your front-end to construct SSA
    form!
--  `Chapter #8 <LangImpl8.html>`_: Extending the Language: Debug
+-  `Chapter #8 <LangImpl08.html>`_: Compiling to Object Files - This
+   chapter explains how to take LLVM IR and compile it down to object
+   files.
+-  `Chapter #9 <LangImpl09.html>`_: Extending the Language: Debug
    Information - Having built a decent little programming language with
    control flow, functions and mutable variables, we consider what it
    takes to add debug information to standalone executables. This debug
    information will allow you to set breakpoints in Kaleidoscope
    functions, print out argument variables, and call functions - all
    from within the debugger!
--  `Chapter #9 <LangImpl9.html>`_: Conclusion and other useful LLVM
+-  `Chapter #10 <LangImpl10.html>`_: Conclusion and other useful LLVM
    tidbits - This chapter wraps up the series by talking about
    potential ways to extend the language, but also includes a bunch of
    pointers to info about "special topics" like adding garbage
@@ -146,7 +149,7 @@ useful for mutually recursive functions). For example:
 
 A more interesting example is included in Chapter 6 where we write a
 little Kaleidoscope application that `displays a Mandelbrot
-Set <LangImpl6.html#kicking-the-tires>`_ at various levels of magnification.
+Set <LangImpl06.html#kicking-the-tires>`_ at various levels of magnification.
 
 Lets dive into the implementation of this language!
 
@@ -280,11 +283,11 @@ file. These are handled with this code:
     }
 
 With this, we have the complete lexer for the basic Kaleidoscope
-language (the `full code listing <LangImpl2.html#full-code-listing>`_ for the Lexer
-is available in the `next chapter <LangImpl2.html>`_ of the tutorial).
+language (the `full code listing <LangImpl02.html#full-code-listing>`_ for the Lexer
+is available in the `next chapter <LangImpl02.html>`_ of the tutorial).
 Next we'll `build a simple parser that uses this to build an Abstract
-Syntax Tree <LangImpl2.html>`_. When we have that, we'll include a
+Syntax Tree <LangImpl02.html>`_. When we have that, we'll include a
 driver so that you can use the lexer and parser together.
 
-`Next: Implementing a Parser and AST <LangImpl2.html>`_
+`Next: Implementing a Parser and AST <LangImpl02.html>`_
 

@@ -772,6 +772,28 @@ private:
   LoopInfo *LI;
 };
 
+/// \brief LoopAccessInfoAnalysis
+class LoopAccessInfoAnalysis
+    : public AnalysisInfoMixin<LoopAccessInfoAnalysis> {
+  friend AnalysisInfoMixin<LoopAccessInfoAnalysis>;
+  static char PassID;
+
+public:
+  typedef LoopAccessInfo Result;
+  Result run(Loop &, AnalysisManager<Loop> &);
+  static StringRef name() { return "LoopAccessInfoAnalysis"; }
+};
+
+/// \brief Printer pass for the \c LoopAccessInfo results.
+class LoopAccessInfoPrinterPass
+    : public PassInfoMixin<LoopAccessInfoPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit LoopAccessInfoPrinterPass(raw_ostream &OS) : OS(OS) {}
+  PreservedAnalyses run(Loop &L, AnalysisManager<Loop> &AM);
+};
+
 inline Instruction *MemoryDepChecker::Dependence::getSource(
     const LoopAccessInfo &LAI) const {
   return LAI.getDepChecker().getMemoryInstructions()[Source];

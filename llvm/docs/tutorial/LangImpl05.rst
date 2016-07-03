@@ -217,7 +217,7 @@ IR into "t.ll" and run "``llvm-as < t.ll | opt -analyze -view-cfg``", `a
 window will pop up <../ProgrammersManual.html#viewing-graphs-while-debugging-code>`_ and you'll
 see this graph:
 
-.. figure:: LangImpl5-cfg.png
+.. figure:: LangImpl05-cfg.png
    :align: center
    :alt: Example CFG
 
@@ -786,5 +786,5 @@ Here is the code:
 .. literalinclude:: ../../examples/Kaleidoscope/Chapter5/toy.cpp
    :language: c++
 
-`Next: Extending the language: user-defined operators <LangImpl6.html>`_
+`Next: Extending the language: user-defined operators <LangImpl06.html>`_
 
