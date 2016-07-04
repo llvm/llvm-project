@@ -481,12 +481,37 @@ getRequiredQualification(ASTContext &Context,
 
 /// Determine whether \p Id is a name reserved for the implementation (C99
 /// 7.1.3, C++ [lib.global.names]).
-static bool isReservedName(const IdentifierInfo *Id) {
+static bool isReservedName(const IdentifierInfo *Id,
+                           bool doubleUnderscoreOnly = false) {
   if (Id->getLength() < 2)
     return false;
   const char *Name = Id->getNameStart();
   return Name[0] == '_' &&
-         (Name[1] == '_' || (Name[1] >= 'A' && Name[1] <= 'Z'));
+         (Name[1] == '_' || (Name[1] >= 'A' && Name[1] <= 'Z' &&
+                             !doubleUnderscoreOnly));
+}
+
+// Some declarations have reserved names that we don't want to ever show.
+// Filter out names reserved for the implementation if they come from a
+// system header.
+static bool shouldIgnoreDueToReservedName(const NamedDecl *ND, Sema &SemaRef) {
+  const IdentifierInfo *Id = ND->getIdentifier();
+  if (!Id)
+    return false;
+
+  // Ignore reserved names for compiler provided decls.
+  if (isReservedName(Id) && ND->getLocation().isInvalid())
+    return true;
+
+  // For system headers ignore only double-underscore names.
+  // This allows for system headers providing private symbols with a single
+  // underscore.
+  if (isReservedName(Id, /*doubleUnderscoreOnly=*/true) &&
+       SemaRef.SourceMgr.isInSystemHeader(
+           SemaRef.SourceMgr.getSpellingLoc(ND->getLocation())))
+      return true;
+
+  return false;
 }
 
 bool ResultBuilder::isInterestingDecl(const NamedDecl *ND,
@@ -513,17 +538,9 @@ bool ResultBuilder::isInterestingDecl(const NamedDecl *ND,
   // Using declarations themselves are never added as results.
   if (isa<UsingDecl>(ND))
     return false;
-  
-  // Some declarations have reserved names that we don't want to ever show.
-  // Filter out names reserved for the implementation if they come from a
-  // system header.
-  // TODO: Add a predicate for this.
-  if (const IdentifierInfo *Id = ND->getIdentifier())
-    if (isReservedName(Id) &&
-        (ND->getLocation().isInvalid() ||
-         SemaRef.SourceMgr.isInSystemHeader(
-             SemaRef.SourceMgr.getSpellingLoc(ND->getLocation()))))
-        return false;
+
+  if (shouldIgnoreDueToReservedName(ND, SemaRef))
+    return false;
 
   if (Filter == &ResultBuilder::IsNestedNameSpecifier ||
       (isa<NamespaceDecl>(ND) &&

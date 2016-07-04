@@ -664,31 +664,6 @@ def detailed_preprocessing_record : Flag<["-"], "detailed-preprocessing-record">
   HelpText<"include a detailed record of preprocessing actions">;
 
 //===----------------------------------------------------------------------===//
-// OpenCL Options
-//===----------------------------------------------------------------------===//
-
-def cl_opt_disable : Flag<["-"], "cl-opt-disable">,
-  HelpText<"OpenCL only. This option disables all optimizations. The default is optimizations are enabled.">;
-def cl_strict_aliasing : Flag<["-"], "cl-strict-aliasing">,
-  HelpText<"OpenCL only. This option does nothing and is for compatibility with OpenCL 1.0">;
-def cl_single_precision_constant : Flag<["-"], "cl-single-precision-constant">,
-  HelpText<"OpenCL only. Treat double precision floating-point constant as single precision constant.">;
-def cl_finite_math_only : Flag<["-"], "cl-finite-math-only">,
-  HelpText<"OpenCL only. Allow floating-point optimizations that assume arguments and results are not NaNs or +-Inf.">;
-def cl_kernel_arg_info : Flag<["-"], "cl-kernel-arg-info">,
-  HelpText<"OpenCL only. Generate kernel argument metadata.">;
-def cl_unsafe_math_optimizations : Flag<["-"], "cl-unsafe-math-optimizations">,
-  HelpText<"OpenCL only. Allow unsafe floating-point optimizations.  Also implies -cl-no-signed-zeros and -cl-mad-enable">;
-def cl_fast_relaxed_math : Flag<["-"], "cl-fast-relaxed-math">,
-  HelpText<"OpenCL only. Sets -cl-finite-math-only and -cl-unsafe-math-optimizations, and defines __FAST_RELAXED_MATH__">;
-def cl_mad_enable : Flag<["-"], "cl-mad-enable">,
-  HelpText<"OpenCL only. Enable less precise MAD instructions to be generated.">;
-def cl_std_EQ : Joined<["-"], "cl-std=">,
-  HelpText<"OpenCL language standard to compile for">;
-def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">,
-  HelpText<"OpenCL only. Allow denormals to be flushed to zero">;
-
-//===----------------------------------------------------------------------===//
 // CUDA Options
 //===----------------------------------------------------------------------===//
 
@@ -707,7 +682,7 @@ def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr
 
 def fopenmp_is_device : Flag<["-"], "fopenmp-is-device">,
   HelpText<"Generate code only for an OpenMP target device.">;
-def fomp_host_ir_file_path : Separate<["-"], "fomp-host-ir-file-path">,
+def fopenmp_host_ir_file_path : Separate<["-"], "fopenmp-host-ir-file-path">,
   HelpText<"Path to the IR file produced by the frontend for the host.">;
   
 } // let Flags = [CC1Option]

@@ -29,6 +29,12 @@ bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context);
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
                                            const ASTContext &Context);
 
+/// Returns true if `Type` has a non-trivial move constructor.
+bool hasNonTrivialMoveConstructor(QualType Type);
+
+/// Return true if `Type` has a non-trivial move assignment operator.
+bool hasNonTrivialMoveAssignment(QualType Type);
+
 } // type_traits
 } // namespace utils
 } // namespace tidy

@@ -1,5 +1,4 @@
-; RUN: llvm-pdbdump -raw-headers -raw-output-style=YAML %p/Inputs/empty.pdb \
-; RUN:               | FileCheck -check-prefix=YAML %s
+; RUN: llvm-pdbdump pdb2yaml -stream-metadata %p/Inputs/empty.pdb | FileCheck -check-prefix=YAML %s
 
 ; YAML:      ---
 ; YAML-NEXT: MSF:
@@ -16,4 +15,4 @@
 ; YAML-NEXT:     - 23
 ; YAML-NEXT:   NumStreams:      17
 ; YAML-NEXT:   FileSize:        102400
-; YAML-NEXT: ...
+; YAML: ...

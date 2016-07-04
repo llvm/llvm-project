@@ -38,9 +38,7 @@ void TestModuleFileExtension::Writer::writeExtensionContents(
     OS << "Hello from " << Ext->BlockName << " v" << Ext->MajorVersion << "."
        << Ext->MinorVersion;
   }
-  SmallVector<uint64_t, 4> Record;
-  Record.push_back(FIRST_EXTENSION_RECORD_ID);
-  Record.push_back(Message.size());
+  uint64_t Record[] = {FIRST_EXTENSION_RECORD_ID, Message.size()};
   Stream.EmitRecordWithBlob(Abbrev, Record, Message);
 }
 

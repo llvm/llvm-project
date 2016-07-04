@@ -157,6 +157,11 @@ if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND NOT __ANDROID_NDK__)
     endif()
   endif()
 endif()
+
+if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB )
+    list(APPEND LLDB_SYSTEM_LIBS atomic)
+endif()
+
 # On FreeBSD/NetBSD backtrace() is provided by libexecinfo, not libc.
 if (CMAKE_SYSTEM_NAME MATCHES "FreeBSD" OR CMAKE_SYSTEM_NAME MATCHES "NetBSD")
   list(APPEND LLDB_SYSTEM_LIBS execinfo)

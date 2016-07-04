@@ -121,7 +121,7 @@ static bool isRematerializable(const LiveInterval &LI,
       }
     }
 
-    if (!TII.isTriviallyReMaterializable(MI, LIS.getAliasAnalysis()))
+    if (!TII.isTriviallyReMaterializable(*MI, LIS.getAliasAnalysis()))
       return false;
   }
   return true;

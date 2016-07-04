@@ -12,11 +12,14 @@
 
 // C Includes
 // C++ Includes
+#include <memory>
 #include <string>
 
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/Platform/Linux/PlatformLinux.h"
+
+#include "AdbClient.h"
 
 namespace lldb_private {
 namespace platform_android {
@@ -102,6 +105,8 @@ namespace platform_android {
         GetLibdlFunctionDeclarations() const override;
 
     private:
+        std::unique_ptr<AdbClient> m_adb;
+        std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
         std::string m_device_id;
         uint32_t m_sdk_version;
 

@@ -64,7 +64,8 @@ std::string InputFile::getShortName() {
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
   auto ArchiveOrErr = Archive::create(MB);
-  error(ArchiveOrErr, "Failed to parse static library");
+  error(errorToErrorCode(ArchiveOrErr.takeError()),
+        "Failed to parse static library");
   File = std::move(*ArchiveOrErr);
 
   // Allocate a buffer for Lazy objects.

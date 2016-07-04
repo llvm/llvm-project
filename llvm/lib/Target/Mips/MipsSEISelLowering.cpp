@@ -1111,9 +1111,9 @@ MipsSETargetLowering::PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const {
 }
 
 MachineBasicBlock *
-MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
+MipsSETargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                   MachineBasicBlock *BB) const {
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   default:
     return MipsTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   case Mips::BPOSGE32_PSEUDO:
@@ -2904,8 +2904,9 @@ SDValue MipsSETargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
   return lowerVECTOR_SHUFFLE_VSHF(Op, ResTy, Indices, DAG);
 }
 
-MachineBasicBlock * MipsSETargetLowering::
-emitBPOSGE32(MachineInstr *MI, MachineBasicBlock *BB) const{
+MachineBasicBlock *
+MipsSETargetLowering::emitBPOSGE32(MachineInstr &MI,
+                                   MachineBasicBlock *BB) const {
   // $bb:
   //  bposge32_pseudo $vr0
   //  =>
@@ -2922,7 +2923,7 @@ emitBPOSGE32(MachineInstr *MI, MachineBasicBlock *BB) const{
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   MachineFunction::iterator It = std::next(MachineFunction::iterator(BB));
   MachineFunction *F = BB->getParent();
@@ -2962,16 +2963,18 @@ emitBPOSGE32(MachineInstr *MI, MachineBasicBlock *BB) const{
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
-          MI->getOperand(0).getReg())
-    .addReg(VR2).addMBB(FBB).addReg(VR1).addMBB(TBB);
+          MI.getOperand(0).getReg())
+      .addReg(VR2)
+      .addMBB(FBB)
+      .addReg(VR1)
+      .addMBB(TBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return Sink;
 }
 
-MachineBasicBlock * MipsSETargetLowering::
-emitMSACBranchPseudo(MachineInstr *MI, MachineBasicBlock *BB,
-                     unsigned BranchOp) const{
+MachineBasicBlock *MipsSETargetLowering::emitMSACBranchPseudo(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned BranchOp) const {
   // $bb:
   //  vany_nonzero $rd, $ws
   //  =>
@@ -2989,7 +2992,7 @@ emitMSACBranchPseudo(MachineInstr *MI, MachineBasicBlock *BB,
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   const TargetRegisterClass *RC = &Mips::GPR32RegClass;
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   const BasicBlock *LLVM_BB = BB->getBasicBlock();
   MachineFunction::iterator It = std::next(MachineFunction::iterator(BB));
   MachineFunction *F = BB->getParent();
@@ -3013,8 +3016,8 @@ emitMSACBranchPseudo(MachineInstr *MI, MachineBasicBlock *BB,
 
   // Insert the real bnz.b instruction to $BB.
   BuildMI(BB, DL, TII->get(BranchOp))
-    .addReg(MI->getOperand(1).getReg())
-    .addMBB(TBB);
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(TBB);
 
   // Fill $FBB.
   unsigned RD1 = RegInfo.createVirtualRegister(RC);
@@ -3029,10 +3032,13 @@ emitMSACBranchPseudo(MachineInstr *MI, MachineBasicBlock *BB,
 
   // Insert phi function to $Sink.
   BuildMI(*Sink, Sink->begin(), DL, TII->get(Mips::PHI),
-          MI->getOperand(0).getReg())
-    .addReg(RD1).addMBB(FBB).addReg(RD2).addMBB(TBB);
+          MI.getOperand(0).getReg())
+      .addReg(RD1)
+      .addMBB(FBB)
+      .addReg(RD2)
+      .addMBB(TBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return Sink;
 }
 
@@ -3046,14 +3052,15 @@ emitMSACBranchPseudo(MachineInstr *MI, MachineBasicBlock *BB,
 // When n is zero, the equivalent operation can be performed with (potentially)
 // zero instructions due to register overlaps. This optimization is never valid
 // for lane 1 because it would require FR=0 mode which isn't supported by MSA.
-MachineBasicBlock * MipsSETargetLowering::
-emitCOPY_FW(MachineInstr *MI, MachineBasicBlock *BB) const{
+MachineBasicBlock *
+MipsSETargetLowering::emitCOPY_FW(MachineInstr &MI,
+                                  MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  unsigned Fd = MI->getOperand(0).getReg();
-  unsigned Ws = MI->getOperand(1).getReg();
-  unsigned Lane = MI->getOperand(2).getImm();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned Fd = MI.getOperand(0).getReg();
+  unsigned Ws = MI.getOperand(1).getReg();
+  unsigned Lane = MI.getOperand(2).getImm();
 
   if (Lane == 0) {
     unsigned Wt = Ws;
@@ -3075,7 +3082,7 @@ emitCOPY_FW(MachineInstr *MI, MachineBasicBlock *BB) const{
     BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_lo);
   }
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3089,16 +3096,17 @@ emitCOPY_FW(MachineInstr *MI, MachineBasicBlock *BB) const{
 // When n is zero, the equivalent operation can be performed with (potentially)
 // zero instructions due to register overlaps. This optimization is always
 // valid because FR=1 mode which is the only supported mode in MSA.
-MachineBasicBlock * MipsSETargetLowering::
-emitCOPY_FD(MachineInstr *MI, MachineBasicBlock *BB) const{
+MachineBasicBlock *
+MipsSETargetLowering::emitCOPY_FD(MachineInstr &MI,
+                                  MachineBasicBlock *BB) const {
   assert(Subtarget.isFP64bit());
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  unsigned Fd  = MI->getOperand(0).getReg();
-  unsigned Ws  = MI->getOperand(1).getReg();
-  unsigned Lane = MI->getOperand(2).getImm() * 2;
-  DebugLoc DL = MI->getDebugLoc();
+  unsigned Fd = MI.getOperand(0).getReg();
+  unsigned Ws = MI.getOperand(1).getReg();
+  unsigned Lane = MI.getOperand(2).getImm() * 2;
+  DebugLoc DL = MI.getDebugLoc();
 
   if (Lane == 0)
     BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Ws, 0, Mips::sub_64);
@@ -3109,7 +3117,7 @@ emitCOPY_FD(MachineInstr *MI, MachineBasicBlock *BB) const{
     BuildMI(*BB, MI, DL, TII->get(Mips::COPY), Fd).addReg(Wt, 0, Mips::sub_64);
   }
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3120,15 +3128,15 @@ emitCOPY_FD(MachineInstr *MI, MachineBasicBlock *BB) const{
 // subreg_to_reg $wt:sub_lo, $fs
 // insve_w $wd[$n], $wd_in, $wt[0]
 MachineBasicBlock *
-MipsSETargetLowering::emitINSERT_FW(MachineInstr *MI,
+MipsSETargetLowering::emitINSERT_FW(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  unsigned Wd = MI->getOperand(0).getReg();
-  unsigned Wd_in = MI->getOperand(1).getReg();
-  unsigned Lane = MI->getOperand(2).getImm();
-  unsigned Fs = MI->getOperand(3).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned Wd = MI.getOperand(0).getReg();
+  unsigned Wd_in = MI.getOperand(1).getReg();
+  unsigned Lane = MI.getOperand(2).getImm();
+  unsigned Fs = MI.getOperand(3).getReg();
   unsigned Wt = RegInfo.createVirtualRegister(
       Subtarget.useOddSPReg() ? &Mips::MSA128WRegClass :
                                 &Mips::MSA128WEvensRegClass);
@@ -3143,7 +3151,7 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr *MI,
       .addReg(Wt)
       .addImm(0);
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3154,17 +3162,17 @@ MipsSETargetLowering::emitINSERT_FW(MachineInstr *MI,
 // subreg_to_reg $wt:sub_64, $fs
 // insve_d $wd[$n], $wd_in, $wt[0]
 MachineBasicBlock *
-MipsSETargetLowering::emitINSERT_FD(MachineInstr *MI,
+MipsSETargetLowering::emitINSERT_FD(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
   assert(Subtarget.isFP64bit());
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  unsigned Wd = MI->getOperand(0).getReg();
-  unsigned Wd_in = MI->getOperand(1).getReg();
-  unsigned Lane = MI->getOperand(2).getImm();
-  unsigned Fs = MI->getOperand(3).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned Wd = MI.getOperand(0).getReg();
+  unsigned Wd_in = MI.getOperand(1).getReg();
+  unsigned Lane = MI.getOperand(2).getImm();
+  unsigned Fs = MI.getOperand(3).getReg();
   unsigned Wt = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
   BuildMI(*BB, MI, DL, TII->get(Mips::SUBREG_TO_REG), Wt)
@@ -3177,7 +3185,7 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr *MI,
       .addReg(Wt)
       .addImm(0);
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3201,18 +3209,16 @@ MipsSETargetLowering::emitINSERT_FD(MachineInstr *MI,
 // (INSVE_[WD], $wdtmp2, 0, $wdtmp1, 0)
 // (NEG $lanetmp2, $lanetmp1)
 // (SLD_B $wd, $wdtmp2, $wdtmp2,  $lanetmp2)
-MachineBasicBlock *
-MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
-                                         MachineBasicBlock *BB,
-                                         unsigned EltSizeInBytes,
-                                         bool IsFP) const {
+MachineBasicBlock *MipsSETargetLowering::emitINSERT_DF_VIDX(
+    MachineInstr &MI, MachineBasicBlock *BB, unsigned EltSizeInBytes,
+    bool IsFP) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  unsigned Wd = MI->getOperand(0).getReg();
-  unsigned SrcVecReg = MI->getOperand(1).getReg();
-  unsigned LaneReg = MI->getOperand(2).getReg();
-  unsigned SrcValReg = MI->getOperand(3).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned Wd = MI.getOperand(0).getReg();
+  unsigned SrcVecReg = MI.getOperand(1).getReg();
+  unsigned LaneReg = MI.getOperand(2).getReg();
+  unsigned SrcValReg = MI.getOperand(3).getReg();
 
   const TargetRegisterClass *VecRC = nullptr;
   // FIXME: This should be true for N32 too.
@@ -3306,7 +3312,7 @@ MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
       .addReg(WdTmp2)
       .addReg(LaneTmp2, 0, SubRegIdx);
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3318,13 +3324,13 @@ MipsSETargetLowering::emitINSERT_DF_VIDX(MachineInstr *MI,
 // insert_subreg $wt2:subreg_lo, $wt1, $fs
 // splati.w $wd, $wt2[0]
 MachineBasicBlock *
-MipsSETargetLowering::emitFILL_FW(MachineInstr *MI,
+MipsSETargetLowering::emitFILL_FW(MachineInstr &MI,
                                   MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  unsigned Wd = MI->getOperand(0).getReg();
-  unsigned Fs = MI->getOperand(1).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned Wd = MI.getOperand(0).getReg();
+  unsigned Fs = MI.getOperand(1).getReg();
   unsigned Wt1 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
   unsigned Wt2 = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
 
@@ -3335,7 +3341,7 @@ MipsSETargetLowering::emitFILL_FW(MachineInstr *MI,
       .addImm(Mips::sub_lo);
   BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_W), Wd).addReg(Wt2).addImm(0);
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3347,15 +3353,15 @@ MipsSETargetLowering::emitFILL_FW(MachineInstr *MI,
 // insert_subreg $wt2:subreg_64, $wt1, $fs
 // splati.d $wd, $wt2[0]
 MachineBasicBlock *
-MipsSETargetLowering::emitFILL_FD(MachineInstr *MI,
+MipsSETargetLowering::emitFILL_FD(MachineInstr &MI,
                                   MachineBasicBlock *BB) const {
   assert(Subtarget.isFP64bit());
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
-  DebugLoc DL = MI->getDebugLoc();
-  unsigned Wd = MI->getOperand(0).getReg();
-  unsigned Fs = MI->getOperand(1).getReg();
+  DebugLoc DL = MI.getDebugLoc();
+  unsigned Wd = MI.getOperand(0).getReg();
+  unsigned Fs = MI.getOperand(1).getReg();
   unsigned Wt1 = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
   unsigned Wt2 = RegInfo.createVirtualRegister(&Mips::MSA128DRegClass);
 
@@ -3366,7 +3372,7 @@ MipsSETargetLowering::emitFILL_FD(MachineInstr *MI,
       .addImm(Mips::sub_64);
   BuildMI(*BB, MI, DL, TII->get(Mips::SPLATI_D), Wd).addReg(Wt2).addImm(0);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3377,25 +3383,25 @@ MipsSETargetLowering::emitFILL_FD(MachineInstr *MI,
 // ldi.w $ws, 1
 // fexp2.w $wd, $ws, $wt
 MachineBasicBlock *
-MipsSETargetLowering::emitFEXP2_W_1(MachineInstr *MI,
+MipsSETargetLowering::emitFEXP2_W_1(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
   const TargetRegisterClass *RC = &Mips::MSA128WRegClass;
   unsigned Ws1 = RegInfo.createVirtualRegister(RC);
   unsigned Ws2 = RegInfo.createVirtualRegister(RC);
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
   // Splat 1.0 into a vector
   BuildMI(*BB, MI, DL, TII->get(Mips::LDI_W), Ws1).addImm(1);
   BuildMI(*BB, MI, DL, TII->get(Mips::FFINT_U_W), Ws2).addReg(Ws1);
 
   // Emit 1.0 * fexp2(Wt)
-  BuildMI(*BB, MI, DL, TII->get(Mips::FEXP2_W), MI->getOperand(0).getReg())
+  BuildMI(*BB, MI, DL, TII->get(Mips::FEXP2_W), MI.getOperand(0).getReg())
       .addReg(Ws2)
-      .addReg(MI->getOperand(1).getReg());
+      .addReg(MI.getOperand(1).getReg());
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }
 
@@ -3406,24 +3412,24 @@ MipsSETargetLowering::emitFEXP2_W_1(MachineInstr *MI,
 // ldi.d $ws, 1
 // fexp2.d $wd, $ws, $wt
 MachineBasicBlock *
-MipsSETargetLowering::emitFEXP2_D_1(MachineInstr *MI,
+MipsSETargetLowering::emitFEXP2_D_1(MachineInstr &MI,
                                     MachineBasicBlock *BB) const {
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
   const TargetRegisterClass *RC = &Mips::MSA128DRegClass;
   unsigned Ws1 = RegInfo.createVirtualRegister(RC);
   unsigned Ws2 = RegInfo.createVirtualRegister(RC);
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
   // Splat 1.0 into a vector
   BuildMI(*BB, MI, DL, TII->get(Mips::LDI_D), Ws1).addImm(1);
   BuildMI(*BB, MI, DL, TII->get(Mips::FFINT_U_D), Ws2).addReg(Ws1);
 
   // Emit 1.0 * fexp2(Wt)
-  BuildMI(*BB, MI, DL, TII->get(Mips::FEXP2_D), MI->getOperand(0).getReg())
+  BuildMI(*BB, MI, DL, TII->get(Mips::FEXP2_D), MI.getOperand(0).getReg())
       .addReg(Ws2)
-      .addReg(MI->getOperand(1).getReg());
+      .addReg(MI.getOperand(1).getReg());
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }

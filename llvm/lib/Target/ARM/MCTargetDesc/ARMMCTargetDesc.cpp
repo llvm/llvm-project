@@ -16,7 +16,6 @@
 #include "ARMMCTargetDesc.h"
 #include "InstPrinter/ARMInstPrinter.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -201,14 +200,6 @@ static MCAsmInfo *createARMMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCCodeGenInfo *createARMMCCodeGenInfo(const Triple &TT, Reloc::Model RM,
-                                             CodeModel::Model CM,
-                                             CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
-}
-
 static MCStreamer *createELFStreamer(const Triple &T, MCContext &Ctx,
                                      MCAsmBackend &MAB, raw_pwrite_stream &OS,
                                      MCCodeEmitter *Emitter, bool RelaxAll) {
@@ -286,9 +277,6 @@ extern "C" void LLVMInitializeARMTargetMC() {
                     &TheThumbBETarget}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createARMMCAsmInfo);
-
-    // Register the MC codegen info.
-    TargetRegistry::RegisterMCCodeGenInfo(*T, createARMMCCodeGenInfo);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createARMMCInstrInfo);

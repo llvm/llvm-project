@@ -3880,6 +3880,17 @@ entry:
   ret i32 %call
 }
 
+define void @__stack_chk_fail() #1 !dbg !6 {
+entry:
+  ret void
+}
+
+define void @test32() #1 !dbg !7 {
+entry:
+  %0 = alloca [5 x i8], align 1
+  ret void
+}
+
 declare double @testi_aux()
 declare i8* @strcpy(i8*, i8*)
 declare i32 @printf(i8*, ...)
@@ -3899,3 +3910,16 @@ attributes #2 = { sspreq }
 attributes #3 = { ssp "stack-protector-buffer-size"="33" }
 attributes #4 = { ssp "stack-protector-buffer-size"="5" }
 attributes #5 = { ssp "stack-protector-buffer-size"="6" }
+
+!llvm.dbg.cu = !{!0}
+!llvm.module.flags = !{!3, !4}
+!llvm.ident = !{!5}
+
+!0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1)
+!1 = !DIFile(filename: "test.c", directory: "/tmp")
+!2 = !{}
+!3 = !{i32 2, !"Dwarf Version", i32 4}
+!4 = !{i32 2, !"Debug Info Version", i32 3}
+!5 = !{!"clang version x.y.z"}
+!6 = distinct !DISubprogram(name: "__stack_chk_fail", scope: !1, unit: !0)
+!7 = distinct !DISubprogram(name: "foo", scope: !1, unit: !0)

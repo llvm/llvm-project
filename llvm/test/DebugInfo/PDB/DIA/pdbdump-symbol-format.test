@@ -1,10 +1,10 @@
-; RUN: llvm-pdbdump -symbols %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT %s
-; RUN: llvm-pdbdump -types %p/../Inputs/symbolformat.pdb > %t.types
+; RUN: llvm-pdbdump pretty -symbols %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=SYM_FORMAT %s
+; RUN: llvm-pdbdump pretty -types %p/../Inputs/symbolformat.pdb > %t.types
 ; RUN: FileCheck --check-prefix=TYPES_FORMAT %s < %t.types
 ; RUN: FileCheck --check-prefix=TYPES_1 %s < %t.types
 ; RUN: FileCheck --check-prefix=TYPES_2 %s < %t.types
-; RUN: llvm-pdbdump -types %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=TYPES_FORMAT %s
-; RUN: llvm-pdbdump -globals %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=GLOBALS %s
+; RUN: llvm-pdbdump pretty -types %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=TYPES_FORMAT %s
+; RUN: llvm-pdbdump pretty -globals %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=GLOBALS %s
 
 ; The format is func [0x<rva_start>+<prologue_length> - 0x<rva_end>-<epilogue_length>]
 ; SYM_FORMAT: ---SYMBOLS---

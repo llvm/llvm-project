@@ -256,12 +256,12 @@ lookupCandidateBaseReg(unsigned BaseReg,
                        int64_t BaseOffset,
                        int64_t FrameSizeAdjust,
                        int64_t LocalFrameOffset,
-                       const MachineInstr *MI,
+                       const MachineInstr &MI,
                        const TargetRegisterInfo *TRI) {
   // Check if the relative offset from the where the base register references
   // to the target address is in range for the instruction.
   int64_t Offset = FrameSizeAdjust + LocalFrameOffset - BaseOffset;
-  return TRI->isFrameOffsetLegal(MI, BaseReg, Offset);
+  return TRI->isFrameOffsetLegal(&MI, BaseReg, Offset);
 }
 
 bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
@@ -285,16 +285,13 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
   // choose the first one).
   SmallVector<FrameRef, 64> FrameReferenceInsns;
 
-  for (MachineFunction::iterator BB = Fn.begin(), E = Fn.end(); BB != E; ++BB) {
-    for (MachineBasicBlock::iterator I = BB->begin(); I != BB->end(); ++I) {
-      MachineInstr *MI = I;
-
+  for (MachineBasicBlock &BB : Fn) {
+    for (MachineInstr &MI : BB) {
       // Debug value, stackmap and patchpoint instructions can't be out of
       // range, so they don't need any updates.
-      if (MI->isDebugValue() ||
-          MI->getOpcode() == TargetOpcode::STATEPOINT ||
-          MI->getOpcode() == TargetOpcode::STACKMAP ||
-          MI->getOpcode() == TargetOpcode::PATCHPOINT)
+      if (MI.isDebugValue() || MI.getOpcode() == TargetOpcode::STATEPOINT ||
+          MI.getOpcode() == TargetOpcode::STACKMAP ||
+          MI.getOpcode() == TargetOpcode::PATCHPOINT)
         continue;
 
       // For now, allocate the base register(s) within the basic block
@@ -303,19 +300,18 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
       // than that, but the increased register pressure makes that a
       // tricky thing to balance. Investigate if re-materializing these
       // becomes an issue.
-      for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
+      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
         // Consider replacing all frame index operands that reference
         // an object allocated in the local block.
-        if (MI->getOperand(i).isFI()) {
+        if (MI.getOperand(i).isFI()) {
           // Don't try this with values not in the local block.
-          if (!MFI->isObjectPreAllocated(MI->getOperand(i).getIndex()))
+          if (!MFI->isObjectPreAllocated(MI.getOperand(i).getIndex()))
             break;
-          int Idx = MI->getOperand(i).getIndex();
+          int Idx = MI.getOperand(i).getIndex();
           int64_t LocalOffset = LocalOffsets[Idx];
-          if (!TRI->needsFrameBaseReg(MI, LocalOffset))
+          if (!TRI->needsFrameBaseReg(&MI, LocalOffset))
             break;
-          FrameReferenceInsns.
-            push_back(FrameRef(MI, LocalOffset, Idx));
+          FrameReferenceInsns.push_back(FrameRef(&MI, LocalOffset, Idx));
           break;
         }
       }
@@ -333,46 +329,44 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
   // Loop through the frame references and allocate for them as necessary.
   for (int ref = 0, e = FrameReferenceInsns.size(); ref < e ; ++ref) {
     FrameRef &FR = FrameReferenceInsns[ref];
-    MachineBasicBlock::iterator I = FR.getMachineInstr();
-    MachineInstr *MI = I;
+    MachineInstr &MI = *FR.getMachineInstr();
     int64_t LocalOffset = FR.getLocalOffset();
     int FrameIdx = FR.getFrameIndex();
     assert(MFI->isObjectPreAllocated(FrameIdx) &&
            "Only pre-allocated locals expected!");
 
-    DEBUG(dbgs() << "Considering: " << *MI);
+    DEBUG(dbgs() << "Considering: " << MI);
 
     unsigned idx = 0;
-    for (unsigned f = MI->getNumOperands(); idx != f; ++idx) {
-      if (!MI->getOperand(idx).isFI())
+    for (unsigned f = MI.getNumOperands(); idx != f; ++idx) {
+      if (!MI.getOperand(idx).isFI())
         continue;
 
-      if (FrameIdx == I->getOperand(idx).getIndex())
+      if (FrameIdx == MI.getOperand(idx).getIndex())
         break;
     }
 
-    assert(idx < MI->getNumOperands() && "Cannot find FI operand");
+    assert(idx < MI.getNumOperands() && "Cannot find FI operand");
 
     int64_t Offset = 0;
     int64_t FrameSizeAdjust = StackGrowsDown ? MFI->getLocalFrameSize() : 0;
 
-    DEBUG(dbgs() << "  Replacing FI in: " << *MI);
+    DEBUG(dbgs() << "  Replacing FI in: " << MI);
 
     // If we have a suitable base register available, use it; otherwise
     // create a new one. Note that any offset encoded in the
     // instruction itself will be taken into account by the target,
     // so we don't have to adjust for it here when reusing a base
     // register.
-    if (UsedBaseReg && lookupCandidateBaseReg(BaseReg, BaseOffset,
-                                              FrameSizeAdjust, LocalOffset, MI,
-                                              TRI)) {
+    if (UsedBaseReg &&
+        lookupCandidateBaseReg(BaseReg, BaseOffset, FrameSizeAdjust,
+                               LocalOffset, MI, TRI)) {
       DEBUG(dbgs() << "  Reusing base register " << BaseReg << "\n");
       // We found a register to reuse.
       Offset = FrameSizeAdjust + LocalOffset - BaseOffset;
     } else {
-      // No previously defined register was in range, so create a // new one.
- 
-      int64_t InstrOffset = TRI->getFrameIndexInstrOffset(MI, idx);
+      // No previously defined register was in range, so create a new one.
+      int64_t InstrOffset = TRI->getFrameIndexInstrOffset(&MI, idx);
 
       int64_t PrevBaseOffset = BaseOffset;
       BaseOffset = FrameSizeAdjust + LocalOffset + InstrOffset;
@@ -386,12 +380,12 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
           !lookupCandidateBaseReg(
               BaseReg, BaseOffset, FrameSizeAdjust,
               FrameReferenceInsns[ref + 1].getLocalOffset(),
-              FrameReferenceInsns[ref + 1].getMachineInstr(), TRI)) {
+              *FrameReferenceInsns[ref + 1].getMachineInstr(), TRI)) {
         BaseOffset = PrevBaseOffset;
         continue;
       }
 
-      const MachineFunction *MF = MI->getParent()->getParent();
+      const MachineFunction *MF = MI.getParent()->getParent();
       const TargetRegisterClass *RC = TRI->getPointerRegClass(*MF);
       BaseReg = Fn.getRegInfo().createVirtualRegister(RC);
 
@@ -416,8 +410,8 @@ bool LocalStackSlotPass::insertFrameReferenceRegisters(MachineFunction &Fn) {
 
     // Modify the instruction to use the new base register rather
     // than the frame index operand.
-    TRI->resolveFrameIndex(*I, BaseReg, Offset);
-    DEBUG(dbgs() << "Resolved: " << *MI);
+    TRI->resolveFrameIndex(MI, BaseReg, Offset);
+    DEBUG(dbgs() << "Resolved: " << MI);
 
     ++NumReplacements;
   }

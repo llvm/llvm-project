@@ -237,6 +237,10 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// \brief A typedef for a block filter set.
   typedef SmallPtrSet<MachineBasicBlock *, 16> BlockFilterSet;
 
+  /// \brief work lists of blocks that are ready to be laid out
+  SmallVector<MachineBasicBlock *, 16> BlockWorkList;
+  SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
+
   /// \brief Machine Function
   MachineFunction *F;
 
@@ -280,8 +284,6 @@ class MachineBlockPlacement : public MachineFunctionPass {
   DenseMap<MachineBasicBlock *, BlockChain *> BlockToChain;
 
   void markChainSuccessors(BlockChain &Chain, MachineBasicBlock *LoopHeaderBB,
-                           SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
-                           SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
                            const BlockFilterSet *BlockFilter = nullptr);
   BranchProbability
   collectViableSuccessors(MachineBasicBlock *BB, BlockChain &Chain,
@@ -315,12 +317,8 @@ class MachineBlockPlacement : public MachineFunctionPass {
   /// is provided, no filtering occurs.
   void fillWorkLists(MachineBasicBlock *MBB,
                      SmallPtrSetImpl<BlockChain *> &UpdatedPreds,
-                     SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
-                     SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
                      const BlockFilterSet *BlockFilter);
   void buildChain(MachineBasicBlock *BB, BlockChain &Chain,
-                  SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
-                  SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
                   const BlockFilterSet *BlockFilter = nullptr);
   MachineBasicBlock *findBestLoopTop(MachineLoop &L,
                                      const BlockFilterSet &LoopBlockSet);
@@ -389,8 +387,6 @@ static std::string getBlockName(MachineBasicBlock *BB) {
 /// chain which reach the zero-predecessor state to the worklist passed in.
 void MachineBlockPlacement::markChainSuccessors(
     BlockChain &Chain, MachineBasicBlock *LoopHeaderBB,
-    SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
-    SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
     const BlockFilterSet *BlockFilter) {
   // Walk all the blocks in this chain, marking their successors as having
   // a predecessor placed.
@@ -812,8 +808,6 @@ MachineBasicBlock *MachineBlockPlacement::getFirstUnplacedBlock(
 void MachineBlockPlacement::fillWorkLists(
     MachineBasicBlock *MBB,
     SmallPtrSetImpl<BlockChain *> &UpdatedPreds,
-    SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
-    SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
     const BlockFilterSet *BlockFilter = nullptr) {
   BlockChain &Chain = *BlockToChain[MBB];
   if (!UpdatedPreds.insert(&Chain).second)
@@ -843,16 +837,13 @@ void MachineBlockPlacement::fillWorkLists(
 
 void MachineBlockPlacement::buildChain(
     MachineBasicBlock *BB, BlockChain &Chain,
-    SmallVectorImpl<MachineBasicBlock *> &BlockWorkList,
-    SmallVectorImpl<MachineBasicBlock *> &EHPadWorkList,
     const BlockFilterSet *BlockFilter) {
   assert(BB && "BB must not be null.\n");
   assert(BlockToChain[BB] == &Chain && "BlockToChainMap mis-match.\n");
   MachineFunction::iterator PrevUnplacedBlockIt = F->begin();
 
   MachineBasicBlock *LoopHeaderBB = BB;
-  markChainSuccessors(Chain, LoopHeaderBB, BlockWorkList, EHPadWorkList,
-                      BlockFilter);
+  markChainSuccessors(Chain, LoopHeaderBB, BlockFilter);
   BB = *std::prev(Chain.end());
   for (;;) {
     assert(BB && "null block found at end of chain in loop.");
@@ -888,8 +879,7 @@ void MachineBlockPlacement::buildChain(
     SuccChain.UnscheduledPredecessors = 0;
     DEBUG(dbgs() << "Merging from " << getBlockName(BB) << " to "
                  << getBlockName(BestSucc) << "\n");
-    markChainSuccessors(SuccChain, LoopHeaderBB, BlockWorkList, EHPadWorkList,
-                        BlockFilter);
+    markChainSuccessors(SuccChain, LoopHeaderBB, BlockFilter);
     Chain.merge(BestSucc, &SuccChain);
     BB = *std::prev(Chain.end());
   }
@@ -1307,8 +1297,8 @@ void MachineBlockPlacement::buildLoopChains(MachineLoop &L) {
   for (MachineLoop *InnerLoop : L)
     buildLoopChains(*InnerLoop);
 
-  SmallVector<MachineBasicBlock *, 16> BlockWorkList;
-  SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
+  assert(BlockWorkList.empty());
+  assert(EHPadWorkList.empty());
   BlockFilterSet LoopBlockSet = collectLoopBlockSet(L);
 
   // Check if we have profile data for this function. If yes, we will rotate
@@ -1343,10 +1333,9 @@ void MachineBlockPlacement::buildLoopChains(MachineLoop &L) {
   UpdatedPreds.insert(&LoopChain);
 
   for (MachineBasicBlock *LoopBB : LoopBlockSet)
-    fillWorkLists(LoopBB, UpdatedPreds, BlockWorkList, EHPadWorkList,
-                  &LoopBlockSet);
+    fillWorkLists(LoopBB, UpdatedPreds, &LoopBlockSet);
 
-  buildChain(LoopTop, LoopChain, BlockWorkList, EHPadWorkList, &LoopBlockSet);
+  buildChain(LoopTop, LoopChain, &LoopBlockSet);
 
   if (RotateLoopWithProfile)
     rotateLoopWithProfile(LoopChain, L, LoopBlockSet);
@@ -1385,6 +1374,9 @@ void MachineBlockPlacement::buildLoopChains(MachineLoop &L) {
     }
     assert(!BadLoop && "Detected problems with the placement of this loop.");
   });
+
+  BlockWorkList.clear();
+  EHPadWorkList.clear();
 }
 
 /// When OutlineOpitonalBranches is on, this method colects BBs that
@@ -1450,15 +1442,15 @@ void MachineBlockPlacement::buildCFGChains() {
   for (MachineLoop *L : *MLI)
     buildLoopChains(*L);
 
-  SmallVector<MachineBasicBlock *, 16> BlockWorkList;
-  SmallVector<MachineBasicBlock *, 16> EHPadWorkList;
+  assert(BlockWorkList.empty());
+  assert(EHPadWorkList.empty());
 
   SmallPtrSet<BlockChain *, 4> UpdatedPreds;
   for (MachineBasicBlock &MBB : *F)
-    fillWorkLists(&MBB, UpdatedPreds, BlockWorkList, EHPadWorkList);
+    fillWorkLists(&MBB, UpdatedPreds);
 
   BlockChain &FunctionChain = *BlockToChain[&F->front()];
-  buildChain(&F->front(), FunctionChain, BlockWorkList, EHPadWorkList);
+  buildChain(&F->front(), FunctionChain);
 
 #ifndef NDEBUG
   typedef SmallPtrSet<MachineBasicBlock *, 16> FunctionBlockSetType;
@@ -1539,6 +1531,9 @@ void MachineBlockPlacement::buildCFGChains() {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr; // For AnalyzeBranch.
   if (!TII->AnalyzeBranch(F->back(), TBB, FBB, Cond))
     F->back().updateTerminator();
+
+  BlockWorkList.clear();
+  EHPadWorkList.clear();
 }
 
 void MachineBlockPlacement::optimizeBranches() {

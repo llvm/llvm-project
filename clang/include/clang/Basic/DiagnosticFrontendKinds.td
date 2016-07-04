@@ -214,4 +214,7 @@ def err_missing_vfs_overlay_file : Error<
   "virtual filesystem overlay file '%0' not found">, DefaultFatal;
 def err_invalid_vfs_overlay : Error<
   "invalid virtual filesystem overlay file '%0'">, DefaultFatal;
+
+def warn_option_invalid_ocl_version : Warning<
+  "OpenCL version %0 does not support the option '%1'">, InGroup<Deprecated>;
 }

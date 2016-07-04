@@ -1047,6 +1047,77 @@ AliasResult CFLAAResult::query(const MemoryLocation &LocA,
   return NoAlias;
 }
 
+ModRefInfo CFLAAResult::getArgModRefInfo(ImmutableCallSite CS,
+                                         unsigned ArgIdx) {
+  if (auto CalledFunc = CS.getCalledFunction()) {
+    auto &MaybeInfo = ensureCached(const_cast<Function *>(CalledFunc));
+    if (!MaybeInfo.hasValue())
+      return MRI_ModRef;
+    auto &RetParamAttributes = MaybeInfo->getRetParamAttributes();
+    auto &RetParamRelations = MaybeInfo->getRetParamRelations();
+
+    bool ArgAttributeIsWritten =
+        std::any_of(RetParamAttributes.begin(), RetParamAttributes.end(),
+                    [ArgIdx](const ExternalAttribute &ExtAttr) {
+                      return ExtAttr.IValue.Index == ArgIdx + 1;
+                    });
+    bool ArgIsAccessed =
+        std::any_of(RetParamRelations.begin(), RetParamRelations.end(),
+                    [ArgIdx](const ExternalRelation &ExtRelation) {
+                      return ExtRelation.To.Index == ArgIdx + 1 ||
+                             ExtRelation.From.Index == ArgIdx + 1;
+                    });
+
+    return (!ArgIsAccessed && !ArgAttributeIsWritten) ? MRI_NoModRef
+                                                      : MRI_ModRef;
+  }
+
+  return MRI_ModRef;
+}
+
+FunctionModRefBehavior CFLAAResult::getModRefBehavior(ImmutableCallSite CS) {
+  // If we know the callee, try analyzing it
+  if (auto CalledFunc = CS.getCalledFunction())
+    return getModRefBehavior(CalledFunc);
+
+  // Otherwise, be conservative
+  return FMRB_UnknownModRefBehavior;
+}
+
+FunctionModRefBehavior CFLAAResult::getModRefBehavior(const Function *F) {
+  assert(F != nullptr);
+
+  // TODO: Remove the const_cast
+  auto &MaybeInfo = ensureCached(const_cast<Function *>(F));
+  if (!MaybeInfo.hasValue())
+    return FMRB_UnknownModRefBehavior;
+  auto &RetParamAttributes = MaybeInfo->getRetParamAttributes();
+  auto &RetParamRelations = MaybeInfo->getRetParamRelations();
+
+  // First, if any argument is marked Escpaed, Unknown or Global, anything may
+  // happen to them and thus we can't draw any conclusion.
+  if (!RetParamAttributes.empty())
+    return FMRB_UnknownModRefBehavior;
+
+  // Currently we don't (and can't) distinguish reads from writes in
+  // RetParamRelations. All we can say is whether there may be memory access or
+  // not.
+  if (RetParamRelations.empty())
+    return FMRB_DoesNotAccessMemory;
+
+  // Check if something beyond argmem gets touched.
+  bool AccessArgMemoryOnly =
+      std::all_of(RetParamRelations.begin(), RetParamRelations.end(),
+                  [](const ExternalRelation &ExtRelation) {
+                    // Both DerefLevels has to be 0, since we don't know which
+                    // one is a read and which is a write.
+                    return ExtRelation.From.DerefLevel == 0 &&
+                           ExtRelation.To.DerefLevel == 0;
+                  });
+  return AccessArgMemoryOnly ? FMRB_OnlyAccessesArgumentPointees
+                             : FMRB_UnknownModRefBehavior;
+}
+
 char CFLAA::PassID;
 
 CFLAAResult CFLAA::run(Function &F, AnalysisManager<Function> &AM) {

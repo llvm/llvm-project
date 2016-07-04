@@ -569,7 +569,7 @@ static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
           "Dependency checked between two loads");
 
   // Let the target decide if memory accesses cannot possibly overlap.
-  if (TII->areMemAccessesTriviallyDisjoint(MIa, MIb, AA))
+  if (TII->areMemAccessesTriviallyDisjoint(*MIa, *MIb, AA))
     return false;
 
   // To this point analysis is generic. From here on we do need AA.
@@ -645,16 +645,15 @@ void ScheduleDAGInstrs::initSUnits() {
   // which is contained within a basic block.
   SUnits.reserve(NumRegionInstrs);
 
-  for (MachineBasicBlock::iterator I = RegionBegin; I != RegionEnd; ++I) {
-    MachineInstr *MI = I;
-    if (MI->isDebugValue())
+  for (MachineInstr &MI : llvm::make_range(RegionBegin, RegionEnd)) {
+    if (MI.isDebugValue())
       continue;
 
-    SUnit *SU = newSUnit(MI);
-    MISUnitMap[MI] = SU;
+    SUnit *SU = newSUnit(&MI);
+    MISUnitMap[&MI] = SU;
 
-    SU->isCall = MI->isCall();
-    SU->isCommutable = MI->isCommutable();
+    SU->isCall = MI.isCall();
+    SU->isCommutable = MI.isCommutable();
 
     // Assign the Latency field of SU using target-provided information.
     SU->Latency = SchedModel.computeInstrLatency(SU->getInstr());
@@ -913,38 +912,38 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   MachineInstr *DbgMI = nullptr;
   for (MachineBasicBlock::iterator MII = RegionEnd, MIE = RegionBegin;
        MII != MIE; --MII) {
-    MachineInstr *MI = std::prev(MII);
-    if (MI && DbgMI) {
-      DbgValues.push_back(std::make_pair(DbgMI, MI));
+    MachineInstr &MI = *std::prev(MII);
+    if (DbgMI) {
+      DbgValues.push_back(std::make_pair(DbgMI, &MI));
       DbgMI = nullptr;
     }
 
-    if (MI->isDebugValue()) {
-      DbgMI = MI;
+    if (MI.isDebugValue()) {
+      DbgMI = &MI;
       continue;
     }
-    SUnit *SU = MISUnitMap[MI];
+    SUnit *SU = MISUnitMap[&MI];
     assert(SU && "No SUnit mapped to this MI");
 
     if (RPTracker) {
       collectVRegUses(SU);
 
       RegisterOperands RegOpers;
-      RegOpers.collect(*MI, *TRI, MRI, TrackLaneMasks, false);
+      RegOpers.collect(MI, *TRI, MRI, TrackLaneMasks, false);
       if (TrackLaneMasks) {
-        SlotIndex SlotIdx = LIS->getInstructionIndex(*MI);
+        SlotIndex SlotIdx = LIS->getInstructionIndex(MI);
         RegOpers.adjustLaneLiveness(*LIS, MRI, SlotIdx);
       }
       if (PDiffs != nullptr)
         PDiffs->addInstruction(SU->NodeNum, RegOpers, MRI);
 
       RPTracker->recedeSkipDebugValues();
-      assert(&*RPTracker->getPos() == MI && "RPTracker in sync");
+      assert(&*RPTracker->getPos() == &MI && "RPTracker in sync");
       RPTracker->recede(RegOpers);
     }
 
     assert(
-        (CanHandleTerminators || (!MI->isTerminator() && !MI->isPosition())) &&
+        (CanHandleTerminators || (!MI.isTerminator() && !MI.isPosition())) &&
         "Cannot schedule terminators or labels!");
 
     // Add register-based dependencies (data, anti, and output).
@@ -953,8 +952,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     // on the operand list before the def. Do two passes over the operand
     // list to make sure that defs are processed before any uses.
     bool HasVRegDef = false;
-    for (unsigned j = 0, n = MI->getNumOperands(); j != n; ++j) {
-      const MachineOperand &MO = MI->getOperand(j);
+    for (unsigned j = 0, n = MI.getNumOperands(); j != n; ++j) {
+      const MachineOperand &MO = MI.getOperand(j);
       if (!MO.isReg() || !MO.isDef())
         continue;
       unsigned Reg = MO.getReg();
@@ -969,8 +968,8 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       }
     }
     // Now process all uses.
-    for (unsigned j = 0, n = MI->getNumOperands(); j != n; ++j) {
-      const MachineOperand &MO = MI->getOperand(j);
+    for (unsigned j = 0, n = MI.getNumOperands(); j != n; ++j) {
+      const MachineOperand &MO = MI.getOperand(j);
       // Only look at use operands.
       // We do not need to check for MO.readsReg() here because subsequent
       // subregister defs will get output dependence edges and need no
@@ -993,8 +992,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     //
     // FIXME: NumDataSuccs would be more precise than NumSuccs here. This
     // check currently relies on being called before adding chain deps.
-    if (SU->NumSuccs == 0 && SU->Latency > 1
-        && (HasVRegDef || MI->mayLoad())) {
+    if (SU->NumSuccs == 0 && SU->Latency > 1 && (HasVRegDef || MI.mayLoad())) {
       SDep Dep(SU, SDep::Artificial);
       Dep.setLatency(SU->Latency - 1);
       ExitSU.addPred(Dep);
@@ -1005,7 +1003,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     // actual addresses).
 
     // This is a barrier event that acts as a pivotal node in the DAG.
-    if (isGlobalMemoryObject(AA, MI)) {
+    if (isGlobalMemoryObject(AA, &MI)) {
 
       // Become the barrier chain.
       if (BarrierChain)
@@ -1025,7 +1023,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     }
 
     // If it's not a store or a variant load, we're done.
-    if (!MI->mayStore() && !(MI->mayLoad() && !MI->isInvariantLoad(AA)))
+    if (!MI.mayStore() && !(MI.mayLoad() && !MI.isInvariantLoad(AA)))
       continue;
 
     // Always add dependecy edge to BarrierChain if present.
@@ -1037,9 +1035,9 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
     // SU depends on. An empty vector means the memory location is
     // unknown, and may alias anything.
     UnderlyingObjectsVector Objs;
-    getUnderlyingObjectsForInstr(MI, MFI, Objs, MF.getDataLayout());
+    getUnderlyingObjectsForInstr(&MI, MFI, Objs, MF.getDataLayout());
 
-    if (MI->mayStore()) {
+    if (MI.mayStore()) {
       if (Objs.empty()) {
         // An unknown store depends on all stores and loads.
         addChainDependencies(SU, Stores);
@@ -1286,15 +1284,15 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
   unsigned Count = MBB->size();
   for (MachineBasicBlock::iterator I = MBB->end(), E = MBB->begin();
        I != E; --Count) {
-    MachineInstr *MI = --I;
-    if (MI->isDebugValue())
+    MachineInstr &MI = *--I;
+    if (MI.isDebugValue())
       continue;
 
     // Update liveness.  Registers that are defed but not used in this
     // instruction are now dead. Mark register and all subregs as they
     // are completely defined.
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
       if (MO.isRegMask())
         LiveRegs.clearBitsNotInMask(MO.getRegMask());
       if (!MO.isReg()) continue;
@@ -1302,7 +1300,7 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
       if (Reg == 0) continue;
       if (!MO.isDef()) continue;
       // Ignore two-addr defs.
-      if (MI->isRegTiedToUseOperand(i)) continue;
+      if (MI.isRegTiedToUseOperand(i)) continue;
 
       // Repeat for reg and all subregs.
       for (MCSubRegIterator SubRegs(Reg, TRI, /*IncludeSelf=*/true);
@@ -1314,8 +1312,8 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
     // register is used multiple times we only set the kill flag on
     // the first use. Don't set kill flags on undef operands.
     killedRegs.reset();
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
       unsigned Reg = MO.getReg();
       if ((Reg == 0) || MRI.isReserved(Reg)) continue;
@@ -1340,13 +1338,15 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
       if (MO.isKill() != kill) {
         DEBUG(dbgs() << "Fixing " << MO << " in ");
         // Warning: toggleKillFlag may invalidate MO.
-        toggleKillFlag(MI, MO);
-        DEBUG(MI->dump());
-        DEBUG(if (MI->getOpcode() == TargetOpcode::BUNDLE) {
-          MachineBasicBlock::instr_iterator Begin = MI->getIterator();
-          MachineBasicBlock::instr_iterator End = getBundleEnd(*MI);
-          while (++Begin != End)
-            DEBUG(Begin->dump());
+        toggleKillFlag(&MI, MO);
+        DEBUG(MI.dump());
+        DEBUG({
+          if (MI.getOpcode() == TargetOpcode::BUNDLE) {
+            MachineBasicBlock::instr_iterator Begin = MI.getIterator();
+            MachineBasicBlock::instr_iterator End = getBundleEnd(MI);
+            while (++Begin != End)
+              DEBUG(Begin->dump());
+          }
         });
       }
 
@@ -1355,8 +1355,8 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock *MBB) {
 
     // Mark any used register (that is not using undef) and subregs as
     // now live...
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg() || !MO.isUse() || MO.isUndef()) continue;
       unsigned Reg = MO.getReg();
       if ((Reg == 0) || MRI.isReserved(Reg)) continue;

@@ -33,12 +33,13 @@ enum ELFKind {
 
 enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring };
 
+enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
+
 // This struct contains symbols version definition that
 // can be found in version script if it is used for link.
 struct Version {
   Version(llvm::StringRef Name) : Name(Name) {}
   llvm::StringRef Name;
-  llvm::StringRef Parent;
   std::vector<llvm::StringRef> Globals;
   size_t NameOff; // Offset in string table.
 };
@@ -85,9 +86,7 @@ struct Configuration {
   bool ICF;
   bool Mips64EL = false;
   bool NoGnuUnique;
-  bool NoUndefined;
   bool NoUndefinedVersion;
-  bool NoinhibitExec;
   bool Pic;
   bool Pie;
   bool PrintGcSections;
@@ -110,6 +109,7 @@ struct Configuration {
   bool ZNow;
   bool ZOrigin;
   bool ZRelro;
+  UnresolvedPolicy UnresolvedSymbols;
   BuildIdKind BuildId = BuildIdKind::None;
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;

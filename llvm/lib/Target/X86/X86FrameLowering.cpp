@@ -1281,7 +1281,7 @@ void X86FrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   while (MBBI != MBB.end() && MBBI->getFlag(MachineInstr::FrameSetup)) {
-    const MachineInstr *FrameInstr = &*MBBI;
+    const MachineInstr &FrameInstr = *MBBI;
     ++MBBI;
 
     if (NeedsWinCFI) {
@@ -2870,6 +2870,8 @@ void X86FrameLowering::orderFrameObjects(
   // Count the number of uses for each object.
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
+      if (MI.isDebugValue())
+        continue;
       for (const MachineOperand &MO : MI.operands()) {
         // Check to see if it's a local stack symbol.
         if (!MO.isFI())

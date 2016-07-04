@@ -12,6 +12,7 @@
 #include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Relocations.h"
+#include "Strings.h"
 #include "SymbolTable.h"
 #include "Target.h"
 
@@ -274,17 +275,17 @@ template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
 
 template <class ELFT>
 static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
-  if (!Config->NoUndefined) {
-    if (Config->Relocatable)
-      return;
-    if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT)
-      return;
-  }
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
+    return;
+
+  if (Config->Shared && Sym->symbol()->Visibility == STV_DEFAULT &&
+      Config->UnresolvedSymbols != UnresolvedPolicy::NoUndef)
+    return;
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
   if (InputFile *File = Sym->getSourceFile<ELFT>())
     Msg += " in " + getFilename(File);
-  if (Config->NoinhibitExec)
+  if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
     warning(Msg);
   else
     error(Msg);
@@ -1131,10 +1132,8 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
   uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Target->getVAStart();
   Out<ELFT>::ElfHeader->setVA(BaseVA);
-  Out<ELFT>::ElfHeader->setFileOffset(0);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
-  Out<ELFT>::ProgramHeaders->setFileOffset(Off);
 }
 
 // Assign VAs (addresses at run-time) to output sections.
@@ -1182,19 +1181,24 @@ static uintX_t getFileAlignment(uintX_t Off, OutputSectionBase<ELFT> *Sec) {
 
 // Assign file offsets to output sections.
 template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
-  uintX_t Off =
-      Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  uintX_t Off = 0;
 
-  for (OutputSectionBase<ELFT> *Sec : OutputSections) {
+  auto Set = [&](OutputSectionBase<ELFT> *Sec) {
     if (Sec->getType() == SHT_NOBITS) {
       Sec->setFileOffset(Off);
-      continue;
+      return;
     }
 
     Off = getFileAlignment<ELFT>(Off, Sec);
     Sec->setFileOffset(Off);
     Off += Sec->getSize();
-  }
+  };
+
+  Set(Out<ELFT>::ElfHeader);
+  Set(Out<ELFT>::ProgramHeaders);
+  for (OutputSectionBase<ELFT> *Sec : OutputSections)
+    Set(Sec);
+
   SectionHeaderOff = alignTo(Off, sizeof(uintX_t));
   FileSize = SectionHeaderOff + (OutputSections.size() + 1) * sizeof(Elf_Shdr);
 }

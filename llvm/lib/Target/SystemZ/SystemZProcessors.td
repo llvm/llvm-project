@@ -92,5 +92,6 @@ def : Processor<"z13", NoItineraries,
                 [FeatureDistinctOps, FeatureLoadStoreOnCond, FeatureHighWord,
                  FeatureFPExtension, FeaturePopulationCount,
                  FeatureFastSerialization, FeatureInterlockedAccess1,
+                 FeatureMiscellaneousExtensions,
                  FeatureTransactionalExecution, FeatureProcessorAssist,
                  FeatureVector]>;

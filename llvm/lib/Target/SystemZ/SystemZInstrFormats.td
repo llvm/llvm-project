@@ -1001,6 +1001,10 @@ class InstVRX<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
 //   Compare:
 //     Two input operands and an implicit CC output operand.
 //
+//   Test:
+//     Two input operands and an implicit CC output operand.  The second
+//     input operand is an "address" operand used as a test class mask.
+//
 //   Ternary:
 //     One register output operand and three input operands.
 //
@@ -1954,6 +1958,14 @@ class CompareVRRa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M3 = type;
   let M4 = 0;
   let M5 = 0;
+}
+
+class TestRXE<string mnemonic, bits<16> opcode, SDPatternOperator operator,
+              RegisterOperand cls>
+  : InstRXE<opcode, (outs), (ins cls:$R1, bdxaddr12only:$XBD2),
+            mnemonic#"\t$R1, $XBD2",
+            [(operator cls:$R1, bdxaddr12only:$XBD2)]> {
+  let M3 = 0;
 }
 
 class TernaryRRD<string mnemonic, bits<16> opcode,

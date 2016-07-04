@@ -15,6 +15,7 @@ files (i.e. template instantiations) and we would get defined in the thing
 importing these symbols anyway.
 """
 
+from __future__ import print_function
 import sys
 import re
 import os
@@ -30,7 +31,8 @@ import argparse
 
 def dumpbin_get_symbols(lib):
     process = subprocess.Popen(['dumpbin','/symbols',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                               universal_newlines=True)
     process.stdin.close()
     for line in process.stdout:
         # Look for external symbols that are defined in some section
@@ -41,7 +43,8 @@ def dumpbin_get_symbols(lib):
 
 def nm_get_symbols(lib):
     process = subprocess.Popen(['nm',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                               universal_newlines=True)
     process.stdin.close()
     for line in process.stdout:
         # Look for external symbols that are defined in some section
@@ -52,7 +55,8 @@ def nm_get_symbols(lib):
 
 def readobj_get_symbols(lib):
     process = subprocess.Popen(['llvm-readobj','-symbols',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                               universal_newlines=True)
     process.stdin.close()
     for line in process.stdout:
         # When looking through the output of llvm-readobj we expect to see Name,
@@ -81,7 +85,8 @@ def dumpbin_is_32bit_windows(lib):
     # dumpbin /headers can output a huge amount of data (>100MB in a debug
     # build) so we read only up to the 'machine' line then close the output.
     process = subprocess.Popen(['dumpbin','/headers',lib], bufsize=1,
-                               stdout=subprocess.PIPE, stdin=subprocess.PIPE)
+                               stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                               universal_newlines=True)
     process.stdin.close()
     retval = False
     for line in process.stdout:
@@ -94,7 +99,8 @@ def dumpbin_is_32bit_windows(lib):
     return retval
 
 def objdump_is_32bit_windows(lib):
-    output = subprocess.check_output(['objdump','-f',lib])
+    output = subprocess.check_output(['objdump','-f',lib],
+                                     universal_newlines=True)
     for line in output:
         match = re.match('.+file format (\S+)', line)
         if match:
@@ -102,7 +108,8 @@ def objdump_is_32bit_windows(lib):
     return False
 
 def readobj_is_32bit_windows(lib):
-    output = subprocess.check_output(['llvm-readobj','-file-headers',lib])
+    output = subprocess.check_output(['llvm-readobj','-file-headers',lib],
+                                     universal_newlines=True)
     for line in output:
         match = re.match('Format: (\S+)', line)
         if match:
@@ -345,7 +352,8 @@ if __name__ == '__main__':
             # want the process to wait for something on stdin.
             p = subprocess.Popen([exe], stdout=subprocess.PIPE,
                                  stderr=subprocess.PIPE,
-                                 stdin=subprocess.PIPE)
+                                 stdin=subprocess.PIPE,
+                                 universal_newlines=True)
             p.stdout.close()
             p.stderr.close()
             p.stdin.close()
@@ -361,10 +369,10 @@ if __name__ == '__main__':
         except OSError:
             continue
     if not get_symbols:
-        print >>sys.stderr, "Couldn't find a program to read symbols with"
+        print("Couldn't find a program to read symbols with", file=sys.stderr)
         exit(1)
     if not is_32bit_windows:
-        print >>sys.stderr, "Couldn't find a program to determing the target"
+        print("Couldn't find a program to determing the target", file=sys.stderr)
         exit(1)
 
     # How we determine which symbols to keep and which to discard depends on
@@ -390,7 +398,7 @@ if __name__ == '__main__':
                     lib = 'lib'+lib+s
                     break
         if not any([lib.endswith(s) for s in suffixes]):
-            print >>sys.stderr, "Don't know what to do with argument "+lib
+            print("Don't know what to do with argument "+lib, file=sys.stderr)
             exit(1)
         libs.append(lib)
 
@@ -423,7 +431,7 @@ if __name__ == '__main__':
     # Merge everything into a single dict
     symbols = dict()
     for this_lib_symbols in libs_symbols:
-        for k,v in this_lib_symbols.items():
+        for k,v in list(this_lib_symbols.items()):
             symbols[k] = v + symbols.setdefault(k,0)
 
     # Count instances of member functions of template classes, and map the
@@ -482,7 +490,7 @@ if __name__ == '__main__':
         outfile = open(args.o,'w')
     else:
         outfile = sys.stdout
-    for k,v in symbols.items():
+    for k,v in list(symbols.items()):
         template_count = template_function_count[template_function_mapping[k]]
         if v == 1 and template_count < 100:
-            print >>outfile, k
+            print(k, file=outfile)

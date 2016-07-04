@@ -2545,14 +2545,13 @@ public:
         MostDerivedClassLayout(Context.getASTRecordLayout(MostDerivedClass)),
         WhichVFPtr(*Which),
         Overriders(MostDerivedClass, CharUnits(), MostDerivedClass) {
-    // Only include the RTTI component if we know that we will provide a
-    // definition of the vftable.  We always provide the definition of
-    // dllimported classes.
+    // Provide the RTTI component if RTTIData is enabled. If the vftable would
+    // be available externally, we should not provide the RTTI componenent. It
+    // is currently impossible to get available externally vftables with either
+    // dllimport or extern template instantiations, but eventually we may add a
+    // flag to support additional devirtualization that needs this.
     if (Context.getLangOpts().RTTIData)
-      if (MostDerivedClass->hasAttr<DLLImportAttr>() ||
-          MostDerivedClass->getTemplateSpecializationKind() !=
-              TSK_ExplicitInstantiationDeclaration)
-        HasRTTIComponent = true;
+      HasRTTIComponent = true;
 
     LayoutVFTable();
 

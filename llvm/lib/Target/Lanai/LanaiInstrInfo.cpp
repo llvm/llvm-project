@@ -86,14 +86,14 @@ void LanaiInstrInfo::loadRegFromStackSlot(
       .addImm(LPAC::ADD);
 }
 
-bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr *MIa,
-                                                     MachineInstr *MIb,
+bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
+                                                     MachineInstr &MIb,
                                                      AliasAnalysis *AA) const {
-  assert(MIa && MIa->mayLoadOrStore() && "MIa must be a load or store.");
-  assert(MIb && MIb->mayLoadOrStore() && "MIb must be a load or store.");
+  assert(MIa.mayLoadOrStore() && "MIa must be a load or store.");
+  assert(MIb.mayLoadOrStore() && "MIb must be a load or store.");
 
-  if (MIa->hasUnmodeledSideEffects() || MIb->hasUnmodeledSideEffects() ||
-      MIa->hasOrderedMemoryRef() || MIb->hasOrderedMemoryRef())
+  if (MIa.hasUnmodeledSideEffects() || MIb.hasUnmodeledSideEffects() ||
+      MIa.hasOrderedMemoryRef() || MIb.hasOrderedMemoryRef())
     return false;
 
   // Retrieve the base register, offset from the base register and width. Width
@@ -118,7 +118,7 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr *MIa,
   return false;
 }
 
-bool LanaiInstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
+bool LanaiInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   return false;
 }
 
@@ -321,20 +321,20 @@ unsigned LanaiInstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
   return Count;
 }
 
-unsigned LanaiInstrInfo::isLoadFromStackSlot(const MachineInstr *MI,
+unsigned LanaiInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                              int &FrameIndex) const {
-  if (MI->getOpcode() == Lanai::LDW_RI)
-    if (MI->getOperand(1).isFI() && MI->getOperand(2).isImm() &&
-        MI->getOperand(2).getImm() == 0) {
-      FrameIndex = MI->getOperand(1).getIndex();
-      return MI->getOperand(0).getReg();
+  if (MI.getOpcode() == Lanai::LDW_RI)
+    if (MI.getOperand(1).isFI() && MI.getOperand(2).isImm() &&
+        MI.getOperand(2).getImm() == 0) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
     }
   return 0;
 }
 
-unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr *MI,
+unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
                                                    int &FrameIndex) const {
-  if (MI->getOpcode() == Lanai::LDW_RI) {
+  if (MI.getOpcode() == Lanai::LDW_RI) {
     unsigned Reg;
     if ((Reg = isLoadFromStackSlot(MI, FrameIndex)))
       return Reg;
@@ -345,30 +345,29 @@ unsigned LanaiInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr *MI,
   return 0;
 }
 
-unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
+unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                             int &FrameIndex) const {
-  if (MI->getOpcode() == Lanai::SW_RI)
-    if (MI->getOperand(0).isFI() && MI->getOperand(1).isImm() &&
-        MI->getOperand(1).getImm() == 0) {
-      FrameIndex = MI->getOperand(0).getIndex();
-      return MI->getOperand(2).getReg();
+  if (MI.getOpcode() == Lanai::SW_RI)
+    if (MI.getOperand(0).isFI() && MI.getOperand(1).isImm() &&
+        MI.getOperand(1).getImm() == 0) {
+      FrameIndex = MI.getOperand(0).getIndex();
+      return MI.getOperand(2).getReg();
     }
   return 0;
 }
 
 bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
-    MachineInstr *LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
+    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
     const TargetRegisterInfo *TRI) const {
   // Handle only loads/stores with base register followed by immediate offset
   // and with add as ALU op.
-  if (LdSt->getNumOperands() != 4)
+  if (LdSt.getNumOperands() != 4)
     return false;
-  if (!LdSt->getOperand(1).isReg() || !LdSt->getOperand(2).isImm() ||
-      !(LdSt->getOperand(3).isImm() &&
-        LdSt->getOperand(3).getImm() == LPAC::ADD))
+  if (!LdSt.getOperand(1).isReg() || !LdSt.getOperand(2).isImm() ||
+      !(LdSt.getOperand(3).isImm() && LdSt.getOperand(3).getImm() == LPAC::ADD))
     return false;
 
-  switch (LdSt->getOpcode()) {
+  switch (LdSt.getOpcode()) {
   default:
     return false;
   case Lanai::LDW_RI:
@@ -389,15 +388,15 @@ bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
     break;
   }
 
-  BaseReg = LdSt->getOperand(1).getReg();
-  Offset = LdSt->getOperand(2).getImm();
+  BaseReg = LdSt.getOperand(1).getReg();
+  Offset = LdSt.getOperand(2).getImm();
   return true;
 }
 
 bool LanaiInstrInfo::getMemOpBaseRegImmOfs(
-    MachineInstr *LdSt, unsigned &BaseReg, int64_t &Offset,
+    MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset,
     const TargetRegisterInfo *TRI) const {
-  switch (LdSt->getOpcode()) {
+  switch (LdSt.getOpcode()) {
   default:
     return false;
   case Lanai::LDW_RI:

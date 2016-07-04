@@ -60,6 +60,8 @@ public:
 
   uint32_t getLength() const override { return Length; }
 
+  Error commit() const override { return Stream->commit(); }
+
   StreamRef drop_front(uint32_t N) const {
     if (!Stream)
       return StreamRef();

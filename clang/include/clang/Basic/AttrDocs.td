@@ -746,6 +746,8 @@ are:
 ``macos``
   Apple's Mac OS X operating system.  The minimum deployment target is
   specified by the ``-mmacosx-version-min=*version*`` command-line argument.
+  ``macosx`` is supported for backward-compatibility reasons, but it is
+  deprecated.
 
 ``tvos``
   Apple's tvOS operating system.  The minimum deployment target is specified by

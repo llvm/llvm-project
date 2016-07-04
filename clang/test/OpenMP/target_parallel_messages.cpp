@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s
-// RUN: not %clang_cc1 -fopenmp -std=c++11 -fomptargets=aaa-bbb-ccc-ddd -o - %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -fopenmp -std=c++11 -fopenmp-targets=aaa-bbb-ccc-ddd -o - %s 2>&1 | FileCheck %s
 // CHECK: error: OpenMP target is invalid: 'aaa-bbb-ccc-ddd'
 
 void foo() {

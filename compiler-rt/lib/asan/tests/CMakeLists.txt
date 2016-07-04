@@ -45,6 +45,10 @@ if(COMPILER_RT_TEST_COMPILER_ID MATCHES "Clang")
 else()
   list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -g)
 endif()
+if(MSVC)
+  list(APPEND ASAN_UNITTEST_COMMON_CFLAGS -gcodeview)
+endif()
+list(APPEND ASAN_UNITTEST_COMMON_LINKFLAGS -g)
 
 # Use -D instead of definitions to please custom compile command.
 list(APPEND ASAN_UNITTEST_COMMON_CFLAGS
@@ -151,12 +155,12 @@ macro(add_asan_test test_suite test_name arch kind)
     else()
      set(configuration_path "")
     endif()
-	if(NOT MSVC)
+  if(NOT MSVC)
       set(asan_test_runtime_path ${configuration_path}lib${ASAN_TEST_RUNTIME}.a)
     else()
       set(asan_test_runtime_path ${configuration_path}${ASAN_TEST_RUNTIME}.lib)
     endif()
-	list(APPEND TEST_OBJECTS ${asan_test_runtime_path})
+  list(APPEND TEST_OBJECTS ${asan_test_runtime_path})
   endif()
   add_compiler_rt_test(${test_suite} ${test_name}
                        SUBDIR ${TEST_SUBDIR}

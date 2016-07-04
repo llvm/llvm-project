@@ -149,7 +149,7 @@ public:
     typedef Container                   container_type;
     typedef void                        value_type;
     typedef void                        difference_type;
-    typedef back_insert_iterator<Cont>& reference;
+    typedef void                        reference;
     typedef void                        pointer;
 
     explicit back_insert_iterator(Container& x);
@@ -170,7 +170,7 @@ public:
     typedef Container                    container_type;
     typedef void                         value_type;
     typedef void                         difference_type;
-    typedef front_insert_iterator<Cont>& reference;
+    typedef void                         reference;
     typedef void                         pointer;
 
     explicit front_insert_iterator(Container& x);
@@ -192,7 +192,7 @@ public:
     typedef Container              container_type;
     typedef void                   value_type;
     typedef void                   difference_type;
-    typedef insert_iterator<Cont>& reference;
+    typedef void                   reference;
     typedef void                   pointer;
 
     insert_iterator(Container& x, typename Container::iterator i);
@@ -663,7 +663,7 @@ class _LIBCPP_TYPE_VIS_ONLY back_insert_iterator
                       void,
                       void,
                       void,
-                      back_insert_iterator<_Container>&>
+                      void>
 {
 protected:
     _Container* container;
@@ -696,7 +696,7 @@ class _LIBCPP_TYPE_VIS_ONLY front_insert_iterator
                       void,
                       void,
                       void,
-                      front_insert_iterator<_Container>&>
+                      void>
 {
 protected:
     _Container* container;
@@ -729,7 +729,7 @@ class _LIBCPP_TYPE_VIS_ONLY insert_iterator
                       void,
                       void,
                       void,
-                      insert_iterator<_Container>&>
+                      void>
 {
 protected:
     _Container* container;

@@ -24,6 +24,26 @@ int a = f();
 inline int b = f();
 int c = f();
 
+// For compatibility with C++11 and C++14, an out-of-line declaration of a
+// static constexpr local variable promotes the variable to weak_odr.
+struct compat {
+  static constexpr int a = 1;
+  static constexpr int b = 2;
+  static constexpr int c = 3;
+  static inline constexpr int d = 4;
+};
+const int &compat_use_before_redecl = compat::b;
+const int compat::a;
+const int compat::b;
+const int compat::c;
+const int compat::d;
+const int &compat_use_after_redecl1 = compat::c;
+const int &compat_use_after_redecl2 = compat::d;
+// CHECK: @_ZN6compat1bE = weak_odr constant i32 2
+// CHECK: @_ZN6compat1aE = weak_odr constant i32 1
+// CHECK: @_ZN6compat1cE = weak_odr constant i32 3
+// CHECK: @_ZN6compat1dE = linkonce_odr constant i32 4
+
 template<typename T> struct X {
   static int a;
   static inline int b;

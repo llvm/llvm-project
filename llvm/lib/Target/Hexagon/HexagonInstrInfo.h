@@ -43,7 +43,7 @@ public:
   /// the destination along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than loading from the stack slot.
-  unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
 
   /// If the specified machine instruction is a direct
@@ -51,7 +51,7 @@ public:
   /// the source reg along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than storing to the stack slot.
-  unsigned isStoreToStackSlot(const MachineInstr *MI,
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
   /// Analyze the branching code at the end of MBB, returning
@@ -170,7 +170,7 @@ public:
   /// into real instructions. The target can edit MI in place, or it can insert
   /// new instructions and erase MI. The function should return true if
   /// anything was changed.
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   /// Reverses the branch condition of the specified condition list,
   /// returning false on success and true if it cannot be reversed.
@@ -207,7 +207,7 @@ public:
 
   /// Test if the given instruction should be considered a scheduling boundary.
   /// This primarily includes labels and terminators.
-  bool isSchedulingBoundary(const MachineInstr *MI,
+  bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;
 
@@ -226,15 +226,14 @@ public:
   /// in SrcReg and SrcReg2 if having two register operands, and the value it
   /// compares against in CmpValue. Return true if the comparison instruction
   /// can be analyzed.
-  bool analyzeCompare(const MachineInstr *MI,
-                      unsigned &SrcReg, unsigned &SrcReg2,
-                      int &Mask, int &Value) const override;
+  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
+                      unsigned &SrcReg2, int &Mask, int &Value) const override;
 
   /// Compute the instruction latency of a given instruction.
   /// If the instruction has higher cost when predicated, it's returned via
   /// PredCost.
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
-                           const MachineInstr *MI,
+                           const MachineInstr &MI,
                            unsigned *PredCost = 0) const override;
 
   /// Create machine specific model for scheduling.
@@ -245,10 +244,9 @@ public:
   // to tell, even without aliasing information, that two MIs access different
   // memory addresses. This function returns true if two MIs access different
   // memory addresses and false otherwise.
-  bool areMemAccessesTriviallyDisjoint(MachineInstr *MIa, MachineInstr *MIb,
-                                       AliasAnalysis *AA = nullptr)
-                                       const override;
-
+  bool
+  areMemAccessesTriviallyDisjoint(MachineInstr &MIa, MachineInstr &MIb,
+                                  AliasAnalysis *AA = nullptr) const override;
 
   /// HexagonInstrInfo specifics.
   ///
@@ -308,7 +306,7 @@ public:
   bool isPredicateLate(unsigned Opcode) const;
   bool isPredictedTaken(unsigned Opcode) const;
   bool isSaveCalleeSavedRegsCall(const MachineInstr *MI) const;
-  bool isSignExtendingLoad(const MachineInstr *MI) const;
+  bool isSignExtendingLoad(const MachineInstr &MI) const;
   bool isSolo(const MachineInstr* MI) const;
   bool isSpillPredRegOp(const MachineInstr *MI) const;
   bool isTC1(const MachineInstr *MI) const;
@@ -322,8 +320,7 @@ public:
   bool isVecALU(const MachineInstr *MI) const;
   bool isVecUsableNextPacket(const MachineInstr *ProdMI,
                              const MachineInstr *ConsMI) const;
-  bool isZeroExtendingLoad(const MachineInstr *MI) const;
-
+  bool isZeroExtendingLoad(const MachineInstr &MI) const;
 
   bool canExecuteInBundle(const MachineInstr *First,
                           const MachineInstr *Second) const;

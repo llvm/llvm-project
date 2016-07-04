@@ -32,8 +32,7 @@ private:
   const R600Subtarget &ST;
 
   std::vector<std::pair<int, unsigned>>
-  ExtractSrcs(MachineInstr *MI,
-              const DenseMap<unsigned, unsigned> &PV,
+  ExtractSrcs(MachineInstr &MI, const DenseMap<unsigned, unsigned> &PV,
               unsigned &ConstCount) const;
 
   MachineInstrBuilder buildIndirectRead(MachineBasicBlock *MBB,
@@ -83,23 +82,23 @@ public:
 
   /// \returns true if this \p Opcode represents an ALU instruction or an
   /// instruction that will be lowered in ExpandSpecialInstrs Pass.
-  bool canBeConsideredALU(const MachineInstr *MI) const;
+  bool canBeConsideredALU(const MachineInstr &MI) const;
 
   bool isTransOnly(unsigned Opcode) const;
-  bool isTransOnly(const MachineInstr *MI) const;
+  bool isTransOnly(const MachineInstr &MI) const;
   bool isVectorOnly(unsigned Opcode) const;
-  bool isVectorOnly(const MachineInstr *MI) const;
+  bool isVectorOnly(const MachineInstr &MI) const;
   bool isExport(unsigned Opcode) const;
 
   bool usesVertexCache(unsigned Opcode) const;
-  bool usesVertexCache(const MachineInstr *MI) const;
+  bool usesVertexCache(const MachineInstr &MI) const;
   bool usesTextureCache(unsigned Opcode) const;
-  bool usesTextureCache(const MachineInstr *MI) const;
+  bool usesTextureCache(const MachineInstr &MI) const;
 
   bool mustBeLastInClause(unsigned Opcode) const;
-  bool usesAddressRegister(MachineInstr *MI) const;
-  bool definesAddressRegister(MachineInstr *MI) const;
-  bool readsLDSSrcReg(const MachineInstr *MI) const;
+  bool usesAddressRegister(MachineInstr &MI) const;
+  bool definesAddressRegister(MachineInstr &MI) const;
+  bool readsLDSSrcReg(const MachineInstr &MI) const;
 
   /// \returns The operand index for the given source number.  Legal values
   /// for SrcNum are 0, 1, and 2.
@@ -114,7 +113,7 @@ public:
   /// If register is ALU_LITERAL, second member is IMM.
   /// Otherwise, second member value is undefined.
   SmallVector<std::pair<MachineOperand *, int64_t>, 3>
-  getSrcs(MachineInstr *MI) const;
+  getSrcs(MachineInstr &MI) const;
 
   unsigned  isLegalUpTo(
     const std::vector<std::vector<std::pair<int, unsigned> > > &IGSrcs,
@@ -205,13 +204,13 @@ public:
   unsigned int getPredicationCost(const MachineInstr &) const override;
 
   unsigned int getInstrLatency(const InstrItineraryData *ItinData,
-                               const MachineInstr *MI,
+                               const MachineInstr &MI,
                                unsigned *PredCost = nullptr) const override;
 
   int getInstrLatency(const InstrItineraryData *ItinData,
                       SDNode *Node) const override { return 1;}
 
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 
   /// \brief Reserve the registers that may be accesed using indirect addressing.
   void reserveIndirectRegisters(BitVector &Reserved,
@@ -286,13 +285,13 @@ public:
   int getOperandIdx(unsigned Opcode, unsigned Op) const;
 
   /// \brief Helper function for setting instruction flag values.
-  void setImmOperand(MachineInstr *MI, unsigned Op, int64_t Imm) const;
+  void setImmOperand(MachineInstr &MI, unsigned Op, int64_t Imm) const;
 
   /// \returns true if this instruction has an operand for storing target flags.
   bool hasFlagOperand(const MachineInstr &MI) const;
 
   ///\brief Add one of the MO_FLAG* flags to the specified \p Operand.
-  void addFlag(MachineInstr *MI, unsigned Operand, unsigned Flag) const;
+  void addFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
 
   ///\brief Determine if the specified \p Flag is set on this \p Operand.
   bool isFlagSet(const MachineInstr &MI, unsigned Operand, unsigned Flag) const;
@@ -301,11 +300,11 @@ public:
   /// \param Flag The flag being set.
   ///
   /// \returns the operand containing the flags for this instruction.
-  MachineOperand &getFlagOp(MachineInstr *MI, unsigned SrcIdx = 0,
+  MachineOperand &getFlagOp(MachineInstr &MI, unsigned SrcIdx = 0,
                             unsigned Flag = 0) const;
 
   /// \brief Clear the specified flag on the instruction.
-  void clearFlag(MachineInstr *MI, unsigned Operand, unsigned Flag) const;
+  void clearFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;
 
   // Helper functions that check the opcode for status information
   bool isRegisterStore(const MachineInstr &MI) const;

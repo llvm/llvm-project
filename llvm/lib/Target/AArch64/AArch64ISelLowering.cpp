@@ -970,7 +970,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
 }
 
 MachineBasicBlock *
-AArch64TargetLowering::EmitF128CSEL(MachineInstr *MI,
+AArch64TargetLowering::EmitF128CSEL(MachineInstr &MI,
                                     MachineBasicBlock *MBB) const {
   // We materialise the F128CSEL pseudo-instruction as some control flow and a
   // phi node:
@@ -987,14 +987,14 @@ AArch64TargetLowering::EmitF128CSEL(MachineInstr *MI,
   MachineFunction *MF = MBB->getParent();
   const TargetInstrInfo *TII = Subtarget->getInstrInfo();
   const BasicBlock *LLVM_BB = MBB->getBasicBlock();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
   MachineFunction::iterator It = ++MBB->getIterator();
 
-  unsigned DestReg = MI->getOperand(0).getReg();
-  unsigned IfTrueReg = MI->getOperand(1).getReg();
-  unsigned IfFalseReg = MI->getOperand(2).getReg();
-  unsigned CondCode = MI->getOperand(3).getImm();
-  bool NZCVKilled = MI->getOperand(4).isKill();
+  unsigned DestReg = MI.getOperand(0).getReg();
+  unsigned IfTrueReg = MI.getOperand(1).getReg();
+  unsigned IfFalseReg = MI.getOperand(2).getReg();
+  unsigned CondCode = MI.getOperand(3).getImm();
+  bool NZCVKilled = MI.getOperand(4).isKill();
 
   MachineBasicBlock *TrueBB = MF->CreateMachineBasicBlock(LLVM_BB);
   MachineBasicBlock *EndBB = MF->CreateMachineBasicBlock(LLVM_BB);
@@ -1025,17 +1025,16 @@ AArch64TargetLowering::EmitF128CSEL(MachineInstr *MI,
       .addReg(IfFalseReg)
       .addMBB(MBB);
 
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return EndBB;
 }
 
-MachineBasicBlock *
-AArch64TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
-                                                 MachineBasicBlock *BB) const {
-  switch (MI->getOpcode()) {
+MachineBasicBlock *AArch64TargetLowering::EmitInstrWithCustomInserter(
+    MachineInstr &MI, MachineBasicBlock *BB) const {
+  switch (MI.getOpcode()) {
   default:
 #ifndef NDEBUG
-    MI->dump();
+    MI.dump();
 #endif
     llvm_unreachable("Unexpected instruction for custom inserter!");
 
@@ -3536,11 +3535,8 @@ SDValue AArch64TargetLowering::LowerELFTLSDescCallSeq(SDValue SymAddr,
   SDValue Chain = DAG.getEntryNode();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
 
-  SmallVector<SDValue, 2> Ops;
-  Ops.push_back(Chain);
-  Ops.push_back(SymAddr);
-
-  Chain = DAG.getNode(AArch64ISD::TLSDESC_CALLSEQ, DL, NodeTys, Ops);
+  Chain =
+      DAG.getNode(AArch64ISD::TLSDESC_CALLSEQ, DL, NodeTys, {Chain, SymAddr});
   SDValue Glue = Chain.getValue(1);
 
   return DAG.getCopyFromReg(Chain, DL, AArch64::X0, PtrVT, Glue);
@@ -5161,7 +5157,7 @@ SDValue AArch64TargetLowering::ReconstructShuffle(SDValue Op,
     ShuffleOps[i] = Sources[i].ShuffleVec;
 
   SDValue Shuffle = DAG.getVectorShuffle(ShuffleVT, dl, ShuffleOps[0],
-                                         ShuffleOps[1], &Mask[0]);
+                                         ShuffleOps[1], Mask);
   return DAG.getNode(ISD::BITCAST, dl, VT, Shuffle);
 }
 
@@ -5638,8 +5634,7 @@ SDValue AArch64TargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   SDValue V1 = Op.getOperand(0);
   SDValue V2 = Op.getOperand(1);
 
-  if (ShuffleVectorSDNode::isSplatMask(&ShuffleMask[0],
-                                       V1.getValueType().getSimpleVT())) {
+  if (SVN->isSplat()) {
     int Lane = SVN->getSplatIndex();
     // If this is undef splat, generate it via "just" vdup, if possible.
     if (Lane == -1)
@@ -8933,9 +8928,10 @@ static SDValue performPostLD1Combine(SDNode *N,
                                            LoadSDN->getMemOperand());
 
     // Update the uses.
-    SmallVector<SDValue, 2> NewResults;
-    NewResults.push_back(SDValue(LD, 0));             // The result of load
-    NewResults.push_back(SDValue(UpdN.getNode(), 2)); // Chain
+    SDValue NewResults[] = {
+        SDValue(LD, 0),            // The result of load
+        SDValue(UpdN.getNode(), 2) // Chain
+    };
     DCI.CombineTo(LD, NewResults);
     DCI.CombineTo(N, SDValue(UpdN.getNode(), 0));     // Dup/Inserted Result
     DCI.CombineTo(User, SDValue(UpdN.getNode(), 1));  // Write back register
@@ -9865,7 +9861,7 @@ static SDValue performSelectCombine(SDNode *N,
 
   // Now duplicate the comparison mask we want across all other lanes.
   SmallVector<int, 8> DUPMask(CCVT.getVectorNumElements(), 0);
-  SDValue Mask = DAG.getVectorShuffle(CCVT, DL, SetCC, SetCC, DUPMask.data());
+  SDValue Mask = DAG.getVectorShuffle(CCVT, DL, SetCC, SetCC, DUPMask);
   Mask = DAG.getNode(ISD::BITCAST, DL,
                      ResVT.changeVectorElementTypeToInteger(), Mask);
 

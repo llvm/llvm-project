@@ -6,9 +6,9 @@ target datalayout = "n8:16:32:64"
 
 define void @PR21651() {
 ; CHECK-LABEL: @PR21651(
-; CHECK-NEXT:    switch i2 0, label %out [
-; CHECK-NEXT:    i2 0, label %out
-; CHECK-NEXT:    i2 1, label %out
+; CHECK-NEXT:    switch i1 false, label %out [
+; CHECK-NEXT:    i1 false, label %out
+; CHECK-NEXT:    i1 true, label %out
 ; CHECK-NEXT:    ]
 ; CHECK:       out:
 ; CHECK-NEXT:    ret void

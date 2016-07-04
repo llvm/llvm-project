@@ -1,9 +1,5 @@
 set(LLVM_LINK_COMPONENTS
-  Core
-  ExecutionEngine
-  Object
-  Support
-  native
+  all
   )
 
 add_kaleidoscope_chapter(Kaleidoscope-Ch8

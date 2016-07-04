@@ -450,8 +450,8 @@ bool HexagonHardwareLoops::findInductionRegister(MachineLoop *L,
 
   unsigned CmpReg1 = 0, CmpReg2 = 0;
   int CmpImm = 0, CmpMask = 0;
-  bool CmpAnalyzed = TII->analyzeCompare(PredI, CmpReg1, CmpReg2,
-                                         CmpMask, CmpImm);
+  bool CmpAnalyzed =
+      TII->analyzeCompare(*PredI, CmpReg1, CmpReg2, CmpMask, CmpImm);
   // Fail if the compare was not analyzed, or it's not comparing a register
   // with an immediate value.  Not checking the mask here, since we handle
   // the individual compare opcodes (including A4_cmpb*) later on.
@@ -620,8 +620,8 @@ CountValue *HexagonHardwareLoops::getLoopTripCount(MachineLoop *L,
 
   unsigned CmpReg1 = 0, CmpReg2 = 0;
   int Mask = 0, ImmValue = 0;
-  bool AnalyzedCmp = TII->analyzeCompare(CondI, CmpReg1, CmpReg2,
-                                         Mask, ImmValue);
+  bool AnalyzedCmp =
+      TII->analyzeCompare(*CondI, CmpReg1, CmpReg2, Mask, ImmValue);
   if (!AnalyzedCmp)
     return nullptr;
 
@@ -1420,7 +1420,7 @@ bool HexagonHardwareLoops::loopCountMayWrapOrUnderFlow(
     unsigned CmpReg1 = 0, CmpReg2 = 0;
     int CmpMask = 0, CmpValue = 0;
 
-    if (!TII->analyzeCompare(MI, CmpReg1, CmpReg2, CmpMask, CmpValue))
+    if (!TII->analyzeCompare(*MI, CmpReg1, CmpReg2, CmpMask, CmpValue))
       continue;
 
     MachineBasicBlock *TBB = 0, *FBB = 0;

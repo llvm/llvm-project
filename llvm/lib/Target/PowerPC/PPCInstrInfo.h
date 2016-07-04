@@ -91,8 +91,7 @@ protected:
   ///
   /// For example, we can commute rlwimi instructions, but only if the
   /// rotate amt is zero.  We also have to munge the immediates a bit.
-  MachineInstr *commuteInstructionImpl(MachineInstr *MI,
-                                       bool NewMI,
+  MachineInstr *commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                        unsigned OpIdx1,
                                        unsigned OpIdx2) const override;
 
@@ -113,12 +112,12 @@ public:
                                      const ScheduleDAG *DAG) const override;
 
   unsigned getInstrLatency(const InstrItineraryData *ItinData,
-                           const MachineInstr *MI,
+                           const MachineInstr &MI,
                            unsigned *PredCost = nullptr) const override;
 
   int getOperandLatency(const InstrItineraryData *ItinData,
-                        const MachineInstr *DefMI, unsigned DefIdx,
-                        const MachineInstr *UseMI,
+                        const MachineInstr &DefMI, unsigned DefIdx,
+                        const MachineInstr &UseMI,
                         unsigned UseIdx) const override;
   int getOperandLatency(const InstrItineraryData *ItinData,
                         SDNode *DefNode, unsigned DefIdx,
@@ -128,7 +127,7 @@ public:
   }
 
   bool hasLowDefLatency(const TargetSchedModel &SchedModel,
-                        const MachineInstr *DefMI,
+                        const MachineInstr &DefMI,
                         unsigned DefIdx) const override {
     // Machine LICM should hoist all instructions in low-register-pressure
     // situations; none are sufficiently free to justify leaving in a loop
@@ -152,12 +151,12 @@ public:
   bool isCoalescableExtInstr(const MachineInstr &MI,
                              unsigned &SrcReg, unsigned &DstReg,
                              unsigned &SubIdx) const override;
-  unsigned isLoadFromStackSlot(const MachineInstr *MI,
+  unsigned isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override;
-  unsigned isStoreToStackSlot(const MachineInstr *MI,
+  unsigned isStoreToStackSlot(const MachineInstr &MI,
                               int &FrameIndex) const override;
 
-  bool findCommutedOpIndices(MachineInstr *MI, unsigned &SrcOpIdx1,
+  bool findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
                              unsigned &SrcOpIdx2) const override;
 
   void insertNoop(MachineBasicBlock &MBB,
@@ -201,8 +200,8 @@ public:
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  bool FoldImmediate(MachineInstr *UseMI, MachineInstr *DefMI,
-                     unsigned Reg, MachineRegisterInfo *MRI) const override;
+  bool FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI, unsigned Reg,
+                     MachineRegisterInfo *MRI) const override;
 
   // If conversion by predication (only supported by some branch instructions).
   // All of the profitability checks always return true; it is always
@@ -247,20 +246,17 @@ public:
 
   // Comparison optimization.
 
+  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
+                      unsigned &SrcReg2, int &Mask, int &Value) const override;
 
-  bool analyzeCompare(const MachineInstr *MI,
-                      unsigned &SrcReg, unsigned &SrcReg2,
-                      int &Mask, int &Value) const override;
-
-  bool optimizeCompareInstr(MachineInstr *CmpInstr,
-                            unsigned SrcReg, unsigned SrcReg2,
-                            int Mask, int Value,
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
+                            unsigned SrcReg2, int Mask, int Value,
                             const MachineRegisterInfo *MRI) const override;
 
   /// GetInstSize - Return the number of bytes of code the specified
   /// instruction may be.  This returns the maximum number of bytes.
   ///
-  unsigned GetInstSizeInBytes(const MachineInstr *MI) const;
+  unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
   void getNoopForMachoTarget(MCInst &NopInst) const override;
 
@@ -274,7 +270,7 @@ public:
   getSerializableBitmaskMachineOperandTargetFlags() const override;
 
   // Lower pseudo instructions after register allocation.
-  bool expandPostRAPseudo(MachineBasicBlock::iterator MI) const override;
+  bool expandPostRAPseudo(MachineInstr &MI) const override;
 };
 
 }

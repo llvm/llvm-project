@@ -1528,21 +1528,17 @@ GenerateMethodList(StringRef ClassName,
     IMPTy, //Method pointer
     nullptr);
   std::vector<llvm::Constant*> Methods;
-  std::vector<llvm::Constant*> Elements;
   for (unsigned int i = 0, e = MethodTypes.size(); i < e; ++i) {
-    Elements.clear();
     llvm::Constant *Method =
       TheModule.getFunction(SymbolNameForMethod(ClassName, CategoryName,
                                                 MethodSels[i],
                                                 isClassMethodList));
     assert(Method && "Can't generate metadata for method that doesn't exist");
     llvm::Constant *C = MakeConstantString(MethodSels[i].getAsString());
-    Elements.push_back(C);
-    Elements.push_back(MethodTypes[i]);
     Method = llvm::ConstantExpr::getBitCast(Method,
         IMPTy);
-    Elements.push_back(Method);
-    Methods.push_back(llvm::ConstantStruct::get(ObjCMethodTy, Elements));
+    Methods.push_back(
+        llvm::ConstantStruct::get(ObjCMethodTy, {C, MethodTypes[i], Method}));
   }
 
   // Array of method structures
@@ -1585,23 +1581,18 @@ GenerateIvarList(ArrayRef<llvm::Constant *> IvarNames,
     IntTy,
     nullptr);
   std::vector<llvm::Constant*> Ivars;
-  std::vector<llvm::Constant*> Elements;
   for (unsigned int i = 0, e = IvarNames.size() ; i < e ; i++) {
-    Elements.clear();
-    Elements.push_back(IvarNames[i]);
-    Elements.push_back(IvarTypes[i]);
-    Elements.push_back(IvarOffsets[i]);
-    Ivars.push_back(llvm::ConstantStruct::get(ObjCIvarTy, Elements));
+    Ivars.push_back(llvm::ConstantStruct::get(
+        ObjCIvarTy, {IvarNames[i], IvarTypes[i], IvarOffsets[i]}));
   }
 
   // Array of method structures
   llvm::ArrayType *ObjCIvarArrayTy = llvm::ArrayType::get(ObjCIvarTy,
       IvarNames.size());
 
-
-  Elements.clear();
-  Elements.push_back(llvm::ConstantInt::get(IntTy, (int)IvarNames.size()));
-  Elements.push_back(llvm::ConstantArray::get(ObjCIvarArrayTy, Ivars));
+  llvm::Constant *Elements[] = {
+      llvm::ConstantInt::get(IntTy, (int)IvarNames.size()),
+      llvm::ConstantArray::get(ObjCIvarArrayTy, Ivars)};
   // Structure containing array and array count
   llvm::StructType *ObjCIvarListTy = llvm::StructType::get(IntTy,
     ObjCIvarArrayTy,
@@ -1713,12 +1704,9 @@ GenerateProtocolMethodList(ArrayRef<llvm::Constant *> MethodNames,
     PtrToInt8Ty,
     nullptr);
   std::vector<llvm::Constant*> Methods;
-  std::vector<llvm::Constant*> Elements;
   for (unsigned int i = 0, e = MethodTypes.size() ; i < e ; i++) {
-    Elements.clear();
-    Elements.push_back(MethodNames[i]);
-    Elements.push_back(MethodTypes[i]);
-    Methods.push_back(llvm::ConstantStruct::get(ObjCMethodDescTy, Elements));
+    Methods.push_back(llvm::ConstantStruct::get(
+        ObjCMethodDescTy, {MethodNames[i], MethodTypes[i]}));
   }
   llvm::ArrayType *ObjCMethodArrayTy = llvm::ArrayType::get(ObjCMethodDescTy,
       MethodNames.size());
@@ -1793,17 +1781,13 @@ llvm::Constant *CGObjCGNU::GenerateEmptyProtocol(
       MethodList->getType(),
       MethodList->getType(),
       nullptr);
-  std::vector<llvm::Constant*> Elements;
   // The isa pointer must be set to a magic number so the runtime knows it's
   // the correct layout.
-  Elements.push_back(llvm::ConstantExpr::getIntToPtr(
-        llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy));
-  Elements.push_back(MakeConstantString(ProtocolName, ".objc_protocol_name"));
-  Elements.push_back(ProtocolList);
-  Elements.push_back(MethodList);
-  Elements.push_back(MethodList);
-  Elements.push_back(MethodList);
-  Elements.push_back(MethodList);
+  llvm::Constant *Elements[] = {
+      llvm::ConstantExpr::getIntToPtr(
+          llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy),
+      MakeConstantString(ProtocolName, ".objc_protocol_name"), ProtocolList,
+      MethodList, MethodList, MethodList, MethodList};
   return MakeGlobal(ProtocolTy, Elements, CGM.getPointerAlign(),
                     ".objc_protocol");
 }
@@ -1951,19 +1935,14 @@ void CGObjCGNU::GenerateProtocol(const ObjCProtocolDecl *PD) {
       PropertyList->getType(),
       OptionalPropertyList->getType(),
       nullptr);
-  std::vector<llvm::Constant*> Elements;
   // The isa pointer must be set to a magic number so the runtime knows it's
   // the correct layout.
-  Elements.push_back(llvm::ConstantExpr::getIntToPtr(
-        llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy));
-  Elements.push_back(MakeConstantString(ProtocolName, ".objc_protocol_name"));
-  Elements.push_back(ProtocolList);
-  Elements.push_back(InstanceMethodList);
-  Elements.push_back(ClassMethodList);
-  Elements.push_back(OptionalInstanceMethodList);
-  Elements.push_back(OptionalClassMethodList);
-  Elements.push_back(PropertyList);
-  Elements.push_back(OptionalPropertyList);
+  llvm::Constant *Elements[] = {
+      llvm::ConstantExpr::getIntToPtr(
+          llvm::ConstantInt::get(Int32Ty, ProtocolVersion), IdTy),
+      MakeConstantString(ProtocolName, ".objc_protocol_name"), ProtocolList,
+      InstanceMethodList, ClassMethodList, OptionalInstanceMethodList,
+      OptionalClassMethodList, PropertyList, OptionalPropertyList};
   ExistingProtocols[ProtocolName] =
     llvm::ConstantExpr::getBitCast(MakeGlobal(ProtocolTy, Elements,
           CGM.getPointerAlign(), ".objc_protocol"), IdTy);
@@ -2089,20 +2068,20 @@ void CGObjCGNU::GenerateCategory(const ObjCCategoryImplDecl *OCD) {
        E = Protos.end(); I != E; ++I)
     Protocols.push_back((*I)->getNameAsString());
 
-  std::vector<llvm::Constant*> Elements;
-  Elements.push_back(MakeConstantString(CategoryName));
-  Elements.push_back(MakeConstantString(ClassName));
-  // Instance method list
-  Elements.push_back(llvm::ConstantExpr::getBitCast(GenerateMethodList(
-          ClassName, CategoryName, InstanceMethodSels, InstanceMethodTypes,
-          false), PtrTy));
-  // Class method list
-  Elements.push_back(llvm::ConstantExpr::getBitCast(GenerateMethodList(
-          ClassName, CategoryName, ClassMethodSels, ClassMethodTypes, true),
-        PtrTy));
-  // Protocol list
-  Elements.push_back(llvm::ConstantExpr::getBitCast(
-        GenerateProtocolList(Protocols), PtrTy));
+  llvm::Constant *Elements[] = {
+      MakeConstantString(CategoryName), MakeConstantString(ClassName),
+      // Instance method list
+      llvm::ConstantExpr::getBitCast(
+          GenerateMethodList(ClassName, CategoryName, InstanceMethodSels,
+                             InstanceMethodTypes, false),
+          PtrTy),
+      // Class method list
+      llvm::ConstantExpr::getBitCast(GenerateMethodList(ClassName, CategoryName,
+                                                        ClassMethodSels,
+                                                        ClassMethodTypes, true),
+                                     PtrTy),
+      // Protocol list
+      llvm::ConstantExpr::getBitCast(GenerateProtocolList(Protocols), PtrTy)};
   Categories.push_back(llvm::ConstantExpr::getBitCast(
         MakeGlobal(llvm::StructType::get(PtrToInt8Ty, PtrToInt8Ty,
             PtrTy, PtrTy, PtrTy, nullptr), Elements, CGM.getPointerAlign()),

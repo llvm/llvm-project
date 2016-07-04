@@ -199,7 +199,7 @@ bool PadShortFunc::cyclesUntilReturn(MachineBasicBlock *MBB,
       return true;
     }
 
-    CyclesToEnd += TII->getInstrLatency(STI->getInstrItineraryData(), MI);
+    CyclesToEnd += TII->getInstrLatency(STI->getInstrItineraryData(), *MI);
   }
 
   VisitedBBs[MBB] = VisitedBBInfo(false, CyclesToEnd);

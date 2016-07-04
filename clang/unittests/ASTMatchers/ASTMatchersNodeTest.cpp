@@ -82,13 +82,11 @@ TEST(NameableDeclaration, REMatchesVariousDecls) {
 
 TEST(DeclarationMatcher, MatchClass) {
   DeclarationMatcher ClassMatcher(recordDecl());
-  llvm::Triple Triple(llvm::sys::getDefaultTargetTriple());
-  if (Triple.getOS() != llvm::Triple::Win32 ||
-    Triple.getEnvironment() != llvm::Triple::MSVC)
-    EXPECT_FALSE(matches("", ClassMatcher));
-  else
-    // Matches class type_info.
-    EXPECT_TRUE(matches("", ClassMatcher));
+
+  // This passes on Windows only because we explicitly pass -target
+  // i386-unknown-unknown.  If we were to compile with the default target
+  // triple, we'd want to EXPECT_TRUE if it's Win32 or MSVC.
+  EXPECT_FALSE(matches("", ClassMatcher));
 
   DeclarationMatcher ClassX = recordDecl(recordDecl(hasName("X")));
   EXPECT_TRUE(matches("class X;", ClassX));
@@ -1297,6 +1295,13 @@ TEST(TypeMatching, AutoRefTypes) {
                                            hasType(lValueReferenceType()))));
   EXPECT_TRUE(matches(Fragment, varDecl(hasName("e"),
                                         hasType(rValueReferenceType()))));
+}
+
+TEST(TypeMatching, MatchesEnumTypes) {
+  EXPECT_TRUE(matches("enum Color { Green }; Color color;",
+                      loc(enumType())));
+  EXPECT_TRUE(matches("enum class Color { Green }; Color color;",
+                      loc(enumType())));
 }
 
 TEST(TypeMatching, MatchesPointersToConstTypes) {

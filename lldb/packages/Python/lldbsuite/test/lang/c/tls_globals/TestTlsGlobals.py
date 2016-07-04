@@ -26,9 +26,19 @@ class TlsGlobalTestCase(TestBase):
                 self.runCmd("settings set target.env-vars " + self.dylibPath + "=" + os.getcwd())
             self.addTearDownHook(lambda: self.runCmd("settings remove target.env-vars " + self.dylibPath))
 
-    @unittest2.expectedFailure("rdar://7796742")
     @skipIfWindows # TLS works differently on Windows, this would need to be implemented separately.
-    def test(self):
+    @skipIfDarwin # Darwin has its own test below and we don't want it to expected fail with decorator below
+    @unittest2.expectedFailure("llvm.org/pr28392")
+    def test_non_darwin(self):
+        '''Mark as expected fail for all except Darwin or Windows'''
+        self.run_test()
+
+    @skipUnlessDarwin
+    def test_darwin(self):
+        '''Always run on darwin with no expected fail'''
+        self.run_test()
+    
+    def run_test(self):
         """Test thread-local storage."""
         self.build()
         exe = os.path.join(os.getcwd(), "a.out")

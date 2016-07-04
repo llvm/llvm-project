@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "InputSection.h"
 #include "LinkerScript.h"
+#include "Strings.h"
 #include "SymbolListFile.h"
 #include "SymbolTable.h"
 #include "Target.h"
@@ -295,6 +296,25 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   }
 }
 
+static UnresolvedPolicy getUnresolvedSymbolOption(opt::InputArgList &Args) {
+  if (Args.hasArg(OPT_noinhibit_exec))
+    return UnresolvedPolicy::Warn;
+  if (Args.hasArg(OPT_no_undefined) || hasZOption(Args, "defs"))
+    return UnresolvedPolicy::NoUndef;
+  if (Config->Relocatable)
+    return UnresolvedPolicy::Ignore;
+
+  if (auto *Arg = Args.getLastArg(OPT_unresolved_symbols)) {
+    StringRef S = Arg->getValue();
+    if (S == "ignore-all" || S == "ignore-in-object-files")
+      return UnresolvedPolicy::Ignore;
+    if (S == "ignore-in-shared-libs" || S == "report-all")
+      return UnresolvedPolicy::Error;
+    error("unknown --unresolved-symbols value: " + S);
+  }
+  return UnresolvedPolicy::Error;
+}
+
 // Initializes Config members by the command line options.
 void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_L))
@@ -327,10 +347,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   Config->GcSections = Args.hasArg(OPT_gc_sections);
   Config->ICF = Args.hasArg(OPT_icf);
   Config->NoGnuUnique = Args.hasArg(OPT_no_gnu_unique);
-  Config->NoUndefined =
-      Args.hasArg(OPT_no_undefined) || hasZOption(Args, "defs");
   Config->NoUndefinedVersion = Args.hasArg(OPT_no_undefined_version);
-  Config->NoinhibitExec = Args.hasArg(OPT_noinhibit_exec);
   Config->Pie = Args.hasArg(OPT_pie);
   Config->PrintGcSections = Args.hasArg(OPT_print_gc_sections);
   Config->Relocatable = Args.hasArg(OPT_relocatable);
@@ -402,7 +419,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
       Config->BuildId = BuildIdKind::None;
     } else if (S.startswith("0x")) {
       Config->BuildId = BuildIdKind::Hexstring;
-      Config->BuildIdVector = parseHexstring(S.substr(2));
+      Config->BuildIdVector = parseHex(S.substr(2));
     } else {
       error("unknown --build-id style: " + S);
     }
@@ -410,6 +427,8 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
 
   for (auto *Arg : Args.filtered(OPT_undefined))
     Config->Undefined.push_back(Arg->getValue());
+
+  Config->UnresolvedSymbols = getUnresolvedSymbolOption(Args);
 
   if (auto *Arg = Args.getLastArg(OPT_dynamic_list))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))

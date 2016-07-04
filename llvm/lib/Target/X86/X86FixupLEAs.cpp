@@ -110,22 +110,22 @@ char FixupLEAPass::ID = 0;
 MachineInstr *
 FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
                                  MachineBasicBlock::iterator &MBBI) const {
-  MachineInstr *MI = MBBI;
-  MachineInstr *NewMI;
-  switch (MI->getOpcode()) {
+  MachineInstr &MI = *MBBI;
+  switch (MI.getOpcode()) {
   case X86::MOV32rr:
   case X86::MOV64rr: {
-    const MachineOperand &Src = MI->getOperand(1);
-    const MachineOperand &Dest = MI->getOperand(0);
-    NewMI = BuildMI(*MF, MI->getDebugLoc(),
-                    TII->get(MI->getOpcode() == X86::MOV32rr ? X86::LEA32r
-                                                             : X86::LEA64r))
-                .addOperand(Dest)
-                .addOperand(Src)
-                .addImm(1)
-                .addReg(0)
-                .addImm(0)
-                .addReg(0);
+    const MachineOperand &Src = MI.getOperand(1);
+    const MachineOperand &Dest = MI.getOperand(0);
+    MachineInstr *NewMI =
+        BuildMI(*MF, MI.getDebugLoc(),
+                TII->get(MI.getOpcode() == X86::MOV32rr ? X86::LEA32r
+                                                        : X86::LEA64r))
+            .addOperand(Dest)
+            .addOperand(Src)
+            .addImm(1)
+            .addReg(0)
+            .addImm(0)
+            .addReg(0);
     MFI->insert(MBBI, NewMI); // Insert the new inst
     return NewMI;
   }
@@ -141,7 +141,7 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
   case X86::ADD16ri8:
   case X86::ADD16ri_DB:
   case X86::ADD16ri8_DB:
-    if (!MI->getOperand(2).isImm()) {
+    if (!MI.getOperand(2).isImm()) {
       // convertToThreeAddress will call getImm()
       // which requires isImm() to be true
       return nullptr;
@@ -149,14 +149,14 @@ FixupLEAPass::postRAConvertToLEA(MachineFunction::iterator &MFI,
     break;
   case X86::ADD16rr:
   case X86::ADD16rr_DB:
-    if (MI->getOperand(1).getReg() != MI->getOperand(2).getReg()) {
+    if (MI.getOperand(1).getReg() != MI.getOperand(2).getReg()) {
       // if src1 != src2, then convertToThreeAddress will
       // need to create a Virtual register, which we cannot do
       // after register allocation.
       return nullptr;
     }
   }
-  return TII->convertToThreeAddress(MFI, MBBI, nullptr);
+  return TII->convertToThreeAddress(MFI, MI, nullptr);
 }
 
 FunctionPass *llvm::createX86FixupLEAs() { return new FixupLEAPass(); }
@@ -236,7 +236,7 @@ FixupLEAPass::searchBackwards(MachineOperand &p, MachineBasicBlock::iterator &I,
       return CurInst;
     }
     InstrDistance += TII->getInstrLatency(
-        MF->getSubtarget().getInstrItineraryData(), CurInst);
+        MF->getSubtarget().getInstrItineraryData(), *CurInst);
     Found = getPreviousInstr(CurInst, MFI);
   }
   return nullptr;

@@ -88,7 +88,6 @@ static bool sink(Instruction &I, const LoopInfo *LI, const DominatorTree *DT,
                  const LoopSafetyInfo *SafetyInfo);
 static bool isSafeToExecuteUnconditionally(const Instruction &Inst,
                                            const DominatorTree *DT,
-                                           const TargetLibraryInfo *TLI,
                                            const Loop *CurLoop,
                                            const LoopSafetyInfo *SafetyInfo,
                                            const Instruction *CtxI = nullptr);
@@ -365,7 +364,7 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
       if (CurLoop->hasLoopInvariantOperands(&I) &&
           canSinkOrHoistInst(I, AA, DT, TLI, CurLoop, CurAST, SafetyInfo) &&
           isSafeToExecuteUnconditionally(
-              I, DT, TLI, CurLoop, SafetyInfo,
+              I, DT, CurLoop, SafetyInfo,
               CurLoop->getLoopPreheader()->getTerminator()))
         Changed |= hoist(I, DT, CurLoop, SafetyInfo);
     }
@@ -490,8 +489,7 @@ bool canSinkOrHoistInst(Instruction &I, AliasAnalysis *AA, DominatorTree *DT,
   // TODO: Plumb the context instruction through to make hoisting and sinking
   // more powerful. Hoisting of loads already works due to the special casing
   // above.
-  return isSafeToExecuteUnconditionally(I, DT, TLI, CurLoop, SafetyInfo,
-                                        nullptr);
+  return isSafeToExecuteUnconditionally(I, DT, CurLoop, SafetyInfo, nullptr);
 }
 
 /// Returns true if a PHINode is a trivially replaceable with an
@@ -724,11 +722,10 @@ static bool hoist(Instruction &I, const DominatorTree *DT, const Loop *CurLoop,
 /// or if it is a trapping instruction and is guaranteed to execute.
 static bool isSafeToExecuteUnconditionally(const Instruction &Inst,
                                            const DominatorTree *DT,
-                                           const TargetLibraryInfo *TLI,
                                            const Loop *CurLoop,
                                            const LoopSafetyInfo *SafetyInfo,
                                            const Instruction *CtxI) {
-  if (isSafeToSpeculativelyExecute(&Inst, CtxI, DT, TLI))
+  if (isSafeToSpeculativelyExecute(&Inst, CtxI, DT))
     return true;
 
   return isGuaranteedToExecute(Inst, DT, CurLoop, SafetyInfo);
@@ -926,7 +923,7 @@ bool llvm::promoteLoopAccessesToScalars(
 
         if (!GuaranteedToExecute && !CanSpeculateLoad)
           CanSpeculateLoad = isSafeToExecuteUnconditionally(
-              *Load, DT, TLI, CurLoop, SafetyInfo, Preheader->getTerminator());
+              *Load, DT, CurLoop, SafetyInfo, Preheader->getTerminator());
       } else if (const StoreInst *Store = dyn_cast<StoreInst>(UI)) {
         // Stores *of* the pointer are not interesting, only stores *to* the
         // pointer.
@@ -959,7 +956,7 @@ bool llvm::promoteLoopAccessesToScalars(
         if (!GuaranteedToExecute && !CanSpeculateLoad) {
           CanSpeculateLoad = isDereferenceableAndAlignedPointer(
               Store->getPointerOperand(), Store->getAlignment(), MDL,
-              Preheader->getTerminator(), DT, TLI);
+              Preheader->getTerminator(), DT);
         }
       } else
         return Changed; // Not a load or store.

@@ -298,7 +298,7 @@ sink3AddrInstruction(MachineInstr *MI, unsigned SavedReg,
     KillMO->setIsKill(true);
 
     if (LV)
-      LV->replaceKillInstruction(SavedReg, KillMI, MI);
+      LV->replaceKillInstruction(SavedReg, *KillMI, *MI);
   }
 
   // Move instruction to its destination.
@@ -647,7 +647,7 @@ bool TwoAddressInstructionPass::commuteInstruction(MachineInstr *MI,
                                                    unsigned Dist) {
   unsigned RegC = MI->getOperand(RegCIdx).getReg();
   DEBUG(dbgs() << "2addr: COMMUTING  : " << *MI);
-  MachineInstr *NewMI = TII->commuteInstruction(MI, false, RegBIdx, RegCIdx);
+  MachineInstr *NewMI = TII->commuteInstruction(*MI, false, RegBIdx, RegCIdx);
 
   if (NewMI == nullptr) {
     DEBUG(dbgs() << "2addr: COMMUTING FAILED!\n");
@@ -695,7 +695,7 @@ TwoAddressInstructionPass::convertInstTo3Addr(MachineBasicBlock::iterator &mi,
                                               unsigned Dist) {
   // FIXME: Why does convertToThreeAddress() need an iterator reference?
   MachineFunction::iterator MFI = MBB->getIterator();
-  MachineInstr *NewMI = TII->convertToThreeAddress(MFI, mi, LV);
+  MachineInstr *NewMI = TII->convertToThreeAddress(MFI, *mi, LV);
   assert(MBB->getIterator() == MFI &&
          "convertToThreeAddress changed iterator reference");
   if (!NewMI)
@@ -861,7 +861,7 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   if (!MI->isSafeToMove(AA, SeenStore))
     return false;
 
-  if (TII->getInstrLatency(InstrItins, MI) > 1)
+  if (TII->getInstrLatency(InstrItins, *MI) > 1)
     // FIXME: Needs more sophisticated heuristics.
     return false;
 
@@ -971,8 +971,8 @@ rescheduleMIBelowKill(MachineBasicBlock::iterator &mi,
   if (LIS) {
     LIS->handleMove(*MI);
   } else {
-    LV->removeVirtualRegisterKilled(Reg, KillMI);
-    LV->addVirtualRegisterKilled(Reg, MI);
+    LV->removeVirtualRegisterKilled(Reg, *KillMI);
+    LV->addVirtualRegisterKilled(Reg, *MI);
   }
 
   DEBUG(dbgs() << "\trescheduled below kill: " << *KillMI);
@@ -993,7 +993,7 @@ bool TwoAddressInstructionPass::isDefTooClose(unsigned Reg, unsigned Dist,
       return true;  // Below MI
     unsigned DefDist = DDI->second;
     assert(Dist > DefDist && "Visited def already?");
-    if (TII->getInstrLatency(InstrItins, &DefMI) > (Dist - DefDist))
+    if (TII->getInstrLatency(InstrItins, DefMI) > (Dist - DefDist))
       return true;
   }
   return false;
@@ -1139,8 +1139,8 @@ rescheduleKillAboveMI(MachineBasicBlock::iterator &mi,
   if (LIS) {
     LIS->handleMove(*KillMI);
   } else {
-    LV->removeVirtualRegisterKilled(Reg, KillMI);
-    LV->addVirtualRegisterKilled(Reg, MI);
+    LV->removeVirtualRegisterKilled(Reg, *KillMI);
+    LV->addVirtualRegisterKilled(Reg, *MI);
   }
 
   DEBUG(dbgs() << "\trescheduled kill: " << *KillMI);
@@ -1174,7 +1174,7 @@ bool TwoAddressInstructionPass::tryInstructionCommute(MachineInstr *MI,
     // other commutable operands and does not change the values of passed
     // variables.
     if (OtherOpIdx == BaseOpIdx ||
-        !TII->findCommutedOpIndices(MI, BaseOpIdx, OtherOpIdx))
+        !TII->findCommutedOpIndices(*MI, BaseOpIdx, OtherOpIdx))
       continue;
 
     unsigned OtherOpReg = MI->getOperand(OtherOpIdx).getReg();
@@ -1307,9 +1307,9 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
             TII->getRegClass(UnfoldMCID, LoadRegIndex, TRI, *MF));
         unsigned Reg = MRI->createVirtualRegister(RC);
         SmallVector<MachineInstr *, 2> NewMIs;
-        if (!TII->unfoldMemoryOperand(*MF, &MI, Reg,
-                                      /*UnfoldLoad=*/true,/*UnfoldStore=*/false,
-                                      NewMIs)) {
+        if (!TII->unfoldMemoryOperand(*MF, MI, Reg,
+                                      /*UnfoldLoad=*/true,
+                                      /*UnfoldStore=*/false, NewMIs)) {
           DEBUG(dbgs() << "2addr: ABANDONING UNFOLD\n");
           return false;
         }
@@ -1346,25 +1346,25 @@ tryInstructionTransform(MachineBasicBlock::iterator &mi,
                 if (MO.isUse()) {
                   if (MO.isKill()) {
                     if (NewMIs[0]->killsRegister(MO.getReg()))
-                      LV->replaceKillInstruction(MO.getReg(), &MI, NewMIs[0]);
+                      LV->replaceKillInstruction(MO.getReg(), MI, *NewMIs[0]);
                     else {
                       assert(NewMIs[1]->killsRegister(MO.getReg()) &&
                              "Kill missing after load unfold!");
-                      LV->replaceKillInstruction(MO.getReg(), &MI, NewMIs[1]);
+                      LV->replaceKillInstruction(MO.getReg(), MI, *NewMIs[1]);
                     }
                   }
-                } else if (LV->removeVirtualRegisterDead(MO.getReg(), &MI)) {
+                } else if (LV->removeVirtualRegisterDead(MO.getReg(), MI)) {
                   if (NewMIs[1]->registerDefIsDead(MO.getReg()))
-                    LV->addVirtualRegisterDead(MO.getReg(), NewMIs[1]);
+                    LV->addVirtualRegisterDead(MO.getReg(), *NewMIs[1]);
                   else {
                     assert(NewMIs[0]->registerDefIsDead(MO.getReg()) &&
                            "Dead flag missing after load unfold!");
-                    LV->addVirtualRegisterDead(MO.getReg(), NewMIs[0]);
+                    LV->addVirtualRegisterDead(MO.getReg(), *NewMIs[0]);
                   }
                 }
               }
             }
-            LV->addVirtualRegisterKilled(Reg, NewMIs[1]);
+            LV->addVirtualRegisterKilled(Reg, *NewMIs[1]);
           }
 
           SmallVector<unsigned, 4> OrigRegs;
@@ -1573,10 +1573,10 @@ TwoAddressInstructionPass::processTiedPairs(MachineInstr *MI,
     }
 
     // Update live variables for regB.
-    if (RemovedKillFlag && LV && LV->getVarInfo(RegB).removeKill(MI)) {
+    if (RemovedKillFlag && LV && LV->getVarInfo(RegB).removeKill(*MI)) {
       MachineBasicBlock::iterator PrevMI = MI;
       --PrevMI;
-      LV->addVirtualRegisterKilled(RegB, PrevMI);
+      LV->addVirtualRegisterKilled(RegB, *PrevMI);
     }
 
     // Update LiveIntervals.
@@ -1786,7 +1786,7 @@ eliminateRegSequence(MachineBasicBlock::iterator &MBBI) {
 
     // Update LiveVariables' kill info.
     if (LV && isKill && !TargetRegisterInfo::isPhysicalRegister(SrcReg))
-      LV->replaceKillInstruction(SrcReg, MI, CopyMI);
+      LV->replaceKillInstruction(SrcReg, *MI, *CopyMI);
 
     DEBUG(dbgs() << "Inserted: " << *CopyMI);
   }

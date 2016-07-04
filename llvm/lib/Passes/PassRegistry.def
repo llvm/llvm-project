@@ -125,6 +125,7 @@ FUNCTION_PASS("adce", ADCEPass())
 FUNCTION_PASS("add-discriminators", AddDiscriminatorsPass())
 FUNCTION_PASS("alignment-from-assumptions", AlignmentFromAssumptionsPass())
 FUNCTION_PASS("bdce", BDCEPass())
+FUNCTION_PASS("consthoist", ConstantHoistingPass())
 FUNCTION_PASS("dce", DCEPass())
 FUNCTION_PASS("dse", DSEPass())
 FUNCTION_PASS("early-cse", EarlyCSEPass())
@@ -170,6 +171,7 @@ FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
+LOOP_ANALYSIS("access-info", LoopAccessInfoAnalysis())
 #undef LOOP_ANALYSIS
 
 #ifndef LOOP_PASS
@@ -181,4 +183,5 @@ LOOP_PASS("no-op-loop", NoOpLoopPass())
 LOOP_PASS("print", PrintLoopPass(dbgs()))
 LOOP_PASS("simplify-cfg", LoopSimplifyCFGPass())
 LOOP_PASS("indvars", IndVarSimplifyPass())
+LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
 #undef LOOP_PASS

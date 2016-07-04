@@ -77,3 +77,109 @@ entry:
    ", ""()
   ret void
 }
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_2_inst_extra_newline:
+; CHECK: codeLenInByte = 20
+define void @code_size_inline_asm_2_inst_extra_newline(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "
+    v_nop_e64
+
+    v_nop_e64
+   ", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_0_inst:
+; CHECK: codeLenInByte = 4
+define void @code_size_inline_asm_0_inst(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_1_comment:
+; CHECK: codeLenInByte = 4
+define void @code_size_inline_asm_1_comment(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "; comment", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_newline_1_comment:
+; CHECK: codeLenInByte = 4
+define void @code_size_inline_asm_newline_1_comment(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "
+; comment", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_1_comment_newline:
+; CHECK: codeLenInByte = 4
+define void @code_size_inline_asm_1_comment_newline(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "; comment
+", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_2_comments_line:
+; CHECK: codeLenInByte = 4
+define void @code_size_inline_asm_2_comments_line(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "; first comment ; second comment", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_2_comments_line_nospace:
+; CHECK: codeLenInByte = 4
+define void @code_size_inline_asm_2_comments_line_nospace(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "; first comment;second comment", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments0:
+; CHECK: codeLenInByte = 20
+define void @code_size_inline_asm_mixed_comments0(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "; comment
+    v_nop_e64 ; inline comment
+; separate comment
+    v_nop_e64
+
+    ; trailing comment
+    ; extra comment
+  ", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments1:
+; CHECK: codeLenInByte = 20
+define void @code_size_inline_asm_mixed_comments1(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "v_nop_e64 ; inline comment
+; separate comment
+    v_nop_e64
+
+    ; trailing comment
+    ; extra comment
+  ", ""()
+  ret void
+}
+
+; CHECK-LABEL: {{^}}code_size_inline_asm_mixed_comments_operands:
+; CHECK: codeLenInByte = 20
+define void @code_size_inline_asm_mixed_comments_operands(i32 addrspace(1)* %out) {
+entry:
+  call void asm sideeffect "; comment
+    v_add_i32_e32 v0, vcc, v1, v2 ; inline comment
+; separate comment
+    v_bfrev_b32_e32 v0, 1
+
+    ; trailing comment
+    ; extra comment
+  ", ""()
+  ret void
+}

@@ -47,7 +47,7 @@ AMDGPUSubtarget::initializeSubtargetDependencies(const Triple &TT,
 
   SmallString<256> FullFS("+promote-alloca,+fp64-denormals,+load-store-opt,");
   if (isAmdHsaOS()) // Turn on FlatForGlobal for HSA.
-    FullFS += "+flat-for-global,";
+    FullFS += "+flat-for-global,+unaligned-buffer-access,";
   FullFS += FS;
 
   ParseSubtargetFeatures(GPU, FullFS);
@@ -85,6 +85,8 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     FP64Denormals(false),
     FPExceptions(false),
     FlatForGlobal(false),
+    UnalignedBufferAccess(false),
+
     EnableXNACK(false),
     DebuggerInsertNops(false),
     DebuggerReserveRegs(false),
@@ -114,7 +116,6 @@ AMDGPUSubtarget::AMDGPUSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     TexVTXClauseSize(0),
 
     FeatureDisable(false),
-
     InstrItins(getInstrItineraryForCPU(GPU)) {
   initializeSubtargetDependencies(TT, GPU, FS);
 }
@@ -206,8 +207,6 @@ unsigned R600Subtarget::getStackEntrySize() const {
 }
 
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                      MachineInstr *begin,
-                                      MachineInstr *end,
                                       unsigned NumRegionInstrs) const {
   // Track register pressure so the scheduler can try to decrease
   // pressure once register usage is above the threshold defined by

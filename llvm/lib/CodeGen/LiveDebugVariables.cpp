@@ -314,7 +314,7 @@ class LDVImpl {
   /// @param MI  DBG_VALUE instruction
   /// @param Idx Last valid SLotIndex before instruction.
   /// @return    True if the DBG_VALUE instruction should be deleted.
-  bool handleDebugValue(MachineInstr *MI, SlotIndex Idx);
+  bool handleDebugValue(MachineInstr &MI, SlotIndex Idx);
 
   /// collectDebugValues - Collect and erase all DBG_VALUE instructions, adding
   /// a UserValue def for each instruction.
@@ -488,24 +488,23 @@ UserValue *LDVImpl::lookupVirtReg(unsigned VirtReg) {
   return nullptr;
 }
 
-bool LDVImpl::handleDebugValue(MachineInstr *MI, SlotIndex Idx) {
+bool LDVImpl::handleDebugValue(MachineInstr &MI, SlotIndex Idx) {
   // DBG_VALUE loc, offset, variable
-  if (MI->getNumOperands() != 4 ||
-      !(MI->getOperand(1).isReg() || MI->getOperand(1).isImm()) ||
-      !MI->getOperand(2).isMetadata()) {
-    DEBUG(dbgs() << "Can't handle " << *MI);
+  if (MI.getNumOperands() != 4 ||
+      !(MI.getOperand(1).isReg() || MI.getOperand(1).isImm()) ||
+      !MI.getOperand(2).isMetadata()) {
+    DEBUG(dbgs() << "Can't handle " << MI);
     return false;
   }
 
   // Get or create the UserValue for (variable,offset).
-  bool IsIndirect = MI->isIndirectDebugValue();
-  unsigned Offset = IsIndirect ? MI->getOperand(1).getImm() : 0;
-  const MDNode *Var = MI->getDebugVariable();
-  const MDNode *Expr = MI->getDebugExpression();
+  bool IsIndirect = MI.isIndirectDebugValue();
+  unsigned Offset = IsIndirect ? MI.getOperand(1).getImm() : 0;
+  const MDNode *Var = MI.getDebugVariable();
+  const MDNode *Expr = MI.getDebugExpression();
   //here.
-  UserValue *UV =
-      getUserValue(Var, Expr, Offset, IsIndirect, MI->getDebugLoc());
-  UV->addDef(Idx, MI->getOperand(0));
+  UserValue *UV = getUserValue(Var, Expr, Offset, IsIndirect, MI.getDebugLoc());
+  UV->addDef(Idx, MI.getOperand(0));
   return true;
 }
 
@@ -527,7 +526,7 @@ bool LDVImpl::collectDebugValues(MachineFunction &mf) {
               : LIS->getInstructionIndex(*std::prev(MBBI)).getRegSlot();
       // Handle consecutive DBG_VALUE instructions with the same slot index.
       do {
-        if (handleDebugValue(MBBI, Idx)) {
+        if (handleDebugValue(*MBBI, Idx)) {
           MBBI = MBB->erase(MBBI);
           Changed = true;
         } else

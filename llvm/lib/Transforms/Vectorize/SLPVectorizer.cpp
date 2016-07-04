@@ -220,46 +220,6 @@ static void propagateIRFlags(Value *I, ArrayRef<Value *> VL) {
   }
 }
 
-/// \returns \p I after propagating metadata from \p VL.
-static Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL) {
-  Instruction *I0 = cast<Instruction>(VL[0]);
-  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  I0->getAllMetadataOtherThanDebugLoc(Metadata);
-
-  for (unsigned i = 0, n = Metadata.size(); i != n; ++i) {
-    unsigned Kind = Metadata[i].first;
-    MDNode *MD = Metadata[i].second;
-
-    for (int i = 1, e = VL.size(); MD && i != e; i++) {
-      Instruction *I = cast<Instruction>(VL[i]);
-      MDNode *IMD = I->getMetadata(Kind);
-
-      switch (Kind) {
-      default:
-        MD = nullptr; // Remove unknown metadata
-        break;
-      case LLVMContext::MD_tbaa:
-        MD = MDNode::getMostGenericTBAA(MD, IMD);
-        break;
-      case LLVMContext::MD_alias_scope:
-        MD = MDNode::getMostGenericAliasScope(MD, IMD);
-        break;
-      case LLVMContext::MD_noalias:
-        MD = MDNode::intersect(MD, IMD);
-        break;
-      case LLVMContext::MD_fpmath:
-        MD = MDNode::getMostGenericFPMath(MD, IMD);
-        break;
-      case LLVMContext::MD_nontemporal:
-        MD = MDNode::intersect(MD, IMD);
-        break;
-      }
-    }
-    I->setMetadata(Kind, MD);
-  }
-  return I;
-}
-
 /// \returns The type that all of the values in \p VL have or null if there
 /// are different types.
 static Type* getSameType(ArrayRef<Value *> VL) {

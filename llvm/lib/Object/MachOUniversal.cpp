@@ -96,7 +96,7 @@ MachOUniversalBinary::ObjectForArch::getAsArchive() const {
     ObjectData = ParentData.substr(Header64.offset, Header64.size);
   StringRef ObjectName = Parent->getFileName();
   MemoryBufferRef ObjBuffer(ObjectData, ObjectName);
-  return errorOrToExpected(Archive::create(ObjBuffer));
+  return Archive::create(ObjBuffer);
 }
 
 void MachOUniversalBinary::anchor() { }

@@ -39,7 +39,6 @@
 #include "lldb/Host/TimeValue.h"
 #include "lldb/Target/FileAction.h"
 #include "lldb/Target/MemoryRegionInfo.h"
-#include "lldb/Target/Platform.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
@@ -76,10 +75,8 @@ namespace
 //----------------------------------------------------------------------
 // GDBRemoteCommunicationServerLLGS constructor
 //----------------------------------------------------------------------
-GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(const lldb::PlatformSP &platform_sp,
-                                                                   MainLoop &mainloop)
+GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(MainLoop &mainloop)
     : GDBRemoteCommunicationServerCommon("gdb-remote.server", "gdb-remote.server.rx_packet"),
-      m_platform_sp(platform_sp),
       m_mainloop(mainloop),
       m_current_tid(LLDB_INVALID_THREAD_ID),
       m_continue_tid(LLDB_INVALID_THREAD_ID),
@@ -93,7 +90,6 @@ GDBRemoteCommunicationServerLLGS::GDBRemoteCommunicationServerLLGS(const lldb::P
       m_next_saved_registers_id(1),
       m_handshake_completed(false)
 {
-    assert(platform_sp);
     RegisterPacketHandlers();
 }
 

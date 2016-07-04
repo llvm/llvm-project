@@ -16,7 +16,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
@@ -222,7 +221,7 @@ SDValue SelectionDAGLegalize::ShuffleWithNarrowerEltType(
   assert(NumEltsGrowth && "Cannot promote to vector type with fewer elts!");
 
   if (NumEltsGrowth == 1)
-    return DAG.getVectorShuffle(NVT, dl, N1, N2, &Mask[0]);
+    return DAG.getVectorShuffle(NVT, dl, N1, N2, Mask);
 
   SmallVector<int, 8> NewMask;
   for (unsigned i = 0; i != NumMaskElts; ++i) {
@@ -236,7 +235,7 @@ SDValue SelectionDAGLegalize::ShuffleWithNarrowerEltType(
   }
   assert(NewMask.size() == NumDestElts && "Non-integer NumEltsGrowth?");
   assert(TLI.isShuffleMaskLegal(NewMask, NVT) && "Shuffle not legal?");
-  return DAG.getVectorShuffle(NVT, dl, N1, N2, &NewMask[0]);
+  return DAG.getVectorShuffle(NVT, dl, N1, N2, NewMask);
 }
 
 /// Expands the ConstantFP node to an integer constant or
@@ -376,8 +375,7 @@ SDValue SelectionDAGLegalize::ExpandINSERT_VECTOR_ELT(SDValue Vec, SDValue Val,
       for (unsigned i = 0; i != NumElts; ++i)
         ShufOps.push_back(i != InsertPos->getZExtValue() ? i : NumElts);
 
-      return DAG.getVectorShuffle(Vec.getValueType(), dl, Vec, ScVec,
-                                  &ShufOps[0]);
+      return DAG.getVectorShuffle(Vec.getValueType(), dl, Vec, ScVec, ShufOps);
     }
   }
   return PerformInsertVectorEltInMemory(Vec, Val, Idx, dl);
@@ -1781,7 +1779,7 @@ ExpandBVWithShuffles(SDNode *Node, SelectionDAG &DAG,
         if (Phase)
           Shuffle = DAG.getVectorShuffle(VT, dl, IntermedVals[i].first,
                                          IntermedVals[i+1].first,
-                                         ShuffleVec.data());
+                                         ShuffleVec);
         else if (!TLI.isShuffleMaskLegal(ShuffleVec, VT))
           return false;
         NewIntermedVals.push_back(
@@ -1812,7 +1810,7 @@ ExpandBVWithShuffles(SDNode *Node, SelectionDAG &DAG,
       ShuffleVec[IntermedVals[1].second[i]] = NumElems + i;
 
     if (Phase)
-      Res = DAG.getVectorShuffle(VT, dl, Vec1, Vec2, ShuffleVec.data());
+      Res = DAG.getVectorShuffle(VT, dl, Vec1, Vec2, ShuffleVec);
     else if (!TLI.isShuffleMaskLegal(ShuffleVec, VT))
       return false;
   }
@@ -1921,7 +1919,7 @@ SDValue SelectionDAGLegalize::ExpandBUILD_VECTOR(SDNode *Node) {
           Vec2 = DAG.getUNDEF(VT);
 
         // Return shuffle(LowValVec, undef, <0,0,0,0>)
-        return DAG.getVectorShuffle(VT, dl, Vec1, Vec2, ShuffleVec.data());
+        return DAG.getVectorShuffle(VT, dl, Vec1, Vec2, ShuffleVec);
       }
     } else {
       SDValue Res;

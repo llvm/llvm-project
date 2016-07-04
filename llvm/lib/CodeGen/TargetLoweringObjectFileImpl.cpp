@@ -69,11 +69,9 @@ void TargetLoweringObjectFileELF::emitPersonalityValue(
       cast<MCSymbolELF>(getContext().getOrCreateSymbol(NameData));
   Streamer.EmitSymbolAttribute(Label, MCSA_Hidden);
   Streamer.EmitSymbolAttribute(Label, MCSA_Weak);
-  StringRef Prefix = ".data.";
-  NameData.insert(NameData.begin(), Prefix.begin(), Prefix.end());
   unsigned Flags = ELF::SHF_ALLOC | ELF::SHF_WRITE | ELF::SHF_GROUP;
-  MCSection *Sec = getContext().getELFSection(NameData, ELF::SHT_PROGBITS,
-                                              Flags, 0, Label->getName());
+  MCSection *Sec = getContext().getELFNamedSection(".data", Label->getName(),
+                                                   ELF::SHT_PROGBITS, Flags, 0);
   unsigned Size = DL.getPointerSize();
   Streamer.SwitchSection(Sec);
   Streamer.EmitValueToAlignment(DL.getPointerABIAlignment());

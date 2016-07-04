@@ -31,7 +31,7 @@ int main()
     {
         LIBCPP_STATIC_ASSERT(std::__is_swappable<T>::value, "");
 #if TEST_STD_VER > 14
-        static_assert(std::is_swappable_v<T>);
+        static_assert(std::is_swappable_v<T>, "");
 #endif
     }
     {

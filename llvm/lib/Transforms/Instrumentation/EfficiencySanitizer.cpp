@@ -169,6 +169,20 @@ private:
   bool instrumentLoadOrStore(Instruction *I, const DataLayout &DL);
   bool instrumentMemIntrinsic(MemIntrinsic *MI);
   bool instrumentGetElementPtr(Instruction *I, Module &M);
+  bool insertCounterUpdate(Instruction *I, StructType *StructTy,
+                           unsigned CounterIdx);
+  unsigned getFieldCounterIdx(StructType *StructTy) {
+    return 0;
+  }
+  unsigned getArrayCounterIdx(StructType *StructTy) {
+    return StructTy->getNumElements();
+  }
+  unsigned getStructCounterSize(StructType *StructTy) {
+    // The struct counter array includes:
+    // - one counter for each struct field,
+    // - one counter for the struct access within an array.
+    return (StructTy->getNumElements()/*field*/ + 1/*array*/);
+  }
   bool shouldIgnoreMemoryAccess(Instruction *I);
   int getMemoryAccessFuncIndex(Value *Addr, const DataLayout &DL);
   Value *appToShadow(Value *Shadow, IRBuilder<> &IRB);
@@ -317,12 +331,13 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
   //   u32 NumFields;
   //   u32 *FieldOffsets;
   //   u32 *FieldSize;
-  //   u64 *FieldCounters;
   //   const char **FieldTypeNames;
+  //   u64 *FieldCounters;
+  //   u64 *ArrayCounter;
   // };
   auto *StructInfoTy =
     StructType::get(Int8PtrTy, Int32Ty, Int32Ty, Int32PtrTy, Int32PtrTy,
-                    Int64PtrTy, Int8PtrPtrTy, nullptr);
+                    Int8PtrPtrTy, Int64PtrTy, Int64PtrTy, nullptr);
   auto *StructInfoPtrTy = StructInfoTy->getPointerTo();
   // This structure should be kept consistent with the CacheFragInfo struct
   // in the runtime library.
@@ -351,11 +366,12 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
     GlobalVariable *StructCounterName = createPrivateGlobalForString(
         M, CounterNameStr, /*AllowMerging*/true);
 
-    // FieldCounters.
+    // Counters.
     // We create the counter array with StructCounterName and weak linkage
     // so that the structs with the same name and layout from different
     // compilation units will be merged into one.
-    auto *CounterArrayTy = ArrayType::get(Int64Ty, StructTy->getNumElements());
+    auto *CounterArrayTy = ArrayType::get(Int64Ty,
+                                          getStructCounterSize(StructTy));
     GlobalVariable *Counters =
       new GlobalVariable(M, CounterArrayTy, false,
                          GlobalVariable::WeakAnyLinkage,
@@ -403,6 +419,14 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
     Offsets->setInitializer(ConstantArray::get(OffsetArrayTy, OffsetVec));
     Size->setInitializer(ConstantArray::get(SizeArrayTy, SizeVec));
 
+    Constant *FieldCounterIdx[2];
+    FieldCounterIdx[0] = ConstantInt::get(Int32Ty, 0);
+    FieldCounterIdx[1] = ConstantInt::get(Int32Ty,
+                                          getFieldCounterIdx(StructTy));
+    Constant *ArrayCounterIdx[2];
+    ArrayCounterIdx[0] = ConstantInt::get(Int32Ty, 0);
+    ArrayCounterIdx[1] = ConstantInt::get(Int32Ty,
+                                          getArrayCounterIdx(StructTy));
     Initializers.push_back(
         ConstantStruct::get(
             StructInfoTy,
@@ -411,8 +435,11 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
             ConstantInt::get(Int32Ty, StructTy->getNumElements()),
             ConstantExpr::getPointerCast(Offsets, Int32PtrTy),
             ConstantExpr::getPointerCast(Size, Int32PtrTy),
-            ConstantExpr::getPointerCast(Counters, Int64PtrTy),
             ConstantExpr::getPointerCast(TypeNames, Int8PtrPtrTy),
+            ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
+                                           FieldCounterIdx),
+            ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
+                                           ArrayCounterIdx),
             nullptr));
   }
   // Structs.
@@ -689,46 +716,72 @@ bool EfficiencySanitizer::instrumentGetElementPtr(Instruction *I, Module &M) {
     return false;
   }
   Type *SourceTy = GepInst->getSourceElementType();
+  StructType *StructTy;
+  ConstantInt *Idx;
+  // Check if GEP calculates address from a struct array.
+  if (isa<StructType>(SourceTy)) {
+    StructTy = cast<StructType>(SourceTy);
+    Idx = dyn_cast<ConstantInt>(GepInst->getOperand(1));
+    if ((Idx == nullptr || Idx->getSExtValue() != 0) &&
+        !shouldIgnoreStructType(StructTy) && StructTyMap.count(StructTy) != 0)
+      Res |= insertCounterUpdate(I, StructTy, getArrayCounterIdx(StructTy));
+  }
   // Iterate all (except the first and the last) idx within each GEP instruction
   // for possible nested struct field address calculation.
   for (unsigned i = 1; i < GepInst->getNumIndices(); ++i) {
     SmallVector<Value *, 8> IdxVec(GepInst->idx_begin(),
                                    GepInst->idx_begin() + i);
-    StructType *StructTy = dyn_cast<StructType>(
-        GetElementPtrInst::getIndexedType(SourceTy, IdxVec));
-    if (StructTy == nullptr || shouldIgnoreStructType(StructTy) ||
-        StructTyMap.count(StructTy) == 0)
-      continue;
-    // Get the StructTy's subfield index.
-    ConstantInt *Idx = dyn_cast<ConstantInt>(GepInst->getOperand(i+1));
-    if (Idx == nullptr || Idx->getZExtValue() > StructTy->getNumElements())
-      continue;
-    GlobalVariable *CounterArray = StructTyMap[StructTy];
-    if (CounterArray == nullptr)
-      return false;
-    IRBuilder<> IRB(I);
-    Constant *Indices[2];
-    // Xref http://llvm.org/docs/LangRef.html#i-getelementptr and
-    // http://llvm.org/docs/GetElementPtr.html.
-    // The first index of the GEP instruction steps through the first operand,
-    // i.e., the array itself.
-    Indices[0] = ConstantInt::get(IRB.getInt32Ty(), 0);
-    // The second index is the index within the array.
-    Indices[1] = ConstantInt::get(IRB.getInt32Ty(), Idx->getZExtValue());
-    Constant *Counter =
-        ConstantExpr::getGetElementPtr(
-            ArrayType::get(IRB.getInt64Ty(), StructTy->getNumElements()),
-            CounterArray, Indices);
-    Value *Load = IRB.CreateLoad(Counter);
-    IRB.CreateStore(IRB.CreateAdd(Load, ConstantInt::get(IRB.getInt64Ty(), 1)),
-                    Counter);
-    Res = true;
+    Type *Ty = GetElementPtrInst::getIndexedType(SourceTy, IdxVec);
+    unsigned CounterIdx = 0;
+    if (isa<ArrayType>(Ty)) {
+      ArrayType *ArrayTy = cast<ArrayType>(Ty);
+      StructTy = dyn_cast<StructType>(ArrayTy->getElementType());
+      if (shouldIgnoreStructType(StructTy) || StructTyMap.count(StructTy) == 0)
+        continue;
+      // The last counter for struct array access.
+      CounterIdx = getArrayCounterIdx(StructTy);
+    } else if (isa<StructType>(Ty)) {
+      StructTy = cast<StructType>(Ty);
+      if (shouldIgnoreStructType(StructTy) || StructTyMap.count(StructTy) == 0)
+        continue;
+      // Get the StructTy's subfield index.
+      Idx = cast<ConstantInt>(GepInst->getOperand(i+1));
+      assert(Idx->getSExtValue() >= 0 &&
+             Idx->getSExtValue() < StructTy->getNumElements());
+      CounterIdx = getFieldCounterIdx(StructTy) + Idx->getSExtValue();
+    }
+    Res |= insertCounterUpdate(I, StructTy, CounterIdx);
   }
   if (Res)
     ++NumInstrumentedGEPs;
   else
     ++NumIgnoredGEPs;
   return Res;
+}
+
+bool EfficiencySanitizer::insertCounterUpdate(Instruction *I,
+                                              StructType *StructTy,
+                                              unsigned CounterIdx) {
+  GlobalVariable *CounterArray = StructTyMap[StructTy];
+  if (CounterArray == nullptr)
+    return false;
+  IRBuilder<> IRB(I);
+  Constant *Indices[2];
+  // Xref http://llvm.org/docs/LangRef.html#i-getelementptr and
+  // http://llvm.org/docs/GetElementPtr.html.
+  // The first index of the GEP instruction steps through the first operand,
+  // i.e., the array itself.
+  Indices[0] = ConstantInt::get(IRB.getInt32Ty(), 0);
+  // The second index is the index within the array.
+  Indices[1] = ConstantInt::get(IRB.getInt32Ty(), CounterIdx);
+  Constant *Counter =
+    ConstantExpr::getGetElementPtr(
+        ArrayType::get(IRB.getInt64Ty(), getStructCounterSize(StructTy)),
+        CounterArray, Indices);
+  Value *Load = IRB.CreateLoad(Counter);
+  IRB.CreateStore(IRB.CreateAdd(Load, ConstantInt::get(IRB.getInt64Ty(), 1)),
+                  Counter);
+  return true;
 }
 
 int EfficiencySanitizer::getMemoryAccessFuncIndex(Value *Addr,

@@ -23,23 +23,15 @@ class YAMLOutputStyle : public OutputStyle {
 public:
   YAMLOutputStyle(PDBFile &File);
 
-  Error dumpFileHeaders() override;
-  Error dumpStreamSummary() override;
-  Error dumpStreamBlocks() override;
-  Error dumpStreamData() override;
-  Error dumpInfoStream() override;
-  Error dumpNamedStream() override;
-  Error dumpTpiStream(uint32_t StreamIdx) override;
-  Error dumpDbiStream() override;
-  Error dumpSectionContribs() override;
-  Error dumpSectionMap() override;
-  Error dumpPublicsStream() override;
-  Error dumpSectionHeaders() override;
-  Error dumpFpoStream() override;
-
-  void flush() override;
+  Error dump() override;
 
 private:
+  Error dumpFileHeaders();
+  Error dumpStreamMetadata();
+  Error dumpStreamDirectory();
+
+  void flush();
+
   PDBFile &File;
   llvm::yaml::Output Out;
 

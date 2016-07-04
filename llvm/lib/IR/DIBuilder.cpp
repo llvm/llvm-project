@@ -24,40 +24,6 @@
 using namespace llvm;
 using namespace llvm::dwarf;
 
-namespace {
-class HeaderBuilder {
-  /// \brief Whether there are any fields yet.
-  ///
-  /// Note that this is not equivalent to \c Chars.empty(), since \a concat()
-  /// may have been called already with an empty string.
-  bool IsEmpty;
-  SmallVector<char, 256> Chars;
-
-public:
-  HeaderBuilder() : IsEmpty(true) {}
-  HeaderBuilder(const HeaderBuilder &X) : IsEmpty(X.IsEmpty), Chars(X.Chars) {}
-  HeaderBuilder(HeaderBuilder &&X)
-      : IsEmpty(X.IsEmpty), Chars(std::move(X.Chars)) {}
-
-  template <class Twineable> HeaderBuilder &concat(Twineable &&X) {
-    if (IsEmpty)
-      IsEmpty = false;
-    else
-      Chars.push_back(0);
-    Twine(X).toVector(Chars);
-    return *this;
-  }
-
-  MDString *get(LLVMContext &Context) const {
-    return MDString::get(Context, StringRef(Chars.begin(), Chars.size()));
-  }
-
-  static HeaderBuilder get(unsigned Tag) {
-    return HeaderBuilder().concat("0x" + Twine::utohexstr(Tag));
-  }
-};
-}
-
 DIBuilder::DIBuilder(Module &m, bool AllowUnresolvedNodes)
   : M(m), VMContext(M.getContext()), CUNode(nullptr),
       DeclareFn(nullptr), ValueFn(nullptr),
@@ -306,6 +272,18 @@ static ConstantAsMetadata *getConstantOrNull(Constant *C) {
   if (C)
     return ConstantAsMetadata::get(C);
   return nullptr;
+}
+
+DIDerivedType *DIBuilder::createBitFieldMemberType(
+    DIScope *Scope, StringRef Name, DIFile *File, unsigned LineNumber,
+    uint64_t SizeInBits, uint64_t AlignInBits, uint64_t OffsetInBits,
+    uint64_t StorageOffsetInBits, unsigned Flags, DIType *Ty) {
+  Flags |= DINode::FlagBitField;
+  return DIDerivedType::get(
+      VMContext, dwarf::DW_TAG_member, Name, File, LineNumber,
+      getNonCompileUnitScope(Scope), Ty, SizeInBits, AlignInBits, OffsetInBits,
+      Flags, ConstantAsMetadata::get(ConstantInt::get(
+                 IntegerType::get(VMContext, 64), StorageOffsetInBits)));
 }
 
 DIDerivedType *DIBuilder::createStaticMemberType(DIScope *Scope, StringRef Name,
@@ -655,8 +633,8 @@ DISubprogram *DIBuilder::createFunction(
   auto *Node = getSubprogram(
       /* IsDistinct = */ isDefinition, VMContext,
       getNonCompileUnitScope(Context), Name, LinkageName, File, LineNo, Ty,
-      isLocalToUnit, isDefinition, ScopeLine, nullptr, 0, 0, Flags, isOptimized,
-      isDefinition ? CUNode : nullptr, TParams, Decl,
+      isLocalToUnit, isDefinition, ScopeLine, nullptr, 0, 0, 0, Flags,
+      isOptimized, isDefinition ? CUNode : nullptr, TParams, Decl,
       MDTuple::getTemporary(VMContext, None).release());
 
   if (isDefinition)
@@ -673,8 +651,8 @@ DISubprogram *DIBuilder::createTempFunctionFwdDecl(
   return DISubprogram::getTemporary(
              VMContext, getNonCompileUnitScope(Context), Name, LinkageName,
              File, LineNo, Ty, isLocalToUnit, isDefinition, ScopeLine, nullptr,
-             0, 0, Flags, isOptimized, isDefinition ? CUNode : nullptr, TParams,
-             Decl, nullptr)
+             0, 0, 0, Flags, isOptimized, isDefinition ? CUNode : nullptr,
+             TParams, Decl, nullptr)
       .release();
 }
 
@@ -682,8 +660,9 @@ DISubprogram *
 DIBuilder::createMethod(DIScope *Context, StringRef Name, StringRef LinkageName,
                         DIFile *F, unsigned LineNo, DISubroutineType *Ty,
                         bool isLocalToUnit, bool isDefinition, unsigned VK,
-                        unsigned VIndex, DIType *VTableHolder, unsigned Flags,
-                        bool isOptimized, DITemplateParameterArray TParams) {
+                        unsigned VIndex, int ThisAdjustment,
+                        DIType *VTableHolder, unsigned Flags, bool isOptimized,
+                        DITemplateParameterArray TParams) {
   assert(getNonCompileUnitScope(Context) &&
          "Methods should have both a Context and a context that isn't "
          "the compile unit.");
@@ -691,7 +670,7 @@ DIBuilder::createMethod(DIScope *Context, StringRef Name, StringRef LinkageName,
   auto *SP = getSubprogram(
       /* IsDistinct = */ isDefinition, VMContext, cast<DIScope>(Context), Name,
       LinkageName, F, LineNo, Ty, isLocalToUnit, isDefinition, LineNo,
-      VTableHolder, VK, VIndex, Flags, isOptimized,
+      VTableHolder, VK, VIndex, ThisAdjustment, Flags, isOptimized,
       isDefinition ? CUNode : nullptr, TParams, nullptr, nullptr);
 
   if (isDefinition)

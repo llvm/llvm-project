@@ -662,58 +662,6 @@ void NVPTXDAGToDAGISel::SelectAddrSpaceCast(SDNode *N) {
           TM.is64Bit() ? NVPTX::cvta_to_local_yes_64 : NVPTX::cvta_to_local_yes;
       break;
     case ADDRESS_SPACE_PARAM:
-      if (Src.getOpcode() == NVPTXISD::MoveParam) {
-        // TL;DR: addrspacecast MoveParam to param space is a no-op.
-        //
-        // Longer version is that this particular change is both an
-        // optimization and a work-around for a problem in ptxas for
-        // sm_50+.
-        //
-        // Background:
-        // According to PTX ISA v7.5 5.1.6.4: "...whenever a formal
-        // parameter has its address taken within the called function
-        // [..] the parameter will be copied to the stack if
-        // necessary, and so the address will be in the .local state
-        // space and is accessed via ld.local and st.local
-        // instructions."
-        //
-        // Bug part: 'copied to the stack if necessary' part is
-        // currently broken for byval arguments with alignment < 4 for
-        // sm_50+ in all public versions of CUDA. Taking the address of
-        // such an argument results in SASS code that attempts to store
-        // the value using a 32-bit write to an unaligned address.
-        //
-        // Optimization: On top of the overhead of spill-to-stack, we
-        // also convert that address from local to generic space,
-        // which may result in further overhead. All of it is in most
-        // cases unnecessary, as we only need the value of the
-        // variable, and it can be accessed directly by using the
-        // argument symbol. We'll use the address of the local copy if
-        // it's needed (see step (a) below).
-        //
-        // In order for this bit to do its job we need to:
-        //
-        // a) Let LLVM do the spilling and make sure the IR does not
-        // access byval arguments directly. Instead, the argument
-        // pointer (which is in the default address space) is
-        // addrspacecast'ed to param space, and the data it points to
-        // is copied to allocated local space (i.e. we let compiler
-        // spill it, which gives us an opportunity to optimize the
-        // spill away later if nobody needs its address). Then all
-        // uses of arg pointer are replaced with a pointer to local
-        // copy of the arg. All this is done in NVPTXLowerKernelArgs.
-        //
-        // b) LowerFormalArguments() lowers the argument to
-        // NVPTXISD::MoveParam without any space conversion.
-        //
-        // c) And the final step is done by the code below.
-        // It replaces the addrspacecast (MoveParam) from step (a)
-        // with the arg symbol itself. This can then be used for
-        // [symbol + offset] addressing.
-
-        ReplaceNode(N, Src.getOperand(0).getNode());
-        return;
-      }
       Opc = TM.is64Bit() ? NVPTX::nvvm_ptr_gen_to_param_64
                          : NVPTX::nvvm_ptr_gen_to_param;
       break;

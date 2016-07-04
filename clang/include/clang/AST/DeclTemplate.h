@@ -1490,8 +1490,8 @@ public:
 };
 
 /// \brief Represents the builtin template declaration which is used to
-/// implement __make_integer_seq.  It serves no real purpose beyond existing as
-/// a place to hold template parameters.
+/// implement __make_integer_seq and other builtin templates.  It serves
+/// no real purpose beyond existing as a place to hold template parameters.
 class BuiltinTemplateDecl : public TemplateDecl {
   void anchor() override;
 

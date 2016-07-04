@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <map>
 #include <mutex>
 #include <vector>
 
@@ -75,6 +76,9 @@ public:
     
     lldb_private::Error
     CanLoadImage() override;
+
+    lldb::addr_t
+    GetThreadLocalData(const lldb::ModuleSP module, const lldb::ThreadSP thread, lldb::addr_t tls_file_addr) override;
 
     //------------------------------------------------------------------
     // PluginInterface protocol
@@ -296,6 +300,8 @@ protected:
         }
     };
 
+    typedef std::map<uint64_t, lldb::addr_t> PthreadKeyToTLSMap;
+    typedef std::map<lldb::user_id_t, PthreadKeyToTLSMap> ThreadIDToTLSMap;
     void
     RegisterNotificationCallbacks();
 
@@ -365,11 +371,19 @@ protected:
                     uint32_t image_infos_count, 
                     DYLDImageInfo::collection &image_infos);
 
+    lldb::ModuleSP
+    GetPThreadLibraryModule();
+
+    lldb_private::Address
+    GetPthreadSetSpecificAddress();
 
     DYLDImageInfo m_dyld;               // Info about the current dyld being used
     lldb::ModuleWP m_dyld_module_wp;
+    lldb::ModuleWP m_libpthread_module_wp;
+    lldb_private::Address m_pthread_getspecific_addr;
     lldb::addr_t m_dyld_all_image_infos_addr;
     DYLDAllImageInfos m_dyld_all_image_infos;
+    ThreadIDToTLSMap m_tid_to_tls_map;
     uint32_t m_dyld_all_image_infos_stop_id;
     lldb::user_id_t m_break_id;
     DYLDImageInfo::collection m_dyld_image_infos;   // Current shared libraries information

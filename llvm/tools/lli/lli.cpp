@@ -511,10 +511,14 @@ int main(int argc, char **argv, char * const *envp) {
     }
     std::unique_ptr<MemoryBuffer> &ArBuf = ArBufOrErr.get();
 
-    ErrorOr<std::unique_ptr<object::Archive>> ArOrErr =
+    Expected<std::unique_ptr<object::Archive>> ArOrErr =
         object::Archive::create(ArBuf->getMemBufferRef());
-    if (std::error_code EC = ArOrErr.getError()) {
-      errs() << EC.message();
+    if (!ArOrErr) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      logAllUnhandledErrors(ArOrErr.takeError(), OS, "");
+      OS.flush();
+      errs() << Buf;
       return 1;
     }
     std::unique_ptr<object::Archive> &Ar = ArOrErr.get();

@@ -2128,6 +2128,10 @@ def err_integer_sequence_negative_length : Error<
 def err_integer_sequence_integral_element_type : Error<
   "integer sequences must have integral element type">;
 
+// __type_pack_element
+def err_type_pack_element_out_of_bounds : Error<
+  "a parameter pack may not be accessed at an out of bounds index">;
+
 // Objective-C++
 def err_objc_decls_may_only_appear_in_global_scope : Error<
   "Objective-C declarations may only appear in global scope">;
@@ -7499,6 +7503,9 @@ def warn_empty_switch_body : Warning<
 def note_empty_body_on_separate_line : Note<
   "put the semicolon on a separate line to silence this warning">;
 
+def err_init_stmt_not_supported : Error<
+  "C++1z init-statement not yet supported">;
+
 def err_va_start_used_in_non_variadic_function : Error<
   "'va_start' used in function with fixed args">;
 def err_va_start_used_in_wrong_abi_function : Error<
@@ -8311,6 +8318,9 @@ def err_omp_expected_int_param : Error<
   "expected a reference to an integer-typed parameter">;
 def err_omp_at_least_one_motion_clause_required : Error<
   "expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'">;
+def warn_omp_nesting_simd : Warning<
+  "OpenMP only allows an ordered construct with the simd clause nested in a simd construct">,
+  InGroup<SourceUsesOpenMP>;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

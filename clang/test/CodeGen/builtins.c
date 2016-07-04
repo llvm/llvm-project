@@ -257,6 +257,98 @@ void test_float_builtin_ops(float F, double D, long double LD) {
   // CHECK: call float @llvm.canonicalize.f32(float
   // CHECK: call double @llvm.canonicalize.f64(double
   // CHECK: call x86_fp80 @llvm.canonicalize.f80(x86_fp80
+
+  resf = __builtin_fminf(F, F);
+  // CHECK: call float @llvm.minnum.f32
+
+  resd = __builtin_fmin(D, D);
+  // CHECK: call double @llvm.minnum.f64
+
+  resld = __builtin_fminl(LD, LD);
+  // CHECK: call x86_fp80 @llvm.minnum.f80
+
+  resf = __builtin_fmaxf(F, F);
+  // CHECK: call float @llvm.maxnum.f32
+
+  resd = __builtin_fmax(D, D);
+  // CHECK: call double @llvm.maxnum.f64
+
+  resld = __builtin_fmaxl(LD, LD);
+  // CHECK: call x86_fp80 @llvm.maxnum.f80
+
+  resf = __builtin_fabsf(F);
+  // CHECK: call float @llvm.fabs.f32
+
+  resd = __builtin_fabs(D);
+  // CHECK: call double @llvm.fabs.f64
+
+  resld = __builtin_fabsl(LD);
+  // CHECK: call x86_fp80 @llvm.fabs.f80
+
+  resf = __builtin_copysignf(F, F);
+  // CHECK: call float @llvm.copysign.f32
+
+  resd = __builtin_copysign(D, D);
+  // CHECK: call double @llvm.copysign.f64
+
+  resld = __builtin_copysignl(LD, LD);
+  // CHECK: call x86_fp80 @llvm.copysign.f80
+
+
+  resf = __builtin_ceilf(F);
+  // CHECK: call float @llvm.ceil.f32
+
+  resd = __builtin_ceil(D);
+  // CHECK: call double @llvm.ceil.f64
+
+  resld = __builtin_ceill(LD);
+  // CHECK: call x86_fp80 @llvm.ceil.f80
+
+  resf = __builtin_floorf(F);
+  // CHECK: call float @llvm.floor.f32
+
+  resd = __builtin_floor(D);
+  // CHECK: call double @llvm.floor.f64
+
+  resld = __builtin_floorl(LD);
+  // CHECK: call x86_fp80 @llvm.floor.f80
+
+  resf = __builtin_truncf(F);
+  // CHECK: call float @llvm.trunc.f32
+
+  resd = __builtin_trunc(D);
+  // CHECK: call double @llvm.trunc.f64
+
+  resld = __builtin_truncl(LD);
+  // CHECK: call x86_fp80 @llvm.trunc.f80
+
+  resf = __builtin_rintf(F);
+  // CHECK: call float @llvm.rint.f32
+
+  resd = __builtin_rint(D);
+  // CHECK: call double @llvm.rint.f64
+
+  resld = __builtin_rintl(LD);
+  // CHECK: call x86_fp80 @llvm.rint.f80
+
+  resf = __builtin_nearbyintf(F);
+  // CHECK: call float @llvm.nearbyint.f32
+
+  resd = __builtin_nearbyint(D);
+  // CHECK: call double @llvm.nearbyint.f64
+
+  resld = __builtin_nearbyintl(LD);
+  // CHECK: call x86_fp80 @llvm.nearbyint.f80
+
+  resf = __builtin_roundf(F);
+  // CHECK: call float @llvm.round.f32
+
+  resd = __builtin_round(D);
+  // CHECK: call double @llvm.round.f64
+
+  resld = __builtin_roundl(LD);
+  // CHECK: call x86_fp80 @llvm.round.f80
+
 }
 
 // __builtin_longjmp isn't supported on all platforms, so only test it on X86.

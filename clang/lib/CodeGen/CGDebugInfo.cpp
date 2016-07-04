@@ -13,6 +13,7 @@
 
 #include "CGDebugInfo.h"
 #include "CGBlocks.h"
+#include "CGRecordLayout.h"
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CodeGenFunction.h"
@@ -184,17 +185,27 @@ StringRef CGDebugInfo::getFunctionName(const FunctionDecl *FD) {
   FunctionTemplateSpecializationInfo *Info =
       FD->getTemplateSpecializationInfo();
 
-  if (!Info && FII)
+  // Emit the unqualified name in normal operation. LLVM and the debugger can
+  // compute the fully qualified name from the scope chain. If we're only
+  // emitting line table info, there won't be any scope chains, so emit the
+  // fully qualified name here so that stack traces are more accurate.
+  // FIXME: Do this when emitting DWARF as well as when emitting CodeView after
+  // evaluating the size impact.
+  bool UseQualifiedName = DebugKind == codegenoptions::DebugLineTablesOnly &&
+                          CGM.getCodeGenOpts().EmitCodeView;
+
+  if (!Info && FII && !UseQualifiedName)
     return FII->getName();
 
-  // Otherwise construct human readable name for debug info.
   SmallString<128> NS;
   llvm::raw_svector_ostream OS(NS);
   PrintingPolicy Policy(CGM.getLangOpts());
   Policy.MSVCFormatting = CGM.getCodeGenOpts().EmitCodeView;
+  if (!UseQualifiedName)
+    FD->printName(OS);
+  else
+    FD->printQualifiedName(OS, Policy);
 
-  // Print the unqualified name with some template arguments.
-  FD->printName(OS);
   // Add any template specialization args.
   if (Info) {
     const TemplateArgumentList *TArgs = Info->TemplateArguments;
@@ -248,20 +259,56 @@ StringRef CGDebugInfo::getSelectorName(Selector S) {
 }
 
 StringRef CGDebugInfo::getClassName(const RecordDecl *RD) {
-  // quick optimization to avoid having to intern strings that are already
-  // stored reliably elsewhere
-  if (!isa<ClassTemplateSpecializationDecl>(RD))
-    return RD->getName();
-
-  SmallString<128> Name;
-  {
+  if (isa<ClassTemplateSpecializationDecl>(RD)) {
+    SmallString<128> Name;
     llvm::raw_svector_ostream OS(Name);
     RD->getNameForDiagnostic(OS, CGM.getContext().getPrintingPolicy(),
                              /*Qualified*/ false);
+
+    // Copy this name on the side and use its reference.
+    return internString(Name);
   }
 
-  // Copy this name on the side and use its reference.
-  return internString(Name);
+  // quick optimization to avoid having to intern strings that are already
+  // stored reliably elsewhere
+  if (const IdentifierInfo *II = RD->getIdentifier())
+    return II->getName();
+
+  // The CodeView printer in LLVM wants to see the names of unnamed types: it is
+  // used to reconstruct the fully qualified type names.
+  if (CGM.getCodeGenOpts().EmitCodeView) {
+    if (const TypedefNameDecl *D = RD->getTypedefNameForAnonDecl()) {
+      assert(RD->getDeclContext() == D->getDeclContext() &&
+             "Typedef should not be in another decl context!");
+      assert(D->getDeclName().getAsIdentifierInfo() &&
+             "Typedef was not named!");
+      return D->getDeclName().getAsIdentifierInfo()->getName();
+    }
+
+    if (CGM.getLangOpts().CPlusPlus) {
+      StringRef Name;
+
+      ASTContext &Context = CGM.getContext();
+      if (const DeclaratorDecl *DD = Context.getDeclaratorForUnnamedTagDecl(RD))
+        // Anonymous types without a name for linkage purposes have their
+        // declarator mangled in if they have one.
+        Name = DD->getName();
+      else if (const TypedefNameDecl *TND =
+                   Context.getTypedefNameForUnnamedTagDecl(RD))
+        // Anonymous types without a name for linkage purposes have their
+        // associate typedef mangled in if they have one.
+        Name = TND->getName();
+
+      if (!Name.empty()) {
+        SmallString<256> UnnamedType("<unnamed-type-");
+        UnnamedType += Name;
+        UnnamedType += '>';
+        return internString(UnnamedType);
+      }
+    }
+  }
+
+  return StringRef();
 }
 
 llvm::DIFile *CGDebugInfo::getOrCreateFile(SourceLocation Loc) {
@@ -847,7 +894,7 @@ static unsigned getDwarfCC(CallingConv CC) {
   case CC_AAPCS_VFP:
   case CC_IntelOclBicc:
   case CC_SpirFunction:
-  case CC_SpirKernel:
+  case CC_OpenCLKernel:
   case CC_Swift:
   case CC_PreserveMost:
   case CC_PreserveAll:
@@ -905,10 +952,38 @@ static unsigned getAccessFlag(AccessSpecifier Access, const RecordDecl *RD) {
   llvm_unreachable("unexpected access enumerator");
 }
 
-llvm::DIType *CGDebugInfo::createFieldType(
-    StringRef name, QualType type, uint64_t sizeInBitsOverride,
-    SourceLocation loc, AccessSpecifier AS, uint64_t offsetInBits,
-    llvm::DIFile *tunit, llvm::DIScope *scope, const RecordDecl *RD) {
+llvm::DIType *CGDebugInfo::createBitFieldType(const FieldDecl *BitFieldDecl,
+                                              llvm::DIScope *RecordTy,
+                                              const RecordDecl *RD) {
+  StringRef Name = BitFieldDecl->getName();
+  QualType Ty = BitFieldDecl->getType();
+  SourceLocation Loc = BitFieldDecl->getLocation();
+  llvm::DIFile *VUnit = getOrCreateFile(Loc);
+  llvm::DIType *DebugType = getOrCreateType(Ty, VUnit);
+
+  // Get the location for the field.
+  llvm::DIFile *File = getOrCreateFile(Loc);
+  unsigned Line = getLineNumber(Loc);
+
+  const CGBitFieldInfo &BitFieldInfo =
+      CGM.getTypes().getCGRecordLayout(RD).getBitFieldInfo(BitFieldDecl);
+  uint64_t SizeInBits = BitFieldInfo.Size;
+  assert(SizeInBits > 0 && "found named 0-width bitfield");
+  unsigned AlignInBits = CGM.getContext().getTypeAlign(Ty);
+  uint64_t StorageOffsetInBits =
+      CGM.getContext().toBits(BitFieldInfo.StorageOffset);
+  uint64_t OffsetInBits = StorageOffsetInBits + BitFieldInfo.Offset;
+  unsigned Flags = getAccessFlag(BitFieldDecl->getAccess(), RD);
+  return DBuilder.createBitFieldMemberType(
+      RecordTy, Name, File, Line, SizeInBits, AlignInBits, OffsetInBits,
+      StorageOffsetInBits, Flags, DebugType);
+}
+
+llvm::DIType *
+CGDebugInfo::createFieldType(StringRef name, QualType type, SourceLocation loc,
+                             AccessSpecifier AS, uint64_t offsetInBits,
+                             llvm::DIFile *tunit, llvm::DIScope *scope,
+                             const RecordDecl *RD) {
   llvm::DIType *debugType = getOrCreateType(type, tunit);
 
   // Get the location for the field.
@@ -921,9 +996,6 @@ llvm::DIType *CGDebugInfo::createFieldType(
     TypeInfo TI = CGM.getContext().getTypeInfo(type);
     SizeInBits = TI.Width;
     AlignInBits = TI.Align;
-
-    if (sizeInBitsOverride)
-      SizeInBits = sizeInBitsOverride;
   }
 
   unsigned flags = getAccessFlag(AS, RD);
@@ -945,19 +1017,15 @@ void CGDebugInfo::CollectRecordLambdaFields(
        I != E; ++I, ++Field, ++fieldno) {
     const LambdaCapture &C = *I;
     if (C.capturesVariable()) {
+      SourceLocation Loc = C.getLocation();
+      assert(!Field->isBitField() && "lambdas don't have bitfield members!");
       VarDecl *V = C.getCapturedVar();
-      llvm::DIFile *VUnit = getOrCreateFile(C.getLocation());
       StringRef VName = V->getName();
-      uint64_t SizeInBitsOverride = 0;
-      if (Field->isBitField()) {
-        SizeInBitsOverride = Field->getBitWidthValue(CGM.getContext());
-        assert(SizeInBitsOverride && "found named 0-width bitfield");
-      }
-      llvm::DIType *fieldType = createFieldType(
-          VName, Field->getType(), SizeInBitsOverride, C.getLocation(),
-          Field->getAccess(), layout.getFieldOffset(fieldno), VUnit, RecordTy,
-          CXXDecl);
-      elements.push_back(fieldType);
+      llvm::DIFile *VUnit = getOrCreateFile(Loc);
+      llvm::DIType *FieldType = createFieldType(
+          VName, Field->getType(), Loc, Field->getAccess(),
+          layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
+      elements.push_back(FieldType);
     } else if (C.capturesThis()) {
       // TODO: Need to handle 'this' in some way by probably renaming the
       // this of the lambda class and having a field member of 'this' or
@@ -967,7 +1035,7 @@ void CGDebugInfo::CollectRecordLambdaFields(
       llvm::DIFile *VUnit = getOrCreateFile(f->getLocation());
       QualType type = f->getType();
       llvm::DIType *fieldType = createFieldType(
-          "this", type, 0, f->getLocation(), f->getAccess(),
+          "this", type, f->getLocation(), f->getAccess(),
           layout.getFieldOffset(fieldno), VUnit, RecordTy, CXXDecl);
 
       elements.push_back(fieldType);
@@ -1015,17 +1083,16 @@ void CGDebugInfo::CollectRecordNormalField(
   if (name.empty() && !type->isRecordType())
     return;
 
-  uint64_t SizeInBitsOverride = 0;
+  llvm::DIType *FieldType;
   if (field->isBitField()) {
-    SizeInBitsOverride = field->getBitWidthValue(CGM.getContext());
-    assert(SizeInBitsOverride && "found named 0-width bitfield");
+    FieldType = createBitFieldType(field, RecordTy, RD);
+  } else {
+    FieldType =
+        createFieldType(name, type, field->getLocation(), field->getAccess(),
+                        OffsetInBits, tunit, RecordTy, RD);
   }
 
-  llvm::DIType *fieldType =
-      createFieldType(name, type, SizeInBitsOverride, field->getLocation(),
-                      field->getAccess(), OffsetInBits, tunit, RecordTy, RD);
-
-  elements.push_back(fieldType);
+  elements.push_back(FieldType);
 }
 
 void CGDebugInfo::CollectRecordFields(
@@ -1175,6 +1242,7 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   unsigned Virtuality = 0;
   unsigned VIndex = 0;
   unsigned Flags = 0;
+  int ThisAdjustment = 0;
 
   if (Method->isVirtual()) {
     if (Method->isPure())
@@ -1204,9 +1272,12 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
       if (Method->begin_overridden_methods() == Method->end_overridden_methods())
         Flags |= llvm::DINode::FlagIntroducedVirtual;
 
-      // FIXME: Pass down ML.VFPtrOffset and ML.VBTableIndex. The debugger needs
-      // these to synthesize a call to a virtual method in a complex inheritance
-      // hierarchy.
+      // The 'this' adjustment accounts for both the virtual and non-virtual
+      // portions of the adjustment. Presumably the debugger only uses it when
+      // it knows the dynamic type of an object.
+      ThisAdjustment = CGM.getCXXABI()
+                           .getVirtualFunctionPrologueThisAdjustment(GD)
+                           .getQuantity();
     }
     ContainingType = RecordTy;
   }
@@ -1232,9 +1303,9 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   llvm::DINodeArray TParamsArray = CollectFunctionTemplateParams(Method, Unit);
   llvm::DISubprogram *SP = DBuilder.createMethod(
       RecordTy, MethodName, MethodLinkageName, MethodDefUnit, MethodLine,
-      MethodTy, /*isLocalToUnit=*/false,
-      /* isDefinition=*/false, Virtuality, VIndex, ContainingType, Flags,
-      CGM.getLangOpts().Optimize, TParamsArray.get());
+      MethodTy, /*isLocalToUnit=*/false, /*isDefinition=*/false, Virtuality,
+      VIndex, ThisAdjustment, ContainingType, Flags, CGM.getLangOpts().Optimize,
+      TParamsArray.get());
 
   SPCache[Method->getCanonicalDecl()].reset(SP);
 
@@ -3299,25 +3370,25 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       CGM.getDataLayout().getStructLayout(block.StructureType);
 
   SmallVector<llvm::Metadata *, 16> fields;
-  fields.push_back(createFieldType("__isa", C.VoidPtrTy, 0, loc, AS_public,
+  fields.push_back(createFieldType("__isa", C.VoidPtrTy, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(0),
                                    tunit, tunit));
-  fields.push_back(createFieldType("__flags", C.IntTy, 0, loc, AS_public,
+  fields.push_back(createFieldType("__flags", C.IntTy, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(1),
                                    tunit, tunit));
-  fields.push_back(createFieldType("__reserved", C.IntTy, 0, loc, AS_public,
+  fields.push_back(createFieldType("__reserved", C.IntTy, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(2),
                                    tunit, tunit));
   auto *FnTy = block.getBlockExpr()->getFunctionType();
   auto FnPtrType = CGM.getContext().getPointerType(FnTy->desugar());
-  fields.push_back(createFieldType("__FuncPtr", FnPtrType, 0, loc, AS_public,
+  fields.push_back(createFieldType("__FuncPtr", FnPtrType, loc, AS_public,
                                    blockLayout->getElementOffsetInBits(3),
                                    tunit, tunit));
   fields.push_back(createFieldType(
       "__descriptor", C.getPointerType(block.NeedsCopyDispose
                                            ? C.getBlockDescriptorExtendedType()
                                            : C.getBlockDescriptorType()),
-      0, loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
+      loc, AS_public, blockLayout->getElementOffsetInBits(4), tunit, tunit));
 
   // We want to sort the captures by offset, not because DWARF
   // requires this, but because we're paranoid about debuggers.
@@ -3368,7 +3439,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
       else
         llvm_unreachable("unexpected block declcontext");
 
-      fields.push_back(createFieldType("this", type, 0, loc, AS_public,
+      fields.push_back(createFieldType("this", type, loc, AS_public,
                                        offsetInBits, tunit, tunit));
       continue;
     }
@@ -3388,7 +3459,7 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
           DBuilder.createMemberType(tunit, name, tunit, line, PtrInfo.Width,
                                     PtrInfo.Align, offsetInBits, 0, fieldType);
     } else {
-      fieldType = createFieldType(name, variable->getType(), 0, loc, AS_public,
+      fieldType = createFieldType(name, variable->getType(), loc, AS_public,
                                   offsetInBits, tunit, tunit);
     }
     fields.push_back(fieldType);

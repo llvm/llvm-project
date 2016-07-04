@@ -1,12 +1,12 @@
-; RUN: llvm-pdbdump -raw-headers -raw-tpi-records -raw-tpi-record-bytes -raw-module-syms \
-; RUN:              -raw-sym-record-bytes -raw-publics -raw-module-files -raw-stream-name=/names \
-; RUN:              -raw-stream-summary -raw-stream-blocks -raw-ipi-records -raw-ipi-record-bytes \
-; RUN:              -raw-section-contribs -raw-section-map -raw-section-headers -raw-line-info \
-; RUN:              -raw-tpi-hash -raw-fpo %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
-; RUN: llvm-pdbdump -raw-all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
-; RUN: llvm-pdbdump -raw-headers -raw-stream-name=/names -raw-modules -raw-module-files \
+; RUN: llvm-pdbdump raw -headers -tpi-records -tpi-record-bytes -module-syms \
+; RUN:              -sym-record-bytes -publics -module-files -stream-name=/names \
+; RUN:              -stream-summary -stream-blocks -ipi-records -ipi-record-bytes \
+; RUN:              -section-contribs -section-map -section-headers -line-info \
+; RUN:              -tpi-hash -fpo %p/Inputs/empty.pdb | FileCheck -check-prefix=EMPTY %s
+; RUN: llvm-pdbdump raw -all %p/Inputs/empty.pdb | FileCheck -check-prefix=ALL %s
+; RUN: llvm-pdbdump raw -headers -stream-name=/names -modules -module-files \
 ; RUN:              %p/Inputs/big-read.pdb | FileCheck -check-prefix=BIG %s
-; RUN: not llvm-pdbdump -raw-headers %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
+; RUN: not llvm-pdbdump raw -headers %p/Inputs/bad-block-size.pdb 2>&1 | FileCheck -check-prefix=BAD-BLOCK-SIZE %s
 
 ; EMPTY:      FileHeaders {
 ; EMPTY-NEXT:   BlockSize: 4096

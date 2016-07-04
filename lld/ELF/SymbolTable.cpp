@@ -18,6 +18,7 @@
 #include "Config.h"
 #include "Error.h"
 #include "LinkerScript.h"
+#include "Strings.h"
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/StringSaver.h"
@@ -32,9 +33,8 @@ using namespace lld::elf;
 // All input object files must be for the same architecture
 // (e.g. it does not make sense to link x86 object files with
 // MIPS object files.) This function checks for that error.
-template <class ELFT> static bool isCompatible(InputFile *FileP) {
-  auto *F = dyn_cast<ELFFileBase<ELFT>>(FileP);
-  if (!F)
+template <class ELFT> static bool isCompatible(InputFile *F) {
+  if (!isa<ELFFileBase<ELFT>>(F) && !isa<BitcodeFile>(F))
     return true;
   if (F->EKind == Config->EKind && F->EMachine == Config->EMachine)
     return true;
@@ -164,7 +164,7 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
   return std::min(VA, VB);
 }
 
-// A symbol version may be included in a symbol name as a prefix after '@'.
+// A symbol version may be included in a symbol name as a suffix after '@'.
 // This function parses that part and returns a version ID number.
 static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
   size_t VersionBegin = Name.find('@');
@@ -173,7 +173,7 @@ static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
                                                 : VER_NDX_LOCAL;
 
   // If symbol name contains '@' or '@@' we can assign its version id right
-  // here. '@@' means version by default. It is usually the most recent one.
+  // here. '@@' means the default version. It is usually the most recent one.
   // VERSYM_HIDDEN flag should be set for all non-default versions.
   StringRef Version = Name.drop_front(VersionBegin + 1);
   bool Default = Version.startswith("@");
@@ -457,19 +457,26 @@ template <class ELFT> SymbolBody *SymbolTable<ELFT>::find(StringRef Name) {
   return SymVector[It->second]->body();
 }
 
+// Returns a list of defined symbols that match with a given glob pattern.
 template <class ELFT>
 std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(StringRef Pattern) {
   // Fast-path. Fallback to find() if Pattern doesn't contain any wildcard
   // characters.
-  bool HasWildcards = (Pattern.find_first_of("?*") != StringRef::npos);
-  if (!HasWildcards)
-    return {find(Pattern)};
+  if (Pattern.find_first_of("?*") == StringRef::npos) {
+    if (SymbolBody *B = find(Pattern))
+      if (!B->isUndefined())
+        return {B};
+    return {};
+  }
 
-  std::vector<SymbolBody *> Result;
-  for (auto &It : Symtab)
-    if (matchStr(Pattern, It.first.Val))
-      Result.push_back(SymVector[It.second]->body());
-  return Result;
+  std::vector<SymbolBody *> Res;
+  for (auto &It : Symtab) {
+    StringRef Name = It.first.Val;
+    SymbolBody *B = SymVector[It.second]->body();
+    if (!B->isUndefined() && globMatch(Pattern, Name))
+      Res.push_back(B);
+  }
+  return Res;
 }
 
 template <class ELFT>
@@ -572,14 +579,15 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   size_t I = 2;
   for (Version &V : Config->SymbolVersions) {
     for (StringRef Name : V.Globals) {
-      for (SymbolBody *B : findAll(Name)) {
-        if (!B || B->isUndefined()) {
-          if (Config->NoUndefinedVersion)
-            error("version script assignment of " + V.Name + " to symbol " +
-                  Name + " failed: symbol not defined");
-          continue;
-        }
+      std::vector<SymbolBody *> Syms = findAll(Name);
+      if (Syms.empty()) {
+        if (Config->NoUndefinedVersion)
+          error("version script assignment of " + V.Name + " to symbol " +
+                Name + " failed: symbol not defined");
+        continue;
+      }
 
+      for (SymbolBody *B : Syms) {
         if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
             B->symbol()->VersionId != VER_NDX_LOCAL)
           warning("duplicate symbol " + Name + " in version script");

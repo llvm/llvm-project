@@ -84,6 +84,17 @@ module LLVM_DebugInfo_PDB_DIA {
   module * { export * }
 }
 
+module LLVM_DebugInfo_CodeView {
+  requires cplusplus
+
+  umbrella "DebugInfo/CodeView"
+  module * { export * }
+
+  // These are intended for (repeated) textual inclusion.
+  textual header "DebugInfo/CodeView/TypeRecords.def"
+  textual header "DebugInfo/CodeView/CVSymbolTypes.def"
+}
+
 module LLVM_ExecutionEngine {
   requires cplusplus
 

@@ -47,7 +47,7 @@ code for that chapter and replace it with optimization support in our JIT class
 in Chapter #2.
 
 Finally, a word on API generations: ORC is the 3rd generation of LLVM JIT API.
-It was preceeded by MCJIT, and before that by the (now deleted) legacy JIT.
+It was preceded by MCJIT, and before that by the (now deleted) legacy JIT.
 These tutorials don't assume any experience with these earlier APIs, but
 readers acquainted with them will see many familiar elements. Where appropriate
 we will make this connection with the earlier APIs explicit to help people who
@@ -140,7 +140,7 @@ to build our LLVM compiler instance; A DataLayout, DL, which will be used for
 symbol mangling (more on that later), and two ORC *layers*: an
 ObjectLinkingLayer and a IRCompileLayer. We'll be talking more about layers in
 the next chapter, but for now you can think of them as analogous to LLVM
-Passes: they wrap up useful JIT utilities behind an easy to compose interace.
+Passes: they wrap up useful JIT utilities behind an easy to compose interface.
 The first layer, ObjectLinkingLayer, is the foundation of our JIT: it takes
 in-memory object files produced by a compiler and links them on the fly to make
 them executable. This JIT-on-top-of-a-linker design was introduced in MCJIT,

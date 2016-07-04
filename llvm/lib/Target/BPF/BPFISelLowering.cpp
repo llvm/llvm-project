@@ -493,12 +493,12 @@ SDValue BPFTargetLowering::LowerGlobalAddress(SDValue Op,
 }
 
 MachineBasicBlock *
-BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
+BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc DL = MI->getDebugLoc();
+  DebugLoc DL = MI.getDebugLoc();
 
-  assert(MI->getOpcode() == BPF::Select && "Unexpected instr type to insert");
+  assert(MI.getOpcode() == BPF::Select && "Unexpected instr type to insert");
 
   // To "insert" a SELECT instruction, we actually have to insert the diamond
   // control-flow pattern.  The incoming instruction knows the destination vreg
@@ -529,9 +529,9 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   BB->addSuccessor(Copy1MBB);
 
   // Insert Branch if Flag
-  unsigned LHS = MI->getOperand(1).getReg();
-  unsigned RHS = MI->getOperand(2).getReg();
-  int CC = MI->getOperand(3).getImm();
+  unsigned LHS = MI.getOperand(1).getReg();
+  unsigned RHS = MI.getOperand(2).getReg();
+  int CC = MI.getOperand(3).getImm();
   switch (CC) {
   case ISD::SETGT:
     BuildMI(BB, DL, TII.get(BPF::JSGT_rr))
@@ -585,12 +585,12 @@ BPFTargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   //  %Result = phi [ %FalseValue, Copy0MBB ], [ %TrueValue, ThisMBB ]
   // ...
   BB = Copy1MBB;
-  BuildMI(*BB, BB->begin(), DL, TII.get(BPF::PHI), MI->getOperand(0).getReg())
-      .addReg(MI->getOperand(5).getReg())
+  BuildMI(*BB, BB->begin(), DL, TII.get(BPF::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(5).getReg())
       .addMBB(Copy0MBB)
-      .addReg(MI->getOperand(4).getReg())
+      .addReg(MI.getOperand(4).getReg())
       .addMBB(ThisMBB);
 
-  MI->eraseFromParent(); // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }

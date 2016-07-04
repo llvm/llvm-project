@@ -2838,7 +2838,7 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
                                       N0->getOperand(0), N1->getOperand(0));
         AddToWorklist(NewNode.getNode());
         return DAG.getVectorShuffle(VT, SDLoc(N), NewNode, ShOp,
-                                    &SVN0->getMask()[0]);
+                                    SVN0->getMask());
       }
 
       // Don't try to fold this node if it requires introducing a
@@ -2859,7 +2859,7 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
                                       N0->getOperand(1), N1->getOperand(1));
         AddToWorklist(NewNode.getNode());
         return DAG.getVectorShuffle(VT, SDLoc(N), ShOp, NewNode,
-                                    &SVN0->getMask()[0]);
+                                    SVN0->getMask());
       }
     }
   }
@@ -3808,8 +3808,7 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
           }
 
           if (LegalMask)
-            return DAG.getVectorShuffle(VT, SDLoc(N), NewLHS,
-                                        NewRHS, &Mask[0]);
+            return DAG.getVectorShuffle(VT, SDLoc(N), NewLHS, NewRHS, Mask);
         }
       }
     }
@@ -12894,7 +12893,7 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
     SDValue Ops[2];
     Ops[0] = VecIn1;
     Ops[1] = VecIn2;
-    return DAG.getVectorShuffle(VT, dl, Ops[0], Ops[1], &Mask[0]);
+    return DAG.getVectorShuffle(VT, dl, Ops[0], Ops[1], Mask);
   }
 
   return SDValue();
@@ -13427,8 +13426,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       if (Idx >= (int)NumElts) Idx -= NumElts;
       NewMask.push_back(Idx);
     }
-    return DAG.getVectorShuffle(VT, SDLoc(N), N0, DAG.getUNDEF(VT),
-                                &NewMask[0]);
+    return DAG.getVectorShuffle(VT, SDLoc(N), N0, DAG.getUNDEF(VT), NewMask);
   }
 
   // Canonicalize shuffle undef, v -> v, undef.  Commute the shuffle mask.
@@ -13448,7 +13446,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       NewMask.push_back(Idx);
     }
     if (Changed)
-      return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, &NewMask[0]);
+      return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
 
   // If it is a splat, check if the argument vector is another splat or a
@@ -13752,7 +13750,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(A, B, M2)
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(A, C, M2)
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, C, M2)
-    return DAG.getVectorShuffle(VT, SDLoc(N), SV0, SV1, &Mask[0]);
+    return DAG.getVectorShuffle(VT, SDLoc(N), SV0, SV1, Mask);
   }
 
   return SDValue();
@@ -13921,7 +13919,7 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
     SDValue Zero = DAG.getConstant(0, dl, ClearVT);
     return DAG.getBitcast(VT, DAG.getVectorShuffle(ClearVT, dl,
                                                    DAG.getBitcast(ClearVT, LHS),
-                                                   Zero, &Indices[0]));
+                                                   Zero, Indices));
   };
 
   // Determine maximum split level (byte level masking).
@@ -13973,7 +13971,7 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
                                      N->getFlags());
       AddUsersToWorklist(N);
       return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
-                                  &SVN0->getMask()[0]);
+                                  SVN0->getMask());
     }
   }
 

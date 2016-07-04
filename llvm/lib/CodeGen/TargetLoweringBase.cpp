@@ -1172,9 +1172,10 @@ bool TargetLoweringBase::isLegalRC(const TargetRegisterClass *RC) const {
 
 /// Replace/modify any TargetFrameIndex operands with a targte-dependent
 /// sequence of memory operands that is recognized by PrologEpilogInserter.
-MachineBasicBlock*
-TargetLoweringBase::emitPatchPoint(MachineInstr *MI,
+MachineBasicBlock *
+TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
                                    MachineBasicBlock *MBB) const {
+  MachineInstr *MI = &InitialMI;
   MachineFunction &MF = *MI->getParent()->getParent();
   MachineFrameInfo &MFI = *MF.getFrameInfo();
 

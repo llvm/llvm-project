@@ -14,7 +14,6 @@ _LIBCPP_BEGIN_NAMESPACE_EXPERIMENTAL_FILESYSTEM
 
 _LIBCPP_CONSTEXPR path::value_type path::preferred_separator;
 
-
 namespace { namespace parser
 {
 

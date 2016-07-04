@@ -153,7 +153,7 @@ void foo() {
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd
+#pragma omp simd // expected-warning {{OpenMP only allows an ordered construct with the simd clause nested in a simd construct}}
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -253,6 +253,16 @@ void foo() {
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
 #pragma omp ordered // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+    bar();
+  }
+#pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp ordered simd // OK
+    bar();
+  }
+#pragma omp simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp ordered threads // expected-error {{OpenMP constructs may not be nested inside a simd region}}
     bar();
   }
 #pragma omp simd
@@ -516,7 +526,7 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd
+#pragma omp simd // expected-warning {{OpenMP only allows an ordered construct with the simd clause nested in a simd construct}}
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -616,6 +626,16 @@ void foo() {
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
 #pragma omp ordered // expected-error {{OpenMP constructs may not be nested inside a simd region}}
+    bar();
+  }
+#pragma omp for simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp ordered simd // OK
+    bar();
+  }
+#pragma omp for simd
+  for (int i = 0; i < 10; ++i) {
+#pragma omp ordered threads // expected-error {{OpenMP constructs may not be nested inside a simd region}}
     bar();
   }
 #pragma omp for simd
@@ -1902,7 +1922,7 @@ void foo() {
   }
 #pragma omp parallel for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd
+#pragma omp simd // expected-warning {{OpenMP only allows an ordered construct with the simd clause nested in a simd construct}}
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -4314,7 +4334,7 @@ void foo() {
   }
 #pragma omp simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd
+#pragma omp simd // expected-warning {{OpenMP only allows an ordered construct with the simd clause nested in a simd construct}}
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -4662,7 +4682,7 @@ void foo() {
   }
 #pragma omp for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd
+#pragma omp simd // expected-warning {{OpenMP only allows an ordered construct with the simd clause nested in a simd construct}}
     for (int i = 0; i < 10; ++i)
       ;
   }
@@ -6022,7 +6042,7 @@ void foo() {
   }
 #pragma omp parallel for simd
   for (int i = 0; i < 10; ++i) {
-#pragma omp simd
+#pragma omp simd // expected-warning {{OpenMP only allows an ordered construct with the simd clause nested in a simd construct}}
     for (int i = 0; i < 10; ++i)
       ;
   }

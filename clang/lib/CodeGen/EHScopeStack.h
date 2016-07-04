@@ -89,7 +89,10 @@ enum CleanupKind : unsigned {
   InactiveCleanup = 0x4,
   InactiveEHCleanup = EHCleanup | InactiveCleanup,
   InactiveNormalCleanup = NormalCleanup | InactiveCleanup,
-  InactiveNormalAndEHCleanup = NormalAndEHCleanup | InactiveCleanup
+  InactiveNormalAndEHCleanup = NormalAndEHCleanup | InactiveCleanup,
+
+  LifetimeMarker = 0x8,
+  NormalEHLifetimeMarker = LifetimeMarker | NormalAndEHCleanup,
 };
 
 /// A stack of scopes which respond to exceptions, including cleanups

@@ -1695,6 +1695,7 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
           const LangOptions &LangOpts = getLangOpts();
           return llvm::StringSwitch<bool>(II->getName())
                       .Case("__make_integer_seq", LangOpts.CPlusPlus)
+                      .Case("__type_pack_element", LangOpts.CPlusPlus)
                       .Default(false);
         }
       });

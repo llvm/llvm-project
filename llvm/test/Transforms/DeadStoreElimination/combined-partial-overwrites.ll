@@ -198,3 +198,42 @@ entry:
   ret i8 0
 }
 
+define signext i8 @test6(i32 *%ptr) {
+entry:
+; CHECK-LABEL: @test6
+
+  store i32 0, i32* %ptr
+
+  %bptr = bitcast i32* %ptr to i16*
+  %bptr1 = getelementptr inbounds i16, i16* %bptr, i64 0
+  %bptr2 = getelementptr inbounds i16, i16* %bptr, i64 1
+
+  store i16 1456, i16* %bptr2, align 1
+  store i16 65535, i16* %bptr1, align 1
+
+; CHECK-NOT: store i32 0, i32* %ptr
+
+  ret i8 0
+}
+
+define signext i8 @test7(i64 *%ptr) {
+entry:
+; CHECK-LABEL: @test7
+
+  store i64 0, i64* %ptr
+
+  %bptr = bitcast i64* %ptr to i16*
+  %bptr1 = getelementptr inbounds i16, i16* %bptr, i64 0
+  %bptr2 = getelementptr inbounds i16, i16* %bptr, i64 1
+  %bptr3 = getelementptr inbounds i16, i16* %bptr, i64 2
+  %bptr4 = getelementptr inbounds i16, i16* %bptr, i64 3
+
+  store i16 1346, i16* %bptr1, align 1
+  store i16 1756, i16* %bptr3, align 1
+  store i16 1456, i16* %bptr2, align 1
+  store i16 5656, i16* %bptr4, align 1
+
+; CHECK-NOT: store i64 0, i64* %ptr
+
+  ret i8 0
+}

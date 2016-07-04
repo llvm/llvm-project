@@ -75,6 +75,16 @@ template <class ELFT> void scanRelocations(InputSection<ELFT> &);
 
 template <class ELFT>
 void scanRelocations(InputSectionBase<ELFT> &, const typename ELFT::Shdr &);
+
+template <class ELFT>
+static inline typename ELFT::uint getAddend(const typename ELFT::Rel &Rel) {
+  return 0;
+}
+
+template <class ELFT>
+static inline typename ELFT::uint getAddend(const typename ELFT::Rela &Rel) {
+  return Rel.r_addend;
+}
 }
 }
 

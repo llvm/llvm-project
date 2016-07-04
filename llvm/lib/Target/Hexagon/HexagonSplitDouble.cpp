@@ -464,7 +464,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
     CmpI = MRI->getVRegDef(CmpI->getOperand(1).getReg());
 
   int Mask = 0, Val = 0;
-  bool OkCI = TII->analyzeCompare(CmpI, CmpR1, CmpR2, Mask, Val);
+  bool OkCI = TII->analyzeCompare(*CmpI, CmpR1, CmpR2, Mask, Val);
   if (!OkCI)
     return;
   // Eliminate non-double input registers.

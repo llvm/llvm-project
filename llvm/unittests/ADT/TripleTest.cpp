@@ -643,6 +643,14 @@ TEST(TripleTest, EndianArchVariants) {
   T.setArch(Triple::arm);
   EXPECT_EQ(Triple::UnknownArch, T.getBigEndianArchVariant().getArch());
   EXPECT_EQ(Triple::arm, T.getLittleEndianArchVariant().getArch());
+  T = Triple("arm");
+  EXPECT_TRUE(T.isLittleEndian());
+  T = Triple("thumb");
+  EXPECT_TRUE(T.isLittleEndian());
+  T = Triple("armeb");
+  EXPECT_FALSE(T.isLittleEndian());
+  T = Triple("thumbeb");
+  EXPECT_FALSE(T.isLittleEndian());
 
   T.setArch(Triple::bpfeb);
   EXPECT_EQ(Triple::bpfeb, T.getBigEndianArchVariant().getArch());

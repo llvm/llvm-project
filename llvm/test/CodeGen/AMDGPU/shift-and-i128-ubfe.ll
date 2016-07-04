@@ -5,11 +5,11 @@
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 
 ; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
-; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO0]]{{$}}
-; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
+; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], v[[ZERO0]]{{$}}
+; GCN: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO0]]:[[ZERO1]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO0]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN: buffer_store_dwordx4 v{{\[}}[[SHIFT]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN: s_endpgm
 define void @v_uextract_bit_31_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -26,12 +26,12 @@ define void @v_uextract_bit_31_i128(i128 addrspace(1)* %out, i128 addrspace(1)* 
 ; GCN-LABEL: {{^}}v_uextract_bit_63_i128:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
 
-; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
+; GCN-DAG: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO0]]{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], v[[ZERO0]]{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO0]]:[[ZERO1]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO0]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[SHIFT]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN: s_endpgm
 define void @v_uextract_bit_63_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -48,12 +48,12 @@ define void @v_uextract_bit_63_i128(i128 addrspace(1)* %out, i128 addrspace(1)* 
 ; GCN-LABEL: {{^}}v_uextract_bit_95_i128:
 ; GCN: buffer_load_dword [[VAL:v[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
 
-; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
-; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO0]]{{$}}
+; GCN-DAG: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], v[[ZERO0]]{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO0]]:[[ZERO1]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO0]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[SHIFT]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN: s_endpgm
 define void @v_uextract_bit_95_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -72,10 +72,10 @@ define void @v_uextract_bit_95_i128(i128 addrspace(1)* %out, i128 addrspace(1)* 
 
 ; GCN: v_mov_b32_e32 v[[ZERO0:[0-9]+]], 0{{$}}
 ; GCN: v_mov_b32_e32 v[[ZERO1:[0-9]+]], v[[ZERO0]]{{$}}
+; GCN: v_mov_b32_e32 v[[ZERO2:[0-9]+]], v[[ZERO0]]{{$}}
 ; GCN-DAG: v_lshrrev_b32_e32 v[[SHIFT:[0-9]+]], 31, [[VAL]]
 
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ZERO0]]:[[ZERO1]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[SHIFT]]:[[ZERO0]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[SHIFT]]:[[ZERO2]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN: s_endpgm
 define void @v_uextract_bit_127_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -90,18 +90,16 @@ define void @v_uextract_bit_127_i128(i128 addrspace(1)* %out, i128 addrspace(1)*
 
 ; Spans more than 2 dword boundaries
 ; GCN-LABEL: {{^}}v_uextract_bit_34_100_i128:
-; GCN: buffer_load_dwordx2 v{{\[}}[[VAL2:[0-9]+]]:[[VAL3:[0-9]+]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; GCN: buffer_load_dword v[[VAL1:[0-9]+]], v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:4{{$}}
+; GCN: buffer_load_dwordx4 v{{\[}}[[VAL0:[0-9]+]]:[[VAL3:[0-9]+]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 
-; GCN-DAG: v_lshl_b64 v{{\[}}[[SHLLO:[0-9]+]]:[[SHLHI:[0-9]+]]{{\]}}, v{{\[}}[[VAL2]]:[[VAL3]]{{\]}}, 30
-; GCN-DAG: v_lshrrev_b32_e32 v[[ELT1PART:[0-9]+]], 2, v[[VAL1]]
+; GCN-DAG: v_lshl_b64 v{{\[}}[[SHLLO:[0-9]+]]:[[SHLHI:[0-9]+]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, 30
+; GCN-DAG: v_lshrrev_b32_e32 v[[ELT1PART:[0-9]+]], 2, v{{[[0-9]+}}
 ; GCN-DAG: v_bfe_u32 v[[ELT2PART:[0-9]+]], v[[VAL3]], 2, 2{{$}}
 ; GCN-DAG: v_mov_b32_e32 v[[ZERO:[0-9]+]], 0{{$}}
 ; GCN-DAG: v_or_b32_e32 v[[OR0:[0-9]+]], v[[SHLLO]], v[[ELT1PART]]
 ; GCN-DAG: v_or_b32_e32 v[[OR1:[0-9]+]], 0, v[[SHLHI]]{{$}}
 
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[ELT2PART]]:[[ZERO]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64 offset:8{{$}}
-; GCN-DAG: buffer_store_dwordx2 v{{\[}}[[OR0]]:[[OR1]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
+; GCN-DAG: buffer_store_dwordx4 v{{\[}}[[OR0]]:[[ZERO]]{{\]}}, v{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, 0 addr64{{$}}
 ; GCN: s_endpgm
 define void @v_uextract_bit_34_100_i128(i128 addrspace(1)* %out, i128 addrspace(1)* %in) #1 {
   %id.x = tail call i32 @llvm.amdgcn.workitem.id.x()

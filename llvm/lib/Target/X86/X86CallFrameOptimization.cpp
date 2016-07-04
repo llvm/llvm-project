@@ -570,7 +570,7 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
   MachineBasicBlock::iterator DefMI = MRI->getVRegDef(Reg);
 
   // Make sure the def is a MOV from memory.
-  // If the def is an another block, give up.
+  // If the def is in another block, give up.
   if ((DefMI->getOpcode() != X86::MOV32rm &&
        DefMI->getOpcode() != X86::MOV64rm) ||
       DefMI->getParent() != FrameSetup->getParent())

@@ -5,8 +5,8 @@
 ; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-unknown-linux-gnu -march=x86-64 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=LINUX-64-PIC
 
 ; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin -march=x86 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-STATIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin -march=x86 -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-DYNAMIC
-; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin -march=x86 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-PIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin9 -march=x86 -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-DYNAMIC
+; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=i686-apple-darwin9 -march=x86 -relocation-model=pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-32-PIC
 
 ; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -march=x86-64 -relocation-model=static -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-STATIC
 ; RUN: llc < %s -asm-verbose=0 -mcpu=generic -mtriple=x86_64-apple-darwin -march=x86-64 -relocation-model=dynamic-no-pic -code-model=small -pre-RA-sched=list-ilp | FileCheck %s -check-prefix=DARWIN-64-DYNAMIC
@@ -8425,25 +8425,25 @@ entry:
 
 ; DARWIN-32-DYNAMIC: _lcallee:
 ; DARWIN-32-DYNAMIC: 	subl	$12, %esp
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_x$stub
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_x
 ; DARWIN-32-DYNAMIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-DYNAMIC-NEXT: 	ret
 
 ; DARWIN-32-PIC: _lcallee:
 ; DARWIN-32-PIC: 	subl	$12, %esp
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_x$stub
+; DARWIN-32-PIC-NEXT: 	calll	_x
+; DARWIN-32-PIC-NEXT: 	calll	_x
+; DARWIN-32-PIC-NEXT: 	calll	_x
+; DARWIN-32-PIC-NEXT: 	calll	_x
+; DARWIN-32-PIC-NEXT: 	calll	_x
+; DARWIN-32-PIC-NEXT: 	calll	_x
+; DARWIN-32-PIC-NEXT: 	calll	_x
 ; DARWIN-32-PIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-PIC-NEXT: 	ret
 
@@ -8557,25 +8557,25 @@ entry:
 
 ; DARWIN-32-DYNAMIC: _dcallee:
 ; DARWIN-32-DYNAMIC: 	subl	$12, %esp
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_y$stub
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_y
 ; DARWIN-32-DYNAMIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-DYNAMIC-NEXT: 	ret
 
 ; DARWIN-32-PIC: _dcallee:
 ; DARWIN-32-PIC: 	subl	$12, %esp
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_y$stub
+; DARWIN-32-PIC-NEXT: 	calll	_y
+; DARWIN-32-PIC-NEXT: 	calll	_y
+; DARWIN-32-PIC-NEXT: 	calll	_y
+; DARWIN-32-PIC-NEXT: 	calll	_y
+; DARWIN-32-PIC-NEXT: 	calll	_y
+; DARWIN-32-PIC-NEXT: 	calll	_y
+; DARWIN-32-PIC-NEXT: 	calll	_y
 ; DARWIN-32-PIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-PIC-NEXT: 	ret
 
@@ -8802,15 +8802,15 @@ entry:
 
 ; DARWIN-32-DYNAMIC: _caller:
 ; DARWIN-32-DYNAMIC: 	subl	$12, %esp
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_callee$stub
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_callee$stub
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_callee
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_callee
 ; DARWIN-32-DYNAMIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-DYNAMIC-NEXT: 	ret
 
 ; DARWIN-32-PIC: _caller:
 ; DARWIN-32-PIC: 	subl	$12, %esp
-; DARWIN-32-PIC-NEXT: 	calll	L_callee$stub
-; DARWIN-32-PIC-NEXT: 	calll	L_callee$stub
+; DARWIN-32-PIC-NEXT: 	calll	_callee
+; DARWIN-32-PIC-NEXT: 	calll	_callee
 ; DARWIN-32-PIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-PIC-NEXT: 	ret
 
@@ -9021,13 +9021,13 @@ entry:
 
 ; DARWIN-32-DYNAMIC: _tailcaller:
 ; DARWIN-32-DYNAMIC: 	subl	$12, %esp
-; DARWIN-32-DYNAMIC-NEXT: 	calll	L_callee$stub
+; DARWIN-32-DYNAMIC-NEXT: 	calll	_callee
 ; DARWIN-32-DYNAMIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-DYNAMIC-NEXT: 	ret
 
 ; DARWIN-32-PIC: _tailcaller:
 ; DARWIN-32-PIC: 	subl	$12, %esp
-; DARWIN-32-PIC-NEXT: 	calll	L_callee$stub
+; DARWIN-32-PIC-NEXT: 	calll	_callee
 ; DARWIN-32-PIC-NEXT: 	addl	$12, %esp
 ; DARWIN-32-PIC-NEXT: 	ret
 

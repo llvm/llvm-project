@@ -136,10 +136,8 @@ define void @global_sextload_v1i16_to_v1i32(<1 x i32> addrspace(1)* %out, <1 x i
 }
 
 ; FUNC-LABEL: {{^}}global_zextload_v2i16_to_v2i32:
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
+; GCN-NOHSA: buffer_load_dword
+; GCN-HSA: flat_load_dword
 define void @global_zextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i16> addrspace(1)* %in) #0 {
   %load = load <2 x i16>, <2 x i16> addrspace(1)* %in
   %ext = zext <2 x i16> %load to <2 x i32>
@@ -148,11 +146,9 @@ define void @global_zextload_v2i16_to_v2i32(<2 x i32> addrspace(1)* %out, <2 x i
 }
 
 ; FUNC-LABEL: {{^}}global_sextload_v2i16_to_v2i32:
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
+; GCN-NOHSA: buffer_load_dword
 
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
+; GCN-HSA: flat_load_dword
 
 ; EG-DAG: VTX_READ_16 [[DST_X:T[0-9]\.[XYZW]]], [[DST_X]]
 ; EG-DAG: VTX_READ_16 [[DST_Y:T[0-9]\.[XYZW]]], [[DST_Y]]
@@ -190,15 +186,9 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}global_global_zextload_v4i16_to_v4i32:
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
+; GCN-NOHSA: buffer_load_dwordx2
 
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
+; GCN-HSA: flat_load_dwordx2
 
 ; EG: VTX_READ_16
 ; EG: VTX_READ_16
@@ -212,15 +202,9 @@ define void @global_global_zextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out,
 }
 
 ; FUNC-LABEL: {{^}}global_sextload_v4i16_to_v4i32:
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
+; GCN-NOHSA: buffer_load_dwordx2
 
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
+; GCN-HSA: flat_load_dwordx2
 
 ; EG-DAG: VTX_READ_16 [[DST_X:T[0-9]\.[XYZW]]], [[DST_X]]
 ; EG-DAG: VTX_READ_16 [[DST_Y:T[0-9]\.[XYZW]]], [[DST_Y]]
@@ -242,23 +226,8 @@ define void @global_sextload_v4i16_to_v4i32(<4 x i32> addrspace(1)* %out, <4 x i
 }
 
 ; FUNC-LABEL: {{^}}global_zextload_v8i16_to_v8i32:
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
 define void @global_zextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i16> addrspace(1)* %in) #0 {
   %load = load <8 x i16>, <8 x i16> addrspace(1)* %in
   %ext = zext <8 x i16> %load to <8 x i32>
@@ -267,23 +236,8 @@ define void @global_zextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i
 }
 
 ; FUNC-LABEL: {{^}}global_sextload_v8i16_to_v8i32:
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
 define void @global_sextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i16> addrspace(1)* %in) #0 {
   %load = load <8 x i16>, <8 x i16> addrspace(1)* %in
   %ext = sext <8 x i16> %load to <8 x i32>
@@ -292,39 +246,11 @@ define void @global_sextload_v8i16_to_v8i32(<8 x i32> addrspace(1)* %out, <8 x i
 }
 
 ; FUNC-LABEL: {{^}}global_zextload_v16i16_to_v16i32:
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
 
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
 define void @global_zextload_v16i16_to_v16i32(<16 x i32> addrspace(1)* %out, <16 x i16> addrspace(1)* %in) #0 {
   %load = load <16 x i16>, <16 x i16> addrspace(1)* %in
   %ext = zext <16 x i16> %load to <16 x i32>
@@ -341,71 +267,15 @@ define void @global_sextload_v16i16_to_v16i32(<16 x i32> addrspace(1)* %out, <16
 }
 
 ; FUNC-LABEL: {{^}}global_zextload_v32i16_to_v32i32:
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
 
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
 define void @global_zextload_v32i16_to_v32i32(<32 x i32> addrspace(1)* %out, <32 x i16> addrspace(1)* %in) #0 {
   %load = load <32 x i16>, <32 x i16> addrspace(1)* %in
   %ext = zext <32 x i16> %load to <32 x i32>
@@ -414,71 +284,15 @@ define void @global_zextload_v32i16_to_v32i32(<32 x i32> addrspace(1)* %out, <32
 }
 
 ; FUNC-LABEL: {{^}}global_sextload_v32i16_to_v32i32:
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
-; GCN-NOHSA: buffer_load_sshort
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
 
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
-; GCN-HSA: flat_load_sshort
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
 define void @global_sextload_v32i16_to_v32i32(<32 x i32> addrspace(1)* %out, <32 x i16> addrspace(1)* %in) #0 {
   %load = load <32 x i16>, <32 x i16> addrspace(1)* %in
   %ext = sext <32 x i16> %load to <32 x i32>
@@ -487,135 +301,23 @@ define void @global_sextload_v32i16_to_v32i32(<32 x i32> addrspace(1)* %out, <32
 }
 
 ; FUNC-LABEL: {{^}}global_zextload_v64i16_to_v64i32:
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
-; GCN-NOHSA: buffer_load_ushort
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
+; GCN-NOHSA: buffer_load_dwordx4
 
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
-; GCN-HSA: flat_load_ushort
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
+; GCN-HSA: flat_load_dwordx4
 define void @global_zextload_v64i16_to_v64i32(<64 x i32> addrspace(1)* %out, <64 x i16> addrspace(1)* %in) #0 {
   %load = load <64 x i16>, <64 x i16> addrspace(1)* %in
   %ext = zext <64 x i16> %load to <64 x i32>

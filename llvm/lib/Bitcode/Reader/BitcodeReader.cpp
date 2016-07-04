@@ -2466,7 +2466,7 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       break;
     }
     case bitc::METADATA_SUBPROGRAM: {
-      if (Record.size() != 18 && Record.size() != 19)
+      if (Record.size() < 18 || Record.size() > 20)
         return error("Invalid record");
 
       IsDistinct =
@@ -2474,21 +2474,36 @@ std::error_code BitcodeReader::parseMetadata(bool ModuleLevel) {
       // Version 1 has a Function as Record[15].
       // Version 2 has removed Record[15].
       // Version 3 has the Unit as Record[15].
+      // Version 4 added thisAdjustment.
       bool HasUnit = Record[0] >= 2;
-      if (HasUnit && Record.size() != 19)
+      if (HasUnit && Record.size() < 19)
         return error("Invalid record");
       Metadata *CUorFn = getMDOrNull(Record[15]);
-      unsigned Offset = Record.size() == 19 ? 1 : 0;
+      unsigned Offset = Record.size() >= 19 ? 1 : 0;
       bool HasFn = Offset && !HasUnit;
+      bool HasThisAdj = Record.size() >= 20;
       DISubprogram *SP = GET_OR_DISTINCT(
-          DISubprogram,
-          (Context, getDITypeRefOrNull(Record[1]), getMDString(Record[2]),
-           getMDString(Record[3]), getMDOrNull(Record[4]), Record[5],
-           getMDOrNull(Record[6]), Record[7], Record[8], Record[9],
-           getDITypeRefOrNull(Record[10]), Record[11], Record[12], Record[13],
-           Record[14], HasUnit ? CUorFn : nullptr,
-           getMDOrNull(Record[15 + Offset]), getMDOrNull(Record[16 + Offset]),
-           getMDOrNull(Record[17 + Offset])));
+          DISubprogram, (Context,
+                         getDITypeRefOrNull(Record[1]),    // scope
+                         getMDString(Record[2]),           // name
+                         getMDString(Record[3]),           // linkageName
+                         getMDOrNull(Record[4]),           // file
+                         Record[5],                        // line
+                         getMDOrNull(Record[6]),           // type
+                         Record[7],                        // isLocal
+                         Record[8],                        // isDefinition
+                         Record[9],                        // scopeLine
+                         getDITypeRefOrNull(Record[10]),   // containingType
+                         Record[11],                       // virtuality
+                         Record[12],                       // virtualIndex
+                         HasThisAdj ? Record[19] : 0,      // thisAdjustment
+                         Record[13],                       // flags
+                         Record[14],                       // isOptimized
+                         HasUnit ? CUorFn : nullptr,       // unit
+                         getMDOrNull(Record[15 + Offset]), // templateParams
+                         getMDOrNull(Record[16 + Offset]), // declaration
+                         getMDOrNull(Record[17 + Offset])  // variables
+                         ));
       MetadataList.assignValue(SP, NextMetadataNo++);
 
       // Upgrade sp->function mapping to function->sp mapping.

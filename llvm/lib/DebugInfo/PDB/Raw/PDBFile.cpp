@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/CodeView/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/DirectoryStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
@@ -107,44 +108,12 @@ Error PDBFile::parseFileHeaders() {
                                 "Does not contain superblock");
   }
 
-  // Check the magic bytes.
-  if (memcmp(SB->MagicBytes, MsfMagic, sizeof(MsfMagic)) != 0)
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "MSF magic header doesn't match");
+  if (auto EC = setSuperBlock(SB))
+    return EC;
 
-  // We don't support blocksizes which aren't a multiple of four bytes.
-  if (SB->BlockSize % sizeof(support::ulittle32_t) != 0)
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Block size is not multiple of 4.");
-
-  switch (SB->BlockSize) {
-  case 512: case 1024: case 2048: case 4096:
-    break;
-  default:
-    // An invalid block size suggests a corrupt PDB file.
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Unsupported block size.");
-  }
-
-  if (Buffer->getLength() % SB->BlockSize != 0)
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "File size is not a multiple of block size");
-
-  // We don't support directories whose sizes aren't a multiple of four bytes.
-  if (SB->NumDirectoryBytes % sizeof(support::ulittle32_t) != 0)
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Directory size is not multiple of 4.");
-
-  // The number of blocks which comprise the directory is a simple function of
-  // the number of bytes it contains.
-  uint64_t NumDirectoryBlocks = getNumDirectoryBlocks();
-
-  // The directory, as we understand it, is a block which consists of a list of
-  // block numbers.  It is unclear what would happen if the number of blocks
-  // couldn't fit on a single block.
-  if (NumDirectoryBlocks > SB->BlockSize / sizeof(support::ulittle32_t))
-    return make_error<RawError>(raw_error_code::corrupt_file,
-                                "Too many directory blocks.");
+  Reader.setOffset(getBlockMapOffset());
+  if (auto EC = Reader.readArray(DirectoryBlocks, getNumDirectoryBlocks()))
+    return EC;
 
   return Error::success();
 }
@@ -195,12 +164,7 @@ Error PDBFile::parseStreamData() {
 }
 
 llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
-  StreamReader Reader(*Buffer);
-  Reader.setOffset(getBlockMapOffset());
-  llvm::ArrayRef<support::ulittle32_t> Result;
-  if (auto EC = Reader.readArray(Result, getNumDirectoryBlocks()))
-    consumeError(std::move(EC));
-  return Result;
+  return DirectoryBlocks;
 }
 
 Expected<InfoStream &> PDBFile::getPDBInfoStream() {
@@ -323,14 +287,89 @@ Expected<NameHashTable &> PDBFile::getStringTable() {
   return *StringTable;
 }
 
-void PDBFile::setSuperBlock(const SuperBlock *Block) { SB = Block; }
+Error PDBFile::setSuperBlock(const SuperBlock *Block) {
+  SB = Block;
+
+  // Check the magic bytes.
+  if (memcmp(SB->MagicBytes, MsfMagic, sizeof(MsfMagic)) != 0)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "MSF magic header doesn't match");
+
+  // We don't support blocksizes which aren't a multiple of four bytes.
+  if (SB->BlockSize % sizeof(support::ulittle32_t) != 0)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Block size is not multiple of 4.");
+
+  switch (SB->BlockSize) {
+  case 512:
+  case 1024:
+  case 2048:
+  case 4096:
+    break;
+  default:
+    // An invalid block size suggests a corrupt PDB file.
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Unsupported block size.");
+  }
+
+  if (Buffer->getLength() % SB->BlockSize != 0)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "File size is not a multiple of block size");
+
+  // We don't support directories whose sizes aren't a multiple of four bytes.
+  if (SB->NumDirectoryBytes % sizeof(support::ulittle32_t) != 0)
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Directory size is not multiple of 4.");
+
+  // The number of blocks which comprise the directory is a simple function of
+  // the number of bytes it contains.
+  uint64_t NumDirectoryBlocks = getNumDirectoryBlocks();
+
+  // The directory, as we understand it, is a block which consists of a list of
+  // block numbers.  It is unclear what would happen if the number of blocks
+  // couldn't fit on a single block.
+  if (NumDirectoryBlocks > SB->BlockSize / sizeof(support::ulittle32_t))
+    return make_error<RawError>(raw_error_code::corrupt_file,
+                                "Too many directory blocks.");
+
+  return Error::success();
+}
 
 void PDBFile::setStreamSizes(ArrayRef<support::ulittle32_t> Sizes) {
   StreamSizes = Sizes;
 }
 
-void PDBFile::setStreamMap(ArrayRef<ArrayRef<support::ulittle32_t>> Blocks) {
-  StreamMap = Blocks;
+void PDBFile::setStreamMap(
+    ArrayRef<support::ulittle32_t> Directory,
+    std::vector<ArrayRef<support::ulittle32_t>> &Streams) {
+  DirectoryBlocks = Directory;
+  StreamMap = Streams;
 }
 
-void PDBFile::commit() {}
+Error PDBFile::commit() {
+  StreamWriter Writer(*Buffer);
+
+  if (auto EC = Writer.writeObject(*SB))
+    return EC;
+  Writer.setOffset(getBlockMapOffset());
+  if (auto EC = Writer.writeArray(DirectoryBlocks))
+    return EC;
+
+  auto DS = MappedBlockStream::createDirectoryStream(*this);
+  if (!DS)
+    return DS.takeError();
+  auto DirStream = std::move(*DS);
+  StreamWriter DW(*DirStream);
+  if (auto EC = DW.writeInteger(this->getNumStreams()))
+    return EC;
+
+  if (auto EC = DW.writeArray(StreamSizes))
+    return EC;
+
+  for (const auto &Blocks : StreamMap) {
+    if (auto EC = DW.writeArray(Blocks))
+      return EC;
+  }
+
+  return Buffer->commit();
+}

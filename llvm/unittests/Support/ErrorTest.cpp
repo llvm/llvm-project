@@ -314,6 +314,51 @@ TEST(Error, CheckJoinErrors) {
   EXPECT_TRUE(CustomErrorInfo1 == 7 && CustomErrorInfo2 == 42 &&
               CustomErrorExtraInfo == 7)
       << "Failed handling compound Error.";
+
+  // Test appending a single item to a list.
+  {
+    int Sum = 0;
+    handleAllErrors(
+        joinErrors(
+            joinErrors(make_error<CustomError>(7),
+                       make_error<CustomError>(7)),
+            make_error<CustomError>(7)),
+        [&](const CustomError &CE) {
+          Sum += CE.getInfo();
+        });
+    EXPECT_EQ(Sum, 21) << "Failed to correctly append error to error list.";
+  }
+
+  // Test prepending a single item to a list.
+  {
+    int Sum = 0;
+    handleAllErrors(
+        joinErrors(
+            make_error<CustomError>(7),
+            joinErrors(make_error<CustomError>(7),
+                       make_error<CustomError>(7))),
+        [&](const CustomError &CE) {
+          Sum += CE.getInfo();
+        });
+    EXPECT_EQ(Sum, 21) << "Failed to correctly prepend error to error list.";
+  }
+
+  // Test concatenating two error lists.
+  {
+    int Sum = 0;
+    handleAllErrors(
+        joinErrors(
+            joinErrors(
+                make_error<CustomError>(7),
+                make_error<CustomError>(7)),
+            joinErrors(
+                make_error<CustomError>(7),
+                make_error<CustomError>(7))),
+        [&](const CustomError &CE) {
+          Sum += CE.getInfo();
+        });
+    EXPECT_EQ(Sum, 28) << "Failed to correctly concatenate erorr lists.";
+  }
 }
 
 // Test that we can consume success values.

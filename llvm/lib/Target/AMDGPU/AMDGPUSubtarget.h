@@ -74,6 +74,7 @@ protected:
   bool FP64Denormals;
   bool FPExceptions;
   bool FlatForGlobal;
+  bool UnalignedBufferAccess;
   bool EnableXNACK;
   bool DebuggerInsertNops;
   bool DebuggerReserveRegs;
@@ -254,6 +255,10 @@ public:
     return FlatForGlobal;
   }
 
+  bool hasUnalignedBufferAccess() const {
+    return UnalignedBufferAccess;
+  }
+
   bool isXNACKEnabled() const {
     return EnableXNACK;
   }
@@ -369,7 +374,6 @@ public:
   }
 
   void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                           MachineInstr *Begin, MachineInstr *End,
                            unsigned NumRegionInstrs) const override;
 
   bool isVGPRSpillingEnabled(const Function& F) const;

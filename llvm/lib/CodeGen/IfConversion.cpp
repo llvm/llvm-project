@@ -1588,14 +1588,14 @@ bool IfConverter::IfConvertDiamond(BBInfo &BBI, IfcvtKind Kind,
   return true;
 }
 
-static bool MaySpeculate(const MachineInstr *MI,
+static bool MaySpeculate(const MachineInstr &MI,
                          SmallSet<unsigned, 4> &LaterRedefs) {
   bool SawStore = true;
-  if (!MI->isSafeToMove(nullptr, SawStore))
+  if (!MI.isSafeToMove(nullptr, SawStore))
     return false;
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
@@ -1616,8 +1616,8 @@ void IfConverter::PredicateBlock(BBInfo &BBI,
                                  SmallSet<unsigned, 4> *LaterRedefs) {
   bool AnyUnpred = false;
   bool MaySpec = LaterRedefs != nullptr;
-  for (MachineBasicBlock::iterator I = BBI.BB->begin(); I != E; ++I) {
-    if (I->isDebugValue() || TII->isPredicated(*I))
+  for (MachineInstr &I : llvm::make_range(BBI.BB->begin(), E)) {
+    if (I.isDebugValue() || TII->isPredicated(I))
       continue;
     // It may be possible not to predicate an instruction if it's the 'true'
     // side of a diamond and the 'false' side may re-define the instruction's
@@ -1629,16 +1629,16 @@ void IfConverter::PredicateBlock(BBInfo &BBI,
     // If any instruction is predicated, then every instruction after it must
     // be predicated.
     MaySpec = false;
-    if (!TII->PredicateInstruction(*I, Cond)) {
+    if (!TII->PredicateInstruction(I, Cond)) {
 #ifndef NDEBUG
-      dbgs() << "Unable to predicate " << *I << "!\n";
+      dbgs() << "Unable to predicate " << I << "!\n";
 #endif
       llvm_unreachable(nullptr);
     }
 
     // If the predicated instruction now redefines a register as the result of
     // if-conversion, add an implicit kill.
-    UpdatePredRedefs(*I, Redefs);
+    UpdatePredRedefs(I, Redefs);
   }
 
   BBI.Predicate.append(Cond.begin(), Cond.end());

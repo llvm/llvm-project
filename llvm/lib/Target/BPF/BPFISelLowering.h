@@ -43,7 +43,7 @@ public:
   const char *getTargetNodeName(unsigned Opcode) const override;
 
   MachineBasicBlock *
-  EmitInstrWithCustomInserter(MachineInstr *MI,
+  EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
 private:

@@ -4,9 +4,16 @@
 // RUN: %run %t 1 2>&1 | FileCheck %s
 // RUN: %run %t 2 2>&1 | FileCheck %s
 
-#include <alloca.h>
 #include <stdio.h>
 #include <string.h>
+
+// MSVC provides _alloca instead of alloca.
+#if defined(_MSC_VER) && !defined(alloca)
+# define alloca _alloca
+#else
+#include <alloca.h>
+#endif
+
 
 void f1_alloca() {
   char *dynamic_buffer = (char *)alloca(200);

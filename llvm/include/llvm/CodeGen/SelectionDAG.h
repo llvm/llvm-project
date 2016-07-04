@@ -634,13 +634,7 @@ public:
   /// which must be a vector type, must match the number of mask elements
   /// NumElts. An integer mask element equal to -1 is treated as undefined.
   SDValue getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1, SDValue N2,
-                           const int *MaskElts);
-  SDValue getVectorShuffle(EVT VT, const SDLoc &dl, SDValue N1, SDValue N2,
-                           ArrayRef<int> MaskElts) {
-    assert(VT.getVectorNumElements() == MaskElts.size() &&
-           "Must have the same number of vector elements as mask elements!");
-    return getVectorShuffle(VT, dl, N1, N2, MaskElts.data());
-  }
+                           ArrayRef<int> Mask);
 
   /// Return an ISD::BUILD_VECTOR node. The number of elements in VT,
   /// which must be a vector type, must match the number of operands in Ops.
