@@ -8,7 +8,7 @@
 __mmask8 test_mm_cmpeq_epu32_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_cmpeq_epu32_mask
   // CHECK: icmp eq <4 x i32> %{{.*}}, %{{.*}}
-  // CHECK: shufflevector <4 x i1> %{{.*}}, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 4, i32 4, i32 4>
+  // CHECK: shufflevector <4 x i1> %{{.*}}, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   return (__mmask8)_mm_cmpeq_epu32_mask(__a, __b);
 }
 
@@ -22,6 +22,7 @@ __mmask8 test_mm_mask_cmpeq_epu32_mask(__mmask8 __u, __m128i __a, __m128i __b) {
 __mmask8 test_mm_cmpeq_epu64_mask(__m128i __a, __m128i __b) {
   // CHECK-LABEL: @test_mm_cmpeq_epu64_mask
   // CHECK: icmp eq <2 x i64> %{{.*}}, %{{.*}}
+  // CHECK: shufflevector <2 x i1> %{{.*}}, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
   return (__mmask8)_mm_cmpeq_epu64_mask(__a, __b);
 }
 

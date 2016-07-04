@@ -6,6 +6,12 @@ struct A
    int a[];  /* expected-warning {{flexible array member 'a' in otherwise empty struct is a Microsoft extension}} */
 };
 
+struct PR28407
+{
+  int : 1;
+  int a[]; /* expected-warning {{flexible array member 'a' in otherwise empty struct is a Microsoft extension}} */
+};
+
 struct C {
    int l;
    union {

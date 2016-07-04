@@ -184,7 +184,7 @@ class TemplateArgumentList final
 
   // Constructs an instance with an internal Argument list, containing
   // a copy of the Args array. (Called by CreateCopy)
-  TemplateArgumentList(const TemplateArgument *Args, unsigned NumArgs);
+  TemplateArgumentList(ArrayRef<TemplateArgument> Args);
 
 public:
   /// \brief Type used to indicate that the template argument list itself is a
@@ -194,16 +194,14 @@ public:
   /// \brief Create a new template argument list that copies the given set of
   /// template arguments.
   static TemplateArgumentList *CreateCopy(ASTContext &Context,
-                                          const TemplateArgument *Args,
-                                          unsigned NumArgs);
+                                          ArrayRef<TemplateArgument> Args);
 
   /// \brief Construct a new, temporary template argument list on the stack.
   ///
   /// The template argument list does not own the template arguments
   /// provided.
-  explicit TemplateArgumentList(OnStackType, const TemplateArgument *Args,
-                                unsigned NumArgs)
-      : Arguments(Args), NumArguments(NumArgs) {}
+  explicit TemplateArgumentList(OnStackType, ArrayRef<TemplateArgument> Args)
+      : Arguments(Args.data()), NumArguments(Args.size()) {}
 
   /// \brief Produces a shallow copy of the given template argument list.
   ///
@@ -1583,8 +1581,7 @@ protected:
                                   DeclContext *DC, SourceLocation StartLoc,
                                   SourceLocation IdLoc,
                                   ClassTemplateDecl *SpecializedTemplate,
-                                  const TemplateArgument *Args,
-                                  unsigned NumArgs,
+                                  ArrayRef<TemplateArgument> Args,
                                   ClassTemplateSpecializationDecl *PrevDecl);
 
   explicit ClassTemplateSpecializationDecl(ASTContext &C, Kind DK);
@@ -1594,8 +1591,7 @@ public:
   Create(ASTContext &Context, TagKind TK, DeclContext *DC,
          SourceLocation StartLoc, SourceLocation IdLoc,
          ClassTemplateDecl *SpecializedTemplate,
-         const TemplateArgument *Args,
-         unsigned NumArgs,
+         ArrayRef<TemplateArgument> Args,
          ClassTemplateSpecializationDecl *PrevDecl);
   static ClassTemplateSpecializationDecl *
   CreateDeserialized(ASTContext &C, unsigned ID);
@@ -1811,8 +1807,7 @@ class ClassTemplatePartialSpecializationDecl
                                          SourceLocation IdLoc,
                                          TemplateParameterList *Params,
                                          ClassTemplateDecl *SpecializedTemplate,
-                                         const TemplateArgument *Args,
-                                         unsigned NumArgs,
+                                         ArrayRef<TemplateArgument> Args,
                                const ASTTemplateArgumentListInfo *ArgsAsWritten,
                                ClassTemplatePartialSpecializationDecl *PrevDecl);
 
@@ -1827,8 +1822,7 @@ public:
          SourceLocation StartLoc, SourceLocation IdLoc,
          TemplateParameterList *Params,
          ClassTemplateDecl *SpecializedTemplate,
-         const TemplateArgument *Args,
-         unsigned NumArgs,
+         ArrayRef<TemplateArgument> Args,
          const TemplateArgumentListInfo &ArgInfos,
          QualType CanonInjectedType,
          ClassTemplatePartialSpecializationDecl *PrevDecl);
@@ -2442,8 +2436,8 @@ protected:
                                 SourceLocation StartLoc, SourceLocation IdLoc,
                                 VarTemplateDecl *SpecializedTemplate,
                                 QualType T, TypeSourceInfo *TInfo,
-                                StorageClass S, const TemplateArgument *Args,
-                                unsigned NumArgs);
+                                StorageClass S,
+                                ArrayRef<TemplateArgument> Args);
 
   explicit VarTemplateSpecializationDecl(Kind DK, ASTContext &Context);
 
@@ -2451,8 +2445,8 @@ public:
   static VarTemplateSpecializationDecl *
   Create(ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
          SourceLocation IdLoc, VarTemplateDecl *SpecializedTemplate, QualType T,
-         TypeSourceInfo *TInfo, StorageClass S, const TemplateArgument *Args,
-         unsigned NumArgs);
+         TypeSourceInfo *TInfo, StorageClass S,
+         ArrayRef<TemplateArgument> Args);
   static VarTemplateSpecializationDecl *CreateDeserialized(ASTContext &C,
                                                            unsigned ID);
 
@@ -2655,7 +2649,7 @@ class VarTemplatePartialSpecializationDecl
       ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
       SourceLocation IdLoc, TemplateParameterList *Params,
       VarTemplateDecl *SpecializedTemplate, QualType T, TypeSourceInfo *TInfo,
-      StorageClass S, const TemplateArgument *Args, unsigned NumArgs,
+      StorageClass S, ArrayRef<TemplateArgument> Args,
       const ASTTemplateArgumentListInfo *ArgInfos);
 
   VarTemplatePartialSpecializationDecl(ASTContext &Context)
@@ -2668,8 +2662,8 @@ public:
   Create(ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
          SourceLocation IdLoc, TemplateParameterList *Params,
          VarTemplateDecl *SpecializedTemplate, QualType T,
-         TypeSourceInfo *TInfo, StorageClass S, const TemplateArgument *Args,
-         unsigned NumArgs, const TemplateArgumentListInfo &ArgInfos);
+         TypeSourceInfo *TInfo, StorageClass S, ArrayRef<TemplateArgument> Args,
+         const TemplateArgumentListInfo &ArgInfos);
 
   static VarTemplatePartialSpecializationDecl *CreateDeserialized(ASTContext &C,
                                                                   unsigned ID);

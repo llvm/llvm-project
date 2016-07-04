@@ -685,19 +685,18 @@ void TemplateTemplateParmDecl::setDefaultArgument(
 //===----------------------------------------------------------------------===//
 // TemplateArgumentList Implementation
 //===----------------------------------------------------------------------===//
-TemplateArgumentList::TemplateArgumentList(const TemplateArgument *Args,
-                                           unsigned NumArgs)
-    : Arguments(getTrailingObjects<TemplateArgument>()), NumArguments(NumArgs) {
-  std::uninitialized_copy(Args, Args + NumArgs,
+TemplateArgumentList::TemplateArgumentList(ArrayRef<TemplateArgument> Args)
+    : Arguments(getTrailingObjects<TemplateArgument>()),
+      NumArguments(Args.size()) {
+  std::uninitialized_copy(Args.begin(), Args.end(),
                           getTrailingObjects<TemplateArgument>());
 }
 
 TemplateArgumentList *
 TemplateArgumentList::CreateCopy(ASTContext &Context,
-                                 const TemplateArgument *Args,
-                                 unsigned NumArgs) {
-  void *Mem = Context.Allocate(totalSizeToAlloc<TemplateArgument>(NumArgs));
-  return new (Mem) TemplateArgumentList(Args, NumArgs);
+                                 ArrayRef<TemplateArgument> Args) {
+  void *Mem = Context.Allocate(totalSizeToAlloc<TemplateArgument>(Args.size()));
+  return new (Mem) TemplateArgumentList(Args);
 }
 
 FunctionTemplateSpecializationInfo *
@@ -732,15 +731,14 @@ ClassTemplateSpecializationDecl(ASTContext &Context, Kind DK, TagKind TK,
                                 DeclContext *DC, SourceLocation StartLoc,
                                 SourceLocation IdLoc,
                                 ClassTemplateDecl *SpecializedTemplate,
-                                const TemplateArgument *Args,
-                                unsigned NumArgs,
+                                ArrayRef<TemplateArgument> Args,
                                 ClassTemplateSpecializationDecl *PrevDecl)
   : CXXRecordDecl(DK, TK, Context, DC, StartLoc, IdLoc,
                   SpecializedTemplate->getIdentifier(),
                   PrevDecl),
     SpecializedTemplate(SpecializedTemplate),
     ExplicitInfo(nullptr),
-    TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args, NumArgs)),
+    TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
     SpecializationKind(TSK_Undeclared) {
 }
 
@@ -756,13 +754,12 @@ ClassTemplateSpecializationDecl::Create(ASTContext &Context, TagKind TK,
                                         SourceLocation StartLoc,
                                         SourceLocation IdLoc,
                                         ClassTemplateDecl *SpecializedTemplate,
-                                        const TemplateArgument *Args,
-                                        unsigned NumArgs,
+                                        ArrayRef<TemplateArgument> Args,
                                    ClassTemplateSpecializationDecl *PrevDecl) {
   ClassTemplateSpecializationDecl *Result =
       new (Context, DC) ClassTemplateSpecializationDecl(
           Context, ClassTemplateSpecialization, TK, DC, StartLoc, IdLoc,
-          SpecializedTemplate, Args, NumArgs, PrevDecl);
+          SpecializedTemplate, Args, PrevDecl);
   Result->MayHaveOutOfDateDef = false;
 
   Context.getTypeDeclType(Result, PrevDecl);
@@ -846,15 +843,14 @@ ClassTemplatePartialSpecializationDecl(ASTContext &Context, TagKind TK,
                                        SourceLocation IdLoc,
                                        TemplateParameterList *Params,
                                        ClassTemplateDecl *SpecializedTemplate,
-                                       const TemplateArgument *Args,
-                                       unsigned NumArgs,
+                                       ArrayRef<TemplateArgument> Args,
                                const ASTTemplateArgumentListInfo *ArgInfos,
                                ClassTemplatePartialSpecializationDecl *PrevDecl)
   : ClassTemplateSpecializationDecl(Context,
                                     ClassTemplatePartialSpecialization,
                                     TK, DC, StartLoc, IdLoc,
                                     SpecializedTemplate,
-                                    Args, NumArgs, PrevDecl),
+                                    Args, PrevDecl),
     TemplateParams(Params), ArgsAsWritten(ArgInfos),
     InstantiatedFromMember(nullptr, false)
 {
@@ -867,8 +863,7 @@ Create(ASTContext &Context, TagKind TK,DeclContext *DC,
        SourceLocation StartLoc, SourceLocation IdLoc,
        TemplateParameterList *Params,
        ClassTemplateDecl *SpecializedTemplate,
-       const TemplateArgument *Args,
-       unsigned NumArgs,
+       ArrayRef<TemplateArgument> Args,
        const TemplateArgumentListInfo &ArgInfos,
        QualType CanonInjectedType,
        ClassTemplatePartialSpecializationDecl *PrevDecl) {
@@ -878,7 +873,7 @@ Create(ASTContext &Context, TagKind TK,DeclContext *DC,
   ClassTemplatePartialSpecializationDecl *Result = new (Context, DC)
       ClassTemplatePartialSpecializationDecl(Context, TK, DC, StartLoc, IdLoc,
                                              Params, SpecializedTemplate, Args,
-                                             NumArgs, ASTArgInfos, PrevDecl);
+                                             ASTArgInfos, PrevDecl);
   Result->setSpecializationKind(TSK_ExplicitSpecialization);
   Result->MayHaveOutOfDateDef = false;
 
@@ -1093,12 +1088,11 @@ VarTemplateDecl::findPartialSpecInstantiatedFromMember(
 VarTemplateSpecializationDecl::VarTemplateSpecializationDecl(
     Kind DK, ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, VarTemplateDecl *SpecializedTemplate, QualType T,
-    TypeSourceInfo *TInfo, StorageClass S, const TemplateArgument *Args,
-    unsigned NumArgs)
+    TypeSourceInfo *TInfo, StorageClass S, ArrayRef<TemplateArgument> Args)
     : VarDecl(DK, Context, DC, StartLoc, IdLoc,
               SpecializedTemplate->getIdentifier(), T, TInfo, S),
       SpecializedTemplate(SpecializedTemplate), ExplicitInfo(nullptr),
-      TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args, NumArgs)),
+      TemplateArgs(TemplateArgumentList::CreateCopy(Context, Args)),
       SpecializationKind(TSK_Undeclared) {}
 
 VarTemplateSpecializationDecl::VarTemplateSpecializationDecl(Kind DK,
@@ -1110,11 +1104,10 @@ VarTemplateSpecializationDecl::VarTemplateSpecializationDecl(Kind DK,
 VarTemplateSpecializationDecl *VarTemplateSpecializationDecl::Create(
     ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, VarTemplateDecl *SpecializedTemplate, QualType T,
-    TypeSourceInfo *TInfo, StorageClass S, const TemplateArgument *Args,
-    unsigned NumArgs) {
+    TypeSourceInfo *TInfo, StorageClass S, ArrayRef<TemplateArgument> Args) {
   return new (Context, DC) VarTemplateSpecializationDecl(
       VarTemplateSpecialization, Context, DC, StartLoc, IdLoc,
-      SpecializedTemplate, T, TInfo, S, Args, NumArgs);
+      SpecializedTemplate, T, TInfo, S, Args);
 }
 
 VarTemplateSpecializationDecl *
@@ -1157,11 +1150,11 @@ VarTemplatePartialSpecializationDecl::VarTemplatePartialSpecializationDecl(
     ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, TemplateParameterList *Params,
     VarTemplateDecl *SpecializedTemplate, QualType T, TypeSourceInfo *TInfo,
-    StorageClass S, const TemplateArgument *Args, unsigned NumArgs,
+    StorageClass S, ArrayRef<TemplateArgument> Args,
     const ASTTemplateArgumentListInfo *ArgInfos)
     : VarTemplateSpecializationDecl(VarTemplatePartialSpecialization, Context,
                                     DC, StartLoc, IdLoc, SpecializedTemplate, T,
-                                    TInfo, S, Args, NumArgs),
+                                    TInfo, S, Args),
       TemplateParams(Params), ArgsAsWritten(ArgInfos),
       InstantiatedFromMember(nullptr, false) {
   // TODO: The template parameters should be in DC by now. Verify.
@@ -1173,7 +1166,7 @@ VarTemplatePartialSpecializationDecl::Create(
     ASTContext &Context, DeclContext *DC, SourceLocation StartLoc,
     SourceLocation IdLoc, TemplateParameterList *Params,
     VarTemplateDecl *SpecializedTemplate, QualType T, TypeSourceInfo *TInfo,
-    StorageClass S, const TemplateArgument *Args, unsigned NumArgs,
+    StorageClass S, ArrayRef<TemplateArgument> Args,
     const TemplateArgumentListInfo &ArgInfos) {
   const ASTTemplateArgumentListInfo *ASTArgInfos
     = ASTTemplateArgumentListInfo::Create(Context, ArgInfos);
@@ -1181,7 +1174,7 @@ VarTemplatePartialSpecializationDecl::Create(
   VarTemplatePartialSpecializationDecl *Result =
       new (Context, DC) VarTemplatePartialSpecializationDecl(
           Context, DC, StartLoc, IdLoc, Params, SpecializedTemplate, T, TInfo,
-          S, Args, NumArgs, ASTArgInfos);
+          S, Args, ASTArgInfos);
   Result->setSpecializationKind(TSK_ExplicitSpecialization);
   return Result;
 }

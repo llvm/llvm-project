@@ -96,6 +96,14 @@ static const char *getSparcAsmModeForCPU(StringRef Name,
           .Case("niagara2", "-Av8plusb")
           .Case("niagara3", "-Av8plusd")
           .Case("niagara4", "-Av8plusd")
+          .Case("leon2", "-Av8")
+          .Case("at697e", "-Av8")
+          .Case("at697f", "-Av8")
+          .Case("leon3", "-Av8")
+          .Case("ut699", "-Av8")
+          .Case("gr712rc", "-Av8")
+          .Case("leon4", "-Av8")
+          .Case("gr740", "-Av8")
           .Default("-Av8");
   }
 }
