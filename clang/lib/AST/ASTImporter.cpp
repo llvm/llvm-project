@@ -4553,8 +4553,7 @@ Decl *ASTNodeImporter::VisitClassTemplateSpecializationDecl(
                                                  D->getTagKind(), DC, 
                                                  StartLoc, IdLoc,
                                                  ClassTemplate,
-                                                 TemplateArgs.data(), 
-                                                 TemplateArgs.size(), 
+                                                 TemplateArgs,
                                                  /*PrevDecl=*/nullptr);
     D2->setSpecializationKind(D->getSpecializationKind());
 
@@ -4755,7 +4754,7 @@ Decl *ASTNodeImporter::VisitVarTemplateSpecializationDecl(
     // Create a new specialization.
     D2 = VarTemplateSpecializationDecl::Create(
         Importer.getToContext(), DC, StartLoc, IdLoc, VarTemplate, T, TInfo,
-        D->getStorageClass(), TemplateArgs.data(), TemplateArgs.size());
+        D->getStorageClass(), TemplateArgs);
     D2->setSpecializationKind(D->getSpecializationKind());
     D2->setTemplateArgsInfo(D->getTemplateArgsInfo());
 

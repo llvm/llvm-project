@@ -6594,7 +6594,7 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
-      Indices[i] = NumElts;
+      Indices[i] = i % NumElts + NumElts;
     Cmp = CGF.Builder.CreateShuffleVector(
         Cmp, llvm::Constant::getNullValue(Cmp->getType()), Indices);
   }
