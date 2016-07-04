@@ -929,7 +929,7 @@ using InvariantAccessesTy = SmallVector<InvariantAccess, 8>;
 /// third element is the execution context under which the invariant memory
 /// location is accessed, hence the union of all domain contexts for the memory
 /// accesses in the list. The last element describes the type of the invariant
-/// accesss in order to differentiate between different typed invariant loads of
+/// access in order to differentiate between different typed invariant loads of
 /// the same location.
 using InvariantEquivClassTy =
     std::tuple<const SCEV *, MemoryAccessList, isl_set *, Type *>;
@@ -1427,7 +1427,7 @@ private:
     /// @brief The location that caused this assumption.
     DebugLoc Loc;
 
-    /// @brief An optional block whos domain can simplify the assumption.
+    /// @brief An optional block whose domain can simplify the assumption.
     BasicBlock *BB;
   };
 

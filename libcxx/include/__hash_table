@@ -2201,7 +2201,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                                       __constrain_hash(__nd->__hash_, __bc) == __chash;
+                (__hash == __nd->__hash_
+                    || __constrain_hash(__nd->__hash_, __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
                 if (key_eq()(__nd->__value_, __k))
@@ -2230,7 +2231,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                                           __constrain_hash(__nd->__hash_, __bc) == __chash;
+                (__hash == __nd->__hash_
+                    || __constrain_hash(__nd->__hash_, __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
                 if (key_eq()(__nd->__value_, __k))

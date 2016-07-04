@@ -335,11 +335,11 @@ struct __make_tuple_types_flat<_Tuple<_Types...>, __tuple_indices<_Idx...>> {
 
 template <class _Vt, size_t _Np, size_t ..._Idx>
 struct __make_tuple_types_flat<array<_Vt, _Np>, __tuple_indices<_Idx...>> {
-  using _Array = array<_Vt, _Np>;
-
+  template <size_t>
+  using __value_type = _Vt;
   template <class _Tp, class _ApplyFn = __apply_cv_t<_Tp>>
   using __apply_quals = __tuple_types<
-      typename _ApplyFn::template __apply<typename tuple_element<_Idx, _Array>::type>...
+      typename _ApplyFn::template __apply<__value_type<_Idx>>...
     >;
 };
 
@@ -371,26 +371,19 @@ template <bool ..._Pred>
 using __all = is_same<__all_dummy<_Pred...>, __all_dummy<(_Pred, true)...>>;
 
 struct __tuple_sfinae_base {
-  template <class ..._FromArgs, class ..._ToArgs>
-  static auto __test_constructible(__tuple_types<_FromArgs...>, __tuple_types<_ToArgs...>)
-    -> __all<is_constructible<_ToArgs, _FromArgs>::value...>;
-  static auto __test_constructible(...) -> false_type;
-  template <class _Types1, class _Types2>
-  using __constructible = decltype(__test_constructible(_Types1{}, _Types2{}));
+  template <template <class, class...> class _Trait,
+            class ..._LArgs, class ..._RArgs>
+  static auto __do_test(__tuple_types<_LArgs...>, __tuple_types<_RArgs...>)
+    -> __all<typename enable_if<_Trait<_LArgs, _RArgs>::value, bool>::type{true}...>;
+  template <template <class...> class>
+  static auto __do_test(...) -> false_type;
 
-  template <class ..._FromArgs, class ..._ToArgs>
-  static auto __test_convertible(__tuple_types<_FromArgs...>, __tuple_types<_ToArgs...>)
-    -> __all<is_convertible<_FromArgs, _ToArgs>::value...>;
-  static auto __test_convertible(...) -> false_type;
-  template <class _Types1, class _Types2>
-  using __convertible = decltype(__test_convertible(_Types1{}, _Types2{}));
-
-  template <class ..._FromArgs, class ..._ToArgs>
-  static auto __test_assignable(__tuple_types<_FromArgs...>, __tuple_types<_ToArgs...>)
-    -> __all<is_assignable<_ToArgs&, _FromArgs>::value...>;
-  static auto __test_assignable(...) -> false_type;
-  template <class _Types1, class _Types2>
-  using __assignable = decltype(__test_assignable(_Types1{}, _Types2{}));
+  template <class _FromArgs, class _ToArgs>
+  using __constructible = decltype(__do_test<is_constructible>(_ToArgs{}, _FromArgs{}));
+  template <class _FromArgs, class _ToArgs>
+  using __convertible = decltype(__do_test<is_convertible>(_FromArgs{}, _ToArgs{}));
+  template <class _FromArgs, class _ToArgs>
+  using __assignable = decltype(__do_test<is_assignable>(_ToArgs{}, _FromArgs{}));
 };
 
 // __tuple_convertible
@@ -434,7 +427,7 @@ template <class _Tp, class _Up>
 struct __tuple_assignable<_Tp, _Up, true, true>
     : public __tuple_sfinae_base::__assignable<
       typename __make_tuple_types<_Tp>::type
-    , typename __make_tuple_types<_Up>::type
+    , typename __make_tuple_types<_Up&>::type
     >
 {};
 

@@ -661,8 +661,8 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
 }
 
 bool BitcodeFile::shouldSkip(uint32_t Flags) {
-  return (!(Flags & BasicSymbolRef::SF_Global) ||
-          Flags & BasicSymbolRef::SF_FormatSpecific);
+  return !(Flags & BasicSymbolRef::SF_Global) ||
+         (Flags & BasicSymbolRef::SF_FormatSpecific);
 }
 
 template <class ELFT>
