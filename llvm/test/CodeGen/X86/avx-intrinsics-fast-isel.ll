@@ -318,12 +318,10 @@ define <4 x i64> @test_mm256_castpd_si256(<4 x double> %a0) nounwind {
 define <4 x double> @test_mm256_castpd128_pd256(<2 x double> %a0) nounwind {
 ; X32-LABEL: test_mm256_castpd128_pd256:
 ; X32:       # BB#0:
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_castpd128_pd256:
 ; X64:       # BB#0:
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %res = shufflevector <2 x double> %a0, <2 x double> %a0, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   ret <4 x double> %res
@@ -370,12 +368,10 @@ define <4 x i64> @test_mm256_castps_si256(<8 x float> %a0) nounwind {
 define <8 x float> @test_mm256_castps128_ps256(<4 x float> %a0) nounwind {
 ; X32-LABEL: test_mm256_castps128_ps256:
 ; X32:       # BB#0:
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_castps128_ps256:
 ; X64:       # BB#0:
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %res = shufflevector <4 x float> %a0, <4 x float> %a0, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 undef, i32 undef, i32 undef, i32 undef>
   ret <8 x float> %res
@@ -398,12 +394,10 @@ define <4 x float> @test_mm256_castps256_ps128(<8 x float> %a0) nounwind {
 define <4 x i64> @test_mm256_castsi128_si256(<2 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm256_castsi128_si256:
 ; X32:       # BB#0:
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_castsi128_si256:
 ; X64:       # BB#0:
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
   %res = shufflevector <2 x i64> %a0, <2 x i64> %a0, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   ret <4 x i64> %res

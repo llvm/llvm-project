@@ -4646,7 +4646,7 @@ __kmp_partition_places( kmp_team_t *team, int update_master_only )
                       team->t.t_id, f, th->th.th_new_place,
                       th->th.th_first_place, th->th.th_last_place ) );
                 }
-                KMP_DEBUG_ASSERT( place == masters_place );
+                KMP_DEBUG_ASSERT( update_master_only || place == masters_place );
             }
             else {
                 int S, rem, gap, s_count;
@@ -4705,7 +4705,7 @@ __kmp_partition_places( kmp_team_t *team, int update_master_only )
                        team->t.t_id, f, th->th.th_new_place,
                        th->th.th_first_place, th->th.th_last_place) );
                 }
-                KMP_DEBUG_ASSERT( place == masters_place );
+                KMP_DEBUG_ASSERT( update_master_only || place == masters_place );
             }
         }
         break;

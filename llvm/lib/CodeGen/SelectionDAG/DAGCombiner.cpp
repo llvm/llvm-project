@@ -3775,19 +3775,24 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
           int M0 = SV0->getMaskElt(i);
           int M1 = SV1->getMaskElt(i);
 
-          // Both shuffle indexes are undef. Propagate Undef.
-          if (M0 < 0 && M1 < 0) {
+          // Determine if either index is pointing to a zero vector.
+          bool M0Zero = M0 < 0 || (ZeroN00 == (M0 < NumElts));
+          bool M1Zero = M1 < 0 || (ZeroN10 == (M1 < NumElts));
+
+          // If one element is zero and the otherside is undef, keep undef.
+          // This also handles the case that both are undef.
+          if ((M0Zero && M1 < 0) || (M1Zero && M0 < 0)) {
             Mask[i] = -1;
             continue;
           }
 
-          // Determine if either index is pointing to a zero vector.
-          bool M0Zero = M0 >= 0 && (ZeroN00 == (M0 < NumElts));
-          bool M1Zero = M1 >= 0 && (ZeroN10 == (M1 < NumElts));
+          // Make sure only one of the elements is zero.
           if (M0Zero == M1Zero) {
             CanFold = false;
             break;
           }
+
+          assert((M0 >= 0 || M1 >= 0) && "Undef index!");
 
           // We have a zero and non-zero element. If the non-zero came from
           // SV0 make the index a LHS index. If it came from SV1, make it

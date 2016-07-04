@@ -5255,7 +5255,7 @@ define <16 x float>@test_int_x86_avx512_mask_shuf_f32x4(<16 x float> %x0, <16 x 
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_f32x4:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 = zmm0[8,9,10,11,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
+; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} = zmm0[8,9,10,11,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[8,9,10,11,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
 ; CHECK-NEXT:    vaddps %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -5271,8 +5271,8 @@ define <8 x double>@test_int_x86_avx512_mask_shuf_f64x2(<8 x double> %x0, <8 x d
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_f64x2:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 = zmm0[4,5,2,3],zmm1[2,3,0,1]
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm3 = zmm0[4,5,2,3],zmm1[2,3,0,1]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} = zmm0[4,5,2,3],zmm1[2,3,0,1]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm3 {%k1} {z} = zmm0[4,5,2,3],zmm1[2,3,0,1]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[4,5,2,3],zmm1[2,3,0,1]
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm3, %zmm0, %zmm0
@@ -5292,7 +5292,7 @@ define <16 x i32>@test_int_x86_avx512_mask_shuf_i32x4(<16 x i32> %x0, <16 x i32>
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_i32x4:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 = zmm0[8,9,10,11,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
+; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} = zmm0[8,9,10,11,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[8,9,10,11,4,5,6,7],zmm1[4,5,6,7,0,1,2,3]
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -5308,7 +5308,7 @@ define <8 x i64>@test_int_x86_avx512_mask_shuf_i64x2(<8 x i64> %x0, <8 x i64> %x
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_i64x2:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 = zmm0[4,5,2,3],zmm1[2,3,0,1]
+; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} = zmm0[4,5,2,3],zmm1[2,3,0,1]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[4,5,2,3],zmm1[2,3,0,1]
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -5407,8 +5407,8 @@ define <8 x double>@test_int_x86_avx512_mask_shuf_pd_512(<8 x double> %x0, <8 x 
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufpd {{.*#+}} zmm2 = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
-; CHECK-NEXT:    vshufpd {{.*#+}} zmm3 = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
+; CHECK-NEXT:    vshufpd {{.*#+}} zmm2 {%k1} = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
+; CHECK-NEXT:    vshufpd {{.*#+}} zmm3 {%k1} {z} = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0],zmm1[1],zmm0[3],zmm1[2],zmm0[5],zmm1[4],zmm0[6],zmm1[6]
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm3, %zmm0, %zmm0
@@ -5428,7 +5428,7 @@ define <16 x float>@test_int_x86_avx512_mask_shuf_ps_512(<16 x float> %x0, <16 x
 ; CHECK-LABEL: test_int_x86_avx512_mask_shuf_ps_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufps {{.*#+}} zmm2 = zmm0[2,1],zmm1[1,0],zmm0[6,5],zmm1[5,4],zmm0[10,9],zmm1[9,8],zmm0[14,13],zmm1[13,12]
+; CHECK-NEXT:    vshufps {{.*#+}} zmm2 {%k1} = zmm0[2,1],zmm1[1,0],zmm0[6,5],zmm1[5,4],zmm0[10,9],zmm1[9,8],zmm0[14,13],zmm1[13,12]
 ; CHECK-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[2,1],zmm1[1,0],zmm0[6,5],zmm1[5,4],zmm0[10,9],zmm1[9,8],zmm0[14,13],zmm1[13,12]
 ; CHECK-NEXT:    vaddps %zmm0, %zmm2, %zmm0
 ; CHECK-NEXT:    retq
@@ -5444,8 +5444,8 @@ define <8 x double>@test_int_x86_avx512_mask_vpermil_pd_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermil_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermilpd {{.*#+}} zmm1 = zmm0[0,1,3,2,5,4,6,6]
-; CHECK-NEXT:    vpermilpd {{.*#+}} zmm2 = zmm0[0,1,3,2,5,4,6,6]
+; CHECK-NEXT:    vpermilpd {{.*#+}} zmm1 {%k1} = zmm0[0,1,3,2,5,4,6,6]
+; CHECK-NEXT:    vpermilpd {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,3,2,5,4,6,6]
 ; CHECK-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,1,3,2,5,4,6,6]
 ; CHECK-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
@@ -5464,8 +5464,8 @@ define <16 x float>@test_int_x86_avx512_mask_vpermil_ps_512(<16 x float> %x0, <1
 ; CHECK-LABEL: test_int_x86_avx512_mask_vpermil_ps_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm2 = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm1 {%k1} = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm2 {%k1} {z} = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,1,1,0,6,5,5,4,10,9,9,8,14,13,13,12]
 ; CHECK-NEXT:    vaddps %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vaddps %zmm0, %zmm1, %zmm0
@@ -5866,8 +5866,8 @@ define <16 x float>@test_int_x86_avx512_mask_broadcastf32x4_512(<4 x float> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x4_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vaddps %zmm0, %zmm2, %zmm0
@@ -5887,8 +5887,8 @@ define <8 x double>@test_int_x86_avx512_mask_broadcastf64x4_512(<4 x double> %x0
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x4_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 = zmm0[0,1,2,3,0,1,2,3]
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 = zmm0[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
@@ -5908,8 +5908,8 @@ define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x4_512(<4 x i32> %x0, <16
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x4_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
-; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,0,1,2,3,0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
@@ -5929,8 +5929,8 @@ define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x4_512(<4 x i64> %x0, <8 x
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x4_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 = zmm0[0,1,2,3,0,1,2,3]
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,2,3,0,1,2,3]
+; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,2,3,0,1,2,3]
 ; CHECK-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0
@@ -6150,8 +6150,8 @@ define <16 x i32>@test_int_x86_avx512_mask_pmovzxb_d_512(<16 x i8> %x0, <16 x i3
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxb_d_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
-; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm1 {%k1} = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm2 {%k1} {z} = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
@@ -6170,8 +6170,8 @@ define <8 x i64>@test_int_x86_avx512_mask_pmovzxb_q_512(<16 x i8> %x0, <8 x i64>
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxb_q_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
-; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm2 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm1 {%k1} = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
+; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm2 {%k1} {z} = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpmovzxbq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,zero,zero,zero,zero,xmm0[1],zero,zero,zero,zero,zero,zero,zero,xmm0[2],zero,zero,zero,zero,zero,zero,zero,xmm0[3],zero,zero,zero,zero,zero,zero,zero,xmm0[4],zero,zero,zero,zero,zero,zero,zero,xmm0[5],zero,zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,xmm0[7],zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
@@ -6190,8 +6190,8 @@ define <8 x i64>@test_int_x86_avx512_mask_pmovzxd_q_512(<8 x i32> %x0, <8 x i64>
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxd_q_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
-; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm2 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm1 {%k1} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
+; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm2 {%k1} {z} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; CHECK-NEXT:    vpmovzxdq {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
@@ -6210,8 +6210,8 @@ define <16 x i32>@test_int_x86_avx512_mask_pmovzxw_d_512(<16 x i16> %x0, <16 x i
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxw_d_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm1 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
-; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm2 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm1 {%k1} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
+; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm2 {%k1} {z} = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; CHECK-NEXT:    vpaddd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
@@ -6230,8 +6230,8 @@ define <8 x i64>@test_int_x86_avx512_mask_pmovzxw_q_512(<8 x i16> %x0, <8 x i64>
 ; CHECK-LABEL: test_int_x86_avx512_mask_pmovzxw_q_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; CHECK-NEXT:    vpmovzxwq {{.*#+}} zmm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; CHECK-NEXT:    vpmovzxwq {{.*#+}} zmm1 {%k1} = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; CHECK-NEXT:    vpmovzxwq {{.*#+}} zmm2 {%k1} {z} = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; CHECK-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
@@ -6352,9 +6352,9 @@ define <8 x double>@test_int_x86_avx512_mask_perm_df_512(<8 x double> %x0, i32 %
 ; CHECK-LABEL: test_int_x86_avx512_mask_perm_df_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vpermpd $3, %zmm0, %zmm1 {%k1}
-; CHECK-NEXT:    vpermpd $3, %zmm0, %zmm2 {%k1} {z}
-; CHECK-NEXT:    vpermpd $3, %zmm0, %zmm0
+; CHECK-NEXT:    vpermpd {{.*#+}} zmm1 {%k1} = zmm0[3,0,0,0,7,4,4,4]
+; CHECK-NEXT:    vpermpd {{.*#+}} zmm2 {%k1} {z} = zmm0[3,0,0,0,7,4,4,4]
+; CHECK-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[3,0,0,0,7,4,4,4]
 ; CHECK-NEXT:    vaddpd %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq
@@ -6372,9 +6372,9 @@ define <8 x i64>@test_int_x86_avx512_mask_perm_di_512(<8 x i64> %x0, i32 %x1, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask_perm_di_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vpermq $3, %zmm0, %zmm1 {%k1}
-; CHECK-NEXT:    vpermq $3, %zmm0, %zmm2 {%k1} {z}
-; CHECK-NEXT:    vpermq $3, %zmm0, %zmm0
+; CHECK-NEXT:    vpermq {{.*#+}} zmm1 {%k1} = zmm0[3,0,0,0,7,4,4,4]
+; CHECK-NEXT:    vpermq {{.*#+}} zmm2 {%k1} {z} = zmm0[3,0,0,0,7,4,4,4]
+; CHECK-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[3,0,0,0,7,4,4,4]
 ; CHECK-NEXT:    vpaddq %zmm2, %zmm1, %zmm1
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    retq

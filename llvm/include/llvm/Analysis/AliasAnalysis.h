@@ -151,6 +151,13 @@ enum FunctionModRefBehavior {
   /// This property corresponds to the IntrReadMem LLVM intrinsic flag.
   FMRB_OnlyReadsMemory = FMRL_Anywhere | MRI_Ref,
 
+  // This function does not read from memory anywhere, but may write to any
+  // memory location.
+  //
+  // This property corresponds to the LLVM IR 'writeonly' attribute.
+  // This property corresponds to the IntrWriteMem LLVM intrinsic flag.
+  FMRB_DoesNotReadMemory = FMRL_Anywhere | MRI_Mod,
+
   /// This indicates that the function could not be classified into one of the
   /// behaviors above.
   FMRB_UnknownModRefBehavior = FMRL_Anywhere | MRI_ModRef
@@ -310,6 +317,12 @@ public:
   /// from non-volatile memory (or not access memory at all).
   static bool onlyReadsMemory(FunctionModRefBehavior MRB) {
     return !(MRB & MRI_Mod);
+  }
+
+  /// Checks if functions with the specified behavior are known to only write
+  /// memory (or not access memory at all).
+  static bool doesNotReadMemory(FunctionModRefBehavior MRB) {
+    return !(MRB & MRI_Ref);
   }
 
   /// Checks if functions with the specified behavior are known to read and
