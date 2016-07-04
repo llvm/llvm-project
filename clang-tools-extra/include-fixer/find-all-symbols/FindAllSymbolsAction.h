@@ -25,7 +25,7 @@ class FindAllSymbolsAction : public clang::ASTFrontendAction {
 public:
   explicit FindAllSymbolsAction(
       SymbolReporter *Reporter,
-      const HeaderMapCollector::HeaderMap *PostfixMap = nullptr);
+      const HeaderMapCollector::RegexHeaderMap *RegexHeaderMap = nullptr);
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
@@ -43,16 +43,16 @@ class FindAllSymbolsActionFactory : public tooling::FrontendActionFactory {
 public:
   FindAllSymbolsActionFactory(
       SymbolReporter *Reporter,
-      const HeaderMapCollector::HeaderMap *PostfixMap = nullptr)
-      : Reporter(Reporter), PostfixMap(PostfixMap) {}
+      const HeaderMapCollector::RegexHeaderMap *RegexHeaderMap = nullptr)
+      : Reporter(Reporter), RegexHeaderMap(RegexHeaderMap) {}
 
   virtual clang::FrontendAction *create() override {
-    return new FindAllSymbolsAction(Reporter, PostfixMap);
+    return new FindAllSymbolsAction(Reporter, RegexHeaderMap);
   }
 
 private:
   SymbolReporter *const Reporter;
-  const HeaderMapCollector::HeaderMap *const PostfixMap;
+  const HeaderMapCollector::RegexHeaderMap *const RegexHeaderMap;
 };
 
 } // namespace find_all_symbols

@@ -66,15 +66,15 @@ public:
 
     std::string FileName = "symbol.cc";
 
-    const std::string InternalHeader = "internal/internal.h";
+    const std::string InternalHeader = "internal/internal_header.h";
     const std::string TopHeader = "<top>";
     // Test .inc header path. The header for `IncHeaderClass` should be
     // internal.h, which will eventually be mapped to <top>.
     std::string IncHeader = "internal/private.inc";
     std::string IncHeaderCode = "class IncHeaderClass {};";
 
-    HeaderMapCollector::HeaderMap PostfixMap = {
-        {"internal.h", TopHeader},
+    HeaderMapCollector::RegexHeaderMap RegexMap = {
+        {R"(internal_.*\.h$)", TopHeader.c_str()},
     };
 
     std::string InternalCode =
@@ -89,7 +89,7 @@ public:
                                 llvm::MemoryBuffer::getMemBuffer(InternalCode));
 
     std::unique_ptr<clang::tooling::FrontendActionFactory> Factory(
-        new FindAllSymbolsActionFactory(&Reporter, &PostfixMap));
+        new FindAllSymbolsActionFactory(&Reporter, &RegexMap));
 
     tooling::ToolInvocation Invocation(
         {std::string("find_all_symbols"), std::string("-fsyntax-only"),
@@ -102,7 +102,8 @@ public:
 
     std::string Content = "#include\"" + std::string(HeaderName) +
                           "\"\n"
-                          "#include \"internal/internal.h\"";
+                          "#include \"" +
+                          InternalHeader + "\"";
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
     // Test path cleaning for both decls and macros.
     const std::string DirtyHeader = "./internal/./a/b.h";

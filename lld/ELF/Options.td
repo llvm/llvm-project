@@ -66,6 +66,9 @@ def export_dynamic: F<"export-dynamic">,
 def export_dynamic_symbol: S<"export-dynamic-symbol">,
   HelpText<"Put a symbol in the dynamic symbol table">;
 
+def fatal_warnings: F<"fatal-warnings">,
+  HelpText<"Treat warnings as errors">;
+
 def fini: S<"fini">, MetaVarName<"<symbol>">,
   HelpText<"Specify a finalizer function">;
 
@@ -232,7 +235,6 @@ def plugin_opt_eq: J<"plugin-opt=">;
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def define_common: F<"define-common">;
 def detect_odr_violations: F<"detect-odr-violations">;
-def fatal_warnings: F<"fatal-warnings">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;
 def no_copy_dt_needed_entries: F<"no-copy-dt-needed-entries">,
