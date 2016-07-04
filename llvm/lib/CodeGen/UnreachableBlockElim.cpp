@@ -184,9 +184,7 @@ bool UnreachableMachineBlockElim::runOnMachineFunction(MachineFunction &F) {
         unsigned Input = phi->getOperand(1).getReg();
         unsigned Output = phi->getOperand(0).getReg();
 
-        MachineInstr* temp = phi;
-        ++phi;
-        temp->eraseFromParent();
+        phi++->eraseFromParent();
         ModifiedPHI = true;
 
         if (Input != Output) {

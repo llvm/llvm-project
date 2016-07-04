@@ -192,12 +192,12 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
        mbbi != mbbe; ++mbbi) {
     for (MachineBasicBlock::iterator mi = mbbi->begin(), me = mbbi->end();
          mi != me;) {
-      MachineInstr *MI = mi;
+      MachineInstr &MI = *mi;
       // Advance iterator here because MI may be erased.
       ++mi;
 
       // Only expand pseudos.
-      if (!MI->isPseudo())
+      if (!MI.isPseudo())
         continue;
 
       // Give targets a chance to expand even standard pseudos.
@@ -207,12 +207,12 @@ bool ExpandPostRA::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Expand standard pseudos.
-      switch (MI->getOpcode()) {
+      switch (MI.getOpcode()) {
       case TargetOpcode::SUBREG_TO_REG:
-        MadeChange |= LowerSubregToReg(MI);
+        MadeChange |= LowerSubregToReg(&MI);
         break;
       case TargetOpcode::COPY:
-        MadeChange |= LowerCopy(MI);
+        MadeChange |= LowerCopy(&MI);
         break;
       case TargetOpcode::DBG_VALUE:
         continue;

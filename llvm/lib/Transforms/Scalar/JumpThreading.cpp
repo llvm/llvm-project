@@ -153,7 +153,7 @@ PreservedAnalyses JumpThreadingPass::run(Function &F,
   PreservedAnalyses PA;
   PA.preserve<LazyValueAnalysis>();
   PA.preserve<GlobalsAA>();
-  return PreservedAnalyses::none();
+  return PA;
 }
 
 bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,

@@ -1427,7 +1427,7 @@ example:
     generated for this function needs to follow certain conventions that
     make it possible for a runtime function to patch over it later.
     The exact effect of this attribute depends on its string value,
-    for which there currently is one legal possiblity:
+    for which there currently is one legal possibility:
 
      * ``"prologue-short-redirect"`` - This style of patchable
        function is intended to support patching a function prologue to
@@ -4338,7 +4338,7 @@ DIMacro
 
 ``DIMacro`` nodes represent definition or undefinition of a macro identifiers.
 The ``name:`` field is the macro identifier, followed by macro parameters when
-definining a function-like macro, and the ``value`` field is the token-string
+defining a function-like macro, and the ``value`` field is the token-string
 used to expand the macro identifier.
 
 .. code-block:: llvm

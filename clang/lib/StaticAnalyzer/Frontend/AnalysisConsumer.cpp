@@ -798,10 +798,7 @@ UbigraphViz::~UbigraphViz() {
   std::string Ubiviz;
   if (auto Path = llvm::sys::findProgramByName("ubiviz"))
     Ubiviz = *Path;
-  std::vector<const char*> args;
-  args.push_back(Ubiviz.c_str());
-  args.push_back(Filename.c_str());
-  args.push_back(nullptr);
+  const char *args[] = {Ubiviz.c_str(), Filename.c_str(), nullptr};
 
   if (llvm::sys::ExecuteAndWait(Ubiviz, &args[0], nullptr, nullptr, 0, 0,
                                 &ErrMsg)) {

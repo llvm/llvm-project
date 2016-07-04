@@ -24,6 +24,7 @@
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/FastISel.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GCMetadata.h"
@@ -3020,8 +3021,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
   unsigned SrcNumElts = SrcVT.getVectorNumElements();
 
   if (SrcNumElts == MaskNumElts) {
-    setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2,
-                                      &Mask[0]));
+    setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2, Mask));
     return;
   }
 
@@ -3075,7 +3075,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
     }
 
     setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2,
-                                      &MappedOps[0]));
+                                      MappedOps));
     return;
   }
 
@@ -3156,7 +3156,7 @@ void SelectionDAGBuilder::visitShuffleVector(const User &I) {
       }
 
       setValue(&I, DAG.getVectorShuffle(VT, getCurSDLoc(), Src1, Src2,
-                                        &MappedOps[0]));
+                                        MappedOps));
       return;
     }
   }

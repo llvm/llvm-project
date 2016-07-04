@@ -67,6 +67,22 @@ public:
     : Base(M0, M1, M2, M3) {}
 
   ~StackOption() override { this->removeArgument(); }
+
+  template <class DT> StackOption<T> &operator=(const DT &V) {
+    this->setValue(V);
+    return *this;
+  }
+};
+
+class StackSubCommand : public cl::SubCommand {
+public:
+  StackSubCommand(const char *const Name,
+                  const char *const Description = nullptr)
+      : SubCommand(Name, Description) {}
+
+  StackSubCommand() : SubCommand() {}
+
+  ~StackSubCommand() { unregisterSubCommand(); }
 };
 
 
@@ -78,7 +94,8 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   const char ArgString[] = "new-test-option";
   const char ValueString[] = "Integer";
 
-  StringMap<cl::Option *> &Map = cl::getRegisteredOptions();
+  StringMap<cl::Option *> &Map =
+      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
 
   ASSERT_TRUE(Map.count("test-option") == 1) <<
     "Could not find option in map.";
@@ -237,7 +254,8 @@ TEST(CommandLineTest, HideUnrelatedOptions) {
   ASSERT_EQ(cl::NotHidden, TestOption2.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map = cl::getRegisteredOptions();
+  StringMap<cl::Option *> &Map =
+      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
   ASSERT_EQ(cl::NotHidden, Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
 }
@@ -261,9 +279,201 @@ TEST(CommandLineTest, HideUnrelatedOptionsMulti) {
   ASSERT_EQ(cl::NotHidden, TestOption3.getOptionHiddenFlag())
       << "Hid extra option that should be visable.";
 
-  StringMap<cl::Option *> &Map = cl::getRegisteredOptions();
+  StringMap<cl::Option *> &Map =
+      cl::getRegisteredOptions(*cl::TopLevelSubCommand);
   ASSERT_EQ(cl::NotHidden, Map["help"]->getOptionHiddenFlag())
       << "Hid default option that should be visable.";
+}
+
+TEST(CommandLineTest, SetValueInSubcategories) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "First subcommand");
+  StackSubCommand SC2("sc2", "Second subcommand");
+
+  StackOption<bool> TopLevelOpt("top-level", cl::init(false));
+  StackOption<bool> SC1Opt("sc1", cl::sub(SC1), cl::init(false));
+  StackOption<bool> SC2Opt("sc2", cl::sub(SC2), cl::init(false));
+
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_FALSE(SC1Opt);
+  EXPECT_FALSE(SC2Opt);
+  const char *args[] = {"prog", "-top-level"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, nullptr, true));
+  EXPECT_TRUE(TopLevelOpt);
+  EXPECT_FALSE(SC1Opt);
+  EXPECT_FALSE(SC2Opt);
+
+  TopLevelOpt = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_FALSE(SC1Opt);
+  EXPECT_FALSE(SC2Opt);
+  const char *args2[] = {"prog", "sc1", "-sc1"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, nullptr, true));
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_TRUE(SC1Opt);
+  EXPECT_FALSE(SC2Opt);
+
+  SC1Opt = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_FALSE(SC1Opt);
+  EXPECT_FALSE(SC2Opt);
+  const char *args3[] = {"prog", "sc2", "-sc2"};
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, nullptr, true));
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_FALSE(SC1Opt);
+  EXPECT_TRUE(SC2Opt);
+}
+
+TEST(CommandLineTest, LookupFailsInWrongSubCommand) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "First subcommand");
+  StackSubCommand SC2("sc2", "Second subcommand");
+
+  StackOption<bool> SC1Opt("sc1", cl::sub(SC1), cl::init(false));
+  StackOption<bool> SC2Opt("sc2", cl::sub(SC2), cl::init(false));
+
+  const char *args[] = {"prog", "sc1", "-sc2"};
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, nullptr, true));
+}
+
+TEST(CommandLineTest, AddToAllSubCommands) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "First subcommand");
+  StackOption<bool> AllOpt("everywhere", cl::sub(*cl::AllSubCommands),
+                           cl::init(false));
+  StackSubCommand SC2("sc2", "Second subcommand");
+
+  const char *args[] = {"prog", "-everywhere"};
+  const char *args2[] = {"prog", "sc1", "-everywhere"};
+  const char *args3[] = {"prog", "sc2", "-everywhere"};
+
+  EXPECT_FALSE(AllOpt);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, nullptr, true));
+  EXPECT_TRUE(AllOpt);
+
+  AllOpt = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(AllOpt);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, nullptr, true));
+  EXPECT_TRUE(AllOpt);
+
+  AllOpt = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(AllOpt);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args3, nullptr, true));
+  EXPECT_TRUE(AllOpt);
+}
+
+TEST(CommandLineTest, ReparseCommandLineOptions) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> TopLevelOpt("top-level", cl::sub(*cl::TopLevelSubCommand),
+                                cl::init(false));
+
+  const char *args[] = {"prog", "-top-level"};
+
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, nullptr, true));
+  EXPECT_TRUE(TopLevelOpt);
+
+  TopLevelOpt = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(TopLevelOpt);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, nullptr, true));
+  EXPECT_TRUE(TopLevelOpt);
+}
+
+TEST(CommandLineTest, RemoveFromRegularSubCommand) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC("sc", "Subcommand");
+  StackOption<bool> RemoveOption("remove-option", cl::sub(SC), cl::init(false));
+  StackOption<bool> KeepOption("keep-option", cl::sub(SC), cl::init(false));
+
+  const char *args[] = {"prog", "sc", "-remove-option"};
+
+  EXPECT_FALSE(RemoveOption);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args, nullptr, true));
+  EXPECT_TRUE(RemoveOption);
+
+  RemoveOption.removeArgument();
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args, nullptr, true));
+}
+
+TEST(CommandLineTest, RemoveFromTopLevelSubCommand) {
+  cl::ResetCommandLineParser();
+
+  StackOption<bool> TopLevelRemove(
+      "top-level-remove", cl::sub(*cl::TopLevelSubCommand), cl::init(false));
+  StackOption<bool> TopLevelKeep(
+      "top-level-keep", cl::sub(*cl::TopLevelSubCommand), cl::init(false));
+
+  const char *args[] = {"prog", "-top-level-remove"};
+
+  EXPECT_FALSE(TopLevelRemove);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args, nullptr, true));
+  EXPECT_TRUE(TopLevelRemove);
+
+  TopLevelRemove.removeArgument();
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args, nullptr, true));
+}
+
+TEST(CommandLineTest, RemoveFromAllSubCommands) {
+  cl::ResetCommandLineParser();
+
+  StackSubCommand SC1("sc1", "First Subcommand");
+  StackSubCommand SC2("sc2", "Second Subcommand");
+  StackOption<bool> RemoveOption("remove-option", cl::sub(*cl::AllSubCommands),
+                                 cl::init(false));
+  StackOption<bool> KeepOption("keep-option", cl::sub(*cl::AllSubCommands),
+                               cl::init(false));
+
+  const char *args0[] = {"prog", "-remove-option"};
+  const char *args1[] = {"prog", "sc1", "-remove-option"};
+  const char *args2[] = {"prog", "sc2", "-remove-option"};
+
+  // It should work for all subcommands including the top-level.
+  EXPECT_FALSE(RemoveOption);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, args0, nullptr, true));
+  EXPECT_TRUE(RemoveOption);
+
+  RemoveOption = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(RemoveOption);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args1, nullptr, true));
+  EXPECT_TRUE(RemoveOption);
+
+  RemoveOption = false;
+
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(RemoveOption);
+  EXPECT_TRUE(cl::ParseCommandLineOptions(3, args2, nullptr, true));
+  EXPECT_TRUE(RemoveOption);
+
+  RemoveOption.removeArgument();
+
+  // It should not work for any subcommands including the top-level.
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(2, args0, nullptr, true));
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args1, nullptr, true));
+  cl::ResetAllOptionOccurrences();
+  EXPECT_FALSE(cl::ParseCommandLineOptions(3, args2, nullptr, true));
 }
 
 }  // anonymous namespace

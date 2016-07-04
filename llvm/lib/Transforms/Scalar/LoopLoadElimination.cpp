@@ -129,7 +129,7 @@ class LoadEliminationForLoop {
 public:
   LoadEliminationForLoop(Loop *L, LoopInfo *LI, const LoopAccessInfo &LAI,
                          DominatorTree *DT)
-      : L(L), LI(LI), LAI(LAI), DT(DT), PSE(LAI.PSE) {}
+      : L(L), LI(LI), LAI(LAI), DT(DT), PSE(LAI.getPSE()) {}
 
   /// \brief Look through the loop-carried and loop-independent dependences in
   /// this loop and find store->load dependences.
@@ -486,13 +486,13 @@ public:
       return false;
     }
 
-    if (LAI.PSE.getUnionPredicate().getComplexity() >
+    if (LAI.getPSE().getUnionPredicate().getComplexity() >
         LoadElimSCEVCheckThreshold) {
       DEBUG(dbgs() << "Too many SCEV run-time checks needed.\n");
       return false;
     }
 
-    if (!Checks.empty() || !LAI.PSE.getUnionPredicate().isAlwaysTrue()) {
+    if (!Checks.empty() || !LAI.getPSE().getUnionPredicate().isAlwaysTrue()) {
       if (L->getHeader()->getParent()->optForSize()) {
         DEBUG(dbgs() << "Versioning is needed but not allowed when optimizing "
                         "for size.\n");
@@ -504,7 +504,7 @@ public:
 
       LoopVersioning LV(LAI, L, LI, DT, PSE.getSE(), false);
       LV.setAliasChecks(std::move(Checks));
-      LV.setSCEVChecks(LAI.PSE.getUnionPredicate());
+      LV.setSCEVChecks(LAI.getPSE().getUnionPredicate());
       LV.versionLoop();
     }
 

@@ -111,7 +111,7 @@ generate a line-oriented report:
     # Step 3(b): Create a line-oriented coverage report.
     % llvm-cov show ./foo -instr-profile=foo.profdata
 
-To demangle any C++ identifiers in the ouput, use:
+To demangle any C++ identifiers in the output, use:
 
 .. code-block:: console
 

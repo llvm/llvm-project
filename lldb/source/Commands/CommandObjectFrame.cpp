@@ -539,6 +539,10 @@ protected:
                                     scope_string = " LOCAL: ";
                                 break;
 
+                            case eValueTypeVariableThreadLocal:
+                                if (dump_variable && m_option_variable.show_scope)
+                                    scope_string = "THREAD: ";
+                                break;
                             default:
                                 break;
                         }

@@ -1,4 +1,4 @@
-; RUN: llvm-pdbdump -lines %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=LINE_NUMS %s
+; RUN: llvm-pdbdump pretty -lines %p/../Inputs/symbolformat.pdb | FileCheck --check-prefix=LINE_NUMS %s
 
 ; LINE_NUMS: llvm\test\debuginfo\pdb\inputs\symbolformat-fpo.cpp
 ; LINE_NUMS: Line 5, Address: [0x000011a0 - 0x000011a5] (6 bytes)

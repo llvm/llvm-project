@@ -159,8 +159,8 @@ BinaryHolder::MapArchiveAndGetMemberBuffers(StringRef Filename,
 
   for (auto MemRef : ArchiveBuffers) {
     auto ErrOrArchive = object::Archive::create(MemRef);
-    if (auto Err = ErrOrArchive.getError())
-      return Err;
+    if (!ErrOrArchive)
+      return errorToErrorCode(ErrOrArchive.takeError());
     CurrentArchives.push_back(std::move(*ErrOrArchive));
   }
   return GetArchiveMemberBuffers(Filename, Timestamp);

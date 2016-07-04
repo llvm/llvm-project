@@ -1772,6 +1772,8 @@ void Scop::createParameterId(const SCEV *Parameter) {
     }
   }
 
+  ParameterName = getIslCompatibleName("", ParameterName, "");
+
   auto *Id = isl_id_alloc(getIslCtx(), ParameterName.c_str(),
                           const_cast<void *>((const void *)Parameter));
   ParameterIds[Parameter] = Id;

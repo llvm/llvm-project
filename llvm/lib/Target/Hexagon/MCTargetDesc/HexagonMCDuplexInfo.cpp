@@ -80,9 +80,6 @@ static const std::pair<unsigned, unsigned> opcodeData[] = {
     std::make_pair((unsigned)V4_SS2_storewi0, 4096),
     std::make_pair((unsigned)V4_SS2_storewi1, 4352)};
 
-static std::map<unsigned, unsigned>
-    subinstOpcodeMap(std::begin(opcodeData), std::end(opcodeData));
-
 bool HexagonMCInstrInfo::isDuplexPairMatch(unsigned Ga, unsigned Gb) {
   switch (Ga) {
   case HexagonII::HSIG_None:
@@ -586,6 +583,9 @@ bool HexagonMCInstrInfo::isOrderedDuplexPair(MCInstrInfo const &MCII,
   }
   unsigned MIaG = HexagonMCInstrInfo::getDuplexCandidateGroup(MIa),
            MIbG = HexagonMCInstrInfo::getDuplexCandidateGroup(MIb);
+
+  static std::map<unsigned, unsigned> subinstOpcodeMap(std::begin(opcodeData),
+                                                       std::end(opcodeData));
 
   // If a duplex contains 2 insns in the same group, the insns must be
   // ordered such that the numerically smaller opcode is in slot 1.

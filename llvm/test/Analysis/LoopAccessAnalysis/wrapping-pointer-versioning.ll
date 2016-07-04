@@ -1,4 +1,5 @@
 ; RUN: opt -basicaa -loop-accesses -analyze < %s | FileCheck %s -check-prefix=LAA
+; RUN: opt -passes='require<aa>,loop(print-access-info)' -aa-pipeline='basic-aa' -disable-output < %s  2>&1 | FileCheck %s --check-prefix=LAA
 ; RUN: opt -loop-versioning -S < %s | FileCheck %s -check-prefix=LV
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

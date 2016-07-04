@@ -1360,7 +1360,7 @@ static unsigned GetFunctionSizeInBytes(const MachineFunction &MF,
   unsigned FnSize = 0;
   for (auto &MBB : MF) {
     for (auto &MI : MBB)
-      FnSize += TII.GetInstSizeInBytes(&MI);
+      FnSize += TII.GetInstSizeInBytes(MI);
   }
   return FnSize;
 }

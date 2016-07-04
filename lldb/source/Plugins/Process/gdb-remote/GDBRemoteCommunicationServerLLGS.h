@@ -40,7 +40,7 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    GDBRemoteCommunicationServerLLGS(const lldb::PlatformSP& platform_sp, MainLoop &mainloop);
+    GDBRemoteCommunicationServerLLGS(MainLoop &mainloop);
 
     //------------------------------------------------------------------
     /// Specify the program to launch and its arguments.
@@ -114,7 +114,6 @@ public:
     InitializeConnection (std::unique_ptr<Connection> &&connection);
 
 protected:
-    lldb::PlatformSP m_platform_sp;
     MainLoop &m_mainloop;
     MainLoop::ReadHandleUP m_network_handle_up;
     lldb::tid_t m_current_tid;

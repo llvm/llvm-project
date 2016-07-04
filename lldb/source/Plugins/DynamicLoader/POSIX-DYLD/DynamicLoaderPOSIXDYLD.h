@@ -61,7 +61,7 @@ public:
     CanLoadImage() override;
 
     lldb::addr_t
-    GetThreadLocalData(const lldb::ModuleSP module, const lldb::ThreadSP thread) override;
+    GetThreadLocalData(const lldb::ModuleSP module, const lldb::ThreadSP thread, lldb::addr_t tls_file_addr) override;
 
     //------------------------------------------------------------------
     // PluginInterface protocol

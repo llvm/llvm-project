@@ -3,20 +3,16 @@
 ; RUN: opt < %s -instcombine -S -default-data-layout=n32    | FileCheck %s --check-prefix=ALL --check-prefix=CHECK32
 ; RUN: opt < %s -instcombine -S -default-data-layout=n32:64 | FileCheck %s --check-prefix=ALL --check-prefix=CHECK64
 
+; In all cases, the data-layout is irrelevant. We should shrink as much as possible in InstCombine
+; and allow the backend to expand as much as needed to ensure optimal codegen for any target.
+
 define i32 @positive1(i64 %a) {
-; CHECK32-LABEL: @positive1(
-; CHECK32:         switch i32
-; CHECK32-NEXT:    i32 10, label %return
-; CHECK32-NEXT:    i32 100, label %sw.bb1
-; CHECK32-NEXT:    i32 1001, label %sw.bb2
-; CHECK32-NEXT:    ]
-;
-; CHECK64-LABEL: @positive1(
-; CHECK64:         switch i64
-; CHECK64-NEXT:    i64 10, label %return
-; CHECK64-NEXT:    i64 100, label %sw.bb1
-; CHECK64-NEXT:    i64 1001, label %sw.bb2
-; CHECK64-NEXT:    ]
+; ALL-LABEL: @positive1(
+; ALL:         switch i32
+; ALL-NEXT:    i32 10, label %return
+; ALL-NEXT:    i32 100, label %sw.bb1
+; ALL-NEXT:    i32 1001, label %sw.bb2
+; ALL-NEXT:    ]
 ;
 entry:
   %and = and i64 %a, 4294967295
@@ -41,19 +37,12 @@ return:
 }
 
 define i32 @negative1(i64 %a) {
-; CHECK32-LABEL: @negative1(
-; CHECK32:         switch i32
-; CHECK32-NEXT:    i32 -10, label %return
-; CHECK32-NEXT:    i32 -100, label %sw.bb1
-; CHECK32-NEXT:    i32 -1001, label %sw.bb2
-; CHECK32-NEXT:    ]
-;
-; CHECK64-LABEL: @negative1(
-; CHECK64:         switch i64
-; CHECK64-NEXT:    i64 -10, label %return
-; CHECK64-NEXT:    i64 -100, label %sw.bb1
-; CHECK64-NEXT:    i64 -1001, label %sw.bb2
-; CHECK64-NEXT:    ]
+; ALL-LABEL: @negative1(
+; ALL:         switch i32
+; ALL-NEXT:    i32 -10, label %return
+; ALL-NEXT:    i32 -100, label %sw.bb1
+; ALL-NEXT:    i32 -1001, label %sw.bb2
+; ALL-NEXT:    ]
 ;
 entry:
   %or = or i64 %a, -4294967296
@@ -115,17 +104,11 @@ return:
 ; to the recomputed condition.
 
 define void @trunc64to59(i64 %a) {
-; CHECK32-LABEL: @trunc64to59(
-; CHECK32:         switch i59
-; CHECK32-NEXT:    i59 0, label %sw.bb1
-; CHECK32-NEXT:    i59 18717182647723699, label %sw.bb2
-; CHECK32-NEXT:    ]
-;
-; CHECK64-LABEL: @trunc64to59(
-; CHECK64:         switch i64
-; CHECK64-NEXT:    i64 0, label %sw.bb1
-; CHECK64-NEXT:    i64 18717182647723699, label %sw.bb2
-; CHECK64-NEXT:    ]
+; ALL-LABEL: @trunc64to59(
+; ALL:         switch i59
+; ALL-NEXT:    i59 0, label %sw.bb1
+; ALL-NEXT:    i59 18717182647723699, label %sw.bb2
+; ALL-NEXT:    ]
 ;
 entry:
   %tmp0 = and i64 %a, 15

@@ -122,8 +122,8 @@ private:
     if (!TII->isALUInstr(MI->getOpcode()) && MI->getOpcode() != AMDGPU::DOT_4)
       return true;
 
-    const SmallVectorImpl<std::pair<MachineOperand *, int64_t> > &Consts =
-        TII->getSrcs(MI);
+    const SmallVectorImpl<std::pair<MachineOperand *, int64_t>> &Consts =
+        TII->getSrcs(*MI);
     assert((TII->isALUInstr(MI->getOpcode()) ||
         MI->getOpcode() == AMDGPU::DOT_4) && "Can't assign Const");
     for (unsigned i = 0, n = Consts.size(); i < n; ++i) {
@@ -245,7 +245,7 @@ private:
         // clause as predicated alus).
         if (AluInstCount > 0)
           break;
-        if (TII->getFlagOp(I).getImm() & MO_FLAG_PUSH)
+        if (TII->getFlagOp(*I).getImm() & MO_FLAG_PUSH)
           PushBeforeModifier = true;
         AluInstCount ++;
         continue;

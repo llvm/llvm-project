@@ -463,11 +463,11 @@ protected:
   /// This includes both the original MDs from \p From and additional ones (\see
   /// addNewMetadata).  Use this for *newly created* instructions in the vector
   /// loop.
-  void addMetadata(Instruction *To, const Instruction *From);
+  void addMetadata(Instruction *To, Instruction *From);
 
   /// \brief Similar to the previous function but it adds the metadata to a
   /// vector of instructions.
-  void addMetadata(SmallVectorImpl<Value *> &To, const Instruction *From);
+  void addMetadata(ArrayRef<Value *> To, Instruction *From);
 
   /// This is a helper class that holds the vectorizer state. It maps scalar
   /// instructions to vector instructions. When the code is 'unrolled' then
@@ -654,28 +654,6 @@ static std::string getDebugLocString(const Loop *L) {
 }
 #endif
 
-/// \brief Propagate known metadata from one instruction to another.
-static void propagateMetadata(Instruction *To, const Instruction *From) {
-  SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
-  From->getAllMetadataOtherThanDebugLoc(Metadata);
-
-  for (auto M : Metadata) {
-    unsigned Kind = M.first;
-
-    // These are safe to transfer (this is safe for TBAA, even when we
-    // if-convert, because should that metadata have had a control dependency
-    // on the condition, and thus actually aliased with some other
-    // non-speculated memory access when the condition was false, this would be
-    // caught by the runtime overlap checks).
-    if (Kind != LLVMContext::MD_tbaa && Kind != LLVMContext::MD_alias_scope &&
-        Kind != LLVMContext::MD_noalias && Kind != LLVMContext::MD_fpmath &&
-        Kind != LLVMContext::MD_nontemporal)
-      continue;
-
-    To->setMetadata(Kind, M.second);
-  }
-}
-
 void InnerLoopVectorizer::addNewMetadata(Instruction *To,
                                          const Instruction *Orig) {
   // If the loop was versioned with memchecks, add the corresponding no-alias
@@ -685,16 +663,17 @@ void InnerLoopVectorizer::addNewMetadata(Instruction *To,
 }
 
 void InnerLoopVectorizer::addMetadata(Instruction *To,
-                                      const Instruction *From) {
+                                      Instruction *From) {
   propagateMetadata(To, From);
   addNewMetadata(To, From);
 }
 
-void InnerLoopVectorizer::addMetadata(SmallVectorImpl<Value *> &To,
-                                      const Instruction *From) {
-  for (Value *V : To)
+void InnerLoopVectorizer::addMetadata(ArrayRef<Value *> To,
+                                      Instruction *From) {
+  for (Value *V : To) {
     if (Instruction *I = dyn_cast<Instruction>(V))
       addMetadata(I, From);
+  }
 }
 
 /// \brief The group of interleaved loads/stores sharing the same stride and
@@ -1153,16 +1132,17 @@ public:
   unsigned getWidth() const { return Width.Value; }
   unsigned getInterleave() const { return Interleave.Value; }
   enum ForceKind getForce() const { return (ForceKind)Force.Value; }
+
+  /// \brief If hints are provided that force vectorization, use the AlwaysPrint
+  /// pass name to force the frontend to print the diagnostic.
   const char *vectorizeAnalysisPassName() const {
-    // If hints are provided that don't disable vectorization use the
-    // AlwaysPrint pass name to force the frontend to print the diagnostic.
     if (getWidth() == 1)
       return LV_NAME;
     if (getForce() == LoopVectorizeHints::FK_Disabled)
       return LV_NAME;
     if (getForce() == LoopVectorizeHints::FK_Undefined && getWidth() == 0)
       return LV_NAME;
-    return DiagnosticInfo::AlwaysPrint;
+    return DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint;
   }
 
   bool allowReordering() const {
@@ -2242,13 +2222,87 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
+  assert(Ptr->getType()->isPointerTy() && "Unexpected non-ptr");
+  auto *SE = PSE.getSE();
+  // Make sure that the pointer does not point to structs.
+  if (Ptr->getType()->getPointerElementType()->isAggregateType())
+    return 0;
 
-  const ValueToValueMap &Strides = getSymbolicStrides() ? *getSymbolicStrides() :
-    ValueToValueMap();
+  // If this value is a pointer induction variable, we know it is consecutive.
+  PHINode *Phi = dyn_cast_or_null<PHINode>(Ptr);
+  if (Phi && Inductions.count(Phi)) {
+    InductionDescriptor II = Inductions[Phi];
+    return II.getConsecutiveDirection();
+  }
 
-  int Stride = getPtrStride(PSE, Ptr, TheLoop, Strides, true, false);
-  if (Stride == 1 || Stride == -1)
-    return Stride;
+  GetElementPtrInst *Gep = getGEPInstruction(Ptr);
+  if (!Gep)
+    return 0;
+
+  unsigned NumOperands = Gep->getNumOperands();
+  Value *GpPtr = Gep->getPointerOperand();
+  // If this GEP value is a consecutive pointer induction variable and all of
+  // the indices are constant, then we know it is consecutive.
+  Phi = dyn_cast<PHINode>(GpPtr);
+  if (Phi && Inductions.count(Phi)) {
+
+    // Make sure that the pointer does not point to structs.
+    PointerType *GepPtrType = cast<PointerType>(GpPtr->getType());
+    if (GepPtrType->getElementType()->isAggregateType())
+      return 0;
+
+    // Make sure that all of the index operands are loop invariant.
+    for (unsigned i = 1; i < NumOperands; ++i)
+      if (!SE->isLoopInvariant(PSE.getSCEV(Gep->getOperand(i)), TheLoop))
+        return 0;
+
+    InductionDescriptor II = Inductions[Phi];
+    return II.getConsecutiveDirection();
+  }
+
+  unsigned InductionOperand = getGEPInductionOperand(Gep);
+
+  // Check that all of the gep indices are uniform except for our induction
+  // operand.
+  for (unsigned i = 0; i != NumOperands; ++i)
+    if (i != InductionOperand &&
+        !SE->isLoopInvariant(PSE.getSCEV(Gep->getOperand(i)), TheLoop))
+      return 0;
+
+  // We can emit wide load/stores only if the last non-zero index is the
+  // induction variable.
+  const SCEV *Last = nullptr;
+  if (!getSymbolicStrides() || !getSymbolicStrides()->count(Gep))
+    Last = PSE.getSCEV(Gep->getOperand(InductionOperand));
+  else {
+    // Because of the multiplication by a stride we can have a s/zext cast.
+    // We are going to replace this stride by 1 so the cast is safe to ignore.
+    //
+    //  %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+    //  %0 = trunc i64 %indvars.iv to i32
+    //  %mul = mul i32 %0, %Stride1
+    //  %idxprom = zext i32 %mul to i64  << Safe cast.
+    //  %arrayidx = getelementptr inbounds i32* %B, i64 %idxprom
+    //
+    Last = replaceSymbolicStrideSCEV(PSE, *getSymbolicStrides(),
+                                     Gep->getOperand(InductionOperand), Gep);
+    if (const SCEVCastExpr *C = dyn_cast<SCEVCastExpr>(Last))
+      Last =
+          (C->getSCEVType() == scSignExtend || C->getSCEVType() == scZeroExtend)
+              ? C->getOperand()
+              : Last;
+  }
+  if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(Last)) {
+    const SCEV *Step = AR->getStepRecurrence(*SE);
+
+    // The memory is consecutive because the last index is consecutive
+    // and all other indices are loop invariant.
+    if (Step->isOne())
+      return 1;
+    if (Step->isAllOnesValue())
+      return -1;
+  }
+
   return 0;
 }
 
@@ -2506,7 +2560,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(Instruction *Instr) {
       assert(Member && "Fail to get a member from an interleaved store group");
 
       Value *StoredVec =
-          getVectorValue(dyn_cast<StoreInst>(Member)->getValueOperand())[Part];
+          getVectorValue(cast<StoreInst>(Member)->getValueOperand())[Part];
       if (Group->isReverse())
         StoredVec = reverseVector(StoredVec);
 
@@ -2584,9 +2638,7 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
   // Handle consecutive loads/stores.
   GetElementPtrInst *Gep = getGEPInstruction(Ptr);
   if (ConsecutiveStride) {
-    if (Gep &&
-        !PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getPointerOperand()),
-                                      OrigLoop)) {
+    if (Gep && Legal->isInductionVariable(Gep->getPointerOperand())) {
       setDebugLocFromInst(Builder, Gep);
       Value *PtrOperand = Gep->getPointerOperand();
       Value *FirstBasePtr = getVectorValue(PtrOperand)[0];
@@ -2599,6 +2651,9 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
       Ptr = Builder.Insert(Gep2);
     } else if (Gep) {
       setDebugLocFromInst(Builder, Gep);
+      assert(PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getPointerOperand()),
+                                          OrigLoop) &&
+             "Base ptr must be invariant");
       // The last index does not have to be the induction. It can be
       // consecutive and be a function of the index. For example A[I+1];
       unsigned NumOperands = Gep->getNumOperands();
@@ -2627,6 +2682,8 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
       }
       Ptr = Builder.Insert(Gep2);
     } else { // No GEP
+      // Use the induction element ptr.
+      assert(isa<PHINode>(Ptr) && "Invalid induction ptr");
       setDebugLocFromInst(Builder, Ptr);
       VectorParts &PtrVal = getVectorValue(Ptr);
       Ptr = Builder.CreateExtractElement(PtrVal[0], Zero);
@@ -4929,38 +4986,83 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 void LoopVectorizationLegality::collectLoopUniforms() {
   // We now know that the loop is vectorizable!
   // Collect variables that will remain uniform after vectorization.
-  std::vector<Value *> Worklist;
-  BasicBlock *Latch = TheLoop->getLoopLatch();
 
-  // Start with the conditional branch and walk up the block.
-  Worklist.push_back(Latch->getTerminator()->getOperand(0));
+  // If V is not an instruction inside the current loop, it is a Value
+  // outside of the scope which we are interesting in.
+  auto isOutOfScope = [&](Value *V) -> bool {
+    Instruction *I = dyn_cast<Instruction>(V);
+    return (!I || !TheLoop->contains(I));
+  };
+
+  SetVector<Instruction *> Worklist;
+  BasicBlock *Latch = TheLoop->getLoopLatch();
+  // Start with the conditional branch.
+  if (!isOutOfScope(Latch->getTerminator()->getOperand(0))) {
+    Instruction *Cmp = cast<Instruction>(Latch->getTerminator()->getOperand(0));
+    Worklist.insert(Cmp);
+    DEBUG(dbgs() << "LV: Found uniform instruction: " << *Cmp << "\n");
+  }
 
   // Also add all consecutive pointer values; these values will be uniform
-  // after vectorization (and subsequent cleanup) and, until revectorization is
-  // supported, all dependencies must also be uniform.
-  for (Loop::block_iterator B = TheLoop->block_begin(),
-                            BE = TheLoop->block_end();
-       B != BE; ++B)
-    for (Instruction &I : **B)
-      if (I.getType()->isPointerTy() && isConsecutivePtr(&I))
-        Worklist.insert(Worklist.end(), I.op_begin(), I.op_end());
-
-  while (!Worklist.empty()) {
-    Instruction *I = dyn_cast<Instruction>(Worklist.back());
-    Worklist.pop_back();
-
-    // Look at instructions inside this loop.
-    // Stop when reaching PHI nodes.
-    // TODO: we need to follow values all over the loop, not only in this block.
-    if (!I || !TheLoop->contains(I) || isa<PHINode>(I))
-      continue;
-
-    // This is a known uniform.
-    Uniforms.insert(I);
-
-    // Insert all operands.
-    Worklist.insert(Worklist.end(), I->op_begin(), I->op_end());
+  // after vectorization (and subsequent cleanup).
+  for (auto *BB : TheLoop->getBlocks()) {
+    for (auto &I : *BB) {
+      if (I.getType()->isPointerTy() && isConsecutivePtr(&I)) {
+        Worklist.insert(&I);
+        DEBUG(dbgs() << "LV: Found uniform instruction: " << I << "\n");
+      }
+    }
   }
+
+  // Expand Worklist in topological order: whenever a new instruction
+  // is added , its users should be either already inside Worklist, or
+  // out of scope. It ensures a uniform instruction will only be used
+  // by uniform instructions or out of scope instructions.
+  unsigned idx = 0;
+  do {
+    Instruction *I = Worklist[idx++];
+
+    for (auto OV : I->operand_values()) {
+      if (isOutOfScope(OV))
+        continue;
+      Instruction *OI = cast<Instruction>(OV);
+      if (std::all_of(OI->user_begin(), OI->user_end(), [&](User *U) -> bool {
+            return isOutOfScope(U) || Worklist.count(cast<Instruction>(U));
+          })) {
+        Worklist.insert(OI);
+        DEBUG(dbgs() << "LV: Found uniform instruction: " << *OI << "\n");
+      }
+    }
+  } while (idx != Worklist.size());
+
+  // For an instruction to be added into Worklist above, all its users inside
+  // the current loop should be already added into Worklist. This condition
+  // cannot be true for phi instructions which is always in a dependence loop.
+  // Because any instruction in the dependence cycle always depends on others
+  // in the cycle to be added into Worklist first, the result is no ones in
+  // the cycle will be added into Worklist in the end.
+  // That is why we process PHI separately.
+  for (auto &Induction : *getInductionVars()) {
+    auto *PN = Induction.first;
+    auto *UpdateV = PN->getIncomingValueForBlock(TheLoop->getLoopLatch());
+    if (std::all_of(PN->user_begin(), PN->user_end(),
+                    [&](User *U) -> bool {
+                      return U == UpdateV || isOutOfScope(U) ||
+                             Worklist.count(cast<Instruction>(U));
+                    }) &&
+        std::all_of(UpdateV->user_begin(), UpdateV->user_end(),
+                    [&](User *U) -> bool {
+                      return U == PN || isOutOfScope(U) ||
+                             Worklist.count(cast<Instruction>(U));
+                    })) {
+      Worklist.insert(cast<Instruction>(PN));
+      Worklist.insert(cast<Instruction>(UpdateV));
+      DEBUG(dbgs() << "LV: Found uniform instruction: " << *PN << "\n");
+      DEBUG(dbgs() << "LV: Found uniform instruction: " << *UpdateV << "\n");
+    }
+  }
+
+  Uniforms.insert(Worklist.begin(), Worklist.end());
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
@@ -4981,7 +5083,7 @@ bool LoopVectorizationLegality::canVectorizeMemory() {
   }
 
   Requirements->addRuntimePointerChecks(LAI->getNumRuntimePointerChecks());
-  PSE.addPredicate(LAI->PSE.getUnionPredicate());
+  PSE.addPredicate(LAI->getPSE().getUnionPredicate());
 
   return true;
 }

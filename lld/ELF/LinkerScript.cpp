@@ -19,7 +19,9 @@
 #include "InputSection.h"
 #include "OutputSections.h"
 #include "ScriptParser.h"
+#include "Strings.h"
 #include "SymbolTable.h"
+#include "Target.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
@@ -34,8 +36,6 @@ using namespace lld;
 using namespace lld::elf;
 
 ScriptConfiguration *elf::ScriptConfig;
-
-static bool matchStr(StringRef S, StringRef T);
 
 // This is an operator-precedence parser to parse and evaluate
 // a linker script expression. For each linker script arithmetic
@@ -188,7 +188,7 @@ uint64_t ExprParser::parseExpr() { return parseExpr1(parsePrimary(), 0); }
 template <class ELFT>
 StringRef LinkerScript<ELFT>::getOutputSection(InputSectionBase<ELFT> *S) {
   for (SectionRule &R : Opt.Sections)
-    if (matchStr(R.SectionPattern, S->getSectionName()))
+    if (globMatch(R.SectionPattern, S->getSectionName()))
       return R.Dest;
   return "";
 }
@@ -201,7 +201,7 @@ bool LinkerScript<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) {
 template <class ELFT>
 bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   for (StringRef Pat : Opt.KeptSections)
-    if (matchStr(Pat, S->getSectionName()))
+    if (globMatch(Pat, S->getSectionName()))
       return true;
   return false;
 }
@@ -222,6 +222,7 @@ void LinkerScript<ELFT>::assignAddresses(
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
   Dot = Out<ELFT>::ElfHeader->getSize() + Out<ELFT>::ProgramHeaders->getSize();
+  uintX_t MinVA = std::numeric_limits<uintX_t>::max();
   uintX_t ThreadBssOffset = 0;
 
   for (SectionsCommand &Cmd : Opt.Commands) {
@@ -248,11 +249,20 @@ void LinkerScript<ELFT>::assignAddresses(
       if (Sec->getFlags() & SHF_ALLOC) {
         Dot = alignTo(Dot, Sec->getAlignment());
         Sec->setVA(Dot);
+        MinVA = std::min(MinVA, Dot);
         Dot += Sec->getSize();
         continue;
       }
     }
   }
+
+  // ELF and Program headers need to be right before the first section in memory.
+  // Set their addresses accordingly.
+  MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
+                        Out<ELFT>::ProgramHeaders->getSize(),
+                    Target->PageSize);
+  Out<ELFT>::ElfHeader->setVA(MinVA);
+  Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
 }
 
 template <class ELFT>
@@ -286,30 +296,6 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
   if (I == INT_MAX && J == INT_MAX)
     return 0;
   return I < J ? -1 : 1;
-}
-
-// Returns true if S matches T. S can contain glob meta-characters.
-// The asterisk ('*') matches zero or more characters, and the question
-// mark ('?') matches one character.
-static bool matchStr(StringRef S, StringRef T) {
-  for (;;) {
-    if (S.empty())
-      return T.empty();
-    if (S[0] == '*') {
-      S = S.substr(1);
-      if (S.empty())
-        // Fast path. If a pattern is '*', it matches anything.
-        return true;
-      for (size_t I = 0, E = T.size(); I < E; ++I)
-        if (matchStr(S, T.substr(I)))
-          return true;
-      return false;
-    }
-    if (T.empty() || (S[0] != T[0] && S[0] != '?'))
-      return false;
-    S = S.substr(1);
-    T = T.substr(1);
-  }
 }
 
 class elf::ScriptParser : public ScriptParserBase {

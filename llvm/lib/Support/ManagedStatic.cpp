@@ -13,7 +13,6 @@
 
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Atomic.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/MutexGuard.h"
 #include "llvm/Support/Threading.h"
@@ -42,18 +41,10 @@ void ManagedStaticBase::RegisterManagedStatic(void *(*Creator)(),
   if (llvm_is_multithreaded()) {
     MutexGuard Lock(*getManagedStaticMutex());
 
-    if (!Ptr) {
-      void* tmp = Creator();
+    if (!Ptr.load(std::memory_order_relaxed)) {
+      void *Tmp = Creator();
 
-      TsanHappensBefore(this);
-      sys::MemoryFence();
-
-      // This write is racy against the first read in the ManagedStatic
-      // accessors. The race is benign because it does a second read after a
-      // memory fence, at which point it isn't possible to get a partial value.
-      TsanIgnoreWritesBegin();
-      Ptr = tmp;
-      TsanIgnoreWritesEnd();
+      Ptr.store(Tmp, std::memory_order_release);
       DeleterFn = Deleter;
       
       // Add to list of managed statics.

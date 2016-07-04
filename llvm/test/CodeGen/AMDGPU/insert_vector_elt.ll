@@ -208,10 +208,7 @@ define void @dynamic_insertelement_v3i16(<3 x i16> addrspace(1)* %out, <3 x i16>
 ; GCN: buffer_load_ushort
 ; GCN: buffer_load_ushort
 
-; GCN: buffer_store_short v{{[0-9]+}}, off
-; GCN: buffer_store_short v{{[0-9]+}}, off
-; GCN: buffer_store_short v{{[0-9]+}}, off
-; GCN: buffer_store_short v{{[0-9]+}}, off
+; GCN: buffer_store_dwordx2 v{{\[[0-9]+:[0-9]+\]}}, off
 define void @dynamic_insertelement_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x i16> %a, i16 5, i32 %b
   store <4 x i16> %vecins, <4 x i16> addrspace(1)* %out, align 8
@@ -230,8 +227,7 @@ define void @dynamic_insertelement_v4i16(<4 x i16> addrspace(1)* %out, <4 x i16>
 ; GCN: buffer_load_ubyte
 ; GCN: buffer_load_ubyte
 
-; GCN: buffer_store_byte v{{[0-9]+}}, off
-; GCN: buffer_store_byte v{{[0-9]+}}, off
+; GCN: buffer_store_short v{{[0-9]+}}, off
 define void @dynamic_insertelement_v2i8(<2 x i8> addrspace(1)* %out, <2 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <2 x i8> %a, i8 5, i32 %b
   store <2 x i8> %vecins, <2 x i8> addrspace(1)* %out, align 8
@@ -279,10 +275,7 @@ define void @dynamic_insertelement_v3i8(<3 x i8> addrspace(1)* %out, <3 x i8> %a
 ; GCN: buffer_load_ubyte
 ; GCN: buffer_load_ubyte
 
-; GCN: buffer_store_byte v{{[0-9]+}}, off
-; GCN: buffer_store_byte v{{[0-9]+}}, off
-; GCN: buffer_store_byte v{{[0-9]+}}, off
-; GCN: buffer_store_byte v{{[0-9]+}}, off
+; GCN: buffer_store_dword v{{[0-9]+}}, off
 define void @dynamic_insertelement_v4i8(<4 x i8> addrspace(1)* %out, <4 x i8> %a, i32 %b) nounwind {
   %vecins = insertelement <4 x i8> %a, i8 5, i32 %b
   store <4 x i8> %vecins, <4 x i8> addrspace(1)* %out, align 4

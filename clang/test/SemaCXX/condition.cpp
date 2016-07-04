@@ -65,3 +65,7 @@ void test5() {
 void test5_inst() {
    test5<int>();
 }
+
+void PR28373() {
+  if (!x) {} // expected-error {{undeclared}}
+}

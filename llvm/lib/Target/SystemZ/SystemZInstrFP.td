@@ -447,6 +447,13 @@ let Defs = [CC], CCValues = 0xF in {
   def CDB : CompareRXE<"cdb", 0xED19, z_fcmp, FP64, load, 8>;
 }
 
+// Test Data Class.
+let Defs = [CC], CCValues = 0xC in {
+  def TCEB : TestRXE<"tceb", 0xED10, z_tdc, FP32>;
+  def TCDB : TestRXE<"tcdb", 0xED11, z_tdc, FP64>;
+  def TCXB : TestRXE<"tcxb", 0xED12, z_tdc, FP128>;
+}
+
 //===----------------------------------------------------------------------===//
 // Peepholes
 //===----------------------------------------------------------------------===//

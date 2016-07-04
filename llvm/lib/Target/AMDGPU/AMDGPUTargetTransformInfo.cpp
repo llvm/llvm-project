@@ -80,6 +80,28 @@ unsigned AMDGPUTTIImpl::getRegisterBitWidth(bool Vector) {
   return Vector ? 0 : 32;
 }
 
+unsigned AMDGPUTTIImpl::getLoadStoreVecRegBitWidth(unsigned AddrSpace) {
+  switch (AddrSpace) {
+  case AMDGPUAS::GLOBAL_ADDRESS:
+  case AMDGPUAS::CONSTANT_ADDRESS:
+  case AMDGPUAS::FLAT_ADDRESS:
+    return 128;
+  case AMDGPUAS::LOCAL_ADDRESS:
+  case AMDGPUAS::REGION_ADDRESS:
+    return 64;
+  case AMDGPUAS::PRIVATE_ADDRESS:
+    return 8 * ST->getMaxPrivateElementSize();
+  default:
+    if (ST->getGeneration() <= AMDGPUSubtarget::NORTHERN_ISLANDS &&
+        (AddrSpace == AMDGPUAS::PARAM_D_ADDRESS ||
+         AddrSpace == AMDGPUAS::PARAM_I_ADDRESS ||
+         (AddrSpace >= AMDGPUAS::CONSTANT_BUFFER_0 &&
+          AddrSpace <= AMDGPUAS::CONSTANT_BUFFER_15)))
+      return 128;
+    llvm_unreachable("unhandled address space");
+  }
+}
+
 unsigned AMDGPUTTIImpl::getMaxInterleaveFactor(unsigned VF) {
   // Semi-arbitrary large amount.
   return 64;

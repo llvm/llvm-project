@@ -16,7 +16,6 @@
 #include "InstPrinter/X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "llvm/ADT/Triple.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrAnalysis.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -199,11 +198,8 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCCodeGenInfo *createX86MCCodeGenInfo(const Triple &TT, Reloc::Model RM,
-                                             CodeModel::Model CM,
-                                             CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-
+static void adjustCodeGenOpts(const Triple &TT, Reloc::Model RM,
+                              CodeModel::Model &CM) {
   bool is64Bit = TT.getArch() == Triple::x86_64;
 
   // For static codegen, if we're not already set, use Small codegen.
@@ -212,9 +208,6 @@ static MCCodeGenInfo *createX86MCCodeGenInfo(const Triple &TT, Reloc::Model RM,
   else if (CM == CodeModel::JITDefault)
     // 64-bit JIT places everything in the same buffer except external funcs.
     CM = is64Bit ? CodeModel::Large : CodeModel::Small;
-
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
 }
 
 static MCInstPrinter *createX86MCInstPrinter(const Triple &T,
@@ -246,7 +239,7 @@ extern "C" void LLVMInitializeX86TargetMC() {
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);
 
     // Register the MC codegen info.
-    RegisterMCCodeGenInfoFn Y(*T, createX86MCCodeGenInfo);
+    RegisterMCAdjustCodeGenOptsFn Y(*T, adjustCodeGenOpts);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createX86MCInstrInfo);

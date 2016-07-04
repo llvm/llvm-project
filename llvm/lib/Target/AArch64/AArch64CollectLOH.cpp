@@ -628,10 +628,7 @@ static void computeADRP(const InstrToInstrs &UseToDefs,
         continue;
       }
       DEBUG(dbgs() << "Record AdrpAdrp:\n" << *L2 << '\n' << *L1 << '\n');
-      SmallVector<const MachineInstr *, 2> Args;
-      Args.push_back(L2);
-      Args.push_back(L1);
-      AArch64FI.addLOHDirective(MCLOH_AdrpAdrp, Args);
+      AArch64FI.addLOHDirective(MCLOH_AdrpAdrp, {L1, L2});
       ++NumADRPSimpleCandidate;
     }
 #ifdef DEBUG
@@ -765,13 +762,9 @@ static bool registerADRCandidate(const MachineInstr &Use,
          "ADD already involved in LOH.");
   DEBUG(dbgs() << "Record AdrpAdd\n" << Def << '\n' << Use << '\n');
 
-  SmallVector<const MachineInstr *, 2> Args;
-  Args.push_back(&Def);
-  Args.push_back(&Use);
-
-  AArch64FI.addLOHDirective(Use.getOpcode() == AArch64::ADDXri ? MCLOH_AdrpAdd
-                                                           : MCLOH_AdrpLdrGot,
-                          Args);
+  AArch64FI.addLOHDirective(
+      Use.getOpcode() == AArch64::ADDXri ? MCLOH_AdrpAdd : MCLOH_AdrpLdrGot,
+      {&Def, &Use});
   return true;
 }
 

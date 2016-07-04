@@ -113,7 +113,16 @@ MapVector<Instruction*, uint64_t>
 computeMinimumValueSizes(ArrayRef<BasicBlock*> Blocks,
                          DemandedBits &DB,
                          const TargetTransformInfo *TTI=nullptr);
-    
+
+/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
+/// MD_nontemporal].  For K in Kinds, we get the MDNode for K from each of the
+/// elements of VL, compute their "intersection" (i.e., the most generic
+/// metadata value that covers all of the individual values), and set I's
+/// metadata for M equal to the intersection value.
+///
+/// This function always sets a (possibly null) value for each K in Kinds.
+Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
+
 } // llvm namespace
 
 #endif

@@ -15,15 +15,25 @@
 
 namespace opts {
 
-enum OutputStyleTy { LLVM, YAML };
-
+namespace pretty {
 extern llvm::cl::opt<bool> Compilands;
 extern llvm::cl::opt<bool> Symbols;
 extern llvm::cl::opt<bool> Globals;
 extern llvm::cl::opt<bool> Types;
 extern llvm::cl::opt<bool> All;
+extern llvm::cl::opt<bool> ExcludeCompilerGenerated;
 
-extern llvm::cl::opt<OutputStyleTy> RawOutputStyle;
+extern llvm::cl::opt<bool> NoClassDefs;
+extern llvm::cl::opt<bool> NoEnumDefs;
+extern llvm::cl::list<std::string> ExcludeTypes;
+extern llvm::cl::list<std::string> ExcludeSymbols;
+extern llvm::cl::list<std::string> ExcludeCompilands;
+extern llvm::cl::list<std::string> IncludeTypes;
+extern llvm::cl::list<std::string> IncludeSymbols;
+extern llvm::cl::list<std::string> IncludeCompilands;
+}
+
+namespace raw {
 extern llvm::cl::opt<bool> DumpHeaders;
 extern llvm::cl::opt<bool> DumpStreamBlocks;
 extern llvm::cl::opt<bool> DumpStreamSummary;
@@ -44,17 +54,13 @@ extern llvm::cl::opt<bool> DumpSectionMap;
 extern llvm::cl::opt<bool> DumpSymRecordBytes;
 extern llvm::cl::opt<bool> DumpSectionHeaders;
 extern llvm::cl::opt<bool> DumpFpo;
+}
 
-extern llvm::cl::opt<bool> ExcludeCompilerGenerated;
-
-extern llvm::cl::opt<bool> NoClassDefs;
-extern llvm::cl::opt<bool> NoEnumDefs;
-extern llvm::cl::list<std::string> ExcludeTypes;
-extern llvm::cl::list<std::string> ExcludeSymbols;
-extern llvm::cl::list<std::string> ExcludeCompilands;
-extern llvm::cl::list<std::string> IncludeTypes;
-extern llvm::cl::list<std::string> IncludeSymbols;
-extern llvm::cl::list<std::string> IncludeCompilands;
+namespace pdb2yaml {
+extern llvm::cl::opt<bool> StreamMetadata;
+extern llvm::cl::opt<bool> StreamDirectory;
+extern llvm::cl::list<std::string> InputFilename;
+}
 }
 
 #endif

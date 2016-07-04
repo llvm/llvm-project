@@ -17,3 +17,5 @@ typedef int type;
 }
 struct FooRecord { };
 FooRecord::NestedNamespace::type x; // expected-error {{no member named 'NestedNamespace' in 'FooRecord'; did you mean 'BarNamespace::NestedNamespace'?}}
+
+void cast_expr(int g) { +int(n)(g); } // expected-error {{undeclared identifier 'n'}}

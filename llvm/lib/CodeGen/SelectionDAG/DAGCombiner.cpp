@@ -2838,7 +2838,7 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
                                       N0->getOperand(0), N1->getOperand(0));
         AddToWorklist(NewNode.getNode());
         return DAG.getVectorShuffle(VT, SDLoc(N), NewNode, ShOp,
-                                    &SVN0->getMask()[0]);
+                                    SVN0->getMask());
       }
 
       // Don't try to fold this node if it requires introducing a
@@ -2859,7 +2859,7 @@ SDValue DAGCombiner::SimplifyBinOpWithSameOpcodeHands(SDNode *N) {
                                       N0->getOperand(1), N1->getOperand(1));
         AddToWorklist(NewNode.getNode());
         return DAG.getVectorShuffle(VT, SDLoc(N), ShOp, NewNode,
-                                    &SVN0->getMask()[0]);
+                                    SVN0->getMask());
       }
     }
   }
@@ -3751,59 +3751,65 @@ SDValue DAGCombiner::visitOR(SDNode *N) {
               N1.getValueType().getScalarType().getSizeInBits()),
           SDLoc(N), N1.getValueType());
 
-    // fold (or (shuf A, V_0, MA), (shuf B, V_0, MB)) -> (shuf A, B, Mask1)
-    // fold (or (shuf A, V_0, MA), (shuf B, V_0, MB)) -> (shuf B, A, Mask2)
+    // fold (or (shuf A, V_0, MA), (shuf B, V_0, MB)) -> (shuf A, B, Mask)
     // Do this only if the resulting shuffle is legal.
     if (isa<ShuffleVectorSDNode>(N0) &&
         isa<ShuffleVectorSDNode>(N1) &&
         // Avoid folding a node with illegal type.
-        TLI.isTypeLegal(VT) &&
-        N0->getOperand(1) == N1->getOperand(1) &&
-        ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode())) {
-      bool CanFold = true;
-      unsigned NumElts = VT.getVectorNumElements();
-      const ShuffleVectorSDNode *SV0 = cast<ShuffleVectorSDNode>(N0);
-      const ShuffleVectorSDNode *SV1 = cast<ShuffleVectorSDNode>(N1);
-      // We construct two shuffle masks:
-      // - Mask1 is a shuffle mask for a shuffle with N0 as the first operand
-      // and N1 as the second operand.
-      // - Mask2 is a shuffle mask for a shuffle with N1 as the first operand
-      // and N0 as the second operand.
-      // We do this because OR is commutable and therefore there might be
-      // two ways to fold this node into a shuffle.
-      SmallVector<int,4> Mask1;
-      SmallVector<int,4> Mask2;
+        TLI.isTypeLegal(VT)) {
+      bool ZeroN00 = ISD::isBuildVectorAllZeros(N0.getOperand(0).getNode());
+      bool ZeroN01 = ISD::isBuildVectorAllZeros(N0.getOperand(1).getNode());
+      bool ZeroN10 = ISD::isBuildVectorAllZeros(N1.getOperand(0).getNode());
+      bool ZeroN11 = ISD::isBuildVectorAllZeros(N1.getOperand(1).getNode());
+      // Ensure both shuffles have a zero input.
+      if ((ZeroN00 || ZeroN01) && (ZeroN10 || ZeroN11)) {
+        assert((!ZeroN00 || !ZeroN01) && "Both inputs zero!");
+        assert((!ZeroN10 || !ZeroN11) && "Both inputs zero!");
+        const ShuffleVectorSDNode *SV0 = cast<ShuffleVectorSDNode>(N0);
+        const ShuffleVectorSDNode *SV1 = cast<ShuffleVectorSDNode>(N1);
+        bool CanFold = true;
+        int NumElts = VT.getVectorNumElements();
+        SmallVector<int, 4> Mask(NumElts);
 
-      for (unsigned i = 0; i != NumElts && CanFold; ++i) {
-        int M0 = SV0->getMaskElt(i);
-        int M1 = SV1->getMaskElt(i);
+        for (int i = 0; i != NumElts; ++i) {
+          int M0 = SV0->getMaskElt(i);
+          int M1 = SV1->getMaskElt(i);
 
-        // Both shuffle indexes are undef. Propagate Undef.
-        if (M0 < 0 && M1 < 0) {
-          Mask1.push_back(M0);
-          Mask2.push_back(M0);
-          continue;
+          // Both shuffle indexes are undef. Propagate Undef.
+          if (M0 < 0 && M1 < 0) {
+            Mask[i] = -1;
+            continue;
+          }
+
+          // Determine if either index is pointing to a zero vector.
+          bool M0Zero = M0 >= 0 && (ZeroN00 == (M0 < NumElts));
+          bool M1Zero = M1 >= 0 && (ZeroN10 == (M1 < NumElts));
+          if (M0Zero == M1Zero) {
+            CanFold = false;
+            break;
+          }
+
+          // We have a zero and non-zero element. If the non-zero came from
+          // SV0 make the index a LHS index. If it came from SV1, make it
+          // a RHS index. We need to mod by NumElts because we don't care
+          // which operand it came from in the original shuffles.
+          Mask[i] = M1Zero ? M0 % NumElts : (M1 % NumElts) + NumElts;
         }
 
-        if (M0 < 0 || M1 < 0 ||
-            (M0 < (int)NumElts && M1 < (int)NumElts) ||
-            (M0 >= (int)NumElts && M1 >= (int)NumElts)) {
-          CanFold = false;
-          break;
+        if (CanFold) {
+          SDValue NewLHS = ZeroN00 ? N0.getOperand(1) : N0.getOperand(0);
+          SDValue NewRHS = ZeroN10 ? N1.getOperand(1) : N1.getOperand(0);
+
+          bool LegalMask = TLI.isShuffleMaskLegal(Mask, VT);
+          if (!LegalMask) {
+            std::swap(NewLHS, NewRHS);
+            ShuffleVectorSDNode::commuteMask(Mask);
+            LegalMask = TLI.isShuffleMaskLegal(Mask, VT);
+          }
+
+          if (LegalMask)
+            return DAG.getVectorShuffle(VT, SDLoc(N), NewLHS, NewRHS, Mask);
         }
-
-        Mask1.push_back(M0 < (int)NumElts ? M0 : M1 + NumElts);
-        Mask2.push_back(M1 < (int)NumElts ? M1 : M0 + NumElts);
-      }
-
-      if (CanFold) {
-        // Fold this sequence only if the resulting shuffle is 'legal'.
-        if (TLI.isShuffleMaskLegal(Mask1, VT))
-          return DAG.getVectorShuffle(VT, SDLoc(N), N0->getOperand(0),
-                                      N1->getOperand(0), &Mask1[0]);
-        if (TLI.isShuffleMaskLegal(Mask2, VT))
-          return DAG.getVectorShuffle(VT, SDLoc(N), N1->getOperand(0),
-                                      N0->getOperand(0), &Mask2[0]);
       }
     }
   }
@@ -12887,7 +12893,7 @@ SDValue DAGCombiner::visitBUILD_VECTOR(SDNode *N) {
     SDValue Ops[2];
     Ops[0] = VecIn1;
     Ops[1] = VecIn2;
-    return DAG.getVectorShuffle(VT, dl, Ops[0], Ops[1], &Mask[0]);
+    return DAG.getVectorShuffle(VT, dl, Ops[0], Ops[1], Mask);
   }
 
   return SDValue();
@@ -13420,8 +13426,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       if (Idx >= (int)NumElts) Idx -= NumElts;
       NewMask.push_back(Idx);
     }
-    return DAG.getVectorShuffle(VT, SDLoc(N), N0, DAG.getUNDEF(VT),
-                                &NewMask[0]);
+    return DAG.getVectorShuffle(VT, SDLoc(N), N0, DAG.getUNDEF(VT), NewMask);
   }
 
   // Canonicalize shuffle undef, v -> v, undef.  Commute the shuffle mask.
@@ -13441,7 +13446,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
       NewMask.push_back(Idx);
     }
     if (Changed)
-      return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, &NewMask[0]);
+      return DAG.getVectorShuffle(VT, SDLoc(N), N0, N1, NewMask);
   }
 
   // If it is a splat, check if the argument vector is another splat or a
@@ -13745,7 +13750,7 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(A, B, M2)
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(A, C, M2)
     //   shuffle(shuffle(A, B, M0), C, M1) -> shuffle(B, C, M2)
-    return DAG.getVectorShuffle(VT, SDLoc(N), SV0, SV1, &Mask[0]);
+    return DAG.getVectorShuffle(VT, SDLoc(N), SV0, SV1, Mask);
   }
 
   return SDValue();
@@ -13914,7 +13919,7 @@ SDValue DAGCombiner::XformToShuffleWithZero(SDNode *N) {
     SDValue Zero = DAG.getConstant(0, dl, ClearVT);
     return DAG.getBitcast(VT, DAG.getVectorShuffle(ClearVT, dl,
                                                    DAG.getBitcast(ClearVT, LHS),
-                                                   Zero, &Indices[0]));
+                                                   Zero, Indices));
   };
 
   // Determine maximum split level (byte level masking).
@@ -13966,7 +13971,7 @@ SDValue DAGCombiner::SimplifyVBinOp(SDNode *N) {
                                      N->getFlags());
       AddUsersToWorklist(N);
       return DAG.getVectorShuffle(VT, SDLoc(N), NewBinOp, UndefVector,
-                                  &SVN0->getMask()[0]);
+                                  SVN0->getMask());
     }
   }
 

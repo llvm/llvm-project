@@ -67,8 +67,7 @@ public:
   /// symbol found and the associated flags.
   static void CollectAsmUndefinedRefs(
       const Triple &TheTriple, StringRef InlineAsm,
-      const std::function<void(StringRef, BasicSymbolRef::Flags)> &
-          AsmUndefinedRefs);
+      function_ref<void(StringRef, BasicSymbolRef::Flags)> AsmUndefinedRefs);
 
   /// \brief Finds and returns bitcode in the given memory buffer (which may
   /// be either a bitcode file or a native object file with embedded bitcode),

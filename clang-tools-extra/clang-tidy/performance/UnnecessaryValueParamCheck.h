@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_VALUE_PARAM_H
 
 #include "../ClangTidy.h"
+#include "../utils/IncludeInserter.h"
 
 namespace clang {
 namespace tidy {
@@ -23,10 +24,18 @@ namespace performance {
 /// http://clang.llvm.org/extra/clang-tidy/checks/performance-unnecessary-value-param.html
 class UnnecessaryValueParamCheck : public ClangTidyCheck {
 public:
-  UnnecessaryValueParamCheck(StringRef Name, ClangTidyContext *Context)
-      : ClangTidyCheck(Name, Context) {}
+  UnnecessaryValueParamCheck(StringRef Name, ClangTidyContext *Context);
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void registerPPCallbacks(CompilerInstance &Compiler) override;
+  void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
+
+private:
+  void handleMoveFix(const ParmVarDecl &Var, const DeclRefExpr &CopyArgument,
+                     const ASTContext &Context);
+
+  std::unique_ptr<utils::IncludeInserter> Inserter;
+  const utils::IncludeSorter::IncludeStyle IncludeStyle;
 };
 
 } // namespace performance

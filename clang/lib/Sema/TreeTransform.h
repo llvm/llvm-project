@@ -1176,7 +1176,8 @@ public:
   StmtResult RebuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
                            Sema::ConditionResult Cond, Stmt *Then,
                            SourceLocation ElseLoc, Stmt *Else) {
-    return getSema().ActOnIfStmt(IfLoc, IsConstexpr, Cond, Then, ElseLoc, Else);
+    return getSema().ActOnIfStmt(IfLoc, IsConstexpr, nullptr, Cond, Then,
+                                 ElseLoc, Else);
   }
 
   /// \brief Start building a new switch statement.
@@ -1185,7 +1186,7 @@ public:
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildSwitchStmtStart(SourceLocation SwitchLoc,
                                     Sema::ConditionResult Cond) {
-    return getSema().ActOnStartOfSwitchStmt(SwitchLoc, Cond);
+    return getSema().ActOnStartOfSwitchStmt(SwitchLoc, nullptr, Cond);
   }
 
   /// \brief Attach the body to the switch statement.

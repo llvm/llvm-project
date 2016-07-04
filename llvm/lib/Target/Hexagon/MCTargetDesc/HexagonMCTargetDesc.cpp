@@ -16,7 +16,6 @@
 #include "HexagonMCAsmInfo.h"
 #include "HexagonMCELFStreamer.h"
 #include "MCTargetDesc/HexagonInstPrinter.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -199,15 +198,6 @@ static MCAsmInfo *createHexagonMCAsmInfo(const MCRegisterInfo &MRI,
   return MAI;
 }
 
-static MCCodeGenInfo *createHexagonMCCodeGenInfo(const Triple &TT,
-                                                 Reloc::Model RM,
-                                                 CodeModel::Model CM,
-                                                 CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
-}
-
 static MCInstPrinter *createHexagonMCInstPrinter(const Triple &T,
                                                  unsigned SyntaxVariant,
                                                  const MCAsmInfo &MAI,
@@ -241,10 +231,6 @@ createHexagonObjectTargetStreamer(MCStreamer &S, MCSubtargetInfo const &STI) {
 extern "C" void LLVMInitializeHexagonTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfoFn X(TheHexagonTarget, createHexagonMCAsmInfo);
-
-  // Register the MC codegen info.
-  TargetRegistry::RegisterMCCodeGenInfo(TheHexagonTarget,
-                                        createHexagonMCCodeGenInfo);
 
   // Register the MC instruction info.
   TargetRegistry::RegisterMCInstrInfo(TheHexagonTarget,

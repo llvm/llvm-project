@@ -61,6 +61,12 @@ def FeatureFlatAddressSpace : SubtargetFeature<"flat-address-space",
   "Support flat address space"
 >;
 
+def FeatureUnalignedBufferAccess : SubtargetFeature<"unaligned-buffer-access",
+  "UnalignedBufferAccess",
+  "true",
+  "Support unaligned global loads and stores"
+>;
+
 def FeatureXNACK : SubtargetFeature<"xnack",
   "EnableXNACK",
   "true",

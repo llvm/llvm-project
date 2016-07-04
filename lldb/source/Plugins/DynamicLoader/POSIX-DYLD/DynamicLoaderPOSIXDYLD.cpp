@@ -599,9 +599,10 @@ DynamicLoaderPOSIXDYLD::GetEntryPoint()
 }
 
 lldb::addr_t
-DynamicLoaderPOSIXDYLD::GetThreadLocalData (const lldb::ModuleSP module, const lldb::ThreadSP thread)
+DynamicLoaderPOSIXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp, const lldb::ThreadSP thread,
+                                           lldb::addr_t tls_file_addr)
 {
-    auto it = m_loaded_modules.find (module);
+    auto it = m_loaded_modules.find (module_sp);
     if (it == m_loaded_modules.end())
         return LLDB_INVALID_ADDRESS;
 
@@ -634,14 +635,16 @@ DynamicLoaderPOSIXDYLD::GetThreadLocalData (const lldb::ModuleSP module, const l
     addr_t dtv_slot = dtv + metadata.dtv_slot_size*modid;
     addr_t tls_block = ReadPointer (dtv_slot + metadata.tls_offset);
 
-    Module *mod = module.get();
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
     if (log)
         log->Printf("DynamicLoaderPOSIXDYLD::Performed TLS lookup: "
                     "module=%s, link_map=0x%" PRIx64 ", tp=0x%" PRIx64 ", modid=%" PRId64 ", tls_block=0x%" PRIx64 "\n",
-                    mod->GetObjectName().AsCString(""), link_map, tp, (int64_t)modid, tls_block);
+                    module_sp->GetObjectName().AsCString(""), link_map, tp, (int64_t)modid, tls_block);
 
-    return tls_block;
+    if (tls_block == LLDB_INVALID_ADDRESS)
+        return LLDB_INVALID_ADDRESS;
+    else
+        return tls_block + tls_file_addr;
 }
 
 void

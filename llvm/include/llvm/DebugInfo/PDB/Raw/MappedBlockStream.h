@@ -36,6 +36,7 @@ public:
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Buffer) const override;
 
   uint32_t getLength() const override;
+  Error commit() const override;
 
   uint32_t getNumBytesCopied() const;
 

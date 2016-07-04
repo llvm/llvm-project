@@ -153,7 +153,6 @@ public:
   /// scheduling heuristics (no custom MachineSchedStrategy) to make
   /// changes to the generic scheduling policy.
   virtual void overrideSchedPolicy(MachineSchedPolicy &Policy,
-                                   MachineInstr *begin, MachineInstr *end,
                                    unsigned NumRegionInstrs) const {}
 
   // \brief Perform target specific adjustments to the latency of a schedule

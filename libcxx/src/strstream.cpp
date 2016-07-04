@@ -175,7 +175,6 @@ strstreambuf::overflow(int_type __c)
         ptrdiff_t ninp = gptr()  - eback();
         ptrdiff_t einp = egptr() - eback();
         ptrdiff_t nout = pptr()  - pbase();
-        ptrdiff_t eout = epptr() - pbase();
         if (__strmode_ & __allocated)
         {
             if (__pfree_)
@@ -184,7 +183,7 @@ strstreambuf::overflow(int_type __c)
                 delete [] eback();
         }
         setg(buf, buf + ninp, buf + einp);
-        setp(buf + einp, buf + einp + eout);
+        setp(buf + einp, buf + new_size);
         pbump(static_cast<int>(nout));
         __strmode_ |= __allocated;
     }

@@ -742,8 +742,8 @@ ASTContext::ASTContext(LangOptions &LOpts, SourceManager &SM,
       sigjmp_bufDecl(nullptr), ucontext_tDecl(nullptr),
       BlockDescriptorType(nullptr), BlockDescriptorExtendedType(nullptr),
       cudaConfigureCallDecl(nullptr), FirstLocalImport(), LastLocalImport(),
-      ExternCContext(nullptr), MakeIntegerSeqDecl(nullptr), SourceMgr(SM),
-      LangOpts(LOpts),
+      ExternCContext(nullptr), MakeIntegerSeqDecl(nullptr),
+      TypePackElementDecl(nullptr), SourceMgr(SM), LangOpts(LOpts),
       SanitizerBL(new SanitizerBlacklist(LangOpts.SanitizerBlacklistFiles, SM)),
       AddrSpaceMap(nullptr), Target(nullptr), AuxTarget(nullptr),
       PrintingPolicy(LOpts), Idents(idents), Selectors(sels),
@@ -926,6 +926,14 @@ ASTContext::getMakeIntegerSeqDecl() const {
     MakeIntegerSeqDecl = buildBuiltinTemplateDecl(BTK__make_integer_seq,
                                                   getMakeIntegerSeqName());
   return MakeIntegerSeqDecl;
+}
+
+BuiltinTemplateDecl *
+ASTContext::getTypePackElementDecl() const {
+  if (!TypePackElementDecl)
+    TypePackElementDecl = buildBuiltinTemplateDecl(BTK__type_pack_element,
+                                                   getTypePackElementName());
+  return TypePackElementDecl;
 }
 
 RecordDecl *ASTContext::buildImplicitRecord(StringRef Name,
@@ -5138,6 +5146,27 @@ bool ASTContext::isMSStaticDataMemberInlineDefinition(const VarDecl *VD) const {
          !VD->getFirstDecl()->isOutOfLine() && VD->getFirstDecl()->hasInit();
 }
 
+ASTContext::InlineVariableDefinitionKind
+ASTContext::getInlineVariableDefinitionKind(const VarDecl *VD) const {
+  if (!VD->isInline())
+    return InlineVariableDefinitionKind::None;
+
+  // In almost all cases, it's a weak definition.
+  auto *First = VD->getFirstDecl();
+  if (!First->isConstexpr() || First->isInlineSpecified() ||
+      !VD->isStaticDataMember())
+    return InlineVariableDefinitionKind::Weak;
+
+  // If there's a file-context declaration in this translation unit, it's a
+  // non-discardable definition.
+  for (auto *D : VD->redecls())
+    if (D->getLexicalDeclContext()->isFileContext())
+      return InlineVariableDefinitionKind::Strong;
+
+  // If we've not seen one yet, we don't know.
+  return InlineVariableDefinitionKind::WeakUnknown;
+}
+
 static inline 
 std::string charUnitsToString(const CharUnits &CU) {
   return llvm::itostr(CU.getQuantity());
@@ -8486,9 +8515,21 @@ static GVALinkage basicGVALinkageForVariable(const ASTContext &Context,
   if (Context.isMSStaticDataMemberInlineDefinition(VD))
     return GVA_DiscardableODR;
 
-  GVALinkage StrongLinkage = GVA_StrongExternal;
-  if (VD->isInline())
+  // Most non-template variables have strong linkage; inline variables are
+  // linkonce_odr or (occasionally, for compatibility) weak_odr.
+  GVALinkage StrongLinkage;
+  switch (Context.getInlineVariableDefinitionKind(VD)) {
+  case ASTContext::InlineVariableDefinitionKind::None:
+    StrongLinkage = GVA_StrongExternal;
+    break;
+  case ASTContext::InlineVariableDefinitionKind::Weak:
+  case ASTContext::InlineVariableDefinitionKind::WeakUnknown:
     StrongLinkage = GVA_DiscardableODR;
+    break;
+  case ASTContext::InlineVariableDefinitionKind::Strong:
+    StrongLinkage = GVA_StrongODR;
+    break;
+  }
 
   switch (VD->getTemplateSpecializationKind()) {
   case TSK_Undeclared:

@@ -217,6 +217,51 @@ static Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
                        ValueType);
 }
 
+// Emit a simple mangled intrinsic that has 1 argument and a return type
+// matching the argument type.
+static Value *emitUnaryBuiltin(CodeGenFunction &CGF,
+                               const CallExpr *E,
+                               unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, Src0);
+}
+
+// Emit an intrinsic that has 2 operands of the same type as its result.
+static Value *emitBinaryBuiltin(CodeGenFunction &CGF,
+                                const CallExpr *E,
+                                unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, { Src0, Src1 });
+}
+
+// Emit an intrinsic that has 3 operands of the same type as its result.
+static Value *emitTernaryBuiltin(CodeGenFunction &CGF,
+                                 const CallExpr *E,
+                                 unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, { Src0, Src1, Src2 });
+}
+
+// Emit an intrinsic that has 1 float or double operand, and 1 integer.
+static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
+                               const CallExpr *E,
+                               unsigned IntrinsicID) {
+  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
+
+  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
+  return CGF.Builder.CreateCall(F, {Src0, Src1});
+}
+
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
   Value *F = CGF.CGM.getIntrinsic(Intrinsic::fabs, V->getType());
@@ -284,40 +329,6 @@ static llvm::Value *EmitOverflowIntrinsic(CodeGenFunction &CGF,
   llvm::Value *Tmp = CGF.Builder.CreateCall(Callee, {X, Y});
   Carry = CGF.Builder.CreateExtractValue(Tmp, 1);
   return CGF.Builder.CreateExtractValue(Tmp, 0);
-}
-
-// Emit a simple mangled intrinsic that has 1 argument and a return type
-// matching the argument type.
-static Value *emitUnaryBuiltin(CodeGenFunction &CGF,
-                               const CallExpr *E,
-                               unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-
-  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, Src0);
-}
-
-// Emit an intrinsic that has 3 float or double operands.
-static Value *emitTernaryFPBuiltin(CodeGenFunction &CGF,
-                                   const CallExpr *E,
-                                   unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
-  llvm::Value *Src2 = CGF.EmitScalarExpr(E->getArg(2));
-
-  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, {Src0, Src1, Src2});
-}
-
-// Emit an intrinsic that has 1 float or double operand, and 1 integer.
-static Value *emitFPIntBuiltin(CodeGenFunction &CGF,
-                               const CallExpr *E,
-                               unsigned IntrinsicID) {
-  llvm::Value *Src0 = CGF.EmitScalarExpr(E->getArg(0));
-  llvm::Value *Src1 = CGF.EmitScalarExpr(E->getArg(1));
-
-  Value *F = CGF.CGM.getIntrinsic(IntrinsicID, Src0->getType());
-  return CGF.Builder.CreateCall(F, {Src0, Src1});
 }
 
 namespace {
@@ -497,9 +508,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
   case Builtin::BI__builtin_fabs:
   case Builtin::BI__builtin_fabsf:
   case Builtin::BI__builtin_fabsl: {
-    Value *Arg1 = EmitScalarExpr(E->getArg(0));
-    Value *Result = EmitFAbs(*this, Arg1);
-    return RValue::get(Result);
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::fabs));
   }
   case Builtin::BI__builtin_fmod:
   case Builtin::BI__builtin_fmodf:
@@ -509,7 +518,51 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     Value *Result = Builder.CreateFRem(Arg1, Arg2, "fmod");
     return RValue::get(Result);
   }
-
+  case Builtin::BI__builtin_copysign:
+  case Builtin::BI__builtin_copysignf:
+  case Builtin::BI__builtin_copysignl: {
+    return RValue::get(emitBinaryBuiltin(*this, E, Intrinsic::copysign));
+  }
+  case Builtin::BI__builtin_ceil:
+  case Builtin::BI__builtin_ceilf:
+  case Builtin::BI__builtin_ceill: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::ceil));
+  }
+  case Builtin::BI__builtin_floor:
+  case Builtin::BI__builtin_floorf:
+  case Builtin::BI__builtin_floorl: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::floor));
+  }
+  case Builtin::BI__builtin_trunc:
+  case Builtin::BI__builtin_truncf:
+  case Builtin::BI__builtin_truncl: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::trunc));
+  }
+  case Builtin::BI__builtin_rint:
+  case Builtin::BI__builtin_rintf:
+  case Builtin::BI__builtin_rintl: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::rint));
+  }
+  case Builtin::BI__builtin_nearbyint:
+  case Builtin::BI__builtin_nearbyintf:
+  case Builtin::BI__builtin_nearbyintl: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::nearbyint));
+  }
+  case Builtin::BI__builtin_round:
+  case Builtin::BI__builtin_roundf:
+  case Builtin::BI__builtin_roundl: {
+    return RValue::get(emitUnaryBuiltin(*this, E, Intrinsic::round));
+  }
+  case Builtin::BI__builtin_fmin:
+  case Builtin::BI__builtin_fminf:
+  case Builtin::BI__builtin_fminl: {
+    return RValue::get(emitBinaryBuiltin(*this, E, Intrinsic::minnum));
+  }
+  case Builtin::BI__builtin_fmax:
+  case Builtin::BI__builtin_fmaxf:
+  case Builtin::BI__builtin_fmaxl: {
+    return RValue::get(emitBinaryBuiltin(*this, E, Intrinsic::maxnum));
+  }
   case Builtin::BI__builtin_conj:
   case Builtin::BI__builtin_conjf:
   case Builtin::BI__builtin_conjl: {
@@ -6460,8 +6513,8 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
       Indices[i] = NumElts;
-    Cmp = CGF.Builder.CreateShuffleVector(Cmp, UndefValue::get(Cmp->getType()),
-                                          Indices);
+    Cmp = CGF.Builder.CreateShuffleVector(
+        Cmp, llvm::Constant::getNullValue(Cmp->getType()), Indices);
   }
   return CGF.Builder.CreateBitCast(Cmp,
                                    IntegerType::get(CGF.getLLVMContext(),
@@ -7380,7 +7433,7 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
   }
   case AMDGPU::BI__builtin_amdgcn_div_fixup:
   case AMDGPU::BI__builtin_amdgcn_div_fixupf:
-    return emitTernaryFPBuiltin(*this, E, Intrinsic::amdgcn_div_fixup);
+    return emitTernaryBuiltin(*this, E, Intrinsic::amdgcn_div_fixup);
   case AMDGPU::BI__builtin_amdgcn_trig_preop:
   case AMDGPU::BI__builtin_amdgcn_trig_preopf:
     return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_trig_preop);

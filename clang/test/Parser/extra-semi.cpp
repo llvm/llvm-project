@@ -5,7 +5,6 @@
 
 void test1(int a;) { // expected-error{{unexpected ';' before ')'}}
   while (a > 5;) {} // expected-error{{unexpected ';' before ')'}}
-  if (int b = 10;) {} // expected-error{{unexpected ';' before ')'}}
   for (int c  = 0; c < 21; ++c;) {} // expected-error{{unexpected ';' before ')'}}
   int d = int(3 + 4;); // expected-error{{unexpected ';' before ')'}}
   int e[5;]; // expected-error{{unexpected ';' before ']'}}

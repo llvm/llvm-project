@@ -30,8 +30,9 @@ struct StructInfo {
   u32 NumFields;
   u32 *FieldOffsets;
   u32 *FieldSize;
-  u64 *FieldCounters;
   const char **FieldTypeNames;
+  u64 *FieldCounters;
+  u64 *ArrayCounter;
 };
 
 // This should be kept consistent with LLVM's EfficiencySanitizer CacheFragInfo.
@@ -96,8 +97,8 @@ static void reportStructCounter(StructHashMap::Handle &Handle) {
   end = strchr(start, '#');
   CHECK(end != nullptr);
   Report("  %s %.*s\n", type, end - start, start);
-  Report("   size = %u, count = %llu, ratio = %llu\n", Struct->Size,
-         Handle->Count, Handle->Ratio);
+  Report("   size = %u, count = %llu, ratio = %llu, array access = %llu\n",
+         Struct->Size, Handle->Count, Handle->Ratio, *Struct->ArrayCounter);
   for (u32 i = 0; i < Struct->NumFields; ++i) {
     Report("   #%2u: offset = %u,\t size = %u,\t count = %llu,\t type = %.*s\n",
            i, Struct->FieldOffsets[i], Struct->FieldSize[i],

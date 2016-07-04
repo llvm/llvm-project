@@ -25,7 +25,7 @@ EnumDumper::EnumDumper(LinePrinter &P) : PDBSymDumper(true), Printer(P) {}
 void EnumDumper::start(const PDBSymbolTypeEnum &Symbol) {
   WithColor(Printer, PDB_ColorItem::Keyword).get() << "enum ";
   WithColor(Printer, PDB_ColorItem::Type).get() << Symbol.getName();
-  if (!opts::NoEnumDefs) {
+  if (!opts::pretty::NoEnumDefs) {
     auto BuiltinType = Symbol.getUnderlyingType();
     if (BuiltinType->getBuiltinType() != PDB_BuiltinType::Int ||
         BuiltinType->getLength() != 4) {

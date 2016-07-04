@@ -3329,6 +3329,30 @@
 	sy	%r0, 524288
 
 #CHECK: error: invalid operand
+#CHECK: tcdb	%f0, -1
+#CHECK: error: invalid operand
+#CHECK: tcdb	%f0, 4096
+
+	tcdb	%f0, -1
+	tcdb	%f0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: tceb	%f0, -1
+#CHECK: error: invalid operand
+#CHECK: tceb	%f0, 4096
+
+	tceb	%f0, -1
+	tceb	%f0, 4096
+
+#CHECK: error: invalid operand
+#CHECK: tcxb	%f0, -1
+#CHECK: error: invalid operand
+#CHECK: tcxb	%f0, 4096
+
+	tcxb	%f0, -1
+	tcxb	%f0, 4096
+
+#CHECK: error: invalid operand
 #CHECK: tm	-1, 0
 #CHECK: error: invalid operand
 #CHECK: tm	4096, 0

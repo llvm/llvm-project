@@ -17,16 +17,18 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/State.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/ABI.h"
+#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/RegisterContext.h"
+#include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Target/ThreadPlanCallFunction.h"
 #include "lldb/Target/ThreadPlanRunToAddress.h"
-#include "lldb/Target/StackFrame.h"
 
 #include "DynamicLoaderMacOSXDYLD.h"
 
@@ -142,8 +144,11 @@ DynamicLoaderMacOSXDYLD::DynamicLoaderMacOSXDYLD(Process *process)
     : DynamicLoader(process),
       m_dyld(),
       m_dyld_module_wp(),
+      m_libpthread_module_wp(),
+      m_pthread_getspecific_addr(),
       m_dyld_all_image_infos_addr(LLDB_INVALID_ADDRESS),
       m_dyld_all_image_infos(),
+      m_tid_to_tls_map(),
       m_dyld_all_image_infos_stop_id(UINT32_MAX),
       m_break_id(LLDB_INVALID_BREAK_ID),
       m_dyld_image_infos(),
@@ -192,6 +197,7 @@ DynamicLoaderMacOSXDYLD::DidLaunch ()
 bool
 DynamicLoaderMacOSXDYLD::ProcessDidExec ()
 {
+    bool did_exec = false;
     if (m_process)
     {
         // If we are stopped after an exec, we will have only one thread...
@@ -205,35 +211,42 @@ DynamicLoaderMacOSXDYLD::ProcessDidExec ()
             {
                 // The image info address from the process is the 'dyld_all_image_infos'
                 // address and it has changed.
-                return true;
+                did_exec = true;
             }
-            
-            if (m_process_image_addr_is_all_images_infos == false && shlib_addr == m_dyld.address)
+            else if (m_process_image_addr_is_all_images_infos == false && shlib_addr == m_dyld.address)
             {
                 // The image info address from the process is the mach_header
                 // address for dyld and it has changed.
-                return true;
+                did_exec = true;
             }
-            
-            // ASLR might be disabled and dyld could have ended up in the same
-            // location. We should try and detect if we are stopped at '_dyld_start'
-            ThreadSP thread_sp (m_process->GetThreadList().GetThreadAtIndex(0));
-            if (thread_sp)
+            else
             {
-                lldb::StackFrameSP frame_sp (thread_sp->GetStackFrameAtIndex(0));
-                if (frame_sp)
+                // ASLR might be disabled and dyld could have ended up in the same
+                // location. We should try and detect if we are stopped at '_dyld_start'
+                ThreadSP thread_sp(m_process->GetThreadList().GetThreadAtIndex(0));
+                if (thread_sp)
                 {
-                    const Symbol *symbol = frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
-                    if (symbol)
+                    lldb::StackFrameSP frame_sp(thread_sp->GetStackFrameAtIndex(0));
+                    if (frame_sp)
                     {
-                        if (symbol->GetName() == ConstString("_dyld_start"))
-                            return true;
+                        const Symbol *symbol = frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
+                        if (symbol)
+                        {
+                            if (symbol->GetName() == ConstString("_dyld_start"))
+                                did_exec = true;
+                        }
                     }
                 }
             }
+
+            if (did_exec)
+            {
+                m_libpthread_module_wp.reset();
+                m_pthread_getspecific_addr.Clear();
+            }
         }
     }
-    return false;
+    return did_exec;
 }
 
 
@@ -1980,6 +1993,135 @@ DynamicLoaderMacOSXDYLD::CanLoadImage ()
 
     error.SetErrorString("unsafe to load or unload shared libraries");
     return error;
+}
+
+lldb::ModuleSP
+DynamicLoaderMacOSXDYLD::GetPThreadLibraryModule()
+{
+    ModuleSP module_sp = m_libpthread_module_wp.lock();
+    if (!module_sp)
+    {
+        SymbolContextList sc_list;
+        ModuleSpec module_spec;
+        module_spec.GetFileSpec().GetFilename().SetCString("libsystem_pthread.dylib");
+        ModuleList module_list;
+        if (m_process->GetTarget().GetImages().FindModules(module_spec, module_list))
+        {
+            if (module_list.GetSize() == 1)
+            {
+                module_sp = module_list.GetModuleAtIndex(0);
+                if (module_sp)
+                    m_libpthread_module_wp = module_sp;
+            }
+        }
+    }
+    return module_sp;
+}
+
+Address
+DynamicLoaderMacOSXDYLD::GetPthreadSetSpecificAddress()
+{
+    if (!m_pthread_getspecific_addr.IsValid())
+    {
+        ModuleSP module_sp = GetPThreadLibraryModule();
+        if (module_sp)
+        {
+            lldb_private::SymbolContextList sc_list;
+            module_sp->FindSymbolsWithNameAndType(ConstString("pthread_getspecific"), eSymbolTypeCode, sc_list);
+            SymbolContext sc;
+            if (sc_list.GetContextAtIndex(0, sc))
+            {
+                if (sc.symbol)
+                    m_pthread_getspecific_addr = sc.symbol->GetAddress();
+            }
+        }
+    }
+    return m_pthread_getspecific_addr;
+}
+
+lldb::addr_t
+DynamicLoaderMacOSXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp, const lldb::ThreadSP thread_sp,
+                                            lldb::addr_t tls_file_addr)
+{
+    if (!thread_sp || !module_sp)
+        return LLDB_INVALID_ADDRESS;
+
+    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+
+    const uint32_t addr_size = m_process->GetAddressByteSize();
+    uint8_t buf[sizeof(lldb::addr_t) * 3];
+
+    lldb_private::Address tls_addr;
+    if (module_sp->ResolveFileAddress(tls_file_addr, tls_addr))
+    {
+        Error error;
+        const size_t tsl_data_size = addr_size * 3;
+        Target &target = m_process->GetTarget();
+        if (target.ReadMemory(tls_addr, false, buf, tsl_data_size, error) == tsl_data_size)
+        {
+            const ByteOrder byte_order = m_process->GetByteOrder();
+            DataExtractor data(buf, sizeof(buf), byte_order, addr_size);
+            lldb::offset_t offset = addr_size; // Skip the first pointer
+            const lldb::addr_t pthread_key = data.GetAddress(&offset);
+            const lldb::addr_t tls_offset = data.GetAddress(&offset);
+            if (pthread_key != 0)
+            {
+                // First check to see if we have already figured out the location
+                // of TLS data for the pthread_key on a specific thread yet. If we
+                // have we can re-use it since its location will not change unless
+                // the process execs.
+                const tid_t tid = thread_sp->GetID();
+                auto tid_pos = m_tid_to_tls_map.find(tid);
+                if (tid_pos != m_tid_to_tls_map.end())
+                {
+                    auto tls_pos = tid_pos->second.find(pthread_key);
+                    if (tls_pos != tid_pos->second.end())
+                    {
+                        return tls_pos->second + tls_offset;
+                    }
+                }
+                StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(0);
+                if (frame_sp)
+                {
+                    ClangASTContext *clang_ast_context = target.GetScratchClangASTContext();
+
+                    if (!clang_ast_context)
+                        return LLDB_INVALID_ADDRESS;
+
+                    CompilerType clang_void_ptr_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+                    Address pthread_getspecific_addr = GetPthreadSetSpecificAddress();
+                    if (pthread_getspecific_addr.IsValid())
+                    {
+                        EvaluateExpressionOptions options;
+
+                        lldb::ThreadPlanSP thread_plan_sp(
+                            new ThreadPlanCallFunction(*thread_sp, pthread_getspecific_addr, clang_void_ptr_type,
+                                                       llvm::ArrayRef<lldb::addr_t>(pthread_key), options));
+
+                        DiagnosticManager execution_errors;
+                        ExecutionContext exe_ctx(thread_sp);
+                        lldb::ExpressionResults results =
+                            m_process->RunThreadPlan(exe_ctx, thread_plan_sp, options, execution_errors);
+
+                        if (results == lldb::eExpressionCompleted)
+                        {
+                            lldb::ValueObjectSP result_valobj_sp = thread_plan_sp->GetReturnValueObject();
+                            if (result_valobj_sp)
+                            {
+                                const lldb::addr_t pthread_key_data = result_valobj_sp->GetValueAsUnsigned(0);
+                                if (pthread_key_data)
+                                {
+                                    m_tid_to_tls_map[tid].insert(std::make_pair(pthread_key, pthread_key_data));
+                                    return pthread_key_data + tls_offset;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    return LLDB_INVALID_ADDRESS;
 }
 
 void

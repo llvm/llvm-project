@@ -105,6 +105,8 @@ add_llvm_library(LLVMCodeGen
   RegUsageInfoCollector.cpp
   RegUsageInfoPropagate.cpp
   SafeStack.cpp
+  SafeStackColoring.cpp
+  SafeStackLayout.cpp
   ScheduleDAG.cpp
   ScheduleDAGInstrs.cpp
   ScheduleDAGPrinter.cpp

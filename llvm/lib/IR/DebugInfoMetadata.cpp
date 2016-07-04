@@ -412,22 +412,22 @@ DISubprogram *DISubprogram::getImpl(
     MDString *LinkageName, Metadata *File, unsigned Line, Metadata *Type,
     bool IsLocalToUnit, bool IsDefinition, unsigned ScopeLine,
     Metadata *ContainingType, unsigned Virtuality, unsigned VirtualIndex,
-    unsigned Flags, bool IsOptimized, Metadata *Unit, Metadata *TemplateParams,
-    Metadata *Declaration, Metadata *Variables, StorageType Storage,
-    bool ShouldCreate) {
+    int ThisAdjustment, unsigned Flags, bool IsOptimized, Metadata *Unit,
+    Metadata *TemplateParams, Metadata *Declaration, Metadata *Variables,
+    StorageType Storage, bool ShouldCreate) {
   assert(isCanonical(Name) && "Expected canonical MDString");
   assert(isCanonical(LinkageName) && "Expected canonical MDString");
-  DEFINE_GETIMPL_LOOKUP(DISubprogram,
-                        (Scope, Name, LinkageName, File, Line, Type,
-                         IsLocalToUnit, IsDefinition, ScopeLine, ContainingType,
-                         Virtuality, VirtualIndex, Flags, IsOptimized, Unit,
-                         TemplateParams, Declaration, Variables));
+  DEFINE_GETIMPL_LOOKUP(
+      DISubprogram,
+      (Scope, Name, LinkageName, File, Line, Type, IsLocalToUnit, IsDefinition,
+       ScopeLine, ContainingType, Virtuality, VirtualIndex, ThisAdjustment,
+       Flags, IsOptimized, Unit, TemplateParams, Declaration, Variables));
   Metadata *Ops[] = {File,           Scope,       Name,           Name,
                      LinkageName,    Type,        ContainingType, Unit,
                      TemplateParams, Declaration, Variables};
-  DEFINE_GETIMPL_STORE(DISubprogram,
-                       (Line, ScopeLine, Virtuality, VirtualIndex, Flags,
-                        IsLocalToUnit, IsDefinition, IsOptimized),
+  DEFINE_GETIMPL_STORE(DISubprogram, (Line, ScopeLine, Virtuality, VirtualIndex,
+                                      ThisAdjustment, Flags, IsLocalToUnit,
+                                      IsDefinition, IsOptimized),
                        Ops);
 }
 

@@ -335,24 +335,24 @@ bool PostRAScheduler::runOnMachineFunction(MachineFunction &Fn) {
     MachineBasicBlock::iterator Current = MBB.end();
     unsigned Count = MBB.size(), CurrentCount = Count;
     for (MachineBasicBlock::iterator I = Current; I != MBB.begin();) {
-      MachineInstr *MI = std::prev(I);
+      MachineInstr &MI = *std::prev(I);
       --Count;
       // Calls are not scheduling boundaries before register allocation, but
       // post-ra we don't gain anything by scheduling across calls since we
       // don't need to worry about register pressure.
-      if (MI->isCall() || TII->isSchedulingBoundary(MI, &MBB, Fn)) {
+      if (MI.isCall() || TII->isSchedulingBoundary(MI, &MBB, Fn)) {
         Scheduler.enterRegion(&MBB, I, Current, CurrentCount - Count);
         Scheduler.setEndIndex(CurrentCount);
         Scheduler.schedule();
         Scheduler.exitRegion();
         Scheduler.EmitSchedule();
-        Current = MI;
+        Current = &MI;
         CurrentCount = Count;
-        Scheduler.Observe(*MI, CurrentCount);
+        Scheduler.Observe(MI, CurrentCount);
       }
       I = MI;
-      if (MI->isBundle())
-        Count -= MI->getBundleSize();
+      if (MI.isBundle())
+        Count -= MI.getBundleSize();
     }
     assert(Count == 0 && "Instruction count mismatch!");
     assert((MBB.begin() == Current || CurrentCount != 0) &&

@@ -3397,12 +3397,14 @@ public:
 
   class ConditionResult;
   StmtResult ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr,
+                         Stmt *InitStmt,
                          ConditionResult Cond, Stmt *ThenVal,
                          SourceLocation ElseLoc, Stmt *ElseVal);
   StmtResult BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
                          ConditionResult Cond, Stmt *ThenVal,
                          SourceLocation ElseLoc, Stmt *ElseVal);
   StmtResult ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
+                                    Stmt *InitStmt,
                                     ConditionResult Cond);
   StmtResult ActOnFinishSwitchStmt(SourceLocation SwitchLoc,
                                            Stmt *Switch, Stmt *Body);
@@ -3474,9 +3476,9 @@ public:
                                            SourceLocation Loc,
                                            unsigned NumParams);
   VarDecl *getCopyElisionCandidate(QualType ReturnType, Expr *E,
-                                   bool AllowFunctionParameters);
+                                   bool AllowParamOrMoveConstructible);
   bool isCopyElisionCandidate(QualType ReturnType, const VarDecl *VD,
-                              bool AllowFunctionParameters);
+                              bool AllowParamOrMoveConstructible);
 
   StmtResult ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                              Scope *CurScope);

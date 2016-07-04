@@ -60,17 +60,16 @@ static bool isZeroImm(const MachineOperand &op) {
 /// the destination along with the FrameIndex of the loaded stack slot.  If
 /// not, return 0.  This predicate must return 0 if the instruction has
 /// any side effects other than loading from the stack slot.
-unsigned
-XCoreInstrInfo::isLoadFromStackSlot(const MachineInstr *MI, int &FrameIndex) const{
-  int Opcode = MI->getOpcode();
+unsigned XCoreInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
+                                             int &FrameIndex) const {
+  int Opcode = MI.getOpcode();
   if (Opcode == XCore::LDWFI) 
   {
-    if ((MI->getOperand(1).isFI()) && // is a stack slot
-        (MI->getOperand(2).isImm()) &&  // the imm is zero
-        (isZeroImm(MI->getOperand(2)))) 
-    {
-      FrameIndex = MI->getOperand(1).getIndex();
-      return MI->getOperand(0).getReg();
+    if ((MI.getOperand(1).isFI()) &&  // is a stack slot
+        (MI.getOperand(2).isImm()) && // the imm is zero
+        (isZeroImm(MI.getOperand(2)))) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
     }
   }
   return 0;
@@ -81,18 +80,16 @@ XCoreInstrInfo::isLoadFromStackSlot(const MachineInstr *MI, int &FrameIndex) con
   /// the source reg along with the FrameIndex of the loaded stack slot.  If
   /// not, return 0.  This predicate must return 0 if the instruction has
   /// any side effects other than storing to the stack slot.
-unsigned
-XCoreInstrInfo::isStoreToStackSlot(const MachineInstr *MI,
-                                   int &FrameIndex) const {
-  int Opcode = MI->getOpcode();
+unsigned XCoreInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                            int &FrameIndex) const {
+  int Opcode = MI.getOpcode();
   if (Opcode == XCore::STWFI)
   {
-    if ((MI->getOperand(1).isFI()) && // is a stack slot
-        (MI->getOperand(2).isImm()) &&  // the imm is zero
-        (isZeroImm(MI->getOperand(2))))
-    {
-      FrameIndex = MI->getOperand(1).getIndex();
-      return MI->getOperand(0).getReg();
+    if ((MI.getOperand(1).isFI()) &&  // is a stack slot
+        (MI.getOperand(2).isImm()) && // the imm is zero
+        (isZeroImm(MI.getOperand(2)))) {
+      FrameIndex = MI.getOperand(1).getIndex();
+      return MI.getOperand(0).getReg();
     }
   }
   return 0;

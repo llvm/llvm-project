@@ -42,6 +42,12 @@ AST_MATCHER(RecordDecl, isTriviallyDefaultConstructible) {
 
 AST_MATCHER(FieldDecl, isBitfield) { return Node.isBitField(); }
 
+// Returns QualType matcher for references to const.
+AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isReferenceToConst) {
+  using namespace ast_matchers;
+  return referenceType(pointee(qualType(isConstQualified())));
+}
+
 } // namespace matchers
 } // namespace tidy
 } // namespace clang

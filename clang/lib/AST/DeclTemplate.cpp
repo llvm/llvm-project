@@ -1239,11 +1239,34 @@ createMakeIntegerSeqParameterList(const ASTContext &C, DeclContext *DC) {
                                        Params, SourceLocation());
 }
 
+static TemplateParameterList *
+createTypePackElementParameterList(const ASTContext &C, DeclContext *DC) {
+  // std::size_t Index
+  TypeSourceInfo *TInfo = C.getTrivialTypeSourceInfo(C.getSizeType());
+  auto *Index = NonTypeTemplateParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(), /*Depth=*/0, /*Position=*/0,
+      /*Id=*/nullptr, TInfo->getType(), /*ParameterPack=*/false, TInfo);
+
+  // typename ...T
+  auto *Ts = TemplateTypeParmDecl::Create(
+      C, DC, SourceLocation(), SourceLocation(), /*Depth=*/0, /*Position=*/1,
+      /*Id=*/nullptr, /*Typename=*/true, /*ParameterPack=*/true);
+  Ts->setImplicit(true);
+
+  // template <std::size_t Index, typename ...T>
+  NamedDecl *Params[] = {Index, Ts};
+  return TemplateParameterList::Create(C, SourceLocation(), SourceLocation(),
+                                       llvm::makeArrayRef(Params),
+                                       SourceLocation());
+}
+
 static TemplateParameterList *createBuiltinTemplateParameterList(
     const ASTContext &C, DeclContext *DC, BuiltinTemplateKind BTK) {
   switch (BTK) {
   case BTK__make_integer_seq:
     return createMakeIntegerSeqParameterList(C, DC);
+  case BTK__type_pack_element:
+    return createTypePackElementParameterList(C, DC);
   }
 
   llvm_unreachable("unhandled BuiltinTemplateKind!");

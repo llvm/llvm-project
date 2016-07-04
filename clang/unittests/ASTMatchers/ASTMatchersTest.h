@@ -73,12 +73,16 @@ testing::AssertionResult matchesConditionally(
     return testing::AssertionFailure() << "Could not add dynamic matcher";
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
-  // Some tests use typeof, which is a gnu extension.
-  std::vector<std::string> Args;
-  Args.push_back(CompileArg);
-  // Some tests need rtti/exceptions on
-  Args.push_back("-frtti");
-  Args.push_back("-fexceptions");
+  // Some tests need rtti/exceptions on.  Use an unknown-unknown triple so we
+  // don't instantiate the full system toolchain.  On Linux, instantiating the
+  // toolchain involves stat'ing large portions of /usr/lib, and this slows down
+  // not only this test, but all other tests, via contention in the kernel.
+  //
+  // FIXME: This is a hack to work around the fact that there's no way to do the
+  // equivalent of runToolOnCodeWithArgs without instantiating a full Driver.
+  // We should consider having a function, at least for tests, that invokes cc1.
+  std::vector<std::string> Args = {CompileArg, "-frtti", "-fexceptions",
+                                   "-target", "i386-unknown-unknown"};
   if (!runToolOnCodeWithArgs(
           Factory->create(), Code, Args, Filename, "clang-tool",
           std::make_shared<PCHContainerOperations>(), VirtualMappedFiles)) {
@@ -180,13 +184,12 @@ testing::AssertionResult matchesConditionallyWithCuda(
     return testing::AssertionFailure() << "Could not add dynamic matcher";
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
-  // Some tests use typeof, which is a gnu extension.
-  std::vector<std::string> Args;
-  Args.push_back("-xcuda");
-  Args.push_back("-fno-ms-extensions");
-  Args.push_back("--cuda-host-only");
-  Args.push_back("-nocudainc");
-  Args.push_back(CompileArg);
+  // Some tests use typeof, which is a gnu extension.  Using an explicit
+  // unknown-unknown triple is good for a large speedup, because it lets us
+  // avoid constructing a full system triple.
+  std::vector<std::string> Args = {
+      "-xcuda",  "-fno-ms-extensions",      "--cuda-host-only", "-nocudainc",
+      "-target", "nvptx64-unknown-unknown", CompileArg};
   if (!runToolOnCodeWithArgs(Factory->create(),
                              CudaHeader + Code, Args)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";
@@ -230,8 +233,11 @@ matchAndVerifyResultConditionally(const std::string &Code, const T &AMatcher,
   Finder.addMatcher(AMatcher, &VerifyVerifiedResult);
   std::unique_ptr<FrontendActionFactory> Factory(
       newFrontendActionFactory(&Finder));
-  // Some tests use typeof, which is a gnu extension.
-  std::vector<std::string> Args(1, "-std=gnu++98");
+  // Some tests use typeof, which is a gnu extension.  Using an explicit
+  // unknown-unknown triple is good for a large speedup, because it lets us
+  // avoid constructing a full system triple.
+  std::vector<std::string> Args = {"-std=gnu++98", "-target",
+                                   "i386-unknown-unknown"};
   if (!runToolOnCodeWithArgs(Factory->create(), Code, Args)) {
     return testing::AssertionFailure() << "Parsing error in \"" << Code << "\"";
   }

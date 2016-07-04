@@ -29,8 +29,9 @@
 ; CHECK:  Struct ({{.*}}) {
 ; CHECK:    TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:    MemberCount: 0
-; CHECK:    Properties [ (0x80)
+; CHECK:    Properties [ (0x180)
 ; CHECK:      ForwardReference (0x80)
+; CHECK:      Scoped (0x100)
 ; CHECK:    ]
 ; CHECK:    FieldList: 0x0
 ; CHECK:    DerivedFrom: 0x0
@@ -42,7 +43,8 @@
 ; CHECK:  Struct ({{.*}}) {
 ; CHECK:    TypeLeafKind: LF_STRUCTURE (0x1505)
 ; CHECK:    MemberCount: 1
-; CHECK:    Properties [ (0x0)
+; CHECK:    Properties [ (0x100)
+; CHECK:      Scoped (0x100)
 ; CHECK:    ]
 ; CHECK:    Name: foo::bar::baz::LocalRecord
 ; CHECK:  }

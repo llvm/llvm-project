@@ -523,8 +523,10 @@ bool CursorVisitor::VisitChildren(CXCursor Cursor) {
           for (ASTUnit::top_level_iterator TL = CXXUnit->top_level_begin(),
                                         TLEnd = CXXUnit->top_level_end();
                TL != TLEnd; ++TL) {
-            if (Visit(MakeCXCursor(*TL, TU, RegionOfInterest), true))
-              return true;
+            const Optional<bool> V = handleDeclForVisitation(*TL);
+            if (!V.hasValue())
+              continue;
+            return V.getValue();
           }
         } else if (VisitDeclContext(
                                 CXXUnit->getASTContext().getTranslationUnitDecl()))
@@ -621,40 +623,48 @@ bool CursorVisitor::VisitDeclContext(DeclContext *DC) {
     Decl *D = *I;
     if (D->getLexicalDeclContext() != DC)
       continue;
-    CXCursor Cursor = MakeCXCursor(D, TU, RegionOfInterest);
-
-    // Ignore synthesized ivars here, otherwise if we have something like:
-    //   @synthesize prop = _prop;
-    // and '_prop' is not declared, we will encounter a '_prop' ivar before
-    // encountering the 'prop' synthesize declaration and we will think that
-    // we passed the region-of-interest.
-    if (ObjCIvarDecl *ivarD = dyn_cast<ObjCIvarDecl>(D)) {
-      if (ivarD->getSynthesize())
-        continue;
-    }
-
-    // FIXME: ObjCClassRef/ObjCProtocolRef for forward class/protocol
-    // declarations is a mismatch with the compiler semantics.
-    if (Cursor.kind == CXCursor_ObjCInterfaceDecl) {
-      ObjCInterfaceDecl *ID = cast<ObjCInterfaceDecl>(D);
-      if (!ID->isThisDeclarationADefinition())
-        Cursor = MakeCursorObjCClassRef(ID, ID->getLocation(), TU);
-
-    } else if (Cursor.kind == CXCursor_ObjCProtocolDecl) {
-      ObjCProtocolDecl *PD = cast<ObjCProtocolDecl>(D);
-      if (!PD->isThisDeclarationADefinition())
-        Cursor = MakeCursorObjCProtocolRef(PD, PD->getLocation(), TU);
-    }
-
-    const Optional<bool> &V = shouldVisitCursor(Cursor);
+    const Optional<bool> V = handleDeclForVisitation(D);
     if (!V.hasValue())
       continue;
-    if (!V.getValue())
-      return false;
-    if (Visit(Cursor, true))
-      return true;
+    return V.getValue();
   }
   return false;
+}
+
+Optional<bool> CursorVisitor::handleDeclForVisitation(const Decl *D) {
+  CXCursor Cursor = MakeCXCursor(D, TU, RegionOfInterest);
+
+  // Ignore synthesized ivars here, otherwise if we have something like:
+  //   @synthesize prop = _prop;
+  // and '_prop' is not declared, we will encounter a '_prop' ivar before
+  // encountering the 'prop' synthesize declaration and we will think that
+  // we passed the region-of-interest.
+  if (auto *ivarD = dyn_cast<ObjCIvarDecl>(D)) {
+    if (ivarD->getSynthesize())
+      return None;
+  }
+
+  // FIXME: ObjCClassRef/ObjCProtocolRef for forward class/protocol
+  // declarations is a mismatch with the compiler semantics.
+  if (Cursor.kind == CXCursor_ObjCInterfaceDecl) {
+    auto *ID = cast<ObjCInterfaceDecl>(D);
+    if (!ID->isThisDeclarationADefinition())
+      Cursor = MakeCursorObjCClassRef(ID, ID->getLocation(), TU);
+
+  } else if (Cursor.kind == CXCursor_ObjCProtocolDecl) {
+    auto *PD = cast<ObjCProtocolDecl>(D);
+    if (!PD->isThisDeclarationADefinition())
+      Cursor = MakeCursorObjCProtocolRef(PD, PD->getLocation(), TU);
+  }
+
+  const Optional<bool> V = shouldVisitCursor(Cursor);
+  if (!V.hasValue())
+    return None;
+  if (!V.getValue())
+    return false;
+  if (Visit(Cursor, true))
+    return true;
+  return None;
 }
 
 bool CursorVisitor::VisitTranslationUnitDecl(TranslationUnitDecl *D) {

@@ -14,15 +14,17 @@
 
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Analysis/VectorUtils.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "loop-accesses"
@@ -866,7 +868,7 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 /// \brief Check whether the access through \p Ptr has a constant stride.
 int llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
                        const Loop *Lp, const ValueToValueMap &StridesMap,
-                       bool Assume, bool ShouldCheckWrap) {
+                       bool Assume) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
 
@@ -905,9 +907,9 @@ int llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
   // to access the pointer value "0" which is undefined behavior in address
   // space 0, therefore we can also vectorize this case.
   bool IsInBoundsGEP = isInBoundsGep(Ptr);
-  bool IsNoWrapAddRec = !ShouldCheckWrap ||
-    PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW) ||
-    isNoWrapAddRec(Ptr, AR, PSE, Lp);
+  bool IsNoWrapAddRec =
+      PSE.hasNoOverflow(Ptr, SCEVWrapPredicate::IncrementNUSW) ||
+      isNoWrapAddRec(Ptr, AR, PSE, Lp);
   bool IsInAddressSpaceZero = PtrTy->getAddressSpace() == 0;
   if (!IsNoWrapAddRec && !IsInBoundsGEP && !IsInAddressSpaceZero) {
     if (Assume) {
@@ -1492,8 +1494,8 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   }
 
   // ScalarEvolution needs to be able to find the exit count.
-  const SCEV *ExitCount = PSE.getBackedgeTakenCount();
-  if (ExitCount == PSE.getSE()->getCouldNotCompute()) {
+  const SCEV *ExitCount = PSE->getBackedgeTakenCount();
+  if (ExitCount == PSE->getSE()->getCouldNotCompute()) {
     emitAnalysis(LoopAccessReport()
                  << "could not determine number of loop iterations");
     DEBUG(dbgs() << "LAA: SCEV could not compute the loop exit count.\n");
@@ -1598,7 +1600,7 @@ void LoopAccessInfo::analyzeLoop() {
 
   MemoryDepChecker::DepCandidates DependentAccesses;
   AccessAnalysis Accesses(TheLoop->getHeader()->getModule()->getDataLayout(),
-                          AA, LI, DependentAccesses, PSE);
+                          AA, LI, DependentAccesses, *PSE);
 
   // Holds the analyzed pointers. We don't want to call GetUnderlyingObjects
   // multiple times on the same object. If the ptr is accessed twice, once
@@ -1647,7 +1649,7 @@ void LoopAccessInfo::analyzeLoop() {
     // words may be written to the same address.
     bool IsReadOnlyPtr = false;
     if (Seen.insert(Ptr).second ||
-        !getPtrStride(PSE, Ptr, TheLoop, SymbolicStrides)) {
+        !getPtrStride(*PSE, Ptr, TheLoop, SymbolicStrides)) {
       ++NumReads;
       IsReadOnlyPtr = true;
     }
@@ -1676,7 +1678,7 @@ void LoopAccessInfo::analyzeLoop() {
 
   // Find pointers with computable bounds. We are going to use this information
   // to place a runtime bound check.
-  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE.getSE(),
+  bool CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, PSE->getSE(),
                                                   TheLoop, SymbolicStrides);
   if (!CanDoRTIfNeeded) {
     emitAnalysis(LoopAccessReport() << "cannot identify array bounds");
@@ -1704,7 +1706,7 @@ void LoopAccessInfo::analyzeLoop() {
       PtrRtChecking->reset();
       PtrRtChecking->Need = true;
 
-      auto *SE = PSE.getSE();
+      auto *SE = PSE->getSE();
       CanDoRTIfNeeded = Accesses.canCheckPtrAtRT(*PtrRtChecking, SE, TheLoop,
                                                  SymbolicStrides, true);
 
@@ -1751,7 +1753,7 @@ void LoopAccessInfo::emitAnalysis(LoopAccessReport &Message) {
 }
 
 bool LoopAccessInfo::isUniform(Value *V) const {
-  return (PSE.getSE()->isLoopInvariant(PSE.getSE()->getSCEV(V), TheLoop));
+  return (PSE->getSE()->isLoopInvariant(PSE->getSE()->getSCEV(V), TheLoop));
 }
 
 // FIXME: this function is currently a duplicate of the one in
@@ -1832,8 +1834,8 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
     Instruction *Loc,
     const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &PointerChecks)
     const {
-  auto *SE = PSE.getSE();
-  SCEVExpander Exp(*SE, DL, "induction");
+  auto *SE = PSE->getSE();
+  SCEVExpander Exp(*SE, *DL, "induction");
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, SE, Exp, *PtrRtChecking);
 
@@ -1906,7 +1908,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   else
     return;
 
-  Value *Stride = getStrideFromPointer(Ptr, PSE.getSE(), TheLoop);
+  Value *Stride = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop);
   if (!Stride)
     return;
 
@@ -1920,10 +1922,10 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
                                const DataLayout &DL,
                                const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                                DominatorTree *DT, LoopInfo *LI)
-    : PSE(*SE, *L),
+    : PSE(llvm::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
-      DepChecker(llvm::make_unique<MemoryDepChecker>(PSE, L)), TheLoop(L),
-      DL(DL), TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
+      DepChecker(llvm::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
+      DL(&DL), TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
       MaxSafeDepDistBytes(-1U), CanVecMem(false),
       StoreToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
@@ -1962,12 +1964,12 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
                    << "found in loop.\n";
 
   OS.indent(Depth) << "SCEV assumptions:\n";
-  PSE.getUnionPredicate().print(OS, Depth);
+  PSE->getUnionPredicate().print(OS, Depth);
 
   OS << "\n";
 
   OS.indent(Depth) << "Expressions re-written:\n";
-  PSE.print(OS, Depth);
+  PSE->print(OS, Depth);
 }
 
 const LoopAccessInfo &LoopAccessAnalysis::getInfo(Loop *L) {
@@ -2021,6 +2023,32 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_END(LoopAccessAnalysis, LAA_NAME, laa_name, false, true)
+
+char LoopAccessInfoAnalysis::PassID;
+
+LoopAccessInfo LoopAccessInfoAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
+  // FIXME: ugly const cast
+  AnalysisManager<Function> &FAM = const_cast<FunctionAnalysisManager &>(
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager());
+  Function &F = *L.getHeader()->getParent();
+  auto *SE = &FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *TLI = FAM.getCachedResult<TargetLibraryAnalysis>(F);
+  auto *AA = &FAM.getResult<AAManager>(F);
+  auto *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
+  auto *LI = &FAM.getResult<LoopAnalysis>(F);
+  const DataLayout &DL = F.getParent()->getDataLayout();
+  return LoopAccessInfo(&L, SE, DL, TLI, AA, DT, LI);
+}
+
+PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,
+                                                 AnalysisManager<Loop> &AM) {
+  Function &F = *L.getHeader()->getParent();
+  auto &LAI = AM.getResult<LoopAccessInfoAnalysis>(L);
+  OS << "Loop access info in function '" << F.getName() << "':\n";
+  OS.indent(2) << L.getHeader()->getName() << ":\n";
+  LAI.print(OS, 4);
+  return PreservedAnalyses::all();
+}
 
 namespace llvm {
   Pass *createLAAPass() {

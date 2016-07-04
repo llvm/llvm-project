@@ -39,6 +39,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
 
@@ -58,6 +59,13 @@ static cl::opt<bool> EnableR600IfConvert(
   cl::desc("Use if conversion pass"),
   cl::ReallyHidden,
   cl::init(true));
+
+// Option to disable vectorizer for tests.
+static cl::opt<bool> EnableLoadStoreVectorizer(
+  "amdgpu-load-store-vectorizer",
+  cl::desc("Enable load store vectorizer"),
+  cl::init(false),
+  cl::Hidden);
 
 extern "C" void LLVMInitializeAMDGPUTarget() {
   // Register the target
@@ -267,6 +275,7 @@ public:
   void addEarlyCSEOrGVNPass();
   void addStraightLineScalarOptimizationPasses();
   void addIRPasses() override;
+  void addCodeGenPrepare() override;
   bool addPreISel() override;
   bool addInstSelector() override;
   bool addGCPasses() override;
@@ -390,6 +399,13 @@ void AMDGPUPassConfig::addIRPasses() {
   // but EarlyCSE can do neither of them.
   if (getOptLevel() != CodeGenOpt::None)
     addEarlyCSEOrGVNPass();
+}
+
+void AMDGPUPassConfig::addCodeGenPrepare() {
+  TargetPassConfig::addCodeGenPrepare();
+
+  if (EnableLoadStoreVectorizer)
+    addPass(createLoadStoreVectorizerPass());
 }
 
 bool AMDGPUPassConfig::addPreISel() {

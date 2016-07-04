@@ -607,6 +607,9 @@ class Configuration(object):
                 self.cxx.flags += ['-fsanitize=address']
                 if llvm_symbolizer is not None:
                     self.env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
+                # FIXME: Turn ODR violation back on after PR28391 is resolved
+                # https://llvm.org/bugs/show_bug.cgi?id=28391
+                self.env['ASAN_OPTIONS'] = 'detect_odr_violation=0'
                 self.config.available_features.add('asan')
                 self.config.available_features.add('sanitizer-new-delete')
             elif san == 'Memory' or san == 'MemoryWithOrigins':

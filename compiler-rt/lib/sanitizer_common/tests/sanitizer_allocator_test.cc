@@ -335,7 +335,6 @@ TEST(SanitizerCommon, SizeClassAllocator64Overflow) {
 }
 #endif
 
-#if !defined(_WIN32)  // FIXME: This currently fails on Windows.
 TEST(SanitizerCommon, LargeMmapAllocator) {
   LargeMmapAllocator<> a;
   a.Init(/* may_return_null */ false);
@@ -411,7 +410,6 @@ TEST(SanitizerCommon, LargeMmapAllocator) {
   CHECK_NE(p, (char *)a.GetBlockBegin(p + page_size));
   a.Deallocate(&stats, p);
 }
-#endif
 
 template
 <class PrimaryAllocator, class SecondaryAllocator, class AllocatorCache>
@@ -483,13 +481,11 @@ TEST(SanitizerCommon, CombinedAllocator64Compact) {
 }
 #endif
 
-#if !defined(_WIN32)  // FIXME: This currently fails on Windows.
 TEST(SanitizerCommon, CombinedAllocator32Compact) {
   TestCombinedAllocator<Allocator32Compact,
       LargeMmapAllocator<>,
       SizeClassAllocatorLocalCache<Allocator32Compact> > ();
 }
-#endif
 
 template <class AllocatorCache>
 void TestSizeClassAllocatorLocalCache() {

@@ -15,7 +15,6 @@
 #include "BPFMCTargetDesc.h"
 #include "BPFMCAsmInfo.h"
 #include "InstPrinter/BPFInstPrinter.h"
-#include "llvm/MC/MCCodeGenInfo.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -51,14 +50,6 @@ static MCSubtargetInfo *createBPFMCSubtargetInfo(const Triple &TT,
   return createBPFMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
-static MCCodeGenInfo *createBPFMCCodeGenInfo(const Triple &TT, Reloc::Model RM,
-                                             CodeModel::Model CM,
-                                             CodeGenOpt::Level OL) {
-  MCCodeGenInfo *X = new MCCodeGenInfo();
-  X->initMCCodeGenInfo(RM, CM, OL);
-  return X;
-}
-
 static MCStreamer *createBPFMCStreamer(const Triple &T,
                                        MCContext &Ctx, MCAsmBackend &MAB,
                                        raw_pwrite_stream &OS, MCCodeEmitter *Emitter,
@@ -80,9 +71,6 @@ extern "C" void LLVMInitializeBPFTargetMC() {
   for (Target *T : {&TheBPFleTarget, &TheBPFbeTarget, &TheBPFTarget}) {
     // Register the MC asm info.
     RegisterMCAsmInfo<BPFMCAsmInfo> X(*T);
-
-    // Register the MC codegen info.
-    TargetRegistry::RegisterMCCodeGenInfo(*T, createBPFMCCodeGenInfo);
 
     // Register the MC instruction info.
     TargetRegistry::RegisterMCInstrInfo(*T, createBPFMCInstrInfo);

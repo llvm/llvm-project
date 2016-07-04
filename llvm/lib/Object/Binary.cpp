@@ -42,7 +42,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
 
   switch (Type) {
     case sys::fs::file_magic::archive:
-      return errorOrToExpected(Archive::create(Buffer));
+      return Archive::create(Buffer);
     case sys::fs::file_magic::elf:
     case sys::fs::file_magic::elf_relocatable:
     case sys::fs::file_magic::elf_executable:

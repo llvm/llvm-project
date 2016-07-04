@@ -27,36 +27,36 @@
 ; ASM: .seh_proc f
 ; ASM: # BB#0:                                 # %entry
 ; ASM:         subq    $56, %rsp
-; ASM:         #DEBUG_VALUE: f:param <- [%RSP+44]
-; ASM:         movl    %ecx, 44(%rsp)
+; ASM:         #DEBUG_VALUE: f:param <- [%RSP+52]
+; ASM:         movl    %ecx, 52(%rsp)
 ; ASM: [[prologue_end:\.Ltmp.*]]:
 ; ASM:         .cv_loc 0 1 8 7                 # t.cpp:8:7
 ; ASM:         testl   %ecx, %ecx
 ; ASM:         je      .LBB0_2
 ; ASM: [[if_start:\.Ltmp.*]]:
 ; ASM: # BB#1:                                 # %if.then
-; ASM:         #DEBUG_VALUE: f:param <- [%RSP+44]
+; ASM:         #DEBUG_VALUE: f:param <- [%RSP+52]
 ; ASM:         #DEBUG_VALUE: a <- [%RSP+40]
 ; ASM:         .cv_loc 0 1 9 9                 # t.cpp:9:9
 ; ASM:         movl    $42, 40(%rsp)
 ; ASM: [[inline_site1:\.Ltmp.*]]:
 ; ASM:         .cv_loc 1 1 4 7                 # t.cpp:4:7
-; ASM:         movl    $3, 48(%rsp)
-; ASM:         leaq    48(%rsp), %rcx
+; ASM:         movl    $3, 44(%rsp)
+; ASM:         leaq    44(%rsp), %rcx
 ; ASM:         .cv_loc 1 1 5 3                 # t.cpp:5:3
 ; ASM:         callq   capture
 ; ASM:         leaq    40(%rsp), %rcx
 ; ASM:         jmp     .LBB0_3
 ; ASM: [[else_start:\.Ltmp.*]]:
 ; ASM: .LBB0_2:                                # %if.else
-; ASM:         #DEBUG_VALUE: f:param <- [%RSP+44]
+; ASM:         #DEBUG_VALUE: f:param <- [%RSP+52]
 ; ASM:         #DEBUG_VALUE: b <- [%RSP+36]
 ; ASM:         .cv_loc 0 1 13 9                # t.cpp:13:9
 ; ASM:         movl    $42, 36(%rsp)
 ; ASM: [[inline_site2:\.Ltmp.*]]:
 ; ASM:         .cv_loc 2 1 4 7                 # t.cpp:4:7
-; ASM:         movl    $3, 52(%rsp)
-; ASM:         leaq    52(%rsp), %rcx
+; ASM:         movl    $3, 48(%rsp)
+; ASM:         leaq    48(%rsp), %rcx
 ; ASM:         .cv_loc 2 1 5 3                 # t.cpp:5:3
 ; ASM:         callq   capture
 ; ASM:         leaq    36(%rsp), %rcx
@@ -75,7 +75,7 @@
 ; ASM: .long   116                     # TypeIndex
 ; ASM: .short  1                       # Flags
 ; ASM: .asciz  "param"
-; ASM: .cv_def_range    [[prologue_end]] [[param_end]], "E\021O\001\000\000,\000\000\000"
+; ASM: .cv_def_range    [[prologue_end]] [[param_end]], "E\021O\001\000\0004\000\000\000"
 ; ASM: .short  4414                    # Record kind: S_LOCAL
 ; ASM: .long   116                     # TypeIndex
 ; ASM: .short  0                       # Flags
@@ -91,14 +91,14 @@
 ; ASM: .long   116                     # TypeIndex
 ; ASM: .short  0                       # Flags
 ; ASM: .asciz  "v"
-; ASM: .cv_def_range    [[inline_site1]] [[else_start]], "E\021O\001\000\0000\000\000\000"
+; ASM: .cv_def_range    [[inline_site1]] [[else_start]], "E\021O\001\000\000,\000\000\000"
 ; ASM: .short  4430                    # Record kind: S_INLINESITE_END
 ; ASM: .short  4429                    # Record kind: S_INLINESITE
 ; ASM: .short  4414                    # Record kind: S_LOCAL
 ; ASM: .long   116                     # TypeIndex
 ; ASM: .short  0                       # Flags
 ; ASM: .asciz  "v"
-; ASM: .cv_def_range    [[inline_site2]] [[inline_site2_end]], "E\021O\001\000\0004\000\000\000"
+; ASM: .cv_def_range    [[inline_site2]] [[inline_site2_end]], "E\021O\001\000\0000\000\000\000"
 ; ASM: .short  4430                    # Record kind: S_INLINESITE_END
 
 ; OBJ:  Subsection [
@@ -118,7 +118,7 @@
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
-; OBJ:      BasePointerOffset: 44
+; OBJ:      BasePointerOffset: 52
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x8
 ; OBJ:        ISectStart: 0x0
@@ -180,7 +180,7 @@
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
-; OBJ:      BasePointerOffset: 48
+; OBJ:      BasePointerOffset: 44
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x14
 ; OBJ:        ISectStart: 0x0
@@ -210,7 +210,7 @@
 ; OBJ:      BaseRegister: 335
 ; OBJ:      HasSpilledUDTMember: No
 ; OBJ:      OffsetInParent: 0
-; OBJ:      BasePointerOffset: 52
+; OBJ:      BasePointerOffset: 48
 ; OBJ:      LocalVariableAddrRange {
 ; OBJ:        OffsetStart: .text+0x35
 ; OBJ:        ISectStart: 0x0

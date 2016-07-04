@@ -610,7 +610,7 @@ CreateVarArgHelper(Function &Func, MemorySanitizer &Msan,
 
 unsigned TypeSizeToSizeIndex(unsigned TypeSize) {
   if (TypeSize <= 8) return 0;
-  return Log2_32_Ceil(TypeSize / 8);
+  return Log2_32_Ceil((TypeSize + 7) / 8);
 }
 
 /// This class does all the work for a given function. Store and Load

@@ -339,48 +339,56 @@ namespace llvm {
                              BeginSymName);
     }
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags) {
       return getELFSection(Section, Type, Flags, nullptr);
     }
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, const char *BeginSymName) {
       return getELFSection(Section, Type, Flags, 0, "", BeginSymName);
     }
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                StringRef Group) {
+                                const Twine &Group) {
       return getELFSection(Section, Type, Flags, EntrySize, Group, nullptr);
     }
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                StringRef Group, const char *BeginSymName) {
+                                const Twine &Group, const char *BeginSymName) {
       return getELFSection(Section, Type, Flags, EntrySize, Group, ~0,
                            BeginSymName);
     }
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                StringRef Group, unsigned UniqueID) {
+                                const Twine &Group, unsigned UniqueID) {
       return getELFSection(Section, Type, Flags, EntrySize, Group, UniqueID,
                            nullptr);
     }
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
-                                StringRef Group, unsigned UniqueID,
+                                const Twine &Group, unsigned UniqueID,
                                 const char *BeginSymName);
 
-    MCSectionELF *getELFSection(StringRef Section, unsigned Type,
+    MCSectionELF *getELFSection(const Twine &Section, unsigned Type,
                                 unsigned Flags, unsigned EntrySize,
                                 const MCSymbolELF *Group, unsigned UniqueID,
                                 const char *BeginSymName,
                                 const MCSectionELF *Associated);
 
-    MCSectionELF *createELFRelSection(StringRef Name, unsigned Type,
+    /// Get a section with the provided group identifier. This section is
+    /// named by concatenating \p Prefix with '.' then \p Suffix. The \p Type
+    /// describes the type of the section and \p Flags are used to further
+    /// configure this named section.
+    MCSectionELF *getELFNamedSection(const Twine &Prefix, const Twine &Suffix,
+                                     unsigned Type, unsigned Flags,
+                                     unsigned EntrySize = 0);
+
+    MCSectionELF *createELFRelSection(const Twine &Name, unsigned Type,
                                       unsigned Flags, unsigned EntrySize,
                                       const MCSymbolELF *Group,
                                       const MCSectionELF *Associated);

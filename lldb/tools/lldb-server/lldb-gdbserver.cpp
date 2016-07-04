@@ -32,7 +32,6 @@
 #include "lldb/Host/Pipe.h"
 #include "lldb/Host/Socket.h"
 #include "lldb/Host/StringConvert.h"
-#include "lldb/Target/Platform.h"
 #include "Acceptor.h"
 #include "LLDBServerUtilities.h"
 #include "Plugins/Process/gdb-remote/GDBRemoteCommunicationServerLLGS.h"
@@ -62,7 +61,6 @@ static int g_verbose = 0;
 static struct option g_long_options[] =
 {
     { "debug",              no_argument,        &g_debug,           1   },
-    { "platform",           required_argument,  NULL,               'p' },
     { "verbose",            no_argument,        &g_verbose,         1   },
     { "log-file",           required_argument,  NULL,               'l' },
     { "log-channels",       required_argument,  NULL,               'c' },
@@ -121,7 +119,6 @@ display_usage (const char *progname, const char* subcommand)
     fprintf(stderr, "Usage:\n  %s %s "
             "[--log-file log-file-name] "
             "[--log-channels log-channel-list] "
-            "[--platform platform_name] "
             "[--setsid] "
             "[--named-pipe named-pipe-path] "
             "[--native-regs] "
@@ -129,66 +126,6 @@ display_usage (const char *progname, const char* subcommand)
             "[[HOST]:PORT] "
             "[-- PROGRAM ARG1 ARG2 ...]\n", progname, subcommand);
     exit(0);
-}
-
-static void
-dump_available_platforms (FILE *output_file)
-{
-    fprintf (output_file, "Available platform plugins:\n");
-    for (int i = 0; ; ++i)
-    {
-        const char *plugin_name = PluginManager::GetPlatformPluginNameAtIndex (i);
-        const char *plugin_desc = PluginManager::GetPlatformPluginDescriptionAtIndex (i);
-
-        if (!plugin_name || !plugin_desc)
-            break;
-
-        fprintf (output_file, "%s\t%s\n", plugin_name, plugin_desc);
-    }
-
-    if ( Platform::GetHostPlatform () )
-    {
-        // add this since the default platform doesn't necessarily get registered by
-        // the plugin name (e.g. 'host' doesn't show up as a
-        // registered platform plugin even though it's the default).
-        fprintf (output_file, "%s\tDefault platform for this host.\n", Platform::GetHostPlatform ()->GetPluginName ().AsCString ());
-    }
-}
-
-static lldb::PlatformSP
-setup_platform (const std::string &platform_name)
-{
-    lldb::PlatformSP platform_sp;
-
-    if (platform_name.empty())
-    {
-        printf ("using the default platform: ");
-        platform_sp = Platform::GetHostPlatform ();
-        printf ("%s\n", platform_sp->GetPluginName ().AsCString ());
-        return platform_sp;
-    }
-
-    Error error;
-    platform_sp = Platform::Create (lldb_private::ConstString(platform_name), error);
-    if (error.Fail ())
-    {
-        // the host platform isn't registered with that name (at
-        // least, not always.  Check if the given name matches
-        // the default platform name.  If so, use it.
-        if ( Platform::GetHostPlatform () && ( Platform::GetHostPlatform ()->GetPluginName () == ConstString (platform_name.c_str()) ) )
-        {
-            platform_sp = Platform::GetHostPlatform ();
-        }
-        else
-        {
-            fprintf (stderr, "error: failed to create platform with name '%s'\n", platform_name.c_str());
-            dump_available_platforms (stderr);
-            exit (1);
-        }
-    }
-    printf ("using platform: %s\n", platform_name.c_str ());
-
-    return platform_sp;
 }
 
 void
@@ -421,7 +358,6 @@ main_gdbserver (int argc, char *argv[])
     argv++;
     int long_option_index = 0;
     int ch;
-    std::string platform_name;
     std::string attach_target;
     std::string named_pipe_path;
     std::string log_file;
@@ -458,11 +394,6 @@ main_gdbserver (int argc, char *argv[])
         case 'c': // Log Channels
             if (optarg && optarg[0])
                 log_channels = StringRef(optarg);
-            break;
-
-        case 'p': // platform name
-            if (optarg && optarg[0])
-                platform_name = optarg;
             break;
 
         case 'N': // named pipe
@@ -548,10 +479,7 @@ main_gdbserver (int argc, char *argv[])
         exit(255);
     }
 
-    // Setup the platform that GDBRemoteCommunicationServerLLGS will use.
-    lldb::PlatformSP platform_sp = setup_platform (platform_name);
-
-    GDBRemoteCommunicationServerLLGS gdb_server (platform_sp, mainloop);
+    GDBRemoteCommunicationServerLLGS gdb_server(mainloop);
 
     const char *const host_and_port = argv[0];
     argc -= 1;

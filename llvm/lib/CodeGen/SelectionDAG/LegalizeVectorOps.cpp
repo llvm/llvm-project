@@ -881,8 +881,7 @@ SDValue VectorLegalizer::ExpandBSWAP(SDValue Op) {
 
   SDLoc DL(Op);
   Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Op.getOperand(0));
-  Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT),
-                            ShuffleMask.data());
+  Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT), ShuffleMask);
   return DAG.getNode(ISD::BITCAST, DL, VT, Op);
 }
 
@@ -911,7 +910,7 @@ SDValue VectorLegalizer::ExpandBITREVERSE(SDValue Op) {
       SDLoc DL(Op);
       Op = DAG.getNode(ISD::BITCAST, DL, ByteVT, Op.getOperand(0));
       Op = DAG.getVectorShuffle(ByteVT, DL, Op, DAG.getUNDEF(ByteVT),
-                                BSWAPMask.data());
+                                BSWAPMask);
       Op = DAG.getNode(ISD::BITREVERSE, DL, ByteVT, Op);
       return DAG.getNode(ISD::BITCAST, DL, VT, Op);
     }

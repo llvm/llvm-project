@@ -874,7 +874,7 @@ static bool DebugACrash(BugDriver &BD,
 }
 
 static bool TestForOptimizerCrash(const BugDriver &BD, Module *M) {
-  return BD.runPasses(M);
+  return BD.runPasses(M, BD.getPassesToRun());
 }
 
 /// debugOptimizerCrash - This method is called when some pass crashes on input.

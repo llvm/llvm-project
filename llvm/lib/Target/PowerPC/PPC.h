@@ -59,13 +59,12 @@ namespace llvm {
     //===------------------------------------------------------------------===//
     // PPC Specific MachineOperand flags.
     MO_NO_FLAG,
-    
-    /// MO_PLT_OR_STUB - On a symbol operand "FOO", this indicates that the
-    /// reference is actually to the "FOO$stub" or "FOO@plt" symbol.  This is
-    /// used for calls and jumps to external functions on Tiger and earlier, and
+
+    /// On a symbol operand "FOO", this indicates that the reference is actually
+    /// to "FOO@plt".  This is used for calls and jumps to external functions on
     /// for PIC calls on Linux and ELF systems.
-    MO_PLT_OR_STUB = 1,
-    
+    MO_PLT = 1,
+
     /// MO_PIC_FLAG - If this bit is set, the symbol reference is relative to
     /// the function's picbase, e.g. lo16(symbol-picbase).
     MO_PIC_FLAG = 2,
@@ -73,7 +72,7 @@ namespace llvm {
     /// MO_NLP_FLAG - If this bit is set, the symbol reference is actually to
     /// the non_lazy_ptr for the global, e.g. lo16(symbol$non_lazy_ptr-picbase).
     MO_NLP_FLAG = 4,
-    
+
     /// MO_NLP_HIDDEN_FLAG - If this bit is set, the symbol reference is to a
     /// symbol with hidden visibility.  This causes a different kind of
     /// non-lazy-pointer to be generated.
@@ -92,11 +91,11 @@ namespace llvm {
     /// These values identify relocations on immediates folded
     /// into memory operations.
     MO_DTPREL_LO = 5 << 4,
-    MO_TLSLD_LO  = 6 << 4,
-    MO_TOC_LO    = 7 << 4,
+    MO_TLSLD_LO = 6 << 4,
+    MO_TOC_LO = 7 << 4,
 
     // Symbol for VK_PPC_TLS fixup attached to an ADD instruction
-    MO_TLS       = 8 << 4
+    MO_TLS = 8 << 4
   };
   } // end namespace PPCII
   

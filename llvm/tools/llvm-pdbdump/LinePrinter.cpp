@@ -44,19 +44,19 @@ using namespace llvm;
 
 LinePrinter::LinePrinter(int Indent, llvm::raw_ostream &Stream)
     : OS(Stream), IndentSpaces(Indent), CurrentIndent(0) {
-  SetFilters(ExcludeTypeFilters, opts::ExcludeTypes.begin(),
-             opts::ExcludeTypes.end());
-  SetFilters(ExcludeSymbolFilters, opts::ExcludeSymbols.begin(),
-             opts::ExcludeSymbols.end());
-  SetFilters(ExcludeCompilandFilters, opts::ExcludeCompilands.begin(),
-             opts::ExcludeCompilands.end());
+  SetFilters(ExcludeTypeFilters, opts::pretty::ExcludeTypes.begin(),
+             opts::pretty::ExcludeTypes.end());
+  SetFilters(ExcludeSymbolFilters, opts::pretty::ExcludeSymbols.begin(),
+             opts::pretty::ExcludeSymbols.end());
+  SetFilters(ExcludeCompilandFilters, opts::pretty::ExcludeCompilands.begin(),
+             opts::pretty::ExcludeCompilands.end());
 
-  SetFilters(IncludeTypeFilters, opts::IncludeTypes.begin(),
-             opts::IncludeTypes.end());
-  SetFilters(IncludeSymbolFilters, opts::IncludeSymbols.begin(),
-             opts::IncludeSymbols.end());
-  SetFilters(IncludeCompilandFilters, opts::IncludeCompilands.begin(),
-             opts::IncludeCompilands.end());
+  SetFilters(IncludeTypeFilters, opts::pretty::IncludeTypes.begin(),
+             opts::pretty::IncludeTypes.end());
+  SetFilters(IncludeSymbolFilters, opts::pretty::IncludeSymbols.begin(),
+             opts::pretty::IncludeSymbols.end());
+  SetFilters(IncludeCompilandFilters, opts::pretty::IncludeCompilands.begin(),
+             opts::pretty::IncludeCompilands.end());
 }
 
 void LinePrinter::Indent() { CurrentIndent += IndentSpaces; }

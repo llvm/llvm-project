@@ -37,8 +37,6 @@ protected:
   size_t getPos();
   void printErrorPos();
 
-  std::vector<uint8_t> parseHex(StringRef S);
-
   StringRef Input;
   std::vector<StringRef> Tokens;
   size_t Pos = 0;

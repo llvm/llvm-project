@@ -1705,6 +1705,8 @@ __tree<_Tp, _Compare, _Allocator>::operator=(__tree&& __t)
 template <class _Tp, class _Compare, class _Allocator>
 __tree<_Tp, _Compare, _Allocator>::~__tree()
 {
+    static_assert((is_copy_constructible<value_compare>::value),
+                 "Comparator must be copy-constructible.");
     destroy(__root());
 }
 

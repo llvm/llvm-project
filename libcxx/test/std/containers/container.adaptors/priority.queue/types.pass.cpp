@@ -15,6 +15,7 @@
 // {
 // public:
 //     typedef Container                                container_type;
+//     typedef Compare                                  value_compare; // LWG#2684
 //     typedef typename container_type::value_type      value_type;
 //     typedef typename container_type::reference       reference;
 //     typedef typename container_type::const_reference const_reference;
@@ -54,6 +55,9 @@ int main()
     static_assert(( std::is_same<std::priority_queue<int>::reference, std::vector<int>::reference>::value), "");
     static_assert(( std::is_same<std::priority_queue<int>::const_reference, std::vector<int>::const_reference>::value), "");
     static_assert(( std::is_same<std::priority_queue<int>::size_type, std::vector<int>::size_type>::value), "");
+    static_assert(( std::is_same<std::priority_queue<int>::value_compare, std::less<int> >::value), "");
+    static_assert(( std::is_same<std::priority_queue<int, std::deque<int> >::value_compare, std::less<int> >::value), "");
+    static_assert(( std::is_same<std::priority_queue<int, std::deque<int>, std::greater<int> >::value_compare, std::greater<int> >::value), "");
     static_assert(( std::uses_allocator<std::priority_queue<int>, std::allocator<int> >::value), "");
     static_assert((!std::uses_allocator<std::priority_queue<int, C>, std::allocator<int> >::value), "");
     test t;

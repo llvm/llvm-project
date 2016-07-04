@@ -266,7 +266,7 @@ namespace llvm {
     SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
     MachineBasicBlock *
-    EmitInstrWithCustomInserter(MachineInstr *MI,
+    EmitInstrWithCustomInserter(MachineInstr &MI,
                                 MachineBasicBlock *MBB) const override;
 
     void HandleByVal(CCState *, unsigned &, unsigned) const override;
@@ -572,24 +572,28 @@ namespace llvm {
     }
 
     /// Emit a sign-extension using sll/sra, seb, or seh appropriately.
-    MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr *MI,
+    MachineBasicBlock *emitSignExtendToI32InReg(MachineInstr &MI,
                                                 MachineBasicBlock *BB,
                                                 unsigned Size, unsigned DstReg,
                                                 unsigned SrcRec) const;
 
-    MachineBasicBlock *emitAtomicBinary(MachineInstr *MI, MachineBasicBlock *BB,
-                    unsigned Size, unsigned BinOpcode, bool Nand = false) const;
-    MachineBasicBlock *emitAtomicBinaryPartword(MachineInstr *MI,
-                    MachineBasicBlock *BB, unsigned Size, unsigned BinOpcode,
-                    bool Nand = false) const;
-    MachineBasicBlock *emitAtomicCmpSwap(MachineInstr *MI,
-                                  MachineBasicBlock *BB, unsigned Size) const;
-    MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr *MI,
-                                  MachineBasicBlock *BB, unsigned Size) const;
-    MachineBasicBlock *emitSEL_D(MachineInstr *MI, MachineBasicBlock *BB) const;
-    MachineBasicBlock *emitPseudoSELECT(MachineInstr *MI,
-                                        MachineBasicBlock *BB, bool isFPCmp,
-                                        unsigned Opc) const;
+    MachineBasicBlock *emitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
+                                        unsigned Size, unsigned BinOpcode,
+                                        bool Nand = false) const;
+    MachineBasicBlock *emitAtomicBinaryPartword(MachineInstr &MI,
+                                                MachineBasicBlock *BB,
+                                                unsigned Size,
+                                                unsigned BinOpcode,
+                                                bool Nand = false) const;
+    MachineBasicBlock *emitAtomicCmpSwap(MachineInstr &MI,
+                                         MachineBasicBlock *BB,
+                                         unsigned Size) const;
+    MachineBasicBlock *emitAtomicCmpSwapPartword(MachineInstr &MI,
+                                                 MachineBasicBlock *BB,
+                                                 unsigned Size) const;
+    MachineBasicBlock *emitSEL_D(MachineInstr &MI, MachineBasicBlock *BB) const;
+    MachineBasicBlock *emitPseudoSELECT(MachineInstr &MI, MachineBasicBlock *BB,
+                                        bool isFPCmp, unsigned Opc) const;
   };
 
   /// Create MipsTargetLowering objects.

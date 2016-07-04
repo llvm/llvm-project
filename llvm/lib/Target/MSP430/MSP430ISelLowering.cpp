@@ -1166,17 +1166,17 @@ bool MSP430TargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
 //  Other Lowering Code
 //===----------------------------------------------------------------------===//
 
-MachineBasicBlock*
-MSP430TargetLowering::EmitShiftInstr(MachineInstr *MI,
+MachineBasicBlock *
+MSP430TargetLowering::EmitShiftInstr(MachineInstr &MI,
                                      MachineBasicBlock *BB) const {
   MachineFunction *F = BB->getParent();
   MachineRegisterInfo &RI = F->getRegInfo();
-  DebugLoc dl = MI->getDebugLoc();
+  DebugLoc dl = MI.getDebugLoc();
   const TargetInstrInfo &TII = *F->getSubtarget().getInstrInfo();
 
   unsigned Opc;
   const TargetRegisterClass * RC;
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   default: llvm_unreachable("Invalid shift opcode!");
   case MSP430::Shl8:
    Opc = MSP430::SHL8r1;
@@ -1230,9 +1230,9 @@ MSP430TargetLowering::EmitShiftInstr(MachineInstr *MI,
   unsigned ShiftAmtReg2 = RI.createVirtualRegister(&MSP430::GR8RegClass);
   unsigned ShiftReg = RI.createVirtualRegister(RC);
   unsigned ShiftReg2 = RI.createVirtualRegister(RC);
-  unsigned ShiftAmtSrcReg = MI->getOperand(2).getReg();
-  unsigned SrcReg = MI->getOperand(1).getReg();
-  unsigned DstReg = MI->getOperand(0).getReg();
+  unsigned ShiftAmtSrcReg = MI.getOperand(2).getReg();
+  unsigned SrcReg = MI.getOperand(1).getReg();
+  unsigned DstReg = MI.getOperand(0).getReg();
 
   // BB:
   // cmp 0, N
@@ -1268,14 +1268,14 @@ MSP430TargetLowering::EmitShiftInstr(MachineInstr *MI,
     .addReg(SrcReg).addMBB(BB)
     .addReg(ShiftReg2).addMBB(LoopBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return RemBB;
 }
 
-MachineBasicBlock*
-MSP430TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
+MachineBasicBlock *
+MSP430TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                   MachineBasicBlock *BB) const {
-  unsigned Opc = MI->getOpcode();
+  unsigned Opc = MI.getOpcode();
 
   if (Opc == MSP430::Shl8 || Opc == MSP430::Shl16 ||
       Opc == MSP430::Sra8 || Opc == MSP430::Sra16 ||
@@ -1283,7 +1283,7 @@ MSP430TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
     return EmitShiftInstr(MI, BB);
 
   const TargetInstrInfo &TII = *BB->getParent()->getSubtarget().getInstrInfo();
-  DebugLoc dl = MI->getDebugLoc();
+  DebugLoc dl = MI.getDebugLoc();
 
   assert((Opc == MSP430::Select16 || Opc == MSP430::Select8) &&
          "Unexpected instr type to insert");
@@ -1317,8 +1317,8 @@ MSP430TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   BB->addSuccessor(copy1MBB);
 
   BuildMI(BB, dl, TII.get(MSP430::JCC))
-    .addMBB(copy1MBB)
-    .addImm(MI->getOperand(3).getImm());
+      .addMBB(copy1MBB)
+      .addImm(MI.getOperand(3).getImm());
 
   //  copy0MBB:
   //   %FalseValue = ...
@@ -1332,11 +1332,12 @@ MSP430TargetLowering::EmitInstrWithCustomInserter(MachineInstr *MI,
   //   %Result = phi [ %FalseValue, copy0MBB ], [ %TrueValue, thisMBB ]
   //  ...
   BB = copy1MBB;
-  BuildMI(*BB, BB->begin(), dl, TII.get(MSP430::PHI),
-          MI->getOperand(0).getReg())
-    .addReg(MI->getOperand(2).getReg()).addMBB(copy0MBB)
-    .addReg(MI->getOperand(1).getReg()).addMBB(thisMBB);
+  BuildMI(*BB, BB->begin(), dl, TII.get(MSP430::PHI), MI.getOperand(0).getReg())
+      .addReg(MI.getOperand(2).getReg())
+      .addMBB(copy0MBB)
+      .addReg(MI.getOperand(1).getReg())
+      .addMBB(thisMBB);
 
-  MI->eraseFromParent();   // The pseudo instruction is gone now.
+  MI.eraseFromParent(); // The pseudo instruction is gone now.
   return BB;
 }

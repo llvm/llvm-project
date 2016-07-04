@@ -27,9 +27,10 @@ entry:
   ret void
 }
 
-; FIXME: should only do one b64 load
+; FIXME: should this do a read2_b64?
 ; FUNC-LABEL: {{^}}local_load_v3f32:
-; GCN: ds_read2_b64
+; GCN-DAG: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:8
+; GCN-DAG: ds_read_b64 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+$}}
 ; GCN: s_waitcnt
 ; GCN-DAG: ds_write_b64
 ; GCN-DAG: ds_write_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:8{{$}}

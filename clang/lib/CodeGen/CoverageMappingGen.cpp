@@ -1013,27 +1013,35 @@ void CoverageMappingModuleGen::emit() {
 
   // Create the filenames and merge them with coverage mappings
   llvm::SmallVector<std::string, 16> FilenameStrs;
+  llvm::SmallVector<StringRef, 16> FilenameRefs;
   FilenameStrs.resize(FileEntries.size());
+  FilenameRefs.resize(FileEntries.size());
   for (const auto &Entry : FileEntries) {
     llvm::SmallString<256> Path(Entry.first->getName());
     llvm::sys::fs::make_absolute(Path);
 
     auto I = Entry.second;
     FilenameStrs[I] = std::string(Path.begin(), Path.end());
+    FilenameRefs[I] = FilenameStrs[I];
   }
 
-  size_t FilenamesSize;
-  size_t CoverageMappingSize;
-  llvm::Expected<std::string> CoverageDataOrErr = encodeFilenamesAndRawMappings(
-      FilenameStrs, CoverageMappings, FilenamesSize, CoverageMappingSize);
-  if (llvm::Error E = CoverageDataOrErr.takeError()) {
-    llvm::handleAllErrors(std::move(E), [](llvm::ErrorInfoBase &EI) {
-      llvm::report_fatal_error(EI.message());
-    });
+  std::string FilenamesAndCoverageMappings;
+  llvm::raw_string_ostream OS(FilenamesAndCoverageMappings);
+  CoverageFilenamesSectionWriter(FilenameRefs).write(OS);
+  std::string RawCoverageMappings =
+      llvm::join(CoverageMappings.begin(), CoverageMappings.end(), "");
+  OS << RawCoverageMappings;
+  size_t CoverageMappingSize = RawCoverageMappings.size();
+  size_t FilenamesSize = OS.str().size() - CoverageMappingSize;
+  // Append extra zeroes if necessary to ensure that the size of the filenames
+  // and coverage mappings is a multiple of 8.
+  if (size_t Rem = OS.str().size() % 8) {
+    CoverageMappingSize += 8 - Rem;
+    for (size_t I = 0, S = 8 - Rem; I < S; ++I)
+      OS << '\0';
   }
-  std::string CoverageData = std::move(CoverageDataOrErr.get());
   auto *FilenamesAndMappingsVal =
-      llvm::ConstantDataArray::getString(Ctx, CoverageData, false);
+      llvm::ConstantDataArray::getString(Ctx, OS.str(), false);
 
   // Create the deferred function records array
   auto RecordsTy =

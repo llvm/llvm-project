@@ -1056,30 +1056,31 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
     if (I->getOpcode() == FrameSetupOpcode ||
         I->getOpcode() == FrameDestroyOpcode) {
       InsideCallSequence = (I->getOpcode() == FrameSetupOpcode);
-      SPAdj += TII.getSPAdjust(I);
+      SPAdj += TII.getSPAdjust(*I);
 
       I = TFI->eliminateCallFramePseudoInstr(Fn, *BB, I);
       continue;
     }
 
-    MachineInstr *MI = I;
+    MachineInstr &MI = *I;
     bool DoIncr = true;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      if (!MI->getOperand(i).isFI())
+    bool DidFinishLoop = true;
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      if (!MI.getOperand(i).isFI())
         continue;
 
       // Frame indices in debug values are encoded in a target independent
       // way with simply the frame index and offset rather than any
       // target-specific addressing mode.
-      if (MI->isDebugValue()) {
+      if (MI.isDebugValue()) {
         assert(i == 0 && "Frame indices can only appear as the first "
                          "operand of a DBG_VALUE machine instruction");
         unsigned Reg;
-        MachineOperand &Offset = MI->getOperand(1);
-        Offset.setImm(Offset.getImm() +
-                      TFI->getFrameIndexReference(
-                          Fn, MI->getOperand(0).getIndex(), Reg));
-        MI->getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
+        MachineOperand &Offset = MI.getOperand(1);
+        Offset.setImm(
+            Offset.getImm() +
+            TFI->getFrameIndexReference(Fn, MI.getOperand(0).getIndex(), Reg));
+        MI.getOperand(0).ChangeToRegister(Reg, false /*isDef*/);
         continue;
       }
 
@@ -1088,16 +1089,16 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
       // implementation other than historical accident.  The only
       // remaining difference is the unconditional use of the stack
       // pointer as the base register.
-      if (MI->getOpcode() == TargetOpcode::STATEPOINT) {
-        assert((!MI->isDebugValue() || i == 0) &&
+      if (MI.getOpcode() == TargetOpcode::STATEPOINT) {
+        assert((!MI.isDebugValue() || i == 0) &&
                "Frame indicies can only appear as the first operand of a "
                "DBG_VALUE machine instruction");
         unsigned Reg;
-        MachineOperand &Offset = MI->getOperand(i + 1);
+        MachineOperand &Offset = MI.getOperand(i + 1);
         int refOffset = TFI->getFrameIndexReferencePreferSP(
-            Fn, MI->getOperand(i).getIndex(), Reg, /*IgnoreSPUpdates*/ false);
+            Fn, MI.getOperand(i).getIndex(), Reg, /*IgnoreSPUpdates*/ false);
         Offset.setImm(Offset.getImm() + refOffset);
-        MI->getOperand(i).ChangeToRegister(Reg, false /*isDef*/);
+        MI.getOperand(i).ChangeToRegister(Reg, false /*isDef*/);
         continue;
       }
 
@@ -1123,7 +1124,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
         DoIncr = false;
       }
 
-      MI = nullptr;
+      DidFinishLoop = false;
       break;
     }
 
@@ -1134,13 +1135,14 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
     // Note that this must come after eliminateFrameIndex, because 
     // if I itself referred to a frame index, we shouldn't count its own
     // adjustment.
-    if (MI && InsideCallSequence)
+    if (DidFinishLoop && InsideCallSequence)
       SPAdj += TII.getSPAdjust(MI);
 
     if (DoIncr && I != BB->end()) ++I;
 
     // Update register states.
-    if (RS && !FrameIndexVirtualScavenging && MI) RS->forward(MI);
+    if (RS && !FrameIndexVirtualScavenging && DidFinishLoop)
+      RS->forward(MI);
   }
 }
 
@@ -1152,27 +1154,27 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &Fn,
 /// iterate over the vreg use list, which at this point only contains machine
 /// operands for which eliminateFrameIndex need a new scratch reg.
 static void
-doScavengeFrameVirtualRegs(MachineFunction &Fn, RegScavenger *RS) {
+doScavengeFrameVirtualRegs(MachineFunction &MF, RegScavenger *RS) {
   // Run through the instructions and find any virtual registers.
-  for (MachineFunction::iterator BB = Fn.begin(),
-       E = Fn.end(); BB != E; ++BB) {
-    RS->enterBasicBlock(*BB);
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  for (MachineBasicBlock &MBB : MF) {
+    RS->enterBasicBlock(MBB);
 
     int SPAdj = 0;
 
-    // The instruction stream may change in the loop, so check BB->end()
+    // The instruction stream may change in the loop, so check MBB.end()
     // directly.
-    for (MachineBasicBlock::iterator I = BB->begin(); I != BB->end(); ) {
+    for (MachineBasicBlock::iterator I = MBB.begin(); I != MBB.end(); ) {
       // We might end up here again with a NULL iterator if we scavenged a
       // register for which we inserted spill code for definition by what was
-      // originally the first instruction in BB.
+      // originally the first instruction in MBB.
       if (I == MachineBasicBlock::iterator(nullptr))
-        I = BB->begin();
+        I = MBB.begin();
 
-      MachineInstr *MI = I;
+      const MachineInstr &MI = *I;
       MachineBasicBlock::iterator J = std::next(I);
       MachineBasicBlock::iterator P =
-                         I == BB->begin() ? MachineBasicBlock::iterator(nullptr)
+                         I == MBB.begin() ? MachineBasicBlock::iterator(nullptr)
                                           : std::prev(I);
 
       // RS should process this instruction before we might scavenge at this
@@ -1181,35 +1183,31 @@ doScavengeFrameVirtualRegs(MachineFunction &Fn, RegScavenger *RS) {
       // instruction are available, and defined registers are not.
       RS->forward(I);
 
-      for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-        if (MI->getOperand(i).isReg()) {
-          MachineOperand &MO = MI->getOperand(i);
-          unsigned Reg = MO.getReg();
-          if (Reg == 0)
-            continue;
-          if (!TargetRegisterInfo::isVirtualRegister(Reg))
-            continue;
+      for (const MachineOperand &MO : MI.operands()) {
+        if (!MO.isReg())
+          continue;
+        unsigned Reg = MO.getReg();
+        if (!TargetRegisterInfo::isVirtualRegister(Reg))
+          continue;
 
-          // When we first encounter a new virtual register, it
-          // must be a definition.
-          assert(MI->getOperand(i).isDef() &&
-                 "frame index virtual missing def!");
-          // Scavenge a new scratch register
-          const TargetRegisterClass *RC = Fn.getRegInfo().getRegClass(Reg);
-          unsigned ScratchReg = RS->scavengeRegister(RC, J, SPAdj);
+        // When we first encounter a new virtual register, it
+        // must be a definition.
+        assert(MO.isDef() && "frame index virtual missing def!");
+        // Scavenge a new scratch register
+        const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+        unsigned ScratchReg = RS->scavengeRegister(RC, J, SPAdj);
 
-          ++NumScavengedRegs;
+        ++NumScavengedRegs;
 
-          // Replace this reference to the virtual register with the
-          // scratch register.
-          assert (ScratchReg && "Missing scratch register!");
-          Fn.getRegInfo().replaceRegWith(Reg, ScratchReg);
-          
-          // Because this instruction was processed by the RS before this
-          // register was allocated, make sure that the RS now records the
-          // register as being used.
-          RS->setRegUsed(ScratchReg);
-        }
+        // Replace this reference to the virtual register with the
+        // scratch register.
+        assert(ScratchReg && "Missing scratch register!");
+        MRI.replaceRegWith(Reg, ScratchReg);
+
+        // Because this instruction was processed by the RS before this
+        // register was allocated, make sure that the RS now records the
+        // register as being used.
+        RS->setRegUsed(ScratchReg);
       }
 
       // If the scavenger needed to use one of its spill slots, the
@@ -1217,7 +1215,7 @@ doScavengeFrameVirtualRegs(MachineFunction &Fn, RegScavenger *RS) {
       // problem because we need the spill code before I: Move I to just
       // prior to J.
       if (I != std::prev(J)) {
-        BB->splice(J, &*BB, I);
+        MBB.splice(J, &MBB, I);
 
         // Before we move I, we need to prepare the RS to visit I again.
         // Specifically, RS will assert if it sees uses of registers that

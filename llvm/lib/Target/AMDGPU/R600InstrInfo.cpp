@@ -152,12 +152,12 @@ bool R600InstrInfo::isLDSRetInstr(unsigned Opcode) const {
   return isLDSInstr(Opcode) && getOperandIdx(Opcode, AMDGPU::OpName::dst) != -1;
 }
 
-bool R600InstrInfo::canBeConsideredALU(const MachineInstr *MI) const {
-  if (isALUInstr(MI->getOpcode()))
+bool R600InstrInfo::canBeConsideredALU(const MachineInstr &MI) const {
+  if (isALUInstr(MI.getOpcode()))
     return true;
-  if (isVector(*MI) || isCubeOp(MI->getOpcode()))
+  if (isVector(MI) || isCubeOp(MI.getOpcode()))
     return true;
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   case AMDGPU::PRED_X:
   case AMDGPU::INTERP_PAIR_XY:
   case AMDGPU::INTERP_PAIR_ZW:
@@ -176,16 +176,16 @@ bool R600InstrInfo::isTransOnly(unsigned Opcode) const {
   return (get(Opcode).getSchedClass() == AMDGPU::Sched::TransALU);
 }
 
-bool R600InstrInfo::isTransOnly(const MachineInstr *MI) const {
-  return isTransOnly(MI->getOpcode());
+bool R600InstrInfo::isTransOnly(const MachineInstr &MI) const {
+  return isTransOnly(MI.getOpcode());
 }
 
 bool R600InstrInfo::isVectorOnly(unsigned Opcode) const {
   return (get(Opcode).getSchedClass() == AMDGPU::Sched::VecALU);
 }
 
-bool R600InstrInfo::isVectorOnly(const MachineInstr *MI) const {
-  return isVectorOnly(MI->getOpcode());
+bool R600InstrInfo::isVectorOnly(const MachineInstr &MI) const {
+  return isVectorOnly(MI.getOpcode());
 }
 
 bool R600InstrInfo::isExport(unsigned Opcode) const {
@@ -196,21 +196,21 @@ bool R600InstrInfo::usesVertexCache(unsigned Opcode) const {
   return ST.hasVertexCache() && IS_VTX(get(Opcode));
 }
 
-bool R600InstrInfo::usesVertexCache(const MachineInstr *MI) const {
-  const MachineFunction *MF = MI->getParent()->getParent();
+bool R600InstrInfo::usesVertexCache(const MachineInstr &MI) const {
+  const MachineFunction *MF = MI.getParent()->getParent();
   return !AMDGPU::isCompute(MF->getFunction()->getCallingConv()) &&
-    usesVertexCache(MI->getOpcode());
+         usesVertexCache(MI.getOpcode());
 }
 
 bool R600InstrInfo::usesTextureCache(unsigned Opcode) const {
   return (!ST.hasVertexCache() && IS_VTX(get(Opcode))) || IS_TEX(get(Opcode));
 }
 
-bool R600InstrInfo::usesTextureCache(const MachineInstr *MI) const {
-  const MachineFunction *MF = MI->getParent()->getParent();
+bool R600InstrInfo::usesTextureCache(const MachineInstr &MI) const {
+  const MachineFunction *MF = MI.getParent()->getParent();
   return (AMDGPU::isCompute(MF->getFunction()->getCallingConv()) &&
-          usesVertexCache(MI->getOpcode())) ||
-    usesTextureCache(MI->getOpcode());
+          usesVertexCache(MI.getOpcode())) ||
+         usesTextureCache(MI.getOpcode());
 }
 
 bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
@@ -223,20 +223,21 @@ bool R600InstrInfo::mustBeLastInClause(unsigned Opcode) const {
   }
 }
 
-bool R600InstrInfo::usesAddressRegister(MachineInstr *MI) const {
-  return  MI->findRegisterUseOperandIdx(AMDGPU::AR_X) != -1;
+bool R600InstrInfo::usesAddressRegister(MachineInstr &MI) const {
+  return MI.findRegisterUseOperandIdx(AMDGPU::AR_X) != -1;
 }
 
-bool R600InstrInfo::definesAddressRegister(MachineInstr *MI) const {
-  return MI->findRegisterDefOperandIdx(AMDGPU::AR_X) != -1;
+bool R600InstrInfo::definesAddressRegister(MachineInstr &MI) const {
+  return MI.findRegisterDefOperandIdx(AMDGPU::AR_X) != -1;
 }
 
-bool R600InstrInfo::readsLDSSrcReg(const MachineInstr *MI) const {
-  if (!isALUInstr(MI->getOpcode())) {
+bool R600InstrInfo::readsLDSSrcReg(const MachineInstr &MI) const {
+  if (!isALUInstr(MI.getOpcode())) {
     return false;
   }
-  for (MachineInstr::const_mop_iterator I = MI->operands_begin(),
-                                        E = MI->operands_end(); I != E; ++I) {
+  for (MachineInstr::const_mop_iterator I = MI.operands_begin(),
+                                        E = MI.operands_end();
+       I != E; ++I) {
     if (!I->isReg() || !I->isUse() ||
         TargetRegisterInfo::isVirtualRegister(I->getReg()))
       continue;
@@ -282,10 +283,10 @@ int R600InstrInfo::getSelIdx(unsigned Opcode, unsigned SrcIdx) const {
 }
 
 SmallVector<std::pair<MachineOperand *, int64_t>, 3>
-R600InstrInfo::getSrcs(MachineInstr *MI) const {
+R600InstrInfo::getSrcs(MachineInstr &MI) const {
   SmallVector<std::pair<MachineOperand *, int64_t>, 3> Result;
 
-  if (MI->getOpcode() == AMDGPU::DOT_4) {
+  if (MI.getOpcode() == AMDGPU::DOT_4) {
     static const unsigned OpTable[8][2] = {
       {AMDGPU::OpName::src0_X, AMDGPU::OpName::src0_sel_X},
       {AMDGPU::OpName::src0_Y, AMDGPU::OpName::src0_sel_Y},
@@ -298,12 +299,12 @@ R600InstrInfo::getSrcs(MachineInstr *MI) const {
     };
 
     for (unsigned j = 0; j < 8; j++) {
-      MachineOperand &MO = MI->getOperand(getOperandIdx(MI->getOpcode(),
-                                                        OpTable[j][0]));
+      MachineOperand &MO =
+          MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][0]));
       unsigned Reg = MO.getReg();
       if (Reg == AMDGPU::ALU_CONST) {
-        MachineOperand &Sel = MI->getOperand(getOperandIdx(MI->getOpcode(),
-                                                    OpTable[j][1]));
+        MachineOperand &Sel =
+            MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][1]));
         Result.push_back(std::make_pair(&MO, Sel.getImm()));
         continue;
       }
@@ -319,20 +320,20 @@ R600InstrInfo::getSrcs(MachineInstr *MI) const {
   };
 
   for (unsigned j = 0; j < 3; j++) {
-    int SrcIdx = getOperandIdx(MI->getOpcode(), OpTable[j][0]);
+    int SrcIdx = getOperandIdx(MI.getOpcode(), OpTable[j][0]);
     if (SrcIdx < 0)
       break;
-    MachineOperand &MO = MI->getOperand(SrcIdx);
+    MachineOperand &MO = MI.getOperand(SrcIdx);
     unsigned Reg = MO.getReg();
     if (Reg == AMDGPU::ALU_CONST) {
-      MachineOperand &Sel = MI->getOperand(
-          getOperandIdx(MI->getOpcode(), OpTable[j][1]));
+      MachineOperand &Sel =
+          MI.getOperand(getOperandIdx(MI.getOpcode(), OpTable[j][1]));
       Result.push_back(std::make_pair(&MO, Sel.getImm()));
       continue;
     }
     if (Reg == AMDGPU::ALU_LITERAL_X) {
-      MachineOperand &Operand = MI->getOperand(
-          getOperandIdx(MI->getOpcode(), AMDGPU::OpName::literal));
+      MachineOperand &Operand =
+          MI.getOperand(getOperandIdx(MI.getOpcode(), AMDGPU::OpName::literal));
       if (Operand.isImm()) {
         Result.push_back(std::make_pair(&MO, Operand.getImm()));
         continue;
@@ -344,8 +345,8 @@ R600InstrInfo::getSrcs(MachineInstr *MI) const {
   return Result;
 }
 
-std::vector<std::pair<int, unsigned> >
-R600InstrInfo::ExtractSrcs(MachineInstr *MI,
+std::vector<std::pair<int, unsigned>>
+R600InstrInfo::ExtractSrcs(MachineInstr &MI,
                            const DenseMap<unsigned, unsigned> &PV,
                            unsigned &ConstCount) const {
   ConstCount = 0;
@@ -552,7 +553,7 @@ R600InstrInfo::fitsReadPortLimitations(const std::vector<MachineInstr *> &IG,
   unsigned ConstCount;
   BankSwizzle TransBS = ALU_VEC_012_SCL_210;
   for (unsigned i = 0, e = IG.size(); i < e; ++i) {
-    IGSrcs.push_back(ExtractSrcs(IG[i], PV, ConstCount));
+    IGSrcs.push_back(ExtractSrcs(*IG[i], PV, ConstCount));
     unsigned Op = getOperandIdx(IG[i]->getOpcode(),
         AMDGPU::OpName::bank_swizzle);
     ValidSwizzle.push_back( (R600InstrInfo::BankSwizzle)
@@ -619,8 +620,8 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<MachineInstr *> &MIs)
   std::vector<unsigned> Consts;
   SmallSet<int64_t, 4> Literals;
   for (unsigned i = 0, n = MIs.size(); i < n; i++) {
-    MachineInstr *MI = MIs[i];
-    if (!isALUInstr(MI->getOpcode()))
+    MachineInstr &MI = *MIs[i];
+    if (!isALUInstr(MI.getOpcode()))
       continue;
 
     ArrayRef<std::pair<MachineOperand *, int64_t>> Srcs = getSrcs(MI);
@@ -780,7 +781,7 @@ unsigned R600InstrInfo::InsertBranch(MachineBasicBlock &MBB,
     } else {
       MachineInstr *PredSet = findFirstPredicateSetterFrom(MBB, MBB.end());
       assert(PredSet && "No previous predicate !");
-      addFlag(PredSet, 0, MO_FLAG_PUSH);
+      addFlag(*PredSet, 0, MO_FLAG_PUSH);
       PredSet->getOperand(2).setImm(Cond[1].getImm());
 
       BuildMI(&MBB, DL, get(AMDGPU::JUMP_COND))
@@ -796,7 +797,7 @@ unsigned R600InstrInfo::InsertBranch(MachineBasicBlock &MBB,
   } else {
     MachineInstr *PredSet = findFirstPredicateSetterFrom(MBB, MBB.end());
     assert(PredSet && "No previous predicate !");
-    addFlag(PredSet, 0, MO_FLAG_PUSH);
+    addFlag(*PredSet, 0, MO_FLAG_PUSH);
     PredSet->getOperand(2).setImm(Cond[1].getImm());
     BuildMI(&MBB, DL, get(AMDGPU::JUMP_COND))
             .addMBB(TBB)
@@ -828,7 +829,7 @@ R600InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
     return 0;
   case AMDGPU::JUMP_COND: {
     MachineInstr *predSet = findFirstPredicateSetterFrom(MBB, I);
-    clearFlag(predSet, 0, MO_FLAG_PUSH);
+    clearFlag(*predSet, 0, MO_FLAG_PUSH);
     I->eraseFromParent();
     MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
     if (CfAlu == MBB.end())
@@ -853,7 +854,7 @@ R600InstrInfo::RemoveBranch(MachineBasicBlock &MBB) const {
     return 1;
   case AMDGPU::JUMP_COND: {
     MachineInstr *predSet = findFirstPredicateSetterFrom(MBB, I);
-    clearFlag(predSet, 0, MO_FLAG_PUSH);
+    clearFlag(*predSet, 0, MO_FLAG_PUSH);
     I->eraseFromParent();
     MachineBasicBlock::iterator CfAlu = FindLastAluClause(MBB);
     if (CfAlu == MBB.end())
@@ -1026,7 +1027,7 @@ unsigned int R600InstrInfo::getPredicationCost(const MachineInstr &) const {
 }
 
 unsigned int R600InstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
-                                            const MachineInstr *MI,
+                                            const MachineInstr &,
                                             unsigned *PredCost) const {
   if (PredCost)
     *PredCost = 2;
@@ -1039,44 +1040,43 @@ unsigned R600InstrInfo::calculateIndirectAddress(unsigned RegIndex,
   return RegIndex;
 }
 
-bool R600InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
-
-  switch(MI->getOpcode()) {
+bool R600InstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
   default: {
-    MachineBasicBlock *MBB = MI->getParent();
-    int OffsetOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                                 AMDGPU::OpName::addr);
-     // addr is a custom operand with multiple MI operands, and only the
-     // first MI operand is given a name.
+    MachineBasicBlock *MBB = MI.getParent();
+    int OffsetOpIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::addr);
+    // addr is a custom operand with multiple MI operands, and only the
+    // first MI operand is given a name.
     int RegOpIdx = OffsetOpIdx + 1;
-    int ChanOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                               AMDGPU::OpName::chan);
-    if (isRegisterLoad(*MI)) {
-      int DstOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                                AMDGPU::OpName::dst);
-      unsigned RegIndex = MI->getOperand(RegOpIdx).getImm();
-      unsigned Channel = MI->getOperand(ChanOpIdx).getImm();
+    int ChanOpIdx =
+        AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::chan);
+    if (isRegisterLoad(MI)) {
+      int DstOpIdx =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::dst);
+      unsigned RegIndex = MI.getOperand(RegOpIdx).getImm();
+      unsigned Channel = MI.getOperand(ChanOpIdx).getImm();
       unsigned Address = calculateIndirectAddress(RegIndex, Channel);
-      unsigned OffsetReg = MI->getOperand(OffsetOpIdx).getReg();
+      unsigned OffsetReg = MI.getOperand(OffsetOpIdx).getReg();
       if (OffsetReg == AMDGPU::INDIRECT_BASE_ADDR) {
-        buildMovInstr(MBB, MI, MI->getOperand(DstOpIdx).getReg(),
+        buildMovInstr(MBB, MI, MI.getOperand(DstOpIdx).getReg(),
                       getIndirectAddrRegClass()->getRegister(Address));
       } else {
-        buildIndirectRead(MBB, MI, MI->getOperand(DstOpIdx).getReg(),
-                          Address, OffsetReg);
+        buildIndirectRead(MBB, MI, MI.getOperand(DstOpIdx).getReg(), Address,
+                          OffsetReg);
       }
-    } else if (isRegisterStore(*MI)) {
-      int ValOpIdx = AMDGPU::getNamedOperandIdx(MI->getOpcode(),
-                                                AMDGPU::OpName::val);
-      unsigned RegIndex = MI->getOperand(RegOpIdx).getImm();
-      unsigned Channel = MI->getOperand(ChanOpIdx).getImm();
+    } else if (isRegisterStore(MI)) {
+      int ValOpIdx =
+          AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::val);
+      unsigned RegIndex = MI.getOperand(RegOpIdx).getImm();
+      unsigned Channel = MI.getOperand(ChanOpIdx).getImm();
       unsigned Address = calculateIndirectAddress(RegIndex, Channel);
-      unsigned OffsetReg = MI->getOperand(OffsetOpIdx).getReg();
+      unsigned OffsetReg = MI.getOperand(OffsetOpIdx).getReg();
       if (OffsetReg == AMDGPU::INDIRECT_BASE_ADDR) {
         buildMovInstr(MBB, MI, getIndirectAddrRegClass()->getRegister(Address),
-                      MI->getOperand(ValOpIdx).getReg());
+                      MI.getOperand(ValOpIdx).getReg());
       } else {
-        buildIndirectWrite(MBB, MI, MI->getOperand(ValOpIdx).getReg(),
+        buildIndirectWrite(MBB, MI, MI.getOperand(ValOpIdx).getReg(),
                            calculateIndirectAddress(RegIndex, Channel),
                            OffsetReg);
       }
@@ -1089,20 +1089,20 @@ bool R600InstrInfo::expandPostRAPseudo(MachineBasicBlock::iterator MI) const {
   }
   case AMDGPU::R600_EXTRACT_ELT_V2:
   case AMDGPU::R600_EXTRACT_ELT_V4:
-    buildIndirectRead(MI->getParent(), MI, MI->getOperand(0).getReg(),
-                      RI.getHWRegIndex(MI->getOperand(1).getReg()), //  Address
-                      MI->getOperand(2).getReg(),
-                      RI.getHWRegChan(MI->getOperand(1).getReg()));
+    buildIndirectRead(MI.getParent(), MI, MI.getOperand(0).getReg(),
+                      RI.getHWRegIndex(MI.getOperand(1).getReg()), //  Address
+                      MI.getOperand(2).getReg(),
+                      RI.getHWRegChan(MI.getOperand(1).getReg()));
     break;
   case AMDGPU::R600_INSERT_ELT_V2:
   case AMDGPU::R600_INSERT_ELT_V4:
-    buildIndirectWrite(MI->getParent(), MI, MI->getOperand(2).getReg(), // Value
-                       RI.getHWRegIndex(MI->getOperand(1).getReg()),  // Address
-                       MI->getOperand(3).getReg(),                    // Offset
-                       RI.getHWRegChan(MI->getOperand(1).getReg()));  // Channel
+    buildIndirectWrite(MI.getParent(), MI, MI.getOperand(2).getReg(), // Value
+                       RI.getHWRegIndex(MI.getOperand(1).getReg()),   // Address
+                       MI.getOperand(3).getReg(),                     // Offset
+                       RI.getHWRegChan(MI.getOperand(1).getReg()));   // Channel
     break;
   }
-  MI->eraseFromParent();
+  MI.eraseFromParent();
   return true;
 }
 
@@ -1153,13 +1153,13 @@ MachineInstrBuilder R600InstrInfo::buildIndirectWrite(MachineBasicBlock *MBB,
   }
   MachineInstr *MOVA = buildDefaultInstruction(*MBB, I, AMDGPU::MOVA_INT_eg,
                                                AMDGPU::AR_X, OffsetReg);
-  setImmOperand(MOVA, AMDGPU::OpName::write, 0);
+  setImmOperand(*MOVA, AMDGPU::OpName::write, 0);
 
   MachineInstrBuilder Mov = buildDefaultInstruction(*MBB, I, AMDGPU::MOV,
                                       AddrReg, ValueReg)
                                       .addReg(AMDGPU::AR_X,
                                            RegState::Implicit | RegState::Kill);
-  setImmOperand(Mov, AMDGPU::OpName::dst_rel, 1);
+  setImmOperand(*Mov, AMDGPU::OpName::dst_rel, 1);
   return Mov;
 }
 
@@ -1186,13 +1186,13 @@ MachineInstrBuilder R600InstrInfo::buildIndirectRead(MachineBasicBlock *MBB,
   MachineInstr *MOVA = buildDefaultInstruction(*MBB, I, AMDGPU::MOVA_INT_eg,
                                                        AMDGPU::AR_X,
                                                        OffsetReg);
-  setImmOperand(MOVA, AMDGPU::OpName::write, 0);
+  setImmOperand(*MOVA, AMDGPU::OpName::write, 0);
   MachineInstrBuilder Mov = buildDefaultInstruction(*MBB, I, AMDGPU::MOV,
                                       ValueReg,
                                       AddrReg)
                                       .addReg(AMDGPU::AR_X,
                                            RegState::Implicit | RegState::Kill);
-  setImmOperand(Mov, AMDGPU::OpName::src0_rel, 1);
+  setImmOperand(*Mov, AMDGPU::OpName::src0_rel, 1);
 
   return Mov;
 }
@@ -1322,7 +1322,7 @@ MachineInstr *R600InstrInfo::buildSlotOfVectorInstruction(
     MachineOperand &MO = MI->getOperand(
         getOperandIdx(MI->getOpcode(), getSlotedOps(Operands[i], Slot)));
     assert (MO.isImm());
-    setImmOperand(MIB, Operands[i], MO.getImm());
+    setImmOperand(*MIB, Operands[i], MO.getImm());
   }
   MIB->getOperand(20).setImm(0);
   return MIB;
@@ -1334,7 +1334,7 @@ MachineInstr *R600InstrInfo::buildMovImm(MachineBasicBlock &BB,
                                          uint64_t Imm) const {
   MachineInstr *MovImm = buildDefaultInstruction(BB, I, AMDGPU::MOV, DstReg,
                                                   AMDGPU::ALU_LITERAL_X);
-  setImmOperand(MovImm, AMDGPU::OpName::literal, Imm);
+  setImmOperand(*MovImm, AMDGPU::OpName::literal, Imm);
   return MovImm;
 }
 
@@ -1352,12 +1352,12 @@ int R600InstrInfo::getOperandIdx(unsigned Opcode, unsigned Op) const {
   return AMDGPU::getNamedOperandIdx(Opcode, Op);
 }
 
-void R600InstrInfo::setImmOperand(MachineInstr *MI, unsigned Op,
+void R600InstrInfo::setImmOperand(MachineInstr &MI, unsigned Op,
                                   int64_t Imm) const {
-  int Idx = getOperandIdx(*MI, Op);
+  int Idx = getOperandIdx(MI, Op);
   assert(Idx != -1 && "Operand not supported for this instruction.");
-  assert(MI->getOperand(Idx).isImm());
-  MI->getOperand(Idx).setImm(Imm);
+  assert(MI.getOperand(Idx).isImm());
+  MI.getOperand(Idx).setImm(Imm);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1368,9 +1368,9 @@ bool R600InstrInfo::hasFlagOperand(const MachineInstr &MI) const {
   return GET_FLAG_OPERAND_IDX(get(MI.getOpcode()).TSFlags) != 0;
 }
 
-MachineOperand &R600InstrInfo::getFlagOp(MachineInstr *MI, unsigned SrcIdx,
+MachineOperand &R600InstrInfo::getFlagOp(MachineInstr &MI, unsigned SrcIdx,
                                          unsigned Flag) const {
-  unsigned TargetFlags = get(MI->getOpcode()).TSFlags;
+  unsigned TargetFlags = get(MI.getOpcode()).TSFlags;
   int FlagIndex = 0;
   if (Flag != 0) {
     // If we pass something other than the default value of Flag to this
@@ -1380,20 +1380,26 @@ MachineOperand &R600InstrInfo::getFlagOp(MachineInstr *MI, unsigned SrcIdx,
     bool IsOP3 = (TargetFlags & R600_InstFlag::OP3) == R600_InstFlag::OP3;
     switch (Flag) {
     case MO_FLAG_CLAMP:
-      FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::clamp);
+      FlagIndex = getOperandIdx(MI, AMDGPU::OpName::clamp);
       break;
     case MO_FLAG_MASK:
-      FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::write);
+      FlagIndex = getOperandIdx(MI, AMDGPU::OpName::write);
       break;
     case MO_FLAG_NOT_LAST:
     case MO_FLAG_LAST:
-      FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::last);
+      FlagIndex = getOperandIdx(MI, AMDGPU::OpName::last);
       break;
     case MO_FLAG_NEG:
       switch (SrcIdx) {
-      case 0: FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::src0_neg); break;
-      case 1: FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::src1_neg); break;
-      case 2: FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::src2_neg); break;
+      case 0:
+        FlagIndex = getOperandIdx(MI, AMDGPU::OpName::src0_neg);
+        break;
+      case 1:
+        FlagIndex = getOperandIdx(MI, AMDGPU::OpName::src1_neg);
+        break;
+      case 2:
+        FlagIndex = getOperandIdx(MI, AMDGPU::OpName::src2_neg);
+        break;
       }
       break;
 
@@ -1402,8 +1408,12 @@ MachineOperand &R600InstrInfo::getFlagOp(MachineInstr *MI, unsigned SrcIdx,
                        "instructions.");
       (void)IsOP3;
       switch (SrcIdx) {
-      case 0: FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::src0_abs); break;
-      case 1: FlagIndex = getOperandIdx(*MI, AMDGPU::OpName::src1_abs); break;
+      case 0:
+        FlagIndex = getOperandIdx(MI, AMDGPU::OpName::src0_abs);
+        break;
+      case 1:
+        FlagIndex = getOperandIdx(MI, AMDGPU::OpName::src1_abs);
+        break;
       }
       break;
 
@@ -1418,14 +1428,14 @@ MachineOperand &R600InstrInfo::getFlagOp(MachineInstr *MI, unsigned SrcIdx,
          "Instruction flags not supported for this instruction");
   }
 
-  MachineOperand &FlagOp = MI->getOperand(FlagIndex);
+  MachineOperand &FlagOp = MI.getOperand(FlagIndex);
   assert(FlagOp.isImm());
   return FlagOp;
 }
 
-void R600InstrInfo::addFlag(MachineInstr *MI, unsigned Operand,
+void R600InstrInfo::addFlag(MachineInstr &MI, unsigned Operand,
                             unsigned Flag) const {
-  unsigned TargetFlags = get(MI->getOpcode()).TSFlags;
+  unsigned TargetFlags = get(MI.getOpcode()).TSFlags;
   if (Flag == 0) {
     return;
   }
@@ -1444,9 +1454,9 @@ void R600InstrInfo::addFlag(MachineInstr *MI, unsigned Operand,
   }
 }
 
-void R600InstrInfo::clearFlag(MachineInstr *MI, unsigned Operand,
+void R600InstrInfo::clearFlag(MachineInstr &MI, unsigned Operand,
                               unsigned Flag) const {
-  unsigned TargetFlags = get(MI->getOpcode()).TSFlags;
+  unsigned TargetFlags = get(MI.getOpcode()).TSFlags;
   if (HAS_NATIVE_OPERANDS(TargetFlags)) {
     MachineOperand &FlagOp = getFlagOp(MI, Operand, Flag);
     FlagOp.setImm(0);

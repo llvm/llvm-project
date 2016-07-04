@@ -2883,6 +2883,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::FileContext:
     case Declarator::BlockContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::ConditionContext:
       break;
     case Declarator::CXXNewContext:
@@ -2968,6 +2969,7 @@ static QualType GetDeclSpecTypeForDeclarator(TypeProcessingState &state,
     case Declarator::MemberContext:
     case Declarator::BlockContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::BlockLiteralContext:
     case Declarator::LambdaExprContext:
       // C++11 [dcl.type]p3:
@@ -3182,15 +3184,19 @@ getCCForDeclaratorChunk(Sema &S, Declarator &D,
   CallingConv CC = S.Context.getDefaultCallingConvention(FTI.isVariadic,
                                                          IsCXXInstanceMethod);
 
-  // Attribute AT_OpenCLKernel affects the calling convention only on
-  // the SPIR target, hence it cannot be treated as a calling
+  // Attribute AT_OpenCLKernel affects the calling convention for SPIR
+  // and AMDGPU targets, hence it cannot be treated as a calling
   // convention attribute. This is the simplest place to infer
-  // "spir_kernel" for OpenCL kernels on SPIR.
-  if (CC == CC_SpirFunction) {
+  // calling convention for OpenCL kernels.
+  if (S.getLangOpts().OpenCL) {
     for (const AttributeList *Attr = D.getDeclSpec().getAttributes().getList();
          Attr; Attr = Attr->getNext()) {
       if (Attr->getKind() == AttributeList::AT_OpenCLKernel) {
-        CC = CC_SpirKernel;
+        llvm::Triple::ArchType arch = S.Context.getTargetInfo().getTriple().getArch();
+        if (arch == llvm::Triple::spir || arch == llvm::Triple::spir64 ||
+            arch == llvm::Triple::amdgcn) {
+          CC = CC_OpenCLKernel;
+        }
         break;
       }
     }
@@ -3711,6 +3717,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case Declarator::CXXCatchContext:
     case Declarator::CXXNewContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::LambdaExprContext:
     case Declarator::LambdaExprParameterContext:
     case Declarator::ObjCCatchContext:
@@ -4523,6 +4530,7 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
     case Declarator::MemberContext:
     case Declarator::BlockContext:
     case Declarator::ForContext:
+    case Declarator::InitStmtContext:
     case Declarator::ConditionContext:
     case Declarator::CXXCatchContext:
     case Declarator::ObjCCatchContext:

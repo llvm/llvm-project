@@ -73,10 +73,7 @@ protected:
         DebugLoc DL = MI->getDebugLoc();
         unsigned GPR3 = Is64Bit ? PPC::X3 : PPC::R3;
         unsigned Opc1, Opc2;
-        SmallVector<unsigned, 4> OrigRegs;
-        OrigRegs.push_back(OutReg);
-        OrigRegs.push_back(InReg);
-        OrigRegs.push_back(GPR3);
+        const unsigned OrigRegs[] = {OutReg, InReg, GPR3};
 
         switch (MI->getOpcode()) {
         default:

@@ -106,8 +106,6 @@ public:
   /// The printed message must not end with '.' nor start with a severity
   /// keyword.
   virtual void print(DiagnosticPrinter &DP) const = 0;
-
-  static const char *AlwaysPrint;
 };
 
 typedef std::function<void(const DiagnosticInfo &)> DiagnosticHandlerFunction;
@@ -492,6 +490,10 @@ public:
 
   /// \see DiagnosticInfoOptimizationBase::isEnabled.
   bool isEnabled() const override;
+
+  static const char *AlwaysPrint;
+
+  bool shouldAlwaysPrint() const { return getPassName() == AlwaysPrint; }
 
 protected:
   DiagnosticInfoOptimizationRemarkAnalysis(enum DiagnosticKind Kind,

@@ -115,15 +115,17 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<NameHashTable &> getStringTable();
 
-  void setSuperBlock(const SuperBlock *Block);
+  Error setSuperBlock(const SuperBlock *Block);
   void setStreamSizes(ArrayRef<support::ulittle32_t> Sizes);
-  void setStreamMap(ArrayRef<ArrayRef<support::ulittle32_t>> Blocks);
-  void commit();
+  void setStreamMap(ArrayRef<support::ulittle32_t> Directory,
+                    std::vector<ArrayRef<support::ulittle32_t>> &Streams);
+  Error commit();
 
 private:
   std::unique_ptr<codeview::StreamInterface> Buffer;
   const PDBFile::SuperBlock *SB;
   ArrayRef<support::ulittle32_t> StreamSizes;
+  ArrayRef<support::ulittle32_t> DirectoryBlocks;
   std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
 
   std::unique_ptr<InfoStream> Info;

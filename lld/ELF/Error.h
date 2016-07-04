@@ -52,6 +52,13 @@ template <class T> T check(ErrorOr<T> EO, const Twine &Prefix) {
   fatal(EO.getError().message(), Prefix);
 }
 
+template <class T> T check(Expected<T> EO, const Twine &Prefix) {
+  if (EO)
+    return std::move(*EO);
+  error(errorToErrorCode(EO.takeError()), Prefix);
+  return T();
+}
+
 } // namespace elf
 } // namespace lld
 

@@ -72,8 +72,8 @@ namespace llvm {
                                        unsigned Depth = 0) const override;
 
     MachineBasicBlock *
-      EmitInstrWithCustomInserter(MachineInstr *MI,
-                                  MachineBasicBlock *MBB) const override;
+    EmitInstrWithCustomInserter(MachineInstr &MI,
+                                MachineBasicBlock *MBB) const override;
 
     const char *getTargetNodeName(unsigned Opcode) const override;
 
@@ -211,11 +211,11 @@ namespace llvm {
                             SmallVectorImpl<SDValue>& Results,
                             SelectionDAG &DAG) const override;
 
-    MachineBasicBlock *expandSelectCC(MachineInstr *MI, MachineBasicBlock *BB,
+    MachineBasicBlock *expandSelectCC(MachineInstr &MI, MachineBasicBlock *BB,
                                       unsigned BROpcode) const;
-    MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr *MI,
+    MachineBasicBlock *emitEHSjLjSetJmp(MachineInstr &MI,
                                         MachineBasicBlock *MBB) const;
-    MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr *MI,
+    MachineBasicBlock *emitEHSjLjLongJmp(MachineInstr &MI,
                                          MachineBasicBlock *MBB) const;
   };
 } // end namespace llvm

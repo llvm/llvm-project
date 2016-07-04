@@ -46,9 +46,8 @@ define void @trunc_i16_bitcast_v2i16(i16 addrspace(1)* %out, <2 x i16> addrspace
   ret void
 }
 
-; FIXME: Don't want load width reduced here.
 ; CHECK-LABEL: {{^}}trunc_i16_bitcast_v4i16:
-; CHECK: buffer_load_ushort [[VAL:v[0-9]+]]
+; CHECK: buffer_load_dword [[VAL:v[0-9]+]]
 ; CHECK: buffer_store_short [[VAL]]
 define void @trunc_i16_bitcast_v4i16(i16 addrspace(1)* %out, <4 x i16> addrspace(1)* %in) {
   %ld = load <4 x i16>, <4 x i16> addrspace(1)* %in

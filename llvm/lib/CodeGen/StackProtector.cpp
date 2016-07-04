@@ -20,11 +20,11 @@
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
@@ -448,6 +448,7 @@ BasicBlock *StackProtector::CreateFailBB() {
   LLVMContext &Context = F->getContext();
   BasicBlock *FailBB = BasicBlock::Create(Context, "CallStackCheckFailBlk", F);
   IRBuilder<> B(FailBB);
+  B.SetCurrentDebugLocation(DebugLoc::get(0, 0, F->getSubprogram()));
   if (Trip.isOSOpenBSD()) {
     Constant *StackChkFail =
         M->getOrInsertFunction("__stack_smash_handler",

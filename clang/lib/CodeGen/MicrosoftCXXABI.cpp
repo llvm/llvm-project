@@ -551,7 +551,7 @@ private:
     return  llvm::Constant::getAllOnesValue(CGM.IntTy);
   }
 
-  CharUnits getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD);
+  CharUnits getVirtualFunctionPrologueThisAdjustment(GlobalDecl GD) override;
 
   void
   GetNullMemberPointerFields(const MemberPointerType *MPT,

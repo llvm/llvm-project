@@ -278,6 +278,12 @@ enum NodeType : unsigned {
   VSTRC_CC,
   VSTRCZ_CC,
 
+  // Test Data Class.
+  //
+  // Operand 0: the value to test
+  // Operand 1: the bit mask
+  TDC,
+
   // Wrappers around the inner loop of an 8- or 16-bit ATOMIC_SWAP or
   // ATOMIC_LOAD_<op>.
   //
@@ -446,9 +452,9 @@ public:
   void insertSSPDeclarations(Module &M) const override {
   }
 
-  MachineBasicBlock *EmitInstrWithCustomInserter(MachineInstr *MI,
-                                                 MachineBasicBlock *BB) const
-    override;
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   bool allowTruncateForTailCall(Type *, Type *) const override;
   bool mayBeEmittedAsTailCall(CallInst *CI) const override;
@@ -539,6 +545,13 @@ private:
                          bool Force) const;
   SDValue combineTruncateExtract(const SDLoc &DL, EVT TruncVT, SDValue Op,
                                  DAGCombinerInfo &DCI) const;
+  SDValue combineSIGN_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineMERGE(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineSTORE(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineEXTRACT_VECTOR_ELT(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineJOIN_DWORDS(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineBSWAP(SDNode *N, DAGCombinerInfo &DCI) const;
 
   // If the last instruction before MBBI in MBB was some form of COMPARE,
   // try to replace it with a COMPARE AND BRANCH just before MBBI.
@@ -550,40 +563,33 @@ private:
                                   MachineBasicBlock *Target) const;
 
   // Implement EmitInstrWithCustomInserter for individual operation types.
-  MachineBasicBlock *emitSelect(MachineInstr *MI,
-                                MachineBasicBlock *BB) const;
-  MachineBasicBlock *emitCondStore(MachineInstr *MI,
-                                   MachineBasicBlock *BB,
+  MachineBasicBlock *emitSelect(MachineInstr &MI, MachineBasicBlock *BB) const;
+  MachineBasicBlock *emitCondStore(MachineInstr &MI, MachineBasicBlock *BB,
                                    unsigned StoreOpcode, unsigned STOCOpcode,
                                    bool Invert) const;
-  MachineBasicBlock *emitExt128(MachineInstr *MI,
-                                MachineBasicBlock *MBB,
+  MachineBasicBlock *emitExt128(MachineInstr &MI, MachineBasicBlock *MBB,
                                 bool ClearEven, unsigned SubReg) const;
-  MachineBasicBlock *emitAtomicLoadBinary(MachineInstr *MI,
+  MachineBasicBlock *emitAtomicLoadBinary(MachineInstr &MI,
                                           MachineBasicBlock *BB,
                                           unsigned BinOpcode, unsigned BitSize,
                                           bool Invert = false) const;
-  MachineBasicBlock *emitAtomicLoadMinMax(MachineInstr *MI,
+  MachineBasicBlock *emitAtomicLoadMinMax(MachineInstr &MI,
                                           MachineBasicBlock *MBB,
                                           unsigned CompareOpcode,
                                           unsigned KeepOldMask,
                                           unsigned BitSize) const;
-  MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr *MI,
+  MachineBasicBlock *emitAtomicCmpSwapW(MachineInstr &MI,
                                         MachineBasicBlock *BB) const;
-  MachineBasicBlock *emitMemMemWrapper(MachineInstr *MI,
-                                       MachineBasicBlock *BB,
+  MachineBasicBlock *emitMemMemWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
-  MachineBasicBlock *emitStringWrapper(MachineInstr *MI,
-                                       MachineBasicBlock *BB,
+  MachineBasicBlock *emitStringWrapper(MachineInstr &MI, MachineBasicBlock *BB,
                                        unsigned Opcode) const;
-  MachineBasicBlock *emitTransactionBegin(MachineInstr *MI,
+  MachineBasicBlock *emitTransactionBegin(MachineInstr &MI,
                                           MachineBasicBlock *MBB,
-                                          unsigned Opcode,
-                                          bool NoFloat) const;
-  MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr *MI,
+                                          unsigned Opcode, bool NoFloat) const;
+  MachineBasicBlock *emitLoadAndTestCmp0(MachineInstr &MI,
                                          MachineBasicBlock *MBB,
                                          unsigned Opcode) const;
-
 };
 } // end namespace llvm
 

@@ -718,7 +718,7 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
       if (Reg1 != Reg0)
         return false;
       // Try to commute the operands to make it a 2-address instruction.
-      MachineInstr *CommutedMI = TII->commuteInstruction(MI);
+      MachineInstr *CommutedMI = TII->commuteInstruction(*MI);
       if (!CommutedMI)
         return false;
     }
@@ -726,11 +726,11 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
     // Try to commute the operands to make it a 2-address instruction.
     unsigned CommOpIdx1 = 1;
     unsigned CommOpIdx2 = TargetInstrInfo::CommuteAnyOperandIndex;
-    if (!TII->findCommutedOpIndices(MI, CommOpIdx1, CommOpIdx2) ||
+    if (!TII->findCommutedOpIndices(*MI, CommOpIdx1, CommOpIdx2) ||
         MI->getOperand(CommOpIdx2).getReg() != Reg0)
       return false;
     MachineInstr *CommutedMI =
-        TII->commuteInstruction(MI, false, CommOpIdx1, CommOpIdx2);
+        TII->commuteInstruction(*MI, false, CommOpIdx1, CommOpIdx2);
     if (!CommutedMI)
       return false;
   }

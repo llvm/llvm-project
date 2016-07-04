@@ -1475,6 +1475,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::~__hash_table()
 {
+    static_assert((is_copy_constructible<key_equal>::value),
+                 "Predicate must be copy-constructible.");
+    static_assert((is_copy_constructible<hasher>::value),
+                 "Hasher must be copy-constructible.");
     __deallocate(__p1_.first().__next_);
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->__erase_c(this);
@@ -2197,7 +2201,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                                       __constrain_hash(__nd->__hash_, __bc) == __chash;
+                (__hash == __nd->__hash_
+                    || __constrain_hash(__nd->__hash_, __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
                 if (key_eq()(__nd->__value_, __k))
@@ -2226,7 +2231,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                                           __constrain_hash(__nd->__hash_, __bc) == __chash;
+                (__hash == __nd->__hash_
+                    || __constrain_hash(__nd->__hash_, __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
                 if (key_eq()(__nd->__value_, __k))

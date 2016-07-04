@@ -183,6 +183,7 @@ namespace {
       (void) llvm::createInstructionSimplifierPass();
       (void) llvm::createLoopVectorizePass();
       (void) llvm::createSLPVectorizerPass();
+      (void) llvm::createLoadStoreVectorizerPass();
       (void) llvm::createBBVectorizePass();
       (void) llvm::createPartiallyInlineLibCallsPass();
       (void) llvm::createScalarizerPass();

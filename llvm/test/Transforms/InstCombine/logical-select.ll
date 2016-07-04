@@ -262,15 +262,10 @@ define <2 x i64> @bitcast_select_swap7(<4 x i1> %cmp, <2 x double> %a, <2 x doub
   ret <2 x i64> %or
 }
 
-; FIXME: Missed conversions to select below here.
-
 define i1 @bools(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools(
-; CHECK-NEXT:    [[NOT:%.*]] = xor i1 %c, true
-; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], %a
-; CHECK-NEXT:    [[AND2:%.*]] = and i1 %c, %b
-; CHECK-NEXT:    [[OR:%.*]] = or i1 [[AND1]], [[AND2]]
-; CHECK-NEXT:    ret i1 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 %c, i1 %b, i1 %a
+; CHECK-NEXT:    ret i1 [[TMP1]]
 ;
   %not = xor i1 %c, -1
   %and1 = and i1 %not, %a
@@ -281,11 +276,8 @@ define i1 @bools(i1 %a, i1 %b, i1 %c) {
 
 define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_of_bools(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[AND1:%.*]] = and <4 x i1> [[NOT]], %a
-; CHECK-NEXT:    [[AND2:%.*]] = and <4 x i1> %b, %c
-; CHECK-NEXT:    [[OR:%.*]] = or <4 x i1> [[AND2]], [[AND1]]
-; CHECK-NEXT:    ret <4 x i1> [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = select <4 x i1> %c, <4 x i1> %b, <4 x i1> %a
+; CHECK-NEXT:    ret <4 x i1> [[TMP1]]
 ;
   %not = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
   %and1 = and <4 x i1> %not, %a
@@ -296,13 +288,11 @@ define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
 
 define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
 ; CHECK-LABEL: @vec_of_casted_bools(
-; CHECK-NEXT:    [[NOT:%.*]] = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
-; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i1> [[NOT]] to i4
-; CHECK-NEXT:    [[BC2:%.*]] = bitcast <4 x i1> %c to i4
-; CHECK-NEXT:    [[AND1:%.*]] = and i4 [[BC1]], %a
-; CHECK-NEXT:    [[AND2:%.*]] = and i4 [[BC2]], %b
-; CHECK-NEXT:    [[OR:%.*]] = or i4 [[AND1]], [[AND2]]
-; CHECK-NEXT:    ret i4 [[OR]]
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i4 %a to <4 x i1>
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i4 %b to <4 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> %c, <4 x i1> [[TMP2]], <4 x i1> [[TMP1]]
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i1> [[TMP3]] to i4
+; CHECK-NEXT:    ret i4 [[TMP4]]
 ;
   %not = xor <4 x i1> %c, <i1 true, i1 true, i1 true, i1 true>
   %bc1 = bitcast <4 x i1> %not to i4
@@ -313,6 +303,7 @@ define i4 @vec_of_casted_bools(i4 %a, i4 %b, <4 x i1> %c) {
   ret i4 %or
 }
 
+; FIXME: Missed conversions to select below here.
 ; Inverted 'and' constants mean this is a select.
 
 define <4 x i32> @vec_sel_consts(<4 x i32> %a, <4 x i32> %b) {
