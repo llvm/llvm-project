@@ -53,7 +53,7 @@ define <8 x double> @combine_vpermt2var_8f64_movddup_mask(<8 x double> %x0, <8 x
 ; CHECK-LABEL: combine_vpermt2var_8f64_movddup_mask:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovddup {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6]
+; CHECK-NEXT:    vmovddup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6]
 ; CHECK-NEXT:    retq
   %res0 = call <8 x double> @llvm.x86.avx512.maskz.vpermt2var.pd.512(<8 x i64> <i64 0, i64 0, i64 2, i64 2, i64 4, i64 4, i64 6, i64 6>, <8 x double> %x0, <8 x double> %x1, i8 %m)
   ret <8 x double> %res0
@@ -169,7 +169,7 @@ define <16 x float> @combine_vpermt2var_16f32_vmovshdup_mask(<16 x float> %x0, <
 ; CHECK-LABEL: combine_vpermt2var_16f32_vmovshdup_mask:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovshdup {{.*#+}} zmm0 = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
+; CHECK-NEXT:    vmovshdup {{.*#+}} zmm0 {%k1} {z} = zmm0[1,1,3,3,5,5,7,7,9,9,11,11,13,13,15,15]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 1, i32 1, i32 3, i32 3, i32 5, i32 5, i32 7, i32 7, i32 9, i32 9, i32 11, i32 11, i32 13, i32 13, i32 15, i32 15>, <16 x float> %x0, <16 x float> %x1, i16 %m)
   ret <16 x float> %res0
@@ -196,7 +196,7 @@ define <16 x float> @combine_vpermt2var_16f32_vmovsldup_mask(<16 x float> %x0, <
 ; CHECK-LABEL: combine_vpermt2var_16f32_vmovsldup_mask:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovsldup {{.*#+}} zmm0 = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vmovsldup {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>, <16 x float> %x0, <16 x float> %x1, i16 %m)
   ret <16 x float> %res0
@@ -205,7 +205,7 @@ define <16 x float> @combine_vpermt2var_16f32_vmovsldup_mask_load(<16 x float> *
 ; CHECK-LABEL: combine_vpermt2var_16f32_vmovsldup_mask_load:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vmovsldup {{.*#+}} zmm0 = mem[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
+; CHECK-NEXT:    vmovsldup {{.*#+}} zmm0 {%k1} {z} = mem[0,0,2,2,4,4,6,6,8,8,10,10,12,12,14,14]
 ; CHECK-NEXT:    retq
   %x0 = load <16 x float>, <16 x float> *%p0
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 undef, i32 0, i32 undef, i32 2, i32 4, i32 4, i32 6, i32 6, i32 8, i32 8, i32 10, i32 10, i32 12, i32 12, i32 14, i32 14>, <16 x float> %x0, <16 x float> %x1, i16 %m)
@@ -233,7 +233,7 @@ define <16 x float> @combine_vpermt2var_16f32_vpermilps_mask(<16 x float> %x0, <
 ; CHECK-LABEL: combine_vpermt2var_16f32_vpermilps_mask:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 %m)
   ret <16 x float> %res0
@@ -242,7 +242,7 @@ define <16 x float> @combine_vpermt2var_16f32_vpermilps_mask_load(<16 x float> *
 ; CHECK-LABEL: combine_vpermt2var_16f32_vpermilps_mask_load:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    kmovw %esi, %k1
-; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = mem[3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12]
 ; CHECK-NEXT:    retq
   %x0 = load <16 x float>, <16 x float> *%p0
   %res0 = call <16 x float> @llvm.x86.avx512.maskz.vpermt2var.ps.512(<16 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4, i32 11, i32 10, i32 9, i32 8, i32 15, i32 14, i32 13, i32 12>, <16 x float> %x0, <16 x float> %x1, i16 %m)

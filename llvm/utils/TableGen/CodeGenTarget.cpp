@@ -595,6 +595,9 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
     } else if (Property->isSubClassOf("ReadOnly")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
       ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadOnly));
+    } else if (Property->isSubClassOf("WriteOnly")) {
+      unsigned ArgNo = Property->getValueAsInt("ArgNo");
+      ArgumentAttributes.push_back(std::make_pair(ArgNo, WriteOnly));
     } else if (Property->isSubClassOf("ReadNone")) {
       unsigned ArgNo = Property->getValueAsInt("ArgNo");
       ArgumentAttributes.push_back(std::make_pair(ArgNo, ReadNone));

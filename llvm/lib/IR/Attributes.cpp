@@ -292,6 +292,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "readnone";
   if (hasAttribute(Attribute::ReadOnly))
     return "readonly";
+  if (hasAttribute(Attribute::WriteOnly))
+    return "writeonly";
   if (hasAttribute(Attribute::Returned))
     return "returned";
   if (hasAttribute(Attribute::ReturnsTwice))
@@ -516,6 +518,7 @@ uint64_t AttributeImpl::getAttrMask(Attribute::AttrKind Val) {
   case Attribute::InaccessibleMemOrArgMemOnly: return 1ULL << 50;
   case Attribute::SwiftSelf:       return 1ULL << 51;
   case Attribute::SwiftError:      return 1ULL << 52;
+  case Attribute::WriteOnly:       return 1ULL << 53;
   case Attribute::Dereferenceable:
     llvm_unreachable("dereferenceable attribute not supported in raw format");
     break;

@@ -167,6 +167,9 @@ def SwiftSelf : EnumAttr<"swiftself">;
 /// Function must be in a unwind table.
 def UWTable : EnumAttr<"uwtable">;
 
+/// Function only writes to memory.
+def WriteOnly : EnumAttr<"writeonly">;
+
 /// Zero extended before/after call.
 def ZExt : EnumAttr<"zeroext">;
 

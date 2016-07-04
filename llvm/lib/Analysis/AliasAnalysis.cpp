@@ -142,6 +142,8 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS,
 
   if (onlyReadsMemory(MRB))
     Result = ModRefInfo(Result & MRI_Ref);
+  else if (doesNotReadMemory(MRB))
+    Result = ModRefInfo(Result & MRI_Mod);
 
   if (onlyAccessesArgPointees(MRB)) {
     bool DoesAlias = false;
@@ -207,6 +209,8 @@ ModRefInfo AAResults::getModRefInfo(ImmutableCallSite CS1,
   // from CS1 reading memory written by CS2.
   if (onlyReadsMemory(CS1B))
     Result = ModRefInfo(Result & MRI_Ref);
+  else if (doesNotReadMemory(CS1B))
+    Result = ModRefInfo(Result & MRI_Mod);
 
   // If CS2 only access memory through arguments, accumulate the mod/ref
   // information from CS1's references to the memory referenced by

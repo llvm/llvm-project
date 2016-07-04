@@ -112,6 +112,7 @@ namespace llvm {
     enum ArgAttribute {
       NoCapture,
       ReadOnly,
+      WriteOnly,
       ReadNone
     };
     std::vector<std::pair<unsigned, ArgAttribute> > ArgumentAttributes;
