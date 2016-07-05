@@ -404,4 +404,426 @@ define <8 x float> @test_mm256_maskz_moveldup_ps(i8 %a0, <8 x float> %a1) {
   ret <8 x float> %res1
 }
 
+define <4 x i64> @test_mm256_permutex_epi64(<4 x i64> %a0) {
+; X32-LABEL: test_mm256_permutex_epi64:
+; X32:       # BB#0:
+; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,0,0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_permutex_epi64:
+; X64:       # BB#0:
+; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,0,0,0]
+; X64-NEXT:    retq
+  %res = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 0, i32 0, i32 0>
+  ret <4 x i64> %res
+}
+
+define <4 x i64> @test_mm256_mask_permutex_epi64(<4 x i64> %a0, i8 %a1, <4 x i64> %a2) {
+; X32-LABEL: test_mm256_mask_permutex_epi64:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp8:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermq {{.*#+}} ymm0 {%k1} = ymm1[1,0,0,0]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_permutex_epi64:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vpermq {{.*#+}} ymm0 {%k1} = ymm1[1,0,0,0]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a1 to i4
+  %arg1 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x i64> %a2, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
+  %res1 = select <4 x i1> %arg1, <4 x i64> %res0, <4 x i64> %a0
+  ret <4 x i64> %res1
+}
+
+define <4 x i64> @test_mm256_maskz_permutex_epi64(i8 %a0, <4 x i64> %a1) {
+; X32-LABEL: test_mm256_maskz_permutex_epi64:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp9:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[1,0,0,0]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_permutex_epi64:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vpermq {{.*#+}} ymm0 {%k1} {z} = ymm0[1,0,0,0]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a0 to i4
+  %arg0 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x i64> %a1, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
+  %res1 = select <4 x i1> %arg0, <4 x i64> %res0, <4 x i64> zeroinitializer
+  ret <4 x i64> %res1
+}
+
+define <4 x double> @test_mm256_permutex_pd(<4 x double> %a0) {
+; X32-LABEL: test_mm256_permutex_pd:
+; X32:       # BB#0:
+; X32-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_permutex_pd:
+; X64:       # BB#0:
+; X64-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[3,0,0,0]
+; X64-NEXT:    retq
+  %res = shufflevector <4 x double> %a0, <4 x double> undef, <4 x i32> <i32 3, i32 0, i32 0, i32 0>
+  ret <4 x double> %res
+}
+
+define <4 x double> @test_mm256_mask_permutex_pd(<4 x double> %a0, i8 %a1, <4 x double> %a2) {
+; X32-LABEL: test_mm256_mask_permutex_pd:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp10:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} = ymm1[1,0,0,0]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_permutex_pd:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} = ymm1[1,0,0,0]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a1 to i4
+  %arg1 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x double> %a2, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
+  %res1 = select <4 x i1> %arg1, <4 x double> %res0, <4 x double> %a0
+  ret <4 x double> %res1
+}
+
+define <4 x double> @test_mm256_maskz_permutex_pd(i8 %a0, <4 x double> %a1) {
+; X32-LABEL: test_mm256_maskz_permutex_pd:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp11:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1,0,0,0]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_permutex_pd:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vpermpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1,0,0,0]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a0 to i4
+  %arg0 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x double> %a1, <4 x double> undef, <4 x i32> <i32 1, i32 0, i32 0, i32 0>
+  %res1 = select <4 x i1> %arg0, <4 x double> %res0, <4 x double> zeroinitializer
+  ret <4 x double> %res1
+}
+
+define <2 x double> @test_mm_shuffle_pd(<2 x double> %a0, <2 x double> %a1) {
+; X32-LABEL: test_mm_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
+; X64-NEXT:    retq
+  %res = shufflevector <2 x double> %a0, <2 x double> %a1, <2 x i32> <i32 1, i32 3>
+  ret <2 x double> %res
+}
+
+define <2 x double> @test_mm_mask_shuffle_pd(<2 x double> %a0, i8 %a1, <2 x double> %a2, <2 x double> %a3) {
+; X32-LABEL: test_mm_mask_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp12:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $3, %al
+; X32-NEXT:    movb %al, {{[0-9]+}}(%esp)
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} = xmm1[1],xmm2[1]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    andb $3, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} = xmm1[1],xmm2[1]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a1 to i2
+  %arg1 = bitcast i2 %trn1 to <2 x i1>
+  %res0 = shufflevector <2 x double> %a2, <2 x double> %a3, <2 x i32> <i32 1, i32 3>
+  %res1 = select <2 x i1> %arg1, <2 x double> %res0, <2 x double> %a0
+  ret <2 x double> %res1
+}
+
+define <2 x double> @test_mm_maskz_shuffle_pd(i8 %a0, <2 x double> %a1, <2 x double> %a2) {
+; X32-LABEL: test_mm_maskz_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp13:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $3, %al
+; X32-NEXT:    movb %al, {{[0-9]+}}(%esp)
+; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    andb $3, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],xmm1[1]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a0 to i2
+  %arg0 = bitcast i2 %trn1 to <2 x i1>
+  %res0 = shufflevector <2 x double> %a1, <2 x double> %a2, <2 x i32> <i32 1, i32 3>
+  %res1 = select <2 x i1> %arg0, <2 x double> %res0, <2 x double> zeroinitializer
+  ret <2 x double> %res1
+}
+
+define <4 x double> @test_mm256_shuffle_pd(<4 x double> %a0, <4 x double> %a1) {
+; X32-LABEL: test_mm256_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[2],ymm1[2]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[1],ymm1[1],ymm0[2],ymm1[2]
+; X64-NEXT:    retq
+  %res = shufflevector <4 x double> %a0, <4 x double> %a1, <4 x i32> <i32 1, i32 5, i32 2, i32 6>
+  ret <4 x double> %res
+}
+
+define <4 x double> @test_mm256_mask_shuffle_pd(<4 x double> %a0, i8 %a1, <4 x double> %a2, <4 x double> %a3) {
+; X32-LABEL: test_mm256_mask_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp14:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} = ymm1[1],ymm2[1],ymm1[2],ymm2[2]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} = ymm1[1],ymm2[1],ymm1[2],ymm2[2]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a1 to i4
+  %arg1 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x double> %a2, <4 x double> %a3, <4 x i32> <i32 1, i32 5, i32 2, i32 6>
+  %res1 = select <4 x i1> %arg1, <4 x double> %res0, <4 x double> %a0
+  ret <4 x double> %res1
+}
+
+define <4 x double> @test_mm256_maskz_shuffle_pd(i8 %a0, <4 x double> %a1, <4 x double> %a2) {
+; X32-LABEL: test_mm256_maskz_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp15:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[2],ymm1[2]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vshufpd {{.*#+}} ymm0 {%k1} {z} = ymm0[1],ymm1[1],ymm0[2],ymm1[2]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a0 to i4
+  %arg0 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x double> %a1, <4 x double> %a2, <4 x i32> <i32 1, i32 5, i32 2, i32 6>
+  %res1 = select <4 x i1> %arg0, <4 x double> %res0, <4 x double> zeroinitializer
+  ret <4 x double> %res1
+}
+
+define <4 x float> @test_mm_shuffle_ps(<4 x float> %a0, <4 x float> %a1) {
+; X32-LABEL: test_mm_shuffle_ps:
+; X32:       # BB#0:
+; X32-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_shuffle_ps:
+; X64:       # BB#0:
+; X64-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[0,0]
+; X64-NEXT:    retq
+  %res = shufflevector <4 x float> %a0, <4 x float> %a1, <4 x i32> <i32 0, i32 1, i32 4, i32 4>
+  ret <4 x float> %res
+}
+
+define <4 x float> @test_mm_mask_shuffle_ps(<4 x float> %a0, i8 %a1, <4 x float> %a2, <4 x float> %a3) {
+; X32-LABEL: test_mm_mask_shuffle_ps:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp16:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufps {{.*#+}} xmm0 {%k1} = xmm1[0,1],xmm2[0,0]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_mask_shuffle_ps:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vshufps {{.*#+}} xmm0 {%k1} = xmm1[0,1],xmm2[0,0]
+; X64-NEXT:    retq
+  %trn1 = trunc i8 %a1 to i4
+  %arg1 = bitcast i4 %trn1 to <4 x i1>
+  %res0 = shufflevector <4 x float> %a2, <4 x float> %a3, <4 x i32> <i32 0, i32 1, i32 4, i32 4>
+  %res1 = select <4 x i1> %arg1, <4 x float> %res0, <4 x float> %a0
+  ret <4 x float> %res1
+}
+
+define <4 x float> @test_mm_maskz_shuffle_ps(i8 %a0, <4 x float> %a1, <4 x float> %a2) {
+; X32-LABEL: test_mm_maskz_shuffle_ps:
+; X32:       # BB#0:
+; X32-NEXT:    pushl %eax
+; X32-NEXT:  .Ltmp17:
+; X32-NEXT:    .cfi_def_cfa_offset 8
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    andb $15, %al
+; X32-NEXT:    movb %al, (%esp)
+; X32-NEXT:    movzbl (%esp), %eax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1],xmm1[0,0]
+; X32-NEXT:    popl %eax
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_maskz_shuffle_ps:
+; X64:       # BB#0:
+; X64-NEXT:    andb $15, %dil
+; X64-NEXT:    movb %dil, -{{[0-9]+}}(%rsp)
+; X64-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    kmovw %eax, %k1
+; X64-NEXT:    vshufps {{.*#+}} xmm0 {%k1} {z} = xmm0[0,1],xmm1[0,0]
+; X64-NEXT:    retq
+  %trn0 = trunc i8 %a0 to i4
+  %arg0 = bitcast i4 %trn0 to <4 x i1>
+  %res0 = shufflevector <4 x float> %a1, <4 x float> %a2, <4 x i32> <i32 0, i32 1, i32 4, i32 4>
+  %res1 = select <4 x i1> %arg0, <4 x float> %res0, <4 x float> zeroinitializer
+  ret <4 x float> %res1
+}
+
+define <8 x float> @test_mm256_shuffle_ps(<8 x float> %a0, <8 x float> %a1) {
+; X32-LABEL: test_mm256_shuffle_ps:
+; X32:       # BB#0:
+; X32-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[0,0],ymm0[4,5],ymm1[4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_shuffle_ps:
+; X64:       # BB#0:
+; X64-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,1],ymm1[0,0],ymm0[4,5],ymm1[4,4]
+; X64-NEXT:    retq
+  %res = shufflevector <8 x float> %a0, <8 x float> %a1, <8 x i32> <i32 0, i32 1, i32 8, i32 8, i32 4, i32 5, i32 12, i32 12>
+  ret <8 x float> %res
+}
+
+define <8 x float> @test_mm256_mask_shuffle_ps(<8 x float> %a0, i8 %a1, <8 x float> %a2, <8 x float> %a3) {
+; X32-LABEL: test_mm256_mask_shuffle_ps:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufps {{.*#+}} ymm0 {%k1} = ymm1[0,1],ymm2[0,0],ymm1[4,5],ymm2[4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_mask_shuffle_ps:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vshufps {{.*#+}} ymm0 {%k1} = ymm1[0,1],ymm2[0,0],ymm1[4,5],ymm2[4,4]
+; X64-NEXT:    retq
+  %arg1 = bitcast i8 %a1 to <8 x i1>
+  %res0 = shufflevector <8 x float> %a2, <8 x float> %a3, <8 x i32> <i32 0, i32 1, i32 8, i32 8, i32 4, i32 5, i32 12, i32 12>
+  %res1 = select <8 x i1> %arg1, <8 x float> %res0, <8 x float> %a0
+  ret <8 x float> %res1
+}
+
+define <8 x float> @test_mm256_maskz_shuffle_ps(i8 %a0, <8 x float> %a1, <8 x float> %a2) {
+; X32-LABEL: test_mm256_maskz_shuffle_ps:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufps {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1],ymm1[0,0],ymm0[4,5],ymm1[4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_maskz_shuffle_ps:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vshufps {{.*#+}} ymm0 {%k1} {z} = ymm0[0,1],ymm1[0,0],ymm0[4,5],ymm1[4,4]
+; X64-NEXT:    retq
+  %arg0 = bitcast i8 %a0 to <8 x i1>
+  %res0 = shufflevector <8 x float> %a1, <8 x float> %a2, <8 x i32> <i32 0, i32 1, i32 8, i32 8, i32 4, i32 5, i32 12, i32 12>
+  %res1 = select <8 x i1> %arg0, <8 x float> %res0, <8 x float> zeroinitializer
+  ret <8 x float> %res1
+}
+
 !0 = !{i32 1}

@@ -31,7 +31,7 @@ define i32 @loads(i32 %arg) {
 
   ; FIXME: There actually are sub-vector Altivec loads, and so we could handle
   ; this with a small expense, but we don't currently.
-  ; CHECK: cost of 48 {{.*}} load
+  ; CHECK: cost of 42 {{.*}} load
   load <4 x i16>, <4 x i16>* undef, align 2
 
   ; CHECK: cost of 2 {{.*}} load

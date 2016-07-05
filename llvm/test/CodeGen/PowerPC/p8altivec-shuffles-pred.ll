@@ -9,7 +9,8 @@ entry:
   ret <2 x i32> %strided.vec
 
 ; CHECK-LABEL: @test1
-; CHECK: vsldoi 2, 2, 2, 12
+; CHECK: vsldoi [[TGT:[0-9]+]], 2, 2, 8
+; CHECK: vmrghw 2, 2, [[TGT]]
 ; CHECK: blr
 }
 

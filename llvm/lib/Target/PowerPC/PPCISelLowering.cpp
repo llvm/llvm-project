@@ -851,6 +851,7 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   // We have target-specific dag combine patterns for the following nodes:
   setTargetDAGCombine(ISD::SINT_TO_FP);
+  setTargetDAGCombine(ISD::BUILD_VECTOR);
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine(ISD::LOAD);
@@ -1041,6 +1042,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::MFVSR:           return "PPCISD::MFVSR";
   case PPCISD::MTVSRA:          return "PPCISD::MTVSRA";
   case PPCISD::MTVSRZ:          return "PPCISD::MTVSRZ";
+  case PPCISD::SINT_VEC_TO_FP:  return "PPCISD::SINT_VEC_TO_FP";
+  case PPCISD::UINT_VEC_TO_FP:  return "PPCISD::UINT_VEC_TO_FP";
   case PPCISD::ANDIo_1_EQ_BIT:  return "PPCISD::ANDIo_1_EQ_BIT";
   case PPCISD::ANDIo_1_GT_BIT:  return "PPCISD::ANDIo_1_GT_BIT";
   case PPCISD::VCMP:            return "PPCISD::VCMP";
@@ -10188,6 +10191,59 @@ SDValue PPCTargetLowering::DAGCombineExtBoolTrunc(SDNode *N,
       ShiftCst);
 }
 
+SDValue PPCTargetLowering::DAGCombineBuildVector(SDNode *N,
+                                                 DAGCombinerInfo &DCI) const {
+  assert(N->getOpcode() == ISD::BUILD_VECTOR &&
+         "Should be called with a BUILD_VECTOR node");
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDLoc dl(N);
+  if (N->getValueType(0) != MVT::v2f64 || !Subtarget.hasVSX())
+    return SDValue();
+
+  // Looking for:
+  // (build_vector ([su]int_to_fp (extractelt 0)), [su]int_to_fp (extractelt 1))
+  if (N->getOperand(0).getOpcode() != ISD::SINT_TO_FP &&
+      N->getOperand(0).getOpcode() != ISD::UINT_TO_FP)
+    return SDValue();
+  if (N->getOperand(1).getOpcode() != ISD::SINT_TO_FP &&
+      N->getOperand(1).getOpcode() != ISD::UINT_TO_FP)
+    return SDValue();
+  if (N->getOperand(0).getOpcode() != N->getOperand(1).getOpcode())
+    return SDValue();
+
+  SDValue Ext1 = N->getOperand(0).getOperand(0);
+  SDValue Ext2 = N->getOperand(1).getOperand(0);
+  if(Ext1.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+     Ext2.getOpcode() != ISD::EXTRACT_VECTOR_ELT)
+    return SDValue();
+
+  ConstantSDNode *Ext1Op = dyn_cast<ConstantSDNode>(Ext1.getOperand(1));
+  ConstantSDNode *Ext2Op = dyn_cast<ConstantSDNode>(Ext2.getOperand(1));
+  if (!Ext1Op || !Ext2Op)
+    return SDValue();
+  if (Ext1.getValueType() != MVT::i32 ||
+      Ext2.getValueType() != MVT::i32)
+  if (Ext1.getOperand(0) != Ext2.getOperand(0))
+    return SDValue();
+
+  int FirstElem = Ext1Op->getZExtValue();
+  int SecondElem = Ext2Op->getZExtValue();
+  int SubvecIdx;
+  if (FirstElem == 0 && SecondElem == 1)
+    SubvecIdx = Subtarget.isLittleEndian() ? 1 : 0;
+  else if (FirstElem == 2 && SecondElem == 3)
+    SubvecIdx = Subtarget.isLittleEndian() ? 0 : 1;
+  else
+    return SDValue();
+
+  SDValue SrcVec = Ext1.getOperand(0);
+  auto NodeType = (N->getOperand(1).getOpcode() == ISD::SINT_TO_FP) ?
+    PPCISD::SINT_VEC_TO_FP : PPCISD::UINT_VEC_TO_FP;
+  return DAG.getNode(NodeType, dl, MVT::v2f64,
+                     SrcVec, DAG.getIntPtrConstant(SubvecIdx, dl));
+}
+
 SDValue PPCTargetLowering::combineFPToIntToFP(SDNode *N,
                                               DAGCombinerInfo &DCI) const {
   assert((N->getOpcode() == ISD::SINT_TO_FP ||
@@ -11024,6 +11080,8 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
     }
     break;
   }
+  case ISD::BUILD_VECTOR:
+    return DAGCombineBuildVector(N, DCI);
   }
 
   return SDValue();

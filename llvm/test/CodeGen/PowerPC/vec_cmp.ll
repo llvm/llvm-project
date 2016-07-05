@@ -24,7 +24,7 @@ define <4 x i8> @v4si8_cmp(<4 x i8> %x, <4 x i8> %y) nounwind readnone {
   ret <4 x i8> %sext
 }
 ; CHECK-LABEL: v4si8_cmp:
-; CHECK: vcmpequw {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; CHECK: vcmpequb {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 
 
 define <8 x i8> @v8si8_cmp(<8 x i8> %x, <8 x i8> %y) nounwind readnone {
@@ -33,7 +33,7 @@ define <8 x i8> @v8si8_cmp(<8 x i8> %x, <8 x i8> %y) nounwind readnone {
   ret <8 x i8> %sext
 }
 ; CHECK-LABEL: v8si8_cmp:
-; CHECK: vcmpequh {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; CHECK: vcmpequb {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 
 
 ; Additional tests for v16i8 since it is a altivec native type
@@ -158,7 +158,7 @@ define <4 x i16> @v4si16_cmp(<4 x i16> %x, <4 x i16> %y) nounwind readnone {
   ret <4 x i16> %sext
 }
 ; CHECK-LABEL: v4si16_cmp:
-; CHECK: vcmpequw {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
+; CHECK: vcmpequh {{[0-9]+}}, {{[0-9]+}}, {{[0-9]+}}
 
 
 ; Additional tests for v8i16 since it is an altivec native type
