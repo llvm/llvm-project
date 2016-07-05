@@ -410,9 +410,6 @@ protected:
     return Filters[BestIndex];
   }
 
-  // Called from Filter::recurse() when singleton exists.  For debug purpose.
-  void SingletonExists(unsigned Opc) const;
-
   bool PositionFiltered(unsigned i) const {
     return ValueSet(FilterBitValues[i]);
   }
@@ -559,7 +556,6 @@ void Filter::recurse() {
   // No need to recurse for a singleton filtered instruction.
   // See also Filter::emit*().
   if (getNumFiltered() == 1) {
-    //Owner->SingletonExists(LastOpcFiltered);
     assert(FilterChooserMap.size() == 1);
     return;
   }
@@ -974,30 +970,6 @@ void FilterChooser::dumpStack(raw_ostream &o, const char *prefix) const {
     dumpFilterArray(o, current->FilterBitValues);
     o << '\n';
     current = current->Parent;
-  }
-}
-
-// Called from Filter::recurse() when singleton exists.  For debug purpose.
-void FilterChooser::SingletonExists(unsigned Opc) const {
-  insn_t Insn0;
-  insnWithID(Insn0, Opc);
-
-  errs() << "Singleton exists: " << nameWithID(Opc)
-         << " with its decoding dominating ";
-  for (unsigned i = 0; i < Opcodes.size(); ++i) {
-    if (Opcodes[i] == Opc) continue;
-    errs() << nameWithID(Opcodes[i]) << ' ';
-  }
-  errs() << '\n';
-
-  dumpStack(errs(), "\t\t");
-  for (unsigned i = 0; i < Opcodes.size(); ++i) {
-    const std::string &Name = nameWithID(Opcodes[i]);
-
-    errs() << '\t' << Name << " ";
-    dumpBits(errs(),
-             getBitsField(*AllInstructions[Opcodes[i]]->TheDef, "Inst"));
-    errs() << '\n';
   }
 }
 

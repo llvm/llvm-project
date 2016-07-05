@@ -1739,6 +1739,14 @@ public:
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly);
   }
 
+  /// \brief Determine if the call does not access or only writes memory.
+  bool doesNotReadMemory() const {
+    return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
+  }
+  void setDoesNotReadMemory() {
+    addAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly);
+  }
+
   /// @brief Determine if the call can access memmory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const {
@@ -3689,6 +3697,14 @@ public:
   }
   void setOnlyReadsMemory() {
     addAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly);
+  }
+
+  /// \brief Determine if the call does not access or only writes memory.
+  bool doesNotReadMemory() const {
+    return doesNotAccessMemory() || hasFnAttr(Attribute::WriteOnly);
+  }
+  void setDoesNotReadMemory() {
+    addAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly);
   }
 
   /// @brief Determine if the call access memmory only using it's pointer

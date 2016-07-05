@@ -3052,8 +3052,7 @@ bool llvm::onlyUsedByLifetimeMarkers(const Value *V) {
 
 bool llvm::isSafeToSpeculativelyExecute(const Value *V,
                                         const Instruction *CtxI,
-                                        const DominatorTree *DT,
-                                        const TargetLibraryInfo *TLI) {
+                                        const DominatorTree *DT) {
   const Operator *Inst = dyn_cast<Operator>(V);
   if (!Inst)
     return false;
@@ -3104,8 +3103,8 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
             Attribute::SanitizeAddress))
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
-    return isDereferenceableAndAlignedPointer(
-        LI->getPointerOperand(), LI->getAlignment(), DL, CtxI, DT, TLI);
+    return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
+                                              LI->getAlignment(), DL, CtxI, DT);
   }
   case Instruction::Call: {
     if (const IntrinsicInst *II = dyn_cast<IntrinsicInst>(Inst)) {
@@ -3190,7 +3189,7 @@ bool llvm::mayBeMemoryDependent(const Instruction &I) {
 }
 
 /// Return true if we know that the specified value is never null.
-bool llvm::isKnownNonNull(const Value *V, const TargetLibraryInfo *TLI) {
+bool llvm::isKnownNonNull(const Value *V) {
   assert(V->getType()->isPointerTy() && "V must be pointer type");
 
   // Alloca never returns null, malloc might.
@@ -3257,8 +3256,8 @@ static bool isKnownNonNullFromDominatingCondition(const Value *V,
 }
 
 bool llvm::isKnownNonNullAt(const Value *V, const Instruction *CtxI,
-                   const DominatorTree *DT, const TargetLibraryInfo *TLI) {
-  if (isKnownNonNull(V, TLI))
+                            const DominatorTree *DT) {
+  if (isKnownNonNull(V))
     return true;
 
   return CtxI ? ::isKnownNonNullFromDominatingCondition(V, CtxI, DT) : false;

@@ -77,28 +77,9 @@ static struct option g_long_options[] =
 //----------------------------------------------------------------------
 // Watch for signals
 //----------------------------------------------------------------------
-static int g_sigpipe_received = 0;
 static int g_sighup_received_count = 0;
 
 #ifndef _WIN32
-
-static void
-signal_handler(int signo)
-{
-    Log *log (GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
-
-    fprintf (stderr, "lldb-server:%s received signal %d\n", __FUNCTION__, signo);
-    if (log)
-        log->Printf ("lldb-server:%s received signal %d", __FUNCTION__, signo);
-
-    switch (signo)
-    {
-    case SIGPIPE:
-        g_sigpipe_received = 1;
-        break;
-    }
-}
-
 static void
 sighup_handler(MainLoopBase &mainloop)
 {
@@ -348,7 +329,7 @@ main_gdbserver (int argc, char *argv[])
     MainLoop mainloop;
 #ifndef _WIN32
     // Setup signal handlers first thing.
-    signal (SIGPIPE, signal_handler);
+    signal(SIGPIPE, SIG_IGN);
     MainLoop::SignalHandleUP sighup_handle = mainloop.RegisterSignal(SIGHUP, sighup_handler, error);
 #endif
 

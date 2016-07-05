@@ -6479,7 +6479,15 @@ public:
     CK_NIAGARA3,
     CK_NIAGARA4,
     CK_MYRIAD2_1,
-    CK_MYRIAD2_2
+    CK_MYRIAD2_2,
+    CK_LEON2,
+    CK_LEON2_AT697E,
+    CK_LEON2_AT697F,
+    CK_LEON3,
+    CK_LEON3_UT699,
+    CK_LEON3_GR712RC,
+    CK_LEON4,
+    CK_LEON4_GR740
   } CPU = CK_GENERIC;
 
   enum CPUGeneration {
@@ -6500,6 +6508,14 @@ public:
     case CK_TSC701:
     case CK_MYRIAD2_1:
     case CK_MYRIAD2_2:
+    case CK_LEON2:
+    case CK_LEON2_AT697E:
+    case CK_LEON2_AT697F:
+    case CK_LEON3:
+    case CK_LEON3_UT699:
+    case CK_LEON3_GR712RC:
+    case CK_LEON4:
+    case CK_LEON4_GR740:
       return CG_V8;
     case CK_V9:
     case CK_ULTRASPARC:
@@ -6533,6 +6549,14 @@ public:
         .Case("myriad2", CK_MYRIAD2_1)
         .Case("myriad2.1", CK_MYRIAD2_1)
         .Case("myriad2.2", CK_MYRIAD2_2)
+        .Case("leon2", CK_LEON2)
+        .Case("at697e", CK_LEON2_AT697E)
+        .Case("at697f", CK_LEON2_AT697F)
+        .Case("leon3", CK_LEON3)
+        .Case("ut699", CK_LEON3_UT699)
+        .Case("gr712rc", CK_LEON3_GR712RC)
+        .Case("leon4", CK_LEON4)
+        .Case("gr740", CK_LEON4_GR740)
         .Default(CK_GENERIC);
   }
 

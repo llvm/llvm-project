@@ -2300,25 +2300,25 @@ _mm_movemask_epi8(__m128i __a)
 
 #define _mm_shuffle_epi32(a, imm) __extension__ ({ \
   (__m128i)__builtin_shufflevector((__v4si)(__m128i)(a), \
-                                   (__v4si)_mm_setzero_si128(), \
-                                   (imm) & 0x3, ((imm) & 0xc) >> 2, \
-                                   ((imm) & 0x30) >> 4, ((imm) & 0xc0) >> 6); })
+                                   (__v4si)_mm_undefined_si128(), \
+                                   ((imm) >> 0) & 0x3, ((imm) >> 2) & 0x3, \
+                                   ((imm) >> 4) & 0x3, ((imm) >> 6) & 0x3); })
 
 #define _mm_shufflelo_epi16(a, imm) __extension__ ({ \
   (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(a), \
-                                   (__v8hi)_mm_setzero_si128(), \
-                                   (imm) & 0x3, ((imm) & 0xc) >> 2, \
-                                   ((imm) & 0x30) >> 4, ((imm) & 0xc0) >> 6, \
+                                   (__v8hi)_mm_undefined_si128(), \
+                                   ((imm) >> 0) & 0x3, ((imm) >> 2) & 0x3, \
+                                   ((imm) >> 4) & 0x3, ((imm) >> 6) & 0x3, \
                                    4, 5, 6, 7); })
 
 #define _mm_shufflehi_epi16(a, imm) __extension__ ({ \
   (__m128i)__builtin_shufflevector((__v8hi)(__m128i)(a), \
-                                   (__v8hi)_mm_setzero_si128(), \
+                                   (__v8hi)_mm_undefined_si128(), \
                                    0, 1, 2, 3, \
-                                   4 + (((imm) & 0x03) >> 0), \
-                                   4 + (((imm) & 0x0c) >> 2), \
-                                   4 + (((imm) & 0x30) >> 4), \
-                                   4 + (((imm) & 0xc0) >> 6)); })
+                                   4 + (((imm) >> 0) & 0x3), \
+                                   4 + (((imm) >> 2) & 0x3), \
+                                   4 + (((imm) >> 4) & 0x3), \
+                                   4 + (((imm) >> 6) & 0x3)); })
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_unpackhi_epi8(__m128i __a, __m128i __b)
@@ -2406,7 +2406,8 @@ _mm_movemask_pd(__m128d __a)
 
 #define _mm_shuffle_pd(a, b, i) __extension__ ({ \
   (__m128d)__builtin_shufflevector((__v2df)(__m128d)(a), (__v2df)(__m128d)(b), \
-                                   (i) & 1, (((i) & 2) >> 1) + 2); })
+                                   0 + (((i) >> 0) & 0x1), \
+                                   2 + (((i) >> 1) & 0x1)); })
 
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_castpd_ps(__m128d __a)

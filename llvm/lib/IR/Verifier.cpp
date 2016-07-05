@@ -1309,6 +1309,7 @@ void Verifier::verifyAttributeTypes(AttributeSet Attrs, unsigned Idx,
         return;
       }
     } else if (I->getKindAsEnum() == Attribute::ReadOnly ||
+               I->getKindAsEnum() == Attribute::WriteOnly ||
                I->getKindAsEnum() == Attribute::ReadNone) {
       if (Idx == 0) {
         CheckFailed("Attribute '" + I->getAsString() +
@@ -1380,6 +1381,18 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, unsigned Idx, Type *Ty,
            Attrs.hasAttribute(Idx, Attribute::ReadOnly)),
          "Attributes "
          "'readnone and readonly' are incompatible!",
+         V);
+
+  Assert(!(Attrs.hasAttribute(Idx, Attribute::ReadNone) &&
+           Attrs.hasAttribute(Idx, Attribute::WriteOnly)),
+         "Attributes "
+         "'readnone and writeonly' are incompatible!",
+         V);
+
+  Assert(!(Attrs.hasAttribute(Idx, Attribute::ReadOnly) &&
+           Attrs.hasAttribute(Idx, Attribute::WriteOnly)),
+         "Attributes "
+         "'readonly and writeonly' are incompatible!",
          V);
 
   Assert(!(Attrs.hasAttribute(Idx, Attribute::NoInline) &&
@@ -1496,6 +1509,16 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeSet Attrs,
       !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
         Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly)),
       "Attributes 'readnone and readonly' are incompatible!", V);
+
+  Assert(
+      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&
+        Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly)),
+      "Attributes 'readnone and writeonly' are incompatible!", V);
+
+  Assert(
+      !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadOnly) &&
+        Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::WriteOnly)),
+      "Attributes 'readonly and writeonly' are incompatible!", V);
 
   Assert(
       !(Attrs.hasAttribute(AttributeSet::FunctionIndex, Attribute::ReadNone) &&

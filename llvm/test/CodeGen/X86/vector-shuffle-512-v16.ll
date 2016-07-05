@@ -107,6 +107,33 @@ define <16 x float> @shuffle_v16f32_01_01_03_03_05_05_07_07_09_09_11_11_13_13_15
   ret <16 x float> %shuffle
 }
 
+define <16 x float> @shuffle_v16f32_00_01_00_01_06_07_06_07_08_09_10_11_12_13_12_13(<16 x float> %a, <16 x float> %b) {
+; ALL-LABEL: shuffle_v16f32_00_01_00_01_06_07_06_07_08_09_10_11_12_13_12_13:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,0,3,3,4,5,6,6]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 0, i32 1, i32 0, i32 1, i32 6, i32 7, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 12, i32 13>
+  ret <16 x float> %shuffle
+}
+
+define <16 x float> @shuffle_v16f32_00_00_02_00_04_04_06_04_08_08_10_08_12_12_14_12(<16 x float> %a, <16 x float> %b) {
+; ALL-LABEL: shuffle_v16f32_00_00_02_00_04_04_06_04_08_08_10_08_12_12_14_12:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[0,0,2,0,4,4,6,4,8,8,10,8,12,12,14,12]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 0, i32 0, i32 2, i32 0, i32 4, i32 4, i32 6, i32 4, i32 8, i32 8, i32 10, i32 8, i32 12, i32 12, i32 14, i32 12>
+  ret <16 x float> %shuffle
+}
+
+define <16 x float> @shuffle_v16f32_03_uu_uu_uu_uu_04_uu_uu_uu_uu_11_uu_uu_uu_uu_12(<16 x float> %a, <16 x float> %b) {
+; ALL-LABEL: shuffle_v16f32_03_uu_uu_uu_uu_04_uu_uu_uu_uu_11_uu_uu_uu_uu_12:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[3,0,3,0,7,4,7,4,11,8,11,8,15,12,15,12]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 3, i32 undef, i32 undef, i32 undef, i32 undef, i32 4, i32 undef, i32 undef, i32 undef, i32 undef, i32 11, i32 undef, i32 undef, i32 undef, i32 undef, i32 12>
+  ret <16 x float> %shuffle
+}
+
 define <16 x i32> @shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00(<16 x i32> %a, <16 x i32> %b) {
 ; ALL-LABEL: shuffle_v16i32_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00_00:
 ; ALL:       # BB#0:

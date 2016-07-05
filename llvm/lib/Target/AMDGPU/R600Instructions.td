@@ -284,7 +284,7 @@ class EG_CF_RAT <bits <8> cfinst, bits <6> ratinst, bits<4> ratid, bits<4> mask,
 }
 
 class VTX_READ <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
-    : InstR600ISA <outs, (ins MEMxi:$src_gpr), name, pattern>,
+    : InstR600ISA <outs, (ins MEMxi:$src_gpr), !strconcat("  ", name), pattern>,
       VTX_WORD1_GPR {
 
   // Static fields
@@ -860,7 +860,7 @@ class R600_TEX <bits<11> inst, string opName> :
           i32imm:$RESOURCE_ID, i32imm:$SAMPLER_ID,
           CT:$COORD_TYPE_X, CT:$COORD_TYPE_Y, CT:$COORD_TYPE_Z,
           CT:$COORD_TYPE_W),
-          !strconcat(opName,
+          !strconcat("  ", opName,
           " $DST_GPR.$DST_SEL_X$DST_SEL_Y$DST_SEL_Z$DST_SEL_W, "
           "$SRC_GPR.$srcx$srcy$srcz$srcw "
           "RID:$RESOURCE_ID SID:$SAMPLER_ID "

@@ -637,8 +637,8 @@ define <16 x float>@test_int_x86_avx512_mask_broadcastf32x8_512(<8 x float> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf32x8_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
-; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vshuff32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vaddps %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vaddps %zmm0, %zmm2, %zmm0
@@ -658,8 +658,8 @@ define <8 x double>@test_int_x86_avx512_mask_broadcastf64x2_512(<2 x double> %x0
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcastf64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %edi, %k1
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 = zmm0[0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 = zmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm1 {%k1} = zmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vaddpd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
@@ -679,8 +679,8 @@ define <16 x i32>@test_int_x86_avx512_mask_broadcasti32x8_512(<8 x i32> %x0, <16
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti32x8_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
-; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
+; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm1 {%k1} = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vshufi32x4 {{.*#+}} zmm0 = zmm0[0,1,2,3,4,5,6,7,0,1,2,3,4,5,6,7]
 ; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpaddd %zmm0, %zmm2, %zmm0
@@ -700,8 +700,8 @@ define <8 x i64>@test_int_x86_avx512_mask_broadcasti64x2_512(<2 x i64> %x0, <8 x
 ; CHECK-LABEL: test_int_x86_avx512_mask_broadcasti64x2_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovb %edi, %k1
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 = zmm0[0,1,0,1,0,1,0,1]
-; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 = zmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm2 {%k1} {z} = zmm0[0,1,0,1,0,1,0,1]
+; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm1 {%k1} = zmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vshufi64x2 {{.*#+}} zmm0 = zmm0[0,1,0,1,0,1,0,1]
 ; CHECK-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm2, %zmm0

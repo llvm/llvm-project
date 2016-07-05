@@ -29,8 +29,7 @@ class MDNode;
 /// specified instruction.
 bool isDereferenceablePointer(const Value *V, const DataLayout &DL,
                               const Instruction *CtxI = nullptr,
-                              const DominatorTree *DT = nullptr,
-                              const TargetLibraryInfo *TLI = nullptr);
+                              const DominatorTree *DT = nullptr);
 
 /// Returns true if V is always a dereferenceable pointer with alignment
 /// greater or equal than requested. If the context instruction is specified
@@ -39,8 +38,7 @@ bool isDereferenceablePointer(const Value *V, const DataLayout &DL,
 bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
                                         const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
-                                        const DominatorTree *DT = nullptr,
-                                        const TargetLibraryInfo *TLI = nullptr);
+                                        const DominatorTree *DT = nullptr);
 
 /// isSafeToLoadUnconditionally - Return true if we know that executing a load
 /// from this value cannot trap.
@@ -54,8 +52,7 @@ bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
 bool isSafeToLoadUnconditionally(Value *V, unsigned Align,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
-                                 const DominatorTree *DT = nullptr,
-                                 const TargetLibraryInfo *TLI = nullptr);
+                                 const DominatorTree *DT = nullptr);
 
 /// DefMaxInstsToScan - the default number of maximum instructions
 /// to scan in the block, used by FindAvailableLoadedValue().

@@ -170,17 +170,21 @@ def atomic_flat_store: flat_st <atomic_store>;
 def flat_truncstorei8 : flat_st <truncstorei8>;
 def flat_truncstorei16 : flat_st <truncstorei16>;
 
+class MubufLoad <SDPatternOperator op> : PatFrag <
+  (ops node:$ptr), (op node:$ptr), [{
 
-def mubuf_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
-	return isGlobalLoad(cast<LoadSDNode>(N)) ||
-         isConstantLoad(cast<LoadSDNode>(N), -1);
+  const MemSDNode *LD = cast<MemSDNode>(N);
+  return LD->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+         LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 }]>;
 
-def mubuf_load_atomic : PatFrag <(ops node:$ptr), (atomic_load node:$ptr), [{
-	return isGlobalLoad(cast<MemSDNode>(N)) ||
-         isConstantLoad(cast<MemSDNode>(N), -1);
-}]>;
+def mubuf_load : MubufLoad <load>;
+def mubuf_az_extloadi8 : MubufLoad <az_extloadi8>;
+def mubuf_sextloadi8 : MubufLoad <sextloadi8>;
+def mubuf_az_extloadi16 : MubufLoad <az_extloadi16>;
+def mubuf_sextloadi16 : MubufLoad <sextloadi16>;
 
+def mubuf_load_atomic : MubufLoad <atomic_load>;
 
 def smrd_load : PatFrag <(ops node:$ptr), (load node:$ptr), [{
   auto Ld = cast<LoadSDNode>(N);

@@ -533,10 +533,6 @@ bool AMDGPUDAGToDAGISel::isGlobalLoad(const MemSDNode *N) const {
     if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS)
       return !isa<GlobalValue>(GetUnderlyingObject(
           N->getMemOperand()->getValue(), CurDAG->getDataLayout()));
-
-    //TODO: Why do we need this?
-    if (N->getMemoryVT().bitsLT(MVT::i32))
-      return true;
   }
 
   return checkType(N->getMemOperand()->getValue(), AMDGPUAS::GLOBAL_ADDRESS);

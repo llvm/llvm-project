@@ -24,7 +24,12 @@ void log(const Twine &Msg) {
     llvm::outs() << Msg << "\n";
 }
 
-void warning(const Twine &Msg) { llvm::errs() << Msg << "\n"; }
+void warning(const Twine &Msg) {
+  if (Config->FatalWarnings)
+    error(Msg);
+  else
+    llvm::errs() << Msg << "\n";
+}
 
 void error(const Twine &Msg) {
   *ErrorOS << Msg << "\n";

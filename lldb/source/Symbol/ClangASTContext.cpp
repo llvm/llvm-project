@@ -1402,9 +1402,7 @@ ClangASTContext::CreateFunctionTemplateSpecializationInfo (FunctionDecl *func_de
                                                            clang::FunctionTemplateDecl *func_tmpl_decl,
                                                            const TemplateParameterInfos &infos)
 {
-    TemplateArgumentList template_args (TemplateArgumentList::OnStack,
-                                        infos.args.data(), 
-                                        infos.args.size());
+    TemplateArgumentList template_args (TemplateArgumentList::OnStack, infos.args);
 
     func_decl->setFunctionTemplateSpecialization (func_tmpl_decl,
                                                   &template_args,
@@ -1502,8 +1500,7 @@ ClangASTContext::CreateClassTemplateSpecializationDecl (DeclContext *decl_ctx,
                                                                                                                    SourceLocation(), 
                                                                                                                    SourceLocation(),
                                                                                                                    class_template_decl,
-                                                                                                                   &template_param_infos.args.front(),
-                                                                                                                   template_param_infos.args.size(),
+                                                                                                                   template_param_infos.args,
                                                                                                                    nullptr);
     
     class_template_specialization_decl->setSpecializationKind(TSK_ExplicitSpecialization);

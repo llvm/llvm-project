@@ -204,7 +204,7 @@ define void @f34()
 ; CHECK: define void @f34()
 {
         call void @nobuiltin() nobuiltin
-; CHECK: call void @nobuiltin() #32
+; CHECK: call void @nobuiltin() #33
         ret void;
 }
 
@@ -328,6 +328,12 @@ define i8* @f55(i32, i32) allocsize(0, 1) {
   ret i8* null
 }
 
+; CHECK: define void @f56() #32
+define void @f56() writeonly
+{
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -360,4 +366,5 @@ define i8* @f55(i32, i32) allocsize(0, 1) {
 ; CHECK: attributes #29 = { inaccessiblemem_or_argmemonly }
 ; CHECK: attributes #30 = { allocsize(0) }
 ; CHECK: attributes #31 = { allocsize(0,1) }
-; CHECK: attributes #32 = { nobuiltin }
+; CHECK: attributes #32 = { writeonly }
+; CHECK: attributes #33 = { nobuiltin }
