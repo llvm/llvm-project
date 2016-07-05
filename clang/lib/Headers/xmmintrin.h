@@ -2496,9 +2496,10 @@ _mm_setcsr(unsigned int __i)
 /// \returns A 128-bit vector of [4 x float] containing the shuffled values.
 #define _mm_shuffle_ps(a, b, mask) __extension__ ({ \
   (__m128)__builtin_shufflevector((__v4sf)(__m128)(a), (__v4sf)(__m128)(b), \
-                                  (mask) & 0x3, ((mask) & 0xc) >> 2, \
-                                  (((mask) & 0x30) >> 4) + 4, \
-                                  (((mask) & 0xc0) >> 6) + 4); })
+                                  0 + (((mask) >> 0) & 0x3), \
+                                  0 + (((mask) >> 2) & 0x3), \
+                                  4 + (((mask) >> 4) & 0x3), \
+                                  4 + (((mask) >> 6) & 0x3)); })
 
 /// \brief Unpacks the high-order (index 2,3) values from two 128-bit vectors of
 ///    [4 x float] and interleaves them into a 128-bit vector of [4 x

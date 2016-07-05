@@ -999,8 +999,8 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 128-bit vector of [2 x double] containing the copied values.
 #define _mm_permute_pd(A, C) __extension__ ({ \
   (__m128d)__builtin_shufflevector((__v2df)(__m128d)(A), \
-                                   (__v2df)_mm_setzero_pd(), \
-                                   (C) & 0x1, ((C) & 0x2) >> 1); })
+                                   (__v2df)_mm_undefined_pd(), \
+                                   ((C) >> 0) & 0x1, ((C) >> 1) & 0x1); })
 
 /// \brief Copies the values in a 256-bit vector of [4 x double] as
 ///    specified by the immediate integer operand.
@@ -1040,10 +1040,11 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 256-bit vector of [4 x double] containing the copied values.
 #define _mm256_permute_pd(A, C) __extension__ ({ \
   (__m256d)__builtin_shufflevector((__v4df)(__m256d)(A), \
-                                   (__v4df)_mm256_setzero_pd(), \
-                                   (C) & 0x1, ((C) & 0x2) >> 1, \
-                                   2 + (((C) & 0x4) >> 2), \
-                                   2 + (((C) & 0x8) >> 3)); })
+                                   (__v4df)_mm256_undefined_pd(), \
+                                   0 + (((C) >> 0) & 0x1), \
+                                   0 + (((C) >> 1) & 0x1), \
+                                   2 + (((C) >> 2) & 0x1), \
+                                   2 + (((C) >> 3) & 0x1)); })
 
 /// \brief Copies the values in a 128-bit vector of [4 x float] as
 ///    specified by the immediate integer operand.
@@ -1099,9 +1100,9 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 128-bit vector of [4 x float] containing the copied values.
 #define _mm_permute_ps(A, C) __extension__ ({ \
   (__m128)__builtin_shufflevector((__v4sf)(__m128)(A), \
-                                  (__v4sf)_mm_setzero_ps(), \
-                                   (C) & 0x3, ((C) & 0xc) >> 2, \
-                                   ((C) & 0x30) >> 4, ((C) & 0xc0) >> 6); })
+                                  (__v4sf)_mm_undefined_ps(), \
+                                  ((C) >> 0) & 0x3, ((C) >> 2) & 0x3, \
+                                  ((C) >> 4) & 0x3, ((C) >> 6) & 0x3); })
 
 /// \brief Copies the values in a 256-bit vector of [8 x float] as
 ///    specified by the immediate integer operand.
@@ -1193,13 +1194,15 @@ _mm256_permutevar_ps(__m256 __a, __m256i __c)
 /// \returns A 256-bit vector of [8 x float] containing the copied values.
 #define _mm256_permute_ps(A, C) __extension__ ({ \
   (__m256)__builtin_shufflevector((__v8sf)(__m256)(A), \
-                                  (__v8sf)_mm256_setzero_ps(), \
-                                  (C) & 0x3, ((C) & 0xc) >> 2, \
-                                  ((C) & 0x30) >> 4, ((C) & 0xc0) >> 6, \
-                                  4 + (((C) & 0x03) >> 0), \
-                                  4 + (((C) & 0x0c) >> 2), \
-                                  4 + (((C) & 0x30) >> 4), \
-                                  4 + (((C) & 0xc0) >> 6)); })
+                                  (__v8sf)_mm256_undefined_ps(), \
+                                  0 + (((C) >> 0) & 0x3), \
+                                  0 + (((C) >> 2) & 0x3), \
+                                  0 + (((C) >> 4) & 0x3), \
+                                  0 + (((C) >> 6) & 0x3), \
+                                  4 + (((C) >> 0) & 0x3), \
+                                  4 + (((C) >> 2) & 0x3), \
+                                  4 + (((C) >> 4) & 0x3), \
+                                  4 + (((C) >> 6) & 0x3)); })
 
 /// \brief Permutes 128-bit data values stored in two 256-bit vectors of
 ///    [4 x double], as specified by the immediate integer operand.
@@ -1538,16 +1541,16 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    11: Bits [127:96] and [255:224] are copied from the selected operand.
 /// \returns A 256-bit vector of [8 x float] containing the shuffled values.
 #define _mm256_shuffle_ps(a, b, mask) __extension__ ({ \
-        (__m256)__builtin_shufflevector((__v8sf)(__m256)(a), \
-                                        (__v8sf)(__m256)(b), \
-                                        (mask) & 0x3, \
-                                        ((mask) & 0xc) >> 2, \
-                                        (((mask) & 0x30) >> 4) + 8, \
-                                        (((mask) & 0xc0) >> 6) + 8, \
-                                        ((mask) & 0x3) + 4, \
-                                        (((mask) & 0xc) >> 2) + 4, \
-                                        (((mask) & 0x30) >> 4) + 12, \
-                                        (((mask) & 0xc0) >> 6) + 12); })
+  (__m256)__builtin_shufflevector((__v8sf)(__m256)(a), \
+                                  (__v8sf)(__m256)(b), \
+                                  0  + (((mask) >> 0) & 0x3), \
+                                  0  + (((mask) >> 2) & 0x3), \
+                                  8  + (((mask) >> 4) & 0x3), \
+                                  8  + (((mask) >> 6) & 0x3), \
+                                  4  + (((mask) >> 0) & 0x3), \
+                                  4  + (((mask) >> 2) & 0x3), \
+                                  12 + (((mask) >> 4) & 0x3), \
+                                  12 + (((mask) >> 6) & 0x3)); })
 
 /// \brief Selects four double-precision values from the 256-bit operands of
 ///    [4 x double], as specified by the immediate value operand. The selected
@@ -1591,12 +1594,12 @@ _mm256_blendv_ps(__m256 __a, __m256 __b, __m256 __c)
 ///    destination.
 /// \returns A 256-bit vector of [4 x double] containing the shuffled values.
 #define _mm256_shuffle_pd(a, b, mask) __extension__ ({ \
-        (__m256d)__builtin_shufflevector((__v4df)(__m256d)(a), \
-                                         (__v4df)(__m256d)(b), \
-                                         (mask) & 0x1, \
-                                         (((mask) & 0x2) >> 1) + 4, \
-                                         (((mask) & 0x4) >> 2) + 2, \
-                                         (((mask) & 0x8) >> 3) + 6); })
+  (__m256d)__builtin_shufflevector((__v4df)(__m256d)(a), \
+                                   (__v4df)(__m256d)(b), \
+                                   0 + (((mask) >> 0) & 0x1), \
+                                   4 + (((mask) >> 1) & 0x1), \
+                                   2 + (((mask) >> 2) & 0x1), \
+                                   6 + (((mask) >> 3) & 0x1)); })
 
 /* Compare */
 #define _CMP_EQ_OQ    0x00 /* Equal (ordered, non-signaling)  */
@@ -2814,7 +2817,7 @@ _mm256_castsi128_si256(__m128i __a)
 #define _mm256_extractf128_ps(V, M) __extension__ ({ \
   (__m128)__builtin_shufflevector( \
     (__v8sf)(__m256)(V), \
-    (__v8sf)(_mm256_setzero_ps()), \
+    (__v8sf)(_mm256_undefined_ps()), \
     (((M) & 1) ? 4 : 0), \
     (((M) & 1) ? 5 : 1), \
     (((M) & 1) ? 6 : 2), \
@@ -2823,14 +2826,14 @@ _mm256_castsi128_si256(__m128i __a)
 #define _mm256_extractf128_pd(V, M) __extension__ ({ \
   (__m128d)__builtin_shufflevector( \
     (__v4df)(__m256d)(V), \
-    (__v4df)(_mm256_setzero_pd()), \
+    (__v4df)(_mm256_undefined_pd()), \
     (((M) & 1) ? 2 : 0), \
     (((M) & 1) ? 3 : 1) );})
 
 #define _mm256_extractf128_si256(V, M) __extension__ ({ \
   (__m128i)__builtin_shufflevector( \
     (__v4di)(__m256i)(V), \
-    (__v4di)(_mm256_setzero_si256()), \
+    (__v4di)(_mm256_undefined_si256()), \
     (((M) & 1) ? 2 : 0), \
     (((M) & 1) ? 3 : 1) );})
 

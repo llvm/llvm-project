@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "HeaderMapCollector.h"
+#include "llvm/Support/Regex.h"
 
 namespace clang {
 namespace find_all_symbols {
@@ -18,12 +19,10 @@ HeaderMapCollector::getMappedHeader(llvm::StringRef Header) const {
   if (Iter != HeaderMappingTable.end())
     return Iter->second;
   // If there is no complete header name mapping for this header, check the
-  // postfix mapping.
-  // FIXME: this is not very efficient. Change PostfixMappingTable to use
-  // postfix tree if necessary.
-  if (PostfixMappingTable) {
-    for (const auto &Entry : *PostfixMappingTable) {
-      if (Header.endswith(Entry.first()))
+  // regex header mapping.
+  if (RegexHeaderMappingTable) {
+    for (const auto &Entry : *RegexHeaderMappingTable) {
+      if (llvm::Regex(Entry.first).match(Header))
         return Entry.second;
     }
   }

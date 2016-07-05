@@ -417,6 +417,14 @@ public:
     CALLSITE_DELEGATE_SETTER(setOnlyReadsMemory());
   }
 
+  /// @brief Determine if the call does not access or only writes memory.
+  bool doesNotReadMemory() const {
+    CALLSITE_DELEGATE_GETTER(doesNotReadMemory());
+  }
+  void setDoesNotReadMemory() {
+    CALLSITE_DELEGATE_SETTER(setDoesNotReadMemory());
+  }
+
   /// @brief Determine if the call can access memmory only using pointers based
   /// on its arguments.
   bool onlyAccessesArgMemory() const {

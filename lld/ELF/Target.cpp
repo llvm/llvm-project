@@ -166,7 +166,7 @@ public:
 
 class AMDGPUTargetInfo final : public TargetInfo {
 public:
-  AMDGPUTargetInfo() {}
+  AMDGPUTargetInfo();
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
 };
@@ -1415,16 +1415,29 @@ void AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
+AMDGPUTargetInfo::AMDGPUTargetInfo() { GotRel = R_AMDGPU_ABS64; }
+
 void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {
-  assert(Type == R_AMDGPU_REL32);
-  write32le(Loc, Val);
+  switch (Type) {
+  case R_AMDGPU_GOTPCREL:
+  case R_AMDGPU_REL32:
+    write32le(Loc, Val);
+    break;
+  default:
+    fatal("unrecognized reloc " + Twine(Type));
+  }
 }
 
 RelExpr AMDGPUTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
-  if (Type != R_AMDGPU_REL32)
-    error("do not know how to handle relocation");
-  return R_PC;
+  switch (Type) {
+  case R_AMDGPU_REL32:
+    return R_PC;
+  case R_AMDGPU_GOTPCREL:
+    return R_GOT_PC;
+  default:
+    fatal("do not know how to handle relocation " + Twine(Type));
+  }
 }
 
 ARMTargetInfo::ARMTargetInfo() {

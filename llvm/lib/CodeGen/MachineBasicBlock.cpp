@@ -470,17 +470,27 @@ void MachineBasicBlock::updateTerminator() {
     FallthroughBB = *SI;
   }
 
-  if (!FallthroughBB && canFallThrough()) {
-    // We fallthrough to the same basic block as the conditional jump targets.
-    // Remove the conditional jump, leaving unconditional fallthrough.
-    // FIXME: This does not seem like a reasonable pattern to support, but it
-    // has been seen in the wild coming out of degenerate ARM test cases.
-    TII->RemoveBranch(*this);
+  if (!FallthroughBB) {
+    if (canFallThrough()) {
+      // We fallthrough to the same basic block as the conditional jump targets.
+      // Remove the conditional jump, leaving unconditional fallthrough.
+      // FIXME: This does not seem like a reasonable pattern to support, but it
+      // has been seen in the wild coming out of degenerate ARM test cases.
+      TII->RemoveBranch(*this);
+  
+      // Finally update the unconditional successor to be reached via a branch if
+      // it would not be reached by fallthrough.
+      if (!isLayoutSuccessor(TBB))
+        TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+      return;
+    }
 
-    // Finally update the unconditional successor to be reached via a branch if
-    // it would not be reached by fallthrough.
-    if (!isLayoutSuccessor(TBB))
-      TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
+    // We enter here iff exactly one successor is TBB which cannot fallthrough
+    // and the rest successors if any are EHPads.  In this case, we need to
+    // change the conditional branch into unconditional branch.
+    TII->RemoveBranch(*this);
+    Cond.clear();
+    TII->InsertBranch(*this, TBB, nullptr, Cond, DL);
     return;
   }
 

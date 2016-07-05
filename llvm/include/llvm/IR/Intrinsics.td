@@ -60,6 +60,12 @@ class ReadOnly<int argNo> : IntrinsicProperty {
   int ArgNo = argNo;
 }
 
+// WriteOnly - The intrinsic does not read memory through the specified
+// argument pointer.
+class WriteOnly<int argNo> : IntrinsicProperty {
+  int ArgNo = argNo;
+}
+
 // ReadNone - The specified argument pointer is not dereferenced by the
 // intrinsic.
 class ReadNone<int argNo> : IntrinsicProperty {
@@ -349,7 +355,7 @@ def int_memcpy  : Intrinsic<[],
                              [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                               llvm_i32_ty, llvm_i1_ty],
                             [IntrArgMemOnly, NoCapture<0>, NoCapture<1>,
-                             ReadOnly<1>]>;
+                             WriteOnly<0>, ReadOnly<1>]>;
 def int_memmove : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_anyptr_ty, llvm_anyint_ty,
                              llvm_i32_ty, llvm_i1_ty],
@@ -358,7 +364,7 @@ def int_memmove : Intrinsic<[],
 def int_memset  : Intrinsic<[],
                             [llvm_anyptr_ty, llvm_i8_ty, llvm_anyint_ty,
                              llvm_i32_ty, llvm_i1_ty],
-                            [IntrArgMemOnly, NoCapture<0>]>;
+                            [IntrArgMemOnly, NoCapture<0>, WriteOnly<0>]>;
 
 let IntrProperties = [IntrNoMem] in {
   def int_fma  : Intrinsic<[llvm_anyfloat_ty],

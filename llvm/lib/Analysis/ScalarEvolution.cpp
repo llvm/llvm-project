@@ -5020,7 +5020,7 @@ const SCEV *ScalarEvolution::createSCEV(Value *V) {
           MulOps.push_back(getSCEV(BO->LHS));
           break;
         }
-	BO = NewBO;
+        BO = NewBO;
       } while (true);
 
       return getMulExpr(MulOps);

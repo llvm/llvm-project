@@ -382,12 +382,14 @@ void DecodeVPPERMMask(ArrayRef<uint64_t> RawMask,
   }
 }
 
-  /// DecodeVPERMMask - this decodes the shuffle masks for VPERMQ/VPERMPD.
-/// No VT provided since it only works on 256-bit, 4 element vectors.
-void DecodeVPERMMask(unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
-  for (unsigned i = 0; i != 4; ++i) {
-    ShuffleMask.push_back((Imm >> (2 * i)) & 3);
-  }
+/// DecodeVPERMMask - this decodes the shuffle masks for VPERMQ/VPERMPD.
+void DecodeVPERMMask(MVT VT, unsigned Imm, SmallVectorImpl<int> &ShuffleMask) {
+  assert((VT.is256BitVector() || VT.is512BitVector()) &&
+         (VT.getScalarSizeInBits() == 64) && "Unexpected vector value type");
+  unsigned NumElts = VT.getVectorNumElements();
+  for (unsigned l = 0; l != NumElts; l += 4)
+    for (unsigned i = 0; i != 4; ++i)
+      ShuffleMask.push_back(l + ((Imm >> (2 * i)) & 3));
 }
 
 void DecodeZeroExtendMask(MVT SrcScalarVT, MVT DstVT, SmallVectorImpl<int> &Mask) {

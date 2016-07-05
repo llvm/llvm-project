@@ -2127,7 +2127,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(
         Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), {Arg0, Arg1}));
   }
-  // OpenCL v2.0 s6.13.16 ,s9.17.3.5 - Built-in pipe commit read and write
+  // OpenCL v2.0 s6.13.16, s9.17.3.5 - Built-in pipe commit read and write
   // functions
   case Builtin::BIcommit_read_pipe:
   case Builtin::BIcommit_write_pipe:
@@ -6512,7 +6512,7 @@ static Value *EmitX86MaskedCompare(CodeGenFunction &CGF, unsigned CC,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
-      Indices[i] = NumElts;
+      Indices[i] = i % NumElts + NumElts;
     Cmp = CGF.Builder.CreateShuffleVector(
         Cmp, llvm::Constant::getNullValue(Cmp->getType()), Indices);
   }

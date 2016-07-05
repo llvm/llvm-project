@@ -46,6 +46,16 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, Y, r##src)            \
   CASE_SSE_INS_COMMON(Inst, r##src)
 
+#define CASE_MASK_MOVDUP(Inst, src)               \
+  CASE_MASK_INS_COMMON(Inst, Z, r##src)           \
+  CASE_MASK_INS_COMMON(Inst, Z256, r##src)        \
+  CASE_MASK_INS_COMMON(Inst, Z128, r##src)
+
+#define CASE_MASKZ_MOVDUP(Inst, src)              \
+  CASE_MASKZ_INS_COMMON(Inst, Z, r##src)          \
+  CASE_MASKZ_INS_COMMON(Inst, Z256, r##src)       \
+  CASE_MASKZ_INS_COMMON(Inst, Z128, r##src)
+
 #define CASE_PMOVZX(Inst, src)                    \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
   CASE_AVX512_INS_COMMON(Inst, Z256, r##src)      \
@@ -53,6 +63,16 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, , r##src)             \
   CASE_AVX_INS_COMMON(Inst, Y, r##src)            \
   CASE_SSE_INS_COMMON(Inst, r##src)
+
+#define CASE_MASK_PMOVZX(Inst, src)               \
+  CASE_MASK_INS_COMMON(Inst, Z, r##src)           \
+  CASE_MASK_INS_COMMON(Inst, Z256, r##src)        \
+  CASE_MASK_INS_COMMON(Inst, Z128, r##src)
+
+#define CASE_MASKZ_PMOVZX(Inst, src)              \
+  CASE_MASKZ_INS_COMMON(Inst, Z, r##src)          \
+  CASE_MASKZ_INS_COMMON(Inst, Z256, r##src)       \
+  CASE_MASKZ_INS_COMMON(Inst, Z128, r##src)
 
 #define CASE_UNPCK(Inst, src)                     \
   CASE_AVX512_INS_COMMON(Inst, Z, r##src)         \
@@ -62,7 +82,17 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, Y, r##src)            \
   CASE_SSE_INS_COMMON(Inst, r##src)
 
-#define CASE_SHUF(Inst, suf)                       \
+#define CASE_MASK_UNPCK(Inst, src)                \
+  CASE_MASK_INS_COMMON(Inst, Z, r##src)           \
+  CASE_MASK_INS_COMMON(Inst, Z256, r##src)        \
+  CASE_MASK_INS_COMMON(Inst, Z128, r##src)
+
+#define CASE_MASKZ_UNPCK(Inst, src)               \
+  CASE_MASKZ_INS_COMMON(Inst, Z, r##src)          \
+  CASE_MASKZ_INS_COMMON(Inst, Z256, r##src)       \
+  CASE_MASKZ_INS_COMMON(Inst, Z128, r##src)
+
+#define CASE_SHUF(Inst, suf)                      \
   CASE_AVX512_INS_COMMON(Inst, Z, suf)            \
   CASE_AVX512_INS_COMMON(Inst, Z256, suf)         \
   CASE_AVX512_INS_COMMON(Inst, Z128, suf)         \
@@ -70,18 +100,63 @@ using namespace llvm;
   CASE_AVX_INS_COMMON(Inst, Y, suf)               \
   CASE_SSE_INS_COMMON(Inst, suf)
 
-#define CASE_VPERM(Inst, src)                     \
+#define CASE_MASK_SHUF(Inst, src)                 \
+  CASE_MASK_INS_COMMON(Inst, Z, r##src##i)        \
+  CASE_MASK_INS_COMMON(Inst, Z256, r##src##i)     \
+  CASE_MASK_INS_COMMON(Inst, Z128, r##src##i)
+
+#define CASE_MASKZ_SHUF(Inst, src)                \
+  CASE_MASKZ_INS_COMMON(Inst, Z, r##src##i)       \
+  CASE_MASKZ_INS_COMMON(Inst, Z256, r##src##i)    \
+  CASE_MASKZ_INS_COMMON(Inst, Z128, r##src##i)
+
+#define CASE_VPERMILPI(Inst, src)                 \
   CASE_AVX512_INS_COMMON(Inst, Z, src##i)         \
   CASE_AVX512_INS_COMMON(Inst, Z256, src##i)      \
   CASE_AVX512_INS_COMMON(Inst, Z128, src##i)      \
   CASE_AVX_INS_COMMON(Inst, , src##i)             \
   CASE_AVX_INS_COMMON(Inst, Y, src##i)
 
+#define CASE_MASK_VPERMILPI(Inst, src)            \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)           \
+  CASE_MASK_INS_COMMON(Inst, Z256, src##i)        \
+  CASE_MASK_INS_COMMON(Inst, Z128, src##i)
+
+#define CASE_MASKZ_VPERMILPI(Inst, src)           \
+  CASE_MASKZ_INS_COMMON(Inst, Z, src##i)          \
+  CASE_MASKZ_INS_COMMON(Inst, Z256, src##i)       \
+  CASE_MASKZ_INS_COMMON(Inst, Z128, src##i)
+
+#define CASE_VPERM(Inst, src)                     \
+  CASE_AVX512_INS_COMMON(Inst, Z, src##i)         \
+  CASE_AVX512_INS_COMMON(Inst, Z256, src##i)      \
+  CASE_AVX_INS_COMMON(Inst, Y, src##i)
+
+#define CASE_MASK_VPERM(Inst, src)                \
+  CASE_MASK_INS_COMMON(Inst, Z, src##i)           \
+  CASE_MASK_INS_COMMON(Inst, Z256, src##i)
+
+#define CASE_MASKZ_VPERM(Inst, src)               \
+  CASE_MASKZ_INS_COMMON(Inst, Z, src##i)          \
+  CASE_MASKZ_INS_COMMON(Inst, Z256, src##i)
+
 #define CASE_VSHUF(Inst, src)                          \
   CASE_AVX512_INS_COMMON(SHUFF##Inst, Z, r##src##i)    \
   CASE_AVX512_INS_COMMON(SHUFI##Inst, Z, r##src##i)    \
   CASE_AVX512_INS_COMMON(SHUFF##Inst, Z256, r##src##i) \
   CASE_AVX512_INS_COMMON(SHUFI##Inst, Z256, r##src##i)
+
+#define CASE_MASK_VSHUF(Inst, src)                    \
+  CASE_MASK_INS_COMMON(SHUFF##Inst, Z, r##src##i)     \
+  CASE_MASK_INS_COMMON(SHUFI##Inst, Z, r##src##i)     \
+  CASE_MASK_INS_COMMON(SHUFF##Inst, Z256, r##src##i)  \
+  CASE_MASK_INS_COMMON(SHUFI##Inst, Z256, r##src##i)
+
+#define CASE_MASKZ_VSHUF(Inst, src)                   \
+  CASE_MASKZ_INS_COMMON(SHUFF##Inst, Z, r##src##i)    \
+  CASE_MASKZ_INS_COMMON(SHUFI##Inst, Z, r##src##i)    \
+  CASE_MASKZ_INS_COMMON(SHUFF##Inst, Z256, r##src##i) \
+  CASE_MASKZ_INS_COMMON(SHUFI##Inst, Z256, r##src##i)
 
 static unsigned getVectorRegSize(unsigned RegNo) {
   if (X86::ZMM0 <= RegNo && RegNo <= X86::ZMM31)
@@ -127,6 +202,160 @@ static MVT getZeroExtensionResultType(const MCInst *MI) {
   CASE_PMOVZX(PMOVZXDQ, r)
     return getRegOperandVectorVT(MI, MVT::i64, 0);
   }
+}
+
+/// Wraps the destination register name with AVX512 mask/maskz filtering.
+static std::string getMaskName(const MCInst *MI, const char *DestName,
+                               const char *(*getRegName)(unsigned)) {
+  std::string OpMaskName(DestName);
+
+  bool MaskWithZero = false;
+  const char *MaskRegName = nullptr;
+
+  switch (MI->getOpcode()) {
+  default:
+    return OpMaskName;
+  CASE_MASKZ_MOVDUP(MOVDDUP, m)
+  CASE_MASKZ_MOVDUP(MOVDDUP, r)
+  CASE_MASKZ_MOVDUP(MOVSHDUP, m)
+  CASE_MASKZ_MOVDUP(MOVSHDUP, r)
+  CASE_MASKZ_MOVDUP(MOVSLDUP, m)
+  CASE_MASKZ_MOVDUP(MOVSLDUP, r)
+  CASE_MASKZ_PMOVZX(PMOVZXBD, m)
+  CASE_MASKZ_PMOVZX(PMOVZXBD, r)
+  CASE_MASKZ_PMOVZX(PMOVZXBQ, m)
+  CASE_MASKZ_PMOVZX(PMOVZXBQ, r)
+  CASE_MASKZ_PMOVZX(PMOVZXBW, m)
+  CASE_MASKZ_PMOVZX(PMOVZXBW, r)
+  CASE_MASKZ_PMOVZX(PMOVZXDQ, m)
+  CASE_MASKZ_PMOVZX(PMOVZXDQ, r)
+  CASE_MASKZ_PMOVZX(PMOVZXWD, m)
+  CASE_MASKZ_PMOVZX(PMOVZXWD, r)
+  CASE_MASKZ_PMOVZX(PMOVZXWQ, m)
+  CASE_MASKZ_PMOVZX(PMOVZXWQ, r)
+  CASE_MASKZ_UNPCK(PUNPCKHBW, m)
+  CASE_MASKZ_UNPCK(PUNPCKHBW, r)
+  CASE_MASKZ_UNPCK(PUNPCKHWD, m)
+  CASE_MASKZ_UNPCK(PUNPCKHWD, r)
+  CASE_MASKZ_UNPCK(PUNPCKHDQ, m)
+  CASE_MASKZ_UNPCK(PUNPCKHDQ, r)
+  CASE_MASKZ_UNPCK(PUNPCKLBW, m)
+  CASE_MASKZ_UNPCK(PUNPCKLBW, r)
+  CASE_MASKZ_UNPCK(PUNPCKLWD, m)
+  CASE_MASKZ_UNPCK(PUNPCKLWD, r)
+  CASE_MASKZ_UNPCK(PUNPCKLDQ, m)
+  CASE_MASKZ_UNPCK(PUNPCKLDQ, r)
+  CASE_MASKZ_UNPCK(UNPCKHPD, m)
+  CASE_MASKZ_UNPCK(UNPCKHPD, r)
+  CASE_MASKZ_UNPCK(UNPCKHPS, m)
+  CASE_MASKZ_UNPCK(UNPCKHPS, r)
+  CASE_MASKZ_UNPCK(UNPCKLPD, m)
+  CASE_MASKZ_UNPCK(UNPCKLPD, r)
+  CASE_MASKZ_UNPCK(UNPCKLPS, m)
+  CASE_MASKZ_UNPCK(UNPCKLPS, r)
+  CASE_MASKZ_SHUF(PALIGNR, r)
+  CASE_MASKZ_SHUF(PALIGNR, m)
+  CASE_MASKZ_SHUF(SHUFPD, m)
+  CASE_MASKZ_SHUF(SHUFPD, r)
+  CASE_MASKZ_SHUF(SHUFPS, m)
+  CASE_MASKZ_SHUF(SHUFPS, r)
+  CASE_MASKZ_VPERMILPI(PERMILPD, m)
+  CASE_MASKZ_VPERMILPI(PERMILPD, r)
+  CASE_MASKZ_VPERMILPI(PERMILPS, m)
+  CASE_MASKZ_VPERMILPI(PERMILPS, r)
+  CASE_MASKZ_VPERMILPI(PSHUFD, m)
+  CASE_MASKZ_VPERMILPI(PSHUFD, r)
+  CASE_MASKZ_VPERMILPI(PSHUFHW, m)
+  CASE_MASKZ_VPERMILPI(PSHUFHW, r)
+  CASE_MASKZ_VPERMILPI(PSHUFLW, m)
+  CASE_MASKZ_VPERMILPI(PSHUFLW, r)
+  CASE_MASKZ_VPERM(PERMPD, m)
+  CASE_MASKZ_VPERM(PERMPD, r)
+  CASE_MASKZ_VPERM(PERMQ, m)
+  CASE_MASKZ_VPERM(PERMQ, r)
+  CASE_MASKZ_VSHUF(64X2, m)
+  CASE_MASKZ_VSHUF(64X2, r)
+  CASE_MASKZ_VSHUF(32X4, m)
+  CASE_MASKZ_VSHUF(32X4, r)
+    MaskWithZero = true;
+    MaskRegName = getRegName(MI->getOperand(1).getReg());
+    break;
+  CASE_MASK_MOVDUP(MOVDDUP, m)
+  CASE_MASK_MOVDUP(MOVDDUP, r)
+  CASE_MASK_MOVDUP(MOVSHDUP, m)
+  CASE_MASK_MOVDUP(MOVSHDUP, r)
+  CASE_MASK_MOVDUP(MOVSLDUP, m)
+  CASE_MASK_MOVDUP(MOVSLDUP, r)
+  CASE_MASK_PMOVZX(PMOVZXBD, m)
+  CASE_MASK_PMOVZX(PMOVZXBD, r)
+  CASE_MASK_PMOVZX(PMOVZXBQ, m)
+  CASE_MASK_PMOVZX(PMOVZXBQ, r)
+  CASE_MASK_PMOVZX(PMOVZXBW, m)
+  CASE_MASK_PMOVZX(PMOVZXBW, r)
+  CASE_MASK_PMOVZX(PMOVZXDQ, m)
+  CASE_MASK_PMOVZX(PMOVZXDQ, r)
+  CASE_MASK_PMOVZX(PMOVZXWD, m)
+  CASE_MASK_PMOVZX(PMOVZXWD, r)
+  CASE_MASK_PMOVZX(PMOVZXWQ, m)
+  CASE_MASK_PMOVZX(PMOVZXWQ, r)
+  CASE_MASK_UNPCK(PUNPCKHBW, m)
+  CASE_MASK_UNPCK(PUNPCKHBW, r)
+  CASE_MASK_UNPCK(PUNPCKHWD, m)
+  CASE_MASK_UNPCK(PUNPCKHWD, r)
+  CASE_MASK_UNPCK(PUNPCKHDQ, m)
+  CASE_MASK_UNPCK(PUNPCKHDQ, r)
+  CASE_MASK_UNPCK(PUNPCKLBW, m)
+  CASE_MASK_UNPCK(PUNPCKLBW, r)
+  CASE_MASK_UNPCK(PUNPCKLWD, m)
+  CASE_MASK_UNPCK(PUNPCKLWD, r)
+  CASE_MASK_UNPCK(PUNPCKLDQ, m)
+  CASE_MASK_UNPCK(PUNPCKLDQ, r)
+  CASE_MASK_UNPCK(UNPCKHPD, m)
+  CASE_MASK_UNPCK(UNPCKHPD, r)
+  CASE_MASK_UNPCK(UNPCKHPS, m)
+  CASE_MASK_UNPCK(UNPCKHPS, r)
+  CASE_MASK_UNPCK(UNPCKLPD, m)
+  CASE_MASK_UNPCK(UNPCKLPD, r)
+  CASE_MASK_UNPCK(UNPCKLPS, m)
+  CASE_MASK_UNPCK(UNPCKLPS, r)
+  CASE_MASK_SHUF(PALIGNR, r)
+  CASE_MASK_SHUF(PALIGNR, m)
+  CASE_MASK_SHUF(SHUFPD, m)
+  CASE_MASK_SHUF(SHUFPD, r)
+  CASE_MASK_SHUF(SHUFPS, m)
+  CASE_MASK_SHUF(SHUFPS, r)
+  CASE_MASK_VPERMILPI(PERMILPD, m)
+  CASE_MASK_VPERMILPI(PERMILPD, r)
+  CASE_MASK_VPERMILPI(PERMILPS, m)
+  CASE_MASK_VPERMILPI(PERMILPS, r)
+  CASE_MASK_VPERMILPI(PSHUFD, m)
+  CASE_MASK_VPERMILPI(PSHUFD, r)
+  CASE_MASK_VPERMILPI(PSHUFHW, m)
+  CASE_MASK_VPERMILPI(PSHUFHW, r)
+  CASE_MASK_VPERMILPI(PSHUFLW, m)
+  CASE_MASK_VPERMILPI(PSHUFLW, r)
+  CASE_MASK_VPERM(PERMPD, m)
+  CASE_MASK_VPERM(PERMPD, r)
+  CASE_MASK_VPERM(PERMQ, m)
+  CASE_MASK_VPERM(PERMQ, r)
+  CASE_MASK_VSHUF(64X2, m)
+  CASE_MASK_VSHUF(64X2, r)
+  CASE_MASK_VSHUF(32X4, m)
+  CASE_MASK_VSHUF(32X4, r)
+    MaskRegName = getRegName(MI->getOperand(2).getReg());
+    break;
+  }
+
+  // MASK: zmmX {%kY}
+  OpMaskName += " {%";
+  OpMaskName += MaskRegName;
+  OpMaskName += "}";
+
+  // MASKZ: zmmX {%kY} {z}
+  if (MaskWithZero)
+    OpMaskName += " {z}";
+
+  return OpMaskName;
 }
 
 //===----------------------------------------------------------------------===//
@@ -581,10 +810,10 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  CASE_VPERM(PERMILPS, r)
+  CASE_VPERMILPI(PERMILPS, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
     // FALL THROUGH.
-  CASE_VPERM(PERMILPS, m)
+  CASE_VPERMILPI(PERMILPS, m)
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodePSHUFMask(getRegOperandVectorVT(MI, MVT::f32, 0),
                       MI->getOperand(NumOperands - 1).getImm(),
@@ -592,10 +821,10 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  CASE_VPERM(PERMILPD, r)
+  CASE_VPERMILPI(PERMILPD, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
     // FALL THROUGH.
-  CASE_VPERM(PERMILPD, m)
+  CASE_VPERMILPI(PERMILPD, m)
     if (MI->getOperand(NumOperands - 1).isImm())
       DecodePSHUFMask(getRegOperandVectorVT(MI, MVT::f64, 0),
                       MI->getOperand(NumOperands - 1).getImm(),
@@ -618,26 +847,24 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
 
-  case X86::VPERMQYri:
-  case X86::VPERMQZ256ri:
-  case X86::VPERMQZ256rik:
-  case X86::VPERMQZ256rikz:
-  case X86::VPERMPDYri:
-  case X86::VPERMPDZ256ri:
-  case X86::VPERMPDZ256rik:
-  case X86::VPERMPDZ256rikz:
+  CASE_VPERM(PERMPD, r)
     Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
     // FALL THROUGH.
-  case X86::VPERMQYmi:
-  case X86::VPERMQZ256mi:
-  case X86::VPERMQZ256mik:
-  case X86::VPERMQZ256mikz:
-  case X86::VPERMPDYmi:
-  case X86::VPERMPDZ256mi:
-  case X86::VPERMPDZ256mik:
-  case X86::VPERMPDZ256mikz:
+  CASE_VPERM(PERMPD, m)
     if (MI->getOperand(NumOperands - 1).isImm())
-      DecodeVPERMMask(MI->getOperand(NumOperands - 1).getImm(),
+      DecodeVPERMMask(getRegOperandVectorVT(MI, MVT::f64, 0),
+                      MI->getOperand(NumOperands - 1).getImm(),
+                      ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+
+  CASE_VPERM(PERMQ, r)
+    Src1Name = getRegName(MI->getOperand(NumOperands - 2).getReg());
+    // FALL THROUGH.
+  CASE_VPERM(PERMQ, m)
+    if (MI->getOperand(NumOperands - 1).isImm())
+      DecodeVPERMMask(getRegOperandVectorVT(MI, MVT::i64, 0),
+                      MI->getOperand(NumOperands - 1).getImm(),
                       ShuffleMask);
     DestName = getRegName(MI->getOperand(0).getReg());
     break;
@@ -753,9 +980,8 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
   if (ShuffleMask.empty())
     return false;
 
-  // TODO: Add support for specifying an AVX512 style mask register in the comment.
   if (!DestName) DestName = Src1Name;
-  OS << (DestName ? DestName : "mem") << " = ";
+  OS << (DestName ? getMaskName(MI, DestName, getRegName) : "mem") << " = ";
 
   // If the two sources are the same, canonicalize the input elements to be
   // from the first src so that we get larger element spans.

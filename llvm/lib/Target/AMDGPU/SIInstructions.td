@@ -953,16 +953,16 @@ defm BUFFER_STORE_FORMAT_XYZW : MUBUF_Store_Helper <
   mubuf<0x07>, "buffer_store_format_xyzw", VReg_128
 >;
 defm BUFFER_LOAD_UBYTE : MUBUF_Load_Helper <
-  mubuf<0x08, 0x10>, "buffer_load_ubyte", VGPR_32, i32, az_extloadi8_global
+  mubuf<0x08, 0x10>, "buffer_load_ubyte", VGPR_32, i32, mubuf_az_extloadi8
 >;
 defm BUFFER_LOAD_SBYTE : MUBUF_Load_Helper <
-  mubuf<0x09, 0x11>, "buffer_load_sbyte", VGPR_32, i32, sextloadi8_global
+  mubuf<0x09, 0x11>, "buffer_load_sbyte", VGPR_32, i32, mubuf_sextloadi8
 >;
 defm BUFFER_LOAD_USHORT : MUBUF_Load_Helper <
-  mubuf<0x0a, 0x12>, "buffer_load_ushort", VGPR_32, i32, az_extloadi16_global
+  mubuf<0x0a, 0x12>, "buffer_load_ushort", VGPR_32, i32, mubuf_az_extloadi16
 >;
 defm BUFFER_LOAD_SSHORT : MUBUF_Load_Helper <
-  mubuf<0x0b, 0x13>, "buffer_load_sshort", VGPR_32, i32, sextloadi16_global
+  mubuf<0x0b, 0x13>, "buffer_load_sshort", VGPR_32, i32, mubuf_sextloadi16
 >;
 defm BUFFER_LOAD_DWORD : MUBUF_Load_Helper <
   mubuf<0x0c, 0x14>, "buffer_load_dword", VGPR_32, i32, mubuf_load

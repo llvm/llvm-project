@@ -1,26 +1,21 @@
 """
-Tests that C++ templates work as expected
+Test that C++ template classes that have integer parameters work correctly.
+
+We must reconstruct the types correctly so the template types are correct 
+and display correctly, and also make sure the expression parser works and
+is able the find all needed functions when evaluating expressions
 """
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
-class TemplateIntegerArgsTestCase(TestBase):
+class TemplateArgsTestCase(TestBase):
     
     mydir = TestBase.compute_mydir(__file__)
-
-    @expectedFailureAll(bugnumber="llvm.org/pr28354", compiler="gcc", oslist=["linux"])
-    def test_with_run_command(self):
-        """Test that C++ template classes that have integer parameters work correctly.
-           
-           We must reconstruct the types correctly so the template types are correct 
-           and display correctly, and also make sure the expression parser works and
-           is able the find all needed functions when evaluating expressions"""
+    
+    def prepareProcess(self):
         self.build()
-        
-        # Set debugger into synchronous mode
-        self.dbg.SetAsync(False)
 
         # Create a target by the debugger.
         exe = os.path.join(os.getcwd(), "a.out")
@@ -43,7 +38,10 @@ class TemplateIntegerArgsTestCase(TestBase):
         thread = lldbutil.get_stopped_thread(process, lldb.eStopReasonBreakpoint)
 
         # Get frame for current thread
-        frame = thread.GetSelectedFrame()
+        return thread.GetSelectedFrame()
+
+    def test_integer_args(self):
+        frame = self.prepareProcess()
         
         testpos = frame.FindVariable('testpos') 
         self.assertTrue(testpos.IsValid(), 'make sure we find a local variabble named "testpos"')
@@ -62,6 +60,11 @@ class TemplateIntegerArgsTestCase(TestBase):
         self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "testneg.getArg()"');
         self.assertTrue(expr_result.GetValue() == "-1", "testneg.getArg() == -1")
         self.assertTrue(expr_result.GetType().GetName() == "int", 'expr_result.GetType().GetName() == "int"')
+
+    # Gcc does not generate the necessary DWARF attribute for enum template parameters.
+    @expectedFailureAll(bugnumber="llvm.org/pr28354", compiler="gcc")
+    def test_enum_args(self):
+        frame = self.prepareProcess()
 
         # Make sure "member" can be displayed and also used in an expression correctly
         member = frame.FindVariable('member') 

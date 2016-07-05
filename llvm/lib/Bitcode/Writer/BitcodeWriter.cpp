@@ -667,6 +667,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SWIFT_SELF;
   case Attribute::UWTable:
     return bitc::ATTR_KIND_UW_TABLE;
+  case Attribute::WriteOnly:
+    return bitc::ATTR_KIND_WRITEONLY;
   case Attribute::ZExt:
     return bitc::ATTR_KIND_Z_EXT;
   case Attribute::EndAttrKinds:

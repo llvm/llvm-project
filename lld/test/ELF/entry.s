@@ -4,9 +4,9 @@
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=SYM %s
 # RUN: ld.lld %t1 -shared -o %t2 -e entry
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=DSO %s
-# RUN: ld.lld %t1 -o %t2 -e 4096
+# RUN: ld.lld %t1 -o %t2 --entry=4096
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=DEC %s
-# RUN: ld.lld %t1 -o %t2 -e 0xcafe
+# RUN: ld.lld %t1 -o %t2 --entry 0xcafe
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=HEX %s
 # RUN: ld.lld %t1 -o %t2 -e 0777
 # RUN: llvm-readobj -file-headers %t2 | FileCheck -check-prefix=OCT %s

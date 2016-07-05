@@ -918,35 +918,38 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
           SimplifySelectInst(CondVal, TrueVal, FalseVal, DL, TLI, DT, AC))
     return replaceInstUsesWith(SI, V);
 
-  if (SI.getType()->isIntegerTy(1)) {
-    if (ConstantInt *C = dyn_cast<ConstantInt>(TrueVal)) {
-      if (C->getZExtValue()) {
+  if (SI.getType()->getScalarType()->isIntegerTy(1) &&
+      TrueVal->getType() == CondVal->getType()) {
+    const APInt *TrueC;
+    if (match(TrueVal, m_APInt(TrueC))) {
+      if (TrueC->isAllOnesValue()) {
         // Change: A = select B, true, C --> A = or B, C
         return BinaryOperator::CreateOr(CondVal, FalseVal);
       }
       // Change: A = select B, false, C --> A = and !B, C
-      Value *NotCond = Builder->CreateNot(CondVal, "not."+CondVal->getName());
+      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
       return BinaryOperator::CreateAnd(NotCond, FalseVal);
     }
-    if (ConstantInt *C = dyn_cast<ConstantInt>(FalseVal)) {
-      if (!C->getZExtValue()) {
+    const APInt *FalseC;
+    if (match(FalseVal, m_APInt(FalseC))) {
+      if (*FalseC == 0) {
         // Change: A = select B, C, false --> A = and B, C
         return BinaryOperator::CreateAnd(CondVal, TrueVal);
       }
       // Change: A = select B, C, true --> A = or !B, C
-      Value *NotCond = Builder->CreateNot(CondVal, "not."+CondVal->getName());
+      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
       return BinaryOperator::CreateOr(NotCond, TrueVal);
     }
 
-    // select a, b, a  -> a&b
-    // select a, a, b  -> a|b
+    // select a, a, b  -> a | b
+    // select a, b, a  -> a & b
     if (CondVal == TrueVal)
       return BinaryOperator::CreateOr(CondVal, FalseVal);
     if (CondVal == FalseVal)
       return BinaryOperator::CreateAnd(CondVal, TrueVal);
 
-    // select a, ~a, b -> (~a)&b
-    // select a, b, ~a -> (~a)|b
+    // select a, ~a, b -> (~a) & b
+    // select a, b, ~a -> (~a) | b
     if (match(TrueVal, m_Not(m_Specific(CondVal))))
       return BinaryOperator::CreateAnd(TrueVal, FalseVal);
     if (match(FalseVal, m_Not(m_Specific(CondVal))))

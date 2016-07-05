@@ -47,7 +47,7 @@ SCRUB_WHITESPACE_RE = re.compile(r'(?!^(|  \w))[ \t]+', flags=re.M)
 SCRUB_TRAILING_WHITESPACE_RE = re.compile(r'[ \t]+$', flags=re.M)
 SCRUB_X86_SHUFFLES_RE = (
     re.compile(
-        r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem) = .*)$',
+        r'^(\s*\w+) [^#\n]+#+ ((?:[xyz]mm\d+|mem)( \{%k\d+\}( \{z\})?)? = .*)$',
         flags=re.M))
 SCRUB_X86_SP_RE = re.compile(r'\d+\(%(esp|rsp)\)')
 SCRUB_X86_RIP_RE = re.compile(r'[.\w]+\(%rip\)')
