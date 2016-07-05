@@ -1886,11 +1886,11 @@ ValueTrackerResult ValueTracker::getNextSourceFromPHI() {
 ValueTrackerResult ValueTracker::getNextSourceImpl() {
   assert(Def && "This method needs a valid definition");
 
-  assert(
-      (Def->getOperand(DefIdx).isDef() &&
-       (DefIdx < Def->getDesc().getNumDefs() || Def->getDesc().isVariadic()) ||
-       Def->getOperand(DefIdx).isImplicit()) &&
-       "Invalid DefIdx");
+  assert(((Def->getOperand(DefIdx).isDef() &&
+           (DefIdx < Def->getDesc().getNumDefs() ||
+            Def->getDesc().isVariadic())) ||
+          Def->getOperand(DefIdx).isImplicit()) &&
+         "Invalid DefIdx");
   if (Def->isCopy())
     return getNextSourceFromCopy();
   if (Def->isBitcast())

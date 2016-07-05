@@ -57,6 +57,9 @@ def SDT_PPCstxvd2x : SDTypeProfile<0, 2, [
 def SDT_PPCxxswapd : SDTypeProfile<1, 1, [
   SDTCisSameAs<0, 1>
 ]>;
+def SDTVecConv : SDTypeProfile<1, 2, [
+  SDTCisVec<0>, SDTCisVec<1>, SDTCisPtrTy<2>
+]>;
 
 def PPClxvd2x  : SDNode<"PPCISD::LXVD2X", SDT_PPClxvd2x,
                         [SDNPHasChain, SDNPMayLoad]>;
@@ -66,6 +69,8 @@ def PPCxxswapd : SDNode<"PPCISD::XXSWAPD", SDT_PPCxxswapd, [SDNPHasChain]>;
 def PPCmfvsr : SDNode<"PPCISD::MFVSR", SDTUnaryOp, []>;
 def PPCmtvsra : SDNode<"PPCISD::MTVSRA", SDTUnaryOp, []>;
 def PPCmtvsrz : SDNode<"PPCISD::MTVSRZ", SDTUnaryOp, []>;
+def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
+def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
 
 multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
                     string asmstr, InstrItinClass itin, Intrinsic Int,
@@ -608,7 +613,8 @@ let Uses = [RM] in {
                       "xvcvsxwdp $XT, $XB", IIC_VecFP, []>;
   def XVCVSXWSP : XX2Form<60, 184,
                       (outs vsrc:$XT), (ins vsrc:$XB),
-                      "xvcvsxwsp $XT, $XB", IIC_VecFP, []>;
+                      "xvcvsxwsp $XT, $XB", IIC_VecFP,
+                      [(set v4f32:$XT, (sint_to_fp v4i32:$XB))]>;
   def XVCVUXDDP : XX2Form<60, 488,
                       (outs vsrc:$XT), (ins vsrc:$XB),
                       "xvcvuxddp $XT, $XB", IIC_VecFP,
@@ -927,6 +933,16 @@ def : Pat<(sext_inreg v2i64:$C, v2i32),
           (XVCVDPSXDS (XVCVSXWDP (XXSLDWI $C, $C, 1)))>;
 def : Pat<(v2f64 (sint_to_fp (sext_inreg v2i64:$C, v2i32))),
           (XVCVSXWDP (XXSLDWI $C, $C, 1))>;
+
+def : Pat<(v2f64 (PPCsvec2fp v4i32:$C, 0)),
+          (v2f64 (XVCVSXWDP (v2i64 (XXMRGHW $C, $C))))>;
+def : Pat<(v2f64 (PPCsvec2fp v4i32:$C, 1)),
+          (v2f64 (XVCVSXWDP (v2i64 (XXMRGLW $C, $C))))>;
+
+def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 0)),
+          (v2f64 (XVCVUXWDP (v2i64 (XXMRGHW $C, $C))))>;
+def : Pat<(v2f64 (PPCuvec2fp v4i32:$C, 1)),
+          (v2f64 (XVCVUXWDP (v2i64 (XXMRGLW $C, $C))))>;
 
 // Loads.
 def : Pat<(v2f64 (load xoaddr:$src)), (LXVD2X xoaddr:$src)>;

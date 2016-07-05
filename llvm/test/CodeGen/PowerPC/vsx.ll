@@ -1144,62 +1144,67 @@ define <2 x double> @test68(<2 x i32> %a) {
   ret <2 x double> %w
 
 ; CHECK-LABEL: @test68
-; CHECK: xxsldwi [[V1:[0-9]+]], 34, 34, 1
+; CHECK: xxmrghw [[V1:[0-9]+]]
 ; CHECK: xvcvsxwdp 34, [[V1]]
 ; CHECK: blr
 
 ; CHECK-LE-LABEL: @test68
-; CHECK-LE: xxsldwi [[V1:[0-9]+]], 34, 34, 1
+; CHECK-LE: xxmrglw [[V1:[0-9]+]], 34, 34
 ; CHECK-LE: xvcvsxwdp 34, [[V1]]
 ; CHECK-LE: blr
 }
 
+; This gets scalarized so the code isn't great
 define <2 x double> @test69(<2 x i16> %a) {
   %w = sitofp <2 x i16> %a to <2 x double>
   ret <2 x double> %w
 
 ; CHECK-LABEL: @test69
-; CHECK: vspltisw [[V1:[0-9]+]], 8
-; CHECK: vadduwm [[V2:[0-9]+]], [[V1]], [[V1]]
-; CHECK: vslw [[V3:[0-9]+]], {{[0-9]+}}, [[V2]]
-; CHECK: vsraw {{[0-9]+}}, [[V3]], [[V2]]
-; CHECK: xxsldwi [[V4:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}, 1
-; CHECK: xvcvsxwdp 34, [[V4]]
+; CHECK-DAG: lfiwax
+; CHECK-DAG: lfiwax
+; CHECK-DAG: xscvsxddp
+; CHECK-DAG: xscvsxddp
+; CHECK: xxmrghd
 ; CHECK: blr
 
 ; CHECK-LE-LABEL: @test69
-; CHECK-LE: vspltisw [[V1:[0-9]+]], 8
-; CHECK-LE: vadduwm [[V2:[0-9]+]], [[V1]], [[V1]]
-; CHECK-LE: vslw [[V3:[0-9]+]], {{[0-9]+}}, [[V2]]
-; CHECK-LE: vsraw {{[0-9]+}}, [[V3]], [[V2]]
-; CHECK-LE: xxsldwi [[V4:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}, 1
-; CHECK-LE: xvcvsxwdp 34, [[V4]]
+; CHECK-LE: mfvsrd
+; CHECK-LE: mtvsrwa
+; CHECK-LE: mtvsrwa
+; CHECK-LE: xscvsxddp
+; CHECK-LE: xscvsxddp
+; CHECK-LE: xxspltd
+; CHECK-LE: xxspltd
+; CHECK-LE: xxmrgld
 ; CHECK-LE: blr
 }
 
+; This gets scalarized so the code isn't great
 define <2 x double> @test70(<2 x i8> %a) {
   %w = sitofp <2 x i8> %a to <2 x double>
   ret <2 x double> %w
 
 ; CHECK-LABEL: @test70
-; CHECK: vspltisw [[V1:[0-9]+]], 12
-; CHECK: vadduwm [[V2:[0-9]+]], [[V1]], [[V1]]
-; CHECK: vslw [[V3:[0-9]+]], {{[0-9]+}}, [[V2]]
-; CHECK: vsraw {{[0-9]+}}, [[V3]], [[V2]]
-; CHECK: xxsldwi [[V4:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}, 1
-; CHECK: xvcvsxwdp 34, [[V4]]
+; CHECK-DAG: lfiwax
+; CHECK-DAG: lfiwax
+; CHECK-DAG: xscvsxddp
+; CHECK-DAG: xscvsxddp
+; CHECK: xxmrghd
 ; CHECK: blr
 
 ; CHECK-LE-LABEL: @test70
-; CHECK-LE: vspltisw [[V1:[0-9]+]], 12
-; CHECK-LE: vadduwm [[V2:[0-9]+]], [[V1]], [[V1]]
-; CHECK-LE: vslw [[V3:[0-9]+]], {{[0-9]+}}, [[V2]]
-; CHECK-LE: vsraw {{[0-9]+}}, [[V3]], [[V2]]
-; CHECK-LE: xxsldwi [[V4:[0-9]+]], {{[0-9]+}}, {{[0-9]+}}, 1
-; CHECK-LE: xvcvsxwdp 34, [[V4]]
+; CHECK-LE: mfvsrd
+; CHECK-LE: mtvsrwa
+; CHECK-LE: mtvsrwa
+; CHECK-LE: xscvsxddp
+; CHECK-LE: xscvsxddp
+; CHECK-LE: xxspltd
+; CHECK-LE: xxspltd
+; CHECK-LE: xxmrgld
 ; CHECK-LE: blr
 }
 
+; This gets scalarized so the code isn't great
 define <2 x i32> @test80(i32 %v) {
   %b1 = insertelement <2 x i32> undef, i32 %v, i32 0
   %b2 = shufflevector <2 x i32> %b1, <2 x i32> undef, <2 x i32> zeroinitializer
@@ -1207,31 +1212,38 @@ define <2 x i32> @test80(i32 %v) {
   ret <2 x i32> %i
 
 ; CHECK-REG-LABEL: @test80
-; CHECK-REG-DAG: addi [[R1:[0-9]+]], 3, 3
-; CHECK-REG-DAG: addi [[R2:[0-9]+]], 1, -16
-; CHECK-REG-DAG: addi [[R3:[0-9]+]], 3, 2
-; CHECK-REG: std [[R1]], -8(1)
-; CHECK-REG: std [[R3]], -16(1)
-; CHECK-REG: lxvd2x 34, 0, [[R2]]
-; CHECK-REG-NOT: stxvd2x
+; CHECK-REG: stw 3, -16(1)
+; CHECK-REG: addi [[R1:[0-9]+]], 1, -16
+; CHECK-REG: addis [[R2:[0-9]+]]
+; CHECK-REG: addi [[R2]], [[R2]]
+; CHECK-REG-DAG: lxvw4x [[VS1:[0-9]+]], 0, [[R1]]
+; CHECK-REG-DAG: lxvw4x 35, 0, [[R2]]
+; CHECK-REG: xxspltw 34, [[VS1]], 0
+; CHECK-REG: vadduwm 2, 2, 3
+; CHECK-REG-NOT: stxvw4x
 ; CHECK-REG: blr
 
 ; CHECK-FISL-LABEL: @test80
-; CHECK-FISL-DAG: addi [[R1:[0-9]+]], 3, 3
-; CHECK-FISL-DAG: addi [[R2:[0-9]+]], 1, -16
-; CHECK-FISL-DAG: addi [[R3:[0-9]+]], 3, 2
-; CHECK-FISL-DAG: std [[R1]], -8(1)
-; CHECK-FISL-DAG: std [[R3]], -16(1)
-; CHECK-FISL-DAG: lxvd2x 0, 0, [[R2]]
+; CHECK-FISL: mr 4, 3
+; CHECK-FISL: stw 4, -16(1)
+; CHECK-FISL: addi [[R1:[0-9]+]], 1, -16
+; CHECK-FISL-DAG: lxvw4x [[VS1:[0-9]+]], 0, [[R1]]
+; CHECK-FISL-DAG: xxspltw {{[0-9]+}}, [[VS1]], 0
+; CHECK-FISL: addis [[R2:[0-9]+]]
+; CHECK-FISL: addi [[R2]], [[R2]]
+; CHECK-FISL-DAG: lxvw4x {{[0-9]+}}, 0, [[R2]]
+; CHECK-FISL: vadduwm
+; CHECK-FISL-NOT: stxvw4x
 ; CHECK-FISL: blr
 
 ; CHECK-LE-LABEL: @test80
 ; CHECK-LE-DAG: mtvsrd [[R1:[0-9]+]], 3
+; CHECK-LE-DAG: xxswapd  [[V1:[0-9]+]], [[R1]]
 ; CHECK-LE-DAG: addi [[R2:[0-9]+]], {{[0-9]+}}, .LCPI
 ; CHECK-LE-DAG: lxvd2x [[V2:[0-9]+]], 0, [[R2]]
-; CHECK-LE-DAG: xxspltd 34, [[R1]]
+; CHECK-LE-DAG: xxspltw 34, [[V1]]
 ; CHECK-LE-DAG: xxswapd 35, [[V2]]
-; CHECK-LE: vaddudm 2, 2, 3
+; CHECK-LE: vadduwm 2, 2, 3
 ; CHECK-LE: blr
 }
 

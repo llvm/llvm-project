@@ -137,6 +137,16 @@ namespace llvm {
       /// Direct move from a GPR to a VSX register (zero)
       MTVSRZ,
 
+      /// Extract a subvector from signed integer vector and convert to FP.
+      /// It is primarily used to convert a (widened) illegal integer vector
+      /// type to a legal floating point vector type.
+      /// For example v2i32 -> widened to v4i32 -> v2f64
+      SINT_VEC_TO_FP,
+
+      /// Extract a subvector from unsigned integer vector and convert to FP.
+      /// As with SINT_VEC_TO_FP, used for converting illegal types.
+      UINT_VEC_TO_FP,
+
       // FIXME: Remove these once the ANDI glue bug is fixed:
       /// i1 = ANDIo_1_[EQ|GT]_BIT(i32 or i64 x) - Represents the result of the
       /// eq or gt bit of CR0 after executing andi. x, 1. This is used to
@@ -432,6 +442,20 @@ namespace llvm {
     /// DAG node.
     const char *getTargetNodeName(unsigned Opcode) const override;
 
+    /// getPreferredVectorAction - The code we generate when vector types are
+    /// legalized by promoting the integer element type is often much worse
+    /// than code we generate if we widen the type for applicable vector types.
+    /// The issue with promoting is that the vector is scalaraized, individual
+    /// elements promoted and then the vector is rebuilt. So say we load a pair
+    /// of v4i8's and shuffle them. This will turn into a mess of 8 extending
+    /// loads, moves back into VSR's (or memory ops if we don't have moves) and
+    /// then the VPERM for the shuffle. All in all a very slow sequence.
+    TargetLoweringBase::LegalizeTypeAction getPreferredVectorAction(EVT VT)
+      const override {
+      if (VT.getVectorElementType().getSizeInBits() % 8 == 0)
+        return TypeWidenVector;
+      return TargetLoweringBase::getPreferredVectorAction(VT);
+    }
     bool useSoftFloat() const override;
 
     MVT getScalarShiftAmountTy(const DataLayout &, EVT) const override {
@@ -883,6 +907,7 @@ namespace llvm {
     SDValue lowerEH_SJLJ_LONGJMP(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue DAGCombineExtBoolTrunc(SDNode *N, DAGCombinerInfo &DCI) const;
+    SDValue DAGCombineBuildVector(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue DAGCombineTruncBoolExt(SDNode *N, DAGCombinerInfo &DCI) const;
     SDValue combineFPToIntToFP(SDNode *N, DAGCombinerInfo &DCI) const;
 

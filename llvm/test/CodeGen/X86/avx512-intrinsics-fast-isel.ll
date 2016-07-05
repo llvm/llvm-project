@@ -160,6 +160,325 @@ define <16 x float> @test_mm512_maskz_moveldup_ps(i16 %a0, <16 x float> %a1) {
   ret <16 x float> %res1
 }
 
+define <8 x double> @test_mm512_permute_pd(<8 x double> %a0) {
+; X32-LABEL: test_mm512_permute_pd:
+; X32:       # BB#0:
+; X32-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,1,2,2,4,4,6,6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permute_pd:
+; X64:       # BB#0:
+; X64-NEXT:    vpermilpd {{.*#+}} zmm0 = zmm0[0,1,2,2,4,4,6,6]
+; X64-NEXT:    retq
+  %res = shufflevector <8 x double> %a0, <8 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  ret <8 x double> %res
+}
+
+define <8 x double> @test_mm512_mask_permute_pd(<8 x double> %a0, i8 %a1, <8 x double> %a2) {
+; X32-LABEL: test_mm512_mask_permute_pd:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermilpd {{.*#+}} zmm0 {%k1} = zmm1[0,1,2,2,4,4,6,6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permute_pd:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermilpd {{.*#+}} zmm0 {%k1} = zmm1[0,1,2,2,4,4,6,6]
+; X64-NEXT:    retq
+  %arg1 = bitcast i8 %a1 to <8 x i1>
+  %res0 = shufflevector <8 x double> %a2, <8 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %res1 = select <8 x i1> %arg1, <8 x double> %res0, <8 x double> %a0
+  ret <8 x double> %res1
+}
+
+define <8 x double> @test_mm512_maskz_permute_pd(i8 %a0, <8 x double> %a1) {
+; X32-LABEL: test_mm512_maskz_permute_pd:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermilpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,2,4,4,6,6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permute_pd:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermilpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,1,2,2,4,4,6,6]
+; X64-NEXT:    retq
+  %arg0 = bitcast i8 %a0 to <8 x i1>
+  %res0 = shufflevector <8 x double> %a1, <8 x double> undef, <8 x i32> <i32 0, i32 1, i32 2, i32 2, i32 4, i32 4, i32 6, i32 6>
+  %res1 = select <8 x i1> %arg0, <8 x double> %res0, <8 x double> zeroinitializer
+  ret <8 x double> %res1
+}
+
+define <16 x float> @test_mm512_permute_ps(<16 x float> %a0) {
+; X32-LABEL: test_mm512_permute_ps:
+; X32:       # BB#0:
+; X32-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,0,0,0,6,4,4,4,10,8,8,8,14,12,12,12]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permute_ps:
+; X64:       # BB#0:
+; X64-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,0,0,0,6,4,4,4,10,8,8,8,14,12,12,12]
+; X64-NEXT:    retq
+  %res = shufflevector <16 x float> %a0, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 0, i32 0, i32 6, i32 4, i32 4, i32 4, i32 10, i32 8, i32 8, i32 8, i32 14, i32 12, i32 12, i32 12>
+  ret <16 x float> %res
+}
+
+define <16 x float> @test_mm512_mask_permute_ps(<16 x float> %a0, i16 %a1, <16 x float> %a2) {
+; X32-LABEL: test_mm512_mask_permute_ps:
+; X32:       # BB#0:
+; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} = zmm1[2,0,0,0,6,4,4,4,10,8,8,8,14,12,12,12]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permute_ps:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} = zmm1[2,0,0,0,6,4,4,4,10,8,8,8,14,12,12,12]
+; X64-NEXT:    retq
+  %arg1 = bitcast i16 %a1 to <16 x i1>
+  %res0 = shufflevector <16 x float> %a2, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 0, i32 0, i32 6, i32 4, i32 4, i32 4, i32 10, i32 8, i32 8, i32 8, i32 14, i32 12, i32 12, i32 12>
+  %res1 = select <16 x i1> %arg1, <16 x float> %res0, <16 x float> %a0
+  ret <16 x float> %res1
+}
+
+define <16 x float> @test_mm512_maskz_permute_ps(i16 %a0, <16 x float> %a1) {
+; X32-LABEL: test_mm512_maskz_permute_ps:
+; X32:       # BB#0:
+; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[2,0,0,0,6,4,4,4,10,8,8,8,14,12,12,12]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permute_ps:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermilps {{.*#+}} zmm0 {%k1} {z} = zmm0[2,0,0,0,6,4,4,4,10,8,8,8,14,12,12,12]
+; X64-NEXT:    retq
+  %arg0 = bitcast i16 %a0 to <16 x i1>
+  %res0 = shufflevector <16 x float> %a1, <16 x float> undef, <16 x i32> <i32 2, i32 0, i32 0, i32 0, i32 6, i32 4, i32 4, i32 4, i32 10, i32 8, i32 8, i32 8, i32 14, i32 12, i32 12, i32 12>
+  %res1 = select <16 x i1> %arg0, <16 x float> %res0, <16 x float> zeroinitializer
+  ret <16 x float> %res1
+}
+
+define <8 x i64> @test_mm512_permutex_epi64(<8 x i64> %a0) {
+; X32-LABEL: test_mm512_permutex_epi64:
+; X32:       # BB#0:
+; X32-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permutex_epi64:
+; X64:       # BB#0:
+; X64-NEXT:    vpermq {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %res = shufflevector <8 x i64> %a0, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  ret <8 x i64> %res
+}
+
+define <8 x i64> @test_mm512_mask_permutex_epi64(<8 x i64> %a0, i8 %a1, <8 x i64> %a2) {
+; X32-LABEL: test_mm512_mask_permutex_epi64:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermq {{.*#+}} zmm0 {%k1} = zmm1[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permutex_epi64:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermq {{.*#+}} zmm0 {%k1} = zmm1[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %arg1 = bitcast i8 %a1 to <8 x i1>
+  %res0 = shufflevector <8 x i64> %a2, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  %res1 = select <8 x i1> %arg1, <8 x i64> %res0, <8 x i64> %a0
+  ret <8 x i64> %res1
+}
+
+define <8 x i64> @test_mm512_maskz_permutex_epi64(i8 %a0, <8 x i64> %a1) {
+; X32-LABEL: test_mm512_maskz_permutex_epi64:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permutex_epi64:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermq {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %arg0 = bitcast i8 %a0 to <8 x i1>
+  %res0 = shufflevector <8 x i64> %a1, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  %res1 = select <8 x i1> %arg0, <8 x i64> %res0, <8 x i64> zeroinitializer
+  ret <8 x i64> %res1
+}
+
+define <8 x double> @test_mm512_permutex_pd(<8 x double> %a0) {
+; X32-LABEL: test_mm512_permutex_pd:
+; X32:       # BB#0:
+; X32-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_permutex_pd:
+; X64:       # BB#0:
+; X64-NEXT:    vpermpd {{.*#+}} zmm0 = zmm0[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %res = shufflevector <8 x double> %a0, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  ret <8 x double> %res
+}
+
+define <8 x double> @test_mm512_mask_permutex_pd(<8 x double> %a0, i8 %a1, <8 x double> %a2) {
+; X32-LABEL: test_mm512_mask_permutex_pd:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = zmm1[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_permutex_pd:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} = zmm1[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %arg1 = bitcast i8 %a1 to <8 x i1>
+  %res0 = shufflevector <8 x double> %a2, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  %res1 = select <8 x i1> %arg1, <8 x double> %res0, <8 x double> %a0
+  ret <8 x double> %res1
+}
+
+define <8 x double> @test_mm512_maskz_permutex_pd(i8 %a0, <8 x double> %a1) {
+; X32-LABEL: test_mm512_maskz_permutex_pd:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,0,0,4,4,4,4]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_permutex_pd:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpermpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0,0,0,0,4,4,4,4]
+; X64-NEXT:    retq
+  %arg0 = bitcast i8 %a0 to <8 x i1>
+  %res0 = shufflevector <8 x double> %a1, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 4, i32 4, i32 4, i32 4>
+  %res1 = select <8 x i1> %arg0, <8 x double> %res0, <8 x double> zeroinitializer
+  ret <8 x double> %res1
+}
+
+define <8 x i64> @test_mm512_shuffle_epi32(<8 x i64> %a0) {
+; X32-LABEL: test_mm512_shuffle_epi32:
+; X32:       # BB#0:
+; X32-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,0,0,0,5,4,4,4,9,8,8,8,13,12,12,12]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_shuffle_epi32:
+; X64:       # BB#0:
+; X64-NEXT:    vpshufd {{.*#+}} zmm0 = zmm0[1,0,0,0,5,4,4,4,9,8,8,8,13,12,12,12]
+; X64-NEXT:    retq
+  %arg0 = bitcast <8 x i64> %a0 to <16 x i32>
+  %res0 = shufflevector <16 x i32> %arg0, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 0, i32 0, i32 5, i32 4, i32 4, i32 4, i32 9, i32 8, i32 8, i32 8, i32 13, i32 12, i32 12, i32 12>
+  %res1 = bitcast <16 x i32> %res0 to <8 x i64>
+  ret <8 x i64> %res1
+}
+
+define <8 x i64> @test_mm512_mask_shuffle_epi32(<8 x i64> %a0, i16 %a1, <8 x i64> %a2) {
+; X32-LABEL: test_mm512_mask_shuffle_epi32:
+; X32:       # BB#0:
+; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} = zmm1[1,0,0,0,5,4,4,4,9,8,8,8,13,12,12,12]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_shuffle_epi32:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} = zmm1[1,0,0,0,5,4,4,4,9,8,8,8,13,12,12,12]
+; X64-NEXT:    retq
+  %arg0 = bitcast <8 x i64> %a0 to <16 x i32>
+  %arg1 = bitcast i16 %a1 to <16 x i1>
+  %arg2 = bitcast <8 x i64> %a2 to <16 x i32>
+  %res0 = shufflevector <16 x i32> %arg2, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 0, i32 0, i32 5, i32 4, i32 4, i32 4, i32 9, i32 8, i32 8, i32 8, i32 13, i32 12, i32 12, i32 12>
+  %res1 = select <16 x i1> %arg1, <16 x i32> %res0, <16 x i32> %arg0
+  %res2 = bitcast <16 x i32> %res1 to <8 x i64>
+  ret <8 x i64> %res2
+}
+
+define <8 x i64> @test_mm512_maskz_shuffle_epi32(i16 %a0, <8 x i64> %a1) {
+; X32-LABEL: test_mm512_maskz_shuffle_epi32:
+; X32:       # BB#0:
+; X32-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[1,0,0,0,5,4,4,4,9,8,8,8,13,12,12,12]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_shuffle_epi32:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vpshufd {{.*#+}} zmm0 {%k1} {z} = zmm0[1,0,0,0,5,4,4,4,9,8,8,8,13,12,12,12]
+; X64-NEXT:    retq
+  %arg0 = bitcast i16 %a0 to <16 x i1>
+  %arg1 = bitcast <8 x i64> %a1 to <16 x i32>
+  %res0 = shufflevector <16 x i32> %arg1, <16 x i32> undef, <16 x i32> <i32 1, i32 0, i32 0, i32 0, i32 5, i32 4, i32 4, i32 4, i32 9, i32 8, i32 8, i32 8, i32 13, i32 12, i32 12, i32 12>
+  %res1 = select <16 x i1> %arg0, <16 x i32> %res0, <16 x i32> zeroinitializer
+  %res2 = bitcast <16 x i32> %res1 to <8 x i64>
+  ret <8 x i64> %res2
+}
+
+define <8 x double> @test_mm512_shuffle_pd(<8 x double> %a0, <8 x double> %a1) {
+; X32-LABEL: test_mm512_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[3],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    vshufpd {{.*#+}} zmm0 = zmm0[0],zmm1[0],zmm0[3],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
+; X64-NEXT:    retq
+  %res = shufflevector <8 x double> %a0, <8 x double> %a1, <8 x i32> <i32 0, i32 8, i32 3, i32 10, i32 4, i32 12, i32 6, i32 14>
+  ret <8 x double> %res
+}
+
+define <8 x double> @test_mm512_mask_shuffle_pd(<8 x double> %a0, i8 %a1, <8 x double> %a2, <8 x double> %a3) {
+; X32-LABEL: test_mm512_mask_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufpd {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[3],zmm2[2],zmm1[4],zmm2[4],zmm1[6],zmm2[6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_mask_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vshufpd {{.*#+}} zmm0 {%k1} = zmm1[0],zmm2[0],zmm1[3],zmm2[2],zmm1[4],zmm2[4],zmm1[6],zmm2[6]
+; X64-NEXT:    retq
+  %arg1 = bitcast i8 %a1 to <8 x i1>
+  %res0 = shufflevector <8 x double> %a2, <8 x double> %a3, <8 x i32> <i32 0, i32 8, i32 3, i32 10, i32 4, i32 12, i32 6, i32 14>
+  %res1 = select <8 x i1> %arg1, <8 x double> %res0, <8 x double> %a0
+  ret <8 x double> %res1
+}
+
+define <8 x double> @test_mm512_maskz_shuffle_pd(i8 %a0, <8 x double> %a1, <8 x double> %a2) {
+; X32-LABEL: test_mm512_maskz_shuffle_pd:
+; X32:       # BB#0:
+; X32-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X32-NEXT:    kmovw %eax, %k1
+; X32-NEXT:    vshufpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[3],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm512_maskz_shuffle_pd:
+; X64:       # BB#0:
+; X64-NEXT:    kmovw %edi, %k1
+; X64-NEXT:    vshufpd {{.*#+}} zmm0 {%k1} {z} = zmm0[0],zmm1[0],zmm0[3],zmm1[2],zmm0[4],zmm1[4],zmm0[6],zmm1[6]
+; X64-NEXT:    retq
+  %arg0 = bitcast i8 %a0 to <8 x i1>
+  %res0 = shufflevector <8 x double> %a1, <8 x double> %a2, <8 x i32> <i32 0, i32 8, i32 3, i32 10, i32 4, i32 12, i32 6, i32 14>
+  %res1 = select <8 x i1> %arg0, <8 x double> %res0, <8 x double> zeroinitializer
+  ret <8 x double> %res1
+}
+
 define <8 x i64> @test_mm512_unpackhi_epi32(<8 x i64> %a0, <8 x i64> %a1) {
 ; X32-LABEL: test_mm512_unpackhi_epi32:
 ; X32:       # BB#0:

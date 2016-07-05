@@ -17,6 +17,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -26,7 +27,6 @@ namespace llvm {
 
 class Error;
 class ErrorList;
-class Twine;
 
 /// Base class for error info classes. Do not extend this directly: Extend
 /// the ErrorInfo template subclass instead.
@@ -537,16 +537,7 @@ inline void handleAllErrors(Error E) {
 /// This is useful in the base level of your program to allow clean termination
 /// (allowing clean deallocation of resources, etc.), while reporting error
 /// information to the user.
-inline void logAllUnhandledErrors(Error E, raw_ostream &OS,
-                                  const std::string &ErrorBanner) {
-  if (!E)
-    return;
-  OS << ErrorBanner;
-  handleAllErrors(std::move(E), [&](const ErrorInfoBase &EI) {
-    EI.log(OS);
-    OS << "\n";
-  });
-}
+void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner);
 
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.
