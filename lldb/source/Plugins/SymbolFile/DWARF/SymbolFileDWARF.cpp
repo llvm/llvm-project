@@ -943,12 +943,8 @@ SymbolFileDWARF::ParseCompileUnit (DWARFCompileUnit* dwarf_cu, uint32_t cu_idx)
                         LanguageType cu_language = DWARFCompileUnit::LanguageTypeFromDWARF(cu_die.GetAttributeValueAsUnsigned(DW_AT_language, 0));
 
                         bool is_optimized = dwarf_cu->GetIsOptimized ();
-                        cu_sp.reset(new CompileUnit (module_sp,
-                                                     dwarf_cu,
-                                                     cu_file_spec, 
-                                                     dwarf_cu->GetID(),
-                                                     cu_language,
-                                                     is_optimized));
+                        cu_sp.reset(new CompileUnit(module_sp, dwarf_cu, cu_file_spec, dwarf_cu->GetID(), cu_language,
+                                                    is_optimized ? eLazyBoolYes : eLazyBoolNo));
                         if (cu_sp)
                         {
                             // If we just created a compile unit with an invalid file spec, try and get the
@@ -1098,7 +1094,17 @@ SymbolFileDWARF::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpec
 }
 
 bool
-SymbolFileDWARF::ParseImportedModules (const lldb_private::SymbolContext &sc, std::vector<lldb_private::ConstString> &imported_modules)
+SymbolFileDWARF::ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc)
+{
+    DWARFCompileUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
+    if (dwarf_cu)
+        return dwarf_cu->GetIsOptimized();
+    return false;
+}
+
+bool
+SymbolFileDWARF::ParseImportedModules(const lldb_private::SymbolContext &sc,
+                                      std::vector<lldb_private::ConstString> &imported_modules)
 {
     assert (sc.comp_unit);
     DWARFCompileUnit* dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);

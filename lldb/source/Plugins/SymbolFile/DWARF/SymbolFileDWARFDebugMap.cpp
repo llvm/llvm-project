@@ -638,13 +638,9 @@ SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx)
                 // zero in each .o file since each .o file can only have
                 // one compile unit for now.
                 lldb::user_id_t cu_id = 0;
-                m_compile_unit_infos[cu_idx].compile_unit_sp.reset(new CompileUnit (m_obj_file->GetModule(),
-                                                                                    NULL,
-                                                                                    so_file_spec,
-                                                                                    cu_id,
-                                                                                    eLanguageTypeUnknown,
-                                                                                    false));
-            
+                m_compile_unit_infos[cu_idx].compile_unit_sp.reset(new CompileUnit(
+                    m_obj_file->GetModule(), NULL, so_file_spec, cu_id, eLanguageTypeUnknown, eLazyBoolCalculate));
+
                 if (m_compile_unit_infos[cu_idx].compile_unit_sp)
                 {
                     // Let our symbol vendor know about this compile unit
@@ -728,7 +724,16 @@ SymbolFileDWARFDebugMap::ParseCompileUnitSupportFiles (const SymbolContext& sc, 
 }
 
 bool
-SymbolFileDWARFDebugMap::ParseImportedModules (const SymbolContext &sc, std::vector<ConstString> &imported_modules)
+SymbolFileDWARFDebugMap::ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc)
+{
+    SymbolFileDWARF *oso_dwarf = GetSymbolFile(sc);
+    if (oso_dwarf)
+        return oso_dwarf->ParseCompileUnitIsOptimized(sc);
+    return false;
+}
+
+bool
+SymbolFileDWARFDebugMap::ParseImportedModules(const SymbolContext &sc, std::vector<ConstString> &imported_modules)
 {
     SymbolFileDWARF *oso_dwarf = GetSymbolFile (sc);
     if (oso_dwarf)

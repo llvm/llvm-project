@@ -68,11 +68,16 @@ public:
     ///     of this compile unit.
     ///
     /// @param[in] is_optimized
-    ///     true if this compile unit was compiled with optimization.
+    ///     A value that can initialized with eLazyBoolYes, eLazyBoolNo
+    ///     or eLazyBoolCalculate. If set to eLazyBoolCalculate, then
+    ///     an extra call into SymbolVendor will be made to calculate if
+    ///     the compile unit is optimized will be made when
+    ///     CompileUnit::GetIsOptimized() is called.
     ///
     /// @see lldb::LanguageType
     //------------------------------------------------------------------
-    CompileUnit(const lldb::ModuleSP &module_sp, void *user_data, const char *pathname, lldb::user_id_t uid, lldb::LanguageType language, bool is_optimized);
+    CompileUnit(const lldb::ModuleSP &module_sp, void *user_data, const char *pathname, lldb::user_id_t uid,
+                lldb::LanguageType language, lldb_private::LazyBool is_optimized);
 
     //------------------------------------------------------------------
     /// Construct with a module, file spec, UID and language.
@@ -103,11 +108,16 @@ public:
     ///     of this compile unit.
     ///
     /// @param[in] is_optimized
-    ///     true if this compile unit was compiled with optimization.
+    ///     A value that can initialized with eLazyBoolYes, eLazyBoolNo
+    ///     or eLazyBoolCalculate. If set to eLazyBoolCalculate, then
+    ///     an extra call into SymbolVendor will be made to calculate if
+    ///     the compile unit is optimized will be made when
+    ///     CompileUnit::GetIsOptimized() is called.
     ///
     /// @see lldb::LanguageType
     //------------------------------------------------------------------
-    CompileUnit(const lldb::ModuleSP &module_sp, void *user_data, const FileSpec &file_spec, lldb::user_id_t uid, lldb::LanguageType language, bool is_optimized);
+    CompileUnit(const lldb::ModuleSP &module_sp, void *user_data, const FileSpec &file_spec, lldb::user_id_t uid,
+                lldb::LanguageType language, lldb_private::LazyBool is_optimized);
 
     //------------------------------------------------------------------
     /// Destructor
@@ -446,7 +456,7 @@ protected:
     std::unique_ptr<LineTable> m_line_table_ap; ///< Line table that will get parsed on demand.
     DebugMacrosSP m_debug_macros_sp; ///< Debug macros that will get parsed on demand.
     lldb::VariableListSP m_variables; ///< Global and static variable list that will get parsed on demand.
-    bool       m_is_optimized; /// eLazyBoolYes if this compile unit was compiled with optimization.
+    lldb_private::LazyBool m_is_optimized; /// eLazyBoolYes if this compile unit was compiled with optimization.
 
 private:
     enum

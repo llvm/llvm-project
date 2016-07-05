@@ -68,7 +68,10 @@ public:
     virtual bool
     ParseCompileUnitSupportFiles (const SymbolContext& sc,
                                   FileSpecList& support_files);
-    
+
+    virtual bool
+    ParseCompileUnitIsOptimized(const SymbolContext &sc);
+
     virtual bool
     ParseImportedModules (const SymbolContext &sc,
                           std::vector<ConstString> &imported_modules);

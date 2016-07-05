@@ -454,7 +454,7 @@ SymbolFilePDB::ParseCompileUnitForSymIndex(uint32_t id)
         lang = TranslateLanguage(details->getLanguage());
 
     // Don't support optimized code for now, DebugInfoPDB does not return this information.
-    bool optimized = false;
+    LazyBool optimized = eLazyBoolNo;
     auto result = std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr, path.c_str(), id, lang, optimized);
     m_comp_units.insert(std::make_pair(id, result));
     return result;

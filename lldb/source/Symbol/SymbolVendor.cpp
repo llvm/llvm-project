@@ -213,8 +213,20 @@ SymbolVendor::ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpecLis
 }
 
 bool
-SymbolVendor::ParseImportedModules (const SymbolContext &sc,
-                                    std::vector<ConstString> &imported_modules)
+SymbolVendor::ParseCompileUnitIsOptimized(const SymbolContext &sc)
+{
+    ModuleSP module_sp(GetModule());
+    if (module_sp)
+    {
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+        if (m_sym_file_ap.get())
+            return m_sym_file_ap->ParseCompileUnitIsOptimized(sc);
+    }
+    return false;
+}
+
+bool
+SymbolVendor::ParseImportedModules(const SymbolContext &sc, std::vector<ConstString> &imported_modules)
 {
     ModuleSP module_sp(GetModule());
     if (module_sp)
