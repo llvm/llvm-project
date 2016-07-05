@@ -3994,6 +3994,30 @@ matcher, or is a pointer to a type that matches the InnerMatcher.
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('forEachOverridden0')"><a name="forEachOverridden0Anchor">forEachOverridden</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachOverridden0"><pre>Matches each method overriden by the given method. This matcher may
+produce multiple matches.
+
+Given
+  class A { virtual void f(); };
+  class B : public A { void f(); };
+  class C : public B { void f(); };
+cxxMethodDecl(ofClass(hasName("C")),
+              forEachOverridden(cxxMethodDecl().bind("b"))).bind("d")
+  matches once, with "b" binding "A::f" and "d" binding "C::f" (Note
+  that B::f is not overridden by C::f).
+
+The check can produce multiple matches in case of multiple inheritance, e.g.
+  class A1 { virtual void f(); };
+  class A2 { virtual void f(); };
+  class C : public A1, public A2 { void f(); };
+cxxMethodDecl(ofClass(hasName("C")),
+              forEachOverridden(cxxMethodDecl().bind("b"))).bind("d")
+  matches twice, once with "b" binding "A1::f" and "d" binding "C::f", and
+  once with "b" binding "A2::f" and "d" binding "C::f".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXMethodDecl.html">CXXMethodDecl</a>&gt;</td><td class="name" onclick="toggle('ofClass0')"><a name="ofClass0Anchor">ofClass</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="ofClass0"><pre>Matches the class declaration that the given method declaration
 belongs to.

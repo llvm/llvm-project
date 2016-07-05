@@ -2184,15 +2184,15 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
     static ConstString bss_section_name(".bss");
     static ConstString opd_section_name(".opd");    // For ppc64
 
-    // On Android the oatdata and the oatexec symbols in system@framework@boot.oat covers the full
-    // .text section what causes issues with displaying unusable symbol name to the user and very
-    // slow unwinding speed because the instruction emulation based unwind plans try to emulate all
+    // On Android the oatdata and the oatexec symbols in the oat files covers the full .text
+    // section what causes issues with displaying unusable symbol name to the user and very slow
+    // unwinding speed because the instruction emulation based unwind plans try to emulate all
     // instructions in these symbols. Don't add these symbols to the symbol list as they have no
     // use for the debugger and they are causing a lot of trouble.
     // Filtering can't be restricted to Android because this special object file don't contain the
     // note section specifying the environment to Android but the custom extension and file name
     // makes it highly unlikely that this will collide with anything else.
-    bool skip_oatdata_oatexec = m_file.GetFilename() == ConstString("system@framework@boot.oat");
+    bool skip_oatdata_oatexec = m_file.GetFileNameExtension() == ConstString("oat");
 
     ArchSpec arch;
     GetArchitecture(arch);

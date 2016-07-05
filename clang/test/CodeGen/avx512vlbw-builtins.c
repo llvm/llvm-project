@@ -2518,3 +2518,45 @@ __m256i test_mm256_maskz_shufflelo_epi16(__mmask32 __U, __m256i __A) {
   // CHECK: select <16 x i1> %{{.*}}, <16 x i16> %{{.*}}, <16 x i16> %{{.*}}
   return _mm256_maskz_shufflelo_epi16(__U, __A, 5); 
 }
+
+void test_mm_mask_cvtepi16_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
+{
+ // CHECK-LABEL:@test_mm_mask_cvtepi16_storeu_epi8
+ // CHECK: @llvm.x86.avx512.mask.pmov.wb.mem.128
+ _mm_mask_cvtepi16_storeu_epi8 (__P, __M, __A);
+}
+
+void test_mm_mask_cvtsepi16_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
+{
+ // CHECK-LABEL:@test_mm_mask_cvtsepi16_storeu_epi8
+ // CHECK: @llvm.x86.avx512.mask.pmovs.wb.mem.128
+  _mm_mask_cvtsepi16_storeu_epi8 ( __P,  __M, __A);
+}
+
+void test_mm_mask_cvtusepi16_storeu_epi8 (void * __P, __mmask8 __M, __m128i __A)
+{
+ // CHECK-LABEL:@test_mm_mask_cvtusepi16_storeu_epi8
+ // CHECK: @llvm.x86.avx512.mask.pmovus.wb.mem.128
+  _mm_mask_cvtusepi16_storeu_epi8 (__P, __M, __A);
+}
+
+void test_mm256_mask_cvtusepi16_storeu_epi8 (void * __P, __mmask16 __M, __m256i __A)
+{
+ // CHECK-LABEL:@test_mm256_mask_cvtusepi16_storeu_epi8
+ // CHECK: @llvm.x86.avx512.mask.pmovus.wb.mem.256
+  _mm256_mask_cvtusepi16_storeu_epi8 ( __P, __M, __A);
+}
+
+void test_mm256_mask_cvtepi16_storeu_epi8 (void * __P, __mmask16 __M, __m256i __A)
+{
+ // CHECK-LABEL:@test_mm256_mask_cvtepi16_storeu_epi8
+ // CHECK: @llvm.x86.avx512.mask.pmov.wb.mem.256
+  _mm256_mask_cvtepi16_storeu_epi8 ( __P,  __M, __A);
+}
+
+void test_mm256_mask_cvtsepi16_storeu_epi8 (void * __P, __mmask16 __M, __m256i __A)
+{
+ // CHECK-LABEL:@test_mm256_mask_cvtsepi16_storeu_epi8
+ // CHECK: @llvm.x86.avx512.mask.pmovs.wb.mem.256
+ _mm256_mask_cvtsepi16_storeu_epi8 ( __P, __M, __A);
+}

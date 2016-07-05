@@ -16,6 +16,7 @@
 #ifndef LLVM_CLANG_AST_DECLCXX_H
 #define LLVM_CLANG_AST_DECLCXX_H
 
+#include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTUnresolvedSet.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
@@ -1829,6 +1830,8 @@ public:
   method_iterator begin_overridden_methods() const;
   method_iterator end_overridden_methods() const;
   unsigned size_overridden_methods() const;
+  typedef ASTContext::overridden_method_range overridden_method_range;
+  overridden_method_range overridden_methods() const;
 
   /// Returns the parent of this method declaration, which
   /// is the class in which this method is defined.

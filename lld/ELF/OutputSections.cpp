@@ -576,13 +576,18 @@ void GnuHashTableSection<ELFT>::writeHashTable(uint8_t *Buf) {
 template <class ELFT>
 void GnuHashTableSection<ELFT>::addSymbols(
     std::vector<std::pair<SymbolBody *, size_t>> &V) {
-  auto Mid = std::stable_partition(V.begin(), V.end(),
-                                   [](std::pair<SymbolBody *, size_t> &P) {
-                                     return P.first->isUndefined();
-                                   });
+  // Ideally this will just be 'auto' but GCC 6.1 is not able
+  // to deduce it correctly.
+  std::vector<std::pair<SymbolBody *, size_t>>::iterator Mid =
+      std::stable_partition(V.begin(), V.end(),
+                            [](std::pair<SymbolBody *, size_t> &P) {
+                              return P.first->isUndefined();
+                            });
   if (Mid == V.end())
     return;
-  for (auto I = Mid, E = V.end(); I != E; ++I) {
+  for (std::vector<std::pair<SymbolBody *, size_t>>::iterator I = Mid,
+                                                              E = V.end();
+       I != E; ++I) {
     SymbolBody *B = I->first;
     size_t StrOff = I->second;
     Symbols.push_back({B, StrOff, hashGnu(B->getName())});
