@@ -3064,6 +3064,7 @@ namespace lldb_private
                           uint32_t last_line = UINT32_MAX,
                           uint32_t line_offset = 0)
         {
+            bool added_one_diagnostic = false;
             for (const RawDiagnostic &diagnostic : m_diagnostics)
             {
                 // We often make expressions and wrap them in some code.
@@ -3076,6 +3077,7 @@ namespace lldb_private
                 
                 const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
                 const DiagnosticOrigin origin = eDiagnosticOriginSwift;
+
                 
                 if (first_line > 0 &&
                     bufferID != UINT32_MAX &&
@@ -3118,15 +3120,32 @@ namespace lldb_private
                                 new_diagnostic->AddFixIt(fixit);
 
                             diagnostic_manager.AddDiagnostic(new_diagnostic);
+                            added_one_diagnostic = true;
                             
                             continue;
                         }
                     }
                 }
                 
-                diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
-                                                 severity,
-                                                 origin);
+            }
+            
+            // In general, we don't want to see diagnostics from outside of the source text range of the actual user
+            // expression.  But if we didn't find any diagnostics in the text range, it's probably because the source
+            // range was not specified correctly, and we don't want to lose legit errors because of that.  So in that
+            // case we'll add them all here:
+            
+            if (!added_one_diagnostic)
+            {
+                // This will report diagnostic errors from outside the expression's source range.  Those are
+                // not interesting to users, so we only emit them in debug builds.
+                for (const RawDiagnostic &diagnostic : m_diagnostics)
+                {
+                    const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
+                    const DiagnosticOrigin origin = eDiagnosticOriginSwift;
+                    diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
+                                                     severity,
+                                                     origin);
+                }
             }
         }
         
