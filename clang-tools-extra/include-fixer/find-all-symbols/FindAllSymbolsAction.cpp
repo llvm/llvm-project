@@ -13,8 +13,9 @@ namespace clang {
 namespace find_all_symbols {
 
 FindAllSymbolsAction::FindAllSymbolsAction(
-    SymbolReporter *Reporter, const HeaderMapCollector::HeaderMap *PostfixMap)
-    : Reporter(Reporter), Collector(PostfixMap), Handler(&Collector),
+    SymbolReporter *Reporter,
+    const HeaderMapCollector::RegexHeaderMap *RegexHeaderMap)
+    : Reporter(Reporter), Collector(RegexHeaderMap), Handler(&Collector),
       Matcher(Reporter, &Collector) {
   Matcher.registerMatchers(&MatchFinder);
 }

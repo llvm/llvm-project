@@ -31,6 +31,7 @@ static bool ShouldCheckDecl(const Decl *TargetDecl) {
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
   auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
+  Finder->addMatcher(loc(enumType(DeclMatcher)), this);
   Finder->addMatcher(loc(recordType(DeclMatcher)), this);
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
   Finder->addMatcher(declRefExpr().bind("used"), this);
@@ -94,6 +95,8 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       removeFromFoundDecls(VD);
     } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
       removeFromFoundDecls(ECD);
+      if (const auto *ET = ECD->getType()->getAs<EnumType>())
+        removeFromFoundDecls(ET->getDecl());
     }
   }
   // Check the uninstantiated template function usage.

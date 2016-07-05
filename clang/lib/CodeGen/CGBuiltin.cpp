@@ -2209,7 +2209,7 @@ RValue CodeGenFunction::EmitBuiltinExpr(const FunctionDecl *FD,
     return RValue::get(
         Builder.CreateCall(CGM.CreateRuntimeFunction(FTy, Name), {Arg0, Arg1}));
   }
-  // OpenCL v2.0 s6.13.16 ,s9.17.3.5 - Built-in pipe commit read and write
+  // OpenCL v2.0 s6.13.16, s9.17.3.5 - Built-in pipe commit read and write
   // functions
   case Builtin::BIcommit_read_pipe:
   case Builtin::BIcommit_write_pipe:
