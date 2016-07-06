@@ -308,7 +308,9 @@ namespace {
   // Retrieve the serialized size of the given CommonTypeInfo, for use
   // in on-disk hash tables.
   static unsigned getCommonTypeInfoSize(const CommonTypeInfo &info) {
-    return 2 + info.getSwiftBridge().size() + getCommonEntityInfoSize(info);
+    return 2 + info.getSwiftBridge().size() +
+           2 + info.getNSErrorDomain().size() +
+           getCommonEntityInfoSize(info);
   }
 
   /// Emit a serialized representation of the common type information.
@@ -317,6 +319,8 @@ namespace {
     endian::Writer<little> writer(out);
     writer.write<uint16_t>(info.getSwiftBridge().size());
     out.write(info.getSwiftBridge().c_str(), info.getSwiftBridge().size());
+    writer.write<uint16_t>(info.getNSErrorDomain().size());
+    out.write(info.getNSErrorDomain().c_str(), info.getNSErrorDomain().size());
   }
 
   /// Used to serialize the on-disk Objective-C context table.

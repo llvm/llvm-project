@@ -199,6 +199,7 @@ namespace {
     bool SwiftPrivate = false;
     StringRef SwiftName;
     StringRef SwiftBridge;
+    StringRef NSErrorDomain;
     MethodsSeq Methods;
     PropertiesSeq Properties;
   };
@@ -237,6 +238,7 @@ namespace {
     StringRef SwiftName;
     bool SwiftPrivate = false;
     StringRef SwiftBridge;
+    StringRef NSErrorDomain;
   };
   typedef std::vector<Tag> TagsSeq;
 
@@ -246,6 +248,7 @@ namespace {
     StringRef SwiftName;
     bool SwiftPrivate = false;
     StringRef SwiftBridge;
+    StringRef NSErrorDomain;
   };
   typedef std::vector<Typedef> TypedefsSeq;
 
@@ -363,6 +366,7 @@ namespace llvm {
         io.mapOptional("SwiftPrivate",          c.SwiftPrivate);
         io.mapOptional("SwiftName",             c.SwiftName);
         io.mapOptional("SwiftBridge",           c.SwiftBridge);
+        io.mapOptional("NSErrorDomain",         c.NSErrorDomain);
         io.mapOptional("Methods",               c.Methods);
         io.mapOptional("Properties",            c.Properties);
       }
@@ -415,6 +419,7 @@ namespace llvm {
         io.mapOptional("SwiftPrivate",          t.SwiftPrivate);
         io.mapOptional("SwiftName",             t.SwiftName);
         io.mapOptional("SwiftBridge",           t.SwiftBridge);
+        io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
       }
     };
 
@@ -427,6 +432,7 @@ namespace llvm {
         io.mapOptional("SwiftPrivate",          t.SwiftPrivate);
         io.mapOptional("SwiftName",             t.SwiftName);
         io.mapOptional("SwiftBridge",           t.SwiftBridge);
+        io.mapOptional("NSErrorDomain",         t.NSErrorDomain);
       }
     };
 
@@ -572,6 +578,7 @@ namespace {
         return true;
 
       info.setSwiftBridge(common.SwiftBridge);
+      info.setNSErrorDomain(common.NSErrorDomain);
       return false;
     }
 
@@ -890,6 +897,7 @@ namespace {
     void handleCommonType(T &record, const CommonTypeInfo &info) {
       handleCommon(record, info);
       record.SwiftBridge = copyString(info.getSwiftBridge());      
+      record.NSErrorDomain = copyString(info.getNSErrorDomain());
     }
 
     /// Map Objective-C context info.

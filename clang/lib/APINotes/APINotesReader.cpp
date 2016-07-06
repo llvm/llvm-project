@@ -58,6 +58,12 @@ namespace {
     info.setSwiftBridge(
         StringRef(reinterpret_cast<const char *>(data), swiftBridgeLength));
     data += swiftBridgeLength;
+
+    unsigned errorDomainLength =
+      endian::readNext<uint16_t, little, unaligned>(data);
+    info.setNSErrorDomain(
+        StringRef(reinterpret_cast<const char *>(data), errorDomainLength));
+    data += errorDomainLength;
   }
 
   /// Used to deserialize the on-disk identifier table.
