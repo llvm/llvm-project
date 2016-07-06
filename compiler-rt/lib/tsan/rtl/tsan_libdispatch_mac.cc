@@ -219,7 +219,7 @@ TSAN_INTERCEPTOR(void, dispatch_after_f, dispatch_time_t when,
 #undef dispatch_once
 TSAN_INTERCEPTOR(void, dispatch_once, dispatch_once_t *predicate,
                  dispatch_block_t block) {
-  SCOPED_TSAN_INTERCEPTOR(dispatch_once, predicate, block);
+  SCOPED_INTERCEPTOR_RAW(dispatch_once, predicate, block);
   atomic_uint32_t *a = reinterpret_cast<atomic_uint32_t *>(predicate);
   u32 v = atomic_load(a, memory_order_acquire);
   if (v == 0 &&
@@ -241,7 +241,7 @@ TSAN_INTERCEPTOR(void, dispatch_once, dispatch_once_t *predicate,
 #undef dispatch_once_f
 TSAN_INTERCEPTOR(void, dispatch_once_f, dispatch_once_t *predicate,
                  void *context, dispatch_function_t function) {
-  SCOPED_TSAN_INTERCEPTOR(dispatch_once_f, predicate, context, function);
+  SCOPED_INTERCEPTOR_RAW(dispatch_once_f, predicate, context, function);
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
   WRAP(dispatch_once)(predicate, ^(void) {
     function(context);
