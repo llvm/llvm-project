@@ -94,30 +94,43 @@ static struct isl_basic_set *to_parameter_domain(struct isl_basic_set *context)
 	return context;
 }
 
-isl_basic_set *plug_in_parameters(isl_basic_set *bset, struct isl_vec *params)
+/* Plug in the initial values of "params" for the parameters in "bset" and
+ * return the result.  The remaining entries in "params", if any,
+ * correspond to the existentially quantified variables in the description
+ * of the original context and can be ignored.
+ */
+static __isl_give isl_basic_set *plug_in_parameters(
+	__isl_take isl_basic_set *bset, __isl_take isl_vec *params)
 {
-	int i;
+	int i, n;
 
-	for (i = 0; i < params->size - 1; ++i)
+	n = isl_basic_set_dim(bset, isl_dim_param);
+	for (i = 0; i < n; ++i)
 		bset = isl_basic_set_fix(bset,
 					 isl_dim_param, i, params->el[1 + i]);
 
-	bset = isl_basic_set_remove_dims(bset,
-					 isl_dim_param, 0, params->size - 1);
+	bset = isl_basic_set_remove_dims(bset, isl_dim_param, 0, n);
 
 	isl_vec_free(params);
 
 	return bset;
 }
 
-isl_set *set_plug_in_parameters(isl_set *set, struct isl_vec *params)
+/* Plug in the initial values of "params" for the parameters in "set" and
+ * return the result.  The remaining entries in "params", if any,
+ * correspond to the existentially quantified variables in the description
+ * of the original context and can be ignored.
+ */
+static __isl_give isl_set *set_plug_in_parameters(__isl_take isl_set *set,
+	__isl_take isl_vec *params)
 {
-	int i;
+	int i, n;
 
-	for (i = 0; i < params->size - 1; ++i)
+	n = isl_set_dim(set, isl_dim_param);
+	for (i = 0; i < n; ++i)
 		set = isl_set_fix(set, isl_dim_param, i, params->el[1 + i]);
 
-	set = isl_set_remove_dims(set, isl_dim_param, 0, params->size - 1);
+	set = isl_set_remove_dims(set, isl_dim_param, 0, n);
 
 	isl_vec_free(params);
 
@@ -128,10 +141,11 @@ isl_set *set_plug_in_parameters(isl_set *set, struct isl_vec *params)
  * element of bset for the given values of the parameters, by
  * successively solving an ilp problem in each direction.
  */
-struct isl_vec *opt_at(struct isl_basic_set *bset,
-	struct isl_vec *params, int max)
+static __isl_give isl_vec *opt_at(__isl_take isl_basic_set *bset,
+	__isl_take isl_vec *params, int max)
 {
 	unsigned dim;
+	isl_ctx *ctx;
 	struct isl_vec *opt;
 	struct isl_vec *obj;
 	int i;
@@ -140,16 +154,17 @@ struct isl_vec *opt_at(struct isl_basic_set *bset,
 
 	bset = plug_in_parameters(bset, params);
 
+	ctx = isl_basic_set_get_ctx(bset);
 	if (isl_basic_set_plain_is_empty(bset)) {
-		opt = isl_vec_alloc(bset->ctx, 0);
+		opt = isl_vec_alloc(ctx, 0);
 		isl_basic_set_free(bset);
 		return opt;
 	}
 
-	opt = isl_vec_alloc(bset->ctx, 1 + dim);
+	opt = isl_vec_alloc(ctx, 1 + dim);
 	assert(opt);
 
-	obj = isl_vec_alloc(bset->ctx, 1 + dim);
+	obj = isl_vec_alloc(ctx, 1 + dim);
 	assert(obj);
 
 	isl_int_set_si(opt->el[0], 1);
@@ -174,7 +189,7 @@ struct isl_vec *opt_at(struct isl_basic_set *bset,
 	return opt;
 empty:
 	isl_vec_free(opt);
-	opt = isl_vec_alloc(bset->ctx, 0);
+	opt = isl_vec_alloc(ctx, 0);
 	isl_basic_set_free(bset);
 	isl_vec_free(obj);
 

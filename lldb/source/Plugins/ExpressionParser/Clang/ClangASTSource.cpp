@@ -743,6 +743,9 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
 
     do
     {
+        if (context.m_found.type)
+            break;
+        
         TypeList types;
         SymbolContext null_sc;
         const bool exact_match = false;
@@ -751,8 +754,6 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
             module_sp->FindTypesInNamespace(null_sc, name, &namespace_decl, 1, types);
         else
             m_target->GetImages().FindTypes(null_sc, name, exact_match, 1, searched_symbol_files, types);
-
-        bool found_a_type = false;
         
         if (size_t num_types = types.GetSize())
         {
@@ -785,12 +786,12 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
                 
                 context.AddTypeDecl(copied_clang_type);
                 
-                found_a_type = true;
+                context.m_found.type = true;
                 break;
             }
         }
 
-        if (!found_a_type)
+        if (!context.m_found.type)
         {
             // Try the modules next.
             
@@ -835,13 +836,13 @@ ClangASTSource::FindExternalVisibleDecls (NameSearchContext &context,
                         
                         context.AddNamedDecl(copied_named_decl);
                         
-                        found_a_type = true;
+                        context.m_found.type = true;
                     }
                 }
             } while (0);
         }
         
-        if (!found_a_type)
+        if (!context.m_found.type)
         {
             do
             {

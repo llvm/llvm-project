@@ -473,6 +473,18 @@ See \autoref{s:online} for the detection
 and exploitation of symmetries that appear during the course of
 the dual simplex method.
 
+Note that the replacement of the $b_i(\vec p)$ by $u$ may lose
+information if the parameters that occur in $b_i(\vec p)$ also
+occur in other constraints.  The replacement is therefore currently
+only applied when all the parameters in all of the $b_i(\vec p)$
+only occur in a single constraint, i.e., the one in which
+the parameter is removed.
+This is the case for the examples from \textcite{Bygde2010licentiate}
+in \autoref{t:comparison}.
+The version of {\tt isl} that was used during the experiments
+of \autoref{s:pip:experiments} did not take into account
+this single-occurrence constraint.
+
 \subsubsection{Parameter Compression}\label{s:compression}
 
 It may in some cases be apparent from the equalities in the problem
@@ -678,7 +690,7 @@ as an \emph{integer} affine combination of other variables is
 propagated to the main tableau, where it is used to eliminate that
 integer division.
 
-\subsection{Experiments}
+\subsection{Experiments}\label{s:pip:experiments}
 
 \autoref{t:comparison} compares the execution times of {\tt isl}
 (with both types of context tableau)

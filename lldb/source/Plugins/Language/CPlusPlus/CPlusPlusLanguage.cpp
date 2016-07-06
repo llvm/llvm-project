@@ -652,8 +652,22 @@ LoadLibStdcppFormatters(lldb::TypeCategoryImplSP cpp_category_sp)
                                                                                                      "size=${svar%#}")));
 
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibStdcppVectorIteratorSyntheticFrontEndCreator, "std::vector iterator synthetic children", ConstString("^__gnu_cxx::__normal_iterator<.+>$"), stl_synth_flags, true);
-    
+
     AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibstdcppMapIteratorSyntheticFrontEndCreator, "std::map iterator synthetic children", ConstString("^std::_Rb_tree_iterator<.+>$"), stl_synth_flags, true);
+
+    AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator,
+                    "std::shared_ptr synthetic children", ConstString("^std::shared_ptr<.+>(( )?&)?$"), stl_synth_flags,
+                    true);
+    AddCXXSynthetic(cpp_category_sp, lldb_private::formatters::LibStdcppSharedPtrSyntheticFrontEndCreator,
+                    "std::weak_ptr synthetic children", ConstString("^std::weak_ptr<.+>(( )?&)?$"), stl_synth_flags,
+                    true);
+
+    AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibStdcppSmartPointerSummaryProvider,
+                  "libstdc++ std::shared_ptr summary provider", ConstString("^std::shared_ptr<.+>(( )?&)?$"),
+                  stl_summary_flags, true);
+    AddCXXSummary(cpp_category_sp, lldb_private::formatters::LibStdcppSmartPointerSummaryProvider,
+                  "libstdc++ std::weak_ptr summary provider", ConstString("^std::weak_ptr<.+>(( )?&)?$"),
+                  stl_summary_flags, true);
 #endif
 }
 

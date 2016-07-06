@@ -38,9 +38,7 @@ namespace lldb_private {
             
             size_t
             GetIndexOfChildWithName(const ConstString &name) override;
-            
-            ~VectorIteratorSyntheticFrontEnd() override;
-            
+
         private:
             ExecutionContextRef m_exe_ctx_ref;
             ConstString m_item_name;
