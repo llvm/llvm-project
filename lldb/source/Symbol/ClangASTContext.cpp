@@ -6327,12 +6327,20 @@ ClangASTContext::GetChildCompilerTypeAtIndex (lldb::opaque_compiler_type_t type,
                         CompilerType field_clang_type (getASTContext(), field->getType());
                         assert(field_idx < record_layout.getFieldCount());
                         child_byte_size = field_clang_type.GetByteSize(exe_ctx ? exe_ctx->GetBestExecutionContextScope() : NULL);
+                        const uint32_t child_bit_size = child_byte_size * 8;
                         
                         // Figure out the field offset within the current struct/union/class type
                         bit_offset = record_layout.getFieldOffset (field_idx);
-                        child_byte_offset = bit_offset / 8;
                         if (ClangASTContext::FieldIsBitfield (getASTContext(), *field, child_bitfield_bit_size))
-                            child_bitfield_bit_offset = bit_offset % 8;
+                        {
+                            child_bitfield_bit_offset = bit_offset % child_bit_size;
+                            const uint32_t child_bit_offset = bit_offset - child_bitfield_bit_offset;
+                            child_byte_offset =  child_bit_offset / 8;
+                        }
+                        else
+                        {
+                            child_byte_offset = bit_offset / 8;
+                        }
                         
                         return field_clang_type;
                     }
