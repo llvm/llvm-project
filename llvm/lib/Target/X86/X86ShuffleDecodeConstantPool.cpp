@@ -300,6 +300,7 @@ void DecodeVPERMVMask(const Constant *C, MVT VT,
   if (MaskTy->isVectorTy()) {
     unsigned NumElements = MaskTy->getVectorNumElements();
     if (NumElements == VT.getVectorNumElements()) {
+      unsigned EltMaskSize = Log2_64(NumElements);
       for (unsigned i = 0; i < NumElements; ++i) {
         Constant *COp = C->getAggregateElement(i);
         if (!COp || (!isa<UndefValue>(COp) && !isa<ConstantInt>(COp))) {
@@ -309,9 +310,9 @@ void DecodeVPERMVMask(const Constant *C, MVT VT,
         if (isa<UndefValue>(COp))
           ShuffleMask.push_back(SM_SentinelUndef);
         else {
-          uint64_t Element = cast<ConstantInt>(COp)->getZExtValue();
-          Element &= (1 << NumElements) - 1;
-          ShuffleMask.push_back(Element);
+          APInt Element = cast<ConstantInt>(COp)->getValue();
+          Element = Element.getLoBits(EltMaskSize);
+          ShuffleMask.push_back(Element.getZExtValue());
         }
       }
     }

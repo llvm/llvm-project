@@ -43,7 +43,8 @@ enum ActionType {
   PrintSets,
   GenOptParserDefs,
   GenCTags,
-  GenAttributes
+  GenAttributes,
+  GenSearchableTables,
 };
 
 namespace {
@@ -89,6 +90,8 @@ namespace {
                                "Generate ctags-compatible index"),
                     clEnumValN(GenAttributes, "gen-attrs",
                                "Generate attributes"),
+                    clEnumValN(GenSearchableTables, "gen-searchable-tables",
+                               "Generate generic binary-searchable table"),
                     clEnumValEnd));
 
   cl::opt<std::string>
@@ -171,6 +174,9 @@ bool LLVMTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenAttributes:
     EmitAttributes(Records, OS);
+    break;
+  case GenSearchableTables:
+    EmitSearchableTables(Records, OS);
     break;
   }
 

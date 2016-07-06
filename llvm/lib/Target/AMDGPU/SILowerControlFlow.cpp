@@ -729,14 +729,13 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
           break;
 
-        case AMDGPU::S_ENDPGM: {
-          if (MF.getInfo<SIMachineFunctionInfo>()->returnsVoid())
-            break;
+        case AMDGPU::SI_RETURN: {
+          assert(!MF.getInfo<SIMachineFunctionInfo>()->returnsVoid());
 
           // Graphics shaders returning non-void shouldn't contain S_ENDPGM,
           // because external bytecode will be appended at the end.
           if (BI != --MF.end() || I != MBB.getFirstTerminator()) {
-            // S_ENDPGM is not the last instruction. Add an empty block at
+            // SI_RETURN is not the last instruction. Add an empty block at
             // the end and jump there.
             if (!EmptyMBBAtEnd) {
               EmptyMBBAtEnd = MF.CreateMachineBasicBlock();
@@ -746,9 +745,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             MBB.addSuccessor(EmptyMBBAtEnd);
             BuildMI(*BI, I, MI.getDebugLoc(), TII->get(AMDGPU::S_BRANCH))
                     .addMBB(EmptyMBBAtEnd);
+            I->eraseFromParent();
           }
-
-          I->eraseFromParent();
           break;
         }
       }

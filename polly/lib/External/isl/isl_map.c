@@ -200,12 +200,12 @@ int isl_map_compatible_domain(struct isl_map *map, struct isl_set *set)
 					set->dim, isl_dim_set);
 }
 
-int isl_basic_map_compatible_domain(struct isl_basic_map *bmap,
-		struct isl_basic_set *bset)
+isl_bool isl_basic_map_compatible_domain(__isl_keep isl_basic_map *bmap,
+	__isl_keep isl_basic_set *bset)
 {
-	int m;
+	isl_bool m;
 	if (!bmap || !bset)
-		return -1;
+		return isl_bool_error;
 	m = isl_space_match(bmap->dim, isl_dim_param, bset->dim, isl_dim_param);
 	if (m < 0 || !m)
 		return m;
@@ -1830,6 +1830,14 @@ void isl_basic_map_swap_div(struct isl_basic_map *bmap, int a, int b)
 	ISL_F_CLR(bmap, ISL_BASIC_MAP_NORMALIZED);
 }
 
+/* Swap divs "a" and "b" in "bset" and adjust the constraints and
+ * div definitions accordingly.
+ */
+void isl_basic_set_swap_div(__isl_keep isl_basic_set *bset, int a, int b)
+{
+	isl_basic_map_swap_div(bset, a, b);
+}
+
 /* Eliminate the specified n dimensions starting at first from the
  * constraints, without removing the dimensions from the space.
  * If the set is rational, the dimensions are eliminated using Fourier-Motzkin.
@@ -2310,25 +2318,40 @@ isl_bool isl_set_involves_dims(__isl_keep isl_set *set,
 	return isl_map_involves_dims(set, type, first, n);
 }
 
-/* Return true if the definition of the given div is unknown or depends
- * on unknown divs.
+/* Does local variable "div" of "bmap" have a complete explicit representation?
+ * Having a complete explicit representation requires not only
+ * an explicit representation, but also that all local variables
+ * that appear in this explicit representation in turn have
+ * a complete explicit representation.
  */
-static int div_is_unknown(__isl_keep isl_basic_map *bmap, int div)
+isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div)
 {
 	int i;
 	unsigned div_offset = isl_basic_map_offset(bmap, isl_dim_div);
+	isl_bool marked;
 
-	if (isl_int_is_zero(bmap->div[div][0]))
-		return 1;
+	marked = isl_basic_map_div_is_marked_unknown(bmap, div);
+	if (marked < 0 || marked)
+		return isl_bool_not(marked);
 
 	for (i = bmap->n_div - 1; i >= 0; --i) {
+		isl_bool known;
+
 		if (isl_int_is_zero(bmap->div[div][1 + div_offset + i]))
 			continue;
-		if (div_is_unknown(bmap, i))
-			return 1;
+		known = isl_basic_map_div_is_known(bmap, i);
+		if (known < 0 || !known)
+			return known;
 	}
 
-	return 0;
+	return isl_bool_true;
+}
+
+/* Does local variable "div" of "bset" have a complete explicit representation?
+ */
+isl_bool isl_basic_set_div_is_known(__isl_keep isl_basic_set *bset, int div)
+{
+	return isl_basic_map_div_is_known(bset, div);
 }
 
 /* Remove all divs that are unknown or defined in terms of unknown divs.
@@ -2342,7 +2365,7 @@ __isl_give isl_basic_map *isl_basic_map_remove_unknown_divs(
 		return NULL;
 
 	for (i = bmap->n_div - 1; i >= 0; --i) {
-		if (!div_is_unknown(bmap, i))
+		if (isl_basic_map_div_is_known(bmap, i))
 			continue;
 		bmap = isl_basic_map_remove_dims(bmap, isl_dim_div, i, 1);
 		if (!bmap)
@@ -6043,95 +6066,6 @@ error:
 	return NULL;
 }
 
-static struct isl_map *isl_basic_map_partial_lexopt(
-		struct isl_basic_map *bmap, struct isl_basic_set *dom,
-		struct isl_set **empty, int max)
-{
-	return isl_tab_basic_map_partial_lexopt(bmap, dom, empty, max);
-}
-
-struct isl_map *isl_basic_map_partial_lexmax(
-		struct isl_basic_map *bmap, struct isl_basic_set *dom,
-		struct isl_set **empty)
-{
-	return isl_basic_map_partial_lexopt(bmap, dom, empty, 1);
-}
-
-struct isl_map *isl_basic_map_partial_lexmin(
-		struct isl_basic_map *bmap, struct isl_basic_set *dom,
-		struct isl_set **empty)
-{
-	return isl_basic_map_partial_lexopt(bmap, dom, empty, 0);
-}
-
-struct isl_set *isl_basic_set_partial_lexmin(
-		struct isl_basic_set *bset, struct isl_basic_set *dom,
-		struct isl_set **empty)
-{
-	return (struct isl_set *)
-		isl_basic_map_partial_lexmin((struct isl_basic_map *)bset,
-			dom, empty);
-}
-
-struct isl_set *isl_basic_set_partial_lexmax(
-		struct isl_basic_set *bset, struct isl_basic_set *dom,
-		struct isl_set **empty)
-{
-	return (struct isl_set *)
-		isl_basic_map_partial_lexmax((struct isl_basic_map *)bset,
-			dom, empty);
-}
-
-__isl_give isl_pw_multi_aff *isl_basic_map_partial_lexmin_pw_multi_aff(
-	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
-	__isl_give isl_set **empty)
-{
-	return isl_basic_map_partial_lexopt_pw_multi_aff(bmap, dom, empty, 0);
-}
-
-__isl_give isl_pw_multi_aff *isl_basic_map_partial_lexmax_pw_multi_aff(
-	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
-	__isl_give isl_set **empty)
-{
-	return isl_basic_map_partial_lexopt_pw_multi_aff(bmap, dom, empty, 1);
-}
-
-__isl_give isl_pw_multi_aff *isl_basic_set_partial_lexmin_pw_multi_aff(
-	__isl_take isl_basic_set *bset, __isl_take isl_basic_set *dom,
-	__isl_give isl_set **empty)
-{
-	return isl_basic_map_partial_lexmin_pw_multi_aff(bset, dom, empty);
-}
-
-__isl_give isl_pw_multi_aff *isl_basic_set_partial_lexmax_pw_multi_aff(
-	__isl_take isl_basic_set *bset, __isl_take isl_basic_set *dom,
-	__isl_give isl_set **empty)
-{
-	return isl_basic_map_partial_lexmax_pw_multi_aff(bset, dom, empty);
-}
-
-__isl_give isl_pw_multi_aff *isl_basic_map_lexopt_pw_multi_aff(
-	__isl_take isl_basic_map *bmap, int max)
-{
-	isl_basic_set *dom = NULL;
-	isl_space *dom_space;
-
-	if (!bmap)
-		goto error;
-	dom_space = isl_space_domain(isl_space_copy(bmap->dim));
-	dom = isl_basic_set_universe(dom_space);
-	return isl_basic_map_partial_lexopt_pw_multi_aff(bmap, dom, NULL, max);
-error:
-	isl_basic_map_free(bmap);
-	return NULL;
-}
-
-__isl_give isl_pw_multi_aff *isl_basic_map_lexmin_pw_multi_aff(
-	__isl_take isl_basic_map *bmap)
-{
-	return isl_basic_map_lexopt_pw_multi_aff(bmap, 0);
-}
-
 #undef TYPE
 #define TYPE	isl_pw_multi_aff
 #undef SUFFIX
@@ -6147,6 +6081,9 @@ __isl_give isl_pw_multi_aff *isl_basic_map_lexmin_pw_multi_aff(
  * in the form of an isl_pw_multi_aff.
  * If "empty" is not NULL, then set *empty to those elements in dom that
  * do not have an image element.
+ * If "flags" includes ISL_OPT_FULL, then "dom" is NULL and the optimum
+ * should be computed over the domain of "map".  "empty" is also NULL
+ * in this case.
  *
  * We first compute the lexicographically minimal or maximal element
  * in the first basic map.  This results in a partial solution "res"
@@ -6158,13 +6095,15 @@ __isl_give isl_pw_multi_aff *isl_basic_map_lexmin_pw_multi_aff(
  */
 static __isl_give isl_pw_multi_aff *isl_map_partial_lexopt_aligned_pw_multi_aff(
 	__isl_take isl_map *map, __isl_take isl_set *dom,
-	__isl_give isl_set **empty, int max)
+	__isl_give isl_set **empty, unsigned flags)
 {
 	int i;
+	int full;
 	isl_pw_multi_aff *res;
 	isl_set *todo;
 
-	if (!map || !dom)
+	full = ISL_FL_ISSET(flags, ISL_OPT_FULL);
+	if (!map || (!full && !dom))
 		goto error;
 
 	if (isl_map_plain_is_empty(map)) {
@@ -6177,7 +6116,7 @@ static __isl_give isl_pw_multi_aff *isl_map_partial_lexopt_aligned_pw_multi_aff(
 
 	res = basic_map_partial_lexopt_pw_multi_aff(
 					    isl_basic_map_copy(map->p[0]),
-					    isl_set_copy(dom), empty, max);
+					    isl_set_copy(dom), empty, flags);
 
 	if (empty)
 		todo = *empty;
@@ -6186,9 +6125,9 @@ static __isl_give isl_pw_multi_aff *isl_map_partial_lexopt_aligned_pw_multi_aff(
 
 		res_i = basic_map_partial_lexopt_pw_multi_aff(
 					    isl_basic_map_copy(map->p[i]),
-					    isl_set_copy(dom), empty, max);
+					    isl_set_copy(dom), empty, flags);
 
-		if (max)
+		if (ISL_FL_ISSET(flags, ISL_OPT_MAX))
 			res = isl_pw_multi_aff_union_lexmax(res, res_i);
 		else
 			res = isl_pw_multi_aff_union_lexmin(res, res_i);
@@ -6227,6 +6166,9 @@ error:
  * in the form of an isl_map.
  * If "empty" is not NULL, then set *empty to those elements in "dom" that
  * do not have an image element.
+ * If "flags" includes ISL_OPT_FULL, then "dom" is NULL and the optimum
+ * should be computed over the domain of "map".  "empty" is also NULL
+ * in this case.
  *
  * If the input consists of more than one disjunct, then first
  * compute the desired result in the form of an isl_pw_multi_aff and
@@ -6243,13 +6185,15 @@ error:
  * even more splintering.
  */
 static __isl_give isl_map *isl_map_partial_lexopt_aligned(
-		__isl_take isl_map *map, __isl_take isl_set *dom,
-		__isl_give isl_set **empty, int max)
+	__isl_take isl_map *map, __isl_take isl_set *dom,
+	__isl_give isl_set **empty, unsigned flags)
 {
+	int full;
 	struct isl_map *res;
 	isl_pw_multi_aff *pma;
 
-	if (!map || !dom)
+	full = ISL_FL_ISSET(flags, ISL_OPT_FULL);
+	if (!map || (!full && !dom))
 		goto error;
 
 	if (isl_map_plain_is_empty(map)) {
@@ -6262,12 +6206,13 @@ static __isl_give isl_map *isl_map_partial_lexopt_aligned(
 
 	if (map->n == 1) {
 		res = basic_map_partial_lexopt(isl_basic_map_copy(map->p[0]),
-						dom, empty, max);
+						dom, empty, flags);
 		isl_map_free(map);
 		return res;
 	}
 
-	pma = isl_map_partial_lexopt_aligned_pw_multi_aff(map, dom, empty, max);
+	pma = isl_map_partial_lexopt_aligned_pw_multi_aff(map, dom, empty,
+							flags);
 	return isl_map_from_pw_multi_aff(pma);
 error:
 	if (empty)
@@ -6281,7 +6226,7 @@ __isl_give isl_map *isl_map_partial_lexmax(
 		__isl_take isl_map *map, __isl_take isl_set *dom,
 		__isl_give isl_set **empty)
 {
-	return isl_map_partial_lexopt(map, dom, empty, 1);
+	return isl_map_partial_lexopt(map, dom, empty, ISL_OPT_MAX);
 }
 
 __isl_give isl_map *isl_map_partial_lexmin(
@@ -6309,43 +6254,18 @@ __isl_give isl_set *isl_set_partial_lexmax(
 			dom, empty);
 }
 
-/* Compute the lexicographic minimum (or maximum if "max" is set)
- * of "bmap" over its domain.
- *
- * Since we are not interested in the part of the domain space where
- * there is no solution, we initialize the domain to those constraints
- * of "bmap" that only involve the parameters and the input dimensions.
- * This relieves the parametric programming engine from detecting those
- * inequalities and transferring them to the context.  More importantly,
- * it ensures that those inequalities are transferred first and not
- * intermixed with inequalities that actually split the domain.
+/* Compute the lexicographic minimum (or maximum if "flags" includes
+ * ISL_OPT_MAX) of "bset" over its parametric domain.
  */
-__isl_give isl_map *isl_basic_map_lexopt(__isl_take isl_basic_map *bmap, int max)
+__isl_give isl_set *isl_basic_set_lexopt(__isl_take isl_basic_set *bset,
+	unsigned flags)
 {
-	int n_div;
-	int n_out;
-	isl_basic_map *copy;
-	isl_basic_set *dom;
-
-	n_div = isl_basic_map_dim(bmap, isl_dim_div);
-	n_out = isl_basic_map_dim(bmap, isl_dim_out);
-	copy = isl_basic_map_copy(bmap);
-	copy = isl_basic_map_drop_constraints_involving_dims(copy,
-							isl_dim_div, 0, n_div);
-	copy = isl_basic_map_drop_constraints_involving_dims(copy,
-							isl_dim_out, 0, n_out);
-	dom = isl_basic_map_domain(copy);
-	return isl_basic_map_partial_lexopt(bmap, dom, NULL, max);
-}
-
-__isl_give isl_map *isl_basic_map_lexmin(__isl_take isl_basic_map *bmap)
-{
-	return isl_basic_map_lexopt(bmap, 0);
+	return isl_basic_map_lexopt(bset, flags);
 }
 
 __isl_give isl_map *isl_basic_map_lexmax(__isl_take isl_basic_map *bmap)
 {
-	return isl_basic_map_lexopt(bmap, 1);
+	return isl_basic_map_lexopt(bmap, ISL_OPT_MAX);
 }
 
 __isl_give isl_set *isl_basic_set_lexmin(__isl_take isl_basic_set *bset)
@@ -6356,6 +6276,18 @@ __isl_give isl_set *isl_basic_set_lexmin(__isl_take isl_basic_set *bset)
 __isl_give isl_set *isl_basic_set_lexmax(__isl_take isl_basic_set *bset)
 {
 	return (isl_set *)isl_basic_map_lexmax((isl_basic_map *)bset);
+}
+
+/* Compute the lexicographic minimum of "bset" over its parametric domain
+ * for the purpose of quantifier elimination.
+ * That is, find an explicit representation for all the existentially
+ * quantified variables in "bset" by computing their lexicographic
+ * minimum.
+ */
+static __isl_give isl_set *isl_basic_set_lexmin_compute_divs(
+	__isl_take isl_basic_set *bset)
+{
+	return isl_basic_set_lexopt(bset, ISL_OPT_QE);
 }
 
 /* Extract the first and only affine expression from list
@@ -6453,6 +6385,15 @@ static __isl_give isl_pw_aff *map_dim_opt(__isl_take isl_map *map, int pos,
 	isl_map_free(map);
 
 	return pwaff;
+}
+
+/* Compute the minimum of the given output dimension as a function of the
+ * parameters and input dimensions, but independently of
+ * the other output dimensions.
+ */
+__isl_give isl_pw_aff *isl_map_dim_min(__isl_take isl_map *map, int pos)
+{
+	return map_dim_opt(map, pos, 0);
 }
 
 /* Compute the maximum of the given output dimension as a function of the
@@ -6669,7 +6610,7 @@ static __isl_give isl_set *base_compute_divs(__isl_take isl_basic_set *bset)
 	if (!bset)
 		return NULL;
 	if (bset->n_eq == 0)
-		return isl_basic_set_lexmin(bset);
+		return isl_basic_set_lexmin_compute_divs(bset);
 
 	morph1 = isl_basic_set_parameter_compression(bset);
 	bset = isl_morph_basic_set(isl_morph_copy(morph1), bset);
@@ -6679,7 +6620,7 @@ static __isl_give isl_set *base_compute_divs(__isl_take isl_basic_set *bset)
 	n = isl_basic_set_dim(bset, isl_dim_set);
 	bset = isl_basic_set_project_out(bset, isl_dim_set, 0, n);
 
-	set = isl_basic_set_lexmin(bset);
+	set = isl_basic_set_lexmin_compute_divs(bset);
 
 	set = isl_morph_set(isl_morph_inverse(morph1), set);
 
@@ -6924,12 +6865,12 @@ error:
 __isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
 	__isl_take isl_basic_map *bmap, int div)
 {
-	isl_bool known;
+	isl_bool unknown;
 
-	known = isl_basic_map_div_is_known(bmap, div);
-	if (known < 0)
+	unknown = isl_basic_map_div_is_marked_unknown(bmap, div);
+	if (unknown < 0)
 		return isl_basic_map_free(bmap);
-	if (!known)
+	if (unknown)
 		return bmap;
 
 	bmap = isl_basic_map_cow(bmap);
@@ -6939,16 +6880,22 @@ __isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
 	return bmap;
 }
 
-/* Does local variable "div" of "bmap" have an explicit representation?
+/* Is local variable "div" of "bmap" marked as not having an explicit
+ * representation?
+ * Note that even if "div" is not marked in this way and therefore
+ * has an explicit representation, this representation may still
+ * depend (indirectly) on other local variables that do not
+ * have an explicit representation.
  */
-isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div)
+isl_bool isl_basic_map_div_is_marked_unknown(__isl_keep isl_basic_map *bmap,
+	int div)
 {
 	if (!bmap)
 		return isl_bool_error;
 	if (div < 0 || div >= isl_basic_map_dim(bmap, isl_dim_div))
 		isl_die(isl_basic_map_get_ctx(bmap), isl_error_invalid,
 			"position out of bounds", return isl_bool_error);
-	return !isl_int_is_zero(bmap->div[div][0]);
+	return isl_int_is_zero(bmap->div[div][0]);
 }
 
 /* Return the position of the first local variable that does not
@@ -7904,8 +7851,18 @@ static isl_bool map_is_equal(__isl_keep isl_map *map1, __isl_keep isl_map *map2)
 	return is_subset;
 }
 
+/* Is "map1" equal to "map2"?
+ *
+ * First check if they are obviously equal.
+ * If not, then perform a more detailed analysis.
+ */
 isl_bool isl_map_is_equal(__isl_keep isl_map *map1, __isl_keep isl_map *map2)
 {
+	isl_bool equal;
+
+	equal = isl_map_plain_is_equal(map1, map2);
+	if (equal < 0 || equal)
+		return equal;
 	return isl_map_align_params_map_map_and_test(map1, map2, &map_is_equal);
 }
 
@@ -8248,7 +8205,7 @@ __isl_give isl_basic_map *isl_basic_map_expand_divs(
 			j++;
 		} else {
 			isl_seq_cpy(bmap->div[i], div->row[i], div->n_col);
-			if (!isl_basic_map_div_is_known(bmap, i))
+			if (isl_basic_map_div_is_marked_unknown(bmap, i))
 				continue;
 			if (isl_basic_map_add_div_constraints(bmap, i) < 0)
 				goto error;

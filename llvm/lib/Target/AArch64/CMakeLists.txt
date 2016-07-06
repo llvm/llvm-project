@@ -12,6 +12,8 @@ tablegen(LLVM AArch64GenFastISel.inc -gen-fast-isel)
 tablegen(LLVM AArch64GenCallingConv.inc -gen-callingconv)
 tablegen(LLVM AArch64GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM AArch64GenDisassemblerTables.inc -gen-disassembler)
+tablegen(LLVM AArch64GenSystemOperands.inc -gen-searchable-tables)
+
 add_public_tablegen_target(AArch64CommonTableGen)
 
 # List of all GlobalISel files.

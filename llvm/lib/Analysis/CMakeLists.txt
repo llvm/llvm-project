@@ -1,6 +1,7 @@
 add_llvm_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
+  AliasAnalysisSummary.cpp
   AliasSetTracker.cpp
   Analysis.cpp
   AssumptionCache.cpp
@@ -10,7 +11,8 @@ add_llvm_library(LLVMAnalysis
   BranchProbabilityInfo.cpp
   CFG.cpp
   CFGPrinter.cpp
-  CFLAliasAnalysis.cpp
+  CFLAndersAliasAnalysis.cpp
+  CFLSteensAliasAnalysis.cpp
   CGSCCPassManager.cpp
   CallGraph.cpp
   CallGraphSCCPass.cpp

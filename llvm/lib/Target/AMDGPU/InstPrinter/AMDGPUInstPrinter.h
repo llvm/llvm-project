@@ -40,7 +40,8 @@ private:
   void printU8ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU16ImmDecOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printU32ImmOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
-  void printNamedBit(const MCInst* MI, unsigned OpNo, raw_ostream& O, const char* BitName);
+  void printNamedBit(const MCInst* MI, unsigned OpNo, raw_ostream& O,
+                     StringRef BitName);
   void printOffen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printIdxen(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   void printAddr64(const MCInst *MI, unsigned OpNo, raw_ostream &O);
@@ -79,6 +80,8 @@ private:
   void printMemOperand(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printIfSet(const MCInst *MI, unsigned OpNo, raw_ostream &O,
                          StringRef Asm, StringRef Default = "");
+  static void printIfSet(const MCInst *MI, unsigned OpNo,
+                         raw_ostream &O, char Asm);
   static void printAbs(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printClamp(const MCInst *MI, unsigned OpNo, raw_ostream &O);
   static void printClampSI(const MCInst *MI, unsigned OpNo, raw_ostream &O);

@@ -628,7 +628,7 @@ static void computeADRP(const InstrToInstrs &UseToDefs,
         continue;
       }
       DEBUG(dbgs() << "Record AdrpAdrp:\n" << *L2 << '\n' << *L1 << '\n');
-      AArch64FI.addLOHDirective(MCLOH_AdrpAdrp, {L1, L2});
+      AArch64FI.addLOHDirective(MCLOH_AdrpAdrp, {L2, L1});
       ++NumADRPSimpleCandidate;
     }
 #ifdef DEBUG
