@@ -407,19 +407,18 @@ protected:
   /// to each vector element of Val. The sequence starts at StartIndex.
   virtual Value *getStepVector(Value *Val, int StartIdx, Value *Step);
 
-  /// This function adds (StartIdx, StartIdx + Step, StartIdx + 2*Step, ...)
-  /// to each vector element of Val. The sequence starts at StartIndex.
-  /// Step is a SCEV. In order to get StepValue it takes the existing value
-  /// from SCEV or creates a new using SCEVExpander.
-  virtual Value *getStepVector(Value *Val, int StartIdx, const SCEV *Step);
+  /// Create a vector induction phi node based on an existing scalar one. This
+  /// currently only works for integer induction variables with a constant
+  /// step. If \p TruncType is non-null, instead of widening the original IV,
+  /// we widen a version of the IV truncated to \p TruncType.
+  void createVectorIntInductionPHI(const InductionDescriptor &II,
+                                   VectorParts &Entry, IntegerType *TruncType);
 
-  /// Create a vector induction variable based on an existing scalar one.
-  /// Currently only works for integer induction variables with a constant
-  /// step.
-  /// If TruncType is provided, instead of widening the original IV, we
-  /// widen a version of the IV truncated to TruncType.
-  void widenInductionVariable(const InductionDescriptor &II, VectorParts &Entry,
-                              IntegerType *TruncType = nullptr);
+  /// Widen an integer induction variable \p IV. If \p TruncType is provided,
+  /// the induction variable will first be truncated to the specified type. The
+  /// widened values are placed in \p Entry.
+  void widenIntInduction(PHINode *IV, VectorParts &Entry,
+                         IntegerType *TruncType = nullptr);
 
   /// When we go over instructions in the basic block we rely on previous
   /// values within the current basic block or on loop invariant values.
@@ -605,7 +604,6 @@ private:
   void vectorizeMemoryInstruction(Instruction *Instr) override;
   Value *getBroadcastInstrs(Value *V) override;
   Value *getStepVector(Value *Val, int StartIdx, Value *Step) override;
-  Value *getStepVector(Value *Val, int StartIdx, const SCEV *StepSCEV) override;
   Value *reverseVector(Value *Vec) override;
 };
 
@@ -2149,18 +2147,8 @@ Value *InnerLoopVectorizer::getBroadcastInstrs(Value *V) {
   return Shuf;
 }
 
-Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
-                                          const SCEV *StepSCEV) {
-  const DataLayout &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
-  SCEVExpander Exp(*PSE.getSE(), DL, "induction");
-  Value *StepValue = Exp.expandCodeFor(StepSCEV, StepSCEV->getType(),
-                                       &*Builder.GetInsertPoint());
-  return getStepVector(Val, StartIdx, StepValue);
-}
-
-void InnerLoopVectorizer::widenInductionVariable(const InductionDescriptor &II,
-                                                 VectorParts &Entry,
-                                                 IntegerType *TruncType) {
+void InnerLoopVectorizer::createVectorIntInductionPHI(
+    const InductionDescriptor &II, VectorParts &Entry, IntegerType *TruncType) {
   Value *Start = II.getStartValue();
   ConstantInt *Step = II.getConstIntStepValue();
   assert(Step && "Can not widen an IV with a non-constant step");
@@ -2191,6 +2179,63 @@ void InnerLoopVectorizer::widenInductionVariable(const InductionDescriptor &II,
 
   VecInd->addIncoming(SteppedStart, LoopVectorPreHeader);
   VecInd->addIncoming(LastInduction, LoopVectorBody);
+}
+
+void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
+                                            IntegerType *TruncType) {
+
+  auto II = Legal->getInductionVars()->find(IV);
+  assert(II != Legal->getInductionVars()->end() && "IV is not an induction");
+
+  auto ID = II->second;
+  assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+
+  // The step of the induction.
+  Value *Step = nullptr;
+
+  // If the induction variable has a constant integer step value, go ahead and
+  // get it now.
+  if (ID.getConstIntStepValue())
+    Step = ID.getConstIntStepValue();
+
+  // Try to create a new independent vector induction variable. If we can't
+  // create the phi node, we will splat the scalar induction variable in each
+  // loop iteration.
+  if (VF > 1 && IV->getType() == Induction->getType() && Step)
+    return createVectorIntInductionPHI(ID, Entry, TruncType);
+
+  // The scalar value to broadcast. This will be derived from the canonical
+  // induction variable.
+  Value *ScalarIV = nullptr;
+
+  // Define the scalar induction variable and step values. If we were given a
+  // truncation type, truncate the canonical induction variable and constant
+  // step. Otherwise, derive these values from the induction descriptor.
+  if (TruncType) {
+    assert(Step && "Truncation requires constant integer step");
+    auto StepInt = cast<ConstantInt>(Step)->getSExtValue();
+    ScalarIV = Builder.CreateCast(Instruction::Trunc, Induction, TruncType);
+    Step = ConstantInt::getSigned(TruncType, StepInt);
+  } else {
+    ScalarIV = Induction;
+    auto &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
+    if (IV != OldInduction) {
+      ScalarIV = Builder.CreateSExtOrTrunc(ScalarIV, IV->getType());
+      ScalarIV = ID.transform(Builder, ScalarIV, PSE.getSE(), DL);
+      ScalarIV->setName("offset.idx");
+    }
+    if (!Step) {
+      SCEVExpander Exp(*PSE.getSE(), DL, "induction");
+      Step = Exp.expandCodeFor(ID.getStep(), ID.getStep()->getType(),
+                               &*Builder.GetInsertPoint());
+    }
+  }
+
+  // Finally, splat the scalar induction variable, and build the necessary step
+  // vectors.
+  Value *Broadcasted = getBroadcastInstrs(ScalarIV);
+  for (unsigned Part = 0; Part < UF; ++Part)
+    Entry[Part] = getStepVector(Broadcasted, VF * Part, Step);
 }
 
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
@@ -4216,30 +4261,8 @@ void InnerLoopVectorizer::widenPHIInstruction(
   switch (II.getKind()) {
   case InductionDescriptor::IK_NoInduction:
     llvm_unreachable("Unknown induction");
-  case InductionDescriptor::IK_IntInduction: {
-    assert(P->getType() == II.getStartValue()->getType() && "Types must match");
-    if (VF == 1 || P->getType() != Induction->getType() ||
-        !II.getConstIntStepValue()) {
-      Value *V = Induction;
-      // Handle other induction variables that are now based on the
-      // canonical one.
-      if (P != OldInduction) {
-        V = Builder.CreateSExtOrTrunc(Induction, P->getType());
-        V = II.transform(Builder, V, PSE.getSE(), DL);
-        V->setName("offset.idx");
-      }
-      Value *Broadcasted = getBroadcastInstrs(V);
-      // After broadcasting the induction variable we need to make the vector
-      // consecutive by adding 0, 1, 2, etc.
-      for (unsigned part = 0; part < UF; ++part)
-        Entry[part] = getStepVector(Broadcasted, VF * part, II.getStep());
-    } else {
-      // Instead of re-creating the vector IV by splatting the scalar IV
-      // in each iteration, we can make a new independent vector IV.
-      widenInductionVariable(II, Entry);
-    }
-    return;
-  }
+  case InductionDescriptor::IK_IntInduction:
+    return widenIntInduction(P, Entry);
   case InductionDescriptor::IK_PtrInduction:
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
@@ -4400,35 +4423,20 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
     case Instruction::BitCast: {
       CastInst *CI = dyn_cast<CastInst>(it);
       setDebugLocFromInst(Builder, &*it);
-      /// Optimize the special case where the source is a constant integer
-      /// induction variable. Notice that we can only optimize the 'trunc' case
-      /// because: a. FP conversions lose precision, b. sext/zext may wrap,
-      /// c. other casts depend on pointer size.
 
-      if (CI->getOperand(0) == OldInduction &&
-          it->getOpcode() == Instruction::Trunc) {
-        InductionDescriptor II =
-            Legal->getInductionVars()->lookup(OldInduction);
-        if (auto StepValue = II.getConstIntStepValue()) {
-          IntegerType *TruncType = cast<IntegerType>(CI->getType());
-          if (VF == 1) {
-            StepValue =
-                ConstantInt::getSigned(TruncType, StepValue->getSExtValue());
-            Value *ScalarCast =
-                Builder.CreateCast(CI->getOpcode(), Induction, CI->getType());
-            Value *Broadcasted = getBroadcastInstrs(ScalarCast);
-            for (unsigned Part = 0; Part < UF; ++Part)
-              Entry[Part] = getStepVector(Broadcasted, VF * Part, StepValue);
-          } else {
-            // Truncating a vector induction variable on each iteration
-            // may be expensive. Instead, truncate the initial value, and create
-            // a new, truncated, vector IV based on that.
-            widenInductionVariable(II, Entry, TruncType);
-          }
-          addMetadata(Entry, &*it);
-          break;
-        }
+      // Optimize the special case where the source is a constant integer
+      // induction variable. Notice that we can only optimize the 'trunc' case
+      // because (a) FP conversions lose precision, (b) sext/zext may wrap, and
+      // (c) other casts depend on pointer size.
+      auto ID = Legal->getInductionVars()->lookup(OldInduction);
+      if (isa<TruncInst>(CI) && CI->getOperand(0) == OldInduction &&
+          ID.getConstIntStepValue()) {
+        auto *TruncType = cast<IntegerType>(CI->getType());
+        widenIntInduction(OldInduction, Entry, TruncType);
+        addMetadata(Entry, &*it);
+        break;
       }
+
       /// Vectorize casts.
       Type *DestTy =
           (VF == 1) ? CI->getType() : VectorType::get(CI->getType(), VF);
@@ -6594,15 +6602,6 @@ void InnerLoopUnroller::vectorizeMemoryInstruction(Instruction *Instr) {
 Value *InnerLoopUnroller::reverseVector(Value *Vec) { return Vec; }
 
 Value *InnerLoopUnroller::getBroadcastInstrs(Value *V) { return V; }
-
-Value *InnerLoopUnroller::getStepVector(Value *Val, int StartIdx,
-                                        const SCEV *StepSCEV) {
-  const DataLayout &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
-  SCEVExpander Exp(*PSE.getSE(), DL, "induction");
-  Value *StepValue = Exp.expandCodeFor(StepSCEV, StepSCEV->getType(),
-                                       &*Builder.GetInsertPoint());
-  return getStepVector(Val, StartIdx, StepValue);
-}
 
 Value *InnerLoopUnroller::getStepVector(Value *Val, int StartIdx, Value *Step) {
   // When unrolling and the VF is 1, we only need to add a simple scalar.

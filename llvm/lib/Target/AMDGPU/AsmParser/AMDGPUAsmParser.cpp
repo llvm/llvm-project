@@ -1107,12 +1107,6 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
     return Res;
   }
 
-  AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
-  if (Op.isImm() && Op.Imm.IsFPImm) {
-    Error(Parser.getTok().getLoc(), "floating point operands not allowed with sext() modifier");
-    return MatchOperand_ParseFail;
-  }
-
   AMDGPUOperand::Modifiers Mods = {false, false, false};
   if (Sext) {
     if (getLexer().isNot(AsmToken::RParen)) {
@@ -1124,6 +1118,7 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
   }
   
   if (Mods.hasIntModifiers()) {
+    AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     Op.setModifiers(Mods);
   }
   return MatchOperand_Success;

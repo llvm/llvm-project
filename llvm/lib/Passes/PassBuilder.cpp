@@ -24,7 +24,8 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/CFLAliasAnalysis.h"
+#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
+#include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DemandedBits.h"
@@ -692,7 +693,8 @@ bool PassBuilder::parsePassPipeline(ModulePassManager &MPM,
                                 DebugLogging) ||
         !PipelineText.empty())
       return false;
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM), DebugLogging));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM), DebugLogging));
     return true;
   }
 

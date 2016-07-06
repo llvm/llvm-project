@@ -44,6 +44,7 @@ public:
   enum RecTyKind {
     BitRecTyKind,
     BitsRecTyKind,
+    CodeRecTyKind,
     IntRecTyKind,
     StringRecTyKind,
     ListRecTyKind,
@@ -116,6 +117,22 @@ public:
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
 };
 
+/// CodeRecTy - 'code' - Represent a code fragment
+///
+class CodeRecTy : public RecTy {
+  static CodeRecTy Shared;
+  CodeRecTy() : RecTy(CodeRecTyKind) {}
+
+public:
+  static bool classof(const RecTy *RT) {
+    return RT->getRecTyKind() == CodeRecTyKind;
+  }
+
+  static CodeRecTy *get() { return &Shared; }
+
+  std::string getAsString() const override { return "code"; }
+};
+
 /// IntRecTy - 'int' - Represent an integer value of no particular size
 ///
 class IntRecTy : public RecTy {
@@ -142,7 +159,8 @@ class StringRecTy : public RecTy {
 
 public:
   static bool classof(const RecTy *RT) {
-    return RT->getRecTyKind() == StringRecTyKind;
+    return RT->getRecTyKind() == StringRecTyKind ||
+           RT->getRecTyKind() == CodeRecTyKind;
   }
 
   static StringRecTy *get() { return &Shared; }
@@ -237,6 +255,7 @@ protected:
     IK_BitInit,
     IK_FirstTypedInit,
     IK_BitsInit,
+    IK_CodeInit,
     IK_DagInit,
     IK_DefInit,
     IK_FieldInit,
@@ -556,7 +575,7 @@ class StringInit : public TypedInit {
   std::string Value;
 
   explicit StringInit(StringRef V)
-    : TypedInit(IK_StringInit, StringRecTy::get()), Value(V) {}
+      : TypedInit(IK_StringInit, StringRecTy::get()), Value(V) {}
 
   StringInit(const StringInit &Other) = delete;
   StringInit &operator=(const StringInit &Other) = delete;
@@ -572,6 +591,46 @@ public:
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   std::string getAsString() const override { return "\"" + Value + "\""; }
+
+  std::string getAsUnquotedString() const override { return Value; }
+
+  /// resolveListElementReference - This method is used to implement
+  /// VarListElementInit::resolveReferences.  If the list element is resolvable
+  /// now, we return the resolved value, otherwise we return null.
+  Init *resolveListElementReference(Record &R, const RecordVal *RV,
+                                    unsigned Elt) const override {
+    llvm_unreachable("Illegal element reference off string");
+  }
+
+  Init *getBit(unsigned Bit) const override {
+    llvm_unreachable("Illegal bit reference off string");
+  }
+};
+
+class CodeInit : public TypedInit {
+  std::string Value;
+
+  explicit CodeInit(StringRef V)
+      : TypedInit(IK_CodeInit, static_cast<RecTy *>(CodeRecTy::get())),
+        Value(V) {}
+
+  CodeInit(const StringInit &Other) = delete;
+  CodeInit &operator=(const StringInit &Other) = delete;
+
+public:
+  static bool classof(const Init *I) {
+    return I->getKind() == IK_CodeInit;
+  }
+  static CodeInit *get(StringRef);
+
+  const std::string &getValue() const { return Value; }
+
+  Init *convertInitializerTo(RecTy *Ty) const override;
+
+  std::string getAsString() const override {
+    return "[{" + Value + "}]";
+  }
+
   std::string getAsUnquotedString() const override { return Value; }
 
   /// resolveListElementReference - This method is used to implement

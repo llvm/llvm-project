@@ -1695,6 +1695,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
       break;
     case MCOI::OPERAND_IMMEDIATE:
+    case AMDGPU::OPERAND_KIMM32:
       // Check if this operand is an immediate.
       // FrameIndex operands will be replaced by immediates, so they are
       // allowed.
@@ -1731,6 +1732,10 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     const int OpIndices[] = { Src0Idx, Src1Idx, Src2Idx };
 
     unsigned ConstantBusCount = 0;
+
+    if (AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::imm) != -1)
+      ++ConstantBusCount;
+
     unsigned SGPRUsed = findImplicitSGPRRead(MI);
     if (SGPRUsed != AMDGPU::NoRegister)
       ++ConstantBusCount;
@@ -2020,9 +2025,12 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
       if (i == OpIdx)
         continue;
       const MachineOperand &Op = MI.getOperand(i);
-      if (Op.isReg() &&
-          (Op.getReg() != SGPRUsed.Reg || Op.getSubReg() != SGPRUsed.SubReg) &&
-          usesConstantBus(MRI, Op, getOpSize(MI, i))) {
+      if (Op.isReg()) {
+        if ((Op.getReg() != SGPRUsed.Reg || Op.getSubReg() != SGPRUsed.SubReg) &&
+            usesConstantBus(MRI, Op, getOpSize(MI, i))) {
+          return false;
+        }
+      } else if (InstDesc.OpInfo[i].OperandType == AMDGPU::OPERAND_KIMM32) {
         return false;
       }
     }

@@ -923,10 +923,7 @@ def psbhint_op : Operand<i32> {
     // "psb" is an alias to "hint" only for certain values of CRm:Op2 fields.
     if (!MCOp.isImm())
       return false;
-    bool ValidNamed;
-    (void)AArch64PSBHint::PSBHintMapper().toString(MCOp.getImm(),
-      STI.getFeatureBits(), ValidNamed);
-    return ValidNamed;
+    return AArch64PSBHint::lookupPSBByEncoding(MCOp.getImm()) != nullptr;
   }];
 }
 

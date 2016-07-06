@@ -12,10 +12,11 @@
 ; GCN-NEXT: ; mask branch [[UNREACHABLE_BB:BB[0-9]+_[0-9]+]]
 
 ; GCN: [[RET_BB]]:
-; GCN-NEXT: ; return
+; GCN-NEXT: s_branch [[FINAL_BB:BB[0-9]+_[0-9]+]]
 
 ; GCN-NEXT: [[UNREACHABLE_BB]]:
 ; GCN-NEXT: s_or_b64 exec, exec, [[XOR_EXEC]]
+; GCN-NEXT: [[FINAL_BB]]:
 ; GCN-NEXT: .Lfunc_end0
 define amdgpu_ps <{ i32, i32, i32, i32, i32, i32, i32, i32, i32, float, float, float, float, float, float, float, float, float, float, float, float, float, float }> @main([9 x <16 x i8>] addrspace(2)* byval, [17 x <16 x i8>] addrspace(2)* byval, [17 x <8 x i32>] addrspace(2)* byval, i32 addrspace(2)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, i32, i32, float, i32) #0 {
 main_body:

@@ -132,6 +132,12 @@ include "AArch64InstrInfo.td"
 def AArch64InstrInfo : InstrInfo;
 
 //===----------------------------------------------------------------------===//
+// Named operands for MRS/MSR/TLBI/...
+//===----------------------------------------------------------------------===//
+
+include "AArch64SystemOperands.td"
+
+//===----------------------------------------------------------------------===//
 // AArch64 Processors supported.
 //
 include "AArch64SchedA53.td"

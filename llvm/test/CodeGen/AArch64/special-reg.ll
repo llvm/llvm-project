@@ -35,7 +35,7 @@ entry:
 define void @write_daifset() nounwind {
 entry:
 ; CHECK-LABEL: write_daifset:
-; CHECK: msr DAIFSET, #2
+; CHECK: msr DAIFSet, #2
   call void @llvm.write_register.i64(metadata !2, i64 2)
   ret void
 }

@@ -12,10 +12,6 @@ N: Joe Abbey
 E: jabbey@arxan.com
 D: LLVM Bitcode (lib/Bitcode/* include/llvm/Bitcode/*)
 
-N: Rafael Avila de Espindola
-E: rafael.espindola@gmail.com
-D: Gold plugin (tools/gold/*)
-
 N: Justin Bogner
 E: mail@justinbogner.com
 D: InstrProfiling and related parts of ProfileData
@@ -89,6 +85,10 @@ D: NVPTX Target (lib/Target/NVPTX/*)
 N: Lang Hames
 E: lhames@gmail.com
 D: MCJIT, RuntimeDyld and JIT event listeners, Orcish Warchief
+
+N: Teresa Johnson
+E: tejohnson@google.com
+D: Gold plugin (tools/gold/*)
 
 N: Galina Kistanova
 E: gkistanova@gmail.com

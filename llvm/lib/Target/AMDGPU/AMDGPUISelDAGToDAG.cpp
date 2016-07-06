@@ -73,17 +73,7 @@ private:
   bool FoldOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
   bool FoldDotOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
 
-  static bool checkType(const Value *ptr, unsigned int addrspace);
-
-  static bool isGlobalStore(const MemSDNode *N);
-  static bool isFlatStore(const MemSDNode *N);
-  static bool isLocalStore(const StoreSDNode *N);
-
   bool isConstantLoad(const MemSDNode *N, int cbID) const;
-  bool isGlobalLoad(const MemSDNode *N) const;
-  bool isFlatLoad(const MemSDNode *N) const;
-  bool isLocalLoad(const LoadSDNode *N) const;
-
   bool isUniformBr(const SDNode *N) const;
 
   SDNode *glueCopyToM0(SDNode *N) const;
@@ -227,8 +217,7 @@ const TargetRegisterClass *AMDGPUDAGToDAGISel::getOperandRegClass(SDNode *N,
 
 SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N) const {
   if (Subtarget->getGeneration() < AMDGPUSubtarget::SOUTHERN_ISLANDS ||
-      !checkType(cast<MemSDNode>(N)->getMemOperand()->getValue(),
-                 AMDGPUAS::LOCAL_ADDRESS))
+      cast<MemSDNode>(N)->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS)
     return N;
 
   const SITargetLowering& Lowering =
@@ -492,55 +481,13 @@ void AMDGPUDAGToDAGISel::Select(SDNode *N) {
   SelectCode(N);
 }
 
-bool AMDGPUDAGToDAGISel::checkType(const Value *Ptr, unsigned AS) {
-  assert(AS != 0 && "Use checkPrivateAddress instead.");
-  if (!Ptr)
-    return false;
-
-  return Ptr->getType()->getPointerAddressSpace() == AS;
-}
-
-bool AMDGPUDAGToDAGISel::isGlobalStore(const MemSDNode *N) {
-  if (!N->writeMem())
-    return false;
-  return checkType(N->getMemOperand()->getValue(), AMDGPUAS::GLOBAL_ADDRESS);
-}
-
-bool AMDGPUDAGToDAGISel::isLocalStore(const StoreSDNode *N) {
-  return checkType(N->getMemOperand()->getValue(), AMDGPUAS::LOCAL_ADDRESS);
-}
-
-bool AMDGPUDAGToDAGISel::isFlatStore(const MemSDNode *N) {
-  if (!N->writeMem())
-    return false;
-  return checkType(N->getMemOperand()->getValue(), AMDGPUAS::FLAT_ADDRESS);
-}
-
 bool AMDGPUDAGToDAGISel::isConstantLoad(const MemSDNode *N, int CbId) const {
   if (!N->readMem())
     return false;
-  const Value *MemVal = N->getMemOperand()->getValue();
   if (CbId == -1)
-    return checkType(MemVal, AMDGPUAS::CONSTANT_ADDRESS);
+    return N->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
 
-  return checkType(MemVal, AMDGPUAS::CONSTANT_BUFFER_0 + CbId);
-}
-
-bool AMDGPUDAGToDAGISel::isGlobalLoad(const MemSDNode *N) const {
-  if (!N->readMem())
-    return false;
-
-  return checkType(N->getMemOperand()->getValue(), AMDGPUAS::GLOBAL_ADDRESS);
-}
-
-bool AMDGPUDAGToDAGISel::isLocalLoad(const  LoadSDNode *N) const {
-  return checkType(N->getMemOperand()->getValue(), AMDGPUAS::LOCAL_ADDRESS);
-}
-
-bool AMDGPUDAGToDAGISel::isFlatLoad(const MemSDNode *N) const {
-  if (!N->readMem())
-    return false;
-  return checkType(N->getMemOperand()->getValue(), AMDGPUAS::FLAT_ADDRESS);
+  return N->getAddressSpace() == AMDGPUAS::CONSTANT_BUFFER_0 + CbId;
 }
 
 bool AMDGPUDAGToDAGISel::isUniformBr(const SDNode *N) const {

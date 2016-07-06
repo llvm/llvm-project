@@ -982,7 +982,7 @@ void ARMLoadStoreOpt::FormCandidates(const MemOpQueue &MemOps) {
     bool CanMergeToLSMulti = true;
     // On swift vldm/vstm starting with an odd register number as that needs
     // more uops than single vldrs.
-    if (STI->isSwift() && !isNotVFP && (PRegNum % 2) == 1)
+    if (STI->hasSlowOddRegister() && !isNotVFP && (PRegNum % 2) == 1)
       CanMergeToLSMulti = false;
 
     // LDRD/STRD do not allow SP/PC. LDM/STM do not support it or have it

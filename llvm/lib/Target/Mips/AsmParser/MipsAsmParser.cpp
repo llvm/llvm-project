@@ -583,7 +583,6 @@ private:
   enum KindTy {
     k_Immediate,     /// An immediate (possibly involving symbol references)
     k_Memory,        /// Base + Offset Memory Address
-    k_PhysRegister,  /// A physical register from the Mips namespace
     k_RegisterIndex, /// A register index in one or more RegKind.
     k_Token,         /// A simple token
     k_RegList,       /// A physical register list
@@ -601,10 +600,6 @@ private:
   struct Token {
     const char *Data;
     unsigned Length;
-  };
-
-  struct PhysRegOp {
-    unsigned Num; /// Register Number
   };
 
   struct RegIdxOp {
@@ -628,7 +623,6 @@ private:
 
   union {
     struct Token Tok;
-    struct PhysRegOp PhysReg;
     struct RegIdxOp RegIdx;
     struct ImmOp Imm;
     struct MemOp Mem;
@@ -1022,12 +1016,9 @@ public:
   }
 
   bool isReg() const override {
-    // As a special case until we sort out the definition of div/divu, pretend
-    // that $0/$zero are k_PhysRegister so that MCK_ZERO works correctly.
-    if (isGPRAsmReg() && RegIdx.Index == 0)
-      return true;
-
-    return Kind == k_PhysRegister;
+    // As a special case until we sort out the definition of div/divu, accept
+    // $0/$zero here so that MCK_ZERO works correctly.
+    return isGPRAsmReg() && RegIdx.Index == 0;
   }
   bool isRegIdx() const { return Kind == k_RegisterIndex; }
   bool isImm() const override { return Kind == k_Immediate; }
@@ -1173,14 +1164,14 @@ public:
   }
 
   unsigned getReg() const override {
-    // As a special case until we sort out the definition of div/divu, pretend
-    // that $0/$zero are k_PhysRegister so that MCK_ZERO works correctly.
+    // As a special case until we sort out the definition of div/divu, accept
+    // $0/$zero here so that MCK_ZERO works correctly.
     if (Kind == k_RegisterIndex && RegIdx.Index == 0 &&
         RegIdx.Kind & RegKind_GPR)
       return getGPR32Reg(); // FIXME: GPR64 too
 
-    assert(Kind == k_PhysRegister && "Invalid access!");
-    return PhysReg.Num;
+    llvm_unreachable("Invalid access!");
+    return 0;
   }
 
   const MCExpr *getImm() const {
@@ -1408,7 +1399,6 @@ public:
       break;
     case k_RegList:
       delete RegList.List;
-    case k_PhysRegister:
     case k_RegisterIndex:
     case k_Token:
     case k_RegPair:
@@ -1429,9 +1419,6 @@ public:
       OS << ", ";
       OS << *Mem.Off;
       OS << ">";
-      break;
-    case k_PhysRegister:
-      OS << "PhysReg<" << PhysReg.Num << ">";
       break;
     case k_RegisterIndex:
       OS << "RegIdx<" << RegIdx.Index << ":" << RegIdx.Kind << ">";

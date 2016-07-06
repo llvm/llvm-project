@@ -672,10 +672,11 @@ int isl_space_find_dim_by_name(__isl_keep isl_space *space,
 
 	offset = isl_space_offset(space, type);
 	n = isl_space_dim(space, type);
-	for (i = 0; i < n && offset + i < space->n_id; ++i)
-		if (space->ids[offset + i]->name &&
-		    !strcmp(space->ids[offset + i]->name, name))
+	for (i = 0; i < n && offset + i < space->n_id; ++i) {
+		isl_id *id = get_id(space, type, i);
+		if (id && id->name && !strcmp(id->name, name))
 			return i;
+	}
 
 	return -1;
 }
@@ -829,34 +830,34 @@ int isl_space_tuple_match(__isl_keep isl_space *space1, enum isl_dim_type type1,
 	return isl_space_tuple_is_equal(space1, type1, space2, type2);
 }
 
-static int match(__isl_keep isl_space *dim1, enum isl_dim_type dim1_type,
-	__isl_keep isl_space *dim2, enum isl_dim_type dim2_type)
+static int match(__isl_keep isl_space *space1, enum isl_dim_type type1,
+	__isl_keep isl_space *space2, enum isl_dim_type type2)
 {
 	int i;
 
-	if (dim1 == dim2 && dim1_type == dim2_type)
+	if (space1 == space2 && type1 == type2)
 		return 1;
 
-	if (!isl_space_tuple_is_equal(dim1, dim1_type, dim2, dim2_type))
+	if (!isl_space_tuple_is_equal(space1, type1, space2, type2))
 		return 0;
 
-	if (!dim1->ids && !dim2->ids)
+	if (!space1->ids && !space2->ids)
 		return 1;
 
-	for (i = 0; i < n(dim1, dim1_type); ++i) {
-		if (get_id(dim1, dim1_type, i) != get_id(dim2, dim2_type, i))
+	for (i = 0; i < n(space1, type1); ++i) {
+		if (get_id(space1, type1, i) != get_id(space2, type2, i))
 			return 0;
 	}
 	return 1;
 }
 
-int isl_space_match(__isl_keep isl_space *dim1, enum isl_dim_type dim1_type,
-	__isl_keep isl_space *dim2, enum isl_dim_type dim2_type)
+isl_bool isl_space_match(__isl_keep isl_space *space1, enum isl_dim_type type1,
+	__isl_keep isl_space *space2, enum isl_dim_type type2)
 {
-	if (!dim1 || !dim2)
-		return -1;
+	if (!space1 || !space2)
+		return isl_bool_error;
 
-	return match(dim1, dim1_type, dim2, dim2_type);
+	return match(space1, type1, space2, type2);
 }
 
 static void get_ids(__isl_keep isl_space *dim, enum isl_dim_type type,

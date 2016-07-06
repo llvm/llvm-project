@@ -235,6 +235,8 @@ enum isl_ineq_type isl_tab_ineq_type(struct isl_tab *tab, isl_int *ineq);
 
 struct isl_tab_undo *isl_tab_snap(struct isl_tab *tab);
 int isl_tab_rollback(struct isl_tab *tab, struct isl_tab_undo *snap) WARN_UNUSED;
+isl_bool isl_tab_need_undo(struct isl_tab *tab);
+void isl_tab_clear_undo(struct isl_tab *tab);
 
 int isl_tab_relax(struct isl_tab *tab, int con) WARN_UNUSED;
 int isl_tab_select_facet(struct isl_tab *tab, int con) WARN_UNUSED;
@@ -242,12 +244,18 @@ int isl_tab_unrestrict(struct isl_tab *tab, int con) WARN_UNUSED;
 
 void isl_tab_dump(__isl_keep struct isl_tab *tab);
 
-struct isl_map *isl_tab_basic_map_partial_lexopt(
-		struct isl_basic_map *bmap, struct isl_basic_set *dom,
-		struct isl_set **empty, int max);
-__isl_give isl_pw_multi_aff *isl_basic_map_partial_lexopt_pw_multi_aff(
+/* Compute maximum instead of minimum. */
+#define ISL_OPT_MAX		(1 << 0)
+/* Compute full instead of partial optimum; also, domain argument is NULL. */
+#define ISL_OPT_FULL		(1 << 1)
+/* Result should be free of (unknown) quantified variables. */
+#define ISL_OPT_QE		(1 << 2)
+__isl_give isl_map *isl_tab_basic_map_partial_lexopt(
 	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
-	__isl_give isl_set **empty, int max);
+	__isl_give isl_set **empty, unsigned flags);
+__isl_give isl_pw_multi_aff *isl_tab_basic_map_partial_lexopt_pw_multi_aff(
+	__isl_take isl_basic_map *bmap, __isl_take isl_basic_set *dom,
+	__isl_give isl_set **empty, unsigned flags);
 
 /* An isl_region represents a sequence of consecutive variables.
  * pos is the location (starting at 0) of the first variable in the sequence.

@@ -50,7 +50,12 @@ namespace AMDGPU {
     /// Operand with register or 32-bit immediate
     OPERAND_REG_IMM32 = MCOI::OPERAND_FIRST_TARGET,
     /// Operand with register or inline constant
-    OPERAND_REG_INLINE_C
+    OPERAND_REG_INLINE_C,
+
+    /// Operand with 32-bit immediate that uses the constant bus. The standard
+    /// OPERAND_IMMEDIATE should be used for special immediates such as source
+    /// modifiers.
+    OPERAND_KIMM32
   };
 }
 }

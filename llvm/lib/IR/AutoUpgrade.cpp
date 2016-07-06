@@ -224,6 +224,8 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx2.pbroadcast") ||
          Name.startswith("avx.vpermil.") ||
          Name.startswith("sse2.pshuf") ||
+         Name.startswith("avx512.pbroadcast") ||
+         Name.startswith("avx512.mask.broadcast.s") ||
          Name.startswith("avx512.mask.movddup") ||
          Name.startswith("avx512.mask.movshdup") ||
          Name.startswith("avx512.mask.movsldup") ||
@@ -909,13 +911,19 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
                                         Idxs);
     } else if (IsX86 && (Name.startswith("avx2.pbroadcast") ||
-                         Name.startswith("avx2.vbroadcast"))) {
+                         Name.startswith("avx2.vbroadcast") ||
+                         Name.startswith("avx512.pbroadcast") ||
+                         Name.startswith("avx512.mask.broadcast.s"))) {
       // Replace vp?broadcasts with a vector shuffle.
       Value *Op = CI->getArgOperand(0);
       unsigned NumElts = CI->getType()->getVectorNumElements();
       Type *MaskTy = VectorType::get(Type::getInt32Ty(C), NumElts);
       Rep = Builder.CreateShuffleVector(Op, UndefValue::get(Op->getType()),
                                         Constant::getNullValue(MaskTy));
+
+      if (CI->getNumArgOperands() == 3)
+        Rep = EmitX86Select(Builder, CI->getArgOperand(2), Rep,
+                            CI->getArgOperand(1));
     } else if (IsX86 && Name.startswith("avx512.mask.palignr.")) {
       Rep = UpgradeX86PALIGNRIntrinsics(Builder, C, CI->getArgOperand(0),
                                         CI->getArgOperand(1),

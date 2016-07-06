@@ -1078,7 +1078,7 @@ void AsmWriterEmitter::EmitPrintAliasInstruction(raw_ostream &O) {
 
     for (unsigned i = 0; i < MCOpPredicates.size(); ++i) {
       Init *MCOpPred = MCOpPredicates[i]->getValueInit("MCOperandPredicate");
-      if (StringInit *SI = dyn_cast<StringInit>(MCOpPred)) {
+      if (CodeInit *SI = dyn_cast<CodeInit>(MCOpPred)) {
         O << "  case " << i + 1 << ": {\n"
           << SI->getValue() << "\n"
           << "    }\n";
