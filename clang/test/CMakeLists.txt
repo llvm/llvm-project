@@ -93,6 +93,11 @@ add_lit_testsuite(check-clang "Running the Clang regression tests"
   )
 set_target_properties(check-clang PROPERTIES FOLDER "Clang tests")
 
+add_lit_testsuites(CLANG ${CMAKE_CURRENT_SOURCE_DIR}
+  PARAMS ${CLANG_TEST_PARAMS}
+  DEPENDS ${CLANG_TEST_DEPS}
+)
+
 # Add a legacy target spelling: clang-test
 add_custom_target(clang-test)
 add_dependencies(clang-test check-clang)

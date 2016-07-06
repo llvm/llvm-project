@@ -12679,10 +12679,9 @@ Decl *Sema::ActOnFriendTypeDecl(Scope *S, const DeclSpec &DS,
   // friend a member of an arbitrary specialization of your template).
 
   Decl *D;
-  if (unsigned NumTempParamLists = TempParams.size())
+  if (!TempParams.empty())
     D = FriendTemplateDecl::Create(Context, CurContext, Loc,
-                                   NumTempParamLists,
-                                   TempParams.data(),
+                                   TempParams,
                                    TSI,
                                    DS.getFriendSpecLoc());
   else

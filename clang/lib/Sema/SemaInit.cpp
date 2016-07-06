@@ -1193,8 +1193,8 @@ void InitListChecker::CheckSubElementType(const InitializedEntity &Entity,
     // Fall through for subaggregate initialization.
 
   } else {
-    assert((ElemType->isRecordType() || ElemType->isVectorType()) &&
-           "Unexpected type");
+    assert((ElemType->isRecordType() || ElemType->isVectorType() ||
+            ElemType->isClkEventT()) && "Unexpected type");
 
     // C99 6.7.8p13:
     //

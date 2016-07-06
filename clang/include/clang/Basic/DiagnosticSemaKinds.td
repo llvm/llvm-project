@@ -8035,6 +8035,20 @@ def err_opencl_builtin_to_addr_arg_num : Error<
   "invalid number of arguments to function: %0">;
 def err_opencl_builtin_to_addr_invalid_arg : Error<
   "invalid argument %0 to function: %1, expecting a generic pointer argument">;
+
+// OpenCL v2.0 s6.13.17 Enqueue kernel restrictions.
+def err_opencl_enqueue_kernel_incorrect_args : Error<
+  "illegal call to enqueue_kernel, incorrect argument types">;
+def err_opencl_enqueue_kernel_expected_type : Error<
+  "illegal call to enqueue_kernel, expected %0 argument type">;
+def err_opencl_enqueue_kernel_local_size_args : Error<
+  "mismatch in number of block parameters and local size arguments passed">;
+def err_opencl_enqueue_kernel_invalid_local_size_type : Error<
+  "local memory sizes need to be specified as uint">;
+def err_opencl_enqueue_kernel_blocks_non_local_void_args : Error<
+  "blocks used in device side enqueue are expected to have parameters of type 'local void*'">;
+def err_opencl_enqueue_kernel_blocks_no_args : Error<
+  "blocks in this form of device side enqueue call are expected to have have no parameters">;
 } // end of sema category
 
 let CategoryName = "OpenMP Issue" in {

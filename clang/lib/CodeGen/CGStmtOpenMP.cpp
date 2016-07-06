@@ -1888,6 +1888,19 @@ void CodeGenFunction::EmitOMPDistributeParallelForSimdDirective(
             cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
       });
 }
+
+void CodeGenFunction::EmitOMPDistributeSimdDirective(
+    const OMPDistributeSimdDirective &S) {
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_distribute_simd,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        OMPLoopScope PreInitScope(CGF, S);
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
 /// \brief Emit a helper variable and return corresponding lvalue.
 static LValue EmitOMPHelperVar(CodeGenFunction &CGF,
                                const DeclRefExpr *Helper) {
