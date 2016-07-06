@@ -51,5 +51,5 @@ test/crashinfo.so
 crashinfo.lock
 crashinfo.so
 
-clang
-swift
+/clang
+/swift

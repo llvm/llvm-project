@@ -12,6 +12,21 @@
 
 import Swift
 
+enum $__lldb__CollectionStatus {
+    case NotACollection
+    case CollectionOfElements
+    case CollectionOfPairs
+    case Element
+    case Pair
+    case ElementOfPair
+    
+    var isCollection: Swift.Bool {
+        get {
+            return self != .NotACollection
+        }
+    }
+}
+
 func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
     _ x_opt: Swift.Any?,
     _ mirror: Swift.Mirror,
@@ -19,7 +34,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
     _ indent: Swift.Int,
     _ maxDepth: Swift.Int,
     _ root: Swift.Bool,
-    _ childOfCollection: Swift.Bool,
+    _ parentCollectionStatus: $__lldb__CollectionStatus,
     _ refsAlreadySeen : inout Swift.Set<Swift.ObjectIdentifier>,
     _ maxItemCounter: inout Swift.Int,
     _ targetStream: inout StreamType) {
@@ -39,23 +54,23 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
                 return 0
             }
         }
-        
-        func isCollectionMirror(_ x_mirror: Swift.Mirror) -> Swift.Bool {
-            let ds = x_mirror.displayStyle ?? .`struct`
-            switch ds {
-            case .optional:
-                fallthrough
-            case .collection:
-                fallthrough
-            case .dictionary:
-                fallthrough
-            case .set:
-                return true
-            default:
-                return false
-            }
-        }
 
+        func getCollectionStatus(_ parentStatus: $__lldb__CollectionStatus,
+                                 _ this: Swift.Mirror) -> $__lldb__CollectionStatus {
+            let disposition = this.displayStyle ?? .struct
+            
+            if disposition == .collection { return .CollectionOfElements }
+            if disposition == .dictionary { return .CollectionOfPairs }
+            if disposition == .set { return .CollectionOfElements }
+            
+            if parentStatus == .CollectionOfElements { return .Element }
+            if parentStatus == .CollectionOfPairs { return .Pair }
+            
+            if parentStatus == .Pair { return .ElementOfPair }
+            
+            return .NotACollection
+        }
+    
         func stringForObject(_ x_opt: Swift.Any?,
                              _ x_mirror: Swift.Mirror,
                              _ x_mirror_count: Swift.Int) -> Swift.String? {
@@ -123,9 +138,9 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
         }
 
         func shouldPrint(_ root: Swift.Bool,
-                         _ isChildOfCollection: Swift.Bool,
+                         _ collectionStatus: $__lldb__CollectionStatus,
                          _ x: Swift.Mirror) -> Swift.Bool {
-            if root || isChildOfCollection { return true }
+            if root || collectionStatus.isCollection { return true }
             let count = Swift.Int(x.children.count)
             let sc = x.superclassMirror
             if count > 0 { return true }
@@ -135,7 +150,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
         
         
         if maxItemCounter <= 0 { return }
-        if !shouldPrint(root, childOfCollection, mirror) { return }
+        if !shouldPrint(root, parentCollectionStatus, mirror) { return }
         maxItemCounter -= 1
         
         for _ in 0..<indent { Swift.print(" ", terminator: "", to: &targetStream) }
@@ -161,7 +176,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
         
         let needColon: Swift.Bool
 
-        let isCollection: Swift.Bool = isCollectionMirror(mirror)
+        let collectionStatus = getCollectionStatus(parentCollectionStatus, mirror)
         
         if let nam = name {
             Swift.print("\(nam) ", terminator: "", to: &targetStream)
@@ -199,7 +214,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
                                           indent + 2,
                                           maxDepth - 1,
                                           false,
-                                          false,
+                                          .NotACollection,
                                           &refsAlreadySeen,
                                           &maxItemCounter,
                                           &targetStream)
@@ -228,7 +243,7 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
                 indent + 2,
                 maxDepth - 1,
                 false,
-                isCollection,
+                collectionStatus,
                 &refsAlreadySeen,
                 &maxItemCounter,
                 &targetStream)
@@ -259,7 +274,7 @@ func $__lldb__DumpForDebugger(_ x: Swift.Any) -> Swift.String {
                                   0,
                                   maxItemCounter,
                                   true,
-                                  false,
+                                  .NotACollection,
                                   &refs,
                                   &maxItemCounter,
                                   &targetStream)
