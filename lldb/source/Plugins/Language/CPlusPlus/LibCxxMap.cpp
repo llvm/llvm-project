@@ -246,7 +246,6 @@ namespace lldb_private {
             CompilerType m_element_type;
             uint32_t m_skip_size;
             size_t m_count;
-            std::map<size_t, lldb::ValueObjectSP> m_children;
             std::map<size_t, MapIterator> m_iterators;
         };
     } // namespace formatters
@@ -259,7 +258,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::LibcxxStdMapSyntheticFr
     m_element_type(),
     m_skip_size(UINT32_MAX),
     m_count(UINT32_MAX),
-    m_children(),
     m_iterators()
 {
     if (valobj_sp)
@@ -332,10 +330,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
     if (m_tree == nullptr || m_root_node == nullptr)
         return lldb::ValueObjectSP();
     
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
-
     MapIterator iterator(m_root_node, CalculateNumChildren());
     
     const bool need_to_skip = (idx > 0);
@@ -437,7 +431,7 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::GetChildAtIndex (size_t
         potential_child_sp->SetName(ConstString(name.GetData()));
     }
     m_iterators[idx] = iterator;
-    return (m_children[idx] = potential_child_sp);
+    return potential_child_sp;
 }
 
 bool
@@ -447,7 +441,6 @@ lldb_private::formatters::LibcxxStdMapSyntheticFrontEnd::Update()
     static ConstString g___begin_node_("__begin_node_");
     m_count = UINT32_MAX;
     m_tree = m_root_node = nullptr;
-    m_children.clear();
     m_iterators.clear();
     m_tree = m_backend.GetChildMemberWithName(g___tree_, true).get();
     if (!m_tree)
