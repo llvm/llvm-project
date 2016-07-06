@@ -2046,7 +2046,7 @@ DynamicLoaderMacOSXDYLD::GetThreadLocalData(const lldb::ModuleSP module_sp, cons
     if (!thread_sp || !module_sp)
         return LLDB_INVALID_ADDRESS;
 
-    std::lock_guard<std::recursive_mutex> guard(m_mutex);
+    Mutex::Locker locker(m_mutex);
 
     const uint32_t addr_size = m_process->GetAddressByteSize();
     uint8_t buf[sizeof(lldb::addr_t) * 3];
