@@ -2313,7 +2313,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPDistributeParallelForSimdDirective = 267,
 
-  CXCursor_LastStmt = CXCursor_OMPDistributeParallelForSimdDirective,
+  /** \brief OpenMP distribute simd directive.
+   */
+  CXCursor_OMPDistributeSimdDirective = 268,
+
+  CXCursor_LastStmt = CXCursor_OMPDistributeSimdDirective,
 
   /**
    * \brief Cursor that represents the translation unit itself.

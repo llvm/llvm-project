@@ -230,3 +230,4 @@ def OMPTaskLoopSimdDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForDirective : DStmt<OMPLoopDirective>;
 def OMPDistributeParallelForSimdDirective : DStmt<OMPLoopDirective>;
+def OMPDistributeSimdDirective : DStmt<OMPLoopDirective>;

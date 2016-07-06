@@ -37,32 +37,36 @@ __m512i test_mm512_maskz_conflict_epi32(__mmask16 __U, __m512i __A) {
 }
 __m512i test_mm512_lzcnt_epi32(__m512i __A) {
   // CHECK-LABEL: @test_mm512_lzcnt_epi32
-  // CHECK: @llvm.x86.avx512.mask.lzcnt.d.512
+  // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 false)
   return _mm512_lzcnt_epi32(__A); 
 }
 __m512i test_mm512_mask_lzcnt_epi32(__m512i __W, __mmask16 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_lzcnt_epi32
-  // CHECK: @llvm.x86.avx512.mask.lzcnt.d.512
+  // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 false)
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_lzcnt_epi32(__W,__U,__A); 
 }
 __m512i test_mm512_maskz_lzcnt_epi32(__mmask16 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_lzcnt_epi32
-  // CHECK: @llvm.x86.avx512.mask.lzcnt.d.512
+  // CHECK: call <16 x i32> @llvm.ctlz.v16i32(<16 x i32> %{{.*}}, i1 false)
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_lzcnt_epi32(__U,__A); 
 }
 __m512i test_mm512_lzcnt_epi64(__m512i __A) {
   // CHECK-LABEL: @test_mm512_lzcnt_epi64
-  // CHECK: @llvm.x86.avx512.mask.lzcnt.q.512
+  // CHECK: call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %{{.*}}, i1 false)
   return _mm512_lzcnt_epi64(__A); 
 }
 __m512i test_mm512_mask_lzcnt_epi64(__m512i __W, __mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_mask_lzcnt_epi64
-  // CHECK: @llvm.x86.avx512.mask.lzcnt.q.512
+  // CHECK: call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %{{.*}}, i1 false)
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_lzcnt_epi64(__W,__U,__A); 
 }
 __m512i test_mm512_maskz_lzcnt_epi64(__mmask8 __U, __m512i __A) {
   // CHECK-LABEL: @test_mm512_maskz_lzcnt_epi64
-  // CHECK: @llvm.x86.avx512.mask.lzcnt.q.512
+  // CHECK: call <8 x i64> @llvm.ctlz.v8i64(<8 x i64> %{{.*}}, i1 false)
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_lzcnt_epi64(__U,__A); 
 }
 

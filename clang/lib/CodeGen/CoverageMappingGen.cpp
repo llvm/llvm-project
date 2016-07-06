@@ -202,12 +202,6 @@ public:
     return None;
   }
 
-  /// \brief Return true if the given clang's file id has a corresponding
-  /// coverage file id.
-  bool hasExistingCoverageFileID(FileID File) const {
-    return FileIDMapping.count(File);
-  }
-
   /// \brief Gather all the regions that were skipped by the preprocessor
   /// using the constructs like #if.
   void gatherSkippedRegions() {
@@ -385,10 +379,6 @@ struct CounterCoverageMappingBuilder
 
   Counter addCounters(Counter C1, Counter C2, Counter C3) {
     return addCounters(addCounters(C1, C2), C3);
-  }
-
-  Counter addCounters(Counter C1, Counter C2, Counter C3, Counter C4) {
-    return addCounters(addCounters(C1, C2, C3), C4);
   }
 
   /// \brief Return the region counter for the given statement.

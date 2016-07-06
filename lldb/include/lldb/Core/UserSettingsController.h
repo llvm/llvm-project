@@ -88,6 +88,20 @@ public:
     lldb::OptionValuePropertiesSP
     GetSubProperty (const ExecutionContext *exe_ctx,
                     const ConstString &name);
+
+    // We sometimes need to introduce a setting to enable experimental features,
+    // but then we don't want the setting for these to cause errors when the setting
+    // goes away.  Add a sub-topic of the settings using this experimental name, and
+    // two things will happen.  One is that settings that don't find the name will not
+    // be treated as errors.  Also, if you decide to keep the settings just move them into
+    // the containing properties, and we will auto-forward the experimental settings to the
+    // real one.
+    static const char *
+    GetExperimentalSettingsName();
+    
+    static bool
+    IsSettingExperimental(const char *setting);
+
 protected:
     lldb::OptionValuePropertiesSP m_collection_sp;
 };

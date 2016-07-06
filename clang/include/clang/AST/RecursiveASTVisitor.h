@@ -2521,6 +2521,9 @@ DEF_TRAVERSE_STMT(OMPDistributeParallelForDirective,
 DEF_TRAVERSE_STMT(OMPDistributeParallelForSimdDirective,
                   { TRY_TO(TraverseOMPExecutableDirective(S)); })
 
+DEF_TRAVERSE_STMT(OMPDistributeSimdDirective,
+                  { TRY_TO(TraverseOMPExecutableDirective(S)); })
+
 // OpenMP clauses.
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseOMPClause(OMPClause *C) {

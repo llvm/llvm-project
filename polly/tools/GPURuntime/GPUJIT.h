@@ -63,7 +63,6 @@
  *   polly_initDevice(&Context, &Device);
  *   polly_getPTXModule(KernelString, &Module);
  *   polly_getPTXKernelEntry(Entry, Module, &Kernel);
- *   polly_allocateMemoryForHostAndDevice(&HostData, &DevData, MemSize);
  *   polly_setKernelParameters(Kernel, BlockWidth, BlockHeight, DevData);
  *   polly_startTimerByCudaEvent(&Start, &Stop);
  *   polly_launchKernel(Kernel, GridWidth, GridHeight);
@@ -92,9 +91,6 @@ void polly_copyFromHostToDevice(PollyGPUDevicePtr *DevData, void *HostData,
                                 int MemSize);
 void polly_copyFromDeviceToHost(void *HostData, PollyGPUDevicePtr *DevData,
                                 int MemSize);
-void polly_allocateMemoryForHostAndDevice(void **HostData,
-                                          PollyGPUDevicePtr **DevData,
-                                          int MemSize);
 void polly_setKernelParameters(PollyGPUFunction *Kernel, int BlockWidth,
                                int BlockHeight, PollyGPUDevicePtr *DevData);
 void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,

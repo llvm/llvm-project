@@ -488,7 +488,9 @@ __m128d test_mm_mask_i32gather_pd(__m128d a, double const *b, __m128i c, __m128d
 
 __m256d test_mm256_i32gather_pd(double const *b, __m128i c) {
   // CHECK-LABEL: test_mm256_i32gather_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, i8 0)
+  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x double>
+  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
+  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <4 x double>
   // CHECK: call <4 x double> @llvm.x86.avx2.gather.d.pd.256(<4 x double> undef, i8* %{{.*}}, <4 x i32> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i32gather_pd(b, c, 2);
 }
@@ -516,7 +518,9 @@ __m128 test_mm_mask_i32gather_ps(__m128 a, float const *b, __m128i c, __m128 d) 
 
 __m256 test_mm256_i32gather_ps(float const *b, __m256i c) {
   // CHECK-LABEL: test_mm256_i32gather_ps
-  // CHECK: call <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float> %{{.*}}, <8 x float> %{{.*}}, i8 0)
+  // CHECK:         [[CMP:%.*]] = fcmp oeq <8 x float>
+  // CHECK-NEXT:    [[SEXT:%.*]] = sext <8 x i1> [[CMP]] to <8 x i32>
+  // CHECK-NEXT:    [[BC:%.*]] = bitcast <8 x i32> [[SEXT]] to <8 x float>
   // CHECK: call <8 x float> @llvm.x86.avx2.gather.d.ps.256(<8 x float> undef, i8* %{{.*}}, <8 x i32> %{{.*}}, <8 x float> %{{.*}}, i8 2)
   return _mm256_i32gather_ps(b, c, 2);
 }
@@ -592,7 +596,9 @@ __m128d test_mm_mask_i64gather_pd(__m128d a, double const *b, __m128i c, __m128d
 
 __m256d test_mm256_i64gather_pd(double const *b, __m256i c) {
   // CHECK-LABEL: test_mm256_i64gather_pd
-  // CHECK: call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> %{{.*}}, <4 x double> %{{.*}}, i8 0)
+  // CHECK:         [[CMP:%.*]] = fcmp oeq <4 x double>
+  // CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> [[CMP]] to <4 x i64>
+  // CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i64> [[SEXT]] to <4 x double>
   // CHECK: call <4 x double> @llvm.x86.avx2.gather.q.pd.256(<4 x double> undef, i8* %{{.*}}, <4 x i64> %{{.*}}, <4 x double> %{{.*}}, i8 2)
   return _mm256_i64gather_pd(b, c, 2);
 }

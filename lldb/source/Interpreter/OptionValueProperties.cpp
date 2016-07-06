@@ -164,8 +164,23 @@ OptionValueProperties::GetSubValue (const ExecutionContext *exe_ctx,
             switch (sub_name[0])
             {
             case '.':
-                return value_sp->GetSubValue (exe_ctx, sub_name + 1, will_modify, error);
-            
+            {
+                lldb::OptionValueSP return_val_sp;
+                return_val_sp = value_sp->GetSubValue (exe_ctx, sub_name + 1, will_modify, error);
+                if (!return_val_sp)
+                {
+                    if (Properties::IsSettingExperimental(sub_name + 1))
+                    {
+                        size_t experimental_len = strlen(Properties::GetExperimentalSettingsName()); 
+                        if (*(sub_name + experimental_len + 1) == '.')
+                        return_val_sp = value_sp->GetSubValue(exe_ctx, sub_name + experimental_len + 2, will_modify, error);
+                        // It isn't an error if an experimental setting is not present.
+                        if (!return_val_sp)
+                            error.Clear();
+                    }
+                }
+                return return_val_sp;
+            }
             case '{':
                 // Predicate matching for predicates like
                 // "<setting-name>{<predicate>}"
