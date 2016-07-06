@@ -129,24 +129,33 @@ class CommonTypeInfo : public CommonEntityInfo {
   /// Reflects the swift_bridge attribute.
   std::string SwiftBridge;
 
+  /// The NS error domain for this type.
+  std::string NSErrorDomain;
+
 public:
   CommonTypeInfo() : CommonEntityInfo() { }
 
   const std::string &getSwiftBridge() const { return SwiftBridge; }
   void setSwiftBridge(const std::string &swiftType) { SwiftBridge = swiftType; }
 
+  const std::string &getNSErrorDomain() const { return NSErrorDomain; }
+  void setNSErrorDomain(const std::string &domain) { NSErrorDomain = domain; }
+
   friend CommonTypeInfo &operator|=(CommonTypeInfo &lhs,
                                     const CommonTypeInfo &rhs) {
     static_cast<CommonEntityInfo &>(lhs) |= rhs;
     if (lhs.SwiftBridge.empty() && !rhs.SwiftBridge.empty())
       lhs.SwiftBridge = rhs.SwiftBridge;
+    if (lhs.NSErrorDomain.empty() && !rhs.NSErrorDomain.empty())
+      lhs.NSErrorDomain = rhs.NSErrorDomain;
     return lhs;
   }
 
   friend bool operator==(const CommonTypeInfo &lhs,
                          const CommonTypeInfo &rhs) {
     return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
-      lhs.SwiftBridge == rhs.SwiftBridge;
+      lhs.SwiftBridge == rhs.SwiftBridge &&
+      lhs.NSErrorDomain == rhs.NSErrorDomain;
   }
 
   friend bool operator!=(const CommonTypeInfo &lhs,
