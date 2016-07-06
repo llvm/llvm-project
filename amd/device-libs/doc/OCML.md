@@ -1,14 +1,14 @@
 # OCML User Guide
 
-- [Introduction](#)
-  - [What Is OCML](#)
-- [Using OCML](#)
-  - [Standard Usage](#)
-  - [Customization](#)
-- [Versioning](#)
-- [Tables](#)
-- [Naming convention](#)
-- [Supported functions](#)
+* [Introduction](#introduction)
+  * [What Is OCML](#what-is-ocml)
+* [Using OCML](#using-ocml)
+  * [Standard Usage](#standard-usage)
+  * [Customization](#customization)
+* [Versioning](#versioning)
+* [Tables](#tables)
+* [Naming convention](#naming-convention)
+* [Supported functions](#supported-functions)
 
 
 ## Introduction
