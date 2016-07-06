@@ -7,7 +7,7 @@ This repository contains the following libraries:
 | **Name** | **Comments** | **Dependencies** |
 | --- | --- | --- |
 | llvm | Utility functions | |
-| ocml | Open Compute Math library. | llvm |
+| ocml | Open Compute Math library ([documentation](doc/OCML.md)) | llvm |
 | ockl | Open Compute Kernel library. | llvm |
 | opencl | OpenCL built-in library | ocml, ockl |
 
