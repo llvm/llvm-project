@@ -17,36 +17,40 @@
 using namespace lldb;
 using namespace lldb_private;
 
-CompileUnit::CompileUnit (const lldb::ModuleSP &module_sp, void *user_data, const char *pathname, const lldb::user_id_t cu_sym_id, lldb::LanguageType language, bool is_optimized) :
-    ModuleChild(module_sp),
-    FileSpec (pathname, false),
-    UserID(cu_sym_id),
-    m_user_data (user_data),
-    m_language (language),
-    m_flags (0),
-    m_functions (),
-    m_support_files (),
-    m_line_table_ap (),
-    m_variables(),
-    m_is_optimized (is_optimized)
+CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data, const char *pathname,
+                         const lldb::user_id_t cu_sym_id, lldb::LanguageType language,
+                         lldb_private::LazyBool is_optimized)
+    : ModuleChild(module_sp),
+      FileSpec(pathname, false),
+      UserID(cu_sym_id),
+      m_user_data(user_data),
+      m_language(language),
+      m_flags(0),
+      m_functions(),
+      m_support_files(),
+      m_line_table_ap(),
+      m_variables(),
+      m_is_optimized(is_optimized)
 {
     if (language != eLanguageTypeUnknown)
         m_flags.Set(flagsParsedLanguage);
     assert(module_sp);
 }
 
-CompileUnit::CompileUnit (const lldb::ModuleSP &module_sp, void *user_data, const FileSpec &fspec, const lldb::user_id_t cu_sym_id, lldb::LanguageType language, bool is_optimized) :
-    ModuleChild(module_sp),
-    FileSpec (fspec),
-    UserID(cu_sym_id),
-    m_user_data (user_data),
-    m_language (language),
-    m_flags (0),
-    m_functions (),
-    m_support_files (),
-    m_line_table_ap (),
-    m_variables(),
-    m_is_optimized (is_optimized)
+CompileUnit::CompileUnit(const lldb::ModuleSP &module_sp, void *user_data, const FileSpec &fspec,
+                         const lldb::user_id_t cu_sym_id, lldb::LanguageType language,
+                         lldb_private::LazyBool is_optimized)
+    : ModuleChild(module_sp),
+      FileSpec(fspec),
+      UserID(cu_sym_id),
+      m_user_data(user_data),
+      m_language(language),
+      m_flags(0),
+      m_functions(),
+      m_support_files(),
+      m_line_table_ap(),
+      m_variables(),
+      m_is_optimized(is_optimized)
 {
     if (language != eLanguageTypeUnknown)
         m_flags.Set(flagsParsedLanguage);
@@ -468,6 +472,17 @@ CompileUnit::ResolveSymbolContext
 bool
 CompileUnit::GetIsOptimized ()
 {
+    if (m_is_optimized == eLazyBoolCalculate)
+    {
+        m_is_optimized = eLazyBoolNo;
+        if (SymbolVendor *symbol_vendor = GetModule()->GetSymbolVendor())
+        {
+            SymbolContext sc;
+            CalculateSymbolContext(&sc);
+            if (symbol_vendor->ParseCompileUnitIsOptimized(sc))
+                m_is_optimized = eLazyBoolYes;
+        }
+    }
     return m_is_optimized;
 }
 

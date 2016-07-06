@@ -431,6 +431,7 @@ struct NameSearchContext {
         bool function_with_type_info    : 1;
         bool function                   : 1;
         bool local_vars_nsp             : 1;
+        bool type                       : 1;
     } m_found;
     
     //------------------------------------------------------------------

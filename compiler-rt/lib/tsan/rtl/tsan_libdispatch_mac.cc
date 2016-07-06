@@ -219,7 +219,7 @@ TSAN_INTERCEPTOR(void, dispatch_after_f, dispatch_time_t when,
 #undef dispatch_once
 TSAN_INTERCEPTOR(void, dispatch_once, dispatch_once_t *predicate,
                  dispatch_block_t block) {
-  SCOPED_TSAN_INTERCEPTOR(dispatch_once, predicate, block);
+  SCOPED_INTERCEPTOR_RAW(dispatch_once, predicate, block);
   atomic_uint32_t *a = reinterpret_cast<atomic_uint32_t *>(predicate);
   u32 v = atomic_load(a, memory_order_acquire);
   if (v == 0 &&
@@ -241,7 +241,7 @@ TSAN_INTERCEPTOR(void, dispatch_once, dispatch_once_t *predicate,
 #undef dispatch_once_f
 TSAN_INTERCEPTOR(void, dispatch_once_f, dispatch_once_t *predicate,
                  void *context, dispatch_function_t function) {
-  SCOPED_TSAN_INTERCEPTOR(dispatch_once_f, predicate, context, function);
+  SCOPED_INTERCEPTOR_RAW(dispatch_once_f, predicate, context, function);
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
   WRAP(dispatch_once)(predicate, ^(void) {
     function(context);
@@ -274,6 +274,7 @@ TSAN_INTERCEPTOR(long_t, dispatch_group_wait, dispatch_group_t group,
 
 TSAN_INTERCEPTOR(void, dispatch_group_leave, dispatch_group_t group) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_group_leave, group);
+  // Acquired in the group noticifaction callback in dispatch_group_notify[_f].
   Release(thr, pc, (uptr)group);
   REAL(dispatch_group_leave)(group);
 }
@@ -308,25 +309,32 @@ TSAN_INTERCEPTOR(void, dispatch_group_async_f, dispatch_group_t group,
 TSAN_INTERCEPTOR(void, dispatch_group_notify, dispatch_group_t group,
                  dispatch_queue_t q, dispatch_block_t block) {
   SCOPED_TSAN_INTERCEPTOR(dispatch_group_notify, group, q, block);
+
+  // To make sure the group is still available in the callback (otherwise
+  // it can be already destroyed).  Will be released in the callback.
+  dispatch_retain(group);
+
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
-  dispatch_block_t heap_block = Block_copy(block);
+  dispatch_block_t heap_block = Block_copy(^(void) {
+    {
+      SCOPED_INTERCEPTOR_RAW(dispatch_read_callback);
+      // Released when leaving the group (dispatch_group_leave).
+      Acquire(thr, pc, (uptr)group);
+    }
+    dispatch_release(group);
+    block();
+  });
   SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
   tsan_block_context_t *new_context =
       AllocContext(thr, pc, q, heap_block, &invoke_and_release_block);
   new_context->is_barrier_block = true;
   Release(thr, pc, (uptr)new_context);
-  REAL(dispatch_group_notify_f)(group, q, new_context,
-                                dispatch_callback_wrap);
+  REAL(dispatch_group_notify_f)(group, q, new_context, dispatch_callback_wrap);
 }
 
 TSAN_INTERCEPTOR(void, dispatch_group_notify_f, dispatch_group_t group,
                  dispatch_queue_t q, void *context, dispatch_function_t work) {
-  SCOPED_TSAN_INTERCEPTOR(dispatch_group_notify_f, group, q, context, work);
-  tsan_block_context_t *new_context = AllocContext(thr, pc, q, context, work);
-  new_context->is_barrier_block = true;
-  Release(thr, pc, (uptr)new_context);
-  REAL(dispatch_group_notify_f)(group, q, new_context,
-                                dispatch_callback_wrap);
+  WRAP(dispatch_group_notify)(group, q, ^(void) { work(context); });
 }
 
 TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler,
