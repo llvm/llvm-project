@@ -186,6 +186,8 @@ MemoryHistoryASan::GetHistoryThreads(lldb::addr_t address)
     options.SetIgnoreBreakpoints(true);
     options.SetTimeoutUsec(GET_STACK_FUNCTION_TIMEOUT_USEC);
     options.SetPrefix(memory_history_asan_command_prefix);
+    options.SetAutoApplyFixIts(false);
+    options.SetLanguage(eLanguageTypeObjC_plus_plus);
 
     ExpressionResults expr_result = UserExpression::Evaluate (exe_ctx,
                                       options,
