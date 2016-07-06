@@ -151,6 +151,15 @@ static void ProcessAPINotes(Sema &S, Decl *D,
                                                  Info.getSwiftBridge())));
   }
 
+  // ns_error_domain
+  if (!Info.getNSErrorDomain().empty() &&
+      !D->getAttr<NSErrorDomainAttr>()) {
+    D->addAttr(
+      NSErrorDomainAttr::CreateImplicit(
+        S.Context,
+        &S.Context.Idents.get(Info.getNSErrorDomain())));
+  }
+
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
 }
 
