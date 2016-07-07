@@ -158,19 +158,19 @@ protected:
   GCCInstallationDetector GCCInstallation;
 
   // \brief A class to find a viable CUDA installation
-
   class CudaInstallationDetector {
-    bool IsValid;
+  private:
     const Driver &D;
-    std::string CudaInstallPath;
-    std::string CudaBinPath;
-    std::string CudaLibPath;
-    std::string CudaLibDevicePath;
-    std::string CudaIncludePath;
-    llvm::StringMap<std::string> CudaLibDeviceMap;
+    bool IsValid = false;
+    std::string InstallPath;
+    std::string BinPath;
+    std::string LibPath;
+    std::string LibDevicePath;
+    std::string IncludePath;
+    llvm::StringMap<std::string> LibDeviceMap;
 
   public:
-    CudaInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
+    CudaInstallationDetector(const Driver &D) : D(D) {}
     void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args);
 
     /// \brief Check whether we detected a valid Cuda install.
@@ -179,18 +179,18 @@ protected:
     void print(raw_ostream &OS) const;
 
     /// \brief Get the detected Cuda installation path.
-    StringRef getInstallPath() const { return CudaInstallPath; }
+    StringRef getInstallPath() const { return InstallPath; }
     /// \brief Get the detected path to Cuda's bin directory.
-    StringRef getBinPath() const { return CudaBinPath; }
+    StringRef getBinPath() const { return BinPath; }
     /// \brief Get the detected Cuda Include path.
-    StringRef getIncludePath() const { return CudaIncludePath; }
+    StringRef getIncludePath() const { return IncludePath; }
     /// \brief Get the detected Cuda library path.
-    StringRef getLibPath() const { return CudaLibPath; }
+    StringRef getLibPath() const { return LibPath; }
     /// \brief Get the detected Cuda device library path.
-    StringRef getLibDevicePath() const { return CudaLibDevicePath; }
+    StringRef getLibDevicePath() const { return LibDevicePath; }
     /// \brief Get libdevice file for given architecture
     std::string getLibDeviceFile(StringRef Gpu) const {
-      return CudaLibDeviceMap.lookup(Gpu);
+      return LibDeviceMap.lookup(Gpu);
     }
   };
 

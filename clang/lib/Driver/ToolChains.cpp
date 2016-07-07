@@ -1715,6 +1715,8 @@ void Generic_GCC::CudaInstallationDetector::init(
         Args.getLastArgValue(options::OPT_cuda_path_EQ));
   else {
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda");
+    // FIXME: Uncomment this once we can compile the cuda 8 headers.
+    // CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-8.0");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.5");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.0");
   }
@@ -1723,20 +1725,19 @@ void Generic_GCC::CudaInstallationDetector::init(
     if (CudaPath.empty() || !D.getVFS().exists(CudaPath))
       continue;
 
-    CudaInstallPath = CudaPath;
-    CudaBinPath = CudaPath + "/bin";
-    CudaIncludePath = CudaInstallPath + "/include";
-    CudaLibDevicePath = CudaInstallPath + "/nvvm/libdevice";
-    CudaLibPath =
-        CudaInstallPath + (TargetTriple.isArch64Bit() ? "/lib64" : "/lib");
+    InstallPath = CudaPath;
+    BinPath = CudaPath + "/bin";
+    IncludePath = InstallPath + "/include";
+    LibDevicePath = InstallPath + "/nvvm/libdevice";
+    LibPath = InstallPath + (TargetTriple.isArch64Bit() ? "/lib64" : "/lib");
 
-    if (!(D.getVFS().exists(CudaIncludePath) &&
-          D.getVFS().exists(CudaBinPath) && D.getVFS().exists(CudaLibPath) &&
-          D.getVFS().exists(CudaLibDevicePath)))
+    auto &FS = D.getVFS();
+    if (!(FS.exists(IncludePath) && FS.exists(BinPath) && FS.exists(LibPath) &&
+          FS.exists(LibDevicePath)))
       continue;
 
     std::error_code EC;
-    for (llvm::sys::fs::directory_iterator LI(CudaLibDevicePath, EC), LE;
+    for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef FilePath = LI->path();
       StringRef FileName = llvm::sys::path::filename(FilePath);
@@ -1746,21 +1747,24 @@ void Generic_GCC::CudaInstallationDetector::init(
         continue;
       StringRef GpuArch = FileName.slice(
           LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
-      CudaLibDeviceMap[GpuArch] = FilePath.str();
+      LibDeviceMap[GpuArch] = FilePath.str();
       // Insert map entries for specifc devices with this compute capability.
       if (GpuArch == "compute_20") {
-        CudaLibDeviceMap["sm_20"] = FilePath;
-        CudaLibDeviceMap["sm_21"] = FilePath;
+        LibDeviceMap["sm_20"] = FilePath;
+        LibDeviceMap["sm_21"] = FilePath;
       } else if (GpuArch == "compute_30") {
-        CudaLibDeviceMap["sm_30"] = FilePath;
-        CudaLibDeviceMap["sm_32"] = FilePath;
+        LibDeviceMap["sm_30"] = FilePath;
+        LibDeviceMap["sm_32"] = FilePath;
       } else if (GpuArch == "compute_35") {
-        CudaLibDeviceMap["sm_35"] = FilePath;
-        CudaLibDeviceMap["sm_37"] = FilePath;
+        LibDeviceMap["sm_35"] = FilePath;
+        LibDeviceMap["sm_37"] = FilePath;
       } else if (GpuArch == "compute_50") {
-        CudaLibDeviceMap["sm_50"] = FilePath;
-        CudaLibDeviceMap["sm_52"] = FilePath;
-        CudaLibDeviceMap["sm_53"] = FilePath;
+        LibDeviceMap["sm_50"] = FilePath;
+        LibDeviceMap["sm_52"] = FilePath;
+        LibDeviceMap["sm_53"] = FilePath;
+        LibDeviceMap["sm_60"] = FilePath;
+        LibDeviceMap["sm_61"] = FilePath;
+        LibDeviceMap["sm_62"] = FilePath;
       }
     }
 
@@ -1771,7 +1775,7 @@ void Generic_GCC::CudaInstallationDetector::init(
 
 void Generic_GCC::CudaInstallationDetector::print(raw_ostream &OS) const {
   if (isValid())
-    OS << "Found CUDA installation: " << CudaInstallPath << "\n";
+    OS << "Found CUDA installation: " << InstallPath << "\n";
 }
 
 namespace {

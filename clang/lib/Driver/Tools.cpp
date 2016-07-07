@@ -11251,9 +11251,10 @@ void NVPTX::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     auto* A = cast<const CudaDeviceAction>(II.getAction());
     // We need to pass an Arch of the form "sm_XX" for cubin files and
     // "compute_XX" for ptx.
-    const char *Arch = (II.getType() == types::TY_PP_Asm)
-                           ? A->getComputeArchName()
-                           : A->getGpuArchName();
+    const char *Arch =
+        (II.getType() == types::TY_PP_Asm)
+            ? CudaVirtualArchToString(VirtualArchForCudaArch(A->getGpuArch()))
+            : CudaArchToString(A->getGpuArch());
     CmdArgs.push_back(Args.MakeArgString(llvm::Twine("--image=profile=") +
                                          Arch + ",file=" + II.getFilename()));
   }

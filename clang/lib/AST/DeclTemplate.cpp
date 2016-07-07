@@ -461,8 +461,7 @@ ClassTemplateDecl::getInjectedClassNameSpecialization() {
   GenerateInjectedTemplateArgs(getASTContext(), Params, TemplateArgs.data());
   CommonPtr->InjectedClassNameType
     = Context.getTemplateSpecializationType(TemplateName(this),
-                                            &TemplateArgs[0],
-                                            TemplateArgs.size());
+                                            TemplateArgs);
   return CommonPtr->InjectedClassNameType;
 }
 
@@ -757,7 +756,7 @@ void ClassTemplateSpecializationDecl::getNameForDiagnostic(
 
   const TemplateArgumentList &TemplateArgs = getTemplateArgs();
   TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, TemplateArgs.data(), TemplateArgs.size(), Policy);
+      OS, TemplateArgs.asArray(), Policy);
 }
 
 ClassTemplateDecl *
@@ -1089,7 +1088,7 @@ void VarTemplateSpecializationDecl::getNameForDiagnostic(
 
   const TemplateArgumentList &TemplateArgs = getTemplateArgs();
   TemplateSpecializationType::PrintTemplateArgumentList(
-      OS, TemplateArgs.data(), TemplateArgs.size(), Policy);
+      OS, TemplateArgs.asArray(), Policy);
 }
 
 VarTemplateDecl *VarTemplateSpecializationDecl::getSpecializedTemplate() const {

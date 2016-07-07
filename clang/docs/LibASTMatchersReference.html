@@ -1453,7 +1453,7 @@ c and d.
 
 Given
   enum C { Green };
-  enum S { Red };
+  enum class S { Red };
 
   C c;
   S s;
@@ -2415,6 +2415,33 @@ Example: Given
 designatorCountIs(2)
   matches '{ [2].y = 1.0, [0].x = 1.0 }',
   but not '{ [2].y = 1.0, [2].x = 0.0, [0].x = 1.0 }'.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FieldDecl.html">FieldDecl</a>&gt;</td><td class="name" onclick="toggle('hasBitWidth0')"><a name="hasBitWidth0Anchor">hasBitWidth</a></td><td>unsigned Width</td></tr>
+<tr><td colspan="4" class="doc" id="hasBitWidth0"><pre>Matches non-static data members that are bit-fields.
+
+Given
+  class C {
+    int a : 2;
+    int b : 4;
+    int c : 2;
+  };
+fieldDecl(isBitField())
+  matches 'int a;' and 'int c;' but not 'int b;'.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FieldDecl.html">FieldDecl</a>&gt;</td><td class="name" onclick="toggle('isBitField0')"><a name="isBitField0Anchor">isBitField</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isBitField0"><pre>Matches non-static data members that are bit-fields.
+
+Given
+  class C {
+    int a : 2;
+    int b;
+  };
+fieldDecl(isBitField())
+  matches 'int a;' but not 'int b;'.
 </pre></td></tr>
 
 

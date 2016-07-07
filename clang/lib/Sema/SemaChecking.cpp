@@ -9057,7 +9057,7 @@ class SequenceChecker : public EvaluatedExprVisitor<SequenceChecker> {
     struct Value {
       explicit Value(unsigned Parent) : Parent(Parent), Merged(false) {}
       unsigned Parent : 31;
-      bool Merged : 1;
+      unsigned Merged : 1;
     };
     SmallVector<Value, 8> Values;
 

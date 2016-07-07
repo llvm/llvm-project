@@ -1,4 +1,6 @@
-// RUN: %check_clang_tidy %s misc-redundant-expression %t
+// RUN: %check_clang_tidy %s misc-redundant-expression %t -- -- -std=c++11
+
+typedef __INT64_TYPE__ I64;
 
 struct Point {
   int x;
@@ -64,7 +66,7 @@ int Test(int X, int Y) {
 
   if ( + "dummy" == + "dummy") return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: both side of operator are equivalent
-  if (L"abc" == L"abc") return 1;     
+  if (L"abc" == L"abc") return 1;
   // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both side of operator are equivalent
 
   if (foo(0) - 2 < foo(0) - 2) return 1;
@@ -82,7 +84,7 @@ int Test(int X, int Y) {
 
 int Valid(int X, int Y) {
   if (X != Y) return 1;
-  if (X == X + 0) return 1;
+  if (X == Y + 0) return 1;
   if (P.x == P.y) return 1;
   if (P.a[P.x] < P.a[P.y]) return 1;
   if (P.a[0] < P.a[1]) return 1;
@@ -160,3 +162,324 @@ void TemplateCheck() {
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: both side of overloaded operator are equivalent
 }
 void TestTemplate() { TemplateCheck<MyClass, MyClass>(); }
+
+int TestArithmetic(int X, int Y) {
+  if (X + 1 == X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X + 1 != X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+  if (X - 1 == X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X - 1 != X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+
+  if (X + 1LL == X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (X + 1ULL == X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: logical expression is always false
+
+  if (X == X + 1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always false
+  if (X != X + 1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always true
+  if (X == X - 1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always false
+  if (X != X - 1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always true
+
+  if (X != X - 1U) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always true
+  if (X != X - 1LL) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always true
+
+  if ((X+X) != (X+X) - 1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+
+  if (X + 1 == X + 2) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X + 1 != X + 2) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+
+  if (X - 1 == X - 2) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X - 1 != X - 2) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+
+  if (X + 1 == X - -1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+  if (X + 1 != X - -1) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X + 1 == X - -2) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X + 1 != X - -2) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+
+  if (X + 1 == X - (~0)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+  if (X + 1 == X - (~0U)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+  if (X + 1 == X - (~0ULL)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+
+  // Should not match.
+  if (X + 0.5 == X) return 1;
+  if (X + 1 == Y) return 1;
+  if (X + 1 == Y + 1) return 1;
+  if (X + 1 == Y + 2) return 1;
+
+  return 0;
+}
+
+int TestBitwise(int X) {
+  if ((X & 0xFF) == 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+  if ((X & 0xFF) != 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always true
+  if ((X | 0xFF) == 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+  if ((X | 0xFF) != 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always true
+
+  if ((X | 0xFFULL) != 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: logical expression is always true
+  if ((X | 0xFF) != 0xF00ULL) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always true
+
+  if ((0xFF & X) == 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+  if ((0xFF & X) != 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always true
+  if ((0xFF & X) == 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+  if ((0xFF & X) != 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always true
+
+  if ((0xFFLL & X) == 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: logical expression is always false
+  if ((0xFF & X) == 0xF00ULL) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+
+  return 0;
+}
+
+int TestRelational(int X, int Y) {
+  if (X == 10 && X != 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (X == 10 && (X != 10)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (X == 10 && !(X == 10)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (!(X != 10) && !(X == 10)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+
+  if (X == 10ULL && X != 10ULL) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+  if (!(X != 10U) && !(X == 10)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: logical expression is always false
+  if (!(X != 10LL) && !(X == 10)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: logical expression is always false
+  if (!(X != 10ULL) && !(X == 10)) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: logical expression is always false
+
+  if (X == 0 && X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+  if (X != 0 && !X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+  if (X && !X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: logical expression is always false
+
+  if (X && !!X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: equivalent expression on both side of logical operator
+  if (X != 0 && X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: equivalent expression on both side of logical operator
+  if (X != 0 && !!X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: equivalent expression on both side of logical operator
+  if (X == 0 && !X) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: equivalent expression on both side of logical operator
+
+  if (X == 10 && X > 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (X == 10 && X < 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (X < 10 && X > 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+  if (X <= 10 && X > 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always false
+  if (X < 10 && X >= 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+  if (X < 10 && X == 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+
+  if (X > 5 && X <= 5) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always false
+  if (X > -5 && X <= -5) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always false
+
+  if (X < 10 || X >= 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: logical expression is always true
+  if (X <= 10 || X > 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+  if (X <= 10 || X >= 11) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:15: warning: logical expression is always true
+
+  if (X < 7 && X < 6) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+  if (X < 7 && X < 7) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both side of operator are equivalent
+  if (X < 7 && X < 8) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: expression is redundant
+
+  if (X < 7 && X <= 5) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  if (X < 7 && X <= 6) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: equivalent expression on both side of logical operator
+  if (X < 7 && X <= 7) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: expression is redundant
+  if (X < 7 && X <= 8) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: expression is redundant
+
+  if (X <= 7 && X < 6) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+  if (X <= 7 && X < 7) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+  if (X <= 7 && X < 8) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: equivalent expression on both side of logical operator
+
+  if (X <= 7 && X <= 5) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+  if (X <= 7 && X <= 6) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+  if (X <= 7 && X <= 7) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: both side of operator are equivalent
+  if (X <= 7 && X <= 8) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: expression is redundant 
+
+  if (X == 11 && X > 10) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: expression is redundant 
+  if (X == 11 && X < 12) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:20: warning: expression is redundant 
+  if (X > 10 && X == 11) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  if (X < 12 && X == 11) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+ 
+  if (X != 11 && X == 42) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  if (X != 11 && X > 11) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  if (X != 11 && X < 11) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  if (X != 11 && X < 8) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+  if (X != 11 && X > 14) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant 
+
+  if (X < 7 || X < 6) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: expression is redundant
+  if (X < 7 || X < 7) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: both side of operator are equivalent
+  if (X < 7 || X < 8) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: expression is redundant
+
+  // Should not match.
+  if (X == 10 && Y == 10) return 1;
+  if (X != 10 && X != 12) return 1;
+  if (X == 10 || X == 12) return 1;
+  if (X < 10 || X > 12) return 1;
+  if (X > 10 && X < 12) return 1;
+  if (X < 10 || X >= 12) return 1;
+  if (X > 10 && X <= 12) return 1;
+  if (X <= 10 || X > 12) return 1;
+  if (X >= 10 && X < 12) return 1;
+  if (X <= 10 || X >= 12) return 1;
+  if (X >= 10 && X <= 12) return 1;
+  if (X >= 10 && X <= 11) return 1;
+  if (X >= 10 && X < 11) return 1;
+  if (X > 10 && X <= 11) return 1;
+  if (X > 10 && X != 11) return 1;
+  if (X >= 10 && X <= 10) return 1;
+  if (X <= 10 && X >= 10) return 1;
+  if (!X && !Y) return 1;
+  if (!X && Y) return 1;
+  if (!X && Y == 0) return 1;
+  if (X == 10 && Y != 10) return 1;
+  if (X < 0 || X > 0) return 1;
+
+  return 0;
+}
+
+int TestValidExpression(int X) {
+  if (X - 1 == 1 - X) return 1;
+  if (2 * X == X) return 1;
+  if ((X << 1) == X) return 1;
+
+  return 0;
+}
+
+enum Color { Red, Yellow, Green };
+int TestRelatiopnalWithEnum(enum Color C) {
+  if (C == Red && C == Yellow) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: logical expression is always false
+  if (C == Red && C != Red) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:16: warning: logical expression is always false
+
+  // Should not match.
+  if (C == Red || C == Yellow) return 1;
+  if (C != Red && C != Yellow) return 1;
+
+  return 0;
+}
+
+template<class T>
+int TestRelationalTemplated(int X) {
+  // This test causes a corner case with |isIntegerConstantExpr| where the type
+  // is dependant. There is an assert failing when evaluating
+  // sizeof(<incomplet-type>).
+  if (sizeof(T) == 4 || sizeof(T) == 8) return 1;
+
+  if (X + 0 == -X) return 1;
+  if (X + 0 < X) return 1;
+
+  return 0;
+}
+
+int TestWithSignedUnsigned(int X) {
+  if (X + 1 == X + 1ULL) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: logical expression is always true
+  if ((X & 0xFFU) == 0xF00) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: logical expression is always false
+  if ((X & 0xFF) == 0xF00U) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: logical expression is always false
+  if ((X & 0xFFU) == 0xF00U) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: logical expression is always false
+
+  return 0;
+}
+
+int TestWithLong(int X, I64 Y) {
+  if (X + 0ULL == -X) return 1;
+  if (Y + 0 == -Y) return 1;
+  if (Y <= 10 && X >= 10LL) return 1;
+  if (Y <= 10 && X >= 10ULL) return 1;
+  if (X <= 10 || X > 12LL) return 1;
+  if (X <= 10 || X > 12ULL) return 1;
+  if (Y <= 10 || Y > 12) return 1;
+
+  return 0;
+}
+
+int TestWithMinMaxInt(int X) {
+  if (X <= X + 0xFFFFFFFFU) return 1;
+  if (X <= X + 0x7FFFFFFF) return 1;
+  if (X <= X + 0x80000000) return 1;
+  if (X <= 0xFFFFFFFFU && X > 0) return 1;
+  if (X <= 0xFFFFFFFFU && X > 0U) return 1;
+
+  if (X + 0x80000000 == X - 0x80000000) return 1;
+  // CHECK-MESSAGES: :[[@LINE-1]]:22: warning: logical expression is always true
+
+  if (X > 0x7FFFFFFF || X < ((-0x7FFFFFFF)-1)) return 1;
+  if (X <= 0x7FFFFFFF && X >= ((-0x7FFFFFFF)-1)) return 1;
+  
+  return 0;
+}

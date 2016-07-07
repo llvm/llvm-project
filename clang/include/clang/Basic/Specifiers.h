@@ -85,7 +85,7 @@ namespace clang {
     /*DeclSpec::TST*/ unsigned Type  : 5;
     /*DeclSpec::TSS*/ unsigned Sign  : 2;
     /*DeclSpec::TSW*/ unsigned Width : 2;
-    bool ModeAttr : 1;
+    unsigned ModeAttr : 1;
   };  
 
   /// \brief A C++ access specifier (public, private, protected), plus the

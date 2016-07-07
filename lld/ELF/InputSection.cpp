@@ -84,23 +84,24 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
 }
 
 template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
-  typedef typename std::conditional<ELFT::Is64Bits, Elf64_Chdr,
-                                    Elf32_Chdr>::type Elf_Chdr;
-  const endianness E = ELFT::TargetEndianness;
-
   if (!zlib::isAvailable())
     fatal("build lld with zlib to enable compressed sections support");
 
+  // A compressed section consists of a header of Elf_Chdr type
+  // followed by compressed data.
   ArrayRef<uint8_t> Data =
       check(this->File->getObj().getSectionContents(this->Header));
-  if (read32<E>(Data.data()) != ELFCOMPRESS_ZLIB)
-    fatal("unsupported elf compression type");
+  if (Data.size() < sizeof(Elf_Chdr))
+    fatal("corrupt compressed section");
 
-  size_t UncompressedSize =
-      reinterpret_cast<const Elf_Chdr *>(Data.data())->ch_size;
-  size_t HdrSize = sizeof(Elf_Chdr);
-  StringRef Buf((const char *)Data.data() + HdrSize, Data.size() - HdrSize);
-  if (zlib::uncompress(Buf, Uncompressed, UncompressedSize) != zlib::StatusOK)
+  auto *Hdr = reinterpret_cast<const Elf_Chdr *>(Data.data());
+  Data = Data.slice(sizeof(Elf_Chdr));
+
+  if (Hdr->ch_type != ELFCOMPRESS_ZLIB)
+    fatal("unsupported compression type");
+
+  StringRef Buf((const char *)Data.data(), Data.size());
+  if (zlib::uncompress(Buf, Uncompressed, Hdr->ch_size) != zlib::StatusOK)
     fatal("error uncompressing section");
 }
 
