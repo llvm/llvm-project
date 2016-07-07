@@ -149,6 +149,10 @@ void InitializePlatformInterceptors() {
       (uptr *)&REAL(NtWaitForWorkViaWorkerFactory)));
 }
 
+void AsanApplyToGlobals(globals_op_fptr op, const void *needle) {
+  UNIMPLEMENTED();
+}
+
 // ---------------------- TSD ---------------- {{{
 static bool tsd_key_inited = false;
 
