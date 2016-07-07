@@ -2768,7 +2768,8 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                     AccessType accessibility = eAccessNone;
                     uint32_t member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
                     size_t byte_size = 0;
-                    size_t bit_offset = 0;
+                    int64_t bit_offset = 0;
+                    uint64_t data_bit_offset = UINT64_MAX;
                     size_t bit_size = 0;
                     bool is_external = false; // On DW_TAG_members, this means the member is static
                     uint32_t i;
@@ -2788,6 +2789,7 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                 case DW_AT_bit_offset:  bit_offset = form_value.Unsigned(); break;
                                 case DW_AT_bit_size:    bit_size = form_value.Unsigned(); break;
                                 case DW_AT_byte_size:   byte_size = form_value.Unsigned(); break;
+                                case DW_AT_data_bit_offset: data_bit_offset = form_value.Unsigned(); break;
                                 case DW_AT_data_member_location:
                                     if (form_value.BlockData())
                                     {
@@ -2975,22 +2977,30 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                     // AT_bit_size indicates the size of the field in bits.
                                     /////////////////////////////////////////////////////////////
 
-                                    if (byte_size == 0)
-                                        byte_size = member_type->GetByteSize();
-
-                                    ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
-                                    if (objfile->GetByteOrder() == eByteOrderLittle)
+                                    if (data_bit_offset != UINT64_MAX)
                                     {
-                                        this_field_info.bit_offset += byte_size * 8;
-                                        this_field_info.bit_offset -= (bit_offset + bit_size);
+                                        this_field_info.bit_offset = data_bit_offset;
                                     }
                                     else
                                     {
-                                        this_field_info.bit_offset += bit_offset;
+                                        if (byte_size == 0)
+                                            byte_size = member_type->GetByteSize();
+
+                                        ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
+                                        if (objfile->GetByteOrder() == eByteOrderLittle)
+                                        {
+                                            this_field_info.bit_offset += byte_size * 8;
+                                            this_field_info.bit_offset -= (bit_offset + bit_size);
+                                        }
+                                        else
+                                        {
+                                            this_field_info.bit_offset += bit_offset;
+                                        }
                                     }
 
                                     if ((this_field_info.bit_offset >= parent_bit_size) || !last_field_info.NextBitfieldOffsetIsValid(this_field_info.bit_offset))
                                     {
+                                        ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
                                         objfile->GetModule()->ReportWarning("0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid bit offset (0x%8.8" PRIx64 ") member will be ignored. Please file a bug against the compiler and include the preprocessed output for %s\n",
                                                                             die.GetID(),
                                                                             DW_TAG_value_to_name(tag),
