@@ -118,6 +118,9 @@ DECL_CONST_OCML_UNARYPRED_F32(isnormal)
 DECL_OCML_UNARY_F32(j0)
 DECL_OCML_UNARY_F32(j1)
 extern __attribute__((const)) float OCML_MANGLE_F32(ldexp)(float, int);
+DECL_CONST_OCML_TERNARY_F32(len3)
+extern __attribute__((const)) float OCML_MANGLE_F32(len4)(float, float, float, float);
+DECL_CONST_OCML_TERNARY_F32(fma)
 DECL_OCML_UNARY_F32(lgamma)
 extern float OCML_MANGLE_F32(lgamma_r)(float, __private int *);
 DECL_PURE_OCML_UNARY_F32(log)
@@ -235,6 +238,8 @@ DECL_CONST_OCML_UNARYPRED_F64(isnormal)
 DECL_OCML_UNARY_F64(j0)
 DECL_OCML_UNARY_F64(j1)
 extern __attribute__((const)) double OCML_MANGLE_F64(ldexp)(double, int);
+DECL_CONST_OCML_TERNARY_F64(len3)
+extern __attribute__((const)) double OCML_MANGLE_F64(len4)(double, double, double, double);
 DECL_OCML_UNARY_F64(lgamma)
 extern double OCML_MANGLE_F64(lgamma_r)(double, __private int *);
 DECL_PURE_OCML_UNARY_F64(log)
@@ -356,6 +361,8 @@ DECL_CONST_OCML_UNARYPRED_F16(isnormal)
 DECL_OCML_UNARY_F16(j0)
 DECL_OCML_UNARY_F16(j1)
 extern __attribute__((const)) half OCML_MANGLE_F16(ldexp)(half, int);
+DECL_CONST_OCML_TERNARY_F16(len3)
+extern __attribute__((const)) half OCML_MANGLE_F16(len4)(half, half, half, half);
 DECL_OCML_UNARY_F16(lgamma)
 extern half OCML_MANGLE_F16(lgamma_r)(half, __private int *);
 DECL_PURE_OCML_UNARY_F16(log)
