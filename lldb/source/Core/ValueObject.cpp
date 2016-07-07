@@ -834,20 +834,20 @@ ValueObject::CreateChildAtIndex (size_t idx, bool synthetic_array_member, int32_
     
     ExecutionContext exe_ctx (GetExecutionContextRef());
     
-    child_compiler_type = GetCompilerType().GetChildCompilerTypeAtIndex (&exe_ctx,
-                                                                      idx,
-                                                                      transparent_pointers,
-                                                                      omit_empty_base_classes,
-                                                                      ignore_array_bounds,
-                                                                      child_name_str,
-                                                                      child_byte_size,
-                                                                      child_byte_offset,
-                                                                      child_bitfield_bit_size,
-                                                                      child_bitfield_bit_offset,
-                                                                      child_is_base_class,
-                                                                      child_is_deref_of_parent,
-                                                                      this,
-                                                                      language_flags);
+    child_compiler_type = GetCompilerType().GetChildCompilerTypeAtIndex(&exe_ctx,
+                                                                        idx,
+                                                                        transparent_pointers,
+                                                                        omit_empty_base_classes,
+                                                                        ignore_array_bounds,
+                                                                        child_name_str,
+                                                                        child_byte_size,
+                                                                        child_byte_offset,
+                                                                        child_bitfield_bit_size,
+                                                                        child_bitfield_bit_offset,
+                                                                        child_is_base_class,
+                                                                        child_is_deref_of_parent,
+                                                                        this,
+                                                                        language_flags);
     if (child_compiler_type)
     {
         if (synthetic_index)
@@ -1789,6 +1789,10 @@ ValueObject::DumpPrintableRepresentation(Stream& s,
 addr_t
 ValueObject::GetAddressOf (bool scalar_is_load_address, AddressType *address_type)
 {
+    // Can't take address of a bitfield
+    if (IsBitfield())
+        return LLDB_INVALID_ADDRESS;
+
     if (!UpdateValueIfNeeded(false))
         return LLDB_INVALID_ADDRESS;
         

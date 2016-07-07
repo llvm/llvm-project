@@ -565,30 +565,29 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 static uint8_t getMachineKind(MemoryBufferRef MB) {
   std::string TripleStr = getBitcodeTargetTriple(MB, Driver->Context);
   switch (Triple(TripleStr).getArch()) {
-    case Triple::aarch64:
-      return EM_AARCH64;
-    case Triple::arm:
-      return EM_ARM;
-    case Triple::mips:
-    case Triple::mipsel:
-    case Triple::mips64:
-    case Triple::mips64el:
-      return EM_MIPS;
-    case Triple::ppc:
-      return EM_PPC;
-    case Triple::ppc64:
-      return EM_PPC64;
-    case Triple::x86:
-      return EM_386;
-    case Triple::x86_64:
-      return EM_X86_64;
-    default:
-      fatal("could not infer e_machine from bitcode target triple " + TripleStr);
+  case Triple::aarch64:
+    return EM_AARCH64;
+  case Triple::arm:
+    return EM_ARM;
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    return EM_MIPS;
+  case Triple::ppc:
+    return EM_PPC;
+  case Triple::ppc64:
+    return EM_PPC64;
+  case Triple::x86:
+    return EM_386;
+  case Triple::x86_64:
+    return EM_X86_64;
+  default:
+    fatal("could not infer e_machine from bitcode target triple " + TripleStr);
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef MB) :
-    InputFile(BitcodeKind, MB) {
+BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
   EKind = getELFKind(MB);
   EMachine = getMachineKind(MB);
 }

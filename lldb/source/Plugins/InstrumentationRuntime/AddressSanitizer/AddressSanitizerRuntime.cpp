@@ -188,6 +188,7 @@ AddressSanitizerRuntime::RetrieveReportData()
     options.SetTimeoutUsec(RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC);
     options.SetPrefix(address_sanitizer_retrieve_report_data_prefix);
     options.SetAutoApplyFixIts(false);
+    options.SetLanguage(eLanguageTypeObjC_plus_plus);
     
     ValueObjectSP return_value_sp;
     ExecutionContext exe_ctx;

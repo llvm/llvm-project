@@ -2427,6 +2427,8 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
                             region_info.SetExecutable (MemoryRegionInfo::eYes);
                         else
                             region_info.SetExecutable (MemoryRegionInfo::eNo);
+
+                        region_info.SetMapped(MemoryRegionInfo::eYes);
                     }
                     else
                     {
@@ -2434,6 +2436,7 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
                         region_info.SetReadable (MemoryRegionInfo::eNo);
                         region_info.SetWritable (MemoryRegionInfo::eNo);
                         region_info.SetExecutable (MemoryRegionInfo::eNo);
+                        region_info.SetMapped(MemoryRegionInfo::eNo);
                     }
                 }
                 else if (name.compare ("error") == 0)
@@ -2453,6 +2456,7 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
                 region_info.SetReadable (MemoryRegionInfo::eNo);
                 region_info.SetWritable (MemoryRegionInfo::eNo);
                 region_info.SetExecutable (MemoryRegionInfo::eNo);
+                region_info.SetMapped(MemoryRegionInfo::eNo);
             }
         }
         else

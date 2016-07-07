@@ -105,7 +105,8 @@ namespace platform_android {
         GetLibdlFunctionDeclarations() const override;
 
     private:
-        std::unique_ptr<AdbClient> m_adb;
+        AdbClient::SyncService* GetSyncService (Error &error);
+
         std::unique_ptr<AdbClient::SyncService> m_adb_sync_svc;
         std::string m_device_id;
         uint32_t m_sdk_version;

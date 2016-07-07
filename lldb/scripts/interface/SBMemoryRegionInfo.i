@@ -42,6 +42,9 @@ public:
     IsExecutable ();
 
     bool
+    IsMapped ();
+
+    bool
     operator == (const lldb::SBMemoryRegionInfo &rhs) const;
 
     bool

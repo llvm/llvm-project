@@ -156,6 +156,9 @@ def undefined: J<"undefined=">,
 def unresolved_symbols: J<"unresolved-symbols=">,
   HelpText<"Determine how to handle unresolved symbols">;
 
+def rsp_quoting: J<"rsp-quoting=">,
+  HelpText<"Quoting style for response files. Values supported: windows|posix">;
+
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
 def version: F<"version">, HelpText<"Display the version number">;

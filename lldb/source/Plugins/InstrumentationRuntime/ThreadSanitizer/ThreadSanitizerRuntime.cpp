@@ -361,6 +361,8 @@ ThreadSanitizerRuntime::RetrieveReportData(ExecutionContextRef exe_ctx_ref)
     options.SetIgnoreBreakpoints(true);
     options.SetTimeoutUsec(RETRIEVE_REPORT_DATA_FUNCTION_TIMEOUT_USEC);
     options.SetPrefix(thread_sanitizer_retrieve_report_data_prefix);
+    options.SetAutoApplyFixIts(false);
+    options.SetLanguage(eLanguageTypeObjC_plus_plus);
     
     ValueObjectSP main_value;
     ExecutionContext exe_ctx;

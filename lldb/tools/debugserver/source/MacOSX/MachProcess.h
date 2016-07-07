@@ -15,8 +15,10 @@
 #define __MachProcess_h__
 
 #include <mach/mach.h>
+#include <mach-o/loader.h>
 #include <sys/signal.h>
 #include <pthread.h>
+#include <uuid/uuid.h>
 #include <vector>
 #include <CoreFoundation/CoreFoundation.h>
 
@@ -45,6 +47,45 @@ public:
     //----------------------------------------------------------------------
     MachProcess ();
     ~MachProcess ();
+
+    // A structure that can hold everything debugserver needs to know from
+    // a binary's Mach-O header / load commands.
+
+    struct mach_o_segment
+    {
+        std::string name;
+        uint64_t vmaddr;
+        uint64_t vmsize;
+        uint64_t fileoff;
+        uint64_t filesize;
+        uint64_t maxprot;
+        uint64_t initprot;
+        uint64_t nsects;
+        uint64_t flags;
+    };
+
+    struct mach_o_information
+    {
+        struct mach_header_64 mach_header;
+        std::vector<struct mach_o_segment> segments;
+        uuid_t uuid;
+        std::string min_version_os_name;
+        std::string min_version_os_version;
+    };
+
+    struct binary_image_information
+    {
+        std::string filename;
+        uint64_t    load_address;
+        uint64_t    mod_date;      // may not be available - 0 if so
+        struct mach_o_information macho_info;
+
+        binary_image_information () : 
+            filename (),
+            load_address (INVALID_NUB_ADDRESS),
+            mod_date (0)
+            { }
+    };
 
     //----------------------------------------------------------------------
     // Child process control
@@ -193,7 +234,15 @@ public:
     nub_addr_t              GetPThreadT (nub_thread_t tid);
     nub_addr_t              GetDispatchQueueT (nub_thread_t tid);
     nub_addr_t              GetTSDAddressForThread (nub_thread_t tid, uint64_t plo_pthread_tsd_base_address_offset, uint64_t plo_pthread_tsd_base_offset, uint64_t plo_pthread_tsd_entry_size);
+
+
+    bool                    GetMachOInformationFromMemory (nub_addr_t mach_o_header_addr, int wordsize, struct mach_o_information &inf);
+    JSONGenerator::ObjectSP FormatDynamicLibrariesIntoJSON (const std::vector<struct binary_image_information> &image_infos);
+    void                    GetAllLoadedBinariesViaDYLDSPI (std::vector<struct binary_image_information> &image_infos);
     JSONGenerator::ObjectSP GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count);
+    JSONGenerator::ObjectSP GetLibrariesInfoForAddresses (nub_process_t pid, std::vector<uint64_t> &macho_addresses);
+    JSONGenerator::ObjectSP GetAllLoadedLibrariesInfos (nub_process_t pid);
+    JSONGenerator::ObjectSP GetSharedCacheInfo (nub_process_t pid);
 
     nub_size_t              GetNumThreads () const;
     nub_thread_t            GetThreadAtIndex (nub_size_t thread_idx) const;
@@ -358,6 +407,11 @@ private:
                                                              // as the sole reason for the process being stopped, we can auto resume
                                                              // the process.
     bool                        m_did_exec;
+
+    void * (*m_dyld_process_info_create) (task_t task, uint64_t timestamp, kern_return_t* kernelError);
+    void   (*m_dyld_process_info_for_each_image) (void* info, void (^callback)(uint64_t machHeaderAddress, const uuid_t uuid, const char* path));
+    void   (*m_dyld_process_info_release) (void* info);
+    void   (*m_dyld_process_info_get_cache) (void* info, void* cacheInfo);
 };
 
 

@@ -14,6 +14,7 @@
 
 // C++ Includes
 
+#include <functional>
 #include <list>
 #include <memory>
 #include <string>
@@ -57,6 +58,9 @@ public:
         Error
         Stat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime);
 
+        bool
+        IsConnected () const;
+
     private:
         explicit SyncService (std::unique_ptr<Connection> &&conn);
 
@@ -72,8 +76,19 @@ public:
         Error
         ReadAllBytes (void *buffer, size_t size);
 
+        Error
+        internalPullFile (const FileSpec &remote_file, const FileSpec &local_file);
 
-        const std::unique_ptr<Connection> m_conn;   
+        Error
+        internalPushFile (const FileSpec &local_file, const FileSpec &remote_file);
+
+        Error
+        internalStat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime);
+
+        Error
+        executeCommand (const std::function<Error()> &cmd);
+
+        std::unique_ptr<Connection> m_conn;   
     };
 
     static Error
@@ -118,7 +133,7 @@ private:
     SetDeviceID (const std::string &device_id);
 
     Error
-    SendMessage (const std::string &packet);
+    SendMessage (const std::string &packet, const bool reconnect = true);
 
     Error
     SendDeviceMessage (const std::string &packet);

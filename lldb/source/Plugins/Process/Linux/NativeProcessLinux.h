@@ -202,6 +202,9 @@ namespace process_linux {
         ::pid_t
         Attach(lldb::pid_t pid, Error &error);
 
+        static void
+        ChildFunc(const LaunchArgs &args) LLVM_ATTRIBUTE_NORETURN;
+
         static Error
         SetDefaultPtraceOpts(const lldb::pid_t);
 
