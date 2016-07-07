@@ -130,6 +130,37 @@ ResolveProcessArchitecture(lldb::pid_t pid, ArchSpec &arch)
         return Error("failed to retrieve a valid architecture from the exe module");
 }
 
+// Used to notify the parent about which part of the launch sequence failed.
+enum LaunchCallSpecifier
+{
+    ePtraceFailed,
+    eDupStdinFailed,
+    eDupStdoutFailed,
+    eDupStderrFailed,
+    eChdirFailed,
+    eExecFailed,
+    eSetGidFailed,
+    eSetSigMaskFailed,
+    eLaunchCallMax = eSetSigMaskFailed
+};
+
+static uint8_t LLVM_ATTRIBUTE_NORETURN
+ExitChildAbnormally(LaunchCallSpecifier spec)
+{
+    static_assert(eLaunchCallMax < 0x8, "Have more launch calls than we are able to represent");
+    // This may truncate the topmost bits of the errno because the exit code is only 8 bits wide.
+    // However, it should still give us a pretty good indication of what went wrong. (And the
+    // most common errors have small numbers anyway).
+    _exit(unsigned(spec) | (errno << 3));
+}
+
+// The second member is the errno (or its 5 lowermost bits anyway).
+inline std::pair<LaunchCallSpecifier, uint8_t>
+DecodeChildExitCode(int exit_code)
+{
+    return std::make_pair(LaunchCallSpecifier(exit_code & 0x7), exit_code >> 3);
+}
+
     void
     DisplayBytes (StreamString &s, void *bytes, uint32_t count)
     {
@@ -453,23 +484,96 @@ NativeProcessLinux::AttachToInferior (MainLoop &mainloop, lldb::pid_t pid, Error
     Attach(pid, error);
 }
 
+void
+NativeProcessLinux::ChildFunc(const LaunchArgs &args)
+{
+    // Start tracing this child that is about to exec.
+    if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1)
+        ExitChildAbnormally(ePtraceFailed);
+
+    // Do not inherit setgid powers.
+    if (setgid(getgid()) != 0)
+        ExitChildAbnormally(eSetGidFailed);
+
+    // Attempt to have our own process group.
+    if (setpgid(0, 0) != 0)
+    {
+        // FIXME log that this failed. This is common.
+        // Don't allow this to prevent an inferior exec.
+    }
+
+    // Dup file descriptors if needed.
+    if (args.m_stdin_file_spec)
+        if (!DupDescriptor(args.m_stdin_file_spec, STDIN_FILENO, O_RDONLY))
+            ExitChildAbnormally(eDupStdinFailed);
+
+    if (args.m_stdout_file_spec)
+        if (!DupDescriptor(args.m_stdout_file_spec, STDOUT_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
+            ExitChildAbnormally(eDupStdoutFailed);
+
+    if (args.m_stderr_file_spec)
+        if (!DupDescriptor(args.m_stderr_file_spec, STDERR_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
+            ExitChildAbnormally(eDupStderrFailed);
+
+    // Close everything besides stdin, stdout, and stderr that has no file
+    // action to avoid leaking
+    for (int fd = 3; fd < sysconf(_SC_OPEN_MAX); ++fd)
+        if (!args.m_launch_info.GetFileActionForFD(fd))
+            close(fd);
+
+    // Change working directory
+    if (args.m_working_dir && 0 != ::chdir(args.m_working_dir.GetCString()))
+        ExitChildAbnormally(eChdirFailed);
+
+    // Disable ASLR if requested.
+    if (args.m_launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR))
+    {
+        const int old_personality = personality(LLDB_PERSONALITY_GET_CURRENT_SETTINGS);
+        if (old_personality == -1)
+        {
+            // Can't retrieve Linux personality.  Cannot disable ASLR.
+        }
+        else
+        {
+            const int new_personality = personality(ADDR_NO_RANDOMIZE | old_personality);
+            if (new_personality == -1)
+            {
+                // Disabling ASLR failed.
+            }
+            else
+            {
+                // Disabling ASLR succeeded.
+            }
+        }
+    }
+
+    // Clear the signal mask to prevent the child from being affected by
+    // any masking done by the parent.
+    sigset_t set;
+    if (sigemptyset(&set) != 0 || pthread_sigmask(SIG_SETMASK, &set, nullptr) != 0)
+        ExitChildAbnormally(eSetSigMaskFailed);
+
+    // Propagate the environment if one is not supplied.
+    const char **envp = args.m_envp;
+    if (envp == NULL || envp[0] == NULL)
+        envp = const_cast<const char **>(environ);
+
+    // Execute.  We should never return...
+    execve(args.m_argv[0], const_cast<char *const *>(args.m_argv), const_cast<char *const *>(envp));
+
+    // ...unless exec fails.  In which case we definitely need to end the child here.
+    ExitChildAbnormally(eExecFailed);
+}
+
 ::pid_t
 NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
 {
     assert (args && "null args");
 
-    const char **argv = args->m_argv;
-    const char **envp = args->m_envp;
-    const FileSpec working_dir = args->m_working_dir;
-
     lldb_utility::PseudoTerminal terminal;
     const size_t err_len = 1024;
     char err_str[err_len];
     lldb::pid_t pid;
-
-    // Propagate the environment if one is not supplied.
-    if (envp == NULL || envp[0] == NULL)
-        envp = const_cast<const char **>(environ);
 
     if ((pid = terminal.Fork(err_str, err_len)) == static_cast<lldb::pid_t> (-1))
     {
@@ -478,111 +582,21 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
         return -1;
     }
 
-    // Recognized child exit status codes.
-    enum {
-        ePtraceFailed = 1,
-        eDupStdinFailed,
-        eDupStdoutFailed,
-        eDupStderrFailed,
-        eChdirFailed,
-        eExecFailed,
-        eSetGidFailed,
-        eSetSigMaskFailed
-    };
-
     // Child process.
     if (pid == 0)
     {
         // First, make sure we disable all logging. If we are logging to stdout, our logs can be
         // mistaken for inferior output.
         Log::DisableAllLogChannels(nullptr);
-        // FIXME consider opening a pipe between parent/child and have this forked child
-        // send log info to parent re: launch status.
-
-        // Start tracing this child that is about to exec.
-        error = PtraceWrapper(PTRACE_TRACEME, 0);
-        if (error.Fail())
-            exit(ePtraceFailed);
 
         // terminal has already dupped the tty descriptors to stdin/out/err.
         // This closes original fd from which they were copied (and avoids
         // leaking descriptors to the debugged process.
         terminal.CloseSlaveFileDescriptor();
 
-        // Do not inherit setgid powers.
-        if (setgid(getgid()) != 0)
-            exit(eSetGidFailed);
-
-        // Attempt to have our own process group.
-        if (setpgid(0, 0) != 0)
-        {
-            // FIXME log that this failed. This is common.
-            // Don't allow this to prevent an inferior exec.
-        }
-
-        // Dup file descriptors if needed.
-        if (args->m_stdin_file_spec)
-            if (!DupDescriptor(args->m_stdin_file_spec, STDIN_FILENO, O_RDONLY))
-                exit(eDupStdinFailed);
-
-        if (args->m_stdout_file_spec)
-            if (!DupDescriptor(args->m_stdout_file_spec, STDOUT_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
-                exit(eDupStdoutFailed);
-
-        if (args->m_stderr_file_spec)
-            if (!DupDescriptor(args->m_stderr_file_spec, STDERR_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
-                exit(eDupStderrFailed);
-
-        // Close everything besides stdin, stdout, and stderr that has no file
-        // action to avoid leaking
-        for (int fd = 3; fd < sysconf(_SC_OPEN_MAX); ++fd)
-            if (!args->m_launch_info.GetFileActionForFD(fd))
-                close(fd);
-
-        // Change working directory
-        if (working_dir && 0 != ::chdir(working_dir.GetCString()))
-              exit(eChdirFailed);
-
-        // Disable ASLR if requested.
-        if (args->m_launch_info.GetFlags ().Test (lldb::eLaunchFlagDisableASLR))
-        {
-            const int old_personality = personality (LLDB_PERSONALITY_GET_CURRENT_SETTINGS);
-            if (old_personality == -1)
-            {
-                // Can't retrieve Linux personality.  Cannot disable ASLR.
-            }
-            else
-            {
-                const int new_personality = personality (ADDR_NO_RANDOMIZE | old_personality);
-                if (new_personality == -1)
-                {
-                    // Disabling ASLR failed.
-                }
-                else
-                {
-                    // Disabling ASLR succeeded.
-                }
-            }
-        }
-
-        // Clear the signal mask to prevent the child from being affected by
-        // any masking done by the parent.
-        sigset_t set;
-        if (sigemptyset(&set) != 0 || pthread_sigmask(SIG_SETMASK, &set, nullptr) != 0)
-            exit(eSetSigMaskFailed);
-
-        // Execute.  We should never return...
-        execve(argv[0],
-               const_cast<char *const *>(argv),
-               const_cast<char *const *>(envp));
-
-        // ...unless exec fails.  In which case we definitely need to end the child here.
-        exit(eExecFailed);
+        ChildFunc(*args);
     }
 
-    //
-    // This is the parent code here.
-    //
     Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
 
     // Wait for the child process to trap on its call to execve.
@@ -603,38 +617,37 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
     }
     else if (WIFEXITED(status))
     {
-        // open, dup or execve likely failed for some reason.
-        error.SetErrorToGenericError();
-        switch (WEXITSTATUS(status))
+        auto p = DecodeChildExitCode(WEXITSTATUS(status));
+        Error child_error(p.second, eErrorTypePOSIX);
+        const char *failure_reason;
+        switch (p.first)
         {
             case ePtraceFailed:
-                error.SetErrorString("Child ptrace failed.");
+                failure_reason = "Child ptrace failed";
                 break;
             case eDupStdinFailed:
-                error.SetErrorString("Child open stdin failed.");
+                failure_reason = "Child open stdin failed";
                 break;
             case eDupStdoutFailed:
-                error.SetErrorString("Child open stdout failed.");
+                failure_reason = "Child open stdout failed";
                 break;
             case eDupStderrFailed:
-                error.SetErrorString("Child open stderr failed.");
+                failure_reason = "Child open stderr failed";
                 break;
             case eChdirFailed:
-                error.SetErrorString("Child failed to set working directory.");
+                failure_reason = "Child failed to set working directory";
                 break;
             case eExecFailed:
-                error.SetErrorString("Child exec failed.");
+                failure_reason = "Child exec failed";
                 break;
             case eSetGidFailed:
-                error.SetErrorString("Child setgid failed.");
+                failure_reason = "Child setgid failed";
                 break;
             case eSetSigMaskFailed:
-                error.SetErrorString("Child failed to set signal mask.");
-                break;
-            default:
-                error.SetErrorString("Child returned unknown exit status.");
+                failure_reason = "Child failed to set signal mask";
                 break;
         }
+        error.SetErrorStringWithFormat("%s: %d - %s (error code truncated)", failure_reason, child_error.GetError(), child_error.AsCString());
 
         if (log)
         {

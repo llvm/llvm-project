@@ -55,7 +55,6 @@ namespace lldb_private {
             ValueObject* m_tree;
             size_t m_num_elements;
             ValueObject* m_next_element;
-            std::map<size_t,lldb::ValueObjectSP> m_children;
             std::vector<std::pair<ValueObject*, uint64_t> > m_elements_cache;
         };
     } // namespace formatters
@@ -66,7 +65,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::LibcxxStdUnord
     m_tree(nullptr),
     m_num_elements(0),
     m_next_element(nullptr),
-    m_children(),
     m_elements_cache()
 {
     if (valobj_sp)
@@ -88,10 +86,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtInde
         return lldb::ValueObjectSP();
     if (m_tree == nullptr)
         return lldb::ValueObjectSP();
-    
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
     
     while (idx >= m_elements_cache.size())
     {
@@ -125,13 +119,10 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::GetChildAtInde
         return lldb::ValueObjectSP();
     const bool thread_and_frame_only_if_stopped = true;
     ExecutionContext exe_ctx = val_hash.first->GetExecutionContextRef().Lock(thread_and_frame_only_if_stopped);
-    ValueObjectSP child_sp(val_hash.first->CreateValueObjectFromData(stream.GetData(),
-                                                                     data,
-                                                                     exe_ctx,
-                                                                     val_hash.first->GetCompilerType()));
-    if (child_sp)
-        m_children.emplace(idx, child_sp);
-    return child_sp;
+    return CreateValueObjectFromData(stream.GetData(),
+                                     data,
+                                     exe_ctx,
+                                     val_hash.first->GetCompilerType());
 }
 
 bool
@@ -140,7 +131,6 @@ lldb_private::formatters::LibcxxStdUnorderedMapSyntheticFrontEnd::Update()
     m_num_elements = UINT32_MAX;
     m_next_element = nullptr;
     m_elements_cache.clear();
-    m_children.clear();
     ValueObjectSP table_sp = m_backend.GetChildMemberWithName(ConstString("__table_"), true);
     if (!table_sp)
         return false;

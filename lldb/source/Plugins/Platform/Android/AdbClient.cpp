@@ -225,10 +225,10 @@ AdbClient::DeletePortForwarding (const uint16_t local_port)
 }
 
 Error
-AdbClient::SendMessage (const std::string &packet)
+AdbClient::SendMessage (const std::string &packet, const bool reconnect)
 {
     Error error;
-    if (!m_conn || !m_conn->IsConnected())
+    if (!m_conn || reconnect)
     {
         error = Connect ();
         if (error.Fail ())
@@ -364,7 +364,7 @@ AdbClient::StartSync ()
 Error
 AdbClient::Sync ()
 {
-    auto error = SendMessage ("sync:");
+    auto error = SendMessage ("sync:", false);
     if (error.Fail ())
         return error;
 
@@ -380,9 +380,13 @@ AdbClient::ReadAllBytes (void *buffer, size_t size)
 Error
 AdbClient::Shell (const char* command, uint32_t timeout_ms, std::string* output)
 {
+    auto error = SwitchDeviceTransport ();
+    if (error.Fail ())
+        return Error ("Failed to switch to device transport: %s", error.AsCString ());
+
     StreamString adb_command;
     adb_command.Printf("shell:%s", command);
-    auto error = SendMessage (adb_command.GetData());
+    error = SendMessage (adb_command.GetData(), false);
     if (error.Fail ())
         return error;
 
@@ -412,7 +416,7 @@ AdbClient::GetSyncService (Error &error)
 }
 
 Error
-AdbClient::SyncService::PullFile (const FileSpec &remote_file, const FileSpec &local_file)
+AdbClient::SyncService::internalPullFile (const FileSpec &remote_file, const FileSpec &local_file)
 {
     const auto local_file_path = local_file.GetPath ();
     llvm::FileRemover local_file_remover (local_file_path.c_str ());
@@ -442,7 +446,7 @@ AdbClient::SyncService::PullFile (const FileSpec &remote_file, const FileSpec &l
 }
 
 Error
-AdbClient::SyncService::PushFile (const FileSpec &local_file, const FileSpec &remote_file)
+AdbClient::SyncService::internalPushFile (const FileSpec &local_file, const FileSpec &remote_file)
 {
     const auto local_file_path (local_file.GetPath ());
     std::ifstream src (local_file_path.c_str(), std::ios::in | std::ios::binary);
@@ -492,7 +496,7 @@ AdbClient::SyncService::PushFile (const FileSpec &local_file, const FileSpec &re
 }
 
 Error
-AdbClient::SyncService::Stat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime)
+AdbClient::SyncService::internalStat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime)
 {
     const std::string remote_file_path (remote_file.GetPath (false));
     auto error = SendSyncRequest (kSTAT, remote_file_path.length (), remote_file_path.c_str ());
@@ -523,9 +527,52 @@ AdbClient::SyncService::Stat (const FileSpec &remote_file, uint32_t &mode, uint3
     return Error ();
 }
 
+Error
+AdbClient::SyncService::PullFile (const FileSpec &remote_file, const FileSpec &local_file)
+{
+    return executeCommand ([this, &remote_file, &local_file]() {
+        return internalPullFile (remote_file, local_file);
+    });
+}
+
+Error
+AdbClient::SyncService::PushFile (const FileSpec &local_file, const FileSpec &remote_file)
+{
+    return executeCommand ([this, &local_file, &remote_file]() {
+        return internalPushFile (local_file, remote_file);
+    });
+}
+
+Error
+AdbClient::SyncService::Stat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime)
+{
+    return executeCommand ([this, &remote_file, &mode, &size, &mtime]() {
+        return internalStat (remote_file, mode, size, mtime);
+    });
+}
+
+bool
+AdbClient::SyncService::IsConnected () const
+{
+    return m_conn && m_conn->IsConnected ();
+}
+
 AdbClient::SyncService::SyncService(std::unique_ptr<Connection> &&conn):
 m_conn(std::move(conn))
 {
+}
+
+Error
+AdbClient::SyncService::executeCommand (const std::function<Error()> &cmd)
+{
+    if (!m_conn)
+        return Error ("SyncService is disconnected");
+
+    const auto error = cmd ();
+    if (error.Fail ())
+        m_conn.reset ();
+
+    return error;
 }
 
 AdbClient::SyncService::~SyncService () {}

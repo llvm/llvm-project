@@ -55,6 +55,21 @@ bool processWorkingSetSigaction(int SigNum, const void *ActVoid,
   return true;
 }
 
+bool processWorkingSetSigprocmask(int How, void *Set, void *OldSet) {
+  VPrintf(2, "%s\n", __FUNCTION__);
+  // All we need to do is ensure that SIGSEGV is not blocked.
+  // FIXME: we are not fully transparent as we do not pretend that
+  // SIGSEGV is still blocked on app queries: that would require
+  // per-thread mask tracking.
+  if (Set && (How == SIG_BLOCK || How == SIG_SETMASK)) {
+    if (internal_sigismember((__sanitizer_sigset_t *)Set, SIGSEGV)) {
+      VPrintf(1, "%s: removing SIGSEGV from the blocked set\n", __FUNCTION__);
+      internal_sigdelset((__sanitizer_sigset_t *)Set, SIGSEGV);
+    }
+  }
+  return true;
+}
+
 static void reinstateDefaultHandler(int SigNum) {
   __sanitizer_sigaction SigAct;
   internal_memset(&SigAct, 0, sizeof(SigAct));
@@ -95,8 +110,14 @@ void registerMemoryFaultHandler() {
   // FIXME: This could result in problems with emulating the app's signal
   // handling if the app relies on an alternate stack for SIGSEGV.
 
-  // We assume SIGSEGV is not blocked and won't be blocked by the app, so
-  // we leave the mask alone.
+  // We require that SIGSEGV is not blocked.  We use a sigprocmask
+  // interceptor to ensure that in the future.  Here we ensure it for
+  // the current thread.  We assume there are no other threads at this
+  // point during initialization, or that at least they do not block
+  // SIGSEGV.
+  __sanitizer_sigset_t SigSet;
+  internal_sigemptyset(&SigSet);
+  internal_sigprocmask(SIG_BLOCK, &SigSet, nullptr);
 
   __sanitizer_sigaction SigAct;
   internal_memset(&SigAct, 0, sizeof(SigAct));

@@ -85,6 +85,12 @@ bool processSigaction(int SigNum, const void *Act, void *OldAct) {
   return true;
 }
 
+bool processSigprocmask(int How, void *Set, void *OldSet) {
+  if (__esan_which_tool == ESAN_WorkingSet)
+    return processWorkingSetSigprocmask(How, Set, OldSet);
+  return true;
+}
+
 #if SANITIZER_DEBUG
 static bool verifyShadowScheme() {
   // Sanity checks for our shadow mapping scheme.

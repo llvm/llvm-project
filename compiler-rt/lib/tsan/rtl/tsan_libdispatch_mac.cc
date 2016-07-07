@@ -67,6 +67,15 @@ static bool IsQueueSerial(dispatch_queue_t q) {
   return width == 1;
 }
 
+static dispatch_queue_t GetTargetQueueFromSource(dispatch_source_t source) {
+  CHECK_EQ(dispatch_queue_offsets.dqo_target_queue_size, 8);
+  dispatch_queue_t target_queue =
+      *(dispatch_queue_t *)(((uptr)source) +
+                            dispatch_queue_offsets.dqo_target_queue);
+  CHECK_NE(target_queue, 0);
+  return target_queue;
+}
+
 static tsan_block_context_t *AllocContext(ThreadState *thr, uptr pc,
                                           dispatch_queue_t queue,
                                           void *orig_context,
@@ -104,6 +113,11 @@ static void dispatch_callback_wrap(void *param) {
   if (context->submitted_synchronously) Release(thr, pc, submit_sync);
 
   if (context->free_context_in_callback) user_free(thr, pc, context);
+}
+
+static void invoke_block(void *param) {
+  dispatch_block_t block = (dispatch_block_t)param;
+  block();
 }
 
 static void invoke_and_release_block(void *param) {
@@ -342,15 +356,17 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler,
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_event_handler, source, handler);
   if (handler == nullptr)
     return REAL(dispatch_source_set_event_handler)(source, nullptr);
-  dispatch_block_t new_handler = ^(void) {
-    {
-      SCOPED_INTERCEPTOR_RAW(dispatch_source_set_event_handler_callback);
-      Acquire(thr, pc, (uptr)source);
-    }
-    handler();
-  };
-  Release(thr, pc, (uptr)source);
+  dispatch_queue_t q = GetTargetQueueFromSource(source);
+  __block tsan_block_context_t new_context = {
+      q, handler, &invoke_block, false, false, false };
+  dispatch_block_t new_handler = Block_copy(^(void) {
+    new_context.orig_context = handler;  // To explicitly capture "handler".
+    dispatch_callback_wrap(&new_context);
+  });
+  uptr submit_sync = (uptr)&new_context;
+  Release(thr, pc, submit_sync);
   REAL(dispatch_source_set_event_handler)(source, new_handler);
+  Block_release(new_handler);
 }
 
 TSAN_INTERCEPTOR(void, dispatch_source_set_event_handler_f,
@@ -369,15 +385,17 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_cancel_handler,
   SCOPED_TSAN_INTERCEPTOR(dispatch_source_set_cancel_handler, source, handler);
   if (handler == nullptr)
     return REAL(dispatch_source_set_cancel_handler)(source, nullptr);
-  dispatch_block_t new_handler = ^(void) {
-    {
-      SCOPED_INTERCEPTOR_RAW(dispatch_source_set_cancel_handler_callback);
-      Acquire(thr, pc, (uptr)source);
-    }
-    handler();
-  };
-  Release(thr, pc, (uptr)source);
+  dispatch_queue_t q = GetTargetQueueFromSource(source);
+  __block tsan_block_context_t new_context = {
+      q, handler, &invoke_block, false, false, false };
+  dispatch_block_t new_handler = Block_copy(^(void) {
+    new_context.orig_context = handler;  // To explicitly capture "handler".
+    dispatch_callback_wrap(&new_context);
+  });
+  uptr submit_sync = (uptr)&new_context;
+  Release(thr, pc, submit_sync);
   REAL(dispatch_source_set_cancel_handler)(source, new_handler);
+  Block_release(new_handler);
 }
 
 TSAN_INTERCEPTOR(void, dispatch_source_set_cancel_handler_f,
@@ -398,15 +416,17 @@ TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler,
                           handler);
   if (handler == nullptr)
     return REAL(dispatch_source_set_registration_handler)(source, nullptr);
-  dispatch_block_t new_handler = ^(void) {
-    {
-      SCOPED_INTERCEPTOR_RAW(dispatch_source_set_registration_handler_callback);
-      Acquire(thr, pc, (uptr)source);
-    }
-    handler();
-  };
-  Release(thr, pc, (uptr)source);
+  dispatch_queue_t q = GetTargetQueueFromSource(source);
+  __block tsan_block_context_t new_context = {
+      q, handler, &invoke_block, false, false, false };
+  dispatch_block_t new_handler = Block_copy(^(void) {
+    new_context.orig_context = handler;  // To explicitly capture "handler".
+    dispatch_callback_wrap(&new_context);
+  });
+  uptr submit_sync = (uptr)&new_context;
+  Release(thr, pc, submit_sync);
   REAL(dispatch_source_set_registration_handler)(source, new_handler);
+  Block_release(new_handler);
 }
 
 TSAN_INTERCEPTOR(void, dispatch_source_set_registration_handler_f,

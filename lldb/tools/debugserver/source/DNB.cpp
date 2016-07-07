@@ -1083,6 +1083,39 @@ DNBGetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image_list_addr
     return JSONGenerator::ObjectSP();
 }
 
+JSONGenerator::ObjectSP 
+DNBGetAllLoadedLibrariesInfos (nub_process_t pid)
+{
+    MachProcessSP procSP;
+    if (GetProcessSP (pid, procSP))
+    {
+        return procSP->GetAllLoadedLibrariesInfos (pid);
+    }
+    return JSONGenerator::ObjectSP();
+}
+
+JSONGenerator::ObjectSP 
+DNBGetLibrariesInfoForAddresses (nub_process_t pid, std::vector<uint64_t> &macho_addresses)
+{
+    MachProcessSP procSP;
+    if (GetProcessSP (pid, procSP))
+    {
+        return procSP->GetLibrariesInfoForAddresses (pid, macho_addresses);
+    }
+    return JSONGenerator::ObjectSP();
+}
+
+JSONGenerator::ObjectSP 
+DNBGetSharedCacheInfo (nub_process_t pid)
+{
+    MachProcessSP procSP;
+    if (GetProcessSP (pid, procSP))
+    {
+        return procSP->GetSharedCacheInfo (pid);
+    }
+    return JSONGenerator::ObjectSP();
+}
+
 
 
 const char *

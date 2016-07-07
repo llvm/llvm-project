@@ -22,6 +22,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/UnwindAssembly.h"
+#include "lldb/Utility/RegisterNumber.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -228,16 +229,81 @@ FuncUnwinders::GetAssemblyUnwindPlan (Target &target, Thread &thread, int curren
     return m_unwind_plan_assembly_sp;
 }
 
+// This method compares the pc unwind rule in the first row of two UnwindPlans.
+// If they have the same way of getting the pc value (e.g. "CFA - 8" + "CFA is sp"), 
+// then it will return LazyBoolTrue.
+LazyBool
+FuncUnwinders::CompareUnwindPlansForIdenticalInitialPCLocation (Thread& thread, const UnwindPlanSP &a, const UnwindPlanSP &b)
+{
+    LazyBool plans_are_identical = eLazyBoolCalculate;
+
+    RegisterNumber pc_reg (thread, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_PC);
+    uint32_t pc_reg_lldb_regnum = pc_reg.GetAsKind (eRegisterKindLLDB);
+
+    if (a.get() && b.get())
+    {
+        UnwindPlan::RowSP a_first_row = a->GetRowAtIndex (0);
+        UnwindPlan::RowSP b_first_row = b->GetRowAtIndex (0);
+
+        if (a_first_row.get() && b_first_row.get())
+        {
+            UnwindPlan::Row::RegisterLocation a_pc_regloc;
+            UnwindPlan::Row::RegisterLocation b_pc_regloc;
+
+            a_first_row->GetRegisterInfo (pc_reg_lldb_regnum, a_pc_regloc);
+            b_first_row->GetRegisterInfo (pc_reg_lldb_regnum, b_pc_regloc);
+
+            plans_are_identical = eLazyBoolYes;
+
+            if (a_first_row->GetCFAValue() != b_first_row->GetCFAValue())
+            {
+                plans_are_identical = eLazyBoolNo;
+            }
+            if (a_pc_regloc != b_pc_regloc)
+            {
+                plans_are_identical = eLazyBoolNo;
+            }
+        }
+    }
+    return plans_are_identical;
+}
 
 UnwindPlanSP
 FuncUnwinders::GetUnwindPlanAtNonCallSite (Target& target, Thread& thread, int current_offset)
 {
-    UnwindPlanSP non_call_site_unwindplan_sp = GetEHFrameAugmentedUnwindPlan (target, thread, current_offset);
-    if (non_call_site_unwindplan_sp.get() == nullptr)
+    UnwindPlanSP eh_frame_sp = GetEHFrameUnwindPlan (target, current_offset);
+    UnwindPlanSP arch_default_at_entry_sp = GetUnwindPlanArchitectureDefaultAtFunctionEntry (thread);
+    UnwindPlanSP arch_default_sp = GetUnwindPlanArchitectureDefault (thread);
+    UnwindPlanSP assembly_sp = GetAssemblyUnwindPlan (target, thread, current_offset);
+
+    // This point of this code is to detect when a function is using a non-standard ABI, and the eh_frame
+    // correctly describes that alternate ABI.  This is addressing a specific situation on x86_64 linux 
+    // systems where one function in a library pushes a value on the stack and jumps to another function.
+    // So using an assembly instruction based unwind will not work when you're in the second function -
+    // the stack has been modified in a non-ABI way.  But we have eh_frame that correctly describes how to
+    // unwind from this location.  So we're looking to see if the initial pc register save location from
+    // the eh_frame is different from the assembly unwind, the arch default unwind, and the arch default at
+    // initial function entry.
+    //
+    // We may have eh_frame that describes the entire function -- or we may have eh_frame that only describes
+    // the unwind after the prologue has executed -- so we need to check both the arch default (once the prologue
+    // has executed) and the arch default at initial function entry.  And we may be running on a target where
+    // we have only some of the assembly/arch default unwind plans available.
+
+    if (CompareUnwindPlansForIdenticalInitialPCLocation (thread, eh_frame_sp, arch_default_at_entry_sp) == eLazyBoolNo
+        && CompareUnwindPlansForIdenticalInitialPCLocation (thread, eh_frame_sp, arch_default_sp) == eLazyBoolNo
+        && CompareUnwindPlansForIdenticalInitialPCLocation (thread, assembly_sp, arch_default_sp) == eLazyBoolNo)
     {
-        non_call_site_unwindplan_sp = GetAssemblyUnwindPlan (target, thread, current_offset);
+        return eh_frame_sp;
     }
-    return non_call_site_unwindplan_sp;
+
+    UnwindPlanSP eh_frame_augmented_sp = GetEHFrameAugmentedUnwindPlan (target, thread, current_offset);
+    if (eh_frame_augmented_sp)
+    {
+        return eh_frame_augmented_sp;
+    }
+
+    return assembly_sp;
 }
 
 UnwindPlanSP

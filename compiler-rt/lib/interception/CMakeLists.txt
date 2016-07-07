@@ -17,3 +17,7 @@ add_compiler_rt_object_libraries(RTInterception
     ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
     SOURCES ${INTERCEPTION_SOURCES}
     CFLAGS ${INTERCEPTION_CFLAGS})
+
+if(COMPILER_RT_INCLUDE_TESTS)
+  add_subdirectory(tests)
+endif()

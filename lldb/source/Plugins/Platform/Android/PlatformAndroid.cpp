@@ -204,17 +204,12 @@ PlatformAndroid::ConnectRemote(Args& args)
     auto error = PlatformLinux::ConnectRemote(args);
     if (error.Success())
     {
-        m_adb.reset(new AdbClient);
-        error = AdbClient::CreateByDeviceID(m_device_id, *m_adb);
+        AdbClient adb;
+        error = AdbClient::CreateByDeviceID(m_device_id, adb);
         if (error.Fail())
             return error;
 
-        m_device_id = m_adb->GetDeviceID();
-        m_adb_sync_svc = m_adb->GetSyncService(error);
-        if (error.Fail())
-            return error;
-
-        error = m_adb->SwitchDeviceTransport();
+        m_device_id = adb.GetDeviceID();
     }
     return error;
 }
@@ -230,7 +225,12 @@ PlatformAndroid::GetFile (const FileSpec& source,
     if (source_spec.IsRelative())
         source_spec = GetRemoteWorkingDirectory ().CopyByAppendingPathComponent (source_spec.GetCString (false));
 
-    return m_adb_sync_svc->PullFile (source_spec, destination);
+    Error error;
+    auto sync_service = GetSyncService (error);
+    if (error.Fail ())
+        return error;
+
+    return sync_service->PullFile (source_spec, destination);
 }
 
 Error
@@ -247,7 +247,11 @@ PlatformAndroid::PutFile (const FileSpec& source,
         destination_spec = GetRemoteWorkingDirectory ().CopyByAppendingPathComponent (destination_spec.GetCString (false));
 
     // TODO: Set correct uid and gid on remote file.
-    return m_adb_sync_svc->PushFile(source, destination_spec);
+    Error error;
+    auto sync_service = GetSyncService (error);
+    if (error.Fail ())
+        return error;
+    return sync_service->PushFile(source, destination_spec);
 }
 
 const char *
@@ -296,7 +300,8 @@ PlatformAndroid::GetSdkVersion()
         return m_sdk_version;
 
     std::string version_string;
-    Error error = m_adb->Shell("getprop ro.build.version.sdk", 5000 /* ms */, &version_string);
+    AdbClient adb(m_device_id);
+    Error error = adb.Shell("getprop ro.build.version.sdk", 5000 /* ms */, &version_string);
     version_string = llvm::StringRef(version_string).trim().str();
 
     if (error.Fail() || version_string.empty())
@@ -317,8 +322,9 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
                                      const FileSpec& dst_file_spec)
 {
     // For oat file we can try to fetch additional debug info from the device
-    if (module_sp->GetFileSpec().GetFileNameExtension() != ConstString("oat"))
-        return Error("Symbol file downloading only supported for oat files");
+    ConstString extension = module_sp->GetFileSpec().GetFileNameExtension();
+    if (extension != ConstString("oat") && extension != ConstString("odex"))
+        return Error("Symbol file downloading only supported for oat and odex files");
 
     // If we have no information about the platform file we can't execute oatdump
     if (!module_sp->GetPlatformFileSpec())
@@ -332,8 +338,9 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
     if (module_sp->GetSectionList()->FindSectionByName(ConstString(".symtab")) != nullptr)
         return Error("Symtab already available in the module");
 
+    AdbClient adb(m_device_id);
     std::string tmpdir;
-    Error error = m_adb->Shell("mktemp --directory --tmpdir /data/local/tmp", 5000 /* ms */, &tmpdir);
+    Error error = adb.Shell("mktemp --directory --tmpdir /data/local/tmp", 5000 /* ms */, &tmpdir);
     if (error.Fail() || tmpdir.empty())
         return Error("Failed to generate temporary directory on the device (%s)", error.AsCString());
     tmpdir = llvm::StringRef(tmpdir).trim().str();
@@ -341,10 +348,10 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
     // Create file remover for the temporary directory created on the device
     std::unique_ptr<std::string, std::function<void(std::string*)>> tmpdir_remover(
         &tmpdir,
-        [this](std::string* s) {
+        [this, &adb](std::string* s) {
             StreamString command;
             command.Printf("rm -rf %s", s->c_str());
-            Error error = m_adb->Shell(command.GetData(), 5000 /* ms */, nullptr);
+            Error error = adb.Shell(command.GetData(), 5000 /* ms */, nullptr);
 
             Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
             if (error.Fail())
@@ -360,7 +367,7 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
     command.Printf("oatdump --symbolize=%s --output=%s",
                    module_sp->GetPlatformFileSpec().GetCString(false),
                    symfile_platform_filespec.GetCString(false));
-    error = m_adb->Shell(command.GetData(), 60000 /* ms */, nullptr);
+    error = adb.Shell(command.GetData(), 60000 /* ms */, nullptr);
     if (error.Fail())
         return Error("Oatdump failed: %s", error.AsCString());
 
@@ -387,3 +394,15 @@ PlatformAndroid::GetLibdlFunctionDeclarations() const
               extern "C" char* dlerror(void) asm("__dl_dlerror");
              )";
 }
+
+AdbClient::SyncService*
+PlatformAndroid::GetSyncService (Error &error)
+{
+    if (m_adb_sync_svc && m_adb_sync_svc->IsConnected ())
+        return m_adb_sync_svc.get ();
+
+    AdbClient adb (m_device_id);
+    m_adb_sync_svc = adb.GetSyncService (error);
+    return (error.Success ()) ? m_adb_sync_svc.get () : nullptr;
+}
+

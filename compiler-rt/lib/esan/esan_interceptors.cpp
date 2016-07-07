@@ -42,6 +42,9 @@ using namespace __esan; // NOLINT
 // intercept malloc soon ourselves and can then remove this undef.
 #undef SANITIZER_INTERCEPT_REALPATH
 
+// We provide our own version:
+#undef SANITIZER_INTERCEPT_SIGPROCMASK
+
 #define COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED (!EsanIsInitialized)
 
 #define COMMON_INTERCEPT_FUNCTION(name) INTERCEPT_FUNCTION(name)
@@ -420,6 +423,40 @@ int real_sigaction(int signum, const void *act, void *oldact) {
 #define ESAN_MAYBE_INTERCEPT_SIGACTION
 #endif
 
+#if SANITIZER_LINUX
+INTERCEPTOR(int, sigprocmask, int how, __sanitizer_sigset_t *set,
+            __sanitizer_sigset_t *oldset) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, sigprocmask, how, set, oldset);
+  int res = 0;
+  if (processSigprocmask(how, set, oldset))
+    res = REAL(sigprocmask)(how, set, oldset);
+  if (!res && oldset)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, oldset, sizeof(*oldset));
+  return res;
+}
+#define ESAN_MAYBE_INTERCEPT_SIGPROCMASK INTERCEPT_FUNCTION(sigprocmask)
+#else
+#define ESAN_MAYBE_INTERCEPT_SIGPROCMASK
+#endif
+
+#if !SANITIZER_WINDOWS
+INTERCEPTOR(int, pthread_sigmask, int how, __sanitizer_sigset_t *set,
+            __sanitizer_sigset_t *oldset) {
+  void *ctx;
+  COMMON_INTERCEPTOR_ENTER(ctx, pthread_sigmask, how, set, oldset);
+  int res = 0;
+  if (processSigprocmask(how, set, oldset))
+    res = REAL(sigprocmask)(how, set, oldset);
+  if (!res && oldset)
+    COMMON_INTERCEPTOR_WRITE_RANGE(ctx, oldset, sizeof(*oldset));
+  return res;
+}
+#define ESAN_MAYBE_INTERCEPT_PTHREAD_SIGMASK INTERCEPT_FUNCTION(pthread_sigmask)
+#else
+#define ESAN_MAYBE_INTERCEPT_PTHREAD_SIGMASK
+#endif
+
 //===----------------------------------------------------------------------===//
 // Malloc interceptors
 //===----------------------------------------------------------------------===//
@@ -493,6 +530,8 @@ void initializeInterceptors() {
 
   ESAN_MAYBE_INTERCEPT_SIGNAL;
   ESAN_MAYBE_INTERCEPT_SIGACTION;
+  ESAN_MAYBE_INTERCEPT_SIGPROCMASK;
+  ESAN_MAYBE_INTERCEPT_PTHREAD_SIGMASK;
 
   INTERCEPT_FUNCTION(calloc);
   INTERCEPT_FUNCTION(free);
