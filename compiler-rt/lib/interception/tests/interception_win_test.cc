@@ -27,7 +27,8 @@ namespace {
 typedef int (*IdentityFunction)(int);
 
 #if !SANITIZER_WINDOWS64
-u8 kIdentityCodeWithPrologue[] = {
+
+const u8 kIdentityCodeWithPrologue[] = {
     0x55,              // push        ebp
     0x8B, 0xEC,        // mov         ebp,esp
     0x8B, 0x45, 0x08,  // mov         eax,dword ptr [ebp + 8]
@@ -35,7 +36,7 @@ u8 kIdentityCodeWithPrologue[] = {
     0xC3,              // ret
 };
 
-u8 kIdentityCodeWithPushPop[] = {
+const u8 kIdentityCodeWithPushPop[] = {
     0x55,              // push        ebp
     0x8B, 0xEC,        // mov         ebp,esp
     0x53,              // push        ebx
@@ -47,28 +48,85 @@ u8 kIdentityCodeWithPushPop[] = {
     0xC3,              // ret
 };
 
+const u8 kPatchableCode1[] = {
+    0xB8, 0x4B, 0x00, 0x00, 0x00,   // mov eax,4B
+    0x33, 0xC9,                     // xor ecx,ecx
+    0xC3,                           // ret
+};
+
+const u8 kPatchableCode2[] = {
+    0x55,                           // push ebp
+    0x8B, 0xEC,                     // mov ebp,esp
+    0x33, 0xC0,                     // xor eax,eax
+    0x5D,                           // pop ebp
+    0xC3,                           // ret
+};
+
+const u8 kPatchableCode3[] = {
+    0x55,                           // push ebp
+    0x8B, 0xEC,                     // mov ebp,esp
+    0x6A, 0x00,                     // push 0
+    0xE8, 0x3D, 0xFF, 0xFF, 0xFF,   // call <func>
+};
+
+const u8 kUnpatchableCode1[] = {
+    0xC3,                           // ret
+};
+
+const u8 kUnpatchableCode2[] = {
+    0x33, 0xC9,                     // xor ecx,ecx
+    0xC3,                           // ret
+};
+
+const u8 kUnpatchableCode3[] = {
+    0x75, 0xCC,                     // jne <label>
+    0x33, 0xC9,                     // xor ecx,ecx
+    0xC3,                           // ret
+};
+
+const u8 kUnpatchableCode4[] = {
+    0x74, 0xCC,                     // jne <label>
+    0x33, 0xC9,                     // xor ecx,ecx
+    0xC3,                           // ret
+};
+
+const u8 kUnpatchableCode5[] = {
+    0xEB, 0x02,                     // jmp <label>
+    0x33, 0xC9,                     // xor ecx,ecx
+    0xC3,                           // ret
+};
+
+const u8 kUnpatchableCode6[] = {
+    0xE9, 0xCC, 0xCC, 0xCC, 0xCC,   // jmp <label>
+    0x90, 0x90, 0x90, 0x90,
+};
+
+const u8 kUnpatchableCode7[] = {
+    0xE8, 0xCC, 0xCC, 0xCC, 0xCC,   // call <func>
+    0x90, 0x90, 0x90, 0x90,
+};
+
 #endif
 
 // A buffer holding the dynamically generated code under test.
 u8* ActiveCode;
 size_t ActiveCodeLength = 4096;
 
-bool LoadActiveCode(u8* Code, size_t CodeLength, uptr* EntryPoint) {
+template<class T>
+void LoadActiveCode(const T &Code, uptr *EntryPoint) {
   if (ActiveCode == nullptr) {
     ActiveCode =
         (u8*)::VirtualAlloc(nullptr, ActiveCodeLength, MEM_COMMIT | MEM_RESERVE,
                             PAGE_EXECUTE_READWRITE);
-    if (ActiveCode == nullptr) return false;
+    ASSERT_NE(ActiveCode, nullptr);
   }
 
   size_t Position = 0;
   *EntryPoint = (uptr)&ActiveCode[0];
 
   // Copy the function body.
-  for (size_t i = 0; i < CodeLength; ++i)
-  	ActiveCode[Position++] = Code[i];
-
-  return true;
+  for (size_t i = 0; i < sizeof(T); ++i)
+    ActiveCode[Position++] = Code[i];
 }
 
 int InterceptorFunctionCalled;
@@ -96,10 +154,21 @@ TEST(Interception, InternalGetProcAddress) {
   EXPECT_NE(DbgPrint_adddress, isdigit_address);
 }
 
-void TestIdentityFunctionPatching(u8* IdentityCode, size_t IdentityCodeLength) {
+template<class T>
+bool TestFunctionPatching(const T &Code) {
+  uptr Address;
+  int x = sizeof(T);
+
+  LoadActiveCode<T>(Code, &Address);
+  uptr UnusedRealAddress = 0;
+  return OverrideFunction(Address, (uptr)&InterceptorFunction,
+                          &UnusedRealAddress);
+}
+
+template<class T>
+void TestIdentityFunctionPatching(const T &IdentityCode) {
   uptr IdentityAddress;
-  ASSERT_TRUE(
-      LoadActiveCode(IdentityCode, IdentityCodeLength, &IdentityAddress));
+  LoadActiveCode<T>(IdentityCode, &IdentityAddress);
   IdentityFunction Identity = (IdentityFunction)IdentityAddress;
 
   // Validate behavior before dynamic patching.
@@ -129,10 +198,22 @@ void TestIdentityFunctionPatching(u8* IdentityCode, size_t IdentityCodeLength) {
 
 #if !SANITIZER_WINDOWS64
 TEST(Interception, OverrideFunction) {
-  TestIdentityFunctionPatching(kIdentityCodeWithPrologue,
-                               sizeof(kIdentityCodeWithPrologue));
-  TestIdentityFunctionPatching(kIdentityCodeWithPushPop,
-                               sizeof(kIdentityCodeWithPushPop));
+  TestIdentityFunctionPatching(kIdentityCodeWithPrologue);
+  TestIdentityFunctionPatching(kIdentityCodeWithPushPop);
+}
+
+TEST(Interception, PatchableFunction) {
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode1));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode2));
+  EXPECT_TRUE(TestFunctionPatching(kPatchableCode3));
+
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode1));
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode2));
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode3));
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode4));
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode5));
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode6));
+  EXPECT_FALSE(TestFunctionPatching(kUnpatchableCode7));
 }
 #endif
 

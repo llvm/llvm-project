@@ -256,7 +256,8 @@ void LinkerScript<ELFT>::assignAddresses(
     }
   }
 
-  // ELF and Program headers need to be right before the first section in memory.
+  // ELF and Program headers need to be right before the first section in
+  // memory.
   // Set their addresses accordingly.
   MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
                         Out<ELFT>::ProgramHeaders->getSize(),

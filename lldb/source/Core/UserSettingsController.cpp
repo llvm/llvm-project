@@ -121,7 +121,7 @@ Properties::IsSettingExperimental(const char *setting)
         return false;
         
     const char *experimental = GetExperimentalSettingsName();
-    auto dot_pos = strchr(setting, '.');
+    const char *dot_pos = strchr(setting, '.');
     if (dot_pos == nullptr)
         return strcmp(experimental, setting) == 0;
     else

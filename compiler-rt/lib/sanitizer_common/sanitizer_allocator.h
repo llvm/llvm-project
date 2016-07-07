@@ -323,12 +323,13 @@ class SizeClassAllocator64 {
   typedef SizeClassAllocatorLocalCache<ThisT> AllocatorCache;
 
   void Init() {
+    uptr TotalSpaceSize = kSpaceSize + AdditionalSize();
     if (kUsingConstantSpaceBeg) {
       CHECK_EQ(kSpaceBeg, reinterpret_cast<uptr>(
-                              MmapFixedNoAccess(kSpaceBeg, kSpaceSize)));
+                              MmapFixedNoAccess(kSpaceBeg, TotalSpaceSize)));
     } else {
       NonConstSpaceBeg =
-          reinterpret_cast<uptr>(MmapNoAccess(kSpaceSize + AdditionalSize()));
+          reinterpret_cast<uptr>(MmapNoAccess(TotalSpaceSize));
       CHECK_NE(NonConstSpaceBeg, ~(uptr)0);
     }
     MapWithCallback(SpaceEnd(), AdditionalSize());

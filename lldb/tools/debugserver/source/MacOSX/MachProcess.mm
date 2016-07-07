@@ -631,8 +631,14 @@ MachProcess::GetMachOInformationFromMemory (nub_addr_t mach_o_header_addr, int w
             if (ReadMemory (load_cmds_p, sizeof (struct uuid_command), &uuidcmd) == sizeof (struct uuid_command))
                 uuid_copy (inf.uuid, uuidcmd.uuid);
         }
-        if (lc.cmd == LC_VERSION_MIN_IPHONEOS || lc.cmd == LC_VERSION_MIN_MACOSX 
-            || lc.cmd == LC_VERSION_MIN_WATCHOS || lc.cmd == LC_VERSION_MIN_TVOS)
+        bool lc_cmd_known = lc.cmd == LC_VERSION_MIN_IPHONEOS || lc.cmd == LC_VERSION_MIN_MACOSX;
+#if defined(LC_VERSION_MIN_TVOS)
+        lc_cmd_known |= lc.cmd == LC_VERSION_MIN_TVOS;
+#endif
+#if defined(LC_VERSION_MIN_WATCHOS)
+        lc_cmd_known |= lc.cmd == LC_VERSION_MIN_WATCHOS;
+#endif
+        if (lc_cmd_known)
         {
             struct version_min_command vers_cmd;
             if (ReadMemory (load_cmds_p, sizeof (struct version_min_command), &vers_cmd) != sizeof (struct version_min_command))
@@ -647,12 +653,16 @@ MachProcess::GetMachOInformationFromMemory (nub_addr_t mach_o_header_addr, int w
                 case LC_VERSION_MIN_MACOSX:
                     inf.min_version_os_name = "macosx";
                     break;
+#if defined(LC_VERSION_MIN_TVOS)
                 case LC_VERSION_MIN_TVOS:
                     inf.min_version_os_name = "tvos";
                     break;
+#endif
+#if defined(LC_VERSION_MIN_WATCHOS)
                 case LC_VERSION_MIN_WATCHOS:
                     inf.min_version_os_name = "watchos";
                     break;
+#endif
                 default:
                     return false;
             }

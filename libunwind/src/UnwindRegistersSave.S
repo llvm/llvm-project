@@ -378,6 +378,8 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveVFPv3EPy)
   vstmia r0, {d16-d31}
   JMP(lr)
 
+#if defined(_LIBUNWIND_ARM_WMMX)
+
 @
 @ static void libunwind::Registers_arm::saveiWMMX(unw_fpreg_t* values)
 @
@@ -386,7 +388,6 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveVFPv3EPy)
 @
   .p2align 2
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveiWMMXEPy)
-#if (!defined(__ARM_ARCH_6M__) && !defined(__ARM_ARCH_6SM__)) || defined(__ARM_WMMX)
   stcl p1, cr0, [r0], #8  @ wstrd wR0, [r0], #8
   stcl p1, cr1, [r0], #8  @ wstrd wR1, [r0], #8
   stcl p1, cr2, [r0], #8  @ wstrd wR2, [r0], #8
@@ -403,7 +404,6 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveiWMMXEPy)
   stcl p1, cr13, [r0], #8  @ wstrd wR13, [r0], #8
   stcl p1, cr14, [r0], #8  @ wstrd wR14, [r0], #8
   stcl p1, cr15, [r0], #8  @ wstrd wR15, [r0], #8
-#endif
   JMP(lr)
 
 @
@@ -414,13 +414,13 @@ DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm9saveiWMMXEPy)
 @
   .p2align 2
 DEFINE_LIBUNWIND_PRIVATE_FUNCTION(_ZN9libunwind13Registers_arm16saveiWMMXControlEPj)
-#if (!defined(__ARM_ARCH_6M__) && !defined(__ARM_ARCH_6SM__)) || defined(__ARM_WMMX)
   stc2 p1, cr8, [r0], #4  @ wstrw wCGR0, [r0], #4
   stc2 p1, cr9, [r0], #4  @ wstrw wCGR1, [r0], #4
   stc2 p1, cr10, [r0], #4  @ wstrw wCGR2, [r0], #4
   stc2 p1, cr11, [r0], #4  @ wstrw wCGR3, [r0], #4
-#endif
   JMP(lr)
+
+#endif
 
 #elif defined(__or1k__)
 
