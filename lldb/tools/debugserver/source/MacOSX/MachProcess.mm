@@ -631,6 +631,44 @@ MachProcess::GetMachOInformationFromMemory (nub_addr_t mach_o_header_addr, int w
             if (ReadMemory (load_cmds_p, sizeof (struct uuid_command), &uuidcmd) == sizeof (struct uuid_command))
                 uuid_copy (inf.uuid, uuidcmd.uuid);
         }
+        if (lc.cmd == LC_VERSION_MIN_IPHONEOS || lc.cmd == LC_VERSION_MIN_MACOSX 
+            || lc.cmd == LC_VERSION_MIN_WATCHOS || lc.cmd == LC_VERSION_MIN_TVOS)
+        {
+            struct version_min_command vers_cmd;
+            if (ReadMemory (load_cmds_p, sizeof (struct version_min_command), &vers_cmd) != sizeof (struct version_min_command))
+            {
+                return false;
+            }
+            switch (lc.cmd)
+            {
+                case LC_VERSION_MIN_IPHONEOS:
+                    inf.min_version_os_name = "iphoneos";
+                    break;
+                case LC_VERSION_MIN_MACOSX:
+                    inf.min_version_os_name = "macosx";
+                    break;
+                case LC_VERSION_MIN_TVOS:
+                    inf.min_version_os_name = "tvos";
+                    break;
+                case LC_VERSION_MIN_WATCHOS:
+                    inf.min_version_os_name = "watchos";
+                    break;
+                default:
+                    return false;
+            }
+            uint32_t xxxx = vers_cmd.sdk >> 16;
+            uint32_t yy = (vers_cmd.sdk >> 8) & 0xffu;
+            uint32_t zz = vers_cmd.sdk & 0xffu;
+            inf.min_version_os_version = "";
+            inf.min_version_os_version += std::to_string(xxxx);
+            inf.min_version_os_version += ".";
+            inf.min_version_os_version += std::to_string(yy);
+            if (zz != 0)
+            {
+                inf.min_version_os_version += ".";
+                inf.min_version_os_version += std::to_string(zz);
+            }
+        }
         load_cmds_p += lc.cmdsize;
     }
     return true;
@@ -656,6 +694,13 @@ MachProcess::FormatDynamicLibrariesIntoJSON (const std::vector<struct binary_ima
         uuid_string_t uuidstr;
         uuid_unparse_upper (image_infos[i].macho_info.uuid, uuidstr);
         image_info_dict_sp->AddStringItem ("uuid", uuidstr);
+
+        if (image_infos[i].macho_info.min_version_os_name.empty() == false
+            && image_infos[i].macho_info.min_version_os_version.empty() == false)
+        {
+            image_info_dict_sp->AddStringItem ("min_version_os_name", image_infos[i].macho_info.min_version_os_name);
+            image_info_dict_sp->AddStringItem ("min_version_os_sdk", image_infos[i].macho_info.min_version_os_version);
+        }
 
         JSONGenerator::DictionarySP mach_header_dict_sp (new JSONGenerator::Dictionary());
         mach_header_dict_sp->AddIntegerItem ("magic", image_infos[i].macho_info.mach_header.magic);

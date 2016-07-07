@@ -69,6 +69,8 @@ public:
         struct mach_header_64 mach_header;
         std::vector<struct mach_o_segment> segments;
         uuid_t uuid;
+        std::string min_version_os_name;
+        std::string min_version_os_version;
     };
 
     struct binary_image_information
