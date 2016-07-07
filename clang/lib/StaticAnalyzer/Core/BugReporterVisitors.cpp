@@ -1596,12 +1596,6 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
         }
       }
 
-      // The analyzer issues a false positive on
-      //   std::basic_string<uint8_t> v; v.push_back(1);
-      // and
-      //   std::u16string s; s += u'a';
-      // because we cannot reason about the internal invariants of the
-      // datastructure.
       for (const LocationContext *LCtx = N->getLocationContext(); LCtx;
            LCtx = LCtx->getParent()) {
         const CXXMethodDecl *MD = dyn_cast<CXXMethodDecl>(LCtx->getDecl());
@@ -1609,7 +1603,21 @@ LikelyFalsePositiveSuppressionBRVisitor::getEndPath(BugReporterContext &BRC,
           continue;
 
         const CXXRecordDecl *CD = MD->getParent();
+        // The analyzer issues a false positive on
+        //   std::basic_string<uint8_t> v; v.push_back(1);
+        // and
+        //   std::u16string s; s += u'a';
+        // because we cannot reason about the internal invariants of the
+        // datastructure.
         if (CD->getName() == "basic_string") {
+          BR.markInvalid(getTag(), nullptr);
+          return nullptr;
+        }
+
+        // The analyzer issues a false positive on
+        //    std::shared_ptr<int> p(new int(1)); p = nullptr;
+        // because it does not reason properly about temporary destructors.
+        if (CD->getName() == "shared_ptr") {
           BR.markInvalid(getTag(), nullptr);
           return nullptr;
         }
