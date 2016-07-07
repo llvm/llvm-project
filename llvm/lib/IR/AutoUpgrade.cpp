@@ -601,8 +601,9 @@ static Value *upgradeMaskedCompare(IRBuilder<> &Builder, CallInst &CI,
     for (unsigned i = 0; i != NumElts; ++i)
       Indices[i] = i;
     for (unsigned i = NumElts; i != 8; ++i)
-      Indices[i] = NumElts;
-    Cmp = Builder.CreateShuffleVector(Cmp, UndefValue::get(Cmp->getType()),
+      Indices[i] = NumElts + i % NumElts;
+    Cmp = Builder.CreateShuffleVector(Cmp,
+                                      Constant::getNullValue(Cmp->getType()),
                                       Indices);
   }
   return Builder.CreateBitCast(Cmp, IntegerType::get(CI.getContext(),

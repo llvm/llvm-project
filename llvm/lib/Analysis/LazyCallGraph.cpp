@@ -15,7 +15,6 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
 
@@ -120,10 +119,6 @@ void LazyCallGraph::Node::removeEdgeInternal(Function &Target) {
   EdgeIndexMap.erase(IndexMapI);
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const LazyCallGraph::Node &N) {
-  return OS << N.F.getName();
-}
-
 void LazyCallGraph::Node::dump() const {
   dbgs() << *this << '\n';
 }
@@ -181,24 +176,6 @@ LazyCallGraph &LazyCallGraph::operator=(LazyCallGraph &&G) {
   return *this;
 }
 
-raw_ostream &llvm::operator<<(raw_ostream &OS, const LazyCallGraph::SCC &C) {
-  OS << '(';
-  int i = 0;
-  for (LazyCallGraph::Node &N : C) {
-    if (i > 0)
-      OS << ", ";
-    // Elide the inner elements if there are too many.
-    if (i > 8) {
-      OS << "..., " << *C.Nodes.back();
-      break;
-    }
-    OS << N;
-    ++i;
-  }
-  OS << ')';
-  return OS;
-}
-
 void LazyCallGraph::SCC::dump() const {
   dbgs() << *this << '\n';
 }
@@ -223,25 +200,6 @@ void LazyCallGraph::SCC::verify() {
 #endif
 
 LazyCallGraph::RefSCC::RefSCC(LazyCallGraph &G) : G(&G) {}
-
-raw_ostream &llvm::operator<<(raw_ostream &OS,
-                              const LazyCallGraph::RefSCC &RC) {
-  OS << '[';
-  int i = 0;
-  for (LazyCallGraph::SCC &C : RC) {
-    if (i > 0)
-      OS << ", ";
-    // Elide the inner elements if there are too many.
-    if (i > 4) {
-      OS << "..., " << *RC.SCCs.back();
-      break;
-    }
-    OS << C;
-    ++i;
-  }
-  OS << ']';
-  return OS;
-}
 
 void LazyCallGraph::RefSCC::dump() const {
   dbgs() << *this << '\n';

@@ -14,7 +14,7 @@
 
 ; Test import with smaller instruction limit and without the -disable-force-link-odr
 ; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -import-instr-limit=5 -S | FileCheck %s --check-prefix=INSTLIM5ODR
-; INSTLIM5ODR: define linkonce_odr void @linkonceodr()
+; INSTLIM5ODR: define linkonce_odr void @linkonceodr() {
 
 
 define i32 @main() #0 {
@@ -47,7 +47,7 @@ declare void @analias(...) #1
 declare void @linkoncealias(...) #1
 
 ; INSTLIMDEF-DAG: Import referencestatics
-; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i)
+; INSTLIMDEF-DAG: define available_externally i32 @referencestatics(i32 %i) !thinlto_src_module !0 {
 ; INSTLIM5-DAG: declare i32 @referencestatics(...)
 declare i32 @referencestatics(...) #1
 
@@ -56,27 +56,27 @@ declare i32 @referencestatics(...) #1
 ; Ensure that the call is to the properly-renamed function.
 ; INSTLIMDEF-DAG: Import staticfunc
 ; INSTLIMDEF-DAG: %call = call i32 @staticfunc.llvm.
-; INSTLIMDEF-DAG: define available_externally hidden i32 @staticfunc.llvm.
+; INSTLIMDEF-DAG: define available_externally hidden i32 @staticfunc.llvm.{{.*}} !thinlto_src_module !0 {
 
 ; INSTLIMDEF-DAG: Import referenceglobals
-; CHECK-DAG: define available_externally i32 @referenceglobals(i32 %i)
+; CHECK-DAG: define available_externally i32 @referenceglobals(i32 %i) !thinlto_src_module !0 {
 declare i32 @referenceglobals(...) #1
 
 ; The import of referenceglobals will expose call to globalfunc1 that
 ; should in turn be imported.
 ; INSTLIMDEF-DAG: Import globalfunc1
-; CHECK-DAG: define available_externally void @globalfunc1()
+; CHECK-DAG: define available_externally void @globalfunc1() !thinlto_src_module !0
 
 ; INSTLIMDEF-DAG: Import referencecommon
-; CHECK-DAG: define available_externally i32 @referencecommon(i32 %i)
+; CHECK-DAG: define available_externally i32 @referencecommon(i32 %i) !thinlto_src_module !0 {
 declare i32 @referencecommon(...) #1
 
 ; INSTLIMDEF-DAG: Import setfuncptr
-; CHECK-DAG: define available_externally void @setfuncptr()
+; CHECK-DAG: define available_externally void @setfuncptr() !thinlto_src_module !0 {
 declare void @setfuncptr(...) #1
 
 ; INSTLIMDEF-DAG: Import callfuncptr
-; CHECK-DAG: define available_externally void @callfuncptr()
+; CHECK-DAG: define available_externally void @callfuncptr() !thinlto_src_module !0 {
 declare void @callfuncptr(...) #1
 
 ; Ensure that all uses of local variable @P which has used in setfuncptr
@@ -87,7 +87,7 @@ declare void @callfuncptr(...) #1
 
 ; Ensure that @referencelargelinkonce definition is pulled in, but later we
 ; also check that the linkonceodr function is not.
-; CHECK-DAG: define available_externally void @referencelargelinkonce()
+; CHECK-DAG: define available_externally void @referencelargelinkonce() !thinlto_src_module !0 {
 ; INSTLIM5-DAG: declare void @linkonceodr()
 declare void @referencelargelinkonce(...)
 
@@ -100,11 +100,12 @@ declare void @weakfunc(...) #1
 declare void @linkoncefunc2(...) #1
 
 ; INSTLIMDEF-DAG: Import funcwithpersonality
-; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+; INSTLIMDEF-DAG: define available_externally hidden void @funcwithpersonality.llvm.{{.*}}() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !thinlto_src_module !0 {
 ; INSTLIM5-DAG: declare hidden void @funcwithpersonality.llvm.{{.*}}()
 
 ; INSTLIMDEF-DAG: Import globalfunc2
 ; INSTLIMDEF-DAG: 13 function-import - Number of functions imported
+; CHECK-DAG: !0 = !{!"{{.*}}/Inputs/funcimport.ll"}
 
 ; The actual GUID values will depend on path to test.
 ; GUID-DAG: GUID {{.*}} is weakalias

@@ -51,6 +51,8 @@ public:
     return SectionOffsets;
   }
 
+  Error commit();
+
 private:
   PDBFile &Pdb;
 

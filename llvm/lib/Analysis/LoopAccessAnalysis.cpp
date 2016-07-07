@@ -575,7 +575,7 @@ static bool isNoWrap(PredicatedScalarEvolution &PSE,
   if (PSE.getSE()->isLoopInvariant(PtrScev, L))
     return true;
 
-  int Stride = getPtrStride(PSE, Ptr, L, Strides);
+  int64_t Stride = getPtrStride(PSE, Ptr, L, Strides);
   return Stride == 1;
 }
 
@@ -866,9 +866,9 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 }
 
 /// \brief Check whether the access through \p Ptr has a constant stride.
-int llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
-                       const Loop *Lp, const ValueToValueMap &StridesMap,
-                       bool Assume) {
+int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
+                           const Loop *Lp, const ValueToValueMap &StridesMap,
+                           bool Assume) {
   Type *Ty = Ptr->getType();
   assert(Ty->isPointerTy() && "Unexpected non-ptr");
 
@@ -1097,8 +1097,8 @@ bool MemoryDepChecker::Dependence::isForward() const {
   llvm_unreachable("unexpected DepType!");
 }
 
-bool MemoryDepChecker::couldPreventStoreLoadForward(unsigned Distance,
-                                                    unsigned TypeByteSize) {
+bool MemoryDepChecker::couldPreventStoreLoadForward(uint64_t Distance,
+                                                    uint64_t TypeByteSize) {
   // If loads occur at a distance that is not a multiple of a feasible vector
   // factor store-load forwarding does not take place.
   // Positive dependences might cause troubles because vectorizing them might
@@ -1111,13 +1111,13 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(unsigned Distance,
 
   // After this many iterations store-to-load forwarding conflicts should not
   // cause any slowdowns.
-  const unsigned NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
+  const uint64_t NumItersForStoreLoadThroughMemory = 8 * TypeByteSize;
   // Maximum vector factor.
-  unsigned MaxVFWithoutSLForwardIssues = std::min(
+  uint64_t MaxVFWithoutSLForwardIssues = std::min(
       VectorizerParams::MaxVectorWidth * TypeByteSize, MaxSafeDepDistBytes);
 
   // Compute the smallest VF at which the store and load would be misaligned.
-  for (unsigned VF = 2 * TypeByteSize; VF <= MaxVFWithoutSLForwardIssues;
+  for (uint64_t VF = 2 * TypeByteSize; VF <= MaxVFWithoutSLForwardIssues;
        VF *= 2) {
     // If the number of vector iteration between the store and the load are
     // small we could incur conflicts.
@@ -1145,8 +1145,8 @@ bool MemoryDepChecker::couldPreventStoreLoadForward(unsigned Distance,
 /// bytes.
 ///
 /// \returns true if they are independent.
-static bool areStridedAccessesIndependent(unsigned Distance, unsigned Stride,
-                                          unsigned TypeByteSize) {
+static bool areStridedAccessesIndependent(uint64_t Distance, uint64_t Stride,
+                                          uint64_t TypeByteSize) {
   assert(Stride > 1 && "The stride must be greater than 1");
   assert(TypeByteSize > 0 && "The type size in byte must be non-zero");
   assert(Distance > 0 && "The distance must be non-zero");
@@ -1155,7 +1155,7 @@ static bool areStridedAccessesIndependent(unsigned Distance, unsigned Stride,
   if (Distance % TypeByteSize)
     return false;
 
-  unsigned ScaledDist = Distance / TypeByteSize;
+  uint64_t ScaledDist = Distance / TypeByteSize;
 
   // No dependence if the scaled distance is not multiple of the stride.
   // E.g.
@@ -1196,8 +1196,8 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
       BPtr->getType()->getPointerAddressSpace())
     return Dependence::Unknown;
 
-  int StrideAPtr = getPtrStride(PSE, APtr, InnermostLoop, Strides, true);
-  int StrideBPtr = getPtrStride(PSE, BPtr, InnermostLoop, Strides, true);
+  int64_t StrideAPtr = getPtrStride(PSE, APtr, InnermostLoop, Strides, true);
+  int64_t StrideBPtr = getPtrStride(PSE, BPtr, InnermostLoop, Strides, true);
 
   const SCEV *Src = PSE.getSCEV(APtr);
   const SCEV *Sink = PSE.getSCEV(BPtr);
@@ -1237,11 +1237,11 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   Type *ATy = APtr->getType()->getPointerElementType();
   Type *BTy = BPtr->getType()->getPointerElementType();
   auto &DL = InnermostLoop->getHeader()->getModule()->getDataLayout();
-  unsigned TypeByteSize = DL.getTypeAllocSize(ATy);
+  uint64_t TypeByteSize = DL.getTypeAllocSize(ATy);
 
   const APInt &Val = C->getAPInt();
   int64_t Distance = Val.getSExtValue();
-  unsigned Stride = std::abs(StrideAPtr);
+  uint64_t Stride = std::abs(StrideAPtr);
 
   // Attempt to prove strided accesses independent.
   if (std::abs(Distance) > 0 && Stride > 1 && ATy == BTy &&
@@ -1315,9 +1315,9 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // If MinNumIter is 4 (Say if a user forces the vectorization factor to be 4),
   // the minimum distance needed is 28, which is greater than distance. It is
   // not safe to do vectorization.
-  unsigned MinDistanceNeeded =
+  uint64_t MinDistanceNeeded =
       TypeByteSize * Stride * (MinNumIter - 1) + TypeByteSize;
-  if (MinDistanceNeeded > Distance) {
+  if (MinDistanceNeeded > static_cast<uint64_t>(Distance)) {
     DEBUG(dbgs() << "LAA: Failure because of positive distance " << Distance
                  << '\n');
     return Dependence::Backward;
@@ -1347,7 +1347,7 @@ MemoryDepChecker::isDependent(const MemAccessInfo &A, unsigned AIdx,
   // is 8, which is less than 2 and forbidden vectorization, But actually
   // both A and B could be vectorized by 2 iterations.
   MaxSafeDepDistBytes =
-      Distance < MaxSafeDepDistBytes ? Distance : MaxSafeDepDistBytes;
+      std::min(static_cast<uint64_t>(Distance), MaxSafeDepDistBytes);
 
   bool IsTrueDataDependence = (!AIsWrite && BIsWrite);
   if (IsTrueDataDependence && EnableForwardingConflictDetection &&
@@ -1365,7 +1365,7 @@ bool MemoryDepChecker::areDepsSafe(DepCandidates &AccessSets,
                                    MemAccessInfoSet &CheckDeps,
                                    const ValueToValueMap &Strides) {
 
-  MaxSafeDepDistBytes = -1U;
+  MaxSafeDepDistBytes = -1;
   while (!CheckDeps.empty()) {
     MemAccessInfo CurAccess = *CheckDeps.begin();
 
@@ -1926,7 +1926,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
       PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
       DepChecker(llvm::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
       DL(&DL), TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
-      MaxSafeDepDistBytes(-1U), CanVecMem(false),
+      MaxSafeDepDistBytes(-1), CanVecMem(false),
       StoreToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
     analyzeLoop();
@@ -1935,7 +1935,7 @@ LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   if (CanVecMem) {
     OS.indent(Depth) << "Memory dependences are safe";
-    if (MaxSafeDepDistBytes != -1U)
+    if (MaxSafeDepDistBytes != -1ULL)
       OS << " with a maximum dependence distance of " << MaxSafeDepDistBytes
          << " bytes";
     if (PtrRtChecking->Need)
@@ -2027,15 +2027,23 @@ INITIALIZE_PASS_END(LoopAccessAnalysis, LAA_NAME, laa_name, false, true)
 char LoopAccessInfoAnalysis::PassID;
 
 LoopAccessInfo LoopAccessInfoAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
-  // FIXME: ugly const cast
-  AnalysisManager<Function> &FAM = const_cast<FunctionAnalysisManager &>(
-      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager());
+  const AnalysisManager<Function> &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function &F = *L.getHeader()->getParent();
-  auto *SE = &FAM.getResult<ScalarEvolutionAnalysis>(F);
+  auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(F);
   auto *TLI = FAM.getCachedResult<TargetLibraryAnalysis>(F);
-  auto *AA = &FAM.getResult<AAManager>(F);
-  auto *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
-  auto *LI = &FAM.getResult<LoopAnalysis>(F);
+  auto *AA = FAM.getCachedResult<AAManager>(F);
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
+  auto *LI = FAM.getCachedResult<LoopAnalysis>(F);
+  if (!SE)
+    report_fatal_error(
+        "ScalarEvolution must have been cached at a higher level");
+  if (!AA)
+    report_fatal_error("AliasAnalysis must have been cached at a higher level");
+  if (!DT)
+    report_fatal_error("DominatorTree must have been cached at a higher level");
+  if (!LI)
+    report_fatal_error("LoopInfo must have been cached at a higher level");
   const DataLayout &DL = F.getParent()->getDataLayout();
   return LoopAccessInfo(&L, SE, DL, TLI, AA, DT, LI);
 }

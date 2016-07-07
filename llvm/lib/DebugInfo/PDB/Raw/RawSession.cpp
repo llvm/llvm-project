@@ -51,6 +51,8 @@ Error RawSession::createFromPdb(StringRef Path,
   ErrorOr<std::unique_ptr<MemoryBuffer>> ErrorOrBuffer =
       MemoryBuffer::getFileOrSTDIN(Path, /*FileSize=*/-1,
                                    /*RequiresNullTerminator=*/false);
+  if (!ErrorOrBuffer)
+    return llvm::make_error<GenericError>(generic_error_code::invalid_path);
 
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
   auto Stream = llvm::make_unique<InputByteStream>(std::move(Buffer));

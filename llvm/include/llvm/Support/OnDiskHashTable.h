@@ -325,7 +325,7 @@ public:
     Info *InfoObj;
 
   public:
-    iterator() : Data(nullptr), Len(0) {}
+    iterator() : Key(), Data(nullptr), Len(0), InfoObj(nullptr) {}
     iterator(const internal_key_type K, const unsigned char *D, offset_type L,
              Info *InfoObj)
         : Key(K), Data(D), Len(L), InfoObj(InfoObj) {}

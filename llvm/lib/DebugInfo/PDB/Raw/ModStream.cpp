@@ -78,3 +78,5 @@ iterator_range<codeview::ModuleSubstreamArray::Iterator>
 ModStream::lines(bool *HadError) const {
   return llvm::make_range(LineInfo.begin(HadError), LineInfo.end());
 }
+
+Error ModStream::commit() { return Error::success(); }

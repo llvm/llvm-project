@@ -29,7 +29,8 @@ by the project that the community uses for communication. It applies to all of
 your communication and conduct in these spaces, including emails, chats, things
 you say, slides, videos, posters, signs, or even t-shirts you display in these
 spaces. In addition, violations of this code outside these spaces may, in rare
-cases, affect a person's ability to participate within them.
+cases, affect a person's ability to participate within them, when the conduct
+amounts to an egregious violation of this code.
 
 If you believe someone is violating the code of conduct, we ask that you report
 it by emailing conduct@llvm.org. For more details please see our

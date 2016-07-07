@@ -208,16 +208,16 @@ define <4 x float> @blendps_not_insertps_2(<4 x float> %t1, <4 x float> %t2) nou
 define i32 @ptestz_1(<2 x i64> %t1, <2 x i64> %t2) nounwind {
 ; X32-LABEL: ptestz_1:
 ; X32:       ## BB#0:
+; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ptest %xmm1, %xmm0
 ; X32-NEXT:    sete %al
-; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ptestz_1:
 ; X64:       ## BB#0:
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ptest %xmm1, %xmm0
 ; X64-NEXT:    sete %al
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
   %tmp1 = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %t1, <2 x i64> %t2) nounwind readnone
   ret i32 %tmp1
@@ -244,16 +244,16 @@ define i32 @ptestz_2(<2 x i64> %t1, <2 x i64> %t2) nounwind {
 define i32 @ptestz_3(<2 x i64> %t1, <2 x i64> %t2) nounwind {
 ; X32-LABEL: ptestz_3:
 ; X32:       ## BB#0:
+; X32-NEXT:    xorl %eax, %eax
 ; X32-NEXT:    ptest %xmm1, %xmm0
 ; X32-NEXT:    seta %al
-; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: ptestz_3:
 ; X64:       ## BB#0:
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    ptest %xmm1, %xmm0
 ; X64-NEXT:    seta %al
-; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
   %tmp1 = call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %t1, <2 x i64> %t2) nounwind readnone
   ret i32 %tmp1

@@ -42,3 +42,5 @@ iterator_range<codeview::CVSymbolArray::Iterator>
 SymbolStream::getSymbols(bool *HadError) const {
   return llvm::make_range(SymbolRecords.begin(HadError), SymbolRecords.end());
 }
+
+Error SymbolStream::commit() { return Error::success(); }

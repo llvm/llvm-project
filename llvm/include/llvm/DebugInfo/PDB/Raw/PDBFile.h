@@ -107,6 +107,8 @@ public:
     return BlockNumber * BlockSize;
   }
 
+  Expected<InfoStream &> emplacePDBInfoStream();
+
   Expected<InfoStream &> getPDBInfoStream();
   Expected<DbiStream &> getPDBDbiStream();
   Expected<TpiStream &> getPDBTpiStream();
@@ -117,8 +119,9 @@ public:
 
   Error setSuperBlock(const SuperBlock *Block);
   void setStreamSizes(ArrayRef<support::ulittle32_t> Sizes);
-  void setStreamMap(ArrayRef<support::ulittle32_t> Directory,
-                    std::vector<ArrayRef<support::ulittle32_t>> &Streams);
+  void setDirectoryBlocks(ArrayRef<support::ulittle32_t> Directory);
+  void setStreamMap(std::vector<ArrayRef<support::ulittle32_t>> &Streams);
+  Error generateSimpleStreamMap();
   Error commit();
 
 private:

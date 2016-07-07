@@ -3,8 +3,8 @@
 ; Make sure the call to syncthreads is not duplicate here by the LLVM
 ; optimizations, because it has the noduplicate attribute set.
 
-; CHECK: call void @llvm.cuda.syncthreads
-; CHECK-NOT: call void @llvm.cuda.syncthreads
+; CHECK: call void @llvm.nvvm.barrier0
+; CHECK-NOT: call void @llvm.nvvm.barrier0
 
 ; Function Attrs: nounwind
 define void @foo(float* %output) #1 {
@@ -37,7 +37,7 @@ if.else:                                          ; preds = %entry
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  call void @llvm.cuda.syncthreads()
+  call void @llvm.nvvm.barrier0()
   %6 = load float*, float** %output.addr, align 8
   %arrayidx6 = getelementptr inbounds float, float* %6, i64 0
   %7 = load float, float* %arrayidx6, align 4
@@ -68,7 +68,7 @@ if.end17:                                         ; preds = %if.else13, %if.then
 }
 
 ; Function Attrs: noduplicate nounwind
-declare void @llvm.cuda.syncthreads() #2
+declare void @llvm.nvvm.barrier0() #2
 
 !0 = !{void (float*)* @foo, !"kernel", i32 1}
 !1 = !{null, !"align", i32 8}

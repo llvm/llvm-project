@@ -67,10 +67,6 @@ void TailDuplicator::initMF(MachineFunction &MF, const MachineModuleInfo *MMIin,
   assert(MBPI != nullptr && "Machine Branch Probability Info required");
 
   PreRegAlloc = MRI->isSSA();
-  RS.reset();
-
-  if (MRI->tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF))
-    RS.reset(new RegScavenger());
 }
 
 static void VerifyPHIs(MachineFunction &MF, bool CheckExtra) {
@@ -769,20 +765,6 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
 
     // Remove PredBB's unconditional branch.
     TII->RemoveBranch(*PredBB);
-
-    if (RS && !TailBB->livein_empty()) {
-      // Update PredBB livein.
-      RS->enterBasicBlock(*PredBB);
-      if (!PredBB->empty())
-        RS->forward(std::prev(PredBB->end()));
-      for (const auto &LI : TailBB->liveins()) {
-        if (!RS->isRegUsed(LI.PhysReg, false))
-          // If a register is previously livein to the tail but it's not live
-          // at the end of predecessor BB, then it should be added to its
-          // livein list.
-          PredBB->addLiveIn(LI);
-      }
-    }
 
     // Clone the contents of TailBB into PredBB.
     DenseMap<unsigned, RegSubRegPair> LocalVRMap;

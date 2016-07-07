@@ -1367,12 +1367,9 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; KNL_64-LABEL: test30:
 ; KNL_64:       # BB#0:
 ; KNL_64-NEXT:    andl $1, %edx
-; KNL_64-NEXT:    kmovw %edx, %k1
 ; KNL_64-NEXT:    andl $1, %esi
-; KNL_64-NEXT:    kmovw %esi, %k2
 ; KNL_64-NEXT:    movl %edi, %eax
 ; KNL_64-NEXT:    andl $1, %eax
-; KNL_64-NEXT:    kmovw %eax, %k0
 ; KNL_64-NEXT:    vpmovsxdq %xmm1, %ymm1
 ; KNL_64-NEXT:    vpsllq $2, %ymm1, %ymm1
 ; KNL_64-NEXT:    vpaddq %ymm1, %ymm0, %ymm1
@@ -1380,81 +1377,76 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; KNL_64-NEXT:    testb $1, %dil
 ; KNL_64-NEXT:    je .LBB29_2
 ; KNL_64-NEXT:  # BB#1: # %cond.load
-; KNL_64-NEXT:    vmovq %xmm1, %rax
-; KNL_64-NEXT:    vmovd (%rax), %xmm0
+; KNL_64-NEXT:    vmovq %xmm1, %rcx
+; KNL_64-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; KNL_64-NEXT:  .LBB29_2: # %else
-; KNL_64-NEXT:    kmovw %k2, %eax
-; KNL_64-NEXT:    movl %eax, %ecx
-; KNL_64-NEXT:    andl $1, %ecx
-; KNL_64-NEXT:    testb %cl, %cl
+; KNL_64-NEXT:    testb %sil, %sil
 ; KNL_64-NEXT:    je .LBB29_4
 ; KNL_64-NEXT:  # BB#3: # %cond.load1
 ; KNL_64-NEXT:    vpextrq $1, %xmm1, %rcx
 ; KNL_64-NEXT:    vpinsrd $1, (%rcx), %xmm0, %xmm0
 ; KNL_64-NEXT:  .LBB29_4: # %else2
-; KNL_64-NEXT:    kmovw %k1, %ecx
-; KNL_64-NEXT:    movl %ecx, %edx
-; KNL_64-NEXT:    andl $1, %edx
 ; KNL_64-NEXT:    testb %dl, %dl
 ; KNL_64-NEXT:    je .LBB29_6
 ; KNL_64-NEXT:  # BB#5: # %cond.load4
 ; KNL_64-NEXT:    vextracti128 $1, %ymm1, %xmm1
-; KNL_64-NEXT:    vmovq %xmm1, %rdx
-; KNL_64-NEXT:    vpinsrd $2, (%rdx), %xmm0, %xmm0
+; KNL_64-NEXT:    vmovq %xmm1, %rcx
+; KNL_64-NEXT:    vpinsrd $2, (%rcx), %xmm0, %xmm0
 ; KNL_64-NEXT:  .LBB29_6: # %else5
-; KNL_64-NEXT:    kmovw %k0, %edx
-; KNL_64-NEXT:    vmovd %edx, %xmm1
-; KNL_64-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; KNL_64-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
+; KNL_64-NEXT:    vmovd %eax, %xmm1
+; KNL_64-NEXT:    vpinsrd $1, %esi, %xmm1, %xmm1
+; KNL_64-NEXT:    vpinsrd $2, %edx, %xmm1, %xmm1
 ; KNL_64-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_64-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
 ; KNL_64-NEXT:    retq
 ;
 ; KNL_32-LABEL: test30:
 ; KNL_32:       # BB#0:
+; KNL_32-NEXT:    pushl %ebx
+; KNL_32-NEXT:  .Ltmp0:
+; KNL_32-NEXT:    .cfi_def_cfa_offset 8
+; KNL_32-NEXT:    pushl %esi
+; KNL_32-NEXT:  .Ltmp1:
+; KNL_32-NEXT:    .cfi_def_cfa_offset 12
+; KNL_32-NEXT:  .Ltmp2:
+; KNL_32-NEXT:    .cfi_offset %esi, -12
+; KNL_32-NEXT:  .Ltmp3:
+; KNL_32-NEXT:    .cfi_offset %ebx, -8
 ; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; KNL_32-NEXT:    andl $1, %eax
-; KNL_32-NEXT:    kmovw %eax, %k1
-; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    andl $1, %eax
-; KNL_32-NEXT:    kmovw %eax, %k2
-; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; KNL_32-NEXT:    movl %eax, %ecx
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; KNL_32-NEXT:    andl $1, %ecx
-; KNL_32-NEXT:    kmovw %ecx, %k0
+; KNL_32-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; KNL_32-NEXT:    movl %ebx, %edx
+; KNL_32-NEXT:    andl $1, %edx
 ; KNL_32-NEXT:    vpslld $2, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; KNL_32-NEXT:    # implicit-def: %XMM0
-; KNL_32-NEXT:    testb $1, %al
+; KNL_32-NEXT:    testb $1, %bl
 ; KNL_32-NEXT:    je .LBB29_2
 ; KNL_32-NEXT:  # BB#1: # %cond.load
-; KNL_32-NEXT:    vmovd %xmm1, %eax
-; KNL_32-NEXT:    vmovd (%eax), %xmm0
+; KNL_32-NEXT:    vmovd %xmm1, %esi
+; KNL_32-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; KNL_32-NEXT:  .LBB29_2: # %else
-; KNL_32-NEXT:    kmovw %k2, %eax
-; KNL_32-NEXT:    movl %eax, %ecx
-; KNL_32-NEXT:    andl $1, %ecx
 ; KNL_32-NEXT:    testb %cl, %cl
 ; KNL_32-NEXT:    je .LBB29_4
 ; KNL_32-NEXT:  # BB#3: # %cond.load1
-; KNL_32-NEXT:    vpextrd $1, %xmm1, %ecx
-; KNL_32-NEXT:    vpinsrd $1, (%ecx), %xmm0, %xmm0
+; KNL_32-NEXT:    vpextrd $1, %xmm1, %esi
+; KNL_32-NEXT:    vpinsrd $1, (%esi), %xmm0, %xmm0
 ; KNL_32-NEXT:  .LBB29_4: # %else2
-; KNL_32-NEXT:    kmovw %k1, %ecx
-; KNL_32-NEXT:    movl %ecx, %edx
-; KNL_32-NEXT:    andl $1, %edx
-; KNL_32-NEXT:    testb %dl, %dl
+; KNL_32-NEXT:    testb %al, %al
 ; KNL_32-NEXT:    je .LBB29_6
 ; KNL_32-NEXT:  # BB#5: # %cond.load4
-; KNL_32-NEXT:    vpextrd $2, %xmm1, %edx
-; KNL_32-NEXT:    vpinsrd $2, (%edx), %xmm0, %xmm0
+; KNL_32-NEXT:    vpextrd $2, %xmm1, %esi
+; KNL_32-NEXT:    vpinsrd $2, (%esi), %xmm0, %xmm0
 ; KNL_32-NEXT:  .LBB29_6: # %else5
-; KNL_32-NEXT:    kmovw %k0, %edx
 ; KNL_32-NEXT:    vmovd %edx, %xmm1
-; KNL_32-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; KNL_32-NEXT:    vpinsrd $2, %ecx, %xmm1, %xmm1
+; KNL_32-NEXT:    vpinsrd $1, %ecx, %xmm1, %xmm1
+; KNL_32-NEXT:    vpinsrd $2, %eax, %xmm1, %xmm1
 ; KNL_32-NEXT:    vpslld $31, %xmm1, %xmm1
 ; KNL_32-NEXT:    vblendvps %xmm1, %xmm0, %xmm2, %xmm0
+; KNL_32-NEXT:    popl %esi
+; KNL_32-NEXT:    popl %ebx
 ; KNL_32-NEXT:    retl
 ;
 ; SKX-LABEL: test30:
@@ -1471,7 +1463,7 @@ define <3 x i32> @test30(<3 x i32*> %base, <3 x i32> %ind, <3 x i1> %mask, <3 x 
 ; SKX-NEXT:    je .LBB29_2
 ; SKX-NEXT:  # BB#1: # %cond.load
 ; SKX-NEXT:    vmovq %xmm1, %rax
-; SKX-NEXT:    vmovd (%rax), %xmm0
+; SKX-NEXT:    vmovd {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SKX-NEXT:  .LBB29_2: # %else
 ; SKX-NEXT:    kmovb %k1, -{{[0-9]+}}(%rsp)
 ; SKX-NEXT:    movb -{{[0-9]+}}(%rsp), %al
@@ -1645,12 +1637,12 @@ define <16 x i64> @test_gather_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i
 ; KNL_32-LABEL: test_gather_16i64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Ltmp0:
+; KNL_32-NEXT:  .Ltmp4:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Ltmp1:
+; KNL_32-NEXT:  .Ltmp5:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Ltmp2:
+; KNL_32-NEXT:  .Ltmp6:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -1768,12 +1760,12 @@ define <16 x double> @test_gather_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <
 ; KNL_32-LABEL: test_gather_16f64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Ltmp3:
+; KNL_32-NEXT:  .Ltmp7:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Ltmp4:
+; KNL_32-NEXT:  .Ltmp8:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Ltmp5:
+; KNL_32-NEXT:  .Ltmp9:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -1885,12 +1877,12 @@ define void @test_scatter_16i64(<16 x i64*> %ptrs, <16 x i1> %mask, <16 x i64> %
 ; KNL_32-LABEL: test_scatter_16i64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Ltmp6:
+; KNL_32-NEXT:  .Ltmp10:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Ltmp7:
+; KNL_32-NEXT:  .Ltmp11:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Ltmp8:
+; KNL_32-NEXT:  .Ltmp12:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp
@@ -1999,12 +1991,12 @@ define void @test_scatter_16f64(<16 x double*> %ptrs, <16 x i1> %mask, <16 x dou
 ; KNL_32-LABEL: test_scatter_16f64:
 ; KNL_32:       # BB#0:
 ; KNL_32-NEXT:    pushl %ebp
-; KNL_32-NEXT:  .Ltmp9:
+; KNL_32-NEXT:  .Ltmp13:
 ; KNL_32-NEXT:    .cfi_def_cfa_offset 8
-; KNL_32-NEXT:  .Ltmp10:
+; KNL_32-NEXT:  .Ltmp14:
 ; KNL_32-NEXT:    .cfi_offset %ebp, -8
 ; KNL_32-NEXT:    movl %esp, %ebp
-; KNL_32-NEXT:  .Ltmp11:
+; KNL_32-NEXT:  .Ltmp15:
 ; KNL_32-NEXT:    .cfi_def_cfa_register %ebp
 ; KNL_32-NEXT:    andl $-64, %esp
 ; KNL_32-NEXT:    subl $64, %esp

@@ -96,6 +96,8 @@ public:
 
   int getVectorInstrCost(unsigned Opcode, Type *ValTy, unsigned Index);
   bool isSourceOfDivergence(const Value *V) const;
+
+  unsigned getVectorSplitCost() { return 0; }
 };
 
 } // end namespace llvm

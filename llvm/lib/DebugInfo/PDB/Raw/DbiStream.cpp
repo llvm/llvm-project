@@ -452,3 +452,5 @@ Expected<StringRef> DbiStream::getFileNameForIndex(uint32_t Index) const {
     return std::move(EC);
   return Name;
 }
+
+Error DbiStream::commit() { return Error::success(); }

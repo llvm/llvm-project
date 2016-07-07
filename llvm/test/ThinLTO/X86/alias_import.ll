@@ -2,6 +2,7 @@
 ; RUN: opt -module-summary %p/Inputs/alias_import.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t.index.bc %t1.bc %t2.bc
 ; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE
+; RUN: llvm-lto -thinlto-action=promote -thinlto-index %t.index.bc %t2.bc -o - | llvm-lto -thinlto-action=internalize -thinlto-index %t.index.bc -thinlto-module-id=%t2.bc - -o - | llvm-dis -o - | FileCheck %s --check-prefix=PROMOTE-INTERNALIZE
 ; RUN: llvm-lto -thinlto-action=import -thinlto-index %t.index.bc %t1.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORT
 
 ;
@@ -86,7 +87,45 @@
 ; IMPORT-DAG: declare void @weakfuncWeakODRAlias()
 ; IMPORT-DAG: declare void @weakfuncLinkonceODRAlias()
 
-
+; Promotion + internalization should internalize all of these, except for aliases of
+; linkonce_odr functions, because alias to linkonce_odr are the only aliases we will
+; import (see selectCallee() in FunctionImport.cpp).
+; PROMOTE-INTERNALIZE-DAG: @globalfuncAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @globalfuncWeakAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @globalfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @globalfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @globalfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @globalfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @internalfuncAlias = internal alias void (...), bitcast (void ()* @internalfunc.llvm.0 to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @internalfuncWeakAlias = internal alias void (...), bitcast (void ()* @internalfunc.llvm.0 to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @internalfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @internalfunc.llvm.0 to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @internalfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @internalfunc.llvm.0 to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @internalfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @internalfunc.llvm.0 to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncAlias = alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncWeakAlias = internal alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncWeakODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkonceODRfuncLinkonceODRAlias = weak_odr alias void (...), bitcast (void ()* @linkonceODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakODRfuncAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakODRfuncWeakAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakODRfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakODRfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakODRfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @weakODRfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkoncefuncAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkoncefuncWeakAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkoncefuncLinkonceAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkoncefuncWeakODRAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @linkoncefuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @linkoncefunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakfuncAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakfuncWeakAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakfuncLinkonceAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakfuncWeakODRAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: @weakfuncLinkonceODRAlias = internal alias void (...), bitcast (void ()* @weakfunc to void (...)*)
+; PROMOTE-INTERNALIZE-DAG: define internal void @globalfunc()
+; PROMOTE-INTERNALIZE-DAG: define internal void @internalfunc.llvm.0()
+; PROMOTE-INTERNALIZE-DAG: define internal void @linkonceODRfunc()
+; PROMOTE-INTERNALIZE-DAG: define internal void @weakODRfunc()
+; PROMOTE-INTERNALIZE-DAG: define internal void @linkoncefunc()
+; PROMOTE-INTERNALIZE-DAG: define internal void @weakfunc()
 
 define i32 @main() #0 {
 entry:

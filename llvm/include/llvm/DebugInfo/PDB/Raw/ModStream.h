@@ -37,6 +37,8 @@ public:
   iterator_range<codeview::ModuleSubstreamArray::Iterator>
   lines(bool *HadError) const;
 
+  Error commit();
+
 private:
   const ModInfo &Mod;
 

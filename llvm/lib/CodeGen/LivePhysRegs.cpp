@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -124,6 +125,19 @@ LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "  " << *this;
 #endif
+}
+
+bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
+                             unsigned Reg) const {
+  if (LiveRegs.count(Reg))
+    return false;
+  if (MRI.isReserved(Reg))
+    return false;
+  for (MCRegAliasIterator R(Reg, TRI, false); R.isValid(); ++R) {
+    if (LiveRegs.count(*R))
+      return false;
+  }
+  return true;
 }
 
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.

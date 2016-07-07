@@ -581,20 +581,26 @@ bool FunctionImporter::importFunctions(
     auto &ImportGUIDs = FunctionsToImportPerModule->second;
     // Find the globals to import
     DenseSet<const GlobalValue *> GlobalsToImport;
-    for (auto &GV : *SrcModule) {
-      if (!GV.hasName())
+    for (Function &F : *SrcModule) {
+      if (!F.hasName())
         continue;
-      auto GUID = GV.getGUID();
+      auto GUID = F.getGUID();
       auto Import = ImportGUIDs.count(GUID);
       DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing function " << GUID
-                   << " " << GV.getName() << " from "
+                   << " " << F.getName() << " from "
                    << SrcModule->getSourceFileName() << "\n");
       if (Import) {
-        GV.materialize();
-        GlobalsToImport.insert(&GV);
+        F.materialize();
+        // Add 'thinlto_src_module' metadata for statistics and debugging.
+        F.setMetadata("thinlto_src_module",
+                      llvm::MDNode::get(DestModule.getContext(),
+                                        {llvm::MDString::get(
+                                            DestModule.getContext(),
+                                            SrcModule->getSourceFileName())}));
+        GlobalsToImport.insert(&F);
       }
     }
-    for (auto &GV : SrcModule->globals()) {
+    for (GlobalVariable &GV : SrcModule->globals()) {
       if (!GV.hasName())
         continue;
       auto GUID = GV.getGUID();
@@ -607,20 +613,20 @@ bool FunctionImporter::importFunctions(
         GlobalsToImport.insert(&GV);
       }
     }
-    for (auto &GV : SrcModule->aliases()) {
-      if (!GV.hasName())
+    for (GlobalAlias &GA : SrcModule->aliases()) {
+      if (!GA.hasName())
         continue;
-      auto GUID = GV.getGUID();
+      auto GUID = GA.getGUID();
       auto Import = ImportGUIDs.count(GUID);
       DEBUG(dbgs() << (Import ? "Is" : "Not") << " importing alias " << GUID
-                   << " " << GV.getName() << " from "
+                   << " " << GA.getName() << " from "
                    << SrcModule->getSourceFileName() << "\n");
       if (Import) {
         // Alias can't point to "available_externally". However when we import
         // linkOnceODR the linkage does not change. So we import the alias
         // and aliasee only in this case. This has been handled by
         // computeImportForFunction()
-        GlobalObject *GO = GV.getBaseObject();
+        GlobalObject *GO = GA.getBaseObject();
         assert(GO->hasLinkOnceODRLinkage() &&
                "Unexpected alias to a non-linkonceODR in import list");
 #ifndef NDEBUG
@@ -631,8 +637,8 @@ bool FunctionImporter::importFunctions(
 #endif
         GO->materialize();
         GlobalsToImport.insert(GO);
-        GV.materialize();
-        GlobalsToImport.insert(&GV);
+        GA.materialize();
+        GlobalsToImport.insert(&GA);
       }
     }
 

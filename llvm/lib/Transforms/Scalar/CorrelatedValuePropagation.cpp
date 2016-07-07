@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -39,7 +40,6 @@ STATISTIC(NumSDivs,     "Number of sdiv converted to udiv");
 
 namespace {
   class CorrelatedValuePropagation : public FunctionPass {
-    LazyValueInfo *LVI;
   public:
     static char ID;
     CorrelatedValuePropagation(): FunctionPass(ID) {
@@ -384,12 +384,7 @@ static Constant *getConstantAt(Value *V, Instruction *At, LazyValueInfo *LVI) {
     ConstantInt::getFalse(C->getContext());
 }
 
-bool CorrelatedValuePropagation::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
-
+static bool runImpl(Function &F, LazyValueInfo *LVI) {
   bool FnChanged = false;
 
   for (BasicBlock &BB : F) {
@@ -446,4 +441,29 @@ bool CorrelatedValuePropagation::runOnFunction(Function &F) {
   }
 
   return FnChanged;
+}
+
+bool CorrelatedValuePropagation::runOnFunction(Function &F) {
+  if (skipFunction(F))
+    return false;
+
+  LazyValueInfo *LVI = &getAnalysis<LazyValueInfoWrapperPass>().getLVI();
+  return runImpl(F, LVI);
+}
+
+PreservedAnalyses
+CorrelatedValuePropagationPass::run(Function &F, FunctionAnalysisManager &AM) {
+
+  LazyValueInfo *LVI = &AM.getResult<LazyValueAnalysis>(F);
+  bool Changed = runImpl(F, LVI);
+
+  // FIXME: We need to invalidate LVI to avoid PR28400. Is there a better
+  // solution?
+  AM.invalidate<LazyValueAnalysis>(F);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<GlobalsAA>();
+  return PA;
 }

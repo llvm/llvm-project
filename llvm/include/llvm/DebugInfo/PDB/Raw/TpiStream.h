@@ -49,6 +49,8 @@ public:
 
   iterator_range<codeview::CVTypeArray::Iterator> types(bool *HadError) const;
 
+  Error commit();
+
 private:
   Error verifyHashValues();
 

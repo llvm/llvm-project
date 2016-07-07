@@ -1896,6 +1896,9 @@ ParseMemoryRegionInfoFromProcMapsLine (const std::string &maps_line, MemoryRegio
     memory_region_info.GetRange ().SetRangeBase (start_address);
     memory_region_info.GetRange ().SetRangeEnd (end_address);
 
+    // Any memory region in /proc/{pid}/maps is by definition mapped into the process.
+    memory_region_info.SetMapped(MemoryRegionInfo::OptionalBool::eYes);
+
     // Parse out each permission entry.
     if (line_extractor.GetBytesLeft () < 4)
         return Error ("malformed /proc/{pid}/maps entry, missing some portion of permissions");
@@ -2024,6 +2027,7 @@ NativeProcessLinux::GetMemoryRegionInfo (lldb::addr_t load_addr, MemoryRegionInf
             range_info.SetReadable (MemoryRegionInfo::OptionalBool::eNo);
             range_info.SetWritable (MemoryRegionInfo::OptionalBool::eNo);
             range_info.SetExecutable (MemoryRegionInfo::OptionalBool::eNo);
+            range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
 
             return error;
         }
@@ -2041,21 +2045,11 @@ NativeProcessLinux::GetMemoryRegionInfo (lldb::addr_t load_addr, MemoryRegionInf
     // load_addr as start and the amount of bytes betwwen load address and the end of the memory as
     // size.
     range_info.GetRange ().SetRangeBase (load_addr);
-    switch (m_arch.GetAddressByteSize())
-    {
-        case 4:
-            range_info.GetRange ().SetByteSize (0x100000000ull - load_addr);
-            break;
-        case 8:
-            range_info.GetRange ().SetByteSize (0ull - load_addr);
-            break;
-        default:
-            assert(false && "Unrecognized data byte size");
-            break;
-    }
+    range_info.GetRange ().SetRangeEnd(LLDB_INVALID_ADDRESS);
     range_info.SetReadable (MemoryRegionInfo::OptionalBool::eNo);
     range_info.SetWritable (MemoryRegionInfo::OptionalBool::eNo);
     range_info.SetExecutable (MemoryRegionInfo::OptionalBool::eNo);
+    range_info.SetMapped(MemoryRegionInfo::OptionalBool::eNo);
     return error;
 }
 

@@ -6609,3 +6609,36 @@ Process::AdvanceAddressToNextBranchInstruction (Address default_stop_addr, Addre
 
     return retval;
 }
+
+Error
+Process::GetMemoryRegions (std::vector<lldb::MemoryRegionInfoSP>& region_list)
+{
+
+    Error error;
+
+    lldb::addr_t range_base = 0;
+    lldb::addr_t range_end = 0;
+
+    region_list.clear();
+    do
+    {
+        lldb::MemoryRegionInfoSP region_info( new lldb_private::MemoryRegionInfo() );
+        error = GetMemoryRegionInfo (range_end, *region_info);
+        // GetMemoryRegionInfo should only return an error if it is unimplemented.
+        if (error.Fail())
+        {
+            region_list.clear();
+            break;
+        }
+
+        range_base = region_info->GetRange().GetRangeBase();
+        range_end = region_info->GetRange().GetRangeEnd();
+        if( region_info->GetMapped() == MemoryRegionInfo::eYes )
+        {
+            region_list.push_back(region_info);
+        }
+    } while (range_end != LLDB_INVALID_ADDRESS);
+
+    return error;
+
+}

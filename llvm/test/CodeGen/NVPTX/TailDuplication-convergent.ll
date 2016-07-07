@@ -2,7 +2,7 @@
 target triple = "nvptx64-nvidia-cuda"
 
 declare void @foo()
-declare void @llvm.cuda.syncthreads()
+declare void @llvm.nvvm.barrier0()
 
 ; syncthreads shouldn't be duplicated.
 ; CHECK: .func call_syncthreads
@@ -20,7 +20,7 @@ L2:
   store i32 1, i32* %a
   br label %L42
 L42:
-  call void @llvm.cuda.syncthreads()
+  call void @llvm.nvvm.barrier0()
   br label %Ret
 }
 

@@ -345,6 +345,7 @@ ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr, MemoryRegionInfo &re
                                                                                  : MemoryRegionInfo::eNo);
             region_info.SetExecutable(permissions.Test(lldb::ePermissionsExecutable) ? MemoryRegionInfo::eYes
                                                                                      : MemoryRegionInfo::eNo);
+            region_info.SetMapped(MemoryRegionInfo::eYes);
         }
         else if (load_addr < permission_entry->GetRangeBase())
         {
@@ -353,10 +354,18 @@ ProcessElfCore::GetMemoryRegionInfo(lldb::addr_t load_addr, MemoryRegionInfo &re
             region_info.SetReadable(MemoryRegionInfo::eNo);
             region_info.SetWritable(MemoryRegionInfo::eNo);
             region_info.SetExecutable(MemoryRegionInfo::eNo);
+            region_info.SetMapped(MemoryRegionInfo::eNo);
         }
         return Error();
     }
-    return Error("invalid address");
+
+    region_info.GetRange().SetRangeBase(load_addr);
+    region_info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
+    region_info.SetReadable(MemoryRegionInfo::eNo);
+    region_info.SetWritable(MemoryRegionInfo::eNo);
+    region_info.SetExecutable(MemoryRegionInfo::eNo);
+    region_info.SetMapped(MemoryRegionInfo::eNo);
+    return Error();
 }
 
 size_t

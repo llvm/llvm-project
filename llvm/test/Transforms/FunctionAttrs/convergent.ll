@@ -59,15 +59,15 @@ define i32 @indirect_non_convergent_call(i32 ()* %f) convergent norecurse {
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: convergent
-; CHECK-NEXT: declare void @llvm.cuda.syncthreads()
-declare void @llvm.cuda.syncthreads() convergent
+; CHECK-NEXT: declare void @llvm.nvvm.barrier0()
+declare void @llvm.nvvm.barrier0() convergent
 
 ; CHECK: Function Attrs
 ; CHECK-SAME: convergent
 ; CHECK-NEXT: define i32 @intrinsic()
 define i32 @intrinsic() convergent {
   ; Implicitly convergent, because the intrinsic is convergent.
-  call void @llvm.cuda.syncthreads()
+  call void @llvm.nvvm.barrier0()
   ret i32 0
 }
 

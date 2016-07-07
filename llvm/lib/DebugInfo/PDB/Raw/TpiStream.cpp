@@ -105,7 +105,7 @@ public:
   }
 
   Error visitClass(ClassRecord &Rec) override { return verify(Rec); }
-  Error visitEnum(EnumRecord &Rec) override { return verify(Rec); }
+  Error visitEnum(EnumRecord &Rec) override { return Error::success(); }
   Error visitUnion(UnionRecord &Rec) override { return verify(Rec); }
 
   Error visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) override {
@@ -269,3 +269,5 @@ iterator_range<CVTypeArray::Iterator>
 TpiStream::types(bool *HadError) const {
   return llvm::make_range(TypeRecords.begin(HadError), TypeRecords.end());
 }
+
+Error TpiStream::commit() { return Error::success(); }
