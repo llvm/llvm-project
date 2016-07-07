@@ -201,6 +201,7 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
   size_t cursor = 0;
   while (cursor < size) {
     switch (code[cursor]) {
+      case '\x50':  // push eax
       case '\x51':  // push ecx
       case '\x52':  // push edx
       case '\x53':  // push ebx
@@ -341,7 +342,7 @@ bool OverrideFunction(uptr old_func, uptr new_func, uptr *orig_old_func) {
 }
 
 static void **InterestingDLLsAvailable() {
-  const char *InterestingDLLs[] = {
+  static const char *InterestingDLLs[] = {
       "kernel32.dll",
       "msvcr110.dll",      // VS2012
       "msvcr120.dll",      // VS2013
