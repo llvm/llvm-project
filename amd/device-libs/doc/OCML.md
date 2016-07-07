@@ -14,7 +14,11 @@
 ## Introduction
 ### What Is OCML
 
-OCML is an LLVM-IR bitcode library designed to relieve language compiler and runtime implementers of the burden of implementing efficient and accurate mathematical functions.  It is essentially a “libm” in intermediate representation with a fixed, simple API that can be linked in to supply the implementations of most standard low-level mathematical functions provided by the language.
+OCML is an LLVM-IR bitcode library designed to relieve language compiler and
+runtime implementers of the burden of implementing efficient and accurate
+mathematical functions.  It is essentially a “libm” in intermediate
+representation with a fixed, simple API that can be linked in to supply the
+implementations of most standard low-level mathematical functions provided by the language.
 
 ## Using OCML
 ### Standard Usage
@@ -25,15 +29,18 @@ OCML is expected to be used in a standard LLVM compilation flow as follows:
   * Generic optimizations (opt)
   * Code generation (llc)
 
-Here, “wrapper” bitcode denotes a thin library responsible for mapping mangled built-in function calls as produced by clang to the OCML API.  An example in C might look like
+Here, “wrapper” bitcode denotes a thin library responsible for mapping
+mangled built-in function calls as produced by clang to the OCML API.  An example in C might look like
 
     inline float sqrt(float x) { return __ocml_sqrt_f32(x); }
 
 The next section describes OCML customizations and how to make them.
 
-### Customization
+### Controls
 
-OCML supports a number of customizations that are controlled by linking in specifically named inline functions.  These functions are inlined at optimization time and result in specific paths taken with no control flow overhead.  These functions all have the form (in C)
+OCML supports a number of controls that are provided by linking in specifically named inline
+functions.  These functions are inlined at optimization time and result in specific paths
+taken with no control flow overhead.  These functions all have the form (in C)
 
     __attribute__((always_inline, const)) int
     __oclc_customization(void)
@@ -48,19 +55,21 @@ The currently supported customizations are
   * `correctly_rounded_sqrt32` - float square root must be correctly rounded
   * `amd_opt` - use AMD device specific instructions
 
-## Versioning
+### Versioning
 
 OCML ships as a single LLVM-IR bitcode file named
 
     ocml-{LLVM rev}-{OCLM rev}.bc
 
-where `{LLVM rev}` is the version of LLVM used to create the file, of the form X.Y, e.g. 3.8, and `{OCML rev}` is the OCML library version of the form X.Y, currently 0.9.
+where `{LLVM rev}` is the version of LLVM used to create the file, of the
+form X.Y, e.g. 3.8, and `{OCML rev}` is the OCML library version of the form X.Y, currently 0.9.
 
 // Should OCML include a constant string with the version in the bitcode as well?
 
 ### Tables
 
-Some OCML functions require access to tables of constants.  These tables are currently named with the prefix `__ocmltbl_` and are placed in LLVM address space 2.
+Some OCML functions require access to tables of constants.  These tables are currently named
+with the prefix `__ocmltbl_` and are placed in LLVM address space 2.
 
 ### Naming convention
 
@@ -79,7 +88,10 @@ OCML does not currently support higher than double precision due to the lack of 
 
 ### Supported functions
 
-The following table contains a list of {function} currently supported by OCML, a brief description of each, and the maximum relative error in ULPs for each floating point type.  A “c” in the last 3 columns indicates that the function is required to be correctly rounded.
+The following table contains a list of {function} currently supported by OCML, a brief
+description of each, and the maximum relative error in ULPs for each floating point
+type.  A “c” in the last 3 columns indicates that the function is required to
+be correctly rounded.
 
 | **{function}** | **Description** | **f32 max err** | **f64 max err** | **f16 max err** |
 | --- | --- | --- | --- | --- |
@@ -129,6 +141,8 @@ The following table contains a list of {function} currently supported by OCML, a
 | j0 | Bessel function of the first kind, order 0, J0 | 2 (<12) | 6 (<12) | 6 (<12) |
 | j1 | Bessel function of the first kind, order 1, J1 | 2 (<12) | 6 (<12) | 6 (<12) |
 | ldexp | multiply by 2 raised to an integral power | c | c | c |
+| len3 | three argument hypot | 2 | 2 | 2|
+| len4 | four argument hypot | 2 | 2 | 2|
 | lgamma | log Γ function | 6(>0) | 4(>0) | 3(>0) |
 | lgamma_r | log Γ function with sign | 6(>0) | 4(>0) | 3(>0) |
 | log10 | log base 10 | 3 | 3 | 2 |
@@ -149,7 +163,7 @@ The following table contains a list of {function} currently supported by OCML, a
 | pow | general power | 16 | 16 | 4 |
 | pown | power with integral exponent | 16 | 16 | 4 |
 | powr | power with positive floating point exponent | 16 | 16 | 4 |
-| rcbrt | reciprocal cube root | 2 | 2 | 1 |
+| rcbrt | reciprocal cube root | 2 | 2 | 2 |
 | remainder | floating point remainder | 0 | 0 | 0 |
 | remquo | floating point remainder and lowest integral quotient bits | 0 | 0 | 0 |
 | rint | round to nearest integer | c | c | c |
