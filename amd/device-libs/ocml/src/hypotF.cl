@@ -4,39 +4,37 @@
 CONSTATTR INLINEATTR float
 MATH_MANGLE(hypot)(float x, float y)
 {
-    uint uax = AS_UINT(x) & EXSIGNBIT_SP32;
-    uint uay = AS_UINT(y) & EXSIGNBIT_SP32;
-    uint ux = BUILTIN_MAX_U32(uax, uay);
-    uint uy = BUILTIN_MIN_U32(uax, uay);
+    float a = BUILTIN_ABS_F32(x);
+    float b = BUILTIN_ABS_F32(y);
+    float t = AS_FLOAT(BUILTIN_MAX_U32(AS_UINT(a), AS_UINT(b)));
 
     int e;
-
     if (AMD_OPT()) {
-        e = BUILTIN_FREXP_EXP_F32(AS_FLOAT(ux)) - 1;
+        e = BUILTIN_FREXP_EXP_F32(t) - 1;
         e = BUILTIN_CLAMP_S32(e, -126, 126);
-        x = BUILTIN_FLDEXP_F32(AS_FLOAT(ux), -e);
-        y = BUILTIN_FLDEXP_F32(AS_FLOAT(uy), -e);
+        a = BUILTIN_FLDEXP_F32(a, -e);
+        b = BUILTIN_FLDEXP_F32(b, -e);
     } else {
-        e = (int)(ux >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
+        e = (int)(AS_UINT(t) >> EXPSHIFTBITS_SP32) - EXPBIAS_SP32;
         e = BUILTIN_MIN_S32(BUILTIN_MAX_S32(e, -126), 126);
-
         float sc = AS_FLOAT((EXPBIAS_SP32 - e) << EXPSHIFTBITS_SP32);
-        x = AS_FLOAT(ux) * sc;
-        y = AS_FLOAT(uy) * sc;
+        a *= sc;
+        b *= sc;
     }
 
-    float ret = MATH_FAST_SQRT(MATH_MAD(x, x, y*y));
+    float ret = MATH_FAST_SQRT(MATH_MAD(a, a, b*b));
 
     if (AMD_OPT()) {
         ret = BUILTIN_FLDEXP_F32(ret, e);
     } else {
-        float sc = AS_FLOAT((EXPBIAS_SP32 + e) << EXPSHIFTBITS_SP32);
-        ret *= sc;
+        ret *= AS_FLOAT((EXPBIAS_SP32 + e) << EXPSHIFTBITS_SP32);
     }
 
     if (!FINITE_ONLY_OPT()) {
-        ret = ux > PINFBITPATT_SP32 ? AS_FLOAT(ux) : ret;
-        ret = ux == PINFBITPATT_SP32 | uy == PINFBITPATT_SP32 ? AS_FLOAT(PINFBITPATT_SP32) : ret;
+        ret = AS_UINT(t) > PINFBITPATT_SP32 ? t : ret;
+        ret = (BUILTIN_CLASS_F32(x, CLASS_PINF|CLASS_NINF) |
+               BUILTIN_CLASS_F32(y, CLASS_PINF|CLASS_NINF)) ?
+              AS_FLOAT(PINFBITPATT_SP32) : ret;
     }
 
     return ret;
