@@ -566,7 +566,7 @@ Intrinsic                                        CUDA Equivalent
 ``i32 @llvm.nvvm.read.ptx.sreg.ctaid.{x,y,z}``   blockIdx.{x,y,z}
 ``i32 @llvm.nvvm.read.ptx.sreg.ntid.{x,y,z}``    blockDim.{x,y,z}
 ``i32 @llvm.nvvm.read.ptx.sreg.nctaid.{x,y,z}``  gridDim.{x,y,z}
-``void @llvm.cuda.syncthreads()``                __syncthreads()
+``void @llvm.nvvm.barrier0()``                   __syncthreads()
 ================================================ ====================
 
 

@@ -642,8 +642,13 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
     OS.emitAbsoluteSymbolDiff(ProcRecordEnd, ProcRecordBegin, 2);
     OS.EmitLabel(ProcRecordBegin);
 
+  if (GV->hasLocalLinkage()) {
+    OS.AddComment("Record kind: S_LPROC32_ID");
+    OS.EmitIntValue(unsigned(SymbolKind::S_LPROC32_ID), 2);
+  } else {
     OS.AddComment("Record kind: S_GPROC32_ID");
     OS.EmitIntValue(unsigned(SymbolKind::S_GPROC32_ID), 2);
+  }
 
     // These fields are filled in by tools like CVPACK which run after the fact.
     OS.AddComment("PtrParent");
@@ -1414,6 +1419,8 @@ struct llvm::ClassInfo {
   MemberList Members;
   // Direct overloaded methods gathered by name.
   MethodsMap Methods;
+
+  std::vector<const DICompositeType *> NestedClasses;
 };
 
 void CodeViewDebug::clear() {
@@ -1466,8 +1473,8 @@ ClassInfo CodeViewDebug::collectClassInfo(const DICompositeType *Ty) {
         // friends in the past, but modern versions do not.
       }
       // FIXME: Get Clang to emit function virtual table here and handle it.
-      // FIXME: Get clang to emit nested types here and do something with
-      // them.
+    } else if (auto *Composite = dyn_cast<DICompositeType>(Element)) {
+      Info.NestedClasses.push_back(Composite);
     }
     // Skip other unrecognized kinds of elements.
   }
@@ -1496,7 +1503,12 @@ TypeIndex CodeViewDebug::lowerCompleteTypeClass(const DICompositeType *Ty) {
   TypeIndex FieldTI;
   TypeIndex VShapeTI;
   unsigned FieldCount;
-  std::tie(FieldTI, VShapeTI, FieldCount) = lowerRecordFieldList(Ty);
+  bool ContainsNestedClass;
+  std::tie(FieldTI, VShapeTI, FieldCount, ContainsNestedClass) =
+      lowerRecordFieldList(Ty);
+
+  if (ContainsNestedClass)
+    CO |= ClassOptions::ContainsNestedClass;
 
   std::string FullName = getFullyQualifiedName(Ty);
 
@@ -1529,10 +1541,16 @@ TypeIndex CodeViewDebug::lowerTypeUnion(const DICompositeType *Ty) {
 }
 
 TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
-  ClassOptions CO = getCommonClassOptions(Ty);
+  ClassOptions CO = ClassOptions::Sealed | getCommonClassOptions(Ty);
   TypeIndex FieldTI;
   unsigned FieldCount;
-  std::tie(FieldTI, std::ignore, FieldCount) = lowerRecordFieldList(Ty);
+  bool ContainsNestedClass;
+  std::tie(FieldTI, std::ignore, FieldCount, ContainsNestedClass) =
+      lowerRecordFieldList(Ty);
+
+  if (ContainsNestedClass)
+    CO |= ClassOptions::ContainsNestedClass;
+
   uint64_t SizeInBytes = Ty->getSizeInBits() / 8;
   std::string FullName = getFullyQualifiedName(Ty);
 
@@ -1550,7 +1568,7 @@ TypeIndex CodeViewDebug::lowerCompleteTypeUnion(const DICompositeType *Ty) {
   return UnionTI;
 }
 
-std::tuple<TypeIndex, TypeIndex, unsigned>
+std::tuple<TypeIndex, TypeIndex, unsigned, bool>
 CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
   // Manually count members. MSVC appears to count everything that generates a
   // field list record. Each individual overload in a method overload group
@@ -1645,8 +1663,17 @@ CodeViewDebug::lowerRecordFieldList(const DICompositeType *Ty) {
           OverloadedMethodRecord(Methods.size(), MethodList, Name));
     }
   }
+
+  // Create nested classes.
+  for (const DICompositeType *Nested : Info.NestedClasses) {
+    NestedTypeRecord R(getTypeIndex(DITypeRef(Nested)), Nested->getName());
+    Fields.writeNestedType(R);
+    MemberCount++;
+  }
+
   TypeIndex FieldTI = TypeTable.writeFieldList(Fields);
-  return std::make_tuple(FieldTI, TypeIndex(), MemberCount);
+  return std::make_tuple(FieldTI, TypeIndex(), MemberCount,
+                         !Info.NestedClasses.empty());
 }
 
 TypeIndex CodeViewDebug::getVBPTypeIndex() {
@@ -1971,8 +1998,24 @@ void CodeViewDebug::emitDebugInfoForGlobal(const DIGlobalVariable *DIGV,
   OS.AddComment("Record length");
   OS.emitAbsoluteSymbolDiff(DataEnd, DataBegin, 2);
   OS.EmitLabel(DataBegin);
-  OS.AddComment("Record kind: S_GDATA32");
-  OS.EmitIntValue(unsigned(SymbolKind::S_GDATA32), 2);
+  const auto *GV = cast<GlobalVariable>(DIGV->getVariable());
+  if (DIGV->isLocalToUnit()) {
+    if (GV->isThreadLocal()) {
+      OS.AddComment("Record kind: S_LTHREAD32");
+      OS.EmitIntValue(unsigned(SymbolKind::S_LTHREAD32), 2);
+    } else {
+      OS.AddComment("Record kind: S_LDATA32");
+      OS.EmitIntValue(unsigned(SymbolKind::S_LDATA32), 2);
+    }
+  } else {
+    if (GV->isThreadLocal()) {
+      OS.AddComment("Record kind: S_GTHREAD32");
+      OS.EmitIntValue(unsigned(SymbolKind::S_GTHREAD32), 2);
+    } else {
+      OS.AddComment("Record kind: S_GDATA32");
+      OS.EmitIntValue(unsigned(SymbolKind::S_GDATA32), 2);
+    }
+  }
   OS.AddComment("Type");
   OS.EmitIntValue(getCompleteTypeIndex(DIGV->getType()).getIndex(), 4);
   OS.AddComment("DataOffset");

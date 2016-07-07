@@ -14,14 +14,14 @@
 ; ASM:        .long   4                       # Debug section magic
 
 ; ASM:        .short  {{.*-.*}}               # Record length
-; ASM:        .short  4365                    # Record kind: S_GDATA32
+; ASM:        .short  4364                    # Record kind: S_LDATA32
 ; ASM:        .long   116                     # Type
 ; ASM:        .secrel32       "?first@@3HA"   # DataOffset
 ; ASM:        .secidx "?first@@3HA"           # Segment
 ; ASM:        .asciz  "first"                 # Name
 
 ; ASM:        .short  {{.*-.*}}               # Record length
-; ASM:        .short  4365                    # Record kind: S_GDATA32
+; ASM:        .short  4371                    # Record kind: S_GTHREAD32
 ; ASM:        .long   4097                    # Type
 ; ASM:        .secrel32       "?middle@@3PEBHEB" # DataOffset
 ; ASM:        .secidx "?middle@@3PEBHEB"      # Segment
@@ -74,18 +74,20 @@
 ; OBJ:   Subsection [
 ; OBJ:     SubSectionType: Symbols (0xF1)
 ; OBJ:     DataSym {
+; OBJ:       Kind: S_LDATA32 (0x110C)
 ; OBJ:       DataOffset: ?first@@3HA+0x0
 ; OBJ:       Type: int (0x74)
 ; OBJ:       DisplayName: first
 ; OBJ:       LinkageName: ?first@@3HA
 ; OBJ:     }
-; OBJ:     DataSym {
+; OBJ:     ThreadLocalDataSym {
 ; OBJ:       DataOffset: ?middle@@3PEBHEB+0x0
 ; OBJ:       Type: const int* (0x1001)
 ; OBJ:       DisplayName: middle
 ; OBJ:       LinkageName: ?middle@@3PEBHEB
 ; OBJ:     }
 ; OBJ:     DataSym {
+; OBJ:       Kind: S_GDATA32 (0x110D)
 ; OBJ:       DataOffset: ?last@@3HA+0x0
 ; OBJ:       Type: int (0x74)
 ; OBJ:       DisplayName: last
@@ -94,7 +96,7 @@
 ; OBJ:   ]
 ; OBJ: ]
 ; OBJ: CodeViewDebugInfo [
-; OBJ:   Section: .debug$S (6)
+; OBJ:   Section: .debug$S (7)
 ; OBJ:   Magic: 0x4
 ; OBJ:   Subsection [
 ; OBJ:     SubSectionType: Symbols (0xF1)
@@ -115,9 +117,9 @@ target triple = "x86_64-pc-windows-msvc19.0.23918"
 
 $"\01?comdat@?$A@X@@2HB" = comdat any
 
-@"\01?first@@3HA" = global i32 0, align 4
+@"\01?first@@3HA" = internal global i32 0, align 4
 @"\01?comdat@?$A@X@@2HB" = linkonce_odr constant i32 3, comdat, align 4
-@"\01?middle@@3PEBHEB" = global i32* @"\01?comdat@?$A@X@@2HB", align 8
+@"\01?middle@@3PEBHEB" = thread_local global i32* @"\01?comdat@?$A@X@@2HB", align 8
 @"\01?last@@3HA" = global i32 0, align 4
 
 !llvm.dbg.cu = !{!0}
@@ -128,7 +130,7 @@ $"\01?comdat@?$A@X@@2HB" = comdat any
 !1 = !DIFile(filename: "t.cpp", directory: "D:\5Csrc\5Cllvm\5Cbuild")
 !2 = !{}
 !3 = !{!4, !6, !13, !15}
-!4 = distinct !DIGlobalVariable(name: "first", linkageName: "\01?first@@3HA", scope: !0, file: !1, line: 1, type: !5, isLocal: false, isDefinition: true, variable: i32* @"\01?first@@3HA")
+!4 = distinct !DIGlobalVariable(name: "first", linkageName: "\01?first@@3HA", scope: !0, file: !1, line: 1, type: !5, isLocal: true, isDefinition: true, variable: i32* @"\01?first@@3HA")
 !5 = !DIBasicType(name: "int", size: 32, align: 32, encoding: DW_ATE_signed)
 !6 = distinct !DIGlobalVariable(name: "comdat", linkageName: "\01?comdat@?$A@X@@2HB", scope: !0, file: !1, line: 2, type: !7, isLocal: false, isDefinition: true, variable: i32* @"\01?comdat@?$A@X@@2HB", declaration: !8)
 !7 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !5)

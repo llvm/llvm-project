@@ -159,7 +159,6 @@ define i64 @test12(<16 x i64>%a, <16 x i64>%b, i64 %a1, i64 %b1) {
 ;CHECK-LABEL: test13
 ;CHECK: cmpl    %esi, %edi
 ;CHECK: setb    %al
-;CHECK: andl    $1, %eax
 ;CHECK: kmovw   %eax, %k0
 ;CHECK: movw    $-4
 ;CHECK: korw

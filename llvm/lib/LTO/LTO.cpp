@@ -92,10 +92,6 @@ void thinLTOResolveWeakForLinkerInIndex(
     function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage) {
-  if (Index.modulePaths().size() == 1)
-    // Nothing to do if we don't have multiple modules
-    return;
-
   // We won't optimize the globals that are referenced by an alias for now
   // Ideally we should turn the alias into a global and duplicate the definition
   // when needed.

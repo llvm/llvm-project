@@ -29,6 +29,7 @@ private:
   Error dumpFileHeaders();
   Error dumpStreamMetadata();
   Error dumpStreamDirectory();
+  Error dumpPDBStream();
 
   void flush();
 

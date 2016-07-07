@@ -516,8 +516,11 @@ void X86MCCodeEmitter::emitMemModRMByte(const MCInst &MI, unsigned Op,
 
     // Otherwise, emit the most general non-SIB encoding: [REG+disp32]
     EmitByte(ModRMByte(2, RegOpcodeField, BaseRegNo), CurByte, OS);
-    EmitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(X86::reloc_signed_4byte),
-                  CurByte, OS, Fixups);
+    unsigned Opcode = MI.getOpcode();
+    unsigned FixupKind = Opcode == X86::MOV32rm ? X86::reloc_signed_4byte_relax
+                                                : X86::reloc_signed_4byte;
+    EmitImmediate(Disp, MI.getLoc(), 4, MCFixupKind(FixupKind), CurByte, OS,
+                  Fixups);
     return;
   }
 

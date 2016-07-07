@@ -8719,7 +8719,7 @@ static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL,
   }
 
   // Don't bother if we have no (non-zeroable) element for insertion.
-  if (V1DstIndex >= 0 && V2DstIndex >= 0)
+  if (V1DstIndex < 0 && V2DstIndex < 0)
     return SDValue();
 
   // Determine element insertion src/dst indices. The src index is from the
@@ -15551,8 +15551,11 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
       isNullConstant(Op1) &&
       (CC == ISD::SETEQ || CC == ISD::SETNE)) {
     if (SDValue NewSetCC = LowerToBT(Op0, CC, dl, DAG)) {
-      if (VT == MVT::i1)
+      if (VT == MVT::i1) {
+        NewSetCC = DAG.getNode(ISD::AssertZext, dl, MVT::i8, NewSetCC,
+                               DAG.getValueType(MVT::i1));
         return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, NewSetCC);
+      }
       return NewSetCC;
     }
   }
@@ -15574,8 +15577,11 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
       SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
                                   DAG.getConstant(CCode, dl, MVT::i8),
                                   Op0.getOperand(1));
-      if (VT == MVT::i1)
+      if (VT == MVT::i1) {
+        SetCC = DAG.getNode(ISD::AssertZext, dl, MVT::i8, SetCC,
+                            DAG.getValueType(MVT::i1));
         return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, SetCC);
+      }
       return SetCC;
     }
   }
@@ -15599,8 +15605,11 @@ SDValue X86TargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   EFLAGS = ConvertCmpIfNecessary(EFLAGS, DAG);
   SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8,
                               DAG.getConstant(X86CC, dl, MVT::i8), EFLAGS);
-  if (VT == MVT::i1)
+  if (VT == MVT::i1) {
+    SetCC = DAG.getNode(ISD::AssertZext, dl, MVT::i8, SetCC,
+                        DAG.getValueType(MVT::i1));
     return DAG.getNode(ISD::TRUNCATE, dl, MVT::i1, SetCC);
+  }
   return SetCC;
 }
 
@@ -15619,8 +15628,11 @@ SDValue X86TargetLowering::LowerSETCCE(SDValue Op, SelectionDAG &DAG) const {
   SDValue Cmp = DAG.getNode(X86ISD::SBB, DL, VTs, LHS, RHS, Carry);
   SDValue SetCC = DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                               DAG.getConstant(CC, DL, MVT::i8), Cmp.getValue(1));
-  if (Op.getSimpleValueType() == MVT::i1)
-      return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
+  if (Op.getSimpleValueType() == MVT::i1) {
+    SetCC = DAG.getNode(ISD::AssertZext, DL, MVT::i8, SetCC,
+                        DAG.getValueType(MVT::i1));
+    return DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
+  }
   return SetCC;
 }
 
@@ -15650,14 +15662,23 @@ static bool isX86LogicalCmp(SDValue Op) {
   return false;
 }
 
-static bool isTruncWithZeroHighBitsInput(SDValue V, SelectionDAG &DAG) {
+/// Returns the "condition" node, that may be wrapped with "truncate".
+/// Like this: (i1 (trunc (i8 X86ISD::SETCC))).
+static SDValue getCondAfterTruncWithZeroHighBitsInput(SDValue V, SelectionDAG &DAG) {
   if (V.getOpcode() != ISD::TRUNCATE)
-    return false;
+    return V;
 
   SDValue VOp0 = V.getOperand(0);
+  if (VOp0.getOpcode() == ISD::AssertZext &&
+      V.getValueSizeInBits() ==
+      cast<VTSDNode>(VOp0.getOperand(1))->getVT().getSizeInBits())
+    return VOp0.getOperand(0);
+
   unsigned InBits = VOp0.getValueSizeInBits();
   unsigned Bits = V.getValueSizeInBits();
-  return DAG.MaskedValueIsZero(VOp0, APInt::getHighBitsSet(InBits,InBits-Bits));
+  if (DAG.MaskedValueIsZero(VOp0, APInt::getHighBitsSet(InBits,InBits-Bits)))
+    return V.getOperand(0);
+  return V;
 }
 
 SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
@@ -15880,8 +15901,7 @@ SDValue X86TargetLowering::LowerSELECT(SDValue Op, SelectionDAG &DAG) const {
 
   if (addTest) {
     // Look past the truncate if the high bits are known zero.
-    if (isTruncWithZeroHighBitsInput(Cond, DAG))
-      Cond = Cond.getOperand(0);
+    Cond = getCondAfterTruncWithZeroHighBitsInput(Cond, DAG);
 
     // We know the result of AND is compared against zero. Try to match
     // it to BT.
@@ -16719,8 +16739,7 @@ SDValue X86TargetLowering::LowerBRCOND(SDValue Op, SelectionDAG &DAG) const {
 
   if (addTest) {
     // Look pass the truncate if the high bits are known zero.
-    if (isTruncWithZeroHighBitsInput(Cond, DAG))
-        Cond = Cond.getOperand(0);
+    Cond = getCondAfterTruncWithZeroHighBitsInput(Cond, DAG);
 
     // We know the result of AND is compared against zero. Try to match
     // it to BT.
@@ -17980,7 +17999,7 @@ static SDValue LowerINTRINSIC_WO_CHAIN(SDValue Op, const X86Subtarget &Subtarget
     SDValue RHS = DAG.getBitcast(MVT::v16i1, Op.getOperand(2));
     SDValue CC = DAG.getConstant(X86CC, dl, MVT::i8);
     SDValue Test = DAG.getNode(X86ISD::KORTEST, dl, MVT::i32, LHS, RHS);
-    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i1, CC, Test);
+    SDValue SetCC = DAG.getNode(X86ISD::SETCC, dl, MVT::i8, CC, Test);
     return DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, SetCC);
   }
 
@@ -20494,10 +20513,15 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
     SDValue Sum = DAG.getNode(X86ISD::UMUL, DL, VTs, LHS, RHS);
 
     SDValue SetCC =
-      DAG.getNode(X86ISD::SETCC, DL, N->getValueType(1),
+      DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                   DAG.getConstant(X86::COND_O, DL, MVT::i32),
                   SDValue(Sum.getNode(), 2));
 
+    if (N->getValueType(1) == MVT::i1) {
+      SetCC = DAG.getNode(ISD::AssertZext, DL, MVT::i8, SetCC,
+                          DAG.getValueType(MVT::i1));
+      SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
+    }
     return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
   }
   }
@@ -20507,10 +20531,15 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
   SDValue Sum = DAG.getNode(BaseOp, DL, VTs, LHS, RHS);
 
   SDValue SetCC =
-    DAG.getNode(X86ISD::SETCC, DL, N->getValueType(1),
+    DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                 DAG.getConstant(Cond, DL, MVT::i32),
                 SDValue(Sum.getNode(), 1));
-
+  
+  if (N->getValueType(1) == MVT::i1) {
+    SetCC = DAG.getNode(ISD::AssertZext, DL, MVT::i8, SetCC,
+                        DAG.getValueType(MVT::i1));
+    SetCC = DAG.getNode(ISD::TRUNCATE, DL, MVT::i1, SetCC);
+  }
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Sum, SetCC);
 }
 
@@ -26870,6 +26899,7 @@ static SDValue checkBoolTestSetCCCombine(SDValue Cmp, X86::CondCode &CC) {
   // Skip (zext $x), (trunc $x), or (and $x, 1) node.
   while (SetCC.getOpcode() == ISD::ZERO_EXTEND ||
          SetCC.getOpcode() == ISD::TRUNCATE ||
+         SetCC.getOpcode() == ISD::AssertZext ||
          SetCC.getOpcode() == ISD::AND) {
     if (SetCC.getOpcode() == ISD::AND) {
       int OpIdx = -1;

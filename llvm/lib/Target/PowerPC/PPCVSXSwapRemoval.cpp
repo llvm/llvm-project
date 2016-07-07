@@ -692,6 +692,7 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
       MachineInstr *MI = SwapVector[EntryIdx].VSEMI;
       unsigned UseReg = MI->getOperand(0).getReg();
       MachineInstr *DefMI = MRI->getVRegDef(UseReg);
+      unsigned DefReg = DefMI->getOperand(0).getReg();
       int DefIdx = SwapMap[DefMI];
 
       if (!SwapVector[DefIdx].IsSwap || SwapVector[DefIdx].IsLoad ||
@@ -706,6 +707,25 @@ void PPCVSXSwapRemoval::recordUnoptimizableWebs() {
         DEBUG(dbgs() << "  use " << EntryIdx << ": ");
         DEBUG(MI->dump());
         DEBUG(dbgs() << "\n");
+      }
+
+      // Ensure all uses of the register defined by DefMI feed store
+      // instructions
+      for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DefReg)) {
+        int UseIdx = SwapMap[&UseMI];
+
+        if (SwapVector[UseIdx].VSEMI->getOpcode() != MI->getOpcode()) {
+          SwapVector[Repr].WebRejected = 1;
+
+          DEBUG(dbgs() <<
+                format("Web %d rejected for swap not feeding only stores\n",
+                       Repr));
+          DEBUG(dbgs() << "  def " << " : ");
+          DEBUG(DefMI->dump());
+          DEBUG(dbgs() << "  use " << UseIdx << ": ");
+          DEBUG(SwapVector[UseIdx].VSEMI->dump());
+          DEBUG(dbgs() << "\n");
+        }
       }
     }
   }

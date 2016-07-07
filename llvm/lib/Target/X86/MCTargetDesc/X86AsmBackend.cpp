@@ -46,6 +46,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_riprel_4byte_relax_rex:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_signed_4byte:
+  case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
   case FK_SecRel_4:
   case FK_Data_4:
@@ -93,6 +94,7 @@ public:
         {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
         {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
         {"reloc_signed_4byte", 0, 32, 0},
+        {"reloc_signed_4byte_relax", 0, 32, 0},
         {"reloc_global_offset_table", 0, 32, 0},
         {"reloc_global_offset_table8", 0, 64, 0},
     };

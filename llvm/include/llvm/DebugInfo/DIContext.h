@@ -17,7 +17,6 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/RelocVisitor.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/DataTypes.h"
 #include <string>

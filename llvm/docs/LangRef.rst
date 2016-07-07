@@ -1318,7 +1318,7 @@ example:
     The ``convergent`` attribute may appear on functions or call/invoke
     instructions.  When it appears on a function, it indicates that calls to
     this function should not be made control-dependent on additional values.
-    For example, the intrinsic ``llvm.cuda.syncthreads`` is ``convergent``, so
+    For example, the intrinsic ``llvm.nvvm.barrier0`` is ``convergent``, so
     calls to this intrinsic cannot be made control-dependent on additional
     values.
 

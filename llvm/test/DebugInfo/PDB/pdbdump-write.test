@@ -7,7 +7,7 @@
 ; constructed PDB to YAML, and verifies that the YAML is the same as the
 ; original YAML generated from the good PDB.
 ;
-; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory %p/Inputs/empty.pdb > %t.1
+; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream %p/Inputs/empty.pdb > %t.1
 ; RUN: llvm-pdbdump yaml2pdb -pdb=%t.2 %t.1
-; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory %t.2 > %t.3
+; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream %t.2 > %t.3
 ; RUN: diff %t.1 %t.3

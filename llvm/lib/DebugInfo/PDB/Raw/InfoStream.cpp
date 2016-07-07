@@ -11,26 +11,30 @@
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/CodeView/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
+using namespace llvm::codeview;
 using namespace llvm::pdb;
+
+namespace {
+struct Header {
+  support::ulittle32_t Version;
+  support::ulittle32_t Signature;
+  support::ulittle32_t Age;
+  PDB_UniqueId Guid;
+};
+}
 
 InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
     : Stream(std::move(Stream)) {}
 
 Error InfoStream::reload() {
   codeview::StreamReader Reader(*Stream);
-
-  struct Header {
-    support::ulittle32_t Version;
-    support::ulittle32_t Signature;
-    support::ulittle32_t Age;
-    PDB_UniqueId Guid;
-  };
 
   const Header *H;
   if (auto EC = Reader.readObject(H))
@@ -39,9 +43,16 @@ Error InfoStream::reload() {
         make_error<RawError>(raw_error_code::corrupt_file,
                              "PDB Stream does not contain a header."));
 
-  if (H->Version < PdbRaw_ImplVer::PdbImplVC70)
+  switch (H->Version) {
+  case PdbImplVC70:
+  case PdbImplVC80:
+  case PdbImplVC110:
+  case PdbImplVC140:
+    break;
+  default:
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Unsupported PDB stream version.");
+  }
 
   Version = H->Version;
   Signature = H->Signature;
@@ -72,3 +83,27 @@ uint32_t InfoStream::getSignature() const { return Signature; }
 uint32_t InfoStream::getAge() const { return Age; }
 
 PDB_UniqueId InfoStream::getGuid() const { return Guid; }
+
+void InfoStream::setVersion(PdbRaw_ImplVer Ver) {
+  Version = static_cast<uint32_t>(Ver);
+}
+
+void InfoStream::setSignature(uint32_t Sig) { Signature = Sig; }
+
+void InfoStream::setAge(uint32_t Age) { this->Age = Age; }
+
+void InfoStream::setGuid(PDB_UniqueId Guid) { this->Guid = Guid; }
+
+Error InfoStream::commit() {
+  StreamWriter Writer(*Stream);
+
+  Header H;
+  H.Age = Age;
+  H.Signature = Signature;
+  H.Version = Version;
+  H.Guid = Guid;
+  if (auto EC = Writer.writeObject(H))
+    return EC;
+
+  return NamedStreams.commit(Writer);
+}

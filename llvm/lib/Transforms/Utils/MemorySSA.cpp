@@ -54,6 +54,16 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                     true)
 
+INITIALIZE_PASS_BEGIN(MemorySSAPrinterLegacyPass, "print-memoryssa",
+                      "Memory SSA Printer", false, false)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_END(MemorySSAPrinterLegacyPass, "print-memoryssa",
+                    "Memory SSA Printer", false, false)
+
+static cl::opt<bool>
+    VerifyMemorySSA("verify-memoryssa", cl::init(false), cl::Hidden,
+                    cl::desc("Verify MemorySSA in legacy printer pass."));
+
 namespace llvm {
 /// \brief An assembly annotator class to print Memory SSA information in
 /// comments.
@@ -892,6 +902,26 @@ void MemoryUse::print(raw_ostream &OS) const {
 void MemoryAccess::dump() const {
   print(dbgs());
   dbgs() << "\n";
+}
+
+char MemorySSAPrinterLegacyPass::ID = 0;
+
+MemorySSAPrinterLegacyPass::MemorySSAPrinterLegacyPass() : FunctionPass(ID) {
+  initializeMemorySSAPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
+}
+
+void MemorySSAPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<MemorySSAWrapperPass>();
+  AU.addPreserved<MemorySSAWrapperPass>();
+}
+
+bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {
+  auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
+  MSSA.print(dbgs());
+  if (VerifyMemorySSA)
+    MSSA.verifyMemorySSA();
+  return false;
 }
 
 char MemorySSAAnalysis::PassID;

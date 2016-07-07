@@ -112,7 +112,7 @@ bool NVPTXInstrInfo::isStoreInstr(const MachineInstr &MI,
 
 bool NVPTXInstrInfo::CanTailMerge(const MachineInstr *MI) const {
   unsigned addrspace = 0;
-  if (MI->getOpcode() == NVPTX::INT_CUDA_SYNCTHREADS)
+  if (MI->getOpcode() == NVPTX::INT_BARRIER0)
     return false;
   if (isLoadInstr(*MI, addrspace))
     if (addrspace == NVPTX::PTXLdStInstCode::SHARED)

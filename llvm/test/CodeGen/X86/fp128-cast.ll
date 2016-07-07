@@ -238,6 +238,7 @@ entry:
 ; X64-LABEL: TestConst128:
 ; X64:       movaps {{.*}}, %xmm1
 ; X64-NEXT:  callq __gttf2
+; X64-NEXT:  xorl
 ; X64-NEXT:  test
 ; X64:       retq
 }
@@ -277,9 +278,9 @@ entry:
 ; X64-NEXT:  movq (%rsp),
 ; X64-NEXT:  movq %
 ; X64-NEXT:  shrq $32,
-; X64:       orl
+; X64:       xorl %eax, %eax
+; X64-NEXT:  orl
 ; X64-NEXT:  sete %al
-; X64-NEXT:  movzbl %al, %eax
 ; X64:       retq
 ;
 ; If TestBits128 fails due to any llvm or clang change,

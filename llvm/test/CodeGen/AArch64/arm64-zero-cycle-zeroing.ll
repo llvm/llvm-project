@@ -47,3 +47,29 @@ declare void @bar(double, double, double, double)
 declare void @bari(i32, i32)
 declare void @barl(i64, i64)
 declare void @barf(float, float)
+
+; We used to produce spills+reloads for a Q register with zero cycle zeroing
+; enabled.
+; CHECK-LABEL: foo:
+; CHECK-NOT: str {{q[0-9]+}}
+; CHECK-NOT: ldr {{q[0-9]+}}
+define double @foo(i32 %n) {
+entry:
+  br label %for.body
+
+for.body:
+  %phi0 = phi double [ 1.0, %entry ], [ %v0, %for.body ]
+  %i.076 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %conv21 = sitofp i32 %i.076 to double
+  %call = tail call fast double @sin(double %conv21)
+  %cmp.i = fcmp fast olt double %phi0, %call
+  %v0 = select i1 %cmp.i, double %call, double %phi0
+  %inc = add nuw nsw i32 %i.076, 1
+  %cmp = icmp slt i32 %inc, %n
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret double %v0
+}
+
+declare double @sin(double)

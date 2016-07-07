@@ -13,7 +13,9 @@
 #include "OutputStyle.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/YAMLTraits.h"
 
@@ -36,10 +38,18 @@ struct StreamBlockList {
   std::vector<support::ulittle32_t> Blocks;
 };
 
+struct PdbInfoStream {
+  uint32_t Version;
+  uint32_t Signature;
+  uint32_t Age;
+  PDB_UniqueId Guid;
+};
+
 struct PdbObject {
   MsfHeaders Headers;
   Optional<std::vector<support::ulittle32_t>> StreamSizes;
   Optional<std::vector<StreamBlockList>> StreamMap;
+  Optional<PdbInfoStream> PdbStream;
 };
 }
 }
@@ -62,6 +72,10 @@ template <> struct MappingTraits<pdb::yaml::MsfHeaders> {
 
 template <> struct MappingTraits<pdb::yaml::PdbObject> {
   static void mapping(IO &IO, pdb::yaml::PdbObject &Obj);
+};
+
+template <> struct MappingTraits<pdb::yaml::PdbInfoStream> {
+  static void mapping(IO &IO, pdb::yaml::PdbInfoStream &Obj);
 };
 }
 }

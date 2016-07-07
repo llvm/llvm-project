@@ -93,6 +93,7 @@
 #include "AArch64Subtarget.h"
 #include "AArch64TargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
@@ -244,27 +245,26 @@ static unsigned findScratchNonCalleeSaveRegister(MachineBasicBlock *MBB) {
   if (&MF->front() == MBB)
     return AArch64::X9;
 
-  RegScavenger RS;
-  RS.enterBasicBlock(*MBB);
+  const TargetRegisterInfo &TRI = *MF->getSubtarget().getRegisterInfo();
+  LivePhysRegs LiveRegs(&TRI);
+  LiveRegs.addLiveIns(*MBB);
 
-  // Prefer X9 since it was historically used for the prologue scratch reg.
-  if (!RS.isRegUsed(AArch64::X9))
-    return AArch64::X9;
-
-  // Find a free non callee-save reg.
+  // Mark callee saved registers as used so we will not choose them.
   const AArch64Subtarget &Subtarget = MF->getSubtarget<AArch64Subtarget>();
   const AArch64RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   const MCPhysReg *CSRegs = RegInfo->getCalleeSavedRegs(MF);
-  BitVector CalleeSaveRegs(RegInfo->getNumRegs());
   for (unsigned i = 0; CSRegs[i]; ++i)
-    CalleeSaveRegs.set(CSRegs[i]);
+    LiveRegs.addReg(CSRegs[i]);
 
-  BitVector Available = RS.getRegsAvailable(&AArch64::GPR64RegClass);
-  for (int AvailReg = Available.find_first(); AvailReg != -1;
-       AvailReg = Available.find_next(AvailReg))
-    if (!CalleeSaveRegs.test(AvailReg))
-      return AvailReg;
+  // Prefer X9 since it was historically used for the prologue scratch reg.
+  const MachineRegisterInfo &MRI = MF->getRegInfo();
+  if (LiveRegs.available(MRI, AArch64::X9))
+    return AArch64::X9;
 
+  for (unsigned Reg : AArch64::GPR64RegClass) {
+    if (LiveRegs.available(MRI, Reg))
+      return Reg;
+  }
   return AArch64::NoRegister;
 }
 

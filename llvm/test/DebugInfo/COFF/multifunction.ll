@@ -60,7 +60,7 @@
 ; X86-NEXT: [[F1_START]]:
 ; X86-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X86-NEXT: [[PROC_SEGMENT_START]]:
-; X86-NEXT: .short  4423
+; X86-NEXT: .short  4422
 ; X86-NEXT: .long   0
 ; X86-NEXT: .long   0
 ; X86-NEXT: .long   0
@@ -154,6 +154,7 @@
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ32-NOT:    ]
 ; OBJ32:        ProcStart {
+; OBJ32:          Kind: S_LPROC32_ID (0x1146)
 ; OBJ32:          CodeSize: 0x6
 ; OBJ32:          DisplayName: x
 ; OBJ32:          LinkageName: _x
@@ -168,6 +169,7 @@
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ32-NOT:    ]
 ; OBJ32:        ProcStart {
+; OBJ32:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ32:          CodeSize: 0x6
 ; OBJ32:          DisplayName: y
 ; OBJ32:          LinkageName: _y
@@ -182,6 +184,7 @@
 ; OBJ32-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ32-NOT:    ]
 ; OBJ32:        ProcStart {
+; OBJ32:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ32:          CodeSize: 0x10
 ; OBJ32:          DisplayName: f
 ; OBJ32:          LinkageName: _f
@@ -324,7 +327,7 @@
 ; X64-NEXT: [[F1_START]]:
 ; X64-NEXT: .short [[PROC_SEGMENT_END:.*]]-[[PROC_SEGMENT_START:.*]] #
 ; X64-NEXT: [[PROC_SEGMENT_START]]:
-; X64-NEXT: .short  4423
+; X64-NEXT: .short  4422
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   0
 ; X64-NEXT: .long   0
@@ -420,6 +423,7 @@
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ64-NOT:    ]
 ; OBJ64:        ProcStart {
+; OBJ64:          Kind: S_LPROC32_ID (0x1146)
 ; OBJ64:          CodeSize: 0xE
 ; OBJ64:          DisplayName: x
 ; OBJ64:          LinkageName: x
@@ -434,6 +438,7 @@
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ64-NOT:    ]
 ; OBJ64:        ProcStart {
+; OBJ64:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ64:          CodeSize: 0xE
 ; OBJ64:          DisplayName: y
 ; OBJ64:          LinkageName: y
@@ -448,6 +453,7 @@
 ; OBJ64-NEXT:   SubSectionType: Symbols (0xF1)
 ; OBJ64-NOT:    ]
 ; OBJ64:        ProcStart {
+; OBJ64:          Kind: S_GPROC32_ID (0x1147)
 ; OBJ64:          CodeSize: 0x18
 ; OBJ64:          DisplayName: f
 ; OBJ64:          LinkageName: f
@@ -561,7 +567,7 @@
 ; OBJ64-NEXT: ]
 
 ; Function Attrs: nounwind
-define void @x() #0 !dbg !4 {
+define internal void @x() #0 !dbg !4 {
 entry:
   call void @z(), !dbg !14
   ret void, !dbg !15

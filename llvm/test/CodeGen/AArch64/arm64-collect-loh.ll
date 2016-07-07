@@ -654,4 +654,25 @@ define void @uninterestingSub(i8* nocapture %row) #0 {
   ret void
 }
 
+@.str.89 = external unnamed_addr constant [12 x i8], align 1
+@.str.90 = external unnamed_addr constant [5 x i8], align 1
+; CHECK-LABEL: test_r274582
+define void @test_r274582() {
+entry:
+  br i1 undef, label %if.then.i, label %if.end.i
+if.then.i:
+  ret void
+if.end.i:
+; CHECK: .loh AdrpAdrp Lloh91, Lloh93
+; CHECK: .loh AdrpLdr Lloh91, Lloh92
+; CHECK: .loh AdrpLdrGot Lloh93, Lloh95
+; CHECK: .loh AdrpLdrGot Lloh94, Lloh96
+  %mul.i.i.i = fmul double undef, 1.000000e-06
+  %add.i.i.i = fadd double undef, %mul.i.i.i
+  %sub.i.i = fsub double %add.i.i.i, undef
+  call void (i8*, ...) @callee(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str.89, i64 0, i64 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str.90, i64 0, i64 0), double %sub.i.i)
+  unreachable
+}
+declare void @callee(i8* nocapture readonly, ...) 
+
 attributes #0 = { "target-cpu"="cyclone" }

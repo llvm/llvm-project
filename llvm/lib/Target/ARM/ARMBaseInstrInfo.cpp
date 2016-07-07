@@ -51,15 +51,6 @@ static cl::opt<bool>
 EnableARM3Addr("enable-arm-3-addr-conv", cl::Hidden,
                cl::desc("Enable ARM 2-addr to 3-addr conv"));
 
-static cl::opt<bool>
-WidenVMOVS("widen-vmovs", cl::Hidden, cl::init(true),
-           cl::desc("Widen ARM vmovs to vmovd when possible"));
-
-static cl::opt<unsigned>
-SwiftPartialUpdateClearance("swift-partial-update-clearance",
-     cl::Hidden, cl::init(12),
-     cl::desc("Clearance before partial register updates"));
-
 /// ARM_MLxEntry - Record information about MLA / MLS instructions.
 struct ARM_MLxEntry {
   uint16_t MLxOpc;     // MLA / MLS opcode
@@ -1305,8 +1296,7 @@ bool ARMBaseInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
   // copyPhysReg() calls.  Look for VMOVS instructions that can legally be
   // widened to VMOVD.  We prefer the VMOVD when possible because it may be
   // changed into a VORR that can go down the NEON pipeline.
-  if (!WidenVMOVS || !MI.isCopy() || Subtarget.isCortexA15() ||
-      Subtarget.isFPOnlySP())
+  if (!MI.isCopy() || Subtarget.dontWidenVMOVS() || Subtarget.isFPOnlySP())
     return false;
 
   // Look for a copy between even S-registers.  That is where we keep floats
@@ -4492,8 +4482,8 @@ void ARMBaseInstrInfo::setExecutionDomain(MachineInstr &MI,
 unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
     const MachineInstr &MI, unsigned OpNum,
     const TargetRegisterInfo *TRI) const {
-  if (!SwiftPartialUpdateClearance ||
-      !(Subtarget.isSwift() || Subtarget.isCortexA15()))
+  auto PartialUpdateClearance = Subtarget.getPartialUpdateClearance();
+  if (!PartialUpdateClearance)
     return 0;
 
   assert(TRI && "Need TRI instance");
@@ -4545,7 +4535,7 @@ unsigned ARMBaseInstrInfo::getPartialRegUpdateClearance(
 
   // MI has an unwanted D-register dependency.
   // Avoid defs in the previous N instructrions.
-  return SwiftPartialUpdateClearance;
+  return PartialUpdateClearance;
 }
 
 // Break a partial register dependency after getPartialRegUpdateClearance

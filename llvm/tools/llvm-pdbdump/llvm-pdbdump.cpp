@@ -40,6 +40,7 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
+#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
@@ -268,6 +269,10 @@ cl::opt<bool> StreamDirectory(
     "stream-directory",
     cl::desc("Dump each stream's block map (implies -stream-metadata)"),
     cl::sub(PdbToYamlSubcommand));
+cl::opt<bool> PdbStream(
+    "pdb-stream",
+    cl::desc("Dump the PDB Stream (Stream 1) (implies -stream-metadata)"),
+    cl::sub(PdbToYamlSubcommand));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -302,18 +307,44 @@ static void yamlToPdb(StringRef Path) {
       llvm::make_unique<FileBufferByteStream>(std::move(*OutFileOrError));
   PDBFile Pdb(std::move(FileByteStream));
   ExitOnErr(Pdb.setSuperBlock(&YamlObj.Headers.SuperBlock));
+  if (YamlObj.StreamSizes.hasValue()) {
+    Pdb.setStreamSizes(YamlObj.StreamSizes.getValue());
+  }
+  Pdb.setDirectoryBlocks(YamlObj.Headers.DirectoryBlocks);
+
   if (YamlObj.StreamMap.hasValue()) {
     std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
     for (auto &E : YamlObj.StreamMap.getValue()) {
       StreamMap.push_back(E.Blocks);
     }
-    Pdb.setStreamMap(YamlObj.Headers.DirectoryBlocks, StreamMap);
+    Pdb.setStreamMap(StreamMap);
+  } else {
+    ExitOnErr(Pdb.generateSimpleStreamMap());
   }
-  if (YamlObj.StreamSizes.hasValue()) {
-    Pdb.setStreamSizes(YamlObj.StreamSizes.getValue());
+
+  if (YamlObj.PdbStream.hasValue()) {
+    auto IS = Pdb.emplacePDBInfoStream();
+    ExitOnErr(IS.takeError());
+    auto &InfoS = IS.get();
+    InfoS.setAge(YamlObj.PdbStream->Age);
+    InfoS.setGuid(YamlObj.PdbStream->Guid);
+    InfoS.setSignature(YamlObj.PdbStream->Signature);
+    InfoS.setVersion(static_cast<PdbRaw_ImplVer>(YamlObj.PdbStream->Version));
   }
 
   ExitOnErr(Pdb.commit());
+}
+
+static void pdb2Yaml(StringRef Path) {
+  std::unique_ptr<IPDBSession> Session;
+  ExitOnErr(loadDataForPDB(PDB_ReaderType::Raw, Path, Session));
+
+  RawSession *RS = static_cast<RawSession *>(Session.get());
+  PDBFile &File = RS->getPDBFile();
+  auto O = llvm::make_unique<YAMLOutputStyle>(File);
+  O = llvm::make_unique<YAMLOutputStyle>(File);
+
+  ExitOnErr(O->dump());
 }
 
 static void dumpRaw(StringRef Path) {
@@ -322,11 +353,7 @@ static void dumpRaw(StringRef Path) {
 
   RawSession *RS = static_cast<RawSession *>(Session.get());
   PDBFile &File = RS->getPDBFile();
-  std::unique_ptr<OutputStyle> O;
-  if (opts::PdbToYamlSubcommand)
-    O = llvm::make_unique<YAMLOutputStyle>(File);
-  else
-    O = llvm::make_unique<LLVMOutputStyle>(File);
+  auto O = llvm::make_unique<LLVMOutputStyle>(File);
 
   ExitOnErr(O->dump());
 }
@@ -486,7 +513,7 @@ int main(int argc_, const char *argv_[]) {
   llvm::sys::InitializeCOMRAII COM(llvm::sys::COMThreadingMode::MultiThreaded);
 
   if (opts::PdbToYamlSubcommand) {
-    dumpRaw(opts::pdb2yaml::InputFilename.front());
+    pdb2Yaml(opts::pdb2yaml::InputFilename.front());
   } else if (opts::YamlToPdbSubcommand) {
     yamlToPdb(opts::yaml2pdb::InputFilename.front());
   } else if (opts::PrettySubcommand) {

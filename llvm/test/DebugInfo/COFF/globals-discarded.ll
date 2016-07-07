@@ -3,7 +3,7 @@
 ; This tests that we don't emit information about globals that were discarded
 ; during optimization. We should only see one global symbol record.
 
-; CHECK: .short  4365                    # Record kind: S_GDATA32
+; CHECK: .short  4364                    # Record kind: S_LDATA32
 ; CHECK: .long   117                     # Type
 ; CHECK: .secrel32       x               # DataOffset
 ; CHECK: .secidx x                       # Segment

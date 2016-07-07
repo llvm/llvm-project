@@ -38,3 +38,48 @@ int main() {         // ALL:         1| [[@LINE]]|int main() {
 }                    // ALL-NEXT:    1| [[@LINE]]|}
 // after coverage    // ALL-NEXT:     | [[@LINE]]|// after
                      // FILTER-NOT:   | [[@LINE-1]]|// after
+
+// Test html output.
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence %s -format html -o %t.html.dir
+// RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -filename-equivalence -name=_Z4funcIbEiT_ %s -format html -o %t.html.dir
+// RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-ALL -input-file=%t.html.dir/coverage/tmp/showTemplateInstantiations.cpp.html %s
+// RUN: FileCheck -check-prefixes=HTML-SHARED,HTML-FILTER -input-file=%t.html.dir/functions.html %s
+
+// HTML-ALL: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>// before
+// HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-45]]</pre></td><td class='code'><pre>// before
+// HTML-ALL: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>template&lt;typename T&gt;
+// HTML-ALL: <td class='covered-line'><pre>2</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>int func(T x) {
+// HTML-ALL: <td class='covered-line'><pre>2</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  if(x)
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>    ret
+// HTML-ALL: <td class='covered-line'><pre>2</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  else
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>    ret
+// HTML-ALL: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>
+// HTML-ALL: <td class='covered-line'><pre>2</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>}
+
+// HTML-SHARED: <div class='source-name-title'><pre>_Z4funcIbEiT_</pre></div><table>
+// HTML-SHARED: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>int func(T x) {
+// HTML-SHARED: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>  if(x)
+// HTML-SHARED: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>    ret
+// HTML-SHARED: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>  else
+// HTML-SHARED: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>
+// HTML-SHARED: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>
+// HTML-SHARED: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-53]]</pre></td><td class='code'><pre>}
+
+// HTML-ALL: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div><table>
+// HTML-FILTER-NOT: <div class='source-name-title'><pre>_Z4funcIiEiT_</pre></div><table>
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>int func(T x) {
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>  if(x)
+// HTML-ALL: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>  else
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>    ret
+// HTML-ALL: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-63]]</pre></td><td class='code'><pre>}
+
+// HTML-ALL: td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>int main() {
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  func&lt;int&gt;(0);
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  func&lt;bool&gt;(true);
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  return 0;
+// HTML-ALL: <td class='covered-line'><pre>1</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>}
+
+// HTML-ALL: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-45]]</pre></td><td class='code'><pre>// after
+// HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-46]]</pre></td><td class='code'><pre>// after

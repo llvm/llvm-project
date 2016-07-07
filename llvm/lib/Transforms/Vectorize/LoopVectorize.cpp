@@ -308,10 +308,14 @@ public:
   // Perform the actual loop widening (vectorization).
   // MinimumBitWidths maps scalar integer values to the smallest bitwidth they
   // can be validly truncated to. The cost model has assumed this truncation
-  // will happen when vectorizing.
+  // will happen when vectorizing. VecValuesToIgnore contains scalar values
+  // that the cost model has chosen to ignore because they will not be
+  // vectorized.
   void vectorize(LoopVectorizationLegality *L,
-                 const MapVector<Instruction *, uint64_t> &MinimumBitWidths) {
+                 const MapVector<Instruction *, uint64_t> &MinimumBitWidths,
+                 SmallPtrSetImpl<const Value *> &VecValuesToIgnore) {
     MinBWs = &MinimumBitWidths;
+    ValuesNotWidened = &VecValuesToIgnore;
     Legal = L;
     // Create a new empty loop. Unlink the old loop and connect the new one.
     createEmptyLoop();
@@ -406,6 +410,13 @@ protected:
   /// This function adds (StartIdx, StartIdx + Step, StartIdx + 2*Step, ...)
   /// to each vector element of Val. The sequence starts at StartIndex.
   virtual Value *getStepVector(Value *Val, int StartIdx, Value *Step);
+
+  /// Compute a step vector like the above function, but scalarize the
+  /// arithmetic instead. The results of the computation are inserted into a
+  /// new vector with VF elements. \p Val is the initial value, \p Step is the
+  /// size of the step, and \p StartIdx indicates the index of the increment
+  /// from which to start computing the steps.
+  Value *getScalarizedStepVector(Value *Val, int StartIdx, Value *Step);
 
   /// Create a vector induction phi node based on an existing scalar one. This
   /// currently only works for integer induction variables with a constant
@@ -582,6 +593,11 @@ protected:
   /// represented as. The vector equivalents of these values should be truncated
   /// to this type.
   const MapVector<Instruction *, uint64_t> *MinBWs;
+
+  /// A set of values that should not be widened. This is taken from
+  /// VecValuesToIgnore in the cost model.
+  SmallPtrSetImpl<const Value *> *ValuesNotWidened;
+
   LoopVectorizationLegality *Legal;
 
   // Record whether runtime checks are added.
@@ -2073,7 +2089,7 @@ struct LoopVectorize : public FunctionPass {
       // If we decided that it is not legal to vectorize the loop, then
       // interleave it.
       InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, IC);
-      Unroller.vectorize(&LVL, CM.MinBWs);
+      Unroller.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
 
       emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
                              Twine("interleaved loop (interleaved count: ") +
@@ -2081,7 +2097,7 @@ struct LoopVectorize : public FunctionPass {
     } else {
       // If we decided that it is *legal* to vectorize the loop, then do it.
       InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, VF.Width, IC);
-      LB.vectorize(&LVL, CM.MinBWs);
+      LB.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
       ++LoopsVectorized;
 
       // Add metadata to disable runtime unrolling a scalar loop when there are
@@ -2201,7 +2217,8 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
   // Try to create a new independent vector induction variable. If we can't
   // create the phi node, we will splat the scalar induction variable in each
   // loop iteration.
-  if (VF > 1 && IV->getType() == Induction->getType() && Step)
+  if (VF > 1 && IV->getType() == Induction->getType() && Step &&
+      !ValuesNotWidened->count(IV))
     return createVectorIntInductionPHI(ID, Entry, TruncType);
 
   // The scalar value to broadcast. This will be derived from the canonical
@@ -2229,6 +2246,15 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
       Step = Exp.expandCodeFor(ID.getStep(), ID.getStep()->getType(),
                                &*Builder.GetInsertPoint());
     }
+  }
+
+  // If an induction variable is only used for counting loop iterations or
+  // calculating addresses, it shouldn't be widened. Scalarize the step vector
+  // to give InstCombine a better chance of simplifying it.
+  if (VF > 1 && ValuesNotWidened->count(IV)) {
+    for (unsigned Part = 0; Part < UF; ++Part)
+      Entry[Part] = getScalarizedStepVector(ScalarIV, VF * Part, Step);
+    return;
   }
 
   // Finally, splat the scalar induction variable, and build the necessary step
@@ -2264,6 +2290,29 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
   // which can be found from the original scalar operations.
   Step = Builder.CreateMul(Cv, Step);
   return Builder.CreateAdd(Val, Step, "induction");
+}
+
+Value *InnerLoopVectorizer::getScalarizedStepVector(Value *Val, int StartIdx,
+                                                    Value *Step) {
+
+  // We can't create a vector with less than two elements.
+  assert(VF > 1 && "VF should be greater than one");
+
+  // Get the value type and ensure it and the step have the same integer type.
+  Type *ValTy = Val->getType()->getScalarType();
+  assert(ValTy->isIntegerTy() && ValTy == Step->getType() &&
+         "Val and Step should have the same integer type");
+
+  // Compute the scalarized step vector. We perform scalar arithmetic and then
+  // insert the results into the step vector.
+  Value *StepVector = UndefValue::get(ToVectorTy(ValTy, VF));
+  for (unsigned I = 0; I < VF; ++I) {
+    auto *Mul = Builder.CreateMul(ConstantInt::get(ValTy, StartIdx + I), Step);
+    auto *Add = Builder.CreateAdd(Val, Mul);
+    StepVector = Builder.CreateInsertElement(StepVector, Add, I);
+  }
+
+  return StepVector;
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
@@ -2737,24 +2786,27 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
     // At this point we should vector version of GEP for Gather or Scatter
     assert(CreateGatherScatter && "The instruction should be scalarized");
     if (Gep) {
+      // Vectorizing GEP, across UF parts. We want to get a vector value for base
+      // and each index that's defined inside the loop, even if it is
+      // loop-invariant but wasn't hoisted out. Otherwise we want to keep them
+      // scalar.
       SmallVector<VectorParts, 4> OpsV;
-      // Vectorizing GEP, across UF parts, we want to keep each loop-invariant
-      // base or index of GEP scalar
       for (Value *Op : Gep->operands()) {
-        if (PSE.getSE()->isLoopInvariant(PSE.getSCEV(Op), OrigLoop))
-          OpsV.push_back(VectorParts(UF, Op));
-        else
+        Instruction *SrcInst = dyn_cast<Instruction>(Op);
+        if (SrcInst && OrigLoop->contains(SrcInst))
           OpsV.push_back(getVectorValue(Op));
+        else
+          OpsV.push_back(VectorParts(UF, Op));
       }
-
       for (unsigned Part = 0; Part < UF; ++Part) {
         SmallVector<Value *, 4> Ops;
         Value *GEPBasePtr = OpsV[0][Part];
         for (unsigned i = 1; i < Gep->getNumOperands(); i++)
           Ops.push_back(OpsV[i][Part]);
-        Value *NewGep =
-            Builder.CreateGEP(nullptr, GEPBasePtr, Ops, "VectorGep");
+        Value *NewGep =  Builder.CreateGEP(GEPBasePtr, Ops, "VectorGep");
+        cast<GetElementPtrInst>(NewGep)->setIsInBounds(Gep->isInBounds());
         assert(NewGep->getType()->isVectorTy() && "Expected vector GEP");
+
         NewGep =
             Builder.CreateBitCast(NewGep, VectorType::get(Ptr->getType(), VF));
         VectorGep.push_back(NewGep);
@@ -6445,8 +6497,8 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     auto *UpdateV = PN->getIncomingValueForBlock(TheLoop->getLoopLatch());
 
     // Check that the PHI is only used by the induction increment (UpdateV) or
-    // by GEPs. Then check that UpdateV is only used by a compare instruction or
-    // the loop header PHI.
+    // by GEPs. Then check that UpdateV is only used by a compare instruction,
+    // the loop header PHI, or by GEPs.
     // FIXME: Need precise def-use analysis to determine if this instruction
     // variable will be vectorized.
     if (std::all_of(PN->user_begin(), PN->user_end(),
@@ -6455,7 +6507,8 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
                     }) &&
         std::all_of(UpdateV->user_begin(), UpdateV->user_end(),
                     [&](const User *U) -> bool {
-                      return U == PN || isa<ICmpInst>(U);
+                      return U == PN || isa<ICmpInst>(U) ||
+                             isa<GetElementPtrInst>(U);
                     })) {
       VecValuesToIgnore.insert(PN);
       VecValuesToIgnore.insert(UpdateV);

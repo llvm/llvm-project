@@ -75,6 +75,8 @@ public:
   codeview::FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
+  Error commit();
+
 private:
   Error initializeSectionContributionData();
   Error initializeSectionHeadersData();

@@ -93,9 +93,14 @@ public:
         SmallVectorImpl<std::pair<unsigned, const MachineOperand*>> *Clobbers);
 
   /// \brief Returns true if register @p Reg is contained in the set. This also
-  /// works if only the super register of @p Reg has been defined, because we
-  /// always add also all sub-registers to the set.
+  /// works if only the super register of @p Reg has been defined, because
+  /// addReg() always adds all sub-registers to the set as well.
+  /// Note: Returns false if just some sub registers are live, use available()
+  /// when searching a free register.
   bool contains(unsigned Reg) const { return LiveRegs.count(Reg); }
+
+  /// Returns true if register \p Reg and no aliasing register is in the set.
+  bool available(const MachineRegisterInfo &MRI, unsigned Reg) const;
 
   /// \brief Simulates liveness when stepping backwards over an
   /// instruction(bundle): Remove Defs, add uses. This is the recommended way of

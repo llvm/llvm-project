@@ -17,7 +17,8 @@ namespace llvm {
 /// \brief The options for displaying the code coverage information.
 struct CoverageViewOptions {
   enum class OutputFormat {
-    Text
+    Text,
+    HTML
   };
 
   bool Debug;

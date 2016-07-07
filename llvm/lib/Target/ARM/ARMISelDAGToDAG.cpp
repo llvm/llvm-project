@@ -43,11 +43,6 @@ DisableShifterOp("disable-shifter-op", cl::Hidden,
   cl::desc("Disable isel of shifter-op"),
   cl::init(false));
 
-static cl::opt<bool>
-CheckVMLxHazard("check-vmlx-hazard", cl::Hidden,
-  cl::desc("Check fp vmla / vmls hazard at isel time"),
-  cl::init(true));
-
 //===--------------------------------------------------------------------===//
 /// ARMDAGToDAGISel - ARM specific code to select ARM machine
 /// instructions for SelectionDAG operations.
@@ -427,11 +422,7 @@ bool ARMDAGToDAGISel::hasNoVMLxHazardUse(SDNode *N) const {
   if (OptLevel == CodeGenOpt::None)
     return true;
 
-  if (!CheckVMLxHazard)
-    return true;
-
-  if (!Subtarget->isCortexA7() && !Subtarget->isCortexA8() &&
-      !Subtarget->isCortexA9() && !Subtarget->isSwift())
+  if (!Subtarget->hasVMLxHazards())
     return true;
 
   if (!N->hasOneUse())

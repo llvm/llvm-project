@@ -201,7 +201,6 @@ define i1 @and_cmp_const_power_of_two(i32 %x, i32 %y) {
 ; CHECK-NEXT:    btl %esi, %edi
 ; CHECK-NEXT:    setae %al
 ; CHECK-NEXT:    retq
-;
   %shl = shl i32 1, %y
   %and = and i32 %x, %shl
   %cmp = icmp ne i32 %and, %shl
@@ -213,12 +212,11 @@ define i32 @and_cmp_not_one_use(i32 %x) {
 ; CHECK-LABEL: and_cmp_not_one_use:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    andl $37, %edi
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    cmpl $37, %edi
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    addl %edi, %eax
 ; CHECK-NEXT:    retq
-;
   %and = and i32 %x, 37
   %cmp = icmp eq i32 %and, 37
   %ext = zext i1 %cmp to i32

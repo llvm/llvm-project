@@ -12,6 +12,7 @@
 #include "PdbYaml.h"
 #include "llvm-pdbdump.h"
 
+#include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
@@ -21,6 +22,9 @@ using namespace llvm::pdb;
 YAMLOutputStyle::YAMLOutputStyle(PDBFile &File) : File(File), Out(outs()) {}
 
 Error YAMLOutputStyle::dump() {
+  if (opts::pdb2yaml::StreamDirectory || opts::pdb2yaml::PdbStream)
+    opts::pdb2yaml::StreamMetadata = true;
+
   if (auto EC = dumpFileHeaders())
     return EC;
 
@@ -28,6 +32,9 @@ Error YAMLOutputStyle::dump() {
     return EC;
 
   if (auto EC = dumpStreamDirectory())
+    return EC;
+
+  if (auto EC = dumpPDBStream())
     return EC;
 
   flush();
@@ -72,6 +79,24 @@ Error YAMLOutputStyle::dumpStreamDirectory() {
     BlockList.Blocks = Stream;
     Obj.StreamMap->push_back(BlockList);
   }
+
+  return Error::success();
+}
+
+Error YAMLOutputStyle::dumpPDBStream() {
+  if (!opts::pdb2yaml::PdbStream)
+    return Error::success();
+
+  auto IS = File.getPDBInfoStream();
+  if (!IS)
+    return IS.takeError();
+
+  auto &InfoS = IS.get();
+  Obj.PdbStream.emplace();
+  Obj.PdbStream->Age = InfoS.getAge();
+  Obj.PdbStream->Guid = InfoS.getGuid();
+  Obj.PdbStream->Signature = InfoS.getSignature();
+  Obj.PdbStream->Version = InfoS.getVersion();
 
   return Error::success();
 }

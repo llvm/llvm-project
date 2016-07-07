@@ -22,8 +22,8 @@ for.end:
 
 ; CHECK-LABEL: @preinc
 ; CHECK-LABEL: middle.block:
-; CHECK: %3 = sub i32 %n.vec, 1
-; CHECK: %ind.escape = add i32 0, %3
+; CHECK: %[[v3:.+]] = sub i32 %n.vec, 1
+; CHECK: %ind.escape = add i32 0, %[[v3]]
 ; CHECK-LABEL: scalar.ph:
 ; CHECK: %bc.resume.val = phi i32 [ %n.vec, %middle.block ], [ 0, %entry ]
 ; CHECK-LABEL: for.end:

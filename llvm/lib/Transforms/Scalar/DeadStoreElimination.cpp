@@ -65,13 +65,17 @@ EnablePartialOverwriteTracking("enable-dse-partial-overwrite-tracking",
 /// the computation tree that feeds them.
 /// If ValueSet is non-null, remove any deleted instructions from it as well.
 static void
-deleteDeadInstruction(Instruction *I, MemoryDependenceResults &MD,
-                      const TargetLibraryInfo &TLI,
+deleteDeadInstruction(Instruction *I, BasicBlock::iterator *BBI,
+                      MemoryDependenceResults &MD, const TargetLibraryInfo &TLI,
                       SmallSetVector<Value *, 16> *ValueSet = nullptr) {
   SmallVector<Instruction*, 32> NowDeadInsts;
 
   NowDeadInsts.push_back(I);
   --NumFastOther;
+
+  // Keeping the iterator straight is a pain, so we let this routine tell the
+  // caller what the next instruction is after we're done mucking about.
+  BasicBlock::iterator NewIter = *BBI;
 
   // Before we touch this instruction, remove it from memdep!
   do {
@@ -95,10 +99,15 @@ deleteDeadInstruction(Instruction *I, MemoryDependenceResults &MD,
           NowDeadInsts.push_back(OpI);
     }
 
-    DeadInst->eraseFromParent();
+
+    if (NewIter == DeadInst->getIterator())
+      NewIter = DeadInst->eraseFromParent();
+    else
+      DeadInst->eraseFromParent();
 
     if (ValueSet) ValueSet->remove(DeadInst);
   } while (!NowDeadInsts.empty());
+  *BBI = NewIter;
 }
 
 /// Does this instruction write some memory?  This only returns true for things
@@ -603,10 +612,9 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
       if (!AA->isMustAlias(F->getArgOperand(0), DepPointer))
         break;
 
-      auto Next = ++Dependency->getIterator();
-
       // DCE instructions only used to calculate that store.
-      deleteDeadInstruction(Dependency, *MD, *TLI);
+      BasicBlock::iterator BBI(Dependency);
+      deleteDeadInstruction(Dependency, &BBI, *MD, *TLI);
       ++NumFastStores;
       MadeChange = true;
 
@@ -615,7 +623,7 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
       //    s[0] = 0;
       //    s[1] = 0; // This has just been deleted.
       //    free(s);
-      Dep = MD->getPointerDependencyFrom(Loc, false, Next, BB);
+      Dep = MD->getPointerDependencyFrom(Loc, false, BBI, BB);
     }
 
     if (Dep.isNonLocal())
@@ -707,7 +715,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
         }
 
       if (AllDead) {
-        Instruction *Dead = &*BBI++;
+        Instruction *Dead = &*BBI;
 
         DEBUG(dbgs() << "DSE: Dead Store at End of Block:\n  DEAD: "
                      << *Dead << "\n  Objects: ";
@@ -720,7 +728,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
               dbgs() << '\n');
 
         // DCE instructions only used to calculate that store.
-        deleteDeadInstruction(Dead, *MD, *TLI, &DeadStackObjects);
+        deleteDeadInstruction(Dead, &BBI, *MD, *TLI, &DeadStackObjects);
         ++NumFastStores;
         MadeChange = true;
         continue;
@@ -729,8 +737,7 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
     // Remove any dead non-memory-mutating instructions.
     if (isInstructionTriviallyDead(&*BBI, TLI)) {
-      Instruction *Inst = &*BBI++;
-      deleteDeadInstruction(Inst, *MD, *TLI, &DeadStackObjects);
+      deleteDeadInstruction(&*BBI, &BBI, *MD, *TLI, &DeadStackObjects);
       ++NumFastOther;
       MadeChange = true;
       continue;
@@ -815,13 +822,16 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
 
   // Do a top-down walk on the BB.
   for (BasicBlock::iterator BBI = BB.begin(), BBE = BB.end(); BBI != BBE; ) {
-    Instruction *Inst = &*BBI++;
-
     // Handle 'free' calls specially.
-    if (CallInst *F = isFreeCall(Inst, TLI)) {
+    if (CallInst *F = isFreeCall(&*BBI, TLI)) {
       MadeChange |= handleFree(F, AA, MD, DT, TLI);
+      // Increment BBI after handleFree has potentially deleted instructions.
+      // This ensures we maintain a valid iterator.
+      ++BBI;
       continue;
     }
+
+    Instruction *Inst = &*BBI++;
 
     // If we find something that writes memory, get its memory dependence.
     if (!hasMemoryWrite(Inst, *TLI))
@@ -830,22 +840,6 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
     // If we're storing the same value back to a pointer that we just
     // loaded from, then the store can be removed.
     if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-
-      auto RemoveDeadInstAndUpdateBBI = [&](Instruction *DeadInst) {
-        // deleteDeadInstruction can delete the current instruction.  Save BBI
-        // in case we need it.
-        WeakVH NextInst(&*BBI);
-
-        deleteDeadInstruction(DeadInst, *MD, *TLI);
-
-        if (!NextInst) // Next instruction deleted.
-          BBI = BB.begin();
-        else if (BBI != BB.begin()) // Revisit this instruction if possible.
-          --BBI;
-        ++NumRedundantStores;
-        MadeChange = true;
-      };
-
       if (LoadInst *DepLoad = dyn_cast<LoadInst>(SI->getValueOperand())) {
         if (SI->getPointerOperand() == DepLoad->getPointerOperand() &&
             isRemovable(SI) &&
@@ -854,7 +848,9 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
           DEBUG(dbgs() << "DSE: Remove Store Of Load from same pointer:\n  "
                        << "LOAD: " << *DepLoad << "\n  STORE: " << *SI << '\n');
 
-          RemoveDeadInstAndUpdateBBI(SI);
+          deleteDeadInstruction(SI, &BBI, *MD, *TLI);
+          ++NumRedundantStores;
+          MadeChange = true;
           continue;
         }
       }
@@ -873,7 +869,9 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                 << "DSE: Remove null store to the calloc'ed object:\n  DEAD: "
                 << *Inst << "\n  OBJECT: " << *UnderlyingPointer << '\n');
 
-          RemoveDeadInstAndUpdateBBI(SI);
+          deleteDeadInstruction(SI, &BBI, *MD, *TLI);
+          ++NumRedundantStores;
+          MadeChange = true;
           continue;
         }
       }
@@ -921,17 +919,13 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                 << *DepWrite << "\n  KILLER: " << *Inst << '\n');
 
           // Delete the store and now-dead instructions that feed it.
-          deleteDeadInstruction(DepWrite, *MD, *TLI);
+          deleteDeadInstruction(DepWrite, &BBI, *MD, *TLI);
           ++NumFastStores;
           MadeChange = true;
 
-          // deleteDeadInstruction can delete the current instruction in loop
-          // cases, reset BBI.
-          BBI = Inst->getIterator();
-          auto BBBegin = BB.begin();
-          while (BBI != BBBegin && isa<DbgInfoIntrinsic>(*(--BBI)))
-            ;
-          break;
+          // We erased DepWrite; start over.
+          InstDep = MD->getDependency(Inst);
+          continue;
         } else if ((OR == OverwriteEnd && isShortenableAtTheEnd(DepWrite)) ||
                    ((OR == OverwriteBegin &&
                      isShortenableAtTheBeginning(DepWrite)))) {
