@@ -296,9 +296,10 @@ ExpressionSourceCode::GetText (std::string &text,
     const char *target_specific_defines = "typedef signed char BOOL;\n";
     std::string module_macros;
     
+    Target *target = exe_ctx.GetTargetPtr();
     if (ClangModulesDeclVendor::LanguageSupportsClangModules(wrapping_language))
     {
-        if (Target *target = exe_ctx.GetTargetPtr())
+        if (target)
         {            
             if (target->GetArchitecture().GetMachine() == llvm::Triple::aarch64)
             {
@@ -379,8 +380,11 @@ ExpressionSourceCode::GetText (std::string &text,
         ConstString object_name;
         if (Language::LanguageIsCPlusPlus(frame->GetLanguage()))
         {
-            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false);
-            AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+            if (target->GetInjectLocalVariables(&exe_ctx))
+            {
+                lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false);
+                AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+            }
         }
     }
     

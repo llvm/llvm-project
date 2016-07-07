@@ -73,6 +73,12 @@ typedef enum LoadCWDlldbinitFile
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
+class TargetExperimentalProperties : public Properties
+{
+public:
+    TargetExperimentalProperties();
+};
+
 class TargetProperties : public Properties
 {
 public:
@@ -262,6 +268,12 @@ public:
 
     void
     SetProcessLaunchInfo(const ProcessLaunchInfo &launch_info);
+    
+    bool
+    GetInjectLocalVariables(ExecutionContext *exe_ctx) const;
+    
+    void
+    SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b);
 
 private:
     //------------------------------------------------------------------
@@ -282,6 +294,7 @@ private:
     // Member variables.
     //------------------------------------------------------------------
     ProcessLaunchInfo m_launch_info;
+    std::unique_ptr<TargetExperimentalProperties> m_experimental_properties_up;
 };
 
 class EvaluateExpressionOptions
