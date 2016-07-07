@@ -1508,6 +1508,28 @@ for this region.
 //  This packet asks the remote debug stub to send the details about libraries
 //  being added/removed from the process as a performance optimization.
 //
+//  There are three ways this packet can be used.  All three return a dictionary of
+//  binary images formatted the same way.
+//
+//  On MacOS X 10.11, iOS 9, tvOS 9, watchOS 2 and earlier, the packet is used like
+//       jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
+//  where the image_list_address is an array of {void* load_addr, void* mod_date, void* pathname}
+//  in the inferior process memory (and image_count is the number of elements in this array).
+//  lldb is using information from the dyld_all_image_infos structure to make these requests to
+//  debugserver.  This use is not supported on macOS 10.12, iOS 10, tvOS 10, watchOS 3 or newer.
+//
+//  On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer, there are two calls.  One requests information
+//  on all shared libraries:
+//       jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
+//  And the second requests information about a list of shared libraries, given their load addresses:
+//       jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
+//
+//  The second call is both a performance optimization (instead of having lldb read the mach-o header/load commands
+//  out of memory with generic read packets) but also adds additional information in the form of the 
+//  filename of the shared libraries (which is not available in the mach-o header/load commands.)
+//  
+//  An example using the Mac OS X 10.11 style call:
+//
 //  LLDB SENDS: jGetLoadedDynamicLibrariesInfos:{"image_count":1,"image_list_address":140734800075128}
 //  STUB REPLIES: ${"images":[{"load_address":4294967296,"mod_date":0,"pathname":"/tmp/a.out","uuid":"02CF262C-ED6F-3965-9E14-63538B465CFF","mach_header":{"magic":4277009103,"cputype":16777223,"cpusubtype":18446744071562067971,"filetype":2},"segments":{"name":"__PAGEZERO","vmaddr":0,"vmsize":4294967296,"fileoff":0,"filesize":0,"maxprot":0},{"name":"__TEXT","vmaddr":4294967296,"vmsize":4096,"fileoff":0,"filesize":4096,"maxprot":7},{"name":"__LINKEDIT","vmaddr":4294971392,"vmsize":4096,"fileoff":4096,"filesize":152,"maxprot":7}}]}#00
 //
@@ -1562,26 +1584,12 @@ for this region.
 // quite a bit to provide all the information that the DynamicLoaderMacOSX
 // would need to work correctly on this platform.
 //
-// On Mac OS X / iOS, when libraries are added or removed, a stub
-// function is called which lldb puts a breakpoint on.  The arguments
-// to the stub function include the number of libraries being added
-// or removed and the address where the list of libraries can be
-// found.  The information at this address is the load address of the
-// library, the filename, and the mod date of the library if available.
-// DynamicLoaderMacOSX then parses the load commands in the Mach-O header
-// at the load address before it can decide what action to take.
-//
-// The purpose of this packet is to eliminate all of the memory reads needed
-// to read the Mach-O header and load commands for these libraries.
-// On a typical GUI app, there can be a couple hundred shared libraries 
-// which results in megabytes of read packets.  That same information can
-// be returned in a couple hundred kilobytes in JSON format from the remote
-// debugserver.
-//
-//
 // PRIORITY TO IMPLEMENT
-//  Low.  If this packet is absent, lldb will read the Mach-O headers/load
-//  commands out of memory.
+//  On Mac OS X 10.11, iOS 9, tvOS 9, watchOS 2 and older: Low.  If this packet is absent, 
+//  lldb will read the Mach-O headers/load commands out of memory.
+//  On macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer: High.  If this packet is absent,
+//  lldb will not know anything about shared libraries in the inferior, or where the main
+//  executable loaded.
 //----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
@@ -1647,6 +1655,26 @@ On MacOSX with debugserver, we expedite the frame pointer backchain for a thread
 (up to 256 entries) by reading 2 pointers worth of bytes at the frame pointer (for
 the previous FP and PC), and follow the backchain. Most backtraces on MacOSX and
 iOS now don't require us to read any memory!
+
+//----------------------------------------------------------------------
+// "jGetSharedCacheInfo"
+//
+// BRIEF
+//  This packet asks the remote debug stub to send the details about the inferior's
+//  shared cache. The shared cache is a collection of common libraries/frameworks that
+//  are mapped into every process at the same address on Darwin systems, and can be
+//  identified by a load address and UUID.
+//
+//
+//  LLDB SENDS: jGetSharedCacheInfo:{}
+//  STUB REPLIES: ${"shared_cache_base_address":140735683125248,"shared_cache_uuid":"DDB8D70C-C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false]}#00
+//
+// PRIORITY TO IMPLEMENT
+//  Low.  When both lldb and the inferior process are running on the same computer, and lldb
+//  and the inferior process have the same shared cache, lldb may (as an optimization) read
+//  the shared cache out of its own memory instead of using gdb-remote read packets to read
+//  them from the inferior process.
+//----------------------------------------------------------------------
 
 //----------------------------------------------------------------------
 // "qQueryGDBServer"
