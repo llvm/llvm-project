@@ -129,14 +129,14 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         continue;
     }
 
-    switch (*(unsigned short*)(code + cursor)) {  // NOLINT
+    switch (*(u16*)(code + cursor)) {  // NOLINT
       case 0x5540:  // 40 55 : rex push rbp
       case 0x5340:  // 40 53 : rex push rbx
         cursor += 2;
         continue;
     }
 
-    switch (0x00FFFFFF & *(unsigned int*)(code + cursor)) {
+    switch (0x00FFFFFF & *(u32*)(code + cursor)) {
       case 0xc18b48:    // 48 8b c1 : mov rax, rcx
       case 0xc48b48:    // 48 8b c4 : mov rax, rsp
       case 0xd9f748:    // 48 f7 d9 : neg rcx
@@ -171,14 +171,14 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         continue;
     }
 
-    switch (*(unsigned int*)(code + cursor)) {
+    switch (*(u32*)(code + cursor)) {
       case 0x24448b48:  // 48 8b 44 24 XX : mov rax, qword ptr [rsp + 0xXX]
         cursor += 5;
         continue;
     }
 
     // Check first 5 bytes.
-    switch (0xFFFFFFFFFFull & *(unsigned long long*)(code + cursor)) {
+    switch (0xFFFFFFFFFFull & *(u64*)(code + cursor)) {
       case 0x08245c8948:    // 48 89 5c 24 08 : mov QWORD PTR [rsp+0x8], rbx
       case 0x1024748948:    // 48 89 74 24 10 : mov QWORD PTR [rsp+0x10], rsi
         cursor += 5;
@@ -186,7 +186,7 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
     }
 
     // Check 8 bytes.
-    switch (*(unsigned long long*)(code + cursor)) {
+    switch (*(u64*)(code + cursor)) {
       case 0x90909090909006EBull:  // JMP +6,  6x NOP
         cursor += 8;
         continue;
@@ -201,6 +201,28 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
   size_t cursor = 0;
   while (cursor < size) {
     switch (code[cursor]) {
+      case '\xE8':  // E8 XX XX XX XX = call <func>
+      case '\xE9':  // E9 XX XX XX XX = jmp <label>
+      case '\xC3':  // C3 = ret
+      case '\xEB':  // EB XX = jmp XX (short jump)
+      case '\x70':  // 7X YY = jx XX (short conditional jump)
+      case '\x71':
+      case '\x72':
+      case '\x73':
+      case '\x74':
+      case '\x75':
+      case '\x76':
+      case '\x77':
+      case '\x78':
+      case '\x79':
+      case '\x7A':
+      case '\x7B':
+      case '\x7C':
+      case '\x7D':
+      case '\x7E':
+      case '\x7F':
+        return 0;
+
       case '\x50':  // push eax
       case '\x51':  // push ecx
       case '\x52':  // push edx
@@ -215,15 +237,15 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
       case '\x6A':  // 6A XX = push XX
         cursor += 2;
         continue;
-      case '\xE9':  // E9 XX YY ZZ WW = jmp WWZZYYXX
       case '\xB8':  // B8 XX YY ZZ WW = mov eax, WWZZYYXX
         cursor += 5;
         continue;
     }
-    switch (*(unsigned short*)(code + cursor)) {  // NOLINT
+    switch (*(u16*)(code + cursor)) {  // NOLINT
       case 0xFF8B:  // 8B FF = mov edi, edi
       case 0xEC8B:  // 8B EC = mov ebp, esp
       case 0xC033:  // 33 C0 = xor eax, eax
+      case 0xC933:  // 33 C9 = xor ecx, ecx
         cursor += 2;
         continue;
       case 0x458B:  // 8B 45 XX = mov eax, dword ptr [ebp+XXh]
@@ -244,7 +266,7 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         cursor += 4;
         continue;
     }
-    switch (0x00FFFFFF & *(unsigned int*)(code + cursor)) {
+    switch (0x00FFFFFF & *(u32*)(code + cursor)) {
       case 0x24448A:  // 8A 44 24 XX = mov eal, dword ptr [esp+XXh]
       case 0x24448B:  // 8B 44 24 XX = mov eax, dword ptr [esp+XXh]
       case 0x244C8B:  // 8B 4C 24 XX = mov ecx, dword ptr [esp+XXh]
@@ -254,7 +276,7 @@ static size_t RoundUpToInstrBoundary(size_t size, char *code) {
         cursor += 4;
         continue;
     }
-    switch (*(unsigned int *)(code + cursor)) {
+    switch (*(u32*)(code + cursor)) {
       case 0x2444B60F:  // 0F B6 44 24 XX = movzx eax, byte ptr [esp+XXh]
         cursor += 5;
         continue;

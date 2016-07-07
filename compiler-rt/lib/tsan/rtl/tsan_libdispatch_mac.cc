@@ -475,6 +475,32 @@ TSAN_INTERCEPTOR(void, dispatch_apply_f, size_t iterations,
   WRAP(dispatch_apply)(iterations, queue, new_block);
 }
 
+DECLARE_REAL_AND_INTERCEPTOR(void, free, void *ptr)
+DECLARE_REAL_AND_INTERCEPTOR(int, munmap, void *addr, long_t sz)
+
+TSAN_INTERCEPTOR(dispatch_data_t, dispatch_data_create, const void *buffer,
+                 size_t size, dispatch_queue_t q, dispatch_block_t destructor) {
+  SCOPED_TSAN_INTERCEPTOR(dispatch_data_create, buffer, size, q, destructor);
+  if ((q == nullptr) || (destructor == DISPATCH_DATA_DESTRUCTOR_DEFAULT))
+    return REAL(dispatch_data_create)(buffer, size, q, destructor);
+
+  if (destructor == DISPATCH_DATA_DESTRUCTOR_FREE)
+    destructor = ^(void) { WRAP(free)((void *)buffer); };
+  else if (destructor == DISPATCH_DATA_DESTRUCTOR_MUNMAP)
+    destructor = ^(void) { WRAP(munmap)((void *)buffer, size); };
+
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_START();
+  dispatch_block_t heap_block = Block_copy(destructor);
+  SCOPED_TSAN_INTERCEPTOR_USER_CALLBACK_END();
+  tsan_block_context_t *new_context =
+      AllocContext(thr, pc, q, heap_block, &invoke_and_release_block);
+  uptr submit_sync = (uptr)new_context;
+  Release(thr, pc, submit_sync);
+  return REAL(dispatch_data_create)(buffer, size, q, ^(void) {
+    dispatch_callback_wrap(new_context);
+  });
+}
+
 }  // namespace __tsan
 
 #endif  // SANITIZER_MAC

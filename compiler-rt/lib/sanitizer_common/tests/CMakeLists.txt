@@ -78,6 +78,13 @@ if(ANDROID)
   list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -pie)
 endif()
 
+# MSVC linker is allocating 1M for the stack by default, which is not
+# enough for the unittests. Some unittests require more than 2M.
+# The default stack size for clang is 8M.
+if(MSVC)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0x8000000)
+endif()
+
 set(SANITIZER_TEST_LINK_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log SANITIZER_TEST_LINK_LIBS)
 # NDK r10 requires -latomic almost always.
