@@ -1187,7 +1187,7 @@ void StmtPrinter::VisitDeclRefExpr(DeclRefExpr *Node) {
   OS << Node->getNameInfo();
   if (Node->hasExplicitTemplateArgs())
     TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
+        OS, Node->template_arguments(), Policy);
 }
 
 void StmtPrinter::VisitDependentScopeDeclRefExpr(
@@ -1199,7 +1199,7 @@ void StmtPrinter::VisitDependentScopeDeclRefExpr(
   OS << Node->getNameInfo();
   if (Node->hasExplicitTemplateArgs())
     TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
+        OS, Node->template_arguments(), Policy);
 }
 
 void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
@@ -1210,7 +1210,7 @@ void StmtPrinter::VisitUnresolvedLookupExpr(UnresolvedLookupExpr *Node) {
   OS << Node->getNameInfo();
   if (Node->hasExplicitTemplateArgs())
     TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
+        OS, Node->template_arguments(), Policy);
 }
 
 void StmtPrinter::VisitObjCIvarRefExpr(ObjCIvarRefExpr *Node) {
@@ -1537,7 +1537,7 @@ void StmtPrinter::VisitMemberExpr(MemberExpr *Node) {
   OS << Node->getMemberNameInfo();
   if (Node->hasExplicitTemplateArgs())
     TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
+        OS, Node->template_arguments(), Policy);
 }
 void StmtPrinter::VisitObjCIsaExpr(ObjCIsaExpr *Node) {
   PrintExpr(Node->getBase());
@@ -1917,7 +1917,7 @@ void StmtPrinter::VisitUserDefinedLiteral(UserDefinedLiteral *Node) {
     if (Args->size() != 1) {
       OS << "operator\"\"" << Node->getUDSuffix()->getName();
       TemplateSpecializationType::PrintTemplateArgumentList(
-          OS, Args->data(), Args->size(), Policy);
+          OS, Args->asArray(), Policy);
       OS << "()";
       return;
     }
@@ -2242,7 +2242,7 @@ void StmtPrinter::VisitCXXDependentScopeMemberExpr(
   OS << Node->getMemberNameInfo();
   if (Node->hasExplicitTemplateArgs())
     TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
+        OS, Node->template_arguments(), Policy);
 }
 
 void StmtPrinter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *Node) {
@@ -2257,7 +2257,7 @@ void StmtPrinter::VisitUnresolvedMemberExpr(UnresolvedMemberExpr *Node) {
   OS << Node->getMemberNameInfo();
   if (Node->hasExplicitTemplateArgs())
     TemplateSpecializationType::PrintTemplateArgumentList(
-        OS, Node->getTemplateArgs(), Node->getNumTemplateArgs(), Policy);
+        OS, Node->template_arguments(), Policy);
 }
 
 static const char *getTypeTraitName(TypeTrait TT) {

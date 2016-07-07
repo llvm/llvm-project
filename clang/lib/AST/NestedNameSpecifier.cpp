@@ -315,7 +315,7 @@ NestedNameSpecifier::print(raw_ostream &OS,
 
       // Print the template argument list.
       TemplateSpecializationType::PrintTemplateArgumentList(
-          OS, SpecType->getArgs(), SpecType->getNumArgs(), InnerPolicy);
+          OS, SpecType->template_arguments(), InnerPolicy);
     } else {
       // Print the type normally
       QualType(T, 0).print(OS, InnerPolicy);

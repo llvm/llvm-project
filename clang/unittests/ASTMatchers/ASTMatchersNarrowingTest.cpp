@@ -1366,6 +1366,14 @@ TEST(Member, MatchesMember) {
     memberExpr(hasDeclaration(fieldDecl(hasType(isInteger()))))));
 }
 
+TEST(Member, BitFields) {
+  EXPECT_TRUE(matches("class C { int a : 2; int b; };",
+                      fieldDecl(isBitField(), hasName("a"))));
+  EXPECT_TRUE(notMatches("class C { int a : 2; int b; };",
+                         fieldDecl(isBitField(), hasName("b"))));
+  EXPECT_TRUE(matches("class C { int a : 2; int b : 4; };",
+                      fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+}
 
 TEST(Member, UnderstandsAccess) {
   EXPECT_TRUE(matches(

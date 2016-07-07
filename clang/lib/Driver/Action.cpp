@@ -51,40 +51,11 @@ void BindArchAction::anchor() {}
 BindArchAction::BindArchAction(Action *Input, const char *_ArchName)
     : Action(BindArchClass, Input), ArchName(_ArchName) {}
 
-// Converts CUDA GPU architecture, e.g. "sm_21", to its corresponding virtual
-// compute arch, e.g. "compute_20".  Returns null if the input arch is null or
-// doesn't match an existing arch.
-static const char* GpuArchToComputeName(const char *ArchName) {
-  if (!ArchName)
-    return nullptr;
-  return llvm::StringSwitch<const char *>(ArchName)
-      .Cases("sm_20", "sm_21", "compute_20")
-      .Case("sm_30", "compute_30")
-      .Case("sm_32", "compute_32")
-      .Case("sm_35", "compute_35")
-      .Case("sm_37", "compute_37")
-      .Case("sm_50", "compute_50")
-      .Case("sm_52", "compute_52")
-      .Case("sm_53", "compute_53")
-      .Default(nullptr);
-}
-
 void CudaDeviceAction::anchor() {}
 
-CudaDeviceAction::CudaDeviceAction(Action *Input, const char *ArchName,
+CudaDeviceAction::CudaDeviceAction(Action *Input, clang::CudaArch Arch,
                                    bool AtTopLevel)
-    : Action(CudaDeviceClass, Input), GpuArchName(ArchName),
-      AtTopLevel(AtTopLevel) {
-  assert(!GpuArchName || IsValidGpuArchName(GpuArchName));
-}
-
-const char *CudaDeviceAction::getComputeArchName() const {
-  return GpuArchToComputeName(GpuArchName);
-}
-
-bool CudaDeviceAction::IsValidGpuArchName(llvm::StringRef ArchName) {
-  return GpuArchToComputeName(ArchName.data()) != nullptr;
-}
+    : Action(CudaDeviceClass, Input), GpuArch(Arch), AtTopLevel(AtTopLevel) {}
 
 void CudaHostAction::anchor() {}
 

@@ -519,6 +519,38 @@ AST_MATCHER(Decl, isPrivate) {
   return Node.getAccess() == AS_private;
 }
 
+/// \brief Matches non-static data members that are bit-fields.
+///
+/// Given
+/// \code
+///   class C {
+///     int a : 2;
+///     int b;
+///   };
+/// \endcode
+/// fieldDecl(isBitField())
+///   matches 'int a;' but not 'int b;'.
+AST_MATCHER(FieldDecl, isBitField) {
+  return Node.isBitField();
+}
+
+/// \brief Matches non-static data members that are bit-fields.
+///
+/// Given
+/// \code
+///   class C {
+///     int a : 2;
+///     int b : 4;
+///     int c : 2;
+///   };
+/// \endcode
+/// fieldDecl(isBitField())
+///   matches 'int a;' and 'int c;' but not 'int b;'.
+AST_MATCHER_P(FieldDecl, hasBitWidth, unsigned, Width) {
+  return Node.isBitField() &&
+         Node.getBitWidthValue(Finder->getASTContext()) == Width;
+}
+
 /// \brief Matches a declaration that has been implicitly added
 /// by the compiler (eg. implicit default/copy constructors).
 AST_MATCHER(Decl, isImplicit) {

@@ -6692,6 +6692,10 @@ public:
     /// \brief The number of template arguments in TemplateArgs.
     unsigned NumTemplateArgs;
 
+    ArrayRef<TemplateArgument> template_arguments() const {
+      return {TemplateArgs, NumTemplateArgs};
+    }
+
     /// \brief The template deduction info object associated with the
     /// substitution or checking of explicit or deduced template arguments.
     sema::TemplateDeductionInfo *DeductionInfo;

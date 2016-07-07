@@ -26,6 +26,11 @@ public:
       : ClangTidyCheck(Name, Context) {}
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+
+private:
+  void checkArithmeticExpr(const ast_matchers::MatchFinder::MatchResult &R);
+  void checkBitwiseExpr(const ast_matchers::MatchFinder::MatchResult &R);
+  void checkRelationalExpr(const ast_matchers::MatchFinder::MatchResult &R);
 };
 
 } // namespace misc

@@ -81,16 +81,12 @@
     return __out;                                                              \
   }
 
-__MAKE_SHUFFLES(__shfl, __builtin_ptx_shfl_idx_i32, __builtin_ptx_shfl_idx_f32,
-                0x1f);
+__MAKE_SHUFFLES(__shfl, __nvvm_shfl_idx_i32, __nvvm_shfl_idx_f32, 0x1f);
 // We use 0 rather than 31 as our mask, because shfl.up applies to lanes >=
 // maxLane.
-__MAKE_SHUFFLES(__shfl_up, __builtin_ptx_shfl_up_i32, __builtin_ptx_shfl_up_f32,
-                0);
-__MAKE_SHUFFLES(__shfl_down, __builtin_ptx_shfl_down_i32,
-                __builtin_ptx_shfl_down_f32, 0x1f);
-__MAKE_SHUFFLES(__shfl_xor, __builtin_ptx_shfl_bfly_i32,
-                __builtin_ptx_shfl_bfly_f32, 0x1f);
+__MAKE_SHUFFLES(__shfl_up, __nvvm_shfl_up_i32, __nvvm_shfl_up_f32, 0);
+__MAKE_SHUFFLES(__shfl_down, __nvvm_shfl_down_i32, __nvvm_shfl_down_f32, 0x1f);
+__MAKE_SHUFFLES(__shfl_xor, __nvvm_shfl_bfly_i32, __nvvm_shfl_bfly_f32, 0x1f);
 
 #pragma pop_macro("__MAKE_SHUFFLES")
 
