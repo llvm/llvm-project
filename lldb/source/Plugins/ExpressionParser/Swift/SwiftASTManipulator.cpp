@@ -221,7 +221,7 @@ $builtin_logger_initialize()
                                       "  }                                                    \n"
                                       "}                                                      \n"
                                       "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
-                                      "  if (1==1) {                                          \n"
+                                      "  do {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                        ",
                                       wrapped_expr_text.GetData(),
@@ -243,7 +243,7 @@ $builtin_logger_initialize()
                                       "  }                                                    \n"
                                       "}                                                      \n"
                                       "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
-                                      "  if (1==1) {                                          \n"
+                                      "  do {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                      \n"
                                       "    )                                                  \n"
@@ -274,7 +274,7 @@ $builtin_logger_initialize()
                                       "  }                                                    \n"
                                       "}                                                      \n"
                                       "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
-                                      "  if (1==1) {                                          \n"
+                                      "  do {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                        ",
                                       wrapped_expr_text.GetData(),
@@ -297,7 +297,7 @@ $builtin_logger_initialize()
                                       "  }                                                    \n"
                                       "}                                                      \n"
                                       "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
-                                      "  if (1==1) {                                          \n"
+                                      "  do {                                          \n"
                                       "    $__lldb_injected_self.$__lldb_wrapped_expr_%u(     \n"
                                       "      $__lldb_arg                                      \n"
                                       "    )                                                  \n"
@@ -326,7 +326,7 @@ $builtin_logger_initialize()
                                   "%s" // This is the expression text.  It has all the newlines it needs.
                                   "}                                                      \n"
                                   "func $__lldb_expr(_ $__lldb_arg : UnsafeMutablePointer<Any>) {      \n"
-                                  "  if (1==1) {                                          \n"
+                                  "  do {                                          \n"
                                   "    $__lldb_wrapped_expr_%u(                           \n"
                                   "      $__lldb_arg",
                                   wrapped_expr_text.GetData(),
