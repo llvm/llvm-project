@@ -236,8 +236,7 @@ static Value *computeArraySize(const CallInst *CI, const DataLayout &DL,
   // return the multiple.  Otherwise, return NULL.
   Value *MallocArg = CI->getArgOperand(0);
   Value *Multiple = nullptr;
-  if (ComputeMultiple(MallocArg, ElementSize, Multiple,
-                      LookThroughSExt))
+  if (ComputeMultiple(MallocArg, ElementSize, Multiple, LookThroughSExt))
     return Multiple;
 
   return nullptr;
@@ -466,7 +465,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitAllocaInst(AllocaInst &I) {
 }
 
 SizeOffsetType ObjectSizeOffsetVisitor::visitArgument(Argument &A) {
-  // no interprocedural analysis is done at the moment
+  // No interprocedural analysis is done at the moment.
   if (!A.hasByValOrInAllocaAttr()) {
     ++ObjectVisitorArgument;
     return unknown();
@@ -482,13 +481,13 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
   if (!FnData)
     return unknown();
 
-  // handle strdup-like functions separately
+  // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
     APInt Size(IntTyBits, GetStringLength(CS.getArgument(0)));
     if (!Size)
       return unknown();
 
-    // strndup limits strlen
+    // Strndup limits strlen.
     if (FnData->FstParam > 0) {
       ConstantInt *Arg =
           dyn_cast<ConstantInt>(CS.getArgument(FnData->FstParam));
@@ -525,7 +524,7 @@ SizeOffsetType ObjectSizeOffsetVisitor::visitCallSite(CallSite CS) {
   if (!CheckedZextOrTrunc(Size))
     return unknown();
 
-  // size determined by just 1 parameter
+  // Size is determined by just 1 parameter.
   if (FnData->SndParam < 0)
     return std::make_pair(Size, Zero);
 
@@ -658,7 +657,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute(Value *V) {
   SizeOffsetEvalType Result = compute_(V);
 
   if (!bothKnown(Result)) {
-    // erase everything that was computed in this iteration from the cache, so
+    // Erase everything that was computed in this iteration from the cache, so
     // that no dangling references are left behind. We could be a bit smarter if
     // we kept a dependency graph. It's probably not worth the complexity.
     for (const Value *SeenVal : SeenVals) {
@@ -682,18 +681,18 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute_(Value *V) {
 
   V = V->stripPointerCasts();
 
-  // check cache
+  // Check cache.
   CacheMapTy::iterator CacheIt = CacheMap.find(V);
   if (CacheIt != CacheMap.end())
     return CacheIt->second;
 
-  // always generate code immediately before the instruction being
-  // processed, so that the generated code dominates the same BBs
+  // Always generate code immediately before the instruction being
+  // processed, so that the generated code dominates the same BBs.
   BuilderTy::InsertPointGuard Guard(Builder);
   if (Instruction *I = dyn_cast<Instruction>(V))
     Builder.SetInsertPoint(I);
 
-  // now compute the size and offset
+  // Now compute the size and offset.
   SizeOffsetEvalType Result;
 
   // Record the pointers that were handled in this run, so that they can be
@@ -710,7 +709,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::compute_(Value *V) {
               cast<ConstantExpr>(V)->getOpcode() == Instruction::IntToPtr) ||
              isa<GlobalAlias>(V) ||
              isa<GlobalVariable>(V)) {
-    // ignore values where we cannot do more than what ObjectSizeVisitor can
+    // Ignore values where we cannot do more than ObjectSizeVisitor.
     Result = unknown();
   } else {
     DEBUG(dbgs() << "ObjectSizeOffsetEvaluator::compute() unhandled value: "
@@ -742,7 +741,7 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitCallSite(CallSite CS) {
   if (!FnData)
     return unknown();
 
-  // handle strdup-like functions separately
+  // Handle strdup-like functions separately.
   if (FnData->AllocTy == StrDupLike) {
     // TODO
     return unknown();
@@ -798,14 +797,14 @@ SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitLoadInst(LoadInst&) {
 }
 
 SizeOffsetEvalType ObjectSizeOffsetEvaluator::visitPHINode(PHINode &PHI) {
-  // create 2 PHIs: one for size and another for offset
+  // Create 2 PHIs: one for size and another for offset.
   PHINode *SizePHI   = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
   PHINode *OffsetPHI = Builder.CreatePHI(IntTy, PHI.getNumIncomingValues());
 
-  // insert right away in the cache to handle recursive PHIs
+  // Insert right away in the cache to handle recursive PHIs.
   CacheMap[&PHI] = std::make_pair(SizePHI, OffsetPHI);
 
-  // compute offset/size for each PHI incoming pointer
+  // Compute offset/size for each PHI incoming pointer.
   for (unsigned i = 0, e = PHI.getNumIncomingValues(); i != e; ++i) {
     Builder.SetInsertPoint(&*PHI.getIncomingBlock(i)->getFirstInsertionPt());
     SizeOffsetEvalType EdgeData = compute_(PHI.getIncomingValue(i));

@@ -103,6 +103,8 @@ public:
                                     std::vector<SDValue> &Ops,
                                     SelectionDAG &DAG) const override;
 
+  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
+
 private:
   SDValue LowerCCCCallTo(SDValue Chain, SDValue Callee,
                          CallingConv::ID CallConv, bool IsVarArg,

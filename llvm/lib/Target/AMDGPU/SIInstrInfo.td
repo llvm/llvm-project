@@ -2632,6 +2632,20 @@ multiclass DS_1A1D_NORET <bits<8> op, string opName, RegisterClass rc,
   }
 }
 
+multiclass DS_1A_Off8_NORET <bits<8> op, string opName,
+  dag outs = (outs),
+  dag ins = (ins VGPR_32:$addr,
+              offset0:$offset0, offset1:$offset1, gds:$gds),
+  string asm = opName#" $addr $offset0"#"$offset1$gds"> {
+
+  def "" : DS_Pseudo <opName, outs, ins, []>;
+
+  let data0 = 0, data1 = 0, vdst = 0, AsmMatchConverter = "cvtDSOffset01" in {
+    def _si : DS_Real_si <op, opName, outs, ins, asm>;
+    def _vi : DS_Real_vi <op, opName, outs, ins, asm>;
+  }
+}
+
 multiclass DS_1A2D_Off8_NORET <bits<8> op, string opName, RegisterClass rc,
   dag outs = (outs),
   dag ins = (ins VGPR_32:$addr, rc:$data0, rc:$data1,

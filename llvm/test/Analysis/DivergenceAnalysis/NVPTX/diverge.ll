@@ -100,7 +100,7 @@ merge:
 define i32 @loop() {
 ; CHECK-LABEL: Printing analysis 'Divergence Analysis' for function 'loop'
 entry:
-  %laneid = call i32 @llvm.ptx.read.laneid()
+  %laneid = call i32 @llvm.nvvm.read.ptx.sreg.laneid()
   br label %loop
 loop:
   %i = phi i32 [ 0, %entry ], [ %i1, %loop ]
@@ -208,7 +208,7 @@ bb3:
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.y()
 declare i32 @llvm.nvvm.read.ptx.sreg.tid.z()
-declare i32 @llvm.ptx.read.laneid()
+declare i32 @llvm.nvvm.read.ptx.sreg.laneid()
 
 !nvvm.annotations = !{!0, !1, !2, !3, !4, !5}
 !0 = !{i32 (i32, i32, i32)* @no_diverge, !"kernel", i32 1}

@@ -297,6 +297,25 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
   }
 
   for (unsigned I = 0; I < LoadCommandCount; ++I) {
+    if (is64Bit()) {
+      if (Load.C.cmdsize % 8 != 0) {
+        // We have a hack here to allow 64-bit Mach-O core files to have
+        // LC_THREAD commands that are only a multiple of 4 and not 8 to be
+        // allowed since the macOS kernel produces them.
+        if (getHeader().filetype != MachO::MH_CORE ||
+            Load.C.cmd != MachO::LC_THREAD || Load.C.cmdsize % 4) {
+          Err = malformedError("load command " + Twine(I) + " cmdsize not a "
+                               "multiple of 8");
+          return;
+        }
+      }
+    } else {
+      if (Load.C.cmdsize % 4 != 0) {
+        Err = malformedError("load command " + Twine(I) + " cmdsize not a "
+                             "multiple of 4");
+        return;
+      }
+    }
     LoadCommands.push_back(Load);
     if (Load.C.cmd == MachO::LC_SYMTAB) {
       // Multiple symbol tables

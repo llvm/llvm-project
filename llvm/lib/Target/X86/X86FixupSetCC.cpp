@@ -156,7 +156,10 @@ bool X86FixupSetCCPass::runOnMachineFunction(MachineFunction &MF) {
       ++NumSubstZexts;
       Changed = true;
 
-      auto *RC = MRI->getRegClass(ZExt->getOperand(0).getReg());
+      // On 32-bit, we need to be careful to force an ABCD register.
+      const TargetRegisterClass *RC = MF.getSubtarget<X86Subtarget>().is64Bit()
+                                          ? &X86::GR32RegClass
+                                          : &X86::GR32_ABCDRegClass;
       unsigned ZeroReg = MRI->createVirtualRegister(RC);
       unsigned InsertReg = MRI->createVirtualRegister(RC);
 

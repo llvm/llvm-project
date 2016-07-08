@@ -9,7 +9,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Vectorize.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -31,6 +30,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Vectorize.h"
 
 using namespace llvm;
 
@@ -60,9 +60,8 @@ class Vectorizer {
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, DominatorTree &DT,
              ScalarEvolution &SE, TargetTransformInfo &TTI)
-    : F(F), AA(AA), DT(DT), SE(SE), TTI(TTI),
-      DL(F.getParent()->getDataLayout()),
-      Builder(SE.getContext()) {}
+      : F(F), AA(AA), DT(DT), SE(SE), TTI(TTI),
+        DL(F.getParent()->getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
 
@@ -178,8 +177,8 @@ bool LoadStoreVectorizer::runOnFunction(Function &F) {
   AliasAnalysis &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
   DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  TargetTransformInfo &TTI
-    = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+  TargetTransformInfo &TTI =
+      getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
 
   Vectorizer V(F, AA, DT, SE, TTI);
   return V.run();
@@ -233,7 +232,7 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
   if (PtrA == PtrB ||
       DL.getTypeStoreSize(PtrATy) != DL.getTypeStoreSize(PtrBTy) ||
       DL.getTypeStoreSize(PtrATy->getScalarType()) !=
-      DL.getTypeStoreSize(PtrBTy->getScalarType()))
+          DL.getTypeStoreSize(PtrBTy->getScalarType()))
     return false;
 
   APInt Size(PtrBitWidth, DL.getTypeStoreSize(PtrATy));
@@ -410,9 +409,9 @@ bool Vectorizer::isVectorizable(ArrayRef<Value *> Chain,
   for (auto I = From, E = To; I != E; ++I, ++Idx) {
     if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
       if (!is_contained(Chain, &*I))
-        MemoryInstrs.push_back({ &*I, Idx });
+        MemoryInstrs.push_back({&*I, Idx});
       else
-        ChainInstrs.push_back({ &*I, Idx });
+        ChainInstrs.push_back({&*I, Idx});
     } else if (I->mayHaveSideEffects()) {
       DEBUG(dbgs() << "LSV: Found side-effecting operation: " << *I << '\n');
       return false;
@@ -446,16 +445,16 @@ bool Vectorizer::isVectorizable(ArrayRef<Value *> Chain,
       Instruction *M1 = cast<Instruction>(VV);
 
       if (!AA.isNoAlias(MemoryLocation::get(M0), MemoryLocation::get(M1))) {
-        DEBUG(
+        DEBUG({
           Value *Ptr0 = getPointerOperand(M0);
           Value *Ptr1 = getPointerOperand(M1);
 
           dbgs() << "LSV: Found alias.\n"
                     "        Aliasing instruction and pointer:\n"
-            << *V << " aliases " << *Ptr0 << '\n'
-            << "        Aliased instruction and pointer:\n"
-            << *VV << " aliases " << *Ptr1 << '\n'
-          );
+                 << *V << " aliases " << *Ptr0 << '\n'
+                 << "        Aliased instruction and pointer:\n"
+                 << *VV << " aliases " << *Ptr1 << '\n';
+        });
 
         return false;
       }
@@ -496,8 +495,7 @@ void Vectorizer::collectInstructions(BasicBlock *BB) {
         continue;
 
       // Make sure all the users of a vector are constant-index extracts.
-      if (isa<VectorType>(Ty) &&
-          !all_of(LI->users(), [LI](const User *U) {
+      if (isa<VectorType>(Ty) && !all_of(LI->users(), [LI](const User *U) {
             const Instruction *UI = cast<Instruction>(U);
             return isa<ExtractElementInst>(UI) &&
                    isa<ConstantInt>(UI->getOperand(1));
@@ -530,8 +528,7 @@ void Vectorizer::collectInstructions(BasicBlock *BB) {
       if (TySize > VecRegSize / 2)
         continue;
 
-      if (isa<VectorType>(Ty) &&
-          !all_of(SI->users(), [SI](const User *U) {
+      if (isa<VectorType>(Ty) && !all_of(SI->users(), [SI](const User *U) {
             const Instruction *UI = cast<Instruction>(U);
             return isa<ExtractElementInst>(UI) &&
                    isa<ConstantInt>(UI->getOperand(1));
@@ -685,11 +682,11 @@ bool Vectorizer::vectorizeStoreChain(ArrayRef<Value *> Chain) {
            vectorizeStoreChain(Chain.slice(VF));
   }
 
-  DEBUG(
+  DEBUG({
     dbgs() << "LSV: Stores to vectorize:\n";
     for (Value *V : Chain)
       V->dump();
-  );
+  });
 
   // Check alignment restrictions.
   unsigned Alignment = getAlignment(S0);
@@ -734,8 +731,8 @@ bool Vectorizer::vectorizeStoreChain(ArrayRef<Value *> Chain) {
         if (Extract->getType() != StoreTy->getScalarType())
           Extract = Builder.CreateBitCast(Extract, StoreTy->getScalarType());
 
-        Value *Insert = Builder.CreateInsertElement(Vec, Extract,
-                                                    Builder.getInt32(NewIdx));
+        Value *Insert =
+            Builder.CreateInsertElement(Vec, Extract, Builder.getInt32(NewIdx));
         Vec = Insert;
       }
     }
@@ -744,16 +741,17 @@ bool Vectorizer::vectorizeStoreChain(ArrayRef<Value *> Chain) {
       StoreInst *Store = cast<StoreInst>(Chain[I]);
       Value *Extract = Store->getValueOperand();
       if (Extract->getType() != StoreTy->getScalarType())
-        Extract = Builder.CreateBitOrPointerCast(Extract, StoreTy->getScalarType());
+        Extract =
+            Builder.CreateBitOrPointerCast(Extract, StoreTy->getScalarType());
 
-      Value *Insert = Builder.CreateInsertElement(Vec, Extract,
-                                                  Builder.getInt32(I));
+      Value *Insert =
+          Builder.CreateInsertElement(Vec, Extract, Builder.getInt32(I));
       Vec = Insert;
     }
   }
 
   Value *Bitcast =
-    Builder.CreateBitCast(S0->getPointerOperand(), VecTy->getPointerTo(AS));
+      Builder.CreateBitCast(S0->getPointerOperand(), VecTy->getPointerTo(AS));
   StoreInst *SI = cast<StoreInst>(Builder.CreateStore(Vec, Bitcast));
   propagateMetadata(SI, Chain);
   SI->setAlignment(Alignment);
@@ -779,7 +777,6 @@ bool Vectorizer::vectorizeLoadChain(ArrayRef<Value *> Chain) {
                                DL.getTypeSizeInBits(LoadTy));
       break;
     }
-
   }
 
   unsigned Sz = DL.getTypeSizeInBits(LoadTy);
@@ -795,7 +792,8 @@ bool Vectorizer::vectorizeLoadChain(ArrayRef<Value *> Chain) {
   // TODO: Should size constraint be a target hook?
   unsigned SzInBytes = (Sz / 8) * ChainSize;
   if (SzInBytes > 2 && SzInBytes % 4 != 0) {
-    DEBUG(dbgs() << "LSV: Size should be 1B, 2B or multiple of 4B. Splitting.\n");
+    DEBUG(dbgs() << "LSV: Size should be 1B, 2B "
+                    "or multiple of 4B. Splitting.\n");
     if (SzInBytes == 3)
       return vectorizeLoadChain(Chain.slice(0, ChainSize - 1));
     auto Chains = splitOddVectorElts(Chain, Sz);
@@ -840,11 +838,11 @@ bool Vectorizer::vectorizeLoadChain(ArrayRef<Value *> Chain) {
     }
   }
 
-  DEBUG(
+  DEBUG({
     dbgs() << "LSV: Loads to vectorize:\n";
     for (Value *V : Chain)
       V->dump();
-  );
+  });
 
   BasicBlock::iterator First, Last;
   std::tie(First, Last) = getBoundaryInstrs(Chain);
@@ -856,7 +854,7 @@ bool Vectorizer::vectorizeLoadChain(ArrayRef<Value *> Chain) {
   Builder.SetInsertPoint(&*Last);
 
   Value *Bitcast =
-    Builder.CreateBitCast(L0->getPointerOperand(), VecTy->getPointerTo(AS));
+      Builder.CreateBitCast(L0->getPointerOperand(), VecTy->getPointerTo(AS));
 
   LoadInst *LI = cast<LoadInst>(Builder.CreateLoad(Bitcast));
   propagateMetadata(LI, Chain);
@@ -875,8 +873,8 @@ bool Vectorizer::vectorizeLoadChain(ArrayRef<Value *> Chain) {
         Value *V = Builder.CreateExtractElement(LI, Builder.getInt32(NewIdx));
         Instruction *Extracted = cast<Instruction>(V);
         if (Extracted->getType() != UI->getType())
-          Extracted =
-            cast<Instruction>(Builder.CreateBitCast(Extracted, UI->getType()));
+          Extracted = cast<Instruction>(
+              Builder.CreateBitCast(Extracted, UI->getType()));
 
         // Replace the old instruction.
         UI->replaceAllUsesWith(Extracted);
@@ -898,8 +896,8 @@ bool Vectorizer::vectorizeLoadChain(ArrayRef<Value *> Chain) {
       Instruction *Extracted = cast<Instruction>(V);
       Instruction *UI = cast<Instruction>(Chain[I]);
       if (Extracted->getType() != UI->getType()) {
-        Extracted =
-          cast<Instruction>(Builder.CreateBitOrPointerCast(Extracted, UI->getType()));
+        Extracted = cast<Instruction>(
+            Builder.CreateBitOrPointerCast(Extracted, UI->getType()));
       }
 
       // Replace the old instruction.

@@ -62,6 +62,10 @@ static DecodeStatus decodeSplsValue(MCInst &Inst, unsigned Insn,
 static DecodeStatus decodeBranch(MCInst &Inst, unsigned Insn, uint64_t Address,
                                  const void *Decoder);
 
+static DecodeStatus decodePredicateOperand(MCInst &Inst, unsigned Val,
+                                           uint64_t Address,
+                                           const void *Decoder);
+
 static DecodeStatus decodeShiftImm(MCInst &Inst, unsigned Insn,
                                    uint64_t Address, const void *Decoder);
 
@@ -224,5 +228,14 @@ static DecodeStatus decodeShiftImm(MCInst &Inst, unsigned Insn,
   unsigned Offset = (Insn & 0xffff);
   Inst.addOperand(MCOperand::createImm(SignExtend32<16>(Offset)));
 
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodePredicateOperand(MCInst &Inst, unsigned Val,
+                                           uint64_t Address,
+                                           const void *Decoder) {
+  if (Val >= LPCC::UNKNOWN)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createImm(Val));
   return MCDisassembler::Success;
 }

@@ -60,7 +60,6 @@ void thinLTOResolveWeakForLinkerInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage);
 

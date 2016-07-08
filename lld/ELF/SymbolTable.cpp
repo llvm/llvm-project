@@ -186,6 +186,16 @@ static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
       return Default ? I : (I | VERSYM_HIDDEN);
     ++I;
   }
+
+  // If we are not building shared and version script
+  // is not specified, then it is not a error, it is
+  // in common not to use script for linking executables.
+  // In this case we just create new version.
+  if (!Config->Shared && !Config->HasVersionScript) {
+    Config->SymbolVersions.push_back(elf::Version(Version));
+    return Default ? I : (I | VERSYM_HIDDEN);
+  }
+
   error("symbol " + Name + " has undefined version " + Version);
   return 0;
 }
@@ -242,9 +252,11 @@ SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
 template <typename ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
                                            InputFile *NewFile) {
-  StringRef Sym = Existing->getName();
-  return demangle(Sym) + " in " + getFilename(Existing->getSourceFile<ELFT>()) +
-         " and " + getFilename(NewFile);
+  std::string Sym = Existing->getName();
+  if (Config->Demangle)
+    Sym = demangle(Sym);
+  return Sym + " in " + getFilename(Existing->getSourceFile<ELFT>()) + " and " +
+         getFilename(NewFile);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {

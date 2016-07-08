@@ -12408,7 +12408,7 @@ SDValue DAGCombiner::visitEXTRACT_VECTOR_ELT(SDNode *N) {
   // on the constant elements already work.
   if (InVec.getOpcode() == ISD::INSERT_VECTOR_ELT &&
       EltNo == InVec.getOperand(2))
-    return InVec.getOperand(1);
+    return DAG.getAnyExtOrTrunc(InVec.getOperand(1), SDLoc(N), NVT);
 
   // Transform: (EXTRACT_VECTOR_ELT( VECTOR_SHUFFLE )) -> EXTRACT_VECTOR_ELT.
   // We only perform this optimization before the op legalization phase because

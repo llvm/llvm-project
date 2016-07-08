@@ -443,7 +443,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   TM.resetTargetOptions(Fn);
   // Reset OptLevel to None for optnone functions.
   CodeGenOpt::Level NewOptLevel = OptLevel;
-  if (Fn.hasFnAttribute(Attribute::OptimizeNone))
+  if (OptLevel != CodeGenOpt::None && skipFunction(Fn))
     NewOptLevel = CodeGenOpt::None;
   OptLevelChanger OLC(*this, NewOptLevel);
 

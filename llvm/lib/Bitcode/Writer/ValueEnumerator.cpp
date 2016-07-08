@@ -957,8 +957,13 @@ void ValueEnumerator::incorporateFunction(const Function &F) {
   }
 
   // Add all of the function-local metadata.
-  for (unsigned i = 0, e = FnLocalMDVector.size(); i != e; ++i)
+  for (unsigned i = 0, e = FnLocalMDVector.size(); i != e; ++i) {
+    // At this point, every local values have been incorporated, we shouldn't
+    // have a metadata operand that references a value that hasn't been seen.
+    assert(ValueMap.count(FnLocalMDVector[i]->getValue()) &&
+           "Missing value for metadata operand");
     EnumerateFunctionLocalMetadata(F, FnLocalMDVector[i]);
+  }
 }
 
 void ValueEnumerator::purgeFunction() {

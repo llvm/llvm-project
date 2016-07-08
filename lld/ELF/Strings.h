@@ -18,6 +18,11 @@ namespace elf {
 bool globMatch(StringRef S, StringRef T);
 std::vector<uint8_t> parseHex(StringRef S);
 bool isValidCIdentifier(StringRef S);
+
+// Returns a demangled C++ symbol name. If Name is not a mangled
+// name or the system does not provide __cxa_demangle function,
+// it returns an unmodified string.
+std::string demangle(StringRef Name);
 }
 }
 

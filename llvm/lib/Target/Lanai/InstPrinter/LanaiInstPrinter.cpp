@@ -284,6 +284,22 @@ void LanaiInstPrinter::printMemSplsOperand(const MCInst *MI, int OpNo,
 
 void LanaiInstPrinter::printCCOperand(const MCInst *MI, int OpNo,
                                       raw_ostream &OS) {
-  const int CC = static_cast<const int>(MI->getOperand(OpNo).getImm());
-  OS << lanaiCondCodeToString(static_cast<LPCC::CondCode>(CC));
+  LPCC::CondCode CC =
+      static_cast<LPCC::CondCode>(MI->getOperand(OpNo).getImm());
+  // Handle the undefined value here for printing so we don't abort().
+  if (CC >= LPCC::UNKNOWN)
+    OS << "<und>";
+  else
+    OS << lanaiCondCodeToString(CC);
+}
+
+void LanaiInstPrinter::printPredicateOperand(const MCInst *MI, unsigned OpNo,
+                                             raw_ostream &OS) {
+  LPCC::CondCode CC =
+      static_cast<LPCC::CondCode>(MI->getOperand(OpNo).getImm());
+  // Handle the undefined value here for printing so we don't abort().
+  if (CC >= LPCC::UNKNOWN)
+    OS << "<und>";
+  else if (CC != LPCC::ICC_T)
+    OS << "." << lanaiCondCodeToString(CC);
 }

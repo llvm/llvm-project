@@ -342,6 +342,23 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
                                         Intrinsic::x86_xop_vfrcz_sd);
       return true;
     }
+    if (IsX86 && (Name.startswith("avx512.mask.pslli.") ||
+                  Name.startswith("avx512.mask.psrai.") ||
+                  Name.startswith("avx512.mask.psrli."))) {
+      F->setName("llvm.x86." + Name + ".old");
+      Intrinsic::ID ShiftID;
+      if (Name.slice(12, 16) == "psll")
+        ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psll_di_512
+                                  : Intrinsic::x86_avx512_mask_psll_qi_512;
+      else if (Name.slice(12, 16) == "psra")
+        ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psra_di_512
+                                  : Intrinsic::x86_avx512_mask_psra_qi_512;
+      else
+        ShiftID = Name[18] == 'd' ? Intrinsic::x86_avx512_mask_psrl_di_512
+                                  : Intrinsic::x86_avx512_mask_psrl_qi_512;
+      NewFn = Intrinsic::getDeclaration(F->getParent(), ShiftID);
+      return true;
+    }
     // Fix the FMA4 intrinsics to remove the 4
     if (IsX86 && Name.startswith("fma4.")) {
       F->setName("llvm.x86.fma" + Name.substr(5));
@@ -353,7 +370,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
       auto Params = F->getFunctionType()->params();
       auto Idx = Params[2];
       if (Idx->getScalarType()->isFloatingPointTy()) {
-        F->setName(Name + ".old");
+        F->setName("llvm.x86." + Name + ".old");
         unsigned IdxSize = Idx->getPrimitiveSizeInBits();
         unsigned EltSize = Idx->getScalarSizeInBits();
         Intrinsic::ID Permil2ID;
@@ -1179,6 +1196,12 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
   default:
     llvm_unreachable("Unknown function for CallInst upgrade.");
 
+  case Intrinsic::x86_avx512_mask_psll_di_512:
+  case Intrinsic::x86_avx512_mask_psra_di_512:
+  case Intrinsic::x86_avx512_mask_psrl_di_512:
+  case Intrinsic::x86_avx512_mask_psll_qi_512:
+  case Intrinsic::x86_avx512_mask_psra_qi_512:
+  case Intrinsic::x86_avx512_mask_psrl_qi_512:
   case Intrinsic::arm_neon_vld1:
   case Intrinsic::arm_neon_vld2:
   case Intrinsic::arm_neon_vld3:

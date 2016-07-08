@@ -67,7 +67,7 @@ entry:
   ret void
 }
 
-; MOD1: define linkonce_odr void @linkonceodrfuncInSingleModule()
+; MOD1: define weak_odr void @linkonceodrfuncInSingleModule()
 ; MOD1-INT: define internal void @linkonceodrfuncInSingleModule()
 ; EXPORTED: define weak_odr void @linkonceodrfuncInSingleModule()
 define linkonce_odr void @linkonceodrfuncInSingleModule() #0 {

@@ -9,9 +9,7 @@ entry:
 }
 
 ; CHECK: push.w  {r11, lr}
-; CHECK: ldr     r[[SP:[0-9]+]], [r0, #8]
-; CHECK: mov     sp, r[[SP]]
-; CHECK: ldr     r[[PC:[0-9]+]], [r0, #4]
-; CHECK: ldr     r11, [r0]
-; CHECK: bx      r[[PC]]
+; CHECK: ldr.w   r11, [r0]
+; CHECK: ldr.w   sp, [r0, #8]
+; CHECK: ldr.w   pc, [r0, #4]
 

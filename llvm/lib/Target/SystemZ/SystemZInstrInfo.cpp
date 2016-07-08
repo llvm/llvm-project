@@ -610,14 +610,14 @@ bool SystemZInstrInfo::PredicateInstruction(
     return true;
   }
   if (Opcode == SystemZ::CallJG) {
-    const GlobalValue *Global = MI.getOperand(0).getGlobal();
+    MachineOperand FirstOp = MI.getOperand(0);
     const uint32_t *RegMask = MI.getOperand(1).getRegMask();
     MI.RemoveOperand(1);
     MI.RemoveOperand(0);
     MI.setDesc(get(SystemZ::CallBRCL));
     MachineInstrBuilder(*MI.getParent()->getParent(), MI)
       .addImm(CCValid).addImm(CCMask)
-      .addGlobalAddress(Global)
+      .addOperand(FirstOp)
       .addRegMask(RegMask)
       .addReg(SystemZ::CC, RegState::Implicit);
     return true;
