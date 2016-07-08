@@ -1,4 +1,3 @@
-; RUN: llc -O0 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-O0
 ; RUN: llc -O1 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 ; RUN: llc -O2 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 ; RUN: llc -O3 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox

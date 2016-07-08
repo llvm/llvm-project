@@ -28,3 +28,7 @@ nop
 do: 
 callq foo@PLT
 callq bar@PLT
+
+.weak zed
+.protected zed
+.quad zed

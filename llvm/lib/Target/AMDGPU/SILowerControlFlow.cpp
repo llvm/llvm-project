@@ -237,8 +237,9 @@ void SILowerControlFlow::If(MachineInstr &MI) {
   Skip(MI, MI.getOperand(2));
 
   // Insert a pseudo terminator to help keep the verifier happy.
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::SI_MASK_BRANCH), Reg)
-    .addOperand(MI.getOperand(2));
+  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+    .addOperand(MI.getOperand(2))
+    .addReg(Reg);
 
   MI.eraseFromParent();
 }
@@ -269,8 +270,9 @@ void SILowerControlFlow::Else(MachineInstr &MI, bool ExecModified) {
   Skip(MI, MI.getOperand(2));
 
   // Insert a pseudo terminator to help keep the verifier happy.
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::SI_MASK_BRANCH), Dst)
-    .addOperand(MI.getOperand(2));
+  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+    .addOperand(MI.getOperand(2))
+    .addReg(Dst);
 
   MI.eraseFromParent();
 }
@@ -642,12 +644,8 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       if (TII->isFLAT(MI))
         NeedFlat = true;
 
-      for (const auto &Def : I->defs()) {
-        if (Def.isReg() && Def.isDef() && Def.getReg() == AMDGPU::EXEC) {
-          ExecModified = true;
-          break;
-        }
-      }
+      if (I->definesRegister(AMDGPU::EXEC, TRI))
+        ExecModified = true;
 
       switch (MI.getOpcode()) {
         default: break;

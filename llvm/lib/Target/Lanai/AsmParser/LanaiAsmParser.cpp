@@ -357,6 +357,20 @@ public:
     return isInt<10>(Value);
   }
 
+  bool isCondCode() {
+    if (!isImm())
+      return false;
+
+    const MCConstantExpr *ConstExpr = dyn_cast<MCConstantExpr>(Imm.Value);
+    if (!ConstExpr)
+      return false;
+    uint64_t Value = ConstExpr->getValue();
+    // The condition codes are between 0 (ICC_T) and 15 (ICC_LE). If the
+    // unsigned value of the immediate is less than LPCC::UNKNOWN (16) then
+    // value corresponds to a valid condition code.
+    return Value < LPCC::UNKNOWN;
+  }
+
   void addExpr(MCInst &Inst, const MCExpr *Expr) const {
     // Add as immediates where possible. Null MCExpr = 0
     if (Expr == nullptr)
@@ -384,6 +398,11 @@ public:
   }
 
   void addCallTargetOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    addExpr(Inst, getImm());
+  }
+
+  void addCondCodeOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     addExpr(Inst, getImm());
   }
@@ -1031,7 +1050,16 @@ StringRef LanaiAsmParser::splitMnemonic(StringRef Name, SMLoc NameLoc,
     LPCC::CondCode CondCode = LPCC::suffixToLanaiCondCode(Mnemonic);
     if (CondCode != LPCC::UNKNOWN) {
       size_t Next = Mnemonic.rfind('.', Name.size());
-      Mnemonic = Mnemonic.substr(0, Next + 1);
+      // 'sel' doesn't use a predicate operand whose printer adds the period,
+      // but instead has the period as part of the identifier (i.e., 'sel.' is
+      // expected by the generated matcher). If the mnemonic starts with 'sel'
+      // then include the period as part of the mnemonic, else don't include it
+      // as part of the mnemonic.
+      if (Mnemonic.startswith("sel")) {
+        Mnemonic = Mnemonic.substr(0, Next + 1);
+      } else {
+        Mnemonic = Mnemonic.substr(0, Next);
+      }
       Operands->push_back(LanaiOperand::CreateToken(Mnemonic, NameLoc));
       Operands->push_back(LanaiOperand::createImm(
           MCConstantExpr::create(CondCode, getContext()), NameLoc, NameLoc));

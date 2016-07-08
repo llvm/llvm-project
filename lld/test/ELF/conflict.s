@@ -1,9 +1,9 @@
-# REQUIRES: x86
+# REQUIRES: x86, shell
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t1.o
 # RUN: not ld.lld %t1.o %t1.o -o %t2 2>&1 | FileCheck -check-prefix=DEMANGLE %s
 
-# DEMANGLE:    duplicate symbol: {{mul\(double, double\)|_Z3muldd}} in
+# DEMANGLE:    duplicate symbol: mul(double, double) in
 # DEMANGLE:    duplicate symbol: foo in
 
 # RUN: not ld.lld %t1.o %t1.o -o %t2 --no-demangle 2>&1 | \

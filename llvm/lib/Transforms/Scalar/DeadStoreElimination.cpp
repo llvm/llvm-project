@@ -778,6 +778,14 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
       continue;
     }
 
+    // We can remove the dead stores, irrespective of the fence and its ordering
+    // (release/acquire/seq_cst). Fences only constraints the ordering of
+    // already visible stores, it does not make a store visible to other
+    // threads. So, skipping over a fence does not change a store from being
+    // dead.
+    if (isa<FenceInst>(*BBI))
+      continue;
+
     MemoryLocation LoadedLoc;
 
     // If we encounter a use of the pointer, it is no longer considered dead

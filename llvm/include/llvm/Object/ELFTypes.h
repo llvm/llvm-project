@@ -561,6 +561,7 @@ struct Elf_GnuHash_Impl {
 };
 
 // Compressed section headers.
+// http://www.sco.com/developers/gabi/latest/ch4.sheader.html#compression_header
 template <endianness TargetEndianness>
 struct Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
   LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)

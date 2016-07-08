@@ -238,6 +238,7 @@ def plugin_opt_eq: J<"plugin-opt=">;
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def define_common: F<"define-common">;
+def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;

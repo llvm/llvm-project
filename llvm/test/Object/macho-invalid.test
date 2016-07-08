@@ -24,13 +24,16 @@ RUN:      | FileCheck -check-prefix SMALL-LOADC-SIZE-1 %s
 SMALL-LOADC-SIZE-1: truncated or malformed object (load command 1 with size less than 8 bytes)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command 2>&1 \
-RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
+RUN:      | FileCheck -check-prefix MULTIPLE-NOT-4 %s
+MULTIPLE-NOT-4: truncated or malformed object (load command 0 cmdsize not a multiple of 4)
+
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-too-small-segment-load-command.1 2>&1 \
 RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE %s
 SMALL-SEGLOADC-SIZE: truncated or malformed object (load command 0 LC_SEGMENT cmdsize too small)
+
 RUN: not llvm-objdump -private-headers %p/Inputs/macho64-invalid-too-small-segment-load-command 2>&1 \
-RUN:      | FileCheck -check-prefix SMALL-SEGLOADC-SIZE-64 %s
-SMALL-SEGLOADC-SIZE-64: truncated or malformed object (load command 0 LC_SEGMENT_64 cmdsize too small)
+RUN:      | FileCheck -check-prefix MULTIPLE-NOT-8 %s
+MULTIPLE-NOT-8: truncated or malformed object (load command 0 cmdsize not a multiple of 8)
 
 RUN: not llvm-objdump -private-headers %p/Inputs/macho-invalid-no-size-for-sections 2>&1 \
 RUN:      | FileCheck -check-prefix TOO-MANY-SECTS %s

@@ -1,4 +1,5 @@
 ; RUN: opt < %s -instsimplify -S | FileCheck %s
+; RUN: opt < %s -passes=instsimplify -S | FileCheck %s
 
 declare {i8, i1} @llvm.uadd.with.overflow.i8(i8 %a, i8 %b)
 declare {i8, i1} @llvm.usub.with.overflow.i8(i8 %a, i8 %b)

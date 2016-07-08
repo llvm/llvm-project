@@ -197,11 +197,16 @@ void LanaiRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     }
     // Reg = FrameReg OP Reg
     if (MI.getOpcode() == Lanai::ADD_I_LO) {
-      if (HasNegOffset)
-        MI.setDesc(TII->get(Lanai::SUB_R));
-      else
-        MI.setDesc(TII->get(Lanai::ADD_R));
-    } else if (isSPLSOpcode(MI.getOpcode()) || isRMOpcode(MI.getOpcode())) {
+      BuildMI(*MI.getParent(), II, DL,
+              HasNegOffset ? TII->get(Lanai::SUB_R) : TII->get(Lanai::ADD_R),
+              MI.getOperand(0).getReg())
+          .addReg(FrameReg)
+          .addReg(Reg)
+          .addImm(LPCC::ICC_T);
+      MI.eraseFromParent();
+      return;
+    }
+    if (isSPLSOpcode(MI.getOpcode()) || isRMOpcode(MI.getOpcode())) {
       MI.setDesc(TII->get(getRRMOpcodeVariant(MI.getOpcode())));
       if (HasNegOffset) {
         // Change the ALU op (operand 3) from LPAC::ADD (the default) to

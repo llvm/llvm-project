@@ -902,7 +902,7 @@ defm DS_MAX_SRC2_U32 : DS_1A <0x88, "ds_max_src2_u32">;
 defm DS_AND_SRC2_B32 : DS_1A <0x89, "ds_and_src_b32">;
 defm DS_OR_SRC2_B32 : DS_1A <0x8a, "ds_or_src2_b32">;
 defm DS_XOR_SRC2_B32 : DS_1A <0x8b, "ds_xor_src2_b32">;
-defm DS_WRITE_SRC2_B32 : DS_1A <0x8c, "ds_write_src2_b32">;
+defm DS_WRITE_SRC2_B32 : DS_1A_Off8_NORET <0x8d, "ds_write_src2_b32">;
 
 defm DS_MIN_SRC2_F32 : DS_1A <0x92, "ds_min_src2_f32">;
 defm DS_MAX_SRC2_F32 : DS_1A <0x93, "ds_max_src2_f32">;
@@ -919,7 +919,7 @@ defm DS_MAX_SRC2_U64 : DS_1A <0xc8, "ds_max_src2_u64">;
 defm DS_AND_SRC2_B64 : DS_1A <0xc9, "ds_and_src2_b64">;
 defm DS_OR_SRC2_B64 : DS_1A <0xca, "ds_or_src2_b64">;
 defm DS_XOR_SRC2_B64 : DS_1A <0xcb, "ds_xor_src2_b64">;
-defm DS_WRITE_SRC2_B64 : DS_1A <0xcc, "ds_write_src2_b64">;
+defm DS_WRITE_SRC2_B64 : DS_1A_Off8_NORET <0xcd, "ds_write_src2_b64">;
 
 defm DS_MIN_SRC2_F64 : DS_1A <0xd2, "ds_min_src2_f64">;
 defm DS_MAX_SRC2_F64 : DS_1A <0xd3, "ds_max_src2_f64">;
@@ -1929,7 +1929,7 @@ let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1 in {
 // Dummy terminator instruction to use after control flow instructions
 // replaced with exec mask operations.
 def SI_MASK_BRANCH : InstSI <
-  (outs SReg_64:$dst), (ins brtarget:$target)> {
+  (outs), (ins brtarget:$target, SReg_64:$dst)> {
   let isBranch = 1;
   let isTerminator = 1;
   let isBarrier = 1;

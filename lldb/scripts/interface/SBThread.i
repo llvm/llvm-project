@@ -259,6 +259,14 @@ public:
     SBError
     ReturnFromFrame (SBFrame &frame, SBValue &return_value);
 
+    %feature("autodoc", "
+    Unwind the stack frames from the innermost expression evaluation.
+    This API is equivalent to 'thread return -x'.
+    ") UnwindInnermostExpression;
+    
+    SBError
+    UnwindInnermostExpression();
+
     %feature("docstring", "
     //--------------------------------------------------------------------------
     /// LLDB currently supports process centric debugging which means when any
