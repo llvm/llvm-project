@@ -101,7 +101,6 @@ lldb_private::formatters::swift::DictionarySyntheticFrontEndCreator (CXXSyntheti
 bool
 lldb_private::formatters::swift::DictionarySyntheticFrontEnd::Update()
 {
-    m_children.clear();
     m_buffer = SwiftHashedContainerBufferHandler::CreateBufferHandler(m_backend,
                                                                         [](ValueObjectSP a,
                                                                            CompilerType b,

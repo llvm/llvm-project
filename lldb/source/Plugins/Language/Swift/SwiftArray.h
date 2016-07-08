@@ -244,7 +244,6 @@ namespace lldb_private {
             private:
                 
                 std::unique_ptr<SwiftArrayBufferHandler> m_array_buffer;
-                std::map<size_t,lldb::ValueObjectSP> m_children;
             };
             
             SyntheticChildrenFrontEnd* ArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);

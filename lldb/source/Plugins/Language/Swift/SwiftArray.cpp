@@ -485,8 +485,7 @@ lldb_private::formatters::swift::Array_SummaryProvider (ValueObject& valobj, Str
 
 lldb_private::formatters::swift::ArraySyntheticFrontEnd::ArraySyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
 SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_array_buffer(),
-m_children()
+m_array_buffer()
 {
     if (valobj_sp)
         Update();
@@ -504,14 +503,9 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex (size_t
     if (!m_array_buffer)
         return ValueObjectSP();
     
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
-    
     lldb::ValueObjectSP child_sp = m_array_buffer->GetElementAtIndex(idx);
-    
     if (child_sp)
-        m_children[idx] = child_sp;
+        child_sp->SetSyntheticChildrenGenerated(true);
     
     return child_sp;
 }
@@ -519,7 +513,6 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex (size_t
 bool
 lldb_private::formatters::swift::ArraySyntheticFrontEnd::Update()
 {
-    m_children.clear();
     m_array_buffer = SwiftArrayBufferHandler::CreateBufferHandler(m_backend);
     return false;
 }

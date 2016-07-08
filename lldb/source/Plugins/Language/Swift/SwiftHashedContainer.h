@@ -207,7 +207,6 @@ namespace lldb_private {
                 ~HashedContainerSyntheticFrontEnd () = default;
             protected:
                 std::unique_ptr<SwiftHashedContainerBufferHandler> m_buffer;
-                std::map<size_t,lldb::ValueObjectSP> m_children;
             };
         }
     }
