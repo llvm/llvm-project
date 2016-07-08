@@ -1,6 +1,12 @@
 
 # Swift Debugger and REPL
 
+|| **Status** |
+|---|---|
+|**macOS**         |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-osx/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-osx)|
+|**Ubuntu 14.04** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-14_04)|
+|**Ubuntu 15.10** |[![Build Status](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-15_10/badge/icon)](https://ci.swift.org/job/oss-lldb-incremental-linux-ubuntu-15_10)|
+
 **Welcome to the Swift Debugger and REPL!**
 
 Swift is a new, high performance systems programming language.  It has a clean
