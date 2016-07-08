@@ -1727,7 +1727,6 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   case X86::BI__builtin_ia32_vcvtps2ph:
   case X86::BI__builtin_ia32_vcvtps2ph256:
-  case X86::BI__builtin_ia32_vcvtps2ph512:
   case X86::BI__builtin_ia32_rndscaleps_128_mask:
   case X86::BI__builtin_ia32_rndscalepd_128_mask:
   case X86::BI__builtin_ia32_rndscaleps_256_mask:

@@ -11,15 +11,15 @@
 
 __device__ int read_tid() {
 
-// CHECK: call i32 @llvm.ptx.read.tid.x()
-// CHECK: call i32 @llvm.ptx.read.tid.y()
-// CHECK: call i32 @llvm.ptx.read.tid.z()
-// CHECK: call i32 @llvm.ptx.read.tid.w()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.tid.y()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.tid.z()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.tid.w()
 
-  int x = __builtin_ptx_read_tid_x();
-  int y = __builtin_ptx_read_tid_y();
-  int z = __builtin_ptx_read_tid_z();
-  int w = __builtin_ptx_read_tid_w();
+  int x = __nvvm_read_ptx_sreg_tid_x();
+  int y = __nvvm_read_ptx_sreg_tid_y();
+  int z = __nvvm_read_ptx_sreg_tid_z();
+  int w = __nvvm_read_ptx_sreg_tid_w();
 
   return x + y + z + w;
 
@@ -27,15 +27,15 @@ __device__ int read_tid() {
 
 __device__ int read_ntid() {
 
-// CHECK: call i32 @llvm.ptx.read.ntid.x()
-// CHECK: call i32 @llvm.ptx.read.ntid.y()
-// CHECK: call i32 @llvm.ptx.read.ntid.z()
-// CHECK: call i32 @llvm.ptx.read.ntid.w()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ntid.w()
 
-  int x = __builtin_ptx_read_ntid_x();
-  int y = __builtin_ptx_read_ntid_y();
-  int z = __builtin_ptx_read_ntid_z();
-  int w = __builtin_ptx_read_ntid_w();
+  int x = __nvvm_read_ptx_sreg_ntid_x();
+  int y = __nvvm_read_ptx_sreg_ntid_y();
+  int z = __nvvm_read_ptx_sreg_ntid_z();
+  int w = __nvvm_read_ptx_sreg_ntid_w();
 
   return x + y + z + w;
 
@@ -43,15 +43,15 @@ __device__ int read_ntid() {
 
 __device__ int read_ctaid() {
 
-// CHECK: call i32 @llvm.ptx.read.ctaid.x()
-// CHECK: call i32 @llvm.ptx.read.ctaid.y()
-// CHECK: call i32 @llvm.ptx.read.ctaid.z()
-// CHECK: call i32 @llvm.ptx.read.ctaid.w()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.w()
 
-  int x = __builtin_ptx_read_ctaid_x();
-  int y = __builtin_ptx_read_ctaid_y();
-  int z = __builtin_ptx_read_ctaid_z();
-  int w = __builtin_ptx_read_ctaid_w();
+  int x = __nvvm_read_ptx_sreg_ctaid_x();
+  int y = __nvvm_read_ptx_sreg_ctaid_y();
+  int z = __nvvm_read_ptx_sreg_ctaid_z();
+  int w = __nvvm_read_ptx_sreg_ctaid_w();
 
   return x + y + z + w;
 
@@ -59,15 +59,15 @@ __device__ int read_ctaid() {
 
 __device__ int read_nctaid() {
 
-// CHECK: call i32 @llvm.ptx.read.nctaid.x()
-// CHECK: call i32 @llvm.ptx.read.nctaid.y()
-// CHECK: call i32 @llvm.ptx.read.nctaid.z()
-// CHECK: call i32 @llvm.ptx.read.nctaid.w()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.w()
 
-  int x = __builtin_ptx_read_nctaid_x();
-  int y = __builtin_ptx_read_nctaid_y();
-  int z = __builtin_ptx_read_nctaid_z();
-  int w = __builtin_ptx_read_nctaid_w();
+  int x = __nvvm_read_ptx_sreg_nctaid_x();
+  int y = __nvvm_read_ptx_sreg_nctaid_y();
+  int z = __nvvm_read_ptx_sreg_nctaid_z();
+  int w = __nvvm_read_ptx_sreg_nctaid_w();
 
   return x + y + z + w;
 
@@ -75,19 +75,19 @@ __device__ int read_nctaid() {
 
 __device__ int read_ids() {
 
-// CHECK: call i32 @llvm.ptx.read.laneid()
-// CHECK: call i32 @llvm.ptx.read.warpid()
-// CHECK: call i32 @llvm.ptx.read.nwarpid()
-// CHECK: call i32 @llvm.ptx.read.smid()
-// CHECK: call i32 @llvm.ptx.read.nsmid()
-// CHECK: call i32 @llvm.ptx.read.gridid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.laneid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.warpid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nwarpid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.smid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.nsmid()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.gridid()
 
-  int a = __builtin_ptx_read_laneid();
-  int b = __builtin_ptx_read_warpid();
-  int c = __builtin_ptx_read_nwarpid();
-  int d = __builtin_ptx_read_smid();
-  int e = __builtin_ptx_read_nsmid();
-  int f = __builtin_ptx_read_gridid();
+  int a = __nvvm_read_ptx_sreg_laneid();
+  int b = __nvvm_read_ptx_sreg_warpid();
+  int c = __nvvm_read_ptx_sreg_nwarpid();
+  int d = __nvvm_read_ptx_sreg_smid();
+  int e = __nvvm_read_ptx_sreg_nsmid();
+  int f = __nvvm_read_ptx_sreg_gridid();
 
   return a + b + c + d + e + f;
 
@@ -95,17 +95,17 @@ __device__ int read_ids() {
 
 __device__ int read_lanemasks() {
 
-// CHECK: call i32 @llvm.ptx.read.lanemask.eq()
-// CHECK: call i32 @llvm.ptx.read.lanemask.le()
-// CHECK: call i32 @llvm.ptx.read.lanemask.lt()
-// CHECK: call i32 @llvm.ptx.read.lanemask.ge()
-// CHECK: call i32 @llvm.ptx.read.lanemask.gt()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.eq()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.le()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.lt()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.ge()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.lanemask.gt()
 
-  int a = __builtin_ptx_read_lanemask_eq();
-  int b = __builtin_ptx_read_lanemask_le();
-  int c = __builtin_ptx_read_lanemask_lt();
-  int d = __builtin_ptx_read_lanemask_ge();
-  int e = __builtin_ptx_read_lanemask_gt();
+  int a = __nvvm_read_ptx_sreg_lanemask_eq();
+  int b = __nvvm_read_ptx_sreg_lanemask_le();
+  int c = __nvvm_read_ptx_sreg_lanemask_lt();
+  int d = __nvvm_read_ptx_sreg_lanemask_ge();
+  int e = __nvvm_read_ptx_sreg_lanemask_gt();
 
   return a + b + c + d + e;
 
@@ -113,26 +113,26 @@ __device__ int read_lanemasks() {
 
 __device__ long long read_clocks() {
 
-// CHECK: call i32 @llvm.ptx.read.clock()
-// CHECK: call i64 @llvm.ptx.read.clock64()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.clock()
+// CHECK: call i64 @llvm.nvvm.read.ptx.sreg.clock64()
 
-  int a = __builtin_ptx_read_clock();
-  long long b = __builtin_ptx_read_clock64();
+  int a = __nvvm_read_ptx_sreg_clock();
+  long long b = __nvvm_read_ptx_sreg_clock64();
 
   return a + b;
 }
 
 __device__ int read_pms() {
 
-// CHECK: call i32 @llvm.ptx.read.pm0()
-// CHECK: call i32 @llvm.ptx.read.pm1()
-// CHECK: call i32 @llvm.ptx.read.pm2()
-// CHECK: call i32 @llvm.ptx.read.pm3()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.pm0()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.pm1()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.pm2()
+// CHECK: call i32 @llvm.nvvm.read.ptx.sreg.pm3()
 
-  int a = __builtin_ptx_read_pm0();
-  int b = __builtin_ptx_read_pm1();
-  int c = __builtin_ptx_read_pm2();
-  int d = __builtin_ptx_read_pm3();
+  int a = __nvvm_read_ptx_sreg_pm0();
+  int b = __nvvm_read_ptx_sreg_pm1();
+  int c = __nvvm_read_ptx_sreg_pm2();
+  int d = __nvvm_read_ptx_sreg_pm3();
 
   return a + b + c + d;
 
@@ -140,9 +140,9 @@ __device__ int read_pms() {
 
 __device__ void sync() {
 
-// CHECK: call void @llvm.ptx.bar.sync(i32 0)
+// CHECK: call void @llvm.nvvm.bar.sync(i32 0)
 
-  __builtin_ptx_bar_sync(0);
+  __nvvm_bar_sync(0);
 
 }
 
@@ -179,7 +179,7 @@ __device__ void nvvm_math(float f1, float f2, double d1, double d2) {
 // CHECK: call void @llvm.nvvm.membar.sys()
   __nvvm_membar_sys();
 // CHECK: call void @llvm.nvvm.barrier0()
-  __nvvm_bar0();
+  __syncthreads();
 }
 
 __device__ int di;

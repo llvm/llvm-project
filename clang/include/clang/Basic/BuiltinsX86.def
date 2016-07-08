@@ -35,10 +35,6 @@ BUILTIN(__builtin_ms_va_start, "vc*&.", "nt")
 BUILTIN(__builtin_ms_va_end, "vc*&", "n")
 BUILTIN(__builtin_ms_va_copy, "vc*&c*&", "n")
 
-// Bit scan
-TARGET_BUILTIN(__builtin_ia32_bit_scan_forward, "ii", "", "")
-TARGET_BUILTIN(__builtin_ia32_bit_scan_reverse, "ii", "", "")
-
 // Undefined Values
 //
 TARGET_BUILTIN(__builtin_ia32_undef128, "V2d", "nc", "")
@@ -376,7 +372,6 @@ TARGET_BUILTIN(__builtin_ia32_pminsd128, "V4iV4iV4i", "", "sse4.1")
 TARGET_BUILTIN(__builtin_ia32_pminud128, "V4iV4iV4i", "", "sse4.1")
 TARGET_BUILTIN(__builtin_ia32_pminuw128, "V8sV8sV8s", "", "sse4.1")
 TARGET_BUILTIN(__builtin_ia32_pmuldq128, "V2LLiV4iV4i", "", "sse4.1")
-TARGET_BUILTIN(__builtin_ia32_pmulld128, "V4iV4iV4i", "", "sse4.1")
 TARGET_BUILTIN(__builtin_ia32_roundps, "V4fV4fIi", "", "sse4.1")
 TARGET_BUILTIN(__builtin_ia32_roundss, "V4fV4fV4fIi", "", "sse4.1")
 TARGET_BUILTIN(__builtin_ia32_roundsd, "V2dV2dV2dIi", "", "sse4.1")
@@ -612,10 +607,8 @@ TARGET_BUILTIN(__builtin_ia32_gatherq_d256, "V4iV4iiC*V4LLiV4iIc", "", "avx2")
 // F16C
 TARGET_BUILTIN(__builtin_ia32_vcvtps2ph, "V8sV4fIi", "", "f16c")
 TARGET_BUILTIN(__builtin_ia32_vcvtps2ph256, "V8sV8fIi", "", "f16c")
-TARGET_BUILTIN(__builtin_ia32_vcvtps2ph512, "V16sV16fIi", "", "avx512f")
 TARGET_BUILTIN(__builtin_ia32_vcvtph2ps, "V4fV8s", "", "f16c")
 TARGET_BUILTIN(__builtin_ia32_vcvtph2ps256, "V8fV8s", "", "f16c")
-TARGET_BUILTIN(__builtin_ia32_vcvtph2ps512, "V16fV16s", "", "avx512f")
 
 // RDRAND
 TARGET_BUILTIN(__builtin_ia32_rdrand16_step, "UiUs*", "", "rdrnd")
@@ -1715,11 +1708,6 @@ TARGET_BUILTIN(__builtin_ia32_getexpsd128_round_mask, "V2dV2dV2dV2dUcIi","","avx
 TARGET_BUILTIN(__builtin_ia32_getexpss128_round_mask, "V4fV4fV4fV4fUcIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_getmantsd_round_mask, "V2dV2dV2dIiV2dUcIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_getmantss_round_mask, "V4fV4fV4fIiV4fUcIi","","avx512f")
-TARGET_BUILTIN(__builtin_ia32_kmov16, "UsUs","","avx512f")
-TARGET_BUILTIN(__builtin_ia32_maxsd_round, "V2dV2dV2dIi","","avx512f")
-TARGET_BUILTIN(__builtin_ia32_maxss_round, "V4fV4fV4fIi","","avx512f")
-TARGET_BUILTIN(__builtin_ia32_minsd_round, "V2dV2dV2dIi","","avx512f")
-TARGET_BUILTIN(__builtin_ia32_minss_round, "V4fV4fV4fIi","","avx512f")
 TARGET_BUILTIN(__builtin_ia32_loaddquhi128_mask, "V8sV8s*V8sUc","","avx512bw,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_loaddquhi256_mask, "V16sV16s*V16sUs","","avx512bw,avx512vl")
 TARGET_BUILTIN(__builtin_ia32_loaddquqi128_mask, "V16cV16c*V16cUs","","avx512bw,avx512vl")

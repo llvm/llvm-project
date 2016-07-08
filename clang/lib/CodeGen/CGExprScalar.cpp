@@ -818,7 +818,7 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
            "Splatted expr doesn't match with vector element type?");
 
     // Splat the element across to all elements
-    unsigned NumElements = cast<llvm::VectorType>(DstTy)->getNumElements();
+    unsigned NumElements = DstTy->getVectorNumElements();
     return Builder.CreateVectorSplat(NumElements, Src, "splat");
   }
 
@@ -1529,7 +1529,7 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Type *DstTy = ConvertType(DestTy);
     Value *Elt = Visit(const_cast<Expr*>(E));
     // Splat the element across to all elements
-    unsigned NumElements = cast<llvm::VectorType>(DstTy)->getNumElements();
+    unsigned NumElements = DstTy->getVectorNumElements();
     return Builder.CreateVectorSplat(NumElements, Elt, "splat");
   }
 
