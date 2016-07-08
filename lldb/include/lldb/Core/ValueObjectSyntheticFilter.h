@@ -170,6 +170,12 @@ public:
     SetPreferredDisplayLanguage (lldb::LanguageType);
     
     bool
+    IsSyntheticChildrenGenerated () override;
+    
+    void
+    SetSyntheticChildrenGenerated (bool b) override;
+    
+    bool
     GetDeclaration(Declaration &decl) override;
 
     uint64_t
