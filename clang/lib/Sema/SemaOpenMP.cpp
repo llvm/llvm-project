@@ -4380,6 +4380,8 @@ bool OpenMPIterationSpaceChecker::CheckInc(Expr *S) {
 static ExprResult
 tryBuildCapture(Sema &SemaRef, Expr *Capture,
                 llvm::MapVector<Expr *, DeclRefExpr *> &Captures) {
+  if (SemaRef.CurContext->isDependentContext())
+    return ExprResult(Capture);
   if (Capture->isEvaluatable(SemaRef.Context, Expr::SE_AllowSideEffects))
     return SemaRef.PerformImplicitConversion(
         Capture->IgnoreImpCasts(), Capture->getType(), Sema::AA_Converting,
@@ -8224,10 +8226,12 @@ OMPClause *Sema::ActOnOpenMPPrivateClause(ArrayRef<Expr *> VarList,
         *this, VDPrivate, RefExpr->getType().getUnqualifiedType(), ELoc);
 
     DeclRefExpr *Ref = nullptr;
-    if (!VD)
+    if (!VD && !CurContext->isDependentContext())
       Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_private, Ref);
-    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
+    Vars.push_back((VD || CurContext->isDependentContext())
+                       ? RefExpr->IgnoreParens()
+                       : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
   }
 
@@ -8522,7 +8526,7 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
         *this, VDPrivate, RefExpr->getType().getUnqualifiedType(),
         RefExpr->getExprLoc());
     DeclRefExpr *Ref = nullptr;
-    if (!VD) {
+    if (!VD && !CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_lastprivate)
         Ref = TopDVar.PrivateCopy;
       else {
@@ -8532,7 +8536,9 @@ OMPClause *Sema::ActOnOpenMPFirstprivateClause(ArrayRef<Expr *> VarList,
       }
     }
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_firstprivate, Ref);
-    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
+    Vars.push_back((VD || CurContext->isDependentContext())
+                       ? RefExpr->IgnoreParens()
+                       : Ref);
     PrivateCopies.push_back(VDPrivateRefExpr);
     Inits.push_back(VDInitRefExpr);
   }
@@ -8661,7 +8667,7 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       continue;
 
     DeclRefExpr *Ref = nullptr;
-    if (!VD) {
+    if (!VD && !CurContext->isDependentContext()) {
       if (TopDVar.CKind == OMPC_firstprivate)
         Ref = TopDVar.PrivateCopy;
       else {
@@ -8685,7 +8691,9 @@ OMPClause *Sema::ActOnOpenMPLastprivateClause(ArrayRef<Expr *> VarList,
       }
     }
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_lastprivate, Ref);
-    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
+    Vars.push_back((VD || CurContext->isDependentContext())
+                       ? RefExpr->IgnoreParens()
+                       : Ref);
     SrcExprs.push_back(PseudoSrcExpr);
     DstExprs.push_back(PseudoDstExpr);
     AssignmentOps.push_back(AssignmentOp.get());
@@ -8737,10 +8745,12 @@ OMPClause *Sema::ActOnOpenMPSharedClause(ArrayRef<Expr *> VarList,
     }
 
     DeclRefExpr *Ref = nullptr;
-    if (!VD && IsOpenMPCapturedDecl(D))
+    if (!VD && IsOpenMPCapturedDecl(D) && !CurContext->isDependentContext())
       Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/true);
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_shared, Ref);
-    Vars.push_back((VD || !Ref) ? RefExpr->IgnoreParens() : Ref);
+    Vars.push_back((VD || !Ref || CurContext->isDependentContext())
+                       ? RefExpr->IgnoreParens()
+                       : Ref);
   }
 
   if (Vars.empty())
@@ -9421,7 +9431,7 @@ OMPClause *Sema::ActOnOpenMPReductionClause(
 
     DeclRefExpr *Ref = nullptr;
     Expr *VarsExpr = RefExpr->IgnoreParens();
-    if (!VD) {
+    if (!VD && !CurContext->isDependentContext()) {
       if (ASE || OASE) {
         TransformExprToCaptures RebuildToCapture(*this, D);
         VarsExpr =
@@ -9579,7 +9589,7 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
     VarDecl *Init = buildVarDecl(*this, ELoc, Type, ".linear.start");
     Expr *InitExpr;
     DeclRefExpr *Ref = nullptr;
-    if (!VD) {
+    if (!VD && !CurContext->isDependentContext()) {
       Ref = buildCapture(*this, D, SimpleRefExpr, /*WithInit=*/false);
       if (!IsOpenMPCapturedDecl(D)) {
         ExprCaptures.push_back(Ref->getDecl());
@@ -9606,7 +9616,9 @@ OMPClause *Sema::ActOnOpenMPLinearClause(
     auto InitRef = buildDeclRefExpr(*this, Init, Type, ELoc);
 
     DSAStack->addDSA(D, RefExpr->IgnoreParens(), OMPC_linear, Ref);
-    Vars.push_back(VD ? RefExpr->IgnoreParens() : Ref);
+    Vars.push_back((VD || CurContext->isDependentContext())
+                       ? RefExpr->IgnoreParens()
+                       : Ref);
     Privates.push_back(PrivateRef);
     Inits.push_back(InitRef);
   }

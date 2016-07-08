@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ToolChains.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
 #include "clang/Basic/VirtualFileSystem.h"
@@ -1703,9 +1704,33 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
     BiarchTripleAliases.push_back(BiarchTriple.str());
 }
 
+// Parses the contents of version.txt in an CUDA installation.  It should
+// contain one line of the from e.g. "CUDA Version 7.5.2".
+static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
+  if (!V.startswith("CUDA Version "))
+    return CudaVersion::UNKNOWN;
+  V = V.substr(strlen("CUDA Version "));
+  int Major = -1, Minor = -1;
+  auto First = V.split('.');
+  auto Second = First.second.split('.');
+  if (!First.first.getAsInteger(10, Major) ||
+      !Second.first.getAsInteger(10, Minor))
+    return CudaVersion::UNKNOWN;
+
+  if (Major == 7 && Minor == 0) {
+    // This doesn't appear to ever happen -- version.txt doesn't exist in the
+    // CUDA 7 installs I've seen.  But no harm in checking.
+    return CudaVersion::CUDA_70;
+  }
+  if (Major == 7 && Minor == 5)
+    return CudaVersion::CUDA_75;
+  if (Major == 8 && Minor == 0)
+    return CudaVersion::CUDA_80;
+  return CudaVersion::UNKNOWN;
+}
+
 // \brief -- try common CUDA installation paths looking for files we need for
 // CUDA compilation.
-
 void Generic_GCC::CudaInstallationDetector::init(
     const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args) {
   SmallVector<std::string, 4> CudaPathCandidates;
@@ -1768,14 +1793,40 @@ void Generic_GCC::CudaInstallationDetector::init(
       }
     }
 
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
+        FS.getBufferForFile(InstallPath + "/version.txt");
+    if (!VersionFile) {
+      // CUDA 7.0 doesn't have a version.txt, so guess that's our version if
+      // version.txt isn't present.
+      Version = CudaVersion::CUDA_70;
+    } else {
+      Version = ParseCudaVersionFile((*VersionFile)->getBuffer());
+    }
+
     IsValid = true;
     break;
   }
 }
 
+void Generic_GCC::CudaInstallationDetector::CheckCudaVersionSupportsArch(
+    CudaArch Arch) const {
+  if (Arch == CudaArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
+      ArchsWithVersionTooLowErrors.count(Arch) > 0)
+    return;
+
+  auto RequiredVersion = MinVersionForCudaArch(Arch);
+  if (Version < RequiredVersion) {
+    ArchsWithVersionTooLowErrors.insert(Arch);
+    D.Diag(diag::err_drv_cuda_version_too_low)
+        << InstallPath << CudaArchToString(Arch) << CudaVersionToString(Version)
+        << CudaVersionToString(RequiredVersion);
+  }
+}
+
 void Generic_GCC::CudaInstallationDetector::print(raw_ostream &OS) const {
   if (isValid())
-    OS << "Found CUDA installation: " << InstallPath << "\n";
+    OS << "Found CUDA installation: " << InstallPath << ", version "
+       << CudaVersionToString(Version) << "\n";
 }
 
 namespace {
@@ -4668,6 +4719,18 @@ CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+ptx42");
   }
+}
+
+void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                                       ArgStringList &CC1Args) const {
+  // Check our CUDA version if we're going to include the CUDA headers.
+  if (!DriverArgs.hasArg(options::OPT_nocudainc) &&
+      !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
+    StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
+    assert(!Arch.empty() && "Must have an explicit GPU arch.");
+    CudaInstallation.CheckCudaVersionSupportsArch(StringToCudaArch(Arch));
+  }
+  Linux::AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 llvm::opt::DerivedArgList *

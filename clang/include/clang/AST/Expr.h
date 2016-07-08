@@ -4859,9 +4859,12 @@ public:
   }
 
   AtomicOp getOp() const { return Op; }
-  unsigned getNumSubExprs() { return NumSubExprs; }
+  unsigned getNumSubExprs() const { return NumSubExprs; }
 
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }
+  const Expr * const *getSubExprs() const {
+    return reinterpret_cast<Expr * const *>(SubExprs);
+  }
 
   bool isVolatile() const {
     return getPtr()->getType()->getPointeeType().isVolatileQualified();

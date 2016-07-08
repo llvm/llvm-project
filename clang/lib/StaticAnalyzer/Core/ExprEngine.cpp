@@ -902,7 +902,6 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::CUDAKernelCallExprClass:
     case Stmt::OpaqueValueExprClass:
     case Stmt::AsTypeExprClass:
-    case Stmt::AtomicExprClass:
       // Fall through.
 
     // Cases we intentionally don't evaluate, since they don't need
@@ -1244,6 +1243,12 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
     case Stmt::MemberExprClass:
       Bldr.takeNodes(Pred);
       VisitMemberExpr(cast<MemberExpr>(S), Pred, Dst);
+      Bldr.addNodes(Dst);
+      break;
+
+    case Stmt::AtomicExprClass:
+      Bldr.takeNodes(Pred);
+      VisitAtomicExpr(cast<AtomicExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
       break;
 
@@ -2068,6 +2073,44 @@ void ExprEngine::VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred,
   }
 
   getCheckerManager().runCheckersForPostStmt(Dst, EvalSet, M, *this);
+}
+
+void ExprEngine::VisitAtomicExpr(const AtomicExpr *AE, ExplodedNode *Pred,
+                                 ExplodedNodeSet &Dst) {
+  ExplodedNodeSet AfterPreSet;
+  getCheckerManager().runCheckersForPreStmt(AfterPreSet, Pred, AE, *this);
+
+  // For now, treat all the arguments to C11 atomics as escaping.
+  // FIXME: Ideally we should model the behavior of the atomics precisely here.
+
+  ExplodedNodeSet AfterInvalidateSet;
+  StmtNodeBuilder Bldr(AfterPreSet, AfterInvalidateSet, *currBldrCtx);
+
+  for (ExplodedNodeSet::iterator I = AfterPreSet.begin(), E = AfterPreSet.end();
+       I != E; ++I) {
+    ProgramStateRef State = (*I)->getState();
+    const LocationContext *LCtx = (*I)->getLocationContext();
+
+    SmallVector<SVal, 8> ValuesToInvalidate;
+    for (unsigned SI = 0, Count = AE->getNumSubExprs(); SI != Count; SI++) {
+      const Expr *SubExpr = AE->getSubExprs()[SI];
+      SVal SubExprVal = State->getSVal(SubExpr, LCtx);
+      ValuesToInvalidate.push_back(SubExprVal);
+    }
+
+    State = State->invalidateRegions(ValuesToInvalidate, AE,
+                                    currBldrCtx->blockCount(),
+                                    LCtx,
+                                    /*CausedByPointerEscape*/true,
+                                    /*Symbols=*/nullptr);
+
+    SVal ResultVal = UnknownVal();
+    State = State->BindExpr(AE, LCtx, ResultVal);
+    Bldr.generateNode(AE, *I, State, nullptr,
+                      ProgramPoint::PostStmtKind);
+  }
+
+  getCheckerManager().runCheckersForPostStmt(Dst, AfterInvalidateSet, AE, *this);
 }
 
 namespace {
