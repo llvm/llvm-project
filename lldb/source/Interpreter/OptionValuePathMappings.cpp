@@ -14,11 +14,24 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/Stream.h"
+#include "lldb/Host/FileSpec.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Interpreter/Args.h"
 
 using namespace lldb;
 using namespace lldb_private;
+namespace
+{
+    static bool
+    VerifyPathExists(const char *path)
+    {
+        if (path && path[0])
+            return FileSpec(path, false).Exists();
+        else
+            return false;
+    }
+}
+
 
 void
 OptionValuePathMappings::DumpValue (const ExecutionContext *exe_ctx, Stream &strm, uint32_t dump_mask)
@@ -59,14 +72,27 @@ OptionValuePathMappings::SetValueFromString (llvm::StringRef value, VarSetOperat
                 }
                 else
                 {
+                    bool changed = false;
                     for (size_t i=1; i<argc; i += 2, ++idx)
                     {
-                        ConstString a(args.GetArgumentAtIndex(i));
-                        ConstString b(args.GetArgumentAtIndex(i+1));
-                        if (!m_path_mappings.Replace (a, b, idx, m_notify_changes))
-                            m_path_mappings.Append(a, b, m_notify_changes);
+                        const char *orginal_path = args.GetArgumentAtIndex(i);
+                        const char *replace_path = args.GetArgumentAtIndex(i+1);
+                        if (VerifyPathExists(replace_path))
+                        {
+                            ConstString a(orginal_path);
+                            ConstString b(replace_path);
+                            if (!m_path_mappings.Replace (a, b, idx, m_notify_changes))
+                                m_path_mappings.Append(a, b, m_notify_changes);
+                            changed = true;
+                        }
+                        else
+                        {
+                            error.SetErrorStringWithFormat("the replacement path doesn't exist: \"%s\"", replace_path);
+                            break;
+                        }
                     }
-                    NotifyValueChanged();
+                    if (changed)
+                        NotifyValueChanged();
                 }
             }
             else
@@ -94,14 +120,27 @@ OptionValuePathMappings::SetValueFromString (llvm::StringRef value, VarSetOperat
             }
             else
             {
+                bool changed = false;
                 for (size_t i=0; i<argc; i += 2)
                 {
-                    ConstString a(args.GetArgumentAtIndex(i));
-                    ConstString b(args.GetArgumentAtIndex(i+1));
-                    m_path_mappings.Append(a, b, m_notify_changes);
-                    m_value_was_set = true;
+                    const char *orginal_path = args.GetArgumentAtIndex(i);
+                    const char *replace_path = args.GetArgumentAtIndex(i+1);
+                    if (VerifyPathExists(replace_path))
+                    {
+                        ConstString a(orginal_path);
+                        ConstString b(replace_path);
+                        m_path_mappings.Append(a, b, m_notify_changes);
+                        m_value_was_set = true;
+                        changed = true;
+                    }
+                    else
+                    {
+                        error.SetErrorStringWithFormat("the replacement path doesn't exist: \"%s\"", replace_path);
+                        break;
+                    }
                 }
-                NotifyValueChanged();
+                if (changed)
+                    NotifyValueChanged();
             }
             break;
             
@@ -118,15 +157,28 @@ OptionValuePathMappings::SetValueFromString (llvm::StringRef value, VarSetOperat
                 }
                 else
                 {
+                    bool changed = false;
                     if (op == eVarSetOperationInsertAfter)
                         ++idx;
                     for (size_t i=1; i<argc; i += 2, ++idx)
                     {
-                        ConstString a(args.GetArgumentAtIndex(i));
-                        ConstString b(args.GetArgumentAtIndex(i+1));
-                        m_path_mappings.Insert (a, b, idx, m_notify_changes);
+                        const char *orginal_path = args.GetArgumentAtIndex(i);
+                        const char *replace_path = args.GetArgumentAtIndex(i+1);
+                        if (VerifyPathExists(replace_path))
+                        {
+                            ConstString a(orginal_path);
+                            ConstString b(replace_path);
+                            m_path_mappings.Insert (a, b, idx, m_notify_changes);
+                            changed = true;
+                        }
+                        else
+                        {
+                            error.SetErrorStringWithFormat("the replacement path doesn't exist: \"%s\"", replace_path);
+                            break;
+                        }
                     }
-                    NotifyValueChanged();
+                    if (changed)
+                        NotifyValueChanged();
                 }
             }
             else
