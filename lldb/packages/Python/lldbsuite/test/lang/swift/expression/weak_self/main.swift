@@ -19,17 +19,21 @@ class ClosureMaker {
 
     func getClosure() -> (() -> Int) {
         return { [weak self] () -> Int in
-            if let _self = self { //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker"])
-                return _self.a
+            if let _self = self {
+                return _self.a //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker?)", "5"])
+                               //% self.expect("expr self!", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["ClosureMaker)", "5"])
             } else {
-                return 0
+                return 0 //% self.expect("expr self", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["nil"])
             }
         }
     }
 }
 
-var maker : ClosureMaker? = ClosureMaker(a: 5)
+var livemaker : ClosureMaker? = ClosureMaker(a: 5)
+let liveclosure = livemaker!.getClosure()
+print(liveclosure())
 
-let closure = maker!.getClosure()
-
-print(closure())
+var deadmaker : ClosureMaker? = ClosureMaker(a: 3)
+let deadclosure = deadmaker!.getClosure()
+deadmaker = nil
+print(deadclosure())

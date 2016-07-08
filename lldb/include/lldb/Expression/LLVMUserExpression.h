@@ -69,6 +69,12 @@ public:
     }
 
     lldb::ModuleSP GetJITModule() override;
+    
+    uint32_t
+    GetLanguageFlags()
+    {
+        return m_language_flags;
+    }
 
 protected:
     lldb::ExpressionResults
@@ -97,18 +103,9 @@ protected:
     std::shared_ptr<IRExecutionUnit> m_execution_unit_sp; ///< The execution unit the expression is stored in.
     std::unique_ptr<Materializer> m_materializer_ap;      ///< The materializer to use when running the expression.
     lldb::ModuleWP m_jit_module_wp;
-    bool m_enforce_valid_object; ///< True if the expression parser should enforce the presence of a valid class pointer
-                                 ///in order to generate the expression as a method.
-    bool m_in_cplusplus_method;  ///< True if the expression is compiled as a C++ member function (true if it was parsed
-                                 ///when exe_ctx was in a C++ method).
-    bool m_in_objectivec_method; ///< True if the expression is compiled as an Objective-C method (true if it was parsed
-                                 ///when exe_ctx was in an Objective-C method).
-    bool m_in_static_method; ///< True if the expression is compiled as a static (or class) method (currently true if it
-                             ///was parsed when exe_ctx was in an Objective-C class method).
-    bool m_needs_object_ptr; ///< True if "this" or "self" must be looked up and passed in.  False if the expression
-                             ///doesn't really use them and they can be NULL.
-    bool m_is_swift_class;   /// FIXME: This really should not be in LLVMUserExpression.
-    bool m_const_object;     ///< True if "this" is const.
+    
+    uint32_t    m_language_flags;  ///< Populated by the language-specific ScanContext()
+    
     Target *m_target;        ///< The target for storing persistent data like types and variables.
 
     bool m_can_interpret; ///< True if the expression could be evaluated statically; false otherwise.

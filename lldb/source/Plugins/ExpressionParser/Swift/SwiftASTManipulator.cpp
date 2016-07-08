@@ -36,6 +36,8 @@
 #include "lldb/Expression/ExpressionSourceCode.h"
 #include "lldb/Target/Target.h"
 
+#include "SwiftUserExpression.h"
+
 using namespace lldb_private;
 
 static void DumpGenericNames (lldb_private::Stream &wrapped_stream, llvm::ArrayRef<Expression::SwiftGenericInfo::Binding> generic_bindings)
@@ -96,9 +98,7 @@ SwiftASTManipulator::VariableInfo::GetIsLet () const
 void
 SwiftASTManipulator::WrapExpression(lldb_private::Stream &wrapped_stream,
                                     const char *orig_text,
-                                    bool instance_method,
-                                    bool static_method,
-                                    bool is_swift_class,
+                                    uint32_t language_flags,
                                     const EvaluateExpressionOptions &options,
                                     const Expression::SwiftGenericInfo &generic_info,
                                     uint32_t &first_body_line)
@@ -185,17 +185,17 @@ $builtin_logger_initialize()
                               "    var %s = __lldb_tmp_error\n"
                               "}\n", GetUserCodeStartMarker(), text, GetUserCodeEndMarker(), GetErrorName());
 
-    if (instance_method || static_method)
+    if (Flags(language_flags).AnySet(SwiftUserExpression::eLanguageFlagNeedsObjectPointer | SwiftUserExpression::eLanguageFlagInStaticMethod))
     {
         const char *func_decorator = "";
-        if (static_method)
+        if (language_flags & SwiftUserExpression::eLanguageFlagInStaticMethod)
         {
-            if (is_swift_class)
+            if (language_flags & SwiftUserExpression::eLanguageFlagIsClass)
                 func_decorator = "final class";
             else
                 func_decorator = "static";
         }
-        else if (is_swift_class)
+        else if (language_flags & SwiftUserExpression::eLanguageFlagIsClass && !(language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf))
         {
             func_decorator = "final";
         }
@@ -204,13 +204,16 @@ $builtin_logger_initialize()
             func_decorator = "mutating";
         }
 
+        const char *optional_extension = (language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf) ? "Optional where Wrapped: " : "";
+        
         if (generic_info.class_bindings.size())
         {
             if (generic_info.function_bindings.size())
             {
-                wrapped_stream.Printf("extension $__lldb_context {\n"
+                wrapped_stream.Printf("extension %s$__lldb_context {\n"
                                       "  @LLDBDebuggerFunction                                 \n"
                                       "  %s func $__lldb_wrapped_expr_%u",
+                                      optional_extension,
                                       func_decorator,
                                       current_counter);
                 DumpGenericNames(wrapped_stream, generic_info.function_bindings);
@@ -236,7 +239,7 @@ $builtin_logger_initialize()
             }
             else
             {
-                wrapped_stream.Printf("extension $__lldb_context {                            \n"
+                wrapped_stream.Printf("extension %s$__lldb_context {                            \n"
                                       "  @LLDBDebuggerFunction                                \n"
                                       "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
@@ -249,6 +252,7 @@ $builtin_logger_initialize()
                                       "    )                                                  \n"
                                       "  }                                                    \n"
                                       "}                                                      \n",
+                                      optional_extension,
                                       func_decorator,
                                       current_counter,
                                       wrapped_expr_text.GetData(),
@@ -261,9 +265,10 @@ $builtin_logger_initialize()
         {
             if (generic_info.function_bindings.size())
             {
-                wrapped_stream.Printf("extension $__lldb_context {                            \n"
+                wrapped_stream.Printf("extension %s$__lldb_context {                            \n"
                                       "  @LLDBDebuggerFunction                                \n"
                                       "  %s func $__lldb_wrapped_expr_%u                        ",
+                                      optional_extension,
                                       func_decorator,
                                       current_counter);
                 DumpGenericNames(wrapped_stream, generic_info.function_bindings);
@@ -290,7 +295,7 @@ $builtin_logger_initialize()
             }
             else
             {
-                wrapped_stream.Printf("extension $__lldb_context {                            \n"
+                wrapped_stream.Printf("extension %s$__lldb_context {                            \n"
                                       "@LLDBDebuggerFunction                                  \n"
                                       "  %s func $__lldb_wrapped_expr_%u(_ $__lldb_arg : UnsafeMutablePointer<Any>) {\n"
                                       "%s" // This is the expression text.  It has all the newlines it needs.
@@ -303,6 +308,7 @@ $builtin_logger_initialize()
                                       "    )                                                  \n"
                                       "  }                                                    \n"
                                       "}                                                      \n",
+                                      optional_extension,
                                       func_decorator,
                                       current_counter,
                                       wrapped_expr_text.GetData(),
@@ -1416,6 +1422,11 @@ SwiftASTManipulator::AddExternalVariables (llvm::MutableArrayRef<VariableInfo> v
             
             swift::PatternBindingDecl *pattern_binding = GetPatternBindingForVarDecl(redirected_var_decl, containing_function);
             
+            if (var_type->getAs<swift::WeakStorageType>())
+            {
+                redirected_var_decl->getAttrs().add(new (ast_context) swift::OwnershipAttr(swift::SourceRange(), swift::Ownership::Weak));
+            }
+            
             if (is_self)
             {
                 // we need to inject into the wrapper
@@ -1583,3 +1594,88 @@ SwiftASTManipulator::MakeGlobalTypealias(swift::Identifier name, CompilerType &t
     
     return type_alias_decl;
 }
+
+SwiftASTManipulator::TypesForResultFixup
+SwiftASTManipulator::GetTypesForResultFixup(uint32_t language_flags)
+{
+    TypesForResultFixup ret;
+    
+    for (swift::Decl *decl : m_source_file.Decls)
+    {
+        if (auto extension_decl = llvm::dyn_cast<swift::ExtensionDecl>(decl))
+        {
+            if (language_flags & SwiftUserExpression::eLanguageFlagIsWeakSelf)
+            {
+                if (extension_decl->getGenericParams() &&
+                    extension_decl->getGenericParams()->getParams().size() == 1)
+                {
+                    swift::GenericTypeParamDecl *type_parameter = extension_decl->getGenericParams()->getParams()[0];
+                    swift::NameAliasType *name_alias_type = llvm::dyn_cast_or_null<swift::NameAliasType>(type_parameter->getSuperclass().getPointer());
+                    
+                    if (name_alias_type)
+                    {
+                        ret.Wrapper_archetype = type_parameter->getArchetype();
+                        ret.context_alias = name_alias_type;
+                        ret.context_real = name_alias_type->getSinglyDesugaredType();
+                    }
+                }
+            }
+            else if (!ret.context_alias)
+            {
+                swift::NameAliasType *name_alias_type = llvm::dyn_cast<swift::NameAliasType>(extension_decl->getExtendedType().getPointer());
+
+                if (name_alias_type)
+                {
+                    ret.context_alias = name_alias_type;
+                    ret.context_real = name_alias_type->getSinglyDesugaredType();
+                }
+            }
+        }
+    }
+    
+    return ret;
+}
+
+static swift::Type ReplaceInType(swift::Type orig,
+                                 swift::TypeBase *from,
+                                 swift::TypeBase *to)
+{
+    std::function <swift::Type (swift::Type)> Replacer = [from, to](swift::Type orig_type)
+    {
+        if (orig_type.getPointer() == from)
+        {
+            return swift::Type(to);
+        }
+        else
+        {
+            return orig_type;
+        }
+    };
+    
+    return orig.transform(Replacer);
+}
+
+swift::Type
+SwiftASTManipulator::FixupResultType(swift::Type &result_type,
+                                     uint32_t language_flags)
+{
+    TypesForResultFixup result_fixup_types = GetTypesForResultFixup(language_flags);
+    
+    if (result_fixup_types.Wrapper_archetype && result_fixup_types.context_real)
+    {
+        result_type = ReplaceInType(result_type, result_fixup_types.Wrapper_archetype, result_fixup_types.context_real);
+    }
+    
+    if (result_fixup_types.context_alias && result_fixup_types.context_real)
+    {
+        // This is what we ought to do, but the printing logic doesn't handle the resulting types properly yet.
+        // result_type = ReplaceInType(result_type, result_fixup_types.context_alias, result_fixup_types.context_real);
+        if (result_type.getPointer() == result_fixup_types.context_alias)
+        {
+            result_type = result_fixup_types.context_alias->getSinglyDesugaredType();
+        }
+    }
+   
+    return result_type;
+}
+

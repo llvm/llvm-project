@@ -57,11 +57,9 @@ public:
     uint32_t
     GetNumBodyLines ();
 
-    bool GetText (std::string &text, 
-                  lldb::LanguageType wrapping_language, 
-                  bool swift_instance_method,
-                  bool static_method,
-                  bool is_swift_class,
+    bool GetText (std::string &text,
+                  lldb::LanguageType wrapping_language,
+                  uint32_t language_flags,
                   const EvaluateExpressionOptions &options,
                   const Expression::SwiftGenericInfo &generic_info,
                   ExecutionContext &exe_ctx,

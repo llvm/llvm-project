@@ -42,6 +42,13 @@ class SwiftUserExpression : public LLVMUserExpression
 public:
     enum { kDefaultTimeout = 500000u };
     
+    enum {
+        eLanguageFlagNeedsObjectPointer = 1 << 0,
+        eLanguageFlagInStaticMethod     = 1 << 1,
+        eLanguageFlagIsClass            = 1 << 2,
+        eLanguageFlagIsWeakSelf         = 1 << 3
+    };
+    
     class SwiftUserExpressionHelper : public ExpressionTypeSystemHelper
     {
     public:

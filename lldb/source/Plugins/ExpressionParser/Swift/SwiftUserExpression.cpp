@@ -109,8 +109,8 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
 
     if (frame_is_swift)
     {
-        m_is_swift_class = false;
-        m_needs_object_ptr = false;
+        m_language_flags &= ~eLanguageFlagIsClass;
+        m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
 
         // we need to make sure the Target's SwiftASTContext has been setup BEFORE we do any Swift name lookups
         if (m_target)
@@ -197,7 +197,7 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                     // Check to see if we are in a class func of a class (or static func of a struct) and adjust our
                     // self_type to point to the instance type.
 
-                    m_needs_object_ptr = true;
+                    m_language_flags |= eLanguageFlagNeedsObjectPointer;
                     
                     Flags self_type_flags(self_type.GetTypeInfo());
 
@@ -206,14 +206,14 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                         self_type = self_type.GetInstanceType();
                         self_type_flags = self_type.GetTypeInfo();
                         if (self_type_flags.Test(lldb::eTypeIsClass))
-                            m_is_swift_class = true;
-                        m_in_static_method = true;
+                            m_language_flags |= eLanguageFlagIsClass;
+                        m_language_flags |= eLanguageFlagInStaticMethod;
                     }
 
                     if (self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeInstanceIsPointer))
                     {
                         if (self_type_flags.Test(lldb::eTypeIsClass))
-                            m_is_swift_class = true;
+                            m_language_flags |= eLanguageFlagIsClass;
                     }
 
                     swift::Type object_type = swift::Type((swift::TypeBase*)(self_type.GetOpaqueQualType()))->getLValueOrInOutObjectType();
@@ -223,17 +223,26 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
 
                     if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsEnumeration | lldb::eTypeIsGeneric))
                     {
-                        // Optional<T> is not something we can extend.
-                        m_needs_object_ptr = false;
-                        self_var_sp.reset();
-                        break;
+                        // Optional<T> means a weak 'self.'  Make sure this really is Optional<T>
+                        if (self_type.GetTypeName().GetStringRef().startswith("Swift.Optional<"))
+                        {
+                            m_language_flags |= eLanguageFlagIsClass;
+                            m_language_flags |= eLanguageFlagIsWeakSelf;
+                        }
+                        else
+                        {
+                            // Something else is going on that we don't handle.
+                            m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
+                            self_var_sp.reset();
+                            break;
+                        }
                     }
 
                     if (Flags(self_type.GetTypeInfo()).AllSet(lldb::eTypeIsSwift | lldb::eTypeIsStructUnion | lldb::eTypeIsGeneric) &&
                         self_type_flags.AllSet(lldb::eTypeIsSwift | lldb::eTypeIsReference | lldb::eTypeHasValue))
                     {
                         // We can't extend generic structs when "self" is mutating at the moment.
-                        m_needs_object_ptr = false;
+                        m_language_flags &= ~eLanguageFlagNeedsObjectPointer;
                         self_var_sp.reset();
                         break;
                     }
@@ -428,9 +437,7 @@ SwiftUserExpression::Parse (DiagnosticManager &diagnostic_manager,
 
     if (!source_code->GetText(m_transformed_text,
                               lang_type,
-                              m_needs_object_ptr,
-                              m_in_static_method,
-                              m_is_swift_class,
+                              m_language_flags,
                               m_options,
                               m_swift_generic_info,
                               exe_ctx,
@@ -612,7 +619,7 @@ SwiftUserExpression::AddArguments (ExecutionContext &exe_ctx,
 {
     lldb::addr_t object_ptr = LLDB_INVALID_ADDRESS;
     
-    if (m_needs_object_ptr)
+    if (m_language_flags & eLanguageFlagNeedsObjectPointer)
     {
         lldb::StackFrameSP frame_sp = exe_ctx.GetFrameSP();
         if (!frame_sp)

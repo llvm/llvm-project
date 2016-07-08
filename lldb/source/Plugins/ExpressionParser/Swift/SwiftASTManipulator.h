@@ -144,9 +144,7 @@ public:
     static void
     WrapExpression (Stream &wrapped_stream,
                     const char *text,
-                    bool instance_method,
-                    bool static_method,
-                    bool is_swift_class,
+                    uint32_t language_flags,
                     const EvaluateExpressionOptions &options,
                     const Expression::SwiftGenericInfo &generic_info,
                     uint32_t &first_body_line);
@@ -170,7 +168,10 @@ public:
     bool FixCaptures ();
     
     swift::ValueDecl *MakeGlobalTypealias(swift::Identifier name, CompilerType &type, bool make_private = true);
-
+    
+    swift::Type FixupResultType(swift::Type &result_type,
+                                uint32_t language_flags);
+    
     bool FixupResultAfterTypeChecking (Error &error);
 
     static const char *GetArgumentName() { return "$__lldb_arg"; }
@@ -223,6 +224,14 @@ private:
     InsertError (swift::VarDecl *error_var,
                  swift::Type &error_type);
 
+    struct TypesForResultFixup
+    {
+        swift::ArchetypeType    *Wrapper_archetype = nullptr;
+        swift::NameAliasType    *context_alias = nullptr;
+        swift::TypeBase         *context_real = nullptr;
+    };
+    
+    TypesForResultFixup GetTypesForResultFixup(uint32_t language_flags);
 
     std::vector<ResultLocationInfo> m_result_info;
 };
