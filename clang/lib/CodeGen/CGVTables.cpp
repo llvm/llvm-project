@@ -328,8 +328,6 @@ void CodeGenFunction::EmitCallAndReturnForThunk(llvm::Value *Callee,
   // Consider return adjustment if we have ThunkInfo.
   if (Thunk && !Thunk->Return.isEmpty())
     RV = PerformReturnAdjustment(*this, ResultType, RV, *Thunk);
-  else if (llvm::CallInst* Call = dyn_cast<llvm::CallInst>(CallOrInvoke))
-    Call->setTailCallKind(llvm::CallInst::TCK_Tail);
 
   // Emit return.
   if (!ResultType->isVoidType() && Slot.isNull())
