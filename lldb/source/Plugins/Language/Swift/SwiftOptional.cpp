@@ -86,6 +86,8 @@ ExtractSomeIfAny (ValueObject *optional,
                     value_sp = PointerOrSP(ValueObject::CreateValueObjectFromData(value_sp->GetName().AsCString(), extractor, exe_ctx, value_type));
                     if (!value_sp)
                         return nullptr;
+                    else
+                        value_sp->SetSyntheticChildrenGenerated(true);
                 }
             }
         }
@@ -214,7 +216,10 @@ lldb_private::formatters::swift::SwiftOptionalSyntheticFrontEnd::GetChildAtIndex
 {
     if (IsEmpty())
         return nullptr;
-    return m_some->GetChildAtIndex(idx, true);
+    auto child = m_some->GetChildAtIndex(idx, true);
+    if (m_some->IsSyntheticChildrenGenerated())
+        child->SetSyntheticChildrenGenerated(true);
+    return child;
 }
 
 bool
