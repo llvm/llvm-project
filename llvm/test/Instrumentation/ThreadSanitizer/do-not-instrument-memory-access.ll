@@ -12,6 +12,7 @@ target triple = "x86_64-apple-macosx10.9"
 @__profc_test_bitcast_foo = private global [1 x i64] zeroinitializer, section "__DATA,__llvm_prf_cnts", align 8
 
 @__llvm_gcov_ctr = internal global [1 x i64] zeroinitializer
+@__llvm_gcov_ctr.1 = internal global [1 x i64] zeroinitializer
 
 define i32 @test_gep() sanitize_thread {
 entry:
@@ -22,6 +23,10 @@ entry:
   %gcovcount = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0)
   %1 = add i64 %gcovcount, 1
   store i64 %1, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr, i64 0, i64 0)
+
+  %gcovcount.1 = load i64, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr.1, i64 0, i64 0)
+  %2 = add i64 %gcovcount.1, 1
+  store i64 %2, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @__llvm_gcov_ctr.1, i64 0, i64 0)
 
   ret i32 1
 }
