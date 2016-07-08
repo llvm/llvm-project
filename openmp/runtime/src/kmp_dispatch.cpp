@@ -180,6 +180,12 @@ struct dispatch_shared_info_template {
     kmp_uint32             *doacross_flags;    // array of iteration flags (0/1)
     kmp_int32               doacross_num_done; // count finished threads
 #endif
+#if KMP_USE_HWLOC
+    // When linking with libhwloc, the ORDERED EPCC test slowsdown on big
+    // machines (> 48 cores). Performance analysis showed that a cache thrash
+    // was occurring and this padding helps alleviate the problem.
+    char padding[64];
+#endif
 };
 
 /* ------------------------------------------------------------------------ */

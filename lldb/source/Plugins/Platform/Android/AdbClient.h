@@ -119,6 +119,9 @@ public:
     Error
     Shell (const char* command, uint32_t timeout_ms, std::string* output);
 
+    Error
+    ShellToFile(const char *command, uint32_t timeout_ms, const FileSpec &output_file_spec);
+
     std::unique_ptr<SyncService>
     GetSyncService (Error &error);
 
@@ -157,7 +160,10 @@ private:
     StartSync ();
 
     Error
-    ReadAllBytes (void *buffer, size_t size);
+    internalShell(const char *command, uint32_t timeout_ms, std::vector<char> &output_buf);
+
+    Error
+    ReadAllBytes(void *buffer, size_t size);
 
     std::string m_device_id;
     std::unique_ptr<Connection> m_conn;

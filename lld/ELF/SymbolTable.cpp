@@ -186,6 +186,16 @@ static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
       return Default ? I : (I | VERSYM_HIDDEN);
     ++I;
   }
+
+  // If we are not building shared and version script
+  // is not specified, then it is not a error, it is
+  // in common not to use script for linking executables.
+  // In this case we just create new version.
+  if (!Config->Shared && !Config->HasVersionScript) {
+    Config->SymbolVersions.push_back(elf::Version(Version));
+    return Default ? I : (I | VERSYM_HIDDEN);
+  }
+
   error("symbol " + Name + " has undefined version " + Version);
   return 0;
 }

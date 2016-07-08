@@ -14,8 +14,8 @@ To install, simply put this into your ~/.vimrc
 IMPORTANT NOTE: Before running the tool, make sure you saved the file.
 
 All you have to do now is to place a cursor on a variable/function/class which
-you would like to rename and press ',cr'. You will be promted a new name if the
-cursor points to a valid symbol.
+you would like to rename and press ',cr'. You will be prompted for a new name if
+the cursor points to a valid symbol.
 '''
 
 import vim

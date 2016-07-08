@@ -4,6 +4,7 @@ set(LLVM_LINK_COMPONENTS
 
 add_clang_library(clangIncludeFixer
   IncludeFixer.cpp
+  IncludeFixerContext.cpp
   InMemorySymbolIndex.cpp
   SymbolIndexManager.cpp
   YamlSymbolIndex.cpp

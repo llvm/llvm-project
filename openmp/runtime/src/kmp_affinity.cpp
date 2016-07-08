@@ -227,6 +227,8 @@ __kmp_affinity_assign_child_nums(AddrUnsPair *address2os,
             address2os[i].first.childNums[labCt] = 0;
         }
     }
+    __kmp_free(lastLabel);
+    __kmp_free(counts);
 }
 
 

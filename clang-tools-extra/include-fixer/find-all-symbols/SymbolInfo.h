@@ -57,6 +57,9 @@ public:
   /// \brief Get symbol name.
   llvm::StringRef getName() const { return Name; }
 
+  /// \brief Get the fully-qualified symbol name.
+  std::string getQualifiedName() const;
+
   /// \brief Get symbol type.
   SymbolKind getSymbolKind() const { return Type; }
 

@@ -12,6 +12,7 @@
 
 #include "Config.h"
 #include "Relocations.h"
+#include "Thunks.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -208,8 +209,8 @@ public:
 
   // Register thunk related to the symbol. When the section is written
   // to a mmap'ed file, target is requested to write an actual thunk code.
-  // Now thunks is supported for MIPS target only.
-  void addThunk(SymbolBody &Body);
+  // Now thunks is supported for MIPS and ARM target only.
+  void addThunk(const Thunk<ELFT> *T);
 
   // The offset of synthetic thunk code from beginning of this section.
   uint64_t getThunkOff() const;
@@ -230,7 +231,7 @@ private:
   // Used by ICF.
   uint64_t GroupId = 0;
 
-  llvm::TinyPtrVector<const SymbolBody *> Thunks;
+  llvm::TinyPtrVector<const Thunk<ELFT> *> Thunks;
 };
 
 // MIPS .reginfo section provides information on the registers used by the code

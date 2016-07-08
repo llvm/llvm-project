@@ -21,6 +21,7 @@ add_lld_library(lldELF
   SymbolTable.cpp
   Symbols.cpp
   Target.cpp
+  Thunks.cpp
   Writer.cpp
 
   LINK_COMPONENTS

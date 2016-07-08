@@ -88,6 +88,10 @@ class SourceManagerTestCase(TestBase):
             system([["ls"]])
             system([["ls", "hidden"]])
 
+        # Set source remapping with invalid replace path and verify we get an error
+        self.expect("settings set target.source-map /a/b/c/d/e /q/r/s/t/u", error=True,
+            substrs = ['''error: the replacement path doesn't exist: "/q/r/s/t/u"'''])
+        
         # Set target.source-map settings.
         self.runCmd("settings set target.source-map %s %s" % (os.getcwd(), os.path.join(os.getcwd(), "hidden")))
         # And verify that the settings work.

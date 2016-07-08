@@ -46,6 +46,7 @@
 #include "OutputSections.h"
 #include "SymbolTable.h"
 #include "Target.h"
+#include "Thunks.h"
 
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
@@ -276,14 +277,14 @@ template <class ELFT> static bool isAbsolute(const SymbolBody &Body) {
 
 static bool needsPlt(RelExpr Expr) {
   return Expr == R_PLT_PC || Expr == R_PPC_PLT_OPD || Expr == R_PLT ||
-         Expr == R_PLT_PAGE_PC;
+         Expr == R_PLT_PAGE_PC || Expr == R_THUNK_PLT_PC;
 }
 
 // True if this expression is of the form Sym - X, where X is a position in the
 // file (PC, or GOT for example).
 static bool isRelExpr(RelExpr Expr) {
   return Expr == R_PC || Expr == R_GOTREL || Expr == R_PAGE_PC ||
-         Expr == R_RELAX_GOT_PC;
+         Expr == R_RELAX_GOT_PC || Expr == R_THUNK_PC || Expr == R_THUNK_PLT_PC;
 }
 
 template <class ELFT>
@@ -293,7 +294,8 @@ static bool isStaticLinkTimeConstant(RelExpr E, uint32_t Type,
   if (E == R_SIZE || E == R_GOT_FROM_END || E == R_GOT_OFF ||
       E == R_MIPS_GOT_LOCAL_PAGE || E == R_MIPS_GOT_OFF || E == R_MIPS_TLSGD ||
       E == R_GOT_PAGE_PC || E == R_GOT_PC || E == R_PLT_PC || E == R_TLSGD_PC ||
-      E == R_TLSGD || E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE || E == R_HINT)
+      E == R_TLSGD || E == R_PPC_PLT_OPD || E == R_TLSDESC_PAGE ||
+      E == R_HINT || E == R_THUNK_PC || E == R_THUNK_PLT_PC)
     return true;
 
   // These never do, except if the entire file is position dependent or if
@@ -402,8 +404,6 @@ template <class ELFT>
 static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
                           bool IsWrite, RelExpr Expr, uint32_t Type,
                           const uint8_t *Data) {
-  if (Target->needsThunk(Type, File, Body))
-    return R_THUNK;
   bool Preemptible = isPreemptible(Body, Type);
   if (Body.isGnuIFunc()) {
     Expr = toPlt(Expr);
@@ -413,6 +413,7 @@ static RelExpr adjustExpr(const elf::ObjectFile<ELFT> &File, SymbolBody &Body,
     if (Expr == R_GOT_PC)
       Expr = Target->adjustRelaxExpr(Type, Data, Expr);
   }
+  Expr = Target->getThunkExpr(Expr, Type, File, Body);
 
   if (IsWrite || isStaticLinkTimeConstant<ELFT>(Expr, Type, Body))
     return Expr;
@@ -556,7 +557,8 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     if (Expr == R_HINT)
       continue;
 
-    if (needsPlt(Expr) || Expr == R_THUNK || refersToGotEntry(Expr) ||
+    if (needsPlt(Expr) || Expr == R_THUNK_ABS || Expr == R_THUNK_PC ||
+        Expr == R_THUNK_PLT_PC || refersToGotEntry(Expr) ||
         !isPreemptible(Body, Type)) {
       // If the relocation points to something in the file, we can process it.
       bool Constant = isStaticLinkTimeConstant<ELFT>(Expr, Type, Body);
@@ -600,14 +602,10 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
 
     // Some targets might require creation of thunks for relocations.
     // Now we support only MIPS which requires LA25 thunk to call PIC
-    // code from non-PIC one.
-    if (Expr == R_THUNK) {
-      if (!Body.hasThunk()) {
-        auto *Sec = cast<InputSection<ELFT>>(
-            cast<DefinedRegular<ELFT>>(&Body)->Section);
-        Sec->addThunk(Body);
-      }
-      continue;
+    // code from non-PIC one, and ARM which requires interworking.
+    if (Expr == R_THUNK_ABS || Expr == R_THUNK_PC || Expr == R_THUNK_PLT_PC) {
+      auto *Sec = cast<InputSection<ELFT>>(&C);
+      addThunk<ELFT>(Type, Body, *Sec);
     }
 
     // At this point we are done with the relocated position. Some relocations
