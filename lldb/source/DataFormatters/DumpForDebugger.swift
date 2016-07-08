@@ -252,15 +252,15 @@ func $__lldb__DumpForDebugger_impl<StreamType: Swift.OutputStream>(
 }
 
 func $__lldb__DumpForDebugger(_ x: Swift.Any) -> Swift.String {
-    class Output : Swift.OutputStream {
+    struct Output : Swift.OutputStream {
         var data = ""
-        func _lock() {
+        mutating func _lock() {
         }
         
-        func _unlock() {
+        mutating func _unlock() {
         }
         
-        func write(_ string: Swift.String) {
+        mutating func write(_ string: Swift.String) {
             data += string
         }
     }
