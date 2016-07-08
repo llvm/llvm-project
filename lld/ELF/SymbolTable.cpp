@@ -242,9 +242,11 @@ SymbolTable<ELFT>::insert(StringRef Name, uint8_t Type, uint8_t Visibility,
 template <typename ELFT>
 std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
                                            InputFile *NewFile) {
-  StringRef Sym = Existing->getName();
-  return demangle(Sym) + " in " + getFilename(Existing->getSourceFile<ELFT>()) +
-         " and " + getFilename(NewFile);
+  std::string Sym = Existing->getName();
+  if (Config->Demangle)
+    Sym = demangle(Sym);
+  return Sym + " in " + getFilename(Existing->getSourceFile<ELFT>()) + " and " +
+         getFilename(NewFile);
 }
 
 template <class ELFT> Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name) {

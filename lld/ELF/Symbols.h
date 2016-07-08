@@ -36,11 +36,6 @@ template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class SharedFile;
 
-// Returns a demangled C++ symbol name. If Name is not a mangled
-// name or the system does not provide __cxa_demangle function,
-// it returns the unmodified string.
-std::string demangle(StringRef Name);
-
 struct Symbol;
 
 // The base class for real symbol classes.

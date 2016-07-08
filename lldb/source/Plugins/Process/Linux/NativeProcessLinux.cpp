@@ -561,6 +561,18 @@ NativeProcessLinux::ChildFunc(const LaunchArgs &args)
     // Execute.  We should never return...
     execve(args.m_argv[0], const_cast<char *const *>(args.m_argv), const_cast<char *const *>(envp));
 
+    if (errno == ETXTBSY)
+    {
+        // On android M and earlier we can get this error because the adb deamon can hold a write
+        // handle on the executable even after it has finished uploading it. This state lasts
+        // only a short time and happens only when there are many concurrent adb commands being
+        // issued, such as when running the test suite. (The file remains open when someone does
+        // an "adb shell" command in the fork() child before it has had a chance to exec.) Since
+        // this state should clear up quickly, wait a while and then give it one more go.
+        usleep(10000);
+        execve(args.m_argv[0], const_cast<char *const *>(args.m_argv), const_cast<char *const *>(envp));
+    }
+
     // ...unless exec fails.  In which case we definitely need to end the child here.
     ExitChildAbnormally(eExecFailed);
 }

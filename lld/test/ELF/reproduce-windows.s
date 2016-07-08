@@ -1,6 +1,6 @@
-# REQUIRES: x86, system-windows
+# REQUIRES: x86
 
-# Test that we can create a repro archive on windows.
+# Test that a repro archive always uses / instead of \.
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir/build
 # RUN: llvm-mc %s -o %t.dir/build/foo.o -filetype=obj -triple=x86_64-pc-linux

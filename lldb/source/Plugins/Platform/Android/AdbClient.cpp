@@ -25,6 +25,7 @@
 
 #include <limits.h>
 
+#include <cstdlib>
 #include <algorithm>
 #include <fstream>
 #include <sstream>
@@ -99,19 +100,24 @@ AdbClient::CreateByDeviceID(const std::string &device_id, AdbClient &adb)
     if (error.Fail())
         return error;
 
-    if (device_id.empty())
+    std::string android_serial;
+    if (!device_id.empty())
+        android_serial = device_id;
+    else if (const char *env_serial = std::getenv("ANDROID_SERIAL"))
+        android_serial = env_serial;
+
+    if (android_serial.empty())
     {
         if (connect_devices.size() != 1)
-            return Error("Expected a single connected device, got instead %" PRIu64,
-                    static_cast<uint64_t>(connect_devices.size()));
-
+            return Error("Expected a single connected device, got instead %zu - try setting 'ANDROID_SERIAL'",
+                         connect_devices.size());
         adb.SetDeviceID(connect_devices.front());
     }
     else
     {
-        auto find_it = std::find(connect_devices.begin(), connect_devices.end(), device_id);
+        auto find_it = std::find(connect_devices.begin(), connect_devices.end(), android_serial);
         if (find_it == connect_devices.end())
-            return Error("Device \"%s\" not found", device_id.c_str());
+            return Error("Device \"%s\" not found", android_serial.c_str());
 
         adb.SetDeviceID(*find_it);
     }

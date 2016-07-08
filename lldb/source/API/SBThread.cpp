@@ -1249,6 +1249,31 @@ SBThread::ReturnFromFrame (SBFrame &frame, SBValue &return_value)
     return sb_error;
 }
 
+SBError
+SBThread::UnwindInnermostExpression()
+{
+    SBError sb_error;
+
+    Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
+
+    std::unique_lock<std::recursive_mutex> lock;
+    ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+
+    if (log)
+        log->Printf ("SBThread(%p)::UnwindExpressionEvaluation",
+                     static_cast<void*>(exe_ctx.GetThreadPtr()));
+
+    if (exe_ctx.HasThreadScope())
+    {
+        Thread *thread = exe_ctx.GetThreadPtr();
+        sb_error.SetError (thread->UnwindInnermostExpression());
+        if (sb_error.Success())
+            thread->SetSelectedFrameByIndex(0, false);
+    }
+
+    return sb_error;
+
+}
 
 bool
 SBThread::Suspend()
