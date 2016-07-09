@@ -89,13 +89,12 @@ static void ImposeStackOrdering(MachineInstr *MI) {
 // Determine whether a call to the callee referenced by
 // MI->getOperand(CalleeOpNo) reads memory, writes memory, and/or has side
 // effects.
-static void QueryCallee(const MachineInstr *MI, unsigned CalleeOpNo,
-                        bool &Read, bool &Write, bool &Effects,
-                        bool &StackPointer) {
+static void QueryCallee(const MachineInstr &MI, unsigned CalleeOpNo, bool &Read,
+                        bool &Write, bool &Effects, bool &StackPointer) {
   // All calls can use the stack pointer.
   StackPointer = true;
 
-  const MachineOperand &MO = MI->getOperand(CalleeOpNo);
+  const MachineOperand &MO = MI.getOperand(CalleeOpNo);
   if (MO.isGlobal()) {
     const Constant *GV = MO.getGlobal();
     if (const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV))
@@ -122,24 +121,24 @@ static void QueryCallee(const MachineInstr *MI, unsigned CalleeOpNo,
 
 // Determine whether MI reads memory, writes memory, has side effects,
 // and/or uses the __stack_pointer value.
-static void Query(const MachineInstr *MI, AliasAnalysis &AA,
-                  bool &Read, bool &Write, bool &Effects, bool &StackPointer) {
-  assert(!MI->isPosition());
-  assert(!MI->isTerminator());
+static void Query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
+                  bool &Write, bool &Effects, bool &StackPointer) {
+  assert(!MI.isPosition());
+  assert(!MI.isTerminator());
 
-  if (MI->isDebugValue())
+  if (MI.isDebugValue())
     return;
 
   // Check for loads.
-  if (MI->mayLoad() && !MI->isInvariantLoad(&AA))
+  if (MI.mayLoad() && !MI.isInvariantLoad(&AA))
     Read = true;
 
   // Check for stores.
-  if (MI->mayStore()) {
+  if (MI.mayStore()) {
     Write = true;
 
     // Check for stores to __stack_pointer.
-    for (auto MMO : MI->memoperands()) {
+    for (auto MMO : MI.memoperands()) {
       const MachinePointerInfo &MPI = MMO->getPointerInfo();
       if (MPI.V.is<const PseudoSourceValue *>()) {
         auto PSV = MPI.V.get<const PseudoSourceValue *>();
@@ -149,8 +148,8 @@ static void Query(const MachineInstr *MI, AliasAnalysis &AA,
             StackPointer = true;
       }
     }
-  } else if (MI->hasOrderedMemoryRef()) {
-    switch (MI->getOpcode()) {
+  } else if (MI.hasOrderedMemoryRef()) {
+    switch (MI.getOpcode()) {
     case WebAssembly::DIV_S_I32: case WebAssembly::DIV_S_I64:
     case WebAssembly::REM_S_I32: case WebAssembly::REM_S_I64:
     case WebAssembly::DIV_U_I32: case WebAssembly::DIV_U_I64:
@@ -167,7 +166,7 @@ static void Query(const MachineInstr *MI, AliasAnalysis &AA,
     default:
       // Record volatile accesses, unless it's a call, as calls are handled
       // specially below.
-      if (!MI->isCall()) {
+      if (!MI.isCall()) {
         Write = true;
         Effects = true;
       }
@@ -176,8 +175,8 @@ static void Query(const MachineInstr *MI, AliasAnalysis &AA,
   }
 
   // Check for side effects.
-  if (MI->hasUnmodeledSideEffects()) {
-    switch (MI->getOpcode()) {
+  if (MI.hasUnmodeledSideEffects()) {
+    switch (MI.getOpcode()) {
     case WebAssembly::DIV_S_I32: case WebAssembly::DIV_S_I64:
     case WebAssembly::REM_S_I32: case WebAssembly::REM_S_I64:
     case WebAssembly::DIV_U_I32: case WebAssembly::DIV_U_I64:
@@ -198,8 +197,8 @@ static void Query(const MachineInstr *MI, AliasAnalysis &AA,
   }
 
   // Analyze calls.
-  if (MI->isCall()) {
-    switch (MI->getOpcode()) {
+  if (MI.isCall()) {
+    switch (MI.getOpcode()) {
     case WebAssembly::CALL_VOID:
     case WebAssembly::CALL_INDIRECT_VOID:
       QueryCallee(MI, 0, Read, Write, Effects, StackPointer);
@@ -320,7 +319,7 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
   }
 
   bool Read = false, Write = false, Effects = false, StackPointer = false;
-  Query(Def, AA, Read, Write, Effects, StackPointer);
+  Query(*Def, AA, Read, Write, Effects, StackPointer);
 
   // If the instruction does not access memory and has no side effects, it has
   // no additional dependencies.
@@ -334,7 +333,7 @@ static bool IsSafeToMove(const MachineInstr *Def, const MachineInstr *Insert,
     bool InterveningWrite = false;
     bool InterveningEffects = false;
     bool InterveningStackPointer = false;
-    Query(I, AA, InterveningRead, InterveningWrite, InterveningEffects,
+    Query(*I, AA, InterveningRead, InterveningWrite, InterveningEffects,
           InterveningStackPointer);
     if (Effects && InterveningEffects)
       return false;

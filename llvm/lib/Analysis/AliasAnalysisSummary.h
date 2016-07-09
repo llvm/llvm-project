@@ -36,6 +36,7 @@
 #define LLVM_ANALYSIS_ALIASANALYSISSUMMARY_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallSite.h"
 #include <bitset>
 
@@ -96,6 +97,9 @@ AliasAttrs getExternallyVisibleAttrs(AliasAttrs);
 // Function summary related stuffs
 //===----------------------------------------------------------------------===//
 
+/// The maximum number of arguments we can put into a summary.
+LLVM_CONSTEXPR static unsigned MaxSupportedArgsInSummary = 50;
+
 /// We use InterfaceValue to describe parameters/return value, as well as
 /// potential memory locations that are pointed to by parameters/return value,
 /// of a function.
@@ -127,6 +131,15 @@ struct ExternalRelation {
 struct ExternalAttribute {
   InterfaceValue IValue;
   AliasAttrs Attr;
+};
+
+/// AliasSummary is just a collection of ExternalRelation and ExternalAttribute
+struct AliasSummary {
+  // RetParamRelations is a collection of ExternalRelations.
+  SmallVector<ExternalRelation, 8> RetParamRelations;
+
+  // RetParamAttributes is a collection of ExternalAttributes.
+  SmallVector<ExternalAttribute, 8> RetParamAttributes;
 };
 
 /// This is the result of instantiating InterfaceValue at a particular callsite

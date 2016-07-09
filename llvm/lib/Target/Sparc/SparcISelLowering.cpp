@@ -32,7 +32,6 @@
 #include "llvm/Support/ErrorHandling.h"
 using namespace llvm;
 
-
 //===----------------------------------------------------------------------===//
 // Calling Convention Implementation
 //===----------------------------------------------------------------------===//
@@ -1636,9 +1635,7 @@ SparcTargetLowering::SparcTargetLowering(const TargetMachine &TM,
   // Atomics are supported on SparcV9. 32-bit atomics are also
   // supported by some Leon SparcV8 variants. Otherwise, atomics
   // are unsupported.
-  if (Subtarget->isV9())
-    setMaxAtomicSizeInBitsSupported(64);
-  else if (Subtarget->hasLeonCasa())
+  if (Subtarget->isV9() || Subtarget->hasLeonCasa())
     setMaxAtomicSizeInBitsSupported(64);
   else
     setMaxAtomicSizeInBitsSupported(0);
@@ -2663,7 +2660,6 @@ static SDValue LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG,
   uint64_t depth = Op.getConstantOperandVal(0);
 
   return getFRAMEADDR(depth, Op, DAG, Subtarget);
-
 }
 
 static SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG,
@@ -3094,7 +3090,7 @@ MachineBasicBlock *
 SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
-  default: llvm_unreachable("Unknown SELECT_CC!");
+  default: llvm_unreachable("Unknown Custom Instruction!");
   case SP::SELECT_CC_Int_ICC:
   case SP::SELECT_CC_FP_ICC:
   case SP::SELECT_CC_DFP_ICC:
@@ -3111,7 +3107,6 @@ SparcTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case SP::EH_SJLJ_LONGJMP32rr:
   case SP::EH_SJLJ_LONGJMP32ri:
     return emitEHSjLjLongJmp(MI, BB);
-
   }
 }
 
@@ -3382,8 +3377,11 @@ SparcTargetLowering::ConstraintType
 SparcTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
-    default:  break;
-    case 'r': return C_RegisterClass;
+    default:
+      break;
+    case 'f':
+    case 'r':
+      return C_RegisterClass;
     case 'I': // SIMM13
       return C_Other;
     }
@@ -3457,6 +3455,9 @@ SparcTargetLowering::getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
                                                   MVT VT) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
+    case 'f':
+      return std::make_pair(0U, &SP::FPRegsRegClass);
+
     case 'r':
       if (VT == MVT::v2i32)
         return std::make_pair(0U, &SP::IntPairRegClass);

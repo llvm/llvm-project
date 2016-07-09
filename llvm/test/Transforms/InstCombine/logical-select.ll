@@ -262,6 +262,31 @@ define <2 x i64> @bitcast_select_swap7(<4 x i1> %cmp, <2 x double> %a, <2 x doub
   ret <2 x i64> %or
 }
 
+define <2 x i64> @bitcast_select_multi_uses(<4 x i1> %cmp, <2 x i64> %a, <2 x i64> %b) {
+; CHECK-LABEL: @bitcast_select_multi_uses(
+; CHECK-NEXT:    [[SEXT:%.*]] = sext <4 x i1> %cmp to <4 x i32>
+; CHECK-NEXT:    [[BC1:%.*]] = bitcast <4 x i32> [[SEXT]] to <2 x i64>
+; CHECK-NEXT:    [[AND1:%.*]] = and <2 x i64> [[BC1]], %a
+; CHECK-NEXT:    [[NEG:%.*]] = xor <4 x i32> [[SEXT]], <i32 -1, i32 -1, i32 -1, i32 -1>
+; CHECK-NEXT:    [[BC2:%.*]] = bitcast <4 x i32> [[NEG]] to <2 x i64>
+; CHECK-NEXT:    [[AND2:%.*]] = and <2 x i64> [[BC2]], %b
+; CHECK-NEXT:    [[OR:%.*]] = or <2 x i64> [[AND2]], [[AND1]]
+; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i64> [[AND2]], [[BC2]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i64> [[OR]], [[ADD]]
+; CHECK-NEXT:    ret <2 x i64> [[SUB]]
+;
+  %sext = sext <4 x i1> %cmp to <4 x i32>
+  %bc1 = bitcast <4 x i32> %sext to <2 x i64>
+  %and1 = and <2 x i64> %a, %bc1
+  %neg = xor <4 x i32> %sext, <i32 -1, i32 -1, i32 -1, i32 -1>
+  %bc2 = bitcast <4 x i32> %neg to <2 x i64>
+  %and2 = and <2 x i64> %b, %bc2
+  %or = or <2 x i64> %and2, %and1
+  %add = add <2 x i64> %and2, %bc2
+  %sub = sub <2 x i64> %or, %add
+  ret <2 x i64> %sub
+}
+
 define i1 @bools(i1 %a, i1 %b, i1 %c) {
 ; CHECK-LABEL: @bools(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 %c, i1 %b, i1 %a
@@ -272,6 +297,44 @@ define i1 @bools(i1 %a, i1 %b, i1 %c) {
   %and2 = and i1 %c, %b
   %or = or i1 %and1, %and2
   ret i1 %or
+}
+
+; Form a select if we know we can get replace 2 simple logic ops.
+
+define i1 @bools_multi_uses1(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @bools_multi_uses1(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 %c, true
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], %a
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 %c, i1 %b, i1 %a
+; CHECK-NEXT:    [[XOR:%.*]] = xor i1 [[TMP1]], [[AND1]]
+; CHECK-NEXT:    ret i1 [[XOR]]
+;
+  %not = xor i1 %c, -1
+  %and1 = and i1 %not, %a
+  %and2 = and i1 %c, %b
+  %or = or i1 %and1, %and2
+  %xor = xor i1 %or, %and1
+  ret i1 %xor
+}
+
+; Don't replace a cheap logic op with a potentially expensive select
+; unless we can also eliminate one of the other original ops.
+
+define i1 @bools_multi_uses2(i1 %a, i1 %b, i1 %c) {
+; CHECK-LABEL: @bools_multi_uses2(
+; CHECK-NEXT:    [[NOT:%.*]] = xor i1 %c, true
+; CHECK-NEXT:    [[AND1:%.*]] = and i1 [[NOT]], %a
+; CHECK-NEXT:    [[AND2:%.*]] = and i1 %c, %b
+; CHECK-NEXT:    [[ADD:%.*]] = xor i1 [[AND1]], [[AND2]]
+; CHECK-NEXT:    ret i1 [[ADD]]
+;
+  %not = xor i1 %c, -1
+  %and1 = and i1 %not, %a
+  %and2 = and i1 %c, %b
+  %or = or i1 %and1, %and2
+  %add = add i1 %and1, %and2
+  %and3 = and i1 %or, %add
+  ret i1 %and3
 }
 
 define <4 x i1> @vec_of_bools(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {

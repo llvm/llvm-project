@@ -29,6 +29,10 @@ namespace llvm {
 
 class TargetLibraryInfo;
 
+namespace cflaa {
+struct AliasSummary;
+}
+
 class CFLSteensAAResult : public AAResultBase<CFLSteensAAResult> {
   friend AAResultBase<CFLSteensAAResult>;
   class FunctionInfo;
@@ -51,6 +55,10 @@ public:
   /// \brief Ensures that the given function is available in the cache.
   /// Returns the appropriate entry from the cache.
   const Optional<FunctionInfo> &ensureCached(Function *Fn);
+
+  /// \brief Get the alias summary for the given function
+  /// Return nullptr if the summary is not found or not available
+  const cflaa::AliasSummary *getAliasSummary(Function &Fn);
 
   AliasResult query(const MemoryLocation &LocA, const MemoryLocation &LocB);
 

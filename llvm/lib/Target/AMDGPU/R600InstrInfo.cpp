@@ -665,9 +665,9 @@ findFirstPredicateSetterFrom(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator I) {
   while (I != MBB.begin()) {
     --I;
-    MachineInstr *MI = I;
-    if (isPredicateSetter(MI->getOpcode()))
-      return MI;
+    MachineInstr &MI = *I;
+    if (isPredicateSetter(MI.getOpcode()))
+      return &MI;
   }
 
   return nullptr;
@@ -711,21 +711,21 @@ R600InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
         I->removeFromParent();
       I = PriorI;
   }
-  MachineInstr *LastInst = I;
+  MachineInstr &LastInst = *I;
 
   // If there is only one terminator instruction, process it.
-  unsigned LastOpc = LastInst->getOpcode();
+  unsigned LastOpc = LastInst.getOpcode();
   if (I == MBB.begin() ||
           !isJump(static_cast<MachineInstr *>(--I)->getOpcode())) {
     if (LastOpc == AMDGPU::JUMP) {
-      TBB = LastInst->getOperand(0).getMBB();
+      TBB = LastInst.getOperand(0).getMBB();
       return false;
     } else if (LastOpc == AMDGPU::JUMP_COND) {
-      MachineInstr *predSet = I;
+      auto predSet = I;
       while (!isPredicateSetter(predSet->getOpcode())) {
         predSet = --I;
       }
-      TBB = LastInst->getOperand(0).getMBB();
+      TBB = LastInst.getOperand(0).getMBB();
       Cond.push_back(predSet->getOperand(1));
       Cond.push_back(predSet->getOperand(2));
       Cond.push_back(MachineOperand::CreateReg(AMDGPU::PRED_SEL_ONE, false));
@@ -735,17 +735,17 @@ R600InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   }
 
   // Get the instruction before it if it is a terminator.
-  MachineInstr *SecondLastInst = I;
-  unsigned SecondLastOpc = SecondLastInst->getOpcode();
+  MachineInstr &SecondLastInst = *I;
+  unsigned SecondLastOpc = SecondLastInst.getOpcode();
 
   // If the block ends with a B and a Bcc, handle it.
   if (SecondLastOpc == AMDGPU::JUMP_COND && LastOpc == AMDGPU::JUMP) {
-    MachineInstr *predSet = --I;
+    auto predSet = --I;
     while (!isPredicateSetter(predSet->getOpcode())) {
       predSet = --I;
     }
-    TBB = SecondLastInst->getOperand(0).getMBB();
-    FBB = LastInst->getOperand(0).getMBB();
+    TBB = SecondLastInst.getOperand(0).getMBB();
+    FBB = LastInst.getOperand(0).getMBB();
     Cond.push_back(predSet->getOperand(1));
     Cond.push_back(predSet->getOperand(2));
     Cond.push_back(MachineOperand::CreateReg(AMDGPU::PRED_SEL_ONE, false));

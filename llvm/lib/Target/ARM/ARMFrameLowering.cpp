@@ -98,23 +98,22 @@ ARMFrameLowering::canSimplifyCallFramePseudos(const MachineFunction &MF) const {
   return hasReservedCallFrame(MF) || MF.getFrameInfo()->hasVarSizedObjects();
 }
 
-static bool isCSRestore(MachineInstr *MI,
-                        const ARMBaseInstrInfo &TII,
+static bool isCSRestore(MachineInstr &MI, const ARMBaseInstrInfo &TII,
                         const MCPhysReg *CSRegs) {
   // Integer spill area is handled with "pop".
-  if (isPopOpcode(MI->getOpcode())) {
+  if (isPopOpcode(MI.getOpcode())) {
     // The first two operands are predicates. The last two are
     // imp-def and imp-use of SP. Check everything in between.
-    for (int i = 5, e = MI->getNumOperands(); i != e; ++i)
-      if (!isCalleeSavedRegister(MI->getOperand(i).getReg(), CSRegs))
+    for (int i = 5, e = MI.getNumOperands(); i != e; ++i)
+      if (!isCalleeSavedRegister(MI.getOperand(i).getReg(), CSRegs))
         return false;
     return true;
   }
-  if ((MI->getOpcode() == ARM::LDR_POST_IMM ||
-       MI->getOpcode() == ARM::LDR_POST_REG ||
-       MI->getOpcode() == ARM::t2LDR_POST) &&
-      isCalleeSavedRegister(MI->getOperand(0).getReg(), CSRegs) &&
-      MI->getOperand(1).getReg() == ARM::SP)
+  if ((MI.getOpcode() == ARM::LDR_POST_IMM ||
+       MI.getOpcode() == ARM::LDR_POST_REG ||
+       MI.getOpcode() == ARM::t2LDR_POST) &&
+      isCalleeSavedRegister(MI.getOperand(0).getReg(), CSRegs) &&
+      MI.getOperand(1).getReg() == ARM::SP)
     return true;
 
   return false;
@@ -143,9 +142,9 @@ static void emitSPUpdate(bool isARM, MachineBasicBlock &MBB,
                        MIFlags, Pred, PredReg);
 }
 
-static int sizeOfSPAdjustment(const MachineInstr *MI) {
+static int sizeOfSPAdjustment(const MachineInstr &MI) {
   int RegSize;
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   case ARM::VSTMDDB_UPD:
     RegSize = 8;
     break;
@@ -163,7 +162,7 @@ static int sizeOfSPAdjustment(const MachineInstr *MI) {
   int count = 0;
   // ARM and Thumb2 push/pop insts have explicit "sp, sp" operands (+
   // pred) so the list starts at 4.
-  for (int i = MI->getNumOperands() - 1; i >= 4; --i)
+  for (int i = MI.getNumOperands() - 1; i >= 4; --i)
     count += RegSize;
   return count;
 }
@@ -415,7 +414,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // .cfi_offset operations will reflect that.
   if (DPRGapSize) {
     assert(DPRGapSize == 4 && "unexpected alignment requirements for DPRs");
-    if (tryFoldSPUpdateIntoPushPop(STI, MF, LastPush, DPRGapSize))
+    if (tryFoldSPUpdateIntoPushPop(STI, MF, &*LastPush, DPRGapSize))
       DefCFAOffsetCandidates.addExtraBytes(LastPush, DPRGapSize);
     else {
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, -DPRGapSize,
@@ -429,7 +428,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
     // Since vpush register list cannot have gaps, there may be multiple vpush
     // instructions in the prologue.
     while (MBBI->getOpcode() == ARM::VSTMDDB_UPD) {
-      DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(MBBI));
+      DefCFAOffsetCandidates.addInst(MBBI, sizeOfSPAdjustment(*MBBI));
       LastPush = MBBI++;
     }
   }
@@ -493,7 +492,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   if (NumBytes) {
     // Adjust SP after all the callee-save spills.
     if (AFI->getNumAlignedDPRCS2Regs() == 0 &&
-        tryFoldSPUpdateIntoPushPop(STI, MF, LastPush, NumBytes))
+        tryFoldSPUpdateIntoPushPop(STI, MF, &*LastPush, NumBytes))
       DefCFAOffsetCandidates.addExtraBytes(LastPush, NumBytes);
     else {
       emitSPUpdate(isARM, MBB, MBBI, dl, TII, -NumBytes,
@@ -521,7 +520,7 @@ void ARMFrameLowering::emitPrologue(MachineFunction &MF,
   // that push.
   if (HasFP) {
     MachineBasicBlock::iterator AfterPush = std::next(GPRCS1Push);
-    unsigned PushSize = sizeOfSPAdjustment(GPRCS1Push);
+    unsigned PushSize = sizeOfSPAdjustment(*GPRCS1Push);
     emitRegPlusImmediate(!AFI->isThumbFunction(), MBB, AfterPush,
                          dl, TII, FramePtr, ARM::SP,
                          PushSize + FramePtrOffsetInPush,
@@ -726,8 +725,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
     if (MBBI != MBB.begin()) {
       do {
         --MBBI;
-      } while (MBBI != MBB.begin() && isCSRestore(MBBI, TII, CSRegs));
-      if (!isCSRestore(MBBI, TII, CSRegs))
+      } while (MBBI != MBB.begin() && isCSRestore(*MBBI, TII, CSRegs));
+      if (!isCSRestore(*MBBI, TII, CSRegs))
         ++MBBI;
     }
 
@@ -773,8 +772,8 @@ void ARMFrameLowering::emitEpilogue(MachineFunction &MF,
             .addReg(FramePtr));
       }
     } else if (NumBytes &&
-               !tryFoldSPUpdateIntoPushPop(STI, MF, MBBI, NumBytes))
-        emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
+               !tryFoldSPUpdateIntoPushPop(STI, MF, &*MBBI, NumBytes))
+      emitSPUpdate(isARM, MBB, MBBI, dl, TII, NumBytes);
 
     // Increment past our save areas.
     if (AFI->getDPRCalleeSavedAreaSize()) {
@@ -1748,9 +1747,9 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
     // If we have alloca, convert as follows:
     // ADJCALLSTACKDOWN -> sub, sp, sp, amount
     // ADJCALLSTACKUP   -> add, sp, sp, amount
-    MachineInstr *Old = I;
-    DebugLoc dl = Old->getDebugLoc();
-    unsigned Amount = Old->getOperand(0).getImm();
+    MachineInstr &Old = *I;
+    DebugLoc dl = Old.getDebugLoc();
+    unsigned Amount = Old.getOperand(0).getImm();
     if (Amount != 0) {
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
@@ -1763,18 +1762,19 @@ MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
       bool isARM = !AFI->isThumbFunction();
 
       // Replace the pseudo instruction with a new instruction...
-      unsigned Opc = Old->getOpcode();
-      int PIdx = Old->findFirstPredOperandIdx();
-      ARMCC::CondCodes Pred = (PIdx == -1)
-        ? ARMCC::AL : (ARMCC::CondCodes)Old->getOperand(PIdx).getImm();
+      unsigned Opc = Old.getOpcode();
+      int PIdx = Old.findFirstPredOperandIdx();
+      ARMCC::CondCodes Pred =
+          (PIdx == -1) ? ARMCC::AL
+                       : (ARMCC::CondCodes)Old.getOperand(PIdx).getImm();
       if (Opc == ARM::ADJCALLSTACKDOWN || Opc == ARM::tADJCALLSTACKDOWN) {
         // Note: PredReg is operand 2 for ADJCALLSTACKDOWN.
-        unsigned PredReg = Old->getOperand(2).getReg();
+        unsigned PredReg = Old.getOperand(2).getReg();
         emitSPUpdate(isARM, MBB, I, dl, TII, -Amount, MachineInstr::NoFlags,
                      Pred, PredReg);
       } else {
         // Note: PredReg is operand 3 for ADJCALLSTACKUP.
-        unsigned PredReg = Old->getOperand(3).getReg();
+        unsigned PredReg = Old.getOperand(3).getReg();
         assert(Opc == ARM::ADJCALLSTACKUP || Opc == ARM::tADJCALLSTACKUP);
         emitSPUpdate(isARM, MBB, I, dl, TII, Amount, MachineInstr::NoFlags,
                      Pred, PredReg);

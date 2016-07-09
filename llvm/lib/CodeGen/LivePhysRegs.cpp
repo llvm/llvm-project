@@ -167,12 +167,13 @@ void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = *MF.getFrameInfo();
   if (MFI.isCalleeSavedInfoValid()) {
-    addPristines(*this, MF, MFI, *TRI);
     if (MBB.isReturnBlock()) {
       // The return block has no successors whose live-ins we could merge
       // below. So instead we add the callee saved registers manually.
       for (const MCPhysReg *I = TRI->getCalleeSavedRegs(&MF); *I; ++I)
         addReg(*I);
+    } else {
+      addPristines(*this, MF, MFI, *TRI);
     }
   }
 

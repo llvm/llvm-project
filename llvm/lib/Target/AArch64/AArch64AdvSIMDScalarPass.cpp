@@ -76,12 +76,12 @@ private:
   // isProfitableToTransform - Predicate function to determine whether an
   // instruction should be transformed to its equivalent AdvSIMD scalar
   // instruction. "add Xd, Xn, Xm" ==> "add Dd, Da, Db", for example.
-  bool isProfitableToTransform(const MachineInstr *MI) const;
+  bool isProfitableToTransform(const MachineInstr &MI) const;
 
   // transformInstruction - Perform the transformation of an instruction
   // to its equivalant AdvSIMD scalar instruction. Update inputs and outputs
   // to be the correct register class, minimizing cross-class copies.
-  void transformInstruction(MachineInstr *MI);
+  void transformInstruction(MachineInstr &MI);
 
   // processMachineBasicBlock - Main optimzation loop.
   bool processMachineBasicBlock(MachineBasicBlock *MBB);
@@ -189,16 +189,16 @@ static unsigned getTransformOpcode(unsigned Opc) {
   return Opc;
 }
 
-static bool isTransformable(const MachineInstr *MI) {
-  unsigned Opc = MI->getOpcode();
+static bool isTransformable(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
   return Opc != getTransformOpcode(Opc);
 }
 
 // isProfitableToTransform - Predicate function to determine whether an
 // instruction should be transformed to its equivalent AdvSIMD scalar
 // instruction. "add Xd, Xn, Xm" ==> "add Dd, Da, Db", for example.
-bool
-AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
+bool AArch64AdvSIMDScalar::isProfitableToTransform(
+    const MachineInstr &MI) const {
   // If this instruction isn't eligible to be transformed (no SIMD equivalent),
   // early exit since that's the common case.
   if (!isTransformable(MI))
@@ -209,8 +209,8 @@ AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
   unsigned NumNewCopies = 3;
   unsigned NumRemovableCopies = 0;
 
-  unsigned OrigSrc0 = MI->getOperand(1).getReg();
-  unsigned OrigSrc1 = MI->getOperand(2).getReg();
+  unsigned OrigSrc0 = MI.getOperand(1).getReg();
+  unsigned OrigSrc1 = MI.getOperand(2).getReg();
   unsigned SubReg0;
   unsigned SubReg1;
   if (!MRI->def_empty(OrigSrc0)) {
@@ -244,14 +244,14 @@ AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
   // any of the uses is a transformable instruction, it's likely the tranforms
   // will chain, enabling us to save a copy there, too. This is an aggressive
   // heuristic that approximates the graph based cost analysis described above.
-  unsigned Dst = MI->getOperand(0).getReg();
+  unsigned Dst = MI.getOperand(0).getReg();
   bool AllUsesAreCopies = true;
   for (MachineRegisterInfo::use_instr_nodbg_iterator
            Use = MRI->use_instr_nodbg_begin(Dst),
            E = MRI->use_instr_nodbg_end();
        Use != E; ++Use) {
     unsigned SubReg;
-    if (getSrcFromCopy(&*Use, MRI, SubReg) || isTransformable(&*Use))
+    if (getSrcFromCopy(&*Use, MRI, SubReg) || isTransformable(*Use))
       ++NumRemovableCopies;
     // If the use is an INSERT_SUBREG, that's still something that can
     // directly use the FPR64, so we don't invalidate AllUsesAreCopies. It's
@@ -279,12 +279,11 @@ AArch64AdvSIMDScalar::isProfitableToTransform(const MachineInstr *MI) const {
   return TransformAll;
 }
 
-static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr *MI,
+static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr &MI,
                                 unsigned Dst, unsigned Src, bool IsKill) {
-  MachineInstrBuilder MIB =
-      BuildMI(*MI->getParent(), MI, MI->getDebugLoc(), TII->get(AArch64::COPY),
-              Dst)
-          .addReg(Src, getKillRegState(IsKill));
+  MachineInstrBuilder MIB = BuildMI(*MI.getParent(), MI, MI.getDebugLoc(),
+                                    TII->get(AArch64::COPY), Dst)
+                                .addReg(Src, getKillRegState(IsKill));
   DEBUG(dbgs() << "    adding copy: " << *MIB);
   ++NumCopiesInserted;
   return MIB;
@@ -293,17 +292,17 @@ static MachineInstr *insertCopy(const TargetInstrInfo *TII, MachineInstr *MI,
 // transformInstruction - Perform the transformation of an instruction
 // to its equivalant AdvSIMD scalar instruction. Update inputs and outputs
 // to be the correct register class, minimizing cross-class copies.
-void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
-  DEBUG(dbgs() << "Scalar transform: " << *MI);
+void AArch64AdvSIMDScalar::transformInstruction(MachineInstr &MI) {
+  DEBUG(dbgs() << "Scalar transform: " << MI);
 
-  MachineBasicBlock *MBB = MI->getParent();
-  unsigned OldOpc = MI->getOpcode();
+  MachineBasicBlock *MBB = MI.getParent();
+  unsigned OldOpc = MI.getOpcode();
   unsigned NewOpc = getTransformOpcode(OldOpc);
   assert(OldOpc != NewOpc && "transform an instruction to itself?!");
 
   // Check if we need a copy for the source registers.
-  unsigned OrigSrc0 = MI->getOperand(1).getReg();
-  unsigned OrigSrc1 = MI->getOperand(2).getReg();
+  unsigned OrigSrc0 = MI.getOperand(1).getReg();
+  unsigned OrigSrc1 = MI.getOperand(2).getReg();
   unsigned Src0 = 0, SubReg0;
   unsigned Src1 = 0, SubReg1;
   bool KillSrc0 = false, KillSrc1 = false;
@@ -368,17 +367,17 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
   // For now, all of the new instructions have the same simple three-register
   // form, so no need to special case based on what instruction we're
   // building.
-  BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(NewOpc), Dst)
+  BuildMI(*MBB, MI, MI.getDebugLoc(), TII->get(NewOpc), Dst)
       .addReg(Src0, getKillRegState(KillSrc0), SubReg0)
       .addReg(Src1, getKillRegState(KillSrc1), SubReg1);
 
   // Now copy the result back out to a GPR.
   // FIXME: Try to avoid this if all uses could actually just use the FPR64
   // directly.
-  insertCopy(TII, MI, MI->getOperand(0).getReg(), Dst, true);
+  insertCopy(TII, MI, MI.getOperand(0).getReg(), Dst, true);
 
   // Erase the old instruction.
-  MI->eraseFromParent();
+  MI.eraseFromParent();
 
   ++NumScalarInsnsUsed;
 }
@@ -387,8 +386,7 @@ void AArch64AdvSIMDScalar::transformInstruction(MachineInstr *MI) {
 bool AArch64AdvSIMDScalar::processMachineBasicBlock(MachineBasicBlock *MBB) {
   bool Changed = false;
   for (MachineBasicBlock::iterator I = MBB->begin(), E = MBB->end(); I != E;) {
-    MachineInstr *MI = I;
-    ++I;
+    MachineInstr &MI = *I++;
     if (isProfitableToTransform(MI)) {
       transformInstruction(MI);
       Changed = true;

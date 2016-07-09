@@ -81,6 +81,7 @@ define <4 x i32> @fptosi_4f64_to_2i32(<2 x double> %a) {
 ;
 ; AVX-LABEL: fptosi_4f64_to_2i32:
 ; AVX:       # BB#0:
+; AVX-NEXT:    # kill
 ; AVX-NEXT:    vcvttpd2dqy %ymm0, %xmm0
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq

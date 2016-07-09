@@ -735,12 +735,12 @@ bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 /// querying the loop access info via LAA::getInfo.  getInfo return a
 /// LoopAccessInfo object.  See this class for the specifics of what information
 /// is provided.
-class LoopAccessAnalysis : public FunctionPass {
+class LoopAccessLegacyAnalysis : public FunctionPass {
 public:
   static char ID;
 
-  LoopAccessAnalysis() : FunctionPass(ID) {
-    initializeLoopAccessAnalysisPass(*PassRegistry::getPassRegistry());
+  LoopAccessLegacyAnalysis() : FunctionPass(ID) {
+    initializeLoopAccessLegacyAnalysisPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override;
@@ -772,16 +772,22 @@ private:
   LoopInfo *LI;
 };
 
-/// \brief LoopAccessInfoAnalysis
-class LoopAccessInfoAnalysis
-    : public AnalysisInfoMixin<LoopAccessInfoAnalysis> {
-  friend AnalysisInfoMixin<LoopAccessInfoAnalysis>;
+/// \brief This analysis provides dependence information for the memory
+/// accesses of a loop.
+///
+/// It runs the analysis for a loop on demand.  This can be initiated by
+/// querying the loop access info via AM.getResult<LoopAccessAnalysis>. 
+/// getResult return a LoopAccessInfo object.  See this class for the
+/// specifics of what information is provided.
+class LoopAccessAnalysis
+    : public AnalysisInfoMixin<LoopAccessAnalysis> {
+  friend AnalysisInfoMixin<LoopAccessAnalysis>;
   static char PassID;
 
 public:
   typedef LoopAccessInfo Result;
   Result run(Loop &, AnalysisManager<Loop> &);
-  static StringRef name() { return "LoopAccessInfoAnalysis"; }
+  static StringRef name() { return "LoopAccessAnalysis"; }
 };
 
 /// \brief Printer pass for the \c LoopAccessInfo results.

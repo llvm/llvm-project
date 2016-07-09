@@ -1455,14 +1455,13 @@ MachineInstr *SIInstrInfo::convertToThreeAddress(MachineFunction::iterator &MBB,
 bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
                                        const MachineBasicBlock *MBB,
                                        const MachineFunction &MF) const {
+  // XXX - Do we want the SP check in the base implementation?
+
   // Target-independent instructions do not have an implicit-use of EXEC, even
   // when they operate on VGPRs. Treating EXEC modifications as scheduling
   // boundaries prevents incorrect movements of such instructions.
-  const SIRegisterInfo *TRI = MF.getSubtarget<SISubtarget>().getRegisterInfo();
-  if (MI.modifiesRegister(AMDGPU::EXEC, TRI))
-    return true;
-
-  return AMDGPUInstrInfo::isSchedulingBoundary(MI, MBB, MF);
+  return TargetInstrInfo::isSchedulingBoundary(MI, MBB, MF) ||
+         MI.modifiesRegister(AMDGPU::EXEC, &RI);
 }
 
 bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
@@ -1713,7 +1712,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     if (RegClass != -1) {
       unsigned Reg = MI.getOperand(i).getReg();
-      if (TargetRegisterInfo::isVirtualRegister(Reg))
+      if (Reg == AMDGPU::NoRegister ||
+          TargetRegisterInfo::isVirtualRegister(Reg))
         continue;
 
       const TargetRegisterClass *RC = RI.getRegClass(RegClass);
@@ -2946,15 +2946,15 @@ void SIInstrInfo::addSCCDefUsersToVALUWorklist(
     MachineInstr &SCCDefInst, SmallVectorImpl<MachineInstr *> &Worklist) const {
   // This assumes that all the users of SCC are in the same block
   // as the SCC def.
-  for (MachineBasicBlock::iterator I = SCCDefInst,
-                                   E = SCCDefInst.getParent()->end();
-       I != E; ++I) {
+  for (MachineInstr &MI :
+       llvm::make_range(MachineBasicBlock::iterator(SCCDefInst),
+                        SCCDefInst.getParent()->end())) {
     // Exit if we find another SCC def.
-    if (I->findRegisterDefOperandIdx(AMDGPU::SCC) != -1)
+    if (MI.findRegisterDefOperandIdx(AMDGPU::SCC) != -1)
       return;
 
-    if (I->findRegisterUseOperandIdx(AMDGPU::SCC) != -1)
-      Worklist.push_back(I);
+    if (MI.findRegisterUseOperandIdx(AMDGPU::SCC) != -1)
+      Worklist.push_back(&MI);
   }
 }
 

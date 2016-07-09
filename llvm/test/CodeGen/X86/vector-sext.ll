@@ -786,6 +786,7 @@ define <2 x i64> @load_sext_2i1_to_2i64(<2 x i1> *%ptr) {
 ; AVX512-NEXT:    movzbl (%rdi), %eax
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_2i1_to_2i64:
@@ -967,6 +968,7 @@ define <4 x i32> @load_sext_4i1_to_4i32(<4 x i1> *%ptr) {
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_4i1_to_4i32:
@@ -1161,6 +1163,7 @@ define <4 x i64> @load_sext_4i1_to_4i64(<4 x i1> *%ptr) {
 ; AVX512-NEXT:    movzbl (%rdi), %eax
 ; AVX512-NEXT:    kmovw %eax, %k1
 ; AVX512-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; AVX512-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_4i1_to_4i64:

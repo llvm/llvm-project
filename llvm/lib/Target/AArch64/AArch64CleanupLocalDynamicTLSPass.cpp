@@ -72,9 +72,9 @@ struct LDTLSCleanup : public MachineFunctionPass {
           break;
 
         if (TLSBaseAddrReg)
-          I = replaceTLSBaseAddrCall(I, TLSBaseAddrReg);
+          I = replaceTLSBaseAddrCall(*I, TLSBaseAddrReg);
         else
-          I = setRegister(I, &TLSBaseAddrReg);
+          I = setRegister(*I, &TLSBaseAddrReg);
         Changed = true;
         break;
       default:
@@ -92,27 +92,27 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
   // Replace the TLS_base_addr instruction I with a copy from
   // TLSBaseAddrReg, returning the new instruction.
-  MachineInstr *replaceTLSBaseAddrCall(MachineInstr *I,
+  MachineInstr *replaceTLSBaseAddrCall(MachineInstr &I,
                                        unsigned TLSBaseAddrReg) {
-    MachineFunction *MF = I->getParent()->getParent();
+    MachineFunction *MF = I.getParent()->getParent();
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
     // Insert a Copy from TLSBaseAddrReg to x0, which is where the rest of the
     // code sequence assumes the address will be.
-    MachineInstr *Copy = BuildMI(*I->getParent(), I, I->getDebugLoc(),
-                                 TII->get(TargetOpcode::COPY),
-                                 AArch64::X0).addReg(TLSBaseAddrReg);
+    MachineInstr *Copy = BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                                 TII->get(TargetOpcode::COPY), AArch64::X0)
+                             .addReg(TLSBaseAddrReg);
 
     // Erase the TLS_base_addr instruction.
-    I->eraseFromParent();
+    I.eraseFromParent();
 
     return Copy;
   }
 
   // Create a virtal register in *TLSBaseAddrReg, and populate it by
   // inserting a copy instruction after I. Returns the new instruction.
-  MachineInstr *setRegister(MachineInstr *I, unsigned *TLSBaseAddrReg) {
-    MachineFunction *MF = I->getParent()->getParent();
+  MachineInstr *setRegister(MachineInstr &I, unsigned *TLSBaseAddrReg) {
+    MachineFunction *MF = I.getParent()->getParent();
     const TargetInstrInfo *TII = MF->getSubtarget().getInstrInfo();
 
     // Create a virtual register for the TLS base address.
@@ -121,7 +121,7 @@ struct LDTLSCleanup : public MachineFunctionPass {
 
     // Insert a copy from X0 to TLSBaseAddrReg for later.
     MachineInstr *Copy =
-        BuildMI(*I->getParent(), ++I->getIterator(), I->getDebugLoc(),
+        BuildMI(*I.getParent(), ++I.getIterator(), I.getDebugLoc(),
                 TII->get(TargetOpcode::COPY), *TLSBaseAddrReg)
             .addReg(AArch64::X0);
 

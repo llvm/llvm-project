@@ -139,8 +139,7 @@ define <2 x double> @combine_vpermilvar_2f64_identity(<2 x double> %a0) {
 define <2 x double> @combine_vpermilvar_2f64_movddup(<2 x double> %a0) {
 ; ALL-LABEL: combine_vpermilvar_2f64_movddup:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; ALL-NEXT:    vpermilpd %xmm1, %xmm0, %xmm0
+; ALL-NEXT:    vmovddup {{.*#+}} xmm0 = xmm0[0,0]
 ; ALL-NEXT:    retq
   %1 = tail call <2 x double> @llvm.x86.avx.vpermilvar.pd(<2 x double> %a0, <2 x i64> <i64 0, i64 0>)
   ret <2 x double> %1
@@ -186,4 +185,14 @@ define <8 x float> @combine_vpermilvar_8f32_4stage(<8 x float> %a0) {
   %3 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %2, <8 x i32> <i32 0, i32 2, i32 1, i32 3, i32 0, i32 2, i32 1, i32 3>)
   %4 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %3, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   ret <8 x float> %4
+}
+
+define <4 x float> @combine_vpermilvar_4f32_as_insertps(<4 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_4f32_as_insertps:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7],zero,zero,zero,zero,xmm0[8,9,10,11],zero,zero,zero,zero
+; ALL-NEXT:    retq
+  %1 = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
+  %2 = shufflevector <4 x float> %1, <4 x float> zeroinitializer, <4 x i32> <i32 2, i32 4, i32 1, i32 4>
+  ret <4 x float> %2
 }

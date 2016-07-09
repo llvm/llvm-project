@@ -37,6 +37,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetOperations.h"
@@ -800,6 +801,32 @@ bool LoopSimplify::runOnFunction(Function &F) {
   }
 #endif
   return Changed;
+}
+
+PreservedAnalyses LoopSimplifyPass::run(Function &F,
+                                        AnalysisManager<Function> &AM) {
+  bool Changed = false;
+  LoopInfo *LI = &AM.getResult<LoopAnalysis>(F);
+  DominatorTree *DT = &AM.getResult<DominatorTreeAnalysis>(F);
+  ScalarEvolution *SE = AM.getCachedResult<ScalarEvolutionAnalysis>(F);
+  AssumptionCache *AC = &AM.getResult<AssumptionAnalysis>(F);
+
+  // FIXME: This pass should verify that the loops on which it's operating
+  // are in canonical SSA form, and that the pass itself preserves this form.
+  for (LoopInfo::iterator I = LI->begin(), E = LI->end(); I != E; ++I)
+    Changed |= simplifyLoop(*I, DT, LI, SE, AC, true /* PreserveLCSSA */);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserve<DominatorTreeAnalysis>();
+  PA.preserve<LoopAnalysis>();
+  PA.preserve<BasicAA>();
+  PA.preserve<GlobalsAA>();
+  PA.preserve<SCEVAA>();
+  PA.preserve<ScalarEvolutionAnalysis>();
+  PA.preserve<DependenceAnalysis>();
+  return PA;
 }
 
 // FIXME: Restore this code when we re-enable verification in verifyAnalysis

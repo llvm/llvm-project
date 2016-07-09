@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=peephole-opts %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -run-pass=peephole-opt %s -o /dev/null 2>&1 | FileCheck %s
 
 # Test the compare fold peephole.
 

@@ -166,6 +166,7 @@ class VirtRegRewriter : public MachineFunctionPass {
   void addMBBLiveIns();
   bool readsUndefSubreg(const MachineOperand &MO) const;
   void addLiveInsForSubRanges(const LiveInterval &LI, unsigned PhysReg) const;
+  void handleIdentityCopy(MachineInstr &MI) const;
 
 public:
   static char ID;
@@ -346,6 +347,30 @@ bool VirtRegRewriter::readsUndefSubreg(const MachineOperand &MO) const {
   return true;
 }
 
+void VirtRegRewriter::handleIdentityCopy(MachineInstr &MI) const {
+  if (!MI.isIdentityCopy())
+    return;
+  DEBUG(dbgs() << "Identity copy: " << MI);
+  ++NumIdCopies;
+
+  // Copies like:
+  //    %R0 = COPY %R0<undef>
+  //    %AL = COPY %AL, %EAX<imp-def>
+  // give us additional liveness information: The target (super-)register
+  // must not be valid before this point. Replace the COPY with a KILL
+  // instruction to maintain this information.
+  if (MI.getOperand(0).isUndef() || MI.getNumOperands() > 2) {
+    MI.setDesc(TII->get(TargetOpcode::KILL));
+    DEBUG(dbgs() << "  replace by: " << MI);
+    return;
+  }
+
+  if (Indexes)
+    Indexes->removeMachineInstrFromMaps(MI);
+  MI.eraseFromParent();
+  DEBUG(dbgs() << "  deleted.\n");
+}
+
 void VirtRegRewriter::rewrite() {
   bool NoSubRegLiveness = !MRI->subRegLivenessEnabled();
   SmallVector<unsigned, 8> SuperDeads;
@@ -435,15 +460,8 @@ void VirtRegRewriter::rewrite() {
 
       DEBUG(dbgs() << "> " << *MI);
 
-      // Finally, remove any identity copies.
-      if (MI->isIdentityCopy()) {
-        ++NumIdCopies;
-        DEBUG(dbgs() << "Deleting identity copy.\n");
-        if (Indexes)
-          Indexes->removeMachineInstrFromMaps(*MI);
-        // It's safe to erase MI because MII has already been incremented.
-        MI->eraseFromParent();
-      }
+      // We can remove identity copies right now.
+      handleIdentityCopy(*MI);
     }
   }
 }

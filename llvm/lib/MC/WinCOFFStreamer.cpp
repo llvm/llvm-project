@@ -75,7 +75,8 @@ void MCWinCOFFStreamer::InitSections(bool NoExecStack) {
   SwitchSection(getContext().getObjectFileInfo()->getTextSection());
 }
 
-void MCWinCOFFStreamer::EmitLabel(MCSymbol *Symbol) {
+void MCWinCOFFStreamer::EmitLabel(MCSymbol *S) {
+  auto *Symbol = cast<MCSymbolCOFF>(S);
   assert(Symbol->isUndefined() && "Cannot define a symbol twice!");
   MCObjectStreamer::EmitLabel(Symbol);
 }
@@ -88,20 +89,16 @@ void MCWinCOFFStreamer::EmitThumbFunc(MCSymbol *Func) {
   llvm_unreachable("not implemented");
 }
 
-bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *Symbol,
+bool MCWinCOFFStreamer::EmitSymbolAttribute(MCSymbol *S,
                                             MCSymbolAttr Attribute) {
-  assert(Symbol && "Symbol must be non-null!");
-  assert((!Symbol->isInSection() ||
-          Symbol->getSection().getVariant() == MCSection::SV_COFF) &&
-         "Got non-COFF section in the COFF backend!");
-
+  auto *Symbol = cast<MCSymbolCOFF>(S);
   getAssembler().registerSymbol(*Symbol);
 
   switch (Attribute) {
   default: return false;
   case MCSA_WeakReference:
   case MCSA_Weak:
-    cast<MCSymbolCOFF>(Symbol)->setIsWeakExternal();
+    Symbol->setIsWeakExternal();
     Symbol->setExternal(true);
     break;
   case MCSA_Global:
@@ -118,11 +115,8 @@ void MCWinCOFFStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   llvm_unreachable("not implemented");
 }
 
-void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *Symbol) {
-  assert((!Symbol->isInSection() ||
-          Symbol->getSection().getVariant() == MCSection::SV_COFF) &&
-         "Got non-COFF section in the COFF backend!");
-
+void MCWinCOFFStreamer::BeginCOFFSymbolDef(MCSymbol const *S) {
+  auto *Symbol = cast<MCSymbolCOFF>(S);
   if (CurSymbol)
     Error("starting a new symbol definition without completing the "
           "previous one");
@@ -209,11 +203,9 @@ void MCWinCOFFStreamer::EmitCOFFSecRel32(MCSymbol const *Symbol) {
   DF->getContents().resize(DF->getContents().size() + 4, 0);
 }
 
-void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
                                          unsigned ByteAlignment) {
-  assert((!Symbol->isInSection() ||
-          Symbol->getSection().getVariant() == MCSection::SV_COFF) &&
-         "Got non-COFF section in the COFF backend!");
+  auto *Symbol = cast<MCSymbolCOFF>(S);
 
   const Triple &T = getContext().getObjectFileInfo()->getTargetTriple();
   if (T.isKnownWindowsMSVCEnvironment()) {
@@ -243,9 +235,9 @@ void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *Symbol, uint64_t Size,
   }
 }
 
-void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *Symbol, uint64_t Size,
+void MCWinCOFFStreamer::EmitLocalCommonSymbol(MCSymbol *S, uint64_t Size,
                                               unsigned ByteAlignment) {
-  assert(!Symbol->isInSection() && "Symbol must not already have a section!");
+  auto *Symbol = cast<MCSymbolCOFF>(S);
 
   MCSection *Section = getContext().getObjectFileInfo()->getBSSSection();
   getAssembler().registerSection(*Section);

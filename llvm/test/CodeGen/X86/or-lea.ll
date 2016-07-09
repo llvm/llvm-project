@@ -9,6 +9,8 @@
 define i32 @or_shift1_and1(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift1_and1:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi,2), %eax
 ; CHECK-NEXT:    retq
@@ -22,6 +24,8 @@ define i32 @or_shift1_and1(i32 %x, i32 %y) {
 define i32 @or_shift1_and1_swapped(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift1_and1_swapped:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi,2), %eax
 ; CHECK-NEXT:    retq
@@ -35,6 +39,8 @@ define i32 @or_shift1_and1_swapped(i32 %x, i32 %y) {
 define i32 @or_shift2_and1(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift2_and1:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi,4), %eax
 ; CHECK-NEXT:    retq
@@ -48,6 +54,8 @@ define i32 @or_shift2_and1(i32 %x, i32 %y) {
 define i32 @or_shift3_and1(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift3_and1:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi,8), %eax
 ; CHECK-NEXT:    retq
@@ -61,6 +69,8 @@ define i32 @or_shift3_and1(i32 %x, i32 %y) {
 define i32 @or_shift3_and7(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift3_and7:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    andl $7, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi,8), %eax
 ; CHECK-NEXT:    retq
@@ -76,6 +86,8 @@ define i32 @or_shift3_and7(i32 %x, i32 %y) {
 define i32 @or_shift4_and1(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift4_and1:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %ESI<def> %ESI<kill> %RSI<def>
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    shll $4, %edi
 ; CHECK-NEXT:    andl $1, %esi
 ; CHECK-NEXT:    leal (%rsi,%rdi), %eax
@@ -92,6 +104,7 @@ define i32 @or_shift4_and1(i32 %x, i32 %y) {
 define i32 @or_shift3_and8(i32 %x, i32 %y) {
 ; CHECK-LABEL: or_shift3_and8:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; CHECK-NEXT:    leal (,%rdi,8), %eax
 ; CHECK-NEXT:    andl $8, %esi
 ; CHECK-NEXT:    orl %esi, %eax

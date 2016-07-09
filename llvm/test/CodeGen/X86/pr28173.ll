@@ -8,6 +8,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i64 @foo64(i1 zeroext %i, i32 %j) #0 {
 ; CHECK-LABEL: foo64:
 ; CHECK:       # BB#0:
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    orq $-2, %rdi
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq

@@ -70,16 +70,16 @@ void LanaiFrameLowering::replaceAdjDynAllocPseudo(MachineFunction &MF) const {
        ++MBB) {
     MachineBasicBlock::iterator MBBI = MBB->begin();
     while (MBBI != MBB->end()) {
-      MachineInstr *MI = MBBI++;
-      if (MI->getOpcode() == Lanai::ADJDYNALLOC) {
-        DebugLoc DL = MI->getDebugLoc();
-        unsigned Dst = MI->getOperand(0).getReg();
-        unsigned Src = MI->getOperand(1).getReg();
+      MachineInstr &MI = *MBBI++;
+      if (MI.getOpcode() == Lanai::ADJDYNALLOC) {
+        DebugLoc DL = MI.getDebugLoc();
+        unsigned Dst = MI.getOperand(0).getReg();
+        unsigned Src = MI.getOperand(1).getReg();
 
         BuildMI(*MBB, MI, DL, LII.get(Lanai::ADD_I_LO), Dst)
             .addReg(Src)
             .addImm(MaxCallFrameSize);
-        MI->eraseFromParent();
+        MI.eraseFromParent();
       }
     }
   }

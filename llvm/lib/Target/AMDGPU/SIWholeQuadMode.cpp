@@ -489,28 +489,30 @@ bool SIWholeQuadMode::runOnMachineFunction(MachineFunction &MF) {
   }
 
   // Store a copy of the original live mask when required
-  MachineBasicBlock &Entry = MF.front();
-  MachineInstr *EntryMI = Entry.getFirstNonPHI();
   unsigned LiveMaskReg = 0;
+  {
+    MachineBasicBlock &Entry = MF.front();
+    MachineBasicBlock::iterator EntryMI = Entry.getFirstNonPHI();
 
-  if (GlobalFlags & StateExact || !LiveMaskQueries.empty()) {
-    LiveMaskReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
-    BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
-        .addReg(AMDGPU::EXEC);
-  }
+    if (GlobalFlags & StateExact || !LiveMaskQueries.empty()) {
+      LiveMaskReg = MRI->createVirtualRegister(&AMDGPU::SReg_64RegClass);
+      BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::COPY), LiveMaskReg)
+          .addReg(AMDGPU::EXEC);
+    }
 
-  if (GlobalFlags == StateWQM) {
-    // For a shader that needs only WQM, we can just set it once.
-    BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::S_WQM_B64),
-            AMDGPU::EXEC).addReg(AMDGPU::EXEC);
+    if (GlobalFlags == StateWQM) {
+      // For a shader that needs only WQM, we can just set it once.
+      BuildMI(Entry, EntryMI, DebugLoc(), TII->get(AMDGPU::S_WQM_B64),
+              AMDGPU::EXEC)
+          .addReg(AMDGPU::EXEC);
 
-    lowerLiveMaskQueries(LiveMaskReg);
-    // EntryMI may become invalid here
-    return true;
+      lowerLiveMaskQueries(LiveMaskReg);
+      // EntryMI may become invalid here
+      return true;
+    }
   }
 
   lowerLiveMaskQueries(LiveMaskReg);
-  EntryMI = nullptr;
 
   // Handle the general case
   for (const auto &BII : Blocks)

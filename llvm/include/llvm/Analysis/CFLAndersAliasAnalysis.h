@@ -21,11 +21,22 @@
 
 namespace llvm {
 
+namespace cflaa {
+struct AliasSummary;
+}
+
 class CFLAndersAAResult : public AAResultBase<CFLAndersAAResult> {
   friend AAResultBase<CFLAndersAAResult>;
 
 public:
   explicit CFLAndersAAResult();
+
+  /// \brief Get the alias summary for the given function
+  /// Return nullptr if the summary is not found or not available
+  const cflaa::AliasSummary *getAliasSummary(Function &Fn) {
+    // Dummy implementation
+    return nullptr;
+  }
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB) {
     // Dummy implementation

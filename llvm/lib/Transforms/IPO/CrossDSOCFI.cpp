@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/EquivalenceClasses.h"
 #include "llvm/ADT/Statistic.h"
@@ -30,6 +30,7 @@
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 
 using namespace llvm;
@@ -46,13 +47,10 @@ struct CrossDSOCFI : public ModulePass {
     initializeCrossDSOCFIPass(*PassRegistry::getPassRegistry());
   }
 
-  Module *M;
   MDNode *VeryLikelyWeights;
 
   ConstantInt *extractNumericTypeId(MDNode *MD);
-  void buildCFICheck();
-
-  bool doInitialization(Module &M) override;
+  void buildCFICheck(Module &M);
   bool runOnModule(Module &M) override;
 };
 
@@ -64,14 +62,6 @@ INITIALIZE_PASS_END(CrossDSOCFI, "cross-dso-cfi", "Cross-DSO CFI", false, false)
 char CrossDSOCFI::ID = 0;
 
 ModulePass *llvm::createCrossDSOCFIPass() { return new CrossDSOCFI; }
-
-bool CrossDSOCFI::doInitialization(Module &Mod) {
-  M = &Mod;
-  VeryLikelyWeights =
-      MDBuilder(M->getContext()).createBranchWeights((1U << 20) - 1, 1);
-
-  return false;
-}
 
 /// Extracts a numeric type identifier from an MDNode containing type metadata.
 ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {
@@ -88,12 +78,12 @@ ConstantInt *CrossDSOCFI::extractNumericTypeId(MDNode *MD) {
 }
 
 /// buildCFICheck - emits __cfi_check for the current module.
-void CrossDSOCFI::buildCFICheck() {
+void CrossDSOCFI::buildCFICheck(Module &M) {
   // FIXME: verify that __cfi_check ends up near the end of the code section,
   // but before the jump slots created in LowerTypeTests.
   llvm::DenseSet<uint64_t> TypeIds;
   SmallVector<MDNode *, 2> Types;
-  for (GlobalObject &GO : M->global_objects()) {
+  for (GlobalObject &GO : M.global_objects()) {
     Types.clear();
     GO.getMetadata(LLVMContext::MD_type, Types);
     for (MDNode *Type : Types) {
@@ -105,8 +95,8 @@ void CrossDSOCFI::buildCFICheck() {
     }
   }
 
-  LLVMContext &Ctx = M->getContext();
-  Constant *C = M->getOrInsertFunction(
+  LLVMContext &Ctx = M.getContext();
+  Constant *C = M.getOrInsertFunction(
       "__cfi_check", Type::getVoidTy(Ctx), Type::getInt64Ty(Ctx),
       Type::getInt8PtrTy(Ctx), Type::getInt8PtrTy(Ctx), nullptr);
   Function *F = dyn_cast<Function>(C);
@@ -125,7 +115,7 @@ void CrossDSOCFI::buildCFICheck() {
 
   BasicBlock *TrapBB = BasicBlock::Create(Ctx, "fail", F);
   IRBuilder<> IRBFail(TrapBB);
-  Constant *CFICheckFailFn = M->getOrInsertFunction(
+  Constant *CFICheckFailFn = M.getOrInsertFunction(
       "__cfi_check_fail", Type::getVoidTy(Ctx), Type::getInt8PtrTy(Ctx),
       Type::getInt8PtrTy(Ctx), nullptr);
   IRBFail.CreateCall(CFICheckFailFn, {&CFICheckFailData, &Addr});
@@ -140,7 +130,7 @@ void CrossDSOCFI::buildCFICheck() {
     ConstantInt *CaseTypeId = ConstantInt::get(Type::getInt64Ty(Ctx), TypeId);
     BasicBlock *TestBB = BasicBlock::Create(Ctx, "test", F);
     IRBuilder<> IRBTest(TestBB);
-    Function *BitsetTestFn = Intrinsic::getDeclaration(M, Intrinsic::type_test);
+    Function *BitsetTestFn = Intrinsic::getDeclaration(&M, Intrinsic::type_test);
 
     Value *Test = IRBTest.CreateCall(
         BitsetTestFn, {&Addr, MetadataAsValue::get(
@@ -157,8 +147,18 @@ bool CrossDSOCFI::runOnModule(Module &M) {
   if (skipModule(M))
     return false;
 
+  VeryLikelyWeights =
+    MDBuilder(M.getContext()).createBranchWeights((1U << 20) - 1, 1);
   if (M.getModuleFlag("Cross-DSO CFI") == nullptr)
     return false;
-  buildCFICheck();
+  buildCFICheck(M);
   return true;
+}
+
+PreservedAnalyses CrossDSOCFIPass::run(Module &M, AnalysisManager<Module> &AM) {
+  CrossDSOCFI Impl;
+  bool Changed = Impl.runOnModule(M);
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return PreservedAnalyses::none();
 }

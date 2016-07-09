@@ -323,14 +323,6 @@ private:
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    bool PreserveLCSSA);
 
-/// \brief Simplify each loop in a loop nest recursively.
-///
-/// This takes a potentially un-simplified loop L (and its children) and turns
-/// it into a simplified loop nest with preheaders and single backedges. It will
-/// update \c AliasAnalysis and \c ScalarEvolution analyses if they're non-null.
-bool simplifyLoop(Loop *L, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-                  AssumptionCache *AC, bool PreserveLCSSA);
-
 /// \brief Put loop into LCSSA form.
 ///
 /// Looks at all instructions in the loop which have uses outside of the

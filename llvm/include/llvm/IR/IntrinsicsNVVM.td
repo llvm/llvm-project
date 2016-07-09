@@ -17,6 +17,7 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
 // MISC
 //
 
+let TargetPrefix = "nvvm" in {
   def int_nvvm_clz_i : GCCBuiltin<"__nvvm_clz_i">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_nvvm_clz_ll : GCCBuiltin<"__nvvm_clz_ll">,
@@ -3730,3 +3731,4 @@ def int_nvvm_shfl_idx_f32 :
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.idx.f32">,
   GCCBuiltin<"__nvvm_shfl_idx_f32">;
+}

@@ -28,6 +28,7 @@ define i32 @test__blcfill_u32(i32 %a0) {
 ;
 ; X64-LABEL: test__blcfill_u32:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    leal 1(%rdi), %eax
 ; X64-NEXT:    andl %edi, %eax
 ; X64-NEXT:    retq
@@ -47,6 +48,7 @@ define i32 @test__blci_u32(i32 %a0) {
 ;
 ; X64-LABEL: test__blci_u32:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    leal 1(%rdi), %eax
 ; X64-NEXT:    xorl $-1, %eax
 ; X64-NEXT:    orl %edi, %eax
@@ -91,6 +93,7 @@ define i32 @test__blcmsk_u32(i32 %a0) {
 ;
 ; X64-LABEL: test__blcmsk_u32:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    leal 1(%rdi), %eax
 ; X64-NEXT:    xorl %edi, %eax
 ; X64-NEXT:    retq
@@ -109,6 +112,7 @@ define i32 @test__blcs_u32(i32 %a0) {
 ;
 ; X64-LABEL: test__blcs_u32:
 ; X64:       # BB#0:
+; X64-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<def>
 ; X64-NEXT:    leal 1(%rdi), %eax
 ; X64-NEXT:    orl %edi, %eax
 ; X64-NEXT:    retq

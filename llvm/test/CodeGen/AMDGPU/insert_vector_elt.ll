@@ -339,9 +339,9 @@ endif:
 ; FIXME: Should be able to manipulate m0 directly instead of add and
 ; copy.
 
-; GCN: s_or_b32 [[IDX1:s[0-9]+]], [[SCALEDIDX]], 1
+; FIXME: Should avoid resetting m0 to same value
 ; GCN-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
-; GCN-DAG: s_mov_b32 m0, [[IDX1]]
+; GCN-DAG: s_mov_b32 m0, [[SCALEDIDX]]
 ; GCN: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
 
 ; GCN: buffer_store_dwordx4
