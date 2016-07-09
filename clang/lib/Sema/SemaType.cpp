@@ -6493,11 +6493,30 @@ static void HandleNeonVectorTypeAttr(QualType& CurType,
 /// Handle OpenCL Access Qualifier Attribute.
 static void HandleOpenCLAccessAttr(QualType &CurType, const AttributeList &Attr,
                                    Sema &S) {
-  // OpenCL v2.0 s6.6 - Access qualifier can used only for image and pipe type.
+  // OpenCL v2.0 s6.6 - Access qualifier can be used only for image and pipe type.
   if (!(CurType->isImageType() || CurType->isPipeType())) {
     S.Diag(Attr.getLoc(), diag::err_opencl_invalid_access_qualifier);
     Attr.setInvalid();
     return;
+  }
+
+  if (const TypedefType* TypedefTy = CurType->getAs<TypedefType>()) {
+    QualType PointeeTy = TypedefTy->desugar();
+    S.Diag(Attr.getLoc(), diag::err_opencl_multiple_access_qualifiers);
+
+    std::string PrevAccessQual;
+    switch (cast<BuiltinType>(PointeeTy.getTypePtr())->getKind()) {
+      #define IMAGE_TYPE(ImgType, Id, SingletonId, Access, Suffix) \
+    case BuiltinType::Id:                                          \
+      PrevAccessQual = #Access;                                    \
+      break;
+      #include "clang/Basic/OpenCLImageTypes.def"
+    default:
+      assert(0 && "Unable to find corresponding image type.");
+    }
+
+    S.Diag(TypedefTy->getDecl()->getLocStart(),
+       diag::note_opencl_typedef_access_qualifier) << PrevAccessQual;
   }
 }
 

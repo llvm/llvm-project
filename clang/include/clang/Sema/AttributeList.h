@@ -880,6 +880,7 @@ enum AttributeDeclKind {
   ExpectedMethod,
   ExpectedFieldOrGlobalVar,
   ExpectedStruct,
+  ExpectedParameterOrTypedef,
   ExpectedVariableOrTypedef,
   ExpectedTLSVar,
   ExpectedVariableOrField,

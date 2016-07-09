@@ -190,10 +190,11 @@ long long test_mm_extract_epi64(__m128i x) {
   return _mm_extract_epi64(x, 1);
 }
 
-//TODO
-//int test_mm_extract_ps(__m128 x) {
-//  return _mm_extract_ps(_mm_add_ps(x,x), 1);
-//}
+int test_mm_extract_ps(__m128 x) {
+  // CHECK-LABEL: test_mm_extract_ps
+  // CHECK: extractelement <4 x float> %{{.*}}, i32 1
+  return _mm_extract_ps(x, 1);
+}
 
 __m128d test_mm_floor_pd(__m128d x) {
   // CHECK-LABEL: test_mm_floor_pd

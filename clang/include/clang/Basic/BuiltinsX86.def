@@ -161,6 +161,8 @@ TARGET_BUILTIN(__builtin_ia32_pmovmskb, "iV8c", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_pmulhuw, "V4sV4sV4s", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_psadbw, "V4sV8cV8c", "", "sse")
 TARGET_BUILTIN(__builtin_ia32_pshufw, "V4sV4sIc", "", "sse")
+TARGET_BUILTIN(__builtin_ia32_vec_ext_v4hi, "iV4sIi", "", "sse")
+TARGET_BUILTIN(__builtin_ia32_vec_set_v4hi, "V4sV4siIi", "", "sse")
 
 // MMX+SSE2
 TARGET_BUILTIN(__builtin_ia32_cvtpd2pi, "V2iV2d", "", "sse2")
