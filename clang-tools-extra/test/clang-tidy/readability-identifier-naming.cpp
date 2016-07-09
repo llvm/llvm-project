@@ -344,3 +344,9 @@ void MY_TEST_Macro(function) {}
 // CHECK-FIXES: {{^}}void MY_TEST_MACRO(function) {}
 }
 }
+
+template <typename t_t> struct a {
+  typename t_t::template b<> c;
+};
+
+template <template <typename> class A> struct b { A<int> c; };

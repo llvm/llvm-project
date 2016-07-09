@@ -1,4 +1,4 @@
-// RUN: %clang_tsan %s -o %t -framework Foundation -std=c++11
+// RUN: %clangxx_tsan %s -o %t -framework Foundation -std=c++11
 // RUN: %run %t 2>&1 | FileCheck %s
 
 #import <Foundation/Foundation.h>
