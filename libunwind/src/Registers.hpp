@@ -1442,26 +1442,34 @@ inline bool Registers_arm::validRegister(int regNum) const {
   // virtual register set (VRS).
   if (regNum == UNW_REG_IP)
     return true;
+
   if (regNum == UNW_REG_SP)
     return true;
+
   if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15)
     return true;
+
 #if defined(__ARM_WMMX)
   if (regNum >= UNW_ARM_WC0 && regNum <= UNW_ARM_WC3)
     return true;
 #endif
+
   return false;
 }
 
 inline uint32_t Registers_arm::getRegister(int regNum) {
   if (regNum == UNW_REG_SP || regNum == UNW_ARM_SP)
     return _registers.__sp;
+
   if (regNum == UNW_ARM_LR)
     return _registers.__lr;
+
   if (regNum == UNW_REG_IP || regNum == UNW_ARM_IP)
     return _registers.__pc;
+
   if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R12)
     return _registers.__r[regNum];
+
 #if defined(__ARM_WMMX)
   if (regNum >= UNW_ARM_WC0 && regNum <= UNW_ARM_WC3) {
     if (!_saved_iwmmx_control) {
@@ -1471,29 +1479,43 @@ inline uint32_t Registers_arm::getRegister(int regNum) {
     return _iwmmx_control[regNum - UNW_ARM_WC0];
   }
 #endif
+
   _LIBUNWIND_ABORT("unsupported arm register");
 }
 
 inline void Registers_arm::setRegister(int regNum, uint32_t value) {
-  if (regNum == UNW_REG_SP || regNum == UNW_ARM_SP)
+  if (regNum == UNW_REG_SP || regNum == UNW_ARM_SP) {
     _registers.__sp = value;
-  else if (regNum == UNW_ARM_LR)
+    return;
+  }
+
+  if (regNum == UNW_ARM_LR) {
     _registers.__lr = value;
-  else if (regNum == UNW_REG_IP || regNum == UNW_ARM_IP)
+    return;
+  }
+
+  if (regNum == UNW_REG_IP || regNum == UNW_ARM_IP) {
     _registers.__pc = value;
-  else if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R12)
+    return;
+  }
+
+  if (regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R12) {
     _registers.__r[regNum] = value;
+    return;
+  }
+
 #if defined(__ARM_WMMX)
-  else if (regNum >= UNW_ARM_WC0 && regNum <= UNW_ARM_WC3) {
+  if (regNum >= UNW_ARM_WC0 && regNum <= UNW_ARM_WC3) {
     if (!_saved_iwmmx_control) {
       _saved_iwmmx_control = true;
       saveiWMMXControl(_iwmmx_control);
     }
     _iwmmx_control[regNum - UNW_ARM_WC0] = value;
+    return;
   }
 #endif
-  else
-    _LIBUNWIND_ABORT("unsupported arm register");
+
+  _LIBUNWIND_ABORT("unsupported arm register");
 }
 
 inline const char *Registers_arm::getRegisterName(int regNum) {
@@ -1685,15 +1707,18 @@ inline unw_fpreg_t Registers_arm::getFloatRegister(int regNum) {
         saveVFPWithFSTMD(_vfp_d0_d15_pad);
     }
     return _vfp_d0_d15_pad[regNum - UNW_ARM_D0];
-  } else if (regNum >= UNW_ARM_D16 && regNum <= UNW_ARM_D31) {
+  }
+
+  if (regNum >= UNW_ARM_D16 && regNum <= UNW_ARM_D31) {
     if (!_saved_vfp_d16_d31) {
       _saved_vfp_d16_d31 = true;
       saveVFPv3(_vfp_d16_d31);
     }
     return _vfp_d16_d31[regNum - UNW_ARM_D16];
   }
+
 #if defined(__ARM_WMMX)
-  else if (regNum >= UNW_ARM_WR0 && regNum <= UNW_ARM_WR15) {
+  if (regNum >= UNW_ARM_WR0 && regNum <= UNW_ARM_WR15) {
     if (!_saved_iwmmx) {
       _saved_iwmmx = true;
       saveiWMMX(_iwmmx);
@@ -1701,8 +1726,8 @@ inline unw_fpreg_t Registers_arm::getFloatRegister(int regNum) {
     return _iwmmx[regNum - UNW_ARM_WR0];
   }
 #endif
-  else
-    _LIBUNWIND_ABORT("Unknown ARM float register");
+
+  _LIBUNWIND_ABORT("Unknown ARM float register");
 }
 
 inline void Registers_arm::setFloatRegister(int regNum, unw_fpreg_t value) {
@@ -1715,24 +1740,30 @@ inline void Registers_arm::setFloatRegister(int regNum, unw_fpreg_t value) {
         saveVFPWithFSTMD(_vfp_d0_d15_pad);
     }
     _vfp_d0_d15_pad[regNum - UNW_ARM_D0] = value;
-  } else if (regNum >= UNW_ARM_D16 && regNum <= UNW_ARM_D31) {
+    return;
+  }
+
+  if (regNum >= UNW_ARM_D16 && regNum <= UNW_ARM_D31) {
     if (!_saved_vfp_d16_d31) {
       _saved_vfp_d16_d31 = true;
       saveVFPv3(_vfp_d16_d31);
     }
     _vfp_d16_d31[regNum - UNW_ARM_D16] = value;
+    return;
   }
+
 #if defined(__ARM_WMMX)
-  else if (regNum >= UNW_ARM_WR0 && regNum <= UNW_ARM_WR15) {
+  if (regNum >= UNW_ARM_WR0 && regNum <= UNW_ARM_WR15) {
     if (!_saved_iwmmx) {
       _saved_iwmmx = true;
       saveiWMMX(_iwmmx);
     }
     _iwmmx[regNum - UNW_ARM_WR0] = value;
+    return;
   }
 #endif
-  else
-    _LIBUNWIND_ABORT("Unknown ARM float register");
+
+  _LIBUNWIND_ABORT("Unknown ARM float register");
 }
 
 inline bool Registers_arm::validVectorRegister(int) const {

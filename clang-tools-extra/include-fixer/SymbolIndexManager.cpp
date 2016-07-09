@@ -20,7 +20,7 @@ namespace include_fixer {
 
 using clang::find_all_symbols::SymbolInfo;
 
-/// Sorts and uniques SymbolInfos based on the popularity info in SymbolInfo.
+/// Sorts SymbolInfos based on the popularity info in SymbolInfo.
 static void rankByPopularity(std::vector<SymbolInfo> &Symbols) {
   // First collect occurrences per header file.
   llvm::DenseMap<llvm::StringRef, unsigned> HeaderPopularity;
@@ -39,17 +39,9 @@ static void rankByPopularity(std::vector<SymbolInfo> &Symbols) {
                 return APop > BPop;
               return A.getFilePath() < B.getFilePath();
             });
-
-  // Deduplicate based on the file name. They will have the same popularity and
-  // we don't want to suggest the same header twice.
-  Symbols.erase(std::unique(Symbols.begin(), Symbols.end(),
-                            [](const SymbolInfo &A, const SymbolInfo &B) {
-                              return A.getFilePath() == B.getFilePath();
-                            }),
-                Symbols.end());
 }
 
-std::vector<std::string>
+std::vector<find_all_symbols::SymbolInfo>
 SymbolIndexManager::search(llvm::StringRef Identifier) const {
   // The identifier may be fully qualified, so split it and get all the context
   // names.
@@ -127,20 +119,7 @@ SymbolIndexManager::search(llvm::StringRef Identifier) const {
   }
 
   rankByPopularity(MatchedSymbols);
-  std::vector<std::string> Results;
-  for (const auto &Symbol : MatchedSymbols) {
-    // FIXME: file path should never be in the form of <...> or "...", but
-    // the unit test with fixed database use <...> file path, which might
-    // need to be changed.
-    // FIXME: if the file path is a system header name, we want to use
-    // angle brackets.
-    std::string FilePath = Symbol.getFilePath().str();
-    Results.push_back((FilePath[0] == '"' || FilePath[0] == '<')
-                          ? FilePath
-                          : "\"" + FilePath + "\"");
-  }
-
-  return Results;
+  return MatchedSymbols;
 }
 
 } // namespace include_fixer

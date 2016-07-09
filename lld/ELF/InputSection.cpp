@@ -14,6 +14,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "Target.h"
+#include "Thunks.h"
 
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
@@ -128,9 +129,9 @@ InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
   return Sections[this->Header->sh_info];
 }
 
-template <class ELFT> void InputSection<ELFT>::addThunk(SymbolBody &Body) {
-  Body.ThunkIndex = Thunks.size();
-  Thunks.push_back(&Body);
+template <class ELFT>
+void InputSection<ELFT>::addThunk(const Thunk<ELFT> *T) {
+  Thunks.push_back(T);
 }
 
 template <class ELFT> uint64_t InputSection<ELFT>::getThunkOff() const {
@@ -138,7 +139,10 @@ template <class ELFT> uint64_t InputSection<ELFT>::getThunkOff() const {
 }
 
 template <class ELFT> uint64_t InputSection<ELFT>::getThunksSize() const {
-  return Thunks.size() * Target->ThunkSize;
+  uint64_t Total = 0;
+  for (const Thunk<ELFT> *T : Thunks)
+    Total += T->size();
+  return Total;
 }
 
 // This is used for -r. We can't use memcpy to copy relocations because we need
@@ -183,8 +187,11 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
            Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_TLSLD_PC:
     return Out<ELFT>::Got->getTlsIndexVA() + A - P;
-  case R_THUNK:
-    return Body.getThunkVA<ELFT>();
+  case R_THUNK_ABS:
+    return Body.getThunkVA<ELFT>() + A;
+  case R_THUNK_PC:
+  case R_THUNK_PLT_PC:
+    return Body.getThunkVA<ELFT>() + A - P;
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
   case R_TLSGD:
@@ -404,9 +411,9 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   // jump istruction.
   if (!Thunks.empty()) {
     Buf += OutSecOff + getThunkOff();
-    for (const SymbolBody *S : Thunks) {
-      Target->writeThunk(Buf, S->getVA<ELFT>());
-      Buf += Target->ThunkSize;
+    for (const Thunk<ELFT> *T : Thunks) {
+      T->writeTo(Buf);
+      Buf += T->size();
     }
   }
 }

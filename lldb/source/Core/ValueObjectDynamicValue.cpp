@@ -419,6 +419,22 @@ ValueObjectDynamicValue::GetPreferredDisplayLanguage ()
 }
 
 bool
+ValueObjectDynamicValue::IsSyntheticChildrenGenerated ()
+{
+    if (m_parent)
+        return m_parent->IsSyntheticChildrenGenerated();
+    return false;
+}
+
+void
+ValueObjectDynamicValue::SetSyntheticChildrenGenerated (bool b)
+{
+    if (m_parent)
+        m_parent->SetSyntheticChildrenGenerated(b);
+    this->ValueObject::SetSyntheticChildrenGenerated(b);
+}
+
+bool
 ValueObjectDynamicValue::GetDeclaration (Declaration &decl)
 {
     if (m_parent)

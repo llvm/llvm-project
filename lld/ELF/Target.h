@@ -48,11 +48,16 @@ public:
   // a dynamic relocation.
   virtual bool usesOnlyLowPageBits(uint32_t Type) const;
 
-  virtual bool needsThunk(uint32_t Type, const InputFile &File,
-                          const SymbolBody &S) const;
-
+  // Decide whether a Thunk is needed for the relocation from File
+  // targeting S. Returns one of:
+  // Expr if there is no Thunk required
+  // R_THUNK_ABS if thunk is required and expression is absolute
+  // R_THUNK_PC if thunk is required and expression is pc rel
+  // R_THUNK_PLT_PC if thunk is required to PLT entry and expression is pc rel
+  virtual RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType,
+                               const InputFile &File,
+                               const SymbolBody &S) const;
   virtual void writeThunk(uint8_t *Buf, uint64_t S) const {}
-
   virtual RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const = 0;
   virtual void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const = 0;
   virtual ~TargetInfo();
@@ -86,8 +91,6 @@ public:
 
   // Set to 0 for variant 2
   unsigned TcbSize = 0;
-
-  uint32_t ThunkSize = 0;
 
   virtual RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
                                   RelExpr Expr) const;

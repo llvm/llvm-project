@@ -118,6 +118,8 @@ void processRangeAccessWorkingSet(uptr PC, uptr Addr, SIZE_T Size,
 }
 
 // This routine will word-align ShadowStart and ShadowEnd prior to scanning.
+// It does *not* clear for BitIdx==TotalWorkingSetBitIdx, as that top bit
+// measures the access during the entire execution and should never be cleared.
 static u32 countAndClearShadowValues(u32 BitIdx, uptr ShadowStart,
                                      uptr ShadowEnd) {
   u32 WorkingSetSize = 0;
@@ -127,6 +129,8 @@ static u32 countAndClearShadowValues(u32 BitIdx, uptr ShadowStart,
   // Get word aligned start.
   ShadowStart = RoundDownTo(ShadowStart, sizeof(u32));
   bool Accum = getFlags()->record_snapshots && BitIdx < MaxAccumBitIdx;
+  // Do not clear the bit that measures access during the entire execution.
+  bool Clear = BitIdx < TotalWorkingSetBitIdx;
   for (u32 *Ptr = (u32 *)ShadowStart; Ptr < (u32 *)ShadowEnd; ++Ptr) {
     if ((*Ptr & WordValue) != 0) {
       byte *BytePtr = (byte *)Ptr;
@@ -139,8 +143,10 @@ static u32 countAndClearShadowValues(u32 BitIdx, uptr ShadowStart,
           }
         }
       }
-      // Clear this bit from every shadow byte.
-      *Ptr &= ~WordValue;
+      if (Clear) {
+        // Clear this bit from every shadow byte.
+        *Ptr &= ~WordValue;
+      }
     }
   }
   return WorkingSetSize;
@@ -149,6 +155,8 @@ static u32 countAndClearShadowValues(u32 BitIdx, uptr ShadowStart,
 // Scan shadow memory to calculate the number of cache lines being accessed,
 // i.e., the number of non-zero bits indexed by BitIdx in each shadow byte.
 // We also clear the lowest bits (most recent working set snapshot).
+// We do *not* clear for BitIdx==TotalWorkingSetBitIdx, as that top bit
+// measures the access during the entire execution and should never be cleared.
 static u32 computeWorkingSizeAndReset(u32 BitIdx) {
   u32 WorkingSetSize = 0;
   MemoryMappingLayout MemIter(true/*cache*/);
@@ -226,10 +234,9 @@ static u32 getSizeForPrinting(u32 NumOfCachelines, const char *&Unit) {
   }
 }
 
-int finalizeWorkingSet() {
+void reportWorkingSet() {
   const char *Unit;
   if (getFlags()->record_snapshots) {
-    Thread.joinThread();
     u32 Freq = 1;
     Report(" Total number of samples: %u\n", SnapshotNum);
     for (u32 i = 0; i < NumFreq; ++i) {
@@ -243,7 +250,6 @@ int finalizeWorkingSet() {
                SizePerFreq[i][j]);
       }
       Freq = Freq << getFlags()->snapshot_step;
-      SizePerFreq[i].free();
     }
   }
 
@@ -252,6 +258,16 @@ int finalizeWorkingSet() {
   u32 Size = getSizeForPrinting(NumOfCachelines, Unit);
   Report(" %s: the total working set size: %u %s (%u cache lines)\n",
          SanitizerToolName, Size, Unit, NumOfCachelines);
+}
+
+int finalizeWorkingSet() {
+  if (getFlags()->record_snapshots)
+    Thread.joinThread();
+  reportWorkingSet();
+  if (getFlags()->record_snapshots) {
+    for (u32 i = 0; i < NumFreq; ++i)
+      SizePerFreq[i].free();
+  }
   return 0;
 }
 

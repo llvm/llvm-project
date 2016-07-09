@@ -25,8 +25,8 @@
 
 #include <limits.h>
 
-#include <cstdlib>
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
 
@@ -384,30 +384,72 @@ AdbClient::ReadAllBytes (void *buffer, size_t size)
 }
 
 Error
-AdbClient::Shell (const char* command, uint32_t timeout_ms, std::string* output)
+AdbClient::internalShell(const char *command, uint32_t timeout_ms, std::vector<char> &output_buf)
 {
-    auto error = SwitchDeviceTransport ();
-    if (error.Fail ())
-        return Error ("Failed to switch to device transport: %s", error.AsCString ());
+    output_buf.clear();
+
+    auto error = SwitchDeviceTransport();
+    if (error.Fail())
+        return Error("Failed to switch to device transport: %s", error.AsCString());
 
     StreamString adb_command;
     adb_command.Printf("shell:%s", command);
-    error = SendMessage (adb_command.GetData(), false);
-    if (error.Fail ())
+    error = SendMessage(adb_command.GetData(), false);
+    if (error.Fail())
         return error;
 
-    error = ReadResponseStatus ();
-    if (error.Fail ())
+    error = ReadResponseStatus();
+    if (error.Fail())
         return error;
 
-    std::vector<char> in_buffer;
-    error = ReadMessageStream (in_buffer, timeout_ms);
+    error = ReadMessageStream(output_buf, timeout_ms);
+    if (error.Fail())
+        return error;
+
+    // ADB doesn't propagate return code of shell execution - if
+    // output starts with /system/bin/sh: most likely command failed.
+    static const char *kShellPrefix = "/system/bin/sh:";
+    if (output_buf.size() > strlen(kShellPrefix))
+    {
+        if (!memcmp(&output_buf[0], kShellPrefix, strlen(kShellPrefix)))
+            return Error("Shell command %s failed: %s", command,
+                         std::string(output_buf.begin(), output_buf.end()).c_str());
+    }
+
+    return Error();
+}
+
+Error
+AdbClient::Shell(const char *command, uint32_t timeout_ms, std::string *output)
+{
+    std::vector<char> output_buffer;
+    auto error = internalShell(command, timeout_ms, output_buffer);
     if (error.Fail())
         return error;
 
     if (output)
-        output->assign(in_buffer.begin(), in_buffer.end());
+        output->assign(output_buffer.begin(), output_buffer.end());
     return error;
+}
+
+Error
+AdbClient::ShellToFile(const char *command, uint32_t timeout_ms, const FileSpec &output_file_spec)
+{
+    std::vector<char> output_buffer;
+    auto error = internalShell(command, timeout_ms, output_buffer);
+    if (error.Fail())
+        return error;
+
+    const auto output_filename = output_file_spec.GetPath();
+    std::ofstream dst(output_filename, std::ios::out | std::ios::binary);
+    if (!dst.is_open())
+        return Error("Unable to open local file %s", output_filename.c_str());
+
+    dst.write(&output_buffer[0], output_buffer.size());
+    dst.close();
+    if (!dst)
+        return Error("Failed to write file %s", output_filename.c_str());
+    return Error();
 }
 
 std::unique_ptr<AdbClient::SyncService>

@@ -1706,6 +1706,12 @@ typedef struct dispatch_shared_info {
     volatile kmp_uint32    *doacross_flags;    // shared array of iteration flags (0/1)
     kmp_int32               doacross_num_done; // count finished threads
 #endif
+#if KMP_USE_HWLOC
+    // When linking with libhwloc, the ORDERED EPCC test slows down on big
+    // machines (> 48 cores). Performance analysis showed that a cache thrash
+    // was occurring and this padding helps alleviate the problem.
+    char padding[64];
+#endif
 } dispatch_shared_info_t;
 
 typedef struct kmp_disp {
@@ -2567,7 +2573,7 @@ typedef struct KMP_ALIGN_CACHE kmp_base_team {
     int t_size_changed; // team size was changed?: 0: no, 1: yes, -1: changed via omp_set_num_threads() call
 
     // Read/write by workers as well -----------------------------------------------------------------------
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+#if (KMP_ARCH_X86 || KMP_ARCH_X86_64) && !KMP_USE_HWLOC
     // Using CACHE_LINE=64 reduces memory footprint, but causes a big perf regression of epcc 'parallel'
     // and 'barrier' on fxe256lin01. This extra padding serves to fix the performance of epcc 'parallel'
     // and 'barrier' when CACHE_LINE=64. TODO: investigate more and get rid if this padding.

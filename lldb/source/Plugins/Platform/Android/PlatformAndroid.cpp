@@ -230,7 +230,31 @@ PlatformAndroid::GetFile (const FileSpec& source,
     if (error.Fail ())
         return error;
 
-    return sync_service->PullFile (source_spec, destination);
+    uint32_t mode = 0, size = 0, mtime = 0;
+    error = sync_service->Stat(source_spec, mode, size, mtime);
+    if (error.Fail())
+        return error;
+
+    if (mode != 0)
+        return sync_service->PullFile(source_spec, destination);
+
+    auto source_file = source_spec.GetCString(false);
+
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+    if (log)
+        log->Printf("Got mode == 0 on '%s': try to get file via 'shell cat'", source_file);
+
+    if (strchr(source_file, '\'') != nullptr)
+        return Error("Doesn't support single-quotes in filenames");
+
+    // mode == 0 can signify that adbd cannot access the file
+    // due security constraints - try "cat ..." as a fallback.
+    AdbClient adb(m_device_id);
+
+    char cmd[PATH_MAX];
+    snprintf(cmd, sizeof(cmd), "cat '%s'", source_file);
+
+    return adb.ShellToFile(cmd, 60000 /* ms */, destination);
 }
 
 Error
