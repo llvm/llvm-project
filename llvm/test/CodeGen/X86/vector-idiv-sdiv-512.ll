@@ -1494,6 +1494,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %cl, %al
 ; AVX512BW-NEXT:    movb $7, %dil
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %dl
 ; AVX512BW-NEXT:    movzbl %dl, %edx
@@ -1506,6 +1507,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %cl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %cl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %sil
 ; AVX512BW-NEXT:    movzbl %sil, %eax
@@ -1520,6 +1522,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1533,6 +1536,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1546,6 +1550,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1559,6 +1564,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1572,6 +1578,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1585,6 +1592,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1598,6 +1606,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1611,6 +1620,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1624,6 +1634,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1637,6 +1648,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1650,6 +1662,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1663,6 +1676,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1676,6 +1690,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1689,6 +1704,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1703,6 +1719,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %esi
@@ -1715,6 +1732,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %cl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %cl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %dl
 ; AVX512BW-NEXT:    movzbl %dl, %eax
@@ -1729,6 +1747,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1742,6 +1761,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1755,6 +1775,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1768,6 +1789,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1781,6 +1803,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1794,6 +1817,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1807,6 +1831,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1820,6 +1845,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1833,6 +1859,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1846,6 +1873,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1859,6 +1887,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1872,6 +1901,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1885,6 +1915,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1898,6 +1929,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1913,6 +1945,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %esi
@@ -1925,6 +1958,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %cl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %cl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %dl
 ; AVX512BW-NEXT:    movzbl %dl, %eax
@@ -1939,6 +1973,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1952,6 +1987,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1965,6 +2001,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1978,6 +2015,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -1991,6 +2029,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2004,6 +2043,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2017,6 +2057,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2030,6 +2071,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2043,6 +2085,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2056,6 +2099,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2069,6 +2113,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2082,6 +2127,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2095,6 +2141,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2108,6 +2155,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2121,6 +2169,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %esi
@@ -2133,6 +2182,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %cl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %cl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %dl
 ; AVX512BW-NEXT:    movzbl %dl, %eax
@@ -2147,6 +2197,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2160,6 +2211,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2173,6 +2225,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2186,6 +2239,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2199,6 +2253,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2212,6 +2267,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2225,6 +2281,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2238,6 +2295,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2251,6 +2309,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2264,6 +2323,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2277,6 +2337,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2290,6 +2351,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2303,6 +2365,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax
@@ -2316,6 +2379,7 @@ define <64 x i8> @test_rem7_64i8(<64 x i8> %a) nounwind {
 ; AVX512BW-NEXT:    shrb $7, %dl
 ; AVX512BW-NEXT:    sarb $2, %al
 ; AVX512BW-NEXT:    addb %dl, %al
+; AVX512BW-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; AVX512BW-NEXT:    mulb %dil
 ; AVX512BW-NEXT:    subb %al, %cl
 ; AVX512BW-NEXT:    movzbl %cl, %eax

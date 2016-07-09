@@ -452,6 +452,39 @@ entry:
   ret void
 }
 
+; Test that the or is folded into the base address register instead of
+; added to m0
+
+; GCN-LABEL: {{^}}extractelement_v4i32_or_index:
+; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
+; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
+; GCN-NOT: [[IDX_SHL]]
+; GCN: s_mov_b32 m0, [[IDX_SHL]]
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+define void @extractelement_v4i32_or_index(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx.in) {
+entry:
+  %ld = load volatile <4 x i32>, <4  x i32> addrspace(1)* %in
+  %idx.shl = shl i32 %idx.in, 2
+  %idx = or i32 %idx.shl, 1
+  %value = extractelement <4 x i32> %ld, i32 %idx
+  store i32 %value, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}insertelement_v4f32_or_index:
+; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
+; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
+; GCN-NOT: [[IDX_SHL]]
+; GCN: s_mov_b32 m0, [[IDX_SHL]]
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+define void @insertelement_v4f32_or_index(<4 x float> addrspace(1)* %out, <4 x float> %a, i32 %idx.in) nounwind {
+  %idx.shl = shl i32 %idx.in, 2
+  %idx = or i32 %idx.shl, 1
+  %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 %idx
+  store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
 attributes #0 = { nounwind }

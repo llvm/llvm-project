@@ -185,7 +185,7 @@ attributes #2 = { "no-frame-pointer-elim"="false" nounwind }
 ; CHECK-NEXT:  je [[STRINGS_EQUAL]]
 ;
 ; CHECK: [[STRINGS_EQUAL]]
-; CHECK-NEXT: popq
+; CHECK: popq
 define zeroext i1 @segmentedStack(i8* readonly %vk1, i8* readonly %vk2, i64 %key_size) #5 {
 entry:
   %cmp.i = icmp eq i8* %vk1, null

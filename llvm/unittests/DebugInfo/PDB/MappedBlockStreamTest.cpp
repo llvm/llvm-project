@@ -317,7 +317,9 @@ TEST(MappedBlockStreamTest, TestWriteThenRead) {
   StringRef FStr[] = {"Fixed Str", ""};
   uint8_t byteArray0[] = {'1', '2'};
   uint8_t byteArray1[] = {'0', '0'};
-  ArrayRef<uint8_t> byteArray[] = {byteArray0, byteArray1};
+  ArrayRef<uint8_t> byteArrayRef0(byteArray0);
+  ArrayRef<uint8_t> byteArrayRef1(byteArray1);
+  ArrayRef<uint8_t> byteArray[] = { byteArrayRef0, byteArrayRef1 };
   ArrayRef<uint32_t> intArray[] = {{890723408, 29082234}, {0, 0}};
 
   StreamReader Reader(S);

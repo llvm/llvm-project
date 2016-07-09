@@ -686,7 +686,7 @@ static void emitKill(const MachineInstr *MI, AsmPrinter &AP) {
                    AP.MF->getSubtarget().getRegisterInfo())
        << (Op.isDef() ? "<def>" : "<kill>");
   }
-  AP.OutStreamer->AddComment(Str);
+  AP.OutStreamer->AddComment(OS.str());
   AP.OutStreamer->AddBlankLine();
 }
 

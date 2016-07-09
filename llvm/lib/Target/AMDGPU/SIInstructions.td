@@ -825,7 +825,7 @@ defm DS_MIN_RTN_F32 : DS_1A2D_RET <0x32, "ds_min_rtn_f32", VGPR_32, "ds_min_f32"
 defm DS_MAX_RTN_F32 : DS_1A2D_RET <0x33, "ds_max_rtn_f32", VGPR_32, "ds_max_f32">;
 
 let Uses = [EXEC], mayLoad =0, mayStore = 0, isConvergent = 1 in {
-defm DS_SWIZZLE_B32 : DS_1A_RET <0x35, "ds_swizzle_b32", VGPR_32>;
+defm DS_SWIZZLE_B32 : DS_1A_RET_ <dsop<0x35, 0x3d>, "ds_swizzle_b32", VGPR_32>;
 }
 
 let mayStore = 0 in {
@@ -1958,11 +1958,6 @@ def SI_LOOP : InstSI <
 
 } // End isBranch = 1, isTerminator = 1
 
-def SI_BREAK : InstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$src), "",
-  [(set i64:$dst, (int_amdgcn_break i64:$src))]
->;
-
 def SI_IF_BREAK : InstSI <
   (outs SReg_64:$dst),   (ins SReg_64:$vcc, SReg_64:$src), "",
   [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]
@@ -2026,12 +2021,11 @@ let Uses = [EXEC], Defs = [EXEC, VCC, M0],
 
 class SI_INDIRECT_SRC<RegisterClass rc> : InstSI <
   (outs VGPR_32:$vdst, SReg_64:$sdst),
-  (ins rc:$src, VSrc_32:$idx, i32imm:$offset)
->;
+  (ins rc:$src, VS_32:$idx, i32imm:$offset)>;
 
 class SI_INDIRECT_DST<RegisterClass rc> : InstSI <
   (outs rc:$vdst, SReg_64:$sdst),
-  (ins unknown:$src, VSrc_32:$idx, i32imm:$offset, VGPR_32:$val)> {
+  (ins unknown:$src, VS_32:$idx, i32imm:$offset, VGPR_32:$val)> {
   let Constraints = "$src = $vdst";
 }
 
@@ -3313,29 +3307,16 @@ def : MTBUF_StoreResource <v4i32, 4, TBUFFER_STORE_FORMAT_XYZW>;
 /********** ====================== **********/
 
 multiclass SI_INDIRECT_Pattern <ValueType vt, ValueType eltvt, string VecSize> {
-
-  // 1. Extract with offset
+  // Extract with offset
   def : Pat<
-    (eltvt (extractelt vt:$vec, (add i32:$idx, imm:$off))),
-    (!cast<Instruction>("SI_INDIRECT_SRC_"#VecSize) $vec, $idx, imm:$off)
+    (eltvt (extractelt vt:$src, (MOVRELSOffset i32:$idx, (i32 imm:$offset)))),
+    (!cast<Instruction>("SI_INDIRECT_SRC_"#VecSize) $src, $idx, imm:$offset)
   >;
 
-  // 2. Extract without offset
+  // Insert with offset
   def : Pat<
-    (eltvt (extractelt vt:$vec, i32:$idx)),
-    (!cast<Instruction>("SI_INDIRECT_SRC_"#VecSize) $vec, $idx, 0)
-  >;
-
-  // 3. Insert with offset
-  def : Pat<
-    (insertelt vt:$vec, eltvt:$val, (add i32:$idx, imm:$off)),
-    (!cast<Instruction>("SI_INDIRECT_DST_"#VecSize) $vec, $idx, imm:$off, $val)
-  >;
-
-  // 4. Insert without offset
-  def : Pat<
-    (insertelt vt:$vec, eltvt:$val, i32:$idx),
-    (!cast<Instruction>("SI_INDIRECT_DST_"#VecSize) $vec, $idx, 0, $val)
+    (insertelt vt:$src, eltvt:$val, (MOVRELDOffset i32:$idx, (i32 imm:$offset))),
+    (!cast<Instruction>("SI_INDIRECT_DST_"#VecSize) $src, $idx, imm:$offset, $val)
   >;
 }
 

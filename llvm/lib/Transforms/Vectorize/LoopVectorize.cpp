@@ -1339,7 +1339,7 @@ public:
                             DominatorTree *DT, TargetLibraryInfo *TLI,
                             AliasAnalysis *AA, Function *F,
                             const TargetTransformInfo *TTI,
-                            LoopAccessAnalysis *LAA, LoopInfo *LI,
+                            LoopAccessLegacyAnalysis *LAA, LoopInfo *LI,
                             LoopVectorizationRequirements *R,
                             LoopVectorizeHints *H)
       : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TheFunction(F),
@@ -1536,7 +1536,7 @@ private:
   /// Dominator Tree.
   DominatorTree *DT;
   // LoopAccess analysis.
-  LoopAccessAnalysis *LAA;
+  LoopAccessLegacyAnalysis *LAA;
   // And the loop-accesses info corresponding to this loop.  This pointer is
   // null until canVectorizeMemory sets it up.
   const LoopAccessInfo *LAI;
@@ -1802,7 +1802,7 @@ struct LoopVectorize : public FunctionPass {
   DemandedBits *DB;
   AliasAnalysis *AA;
   AssumptionCache *AC;
-  LoopAccessAnalysis *LAA;
+  LoopAccessLegacyAnalysis *LAA;
   bool DisableUnrolling;
   bool AlwaysVectorize;
 
@@ -1821,7 +1821,7 @@ struct LoopVectorize : public FunctionPass {
     TLI = TLIP ? &TLIP->getTLI() : nullptr;
     AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
     AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    LAA = &getAnalysis<LoopAccessAnalysis>();
+    LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
 
     // Compute some weights outside of the loop over the loops. Compute this
@@ -2130,7 +2130,7 @@ struct LoopVectorize : public FunctionPass {
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<LoopAccessAnalysis>();
+    AU.addRequired<LoopAccessLegacyAnalysis>();
     AU.addRequired<DemandedBitsWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
@@ -6454,7 +6454,7 @@ INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
-INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
 INITIALIZE_PASS_END(LoopVectorize, LV_NAME, lv_name, false, false)
 

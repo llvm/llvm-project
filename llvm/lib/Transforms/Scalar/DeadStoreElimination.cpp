@@ -819,6 +819,50 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
   return MadeChange;
 }
 
+static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
+                               AliasAnalysis *AA, MemoryDependenceResults *MD,
+                               const DataLayout &DL,
+                               const TargetLibraryInfo *TLI) {
+  // Must be a store instruction.
+  StoreInst *SI = dyn_cast<StoreInst>(Inst);
+  if (!SI)
+    return false;
+
+  // If we're storing the same value back to a pointer that we just loaded from,
+  // then the store can be removed.
+  if (LoadInst *DepLoad = dyn_cast<LoadInst>(SI->getValueOperand())) {
+    if (SI->getPointerOperand() == DepLoad->getPointerOperand() &&
+        isRemovable(SI) && memoryIsNotModifiedBetween(DepLoad, SI, AA)) {
+
+      DEBUG(dbgs() << "DSE: Remove Store Of Load from same pointer:\n  LOAD: "
+                   << *DepLoad << "\n  STORE: " << *SI << '\n');
+
+      deleteDeadInstruction(SI, &BBI, *MD, *TLI);
+      ++NumRedundantStores;
+      return true;
+    }
+  }
+
+  // Remove null stores into the calloc'ed objects
+  Constant *StoredConstant = dyn_cast<Constant>(SI->getValueOperand());
+  if (StoredConstant && StoredConstant->isNullValue() && isRemovable(SI)) {
+    Instruction *UnderlyingPointer =
+        dyn_cast<Instruction>(GetUnderlyingObject(SI->getPointerOperand(), DL));
+
+    if (UnderlyingPointer && isCallocLikeFn(UnderlyingPointer, TLI) &&
+        memoryIsNotModifiedBetween(UnderlyingPointer, SI, AA)) {
+      DEBUG(
+          dbgs() << "DSE: Remove null store to the calloc'ed object:\n  DEAD: "
+                 << *Inst << "\n  OBJECT: " << *UnderlyingPointer << '\n');
+
+      deleteDeadInstruction(SI, &BBI, *MD, *TLI);
+      ++NumRedundantStores;
+      return true;
+    }
+  }
+  return false;
+}
+
 static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                                 MemoryDependenceResults *MD, DominatorTree *DT,
                                 const TargetLibraryInfo *TLI) {
@@ -841,50 +885,17 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
 
     Instruction *Inst = &*BBI++;
 
-    // If we find something that writes memory, get its memory dependence.
+    // Check to see if Inst writes to memory.  If not, continue.
     if (!hasMemoryWrite(Inst, *TLI))
       continue;
 
-    // If we're storing the same value back to a pointer that we just
-    // loaded from, then the store can be removed.
-    if (StoreInst *SI = dyn_cast<StoreInst>(Inst)) {
-      if (LoadInst *DepLoad = dyn_cast<LoadInst>(SI->getValueOperand())) {
-        if (SI->getPointerOperand() == DepLoad->getPointerOperand() &&
-            isRemovable(SI) &&
-            memoryIsNotModifiedBetween(DepLoad, SI, AA)) {
-
-          DEBUG(dbgs() << "DSE: Remove Store Of Load from same pointer:\n  "
-                       << "LOAD: " << *DepLoad << "\n  STORE: " << *SI << '\n');
-
-          deleteDeadInstruction(SI, &BBI, *MD, *TLI);
-          ++NumRedundantStores;
-          MadeChange = true;
-          continue;
-        }
-      }
-
-      // Remove null stores into the calloc'ed objects
-      Constant *StoredConstant = dyn_cast<Constant>(SI->getValueOperand());
-
-      if (StoredConstant && StoredConstant->isNullValue() &&
-          isRemovable(SI)) {
-        Instruction *UnderlyingPointer = dyn_cast<Instruction>(
-            GetUnderlyingObject(SI->getPointerOperand(), DL));
-
-        if (UnderlyingPointer && isCallocLikeFn(UnderlyingPointer, TLI) &&
-            memoryIsNotModifiedBetween(UnderlyingPointer, SI, AA)) {
-          DEBUG(dbgs()
-                << "DSE: Remove null store to the calloc'ed object:\n  DEAD: "
-                << *Inst << "\n  OBJECT: " << *UnderlyingPointer << '\n');
-
-          deleteDeadInstruction(SI, &BBI, *MD, *TLI);
-          ++NumRedundantStores;
-          MadeChange = true;
-          continue;
-        }
-      }
+    // eliminateNoopStore will update in iterator, if necessary.
+    if (eliminateNoopStore(Inst, BBI, AA, MD, DL, TLI)) {
+      MadeChange = true;
+      continue;
     }
 
+    // If we find something that writes memory, get its memory dependence.
     MemDepResult InstDep = MD->getDependency(Inst);
 
     // Ignore any store where we can't find a local dependence.

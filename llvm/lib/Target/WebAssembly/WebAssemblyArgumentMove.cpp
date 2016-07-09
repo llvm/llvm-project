@@ -65,8 +65,8 @@ FunctionPass *llvm::createWebAssemblyArgumentMove() {
 }
 
 /// Test whether the given instruction is an ARGUMENT.
-static bool IsArgument(const MachineInstr *MI) {
-  switch (MI->getOpcode()) {
+static bool IsArgument(const MachineInstr &MI) {
+  switch (MI.getOpcode()) {
   case WebAssembly::ARGUMENT_I32:
   case WebAssembly::ARGUMENT_I64:
   case WebAssembly::ARGUMENT_F32:
@@ -88,20 +88,18 @@ bool WebAssemblyArgumentMove::runOnMachineFunction(MachineFunction &MF) {
   MachineBasicBlock::iterator InsertPt = EntryMBB.end();
 
   // Look for the first NonArg instruction.
-  for (auto MII = EntryMBB.begin(), MIE = EntryMBB.end(); MII != MIE; ++MII) {
-    MachineInstr *MI = MII;
+  for (MachineInstr &MI : EntryMBB) {
     if (!IsArgument(MI)) {
-      InsertPt = MII;
+      InsertPt = MI;
       break;
     }
   }
 
   // Now move any argument instructions later in the block
   // to before our first NonArg instruction.
-  for (auto I = InsertPt, E = EntryMBB.end(); I != E; ++I) {
-    MachineInstr *MI = I;
+  for (MachineInstr &MI : llvm::make_range(InsertPt, EntryMBB.end())) {
     if (IsArgument(MI)) {
-      EntryMBB.insert(InsertPt, MI->removeFromParent());
+      EntryMBB.insert(InsertPt, MI.removeFromParent());
       Changed = true;
     }
   }

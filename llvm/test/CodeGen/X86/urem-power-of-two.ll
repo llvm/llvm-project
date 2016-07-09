@@ -57,8 +57,10 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    andb $4, %sil
 ; CHECK-NEXT:    movzbl %dil, %eax
+; CHECK-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; CHECK-NEXT:    divb %sil
 ; CHECK-NEXT:    movzbl %ah, %eax # NOREX
+; CHECK-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
 ;
   %and = and i8 %y, 4
@@ -66,7 +68,7 @@ define i8 @and_pow_2(i8 %x, i8 %y) {
   ret i8 %urem
 }
 
-; A vector splat constant divisor should get the same treatment as a scalar. 
+; A vector splat constant divisor should get the same treatment as a scalar.
 
 define <4 x i32> @vec_const_pow_2(<4 x i32> %x) {
 ; CHECK-LABEL: vec_const_pow_2:

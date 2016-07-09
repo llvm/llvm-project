@@ -1619,8 +1619,8 @@ static Value *matchSelectFromAndOr(Value *A, Value *C, Value *B, Value *D,
   // through its bitcast and the corresponding bitcast of the 'not' condition.
   Type *OrigType = A->getType();
   Value *SrcA, *SrcB;
-  if (match(A, m_BitCast(m_Value(SrcA))) &&
-      match(B, m_BitCast(m_Value(SrcB)))) {
+  if (match(A, m_OneUse(m_BitCast(m_Value(SrcA)))) &&
+      match(B, m_OneUse(m_BitCast(m_Value(SrcB))))) {
     A = SrcA;
     B = SrcB;
   }
@@ -2222,23 +2222,28 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
       }
     }
 
-    // (Cond & C) | (~Cond & D) -> Cond ? C : D, and commuted variants.
-    if (Value *V = matchSelectFromAndOr(A, C, B, D, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(A, C, D, B, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(C, A, B, D, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(C, A, D, B, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(B, D, A, C, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(B, D, C, A, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(D, B, A, C, *Builder))
-      return replaceInstUsesWith(I, V);
-    if (Value *V = matchSelectFromAndOr(D, B, C, A, *Builder))
-      return replaceInstUsesWith(I, V);
+    // Don't try to form a select if it's unlikely that we'll get rid of at
+    // least one of the operands. A select is generally more expensive than the
+    // 'or' that it is replacing.
+    if (Op0->hasOneUse() || Op1->hasOneUse()) {
+      // (Cond & C) | (~Cond & D) -> Cond ? C : D, and commuted variants.
+      if (Value *V = matchSelectFromAndOr(A, C, B, D, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(A, C, D, B, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(C, A, B, D, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(C, A, D, B, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(B, D, A, C, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(B, D, C, A, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(D, B, A, C, *Builder))
+        return replaceInstUsesWith(I, V);
+      if (Value *V = matchSelectFromAndOr(D, B, C, A, *Builder))
+        return replaceInstUsesWith(I, V);
+    }
 
     // ((A&~B)|(~A&B)) -> A^B
     if ((match(C, m_Not(m_Specific(D))) &&
@@ -2393,11 +2398,12 @@ Instruction *InstCombiner::visitOr(BinaryOperator &I) {
   if (Instruction *CastedOr = foldCastedBitwiseLogic(I))
     return CastedOr;
 
-  // or(sext(A), B) -> A ? -1 : B where A is an i1
-  // or(A, sext(B)) -> B ? -1 : A where B is an i1
-  if (match(Op0, m_SExt(m_Value(A))) && A->getType()->isIntegerTy(1))
+  // or(sext(A), B) / or(B, sext(A)) --> A ? -1 : B, where A is i1 or <N x i1>.
+  if (match(Op0, m_OneUse(m_SExt(m_Value(A)))) &&
+      A->getType()->getScalarType()->isIntegerTy(1))
     return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op1);
-  if (match(Op1, m_SExt(m_Value(A))) && A->getType()->isIntegerTy(1))
+  if (match(Op1, m_OneUse(m_SExt(m_Value(A)))) &&
+      A->getType()->getScalarType()->isIntegerTy(1))
     return SelectInst::Create(A, ConstantInt::getSigned(I.getType(), -1), Op0);
 
   // Note: If we've gotten to the point of visiting the outer OR, then the

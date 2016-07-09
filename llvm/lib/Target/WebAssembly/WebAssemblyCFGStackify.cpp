@@ -295,11 +295,11 @@ static bool ExplicitlyBranchesTo(MachineBasicBlock *Pred,
 }
 
 /// Test whether MI is a child of some other node in an expression tree.
-static bool IsChild(const MachineInstr *MI,
+static bool IsChild(const MachineInstr &MI,
                     const WebAssemblyFunctionInfo &MFI) {
-  if (MI->getNumOperands() == 0)
+  if (MI.getNumOperands() == 0)
     return false;
-  const MachineOperand &MO = MI->getOperand(0);
+  const MachineOperand &MO = MI.getOperand(0);
   if (!MO.isReg() || MO.isImplicit() || !MO.isDef())
     return false;
   unsigned Reg = MO.getReg();
@@ -369,7 +369,7 @@ static void PlaceBlockMarker(MachineBasicBlock &MBB, MachineFunction &MF,
     // Otherwise, insert the BLOCK as late in Header as we can, but before the
     // beginning of the local expression tree and any nested BLOCKs.
     InsertPos = Header->getFirstTerminator();
-    while (InsertPos != Header->begin() && IsChild(prev(InsertPos), MFI) &&
+    while (InsertPos != Header->begin() && IsChild(*prev(InsertPos), MFI) &&
            prev(InsertPos)->getOpcode() != WebAssembly::LOOP &&
            prev(InsertPos)->getOpcode() != WebAssembly::END_BLOCK &&
            prev(InsertPos)->getOpcode() != WebAssembly::END_LOOP)

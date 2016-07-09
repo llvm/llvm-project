@@ -9,6 +9,7 @@ define i8 @foo(i8 %tmp325) {
 ; CHECK-NEXT:    andl $28672, %eax # imm = 0x7000
 ; CHECK-NEXT:    shrl $12, %eax
 ; CHECK-NEXT:    movb $37, %dl
+; CHECK-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    mulb %dl
 ; CHECK-NEXT:    subb %al, %cl
 ; CHECK-NEXT:    movl %ecx, %eax

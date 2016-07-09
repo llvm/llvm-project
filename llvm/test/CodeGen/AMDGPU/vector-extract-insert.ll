@@ -61,6 +61,24 @@ define void @extract_insert_same_elt2_v4i32(i32 addrspace(1)* %out, <4 x i32> ad
   ret void
 }
 
+; GCN-LABEL: {{^}}extract_insert_same_dynelt_v4f32:
+; GCN: s_load_dword [[VAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, 0xd{{$}}
+; GCN-NOT buffer_load_dword
+; GCN-NOT: [[VAL]]
+; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
+; GCN-NOT: [[VVAL]]
+; GCN: buffer_store_dword [[VVAL]]
+define void @extract_insert_same_dynelt_v4f32(float addrspace(1)* %out, <4 x float> addrspace(1)* %in, float %val, i32 %idx) #1 {
+  %id = call i32 @llvm.amdgcn.workitem.id.x()
+  %id.ext = sext i32 %id to i64
+  %gep.in = getelementptr inbounds <4 x float>, <4 x float> addrspace(1)* %in, i64 %id.ext
+  %gep.out = getelementptr inbounds float, float addrspace(1)* %out, i64 %id.ext
+  %vec = load volatile <4 x float>, <4 x float> addrspace(1)* %gep.in
+  %insert = insertelement <4 x float> %vec, float %val, i32 %idx
+  %extract = extractelement <4 x float> %insert, i32 %idx
+  store float %extract, float addrspace(1)* %gep.out
+  ret void
+}
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }

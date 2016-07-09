@@ -60,9 +60,11 @@ define void @call_intarg(i32 %i0, i8* %i1) {
 ; HARD: mov %i5, %g2
 ; HARD-NEXT: ld [%fp+92], %g3
 ; HARD-NEXT: mov %i4, %i5
+; HARD-NEXT: ! kill
 ; HARD-NEXT: std %g2, [%fp+-24]
 ; HARD-NEXT: mov %i3, %i4
 ; HARD-NEXT: std %i4, [%fp+-16]
+; HARD-NEXT: ! kill
 ; HARD-NEXT: std %i0, [%fp+-8]
 ; HARD-NEXT: st %i2, [%fp+-28]
 ; HARD-NEXT: ld [%fp+104], %f0

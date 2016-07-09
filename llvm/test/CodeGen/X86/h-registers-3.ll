@@ -17,13 +17,17 @@ entry:
 
 ; X64-LABEL: foo
 ; X64: callq
+; X64-NEXT: # kill
 ; X64-NEXT: shrl $8, %eax
+; X64-NEXT: # kill
 ; X64-NEXT: popq
 ; X64-NEXT: retq
 
 ; X32-LABEL: foo
 ; X32: callq
+; X32-NEXT: # kill
 ; X32-NEXT: shrl $8, %eax
+; X32-NEXT: # kill
 ; X32-NEXT: popq
 ; X32-NEXT: retq
 }

@@ -299,49 +299,18 @@ Instruction *NaryReassociate::tryReassociate(Instruction *I) {
   }
 }
 
-// FIXME: extract this method into TTI->getGEPCost.
 static bool isGEPFoldable(GetElementPtrInst *GEP,
-                          const TargetTransformInfo *TTI,
-                          const DataLayout *DL) {
-  GlobalVariable *BaseGV = nullptr;
-  int64_t BaseOffset = 0;
-  bool HasBaseReg = false;
-  int64_t Scale = 0;
-
-  if (GlobalVariable *GV = dyn_cast<GlobalVariable>(GEP->getPointerOperand()))
-    BaseGV = GV;
-  else
-    HasBaseReg = true;
-
-  gep_type_iterator GTI = gep_type_begin(GEP);
-  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I, ++GTI) {
-    if (isa<SequentialType>(*GTI)) {
-      int64_t ElementSize = DL->getTypeAllocSize(GTI.getIndexedType());
-      if (ConstantInt *ConstIdx = dyn_cast<ConstantInt>(*I)) {
-        BaseOffset += ConstIdx->getSExtValue() * ElementSize;
-      } else {
-        // Needs scale register.
-        if (Scale != 0) {
-          // No addressing mode takes two scale registers.
-          return false;
-        }
-        Scale = ElementSize;
-      }
-    } else {
-      StructType *STy = cast<StructType>(*GTI);
-      uint64_t Field = cast<ConstantInt>(*I)->getZExtValue();
-      BaseOffset += DL->getStructLayout(STy)->getElementOffset(Field);
-    }
-  }
-
-  unsigned AddrSpace = GEP->getPointerAddressSpace();
-  return TTI->isLegalAddressingMode(GEP->getResultElementType(), BaseGV,
-                                    BaseOffset, HasBaseReg, Scale, AddrSpace);
+                          const TargetTransformInfo *TTI) {
+  SmallVector<const Value*, 4> Indices;
+  for (auto I = GEP->idx_begin(); I != GEP->idx_end(); ++I)
+    Indices.push_back(*I);
+  return TTI->getGEPCost(GEP->getSourceElementType(), GEP->getPointerOperand(),
+                         Indices) == TargetTransformInfo::TCC_Free;
 }
 
 Instruction *NaryReassociate::tryReassociateGEP(GetElementPtrInst *GEP) {
   // Not worth reassociating GEP if it is foldable.
-  if (isGEPFoldable(GEP, TTI, DL))
+  if (isGEPFoldable(GEP, TTI))
     return nullptr;
 
   gep_type_iterator GTI = gep_type_begin(*GEP);

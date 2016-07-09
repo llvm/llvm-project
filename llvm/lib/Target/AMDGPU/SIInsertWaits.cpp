@@ -579,7 +579,7 @@ bool SIInsertWaits::runOnMachineFunction(MachineFunction &MF) {
       // Record pre-existing, explicitly requested waits
       if (I->getOpcode() == AMDGPU::S_WAITCNT) {
         handleExistingWait(*I);
-        RemoveMI.push_back(I);
+        RemoveMI.push_back(&*I);
         continue;
       }
 

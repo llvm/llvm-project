@@ -338,11 +338,13 @@ void SplitAnalysis::analyze(const LiveInterval *li) {
 //===----------------------------------------------------------------------===//
 
 /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
-SplitEditor::SplitEditor(SplitAnalysis &sa, LiveIntervals &lis, VirtRegMap &vrm,
+SplitEditor::SplitEditor(SplitAnalysis &sa, AliasAnalysis &aa,
+                         LiveIntervals &lis, VirtRegMap &vrm,
                          MachineDominatorTree &mdt,
                          MachineBlockFrequencyInfo &mbfi)
-    : SA(sa), LIS(lis), VRM(vrm), MRI(vrm.getMachineFunction().getRegInfo()),
-      MDT(mdt), TII(*vrm.getMachineFunction().getSubtarget().getInstrInfo()),
+    : SA(sa), AA(aa), LIS(lis), VRM(vrm),
+      MRI(vrm.getMachineFunction().getRegInfo()), MDT(mdt),
+      TII(*vrm.getMachineFunction().getSubtarget().getInstrInfo()),
       TRI(*vrm.getMachineFunction().getSubtarget().getRegisterInfo()),
       MBFI(mbfi), Edit(nullptr), OpenIdx(0), SpillMode(SM_Partition),
       RegAssign(Allocator) {}
@@ -1130,7 +1132,7 @@ void SplitEditor::deleteRematVictims() {
   if (Dead.empty())
     return;
 
-  Edit->eliminateDeadDefs(Dead);
+  Edit->eliminateDeadDefs(Dead, None, &AA);
 }
 
 void SplitEditor::finish(SmallVectorImpl<unsigned> *LRMap) {

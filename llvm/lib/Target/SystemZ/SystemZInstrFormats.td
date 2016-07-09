@@ -1060,10 +1060,28 @@ class BranchUnaryRI<string mnemonic, bits<12> opcode, RegisterOperand cls>
   let DisableEncoding = "$R1src";
 }
 
-class LoadMultipleRSY<string mnemonic, bits<16> opcode, RegisterOperand cls>
-  : InstRSY<opcode, (outs cls:$R1, cls:$R3), (ins bdaddr20only:$BD2),
+class LoadMultipleRS<string mnemonic, bits<8> opcode, RegisterOperand cls,
+                     AddressingMode mode = bdaddr12only>
+  : InstRS<opcode, (outs cls:$R1, cls:$R3), (ins mode:$BD2),
+           mnemonic#"\t$R1, $R3, $BD2", []> {
+  let mayLoad = 1;
+}
+
+class LoadMultipleRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                      AddressingMode mode = bdaddr20only>
+  : InstRSY<opcode, (outs cls:$R1, cls:$R3), (ins mode:$BD2),
             mnemonic#"\t$R1, $R3, $BD2", []> {
   let mayLoad = 1;
+}
+
+multiclass LoadMultipleRSPair<string mnemonic, bits<8> rsOpcode,
+                              bits<16> rsyOpcode, RegisterOperand cls> {
+  let DispKey = mnemonic ## #cls in {
+    let DispSize = "12" in
+      def "" : LoadMultipleRS<mnemonic, rsOpcode, cls, bdaddr12pair>;
+    let DispSize = "20" in
+      def Y  : LoadMultipleRSY<mnemonic#"y", rsyOpcode, cls, bdaddr20pair>;
+  }
 }
 
 class LoadMultipleVRSa<string mnemonic, bits<16> opcode>
@@ -1141,10 +1159,28 @@ class StoreLengthVRSb<string mnemonic, bits<16> opcode,
   let AccessBytes = bytes;
 }
 
-class StoreMultipleRSY<string mnemonic, bits<16> opcode, RegisterOperand cls>
-  : InstRSY<opcode, (outs), (ins cls:$R1, cls:$R3, bdaddr20only:$BD2),
+class StoreMultipleRS<string mnemonic, bits<8> opcode, RegisterOperand cls,
+                      AddressingMode mode = bdaddr12only>
+  : InstRS<opcode, (outs), (ins cls:$R1, cls:$R3, mode:$BD2),
+           mnemonic#"\t$R1, $R3, $BD2", []> {
+  let mayStore = 1;
+}
+
+class StoreMultipleRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                       AddressingMode mode = bdaddr20only>
+  : InstRSY<opcode, (outs), (ins cls:$R1, cls:$R3, mode:$BD2),
             mnemonic#"\t$R1, $R3, $BD2", []> {
   let mayStore = 1;
+}
+
+multiclass StoreMultipleRSPair<string mnemonic, bits<8> rsOpcode,
+                               bits<16> rsyOpcode, RegisterOperand cls> {
+  let DispKey = mnemonic ## #cls in {
+    let DispSize = "12" in
+      def "" : StoreMultipleRS<mnemonic, rsOpcode, cls, bdaddr12pair>;
+    let DispSize = "20" in
+      def Y  : StoreMultipleRSY<mnemonic#"y", rsyOpcode, cls, bdaddr20pair>;
+  }
 }
 
 class StoreMultipleVRSa<string mnemonic, bits<16> opcode>
@@ -1977,6 +2013,40 @@ class TernaryRRD<string mnemonic, bits<16> opcode,
   let OpType = "reg";
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
+}
+
+class TernaryRS<string mnemonic, bits<8> opcode, RegisterOperand cls,
+                bits<5> bytes, AddressingMode mode = bdaddr12only>
+  : InstRS<opcode, (outs cls:$R1),
+          (ins cls:$R1src, imm32zx4:$R3, mode:$BD2),
+           mnemonic#"\t$R1, $R3, $BD2", []> {
+
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+}
+
+class TernaryRSY<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                bits<5> bytes, AddressingMode mode = bdaddr20only>
+  : InstRSY<opcode, (outs cls:$R1),
+           (ins cls:$R1src, imm32zx4:$R3, mode:$BD2),
+            mnemonic#"\t$R1, $R3, $BD2", []> {
+
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let mayLoad = 1;
+  let AccessBytes = bytes;
+}
+
+multiclass TernaryRSPair<string mnemonic, bits<8> rsOpcode, bits<16> rsyOpcode,
+                         RegisterOperand cls, bits<5> bytes> {
+  let DispKey = mnemonic ## #cls in {
+    let DispSize = "12" in
+      def "" : TernaryRS<mnemonic, rsOpcode, cls, bytes, bdaddr12pair>;
+    let DispSize = "20" in
+      def Y  : TernaryRSY<mnemonic#"y", rsyOpcode, cls, bytes, bdaddr20pair>;
+  }
 }
 
 class TernaryRXF<string mnemonic, bits<16> opcode, SDPatternOperator operator,

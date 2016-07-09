@@ -38,6 +38,7 @@ MODULE_ALIAS_ANALYSIS("globals-aa", GlobalsAA())
 #define MODULE_PASS(NAME, CREATE_PASS)
 #endif
 MODULE_PASS("constmerge", ConstantMergePass())
+MODULE_PASS("cross-dso-cfi", CrossDSOCFIPass())
 MODULE_PASS("deadargelim", DeadArgumentEliminationPass())
 MODULE_PASS("elim-avail-extern", EliminateAvailableExternallyPass())
 MODULE_PASS("forceattrs", ForceFunctionAttrsPass())
@@ -140,6 +141,7 @@ FUNCTION_PASS("loweratomic", LowerAtomicPass())
 FUNCTION_PASS("lower-expect", LowerExpectIntrinsicPass())
 FUNCTION_PASS("guard-widening", GuardWideningPass())
 FUNCTION_PASS("gvn", GVN())
+FUNCTION_PASS("loop-simplify", LoopSimplifyPass())
 FUNCTION_PASS("mem2reg", PromotePass())
 FUNCTION_PASS("memcpyopt", MemCpyOptPass())
 FUNCTION_PASS("mldst-motion", MergedLoadStoreMotionPass())
@@ -176,7 +178,7 @@ FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
 #define LOOP_ANALYSIS(NAME, CREATE_PASS)
 #endif
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
-LOOP_ANALYSIS("access-info", LoopAccessInfoAnalysis())
+LOOP_ANALYSIS("access-info", LoopAccessAnalysis())
 #undef LOOP_ANALYSIS
 
 #ifndef LOOP_PASS

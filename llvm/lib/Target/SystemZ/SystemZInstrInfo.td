@@ -702,10 +702,14 @@ def  : StoreGR64PC<STRL, aligned_truncstorei32>;
 //===----------------------------------------------------------------------===//
 
 // Multi-register loads.
+defm LM : LoadMultipleRSPair<"lm", 0x98, 0xEB98, GR32>;
 def LMG : LoadMultipleRSY<"lmg", 0xEB04, GR64>;
+def LMH : LoadMultipleRSY<"lmh", 0xEB96, GRH32>;
 
 // Multi-register stores.
+defm STM : StoreMultipleRSPair<"stm", 0x90, 0xEB90, GR32>;
 def STMG : StoreMultipleRSY<"stmg", 0xEB24, GR64>;
+def STMH : StoreMultipleRSY<"stmh", 0xEB26, GRH32>;
 
 //===----------------------------------------------------------------------===//
 // Byte swaps
@@ -813,6 +817,11 @@ defm : InsertMem<"inserti8", IC32Y, GR32, azextloadi8, bdxaddr20pair>;
 
 defm : InsertMem<"inserti8", IC,  GR64, azextloadi8, bdxaddr12pair>;
 defm : InsertMem<"inserti8", ICY, GR64, azextloadi8, bdxaddr20pair>;
+
+let Defs = [CC] in {
+  defm ICM : TernaryRSPair<"icm", 0xBF, 0xEB81, GR32, 0>;
+  def ICMH : TernaryRSY<"icmh", 0xEB80, GRH32, 0>;
+}
 
 // Insertions of a 16-bit immediate, leaving other bits unaffected.
 // We don't have or_as_insert equivalents of these operations because
@@ -1187,6 +1196,7 @@ def DLG  : BinaryRXY<"dlg",  0xE387, z_udivrem64, GR128, load, 8>;
 // Shift left.
 let hasSideEffects = 0 in {
   defm SLL : BinaryRSAndK<"sll", 0x89, 0xEBDF, shl, GR32>;
+  defm SLA : BinaryRSAndK<"sla", 0x8B, 0xEBDD, null_frag, GR32>;
   def SLLG : BinaryRSY<"sllg", 0xEB0D, shl, GR64>;
 }
 
@@ -1364,6 +1374,9 @@ let Defs = [CC] in {
 
   defm TM : CompareSIPair<"tm", 0x91, 0xEB51, z_tm_mem, anyextloadi8, imm32zx8>;
 }
+
+def TML : InstAlias<"tml\t$R, $I", (TMLL GR32:$R, imm32ll16:$I), 0>;
+def TMH : InstAlias<"tmh\t$R, $I", (TMLH GR32:$R, imm32lh16:$I), 0>;
 
 //===----------------------------------------------------------------------===//
 // Prefetch
@@ -1648,6 +1661,12 @@ let hasSideEffects = 1, Defs = [CC], mayStore = 1 in
                        "stfle\t$BD2",
                        []>;
 
+let hasSideEffects = 1 in {
+  def EX   : InstRX<0x44, (outs), (ins GR64:$R1, bdxaddr12only:$XBD2),
+                  "ex\t$R1, $XBD2", []>;
+  def EXRL : InstRIL<0xC60, (outs), (ins GR64:$R1, pcrel32:$I2),
+                     "exrl\t$R1, $I2", []>;
+}
 
 
 //===----------------------------------------------------------------------===//

@@ -79,16 +79,6 @@ static cl::opt<double> SampleProfileHotThreshold(
     "sample-profile-inline-hot-threshold", cl::init(0.1), cl::value_desc("N"),
     cl::desc("Inlined functions that account for more than N% of all samples "
              "collected in the parent function, will be inlined again."));
-static cl::opt<double> SampleProfileGlobalHotThreshold(
-    "sample-profile-global-hot-threshold", cl::init(30), cl::value_desc("N"),
-    cl::desc("Top-level functions that account for more than N% of all samples "
-             "collected in the profile, will be marked as hot for the inliner "
-             "to consider."));
-static cl::opt<double> SampleProfileGlobalColdThreshold(
-    "sample-profile-global-cold-threshold", cl::init(0.5), cl::value_desc("N"),
-    cl::desc("Top-level functions that account for less than N% of all samples "
-             "collected in the profile, will be marked as cold for the inliner "
-             "to consider."));
 
 namespace {
 typedef DenseMap<const BasicBlock *, uint64_t> BlockWeightMap;
@@ -125,7 +115,6 @@ protected:
   const FunctionSamples *findCalleeFunctionSamples(const CallInst &I) const;
   const FunctionSamples *findFunctionSamples(const Instruction &I) const;
   bool inlineHotFunctions(Function &F);
-  bool emitInlineHints(Function &F);
   void printEdgeWeight(raw_ostream &OS, Edge E);
   void printBlockWeight(raw_ostream &OS, const BasicBlock *BB) const;
   void printBlockEquivalence(raw_ostream &OS, const BasicBlock *BB);
@@ -622,63 +611,6 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
   return FS;
 }
 
-/// \brief Emit an inline hint if \p F is globally hot or cold.
-///
-/// If \p F consumes a significant fraction of samples (indicated by
-/// SampleProfileGlobalHotThreshold), apply the InlineHint attribute for the
-/// inliner to consider the function hot.
-///
-/// If \p F consumes a small fraction of samples (indicated by
-/// SampleProfileGlobalColdThreshold), apply the Cold attribute for the inliner
-/// to consider the function cold.
-///
-/// FIXME - This setting of inline hints is sub-optimal. Instead of marking a
-/// function globally hot or cold, we should be annotating individual callsites.
-/// This is not currently possible, but work on the inliner will eventually
-/// provide this ability. See http://reviews.llvm.org/D15003 for details and
-/// discussion.
-///
-/// \returns True if either attribute was applied to \p F.
-bool SampleProfileLoader::emitInlineHints(Function &F) {
-  if (TotalCollectedSamples == 0)
-    return false;
-
-  uint64_t FunctionSamples = Samples->getTotalSamples();
-  double SamplesPercent =
-      (double)FunctionSamples / (double)TotalCollectedSamples * 100.0;
-
-  // If the function collected more samples than the hot threshold, mark
-  // it globally hot.
-  if (SamplesPercent >= SampleProfileGlobalHotThreshold) {
-    F.addFnAttr(llvm::Attribute::InlineHint);
-    std::string Msg;
-    raw_string_ostream S(Msg);
-    S << "Applied inline hint to globally hot function '" << F.getName()
-      << "' with " << format("%.2f", SamplesPercent)
-      << "% of samples (threshold: "
-      << format("%.2f", SampleProfileGlobalHotThreshold.getValue()) << "%)";
-    S.flush();
-    emitOptimizationRemark(F.getContext(), DEBUG_TYPE, F, DebugLoc(), Msg);
-    return true;
-  }
-
-  // If the function collected fewer samples than the cold threshold, mark
-  // it globally cold.
-  if (SamplesPercent <= SampleProfileGlobalColdThreshold) {
-    F.addFnAttr(llvm::Attribute::Cold);
-    std::string Msg;
-    raw_string_ostream S(Msg);
-    S << "Applied cold hint to globally cold function '" << F.getName()
-      << "' with " << format("%.2f", SamplesPercent)
-      << "% of samples (threshold: "
-      << format("%.2f", SampleProfileGlobalColdThreshold.getValue()) << "%)";
-    S.flush();
-    emitOptimizationRemark(F.getContext(), DEBUG_TYPE, F, DebugLoc(), Msg);
-    return true;
-  }
-
-  return false;
-}
 
 /// \brief Iteratively inline hot callsites of a function.
 ///
@@ -1185,8 +1117,6 @@ bool SampleProfileLoader::emitAnnotations(Function &F) {
 
   DEBUG(dbgs() << "Line number for the first instruction in " << F.getName()
                << ": " << getFunctionLoc(F) << "\n");
-
-  Changed |= emitInlineHints(F);
 
   Changed |= inlineHotFunctions(F);
 

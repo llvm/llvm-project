@@ -360,9 +360,9 @@ ARMBaseInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
       if (AllowModify) {
         MachineBasicBlock::iterator DI = std::next(I);
         while (DI != MBB.end()) {
-          MachineInstr *InstToDelete = DI;
+          MachineInstr &InstToDelete = *DI;
           ++DI;
-          InstToDelete->eraseFromParent();
+          InstToDelete.eraseFromParent();
         }
       }
     }
@@ -1227,12 +1227,11 @@ unsigned ARMBaseInstrInfo::isLoadFromStackSlotPostFE(const MachineInstr &MI,
 
 /// \brief Expands MEMCPY to either LDMIA/STMIA or LDMIA_UPD/STMID_UPD
 /// depending on whether the result is used.
-void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MBBI) const {
+void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MI) const {
   bool isThumb1 = Subtarget.isThumb1Only();
   bool isThumb2 = Subtarget.isThumb2();
   const ARMBaseInstrInfo *TII = Subtarget.getInstrInfo();
 
-  MachineInstr *MI = MBBI;
   DebugLoc dl = MI->getDebugLoc();
   MachineBasicBlock *BB = MI->getParent();
 
@@ -1275,7 +1274,7 @@ void ARMBaseInstrInfo::expandMEMCPY(MachineBasicBlock::iterator MBBI) const {
     STM.addReg(Reg, RegState::Kill);
   }
 
-  BB->erase(MBBI);
+  BB->erase(MI);
 }
 
 

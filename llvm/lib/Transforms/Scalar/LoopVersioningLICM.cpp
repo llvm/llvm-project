@@ -154,7 +154,7 @@ struct LoopVersioningLICM : public LoopPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequiredID(LCSSAID);
-    AU.addRequired<LoopAccessAnalysis>();
+    AU.addRequired<LoopAccessLegacyAnalysis>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addRequiredID(LoopSimplifyID);
     AU.addRequired<ScalarEvolutionWrapperPass>();
@@ -178,7 +178,7 @@ struct LoopVersioningLICM : public LoopPass {
   LoopInfo *LI;              // Current LoopInfo
   DominatorTree *DT;         // Dominator Tree for the current Loop.
   TargetLibraryInfo *TLI;    // TargetLibraryInfo for constant folding.
-  LoopAccessAnalysis *LAA;   // Current LoopAccessAnalysis
+  LoopAccessLegacyAnalysis *LAA;   // Current LoopAccessAnalysis
   const LoopAccessInfo *LAI; // Current Loop's LoopAccessInfo
 
   bool Changed;            // Set to true when we change anything.
@@ -514,7 +514,7 @@ bool LoopVersioningLICM::runOnLoop(Loop *L, LPPassManager &LPM) {
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-  LAA = &getAnalysis<LoopAccessAnalysis>();
+  LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
   LAI = nullptr;
   // Set Current Loop
   CurLoop = L;
@@ -560,7 +560,7 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(GlobalsAAWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LCSSAWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopAccessAnalysis)
+INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)

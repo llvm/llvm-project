@@ -36,6 +36,7 @@ define <4 x i32> @trunc_add_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -43,6 +44,7 @@ define <4 x i32> @trunc_add_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = add <4 x i64> %a0, %a1
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -105,6 +107,7 @@ define <8 x i16> @trunc_add_v8i64_8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -148,6 +151,7 @@ define <8 x i16> @trunc_add_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -155,6 +159,7 @@ define <8 x i16> @trunc_add_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpaddd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = add <8 x i32> %a0, %a1
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -379,6 +384,7 @@ define <16 x i8> @trunc_add_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpaddw %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = add <16 x i16> %a0, %a1
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -421,6 +427,7 @@ define <4 x i32> @trunc_add_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -428,6 +435,7 @@ define <4 x i32> @trunc_add_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = add <4 x i64> %a0, <i64 0, i64 1, i64 2, i64 3>
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -495,6 +503,7 @@ define <8 x i16> @trunc_add_const_v16i64_v16i16(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -537,6 +546,7 @@ define <8 x i16> @trunc_add_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX2-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -544,6 +554,7 @@ define <8 x i16> @trunc_add_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = add <8 x i32> %a0, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -767,6 +778,7 @@ define <16 x i8> @trunc_add_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = add <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -804,6 +816,7 @@ define <4 x i32> @trunc_sub_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -811,6 +824,7 @@ define <4 x i32> @trunc_sub_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpsubq %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = sub <4 x i64> %a0, %a1
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -873,6 +887,7 @@ define <8 x i16> @trunc_sub_v8i64_8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -916,6 +931,7 @@ define <8 x i16> @trunc_sub_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -923,6 +939,7 @@ define <8 x i16> @trunc_sub_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpsubd %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = sub <8 x i32> %a0, %a1
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -1147,6 +1164,7 @@ define <16 x i8> @trunc_sub_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpsubw %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = sub <16 x i16> %a0, %a1
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -1189,6 +1207,7 @@ define <4 x i32> @trunc_sub_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vpsubq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1196,6 +1215,7 @@ define <4 x i32> @trunc_sub_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpsubq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = sub <4 x i64> %a0, <i64 0, i64 1, i64 2, i64 3>
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -1262,6 +1282,7 @@ define <8 x i16> @trunc_sub_const_v16i64_v16i16(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1304,6 +1325,7 @@ define <8 x i16> @trunc_sub_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX2-NEXT:    vpsubd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1311,6 +1333,7 @@ define <8 x i16> @trunc_sub_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpsubd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = sub <8 x i32> %a0, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -1534,6 +1557,7 @@ define <16 x i8> @trunc_sub_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpsubw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = sub <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -1615,6 +1639,7 @@ define <4 x i32> @trunc_mul_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1630,6 +1655,7 @@ define <4 x i32> @trunc_mul_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX512-NEXT:    vpsllq $32, %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = mul <4 x i64> %a0, %a1
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -1780,6 +1806,7 @@ define <8 x i16> @trunc_mul_v8i64_8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1843,6 +1870,7 @@ define <8 x i16> @trunc_mul_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1850,6 +1878,7 @@ define <8 x i16> @trunc_mul_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpmulld %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = mul <8 x i32> %a0, %a1
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -2298,6 +2327,7 @@ define <16 x i8> @trunc_mul_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = mul <16 x i16> %a0, %a1
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -2365,6 +2395,7 @@ define <4 x i32> @trunc_mul_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2377,6 +2408,7 @@ define <4 x i32> @trunc_mul_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX512-NEXT:    vpsllq $32, %ymm0, %ymm0
 ; AVX512-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = mul <4 x i64> %a0, <i64 0, i64 1, i64 2, i64 3>
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -2495,6 +2527,7 @@ define <8 x i16> @trunc_mul_const_v16i64_v16i16(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2556,6 +2589,7 @@ define <8 x i16> @trunc_mul_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX2-NEXT:    vpmulld {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2563,6 +2597,7 @@ define <8 x i16> @trunc_mul_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vpmulld {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = mul <8 x i32> %a0, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -2930,6 +2965,7 @@ define <16 x i8> @trunc_mul_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vpmullw {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = mul <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -2965,6 +3001,7 @@ define <4 x i32> @trunc_and_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -2972,6 +3009,7 @@ define <4 x i32> @trunc_and_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = and <4 x i64> %a0, %a1
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -3030,6 +3068,7 @@ define <8 x i16> @trunc_and_v8i64_8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3071,6 +3110,7 @@ define <8 x i16> @trunc_and_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3078,6 +3118,7 @@ define <8 x i16> @trunc_and_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = and <8 x i32> %a0, %a1
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -3288,6 +3329,7 @@ define <16 x i8> @trunc_and_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vandps %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = and <16 x i16> %a0, %a1
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -3326,6 +3368,7 @@ define <4 x i32> @trunc_and_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3333,6 +3376,7 @@ define <4 x i32> @trunc_and_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = and <4 x i64> %a0, <i64 0, i64 1, i64 2, i64 3>
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -3395,6 +3439,7 @@ define <8 x i16> @trunc_and_const_v16i64_v16i16(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3436,6 +3481,7 @@ define <8 x i16> @trunc_and_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3443,6 +3489,7 @@ define <8 x i16> @trunc_and_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = and <8 x i32> %a0, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -3656,6 +3703,7 @@ define <16 x i8> @trunc_and_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = and <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -3691,6 +3739,7 @@ define <4 x i32> @trunc_xor_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3698,6 +3747,7 @@ define <4 x i32> @trunc_xor_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = xor <4 x i64> %a0, %a1
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -3756,6 +3806,7 @@ define <8 x i16> @trunc_xor_v8i64_8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3797,6 +3848,7 @@ define <8 x i16> @trunc_xor_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpxor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -3804,6 +3856,7 @@ define <8 x i16> @trunc_xor_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = xor <8 x i32> %a0, %a1
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -4014,6 +4067,7 @@ define <16 x i8> @trunc_xor_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwin
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vxorps %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = xor <16 x i16> %a0, %a1
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -4052,6 +4106,7 @@ define <4 x i32> @trunc_xor_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vpxor {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4059,6 +4114,7 @@ define <4 x i32> @trunc_xor_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = xor <4 x i64> %a0, <i64 0, i64 1, i64 2, i64 3>
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -4121,6 +4177,7 @@ define <8 x i16> @trunc_xor_const_v16i64_v16i16(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4162,6 +4219,7 @@ define <8 x i16> @trunc_xor_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX2-NEXT:    vpxor {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4169,6 +4227,7 @@ define <8 x i16> @trunc_xor_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = xor <8 x i32> %a0, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -4382,6 +4441,7 @@ define <16 x i8> @trunc_xor_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vxorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = xor <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -4417,6 +4477,7 @@ define <4 x i32> @trunc_or_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4424,6 +4485,7 @@ define <4 x i32> @trunc_or_v4i64_4i32(<4 x i64> %a0, <4 x i64> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = or <4 x i64> %a0, %a1
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -4482,6 +4544,7 @@ define <8 x i16> @trunc_or_v8i64_8i16(<8 x i64> %a0, <8 x i64> %a1) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4523,6 +4586,7 @@ define <8 x i16> @trunc_or_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpor %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4530,6 +4594,7 @@ define <8 x i16> @trunc_or_v8i32_8i16(<8 x i32> %a0, <8 x i32> %a1) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = or <8 x i32> %a0, %a1
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -4740,6 +4805,7 @@ define <16 x i8> @trunc_or_v16i16_v16i8(<16 x i16> %a0, <16 x i16> %a1) nounwind
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vorps %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = or <16 x i16> %a0, %a1
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -4778,6 +4844,7 @@ define <4 x i32> @trunc_or_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vpor {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4785,6 +4852,7 @@ define <4 x i32> @trunc_or_const_v4i64_4i32(<4 x i64> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = or <4 x i64> %a0, <i64 0, i64 1, i64 2, i64 3>
   %2 = trunc <4 x i64> %1 to <4 x i32>
@@ -4847,6 +4915,7 @@ define <8 x i16> @trunc_or_const_v16i64_v16i16(<8 x i64> %a0) nounwind {
 ; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4888,6 +4957,7 @@ define <8 x i16> @trunc_or_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX2-NEXT:    vpor {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -4895,6 +4965,7 @@ define <8 x i16> @trunc_or_const_v16i32_v16i16(<8 x i32> %a0) nounwind {
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = or <8 x i32> %a0, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %2 = trunc <8 x i32> %1 to <8 x i16>
@@ -5108,6 +5179,7 @@ define <16 x i8> @trunc_or_const_v16i16_v16i8(<16 x i16> %a0) nounwind {
 ; AVX512BW:       # BB#0:
 ; AVX512BW-NEXT:    vorps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
   %1 = or <16 x i16> %a0, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   %2 = trunc <16 x i16> %1 to <16 x i8>
@@ -5213,6 +5285,7 @@ define <4 x i32> @mul_add_v4i64_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; AVX2-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -5231,6 +5304,7 @@ define <4 x i32> @mul_add_v4i64_v4i32(<4 x i32> %a0, <4 x i32> %a1) nounwind {
 ; AVX512-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    retq
   %1 = sext <4 x i32> %a0 to <4 x i64>
   %2 = sext <4 x i32> %a1 to <4 x i64>

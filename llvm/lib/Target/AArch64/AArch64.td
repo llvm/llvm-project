@@ -245,6 +245,7 @@ def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",
                                    FeatureCRC,
                                    FeatureCrypto,
                                    FeatureFPARMv8,
+                                   FeatureMacroOpFusion,
                                    FeatureNEON,
                                    FeaturePostRAScheduler,
                                    HasV8_1aOps]>;

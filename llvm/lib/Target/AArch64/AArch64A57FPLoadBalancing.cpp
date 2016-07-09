@@ -226,7 +226,7 @@ public:
   }
 
   /// Return true if MI is a member of the chain.
-  bool contains(MachineInstr *MI) { return Insts.count(MI) > 0; }
+  bool contains(MachineInstr &MI) { return Insts.count(&MI) > 0; }
 
   /// Return the number of instructions in the chain.
   unsigned size() const {
@@ -252,9 +252,10 @@ public:
   MachineInstr *getKill() const { return KillInst; }
   /// Return an instruction that can be used as an iterator for the end
   /// of the chain. This is the maximum of KillInst (if set) and LastInst.
-  MachineBasicBlock::iterator getEnd() const {
+  MachineBasicBlock::iterator end() const {
     return ++MachineBasicBlock::iterator(KillInst ? KillInst : LastInst);
   }
+  MachineBasicBlock::iterator begin() const { return getStart(); }
 
   /// Can the Kill instruction (assuming one exists) be modified?
   bool isKillImmutable() const { return KillIsImmutable; }
@@ -504,8 +505,7 @@ int AArch64A57FPLoadBalancing::scavengeRegister(Chain *G, Color C,
   // of the chain?
   unsigned RegClassID = G->getStart()->getDesc().OpInfo[0].RegClass;
   BitVector AvailableRegs = RS.getRegsAvailable(TRI->getRegClass(RegClassID));
-  for (MachineBasicBlock::iterator I = G->getStart(), E = G->getEnd();
-       I != E; ++I) {
+  for (MachineBasicBlock::iterator I = G->begin(), E = G->end(); I != E; ++I) {
     RS.forward(I);
     AvailableRegs &= RS.getRegsAvailable(TRI->getRegClass(RegClassID));
 
@@ -558,16 +558,14 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
   DEBUG(dbgs() << " - Scavenged register: " << TRI->getName(Reg) << "\n");
 
   std::map<unsigned, unsigned> Substs;
-  for (MachineBasicBlock::iterator I = G->getStart(), E = G->getEnd();
-       I != E; ++I) {
-    if (!G->contains(I) &&
-        (&*I != G->getKill() || G->isKillImmutable()))
+  for (MachineInstr &I : *G) {
+    if (!G->contains(I) && (&I != G->getKill() || G->isKillImmutable()))
       continue;
 
     // I is a member of G, or I is a mutable instruction that kills G.
 
     std::vector<unsigned> ToErase;
-    for (auto &U : I->operands()) {
+    for (auto &U : I.operands()) {
       if (U.isReg() && U.isUse() && Substs.find(U.getReg()) != Substs.end()) {
         unsigned OrigReg = U.getReg();
         U.setReg(Substs[OrigReg]);
@@ -587,11 +585,11 @@ bool AArch64A57FPLoadBalancing::colorChain(Chain *G, Color C,
       Substs.erase(J);
 
     // Only change the def if this isn't the last instruction.
-    if (&*I != G->getKill()) {
-      MachineOperand &MO = I->getOperand(0);
+    if (&I != G->getKill()) {
+      MachineOperand &MO = I.getOperand(0);
 
       bool Change = TransformAll || getColor(MO.getReg()) != C;
-      if (G->requiresFixup() && &*I == G->getLast())
+      if (G->requiresFixup() && &I == G->getLast())
         Change = false;
 
       if (Change) {

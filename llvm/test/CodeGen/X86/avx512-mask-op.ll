@@ -8,6 +8,7 @@ define i16 @mask16(i16 %x) {
 ; CHECK-NEXT:    kmovw %edi, %k0
 ; CHECK-NEXT:    knotw %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -35,6 +36,7 @@ define i8 @mask8(i8 %x) {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    knotw %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: mask8:
@@ -42,6 +44,7 @@ define i8 @mask8(i8 %x) {
 ; SKX-NEXT:    kmovb %edi, %k0
 ; SKX-NEXT:    knotb %k0, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
@@ -136,6 +139,7 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; CHECK-NEXT:    kxorw %k1, %k0, %k0
 ; CHECK-NEXT:    korw %k0, %k2, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %ma = load <16 x i1>, <16 x i1>* %x
   %mb = load <16 x i1>, <16 x i1>* %y
@@ -152,6 +156,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; KNL-NEXT:    kmovw %edi, %k0
 ; KNL-NEXT:    kshiftrw $8, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: shuf_test1:
@@ -159,6 +164,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ; SKX-NEXT:    kmovw %edi, %k0
 ; SKX-NEXT:    kshiftrw $8, %k0, %k0
 ; SKX-NEXT:    kmovb %k0, %eax
+; SKX-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; SKX-NEXT:    retq
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -201,6 +207,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
 ; CHECK-NEXT:    kshiftlw $10, %k0, %k0
 ; CHECK-NEXT:    kshiftrw $15, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %AX<kill>
 ; CHECK-NEXT:    retq
   %cmp_res = icmp ugt <16 x i32> %a, %b
   %cmp_res.i1 = extractelement <16 x i1> %cmp_res, i32 5
@@ -674,6 +681,7 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
 define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
 ; KNL-LABEL: test22:
 ; KNL:       ## BB#0:
+; KNL-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<def>
 ; KNL-NEXT:    vpslld $31, %ymm0, %ymm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -693,6 +701,7 @@ define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
 define void @test23(<2 x i1> %a, <2 x i1>* %addr) {
 ; KNL-LABEL: test23:
 ; KNL:       ## BB#0:
+; KNL-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; KNL-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; KNL-NEXT:    vptestmq %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
@@ -1395,6 +1404,7 @@ define <2 x i16> @load_2i1(<2 x i1>* %a) {
 ; KNL-NEXT:    movzbl (%rdi), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: load_2i1:
@@ -1414,6 +1424,7 @@ define <4 x i16> @load_4i1(<4 x i1>* %a) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
+; KNL-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: load_4i1:

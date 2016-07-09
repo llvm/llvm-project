@@ -384,9 +384,9 @@ static MachineBasicBlock::iterator convertCalleeSaveRestoreToSPPrePostIncDec(
 
 // Fixup callee-save register save/restore instructions to take into account
 // combined SP bump by adding the local stack size to the stack offsets.
-static void fixupCalleeSaveRestoreStackOffset(MachineInstr *MI,
+static void fixupCalleeSaveRestoreStackOffset(MachineInstr &MI,
                                               unsigned LocalStackSize) {
-  unsigned Opc = MI->getOpcode();
+  unsigned Opc = MI.getOpcode();
   (void)Opc;
   assert((Opc == AArch64::STPXi || Opc == AArch64::STPDi ||
           Opc == AArch64::STRXui || Opc == AArch64::STRDui ||
@@ -394,11 +394,11 @@ static void fixupCalleeSaveRestoreStackOffset(MachineInstr *MI,
           Opc == AArch64::LDRXui || Opc == AArch64::LDRDui) &&
          "Unexpected callee-save save/restore opcode!");
 
-  unsigned OffsetIdx = MI->getNumExplicitOperands() - 1;
-  assert(MI->getOperand(OffsetIdx - 1).getReg() == AArch64::SP &&
+  unsigned OffsetIdx = MI.getNumExplicitOperands() - 1;
+  assert(MI.getOperand(OffsetIdx - 1).getReg() == AArch64::SP &&
          "Unexpected base register in callee-save save/restore instruction!");
   // Last operand is immediate offset that needs fixing.
-  MachineOperand &OffsetOpnd = MI->getOperand(OffsetIdx);
+  MachineOperand &OffsetOpnd = MI.getOperand(OffsetIdx);
   // All generated opcodes have scaled offsets.
   assert(LocalStackSize % 8 == 0);
   OffsetOpnd.setImm(OffsetOpnd.getImm() + LocalStackSize / 8);
@@ -477,7 +477,7 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   MachineBasicBlock::iterator End = MBB.end();
   while (MBBI != End && MBBI->getFlag(MachineInstr::FrameSetup)) {
     if (CombineSPBump)
-      fixupCalleeSaveRestoreStackOffset(MBBI, AFI->getLocalStackSize());
+      fixupCalleeSaveRestoreStackOffset(*MBBI, AFI->getLocalStackSize());
     ++MBBI;
   }
   if (HasFP) {
@@ -724,7 +724,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
       ++LastPopI;
       break;
     } else if (CombineSPBump)
-      fixupCalleeSaveRestoreStackOffset(LastPopI, AFI->getLocalStackSize());
+      fixupCalleeSaveRestoreStackOffset(*LastPopI, AFI->getLocalStackSize());
   }
 
   // If there is a single SP update, insert it before the ret and we're done.

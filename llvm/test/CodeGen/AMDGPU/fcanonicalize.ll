@@ -1,5 +1,4 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=-fp32-denormals,-fp64-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=NODENORM %s
-; RUN: llc -march=amdgcn -verify-machineinstrs -mattr=+fp32-denormals,+fp64-denormals < %s | FileCheck -check-prefix=GCN -check-prefix=DENORM %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 declare float @llvm.canonicalize.f32(float) #0
 declare double @llvm.canonicalize.f64(double) #0
@@ -68,21 +67,37 @@ define void @test_fold_canonicalize_literal_f32(float addrspace(1)* %out) #1 {
   ret void
 }
 
-; GCN-LABEL: {{^}}test_fold_canonicalize_denormal0_f32:
-; NODENORM: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
-; DENORM: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fffff{{$}}
+; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal0_f32:
+; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @test_fold_canonicalize_denormal0_f32(float addrspace(1)* %out) #1 {
+define void @test_no_denormals_fold_canonicalize_denormal0_f32(float addrspace(1)* %out) #1 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
   store float %canonicalized, float addrspace(1)* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}test_fold_canonicalize_denormal1_f32:
-; NODENORM: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
-; DENORM: v_mov_b32_e32 [[REG:v[0-9]+]], 0x807fffff{{$}}
+; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal0_f32:
+; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x7fffff{{$}}
 ; GCN: buffer_store_dword [[REG]]
-define void @test_fold_canonicalize_denormal1_f32(float addrspace(1)* %out) #1 {
+define void @test_denormals_fold_canonicalize_denormal0_f32(float addrspace(1)* %out) #3 {
+  %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
+  store float %canonicalized, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal1_f32:
+; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0{{$}}
+; GCN: buffer_store_dword [[REG]]
+define void @test_no_denormals_fold_canonicalize_denormal1_f32(float addrspace(1)* %out) #1 {
+  %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2155872255 to float))
+  store float %canonicalized, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal1_f32:
+; GCN: v_mov_b32_e32 [[REG:v[0-9]+]], 0x807fffff{{$}}
+; GCN: buffer_store_dword [[REG]]
+define void @test_denormals_fold_canonicalize_denormal1_f32(float addrspace(1)* %out) #3 {
   %canonicalized = call float @llvm.canonicalize.f32(float bitcast (i32 2155872255 to float))
   store float %canonicalized, float addrspace(1)* %out
   ret void
@@ -220,27 +235,41 @@ define void @test_fold_canonicalize_literal_f64(double addrspace(1)* %out) #1 {
   ret void
 }
 
-; GCN-LABEL: {{^}}test_fold_canonicalize_denormal0_f64:
-; DENORM-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
-; DENORM-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xfffff{{$}}
-
-; NODENORM: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; NODENORM: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
+; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal0_f64:
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @test_fold_canonicalize_denormal0_f64(double addrspace(1)* %out) #1 {
+define void @test_no_denormals_fold_canonicalize_denormal0_f64(double addrspace(1)* %out) #2 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 4503599627370495 to double))
   store double %canonicalized, double addrspace(1)* %out
   ret void
 }
 
-; GCN-LABEL: {{^}}test_fold_canonicalize_denormal1_f64:
-; DENORM-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
-; DENORM-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x800fffff{{$}}
-
-; NODENORM: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
-; NODENORM: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
+; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal0_f64:
+; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
+; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0xfffff{{$}}
 ; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
-define void @test_fold_canonicalize_denormal1_f64(double addrspace(1)* %out) #1 {
+define void @test_denormals_fold_canonicalize_denormal0_f64(double addrspace(1)* %out) #3 {
+  %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 4503599627370495 to double))
+  store double %canonicalized, double addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_no_denormals_fold_canonicalize_denormal1_f64:
+; GCN: v_mov_b32_e32 v[[LO:[0-9]+]], 0{{$}}
+; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], v[[LO]]{{$}}
+; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+define void @test_no_denormals_fold_canonicalize_denormal1_f64(double addrspace(1)* %out) #2 {
+  %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9227875636482146303 to double))
+  store double %canonicalized, double addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}test_denormals_fold_canonicalize_denormal1_f64:
+; GCN-DAG: v_mov_b32_e32 v[[LO:[0-9]+]], -1{{$}}
+; GCN-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], 0x800fffff{{$}}
+; GCN: buffer_store_dwordx2 v{{\[}}[[LO]]:[[HI]]{{\]}}
+define void @test_denormals_fold_canonicalize_denormal1_f64(double addrspace(1)* %out) #3 {
   %canonicalized = call double @llvm.canonicalize.f64(double bitcast (i64 9227875636482146303 to double))
   store double %canonicalized, double addrspace(1)* %out
   ret void
@@ -318,3 +347,5 @@ define void @test_fold_canonicalize_snan3_value_f64(double addrspace(1)* %out) #
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
+attributes #2 = { nounwind "target-features"="-fp32-denormals,-fp64-denormals" }
+attributes #3 = { nounwind "target-features"="+fp32-denormals,+fp64-denormals" }

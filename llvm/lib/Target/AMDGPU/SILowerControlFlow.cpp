@@ -80,7 +80,6 @@ private:
 
   void If(MachineInstr &MI);
   void Else(MachineInstr &MI, bool ExecModified);
-  void Break(MachineInstr &MI);
   void IfBreak(MachineInstr &MI);
   void ElseBreak(MachineInstr &MI);
   void Loop(MachineInstr &MI);
@@ -277,20 +276,6 @@ void SILowerControlFlow::Else(MachineInstr &MI, bool ExecModified) {
   MI.eraseFromParent();
 }
 
-void SILowerControlFlow::Break(MachineInstr &MI) {
-  MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
-
-  unsigned Dst = MI.getOperand(0).getReg();
-  unsigned Src = MI.getOperand(1).getReg();
-
-  BuildMI(MBB, &MI, DL, TII->get(AMDGPU::S_OR_B64), Dst)
-          .addReg(AMDGPU::EXEC)
-          .addReg(Src);
-
-  MI.eraseFromParent();
-}
-
 void SILowerControlFlow::IfBreak(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   DebugLoc DL = MI.getDebugLoc();
@@ -450,7 +435,7 @@ void SILowerControlFlow::emitLoadM0FromVGPRLoop(MachineBasicBlock &LoopBB,
   BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_AND_SAVEEXEC_B64), AMDGPU::VCC)
     .addReg(AMDGPU::VCC);
 
-  if (Offset) {
+  if (Offset != 0) {
     BuildMI(LoopBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
       .addReg(AMDGPU::M0)
       .addImm(Offset);
@@ -478,7 +463,7 @@ bool SILowerControlFlow::loadM0(MachineInstr &MI, MachineInstr *MovRel, int Offs
   const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
 
   if (AMDGPU::SReg_32RegClass.contains(Idx->getReg())) {
-    if (Offset) {
+    if (Offset != 0) {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::S_ADD_I32), AMDGPU::M0)
         .addReg(Idx->getReg(), getUndefRegState(Idx->isUndef()))
         .addImm(Offset);
@@ -535,16 +520,17 @@ bool SILowerControlFlow::loadM0(MachineInstr &MI, MachineInstr *MovRel, int Offs
   return true;
 }
 
-/// \param @VecReg The register which holds element zero of the vector
-///                 being addressed into.
-/// \param[out] @Reg The base register to use in the indirect addressing instruction.
-/// \param[in,out] @Offset As an input, this is the constant offset part of the
-//                         indirect Index. e.g. v0 = v[VecReg + Offset]
-//                         As an output, this is a constant value that needs
-//                         to be added to the value stored in M0.
+/// \param @VecReg The register which holds element zero of the vector being
+///                 addressed into.
+//
+/// \param[in] @Idx The index operand from the movrel instruction. This must be
+// a register, but may be NoRegister.
+///
+/// \param[in] @Offset As an input, this is the constant offset part of the
+// indirect Index. e.g. v0 = v[VecReg + Offset] As an output, this is a constant
+// value that needs to be added to the value stored in M0.
 std::pair<unsigned, int>
-SILowerControlFlow::computeIndirectRegAndOffset(unsigned VecReg,
-                                                int Offset) const {
+SILowerControlFlow::computeIndirectRegAndOffset(unsigned VecReg, int Offset) const {
   unsigned SubReg = TRI->getSubReg(VecReg, AMDGPU::sub0);
   if (!SubReg)
     SubReg = VecReg;
@@ -575,42 +561,59 @@ SILowerControlFlow::computeIndirectRegAndOffset(unsigned VecReg,
 // Return true if a new block was inserted.
 bool SILowerControlFlow::indirectSrc(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
 
   unsigned Dst = MI.getOperand(0).getReg();
   const MachineOperand *SrcVec = TII->getNamedOperand(MI, AMDGPU::OpName::src);
-  int Off = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
+  int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
   unsigned Reg;
 
-  std::tie(Reg, Off) = computeIndirectRegAndOffset(SrcVec->getReg(), Off);
+  std::tie(Reg, Offset) = computeIndirectRegAndOffset(SrcVec->getReg(), Offset);
+
+  const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+  if (Idx->getReg() == AMDGPU::NoRegister) {
+    // Only had a constant offset, copy the register directly.
+    BuildMI(MBB, MI.getIterator(), DL, TII->get(AMDGPU::V_MOV_B32_e32), Dst)
+      .addReg(Reg, getUndefRegState(SrcVec->isUndef()));
+    MI.eraseFromParent();
+    return false;
+  }
 
   MachineInstr *MovRel =
     BuildMI(*MBB.getParent(), DL, TII->get(AMDGPU::V_MOVRELS_B32_e32), Dst)
     .addReg(Reg, getUndefRegState(SrcVec->isUndef()))
     .addReg(SrcVec->getReg(), RegState::Implicit);
 
-  return loadM0(MI, MovRel, Off);
+  return loadM0(MI, MovRel, Offset);
 }
 
 // Return true if a new block was inserted.
 bool SILowerControlFlow::indirectDst(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
-  DebugLoc DL = MI.getDebugLoc();
+  const DebugLoc &DL = MI.getDebugLoc();
 
   unsigned Dst = MI.getOperand(0).getReg();
-  int Off = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
-  MachineOperand *Val = TII->getNamedOperand(MI, AMDGPU::OpName::val);
+  int Offset = TII->getNamedOperand(MI, AMDGPU::OpName::offset)->getImm();
   unsigned Reg;
 
-  std::tie(Reg, Off) = computeIndirectRegAndOffset(Dst, Off);
+  const MachineOperand *Val = TII->getNamedOperand(MI, AMDGPU::OpName::val);
+  std::tie(Reg, Offset) = computeIndirectRegAndOffset(Dst, Offset);
+
+  MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
+  if (Idx->getReg() == AMDGPU::NoRegister) {
+    // Only had a constant offset, copy the register directly.
+    BuildMI(MBB, MI.getIterator(), DL, TII->get(AMDGPU::V_MOV_B32_e32), Reg)
+      .addOperand(*Val);
+    MI.eraseFromParent();
+    return false;
+  }
 
   MachineInstr *MovRel =
-    BuildMI(*MBB.getParent(), DL, TII->get(AMDGPU::V_MOVRELD_B32_e32))
-    .addReg(Reg, RegState::Define)
+    BuildMI(*MBB.getParent(), DL, TII->get(AMDGPU::V_MOVRELD_B32_e32), Reg)
     .addReg(Val->getReg(), getUndefRegState(Val->isUndef()))
     .addReg(Dst, RegState::Implicit);
 
-  return loadM0(MI, MovRel, Off);
+  return loadM0(MI, MovRel, Offset);
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
@@ -644,7 +647,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
       if (TII->isFLAT(MI))
         NeedFlat = true;
 
-      if (I->definesRegister(AMDGPU::EXEC, TRI))
+      if (I->modifiesRegister(AMDGPU::EXEC, TRI))
         ExecModified = true;
 
       switch (MI.getOpcode()) {
@@ -656,10 +659,6 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
 
         case AMDGPU::SI_ELSE:
           Else(MI, ExecModified);
-          break;
-
-        case AMDGPU::SI_BREAK:
-          Break(MI);
           break;
 
         case AMDGPU::SI_IF_BREAK:

@@ -721,6 +721,7 @@ MachinePassRegistry RegisterRegAlloc::Registry;
 
 /// A dummy default pass factory indicates whether the register allocator is
 /// overridden on the command line.
+LLVM_DEFINE_ONCE_FLAG(InitializeDefaultRegisterAllocatorFlag);
 static FunctionPass *useDefaultRegisterAllocator() { return nullptr; }
 static RegisterRegAlloc
 defaultRegAlloc("default",
@@ -733,6 +734,15 @@ static cl::opt<RegisterRegAlloc::FunctionPassCtor, false,
 RegAlloc("regalloc",
          cl::init(&useDefaultRegisterAllocator),
          cl::desc("Register allocator to use"));
+
+static void initializeDefaultRegisterAllocatorOnce() {
+  RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
+
+  if (!Ctor) {
+    Ctor = RegAlloc;
+    RegisterRegAlloc::setDefault(RegAlloc);
+  }
+}
 
 
 /// Instantiate the default register allocator pass for this target for either
@@ -760,13 +770,11 @@ FunctionPass *TargetPassConfig::createTargetRegisterAllocator(bool Optimized) {
 /// FIXME: When MachinePassRegistry register pass IDs instead of function ptrs,
 /// this can be folded into addPass.
 FunctionPass *TargetPassConfig::createRegAllocPass(bool Optimized) {
-  RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
-
   // Initialize the global default.
-  if (!Ctor) {
-    Ctor = RegAlloc;
-    RegisterRegAlloc::setDefault(RegAlloc);
-  }
+  llvm::call_once(InitializeDefaultRegisterAllocatorFlag,
+                  initializeDefaultRegisterAllocatorOnce);
+
+  RegisterRegAlloc::FunctionPassCtor Ctor = RegisterRegAlloc::getDefault();
   if (Ctor != useDefaultRegisterAllocator)
     return Ctor();
 

@@ -1972,7 +1972,7 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
   PSE->print(OS, Depth);
 }
 
-const LoopAccessInfo &LoopAccessAnalysis::getInfo(Loop *L) {
+const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L) {
   auto &LAI = LoopAccessInfoMap[L];
 
   if (!LAI) {
@@ -1982,8 +1982,8 @@ const LoopAccessInfo &LoopAccessAnalysis::getInfo(Loop *L) {
   return *LAI.get();
 }
 
-void LoopAccessAnalysis::print(raw_ostream &OS, const Module *M) const {
-  LoopAccessAnalysis &LAA = *const_cast<LoopAccessAnalysis *>(this);
+void LoopAccessLegacyAnalysis::print(raw_ostream &OS, const Module *M) const {
+  LoopAccessLegacyAnalysis &LAA = *const_cast<LoopAccessLegacyAnalysis *>(this);
 
   for (Loop *TopLevelLoop : *LI)
     for (Loop *L : depth_first(TopLevelLoop)) {
@@ -1993,7 +1993,7 @@ void LoopAccessAnalysis::print(raw_ostream &OS, const Module *M) const {
     }
 }
 
-bool LoopAccessAnalysis::runOnFunction(Function &F) {
+bool LoopAccessLegacyAnalysis::runOnFunction(Function &F) {
   SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
   TLI = TLIP ? &TLIP->getTLI() : nullptr;
@@ -2004,7 +2004,7 @@ bool LoopAccessAnalysis::runOnFunction(Function &F) {
   return false;
 }
 
-void LoopAccessAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
+void LoopAccessLegacyAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.addRequired<ScalarEvolutionWrapperPass>();
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<DominatorTreeWrapperPass>();
@@ -2013,20 +2013,20 @@ void LoopAccessAnalysis::getAnalysisUsage(AnalysisUsage &AU) const {
     AU.setPreservesAll();
 }
 
-char LoopAccessAnalysis::ID = 0;
+char LoopAccessLegacyAnalysis::ID = 0;
 static const char laa_name[] = "Loop Access Analysis";
 #define LAA_NAME "loop-accesses"
 
-INITIALIZE_PASS_BEGIN(LoopAccessAnalysis, LAA_NAME, laa_name, false, true)
+INITIALIZE_PASS_BEGIN(LoopAccessLegacyAnalysis, LAA_NAME, laa_name, false, true)
 INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_END(LoopAccessAnalysis, LAA_NAME, laa_name, false, true)
+INITIALIZE_PASS_END(LoopAccessLegacyAnalysis, LAA_NAME, laa_name, false, true)
 
-char LoopAccessInfoAnalysis::PassID;
+char LoopAccessAnalysis::PassID;
 
-LoopAccessInfo LoopAccessInfoAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
+LoopAccessInfo LoopAccessAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
   const AnalysisManager<Function> &FAM =
       AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
   Function &F = *L.getHeader()->getParent();
@@ -2051,7 +2051,7 @@ LoopAccessInfo LoopAccessInfoAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
 PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,
                                                  AnalysisManager<Loop> &AM) {
   Function &F = *L.getHeader()->getParent();
-  auto &LAI = AM.getResult<LoopAccessInfoAnalysis>(L);
+  auto &LAI = AM.getResult<LoopAccessAnalysis>(L);
   OS << "Loop access info in function '" << F.getName() << "':\n";
   OS.indent(2) << L.getHeader()->getName() << ":\n";
   LAI.print(OS, 4);
@@ -2060,6 +2060,6 @@ PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,
 
 namespace llvm {
   Pass *createLAAPass() {
-    return new LoopAccessAnalysis();
+    return new LoopAccessLegacyAnalysis();
   }
 }
