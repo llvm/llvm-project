@@ -656,15 +656,16 @@ void IdentifierNamingCheck::check(const MatchFinder::MatchResult &Result) {
 
       SourceRange Range(Ref.getTemplateNameLoc(), Ref.getTemplateNameLoc());
       if (const auto *ClassDecl = dyn_cast<TemplateDecl>(Decl)) {
-        addUsage(NamingCheckFailures, ClassDecl->getTemplatedDecl(), Range);
+        if (const auto *TemplDecl = ClassDecl->getTemplatedDecl())
+          addUsage(NamingCheckFailures, TemplDecl, Range);
         return;
       }
     }
 
     if (const auto &Ref =
             Loc->getAs<DependentTemplateSpecializationTypeLoc>()) {
-      addUsage(NamingCheckFailures, Ref.getTypePtr()->getAsTagDecl(),
-               Loc->getSourceRange());
+      if (const auto *Decl = Ref.getTypePtr()->getAsTagDecl())
+        addUsage(NamingCheckFailures, Decl, Loc->getSourceRange());
       return;
     }
   }
