@@ -2246,6 +2246,10 @@ bool Scop::buildDomains(Region *R, DominatorTree &DT, LoopInfo &LI) {
   return true;
 }
 
+// If the loop is nonaffine/boxed, return the first non-boxed surrounding loop
+// for Polly. If the loop is affine, return the loop itself. Do not call
+// `getSCEVAtScope()` on the result of `getFirstNonBoxedLoopFor()`, as we need
+// to analyze the memory accesses of the nonaffine/boxed loops.
 static Loop *getFirstNonBoxedLoopFor(BasicBlock *BB, LoopInfo &LI,
                                      const BoxedLoopsSetTy &BoxedLoops) {
   auto *L = LI.getLoopFor(BB);

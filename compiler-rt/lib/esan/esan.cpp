@@ -228,6 +228,15 @@ int finalizeLibrary() {
   return 0;
 }
 
+void reportResults() {
+  VPrintf(1, "in esan::%s\n", __FUNCTION__);
+  if (__esan_which_tool == ESAN_CacheFrag) {
+    return reportCacheFrag();
+  } else if (__esan_which_tool == ESAN_WorkingSet) {
+    return reportWorkingSet();
+  }
+}
+
 void processCompilationUnitInit(void *Ptr) {
   VPrintf(2, "in esan::%s\n", __FUNCTION__);
   if (__esan_which_tool == ESAN_CacheFrag) {

@@ -2205,7 +2205,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
                     || __constrain_hash(__nd->__hash_, __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
-                if (key_eq()(__nd->__value_, __k))
+                if ((__nd->__hash_ == __hash) && key_eq()(__nd->__value_, __k))
 #if _LIBCPP_DEBUG_LEVEL >= 2
                     return iterator(__nd, this);
 #else
@@ -2235,7 +2235,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
                     || __constrain_hash(__nd->__hash_, __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
-                if (key_eq()(__nd->__value_, __k))
+                if ((__nd->__hash_ == __hash) && key_eq()(__nd->__value_, __k))
 #if _LIBCPP_DEBUG_LEVEL >= 2
                     return const_iterator(__nd, this);
 #else

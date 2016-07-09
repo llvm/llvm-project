@@ -22,6 +22,7 @@ void processCacheFragCompilationUnitExit(void *Ptr);
 
 void initializeCacheFrag();
 int finalizeCacheFrag();
+void reportCacheFrag();
 
 } // namespace __esan
 

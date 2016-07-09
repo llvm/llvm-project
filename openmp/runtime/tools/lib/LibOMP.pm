@@ -17,7 +17,7 @@ use tools;
 
 sub empty($) {
     my ( $var ) = @_;
-    return not exists( $ENV{ $var } ) or not defined( $ENV{ $var } ) or $ENV{ $var } eq "";
+    return (not exists($ENV{$var})) or (not defined($ENV{$var})) or ($ENV{$var} eq "");
 }; # sub empty
 
 my ( $base, $out, $tmp );

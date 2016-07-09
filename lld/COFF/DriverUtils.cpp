@@ -584,13 +584,6 @@ static std::string writeToTempFile(StringRef Contents) {
   return Path.str();
 }
 
-void touchFile(StringRef Path) {
-  int FD;
-  std::error_code EC = sys::fs::openFileForWrite(Path, FD, sys::fs::F_Append);
-  error(EC, "failed to create a file");
-  sys::Process::SafelyCloseFileDescriptor(FD);
-}
-
 static std::string getImplibPath() {
   if (!Config->Implib.empty())
     return Config->Implib;

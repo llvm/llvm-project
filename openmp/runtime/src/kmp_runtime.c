@@ -3822,10 +3822,12 @@ __kmp_reset_root(int gtid, kmp_root_t *root)
         // to __kmp_free_team().
     __kmp_free_team( root, root_team USE_NESTED_HOT_ARG(NULL) );
 #if KMP_NESTED_HOT_TEAMS
-    if( __kmp_hot_teams_max_level > 1 ) {  // need to free nested hot teams and their threads if any
+    if( __kmp_hot_teams_max_level > 0 ) {  // need to free nested hot teams and their threads if any
         for( i = 0; i < hot_team->t.t_nproc; ++i ) {
             kmp_info_t *th = hot_team->t.t_threads[i];
-            n += __kmp_free_hot_teams( root, th, 1, __kmp_hot_teams_max_level );
+            if( __kmp_hot_teams_max_level > 1 ) {
+                n += __kmp_free_hot_teams( root, th, 1, __kmp_hot_teams_max_level );
+            }
             if( th->th.th_hot_teams ) {
                 __kmp_free( th->th.th_hot_teams );
                 th->th.th_hot_teams = NULL;

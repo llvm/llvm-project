@@ -199,4 +199,10 @@ int finalizeCacheFrag() {
   return 0;
 }
 
+void reportCacheFrag() {
+  VPrintf(2, "in esan::%s\n", __FUNCTION__);
+  // FIXME: Not yet implemented.  We need to iterate over all of the
+  // compilation unit data.
+}
+
 } // namespace __esan

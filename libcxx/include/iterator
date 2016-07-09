@@ -131,8 +131,9 @@ bool
 operator<=(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
 
 template <class Iterator1, class Iterator2>
-typename reverse_iterator<Iterator1>::difference_type
-operator-(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y);
+auto
+operator-(const reverse_iterator<Iterator1>& x, const reverse_iterator<Iterator2>& y)
+-> decltype(__y.base() - __x.base());
 
 template <class Iterator>
 reverse_iterator<Iterator>
@@ -204,6 +205,73 @@ public:
 
 template <class Container, class Iterator>
 insert_iterator<Container> inserter(Container& x, Iterator i);
+
+template <class Iterator>
+class move_iterator {
+public:
+    typedef Iterator                                              iterator_type;
+    typedef typename iterator_traits<Iterator>::difference_type   difference_type;
+    typedef Iterator                                              pointer;
+    typedef typename iterator_traits<Iterator>::value_type        value_type;
+    typedef typename iterator_traits<Iterator>::iterator_category iterator_category;
+    typedef value_type&&                                          reference;
+ 
+    move_iterator();
+    explicit move_iterator(Iterator i);
+    template <class U> move_iterator(const move_iterator<U>& u);
+    template <class U> move_iterator& operator=(const move_iterator<U>& u);
+    iterator_type base() const;
+    reference operator*() const;
+    pointer operator->() const;
+    move_iterator& operator++();
+    move_iterator operator++(int);
+    move_iterator& operator--();
+    move_iterator operator--(int);
+    move_iterator operator+(difference_type n) const; 
+    move_iterator& operator+=(difference_type n); 
+    move_iterator operator-(difference_type n) const; 
+    move_iterator& operator-=(difference_type n); 
+    unspecified operator[](difference_type n) const;
+private:
+    Iterator current; // exposition only
+};
+
+template <class Iterator1, class Iterator2>
+bool
+operator==(const move_iterator<Iterator1>& x, const move_iterator<Iterator2>& y);
+
+template <class Iterator1, class Iterator2>
+bool
+operator!=(const move_iterator<Iterator1>& x, const move_iterator<Iterator2>& y);
+
+template <class Iterator1, class Iterator2>
+bool
+operator<(const move_iterator<Iterator1>& x, const move_iterator<Iterator2>& y);
+
+template <class Iterator1, class Iterator2>
+bool
+operator<=(const move_iterator<Iterator1>& x, const move_iterator<Iterator2>& y);
+
+template <class Iterator1, class Iterator2>
+bool
+operator>(const move_iterator<Iterator1>& x, const move_iterator<Iterator2>& y);
+
+template <class Iterator1, class Iterator2>
+bool
+operator>=(const move_iterator<Iterator1>& x, const move_iterator<Iterator2>& y);
+
+template <class Iterator1, class Iterator2>
+auto
+operator-(const move_iterator<Iterator1>& x,
+          const move_iterator<Iterator2>& y) -> decltype(x.base() - y.base());
+
+template <class Iterator>
+move_iterator<Iterator> operator+(typename move_iterator<Iterator>::difference_type n, 
+                                     const move_iterator<Iterator>& x);
+
+template <class Iterator>
+move_iterator<Iterator> make_move_iterator(const Iterator& i);
+
 
 template <class T, class charT = char, class traits = char_traits<charT>, class Distance = ptrdiff_t>
 class istream_iterator
@@ -632,6 +700,16 @@ operator<=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
     return __x.base() >= __y.base();
 }
 
+#if __cplusplus >= 201103L
+template <class _Iter1, class _Iter2>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+operator-(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& __y)
+-> decltype(__y.base() - __x.base())
+{
+    return __y.base() - __x.base();
+}
+#else
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY
 typename reverse_iterator<_Iter1>::difference_type
@@ -639,6 +717,7 @@ operator-(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& _
 {
     return __y.base() - __x.base();
 }
+#endif
 
 template <class _Iter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1038,6 +1117,16 @@ operator<=(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
     return __x.base() <= __y.base();
 }
 
+#if __cplusplus >= 201103L
+template <class _Iter1, class _Iter2>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+operator-(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
+-> decltype(__x.base() - __y.base())
+{
+    return __x.base() - __y.base();
+}
+#else
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY
 typename move_iterator<_Iter1>::difference_type
@@ -1045,6 +1134,7 @@ operator-(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
 {
     return __x.base() - __y.base();
 }
+#endif
 
 template <class _Iter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1096,10 +1186,18 @@ _LIBCPP_INLINE_VISIBILITY
 bool
 operator<=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
 
+#if __cplusplus >= 201103L
+template <class _Iter1, class _Iter2>
+_LIBCPP_INLINE_VISIBILITY
+auto
+operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+-> decltype(__x.base() - __y.base());
+#else
 template <class _Iter1, class _Iter2>
 _LIBCPP_INLINE_VISIBILITY
 typename __wrap_iter<_Iter1>::difference_type
 operator-(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
+#endif
 
 template <class _Iter>
 _LIBCPP_INLINE_VISIBILITY
@@ -1281,10 +1379,18 @@ private:
     bool
     operator<=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
 
+#if __cplusplus >= 201103L
+    template <class _Iter1, class _Iter2>
+    friend
+    auto
+    operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+    -> decltype(__x.base() - __y.base());
+#else
     template <class _Iter1, class _Iter2>
     friend
     typename __wrap_iter<_Iter1>::difference_type
     operator-(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
+#endif
 
     template <class _Iter1>
     friend
@@ -1390,6 +1496,20 @@ operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEX
     return !(__y < __x);
 }
 
+#if __cplusplus >= 201103L
+template <class _Iter1, class _Iter2>
+inline _LIBCPP_INLINE_VISIBILITY
+auto
+operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+-> decltype(__x.base() - __y.base())
+{
+#if _LIBCPP_DEBUG_LEVEL >= 2
+    _LIBCPP_ASSERT(__get_const_db()->__less_than_comparable(&__x, &__y),
+                   "Attempted to subtract incompatible iterators");
+#endif
+    return __x.base() - __y.base();
+}
+#else
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY
 typename __wrap_iter<_Iter1>::difference_type
@@ -1401,6 +1521,7 @@ operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXC
 #endif
     return __x.base() - __y.base();
 }
+#endif
 
 template <class _Iter>
 inline _LIBCPP_INLINE_VISIBILITY

@@ -353,8 +353,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (Alloc) Undefined(Sym->st_name, Sym->st_other, Sym->getType());
-    return new (Alloc) DefinedRegular<ELFT>(*Sym, Sec);
+      return new (this->Alloc)
+          Undefined(Sym->st_name, Sym->st_other, Sym->getType());
+    return new (this->Alloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
