@@ -3457,6 +3457,8 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
     // continue statements.
     Block = nullptr;
     Succ = addStmt(S->getInc());
+    if (badCFG)
+      return nullptr;
     ContinueJumpTarget = JumpTarget(Succ, ContinueScopePos);
 
     // The starting block for the loop increment is the block that should

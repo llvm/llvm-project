@@ -5139,6 +5139,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.getLastArg(options::OPT_cl_mad_enable)) {
     CmdArgs.push_back("-cl-mad-enable");
   }
+  if (Args.getLastArg(options::OPT_cl_no_signed_zeros)) {
+    CmdArgs.push_back("-cl-no-signed-zeros");
+  }
   if (Arg *A = Args.getLastArg(options::OPT_cl_std_EQ)) {
     std::string CLStdStr = "-cl-std=";
     CLStdStr += A->getValue();

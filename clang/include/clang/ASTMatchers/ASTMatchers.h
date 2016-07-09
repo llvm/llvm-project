@@ -3186,8 +3186,11 @@ AST_MATCHER_P2(FunctionDecl, hasParameter,
 ///   int y;
 ///   f(y);
 /// \endcode
-/// callExpr(declRefExpr(to(varDecl(hasName("y")))),
-/// parmVarDecl(hasType(isInteger())))
+/// callExpr(
+///   forEachArgumentWithParam(
+///     declRefExpr(to(varDecl(hasName("y")))),
+///     parmVarDecl(hasType(isInteger()))
+/// ))
 ///   matches f(y);
 /// with declRefExpr(...)
 ///   matching int y

@@ -3209,10 +3209,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
   case llvm::Triple::COFF:
-    GV->setSection(".rdata.cfstring");
-    break;
   case llvm::Triple::ELF:
-    GV->setSection(".rodata.cfstring");
+    GV->setSection("cfstring");
     break;
   case llvm::Triple::MachO:
     GV->setSection("__DATA,__cfstring");

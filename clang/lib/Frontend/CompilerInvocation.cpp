@@ -564,7 +564,8 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
                        Args.hasArg(OPT_cl_unsafe_math_optimizations) ||
                        Args.hasArg(OPT_cl_finite_math_only) ||
                        Args.hasArg(OPT_cl_fast_relaxed_math));
-  Opts.NoSignedZeros = Args.hasArg(OPT_fno_signed_zeros);
+  Opts.NoSignedZeros = (Args.hasArg(OPT_fno_signed_zeros) ||
+                        Args.hasArg(OPT_cl_no_signed_zeros));
   Opts.ReciprocalMath = Args.hasArg(OPT_freciprocal_math);
   Opts.NoZeroInitializedInBSS = Args.hasArg(OPT_mno_zero_initialized_in_bss);
   Opts.BackendOptions = Args.getAllArgValues(OPT_backend_option);

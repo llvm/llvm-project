@@ -34,7 +34,7 @@
 // RUN:    --sysroot=%S/Inputs/CUDA 2>&1 %s | \
 // RUN:    FileCheck %s --check-prefix=OK
 
-// -nocuda-version-check should suppress all of these errors.
+// --no-cuda-version-check should suppress all of these errors.
 // RUN: %clang -v -### --cuda-gpu-arch=sm_60 --sysroot=%S/Inputs/CUDA 2>&1 \
 // RUN:    --no-cuda-version-check %s | \
 // RUN:    FileCheck %s --check-prefix=OK
