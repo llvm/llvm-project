@@ -61,8 +61,8 @@ public:
       return ArrayRef<support::ulittle32_t>();
     return Blocks;
   }
-  ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
-                                 uint32_t NumBytes) const override {
+  Expected<ArrayRef<uint8_t>> getBlockData(uint32_t BlockIndex,
+                                           uint32_t NumBytes) const override {
     return ArrayRef<uint8_t>(&Data[BlockIndex], NumBytes);
   }
 

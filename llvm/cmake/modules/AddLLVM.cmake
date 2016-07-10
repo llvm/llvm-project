@@ -800,11 +800,16 @@ macro(add_llvm_example name)
   set_target_properties(${name} PROPERTIES FOLDER "Examples")
 endmacro(add_llvm_example name)
 
-
+# This is a macro that is used to create targets for executables that are needed
+# for development, but that are not intended to be installed by default.
 macro(add_llvm_utility name)
+  if ( NOT LLVM_BUILD_UTILS )
+    set(EXCLUDE_FROM_ALL ON)
+  endif()
+
   add_llvm_executable(${name} DISABLE_LLVM_LINK_LLVM_DYLIB ${ARGN})
   set_target_properties(${name} PROPERTIES FOLDER "Utils")
-  if( LLVM_INSTALL_UTILS )
+  if( LLVM_INSTALL_UTILS AND LLVM_BUILD_UTILS )
     install (TARGETS ${name}
       RUNTIME DESTINATION bin
       COMPONENT ${name})

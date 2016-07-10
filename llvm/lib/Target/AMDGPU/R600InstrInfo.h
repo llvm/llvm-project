@@ -226,7 +226,17 @@ public:
   unsigned calculateIndirectAddress(unsigned RegIndex, unsigned Channel) const;
 
 
-  const TargetRegisterClass *getIndirectAddrRegClass() const override;
+  /// \returns The register class to be used for loading and storing values
+  /// from an "Indirect Address" .
+  const TargetRegisterClass *getIndirectAddrRegClass() const;
+
+  /// \returns the smallest register index that will be accessed by an indirect
+  /// read or write or -1 if indirect addressing is not used by this program.
+  int getIndirectIndexBegin(const MachineFunction &MF) const;
+
+  /// \returns the largest register index that will be accessed by an indirect
+  /// read or write or -1 if indirect addressing is not used by this program.
+  int getIndirectIndexEnd(const MachineFunction &MF) const;
 
   /// \brief Build instruction(s) for an indirect register write.
   ///

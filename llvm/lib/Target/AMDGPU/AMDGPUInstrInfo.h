@@ -44,14 +44,6 @@ private:
 public:
   explicit AMDGPUInstrInfo(const AMDGPUSubtarget &st);
 
-  /// \returns the smallest register index that will be accessed by an indirect
-  /// read or write or -1 if indirect addressing is not used by this program.
-  int getIndirectIndexBegin(const MachineFunction &MF) const;
-
-  /// \returns the largest register index that will be accessed by an indirect
-  /// read or write or -1 if indirect addressing is not used by this program.
-  int getIndirectIndexEnd(const MachineFunction &MF) const;
-
   bool enableClusterLoads() const override;
 
   bool shouldScheduleLoadsNear(SDNode *Load1, SDNode *Load2,
@@ -62,16 +54,6 @@ public:
   /// Return -1 if the target-specific opcode for the pseudo instruction does
   /// not exist. If Opcode is not a pseudo instruction, this is identity.
   int pseudoToMCOpcode(int Opcode) const;
-
-//===---------------------------------------------------------------------===//
-// Pure virtual funtions to be implemented by sub-classes.
-//===---------------------------------------------------------------------===//
-
-  /// \returns The register class to be used for loading and storing values
-  /// from an "Indirect Address" .
-  virtual const TargetRegisterClass *getIndirectAddrRegClass() const {
-    llvm_unreachable("getIndirectAddrRegClass() not implemented");
-  }
 
   /// \brief Given a MIMG \p Opcode that writes all 4 channels, return the
   /// equivalent opcode that writes \p Channels Channels.

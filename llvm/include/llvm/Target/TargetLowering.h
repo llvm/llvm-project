@@ -266,8 +266,7 @@ public:
   /// this factor, it is very likely to be predicted correctly.
   virtual BranchProbability getPredictableBranchThreshold() const;
 
-  /// isLoadBitCastBeneficial() - Return true if the following transform
-  /// is beneficial.
+  /// Return true if the following transform is beneficial:
   /// fold (conv (load x)) -> (load (conv*)x)
   /// On architectures that don't natively support some vector loads
   /// efficiently, casting the load to a smaller vector of larger types and
@@ -291,9 +290,7 @@ public:
     return true;
   }
 
-  /// isStoreBitCastBeneficial() - Mirror of isLoadBitCastBeneficial(). Return
-  /// true if the following transform is beneficial.
-  ///
+  /// Return true if the following transform is beneficial:
   /// (store (y (conv x)), y*)) -> (store x, (x*))
   virtual bool isStoreBitCastBeneficial(EVT StoreVT, EVT BitcastVT) const {
     // Default to the same logic as loads.

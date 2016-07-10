@@ -98,4 +98,19 @@ define void @simple_enough(i32 %b, i32 %s) {
   ret void
 }
 
+define void @slsr_strided_add_128bit(i128 %b, i128 %s) {
+; CHECK-LABEL: @slsr_strided_add_128bit(
+  %s125 = shl i128 %s, 125
+  %s126 = shl i128 %s, 126
+  %1 = add i128 %b, %s125
+; CHECK: [[t1:%[a-zA-Z0-9]+]] = add i128 %b, %s125
+  call void @bar(i128 %1)
+  %2 = add i128 %b, %s126
+; CHECK: [[t2:%[a-zA-Z0-9]+]] = add i128 [[t1]], %s125
+  call void @bar(i128 %2)
+; CHECK: call void @bar(i128 [[t2]])
+  ret void
+}
+
 declare void @foo(i32)
+declare void @bar(i128)

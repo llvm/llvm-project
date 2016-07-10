@@ -466,8 +466,6 @@ public:
   /// VALU if necessary.
   void moveToVALU(MachineInstr &MI) const;
 
-  const TargetRegisterClass *getIndirectAddrRegClass() const override;
-
   void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
                         int Count) const;
 

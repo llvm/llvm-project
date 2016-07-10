@@ -29,6 +29,8 @@ public:
 
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
+    if (ViewOffset + Offset < Offset)
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     if (Size + Offset > Length)
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);

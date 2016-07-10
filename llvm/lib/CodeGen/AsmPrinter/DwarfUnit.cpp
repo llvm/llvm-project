@@ -1061,14 +1061,18 @@ void DwarfUnit::constructTemplateValueParameterDIE(
     if (ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(Val))
       addConstantValue(ParamDIE, CI, resolve(VP->getType()));
     else if (GlobalValue *GV = mdconst::dyn_extract<GlobalValue>(Val)) {
-      // For declaration non-type template parameters (such as global values and
-      // functions)
-      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-      addOpAddress(*Loc, Asm->getSymbol(GV));
-      // Emit DW_OP_stack_value to use the address as the immediate value of the
-      // parameter, rather than a pointer to it.
-      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
-      addBlock(ParamDIE, dwarf::DW_AT_location, Loc);
+      // We cannot describe the location of dllimport'd entities: the
+      // computation of their address requires loads from the IAT.
+      if (!GV->hasDLLImportStorageClass()) {
+        // For declaration non-type template parameters (such as global values
+        // and functions)
+        DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+        addOpAddress(*Loc, Asm->getSymbol(GV));
+        // Emit DW_OP_stack_value to use the address as the immediate value of
+        // the parameter, rather than a pointer to it.
+        addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_stack_value);
+        addBlock(ParamDIE, dwarf::DW_AT_location, Loc);
+      }
     } else if (VP->getTag() == dwarf::DW_TAG_GNU_template_template_param) {
       assert(isa<MDString>(Val));
       addString(ParamDIE, dwarf::DW_AT_GNU_template_name,
