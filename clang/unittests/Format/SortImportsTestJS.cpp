@@ -236,6 +236,31 @@ TEST_F(SortImportsTestJS, SortingCanShrink) {
              "1;");
 }
 
+TEST_F(SortImportsTestJS, TrailingComma) {
+  verifySort("import {A, B,} from 'aa';\n", "import {B, A,} from 'aa';\n");
+}
+
+TEST_F(SortImportsTestJS, SortCaseInsensitive) {
+  verifySort("import {A} from 'aa';\n"
+             "import {A} from 'Ab';\n"
+             "import {A} from 'b';\n"
+             "import {A} from 'Bc';\n"
+             "\n"
+             "1;",
+             "import {A} from 'b';\n"
+             "import {A} from 'Bc';\n"
+             "import {A} from 'Ab';\n"
+             "import {A} from 'aa';\n"
+             "\n"
+             "1;");
+  verifySort("import {aa, Ab, b, Bc} from 'x';\n"
+             "\n"
+             "1;",
+             "import {b, Bc, Ab, aa} from 'x';\n"
+             "\n"
+             "1;");
+}
+
 } // end namespace
 } // end namespace format
 } // end namespace clang

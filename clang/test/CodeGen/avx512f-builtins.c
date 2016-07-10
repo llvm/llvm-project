@@ -4234,19 +4234,21 @@ __m512d test_mm512_maskz_shuffle_pd(__mmask8 __U, __m512d __M, __m512d __V) {
 
 __m512 test_mm512_shuffle_ps(__m512 __M, __m512 __V) {
   // CHECK-LABEL: @test_mm512_shuffle_ps
-  // CHECK: @llvm.x86.avx512.mask.shuf.ps.512
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 4, i32 5, i32 20, i32 20, i32 8, i32 9, i32 24, i32 24, i32 12, i32 13, i32 28, i32 28>
   return _mm512_shuffle_ps(__M, __V, 4); 
 }
 
 __m512 test_mm512_mask_shuffle_ps(__m512 __W, __mmask16 __U, __m512 __M, __m512 __V) {
   // CHECK-LABEL: @test_mm512_mask_shuffle_ps
-  // CHECK: @llvm.x86.avx512.mask.shuf.ps.512
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 4, i32 5, i32 20, i32 20, i32 8, i32 9, i32 24, i32 24, i32 12, i32 13, i32 28, i32 28>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_mask_shuffle_ps(__W, __U, __M, __V, 4); 
 }
 
 __m512 test_mm512_maskz_shuffle_ps(__mmask16 __U, __m512 __M, __m512 __V) {
   // CHECK-LABEL: @test_mm512_maskz_shuffle_ps
-  // CHECK: @llvm.x86.avx512.mask.shuf.ps.512
+  // CHECK: shufflevector <16 x float> %{{.*}}, <16 x float> %{{.*}}, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 4, i32 5, i32 20, i32 20, i32 8, i32 9, i32 24, i32 24, i32 12, i32 13, i32 28, i32 28>
+  // CHECK: select <16 x i1> %{{.*}}, <16 x float> %{{.*}}, <16 x float> %{{.*}}
   return _mm512_maskz_shuffle_ps(__U, __M, __V, 4); 
 }
 
