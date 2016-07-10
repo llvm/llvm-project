@@ -1197,6 +1197,63 @@ MachineInstrBuilder R600InstrInfo::buildIndirectRead(MachineBasicBlock *MBB,
   return Mov;
 }
 
+int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  int Offset = -1;
+
+  if (MFI->getNumObjects() == 0) {
+    return -1;
+  }
+
+  if (MRI.livein_empty()) {
+    return 0;
+  }
+
+  const TargetRegisterClass *IndirectRC = getIndirectAddrRegClass();
+  for (MachineRegisterInfo::livein_iterator LI = MRI.livein_begin(),
+                                            LE = MRI.livein_end();
+                                            LI != LE; ++LI) {
+    unsigned Reg = LI->first;
+    if (TargetRegisterInfo::isVirtualRegister(Reg) ||
+        !IndirectRC->contains(Reg))
+      continue;
+
+    unsigned RegIndex;
+    unsigned RegEnd;
+    for (RegIndex = 0, RegEnd = IndirectRC->getNumRegs(); RegIndex != RegEnd;
+                                                          ++RegIndex) {
+      if (IndirectRC->getRegister(RegIndex) == Reg)
+        break;
+    }
+    Offset = std::max(Offset, (int)RegIndex);
+  }
+
+  return Offset + 1;
+}
+
+int R600InstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
+  int Offset = 0;
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+
+  // Variable sized objects are not supported
+  if (MFI->hasVarSizedObjects()) {
+    return -1;
+  }
+
+  if (MFI->getNumObjects() == 0) {
+    return -1;
+  }
+
+  const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+  const R600FrameLowering *TFL = ST.getFrameLowering();
+
+  unsigned IgnoredFrameReg;
+  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg);
+
+  return getIndirectIndexBegin(MF) + Offset;
+}
+
 unsigned R600InstrInfo::getMaxAlusPerClause() const {
   return 115;
 }

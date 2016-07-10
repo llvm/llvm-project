@@ -8677,16 +8677,14 @@ static SDValue lowerVectorShuffleAsBroadcast(const SDLoc &DL, MVT VT,
 // are much smaller to encode than a SHUFPS and an INSERTPS. We can also
 // perform INSERTPS if a single V1 element is out of place and all V2
 // elements are zeroable.
-static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL,
-                                            SDValue V1, SDValue V2,
-                                            ArrayRef<int> Mask,
-                                            SelectionDAG &DAG) {
+static bool matchVectorShuffleAsInsertPS(SDValue &V1, SDValue &V2,
+                                         unsigned &InsertPSMask,
+                                         const SmallBitVector &Zeroable,
+                                         ArrayRef<int> Mask,
+                                         SelectionDAG &DAG) {
   assert(V1.getSimpleValueType() == MVT::v4f32 && "Bad operand type!");
   assert(V2.getSimpleValueType() == MVT::v4f32 && "Bad operand type!");
   assert(Mask.size() == 4 && "Unexpected mask size for v4 shuffle!");
-
-  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
-
   unsigned ZMask = 0;
   int V1DstIndex = -1;
   int V2DstIndex = -1;
@@ -8707,7 +8705,7 @@ static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL,
 
     // We can only insert a single non-zeroable element.
     if (V1DstIndex >= 0 || V2DstIndex >= 0)
-      return SDValue();
+      return false;
 
     if (Mask[i] < 4) {
       // V1 input out of place for insertion.
@@ -8720,7 +8718,7 @@ static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL,
 
   // Don't bother if we have no (non-zeroable) element for insertion.
   if (V1DstIndex < 0 && V2DstIndex < 0)
-    return SDValue();
+    return false;
 
   // Determine element insertion src/dst indices. The src index is from the
   // start of the inserted vector, not the start of the concatenated vector.
@@ -8740,8 +8738,21 @@ static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL,
   if (!V1UsedInPlace)
     V1 = DAG.getUNDEF(MVT::v4f32);
 
-  unsigned InsertPSMask = V2SrcIndex << 6 | V2DstIndex << 4 | ZMask;
+  // Insert the V2 element into the desired position.
+  InsertPSMask = V2SrcIndex << 6 | V2DstIndex << 4 | ZMask;
   assert((InsertPSMask & ~0xFFu) == 0 && "Invalid mask!");
+  return true;
+}
+
+static SDValue lowerVectorShuffleAsInsertPS(const SDLoc &DL, SDValue V1,
+                                            SDValue V2, ArrayRef<int> Mask,
+                                            SelectionDAG &DAG) {
+  SmallBitVector Zeroable = computeZeroableShuffleElements(Mask, V1, V2);
+
+  // Attempt to match the insertps pattern.
+  unsigned InsertPSMask;
+  if (!matchVectorShuffleAsInsertPS(V1, V2, InsertPSMask, Zeroable, Mask, DAG))
+    return SDValue();
 
   // Insert the V2 element into the desired position.
   return DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32, V1, V2,
@@ -11810,11 +11821,15 @@ static SDValue lowerV16F32VectorShuffle(SDLoc DL, ArrayRef<int> Mask,
     if (V2.isUndef())
       return DAG.getNode(X86ISD::VPERMILPI, DL, MVT::v16f32, V1,
                          getV4X86ShuffleImm8ForMask(RepeatedMask, DL, DAG));
-  }
 
-  if (SDValue Unpck =
-          lowerVectorShuffleWithUNPCK(DL, MVT::v16f32, Mask, V1, V2, DAG))
-    return Unpck;
+    // Use dedicated unpack instructions for masks that match their pattern.
+    if (SDValue Unpck =
+            lowerVectorShuffleWithUNPCK(DL, MVT::v16f32, Mask, V1, V2, DAG))
+      return Unpck;
+
+    // Otherwise, fall back to a SHUFPS sequence.
+    return lowerVectorShuffleWithSHUFPS(DL, MVT::v16f32, RepeatedMask, V1, V2, DAG);
+  }
 
   return lowerVectorShuffleWithPERMV(DL, MVT::v16f32, Mask, V1, V2, DAG);
 }
@@ -24879,17 +24894,8 @@ static bool matchPermuteVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
 
   // Narrow the repeated mask for 32-bit element permutes.
   SmallVector<int, 4> WordMask = RepeatedMask;
-  if (MaskScalarSizeInBits == 64) {
-    WordMask.clear();
-    for (int M : RepeatedMask) {
-      if (M == SM_SentinelUndef) {
-        WordMask.append(2, SM_SentinelUndef);
-        continue;
-      }
-      WordMask.push_back((M * 2) + 0);
-      WordMask.push_back((M * 2) + 1);
-    }
-  }
+  if (MaskScalarSizeInBits == 64)
+    scaleShuffleMask(2, RepeatedMask, WordMask);
 
   Shuffle = (FloatDomain ? X86ISD::VPERMILPI : X86ISD::PSHUFD);
   ShuffleVT = (FloatDomain ? MVT::f32 : MVT::i32);
@@ -25083,6 +25089,33 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
       DCI.AddToWorklist(Res.getNode());
       Res = DAG.getNode(X86ISD::BLENDI, DL, ShuffleVT, Res, Zero,
                         DAG.getConstant(BlendMask, DL, MVT::i8));
+      DCI.AddToWorklist(Res.getNode());
+      DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                    /*AddTo*/ true);
+      return true;
+    }
+  }
+
+  // Attempt to combine to INSERTPS.
+  if (Subtarget.hasSSE41() && NumMaskElts == 4 &&
+      (VT == MVT::v2f64 || VT == MVT::v4f32)) {
+    SmallBitVector Zeroable(4, false);
+    for (unsigned i = 0; i != NumMaskElts; ++i)
+      if (Mask[i] < 0)
+        Zeroable[i] = true;
+
+    unsigned InsertPSMask;
+    SDValue V1 = Input, V2 = Input;
+    if (Zeroable.any() && matchVectorShuffleAsInsertPS(V1, V2, InsertPSMask,
+                                                       Zeroable, Mask, DAG)) {
+      if (Depth == 1 && Root.getOpcode() == X86ISD::INSERTPS)
+        return false; // Nothing to do!
+      V1 = DAG.getBitcast(MVT::v4f32, V1);
+      DCI.AddToWorklist(V1.getNode());
+      V2 = DAG.getBitcast(MVT::v4f32, V2);
+      DCI.AddToWorklist(V2.getNode());
+      Res = DAG.getNode(X86ISD::INSERTPS, DL, MVT::v4f32, V1, V2,
+                        DAG.getConstant(InsertPSMask, DL, MVT::i8));
       DCI.AddToWorklist(Res.getNode());
       DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
                     /*AddTo*/ true);

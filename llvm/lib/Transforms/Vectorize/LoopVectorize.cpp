@@ -46,6 +46,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/MapVector.h"
@@ -55,21 +56,13 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/Analysis/AliasAnalysis.h"
-#include "llvm/Analysis/AssumptionCache.h"
-#include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/CodeMetrics.h"
-#include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/GlobalsModRef.h"
-#include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
-#include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Constants.h"
@@ -101,7 +94,6 @@
 #include "llvm/Transforms/Utils/LoopVersioning.h"
 #include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
-#include <functional>
 #include <map>
 #include <tuple>
 
@@ -1335,15 +1327,14 @@ static void emitMissedWarning(Function *F, Loop *L,
 /// induction variable and the different reduction variables.
 class LoopVectorizationLegality {
 public:
-  LoopVectorizationLegality(Loop *L, PredicatedScalarEvolution &PSE,
-                            DominatorTree *DT, TargetLibraryInfo *TLI,
-                            AliasAnalysis *AA, Function *F,
-                            const TargetTransformInfo *TTI,
-                            LoopAccessLegacyAnalysis *LAA, LoopInfo *LI,
-                            LoopVectorizationRequirements *R,
-                            LoopVectorizeHints *H)
+  LoopVectorizationLegality(
+      Loop *L, PredicatedScalarEvolution &PSE, DominatorTree *DT,
+      TargetLibraryInfo *TLI, AliasAnalysis *AA, Function *F,
+      const TargetTransformInfo *TTI,
+      std::function<const LoopAccessInfo &(Loop &)> *GetLAA, LoopInfo *LI,
+      LoopVectorizationRequirements *R, LoopVectorizeHints *H)
       : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TheFunction(F),
-        TTI(TTI), DT(DT), LAA(LAA), LAI(nullptr),
+        TTI(TTI), DT(DT), GetLAA(GetLAA), LAI(nullptr),
         InterleaveInfo(PSE, L, DT, LI), Induction(nullptr),
         WidestIndTy(nullptr), HasFunNoNaNAttr(false), Requirements(R),
         Hints(H) {}
@@ -1536,7 +1527,7 @@ private:
   /// Dominator Tree.
   DominatorTree *DT;
   // LoopAccess analysis.
-  LoopAccessLegacyAnalysis *LAA;
+  std::function<const LoopAccessInfo &(Loop &)> *GetLAA;
   // And the loop-accesses info corresponding to this loop.  This pointer is
   // null until canVectorizeMemory sets it up.
   const LoopAccessInfo *LAI;
@@ -1788,336 +1779,35 @@ struct LoopVectorize : public FunctionPass {
   static char ID;
 
   explicit LoopVectorize(bool NoUnrolling = false, bool AlwaysVectorize = true)
-      : FunctionPass(ID), DisableUnrolling(NoUnrolling),
-        AlwaysVectorize(AlwaysVectorize) {
+      : FunctionPass(ID) {
+    Impl.DisableUnrolling = NoUnrolling;
+    Impl.AlwaysVectorize = AlwaysVectorize;
     initializeLoopVectorizePass(*PassRegistry::getPassRegistry());
   }
 
-  ScalarEvolution *SE;
-  LoopInfo *LI;
-  TargetTransformInfo *TTI;
-  DominatorTree *DT;
-  BlockFrequencyInfo *BFI;
-  TargetLibraryInfo *TLI;
-  DemandedBits *DB;
-  AliasAnalysis *AA;
-  AssumptionCache *AC;
-  LoopAccessLegacyAnalysis *LAA;
-  bool DisableUnrolling;
-  bool AlwaysVectorize;
-
-  BlockFrequency ColdEntryFreq;
+  LoopVectorizePass Impl;
 
   bool runOnFunction(Function &F) override {
     if (skipFunction(F))
       return false;
 
-    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-    LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-    TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
+    auto *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    auto *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto *TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
+    auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    auto *BFI = &getAnalysis<BlockFrequencyInfoWrapperPass>().getBFI();
     auto *TLIP = getAnalysisIfAvailable<TargetLibraryInfoWrapperPass>();
-    TLI = TLIP ? &TLIP->getTLI() : nullptr;
-    AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-    AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
-    DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
+    auto *TLI = TLIP ? &TLIP->getTLI() : nullptr;
+    auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
+    auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
+    auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
 
-    // Compute some weights outside of the loop over the loops. Compute this
-    // using a BranchProbability to re-use its scaling math.
-    const BranchProbability ColdProb(1, 5); // 20%
-    ColdEntryFreq = BlockFrequency(BFI->getEntryFreq()) * ColdProb;
+    std::function<const LoopAccessInfo &(Loop &)> GetLAA =
+        [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
-    // Don't attempt if
-    // 1. the target claims to have no vector registers, and
-    // 2. interleaving won't help ILP.
-    //
-    // The second condition is necessary because, even if the target has no
-    // vector registers, loop vectorization may still enable scalar
-    // interleaving.
-    if (!TTI->getNumberOfRegisters(true) && TTI->getMaxInterleaveFactor(1) < 2)
-      return false;
-
-    // Build up a worklist of inner-loops to vectorize. This is necessary as
-    // the act of vectorizing or partially unrolling a loop creates new loops
-    // and can invalidate iterators across the loops.
-    SmallVector<Loop *, 8> Worklist;
-
-    for (Loop *L : *LI)
-      addInnerLoop(*L, Worklist);
-
-    LoopsAnalyzed += Worklist.size();
-
-    // Now walk the identified inner loops.
-    bool Changed = false;
-    while (!Worklist.empty())
-      Changed |= processLoop(Worklist.pop_back_val());
-
-    // Process each loop nest in the function.
-    return Changed;
-  }
-
-  static void AddRuntimeUnrollDisableMetaData(Loop *L) {
-    SmallVector<Metadata *, 4> MDs;
-    // Reserve first location for self reference to the LoopID metadata node.
-    MDs.push_back(nullptr);
-    bool IsUnrollMetadata = false;
-    MDNode *LoopID = L->getLoopID();
-    if (LoopID) {
-      // First find existing loop unrolling disable metadata.
-      for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
-        MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
-        if (MD) {
-          const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
-          IsUnrollMetadata =
-              S && S->getString().startswith("llvm.loop.unroll.disable");
-        }
-        MDs.push_back(LoopID->getOperand(i));
-      }
-    }
-
-    if (!IsUnrollMetadata) {
-      // Add runtime unroll disable metadata.
-      LLVMContext &Context = L->getHeader()->getContext();
-      SmallVector<Metadata *, 1> DisableOperands;
-      DisableOperands.push_back(
-          MDString::get(Context, "llvm.loop.unroll.runtime.disable"));
-      MDNode *DisableNode = MDNode::get(Context, DisableOperands);
-      MDs.push_back(DisableNode);
-      MDNode *NewLoopID = MDNode::get(Context, MDs);
-      // Set operand 0 to refer to the loop id itself.
-      NewLoopID->replaceOperandWith(0, NewLoopID);
-      L->setLoopID(NewLoopID);
-    }
-  }
-
-  bool processLoop(Loop *L) {
-    assert(L->empty() && "Only process inner loops.");
-
-#ifndef NDEBUG
-    const std::string DebugLocStr = getDebugLocString(L);
-#endif /* NDEBUG */
-
-    DEBUG(dbgs() << "\nLV: Checking a loop in \""
-                 << L->getHeader()->getParent()->getName() << "\" from "
-                 << DebugLocStr << "\n");
-
-    LoopVectorizeHints Hints(L, DisableUnrolling);
-
-    DEBUG(dbgs() << "LV: Loop hints:"
-                 << " force="
-                 << (Hints.getForce() == LoopVectorizeHints::FK_Disabled
-                         ? "disabled"
-                         : (Hints.getForce() == LoopVectorizeHints::FK_Enabled
-                                ? "enabled"
-                                : "?"))
-                 << " width=" << Hints.getWidth()
-                 << " unroll=" << Hints.getInterleave() << "\n");
-
-    // Function containing loop
-    Function *F = L->getHeader()->getParent();
-
-    // Looking at the diagnostic output is the only way to determine if a loop
-    // was vectorized (other than looking at the IR or machine code), so it
-    // is important to generate an optimization remark for each loop. Most of
-    // these messages are generated by emitOptimizationRemarkAnalysis. Remarks
-    // generated by emitOptimizationRemark and emitOptimizationRemarkMissed are
-    // less verbose reporting vectorized loops and unvectorized loops that may
-    // benefit from vectorization, respectively.
-
-    if (!Hints.allowVectorization(F, L, AlwaysVectorize)) {
-      DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
-      return false;
-    }
-
-    // Check the loop for a trip count threshold:
-    // do not vectorize loops with a tiny trip count.
-    const unsigned TC = SE->getSmallConstantTripCount(L);
-    if (TC > 0u && TC < TinyTripCountVectorThreshold) {
-      DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
-                   << "This loop is not worth vectorizing.");
-      if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
-        DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
-      else {
-        DEBUG(dbgs() << "\n");
-        emitAnalysisDiag(F, L, Hints, VectorizationReport()
-                                          << "vectorization is not beneficial "
-                                             "and is not explicitly forced");
-        return false;
-      }
-    }
-
-    PredicatedScalarEvolution PSE(*SE, *L);
-
-    // Check if it is legal to vectorize the loop.
-    LoopVectorizationRequirements Requirements;
-    LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, LAA, LI,
-                                  &Requirements, &Hints);
-    if (!LVL.canVectorize()) {
-      DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
-      emitMissedWarning(F, L, Hints);
-      return false;
-    }
-
-    // Use the cost model.
-    LoopVectorizationCostModel CM(L, PSE, LI, &LVL, *TTI, TLI, DB, AC, F,
-                                  &Hints);
-    CM.collectValuesToIgnore();
-
-    // Check the function attributes to find out if this function should be
-    // optimized for size.
-    bool OptForSize =
-        Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
-
-    // Compute the weighted frequency of this loop being executed and see if it
-    // is less than 20% of the function entry baseline frequency. Note that we
-    // always have a canonical loop here because we think we *can* vectorize.
-    // FIXME: This is hidden behind a flag due to pervasive problems with
-    // exactly what block frequency models.
-    if (LoopVectorizeWithBlockFrequency) {
-      BlockFrequency LoopEntryFreq = BFI->getBlockFreq(L->getLoopPreheader());
-      if (Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
-          LoopEntryFreq < ColdEntryFreq)
-        OptForSize = true;
-    }
-
-    // Check the function attributes to see if implicit floats are allowed.
-    // FIXME: This check doesn't seem possibly correct -- what if the loop is
-    // an integer loop and the vector instructions selected are purely integer
-    // vector instructions?
-    if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
-      DEBUG(dbgs() << "LV: Can't vectorize when the NoImplicitFloat"
-                      "attribute is used.\n");
-      emitAnalysisDiag(
-          F, L, Hints,
-          VectorizationReport()
-              << "loop not vectorized due to NoImplicitFloat attribute");
-      emitMissedWarning(F, L, Hints);
-      return false;
-    }
-
-    // Check if the target supports potentially unsafe FP vectorization.
-    // FIXME: Add a check for the type of safety issue (denormal, signaling)
-    // for the target we're vectorizing for, to make sure none of the
-    // additional fp-math flags can help.
-    if (Hints.isPotentiallyUnsafe() &&
-        TTI->isFPVectorizationPotentiallyUnsafe()) {
-      DEBUG(dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
-      emitAnalysisDiag(F, L, Hints,
-                       VectorizationReport()
-                           << "loop not vectorized due to unsafe FP support.");
-      emitMissedWarning(F, L, Hints);
-      return false;
-    }
-
-    // Select the optimal vectorization factor.
-    const LoopVectorizationCostModel::VectorizationFactor VF =
-        CM.selectVectorizationFactor(OptForSize);
-
-    // Select the interleave count.
-    unsigned IC = CM.selectInterleaveCount(OptForSize, VF.Width, VF.Cost);
-
-    // Get user interleave count.
-    unsigned UserIC = Hints.getInterleave();
-
-    // Identify the diagnostic messages that should be produced.
-    std::string VecDiagMsg, IntDiagMsg;
-    bool VectorizeLoop = true, InterleaveLoop = true;
-
-    if (Requirements.doesNotMeet(F, L, Hints)) {
-      DEBUG(dbgs() << "LV: Not vectorizing: loop did not meet vectorization "
-                      "requirements.\n");
-      emitMissedWarning(F, L, Hints);
-      return false;
-    }
-
-    if (VF.Width == 1) {
-      DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
-      VecDiagMsg =
-          "the cost-model indicates that vectorization is not beneficial";
-      VectorizeLoop = false;
-    }
-
-    if (IC == 1 && UserIC <= 1) {
-      // Tell the user interleaving is not beneficial.
-      DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
-      IntDiagMsg =
-          "the cost-model indicates that interleaving is not beneficial";
-      InterleaveLoop = false;
-      if (UserIC == 1)
-        IntDiagMsg +=
-            " and is explicitly disabled or interleave count is set to 1";
-    } else if (IC > 1 && UserIC == 1) {
-      // Tell the user interleaving is beneficial, but it explicitly disabled.
-      DEBUG(dbgs()
-            << "LV: Interleaving is beneficial but is explicitly disabled.");
-      IntDiagMsg = "the cost-model indicates that interleaving is beneficial "
-                   "but is explicitly disabled or interleave count is set to 1";
-      InterleaveLoop = false;
-    }
-
-    // Override IC if user provided an interleave count.
-    IC = UserIC > 0 ? UserIC : IC;
-
-    // Emit diagnostic messages, if any.
-    const char *VAPassName = Hints.vectorizeAnalysisPassName();
-    if (!VectorizeLoop && !InterleaveLoop) {
-      // Do not vectorize or interleaving the loop.
-      emitOptimizationRemarkAnalysis(F->getContext(), VAPassName, *F,
-                                     L->getStartLoc(), VecDiagMsg);
-      emitOptimizationRemarkAnalysis(F->getContext(), LV_NAME, *F,
-                                     L->getStartLoc(), IntDiagMsg);
-      return false;
-    } else if (!VectorizeLoop && InterleaveLoop) {
-      DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
-      emitOptimizationRemarkAnalysis(F->getContext(), VAPassName, *F,
-                                     L->getStartLoc(), VecDiagMsg);
-    } else if (VectorizeLoop && !InterleaveLoop) {
-      DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
-                   << DebugLocStr << '\n');
-      emitOptimizationRemarkAnalysis(F->getContext(), LV_NAME, *F,
-                                     L->getStartLoc(), IntDiagMsg);
-    } else if (VectorizeLoop && InterleaveLoop) {
-      DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
-                   << DebugLocStr << '\n');
-      DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
-    }
-
-    if (!VectorizeLoop) {
-      assert(IC > 1 && "interleave count should not be 1 or 0");
-      // If we decided that it is not legal to vectorize the loop, then
-      // interleave it.
-      InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, IC);
-      Unroller.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
-
-      emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
-                             Twine("interleaved loop (interleaved count: ") +
-                                 Twine(IC) + ")");
-    } else {
-      // If we decided that it is *legal* to vectorize the loop, then do it.
-      InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, VF.Width, IC);
-      LB.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
-      ++LoopsVectorized;
-
-      // Add metadata to disable runtime unrolling a scalar loop when there are
-      // no runtime checks about strides and memory. A scalar loop that is
-      // rarely used is not worth unrolling.
-      if (!LB.areSafetyChecksAdded())
-        AddRuntimeUnrollDisableMetaData(L);
-
-      // Report the vectorization decision.
-      emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
-                             Twine("vectorized loop (vectorization width: ") +
-                                 Twine(VF.Width) + ", interleaved count: " +
-                                 Twine(IC) + ")");
-    }
-
-    // Mark the loop as already vectorized to avoid vectorizing again.
-    Hints.setAlreadyVectorized();
-
-    DEBUG(verifyFunction(*L->getHeader()->getParent()));
-    return true;
+    return Impl.runImpl(F, *SE, *LI, *TTI, *DT, *BFI, TLI, *DB, *AA, *AC,
+                        GetLAA);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -5126,7 +4816,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
 }
 
 bool LoopVectorizationLegality::canVectorizeMemory() {
-  LAI = &LAA->getInfo(TheLoop);
+  LAI = &(*GetLAA)(*TheLoop);
   InterleaveInfo.setLAI(LAI);
   auto &OptionalReport = LAI->getReport();
   if (OptionalReport)
@@ -6662,4 +6352,347 @@ Value *InnerLoopUnroller::getStepVector(Value *Val, int StartIdx, Value *Step) {
   assert(!ITy->isVectorTy() && "Val must be a scalar");
   Constant *C = ConstantInt::get(ITy, StartIdx);
   return Builder.CreateAdd(Val, Builder.CreateMul(C, Step), "induction");
+}
+
+static void AddRuntimeUnrollDisableMetaData(Loop *L) {
+  SmallVector<Metadata *, 4> MDs;
+  // Reserve first location for self reference to the LoopID metadata node.
+  MDs.push_back(nullptr);
+  bool IsUnrollMetadata = false;
+  MDNode *LoopID = L->getLoopID();
+  if (LoopID) {
+    // First find existing loop unrolling disable metadata.
+    for (unsigned i = 1, ie = LoopID->getNumOperands(); i < ie; ++i) {
+      MDNode *MD = dyn_cast<MDNode>(LoopID->getOperand(i));
+      if (MD) {
+        const MDString *S = dyn_cast<MDString>(MD->getOperand(0));
+        IsUnrollMetadata =
+            S && S->getString().startswith("llvm.loop.unroll.disable");
+      }
+      MDs.push_back(LoopID->getOperand(i));
+    }
+  }
+
+  if (!IsUnrollMetadata) {
+    // Add runtime unroll disable metadata.
+    LLVMContext &Context = L->getHeader()->getContext();
+    SmallVector<Metadata *, 1> DisableOperands;
+    DisableOperands.push_back(
+        MDString::get(Context, "llvm.loop.unroll.runtime.disable"));
+    MDNode *DisableNode = MDNode::get(Context, DisableOperands);
+    MDs.push_back(DisableNode);
+    MDNode *NewLoopID = MDNode::get(Context, MDs);
+    // Set operand 0 to refer to the loop id itself.
+    NewLoopID->replaceOperandWith(0, NewLoopID);
+    L->setLoopID(NewLoopID);
+  }
+}
+
+bool LoopVectorizePass::processLoop(Loop *L) {
+  assert(L->empty() && "Only process inner loops.");
+
+#ifndef NDEBUG
+  const std::string DebugLocStr = getDebugLocString(L);
+#endif /* NDEBUG */
+
+  DEBUG(dbgs() << "\nLV: Checking a loop in \""
+               << L->getHeader()->getParent()->getName() << "\" from "
+               << DebugLocStr << "\n");
+
+  LoopVectorizeHints Hints(L, DisableUnrolling);
+
+  DEBUG(dbgs() << "LV: Loop hints:"
+               << " force="
+               << (Hints.getForce() == LoopVectorizeHints::FK_Disabled
+                       ? "disabled"
+                       : (Hints.getForce() == LoopVectorizeHints::FK_Enabled
+                              ? "enabled"
+                              : "?"))
+               << " width=" << Hints.getWidth()
+               << " unroll=" << Hints.getInterleave() << "\n");
+
+  // Function containing loop
+  Function *F = L->getHeader()->getParent();
+
+  // Looking at the diagnostic output is the only way to determine if a loop
+  // was vectorized (other than looking at the IR or machine code), so it
+  // is important to generate an optimization remark for each loop. Most of
+  // these messages are generated by emitOptimizationRemarkAnalysis. Remarks
+  // generated by emitOptimizationRemark and emitOptimizationRemarkMissed are
+  // less verbose reporting vectorized loops and unvectorized loops that may
+  // benefit from vectorization, respectively.
+
+  if (!Hints.allowVectorization(F, L, AlwaysVectorize)) {
+    DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
+    return false;
+  }
+
+  // Check the loop for a trip count threshold:
+  // do not vectorize loops with a tiny trip count.
+  const unsigned TC = SE->getSmallConstantTripCount(L);
+  if (TC > 0u && TC < TinyTripCountVectorThreshold) {
+    DEBUG(dbgs() << "LV: Found a loop with a very small trip count. "
+                 << "This loop is not worth vectorizing.");
+    if (Hints.getForce() == LoopVectorizeHints::FK_Enabled)
+      DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
+    else {
+      DEBUG(dbgs() << "\n");
+      emitAnalysisDiag(F, L, Hints, VectorizationReport()
+                                        << "vectorization is not beneficial "
+                                           "and is not explicitly forced");
+      return false;
+    }
+  }
+
+  PredicatedScalarEvolution PSE(*SE, *L);
+
+  // Check if it is legal to vectorize the loop.
+  LoopVectorizationRequirements Requirements;
+  LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, GetLAA, LI,
+                                &Requirements, &Hints);
+  if (!LVL.canVectorize()) {
+    DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
+    emitMissedWarning(F, L, Hints);
+    return false;
+  }
+
+  // Use the cost model.
+  LoopVectorizationCostModel CM(L, PSE, LI, &LVL, *TTI, TLI, DB, AC, F,
+                                &Hints);
+  CM.collectValuesToIgnore();
+
+  // Check the function attributes to find out if this function should be
+  // optimized for size.
+  bool OptForSize =
+      Hints.getForce() != LoopVectorizeHints::FK_Enabled && F->optForSize();
+
+  // Compute the weighted frequency of this loop being executed and see if it
+  // is less than 20% of the function entry baseline frequency. Note that we
+  // always have a canonical loop here because we think we *can* vectorize.
+  // FIXME: This is hidden behind a flag due to pervasive problems with
+  // exactly what block frequency models.
+  if (LoopVectorizeWithBlockFrequency) {
+    BlockFrequency LoopEntryFreq = BFI->getBlockFreq(L->getLoopPreheader());
+    if (Hints.getForce() != LoopVectorizeHints::FK_Enabled &&
+        LoopEntryFreq < ColdEntryFreq)
+      OptForSize = true;
+  }
+
+  // Check the function attributes to see if implicit floats are allowed.
+  // FIXME: This check doesn't seem possibly correct -- what if the loop is
+  // an integer loop and the vector instructions selected are purely integer
+  // vector instructions?
+  if (F->hasFnAttribute(Attribute::NoImplicitFloat)) {
+    DEBUG(dbgs() << "LV: Can't vectorize when the NoImplicitFloat"
+                    "attribute is used.\n");
+    emitAnalysisDiag(
+        F, L, Hints,
+        VectorizationReport()
+            << "loop not vectorized due to NoImplicitFloat attribute");
+    emitMissedWarning(F, L, Hints);
+    return false;
+  }
+
+  // Check if the target supports potentially unsafe FP vectorization.
+  // FIXME: Add a check for the type of safety issue (denormal, signaling)
+  // for the target we're vectorizing for, to make sure none of the
+  // additional fp-math flags can help.
+  if (Hints.isPotentiallyUnsafe() &&
+      TTI->isFPVectorizationPotentiallyUnsafe()) {
+    DEBUG(dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
+    emitAnalysisDiag(F, L, Hints,
+                     VectorizationReport()
+                         << "loop not vectorized due to unsafe FP support.");
+    emitMissedWarning(F, L, Hints);
+    return false;
+  }
+
+  // Select the optimal vectorization factor.
+  const LoopVectorizationCostModel::VectorizationFactor VF =
+      CM.selectVectorizationFactor(OptForSize);
+
+  // Select the interleave count.
+  unsigned IC = CM.selectInterleaveCount(OptForSize, VF.Width, VF.Cost);
+
+  // Get user interleave count.
+  unsigned UserIC = Hints.getInterleave();
+
+  // Identify the diagnostic messages that should be produced.
+  std::string VecDiagMsg, IntDiagMsg;
+  bool VectorizeLoop = true, InterleaveLoop = true;
+
+  if (Requirements.doesNotMeet(F, L, Hints)) {
+    DEBUG(dbgs() << "LV: Not vectorizing: loop did not meet vectorization "
+                    "requirements.\n");
+    emitMissedWarning(F, L, Hints);
+    return false;
+  }
+
+  if (VF.Width == 1) {
+    DEBUG(dbgs() << "LV: Vectorization is possible but not beneficial.\n");
+    VecDiagMsg =
+        "the cost-model indicates that vectorization is not beneficial";
+    VectorizeLoop = false;
+  }
+
+  if (IC == 1 && UserIC <= 1) {
+    // Tell the user interleaving is not beneficial.
+    DEBUG(dbgs() << "LV: Interleaving is not beneficial.\n");
+    IntDiagMsg =
+        "the cost-model indicates that interleaving is not beneficial";
+    InterleaveLoop = false;
+    if (UserIC == 1)
+      IntDiagMsg +=
+          " and is explicitly disabled or interleave count is set to 1";
+  } else if (IC > 1 && UserIC == 1) {
+    // Tell the user interleaving is beneficial, but it explicitly disabled.
+    DEBUG(dbgs()
+          << "LV: Interleaving is beneficial but is explicitly disabled.");
+    IntDiagMsg = "the cost-model indicates that interleaving is beneficial "
+                 "but is explicitly disabled or interleave count is set to 1";
+    InterleaveLoop = false;
+  }
+
+  // Override IC if user provided an interleave count.
+  IC = UserIC > 0 ? UserIC : IC;
+
+  // Emit diagnostic messages, if any.
+  const char *VAPassName = Hints.vectorizeAnalysisPassName();
+  if (!VectorizeLoop && !InterleaveLoop) {
+    // Do not vectorize or interleaving the loop.
+    emitOptimizationRemarkAnalysis(F->getContext(), VAPassName, *F,
+                                   L->getStartLoc(), VecDiagMsg);
+    emitOptimizationRemarkAnalysis(F->getContext(), LV_NAME, *F,
+                                   L->getStartLoc(), IntDiagMsg);
+    return false;
+  } else if (!VectorizeLoop && InterleaveLoop) {
+    DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
+    emitOptimizationRemarkAnalysis(F->getContext(), VAPassName, *F,
+                                   L->getStartLoc(), VecDiagMsg);
+  } else if (VectorizeLoop && !InterleaveLoop) {
+    DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
+                 << DebugLocStr << '\n');
+    emitOptimizationRemarkAnalysis(F->getContext(), LV_NAME, *F,
+                                   L->getStartLoc(), IntDiagMsg);
+  } else if (VectorizeLoop && InterleaveLoop) {
+    DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
+                 << DebugLocStr << '\n');
+    DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
+  }
+
+  if (!VectorizeLoop) {
+    assert(IC > 1 && "interleave count should not be 1 or 0");
+    // If we decided that it is not legal to vectorize the loop, then
+    // interleave it.
+    InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, IC);
+    Unroller.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
+
+    emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
+                           Twine("interleaved loop (interleaved count: ") +
+                               Twine(IC) + ")");
+  } else {
+    // If we decided that it is *legal* to vectorize the loop, then do it.
+    InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, VF.Width, IC);
+    LB.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
+    ++LoopsVectorized;
+
+    // Add metadata to disable runtime unrolling a scalar loop when there are
+    // no runtime checks about strides and memory. A scalar loop that is
+    // rarely used is not worth unrolling.
+    if (!LB.areSafetyChecksAdded())
+      AddRuntimeUnrollDisableMetaData(L);
+
+    // Report the vectorization decision.
+    emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
+                           Twine("vectorized loop (vectorization width: ") +
+                               Twine(VF.Width) + ", interleaved count: " +
+                               Twine(IC) + ")");
+  }
+
+  // Mark the loop as already vectorized to avoid vectorizing again.
+  Hints.setAlreadyVectorized();
+
+  DEBUG(verifyFunction(*L->getHeader()->getParent()));
+  return true;
+}
+
+bool LoopVectorizePass::runImpl(
+    Function &F, ScalarEvolution &SE_, LoopInfo &LI_, TargetTransformInfo &TTI_,
+    DominatorTree &DT_, BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
+    DemandedBits &DB_, AliasAnalysis &AA_, AssumptionCache &AC_,
+    std::function<const LoopAccessInfo &(Loop &)> &GetLAA_) {
+
+  SE = &SE_;
+  LI = &LI_;
+  TTI = &TTI_;
+  DT = &DT_;
+  BFI = &BFI_;
+  TLI = TLI_;
+  AA = &AA_;
+  AC = &AC_;
+  GetLAA = &GetLAA_;
+  DB = &DB_;
+
+  // Compute some weights outside of the loop over the loops. Compute this
+  // using a BranchProbability to re-use its scaling math.
+  const BranchProbability ColdProb(1, 5); // 20%
+  ColdEntryFreq = BlockFrequency(BFI->getEntryFreq()) * ColdProb;
+
+  // Don't attempt if
+  // 1. the target claims to have no vector registers, and
+  // 2. interleaving won't help ILP.
+  //
+  // The second condition is necessary because, even if the target has no
+  // vector registers, loop vectorization may still enable scalar
+  // interleaving.
+  if (!TTI->getNumberOfRegisters(true) && TTI->getMaxInterleaveFactor(1) < 2)
+    return false;
+
+  // Build up a worklist of inner-loops to vectorize. This is necessary as
+  // the act of vectorizing or partially unrolling a loop creates new loops
+  // and can invalidate iterators across the loops.
+  SmallVector<Loop *, 8> Worklist;
+
+  for (Loop *L : *LI)
+    addInnerLoop(*L, Worklist);
+
+  LoopsAnalyzed += Worklist.size();
+
+  // Now walk the identified inner loops.
+  bool Changed = false;
+  while (!Worklist.empty())
+    Changed |= processLoop(Worklist.pop_back_val());
+
+  // Process each loop nest in the function.
+  return Changed;
+
+}
+
+
+PreservedAnalyses LoopVectorizePass::run(Function &F,
+                                         FunctionAnalysisManager &AM) {
+    auto &SE = AM.getResult<ScalarEvolutionAnalysis>(F);
+    auto &LI = AM.getResult<LoopAnalysis>(F);
+    auto &TTI = AM.getResult<TargetIRAnalysis>(F);
+    auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
+    auto &BFI = AM.getResult<BlockFrequencyAnalysis>(F);
+    auto *TLI = AM.getCachedResult<TargetLibraryAnalysis>(F);
+    auto &AA = AM.getResult<AAManager>(F);
+    auto &AC = AM.getResult<AssumptionAnalysis>(F);
+    auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
+
+    auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
+    std::function<const LoopAccessInfo &(Loop &)> GetLAA =
+        [&](Loop &L) -> const LoopAccessInfo & {
+      return LAM.getResult<LoopAccessAnalysis>(L);
+    };
+    bool Changed = runImpl(F, SE, LI, TTI, DT, BFI, TLI, DB, AA, AC, GetLAA);
+    if (!Changed)
+      return PreservedAnalyses::all();
+    PreservedAnalyses PA;
+    PA.preserve<LoopAnalysis>();
+    PA.preserve<DominatorTreeAnalysis>();
+    PA.preserve<BasicAA>();
+    PA.preserve<GlobalsAA>();
+    return PA;
 }

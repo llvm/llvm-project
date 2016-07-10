@@ -200,7 +200,6 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void writeThunk(uint8_t *Buf, uint64_t S) const override;
   RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType,
                        const InputFile &File,
                        const SymbolBody &S) const override;
@@ -1916,19 +1915,6 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   writeMipsHi16<E>(Buf, GotEntryAddr);
   writeMipsLo16<E>(Buf + 4, GotEntryAddr);
   writeMipsLo16<E>(Buf + 12, GotEntryAddr);
-}
-
-template <class ELFT>
-void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
-  // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
-  // See MipsTargetInfo::writeThunk for details.
-  const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, 0x3c190000);                // lui   $25, %hi(func)
-  write32<E>(Buf + 4, 0x08000000 | (S >> 2)); // j     func
-  write32<E>(Buf + 8, 0x27390000);            // addiu $25, $25, %lo(func)
-  write32<E>(Buf + 12, 0x00000000);           // nop
-  writeMipsHi16<E>(Buf, S);
-  writeMipsLo16<E>(Buf + 8, S);
 }
 
 template <class ELFT>

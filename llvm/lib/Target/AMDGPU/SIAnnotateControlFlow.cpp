@@ -37,6 +37,7 @@ typedef SmallVector<StackEntry, 16> StackVector;
 // Intrinsic names the control flow is annotated with
 static const char *const IfIntrinsic = "llvm.amdgcn.if";
 static const char *const ElseIntrinsic = "llvm.amdgcn.else";
+static const char *const BreakIntrinsic = "llvm.amdgcn.break";
 static const char *const IfBreakIntrinsic = "llvm.amdgcn.if.break";
 static const char *const ElseBreakIntrinsic = "llvm.amdgcn.else.break";
 static const char *const LoopIntrinsic = "llvm.amdgcn.loop";
@@ -144,6 +145,9 @@ bool SIAnnotateControlFlow::doInitialization(Module &M) {
 
   Else = M.getOrInsertFunction(
     ElseIntrinsic, ReturnStruct, Int64, (Type *)nullptr);
+
+  Break = M.getOrInsertFunction(
+    BreakIntrinsic, Int64, Int64, (Type *)nullptr);
 
   IfBreak = M.getOrInsertFunction(
     IfBreakIntrinsic, Int64, Boolean, Int64, (Type *)nullptr);

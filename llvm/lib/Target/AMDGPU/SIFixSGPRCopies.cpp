@@ -324,6 +324,7 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
           assert(DefInstr);
           switch(DefInstr->getOpcode()) {
 
+          case AMDGPU::SI_BREAK:
           case AMDGPU::SI_IF_BREAK:
           case AMDGPU::SI_ELSE_BREAK:
           // If we see a PHI instruction that defines an SGPR, then that PHI

@@ -72,6 +72,7 @@ bool SIFixControlFlowLiveIntervals::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
         case AMDGPU::SI_IF:
         case AMDGPU::SI_ELSE:
+        case AMDGPU::SI_BREAK:
         case AMDGPU::SI_IF_BREAK:
         case AMDGPU::SI_ELSE_BREAK:
         case AMDGPU::SI_END_CF: {

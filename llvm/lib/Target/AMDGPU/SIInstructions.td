@@ -1958,6 +1958,11 @@ def SI_LOOP : InstSI <
 
 } // End isBranch = 1, isTerminator = 1
 
+def SI_BREAK : InstSI <
+  (outs SReg_64:$dst), (ins SReg_64:$src), "",
+  [(set i64:$dst, (int_amdgcn_break i64:$src))]
+>;
+
 def SI_IF_BREAK : InstSI <
   (outs SReg_64:$dst),   (ins SReg_64:$vcc, SReg_64:$src), "",
   [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]

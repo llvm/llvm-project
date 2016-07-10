@@ -1261,6 +1261,7 @@ bool SITargetLowering::isCFIntrinsic(const SDNode *Intr) const {
   default: return false;
   case AMDGPUIntrinsic::amdgcn_if:
   case AMDGPUIntrinsic::amdgcn_else:
+  case AMDGPUIntrinsic::amdgcn_break:
   case AMDGPUIntrinsic::amdgcn_if_break:
   case AMDGPUIntrinsic::amdgcn_else_break:
   case AMDGPUIntrinsic::amdgcn_loop:

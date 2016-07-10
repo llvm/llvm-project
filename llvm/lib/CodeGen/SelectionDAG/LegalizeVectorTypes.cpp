@@ -476,16 +476,16 @@ bool DAGTypeLegalizer::ScalarizeVectorOperand(SDNode *N, unsigned OpNo) {
   return false;
 }
 
-/// ScalarizeVecOp_BITCAST - If the value to convert is a vector that needs
-/// to be scalarized, it must be <1 x ty>.  Convert the element instead.
+/// If the value to convert is a vector that needs to be scalarized, it must be
+/// <1 x ty>. Convert the element instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_BITCAST(SDNode *N) {
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
   return DAG.getNode(ISD::BITCAST, SDLoc(N),
                      N->getValueType(0), Elt);
 }
 
-/// ScalarizeVecOp_UnaryOp - If the input is a vector that needs to be
-/// scalarized, it must be <1 x ty>.  Do the operation on the element instead.
+/// If the input is a vector that needs to be scalarized, it must be <1 x ty>.
+/// Do the operation on the element instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp(SDNode *N) {
   assert(N->getValueType(0).getVectorNumElements() == 1 &&
          "Unexpected vector type!");
@@ -497,8 +497,7 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_UnaryOp(SDNode *N) {
   return DAG.getNode(ISD::BUILD_VECTOR, SDLoc(N), N->getValueType(0), Op);
 }
 
-/// ScalarizeVecOp_CONCAT_VECTORS - The vectors to concatenate have length one -
-/// use a BUILD_VECTOR instead.
+/// The vectors to concatenate have length one - use a BUILD_VECTOR instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_CONCAT_VECTORS(SDNode *N) {
   SmallVector<SDValue, 8> Ops(N->getNumOperands());
   for (unsigned i = 0, e = N->getNumOperands(); i < e; ++i)
@@ -506,9 +505,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_CONCAT_VECTORS(SDNode *N) {
   return DAG.getNode(ISD::BUILD_VECTOR, SDLoc(N), N->getValueType(0), Ops);
 }
 
-/// ScalarizeVecOp_EXTRACT_VECTOR_ELT - If the input is a vector that needs to
-/// be scalarized, it must be <1 x ty>, so just return the element, ignoring the
-/// index.
+/// If the input is a vector that needs to be scalarized, it must be <1 x ty>,
+/// so just return the element, ignoring the index.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
   SDValue Res = GetScalarizedVector(N->getOperand(0));
   if (Res.getValueType() != N->getValueType(0))
@@ -518,8 +516,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_EXTRACT_VECTOR_ELT(SDNode *N) {
 }
 
 
-/// ScalarizeVecOp_VSELECT - If the input condition is a vector that needs to be
-/// scalarized, it must be <1 x i1>, so just convert to a normal ISD::SELECT
+/// If the input condition is a vector that needs to be scalarized, it must be
+/// <1 x i1>, so just convert to a normal ISD::SELECT
 /// (still with vector output type since that was acceptable if we got here).
 SDValue DAGTypeLegalizer::ScalarizeVecOp_VSELECT(SDNode *N) {
   SDValue ScalarCond = GetScalarizedVector(N->getOperand(0));
@@ -529,8 +527,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_VSELECT(SDNode *N) {
                      N->getOperand(2));
 }
 
-/// ScalarizeVecOp_STORE - If the value to store is a vector that needs to be
-/// scalarized, it must be <1 x ty>.  Just store the element.
+/// If the value to store is a vector that needs to be scalarized, it must be
+/// <1 x ty>. Just store the element.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
   assert(N->isUnindexed() && "Indexed store of one-element vector?");
   assert(OpNo == 1 && "Do not know how to scalarize this operand!");
@@ -550,8 +548,8 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_STORE(StoreSDNode *N, unsigned OpNo){
                       N->getOriginalAlignment(), N->getAAInfo());
 }
 
-/// ScalarizeVecOp_FP_ROUND - If the value to round is a vector that needs
-/// to be scalarized, it must be <1 x ty>.  Convert the element instead.
+/// If the value to round is a vector that needs to be scalarized, it must be
+/// <1 x ty>. Convert the element instead.
 SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
   SDValue Elt = GetScalarizedVector(N->getOperand(0));
   SDValue Res = DAG.getNode(ISD::FP_ROUND, SDLoc(N),
@@ -564,11 +562,10 @@ SDValue DAGTypeLegalizer::ScalarizeVecOp_FP_ROUND(SDNode *N, unsigned OpNo) {
 //  Result Vector Splitting
 //===----------------------------------------------------------------------===//
 
-/// SplitVectorResult - This method is called when the specified result of the
-/// specified node is found to need vector splitting.  At this point, the node
-/// may also have invalid operands or may have other results that need
-/// legalization, we just know that (at least) one result needs vector
-/// splitting.
+/// This method is called when the specified result of the specified node is
+/// found to need vector splitting. At this point, the node may also have
+/// invalid operands or may have other results that need legalization, we just
+/// know that (at least) one result needs vector splitting.
 void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
   DEBUG(dbgs() << "Split node result: ";
         N->dump(&DAG);
@@ -1434,10 +1431,10 @@ void DAGTypeLegalizer::SplitVecRes_VECTOR_SHUFFLE(ShuffleVectorSDNode *N,
 //  Operand Vector Splitting
 //===----------------------------------------------------------------------===//
 
-/// SplitVectorOperand - This method is called when the specified operand of the
-/// specified node is found to need vector splitting.  At this point, all of the
-/// result types of the node are known to be legal, but other operands of the
-/// node may need legalization as well as the specified one.
+/// This method is called when the specified operand of the specified node is
+/// found to need vector splitting. At this point, all of the result types of
+/// the node are known to be legal, but other operands of the node may need
+/// legalization as well as the specified one.
 bool DAGTypeLegalizer::SplitVectorOperand(SDNode *N, unsigned OpNo) {
   DEBUG(dbgs() << "Split node operand: ";
         N->dump(&DAG);

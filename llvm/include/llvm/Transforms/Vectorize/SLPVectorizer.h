@@ -16,8 +16,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_SLPVECTORIZER_H
-#define LLVM_TRANSFORMS_SCALAR_SLPVECTORIZER_H
+#ifndef LLVM_TRANSFORMS_VECTORIZE_SLPVECTORIZER_H
+#define LLVM_TRANSFORMS_VECTORIZE_SLPVECTORIZER_H
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -110,4 +110,4 @@ private:
 };
 }
 
-#endif // LLVM_TRANSFORMS_SCALAR_SLPVECTORIZER_H
+#endif // LLVM_TRANSFORMS_VECTORIZE_SLPVECTORIZER_H

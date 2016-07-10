@@ -443,31 +443,30 @@ let F = 1, Defs = [SR] in {
 }
 
 class ShiftRR<string AsmStr, list<dag> Pattern>
-  : InstRR<0b111, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2), AsmStr, Pattern> {
-  let DDDI = 0;
-}
+  : InstRR<0b111, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2, pred:$DDDI), AsmStr,
+           Pattern>;
 
 let F = 0 in {
   let JJJJJ = 0b10000 in
-    def SHL_R : ShiftRR<"sh\t$Rs1, $Rs2, $Rd",
+    def SHL_R : ShiftRR<"sh$DDDI\t$Rs1, $Rs2, $Rd",
                         [(set GPR:$Rd, (shl GPR:$Rs1, GPR:$Rs2))]>;
   let isCodeGenOnly = 1 in {
     let JJJJJ = 0b10000 in
-      def SRL_R : ShiftRR<"sh\t$Rs1, $Rs2, $Rd", []>;
+      def SRL_R : ShiftRR<"sh$DDDI\t$Rs1, $Rs2, $Rd", []>;
   }
   let JJJJJ = 0b11000 in
-    def SRA_R : ShiftRR<"sha\t$Rs1, $Rs2, $Rd", []>;
+    def SRA_R : ShiftRR<"sha$DDDI\t$Rs1, $Rs2, $Rd", []>;
 }
 
 let F = 1, Defs = [SR] in {
   let JJJJJ = 0b10000 in
-    def SHL_F_R : ShiftRR<"sh.f\t$Rs1, $Rs2, $Rd", []>;
+    def SHL_F_R : ShiftRR<"sh.f$DDDI\t$Rs1, $Rs2, $Rd", []>;
   let isCodeGenOnly = 1 in {
     let JJJJJ = 0b10000 in
-      def SRL_F_R : ShiftRR<"sh.f\t$Rs1, $Rs2, $Rd", []>;
+      def SRL_F_R : ShiftRR<"sh.f$DDDI\t$Rs1, $Rs2, $Rd", []>;
   }
   let JJJJJ = 0b11000 in
-    def SRA_F_R : ShiftRR<"sha.f\t$Rs1, $Rs2, $Rd", []>;
+    def SRA_F_R : ShiftRR<"sha.f$DDDI\t$Rs1, $Rs2, $Rd", []>;
 }
 
 // Expand shift-right operations

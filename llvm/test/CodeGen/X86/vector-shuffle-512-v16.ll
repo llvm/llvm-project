@@ -288,3 +288,12 @@ define <16 x i32> @shuffle_v16i16_3_3_0_0_7_7_4_4_11_11_8_8_15_15_12_12(<16 x i3
   %c = shufflevector <16 x i32> %a, <16 x i32> %b, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 6, i32 7, i32 4, i32 5, i32 10, i32 11, i32 8, i32 9, i32 14, i32 15, i32 12, i32 13>
   ret <16 x i32> %c
 }
+
+define <16 x float> @shuffle_v16f32_00_01_10_10_04_05_14_14_08_09_18_18_0c_0d_1c_1c(<16 x float> %a, <16 x float> %b) {
+; ALL-LABEL: shuffle_v16f32_00_01_10_10_04_05_14_14_08_09_18_18_0c_0d_1c_1c:
+; ALL:       # BB#0:
+; ALL-NEXT:    vshufps {{.*#+}} zmm0 = zmm0[0,1],zmm1[0,0],zmm0[4,5],zmm1[4,4],zmm0[8,9],zmm1[8,8],zmm0[12,13],zmm1[12,12]
+; ALL-NEXT:    retq
+  %shuffle = shufflevector <16 x float> %a, <16 x float> %b, <16 x i32> <i32 0, i32 1, i32 16, i32 16, i32 4, i32 5, i32 20, i32 20, i32 8, i32 9, i32 24, i32 24, i32 12, i32 13, i32 28, i32 28>
+  ret <16 x float> %shuffle
+}

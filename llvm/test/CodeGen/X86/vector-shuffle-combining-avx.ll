@@ -190,7 +190,7 @@ define <8 x float> @combine_vpermilvar_8f32_4stage(<8 x float> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_as_insertps(<4 x float> %a0) {
 ; ALL-LABEL: combine_vpermilvar_4f32_as_insertps:
 ; ALL:       # BB#0:
-; ALL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,6,7],zero,zero,zero,zero,xmm0[8,9,10,11],zero,zero,zero,zero
+; ALL-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[1],zero,xmm0[2],zero
 ; ALL-NEXT:    retq
   %1 = call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <4 x float> %1, <4 x float> zeroinitializer, <4 x i32> <i32 2, i32 4, i32 1, i32 4>
