@@ -397,7 +397,7 @@ Mangled::GetDemangledName (lldb::LanguageType language) const
             std::string demangled(swift::Demangle::demangleSymbolAsString(mangled_name, strlen(mangled_name)));
             if (!demangled.empty())
             {
-                m_demangled.SetCString(demangled.c_str());
+                m_demangled.SetCStringWithMangledCounterpart(demangled.c_str(), m_mangled);
                 if (log)
                     log->Printf("demangle swift: %s -> \"%s\"", mangled_name, demangled.c_str());
             }

@@ -950,8 +950,8 @@ SwiftLanguageRuntime::MethodName::Parse()
         
         if (StringHasAllOf(full,".:()"))
         {
-            size_t idx_of_colon = full.find(':');
-            llvm::StringRef funcname = full.substr(0,idx_of_colon-2);
+            const size_t open_paren = full.find(" (");
+            llvm::StringRef funcname = full.substr(0, open_paren);
             UnpackQualifiedName(funcname,
                                 m_context,
                                 m_basename,
@@ -959,15 +959,18 @@ SwiftLanguageRuntime::MethodName::Parse()
             if (was_operator)
                 m_type = eTypeOperator;
             // check for obvious constructor/destructor cases
-            if (m_basename.equals("__deallocating_destructor"))
+            else if (m_basename.equals("__deallocating_destructor"))
                 m_type = eTypeDeallocator;
-            if (m_basename.equals("__allocating_constructor"))
+            else if (m_basename.equals("__allocating_constructor"))
                 m_type = eTypeAllocator;
-            if (m_basename.equals("init"))
+            else if (m_basename.equals("init"))
                 m_type = eTypeConstructor;
-            if (m_basename.equals("destructor"))
+            else if (m_basename.equals("destructor"))
                 m_type = eTypeDestructor;
-            m_type = eTypeUnknownMethod;
+            else
+                m_type = eTypeUnknownMethod;
+
+            const size_t idx_of_colon = full.find(':', open_paren == llvm::StringRef::npos ? 0 : open_paren);
             full = full.substr(idx_of_colon+2);
             if (full.empty())
                 return;
