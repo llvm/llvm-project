@@ -1428,49 +1428,65 @@ __m512i test_mm512_maskz_and_epi64(__mmask8 __k, __m512i __a, __m512i __b) {
 
 __m512i test_mm512_mask_or_epi32(__m512i __src,__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_or_epi32
-  // CHECK: @llvm.x86.avx512.mask.por.d.512
+  // CHECK: or <16 x i32> 
+  // CHECK: %[[MASK:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: select <16 x i1> %[[MASK]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_or_epi32(__src, __k,__a, __b);
 }
 
 __m512i test_mm512_maskz_or_epi32(__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_maskz_or_epi32
-  // CHECK: @llvm.x86.avx512.mask.por.d.512
+  // CHECK: or <16 x i32> 
+  // CHECK: %[[MASK:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: select <16 x i1> %[[MASK]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_or_epi32(__k,__a, __b);
 }
 
 __m512i test_mm512_mask_or_epi64(__m512i __src,__mmask8 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_or_epi64
-  // CHECK: @llvm.x86.avx512.mask.por.q.512
+  // CHECK: %[[OR_RES:.*]] = or <8 x i64>
+  // CHECK: %[[MASK:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: select <8 x i1> %[[MASK]], <8 x i64> %[[OR_RES]], <8 x i64> %{{.*}}
   return _mm512_mask_or_epi64(__src, __k,__a, __b);
 }
 
 __m512i test_mm512_maskz_or_epi64(__mmask8 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_maskz_or_epi64
-  // CHECK: @llvm.x86.avx512.mask.por.q.512
+  // CHECK: %[[OR_RES:.*]] = or <8 x i64>
+  // CHECK: %[[MASK:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: select <8 x i1> %[[MASK]], <8 x i64> %[[OR_RES]], <8 x i64> %{{.*}}
   return _mm512_maskz_or_epi64(__k,__a, __b);
 }
 
 __m512i test_mm512_mask_xor_epi32(__m512i __src,__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_xor_epi32
-  // CHECK: @llvm.x86.avx512.mask.pxor.d.512
+  // CHECK: xor <16 x i32> 
+  // CHECK: %[[MASK:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: select <16 x i1> %[[MASK]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_xor_epi32(__src, __k,__a, __b);
 }
 
 __m512i test_mm512_maskz_xor_epi32(__mmask16 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_maskz_xor_epi32
-  // CHECK: @llvm.x86.avx512.mask.pxor.d.512
+  // CHECK: xor <16 x i32> 
+  // CHECK: %[[MASK:.*]] = bitcast i16 %{{.*}} to <16 x i1>
+  // CHECK: select <16 x i1> %[[MASK]], <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_xor_epi32(__k,__a, __b);
 }
 
 __m512i test_mm512_mask_xor_epi64(__m512i __src,__mmask8 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_mask_xor_epi64
-  // CHECK: @llvm.x86.avx512.mask.pxor.q.512
+  // CHECK: %[[XOR_RES:.*]] = xor <8 x i64>
+  // CHECK: %[[MASK:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: select <8 x i1> %[[MASK]], <8 x i64> %[[XOR_RES]], <8 x i64> %{{.*}}
   return _mm512_mask_xor_epi64(__src, __k,__a, __b);
 }
 
 __m512i test_mm512_maskz_xor_epi64(__mmask8 __k, __m512i __a, __m512i __b) {
   // CHECK-LABEL: @test_mm512_maskz_xor_epi64
-  // CHECK: @llvm.x86.avx512.mask.pxor.q.512
+  // CHECK: %[[XOR_RES:.*]] = xor <8 x i64>
+  // CHECK: %[[MASK:.*]] = bitcast i8 %{{.*}} to <8 x i1>
+  // CHECK: select <8 x i1> %[[MASK]], <8 x i64> %[[XOR_RES]], <8 x i64> %{{.*}}
   return _mm512_maskz_xor_epi64(__k,__a, __b);
 }
 
@@ -1511,15 +1527,19 @@ __m512i test_mm512_xor_epi64(__m512i __src,__mmask8 __k, __m512i __a, __m512i __
 }
 
 __m512i test_mm512_maskz_andnot_epi32 (__mmask16 __k,__m512i __A, __m512i __B){
-  //CHECK-LABEL: @test_mm512_maskz_andnot_epi32
-  //CHECK: @llvm.x86.avx512.mask.pandn.d.512
+  // CHECK-LABEL: @test_mm512_maskz_andnot_epi32
+  // CHECK: xor <16 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_maskz_andnot_epi32(__k,__A,__B);
 }
 
 __m512i test_mm512_mask_andnot_epi32 (__mmask16 __k,__m512i __A, __m512i __B,
                                       __m512i __src) {
-  //CHECK-LABEL: @test_mm512_mask_andnot_epi32
-  //CHECK: @llvm.x86.avx512.mask.pandn.d.512
+  // CHECK-LABEL: @test_mm512_mask_andnot_epi32
+  // CHECK: xor <16 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
+  // CHECK: select <16 x i1> %{{.*}}, <16 x i32> %{{.*}}, <16 x i32> %{{.*}}
   return _mm512_mask_andnot_epi32(__src,__k,__A,__B);
 }
 
@@ -1535,27 +1555,33 @@ __m512i test_mm512_andnot_si512(__m512i __A, __m512i __B)
 }
 
 __m512i test_mm512_andnot_epi32(__m512i __A, __m512i __B) {
-  //CHECK-LABEL: @test_mm512_andnot_epi32
-  //CHECK: @llvm.x86.avx512.mask.pandn.d.512
+  // CHECK-LABEL: @test_mm512_andnot_epi32
+  // CHECK: xor <16 x i32> %{{.*}}, <i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>
+  // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
   return _mm512_andnot_epi32(__A,__B);
 }
 
 __m512i test_mm512_maskz_andnot_epi64 (__mmask8 __k,__m512i __A, __m512i __B) {
-  //CHECK-LABEL: @test_mm512_maskz_andnot_epi64
-  //CHECK: @llvm.x86.avx512.mask.pandn.q.512
+  // CHECK-LABEL: @test_mm512_maskz_andnot_epi64
+  // CHECK: xor <8 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: and <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_maskz_andnot_epi64(__k,__A,__B);
 }
 
 __m512i test_mm512_mask_andnot_epi64 (__mmask8 __k,__m512i __A, __m512i __B, 
                                       __m512i __src) {
   //CHECK-LABEL: @test_mm512_mask_andnot_epi64
-  //CHECK: @llvm.x86.avx512.mask.pandn.q.512
+  // CHECK: xor <8 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: and <8 x i64> %{{.*}}, %{{.*}}
+  // CHECK: select <8 x i1> %{{.*}}, <8 x i64> %{{.*}}, <8 x i64> %{{.*}}
   return _mm512_mask_andnot_epi64(__src,__k,__A,__B);
 }
 
 __m512i test_mm512_andnot_epi64(__m512i __A, __m512i __B) {
   //CHECK-LABEL: @test_mm512_andnot_epi64
-  //CHECK: @llvm.x86.avx512.mask.pandn.q.512
+  // CHECK: xor <8 x i64> %{{.*}}, <i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1, i64 -1>
+  // CHECK: and <8 x i64> %{{.*}}, %{{.*}}
   return _mm512_andnot_epi64(__A,__B);
 }
 

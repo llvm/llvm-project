@@ -17,6 +17,20 @@
 #if defined(BUILTIN) && !defined(TARGET_BUILTIN)
 #   define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE) BUILTIN(ID, TYPE, ATTRS)
 #endif
+//===----------------------------------------------------------------------===//
+// SI+ only builtins.
+//===----------------------------------------------------------------------===//
+
+BUILTIN(__builtin_amdgcn_kernarg_segment_ptr, "Uc*2", "nc")
+BUILTIN(__builtin_amdgcn_implicitarg_ptr, "Uc*2", "nc")
+
+BUILTIN(__builtin_amdgcn_workgroup_id_x, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_workgroup_id_y, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_workgroup_id_z, "Ui", "nc")
+
+BUILTIN(__builtin_amdgcn_workitem_id_x, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_workitem_id_y, "Ui", "nc")
+BUILTIN(__builtin_amdgcn_workitem_id_z, "Ui", "nc")
 
 //===----------------------------------------------------------------------===//
 // Instruction builtins.
@@ -66,6 +80,20 @@ TARGET_BUILTIN(__builtin_amdgcn_s_memrealtime, "LUi", "n", "s-memrealtime")
 // Special builtins.
 //===----------------------------------------------------------------------===//
 BUILTIN(__builtin_amdgcn_read_exec, "LUi", "nc")
+
+//===----------------------------------------------------------------------===//
+// R600-NI only builtins.
+//===----------------------------------------------------------------------===//
+
+BUILTIN(__builtin_r600_implicitarg_ptr, "Uc*7", "nc")
+
+BUILTIN(__builtin_r600_read_tgid_x, "Ui", "nc")
+BUILTIN(__builtin_r600_read_tgid_y, "Ui", "nc")
+BUILTIN(__builtin_r600_read_tgid_z, "Ui", "nc")
+
+BUILTIN(__builtin_r600_read_tidig_x, "Ui", "nc")
+BUILTIN(__builtin_r600_read_tidig_y, "Ui", "nc")
+BUILTIN(__builtin_r600_read_tidig_z, "Ui", "nc")
 
 //===----------------------------------------------------------------------===//
 // Legacy names with amdgpu prefix
