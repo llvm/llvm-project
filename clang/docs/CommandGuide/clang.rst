@@ -184,7 +184,7 @@ Language Selection and Mode Options
  (either via :option:`-fobjc-nonfragile-abi`, or because it is the platform
  default).
 
-.. option:: -fobjc-nonfragile-abi
+.. option:: -fobjc-nonfragile-abi, -fno-objc-nonfragile-abi
 
  Enable use of the Objective-C non-fragile ABI. On platforms for which this is
  the default ABI, it can be disabled with :option:`-fno-objc-nonfragile-abi`.
@@ -300,7 +300,7 @@ Code Generation Options
 
   This flag sets the default visibility level.
 
-.. option:: -fcommon
+.. option:: -fcommon, -fno-common
 
   This flag specifies that variables without initializers get common linkage.
   It can be disabled with :option:`-fno-common`.
