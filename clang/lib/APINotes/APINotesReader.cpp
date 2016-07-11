@@ -228,6 +228,22 @@ namespace {
       = endian::readNext<uint8_t, little, unaligned>(data);
     info.NullabilityPayload
       = endian::readNext<uint64_t, little, unaligned>(data);
+
+    unsigned numParams = endian::readNext<uint16_t, little, unaligned>(data);
+    while (numParams > 0) {
+      uint8_t payload = endian::readNext<uint8_t, little, unaligned>(data);
+
+      ParamInfo pi;
+      uint8_t nullabilityValue = payload & 0x3; payload >>= 2;
+      if (payload & 0x01)
+        pi.setNullabilityAudited(static_cast<NullabilityKind>(nullabilityValue));
+      payload >>= 1;
+      pi.setNoEscape(payload & 0x01);
+      payload >>= 1; assert(payload == 0 && "Bad API notes");
+
+      info.Params.push_back(pi);
+      --numParams;
+    }
   }
 
   /// Used to deserialize the on-disk Objective-C method table.
