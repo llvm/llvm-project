@@ -268,7 +268,6 @@ public:
     Nullable = static_cast<unsigned>(kind);
   }
 
-
   friend bool operator==(const VariableInfo &lhs, const VariableInfo &rhs) {
     return static_cast<const CommonEntityInfo &>(lhs) == rhs &&
            lhs.NullabilityAudited == rhs.NullabilityAudited &&
@@ -279,6 +278,13 @@ public:
     return !(lhs == rhs);
   }
 
+  friend VariableInfo &operator|=(VariableInfo &lhs,
+                                  const VariableInfo &rhs) {
+    static_cast<CommonEntityInfo &>(lhs) |= rhs;
+    if (!lhs.NullabilityAudited && rhs.NullabilityAudited)
+      lhs.setNullabilityAudited(*rhs.getNullability());
+    return lhs;
+  }
 };
 
 /// Describes API notes data for an Objective-C property.
@@ -297,6 +303,34 @@ public:
     }
 
     return lhs;
+  }
+};
+
+/// Describes a function or method parameter.
+class ParamInfo : public VariableInfo {
+  /// Whether the this parameter has the 'noescape' attribute.
+  unsigned NoEscape : 1;
+
+public:
+  ParamInfo() : VariableInfo(), NoEscape(false) { }
+
+  bool isNoEscape() const { return NoEscape; }
+  void setNoEscape(bool noescape) { NoEscape = noescape; }
+
+  friend ParamInfo &operator|=(ParamInfo &lhs, const ParamInfo &rhs) {
+    static_cast<VariableInfo &>(lhs) |= rhs;
+    if (!lhs.NoEscape && rhs.NoEscape)
+      lhs.NoEscape = true;
+    return lhs;
+  }
+
+  friend bool operator==(const ParamInfo &lhs, const ParamInfo &rhs) {
+    return static_cast<const VariableInfo &>(lhs) == rhs &&
+           lhs.NoEscape == rhs.NoEscape;
+  }
+
+  friend bool operator!=(const ParamInfo &lhs, const ParamInfo &rhs) {
+    return !(lhs == rhs);
   }
 };
 
@@ -332,6 +366,9 @@ public:
   //  about the return type is stored at position 0, followed by the nullability
   //  of the parameters.
   uint64_t NullabilityPayload = 0;
+
+  /// The function parameters.
+  std::vector<ParamInfo> Params;
 
   FunctionInfo()
     : CommonEntityInfo(),

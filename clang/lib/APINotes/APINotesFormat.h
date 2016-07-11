@@ -35,7 +35,7 @@ const uint16_t VERSION_MAJOR = 0;
 /// API notes file minor version number.
 ///
 /// When the format changes IN ANY WAY, this number should be incremented.
-const uint16_t VERSION_MINOR = 12;  // SwiftPrivate
+const uint16_t VERSION_MINOR = 13;  // Function/method parameters
 
 using IdentifierID = Fixnum<31>;
 using IdentifierIDField = BCVBR<16>;

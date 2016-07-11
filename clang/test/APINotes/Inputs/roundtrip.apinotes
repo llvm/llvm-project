@@ -67,6 +67,13 @@ Classes:
         SwiftName:       ''
       - Selector:        'addSubview:positioned:relativeTo:'
         MethodKind:      Instance
+        Parameters:      
+          - Position:        0
+            NoEscape:        false
+          - Position:        1
+            NoEscape:        false
+          - Position:        2
+            NoEscape:        true
         Nullability:     [ N, N, O ]
         NullabilityOfRet: N
         Availability:    available
