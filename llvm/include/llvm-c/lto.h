@@ -40,7 +40,7 @@ typedef bool lto_bool_t;
  * @{
  */
 
-#define LTO_API_VERSION 19
+#define LTO_API_VERSION 20
 
 /**
  * \since prior to LTO_API_VERSION=3
@@ -135,12 +135,20 @@ lto_module_is_object_file_for_target(const char* path,
 
 
 /**
- * Checks if a buffer is a loadable object file.
+ * Return true if \p Buffer contains a bitcode file with ObjC code (category
+ * or class) in it.
  *
- * \since prior to LTO_API_VERSION=3
+ * \since LTO_API_VERSION=20
  */
-extern lto_bool_t
-lto_module_is_object_file_in_memory(const void* mem, size_t length);
+bool lto_module_has_objc_category(const void *mem, size_t length);
+
+/**
+* Checks if a buffer is a loadable object file.
+*
+* \since prior to LTO_API_VERSION=3
+*/
+extern lto_bool_t lto_module_is_object_file_in_memory(const void *mem,
+                                                      size_t length);
 
 
 /**
