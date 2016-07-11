@@ -4,7 +4,7 @@
   * [What Is OCML](#what-is-ocml)
 * [Using OCML](#using-ocml)
   * [Standard Usage](#standard-usage)
-  * [Customization](#customization)
+  * [Controls](#controls)
 * [Versioning](#versioning)
 * [Tables](#tables)
 * [Naming convention](#naming-convention)
@@ -25,7 +25,7 @@ implementations of most standard low-level mathematical functions provided by th
 
 OCML is expected to be used in a standard LLVM compilation flow as follows:
   * Compile source modules to LLVM-IR bitcode (clang)
-  * Link program bitcode, “wrapper” bitcode, OCML bitcode, and OCML customization functions (llvm-link)
+  * Link program bitcode, “wrapper” bitcode, OCML bitcode, and OCML control functions (llvm-link)
   * Generic optimizations (opt)
   * Code generation (llc)
 
@@ -34,7 +34,7 @@ mangled built-in function calls as produced by clang to the OCML API.  An exampl
 
     inline float sqrt(float x) { return __ocml_sqrt_f32(x); }
 
-The next section describes OCML customizations and how to make them.
+The next section describes OCML controls and how to make them.
 
 ### Controls
 
@@ -43,10 +43,10 @@ functions.  These functions are inlined at optimization time and result in speci
 taken with no control flow overhead.  These functions all have the form (in C)
 
     __attribute__((always_inline, const)) int
-    __oclc_customization(void)
+    __oclc_control(void)
     { return 1; } // or 0 to disable
 
-The currently supported customizations are
+The currently supported control are
   * `have_fast_fma32` - device performs float fma as fast as float multiply
   * `have_fast_fma64` - device performs double fma as fast as double multiply
   * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced
