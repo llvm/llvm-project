@@ -27,6 +27,7 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/MDBuilder.h"
 #include <sstream>
 
 using namespace clang;
@@ -330,6 +331,17 @@ static llvm::Value *EmitOverflowIntrinsic(CodeGenFunction &CGF,
   llvm::Value *Tmp = CGF.Builder.CreateCall(Callee, {X, Y});
   Carry = CGF.Builder.CreateExtractValue(Tmp, 1);
   return CGF.Builder.CreateExtractValue(Tmp, 0);
+}
+
+static Value *emitRangedBuiltin(CodeGenFunction &CGF,
+                                unsigned IntrinsicID,
+                                int low, int high) {
+    llvm::MDBuilder MDHelper(CGF.getLLVMContext());
+    llvm::MDNode *RNode = MDHelper.createRange(APInt(32, low), APInt(32, high));
+    Value *F = CGF.CGM.getIntrinsic(IntrinsicID, {});
+    llvm::Instruction *Call = CGF.Builder.CreateCall(F);
+    Call->setMetadata(llvm::LLVMContext::MD_range, RNode);
+    return Call;
 }
 
 namespace {
@@ -7752,6 +7764,22 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
       return emitFPIntBuiltin(*this, E, Intrinsic::amdgcn_ldexp);
     return emitFPIntBuiltin(*this, E, Intrinsic::AMDGPU_ldexp);
   }
+
+  // amdgcn workitem
+  case AMDGPU::BI__builtin_amdgcn_workitem_id_x:
+    return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_x, 0, 1024);
+  case AMDGPU::BI__builtin_amdgcn_workitem_id_y:
+    return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_y, 0, 1024);
+  case AMDGPU::BI__builtin_amdgcn_workitem_id_z:
+    return emitRangedBuiltin(*this, Intrinsic::amdgcn_workitem_id_z, 0, 1024);
+
+  // r600 workitem
+  case AMDGPU::BI__builtin_r600_read_tidig_x:
+    return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_x, 0, 1024);
+  case AMDGPU::BI__builtin_r600_read_tidig_y:
+    return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_y, 0, 1024);
+  case AMDGPU::BI__builtin_r600_read_tidig_z:
+    return emitRangedBuiltin(*this, Intrinsic::r600_read_tidig_z, 0, 1024);
   default:
     return nullptr;
   }

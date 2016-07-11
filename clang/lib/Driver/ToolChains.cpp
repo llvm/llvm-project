@@ -392,24 +392,12 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
 void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
                                           ArgStringList &CmdArgs,
                                           StringRef Sanitizer) const {
-  if (!Args.hasArg(options::OPT_dynamiclib) &&
-      !Args.hasArg(options::OPT_bundle)) {
-    // Sanitizer runtime libraries requires C++.
-    AddCXXStdlibLibArgs(Args, CmdArgs);
-  }
-
   AddLinkRuntimeLib(
       Args, CmdArgs,
       (Twine("libclang_rt.") + Sanitizer + "_" +
        getOSLibraryNameSuffix() + "_dynamic.dylib").str(),
       /*AlwaysLink*/ true, /*IsEmbedded*/ false,
       /*AddRPath*/ true);
-
-  if (GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) {
-    // Add explicit dependcy on -lc++abi, as -lc++ doesn't re-export
-    // all RTTI-related symbols that UBSan uses.
-    CmdArgs.push_back("-lc++abi");
-  }
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,

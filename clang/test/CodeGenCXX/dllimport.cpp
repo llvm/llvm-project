@@ -676,7 +676,7 @@ namespace ClassTemplateStaticDef {
     static int x;
   };
   template <typename T> int S<T>::x;
-  // MSC-DAG: @"\01?x@?$S@H@ClassTemplateStaticDef@@2HA" = available_externally dllimport global i32 0
+  // MSC-DAG: @"\01?x@?$S@H@ClassTemplateStaticDef@@2HA" = external dllimport global i32
   int f() { return S<int>::x; }
 
   // Partial class template specialization static field:
@@ -685,7 +685,7 @@ namespace ClassTemplateStaticDef {
     static int x;
   };
   template <typename A> int T<A*>::x;
-  // GNU-DAG: @_ZN22ClassTemplateStaticDef1TIPvE1xE = available_externally dllimport global i32 0
+  // GNU-DAG: @_ZN22ClassTemplateStaticDef1TIPvE1xE = external dllimport global i32
   int g() { return T<void*>::x; }
 }
 
