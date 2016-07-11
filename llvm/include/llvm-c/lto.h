@@ -140,7 +140,8 @@ lto_module_is_object_file_for_target(const char* path,
  *
  * \since LTO_API_VERSION=20
  */
-bool lto_module_has_objc_category(const void *mem, size_t length);
+extern lto_bool_t
+lto_module_has_objc_category(const void *mem, size_t length);
 
 /**
 * Checks if a buffer is a loadable object file.
