@@ -175,10 +175,20 @@ static void ProcessAPINotes(Sema &S, Decl *D,
   ProcessAPINotes(S, D, static_cast<const api_notes::CommonEntityInfo &>(Info));
 }
 
+/// Process API notes for a parameter.
+static void ProcessAPINotes(Sema &S, ParmVarDecl *D,
+                            const api_notes::ParamInfo &Info) {
+  // noescape
+  if (Info.isNoEscape() && !D->getAttr<NoEscapeAttr>())
+    D->addAttr(NoEscapeAttr::CreateImplicit(S.Context));
+
+  // Handle common entity information.
+  ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
+}
+
 /// Process API notes for a global variable.
 static void ProcessAPINotes(Sema &S, VarDecl *D,
                             const api_notes::GlobalVariableInfo &Info) {
-
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
 }
@@ -186,7 +196,6 @@ static void ProcessAPINotes(Sema &S, VarDecl *D,
 /// Process API notes for an Objective-C property.
 static void ProcessAPINotes(Sema &S, ObjCPropertyDecl *D,
                             const api_notes::ObjCPropertyInfo &Info) {
-
   // Handle common entity information.
   ProcessAPINotes(S, D, static_cast<const api_notes::VariableInfo &>(Info));
 }
@@ -207,26 +216,31 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
     D = MD;
   }
 
-  // Nullability.
+  // Nullability of return type.
   if (Info.NullabilityAudited) {
-    // Return type.
     applyNullability(S, D, Info.getReturnTypeInfo());
+  }
 
-    // Parameters.
-    unsigned NumParams;
+  // Parameters.
+  unsigned NumParams;
+  if (FD)
+    NumParams = FD->getNumParams();
+  else
+    NumParams = MD->param_size();
+  
+  for (unsigned I = 0; I != NumParams; ++I) {
+    ParmVarDecl *Param;
     if (FD)
-      NumParams = FD->getNumParams();
+      Param = FD->getParamDecl(I);
     else
-      NumParams = MD->param_size();
-
-    for (unsigned I = 0; I != NumParams; ++I) {
-      ParmVarDecl *Param;
-      if (FD)
-        Param = FD->getParamDecl(I);
-      else
-        Param = MD->param_begin()[I];
-
+      Param = MD->param_begin()[I];
+    
+    // Nullability.
+    if (Info.NullabilityAudited)
       applyNullability(S, Param, Info.getParamTypeInfo(I));
+
+    if (I < Info.Params.size()) {
+      ProcessAPINotes(S, Param, Info.Params[I]);
     }
   }
 
