@@ -1108,14 +1108,17 @@ bool AttributeSet::hasFnAttribute(Attribute::AttrKind Kind) const {
   return pImpl && pImpl->hasFnAttribute(Kind);
 }
 
-bool AttributeSet::hasAttrSomewhere(Attribute::AttrKind Attr) const {
+bool AttributeSet::hasAttrSomewhere(Attribute::AttrKind Attr,
+                                    unsigned *Index) const {
   if (!pImpl) return false;
 
   for (unsigned I = 0, E = pImpl->getNumSlots(); I != E; ++I)
     for (AttributeSetImpl::iterator II = pImpl->begin(I),
            IE = pImpl->end(I); II != IE; ++II)
-      if (II->hasAttribute(Attr))
+      if (II->hasAttribute(Attr)) {
+        if (Index) *Index = pImpl->getSlotIndex(I);
         return true;
+      }
 
   return false;
 }

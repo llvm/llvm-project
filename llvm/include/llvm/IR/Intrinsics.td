@@ -54,6 +54,12 @@ class NoCapture<int argNo> : IntrinsicProperty {
   int ArgNo = argNo;
 }
 
+// Returned - The specified argument is always the return value of the
+// intrinsic.
+class Returned<int argNo> : IntrinsicProperty {
+  int ArgNo = argNo;
+}
+
 // ReadOnly - The specified argument pointer is not written to through the
 // pointer by the intrinsic.
 class ReadOnly<int argNo> : IntrinsicProperty {

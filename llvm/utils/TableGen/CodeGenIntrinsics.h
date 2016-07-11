@@ -108,7 +108,7 @@ struct CodeGenIntrinsic {
   /// True if the intrinsic is marked as convergent.
   bool isConvergent;
 
-  enum ArgAttribute { NoCapture, ReadOnly, WriteOnly, ReadNone };
+  enum ArgAttribute { NoCapture, Returned, ReadOnly, WriteOnly, ReadNone };
   std::vector<std::pair<unsigned, ArgAttribute>> ArgumentAttributes;
 
   CodeGenIntrinsic(Record *R);

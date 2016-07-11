@@ -18,6 +18,8 @@
 ; RUN: llc -march=mips64 -target-abi n64 < %s | FileCheck --check-prefixes=ALL,ALL-INV,N64-INV %s
 ; RUN: llc -march=mips64el -target-abi n64 < %s | FileCheck --check-prefixes=ALL,ALL-INV,N64-INV %s
 
+; RUN: llc -march=mips -mcpu=mips32r6 -mattr=micromips -filetype=obj < %s -o - | llvm-objdump -no-show-raw-insn -arch mips -mcpu=mips32r6 -mattr=micromips -d - | FileCheck --check-prefix=MM32R6 %s
+
 ; Test the the callee-saved registers are callee-saved as specified by section
 ; 2 of the MIPSpro N32 Handbook and section 3 of the SYSV ABI spec.
 
@@ -109,3 +111,6 @@ entry:
 ; N64-DAG:       ldc1 [[F30]], [[OFF30]]($sp)
 ; N64-DAG:       ldc1 [[F31]], [[OFF31]]($sp)
 ; N64:           addiu $sp, $sp, 64
+
+; Check the mapping between LDC164 and LDC1_64_MMR6.
+; MM32R6: ldc1

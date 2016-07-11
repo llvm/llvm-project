@@ -1444,6 +1444,11 @@ static bool isIntrinsicWithCC(SDValue Op, unsigned &Opcode, unsigned &CCValid) {
     CCValid = SystemZ::CCMASK_VCMP;
     return true;
 
+  case Intrinsic::s390_tdc:
+    Opcode = SystemZISD::TDC;
+    CCValid = SystemZ::CCMASK_TDC;
+    return true;
+
   default:
     return false;
   }

@@ -329,7 +329,8 @@ class VTX_READ <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
 
 class LoadParamFrag <PatFrag load_type> : PatFrag <
   (ops node:$ptr), (load_type node:$ptr),
-  [{ return isConstantLoad(dyn_cast<LoadSDNode>(N), 0); }]
+  [{ return isConstantLoad(cast<LoadSDNode>(N), 0) ||
+            (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::PARAM_I_ADDRESS); }]
 >;
 
 def load_param : LoadParamFrag<load>;

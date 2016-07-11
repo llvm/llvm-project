@@ -1050,6 +1050,7 @@ PreservedAnalyses DSEPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PA;
 }
 
+namespace {
 /// A legacy pass for the legacy pass manager that wraps \c DSEPass.
 class DSELegacyPass : public FunctionPass {
 public:
@@ -1084,6 +1085,7 @@ public:
 
   static char ID; // Pass identification, replacement for typeid
 };
+} // end anonymous namespace
 
 char DSELegacyPass::ID = 0;
 INITIALIZE_PASS_BEGIN(DSELegacyPass, "dse", "Dead Store Elimination", false,

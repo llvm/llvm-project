@@ -865,7 +865,8 @@ define <8 x i32>@test28(<8 x i64> %x, <8 x i64> %y, <8 x i64> %x1, <8 x i64> %y1
 ; KNL-NEXT:    vpcmpgtq %zmm1, %zmm0, %k0
 ; KNL-NEXT:    vpcmpgtq %zmm3, %zmm2, %k1
 ; KNL-NEXT:    kxnorw %k1, %k0, %k1
-; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    retq
 ;
@@ -889,7 +890,8 @@ define <16 x i8>@test29(<16 x i32> %x, <16 x i32> %y, <16 x i32> %x1, <16 x i32>
 ; KNL-NEXT:    vpcmpgtd %zmm1, %zmm0, %k0
 ; KNL-NEXT:    vpcmpgtd %zmm3, %zmm2, %k1
 ; KNL-NEXT:    kxorw %k1, %k0, %k1
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovdb %zmm0, %xmm0
 ; KNL-NEXT:    retq
 ;

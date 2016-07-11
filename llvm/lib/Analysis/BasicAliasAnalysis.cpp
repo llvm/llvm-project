@@ -376,6 +376,12 @@ bool BasicAAResult::DecomposeGEPExpression(const Value *V,
 
     const GEPOperator *GEPOp = dyn_cast<GEPOperator>(Op);
     if (!GEPOp) {
+      if (auto CS = ImmutableCallSite(V))
+        if (const Value *RV = CS.getReturnedArgOperand()) {
+          V = RV;
+          continue;
+        }
+
       // If it's not a GEP, hand it off to SimplifyInstruction to see if it
       // can come up with something. This matches what GetUnderlyingObject does.
       if (const Instruction *I = dyn_cast<Instruction>(V))
@@ -817,7 +823,10 @@ static AliasResult aliasSameBasePointerGEPs(const GEPOperator *GEP1,
                                             uint64_t V2Size,
                                             const DataLayout &DL) {
 
-  assert(GEP1->getPointerOperand() == GEP2->getPointerOperand() &&
+  assert(GEP1->getPointerOperand()->stripPointerCasts() ==
+         GEP2->getPointerOperand()->stripPointerCasts() &&
+         GEP1->getPointerOperand()->getType() ==
+         GEP2->getPointerOperand()->getType() &&
          "Expected GEPs with the same pointer operand");
 
   // Try to determine whether GEP1 and GEP2 index through arrays, into structs,
@@ -1075,7 +1084,10 @@ AliasResult BasicAAResult::aliasGEP(const GEPOperator *GEP1, uint64_t V1Size,
     // If we know the two GEPs are based off of the exact same pointer (and not
     // just the same underlying object), see if that tells us anything about
     // the resulting pointers.
-    if (GEP1->getPointerOperand() == GEP2->getPointerOperand()) {
+    if (GEP1->getPointerOperand()->stripPointerCasts() ==
+        GEP2->getPointerOperand()->stripPointerCasts() &&
+        GEP1->getPointerOperand()->getType() ==
+        GEP2->getPointerOperand()->getType()) {
       AliasResult R = aliasSameBasePointerGEPs(GEP1, V1Size, GEP2, V2Size, DL);
       // If we couldn't find anything interesting, don't abandon just yet.
       if (R != MayAlias)

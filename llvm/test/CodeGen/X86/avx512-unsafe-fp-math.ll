@@ -69,3 +69,39 @@ define <8 x double> @test_min_v8f64(<8 x double>* %a_ptr, <8 x double> %b)  {
   %tmp4 = select <8 x i1> %tmp, <8 x double> %a, <8 x double> %b
   ret <8 x double> %tmp4;
 }
+
+define float @test_min_f32(float %a, float* %ptr) {
+; CHECK_UNSAFE-LABEL: test_min_f32:
+; CHECK_UNSAFE:       # BB#0: # %entry
+; CHECK_UNSAFE-NEXT:    vminss (%rdi), %xmm0, %xmm0
+; CHECK_UNSAFE-NEXT:    retq
+;
+; CHECK-LABEL: test_min_f32:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vminss %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = load float, float* %ptr
+  %1 = fcmp fast olt float %0, %a
+  %2 = select i1 %1, float %0, float %a
+  ret float %2
+}
+
+define double @test_max_f64(double %a, double* %ptr) {
+; CHECK_UNSAFE-LABEL: test_max_f64:
+; CHECK_UNSAFE:       # BB#0: # %entry
+; CHECK_UNSAFE-NEXT:    vmaxsd (%rdi), %xmm0, %xmm0
+; CHECK_UNSAFE-NEXT:    retq
+;
+; CHECK-LABEL: test_max_f64:
+; CHECK:       # BB#0: # %entry
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; CHECK-NEXT:    vmaxsd %xmm0, %xmm1, %xmm0
+; CHECK-NEXT:    retq
+entry:
+  %0 = load double, double* %ptr
+  %1 = fcmp fast ogt double %0, %a
+  %2 = select i1 %1, double %0, double %a
+  ret double %2
+}
