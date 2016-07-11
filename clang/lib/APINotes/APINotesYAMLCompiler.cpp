@@ -166,9 +166,17 @@ namespace {
     NullabilityKind::NonNull;
   typedef std::vector<clang::NullabilityKind> NullabilitySeq;
 
+  struct Param {
+    unsigned Position;
+    bool NoEscape = false;
+    llvm::Optional<NullabilityKind> Nullability;
+  };
+  typedef std::vector<Param> ParamsSeq;
+
   struct Method {
     StringRef Selector;
     MethodKind Kind;
+    ParamsSeq Params;
     NullabilitySeq Nullability;
     llvm::Optional<NullabilityKind> NullabilityOfRet;
     AvailabilityItem Availability;
@@ -205,6 +213,7 @@ namespace {
 
   struct Function {
     StringRef Name;
+    ParamsSeq Params;
     NullabilitySeq Nullability;
     llvm::Optional<NullabilityKind> NullabilityOfRet;
     AvailabilityItem Availability;
@@ -272,6 +281,7 @@ namespace {
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(clang::NullabilityKind)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Method)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Property)
+LLVM_YAML_IS_SEQUENCE_VECTOR(Param)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Class)
 LLVM_YAML_IS_SEQUENCE_VECTOR(Function)
 LLVM_YAML_IS_SEQUENCE_VECTOR(GlobalVariable)
@@ -323,6 +333,16 @@ namespace llvm {
     };
 
     template <>
+    struct MappingTraits<Param> {
+      static void mapping(IO &io, Param& p) {
+        io.mapRequired("Position",        p.Position);
+        io.mapOptional("Nullability",     p.Nullability, 
+                                          AbsentNullability);
+        io.mapOptional("NoEscape",        p.NoEscape);
+      }
+    };
+
+    template <>
     struct MappingTraits<Property> {
       static void mapping(IO &io, Property& p) {
         io.mapRequired("Name",            p.Name);
@@ -340,6 +360,7 @@ namespace llvm {
       static void mapping(IO &io, Method& m) {
         io.mapRequired("Selector",        m.Selector);
         io.mapRequired("MethodKind",      m.Kind);
+        io.mapOptional("Parameters",      m.Params);
         io.mapOptional("Nullability",     m.Nullability);
         io.mapOptional("NullabilityOfRet",  m.NullabilityOfRet,
                                             AbsentNullability);
@@ -374,6 +395,7 @@ namespace llvm {
     struct MappingTraits<Function> {
       static void mapping(IO &io, Function& f) {
         io.mapRequired("Name",             f.Name);
+        io.mapOptional("Parameters",       f.Params);
         io.mapOptional("Nullability",      f.Nullability);
         io.mapOptional("NullabilityOfRet", f.NullabilityOfRet,
                                            AbsentNullability);
@@ -527,6 +549,20 @@ namespace {
       return false;
     }
 
+    void convertParams(const ParamsSeq &params, FunctionInfo &outInfo) {
+      for (const auto &p : params) {
+        ParamInfo pi;
+        if (p.Nullability)
+          pi.setNullabilityAudited(*p.Nullability);
+        pi.setNoEscape(p.NoEscape);
+
+        while (outInfo.Params.size() <= p.Position) {
+          outInfo.Params.push_back(ParamInfo());
+        }
+        outInfo.Params[p.Position] |= pi;
+      }
+    }
+
     void convertNullability(const NullabilitySeq &nullability,
                             Optional<NullabilityKind> nullabilityOfRet,
                             FunctionInfo &outInfo,
@@ -609,6 +645,9 @@ namespace {
       mInfo.Required = meth.Required;
       if (meth.FactoryAsInit != FactoryAsInitKind::Infer)
         mInfo.setFactoryAsInitKind(meth.FactoryAsInit);
+
+      // Translate parameter information.
+      convertParams(meth.Params, mInfo);
 
       // Translate nullability info.
       convertNullability(meth.Nullability, meth.NullabilityOfRet,
@@ -744,6 +783,7 @@ namespace {
         convertAvailability(function.Availability, info, function.Name);
         info.SwiftPrivate = function.SwiftPrivate;
         info.SwiftName = function.SwiftName;
+        convertParams(function.Params, info);
         convertNullability(function.Nullability,
                            function.NullabilityOfRet,
                            info, function.Name);
@@ -924,6 +964,19 @@ namespace {
       }
     }
 
+    /// Map parameter information for a function.
+    void handleParameters(ParamsSeq &params,
+                          const FunctionInfo &info) {
+      unsigned position = 0;
+      for (const auto &pi: info.Params) {
+        Param p;
+        p.Position = position++;
+        p.Nullability = pi.getNullability();
+        p.NoEscape = pi.isNoEscape();
+        params.push_back(p);
+      }
+    }
+
     /// Map nullability information for a function.
     void handleNullability(NullabilitySeq &nullability,
                            llvm::Optional<NullabilityKind> &nullabilityOfRet,
@@ -967,6 +1020,7 @@ namespace {
       method.Kind = isInstanceMethod ? MethodKind::Instance : MethodKind::Class;
 
       handleCommon(method, info);
+      handleParameters(method.Params, info);
       handleNullability(method.Nullability, method.NullabilityOfRet, info,
                         selector.count(':'));
       method.FactoryAsInit = info.getFactoryAsInitKind();
@@ -1003,6 +1057,7 @@ namespace {
       Function function;
       function.Name = name;
       handleCommon(function, info);
+      handleParameters(function.Params, info);
       if (info.NumAdjustedNullable > 0)
         handleNullability(function.Nullability, function.NullabilityOfRet,
                           info, info.NumAdjustedNullable-1);
