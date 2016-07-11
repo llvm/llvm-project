@@ -493,7 +493,8 @@ namespace {
   /// Retrieve the serialized size of the given FunctionInfo, for use in
   /// on-disk hash tables.
   static unsigned getFunctionInfoSize(const FunctionInfo &info) {
-    return 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info);
+    return 2 + sizeof(uint64_t) + getCommonEntityInfoSize(info) + 
+           2 + info.Params.size() * 1;
   }
 
   /// Emit a serialized representation of the function information.
@@ -504,6 +505,20 @@ namespace {
     writer.write<uint8_t>(info.NullabilityAudited);
     writer.write<uint8_t>(info.NumAdjustedNullable);
     writer.write<uint64_t>(info.NullabilityPayload);
+
+    // Parameters.
+    writer.write<uint16_t>(info.Params.size());
+    for (const auto &pi : info.Params) {
+      uint8_t payload = pi.isNoEscape();
+
+      auto nullability = pi.getNullability();
+      payload = (payload << 1) | nullability.hasValue();
+
+      payload = payload << 2;
+      if (nullability)
+        payload |= static_cast<uint8_t>(*nullability);
+      writer.write<uint8_t>(payload);
+    }
   }
 
   /// Used to serialize the on-disk Objective-C method table.
