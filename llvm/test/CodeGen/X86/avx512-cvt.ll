@@ -685,7 +685,8 @@ define <16 x float> @sitofp_16i1_float(<16 x i32> %a) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; KNL-NEXT:    vpcmpgtd %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; KNL-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vcvtdq2ps %zmm0, %zmm0
 ; KNL-NEXT:    retq
 ;
@@ -748,7 +749,8 @@ define <8 x double> @sitofp_8i1_double(<8 x double> %a) {
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpxord %zmm1, %zmm1, %zmm1
 ; KNL-NEXT:    vcmpltpd %zmm0, %zmm1, %k1
-; KNL-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm0 {%k1} {z}
+; KNL-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
+; KNL-NEXT:    vmovdqa64 %zmm0, %zmm0 {%k1} {z}
 ; KNL-NEXT:    vpmovqd %zmm0, %ymm0
 ; KNL-NEXT:    vcvtdq2pd %ymm0, %zmm0
 ; KNL-NEXT:    retq

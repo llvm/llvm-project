@@ -49,6 +49,7 @@ static cl::opt<unsigned> DefaultRotationThreshold(
 
 STATISTIC(NumRotated, "Number of loops rotated");
 
+namespace {
 /// A simple loop rotation transformation.
 class LoopRotate {
   const unsigned MaxHeaderSize;
@@ -70,6 +71,7 @@ private:
   bool rotateLoop(Loop *L, bool SimplifiedLatch);
   bool simplifyLoopLatch(Loop *L);
 };
+} // end anonymous namespace
 
 /// RewriteUsesOfClonedInstructions - We just cloned the instructions from the
 /// old header into the preheader.  If there were uses of the values produced by

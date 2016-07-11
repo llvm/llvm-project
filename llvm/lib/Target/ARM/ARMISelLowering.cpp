@@ -3720,9 +3720,13 @@ SDValue ARMTargetLowering::getCMOV(const SDLoc &dl, EVT VT, SDValue FalseVal,
   }
 }
 
-bool isGTorGE(ISD::CondCode CC) { return CC == ISD::SETGT || CC == ISD::SETGE; }
+static bool isGTorGE(ISD::CondCode CC) {
+  return CC == ISD::SETGT || CC == ISD::SETGE;
+}
 
-bool isLTorLE(ISD::CondCode CC) { return CC == ISD::SETLT || CC == ISD::SETLE; }
+static bool isLTorLE(ISD::CondCode CC) {
+  return CC == ISD::SETLT || CC == ISD::SETLE;
+}
 
 // See if a conditional (LHS CC RHS ? TrueVal : FalseVal) is lower-saturating.
 // All of these conditions (and their <= and >= counterparts) will do:
@@ -3730,9 +3734,9 @@ bool isLTorLE(ISD::CondCode CC) { return CC == ISD::SETLT || CC == ISD::SETLE; }
 //          x > k ? x : k
 //          k < x ? x : k
 //          k > x ? k : x
-bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
-                     const SDValue TrueVal, const SDValue FalseVal,
-                     const ISD::CondCode CC, const SDValue K) {
+static bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
+                            const SDValue TrueVal, const SDValue FalseVal,
+                            const ISD::CondCode CC, const SDValue K) {
   return (isGTorGE(CC) &&
           ((K == LHS && K == TrueVal) || (K == RHS && K == FalseVal))) ||
          (isLTorLE(CC) &&
@@ -3740,9 +3744,9 @@ bool isLowerSaturate(const SDValue LHS, const SDValue RHS,
 }
 
 // Similar to isLowerSaturate(), but checks for upper-saturating conditions.
-bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
-                     const SDValue TrueVal, const SDValue FalseVal,
-                     const ISD::CondCode CC, const SDValue K) {
+static bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
+                            const SDValue TrueVal, const SDValue FalseVal,
+                            const ISD::CondCode CC, const SDValue K) {
   return (isGTorGE(CC) &&
           ((K == RHS && K == TrueVal) || (K == LHS && K == FalseVal))) ||
          (isLTorLE(CC) &&
@@ -3762,7 +3766,8 @@ bool isUpperSaturate(const SDValue LHS, const SDValue RHS,
 //
 // It returns true if the conversion can be done, false otherwise.
 // Additionally, the variable is returned in parameter V and the constant in K.
-bool isSaturatingConditional(const SDValue &Op, SDValue &V, uint64_t &K) {
+static bool isSaturatingConditional(const SDValue &Op, SDValue &V,
+                                    uint64_t &K) {
 
   SDValue LHS1 = Op.getOperand(0);
   SDValue RHS1 = Op.getOperand(1);

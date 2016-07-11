@@ -1063,10 +1063,17 @@ public:
   //        and determine whether a Value is a constant or not.
   template <unsigned Bits, unsigned ShiftAmount = 0>
   bool isMemWithSimmOffset() const {
-    return isMem() && getMemBase()->isGPRAsmReg() &&
-           (isa<MCTargetExpr>(getMemOff()) ||
-            (isConstantMemOff() &&
-             isShiftedInt<Bits, ShiftAmount>(getConstantMemOff())));
+    if (!isMem())
+      return false;
+    if (!getMemBase()->isGPRAsmReg())
+      return false;
+    if (isa<MCTargetExpr>(getMemOff()) ||
+        (isConstantMemOff() &&
+         isShiftedInt<Bits, ShiftAmount>(getConstantMemOff())))
+      return true;
+    MCValue Res;
+    bool IsReloc = getMemOff()->evaluateAsRelocatable(Res, nullptr, nullptr);
+    return IsReloc && isShiftedInt<Bits, ShiftAmount>(Res.getConstant());
   }
   bool isMemWithGRPMM16Base() const {
     return isMem() && getMemBase()->isMM16AsmReg();

@@ -93,8 +93,22 @@ bool ConstantFPSDNode::isValueValidForType(EVT VT,
 //                              ISD Namespace
 //===----------------------------------------------------------------------===//
 
-/// isBuildVectorAllOnes - Return true if the specified node is a
-/// BUILD_VECTOR where all of the elements are ~0 or undef.
+bool ISD::isConstantSplatVector(const SDNode *N, APInt &SplatVal) {
+  auto *BV = dyn_cast<BuildVectorSDNode>(N);
+  if (!BV)
+    return false;
+
+  APInt SplatUndef;
+  unsigned SplatBitSize;
+  bool HasUndefs;
+  EVT EltVT = N->getValueType(0).getVectorElementType();
+  return BV->isConstantSplat(SplatVal, SplatUndef, SplatBitSize, HasUndefs) &&
+         EltVT.getSizeInBits() >= SplatBitSize;
+}
+
+// FIXME: AllOnes and AllZeros duplicate a lot of code. Could these be
+// specializations of the more general isConstantSplatVector()?
+
 bool ISD::isBuildVectorAllOnes(const SDNode *N) {
   // Look through a bit convert.
   while (N->getOpcode() == ISD::BITCAST)
@@ -139,9 +153,6 @@ bool ISD::isBuildVectorAllOnes(const SDNode *N) {
   return true;
 }
 
-
-/// isBuildVectorAllZeros - Return true if the specified node is a
-/// BUILD_VECTOR where all of the elements are 0 or undef.
 bool ISD::isBuildVectorAllZeros(const SDNode *N) {
   // Look through a bit convert.
   while (N->getOpcode() == ISD::BITCAST)
@@ -179,8 +190,6 @@ bool ISD::isBuildVectorAllZeros(const SDNode *N) {
   return true;
 }
 
-/// \brief Return true if the specified node is a BUILD_VECTOR node of
-/// all ConstantSDNode or undef.
 bool ISD::isBuildVectorOfConstantSDNodes(const SDNode *N) {
   if (N->getOpcode() != ISD::BUILD_VECTOR)
     return false;
@@ -194,8 +203,6 @@ bool ISD::isBuildVectorOfConstantSDNodes(const SDNode *N) {
   return true;
 }
 
-/// \brief Return true if the specified node is a BUILD_VECTOR node of
-/// all ConstantFPSDNode or undef.
 bool ISD::isBuildVectorOfConstantFPSDNodes(const SDNode *N) {
   if (N->getOpcode() != ISD::BUILD_VECTOR)
     return false;
@@ -209,8 +216,6 @@ bool ISD::isBuildVectorOfConstantFPSDNodes(const SDNode *N) {
   return true;
 }
 
-/// allOperandsUndef - Return true if the node has at least one operand
-/// and all operands of the specified node are ISD::UNDEF.
 bool ISD::allOperandsUndef(const SDNode *N) {
   // Return false if the node has no operands.
   // This is "logically inconsistent" with the definition of "all" but

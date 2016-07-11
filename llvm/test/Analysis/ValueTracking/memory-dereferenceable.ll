@@ -43,7 +43,8 @@ entry:
     %load4 = load i32, i32 addrspace(1)* %relocate
 
 ; CHECK-NOT: %nparam
-    %nparam = getelementptr i32, i32 addrspace(1)* %dparam, i32 5
+    %dpa = call i32 addrspace(1)* @func1(i32 addrspace(1)* %dparam)
+    %nparam = getelementptr i32, i32 addrspace(1)* %dpa, i32 5
     %load5 = load i32, i32 addrspace(1)* %nparam
 
     ; Load from a non-dereferenceable load
@@ -161,6 +162,8 @@ if.end:
 
 declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
 declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32, i32)
+
+declare i32 addrspace(1)* @func1(i32 addrspace(1)* returned) nounwind argmemonly
 
 !0 = !{i64 4}
 !1 = !{i64 2}

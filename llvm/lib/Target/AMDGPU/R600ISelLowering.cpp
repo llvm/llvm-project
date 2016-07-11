@@ -782,6 +782,11 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       return DAG.getNode(AMDGPUISD::DOT4, DL, MVT::f32, Args);
     }
 
+    case Intrinsic::r600_implicitarg_ptr: {
+      MVT PtrVT = getPointerTy(DAG.getDataLayout(), AMDGPUAS::PARAM_I_ADDRESS);
+      uint32_t ByteOffset = getImplicitParameterOffset(MFI, FIRST_IMPLICIT);
+      return DAG.getConstant(ByteOffset, DL, PtrVT);
+    }
     case Intrinsic::r600_read_ngroups_x:
       return LowerImplicitParameter(DAG, VT, DL, 0);
     case Intrinsic::r600_read_ngroups_y:

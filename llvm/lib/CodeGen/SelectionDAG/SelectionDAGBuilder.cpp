@@ -2731,7 +2731,7 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
 
 // Check if the condition of the select has one use or two users that are both
 // selects with the same condition.
-bool hasOnlySelectUsers(const Value *Cond) {
+static bool hasOnlySelectUsers(const Value *Cond) {
   return std::all_of(Cond->user_begin(), Cond->user_end(), [](const Value *V) {
     return isa<SelectInst>(V);
   });

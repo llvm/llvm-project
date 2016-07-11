@@ -2473,7 +2473,8 @@ define <16 x i8> @test_mask_load_16xi8(<16 x i1> %mask, <16 x i8>* %addr, <16 x 
 ; AVX512F-NEXT:  ## BB#31: ## %cond.load43
 ; AVX512F-NEXT:    vpinsrb $15, 15(%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:  LBB50_32: ## %else44
-; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovdqa32 %zmm1, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512F-NEXT:    vpblendvb %xmm1, %xmm0, %xmm0, %xmm0
 ; AVX512F-NEXT:    retq
@@ -5676,7 +5677,8 @@ define <8 x i16> @test_mask_load_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i1
 ; AVX512F-NEXT:  ## BB#15: ## %cond.load19
 ; AVX512F-NEXT:    vpinsrw $7, 14(%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:  LBB53_16: ## %else20
-; AVX512F-NEXT:    vpbroadcastq {{.*}}(%rip), %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovdqa64 %zmm1, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vpmovqw %zmm1, %xmm1
 ; AVX512F-NEXT:    vpcmpeqd %xmm2, %xmm2, %xmm2
 ; AVX512F-NEXT:    vpxor %xmm2, %xmm1, %xmm2
@@ -6116,7 +6118,8 @@ define <16 x i16> @test_mask_load_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16
 ; AVX512F-NEXT:    vpinsrw $7, 30(%rdi), %xmm1, %xmm1
 ; AVX512F-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512F-NEXT:  LBB54_32: ## %else44
-; AVX512F-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1 {%k1} {z}
+; AVX512F-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; AVX512F-NEXT:    vmovdqa32 %zmm1, %zmm1 {%k1} {z}
 ; AVX512F-NEXT:    vpmovdw %zmm1, %ymm1
 ; AVX512F-NEXT:    vpand %ymm0, %ymm1, %ymm0
 ; AVX512F-NEXT:    retq

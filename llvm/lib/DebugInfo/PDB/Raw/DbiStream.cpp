@@ -80,8 +80,8 @@ struct DbiStream::HeaderInfo {
 };
 
 template <typename ContribType>
-Error loadSectionContribs(FixedStreamArray<ContribType> &Output,
-                          StreamReader &Reader) {
+static Error loadSectionContribs(FixedStreamArray<ContribType> &Output,
+                                 StreamReader &Reader) {
   if (Reader.bytesRemaining() % sizeof(ContribType) != 0)
     return make_error<RawError>(
         raw_error_code::corrupt_file,

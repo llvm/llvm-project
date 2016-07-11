@@ -4,7 +4,8 @@
 define <16 x i32> @test2(<16 x i32> %x) {
 ; CHECK-LABEL: test2:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpaddd {{.*}}(%rip){1to16}, %zmm0, %zmm0
+; CHECK-NEXT:    vpternlogd $255, %zmm1, %zmm1, %zmm1
+; CHECK-NEXT:    vpaddd %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
    %res = add <16 x i32><i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1, i32 -1>, %x
    ret <16 x i32>%res
@@ -15,8 +16,8 @@ define <16 x float> @test3(<4 x float> %a) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vmovss %xmm0, %xmm2, %xmm0
-; CHECK-NEXT:    vmovss %xmm1, %xmm2, %xmm1
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3]
+; CHECK-NEXT:    vmovss {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3]
 ; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm1[1,0],xmm0[0,1]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm2, %ymm0
 ; CHECK-NEXT:    vxorps %ymm1, %ymm1, %ymm1
