@@ -770,16 +770,18 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
                                    unsigned *Cursor = nullptr);
 
 /// \brief Returns the replacements corresponding to applying and formatting
-/// \p Replaces.
-tooling::Replacements formatReplacements(StringRef Code,
-                                         const tooling::Replacements &Replaces,
-                                         const FormatStyle &Style);
+/// \p Replaces on success; otheriwse, return an llvm::Error carrying
+/// llvm::StringError.
+llvm::Expected<tooling::Replacements>
+formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
+                   const FormatStyle &Style);
 
 /// \brief Returns the replacements corresponding to applying \p Replaces and
-/// cleaning up the code after that.
+/// cleaning up the code after that on success; otherwise, return an llvm::Error
+/// carrying llvm::StringError.
 /// This also inserts a C++ #include directive into the correct block if the
 /// replacement corresponding to the header insertion has offset UINT_MAX.
-tooling::Replacements
+llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style);
 

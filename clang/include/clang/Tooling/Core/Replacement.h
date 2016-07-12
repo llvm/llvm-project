@@ -22,6 +22,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <map>
 #include <set>
 #include <string>
@@ -165,9 +166,13 @@ bool applyAllReplacements(const std::vector<Replacement> &Replaces,
 
 /// \brief Applies all replacements in \p Replaces to \p Code.
 ///
-/// This completely ignores the path stored in each replacement. If one or more
-/// replacements cannot be applied, this returns an empty \c string.
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
+/// This completely ignores the path stored in each replacement. If all
+/// replacements are applied successfully, this returns the code with
+/// replacements applied; otherwise, an llvm::Error carrying llvm::StringError
+/// is returned (the Error message can be converted to string using
+/// `llvm::toString()` and 'std::error_code` in the `Error` should be ignored).
+llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+                                                 const Replacements &Replaces);
 
 /// \brief Calculates how a code \p Position is shifted when \p Replaces are
 /// applied.
@@ -202,29 +207,6 @@ struct TranslationUnitReplacements {
 
   std::vector<Replacement> Replacements;
 };
-
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const Replacements &Replaces, Rewriter &Rewrite);
-
-/// \brief Apply all replacements in \p Replaces to the Rewriter \p Rewrite.
-///
-/// Replacement applications happen independently of the success of
-/// other applications.
-///
-/// \returns true if all replacements apply. false otherwise.
-bool applyAllReplacements(const std::vector<Replacement> &Replaces,
-                          Rewriter &Rewrite);
-
-/// \brief Applies all replacements in \p Replaces to \p Code.
-///
-/// This completely ignores the path stored in each replacement. If one or more
-/// replacements cannot be applied, this returns an empty \c string.
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces);
 
 /// \brief Calculates the ranges in a single file that are affected by the
 /// Replacements. Overlapping ranges will be merged.

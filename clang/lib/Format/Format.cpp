@@ -1393,27 +1393,29 @@ tooling::Replacements sortIncludes(const FormatStyle &Style, StringRef Code,
 }
 
 template <typename T>
-static tooling::Replacements
+static llvm::Expected<tooling::Replacements>
 processReplacements(T ProcessFunc, StringRef Code,
                     const tooling::Replacements &Replaces,
                     const FormatStyle &Style) {
   if (Replaces.empty())
     return tooling::Replacements();
 
-  std::string NewCode = applyAllReplacements(Code, Replaces);
+  auto NewCode = applyAllReplacements(Code, Replaces);
+  if (!NewCode)
+    return NewCode.takeError();
   std::vector<tooling::Range> ChangedRanges =
       tooling::calculateChangedRanges(Replaces);
   StringRef FileName = Replaces.begin()->getFilePath();
 
   tooling::Replacements FormatReplaces =
-      ProcessFunc(Style, NewCode, ChangedRanges, FileName);
+      ProcessFunc(Style, *NewCode, ChangedRanges, FileName);
 
   return mergeReplacements(Replaces, FormatReplaces);
 }
 
-tooling::Replacements formatReplacements(StringRef Code,
-                                         const tooling::Replacements &Replaces,
-                                         const FormatStyle &Style) {
+llvm::Expected<tooling::Replacements>
+formatReplacements(StringRef Code, const tooling::Replacements &Replaces,
+                   const FormatStyle &Style) {
   // We need to use lambda function here since there are two versions of
   // `sortIncludes`.
   auto SortIncludes = [](const FormatStyle &Style, StringRef Code,
@@ -1421,8 +1423,10 @@ tooling::Replacements formatReplacements(StringRef Code,
                          StringRef FileName) -> tooling::Replacements {
     return sortIncludes(Style, Code, Ranges, FileName);
   };
-  tooling::Replacements SortedReplaces =
+  auto SortedReplaces =
       processReplacements(SortIncludes, Code, Replaces, Style);
+  if (!SortedReplaces)
+    return SortedReplaces.takeError();
 
   // We need to use lambda function here since there are two versions of
   // `reformat`.
@@ -1431,7 +1435,7 @@ tooling::Replacements formatReplacements(StringRef Code,
                      StringRef FileName) -> tooling::Replacements {
     return reformat(Style, Code, Ranges, FileName);
   };
-  return processReplacements(Reformat, Code, SortedReplaces, Style);
+  return processReplacements(Reformat, Code, *SortedReplaces, Style);
 }
 
 namespace {
@@ -1591,7 +1595,7 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
 
 } // anonymous namespace
 
-tooling::Replacements
+llvm::Expected<tooling::Replacements>
 cleanupAroundReplacements(StringRef Code, const tooling::Replacements &Replaces,
                           const FormatStyle &Style) {
   // We need to use lambda function here since there are two versions of

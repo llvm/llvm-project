@@ -7984,8 +7984,6 @@ def err_atomic_init_constant : Error<
   " in the declaration statement in the program scope">;
 def err_opencl_implicit_vector_conversion : Error<
   "implicit conversions between vector types (%0 and %1) are not permitted">;
-def err_opencl_dereferencing : Error<
-  "dereferencing pointer of type %0 is not allowed in OpenCL">;
 def err_opencl_block_proto_variadic : Error<
   "invalid block prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_invalid_type_array : Error<

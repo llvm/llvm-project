@@ -172,6 +172,10 @@ public:
       if (!Visited.insert(File).second)
         continue;
 
+      // Do not map FileID's associated with system headers.
+      if (SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
+        continue;
+
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);
            Parent.isValid(); Parent = getIncludeOrExpansionLoc(Parent))
@@ -250,6 +254,10 @@ public:
 
       SourceLocation LocStart = Region.getStartLoc();
       assert(SM.getFileID(LocStart).isValid() && "region in invalid file");
+
+      // Ignore regions from system headers.
+      if (SM.isInSystemHeader(SM.getSpellingLoc(LocStart)))
+        continue;
 
       auto CovFileID = getCoverageFileID(LocStart);
       // Ignore regions that don't have a file, such as builtin macros.

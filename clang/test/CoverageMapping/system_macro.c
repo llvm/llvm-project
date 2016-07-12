@@ -13,9 +13,8 @@
 
 // CHECK-LABEL: doSomething:
 void doSomething(int x) { // CHECK: File 0, [[@LINE]]:25 -> {{[0-9:]+}} = #0
-  Func(x); // CHECK: Expansion,File 0, [[@LINE]]:3 -> [[@LINE]]:7
+  Func(x);
   return;
-  // CHECK: Expansion,File 0, [[@LINE+1]]:3 -> [[@LINE+1]]:11
   SomeType *f; // CHECK: File 0, [[@LINE]]:11 -> {{[0-9:]+}} = 0
 }
 

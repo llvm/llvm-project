@@ -640,27 +640,32 @@ protected:
                            StringRef Result, const Replacements &First,
                            const Replacements &Second) {
     // These are mainly to verify the test itself and make it easier to read.
-    std::string AfterFirst = applyAllReplacements(Code, First);
-    std::string InSequenceRewrite = applyAllReplacements(AfterFirst, Second);
-    EXPECT_EQ(Intermediate, AfterFirst);
-    EXPECT_EQ(Result, InSequenceRewrite);
+    auto AfterFirst = applyAllReplacements(Code, First);
+    EXPECT_TRUE(static_cast<bool>(AfterFirst));
+    auto InSequenceRewrite = applyAllReplacements(*AfterFirst, Second);
+    EXPECT_TRUE(static_cast<bool>(InSequenceRewrite));
+    EXPECT_EQ(Intermediate, *AfterFirst);
+    EXPECT_EQ(Result, *InSequenceRewrite);
 
     tooling::Replacements Merged = mergeReplacements(First, Second);
-    std::string MergedRewrite = applyAllReplacements(Code, Merged);
-    EXPECT_EQ(InSequenceRewrite, MergedRewrite);
-    if (InSequenceRewrite != MergedRewrite)
+    auto MergedRewrite = applyAllReplacements(Code, Merged);
+    EXPECT_TRUE(static_cast<bool>(MergedRewrite));
+    EXPECT_EQ(*InSequenceRewrite, *MergedRewrite);
+    if (*InSequenceRewrite != *MergedRewrite)
       for (tooling::Replacement M : Merged)
         llvm::errs() << M.getOffset() << " " << M.getLength() << " "
                      << M.getReplacementText() << "\n";
   }
   void mergeAndTestRewrite(StringRef Code, const Replacements &First,
                            const Replacements &Second) {
-    std::string InSequenceRewrite =
-        applyAllReplacements(applyAllReplacements(Code, First), Second);
+    auto AfterFirst = applyAllReplacements(Code, First);
+    EXPECT_TRUE(static_cast<bool>(AfterFirst));
+    auto InSequenceRewrite = applyAllReplacements(*AfterFirst, Second);
     tooling::Replacements Merged = mergeReplacements(First, Second);
-    std::string MergedRewrite = applyAllReplacements(Code, Merged);
-    EXPECT_EQ(InSequenceRewrite, MergedRewrite);
-    if (InSequenceRewrite != MergedRewrite)
+    auto MergedRewrite = applyAllReplacements(Code, Merged);
+    EXPECT_TRUE(static_cast<bool>(MergedRewrite));
+    EXPECT_EQ(*InSequenceRewrite, *MergedRewrite);
+    if (*InSequenceRewrite != *MergedRewrite)
       for (tooling::Replacement M : Merged)
         llvm::errs() << M.getOffset() << " " << M.getLength() << " "
                      << M.getReplacementText() << "\n";

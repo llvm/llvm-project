@@ -118,6 +118,10 @@ def CMAKE_FLAGS ():
             "-DCMAKE_BUILD_TYPE=Release",
             "-DLLVM_ENABLE_ASSERTIONS=ON",
             ],
+        "BuildAndIntegration": [
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DLLVM_ENABLE_ASSERTIONS=OFF",
+            ],
     }
 
 def CMAKE_ENVIRONMENT ():

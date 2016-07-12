@@ -5378,14 +5378,13 @@ bool Sema::CheckTemplateArgument(TemplateTemplateParmDecl *Param,
   // partial specializations.
   if (!isa<ClassTemplateDecl>(Template) &&
       !isa<TemplateTemplateParmDecl>(Template) &&
-      !isa<TypeAliasTemplateDecl>(Template)) {
-    assert((isa<FunctionTemplateDecl>(Template) ||
-            isa<BuiltinTemplateDecl>(Template)) &&
-           "Only function or builtin templates are possible here");
+      !isa<TypeAliasTemplateDecl>(Template) &&
+      !isa<BuiltinTemplateDecl>(Template)) {
+    assert(isa<FunctionTemplateDecl>(Template) &&
+           "Only function templates are possible here");
     Diag(Arg.getLocation(), diag::err_template_arg_not_valid_template);
-    if (isa<FunctionTemplateDecl>(Template))
-      Diag(Template->getLocation(), diag::note_template_arg_refers_here_func)
-          << Template;
+    Diag(Template->getLocation(), diag::note_template_arg_refers_here_func)
+      << Template;
   }
 
   TemplateParameterList *Params = Param->getTemplateParameters();

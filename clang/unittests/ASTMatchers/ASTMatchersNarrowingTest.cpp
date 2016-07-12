@@ -723,6 +723,18 @@ TEST(IsInteger, ReportsNoFalsePositives) {
                            to(varDecl(hasType(isInteger()))))))));
 }
 
+TEST(IsSignedInteger, MatchesSignedIntegers) {
+  EXPECT_TRUE(matches("int i = 0;", varDecl(hasType(isSignedInteger()))));
+  EXPECT_TRUE(notMatches("unsigned i = 0;",
+                         varDecl(hasType(isSignedInteger()))));
+}
+
+TEST(IsUnsignedInteger, MatchesUnsignedIntegers) {
+  EXPECT_TRUE(notMatches("int i = 0;", varDecl(hasType(isUnsignedInteger()))));
+  EXPECT_TRUE(matches("unsigned i = 0;",
+                      varDecl(hasType(isUnsignedInteger()))));
+}
+
 TEST(IsAnyPointer, MatchesPointers) {
   EXPECT_TRUE(matches("int* i = nullptr;", varDecl(hasType(isAnyPointer()))));
 }
