@@ -234,8 +234,18 @@ static void LoadActiveCode(
 
   // Add the detour instruction (i.e. mov edi, edi)
   if (prefix_kind == FunctionPrefixDetour) {
+#if SANITIZER_WINDOWS64
+    // Note that "mov edi,edi" is NOP in 32-bit only, in 64-bit it clears
+    // higher bits of RDI.
+    // Use 66,90H as NOP for Windows64.
+    ActiveCode[position++] = 0x66;
+    ActiveCode[position++] = 0x90;
+#else
+    // mov edi,edi.
     ActiveCode[position++] = 0x8B;
     ActiveCode[position++] = 0xFF;
+#endif
+
   }
 
   // Copy the function body.

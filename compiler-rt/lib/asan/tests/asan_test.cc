@@ -300,6 +300,7 @@ TEST(AddressSanitizer, LargeMallocTest) {
   }
 }
 
+#if !GTEST_USES_SIMPLE_RE
 TEST(AddressSanitizer, HugeMallocTest) {
   if (SANITIZER_WORDSIZE != 64 || ASAN_AVOID_EXPENSIVE_TESTS) return;
   size_t n_megs = 4100;
@@ -307,6 +308,7 @@ TEST(AddressSanitizer, HugeMallocTest) {
                "is located 1 bytes to the left|"
                "AddressSanitizer failed to allocate");
 }
+#endif
 
 #if SANITIZER_TEST_HAS_MEMALIGN
 void MemalignRun(size_t align, size_t size, int idx) {
