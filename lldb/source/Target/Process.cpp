@@ -1462,14 +1462,6 @@ Process::SetExitStatus (int status, const char *cstr)
     else
         m_exit_string.clear();
 
-    // When we exit, we don't need the input reader anymore
-    if (m_process_input_reader)
-    {
-        m_process_input_reader->SetIsDone(true);
-        m_process_input_reader->Cancel();
-        m_process_input_reader.reset();
-    }
-
     // Clear the last natural stop ID since it has a strong
     // reference to this process
     m_mod_id.SetStopEventForLastNaturalStopID(EventSP());

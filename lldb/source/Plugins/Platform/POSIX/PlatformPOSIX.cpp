@@ -882,6 +882,7 @@ PlatformPOSIX::EvaluateLibdlExpression(lldb_private::Process* process,
     expr_options.SetIgnoreBreakpoints(true);
     expr_options.SetExecutionPolicy(eExecutionPolicyAlways);
     expr_options.SetLanguage(eLanguageTypeC_plus_plus);
+    expr_options.SetTimeoutUsec(2000000); // 2 seconds
 
     Error expr_error;
     UserExpression::Evaluate(exe_ctx,

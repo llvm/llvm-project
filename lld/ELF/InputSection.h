@@ -21,6 +21,8 @@
 namespace lld {
 namespace elf {
 
+template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
+
 class SymbolBody;
 
 template <class ELFT> class ICF;

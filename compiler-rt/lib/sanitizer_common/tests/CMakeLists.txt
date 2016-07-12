@@ -82,7 +82,7 @@ endif()
 # enough for the unittests. Some unittests require more than 2M.
 # The default stack size for clang is 8M.
 if(MSVC)
-  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0x8000000)
+  list(APPEND SANITIZER_TEST_LINK_FLAGS_COMMON -Wl,/STACK:0xC00000)
 endif()
 
 set(SANITIZER_TEST_LINK_LIBS)

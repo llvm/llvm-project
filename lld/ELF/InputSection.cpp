@@ -12,6 +12,7 @@
 #include "EhFrame.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Target.h"
 #include "Thunks.h"
@@ -26,6 +27,11 @@ using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
+
+template <class ELFT> bool elf::isDiscarded(InputSectionBase<ELFT> *S) {
+  return !S || S == &InputSection<ELFT>::Discarded || !S->Live ||
+         Script<ELFT>::X->isDiscarded(S);
+}
 
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
@@ -643,6 +649,11 @@ template <class ELFT>
 bool MipsOptionsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::MipsOptions;
 }
+
+template bool elf::isDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
+template bool elf::isDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);
+template bool elf::isDiscarded<ELF64LE>(InputSectionBase<ELF64LE> *);
+template bool elf::isDiscarded<ELF64BE>(InputSectionBase<ELF64BE> *);
 
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;

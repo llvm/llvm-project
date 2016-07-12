@@ -135,6 +135,7 @@ option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread AP
 # about #include_next which is used everywhere.
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
+option(LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS "Disable #warnings about conflicting macros." OFF)
 
 option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
 set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
@@ -322,6 +323,9 @@ else()
 endif()
 if (LIBCXX_ENABLE_PEDANTIC)
   add_compile_flags_if_supported(-pedantic)
+endif()
+if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
+  add_definitions(-D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
 endif()
 
 # Exception flags =============================================================

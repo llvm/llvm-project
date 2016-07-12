@@ -202,6 +202,29 @@ static bool IsMemoryPadding(uptr address, uptr size) {
   return true;
 }
 
+static const u8 kHintNop10Bytes[] = {
+  0x66, 0x66, 0x0F, 0x1F, 0x84,
+  0x00, 0x00, 0x00, 0x00, 0x00
+};
+
+template<class T>
+static bool FunctionHasPrefix(uptr address, const T &pattern) {
+  u8* function = (u8*)address - sizeof(pattern);
+  for (size_t i = 0; i < sizeof(pattern); ++i)
+    if (function[i] != pattern[i])
+      return false;
+  return true;
+}
+
+static bool FunctionHasPadding(uptr address, uptr size) {
+  if (IsMemoryPadding(address - size, size))
+    return true;
+  if (size <= sizeof(kHintNop10Bytes) &&
+      FunctionHasPrefix(address, kHintNop10Bytes))
+    return true;
+  return false;
+}
+
 static void WritePadding(uptr from, uptr size) {
   _memset((void*)from, 0xCC, (size_t)size);
 }
@@ -438,6 +461,7 @@ static size_t GetInstructionSize(uptr address) {
     case 0x5541:  // push r13
     case 0x5641:  // push r14
     case 0x5741:  // push r15
+    case 0x9066:  // Two-byte NOP
       return 2;
   }
 
@@ -617,7 +641,7 @@ bool OverrideFunctionWithHotPatch(
   // Validate that the function is hot patchable.
   size_t instruction_size = GetInstructionSize(old_func);
   if (instruction_size < kShortJumpInstructionLength ||
-      !IsMemoryPadding(header, kHotPatchHeaderLen))
+      !FunctionHasPadding(old_func, kHotPatchHeaderLen))
     return false;
 
   if (orig_old_func) {
