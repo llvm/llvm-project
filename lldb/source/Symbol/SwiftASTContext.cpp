@@ -4924,7 +4924,7 @@ SwiftASTContext::CreateFunctionType (CompilerType arg_type, CompilerType ret_typ
 
 
 CompilerType
-SwiftASTContext::GetErrorProtocolType ()
+SwiftASTContext::GetErrorType ()
 {
     VALID_OR_RETURN(CompilerType());
 
@@ -4934,7 +4934,7 @@ SwiftASTContext::GetErrorProtocolType ()
         // Getting the error type requires the Stdlib module be loaded, but doesn't cause it to be loaded.
         // Do that here:
         swift_ctx->getStdlibModule(true);
-        swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorProtocolDecl();
+        swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorDecl();
         if (error_type_decl)
         {
             auto error_type = error_type_decl->getType().getPointer();
@@ -6043,7 +6043,7 @@ SwiftASTContext::GetProtocolTypeInfo (const CompilerType& type,
                 protocol_info.m_num_payload_words = 3;
                 protocol_info.m_is_objc = t->getDecl()->isObjC();
                 protocol_info.m_is_anyobject = (t->getDecl() == ast->GetASTContext()->getProtocol(swift::KnownProtocolKind::AnyObject));
-                protocol_info.m_is_errortype = (t->getDecl() == ast->GetASTContext()->getErrorProtocolDecl());
+                protocol_info.m_is_errortype = (t->getDecl() == ast->GetASTContext()->getErrorDecl());
                 protocol_info.m_num_payload_words = (protocol_info.m_is_errortype ? 0 : 3);
                 if (protocol_info.IsOneWordStorage()) // @objc protocols only wrap an ISA/metadata pointer
                     protocol_info.m_num_storage_words = 1;

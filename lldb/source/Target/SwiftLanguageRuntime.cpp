@@ -3192,7 +3192,7 @@ SwiftLanguageRuntime::CalculateErrorValueObjectAtAddress (lldb::addr_t addr, Con
     if (!ast_context || error.Fail())
         return error_valobj_sp;
 
-    CompilerType swift_error_proto_type = ast_context->GetErrorProtocolType();
+    CompilerType swift_error_proto_type = ast_context->GetErrorType();
     Value addr_value;
 
     error_valobj_sp = ValueObjectConstResult::Create (m_process,
@@ -3270,7 +3270,7 @@ SwiftLanguageRuntime::CalculateErrorValueFromFirstArgument(StackFrameSP frame_sp
         if (!ast_context || error.Fail())
             return error_valobj_sp;
 
-        CompilerType swift_error_proto_type = ast_context->GetErrorProtocolType();
+        CompilerType swift_error_proto_type = ast_context->GetErrorType();
         if (swift_error_proto_type.IsValid())
         {
             Value *arg0 = argument_values.GetValueAtIndex(0);
@@ -3323,7 +3323,7 @@ SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name, lldb
                                                                                           is_let,
                                                                                           swift::SourceLoc(),
                                                                                           ast_context->GetIdentifier(name.GetCString()),
-                                                                                          GetSwiftType(ast_context->GetErrorProtocolType()),
+                                                                                          GetSwiftType(ast_context->GetErrorType()),
                                                                                           module_decl);
             var_decl->setDebuggerVar(true);
             
