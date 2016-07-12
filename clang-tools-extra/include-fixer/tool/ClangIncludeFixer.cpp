@@ -209,13 +209,20 @@ int includeFixerMain(int argc, const char **argv) {
       return 1;
     }
 
-    tooling::Replacements Replacements =
-        clang::include_fixer::createInsertHeaderReplacements(
-            Code->getBuffer(), FilePath, Context.getHeaders().front(),
-            InsertStyle);
-    std::string ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), Replacements);
-    llvm::outs() << ChangedCode;
+    auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
+        Code->getBuffer(), FilePath, Context.getHeaders().front(), InsertStyle);
+    if (!Replacements) {
+      errs() << "Failed to create header insertion replacement: "
+             << llvm::toString(Replacements.takeError()) << "\n";
+      return 1;
+    }
+    auto ChangedCode =
+        tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
+    if (!ChangedCode) {
+      llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+      return 1;
+    }
+    llvm::outs() << *ChangedCode;
     return 0;
   }
 
@@ -250,17 +257,22 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
   }
 
-  tooling::Replacements Replacements =
-      clang::include_fixer::createInsertHeaderReplacements(
-          /*Code=*/Buffer.get()->getBuffer(), FilePath,
-          Context.getHeaders().front(), InsertStyle);
+  // FIXME: Rank the results and pick the best one instead of the first one.
+  auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
+      /*Code=*/Buffer.get()->getBuffer(), FilePath,
+      Context.getHeaders().front(), InsertStyle);
+  if (!Replacements) {
+    errs() << "Failed to create header insertion replacement: "
+           << llvm::toString(Replacements.takeError()) << "\n";
+    return 1;
+  }
 
   if (!Quiet)
     llvm::errs() << "Added #include" << Context.getHeaders().front();
 
   // Add missing namespace qualifiers to the unidentified symbol.
   if (Context.getSymbolRange().getLength() > 0)
-    Replacements.insert(Context.createSymbolReplacement(FilePath, 0));
+    Replacements->insert(Context.createSymbolReplacement(FilePath, 0));
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
@@ -270,15 +282,19 @@ int includeFixerMain(int argc, const char **argv) {
   Diagnostics.setClient(&DiagnosticPrinter, false);
 
   if (STDINMode) {
-    std::string ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), Replacements);
-    llvm::outs() << ChangedCode;
+    auto ChangedCode =
+        tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
+    if (!ChangedCode) {
+      llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+      return 1;
+    }
+    llvm::outs() << *ChangedCode;
     return 0;
   }
 
   // Write replacements to disk.
   Rewriter Rewrites(SM, LangOptions());
-  tooling::applyAllReplacements(Replacements, Rewrites);
+  tooling::applyAllReplacements(*Replacements, Rewrites);
   return Rewrites.overwriteChangedFiles();
 }
 

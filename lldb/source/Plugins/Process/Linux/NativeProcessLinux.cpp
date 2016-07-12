@@ -1919,31 +1919,28 @@ ParseMemoryRegionInfoFromProcMapsLine (const std::string &maps_line, MemoryRegio
     const char read_perm_char = line_extractor.GetChar ();
     if (read_perm_char == 'r')
         memory_region_info.SetReadable (MemoryRegionInfo::OptionalBool::eYes);
-    else
-    {
-        assert ( (read_perm_char == '-') && "unexpected /proc/{pid}/maps read permission char" );
+    else if (read_perm_char == '-')
         memory_region_info.SetReadable (MemoryRegionInfo::OptionalBool::eNo);
-    }
+    else
+        return Error ("unexpected /proc/{pid}/maps read permission char");
 
     // Handle write permission.
     const char write_perm_char = line_extractor.GetChar ();
     if (write_perm_char == 'w')
         memory_region_info.SetWritable (MemoryRegionInfo::OptionalBool::eYes);
-    else
-    {
-        assert ( (write_perm_char == '-') && "unexpected /proc/{pid}/maps write permission char" );
+    else if (write_perm_char == '-')
         memory_region_info.SetWritable (MemoryRegionInfo::OptionalBool::eNo);
-    }
+    else
+        return Error ("unexpected /proc/{pid}/maps write permission char");
 
     // Handle execute permission.
     const char exec_perm_char = line_extractor.GetChar ();
     if (exec_perm_char == 'x')
         memory_region_info.SetExecutable (MemoryRegionInfo::OptionalBool::eYes);
-    else
-    {
-        assert ( (exec_perm_char == '-') && "unexpected /proc/{pid}/maps exec permission char" );
+    else if (exec_perm_char == '-')
         memory_region_info.SetExecutable (MemoryRegionInfo::OptionalBool::eNo);
-    }
+    else
+        return Error ("unexpected /proc/{pid}/maps exec permission char");
 
     return Error ();
 }

@@ -19,6 +19,7 @@
 #include "Error.h"
 #include "LinkerScript.h"
 #include "Strings.h"
+#include "SymbolListFile.h"
 #include "Symbols.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/Support/StringSaver.h"
@@ -180,20 +181,18 @@ static uint16_t getVersionId(Symbol *Sym, StringRef Name) {
   if (Default)
     Version = Version.drop_front();
 
-  size_t I = 2;
-  for (elf::Version &V : Config->SymbolVersions) {
+  for (elf::Version &V : Config->SymbolVersions)
     if (V.Name == Version)
-      return Default ? I : (I | VERSYM_HIDDEN);
-    ++I;
-  }
+      return Default ? V.Id : (V.Id | VERSYM_HIDDEN);
+
 
   // If we are not building shared and version script
   // is not specified, then it is not a error, it is
   // in common not to use script for linking executables.
   // In this case we just create new version.
   if (!Config->Shared && !Config->HasVersionScript) {
-    Config->SymbolVersions.push_back(elf::Version(Version));
-    return Default ? I : (I | VERSYM_HIDDEN);
+    size_t Id = defineSymbolVersion(Version);
+    return Default ? Id : (Id | VERSYM_HIDDEN);
   }
 
   error("symbol " + Name + " has undefined version " + Version);
@@ -608,7 +607,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
       if (B->symbol()->VersionId != VER_NDX_GLOBAL &&
           B->symbol()->VersionId != VER_NDX_LOCAL)
         warning("duplicate symbol " + Name + " in version script");
-      B->symbol()->VersionId = I + 2;
+      B->symbol()->VersionId = V.Id;
     }
   }
 
@@ -621,7 +620,7 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
       for (SymbolBody *B : findAll(Name))
         if (B->symbol()->VersionId == VER_NDX_GLOBAL ||
             B->symbol()->VersionId == VER_NDX_LOCAL)
-          B->symbol()->VersionId = I + 2;
+          B->symbol()->VersionId = V.Id;
     }
   }
 }

@@ -86,14 +86,17 @@ static std::string runIncludeFixer(
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
   if (FixerContext.getMatchedSymbols().empty())
     return Code;
-  tooling::Replacements Replacements =
-      clang::include_fixer::createInsertHeaderReplacements(
-          Code, FakeFileName, FixerContext.getHeaders().front());
+  auto Replaces = clang::include_fixer::createInsertHeaderReplacements(
+      Code, FakeFileName, FixerContext.getHeaders().front());
+  EXPECT_TRUE(static_cast<bool>(Replaces))
+      << llvm::toString(Replaces.takeError()) << "\n";
+  if (!Replaces)
+    return "";
   clang::RewriterTestContext Context;
   clang::FileID ID = Context.createInMemoryFile(FakeFileName, Code);
   if (FixerContext.getSymbolRange().getLength() > 0)
-    Replacements.insert(FixerContext.createSymbolReplacement(FakeFileName, 0));
-  clang::tooling::applyAllReplacements(Replacements, Context.Rewrite);
+    Replaces->insert(FixerContext.createSymbolReplacement(FakeFileName, 0));
+  clang::tooling::applyAllReplacements(*Replaces, Context.Rewrite);
   return Context.getRewrittenText(ID);
 }
 

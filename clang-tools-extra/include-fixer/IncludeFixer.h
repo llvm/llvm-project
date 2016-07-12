@@ -68,8 +68,9 @@ private:
 /// \param Header The header being inserted.
 /// \param Style clang-format style being used.
 ///
-/// \return Replacements for inserting and sorting headers.
-tooling::Replacements createInsertHeaderReplacements(
+/// \return Replacements for inserting and sorting headers on success;
+/// otherwise, an llvm::Error carrying llvm::StringError is returned.
+llvm::Expected<tooling::Replacements> createInsertHeaderReplacements(
     StringRef Code, StringRef FilePath, StringRef Header,
     const clang::format::FormatStyle &Style = clang::format::getLLVMStyle());
 

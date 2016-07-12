@@ -2,6 +2,7 @@
 
 import errno
 import hashlib
+import fnmatch
 import os
 import platform
 import subprocess
@@ -117,6 +118,10 @@ def CMAKE_FLAGS ():
             "-DCMAKE_BUILD_TYPE=Release",
             "-DLLVM_ENABLE_ASSERTIONS=ON",
             ],
+        "BuildAndIntegration": [
+            "-DCMAKE_BUILD_TYPE=Release",
+            "-DLLVM_ENABLE_ASSERTIONS=OFF",
+            ],
     }
 
 def CMAKE_ENVIRONMENT ():
@@ -166,9 +171,16 @@ def all_source_control_status_md5 ():
 
 #### CHECKING OUT AND BUILDING LLVM ####
 
+def apply_patches(spec):
+    files = os.listdir(os.path.join(lldb_source_path(), 'scripts'))
+    patches = [f for f in files if fnmatch.fnmatch(f, spec['name'] + '.*.diff')]
+    for p in patches:
+        run_in_directory(["patch", "-p0", "-i", os.path.join(lldb_source_path(), 'scripts', p)], spec['root'])
+
 def check_out_if_needed(spec):
     if not os.path.isdir(spec['root']):
         vcs(spec).check_out()
+        apply_patches(spec)
 
 def all_check_out_if_needed ():
     map (check_out_if_needed, XCODE_REPOSITORIES())

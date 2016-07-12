@@ -25,6 +25,12 @@
 /* ------------------------------------------------------------------------ */
 /* ------------------------------------------------------------------------ */
 
+// Need to raise Win version from XP to Vista here for support of InterlockedExchange64
+#if defined(_WIN32_WINNT) && defined(_M_IX86)
+#undef _WIN32_WINNT
+#define _WIN32_WINNT 0x0502
+#endif
+
 #include "kmp.h"
 #include "kmp_i18n.h"
 #include "kmp_itt.h"
@@ -71,7 +77,7 @@ struct i_maxmin< unsigned long long > {
 };
 //-------------------------------------------------------------------------
 
-#ifdef KMP_STATIC_STEAL_ENABLED
+#if KMP_STATIC_STEAL_ENABLED
 
     // replaces dispatch_private_info{32,64} structures and dispatch_private_info{32,64}_t types
     template< typename T >
@@ -667,13 +673,13 @@ __kmp_dispatch_init(
             ( &team -> t.t_disp_buffer[ my_buffer_index % __kmp_dispatch_num_buffers ] );
     }
 
-    /* Currently just ignore the monotonic and non-monotonic modifiers (the compiler isn't producing them
-     * yet anyway).
-     * When it is we'll want to look at them somewhere here and use that information to add to our
-     * schedule choice. We shouldn't need to pass them on, they merely affect which schedule we can
-     * legally choose for various dynamic cases. (In paritcular, whether or not a stealing scheme is legal).
-     */
-    schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
+    #if  ( KMP_STATIC_STEAL_ENABLED )
+    if ( SCHEDULE_HAS_NONMONOTONIC(schedule) )
+        // AC: we now have only one implementation of stealing, so use it
+        schedule = kmp_sch_static_steal;
+    else
+    #endif
+        schedule = SCHEDULE_WITHOUT_MODIFIERS(schedule);
 
     /* Pick up the nomerge/ordered bits from the scheduling type */
     if ( (schedule >= kmp_nm_lower) && (schedule < kmp_nm_upper) ) {
@@ -839,7 +845,7 @@ __kmp_dispatch_init(
     }
 
     switch ( schedule ) {
-    #if  ( KMP_STATIC_STEAL_ENABLED && KMP_ARCH_X86_64 )
+    #if  ( KMP_STATIC_STEAL_ENABLED )
     case kmp_sch_static_steal:
         {
             T nproc = th->th.th_team_nproc;
@@ -861,8 +867,19 @@ __kmp_dispatch_init(
 
                 pr->u.p.parm2 = lb;
                 //pr->pfields.parm3 = 0; // it's not used in static_steal
-                pr->u.p.parm4 = id;
+                pr->u.p.parm4 = (id + 1) % nproc; // remember neighbour tid
                 pr->u.p.st = st;
+                if ( ___kmp_size_type > 4 ) {
+                    // AC: TODO: check if 16-byte CAS available and use it to
+                    // improve performance (probably wait for explicit request
+                    // before spending time on this).
+                    // For now use dynamically allocated per-thread lock,
+                    // free memory in __kmp_dispatch_next when status==0.
+                    KMP_DEBUG_ASSERT(th->th.th_dispatch->th_steal_lock == NULL);
+                    th->th.th_dispatch->th_steal_lock =
+                        (kmp_lock_t*)__kmp_allocate(sizeof(kmp_lock_t));
+                    __kmp_init_lock(th->th.th_dispatch->th_steal_lock);
+                }
                 break;
             } else {
                 KD_TRACE(100, ("__kmp_dispatch_init: T#%d falling-through to kmp_sch_static_balanced\n",
@@ -1222,7 +1239,6 @@ __kmp_dispatch_init(
     }
     #endif
     #if ( KMP_STATIC_STEAL_ENABLED )
-    if ( ___kmp_size_type < 8 ) {
       // It cannot be guaranteed that after execution of a loop with some other schedule kind
       // all the parm3 variables will contain the same value.
       // Even if all parm3 will be the same, it still exists a bad case like using 0 and 1
@@ -1234,8 +1250,7 @@ __kmp_dispatch_init(
         volatile T * p = &pr->u.p.static_steal_counter;
         *p = *p + 1;
       }
-    }
-    #endif // ( KMP_STATIC_STEAL_ENABLED && USE_STEALING )
+    #endif // ( KMP_STATIC_STEAL_ENABLED )
 
 #if OMPT_SUPPORT && OMPT_TRACE
     if (ompt_enabled &&
@@ -1423,7 +1438,7 @@ __kmp_dispatch_next(
     typedef typename traits_t< T >::unsigned_t  UT;
     typedef typename traits_t< T >::signed_t    ST;
     typedef typename traits_t< T >::floating_t  DBL;
-#if ( KMP_STATIC_STEAL_ENABLED && KMP_ARCH_X86_64 )
+#if ( KMP_STATIC_STEAL_ENABLED )
     static const int ___kmp_size_type = sizeof( UT );
 #endif
 
@@ -1582,21 +1597,97 @@ __kmp_dispatch_next(
             status = 0;
         } else {
             switch (pr->schedule) {
-            #if ( KMP_STATIC_STEAL_ENABLED && KMP_ARCH_X86_64 )
+            #if ( KMP_STATIC_STEAL_ENABLED )
             case kmp_sch_static_steal:
                 {
                     T chunk = pr->u.p.parm1;
+                    int nproc = th->th.th_team_nproc;
 
                     KD_TRACE(100, ("__kmp_dispatch_next: T#%d kmp_sch_static_steal case\n", gtid) );
 
                     trip = pr->u.p.tc - 1;
 
                     if ( ___kmp_size_type > 4 ) {
-                        // Other threads do not look into the data of this thread,
-                        //  so it's not necessary to make volatile casting.
-                        init   = ( pr->u.p.count )++;
-                        status = ( init < (UT)pr->u.p.ub );
+                        // use lock for 8-byte and CAS for 4-byte induction
+                        // variable. TODO (optional): check and use 16-byte CAS
+                        kmp_lock_t * lck = th->th.th_dispatch->th_steal_lock;
+                        KMP_DEBUG_ASSERT(lck != NULL);
+                        if( pr->u.p.count < (UT)pr->u.p.ub ) {
+                            __kmp_acquire_lock(lck, gtid);
+                            // try to get own chunk of iterations
+                            init   = ( pr->u.p.count )++;
+                            status = ( init < (UT)pr->u.p.ub );
+                            __kmp_release_lock(lck, gtid);
+                        } else {
+                            status = 0; // no own chunks
+                        }
+                        if( !status ) { // try to steal
+                            kmp_info_t   **other_threads = team->t.t_threads;
+                            int          while_limit = nproc; // nproc attempts to find a victim
+                            int          while_index = 0;
+                            // TODO: algorithm of searching for a victim
+                            // should be cleaned up and measured
+                            while ( ( !status ) && ( while_limit != ++while_index ) ) {
+                                T remaining;
+                                T victimIdx    = pr->u.p.parm4;
+                                T oldVictimIdx = victimIdx ? victimIdx - 1 : nproc - 1;
+                                dispatch_private_info_template< T > * victim =
+                                    reinterpret_cast< dispatch_private_info_template< T >* >
+                                    (other_threads[victimIdx]->th.th_dispatch->th_dispatch_pr_current);
+                                while( ( victim == NULL || victim == pr ||
+                                    ( *(volatile T*)&victim->u.p.static_steal_counter !=
+                                    *(volatile T*)&pr->u.p.static_steal_counter ) ) &&
+                                    oldVictimIdx != victimIdx )
+                                {
+                                    victimIdx = (victimIdx + 1) % nproc;
+                                    victim = reinterpret_cast< dispatch_private_info_template< T >* >
+                                        (other_threads[victimIdx]->th.th_dispatch->th_dispatch_pr_current);
+                                };
+                                if( !victim ||
+                                    ( *(volatile T *)&victim->u.p.static_steal_counter !=
+                                    *(volatile T *)&pr->u.p.static_steal_counter ) )
+                                {
+                                    continue; // try once more (nproc attempts in total)
+                                    // no victim is ready yet to participate in stealing
+                                    // because all victims are still in kmp_init_dispatch
+                                }
+                                if( victim->u.p.count + 2 > (UT)victim->u.p.ub ) {
+                                    pr->u.p.parm4 = (victimIdx + 1) % nproc; // shift start tid
+                                    continue; // not enough chunks to steal, goto next victim
+                                }
+
+                                lck = other_threads[victimIdx]->th.th_dispatch->th_steal_lock;
+                                KMP_ASSERT(lck != NULL);
+                                __kmp_acquire_lock(lck, gtid);
+                                limit = victim->u.p.ub; // keep initial ub
+                                if( victim->u.p.count >= limit ||
+                                    (remaining = limit - victim->u.p.count) < 2 )
+                                {
+                                    __kmp_release_lock(lck, gtid);
+                                    pr->u.p.parm4 = (victimIdx + 1) % nproc; // next victim
+                                    continue; // not enough chunks to steal
+                                }
+                                // stealing succeded, reduce victim's ub by 1/4 of undone chunks or by 1
+                                if( remaining > 3 ) {
+                                    init = ( victim->u.p.ub -= (remaining>>2) ); // steal 1/4 of remaining
+                                } else {
+                                    init = ( victim->u.p.ub -= 1 ); // steal 1 chunk of 2 or 3 remaining
+                                }
+                                __kmp_release_lock(lck, gtid);
+
+                                KMP_DEBUG_ASSERT(init + 1 <= limit);
+                                pr->u.p.parm4 = victimIdx; // remember victim to steal from
+                                status = 1;
+                                while_index = 0;
+                                // now update own count and ub with stolen range but init chunk
+                                __kmp_acquire_lock(th->th.th_dispatch->th_steal_lock, gtid);
+                                pr->u.p.count = init + 1;
+                                pr->u.p.ub = limit;
+                                __kmp_release_lock(th->th.th_dispatch->th_steal_lock, gtid);
+                            } // while (search for victim)
+                        } // if (try to find victim and steal)
                     } else {
+                        // 4-byte induction variable, use 8-byte CAS for pair (count, ub)
                         typedef union {
                             struct {
                                 UT count;
@@ -1605,7 +1696,6 @@ __kmp_dispatch_next(
                             kmp_int64 b;
                         } union_i4;
                         // All operations on 'count' or 'ub' must be combined atomically together.
-                        // stealing implemented only for 4-byte indexes
                         {
                             union_i4 vold, vnew;
                             vold.b = *( volatile kmp_int64 * )(&pr->u.p.count);
@@ -1627,86 +1717,77 @@ __kmp_dispatch_next(
 
                         if( !status ) {
                             kmp_info_t   **other_threads = team->t.t_threads;
-                            int          while_limit = 10;
+                            int          while_limit = nproc; // nproc attempts to find a victim
                             int          while_index = 0;
 
                             // TODO: algorithm of searching for a victim
                             // should be cleaned up and measured
                             while ( ( !status ) && ( while_limit != ++while_index ) ) {
                                 union_i4  vold, vnew;
-                                kmp_int32 remaining; // kmp_int32 because KMP_I4 only
+                                kmp_int32 remaining;
                                 T         victimIdx    = pr->u.p.parm4;
-                                T         oldVictimIdx = victimIdx;
-                                dispatch_private_info_template< T > * victim;
-
-                                do {
-                                    if( !victimIdx ) {
-                                        victimIdx = team->t.t_nproc - 1;
-                                    } else {
-                                        --victimIdx;
-                                    }
+                                T oldVictimIdx = victimIdx ? victimIdx - 1 : nproc - 1;
+                                dispatch_private_info_template< T > * victim =
+                                    reinterpret_cast< dispatch_private_info_template< T >* >
+                                    (other_threads[victimIdx]->th.th_dispatch->th_dispatch_pr_current);
+                                while( (victim == NULL || victim == pr ||
+                                    (*(volatile T*)&victim->u.p.static_steal_counter !=
+                                    *(volatile T*)&pr->u.p.static_steal_counter)) &&
+                                    oldVictimIdx != victimIdx )
+                                {
+                                    victimIdx = (victimIdx + 1) % nproc;
                                     victim = reinterpret_cast< dispatch_private_info_template< T >* >
                                         ( other_threads[victimIdx]->th.th_dispatch->th_dispatch_pr_current );
-                                } while ( (victim == NULL || victim == pr) && oldVictimIdx != victimIdx );
-                                // TODO: think about a proper place of this test
-                                if ( ( !victim ) ||
-                                   ( (*( volatile T * )&victim->u.p.static_steal_counter) !=
-                                     (*( volatile T * )&pr->u.p.static_steal_counter) ) ) {
-                                    // TODO: delay would be nice
-                                    continue;
-                                    // the victim is not ready yet to participate in stealing
-                                    // because the victim is still in kmp_init_dispatch
+                                };
+                                if( !victim ||
+                                    ( *(volatile T *)&victim->u.p.static_steal_counter !=
+                                    *(volatile T *)&pr->u.p.static_steal_counter ) )
+                                {
+                                    continue; // try once more (nproc attempts in total)
+                                    // no victim is ready yet to participate in stealing
+                                    // because all victims are still in kmp_init_dispatch
                                 }
-                                if ( oldVictimIdx == victimIdx ) {
-                                    break;
-                                }
-                                pr->u.p.parm4 = victimIdx;
-
-                                while( 1 ) {
+                                pr->u.p.parm4 = victimIdx; // new victim found
+                                while( 1 ) { // CAS loop if victim has enough chunks to steal
                                     vold.b = *( volatile kmp_int64 * )( &victim->u.p.count );
                                     vnew = vold;
 
                                     KMP_DEBUG_ASSERT( (vnew.p.ub - 1) * (UT)chunk <= trip );
-                                    if ( vnew.p.count >= (UT)vnew.p.ub || (remaining = vnew.p.ub - vnew.p.count) < 4 ) {
-                                        break;
+                                    if ( vnew.p.count >= (UT)vnew.p.ub ||
+                                        (remaining = vnew.p.ub - vnew.p.count) < 2 )
+                                    {
+                                        pr->u.p.parm4 = (victimIdx + 1) % nproc; // shift start victim id
+                                        break; // not enough chunks to steal, goto next victim
                                     }
-                                    vnew.p.ub -= (remaining >> 2);
+                                    if( remaining > 3 ) {
+                                        vnew.p.ub -= (remaining>>2); // try to steal 1/4 of remaining
+                                    } else {
+                                        vnew.p.ub -= 1; // steal 1 chunk of 2 or 3 remaining
+                                    }
                                     KMP_DEBUG_ASSERT((vnew.p.ub - 1) * (UT)chunk <= trip);
-                                    #pragma warning( push )
-                                    // disable warning on pointless comparison of unsigned with 0
-                                    #pragma warning( disable: 186 )
-                                        KMP_DEBUG_ASSERT(vnew.p.ub >= 0);
-                                    #pragma warning( pop )
                                     // TODO: Should this be acquire or release?
                                     if ( KMP_COMPARE_AND_STORE_ACQ64(
                                             ( volatile kmp_int64 * )&victim->u.p.count,
                                             *VOLATILE_CAST(kmp_int64 *)&vold.b,
                                             *VOLATILE_CAST(kmp_int64 *)&vnew.b ) ) {
+                                        // stealing succedded
                                         status = 1;
                                         while_index = 0;
                                         // now update own count and ub
+                                        init = vnew.p.ub;
+                                        vold.p.count = init + 1;
                                         #if KMP_ARCH_X86
-                                        // stealing executed on non-KMP_ARCH_X86 only
-                                            // Atomic 64-bit write on ia32 is
-                                            // unavailable, so we do this in steps.
-                                            //     This code is not tested.
-                                            init = vold.p.count;
-                                            pr->u.p.ub = 0;
-                                            pr->u.p.count = init + 1;
-                                            pr->u.p.ub = vnew.p.count;
+                                        KMP_XCHG_FIXED64(( volatile kmp_int64 * )(&pr->u.p.count), vold.b);
                                         #else
-                                            init = vnew.p.ub;
-                                            vold.p.count = init + 1;
-                                            // TODO: is it safe and enough?
-                                            *( volatile kmp_int64 * )(&pr->u.p.count) = vold.b;
-                                        #endif // KMP_ARCH_X86
+                                        *( volatile kmp_int64 * )(&pr->u.p.count) = vold.b;
+                                        #endif
                                         break;
-                                    } // if
-                                KMP_CPU_PAUSE();
-                                } // while (1)
-                            } // while
-                        } // if
-                    } // if
+                                    } // if (check CAS result)
+                                    KMP_CPU_PAUSE(); // CAS failed, repeate attempt
+                                } // while (try to steal from particular victim)
+                            } // while (search for victim)
+                        } // if (try to find victim and steal)
+                    } // if (4-byte induction variable)
                     if ( !status ) {
                         *p_lb = 0;
                         *p_ub = 0;
@@ -1748,7 +1829,7 @@ __kmp_dispatch_next(
                     } // if
                     break;
                 } // case
-            #endif // ( KMP_STATIC_STEAL_ENABLED && KMP_ARCH_X86_64 )
+            #endif // ( KMP_STATIC_STEAL_ENABLED )
             case kmp_sch_static_balanced:
                 {
                     KD_TRACE(100, ("__kmp_dispatch_next: T#%d kmp_sch_static_balanced case\n", gtid) );
@@ -2142,6 +2223,20 @@ __kmp_dispatch_next(
             #endif
 
             if ( (ST)num_done == th->th.th_team_nproc - 1 ) {
+                #if ( KMP_STATIC_STEAL_ENABLED )
+                if( pr->schedule == kmp_sch_static_steal && ___kmp_size_type > 4 ) {
+                    int i;
+                    kmp_info_t **other_threads = team->t.t_threads;
+                    // loop complete, safe to destroy locks used for stealing
+                    for( i = 0; i < th->th.th_team_nproc; ++i ) {
+                        kmp_lock_t * lck = other_threads[i]->th.th_dispatch->th_steal_lock;
+                        KMP_ASSERT(lck != NULL);
+                        __kmp_destroy_lock( lck );
+                        __kmp_free( lck );
+                        other_threads[i]->th.th_dispatch->th_steal_lock = NULL;
+                    }
+                }
+                #endif
                 /* NOTE: release this buffer to be reused */
 
                 KMP_MB();       /* Flush all pending memory write invalidates.  */

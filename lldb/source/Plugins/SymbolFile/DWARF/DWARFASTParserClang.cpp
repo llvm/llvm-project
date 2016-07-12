@@ -328,7 +328,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                         }
                     }
 
-                    if (tag == DW_TAG_typedef)
+                    if (tag == DW_TAG_typedef && encoding_uid.IsValid())
                     {
                         // Try to parse a typedef from the DWO file first as modules
                         // can contain typedef'ed structures that have no names like:

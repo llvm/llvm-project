@@ -462,8 +462,6 @@ Debugger::Terminate ()
             for (const auto& debugger: *g_debugger_list_ptr)
                 debugger->Clear();
             g_debugger_list_ptr->clear();
-            delete g_debugger_list_ptr;
-            g_debugger_list_ptr = nullptr;
         }
     }
 }
