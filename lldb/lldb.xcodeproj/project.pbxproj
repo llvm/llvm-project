@@ -895,7 +895,6 @@
 		94CD131A19BA33B400DB7BED /* TypeValidator.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94CD131919BA33B400DB7BED /* TypeValidator.cpp */; };
 		94D0858C1B9675B8000D24BD /* FormattersHelpers.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94D0858B1B9675B8000D24BD /* FormattersHelpers.cpp */; };
 		94E829CA152D33C1006F96A3 /* lldb-server in Resources */ = {isa = PBXBuildFile; fileRef = 26DC6A101337FE6900FF7998 /* lldb-server */; };
-		94F6292F1AFC4285007BA92B /* DumpForDebugger.swift in CopyFiles */ = {isa = PBXBuildFile; fileRef = 946CDE1F1AEFF7E000C9E33F /* DumpForDebugger.swift */; };
 		94FA3DE01405D50400833217 /* ValueObjectConstResultChild.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 94FA3DDF1405D50300833217 /* ValueObjectConstResultChild.cpp */; };
 		964381701C8D6B8200023D59 /* SBLanguageRuntime.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF20F76C1AF18FC700751A6E /* SBLanguageRuntime.cpp */; };
 		964463EC1A330C0500154ED8 /* CompactUnwindInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 964463EB1A330C0500154ED8 /* CompactUnwindInfo.cpp */; };
@@ -1277,7 +1276,6 @@
 			dstPath = "";
 			dstSubfolderSpec = 7;
 			files = (
-				94F6292F1AFC4285007BA92B /* DumpForDebugger.swift in CopyFiles */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2786,7 +2784,6 @@
 		946216C11A97C080006E19CC /* OptionValueLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = OptionValueLanguage.cpp; path = source/Interpreter/OptionValueLanguage.cpp; sourceTree = "<group>"; };
 		9463D4CC13B1798800C230D4 /* CommandObjectType.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = CommandObjectType.cpp; path = source/Commands/CommandObjectType.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		9463D4CE13B179A500C230D4 /* CommandObjectType.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = CommandObjectType.h; path = source/Commands/CommandObjectType.h; sourceTree = "<group>"; };
-		946CDE1F1AEFF7E000C9E33F /* DumpForDebugger.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = DumpForDebugger.swift; path = source/DataFormatters/DumpForDebugger.swift; sourceTree = "<group>"; };
 		9475C18514E5E9C5001BFC6D /* SBTypeCategory.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = SBTypeCategory.h; path = include/lldb/API/SBTypeCategory.h; sourceTree = "<group>"; };
 		9475C18714E5E9FA001BFC6D /* SBTypeCategory.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBTypeCategory.cpp; path = source/API/SBTypeCategory.cpp; sourceTree = "<group>"; };
 		9475C18A14E5EA1C001BFC6D /* SBTypeCategory.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBTypeCategory.i; sourceTree = "<group>"; };
@@ -6048,7 +6045,6 @@
 				945261C71B9A14D300BF138D /* CXXFunctionPointer.cpp */,
 				94CB256016B069800059775D /* DataVisualization.h */,
 				94CB255816B069770059775D /* DataVisualization.cpp */,
-				946CDE1F1AEFF7E000C9E33F /* DumpForDebugger.swift */,
 				9447DE411BD5962900E67212 /* DumpValueObjectOptions.h */,
 				9447DE421BD5963300E67212 /* DumpValueObjectOptions.cpp */,
 				94CB257516B1D3910059775D /* FormatCache.h */,

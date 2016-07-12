@@ -86,7 +86,6 @@ SwiftLanguageRuntime::~SwiftLanguageRuntime()
 SwiftLanguageRuntime::SwiftLanguageRuntime (Process *process) :
     LanguageRuntime (process),
     m_negative_cache_mutex(Mutex::eMutexTypeNormal),
-    m_loaded_DumpForDebugger(eLazyBoolCalculate),
     m_SwiftNativeNSErrorISA(),
     m_memory_reader_sp(),
     m_promises_map(),
@@ -157,7 +156,7 @@ GetObjectDescription_ResultVariable (Process *process,
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
 
     StreamString expr_string;
-    expr_string.Printf("$__lldb__DumpForDebugger(%s)", object.GetName().GetCString());
+    expr_string.Printf("Swift._DebuggerSupport.stringForPrintObject(%s)", object.GetName().GetCString());
     
     if (log)
         log->Printf("[GetObjectDescription_ResultVariable] expression: %s", expr_string.GetData());
@@ -247,7 +246,7 @@ GetObjectDescription_ObjectReference (Process *process,
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
     
     StreamString expr_string;
-    expr_string.Printf("$__lldb__DumpForDebugger(Swift.unsafeBitCast(0x%" PRIx64 ", to: AnyObject.self))", object.GetValueAsUnsigned(0));
+    expr_string.Printf("Swift._DebuggerSupport.stringForPrintObject(Swift.unsafeBitCast(0x%" PRIx64 ", to: AnyObject.self))", object.GetValueAsUnsigned(0));
 
     if (log)
         log->Printf("[GetObjectDescription_ObjectReference] expression: %s", expr_string.GetData());
@@ -367,7 +366,7 @@ GetObjectDescription_ObjectCopy (Process *process,
     }
     
     StreamString expr_string;
-    expr_string.Printf("$__lldb__DumpForDebugger(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ")!.pointee)",static_type.GetTypeName().GetCString(),copy_location);
+    expr_string.Printf("Swift._DebuggerSupport.stringForPrintObject(Swift.UnsafePointer<%s>(bitPattern: 0x%" PRIx64 ")!.pointee)",static_type.GetTypeName().GetCString(),copy_location);
     
     if (log)
         log->Printf("[GetObjectDescription_ObjectCopy] expression: %s", expr_string.GetData());
@@ -456,59 +455,6 @@ GetObjectDescription_ObjectCopy (Process *process,
     return true;
 }
 
-bool
-SwiftLanguageRuntime::LoadDumpForDebugger (Error& error)
-{
-    if (m_loaded_DumpForDebugger != eLazyBoolCalculate)
-        return (m_loaded_DumpForDebugger == eLazyBoolYes);
-    FileSpec res_dir;
-    if (HostInfo::GetLLDBPath(lldb::ePathTypeSupportFileDir, res_dir))
-    {
-        res_dir.AppendPathComponent("DumpForDebugger.swift");
-        if (lldb::DataBufferSP buffer_sp = res_dir.ReadFileContents())
-        {
-            uint8_t* buffer = (uint8_t*)buffer_sp->GetBytes();
-            if (buffer && *buffer)
-            {
-                std::vector<char> expr_text(buffer_sp->GetByteSize()+1,0);
-                memcpy(&expr_text[0], buffer, buffer_sp->GetByteSize());
-
-                ValueObjectSP result_sp;
-                EvaluateExpressionOptions eval_options;
-                eval_options.SetLanguage(lldb::eLanguageTypeSwift);
-                eval_options.SetResultIsInternal(true);
-                if (eExpressionCompleted ==
-                    m_process->GetTarget().EvaluateExpression(&expr_text[0], m_process->GetThreadList().GetSelectedThread().get(), result_sp, eval_options))
-                {
-                    m_loaded_DumpForDebugger = eLazyBoolYes;
-                    return true;
-                }
-                else
-                {
-                    m_loaded_DumpForDebugger = eLazyBoolNo;
-                    error.SetErrorStringWithFormat("%s",result_sp->GetError().AsCString());
-                    return false;
-                }
-            }
-            else
-            {
-                error.SetErrorStringWithFormat("unable to get contents of helper file %s", res_dir.GetPath().c_str());
-                return false;
-            }
-        }
-        else
-        {
-            error.SetErrorStringWithFormat("unable to read helper file %s", res_dir.GetPath().c_str());
-            return false;
-        }
-    }
-    else
-    {
-        error.SetErrorString("unable to find support dir");
-        return false;
-    }
-}
-
 static bool
 IsSwiftResultVariable (const ConstString &name)
 {
@@ -542,12 +488,6 @@ SwiftLanguageRuntime::GetObjectDescription (Stream &str, ValueObject &object)
     if (object.IsUninitializedReference())
     {
         str.Printf("<uninitialized>");
-        return true;
-    }
-    Error error;
-    if (!LoadDumpForDebugger(error))
-    {
-        str.Printf("error loading helper function: %s", error.AsCString());
         return true;
     }
     

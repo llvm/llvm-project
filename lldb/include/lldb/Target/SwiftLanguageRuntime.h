@@ -521,9 +521,6 @@ protected:
     void
     SetupSwiftError ();
     
-    bool
-    LoadDumpForDebugger (Error& error);
-    
     const CompilerType&
     GetBoxMetadataType ();
     
@@ -535,8 +532,6 @@ protected:
     
     std::unordered_set<std::string> m_library_negative_cache;  // We have to load swift dependent libraries by hand,
     Mutex                           m_negative_cache_mutex;    // but if they are missing, we shouldn't keep trying.
-    
-    LazyBool m_loaded_DumpForDebugger;
     
     llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
