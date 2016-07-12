@@ -264,37 +264,6 @@ template <class ELFT> void Writer<ELFT>::run() {
   check(Buffer->commit());
 }
 
-namespace {
-template <bool Is64Bits> struct SectionKey {
-  typedef typename std::conditional<Is64Bits, uint64_t, uint32_t>::type uintX_t;
-  StringRef Name;
-  uint32_t Type;
-  uintX_t Flags;
-  uintX_t Alignment;
-};
-}
-namespace llvm {
-template <bool Is64Bits> struct DenseMapInfo<SectionKey<Is64Bits>> {
-  static SectionKey<Is64Bits> getEmptyKey() {
-    return SectionKey<Is64Bits>{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0,
-                                0};
-  }
-  static SectionKey<Is64Bits> getTombstoneKey() {
-    return SectionKey<Is64Bits>{DenseMapInfo<StringRef>::getTombstoneKey(), 0,
-                                0, 0};
-  }
-  static unsigned getHashValue(const SectionKey<Is64Bits> &Val) {
-    return hash_combine(Val.Name, Val.Type, Val.Flags, Val.Alignment);
-  }
-  static bool isEqual(const SectionKey<Is64Bits> &LHS,
-                      const SectionKey<Is64Bits> &RHS) {
-    return DenseMapInfo<StringRef>::isEqual(LHS.Name, RHS.Name) &&
-           LHS.Type == RHS.Type && LHS.Flags == RHS.Flags &&
-           LHS.Alignment == RHS.Alignment;
-  }
-};
-}
-
 template <class ELFT>
 static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Ignore)
@@ -553,79 +522,6 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
   S = Config->Rela ? "__rela_iplt_end" : "__rel_iplt_end";
   addOptionalSynthetic(Symtab, S, Out<ELFT>::RelaPlt,
                        DefinedSynthetic<ELFT>::SectionEnd);
-}
-
-// This class knows how to create an output section for a given
-// input section. Output section type is determined by various
-// factors, including input section's sh_flags, sh_type and
-// linker scripts.
-namespace {
-template <class ELFT> class OutputSectionFactory {
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
-                                                    StringRef OutsecName);
-
-  OutputSectionBase<ELFT> *lookup(StringRef Name, uint32_t Type,
-                                  uintX_t Flags) {
-    return Map.lookup({Name, Type, Flags, 0});
-  }
-
-private:
-  SectionKey<ELFT::Is64Bits> createKey(InputSectionBase<ELFT> *C,
-                                       StringRef OutsecName);
-
-  SmallDenseMap<SectionKey<ELFT::Is64Bits>, OutputSectionBase<ELFT> *> Map;
-};
-}
-
-template <class ELFT>
-std::pair<OutputSectionBase<ELFT> *, bool>
-OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
-                                   StringRef OutsecName) {
-  SectionKey<ELFT::Is64Bits> Key = createKey(C, OutsecName);
-  OutputSectionBase<ELFT> *&Sec = Map[Key];
-  if (Sec)
-    return {Sec, false};
-
-  switch (C->SectionKind) {
-  case InputSectionBase<ELFT>::Regular:
-    Sec = new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
-    break;
-  case InputSectionBase<ELFT>::EHFrame:
-    return {Out<ELFT>::EhFrame, false};
-  case InputSectionBase<ELFT>::Merge:
-    Sec = new MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags,
-                                       Key.Alignment);
-    break;
-  case InputSectionBase<ELFT>::MipsReginfo:
-    Sec = new MipsReginfoOutputSection<ELFT>();
-    break;
-  case InputSectionBase<ELFT>::MipsOptions:
-    Sec = new MipsOptionsOutputSection<ELFT>();
-    break;
-  }
-  return {Sec, true};
-}
-
-template <class ELFT>
-SectionKey<ELFT::Is64Bits>
-OutputSectionFactory<ELFT>::createKey(InputSectionBase<ELFT> *C,
-                                      StringRef OutsecName) {
-  const Elf_Shdr *H = C->getSectionHdr();
-  uintX_t Flags = H->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
-
-  // For SHF_MERGE we create different output sections for each alignment.
-  // This makes each output section simple and keeps a single level mapping from
-  // input to output.
-  uintX_t Alignment = 0;
-  if (isa<MergeInputSection<ELFT>>(C))
-    Alignment = std::max(H->sh_addralign, H->sh_entsize);
-
-  uint32_t Type = H->sh_type;
-  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
 }
 
 // The linker is expected to define some symbols depending on
@@ -1126,7 +1022,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Target->getVAStart();
+  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->VAStart;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
@@ -1134,7 +1030,7 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Target->getVAStart() + Out<ELFT>::ElfHeader->getSize() +
+  uintX_t VA = Config->VAStart + Out<ELFT>::ElfHeader->getSize() +
                Out<ELFT>::ProgramHeaders->getSize();
 
   uintX_t ThreadBssOffset = 0;

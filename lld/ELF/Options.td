@@ -79,6 +79,8 @@ def help: F<"help">, HelpText<"Print option help">;
 
 def icf: F<"icf=all">, HelpText<"Enable identical code folding">;
 
+def image_base : J<"image-base=">, HelpText<"Set the base address">;
+
 def gc_sections: F<"gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
 

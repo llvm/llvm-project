@@ -569,7 +569,7 @@ NativeProcessLinux::ChildFunc(const LaunchArgs &args)
         // issued, such as when running the test suite. (The file remains open when someone does
         // an "adb shell" command in the fork() child before it has had a chance to exec.) Since
         // this state should clear up quickly, wait a while and then give it one more go.
-        usleep(10000);
+        usleep(50000);
         execve(args.m_argv[0], const_cast<char *const *>(args.m_argv), const_cast<char *const *>(envp));
     }
 

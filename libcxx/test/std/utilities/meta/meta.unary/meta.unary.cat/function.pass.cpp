@@ -88,6 +88,6 @@ int main()
     TEST_REF_QUALIFIED( int (double, char, ...) );
 #endif
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_function<incomplete_type>::value, "");
 }

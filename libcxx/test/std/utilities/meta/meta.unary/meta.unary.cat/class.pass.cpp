@@ -53,7 +53,8 @@ struct incomplete_type;
 int main()
 {
     test_class<Class>();
+    test_class<incomplete_type>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert( std::is_class<incomplete_type>::value, "");
 }

@@ -661,6 +661,35 @@ template <class ELFT> struct Out {
   static OutputSectionBase<ELFT> *ProgramHeaders;
 };
 
+template <bool Is64Bits> struct SectionKey {
+  typedef typename std::conditional<Is64Bits, uint64_t, uint32_t>::type uintX_t;
+  StringRef Name;
+  uint32_t Type;
+  uintX_t Flags;
+  uintX_t Alignment;
+};
+
+// This class knows how to create an output section for a given
+// input section. Output section type is determined by various
+// factors, including input section's sh_flags, sh_type and
+// linker scripts.
+template <class ELFT> class OutputSectionFactory {
+  typedef typename ELFT::Shdr Elf_Shdr;
+  typedef typename ELFT::uint uintX_t;
+  typedef typename elf::SectionKey<ELFT::Is64Bits> Key;
+
+public:
+  std::pair<OutputSectionBase<ELFT> *, bool> create(InputSectionBase<ELFT> *C,
+                                                    StringRef OutsecName);
+
+  OutputSectionBase<ELFT> *lookup(StringRef Name, uint32_t Type, uintX_t Flags);
+
+private:
+  Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
+
+  llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
+};
+
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;
 template <class ELFT> DynamicSection<ELFT> *Out<ELFT>::Dynamic;
 template <class ELFT> EhFrameHeader<ELFT> *Out<ELFT>::EhFrameHdr;
@@ -692,4 +721,15 @@ template <class ELFT> OutputSectionBase<ELFT> *Out<ELFT>::ProgramHeaders;
 } // namespace elf
 } // namespace lld
 
-#endif // LLD_ELF_OUTPUT_SECTIONS_H
+namespace llvm {
+template <bool Is64Bits> struct DenseMapInfo<lld::elf::SectionKey<Is64Bits>> {
+  typedef typename lld::elf::SectionKey<Is64Bits> Key;
+
+  static Key getEmptyKey();
+  static Key getTombstoneKey();
+  static unsigned getHashValue(const Key &Val);
+  static bool isEqual(const Key &LHS, const Key &RHS);
+};
+}
+
+#endif

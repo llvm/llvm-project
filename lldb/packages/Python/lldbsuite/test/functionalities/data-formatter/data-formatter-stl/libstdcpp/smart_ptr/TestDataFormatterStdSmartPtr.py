@@ -15,6 +15,7 @@ class StdSmartPtrDataFormatterTestCase(TestBase):
 
     @skipIfFreeBSD
     @skipIfWindows # libstdcpp not ported to Windows
+    @skipIfDarwin # doesn't compile on Darwin
     def test_with_run_command(self):
         self.build()
         self.runCmd("file a.out", CURRENT_EXECUTABLE_SET)
