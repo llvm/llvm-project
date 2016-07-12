@@ -95,6 +95,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
+#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 
 #ifdef LLDB_CONFIGURATION_DEBUG
 #define VALID_OR_RETURN(value) do { lldbassert (!HasFatalErrors()); if (HasFatalErrors()) { return (value); } } while (0)
@@ -1826,6 +1827,20 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             // First, prime the compiler with the options from the main executable:
             bool read_options_from_ast = false;
             ModuleSP exe_module_sp (target->GetExecutableModule());
+            
+            // If we're debugging a testsuite, then treat the main test bundle as the executable
+            static ConstString s_XCTest("XCTest");
+            
+            if (exe_module_sp->GetFileSpec().GetFilename() == s_XCTest)
+            {
+                ModuleSP unit_test_module = PlatformDarwin::GetUnitTestModule(target->GetImages());
+                
+                if (unit_test_module)
+                {
+                    exe_module_sp = unit_test_module;
+                }
+            }
+                
             if (exe_module_sp)
             {
                 SymbolVendor *sym_vendor = exe_module_sp->GetSymbolVendor();

@@ -97,6 +97,9 @@ public:
 
     lldb_private::FileSpec
     LocateExecutable (const char *basename) override;
+    
+    static lldb::ModuleSP
+    GetUnitTestModule (lldb_private::ModuleList &modules);
 
 protected:
     void
