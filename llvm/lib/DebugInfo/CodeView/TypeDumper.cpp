@@ -286,12 +286,15 @@ Error CVTypeDumper::visitUnion(UnionRecord &Union) {
 }
 
 Error CVTypeDumper::visitEnum(EnumRecord &Enum) {
+  uint16_t Props = static_cast<uint16_t>(Enum.getOptions());
   W->printNumber("NumEnumerators", Enum.getMemberCount());
   W->printFlags("Properties", uint16_t(Enum.getOptions()),
                 makeArrayRef(ClassOptionNames));
   printTypeIndex("UnderlyingType", Enum.getUnderlyingType());
   printTypeIndex("FieldListType", Enum.getFieldList());
   W->printString("Name", Enum.getName());
+  if (Props & uint16_t(ClassOptions::HasUniqueName))
+    W->printString("LinkageName", Enum.getUniqueName());
   Name = Enum.getName();
   return Error::success();
 }

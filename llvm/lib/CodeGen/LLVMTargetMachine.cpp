@@ -70,6 +70,8 @@ void LLVMTargetMachine::initAsmInfo() {
   if (Options.DisableIntegratedAS)
     TmpAsmInfo->setUseIntegratedAssembler(false);
 
+  TmpAsmInfo->setPreserveAsmComments(Options.MCOptions.PreserveAsmComments);
+
   if (Options.CompressDebugSections)
     TmpAsmInfo->setCompressDebugSections(DebugCompressionType::DCT_ZlibGnu);
 

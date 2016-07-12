@@ -12,6 +12,7 @@
 #include "PdbYaml.h"
 #include "llvm-pdbdump.h"
 
+#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -22,7 +23,8 @@ using namespace llvm::pdb;
 YAMLOutputStyle::YAMLOutputStyle(PDBFile &File) : File(File), Out(outs()) {}
 
 Error YAMLOutputStyle::dump() {
-  if (opts::pdb2yaml::StreamDirectory || opts::pdb2yaml::PdbStream)
+  if (opts::pdb2yaml::StreamDirectory || opts::pdb2yaml::PdbStream ||
+      opts::pdb2yaml::DbiStream)
     opts::pdb2yaml::StreamMetadata = true;
 
   if (auto EC = dumpFileHeaders())
@@ -37,25 +39,32 @@ Error YAMLOutputStyle::dump() {
   if (auto EC = dumpPDBStream())
     return EC;
 
+  if (auto EC = dumpDbiStream())
+    return EC;
+
   flush();
   return Error::success();
 }
 
 Error YAMLOutputStyle::dumpFileHeaders() {
+  if (opts::pdb2yaml::NoFileHeaders)
+    return Error::success();
+
   yaml::MsfHeaders Headers;
-  Obj.Headers.SuperBlock.NumBlocks = File.getBlockCount();
-  Obj.Headers.SuperBlock.BlockMapAddr = File.getBlockMapIndex();
-  Obj.Headers.BlockMapOffset = File.getBlockMapOffset();
-  Obj.Headers.SuperBlock.BlockSize = File.getBlockSize();
+  Obj.Headers.emplace();
+  Obj.Headers->SuperBlock.NumBlocks = File.getBlockCount();
+  Obj.Headers->SuperBlock.BlockMapAddr = File.getBlockMapIndex();
+  Obj.Headers->BlockMapOffset = File.getBlockMapOffset();
+  Obj.Headers->SuperBlock.BlockSize = File.getBlockSize();
   auto Blocks = File.getDirectoryBlockArray();
-  Obj.Headers.DirectoryBlocks.assign(Blocks.begin(), Blocks.end());
-  Obj.Headers.NumDirectoryBlocks = File.getNumDirectoryBlocks();
-  Obj.Headers.SuperBlock.NumDirectoryBytes = File.getNumDirectoryBytes();
-  Obj.Headers.NumStreams =
+  Obj.Headers->DirectoryBlocks.assign(Blocks.begin(), Blocks.end());
+  Obj.Headers->NumDirectoryBlocks = File.getNumDirectoryBlocks();
+  Obj.Headers->SuperBlock.NumDirectoryBytes = File.getNumDirectoryBytes();
+  Obj.Headers->NumStreams =
       opts::pdb2yaml::StreamMetadata ? File.getNumStreams() : 0;
-  Obj.Headers.SuperBlock.Unknown0 = File.getUnknown0();
-  Obj.Headers.SuperBlock.Unknown1 = File.getUnknown1();
-  Obj.Headers.FileSize = File.getFileSize();
+  Obj.Headers->SuperBlock.Unknown0 = File.getUnknown0();
+  Obj.Headers->SuperBlock.Unknown1 = File.getUnknown1();
+  Obj.Headers->FileSize = File.getFileSize();
 
   return Error::success();
 }
@@ -98,6 +107,26 @@ Error YAMLOutputStyle::dumpPDBStream() {
   Obj.PdbStream->Signature = InfoS.getSignature();
   Obj.PdbStream->Version = InfoS.getVersion();
 
+  return Error::success();
+}
+
+Error YAMLOutputStyle::dumpDbiStream() {
+  if (!opts::pdb2yaml::DbiStream)
+    return Error::success();
+
+  auto DbiS = File.getPDBDbiStream();
+  if (!DbiS)
+    return DbiS.takeError();
+
+  auto &DS = DbiS.get();
+  Obj.DbiStream.emplace();
+  Obj.DbiStream->Age = DS.getAge();
+  Obj.DbiStream->BuildNumber = DS.getBuildNumber();
+  Obj.DbiStream->Flags = DS.getFlags();
+  Obj.DbiStream->MachineType = DS.getMachineType();
+  Obj.DbiStream->PdbDllRbld = DS.getPdbDllRbld();
+  Obj.DbiStream->PdbDllVersion = DS.getPdbDllVersion();
+  Obj.DbiStream->VerHeader = DS.getDbiVersion();
   return Error::success();
 }
 

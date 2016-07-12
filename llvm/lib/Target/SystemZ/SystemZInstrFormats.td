@@ -1308,6 +1308,15 @@ class CondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let R4 = 0;
 }
 
+class CondUnaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                   Immediate imm>
+  : InstRIEd<opcode, (outs cls:$R1),
+                     (ins imm:$I2, cond4:$valid, cond4:$R3),
+             mnemonic#"$R3\t$R1, $I2", []>,
+    Requires<[FeatureLoadStoreOnCond2]> {
+  let CCMaskLast = 1;
+}
+
 // Like CondUnaryRRF, but used for the raw assembly form.  The condition-code
 // mask is the third operand rather than being part of the mnemonic.
 class AsmCondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
@@ -1320,6 +1329,16 @@ class AsmCondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let R4 = 0;
 }
 
+class AsmCondUnaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                   Immediate imm>
+  : InstRIEd<opcode, (outs cls:$R1),
+                     (ins cls:$R1src, imm:$I2, imm32zx4:$R3),
+             mnemonic#"\t$R1, $I2, $R3", []>,
+    Requires<[FeatureLoadStoreOnCond2]> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+}
+
 // Like CondUnaryRRF, but with a fixed CC mask.
 class FixedCondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
                         RegisterOperand cls2, bits<4> ccmask>
@@ -1330,6 +1349,17 @@ class FixedCondUnaryRRF<string mnemonic, bits<16> opcode, RegisterOperand cls1,
   let DisableEncoding = "$R1src";
   let R3 = ccmask;
   let R4 = 0;
+}
+
+class FixedCondUnaryRIE<string mnemonic, bits<16> opcode, RegisterOperand cls,
+                   Immediate imm, bits<4> ccmask>
+  : InstRIEd<opcode, (outs cls:$R1),
+                     (ins cls:$R1src, imm:$I2),
+             mnemonic#"\t$R1, $I2", []>,
+    Requires<[FeatureLoadStoreOnCond2]> {
+  let Constraints = "$R1 = $R1src";
+  let DisableEncoding = "$R1src";
+  let R3 = ccmask;
 }
 
 class UnaryRI<string mnemonic, bits<12> opcode, SDPatternOperator operator,

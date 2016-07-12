@@ -1,5 +1,7 @@
 ; RUN: llvm-pdbdump pdb2yaml -stream-metadata -stream-directory -pdb-stream %p/Inputs/empty.pdb \
 ; RUN:   | FileCheck -check-prefix=YAML %s
+; RUN: llvm-pdbdump pdb2yaml -no-file-headers -stream-metadata -stream-directory -pdb-stream \
+; RUN:   %p/Inputs/empty.pdb | FileCheck -check-prefix=NO-HEADERS %s
 
 ; YAML:      ---
 ; YAML-NEXT: MSF:
@@ -72,5 +74,10 @@
 ; YAML-NEXT:   Age:             1
 ; YAML-NEXT:   Guid:            '{0B355641-86A0-A249-896F-9988FAE52FF0}'
 ; YAML-NEXT:   Signature:       1424295906
-; YAML-NEXT:   Version:         20000404
+; YAML-NEXT:   Version:         VC70
 ; YAML-NEXT: ...
+
+; NO-HEADERS: ---
+; NO-HEADERS-NOT: MSF:
+; NO-HEADERS-NOT:   SuperBlock:
+; NO-HEADERS: ...

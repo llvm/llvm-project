@@ -238,21 +238,21 @@ define void @uitofp8(<8 x i1> %a, <8 x i8> %b, <8 x i16> %c, <8 x i32> %d) {
 
 define void @fp_conv(<8 x float> %a, <16 x float>%b, <4 x float> %c) {
 ;CHECK-LABEL: for function 'fp_conv'
-  ; CHECK-AVX512: cost of 1 {{.*}} fpext
-  %A1 = fpext <8 x float> %a to <8 x double>
+  ; CHECK: cost of 1 {{.*}} %A1 = fpext
+  %A1 = fpext <4 x float> %c to <4 x double>
 
-  ; CHECK-AVX512: cost of 1 {{.*}} fpext
-  %A2 = fpext <4 x float> %c to <4 x double>
+  ; CHECK-AVX:    cost of 3 {{.*}} %A2 = fpext
+  ; CHECK-AVX2:   cost of 3 {{.*}} %A2 = fpext
+  ; CHECK-AVX512: cost of 1 {{.*}} %A2 = fpext
+  %A2 = fpext <8 x float> %a to <8 x double>
 
-  ; CHECK-AVX2:   cost of 3 {{.*}} %A3 = fpext
-  ; CHECK-AVX512: cost of 1 {{.*}} %A3 = fpext
-  %A3 = fpext <8 x float> %a to <8 x double>
+  ; CHECK: cost of 1 {{.*}} %A3 = fptrunc
+  %A3 = fptrunc <4 x double> undef to <4 x float>
 
+  ; CHECK-AVX:    cost of 3 {{.*}} %A4 = fptrunc
   ; CHECK-AVX2:   cost of 3 {{.*}} %A4 = fptrunc
   ; CHECK-AVX512: cost of 1 {{.*}} %A4 = fptrunc
   %A4 = fptrunc <8 x double> undef to <8 x float>
 
-  ; CHECK-AVX512: cost of 1 {{.*}} %A5 = fptrunc
-  %A5 = fptrunc <4 x double> undef to <4 x float>
   ret void
 }

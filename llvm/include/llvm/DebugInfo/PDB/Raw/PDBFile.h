@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -31,6 +32,7 @@ class DbiStream;
 class InfoStream;
 class MappedBlockStream;
 class NameHashTable;
+class PDBFileBuilder;
 class PublicsStream;
 class SymbolStream;
 class TpiStream;
@@ -41,6 +43,8 @@ static const char MsfMagic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
                                 '\r', '\n', '\x1a', 'D', 'S', '\0', '\0', '\0'};
 
 class PDBFile : public IPDBFile {
+  friend PDBFileBuilder;
+
 public:
   // The superblock is overlaid at the beginning of the file (offset 0).
   // It starts with a magic header and is followed by information which
@@ -107,8 +111,6 @@ public:
     return BlockNumber * BlockSize;
   }
 
-  Expected<InfoStream &> emplacePDBInfoStream();
-
   Expected<InfoStream &> getPDBInfoStream();
   Expected<DbiStream &> getPDBDbiStream();
   Expected<TpiStream &> getPDBTpiStream();
@@ -117,14 +119,13 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<NameHashTable &> getStringTable();
 
-  Error setSuperBlock(const SuperBlock *Block);
-  void setStreamSizes(ArrayRef<support::ulittle32_t> Sizes);
-  void setDirectoryBlocks(ArrayRef<support::ulittle32_t> Directory);
-  void setStreamMap(std::vector<ArrayRef<support::ulittle32_t>> &Streams);
-  Error generateSimpleStreamMap();
   Error commit();
 
 private:
+  Error setSuperBlock(const SuperBlock *Block);
+
+  BumpPtrAllocator Allocator;
+
   std::unique_ptr<codeview::StreamInterface> Buffer;
   const PDBFile::SuperBlock *SB;
   ArrayRef<support::ulittle32_t> StreamSizes;

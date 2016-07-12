@@ -37,9 +37,9 @@ namespace {
 class HexagonCFGOptimizer : public MachineFunctionPass {
 
 private:
-  void InvertAndChangeJumpTarget(MachineInstr*, MachineBasicBlock*);
+  void InvertAndChangeJumpTarget(MachineInstr &, MachineBasicBlock *);
 
- public:
+public:
   static char ID;
   HexagonCFGOptimizer() : MachineFunctionPass(ID) {
     initializeHexagonCFGOptimizerPass(*PassRegistry::getPassRegistry());
@@ -68,14 +68,12 @@ static bool IsUnconditionalJump(int Opc) {
   return (Opc == Hexagon::J2_jump);
 }
 
-
-void
-HexagonCFGOptimizer::InvertAndChangeJumpTarget(MachineInstr* MI,
-                                               MachineBasicBlock* NewTarget) {
+void HexagonCFGOptimizer::InvertAndChangeJumpTarget(
+    MachineInstr &MI, MachineBasicBlock *NewTarget) {
   const TargetInstrInfo *TII =
-      MI->getParent()->getParent()->getSubtarget().getInstrInfo();
+      MI.getParent()->getParent()->getSubtarget().getInstrInfo();
   int NewOpcode = 0;
-  switch(MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   case Hexagon::J2_jumpt:
     NewOpcode = Hexagon::J2_jumpf;
     break;
@@ -96,8 +94,8 @@ HexagonCFGOptimizer::InvertAndChangeJumpTarget(MachineInstr* MI,
     llvm_unreachable("Cannot handle this case");
   }
 
-  MI->setDesc(TII->get(NewOpcode));
-  MI->getOperand(1).setMBB(NewTarget);
+  MI.setDesc(TII->get(NewOpcode));
+  MI.getOperand(1).setMBB(NewTarget);
 }
 
 
@@ -113,8 +111,8 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
     // Traverse the basic block.
     MachineBasicBlock::iterator MII = MBB->getFirstTerminator();
     if (MII != MBB->end()) {
-      MachineInstr *MI = MII;
-      int Opc = MI->getOpcode();
+      MachineInstr &MI = *MII;
+      int Opc = MI.getOpcode();
       if (IsConditionalBranch(Opc)) {
 
         //
@@ -166,9 +164,9 @@ bool HexagonCFGOptimizer::runOnMachineFunction(MachineFunction &Fn) {
         // The target of the unconditional branch must be JumpAroundTarget.
         // TODO: If not, we should not invert the unconditional branch.
         MachineBasicBlock* CondBranchTarget = nullptr;
-        if ((MI->getOpcode() == Hexagon::J2_jumpt) ||
-            (MI->getOpcode() == Hexagon::J2_jumpf)) {
-          CondBranchTarget = MI->getOperand(1).getMBB();
+        if (MI.getOpcode() == Hexagon::J2_jumpt ||
+            MI.getOpcode() == Hexagon::J2_jumpf) {
+          CondBranchTarget = MI.getOperand(1).getMBB();
         }
 
         if (!LayoutSucc || (CondBranchTarget != JumpAroundTarget)) {

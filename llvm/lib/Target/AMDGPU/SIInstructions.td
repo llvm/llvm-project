@@ -1899,36 +1899,36 @@ defm V_ASHRREV_I64 : VOP3Inst <vop3<0, 0x291>, "v_ashrrev_i64",
 //===----------------------------------------------------------------------===//
 // Pseudo Instructions
 //===----------------------------------------------------------------------===//
-let isCodeGenOnly = 1, isPseudo = 1 in {
+
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
 
 // For use in patterns
 def V_CNDMASK_B64_PSEUDO : VOP3Common <(outs VReg_64:$vdst),
-  (ins VSrc_64:$src0, VSrc_64:$src1, SSrc_64:$src2), "", []
->;
-
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
-// 64-bit vector move instruction.  This is mainly used by the SIFoldOperands
-// pass to enable folding of inline immediates.
-def V_MOV_B64_PSEUDO : InstSI <(outs VReg_64:$vdst), (ins VSrc_64:$src0), "", []>;
-} // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0
-
-let hasSideEffects = 1, SALU = 1 in {
-def SGPR_USE : InstSI <(outs), (ins)>;
+  (ins VSrc_64:$src0, VSrc_64:$src1, SSrc_64:$src2), "", []> {
+  let isPseudo = 1;
+  let isCodeGenOnly = 1;
 }
 
+// 64-bit vector move instruction.  This is mainly used by the SIFoldOperands
+// pass to enable folding of inline immediates.
+def V_MOV_B64_PSEUDO : PseudoInstSI <(outs VReg_64:$vdst), (ins VSrc_64:$src0)> {
+  let VALU = 1;
+}
+} // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
+
 let usesCustomInserter = 1, SALU = 1 in {
-def GET_GROUPSTATICSIZE : InstSI <(outs SReg_32:$sdst), (ins), "",
+def GET_GROUPSTATICSIZE : PseudoInstSI <(outs SReg_32:$sdst), (ins),
   [(set SReg_32:$sdst, (int_amdgcn_groupstaticsize))]>;
 } // End let usesCustomInserter = 1, SALU = 1
 
 // SI pseudo instructions. These are used by the CFG structurizer pass
 // and should be lowered to ISA instructions prior to codegen.
 
-let hasSideEffects = 1, isPseudo = 1, isCodeGenOnly = 1 in {
+let hasSideEffects = 1 in {
 
 // Dummy terminator instruction to use after control flow instructions
 // replaced with exec mask operations.
-def SI_MASK_BRANCH : InstSI <
+def SI_MASK_BRANCH : PseudoInstSI <
   (outs), (ins brtarget:$target, SReg_64:$dst)> {
   let isBranch = 1;
   let isTerminator = 1;
@@ -1936,61 +1936,63 @@ def SI_MASK_BRANCH : InstSI <
   let SALU = 1;
 }
 
-let Uses = [EXEC], Defs = [EXEC] in {
+let Uses = [EXEC], Defs = [EXEC, SCC] in {
 
 let isBranch = 1, isTerminator = 1 in {
 
-def SI_IF: InstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$vcc, brtarget:$target), "",
-  [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))]
->;
+def SI_IF: PseudoInstSI <
+  (outs SReg_64:$dst), (ins SReg_64:$vcc, brtarget:$target),
+  [(set i64:$dst, (int_amdgcn_if i1:$vcc, bb:$target))]> {
+  let Constraints = "";
+}
 
-def SI_ELSE : InstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target), "",
+def SI_ELSE : PseudoInstSI <
+  (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target),
   [(set i64:$dst, (int_amdgcn_else i64:$src, bb:$target))]> {
   let Constraints = "$src = $dst";
 }
 
-def SI_LOOP : InstSI <
-  (outs), (ins SReg_64:$saved, brtarget:$target), "",
+def SI_LOOP : PseudoInstSI <
+  (outs), (ins SReg_64:$saved, brtarget:$target),
   [(int_amdgcn_loop i64:$saved, bb:$target)]
 >;
 
 } // End isBranch = 1, isTerminator = 1
 
-def SI_BREAK : InstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$src), "",
+
+def SI_BREAK : PseudoInstSI <
+  (outs SReg_64:$dst), (ins SReg_64:$src),
   [(set i64:$dst, (int_amdgcn_break i64:$src))]
 >;
 
-def SI_IF_BREAK : InstSI <
-  (outs SReg_64:$dst),   (ins SReg_64:$vcc, SReg_64:$src), "",
+def SI_IF_BREAK : PseudoInstSI <
+  (outs SReg_64:$dst), (ins SReg_64:$vcc, SReg_64:$src),
   [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]
 >;
 
-def SI_ELSE_BREAK : InstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$src0, SReg_64:$src1), "",
+def SI_ELSE_BREAK : PseudoInstSI <
+  (outs SReg_64:$dst), (ins SReg_64:$src0, SReg_64:$src1),
   [(set i64:$dst, (int_amdgcn_else_break i64:$src0, i64:$src1))]
 >;
 
-def SI_END_CF : InstSI <
-  (outs), (ins SReg_64:$saved), "",
+def SI_END_CF : PseudoInstSI <
+  (outs), (ins SReg_64:$saved),
   [(int_amdgcn_end_cf i64:$saved)]
 >;
 
-} // End Uses = [EXEC], Defs = [EXEC]
+} // End Uses = [EXEC], Defs = [EXEC, SCC]
 
 let Uses = [EXEC], Defs = [EXEC,VCC] in {
-def SI_KILL : InstSI <
-  (outs), (ins VSrc_32:$src), "",
+def SI_KILL : PseudoInstSI <
+  (outs), (ins VSrc_32:$src),
   [(int_AMDGPU_kill f32:$src)]
 >;
 } // End Uses = [EXEC], Defs = [EXEC,VCC]
 
 } // End mayLoad = 1, mayStore = 1, hasSideEffects = 1
 
-def SI_PS_LIVE : InstSI <
-  (outs SReg_64:$dst), (ins), "",
+def SI_PS_LIVE : PseudoInstSI <
+  (outs SReg_64:$dst), (ins),
   [(set i1:$dst, (int_amdgcn_ps_live))]> {
   let SALU = 1;
 }
@@ -1999,23 +2001,19 @@ def SI_PS_LIVE : InstSI <
 // s_mov_b32 rather than a copy of another initialized
 // register. MachineCSE skips copies, and we don't want to have to
 // fold operands before it runs.
-def SI_INIT_M0 : InstSI <(outs), (ins SSrc_32:$src)> {
+def SI_INIT_M0 : PseudoInstSI <(outs), (ins SSrc_32:$src)> {
   let Defs = [M0];
   let usesCustomInserter = 1;
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
   let isAsCheapAsAMove = 1;
   let SALU = 1;
   let isReMaterializable = 1;
 }
 
-def SI_RETURN : InstSI <
-  (outs), (ins variable_ops), "", [(AMDGPUreturn)]> {
+def SI_RETURN : PseudoInstSI <
+  (outs), (ins variable_ops), [(AMDGPUreturn)]> {
   let isTerminator = 1;
   let isBarrier = 1;
   let isReturn = 1;
-  let isPseudo = 1;
-  let isCodeGenOnly = 1;
   let hasSideEffects = 1;
   let SALU = 1;
   let hasNoSchedulingInfo = 1;
@@ -2024,11 +2022,11 @@ def SI_RETURN : InstSI <
 let Uses = [EXEC], Defs = [EXEC, VCC, M0],
   UseNamedOperandTable = 1 in {
 
-class SI_INDIRECT_SRC<RegisterClass rc> : InstSI <
+class SI_INDIRECT_SRC<RegisterClass rc> : PseudoInstSI <
   (outs VGPR_32:$vdst, SReg_64:$sdst),
   (ins rc:$src, VS_32:$idx, i32imm:$offset)>;
 
-class SI_INDIRECT_DST<RegisterClass rc> : InstSI <
+class SI_INDIRECT_DST<RegisterClass rc> : PseudoInstSI <
   (outs rc:$vdst, SReg_64:$sdst),
   (ins unknown:$src, VS_32:$idx, i32imm:$offset, VGPR_32:$val)> {
   let Constraints = "$src = $vdst";
@@ -2050,16 +2048,15 @@ def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
 } // End Uses = [EXEC], Defs = [EXEC,VCC,M0]
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
-
   let UseNamedOperandTable = 1, Uses = [EXEC] in {
-    def _SAVE : InstSI <
+    def _SAVE : PseudoInstSI <
       (outs),
       (ins sgpr_class:$src, i32imm:$frame_idx)> {
       let mayStore = 1;
       let mayLoad = 0;
     }
 
-    def _RESTORE : InstSI <
+    def _RESTORE : PseudoInstSI <
       (outs sgpr_class:$dst),
       (ins i32imm:$frame_idx)> {
       let mayStore = 0;
@@ -2079,7 +2076,7 @@ defm SI_SPILL_S512 : SI_SPILL_SGPR <SReg_512>;
 
 multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
   let UseNamedOperandTable = 1, VGPRSpill = 1, Uses = [EXEC] in {
-    def _SAVE : InstSI <
+    def _SAVE : PseudoInstSI <
       (outs),
       (ins vgpr_class:$src, i32imm:$frame_idx, SReg_128:$scratch_rsrc,
            SReg_32:$scratch_offset, i32imm:$offset)> {
@@ -2087,7 +2084,7 @@ multiclass SI_SPILL_VGPR <RegisterClass vgpr_class> {
       let mayLoad = 0;
     }
 
-    def _RESTORE : InstSI <
+    def _RESTORE : PseudoInstSI <
       (outs vgpr_class:$dst),
       (ins i32imm:$frame_idx, SReg_128:$scratch_rsrc, SReg_32:$scratch_offset,
            i32imm:$offset)> {
@@ -2106,17 +2103,14 @@ defm SI_SPILL_V512 : SI_SPILL_VGPR <VReg_512>;
 
 let Defs = [SCC] in {
 
-def SI_PC_ADD_REL_OFFSET : InstSI <
+def SI_PC_ADD_REL_OFFSET : PseudoInstSI <
   (outs SReg_64:$dst),
   (ins si_ga:$ptr),
-  "", [(set SReg_64:$dst, (i64 (SIpc_add_rel_offset (tglobaladdr:$ptr))))]
-> {
+  [(set SReg_64:$dst, (i64 (SIpc_add_rel_offset (tglobaladdr:$ptr))))]> {
   let SALU = 1;
 }
 
 } // End Defs = [SCC]
-
-} // End isCodeGenOnly, isPseudo
 
 } // End SubtargetPredicate = isGCN
 
@@ -3314,13 +3308,13 @@ def : MTBUF_StoreResource <v4i32, 4, TBUFFER_STORE_FORMAT_XYZW>;
 multiclass SI_INDIRECT_Pattern <ValueType vt, ValueType eltvt, string VecSize> {
   // Extract with offset
   def : Pat<
-    (eltvt (extractelt vt:$src, (MOVRELSOffset i32:$idx, (i32 imm:$offset)))),
+    (eltvt (extractelt vt:$src, (MOVRELOffset i32:$idx, (i32 imm:$offset)))),
     (!cast<Instruction>("SI_INDIRECT_SRC_"#VecSize) $src, $idx, imm:$offset)
   >;
 
   // Insert with offset
   def : Pat<
-    (insertelt vt:$src, eltvt:$val, (MOVRELDOffset i32:$idx, (i32 imm:$offset))),
+    (insertelt vt:$src, eltvt:$val, (MOVRELOffset i32:$idx, (i32 imm:$offset))),
     (!cast<Instruction>("SI_INDIRECT_DST_"#VecSize) $src, $idx, imm:$offset, $val)
   >;
 }

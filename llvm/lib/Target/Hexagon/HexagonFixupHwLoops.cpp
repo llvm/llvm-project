@@ -82,11 +82,11 @@ FunctionPass *llvm::createHexagonFixupHwLoops() {
 }
 
 /// \brief Returns true if the instruction is a hardware loop instruction.
-static bool isHardwareLoop(const MachineInstr *MI) {
-  return MI->getOpcode() == Hexagon::J2_loop0r ||
-         MI->getOpcode() == Hexagon::J2_loop0i ||
-         MI->getOpcode() == Hexagon::J2_loop1r ||
-         MI->getOpcode() == Hexagon::J2_loop1i;
+static bool isHardwareLoop(const MachineInstr &MI) {
+  return MI.getOpcode() == Hexagon::J2_loop0r ||
+         MI.getOpcode() == Hexagon::J2_loop0i ||
+         MI.getOpcode() == Hexagon::J2_loop1r ||
+         MI.getOpcode() == Hexagon::J2_loop1i;
 }
 
 bool HexagonFixupHwLoops::runOnMachineFunction(MachineFunction &MF) {
@@ -143,7 +143,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
         ++MII;
         continue;
       }
-      if (isHardwareLoop(MII)) {
+      if (isHardwareLoop(*MII)) {
         assert(MII->getOperand(0).isMBB() &&
                "Expect a basic block as loop operand");
         int diff = InstOffset - BlockToInstOffset[MII->getOperand(0).getMBB()];

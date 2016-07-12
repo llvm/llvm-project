@@ -244,6 +244,11 @@ public:
 
   bool isFPVectorizationPotentiallyUnsafe() { return false; }
 
+  bool allowsMisalignedMemoryAccesses(unsigned BitWidth,
+                                      unsigned AddressSpace,
+                                      unsigned Alignment,
+                                      bool *Fast) { return false; }
+
   TTI::PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) {
     return TTI::PSK_Software;
   }

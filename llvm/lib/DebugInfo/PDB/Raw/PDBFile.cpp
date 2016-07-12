@@ -173,17 +173,6 @@ llvm::ArrayRef<support::ulittle32_t> PDBFile::getDirectoryBlockArray() const {
   return DirectoryBlocks;
 }
 
-Expected<InfoStream &> PDBFile::emplacePDBInfoStream() {
-  if (Info)
-    Info.reset();
-
-  auto InfoS = MappedBlockStream::createIndexedStream(StreamPDB, *this);
-  if (!InfoS)
-    return InfoS.takeError();
-  Info = llvm::make_unique<InfoStream>(std::move(*InfoS));
-  return *Info;
-}
-
 Expected<InfoStream &> PDBFile::getPDBInfoStream() {
   if (!Info) {
     auto InfoS = MappedBlockStream::createIndexedStream(StreamPDB, *this);
@@ -349,64 +338,6 @@ Error PDBFile::setSuperBlock(const SuperBlock *Block) {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Too many directory blocks.");
 
-  return Error::success();
-}
-
-void PDBFile::setStreamSizes(ArrayRef<support::ulittle32_t> Sizes) {
-  StreamSizes = Sizes;
-}
-
-void PDBFile::setStreamMap(
-    std::vector<ArrayRef<support::ulittle32_t>> &Streams) {
-  StreamMap = Streams;
-}
-
-void PDBFile::setDirectoryBlocks(ArrayRef<support::ulittle32_t> Directory) {
-  DirectoryBlocks = Directory;
-}
-
-Error PDBFile::generateSimpleStreamMap() {
-  if (StreamSizes.empty())
-    return Error::success();
-
-  static std::vector<std::vector<support::ulittle32_t>> StaticMap;
-  StreamMap.clear();
-  StaticMap.clear();
-
-  // Figure out how many blocks are needed for all streams, and set the first
-  // used block to the highest block so that we can write the rest of the
-  // blocks contiguously.
-  uint32_t TotalFileBlocks = getBlockCount();
-  std::vector<support::ulittle32_t> ReservedBlocks;
-  ReservedBlocks.push_back(support::ulittle32_t(0));
-  ReservedBlocks.push_back(SB->BlockMapAddr);
-  ReservedBlocks.insert(ReservedBlocks.end(), DirectoryBlocks.begin(),
-                        DirectoryBlocks.end());
-
-  uint32_t BlocksNeeded = 0;
-  for (auto Size : StreamSizes)
-    BlocksNeeded += bytesToBlocks(Size, getBlockSize());
-
-  support::ulittle32_t NextBlock(TotalFileBlocks - BlocksNeeded -
-                                 ReservedBlocks.size());
-
-  StaticMap.resize(StreamSizes.size());
-  for (uint32_t S = 0; S < StreamSizes.size(); ++S) {
-    uint32_t Size = StreamSizes[S];
-    uint32_t NumBlocks = bytesToBlocks(Size, getBlockSize());
-    auto &ThisStream = StaticMap[S];
-    for (uint32_t I = 0; I < NumBlocks;) {
-      NextBlock += 1;
-      if (std::find(ReservedBlocks.begin(), ReservedBlocks.end(), NextBlock) !=
-          ReservedBlocks.end())
-        continue;
-
-      ++I;
-      assert(NextBlock < getBlockCount());
-      ThisStream.push_back(NextBlock);
-    }
-    StreamMap.push_back(ThisStream);
-  }
   return Error::success();
 }
 

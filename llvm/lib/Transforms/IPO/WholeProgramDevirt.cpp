@@ -35,6 +35,7 @@
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
@@ -215,7 +216,15 @@ struct VirtualCallSite {
   // of that field for details.
   unsigned *NumUnsafeUses;
 
+  void emitRemark() {
+    Function *F = CS.getCaller();
+    emitOptimizationRemark(F->getContext(), DEBUG_TYPE, *F,
+                           CS.getInstruction()->getDebugLoc(),
+                           "devirtualized call");
+  }
+
   void replaceAndErase(Value *New) {
+    emitRemark();
     CS->replaceAllUsesWith(New);
     if (auto II = dyn_cast<InvokeInst>(CS.getInstruction())) {
       BranchInst::Create(II->getNormalDest(), CS.getInstruction());
@@ -394,6 +403,7 @@ bool DevirtModule::trySingleImplDevirt(
 
   // If so, update each call site to call that implementation directly.
   for (auto &&VCallSite : CallSites) {
+    VCallSite.emitRemark();
     VCallSite.CS.setCalledFunction(ConstantExpr::getBitCast(
         TheFn, VCallSite.CS.getCalledValue()->getType()));
     // This use is no longer unsafe.

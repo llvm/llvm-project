@@ -44,6 +44,7 @@ public:
   const X86Subtarget *STI;
   const X86InstrInfo *TII;
   const X86RegisterInfo *TRI;
+  const X86MachineFunctionInfo *X86FI;
   const X86FrameLowering *X86FL;
 
   bool runOnMachineFunction(MachineFunction &Fn) override;
@@ -88,11 +89,18 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     // Adjust stack pointer.
     int StackAdj = StackAdjust.getImm();
+    int MaxTCDelta = X86FI->getTCReturnAddrDelta();
+    int Offset = 0;
+    assert(MaxTCDelta <= 0 && "MaxTCDelta should never be positive");
 
-    if (StackAdj) {
+    // Incoporate the retaddr area.
+    Offset = StackAdj-MaxTCDelta;
+    assert(Offset >= 0 && "Offset should never be negative");
+
+    if (Offset) {
       // Check for possible merge with preceding ADD instruction.
-      StackAdj += X86FL->mergeSPUpdates(MBB, MBBI, true);
-      X86FL->emitSPUpdate(MBB, MBBI, StackAdj, /*InEpilogue=*/true);
+      Offset += X86FL->mergeSPUpdates(MBB, MBBI, true);
+      X86FL->emitSPUpdate(MBB, MBBI, Offset, /*InEpilogue=*/true);
     }
 
     // Jump to label or value in register.
@@ -126,8 +134,8 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
           .addReg(JumpTarget.getReg(), RegState::Kill);
     }
 
-    MachineInstr *NewMI = std::prev(MBBI);
-    NewMI->copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
+    MachineInstr &NewMI = *std::prev(MBBI);
+    NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
 
     // Delete the pseudo instruction TCRETURN.
     MBB.erase(MBBI);
@@ -247,6 +255,7 @@ bool X86ExpandPseudo::runOnMachineFunction(MachineFunction &MF) {
   STI = &static_cast<const X86Subtarget &>(MF.getSubtarget());
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
+  X86FI = MF.getInfo<X86MachineFunctionInfo>();
   X86FL = STI->getFrameLowering();
 
   bool Modified = false;

@@ -67,14 +67,16 @@ CFLSteensAAResult::~CFLSteensAAResult() {}
 
 /// Information we have about a function and would like to keep around.
 class CFLSteensAAResult::FunctionInfo {
-  StratifiedSets<Value *> Sets;
+  StratifiedSets<InstantiatedValue> Sets;
   AliasSummary Summary;
 
 public:
   FunctionInfo(Function &Fn, const SmallVectorImpl<Value *> &RetVals,
-               StratifiedSets<Value *> S);
+               StratifiedSets<InstantiatedValue> S);
 
-  const StratifiedSets<Value *> &getStratifiedSets() const { return Sets; }
+  const StratifiedSets<InstantiatedValue> &getStratifiedSets() const {
+    return Sets;
+  }
   const AliasSummary &getAliasSummary() const { return Summary; }
 };
 
@@ -84,20 +86,9 @@ static Optional<Function *> parentFunctionOfValue(Value *);
 const StratifiedIndex StratifiedLink::SetSentinel =
     std::numeric_limits<StratifiedIndex>::max();
 
-namespace {
-
-/// StratifiedSets call for knowledge of "direction", so this is how we
-/// represent that locally.
-enum class Level { Same, Above, Below };
-}
-
 //===----------------------------------------------------------------------===//
 // Function declarations that require types defined in the namespace above
 //===----------------------------------------------------------------------===//
-
-/// Gets the "Level" that one should travel in StratifiedSets
-/// given an EdgeType.
-static Level directionOfEdgeType(EdgeType);
 
 /// Determines whether it would be pointless to add the given Value to our sets.
 static bool canSkipAddingToSets(Value *Val);
@@ -111,18 +102,6 @@ static Optional<Function *> parentFunctionOfValue(Value *Val) {
   if (auto *Arg = dyn_cast<Argument>(Val))
     return Arg->getParent();
   return None;
-}
-
-static Level directionOfEdgeType(EdgeType Weight) {
-  switch (Weight) {
-  case EdgeType::Reference:
-    return Level::Above;
-  case EdgeType::Dereference:
-    return Level::Below;
-  case EdgeType::Assign:
-    return Level::Same;
-  }
-  llvm_unreachable("Incomplete switch coverage");
 }
 
 static bool canSkipAddingToSets(Value *Val) {
@@ -148,7 +127,7 @@ static bool canSkipAddingToSets(Value *Val) {
 
 CFLSteensAAResult::FunctionInfo::FunctionInfo(
     Function &Fn, const SmallVectorImpl<Value *> &RetVals,
-    StratifiedSets<Value *> S)
+    StratifiedSets<InstantiatedValue> S)
     : Sets(std::move(S)) {
   // Historically, an arbitrary upper-bound of 50 args was selected. We may want
   // to remove this if it doesn't really matter in practice.
@@ -197,7 +176,7 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
   for (auto *RetVal : RetVals) {
     assert(RetVal != nullptr);
     assert(RetVal->getType()->isPointerTy());
-    auto RetInfo = Sets.find(RetVal);
+    auto RetInfo = Sets.find(InstantiatedValue{RetVal, 0});
     if (RetInfo.hasValue())
       AddToRetParamRelations(0, RetInfo->Index);
   }
@@ -206,7 +185,7 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
   unsigned I = 0;
   for (auto &Param : Fn.args()) {
     if (Param.getType()->isPointerTy()) {
-      auto ParamInfo = Sets.find(&Param);
+      auto ParamInfo = Sets.find(InstantiatedValue{&Param, 0});
       if (ParamInfo.hasValue())
         AddToRetParamRelations(I + 1, ParamInfo->Index);
     }
@@ -217,62 +196,41 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
 // Builds the graph + StratifiedSets for a function.
 CFLSteensAAResult::FunctionInfo CFLSteensAAResult::buildSetsFrom(Function *Fn) {
   CFLGraphBuilder<CFLSteensAAResult> GraphBuilder(*this, TLI, *Fn);
-  StratifiedSetsBuilder<Value *> SetBuilder;
+  StratifiedSetsBuilder<InstantiatedValue> SetBuilder;
 
+  // Add all CFLGraph nodes and all Dereference edges to StratifiedSets
   auto &Graph = GraphBuilder.getCFLGraph();
-  SmallVector<Value *, 16> Worklist;
-  for (auto Node : Graph.nodes())
-    Worklist.push_back(Node);
-
-  while (!Worklist.empty()) {
-    auto *CurValue = Worklist.pop_back_val();
-    SetBuilder.add(CurValue);
-    if (canSkipAddingToSets(CurValue))
+  for (const auto &Mapping : Graph.value_mappings()) {
+    auto Val = Mapping.first;
+    if (canSkipAddingToSets(Val))
       continue;
+    auto &ValueInfo = Mapping.second;
 
-    auto Attr = Graph.attrFor(CurValue);
-    SetBuilder.noteAttributes(CurValue, Attr);
-
-    for (const auto &Edge : Graph.edgesFor(CurValue)) {
-      auto Label = Edge.Type;
-      auto *OtherValue = Edge.Other;
-
-      if (canSkipAddingToSets(OtherValue))
-        continue;
-
-      bool Added;
-      switch (directionOfEdgeType(Label)) {
-      case Level::Above:
-        Added = SetBuilder.addAbove(CurValue, OtherValue);
-        break;
-      case Level::Below:
-        Added = SetBuilder.addBelow(CurValue, OtherValue);
-        break;
-      case Level::Same:
-        Added = SetBuilder.addWith(CurValue, OtherValue);
-        break;
-      }
-
-      if (Added)
-        Worklist.push_back(OtherValue);
+    assert(ValueInfo.getNumLevels() > 0);
+    SetBuilder.add(InstantiatedValue{Val, 0});
+    SetBuilder.noteAttributes(InstantiatedValue{Val, 0},
+                              ValueInfo.getNodeInfoAtLevel(0).Attr);
+    for (unsigned I = 0, E = ValueInfo.getNumLevels() - 1; I < E; ++I) {
+      SetBuilder.add(InstantiatedValue{Val, I + 1});
+      SetBuilder.noteAttributes(InstantiatedValue{Val, I + 1},
+                                ValueInfo.getNodeInfoAtLevel(I + 1).Attr);
+      SetBuilder.addBelow(InstantiatedValue{Val, I},
+                          InstantiatedValue{Val, I + 1});
     }
   }
 
-  // Special handling for interprocedural aliases
-  for (auto &Edge : GraphBuilder.getInstantiatedRelations()) {
-    auto FromVal = Edge.From.Val;
-    auto ToVal = Edge.To.Val;
-    SetBuilder.add(FromVal);
-    SetBuilder.add(ToVal);
-    SetBuilder.addBelowWith(FromVal, Edge.From.DerefLevel, ToVal,
-                            Edge.To.DerefLevel);
-  }
+  // Add all assign edges to StratifiedSets
+  for (const auto &Mapping : Graph.value_mappings()) {
+    auto Val = Mapping.first;
+    if (canSkipAddingToSets(Val))
+      continue;
+    auto &ValueInfo = Mapping.second;
 
-  // Special handling for interprocedural attributes
-  for (auto &IPAttr : GraphBuilder.getInstantiatedAttrs()) {
-    auto Val = IPAttr.IValue.Val;
-    SetBuilder.add(Val);
-    SetBuilder.addAttributesBelow(Val, IPAttr.IValue.DerefLevel, IPAttr.Attr);
+    for (unsigned I = 0, E = ValueInfo.getNumLevels(); I < E; ++I) {
+      auto Src = InstantiatedValue{Val, I};
+      for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges)
+        SetBuilder.addWith(Src, Edge.Other);
+    }
   }
 
   return FunctionInfo(*Fn, GraphBuilder.getReturnValues(), SetBuilder.build());
@@ -349,11 +307,11 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
   assert(MaybeInfo.hasValue());
 
   auto &Sets = MaybeInfo->getStratifiedSets();
-  auto MaybeA = Sets.find(ValA);
+  auto MaybeA = Sets.find(InstantiatedValue{ValA, 0});
   if (!MaybeA.hasValue())
     return MayAlias;
 
-  auto MaybeB = Sets.find(ValB);
+  auto MaybeB = Sets.find(InstantiatedValue{ValB, 0});
   if (!MaybeB.hasValue())
     return MayAlias;
 

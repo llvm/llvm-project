@@ -86,55 +86,56 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
     MachineBasicBlock::iterator MII = MBB->begin();
     MachineBasicBlock::iterator MIE = MBB->end ();
     while (MII != MIE) {
-      MachineInstr *MI = MII;
-      int Opc = MI->getOpcode();
+      MachineInstr &MI = *MII;
+      int Opc = MI.getOpcode();
       if (Opc == Hexagon::CONST32_Int_Real &&
-          MI->getOperand(1).isBlockAddress()) {
-        int DestReg = MI->getOperand(0).getReg();
-        MachineOperand &Symbol = MI->getOperand (1);
+          MI.getOperand(1).isBlockAddress()) {
+        int DestReg = MI.getOperand(0).getReg();
+        MachineOperand &Symbol = MI.getOperand(1);
 
-        BuildMI (*MBB, MII, MI->getDebugLoc(),
-                 TII->get(Hexagon::LO), DestReg).addOperand(Symbol);
-        BuildMI (*MBB, MII, MI->getDebugLoc(),
-                 TII->get(Hexagon::HI), DestReg).addOperand(Symbol);
+        BuildMI(*MBB, MII, MI.getDebugLoc(), TII->get(Hexagon::LO), DestReg)
+            .addOperand(Symbol);
+        BuildMI(*MBB, MII, MI.getDebugLoc(), TII->get(Hexagon::HI), DestReg)
+            .addOperand(Symbol);
         // MBB->erase returns the iterator to the next instruction, which is the
         // one we want to process next
-        MII = MBB->erase (MI);
+        MII = MBB->erase(&MI);
         continue;
       }
 
       else if (Opc == Hexagon::CONST32_Int_Real ||
                Opc == Hexagon::CONST32_Float_Real) {
-        int DestReg = MI->getOperand(0).getReg();
+        int DestReg = MI.getOperand(0).getReg();
 
         // We have to convert an FP immediate into its corresponding integer
         // representation
         int64_t ImmValue;
         if (Opc == Hexagon::CONST32_Float_Real) {
-          APFloat Val = MI->getOperand(1).getFPImm()->getValueAPF();
+          APFloat Val = MI.getOperand(1).getFPImm()->getValueAPF();
           ImmValue = *Val.bitcastToAPInt().getRawData();
         }
         else
-          ImmValue = MI->getOperand(1).getImm();
+          ImmValue = MI.getOperand(1).getImm();
 
-        BuildMI(*MBB, MII, MI->getDebugLoc(),
-                 TII->get(Hexagon::A2_tfrsi), DestReg).addImm(ImmValue);
-        MII = MBB->erase (MI);
+        BuildMI(*MBB, MII, MI.getDebugLoc(), TII->get(Hexagon::A2_tfrsi),
+                DestReg)
+            .addImm(ImmValue);
+        MII = MBB->erase(&MI);
         continue;
       }
       else if (Opc == Hexagon::CONST64_Int_Real ||
                Opc == Hexagon::CONST64_Float_Real) {
-        int DestReg = MI->getOperand(0).getReg();
+        int DestReg = MI.getOperand(0).getReg();
 
         // We have to convert an FP immediate into its corresponding integer
         // representation
         int64_t ImmValue;
         if (Opc == Hexagon::CONST64_Float_Real) {
-          APFloat Val =  MI->getOperand(1).getFPImm()->getValueAPF();
+          APFloat Val = MI.getOperand(1).getFPImm()->getValueAPF();
           ImmValue = *Val.bitcastToAPInt().getRawData();
         }
         else
-          ImmValue = MI->getOperand(1).getImm();
+          ImmValue = MI.getOperand(1).getImm();
 
         unsigned DestLo = TRI->getSubReg(DestReg, Hexagon::subreg_loreg);
         unsigned DestHi = TRI->getSubReg(DestReg, Hexagon::subreg_hireg);
@@ -142,11 +143,13 @@ bool HexagonSplitConst32AndConst64::runOnMachineFunction(MachineFunction &Fn) {
         int32_t LowWord = (ImmValue & 0xFFFFFFFF);
         int32_t HighWord = (ImmValue >> 32) & 0xFFFFFFFF;
 
-        BuildMI(*MBB, MII, MI->getDebugLoc(),
-                 TII->get(Hexagon::A2_tfrsi), DestLo).addImm(LowWord);
-        BuildMI (*MBB, MII, MI->getDebugLoc(),
-                 TII->get(Hexagon::A2_tfrsi), DestHi).addImm(HighWord);
-        MII = MBB->erase (MI);
+        BuildMI(*MBB, MII, MI.getDebugLoc(), TII->get(Hexagon::A2_tfrsi),
+                DestLo)
+            .addImm(LowWord);
+        BuildMI(*MBB, MII, MI.getDebugLoc(), TII->get(Hexagon::A2_tfrsi),
+                DestHi)
+            .addImm(HighWord);
+        MII = MBB->erase(&MI);
         continue;
       }
       ++MII;

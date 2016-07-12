@@ -55,7 +55,7 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
 
   // Get two load or store instructions.  Use the original instruction for one
   // of them (arbitrarily the second here) and create a clone for the other.
-  MachineInstr *EarlierMI = MF.CloneMachineInstr(MI);
+  MachineInstr *EarlierMI = MF.CloneMachineInstr(&*MI);
   MBB->insert(MI, EarlierMI);
 
   // Set up the two 64-bit registers.
@@ -496,8 +496,8 @@ static bool removeIPMBasedCompare(MachineInstr &Compare, unsigned SrcReg,
     return false;
   MachineBasicBlock::iterator MBBI = IPM, MBBE = Compare.getIterator();
   for (++MBBI; MBBI != MBBE; ++MBBI) {
-    MachineInstr *MI = MBBI;
-    if (MI->modifiesRegister(SystemZ::CC, TRI))
+    MachineInstr &MI = *MBBI;
+    if (MI.modifiesRegister(SystemZ::CC, TRI))
       return false;
   }
 
@@ -530,9 +530,19 @@ static unsigned getConditionalMove(unsigned Opcode) {
   }
 }
 
+static unsigned getConditionalLoadImmediate(unsigned Opcode) {
+  switch (Opcode) {
+  case SystemZ::LHI:  return SystemZ::LOCHI;
+  case SystemZ::LGHI: return SystemZ::LOCGHI;
+  default:           return 0;
+  }
+}
+
 bool SystemZInstrInfo::isPredicable(MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
   if (STI.hasLoadStoreOnCond() && getConditionalMove(Opcode))
+    return true;
+  if (STI.hasLoadStoreOnCond2() && getConditionalLoadImmediate(Opcode))
     return true;
   if (Opcode == SystemZ::Return ||
       Opcode == SystemZ::Trap ||
@@ -587,6 +597,16 @@ bool SystemZInstrInfo::PredicateInstruction(
   unsigned Opcode = MI.getOpcode();
   if (STI.hasLoadStoreOnCond()) {
     if (unsigned CondOpcode = getConditionalMove(Opcode)) {
+      MI.setDesc(get(CondOpcode));
+      MachineInstrBuilder(*MI.getParent()->getParent(), MI)
+          .addImm(CCValid)
+          .addImm(CCMask)
+          .addReg(SystemZ::CC, RegState::Implicit);
+      return true;
+    }
+  }
+  if (STI.hasLoadStoreOnCond2()) {
+    if (unsigned CondOpcode = getConditionalLoadImmediate(Opcode)) {
       MI.setDesc(get(CondOpcode));
       MachineInstrBuilder(*MI.getParent()->getParent(), MI)
           .addImm(CCValid)

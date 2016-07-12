@@ -501,13 +501,14 @@ static bool isNoReturnDef(const MachineOperand &MO) {
            !Called->hasFnAttribute(Attribute::NoUnwind));
 }
 
-bool MachineRegisterInfo::isPhysRegModified(unsigned PhysReg) const {
+bool MachineRegisterInfo::isPhysRegModified(unsigned PhysReg,
+                                            bool SkipNoReturnDef) const {
   if (UsedPhysRegMask.test(PhysReg))
     return true;
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   for (MCRegAliasIterator AI(PhysReg, TRI, true); AI.isValid(); ++AI) {
     for (const MachineOperand &MO : make_range(def_begin(*AI), def_end())) {
-      if (isNoReturnDef(MO))
+      if (!SkipNoReturnDef && isNoReturnDef(MO))
         continue;
       return true;
     }

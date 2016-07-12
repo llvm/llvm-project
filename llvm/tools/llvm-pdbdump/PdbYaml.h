@@ -39,17 +39,28 @@ struct StreamBlockList {
 };
 
 struct PdbInfoStream {
-  uint32_t Version;
+  PdbRaw_ImplVer Version;
   uint32_t Signature;
   uint32_t Age;
   PDB_UniqueId Guid;
 };
 
+struct PdbDbiStream {
+  PdbRaw_DbiVer VerHeader;
+  uint32_t Age;
+  uint16_t BuildNumber;
+  uint32_t PdbDllVersion;
+  uint16_t PdbDllRbld;
+  uint16_t Flags;
+  PDB_Machine MachineType;
+};
+
 struct PdbObject {
-  MsfHeaders Headers;
+  Optional<MsfHeaders> Headers;
   Optional<std::vector<support::ulittle32_t>> StreamSizes;
   Optional<std::vector<StreamBlockList>> StreamMap;
   Optional<PdbInfoStream> PdbStream;
+  Optional<PdbDbiStream> DbiStream;
 };
 }
 }
@@ -57,6 +68,14 @@ struct PdbObject {
 
 namespace llvm {
 namespace yaml {
+
+template <> struct MappingTraits<pdb::yaml::PdbObject> {
+  static void mapping(IO &IO, pdb::yaml::PdbObject &Obj);
+};
+
+template <> struct MappingTraits<pdb::yaml::MsfHeaders> {
+  static void mapping(IO &IO, pdb::yaml::MsfHeaders &Obj);
+};
 
 template <> struct MappingTraits<pdb::PDBFile::SuperBlock> {
   static void mapping(IO &IO, pdb::PDBFile::SuperBlock &SB);
@@ -66,16 +85,12 @@ template <> struct MappingTraits<pdb::yaml::StreamBlockList> {
   static void mapping(IO &IO, pdb::yaml::StreamBlockList &SB);
 };
 
-template <> struct MappingTraits<pdb::yaml::MsfHeaders> {
-  static void mapping(IO &IO, pdb::yaml::MsfHeaders &Obj);
-};
-
-template <> struct MappingTraits<pdb::yaml::PdbObject> {
-  static void mapping(IO &IO, pdb::yaml::PdbObject &Obj);
-};
-
 template <> struct MappingTraits<pdb::yaml::PdbInfoStream> {
   static void mapping(IO &IO, pdb::yaml::PdbInfoStream &Obj);
+};
+
+template <> struct MappingTraits<pdb::yaml::PdbDbiStream> {
+  static void mapping(IO &IO, pdb::yaml::PdbDbiStream &Obj);
 };
 }
 }

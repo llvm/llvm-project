@@ -2782,6 +2782,8 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     // name of the expression is not a valid token, the match will fail,
     // so we need to handle it here.
     return Operand.isSSrc32() ? Match_Success : Match_InvalidOperand;
+  case MCK_SoppBrTarget:
+    return Operand.isSoppBrTarget() ? Match_Success : Match_InvalidOperand;
   default: return Match_InvalidOperand;
   }
 }

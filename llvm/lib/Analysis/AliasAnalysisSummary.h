@@ -35,6 +35,7 @@
 #ifndef LLVM_ANALYSIS_ALIASANALYSISSUMMARY_H
 #define LLVM_ANALYSIS_ALIASANALYSISSUMMARY_H
 
+#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/CallSite.h"
@@ -166,6 +167,25 @@ struct InstantiatedAttr {
 Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute,
                                                         CallSite);
 }
+
+template <> struct DenseMapInfo<cflaa::InstantiatedValue> {
+  static inline cflaa::InstantiatedValue getEmptyKey() {
+    return cflaa::InstantiatedValue{DenseMapInfo<Value *>::getEmptyKey(),
+                                    DenseMapInfo<unsigned>::getEmptyKey()};
+  }
+  static inline cflaa::InstantiatedValue getTombstoneKey() {
+    return cflaa::InstantiatedValue{DenseMapInfo<Value *>::getTombstoneKey(),
+                                    DenseMapInfo<unsigned>::getTombstoneKey()};
+  }
+  static unsigned getHashValue(const cflaa::InstantiatedValue &IV) {
+    return DenseMapInfo<std::pair<Value *, unsigned>>::getHashValue(
+        std::make_pair(IV.Val, IV.DerefLevel));
+  }
+  static bool isEqual(const cflaa::InstantiatedValue &LHS,
+                      const cflaa::InstantiatedValue &RHS) {
+    return LHS.Val == RHS.Val && LHS.DerefLevel == RHS.DerefLevel;
+  }
+};
 }
 
 #endif

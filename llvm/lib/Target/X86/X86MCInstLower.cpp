@@ -1025,7 +1025,7 @@ PrevCrossBBInst(MachineBasicBlock::const_iterator MBBI) {
   const MachineBasicBlock *MBB = MBBI->getParent();
   while (MBBI == MBB->begin()) {
     if (MBB == &MBB->getParent()->front())
-      return nullptr;
+      return MachineBasicBlock::const_iterator();
     MBB = MBB->getPrevNode();
     MBBI = MBB->end();
   }
@@ -1305,7 +1305,9 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
   case X86::SEH_Epilogue: {
     MachineBasicBlock::const_iterator MBBI(MI);
     // Check if preceded by a call and emit nop if so.
-    for (MBBI = PrevCrossBBInst(MBBI); MBBI; MBBI = PrevCrossBBInst(MBBI)) {
+    for (MBBI = PrevCrossBBInst(MBBI);
+         MBBI != MachineBasicBlock::const_iterator();
+         MBBI = PrevCrossBBInst(MBBI)) {
       // Conservatively assume that pseudo instructions don't emit code and keep
       // looking for a call. We may emit an unnecessary nop in some cases.
       if (!MBBI->isPseudo()) {

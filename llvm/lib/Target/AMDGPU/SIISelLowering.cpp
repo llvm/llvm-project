@@ -3133,7 +3133,8 @@ SDNode *SITargetLowering::PostISelFolding(MachineSDNode *Node,
   const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
   unsigned Opcode = Node->getMachineOpcode();
 
-  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore())
+  if (TII->isMIMG(Opcode) && !TII->get(Opcode).mayStore() &&
+      !TII->isGather4(Opcode))
     adjustWritemask(Node, DAG);
 
   if (Opcode == AMDGPU::INSERT_SUBREG ||

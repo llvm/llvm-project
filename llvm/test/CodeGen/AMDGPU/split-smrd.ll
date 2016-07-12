@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=amdgcn -mcpu=SI -verify-machineinstrs | FileCheck %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck %s
 
 ; FIXME: Move this to sgpr-copy.ll when this is fixed on VI.
 ; Make sure that when we split an smrd instruction in order to move it to
@@ -38,7 +38,7 @@ declare <4 x float> @llvm.SI.image.sample.v2i32(<2 x i32>, <8 x i32>, <4 x i32>,
 
 declare i32 @llvm.SI.packf16(float, float) #1
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
 
 !0 = !{!1, !1, i64 0, i32 1}

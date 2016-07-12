@@ -120,11 +120,11 @@ public:
                                   SmallVectorImpl<MCFixup> &Fixups,
                                   const MCSubtargetInfo &STI) const;
 
-  /// getUnconditionalBranchTargetOpValue - Return encoding info for 24-bit
+  /// getThumbBranchTargetOpValue - Return encoding info for 24-bit
   /// immediate Thumb2 direct branch target.
-  uint32_t getUnconditionalBranchTargetOpValue(const MCInst &MI, unsigned OpIdx,
-                                  SmallVectorImpl<MCFixup> &Fixups,
-                                  const MCSubtargetInfo &STI) const;
+  uint32_t getThumbBranchTargetOpValue(const MCInst &MI, unsigned OpIdx,
+                                       SmallVectorImpl<MCFixup> &Fixups,
+                                       const MCSubtargetInfo &STI) const;
 
   /// getARMBranchTargetOpValue - Return encoding info for 24-bit immediate
   /// branch target.
@@ -750,10 +750,9 @@ getARMBLXTargetOpValue(const MCInst &MI, unsigned OpIdx,
 
 /// getUnconditionalBranchTargetOpValue - Return encoding info for 24-bit
 /// immediate branch target.
-uint32_t ARMMCCodeEmitter::
-getUnconditionalBranchTargetOpValue(const MCInst &MI, unsigned OpIdx,
-                       SmallVectorImpl<MCFixup> &Fixups,
-                       const MCSubtargetInfo &STI) const {
+uint32_t ARMMCCodeEmitter::getThumbBranchTargetOpValue(
+    const MCInst &MI, unsigned OpIdx, SmallVectorImpl<MCFixup> &Fixups,
+    const MCSubtargetInfo &STI) const {
   unsigned Val = 0;
   const MCOperand MO = MI.getOperand(OpIdx);
     

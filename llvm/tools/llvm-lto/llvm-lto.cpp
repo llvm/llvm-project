@@ -156,6 +156,10 @@ static cl::opt<bool> RestoreGlobalsLinkage(
     "restore-linkage", cl::init(false),
     cl::desc("Restore original linkage of globals prior to CodeGen"));
 
+static cl::opt<bool> CheckHasObjC(
+    "check-for-objc", cl::init(false),
+    cl::desc("Only check if the module has objective-C defined in it"));
+
 namespace {
 struct ModuleInfo {
   std::vector<bool> CanBeHidden;
@@ -711,6 +715,21 @@ int main(int argc, char **argv) {
 
   if (ListSymbolsOnly) {
     listSymbols(Options);
+    return 0;
+  }
+
+  if (CheckHasObjC) {
+    for (auto &Filename : InputFilenames) {
+      ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
+          MemoryBuffer::getFile(Filename);
+      error(BufferOrErr, "error loading file '" + Filename + "'");
+      auto Buffer = std::move(BufferOrErr.get());
+      LLVMContext Ctx;
+      if (llvm::isBitcodeContainingObjCCategory(*Buffer, Ctx))
+        outs() << "Bitcode " << Filename << " contains ObjC\n";
+      else
+        outs() << "Bitcode " << Filename << " does not contain ObjC\n";
+    }
     return 0;
   }
 

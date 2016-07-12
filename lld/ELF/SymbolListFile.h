@@ -16,6 +16,8 @@
 namespace lld {
 namespace elf {
 
+size_t defineSymbolVersion(StringRef Version);
+
 void parseDynamicList(MemoryBufferRef MB);
 void parseVersionScript(MemoryBufferRef MB);
 

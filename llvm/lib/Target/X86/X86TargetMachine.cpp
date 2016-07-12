@@ -304,10 +304,10 @@ bool X86PassConfig::addPreISel() {
 }
 
 void X86PassConfig::addPreRegAlloc() {
-  addPass(createX86FixupSetCC());
-
-  if (getOptLevel() != CodeGenOpt::None)
-    addPass(createX86OptimizeLEAs());
+  if (getOptLevel() != CodeGenOpt::None) {
+    addPass(createX86FixupSetCC());    
+    addPass(createX86OptimizeLEAs());    
+  }
 
   addPass(createX86CallFrameOptimization());
   addPass(createX86WinAllocaExpander());

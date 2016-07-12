@@ -252,7 +252,7 @@ public:
   /// correctly?
   virtual bool isIntegratedAssemblerRequired() const { return false; }
 
-  /// \brief Add a textual command.
+  /// \brief Add a textual comment.
   ///
   /// Typically for comments that can be emitted to the generated .s
   /// file if applicable as a QoI issue to make the output of the compiler
@@ -273,6 +273,12 @@ public:
   /// the current line. It is basically a safe version of EmitRawText: since it
   /// only prints comments, the object streamer ignores it instead of asserting.
   virtual void emitRawComment(const Twine &T, bool TabPrefix = true);
+
+  /// \brief Add explicit comment T. T is required to be a valid
+  /// comment in the output and does not need to be escaped.
+  virtual void addExplicitComment(const Twine &T);
+  /// \brief Emit added explicit comments.
+  virtual void emitExplicitComments();
 
   /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
   virtual void AddBlankLine() {}

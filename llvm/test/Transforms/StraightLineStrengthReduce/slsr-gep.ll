@@ -1,6 +1,6 @@
 ; RUN: opt < %s -slsr -gvn -S | FileCheck %s
 
-target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
+target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64-p:64:64:64-p1:32:32:32"
 
 ; foo(input[0]);
 ; foo(input[s]);
@@ -149,8 +149,8 @@ define void @slsr_out_of_bounds_gep(i32* %input, i32 %s) {
   ret void
 }
 
-define void @slsr_gep_128bit(i32* %input, i128 %s) {
-; CHECK-LABEL: @slsr_gep_128bit(
+define void @slsr_gep_128bit_index(i32* %input, i128 %s) {
+; CHECK-LABEL: @slsr_gep_128bit_index(
   ; p0 = &input[0]
   %p0 = getelementptr inbounds i32, i32* %input, i128 0
   call void @foo(i32* %p0)
@@ -170,5 +170,22 @@ define void @slsr_gep_128bit(i32* %input, i128 %s) {
   ret void
 }
 
+define void @slsr_gep_32bit_pointer(i32 addrspace(1)* %input, i64 %s) {
+; CHECK-LABEL: @slsr_gep_32bit_pointer(
+  ; p1 = &input[s]
+  %p1 = getelementptr inbounds i32, i32 addrspace(1)* %input, i64 %s
+  call void @baz(i32 addrspace(1)* %p1)
+
+  ; p2 = &input[s * 2]
+  %s2 = mul nsw i64 %s, 2
+  %p2 = getelementptr inbounds i32, i32 addrspace(1)* %input, i64 %s2
+  ; %s2 is wider than the pointer size of addrspace(1), so do not factor it.
+; CHECK: %p2 = getelementptr inbounds i32, i32 addrspace(1)* %input, i64 %s2
+  call void @baz(i32 addrspace(1)* %p2)
+
+  ret void
+}
+
 declare void @foo(i32*)
 declare void @bar(i64*)
+declare void @baz(i32 addrspace(1)*)

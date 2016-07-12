@@ -21,27 +21,32 @@
 
 namespace llvm {
 namespace pdb {
+class InfoStreamBuilder;
 class PDBFile;
+
 class InfoStream {
+  friend class InfoStreamBuilder;
+
+  struct Header {
+    support::ulittle32_t Version;
+    support::ulittle32_t Signature;
+    support::ulittle32_t Age;
+    PDB_UniqueId Guid;
+  };
+
 public:
   InfoStream(std::unique_ptr<MappedBlockStream> Stream);
 
   Error reload();
+  Error commit();
 
   PdbRaw_ImplVer getVersion() const;
   uint32_t getSignature() const;
   uint32_t getAge() const;
   PDB_UniqueId getGuid() const;
 
-  void setVersion(PdbRaw_ImplVer Ver);
-  void setSignature(uint32_t Sig);
-  void setAge(uint32_t Age);
-  void setGuid(PDB_UniqueId Guid);
-
   uint32_t getNamedStreamIndex(llvm::StringRef Name) const;
   iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
-
-  Error commit();
 
 private:
   std::unique_ptr<MappedBlockStream> Stream;

@@ -18,11 +18,29 @@ define void @test1({i32, i32, i32, i32}* sret %p) nounwind {
   ret void
 }
 
+; This should pop 8 bytes on return.
+; CHECK-LABEL: thiscallfun:
+; CHECK: retl $8
+define x86_thiscallcc void @thiscallfun(i32* %this, i32 %a, i32 %b) nounwind {
+  ret void
+}
+
+; Here, the callee pop doesn't fit the 16 bit immediate -- see x86-big-ret.ll
+; This checks that -fast-isel doesn't miscompile this.
+; CHECK-LABEL: thiscall_large:
+; CHECK:      popl %ecx
+; CHECK-NEXT: addl $65536, %esp
+; CHECK-NEXT: pushl %ecx
+; CHECK-NEXT: retl
+define x86_thiscallcc void @thiscall_large(i32* %this, [65533 x i8]* byval %b) nounwind {
+  ret void
+}
+
 ; Properly initialize the pic base.
 ; CHECK-LABEL: test2:
 ; CHECK-NOT: HHH
-; CHECK: call{{.*}}L2$pb
-; CHECK-NEXT: L2$pb:
+; CHECK: call{{.*}}L4$pb
+; CHECK-NEXT: L4$pb:
 ; CHECK-NEXT: pop
 ; CHECK: HHH
 ; CHECK: retl
@@ -75,7 +93,7 @@ entry:
 ; SDag-ISel's arg push:
 ; CHECK: movl %esp, [[REGISTER:%[a-z]+]]
 ; CHECK: movl $42, ([[REGISTER]])
-; CHECK: movl L_test5dllimport$non_lazy_ptr-L5$pb(%eax), %eax
+; CHECK: movl L_test5dllimport$non_lazy_ptr-L7$pb(%eax), %eax
 
 }
 declare dllimport i32 @test5dllimport(i32)

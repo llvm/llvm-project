@@ -73,6 +73,15 @@ define void @insertelement_v3f32_3(<3 x float> addrspace(1)* %out, <3 x float> %
   ret void
 }
 
+; GCN-LABEL: {{^}}insertelement_to_sgpr:
+; GCN-NOT: v_readfirstlane
+define amdgpu_ps <4 x float> @insertelement_to_sgpr() nounwind {
+  %tmp = load <4 x i32>, <4 x i32> addrspace(2)* undef
+  %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
+  %tmp2 = call <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> %tmp1, i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  ret <4 x float> %tmp2
+}
+
 ; GCN-LABEL: {{^}}dynamic_insertelement_v2f32:
 ; GCN: v_mov_b32_e32 [[CONST:v[0-9]+]], 0x40a00000
 ; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
@@ -432,3 +441,5 @@ define void @dynamic_insertelement_v8f64(<8 x double> addrspace(1)* %out, <8 x d
   store <8 x double> %vecins, <8 x double> addrspace(1)* %out, align 16
   ret void
 }
+
+declare <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) nounwind readnone

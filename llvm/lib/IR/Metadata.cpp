@@ -1312,6 +1312,32 @@ bool Instruction::extractProfMetadata(uint64_t &TrueVal, uint64_t &FalseVal) {
   return true;
 }
 
+bool Instruction::extractProfTotalWeight(uint64_t &TotalVal) {
+  assert((getOpcode() == Instruction::Br ||
+          getOpcode() == Instruction::Select ||
+          getOpcode() == Instruction::Call ||
+          getOpcode() == Instruction::Invoke) &&
+         "Looking for branch weights on something besides branch");
+
+  TotalVal = 0;
+  auto *ProfileData = getMetadata(LLVMContext::MD_prof);
+  if (!ProfileData)
+    return false;
+
+  auto *ProfDataName = dyn_cast<MDString>(ProfileData->getOperand(0));
+  if (!ProfDataName || !ProfDataName->getString().equals("branch_weights"))
+    return false;
+
+  TotalVal = 0;
+  for (unsigned i = 1; i < ProfileData->getNumOperands(); i++) {
+    auto *V = mdconst::dyn_extract<ConstantInt>(ProfileData->getOperand(i));
+    if (!V)
+      return false;
+    TotalVal += V->getValue().getZExtValue();
+  }
+  return true;
+}
+
 void Instruction::clearMetadataHashEntries() {
   assert(hasMetadataHashEntry() && "Caller should check");
   getContext().pImpl->InstructionMetadata.erase(this);

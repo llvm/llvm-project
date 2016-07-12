@@ -230,7 +230,7 @@ namespace {
     enum { Sub_Low = 0x1, Sub_High = 0x2, Sub_None = (Sub_Low | Sub_High) };
     enum { Exec_Then = 0x10, Exec_Else = 0x20 };
     unsigned getMaskForSub(unsigned Sub);
-    bool isCondset(const MachineInstr *MI);
+    bool isCondset(const MachineInstr &MI);
     LaneBitmask getLaneMask(unsigned Reg, unsigned Sub);
 
     void addRefToMap(RegisterRef RR, ReferenceMap &Map, unsigned Exec);
@@ -241,7 +241,7 @@ namespace {
     void updateKillFlags(unsigned Reg);
     void updateDeadFlags(unsigned Reg);
     void recalculateLiveInterval(unsigned Reg);
-    void removeInstr(MachineInstr *MI);
+    void removeInstr(MachineInstr &MI);
     void updateLiveness(std::set<unsigned> &RegSet, bool Recalc,
         bool UpdateKills, bool UpdateDeads);
 
@@ -250,22 +250,22 @@ namespace {
         MachineBasicBlock::iterator At, unsigned DstR,
         unsigned DstSR, const MachineOperand &PredOp, bool PredSense,
         bool ReadUndef, bool ImpUse);
-    bool split(MachineInstr *MI, std::set<unsigned> &UpdRegs);
+    bool split(MachineInstr &MI, std::set<unsigned> &UpdRegs);
     bool splitInBlock(MachineBasicBlock &B, std::set<unsigned> &UpdRegs);
 
     bool isPredicable(MachineInstr *MI);
     MachineInstr *getReachingDefForPred(RegisterRef RD,
         MachineBasicBlock::iterator UseIt, unsigned PredR, bool Cond);
-    bool canMoveOver(MachineInstr *MI, ReferenceMap &Defs, ReferenceMap &Uses);
-    bool canMoveMemTo(MachineInstr *MI, MachineInstr *ToI, bool IsDown);
-    void predicateAt(const MachineOperand &DefOp, MachineInstr *MI,
-        MachineBasicBlock::iterator Where, const MachineOperand &PredOp,
-        bool Cond, std::set<unsigned> &UpdRegs);
+    bool canMoveOver(MachineInstr &MI, ReferenceMap &Defs, ReferenceMap &Uses);
+    bool canMoveMemTo(MachineInstr &MI, MachineInstr &ToI, bool IsDown);
+    void predicateAt(const MachineOperand &DefOp, MachineInstr &MI,
+                     MachineBasicBlock::iterator Where,
+                     const MachineOperand &PredOp, bool Cond,
+                     std::set<unsigned> &UpdRegs);
     void renameInRange(RegisterRef RO, RegisterRef RN, unsigned PredR,
         bool Cond, MachineBasicBlock::iterator First,
         MachineBasicBlock::iterator Last);
-    bool predicate(MachineInstr *TfrI, bool Cond,
-        std::set<unsigned> &UpdRegs);
+    bool predicate(MachineInstr &TfrI, bool Cond, std::set<unsigned> &UpdRegs);
     bool predicateInBlock(MachineBasicBlock &B,
         std::set<unsigned> &UpdRegs);
 
@@ -298,9 +298,8 @@ unsigned HexagonExpandCondsets::getMaskForSub(unsigned Sub) {
   llvm_unreachable("Invalid subregister");
 }
 
-
-bool HexagonExpandCondsets::isCondset(const MachineInstr *MI) {
-  unsigned Opc = MI->getOpcode();
+bool HexagonExpandCondsets::isCondset(const MachineInstr &MI) {
+  unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case Hexagon::C2_mux:
     case Hexagon::C2_muxii:
@@ -548,10 +547,9 @@ void HexagonExpandCondsets::recalculateLiveInterval(unsigned Reg) {
   LIS->createAndComputeVirtRegInterval(Reg);
 }
 
-
-void HexagonExpandCondsets::removeInstr(MachineInstr *MI) {
-  LIS->RemoveMachineInstrFromMaps(*MI);
-  MI->eraseFromParent();
+void HexagonExpandCondsets::removeInstr(MachineInstr &MI) {
+  LIS->RemoveMachineInstrFromMaps(MI);
+  MI.eraseFromParent();
 }
 
 
@@ -640,19 +638,19 @@ MachineInstr *HexagonExpandCondsets::genCondTfrFor(MachineOperand &SrcOp,
 
 /// Replace a MUX instruction MI with a pair A2_tfrt/A2_tfrf. This function
 /// performs all necessary changes to complete the replacement.
-bool HexagonExpandCondsets::split(MachineInstr *MI,
-      std::set<unsigned> &UpdRegs) {
+bool HexagonExpandCondsets::split(MachineInstr &MI,
+                                  std::set<unsigned> &UpdRegs) {
   if (TfrLimitActive) {
     if (TfrCounter >= TfrLimit)
       return false;
     TfrCounter++;
   }
-  DEBUG(dbgs() << "\nsplitting BB#" << MI->getParent()->getNumber()
-               << ": " << *MI);
-  MachineOperand &MD  = MI->getOperand(0); // Definition
-  MachineOperand &MP  = MI->getOperand(1); // Predicate register
-  MachineOperand &MS1 = MI->getOperand(2); // Source value #1
-  MachineOperand &MS2 = MI->getOperand(3); // Source value #2
+  DEBUG(dbgs() << "\nsplitting BB#" << MI.getParent()->getNumber() << ": "
+               << MI);
+  MachineOperand &MD = MI.getOperand(0);  // Definition
+  MachineOperand &MP = MI.getOperand(1);  // Predicate register
+  MachineOperand &MS1 = MI.getOperand(2); // Source value #1
+  MachineOperand &MS2 = MI.getOperand(3); // Source value #2
   assert(MD.isDef());
   unsigned DR = MD.getReg(), DSR = MD.getSubReg();
   bool ReadUndef = MD.isUndef();
@@ -685,15 +683,15 @@ bool HexagonExpandCondsets::split(MachineInstr *MI,
   // First, create the two invididual conditional transfers, and add each
   // of them to the live intervals information. Do that first and then remove
   // the old instruction from live intervals.
-  MachineInstr *TfrT = genCondTfrFor(MI->getOperand(2), At, DR, DSR, MP, true,
-                                     ReadUndef, false);
-  MachineInstr *TfrF = genCondTfrFor(MI->getOperand(3), At, DR, DSR, MP, false,
-                                     ReadUndef, true);
+  MachineInstr *TfrT =
+      genCondTfrFor(MI.getOperand(2), At, DR, DSR, MP, true, ReadUndef, false);
+  MachineInstr *TfrF =
+      genCondTfrFor(MI.getOperand(3), At, DR, DSR, MP, false, ReadUndef, true);
   LIS->InsertMachineInstrInMaps(*TfrT);
   LIS->InsertMachineInstrInMaps(*TfrF);
 
   // Will need to recalculate live intervals for all registers in MI.
-  for (auto &Op : MI->operands())
+  for (auto &Op : MI.operands())
     if (Op.isReg())
       UpdRegs.insert(Op.getReg());
 
@@ -710,8 +708,8 @@ bool HexagonExpandCondsets::splitInBlock(MachineBasicBlock &B,
   MachineBasicBlock::iterator I, E, NextI;
   for (I = B.begin(), E = B.end(); I != E; I = NextI) {
     NextI = std::next(I);
-    if (isCondset(I))
-      Changed |= split(I, UpdRegs);
+    if (isCondset(*I))
+      Changed |= split(*I, UpdRegs);
   }
   return Changed;
 }
@@ -791,12 +789,12 @@ MachineInstr *HexagonExpandCondsets::getReachingDefForPred(RegisterRef RD,
 /// the maps Defs and Uses. These maps reflect the conditional defs and uses
 /// that depend on the same predicate register to allow moving instructions
 /// over instructions predicated on the opposite condition.
-bool HexagonExpandCondsets::canMoveOver(MachineInstr *MI, ReferenceMap &Defs,
-      ReferenceMap &Uses) {
+bool HexagonExpandCondsets::canMoveOver(MachineInstr &MI, ReferenceMap &Defs,
+                                        ReferenceMap &Uses) {
   // In order to be able to safely move MI over instructions that define
   // "Defs" and use "Uses", no def operand from MI can be defined or used
   // and no use operand can be defined.
-  for (auto &Op : MI->operands()) {
+  for (auto &Op : MI.operands()) {
     if (!Op.isReg())
       continue;
     RegisterRef RR = Op;
@@ -818,19 +816,19 @@ bool HexagonExpandCondsets::canMoveOver(MachineInstr *MI, ReferenceMap &Defs,
 
 /// Check if the instruction accessing memory (TheI) can be moved to the
 /// location ToI.
-bool HexagonExpandCondsets::canMoveMemTo(MachineInstr *TheI, MachineInstr *ToI,
-      bool IsDown) {
-  bool IsLoad = TheI->mayLoad(), IsStore = TheI->mayStore();
+bool HexagonExpandCondsets::canMoveMemTo(MachineInstr &TheI, MachineInstr &ToI,
+                                         bool IsDown) {
+  bool IsLoad = TheI.mayLoad(), IsStore = TheI.mayStore();
   if (!IsLoad && !IsStore)
     return true;
-  if (HII->areMemAccessesTriviallyDisjoint(*TheI, *ToI))
+  if (HII->areMemAccessesTriviallyDisjoint(TheI, ToI))
     return true;
-  if (TheI->hasUnmodeledSideEffects())
+  if (TheI.hasUnmodeledSideEffects())
     return false;
 
   MachineBasicBlock::iterator StartI = IsDown ? TheI : ToI;
   MachineBasicBlock::iterator EndI = IsDown ? ToI : TheI;
-  bool Ordered = TheI->hasOrderedMemoryRef();
+  bool Ordered = TheI.hasOrderedMemoryRef();
 
   // Search for aliased memory reference in (StartI, EndI).
   for (MachineBasicBlock::iterator I = std::next(StartI); I != EndI; ++I) {
@@ -854,8 +852,10 @@ bool HexagonExpandCondsets::canMoveMemTo(MachineInstr *TheI, MachineInstr *ToI,
 /// Generate a predicated version of MI (where the condition is given via
 /// PredR and Cond) at the point indicated by Where.
 void HexagonExpandCondsets::predicateAt(const MachineOperand &DefOp,
-      MachineInstr *MI, MachineBasicBlock::iterator Where,
-      const MachineOperand &PredOp, bool Cond, std::set<unsigned> &UpdRegs) {
+                                        MachineInstr &MI,
+                                        MachineBasicBlock::iterator Where,
+                                        const MachineOperand &PredOp, bool Cond,
+                                        std::set<unsigned> &UpdRegs) {
   // The problem with updating live intervals is that we can move one def
   // past another def. In particular, this can happen when moving an A2_tfrt
   // over an A2_tfrf defining the same register. From the point of view of
@@ -867,15 +867,15 @@ void HexagonExpandCondsets::predicateAt(const MachineOperand &DefOp,
   // target location, (2) update liveness, (3) delete the old instruction,
   // and (4) update liveness again.
 
-  MachineBasicBlock &B = *MI->getParent();
+  MachineBasicBlock &B = *MI.getParent();
   DebugLoc DL = Where->getDebugLoc();  // "Where" points to an instruction.
-  unsigned Opc = MI->getOpcode();
+  unsigned Opc = MI.getOpcode();
   unsigned PredOpc = HII->getCondOpcode(Opc, !Cond);
   MachineInstrBuilder MB = BuildMI(B, Where, DL, HII->get(PredOpc));
-  unsigned Ox = 0, NP = MI->getNumOperands();
+  unsigned Ox = 0, NP = MI.getNumOperands();
   // Skip all defs from MI first.
   while (Ox < NP) {
-    MachineOperand &MO = MI->getOperand(Ox);
+    MachineOperand &MO = MI.getOperand(Ox);
     if (!MO.isReg() || !MO.isDef())
       break;
     Ox++;
@@ -886,15 +886,15 @@ void HexagonExpandCondsets::predicateAt(const MachineOperand &DefOp,
   MB.addReg(PredOp.getReg(), PredOp.isUndef() ? RegState::Undef : 0,
             PredOp.getSubReg());
   while (Ox < NP) {
-    MachineOperand &MO = MI->getOperand(Ox);
+    MachineOperand &MO = MI.getOperand(Ox);
     if (!MO.isReg() || !MO.isImplicit())
       MB.addOperand(MO);
     Ox++;
   }
 
   MachineFunction &MF = *B.getParent();
-  MachineInstr::mmo_iterator I = MI->memoperands_begin();
-  unsigned NR = std::distance(I, MI->memoperands_end());
+  MachineInstr::mmo_iterator I = MI.memoperands_begin();
+  unsigned NR = std::distance(I, MI.memoperands_end());
   MachineInstr::mmo_iterator MemRefs = MF.allocateMemRefsArray(NR);
   for (unsigned i = 0; i < NR; ++i)
     MemRefs[i] = *I++;
@@ -941,18 +941,18 @@ void HexagonExpandCondsets::renameInRange(RegisterRef RO, RegisterRef RN,
 /// For a given conditional copy, predicate the definition of the source of
 /// the copy under the given condition (using the same predicate register as
 /// the copy).
-bool HexagonExpandCondsets::predicate(MachineInstr *TfrI, bool Cond,
-      std::set<unsigned> &UpdRegs) {
+bool HexagonExpandCondsets::predicate(MachineInstr &TfrI, bool Cond,
+                                      std::set<unsigned> &UpdRegs) {
   // TfrI - A2_tfr[tf] Instruction (not A2_tfrsi).
-  unsigned Opc = TfrI->getOpcode();
+  unsigned Opc = TfrI.getOpcode();
   (void)Opc;
   assert(Opc == Hexagon::A2_tfrt || Opc == Hexagon::A2_tfrf);
   DEBUG(dbgs() << "\nattempt to predicate if-" << (Cond ? "true" : "false")
-               << ": " << *TfrI);
+               << ": " << TfrI);
 
-  MachineOperand &MD = TfrI->getOperand(0);
-  MachineOperand &MP = TfrI->getOperand(1);
-  MachineOperand &MS = TfrI->getOperand(2);
+  MachineOperand &MD = TfrI.getOperand(0);
+  MachineOperand &MP = TfrI.getOperand(1);
+  MachineOperand &MS = TfrI.getOperand(2);
   // The source operand should be a <kill>. This is not strictly necessary,
   // but it makes things a lot simpler. Otherwise, we would need to rename
   // some registers, which would complicate the transformation considerably.
@@ -1040,20 +1040,20 @@ bool HexagonExpandCondsets::predicate(MachineInstr *TfrI, bool Cond,
   // If the target register of the TfrI (RD) is not used or defined between
   // DefI and TfrI, consider moving TfrI up to DefI.
   bool CanUp =   canMoveOver(TfrI, Defs, Uses);
-  bool CanDown = canMoveOver(DefI, Defs, Uses);
+  bool CanDown = canMoveOver(*DefI, Defs, Uses);
   // The TfrI does not access memory, but DefI could. Check if it's safe
   // to move DefI down to TfrI.
   if (DefI->mayLoad() || DefI->mayStore())
-    if (!canMoveMemTo(DefI, TfrI, true))
+    if (!canMoveMemTo(*DefI, TfrI, true))
       CanDown = false;
 
   DEBUG(dbgs() << "Can move up: " << (CanUp ? "yes" : "no")
                << ", can move down: " << (CanDown ? "yes\n" : "no\n"));
   MachineBasicBlock::iterator PastDefIt = std::next(DefIt);
   if (CanUp)
-    predicateAt(MD, DefI, PastDefIt, MP, Cond, UpdRegs);
+    predicateAt(MD, *DefI, PastDefIt, MP, Cond, UpdRegs);
   else if (CanDown)
-    predicateAt(MD, DefI, TfrIt, MP, Cond, UpdRegs);
+    predicateAt(MD, *DefI, TfrIt, MP, Cond, UpdRegs);
   else
     return false;
 
@@ -1063,7 +1063,7 @@ bool HexagonExpandCondsets::predicate(MachineInstr *TfrI, bool Cond,
   }
 
   removeInstr(TfrI);
-  removeInstr(DefI);
+  removeInstr(*DefI);
   return true;
 }
 
@@ -1077,7 +1077,7 @@ bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
     NextI = std::next(I);
     unsigned Opc = I->getOpcode();
     if (Opc == Hexagon::A2_tfrt || Opc == Hexagon::A2_tfrf) {
-      bool Done = predicate(I, (Opc == Hexagon::A2_tfrt), UpdRegs);
+      bool Done = predicate(*I, (Opc == Hexagon::A2_tfrt), UpdRegs);
       if (!Done) {
         // If we didn't predicate I, we may need to remove it in case it is
         // an "identity" copy, e.g.  vreg1 = A2_tfrt vreg2, vreg1.
@@ -1085,7 +1085,7 @@ bool HexagonExpandCondsets::predicateInBlock(MachineBasicBlock &B,
           for (auto &Op : I->operands())
             if (Op.isReg())
               UpdRegs.insert(Op.getReg());
-          removeInstr(&*I);
+          removeInstr(*I);
         }
       }
       Changed |= Done;
@@ -1194,7 +1194,7 @@ bool HexagonExpandCondsets::coalesceSegments(MachineFunction &MF) {
     MachineBasicBlock &B = *I;
     for (MachineBasicBlock::iterator J = B.begin(), F = B.end(); J != F; ++J) {
       MachineInstr *MI = &*J;
-      if (!isCondset(MI))
+      if (!isCondset(*MI))
         continue;
       MachineOperand &S1 = MI->getOperand(2), &S2 = MI->getOperand(3);
       if (!S1.isReg() && !S2.isReg())
@@ -1292,7 +1292,7 @@ bool HexagonExpandCondsets::runOnMachineFunction(MachineFunction &MF) {
   updateLiveness(Diff, false, false, true);
 
   for (auto *ImpD : LocalImpDefs)
-    removeInstr(ImpD);
+    removeInstr(*ImpD);
 
   DEBUG({
     if (Changed)

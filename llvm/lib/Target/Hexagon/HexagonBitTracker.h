@@ -26,9 +26,9 @@ struct HexagonEvaluator : public BitTracker::MachineEvaluator {
   HexagonEvaluator(const HexagonRegisterInfo &tri, MachineRegisterInfo &mri,
                    const HexagonInstrInfo &tii, MachineFunction &mf);
 
-  bool evaluate(const MachineInstr *MI, const CellMapType &Inputs,
+  bool evaluate(const MachineInstr &MI, const CellMapType &Inputs,
                 CellMapType &Outputs) const override;
-  bool evaluate(const MachineInstr *BI, const CellMapType &Inputs,
+  bool evaluate(const MachineInstr &BI, const CellMapType &Inputs,
                 BranchTargetList &Targets, bool &FallsThru) const override;
 
   BitTracker::BitMask mask(unsigned Reg, unsigned Sub) const override;
@@ -38,9 +38,9 @@ struct HexagonEvaluator : public BitTracker::MachineEvaluator {
   const HexagonInstrInfo &TII;
 
 private:
-  bool evaluateLoad(const MachineInstr *MI, const CellMapType &Inputs,
+  bool evaluateLoad(const MachineInstr &MI, const CellMapType &Inputs,
                     CellMapType &Outputs) const;
-  bool evaluateFormalCopy(const MachineInstr *MI, const CellMapType &Inputs,
+  bool evaluateFormalCopy(const MachineInstr &MI, const CellMapType &Inputs,
                           CellMapType &Outputs) const;
 
   unsigned getNextPhysReg(unsigned PReg, unsigned Width) const;

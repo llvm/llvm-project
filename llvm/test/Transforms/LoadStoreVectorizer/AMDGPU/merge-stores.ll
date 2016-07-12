@@ -19,8 +19,7 @@ define void @merge_global_store_2_constants_i8(i8 addrspace(1)* %out) #0 {
 }
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i8_natural_align
-; CHECK: store i8
-; CHECK: store i8
+; CHECK: store <2 x i8>
 define void @merge_global_store_2_constants_i8_natural_align(i8 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i32 1
 
@@ -50,8 +49,7 @@ define void @merge_global_store_2_constants_0_i16(i16 addrspace(1)* %out) #0 {
 }
 
 ; CHECK-LABEL: @merge_global_store_2_constants_i16_natural_align
-; CHECK: store i16
-; CHECK: store i16
+; CHECK: store <2 x i16>
 define void @merge_global_store_2_constants_i16_natural_align(i16 addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr i16, i16 addrspace(1)* %out, i32 1
 
@@ -61,8 +59,7 @@ define void @merge_global_store_2_constants_i16_natural_align(i16 addrspace(1)* 
 }
 
 ; CHECK-LABEL: @merge_global_store_2_constants_half_natural_align
-; CHECK: store half
-; CHECK: store half
+; CHECK: store <2 x half>
 define void @merge_global_store_2_constants_half_natural_align(half addrspace(1)* %out) #0 {
   %out.gep.1 = getelementptr half, half addrspace(1)* %out, i32 1
 
@@ -432,14 +429,8 @@ define void @merge_global_store_4_adjacent_loads_i8(i8 addrspace(1)* %out, i8 ad
 }
 
 ; CHECK-LABEL: @merge_global_store_4_adjacent_loads_i8_natural_align
-; CHECK: load i8
-; CHECK: load i8
-; CHECK: load i8
-; CHECK: load i8
-; CHECK: store i8
-; CHECK: store i8
-; CHECK: store i8
-; CHECK: store i8
+; CHECK: load <4 x i8>
+; CHECK: store <4 x i8>
 define void @merge_global_store_4_adjacent_loads_i8_natural_align(i8 addrspace(1)* %out, i8 addrspace(1)* %in) #0 {
   %out.gep.1 = getelementptr i8, i8 addrspace(1)* %out, i8 1
   %out.gep.2 = getelementptr i8, i8 addrspace(1)* %out, i8 2
