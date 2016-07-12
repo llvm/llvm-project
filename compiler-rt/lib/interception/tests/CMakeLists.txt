@@ -62,7 +62,8 @@ include_directories(../..)
 macro(add_interceptor_lib library)
   add_library(${library} STATIC ${ARGN})
   set_target_properties(${library} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    FOLDER "Compiler-RT Runtime tests")
 endmacro()
 
 function(get_interception_lib_for_arch arch lib lib_name)
@@ -121,8 +122,6 @@ macro(add_interception_tests_for_arch arch)
                        DEPS ${INTERCEPTION_TEST_OBJECTS} ${INTERCEPTION_COMMON_LIB}
                        LINK_FLAGS ${INTERCEPTION_TEST_LINK_FLAGS_COMMON}
                                   ${TARGET_FLAGS})
-
-
 endmacro()
 
 if(COMPILER_RT_CAN_EXECUTE_TESTS AND NOT ANDROID AND NOT APPLE)

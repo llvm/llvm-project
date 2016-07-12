@@ -5674,6 +5674,26 @@ struct __noexcept_move_assign_container : public integral_constant<bool,
 #endif
     > {};
 
+
+#ifndef _LIBCPP_HAS_NO_VARIADICS
+template <class _Tp, class _Alloc>
+struct __temp_value {
+    typedef allocator_traits<_Alloc> _Traits;
+    
+    typename aligned_storage<sizeof(_Tp), alignof(_Tp)>::type __v;
+    _Alloc &__a;
+
+    _Tp *__addr() { return reinterpret_cast<_Tp *>(addressof(__v)); }
+    _Tp &   get() { return *__addr(); }
+        
+    template<class... _Args>
+    __temp_value(_Alloc &__alloc, _Args&& ... __args) : __a(__alloc)
+    { _Traits::construct(__a, __addr(), _VSTD::forward<_Args>(__args)...); }
+    
+    ~__temp_value() { _Traits::destroy(__a, __addr()); }
+    };
+#endif
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif  // _LIBCPP_MEMORY

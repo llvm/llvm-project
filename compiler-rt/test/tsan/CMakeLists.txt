@@ -54,4 +54,4 @@ endif()
 add_lit_testsuite(check-tsan "Running ThreadSanitizer tests"
   ${TSAN_TESTSUITES}
   DEPENDS ${TSAN_TEST_DEPS})
-set_target_properties(check-tsan PROPERTIES FOLDER "TSan tests")
+set_target_properties(check-tsan PROPERTIES FOLDER "Compiler-RT Tests")

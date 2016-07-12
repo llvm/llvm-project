@@ -26,6 +26,8 @@ set(MSAN_RUNTIME_LIBRARIES)
 
 # Static runtime library.
 add_custom_target(msan)
+set_target_properties(msan PROPERTIES FOLDER "Compiler-RT Misc")
+
 foreach(arch ${MSAN_SUPPORTED_ARCH})
   add_compiler_rt_runtime(clang_rt.msan
     STATIC

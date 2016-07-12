@@ -69,6 +69,7 @@ asan_rt_version_t  __asan_rt_version;
 namespace __asan {
 
 void InitializePlatformInterceptors() {}
+void InitializePlatformExceptionHandlers() {}
 
 void *AsanDoesNotSupportStaticLinkage() {
   // This will fail to link with -static.

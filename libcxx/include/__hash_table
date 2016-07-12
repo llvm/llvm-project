@@ -90,7 +90,8 @@ inline _LIBCPP_INLINE_VISIBILITY
 size_t
 __constrain_hash(size_t __h, size_t __bc)
 {
-    return !(__bc & (__bc - 1)) ? __h & (__bc - 1) : __h % __bc;
+    return !(__bc & (__bc - 1)) ? __h & (__bc - 1) :
+        (__h < __bc ? __h : __h % __bc);
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
@@ -2201,8 +2202,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                (__hash == __nd->__hash_
-                    || __constrain_hash(__nd->__hash_, __bc) == __chash);
+                __constrain_hash(__nd->__hash_, __bc) == __chash;
                                                            __nd = __nd->__next_)
             {
                 if ((__nd->__hash_ == __hash) && key_eq()(__nd->__value_, __k))
@@ -2231,8 +2231,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                (__hash == __nd->__hash_
-                    || __constrain_hash(__nd->__hash_, __bc) == __chash);
+                  __constrain_hash(__nd->__hash_, __bc) == __chash;
                                                            __nd = __nd->__next_)
             {
                 if ((__nd->__hash_ == __hash) && key_eq()(__nd->__value_, __k))

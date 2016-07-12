@@ -34,6 +34,7 @@ append_rtti_flag(ON UBSAN_STANDALONE_CXXFLAGS)
 append_list_if(SANITIZER_CAN_USE_CXXABI -DUBSAN_CAN_USE_CXXABI UBSAN_CXXFLAGS)
 
 add_custom_target(ubsan)
+set_target_properties(ubsan PROPERTIES FOLDER "Compiler-RT Misc")
 
 if(APPLE)
   set(UBSAN_COMMON_SOURCES ${UBSAN_SOURCES})

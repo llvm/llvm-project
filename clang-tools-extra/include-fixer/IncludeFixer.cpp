@@ -349,7 +349,7 @@ bool IncludeFixerActionFactory::runInvocation(
   return !Compiler.getDiagnostics().hasFatalErrorOccurred();
 }
 
-tooling::Replacements
+llvm::Expected<tooling::Replacements>
 createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
                                StringRef Header,
                                const clang::format::FormatStyle &Style) {
@@ -360,8 +360,10 @@ createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
   clang::tooling::Replacements Insertions = {
       tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName)};
 
-  return formatReplacements(
-      Code, cleanupAroundReplacements(Code, Insertions, Style), Style);
+  auto CleanReplaces = cleanupAroundReplacements(Code, Insertions, Style);
+  if (!CleanReplaces)
+    return CleanReplaces;
+  return formatReplacements(Code, *CleanReplaces, Style);
 }
 
 } // namespace include_fixer

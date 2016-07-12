@@ -39,6 +39,7 @@ int main() {
 " COMPILER_RT_TARGET_HAS_FCNTL_LCK)
 
 add_custom_target(profile)
+set_target_properties(profile PROPERTIES FOLDER "Compiler-RT Misc")
 
 set(PROFILE_SOURCES
   GCDAProfiling.c

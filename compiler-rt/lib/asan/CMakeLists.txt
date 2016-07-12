@@ -106,6 +106,8 @@ endif()
 
 # Build ASan runtimes shipped with Clang.
 add_custom_target(asan)
+set_target_properties(asan PROPERTIES FOLDER "Compiler-RT Misc")
+
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.asan
     SHARED

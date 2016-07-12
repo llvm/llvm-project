@@ -313,13 +313,19 @@ static int clangTidyMain(int argc, const char **argv) {
   if (!PathList.empty()) {
     FileName = PathList.front();
   }
-  ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FileName);
+
+  SmallString<256> FilePath(FileName);
+  if (std::error_code EC = llvm::sys::fs::make_absolute(FilePath)) {
+    llvm::errs() << "Can't make absolute path from " << FileName << ": "
+                 << EC.message() << "\n";
+  }
+  ClangTidyOptions EffectiveOptions = OptionsProvider->getOptions(FilePath);
   std::vector<std::string> EnabledChecks = getCheckNames(EffectiveOptions);
 
   if (ExplainConfig) {
     //FIXME: Show other ClangTidyOptions' fields, like ExtraArg.
     std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
-        RawOptions = OptionsProvider->getRawOptions(FileName);
+        RawOptions = OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
       for (auto It = RawOptions.rbegin(); It != RawOptions.rend(); ++It) {
         if (It->first.Checks && GlobList(*It->first.Checks).contains(Check)) {

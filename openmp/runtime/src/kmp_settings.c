@@ -3543,9 +3543,8 @@ __kmp_stg_parse_omp_schedule( char const * name, char const * value, void * data
                 __kmp_sched = kmp_sch_trapezoidal;
             else if (!__kmp_strcasecmp_with_sentinel("static", value, ','))      /* STATIC */
                 __kmp_sched = kmp_sch_static;
-#ifdef KMP_STATIC_STEAL_ENABLED
-            else if (KMP_ARCH_X86_64 &&
-                     !__kmp_strcasecmp_with_sentinel("static_steal", value, ','))
+#if KMP_STATIC_STEAL_ENABLED
+            else if (!__kmp_strcasecmp_with_sentinel("static_steal", value, ','))
                 __kmp_sched = kmp_sch_static_steal;
 #endif
             else {
