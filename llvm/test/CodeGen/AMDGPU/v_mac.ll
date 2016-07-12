@@ -7,7 +7,7 @@
 ; GCN: buffer_load_dword [[C:v[0-9]+]], off, s[{{[0-9]+:[0-9]+}}], 0 offset:8
 ; GCN: v_mac_f32_e32 [[C]], [[B]], [[A]]
 ; GCN: buffer_store_dword [[C]]
-define void @mac_vvv(float addrspace(1)* %out, float addrspace(1)* %in) {
+define void @mac_vvv(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -25,7 +25,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_inline_sgpr_inline:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]}}, s{{[0-9]+}}, 0.5, 0.5
-define void @mad_inline_sgpr_inline(float addrspace(1)* %out, float %in) {
+define void @mad_inline_sgpr_inline(float addrspace(1)* %out, float %in) #0 {
 entry:
   %tmp0 = fmul float 0.5, %in
   %tmp1 = fadd float %tmp0, 0.5
@@ -36,7 +36,7 @@ entry:
 ; GCN-LABEL: {{^}}mad_vvs:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}, s{{[0-9]+}}
-define void @mad_vvs(float addrspace(1)* %out, float addrspace(1)* %in, float %c) {
+define void @mad_vvs(float addrspace(1)* %out, float addrspace(1)* %in, float %c) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
 
@@ -51,7 +51,7 @@ entry:
 
 ; GCN-LABEL: {{^}}mac_ssv:
 ; GCN: v_mac_f32_e64 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}
-define void @mac_ssv(float addrspace(1)* %out, float addrspace(1)* %in, float %a) {
+define void @mac_ssv(float addrspace(1)* %out, float addrspace(1)* %in, float %a) #0 {
 entry:
   %c = load float, float addrspace(1)* %in
 
@@ -64,7 +64,7 @@ entry:
 ; GCN-LABEL: {{^}}mac_mad_same_add:
 ; GCN: v_mad_f32 v{{[0-9]}}, v{{[0-9]+}}, v{{[0-9]+}}, [[ADD:v[0-9]+]]
 ; GCN: v_mac_f32_e32 [[ADD]], v{{[0-9]+}}, v{{[0-9]+}}
-define void @mac_mad_same_add(float addrspace(1)* %out, float addrspace(1)* %in) {
+define void @mac_mad_same_add(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -104,6 +104,46 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
+  %neg_a = fsub float -0.0, %a
+  %tmp0 = fmul float %neg_a, %b
+  %tmp1 = fadd float %tmp0, %c
+
+  store float %tmp1, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}unsafe_mad_sub0_src0:
+; GCN-NOT: v_mac_f32
+; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
+define void @unsafe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
+entry:
+  %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
+  %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
+
+  %a = load float, float addrspace(1)* %in
+  %b = load float, float addrspace(1)* %b_ptr
+  %c = load float, float addrspace(1)* %c_ptr
+
+  %neg_a = fsub float 0.0, %a
+  %tmp0 = fmul float %neg_a, %b
+  %tmp1 = fadd float %tmp0, %c
+
+  store float %tmp1, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}safe_mad_sub0_src0:
+; GCN: v_sub_f32_e32 [[SUB0:v[0-9]+]], 0,
+; GCN: v_mac_f32_e32 v{{[0-9]+}}, v{{[0-9]+}}, [[SUB0]]
+define void @safe_mad_sub0_src0(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+entry:
+  %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
+  %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
+
+  %a = load float, float addrspace(1)* %in
+  %b = load float, float addrspace(1)* %b_ptr
+  %c = load float, float addrspace(1)* %c_ptr
+
   %neg_a = fsub float 0.0, %a
   %tmp0 = fmul float %neg_a, %b
   %tmp1 = fadd float %tmp0, %c
@@ -116,6 +156,26 @@ entry:
 ; GCN-NOT: v_mac_f32
 ; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
 define void @mad_neg_src1(float addrspace(1)* %out, float addrspace(1)* %in) #0 {
+entry:
+  %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
+  %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
+
+  %a = load float, float addrspace(1)* %in
+  %b = load float, float addrspace(1)* %b_ptr
+  %c = load float, float addrspace(1)* %c_ptr
+
+  %neg_b = fsub float -0.0, %b
+  %tmp0 = fmul float %a, %neg_b
+  %tmp1 = fadd float %tmp0, %c
+
+  store float %tmp1, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}unsafe_mad_sub0_src1:
+; GCN-NOT: v_mac_f32
+; GCN: v_mad_f32 v{{[0-9]+}}, -v{{[0-9]+}}, v{{[0-9]+}}, v{{[-0-9]}}
+define void @unsafe_mad_sub0_src1(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
 entry:
   %b_ptr = getelementptr float, float addrspace(1)* %in, i32 1
   %c_ptr = getelementptr float, float addrspace(1)* %in, i32 2
@@ -144,7 +204,7 @@ entry:
   %b = load float, float addrspace(1)* %b_ptr
   %c = load float, float addrspace(1)* %c_ptr
 
-  %neg_c = fsub float 0.0, %c
+  %neg_c = fsub float -0.0, %c
   %tmp0 = fmul float %a, %b
   %tmp1 = fadd float %tmp0, %neg_c
 
@@ -152,4 +212,5 @@ entry:
   ret void
 }
 
-attributes #0 = { "true" "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "unsafe-fp-math"="false" }
+attributes #1 = { nounwind "unsafe-fp-math"="true" }

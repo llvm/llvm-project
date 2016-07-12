@@ -362,6 +362,9 @@ protected:
   /// construction (see LLVMTargetMachine::initAsmInfo()).
   bool UseIntegratedAssembler;
 
+  /// Preserve Comments in assembly
+  bool PreserveAsmComments;
+
   /// Compress DWARF debug sections. Defaults to no compression.
   DebugCompressionType CompressDebugSections;
 
@@ -573,6 +576,14 @@ public:
   /// Set whether assembly (inline or otherwise) should be parsed.
   virtual void setUseIntegratedAssembler(bool Value) {
     UseIntegratedAssembler = Value;
+  }
+
+  /// Return true if assembly (inline or otherwise) should be parsed.
+  bool preserveAsmComments() const { return PreserveAsmComments; }
+
+  /// Set whether assembly (inline or otherwise) should be parsed.
+  virtual void setPreserveAsmComments(bool Value) {
+    PreserveAsmComments = Value;
   }
 
   DebugCompressionType compressDebugSections() const {

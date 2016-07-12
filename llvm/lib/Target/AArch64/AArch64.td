@@ -237,7 +237,8 @@ def ProcKryo    : SubtargetFeature<"kryo", "ARMProcFamily", "Kryo",
                                    FeatureNEON,
                                    FeaturePerfMon,
                                    FeaturePostRAScheduler,
-                                   FeaturePredictableSelectIsExpensive
+                                   FeaturePredictableSelectIsExpensive,
+                                   FeatureZCZeroing
                                    ]>;
 
 def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",

@@ -75,7 +75,8 @@ public:
   /// \param Inst - The instruction to relax, which may be the same
   /// as the output.
   /// \param [out] Res On return, the relaxed instruction.
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {}
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {}
 
   /// @}
 

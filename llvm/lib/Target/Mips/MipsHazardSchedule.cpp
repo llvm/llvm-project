@@ -137,8 +137,8 @@ bool MipsHazardSchedule::runOnMachineFunction(MachineFunction &MF) {
 
       if (InsertNop) {
         Changed = true;
-        MIBundleBuilder(I)
-            .append(BuildMI(MF, I->getDebugLoc(), TII->get(Mips::NOP)));
+        MIBundleBuilder(&*I).append(
+            BuildMI(MF, I->getDebugLoc(), TII->get(Mips::NOP)));
         NumInsertedNops++;
       }
     }

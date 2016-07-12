@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
+#include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -24,7 +25,6 @@ namespace llvm {
 namespace pdb {
 
 class IPDBFile;
-class IPDBStreamData;
 class PDBFile;
 
 class MappedBlockStream : public codeview::StreamInterface {
@@ -44,6 +44,8 @@ public:
   createIndexedStream(uint32_t StreamIdx, const IPDBFile &File);
   static Expected<std::unique_ptr<MappedBlockStream>>
   createDirectoryStream(const PDBFile &File);
+
+  llvm::BumpPtrAllocator &getAllocator() { return Pool; }
 
 protected:
   MappedBlockStream(std::unique_ptr<IPDBStreamData> Data, const IPDBFile &File);

@@ -290,22 +290,35 @@ define <16 x i8> @cmpeq_zext_v16i8(<16 x i8> %a, <16 x i8> %b) {
   ret <16 x i8> %zext
 }
 
-define <8 x i16> @cmpeq_zext_v8i16(<8 x i16> %a, <8 x i16> %b) {
-; SSE-LABEL: cmpeq_zext_v8i16:
+define <16 x i16> @cmpeq_zext_v16i16(<16 x i16> %a, <16 x i16> %b) {
+; SSE-LABEL: cmpeq_zext_v16i16:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pcmpeqw %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pcmpeqw %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pcmpeqw %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: cmpeq_zext_v8i16:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: cmpeq_zext_v16i16:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpeqw %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
 ;
-  %cmp = icmp eq <8 x i16> %a, %b
-  %zext = zext <8 x i1> %cmp to <8 x i16>
-  ret <8 x i16> %zext
+; AVX2-LABEL: cmpeq_zext_v16i16:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+  %cmp = icmp eq <16 x i16> %a, %b
+  %zext = zext <16 x i1> %cmp to <16 x i16>
+  ret <16 x i16> %zext
 }
 
 define <4 x i32> @cmpeq_zext_v4i32(<4 x i32> %a, <4 x i32> %b) {
@@ -333,48 +346,80 @@ define <4 x i32> @cmpeq_zext_v4i32(<4 x i32> %a, <4 x i32> %b) {
   ret <4 x i32> %zext
 }
 
-define <2 x i64> @cmpeq_zext_v2i64(<2 x i64> %a, <2 x i64> %b) {
-; SSE2-LABEL: cmpeq_zext_v2i64:
+define <4 x i64> @cmpeq_zext_v4i64(<4 x i64> %a, <4 x i64> %b) {
+; SSE2-LABEL: cmpeq_zext_v4i64:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,0,3,2]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [1,1]
+; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm1
+; SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,0,3,2]
+; SSE2-NEXT:    pand %xmm4, %xmm2
+; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
-; SSE42-LABEL: cmpeq_zext_v2i64:
+; SSE42-LABEL: cmpeq_zext_v4i64:
 ; SSE42:       # BB#0:
-; SSE42-NEXT:    pcmpeqq %xmm1, %xmm0
-; SSE42-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [1,1]
+; SSE42-NEXT:    pand %xmm2, %xmm0
+; SSE42-NEXT:    pcmpeqq %xmm3, %xmm1
+; SSE42-NEXT:    pand %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;
-; AVX-LABEL: cmpeq_zext_v2i64:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: cmpeq_zext_v4i64:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpeqq %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
 ;
-  %cmp = icmp eq <2 x i64> %a, %b
-  %zext = zext <2 x i1> %cmp to <2 x i64>
-  ret <2 x i64> %zext
+; AVX2-LABEL: cmpeq_zext_v4i64:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+  %cmp = icmp eq <4 x i64> %a, %b
+  %zext = zext <4 x i1> %cmp to <4 x i64>
+  ret <4 x i64> %zext
 }
 
-define <16 x i8> @cmpgt_zext_v16i8(<16 x i8> %a, <16 x i8> %b) {
-; SSE-LABEL: cmpgt_zext_v16i8:
+define <32 x i8> @cmpgt_zext_v32i8(<32 x i8> %a, <32 x i8> %b) {
+; SSE-LABEL: cmpgt_zext_v32i8:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pcmpgtb %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pcmpgtb %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pcmpgtb %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: cmpgt_zext_v16i8:
-; AVX:       # BB#0:
-; AVX-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX-NEXT:    retq
+; AVX1-LABEL: cmpgt_zext_v32i8:
+; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpgtb %xmm2, %xmm3, %xmm2
+; AVX1-NEXT:    vpcmpgtb %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
+; AVX1-NEXT:    retq
 ;
-  %cmp = icmp sgt <16 x i8> %a, %b
-  %zext = zext <16 x i1> %cmp to <16 x i8>
-  ret <16 x i8> %zext
+; AVX2-LABEL: cmpgt_zext_v32i8:
+; AVX2:       # BB#0:
+; AVX2-NEXT:    vpcmpgtb %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    retq
+;
+  %cmp = icmp sgt <32 x i8> %a, %b
+  %zext = zext <32 x i1> %cmp to <32 x i8>
+  ret <32 x i8> %zext
 }
 
 define <8 x i16> @cmpgt_zext_v8i16(<8 x i16> %a, <8 x i16> %b) {
@@ -395,29 +440,36 @@ define <8 x i16> @cmpgt_zext_v8i16(<8 x i16> %a, <8 x i16> %b) {
   ret <8 x i16> %zext
 }
 
-define <4 x i32> @cmpgt_zext_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; SSE-LABEL: cmpgt_zext_v4i32:
+define <8 x i32> @cmpgt_zext_v8i32(<8 x i32> %a, <8 x i32> %b) {
+; SSE-LABEL: cmpgt_zext_v8i32:
 ; SSE:       # BB#0:
-; SSE-NEXT:    pcmpgtd %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
+; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    pcmpgtd %xmm3, %xmm1
+; SSE-NEXT:    pand %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: cmpgt_zext_v4i32:
+; AVX1-LABEL: cmpgt_zext_v8i32:
 ; AVX1:       # BB#0:
+; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; AVX1-NEXT:    vpcmpgtd %xmm2, %xmm3, %xmm2
 ; AVX1-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX1-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: cmpgt_zext_v4i32:
+; AVX2-LABEL: cmpgt_zext_v8i32:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vpcmpgtd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
+; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
-  %cmp = icmp sgt <4 x i32> %a, %b
-  %zext = zext <4 x i1> %cmp to <4 x i32>
-  ret <4 x i32> %zext
+  %cmp = icmp sgt <8 x i32> %a, %b
+  %zext = zext <8 x i1> %cmp to <8 x i32>
+  ret <8 x i32> %zext
 }
 
 define <2 x i64> @cmpgt_zext_v2i64(<2 x i64> %a, <2 x i64> %b) {

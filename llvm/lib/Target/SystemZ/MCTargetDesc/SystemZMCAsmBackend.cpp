@@ -58,7 +58,8 @@ public:
                             const MCAsmLayout &Layout) const override {
     return false;
   }
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {
     llvm_unreachable("SystemZ does do not have assembler relaxation");
   }
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;

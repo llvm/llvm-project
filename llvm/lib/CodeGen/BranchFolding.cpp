@@ -816,14 +816,13 @@ mergeMMOsFromMemoryOperations(MachineBasicBlock::iterator MBBIStartPos,
   }
 }
 
-// See if any of the blocks in MergePotentials (which all have a common single
-// successor, or all have no successor) can be tail-merged.  If there is a
-// successor, any blocks in MergePotentials that are not tail-merged and
-// are not immediately before Succ must have an unconditional branch to
-// Succ added (but the predecessor/successor lists need no adjustment).
-// The lone predecessor of Succ that falls through into Succ,
+// See if any of the blocks in MergePotentials (which all have SuccBB as a
+// successor, or all have no successor if it is null) can be tail-merged.
+// If there is a successor, any blocks in MergePotentials that are not
+// tail-merged and are not immediately before Succ must have an unconditional
+// branch to Succ added (but the predecessor/successor lists need no
+// adjustment). The lone predecessor of Succ that falls through into Succ,
 // if any, is given in PredBB.
-
 bool BranchFolder::TryTailMergeBlocks(MachineBasicBlock *SuccBB,
                                       MachineBasicBlock *PredBB) {
   bool MadeChange = false;

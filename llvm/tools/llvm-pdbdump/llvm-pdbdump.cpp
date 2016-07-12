@@ -40,8 +40,12 @@
 #include "llvm/DebugInfo/PDB/PDBSymbolExe.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolThunk.h"
+#include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
+#include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
@@ -261,18 +265,28 @@ cl::list<std::string> InputFilename(cl::Positional,
 }
 
 namespace pdb2yaml {
+cl::opt<bool>
+    NoFileHeaders("no-file-headers",
+                  cl::desc("Do not dump MSF file headers (you will not be able "
+                           "to generate a fresh PDB from the resulting YAML)"),
+                  cl::sub(PdbToYamlSubcommand), cl::init(false));
+
 cl::opt<bool> StreamMetadata(
     "stream-metadata",
     cl::desc("Dump the number of streams and each stream's size"),
-    cl::sub(PdbToYamlSubcommand));
+    cl::sub(PdbToYamlSubcommand), cl::init(false));
 cl::opt<bool> StreamDirectory(
     "stream-directory",
     cl::desc("Dump each stream's block map (implies -stream-metadata)"),
-    cl::sub(PdbToYamlSubcommand));
+    cl::sub(PdbToYamlSubcommand), cl::init(false));
 cl::opt<bool> PdbStream(
     "pdb-stream",
     cl::desc("Dump the PDB Stream (Stream 1) (implies -stream-metadata)"),
-    cl::sub(PdbToYamlSubcommand));
+    cl::sub(PdbToYamlSubcommand), cl::init(false));
+cl::opt<bool> DbiStream(
+    "dbi-stream",
+    cl::desc("Dump the DBI Stream (Stream 2) (implies -stream-metadata)"),
+    cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -296,43 +310,60 @@ static void yamlToPdb(StringRef Path) {
   llvm::yaml::Input In(Buffer->getBuffer());
   pdb::yaml::PdbObject YamlObj;
   In >> YamlObj;
+  if (!YamlObj.Headers.hasValue())
+    ExitOnErr(make_error<GenericError>(generic_error_code::unspecified,
+                                       "Yaml does not contain MSF headers"));
 
   auto OutFileOrError = FileOutputBuffer::create(
-      opts::yaml2pdb::YamlPdbOutputFile, YamlObj.Headers.FileSize);
+      opts::yaml2pdb::YamlPdbOutputFile, YamlObj.Headers->FileSize);
   if (OutFileOrError.getError())
     ExitOnErr(make_error<GenericError>(generic_error_code::invalid_path,
                                        opts::yaml2pdb::YamlPdbOutputFile));
 
   auto FileByteStream =
       llvm::make_unique<FileBufferByteStream>(std::move(*OutFileOrError));
-  PDBFile Pdb(std::move(FileByteStream));
-  ExitOnErr(Pdb.setSuperBlock(&YamlObj.Headers.SuperBlock));
+  PDBFileBuilder Builder(std::move(FileByteStream));
+
+  ExitOnErr(Builder.setSuperBlock(YamlObj.Headers->SuperBlock));
   if (YamlObj.StreamSizes.hasValue()) {
-    Pdb.setStreamSizes(YamlObj.StreamSizes.getValue());
+    Builder.setStreamSizes(YamlObj.StreamSizes.getValue());
   }
-  Pdb.setDirectoryBlocks(YamlObj.Headers.DirectoryBlocks);
+  Builder.setDirectoryBlocks(YamlObj.Headers->DirectoryBlocks);
 
   if (YamlObj.StreamMap.hasValue()) {
     std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
     for (auto &E : YamlObj.StreamMap.getValue()) {
       StreamMap.push_back(E.Blocks);
     }
-    Pdb.setStreamMap(StreamMap);
+    Builder.setStreamMap(StreamMap);
   } else {
-    ExitOnErr(Pdb.generateSimpleStreamMap());
+    ExitOnErr(Builder.generateSimpleStreamMap());
   }
 
   if (YamlObj.PdbStream.hasValue()) {
-    auto IS = Pdb.emplacePDBInfoStream();
-    ExitOnErr(IS.takeError());
-    auto &InfoS = IS.get();
-    InfoS.setAge(YamlObj.PdbStream->Age);
-    InfoS.setGuid(YamlObj.PdbStream->Guid);
-    InfoS.setSignature(YamlObj.PdbStream->Signature);
-    InfoS.setVersion(static_cast<PdbRaw_ImplVer>(YamlObj.PdbStream->Version));
+    auto &InfoBuilder = Builder.getInfoBuilder();
+    InfoBuilder.setAge(YamlObj.PdbStream->Age);
+    InfoBuilder.setGuid(YamlObj.PdbStream->Guid);
+    InfoBuilder.setSignature(YamlObj.PdbStream->Signature);
+    InfoBuilder.setVersion(YamlObj.PdbStream->Version);
   }
 
-  ExitOnErr(Pdb.commit());
+  if (YamlObj.DbiStream.hasValue()) {
+    auto &DbiBuilder = Builder.getDbiBuilder();
+    DbiBuilder.setAge(YamlObj.DbiStream->Age);
+    DbiBuilder.setBuildNumber(YamlObj.DbiStream->BuildNumber);
+    DbiBuilder.setFlags(YamlObj.DbiStream->Flags);
+    DbiBuilder.setMachineType(YamlObj.DbiStream->MachineType);
+    DbiBuilder.setPdbDllRbld(YamlObj.DbiStream->PdbDllRbld);
+    DbiBuilder.setPdbDllVersion(YamlObj.DbiStream->PdbDllVersion);
+    DbiBuilder.setVersionHeader(YamlObj.DbiStream->VerHeader);
+  }
+
+  auto Pdb = Builder.build();
+  ExitOnErr(Pdb.takeError());
+
+  auto &PdbFile = *Pdb;
+  ExitOnErr(PdbFile->commit());
 }
 
 static void pdb2Yaml(StringRef Path) {

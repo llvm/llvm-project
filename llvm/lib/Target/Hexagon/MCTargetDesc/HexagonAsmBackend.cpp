@@ -634,8 +634,8 @@ public:
     llvm_unreachable("Handled by fixupNeedsRelaxationAdvanced");
   }
 
-  void relaxInstruction(MCInst const & Inst,
-                        MCInst & Res) const override {
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {
     assert(HexagonMCInstrInfo::isBundle(Inst) &&
            "Hexagon relaxInstruction only works on bundles");
 

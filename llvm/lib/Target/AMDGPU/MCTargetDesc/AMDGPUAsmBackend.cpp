@@ -53,7 +53,8 @@ public:
                             const MCAsmLayout &Layout) const override {
     return false;
   }
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {
     assert(!"Not implemented");
   }
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }

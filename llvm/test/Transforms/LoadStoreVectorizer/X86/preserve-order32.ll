@@ -4,8 +4,11 @@ target datalayout = "e-p:32:32-p1:64:64-p2:64:64-p3:32:32-p4:64:64-p5:32:32-p24:
 
 %struct.buffer_t = type { i32, i8* }
 
-; Check an i32 and i8* get vectorized, and that
-; the two accesses (load into buff.val and store to buff.p) preserve their order.
+; Check an i32 and i8* get vectorized, and that the two accesses
+; (load into buff.val and store to buff.p) preserve their order.
+; Vectorized loads should be inserted at the position of the first load,
+; and instructions which were between the first and last load should be
+; reordered preserving their relative order inasmuch as possible.
 
 ; CHECK-LABEL: @preserve_order_32(
 ; CHECK: load <2 x i32>

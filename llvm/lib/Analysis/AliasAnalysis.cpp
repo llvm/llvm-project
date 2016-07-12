@@ -110,7 +110,7 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, ImmutableCallSite Call) {
   // We may have two calls
   if (auto CS = ImmutableCallSite(I)) {
     // Check if the two calls modify the same memory
-    return getModRefInfo(Call, CS);
+    return getModRefInfo(CS, Call);
   } else {
     // Otherwise, check if the call modifies or references the
     // location this memory access defines.  The best we can say

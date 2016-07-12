@@ -761,9 +761,8 @@ void SCCPSolver::visitCastInst(CastInst &I) {
     markOverdefined(&I);
   else if (OpSt.isConstant()) {
     // Fold the constant as we build.
-    Constant *C = ConstantFoldCastOperand(
-        I.getOpcode(), getValueState(I.getOperand(0)).getConstant(),
-        I.getType(), DL);
+    Constant *C = ConstantFoldCastOperand(I.getOpcode(), OpSt.getConstant(),
+                                          I.getType(), DL);
     if (isa<UndefValue>(C))
       return;
     // Propagate constant value

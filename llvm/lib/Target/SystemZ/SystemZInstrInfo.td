@@ -205,6 +205,10 @@ multiclass CondExtendedMnemonicA<bits<4> ccmask, string name> {
   }
   def LOCR  : FixedCondUnaryRRF<"locr"##name,  0xB9F2, GR32, GR32, ccmask>;
   def LOCGR : FixedCondUnaryRRF<"locgr"##name, 0xB9E2, GR64, GR64, ccmask>;
+  def LOCHI : FixedCondUnaryRIE<"lochi"##name,  0xEC42, GR64, imm32sx16,
+                                ccmask>;
+  def LOCGHI: FixedCondUnaryRIE<"locghi"##name, 0xEC46, GR64, imm64sx16,
+                                ccmask>;
   def LOC   : FixedCondUnaryRSY<"loc"##name,   0xEBF2, GR32, ccmask, 4>;
   def LOCG  : FixedCondUnaryRSY<"locg"##name,  0xEBE2, GR64, ccmask, 8>;
   def STOC  : FixedCondStoreRSY<"stoc"##name,  0xEBF3, GR32, ccmask, 4>;
@@ -449,6 +453,14 @@ let isCodeGenOnly = 1, Uses = [CC] in {
 let Uses = [CC] in {
   def AsmLOCR  : AsmCondUnaryRRF<"loc",  0xB9F2, GR32, GR32>;
   def AsmLOCGR : AsmCondUnaryRRF<"locg", 0xB9E2, GR64, GR64>;
+}
+let isCodeGenOnly = 1, Uses = [CC] in {
+  def LOCHI  : CondUnaryRIE<"lochi",  0xEC42, GR32, imm32sx16>;
+  def LOCGHI : CondUnaryRIE<"locghi", 0xEC46, GR64, imm64sx16>;
+}
+let Uses = [CC] in {
+  def AsmLOCHI  : AsmCondUnaryRIE<"lochi",  0xEC42, GR32, imm32sx16>;
+  def AsmLOCGHI : AsmCondUnaryRIE<"locghi", 0xEC46, GR64, imm64sx16>;
 }
 
 // Immediate moves.

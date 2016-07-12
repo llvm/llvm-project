@@ -40,7 +40,8 @@ enum {
   FLAT = 1 << 21,
   WQM = 1 << 22,
   VGPRSpill = 1 << 23,
-  VOPAsmPrefer32Bit = 1 << 24
+  VOPAsmPrefer32Bit = 1 << 24,
+  Gather4 = 1 << 25
 };
 }
 

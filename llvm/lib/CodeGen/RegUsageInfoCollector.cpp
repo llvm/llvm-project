@@ -1,4 +1,4 @@
-//===- RegUsageInfoCollector.cpp - Register Usage Informartion Collector --===//
+//===-- RegUsageInfoCollector.cpp - Register Usage Information Collector --===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -106,8 +106,9 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   PRUI->setTargetMachine(&TM);
 
   DEBUG(dbgs() << "Clobbered Registers: ");
+
   for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
-    if (!MRI->reg_nodbg_empty(PReg) && MRI->isPhysRegUsed(PReg))
+    if (MRI->isPhysRegModified(PReg, true))
       markRegClobbered(TRI, &RegMask[0], PReg);
 
   const uint32_t *CallPreservedMask =

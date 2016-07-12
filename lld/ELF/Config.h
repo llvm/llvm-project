@@ -38,8 +38,9 @@ enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
 // This struct contains symbols version definition that
 // can be found in version script if it is used for link.
 struct Version {
-  Version(llvm::StringRef Name) : Name(Name) {}
+  Version(llvm::StringRef Name, size_t Id) : Name(Name), Id(Id) {}
   llvm::StringRef Name;
+  size_t Id;
   std::vector<llvm::StringRef> Globals;
   size_t NameOff; // Offset in string table.
 };

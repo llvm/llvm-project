@@ -505,7 +505,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     Value *ArrayIdx = GEP->getOperand(I);
     uint64_t ElementSize = DL->getTypeAllocSize(*GTI);
     if (ArrayIdx->getType()->getIntegerBitWidth() <=
-        DL->getPointerSizeInBits()) {
+        DL->getPointerSizeInBits(GEP->getAddressSpace())) {
       // Skip factoring if ArrayIdx is wider than the pointer size, because
       // ArrayIdx is implicitly truncated to the pointer size.
       factorArrayIndex(ArrayIdx, BaseExpr, ElementSize, GEP);
@@ -516,7 +516,7 @@ void StraightLineStrengthReduce::allocateCandidatesAndFindBasisForGEP(
     Value *TruncatedArrayIdx = nullptr;
     if (match(ArrayIdx, m_SExt(m_Value(TruncatedArrayIdx))) &&
         TruncatedArrayIdx->getType()->getIntegerBitWidth() <=
-            DL->getPointerSizeInBits()) {
+            DL->getPointerSizeInBits(GEP->getAddressSpace())) {
       // Skip factoring if TruncatedArrayIdx is wider than the pointer size,
       // because TruncatedArrayIdx is implicitly truncated to the pointer size.
       factorArrayIndex(TruncatedArrayIdx, BaseExpr, ElementSize, GEP);

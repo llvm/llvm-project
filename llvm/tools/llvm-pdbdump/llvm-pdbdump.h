@@ -57,9 +57,11 @@ extern llvm::cl::opt<bool> DumpFpo;
 }
 
 namespace pdb2yaml {
+extern llvm::cl::opt<bool> NoFileHeaders;
 extern llvm::cl::opt<bool> StreamMetadata;
 extern llvm::cl::opt<bool> StreamDirectory;
 extern llvm::cl::opt<bool> PdbStream;
+extern llvm::cl::opt<bool> DbiStream;
 extern llvm::cl::list<std::string> InputFilename;
 }
 }

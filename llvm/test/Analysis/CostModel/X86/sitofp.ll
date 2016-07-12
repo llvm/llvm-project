@@ -264,13 +264,13 @@ define <4 x double> @sitofpv4i64v4double(<4 x i64> %a) {
   ; SSE2: cost of 40 {{.*}} sitofp
   ;
   ; AVX1-LABEL: sitofpv4i64v4double
-  ; AVX1: cost of 10 {{.*}} sitofp
+  ; AVX1: cost of 13 {{.*}} sitofp
   ;
   ; AVX2-LABEL: sitofpv4i64v4double
-  ; AVX2: cost of 10 {{.*}} sitofp
+  ; AVX2: cost of 13 {{.*}} sitofp
   ;
   ; AVX512F-LABEL: sitofpv4i64v4double
-  ; AVX512F: cost of 10 {{.*}} sitofp
+  ; AVX512F: cost of 13 {{.*}} sitofp
   %1 = sitofp <4 x i64> %a to <4 x double>
   ret <4 x double> %1
 }
@@ -280,10 +280,10 @@ define <8 x double> @sitofpv8i64v8double(<8 x i64> %a) {
   ; SSE2: cost of 80 {{.*}} sitofp
   ;
   ; AVX1-LABEL: sitofpv8i64v8double
-  ; AVX1: cost of 21 {{.*}} sitofp
+  ; AVX1: cost of 27 {{.*}} sitofp
   ;
   ; AVX2-LABEL: sitofpv8i64v8double
-  ; AVX2: cost of 21 {{.*}} sitofp
+  ; AVX2: cost of 27 {{.*}} sitofp
   ;
   ; AVX512F-LABEL: sitofpv8i64v8double
   ; AVX512F: cost of 22 {{.*}} sitofp
@@ -296,10 +296,10 @@ define <16 x double> @sitofpv16i64v16double(<16 x i64> %a) {
   ; SSE2: cost of 160 {{.*}} sitofp
   ;
   ; AVX1-LABEL: sitofpv16i64v16double
-  ; AVX1: cost of 43 {{.*}} sitofp
+  ; AVX1: cost of 55 {{.*}} sitofp
   ;
   ; AVX2-LABEL: sitofpv16i64v16double
-  ; AVX2: cost of 43 {{.*}} sitofp
+  ; AVX2: cost of 55 {{.*}} sitofp
   ;
   ; AVX512F-LABEL: sitofpv16i64v16double
   ; AVX512F: cost of 45 {{.*}} sitofp
@@ -312,10 +312,10 @@ define <32 x double> @sitofpv32i64v32double(<32 x i64> %a) {
   ; SSE2: cost of 320 {{.*}} sitofp
   ;
   ; AVX1-LABEL: sitofpv32i64v32double
-  ; AVX1: cost of 87 {{.*}} sitofp
+  ; AVX1: cost of 111 {{.*}} sitofp
   ;
   ; AVX2-LABEL: sitofpv32i64v32double
-  ; AVX2: cost of 87 {{.*}} sitofp
+  ; AVX2: cost of 111 {{.*}} sitofp
   ;
   ; AVX512F-LABEL: sitofpv32i64v32double
   ; AVX512F: cost of 91 {{.*}} sitofp

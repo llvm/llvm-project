@@ -3825,6 +3825,14 @@ static bool isTargetShuffle(unsigned Opcode) {
   }
 }
 
+static bool isTargetShuffleVariableMask(unsigned Opcode) {
+  switch (Opcode) {
+  default: return false;
+  case X86ISD::PSHUFB:
+    return true;
+  }
+}
+
 static SDValue getTargetShuffleNode(unsigned Opc, const SDLoc &dl, MVT VT,
                                     SDValue V1, unsigned TargetMask,
                                     SelectionDAG &DAG) {
@@ -25009,7 +25017,7 @@ static bool matchBinaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
 /// instruction but should only be used to replace chains over a certain depth.
 static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
                                    ArrayRef<int> Mask, int Depth,
-                                   bool HasPSHUFB, SelectionDAG &DAG,
+                                   bool HasVariableMask, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
   assert(!Mask.empty() && "Cannot combine an empty shuffle mask!");
@@ -25175,11 +25183,12 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   if (Depth < 2)
     return false;
 
-  // If we have 3 or more shuffle instructions or a chain involving PSHUFB, we
-  // can replace them with a single PSHUFB instruction profitably. Intel's
-  // manuals suggest only using PSHUFB if doing so replacing 5 instructions, but
-  // in practice PSHUFB tends to be *very* fast so we're more aggressive.
-  if ((Depth >= 3 || HasPSHUFB) &&
+  // If we have 3 or more shuffle instructions or a chain involving a variable
+  // mask, we can replace them with a single PSHUFB instruction profitably.
+  // Intel's manuals suggest only using PSHUFB if doing so replacing 5
+  // instructions, but in practice PSHUFB tends to be *very* fast so we're
+  // more aggressive.
+  if ((Depth >= 3 || HasVariableMask) &&
       ((VT.is128BitVector() && Subtarget.hasSSSE3()) ||
        (VT.is256BitVector() && Subtarget.hasAVX2()) ||
        (VT.is512BitVector() && Subtarget.hasBWI()))) {
@@ -25249,7 +25258,7 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 /// combining in this recursive walk.
 static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
                                           ArrayRef<int> RootMask,
-                                          int Depth, bool HasPSHUFB,
+                                          int Depth, bool HasVariableMask,
                                           SelectionDAG &DAG,
                                           TargetLowering::DAGCombinerInfo &DCI,
                                           const X86Subtarget &Subtarget) {
@@ -25351,13 +25360,12 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
 
   assert(Input0 && "Shuffle with no inputs detected");
 
-  // TODO - generalize this to support any variable mask shuffle.
-  HasPSHUFB |= (Op.getOpcode() == X86ISD::PSHUFB);
+  HasVariableMask |= isTargetShuffleVariableMask(Op.getOpcode());
 
   // See if we can recurse into Input0 (if it's a target shuffle).
   if (Op->isOnlyUserOf(Input0.getNode()) &&
-      combineX86ShufflesRecursively(Input0, Root, Mask, Depth + 1, HasPSHUFB,
-                                    DAG, DCI, Subtarget))
+      combineX86ShufflesRecursively(Input0, Root, Mask, Depth + 1,
+                                    HasVariableMask, DAG, DCI, Subtarget))
     return true;
 
   // Minor canonicalization of the accumulated shuffle mask to make it easier
@@ -25370,8 +25378,8 @@ static bool combineX86ShufflesRecursively(SDValue Op, SDValue Root,
     Mask = std::move(WidenedMask);
   }
 
-  return combineX86ShuffleChain(Input0, Root, Mask, Depth, HasPSHUFB, DAG, DCI,
-                                Subtarget);
+  return combineX86ShuffleChain(Input0, Root, Mask, Depth, HasVariableMask, DAG,
+                                DCI, Subtarget);
 }
 
 /// \brief Get the PSHUF-style mask from PSHUF node.

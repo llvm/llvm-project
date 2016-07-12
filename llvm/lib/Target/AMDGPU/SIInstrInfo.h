@@ -310,6 +310,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MIMG;
   }
 
+  static bool isGather4(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::Gather4;
+  }
+
+  bool isGather4(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::Gather4;
+  }
+
   static bool isFLAT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::FLAT;
   }

@@ -812,22 +812,30 @@ bool SampleProfileLoader::propagateThroughEdges(Function &F) {
     // edge is unknown (see setEdgeOrBlockWeight).
     for (unsigned i = 0; i < 2; i++) {
       uint64_t TotalWeight = 0;
-      unsigned NumUnknownEdges = 0;
-      Edge UnknownEdge, SelfReferentialEdge;
+      unsigned NumUnknownEdges = 0, NumTotalEdges = 0;
+      Edge UnknownEdge, SelfReferentialEdge, SingleEdge;
 
       if (i == 0) {
         // First, visit all predecessor edges.
+        NumTotalEdges = Predecessors[BB].size();
         for (auto *Pred : Predecessors[BB]) {
           Edge E = std::make_pair(Pred, BB);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
           if (E.first == E.second)
             SelfReferentialEdge = E;
         }
+        if (NumTotalEdges == 1) {
+          SingleEdge = std::make_pair(Predecessors[BB][0], BB);
+        }
       } else {
         // On the second round, visit all successor edges.
+        NumTotalEdges = Successors[BB].size();
         for (auto *Succ : Successors[BB]) {
           Edge E = std::make_pair(BB, Succ);
           TotalWeight += visitEdge(E, &NumUnknownEdges, &UnknownEdge);
+        }
+        if (NumTotalEdges == 1) {
+          SingleEdge = std::make_pair(BB, Successors[BB][0]);
         }
       }
 
@@ -857,18 +865,24 @@ bool SampleProfileLoader::propagateThroughEdges(Function &F) {
       if (NumUnknownEdges <= 1) {
         uint64_t &BBWeight = BlockWeights[EC];
         if (NumUnknownEdges == 0) {
-          // If we already know the weight of all edges, the weight of the
-          // basic block can be computed. It should be no larger than the sum
-          // of all edge weights.
-          if (TotalWeight > BBWeight) {
-            BBWeight = TotalWeight;
+          if (!VisitedBlocks.count(EC)) {
+            // If we already know the weight of all edges, the weight of the
+            // basic block can be computed. It should be no larger than the sum
+            // of all edge weights.
+            if (TotalWeight > BBWeight) {
+              BBWeight = TotalWeight;
+              Changed = true;
+              DEBUG(dbgs() << "All edge weights for " << BB->getName()
+                           << " known. Set weight for block: ";
+                    printBlockWeight(dbgs(), BB););
+            }
+          } else if (NumTotalEdges == 1 &&
+                     EdgeWeights[SingleEdge] < BlockWeights[EC]) {
+            // If there is only one edge for the visited basic block, use the
+            // block weight to adjust edge weight if edge weight is smaller.
+            EdgeWeights[SingleEdge] = BlockWeights[EC];
             Changed = true;
-            DEBUG(dbgs() << "All edge weights for " << BB->getName()
-                         << " known. Set weight for block: ";
-                  printBlockWeight(dbgs(), BB););
           }
-          if (VisitedBlocks.insert(EC).second)
-            Changed = true;
         } else if (NumUnknownEdges == 1 && VisitedBlocks.count(EC)) {
           // If there is a single unknown edge and the block has been
           // visited, then we can compute E's weight.
@@ -973,6 +987,19 @@ void SampleProfileLoader::propagateWeights(Function &F) {
   MDBuilder MDB(Ctx);
   for (auto &BI : F) {
     BasicBlock *BB = &BI;
+
+    if (BlockWeights[BB]) {
+      for (auto &I : BB->getInstList()) {
+        if (CallInst *CI = dyn_cast<CallInst>(&I)) {
+          if (!dyn_cast<IntrinsicInst>(&I)) {
+            SmallVector<uint32_t, 1> Weights;
+            Weights.push_back(BlockWeights[BB]);
+            CI->setMetadata(LLVMContext::MD_prof, 
+                            MDB.createBranchWeights(Weights));
+          }
+        }
+      }
+    }
     TerminatorInst *TI = BB->getTerminator();
     if (TI->getNumSuccessors() == 1)
       continue;

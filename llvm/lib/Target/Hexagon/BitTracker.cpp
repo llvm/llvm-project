@@ -733,18 +733,18 @@ BT::BitMask BT::MachineEvaluator::mask(unsigned Reg, unsigned Sub) const {
   return BitMask(0, W-1);
 }
 
-
-bool BT::MachineEvaluator::evaluate(const MachineInstr *MI,
-      const CellMapType &Inputs, CellMapType &Outputs) const {
-  unsigned Opc = MI->getOpcode();
+bool BT::MachineEvaluator::evaluate(const MachineInstr &MI,
+                                    const CellMapType &Inputs,
+                                    CellMapType &Outputs) const {
+  unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case TargetOpcode::REG_SEQUENCE: {
-      RegisterRef RD = MI->getOperand(0);
+      RegisterRef RD = MI.getOperand(0);
       assert(RD.Sub == 0);
-      RegisterRef RS = MI->getOperand(1);
-      unsigned SS = MI->getOperand(2).getImm();
-      RegisterRef RT = MI->getOperand(3);
-      unsigned ST = MI->getOperand(4).getImm();
+      RegisterRef RS = MI.getOperand(1);
+      unsigned SS = MI.getOperand(2).getImm();
+      RegisterRef RT = MI.getOperand(3);
+      unsigned ST = MI.getOperand(4).getImm();
       assert(SS != ST);
 
       uint16_t W = getRegBitWidth(RD);
@@ -758,8 +758,8 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr *MI,
     case TargetOpcode::COPY: {
       // COPY can transfer a smaller register into a wider one.
       // If that is the case, fill the remaining high bits with 0.
-      RegisterRef RD = MI->getOperand(0);
-      RegisterRef RS = MI->getOperand(1);
+      RegisterRef RD = MI.getOperand(0);
+      RegisterRef RS = MI.getOperand(1);
       assert(RD.Sub == 0);
       uint16_t WD = getRegBitWidth(RD);
       uint16_t WS = getRegBitWidth(RS);
@@ -782,12 +782,12 @@ bool BT::MachineEvaluator::evaluate(const MachineInstr *MI,
 
 // Main W-Z implementation.
 
-void BT::visitPHI(const MachineInstr *PI) {
-  int ThisN = PI->getParent()->getNumber();
+void BT::visitPHI(const MachineInstr &PI) {
+  int ThisN = PI.getParent()->getNumber();
   if (Trace)
-    dbgs() << "Visit FI(BB#" << ThisN << "): " << *PI;
+    dbgs() << "Visit FI(BB#" << ThisN << "): " << PI;
 
-  const MachineOperand &MD = PI->getOperand(0);
+  const MachineOperand &MD = PI.getOperand(0);
   assert(MD.getSubReg() == 0 && "Unexpected sub-register in definition");
   RegisterRef DefRR(MD);
   uint16_t DefBW = ME.getRegBitWidth(DefRR);
@@ -798,8 +798,8 @@ void BT::visitPHI(const MachineInstr *PI) {
 
   bool Changed = false;
 
-  for (unsigned i = 1, n = PI->getNumOperands(); i < n; i += 2) {
-    const MachineBasicBlock *PB = PI->getOperand(i+1).getMBB();
+  for (unsigned i = 1, n = PI.getNumOperands(); i < n; i += 2) {
+    const MachineBasicBlock *PB = PI.getOperand(i + 1).getMBB();
     int PredN = PB->getNumber();
     if (Trace)
       dbgs() << "  edge BB#" << PredN << "->BB#" << ThisN;
@@ -809,7 +809,7 @@ void BT::visitPHI(const MachineInstr *PI) {
       continue;
     }
 
-    RegisterRef RU = PI->getOperand(i);
+    RegisterRef RU = PI.getOperand(i);
     RegisterCell ResC = ME.getCell(RU, Map);
     if (Trace)
       dbgs() << " input reg: " << PrintReg(RU.Reg, &ME.TRI, RU.Sub)
@@ -826,22 +826,21 @@ void BT::visitPHI(const MachineInstr *PI) {
   }
 }
 
-
-void BT::visitNonBranch(const MachineInstr *MI) {
+void BT::visitNonBranch(const MachineInstr &MI) {
   if (Trace) {
-    int ThisN = MI->getParent()->getNumber();
-    dbgs() << "Visit MI(BB#" << ThisN << "): " << *MI;
+    int ThisN = MI.getParent()->getNumber();
+    dbgs() << "Visit MI(BB#" << ThisN << "): " << MI;
   }
-  if (MI->isDebugValue())
+  if (MI.isDebugValue())
     return;
-  assert(!MI->isBranch() && "Unexpected branch instruction");
+  assert(!MI.isBranch() && "Unexpected branch instruction");
 
   CellMapType ResMap;
   bool Eval = ME.evaluate(MI, Map, ResMap);
 
   if (Trace && Eval) {
-    for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-      const MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+      const MachineOperand &MO = MI.getOperand(i);
       if (!MO.isReg() || !MO.isUse())
         continue;
       RegisterRef RU(MO);
@@ -859,8 +858,8 @@ void BT::visitNonBranch(const MachineInstr *MI) {
 
   // Iterate over all definitions of the instruction, and update the
   // cells accordingly.
-  for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     // Visit register defs only.
     if (!MO.isReg() || !MO.isDef())
       continue;
@@ -907,9 +906,8 @@ void BT::visitNonBranch(const MachineInstr *MI) {
   }
 }
 
-
-void BT::visitBranchesFrom(const MachineInstr *BI) {
-  const MachineBasicBlock &B = *BI->getParent();
+void BT::visitBranchesFrom(const MachineInstr &BI) {
+  const MachineBasicBlock &B = *BI.getParent();
   MachineBasicBlock::const_iterator It = BI, End = B.end();
   BranchTargetList Targets, BTs;
   bool FallsThrough = true, DefaultToAll = false;
@@ -917,11 +915,11 @@ void BT::visitBranchesFrom(const MachineInstr *BI) {
 
   do {
     BTs.clear();
-    const MachineInstr *MI = &*It;
+    const MachineInstr &MI = *It;
     if (Trace)
-      dbgs() << "Visit BR(BB#" << ThisN << "): " << *MI;
-    assert(MI->isBranch() && "Expecting branch instruction");
-    InstrExec.insert(MI);
+      dbgs() << "Visit BR(BB#" << ThisN << "): " << MI;
+    assert(MI.isBranch() && "Expecting branch instruction");
+    InstrExec.insert(&MI);
     bool Eval = ME.evaluate(MI, Map, BTs, FallsThrough);
     if (!Eval) {
       // If the evaluation failed, we will add all targets. Keep going in
@@ -985,11 +983,11 @@ void BT::visitUsesOf(unsigned Reg) {
     if (!InstrExec.count(UseI))
       continue;
     if (UseI->isPHI())
-      visitPHI(UseI);
+      visitPHI(*UseI);
     else if (!UseI->isBranch())
-      visitNonBranch(UseI);
+      visitNonBranch(*UseI);
     else
-      visitBranchesFrom(UseI);
+      visitBranchesFrom(*UseI);
   }
 }
 
@@ -1086,8 +1084,8 @@ void BT::run() {
     MachineBasicBlock::const_iterator It = B.begin(), End = B.end();
     // Visit PHI nodes first.
     while (It != End && It->isPHI()) {
-      const MachineInstr *PI = &*It++;
-      InstrExec.insert(PI);
+      const MachineInstr &PI = *It++;
+      InstrExec.insert(&PI);
       visitPHI(PI);
     }
 
@@ -1100,8 +1098,8 @@ void BT::run() {
 
     // Visit non-branch instructions.
     while (It != End && !It->isBranch()) {
-      const MachineInstr *MI = &*It++;
-      InstrExec.insert(MI);
+      const MachineInstr &MI = *It++;
+      InstrExec.insert(&MI);
       visitNonBranch(MI);
     }
     // If block end has been reached, add the fall-through edge to the queue.
@@ -1116,7 +1114,7 @@ void BT::run() {
     } else {
       // Handle the remaining sequence of branches. This function will update
       // the work queue.
-      visitBranchesFrom(It);
+      visitBranchesFrom(*It);
     }
   } // while (!FlowQ->empty())
 

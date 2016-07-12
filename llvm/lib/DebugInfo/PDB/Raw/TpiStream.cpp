@@ -105,7 +105,7 @@ public:
   }
 
   Error visitClass(ClassRecord &Rec) override { return verify(Rec); }
-  Error visitEnum(EnumRecord &Rec) override { return Error::success(); }
+  Error visitEnum(EnumRecord &Rec) override { return verify(Rec); }
   Error visitUnion(UnionRecord &Rec) override { return verify(Rec); }
 
   Error visitTypeBegin(const CVRecord<TypeLeafKind> &Rec) override {

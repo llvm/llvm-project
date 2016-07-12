@@ -245,8 +245,6 @@ ISD::NodeType ISD::getExtForLoadExtType(bool IsFP, ISD::LoadExtType ExtType) {
   llvm_unreachable("Invalid LoadExtType");
 }
 
-/// getSetCCSwappedOperands - Return the operation corresponding to (Y op X)
-/// when given the operation for (X op Y).
 ISD::CondCode ISD::getSetCCSwappedOperands(ISD::CondCode Operation) {
   // To perform this operation, we just need to swap the L and G bits of the
   // operation.
@@ -257,8 +255,6 @@ ISD::CondCode ISD::getSetCCSwappedOperands(ISD::CondCode Operation) {
                        (OldG << 2));       // New L bit.
 }
 
-/// getSetCCInverse - Return the operation corresponding to !(X op Y), where
-/// 'op' is a valid SetCC operation.
 ISD::CondCode ISD::getSetCCInverse(ISD::CondCode Op, bool isInteger) {
   unsigned Operation = Op;
   if (isInteger)
@@ -273,9 +269,9 @@ ISD::CondCode ISD::getSetCCInverse(ISD::CondCode Op, bool isInteger) {
 }
 
 
-/// isSignedOp - For an integer comparison, return 1 if the comparison is a
-/// signed operation and 2 if the result is an unsigned comparison.  Return zero
-/// if the operation does not depend on the sign of the input (setne and seteq).
+/// For an integer comparison, return 1 if the comparison is a signed operation
+/// and 2 if the result is an unsigned comparison. Return zero if the operation
+/// does not depend on the sign of the input (setne and seteq).
 static int isSignedOp(ISD::CondCode Opcode) {
   switch (Opcode) {
   default: llvm_unreachable("Illegal integer setcc operation!");
@@ -292,10 +288,6 @@ static int isSignedOp(ISD::CondCode Opcode) {
   }
 }
 
-/// getSetCCOrOperation - Return the result of a logical OR between different
-/// comparisons of identical values: ((X op1 Y) | (X op2 Y)).  This function
-/// returns SETCC_INVALID if it is not possible to represent the resultant
-/// comparison.
 ISD::CondCode ISD::getSetCCOrOperation(ISD::CondCode Op1, ISD::CondCode Op2,
                                        bool isInteger) {
   if (isInteger && (isSignedOp(Op1) | isSignedOp(Op2)) == 3)
@@ -316,10 +308,6 @@ ISD::CondCode ISD::getSetCCOrOperation(ISD::CondCode Op1, ISD::CondCode Op2,
   return ISD::CondCode(Op);
 }
 
-/// getSetCCAndOperation - Return the result of a logical AND between different
-/// comparisons of identical values: ((X op1 Y) & (X op2 Y)).  This
-/// function returns zero if it is not possible to represent the resultant
-/// comparison.
 ISD::CondCode ISD::getSetCCAndOperation(ISD::CondCode Op1, ISD::CondCode Op2,
                                         bool isInteger) {
   if (isInteger && (isSignedOp(Op1) | isSignedOp(Op2)) == 3)
@@ -884,9 +872,6 @@ SDNode *SelectionDAG::FindModifiedNodeSlot(SDNode *N, ArrayRef<SDValue> Ops,
   return Node;
 }
 
-/// getEVTAlignment - Compute the default alignment value for the
-/// given type.
-///
 unsigned SelectionDAG::getEVTAlignment(EVT VT) const {
   Type *Ty = VT == MVT::iPTR ?
                    PointerType::get(Type::getInt8Ty(*getContext()), 0) :
@@ -1480,9 +1465,8 @@ SDValue SelectionDAG::getCondCode(ISD::CondCode Cond) {
   return SDValue(CondCodeNodes[Cond], 0);
 }
 
-// commuteShuffle - swaps the values of N1 and N2, and swaps all indices in
-// the shuffle mask M that point at N1 to point at N2, and indices that point
-// N2 to point at N1.
+/// Swaps the values of N1 and N2. Swaps all indices in the shuffle mask M that
+/// point at N1 to point at N2 and indices that point at N2 to point at N1.
 static void commuteShuffle(SDValue &N1, SDValue &N2, MutableArrayRef<int> M) {
   std::swap(N1, N2);
   ShuffleVectorSDNode::commuteMask(M);
@@ -1737,7 +1721,6 @@ SDValue SelectionDAG::getEHLabel(const SDLoc &dl, SDValue Root,
   return SDValue(N, 0);
 }
 
-
 SDValue SelectionDAG::getBlockAddress(const BlockAddress *BA, EVT VT,
                                       int64_t Offset,
                                       bool isTarget,
@@ -1777,7 +1760,6 @@ SDValue SelectionDAG::getSrcValue(const Value *V) {
   return SDValue(N, 0);
 }
 
-/// getMDNode - Return an MDNodeSDNode which holds an MDNode.
 SDValue SelectionDAG::getMDNode(const MDNode *MD) {
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::MDNODE_SDNODE, getVTList(MVT::Other), None);
@@ -1800,7 +1782,6 @@ SDValue SelectionDAG::getBitcast(EVT VT, SDValue V) {
   return getNode(ISD::BITCAST, SDLoc(V), VT, V);
 }
 
-/// getAddrSpaceCast - Return an AddrSpaceCastSDNode.
 SDValue SelectionDAG::getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
                                        unsigned SrcAS, unsigned DestAS) {
   SDValue Ops[] = {Ptr};
@@ -1883,8 +1864,6 @@ SDValue SelectionDAG::expandVACopy(SDNode *Node) {
                   MachinePointerInfo(VD), false, false, 0);
 }
 
-/// CreateStackTemporary - Create a stack temporary, suitable for holding the
-/// specified value type.
 SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
   MachineFrameInfo *FrameInfo = getMachineFunction().getFrameInfo();
   unsigned ByteSize = VT.getStoreSize();
@@ -1896,8 +1875,6 @@ SDValue SelectionDAG::CreateStackTemporary(EVT VT, unsigned minAlign) {
   return getFrameIndex(FrameIdx, TLI->getPointerTy(getDataLayout()));
 }
 
-/// CreateStackTemporary - Create a stack temporary suitable for holding
-/// either of the specified value types.
 SDValue SelectionDAG::CreateStackTemporary(EVT VT1, EVT VT2) {
   unsigned Bytes = std::max(VT1.getStoreSize(), VT2.getStoreSize());
   Type *Ty1 = VT1.getTypeForEVT(*getContext());
@@ -2547,12 +2524,7 @@ bool SelectionDAG::isKnownToBeAPowerOfTwo(SDValue Val) const {
          (KnownOne.countPopulation() == 1);
 }
 
-/// ComputeNumSignBits - Return the number of times the sign bit of the
-/// register is replicated into the other bits.  We know that at least 1 bit
-/// is always equal to the sign bit (itself), but other cases can give us
-/// information.  For example, immediately after an "SRA X, 2", we know that
-/// the top 3 bits are all equal to each other, so we return 3.
-unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const{
+unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const {
   EVT VT = Op.getValueType();
   assert(VT.isInteger() && "Invalid VT!");
   unsigned VTBits = VT.getScalarType().getSizeInBits();
@@ -2802,11 +2774,6 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, unsigned Depth) const{
   return std::max(FirstAnswer, std::min(VTBits, Mask.countLeadingZeros()));
 }
 
-/// isBaseWithConstantOffset - Return true if the specified operand is an
-/// ISD::ADD with a ConstantSDNode on the right-hand side, or if it is an
-/// ISD::OR with a ConstantSDNode that is guaranteed to have the same
-/// semantics as an ADD.  This handles the equivalence:
-///     X|Cst == X+Cst iff X&Cst = 0.
 bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
   if ((Op.getOpcode() != ISD::ADD && Op.getOpcode() != ISD::OR) ||
       !isa<ConstantSDNode>(Op.getOperand(1)))
@@ -2819,7 +2786,6 @@ bool SelectionDAG::isBaseWithConstantOffset(SDValue Op) const {
 
   return true;
 }
-
 
 bool SelectionDAG::isKnownNeverNaN(SDValue Op) const {
   // If we're told that NaNs won't happen, assume they won't.
@@ -2914,8 +2880,7 @@ static SDValue FoldCONCAT_VECTORS(const SDLoc &DL, EVT VT,
   return DAG.getNode(ISD::BUILD_VECTOR, DL, VT, Elts);
 }
 
-/// getNode - Gets or creates the specified node.
-///
+/// Gets or creates the specified node.
 SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT) {
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, Opcode, getVTList(VT), None);

@@ -174,8 +174,7 @@ define void @store_vgpr_ptr(i32 addrspace(1)* %out) #0 {
   ret void
 }
 
-declare i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32) #3
+declare i32 @llvm.SI.buffer.load.dword.i32.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32) #0
 declare void @llvm.SI.tbuffer.store.i32(<16 x i8>, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32)
 
-attributes #1 = { "unsafe-fp-math"="true" }
-attributes #3 = { nounwind readonly }
+attributes #0 = { nounwind readonly }

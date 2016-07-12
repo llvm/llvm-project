@@ -11,6 +11,7 @@
 
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/CodeView/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/ISectionContribVisitor.h"
 #include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
@@ -53,31 +54,16 @@ const uint16_t BuildMinorShift = 0;
 
 const uint16_t BuildMajorMask = 0x7F00;
 const uint16_t BuildMajorShift = 8;
-}
 
-struct DbiStream::HeaderInfo {
-  little32_t VersionSignature;
-  ulittle32_t VersionHeader;
-  ulittle32_t Age;                     // Should match InfoStream.
-  ulittle16_t GlobalSymbolStreamIndex; // Global symbol stream #
-  ulittle16_t BuildNumber;             // See DbiBuildNo structure.
-  ulittle16_t PublicSymbolStreamIndex; // Public symbols stream #
-  ulittle16_t PdbDllVersion;           // version of mspdbNNN.dll
-  ulittle16_t SymRecordStreamIndex;    // Symbol records stream #
-  ulittle16_t PdbDllRbld;              // rbld number of mspdbNNN.dll
-  little32_t ModiSubstreamSize;        // Size of module info stream
-  little32_t SecContrSubstreamSize;    // Size of sec. contribution stream
-  little32_t SectionMapSize;           // Size of sec. map substream
-  little32_t FileInfoSize;             // Size of file info substream
-  little32_t TypeServerSize;      // Size of type server map
-  ulittle32_t MFCTypeServerIndex; // Index of MFC Type Server
-  little32_t OptionalDbgHdrSize;  // Size of DbgHeader info
-  little32_t ECSubstreamSize;     // Size of EC stream (what is EC?)
-  ulittle16_t Flags;              // See DbiFlags enum.
-  ulittle16_t MachineType;        // See PDB_MachineType enum.
-
-  ulittle32_t Reserved; // Pad to 64 bytes
+struct FileInfoSubstreamHeader {
+  ulittle16_t NumModules;     // Total # of modules, should match number of
+                              // records in the ModuleInfo substream.
+  ulittle16_t NumSourceFiles; // Total # of source files.  This value is not
+                              // accurate because PDB actually supports more
+                              // than 64k source files, so we ignore it and
+                              // compute the value from other stream fields.
 };
+}
 
 template <typename ContribType>
 static Error loadSectionContribs(FixedStreamArray<ContribType> &Output,
@@ -218,6 +204,8 @@ uint16_t DbiStream::getGlobalSymbolStreamIndex() const {
   return Header->GlobalSymbolStreamIndex;
 }
 
+uint16_t DbiStream::getFlags() const { return Header->Flags; }
+
 bool DbiStream::isIncrementallyLinked() const {
   return (Header->Flags & FlagIncrementalMask) != 0;
 }
@@ -230,6 +218,8 @@ bool DbiStream::isStripped() const {
   return (Header->Flags & FlagStrippedMask) != 0;
 }
 
+uint16_t DbiStream::getBuildNumber() const { return Header->BuildNumber; }
+
 uint16_t DbiStream::getBuildMajorVersion() const {
   return (Header->BuildNumber & BuildMajorMask) >> BuildMajorShift;
 }
@@ -237,6 +227,8 @@ uint16_t DbiStream::getBuildMajorVersion() const {
 uint16_t DbiStream::getBuildMinorVersion() const {
   return (Header->BuildNumber & BuildMinorMask) >> BuildMinorShift;
 }
+
+uint16_t DbiStream::getPdbDllRbld() const { return Header->PdbDllRbld; }
 
 uint32_t DbiStream::getPdbDllVersion() const { return Header->PdbDllVersion; }
 
@@ -353,15 +345,6 @@ Error DbiStream::initializeSectionMapData() {
 }
 
 Error DbiStream::initializeFileInfo() {
-  struct FileInfoSubstreamHeader {
-    ulittle16_t NumModules;     // Total # of modules, should match number of
-                                // records in the ModuleInfo substream.
-    ulittle16_t NumSourceFiles; // Total # of source files.  This value is not
-                                // accurate because PDB actually supports more
-                                // than 64k source files, so we ignore it and
-                                // compute the value from other stream fields.
-  };
-
   // The layout of the FileInfoSubstream is like this:
   // struct {
   //   ulittle16_t NumModules;

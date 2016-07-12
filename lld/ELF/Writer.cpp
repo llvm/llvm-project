@@ -786,6 +786,10 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
 
+  // Add scripted symbols with zero values now.
+  // Real values will be assigned later
+  Script<ELFT>::X->addScriptedSymbols();
+
   if (!Out<ELFT>::EhFrame->empty()) {
     OutputSections.push_back(Out<ELFT>::EhFrame);
     Out<ELFT>::EhFrame->finalize();

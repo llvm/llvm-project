@@ -129,10 +129,7 @@ private:
   bool SelectSMRDBufferImm(SDValue Addr, SDValue &Offset) const;
   bool SelectSMRDBufferImm32(SDValue Addr, SDValue &Offset) const;
   bool SelectSMRDBufferSgpr(SDValue Addr, SDValue &Offset) const;
-  bool selectMOVRELOffsetImpl(SDValue Index, SDValue &Base,
-                              SDValue &Offset, bool IsInsert) const;
-  bool selectMOVRELSOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
-  bool selectMOVRELDOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
+  bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,
@@ -1193,10 +1190,9 @@ bool AMDGPUDAGToDAGISel::SelectSMRDBufferSgpr(SDValue Addr,
          !isa<ConstantSDNode>(Offset);
 }
 
-bool AMDGPUDAGToDAGISel::selectMOVRELOffsetImpl(SDValue Index,
-                                                SDValue &Base,
-                                                SDValue &Offset,
-                                                bool IsInsert) const {
+bool AMDGPUDAGToDAGISel::SelectMOVRELOffset(SDValue Index,
+                                            SDValue &Base,
+                                            SDValue &Offset) const {
   SDLoc DL(Index);
 
   if (CurDAG->isBaseWithConstantOffset(Index)) {
@@ -1210,32 +1206,12 @@ bool AMDGPUDAGToDAGISel::selectMOVRELOffsetImpl(SDValue Index,
     return true;
   }
 
-  if (IsInsert) {
-    if (ConstantSDNode *CBase = dyn_cast<ConstantSDNode>(Index)) {
-      Base = CurDAG->getRegister(AMDGPU::NoRegister, MVT::i32);
-      Offset = CurDAG->getTargetConstant(CBase->getZExtValue(), DL, MVT::i32);
-      return true;
-    }
-  } else {
-    if (isa<ConstantSDNode>(Index))
-      return false;
-  }
+  if (isa<ConstantSDNode>(Index))
+    return false;
 
   Base = Index;
   Offset = CurDAG->getTargetConstant(0, DL, MVT::i32);
   return true;
-}
-
-bool AMDGPUDAGToDAGISel::selectMOVRELSOffset(SDValue Index,
-                                             SDValue &Base,
-                                             SDValue &Offset) const {
-  return selectMOVRELOffsetImpl(Index, Base, Offset, false);
-}
-
-bool AMDGPUDAGToDAGISel::selectMOVRELDOffset(SDValue Index,
-                                             SDValue &Base,
-                                             SDValue &Offset) const {
-  return selectMOVRELOffsetImpl(Index, Base, Offset, true);
 }
 
 SDNode *AMDGPUDAGToDAGISel::getS_BFE(unsigned Opcode, const SDLoc &DL,

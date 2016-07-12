@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=NOSNAN -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mattr=+fp-exceptions -verify-machineinstrs < %s | FileCheck -check-prefix=SNAN -check-prefix=GCN %s
 
-declare i32 @llvm.r600.read.tidig.x() #0
+declare i32 @llvm.amdgcn.workitem.id.x() #0
 declare float @llvm.minnum.f32(float, float) #0
 declare float @llvm.maxnum.f32(float, float) #0
 declare double @llvm.minnum.f64(double, double) #0
@@ -13,7 +13,7 @@ declare double @llvm.maxnum.f64(double, double) #0
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 define void @v_test_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
@@ -31,7 +31,7 @@ define void @v_test_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 define void @v_test_fmed3_r_i_i_commute0_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
@@ -49,7 +49,7 @@ define void @v_test_fmed3_r_i_i_commute0_f32(float addrspace(1)* %out, float add
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 define void @v_test_fmed3_r_i_i_commute1_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
@@ -65,7 +65,7 @@ define void @v_test_fmed3_r_i_i_commute1_f32(float addrspace(1)* %out, float add
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 define void @v_test_fmed3_r_i_i_constant_order_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
@@ -82,7 +82,7 @@ define void @v_test_fmed3_r_i_i_constant_order_f32(float addrspace(1)* %out, flo
 ; GCN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; GCN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 define void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
@@ -99,7 +99,7 @@ define void @v_test_fmed3_r_i_i_multi_use_f32(float addrspace(1)* %out, float ad
 ; GCN: v_max_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 2.0
 ; GCN: v_min_f64 {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, 4.0
 define void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, double addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr double, double addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr double, double addrspace(1)* %out, i32 %tid
   %a = load double, double addrspace(1)* %gep0
@@ -114,7 +114,7 @@ define void @v_test_fmed3_r_i_i_f64(double addrspace(1)* %out, double addrspace(
 ; GCN-LABEL: {{^}}v_test_fmed3_r_i_i_no_nans_f32:
 ; GCN: v_med3_f32 v{{[0-9]+}}, v{{[0-9]+}}, 2.0, 4.0
 define void @v_test_fmed3_r_i_i_no_nans_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #2 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0
@@ -132,7 +132,7 @@ define void @v_test_fmed3_r_i_i_no_nans_f32(float addrspace(1)* %out, float addr
 ; SNAN: v_max_f32_e32 v{{[0-9]+}}, 2.0, v{{[0-9]+}}
 ; SNAN: v_min_f32_e32 v{{[0-9]+}}, 4.0, v{{[0-9]+}}
 define void @v_test_legacy_fmed3_r_i_i_f32(float addrspace(1)* %out, float addrspace(1)* %aptr) #1 {
-  %tid = call i32 @llvm.r600.read.tidig.x()
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
   %outgep = getelementptr float, float addrspace(1)* %out, i32 %tid
   %a = load float, float addrspace(1)* %gep0

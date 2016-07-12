@@ -186,6 +186,14 @@ bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
   return TTIImpl->isFPVectorizationPotentiallyUnsafe();
 }
 
+bool TargetTransformInfo::allowsMisalignedMemoryAccesses(unsigned BitWidth,
+                                                         unsigned AddressSpace,
+                                                         unsigned Alignment,
+                                                         bool *Fast) const {
+  return TTIImpl->allowsMisalignedMemoryAccesses(BitWidth, AddressSpace,
+                                                 Alignment, Fast);
+}
+
 TargetTransformInfo::PopcntSupportKind
 TargetTransformInfo::getPopcntSupport(unsigned IntTyWidthInBit) const {
   return TTIImpl->getPopcntSupport(IntTyWidthInBit);

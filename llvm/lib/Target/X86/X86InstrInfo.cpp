@@ -2525,8 +2525,8 @@ void X86InstrInfo::reMaterialize(MachineBasicBlock &MBB,
     MBB.insert(I, MI);
   }
 
-  MachineInstr *NewMI = std::prev(I);
-  NewMI->substituteRegister(Orig.getOperand(0).getReg(), DestReg, SubIdx, TRI);
+  MachineInstr &NewMI = *std::prev(I);
+  NewMI.substituteRegister(Orig.getOperand(0).getReg(), DestReg, SubIdx, TRI);
 }
 
 /// True if MI has a condition code def, e.g. EFLAGS, that is not marked dead.
@@ -4057,7 +4057,7 @@ bool X86InstrInfo::AnalyzeBranchImpl(
       FBB = TBB;
       TBB = I->getOperand(0).getMBB();
       Cond.push_back(MachineOperand::CreateImm(BranchCode));
-      CondBranches.push_back(I);
+      CondBranches.push_back(&*I);
       continue;
     }
 
@@ -4110,7 +4110,7 @@ bool X86InstrInfo::AnalyzeBranchImpl(
 
     // Update the MachineOperand.
     Cond[0].setImm(BranchCode);
-    CondBranches.push_back(I);
+    CondBranches.push_back(&*I);
   }
 
   return false;
@@ -5123,7 +5123,8 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
         ShouldUpdateCC = true; // Update CC later on.
         // This is not a def of SrcReg, but still a def of EFLAGS. Keep going
         // with the new def.
-        MI = Def = J;
+        Def = J;
+        MI = &*Def;
         break;
       }
 
@@ -7467,9 +7468,9 @@ namespace {
           case X86::TLS_base_addr32:
           case X86::TLS_base_addr64:
             if (TLSBaseAddrReg)
-              I = ReplaceTLSBaseAddrCall(I, TLSBaseAddrReg);
+              I = ReplaceTLSBaseAddrCall(*I, TLSBaseAddrReg);
             else
-              I = SetRegister(I, &TLSBaseAddrReg);
+              I = SetRegister(*I, &TLSBaseAddrReg);
             Changed = true;
             break;
           default:
@@ -7488,29 +7489,29 @@ namespace {
 
     // Replace the TLS_base_addr instruction I with a copy from
     // TLSBaseAddrReg, returning the new instruction.
-    MachineInstr *ReplaceTLSBaseAddrCall(MachineInstr *I,
+    MachineInstr *ReplaceTLSBaseAddrCall(MachineInstr &I,
                                          unsigned TLSBaseAddrReg) {
-      MachineFunction *MF = I->getParent()->getParent();
+      MachineFunction *MF = I.getParent()->getParent();
       const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
       const bool is64Bit = STI.is64Bit();
       const X86InstrInfo *TII = STI.getInstrInfo();
 
       // Insert a Copy from TLSBaseAddrReg to RAX/EAX.
-      MachineInstr *Copy = BuildMI(*I->getParent(), I, I->getDebugLoc(),
-                                   TII->get(TargetOpcode::COPY),
-                                   is64Bit ? X86::RAX : X86::EAX)
-                                   .addReg(TLSBaseAddrReg);
+      MachineInstr *Copy =
+          BuildMI(*I.getParent(), I, I.getDebugLoc(),
+                  TII->get(TargetOpcode::COPY), is64Bit ? X86::RAX : X86::EAX)
+              .addReg(TLSBaseAddrReg);
 
       // Erase the TLS_base_addr instruction.
-      I->eraseFromParent();
+      I.eraseFromParent();
 
       return Copy;
     }
 
     // Create a virtal register in *TLSBaseAddrReg, and populate it by
     // inserting a copy instruction after I. Returns the new instruction.
-    MachineInstr *SetRegister(MachineInstr *I, unsigned *TLSBaseAddrReg) {
-      MachineFunction *MF = I->getParent()->getParent();
+    MachineInstr *SetRegister(MachineInstr &I, unsigned *TLSBaseAddrReg) {
+      MachineFunction *MF = I.getParent()->getParent();
       const X86Subtarget &STI = MF->getSubtarget<X86Subtarget>();
       const bool is64Bit = STI.is64Bit();
       const X86InstrInfo *TII = STI.getInstrInfo();
@@ -7522,11 +7523,11 @@ namespace {
                                                       : &X86::GR32RegClass);
 
       // Insert a copy from RAX/EAX to TLSBaseAddrReg.
-      MachineInstr *Next = I->getNextNode();
-      MachineInstr *Copy = BuildMI(*I->getParent(), Next, I->getDebugLoc(),
-                                   TII->get(TargetOpcode::COPY),
-                                   *TLSBaseAddrReg)
-                                   .addReg(is64Bit ? X86::RAX : X86::EAX);
+      MachineInstr *Next = I.getNextNode();
+      MachineInstr *Copy =
+          BuildMI(*I.getParent(), Next, I.getDebugLoc(),
+                  TII->get(TargetOpcode::COPY), *TLSBaseAddrReg)
+              .addReg(is64Bit ? X86::RAX : X86::EAX);
 
       return Copy;
     }

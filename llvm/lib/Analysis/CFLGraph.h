@@ -16,45 +16,29 @@
 #define LLVM_ANALYSIS_CFLGRAPH_H
 
 #include "AliasAnalysisSummary.h"
-#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 
 namespace llvm {
 namespace cflaa {
-/// Edges can be one of four "weights" -- each weight must have an inverse
-/// weight (Assign has Assign; Reference has Dereference).
-enum class EdgeType {
-  /// The weight assigned when assigning from or to a value. For example, in:
-  /// %b = getelementptr %a, 0
-  /// ...The relationships are %b assign %a, and %a assign %b. This used to be
-  /// two edges, but having a distinction bought us nothing.
-  Assign,
-
-  /// The edge used when we have an edge going from some handle to a Value.
-  /// Examples of this include:
-  /// %b = load %a              (%b Dereference %a)
-  /// %b = extractelement %a, 0 (%a Dereference %b)
-  Dereference,
-
-  /// The edge used when our edge goes from a value to a handle that may have
-  /// contained it at some point. Examples:
-  /// %b = load %a              (%a Reference %b)
-  /// %b = extractelement %a, 0 (%b Reference %a)
-  Reference
-};
 
 /// \brief The Program Expression Graph (PEG) of CFL analysis
 /// CFLGraph is auxiliary data structure used by CFL-based alias analysis to
 /// describe flow-insensitive pointer-related behaviors. Given an LLVM function,
 /// the main purpose of this graph is to abstract away unrelated facts and
 /// translate the rest into a form that can be easily digested by CFL analyses.
+/// Each Node in the graph is an InstantiatedValue, and each edge represent a
+/// pointer assignment between InstantiatedValue. Pointer
+/// references/dereferences are not explicitly stored in the graph: we
+/// implicitly assume that for each node (X, I) it has a dereference edge to (X,
+/// I+1) and a reference edge to (X, I-1).
 class CFLGraph {
-  typedef Value *Node;
+public:
+  typedef InstantiatedValue Node;
 
   struct Edge {
-    EdgeType Type;
     Node Other;
   };
 
@@ -65,48 +49,56 @@ class CFLGraph {
     AliasAttrs Attr;
   };
 
-  typedef DenseMap<Node, NodeInfo> NodeMap;
-  NodeMap NodeImpls;
+  class ValueInfo {
+    std::vector<NodeInfo> Levels;
 
-  // Gets the inverse of a given EdgeType.
-  static EdgeType flipWeight(EdgeType Initial) {
-    switch (Initial) {
-    case EdgeType::Assign:
-      return EdgeType::Assign;
-    case EdgeType::Dereference:
-      return EdgeType::Reference;
-    case EdgeType::Reference:
-      return EdgeType::Dereference;
+  public:
+    bool addNodeToLevel(unsigned Level) {
+      auto NumLevels = Levels.size();
+      if (NumLevels > Level)
+        return false;
+      Levels.resize(Level + 1);
+      return true;
     }
-    llvm_unreachable("Incomplete coverage of EdgeType enum");
-  }
+
+    NodeInfo &getNodeInfoAtLevel(unsigned Level) {
+      assert(Level < Levels.size());
+      return Levels[Level];
+    }
+    const NodeInfo &getNodeInfoAtLevel(unsigned Level) const {
+      assert(Level < Levels.size());
+      return Levels[Level];
+    }
+
+    unsigned getNumLevels() const { return Levels.size(); }
+  };
+
+private:
+  typedef DenseMap<Value *, ValueInfo> ValueMap;
+  ValueMap ValueImpls;
 
   const NodeInfo *getNode(Node N) const {
-    auto Itr = NodeImpls.find(N);
-    if (Itr == NodeImpls.end())
+    auto Itr = ValueImpls.find(N.Val);
+    if (Itr == ValueImpls.end() || Itr->second.getNumLevels() <= N.DerefLevel)
       return nullptr;
-    return &Itr->second;
+    return &Itr->second.getNodeInfoAtLevel(N.DerefLevel);
   }
   NodeInfo *getNode(Node N) {
-    auto Itr = NodeImpls.find(N);
-    if (Itr == NodeImpls.end())
+    auto Itr = ValueImpls.find(N.Val);
+    if (Itr == ValueImpls.end() || Itr->second.getNumLevels() <= N.DerefLevel)
       return nullptr;
-    return &Itr->second;
+    return &Itr->second.getNodeInfoAtLevel(N.DerefLevel);
   }
 
-  static Node nodeDeref(const NodeMap::value_type &P) { return P.first; }
-  typedef std::pointer_to_unary_function<const NodeMap::value_type &, Node>
-      NodeDerefFun;
-
 public:
-  typedef EdgeList::const_iterator const_edge_iterator;
-  typedef mapped_iterator<NodeMap::const_iterator, NodeDerefFun>
-      const_node_iterator;
+  typedef ValueMap::const_iterator const_value_iterator;
 
-  bool addNode(Node N) {
-    return NodeImpls
-        .insert(std::make_pair(N, NodeInfo{EdgeList(), getAttrNone()}))
-        .second;
+  bool addNode(Node N, AliasAttrs Attr = AliasAttrs()) {
+    assert(N.Val != nullptr);
+    auto &ValInfo = ValueImpls[N.Val];
+    auto Changed = ValInfo.addNodeToLevel(N.DerefLevel);
+    ValInfo.getNodeInfoAtLevel(N.DerefLevel).Attr |= Attr;
+    return Changed;
   }
 
   void addAttr(Node N, AliasAttrs Attr) {
@@ -115,14 +107,12 @@ public:
     Info->Attr |= Attr;
   }
 
-  void addEdge(Node From, Node To, EdgeType Type) {
+  void addEdge(Node From, Node To, int64_t Offset = 0) {
+    assert(getNode(To) != nullptr);
+
     auto *FromInfo = getNode(From);
     assert(FromInfo != nullptr);
-    auto *ToInfo = getNode(To);
-    assert(ToInfo != nullptr);
-
-    FromInfo->Edges.push_back(Edge{Type, To});
-    ToInfo->Edges.push_back(Edge{flipWeight(Type), From});
+    FromInfo->Edges.push_back(Edge{To});
   }
 
   AliasAttrs attrFor(Node N) const {
@@ -131,21 +121,10 @@ public:
     return Info->Attr;
   }
 
-  iterator_range<const_edge_iterator> edgesFor(Node N) const {
-    auto *Info = getNode(N);
-    assert(Info != nullptr);
-    auto &Edges = Info->Edges;
-    return make_range(Edges.begin(), Edges.end());
+  iterator_range<const_value_iterator> value_mappings() const {
+    return make_range<const_value_iterator>(ValueImpls.begin(),
+                                            ValueImpls.end());
   }
-
-  iterator_range<const_node_iterator> nodes() const {
-    return make_range<const_node_iterator>(
-        map_iterator(NodeImpls.begin(), NodeDerefFun(nodeDeref)),
-        map_iterator(NodeImpls.end(), NodeDerefFun(nodeDeref)));
-  }
-
-  bool empty() const { return NodeImpls.empty(); }
-  std::size_t size() const { return NodeImpls.size(); }
 };
 
 ///\brief A builder class used to create CFLGraph instance from a given function
@@ -165,10 +144,6 @@ template <typename CFLAA> class CFLGraphBuilder {
   CFLGraph Graph;
   SmallVector<Value *, 4> ReturnedValues;
 
-  // Auxiliary structures used by the builder
-  SmallVector<InstantiatedRelation, 8> InstantiatedRelations;
-  SmallVector<InstantiatedAttr, 8> InstantiatedAttrs;
-
   // Helper class
   /// Gets the edges our graph should have, based on an Instruction*
   class GetEdgesVisitor : public InstVisitor<GetEdgesVisitor, void> {
@@ -177,8 +152,6 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     CFLGraph &Graph;
     SmallVectorImpl<Value *> &ReturnValues;
-    SmallVectorImpl<InstantiatedRelation> &InstantiatedRelations;
-    SmallVectorImpl<InstantiatedAttr> &InstantiatedAttrs;
 
     static bool hasUsefulEdges(ConstantExpr *CE) {
       // ConstantExpr doesn't have terminators, invokes, or fences, so only
@@ -203,42 +176,47 @@ template <typename CFLAA> class CFLGraphBuilder {
       return false;
     }
 
-    void addNode(Value *Val) {
-      assert(Val != nullptr);
-      if (!Graph.addNode(Val))
-        return;
-
-      if (isa<GlobalValue>(Val)) {
-        Graph.addAttr(Val, getGlobalOrArgAttrFromValue(*Val));
-        // Currently we do not attempt to be smart on globals
-        InstantiatedAttrs.push_back(
-            InstantiatedAttr{InstantiatedValue{Val, 1}, getAttrUnknown()});
-      } else if (auto CExpr = dyn_cast<ConstantExpr>(Val))
-        if (hasUsefulEdges(CExpr))
-          visitConstantExpr(CExpr);
+    void addNode(Value *Val, AliasAttrs Attr = AliasAttrs()) {
+      assert(Val != nullptr && Val->getType()->isPointerTy());
+      if (auto GVal = dyn_cast<GlobalValue>(Val)) {
+        if (Graph.addNode(InstantiatedValue{GVal, 0},
+                          getGlobalOrArgAttrFromValue(*GVal)))
+          Graph.addNode(InstantiatedValue{GVal, 1}, getAttrUnknown());
+      } else if (auto CExpr = dyn_cast<ConstantExpr>(Val)) {
+        if (hasUsefulEdges(CExpr)) {
+          if (Graph.addNode(InstantiatedValue{CExpr, 0}))
+            visitConstantExpr(CExpr);
+        }
+      } else
+        Graph.addNode(InstantiatedValue{Val, 0}, Attr);
     }
 
-    void addNodeWithAttr(Value *Val, AliasAttrs Attr) {
-      addNode(Val);
-      Graph.addAttr(Val, Attr);
-    }
-
-    void addEdge(Value *From, Value *To, EdgeType Type) {
+    void addAssignEdge(Value *From, Value *To, int64_t Offset = 0) {
       assert(From != nullptr && To != nullptr);
       if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
         return;
       addNode(From);
-      if (To != From)
+      if (To != From) {
         addNode(To);
-      Graph.addEdge(From, To, Type);
+        Graph.addEdge(InstantiatedValue{From, 0}, InstantiatedValue{To, 0},
+                      Offset);
+      }
+    }
+
+    void addDerefEdge(Value *From, Value *To) {
+      assert(From != nullptr && To != nullptr);
+      if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
+        return;
+      addNode(From);
+      addNode(To);
+      Graph.addNode(InstantiatedValue{From, 1});
+      Graph.addEdge(InstantiatedValue{From, 1}, InstantiatedValue{To, 0});
     }
 
   public:
     GetEdgesVisitor(CFLGraphBuilder &Builder)
         : AA(Builder.Analysis), TLI(Builder.TLI), Graph(Builder.Graph),
-          ReturnValues(Builder.ReturnedValues),
-          InstantiatedRelations(Builder.InstantiatedRelations),
-          InstantiatedAttrs(Builder.InstantiatedAttrs) {}
+          ReturnValues(Builder.ReturnedValues) {}
 
     void visitInstruction(Instruction &) {
       llvm_unreachable("Unsupported instruction encountered");
@@ -255,46 +233,46 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     void visitPtrToIntInst(PtrToIntInst &Inst) {
       auto *Ptr = Inst.getOperand(0);
-      addNodeWithAttr(Ptr, getAttrEscaped());
+      addNode(Ptr, getAttrEscaped());
     }
 
     void visitIntToPtrInst(IntToPtrInst &Inst) {
       auto *Ptr = &Inst;
-      addNodeWithAttr(Ptr, getAttrUnknown());
+      addNode(Ptr, getAttrUnknown());
     }
 
     void visitCastInst(CastInst &Inst) {
       auto *Src = Inst.getOperand(0);
-      addEdge(Src, &Inst, EdgeType::Assign);
+      addAssignEdge(Src, &Inst);
     }
 
     void visitBinaryOperator(BinaryOperator &Inst) {
       auto *Op1 = Inst.getOperand(0);
       auto *Op2 = Inst.getOperand(1);
-      addEdge(Op1, &Inst, EdgeType::Assign);
-      addEdge(Op2, &Inst, EdgeType::Assign);
+      addAssignEdge(Op1, &Inst);
+      addAssignEdge(Op2, &Inst);
     }
 
     void visitAtomicCmpXchgInst(AtomicCmpXchgInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getNewValOperand();
-      addEdge(Ptr, Val, EdgeType::Dereference);
+      addDerefEdge(Ptr, Val);
     }
 
     void visitAtomicRMWInst(AtomicRMWInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getValOperand();
-      addEdge(Ptr, Val, EdgeType::Dereference);
+      addDerefEdge(Ptr, Val);
     }
 
     void visitPHINode(PHINode &Inst) {
       for (Value *Val : Inst.incoming_values())
-        addEdge(Val, &Inst, EdgeType::Assign);
+        addAssignEdge(Val, &Inst);
     }
 
     void visitGetElementPtrInst(GetElementPtrInst &Inst) {
       auto *Op = Inst.getPointerOperand();
-      addEdge(Op, &Inst, EdgeType::Assign);
+      addAssignEdge(Op, &Inst);
     }
 
     void visitSelectInst(SelectInst &Inst) {
@@ -305,22 +283,22 @@ template <typename CFLAA> class CFLGraphBuilder {
 
       auto *TrueVal = Inst.getTrueValue();
       auto *FalseVal = Inst.getFalseValue();
-      addEdge(TrueVal, &Inst, EdgeType::Assign);
-      addEdge(FalseVal, &Inst, EdgeType::Assign);
+      addAssignEdge(TrueVal, &Inst);
+      addAssignEdge(FalseVal, &Inst);
     }
 
-    void visitAllocaInst(AllocaInst &Inst) { Graph.addNode(&Inst); }
+    void visitAllocaInst(AllocaInst &Inst) { addNode(&Inst); }
 
     void visitLoadInst(LoadInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = &Inst;
-      addEdge(Val, Ptr, EdgeType::Reference);
+      addDerefEdge(Ptr, Val);
     }
 
     void visitStoreInst(StoreInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getValueOperand();
-      addEdge(Ptr, Val, EdgeType::Dereference);
+      addDerefEdge(Ptr, Val);
     }
 
     void visitVAArgInst(VAArgInst &Inst) {
@@ -332,7 +310,7 @@ template <typename CFLAA> class CFLGraphBuilder {
       // For now, we'll handle this like a landingpad instruction (by placing
       // the
       // result in its own group, and having that group alias externals).
-      addNodeWithAttr(&Inst, getAttrUnknown());
+      addNode(&Inst, getAttrUnknown());
     }
 
     static bool isFunctionExternal(Function *Fn) {
@@ -363,15 +341,18 @@ template <typename CFLAA> class CFLGraphBuilder {
         auto &RetParamRelations = Summary->RetParamRelations;
         for (auto &Relation : RetParamRelations) {
           auto IRelation = instantiateExternalRelation(Relation, CS);
-          if (IRelation.hasValue())
-            InstantiatedRelations.push_back(*IRelation);
+          if (IRelation.hasValue()) {
+            Graph.addNode(IRelation->From);
+            Graph.addNode(IRelation->To);
+            Graph.addEdge(IRelation->From, IRelation->To);
+          }
         }
 
         auto &RetParamAttributes = Summary->RetParamAttributes;
         for (auto &Attribute : RetParamAttributes) {
           auto IAttr = instantiateExternalAttribute(Attribute, CS);
           if (IAttr.hasValue())
-            InstantiatedAttrs.push_back(*IAttr);
+            Graph.addNode(IAttr->IValue, IAttr->Attr);
         }
       }
 
@@ -383,7 +364,8 @@ template <typename CFLAA> class CFLGraphBuilder {
 
       // Make sure all arguments and return value are added to the graph first
       for (Value *V : CS.args())
-        addNode(V);
+        if (V->getType()->isPointerTy())
+          addNode(V);
       if (Inst->getType()->isPointerTy())
         addNode(Inst);
 
@@ -413,23 +395,20 @@ template <typename CFLAA> class CFLGraphBuilder {
         for (Value *V : CS.args()) {
           if (V->getType()->isPointerTy()) {
             // The argument itself escapes.
-            addNodeWithAttr(V, getAttrEscaped());
+            Graph.addAttr(InstantiatedValue{V, 0}, getAttrEscaped());
             // The fate of argument memory is unknown. Note that since
-            // AliasAttrs
-            // is transitive with respect to dereference, we only need to
-            // specify
-            // it for the first-level memory.
-            InstantiatedAttrs.push_back(
-                InstantiatedAttr{InstantiatedValue{V, 1}, getAttrUnknown()});
+            // AliasAttrs is transitive with respect to dereference, we only
+            // need to specify it for the first-level memory.
+            Graph.addNode(InstantiatedValue{V, 1}, getAttrUnknown());
           }
         }
 
       if (Inst->getType()->isPointerTy()) {
         auto *Fn = CS.getCalledFunction();
         if (Fn == nullptr || !Fn->doesNotAlias(0))
-          // No need to call addNodeWithAttr() since we've added Inst at the
+          // No need to call addNode() since we've added Inst at the
           // beginning of this function and we know it is not a global.
-          Graph.addAttr(Inst, getAttrUnknown());
+          Graph.addAttr(InstantiatedValue{Inst, 0}, getAttrUnknown());
       }
     }
 
@@ -440,40 +419,40 @@ template <typename CFLAA> class CFLGraphBuilder {
     void visitExtractElementInst(ExtractElementInst &Inst) {
       auto *Ptr = Inst.getVectorOperand();
       auto *Val = &Inst;
-      addEdge(Val, Ptr, EdgeType::Reference);
+      addDerefEdge(Ptr, Val);
     }
 
     void visitInsertElementInst(InsertElementInst &Inst) {
       auto *Vec = Inst.getOperand(0);
       auto *Val = Inst.getOperand(1);
-      addEdge(Vec, &Inst, EdgeType::Assign);
-      addEdge(&Inst, Val, EdgeType::Dereference);
+      addAssignEdge(Vec, &Inst);
+      addDerefEdge(&Inst, Val);
     }
 
     void visitLandingPadInst(LandingPadInst &Inst) {
       // Exceptions come from "nowhere", from our analysis' perspective.
       // So we place the instruction its own group, noting that said group may
       // alias externals
-      addNodeWithAttr(&Inst, getAttrUnknown());
+      addNode(&Inst, getAttrUnknown());
     }
 
     void visitInsertValueInst(InsertValueInst &Inst) {
       auto *Agg = Inst.getOperand(0);
       auto *Val = Inst.getOperand(1);
-      addEdge(Agg, &Inst, EdgeType::Assign);
-      addEdge(&Inst, Val, EdgeType::Dereference);
+      addAssignEdge(Agg, &Inst);
+      addDerefEdge(&Inst, Val);
     }
 
     void visitExtractValueInst(ExtractValueInst &Inst) {
       auto *Ptr = Inst.getAggregateOperand();
-      addEdge(&Inst, Ptr, EdgeType::Reference);
+      addDerefEdge(Ptr, &Inst);
     }
 
     void visitShuffleVectorInst(ShuffleVectorInst &Inst) {
       auto *From1 = Inst.getOperand(0);
       auto *From2 = Inst.getOperand(1);
-      addEdge(From1, &Inst, EdgeType::Assign);
-      addEdge(From2, &Inst, EdgeType::Assign);
+      addAssignEdge(From1, &Inst);
+      addAssignEdge(From2, &Inst);
     }
 
     void visitConstantExpr(ConstantExpr *CE) {
@@ -504,11 +483,10 @@ template <typename CFLAA> class CFLGraphBuilder {
 
   void addArgumentToGraph(Argument &Arg) {
     if (Arg.getType()->isPointerTy()) {
-      Graph.addNode(&Arg);
-      Graph.addAttr(&Arg, getGlobalOrArgAttrFromValue(Arg));
+      Graph.addNode(InstantiatedValue{&Arg, 0},
+                    getGlobalOrArgAttrFromValue(Arg));
       // Pointees of a formal parameter is known to the caller
-      InstantiatedAttrs.push_back(
-          InstantiatedAttr{InstantiatedValue{&Arg, 1}, getAttrCaller()});
+      Graph.addNode(InstantiatedValue{&Arg, 1}, getAttrCaller());
     }
   }
 
@@ -518,19 +496,21 @@ template <typename CFLAA> class CFLGraphBuilder {
   //   %0 = load i16* getelementptr ([1 x i16]* @a, 0, 0), align 2
   // addInstructionToGraph would add both the `load` and `getelementptr`
   // instructions to the graph appropriately.
-  void addInstructionToGraph(Instruction &Inst) {
+  void addInstructionToGraph(GetEdgesVisitor &Visitor, Instruction &Inst) {
     if (!hasUsefulEdges(&Inst))
       return;
 
-    GetEdgesVisitor(*this).visit(Inst);
+    Visitor.visit(Inst);
   }
 
   // Builds the graph needed for constructing the StratifiedSets for the given
   // function
   void buildGraphFrom(Function &Fn) {
+    GetEdgesVisitor Visitor(*this);
+
     for (auto &Bb : Fn.getBasicBlockList())
       for (auto &Inst : Bb.getInstList())
-        addInstructionToGraph(Inst);
+        addInstructionToGraph(Visitor, Inst);
 
     for (auto &Arg : Fn.args())
       addArgumentToGraph(Arg);
@@ -545,12 +525,6 @@ public:
   const CFLGraph &getCFLGraph() const { return Graph; }
   const SmallVector<Value *, 4> &getReturnValues() const {
     return ReturnedValues;
-  }
-  const SmallVector<InstantiatedRelation, 8> &getInstantiatedRelations() const {
-    return InstantiatedRelations;
-  }
-  const SmallVector<InstantiatedAttr, 8> &getInstantiatedAttrs() const {
-    return InstantiatedAttrs;
   }
 };
 }

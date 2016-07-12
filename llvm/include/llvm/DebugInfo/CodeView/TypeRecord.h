@@ -575,6 +575,10 @@ private:
     TypeIndex UnderlyingType;
     TypeIndex FieldListType;
     // Name: The null-terminated name follows.
+
+    bool hasUniqueName() const {
+      return Properties & uint16_t(ClassOptions::HasUniqueName);
+    }
   };
 
   TypeIndex UnderlyingType;
