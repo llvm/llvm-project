@@ -218,15 +218,6 @@ FileOptionsProvider::FileOptionsProvider(
 std::vector<OptionsSource>
 FileOptionsProvider::getRawOptions(StringRef FileName) {
   DEBUG(llvm::dbgs() << "Getting options for file " << FileName << "...\n");
-  SmallString<256> FilePath(FileName);
-
-  if (std::error_code EC = llvm::sys::fs::make_absolute(FilePath)) {
-    llvm::errs() << "Can't make absolute path from " << FileName << ": "
-                 << EC.message() << "\n";
-    // FIXME: Figure out what to do.
-  } else {
-    FileName = FilePath;
-  }
 
   std::vector<OptionsSource> RawOptions =
       DefaultOptionsProvider::getRawOptions(FileName);

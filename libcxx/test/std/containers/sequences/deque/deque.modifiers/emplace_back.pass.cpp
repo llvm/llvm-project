@@ -16,6 +16,7 @@
 
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
@@ -81,6 +82,17 @@ int main()
     for (int i = 0; i < N; ++i)
         for (int j = 0; j < N; ++j)
             testN<std::deque<Emplaceable, min_allocator<Emplaceable>> >(rng[i], rng[j]);
+    }
+    {
+        std::deque<Tag_X, TaggingAllocator<Tag_X>> c;
+        c.emplace_back();
+        assert(c.size() == 1);
+        c.emplace_back(1, 2, 3);
+        assert(c.size() == 2);
+        c.emplace_front();
+        assert(c.size() == 3);
+        c.emplace_front(1, 2, 3);
+        assert(c.size() == 4);
     }
 #endif
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES

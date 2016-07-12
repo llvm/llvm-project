@@ -155,12 +155,12 @@ macro(add_asan_test test_suite test_name arch kind)
     else()
      set(configuration_path "")
     endif()
-  if(NOT MSVC)
+    if(NOT MSVC)
       set(asan_test_runtime_path ${configuration_path}lib${ASAN_TEST_RUNTIME}.a)
     else()
       set(asan_test_runtime_path ${configuration_path}${ASAN_TEST_RUNTIME}.lib)
     endif()
-  list(APPEND TEST_OBJECTS ${asan_test_runtime_path})
+    list(APPEND TEST_OBJECTS ${asan_test_runtime_path})
   endif()
   add_compiler_rt_test(${test_suite} ${test_name}
                        SUBDIR ${TEST_SUBDIR}
@@ -172,15 +172,15 @@ endmacro()
 
 # Main AddressSanitizer unit tests.
 add_custom_target(AsanUnitTests)
-set_target_properties(AsanUnitTests PROPERTIES FOLDER "ASan unit tests")
+set_target_properties(AsanUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
+
 # AddressSanitizer unit tests with dynamic runtime (on platforms where it's
 # not the default).
 add_custom_target(AsanDynamicUnitTests)
-set_target_properties(AsanDynamicUnitTests
-  PROPERTIES FOLDER "ASan unit tests with dynamic runtime")
+set_target_properties(AsanDynamicUnitTests PROPERTIES FOLDER "Compiler-RT Tests")
 # ASan benchmarks (not actively used now).
 add_custom_target(AsanBenchmarks)
-set_target_properties(AsanBenchmarks PROPERTIES FOLDER "Asan benchmarks")
+set_target_properties(AsanBenchmarks PROPERTIES FOLDER "Compiler-RT Tests")
 
 set(ASAN_NOINST_TEST_SOURCES
   ${COMPILER_RT_GTEST_SOURCE}
@@ -272,7 +272,8 @@ macro(add_asan_tests_for_arch_and_kind arch kind)
   endif()
   add_library(${ASAN_TEST_RUNTIME} STATIC ${ASAN_TEST_RUNTIME_OBJECTS})
   set_target_properties(${ASAN_TEST_RUNTIME} PROPERTIES
-    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+    ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    FOLDER "Compiler-RT Runtime tests")
   # Uninstrumented tests.
   set(ASAN_NOINST_TEST_OBJECTS)
   foreach(src ${ASAN_NOINST_TEST_SOURCES})

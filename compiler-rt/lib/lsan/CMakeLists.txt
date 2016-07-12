@@ -17,6 +17,7 @@ set(LSAN_SOURCES
 set(LSAN_SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 
 add_custom_target(lsan)
+set_target_properties(lsan PROPERTIES FOLDER "Compiler-RT Misc")
 
 add_compiler_rt_object_libraries(RTLSanCommon
     OS ${SANITIZER_COMMON_SUPPORTED_OS}

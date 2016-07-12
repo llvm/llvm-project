@@ -29,4 +29,4 @@ endforeach()
 add_lit_testsuite(check-esan "Running EfficiencySanitizer tests"
   ${ESAN_TESTSUITES}
   DEPENDS ${ESAN_TEST_DEPS})
-set_target_properties(check-esan PROPERTIES FOLDER "Esan tests")
+set_target_properties(check-esan PROPERTIES FOLDER "Compiler-RT Misc")

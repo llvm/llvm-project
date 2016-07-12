@@ -1,6 +1,28 @@
 include(ExternalProject)
 include(CompilerRTUtils)
 
+function(set_target_output_directories target output_dir)
+  # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
+  # append a per-configuration subdirectory to the specified directory.
+  # To avoid the appended folder, the configuration specific variable must be
+  # set 'RUNTIME_OUTPUT_DIRECTORY_${CONF}':
+  # RUNTIME_OUTPUT_DIRECTORY_DEBUG, RUNTIME_OUTPUT_DIRECTORY_RELEASE, ...
+  if(CMAKE_CONFIGURATION_TYPES)
+    foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
+      string(TOUPPER "${build_mode}" CONFIG_SUFFIX)
+      set_target_properties("${target}" PROPERTIES
+          "ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${output_dir}
+          "LIBRARY_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${output_dir}
+          "RUNTIME_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${output_dir})
+    endforeach()
+  else()
+    set_target_properties("${target}" PROPERTIES
+        ARCHIVE_OUTPUT_DIRECTORY ${output_dir}
+        LIBRARY_OUTPUT_DIRECTORY ${output_dir}
+        RUNTIME_OUTPUT_DIRECTORY ${output_dir})
+  endif()
+endfunction()
+
 # Tries to add an "object library" target for a given list of OSs and/or
 # architectures with name "<name>.<arch>" for non-Darwin platforms if
 # architecture can be targeted, and "<name>.<os>" for Darwin platforms.
@@ -31,13 +53,14 @@ function(add_compiler_rt_object_libraries name)
       endif()
     endforeach()
   endif()
-  
+
   foreach(libname ${libnames})
     add_library(${libname} OBJECT ${LIB_SOURCES})
     set_target_compile_flags(${libname}
       ${CMAKE_CXX_FLAGS} ${extra_cflags_${libname}} ${LIB_CFLAGS})
     set_property(TARGET ${libname} APPEND PROPERTY
       COMPILE_DEFINITIONS ${LIB_DEFS})
+    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Libraries")
     if(APPLE)
       set_target_properties(${libname} PROPERTIES
         OSX_ARCHITECTURES "${LIB_ARCHS_${libname}}")
@@ -139,11 +162,13 @@ function(add_compiler_rt_runtime name type)
                         COMMAND "${CMAKE_COMMAND}"
                                 -DCMAKE_INSTALL_COMPONENT=${LIB_PARENT_TARGET}
                                 -P "${CMAKE_BINARY_DIR}/cmake_install.cmake")
+      set_target_properties(install-${LIB_PARENT_TARGET} PROPERTIES
+                            FOLDER "Compiler-RT Misc")
     endif()
   endif()
 
   foreach(libname ${libnames})
-    # If you have are using a multi-configuration generator we don't generate
+    # If you are using a multi-configuration generator we don't generate
     # per-library install rules, so we fall back to the parent target COMPONENT
     if(CMAKE_CONFIGURATION_TYPES AND LIB_PARENT_TARGET)
       set(COMPONENT_OPTION COMPONENT ${LIB_PARENT_TARGET})
@@ -154,31 +179,12 @@ function(add_compiler_rt_runtime name type)
     add_library(${libname} ${type} ${sources_${libname}})
     set_target_compile_flags(${libname} ${extra_cflags_${libname}})
     set_target_link_flags(${libname} ${extra_linkflags_${libname}})
-    set_property(TARGET ${libname} APPEND PROPERTY 
+    set_property(TARGET ${libname} APPEND PROPERTY
                 COMPILE_DEFINITIONS ${LIB_DEFS})
-
-    # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
-    # append a per-configuration subdirectory to the specified directory.
-    # To avoid the appended folder, the configuration specific variable must be
-    # set 'RUNTIME_OUTPUT_DIRECTORY_${CONF}':
-    # RUNTIME_OUTPUT_DIRECTORY_DEBUG, RUNTIME_OUTPUT_DIRECTORY_RELEASE, ...
-    if(CMAKE_CONFIGURATION_TYPES)
-      foreach(build_mode ${CMAKE_CONFIGURATION_TYPES})
-        string(TOUPPER "${build_mode}" CONFIG_SUFFIX)
-        set_target_properties(${libname} PROPERTIES
-            "ARCHIVE_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-            "LIBRARY_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-            "RUNTIME_OUTPUT_DIRECTORY_${CONFIG_SUFFIX}" ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
-      endforeach()
-    else()
-      set_target_properties(${libname} PROPERTIES
-          ARCHIVE_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-          LIBRARY_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR}
-          RUNTIME_OUTPUT_DIRECTORY ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
-    endif()
-
+    set_target_output_directories(${libname} ${COMPILER_RT_LIBRARY_OUTPUT_DIR})
     set_target_properties(${libname} PROPERTIES
         OUTPUT_NAME ${output_name_${libname}})
+    set_target_properties(${libname} PROPERTIES FOLDER "Compiler-RT Runtime")
     if(LIB_LINK_LIBS AND ${type} STREQUAL "SHARED")
       target_link_libraries(${libname} ${LIB_LINK_LIBS})
     endif()
@@ -296,6 +302,8 @@ macro(add_compiler_rt_test test_suite test_name)
             -o "${output_bin}"
             ${TEST_LINK_FLAGS}
     DEPENDS ${TEST_DEPS})
+  set_target_properties(${test_name} PROPERTIES FOLDER "Compiler-RT Tests")
+
   # Make the test suite depend on the binary.
   add_dependencies(${test_suite} ${test_name})
 endmacro()
@@ -313,6 +321,8 @@ macro(add_compiler_rt_resource_file target_name file_name component)
     DESTINATION ${COMPILER_RT_INSTALL_PATH}
     COMPONENT ${component})
   add_dependencies(${component} ${target_name})
+
+  set_target_properties(${target_name} PROPERTIES FOLDER "Compiler-RT Misc")
 endmacro()
 
 macro(add_compiler_rt_script name)

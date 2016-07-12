@@ -922,17 +922,30 @@ struct InvariantAccess {
 using InvariantAccessesTy = SmallVector<InvariantAccess, 8>;
 
 /// @brief Type for equivalent invariant accesses and their domain context.
-///
-/// The first element is the SCEV for the pointer/location that identifies this
-/// equivalence class. The second is a list of memory accesses to that location
-/// that are now treated as invariant and hoisted during code generation. The
-/// third element is the execution context under which the invariant memory
-/// location is accessed, hence the union of all domain contexts for the memory
-/// accesses in the list. The last element describes the type of the invariant
-/// access in order to differentiate between different typed invariant loads of
-/// the same location.
-using InvariantEquivClassTy =
-    std::tuple<const SCEV *, MemoryAccessList, isl_set *, Type *>;
+struct InvariantEquivClassTy {
+
+  /// The pointer that identifies this equivalence class
+  const SCEV *IdentifyingPointer;
+
+  /// Memory accesses now treated invariant
+  ///
+  /// These memory accesses access the pointer location that identifies
+  /// this equivalence class. They are treated as invariant and hoisted during
+  /// code generation.
+  MemoryAccessList InvariantAccesses;
+
+  /// The execution context under which the memory location is accessed
+  ///
+  /// It is the union of the execution domains of the memory accesses in the
+  /// InvariantAccesses list.
+  isl_set *ExecutionContext;
+
+  /// The type of the invariant access
+  ///
+  /// It is used to differentiate between differently typed invariant loads from
+  /// the same location.
+  Type *AccessType;
+};
 
 /// @brief Type for invariant accesses equivalence classes.
 using InvariantEquivClassesTy = SmallVector<InvariantEquivClassTy, 8>;

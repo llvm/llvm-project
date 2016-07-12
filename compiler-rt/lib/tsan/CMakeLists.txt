@@ -97,6 +97,7 @@ set(TSAN_HEADERS
 
 set(TSAN_RUNTIME_LIBRARIES)
 add_custom_target(tsan)
+set_target_properties(tsan PROPERTIES FOLDER "Compiler-RT Misc")
 
 if(APPLE)
   set(TSAN_ASM_SOURCES rtl/tsan_rtl_amd64.S)

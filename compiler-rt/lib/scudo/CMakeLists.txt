@@ -1,4 +1,5 @@
 add_custom_target(scudo)
+set_target_properties(scudo PROPERTIES FOLDER "Compiler-RT Misc")
 
 include_directories(..)
 

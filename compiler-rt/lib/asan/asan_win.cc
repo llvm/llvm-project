@@ -24,6 +24,7 @@
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
+#include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 
@@ -213,6 +214,55 @@ void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
 
 void AsanOnDeadlySignal(int, void *siginfo, void *context) {
   UNIMPLEMENTED();
+}
+
+#if SANITIZER_WINDOWS64
+// Exception handler for dealing with shadow memory.
+static LONG CALLBACK
+ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
+  static uptr page_size = GetPageSizeCached();
+  static uptr alloc_granularity = GetMmapGranularity();
+  // Only handle access violations.
+  if (exception_pointers->ExceptionRecord->ExceptionCode !=
+      EXCEPTION_ACCESS_VIOLATION) {
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
+
+  // Only handle access violations that land within the shadow memory.
+  uptr addr =
+      (uptr)(exception_pointers->ExceptionRecord->ExceptionInformation[1]);
+
+  // Check valid shadow range.
+  if (!AddrIsInShadow(addr)) return EXCEPTION_CONTINUE_SEARCH;
+
+  // This is an access violation while trying to read from the shadow. Commit
+  // the relevant page and let execution continue.
+
+  // Determine the address of the page that is being accessed.
+  uptr page = RoundDownTo(addr, page_size);
+
+  // Query the existing page.
+  MEMORY_BASIC_INFORMATION mem_info = {};
+  if (::VirtualQuery((LPVOID)page, &mem_info, sizeof(mem_info)) == 0)
+    return EXCEPTION_CONTINUE_SEARCH;
+
+  // Commit the page.
+  uptr result =
+      (uptr)::VirtualAlloc((LPVOID)page, page_size, MEM_COMMIT, PAGE_READWRITE);
+  if (result != page) return EXCEPTION_CONTINUE_SEARCH;
+
+  // The page mapping succeeded, so continue execution as usual.
+  return EXCEPTION_CONTINUE_EXECUTION;
+}
+
+#endif
+
+void InitializePlatformExceptionHandlers() {
+#if SANITIZER_WINDOWS64
+  // On Win64, we map memory on demand with access violation handler.
+  // Install our exception handler.
+  CHECK(AddVectoredExceptionHandler(TRUE, &ShadowExceptionHandler));
+#endif
 }
 
 static LPTOP_LEVEL_EXCEPTION_FILTER default_seh_handler;
