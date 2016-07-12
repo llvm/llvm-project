@@ -403,7 +403,7 @@ public:
                         bool throws = false);
 
     CompilerType
-    GetErrorProtocolType ();
+    GetErrorType ();
     
     CompilerType
     GetNSErrorType (Error& error);
