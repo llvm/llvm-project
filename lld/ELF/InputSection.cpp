@@ -173,10 +173,9 @@ static uint64_t getAArch64Page(uint64_t Expr) {
 }
 
 template <class ELFT>
-static typename ELFT::uint
-getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
-         const SymbolBody &Body, uint8_t *BufLoc,
-         const elf::ObjectFile<ELFT> &File, RelExpr Expr) {
+static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
+                                    typename ELFT::uint P,
+                                    const SymbolBody &Body, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
 
   switch (Expr) {
@@ -314,8 +313,8 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     }
 
     uintX_t AddrLoc = this->OutSec->getVA() + Offset;
-    uint64_t SymVA = SignExtend64<Bits>(getSymVA<ELFT>(
-        Type, Addend, AddrLoc, Sym, BufLoc, *this->File, R_ABS));
+    uint64_t SymVA =
+        SignExtend64<Bits>(getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }
@@ -345,8 +344,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 
     uintX_t AddrLoc = OutSec->getVA() + Offset;
     RelExpr Expr = Rel.Expr;
-    uint64_t SymVA = SignExtend64<Bits>(
-        getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, BufLoc, *File, Expr));
+    uint64_t SymVA =
+        SignExtend64<Bits>(getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));
 
     switch (Expr) {
     case R_RELAX_GOT_PC:

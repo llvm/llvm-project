@@ -11038,16 +11038,6 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     }
   }
 
-  // OpenCL v2.0 s6.9b - Pointer to image/sampler cannot be used.
-  // OpenCL v2.0 s6.13.16.1 - Pointer to pipe cannot be used.
-  if (getLangOpts().OpenCL && T->isPointerType()) {
-    const QualType PTy = T->getPointeeType();
-    if (PTy->isImageType() || PTy->isSamplerT() || PTy->isPipeType()) {
-      Diag(NameLoc, diag::err_opencl_pointer_to_type) << PTy;
-      New->setInvalidDecl();
-    }
-  }
-
   return New;
 }
 

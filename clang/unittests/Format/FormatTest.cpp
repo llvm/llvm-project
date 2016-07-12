@@ -47,10 +47,10 @@ protected:
       EXPECT_EQ(ExpectedIncompleteFormat, IncompleteFormat) << Code << "\n\n";
     }
     ReplacementCount = Replaces.size();
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   FormatStyle getLLVMStyleWithColumns(unsigned ColumnLimit) {
@@ -11553,8 +11553,12 @@ TEST_F(ReplacementTest, FormatCodeAfterReplacements) {
 
   format::FormatStyle Style = format::getLLVMStyle();
   Style.ColumnLimit = 20; // Set column limit to 20 to increase readibility.
-  EXPECT_EQ(Expected, applyAllReplacements(
-                          Code, formatReplacements(Code, Replaces, Style)));
+  auto FormattedReplaces = formatReplacements(Code, Replaces, Style);
+  EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
+      << llvm::toString(FormattedReplaces.takeError()) << "\n";
+  auto Result = applyAllReplacements(Code, *FormattedReplaces);
+  EXPECT_TRUE(static_cast<bool>(Result));
+  EXPECT_EQ(Expected, *Result);
 }
 
 TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
@@ -11578,8 +11582,12 @@ TEST_F(ReplacementTest, SortIncludesAfterReplacement) {
 
   format::FormatStyle Style = format::getLLVMStyle();
   Style.SortIncludes = true;
-  auto FinalReplaces = formatReplacements(Code, Replaces, Style);
-  EXPECT_EQ(Expected, applyAllReplacements(Code, FinalReplaces));
+  auto FormattedReplaces = formatReplacements(Code, Replaces, Style);
+  EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
+      << llvm::toString(FormattedReplaces.takeError()) << "\n";
+  auto Result = applyAllReplacements(Code, *FormattedReplaces);
+  EXPECT_TRUE(static_cast<bool>(Result));
+  EXPECT_EQ(Expected, *Result);
 }
 
 } // end namespace

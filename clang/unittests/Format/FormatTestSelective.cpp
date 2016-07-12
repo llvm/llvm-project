@@ -28,10 +28,10 @@ protected:
     tooling::Replacements Replaces =
         reformat(Style, Code, Ranges, "<stdin>", &IncompleteFormat);
     EXPECT_FALSE(IncompleteFormat) << Code << "\n\n";
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   FormatStyle Style = getLLVMStyle();

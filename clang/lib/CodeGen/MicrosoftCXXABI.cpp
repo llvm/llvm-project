@@ -3639,7 +3639,8 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo *Info) {
 }
 
 static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
-                                   bool &IsConst, bool &IsVolatile) {
+                                   bool &IsConst, bool &IsVolatile,
+                                   bool &IsUnaligned) {
   T = Context.getExceptionObjectType(T);
 
   // C++14 [except.handle]p3:
@@ -3649,10 +3650,12 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   //         - a qualification conversion
   IsConst = false;
   IsVolatile = false;
+  IsUnaligned = false;
   QualType PointeeType = T->getPointeeType();
   if (!PointeeType.isNull()) {
     IsConst = PointeeType.isConstQualified();
     IsVolatile = PointeeType.isVolatileQualified();
+    IsUnaligned = PointeeType.getQualifiers().hasUnaligned();
   }
 
   // Member pointer types like "const int A::*" are represented by having RTTI
@@ -3675,8 +3678,9 @@ MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
   // TypeDescriptors for exceptions never have qualified pointer types,
   // qualifiers are stored seperately in order to support qualification
   // conversions.
-  bool IsConst, IsVolatile;
-  Type = decomposeTypeForEH(getContext(), Type, IsConst, IsVolatile);
+  bool IsConst, IsVolatile, IsUnaligned;
+  Type =
+      decomposeTypeForEH(getContext(), Type, IsConst, IsVolatile, IsUnaligned);
 
   bool IsReference = CatchHandlerType->isReferenceType();
 
@@ -3685,6 +3689,8 @@ MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
     Flags |= 1;
   if (IsVolatile)
     Flags |= 2;
+  if (IsUnaligned)
+    Flags |= 4;
   if (IsReference)
     Flags |= 8;
 
@@ -4095,8 +4101,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
 }
 
 llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
-  bool IsConst, IsVolatile;
-  T = decomposeTypeForEH(getContext(), T, IsConst, IsVolatile);
+  bool IsConst, IsVolatile, IsUnaligned;
+  T = decomposeTypeForEH(getContext(), T, IsConst, IsVolatile, IsUnaligned);
 
   // The CatchableTypeArray enumerates the various (CV-unqualified) types that
   // the exception object may be caught as.
@@ -4112,8 +4118,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   SmallString<256> MangledName;
   {
     llvm::raw_svector_ostream Out(MangledName);
-    getMangleContext().mangleCXXThrowInfo(T, IsConst, IsVolatile, NumEntries,
-                                          Out);
+    getMangleContext().mangleCXXThrowInfo(T, IsConst, IsVolatile, IsUnaligned,
+                                          NumEntries, Out);
   }
 
   // Reuse a previously generated ThrowInfo if we have generated an appropriate
@@ -4129,6 +4135,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
     Flags |= 1;
   if (IsVolatile)
     Flags |= 2;
+  if (IsUnaligned)
+    Flags |= 4;
 
   // The cleanup-function (a destructor) must be called when the exception
   // object's lifetime ends.

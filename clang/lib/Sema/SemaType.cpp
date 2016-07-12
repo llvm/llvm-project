@@ -3829,8 +3829,13 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
                               DeclType.Loc, DeclType.getAttrListRef());
 
       T = S.BuildBlockPointerType(T, D.getIdentifierLoc(), Name);
-      if (DeclType.Cls.TypeQuals)
+      if (DeclType.Cls.TypeQuals || LangOpts.OpenCL) {
+        // OpenCL v2.0, s6.12.5 - Block variable declarations are implicitly
+        // qualified with const.
+        if (LangOpts.OpenCL)
+          DeclType.Cls.TypeQuals |= DeclSpec::TQ_const;
         T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Cls.TypeQuals);
+      }
       break;
     case DeclaratorChunk::Pointer:
       // Verify that we're not building a pointer to pointer to function with
@@ -3851,6 +3856,18 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
           T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Ptr.TypeQuals);
         break;
       }
+
+      // OpenCL v2.0 s6.9b - Pointer to image/sampler cannot be used.
+      // OpenCL v2.0 s6.13.16.1 - Pointer to pipe cannot be used.
+      // OpenCL v2.0 s6.12.5 - Pointers to Blocks are not allowed.
+      if (LangOpts.OpenCL) {
+        if (T->isImageType() || T->isSamplerT() || T->isPipeType() ||
+            T->isBlockPointerType()) {
+          S.Diag(D.getIdentifierLoc(), diag::err_opencl_pointer_to_type) << T;
+          D.setInvalidType(true);
+        }
+      }
+
       T = S.BuildPointerType(T, DeclType.Loc, Name);
       if (DeclType.Ptr.TypeQuals)
         T = S.BuildQualifiedType(T, DeclType.Loc, DeclType.Ptr.TypeQuals);
@@ -4033,7 +4050,8 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
 
         // OpenCL v2.0 s6.12.5 - A block cannot be the return value of a
         // function.
-      if (LangOpts.OpenCL && T->isBlockPointerType()) {
+      if (LangOpts.OpenCL && (T->isBlockPointerType() || T->isImageType() ||
+                              T->isSamplerT() || T->isPipeType())) {
         S.Diag(D.getIdentifierLoc(), diag::err_opencl_invalid_return)
             << T << 1 /*hint off*/;
         D.setInvalidType(true);

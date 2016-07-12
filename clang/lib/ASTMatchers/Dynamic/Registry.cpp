@@ -321,9 +321,11 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isProtected);
   REGISTER_MATCHER(isPublic);
   REGISTER_MATCHER(isPure);
+  REGISTER_MATCHER(isSignedInteger);
   REGISTER_MATCHER(isStruct);
   REGISTER_MATCHER(isTemplateInstantiation);
   REGISTER_MATCHER(isUnion);
+  REGISTER_MATCHER(isUnsignedInteger);
   REGISTER_MATCHER(isVariadic);
   REGISTER_MATCHER(isVirtual);
   REGISTER_MATCHER(isVirtualAsWritten);

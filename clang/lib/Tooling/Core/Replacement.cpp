@@ -249,8 +249,10 @@ bool applyAllReplacements(const std::vector<Replacement> &Replaces,
   return Result;
 }
 
-std::string applyAllReplacements(StringRef Code, const Replacements &Replaces) {
-  if (Replaces.empty()) return Code;
+llvm::Expected<std::string> applyAllReplacements(StringRef Code,
+                                                const Replacements &Replaces) {
+  if (Replaces.empty())
+    return Code.str();
 
   IntrusiveRefCntPtr<vfs::InMemoryFileSystem> InMemoryFileSystem(
       new vfs::InMemoryFileSystem);
@@ -269,7 +271,9 @@ std::string applyAllReplacements(StringRef Code, const Replacements &Replaces) {
     Replacement Replace("<stdin>", I->getOffset(), I->getLength(),
                         I->getReplacementText());
     if (!Replace.apply(Rewrite))
-      return "";
+      return llvm::make_error<llvm::StringError>(
+          "Failed to apply replacement: " + Replace.toString(),
+          llvm::inconvertibleErrorCode());
   }
   std::string Result;
   llvm::raw_string_ostream OS(Result);

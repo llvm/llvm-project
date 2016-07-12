@@ -79,9 +79,13 @@ bool formatAndApplyAllReplacements(const Replacements &Replaces,
     StringRef Code = SM.getBufferData(ID);
 
     format::FormatStyle CurStyle = format::getStyle(Style, FilePath, "LLVM");
-    Replacements NewReplacements =
+    auto NewReplacements =
         format::formatReplacements(Code, CurReplaces, CurStyle);
-    Result = applyAllReplacements(NewReplacements, Rewrite) && Result;
+    if (!NewReplacements) {
+      llvm::errs() << llvm::toString(NewReplacements.takeError()) << "\n";
+      return false;
+    }
+    Result = applyAllReplacements(*NewReplacements, Rewrite) && Result;
   }
   return Result;
 }

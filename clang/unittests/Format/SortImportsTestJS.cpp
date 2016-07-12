@@ -25,10 +25,13 @@ protected:
     if (Length == 0U)
       Length = Code.size() - Offset;
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
-    std::string Sorted =
+    auto Sorted =
         applyAllReplacements(Code, sortIncludes(Style, Code, Ranges, FileName));
-    return applyAllReplacements(Sorted,
-                                reformat(Style, Sorted, Ranges, FileName));
+    EXPECT_TRUE(static_cast<bool>(Sorted));
+    auto Formatted = applyAllReplacements(
+        *Sorted, reformat(Style, *Sorted, Ranges, FileName));
+    EXPECT_TRUE(static_cast<bool>(Formatted));
+    return *Formatted;
   }
 
   void verifySort(llvm::StringRef Expected, llvm::StringRef Code,

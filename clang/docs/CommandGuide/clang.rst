@@ -184,7 +184,7 @@ Language Selection and Mode Options
  (either via :option:`-fobjc-nonfragile-abi`, or because it is the platform
  default).
 
-.. option:: -fobjc-nonfragile-abi
+.. option:: -fobjc-nonfragile-abi, -fno-objc-nonfragile-abi
 
  Enable use of the Objective-C non-fragile ABI. On platforms for which this is
  the default ABI, it can be disabled with :option:`-fno-objc-nonfragile-abi`.
@@ -253,22 +253,32 @@ Code Generation Options
 
       Currently equivalent to :option:`-O3`
 
-.. option:: -g
+.. option:: -g, -gline-tables-only, -gmodules
 
-  Generate debug information.  Note that Clang debug information works best at -O0.
+  Control debug information output.  Note that Clang debug information works
+  best at :option:`-O0`.  When more than one option starting with `-g` is
+  specified, the last one wins:
 
-.. option:: -gmodules
+    :option:`-g` Generate debug information.
 
-  Generate debug information that contains external references to
-  types defined in clang modules or precompiled headers instead of
-  emitting redundant debug type information into every object file.
-  This option implies :option:`-fmodule-format=obj`.
+    :option:`-gline-tables-only` Generate only line table debug information. This
+    allows for symbolicated backtraces with inlining information, but does not
+    include any information about variables, their locations or types.
 
-  This option should not be used when building static libraries for
-  distribution to other machines because the debug info will contain
-  references to the module cache on the machine the object files in
-  the library were built on.
-  
+    :option:`-gmodules` Generate debug information that contains external
+    references to types defined in Clang modules or precompiled headers instead
+    of emitting redundant debug type information into every object file.  This
+    option transparently switches the Clang module format to object file
+    containers that hold the Clang module together with the debug information.
+    When compiling a program that uses Clang modules or precompiled headers,
+    this option produces complete debug information with faster compile
+    times and much smaller object files.
+
+    This option should not be used when building static libraries for
+    distribution to other machines because the debug info will contain
+    references to the module cache on the machine the object files in the
+    library were built on.
+
 .. option:: -fstandalone-debug -fno-standalone-debug
 
   Clang supports a number of optimizations to reduce the size of debug
@@ -300,7 +310,7 @@ Code Generation Options
 
   This flag sets the default visibility level.
 
-.. option:: -fcommon
+.. option:: -fcommon, -fno-common
 
   This flag specifies that variables without initializers get common linkage.
   It can be disabled with :option:`-fno-common`.

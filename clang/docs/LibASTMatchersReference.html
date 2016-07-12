@@ -2968,6 +2968,30 @@ matches "a(int)", "b(long)", but not "c(double)".
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isSignedInteger0')"><a name="isSignedInteger0Anchor">isSignedInteger</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isSignedInteger0"><pre>Matches QualType nodes that are of signed integer type.
+
+Given
+  void a(int);
+  void b(unsigned long);
+  void c(double);
+functionDecl(hasAnyParameter(hasType(isInteger())))
+matches "a(int)", but not "b(unsigned long)" and "c(double)".
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isUnsignedInteger0')"><a name="isUnsignedInteger0Anchor">isUnsignedInteger</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isUnsignedInteger0"><pre>Matches QualType nodes that are of unsigned integer type.
+
+Given
+  void a(int);
+  void b(unsigned long);
+  void c(double);
+functionDecl(hasAnyParameter(hasType(isInteger())))
+matches "b(unsigned long)", but not "a(int)" and "c(double)".
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt;</td><td class="name" onclick="toggle('isVolatileQualified0')"><a name="isVolatileQualified0Anchor">isVolatileQualified</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isVolatileQualified0"><pre>Matches QualType nodes that are volatile-qualified, i.e., that
 include "top-level" volatile.
@@ -3849,8 +3873,11 @@ Given
   void f(int i);
   int y;
   f(y);
-callExpr(declRefExpr(to(varDecl(hasName("y")))),
-parmVarDecl(hasType(isInteger())))
+callExpr(
+  forEachArgumentWithParam(
+    declRefExpr(to(varDecl(hasName("y")))),
+    parmVarDecl(hasType(isInteger()))
+))
   matches f(y);
 with declRefExpr(...)
   matching int y
@@ -4139,8 +4166,11 @@ Given
   void f(int i);
   int y;
   f(y);
-callExpr(declRefExpr(to(varDecl(hasName("y")))),
-parmVarDecl(hasType(isInteger())))
+callExpr(
+  forEachArgumentWithParam(
+    declRefExpr(to(varDecl(hasName("y")))),
+    parmVarDecl(hasType(isInteger()))
+))
   matches f(y);
 with declRefExpr(...)
   matching int y
