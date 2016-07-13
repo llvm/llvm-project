@@ -509,6 +509,8 @@ def find_pch_source_EQ : Joined<["-"], "find-pch-source=">,
   HelpText<"When building a pch, try to find the input file in include "
            "directories, as if it had been included by the argument passed "
            "to this flag.">;
+def fno_pch_timestamp : Flag<["-"], "fno-pch-timestamp">,
+  HelpText<"Disable inclusion of timestamp in precompiled headers">;
   
 //===----------------------------------------------------------------------===//
 // Language Options

@@ -126,8 +126,8 @@ void DefinitionsInHeadersCheck::check(const MatchFinder::MatchResult &Result) {
     diag(FD->getLocation(),
          "function %0 defined in a header file; "
          "function definitions in header files can lead to ODR violations")
-        << FD << FixItHint::CreateInsertion(FD->getSourceRange().getBegin(),
-                                            "inline ");
+        << FD << FixItHint::CreateInsertion(
+                     FD->getReturnTypeSourceRange().getBegin(), "inline ");
   } else if (const auto *VD = dyn_cast<VarDecl>(ND)) {
     // Static data members of a class template are allowed.
     if (VD->getDeclContext()->isDependentContext() && VD->isStaticDataMember())

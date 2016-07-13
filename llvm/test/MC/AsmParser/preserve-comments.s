@@ -2,6 +2,8 @@
 	#RUN: diff %s %t
 	.text
 
+foo:	#Comment here
+	#comment here
 	nop
 	#if DIRECTIVE COMMENT
 	## WHOLE LINE COMMENT

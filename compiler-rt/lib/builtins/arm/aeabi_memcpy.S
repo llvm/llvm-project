@@ -11,6 +11,7 @@
 
 //  void __aeabi_memcpy(void *dest, void *src, size_t n) { memcpy(dest, src, n); }
 
+        .syntax unified
         .p2align 2
 DEFINE_COMPILERRT_FUNCTION(__aeabi_memcpy)
         b       memcpy
