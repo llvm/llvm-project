@@ -473,9 +473,9 @@ lldb_private::formatters::swift::Array_SummaryProvider (ValueObject& valobj, Str
     
     if (!handler)
         return false;
-    
+
     auto count = handler->GetCount();
-    
+
     stream.Printf("%zu value%s",
                   count,
                   (count == 1 ? "" : "s"));
@@ -518,6 +518,14 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::Update()
 }
 
 bool
+lldb_private::formatters::swift::ArraySyntheticFrontEnd::IsValid ()
+{
+    if (m_array_buffer)
+        return m_array_buffer->IsValid();
+    return false;
+}
+
+bool
 lldb_private::formatters::swift::ArraySyntheticFrontEnd::MightHaveChildren ()
 {
     return true;
@@ -539,6 +547,10 @@ SyntheticChildrenFrontEnd*
 lldb_private::formatters::swift::ArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
     if (!valobj_sp)
-        return NULL;
-    return (new ArraySyntheticFrontEnd(valobj_sp));
+        return nullptr;
+
+    ArraySyntheticFrontEnd *front_end = new ArraySyntheticFrontEnd(valobj_sp);
+    if (front_end && front_end->IsValid())
+        return front_end;
+    return nullptr;
 }
