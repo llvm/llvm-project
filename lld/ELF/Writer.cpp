@@ -1022,7 +1022,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->VAStart;
+  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->ImageBase;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
@@ -1030,7 +1030,7 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Config->VAStart + Out<ELFT>::ElfHeader->getSize() +
+  uintX_t VA = Config->ImageBase + Out<ELFT>::ElfHeader->getSize() +
                Out<ELFT>::ProgramHeaders->getSize();
 
   uintX_t ThreadBssOffset = 0;

@@ -344,48 +344,25 @@ ModuleList::FindFunctions (const ConstString &name,
     
     if (name_type_mask & eFunctionNameTypeAuto)
     {
-        ConstString lookup_name;
-        uint32_t lookup_name_type_mask = 0;
-        bool match_name_after_lookup = false;
-        Module::PrepareForFunctionNameLookup (name, name_type_mask,
-                                              eLanguageTypeUnknown, // TODO: add support
-                                              lookup_name,
-                                              lookup_name_type_mask,
-                                              match_name_after_lookup);
+        Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
 
         std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
         collection::const_iterator pos, end = m_modules.end();
         for (pos = m_modules.begin(); pos != end; ++pos)
         {
-            (*pos)->FindFunctions(lookup_name,
+            (*pos)->FindFunctions(lookup_info.GetLookupName(),
                                   nullptr,
-                                  lookup_name_type_mask,
+                                  lookup_info.GetNameTypeMask(),
                                   include_symbols,
                                   include_inlines,
                                   true,
                                   sc_list);
         }
         
-        if (match_name_after_lookup)
-        {
-            SymbolContext sc;
-            size_t i = old_size;
-            while (i < sc_list.GetSize())
-            {
-                if (sc_list.GetContextAtIndex(i, sc))
-                {
-                    const char *func_name = sc.GetFunctionName().GetCString();
-                    if (func_name != nullptr && strstr(func_name, name.GetCString()) == nullptr)
-                    {
-                        // Remove the current context
-                        sc_list.RemoveContextAtIndex(i);
-                        // Don't increment i and continue in the loop
-                        continue;
-                    }
-                }
-                ++i;
-            }
-        }
+        const size_t new_size = sc_list.GetSize();
+
+        if (old_size < new_size)
+            lookup_info.Prune (sc_list, old_size);
     }
     else
     {
@@ -408,44 +385,22 @@ ModuleList::FindFunctionSymbols (const ConstString &name,
 
     if (name_type_mask & eFunctionNameTypeAuto)
     {
-        ConstString lookup_name;
-        uint32_t lookup_name_type_mask = 0;
-        bool match_name_after_lookup = false;
-        Module::PrepareForFunctionNameLookup (name, name_type_mask,
-                                              eLanguageTypeUnknown, // TODO: add support
-                                              lookup_name,
-                                              lookup_name_type_mask,
-                                              match_name_after_lookup);
+        Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
 
         std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
         collection::const_iterator pos, end = m_modules.end();
         for (pos = m_modules.begin(); pos != end; ++pos)
         {
-            (*pos)->FindFunctionSymbols (lookup_name,
-                                   lookup_name_type_mask,
-                                   sc_list);
+            (*pos)->FindFunctionSymbols (lookup_info.GetLookupName(),
+                                         lookup_info.GetNameTypeMask(),
+                                         sc_list);
         }
-        
-        if (match_name_after_lookup)
-        {
-            SymbolContext sc;
-            size_t i = old_size;
-            while (i < sc_list.GetSize())
-            {
-                if (sc_list.GetContextAtIndex(i, sc))
-                {
-                    const char *func_name = sc.GetFunctionName().GetCString();
-                    if (func_name != nullptr && strstr(func_name, name.GetCString()) == nullptr)
-                    {
-                        // Remove the current context
-                        sc_list.RemoveContextAtIndex(i);
-                        // Don't increment i and continue in the loop
-                        continue;
-                    }
-                }
-                ++i;
-            }
-        }
+
+
+        const size_t new_size = sc_list.GetSize();
+
+        if (old_size < new_size)
+            lookup_info.Prune (sc_list, old_size);
     }
     else
     {

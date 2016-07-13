@@ -1681,22 +1681,22 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
       LangStd = OpenCLLangStd;
   }
 
-  // -cl-strict-aliasing needs to emit diagnostic in the case where CL > 1.0.
-  // This option should be deprecated for CL > 1.0 because
-  // this option was added for compatibility with OpenCL 1.0.
-  if (const Arg *A = Args.getLastArg(OPT_cl_strict_aliasing))
-    if (Opts.OpenCLVersion > 100) {
-      std::string VerSpec = llvm::to_string(Opts.OpenCLVersion / 100) +
-                            std::string (".") +
-                            llvm::to_string((Opts.OpenCLVersion % 100) / 10);
-      Diags.Report(diag::warn_option_invalid_ocl_version)
-      << VerSpec << A->getAsString(Args);
-    }
-
   Opts.IncludeDefaultHeader = Args.hasArg(OPT_finclude_default_header);
 
   llvm::Triple T(TargetOpts.Triple);
   CompilerInvocation::setLangDefaults(Opts, IK, T, PPOpts, LangStd);
+
+  // -cl-strict-aliasing needs to emit diagnostic in the case where CL > 1.0.
+  // This option should be deprecated for CL > 1.0 because
+  // this option was added for compatibility with OpenCL 1.0.
+  if (Args.getLastArg(OPT_cl_strict_aliasing)
+       && Opts.OpenCLVersion > 100) {
+    std::string VerSpec = llvm::to_string(Opts.OpenCLVersion / 100) +
+                          std::string(".") +
+                          llvm::to_string((Opts.OpenCLVersion % 100) / 10);
+    Diags.Report(diag::warn_option_invalid_ocl_version)
+      << VerSpec << Args.getLastArg(OPT_cl_strict_aliasing)->getAsString(Args);
+  }
 
   // We abuse '-f[no-]gnu-keywords' to force overriding all GNU-extension
   // keywords. This behavior is provided by GCC's poorly named '-fasm' flag,

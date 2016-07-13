@@ -225,6 +225,7 @@ OPENMP_CLAUSE(defaultmap, OMPDefaultmapClause)
 OPENMP_CLAUSE(to, OMPToClause)
 OPENMP_CLAUSE(from, OMPFromClause)
 OPENMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
+OPENMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -394,7 +395,6 @@ OPENMP_ATOMIC_CLAUSE(capture)
 OPENMP_ATOMIC_CLAUSE(seq_cst)
 
 // Clauses allowed for OpenMP directive 'target'.
-// TODO More clauses for 'target' directive.
 OPENMP_TARGET_CLAUSE(if)
 OPENMP_TARGET_CLAUSE(device)
 OPENMP_TARGET_CLAUSE(map)
@@ -403,6 +403,7 @@ OPENMP_TARGET_CLAUSE(nowait)
 OPENMP_TARGET_CLAUSE(depend)
 OPENMP_TARGET_CLAUSE(defaultmap)
 OPENMP_TARGET_CLAUSE(firstprivate)
+OPENMP_TARGET_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target data'.
 // TODO More clauses for 'target data' directive.
