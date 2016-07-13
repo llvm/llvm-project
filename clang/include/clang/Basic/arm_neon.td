@@ -967,7 +967,7 @@ def XTN2 : SOpInst<"vmovn_high", "qhk", "silUsUiUl", OP_XTN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed integer saturating extract and unsigned narrow to high
-def SQXTUN2 : SOpInst<"vqmovun_high", "qhk", "sil", OP_SQXTUN>;
+def SQXTUN2 : SOpInst<"vqmovun_high", "emd", "HsHiHl", OP_SQXTUN>;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Integer saturating extract and narrow to high
