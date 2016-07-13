@@ -529,6 +529,10 @@ void OMPClauseProfiler::VisitOMPToClause(const OMPToClause *C) {
 void OMPClauseProfiler::VisitOMPFromClause(const OMPFromClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPUseDevicePtrClause(
+    const OMPUseDevicePtrClause *C) {
+  VisitOMPClauseList(C);
+}
 }
 
 void
