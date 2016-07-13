@@ -942,7 +942,6 @@ MicrosoftCXXABI::performBaseAdjustment(CodeGenFunction &CGF, Address Value,
   llvm::Value *Offset =
     GetVirtualBaseClassOffset(CGF, Value, SrcDecl, PolymorphicBase);
   llvm::Value *Ptr = CGF.Builder.CreateInBoundsGEP(Value.getPointer(), Offset);
-  Offset = CGF.Builder.CreateTrunc(Offset, CGF.Int32Ty);
   CharUnits VBaseAlign =
     CGF.CGM.getVBaseAlignment(Value.getAlignment(), SrcDecl, PolymorphicBase);
   return std::make_pair(Address(Ptr, VBaseAlign), Offset);
@@ -976,8 +975,8 @@ llvm::Value *MicrosoftCXXABI::EmitTypeid(CodeGenFunction &CGF,
                                          QualType SrcRecordTy,
                                          Address ThisPtr,
                                          llvm::Type *StdTypeInfoPtrTy) {
-  llvm::Value *Offset;
-  std::tie(ThisPtr, Offset) = performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
+  std::tie(ThisPtr, std::ignore) =
+      performBaseAdjustment(CGF, ThisPtr, SrcRecordTy);
   auto Typeid = emitRTtypeidCall(CGF, ThisPtr.getPointer()).getInstruction();
   return CGF.Builder.CreateBitCast(Typeid, StdTypeInfoPtrTy);
 }
@@ -1002,6 +1001,7 @@ llvm::Value *MicrosoftCXXABI::EmitDynamicCastCall(
   llvm::Value *Offset;
   std::tie(This, Offset) = performBaseAdjustment(CGF, This, SrcRecordTy);
   llvm::Value *ThisPtr = This.getPointer();
+  Offset = CGF.Builder.CreateTrunc(Offset, CGF.Int32Ty);
 
   // PVOID __RTDynamicCast(
   //   PVOID inptr,
@@ -1025,8 +1025,7 @@ llvm::Value *
 MicrosoftCXXABI::EmitDynamicCastToVoid(CodeGenFunction &CGF, Address Value,
                                        QualType SrcRecordTy,
                                        QualType DestTy) {
-  llvm::Value *Offset;
-  std::tie(Value, Offset) = performBaseAdjustment(CGF, Value, SrcRecordTy);
+  std::tie(Value, std::ignore) = performBaseAdjustment(CGF, Value, SrcRecordTy);
 
   // PVOID __RTCastToVoid(
   //   PVOID inptr)
@@ -1152,16 +1151,14 @@ void MicrosoftCXXABI::initializeHiddenVirtualInheritanceMembers(
 
     llvm::Value *VBaseOffset =
         GetVirtualBaseClassOffset(CGF, getThisAddress(CGF), RD, I->first);
-    // FIXME: it doesn't look right that we SExt in GetVirtualBaseClassOffset()
-    // just to Trunc back immediately.
-    VBaseOffset = Builder.CreateTruncOrBitCast(VBaseOffset, CGF.Int32Ty);
     uint64_t ConstantVBaseOffset =
         Layout.getVBaseClassOffset(I->first).getQuantity();
 
     // vtorDisp_for_vbase = vbptr[vbase_idx] - offsetof(RD, vbase).
     llvm::Value *VtorDispValue = Builder.CreateSub(
-        VBaseOffset, llvm::ConstantInt::get(CGM.Int32Ty, ConstantVBaseOffset),
+        VBaseOffset, llvm::ConstantInt::get(CGM.PtrDiffTy, ConstantVBaseOffset),
         "vtordisp.value");
+    VtorDispValue = Builder.CreateTruncOrBitCast(VtorDispValue, CGF.Int32Ty);
 
     if (!Int8This)
       Int8This = Builder.CreateBitCast(getThisValue(CGF),
@@ -3642,7 +3639,8 @@ MSRTTIBuilder::getCompleteObjectLocator(const VPtrInfo *Info) {
 }
 
 static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
-                                   bool &IsConst, bool &IsVolatile) {
+                                   bool &IsConst, bool &IsVolatile,
+                                   bool &IsUnaligned) {
   T = Context.getExceptionObjectType(T);
 
   // C++14 [except.handle]p3:
@@ -3652,10 +3650,12 @@ static QualType decomposeTypeForEH(ASTContext &Context, QualType T,
   //         - a qualification conversion
   IsConst = false;
   IsVolatile = false;
+  IsUnaligned = false;
   QualType PointeeType = T->getPointeeType();
   if (!PointeeType.isNull()) {
     IsConst = PointeeType.isConstQualified();
     IsVolatile = PointeeType.isVolatileQualified();
+    IsUnaligned = PointeeType.getQualifiers().hasUnaligned();
   }
 
   // Member pointer types like "const int A::*" are represented by having RTTI
@@ -3678,8 +3678,9 @@ MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
   // TypeDescriptors for exceptions never have qualified pointer types,
   // qualifiers are stored seperately in order to support qualification
   // conversions.
-  bool IsConst, IsVolatile;
-  Type = decomposeTypeForEH(getContext(), Type, IsConst, IsVolatile);
+  bool IsConst, IsVolatile, IsUnaligned;
+  Type =
+      decomposeTypeForEH(getContext(), Type, IsConst, IsVolatile, IsUnaligned);
 
   bool IsReference = CatchHandlerType->isReferenceType();
 
@@ -3688,6 +3689,8 @@ MicrosoftCXXABI::getAddrOfCXXCatchHandlerType(QualType Type,
     Flags |= 1;
   if (IsVolatile)
     Flags |= 2;
+  if (IsUnaligned)
+    Flags |= 4;
   if (IsReference)
     Flags |= 8;
 
@@ -4098,8 +4101,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getCatchableTypeArray(QualType T) {
 }
 
 llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
-  bool IsConst, IsVolatile;
-  T = decomposeTypeForEH(getContext(), T, IsConst, IsVolatile);
+  bool IsConst, IsVolatile, IsUnaligned;
+  T = decomposeTypeForEH(getContext(), T, IsConst, IsVolatile, IsUnaligned);
 
   // The CatchableTypeArray enumerates the various (CV-unqualified) types that
   // the exception object may be caught as.
@@ -4115,8 +4118,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
   SmallString<256> MangledName;
   {
     llvm::raw_svector_ostream Out(MangledName);
-    getMangleContext().mangleCXXThrowInfo(T, IsConst, IsVolatile, NumEntries,
-                                          Out);
+    getMangleContext().mangleCXXThrowInfo(T, IsConst, IsVolatile, IsUnaligned,
+                                          NumEntries, Out);
   }
 
   // Reuse a previously generated ThrowInfo if we have generated an appropriate
@@ -4132,6 +4135,8 @@ llvm::GlobalVariable *MicrosoftCXXABI::getThrowInfo(QualType T) {
     Flags |= 1;
   if (IsVolatile)
     Flags |= 2;
+  if (IsUnaligned)
+    Flags |= 4;
 
   // The cleanup-function (a destructor) must be called when the exception
   // object's lifetime ends.

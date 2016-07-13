@@ -665,9 +665,9 @@ findFirstPredicateSetterFrom(MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator I) {
   while (I != MBB.begin()) {
     --I;
-    MachineInstr *MI = I;
-    if (isPredicateSetter(MI->getOpcode()))
-      return MI;
+    MachineInstr &MI = *I;
+    if (isPredicateSetter(MI.getOpcode()))
+      return &MI;
   }
 
   return nullptr;
@@ -711,21 +711,21 @@ R600InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
         I->removeFromParent();
       I = PriorI;
   }
-  MachineInstr *LastInst = I;
+  MachineInstr &LastInst = *I;
 
   // If there is only one terminator instruction, process it.
-  unsigned LastOpc = LastInst->getOpcode();
+  unsigned LastOpc = LastInst.getOpcode();
   if (I == MBB.begin() ||
           !isJump(static_cast<MachineInstr *>(--I)->getOpcode())) {
     if (LastOpc == AMDGPU::JUMP) {
-      TBB = LastInst->getOperand(0).getMBB();
+      TBB = LastInst.getOperand(0).getMBB();
       return false;
     } else if (LastOpc == AMDGPU::JUMP_COND) {
-      MachineInstr *predSet = I;
+      auto predSet = I;
       while (!isPredicateSetter(predSet->getOpcode())) {
         predSet = --I;
       }
-      TBB = LastInst->getOperand(0).getMBB();
+      TBB = LastInst.getOperand(0).getMBB();
       Cond.push_back(predSet->getOperand(1));
       Cond.push_back(predSet->getOperand(2));
       Cond.push_back(MachineOperand::CreateReg(AMDGPU::PRED_SEL_ONE, false));
@@ -735,17 +735,17 @@ R600InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   }
 
   // Get the instruction before it if it is a terminator.
-  MachineInstr *SecondLastInst = I;
-  unsigned SecondLastOpc = SecondLastInst->getOpcode();
+  MachineInstr &SecondLastInst = *I;
+  unsigned SecondLastOpc = SecondLastInst.getOpcode();
 
   // If the block ends with a B and a Bcc, handle it.
   if (SecondLastOpc == AMDGPU::JUMP_COND && LastOpc == AMDGPU::JUMP) {
-    MachineInstr *predSet = --I;
+    auto predSet = --I;
     while (!isPredicateSetter(predSet->getOpcode())) {
       predSet = --I;
     }
-    TBB = SecondLastInst->getOperand(0).getMBB();
-    FBB = LastInst->getOperand(0).getMBB();
+    TBB = SecondLastInst.getOperand(0).getMBB();
+    FBB = LastInst.getOperand(0).getMBB();
     Cond.push_back(predSet->getOperand(1));
     Cond.push_back(predSet->getOperand(2));
     Cond.push_back(MachineOperand::CreateReg(AMDGPU::PRED_SEL_ONE, false));
@@ -1195,6 +1195,63 @@ MachineInstrBuilder R600InstrInfo::buildIndirectRead(MachineBasicBlock *MBB,
   setImmOperand(*Mov, AMDGPU::OpName::src0_rel, 1);
 
   return Mov;
+}
+
+int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  int Offset = -1;
+
+  if (MFI->getNumObjects() == 0) {
+    return -1;
+  }
+
+  if (MRI.livein_empty()) {
+    return 0;
+  }
+
+  const TargetRegisterClass *IndirectRC = getIndirectAddrRegClass();
+  for (MachineRegisterInfo::livein_iterator LI = MRI.livein_begin(),
+                                            LE = MRI.livein_end();
+                                            LI != LE; ++LI) {
+    unsigned Reg = LI->first;
+    if (TargetRegisterInfo::isVirtualRegister(Reg) ||
+        !IndirectRC->contains(Reg))
+      continue;
+
+    unsigned RegIndex;
+    unsigned RegEnd;
+    for (RegIndex = 0, RegEnd = IndirectRC->getNumRegs(); RegIndex != RegEnd;
+                                                          ++RegIndex) {
+      if (IndirectRC->getRegister(RegIndex) == Reg)
+        break;
+    }
+    Offset = std::max(Offset, (int)RegIndex);
+  }
+
+  return Offset + 1;
+}
+
+int R600InstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
+  int Offset = 0;
+  const MachineFrameInfo *MFI = MF.getFrameInfo();
+
+  // Variable sized objects are not supported
+  if (MFI->hasVarSizedObjects()) {
+    return -1;
+  }
+
+  if (MFI->getNumObjects() == 0) {
+    return -1;
+  }
+
+  const R600Subtarget &ST = MF.getSubtarget<R600Subtarget>();
+  const R600FrameLowering *TFL = ST.getFrameLowering();
+
+  unsigned IgnoredFrameReg;
+  Offset = TFL->getFrameIndexReference(MF, -1, IgnoredFrameReg);
+
+  return getIndirectIndexBegin(MF) + Offset;
 }
 
 unsigned R600InstrInfo::getMaxAlusPerClause() const {

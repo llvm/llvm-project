@@ -2638,6 +2638,10 @@ public:
     return getTrailingASTTemplateKWAndArgsInfo()->NumTemplateArgs;
   }
 
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
+  }
+
   /// \brief Copies the template arguments into the given structure.
   void copyTemplateArgumentsInto(TemplateArgumentListInfo &List) const {
     if (hasExplicitTemplateArgs())
@@ -2889,6 +2893,10 @@ public:
       return 0;
 
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   /// Note: getLocStart() is the start of the whole DependentScopeDeclRefExpr,
@@ -3304,6 +3312,10 @@ public:
       return 0;
 
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   SourceLocation getLocStart() const LLVM_READONLY {

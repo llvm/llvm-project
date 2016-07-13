@@ -22,9 +22,8 @@
 # COMPRESSED-NEXT: }
 
 # RUN: ld.lld %t -o %t.so -shared
-# RUN: llvm-readobj -sections %t.so | FileCheck -check-prefix=UNCOMPRESSED %s
+# RUN: llvm-readobj -sections -section-data %t.so | FileCheck -check-prefix=UNCOMPRESSED %s
 
-## Check that section is decompressed and compression flag is removed.
 # UNCOMPRESSED:      Section {
 # UNCOMPRESSED:        Index: 6
 # UNCOMPRESSED:        Name: .debug_str
@@ -40,6 +39,13 @@
 # UNCOMPRESSED-NEXT:   Info: 0
 # UNCOMPRESSED-NEXT:   AddressAlignment: 1
 # UNCOMPRESSED-NEXT:   EntrySize: 1
+# UNCOMPRESSED-NEXT:   SectionData (
+# UNCOMPRESSED-NEXT:     0000: 73686F72 7420756E 7369676E 65642069  |short unsigned i|
+# UNCOMPRESSED-NEXT:     0010: 6E740075 6E736967 6E656420 696E7400  |nt.unsigned int.|
+# UNCOMPRESSED-NEXT:     0020: 6C6F6E67 20756E73 69676E65 6420696E  |long unsigned in|
+# UNCOMPRESSED-NEXT:     0030: 74006368 61720075 6E736967 6E656420  |t.char.unsigned |
+# UNCOMPRESSED-NEXT:     0040: 63686172 00                          |char.|
+# UNCOMPRESSED-NEXT:   )
 # UNCOMPRESSED-NEXT: }
 
 .section .debug_str,"MS",@progbits,1

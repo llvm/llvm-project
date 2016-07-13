@@ -29,6 +29,7 @@
 #include "InputFiles.h"
 #include "OutputSections.h"
 #include "Symbols.h"
+#include "Thunks.h"
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Object/ELF.h"
@@ -101,7 +102,7 @@ public:
   void relaxTlsLdToLe(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 };
 
-class X86_64TargetInfo final : public TargetInfo {
+template <class ELFT> class X86_64TargetInfo final : public TargetInfo {
 public:
   X86_64TargetInfo();
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
@@ -181,6 +182,9 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
+  RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType,
+                       const InputFile &File,
+                       const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
 };
 
@@ -196,9 +200,9 @@ public:
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
-  void writeThunk(uint8_t *Buf, uint64_t S) const override;
-  bool needsThunk(uint32_t Type, const InputFile &File,
-                  const SymbolBody &S) const override;
+  RelExpr getThunkExpr(RelExpr Expr, uint32_t RelocType,
+                       const InputFile &File,
+                       const SymbolBody &S) const override;
   void relocateOne(uint8_t *Loc, uint32_t Type, uint64_t Val) const override;
   bool usesOnlyLowPageBits(uint32_t Type) const override;
 };
@@ -232,7 +236,9 @@ TargetInfo *createTarget() {
   case EM_PPC64:
     return new PPC64TargetInfo();
   case EM_X86_64:
-    return new X86_64TargetInfo();
+    if (Config->EKind == ELF32LEKind)
+      return new X86_64TargetInfo<ELF32LE>();
+    return new X86_64TargetInfo<ELF64LE>();
   }
   fatal("unknown target machine");
 }
@@ -248,9 +254,10 @@ uint64_t TargetInfo::getVAStart() const { return Config->Pic ? 0 : VAStart; }
 
 bool TargetInfo::usesOnlyLowPageBits(uint32_t Type) const { return false; }
 
-bool TargetInfo::needsThunk(uint32_t Type, const InputFile &File,
-                            const SymbolBody &S) const {
-  return false;
+RelExpr TargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
+                                 const InputFile &File,
+                                 const SymbolBody &S) const {
+  return Expr;
 }
 
 bool TargetInfo::isTlsInitialExecRel(uint32_t Type) const { return false; }
@@ -321,6 +328,7 @@ RelExpr X86TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_386_TLS_IE:
     return R_GOT;
   case R_386_GOT32:
+  case R_386_GOT32X:
   case R_386_TLS_GOTIE:
     return R_GOT_FROM_END;
   case R_386_GOTOFF:
@@ -423,6 +431,7 @@ uint64_t X86TargetInfo::getImplicitAddend(const uint8_t *Buf,
     return 0;
   case R_386_32:
   case R_386_GOT32:
+  case R_386_GOT32X:
   case R_386_GOTOFF:
   case R_386_GOTPC:
   case R_386_PC32:
@@ -531,7 +540,7 @@ void X86TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
   memcpy(Loc - 2, Inst, sizeof(Inst));
 }
 
-X86_64TargetInfo::X86_64TargetInfo() {
+template <class ELFT> X86_64TargetInfo<ELFT>::X86_64TargetInfo() {
   CopyRel = R_X86_64_COPY;
   GotRel = R_X86_64_GLOB_DAT;
   PltRel = R_X86_64_JUMP_SLOT;
@@ -545,7 +554,9 @@ X86_64TargetInfo::X86_64TargetInfo() {
   TlsGdRelaxSkip = 2;
 }
 
-RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
+template <class ELFT>
+RelExpr X86_64TargetInfo<ELFT>::getRelExpr(uint32_t Type,
+                                           const SymbolBody &S) const {
   switch (Type) {
   default:
     return R_ABS;
@@ -573,35 +584,40 @@ RelExpr X86_64TargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   }
 }
 
-void X86_64TargetInfo::writeGotPltHeader(uint8_t *Buf) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::writeGotPltHeader(uint8_t *Buf) const {
   // The first entry holds the value of _DYNAMIC. It is not clear why that is
   // required, but it is documented in the psabi and the glibc dynamic linker
   // seems to use it (note that this is relevant for linking ld.so, not any
   // other program).
-  write64le(Buf, Out<ELF64LE>::Dynamic->getVA());
+  write64le(Buf, Out<ELFT>::Dynamic->getVA());
 }
 
-void X86_64TargetInfo::writeGotPlt(uint8_t *Buf, const SymbolBody &S) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::writeGotPlt(uint8_t *Buf,
+                                         const SymbolBody &S) const {
   // See comments in X86TargetInfo::writeGotPlt.
-  write32le(Buf, S.getPltVA<ELF64LE>() + 6);
+  write32le(Buf, S.getPltVA<ELFT>() + 6);
 }
 
-void X86_64TargetInfo::writePltHeader(uint8_t *Buf) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::writePltHeader(uint8_t *Buf) const {
   const uint8_t PltData[] = {
       0xff, 0x35, 0x00, 0x00, 0x00, 0x00, // pushq GOT+8(%rip)
       0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmp *GOT+16(%rip)
       0x0f, 0x1f, 0x40, 0x00              // nopl 0x0(rax)
   };
   memcpy(Buf, PltData, sizeof(PltData));
-  uint64_t Got = Out<ELF64LE>::GotPlt->getVA();
-  uint64_t Plt = Out<ELF64LE>::Plt->getVA();
+  uint64_t Got = Out<ELFT>::GotPlt->getVA();
+  uint64_t Plt = Out<ELFT>::Plt->getVA();
   write32le(Buf + 2, Got - Plt + 2); // GOT+8
   write32le(Buf + 8, Got - Plt + 4); // GOT+16
 }
 
-void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
-                                uint64_t PltEntryAddr, int32_t Index,
-                                unsigned RelOff) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
+                                      uint64_t PltEntryAddr, int32_t Index,
+                                      unsigned RelOff) const {
   const uint8_t Inst[] = {
       0xff, 0x25, 0x00, 0x00, 0x00, 0x00, // jmpq *got(%rip)
       0x68, 0x00, 0x00, 0x00, 0x00,       // pushq <relocation index>
@@ -614,27 +630,32 @@ void X86_64TargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   write32le(Buf + 12, -Index * PltEntrySize - PltHeaderSize - 16);
 }
 
-uint32_t X86_64TargetInfo::getDynRel(uint32_t Type) const {
+template <class ELFT>
+uint32_t X86_64TargetInfo<ELFT>::getDynRel(uint32_t Type) const {
   if (Type == R_X86_64_PC32 || Type == R_X86_64_32)
     errorDynRel(Type);
   return Type;
 }
 
-bool X86_64TargetInfo::isTlsInitialExecRel(uint32_t Type) const {
+template <class ELFT>
+bool X86_64TargetInfo<ELFT>::isTlsInitialExecRel(uint32_t Type) const {
   return Type == R_X86_64_GOTTPOFF;
 }
 
-bool X86_64TargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
+template <class ELFT>
+bool X86_64TargetInfo<ELFT>::isTlsGlobalDynamicRel(uint32_t Type) const {
   return Type == R_X86_64_TLSGD;
 }
 
-bool X86_64TargetInfo::isTlsLocalDynamicRel(uint32_t Type) const {
+template <class ELFT>
+bool X86_64TargetInfo<ELFT>::isTlsLocalDynamicRel(uint32_t Type) const {
   return Type == R_X86_64_DTPOFF32 || Type == R_X86_64_DTPOFF64 ||
          Type == R_X86_64_TLSLD;
 }
 
-void X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
-                                      uint64_t Val) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
+                                            uint64_t Val) const {
   // Convert
   //   .byte 0x66
   //   leaq x@tlsgd(%rip), %rdi
@@ -654,8 +675,9 @@ void X86_64TargetInfo::relaxTlsGdToLe(uint8_t *Loc, uint32_t Type,
   relocateOne(Loc + 8, R_X86_64_TPOFF32, Val + 4);
 }
 
-void X86_64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
-                                      uint64_t Val) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
+                                            uint64_t Val) const {
   // Convert
   //   .byte 0x66
   //   leaq x@tlsgd(%rip), %rdi
@@ -677,8 +699,9 @@ void X86_64TargetInfo::relaxTlsGdToIe(uint8_t *Loc, uint32_t Type,
 
 // In some conditions, R_X86_64_GOTTPOFF relocation can be optimized to
 // R_X86_64_TPOFF32 so that it does not use GOT.
-void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
-                                      uint64_t Val) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
+                                            uint64_t Val) const {
   uint8_t *Inst = Loc - 3;
   uint8_t Reg = Loc[-1] >> 3;
   uint8_t *RegSlot = Loc - 1;
@@ -718,8 +741,9 @@ void X86_64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   relocateOne(Loc, R_X86_64_TPOFF32, Val + 4);
 }
 
-void X86_64TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
-                                      uint64_t Val) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
+                                            uint64_t Val) const {
   // Convert
   //   leaq bar@tlsld(%rip), %rdi
   //   callq __tls_get_addr@PLT
@@ -746,8 +770,9 @@ void X86_64TargetInfo::relaxTlsLdToLe(uint8_t *Loc, uint32_t Type,
   memcpy(Loc - 3, Inst, sizeof(Inst));
 }
 
-void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
-                                   uint64_t Val) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relocateOne(uint8_t *Loc, uint32_t Type,
+                                         uint64_t Val) const {
   switch (Type) {
   case R_X86_64_32:
     checkUInt<32>(Val, Type);
@@ -780,8 +805,10 @@ void X86_64TargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   }
 }
 
-RelExpr X86_64TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
-                                          RelExpr RelExpr) const {
+template <class ELFT>
+RelExpr X86_64TargetInfo<ELFT>::adjustRelaxExpr(uint32_t Type,
+                                                const uint8_t *Data,
+                                                RelExpr RelExpr) const {
   if (Type != R_X86_64_GOTPCRELX && Type != R_X86_64_REX_GOTPCRELX)
     return RelExpr;
   const uint8_t Op = Data[-2];
@@ -809,8 +836,9 @@ RelExpr X86_64TargetInfo::adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
 // "Intel 64 and IA-32 Architectures Software Developer's Manual V2"
 // (http://www.intel.com/content/dam/www/public/us/en/documents/manuals/
 //    64-ia-32-architectures-software-developer-instruction-set-reference-manual-325383.pdf)
-void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
-                                     uint8_t ModRm) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relaxGotNoPic(uint8_t *Loc, uint64_t Val,
+                                           uint8_t Op, uint8_t ModRm) const {
   const uint8_t Rex = Loc[-3];
   // Convert "test %reg, foo@GOTPCREL(%rip)" to "test $foo, %reg".
   if (Op == 0x85) {
@@ -872,7 +900,8 @@ void X86_64TargetInfo::relaxGotNoPic(uint8_t *Loc, uint64_t Val, uint8_t Op,
   relocateOne(Loc, R_X86_64_PC32, Val);
 }
 
-void X86_64TargetInfo::relaxGot(uint8_t *Loc, uint64_t Val) const {
+template <class ELFT>
+void X86_64TargetInfo<ELFT>::relaxGot(uint8_t *Loc, uint64_t Val) const {
   const uint8_t Op = Loc[-2];
   const uint8_t ModRm = Loc[-1];
 
@@ -1481,8 +1510,12 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     // FIXME: currently B(S) assumed to be .got, this may not hold for all
     // platforms.
     return R_GOTONLY_PC;
+  case R_ARM_MOVW_PREL_NC:
+  case R_ARM_MOVT_PREL:
   case R_ARM_PREL31:
   case R_ARM_REL32:
+  case R_ARM_THM_MOVW_PREL_NC:
+  case R_ARM_THM_MOVT_PREL:
     return R_PC;
   }
 }
@@ -1528,6 +1561,34 @@ void ARMTargetInfo::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
   memcpy(Buf, PltData, sizeof(PltData));
   uint64_t L1 = PltEntryAddr + 4;
   write32le(Buf + 12, GotEntryAddr - L1 - 8);
+}
+
+RelExpr ARMTargetInfo::getThunkExpr(RelExpr Expr, uint32_t RelocType,
+                                    const InputFile &File,
+                                    const SymbolBody &S) const {
+  // A state change from ARM to Thumb and vice versa must go through an
+  // interworking thunk if the relocation type is not R_ARM_CALL or
+  // R_ARM_THM_CALL.
+  switch (RelocType) {
+  case R_ARM_PC24:
+  case R_ARM_PLT32:
+  case R_ARM_JUMP24:
+    // Source is ARM, all PLT entries are ARM so no interworking required.
+    // Otherwise we need to interwork if Symbol has bit 0 set (Thumb).
+    if (Expr == R_PC && ((S.getVA<ELF32LE>() & 1) == 1))
+      return R_THUNK_PC;
+    break;
+  case R_ARM_THM_JUMP19:
+  case R_ARM_THM_JUMP24:
+    // Source is Thumb, all PLT entries are ARM so interworking is required.
+    // Otherwise we need to interwork if Symbol has bit 0 clear (ARM).
+    if (Expr == R_PLT_PC)
+      return R_THUNK_PLT_PC;
+    if ((S.getVA<ELF32LE>() & 1) == 0)
+      return R_THUNK_PC;
+    break;
+  }
+  return Expr;
 }
 
 void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
@@ -1613,17 +1674,20 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                   ((Val >> 1) & 0x07ff));                     // imm11
     break;
   case R_ARM_MOVW_ABS_NC:
+  case R_ARM_MOVW_PREL_NC:
     write32le(Loc, (read32le(Loc) & ~0x000f0fff) | ((Val & 0xf000) << 4) |
                        (Val & 0x0fff));
     break;
   case R_ARM_MOVT_ABS:
-    checkUInt<32>(Val, Type);
+  case R_ARM_MOVT_PREL:
+    checkInt<32>(Val, Type);
     write32le(Loc, (read32le(Loc) & ~0x000f0fff) |
                        (((Val >> 16) & 0xf000) << 4) | ((Val >> 16) & 0xfff));
     break;
   case R_ARM_THM_MOVT_ABS:
+  case R_ARM_THM_MOVT_PREL:
     // Encoding T1: A = imm4:i:imm3:imm8
-    checkUInt<32>(Val, Type);
+    checkInt<32>(Val, Type);
     write16le(Loc,
               0xf2c0 |                     // opcode
                   ((Val >> 17) & 0x0400) | // i
@@ -1634,6 +1698,7 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                   ((Val >> 16) & 0x00ff));   // imm8
     break;
   case R_ARM_THM_MOVW_ABS_NC:
+  case R_ARM_THM_MOVW_PREL_NC:
     // Encoding T3: A = imm4:i:imm3:imm8
     write16le(Loc,
               0xf240 |                     // opcode
@@ -1680,8 +1745,8 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
                             ((Hi & 0x003f) << 12) | // imm6
                             ((Lo & 0x07ff) << 1));  // imm11:0
   }
-  case R_ARM_THM_JUMP24:
-  case R_ARM_THM_CALL: {
+  case R_ARM_THM_CALL:
+  case R_ARM_THM_JUMP24: {
     // Encoding B T4, BL T1, BLX T2: A = S:I1:I2:imm10:imm11:0
     // I1 = NOT(J1 EOR S), I2 = NOT(J2 EOR S)
     // FIXME: I1 and I2 require v6T2ops
@@ -1696,12 +1761,16 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   // ELF for the ARM Architecture 4.6.1.1 the implicit addend for MOVW and
   // MOVT is in the range -32768 <= A < 32768
   case R_ARM_MOVW_ABS_NC:
-  case R_ARM_MOVT_ABS: {
+  case R_ARM_MOVT_ABS:
+  case R_ARM_MOVW_PREL_NC:
+  case R_ARM_MOVT_PREL: {
     uint64_t Val = read32le(Buf) & 0x000f0fff;
     return SignExtend64<16>(((Val & 0x000f0000) >> 4) | (Val & 0x00fff));
   }
   case R_ARM_THM_MOVW_ABS_NC:
-  case R_ARM_THM_MOVT_ABS: {
+  case R_ARM_THM_MOVT_ABS:
+  case R_ARM_THM_MOVW_PREL_NC:
+  case R_ARM_THM_MOVT_PREL: {
     // Encoding T3: A = imm4:i:imm3:imm8
     uint16_t Hi = read16le(Buf);
     uint16_t Lo = read16le(Buf + 2);
@@ -1718,7 +1787,6 @@ template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {
   PageSize = 65536;
   PltEntrySize = 16;
   PltHeaderSize = 32;
-  ThunkSize = 16;
   CopyRel = R_MIPS_COPY;
   PltRel = R_MIPS_JUMP_SLOT;
   if (ELFT::Is64Bits) {
@@ -1872,41 +1940,31 @@ void MipsTargetInfo<ELFT>::writePlt(uint8_t *Buf, uint64_t GotEntryAddr,
 }
 
 template <class ELFT>
-void MipsTargetInfo<ELFT>::writeThunk(uint8_t *Buf, uint64_t S) const {
-  // Write MIPS LA25 thunk code to call PIC function from the non-PIC one.
-  // See MipsTargetInfo::writeThunk for details.
-  const endianness E = ELFT::TargetEndianness;
-  write32<E>(Buf, 0x3c190000);                // lui   $25, %hi(func)
-  write32<E>(Buf + 4, 0x08000000 | (S >> 2)); // j     func
-  write32<E>(Buf + 8, 0x27390000);            // addiu $25, $25, %lo(func)
-  write32<E>(Buf + 12, 0x00000000);           // nop
-  writeMipsHi16<E>(Buf, S);
-  writeMipsLo16<E>(Buf + 8, S);
-}
-
-template <class ELFT>
-bool MipsTargetInfo<ELFT>::needsThunk(uint32_t Type, const InputFile &File,
-                                      const SymbolBody &S) const {
+RelExpr MipsTargetInfo<ELFT>::getThunkExpr(RelExpr Expr, uint32_t Type,
+                                           const InputFile &File,
+                                           const SymbolBody &S) const {
   // Any MIPS PIC code function is invoked with its address in register $t9.
   // So if we have a branch instruction from non-PIC code to the PIC one
   // we cannot make the jump directly and need to create a small stubs
   // to save the target function address.
   // See page 3-38 ftp://www.linux-mips.org/pub/linux/mips/doc/ABI/mipsabi.pdf
   if (Type != R_MIPS_26)
-    return false;
+    return Expr;
   auto *F = dyn_cast<ELFFileBase<ELFT>>(&File);
   if (!F)
-    return false;
+    return Expr;
   // If current file has PIC code, LA25 stub is not required.
   if (F->getObj().getHeader()->e_flags & EF_MIPS_PIC)
-    return false;
+    return Expr;
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&S);
   if (!D || !D->Section)
-    return false;
+    return Expr;
   // LA25 is required if target file has PIC code
   // or target symbol is a PIC symbol.
-  return (D->Section->getFile()->getObj().getHeader()->e_flags & EF_MIPS_PIC) ||
-         (D->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC;
+  const ELFFile<ELFT> &DefFile = D->Section->getFile()->getObj();
+  bool PicFile = DefFile.getHeader()->e_flags & EF_MIPS_PIC;
+  bool PicSym = (D->StOther & STO_MIPS_MIPS16) == STO_MIPS_PIC;
+  return (PicFile || PicSym) ? R_THUNK_ABS : Expr;
 }
 
 template <class ELFT>

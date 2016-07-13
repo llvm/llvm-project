@@ -38,8 +38,9 @@ enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
 // This struct contains symbols version definition that
 // can be found in version script if it is used for link.
 struct Version {
-  Version(llvm::StringRef Name) : Name(Name) {}
+  Version(llvm::StringRef Name, size_t Id) : Name(Name), Id(Id) {}
   llvm::StringRef Name;
+  size_t Id;
   std::vector<llvm::StringRef> Globals;
   size_t NameOff; // Offset in string table.
 };
@@ -81,9 +82,10 @@ struct Configuration {
   bool EhFrameHdr;
   bool EnableNewDtags;
   bool ExportDynamic;
-  bool FatalWarnings = false;
+  bool FatalWarnings;
   bool GcSections;
   bool GnuHash = false;
+  bool HasVersionScript = false;
   bool ICF;
   bool Mips64EL = false;
   bool NoGnuUnique;
@@ -115,6 +117,7 @@ struct Configuration {
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint64_t EntryAddr = -1;
+  uint64_t VAStart;
   unsigned LtoJobs;
   unsigned LtoO;
   unsigned Optimize;

@@ -707,9 +707,10 @@ public:
   /// Return true if the specified register is modified in this function.
   /// This checks that no defining machine operands exist for the register or
   /// any of its aliases. Definitions found on functions marked noreturn are
-  /// ignored. The register is also considered modified when it is set in the
-  /// UsedPhysRegMask.
-  bool isPhysRegModified(unsigned PhysReg) const;
+  /// ignored, to consider them pass 'true' for optional parameter
+  /// SkipNoReturnDef. The register is also considered modified when it is set
+  /// in the UsedPhysRegMask.
+  bool isPhysRegModified(unsigned PhysReg, bool SkipNoReturnDef = false) const;
 
   /// Return true if the specified register is modified or read in this
   /// function. This checks that no machine operands exist for the register or

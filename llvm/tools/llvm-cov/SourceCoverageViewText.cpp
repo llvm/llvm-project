@@ -59,11 +59,9 @@ unsigned getDividerWidth(const CoverageViewOptions &Opts) {
 
 } // anonymous namespace
 
-void SourceCoverageViewText::renderViewHeader(
-    raw_ostream &OS LLVM_ATTRIBUTE_UNUSED) {}
+void SourceCoverageViewText::renderViewHeader(raw_ostream &) {}
 
-void SourceCoverageViewText::renderViewFooter(
-    raw_ostream &OS LLVM_ATTRIBUTE_UNUSED) {}
+void SourceCoverageViewText::renderViewFooter(raw_ostream &) {}
 
 void SourceCoverageViewText::renderSourceName(raw_ostream &OS) {
   getOptions().colored_ostream(OS, raw_ostream::CYAN) << getSourceName()
@@ -76,9 +74,7 @@ void SourceCoverageViewText::renderLinePrefix(raw_ostream &OS,
     OS << "  |";
 }
 
-void SourceCoverageViewText::renderLineSuffix(
-    raw_ostream &OS LLVM_ATTRIBUTE_UNUSED,
-    unsigned ViewDepth LLVM_ATTRIBUTE_UNUSED) {}
+void SourceCoverageViewText::renderLineSuffix(raw_ostream &, unsigned) {}
 
 void SourceCoverageViewText::renderViewDivider(raw_ostream &OS,
                                                unsigned ViewDepth) {

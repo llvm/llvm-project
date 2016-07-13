@@ -1651,6 +1651,13 @@ unsigned CXXMethodDecl::size_overridden_methods() const {
   return getASTContext().overridden_methods_size(this);
 }
 
+CXXMethodDecl::overridden_method_range
+CXXMethodDecl::overridden_methods() const {
+  if (isa<CXXConstructorDecl>(this))
+    return overridden_method_range(nullptr, nullptr);
+  return getASTContext().overridden_methods(this);
+}
+
 QualType CXXMethodDecl::getThisType(ASTContext &C) const {
   // C++ 9.3.2p1: The type of this in a member function of a class X is X*.
   // If the member function is declared const, the type of this is const X*,

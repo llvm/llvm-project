@@ -65,7 +65,6 @@ private:
 void LanaiAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
                                    raw_ostream &O, const char *Modifier) {
   const MachineOperand &MO = MI->getOperand(OpNum);
-  unsigned TF = MO.getTargetFlags();
 
   switch (MO.getType()) {
   case MachineOperand::MO_Register:
@@ -81,10 +80,7 @@ void LanaiAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
     break;
 
   case MachineOperand::MO_GlobalAddress:
-    if (TF == LanaiII::MO_PLT)
-      O << "plt(" << *getSymbol(MO.getGlobal()) << ")";
-    else
-      O << *getSymbol(MO.getGlobal());
+    O << *getSymbol(MO.getGlobal());
     break;
 
   case MachineOperand::MO_BlockAddress: {
@@ -94,10 +90,7 @@ void LanaiAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
   }
 
   case MachineOperand::MO_ExternalSymbol:
-    if (TF == LanaiII::MO_PLT)
-      O << "plt(" << *GetExternalSymbolSymbol(MO.getSymbolName()) << ")";
-    else
-      O << *GetExternalSymbolSymbol(MO.getSymbolName());
+    O << *GetExternalSymbolSymbol(MO.getSymbolName());
     break;
 
   case MachineOperand::MO_JumpTableIndex:
@@ -116,7 +109,6 @@ void LanaiAsmPrinter::printOperand(const MachineInstr *MI, int OpNum,
 }
 
 // PrintAsmOperand - Print out an operand for an inline asm expression.
-//
 bool LanaiAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
                                       unsigned AsmVariant,
                                       const char *ExtraCode, raw_ostream &O) {

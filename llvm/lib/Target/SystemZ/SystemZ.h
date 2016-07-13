@@ -87,12 +87,52 @@ const unsigned CCMASK_VCMP_MIXED     = CCMASK_1;
 const unsigned CCMASK_VCMP_NONE      = CCMASK_3;
 const unsigned CCMASK_VCMP           = CCMASK_0 | CCMASK_1 | CCMASK_3;
 
+// Condition-code mask assignments for Test Data Class.
+const unsigned CCMASK_TDC_NOMATCH   = CCMASK_0;
+const unsigned CCMASK_TDC_MATCH     = CCMASK_1;
+const unsigned CCMASK_TDC           = CCMASK_TDC_NOMATCH | CCMASK_TDC_MATCH;
+
 // The position of the low CC bit in an IPM result.
 const unsigned IPM_CC = 28;
 
 // Mask assignments for PFD.
 const unsigned PFD_READ  = 1;
 const unsigned PFD_WRITE = 2;
+
+// Mask assignments for TDC
+const unsigned TDCMASK_ZERO_PLUS       = 0x800;
+const unsigned TDCMASK_ZERO_MINUS      = 0x400;
+const unsigned TDCMASK_NORMAL_PLUS     = 0x200;
+const unsigned TDCMASK_NORMAL_MINUS    = 0x100;
+const unsigned TDCMASK_SUBNORMAL_PLUS  = 0x080;
+const unsigned TDCMASK_SUBNORMAL_MINUS = 0x040;
+const unsigned TDCMASK_INFINITY_PLUS   = 0x020;
+const unsigned TDCMASK_INFINITY_MINUS  = 0x010;
+const unsigned TDCMASK_QNAN_PLUS       = 0x008;
+const unsigned TDCMASK_QNAN_MINUS      = 0x004;
+const unsigned TDCMASK_SNAN_PLUS       = 0x002;
+const unsigned TDCMASK_SNAN_MINUS      = 0x001;
+
+const unsigned TDCMASK_ZERO            = TDCMASK_ZERO_PLUS | TDCMASK_ZERO_MINUS;
+const unsigned TDCMASK_POSITIVE        = TDCMASK_NORMAL_PLUS |
+                                         TDCMASK_SUBNORMAL_PLUS |
+                                         TDCMASK_INFINITY_PLUS;
+const unsigned TDCMASK_NEGATIVE        = TDCMASK_NORMAL_MINUS |
+                                         TDCMASK_SUBNORMAL_MINUS |
+                                         TDCMASK_INFINITY_MINUS;
+const unsigned TDCMASK_NAN             = TDCMASK_QNAN_PLUS |
+                                         TDCMASK_QNAN_MINUS |
+                                         TDCMASK_SNAN_PLUS |
+                                         TDCMASK_SNAN_MINUS;
+const unsigned TDCMASK_PLUS            = TDCMASK_POSITIVE |
+                                         TDCMASK_ZERO_PLUS |
+                                         TDCMASK_QNAN_PLUS |
+                                         TDCMASK_SNAN_PLUS;
+const unsigned TDCMASK_MINUS           = TDCMASK_NEGATIVE |
+                                         TDCMASK_ZERO_MINUS |
+                                         TDCMASK_QNAN_MINUS |
+                                         TDCMASK_SNAN_MINUS;
+const unsigned TDCMASK_ALL             = TDCMASK_PLUS | TDCMASK_MINUS;
 
 // Number of bits in a vector register.
 const unsigned VectorBits = 128;
@@ -138,6 +178,7 @@ FunctionPass *createSystemZElimComparePass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZShortenInstPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLongBranchPass(SystemZTargetMachine &TM);
 FunctionPass *createSystemZLDCleanupPass(SystemZTargetMachine &TM);
+FunctionPass *createSystemZTDCPass();
 } // end namespace llvm
 
 #endif

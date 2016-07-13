@@ -279,6 +279,7 @@ define <8 x i16> @shl_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; CHECK-NEXT:    vpsllvd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %shl = shl <8 x i16> %r, %a
@@ -330,6 +331,7 @@ define <8 x i16> @ashr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; CHECK-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %ashr = ashr <8 x i16> %r, %a
@@ -394,6 +396,7 @@ define <8 x i16> @lshr_8i16(<8 x i16> %r, <8 x i16> %a) nounwind {
 ; CHECK-NEXT:    vpsrlvd %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %lshr = lshr <8 x i16> %r, %a

@@ -16834,12 +16834,6 @@ ndrange_t __ovld ndrange_3D(const size_t[3]);
 ndrange_t __ovld ndrange_3D(const size_t[3], const size_t[3]);
 ndrange_t __ovld ndrange_3D(const size_t[3], const size_t[3], const size_t[3]);
 
-// ToDo: Add these functions as Clang builtins since they eed a special check of parameters to block.
-uint __ovld get_kernel_work_group_size(void (^block)(void));
-uint __ovld get_kernel_work_group_size(void (^block)(local void *, ...));
-uint __ovld get_kernel_preferred_work_group_size_multiple(void (^block)(void));
-uint __ovld get_kernel_preferred_work_group_size_multiple(void (^block)(local void *, ...));
-
 int __ovld enqueue_marker(queue_t, uint, const __private clk_event_t*, __private clk_event_t*);
 
 void __ovld retain_event(clk_event_t);

@@ -228,7 +228,7 @@ public:
 
   /// \brief The maximum number of bytes of a vector register we can vectorize
   /// the accesses safely with.
-  unsigned getMaxSafeDepDistBytes() { return MaxSafeDepDistBytes; }
+  uint64_t getMaxSafeDepDistBytes() { return MaxSafeDepDistBytes; }
 
   /// \brief In same cases when the dependency check fails we can still
   /// vectorize the loop with a dynamic array access check.
@@ -284,7 +284,7 @@ private:
   unsigned AccessIdx;
 
   // We can access this many bytes in parallel safely.
-  unsigned MaxSafeDepDistBytes;
+  uint64_t MaxSafeDepDistBytes;
 
   /// \brief If we see a non-constant dependence distance we can still try to
   /// vectorize this loop with runtime checks.
@@ -324,7 +324,7 @@ private:
   ///
   /// \return false if we shouldn't vectorize at all or avoid larger
   /// vectorization factors by limiting MaxSafeDepDistBytes.
-  bool couldPreventStoreLoadForward(unsigned Distance, unsigned TypeByteSize);
+  bool couldPreventStoreLoadForward(uint64_t Distance, uint64_t TypeByteSize);
 };
 
 /// \brief Holds information about the memory runtime legality checks to verify
@@ -575,7 +575,7 @@ public:
   /// Returns true if the value V is uniform within the loop.
   bool isUniform(Value *V) const;
 
-  unsigned getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
+  uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
   unsigned getNumStores() const { return NumStores; }
   unsigned getNumLoads() const { return NumLoads;}
 
@@ -672,7 +672,7 @@ private:
   unsigned NumLoads;
   unsigned NumStores;
 
-  unsigned MaxSafeDepDistBytes;
+  uint64_t MaxSafeDepDistBytes;
 
   /// \brief Cache the result of analyzeLoop.
   bool CanVecMem;
@@ -719,9 +719,9 @@ const SCEV *replaceSymbolicStrideSCEV(PredicatedScalarEvolution &PSE,
 /// to \p PtrToStride and therefore add further predicates to \p PSE.
 /// The \p Assume parameter indicates if we are allowed to make additional
 /// run-time assumptions.
-int getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
-                 const ValueToValueMap &StridesMap = ValueToValueMap(),
-                 bool Assume = false);
+int64_t getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr, const Loop *Lp,
+                     const ValueToValueMap &StridesMap = ValueToValueMap(),
+                     bool Assume = false);
 
 /// \brief Returns true if the memory operations \p A and \p B are consecutive.
 /// This is a simple API that does not depend on the analysis pass. 
@@ -735,12 +735,12 @@ bool isConsecutiveAccess(Value *A, Value *B, const DataLayout &DL,
 /// querying the loop access info via LAA::getInfo.  getInfo return a
 /// LoopAccessInfo object.  See this class for the specifics of what information
 /// is provided.
-class LoopAccessAnalysis : public FunctionPass {
+class LoopAccessLegacyAnalysis : public FunctionPass {
 public:
   static char ID;
 
-  LoopAccessAnalysis() : FunctionPass(ID) {
-    initializeLoopAccessAnalysisPass(*PassRegistry::getPassRegistry());
+  LoopAccessLegacyAnalysis() : FunctionPass(ID) {
+    initializeLoopAccessLegacyAnalysisPass(*PassRegistry::getPassRegistry());
   }
 
   bool runOnFunction(Function &F) override;
@@ -772,16 +772,22 @@ private:
   LoopInfo *LI;
 };
 
-/// \brief LoopAccessInfoAnalysis
-class LoopAccessInfoAnalysis
-    : public AnalysisInfoMixin<LoopAccessInfoAnalysis> {
-  friend AnalysisInfoMixin<LoopAccessInfoAnalysis>;
+/// \brief This analysis provides dependence information for the memory
+/// accesses of a loop.
+///
+/// It runs the analysis for a loop on demand.  This can be initiated by
+/// querying the loop access info via AM.getResult<LoopAccessAnalysis>. 
+/// getResult return a LoopAccessInfo object.  See this class for the
+/// specifics of what information is provided.
+class LoopAccessAnalysis
+    : public AnalysisInfoMixin<LoopAccessAnalysis> {
+  friend AnalysisInfoMixin<LoopAccessAnalysis>;
   static char PassID;
 
 public:
   typedef LoopAccessInfo Result;
   Result run(Loop &, AnalysisManager<Loop> &);
-  static StringRef name() { return "LoopAccessInfoAnalysis"; }
+  static StringRef name() { return "LoopAccessAnalysis"; }
 };
 
 /// \brief Printer pass for the \c LoopAccessInfo results.

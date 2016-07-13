@@ -61,6 +61,10 @@ static cl::opt<bool> ClInstrumentMemIntrinsics(
 static cl::opt<bool> ClInstrumentFastpath(
     "esan-instrument-fastpath", cl::init(true),
     cl::desc("Instrument fastpath"), cl::Hidden);
+static cl::opt<bool> ClAuxFieldInfo(
+    "esan-aux-field-info", cl::init(true),
+    cl::desc("Generate binary with auxiliary struct field information"),
+    cl::Hidden);
 
 // Experiments show that the performance difference can be 2x or more,
 // and accuracy loss is typically negligible, so we turn this on by default.
@@ -161,6 +165,9 @@ private:
   bool shouldIgnoreStructType(StructType *StructTy);
   void createStructCounterName(
       StructType *StructTy, SmallString<MaxStructCounterNameSize> &NameStr);
+  void createCacheFragAuxGV(
+    Module &M, const DataLayout &DL, StructType *StructTy,
+    GlobalVariable *&TypeNames, GlobalVariable *&Offsets, GlobalVariable *&Size);
   GlobalVariable *createCacheFragInfoGV(Module &M, const DataLayout &DL,
                                         Constant *UnitName);
   Constant *createEsanInitToolInfoArg(Module &M, const DataLayout &DL);
@@ -312,6 +319,49 @@ void EfficiencySanitizer::createStructCounterName(
   }
 }
 
+// Create global variables with auxiliary information (e.g., struct field size,
+// offset, and type name) for better user report.
+void EfficiencySanitizer::createCacheFragAuxGV(
+    Module &M, const DataLayout &DL, StructType *StructTy,
+    GlobalVariable *&TypeName, GlobalVariable *&Offset,
+    GlobalVariable *&Size) {
+  auto *Int8PtrTy = Type::getInt8PtrTy(*Ctx);
+  auto *Int32Ty = Type::getInt32Ty(*Ctx);
+  // FieldTypeName.
+  auto *TypeNameArrayTy = ArrayType::get(Int8PtrTy, StructTy->getNumElements());
+  TypeName = new GlobalVariable(M, TypeNameArrayTy, true,
+                                 GlobalVariable::InternalLinkage, nullptr);
+  SmallVector<Constant *, 16> TypeNameVec;
+  // FieldOffset.
+  auto *OffsetArrayTy = ArrayType::get(Int32Ty, StructTy->getNumElements());
+  Offset = new GlobalVariable(M, OffsetArrayTy, true,
+                              GlobalVariable::InternalLinkage, nullptr);
+  SmallVector<Constant *, 16> OffsetVec;
+  // FieldSize
+  auto *SizeArrayTy = ArrayType::get(Int32Ty, StructTy->getNumElements());
+  Size = new GlobalVariable(M, SizeArrayTy, true,
+                            GlobalVariable::InternalLinkage, nullptr);
+  SmallVector<Constant *, 16> SizeVec;
+  for (unsigned i = 0; i < StructTy->getNumElements(); ++i) {
+    Type *Ty = StructTy->getElementType(i);
+    std::string Str;
+    raw_string_ostream StrOS(Str);
+    Ty->print(StrOS);
+    TypeNameVec.push_back(
+        ConstantExpr::getPointerCast(
+            createPrivateGlobalForString(M, StrOS.str(), true),
+            Int8PtrTy));
+    OffsetVec.push_back(
+        ConstantInt::get(Int32Ty,
+                         DL.getStructLayout(StructTy)->getElementOffset(i)));
+    SizeVec.push_back(ConstantInt::get(Int32Ty,
+                                       DL.getTypeAllocSize(Ty)));
+    }
+  TypeName->setInitializer(ConstantArray::get(TypeNameArrayTy, TypeNameVec));
+  Offset->setInitializer(ConstantArray::get(OffsetArrayTy, OffsetVec));
+  Size->setInitializer(ConstantArray::get(SizeArrayTy, SizeVec));
+}
+
 // Create the global variable for the cache-fragmentation tool.
 GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
     Module &M, const DataLayout &DL, Constant *UnitName) {
@@ -329,9 +379,9 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
   //   const char *StructName;
   //   u32 Size;
   //   u32 NumFields;
-  //   u32 *FieldOffsets;
-  //   u32 *FieldSize;
-  //   const char **FieldTypeNames;
+  //   u32 *FieldOffset;           // auxiliary struct field info.
+  //   u32 *FieldSize;             // auxiliary struct field info.
+  //   const char **FieldTypeName; // auxiliary struct field info.
   //   u64 *FieldCounters;
   //   u64 *ArrayCounter;
   // };
@@ -381,43 +431,11 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
     // Remember the counter variable for each struct type.
     StructTyMap.insert(std::pair<Type *, GlobalVariable *>(StructTy, Counters));
 
-    // We pass the field type name array and offset array to the runtime for
-    // better reporting.
-    // FieldTypeNames.
-    auto *TypeNameArrayTy = ArrayType::get(Int8PtrTy, StructTy->getNumElements());
-    GlobalVariable *TypeNames =
-      new GlobalVariable(M, TypeNameArrayTy, true,
-                         GlobalVariable::InternalLinkage, nullptr);
-    SmallVector<Constant *, 16> TypeNameVec;
-    // FieldOffsets.
-    const StructLayout *SL = DL.getStructLayout(StructTy);
-    auto *OffsetArrayTy = ArrayType::get(Int32Ty, StructTy->getNumElements());
-    GlobalVariable *Offsets =
-      new GlobalVariable(M, OffsetArrayTy, true,
-                         GlobalVariable::InternalLinkage, nullptr);
-    SmallVector<Constant *, 16> OffsetVec;
-    // FieldSize
-    auto *SizeArrayTy = ArrayType::get(Int32Ty, StructTy->getNumElements());
-    GlobalVariable *Size =
-      new GlobalVariable(M, SizeArrayTy, true,
-                         GlobalVariable::InternalLinkage, nullptr);
-    SmallVector<Constant *, 16> SizeVec;
-    for (unsigned i = 0; i < StructTy->getNumElements(); ++i) {
-      Type *Ty = StructTy->getElementType(i);
-      std::string Str;
-      raw_string_ostream StrOS(Str);
-      Ty->print(StrOS);
-      TypeNameVec.push_back(
-          ConstantExpr::getPointerCast(
-              createPrivateGlobalForString(M, StrOS.str(), true),
-              Int8PtrTy));
-      OffsetVec.push_back(ConstantInt::get(Int32Ty, SL->getElementOffset(i)));
-      SizeVec.push_back(ConstantInt::get(Int32Ty,
-                                         DL.getTypeAllocSize(Ty)));
-    }
-    TypeNames->setInitializer(ConstantArray::get(TypeNameArrayTy, TypeNameVec));
-    Offsets->setInitializer(ConstantArray::get(OffsetArrayTy, OffsetVec));
-    Size->setInitializer(ConstantArray::get(SizeArrayTy, SizeVec));
+    // We pass the field type name array, offset array, and size array to
+    // the runtime for better reporting.
+    GlobalVariable *TypeName = nullptr, *Offset = nullptr, *Size = nullptr;
+    if (ClAuxFieldInfo)
+      createCacheFragAuxGV(M, DL, StructTy, TypeName, Offset, Size);
 
     Constant *FieldCounterIdx[2];
     FieldCounterIdx[0] = ConstantInt::get(Int32Ty, 0);
@@ -431,11 +449,15 @@ GlobalVariable *EfficiencySanitizer::createCacheFragInfoGV(
         ConstantStruct::get(
             StructInfoTy,
             ConstantExpr::getPointerCast(StructCounterName, Int8PtrTy),
-            ConstantInt::get(Int32Ty, SL->getSizeInBytes()),
+            ConstantInt::get(Int32Ty,
+                             DL.getStructLayout(StructTy)->getSizeInBytes()),
             ConstantInt::get(Int32Ty, StructTy->getNumElements()),
-            ConstantExpr::getPointerCast(Offsets, Int32PtrTy),
-            ConstantExpr::getPointerCast(Size, Int32PtrTy),
-            ConstantExpr::getPointerCast(TypeNames, Int8PtrPtrTy),
+            Offset == nullptr ? ConstantPointerNull::get(Int32PtrTy) :
+                ConstantExpr::getPointerCast(Offset, Int32PtrTy),
+            Size == nullptr ? ConstantPointerNull::get(Int32PtrTy) :
+                ConstantExpr::getPointerCast(Size, Int32PtrTy),
+            TypeName == nullptr ? ConstantPointerNull::get(Int8PtrPtrTy) :
+                ConstantExpr::getPointerCast(TypeName, Int8PtrPtrTy),
             ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
                                            FieldCounterIdx),
             ConstantExpr::getGetElementPtr(CounterArrayTy, Counters,
@@ -671,7 +693,7 @@ bool EfficiencySanitizer::instrumentLoadOrStore(Instruction *I,
       NumFastpaths++;
       return true;
     }
-    if (Alignment == 0 || Alignment >= 8 || (Alignment % TypeSizeBytes) == 0)
+    if (Alignment == 0 || (Alignment % TypeSizeBytes) == 0)
       OnAccessFunc = IsStore ? EsanAlignedStore[Idx] : EsanAlignedLoad[Idx];
     else
       OnAccessFunc = IsStore ? EsanUnalignedStore[Idx] : EsanUnalignedLoad[Idx];
@@ -832,7 +854,7 @@ bool EfficiencySanitizer::instrumentFastpathWorkingSet(
   // getMemoryAccessFuncIndex has already ruled out a size larger than 16
   // and thus larger than a cache line for platforms this tool targets
   // (and our shadow memory setup assumes 64-byte cache lines).
-  assert(TypeSize <= 64);
+  assert(TypeSize <= 128);
   if (!(TypeSize == 8 ||
         (Alignment % (TypeSize / 8)) == 0)) {
     if (ClAssumeIntraCacheLine)

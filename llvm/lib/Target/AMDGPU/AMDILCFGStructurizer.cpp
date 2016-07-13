@@ -423,7 +423,8 @@ bool AMDGPUCFGStructurizer::needMigrateBlock(MachineBasicBlock *MBB) const {
 
 void AMDGPUCFGStructurizer::reversePredicateSetter(
     MachineBasicBlock::iterator I) {
-  while (I--) {
+  assert(static_cast<MachineInstr *>(I) && "Expected valid iterator");
+  for (;; --I) {
     if (I->getOpcode() == AMDGPU::PRED_X) {
       switch (static_cast<MachineInstr *>(I)->getOperand(2).getImm()) {
       case OPCODE_IS_ZERO_INT:
@@ -659,11 +660,8 @@ MachineBasicBlock *AMDGPUCFGStructurizer::clone(MachineBasicBlock *MBB) {
   MachineFunction *Func = MBB->getParent();
   MachineBasicBlock *NewMBB = Func->CreateMachineBasicBlock();
   Func->push_back(NewMBB);  //insert to function
-  for (MachineBasicBlock::iterator It = MBB->begin(), E = MBB->end();
-      It != E; ++It) {
-    MachineInstr *MI = Func->CloneMachineInstr(It);
-    NewMBB->push_back(MI);
-  }
+  for (const MachineInstr &It : *MBB)
+    NewMBB->push_back(Func->CloneMachineInstr(&It));
   return NewMBB;
 }
 
@@ -689,7 +687,7 @@ void AMDGPUCFGStructurizer::wrapup(MachineBasicBlock *MBB) {
    while (It != E) {
      if (Pre->getOpcode() == AMDGPU::CONTINUE
          && It->getOpcode() == AMDGPU::ENDLOOP)
-       ContInstr.push_back(Pre);
+       ContInstr.push_back(&*Pre);
      Pre = It;
      ++It;
    }

@@ -304,7 +304,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case AArch64::CBNZW:
     case AArch64::CBNZX:
       // These can be converted into a ccmp against #0.
-      return I;
+      return &*I;
     }
     ++NumCmpTermRejs;
     DEBUG(dbgs() << "Flags not used by terminator: " << *I);
@@ -335,7 +335,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case AArch64::ADDSWrr:
     case AArch64::ADDSXrr:
       if (isDeadDef(I->getOperand(0).getReg()))
-        return I;
+        return &*I;
       DEBUG(dbgs() << "Can't convert compare with live destination: " << *I);
       ++NumLiveDstRejs;
       return nullptr;
@@ -343,7 +343,7 @@ MachineInstr *SSACCmpConv::findConvertibleCompare(MachineBasicBlock *MBB) {
     case AArch64::FCMPDrr:
     case AArch64::FCMPESrr:
     case AArch64::FCMPEDrr:
-      return I;
+      return &*I;
     }
 
     // Check for flag reads and clobbers.

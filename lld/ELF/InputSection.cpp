@@ -12,8 +12,10 @@
 #include "EhFrame.h"
 #include "Error.h"
 #include "InputFiles.h"
+#include "LinkerScript.h"
 #include "OutputSections.h"
 #include "Target.h"
+#include "Thunks.h"
 
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
@@ -25,6 +27,11 @@ using namespace llvm::support::endian;
 
 using namespace lld;
 using namespace lld::elf;
+
+template <class ELFT> bool elf::isDiscarded(InputSectionBase<ELFT> *S) {
+  return !S || S == &InputSection<ELFT>::Discarded || !S->Live ||
+         Script<ELFT>::X->isDiscarded(S);
+}
 
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
@@ -84,23 +91,24 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
 }
 
 template <class ELFT> void InputSectionBase<ELFT>::uncompress() {
-  typedef typename std::conditional<ELFT::Is64Bits, Elf64_Chdr,
-                                    Elf32_Chdr>::type Elf_Chdr;
-  const endianness E = ELFT::TargetEndianness;
-
   if (!zlib::isAvailable())
     fatal("build lld with zlib to enable compressed sections support");
 
+  // A compressed section consists of a header of Elf_Chdr type
+  // followed by compressed data.
   ArrayRef<uint8_t> Data =
       check(this->File->getObj().getSectionContents(this->Header));
-  if (read32<E>(Data.data()) != ELFCOMPRESS_ZLIB)
-    fatal("unsupported elf compression type");
+  if (Data.size() < sizeof(Elf_Chdr))
+    fatal("corrupt compressed section");
 
-  size_t UncompressedSize =
-      reinterpret_cast<const Elf_Chdr *>(Data.data())->ch_size;
-  size_t HdrSize = sizeof(Elf_Chdr);
-  StringRef Buf((const char *)Data.data() + HdrSize, Data.size() - HdrSize);
-  if (zlib::uncompress(Buf, Uncompressed, UncompressedSize) != zlib::StatusOK)
+  auto *Hdr = reinterpret_cast<const Elf_Chdr *>(Data.data());
+  Data = Data.slice(sizeof(Elf_Chdr));
+
+  if (Hdr->ch_type != ELFCOMPRESS_ZLIB)
+    fatal("unsupported compression type");
+
+  StringRef Buf((const char *)Data.data(), Data.size());
+  if (zlib::uncompress(Buf, Uncompressed, Hdr->ch_size) != zlib::StatusOK)
     fatal("error uncompressing section");
 }
 
@@ -127,9 +135,9 @@ InputSectionBase<ELFT> *InputSection<ELFT>::getRelocatedSection() {
   return Sections[this->Header->sh_info];
 }
 
-template <class ELFT> void InputSection<ELFT>::addThunk(SymbolBody &Body) {
-  Body.ThunkIndex = Thunks.size();
-  Thunks.push_back(&Body);
+template <class ELFT>
+void InputSection<ELFT>::addThunk(const Thunk<ELFT> *T) {
+  Thunks.push_back(T);
 }
 
 template <class ELFT> uint64_t InputSection<ELFT>::getThunkOff() const {
@@ -137,7 +145,10 @@ template <class ELFT> uint64_t InputSection<ELFT>::getThunkOff() const {
 }
 
 template <class ELFT> uint64_t InputSection<ELFT>::getThunksSize() const {
-  return Thunks.size() * Target->ThunkSize;
+  uint64_t Total = 0;
+  for (const Thunk<ELFT> *T : Thunks)
+    Total += T->size();
+  return Total;
 }
 
 // This is used for -r. We can't use memcpy to copy relocations because we need
@@ -168,10 +179,9 @@ static uint64_t getAArch64Page(uint64_t Expr) {
 }
 
 template <class ELFT>
-static typename ELFT::uint
-getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
-         const SymbolBody &Body, uint8_t *BufLoc,
-         const elf::ObjectFile<ELFT> &File, RelExpr Expr) {
+static typename ELFT::uint getSymVA(uint32_t Type, typename ELFT::uint A,
+                                    typename ELFT::uint P,
+                                    const SymbolBody &Body, RelExpr Expr) {
   typedef typename ELFT::uint uintX_t;
 
   switch (Expr) {
@@ -182,8 +192,11 @@ getSymVA(uint32_t Type, typename ELFT::uint A, typename ELFT::uint P,
            Out<ELFT>::Got->getNumEntries() * sizeof(uintX_t);
   case R_TLSLD_PC:
     return Out<ELFT>::Got->getTlsIndexVA() + A - P;
-  case R_THUNK:
-    return Body.getThunkVA<ELFT>();
+  case R_THUNK_ABS:
+    return Body.getThunkVA<ELFT>() + A;
+  case R_THUNK_PC:
+  case R_THUNK_PLT_PC:
+    return Body.getThunkVA<ELFT>() + A - P;
   case R_PPC_TOC:
     return getPPC64TocBase() + A;
   case R_TLSGD:
@@ -306,8 +319,8 @@ void InputSection<ELFT>::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     }
 
     uintX_t AddrLoc = this->OutSec->getVA() + Offset;
-    uint64_t SymVA = SignExtend64<Bits>(getSymVA<ELFT>(
-        Type, Addend, AddrLoc, Sym, BufLoc, *this->File, R_ABS));
+    uint64_t SymVA =
+        SignExtend64<Bits>(getSymVA<ELFT>(Type, Addend, AddrLoc, Sym, R_ABS));
     Target->relocateOne(BufLoc, Type, SymVA);
   }
 }
@@ -337,8 +350,8 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 
     uintX_t AddrLoc = OutSec->getVA() + Offset;
     RelExpr Expr = Rel.Expr;
-    uint64_t SymVA = SignExtend64<Bits>(
-        getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, BufLoc, *File, Expr));
+    uint64_t SymVA =
+        SignExtend64<Bits>(getSymVA<ELFT>(Type, A, AddrLoc, *Rel.Sym, Expr));
 
     switch (Expr) {
     case R_RELAX_GOT_PC:
@@ -403,9 +416,9 @@ template <class ELFT> void InputSection<ELFT>::writeTo(uint8_t *Buf) {
   // jump istruction.
   if (!Thunks.empty()) {
     Buf += OutSecOff + getThunkOff();
-    for (const SymbolBody *S : Thunks) {
-      Target->writeThunk(Buf, S->getVA<ELFT>());
-      Buf += Target->ThunkSize;
+    for (const Thunk<ELFT> *T : Thunks) {
+      T->writeTo(Buf);
+      Buf += T->size();
     }
   }
 }
@@ -636,6 +649,11 @@ template <class ELFT>
 bool MipsOptionsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::MipsOptions;
 }
+
+template bool elf::isDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
+template bool elf::isDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);
+template bool elf::isDiscarded<ELF64LE>(InputSectionBase<ELF64LE> *);
+template bool elf::isDiscarded<ELF64BE>(InputSectionBase<ELF64BE> *);
 
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;

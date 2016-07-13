@@ -377,19 +377,19 @@ bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
 }
 
 /// Return the number of bytes of code the specified instruction may be.
-unsigned MipsInstrInfo::GetInstSizeInBytes(const MachineInstr *MI) const {
-  switch (MI->getOpcode()) {
+unsigned MipsInstrInfo::GetInstSizeInBytes(const MachineInstr &MI) const {
+  switch (MI.getOpcode()) {
   default:
-    return MI->getDesc().getSize();
+    return MI.getDesc().getSize();
   case  TargetOpcode::INLINEASM: {       // Inline Asm: Variable size.
-    const MachineFunction *MF = MI->getParent()->getParent();
-    const char *AsmStr = MI->getOperand(0).getSymbolName();
+    const MachineFunction *MF = MI.getParent()->getParent();
+    const char *AsmStr = MI.getOperand(0).getSymbolName();
     return getInlineAsmLength(AsmStr, *MF->getTarget().getMCAsmInfo());
   }
   case Mips::CONSTPOOL_ENTRY:
     // If this machine instr is a constant pool entry, its size is recorded as
     // operand #2.
-    return MI->getOperand(2).getImm();
+    return MI.getOperand(2).getImm();
   }
 }
 

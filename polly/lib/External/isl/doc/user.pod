@@ -253,6 +253,18 @@ is now obtained by turning on the C<schedule_serialize_sccs> option.
 
 =back
 
+=head3 Changes since isl-0.17
+
+=over
+
+=item * The function C<isl_printer_print_ast_expr> no longer prints
+in C format by default.  To print in C format, the output format
+of the printer needs to have been explicitly set to C<ISL_FORMAT_C>.
+As a result, the function C<isl_ast_expr_to_str> no longer prints
+the expression in C format.  Use C<isl_ast_expr_to_C_str> instead.
+
+=back
+
 =head1 License
 
 C<isl> is released under the MIT license.
@@ -3672,6 +3684,8 @@ in isl format.
 		__isl_keep isl_multi_val *mv);
 
 	#include <isl/set.h>
+	__isl_give char *isl_basic_set_to_str(
+		__isl_keep isl_basic_set *bset);
 	__isl_give char *isl_set_to_str(
 		__isl_keep isl_set *set);
 
@@ -3680,6 +3694,8 @@ in isl format.
 		__isl_keep isl_union_set *uset);
 
 	#include <isl/map.h>
+	__isl_give char *isl_basic_map_to_str(
+		__isl_keep isl_basic_map *bmap);
 	__isl_give char *isl_map_to_str(
 		__isl_keep isl_map *map);
 
@@ -3703,6 +3719,16 @@ in isl format.
 		__isl_keep isl_union_pw_multi_aff *upma);
 	__isl_give char *isl_multi_union_pw_aff_to_str(
 		__isl_keep isl_multi_union_pw_aff *mupa);
+
+	#include <isl/point.h>
+	__isl_give char *isl_point_to_str(
+		__isl_keep isl_point *pnt);
+
+	#include <isl/polynomial.h>
+	__isl_give char *isl_pw_qpolynomial_to_str(
+		__isl_keep isl_pw_qpolynomial *pwqp);
+	__isl_give char *isl_union_pw_qpolynomial_to_str(
+		__isl_keep isl_union_pw_qpolynomial *upwqp);
 
 =head2 Properties
 
@@ -5018,6 +5044,8 @@ NaN if the problem is empty.
 		__isl_take isl_set *set, int pos);
 	__isl_give isl_pw_aff *isl_set_dim_max(
 		__isl_take isl_set *set, int pos);
+	__isl_give isl_pw_aff *isl_map_dim_min(
+		__isl_take isl_map *map, int pos);
 	__isl_give isl_pw_aff *isl_map_dim_max(
 		__isl_take isl_map *map, int pos);
 
@@ -7664,7 +7692,7 @@ A filter node does not impose any ordering, but rather intersects
 the set of domain elements that the current subtree refers to
 with a given union set.  The subtree of the filter node only
 refers to domain elements in the intersection.
-A filter node is typically only used a child of a sequence or
+A filter node is typically only used as a child of a sequence or
 set node.
 
 =item C<isl_schedule_node_leaf>
@@ -9714,6 +9742,16 @@ Basic printing can be performed using the following functions.
 		__isl_keep isl_ast_node *node);
 	__isl_give char *isl_ast_expr_to_str(
 		__isl_keep isl_ast_expr *expr);
+	__isl_give char *isl_ast_node_to_str(
+		__isl_keep isl_ast_node *node);
+	__isl_give char *isl_ast_expr_to_C_str(
+		__isl_keep isl_ast_expr *expr);
+	__isl_give char *isl_ast_node_to_C_str(
+		__isl_keep isl_ast_node *node);
+
+The functions C<isl_ast_expr_to_C_str> and
+C<isl_ast_node_to_C_str> are convenience functions
+that return a string representation of the input in C format.
 
 More advanced printing can be performed using the following functions.
 
@@ -10080,7 +10118,8 @@ This option may also be set directly using
 C<isl_schedule_node_band_member_set_isolate_ast_loop_type>.
 The atomic/separate/unroll choice for the remaining part is determined
 by the regular C<atomic>, C<separate> or C<unroll> option.
-The use of the C<isolate> option causes any tree containing the node
+Since the C<isolate> option references outer schedule dimensions,
+its use in a band node causes any tree containing the node
 to be considered anchored.
 
 As an example, consider the isolation of full tiles from partial tiles

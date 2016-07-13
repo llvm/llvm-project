@@ -310,6 +310,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::MIMG;
   }
 
+  static bool isGather4(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::Gather4;
+  }
+
+  bool isGather4(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::Gather4;
+  }
+
   static bool isFLAT(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & SIInstrFlags::FLAT;
   }
@@ -340,6 +348,14 @@ public:
 
   bool isDPP(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::DPP;
+  }
+
+  static bool isScalarUnit(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
+  }
+
+  static bool usesVM_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VM_CNT;
   }
 
   bool isVGPRCopy(const MachineInstr &MI) const {
@@ -465,8 +481,6 @@ public:
   /// opcode.  This function will also move the users of \p MI to the
   /// VALU if necessary.
   void moveToVALU(MachineInstr &MI) const;
-
-  const TargetRegisterClass *getIndirectAddrRegClass() const override;
 
   void insertWaitStates(MachineBasicBlock &MBB,MachineBasicBlock::iterator MI,
                         int Count) const;

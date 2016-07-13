@@ -13,22 +13,24 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/raw_ostream.h"
 
+using namespace llvm;
+
 namespace lld {
 namespace elf {
 
 bool HasError;
-llvm::raw_ostream *ErrorOS;
+raw_ostream *ErrorOS;
 
 void log(const Twine &Msg) {
   if (Config->Verbose)
-    llvm::outs() << Msg << "\n";
+    outs() << Msg << "\n";
 }
 
 void warning(const Twine &Msg) {
   if (Config->FatalWarnings)
     error(Msg);
   else
-    llvm::errs() << Msg << "\n";
+    errs() << Msg << "\n";
 }
 
 void error(const Twine &Msg) {
@@ -42,7 +44,7 @@ void error(std::error_code EC, const Twine &Prefix) {
 }
 
 void fatal(const Twine &Msg) {
-  llvm::errs() << Msg << "\n";
+  errs() << Msg << "\n";
   exit(1);
 }
 

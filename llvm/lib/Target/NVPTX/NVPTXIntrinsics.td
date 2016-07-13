@@ -33,9 +33,6 @@ def immDouble1 : PatLeaf<(fpimm), [{
 // Synchronization and shuffle functions
 //-----------------------------------
 let isConvergent = 1 in {
-def INT_CUDA_SYNCTHREADS : NVPTXInst<(outs), (ins),
-                  "bar.sync \t0;",
-      [(int_cuda_syncthreads)]>;
 def INT_BARRIER0 : NVPTXInst<(outs), (ins),
                   "bar.sync \t0;",
       [(int_nvvm_barrier0)]>;
@@ -64,6 +61,9 @@ def INT_BARRIER0_OR : NVPTXInst<(outs Int32Regs:$dst), (ins Int32Regs:$pred),
       !strconcat("selp.u32 \t$dst, 1, 0, %p2; \n\t",
         !strconcat("}}", ""))))))),
       [(set Int32Regs:$dst, (int_nvvm_barrier0_or Int32Regs:$pred))]>;
+
+def INT_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync\t$i;",
+                             [(int_nvvm_bar_sync imm:$i)]>;
 
 // shfl.{up,down,bfly,idx}.b32
 multiclass SHFL<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
@@ -96,14 +96,14 @@ multiclass SHFL<NVPTXRegClass regclass, string mode, Intrinsic IntOp> {
       [(set regclass:$dst, (IntOp regclass:$src, imm:$offset, imm:$mask))]>;
 }
 
-defm INT_SHFL_DOWN_I32 : SHFL<Int32Regs, "down", int_ptx_shfl_down_i32>;
-defm INT_SHFL_DOWN_F32 : SHFL<Float32Regs, "down", int_ptx_shfl_down_f32>;
-defm INT_SHFL_UP_I32 : SHFL<Int32Regs, "up", int_ptx_shfl_up_i32>;
-defm INT_SHFL_UP_F32 : SHFL<Float32Regs, "up", int_ptx_shfl_up_f32>;
-defm INT_SHFL_BFLY_I32 : SHFL<Int32Regs, "bfly", int_ptx_shfl_bfly_i32>;
-defm INT_SHFL_BFLY_F32 : SHFL<Float32Regs, "bfly", int_ptx_shfl_bfly_f32>;
-defm INT_SHFL_IDX_I32 : SHFL<Int32Regs, "idx", int_ptx_shfl_idx_i32>;
-defm INT_SHFL_IDX_F32 : SHFL<Float32Regs, "idx", int_ptx_shfl_idx_f32>;
+defm INT_SHFL_DOWN_I32 : SHFL<Int32Regs, "down", int_nvvm_shfl_down_i32>;
+defm INT_SHFL_DOWN_F32 : SHFL<Float32Regs, "down", int_nvvm_shfl_down_f32>;
+defm INT_SHFL_UP_I32 : SHFL<Int32Regs, "up", int_nvvm_shfl_up_i32>;
+defm INT_SHFL_UP_F32 : SHFL<Float32Regs, "up", int_nvvm_shfl_up_f32>;
+defm INT_SHFL_BFLY_I32 : SHFL<Int32Regs, "bfly", int_nvvm_shfl_bfly_i32>;
+defm INT_SHFL_BFLY_F32 : SHFL<Float32Regs, "bfly", int_nvvm_shfl_bfly_f32>;
+defm INT_SHFL_IDX_I32 : SHFL<Int32Regs, "idx", int_nvvm_shfl_idx_i32>;
+defm INT_SHFL_IDX_F32 : SHFL<Float32Regs, "idx", int_nvvm_shfl_idx_f32>;
 
 } // isConvergent = 1
 
@@ -1378,44 +1378,6 @@ defm INT_PTX_ATOM_CAS_GEN_64_USE_G : F_ATOMIC_3<Int64Regs, ".global", ".b64",
   ".cas", atomic_cmp_swap_64_gen, i64imm, useAtomRedG64forGen64>;
 
 
-//-----------------------------------
-// Read Special Registers
-//-----------------------------------
-class F_SREG<string OpStr, NVPTXRegClass regclassOut, Intrinsic IntOp> :
-      NVPTXInst<(outs regclassOut:$dst), (ins),
-               OpStr,
-         [(set regclassOut:$dst, (IntOp))]>;
-
-def INT_PTX_SREG_TID_X : F_SREG<"mov.u32 \t$dst, %tid.x;", Int32Regs,
-  int_nvvm_read_ptx_sreg_tid_x>;
-def INT_PTX_SREG_TID_Y : F_SREG<"mov.u32 \t$dst, %tid.y;", Int32Regs,
-  int_nvvm_read_ptx_sreg_tid_y>;
-def INT_PTX_SREG_TID_Z : F_SREG<"mov.u32 \t$dst, %tid.z;", Int32Regs,
-  int_nvvm_read_ptx_sreg_tid_z>;
-
-def INT_PTX_SREG_NTID_X : F_SREG<"mov.u32 \t$dst, %ntid.x;", Int32Regs,
-  int_nvvm_read_ptx_sreg_ntid_x>;
-def INT_PTX_SREG_NTID_Y : F_SREG<"mov.u32 \t$dst, %ntid.y;", Int32Regs,
-  int_nvvm_read_ptx_sreg_ntid_y>;
-def INT_PTX_SREG_NTID_Z : F_SREG<"mov.u32 \t$dst, %ntid.z;", Int32Regs,
-  int_nvvm_read_ptx_sreg_ntid_z>;
-
-def INT_PTX_SREG_CTAID_X : F_SREG<"mov.u32 \t$dst, %ctaid.x;", Int32Regs,
-  int_nvvm_read_ptx_sreg_ctaid_x>;
-def INT_PTX_SREG_CTAID_Y : F_SREG<"mov.u32 \t$dst, %ctaid.y;", Int32Regs,
-  int_nvvm_read_ptx_sreg_ctaid_y>;
-def INT_PTX_SREG_CTAID_Z : F_SREG<"mov.u32 \t$dst, %ctaid.z;", Int32Regs,
-  int_nvvm_read_ptx_sreg_ctaid_z>;
-
-def INT_PTX_SREG_NCTAID_X : F_SREG<"mov.u32 \t$dst, %nctaid.x;", Int32Regs,
-  int_nvvm_read_ptx_sreg_nctaid_x>;
-def INT_PTX_SREG_NCTAID_Y : F_SREG<"mov.u32 \t$dst, %nctaid.y;", Int32Regs,
-  int_nvvm_read_ptx_sreg_nctaid_y>;
-def INT_PTX_SREG_NCTAID_Z : F_SREG<"mov.u32 \t$dst, %nctaid.z;", Int32Regs,
-  int_nvvm_read_ptx_sreg_nctaid_z>;
-
-def INT_PTX_SREG_WARPSIZE : F_SREG<"mov.u32 \t$dst, WARP_SZ;", Int32Regs,
-  int_nvvm_read_ptx_sreg_warpsize>;
 
 
 //-----------------------------------
@@ -7008,98 +6970,95 @@ def : Pat<(int_nvvm_sust_p_3d_v4i32_trap
            Int32Regs:$x, Int32Regs:$y, Int32Regs:$z,
            Int32Regs:$r, Int32Regs:$g, Int32Regs:$b, Int32Regs:$a)>;
 
+//-----------------------------------
+// Read Special Registers
+//-----------------------------------
 
-
-//===-- Old PTX Back-end Intrinsics ---------------------------------------===//
-
-// These intrinsics are handled to retain compatibility with the old backend.
-
-// PTX Special Purpose Register Accessor Intrinsics
-
-class PTX_READ_SPECIAL_REGISTER_R64<string regname, Intrinsic intop>
+class PTX_READ_SREG_R64<string regname, Intrinsic intop>
   : NVPTXInst<(outs Int64Regs:$d), (ins),
               !strconcat(!strconcat("mov.u64\t$d, %", regname), ";"),
               [(set Int64Regs:$d, (intop))]>;
 
-class PTX_READ_SPECIAL_REGISTER_R32<string regname, Intrinsic intop>
+class PTX_READ_SREG_R32<string regname, Intrinsic intop>
   : NVPTXInst<(outs Int32Regs:$d), (ins),
               !strconcat(!strconcat("mov.u32\t$d, %", regname), ";"),
               [(set Int32Regs:$d, (intop))]>;
 
 // TODO Add read vector-version of special registers
 
-def PTX_READ_TID_X   : PTX_READ_SPECIAL_REGISTER_R32<"tid.x",
-                                                     int_ptx_read_tid_x>;
-def PTX_READ_TID_Y   : PTX_READ_SPECIAL_REGISTER_R32<"tid.y",
-                                                     int_ptx_read_tid_y>;
-def PTX_READ_TID_Z   : PTX_READ_SPECIAL_REGISTER_R32<"tid.z",
-                                                     int_ptx_read_tid_z>;
-def PTX_READ_TID_W   : PTX_READ_SPECIAL_REGISTER_R32<"tid.w",
-                                                     int_ptx_read_tid_w>;
+def INT_PTX_SREG_TID_X :
+    PTX_READ_SREG_R32<"tid.x", int_nvvm_read_ptx_sreg_tid_x>;
+def INT_PTX_SREG_TID_Y :
+    PTX_READ_SREG_R32<"tid.y", int_nvvm_read_ptx_sreg_tid_y>;
+def INT_PTX_SREG_TID_Z :
+    PTX_READ_SREG_R32<"tid.z", int_nvvm_read_ptx_sreg_tid_z>;
+def INT_PTX_SREG_TID_W :
+    PTX_READ_SREG_R32<"tid.w", int_nvvm_read_ptx_sreg_tid_w>;
 
-def PTX_READ_NTID_X   : PTX_READ_SPECIAL_REGISTER_R32<"ntid.x",
-                                                      int_ptx_read_ntid_x>;
-def PTX_READ_NTID_Y   : PTX_READ_SPECIAL_REGISTER_R32<"ntid.y",
-                                                      int_ptx_read_ntid_y>;
-def PTX_READ_NTID_Z   : PTX_READ_SPECIAL_REGISTER_R32<"ntid.z",
-                                                      int_ptx_read_ntid_z>;
-def PTX_READ_NTID_W   : PTX_READ_SPECIAL_REGISTER_R32<"ntid.w",
-                                                      int_ptx_read_ntid_w>;
+def INT_PTX_SREG_NTID_X :
+    PTX_READ_SREG_R32<"ntid.x", int_nvvm_read_ptx_sreg_ntid_x>;
+def INT_PTX_SREG_NTID_Y :
+    PTX_READ_SREG_R32<"ntid.y", int_nvvm_read_ptx_sreg_ntid_y>;
+def INT_PTX_SREG_NTID_Z :
+    PTX_READ_SREG_R32<"ntid.z", int_nvvm_read_ptx_sreg_ntid_z>;
+def INT_PTX_SREG_NTID_W :
+    PTX_READ_SREG_R32<"ntid.w", int_nvvm_read_ptx_sreg_ntid_w>;
 
-def PTX_READ_LANEID  : PTX_READ_SPECIAL_REGISTER_R32<"laneid",
-                                                     int_ptx_read_laneid>;
-def PTX_READ_WARPID  : PTX_READ_SPECIAL_REGISTER_R32<"warpid",
-                                                     int_ptx_read_warpid>;
-def PTX_READ_NWARPID : PTX_READ_SPECIAL_REGISTER_R32<"nwarpid",
-                                                     int_ptx_read_nwarpid>;
+def INT_PTX_SREG_LANEID :
+    PTX_READ_SREG_R32<"laneid", int_nvvm_read_ptx_sreg_laneid>;
+def INT_PTX_SREG_WARPID :
+    PTX_READ_SREG_R32<"warpid", int_nvvm_read_ptx_sreg_warpid>;
+def INT_PTX_SREG_NWARPID :
+    PTX_READ_SREG_R32<"nwarpid", int_nvvm_read_ptx_sreg_nwarpid>;
 
-def PTX_READ_CTAID_X   : PTX_READ_SPECIAL_REGISTER_R32<"ctaid.x",
-                                                       int_ptx_read_ctaid_x>;
-def PTX_READ_CTAID_Y   : PTX_READ_SPECIAL_REGISTER_R32<"ctaid.y",
-                                                       int_ptx_read_ctaid_y>;
-def PTX_READ_CTAID_Z   : PTX_READ_SPECIAL_REGISTER_R32<"ctaid.z",
-                                                       int_ptx_read_ctaid_z>;
-def PTX_READ_CTAID_W   : PTX_READ_SPECIAL_REGISTER_R32<"ctaid.w",
-                                                       int_ptx_read_ctaid_w>;
+def INT_PTX_SREG_CTAID_X :
+    PTX_READ_SREG_R32<"ctaid.x", int_nvvm_read_ptx_sreg_ctaid_x>;
+def INT_PTX_SREG_CTAID_Y :
+    PTX_READ_SREG_R32<"ctaid.y", int_nvvm_read_ptx_sreg_ctaid_y>;
+def INT_PTX_SREG_CTAID_Z :
+    PTX_READ_SREG_R32<"ctaid.z", int_nvvm_read_ptx_sreg_ctaid_z>;
+def INT_PTX_SREG_CTAID_W :
+    PTX_READ_SREG_R32<"ctaid.w", int_nvvm_read_ptx_sreg_ctaid_w>;
 
-def PTX_READ_NCTAID_X   : PTX_READ_SPECIAL_REGISTER_R32<"nctaid.x",
-                                                        int_ptx_read_nctaid_x>;
-def PTX_READ_NCTAID_Y   : PTX_READ_SPECIAL_REGISTER_R32<"nctaid.y",
-                                                        int_ptx_read_nctaid_y>;
-def PTX_READ_NCTAID_Z   : PTX_READ_SPECIAL_REGISTER_R32<"nctaid.z",
-                                                        int_ptx_read_nctaid_z>;
-def PTX_READ_NCTAID_W   : PTX_READ_SPECIAL_REGISTER_R32<"nctaid.w",
-                                                        int_ptx_read_nctaid_w>;
+def INT_PTX_SREG_NCTAID_X :
+    PTX_READ_SREG_R32<"nctaid.x", int_nvvm_read_ptx_sreg_nctaid_x>;
+def INT_PTX_SREG_NCTAID_Y :
+    PTX_READ_SREG_R32<"nctaid.y", int_nvvm_read_ptx_sreg_nctaid_y>;
+def INT_PTX_SREG_NCTAID_Z :
+    PTX_READ_SREG_R32<"nctaid.z", int_nvvm_read_ptx_sreg_nctaid_z>;
+def INT_PTX_SREG_NCTAID_W :
+    PTX_READ_SREG_R32<"nctaid.w", int_nvvm_read_ptx_sreg_nctaid_w>;
 
-def PTX_READ_SMID  : PTX_READ_SPECIAL_REGISTER_R32<"smid",
-                                                   int_ptx_read_smid>;
-def PTX_READ_NSMID  : PTX_READ_SPECIAL_REGISTER_R32<"nsmid",
-                                                    int_ptx_read_nsmid>;
-def PTX_READ_GRIDID  : PTX_READ_SPECIAL_REGISTER_R32<"gridid",
-                                                     int_ptx_read_gridid>;
+def INT_PTX_SREG_SMID :
+    PTX_READ_SREG_R32<"smid", int_nvvm_read_ptx_sreg_smid>;
+def INT_PTX_SREG_NSMID :
+    PTX_READ_SREG_R32<"nsmid", int_nvvm_read_ptx_sreg_nsmid>;
+def INT_PTX_SREG_GRIDID :
+    PTX_READ_SREG_R32<"gridid", int_nvvm_read_ptx_sreg_gridid>;
 
-def PTX_READ_LANEMASK_EQ
-  : PTX_READ_SPECIAL_REGISTER_R32<"lanemask_eq", int_ptx_read_lanemask_eq>;
-def PTX_READ_LANEMASK_LE
-  : PTX_READ_SPECIAL_REGISTER_R32<"lanemask_le", int_ptx_read_lanemask_le>;
-def PTX_READ_LANEMASK_LT
-  : PTX_READ_SPECIAL_REGISTER_R32<"lanemask_lt", int_ptx_read_lanemask_lt>;
-def PTX_READ_LANEMASK_GE
-  : PTX_READ_SPECIAL_REGISTER_R32<"lanemask_ge", int_ptx_read_lanemask_ge>;
-def PTX_READ_LANEMASK_GT
-  : PTX_READ_SPECIAL_REGISTER_R32<"lanemask_gt", int_ptx_read_lanemask_gt>;
+def INT_PTX_SREG_LANEMASK_EQ :
+    PTX_READ_SREG_R32<"lanemask_eq", int_nvvm_read_ptx_sreg_lanemask_eq>;
+def INT_PTX_SREG_LANEMASK_LE :
+    PTX_READ_SREG_R32<"lanemask_le", int_nvvm_read_ptx_sreg_lanemask_le>;
+def INT_PTX_SREG_LANEMASK_LT :
+    PTX_READ_SREG_R32<"lanemask_lt", int_nvvm_read_ptx_sreg_lanemask_lt>;
+def INT_PTX_SREG_LANEMASK_GE :
+    PTX_READ_SREG_R32<"lanemask_ge", int_nvvm_read_ptx_sreg_lanemask_ge>;
+def INT_PTX_SREG_LANEMASK_GT :
+    PTX_READ_SREG_R32<"lanemask_gt", int_nvvm_read_ptx_sreg_lanemask_gt>;
 
-def PTX_READ_CLOCK
-  : PTX_READ_SPECIAL_REGISTER_R32<"clock", int_ptx_read_clock>;
-def PTX_READ_CLOCK64
-  : PTX_READ_SPECIAL_REGISTER_R64<"clock64", int_ptx_read_clock64>;
+def INT_PTX_SREG_CLOCK :
+    PTX_READ_SREG_R32<"clock", int_nvvm_read_ptx_sreg_clock>;
+def INT_PTX_SREG_CLOCK64 :
+    PTX_READ_SREG_R64<"clock64", int_nvvm_read_ptx_sreg_clock64>;
 
-def PTX_READ_PM0 : PTX_READ_SPECIAL_REGISTER_R32<"pm0", int_ptx_read_pm0>;
-def PTX_READ_PM1 : PTX_READ_SPECIAL_REGISTER_R32<"pm1", int_ptx_read_pm1>;
-def PTX_READ_PM2 : PTX_READ_SPECIAL_REGISTER_R32<"pm2", int_ptx_read_pm2>;
-def PTX_READ_PM3 : PTX_READ_SPECIAL_REGISTER_R32<"pm3", int_ptx_read_pm3>;
+def INT_PTX_SREG_PM0 : PTX_READ_SREG_R32<"pm0", int_nvvm_read_ptx_sreg_pm0>;
+def INT_PTX_SREG_PM1 : PTX_READ_SREG_R32<"pm1", int_nvvm_read_ptx_sreg_pm1>;
+def INT_PTX_SREG_PM2 : PTX_READ_SREG_R32<"pm2", int_nvvm_read_ptx_sreg_pm2>;
+def INT_PTX_SREG_PM3 : PTX_READ_SREG_R32<"pm3", int_nvvm_read_ptx_sreg_pm3>;
 
-// PTX Parallel Synchronization and Communication Intrinsics
-
-def PTX_BAR_SYNC : NVPTXInst<(outs), (ins i32imm:$i), "bar.sync\t$i;",
-                             [(int_ptx_bar_sync imm:$i)]>;
+// TODO: It would be nice to use PTX_READ_SREG here, but it doesn't
+// handle the constant.
+def INT_PTX_SREG_WARPSIZE :
+    NVPTXInst<(outs Int32Regs:$dst), (ins), "mov.u32 \t$dst, WARP_SZ;",
+              [(set Int32Regs:$dst, (int_nvvm_read_ptx_sreg_warpsize))]>;

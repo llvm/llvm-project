@@ -70,15 +70,15 @@ int main()
     CHECK_ALWAYS_LOCK_FREE(double __attribute__((vector_size(4 * sizeof(double)))));
     CHECK_ALWAYS_LOCK_FREE(double __attribute__((vector_size(16 * sizeof(double)))));
     CHECK_ALWAYS_LOCK_FREE(double __attribute__((vector_size(32 * sizeof(double)))));
-    CHECK_ALWAYS_LOCK_FREE(struct{});
-    CHECK_ALWAYS_LOCK_FREE(struct{ int i; });
-    CHECK_ALWAYS_LOCK_FREE(struct{ int i[2]; });
-    CHECK_ALWAYS_LOCK_FREE(struct{ long long int i[2]; });
-    CHECK_ALWAYS_LOCK_FREE(struct{ long long int i[4]; });
-    CHECK_ALWAYS_LOCK_FREE(struct{ long long int i[8]; });
-    CHECK_ALWAYS_LOCK_FREE(struct{ long long int i[16]; });
-    CHECK_ALWAYS_LOCK_FREE(struct{ char c; /* padding */ long long int i; });
-    CHECK_ALWAYS_LOCK_FREE(union{ int i; float f; });
+    CHECK_ALWAYS_LOCK_FREE(struct Empty {});
+    CHECK_ALWAYS_LOCK_FREE(struct OneInt { int i; });
+    CHECK_ALWAYS_LOCK_FREE(struct IntArr2 { int i[2]; });
+    CHECK_ALWAYS_LOCK_FREE(struct LLIArr2 { long long int i[2]; });
+    CHECK_ALWAYS_LOCK_FREE(struct LLIArr4 { long long int i[4]; });
+    CHECK_ALWAYS_LOCK_FREE(struct LLIArr8 { long long int i[8]; });
+    CHECK_ALWAYS_LOCK_FREE(struct LLIArr16 { long long int i[16]; });
+    CHECK_ALWAYS_LOCK_FREE(struct Padding { char c; /* padding */ long long int i; });
+    CHECK_ALWAYS_LOCK_FREE(union IntFloat { int i; float f; });
 
     // C macro and static constexpr must be consistent.
     static_assert(std::atomic<bool>::is_always_lock_free == (2 == ATOMIC_BOOL_LOCK_FREE));

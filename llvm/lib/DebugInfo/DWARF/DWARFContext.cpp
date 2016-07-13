@@ -13,6 +13,8 @@
 #include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugArangeSet.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnitIndex.h"
+#include "llvm/Object/MachO.h"
+#include "llvm/Object/RelocVisitor.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Dwarf.h"
 #include "llvm/Support/ELF.h"

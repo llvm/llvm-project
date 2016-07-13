@@ -245,6 +245,11 @@ bool SIRegisterInfo::requiresVirtualBaseRegisters(
   return true;
 }
 
+bool SIRegisterInfo::trackLivenessAfterRegAlloc(const MachineFunction &MF) const {
+  // This helps catch bugs as verifier errors.
+  return true;
+}
+
 int64_t SIRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
                                                  int Idx) const {
   if (!SIInstrInfo::isMUBUF(*MI))
@@ -285,10 +290,13 @@ void SIRegisterInfo::materializeFrameBaseRegister(MachineBasicBlock *MBB,
 
   MachineRegisterInfo &MRI = MF->getRegInfo();
   unsigned UnusedCarry = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
+  BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::S_MOV_B32), OffsetReg)
+    .addImm(Offset);
   BuildMI(*MBB, Ins, DL, TII->get(AMDGPU::V_ADD_I32_e64), BaseReg)
     .addReg(UnusedCarry, RegState::Define | RegState::Dead)
-    .addImm(Offset)
+    .addReg(OffsetReg, RegState::Kill)
     .addFrameIndex(FrameIdx);
 }
 
@@ -335,13 +343,16 @@ void SIRegisterInfo::resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
   assert(Offset != 0 && "Non-zero offset expected");
 
   unsigned UnusedCarry = MRI.createVirtualRegister(&AMDGPU::SReg_64RegClass);
+  unsigned OffsetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
   // In the case the instruction already had an immediate offset, here only
   // the requested new offset is added because we are leaving the original
   // immediate in place.
+  BuildMI(*MBB, MI, DL, TII->get(AMDGPU::S_MOV_B32), OffsetReg)
+    .addImm(Offset);
   BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_ADD_I32_e64), NewReg)
     .addReg(UnusedCarry, RegState::Define | RegState::Dead)
-    .addImm(Offset)
+    .addReg(OffsetReg, RegState::Kill)
     .addReg(BaseReg);
 
   FIOp->ChangeToRegister(NewReg, false);

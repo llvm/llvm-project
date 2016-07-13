@@ -75,12 +75,59 @@ public:
                                   int64_t &Offset, unsigned &Width,
                                   const TargetRegisterInfo *TRI) const;
 
+  std::pair<unsigned, unsigned>
+  decomposeMachineOperandsTargetFlags(unsigned TF) const override;
+
+  ArrayRef<std::pair<unsigned, const char *>>
+  getSerializableDirectMachineOperandTargetFlags() const override;
+
   bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TrueBlock,
                      MachineBasicBlock *&FalseBlock,
                      SmallVectorImpl<MachineOperand> &Condition,
                      bool AllowModify) const override;
 
   unsigned RemoveBranch(MachineBasicBlock &MBB) const override;
+
+  // For a comparison instruction, return the source registers in SrcReg and
+  // SrcReg2 if having two register operands, and the value it compares against
+  // in CmpValue. Return true if the comparison instruction can be analyzed.
+  bool analyzeCompare(const MachineInstr &MI, unsigned &SrcReg,
+                      unsigned &SrcReg2, int &CmpMask,
+                      int &CmpValue) const override;
+
+  // See if the comparison instruction can be converted into something more
+  // efficient. E.g., on Lanai register-register instructions can set the flag
+  // register, obviating the need for a separate compare.
+  bool optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
+                            unsigned SrcReg2, int CmpMask, int CmpValue,
+                            const MachineRegisterInfo *MRI) const override;
+
+  // Analyze the given select instruction, returning true if it cannot be
+  // understood. It is assumed that MI->isSelect() is true.
+  //
+  // When successful, return the controlling condition and the operands that
+  // determine the true and false result values.
+  //
+  //   Result = SELECT Cond, TrueOp, FalseOp
+  //
+  // Lanai can optimize certain select instructions, for example by predicating
+  // the instruction defining one of the operands and sets Optimizable to true.
+  bool analyzeSelect(const MachineInstr &MI,
+                     SmallVectorImpl<MachineOperand> &Cond, unsigned &TrueOp,
+                     unsigned &FalseOp, bool &Optimizable) const override;
+
+  // Given a select instruction that was understood by analyzeSelect and
+  // returned Optimizable = true, attempt to optimize MI by merging it with one
+  // of its operands. Returns NULL on failure.
+  //
+  // When successful, returns the new select instruction. The client is
+  // responsible for deleting MI.
+  //
+  // If both sides of the select can be optimized, the TrueOp is modifed.
+  // PreferFalse is not used.
+  MachineInstr *optimizeSelect(MachineInstr &MI,
+                               SmallPtrSetImpl<MachineInstr *> &SeenMIs,
+                               bool PreferFalse) const override;
 
   bool ReverseBranchCondition(
       SmallVectorImpl<MachineOperand> &Condition) const override;

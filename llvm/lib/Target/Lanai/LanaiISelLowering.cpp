@@ -124,6 +124,12 @@ LanaiTargetLowering::LanaiTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
   }
 
+  setTargetDAGCombine(ISD::ADD);
+  setTargetDAGCombine(ISD::SUB);
+  setTargetDAGCombine(ISD::AND);
+  setTargetDAGCombine(ISD::OR);
+  setTargetDAGCombine(ISD::XOR);
+
   // Function alignments (log2)
   setMinFunctionAlignment(2);
   setPrefFunctionAlignment(2);
@@ -1267,4 +1273,168 @@ SDValue LanaiTargetLowering::LowerSRL_PARTS(SDValue Op,
 
   SDValue Ops[2] = {Lo, Hi};
   return DAG.getMergeValues(Ops, dl);
+}
+
+// Helper function that checks if N is a null or all ones constant.
+static inline bool isZeroOrAllOnes(SDValue N, bool AllOnes) {
+  return AllOnes ? isAllOnesConstant(N) : isNullConstant(N);
+}
+
+// Return true if N is conditionally 0 or all ones.
+// Detects these expressions where cc is an i1 value:
+//
+//   (select cc 0, y)   [AllOnes=0]
+//   (select cc y, 0)   [AllOnes=0]
+//   (zext cc)          [AllOnes=0]
+//   (sext cc)          [AllOnes=0/1]
+//   (select cc -1, y)  [AllOnes=1]
+//   (select cc y, -1)  [AllOnes=1]
+//
+// * AllOnes determines whether to check for an all zero (AllOnes false) or an
+//   all ones operand (AllOnes true).
+// * Invert is set when N is the all zero/ones constant when CC is false.
+// * OtherOp is set to the alternative value of N.
+//
+// For example, for (select cc X, Y) and AllOnes = 0 if:
+// * X = 0, Invert = False and OtherOp = Y
+// * Y = 0, Invert = True and OtherOp = X
+static bool isConditionalZeroOrAllOnes(SDNode *N, bool AllOnes, SDValue &CC,
+                                       bool &Invert, SDValue &OtherOp,
+                                       SelectionDAG &DAG) {
+  switch (N->getOpcode()) {
+  default:
+    return false;
+  case ISD::SELECT: {
+    CC = N->getOperand(0);
+    SDValue N1 = N->getOperand(1);
+    SDValue N2 = N->getOperand(2);
+    if (isZeroOrAllOnes(N1, AllOnes)) {
+      Invert = false;
+      OtherOp = N2;
+      return true;
+    }
+    if (isZeroOrAllOnes(N2, AllOnes)) {
+      Invert = true;
+      OtherOp = N1;
+      return true;
+    }
+    return false;
+  }
+  case ISD::ZERO_EXTEND: {
+    // (zext cc) can never be the all ones value.
+    if (AllOnes)
+      return false;
+    CC = N->getOperand(0);
+    if (CC.getValueType() != MVT::i1)
+      return false;
+    SDLoc dl(N);
+    EVT VT = N->getValueType(0);
+    OtherOp = DAG.getConstant(1, dl, VT);
+    Invert = true;
+    return true;
+  }
+  case ISD::SIGN_EXTEND: {
+    CC = N->getOperand(0);
+    if (CC.getValueType() != MVT::i1)
+      return false;
+    SDLoc dl(N);
+    EVT VT = N->getValueType(0);
+    Invert = !AllOnes;
+    if (AllOnes)
+      // When looking for an AllOnes constant, N is an sext, and the 'other'
+      // value is 0.
+      OtherOp = DAG.getConstant(0, dl, VT);
+    else
+      OtherOp =
+          DAG.getConstant(APInt::getAllOnesValue(VT.getSizeInBits()), dl, VT);
+    return true;
+  }
+  }
+}
+
+// Combine a constant select operand into its use:
+//
+//   (add (select cc, 0, c), x)  -> (select cc, x, (add, x, c))
+//   (sub x, (select cc, 0, c))  -> (select cc, x, (sub, x, c))
+//   (and (select cc, -1, c), x) -> (select cc, x, (and, x, c))  [AllOnes=1]
+//   (or  (select cc, 0, c), x)  -> (select cc, x, (or, x, c))
+//   (xor (select cc, 0, c), x)  -> (select cc, x, (xor, x, c))
+//
+// The transform is rejected if the select doesn't have a constant operand that
+// is null, or all ones when AllOnes is set.
+//
+// Also recognize sext/zext from i1:
+//
+//   (add (zext cc), x) -> (select cc (add x, 1), x)
+//   (add (sext cc), x) -> (select cc (add x, -1), x)
+//
+// These transformations eventually create predicated instructions.
+static SDValue combineSelectAndUse(SDNode *N, SDValue Slct, SDValue OtherOp,
+                                   TargetLowering::DAGCombinerInfo &DCI,
+                                   bool AllOnes) {
+  SelectionDAG &DAG = DCI.DAG;
+  EVT VT = N->getValueType(0);
+  SDValue NonConstantVal;
+  SDValue CCOp;
+  bool SwapSelectOps;
+  if (!isConditionalZeroOrAllOnes(Slct.getNode(), AllOnes, CCOp, SwapSelectOps,
+                                  NonConstantVal, DAG))
+    return SDValue();
+
+  // Slct is now know to be the desired identity constant when CC is true.
+  SDValue TrueVal = OtherOp;
+  SDValue FalseVal =
+      DAG.getNode(N->getOpcode(), SDLoc(N), VT, OtherOp, NonConstantVal);
+  // Unless SwapSelectOps says CC should be false.
+  if (SwapSelectOps)
+    std::swap(TrueVal, FalseVal);
+
+  return DAG.getNode(ISD::SELECT, SDLoc(N), VT, CCOp, TrueVal, FalseVal);
+}
+
+// Attempt combineSelectAndUse on each operand of a commutative operator N.
+static SDValue
+combineSelectAndUseCommutative(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
+                               bool AllOnes) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+  if (N0.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N0, N1, DCI, AllOnes))
+      return Result;
+  if (N1.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI, AllOnes))
+      return Result;
+  return SDValue();
+}
+
+// PerformSUBCombine - Target-specific dag combine xforms for ISD::SUB.
+static SDValue PerformSUBCombine(SDNode *N,
+                                 TargetLowering::DAGCombinerInfo &DCI) {
+  SDValue N0 = N->getOperand(0);
+  SDValue N1 = N->getOperand(1);
+
+  // fold (sub x, (select cc, 0, c)) -> (select cc, x, (sub, x, c))
+  if (N1.getNode()->hasOneUse())
+    if (SDValue Result = combineSelectAndUse(N, N1, N0, DCI, /*AllOnes=*/false))
+      return Result;
+
+  return SDValue();
+}
+
+SDValue LanaiTargetLowering::PerformDAGCombine(SDNode *N,
+                                               DAGCombinerInfo &DCI) const {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case ISD::ADD:
+  case ISD::OR:
+  case ISD::XOR:
+    return combineSelectAndUseCommutative(N, DCI, /*AllOnes=*/false);
+  case ISD::AND:
+    return combineSelectAndUseCommutative(N, DCI, /*AllOnes=*/true);
+  case ISD::SUB:
+    return PerformSUBCombine(N, DCI);
+  }
+
+  return SDValue();
 }

@@ -79,6 +79,8 @@ def help: F<"help">, HelpText<"Print option help">;
 
 def icf: F<"icf=all">, HelpText<"Enable identical code folding">;
 
+def image_base : J<"image-base=">, HelpText<"Set the base address">;
+
 def gc_sections: F<"gc-sections">,
   HelpText<"Enable garbage collection of unused sections">;
 
@@ -155,6 +157,9 @@ def undefined: J<"undefined=">,
 
 def unresolved_symbols: J<"unresolved-symbols=">,
   HelpText<"Determine how to handle unresolved symbols">;
+
+def rsp_quoting: J<"rsp-quoting=">,
+  HelpText<"Quoting style for response files. Values supported: windows|posix">;
 
 def verbose: F<"verbose">, HelpText<"Verbose mode">;
 
@@ -235,6 +240,7 @@ def plugin_opt_eq: J<"plugin-opt=">;
 // Options listed below are silently ignored for now for compatibility.
 def allow_shlib_undefined: F<"allow-shlib-undefined">;
 def define_common: F<"define-common">;
+def demangle: F<"demangle">;
 def detect_odr_violations: F<"detect-odr-violations">;
 def no_add_needed: F<"no-add-needed">;
 def no_allow_shlib_undefined: F<"no-allow-shlib-undefined">;

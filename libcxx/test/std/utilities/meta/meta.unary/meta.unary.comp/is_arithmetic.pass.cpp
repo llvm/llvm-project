@@ -45,6 +45,8 @@ void test_is_not_arithmetic()
 #endif
 }
 
+class incomplete_type;
+
 class Empty
 {
 };
@@ -98,6 +100,7 @@ int main()
     test_is_not_arithmetic<Enum>();
     test_is_not_arithmetic<FunctionPtr>();
     test_is_not_arithmetic<Empty>();
+    test_is_not_arithmetic<incomplete_type>();
     test_is_not_arithmetic<bit_zero>();
     test_is_not_arithmetic<NotEmpty>();
     test_is_not_arithmetic<Abstract>();

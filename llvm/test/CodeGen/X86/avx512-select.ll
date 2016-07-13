@@ -90,6 +90,7 @@ define i8 @select05_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    korw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -120,6 +121,7 @@ define i8 @select06_mem(<8 x i1>* %a.0, <8 x i1>* %m) {
 ; CHECK-NEXT:    kmovw %eax, %k1
 ; CHECK-NEXT:    kandw %k1, %k0, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %mask = load <8 x i1> , <8 x i1>* %m
   %a = load <8 x i1> , <8 x i1>* %a.0
@@ -138,6 +140,7 @@ define i8 @select07(i8 %a.0, i8 %b.0, i8 %m) {
 ; CHECK-NEXT:    kandw %k0, %k2, %k0
 ; CHECK-NEXT:    korw %k0, %k1, %k0
 ; CHECK-NEXT:    kmovw %k0, %eax
+; CHECK-NEXT:    ## kill: %AL<def> %AL<kill> %EAX<kill>
 ; CHECK-NEXT:    retq
   %mask = bitcast i8 %m to <8 x i1>
   %a = bitcast i8 %a.0 to <8 x i1>

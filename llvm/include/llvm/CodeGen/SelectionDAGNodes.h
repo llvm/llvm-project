@@ -66,24 +66,28 @@ struct SDVTList {
 namespace ISD {
   /// Node predicates
 
-  /// Return true if the specified node is a
-  /// BUILD_VECTOR where all of the elements are ~0 or undef.
+  /// If N is a BUILD_VECTOR node whose elements are all the same constant or
+  /// undefined, return true and return the constant value in \p SplatValue.
+  bool isConstantSplatVector(const SDNode *N, APInt &SplatValue);
+
+  /// Return true if the specified node is a BUILD_VECTOR where all of the
+  /// elements are ~0 or undef.
   bool isBuildVectorAllOnes(const SDNode *N);
 
-  /// Return true if the specified node is a
-  /// BUILD_VECTOR where all of the elements are 0 or undef.
+  /// Return true if the specified node is a BUILD_VECTOR where all of the
+  /// elements are 0 or undef.
   bool isBuildVectorAllZeros(const SDNode *N);
 
-  /// \brief Return true if the specified node is a BUILD_VECTOR node of
-  /// all ConstantSDNode or undef.
+  /// Return true if the specified node is a BUILD_VECTOR node of all
+  /// ConstantSDNode or undef.
   bool isBuildVectorOfConstantSDNodes(const SDNode *N);
 
-  /// \brief Return true if the specified node is a BUILD_VECTOR node of
-  /// all ConstantFPSDNode or undef.
+  /// Return true if the specified node is a BUILD_VECTOR node of all
+  /// ConstantFPSDNode or undef.
   bool isBuildVectorOfConstantFPSDNodes(const SDNode *N);
 
-  /// Return true if the node has at least one operand
-  /// and all operands of the specified node are ISD::UNDEF.
+  /// Return true if the node has at least one operand and all operands of the
+  /// specified node are ISD::UNDEF.
   bool allOperandsUndef(const SDNode *N);
 }  // end llvm:ISD namespace
 

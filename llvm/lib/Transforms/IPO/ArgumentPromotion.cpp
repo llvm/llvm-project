@@ -94,7 +94,7 @@ typedef std::vector<uint64_t> IndicesVector;
 
 static CallGraphNode *
 PromoteArguments(CallGraphNode *CGN, CallGraph &CG,
-                 std::function<AAResults &(Function &F)> AARGetter,
+                 function_ref<AAResults &(Function &F)> AARGetter,
                  unsigned MaxElements);
 static bool isDenselyPacked(Type *type, const DataLayout &DL);
 static bool canPaddingBeAccessed(Argument *Arg);
@@ -118,18 +118,18 @@ Pass *llvm::createArgumentPromotionPass(unsigned maxElements) {
 }
 
 static bool runImpl(CallGraphSCC &SCC, CallGraph &CG,
-                    std::function<AAResults &(Function &F)> &AARGetter,
+                    function_ref<AAResults &(Function &F)> AARGetter,
                     unsigned MaxElements) {
   bool Changed = false, LocalChange;
 
   do {  // Iterate until we stop promoting from this SCC.
     LocalChange = false;
     // Attempt to promote arguments from all functions in this SCC.
-    for (CallGraphSCC::iterator I = SCC.begin(), E = SCC.end(); I != E; ++I) {
-      if (CallGraphNode *CGN =
-              PromoteArguments(*I, CG, AARGetter, MaxElements)) {
+    for (CallGraphNode *OldNode : SCC) {
+      if (CallGraphNode *NewNode =
+              PromoteArguments(OldNode, CG, AARGetter, MaxElements)) {
         LocalChange = true;
-        SCC.ReplaceNode(*I, CGN);
+        SCC.ReplaceNode(OldNode, NewNode);
       }
     }
     Changed |= LocalChange;               // Remember that we changed something.
@@ -151,8 +151,7 @@ bool ArgPromotion::runOnSCC(CallGraphSCC &SCC) {
   // be queried, but we re-use them each time.
   Optional<BasicAAResult> BAR;
   Optional<AAResults> AAR;
-  std::function<AAResults &(Function & F)> AARGetter = [&](
-      Function &F) -> AAResults & {
+  auto AARGetter = [&](Function &F) -> AAResults & {
     BAR.emplace(createLegacyPMBasicAAResult(*this, F));
     AAR.emplace(createLegacyPMAAResults(*this, F, *BAR));
     return *AAR;
@@ -241,7 +240,7 @@ static bool canPaddingBeAccessed(Argument *arg) {
 ///
 static CallGraphNode *
 PromoteArguments(CallGraphNode *CGN, CallGraph &CG,
-                 std::function<AAResults &(Function &F)> AARGetter,
+                 function_ref<AAResults &(Function &F)> AARGetter,
                  unsigned MaxElements) {
   Function *F = CGN->getFunction();
 
@@ -283,8 +282,7 @@ PromoteArguments(CallGraphNode *CGN, CallGraph &CG,
   // add it to ArgsToPromote.
   SmallPtrSet<Argument*, 8> ArgsToPromote;
   SmallPtrSet<Argument*, 8> ByValArgsToTransform;
-  for (unsigned i = 0, e = PointerArgs.size(); i != e; ++i) {
-    Argument *PtrArg = PointerArgs[i];
+  for (Argument *PtrArg : PointerArgs) {
     Type *AgTy = cast<PointerType>(PtrArg->getType())->getElementType();
 
     // Replace sret attribute with noalias. This reduces register pressure by
@@ -604,10 +602,9 @@ static bool isSafeToPromoteArgument(Argument *Arg, bool isByValOrInAlloca,
   // blocks we know to be transparent to the load.
   SmallPtrSet<BasicBlock*, 16> TranspBlocks;
 
-  for (unsigned i = 0, e = Loads.size(); i != e; ++i) {
+  for (LoadInst *Load : Loads) {
     // Check to see if the load is invalidated from the start of the block to
     // the load itself.
-    LoadInst *Load = Loads[i];
     BasicBlock *BB = Load->getParent();
 
     MemoryLocation Loc = MemoryLocation::get(Load);

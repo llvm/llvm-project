@@ -32,4 +32,4 @@ endforeach()
 add_lit_testsuite(check-profile "Running the profile tests"
   ${PROFILE_TESTSUITES}
   DEPENDS ${PROFILE_TEST_DEPS})
-set_target_properties(check-profile PROPERTIES FOLDER "Profile tests")
+set_target_properties(check-profile PROPERTIES FOLDER "Compiler-RT Misc")

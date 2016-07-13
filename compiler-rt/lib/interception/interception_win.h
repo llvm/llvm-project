@@ -42,6 +42,23 @@ bool OverrideImportedFunction(const char *module_to_patch,
                               const char *function_name, uptr new_function,
                               uptr *orig_old_func);
 
+#if !SANITIZER_WINDOWS64
+// Exposed for unittests
+bool OverrideFunctionWithDetour(
+    uptr old_func, uptr new_func, uptr *orig_old_func);
+#endif
+
+// Exposed for unittests
+bool OverrideFunctionWithRedirectJump(
+    uptr old_func, uptr new_func, uptr *orig_old_func);
+bool OverrideFunctionWithHotPatch(
+    uptr old_func, uptr new_func, uptr *orig_old_func);
+bool OverrideFunctionWithTrampoline(
+    uptr old_func, uptr new_func, uptr *orig_old_func);
+
+// Exposed for unittests
+void TestOnlyReleaseTrampolineRegions();
+
 }  // namespace __interception
 
 #if defined(INTERCEPTION_DYNAMIC_CRT)

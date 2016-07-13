@@ -1,11 +1,12 @@
 // RUN: %clang_esan_wset -O0 %s -o %t 2>&1
 // RUN: %run %t 2>&1 | FileCheck %s
 
+#include <assert.h>
+#include <setjmp.h>
+#include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <signal.h>
-#include <setjmp.h>
-#include <assert.h>
+#include <sys/mman.h>
 
 sigjmp_buf mark;
 
@@ -51,10 +52,24 @@ int main(int argc, char **argv) {
   assert(Res == 0);
   assert(SigAct.sa_sigaction == SigactionHandler);
 
+  // Test blocking SIGSEGV and raising a shadow fault.
+  sigset_t Set;
+  sigemptyset(&Set);
+  sigaddset(&Set, SIGSEGV);
+  Res = sigprocmask(SIG_BLOCK, &Set, NULL);
+  // Make a large enough mapping that its start point will be before any
+  // prior library-region shadow access.
+  char *buf = (char *)mmap(0, 640*1024, PROT_READ | PROT_WRITE,
+                           MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+  buf[0] = 4;
+  munmap(buf, 640*1024);
+  fprintf(stderr, "Past blocked-SIGSEGV shadow fault\n");
+
   return 0;
 }
 // CHECK:      Handling SIGSEGV for signal
 // CHECK-NEXT: Past longjmp for signal
 // CHECK-NEXT: Handling SIGSEGV for sigaction
 // CHECK-NEXT: Past longjmp for sigaction
-// CHECK:      {{.*}} EfficiencySanitizer: the total working set size: {{[0-9][0-9][0-9]}} Bytes ({{[0-9][0-9]}} cache lines)
+// CHECK-NEXT: Past blocked-SIGSEGV shadow fault
+// CHECK:      {{.*}} EfficiencySanitizer: the total working set size: {{[0-9]+}} Bytes ({{[0-9][0-9]}} cache lines)

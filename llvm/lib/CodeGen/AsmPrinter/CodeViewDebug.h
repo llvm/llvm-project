@@ -275,7 +275,7 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
   /// Common record member lowering functionality for record types, which are
   /// structs, classes, and unions. Returns the field list index and the member
   /// count.
-  std::tuple<codeview::TypeIndex, codeview::TypeIndex, unsigned>
+  std::tuple<codeview::TypeIndex, codeview::TypeIndex, unsigned, bool>
   lowerRecordFieldList(const DICompositeType *Ty);
 
   /// Inserts {{Node, ClassTy}, TI} into TypeIndices and checks for duplicates.

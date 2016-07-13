@@ -48,6 +48,7 @@ After:
 In this case the calls of ``push_back`` won't be replaced.
 
 .. code:: c++
+
 	std::vector<std::unique_ptr<int> > v;
 	v.push_back(new int(5));
 	auto *ptr = int;

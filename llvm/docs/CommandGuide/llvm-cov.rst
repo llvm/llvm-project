@@ -238,7 +238,7 @@ OPTIONS
 
 .. option:: -format=<FORMAT>
 
- Use the specified output format. The supported formats are: "text".
+ Use the specified output format. The supported formats are: "text", "html".
 
 .. option:: -output-dir=PATH
 

@@ -29,9 +29,15 @@
 #if !SANITIZER_DEBUG
 
 #if SANITIZER_CAN_USE_ALLOCATOR64
+#if SANITIZER_WINDOWS
+static const uptr kAllocatorSpace = 0x10000000000ULL;
+static const uptr kAllocatorSize  =  0x10000000000ULL;  // 1T.
+static const u64 kAddressSpaceSize = 1ULL << 40;
+#else
 static const uptr kAllocatorSpace = 0x700000000000ULL;
 static const uptr kAllocatorSize  = 0x010000000000ULL;  // 1T.
 static const u64 kAddressSpaceSize = 1ULL << 47;
+#endif
 
 typedef SizeClassAllocator64<
   kAllocatorSpace, kAllocatorSize, 16, DefaultSizeClassMap> Allocator64;
@@ -601,6 +607,8 @@ TEST(Allocator, AllocatorCacheDeallocNewThread) {
   pthread_t t;
   PTHREAD_CREATE(&t, 0, DeallocNewThreadWorker, params);
   PTHREAD_JOIN(t, 0);
+
+  allocator.TestOnlyUnmap();
 }
 #endif
 

@@ -331,6 +331,19 @@ CallInst *CallInst::Create(CallInst *CI, ArrayRef<OperandBundleDef> OpB,
   return NewCI;
 }
 
+Value *CallInst::getReturnedArgOperand() const {
+  unsigned Index;
+
+  if (AttributeList.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
+    return getArgOperand(Index-1);
+  if (const Function *F = getCalledFunction())
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
+        Index)
+      return getArgOperand(Index-1);
+      
+  return nullptr;
+}
+
 void CallInst::addAttribute(unsigned i, Attribute::AttrKind Kind) {
   AttributeSet PAL = getAttributes();
   PAL = PAL.addAttribute(getContext(), i, Kind);
@@ -686,6 +699,19 @@ unsigned InvokeInst::getNumSuccessorsV() const {
 }
 void InvokeInst::setSuccessorV(unsigned idx, BasicBlock *B) {
   return setSuccessor(idx, B);
+}
+
+Value *InvokeInst::getReturnedArgOperand() const {
+  unsigned Index;
+
+  if (AttributeList.hasAttrSomewhere(Attribute::Returned, &Index) && Index)
+    return getArgOperand(Index-1);
+  if (const Function *F = getCalledFunction())
+    if (F->getAttributes().hasAttrSomewhere(Attribute::Returned, &Index) &&
+        Index)
+      return getArgOperand(Index-1);
+      
+  return nullptr;
 }
 
 bool InvokeInst::paramHasAttr(unsigned i, Attribute::AttrKind Kind) const {

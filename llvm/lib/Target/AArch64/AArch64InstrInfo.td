@@ -301,9 +301,6 @@ def AArch64umaxv    : SDNode<"AArch64ISD::UMAXV", SDT_AArch64UnaryVec>;
 //===----------------------------------------------------------------------===//
 
 // AArch64 Instruction Predicate Definitions.
-//
-def HasZCZ    : Predicate<"Subtarget->hasZeroCycleZeroing()">;
-def NoZCZ     : Predicate<"!Subtarget->hasZeroCycleZeroing()">;
 def IsDarwin  : Predicate<"Subtarget->isTargetDarwin()">;
 def IsNotDarwin: Predicate<"!Subtarget->isTargetDarwin()">;
 def ForCodeSize   : Predicate<"ForCodeSize">;
@@ -2565,15 +2562,11 @@ defm UCVTF : IntegerToFP<1, "ucvtf", uint_to_fp>;
 defm FMOV : UnscaledConversion<"fmov">;
 
 // Add pseudo ops for FMOV 0 so we can mark them as isReMaterializable
-let isReMaterializable = 1, isCodeGenOnly = 1 in {
+let isReMaterializable = 1, isCodeGenOnly = 1, isAsCheapAsAMove = 1 in {
 def FMOVS0 : Pseudo<(outs FPR32:$Rd), (ins), [(set f32:$Rd, (fpimm0))]>,
-    PseudoInstExpansion<(FMOVWSr FPR32:$Rd, WZR)>,
-    Sched<[WriteF]>,
-    Requires<[NoZCZ]>;
+    Sched<[WriteF]>;
 def FMOVD0 : Pseudo<(outs FPR64:$Rd), (ins), [(set f64:$Rd, (fpimm0))]>,
-    PseudoInstExpansion<(FMOVXDr FPR64:$Rd, XZR)>,
-    Sched<[WriteF]>,
-    Requires<[NoZCZ]>;
+    Sched<[WriteF]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4434,18 +4427,6 @@ def MOVIv2d_ns   : SIMDModifiedImmVectorNoShift<1, 1, 0, 0b1110, V128,
                                                 simdimmtype10,
                                                 "movi", ".2d",
                    [(set (v2i64 V128:$Rd), (AArch64movi_edit imm0_255:$imm8))]>;
-
-
-// Use movi.2d to materialize 0.0 if the HW does zero-cycle zeroing.
-// Complexity is added to break a tie with a plain MOVI.
-let AddedComplexity = 1 in {
-def : Pat<(f32   fpimm0),
-          (f32 (EXTRACT_SUBREG (v2i64 (MOVIv2d_ns (i32 0))), ssub))>,
-      Requires<[HasZCZ]>;
-def : Pat<(f64   fpimm0),
-          (f64 (EXTRACT_SUBREG (v2i64 (MOVIv2d_ns (i32 0))), dsub))>,
-      Requires<[HasZCZ]>;
-}
 
 def : Pat<(v2i64 immAllZerosV), (MOVIv2d_ns (i32 0))>;
 def : Pat<(v4i32 immAllZerosV), (MOVIv2d_ns (i32 0))>;

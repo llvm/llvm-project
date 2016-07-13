@@ -17,6 +17,7 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
 // MISC
 //
 
+let TargetPrefix = "nvvm" in {
   def int_nvvm_clz_i : GCCBuiltin<"__nvvm_clz_i">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_nvvm_clz_ll : GCCBuiltin<"__nvvm_clz_ll">,
@@ -729,9 +730,10 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
                                       [IntrArgMemOnly, NoCapture<0>]>;
 
 // Bar.Sync
-  def int_cuda_syncthreads : GCCBuiltin<"__syncthreads">,
-      Intrinsic<[], [], [IntrConvergent]>;
-  def int_nvvm_barrier0 : GCCBuiltin<"__nvvm_bar0">,
+
+  // The builtin for "bar.sync 0" is called __syncthreads.  Unlike most of the
+  // intrinsics in this file, this one is a user-facing API.
+  def int_nvvm_barrier0 : GCCBuiltin<"__syncthreads">,
       Intrinsic<[], [], [IntrConvergent]>;
   def int_nvvm_barrier0_popc : GCCBuiltin<"__nvvm_bar0_popc">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent]>;
@@ -740,6 +742,10 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
   def int_nvvm_barrier0_or : GCCBuiltin<"__nvvm_bar0_or">,
       Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrConvergent]>;
 
+  def int_nvvm_bar_sync :
+      Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>,
+      GCCBuiltin<"__nvvm_bar_sync">;
+
   // Membar
   def int_nvvm_membar_cta : GCCBuiltin<"__nvvm_membar_cta">,
       Intrinsic<[], [], []>;
@@ -747,53 +753,6 @@ def llvm_anyi64ptr_ty     : LLVMAnyPointerType<llvm_i64_ty>;     // (space)i64*
       Intrinsic<[], [], []>;
   def int_nvvm_membar_sys : GCCBuiltin<"__nvvm_membar_sys">,
       Intrinsic<[], [], []>;
-
-
-// Accessing special registers
-  def int_nvvm_read_ptx_sreg_tid_x :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_tid_x">;
-  def int_nvvm_read_ptx_sreg_tid_y :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_tid_y">;
-  def int_nvvm_read_ptx_sreg_tid_z :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_tid_z">;
-
-  def int_nvvm_read_ptx_sreg_ntid_x :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_ntid_x">;
-  def int_nvvm_read_ptx_sreg_ntid_y :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_ntid_y">;
-  def int_nvvm_read_ptx_sreg_ntid_z :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_ntid_z">;
-
-  def int_nvvm_read_ptx_sreg_ctaid_x :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_ctaid_x">;
-  def int_nvvm_read_ptx_sreg_ctaid_y :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_ctaid_y">;
-  def int_nvvm_read_ptx_sreg_ctaid_z :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_ctaid_z">;
-
-  def int_nvvm_read_ptx_sreg_nctaid_x :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_nctaid_x">;
-  def int_nvvm_read_ptx_sreg_nctaid_y :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_nctaid_y">;
-  def int_nvvm_read_ptx_sreg_nctaid_z :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_nctaid_z">;
-
-  def int_nvvm_read_ptx_sreg_warpsize :
-      Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-      GCCBuiltin<"__nvvm_read_ptx_sreg_warpsize">;
-
 
 // Generated within nvvm. Use for ldu on sm_20 or later.  Second arg is the
 // pointer's alignment.
@@ -3668,9 +3627,8 @@ def int_nvvm_swap_lo_hi_b64
               GCCBuiltin<"__nvvm_swap_lo_hi_b64">;
 
 
-// Old PTX back-end intrinsics retained here for backwards-compatibility
-
-multiclass PTXReadSpecialRegisterIntrinsic_v4i32<string prefix> {
+// Accessing special registers.
+multiclass PTXReadSRegIntrinsic_v4i32<string regname> {
 // FIXME: Do we need the 128-bit integer type version?
 //    def _r64   : Intrinsic<[llvm_i128_ty],   [], [IntrNoMem]>;
 
@@ -3678,115 +3636,99 @@ multiclass PTXReadSpecialRegisterIntrinsic_v4i32<string prefix> {
 //    def _v4i16 : Intrinsic<[llvm_v4i32_ty], [], [IntrNoMem]>;
 
   def _x     : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-               GCCBuiltin<!strconcat(prefix, "_x")>;
+               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_x">;
   def _y     : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-               GCCBuiltin<!strconcat(prefix, "_y")>;
+               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_y">;
   def _z     : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-               GCCBuiltin<!strconcat(prefix, "_z")>;
+               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_z">;
   def _w     : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-               GCCBuiltin<!strconcat(prefix, "_w")>;
+               GCCBuiltin<"__nvvm_read_ptx_sreg_" # regname # "_w">;
 }
 
-class PTXReadSpecialRegisterIntrinsic_r32<string name>
+class PTXReadSRegIntrinsic_r32<string name>
   : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>,
-    GCCBuiltin<name>;
+    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
-class PTXReadSpecialRegisterIntrinsic_r64<string name>
+class PTXReadSRegIntrinsic_r64<string name>
   : Intrinsic<[llvm_i64_ty], [], [IntrNoMem]>,
-    GCCBuiltin<name>;
+    GCCBuiltin<"__nvvm_read_ptx_sreg_" # name>;
 
-defm int_ptx_read_tid        : PTXReadSpecialRegisterIntrinsic_v4i32
-                               <"__builtin_ptx_read_tid">;
-defm int_ptx_read_ntid       : PTXReadSpecialRegisterIntrinsic_v4i32
-                               <"__builtin_ptx_read_ntid">;
+defm int_nvvm_read_ptx_sreg_tid : PTXReadSRegIntrinsic_v4i32<"tid">;
+defm int_nvvm_read_ptx_sreg_ntid : PTXReadSRegIntrinsic_v4i32<"ntid">;
 
-def int_ptx_read_laneid      : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_laneid">;
-def int_ptx_read_warpid      : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_warpid">;
-def int_ptx_read_nwarpid     : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_nwarpid">;
+def int_nvvm_read_ptx_sreg_laneid : PTXReadSRegIntrinsic_r32<"laneid">;
+def int_nvvm_read_ptx_sreg_warpid : PTXReadSRegIntrinsic_r32<"warpid">;
+def int_nvvm_read_ptx_sreg_nwarpid : PTXReadSRegIntrinsic_r32<"nwarpid">;
 
-defm int_ptx_read_ctaid      : PTXReadSpecialRegisterIntrinsic_v4i32
-                               <"__builtin_ptx_read_ctaid">;
-defm int_ptx_read_nctaid     : PTXReadSpecialRegisterIntrinsic_v4i32
-                               <"__builtin_ptx_read_nctaid">;
+defm int_nvvm_read_ptx_sreg_ctaid : PTXReadSRegIntrinsic_v4i32<"ctaid">;
+defm int_nvvm_read_ptx_sreg_nctaid : PTXReadSRegIntrinsic_v4i32<"nctaid">;
 
-def int_ptx_read_smid        : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_smid">;
-def int_ptx_read_nsmid       : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_nsmid">;
-def int_ptx_read_gridid      : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_gridid">;
+def int_nvvm_read_ptx_sreg_smid : PTXReadSRegIntrinsic_r32<"smid">;
+def int_nvvm_read_ptx_sreg_nsmid : PTXReadSRegIntrinsic_r32<"nsmid">;
+def int_nvvm_read_ptx_sreg_gridid : PTXReadSRegIntrinsic_r32<"gridid">;
 
-def int_ptx_read_lanemask_eq : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_lanemask_eq">;
-def int_ptx_read_lanemask_le : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_lanemask_le">;
-def int_ptx_read_lanemask_lt : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_lanemask_lt">;
-def int_ptx_read_lanemask_ge : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_lanemask_ge">;
-def int_ptx_read_lanemask_gt : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_lanemask_gt">;
+def int_nvvm_read_ptx_sreg_lanemask_eq :
+    PTXReadSRegIntrinsic_r32<"lanemask_eq">;
+def int_nvvm_read_ptx_sreg_lanemask_le :
+    PTXReadSRegIntrinsic_r32<"lanemask_le">;
+def int_nvvm_read_ptx_sreg_lanemask_lt :
+    PTXReadSRegIntrinsic_r32<"lanemask_lt">;
+def int_nvvm_read_ptx_sreg_lanemask_ge :
+    PTXReadSRegIntrinsic_r32<"lanemask_ge">;
+def int_nvvm_read_ptx_sreg_lanemask_gt :
+    PTXReadSRegIntrinsic_r32<"lanemask_gt">;
 
-def int_ptx_read_clock       : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_clock">;
-def int_ptx_read_clock64     : PTXReadSpecialRegisterIntrinsic_r64
-                               <"__builtin_ptx_read_clock64">;
+def int_nvvm_read_ptx_sreg_clock : PTXReadSRegIntrinsic_r32<"clock">;
+def int_nvvm_read_ptx_sreg_clock64 : PTXReadSRegIntrinsic_r64<"clock64">;
 
-def int_ptx_read_pm0         : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_pm0">;
-def int_ptx_read_pm1         : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_pm1">;
-def int_ptx_read_pm2         : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_pm2">;
-def int_ptx_read_pm3         : PTXReadSpecialRegisterIntrinsic_r32
-                               <"__builtin_ptx_read_pm3">;
+def int_nvvm_read_ptx_sreg_pm0 : PTXReadSRegIntrinsic_r32<"pm0">;
+def int_nvvm_read_ptx_sreg_pm1 : PTXReadSRegIntrinsic_r32<"pm1">;
+def int_nvvm_read_ptx_sreg_pm2 : PTXReadSRegIntrinsic_r32<"pm2">;
+def int_nvvm_read_ptx_sreg_pm3 : PTXReadSRegIntrinsic_r32<"pm3">;
 
-def int_ptx_bar_sync : Intrinsic<[], [llvm_i32_ty], [IntrConvergent]>,
-                       GCCBuiltin<"__builtin_ptx_bar_sync">;
+def int_nvvm_read_ptx_sreg_warpsize : PTXReadSRegIntrinsic_r32<"warpsize">;
 
 //
 // SHUFFLE
 //
 
 // shfl.down.b32 dest, val, offset, mask_and_clamp
-def int_ptx_shfl_down_i32 :
+def int_nvvm_shfl_down_i32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.down.i32">,
-  GCCBuiltin<"__builtin_ptx_shfl_down_i32">;
-def int_ptx_shfl_down_f32 :
+  GCCBuiltin<"__nvvm_shfl_down_i32">;
+def int_nvvm_shfl_down_f32 :
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.down.f32">,
-  GCCBuiltin<"__builtin_ptx_shfl_down_f32">;
+  GCCBuiltin<"__nvvm_shfl_down_f32">;
 
 // shfl.up.b32 dest, val, offset, mask_and_clamp
-def int_ptx_shfl_up_i32 :
+def int_nvvm_shfl_up_i32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.up.i32">,
-  GCCBuiltin<"__builtin_ptx_shfl_up_i32">;
-def int_ptx_shfl_up_f32 :
+  GCCBuiltin<"__nvvm_shfl_up_i32">;
+def int_nvvm_shfl_up_f32 :
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.up.f32">,
-  GCCBuiltin<"__builtin_ptx_shfl_up_f32">;
+  GCCBuiltin<"__nvvm_shfl_up_f32">;
 
 // shfl.bfly.b32 dest, val, offset, mask_and_clamp
-def int_ptx_shfl_bfly_i32 :
+def int_nvvm_shfl_bfly_i32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.bfly.i32">,
-  GCCBuiltin<"__builtin_ptx_shfl_bfly_i32">;
-def int_ptx_shfl_bfly_f32 :
+  GCCBuiltin<"__nvvm_shfl_bfly_i32">;
+def int_nvvm_shfl_bfly_f32 :
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.bfly.f32">,
-  GCCBuiltin<"__builtin_ptx_shfl_bfly_f32">;
+  GCCBuiltin<"__nvvm_shfl_bfly_f32">;
 
 // shfl.idx.b32 dest, val, lane, mask_and_clamp
-def int_ptx_shfl_idx_i32 :
+def int_nvvm_shfl_idx_i32 :
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.idx.i32">,
-  GCCBuiltin<"__builtin_ptx_shfl_idx_i32">;
-def int_ptx_shfl_idx_f32 :
+  GCCBuiltin<"__nvvm_shfl_idx_i32">;
+def int_nvvm_shfl_idx_f32 :
   Intrinsic<[llvm_float_ty], [llvm_float_ty, llvm_i32_ty, llvm_i32_ty],
             [IntrNoMem, IntrConvergent], "llvm.nvvm.shfl.idx.f32">,
-  GCCBuiltin<"__builtin_ptx_shfl_idx_f32">;
+  GCCBuiltin<"__nvvm_shfl_idx_f32">;
+}

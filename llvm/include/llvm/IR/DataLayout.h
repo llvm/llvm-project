@@ -440,7 +440,7 @@ public:
   ///
   /// Note that this takes the element type, not the pointer type.
   /// This is used to implement getelementptr.
-  uint64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
+  int64_t getIndexedOffsetInType(Type *ElemTy, ArrayRef<Value *> Indices) const;
 
   /// \brief Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.

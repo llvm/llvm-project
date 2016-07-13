@@ -1971,6 +1971,9 @@ public:
   void VisitOMPDistributeDirective(const OMPDistributeDirective *D);
   void VisitOMPDistributeParallelForDirective(
       const OMPDistributeParallelForDirective *D);
+  void VisitOMPDistributeParallelForSimdDirective(
+      const OMPDistributeParallelForSimdDirective *D);
+  void VisitOMPDistributeSimdDirective(const OMPDistributeSimdDirective *D);
 
 private:
   void AddDeclarationNameInfo(const Stmt *S);
@@ -2726,6 +2729,16 @@ void EnqueueVisitor::VisitOMPDistributeDirective(
 
 void EnqueueVisitor::VisitOMPDistributeParallelForDirective(
     const OMPDistributeParallelForDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPDistributeParallelForSimdDirective(
+    const OMPDistributeParallelForSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
+void EnqueueVisitor::VisitOMPDistributeSimdDirective(
+    const OMPDistributeSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
@@ -4445,10 +4458,8 @@ CXString clang_getCursorDisplayName(CXCursor C) {
     SmallString<128> Str;
     llvm::raw_svector_ostream OS(Str);
     OS << *ClassSpec;
-    TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                      ClassSpec->getTemplateArgs().data(),
-                                      ClassSpec->getTemplateArgs().size(),
-                                                                Policy);
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, ClassSpec->getTemplateArgs().asArray(), Policy);
     return cxstring::createDup(OS.str());
   }
   
@@ -4847,6 +4858,10 @@ CXString clang_getCursorKindSpelling(enum CXCursorKind Kind) {
     return cxstring::createRef("OMPDistributeDirective");
   case CXCursor_OMPDistributeParallelForDirective:
     return cxstring::createRef("OMPDistributeParallelForDirective");
+  case CXCursor_OMPDistributeParallelForSimdDirective:
+    return cxstring::createRef("OMPDistributeParallelForSimdDirective");
+  case CXCursor_OMPDistributeSimdDirective:
+    return cxstring::createRef("OMPDistributeSimdDirective");
   case CXCursor_OverloadCandidate:
       return cxstring::createRef("OverloadCandidate");
   case CXCursor_TypeAliasTemplateDecl:

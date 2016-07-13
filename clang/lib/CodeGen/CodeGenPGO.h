@@ -103,6 +103,7 @@ private:
                                llvm::Function *Fn);
   void loadRegionCounts(llvm::IndexedInstrProfReader *PGOReader,
                         bool IsInMainFile);
+  bool skipRegionMappingForDecl(const Decl *D);
   void emitCounterRegionMapping(const Decl *D);
 
 public:

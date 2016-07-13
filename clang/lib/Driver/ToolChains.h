@@ -11,12 +11,14 @@
 #define LLVM_CLANG_LIB_DRIVER_TOOLCHAINS_H
 
 #include "Tools.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/VersionTuple.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/Multilib.h"
 #include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/Compiler.h"
 #include <set>
 #include <vector>
@@ -158,39 +160,52 @@ protected:
   GCCInstallationDetector GCCInstallation;
 
   // \brief A class to find a viable CUDA installation
-
   class CudaInstallationDetector {
-    bool IsValid;
+  private:
     const Driver &D;
-    std::string CudaInstallPath;
-    std::string CudaBinPath;
-    std::string CudaLibPath;
-    std::string CudaLibDevicePath;
-    std::string CudaIncludePath;
-    llvm::StringMap<std::string> CudaLibDeviceMap;
+    bool IsValid = false;
+    CudaVersion Version = CudaVersion::UNKNOWN;
+    std::string InstallPath;
+    std::string BinPath;
+    std::string LibPath;
+    std::string LibDevicePath;
+    std::string IncludePath;
+    llvm::StringMap<std::string> LibDeviceMap;
+
+    // CUDA architectures for which we have raised an error in
+    // CheckCudaVersionSupportsArch.
+    mutable llvm::SmallSet<CudaArch, 4> ArchsWithVersionTooLowErrors;
 
   public:
-    CudaInstallationDetector(const Driver &D) : IsValid(false), D(D) {}
+    CudaInstallationDetector(const Driver &D) : D(D) {}
     void init(const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args);
+
+    /// \brief Emit an error if Version does not support the given Arch.
+    ///
+    /// If either Version or Arch is unknown, does not emit an error.  Emits at
+    /// most one error per Arch.
+    void CheckCudaVersionSupportsArch(CudaArch Arch) const;
 
     /// \brief Check whether we detected a valid Cuda install.
     bool isValid() const { return IsValid; }
     /// \brief Print information about the detected CUDA installation.
     void print(raw_ostream &OS) const;
 
+    /// \brief Get the deteced Cuda install's version.
+    CudaVersion version() const { return Version; }
     /// \brief Get the detected Cuda installation path.
-    StringRef getInstallPath() const { return CudaInstallPath; }
+    StringRef getInstallPath() const { return InstallPath; }
     /// \brief Get the detected path to Cuda's bin directory.
-    StringRef getBinPath() const { return CudaBinPath; }
+    StringRef getBinPath() const { return BinPath; }
     /// \brief Get the detected Cuda Include path.
-    StringRef getIncludePath() const { return CudaIncludePath; }
+    StringRef getIncludePath() const { return IncludePath; }
     /// \brief Get the detected Cuda library path.
-    StringRef getLibPath() const { return CudaLibPath; }
+    StringRef getLibPath() const { return LibPath; }
     /// \brief Get the detected Cuda device library path.
-    StringRef getLibDevicePath() const { return CudaLibDevicePath; }
+    StringRef getLibDevicePath() const { return LibDevicePath; }
     /// \brief Get libdevice file for given architecture
     std::string getLibDeviceFile(StringRef Gpu) const {
-      return CudaLibDeviceMap.lookup(Gpu);
+      return LibDeviceMap.lookup(Gpu);
     }
   };
 
@@ -851,6 +866,16 @@ public:
   // Never try to use the integrated assembler with CUDA; always fork out to
   // ptxas.
   bool useIntegratedAs() const override { return false; }
+
+  void AddCudaIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                          llvm::opt::ArgStringList &CC1Args) const override;
+
+  const Generic_GCC::CudaInstallationDetector &cudaInstallation() const {
+    return CudaInstallation;
+  }
+  Generic_GCC::CudaInstallationDetector &cudaInstallation() {
+    return CudaInstallation;
+  }
 
 protected:
   Tool *buildAssembler() const override;  // ptxas

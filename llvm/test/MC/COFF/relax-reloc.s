@@ -2,5 +2,6 @@
 
 // Don't crash trying to create relaxable relocations on COFF.
 
+        movl bar(%eax), %ebx
         add   bar(%rip), %rax
         call *bar(%rip)

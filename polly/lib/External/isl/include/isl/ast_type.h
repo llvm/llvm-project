@@ -7,10 +7,10 @@
 extern "C" {
 #endif
 
-struct isl_ast_expr;
+struct __isl_export isl_ast_expr;
 typedef struct isl_ast_expr isl_ast_expr;
 
-struct isl_ast_node;
+struct __isl_export isl_ast_node;
 typedef struct isl_ast_node isl_ast_node;
 
 enum isl_ast_op_type {

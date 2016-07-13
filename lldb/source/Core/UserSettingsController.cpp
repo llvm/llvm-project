@@ -108,3 +108,27 @@ Properties::GetSubProperty (const ExecutionContext *exe_ctx,
     return lldb::OptionValuePropertiesSP();
 }
 
+const char *
+Properties::GetExperimentalSettingsName()
+{
+    return "experimental";
+}
+
+bool
+Properties::IsSettingExperimental(const char *setting)
+{
+    if (setting == nullptr)
+        return false;
+        
+    const char *experimental = GetExperimentalSettingsName();
+    const char *dot_pos = strchr(setting, '.');
+    if (dot_pos == nullptr)
+        return strcmp(experimental, setting) == 0;
+    else
+    {
+        size_t first_elem_len = dot_pos - setting;
+        return strncmp(experimental, setting, first_elem_len) == 0;
+    }
+
+}
+

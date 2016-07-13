@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MathExtras.h"
@@ -31,6 +32,7 @@ class DbiStream;
 class InfoStream;
 class MappedBlockStream;
 class NameHashTable;
+class PDBFileBuilder;
 class PublicsStream;
 class SymbolStream;
 class TpiStream;
@@ -41,6 +43,8 @@ static const char MsfMagic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
                                 '\r', '\n', '\x1a', 'D', 'S', '\0', '\0', '\0'};
 
 class PDBFile : public IPDBFile {
+  friend PDBFileBuilder;
+
 public:
   // The superblock is overlaid at the beginning of the file (offset 0).
   // It starts with a magic header and is followed by information which
@@ -82,10 +86,10 @@ public:
   uint32_t getStreamByteSize(uint32_t StreamIndex) const override;
   ArrayRef<support::ulittle32_t>
   getStreamBlockList(uint32_t StreamIndex) const override;
-  size_t getFileSize() const;
+  uint32_t getFileSize() const;
 
-  ArrayRef<uint8_t> getBlockData(uint32_t BlockIndex,
-                                 uint32_t NumBytes) const override;
+  Expected<ArrayRef<uint8_t>> getBlockData(uint32_t BlockIndex,
+                                           uint32_t NumBytes) const override;
   Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                      ArrayRef<uint8_t> Data) const override;
 
@@ -115,13 +119,13 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<NameHashTable &> getStringTable();
 
-  Error setSuperBlock(const SuperBlock *Block);
-  void setStreamSizes(ArrayRef<support::ulittle32_t> Sizes);
-  void setStreamMap(ArrayRef<support::ulittle32_t> Directory,
-                    std::vector<ArrayRef<support::ulittle32_t>> &Streams);
   Error commit();
 
 private:
+  Error setSuperBlock(const SuperBlock *Block);
+
+  BumpPtrAllocator Allocator;
+
   std::unique_ptr<codeview::StreamInterface> Buffer;
   const PDBFile::SuperBlock *SB;
   ArrayRef<support::ulittle32_t> StreamSizes;

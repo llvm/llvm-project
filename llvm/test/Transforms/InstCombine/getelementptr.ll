@@ -624,15 +624,11 @@ define i32 @test35() nounwind {
 ; CHECK: call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([17 x i8], [17 x i8]* @"\01LC8", i64 0, i64 0), i8* getelementptr inbounds (%t0, %t0* @s, i64 0, i32 1, i64 0)) [[NUW:#[0-9]+]]
 }
 
-; Instcombine should constant-fold the GEP so that indices that have
-; static array extents are within bounds of those array extents.
-; In the below, -1 is not in the range [0,11). After the transformation,
-; the same address is computed, but 3 is in the range of [0,11).
-
+; Don't treat signed offsets as unsigned.
 define i8* @test36() nounwind {
   ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i32 0, i64 -1)
 ; CHECK-LABEL: @test36(
-; CHECK: ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i64 1676976733973595601, i64 4)
+; CHECK: ret i8* getelementptr ([11 x i8], [11 x i8]* @array, i64 0, i64 -1)
 }
 
 ; Instcombine shouldn't assume that gep(A,0,1) != gep(A,1,0).

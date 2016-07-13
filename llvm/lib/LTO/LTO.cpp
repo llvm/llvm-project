@@ -45,26 +45,17 @@ static void thinLTOResolveWeakForLinkerGUID(
     DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage) {
-  auto HasMultipleCopies = GVSummaryList.size() > 1;
-
   for (auto &S : GVSummaryList) {
     if (GlobalInvolvedWithAlias.count(S.get()))
       continue;
     GlobalValue::LinkageTypes OriginalLinkage = S->linkage();
     if (!GlobalValue::isWeakForLinker(OriginalLinkage))
       continue;
-    // We need to emit only one of these, the first module will keep it,
+    // We need to emit only one of these. The prevailing module will keep it,
     // but turned into a weak, while the others will drop it when possible.
-    if (!HasMultipleCopies) {
-      // Exported Linkonce needs to be promoted to not be discarded.
-      if (GlobalValue::isLinkOnceLinkage(OriginalLinkage) &&
-          isExported(S->modulePath(), GUID))
-        S->setLinkage(GlobalValue::getWeakLinkage(
-            GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
-    } else if (isPrevailing(GUID, S.get())) {
+    if (isPrevailing(GUID, S.get())) {
       if (GlobalValue::isLinkOnceLinkage(OriginalLinkage))
         S->setLinkage(GlobalValue::getWeakLinkage(
             GlobalValue::isLinkOnceODRLinkage(OriginalLinkage)));
@@ -89,13 +80,8 @@ void thinLTOResolveWeakForLinkerInIndex(
     ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    function_ref<bool(StringRef, GlobalValue::GUID)> isExported,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
         recordNewLinkage) {
-  if (Index.modulePaths().size() == 1)
-    // Nothing to do if we don't have multiple modules
-    return;
-
   // We won't optimize the globals that are referenced by an alias for now
   // Ideally we should turn the alias into a global and duplicate the definition
   // when needed.
@@ -107,7 +93,7 @@ void thinLTOResolveWeakForLinkerInIndex(
 
   for (auto &I : Index)
     thinLTOResolveWeakForLinkerGUID(I.second, I.first, GlobalInvolvedWithAlias,
-                                    isPrevailing, isExported, recordNewLinkage);
+                                    isPrevailing, recordNewLinkage);
 }
 
 static void thinLTOInternalizeAndPromoteGUID(

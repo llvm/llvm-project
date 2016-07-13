@@ -342,7 +342,6 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
   // We run after PEI, so we need to AddPristinesAndCSRs.
   LiveRegs.addLiveOuts(MBB);
 
-  bool CandidateDidntGetTransformed = false;
   bool WasCandidate = false;
 
   for (auto I = MBB.rbegin(); I != MBB.rend(); ++I) {
@@ -354,44 +353,10 @@ void FixupBWInstPass::processBasicBlock(MachineFunction &MF,
     // nullptr.  We will revisit that in a bit.
     if (WasCandidate) {
       MIReplacements.push_back(std::make_pair(MI, NewMI));
-      if (!NewMI)
-        CandidateDidntGetTransformed = true;
     }
 
     // We're done with this instruction, update liveness for the next one.
     LiveRegs.stepBackward(*MI);
-  }
-
-  if (CandidateDidntGetTransformed) {
-    // If there was a candidate that didn't get transformed then let's try
-    // doing the register liveness going forward.  Sometimes one direction
-    // is overly conservative compared to the other.
-    // FIXME - Register liveness should be investigated further. This really
-    // shouldn't be necessary.  See PR28142.
-    LiveRegs.clear();
-    LiveRegs.addLiveIns(MBB);
-
-    auto NextCandidateIter = MIReplacements.begin();
-    auto EndCandidateIter = MIReplacements.end();
-
-    for (auto I = MBB.begin(); I != MBB.end(); ++I) {
-      MachineInstr *MI = &*I;
-      SmallVector<std::pair<unsigned, const MachineOperand*>, 4> Clobbers;
-      LiveRegs.stepForward(*MI, Clobbers);
-
-      if (NextCandidateIter == EndCandidateIter)
-        break;
-
-      // Only check and create a new instruction if this instruction is
-      // known to be a candidate that didn't get transformed.
-      if (NextCandidateIter->first == MI) {
-        if (NextCandidateIter->second == nullptr) {
-          MachineInstr *NewMI = tryReplaceInstr(MI, MBB, WasCandidate);
-          NextCandidateIter->second = NewMI;
-        }
-        ++NextCandidateIter;
-      }
-    }
   }
 
   while (!MIReplacements.empty()) {

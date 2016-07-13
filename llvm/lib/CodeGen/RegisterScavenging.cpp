@@ -97,14 +97,14 @@ void RegScavenger::addRegUnits(BitVector &BV, unsigned Reg) {
 void RegScavenger::determineKillsAndDefs() {
   assert(Tracking && "Must be tracking to determine kills and defs");
 
-  MachineInstr *MI = MBBI;
-  assert(!MI->isDebugValue() && "Debug values have no kills or defs");
+  MachineInstr &MI = *MBBI;
+  assert(!MI.isDebugValue() && "Debug values have no kills or defs");
 
   // Find out which registers are early clobbered, killed, defined, and marked
   // def-dead in this instruction.
   KillRegUnits.reset();
   DefRegUnits.reset();
-  for (const MachineOperand &MO : MI->operands()) {
+  for (const MachineOperand &MO : MI.operands()) {
     if (MO.isRegMask()) {
       TmpRegUnits.clear();
       for (unsigned RU = 0, RUEnd = TRI->getNumRegUnits(); RU != RUEnd; ++RU) {
@@ -144,8 +144,8 @@ void RegScavenger::determineKillsAndDefs() {
 void RegScavenger::unprocess() {
   assert(Tracking && "Cannot unprocess because we're not tracking");
 
-  MachineInstr *MI = MBBI;
-  if (!MI->isDebugValue()) {
+  MachineInstr &MI = *MBBI;
+  if (!MI.isDebugValue()) {
     determineKillsAndDefs();
 
     // Commit the changes.
@@ -171,25 +171,25 @@ void RegScavenger::forward() {
   }
   assert(MBBI != MBB->end() && "Already at the end of the basic block!");
 
-  MachineInstr *MI = MBBI;
+  MachineInstr &MI = *MBBI;
 
   for (SmallVectorImpl<ScavengedInfo>::iterator I = Scavenged.begin(),
          IE = Scavenged.end(); I != IE; ++I) {
-    if (I->Restore != MI)
+    if (I->Restore != &MI)
       continue;
 
     I->Reg = 0;
     I->Restore = nullptr;
   }
 
-  if (MI->isDebugValue())
+  if (MI.isDebugValue())
     return;
 
   determineKillsAndDefs();
 
   // Verify uses and defs.
 #ifndef NDEBUG
-  for (const MachineOperand &MO : MI->operands()) {
+  for (const MachineOperand &MO : MI.operands()) {
     if (!MO.isReg())
       continue;
     unsigned Reg = MO.getReg();
@@ -337,12 +337,11 @@ unsigned RegScavenger::findSurvivorReg(MachineBasicBlock::iterator StartMI,
   return Survivor;
 }
 
-static unsigned getFrameIndexOperandNum(MachineInstr *MI) {
+static unsigned getFrameIndexOperandNum(MachineInstr &MI) {
   unsigned i = 0;
-  while (!MI->getOperand(i).isFI()) {
+  while (!MI.getOperand(i).isFI()) {
     ++i;
-    assert(i < MI->getNumOperands() &&
-           "Instr doesn't have FrameIndex operand!");
+    assert(i < MI.getNumOperands() && "Instr doesn't have FrameIndex operand!");
   }
   return i;
 }
@@ -435,7 +434,7 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
                              RC, TRI);
     MachineBasicBlock::iterator II = std::prev(I);
 
-    unsigned FIOperandNum = getFrameIndexOperandNum(II);
+    unsigned FIOperandNum = getFrameIndexOperandNum(*II);
     TRI->eliminateFrameIndex(II, SPAdj, FIOperandNum, this);
 
     // Restore the scavenged register before its use (or first terminator).
@@ -443,11 +442,11 @@ unsigned RegScavenger::scavengeRegister(const TargetRegisterClass *RC,
                               RC, TRI);
     II = std::prev(UseMI);
 
-    FIOperandNum = getFrameIndexOperandNum(II);
+    FIOperandNum = getFrameIndexOperandNum(*II);
     TRI->eliminateFrameIndex(II, SPAdj, FIOperandNum, this);
   }
 
-  Scavenged[SI].Restore = std::prev(UseMI);
+  Scavenged[SI].Restore = &*std::prev(UseMI);
 
   // Doing this here leads to infinite regress.
   // Scavenged[SI].Reg = SReg;

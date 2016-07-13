@@ -45,6 +45,7 @@ protected:
   bool HasTransactionalExecution;
   bool HasProcessorAssist;
   bool HasVector;
+  bool HasLoadStoreOnCond2;
 
 private:
   Triple TargetTriple;
@@ -84,6 +85,9 @@ public:
 
   // Return true if the target has the load/store-on-condition facility.
   bool hasLoadStoreOnCond() const { return HasLoadStoreOnCond; }
+
+  // Return true if the target has the load/store-on-condition facility 2.
+  bool hasLoadStoreOnCond2() const { return HasLoadStoreOnCond2; }
 
   // Return true if the target has the high-word facility.
   bool hasHighWord() const { return HasHighWord; }

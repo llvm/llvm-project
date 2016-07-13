@@ -387,6 +387,23 @@ depends on special features of sub-architectures, you must add the specific
 triple, test with the specific FileCheck and put it into the specific
 directory that will filter out all other architectures.
 
+REQUIRES and REQUIRES-ANY directive
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Some tests can be enabled only in specific situation - like having
+debug build. Use ``REQUIRES`` directive to specify those requirements.
+
+.. code-block:: llvm
+
+    ; This test will be only enabled in the build with asserts
+    ; REQUIRES: asserts
+
+You can separate requirements by a comma.
+``REQUIRES`` means all listed requirements must be satisfied.
+``REQUIRES-ANY`` means at least one must be satisfied.
+
+List of features that can be used in ``REQUIRES`` and ``REQUIRES-ANY`` can be
+found in lit.cfg files.
 
 Substitutions
 -------------

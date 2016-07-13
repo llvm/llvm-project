@@ -12407,8 +12407,7 @@ Sema::BuildCallToMemberFunction(Scope *S, Expr *MemExprE,
   if (CXXDestructorDecl *DD =
           dyn_cast<CXXDestructorDecl>(TheCall->getMethodDecl())) {
     // a->A::f() doesn't go through the vtable, except in AppleKext mode.
-    bool CallCanBeVirtual = !cast<MemberExpr>(NakedMemExpr)->hasQualifier() ||
-                            getLangOpts().AppleKext;
+    bool CallCanBeVirtual = !MemExpr->hasQualifier() || getLangOpts().AppleKext;
     CheckVirtualDtorCall(DD, MemExpr->getLocStart(), /*IsDelete=*/false,
                          CallCanBeVirtual, /*WarnOnNonAbstractTypes=*/true,
                          MemExpr->getMemberLoc());

@@ -26,6 +26,10 @@ def err_drv_cuda_bad_gpu_arch : Error<"Unsupported CUDA gpu architecture: %0">;
 def err_drv_no_cuda_installation : Error<
   "cannot find CUDA installation.  Provide its path via --cuda-path, or pass "
   "-nocudainc to build without CUDA includes.">;
+def err_drv_cuda_version_too_low : Error<
+  "GPU arch %1 requires CUDA version at least %3, but installation at %0 is %2. "
+  "Use --cuda-path to specify a different CUDA install, or pass "
+  "--no-cuda-version-check.">;
 def err_drv_invalid_thread_model_for_target : Error<
   "invalid thread model '%0' in '%1' for this target">;
 def err_drv_invalid_linker_name : Error<

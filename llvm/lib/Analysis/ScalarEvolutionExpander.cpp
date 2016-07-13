@@ -1288,6 +1288,13 @@ Value *SCEVExpander::expandAddRecExprLiterally(const SCEVAddRecExpr *S) {
   if (!SE.dominates(Step, L->getHeader())) {
     PostLoopScale = Step;
     Step = SE.getConstant(Normalized->getType(), 1);
+    if (!Start->isZero()) {
+        // The normalization below assumes that Start is constant zero, so if
+        // it isn't re-associate Start to PostLoopOffset.
+        assert(!PostLoopOffset && "Start not-null but PostLoopOffset set?");
+        PostLoopOffset = Start;
+        Start = SE.getConstant(Normalized->getType(), 0);
+    }
     Normalized =
       cast<SCEVAddRecExpr>(SE.getAddRecExpr(
                              Start, Step, Normalized->getLoop(),

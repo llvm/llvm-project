@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  BitReader
   Core
   LTO
   MC

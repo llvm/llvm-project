@@ -738,14 +738,15 @@ define i1 @bug27873(i64 %c1, i1 %c2) {
 ; KNL-LABEL: bug27873:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    andl $1, %esi
+; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    movl $160, %ecx
 ; KNL-NEXT:    movq %rdi, %rax
 ; KNL-NEXT:    mulq %rcx
-; KNL-NEXT:    kmovw %esi, %k0
 ; KNL-NEXT:    seto %al
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
+; KNL-NEXT:    # kill
 ; KNL-NEXT:    retq
   %mul = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 %c1, i64 160)
   %mul.overflow = extractvalue { i64, i1 } %mul, 1

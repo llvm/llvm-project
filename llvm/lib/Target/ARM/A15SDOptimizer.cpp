@@ -693,7 +693,7 @@ bool A15SDOptimizer::runOnMachineFunction(MachineFunction &Fn) {
 
     for (MachineBasicBlock::iterator MI = MFI->begin(), ME = MFI->end();
       MI != ME;) {
-      Modified |= runOnInstruction(MI++);
+      Modified |= runOnInstruction(&*MI++);
     }
 
   }

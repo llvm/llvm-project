@@ -148,62 +148,69 @@ DIE *DwarfCompileUnit::getOrCreateGlobalVariableDIE(
   // Add location.
   bool addToAccelTable = false;
   if (auto *Global = dyn_cast_or_null<GlobalVariable>(GV->getVariable())) {
-    addToAccelTable = true;
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
-    const MCSymbol *Sym = Asm->getSymbol(Global);
-    if (Global->isThreadLocal()) {
-      if (Asm->TM.Options.EmulatedTLS) {
-        // TODO: add debug info for emulated thread local mode.
-      } else {
-        // FIXME: Make this work with -gsplit-dwarf.
-        unsigned PointerSize = Asm->getDataLayout().getPointerSize();
-        assert((PointerSize == 4 || PointerSize == 8) &&
-               "Add support for other sizes if necessary");
-        // Based on GCC's support for TLS:
-        if (!DD->useSplitDwarf()) {
-          // 1) Start with a constNu of the appropriate pointer size
-          addUInt(*Loc, dwarf::DW_FORM_data1, PointerSize == 4
-                                                  ? dwarf::DW_OP_const4u
-                                                  : dwarf::DW_OP_const8u);
-          // 2) containing the (relocated) offset of the TLS variable
-          //    within the module's TLS block.
-          addExpr(*Loc, dwarf::DW_FORM_udata,
-                  Asm->getObjFileLowering().getDebugThreadLocalSymbol(Sym));
+    // We cannot describe the location of dllimport'd variables: the computation
+    // of their address requires loads from the IAT.
+    if (!Global->hasDLLImportStorageClass()) {
+      addToAccelTable = true;
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      const MCSymbol *Sym = Asm->getSymbol(Global);
+      if (Global->isThreadLocal()) {
+        if (Asm->TM.Options.EmulatedTLS) {
+          // TODO: add debug info for emulated thread local mode.
         } else {
-          addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_const_index);
-          addUInt(*Loc, dwarf::DW_FORM_udata,
-                  DD->getAddressPool().getIndex(Sym, /* TLS */ true));
+          // FIXME: Make this work with -gsplit-dwarf.
+          unsigned PointerSize = Asm->getDataLayout().getPointerSize();
+          assert((PointerSize == 4 || PointerSize == 8) &&
+                 "Add support for other sizes if necessary");
+          // Based on GCC's support for TLS:
+          if (!DD->useSplitDwarf()) {
+            // 1) Start with a constNu of the appropriate pointer size
+            addUInt(*Loc, dwarf::DW_FORM_data1, PointerSize == 4
+                                                    ? dwarf::DW_OP_const4u
+                                                    : dwarf::DW_OP_const8u);
+            // 2) containing the (relocated) offset of the TLS variable
+            //    within the module's TLS block.
+            addExpr(*Loc, dwarf::DW_FORM_udata,
+                    Asm->getObjFileLowering().getDebugThreadLocalSymbol(Sym));
+          } else {
+            addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_GNU_const_index);
+            addUInt(*Loc, dwarf::DW_FORM_udata,
+                    DD->getAddressPool().getIndex(Sym, /* TLS */ true));
+          }
+          // 3) followed by an OP to make the debugger do a TLS lookup.
+          addUInt(*Loc, dwarf::DW_FORM_data1,
+                  DD->useGNUTLSOpcode() ? dwarf::DW_OP_GNU_push_tls_address
+                                        : dwarf::DW_OP_form_tls_address);
         }
-        // 3) followed by an OP to make the debugger do a TLS lookup.
-        addUInt(*Loc, dwarf::DW_FORM_data1,
-                DD->useGNUTLSOpcode() ? dwarf::DW_OP_GNU_push_tls_address
-                                      : dwarf::DW_OP_form_tls_address);
+      } else {
+        DD->addArangeLabel(SymbolCU(this, Sym));
+        addOpAddress(*Loc, Sym);
       }
-    } else {
-      DD->addArangeLabel(SymbolCU(this, Sym));
-      addOpAddress(*Loc, Sym);
-    }
 
-    addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
-    if (DD->useAllLinkageNames())
-      addLinkageName(*VariableDIE, GV->getLinkageName());
+      addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+      if (DD->useAllLinkageNames())
+        addLinkageName(*VariableDIE, GV->getLinkageName());
+    }
   } else if (const ConstantInt *CI =
                  dyn_cast_or_null<ConstantInt>(GV->getVariable())) {
     addConstantValue(*VariableDIE, CI, GTy);
   } else if (const ConstantExpr *CE = getMergedGlobalExpr(GV->getVariable())) {
-    addToAccelTable = true;
-    // GV is a merged global.
-    DIELoc *Loc = new (DIEValueAllocator) DIELoc;
     auto *Ptr = cast<GlobalValue>(CE->getOperand(0));
-    MCSymbol *Sym = Asm->getSymbol(Ptr);
-    DD->addArangeLabel(SymbolCU(this, Sym));
-    addOpAddress(*Loc, Sym);
-    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
-    SmallVector<Value *, 3> Idx(CE->op_begin() + 1, CE->op_end());
-    addUInt(*Loc, dwarf::DW_FORM_udata,
-            Asm->getDataLayout().getIndexedOffsetInType(Ptr->getValueType(), Idx));
-    addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
-    addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+    if (!Ptr->hasDLLImportStorageClass()) {
+      addToAccelTable = true;
+      // GV is a merged global.
+      DIELoc *Loc = new (DIEValueAllocator) DIELoc;
+      MCSymbol *Sym = Asm->getSymbol(Ptr);
+      DD->addArangeLabel(SymbolCU(this, Sym));
+      addOpAddress(*Loc, Sym);
+      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_constu);
+      SmallVector<Value *, 3> Idx(CE->op_begin() + 1, CE->op_end());
+      addUInt(*Loc, dwarf::DW_FORM_udata,
+              Asm->getDataLayout().getIndexedOffsetInType(Ptr->getValueType(),
+                                                          Idx));
+      addUInt(*Loc, dwarf::DW_FORM_data1, dwarf::DW_OP_plus);
+      addBlock(*VariableDIE, dwarf::DW_AT_location, Loc);
+    }
   }
 
   if (addToAccelTable) {

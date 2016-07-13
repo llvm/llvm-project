@@ -153,7 +153,8 @@ public:
                                        const CXXRecordDecl *DstRD,
                                        raw_ostream &Out) override;
   void mangleCXXThrowInfo(QualType T, bool IsConst, bool IsVolatile,
-                          uint32_t NumEntries, raw_ostream &Out) override;
+                          bool IsUnaligned, uint32_t NumEntries,
+                          raw_ostream &Out) override;
   void mangleCXXCatchableTypeArray(QualType T, uint32_t NumEntries,
                                    raw_ostream &Out) override;
   void mangleCXXCatchableType(QualType T, const CXXConstructorDecl *CD,
@@ -2654,9 +2655,9 @@ void MicrosoftMangleContextImpl::mangleCXXVirtualDisplacementMap(
   Mangler.mangleName(DstRD);
 }
 
-void MicrosoftMangleContextImpl::mangleCXXThrowInfo(QualType T,
-                                                    bool IsConst,
+void MicrosoftMangleContextImpl::mangleCXXThrowInfo(QualType T, bool IsConst,
                                                     bool IsVolatile,
+                                                    bool IsUnaligned,
                                                     uint32_t NumEntries,
                                                     raw_ostream &Out) {
   msvc_hashing_ostream MHO(Out);
@@ -2666,6 +2667,8 @@ void MicrosoftMangleContextImpl::mangleCXXThrowInfo(QualType T,
     Mangler.getStream() << 'C';
   if (IsVolatile)
     Mangler.getStream() << 'V';
+  if (IsUnaligned)
+    Mangler.getStream() << 'U';
   Mangler.getStream() << NumEntries;
   Mangler.mangleType(T, SourceRange(), MicrosoftCXXNameMangler::QMM_Result);
 }

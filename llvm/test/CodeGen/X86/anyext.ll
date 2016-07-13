@@ -8,6 +8,7 @@ define i32 @foo(i32 %p, i8 zeroext %x) nounwind {
 ; X32-LABEL: foo:
 ; X32:       # BB#0:
 ; X32-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; X32-NEXT:    divb {{[0-9]+}}(%esp)
 ; X32-NEXT:    movzbl %al, %eax
 ; X32-NEXT:    andl $1, %eax
@@ -16,6 +17,7 @@ define i32 @foo(i32 %p, i8 zeroext %x) nounwind {
 ; X64-LABEL: foo:
 ; X64:       # BB#0:
 ; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    # kill: %EAX<def> %EAX<kill> %AX<def>
 ; X64-NEXT:    divb %sil
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    andl $1, %eax
@@ -33,6 +35,7 @@ define i32 @bar(i32 %p, i16 zeroext %x) nounwind {
 ; X32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    xorl %edx, %edx
 ; X32-NEXT:    divw {{[0-9]+}}(%esp)
+; X32-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
 ; X32-NEXT:    andl $1, %eax
 ; X32-NEXT:    retl
 ;
@@ -41,6 +44,7 @@ define i32 @bar(i32 %p, i16 zeroext %x) nounwind {
 ; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    divw %si
+; X64-NEXT:    # kill: %AX<def> %AX<kill> %EAX<def>
 ; X64-NEXT:    andl $1, %eax
 ; X64-NEXT:    retq
   %q = trunc i32 %p to i16

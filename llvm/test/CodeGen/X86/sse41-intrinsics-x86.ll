@@ -323,16 +323,16 @@ declare i32 @llvm.x86.sse41.ptestc(<2 x i64>, <2 x i64>) nounwind readnone
 define i32 @test_x86_sse41_ptestnzc(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE41-LABEL: test_x86_sse41_ptestnzc:
 ; SSE41:       ## BB#0:
+; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    seta %al
-; SSE41-NEXT:    movzbl %al, %eax
 ; SSE41-NEXT:    retl
 ;
 ; KNL-LABEL: test_x86_sse41_ptestnzc:
 ; KNL:       ## BB#0:
+; KNL-NEXT:    xorl %eax, %eax
 ; KNL-NEXT:    vptest %xmm1, %xmm0
 ; KNL-NEXT:    seta %al
-; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    retl
   %res = call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %a0, <2 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -343,16 +343,16 @@ declare i32 @llvm.x86.sse41.ptestnzc(<2 x i64>, <2 x i64>) nounwind readnone
 define i32 @test_x86_sse41_ptestz(<2 x i64> %a0, <2 x i64> %a1) {
 ; SSE41-LABEL: test_x86_sse41_ptestz:
 ; SSE41:       ## BB#0:
+; SSE41-NEXT:    xorl %eax, %eax
 ; SSE41-NEXT:    ptest %xmm1, %xmm0
 ; SSE41-NEXT:    sete %al
-; SSE41-NEXT:    movzbl %al, %eax
 ; SSE41-NEXT:    retl
 ;
 ; KNL-LABEL: test_x86_sse41_ptestz:
 ; KNL:       ## BB#0:
+; KNL-NEXT:    xorl %eax, %eax
 ; KNL-NEXT:    vptest %xmm1, %xmm0
 ; KNL-NEXT:    sete %al
-; KNL-NEXT:    movzbl %al, %eax
 ; KNL-NEXT:    retl
   %res = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %a0, <2 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res

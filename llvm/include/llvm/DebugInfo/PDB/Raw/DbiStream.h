@@ -29,11 +29,36 @@ struct coff_section;
 }
 
 namespace pdb {
+class DbiStreamBuilder;
 class PDBFile;
 class ISectionContribVisitor;
 
 class DbiStream {
-  struct HeaderInfo;
+  friend class DbiStreamBuilder;
+
+  struct HeaderInfo {
+    support::little32_t VersionSignature;
+    support::ulittle32_t VersionHeader;
+    support::ulittle32_t Age;                     // Should match InfoStream.
+    support::ulittle16_t GlobalSymbolStreamIndex; // Global symbol stream #
+    support::ulittle16_t BuildNumber;             // See DbiBuildNo structure.
+    support::ulittle16_t PublicSymbolStreamIndex; // Public symbols stream #
+    support::ulittle16_t PdbDllVersion;           // version of mspdbNNN.dll
+    support::ulittle16_t SymRecordStreamIndex;    // Symbol records stream #
+    support::ulittle16_t PdbDllRbld;              // rbld number of mspdbNNN.dll
+    support::little32_t ModiSubstreamSize;        // Size of module info stream
+    support::little32_t SecContrSubstreamSize;    // Size of sec. contrib stream
+    support::little32_t SectionMapSize;           // Size of sec. map substream
+    support::little32_t FileInfoSize;             // Size of file info substream
+    support::little32_t TypeServerSize;           // Size of type server map
+    support::ulittle32_t MFCTypeServerIndex;      // Index of MFC Type Server
+    support::little32_t OptionalDbgHdrSize;       // Size of DbgHeader info
+    support::little32_t ECSubstreamSize; // Size of EC stream (what is EC?)
+    support::ulittle16_t Flags;          // See DbiFlags enum.
+    support::ulittle16_t MachineType;    // See PDB_MachineType enum.
+
+    support::ulittle32_t Reserved; // Pad to 64 bytes
+  };
 
 public:
   DbiStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream);
@@ -45,13 +70,16 @@ public:
   uint16_t getPublicSymbolStreamIndex() const;
   uint16_t getGlobalSymbolStreamIndex() const;
 
+  uint16_t getFlags() const;
   bool isIncrementallyLinked() const;
   bool hasCTypes() const;
   bool isStripped() const;
 
+  uint16_t getBuildNumber() const;
   uint16_t getBuildMajorVersion() const;
   uint16_t getBuildMinorVersion() const;
 
+  uint16_t getPdbDllRbld() const;
   uint32_t getPdbDllVersion() const;
 
   uint32_t getSymRecordStreamIndex() const;
@@ -74,6 +102,8 @@ public:
 
   codeview::FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
+
+  Error commit();
 
 private:
   Error initializeSectionContributionData();

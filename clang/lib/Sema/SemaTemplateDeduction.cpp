@@ -4596,11 +4596,9 @@ Sema::getMoreSpecializedPartialSpecialization(
   TemplateName Name(PS1->getSpecializedTemplate());
   TemplateName CanonTemplate = Context.getCanonicalTemplateName(Name);
   QualType PT1 = Context.getTemplateSpecializationType(
-      CanonTemplate, PS1->getTemplateArgs().data(),
-      PS1->getTemplateArgs().size());
+      CanonTemplate, PS1->getTemplateArgs().asArray());
   QualType PT2 = Context.getTemplateSpecializationType(
-      CanonTemplate, PS2->getTemplateArgs().data(),
-      PS2->getTemplateArgs().size());
+      CanonTemplate, PS2->getTemplateArgs().asArray());
 
   // Determine whether PS1 is at least as specialized as PS2
   Deduced.resize(PS2->getTemplateParameters()->size());

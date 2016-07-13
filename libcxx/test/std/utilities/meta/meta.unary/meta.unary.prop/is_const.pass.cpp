@@ -29,6 +29,8 @@ void test_is_const()
 #endif
 }
 
+struct A; // incomplete
+
 int main()
 {
     test_is_const<void>();
@@ -38,6 +40,8 @@ int main()
     test_is_const<const int*>();
     test_is_const<char[3]>();
     test_is_const<char[]>();
+
+    test_is_const<A>();
 
     static_assert(!std::is_const<int&>::value, "");
     static_assert(!std::is_const<const int&>::value, "");

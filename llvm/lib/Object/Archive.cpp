@@ -69,14 +69,20 @@ sys::TimeValue ArchiveMemberHeader::getLastModified() const {
 
 unsigned ArchiveMemberHeader::getUID() const {
   unsigned Ret;
-  if (StringRef(UID, sizeof(UID)).rtrim(' ').getAsInteger(10, Ret))
+  StringRef User = StringRef(UID, sizeof(UID)).rtrim(' ');
+  if (User.empty())
+    return 0;
+  if (User.getAsInteger(10, Ret))
     llvm_unreachable("UID time not a decimal number.");
   return Ret;
 }
 
 unsigned ArchiveMemberHeader::getGID() const {
   unsigned Ret;
-  if (StringRef(GID, sizeof(GID)).rtrim(' ').getAsInteger(10, Ret))
+  StringRef Group = StringRef(GID, sizeof(GID)).rtrim(' ');
+  if (Group.empty())
+    return 0;
+  if (Group.getAsInteger(10, Ret))
     llvm_unreachable("GID time not a decimal number.");
   return Ret;
 }

@@ -2189,8 +2189,7 @@ QualType Sema::CheckTemplateIdType(TemplateName Name,
     //   template<typename T, typename U = T> struct A;
     TemplateName CanonName = Context.getCanonicalTemplateName(Name);
     CanonType = Context.getTemplateSpecializationType(CanonName,
-                                                      Converted.data(),
-                                                      Converted.size());
+                                                      Converted);
 
     // FIXME: CanonType is not actually the canonical type, and unfortunately
     // it is a TemplateSpecializationType that we will never use again.
@@ -2576,7 +2575,7 @@ DeclResult Sema::ActOnVarTemplateSpecialization(
     bool InstantiationDependent;
     if (!Name.isDependent() &&
         !TemplateSpecializationType::anyDependentTemplateArguments(
-            TemplateArgs.getArgumentArray(), TemplateArgs.size(),
+            TemplateArgs.arguments(),
             InstantiationDependent)) {
       Diag(TemplateNameLoc, diag::err_partial_spec_fully_specialized)
           << VarTemplate->getDeclName();
@@ -5378,7 +5377,8 @@ bool Sema::CheckTemplateArgument(TemplateTemplateParmDecl *Param,
   // partial specializations.
   if (!isa<ClassTemplateDecl>(Template) &&
       !isa<TemplateTemplateParmDecl>(Template) &&
-      !isa<TypeAliasTemplateDecl>(Template)) {
+      !isa<TypeAliasTemplateDecl>(Template) &&
+      !isa<BuiltinTemplateDecl>(Template)) {
     assert(isa<FunctionTemplateDecl>(Template) &&
            "Only function templates are possible here");
     Diag(Arg.getLocation(), diag::err_template_arg_not_valid_template);
@@ -6319,9 +6319,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
     bool InstantiationDependent;
     if (!Name.isDependent() &&
         !TemplateSpecializationType::anyDependentTemplateArguments(
-                                             TemplateArgs.getArgumentArray(),
-                                                         TemplateArgs.size(),
-                                                     InstantiationDependent)) {
+            TemplateArgs.arguments(), InstantiationDependent)) {
       Diag(TemplateNameLoc, diag::err_partial_spec_fully_specialized)
         << ClassTemplate->getDeclName();
       isPartialSpecialization = false;
@@ -6354,8 +6352,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
     // arguments of the class template partial specialization.
     TemplateName CanonTemplate = Context.getCanonicalTemplateName(Name);
     CanonType = Context.getTemplateSpecializationType(CanonTemplate,
-                                                      Converted.data(),
-                                                      Converted.size());
+                                                      Converted);
 
     if (Context.hasSameType(CanonType,
                         ClassTemplate->getInjectedClassNameSpecialization())) {
@@ -6459,7 +6456,7 @@ Sema::ActOnClassTemplateSpecialization(Scope *S, unsigned TagSpec,
              "Only possible with -fms-extensions!");
       TemplateName CanonTemplate = Context.getCanonicalTemplateName(Name);
       CanonType = Context.getTemplateSpecializationType(
-          CanonTemplate, Converted.data(), Converted.size());
+          CanonTemplate, Converted);
     } else {
       CanonType = Context.getTypeDeclType(Specialization);
     }

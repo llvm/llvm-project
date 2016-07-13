@@ -21,6 +21,7 @@
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSectionELF.h"
 #include "llvm/MC/MCSectionMachO.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MachO.h"
@@ -46,6 +47,7 @@ static unsigned getFixupKindLog2Size(unsigned Kind) {
   case X86::reloc_riprel_4byte_relax_rex:
   case X86::reloc_riprel_4byte_movq_load:
   case X86::reloc_signed_4byte:
+  case X86::reloc_signed_4byte_relax:
   case X86::reloc_global_offset_table:
   case FK_SecRel_4:
   case FK_Data_4:
@@ -93,6 +95,7 @@ public:
         {"reloc_riprel_4byte_relax", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
         {"reloc_riprel_4byte_relax_rex", 0, 32, MCFixupKindInfo::FKF_IsPCRel},
         {"reloc_signed_4byte", 0, 32, 0},
+        {"reloc_signed_4byte_relax", 0, 32, 0},
         {"reloc_global_offset_table", 0, 32, 0},
         {"reloc_global_offset_table8", 0, 64, 0},
     };
@@ -129,38 +132,57 @@ public:
                             const MCRelaxableFragment *DF,
                             const MCAsmLayout &Layout) const override;
 
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override;
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override;
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
 } // end anonymous namespace
 
-static unsigned getRelaxedOpcodeBranch(unsigned Op) {
+static unsigned getRelaxedOpcodeBranch(const MCInst &Inst, bool is16BitMode) {
+  unsigned Op = Inst.getOpcode();
   switch (Op) {
   default:
     return Op;
-
-  case X86::JAE_1: return X86::JAE_4;
-  case X86::JA_1:  return X86::JA_4;
-  case X86::JBE_1: return X86::JBE_4;
-  case X86::JB_1:  return X86::JB_4;
-  case X86::JE_1:  return X86::JE_4;
-  case X86::JGE_1: return X86::JGE_4;
-  case X86::JG_1:  return X86::JG_4;
-  case X86::JLE_1: return X86::JLE_4;
-  case X86::JL_1:  return X86::JL_4;
-  case X86::JMP_1: return X86::JMP_4;
-  case X86::JNE_1: return X86::JNE_4;
-  case X86::JNO_1: return X86::JNO_4;
-  case X86::JNP_1: return X86::JNP_4;
-  case X86::JNS_1: return X86::JNS_4;
-  case X86::JO_1:  return X86::JO_4;
-  case X86::JP_1:  return X86::JP_4;
-  case X86::JS_1:  return X86::JS_4;
+  case X86::JAE_1:
+    return (is16BitMode) ? X86::JAE_2 : X86::JAE_4;
+  case X86::JA_1:
+    return (is16BitMode) ? X86::JA_2 : X86::JA_4;
+  case X86::JBE_1:
+    return (is16BitMode) ? X86::JBE_2 : X86::JBE_4;
+  case X86::JB_1:
+    return (is16BitMode) ? X86::JB_2 : X86::JB_4;
+  case X86::JE_1:
+    return (is16BitMode) ? X86::JE_2 : X86::JE_4;
+  case X86::JGE_1:
+    return (is16BitMode) ? X86::JGE_2 : X86::JGE_4;
+  case X86::JG_1:
+    return (is16BitMode) ? X86::JG_2 : X86::JG_4;
+  case X86::JLE_1:
+    return (is16BitMode) ? X86::JLE_2 : X86::JLE_4;
+  case X86::JL_1:
+    return (is16BitMode) ? X86::JL_2 : X86::JL_4;
+  case X86::JMP_1:
+    return (is16BitMode) ? X86::JMP_2 : X86::JMP_4;
+  case X86::JNE_1:
+    return (is16BitMode) ? X86::JNE_2 : X86::JNE_4;
+  case X86::JNO_1:
+    return (is16BitMode) ? X86::JNO_2 : X86::JNO_4;
+  case X86::JNP_1:
+    return (is16BitMode) ? X86::JNP_2 : X86::JNP_4;
+  case X86::JNS_1:
+    return (is16BitMode) ? X86::JNS_2 : X86::JNS_4;
+  case X86::JO_1:
+    return (is16BitMode) ? X86::JO_2 : X86::JO_4;
+  case X86::JP_1:
+    return (is16BitMode) ? X86::JP_2 : X86::JP_4;
+  case X86::JS_1:
+    return (is16BitMode) ? X86::JS_2 : X86::JS_4;
   }
 }
 
-static unsigned getRelaxedOpcodeArith(unsigned Op) {
+static unsigned getRelaxedOpcodeArith(const MCInst &Inst) {
+  unsigned Op = Inst.getOpcode();
   switch (Op) {
   default:
     return Op;
@@ -244,20 +266,20 @@ static unsigned getRelaxedOpcodeArith(unsigned Op) {
   }
 }
 
-static unsigned getRelaxedOpcode(unsigned Op) {
-  unsigned R = getRelaxedOpcodeArith(Op);
-  if (R != Op)
+static unsigned getRelaxedOpcode(const MCInst &Inst, bool is16BitMode) {
+  unsigned R = getRelaxedOpcodeArith(Inst);
+  if (R != Inst.getOpcode())
     return R;
-  return getRelaxedOpcodeBranch(Op);
+  return getRelaxedOpcodeBranch(Inst, is16BitMode);
 }
 
 bool X86AsmBackend::mayNeedRelaxation(const MCInst &Inst) const {
-  // Branches can always be relaxed.
-  if (getRelaxedOpcodeBranch(Inst.getOpcode()) != Inst.getOpcode())
+  // Branches can always be relaxed in either mode.
+  if (getRelaxedOpcodeBranch(Inst, false) != Inst.getOpcode())
     return true;
 
   // Check if this instruction is ever relaxable.
-  if (getRelaxedOpcodeArith(Inst.getOpcode()) == Inst.getOpcode())
+  if (getRelaxedOpcodeArith(Inst) == Inst.getOpcode())
     return false;
 
 
@@ -280,9 +302,12 @@ bool X86AsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
 
 // FIXME: Can tblgen help at all here to verify there aren't other instructions
 // we can relax?
-void X86AsmBackend::relaxInstruction(const MCInst &Inst, MCInst &Res) const {
+void X86AsmBackend::relaxInstruction(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI,
+                                     MCInst &Res) const {
   // The only relaxations X86 does is from a 1byte pcrel to a 4byte pcrel.
-  unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
+  bool is16BitMode = STI.getFeatureBits()[X86::Mode16Bit];
+  unsigned RelaxedOp = getRelaxedOpcode(Inst, is16BitMode);
 
   if (RelaxedOp == Inst.getOpcode()) {
     SmallString<256> Tmp;

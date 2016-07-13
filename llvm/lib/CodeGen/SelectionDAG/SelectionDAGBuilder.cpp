@@ -2731,7 +2731,7 @@ void SelectionDAGBuilder::visitFCmp(const User &I) {
 
 // Check if the condition of the select has one use or two users that are both
 // selects with the same condition.
-bool hasOnlySelectUsers(const Value *Cond) {
+static bool hasOnlySelectUsers(const Value *Cond) {
   return std::all_of(Cond->user_begin(), Cond->user_end(), [](const Value *V) {
     return isa<SelectInst>(V);
   });
@@ -8152,7 +8152,8 @@ SelectionDAGBuilder::HandlePHINodesInSuccessorBlocks(const BasicBlock *LLVMBB) {
         EVT VT = ValueVTs[vti];
         unsigned NumRegisters = TLI.getNumRegisters(*DAG.getContext(), VT);
         for (unsigned i = 0, e = NumRegisters; i != e; ++i)
-          FuncInfo.PHINodesToUpdate.push_back(std::make_pair(MBBI++, Reg+i));
+          FuncInfo.PHINodesToUpdate.push_back(
+              std::make_pair(&*MBBI++, Reg + i));
         Reg += NumRegisters;
       }
     }

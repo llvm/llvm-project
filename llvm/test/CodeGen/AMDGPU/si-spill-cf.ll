@@ -6,7 +6,7 @@
 
 ; SI: s_or_b64 exec, exec, [[SAVED:s\[[0-9]+:[0-9]+\]|[a-z]+]]
 ; SI-NOT: v_readlane_b32 [[SAVED]]
-define amdgpu_ps void @main() {
+define amdgpu_ps void @main() #0 {
 main_body:
   %0 = call float @llvm.SI.load.const(<16 x i8> undef, i32 16)
   %1 = call float @llvm.SI.load.const(<16 x i8> undef, i32 32)
@@ -80,7 +80,7 @@ main_body:
 LOOP:                                             ; preds = %ENDIF2795, %main_body
   %temp894.0 = phi float [ 0.000000e+00, %main_body ], [ %temp894.1, %ENDIF2795 ]
   %temp18.0 = phi float [ undef, %main_body ], [ %temp18.1, %ENDIF2795 ]
-  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0) #2
+  %tid = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %67 = icmp sgt i32 %tid, 4
   br i1 %67, label %ENDLOOP, label %ENDIF
 
@@ -490,25 +490,24 @@ ELSE2824:                                         ; preds = %ELSE2821
   br label %ENDIF2795
 }
 
-declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #2
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.SI.load.const(<16 x i8>, i32) #2
+declare float @llvm.SI.load.const(<16 x i8>, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.floor.f32(float) #2
+declare float @llvm.floor.f32(float) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.sqrt.f32(float) #2
+declare float @llvm.sqrt.f32(float) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.minnum.f32(float, float) #2
+declare float @llvm.minnum.f32(float, float) #1
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.maxnum.f32(float, float) #2
+declare float @llvm.maxnum.f32(float, float) #1
 
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { alwaysinline nounwind readnone }
-attributes #1 = { "enable-no-nans-fp-math"="true" }
-attributes #2 = { nounwind readnone }
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

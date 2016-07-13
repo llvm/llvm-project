@@ -311,6 +311,7 @@ define <8 x i16> @var_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; AVX2-NEXT:    vpsravd %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -323,7 +324,10 @@ define <8 x i16> @var_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ;
 ; AVX512-LABEL: var_shift_v8i16:
 ; AVX512:       ## BB#0:
+; AVX512-NEXT:    ## kill: %XMM1<def> %XMM1<kill> %ZMM1<def>
+; AVX512-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE-LABEL: var_shift_v8i16:
@@ -1218,6 +1222,7 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ; AVX2-NEXT:    vpsravd {{.*}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;
@@ -1230,8 +1235,10 @@ define <8 x i16> @constant_shift_v8i16(<8 x i16> %a) nounwind {
 ;
 ; AVX512-LABEL: constant_shift_v8i16:
 ; AVX512:       ## BB#0:
+; AVX512-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<def>
 ; AVX512-NEXT:    vmovdqa {{.*#+}} xmm1 = [0,1,2,3,4,5,6,7]
 ; AVX512-NEXT:    vpsravw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE-LABEL: constant_shift_v8i16:

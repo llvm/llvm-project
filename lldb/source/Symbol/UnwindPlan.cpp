@@ -385,16 +385,27 @@ UnwindPlan::IsValidRowIndex (uint32_t idx) const
 const UnwindPlan::RowSP
 UnwindPlan::GetRowAtIndex (uint32_t idx) const
 {
-    // You must call IsValidRowIndex(idx) first before calling this!!!
-    assert (idx < m_row_list.size());
-    return m_row_list[idx];
+    if (idx < m_row_list.size())
+        return m_row_list[idx];
+    else
+    {
+        Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_UNWIND));
+        if (log)
+            log->Printf ("error: UnwindPlan::GetRowAtIndex(idx = %u) invalid index (number rows is %u)", idx, (uint32_t)m_row_list.size());
+        return UnwindPlan::RowSP();
+    }
 }
 
 const UnwindPlan::RowSP
 UnwindPlan::GetLastRow () const
 {
-    // You must call GetRowCount() first to make sure there is at least one row
-    assert (!m_row_list.empty());
+    if (m_row_list.empty())
+    {
+        Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_UNWIND));
+        if (log)
+            log->Printf ("UnwindPlan::GetLastRow() when rows are empty");
+        return UnwindPlan::RowSP();
+    }
     return m_row_list.back();
 }
 

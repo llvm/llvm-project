@@ -10,9 +10,9 @@ entry:
 ; SOURCE-SCHED: subl
 ; SOURCE-SCHED: movl
 ; SOURCE-SCHED: sarl
+; SOURCE-SCHED: xorl
 ; SOURCE-SCHED: cmpl
 ; SOURCE-SCHED: setg
-; SOURCE-SCHED: movzbl
 ; SOURCE-SCHED: movb
 ; SOURCE-SCHED: xorl
 ; SOURCE-SCHED: subl

@@ -32,13 +32,6 @@ const MCPhysReg *AMDGPURegisterInfo::getCalleeSavedRegs(
   return &CalleeSavedReg;
 }
 
-void AMDGPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
-                                             int SPAdj,
-                                             unsigned FIOperandNum,
-                                             RegScavenger *RS) const {
-  llvm_unreachable("Subroutines not supported yet");
-}
-
 unsigned AMDGPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return AMDGPU::NoRegister;
 }
@@ -53,10 +46,6 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) const {
 
   assert(Channel < array_lengthof(SubRegs));
   return SubRegs[Channel];
-}
-
-unsigned AMDGPURegisterInfo::getIndirectSubReg(unsigned IndirectIndex) const {
-  return getSubRegFromChannel(IndirectIndex);
 }
 
 #define GET_REGINFO_TARGET_DESC

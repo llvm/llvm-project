@@ -364,6 +364,7 @@ int main(int argc, char **argv) {
   initializePreISelIntrinsicLoweringLegacyPassPass(Registry);
   initializeGlobalMergePass(Registry);
   initializeInterleavedAccessPass(Registry);
+  initializeUnreachableBlockElimLegacyPassPass(Registry);
 
 #ifdef LINK_POLLY_INTO_TOOLS
   polly::initializePollyPasses(Registry);

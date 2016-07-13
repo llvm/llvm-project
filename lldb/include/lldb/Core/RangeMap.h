@@ -1352,7 +1352,7 @@ namespace lldb_private {
                 typename Collection::const_iterator end = m_entries.end();
                 typename Collection::const_iterator pos =
                     std::lower_bound(m_entries.begin(), end, addr, [](const Entry &lhs, B rhs_base) -> bool {
-                        return lhs.GetRangeBase() < rhs_base;
+                        return lhs.GetRangeEnd() <= rhs_base;
                     });
 
                 if (pos != end)

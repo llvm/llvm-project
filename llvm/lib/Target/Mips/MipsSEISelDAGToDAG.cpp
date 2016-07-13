@@ -403,6 +403,18 @@ bool MipsSEDAGToDAGISel::selectAddrRegImm10(SDValue Addr, SDValue &Base,
   return false;
 }
 
+/// Used on microMIPS LWC2, LDC2, SWC2 and SDC2 instructions (11-bit offset)
+bool MipsSEDAGToDAGISel::selectAddrRegImm11(SDValue Addr, SDValue &Base,
+                                            SDValue &Offset) const {
+  if (selectAddrFrameIndex(Addr, Base, Offset))
+    return true;
+
+  if (selectAddrFrameIndexOffset(Addr, Base, Offset, 11))
+    return true;
+
+  return false;
+}
+
 /// Used on microMIPS Load/Store unaligned instructions (12-bit offset)
 bool MipsSEDAGToDAGISel::selectAddrRegImm12(SDValue Addr, SDValue &Base,
                                             SDValue &Offset) const {
@@ -426,9 +438,21 @@ bool MipsSEDAGToDAGISel::selectAddrRegImm16(SDValue Addr, SDValue &Base,
   return false;
 }
 
-bool MipsSEDAGToDAGISel::selectIntAddrMM(SDValue Addr, SDValue &Base,
+bool MipsSEDAGToDAGISel::selectIntAddr11MM(SDValue Addr, SDValue &Base,
+                                         SDValue &Offset) const {
+  return selectAddrRegImm11(Addr, Base, Offset) ||
+    selectAddrDefault(Addr, Base, Offset);
+}
+
+bool MipsSEDAGToDAGISel::selectIntAddr12MM(SDValue Addr, SDValue &Base,
                                          SDValue &Offset) const {
   return selectAddrRegImm12(Addr, Base, Offset) ||
+    selectAddrDefault(Addr, Base, Offset);
+}
+
+bool MipsSEDAGToDAGISel::selectIntAddr16MM(SDValue Addr, SDValue &Base,
+                                         SDValue &Offset) const {
+  return selectAddrRegImm16(Addr, Base, Offset) ||
     selectAddrDefault(Addr, Base, Offset);
 }
 

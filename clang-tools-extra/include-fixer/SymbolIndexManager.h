@@ -11,6 +11,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_INCLUDE_FIXER_SYMBOLINDEXMANAGER_H
 
 #include "SymbolIndex.h"
+#include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
@@ -29,11 +30,10 @@ public:
   ///                   fully qualified.
   /// \returns A list of inclusion candidates, in a format ready for being
   ///          pasted after an #include token.
-  // FIXME: Expose the type name so we can also insert using declarations (or
-  // fix the usage)
   // FIXME: Move mapping from SymbolInfo to headers out of
   // SymbolIndexManager::search and return SymbolInfos instead of header paths.
-  std::vector<std::string> search(llvm::StringRef Identifier) const;
+  std::vector<find_all_symbols::SymbolInfo>
+  search(llvm::StringRef Identifier) const;
 
 private:
   std::vector<std::unique_ptr<SymbolIndex>> SymbolIndices;

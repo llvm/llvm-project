@@ -489,8 +489,8 @@ public:
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
           ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
-    for (unsigned Arg = 0; Arg != TemplateArgs.size(); ++Arg)
-      TemplateArgs[Arg].Profile(ID, Context);
+    for (const TemplateArgument &TemplateArg : TemplateArgs)
+      TemplateArg.Profile(ID, Context);
   }
 };
 
@@ -1179,9 +1179,8 @@ class NonTypeTemplateParmDecl final
                           SourceLocation IdLoc, unsigned D, unsigned P,
                           IdentifierInfo *Id, QualType T,
                           TypeSourceInfo *TInfo,
-                          const QualType *ExpandedTypes,
-                          unsigned NumExpandedTypes,
-                          TypeSourceInfo **ExpandedTInfos);
+                          ArrayRef<QualType> ExpandedTypes,
+                          ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
   friend class ASTDeclReader;
   friend TrailingObjects;
@@ -1195,9 +1194,8 @@ public:
   static NonTypeTemplateParmDecl *
   Create(const ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
          SourceLocation IdLoc, unsigned D, unsigned P, IdentifierInfo *Id,
-         QualType T, TypeSourceInfo *TInfo,
-         const QualType *ExpandedTypes, unsigned NumExpandedTypes,
-         TypeSourceInfo **ExpandedTInfos);
+         QualType T, TypeSourceInfo *TInfo, ArrayRef<QualType> ExpandedTypes,
+         ArrayRef<TypeSourceInfo *> ExpandedTInfos);
 
   static NonTypeTemplateParmDecl *CreateDeserialized(ASTContext &C, 
                                                      unsigned ID);
@@ -1360,8 +1358,7 @@ class TemplateTemplateParmDecl final
   TemplateTemplateParmDecl(DeclContext *DC, SourceLocation L,
                            unsigned D, unsigned P,
                            IdentifierInfo *Id, TemplateParameterList *Params,
-                           unsigned NumExpansions,
-                           TemplateParameterList * const *Expansions);
+                           ArrayRef<TemplateParameterList *> Expansions);
 
 public:
   static TemplateTemplateParmDecl *Create(const ASTContext &C, DeclContext *DC,
@@ -1768,8 +1765,8 @@ public:
   Profile(llvm::FoldingSetNodeID &ID, ArrayRef<TemplateArgument> TemplateArgs,
           ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
-    for (unsigned Arg = 0; Arg != TemplateArgs.size(); ++Arg)
-      TemplateArgs[Arg].Profile(ID, Context);
+    for (const TemplateArgument &TemplateArg : TemplateArgs)
+      TemplateArg.Profile(ID, Context);
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }
@@ -2162,18 +2159,11 @@ private:
   // Location of the 'friend' specifier.
   SourceLocation FriendLoc;
 
-
   FriendTemplateDecl(DeclContext *DC, SourceLocation Loc,
-                     unsigned NParams,
-                     TemplateParameterList **Params,
-                     FriendUnion Friend,
-                     SourceLocation FriendLoc)
-    : Decl(Decl::FriendTemplate, DC, Loc),
-      NumParams(NParams),
-      Params(Params),
-      Friend(Friend),
-      FriendLoc(FriendLoc)
-  {}
+                     MutableArrayRef<TemplateParameterList *> Params,
+                     FriendUnion Friend, SourceLocation FriendLoc)
+      : Decl(Decl::FriendTemplate, DC, Loc), NumParams(Params.size()),
+        Params(Params.data()), Friend(Friend), FriendLoc(FriendLoc) {}
 
   FriendTemplateDecl(EmptyShell Empty)
     : Decl(Decl::FriendTemplate, Empty),
@@ -2182,12 +2172,10 @@ private:
   {}
 
 public:
-  static FriendTemplateDecl *Create(ASTContext &Context,
-                                    DeclContext *DC, SourceLocation Loc,
-                                    unsigned NParams,
-                                    TemplateParameterList **Params,
-                                    FriendUnion Friend,
-                                    SourceLocation FriendLoc);
+  static FriendTemplateDecl *
+  Create(ASTContext &Context, DeclContext *DC, SourceLocation Loc,
+         MutableArrayRef<TemplateParameterList *> Params, FriendUnion Friend,
+         SourceLocation FriendLoc);
 
   static FriendTemplateDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -2612,8 +2600,8 @@ public:
                       ArrayRef<TemplateArgument> TemplateArgs,
                       ASTContext &Context) {
     ID.AddInteger(TemplateArgs.size());
-    for (unsigned Arg = 0; Arg != TemplateArgs.size(); ++Arg)
-      TemplateArgs[Arg].Profile(ID, Context);
+    for (const TemplateArgument &TemplateArg : TemplateArgs)
+      TemplateArg.Profile(ID, Context);
   }
 
   static bool classof(const Decl *D) { return classofKind(D->getKind()); }

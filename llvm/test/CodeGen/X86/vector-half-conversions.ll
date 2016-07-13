@@ -27,6 +27,7 @@ define <4 x float> @cvt_4i16_to_4f32(<4 x i16> %a0) {
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
 ; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    shrq $32, %rcx
 ; ALL-NEXT:    shrq $48, %rdx
@@ -57,6 +58,7 @@ define <4 x float> @cvt_8i16_to_4f32(<8 x i16> %a0) {
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
 ; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    shrq $32, %rcx
 ; ALL-NEXT:    shrq $48, %rdx
@@ -88,6 +90,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) {
 ; AVX1-NEXT:    movq %rdx, %r8
 ; AVX1-NEXT:    movq %rdx, %r10
 ; AVX1-NEXT:    movswl %dx, %r9d
+; AVX1-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<kill>
 ; AVX1-NEXT:    shrl $16, %edx
 ; AVX1-NEXT:    shrq $32, %r8
 ; AVX1-NEXT:    shrq $48, %r10
@@ -95,6 +98,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) {
 ; AVX1-NEXT:    movq %rdi, %rax
 ; AVX1-NEXT:    movq %rdi, %rsi
 ; AVX1-NEXT:    movswl %di, %ecx
+; AVX1-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
 ; AVX1-NEXT:    shrl $16, %edi
 ; AVX1-NEXT:    shrq $32, %rax
 ; AVX1-NEXT:    shrq $48, %rsi
@@ -135,6 +139,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) {
 ; AVX2-NEXT:    movq %rdx, %r8
 ; AVX2-NEXT:    movq %rdx, %r10
 ; AVX2-NEXT:    movswl %dx, %r9d
+; AVX2-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<kill>
 ; AVX2-NEXT:    shrl $16, %edx
 ; AVX2-NEXT:    shrq $32, %r8
 ; AVX2-NEXT:    shrq $48, %r10
@@ -142,6 +147,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) {
 ; AVX2-NEXT:    movq %rdi, %rax
 ; AVX2-NEXT:    movq %rdi, %rsi
 ; AVX2-NEXT:    movswl %di, %ecx
+; AVX2-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
 ; AVX2-NEXT:    shrl $16, %edi
 ; AVX2-NEXT:    shrq $32, %rax
 ; AVX2-NEXT:    shrq $48, %rsi
@@ -182,6 +188,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) {
 ; AVX512-NEXT:    movq %rdx, %r8
 ; AVX512-NEXT:    movq %rdx, %r10
 ; AVX512-NEXT:    movswl %dx, %r9d
+; AVX512-NEXT:    # kill: %EDX<def> %EDX<kill> %RDX<kill>
 ; AVX512-NEXT:    shrl $16, %edx
 ; AVX512-NEXT:    shrq $32, %r8
 ; AVX512-NEXT:    shrq $48, %r10
@@ -189,6 +196,7 @@ define <8 x float> @cvt_8i16_to_8f32(<8 x i16> %a0) {
 ; AVX512-NEXT:    movq %rdi, %rax
 ; AVX512-NEXT:    movq %rdi, %rsi
 ; AVX512-NEXT:    movswl %di, %ecx
+; AVX512-NEXT:    # kill: %EDI<def> %EDI<kill> %RDI<kill>
 ; AVX512-NEXT:    shrl $16, %edi
 ; AVX512-NEXT:    shrq $32, %rax
 ; AVX512-NEXT:    shrq $48, %rsi
@@ -241,6 +249,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX1-NEXT:    movswl %cx, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm9
 ; AVX1-NEXT:    movswl %ax, %ecx
+; AVX1-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX1-NEXT:    shrl $16, %eax
 ; AVX1-NEXT:    cwtl
 ; AVX1-NEXT:    vmovd %eax, %xmm10
@@ -255,6 +264,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX1-NEXT:    movswl %cx, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm13
 ; AVX1-NEXT:    movswl %ax, %ecx
+; AVX1-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX1-NEXT:    shrl $16, %eax
 ; AVX1-NEXT:    cwtl
 ; AVX1-NEXT:    vmovd %eax, %xmm14
@@ -269,6 +279,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX1-NEXT:    movswl %cx, %ecx
 ; AVX1-NEXT:    vmovd %ecx, %xmm3
 ; AVX1-NEXT:    movswl %ax, %ecx
+; AVX1-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX1-NEXT:    shrl $16, %eax
 ; AVX1-NEXT:    cwtl
 ; AVX1-NEXT:    vmovd %eax, %xmm4
@@ -333,6 +344,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX2-NEXT:    movswl %cx, %ecx
 ; AVX2-NEXT:    vmovd %ecx, %xmm9
 ; AVX2-NEXT:    movswl %ax, %ecx
+; AVX2-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX2-NEXT:    shrl $16, %eax
 ; AVX2-NEXT:    cwtl
 ; AVX2-NEXT:    vmovd %eax, %xmm10
@@ -347,6 +359,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX2-NEXT:    movswl %cx, %ecx
 ; AVX2-NEXT:    vmovd %ecx, %xmm13
 ; AVX2-NEXT:    movswl %ax, %ecx
+; AVX2-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX2-NEXT:    shrl $16, %eax
 ; AVX2-NEXT:    cwtl
 ; AVX2-NEXT:    vmovd %eax, %xmm14
@@ -361,6 +374,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX2-NEXT:    movswl %cx, %ecx
 ; AVX2-NEXT:    vmovd %ecx, %xmm3
 ; AVX2-NEXT:    movswl %ax, %ecx
+; AVX2-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX2-NEXT:    shrl $16, %eax
 ; AVX2-NEXT:    cwtl
 ; AVX2-NEXT:    vmovd %eax, %xmm4
@@ -425,6 +439,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX512-NEXT:    movswl %cx, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm9
 ; AVX512-NEXT:    movswl %ax, %ecx
+; AVX512-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX512-NEXT:    shrl $16, %eax
 ; AVX512-NEXT:    cwtl
 ; AVX512-NEXT:    vmovd %eax, %xmm11
@@ -439,6 +454,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX512-NEXT:    movswl %cx, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm14
 ; AVX512-NEXT:    movswl %ax, %ecx
+; AVX512-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX512-NEXT:    shrl $16, %eax
 ; AVX512-NEXT:    cwtl
 ; AVX512-NEXT:    vmovd %eax, %xmm15
@@ -453,6 +469,7 @@ define <16 x float> @cvt_16i16_to_16f32(<16 x i16> %a0) {
 ; AVX512-NEXT:    movswl %cx, %ecx
 ; AVX512-NEXT:    vmovd %ecx, %xmm1
 ; AVX512-NEXT:    movswl %ax, %ecx
+; AVX512-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; AVX512-NEXT:    shrl $16, %eax
 ; AVX512-NEXT:    cwtl
 ; AVX512-NEXT:    vmovd %eax, %xmm4
@@ -558,6 +575,7 @@ define <4 x float> @load_cvt_8i16_to_4f32(<8 x i16>* %a0) {
 ; ALL-NEXT:    movq %rax, %rcx
 ; ALL-NEXT:    movq %rax, %rdx
 ; ALL-NEXT:    movswl %ax, %esi
+; ALL-NEXT:    # kill: %EAX<def> %EAX<kill> %RAX<kill>
 ; ALL-NEXT:    shrl $16, %eax
 ; ALL-NEXT:    shrq $32, %rcx
 ; ALL-NEXT:    shrq $48, %rdx
@@ -1441,6 +1459,7 @@ define i16 @cvt_f32_to_i16(float %a0) {
 ; ALL:       # BB#0:
 ; ALL-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
 ; ALL-NEXT:    vmovd %xmm0, %eax
+; ALL-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; ALL-NEXT:    retq
   %1 = fptrunc float %a0 to half
   %2 = bitcast half %1 to i16
@@ -2383,6 +2402,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) {
 ; AVX1-NEXT:    movw %ax, %bx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %r14d
@@ -2429,6 +2449,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) {
 ; AVX2-NEXT:    movw %ax, %bx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %r14d
@@ -2474,6 +2495,7 @@ define <4 x i16> @cvt_4f64_to_4i16(<4 x double> %a0) {
 ; AVX512-NEXT:    movw %ax, %bx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %r14d
 ; AVX512-NEXT:    orl %ebx, %r14d
@@ -2523,6 +2545,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) {
 ; AVX1-NEXT:    movw %ax, %bx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %r14d
@@ -2570,6 +2593,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) {
 ; AVX2-NEXT:    movw %ax, %bx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %r14d
@@ -2616,6 +2640,7 @@ define <8 x i16> @cvt_4f64_to_8i16_undef(<4 x double> %a0) {
 ; AVX512-NEXT:    movw %ax, %bx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %r14d
 ; AVX512-NEXT:    orl %ebx, %r14d
@@ -2667,6 +2692,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) {
 ; AVX1-NEXT:    movw %ax, %bx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %r14d
@@ -2714,6 +2740,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) {
 ; AVX2-NEXT:    movw %ax, %bx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %r14d
@@ -2760,6 +2787,7 @@ define <8 x i16> @cvt_4f64_to_8i16_zero(<4 x double> %a0) {
 ; AVX512-NEXT:    movw %ax, %bx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %r14d
 ; AVX512-NEXT:    orl %ebx, %r14d
@@ -2817,6 +2845,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) {
 ; AVX1-NEXT:    movw %ax, %bx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %r15d
@@ -2842,6 +2871,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) {
 ; AVX1-NEXT:    movw %ax, %bx
 ; AVX1-NEXT:    shll $16, %ebx
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %r15d
@@ -2897,6 +2927,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) {
 ; AVX2-NEXT:    movw %ax, %bx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %r15d
@@ -2922,6 +2953,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) {
 ; AVX2-NEXT:    movw %ax, %bx
 ; AVX2-NEXT:    shll $16, %ebx
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %r15d
@@ -2975,6 +3007,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) {
 ; AVX512-NEXT:    movw %ax, %bx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %zmm0 # 64-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %r15d
 ; AVX512-NEXT:    orl %ebx, %r15d
@@ -2999,6 +3032,7 @@ define <8 x i16> @cvt_8f64_to_8i16(<8 x double> %a0) {
 ; AVX512-NEXT:    movw %ax, %bx
 ; AVX512-NEXT:    shll $16, %ebx
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %r15d
 ; AVX512-NEXT:    orl %ebx, %r15d
@@ -3126,6 +3160,7 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) {
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %r15d
 ; AVX1-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %ebp
@@ -3181,6 +3216,7 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) {
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %r15d
 ; AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %ebp
@@ -3234,6 +3270,7 @@ define void @store_cvt_4f64_to_4i16(<4 x double> %a0, <4 x i16>* %a1) {
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movl %eax, %r15d
 ; AVX512-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movl %eax, %ebp
 ; AVX512-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
@@ -3283,6 +3320,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) {
 ; AVX1-NEXT:    movw %ax, %bp
 ; AVX1-NEXT:    shll $16, %ebp
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %ebx
@@ -3338,6 +3376,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) {
 ; AVX2-NEXT:    movw %ax, %bp
 ; AVX2-NEXT:    shll $16, %ebp
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %ebx
@@ -3392,6 +3431,7 @@ define void @store_cvt_4f64_to_8i16_undef(<4 x double> %a0, <8 x i16>* %a1) {
 ; AVX512-NEXT:    movw %ax, %bp
 ; AVX512-NEXT:    shll $16, %ebp
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %ebx
 ; AVX512-NEXT:    orl %ebp, %ebx
@@ -3452,6 +3492,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) {
 ; AVX1-NEXT:    movw %ax, %bp
 ; AVX1-NEXT:    shll $16, %ebp
 ; AVX1-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movzwl %ax, %ebx
@@ -3507,6 +3548,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) {
 ; AVX2-NEXT:    movw %ax, %bp
 ; AVX2-NEXT:    shll $16, %ebp
 ; AVX2-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movzwl %ax, %ebx
@@ -3561,6 +3603,7 @@ define void @store_cvt_4f64_to_8i16_zero(<4 x double> %a0, <8 x i16>* %a1) {
 ; AVX512-NEXT:    movw %ax, %bp
 ; AVX512-NEXT:    shll $16, %ebp
 ; AVX512-NEXT:    vmovups (%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movzwl %ax, %ebx
 ; AVX512-NEXT:    orl %ebp, %ebx
@@ -3655,6 +3698,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) {
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %r13d
 ; AVX1-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %ebp
@@ -3662,6 +3706,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) {
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %r14d
 ; AVX1-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX1-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX1-NEXT:    vzeroupper
 ; AVX1-NEXT:    callq __truncdfhf2
 ; AVX1-NEXT:    movl %eax, %r15d
@@ -3748,6 +3793,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) {
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %r13d
 ; AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %ebp
@@ -3755,6 +3801,7 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) {
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %r14d
 ; AVX2-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX2-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    callq __truncdfhf2
 ; AVX2-NEXT:    movl %eax, %r15d
@@ -3838,12 +3885,14 @@ define void @store_cvt_8f64_to_8i16(<8 x double> %a0, <8 x i16>* %a1) {
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movl %eax, %r13d
 ; AVX512-NEXT:    vmovups {{[0-9]+}}(%rsp), %zmm0 # 64-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movl %eax, %ebp
 ; AVX512-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movl %eax, %r14d
 ; AVX512-NEXT:    vmovups {{[0-9]+}}(%rsp), %ymm0 # 32-byte Reload
+; AVX512-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512-NEXT:    callq __truncdfhf2
 ; AVX512-NEXT:    movl %eax, %r15d
 ; AVX512-NEXT:    vmovaps {{[0-9]+}}(%rsp), %xmm0 # 16-byte Reload

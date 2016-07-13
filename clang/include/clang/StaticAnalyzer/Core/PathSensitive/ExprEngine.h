@@ -392,6 +392,10 @@ public:
   void VisitMemberExpr(const MemberExpr *M, ExplodedNode *Pred, 
                            ExplodedNodeSet &Dst);
 
+  /// VisitMemberExpr - Transfer function for builtin atomic expressions
+  void VisitAtomicExpr(const AtomicExpr *E, ExplodedNode *Pred,
+                       ExplodedNodeSet &Dst);
+
   /// Transfer function logic for ObjCAtSynchronizedStmts.
   void VisitObjCAtSynchronizedStmt(const ObjCAtSynchronizedStmt *S,
                                    ExplodedNode *Pred, ExplodedNodeSet &Dst);

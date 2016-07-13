@@ -17,6 +17,8 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
 
 #include <cstdint>
 #include <cstring>
@@ -200,6 +202,12 @@ struct ByteArrayBuilder {
 };
 
 } // end namespace lowertypetests
+
+class LowerTypeTestsPass : public PassInfoMixin<LowerTypeTestsPass> {
+public:
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_LOWERTYPETESTS_H

@@ -16,7 +16,6 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERINFO_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUREGISTERINFO_H
 
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Target/TargetRegisterInfo.h"
 
 #define GET_REGINFO_HEADER
@@ -36,12 +35,7 @@ struct AMDGPURegisterInfo : public AMDGPUGenRegisterInfo {
   unsigned getSubRegFromChannel(unsigned Channel) const;
 
   const MCPhysReg* getCalleeSavedRegs(const MachineFunction *MF) const override;
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
-                           unsigned FIOperandNum,
-                           RegScavenger *RS) const override;
   unsigned getFrameRegister(const MachineFunction &MF) const override;
-
-  unsigned getIndirectSubReg(unsigned IndirectIndex) const;
 };
 
 } // End namespace llvm

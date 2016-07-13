@@ -673,6 +673,8 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
 // We disable for Go simply because we have not yet added to buildgo.sh.
 #if defined(__x86_64__) && !SANITIZER_GO
 int internal_sigaction_syscall(int signum, const void *act, void *oldact) {
+  if (act == nullptr)
+    return internal_sigaction_norestorer(signum, act, oldact);
   __sanitizer_sigaction u_adjust;
   internal_memcpy(&u_adjust, act, sizeof(u_adjust));
 #if !SANITIZER_ANDROID || !SANITIZER_MIPS32
@@ -703,6 +705,10 @@ void internal_sigfillset(__sanitizer_sigset_t *set) {
   internal_memset(set, 0xff, sizeof(*set));
 }
 
+void internal_sigemptyset(__sanitizer_sigset_t *set) {
+  internal_memset(set, 0, sizeof(*set));
+}
+
 #if SANITIZER_LINUX
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
   signum -= 1;
@@ -712,6 +718,16 @@ void internal_sigdelset(__sanitizer_sigset_t *set, int signum) {
   const uptr idx = signum / (sizeof(k_set->sig[0]) * 8);
   const uptr bit = signum % (sizeof(k_set->sig[0]) * 8);
   k_set->sig[idx] &= ~(1 << bit);
+}
+
+bool internal_sigismember(__sanitizer_sigset_t *set, int signum) {
+  signum -= 1;
+  CHECK_GE(signum, 0);
+  CHECK_LT(signum, sizeof(*set) * 8);
+  __sanitizer_kernel_sigset_t *k_set = (__sanitizer_kernel_sigset_t *)set;
+  const uptr idx = signum / (sizeof(k_set->sig[0]) * 8);
+  const uptr bit = signum % (sizeof(k_set->sig[0]) * 8);
+  return k_set->sig[idx] & (1 << bit);
 }
 #endif  // SANITIZER_LINUX
 

@@ -633,11 +633,18 @@ void CallAnalyzer::updateThreshold(CallSite CS, Function &Callee) {
       Threshold = OptSizeThreshold;
   }
 
+  bool HotCallsite = false;
+  uint64_t TotalWeight;
+  if (CS.getInstruction()->extractProfTotalWeight(TotalWeight) &&
+      PSI->isHotCount(TotalWeight))
+    HotCallsite = true;
+
   // Listen to the inlinehint attribute or profile based hotness information
   // when it would increase the threshold and the caller does not need to
   // minimize its size.
   bool InlineHint = Callee.hasFnAttribute(Attribute::InlineHint) ||
-                    PSI->isHotFunction(&Callee);
+                    PSI->isHotFunction(&Callee) ||
+                    HotCallsite;
   if (InlineHint && HintThreshold > Threshold && !Caller->optForMinSize())
     Threshold = HintThreshold;
 

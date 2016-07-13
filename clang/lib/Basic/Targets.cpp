@@ -12,12 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
+#include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
 #include "clang/Basic/Version.h"
 #include "llvm/ADT/APFloat.h"
@@ -1694,19 +1695,7 @@ static const unsigned NVPTXAddrSpaceMap[] = {
 class NVPTXTargetInfo : public TargetInfo {
   static const char *const GCCRegNames[];
   static const Builtin::Info BuiltinInfo[];
-
-  // The GPU profiles supported by the NVPTX backend
-  enum GPUKind {
-    GK_NONE,
-    GK_SM20,
-    GK_SM21,
-    GK_SM30,
-    GK_SM35,
-    GK_SM37,
-    GK_SM50,
-    GK_SM52,
-    GK_SM53,
-  } GPU;
+  CudaArch GPU;
 
 public:
   NVPTXTargetInfo(const llvm::Triple &Triple, const TargetOptions &Opts)
@@ -1719,8 +1708,7 @@ public:
     // Define available target features
     // These must be defined in sorted order!
     NoAsmVariants = true;
-    // Set the default GPU to sm20
-    GPU = GK_SM20;
+    GPU = CudaArch::SM_20;
 
     // If possible, get a TargetInfo for our host triple, so we can match its
     // types.
@@ -1787,35 +1775,38 @@ public:
     Builder.defineMacro("__NVPTX__");
     if (Opts.CUDAIsDevice) {
       // Set __CUDA_ARCH__ for the GPU specified.
-      std::string CUDAArchCode;
-      switch (GPU) {
-      case GK_SM20:
-        CUDAArchCode = "200";
-        break;
-      case GK_SM21:
-        CUDAArchCode = "210";
-        break;
-      case GK_SM30:
-        CUDAArchCode = "300";
-        break;
-      case GK_SM35:
-        CUDAArchCode = "350";
-        break;
-      case GK_SM37:
-        CUDAArchCode = "370";
-        break;
-      case GK_SM50:
-        CUDAArchCode = "500";
-        break;
-      case GK_SM52:
-        CUDAArchCode = "520";
-        break;
-      case GK_SM53:
-        CUDAArchCode = "530";
-        break;
-      default:
-        llvm_unreachable("Unhandled target CPU");
-      }
+      std::string CUDAArchCode = [this] {
+        switch (GPU) {
+        case CudaArch::UNKNOWN:
+          assert(false && "No GPU arch when compiling CUDA device code.");
+          return "";
+        case CudaArch::SM_20:
+          return "200";
+        case CudaArch::SM_21:
+          return "210";
+        case CudaArch::SM_30:
+          return "300";
+        case CudaArch::SM_32:
+          return "320";
+        case CudaArch::SM_35:
+          return "350";
+        case CudaArch::SM_37:
+          return "370";
+        case CudaArch::SM_50:
+          return "500";
+        case CudaArch::SM_52:
+          return "520";
+        case CudaArch::SM_53:
+          return "530";
+        case CudaArch::SM_60:
+          return "600";
+        case CudaArch::SM_61:
+          return "610";
+        case CudaArch::SM_62:
+          return "620";
+        }
+        llvm_unreachable("unhandled CudaArch");
+      }();
       Builder.defineMacro("__CUDA_ARCH__", CUDAArchCode);
     }
   }
@@ -1856,18 +1847,8 @@ public:
     return TargetInfo::CharPtrBuiltinVaList;
   }
   bool setCPU(const std::string &Name) override {
-    GPU = llvm::StringSwitch<GPUKind>(Name)
-              .Case("sm_20", GK_SM20)
-              .Case("sm_21", GK_SM21)
-              .Case("sm_30", GK_SM30)
-              .Case("sm_35", GK_SM35)
-              .Case("sm_37", GK_SM37)
-              .Case("sm_50", GK_SM50)
-              .Case("sm_52", GK_SM52)
-              .Case("sm_53", GK_SM53)
-              .Default(GK_NONE);
-
-    return GPU != GK_NONE;
+    GPU = StringToCudaArch(Name);
+    return GPU != CudaArch::UNKNOWN;
   }
   void setSupportedOpenCLOpts() override {
     auto &Opts = getSupportedOpenCLOpts();

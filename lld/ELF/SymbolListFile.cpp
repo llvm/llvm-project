@@ -82,9 +82,17 @@ private:
   void parseVersionSymbols(StringRef Version);
 };
 
+size_t elf::defineSymbolVersion(StringRef Version) {
+  // Identifiers start at 2 because 0 and 1 are reserved
+  // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
+  size_t VersionId = Config->SymbolVersions.size() + 2;
+  Config->SymbolVersions.push_back(elf::Version(Version, VersionId));
+  return VersionId;
+}
+
 void VersionScriptParser::parseVersion(StringRef Version) {
   expect("{");
-  Config->SymbolVersions.push_back(elf::Version(Version));
+  defineSymbolVersion(Version);
   if (peek() == "global:") {
     next();
     parseVersionSymbols(Version);

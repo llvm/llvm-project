@@ -40,12 +40,12 @@ struct SectionRule {
 // This enum represents what we can observe in SECTIONS tag of script:
 // ExprKind is a location counter change, like ". = . + 0x1000"
 // SectionKind is a description of output section, like ".data :..."
-enum SectionsCommandKind { ExprKind, SectionKind };
+enum SectionsCommandKind { ExprKind, SectionKind, SymbolAssignmentKind };
 
 struct SectionsCommand {
   SectionsCommandKind Kind;
   std::vector<StringRef> Expr;
-  StringRef SectionName;
+  StringRef Name;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -81,6 +81,7 @@ public:
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignAddresses(ArrayRef<OutputSectionBase<ELFT> *> S);
   int compareSections(StringRef A, StringRef B);
+  void addScriptedSymbols();
 
 private:
   // "ScriptConfig" is a bit too long, so define a short name for it.

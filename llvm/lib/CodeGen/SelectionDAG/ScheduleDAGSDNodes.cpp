@@ -750,7 +750,7 @@ ProcessSourceNode(SDNode *N, SelectionDAG *DAG, InstrEmitter &Emitter,
     return;
   }
 
-  Orders.push_back(std::make_pair(Order, std::prev(Emitter.getInsertPos())));
+  Orders.push_back(std::make_pair(Order, &*std::prev(Emitter.getInsertPos())));
   ProcessSDDbgValues(N, DAG, Emitter, Orders, VRBaseMap, Order);
 }
 

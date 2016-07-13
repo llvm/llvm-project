@@ -224,7 +224,9 @@ public:
     void removeEdgeInternal(Function &ChildF);
 
     /// Print the name of this node's function.
-    friend raw_ostream &operator<<(raw_ostream &OS, const Node &N);
+    friend raw_ostream &operator<<(raw_ostream &OS, const Node &N) {
+      return OS << N.F.getName();
+    }
 
     /// Dump the name of this node's function to stderr.
     void dump() const;
@@ -364,7 +366,26 @@ public:
     ///
     /// We print the function names in the SCC wrapped in '()'s and skipping
     /// the middle functions if there are a large number.
-    friend raw_ostream &operator<<(raw_ostream &OS, const SCC &C);
+    //
+    // Note: this is defined inline to dodge issues with GCC's interpretation
+    // of enclosing namespaces for friend function declarations.
+    friend raw_ostream &operator<<(raw_ostream &OS, const SCC &C) {
+      OS << '(';
+      int i = 0;
+      for (LazyCallGraph::Node &N : C) {
+        if (i > 0)
+          OS << ", ";
+        // Elide the inner elements if there are too many.
+        if (i > 8) {
+          OS << "..., " << *C.Nodes.back();
+          break;
+        }
+        OS << N;
+        ++i;
+      }
+      OS << ')';
+      return OS;
+    }
 
     /// Dump a short description of this SCC to stderr.
     void dump() const;
@@ -436,7 +457,26 @@ public:
     ///
     /// We print the SCCs wrapped in '[]'s and skipping the middle SCCs if
     /// there are a large number.
-    friend raw_ostream &operator<<(raw_ostream &OS, const RefSCC &RC);
+    //
+    // Note: this is defined inline to dodge issues with GCC's interpretation
+    // of enclosing namespaces for friend function declarations.
+    friend raw_ostream &operator<<(raw_ostream &OS, const RefSCC &RC) {
+      OS << '[';
+      int i = 0;
+      for (LazyCallGraph::SCC &C : RC) {
+        if (i > 0)
+          OS << ", ";
+        // Elide the inner elements if there are too many.
+        if (i > 4) {
+          OS << "..., " << *RC.SCCs.back();
+          break;
+        }
+        OS << C;
+        ++i;
+      }
+      OS << ']';
+      return OS;
+    }
 
     /// Dump a short description of this RefSCC to stderr.
     void dump() const;

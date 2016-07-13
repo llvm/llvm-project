@@ -67,16 +67,12 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
 
   // Measure each MBB and compute a size for the entire function.
   unsigned FuncSize = 0;
-  for (MachineFunction::iterator MFI = Fn.begin(), E = Fn.end(); MFI != E;
-       ++MFI) {
-    MachineBasicBlock *MBB = &*MFI;
-
+  for (MachineBasicBlock &MBB : Fn) {
     unsigned BlockSize = 0;
-    for (MachineBasicBlock::iterator MBBI = MBB->begin(), EE = MBB->end();
-         MBBI != EE; ++MBBI)
-      BlockSize += TII->GetInstSizeInBytes(MBBI);
+    for (MachineInstr &MI : MBB)
+      BlockSize += TII->GetInstSizeInBytes(MI);
 
-    BlockSizes[MBB->getNumber()] = BlockSize;
+    BlockSizes[MBB.getNumber()] = BlockSize;
     FuncSize += BlockSize;
   }
 
@@ -111,7 +107,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
            I != E; ++I) {
         if ((I->getOpcode() != MSP430::JCC || I->getOperand(0).isImm()) &&
             I->getOpcode() != MSP430::JMP) {
-          MBBStartOffset += TII->GetInstSizeInBytes(I);
+          MBBStartOffset += TII->GetInstSizeInBytes(*I);
           continue;
         }
 
@@ -145,8 +141,8 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
 
         // Otherwise, we have to expand it to a long branch.
         unsigned NewSize;
-        MachineInstr *OldBranch = I;
-        DebugLoc dl = OldBranch->getDebugLoc();
+        MachineInstr &OldBranch = *I;
+        DebugLoc dl = OldBranch.getDebugLoc();
 
         if (I->getOpcode() == MSP430::JMP) {
           NewSize = 4;
@@ -168,7 +164,7 @@ bool MSP430BSel::runOnMachineFunction(MachineFunction &Fn) {
         I = BuildMI(MBB, I, dl, TII->get(MSP430::Bi)).addMBB(Dest);
 
         // Remove the old branch from the function.
-        OldBranch->eraseFromParent();
+        OldBranch.eraseFromParent();
 
         // Remember that this instruction is NewSize bytes, increase the size of the
         // block by NewSize-2, remember to iterate.

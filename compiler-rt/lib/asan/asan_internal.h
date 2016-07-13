@@ -62,6 +62,9 @@ using __sanitizer::StackTrace;
 
 void AsanInitFromRtl();
 
+// asan_win.cc
+void InitializePlatformExceptionHandlers();
+
 // asan_rtl.cc
 void NORETURN ShowStatsAndAbort();
 
@@ -127,7 +130,6 @@ extern int asan_inited;
 // Used to avoid infinite recursion in __asan_init().
 extern bool asan_init_is_running;
 extern void (*death_callback)(void);
-
 // These magic values are written to shadow for better error reporting.
 const int kAsanHeapLeftRedzoneMagic = 0xfa;
 const int kAsanHeapRightRedzoneMagic = 0xfb;

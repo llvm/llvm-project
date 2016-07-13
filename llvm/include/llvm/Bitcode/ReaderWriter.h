@@ -60,6 +60,11 @@ namespace llvm {
   std::string getBitcodeTargetTriple(MemoryBufferRef Buffer,
                                      LLVMContext &Context);
 
+  /// Return true if \p Buffer contains a bitcode file with ObjC code (category
+  /// or class) in it.
+  bool isBitcodeContainingObjCCategory(MemoryBufferRef Buffer,
+                                       LLVMContext &Context);
+
   /// Read the header of the specified bitcode buffer and extract just the
   /// producer string information. If successful, this returns a string. On
   /// error, this returns "".

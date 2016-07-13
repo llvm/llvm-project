@@ -104,10 +104,10 @@ int main()
 
 //  LWG 2560  -- postpone this test until bots updated
 //     test_is_not_constructible<void()> ();
-// #if TEST_STD_VERS > 11
+#if TEST_STD_VER > 11
 //     test_is_not_constructible<void() const> ();
 //     test_is_not_constructible<void() volatile> ();
 //     test_is_not_constructible<void() &> ();
 //     test_is_not_constructible<void() &&> ();
-// #endif
+#endif
 }

@@ -391,6 +391,9 @@ public:
     : MCTargetAsmParser(Options, sti), Parser(parser) {
     MCAsmParserExtension::Initialize(Parser);
 
+    // Alias the .word directive to .short.
+    parser.addAliasForDirective(".word", ".short");
+
     // Initialize the set of available features.
     setAvailableFeatures(ComputeAvailableFeatures(getSTI().getFeatureBits()));
   }

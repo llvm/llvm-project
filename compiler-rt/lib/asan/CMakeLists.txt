@@ -83,15 +83,15 @@ add_compiler_rt_object_libraries(RTAsan_dynamic
   DEFS ${ASAN_DYNAMIC_DEFINITIONS})
 
 if(NOT APPLE)
-  add_compiler_rt_object_libraries(RTAsan 
+  add_compiler_rt_object_libraries(RTAsan
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_SOURCES} CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
-  add_compiler_rt_object_libraries(RTAsan_cxx 
+  add_compiler_rt_object_libraries(RTAsan_cxx
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_CXX_SOURCES} CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
-  add_compiler_rt_object_libraries(RTAsan_preinit 
+  add_compiler_rt_object_libraries(RTAsan_preinit
     ARCHS ${ASAN_SUPPORTED_ARCH}
     SOURCES ${ASAN_PREINIT_SOURCES} CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS})
@@ -106,6 +106,8 @@ endif()
 
 # Build ASan runtimes shipped with Clang.
 add_custom_target(asan)
+set_target_properties(asan PROPERTIES FOLDER "Compiler-RT Misc")
+
 if(APPLE)
   add_compiler_rt_runtime(clang_rt.asan
     SHARED
@@ -123,39 +125,39 @@ if(APPLE)
 else()
   # Build separate libraries for each target.
 
-    set(ASAN_COMMON_RUNTIME_OBJECT_LIBS
-      RTInterception
-      RTSanitizerCommon
-      RTSanitizerCommonLibc
-      RTLSanCommon
-      RTUbsan)
+  set(ASAN_COMMON_RUNTIME_OBJECT_LIBS
+    RTInterception
+    RTSanitizerCommon
+    RTSanitizerCommonLibc
+    RTLSanCommon
+    RTUbsan)
 
-    add_compiler_rt_runtime(clang_rt.asan
-      STATIC
-      ARCHS ${ASAN_SUPPORTED_ARCH}
-      OBJECT_LIBS RTAsan_preinit
-                  RTAsan
-                  ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
-      CFLAGS ${ASAN_CFLAGS}
-      DEFS ${ASAN_COMMON_DEFINITIONS}
-      PARENT_TARGET asan)
+  add_compiler_rt_runtime(clang_rt.asan
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_preinit
+                RTAsan
+                ${ASAN_COMMON_RUNTIME_OBJECT_LIBS}
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
 
-    add_compiler_rt_runtime(clang_rt.asan_cxx
-      STATIC
-      ARCHS ${ASAN_SUPPORTED_ARCH}
-      OBJECT_LIBS RTAsan_cxx
-                  RTUbsan_cxx
-      CFLAGS ${ASAN_CFLAGS}
-      DEFS ${ASAN_COMMON_DEFINITIONS}
-      PARENT_TARGET asan)
+  add_compiler_rt_runtime(clang_rt.asan_cxx
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_cxx
+                RTUbsan_cxx
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
 
-    add_compiler_rt_runtime(clang_rt.asan-preinit
-      STATIC
-      ARCHS ${ASAN_SUPPORTED_ARCH}
-      OBJECT_LIBS RTAsan_preinit
-      CFLAGS ${ASAN_CFLAGS}
-      DEFS ${ASAN_COMMON_DEFINITIONS}
-      PARENT_TARGET asan)
+  add_compiler_rt_runtime(clang_rt.asan-preinit
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_preinit
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
 
   foreach(arch ${ASAN_SUPPORTED_ARCH})
     if (UNIX AND NOT ${arch} MATCHES "i386|i686")
@@ -195,7 +197,7 @@ else()
         ARCHS ${arch})
       add_dependencies(asan clang_rt.asan_cxx-${arch}-symbols)
       add_sanitizer_rt_symbols(clang_rt.asan
-        ARCHS ${arch} 
+        ARCHS ${arch}
         EXTRA asan.syms.extra)
       add_dependencies(asan clang_rt.asan-${arch}-symbols)
     endif()

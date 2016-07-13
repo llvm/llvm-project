@@ -25,5 +25,5 @@ declare <4 x float> @llvm.SI.image.load.v4i32(<4 x i32>, <8 x i32>, i32, i32, i3
 declare i32 @llvm.SI.packf16(float, float) #1
 declare void @llvm.SI.export(i32, i32, i32, i32, i32, float, float, float, float)
 
-attributes #0 = { "enable-no-nans-fp-math"="true" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

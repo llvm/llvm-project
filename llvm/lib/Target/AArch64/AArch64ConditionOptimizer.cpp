@@ -173,7 +173,7 @@ MachineInstr *AArch64ConditionOptimizer::findSuitableCompare(
         DEBUG(dbgs() << "Destination of cmp is not dead, " << *I << '\n');
         return nullptr;
       }
-      return I;
+      return &*I;
     }
     // Prevent false positive case like:
     // cmp      w19, #0
@@ -275,13 +275,13 @@ void AArch64ConditionOptimizer::modifyCmp(MachineInstr *CmpMI,
 
   // The fact that this comparison was picked ensures that it's related to the
   // first terminator instruction.
-  MachineInstr *BrMI = MBB->getFirstTerminator();
+  MachineInstr &BrMI = *MBB->getFirstTerminator();
 
   // Change condition in branch instruction.
-  BuildMI(*MBB, BrMI, BrMI->getDebugLoc(), TII->get(AArch64::Bcc))
+  BuildMI(*MBB, BrMI, BrMI.getDebugLoc(), TII->get(AArch64::Bcc))
       .addImm(Cmp)
-      .addOperand(BrMI->getOperand(1));
-  BrMI->eraseFromParent();
+      .addOperand(BrMI.getOperand(1));
+  BrMI.eraseFromParent();
 
   MBB->updateTerminator();
 

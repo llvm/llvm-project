@@ -5204,9 +5204,8 @@ void CGObjCMac::FinishModule() {
 }
 
 CGObjCNonFragileABIMac::CGObjCNonFragileABIMac(CodeGen::CodeGenModule &cgm)
-  : CGObjCCommonMac(cgm),
-    ObjCTypes(cgm) {
-  ObjCEmptyCacheVar = ObjCEmptyVtableVar = nullptr;
+    : CGObjCCommonMac(cgm), ObjCTypes(cgm), ObjCEmptyCacheVar(nullptr),
+      ObjCEmptyVtableVar(nullptr) {
   ObjCABI = 2;
 }
 
@@ -5982,28 +5981,15 @@ void CGObjCNonFragileABIMac::GenerateClass(const ObjCImplementationDecl *ID) {
   std::string ClassName = ID->getObjCRuntimeNameAsString();
   if (!ObjCEmptyCacheVar) {
     ObjCEmptyCacheVar = new llvm::GlobalVariable(
-      CGM.getModule(),
-      ObjCTypes.CacheTy,
-      false,
-      llvm::GlobalValue::ExternalLinkage,
-      nullptr,
-      "_objc_empty_cache");
+        CGM.getModule(), ObjCTypes.CacheTy, false,
+        llvm::GlobalValue::ExternalLinkage, nullptr, "_objc_empty_cache");
 
-    // Make this entry NULL for any iOS device target, any iOS simulator target,
-    // OS X with deployment target 10.9 or later.
+    // Only OS X with deployment version <10.9 use the empty vtable symbol
     const llvm::Triple &Triple = CGM.getTarget().getTriple();
-    if (Triple.isiOS() || Triple.isWatchOS() ||
-        (Triple.isMacOSX() && !Triple.isMacOSXVersionLT(10, 9)))
-      // This entry will be null.
-      ObjCEmptyVtableVar = nullptr;
-    else
+    if (Triple.isMacOSX() && Triple.isMacOSXVersionLT(10, 9))
       ObjCEmptyVtableVar = new llvm::GlobalVariable(
-                                                    CGM.getModule(),
-                                                    ObjCTypes.ImpnfABITy,
-                                                    false,
-                                                    llvm::GlobalValue::ExternalLinkage,
-                                                    nullptr,
-                                                    "_objc_empty_vtable");
+          CGM.getModule(), ObjCTypes.ImpnfABITy, false,
+          llvm::GlobalValue::ExternalLinkage, nullptr, "_objc_empty_vtable");
   }
   assert(ID->getClassInterface() &&
          "CGObjCNonFragileABIMac::GenerateClass - class is 0");

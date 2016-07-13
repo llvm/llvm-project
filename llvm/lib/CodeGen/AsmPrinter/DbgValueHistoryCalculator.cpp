@@ -138,12 +138,12 @@ static const MachineInstr *getFirstEpilogueInst(const MachineBasicBlock &MBB) {
        E = MBB.rend();
        I != E; ++I) {
     if (I->getDebugLoc() != LastLoc)
-      return Res;
+      return &*Res;
     Res = &*I;
   }
   // If all instructions have the same debug location, assume whole MBB is
   // an epilogue.
-  return MBB.begin();
+  return &*MBB.begin();
 }
 
 // \brief Collect registers that are modified in the function body (their

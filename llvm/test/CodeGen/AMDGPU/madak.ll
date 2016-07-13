@@ -191,3 +191,32 @@ define void @no_madak_src1_modifier_f32(float addrspace(1)* noalias %out, float 
   store float %madak, float addrspace(1)* %out.gep, align 4
   ret void
 }
+
+; SIFoldOperands should not fold the SGPR copy into the instruction
+; because the implicit immediate already uses the constant bus.
+; GCN-LABEL: {{^}}madak_constant_bus_violation:
+; GCN: s_load_dword [[SGPR0:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0xa|0x28}}
+; GCN: v_mov_b32_e32 [[SGPR0_VCOPY:v[0-9]+]], [[SGPR0]]
+; GCN: buffer_load_dword [[VGPR:v[0-9]+]]
+; GCN: v_madak_f32_e32 [[MADAK:v[0-9]+]], 0.5, [[SGPR0_VCOPY]], 0x42280000
+; GCN: v_mul_f32_e32 [[MUL:v[0-9]+]], [[VGPR]], [[MADAK]]
+; GCN: buffer_store_dword [[MUL]]
+define void @madak_constant_bus_violation(i32 %arg1, float %sgpr0, float %sgpr1) #0 {
+bb:
+  %tmp = icmp eq i32 %arg1, 0
+  br i1 %tmp, label %bb3, label %bb4
+
+bb3:
+  store volatile float 0.0, float addrspace(1)* undef
+  br label %bb4
+
+bb4:
+  %vgpr = load volatile float, float addrspace(1)* undef
+  %tmp0 = fmul float %sgpr0, 0.5
+  %tmp1 = fadd float %tmp0, 42.0
+  %tmp2 = fmul float %tmp1, %vgpr
+  store volatile float %tmp2, float addrspace(1)* undef, align 4
+  ret void
+}
+
+attributes #0 = { nounwind}

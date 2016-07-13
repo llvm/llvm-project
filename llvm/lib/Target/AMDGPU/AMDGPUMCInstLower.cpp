@@ -113,7 +113,7 @@ void AMDGPUAsmPrinter::EmitInstruction(const MachineInstr *MI) {
         SmallVector<char, 16> BBStr;
         raw_svector_ostream Str(BBStr);
 
-        const MachineBasicBlock *MBB = MI->getOperand(1).getMBB();
+        const MachineBasicBlock *MBB = MI->getOperand(0).getMBB();
         const MCSymbolRefExpr *Expr
           = MCSymbolRefExpr::create(MBB->getSymbol(), OutContext);
         Expr->print(Str, MAI);

@@ -7,6 +7,7 @@
 #include <sys/mman.h>
 
 const int size = 0x1 << 25; // 523288 cache lines
+const int iters = 6;
 
 int main(int argc, char **argv) {
   char *buf = (char *)mmap(0, size, PROT_READ | PROT_WRITE,
@@ -15,19 +16,22 @@ int main(int argc, char **argv) {
   // scheduled.  Unfortunately we can't do proper synchronization
   // without some form of annotation or something.
   sched_yield();
-  // Do enough work to get at least 2 samples.
-  for (int i = 0; i < size; ++i)
-    buf[i] = i;
+  // Do enough work to get at least 4 samples.
+  for (int j = 0; j < iters; ++j) {
+    for (int i = 0; i < size; ++i)
+      buf[i] = i;
+    sched_yield();
+  }
   munmap(buf, size);
   // We only check for a few samples here to reduce the chance of flakiness.
   // CHECK:      =={{[0-9]+}}== Total number of samples: {{[0-9]+}}
   // CHECK-NEXT: =={{[0-9]+}}== Samples array #0 at period 20 ms
-  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
-  // CHECK-NEXT: =={{[0-9]+}}==#   1: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
-  // CHECK-NEXT: =={{[0-9]+}}==#   2: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
-  // CHECK-NEXT: =={{[0-9]+}}==#   3: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} {{KB|MB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   1: {{[ 0-9]+}} {{KB|MB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   2: {{[ 0-9]+}} {{KB|MB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   3: {{[ 0-9]+}} {{KB|MB|Bytes}} ({{[ 0-9]+}} cache lines)
   // CHECK:      =={{[0-9]+}}== Samples array #1 at period 80 ms
-  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} {{KB|Bytes}} ({{[ 0-9]+}} cache lines)
+  // CHECK-NEXT: =={{[0-9]+}}==#   0: {{[ 0-9]+}} {{KB|MB|Bytes}} ({{[ 0-9]+}} cache lines)
   // CHECK:      =={{[0-9]+}}== Samples array #2 at period 320 ms
   // CHECK:      =={{[0-9]+}}== Samples array #3 at period 1280 ms
   // CHECK:      =={{[0-9]+}}== Samples array #4 at period 5120 ms

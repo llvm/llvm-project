@@ -535,7 +535,7 @@ __isl_give PWACtx SCEVAffinator::visitSDivInstruction(Instruction *SDiv) {
   auto *Divisor = SDiv->getOperand(1);
   auto *DivisorSCEV = SE.getSCEVAtScope(Divisor, Scope);
   auto DivisorPWAC = visit(DivisorSCEV);
-  assert(isa<ConstantInt>(Divisor) &&
+  assert(isa<SCEVConstant>(DivisorSCEV) &&
          "SDiv is no parameter but has a non-constant RHS.");
 
   auto *Dividend = SDiv->getOperand(0);

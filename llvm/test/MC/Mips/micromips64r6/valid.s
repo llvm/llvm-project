@@ -307,5 +307,15 @@ a:
         dsrl $1, $2, 2           # CHECK: dsrl $1, $2, 2          # encoding: [0x58,0x22,0x10,0x40]
         dsrl32 $3, $4, 5         # CHECK: dsrl32 $3, $4, 5        # encoding: [0x58,0x64,0x28,0x48]
         dsrlv $1, $3, $3         # CHECK: dsrlv $1, $3, $3        # encoding: [0x58,0x63,0x08,0x50]
+        ldc1 $f7, 300($10)       # CHECK: ldc1 $f7, 300($10)      # encoding: [0xbc,0xea,0x01,0x2c]
+        ldc1 $f8, 300($10)       # CHECK: ldc1 $f8, 300($10)      # encoding: [0xbd,0x0a,0x01,0x2c]
+        ldc2 $11, 1023($12)      # CHECK: ldc2 $11, 1023($12)     # encoding: [0x21,0x6c,0x23,0xff]
+        lwc1 $f2, 32($5)         # CHECK: lwc1 $f2, 32($5)        # encoding: [0x9c,0x45,0x00,0x20]
+        lwc2 $1, 16($4)          # CHECK: lwc2 $1, 16($4)         # encoding: [0x20,0x24,0x00,0x10]
+        sdc1 $f7, 64($10)        # CHECK: sdc1 $f7, 64($10)       # encoding: [0xb8,0xea,0x00,0x40]
+        sdc1 $f8, 64($10)        # CHECK: sdc1 $f8, 64($10)       # encoding: [0xb9,0x0a,0x00,0x40]
+        sdc2 $2, 8($16)          # CHECK: sdc2 $2, 8($16)         # encoding: [0x20,0x50,0xa0,0x08]
+        swc1 $f6, 369($13)       # CHECK: swc1 $f6, 369($13)      # encoding: [0x98,0xcd,0x01,0x71]
+        swc2 $7, 777($17)        # CHECK: swc2 $7, 777($17)       # encoding: [0x20,0xf1,0x83,0x09]
 
 1:

@@ -1,4 +1,6 @@
-add_subdirectory(ChildTarget)
+if ( LLVM_INCLUDE_UTILS )
+  add_subdirectory(ChildTarget)
+endif()
 
 set(LLVM_LINK_COMPONENTS
   CodeGen

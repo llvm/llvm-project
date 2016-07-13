@@ -14,6 +14,7 @@
 // RUN: %clang -S -### -cl-unsafe-math-optimizations %s | FileCheck --check-prefix=CHECK-UNSAFE-MATH-OPT %s
 // RUN: %clang -S -### -cl-fast-relaxed-math %s | FileCheck --check-prefix=CHECK-FAST-RELAXED-MATH %s
 // RUN: %clang -S -### -cl-mad-enable %s | FileCheck --check-prefix=CHECK-MAD-ENABLE %s
+// RUN: %clang -S -### -cl-no-signed-zeros %s | FileCheck --check-prefix=CHECK-NO-SIGNED-ZEROS %s
 // RUN: %clang -S -### -cl-denorms-are-zero %s | FileCheck --check-prefix=CHECK-DENORMS-ARE-ZERO %s
 // RUN: not %clang_cc1 -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang_cc1 -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
@@ -33,6 +34,7 @@
 // CHECK-UNSAFE-MATH-OPT: .*clang.* "-cc1" .* "-cl-unsafe-math-optimizations"
 // CHECK-FAST-RELAXED-MATH: .*clang.* "-cc1" .* "-cl-fast-relaxed-math"
 // CHECK-MAD-ENABLE: .*clang.* "-cc1" .* "-cl-mad-enable"
+// CHECK-NO-SIGNED-ZEROS: .*clang.* "-cc1" .* "-cl-no-signed-zeros"
 // CHECK-DENORMS-ARE-ZERO: .*clang.* "-cc1" .* "-cl-denorms-are-zero"
 // CHECK-C99: error: invalid argument '-cl-std=c99' not allowed with 'OpenCL'
 // CHECK-INVALID: error: invalid value 'invalid' in '-cl-std=invalid'

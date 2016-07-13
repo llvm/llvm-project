@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-struct isl_ast_build;
+struct __isl_export isl_ast_build;
 typedef struct isl_ast_build isl_ast_build;
 
 
@@ -45,7 +45,9 @@ int isl_options_get_ast_build_allow_or(isl_ctx *ctx);
 
 isl_ctx *isl_ast_build_get_ctx(__isl_keep isl_ast_build *build);
 
+__isl_constructor
 __isl_give isl_ast_build *isl_ast_build_alloc(isl_ctx *ctx);
+__isl_export
 __isl_give isl_ast_build *isl_ast_build_from_context(__isl_take isl_set *set);
 
 __isl_give isl_space *isl_ast_build_get_schedule_space(
@@ -92,21 +94,28 @@ __isl_give isl_ast_build *isl_ast_build_set_create_leaf(
 	__isl_give isl_ast_node *(*fn)(__isl_take isl_ast_build *build,
 		void *user), void *user);
 
+__isl_export
 __isl_give isl_ast_expr *isl_ast_build_expr_from_set(
 	__isl_keep isl_ast_build *build, __isl_take isl_set *set);
+__isl_export
 __isl_give isl_ast_expr *isl_ast_build_expr_from_pw_aff(
 	__isl_keep isl_ast_build *build, __isl_take isl_pw_aff *pa);
+__isl_export
 __isl_give isl_ast_expr *isl_ast_build_access_from_pw_multi_aff(
 	__isl_keep isl_ast_build *build, __isl_take isl_pw_multi_aff *pma);
+__isl_export
 __isl_give isl_ast_expr *isl_ast_build_access_from_multi_pw_aff(
 	__isl_keep isl_ast_build *build, __isl_take isl_multi_pw_aff *mpa);
+__isl_export
 __isl_give isl_ast_expr *isl_ast_build_call_from_pw_multi_aff(
 	__isl_keep isl_ast_build *build, __isl_take isl_pw_multi_aff *pma);
+__isl_export
 __isl_give isl_ast_expr *isl_ast_build_call_from_multi_pw_aff(
 	__isl_keep isl_ast_build *build, __isl_take isl_multi_pw_aff *mpa);
 
 __isl_give isl_ast_node *isl_ast_build_node_from_schedule(
 	__isl_keep isl_ast_build *build, __isl_take isl_schedule *schedule);
+__isl_export
 __isl_give isl_ast_node *isl_ast_build_node_from_schedule_map(
 	__isl_keep isl_ast_build *build, __isl_take isl_union_map *schedule);
 __isl_give isl_ast_node *isl_ast_build_ast_from_schedule(

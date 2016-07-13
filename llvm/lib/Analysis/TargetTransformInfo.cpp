@@ -71,6 +71,11 @@ unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
   return TTIImpl->getInliningThresholdMultiplier();
 }
 
+int TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
+                                    ArrayRef<const Value *> Operands) const {
+  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands);
+}
+
 int TargetTransformInfo::getIntrinsicCost(
     Intrinsic::ID IID, Type *RetTy, ArrayRef<const Value *> Arguments) const {
   int Cost = TTIImpl->getIntrinsicCost(IID, RetTy, Arguments);
@@ -179,6 +184,14 @@ bool TargetTransformInfo::enableInterleavedAccessVectorization() const {
 
 bool TargetTransformInfo::isFPVectorizationPotentiallyUnsafe() const {
   return TTIImpl->isFPVectorizationPotentiallyUnsafe();
+}
+
+bool TargetTransformInfo::allowsMisalignedMemoryAccesses(unsigned BitWidth,
+                                                         unsigned AddressSpace,
+                                                         unsigned Alignment,
+                                                         bool *Fast) const {
+  return TTIImpl->allowsMisalignedMemoryAccesses(BitWidth, AddressSpace,
+                                                 Alignment, Fast);
 }
 
 TargetTransformInfo::PopcntSupportKind

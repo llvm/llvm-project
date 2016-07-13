@@ -214,8 +214,9 @@ public:
 
     auto *L = Expr->getLoop();
     if (R->contains(L) && (!Scope || !L->contains(Scope))) {
-      DEBUG(dbgs() << "INVALID: AddRec out of a loop whose exit value is not "
-                      "synthesizable");
+      DEBUG(dbgs() << "INVALID: Loop of AddRec expression boxed in an a "
+                      "non-affine subregion or has a non-synthesizable exit "
+                      "value.");
       return ValidatorResult(SCEVType::INVALID);
     }
 

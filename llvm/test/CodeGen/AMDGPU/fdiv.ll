@@ -1,8 +1,9 @@
-; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -amdgpu-fast-fdiv < %s | FileCheck -check-prefix=SI %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=I754 %s
-; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=UNSAFE-FP %s
-; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 %s
+; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -mattr=+fp32-denormals -verify-machineinstrs < %s | FileCheck -check-prefix=I754 -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -amdgpu-fast-fdiv < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefix=I754 -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=fiji -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck -check-prefix=UNSAFE-FP -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
 
 ; These tests check that fdiv is expanded correctly and also test that the
 ; scheduler is scheduling the RECIP_IEEE and MUL_IEEE instructions in separate
@@ -11,10 +12,8 @@
 ; These test check that fdiv using unsafe_fp_math, coarse fp div, and IEEE754 fp div.
 
 ; FUNC-LABEL: {{^}}fdiv_f32:
-; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Z
-; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Y
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, PS
+; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
 
 ; UNSAFE-FP: v_rcp_f32
 ; UNSAFE-FP: v_mul_f32_e32
@@ -36,10 +35,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}fdiv_f32_fast_math:
-; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Z
-; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Y
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, PS
+; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
 
 ; UNSAFE-FP: v_rcp_f32
 ; UNSAFE-FP: v_mul_f32_e32
@@ -54,10 +51,8 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}fdiv_f32_arcp_math:
-; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Z
-; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[3].Y
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[3].X, PS
-; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].W, PS
+; R600-DAG: RECIP_IEEE * T{{[0-9]+\.[XYZW]}}, KC0[2].W
+; R600-DAG: MUL_IEEE {{\** *}}T{{[0-9]+\.[XYZW]}}, KC0[2].Z, PS
 
 ; UNSAFE-FP: v_rcp_f32
 ; UNSAFE-FP: v_mul_f32_e32

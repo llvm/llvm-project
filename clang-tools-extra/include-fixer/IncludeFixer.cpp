@@ -70,7 +70,11 @@ public:
       return false;
 
     clang::ASTContext &context = getCompilerInstance().getASTContext();
-    query(T.getUnqualifiedType().getAsString(context.getPrintingPolicy()), Loc);
+    std::string QueryString =
+        T.getUnqualifiedType().getAsString(context.getPrintingPolicy());
+    DEBUG(llvm::dbgs() << "Query missing complete type '" << QueryString
+                       << "'");
+    query(QueryString, "", tooling::Range());
     return false;
   }
 
@@ -152,32 +156,31 @@ public:
 
     /// If we have a scope specification, use that to get more precise results.
     std::string QueryString;
+    tooling::Range SymbolRange;
+    const auto &SM = getCompilerInstance().getSourceManager();
+    auto CreateToolingRange = [&QueryString, &SM](SourceLocation BeginLoc) {
+      return tooling::Range(SM.getDecomposedLoc(BeginLoc).second,
+                            QueryString.size());
+    };
     if (SS && SS->getRange().isValid()) {
       auto Range = CharSourceRange::getTokenRange(SS->getRange().getBegin(),
                                                   Typo.getLoc());
 
       QueryString = ExtendNestedNameSpecifier(Range);
+      SymbolRange = CreateToolingRange(Range.getBegin());
     } else if (Typo.getName().isIdentifier() && !Typo.getLoc().isMacroID()) {
       auto Range =
           CharSourceRange::getTokenRange(Typo.getBeginLoc(), Typo.getEndLoc());
 
       QueryString = ExtendNestedNameSpecifier(Range);
+      SymbolRange = CreateToolingRange(Range.getBegin());
     } else {
       QueryString = Typo.getAsString();
+      SymbolRange = CreateToolingRange(Typo.getLoc());
     }
 
-    // Follow C++ Lookup rules. Firstly, lookup the identifier with scoped
-    // namespace contexts. If fails, falls back to identifier.
-    // For example:
-    //
-    // namespace a {
-    // b::foo f;
-    // }
-    //
-    // 1. lookup a::b::foo.
-    // 2. lookup b::foo.
-    if (!query(TypoScopeString + QueryString, Typo.getLoc()))
-      query(QueryString, Typo.getLoc());
+    DEBUG(llvm::dbgs() << "TypoScopeQualifiers: " << TypoScopeString << "\n");
+    query(QueryString, TypoScopeString, SymbolRange);
 
     // FIXME: We should just return the name we got as input here and prevent
     // clang from trying to correct the typo by itself. That may change the
@@ -215,32 +218,63 @@ public:
   IncludeFixerContext
   getIncludeFixerContext(const clang::SourceManager &SourceManager,
                          clang::HeaderSearch &HeaderSearch) {
-    IncludeFixerContext FixerContext;
-    FixerContext.SymbolIdentifier = QuerySymbol;
-    for (const auto &Header : SymbolQueryResults)
-      FixerContext.Headers.push_back(
-          minimizeInclude(Header, SourceManager, HeaderSearch));
-
-    return FixerContext;
+    std::vector<find_all_symbols::SymbolInfo> SymbolCandidates;
+    for (const auto &Symbol : MatchedSymbols) {
+      std::string FilePath = Symbol.getFilePath().str();
+      std::string MinimizedFilePath = minimizeInclude(
+          ((FilePath[0] == '"' || FilePath[0] == '<') ? FilePath
+                                                      : "\"" + FilePath + "\""),
+          SourceManager, HeaderSearch);
+      SymbolCandidates.emplace_back(Symbol.getName(), Symbol.getSymbolKind(),
+                                    MinimizedFilePath, Symbol.getLineNumber(),
+                                    Symbol.getContexts(),
+                                    Symbol.getNumOccurrences());
+    }
+    return IncludeFixerContext(QuerySymbol, SymbolScopedQualifiers,
+                               SymbolCandidates, QuerySymbolRange);
   }
 
 private:
   /// Query the database for a given identifier.
-  bool query(StringRef Query, SourceLocation Loc) {
+  bool query(StringRef Query, StringRef ScopedQualifiers, tooling::Range Range) {
     assert(!Query.empty() && "Empty query!");
 
-    // Skip other identifers once we have discovered an identfier successfully.
-    if (!SymbolQueryResults.empty())
+    // Skip other identifiers once we have discovered an identfier successfully.
+    if (!MatchedSymbols.empty())
       return false;
 
     DEBUG(llvm::dbgs() << "Looking up '" << Query << "' at ");
-    DEBUG(Loc.print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
+    DEBUG(getCompilerInstance()
+              .getSourceManager()
+              .getLocForStartOfFile(
+                  getCompilerInstance().getSourceManager().getMainFileID())
+              .getLocWithOffset(Range.getOffset())
+              .print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
     DEBUG(llvm::dbgs() << " ...");
 
     QuerySymbol = Query.str();
-    SymbolQueryResults = SymbolIndexMgr.search(Query);
-    DEBUG(llvm::dbgs() << SymbolQueryResults.size() << " replies\n");
-    return !SymbolQueryResults.empty();
+    QuerySymbolRange = Range;
+    SymbolScopedQualifiers = ScopedQualifiers;
+
+    // Query the symbol based on C++ name Lookup rules.
+    // Firstly, lookup the identifier with scoped namespace contexts;
+    // If that fails, falls back to look up the identifier directly.
+    //
+    // For example:
+    //
+    // namespace a {
+    // b::foo f;
+    // }
+    //
+    // 1. lookup a::b::foo.
+    // 2. lookup b::foo.
+    std::string QueryString = ScopedQualifiers.str() + Query.str();
+    MatchedSymbols = SymbolIndexMgr.search(QueryString);
+    if (MatchedSymbols.empty() && !ScopedQualifiers.empty())
+      MatchedSymbols = SymbolIndexMgr.search(Query);
+    DEBUG(llvm::dbgs() << "Having found " << MatchedSymbols.size()
+                       << " symbols\n");
+    return !MatchedSymbols.empty();
   }
 
   /// The client to use to find cross-references.
@@ -252,9 +286,18 @@ private:
   /// The symbol being queried.
   std::string QuerySymbol;
 
-  /// The query results of an identifier. We only include the first discovered
-  /// identifier to avoid getting caught in results from error recovery.
-  std::vector<std::string> SymbolQueryResults;
+  /// The scoped qualifiers of QuerySymbol. It is represented as a sequence of
+  /// names and scope resolution operatiors ::, ending with a scope resolution
+  /// operator (e.g. a::b::). Empty if the symbol is not in a specific scope.
+  std::string SymbolScopedQualifiers;
+
+  /// The replacement range of the first discovered QuerySymbol.
+  tooling::Range QuerySymbolRange;
+
+  /// All symbol candidates which match QuerySymbol. We only include the first
+  /// discovered identifier to avoid getting caught in results from error
+  /// recovery.
+  std::vector<find_all_symbols::SymbolInfo> MatchedSymbols;
 
   /// Whether we should use the smallest possible include path.
   bool MinimizeIncludePaths = true;
@@ -306,7 +349,7 @@ bool IncludeFixerActionFactory::runInvocation(
   return !Compiler.getDiagnostics().hasFatalErrorOccurred();
 }
 
-tooling::Replacements
+llvm::Expected<tooling::Replacements>
 createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
                                StringRef Header,
                                const clang::format::FormatStyle &Style) {
@@ -317,8 +360,10 @@ createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
   clang::tooling::Replacements Insertions = {
       tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName)};
 
-  return formatReplacements(
-      Code, cleanupAroundReplacements(Code, Insertions, Style), Style);
+  auto CleanReplaces = cleanupAroundReplacements(Code, Insertions, Style);
+  if (!CleanReplaces)
+    return CleanReplaces;
+  return formatReplacements(Code, *CleanReplaces, Style);
 }
 
 } // namespace include_fixer

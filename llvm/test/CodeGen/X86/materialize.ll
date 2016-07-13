@@ -125,6 +125,7 @@ entry:
 ; CHECK32-LABEL: one16:
 ; CHECK32:       xorl %eax, %eax
 ; CHECK32-NEXT:  incl %eax
+; CHECK32-NEXT:  # kill
 ; CHECK32-NEXT:  retl
 }
 
@@ -135,6 +136,7 @@ entry:
 ; CHECK32-LABEL: minus_one16:
 ; CHECK32:       xorl %eax, %eax
 ; CHECK32-NEXT:  decl %eax
+; CHECK32-NEXT:  # kill
 ; CHECK32-NEXT:  retl
 }
 

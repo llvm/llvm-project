@@ -9,7 +9,6 @@
 
 #include "polly/CodeGen/CodegenCleanup.h"
 
-#include "llvm/Analysis/CFLAliasAnalysis.h"
 #include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/IR/Function.h"

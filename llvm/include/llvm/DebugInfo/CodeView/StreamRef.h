@@ -16,7 +16,7 @@
 namespace llvm {
 namespace codeview {
 
-class StreamRef : private StreamInterface {
+class StreamRef {
 public:
   StreamRef() : Stream(nullptr), ViewOffset(0), Length(0) {}
   StreamRef(const StreamInterface &Stream)
@@ -28,7 +28,9 @@ public:
   StreamRef(const StreamRef &S, uint32_t Offset, uint32_t Length) = delete;
 
   Error readBytes(uint32_t Offset, uint32_t Size,
-                  ArrayRef<uint8_t> &Buffer) const override {
+                  ArrayRef<uint8_t> &Buffer) const {
+    if (ViewOffset + Offset < Offset)
+      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     if (Size + Offset > Length)
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);
@@ -37,7 +39,7 @@ public:
   // Given an offset into the stream, read as much as possible without copying
   // any data.
   Error readLongestContiguousChunk(uint32_t Offset,
-                                   ArrayRef<uint8_t> &Buffer) const override {
+                                   ArrayRef<uint8_t> &Buffer) const {
     if (Offset >= Length)
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
 
@@ -52,15 +54,15 @@ public:
     return Error::success();
   }
 
-  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const override {
+  Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const {
     if (Data.size() + Offset > Length)
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
     return Stream->writeBytes(ViewOffset + Offset, Data);
   }
 
-  uint32_t getLength() const override { return Length; }
+  uint32_t getLength() const { return Length; }
 
-  Error commit() const override { return Stream->commit(); }
+  Error commit() const { return Stream->commit(); }
 
   StreamRef drop_front(uint32_t N) const {
     if (!Stream)

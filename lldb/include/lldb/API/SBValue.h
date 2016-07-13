@@ -125,6 +125,12 @@ public:
     
     bool
     IsSynthetic ();
+    
+    bool
+    IsSyntheticChildrenGenerated ();
+    
+    void
+    SetSyntheticChildrenGenerated (bool);
 
     const char *
     GetLocation ();

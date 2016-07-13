@@ -292,6 +292,7 @@
 ; EMPTY-NEXT:         }
 ; EMPTY-NEXT:         {
 ; EMPTY-NEXT:           ProcStart {
+; EMPTY-NEXT:             Kind: S_GPROC32 (0x1110)
 ; EMPTY-NEXT:             PtrParent: 0x0
 ; EMPTY-NEXT:             PtrEnd: 0xC4
 ; EMPTY-NEXT:             PtrNext: 0x0
@@ -842,6 +843,7 @@
 ; EMPTY-NEXT:     }
 ; EMPTY-NEXT:     {
 ; EMPTY-NEXT:       DataSym {
+; EMPTY-NEXT:         Kind: S_GDATA32 (0x110D)
 ; EMPTY-NEXT:         Type: void* (0x403)
 ; EMPTY-NEXT:         DisplayName: __purecall
 ; EMPTY-NEXT:       }

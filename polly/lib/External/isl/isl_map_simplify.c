@@ -4983,7 +4983,7 @@ static __isl_give isl_basic_map *isl_basic_map_preimage_vars(
 		if (preimage(bmap->ineq[i] + 1 + pos, T) < 0)
 			goto error;
 	for (i = 0; i < bmap->n_div; ++i) {
-		if (!isl_basic_map_div_is_known(bmap, i))
+		if (isl_basic_map_div_is_marked_unknown(bmap, i))
 			continue;
 		if (preimage(bmap->div[i] + 1 + 1 + pos, T) < 0)
 			goto error;

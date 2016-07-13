@@ -10,6 +10,7 @@
 #ifndef utility_SharedCluster_h_
 #define utility_SharedCluster_h_
 
+#include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/SharingPtr.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
@@ -75,7 +76,11 @@ public:
         {
             std::lock_guard<std::mutex> guard(m_mutex);
             m_external_ref++;
-            assert(m_objects.count(desired_object));
+            if (0 == m_objects.count(desired_object))
+            {
+                lldbassert(false && "object not found in shared cluster when expected");
+                desired_object = nullptr;
+            }
         }
         return typename lldb_private::SharingPtr<T>(desired_object, new imp::shared_ptr_refcount<ClusterManager>(this));
     }

@@ -173,16 +173,16 @@ declare i32 @llvm.x86.sse2.comieq.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comige_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_comige_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_comige_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comige.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -193,16 +193,16 @@ declare i32 @llvm.x86.sse2.comige.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comigt_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_comigt_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_comigt_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomisd %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comigt.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -213,16 +213,16 @@ declare i32 @llvm.x86.sse2.comigt.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comile_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_comile_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomisd %xmm0, %xmm1
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_comile_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomisd %xmm0, %xmm1
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comile.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -233,16 +233,16 @@ declare i32 @llvm.x86.sse2.comile.sd(<2 x double>, <2 x double>) nounwind readno
 define i32 @test_x86_sse2_comilt_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_comilt_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomisd %xmm0, %xmm1
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_comilt_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomisd %xmm0, %xmm1
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.comilt.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1264,16 +1264,16 @@ declare i32 @llvm.x86.sse2.ucomieq.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomige_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_ucomige_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_ucomige_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomisd %xmm1, %xmm0
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomige.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1284,16 +1284,16 @@ declare i32 @llvm.x86.sse2.ucomige.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomigt_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_ucomigt_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_ucomigt_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomisd %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomigt.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1304,16 +1304,16 @@ declare i32 @llvm.x86.sse2.ucomigt.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomile_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_ucomile_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomisd %xmm0, %xmm1
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_ucomile_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomisd %xmm0, %xmm1
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomile.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1324,16 +1324,16 @@ declare i32 @llvm.x86.sse2.ucomile.sd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_sse2_ucomilt_sd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_sse2_ucomilt_sd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomisd %xmm0, %xmm1
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse2_ucomilt_sd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomisd %xmm0, %xmm1
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse2.ucomilt.sd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1791,16 +1791,16 @@ declare i32 @llvm.x86.sse41.ptestc(<2 x i64>, <2 x i64>) nounwind readnone
 define i32 @test_x86_sse41_ptestnzc(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX-LABEL: test_x86_sse41_ptestnzc:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse41_ptestnzc:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vptest %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse41.ptestnzc(<2 x i64> %a0, <2 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1811,16 +1811,16 @@ declare i32 @llvm.x86.sse41.ptestnzc(<2 x i64>, <2 x i64>) nounwind readnone
 define i32 @test_x86_sse41_ptestz(<2 x i64> %a0, <2 x i64> %a1) {
 ; AVX-LABEL: test_x86_sse41_ptestz:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %xmm1, %xmm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse41_ptestz:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vptest %xmm1, %xmm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse41.ptestz(<2 x i64> %a0, <2 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -1943,23 +1943,29 @@ define i32 @test_x86_sse42_pcmpestri128_load(<16 x i8>* %a0, <16 x i8>* %a2) {
 }
 
 
-define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) {
+define i32 @test_x86_sse42_pcmpestria128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; AVX-LABEL: test_x86_sse42_pcmpestria128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    pushl %ebx
 ; AVX-NEXT:    movl $7, %eax
 ; AVX-NEXT:    movl $7, %edx
+; AVX-NEXT:    xorl %ebx, %ebx
 ; AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    seta %bl
+; AVX-NEXT:    movl %ebx, %eax
+; AVX-NEXT:    popl %ebx
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpestria128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    pushl %ebx
 ; AVX512VL-NEXT:    movl $7, %eax
 ; AVX512VL-NEXT:    movl $7, %edx
+; AVX512VL-NEXT:    xorl %ebx, %ebx
 ; AVX512VL-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    seta %bl
+; AVX512VL-NEXT:    movl %ebx, %eax
+; AVX512VL-NEXT:    popl %ebx
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpestria128(<16 x i8> %a0, i32 7, <16 x i8> %a2, i32 7, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -1991,23 +1997,29 @@ define i32 @test_x86_sse42_pcmpestric128(<16 x i8> %a0, <16 x i8> %a2) {
 declare i32 @llvm.x86.sse42.pcmpestric128(<16 x i8>, i32, <16 x i8>, i32, i8) nounwind readnone
 
 
-define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) {
+define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; AVX-LABEL: test_x86_sse42_pcmpestrio128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    pushl %ebx
 ; AVX-NEXT:    movl $7, %eax
 ; AVX-NEXT:    movl $7, %edx
+; AVX-NEXT:    xorl %ebx, %ebx
 ; AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX-NEXT:    seto %al
-; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    seto %bl
+; AVX-NEXT:    movl %ebx, %eax
+; AVX-NEXT:    popl %ebx
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpestrio128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    pushl %ebx
 ; AVX512VL-NEXT:    movl $7, %eax
 ; AVX512VL-NEXT:    movl $7, %edx
+; AVX512VL-NEXT:    xorl %ebx, %ebx
 ; AVX512VL-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX512VL-NEXT:    seto %al
-; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    seto %bl
+; AVX512VL-NEXT:    movl %ebx, %eax
+; AVX512VL-NEXT:    popl %ebx
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpestrio128(<16 x i8> %a0, i32 7, <16 x i8> %a2, i32 7, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2015,23 +2027,29 @@ define i32 @test_x86_sse42_pcmpestrio128(<16 x i8> %a0, <16 x i8> %a2) {
 declare i32 @llvm.x86.sse42.pcmpestrio128(<16 x i8>, i32, <16 x i8>, i32, i8) nounwind readnone
 
 
-define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) {
+define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; AVX-LABEL: test_x86_sse42_pcmpestris128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    pushl %ebx
 ; AVX-NEXT:    movl $7, %eax
 ; AVX-NEXT:    movl $7, %edx
+; AVX-NEXT:    xorl %ebx, %ebx
 ; AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX-NEXT:    sets %al
-; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    sets %bl
+; AVX-NEXT:    movl %ebx, %eax
+; AVX-NEXT:    popl %ebx
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpestris128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    pushl %ebx
 ; AVX512VL-NEXT:    movl $7, %eax
 ; AVX512VL-NEXT:    movl $7, %edx
+; AVX512VL-NEXT:    xorl %ebx, %ebx
 ; AVX512VL-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX512VL-NEXT:    sets %al
-; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    sets %bl
+; AVX512VL-NEXT:    movl %ebx, %eax
+; AVX512VL-NEXT:    popl %ebx
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpestris128(<16 x i8> %a0, i32 7, <16 x i8> %a2, i32 7, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2039,23 +2057,29 @@ define i32 @test_x86_sse42_pcmpestris128(<16 x i8> %a0, <16 x i8> %a2) {
 declare i32 @llvm.x86.sse42.pcmpestris128(<16 x i8>, i32, <16 x i8>, i32, i8) nounwind readnone
 
 
-define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) {
+define i32 @test_x86_sse42_pcmpestriz128(<16 x i8> %a0, <16 x i8> %a2) nounwind {
 ; AVX-LABEL: test_x86_sse42_pcmpestriz128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    pushl %ebx
 ; AVX-NEXT:    movl $7, %eax
 ; AVX-NEXT:    movl $7, %edx
+; AVX-NEXT:    xorl %ebx, %ebx
 ; AVX-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
+; AVX-NEXT:    sete %bl
+; AVX-NEXT:    movl %ebx, %eax
+; AVX-NEXT:    popl %ebx
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpestriz128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    pushl %ebx
 ; AVX512VL-NEXT:    movl $7, %eax
 ; AVX512VL-NEXT:    movl $7, %edx
+; AVX512VL-NEXT:    xorl %ebx, %ebx
 ; AVX512VL-NEXT:    vpcmpestri $7, %xmm1, %xmm0
-; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
+; AVX512VL-NEXT:    sete %bl
+; AVX512VL-NEXT:    movl %ebx, %eax
+; AVX512VL-NEXT:    popl %ebx
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpestriz128(<16 x i8> %a0, i32 7, <16 x i8> %a2, i32 7, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2151,16 +2175,16 @@ define i32 @test_x86_sse42_pcmpistri128_load(<16 x i8>* %a0, <16 x i8>* %a1) {
 define i32 @test_x86_sse42_pcmpistria128(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-LABEL: test_x86_sse42_pcmpistria128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpistria128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpistria128(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2191,16 +2215,16 @@ declare i32 @llvm.x86.sse42.pcmpistric128(<16 x i8>, <16 x i8>, i8) nounwind rea
 define i32 @test_x86_sse42_pcmpistrio128(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-LABEL: test_x86_sse42_pcmpistrio128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX-NEXT:    seto %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpistrio128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX512VL-NEXT:    seto %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpistrio128(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2211,16 +2235,16 @@ declare i32 @llvm.x86.sse42.pcmpistrio128(<16 x i8>, <16 x i8>, i8) nounwind rea
 define i32 @test_x86_sse42_pcmpistris128(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-LABEL: test_x86_sse42_pcmpistris128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX-NEXT:    sets %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpistris128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX512VL-NEXT:    sets %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpistris128(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2231,16 +2255,16 @@ declare i32 @llvm.x86.sse42.pcmpistris128(<16 x i8>, <16 x i8>, i8) nounwind rea
 define i32 @test_x86_sse42_pcmpistriz128(<16 x i8> %a0, <16 x i8> %a1) {
 ; AVX-LABEL: test_x86_sse42_pcmpistriz128:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse42_pcmpistriz128:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vpcmpistri $7, %xmm1, %xmm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse42.pcmpistriz128(<16 x i8> %a0, <16 x i8> %a1, i8 7) ; <i32> [#uses=1]
   ret i32 %res
@@ -2357,16 +2381,16 @@ declare i32 @llvm.x86.sse.comieq.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comige_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_comige_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_comige_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comige.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2377,16 +2401,16 @@ declare i32 @llvm.x86.sse.comige.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comigt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_comigt_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_comigt_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomiss %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comigt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2397,16 +2421,16 @@ declare i32 @llvm.x86.sse.comigt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comile_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_comile_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_comile_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comile.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2417,16 +2441,16 @@ declare i32 @llvm.x86.sse.comile.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_comilt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_comilt_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_comilt_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vcomiss %xmm0, %xmm1
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.comilt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2797,16 +2821,16 @@ declare i32 @llvm.x86.sse.ucomieq.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomige_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_ucomige_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_ucomige_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomige.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2817,16 +2841,16 @@ declare i32 @llvm.x86.sse.ucomige.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomigt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_ucomigt_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_ucomigt_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomiss %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomigt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2837,16 +2861,16 @@ declare i32 @llvm.x86.sse.ucomigt.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomile_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_ucomile_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX-NEXT:    setae %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_ucomile_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512VL-NEXT:    setae %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomile.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -2857,16 +2881,16 @@ declare i32 @llvm.x86.sse.ucomile.ss(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_sse_ucomilt_ss(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_sse_ucomilt_ss:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_sse_ucomilt_ss:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vucomiss %xmm0, %xmm1
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.sse.ucomilt.ss(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -3778,17 +3802,17 @@ declare i32 @llvm.x86.avx.ptestc.256(<4 x i64>, <4 x i64>) nounwind readnone
 define i32 @test_x86_avx_ptestnzc_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX-LABEL: test_x86_avx_ptestnzc_256:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %ymm1, %ymm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_ptestnzc_256:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vptest %ymm1, %ymm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.ptestnzc.256(<4 x i64> %a0, <4 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -3799,17 +3823,17 @@ declare i32 @llvm.x86.avx.ptestnzc.256(<4 x i64>, <4 x i64>) nounwind readnone
 define i32 @test_x86_avx_ptestz_256(<4 x i64> %a0, <4 x i64> %a1) {
 ; AVX-LABEL: test_x86_avx_ptestz_256:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vptest %ymm1, %ymm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_ptestz_256:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vptest %ymm1, %ymm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.ptestz.256(<4 x i64> %a0, <4 x i64> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4175,16 +4199,16 @@ declare i32 @llvm.x86.avx.vtestc.ps.256(<8 x float>, <8 x float>) nounwind readn
 define i32 @test_x86_avx_vtestnzc_pd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestnzc_pd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestpd %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestnzc_pd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestpd %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestnzc.pd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4195,17 +4219,17 @@ declare i32 @llvm.x86.avx.vtestnzc.pd(<2 x double>, <2 x double>) nounwind readn
 define i32 @test_x86_avx_vtestnzc_pd_256(<4 x double> %a0, <4 x double> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestnzc_pd_256:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestpd %ymm1, %ymm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestnzc_pd_256:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestpd %ymm1, %ymm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestnzc.pd.256(<4 x double> %a0, <4 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4216,16 +4240,16 @@ declare i32 @llvm.x86.avx.vtestnzc.pd.256(<4 x double>, <4 x double>) nounwind r
 define i32 @test_x86_avx_vtestnzc_ps(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestnzc_ps:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestps %xmm1, %xmm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestnzc_ps:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestps %xmm1, %xmm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestnzc.ps(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4236,17 +4260,17 @@ declare i32 @llvm.x86.avx.vtestnzc.ps(<4 x float>, <4 x float>) nounwind readnon
 define i32 @test_x86_avx_vtestnzc_ps_256(<8 x float> %a0, <8 x float> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestnzc_ps_256:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestps %ymm1, %ymm0
 ; AVX-NEXT:    seta %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestnzc_ps_256:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestps %ymm1, %ymm0
 ; AVX512VL-NEXT:    seta %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestnzc.ps.256(<8 x float> %a0, <8 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4257,16 +4281,16 @@ declare i32 @llvm.x86.avx.vtestnzc.ps.256(<8 x float>, <8 x float>) nounwind rea
 define i32 @test_x86_avx_vtestz_pd(<2 x double> %a0, <2 x double> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestz_pd:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestpd %xmm1, %xmm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestz_pd:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestpd %xmm1, %xmm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestz.pd(<2 x double> %a0, <2 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4277,17 +4301,17 @@ declare i32 @llvm.x86.avx.vtestz.pd(<2 x double>, <2 x double>) nounwind readnon
 define i32 @test_x86_avx_vtestz_pd_256(<4 x double> %a0, <4 x double> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestz_pd_256:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestpd %ymm1, %ymm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestz_pd_256:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestpd %ymm1, %ymm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestz.pd.256(<4 x double> %a0, <4 x double> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4298,16 +4322,16 @@ declare i32 @llvm.x86.avx.vtestz.pd.256(<4 x double>, <4 x double>) nounwind rea
 define i32 @test_x86_avx_vtestz_ps(<4 x float> %a0, <4 x float> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestz_ps:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestps %xmm1, %xmm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestz_ps:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestps %xmm1, %xmm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestz.ps(<4 x float> %a0, <4 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res
@@ -4318,17 +4342,17 @@ declare i32 @llvm.x86.avx.vtestz.ps(<4 x float>, <4 x float>) nounwind readnone
 define i32 @test_x86_avx_vtestz_ps_256(<8 x float> %a0, <8 x float> %a1) {
 ; AVX-LABEL: test_x86_avx_vtestz_ps_256:
 ; AVX:       ## BB#0:
+; AVX-NEXT:    xorl %eax, %eax
 ; AVX-NEXT:    vtestps %ymm1, %ymm0
 ; AVX-NEXT:    sete %al
-; AVX-NEXT:    movzbl %al, %eax
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vtestz_ps_256:
 ; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    xorl %eax, %eax
 ; AVX512VL-NEXT:    vtestps %ymm1, %ymm0
 ; AVX512VL-NEXT:    sete %al
-; AVX512VL-NEXT:    movzbl %al, %eax
 ; AVX512VL-NEXT:    retl
   %res = call i32 @llvm.x86.avx.vtestz.ps.256(<8 x float> %a0, <8 x float> %a1) ; <i32> [#uses=1]
   ret i32 %res

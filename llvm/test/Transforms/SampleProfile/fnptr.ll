@@ -10,10 +10,10 @@
 
 ; CHECK:   edge for.body3 -> if.then probability is 0x1a4f3959 / 0x80000000 = 20.55%
 ; CHECK:   edge for.body3 -> if.else probability is 0x65b0c6a7 / 0x80000000 = 79.45%
-; CHECK:   edge for.inc -> for.inc12 probability is 0x33d4a4c1 / 0x80000000 = 40.49%
-; CHECK:   edge for.inc -> for.body3 probability is 0x4c2b5b3f / 0x80000000 = 59.51%
-; CHECK:   edge for.inc12 -> for.end14 probability is 0x3f06d04e / 0x80000000 = 49.24%
-; CHECK:   edge for.inc12 -> for.cond1.preheader probability is 0x40f92fb2 / 0x80000000 = 50.76%
+; CHECK:   edge for.inc -> for.inc12 probability is 0x20dc8dc9 / 0x80000000 = 25.67%
+; CHECK:   edge for.inc -> for.body3 probability is 0x5f237237 / 0x80000000 = 74.33%
+; CHECK:   edge for.inc12 -> for.end14 probability is 0x00000000 / 0x80000000 = 0.00%
+; CHECK:   edge for.inc12 -> for.cond1.preheader probability is 0x80000000 / 0x80000000 = 100.00%
 
 ; Original C++ test case.
 ;

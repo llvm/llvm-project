@@ -161,8 +161,9 @@
 ; CHECK:   Union (0x100B) {
 ; CHECK:     TypeLeafKind: LF_UNION (0x1506)
 ; CHECK:     MemberCount: 2
-; CHECK:     Properties [ (0x200)
+; CHECK:     Properties [ (0x600)
 ; CHECK:       HasUniqueName (0x200)
+; CHECK:       Sealed (0x400)
 ; CHECK:     ]
 ; CHECK:     FieldList: <field list> (0x100A)
 ; CHECK:     SizeOf: 4

@@ -275,30 +275,6 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
             switch (tag)
             {
                 case DW_TAG_typedef:
-                    // Try to parse a typedef from the DWO file first as modules
-                    // can contain typedef'ed structures that have no names like:
-                    //
-                    //  typedef struct { int a; } Foo;
-                    //
-                    // In this case we will have a structure with no name and a
-                    // typedef named "Foo" that points to this unnamed structure.
-                    // The name in the typedef is the only identifier for the struct,
-                    // so always try to get typedefs from DWO files if possible.
-                    //
-                    // The type_sp returned will be empty if the typedef doesn't exist
-                    // in a DWO file, so it is cheap to call this function just to check.
-                    //
-                    // If we don't do this we end up creating a TypeSP that says this
-                    // is a typedef to type 0x123 (the DW_AT_type value would be 0x123
-                    // in the DW_TAG_typedef), and this is the unnamed structure type.
-                    // We will have a hard time tracking down an unnammed structure
-                    // type in the module DWO file, so we make sure we don't get into
-                    // this situation by always resolving typedefs from the DWO file.
-                    type_sp = ParseTypeFromDWO(die, log);
-                    if (type_sp)
-                        return type_sp;
-
-                LLVM_FALLTHROUGH;
                 case DW_TAG_base_type:
                 case DW_TAG_pointer_type:
                 case DW_TAG_reference_type:
@@ -349,6 +325,42 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                                         break;
                                 }
                             }
+                        }
+                    }
+
+                    if (tag == DW_TAG_typedef && encoding_uid.IsValid())
+                    {
+                        // Try to parse a typedef from the DWO file first as modules
+                        // can contain typedef'ed structures that have no names like:
+                        //
+                        //  typedef struct { int a; } Foo;
+                        //
+                        // In this case we will have a structure with no name and a
+                        // typedef named "Foo" that points to this unnamed structure.
+                        // The name in the typedef is the only identifier for the struct,
+                        // so always try to get typedefs from DWO files if possible.
+                        //
+                        // The type_sp returned will be empty if the typedef doesn't exist
+                        // in a DWO file, so it is cheap to call this function just to check.
+                        //
+                        // If we don't do this we end up creating a TypeSP that says this
+                        // is a typedef to type 0x123 (the DW_AT_type value would be 0x123
+                        // in the DW_TAG_typedef), and this is the unnamed structure type.
+                        // We will have a hard time tracking down an unnammed structure
+                        // type in the module DWO file, so we make sure we don't get into
+                        // this situation by always resolving typedefs from the DWO file.
+                        const DWARFDIE encoding_die = dwarf->GetDIE(DIERef(encoding_uid));
+
+                        // First make sure that the die that this is typedef'ed to _is_
+                        // just a declaration (DW_AT_declaration == 1), not a full definition
+                        // since template types can't be represented in modules since only
+                        // concrete instances of templates are ever emitted and modules
+                        // won't contain those
+                        if (encoding_die && encoding_die.GetAttributeValueAsUnsigned(DW_AT_declaration, 0) == 1)
+                        {
+                            type_sp = ParseTypeFromDWO(die, log);
+                            if (type_sp)
+                                return type_sp;
                         }
                     }
 
@@ -2808,6 +2820,7 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                     uint32_t member_byte_offset = (parent_die.Tag() == DW_TAG_union_type) ? 0 : UINT32_MAX;
                     size_t byte_size = 0;
                     int64_t bit_offset = 0;
+                    uint64_t data_bit_offset = UINT64_MAX;
                     size_t bit_size = 0;
                     bool is_external = false; // On DW_TAG_members, this means the member is static
                     uint32_t i;
@@ -2827,6 +2840,7 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                 case DW_AT_bit_offset:  bit_offset = form_value.Signed(); break;
                                 case DW_AT_bit_size:    bit_size = form_value.Unsigned(); break;
                                 case DW_AT_byte_size:   byte_size = form_value.Unsigned(); break;
+                                case DW_AT_data_bit_offset: data_bit_offset = form_value.Unsigned(); break;
                                 case DW_AT_data_member_location:
                                     if (form_value.BlockData())
                                     {
@@ -3014,22 +3028,30 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                     // AT_bit_size indicates the size of the field in bits.
                                     /////////////////////////////////////////////////////////////
 
-                                    if (byte_size == 0)
-                                        byte_size = member_type->GetByteSize();
-
-                                    ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
-                                    if (objfile->GetByteOrder() == eByteOrderLittle)
+                                    if (data_bit_offset != UINT64_MAX)
                                     {
-                                        this_field_info.bit_offset += byte_size * 8;
-                                        this_field_info.bit_offset -= (bit_offset + bit_size);
+                                        this_field_info.bit_offset = data_bit_offset;
                                     }
                                     else
                                     {
-                                        this_field_info.bit_offset += bit_offset;
+                                        if (byte_size == 0)
+                                            byte_size = member_type->GetByteSize();
+
+                                        ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
+                                        if (objfile->GetByteOrder() == eByteOrderLittle)
+                                        {
+                                            this_field_info.bit_offset += byte_size * 8;
+                                            this_field_info.bit_offset -= (bit_offset + bit_size);
+                                        }
+                                        else
+                                        {
+                                            this_field_info.bit_offset += bit_offset;
+                                        }
                                     }
 
                                     if ((this_field_info.bit_offset >= parent_bit_size) || !last_field_info.NextBitfieldOffsetIsValid(this_field_info.bit_offset))
                                     {
+                                        ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
                                         objfile->GetModule()->ReportWarning("0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid bit offset (0x%8.8" PRIx64 ") member will be ignored. Please file a bug against the compiler and include the preprocessed output for %s\n",
                                                                             die.GetID(),
                                                                             DW_TAG_value_to_name(tag),

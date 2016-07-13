@@ -83,6 +83,8 @@ __isl_give isl_printer *isl_printer_print_ast_expr(__isl_take isl_printer *p,
 	__isl_keep isl_ast_expr *expr);
 void isl_ast_expr_dump(__isl_keep isl_ast_expr *expr);
 __isl_give char *isl_ast_expr_to_str(__isl_keep isl_ast_expr *expr);
+__isl_export
+__isl_give char *isl_ast_expr_to_C_str(__isl_keep isl_ast_expr *expr);
 
 __isl_give isl_ast_node *isl_ast_node_alloc_user(__isl_take isl_ast_expr *expr);
 __isl_give isl_ast_node *isl_ast_node_copy(__isl_keep isl_ast_node *node);
@@ -132,6 +134,7 @@ isl_stat isl_ast_node_foreach_descendant_top_down(
 __isl_give isl_printer *isl_printer_print_ast_node(__isl_take isl_printer *p,
 	__isl_keep isl_ast_node *node);
 void isl_ast_node_dump(__isl_keep isl_ast_node *node);
+__isl_give char *isl_ast_node_to_str(__isl_keep isl_ast_node *node);
 
 __isl_give isl_ast_print_options *isl_ast_print_options_alloc(isl_ctx *ctx);
 __isl_give isl_ast_print_options *isl_ast_print_options_copy(
@@ -179,6 +182,9 @@ __isl_give isl_printer *isl_ast_node_for_print(__isl_keep isl_ast_node *node,
 __isl_give isl_printer *isl_ast_node_if_print(__isl_keep isl_ast_node *node,
 	__isl_take isl_printer *p,
 	__isl_take isl_ast_print_options *options);
+
+__isl_export
+__isl_give char *isl_ast_node_to_C_str(__isl_keep isl_ast_node *node);
 
 #if defined(__cplusplus)
 }

@@ -1,4 +1,5 @@
 ; RUN: opt -S -cross-dso-cfi < %s | FileCheck %s
+; RUN: opt -S -passes=cross-dso-cfi < %s | FileCheck %s
 
 ; CHECK:     define void @__cfi_check(i64 %[[TYPE:.*]], i8* %[[ADDR:.*]], i8* %[[DATA:.*]]) align 4096
 ; CHECK:     switch i64 %[[TYPE]], label %[[FAIL:.*]] [

@@ -68,7 +68,7 @@ public:
                             const TargetRegisterClass *RC,
                             const TargetRegisterInfo *TRI) const override;
 
-  unsigned GetInstSizeInBytes(const MachineInstr *MI) const;
+  unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
   // Branch folding goodness
   bool

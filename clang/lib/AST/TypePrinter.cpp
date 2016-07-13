@@ -923,10 +923,8 @@ void TypePrinter::AppendScope(DeclContext *DC, raw_ostream &OS) {
     IncludeStrongLifetimeRAII Strong(Policy);
     OS << Spec->getIdentifier()->getName();
     const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-    TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                            TemplateArgs.data(),
-                                            TemplateArgs.size(),
-                                            Policy);
+    TemplateSpecializationType::PrintTemplateArgumentList(
+        OS, TemplateArgs.asArray(), Policy);
     OS << "::";
   } else if (TagDecl *Tag = dyn_cast<TagDecl>(DC)) {
     if (TypedefNameDecl *Typedef = Tag->getTypedefNameForAnonDecl())
@@ -1003,22 +1001,17 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   // arguments.
   if (ClassTemplateSpecializationDecl *Spec
         = dyn_cast<ClassTemplateSpecializationDecl>(D)) {
-    const TemplateArgument *Args;
-    unsigned NumArgs;
+    ArrayRef<TemplateArgument> Args;
     if (TypeSourceInfo *TAW = Spec->getTypeAsWritten()) {
       const TemplateSpecializationType *TST =
         cast<TemplateSpecializationType>(TAW->getType());
-      Args = TST->getArgs();
-      NumArgs = TST->getNumArgs();
+      Args = TST->template_arguments();
     } else {
       const TemplateArgumentList &TemplateArgs = Spec->getTemplateArgs();
-      Args = TemplateArgs.data();
-      NumArgs = TemplateArgs.size();
+      Args = TemplateArgs.asArray();
     }
     IncludeStrongLifetimeRAII Strong(Policy);
-    TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                                          Args, NumArgs,
-                                                          Policy);
+    TemplateSpecializationType::PrintTemplateArgumentList(OS, Args, Policy);
   }
 
   spaceBeforePlaceHolder(OS);
@@ -1076,11 +1069,9 @@ void TypePrinter::printTemplateSpecializationBefore(
                                             raw_ostream &OS) { 
   IncludeStrongLifetimeRAII Strong(Policy);
   T->getTemplateName().print(OS, Policy);
-  
-  TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                                        T->getArgs(), 
-                                                        T->getNumArgs(), 
-                                                        Policy);
+
+  TemplateSpecializationType::PrintTemplateArgumentList(
+      OS, T->template_arguments(), Policy);
   spaceBeforePlaceHolder(OS);
 }
 void TypePrinter::printTemplateSpecializationAfter(
@@ -1157,8 +1148,7 @@ void TypePrinter::printDependentTemplateSpecializationBefore(
     T->getQualifier()->print(OS, Policy);    
   OS << T->getIdentifier()->getName();
   TemplateSpecializationType::PrintTemplateArgumentList(OS,
-                                                        T->getArgs(),
-                                                        T->getNumArgs(),
+                                                        T->template_arguments(),
                                                         Policy);
   spaceBeforePlaceHolder(OS);
 }
@@ -1445,50 +1435,46 @@ void TemplateSpecializationType::
                             const TemplateArgumentListInfo &Args,
                             const PrintingPolicy &Policy) {
   return PrintTemplateArgumentList(OS,
-                                   Args.getArgumentArray(),
-                                   Args.size(),
+                                   Args.arguments(),
                                    Policy);
 }
 
-void
-TemplateSpecializationType::PrintTemplateArgumentList(
-                                                raw_ostream &OS,
-                                                const TemplateArgument *Args,
-                                                unsigned NumArgs,
-                                                  const PrintingPolicy &Policy,
-                                                      bool SkipBrackets) {
+void TemplateSpecializationType::PrintTemplateArgumentList(
+    raw_ostream &OS, ArrayRef<TemplateArgument> Args,
+    const PrintingPolicy &Policy, bool SkipBrackets) {
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
   if (!SkipBrackets)
     OS << '<';
-  
+
   bool needSpace = false;
-  for (unsigned Arg = 0; Arg < NumArgs; ++Arg) {
+  bool FirstArg = true;
+  for (const TemplateArgument &Arg : Args) {
     // Print the argument into a string.
     SmallString<128> Buf;
     llvm::raw_svector_ostream ArgOS(Buf);
-    if (Args[Arg].getKind() == TemplateArgument::Pack) {
-      if (Args[Arg].pack_size() && Arg > 0)
+    if (Arg.getKind() == TemplateArgument::Pack) {
+      if (Arg.pack_size() && !FirstArg)
         OS << Comma;
       PrintTemplateArgumentList(ArgOS,
-                                Args[Arg].pack_begin(), 
-                                Args[Arg].pack_size(), 
+                                Arg.getPackAsArray(),
                                 Policy, true);
     } else {
-      if (Arg > 0)
+      if (!FirstArg)
         OS << Comma;
-      Args[Arg].print(Policy, ArgOS);
+      Arg.print(Policy, ArgOS);
     }
     StringRef ArgString = ArgOS.str();
 
     // If this is the first argument and its string representation
     // begins with the global scope specifier ('::foo'), add a space
     // to avoid printing the diagraph '<:'.
-    if (!Arg && !ArgString.empty() && ArgString[0] == ':')
+    if (FirstArg && !ArgString.empty() && ArgString[0] == ':')
       OS << ' ';
 
     OS << ArgString;
 
     needSpace = (!ArgString.empty() && ArgString.back() == '>');
+    FirstArg = false;
   }
 
   // If the last character of our string is '>', add another space to
@@ -1504,40 +1490,41 @@ TemplateSpecializationType::PrintTemplateArgumentList(
 // Sadly, repeat all that with TemplateArgLoc.
 void TemplateSpecializationType::
 PrintTemplateArgumentList(raw_ostream &OS,
-                          const TemplateArgumentLoc *Args, unsigned NumArgs,
+                          ArrayRef<TemplateArgumentLoc> Args,
                           const PrintingPolicy &Policy) {
   OS << '<';
   const char *Comma = Policy.MSVCFormatting ? "," : ", ";
 
   bool needSpace = false;
-  for (unsigned Arg = 0; Arg < NumArgs; ++Arg) {
-    if (Arg > 0)
+  bool FirstArg = true;
+  for (const TemplateArgumentLoc &Arg : Args) {
+    if (!FirstArg)
       OS << Comma;
-    
+
     // Print the argument into a string.
     SmallString<128> Buf;
     llvm::raw_svector_ostream ArgOS(Buf);
-    if (Args[Arg].getArgument().getKind() == TemplateArgument::Pack) {
+    if (Arg.getArgument().getKind() == TemplateArgument::Pack) {
       PrintTemplateArgumentList(ArgOS,
-                                Args[Arg].getArgument().pack_begin(), 
-                                Args[Arg].getArgument().pack_size(), 
+                                Arg.getArgument().getPackAsArray(),
                                 Policy, true);
     } else {
-      Args[Arg].getArgument().print(Policy, ArgOS);
+      Arg.getArgument().print(Policy, ArgOS);
     }
     StringRef ArgString = ArgOS.str();
-    
+
     // If this is the first argument and its string representation
     // begins with the global scope specifier ('::foo'), add a space
     // to avoid printing the diagraph '<:'.
-    if (!Arg && !ArgString.empty() && ArgString[0] == ':')
+    if (FirstArg && !ArgString.empty() && ArgString[0] == ':')
       OS << ' ';
 
     OS << ArgString;
 
     needSpace = (!ArgString.empty() && ArgString.back() == '>');
+    FirstArg = false;
   }
-  
+
   // If the last character of our string is '>', add another space to
   // keep the two '>''s separate tokens. We don't *have* to do this in
   // C++0x, but it's still good hygiene.

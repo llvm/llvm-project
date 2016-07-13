@@ -55,11 +55,10 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
 
   calculateFrameObjectOffsets(MF);
 
-  for (MachineFunction::iterator BB = MF.begin(), E = MF.end(); BB != E; ++BB) {
-    for (MachineBasicBlock::iterator I = BB->begin(); I != BB->end(); ++I) {
-      MachineInstr *MI = I;
-      for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-        if (!MI->getOperand(i).isFI())
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB) {
+      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+        if (!MI.getOperand(i).isFI())
           continue;
         TRI.eliminateFrameIndex(MI, 0, i, nullptr);
         Modified = true;

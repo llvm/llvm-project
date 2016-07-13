@@ -123,6 +123,9 @@ public:
   unsigned getRegisterByName(const char* RegName, EVT VT,
                              SelectionDAG &DAG) const override;
 
+  MachineBasicBlock *splitKillBlock(MachineInstr &MI,
+                                    MachineBasicBlock *BB) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;

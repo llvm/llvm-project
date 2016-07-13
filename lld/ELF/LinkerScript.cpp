@@ -20,6 +20,7 @@
 #include "OutputSections.h"
 #include "ScriptParser.h"
 #include "Strings.h"
+#include "Symbols.h"
 #include "SymbolTable.h"
 #include "Target.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -226,16 +227,25 @@ void LinkerScript<ELFT>::assignAddresses(
   uintX_t ThreadBssOffset = 0;
 
   for (SectionsCommand &Cmd : Opt.Commands) {
-    if (Cmd.Kind == ExprKind) {
+    switch (Cmd.Kind) {
+    case ExprKind:
       Dot = evalExpr(Cmd.Expr, Dot);
       continue;
+    case SymbolAssignmentKind: {
+      auto *D =
+          cast<DefinedRegular<ELFT>>(Symtab<ELFT>::X->find(Cmd.Name));
+      D->Value = evalExpr(Cmd.Expr, Dot);
+      continue;
+    }
+    default:
+      break;
     }
 
     // Find all the sections with required name. There can be more than
     // ont section with such name, if the alignment, flags or type
     // attribute differs.
     for (OutputSectionBase<ELFT> *Sec : Sections) {
-      if (Sec->getName() != Cmd.SectionName)
+      if (Sec->getName() != Cmd.Name)
         continue;
 
       if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
@@ -256,7 +266,8 @@ void LinkerScript<ELFT>::assignAddresses(
     }
   }
 
-  // ELF and Program headers need to be right before the first section in memory.
+  // ELF and Program headers need to be right before the first section in
+  // memory.
   // Set their addresses accordingly.
   MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
                         Out<ELFT>::ProgramHeaders->getSize(),
@@ -282,7 +293,7 @@ int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
   auto Begin = Opt.Commands.begin();
   auto End = Opt.Commands.end();
   auto I = std::find_if(Begin, End, [&](SectionsCommand &N) {
-    return N.Kind == SectionKind && N.SectionName == Name;
+    return N.Kind == SectionKind && N.Name == Name;
   });
   return I == End ? INT_MAX : (I - Begin);
 }
@@ -296,6 +307,13 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
   if (I == INT_MAX && J == INT_MAX)
     return 0;
   return I < J ? -1 : 1;
+}
+
+template <class ELFT>
+void LinkerScript<ELFT>::addScriptedSymbols() {
+  for (SectionsCommand &Cmd : Opt.Commands)
+    if (Cmd.Kind == SymbolAssignmentKind)
+      Symtab<ELFT>::X->addAbsolute(Cmd.Name, STV_DEFAULT);
 }
 
 class elf::ScriptParser : public ScriptParserBase {
@@ -322,7 +340,9 @@ private:
   void readSections();
 
   void readLocationCounterValue();
-  void readOutputSectionDescription();
+  void readOutputSectionDescription(StringRef OutSec);
+  void readSymbolAssignment(StringRef Name);
+  std::vector<StringRef> readSectionsCommandExpr();
 
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -486,30 +506,29 @@ void ScriptParser::readSections() {
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = peek();
-    if (Tok == ".")
+    if (Tok == ".") {
       readLocationCounterValue();
+      continue;
+    }
+    next();
+    if (peek() == "=")
+      readSymbolAssignment(Tok);
     else
-      readOutputSectionDescription();
+      readOutputSectionDescription(Tok);
   }
 }
 
 void ScriptParser::readLocationCounterValue() {
   expect(".");
   expect("=");
-  Opt.Commands.push_back({ExprKind, {}, ""});
-  SectionsCommand &Cmd = Opt.Commands.back();
-  while (!Error) {
-    StringRef Tok = next();
-    if (Tok == ";")
-      break;
-    Cmd.Expr.push_back(Tok);
-  }
-  if (Cmd.Expr.empty())
+  std::vector<StringRef> Expr = readSectionsCommandExpr();
+  if (Expr.empty())
     error("error in location counter expression");
+  else
+    Opt.Commands.push_back({ExprKind, std::move(Expr), ""});
 }
 
-void ScriptParser::readOutputSectionDescription() {
-  StringRef OutSec = next();
+void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   Opt.Commands.push_back({SectionKind, {}, OutSec});
   expect(":");
   expect("{");
@@ -545,6 +564,26 @@ void ScriptParser::readOutputSectionDescription() {
     Opt.Filler[OutSec] = parseHex(Tok);
     next();
   }
+}
+
+void ScriptParser::readSymbolAssignment(StringRef Name) {
+  expect("=");
+  std::vector<StringRef> Expr = readSectionsCommandExpr();
+  if (Expr.empty())
+    error("error in symbol assignment expression");
+  else
+    Opt.Commands.push_back({SymbolAssignmentKind, std::move(Expr), Name});
+}
+
+std::vector<StringRef> ScriptParser::readSectionsCommandExpr() {
+  std::vector<StringRef> Expr;
+  while (!Error) {
+    StringRef Tok = next();
+    if (Tok == ";")
+      break;
+    Expr.push_back(Tok);
+  }
+  return Expr;
 }
 
 static bool isUnderSysroot(StringRef Path) {

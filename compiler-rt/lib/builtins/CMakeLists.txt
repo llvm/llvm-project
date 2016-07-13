@@ -386,6 +386,7 @@ set(wasm32_SOURCES ${GENERIC_SOURCES})
 set(wasm64_SOURCES ${GENERIC_SOURCES})
 
 add_custom_target(builtins)
+set_target_properties(builtins PROPERTIES FOLDER "Compiler-RT Misc")
 
 if (APPLE)
   add_subdirectory(Darwin-excludes)

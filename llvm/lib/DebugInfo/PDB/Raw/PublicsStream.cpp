@@ -169,3 +169,5 @@ PublicsStream::getSymbols(bool *HadError) const {
 
   return SS.getSymbols(HadError);
 }
+
+Error PublicsStream::commit() { return Error::success(); }

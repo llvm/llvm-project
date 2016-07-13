@@ -109,3 +109,10 @@ void __esan_unaligned_loadN(void *Addr, uptr Size) {
 void __esan_unaligned_storeN(void *Addr, uptr Size) {
   processRangeAccess(GET_CALLER_PC(), (uptr)Addr, Size, true);
 }
+
+// Public interface:
+extern "C" {
+SANITIZER_INTERFACE_ATTRIBUTE void __esan_report() {
+  reportResults();
+}
+} // extern "C"

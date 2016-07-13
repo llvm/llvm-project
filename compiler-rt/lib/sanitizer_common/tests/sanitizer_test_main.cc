@@ -13,10 +13,6 @@
 #include "gtest/gtest.h"
 #include "sanitizer_common/sanitizer_flags.h"
 
-#ifdef _MSC_VER
-#pragma comment(linker, "/STACK:33554432")
-#endif
-
 const char *argv0;
 
 int main(int argc, char **argv) {

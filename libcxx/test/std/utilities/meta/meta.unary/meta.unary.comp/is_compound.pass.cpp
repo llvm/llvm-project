@@ -45,6 +45,8 @@ void test_is_not_compound()
 #endif
 }
 
+class incomplete_type;
+
 class Empty
 {
 };
@@ -81,6 +83,7 @@ int main()
     test_is_compound<int&&>();
     test_is_compound<Union>();
     test_is_compound<Empty>();
+    test_is_compound<incomplete_type>();
     test_is_compound<bit_zero>();
     test_is_compound<int*>();
     test_is_compound<const int*>();

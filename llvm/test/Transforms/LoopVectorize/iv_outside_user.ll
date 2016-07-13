@@ -22,8 +22,8 @@ for.end:
 
 ; CHECK-LABEL: @preinc
 ; CHECK-LABEL: middle.block:
-; CHECK: %3 = sub i32 %n.vec, 1
-; CHECK: %ind.escape = add i32 0, %3
+; CHECK: %[[v3:.+]] = sub i32 %n.vec, 1
+; CHECK: %ind.escape = add i32 0, %[[v3]]
 ; CHECK-LABEL: scalar.ph:
 ; CHECK: %bc.resume.val = phi i32 [ %n.vec, %middle.block ], [ 0, %entry ]
 ; CHECK-LABEL: for.end:
@@ -107,4 +107,29 @@ for.body:
 
 for.end:
   ret i32* %inc.lag1
+}
+
+; CHECK-LABEL: @multiphi
+; CHECK-LABEL: scalar.ph:
+; CHECK: %bc.resume.val = phi i32 [ %n.vec, %middle.block ], [ 0, %entry ]
+; CHECK-LABEL: for.end:
+; CHECK: %phi = phi i32 [ {{.*}}, %for.body ], [ %n.vec, %middle.block ]
+; CHECK: %phi2 = phi i32 [ {{.*}}, %for.body ], [ %n.vec, %middle.block ]
+; CHECK: store i32 %phi2, i32* %p
+; CHECK: ret i32 %phi
+define i32 @multiphi(i32 %k, i32* %p)  {
+entry:
+  br label %for.body
+
+for.body:
+  %inc.phi = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %inc = add nsw i32 %inc.phi, 1
+  %cmp = icmp eq i32 %inc, %k
+  br i1 %cmp, label %for.end, label %for.body
+
+for.end:
+  %phi = phi i32 [ %inc, %for.body ]
+  %phi2 = phi i32 [ %inc, %for.body ]
+  store i32 %phi2, i32* %p
+  ret i32 %phi
 }

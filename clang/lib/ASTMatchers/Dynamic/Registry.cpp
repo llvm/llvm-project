@@ -208,6 +208,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasAttr);
   REGISTER_MATCHER(hasAutomaticStorageDuration);
   REGISTER_MATCHER(hasBase);
+  REGISTER_MATCHER(hasBitWidth);
   REGISTER_MATCHER(hasBody);
   REGISTER_MATCHER(hasCanonicalType);
   REGISTER_MATCHER(hasCaseConstant);
@@ -283,6 +284,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isAnyPointer);
   REGISTER_MATCHER(isArrow);
   REGISTER_MATCHER(isBaseInitializer);
+  REGISTER_MATCHER(isBitField);
   REGISTER_MATCHER(isCatchAll);
   REGISTER_MATCHER(isClass);
   REGISTER_MATCHER(isConst);
@@ -319,9 +321,11 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(isProtected);
   REGISTER_MATCHER(isPublic);
   REGISTER_MATCHER(isPure);
+  REGISTER_MATCHER(isSignedInteger);
   REGISTER_MATCHER(isStruct);
   REGISTER_MATCHER(isTemplateInstantiation);
   REGISTER_MATCHER(isUnion);
+  REGISTER_MATCHER(isUnsignedInteger);
   REGISTER_MATCHER(isVariadic);
   REGISTER_MATCHER(isVirtual);
   REGISTER_MATCHER(isVirtualAsWritten);

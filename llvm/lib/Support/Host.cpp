@@ -703,8 +703,8 @@ static void getAMDProcessorTypeAndSubtype(unsigned int Family,
   }
 }
 
-unsigned getAvailableFeatures(unsigned int ECX, unsigned int EDX,
-                              unsigned MaxLeaf) {
+static unsigned getAvailableFeatures(unsigned int ECX, unsigned int EDX,
+                                     unsigned MaxLeaf) {
   unsigned Features = 0;
   unsigned int EAX, EBX;
   Features |= (((EDX >> 23) & 1) << FEATURE_MMX);

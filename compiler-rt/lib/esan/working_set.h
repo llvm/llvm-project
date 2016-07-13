@@ -23,6 +23,7 @@ namespace __esan {
 void initializeWorkingSet();
 void initializeShadowWorkingSet();
 int finalizeWorkingSet();
+void reportWorkingSet();
 void processRangeAccessWorkingSet(uptr PC, uptr Addr, SIZE_T Size,
                                   bool IsWrite);
 
@@ -31,6 +32,7 @@ void registerMemoryFaultHandler();
 bool processWorkingSetSignal(int SigNum, void (*Handler)(int),
                              void (**Result)(int));
 bool processWorkingSetSigaction(int SigNum, const void *Act, void *OldAct);
+bool processWorkingSetSigprocmask(int How, void *Set, void *OldSet);
 
 } // namespace __esan
 

@@ -17,6 +17,7 @@
 #include "Error.h"
 #include "lld/Config/Version.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -49,29 +50,45 @@ static const opt::OptTable::Info OptInfo[] = {
 
 ELFOptTable::ELFOptTable() : OptTable(OptInfo) {}
 
+static cl::TokenizerCallback getQuotingStyle(opt::InputArgList &Args) {
+  if (auto *Arg = Args.getLastArg(OPT_rsp_quoting)) {
+    StringRef S = Arg->getValue();
+    if (S != "windows" && S != "posix")
+      error("invalid response file quoting: " + S);
+    if (S == "windows")
+      return cl::TokenizeWindowsCommandLine;
+    return cl::TokenizeGNUCommandLine;
+  }
+  if (Triple(sys::getProcessTriple()).getOS() == Triple::Win32)
+    return cl::TokenizeWindowsCommandLine;
+  return cl::TokenizeGNUCommandLine;
+}
+
 // Parses a given list of options.
 opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   // Make InputArgList from string vectors.
   unsigned MissingIndex;
   unsigned MissingCount;
+  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
+
+  // We need to get the quoting style for response files before parsing all
+  // options so we parse here before and ignore all the options but
+  // --rsp-quoting.
+  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
 
   // Expand response files. '@<filename>' is replaced by the file's contents.
-  SmallVector<const char *, 256> Vec(Argv.data(), Argv.data() + Argv.size());
   StringSaver Saver(Alloc);
-  cl::ExpandResponseFiles(Saver, cl::TokenizeGNUCommandLine, Vec);
+  cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), Vec);
 
   // Parse options and then do error checking.
-  opt::InputArgList Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
+  Args = this->ParseArgs(Vec, MissingIndex, MissingCount);
   if (MissingCount)
     error(Twine("missing arg value for \"") + Args.getArgString(MissingIndex) +
           "\", expected " + Twine(MissingCount) +
           (MissingCount == 1 ? " argument.\n" : " arguments"));
 
-  iterator_range<opt::arg_iterator> Unknowns = Args.filtered(OPT_UNKNOWN);
-  for (auto *Arg : Unknowns)
-    warning("warning: unknown argument: " + Arg->getSpelling());
-  if (Unknowns.begin() != Unknowns.end())
-    error("unknown argument(s) found");
+  for (auto *Arg : Args.filtered(OPT_UNKNOWN))
+    error("unknown argument: " + Arg->getSpelling());
   return Args;
 }
 
@@ -152,6 +169,11 @@ void CpioFile::append(StringRef Path, StringRef Data) {
   // (i.e. in that case we are creating baz.cpio.)
   SmallString<128> Fullpath;
   path::append(Fullpath, Basename, Path);
+
+  // Use unix path separators so the cpio can be extracted on both unix and
+  // windows.
+  std::replace(Fullpath.begin(), Fullpath.end(), '\\', '/');
+
   writeMember(*OS, Fullpath, Data);
 
   // Print the trailer and seek back.

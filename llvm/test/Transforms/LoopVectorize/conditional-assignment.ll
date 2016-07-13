@@ -1,4 +1,5 @@
 ; RUN: opt < %s -loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -S -pass-remarks-missed='loop-vectorize' -pass-remarks-analysis='loop-vectorize' 2>&1 | FileCheck %s
 
 ; CHECK: remark: source.c:2:8: loop not vectorized: store that is conditionally executed prevents vectorization
 

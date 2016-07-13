@@ -105,6 +105,7 @@ option(LIBUNWIND_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBUNWIND_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBUNWIND_ENABLE_SHARED "Build libunwind as a shared library." ON)
 option(LIBUNWIND_ENABLE_CROSS_UNWINDING "Enable cross-platform unwinding support." OFF)
+option(LIBUNWIND_ENABLE_ARM_WMMX "Enable unwinding support for ARM WMMX registers." OFF)
 
 set(LIBUNWIND_TARGET_TRIPLE "" CACHE STRING "Target triple for cross compiling.")
 set(LIBUNWIND_GCC_TOOLCHAIN "" CACHE PATH "GCC toolchain for cross compiling.")
@@ -235,6 +236,15 @@ endif ()
 # Cross-unwinding
 if (NOT LIBUNWIND_ENABLE_CROSS_UNWINDING)
   list(APPEND LIBUNWIND_COMPILE_FLAGS -D_LIBUNWIND_IS_NATIVE_ONLY)
+endif ()
+
+# ARM WMMX register support
+if (LIBUNWIND_ENABLE_ARM_WMMX)
+  # __ARM_WMMX is a compiler pre-define (as per the ACLE 2.0). Clang does not
+  # define this macro for any supported target at present. Therefore, here we
+  # provide the option to explicitly enable support for WMMX registers in the
+  # unwinder.
+  list(APPEND LIBUNWIND_COMPILE_FLAGS -D__ARM_WMMX)
 endif ()
 
 # This is the _ONLY_ place where add_definitions is called.

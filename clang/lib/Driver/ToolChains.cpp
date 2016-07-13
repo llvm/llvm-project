@@ -8,6 +8,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ToolChains.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
 #include "clang/Basic/VirtualFileSystem.h"
@@ -391,24 +392,12 @@ void Darwin::addProfileRTLibs(const ArgList &Args,
 void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
                                           ArgStringList &CmdArgs,
                                           StringRef Sanitizer) const {
-  if (!Args.hasArg(options::OPT_dynamiclib) &&
-      !Args.hasArg(options::OPT_bundle)) {
-    // Sanitizer runtime libraries requires C++.
-    AddCXXStdlibLibArgs(Args, CmdArgs);
-  }
-
   AddLinkRuntimeLib(
       Args, CmdArgs,
       (Twine("libclang_rt.") + Sanitizer + "_" +
        getOSLibraryNameSuffix() + "_dynamic.dylib").str(),
       /*AlwaysLink*/ true, /*IsEmbedded*/ false,
       /*AddRPath*/ true);
-
-  if (GetCXXStdlibType(Args) == ToolChain::CST_Libcxx) {
-    // Add explicit dependcy on -lc++abi, as -lc++ doesn't re-export
-    // all RTTI-related symbols that UBSan uses.
-    CmdArgs.push_back("-lc++abi");
-  }
 }
 
 void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
@@ -1703,9 +1692,33 @@ bool Generic_GCC::GCCInstallationDetector::getBiarchSibling(Multilib &M) const {
     BiarchTripleAliases.push_back(BiarchTriple.str());
 }
 
+// Parses the contents of version.txt in an CUDA installation.  It should
+// contain one line of the from e.g. "CUDA Version 7.5.2".
+static CudaVersion ParseCudaVersionFile(llvm::StringRef V) {
+  if (!V.startswith("CUDA Version "))
+    return CudaVersion::UNKNOWN;
+  V = V.substr(strlen("CUDA Version "));
+  int Major = -1, Minor = -1;
+  auto First = V.split('.');
+  auto Second = First.second.split('.');
+  if (!First.first.getAsInteger(10, Major) ||
+      !Second.first.getAsInteger(10, Minor))
+    return CudaVersion::UNKNOWN;
+
+  if (Major == 7 && Minor == 0) {
+    // This doesn't appear to ever happen -- version.txt doesn't exist in the
+    // CUDA 7 installs I've seen.  But no harm in checking.
+    return CudaVersion::CUDA_70;
+  }
+  if (Major == 7 && Minor == 5)
+    return CudaVersion::CUDA_75;
+  if (Major == 8 && Minor == 0)
+    return CudaVersion::CUDA_80;
+  return CudaVersion::UNKNOWN;
+}
+
 // \brief -- try common CUDA installation paths looking for files we need for
 // CUDA compilation.
-
 void Generic_GCC::CudaInstallationDetector::init(
     const llvm::Triple &TargetTriple, const llvm::opt::ArgList &Args) {
   SmallVector<std::string, 4> CudaPathCandidates;
@@ -1715,6 +1728,8 @@ void Generic_GCC::CudaInstallationDetector::init(
         Args.getLastArgValue(options::OPT_cuda_path_EQ));
   else {
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda");
+    // FIXME: Uncomment this once we can compile the cuda 8 headers.
+    // CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-8.0");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.5");
     CudaPathCandidates.push_back(D.SysRoot + "/usr/local/cuda-7.0");
   }
@@ -1723,20 +1738,19 @@ void Generic_GCC::CudaInstallationDetector::init(
     if (CudaPath.empty() || !D.getVFS().exists(CudaPath))
       continue;
 
-    CudaInstallPath = CudaPath;
-    CudaBinPath = CudaPath + "/bin";
-    CudaIncludePath = CudaInstallPath + "/include";
-    CudaLibDevicePath = CudaInstallPath + "/nvvm/libdevice";
-    CudaLibPath =
-        CudaInstallPath + (TargetTriple.isArch64Bit() ? "/lib64" : "/lib");
+    InstallPath = CudaPath;
+    BinPath = CudaPath + "/bin";
+    IncludePath = InstallPath + "/include";
+    LibDevicePath = InstallPath + "/nvvm/libdevice";
+    LibPath = InstallPath + (TargetTriple.isArch64Bit() ? "/lib64" : "/lib");
 
-    if (!(D.getVFS().exists(CudaIncludePath) &&
-          D.getVFS().exists(CudaBinPath) && D.getVFS().exists(CudaLibPath) &&
-          D.getVFS().exists(CudaLibDevicePath)))
+    auto &FS = D.getVFS();
+    if (!(FS.exists(IncludePath) && FS.exists(BinPath) && FS.exists(LibPath) &&
+          FS.exists(LibDevicePath)))
       continue;
 
     std::error_code EC;
-    for (llvm::sys::fs::directory_iterator LI(CudaLibDevicePath, EC), LE;
+    for (llvm::sys::fs::directory_iterator LI(LibDevicePath, EC), LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef FilePath = LI->path();
       StringRef FileName = llvm::sys::path::filename(FilePath);
@@ -1746,22 +1760,35 @@ void Generic_GCC::CudaInstallationDetector::init(
         continue;
       StringRef GpuArch = FileName.slice(
           LibDeviceName.size(), FileName.find('.', LibDeviceName.size()));
-      CudaLibDeviceMap[GpuArch] = FilePath.str();
+      LibDeviceMap[GpuArch] = FilePath.str();
       // Insert map entries for specifc devices with this compute capability.
       if (GpuArch == "compute_20") {
-        CudaLibDeviceMap["sm_20"] = FilePath;
-        CudaLibDeviceMap["sm_21"] = FilePath;
+        LibDeviceMap["sm_20"] = FilePath;
+        LibDeviceMap["sm_21"] = FilePath;
       } else if (GpuArch == "compute_30") {
-        CudaLibDeviceMap["sm_30"] = FilePath;
-        CudaLibDeviceMap["sm_32"] = FilePath;
+        LibDeviceMap["sm_30"] = FilePath;
+        LibDeviceMap["sm_32"] = FilePath;
       } else if (GpuArch == "compute_35") {
-        CudaLibDeviceMap["sm_35"] = FilePath;
-        CudaLibDeviceMap["sm_37"] = FilePath;
+        LibDeviceMap["sm_35"] = FilePath;
+        LibDeviceMap["sm_37"] = FilePath;
       } else if (GpuArch == "compute_50") {
-        CudaLibDeviceMap["sm_50"] = FilePath;
-        CudaLibDeviceMap["sm_52"] = FilePath;
-        CudaLibDeviceMap["sm_53"] = FilePath;
+        LibDeviceMap["sm_50"] = FilePath;
+        LibDeviceMap["sm_52"] = FilePath;
+        LibDeviceMap["sm_53"] = FilePath;
+        LibDeviceMap["sm_60"] = FilePath;
+        LibDeviceMap["sm_61"] = FilePath;
+        LibDeviceMap["sm_62"] = FilePath;
       }
+    }
+
+    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> VersionFile =
+        FS.getBufferForFile(InstallPath + "/version.txt");
+    if (!VersionFile) {
+      // CUDA 7.0 doesn't have a version.txt, so guess that's our version if
+      // version.txt isn't present.
+      Version = CudaVersion::CUDA_70;
+    } else {
+      Version = ParseCudaVersionFile((*VersionFile)->getBuffer());
     }
 
     IsValid = true;
@@ -1769,9 +1796,25 @@ void Generic_GCC::CudaInstallationDetector::init(
   }
 }
 
+void Generic_GCC::CudaInstallationDetector::CheckCudaVersionSupportsArch(
+    CudaArch Arch) const {
+  if (Arch == CudaArch::UNKNOWN || Version == CudaVersion::UNKNOWN ||
+      ArchsWithVersionTooLowErrors.count(Arch) > 0)
+    return;
+
+  auto RequiredVersion = MinVersionForCudaArch(Arch);
+  if (Version < RequiredVersion) {
+    ArchsWithVersionTooLowErrors.insert(Arch);
+    D.Diag(diag::err_drv_cuda_version_too_low)
+        << InstallPath << CudaArchToString(Arch) << CudaVersionToString(Version)
+        << CudaVersionToString(RequiredVersion);
+  }
+}
+
 void Generic_GCC::CudaInstallationDetector::print(raw_ostream &OS) const {
   if (isValid())
-    OS << "Found CUDA installation: " << CudaInstallPath << "\n";
+    OS << "Found CUDA installation: " << InstallPath << ", version "
+       << CudaVersionToString(Version) << "\n";
 }
 
 namespace {
@@ -4664,6 +4707,18 @@ CudaToolChain::addClangTargetOptions(const llvm::opt::ArgList &DriverArgs,
     CC1Args.push_back("-target-feature");
     CC1Args.push_back("+ptx42");
   }
+}
+
+void CudaToolChain::AddCudaIncludeArgs(const ArgList &DriverArgs,
+                                       ArgStringList &CC1Args) const {
+  // Check our CUDA version if we're going to include the CUDA headers.
+  if (!DriverArgs.hasArg(options::OPT_nocudainc) &&
+      !DriverArgs.hasArg(options::OPT_no_cuda_version_check)) {
+    StringRef Arch = DriverArgs.getLastArgValue(options::OPT_march_EQ);
+    assert(!Arch.empty() && "Must have an explicit GPU arch.");
+    CudaInstallation.CheckCudaVersionSupportsArch(StringToCudaArch(Arch));
+  }
+  Linux::AddCudaIncludeArgs(DriverArgs, CC1Args);
 }
 
 llvm::opt::DerivedArgList *

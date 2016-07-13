@@ -34,6 +34,7 @@ template <class ELFT> struct Elf_Vernaux_Impl;
 template <class ELFT> struct Elf_Versym_Impl;
 template <class ELFT> struct Elf_Hash_Impl;
 template <class ELFT> struct Elf_GnuHash_Impl;
+template <class ELFT> struct Elf_Chdr_Impl;
 
 template <endianness E, bool Is64> struct ELFType {
 private:
@@ -59,6 +60,7 @@ public:
   typedef Elf_Versym_Impl<ELFType<E, Is64>> Versym;
   typedef Elf_Hash_Impl<ELFType<E, Is64>> Hash;
   typedef Elf_GnuHash_Impl<ELFType<E, Is64>> GnuHash;
+  typedef Elf_Chdr_Impl<ELFType<E, Is64>> Chdr;
   typedef ArrayRef<Dyn> DynRange;
   typedef ArrayRef<Shdr> ShdrRange;
   typedef ArrayRef<Sym> SymRange;
@@ -556,6 +558,25 @@ struct Elf_GnuHash_Impl {
   ArrayRef<Elf_Word> values(unsigned DynamicSymCount) const {
     return ArrayRef<Elf_Word>(buckets().end(), DynamicSymCount - symndx);
   }
+};
+
+// Compressed section headers.
+// http://www.sco.com/developers/gabi/latest/ch4.sheader.html#compression_header
+template <endianness TargetEndianness>
+struct Elf_Chdr_Impl<ELFType<TargetEndianness, false>> {
+  LLVM_ELF_IMPORT_TYPES(TargetEndianness, false)
+  Elf_Word ch_type;
+  Elf_Word ch_size;
+  Elf_Word ch_addralign;
+};
+
+template <endianness TargetEndianness>
+struct Elf_Chdr_Impl<ELFType<TargetEndianness, true>> {
+  LLVM_ELF_IMPORT_TYPES(TargetEndianness, true)
+  Elf_Word ch_type;
+  Elf_Word ch_reserved;
+  Elf_Xword ch_size;
+  Elf_Xword ch_addralign;
 };
 
 // MIPS .reginfo section

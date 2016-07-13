@@ -54,6 +54,16 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MemorySSAWrapperPass, "memoryssa", "Memory SSA", false,
                     true)
 
+INITIALIZE_PASS_BEGIN(MemorySSAPrinterLegacyPass, "print-memoryssa",
+                      "Memory SSA Printer", false, false)
+INITIALIZE_PASS_DEPENDENCY(MemorySSAWrapperPass)
+INITIALIZE_PASS_END(MemorySSAPrinterLegacyPass, "print-memoryssa",
+                    "Memory SSA Printer", false, false)
+
+static cl::opt<bool>
+    VerifyMemorySSA("verify-memoryssa", cl::init(false), cl::Hidden,
+                    cl::desc("Verify MemorySSA in legacy printer pass."));
+
 namespace llvm {
 /// \brief An assembly annotator class to print Memory SSA information in
 /// comments.
@@ -201,8 +211,6 @@ MemoryAccess *MemorySSA::renameBlock(BasicBlock *BB,
       continue;
     AccessList *Accesses = It->second.get();
     auto *Phi = cast<MemoryPhi>(&Accesses->front());
-    assert(std::find(succ_begin(BB), succ_end(BB), S) != succ_end(BB) &&
-           "Must be at least one edge from Succ to BB!");
     Phi->addIncoming(IncomingVal, BB);
   }
 
@@ -245,12 +253,28 @@ void MemorySSA::computeDomLevels(DenseMap<DomTreeNode *, unsigned> &DomLevels) {
     DomLevels[*DFI] = DFI.getPathLength() - 1;
 }
 
-/// \brief This handles unreachable block acccesses by deleting phi nodes in
+/// \brief This handles unreachable block accesses by deleting phi nodes in
 /// unreachable blocks, and marking all other unreachable MemoryAccess's as
 /// being uses of the live on entry definition.
 void MemorySSA::markUnreachableAsLiveOnEntry(BasicBlock *BB) {
   assert(!DT->isReachableFromEntry(BB) &&
          "Reachable block found while handling unreachable blocks");
+
+  // Make sure phi nodes in our reachable successors end up with a
+  // LiveOnEntryDef for our incoming edge, even though our block is forward
+  // unreachable.  We could just disconnect these blocks from the CFG fully,
+  // but we do not right now.
+  for (const BasicBlock *S : successors(BB)) {
+    if (!DT->isReachableFromEntry(S))
+      continue;
+    auto It = PerBlockAccesses.find(S);
+    // Rename the phi nodes in our successor block
+    if (It == PerBlockAccesses.end() || !isa<MemoryPhi>(It->second->front()))
+      continue;
+    AccessList *Accesses = It->second.get();
+    auto *Phi = cast<MemoryPhi>(&Accesses->front());
+    Phi->addIncoming(LiveOnEntryDef.get(), BB);
+  }
 
   auto It = PerBlockAccesses.find(BB);
   if (It == PerBlockAccesses.end())
@@ -878,6 +902,26 @@ void MemoryUse::print(raw_ostream &OS) const {
 void MemoryAccess::dump() const {
   print(dbgs());
   dbgs() << "\n";
+}
+
+char MemorySSAPrinterLegacyPass::ID = 0;
+
+MemorySSAPrinterLegacyPass::MemorySSAPrinterLegacyPass() : FunctionPass(ID) {
+  initializeMemorySSAPrinterLegacyPassPass(*PassRegistry::getPassRegistry());
+}
+
+void MemorySSAPrinterLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
+  AU.setPreservesAll();
+  AU.addRequired<MemorySSAWrapperPass>();
+  AU.addPreserved<MemorySSAWrapperPass>();
+}
+
+bool MemorySSAPrinterLegacyPass::runOnFunction(Function &F) {
+  auto &MSSA = getAnalysis<MemorySSAWrapperPass>().getMSSA();
+  MSSA.print(dbgs());
+  if (VerifyMemorySSA)
+    MSSA.verifyMemorySSA();
+  return false;
 }
 
 char MemorySSAAnalysis::PassID;

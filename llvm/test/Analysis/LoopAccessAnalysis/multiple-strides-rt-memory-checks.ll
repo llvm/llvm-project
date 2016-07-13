@@ -1,5 +1,5 @@
 ; RUN: opt -loop-accesses -analyze -S < %s | FileCheck %s
-; RUN: opt -passes='loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='require<scalar-evolution>,require<aa>,loop(print-access-info)' -disable-output  < %s 2>&1 | FileCheck %s
 
 ; This is the test case from PR26314.
 ; When we were retrying dependence checking with memchecks only, 

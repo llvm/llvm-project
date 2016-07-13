@@ -76,6 +76,16 @@ public:
     bool
     IsExecutable ();
 
+    //------------------------------------------------------------------
+    /// Check if this memory address is mapped into the process address
+    /// space.
+    ///
+    /// @return
+    ///     true if this memory address is in the process address space.
+    //------------------------------------------------------------------
+    bool
+    IsMapped ();
+
     bool
     operator == (const lldb::SBMemoryRegionInfo &rhs) const;
 

@@ -1,4 +1,4 @@
-; RUN: llc -print-before=peephole-opts -print-after=peephole-opts -mtriple=powerpc64-unknown-linux-gnu -o /dev/null 2>&1 < %s | FileCheck %s
+; RUN: llc -print-before=peephole-opt -print-after=peephole-opt -mtriple=powerpc64-unknown-linux-gnu -o /dev/null 2>&1 < %s | FileCheck %s
 
 define signext i32 @fn1(i32 %baz) {
   %1 = mul nsw i32 %baz, 208

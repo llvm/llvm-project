@@ -51,6 +51,6 @@ int main()
 {
     test_enum<Enum>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_enum<incomplete_type>::value, "");
 }

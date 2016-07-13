@@ -258,5 +258,5 @@ declare i32 @llvm.amdgcn.workitem.id.x() #1
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.amdgcn.workitem.id.y() #1
 
-attributes #0 = { nounwind "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-realign-stack" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }

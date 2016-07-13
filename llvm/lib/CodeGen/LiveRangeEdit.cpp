@@ -234,7 +234,8 @@ bool LiveRangeEdit::useIsKill(const LiveInterval &LI,
 }
 
 /// Find all live intervals that need to shrink, then remove the instruction.
-void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
+void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
+                                     AliasAnalysis *AA) {
   assert(MI->allDefsAreDead() && "Def isn't really dead");
   SlotIndex Idx = LIS.getInstructionIndex(*MI).getRegSlot();
 
@@ -327,11 +328,12 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     }
     DEBUG(dbgs() << "Converted physregs to:\t" << *MI);
   } else {
-    // If the dest of MI is an original reg, don't delete the inst. Replace
-    // the dest with a new reg, keep the inst for remat of other siblings.
-    // The inst is saved in LiveRangeEdit::DeadRemats and will be deleted
-    // after all the allocations of the func are done.
-    if (isOrigDef) {
+    // If the dest of MI is an original reg and MI is reMaterializable,
+    // don't delete the inst. Replace the dest with a new reg, and keep
+    // the inst for remat of other siblings. The inst is saved in
+    // LiveRangeEdit::DeadRemats and will be deleted after all the
+    // allocations of the func are done.
+    if (isOrigDef && DeadRemats && TII.isTriviallyReMaterializable(*MI, AA)) {
       LiveInterval &NewLI = createEmptyIntervalFrom(Dest);
       VNInfo *VNI = NewLI.getNextValue(Idx, LIS.getVNInfoAllocator());
       NewLI.addSegment(LiveInterval::Segment(Idx, Idx.getDeadSlot(), VNI));
@@ -361,13 +363,14 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
 }
 
 void LiveRangeEdit::eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                                      ArrayRef<unsigned> RegsBeingSpilled) {
+                                      ArrayRef<unsigned> RegsBeingSpilled,
+                                      AliasAnalysis *AA) {
   ToShrinkSet ToShrink;
 
   for (;;) {
     // Erase all dead defs.
     while (!Dead.empty())
-      eliminateDeadDef(Dead.pop_back_val(), ToShrink);
+      eliminateDeadDef(Dead.pop_back_val(), ToShrink, AA);
 
     if (ToShrink.empty())
       break;

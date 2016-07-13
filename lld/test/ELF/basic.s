@@ -184,11 +184,22 @@ _start:
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# Test for the response file
+# Test for the response file (POSIX quoting style)
 # RUN: echo " -o %t2" > %t.responsefile
-# RUN: ld.lld %t @%t.responsefile
+# RUN: ld.lld %t --rsp-quoting=posix @%t.responsefile
 # RUN: llvm-readobj -file-headers -sections -program-headers -symbols %t2 \
 # RUN:   | FileCheck %s
+
+# Test for the response file (Windows quoting style)
+# RUN: echo " c:\blah\foo" > %t.responsefile
+# RUN: not ld.lld --rsp-quoting=windows %t @%t.responsefile 2>&1 | FileCheck \
+# RUN:   %s --check-prefix=WINRSP
+# WINRSP: cannot open c:\blah\foo
+
+# Test for the response file (invalid quoting style)
+# RUN: not ld.lld --rsp-quoting=patatino %t 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=INVRSP
+# INVRSP: invalid response file quoting: patatino
 
 # RUN: not ld.lld %t.foo -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=MISSING %s

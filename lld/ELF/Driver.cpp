@@ -62,6 +62,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
           .Case("aarch64linux", {ELF64LEKind, EM_AARCH64})
           .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
+          .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Case("elf32btsmip", {ELF32BEKind, EM_MIPS})
           .Case("elf32ltsmip", {ELF32LEKind, EM_MIPS})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
@@ -439,6 +440,7 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
     Config->DynamicList.push_back(Arg->getValue());
 
   if (auto *Arg = Args.getLastArg(OPT_version_script)) {
+    Config->HasVersionScript = true;
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseVersionScript(*Buffer);
   }
@@ -511,7 +513,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   LinkerScript<ELFT> LS;
   Script<ELFT>::X = &LS;
 
-  Config->Rela = ELFT::Is64Bits;
+  Config->Rela = ELFT::Is64Bits || Config->EMachine == EM_X86_64;
   Config->Mips64EL =
       (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
 
@@ -529,6 +531,16 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     StringRef S = Config->Entry;
     if (S.getAsInteger(0, Config->EntryAddr))
       Config->EntrySym = Symtab.addUndefined(S);
+  }
+
+  if (auto *Arg = Args.getLastArg(OPT_image_base)) {
+    StringRef S = Arg->getValue();
+    if (S.getAsInteger(0, Config->VAStart))
+      error(Arg->getSpelling() + ": number expected, but got " + S);
+    else if ((Config->VAStart % Target->PageSize) != 0)
+      warning(Arg->getSpelling() + ": address isn't multiple of page size");
+  } else {
+    Config->VAStart = Target->getVAStart();
   }
 
   for (std::unique_ptr<InputFile> &F : Files)

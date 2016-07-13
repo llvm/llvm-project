@@ -23,6 +23,7 @@
 
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/Support/Error.h"
+#include "llvm/ADT/ArrayRef.h"
 
 namespace llvm {
 class Function;

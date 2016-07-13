@@ -223,6 +223,12 @@ class BC1EQZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc1eqzc", 0b01000>;
 class BC1NEZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc1nezc", 0b01001>;
 class BC2EQZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc2eqzc", 0b01010>;
 class BC2NEZC_MMR6_ENC : POOL32I_BRANCH_COP_1_2_FM_MMR6<"bc2nezc", 0b01011>;
+class LDC1_MMR6_ENC : LDWC1_SDWC1_FM_MMR6<"ldc1", 0b101111>;
+class SDC1_MMR6_ENC : LDWC1_SDWC1_FM_MMR6<"sdc1", 0b101110>;
+class LDC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"ldc2", 0b0010>;
+class SDC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"sdc2", 0b1010>;
+class LWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"lwc2", 0b0000>;
+class SWC2_MMR6_ENC : POOL32B_LDWC2_SDWC2_FM_MMR6<"swc2", 0b1000>;
 
 class CMP_CBR_RT_Z_MMR6_DESC_BASE<string instr_asm, DAGOperand opnd,
                                   RegisterOperand GPROpnd>
@@ -755,6 +761,58 @@ class MFHC1_D32_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfhc1", GPR32Opnd, AFGR64Opnd,
 class MFHC1_D64_MMR6_DESC : MFC1_MMR6_DESC_BASE<"mfhc1", GPR32Opnd, FGR64Opnd,
                                                 II_MFHC1>, HARDFLOAT, FGR_64;
 class MFHC2_MMR6_DESC : MFC2_MMR6_DESC_BASE<"mfhc2", GPR32Opnd, COP2Opnd>;
+
+class LDC1_D64_MMR6_DESC : MipsR6Inst, HARDFLOAT, FGR_64 {
+  dag InOperandList = (ins mem_mm_16:$addr);
+  dag OutOperandList = (outs FGR64Opnd:$ft);
+  string AsmString = !strconcat("ldc1", "\t$ft, $addr");
+  list<dag> Pattern = [(set FGR64Opnd:$ft, (load addrimm16:$addr))];
+  Format f = FrmFI;
+  InstrItinClass Itinerary = II_LDC1;
+  string BaseOpcode = "ldc1";
+  bit mayLoad = 1;
+  let DecoderMethod = "DecodeFMemMMR2";
+}
+
+class SDC1_D64_MMR6_DESC : MipsR6Inst, HARDFLOAT, FGR_64 {
+  dag InOperandList = (ins FGR64Opnd:$ft, mem_mm_16:$addr);
+  dag OutOperandList = (outs);
+  string AsmString = !strconcat("sdc1", "\t$ft, $addr");
+  list<dag> Pattern = [(store FGR64Opnd:$ft, addrimm16:$addr)];
+  Format f = FrmFI;
+  InstrItinClass Itinerary = II_SDC1;
+  string BaseOpcode = "sdc1";
+  bit mayStore = 1;
+  let DecoderMethod = "DecodeFMemMMR2";
+}
+
+class LDC2_LWC2_MMR6_DESC_BASE<string opstr> {
+  dag OutOperandList = (outs COP2Opnd:$rt);
+  dag InOperandList = (ins mem_mm_11:$addr);
+  string AsmString = !strconcat(opstr, "\t$rt, $addr");
+  list<dag> Pattern = [(set COP2Opnd:$rt, (load addrimm11:$addr))];
+  Format f = FrmFI;
+  InstrItinClass Itinerary = NoItinerary;
+  string BaseOpcode = opstr;
+  bit mayLoad = 1;
+  string DecoderMethod = "DecodeFMemCop2MMR6";
+}
+class LDC2_MMR6_DESC : LDC2_LWC2_MMR6_DESC_BASE<"ldc2">;
+class LWC2_MMR6_DESC : LDC2_LWC2_MMR6_DESC_BASE<"lwc2">;
+
+class SDC2_SWC2_MMR6_DESC_BASE<string opstr> {
+  dag OutOperandList = (outs);
+  dag InOperandList = (ins COP2Opnd:$rt, mem_mm_11:$addr);
+  string AsmString = !strconcat(opstr, "\t$rt, $addr");
+  list<dag> Pattern = [(store COP2Opnd:$rt, addrimm11:$addr)];
+  Format f = FrmFI;
+  InstrItinClass Itinerary = NoItinerary;
+  string BaseOpcode = opstr;
+  bit mayStore = 1;
+  string DecoderMethod = "DecodeFMemCop2MMR6";
+}
+class SDC2_MMR6_DESC : SDC2_SWC2_MMR6_DESC_BASE<"sdc2">;
+class SWC2_MMR6_DESC : SDC2_SWC2_MMR6_DESC_BASE<"swc2">;
 
 /// Floating Point Instructions
 class FARITH_MMR6_DESC_BASE<string instr_asm, RegisterOperand RC,
@@ -1577,6 +1635,18 @@ def BC2EQZC_MMR6 : R6MMR6Rel, MipsR6Inst, BC2EQZC_MMR6_ENC, BC2EQZC_MMR6_DESC,
                    ISA_MICROMIPS32R6;
 def BC2NEZC_MMR6 : R6MMR6Rel, MipsR6Inst, BC2NEZC_MMR6_ENC, BC2NEZC_MMR6_DESC,
                    ISA_MICROMIPS32R6;
+let DecoderNamespace = "MicroMips32r6FP64" in {
+  def LDC1_D64_MMR6 : StdMMR6Rel, LDC1_D64_MMR6_DESC, LDC1_MMR6_ENC,
+                      ISA_MICROMIPS32R6 {
+    let BaseOpcode = "LDC164";
+  }
+  def SDC1_D64_MMR6 : StdMMR6Rel, SDC1_D64_MMR6_DESC, SDC1_MMR6_ENC,
+                      ISA_MICROMIPS32R6;
+}
+def LDC2_MMR6 : StdMMR6Rel, LDC2_MMR6_ENC, LDC2_MMR6_DESC, ISA_MICROMIPS32R6;
+def SDC2_MMR6 : StdMMR6Rel, SDC2_MMR6_ENC, SDC2_MMR6_DESC, ISA_MICROMIPS32R6;
+def LWC2_MMR6 : StdMMR6Rel, LWC2_MMR6_ENC, LWC2_MMR6_DESC, ISA_MICROMIPS32R6;
+def SWC2_MMR6 : StdMMR6Rel, SWC2_MMR6_ENC, SWC2_MMR6_DESC, ISA_MICROMIPS32R6;
 }
 
 def BOVC_MMR6 : R6MMR6Rel, BOVC_MMR6_ENC, BOVC_MMR6_DESC, ISA_MICROMIPS32R6,
@@ -1697,3 +1767,8 @@ def : MipsPat<(not GPRMM16:$in),
               (NOT16_MMR6 GPRMM16:$in)>, ISA_MICROMIPS32R6;
 def : MipsPat<(not GPR32:$in),
               (NOR_MMR6 GPR32Opnd:$in, ZERO)>, ISA_MICROMIPS32R6;
+// Patterns for load with a reg+imm operand.
+let AddedComplexity = 41 in {
+  def : LoadRegImmPat<LDC1_D64_MMR6, f64, load>, FGR_64, ISA_MICROMIPS32R6;
+  def : StoreRegImmPat<SDC1_D64_MMR6, f64>, FGR_64, ISA_MICROMIPS32R6;
+}

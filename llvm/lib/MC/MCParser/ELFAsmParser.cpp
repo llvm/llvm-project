@@ -188,6 +188,7 @@ bool ELFAsmParser::ParseSectionSwitch(StringRef Section, unsigned Type,
     if (getParser().parseExpression(Subsection))
       return true;
   }
+  Lex();
 
   getStreamer().SwitchSection(getContext().getELFSection(Section, Type, Flags),
                               Subsection);

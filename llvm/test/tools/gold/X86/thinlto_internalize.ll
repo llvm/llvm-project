@@ -11,11 +11,18 @@
 ; f() should be internalized and eliminated after inlining
 ; CHECK-NOT: @f()
 
+; h() should be internalized after promotion, and eliminated after inlining
+; CHECK-NOT: @h.llvm.
+
 target triple = "x86_64-unknown-linux-gnu"
 define i32 @g() {
   call void @f()
+  call void @h()
   ret i32 0
 }
 define void @f() {
+  ret void
+}
+define internal void @h() {
   ret void
 }

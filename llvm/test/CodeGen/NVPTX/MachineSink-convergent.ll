@@ -1,7 +1,7 @@
 ; RUN: llc < %s | FileCheck %s
 target triple = "nvptx64-nvidia-cuda"
 
-declare void @llvm.cuda.syncthreads()
+declare void @llvm.nvvm.barrier0()
 
 ; Load a value, then syncthreads.  Branch, and use the loaded value only on one
 ; side of the branch.  The load shouldn't be sunk beneath the call, because
@@ -11,7 +11,7 @@ Start:
   ; CHECK: ld.u32
   %ptr_val = load i32, i32* %ptr
   ; CHECK: bar.sync
-  call void @llvm.cuda.syncthreads()
+  call void @llvm.nvvm.barrier0()
   br i1 %cond, label %L1, label %L2
 L1:
   %ptr_val2 = add i32 %ptr_val, 100

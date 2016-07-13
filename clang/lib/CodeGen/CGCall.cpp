@@ -1732,6 +1732,8 @@ void CodeGenModule::ConstructAttributeList(
                            llvm::toStringRef(CodeGenOpts.SoftFloat));
     FuncAttrs.addAttribute("stack-protector-buffer-size",
                            llvm::utostr(CodeGenOpts.SSPBufferSize));
+    FuncAttrs.addAttribute("no-signed-zeros-fp-math",
+                           llvm::toStringRef(CodeGenOpts.NoSignedZeros));
 
     if (CodeGenOpts.StackRealignment)
       FuncAttrs.addAttribute("stackrealign");

@@ -420,7 +420,7 @@
 // Z7: "-gcodeview"
 // Z7: "-debug-info-kind=limited"
 
-// RUN: %clang_cl -gline-tables-only /Z7 /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7GMLT %s
+// RUN: %clang_cl /Zd /c -### -- %s 2>&1 | FileCheck -check-prefix=Z7GMLT %s
 // Z7GMLT: "-gcodeview"
 // Z7GMLT: "-debug-info-kind=line-tables-only"
 

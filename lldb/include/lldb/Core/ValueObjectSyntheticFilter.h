@@ -17,6 +17,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "lldb/Core/ThreadSafeSTLMap.h"
+#include "lldb/Core/ThreadSafeSTLVector.h"
 #include "lldb/Core/ValueObject.h"
 
 namespace lldb_private {
@@ -147,6 +148,12 @@ public:
     SetPreferredDisplayLanguage (lldb::LanguageType);
     
     bool
+    IsSyntheticChildrenGenerated () override;
+    
+    void
+    SetSyntheticChildrenGenerated (bool b) override;
+    
+    bool
     GetDeclaration(Declaration &decl) override;
 
     uint64_t
@@ -177,6 +184,7 @@ protected:
     
     typedef ThreadSafeSTLMap<uint32_t, ValueObject*> ByIndexMap;
     typedef ThreadSafeSTLMap<const char*, uint32_t> NameToIndexMap;
+    typedef ThreadSafeSTLVector<lldb::ValueObjectSP> SyntheticChildrenCache;
     
     typedef ByIndexMap::iterator ByIndexIterator;
     typedef NameToIndexMap::iterator NameToIndexIterator;
@@ -184,6 +192,7 @@ protected:
     ByIndexMap      m_children_byindex;
     NameToIndexMap  m_name_toindex;
     uint32_t        m_synthetic_children_count; // FIXME use the ValueObject's ChildrenManager instead of a special purpose solution
+    SyntheticChildrenCache m_synthetic_children_cache;
     
     ConstString     m_parent_type_name;
 

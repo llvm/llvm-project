@@ -7,8 +7,8 @@
 define zeroext i16 @t1(i16 zeroext %x) nounwind readnone ssp {
 entry:
 ; CHECK-LABEL: t1:
+; CHECK: xorl %eax, %eax
 ; CHECK: seta %al
-; CHECK: movzbl %al, %eax
 ; CHECK: shll $5, %eax
   %0 = icmp ugt i16 %x, 26                        ; <i1> [#uses=1]
   %iftmp.1.0 = select i1 %0, i16 32, i16 0        ; <i16> [#uses=1]

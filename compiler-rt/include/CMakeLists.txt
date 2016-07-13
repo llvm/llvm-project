@@ -4,6 +4,7 @@ set(SANITIZER_HEADERS
   sanitizer/common_interface_defs.h
   sanitizer/coverage_interface.h
   sanitizer/dfsan_interface.h
+  sanitizer/esan_interface.h
   sanitizer/linux_syscall_hooks.h
   sanitizer/lsan_interface.h
   sanitizer/msan_interface.h
@@ -25,6 +26,7 @@ endforeach( f )
 
 add_custom_target(compiler-rt-headers ALL DEPENDS ${out_files})
 add_dependencies(compiler-rt compiler-rt-headers)
+set_target_properties(compiler-rt-headers PROPERTIES FOLDER "Compiler-RT Misc")
 
 # Install sanitizer headers.
 install(FILES ${SANITIZER_HEADERS}

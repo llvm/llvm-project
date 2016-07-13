@@ -351,6 +351,7 @@ _Unwind_Reason_Code _Unwind_VRS_Interpret(
         }
         case 0xc0: {
           switch (byte) {
+#if defined(__ARM_WMMX)
             case 0xc0:
             case 0xc1:
             case 0xc2:
@@ -378,6 +379,7 @@ _Unwind_Reason_Code _Unwind_VRS_Interpret(
               _Unwind_VRS_Pop(context, _UVRSC_WMMXC, v, _UVRSD_DOUBLE);
               break;
             }
+#endif
             case 0xc8:
             case 0xc9: {
               uint8_t v = getByte(data, offset++);
@@ -771,13 +773,6 @@ _Unwind_VRS_Set(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                          *(unw_word_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
-    case _UVRSC_WMMXC:
-      if (representation != _UVRSD_UINT32 || regno > 3)
-        return _UVRSR_FAILED;
-      return unw_set_reg(cursor, (unw_regnum_t)(UNW_ARM_WC0 + regno),
-                         *(unw_word_t *)valuep) == UNW_ESUCCESS
-                 ? _UVRSR_OK
-                 : _UVRSR_FAILED;
     case _UVRSC_VFP:
       if (representation != _UVRSD_VFPX && representation != _UVRSD_DOUBLE)
         return _UVRSR_FAILED;
@@ -794,6 +789,14 @@ _Unwind_VRS_Set(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                            *(unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#if defined(__ARM_WMMX)
+    case _UVRSC_WMMXC:
+      if (representation != _UVRSD_UINT32 || regno > 3)
+        return _UVRSR_FAILED;
+      return unw_set_reg(cursor, (unw_regnum_t)(UNW_ARM_WC0 + regno),
+                         *(unw_word_t *)valuep) == UNW_ESUCCESS
+                 ? _UVRSR_OK
+                 : _UVRSR_FAILED;
     case _UVRSC_WMMXD:
       if (representation != _UVRSD_DOUBLE || regno > 31)
         return _UVRSR_FAILED;
@@ -801,6 +804,7 @@ _Unwind_VRS_Set(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
                            *(unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#endif
   }
   _LIBUNWIND_ABORT("unsupported register class");
 }
@@ -816,13 +820,6 @@ _Unwind_VRS_Get_Internal(_Unwind_Context *context,
       if (representation != _UVRSD_UINT32 || regno > 15)
         return _UVRSR_FAILED;
       return unw_get_reg(cursor, (unw_regnum_t)(UNW_ARM_R0 + regno),
-                         (unw_word_t *)valuep) == UNW_ESUCCESS
-                 ? _UVRSR_OK
-                 : _UVRSR_FAILED;
-    case _UVRSC_WMMXC:
-      if (representation != _UVRSD_UINT32 || regno > 3)
-        return _UVRSR_FAILED;
-      return unw_get_reg(cursor, (unw_regnum_t)(UNW_ARM_WC0 + regno),
                          (unw_word_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
@@ -842,6 +839,14 @@ _Unwind_VRS_Get_Internal(_Unwind_Context *context,
                            (unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#if defined(__ARM_WMMX)
+    case _UVRSC_WMMXC:
+      if (representation != _UVRSD_UINT32 || regno > 3)
+        return _UVRSR_FAILED;
+      return unw_get_reg(cursor, (unw_regnum_t)(UNW_ARM_WC0 + regno),
+                         (unw_word_t *)valuep) == UNW_ESUCCESS
+                 ? _UVRSR_OK
+                 : _UVRSR_FAILED;
     case _UVRSC_WMMXD:
       if (representation != _UVRSD_DOUBLE || regno > 31)
         return _UVRSR_FAILED;
@@ -849,6 +854,7 @@ _Unwind_VRS_Get_Internal(_Unwind_Context *context,
                            (unw_fpreg_t *)valuep) == UNW_ESUCCESS
                  ? _UVRSR_OK
                  : _UVRSR_FAILED;
+#endif
   }
   _LIBUNWIND_ABORT("unsupported register class");
 }

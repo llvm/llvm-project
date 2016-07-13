@@ -200,7 +200,6 @@ namespace lldb_private {
             ValueObject* m_tail;
             CompilerType m_element_type;
             size_t m_count;
-            std::map<size_t,lldb::ValueObjectSP> m_children;
             std::map<size_t, ListIterator> m_iterators;
         };
     } // namespace formatters
@@ -215,7 +214,6 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::LibcxxStdListSynthetic
     m_tail(nullptr),
     m_element_type(),
     m_count(UINT32_MAX),
-    m_children(),
     m_iterators()
 {
     if (valobj_sp)
@@ -312,10 +310,6 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetChildAtIndex (size_
     if (!m_head || !m_tail || m_node_address == 0)
         return lldb::ValueObjectSP();
     
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
-    
     if (HasLoop(idx+1))
         return lldb::ValueObjectSP();
     
@@ -350,13 +344,15 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetChildAtIndex (size_
     
     StreamString name;
     name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    return (m_children[idx] = CreateValueObjectFromData(name.GetData(), data, m_backend.GetExecutionContextRef(), m_element_type));
+    return CreateValueObjectFromData(name.GetData(),
+                                     data,
+                                     m_backend.GetExecutionContextRef(),
+                                     m_element_type);
 }
 
 bool
 lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::Update()
 {
-    m_children.clear();
     m_iterators.clear();
     m_head = m_tail = nullptr;
     m_node_address = 0;

@@ -1,4 +1,5 @@
 ; RUN: opt -S -lowertypetests < %s | FileCheck %s
+; RUN: opt -S -passes=lowertypetests < %s | FileCheck %s
 
 target datalayout = "e-p:32:32"
 

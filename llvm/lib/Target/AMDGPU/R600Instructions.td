@@ -329,12 +329,38 @@ class VTX_READ <string name, bits<8> buffer_id, dag outs, list<dag> pattern>
 
 class LoadParamFrag <PatFrag load_type> : PatFrag <
   (ops node:$ptr), (load_type node:$ptr),
-  [{ return isConstantLoad(dyn_cast<LoadSDNode>(N), 0); }]
+  [{ return isConstantLoad(cast<LoadSDNode>(N), 0) ||
+            (cast<LoadSDNode>(N)->getAddressSpace() == AMDGPUAS::PARAM_I_ADDRESS); }]
 >;
 
 def load_param : LoadParamFrag<load>;
 def load_param_exti8 : LoadParamFrag<az_extloadi8>;
 def load_param_exti16 : LoadParamFrag<az_extloadi16>;
+
+class LoadVtxId1 <PatFrag load> : PatFrag <
+  (ops node:$ptr), (load node:$ptr), [{
+  const MemSDNode *LD = cast<MemSDNode>(N);
+  return LD->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS ||
+         (LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+           !isa<GlobalValue>(GetUnderlyingObject(
+           LD->getMemOperand()->getValue(), CurDAG->getDataLayout())));
+}]>;
+
+def vtx_id1_az_extloadi8 : LoadVtxId1 <az_extloadi8>;
+def vtx_id1_az_extloadi16 : LoadVtxId1 <az_extloadi16>;
+def vtx_id1_load : LoadVtxId1 <load>;
+
+class LoadVtxId2 <PatFrag load> : PatFrag <
+  (ops node:$ptr), (load node:$ptr), [{
+  const MemSDNode *LD = cast<MemSDNode>(N);
+  return LD->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS &&
+         isa<GlobalValue>(GetUnderlyingObject(
+         LD->getMemOperand()->getValue(), CurDAG->getDataLayout()));
+}]>;
+
+def vtx_id2_az_extloadi8 : LoadVtxId2 <az_extloadi8>;
+def vtx_id2_az_extloadi16 : LoadVtxId2 <az_extloadi16>;
+def vtx_id2_load : LoadVtxId2 <load>;
 
 def isR600 : Predicate<"Subtarget->getGeneration() <= R600Subtarget::R700">;
 

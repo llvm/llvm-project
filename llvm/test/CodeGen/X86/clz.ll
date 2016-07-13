@@ -14,6 +14,7 @@ define i8 @cttz_i8(i8 %x)  {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    bsfl %eax, %eax
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %tmp = call i8 @llvm.cttz.i8( i8 %x, i1 true )
   ret i8 %tmp
@@ -52,6 +53,7 @@ define i8 @ctlz_i8(i8 %x) {
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    bsrl %eax, %eax
 ; CHECK-NEXT:    xorl $7, %eax
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %tmp2 = call i8 @llvm.ctlz.i8( i8 %x, i1 true )
   ret i8 %tmp2
@@ -62,6 +64,7 @@ define i16 @ctlz_i16(i16 %x) {
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    bsrw %di, %ax
 ; CHECK-NEXT:    xorl $15, %eax
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %tmp2 = call i16 @llvm.ctlz.i16( i16 %x, i1 true )
   ret i16 %tmp2
@@ -100,6 +103,7 @@ define i8 @ctlz_i8_zero_test(i8 %n) {
 ; CHECK-NEXT:    bsrl %eax, %eax
 ; CHECK-NEXT:    xorl $7, %eax
 ; CHECK-NEXT:  .LBB8_2: # %cond.end
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %tmp1 = call i8 @llvm.ctlz.i8(i8 %n, i1 false)
   ret i8 %tmp1
@@ -117,6 +121,7 @@ define i16 @ctlz_i16_zero_test(i16 %n) {
 ; CHECK-NEXT:    bsrw %di, %ax
 ; CHECK-NEXT:    xorl $15, %eax
 ; CHECK-NEXT:  .LBB9_2: # %cond.end
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %tmp1 = call i16 @llvm.ctlz.i16(i16 %n, i1 false)
   ret i16 %tmp1
@@ -168,6 +173,7 @@ define i8 @cttz_i8_zero_test(i8 %n) {
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    bsfl %eax, %eax
 ; CHECK-NEXT:  .LBB12_2: # %cond.end
+; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %tmp1 = call i8 @llvm.cttz.i8(i8 %n, i1 false)
   ret i8 %tmp1

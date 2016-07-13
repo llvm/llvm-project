@@ -393,8 +393,6 @@ ProcessThinLTOModule(Module &TheModule, ModuleSummaryIndex &Index,
 /// copies when possible).
 static void resolveWeakForLinkerInIndex(
     ModuleSummaryIndex &Index,
-    const StringMap<FunctionImporter::ExportSetTy> &ExportLists,
-    const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols,
     StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>>
         &ResolvedODR) {
 
@@ -409,21 +407,13 @@ static void resolveWeakForLinkerInIndex(
     return Prevailing->second == S;
   };
 
-  auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
-    const auto &ExportList = ExportLists.find(ModuleIdentifier);
-    return (ExportList != ExportLists.end() &&
-            ExportList->second.count(GUID)) ||
-           GUIDPreservedSymbols.count(GUID);
-  };
-
   auto recordNewLinkage = [&](StringRef ModuleIdentifier,
                               GlobalValue::GUID GUID,
                               GlobalValue::LinkageTypes NewLinkage) {
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
 
-  thinLTOResolveWeakForLinkerInIndex(Index, isPrevailing, isExported,
-                                     recordNewLinkage);
+  thinLTOResolveWeakForLinkerInIndex(Index, isPrevailing, recordNewLinkage);
 }
 
 // Initialize the TargetMachine builder for a given Triple
@@ -537,14 +527,9 @@ void ThinLTOCodeGenerator::promote(Module &TheModule,
   ComputeCrossModuleImport(Index, ModuleToDefinedGVSummaries, ImportLists,
                            ExportLists);
 
-  // Convert the preserved symbols set from string to GUID
-  auto GUIDPreservedSymbols =
-  computeGUIDPreservedSymbols(PreservedSymbols, TMBuilder.TheTriple);
-
   // Resolve LinkOnce/Weak symbols.
   StringMap<std::map<GlobalValue::GUID, GlobalValue::LinkageTypes>> ResolvedODR;
-  resolveWeakForLinkerInIndex(Index, ExportLists, GUIDPreservedSymbols,
-                              ResolvedODR);
+  resolveWeakForLinkerInIndex(Index, ResolvedODR);
 
   thinLTOResolveWeakForLinkerModule(
       TheModule, ModuleToDefinedGVSummaries[ModuleIdentifier]);
@@ -750,8 +735,7 @@ void ThinLTOCodeGenerator::run() {
 
   // Resolve LinkOnce/Weak symbols, this has to be computed early because it
   // impacts the caching.
-  resolveWeakForLinkerInIndex(*Index, ExportLists, GUIDPreservedSymbols,
-                              ResolvedODR);
+  resolveWeakForLinkerInIndex(*Index, ResolvedODR);
 
   auto isExported = [&](StringRef ModuleIdentifier, GlobalValue::GUID GUID) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);

@@ -18,6 +18,7 @@
 namespace llvm {
 namespace codeview {
 class StreamReader;
+class StreamWriter;
 }
 namespace pdb {
 
@@ -26,6 +27,7 @@ public:
   NameMap();
 
   Error load(codeview::StreamReader &Stream);
+  Error commit(codeview::StreamWriter &Writer);
 
   bool tryGetValue(StringRef Name, uint32_t &Value) const;
 

@@ -19,7 +19,6 @@
 def G_ADD : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$src1, unknown:$src2);
-  let AsmString = "";
   let hasSideEffects = 0;
   let isCommutable = 1;
 }
@@ -28,7 +27,6 @@ def G_ADD : Instruction {
 def G_OR : Instruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$src1, unknown:$src2);
-  let AsmString = "";
   let hasSideEffects = 0;
   let isCommutable = 1;
 }
@@ -40,7 +38,6 @@ def G_OR : Instruction {
 def G_BR : Instruction {
   let OutOperandList = (outs);
   let InOperandList = (ins unknown:$src1);
-  let AsmString = "";
   let hasSideEffects = 0;
   let isBranch = 1;
   let isTerminator = 1;
