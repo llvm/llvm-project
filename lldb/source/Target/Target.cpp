@@ -3805,7 +3805,7 @@ protected:
 static PropertyDefinition
 g_experimental_properties[] 
 {
-{   "inject-local-vars",        OptionValue::eTypeBoolean     , true, true, nullptr, nullptr, "If true, inject local variables explicitly into the expression text.  "
+{   "inject-local-vars",        OptionValue::eTypeBoolean     , true, false, nullptr, nullptr, "If true, inject local variables explicitly into the expression text.  "
                                                                                                "This will fix symbol resolution when there are name collisions between ivars and local variables.  "
                                                                                                "But it can make expressions run much more slowly." },
 {   nullptr,                    OptionValue::eTypeInvalid     , true, 0    , nullptr, nullptr, nullptr }

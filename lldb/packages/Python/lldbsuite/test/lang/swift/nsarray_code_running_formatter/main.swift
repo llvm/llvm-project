@@ -9,22 +9,25 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-import Cocoa
+import Foundation
 
-class Person: NSObject {
-    var array = [AnyObject]()
+class Test: NSArray { 
+    override var count: Int { return 1 } 
+    override func object(at index: Int) -> AnyObject { return "abc" } 
+    override func copy(with: NSZone?) -> AnyObject { return self } 
 }
 
-func main() -> Int {
-  let person = Person()
-  let array = person.mutableArrayValueForKey("array")
+func main() {
+  var t = Test()
+  var ta = Test() as Array
+  var tb = Test() as Array + []
 
-  array.addObject(3)
-  array.addObject(4)
-  array.addObject(5)
-  
-  return 6 //% self.expect("expr -d run -- array", substrs=['Int64(3)','Int64(4)','Int64(5)'])
-           //% self.expect("frame variable -d run -- array", substrs=['Int64(3)','Int64(4)','Int64(5)'])
+  print("second stop") //% self.expect('frame variable -d run -- t', substrs=['t = 0x', 'NSArray = {', 'NSObject = {'])
+                       //% self.expect('frame variable -d run -- ta', substrs=['ta = {', '_buffer = {', '_storage =', 'rawValue = 0x'])
+                       //% self.expect('frame variable -d run -- tb', substrs=['tb = 1 value {', '[0] = "abc"'])
+                       //% self.expect('po t', substrs=['0 : abc'])
+                       //% self.expect('po ta', substrs=['0 : abc'])
+                       //% self.expect('po tb', substrs=['0 : abc'])
 }
 
 main()
