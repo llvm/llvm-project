@@ -154,6 +154,8 @@ public:
                                            ///< implicit module build.
   unsigned ModulesEmbedAllFiles : 1;       ///< Whether we should embed all used
                                            ///< files into the PCM file.
+  unsigned IncludeTimestamps : 1;          ///< Whether timestamps should be
+                                           ///< written to the produced PCH file.
 
   CodeCompleteOptions CodeCompleteOpts;
 
@@ -278,8 +280,8 @@ public:
     SkipFunctionBodies(false), UseGlobalModuleIndex(true),
     GenerateGlobalModuleIndex(true), ASTDumpDecls(false), ASTDumpLookups(false),
     BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-    ARCMTAction(ARCMT_None), ObjCMTAction(ObjCMT_None),
-    ProgramAction(frontend::ParseSyntaxOnly)
+    IncludeTimestamps(true), ARCMTAction(ARCMT_None),
+    ObjCMTAction(ObjCMT_None), ProgramAction(frontend::ParseSyntaxOnly)
   {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file

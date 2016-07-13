@@ -25,3 +25,23 @@ void test4(read_only pipe uchar3 p) {
 void test5(read_only pipe int4 p) {
 // CHECK: define void @test5(%opencl.pipe_t* %p)
 }
+
+typedef read_only pipe int MyPipe;
+kernel void test6(MyPipe p) {
+// CHECK: define void @test6(%opencl.pipe_t* %p)
+}
+
+struct Person {
+  const char *Name;
+  bool isFemale;
+  int ID;
+};
+
+void test_reserved_read_pipe(global struct Person *SDst,
+                             read_only pipe struct Person SPipe) {
+// CHECK: define void @test_reserved_read_pipe
+  read_pipe (SPipe, SDst);
+  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}})
+  read_pipe (SPipe, SDst);
+  // CHECK: call i32 @__read_pipe_2(%opencl.pipe_t* %{{.*}}, i8* %{{.*}})
+}

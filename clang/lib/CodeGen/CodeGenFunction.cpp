@@ -516,7 +516,8 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
       // Get argument type name.
       std::string typeName;
       if (isPipe)
-        typeName = cast<PipeType>(ty)->getElementType().getAsString(Policy);
+        typeName = ty.getCanonicalType()->getAs<PipeType>()->getElementType()
+                     .getAsString(Policy);
       else
         typeName = ty.getUnqualifiedType().getAsString(Policy);
 
@@ -529,8 +530,9 @@ static void GenOpenCLArgMetadata(const FunctionDecl *FD, llvm::Function *Fn,
 
       std::string baseTypeName;
       if (isPipe)
-        baseTypeName =
-          cast<PipeType>(ty)->getElementType().getCanonicalType().getAsString(Policy);
+        baseTypeName = ty.getCanonicalType()->getAs<PipeType>()
+                          ->getElementType().getCanonicalType()
+                          .getAsString(Policy);
       else
         baseTypeName =
           ty.getUnqualifiedType().getCanonicalType().getAsString(Policy);

@@ -1183,6 +1183,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
   case OMPC_map:
   case OMPC_to:
   case OMPC_from:
+  case OMPC_use_device_ptr:
     Clause = ParseOpenMPVarListClause(DKind, CKind);
     break;
   case OMPC_unknown:
@@ -1747,6 +1748,8 @@ bool Parser::ParseOpenMPVarList(OpenMPDirectiveKind DKind,
 ///       'to' '(' list ')'
 ///    from-clause:
 ///       'from' '(' list ')'
+///    use_device_ptr-clause:
+///       'use_device_ptr' '(' list ')'
 ///
 /// For 'linear' clause linear-list may have the following forms:
 ///  list

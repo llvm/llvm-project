@@ -8421,6 +8421,8 @@ def err_omp_expected_int_param : Error<
   "expected a reference to an integer-typed parameter">;
 def err_omp_at_least_one_motion_clause_required : Error<
   "expected at least one 'to' clause or 'from' clause specified to '#pragma omp target update'">;
+def  err_omp_usedeviceptr_not_a_pointer : Error<
+  "expected pointer or reference to pointer in 'use_device_ptr' clause">;
 def warn_omp_nesting_simd : Warning<
   "OpenMP only allows an ordered construct with the simd clause nested in a simd construct">,
   InGroup<SourceUsesOpenMP>;

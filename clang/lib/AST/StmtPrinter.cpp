@@ -947,6 +947,14 @@ void OMPClausePrinter::VisitOMPDefaultmapClause(OMPDefaultmapClause *Node) {
     Node->getDefaultmapKind());
   OS << ")";
 }
+
+void OMPClausePrinter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *Node) {
+  if (!Node->varlist_empty()) {
+    OS << "use_device_ptr";
+    VisitOMPClauseList(Node, '(');
+    OS << ")";
+  }
+}
 }
 
 //===----------------------------------------------------------------------===//
