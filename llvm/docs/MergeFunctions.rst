@@ -56,7 +56,7 @@ As a good start point, Kaleidoscope tutorial could be used:
 
 Especially it's important to understand chapter 3 of tutorial:
 
-:doc:`tutorial/LangImpl3`
+:doc:`tutorial/LangImpl03`
 
 Reader also should know how passes work in LLVM, they could use next article as
 a reference and start point here:

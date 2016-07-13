@@ -62,6 +62,7 @@ static std::pair<ELFKind, uint16_t> parseEmulation(StringRef S) {
       StringSwitch<std::pair<ELFKind, uint16_t>>(S)
           .Case("aarch64linux", {ELF64LEKind, EM_AARCH64})
           .Case("armelf_linux_eabi", {ELF32LEKind, EM_ARM})
+          .Case("elf32_x86_64", {ELF32LEKind, EM_X86_64})
           .Case("elf32btsmip", {ELF32BEKind, EM_MIPS})
           .Case("elf32ltsmip", {ELF32LEKind, EM_MIPS})
           .Case("elf32ppc", {ELF32BEKind, EM_PPC})
@@ -512,7 +513,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   LinkerScript<ELFT> LS;
   Script<ELFT>::X = &LS;
 
-  Config->Rela = ELFT::Is64Bits;
+  Config->Rela = ELFT::Is64Bits || Config->EMachine == EM_X86_64;
   Config->Mips64EL =
       (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind);
 

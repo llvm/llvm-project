@@ -129,6 +129,12 @@ BlockFrequencyInfo &BlockFrequencyInfo::operator=(BlockFrequencyInfo &&RHS) {
   return *this;
 }
 
+// Explicitly define the default constructor otherwise it would be implicitly
+// defined at the first ODR-use which is the BFI member in the
+// LazyBlockFrequencyInfo header.  The dtor needs the BlockFrequencyInfoImpl
+// template instantiated which is not available in the header.
+BlockFrequencyInfo::~BlockFrequencyInfo() {}
+
 void BlockFrequencyInfo::calculate(const Function &F,
                                    const BranchProbabilityInfo &BPI,
                                    const LoopInfo &LI) {

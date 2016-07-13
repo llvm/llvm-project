@@ -402,38 +402,8 @@ You can separate requirements by a comma.
 ``REQUIRES`` means all listed requirements must be satisfied.
 ``REQUIRES-ANY`` means at least one must be satisfied.
 
-List of features that can be used in ``REQUIRES`` and ``REQUIRES-ANY``:
-- asan
-- not_asan
-- asserts
-- can-execute
-- debug_frame
-- default_triple
-- dfsan
-- fma3
-- global-isel
-- ld64_plugin
-- ld_emu_elf32ppc
-- ld_plugin
-- linux
-- loadable_module
-- long_tests
-- lsan
-- msan
-- not_msan
-- native
-- object-emission
-- python-psutil
-- shell
-- system-windows
-- ubsan
-- not_ubsan
-- x86_64-linux
-- xar
-- zlib
-- nozlib
-
-To add new features change lit.cfg in test directory.
+List of features that can be used in ``REQUIRES`` and ``REQUIRES-ANY`` can be
+found in lit.cfg files.
 
 Substitutions
 -------------

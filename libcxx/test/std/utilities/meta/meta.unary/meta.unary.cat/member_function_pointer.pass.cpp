@@ -136,6 +136,6 @@ int main()
     test_member_function_pointer<void (Class::*)(int, char,...) const volatile &&>();
 #endif
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_member_function_pointer<incomplete_type>::value, "");
 }

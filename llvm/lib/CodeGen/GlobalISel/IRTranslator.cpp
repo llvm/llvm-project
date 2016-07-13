@@ -155,5 +155,10 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
       }
     }
   }
+
+  // Now that the MachineFrameInfo has been configured, no further changes to
+  // the reserved registers are possible.
+  MRI->freezeReservedRegs(MF);
+
   return false;
 }

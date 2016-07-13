@@ -723,9 +723,9 @@ unsigned DataLayout::getLargestLegalIntTypeSizeInBits() const {
   return Max != LegalIntWidths.end() ? *Max : 0;
 }
 
-uint64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
-                                            ArrayRef<Value *> Indices) const {
-  uint64_t Result = 0;
+int64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
+                                           ArrayRef<Value *> Indices) const {
+  int64_t Result = 0;
 
   // We can use 0 as the address space as we don't need
   // to get pointer types back from gep_type_iterator.
@@ -735,7 +735,7 @@ uint64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
     GTE = gep_type_end(ElemTy, AS, Indices);
   for (; GTI != GTE; ++GTI) {
     Value *Idx = GTI.getOperand();
-    if (StructType *STy = dyn_cast<StructType>(*GTI)) {
+    if (auto *STy = dyn_cast<StructType>(*GTI)) {
       assert(Idx->getType()->isIntegerTy(32) && "Illegal struct idx");
       unsigned FieldNo = cast<ConstantInt>(Idx)->getZExtValue();
 
@@ -747,7 +747,7 @@ uint64_t DataLayout::getIndexedOffsetInType(Type *ElemTy,
     } else {
       // Get the array index and the size of each array element.
       if (int64_t arrayIdx = cast<ConstantInt>(Idx)->getSExtValue())
-        Result += (uint64_t)arrayIdx * getTypeAllocSize(GTI.getIndexedType());
+        Result += arrayIdx * getTypeAllocSize(GTI.getIndexedType());
     }
   }
 

@@ -186,22 +186,20 @@ template <class ELFT> Thunk<ELFT>::~Thunk() {}
 template <class ELFT>
 static Thunk<ELFT> *createThunkArm(uint32_t Reloc, SymbolBody &S,
                                    InputSection<ELFT> &IS) {
-  bool NeedsPI = Config->Pic || Config->Pie || Config->Shared;
-  BumpPtrAllocator &Alloc = IS.getFile()->Alloc;
-
   // ARM relocations need ARM to Thumb interworking Thunks.
   // Thumb relocations need Thumb to ARM relocations.
   // Use position independent Thunks if we require position independent code.
+  BumpPtrAllocator &Alloc = IS.getFile()->Alloc;
   switch (Reloc) {
   case R_ARM_PC24:
   case R_ARM_PLT32:
   case R_ARM_JUMP24:
-    if (NeedsPI)
+    if (Config->Pic)
       return new (Alloc) ARMToThumbV7PILongThunk<ELFT>(S, IS);
     return new (Alloc) ARMToThumbV7ABSLongThunk<ELFT>(S, IS);
   case R_ARM_THM_JUMP19:
   case R_ARM_THM_JUMP24:
-    if (NeedsPI)
+    if (Config->Pic)
       return new (Alloc) ThumbToARMV7PILongThunk<ELFT>(S, IS);
     return new (Alloc) ThumbToARMV7ABSLongThunk<ELFT>(S, IS);
   }

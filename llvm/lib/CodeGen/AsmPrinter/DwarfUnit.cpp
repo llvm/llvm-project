@@ -561,32 +561,6 @@ static bool isUnsignedDIType(DwarfDebug *DD, const DIType *Ty) {
          Ty->getTag() == dwarf::DW_TAG_unspecified_type;
 }
 
-/// If this type is derived from a base type then return base type size.
-static uint64_t getBaseTypeSize(DwarfDebug *DD, const DIDerivedType *Ty) {
-  unsigned Tag = Ty->getTag();
-
-  if (Tag != dwarf::DW_TAG_member && Tag != dwarf::DW_TAG_typedef &&
-      Tag != dwarf::DW_TAG_const_type && Tag != dwarf::DW_TAG_volatile_type &&
-      Tag != dwarf::DW_TAG_restrict_type)
-    return Ty->getSizeInBits();
-
-  auto *BaseType = DD->resolve(Ty->getBaseType());
-
-  assert(BaseType && "Unexpected invalid base type");
-
-  // If this is a derived type, go ahead and get the base type, unless it's a
-  // reference then it's just the size of the field. Pointer types have no need
-  // of this since they're a different type of qualification on the type.
-  if (BaseType->getTag() == dwarf::DW_TAG_reference_type ||
-      BaseType->getTag() == dwarf::DW_TAG_rvalue_reference_type)
-    return Ty->getSizeInBits();
-
-  if (auto *DT = dyn_cast<DIDerivedType>(BaseType))
-    return getBaseTypeSize(DD, DT);
-
-  return BaseType->getSizeInBits();
-}
-
 void DwarfUnit::addConstantFPValue(DIE &Die, const MachineOperand &MO) {
   assert(MO.isFPImm() && "Invalid machine operand!");
   DIEBlock *Block = new (DIEValueAllocator) DIEBlock;
@@ -1416,7 +1390,7 @@ void DwarfUnit::constructMemberDIE(DIE &Buffer, const DIDerivedType *DT) {
     addBlock(MemberDie, dwarf::DW_AT_data_member_location, VBaseLocationDie);
   } else {
     uint64_t Size = DT->getSizeInBits();
-    uint64_t FieldSize = getBaseTypeSize(DD, DT);
+    uint64_t FieldSize = DD->getBaseTypeSize(DT);
     uint64_t OffsetInBytes;
 
     bool IsBitfield = FieldSize && Size != FieldSize;

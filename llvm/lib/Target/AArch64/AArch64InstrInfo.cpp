@@ -620,6 +620,12 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return canBeExpandedToORR(MI, 32);
   case AArch64::MOVi64imm:
     return canBeExpandedToORR(MI, 64);
+
+  // It is cheap to move #0 to float registers if the subtarget has 
+  // ZeroCycleZeroing feature.
+  case AArch64::FMOVS0:
+  case AArch64::FMOVD0:
+    return Subtarget.hasZeroCycleZeroing();
   }
 
   llvm_unreachable("Unknown opcode to check as cheap as a move!");

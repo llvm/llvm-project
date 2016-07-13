@@ -43,6 +43,8 @@ public:
 
   BlockFrequencyInfo &operator=(BlockFrequencyInfo &&RHS);
 
+  ~BlockFrequencyInfo();
+
   const Function *getFunction() const;
   const BranchProbabilityInfo *getBPI() const;
   void view() const;

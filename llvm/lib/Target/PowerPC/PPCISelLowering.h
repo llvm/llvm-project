@@ -65,6 +65,14 @@ namespace llvm {
       ///
       XXSPLT,
 
+      /// XXINSERT - The PPC VSX insert instruction
+      ///
+      XXINSERT,
+
+      /// VECSHL - The PPC VSX shift left instruction
+      ///
+      VECSHL,
+
       /// The CMPB instruction (takes two operands of i32 or i64).
       CMPB,
 
@@ -311,6 +319,10 @@ namespace llvm {
       /// of outputs.
       XXSWAPD,
 
+      /// An SDNode for swaps that are not associated with any loads/stores
+      /// and thereby have no chain.
+      SWAP_NO_CHAIN,
+
       /// QVFPERM = This corresponds to the QPX qvfperm instruction.
       QVFPERM,
 
@@ -415,6 +427,16 @@ namespace llvm {
     /// specifies a splat of a single element that is suitable for input to
     /// VSPLTB/VSPLTH/VSPLTW.
     bool isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize);
+
+    /// isXXINSERTWMask - Return true if this VECTOR_SHUFFLE can be handled by
+    /// the XXINSERTW instruction introduced in ISA 3.0. This is essentially any
+    /// shuffle of v4f32/v4i32 vectors that just inserts one element from one
+    /// vector into the other. This function will also set a couple of
+    /// output parameters for how much the source vector needs to be shifted and
+    /// what byte number needs to be specified for the instruction to put the
+    /// element in the desired location of the target vector.
+    bool isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
+                         unsigned &InsertAtByte, bool &Swap, bool IsLE);
 
     /// getVSPLTImmediate - Return the appropriate VSPLT* immediate to splat the
     /// specified isSplatShuffleMask VECTOR_SHUFFLE mask.

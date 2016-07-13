@@ -66,6 +66,6 @@ int main()
     test_integral<__uint128_t>();
 #endif
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_integral<incomplete_type>::value, "");
 }

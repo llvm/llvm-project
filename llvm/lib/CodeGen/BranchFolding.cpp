@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/CodeGen/RegisterScavenging.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
@@ -212,13 +211,10 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   TRI = tri;
   MMI = mmi;
   MLI = mli;
-  RS = nullptr;
 
-  // Use a RegScavenger to help update liveness when required.
   MachineRegisterInfo &MRI = MF.getRegInfo();
-  if (MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF))
-    RS = new RegScavenger();
-  else
+  UpdateLiveIns = MRI.tracksLiveness() && TRI->trackLivenessAfterRegAlloc(MF);
+  if (!UpdateLiveIns)
     MRI.invalidateLiveness();
 
   // Fix CFG.  The later algorithms expect it to be right.
@@ -249,10 +245,8 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
   // See if any jump tables have become dead as the code generator
   // did its thing.
   MachineJumpTableInfo *JTI = MF.getJumpTableInfo();
-  if (!JTI) {
-    delete RS;
+  if (!JTI)
     return MadeChange;
-  }
 
   // Walk the function to find jump tables that are live.
   BitVector JTIsLive(JTI->getJumpTables().size());
@@ -274,7 +268,6 @@ bool BranchFolder::OptimizeFunction(MachineFunction &MF,
       MadeChange = true;
     }
 
-  delete RS;
   return MadeChange;
 }
 
@@ -406,15 +399,27 @@ static unsigned ComputeCommonTailLength(MachineBasicBlock *MBB1,
   return TailLen;
 }
 
-void BranchFolder::MaintainLiveIns(MachineBasicBlock *CurMBB,
-                                   MachineBasicBlock *NewMBB) {
-  if (RS) {
-    RS->enterBasicBlock(*CurMBB);
-    if (!CurMBB->empty())
-      RS->forward(std::prev(CurMBB->end()));
-    for (unsigned int i = 1, e = TRI->getNumRegs(); i != e; i++)
-      if (RS->isRegUsed(i, false))
-        NewMBB->addLiveIn(i);
+void BranchFolder::computeLiveIns(MachineBasicBlock &MBB) {
+  if (!UpdateLiveIns)
+    return;
+
+  LiveRegs.init(TRI);
+  LiveRegs.addLiveOutsNoPristines(MBB);
+  for (MachineInstr &MI : make_range(MBB.rbegin(), MBB.rend()))
+    LiveRegs.stepBackward(MI);
+
+  for (unsigned Reg : LiveRegs) {
+    // Skip the register if we are about to add one of its super registers.
+    bool ContainsSuperReg = false;
+    for (MCSuperRegIterator SReg(Reg, TRI); SReg.isValid(); ++SReg) {
+      if (LiveRegs.contains(*SReg)) {
+        ContainsSuperReg = true;
+        break;
+      }
+    }
+    if (ContainsSuperReg)
+      continue;
+    MBB.addLiveIn(Reg);
   }
 }
 
@@ -422,12 +427,9 @@ void BranchFolder::MaintainLiveIns(MachineBasicBlock *CurMBB,
 /// after it, replacing it with an unconditional branch to NewDest.
 void BranchFolder::ReplaceTailWithBranchTo(MachineBasicBlock::iterator OldInst,
                                            MachineBasicBlock *NewDest) {
-  MachineBasicBlock *CurMBB = OldInst->getParent();
-
   TII->ReplaceTailWithBranchTo(OldInst, NewDest);
 
-  // For targets that use the register scavenger, we must maintain LiveIns.
-  MaintainLiveIns(CurMBB, NewDest);
+  computeLiveIns(*NewDest);
 
   ++NumTailMerge;
 }
@@ -465,8 +467,7 @@ MachineBasicBlock *BranchFolder::SplitMBBAt(MachineBasicBlock &CurMBB,
   // NewMBB inherits CurMBB's block frequency.
   MBBFreqInfo.setBlockFreq(NewMBB, MBBFreqInfo.getBlockFreq(&CurMBB));
 
-  // For targets that use the register scavenger, we must maintain LiveIns.
-  MaintainLiveIns(&CurMBB, NewMBB);
+  computeLiveIns(*NewMBB);
 
   // Add the new block to the funclet.
   const auto &FuncletI = FuncletMembership.find(&CurMBB);

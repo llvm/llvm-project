@@ -10,6 +10,7 @@ add_lld_library(lldCOFF
   Error.cpp
   ICF.cpp
   InputFiles.cpp
+  Librarian.cpp
   MarkLive.cpp
   ModuleDef.cpp
   PDB.cpp

@@ -46,3 +46,13 @@ define <2 x i8*> @test8(<2 x [2 x i8]*> %a) {
   %w = getelementptr  [2 x i8], <2 x  [2 x i8]*> %a, <2 x i32> <i32 0, i32 0>, <2 x i8> <i8 0, i8 1>
   ret <2 x i8*> %w
 }
+
+@array = internal global [16 x i32] [i32 -200, i32 -199, i32 -198, i32 -197, i32 -196, i32 -195, i32 -194, i32 -193, i32 -192, i32 -191, i32 -190, i32 -189, i32 -188, i32 -187, i32 -186, i32 -185], align 16
+
+; Verify that array GEP doesn't incorrectly infer inbounds.
+define i32* @test9() {
+entry:
+  ret i32* getelementptr ([16 x i32], [16 x i32]* @array, i64 0, i64 -13)
+; CHECK-LABEL: define i32* @test9(
+; CHECK: ret i32* getelementptr ([16 x i32], [16 x i32]* @array, i64 0, i64 -13)
+}

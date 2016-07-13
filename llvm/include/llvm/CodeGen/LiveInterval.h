@@ -613,6 +613,9 @@ namespace llvm {
                BumpPtrAllocator &Allocator)
         : LiveRange(Other, Allocator), Next(nullptr), LaneMask(LaneMask) {
       }
+
+      void print(raw_ostream &OS) const;
+      void dump() const;
     };
 
   private:
@@ -754,6 +757,12 @@ namespace llvm {
     /// Free memory held by SubRange.
     void freeSubRange(SubRange *S);
   };
+
+  inline raw_ostream &operator<<(raw_ostream &OS,
+                                 const LiveInterval::SubRange &SR) {
+    SR.print(OS);
+    return OS;
+  }
 
   inline raw_ostream &operator<<(raw_ostream &OS, const LiveInterval &LI) {
     LI.print(OS);

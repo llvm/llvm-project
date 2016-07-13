@@ -71,6 +71,7 @@ def PPCmtvsra : SDNode<"PPCISD::MTVSRA", SDTUnaryOp, []>;
 def PPCmtvsrz : SDNode<"PPCISD::MTVSRZ", SDTUnaryOp, []>;
 def PPCsvec2fp : SDNode<"PPCISD::SINT_VEC_TO_FP", SDTVecConv, []>;
 def PPCuvec2fp: SDNode<"PPCISD::UINT_VEC_TO_FP", SDTVecConv, []>;
+def PPCswapNoChain : SDNode<"PPCISD::SWAP_NO_CHAIN", SDT_PPCxxswapd>;
 
 multiclass XX3Form_Rcr<bits<6> opcode, bits<7> xo, string asmbase,
                     string asmstr, InstrItinClass itin, Intrinsic Int,
@@ -778,7 +779,9 @@ let Uses = [RM] in {
 
   def XXSLDWI : XX3Form_2<60, 2,
                        (outs vsrc:$XT), (ins vsrc:$XA, vsrc:$XB, u2imm:$SHW),
-                       "xxsldwi $XT, $XA, $XB, $SHW", IIC_VecPerm, []>;
+                       "xxsldwi $XT, $XA, $XB, $SHW", IIC_VecPerm,
+                       [(set v4i32:$XT, (PPCvecshl v4i32:$XA, v4i32:$XB,
+                                                  imm32SExt16:$SHW))]>;
   def XXSPLTW : XX2Form_2<60, 164,
                        (outs vsrc:$XT), (ins vsrc:$XB, u2imm:$UIM),
                        "xxspltw $XT, $XB, $UIM", IIC_VecPerm,
@@ -963,6 +966,7 @@ def : Pat<(v2f64 (PPCxxswapd v2f64:$src)), (XXPERMDI $src, $src, 2)>;
 def : Pat<(v2i64 (PPCxxswapd v2i64:$src)), (XXPERMDI $src, $src, 2)>;
 def : Pat<(v4f32 (PPCxxswapd v4f32:$src)), (XXPERMDI $src, $src, 2)>;
 def : Pat<(v4i32 (PPCxxswapd v4i32:$src)), (XXPERMDI $src, $src, 2)>;
+def : Pat<(v2f64 (PPCswapNoChain v2f64:$src)), (XXPERMDI $src, $src, 2)>;
 
 // Selects.
 def : Pat<(v2f64 (selectcc i1:$lhs, i1:$rhs, v2f64:$tval, v2f64:$fval, SETLT)),
@@ -1318,7 +1322,7 @@ def VectorExtractions {
                        (v2i64 (COPY_TO_REGCLASS $S, VSRC)), sub_64));
 
   // Word extraction
-  dag LE_WORD_0 = (MFVSRWZ (EXTRACT_SUBREG (XXSLDWI $S, $S, 2), sub_64));
+  dag LE_WORD_0 = (MFVSRWZ (EXTRACT_SUBREG (XXPERMDI $S, $S, 2), sub_64));
   dag LE_WORD_1 = (MFVSRWZ (EXTRACT_SUBREG (XXSLDWI $S, $S, 1), sub_64));
   dag LE_WORD_2 = (MFVSRWZ (EXTRACT_SUBREG
                              (v2i64 (COPY_TO_REGCLASS $S, VSRC)), sub_64));
@@ -1588,7 +1592,7 @@ let Predicates = [IsBigEndian, HasP8Vector] in {
   def : Pat<(f32 (vector_extract v4f32:$S, 1)),
             (f32 (XSCVSPDPN (XXSLDWI $S, $S, 1)))>;
   def : Pat<(f32 (vector_extract v4f32:$S, 2)),
-            (f32 (XSCVSPDPN (XXSLDWI $S, $S, 2)))>;
+            (f32 (XSCVSPDPN (XXPERMDI $S, $S, 2)))>;
   def : Pat<(f32 (vector_extract v4f32:$S, 3)),
             (f32 (XSCVSPDPN (XXSLDWI $S, $S, 3)))>;
   def : Pat<(f32 (vector_extract v4f32:$S, i64:$Idx)),
@@ -1693,7 +1697,7 @@ let Predicates = [IsLittleEndian, HasP8Vector] in {
   def : Pat<(f32 (vector_extract v4f32:$S, 0)),
             (f32 (XSCVSPDPN (XXSLDWI $S, $S, 3)))>;
   def : Pat<(f32 (vector_extract v4f32:$S, 1)),
-            (f32 (XSCVSPDPN (XXSLDWI $S, $S, 2)))>;
+            (f32 (XSCVSPDPN (XXPERMDI $S, $S, 2)))>;
   def : Pat<(f32 (vector_extract v4f32:$S, 2)),
             (f32 (XSCVSPDPN (XXSLDWI $S, $S, 1)))>;
   def : Pat<(f32 (vector_extract v4f32:$S, 3)),
@@ -1817,9 +1821,14 @@ def : Pat<(f64 (bitconvert i64:$S)),
           (f64 (MTVSRD $S))>;
 }
 
+def AlignValues {
+  dag F32_TO_BE_WORD1 = (v4f32 (XXSLDWI (XSCVDPSPN $B), (XSCVDPSPN $B), 3));
+  dag I32_TO_BE_WORD1 = (COPY_TO_REGCLASS (MTVSRWZ $B), VSRC);
+}
+
 // The following VSX instructions were introduced in Power ISA 3.0
 def HasP9Vector : Predicate<"PPCSubTarget->hasP9Vector()">;
-let Predicates = [HasP9Vector] in {
+let AddedComplexity = 400, Predicates = [HasP9Vector] in {
 
   // [PO VRT XO VRB XO /]
   class X_VT5_XO5_VB5<bits<6> opcode, bits<5> xo2, bits<10> xo, string opc,
@@ -2026,13 +2035,17 @@ let Predicates = [HasP9Vector] in {
 
   // Vector Insert Word
   // XB NOTE: Only XB.dword[1] is used, but we use vsrc on XB.
-  def XXINSERTW   : XX2_RD6_UIM5_RS6<60, 181,
-                                  (outs vsrc:$XT), (ins u4imm:$UIMM, vsrc:$XB),
-                                  "xxinsertw $XT, $XB, $UIMM", IIC_VecFP, []>;
+  def XXINSERTW   :
+    XX2_RD6_UIM5_RS6<60, 181, (outs vsrc:$XT),
+                     (ins vsrc:$XTi, vsrc:$XB, u4imm:$UIM),
+                     "xxinsertw $XT, $XB, $UIM", IIC_VecFP,
+                     [(set v4i32:$XT, (PPCxxinsert v4i32:$XTi, v4i32:$XB,
+                                                   imm32SExt16:$UIM))]>,
+                     RegConstraint<"$XTi = $XT">, NoEncode<"$XTi">;
 
   // Vector Extract Unsigned Word
   def XXEXTRACTUW : XX2_RD6_UIM5_RS6<60, 165,
-                                  (outs vsrc:$XT), (ins u4imm:$UIMM, vsrc:$XB),
+                                  (outs vsfrc:$XT), (ins vsrc:$XB, u4imm:$UIMM),
                                   "xxextractuw $XT, $XB, $UIMM", IIC_VecFP, []>;
 
   // Vector Insert Exponent DP/SP
@@ -2171,4 +2184,59 @@ let Predicates = [HasP9Vector] in {
   def STXVL    : X_XS6_RA5_RB5<31,  397, "stxvl"   , vsrc, []>;
   def STXVLL   : X_XS6_RA5_RB5<31,  429, "stxvll"  , vsrc, []>;
   } // end mayStore
-} // end HasP9Vector
+
+  // Patterns for which instructions from ISA 3.0 are a better match
+  let Predicates = [IsLittleEndian, HasP9Vector] in {
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 0))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 12)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 1))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 8)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 2))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 4)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 3))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 0)))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 0)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 12))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 1)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 8))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 2)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 4))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 3)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 0))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 0)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 12))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 1)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 8))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 2)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 4))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 3)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 0))>;
+  } // IsLittleEndian, HasP9Vector
+
+  let Predicates = [IsBigEndian, HasP9Vector] in {
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 0))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 0)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 1))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 4)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 2))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 8)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsrz (i32 (extractelt v4i32:$A, 3))))),
+            (f32 (XSCVUXDSP (XXEXTRACTUW $A, 12)))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 0)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 0))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 1)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 4))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 2)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 8))>;
+  def : Pat<(v4i32 (insertelt v4i32:$A, i32:$B, 3)),
+            (v4i32 (XXINSERTW v4i32:$A, AlignValues.I32_TO_BE_WORD1, 12))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 0)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 0))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 1)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 4))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 2)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 8))>;
+  def : Pat<(v4f32 (insertelt v4f32:$A, f32:$B, 3)),
+            (v4f32 (XXINSERTW v4f32:$A, AlignValues.F32_TO_BE_WORD1, 12))>;
+  } // IsLittleEndian, HasP9Vector
+} // end HasP9Vector, AddedComplexity

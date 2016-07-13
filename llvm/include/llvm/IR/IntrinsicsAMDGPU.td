@@ -384,6 +384,11 @@ def int_amdgcn_ds_swizzle :
   GCCBuiltin<"__builtin_amdgcn_ds_swizzle">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
 
+// llvm.amdgcn.lerp
+def int_amdgcn_lerp :
+  GCCBuiltin<"__builtin_amdgcn_lerp">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
+
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics
 //===----------------------------------------------------------------------===//

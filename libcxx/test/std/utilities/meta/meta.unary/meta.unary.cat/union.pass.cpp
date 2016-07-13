@@ -56,6 +56,6 @@ int main()
 {
     test_union<Union>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_union<incomplete_type>::value, "");
 }
