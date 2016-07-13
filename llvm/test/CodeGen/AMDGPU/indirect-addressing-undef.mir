@@ -3,7 +3,7 @@
 
 # CHECK-LABEL: name: extract_undef_offset_vgpr{{$}}
 # CHECK: bb.1:
-# CHECK: successors: %bb.1(0x40000000 / 0x80000000 = 50.00%), %bb.2(0x40000000 / 0x80000000 = 50.00%)
+# CHECK: successors: %bb.2(0x40000000 / 0x80000000 = 50.00%), %bb.1(0x40000000 / 0x80000000 = 50.00%)
 # CHECK: liveins: %vgpr0_vgpr1_vgpr2_vgpr3{{$}}
 
 # CHECK: V_READFIRSTLANE_B32 undef %vgpr10, implicit %exec
@@ -103,7 +103,7 @@ body:             |
 
 # CHECK-LABEL: name: extract_undef_neg_offset_vgpr{{$}}
 # CHECK: bb.1:
-# CHECK: successors: %bb.1(0x40000000 / 0x80000000 = 50.00%), %bb.2(0x40000000 / 0x80000000 = 50.00%)
+# CHECK: successors: %bb.2(0x40000000 / 0x80000000 = 50.00%), %bb.1(0x40000000 / 0x80000000 = 50.00%)
 # CHECK: liveins: %vgpr0_vgpr1_vgpr2_vgpr3{{$}}
 
 # CHECK: %vcc_lo = V_READFIRSTLANE_B32 undef %vgpr10, implicit %exec
@@ -159,7 +159,7 @@ body:             |
 
 # CHECK-LABEL: name: insert_undef_offset_vgpr{{$}}
 # CHECK: bb.1:
-# CHECK: successors: %bb.1(0x40000000 / 0x80000000 = 50.00%), %bb.2(0x40000000 / 0x80000000 = 50.00%)
+# CHECK: successors: %bb.2(0x40000000 / 0x80000000 = 50.00%), %bb.1(0x40000000 / 0x80000000 = 50.00%)
 # CHECK: liveins: %vgpr4, %vgpr0_vgpr1_vgpr2_vgpr3{{$}}
 
 # CHECK: %vcc_lo = V_READFIRSTLANE_B32 undef %vgpr10, implicit %exec
@@ -215,7 +215,7 @@ body:             |
 
 # CHECK-LABEL: name: insert_undef_neg_offset_vgpr{{$}}
 # CHECK: bb.1:
-# CHECK: successors: %bb.1(0x40000000 / 0x80000000 = 50.00%), %bb.2(0x40000000 / 0x80000000 = 50.00%)
+# CHECK: successors: %bb.2(0x40000000 / 0x80000000 = 50.00%), %bb.1(0x40000000 / 0x80000000 = 50.00%)
 # CHECK: liveins: %vgpr4, %vgpr0_vgpr1_vgpr2_vgpr3{{$}}
 
 # CHECK: %vcc_lo = V_READFIRSTLANE_B32 undef %vgpr10, implicit %exec
@@ -272,7 +272,7 @@ body:             |
 
 # CHECK-LABEL: insert_undef_value_offset_vgpr{{$}}
 # CHECK: bb.1:
-# CHECK: successors: %bb.1(0x40000000 / 0x80000000 = 50.00%), %bb.2(0x40000000 / 0x80000000 = 50.00%)
+# CHECK: successors: %bb.2(0x40000000 / 0x80000000 = 50.00%), %bb.1(0x40000000 / 0x80000000 = 50.00%)
 # CHECK: liveins: %vgpr4, %vgpr0_vgpr1_vgpr2_vgpr3{{$}}
 
 # CHECK: %vcc_lo = V_READFIRSTLANE_B32 %vgpr4, implicit %exec

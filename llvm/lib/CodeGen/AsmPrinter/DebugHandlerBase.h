@@ -99,6 +99,9 @@ public:
 
   /// Determine whether two variable pieces overlap.
   static bool piecesOverlap(const DIExpression *P1, const DIExpression *P2);
+
+  /// If this type is derived from a base type then return base type size.
+  static uint64_t getBaseTypeSize(const DITypeRef TyRef);
 };
 
 }

@@ -825,12 +825,12 @@ unsigned LiveInterval::getSize() const {
 }
 
 raw_ostream& llvm::operator<<(raw_ostream& os, const LiveRange::Segment &S) {
-  return os << '[' << S.start << ',' << S.end << ':' << S.valno->id << ")";
+  return os << '[' << S.start << ',' << S.end << ':' << S.valno->id << ')';
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveRange::Segment::dump() const {
-  dbgs() << *this << "\n";
+  dbgs() << *this << '\n';
 }
 #endif
 
@@ -851,10 +851,10 @@ void LiveRange::print(raw_ostream &OS) const {
     for (const_vni_iterator i = vni_begin(), e = vni_end(); i != e;
          ++i, ++vnum) {
       const VNInfo *vni = *i;
-      if (vnum) OS << " ";
-      OS << vnum << "@";
+      if (vnum) OS << ' ';
+      OS << vnum << '@';
       if (vni->isUnused()) {
-        OS << "x";
+        OS << 'x';
       } else {
         OS << vni->def;
         if (vni->isPHIDef())
@@ -864,22 +864,30 @@ void LiveRange::print(raw_ostream &OS) const {
   }
 }
 
+void LiveInterval::SubRange::print(raw_ostream &OS) const {
+  OS << " L" << PrintLaneMask(LaneMask) << ' '
+     << static_cast<const LiveRange&>(*this);
+}
+
 void LiveInterval::print(raw_ostream &OS) const {
   OS << PrintReg(reg) << ' ';
   super::print(OS);
   // Print subranges
-  for (const SubRange &SR : subranges()) {
-    OS << " L" << PrintLaneMask(SR.LaneMask) << ' ' << SR;
-  }
+  for (const SubRange &SR : subranges())
+    OS << SR;
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveRange::dump() const {
-  dbgs() << *this << "\n";
+  dbgs() << *this << '\n';
+}
+
+LLVM_DUMP_METHOD void LiveInterval::SubRange::dump() const {
+  dbgs() << *this << '\n';
 }
 
 LLVM_DUMP_METHOD void LiveInterval::dump() const {
-  dbgs() << *this << "\n";
+  dbgs() << *this << '\n';
 }
 #endif
 

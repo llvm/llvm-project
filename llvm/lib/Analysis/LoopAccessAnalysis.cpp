@@ -105,7 +105,7 @@ void LoopAccessReport::emitAnalysis(const LoopAccessReport &Message,
 }
 
 Value *llvm::stripIntegerCast(Value *V) {
-  if (CastInst *CI = dyn_cast<CastInst>(V))
+  if (auto *CI = dyn_cast<CastInst>(V))
     if (CI->getOperand(0)->getType()->isIntegerTy())
       return CI->getOperand(0);
   return V;
@@ -172,7 +172,7 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, bool WritePtr,
 
     // For expressions with negative step, the upper bound is ScStart and the
     // lower bound is ScEnd.
-    if (const SCEVConstant *CStep = dyn_cast<const SCEVConstant>(Step)) {
+    if (const auto *CStep = dyn_cast<SCEVConstant>(Step)) {
       if (CStep->getValue()->isNegative())
         std::swap(ScStart, ScEnd);
     } else {
@@ -839,11 +839,11 @@ static bool isNoWrapAddRec(Value *Ptr, const SCEVAddRecExpr *AR,
 
   // Make sure there is only one non-const index and analyze that.
   Value *NonConstIndex = nullptr;
-  for (auto Index = GEP->idx_begin(); Index != GEP->idx_end(); ++Index)
-    if (!isa<ConstantInt>(*Index)) {
+  for (Value *Index : make_range(GEP->idx_begin(), GEP->idx_end()))
+    if (!isa<ConstantInt>(Index)) {
       if (NonConstIndex)
         return false;
-      NonConstIndex = *Index;
+      NonConstIndex = Index;
     }
   if (!NonConstIndex)
     // The recurrence is on the pointer, ignore for now.
@@ -976,9 +976,9 @@ int64_t llvm::getPtrStride(PredicatedScalarEvolution &PSE, Value *Ptr,
 /// Take the pointer operand from the Load/Store instruction.
 /// Returns NULL if this is not a valid Load/Store instruction.
 static Value *getPointerOperand(Value *I) {
-  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+  if (auto *LI = dyn_cast<LoadInst>(I))
     return LI->getPointerOperand();
-  if (StoreInst *SI = dyn_cast<StoreInst>(I))
+  if (auto *SI = dyn_cast<StoreInst>(I))
     return SI->getPointerOperand();
   return nullptr;
 }
@@ -1522,21 +1522,17 @@ void LoopAccessInfo::analyzeLoop() {
   const bool IsAnnotatedParallel = TheLoop->isAnnotatedParallel();
 
   // For each block.
-  for (Loop::block_iterator bb = TheLoop->block_begin(),
-       be = TheLoop->block_end(); bb != be; ++bb) {
-
+  for (BasicBlock *BB : TheLoop->blocks()) {
     // Scan the BB and collect legal loads and stores.
-    for (BasicBlock::iterator it = (*bb)->begin(), e = (*bb)->end(); it != e;
-         ++it) {
-
+    for (Instruction &I : *BB) {
       // If this is a load, save it. If this instruction can read from memory
       // but is not a load, then we quit. Notice that we don't handle function
       // calls that read or write.
-      if (it->mayReadFromMemory()) {
+      if (I.mayReadFromMemory()) {
         // Many math library functions read the rounding mode. We will only
         // vectorize a loop if it contains known function calls that don't set
         // the flag. Therefore, it is safe to ignore this read from memory.
-        CallInst *Call = dyn_cast<CallInst>(it);
+        auto *Call = dyn_cast<CallInst>(&I);
         if (Call && getVectorIntrinsicIDForCall(Call, TLI))
           continue;
 
@@ -1546,7 +1542,7 @@ void LoopAccessInfo::analyzeLoop() {
             TLI->isFunctionVectorizable(Call->getCalledFunction()->getName()))
           continue;
 
-        LoadInst *Ld = dyn_cast<LoadInst>(it);
+        auto *Ld = dyn_cast<LoadInst>(&I);
         if (!Ld || (!Ld->isSimple() && !IsAnnotatedParallel)) {
           emitAnalysis(LoopAccessReport(Ld)
                        << "read with atomic ordering or volatile read");
@@ -1563,11 +1559,11 @@ void LoopAccessInfo::analyzeLoop() {
       }
 
       // Save 'store' instructions. Abort if other instructions write to memory.
-      if (it->mayWriteToMemory()) {
-        StoreInst *St = dyn_cast<StoreInst>(it);
+      if (I.mayWriteToMemory()) {
+        auto *St = dyn_cast<StoreInst>(&I);
         if (!St) {
-          emitAnalysis(LoopAccessReport(&*it) <<
-                       "instruction cannot be vectorized");
+          emitAnalysis(LoopAccessReport(St)
+                       << "instruction cannot be vectorized");
           CanVecMem = false;
           return;
         }

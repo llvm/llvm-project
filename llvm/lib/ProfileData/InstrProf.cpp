@@ -23,8 +23,14 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
 
 using namespace llvm;
+
+static cl::opt<bool> StaticFuncFullModulePrefix(
+    "static-func-full-module-prefix", cl::init(false),
+    cl::desc("Use full module build paths in the profile counter names for "
+             "static functions."));
 
 namespace {
 std::string getInstrProfErrString(instrprof_error Err) {
@@ -135,9 +141,12 @@ std::string getPGOFuncName(StringRef RawFuncName,
 // (PGOUseFunc::annotateIndirectCallSites). If a symbol does not have the meta
 // data, its original linkage must be non-internal.
 std::string getPGOFuncName(const Function &F, bool InLTO, uint64_t Version) {
-  if (!InLTO)
-    return getPGOFuncName(F.getName(), F.getLinkage(), F.getParent()->getName(),
-                          Version);
+  if (!InLTO) {
+    StringRef FileName = (StaticFuncFullModulePrefix
+                              ? F.getParent()->getName()
+                              : sys::path::filename(F.getParent()->getName()));
+    return getPGOFuncName(F.getName(), F.getLinkage(), FileName, Version);
+  }
 
   // In LTO mode (when InLTO is true), first check if there is a meta data.
   if (MDNode *MD = getPGOFuncNameMetadata(F)) {

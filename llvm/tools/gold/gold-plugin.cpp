@@ -1323,10 +1323,9 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
   // interfaces with gold.
   DenseMap<void *, std::unique_ptr<PluginInputFile>> HandleToInputFile;
 
-  // Keep track of internalization candidates as well as those that may not
-  // be internalized because they are refereneced from other IR modules.
-  DenseSet<GlobalValue::GUID> Internalize;
-  DenseSet<GlobalValue::GUID> CrossReferenced;
+  // Keep track of symbols that must not be internalized because they
+  // are referenced outside of a single IR module.
+  DenseSet<GlobalValue::GUID> Preserve;
 
   ModuleSummaryIndex CombinedIndex;
   uint64_t NextModuleId = 0;
@@ -1352,22 +1351,16 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     if (Index)
       CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
 
-    // Look for internalization candidates based on gold's symbol resolution
-    // information. Also track symbols referenced from other IR modules.
+    // Use gold's symbol resolution information to identify symbols referenced
+    // by more than a single IR module (before importing, which is checked
+    // separately).
     for (auto &Sym : F.syms) {
       ld_plugin_symbol_resolution Resolution =
           (ld_plugin_symbol_resolution)Sym.resolution;
-      if (Resolution == LDPR_PREVAILING_DEF_IRONLY)
-        Internalize.insert(GlobalValue::getGUID(Sym.name));
-      if (Resolution == LDPR_RESOLVED_IR || Resolution == LDPR_PREEMPTED_IR)
-        CrossReferenced.insert(GlobalValue::getGUID(Sym.name));
+      if (Resolution != LDPR_PREVAILING_DEF_IRONLY)
+        Preserve.insert(GlobalValue::getGUID(Sym.name));
     }
   }
-
-  // Remove symbols referenced from other IR modules from the internalization
-  // candidate set.
-  for (auto &S : CrossReferenced)
-    Internalize.erase(S);
 
   // Collect for each module the list of function it defines (GUID ->
   // Summary).
@@ -1387,7 +1380,7 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     const auto &ExportList = ExportLists.find(ModuleIdentifier);
     return (ExportList != ExportLists.end() &&
             ExportList->second.count(GUID)) ||
-           !Internalize.count(GUID);
+           Preserve.count(GUID);
   };
 
   // Use global summary-based analysis to identify symbols that can be

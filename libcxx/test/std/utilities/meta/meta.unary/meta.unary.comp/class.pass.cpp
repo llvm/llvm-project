@@ -38,7 +38,10 @@ class Class
 {
 };
 
+class incomplete_type;
+
 int main()
 {
     test_class<Class>();
+    test_class<incomplete_type>();
 }

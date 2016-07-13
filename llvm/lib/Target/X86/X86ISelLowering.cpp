@@ -25043,10 +25043,6 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   unsigned RootSizeInBits = RootVT.getSizeInBits();
   unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
 
-  // TODO - handle 128/256-bit wide vector shuffles.
-  if (MaskEltSizeInBits > 64)
-    return false;
-
   // Don't combine if we are a AVX512/EVEX target and the mask element size
   // is different from the root element size - this would prevent writemasks
   // from being reused.
@@ -25057,6 +25053,34 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
        (Subtarget.hasVLX() && RootSizeInBits >= 128))) {
     return false;
   }
+
+  // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
+
+  // Handle 128-bit lane shuffles of 256-bit vectors.
+  // TODO - handle blend with zero cases.
+  if (VT.is256BitVector() && Mask.size() == 2 &&
+      !isSequentialOrUndefOrZeroInRange(Mask, 0, 2, 0)) {
+    if (Depth == 1 && Root.getOpcode() == X86ISD::VPERM2X128)
+      return false; // Nothing to do!
+    MVT ShuffleVT = (VT.isFloatingPoint() || !Subtarget.hasAVX2() ? MVT::v4f64
+                                                                  : MVT::v4i64);
+    unsigned PermMask = 0;
+    PermMask |= ((Mask[0] < 0 ? 0x8 : (Mask[0] & 1)) << 0);
+    PermMask |= ((Mask[1] < 0 ? 0x8 : (Mask[1] & 1)) << 4);
+
+    Res = DAG.getBitcast(ShuffleVT, Input);
+    DCI.AddToWorklist(Res.getNode());
+    Res = DAG.getNode(X86ISD::VPERM2X128, DL, ShuffleVT, Res,
+                      DAG.getUNDEF(ShuffleVT),
+                      DAG.getConstant(PermMask, DL, MVT::i8));
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
+  }
+
+  if (MaskEltSizeInBits > 64)
+    return false;
 
   // Attempt to match the mask against known shuffle patterns.
   MVT ShuffleVT;

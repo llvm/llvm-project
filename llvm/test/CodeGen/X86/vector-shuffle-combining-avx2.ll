@@ -48,17 +48,18 @@ define <32 x i8> @combine_pshufb_vpermps(<8 x float> %a) {
   ret <32 x i8> %tmp2
 }
 
-define <4 x i64> @combine_permq_pshufb(<4 x i64> %a0) {
-; CHECK-LABEL: combine_permq_pshufb:
+define <4 x i64> @combine_permq_pshufb_as_vperm2i128(<4 x i64> %a0) {
+; CHECK-LABEL: combine_permq_pshufb_as_vperm2i128:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[3,2,1,0]
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[2,3,0,1,6,7,4,5]
+; CHECK-NEXT:    vperm2i128 {{.*#+}} ymm0 = ymm0[2,3],zero,zero
+; CHECK-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %2 = bitcast <4 x i64> %1 to <32 x i8>
-  %3 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7>)
+  %3 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255>)
   %4 = bitcast <32 x i8> %3 to <4 x i64>
-  ret <4 x i64> %4
+  %5 = add <4 x i64> %4, <i64 1, i64 1, i64 3, i64 3>
+  ret <4 x i64> %5
 }
 
 define <16 x i8> @combine_pshufb_as_vpbroadcastb128(<16 x i8> %a) {

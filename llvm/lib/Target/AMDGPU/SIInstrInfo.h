@@ -350,6 +350,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::DPP;
   }
 
+  static bool isScalarUnit(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
+  }
+
+  static bool usesVM_CNT(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::VM_CNT;
+  }
+
   bool isVGPRCopy(const MachineInstr &MI) const {
     assert(MI.isCopy());
     unsigned Dest = MI.getOperand(0).getReg();

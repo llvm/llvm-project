@@ -90,5 +90,5 @@ int main()
     test_is_not_array<Empty>();
     test_is_not_array<bit_zero>();
     test_is_not_array<NotEmpty>();
-    test_is_not_array<incomplete_type>();  //  LWG#2581
+    test_is_not_array<incomplete_type>();  //  LWG#2582
 }

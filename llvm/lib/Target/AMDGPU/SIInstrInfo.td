@@ -2303,13 +2303,14 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
            VOP2_REV<revOpName#"_e32", !eq(revOpName, opName)> {
     let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
     let SchedRW = sched;
+    let isConvergent = DefExec;
   }
 
   let AssemblerPredicates = [isSICI] in {
     def _si : VOPC<op.SI, ins, asm, []>,
               SIMCInstr <opName#"_e32", SIEncodingFamily.SI> {
       let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
-      let hasSideEffects = DefExec;
+      let isConvergent = DefExec;
       let SchedRW = sched;
       let DecoderNamespace = "SICI";
       let DisableDecoder = DisableSIDecoder;
@@ -2321,7 +2322,7 @@ multiclass VOPC_m <vopc op, dag ins, string op_asm, list<dag> pattern,
     def _vi : VOPC<op.VI, ins, asm, []>,
               SIMCInstr <opName#"_e32", SIEncodingFamily.VI> {
       let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
-      let hasSideEffects = DefExec;
+      let isConvergent = DefExec;
       let SchedRW = sched;
       let DecoderNamespace = "VI";
       let DisableDecoder = DisableVIDecoder;

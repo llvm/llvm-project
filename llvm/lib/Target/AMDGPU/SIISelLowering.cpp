@@ -1070,9 +1070,64 @@ unsigned SITargetLowering::getRegisterByName(const char* RegName, EVT VT,
                            + StringRef(RegName) + "\"."));
 }
 
-MachineBasicBlock *
-SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
-                                              MachineBasicBlock *BB) const {
+// If kill is not the last instruction, split the block so kill is always a
+// proper terminator.
+MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
+                                                    MachineBasicBlock *BB) const {
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+
+  MachineBasicBlock::iterator SplitPoint(&MI);
+  ++SplitPoint;
+
+  if (SplitPoint == BB->end()) {
+    // Don't bother with a new block.
+    MI.setDesc(TII->get(AMDGPU::SI_KILL_TERMINATOR));
+    return BB;
+  }
+
+  MachineFunction *MF = BB->getParent();
+  MachineBasicBlock *SplitBB
+    = MF->CreateMachineBasicBlock(BB->getBasicBlock());
+
+  SmallSet<unsigned, 8> SplitDefRegs;
+  for (auto I = SplitPoint, E = BB->end(); I != E; ++I) {
+    for (MachineOperand &Def : I->defs())
+      SplitDefRegs.insert(Def.getReg());
+  }
+
+  // Fix the block phi references to point to the new block for the defs in the
+  // second piece of the block.
+  for (MachineBasicBlock *Succ : BB->successors()) {
+    for (MachineInstr &MI : *Succ) {
+      if (!MI.isPHI())
+        break;
+
+      for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
+        unsigned IncomingReg = MI.getOperand(I).getReg();
+        MachineOperand &FromBB = MI.getOperand(I + 1);
+        if (BB == FromBB.getMBB()) {
+          if (SplitDefRegs.count(IncomingReg))
+            FromBB.setMBB(SplitBB);
+
+          break;
+        }
+      }
+    }
+  }
+
+  MF->insert(++MachineFunction::iterator(BB), SplitBB);
+  SplitBB->splice(SplitBB->begin(), BB, SplitPoint, BB->end());
+
+
+  SplitBB->transferSuccessors(BB);
+  BB->addSuccessor(SplitBB);
+
+  MI.setDesc(TII->get(AMDGPU::SI_KILL_TERMINATOR));
+  return SplitBB;
+}
+
+MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
+  MachineInstr &MI, MachineBasicBlock *BB) const {
   switch (MI.getOpcode()) {
   case AMDGPU::SI_INIT_M0: {
     const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
@@ -1096,6 +1151,8 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::SI_KILL:
+    return splitKillBlock(MI, BB);
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }
@@ -1903,6 +1960,14 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
       VT.getStoreSize(), 4);
     return DAG.getMemIntrinsicNode(AMDGPUISD::TBUFFER_STORE_FORMAT, DL,
                                    Op->getVTList(), Ops, VT, MMO);
+  }
+  case AMDGPUIntrinsic::AMDGPU_kill: {
+    if (const ConstantFPSDNode *K = dyn_cast<ConstantFPSDNode>(Op.getOperand(2))) {
+      if (!K->isNegative())
+        return Chain;
+    }
+
+    return Op;
   }
   default:
     return SDValue();

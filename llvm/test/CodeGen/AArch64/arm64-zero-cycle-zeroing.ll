@@ -13,9 +13,9 @@ entry:
 ; CYCLONE: movi.2d v2, #0000000000000000
 ; CYCLONE: movi.2d v3, #0000000000000000
 ; KRYO: movi v0.2d, #0000000000000000
-; KRYO: mov v1.16b, v0.16b 
-; KRYO: mov v2.16b, v0.16b 
-; KRYO: mov v3.16b, v0.16b
+; KRYO: movi v1.2d, #0000000000000000
+; KRYO: movi v2.2d, #0000000000000000
+; KRYO: movi v3.2d, #0000000000000000
   tail call void @bar(double 0.000000e+00, double 0.000000e+00, double 0.000000e+00, double 0.000000e+00) nounwind
   ret void
 }
@@ -46,7 +46,7 @@ define void @t4() nounwind ssp {
 ; CYCLONE: movi.2d v0, #0000000000000000
 ; CYCLONE: movi.2d v1, #0000000000000000
 ; KRYO: movi v0.2d, #0000000000000000
-; KRYO: mov v1.16b, v0.16b
+; KRYO: movi v1.2d, #0000000000000000
   tail call void @barf(float 0.000000e+00, float 0.000000e+00) nounwind
   ret void
 }

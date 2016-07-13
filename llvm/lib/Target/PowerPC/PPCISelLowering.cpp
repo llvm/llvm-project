@@ -665,6 +665,10 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       addRegisterClass(MVT::v2i64, &PPC::VRRCRegClass);
       addRegisterClass(MVT::v1i128, &PPC::VRRCRegClass);
     }
+    if (Subtarget.hasP9Vector()) {
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4i32, Legal);
+      setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f32, Legal);
+    }
   }
 
   if (Subtarget.hasQPX()) {
@@ -1018,6 +1022,8 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::VNMSUBFP:        return "PPCISD::VNMSUBFP";
   case PPCISD::VPERM:           return "PPCISD::VPERM";
   case PPCISD::XXSPLT:          return "PPCISD::XXSPLT";
+  case PPCISD::XXINSERT:        return "PPCISD::XXINSERT";
+  case PPCISD::VECSHL:          return "PPCISD::VECSHL";
   case PPCISD::CMPB:            return "PPCISD::CMPB";
   case PPCISD::Hi:              return "PPCISD::Hi";
   case PPCISD::Lo:              return "PPCISD::Lo";
@@ -1083,6 +1089,7 @@ const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case PPCISD::MFBHRBE:         return "PPCISD::MFBHRBE";
   case PPCISD::RFEBB:           return "PPCISD::RFEBB";
   case PPCISD::XXSWAPD:         return "PPCISD::XXSWAPD";
+  case PPCISD::SWAP_NO_CHAIN:   return "PPCISD::SWAP_NO_CHAIN";
   case PPCISD::QVFPERM:         return "PPCISD::QVFPERM";
   case PPCISD::QVGPCI:          return "PPCISD::QVGPCI";
   case PPCISD::QVALIGNI:        return "PPCISD::QVALIGNI";
@@ -1492,6 +1499,91 @@ bool PPC::isSplatShuffleMask(ShuffleVectorSDNode *N, unsigned EltSize) {
         return false;
   }
   return true;
+}
+
+bool PPC::isXXINSERTWMask(ShuffleVectorSDNode *N, unsigned &ShiftElts,
+                          unsigned &InsertAtByte, bool &Swap, bool IsLE) {
+
+  // Check that the mask is shuffling words
+  for (unsigned i = 0; i < 4; ++i) {
+    unsigned B0 = N->getMaskElt(i*4);
+    unsigned B1 = N->getMaskElt(i*4+1);
+    unsigned B2 = N->getMaskElt(i*4+2);
+    unsigned B3 = N->getMaskElt(i*4+3);
+    if (B0 % 4)
+      return false;
+    if (B1 != B0+1 || B2 != B1+1 || B3 != B2+1)
+      return false;
+  }
+
+  // Now we look at mask elements 0,4,8,12
+  unsigned M0 = N->getMaskElt(0) / 4;
+  unsigned M1 = N->getMaskElt(4) / 4;
+  unsigned M2 = N->getMaskElt(8) / 4;
+  unsigned M3 = N->getMaskElt(12) / 4;
+  unsigned LittleEndianShifts[] = { 2, 1, 0, 3 };
+  unsigned BigEndianShifts[] = { 3, 0, 1, 2 };
+
+  // Below, let H and L be arbitrary elements of the shuffle mask
+  // where H is in the range [4,7] and L is in the range [0,3].
+  // H, 1, 2, 3 or L, 5, 6, 7
+  if ((M0 > 3 && M1 == 1 && M2 == 2 && M3 == 3) ||
+      (M0 < 4 && M1 == 5 && M2 == 6 && M3 == 7)) {
+    ShiftElts = IsLE ? LittleEndianShifts[M0 & 0x3] : BigEndianShifts[M0 & 0x3];
+    InsertAtByte = IsLE ? 12 : 0;
+    Swap = M0 < 4;
+    return true;
+  }
+  // 0, H, 2, 3 or 4, L, 6, 7
+  if ((M1 > 3 && M0 == 0 && M2 == 2 && M3 == 3) ||
+      (M1 < 4 && M0 == 4 && M2 == 6 && M3 == 7)) {
+    ShiftElts = IsLE ? LittleEndianShifts[M1 & 0x3] : BigEndianShifts[M1 & 0x3];
+    InsertAtByte = IsLE ? 8 : 4;
+    Swap = M1 < 4;
+    return true;
+  }
+  // 0, 1, H, 3 or 4, 5, L, 7
+  if ((M2 > 3 && M0 == 0 && M1 == 1 && M3 == 3) ||
+      (M2 < 4 && M0 == 4 && M1 == 5 && M3 == 7)) {
+    ShiftElts = IsLE ? LittleEndianShifts[M2 & 0x3] : BigEndianShifts[M2 & 0x3];
+    InsertAtByte = IsLE ? 4 : 8;
+    Swap = M2 < 4;
+    return true;
+  }
+  // 0, 1, 2, H or 4, 5, 6, L
+  if ((M3 > 3 && M0 == 0 && M1 == 1 && M2 == 2) ||
+      (M3 < 4 && M0 == 4 && M1 == 5 && M2 == 6)) {
+    ShiftElts = IsLE ? LittleEndianShifts[M3 & 0x3] : BigEndianShifts[M3 & 0x3];
+    InsertAtByte = IsLE ? 0 : 12;
+    Swap = M3 < 4;
+    return true;
+  }
+
+  // If both vector operands for the shuffle are the same vector, the mask will
+  // contain only elements from the first one and the second one will be undef.
+  if (N->getOperand(1).isUndef()) {
+    ShiftElts = 0;
+    Swap = true;
+    unsigned XXINSERTWSrcElem = IsLE ? 2 : 1;
+    if (M0 == XXINSERTWSrcElem && M1 == 1 && M2 == 2 && M3 == 3) {
+      InsertAtByte = IsLE ? 12 : 0;
+      return true;
+    }
+    if (M0 == 0 && M1 == XXINSERTWSrcElem && M2 == 2 && M3 == 3) {
+      InsertAtByte = IsLE ? 8 : 4;
+      return true;
+    }
+    if (M0 == 0 && M1 == 1 && M2 == XXINSERTWSrcElem && M3 == 3) {
+      InsertAtByte = IsLE ? 4 : 8;
+      return true;
+    }
+    if (M0 == 0 && M1 == 1 && M2 == 2 && M3 == XXINSERTWSrcElem) {
+      InsertAtByte = IsLE ? 0 : 12;
+      return true;
+    }
+  }
+
+  return false;
 }
 
 /// getVSPLTImmediate - Return the appropriate VSPLT* immediate to splat the
@@ -7348,6 +7440,27 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
   EVT VT = Op.getValueType();
   bool isLittleEndian = Subtarget.isLittleEndian();
 
+  unsigned ShiftElts, InsertAtByte;
+  bool Swap;
+  if (Subtarget.hasP9Vector() &&
+      PPC::isXXINSERTWMask(SVOp, ShiftElts, InsertAtByte, Swap,
+                           isLittleEndian)) {
+    if (Swap)
+      std::swap(V1, V2);
+    SDValue Conv1 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V1);
+    SDValue Conv2 = DAG.getNode(ISD::BITCAST, dl, MVT::v4i32, V2);
+    if (ShiftElts) {
+      SDValue Shl = DAG.getNode(PPCISD::VECSHL, dl, MVT::v4i32, Conv2, Conv2,
+                                DAG.getConstant(ShiftElts, dl, MVT::i32));
+      SDValue Ins = DAG.getNode(PPCISD::XXINSERT, dl, MVT::v4i32, Conv1, Shl,
+                                DAG.getConstant(InsertAtByte, dl, MVT::i32));
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
+    }
+    SDValue Ins = DAG.getNode(PPCISD::XXINSERT, dl, MVT::v4i32, Conv1, Conv2,
+                              DAG.getConstant(InsertAtByte, dl, MVT::i32));
+    return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Ins);
+  }
+
   if (Subtarget.hasVSX()) {
     if (V2.isUndef() && PPC::isSplatShuffleMask(SVOp, 4)) {
       int SplatIdx = PPC::getVSPLTImmediate(SVOp, 4, DAG);
@@ -7356,6 +7469,14 @@ SDValue PPCTargetLowering::LowerVECTOR_SHUFFLE(SDValue Op,
                                   DAG.getConstant(SplatIdx, dl, MVT::i32));
       return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Splat);
     }
+
+    // Left shifts of 8 bytes are actually swaps. Convert accordingly.
+    if (V2.isUndef() && PPC::isVSLDOIShuffleMask(SVOp, 1, DAG) == 8) {
+      SDValue Conv = DAG.getNode(ISD::BITCAST, dl, MVT::v2f64, V1);
+      SDValue Swap = DAG.getNode(PPCISD::SWAP_NO_CHAIN, dl, MVT::v2f64, Conv);
+      return DAG.getNode(ISD::BITCAST, dl, MVT::v16i8, Swap);
+    }
+
   }
 
   if (Subtarget.hasQPX()) {

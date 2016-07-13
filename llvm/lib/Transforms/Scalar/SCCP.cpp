@@ -270,6 +270,18 @@ public:
     return BBExecutable.count(BB);
   }
 
+  std::vector<LatticeVal> getStructLatticeValueFor(Value *V) const {
+    std::vector<LatticeVal> StructValues;
+    StructType *STy = dyn_cast<StructType>(V->getType());
+    assert(STy && "getStructLatticeValueFor() can be called only on structs");
+    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+      auto I = StructValueState.find(std::make_pair(V, i));
+      assert(I != StructValueState.end() && "Value not in valuemap!");
+      StructValues.push_back(I->second);
+    }
+    return StructValues;
+  }
+
   LatticeVal getLatticeValueFor(Value *V) const {
     DenseMap<Value*, LatticeVal>::const_iterator I = ValueState.find(V);
     assert(I != ValueState.end() && "V is not in valuemap!");
@@ -1545,16 +1557,30 @@ static bool runSCCP(Function &F, const DataLayout &DL,
       if (Inst->getType()->isVoidTy() || isa<TerminatorInst>(Inst))
         continue;
 
-      // TODO: Reconstruct structs from their elements.
-      if (Inst->getType()->isStructTy())
-        continue;
+      Constant *Const = nullptr;
+      if (Inst->getType()->isStructTy()) {
+        std::vector<LatticeVal> IVs = Solver.getStructLatticeValueFor(Inst);
+        if (std::any_of(IVs.begin(), IVs.end(),
+                        [](LatticeVal &LV) { return LV.isOverdefined(); }))
+          continue;
+        std::vector<Constant *> ConstVals;
+        StructType *ST = dyn_cast<StructType>(Inst->getType());
+        for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
+          LatticeVal V = IVs[i];
+          ConstVals.push_back(V.isConstant()
+                                  ? V.getConstant()
+                                  : UndefValue::get(ST->getElementType(i)));
+        }
+        Const = ConstantStruct::get(ST, ConstVals);
+      } else {
+        LatticeVal IV = Solver.getLatticeValueFor(Inst);
+        if (IV.isOverdefined())
+          continue;
 
-      LatticeVal IV = Solver.getLatticeValueFor(Inst);
-      if (IV.isOverdefined())
-        continue;
-
-      Constant *Const = IV.isConstant()
-        ? IV.getConstant() : UndefValue::get(Inst->getType());
+        Const = IV.isConstant() ? IV.getConstant()
+                                : UndefValue::get(Inst->getType());
+      }
+      assert(Const && "Constant is nullptr here!");
       DEBUG(dbgs() << "  Constant: " << *Const << " = " << *Inst << '\n');
 
       // Replaces all of the uses of a variable with uses of the constant.

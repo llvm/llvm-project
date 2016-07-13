@@ -1,4 +1,5 @@
 ; RUN: opt -basicaa -sroa -loop-rotate -licm -S < %s | FileCheck %s
+; RUN: opt -basicaa -sroa -loop-rotate %s | opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' -S | FileCheck %s
 ; The objects *p and *q are aliased to each other, but even though *q is
 ; volatile, *p can be considered invariant in the loop. Check if it is moved
 ; out of the loop.
