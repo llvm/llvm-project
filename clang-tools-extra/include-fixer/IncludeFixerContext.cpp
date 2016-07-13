@@ -13,32 +13,19 @@
 namespace clang {
 namespace include_fixer {
 
-IncludeFixerContext::IncludeFixerContext(
-    llvm::StringRef Name, llvm::StringRef ScopeQualifiers,
-    const std::vector<find_all_symbols::SymbolInfo> Symbols,
-    tooling::Range Range)
-    : SymbolIdentifier(Name), SymbolScopedQualifiers(ScopeQualifiers),
-      MatchedSymbols(Symbols), SymbolRange(Range) {
-  // Deduplicate headers, so that we don't want to suggest the same header
-  // twice.
-  for (const auto &Symbol : MatchedSymbols)
-    Headers.push_back(Symbol.getFilePath());
-  Headers.erase(std::unique(Headers.begin(), Headers.end(),
-                            [](const std::string &A, const std::string &B) {
-                              return A == B;
-                            }),
-                Headers.end());
-}
+namespace {
 
-tooling::Replacement
-IncludeFixerContext::createSymbolReplacement(llvm::StringRef FilePath,
-                                             size_t Idx) {
-  assert(Idx < MatchedSymbols.size());
+std::string createQualifiedNameForReplacement(
+    llvm::StringRef RawSymbolName,
+    llvm::StringRef SymbolScopedQualifiers,
+    const find_all_symbols::SymbolInfo &MatchedSymbol) {
   // No need to add missing qualifiers if SymbolIndentifer has a global scope
   // operator "::".
-  if (getSymbolIdentifier().startswith("::"))
-    return tooling::Replacement();
-  std::string QualifiedName = MatchedSymbols[Idx].getQualifiedName();
+  if (RawSymbolName.startswith("::"))
+    return RawSymbolName;
+
+  std::string QualifiedName = MatchedSymbol.getQualifiedName();
+
   // For nested classes, the qualified name constructed from database misses
   // some stripped qualifiers, because when we search a symbol in database,
   // we strip qualifiers from the end until we find a result. So append the
@@ -46,7 +33,7 @@ IncludeFixerContext::createSymbolReplacement(llvm::StringRef FilePath,
   //
   // Get stripped qualifiers.
   llvm::SmallVector<llvm::StringRef, 8> SymbolQualifiers;
-  getSymbolIdentifier().split(SymbolQualifiers, "::");
+  RawSymbolName.split(SymbolQualifiers, "::");
   std::string StrippedQualifiers;
   while (!SymbolQualifiers.empty() &&
          !llvm::StringRef(QualifiedName).endswith(SymbolQualifiers.back())) {
@@ -56,9 +43,30 @@ IncludeFixerContext::createSymbolReplacement(llvm::StringRef FilePath,
   // Append the missing stripped qualifiers.
   std::string FullyQualifiedName = QualifiedName + StrippedQualifiers;
   auto pos = FullyQualifiedName.find(SymbolScopedQualifiers);
-  return {FilePath, SymbolRange.getOffset(), SymbolRange.getLength(),
-          FullyQualifiedName.substr(
-              pos == std::string::npos ? 0 : SymbolScopedQualifiers.size())};
+  return FullyQualifiedName.substr(
+      pos == std::string::npos ? 0 : SymbolScopedQualifiers.size());
+}
+
+} // anonymous namespace
+
+IncludeFixerContext::IncludeFixerContext(
+    llvm::StringRef Name, llvm::StringRef ScopeQualifiers,
+    std::vector<find_all_symbols::SymbolInfo> Symbols,
+    tooling::Range Range)
+    : SymbolIdentifier(Name), SymbolScopedQualifiers(ScopeQualifiers),
+      MatchedSymbols(std::move(Symbols)), SymbolRange(Range) {
+  for (const auto &Symbol : MatchedSymbols) {
+    HeaderInfos.push_back({Symbol.getFilePath().str(),
+                           createQualifiedNameForReplacement(
+                               SymbolIdentifier, ScopeQualifiers, Symbol)});
+  }
+  // Deduplicate header infos.
+  HeaderInfos.erase(std::unique(HeaderInfos.begin(), HeaderInfos.end(),
+                                [](const HeaderInfo &A, const HeaderInfo &B) {
+                                  return A.Header == B.Header &&
+                                         A.QualifiedName == B.QualifiedName;
+                                }),
+                    HeaderInfos.end());
 }
 
 } // include_fixer

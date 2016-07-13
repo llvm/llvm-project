@@ -2309,6 +2309,11 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         Diag(diag::err_pch_with_compiler_errors);
         return HadErrors;
       }
+      if (hasErrors) {
+        Diags.ErrorOccurred = true;
+        Diags.UncompilableErrorOccurred = true;
+        Diags.UnrecoverableErrorOccurred = true;
+      }
 
       F.RelocatablePCH = Record[4];
       // Relative paths in a relocatable PCH are relative to our sysroot.

@@ -535,12 +535,12 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
 
   if (auto *Arg = Args.getLastArg(OPT_image_base)) {
     StringRef S = Arg->getValue();
-    if (S.getAsInteger(0, Config->VAStart))
+    if (S.getAsInteger(0, Config->ImageBase))
       error(Arg->getSpelling() + ": number expected, but got " + S);
-    else if ((Config->VAStart % Target->PageSize) != 0)
+    else if ((Config->ImageBase % Target->PageSize) != 0)
       warning(Arg->getSpelling() + ": address isn't multiple of page size");
   } else {
-    Config->VAStart = Target->getVAStart();
+    Config->ImageBase = Target->getImageBase();
   }
 
   for (std::unique_ptr<InputFile> &F : Files)
