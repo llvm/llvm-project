@@ -1,4 +1,4 @@
-// RUN: CINDEXTEST_EDITING=1 c-index-test -test-load-source local %s -Wuninitialized -Werror=unused 2>&1 | FileCheck -check-prefix=DIAGS %s
+// RUN: env CINDEXTEST_EDITING=1 c-index-test -test-load-source local %s -Wuninitialized -Werror=unused 2>&1 | FileCheck -check-prefix=DIAGS %s
 
 // Make sure -Wuninitialized works even though the header had a warn-as-error occurrence.
 
