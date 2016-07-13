@@ -1501,6 +1501,12 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     if (!Sym->isUndefined() || Sym->isVariable())
       return Error(IDLoc, "invalid symbol redefinition");
 
+    // Consume any end of statement token, if present, to avoid spurious
+    // AddBlankLine calls().
+    if (getTok().is(AsmToken::EndOfStatement)) {
+      Lex();
+    }
+
     // Emit the label.
     if (!ParsingInlineAsm)
       Out.EmitLabel(Sym);
@@ -1513,13 +1519,7 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
 
     getTargetParser().onLabelParsed(Sym);
 
-    // Consume any end of statement token, if present, to avoid spurious
-    // AddBlankLine calls().
-    if (Lexer.is(AsmToken::EndOfStatement)) {
-      Lex();
-      if (Lexer.is(AsmToken::Eof))
-        return false;
-    }
+
 
     return false;
   }

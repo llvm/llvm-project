@@ -134,9 +134,9 @@ static StringRef getGPUOrDefault(const Triple &TT, StringRef GPU) {
 }
 
 static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  if (!RM.hasValue())
-    return Reloc::PIC_;
-  return *RM;
+  // The AMDGPU toolchain only supports generating shared objects, so we
+  // must always use PIC.
+  return Reloc::PIC_;
 }
 
 AMDGPUTargetMachine::AMDGPUTargetMachine(const Target &T, const Triple &TT,

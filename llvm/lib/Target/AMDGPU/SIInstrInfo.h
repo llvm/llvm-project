@@ -91,6 +91,12 @@ protected:
                                        unsigned OpIdx1) const override;
 
 public:
+
+  enum TargetOperandFlags {
+    MO_NONE = 0,
+    MO_GOTPCREL = 1
+  };
+
   explicit SIInstrInfo(const SISubtarget &);
 
   const SIRegisterInfo &getRegisterInfo() const {
