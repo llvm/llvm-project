@@ -13,7 +13,7 @@ define void @exts() {
   ; CHECK: cost of 1 {{.*}} sext
   %v3 = sext <4 x i16> undef to <4 x i32>
 
-  ; CHECK: cost of 112 {{.*}} sext
+  ; CHECK: cost of 3 {{.*}} sext
   %v4 = sext <8 x i16> undef to <8 x i32>
 
   ret void

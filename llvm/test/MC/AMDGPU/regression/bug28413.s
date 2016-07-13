@@ -1,0 +1,34 @@
+// RUN: llvm-mc -arch=amdgcn -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
+// RUN: llvm-mc -arch=amdgcn -mcpu=SI -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SI --check-prefix=SICI
+// RUN: llvm-mc -arch=amdgcn -mcpu=bonaire -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=SICI --check-prefix=CIVI
+// RUN: llvm-mc -arch=amdgcn -mcpu=tonga -show-encoding %s | FileCheck %s --check-prefix=GCN --check-prefix=CIVI --check-prefix=VI
+
+v_cmp_eq_i32 vcc, 0.5, v0
+// SICI: v_cmp_eq_i32_e32 vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x04,0x7d]
+// VI: v_cmp_eq_i32_e32 vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x84,0x7d]
+
+v_cmpx_eq_u32_e64 s[0:1], -4.0, s0
+// SICI: v_cmpx_eq_u32_e64 s[0:1], -4.0, s0 ; encoding: [0x00,0x00,0xa4,0xd1,0xf7,0x00,0x00,0x00]
+// VI: v_cmpx_eq_u32_e64 s[0:1], -4.0, s0 ; encoding: [0x00,0x00,0xda,0xd0,0xf7,0x00,0x00,0x00]
+
+v_cmp_eq_i32 vcc, 3.125, v0
+// SICI: v_cmp_eq_i32_e32 vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x04,0x7d,0x00,0x00,0x48,0x40]
+// VI: v_cmp_eq_i32_e32 vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x84,0x7d,0x00,0x00,0x48,0x40]
+
+v_cmpx_eq_u32 vcc, 3.125, v0
+// SICI: v_cmpx_eq_u32_e32 vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0xa4,0x7d,0x00,0x00,0x48,0x40]
+// VI: v_cmpx_eq_u32_e32 vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0xb4,0x7d,0x00,0x00,0x48,0x40]
+
+v_mov_b32 v0, 0.5
+// GCN: v_mov_b32_e32 v0, 0.5 ; encoding: [0xf0,0x02,0x00,0x7e]
+
+v_mov_b32 v0, 3.125
+// GCN: v_mov_b32_e32 v0, 0x40480000 ; encoding: [0xff,0x02,0x00,0x7e,0x00,0x00,0x48,0x40]
+
+v_add_i32 v0, vcc, 0.5, v0
+// SICI: v_add_i32_e32 v0, vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x00,0x4a]
+// VI: v_add_i32_e32 v0, vcc, 0.5, v0 ; encoding: [0xf0,0x00,0x00,0x32]
+
+v_add_i32 v0, vcc, 3.125, v0
+// SICI: v_add_i32_e32 v0, vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x00,0x4a,0x00,0x00,0x48,0x40]
+// VI: v_add_i32_e32 v0, vcc, 0x40480000, v0 ; encoding: [0xff,0x00,0x00,0x32,0x00,0x00,0x48,0x40]

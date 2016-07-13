@@ -171,9 +171,16 @@ void *MmapAlignedOrDie(uptr size, uptr alignment, const char *mem_type) {
 void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   // FIXME: is this really "NoReserve"? On Win32 this does not matter much,
   // but on Win64 it does.
-  (void)name; // unsupported
-  void *p = VirtualAlloc((LPVOID)fixed_addr, size,
-      MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+  (void)name;  // unsupported
+#if SANITIZER_WINDOWS64
+  // On Windows64, use MEM_COMMIT would result in error
+  // 1455:ERROR_COMMITMENT_LIMIT.
+  // We use exception handler to commit page on demand.
+  void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE, PAGE_READWRITE);
+#else
+  void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE | MEM_COMMIT,
+                         PAGE_READWRITE);
+#endif
   if (p == 0)
     Report("ERROR: %s failed to "
            "allocate %p (%zd) bytes at %p (error code: %d)\n",
@@ -181,9 +188,11 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   return p;
 }
 
+// Memory space mapped by 'MmapFixedOrDie' must have been reserved by
+// 'MmapFixedNoAccess'.
 void *MmapFixedOrDie(uptr fixed_addr, uptr size) {
   void *p = VirtualAlloc((LPVOID)fixed_addr, size,
-      MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+      MEM_COMMIT, PAGE_READWRITE);
   if (p == 0) {
     char mem_type[30];
     internal_snprintf(mem_type, sizeof(mem_type), "memory at address 0x%zx",
@@ -201,7 +210,7 @@ void *MmapNoReserveOrDie(uptr size, const char *mem_type) {
 void *MmapFixedNoAccess(uptr fixed_addr, uptr size, const char *name) {
   (void)name; // unsupported
   void *res = VirtualAlloc((LPVOID)fixed_addr, size,
-                           MEM_RESERVE | MEM_COMMIT, PAGE_NOACCESS);
+                           MEM_RESERVE, PAGE_NOACCESS);
   if (res == 0)
     Report("WARNING: %s failed to "
            "mprotect %p (%zd) bytes at %p (error code: %d)\n",

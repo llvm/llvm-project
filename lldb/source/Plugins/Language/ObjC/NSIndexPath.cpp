@@ -31,6 +31,8 @@ class NSIndexPathSyntheticFrontEnd : public SyntheticChildrenFrontEnd
 public:
     NSIndexPathSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
     SyntheticChildrenFrontEnd (*valobj_sp.get()),
+    m_descriptor_sp(nullptr),
+    m_impl(),
     m_ptr_size(0),
     m_uint_star_type()
     {
@@ -169,9 +171,8 @@ protected:
         Invalid
     };
     
-    struct Impl {
-        Mode m_mode;
-
+    struct Impl
+    {
         size_t
         GetNumIndexes ()
         {
@@ -200,48 +201,52 @@ protected:
                     return m_outsourced.GetIndexAtIndex (idx);
             }
         }
-
-        struct InlinedIndexes {
+        
+        struct InlinedIndexes
+        {
         public:
-          void SetIndexes(uint64_t value, Process& p)
-          {
-              m_indexes = value;
-              _lengthForInlinePayload(p.GetAddressByteSize());
-              m_process = &p;
-          }
-              
-          size_t
-          GetNumIndexes ()
-          {
-              return m_count;
-          }
+            void SetIndexes(uint64_t value, Process& p)
+            {
+                m_indexes = value;
+                _lengthForInlinePayload(p.GetAddressByteSize());
+                m_process = &p;
+            }
+            
+            size_t
+            GetNumIndexes ()
+            {
+                return m_count;
+            }
+            
+            lldb::ValueObjectSP
+            GetIndexAtIndex (size_t idx, const CompilerType& desired_type)
+            {
+                if (!m_process)
+                    return nullptr;
 
-          lldb::ValueObjectSP
-          GetIndexAtIndex (size_t idx, const CompilerType& desired_type)
-          {
-              std::pair<uint64_t, bool> value(_indexAtPositionForInlinePayload(idx));
-              if (!value.second)
-                  return nullptr;
-              
-              Value v;
-              if (m_ptr_size == 8)
-              {
-                  Scalar scalar( (unsigned long long)value.first );
-                  v = Value(scalar);
-              }
-              else
-              {
-                  Scalar scalar( (unsigned int)value.first );
-                  v = Value(scalar);
-              }
-
-              v.SetCompilerType(desired_type);
-
-              StreamString idx_name;
-              idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-
-              return ValueObjectConstResult::Create(m_process, v, ConstString(idx_name.GetData()));
-          }
+                std::pair<uint64_t, bool> value(_indexAtPositionForInlinePayload(idx));
+                if (!value.second)
+                    return nullptr;
+                
+                Value v;
+                if (m_ptr_size == 8)
+                {
+                    Scalar scalar( (unsigned long long)value.first );
+                    v = Value(scalar);
+                }
+                else
+                {
+                    Scalar scalar( (unsigned int)value.first );
+                    v = Value(scalar);
+                }
+                
+                v.SetCompilerType(desired_type);
+                
+                StreamString idx_name;
+                idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
+                
+                return ValueObjectConstResult::Create(m_process, v, ConstString(idx_name.GetData()));
+            }
             
             void
             Clear ()
@@ -251,53 +256,60 @@ protected:
                 m_ptr_size = 0;
                 m_process = nullptr;
             }
-                    
+            
+            InlinedIndexes () :
+            m_indexes(0),
+            m_count(0),
+            m_ptr_size(0),
+            m_process(nullptr)
+            {
+            }
+            
         private:
-          uint64_t m_indexes;
-          size_t m_count;
-          uint32_t m_ptr_size;
-          Process *m_process;
-                    
-          // cfr. Foundation for the details of this code
-          size_t _lengthForInlinePayload(uint32_t ptr_size) {
-              m_ptr_size = ptr_size;
-              if (m_ptr_size == 8)
-              m_count = ((m_indexes >> 3) & 0x7);
-              else
-              m_count = ((m_indexes >> 3) & 0x3);
-              return m_count;
-          }
-                    
-          std::pair<uint64_t, bool>
-          _indexAtPositionForInlinePayload(size_t pos)
-          {
-              if (m_ptr_size == 8)
-              {
-                switch (pos) {
-                    case 5: return {((m_indexes >> 51) & 0x1ff),true};
-                    case 4: return {((m_indexes >> 42) & 0x1ff),true};
-                    case 3: return {((m_indexes >> 33) & 0x1ff),true};
-                    case 2: return {((m_indexes >> 24) & 0x1ff),true};
-                    case 1: return {((m_indexes >> 15) & 0x1ff),true};
-                    case 0: return {((m_indexes >>  6) & 0x1ff),true};
-                }
-              }
-              else
-                  {
-                  switch (pos) {
-                      case 2: return {((m_indexes >> 23) & 0x1ff),true};
-                      case 1: return {((m_indexes >> 14) & 0x1ff),true};
-                      case 0: return {((m_indexes >>  5) & 0x1ff),true};
-                  }
-              }
-              return {0,false};
-          }
-
-        };
-        struct OutsourcedIndexes {
-            ValueObject *m_indexes;
+            uint64_t m_indexes;
             size_t m_count;
-                    
+            uint32_t m_ptr_size;
+            Process *m_process;
+            
+            // cfr. Foundation for the details of this code
+            size_t _lengthForInlinePayload(uint32_t ptr_size) {
+                m_ptr_size = ptr_size;
+                if (m_ptr_size == 8)
+                    m_count = ((m_indexes >> 3) & 0x7);
+                else
+                    m_count = ((m_indexes >> 3) & 0x3);
+                return m_count;
+            }
+            
+            std::pair<uint64_t, bool>
+            _indexAtPositionForInlinePayload(size_t pos)
+            {
+                if (m_ptr_size == 8)
+                {
+                    switch (pos) {
+                        case 5: return {((m_indexes >> 51) & 0x1ff),true};
+                        case 4: return {((m_indexes >> 42) & 0x1ff),true};
+                        case 3: return {((m_indexes >> 33) & 0x1ff),true};
+                        case 2: return {((m_indexes >> 24) & 0x1ff),true};
+                        case 1: return {((m_indexes >> 15) & 0x1ff),true};
+                        case 0: return {((m_indexes >>  6) & 0x1ff),true};
+                    }
+                }
+                else
+                {
+                    switch (pos) {
+                        case 2: return {((m_indexes >> 23) & 0x1ff),true};
+                        case 1: return {((m_indexes >> 14) & 0x1ff),true};
+                        case 0: return {((m_indexes >>  5) & 0x1ff),true};
+                    }
+                }
+                return {0,false};
+            }
+            
+        };
+
+        struct OutsourcedIndexes
+        {
             lldb::ValueObjectSP
             GetIndexAtIndex (size_t idx)
             {
@@ -315,9 +327,19 @@ protected:
                 m_indexes = nullptr;
                 m_count = 0;
             }
+            
+            OutsourcedIndexes () :
+            m_indexes(nullptr),
+            m_count(0)
+            {
+            }
+            
+            ValueObject *m_indexes;
+            size_t m_count;
         };
-
-        union {
+        
+        union
+        {
             struct InlinedIndexes m_inlined;
             struct OutsourcedIndexes m_outsourced;
         };
@@ -329,6 +351,13 @@ protected:
             m_inlined.Clear();
             m_outsourced.Clear();
         }
+        
+        Impl() :
+        m_mode(Mode::Invalid)
+        {
+        }
+        
+        Mode m_mode;
     } m_impl;
     
     uint32_t m_ptr_size;

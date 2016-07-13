@@ -1199,3 +1199,26 @@
 	wledb	%v0, %v0, 0, 16
 	wledb	%v0, %v0, -1, 0
 	wledb	%v0, %v0, 16, 0
+        
+#CHECK: error: invalid operand
+#CHECK: lochie	%r0, 66000
+#CHECK: error: invalid operand
+#CHECK: lochie	%f0, 0
+#CHECK: error: invalid operand
+#CHECK: lochie	0, %r0
+        
+        lochie	%r0, 66000
+        lochie	%f0, 0
+        lochie	0, %r0        
+
+#CHECK: error: invalid operand
+#CHECK: locghie	%r0, 66000
+#CHECK: error: invalid operand
+#CHECK: locghie	%f0, 0
+#CHECK: error: invalid operand
+#CHECK: locghie	0, %r0
+        
+        locghie	%r0, 66000
+        locghie	%f0, 0
+        locghie	0, %r0        
+        

@@ -119,7 +119,7 @@ static QualType Desugar(ASTContext &Context, QualType QT, bool &ShouldAKA) {
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args.data(), Args.size(), QT);
+              TST->getTemplateName(), Args, QT);
         }
         break;
       }
@@ -1060,8 +1060,7 @@ class TemplateDiff {
 
     Ty = Context.getTemplateSpecializationType(
              TemplateName(CTSD->getSpecializedTemplate()),
-             CTSD->getTemplateArgs().data(),
-             CTSD->getTemplateArgs().size(),
+             CTSD->getTemplateArgs().asArray(),
              Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();

@@ -279,6 +279,7 @@ void CVSymbolDumperImpl::visitConstantSym(SymbolKind Kind,
 void CVSymbolDumperImpl::visitDataSym(SymbolKind Kind, DataSym &Data) {
   DictScope S(W, "DataSym");
 
+  W.printEnum("Kind", uint16_t(Kind), getSymbolTypeNames());
   StringRef LinkageName;
   if (ObjDelegate) {
     ObjDelegate->printRelocatedField("DataOffset", Data.getRelocationOffset(),
@@ -552,6 +553,7 @@ void CVSymbolDumperImpl::visitProcSym(SymbolKind Kind, ProcSym &Proc) {
   InFunctionScope = true;
 
   StringRef LinkageName;
+  W.printEnum("Kind", uint16_t(Kind), getSymbolTypeNames());
   W.printHex("PtrParent", Proc.Header.PtrParent);
   W.printHex("PtrEnd", Proc.Header.PtrEnd);
   W.printHex("PtrNext", Proc.Header.PtrNext);

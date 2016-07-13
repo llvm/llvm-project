@@ -41,6 +41,6 @@ int main()
     test_lvalue_ref<int&>();
     test_lvalue_ref<const int&>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_lvalue_reference<incomplete_type>::value, "");
 }

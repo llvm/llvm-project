@@ -245,6 +245,13 @@ static cl::opt<bool>
                                          " variables"),
                                 cl::Hidden, cl::init(false));
 
+static cl::opt<bool>
+    ClUseMachOGlobalsSection("asan-globals-live-support",
+                             cl::desc("Use linker features to support dead "
+                                      "code stripping of globals "
+                                      "(Mach-O only)"),
+                             cl::Hidden, cl::init(false));
+
 // Debug flags.
 static cl::opt<int> ClDebug("asan-debug", cl::desc("debug"), cl::Hidden,
                             cl::init(0));
@@ -1338,6 +1345,9 @@ bool AddressSanitizerModule::ShouldInstrumentGlobal(GlobalVariable *G) {
 // binary in order to allow the linker to properly dead strip. This is only
 // supported on recent versions of ld64.
 bool AddressSanitizerModule::ShouldUseMachOGlobalsSection() const {
+  if (!ClUseMachOGlobalsSection)
+    return false;
+
   if (!TargetTriple.isOSBinFormatMachO())
     return false;
 

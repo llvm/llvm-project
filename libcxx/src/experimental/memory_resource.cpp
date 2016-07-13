@@ -61,6 +61,8 @@ protected:
     { return &__other == this; }
 };
 
+namespace {
+
 union ResourceInitHelper {
   struct {
     __new_delete_memory_resource_imp new_delete_res;
@@ -73,6 +75,9 @@ union ResourceInitHelper {
 // When compiled in C++14 this initialization should be a constant expression.
 // Only in C++11 is "init_priority" needed to ensure initialization order.
 ResourceInitHelper res_init __attribute__((init_priority (101)));
+
+} // end namespace
+
 
 memory_resource * new_delete_resource() _NOEXCEPT {
     return &res_init.resources.new_delete_res;

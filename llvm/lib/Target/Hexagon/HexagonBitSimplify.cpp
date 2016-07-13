@@ -1318,7 +1318,7 @@ namespace {
       : Transformation(true), HII(hii), MRI(mri), BT(bt) {}
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
   private:
-    bool isTfrConst(const MachineInstr *MI) const;
+    bool isTfrConst(const MachineInstr &MI) const;
     bool isConst(unsigned R, int64_t &V) const;
     unsigned genTfrConst(const TargetRegisterClass *RC, int64_t C,
         MachineBasicBlock &B, MachineBasicBlock::iterator At, DebugLoc &DL);
@@ -1346,9 +1346,8 @@ bool ConstGeneration::isConst(unsigned R, int64_t &C) const {
   return true;
 }
 
-
-bool ConstGeneration::isTfrConst(const MachineInstr *MI) const {
-  unsigned Opc = MI->getOpcode();
+bool ConstGeneration::isTfrConst(const MachineInstr &MI) const {
+  unsigned Opc = MI.getOpcode();
   switch (Opc) {
     case Hexagon::A2_combineii:
     case Hexagon::A4_combineii:
@@ -1418,7 +1417,7 @@ bool ConstGeneration::processBlock(MachineBasicBlock &B, const RegisterSet&) {
   RegisterSet Defs;
 
   for (auto I = B.begin(), E = B.end(); I != E; ++I) {
-    if (isTfrConst(I))
+    if (isTfrConst(*I))
       continue;
     Defs.clear();
     HBS::getInstrDefs(*I, Defs);

@@ -54,6 +54,6 @@ int main()
     test_pointer<const int*>();
     test_pointer<void (*)(int)>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_pointer<incomplete_type>::value, "");
 }

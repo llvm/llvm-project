@@ -20,6 +20,9 @@
 using namespace llvm;
 
 namespace llvm {
+namespace object {
+class ELFObjectFileBase;
+}
 
 class RuntimeDyldELF : public RuntimeDyldImpl {
 

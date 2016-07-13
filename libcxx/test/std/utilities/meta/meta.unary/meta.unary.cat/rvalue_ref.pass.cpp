@@ -43,7 +43,7 @@ int main()
     test_rvalue_ref<int&&>();
     test_rvalue_ref<const int&&>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_rvalue_reference<incomplete_type>::value, "");
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

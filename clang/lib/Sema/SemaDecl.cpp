@@ -8307,7 +8307,7 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
     if (isFunctionTemplateSpecialization && isFriend &&
         (NewFD->getType()->isDependentType() || DC->isDependentContext() ||
          TemplateSpecializationType::anyDependentTemplateArguments(
-            TemplateArgs.getArgumentArray(), TemplateArgs.size(),
+            TemplateArgs,
             InstantiationDependent))) {
       assert(HasExplicitTemplateArgs &&
              "friend function specialization without template args");
@@ -11028,16 +11028,6 @@ ParmVarDecl *Sema::CheckParameter(DeclContext *DC, SourceLocation StartLoc,
     // to be qualified with an address space.
     if (!(getLangOpts().OpenCL && T->isArrayType())) {
       Diag(NameLoc, diag::err_arg_with_address_space);
-      New->setInvalidDecl();
-    }
-  }
-
-  // OpenCL v2.0 s6.9b - Pointer to image/sampler cannot be used.
-  // OpenCL v2.0 s6.13.16.1 - Pointer to pipe cannot be used.
-  if (getLangOpts().OpenCL && T->isPointerType()) {
-    const QualType PTy = T->getPointeeType();
-    if (PTy->isImageType() || PTy->isSamplerT() || PTy->isPipeType()) {
-      Diag(NameLoc, diag::err_opencl_pointer_to_type) << PTy;
       New->setInvalidDecl();
     }
   }

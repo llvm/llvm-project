@@ -7394,6 +7394,22 @@ Sema::CheckAssignmentConstraints(QualType LHSType, ExprResult &RHS,
         return IncompatibleVectors;
       }
     }
+
+    // When the RHS comes from another lax conversion (e.g. binops between
+    // scalars and vectors) the result is canonicalized as a vector. When the
+    // LHS is also a vector, the lax is allowed by the condition above. Handle
+    // the case where LHS is a scalar.
+    if (LHSType->isScalarType()) {
+      const VectorType *VecType = RHSType->getAs<VectorType>();
+      if (VecType && VecType->getNumElements() == 1 &&
+          isLaxVectorConversion(RHSType, LHSType)) {
+        ExprResult *VecExpr = &RHS;
+        *VecExpr = ImpCastExprToType(VecExpr->get(), LHSType, CK_BitCast);
+        Kind = CK_BitCast;
+        return Compatible;
+      }
+    }
+
     return Incompatible;
   }
 
@@ -10518,13 +10534,6 @@ QualType Sema::CheckAddressOfOperand(ExprResult &OrigOp, SourceLocation OpLoc) {
   if (op->getType()->isObjCObjectType())
     return Context.getObjCObjectPointerType(op->getType());
 
-  // OpenCL v2.0 s6.12.5 - The unary operators & cannot be used with a block.
-  if (getLangOpts().OpenCL && OrigOp.get()->getType()->isBlockPointerType()) {
-    Diag(OpLoc, diag::err_typecheck_unary_expr) << OrigOp.get()->getType()
-                                                << op->getSourceRange();
-    return QualType();
-  }
-
   return Context.getPointerType(op->getType());
 }
 
@@ -10568,12 +10577,6 @@ static QualType CheckIndirectionOperand(Sema &S, Expr *Op, ExprValueKind &VK,
   if (const PointerType *PT = OpTy->getAs<PointerType>())
   {
     Result = PT->getPointeeType();
-    // OpenCL v2.0 s6.12.5 - The unary operators * cannot be used with a block.
-    if (S.getLangOpts().OpenCLVersion >= 200 && Result->isBlockPointerType()) {
-      S.Diag(OpLoc, diag::err_opencl_dereferencing) << OpTy
-                                                    << Op->getSourceRange();
-      return QualType();
-    }
   }
   else if (const ObjCObjectPointerType *OPT =
              OpTy->getAs<ObjCObjectPointerType>())
@@ -10812,15 +10815,26 @@ ExprResult Sema::CreateBuiltinBinOp(SourceLocation OpLoc,
   }
 
   if (getLangOpts().OpenCL) {
+    QualType LHSTy = LHSExpr->getType();
+    QualType RHSTy = RHSExpr->getType();
     // OpenCLC v2.0 s6.13.11.1 allows atomic variables to be initialized by
     // the ATOMIC_VAR_INIT macro.
-    if (LHSExpr->getType()->isAtomicType() ||
-        RHSExpr->getType()->isAtomicType()) {
+    if (LHSTy->isAtomicType() || RHSTy->isAtomicType()) {
       SourceRange SR(LHSExpr->getLocStart(), RHSExpr->getLocEnd());
       if (BO_Assign == Opc)
         Diag(OpLoc, diag::err_atomic_init_constant) << SR;
       else
         ResultTy = InvalidOperands(OpLoc, LHS, RHS);
+      return ExprError();
+    }
+
+    // OpenCL special types - image, sampler, pipe, and blocks are to be used
+    // only with a builtin functions and therefore should be disallowed here.
+    if (LHSTy->isImageType() || RHSTy->isImageType() ||
+        LHSTy->isSamplerT() || RHSTy->isSamplerT() ||
+        LHSTy->isPipeType() || RHSTy->isPipeType() ||
+        LHSTy->isBlockPointerType() || RHSTy->isBlockPointerType()) {
+      ResultTy = InvalidOperands(OpLoc, LHS, RHS);
       return ExprError();
     }
   }
@@ -11293,8 +11307,13 @@ ExprResult Sema::CreateBuiltinUnaryOp(SourceLocation OpLoc,
   ExprObjectKind OK = OK_Ordinary;
   QualType resultType;
   if (getLangOpts().OpenCL) {
+    QualType Ty = InputExpr->getType();
     // The only legal unary operation for atomics is '&'.
-    if (Opc != UO_AddrOf && InputExpr->getType()->isAtomicType()) {
+    if ((Opc != UO_AddrOf && Ty->isAtomicType()) ||
+    // OpenCL special types - image, sampler, pipe, and blocks are to be used
+    // only with a builtin functions and therefore should be disallowed here.
+        (Ty->isImageType() || Ty->isSamplerT() || Ty->isPipeType()
+        || Ty->isBlockPointerType())) {
       return ExprError(Diag(OpLoc, diag::err_typecheck_unary_expr)
                        << InputExpr->getType()
                        << Input.get()->getSourceRange());

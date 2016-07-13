@@ -49,9 +49,9 @@ define i64 @test3(i64 %x) nounwind {
   %r = zext i1 %t to i64
   ret i64 %r
 ; CHECK-LABEL: test3:
+; CHECK:  xorl %eax, %eax
 ; CHECK: 	testq	%rdi, %rdi
 ; CHECK: 	sete	%al
-; CHECK: 	movzbl	%al, %eax
 ; CHECK: 	ret
 }
 
@@ -60,9 +60,9 @@ define i64 @test4(i64 %x) nounwind {
   %r = zext i1 %t to i64
   ret i64 %r
 ; CHECK-LABEL: test4:
+; CHECK:  xorl %eax, %eax
 ; CHECK: 	testq	%rdi, %rdi
 ; CHECK: 	setle	%al
-; CHECK: 	movzbl	%al, %eax
 ; CHECK: 	ret
 }
 

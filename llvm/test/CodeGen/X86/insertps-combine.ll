@@ -60,17 +60,12 @@ define <4 x float> @shuffle_v4f32_0z24(<4 x float> %xyzw, <4 x float> %abcd) {
 define <4 x float> @shuffle_v4f32_0zz0(float %a) {
 ; SSE-LABEL: shuffle_v4f32_0zz0:
 ; SSE:       # BB#0:
-; SSE-NEXT:    xorps %xmm1, %xmm1
-; SSE-NEXT:    blendps {{.*#+}} xmm1 = xmm0[0],xmm1[1,2,3]
-; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1,1,0]
-; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    insertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm0[0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: shuffle_v4f32_0zz0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,1,1,0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm0 = xmm0[0],zero,zero,xmm0[0]
 ; AVX-NEXT:    retq
   %vecinit = insertelement <4 x float> undef, float %a, i32 0
   %vecinit1 = insertelement <4 x float> %vecinit, float 0.000000e+00, i32 1

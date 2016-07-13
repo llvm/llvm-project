@@ -19,15 +19,12 @@
 #include "Symbols.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/Object/Archive.h"
-#include "llvm/Object/ArchiveWriter.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileUtilities.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/raw_ostream.h"
@@ -570,153 +567,6 @@ convertResToCOFF(const std::vector<MemoryBufferRef> &MBs) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> Ret = MemoryBuffer::getFile(Path);
   error(Ret, Twine("Could not open ") + Path);
   return std::move(*Ret);
-}
-
-static std::string writeToTempFile(StringRef Contents) {
-  SmallString<128> Path;
-  int FD;
-  if (llvm::sys::fs::createTemporaryFile("tmp", "def", FD, Path)) {
-    llvm::errs() << "failed to create a temporary file\n";
-    return "";
-  }
-  llvm::raw_fd_ostream OS(FD, /*shouldClose*/ true);
-  OS << Contents;
-  return Path.str();
-}
-
-void touchFile(StringRef Path) {
-  int FD;
-  std::error_code EC = sys::fs::openFileForWrite(Path, FD, sys::fs::F_Append);
-  error(EC, "failed to create a file");
-  sys::Process::SafelyCloseFileDescriptor(FD);
-}
-
-static std::string getImplibPath() {
-  if (!Config->Implib.empty())
-    return Config->Implib;
-  SmallString<128> Out = StringRef(Config->OutputFile);
-  sys::path::replace_extension(Out, ".lib");
-  return Out.str();
-}
-
-static std::unique_ptr<MemoryBuffer> createEmptyImportLibrary() {
-  std::string S = (Twine("LIBRARY \"") +
-                   llvm::sys::path::filename(Config->OutputFile) + "\"\n")
-                      .str();
-  std::string Path1 = writeToTempFile(S);
-  std::string Path2 = getImplibPath();
-  llvm::FileRemover Remover1(Path1);
-  llvm::FileRemover Remover2(Path2);
-
-  Executor E("lib.exe");
-  E.add("/nologo");
-  E.add("/machine:" + machineToStr(Config->Machine));
-  E.add(Twine("/def:") + Path1);
-  E.add(Twine("/out:") + Path2);
-  E.run();
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
-      MemoryBuffer::getFile(Path2, -1, false);
-  error(BufOrErr, Twine("Failed to open ") + Path2);
-  return MemoryBuffer::getMemBufferCopy((*BufOrErr)->getBuffer());
-}
-
-static std::vector<NewArchiveMember>
-readMembers(const object::Archive &Archive) {
-  std::vector<NewArchiveMember> V;
-  for (const auto &ChildOrErr : Archive.children()) {
-    error(ChildOrErr, "Archive::Child::getName failed");
-    const object::Archive::Child C(*ChildOrErr);
-    NewArchiveMember M =
-        check(NewArchiveMember::getOldMember(C, /*Deterministic=*/true),
-              "NewArchiveMember::getOldMember failed");
-    V.emplace_back(std::move(M));
-  }
-  return V;
-}
-
-// This class creates short import files which is described in
-// PE/COFF spec 7. Import Library Format.
-class ShortImportCreator {
-public:
-  ShortImportCreator(StringRef S) : DLLName(S) {}
-
-  NewArchiveMember create(StringRef Sym, uint16_t Ordinal,
-                          ImportNameType NameType, bool isData) {
-    size_t ImpSize = DLLName.size() + Sym.size() + 2; // +2 for NULs
-    size_t Size = sizeof(coff_import_header) + ImpSize;
-    char *Buf = Alloc.Allocate<char>(Size);
-    memset(Buf, 0, Size);
-    char *P = Buf;
-
-    // Write short import library.
-    auto *Imp = reinterpret_cast<coff_import_header *>(P);
-    P += sizeof(*Imp);
-    Imp->Sig2 = 0xFFFF;
-    Imp->Machine = Config->Machine;
-    Imp->SizeOfData = ImpSize;
-    if (Ordinal > 0)
-      Imp->OrdinalHint = Ordinal;
-    Imp->TypeInfo = (isData ? IMPORT_DATA : IMPORT_CODE);
-    Imp->TypeInfo |= NameType << 2;
-
-    // Write symbol name and DLL name.
-    memcpy(P, Sym.data(), Sym.size());
-    P += Sym.size() + 1;
-    memcpy(P, DLLName.data(), DLLName.size());
-
-    return NewArchiveMember(MemoryBufferRef(StringRef(Buf, Size), DLLName));
-  }
-
-private:
-  BumpPtrAllocator Alloc;
-  StringRef DLLName;
-};
-
-static ImportNameType getNameType(StringRef Sym, StringRef ExtName) {
-  if (Sym != ExtName)
-    return IMPORT_NAME_UNDECORATE;
-  if (Config->Machine == I386 && Sym.startswith("_"))
-    return IMPORT_NAME_NOPREFIX;
-  return IMPORT_NAME;
-}
-
-static std::string replace(StringRef S, StringRef From, StringRef To) {
-  size_t Pos = S.find(From);
-  assert(Pos != StringRef::npos);
-  return (Twine(S.substr(0, Pos)) + To + S.substr(Pos + From.size())).str();
-}
-
-// Creates an import library for a DLL. In this function, we first
-// create an empty import library using lib.exe and then adds short
-// import files to that file.
-void writeImportLibrary() {
-  std::unique_ptr<MemoryBuffer> Buf = createEmptyImportLibrary();
-  llvm::Error Err;
-  object::Archive Archive(Buf->getMemBufferRef(), Err);
-  error(std::move(Err), "Error reading an empty import file");
-  std::vector<NewArchiveMember> Members = readMembers(Archive);
-
-  std::string DLLName = llvm::sys::path::filename(Config->OutputFile);
-  ShortImportCreator ShortImport(DLLName);
-  for (Export &E : Config->Exports) {
-    if (E.Private)
-      continue;
-    if (E.ExtName.empty()) {
-      Members.push_back(ShortImport.create(
-          E.SymbolName, E.Ordinal, getNameType(E.SymbolName, E.Name), E.Data));
-    } else {
-      Members.push_back(ShortImport.create(
-          replace(E.SymbolName, E.Name, E.ExtName), E.Ordinal,
-          getNameType(E.SymbolName, E.Name), E.Data));
-    }
-  }
-
-  std::string Path = getImplibPath();
-  std::pair<StringRef, std::error_code> Result =
-      writeArchive(Path, Members, /*WriteSymtab*/ true, object::Archive::K_GNU,
-                   /*Deterministic*/ true, /*Thin*/ false);
-  error(Result.second, Twine("Failed to write ") + Path);
 }
 
 // Create OptTable

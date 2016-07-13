@@ -12,6 +12,8 @@ append_list_if(COMPILER_RT_HAS_FFREESTANDING_FLAG -ffreestanding DFSAN_COMMON_CF
 
 # Static runtime library.
 add_custom_target(dfsan)
+set_target_properties(dfsan PROPERTIES FOLDER "Compiler-RT Misc")
+
 foreach(arch ${DFSAN_SUPPORTED_ARCH})
   set(DFSAN_CFLAGS ${DFSAN_COMMON_CFLAGS})
   append_list_if(COMPILER_RT_HAS_FPIE_FLAG -fPIE DFSAN_CFLAGS)

@@ -23,7 +23,6 @@ add_llvm_target(LanaiCodeGen
   LanaiMemAluCombiner.cpp
   LanaiRegisterInfo.cpp
   LanaiSelectionDAGInfo.cpp
-  LanaiSetflagAluCombiner.cpp
   LanaiSubtarget.cpp
   LanaiTargetMachine.cpp
   LanaiTargetObjectFile.cpp

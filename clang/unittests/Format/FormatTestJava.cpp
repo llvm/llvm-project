@@ -25,10 +25,10 @@ protected:
     DEBUG(llvm::errs() << Code << "\n\n");
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
     tooling::Replacements Replaces = reformat(Style, Code, Ranges);
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   static std::string

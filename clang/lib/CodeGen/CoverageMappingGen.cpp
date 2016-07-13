@@ -172,6 +172,10 @@ public:
       if (!Visited.insert(File).second)
         continue;
 
+      // Do not map FileID's associated with system headers.
+      if (SM.isInSystemHeader(SM.getSpellingLoc(Loc)))
+        continue;
+
       unsigned Depth = 0;
       for (SourceLocation Parent = getIncludeOrExpansionLoc(Loc);
            Parent.isValid(); Parent = getIncludeOrExpansionLoc(Parent))
@@ -200,12 +204,6 @@ public:
     if (Mapping != FileIDMapping.end())
       return Mapping->second.first;
     return None;
-  }
-
-  /// \brief Return true if the given clang's file id has a corresponding
-  /// coverage file id.
-  bool hasExistingCoverageFileID(FileID File) const {
-    return FileIDMapping.count(File);
   }
 
   /// \brief Gather all the regions that were skipped by the preprocessor
@@ -256,6 +254,10 @@ public:
 
       SourceLocation LocStart = Region.getStartLoc();
       assert(SM.getFileID(LocStart).isValid() && "region in invalid file");
+
+      // Ignore regions from system headers.
+      if (SM.isInSystemHeader(SM.getSpellingLoc(LocStart)))
+        continue;
 
       auto CovFileID = getCoverageFileID(LocStart);
       // Ignore regions that don't have a file, such as builtin macros.
@@ -385,10 +387,6 @@ struct CounterCoverageMappingBuilder
 
   Counter addCounters(Counter C1, Counter C2, Counter C3) {
     return addCounters(addCounters(C1, C2), C3);
-  }
-
-  Counter addCounters(Counter C1, Counter C2, Counter C3, Counter C4) {
-    return addCounters(addCounters(C1, C2, C3), C4);
   }
 
   /// \brief Return the region counter for the given statement.

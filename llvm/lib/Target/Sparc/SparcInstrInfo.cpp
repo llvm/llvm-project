@@ -170,7 +170,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
     return false;
 
   // Get the last instruction in the block.
-  MachineInstr *LastInst = I;
+  MachineInstr *LastInst = &*I;
   unsigned LastOpc = LastInst->getOpcode();
 
   // If there is only one terminator instruction, process it.
@@ -188,7 +188,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   }
 
   // Get the instruction before it if it is a terminator.
-  MachineInstr *SecondLastInst = I;
+  MachineInstr *SecondLastInst = &*I;
   unsigned SecondLastOpc = SecondLastInst->getOpcode();
 
   // If AllowModify is true and the block ends with two or more unconditional
@@ -203,7 +203,7 @@ bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
         TBB = LastInst->getOperand(0).getMBB();
         return false;
       } else {
-        SecondLastInst = I;
+        SecondLastInst = &*I;
         SecondLastOpc = SecondLastInst->getOpcode();
       }
     }

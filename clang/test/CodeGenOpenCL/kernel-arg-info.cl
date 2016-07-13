@@ -49,7 +49,7 @@ kernel void foo4(__global unsigned int * X, __global myunsignedint * Y) {
 // ARGINFO: !kernel_arg_name ![[MD46:[0-9]+]]
 
 typedef image1d_t myImage;
-kernel void foo5(read_only myImage img1, write_only image1d_t img2) {
+kernel void foo5(myImage img1, write_only image1d_t img2) {
 }
 // CHECK: define spir_kernel void @foo5{{[^!]+}}
 // CHECK: !kernel_arg_addr_space ![[MD41:[0-9]+]]

@@ -58,6 +58,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(const MCValue &Target,
       return COFF::IMAGE_REL_AMD64_REL32;
     case FK_Data_4:
     case X86::reloc_signed_4byte:
+    case X86::reloc_signed_4byte_relax:
       if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_AMD64_ADDR32NB;
       if (Modifier == MCSymbolRefExpr::VK_SECREL)
@@ -80,6 +81,7 @@ unsigned X86WinCOFFObjectWriter::getRelocType(const MCValue &Target,
       return COFF::IMAGE_REL_I386_REL32;
     case FK_Data_4:
     case X86::reloc_signed_4byte:
+    case X86::reloc_signed_4byte_relax:
       if (Modifier == MCSymbolRefExpr::VK_COFF_IMGREL32)
         return COFF::IMAGE_REL_I386_DIR32NB;
       if (Modifier == MCSymbolRefExpr::VK_SECREL)

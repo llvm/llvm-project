@@ -564,9 +564,9 @@ void LiveIntervals::shrinkToUses(LiveInterval::SubRange &SR, unsigned Reg)
       continue;
     if (VNI->isPHIDef()) {
       // This is a dead PHI. Remove it.
+      DEBUG(dbgs() << "Dead PHI at " << VNI->def << " may separate interval\n");
       VNI->markUnused();
       SR.removeSegment(*Segment);
-      DEBUG(dbgs() << "Dead PHI at " << VNI->def << " may separate interval\n");
     }
   }
 

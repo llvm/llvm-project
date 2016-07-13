@@ -29,6 +29,8 @@ public:
   iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
 
+  Error commit();
+
 private:
   codeview::CVSymbolArray SymbolRecords;
   std::unique_ptr<MappedBlockStream> Stream;

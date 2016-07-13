@@ -14,6 +14,7 @@ add_clang_unittest(ASTTests
   EvaluateAsRValueTest.cpp
   ExternalASTSourceTest.cpp
   NamedDeclPrinterTest.cpp
+  PostOrderASTVisitor.cpp
   SourceLocationTest.cpp
   StmtPrinterTest.cpp
   )

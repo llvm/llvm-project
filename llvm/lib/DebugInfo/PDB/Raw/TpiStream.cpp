@@ -269,3 +269,5 @@ iterator_range<CVTypeArray::Iterator>
 TpiStream::types(bool *HadError) const {
   return llvm::make_range(TypeRecords.begin(HadError), TypeRecords.end());
 }
+
+Error TpiStream::commit() { return Error::success(); }

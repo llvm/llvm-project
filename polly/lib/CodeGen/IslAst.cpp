@@ -585,11 +585,11 @@ void IslAstInfo::printScop(raw_ostream &OS, Scop &S) const {
   Options = isl_ast_print_options_set_print_for(Options, cbPrintFor, nullptr);
 
   isl_printer *P = isl_printer_to_str(S.getIslCtx());
+  P = isl_printer_set_output_format(P, ISL_FORMAT_C);
   P = isl_printer_print_ast_expr(P, RunCondition);
   RtCStr = isl_printer_get_str(P);
   P = isl_printer_flush(P);
   P = isl_printer_indent(P, 4);
-  P = isl_printer_set_output_format(P, ISL_FORMAT_C);
   P = isl_ast_node_print(RootNode, P, Options);
   AstStr = isl_printer_get_str(P);
 

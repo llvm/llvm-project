@@ -87,6 +87,10 @@ PrintImmHex("print-imm-hex", cl::init(false),
 static cl::list<std::string>
 DefineSymbol("defsym", cl::desc("Defines a symbol to be an integer constant"));
 
+static cl::opt<bool>
+    PreserveComments("preserve-comments",
+                     cl::desc("Preserve Comments in outputted assembly"));
+
 enum OutputFileType {
   OFT_Null,
   OFT_AssemblyFile,
@@ -430,6 +434,7 @@ int main(int argc, char **argv) {
     }
     MAI->setCompressDebugSections(CompressDebugSections);
   }
+  MAI->setPreserveAsmComments(PreserveComments);
 
   // FIXME: This is not pretty. MCContext has a ptr to MCObjectFileInfo and
   // MCObjectFileInfo needs a MCContext reference in order to initialize itself.

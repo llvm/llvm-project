@@ -59,9 +59,9 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
     // If we have alloca, convert as follows:
     // ADJCALLSTACKDOWN -> sub, sp, sp, amount
     // ADJCALLSTACKUP   -> add, sp, sp, amount
-    MachineInstr *Old = I;
-    DebugLoc dl = Old->getDebugLoc();
-    unsigned Amount = Old->getOperand(0).getImm();
+    MachineInstr &Old = *I;
+    DebugLoc dl = Old.getDebugLoc();
+    unsigned Amount = Old.getOperand(0).getImm();
     if (Amount != 0) {
       // We need to keep the stack aligned properly.  To do this, we round the
       // amount of space needed for the outgoing arguments up to the next
@@ -70,7 +70,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       Amount = (Amount+Align-1)/Align*Align;
 
       // Replace the pseudo instruction with a new instruction...
-      unsigned Opc = Old->getOpcode();
+      unsigned Opc = Old.getOpcode();
       if (Opc == ARM::ADJCALLSTACKDOWN || Opc == ARM::tADJCALLSTACKDOWN) {
         emitSPUpdate(MBB, I, TII, dl, *RegInfo, -Amount);
       } else {
@@ -188,7 +188,7 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
 
   int FramePtrOffsetInBlock = 0;
   unsigned adjustedGPRCS1Size = GPRCS1Size;
-  if (tryFoldSPUpdateIntoPushPop(STI, MF, std::prev(MBBI), NumBytes)) {
+  if (tryFoldSPUpdateIntoPushPop(STI, MF, &*std::prev(MBBI), NumBytes)) {
     FramePtrOffsetInBlock = NumBytes;
     adjustedGPRCS1Size += NumBytes;
     NumBytes = 0;
@@ -303,16 +303,15 @@ void Thumb1FrameLowering::emitPrologue(MachineFunction &MF,
     AFI->setShouldRestoreSPFromFP(true);
 }
 
-static bool isCSRestore(MachineInstr *MI, const MCPhysReg *CSRegs) {
-  if (MI->getOpcode() == ARM::tLDRspi &&
-      MI->getOperand(1).isFI() &&
-      isCalleeSavedRegister(MI->getOperand(0).getReg(), CSRegs))
+static bool isCSRestore(MachineInstr &MI, const MCPhysReg *CSRegs) {
+  if (MI.getOpcode() == ARM::tLDRspi && MI.getOperand(1).isFI() &&
+      isCalleeSavedRegister(MI.getOperand(0).getReg(), CSRegs))
     return true;
-  else if (MI->getOpcode() == ARM::tPOP) {
+  else if (MI.getOpcode() == ARM::tPOP) {
     // The first two operands are predicates. The last two are
     // imp-def and imp-use of SP. Check everything in between.
-    for (int i = 2, e = MI->getNumOperands() - 2; i != e; ++i)
-      if (!isCalleeSavedRegister(MI->getOperand(i).getReg(), CSRegs))
+    for (int i = 2, e = MI.getNumOperands() - 2; i != e; ++i)
+      if (!isCalleeSavedRegister(MI.getOperand(i).getReg(), CSRegs))
         return false;
     return true;
   }
@@ -345,8 +344,8 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
     if (MBBI != MBB.begin()) {
       do
         --MBBI;
-      while (MBBI != MBB.begin() && isCSRestore(MBBI, CSRegs));
-      if (!isCSRestore(MBBI, CSRegs))
+      while (MBBI != MBB.begin() && isCSRestore(*MBBI, CSRegs));
+      if (!isCSRestore(*MBBI, CSRegs))
         ++MBBI;
     }
 
@@ -375,11 +374,11 @@ void Thumb1FrameLowering::emitEpilogue(MachineFunction &MF,
           .addReg(FramePtr));
     } else {
       if (MBBI != MBB.end() && MBBI->getOpcode() == ARM::tBX_RET &&
-          &MBB.front() != MBBI && std::prev(MBBI)->getOpcode() == ARM::tPOP) {
+          &MBB.front() != &*MBBI && std::prev(MBBI)->getOpcode() == ARM::tPOP) {
         MachineBasicBlock::iterator PMBBI = std::prev(MBBI);
-        if (!tryFoldSPUpdateIntoPushPop(STI, MF, PMBBI, NumBytes))
+        if (!tryFoldSPUpdateIntoPushPop(STI, MF, &*PMBBI, NumBytes))
           emitSPUpdate(MBB, PMBBI, TII, dl, *RegInfo, NumBytes);
-      } else if (!tryFoldSPUpdateIntoPushPop(STI, MF, MBBI, NumBytes))
+      } else if (!tryFoldSPUpdateIntoPushPop(STI, MF, &*MBBI, NumBytes))
         emitSPUpdate(MBB, MBBI, TII, dl, *RegInfo, NumBytes);
     }
   }

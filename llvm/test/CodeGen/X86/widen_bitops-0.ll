@@ -141,6 +141,9 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X32-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X32-SSE-NEXT:    pextrb $8, %xmm1, %ecx
+; X32-SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-SSE-NEXT:    # kill: %DL<def> %DL<kill> %EDX<kill>
+; X32-SSE-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: and_v3i8_as_i24:
@@ -155,6 +158,9 @@ define <3 x i8> @and_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X64-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X64-SSE-NEXT:    pextrb $8, %xmm1, %ecx
+; X64-SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-SSE-NEXT:    # kill: %DL<def> %DL<kill> %EDX<kill>
+; X64-SSE-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
 ; X64-SSE-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24
@@ -176,6 +182,9 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X32-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X32-SSE-NEXT:    pextrb $8, %xmm1, %ecx
+; X32-SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-SSE-NEXT:    # kill: %DL<def> %DL<kill> %EDX<kill>
+; X32-SSE-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: xor_v3i8_as_i24:
@@ -190,6 +199,9 @@ define <3 x i8> @xor_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X64-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X64-SSE-NEXT:    pextrb $8, %xmm1, %ecx
+; X64-SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-SSE-NEXT:    # kill: %DL<def> %DL<kill> %EDX<kill>
+; X64-SSE-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
 ; X64-SSE-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24
@@ -211,6 +223,9 @@ define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X32-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X32-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X32-SSE-NEXT:    pextrb $8, %xmm1, %ecx
+; X32-SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X32-SSE-NEXT:    # kill: %DL<def> %DL<kill> %EDX<kill>
+; X32-SSE-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
 ; X32-SSE-NEXT:    retl
 ;
 ; X64-SSE-LABEL: or_v3i8_as_i24:
@@ -225,6 +240,9 @@ define <3 x i8> @or_v3i8_as_i24(<3 x i8> %a, <3 x i8> %b) nounwind {
 ; X64-SSE-NEXT:    pextrb $0, %xmm1, %eax
 ; X64-SSE-NEXT:    pextrb $4, %xmm1, %edx
 ; X64-SSE-NEXT:    pextrb $8, %xmm1, %ecx
+; X64-SSE-NEXT:    # kill: %AL<def> %AL<kill> %EAX<kill>
+; X64-SSE-NEXT:    # kill: %DL<def> %DL<kill> %EDX<kill>
+; X64-SSE-NEXT:    # kill: %CL<def> %CL<kill> %ECX<kill>
 ; X64-SSE-NEXT:    retq
   %1 = bitcast <3 x i8> %a to i24
   %2 = bitcast <3 x i8> %b to i24

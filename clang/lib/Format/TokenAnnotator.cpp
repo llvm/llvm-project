@@ -639,7 +639,7 @@ private:
       }
       // Declarations cannot be conditional expressions, this can only be part
       // of a type declaration.
-      if (!Contexts.back().IsExpression &&
+      if (Line.MustBeDeclaration && !Contexts.back().IsExpression &&
           Style.Language == FormatStyle::LK_JavaScript)
         break;
       parseConditional();

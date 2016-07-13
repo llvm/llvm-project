@@ -10,6 +10,7 @@
 #ifndef LLVM_ADT_STRATIFIEDSETS_H
 #define LLVM_ADT_STRATIFIEDSETS_H
 
+#include "AliasAnalysisSummary.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
@@ -22,6 +23,7 @@
 #include <vector>
 
 namespace llvm {
+namespace cflaa {
 /// An index into Stratified Sets.
 typedef unsigned StratifiedIndex;
 /// NOTE: ^ This can't be a short -- bootstrapping clang has a case where
@@ -32,17 +34,6 @@ struct StratifiedInfo {
   StratifiedIndex Index;
   /// For field sensitivity, etc. we can tack fields on here.
 };
-
-/// The number of attributes that StratifiedAttrs should contain. Attributes are
-/// described below, and 32 was an arbitrary choice because it fits nicely in 32
-/// bits (because we use a bitset for StratifiedAttrs).
-static const unsigned NumStratifiedAttrs = 32;
-
-/// These are attributes that the users of StratifiedSets/StratifiedSetBuilders
-/// may use for various purposes. These also have the special property of that
-/// they are merged down. So, if set A is above set B, and one decides to set an
-/// attribute in set A, then the attribute will automatically be set in set B.
-typedef std::bitset<NumStratifiedAttrs> StratifiedAttrs;
 
 /// A "link" between two StratifiedSets.
 struct StratifiedLink {
@@ -61,7 +52,7 @@ struct StratifiedLink {
   StratifiedIndex Below;
 
   /// Attributes for these StratifiedSets.
-  StratifiedAttrs Attrs;
+  AliasAttrs Attrs;
 
   StratifiedLink() : Above(SetSentinel), Below(SetSentinel) {}
 
@@ -242,14 +233,14 @@ template <typename T> class StratifiedSetsBuilder {
       return Link.Above;
     }
 
-    StratifiedAttrs &getAttrs() {
+    AliasAttrs getAttrs() {
       assert(!isRemapped());
       return Link.Attrs;
     }
 
-    void setAttrs(const StratifiedAttrs &other) {
+    void setAttrs(AliasAttrs Other) {
       assert(!isRemapped());
-      Link.Attrs |= other;
+      Link.Attrs |= Other;
     }
 
     bool isRemapped() const { return Remap != StratifiedLink::SetSentinel; }
@@ -395,47 +386,13 @@ public:
     return addAtMerging(ToAdd, Below);
   }
 
-  /// \brief Set the StratifiedAttrs of the set "Level"-levels below "Main". If
-  /// there is no set below "Main", create one for it.
-  void addAttributesBelow(const T &Main, unsigned Level, StratifiedAttrs Attr) {
-    assert(has(Main));
-    auto Index = *indexOf(Main);
-    auto *Link = &linksAt(Index);
-
-    for (unsigned I = 0; I < Level; ++I) {
-      Index = Link->hasBelow() ? Link->getBelow() : addLinkBelow(Index);
-      Link = &linksAt(Index);
-    }
-    Link->setAttrs(Attr);
-  }
-
   bool addWith(const T &Main, const T &ToAdd) {
     assert(has(Main));
     auto MainIndex = *indexOf(Main);
     return addAtMerging(ToAdd, MainIndex);
   }
 
-  /// \brief Merge the set "MainBelow"-levels below "Main" and the set
-  /// "ToAddBelow"-levels below "ToAdd".
-  void addBelowWith(const T &Main, unsigned MainBelow, const T &ToAdd,
-                    unsigned ToAddBelow) {
-    assert(has(Main));
-    assert(has(ToAdd));
-
-    auto GetIndexBelow = [&](StratifiedIndex Index, unsigned NumLevel) {
-      for (unsigned I = 0; I < NumLevel; ++I) {
-        auto Link = linksAt(Index);
-        Index = Link.hasBelow() ? Link.getBelow() : addLinkBelow(Index);
-      }
-      return Index;
-    };
-    auto MainIndex = GetIndexBelow(*indexOf(Main), MainBelow);
-    auto ToAddIndex = GetIndexBelow(*indexOf(ToAdd), ToAddBelow);
-    if (&linksAt(MainIndex) != &linksAt(ToAddIndex))
-      merge(MainIndex, ToAddIndex);
-  }
-
-  void noteAttributes(const T &Main, const StratifiedAttrs &NewAttrs) {
+  void noteAttributes(const T &Main, AliasAttrs NewAttrs) {
     assert(has(Main));
     auto *Info = *get(Main);
     auto &Link = linksAt(Info->Index);
@@ -537,7 +494,7 @@ private:
     //  match `LinksFrom.Below`
     //  > If both have links above, deal with those next.
     while (LinksInto->hasBelow() && LinksFrom->hasBelow()) {
-      auto &FromAttrs = LinksFrom->getAttrs();
+      auto FromAttrs = LinksFrom->getAttrs();
       LinksInto->setAttrs(FromAttrs);
 
       // Remap needs to happen after getBelow(), but before
@@ -554,6 +511,7 @@ private:
       NewBelow.setAbove(LinksInto->Number);
     }
 
+    LinksInto->setAttrs(LinksFrom->getAttrs());
     LinksFrom->remapTo(LinksInto->Number);
   }
 
@@ -643,5 +601,6 @@ private:
 
   bool inbounds(StratifiedIndex N) const { return N < Links.size(); }
 };
+}
 }
 #endif // LLVM_ADT_STRATIFIEDSETS_H

@@ -2506,8 +2506,8 @@ def warn_attribute_wrong_decl_type : Warning<
   "variables and functions|functions and methods|parameters|"
   "functions, methods and blocks|functions, methods, and classes|"
   "functions, methods, and parameters|classes|enums|variables|methods|"
-  "fields and global variables|structs|variables and typedefs|thread-local variables|"
-  "variables and fields|variables, data members and tag types|"
+  "fields and global variables|structs|parameters and typedefs|variables and typedefs|"
+  "thread-local variables|variables and fields|variables, data members and tag types|"
   "types and namespaces|Objective-C interfaces|methods and properties|"
   "struct or union|struct, union or class|types|"
   "Objective-C instance methods|init methods of interface or class extension declarations|"
@@ -7893,8 +7893,6 @@ def err_atomic_init_constant : Error<
   " in the declaration statement in the program scope">;
 def err_opencl_implicit_vector_conversion : Error<
   "implicit conversions between vector types (%0 and %1) are not permitted">;
-def err_opencl_dereferencing : Error<
-  "dereferencing pointer of type %0 is not allowed in OpenCL">;
 def err_opencl_block_proto_variadic : Error<
   "invalid block prototype, variadic arguments are not allowed in OpenCL">;
 def err_opencl_invalid_type_array : Error<
@@ -7923,9 +7921,11 @@ def err_opencl_builtin_pipe_invalid_access_modifier : Error<
 def err_opencl_invalid_access_qualifier : Error<
   "access qualifier can only be used for pipe and image type">;
 def err_opencl_invalid_read_write : Error<
-  "access qualifier %0 can not be used for %1 %select{|earlier than OpenCL version 2.0}2">;
+  "access qualifier %0 can not be used for %1 %select{|prior to OpenCL version 2.0}2">;
 def err_opencl_multiple_access_qualifiers : Error<
   "multiple access qualifiers">;
+def note_opencl_typedef_access_qualifier : Note<
+  "previously declared '%0' here">;
 
 // OpenCL Section 6.8.g
 def err_opencl_unknown_type_specifier : Error<
@@ -7944,6 +7944,20 @@ def err_opencl_builtin_to_addr_arg_num : Error<
   "invalid number of arguments to function: %0">;
 def err_opencl_builtin_to_addr_invalid_arg : Error<
   "invalid argument %0 to function: %1, expecting a generic pointer argument">;
+
+// OpenCL v2.0 s6.13.17 Enqueue kernel restrictions.
+def err_opencl_enqueue_kernel_incorrect_args : Error<
+  "illegal call to enqueue_kernel, incorrect argument types">;
+def err_opencl_enqueue_kernel_expected_type : Error<
+  "illegal call to enqueue_kernel, expected %0 argument type">;
+def err_opencl_enqueue_kernel_local_size_args : Error<
+  "mismatch in number of block parameters and local size arguments passed">;
+def err_opencl_enqueue_kernel_invalid_local_size_type : Error<
+  "local memory sizes need to be specified as uint">;
+def err_opencl_enqueue_kernel_blocks_non_local_void_args : Error<
+  "blocks used in device side enqueue are expected to have parameters of type 'local void*'">;
+def err_opencl_enqueue_kernel_blocks_no_args : Error<
+  "blocks in this form of device side enqueue call are expected to have have no parameters">;
 } // end of sema category
 
 let CategoryName = "OpenMP Issue" in {

@@ -60,5 +60,5 @@ if(SANITIZER_COMMON_TESTSUITES AND
     ${SANITIZER_COMMON_TESTSUITES}
     DEPENDS ${SANITIZER_COMMON_TEST_DEPS})
   set_target_properties(check-sanitizer PROPERTIES FOLDER
-                        "sanitizer_common tests")
+                        "Compiler-RT Misc")
 endif()

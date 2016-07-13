@@ -166,7 +166,10 @@ define <16 x i16> @var_shift_v16i16(<16 x i16> %a, <16 x i16> %b) nounwind {
 ;
 ; AVX512-LABEL: var_shift_v16i16:
 ; AVX512:       ## BB#0:
+; AVX512-NEXT:    ## kill: %YMM1<def> %YMM1<kill> %ZMM1<def>
+; AVX512-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; AVX512-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
   %shift = shl <16 x i16> %a, %b
   ret <16 x i16> %shift
@@ -585,8 +588,10 @@ define <16 x i16> @constant_shift_v16i16(<16 x i16> %a) nounwind {
 ;
 ; AVX512-LABEL: constant_shift_v16i16:
 ; AVX512:       ## BB#0:
+; AVX512-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; AVX512-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]
 ; AVX512-NEXT:    vpsllvw %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    ## kill: %YMM0<def> %YMM0<kill> %ZMM0<kill>
 ; AVX512-NEXT:    retq
   %shift = shl <16 x i16> %a, <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15>
   ret <16 x i16> %shift

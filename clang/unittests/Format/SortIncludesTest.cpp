@@ -26,10 +26,13 @@ protected:
 
   std::string sort(StringRef Code, StringRef FileName = "input.cpp") {
     auto Ranges = GetCodeRange(Code);
-    std::string Sorted =
+    auto Sorted =
         applyAllReplacements(Code, sortIncludes(Style, Code, Ranges, FileName));
-    return applyAllReplacements(Sorted,
-                                reformat(Style, Sorted, Ranges, FileName));
+    EXPECT_TRUE(static_cast<bool>(Sorted));
+    auto Result = applyAllReplacements(
+        *Sorted, reformat(Style, *Sorted, Ranges, FileName));
+    EXPECT_TRUE(static_cast<bool>(Result));
+    return *Result;
   }
 
   unsigned newCursor(llvm::StringRef Code, unsigned Cursor) {

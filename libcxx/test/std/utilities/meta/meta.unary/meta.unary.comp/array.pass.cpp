@@ -38,9 +38,12 @@ typedef char array[3];
 typedef const char const_array[3];
 typedef char incomplete_array[];
 
+class incomplete_type;
+
 int main()
 {
     test_array<array>();
     test_array<const_array>();
     test_array<incomplete_array>();
+    test_array<incomplete_type[]>();
 }

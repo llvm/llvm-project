@@ -25,9 +25,9 @@ protected:
                       const FormatStyle &Style = getLLVMStyle()) {
     tooling::Replacements Replaces = format::cleanup(Style, Code, Ranges);
 
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    return *Result;
   }
 };
 
@@ -254,16 +254,26 @@ protected:
 
   inline std::string apply(StringRef Code,
                            const tooling::Replacements Replaces) {
-    return applyAllReplacements(
-        Code, cleanupAroundReplacements(Code, Replaces, Style));
+    auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
+    EXPECT_TRUE(static_cast<bool>(CleanReplaces))
+        << llvm::toString(CleanReplaces.takeError()) << "\n";
+    auto Result = applyAllReplacements(Code, *CleanReplaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    return *Result;
   }
 
   inline std::string formatAndApply(StringRef Code,
                                     const tooling::Replacements Replaces) {
-    return applyAllReplacements(
-        Code,
-        formatReplacements(
-            Code, cleanupAroundReplacements(Code, Replaces, Style), Style));
+
+    auto CleanReplaces = cleanupAroundReplacements(Code, Replaces, Style);
+    EXPECT_TRUE(static_cast<bool>(CleanReplaces))
+        << llvm::toString(CleanReplaces.takeError()) << "\n";
+    auto FormattedReplaces = formatReplacements(Code, *CleanReplaces, Style);
+    EXPECT_TRUE(static_cast<bool>(FormattedReplaces))
+        << llvm::toString(FormattedReplaces.takeError()) << "\n";
+    auto Result = applyAllReplacements(Code, *FormattedReplaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    return *Result;
   }
 
   int getOffset(StringRef Code, int Line, int Column) {

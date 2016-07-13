@@ -1,4 +1,5 @@
 ; RUN: opt < %s -tailcallelim -S | FileCheck %s
+; RUN: opt < %s -passes=tailcallelim -S | FileCheck %s
 
 define i32 @test1_factorial(i32 %x) {
 entry:

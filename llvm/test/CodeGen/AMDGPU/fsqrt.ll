@@ -1,29 +1,143 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs -enable-unsafe-fp-math < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefix=GCN -check-prefix=FUNC %s
+; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=R600 -check-prefix=FUNC %s
+
 
 ; Run with unsafe-fp-math to make sure nothing tries to turn this into 1 / rsqrt(x)
 
-; CHECK: {{^}}fsqrt_f32:
-; CHECK: v_sqrt_f32_e32 {{v[0-9]+, v[0-9]+}}
-
-define void @fsqrt_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
-   %r0 = load float, float addrspace(1)* %in
-   %r1 = call float @llvm.sqrt.f32(float %r0)
-   store float %r1, float addrspace(1)* %out
-   ret void
+; FUNC-LABEL: {{^}}v_safe_fsqrt_f32:
+; GCN: v_sqrt_f32_e32 {{v[0-9]+, v[0-9]+}}
+define void @v_safe_fsqrt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #1 {
+  %r0 = load float, float addrspace(1)* %in
+  %r1 = call float @llvm.sqrt.f32(float %r0)
+  store float %r1, float addrspace(1)* %out
+  ret void
 }
 
-; CHECK: {{^}}fsqrt_f64:
-; CHECK: v_sqrt_f64_e32 {{v\[[0-9]+:[0-9]+\], v\[[0-9]+:[0-9]+\]}}
-
-define void @fsqrt_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
-   %r0 = load double, double addrspace(1)* %in
-   %r1 = call double @llvm.sqrt.f64(double %r0)
-   store double %r1, double addrspace(1)* %out
-   ret void
+; FUNC-LABEL: {{^}}v_unsafe_fsqrt_f32:
+; GCN: v_sqrt_f32_e32 {{v[0-9]+, v[0-9]+}}
+define void @v_unsafe_fsqrt_f32(float addrspace(1)* %out, float addrspace(1)* %in) #2 {
+  %r0 = load float, float addrspace(1)* %in
+  %r1 = call float @llvm.sqrt.f32(float %r0)
+  store float %r1, float addrspace(1)* %out
+  ret void
 }
 
-declare float @llvm.sqrt.f32(float %Val)
-declare double @llvm.sqrt.f64(double %Val)
+
+; FUNC-LABEL: {{^}}s_sqrt_f32:
+; GCN: v_sqrt_f32_e32
+
+; R600: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[2].Z
+; R600: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[2].Z, PS
+define void @s_sqrt_f32(float addrspace(1)* %out, float %in) #1 {
+entry:
+  %fdiv = call float @llvm.sqrt.f32(float %in)
+  store float %fdiv, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}s_sqrt_v2f32:
+; GCN: v_sqrt_f32_e32
+; GCN: v_sqrt_f32_e32
+
+; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[2].W
+; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[2].W, PS
+; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].X
+; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].X, PS
+define void @s_sqrt_v2f32(<2 x float> addrspace(1)* %out, <2 x float> %in) #1 {
+entry:
+  %fdiv = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
+  store <2 x float> %fdiv, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}s_sqrt_v4f32:
+; GCN: v_sqrt_f32_e32
+; GCN: v_sqrt_f32_e32
+; GCN: v_sqrt_f32_e32
+; GCN: v_sqrt_f32_e32
+
+; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].Y
+; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].Y, PS
+; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].Z
+; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].Z, PS
+; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[3].W
+; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[3].W, PS
+; R600-DAG: RECIPSQRT_CLAMPED * T{{[0-9]\.[XYZW]}}, KC0[4].X
+; R600-DAG: MUL NON-IEEE T{{[0-9]\.[XYZW]}}, KC0[4].X, PS
+define void @s_sqrt_v4f32(<4 x float> addrspace(1)* %out, <4 x float> %in) #1 {
+entry:
+  %fdiv = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %in)
+  store <4 x float> %fdiv, <4 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}elim_redun_check_neg0:
+; GCN: v_sqrt_f32_e32
+; GCN-NOT: v_cndmask
+define void @elim_redun_check_neg0(float addrspace(1)* %out, float %in) #1 {
+entry:
+  %sqrt = call float @llvm.sqrt.f32(float %in)
+  %cmp = fcmp olt float %in, -0.000000e+00
+  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  store float %res, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}elim_redun_check_pos0:
+; GCN: v_sqrt_f32_e32
+; GCN-NOT: v_cndmask
+define void @elim_redun_check_pos0(float addrspace(1)* %out, float %in) #1 {
+entry:
+  %sqrt = call float @llvm.sqrt.f32(float %in)
+  %cmp = fcmp olt float %in, 0.000000e+00
+  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  store float %res, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}elim_redun_check_ult:
+; GCN: v_sqrt_f32_e32
+; GCN-NOT: v_cndmask
+define void @elim_redun_check_ult(float addrspace(1)* %out, float %in) #1 {
+entry:
+  %sqrt = call float @llvm.sqrt.f32(float %in)
+  %cmp = fcmp ult float %in, -0.000000e+00
+  %res = select i1 %cmp, float 0x7FF8000000000000, float %sqrt
+  store float %res, float addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}elim_redun_check_v2:
+; GCN: v_sqrt_f32_e32
+; GCN: v_sqrt_f32_e32
+; GCN-NOT: v_cndmask
+define void @elim_redun_check_v2(<2 x float> addrspace(1)* %out, <2 x float> %in) #1 {
+entry:
+  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
+  %cmp = fcmp olt <2 x float> %in, <float -0.000000e+00, float -0.000000e+00>
+  %res = select <2 x i1> %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> %sqrt
+  store <2 x float> %res, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}elim_redun_check_v2_ult
+; GCN: v_sqrt_f32_e32
+; GCN: v_sqrt_f32_e32
+; GCN-NOT: v_cndmask
+define void @elim_redun_check_v2_ult(<2 x float> addrspace(1)* %out, <2 x float> %in) #1 {
+entry:
+  %sqrt = call <2 x float> @llvm.sqrt.v2f32(<2 x float> %in)
+  %cmp = fcmp ult <2 x float> %in, <float -0.000000e+00, float -0.000000e+00>
+  %res = select <2 x i1> %cmp, <2 x float> <float 0x7FF8000000000000, float 0x7FF8000000000000>, <2 x float> %sqrt
+  store <2 x float> %res, <2 x float> addrspace(1)* %out
+  ret void
+}
+
+declare float @llvm.sqrt.f32(float %in) #0
+declare <2 x float> @llvm.sqrt.v2f32(<2 x float> %in) #0
+declare <4 x float> @llvm.sqrt.v4f32(<4 x float> %in) #0
+
+attributes #0 = { nounwind readnone }
+attributes #1 = { nounwind "unsafe-fp-math"="false" }
+attributes #2 = { nounwind "unsafe-fp-math"="true" }

@@ -118,8 +118,10 @@ void UnnecessaryValueParamCheck::check(const MatchFinder::MatchResult &Result) {
                               "invocation but only used as a const reference; "
                               "consider making it a const reference")
       << paramNameOrIndex(Param->getName(), Index);
-  // Do not propose fixes in macros since we cannot place them correctly.
-  if (Param->getLocStart().isMacroID())
+  // Do not propose fixes in macros since we cannot place them correctly, or if
+  // function is virtual as it might break overrides.
+  const auto *Method = llvm::dyn_cast<CXXMethodDecl>(Function);
+  if (Param->getLocStart().isMacroID() || (Method && Method->isVirtual()))
     return;
   for (const auto *FunctionDecl = Function; FunctionDecl != nullptr;
        FunctionDecl = FunctionDecl->getPreviousDecl()) {

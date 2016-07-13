@@ -1,5 +1,5 @@
 ; XFAIL: *
-; RUN: opt -basicaa -memoryssa -analyze < %s 2>&1 | FileCheck %s
+; RUN: opt -basicaa -print-memoryssa -verify-memoryssa -analyze < %s 2>&1 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='print<memoryssa>' -verify-memoryssa -disable-output < %s 2>&1 | FileCheck %s
 ;
 ; Invariant loads should be considered live on entry, because, once the

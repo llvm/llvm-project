@@ -1145,6 +1145,25 @@ SBValue::IsSynthetic ()
     return false;
 }
 
+bool
+SBValue::IsSyntheticChildrenGenerated ()
+{
+    ValueLocker locker;
+    lldb::ValueObjectSP value_sp(GetSP(locker));
+    if (value_sp)
+        return value_sp->IsSyntheticChildrenGenerated();
+    return false;
+}
+
+void
+SBValue::SetSyntheticChildrenGenerated (bool is)
+{
+    ValueLocker locker;
+    lldb::ValueObjectSP value_sp(GetSP(locker));
+    if (value_sp)
+        return value_sp->SetSyntheticChildrenGenerated(is);
+}
+
 lldb::SBValue
 SBValue::GetValueForExpressionPath(const char* expr_path)
 {

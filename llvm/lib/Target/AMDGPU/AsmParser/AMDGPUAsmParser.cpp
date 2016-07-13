@@ -1107,12 +1107,6 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
     return Res;
   }
 
-  AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
-  if (Op.isImm() && Op.Imm.IsFPImm) {
-    Error(Parser.getTok().getLoc(), "floating point operands not allowed with sext() modifier");
-    return MatchOperand_ParseFail;
-  }
-
   AMDGPUOperand::Modifiers Mods = {false, false, false};
   if (Sext) {
     if (getLexer().isNot(AsmToken::RParen)) {
@@ -1124,6 +1118,7 @@ AMDGPUAsmParser::parseRegOrImmWithIntInputMods(OperandVector &Operands) {
   }
   
   if (Mods.hasIntModifiers()) {
+    AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     Op.setModifiers(Mods);
   }
   return MatchOperand_Success;
@@ -2787,6 +2782,8 @@ unsigned AMDGPUAsmParser::validateTargetOperandClass(MCParsedAsmOperand &Op,
     // name of the expression is not a valid token, the match will fail,
     // so we need to handle it here.
     return Operand.isSSrc32() ? Match_Success : Match_InvalidOperand;
+  case MCK_SoppBrTarget:
+    return Operand.isSoppBrTarget() ? Match_Success : Match_InvalidOperand;
   default: return Match_InvalidOperand;
   }
 }

@@ -43,6 +43,12 @@ defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 
 def int_r600_read_workdim : AMDGPUReadPreloadRegisterIntrinsic;
 
+
+// AS 7 is PARAM_I_ADDRESS, used for kernel arguments
+def int_r600_implicitarg_ptr :
+  GCCBuiltin<"__builtin_r600_implicitarg_ptr">,
+  Intrinsic<[LLVMQualPointerType<llvm_i8_ty, 7>], [], [IntrNoMem]>;
+
 def int_r600_rat_store_typed :
   // 1st parameter: Data
   // 2nd parameter: Index
@@ -377,6 +383,11 @@ def int_amdgcn_mbcnt_hi :
 def int_amdgcn_ds_swizzle :
   GCCBuiltin<"__builtin_amdgcn_ds_swizzle">,
   Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
+// llvm.amdgcn.lerp
+def int_amdgcn_lerp :
+  GCCBuiltin<"__builtin_amdgcn_lerp">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
 
 //===----------------------------------------------------------------------===//
 // CI+ Intrinsics

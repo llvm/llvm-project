@@ -626,6 +626,17 @@ private:
   unsigned NextID;
 };
 
+// This pass does eager building and then printing of MemorySSA. It is used by
+// the tests to be able to build, dump, and verify Memory SSA.
+class MemorySSAPrinterLegacyPass : public FunctionPass {
+public:
+  MemorySSAPrinterLegacyPass();
+
+  static char ID;
+  bool runOnFunction(Function &) override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
 /// An analysis that produces \c MemorySSA for a function.
 ///
 class MemorySSAAnalysis : public AnalysisInfoMixin<MemorySSAAnalysis> {

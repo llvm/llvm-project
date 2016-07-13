@@ -272,6 +272,8 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "format", cl::desc("Output format for line-based coverage reports"),
       cl::values(clEnumValN(CoverageViewOptions::OutputFormat::Text, "text",
                             "Text output"),
+                 clEnumValN(CoverageViewOptions::OutputFormat::HTML, "html",
+                            "HTML output"),
                  clEnumValEnd),
       cl::init(CoverageViewOptions::OutputFormat::Text));
 
@@ -332,6 +334,11 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       ViewOpts.Colors = UseColor == cl::BOU_UNSET
                             ? sys::Process::StandardOutHasColors()
                             : UseColor == cl::BOU_TRUE;
+      break;
+    case CoverageViewOptions::OutputFormat::HTML:
+      if (UseColor == cl::BOU_FALSE)
+        error("Color output cannot be disabled when generating html.");
+      ViewOpts.Colors = true;
       break;
     }
 
@@ -526,6 +533,9 @@ int CodeCoverageTool::report(int argc, const char **argv,
   auto Err = commandLineParser(argc, argv);
   if (Err)
     return Err;
+
+  if (ViewOpts.Format == CoverageViewOptions::OutputFormat::HTML)
+    error("HTML output for summary reports is not yet supported.");
 
   auto Coverage = load();
   if (!Coverage)

@@ -1597,6 +1597,10 @@ public:
     return getOperandUse(i);
   }
 
+  /// If one of the arguments has the 'returned' attribute, return its
+  /// operand value. Otherwise, return nullptr.
+  Value *getReturnedArgOperand() const;
+
   /// getCallingConv/setCallingConv - Get or set the calling convention of this
   /// function call.
   CallingConv::ID getCallingConv() const {
@@ -3565,6 +3569,10 @@ public:
     assert(i < getNumArgOperands() && "Out of bounds!");
     return getOperandUse(i);
   }
+
+  /// If one of the arguments has the 'returned' attribute, return its
+  /// operand value. Otherwise, return nullptr.
+  Value *getReturnedArgOperand() const;
 
   /// getCallingConv/setCallingConv - Get or set the calling convention of this
   /// function call.

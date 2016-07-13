@@ -249,6 +249,25 @@ protected:
   /// If true, ISHST barriers will be used for Release semantics.
   bool PreferISHST = false;
 
+  /// If true, a VLDM/VSTM starting with an odd register number is considered to
+  /// take more microops than single VLDRS/VSTRS.
+  bool SlowOddRegister = false;
+
+  /// If true, loading into a D subregister will be penalized.
+  bool SlowLoadDSubregister = false;
+
+  /// If true, the AGU and NEON/FPU units are multiplexed.
+  bool HasMuxedUnits = false;
+
+  /// If true, VMOVS will never be widened to VMOVD
+  bool DontWidenVMOVS = false;
+
+  /// If true, run the MLx expansion pass.
+  bool ExpandMLx = false;
+
+  /// If true, VFP/NEON VMLA/VMLS have special RAW hazards.
+  bool HasVMLxHazards = false;
+
   /// If true, VMOVRS, VMOVSR and VMOVS will be converted from VFP to NEON.
   bool UseNEONForFPMovs = false;
 
@@ -291,6 +310,9 @@ protected:
   std::string CPUString;
 
   unsigned MaxInterleaveFactor = 1;
+
+  /// Clearance before partial register updates (in number of instructions)
+  unsigned PartialUpdateClearance = 0;
 
   /// What kind of timing do load multiple/store multiple have (double issue,
   /// single issue etc).
@@ -382,6 +404,9 @@ public:
   bool hasV8MBaselineOps() const { return HasV8MBaselineOps; }
   bool hasV8MMainlineOps() const { return HasV8MMainlineOps; }
 
+  /// @{
+  /// These functions are obsolete, please consider adding subtarget features
+  /// or properties instead of calling them.
   bool isCortexA5() const { return ARMProcFamily == CortexA5; }
   bool isCortexA7() const { return ARMProcFamily == CortexA7; }
   bool isCortexA8() const { return ARMProcFamily == CortexA8; }
@@ -392,6 +417,7 @@ public:
   bool isLikeA9() const { return isCortexA9() || isCortexA15() || isKrait(); }
   bool isCortexR5() const { return ARMProcFamily == CortexR5; }
   bool isKrait() const { return ARMProcFamily == Krait; }
+  /// @}
 
   bool hasARMOps() const { return !NoARM; }
 
@@ -431,6 +457,12 @@ public:
   bool hasSlowVDUP32() const { return HasSlowVDUP32; }
   bool preferVMOVSR() const { return PreferVMOVSR; }
   bool preferISHSTBarriers() const { return PreferISHST; }
+  bool expandMLx() const { return ExpandMLx; }
+  bool hasVMLxHazards() const { return HasVMLxHazards; }
+  bool hasSlowOddRegister() const { return SlowOddRegister; }
+  bool hasSlowLoadDSubregister() const { return SlowLoadDSubregister; }
+  bool hasMuxedUnits() const { return HasMuxedUnits; }
+  bool dontWidenVMOVS() const { return DontWidenVMOVS; }
   bool useNEONForFPMovs() const { return UseNEONForFPMovs; }
   bool checkVLDnAccessAlignment() const { return CheckVLDnAlign; }
   bool nonpipelinedVFP() const { return NonpipelinedVFP; }
@@ -573,6 +605,8 @@ public:
   unsigned getStackAlignment() const { return stackAlignment; }
 
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
+
+  unsigned getPartialUpdateClearance() const { return PartialUpdateClearance; }
 
   ARMLdStMultipleTiming getLdStMultipleTiming() const {
     return LdStMultipleTiming;

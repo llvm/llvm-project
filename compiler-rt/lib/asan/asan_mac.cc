@@ -47,6 +47,7 @@ extern "C" {
 namespace __asan {
 
 void InitializePlatformInterceptors() {}
+void InitializePlatformExceptionHandlers() {}
 
 bool PlatformHasDifferentMemcpyAndMemmove() {
   // On OS X 10.7 memcpy() and memmove() are both resolved

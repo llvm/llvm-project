@@ -36,11 +36,6 @@ template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class SharedFile;
 
-// Returns a demangled C++ symbol name. If Name is not a mangled
-// name or the system does not provide __cxa_demangle function,
-// it returns the unmodified string.
-std::string demangle(StringRef Name);
-
 struct Symbol;
 
 // The base class for real symbol classes.
@@ -89,11 +84,10 @@ public:
   uint32_t GotIndex = -1;
   uint32_t GotPltIndex = -1;
   uint32_t PltIndex = -1;
-  uint32_t ThunkIndex = -1;
   uint32_t GlobalDynIndex = -1;
   bool isInGot() const { return GotIndex != -1U; }
   bool isInPlt() const { return PltIndex != -1U; }
-  bool hasThunk() const { return ThunkIndex != -1U; }
+  template <class ELFT> bool hasThunk() const;
 
   template <class ELFT>
   typename ELFT::uint getVA(typename ELFT::uint Addend = 0) const;
@@ -234,6 +228,10 @@ public:
   // If this is null, the symbol is an absolute symbol.
   InputSectionBase<ELFT> *&Section;
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol.
+  Thunk<ELFT> *ThunkData = nullptr;
+
 private:
   static InputSectionBase<ELFT> *NullInputSection;
 };
@@ -306,6 +304,9 @@ public:
   // OffsetInBss is significant only when needsCopy() is true.
   uintX_t OffsetInBss = 0;
 
+  // If non-null the symbol has a Thunk that may be used as an alternative
+  // destination for callers of this Symbol.
+  Thunk<ELFT> *ThunkData = nullptr;
   bool needsCopy() const { return this->NeedsCopyOrPltAddr && !this->isFunc(); }
 };
 

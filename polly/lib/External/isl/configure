@@ -18243,6 +18243,31 @@ $as_echo "#define initializeBuiltins InitializeBuiltins" >>confdefs.h
 fi
 rm -f conftest*
 
+	cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+#include <clang/Frontend/CompilerInstance.h>
+int
+main ()
+{
+
+		using namespace clang;
+		CompilerInstance *Clang;
+		TargetOptions TO;
+		llvm::Triple T(TO.Triple);
+		PreprocessorOptions PO;
+		CompilerInvocation::setLangDefaults(Clang->getLangOpts(), IK_C,
+				T, PO, LangStandard::lang_unspecified);
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_compile "$LINENO"; then :
+
+$as_echo "#define SETLANGDEFAULTS_TAKES_5_ARGUMENTS /**/" >>confdefs.h
+
+fi
+rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
 	ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
 ac_compile='$CC -c $CFLAGS $CPPFLAGS conftest.$ac_ext >&5'

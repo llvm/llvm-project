@@ -353,8 +353,9 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (Alloc) Undefined(Sym->st_name, Sym->st_other, Sym->getType());
-    return new (Alloc) DefinedRegular<ELFT>(*Sym, Sec);
+      return new (this->Alloc)
+          Undefined(Sym->st_name, Sym->st_other, Sym->getType());
+    return new (this->Alloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
@@ -565,30 +566,29 @@ static ELFKind getELFKind(MemoryBufferRef MB) {
 static uint8_t getMachineKind(MemoryBufferRef MB) {
   std::string TripleStr = getBitcodeTargetTriple(MB, Driver->Context);
   switch (Triple(TripleStr).getArch()) {
-    case Triple::aarch64:
-      return EM_AARCH64;
-    case Triple::arm:
-      return EM_ARM;
-    case Triple::mips:
-    case Triple::mipsel:
-    case Triple::mips64:
-    case Triple::mips64el:
-      return EM_MIPS;
-    case Triple::ppc:
-      return EM_PPC;
-    case Triple::ppc64:
-      return EM_PPC64;
-    case Triple::x86:
-      return EM_386;
-    case Triple::x86_64:
-      return EM_X86_64;
-    default:
-      fatal("could not infer e_machine from bitcode target triple " + TripleStr);
+  case Triple::aarch64:
+    return EM_AARCH64;
+  case Triple::arm:
+    return EM_ARM;
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    return EM_MIPS;
+  case Triple::ppc:
+    return EM_PPC;
+  case Triple::ppc64:
+    return EM_PPC64;
+  case Triple::x86:
+    return EM_386;
+  case Triple::x86_64:
+    return EM_X86_64;
+  default:
+    fatal("could not infer e_machine from bitcode target triple " + TripleStr);
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef MB) :
-    InputFile(BitcodeKind, MB) {
+BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
   EKind = getELFKind(MB);
   EMachine = getMachineKind(MB);
 }

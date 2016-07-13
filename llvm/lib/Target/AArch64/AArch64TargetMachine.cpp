@@ -307,8 +307,7 @@ void AArch64PassConfig::addIRPasses() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableAtomicTidy)
     addPass(createCFGSimplificationPass());
 
-  // Run LoopDataPrefetch for Cyclone (the only subtarget that defines a
-  // non-zero getPrefetchDistance).
+  // Run LoopDataPrefetch
   //
   // Run this before LSR to remove the multiplies involved in computing the
   // pointer values N iterations ahead.

@@ -227,7 +227,8 @@ namespace {
       ++NumFXCH;
     }
 
-    void duplicateToTop(unsigned RegNo, unsigned AsReg, MachineInstr *I) {
+    void duplicateToTop(unsigned RegNo, unsigned AsReg,
+                        MachineBasicBlock::iterator I) {
       DebugLoc dl = I == MBB->end() ? DebugLoc() : I->getDebugLoc();
       unsigned STReg = getSTReg(RegNo);
       pushReg(AsReg);   // New register on top of stack
@@ -272,9 +273,9 @@ namespace {
     void handleSpecialFP(MachineBasicBlock::iterator &I);
 
     // Check if a COPY instruction is using FP registers.
-    static bool isFPCopy(MachineInstr *MI) {
-      unsigned DstReg = MI->getOperand(0).getReg();
-      unsigned SrcReg = MI->getOperand(1).getReg();
+    static bool isFPCopy(MachineInstr &MI) {
+      unsigned DstReg = MI.getOperand(0).getReg();
+      unsigned SrcReg = MI.getOperand(1).getReg();
 
       return X86::RFP80RegClass.contains(DstReg) ||
         X86::RFP80RegClass.contains(SrcReg);
@@ -373,21 +374,21 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
   setupBlockStack();
 
   for (MachineBasicBlock::iterator I = BB.begin(); I != BB.end(); ++I) {
-    MachineInstr *MI = I;
-    uint64_t Flags = MI->getDesc().TSFlags;
+    MachineInstr &MI = *I;
+    uint64_t Flags = MI.getDesc().TSFlags;
 
     unsigned FPInstClass = Flags & X86II::FPTypeMask;
-    if (MI->isInlineAsm())
+    if (MI.isInlineAsm())
       FPInstClass = X86II::SpecialFP;
 
-    if (MI->isCopy() && isFPCopy(MI))
+    if (MI.isCopy() && isFPCopy(MI))
       FPInstClass = X86II::SpecialFP;
 
-    if (MI->isImplicitDef() &&
-        X86::RFP80RegClass.contains(MI->getOperand(0).getReg()))
+    if (MI.isImplicitDef() &&
+        X86::RFP80RegClass.contains(MI.getOperand(0).getReg()))
       FPInstClass = X86II::SpecialFP;
 
-    if (MI->isCall())
+    if (MI.isCall())
       FPInstClass = X86II::SpecialFP;
 
     if (FPInstClass == X86II::NotFP)
@@ -395,16 +396,16 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
 
     MachineInstr *PrevMI = nullptr;
     if (I != BB.begin())
-      PrevMI = std::prev(I);
+      PrevMI = &*std::prev(I);
 
     ++NumFP;  // Keep track of # of pseudo instrs
-    DEBUG(dbgs() << "\nFPInst:\t" << *MI);
+    DEBUG(dbgs() << "\nFPInst:\t" << MI);
 
     // Get dead variables list now because the MI pointer may be deleted as part
     // of processing!
     SmallVector<unsigned, 8> DeadRegs;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      const MachineOperand &MO = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      const MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg() && MO.isDead())
         DeadRegs.push_back(MO.getReg());
     }
@@ -433,20 +434,22 @@ bool FPS::processBasicBlock(MachineFunction &MF, MachineBasicBlock &BB) {
     }
 
     // Print out all of the instructions expanded to if -debug
-    DEBUG(
-      MachineBasicBlock::iterator PrevI(PrevMI);
+    DEBUG({
+      MachineBasicBlock::iterator PrevI = PrevMI;
       if (I == PrevI) {
         dbgs() << "Just deleted pseudo instruction\n";
       } else {
         MachineBasicBlock::iterator Start = I;
         // Rewind to first instruction newly inserted.
-        while (Start != BB.begin() && std::prev(Start) != PrevI) --Start;
+        while (Start != BB.begin() && std::prev(Start) != PrevI)
+          --Start;
         dbgs() << "Inserted instructions:\n\t";
         Start->print(dbgs());
-        while (++Start != std::next(I)) {}
+        while (++Start != std::next(I)) {
+        }
       }
       dumpStack();
-    );
+    });
     (void)PrevMI;
 
     Changed = true;
@@ -785,8 +788,8 @@ static const TableEntry PopTable[] = {
 /// instruction if it was modified in place.
 ///
 void FPS::popStackAfter(MachineBasicBlock::iterator &I) {
-  MachineInstr* MI = I;
-  const DebugLoc &dl = MI->getDebugLoc();
+  MachineInstr &MI = *I;
+  const DebugLoc &dl = MI.getDebugLoc();
   ASSERT_SORTED(PopTable);
   if (StackTop == 0)
     report_fatal_error("Cannot pop empty stack!");
@@ -952,22 +955,22 @@ void FPS::handleCall(MachineBasicBlock::iterator &I) {
 /// If RET has an FP register use operand, pass the first one in ST(0) and
 /// the second one in ST(1).
 void FPS::handleReturn(MachineBasicBlock::iterator &I) {
-  MachineInstr *MI = I;
+  MachineInstr &MI = *I;
 
   // Find the register operands.
   unsigned FirstFPRegOp = ~0U, SecondFPRegOp = ~0U;
   unsigned LiveMask = 0;
 
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    MachineOperand &Op = MI->getOperand(i);
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    MachineOperand &Op = MI.getOperand(i);
     if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
       continue;
     // FP Register uses must be kills unless there are two uses of the same
     // register, in which case only one will be a kill.
     assert(Op.isUse() &&
-           (Op.isKill() ||                        // Marked kill.
-            getFPReg(Op) == FirstFPRegOp ||       // Second instance.
-            MI->killsRegister(Op.getReg())) &&    // Later use is marked kill.
+           (Op.isKill() ||                    // Marked kill.
+            getFPReg(Op) == FirstFPRegOp ||   // Second instance.
+            MI.killsRegister(Op.getReg())) && // Later use is marked kill.
            "Ret only defs operands, and values aren't live beyond it");
 
     if (FirstFPRegOp == ~0U)
@@ -979,7 +982,7 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
     LiveMask |= (1 << getFPReg(Op));
 
     // Remove the operand so that later passes don't see it.
-    MI->RemoveOperand(i);
+    MI.RemoveOperand(i);
     --i;
     --e;
   }
@@ -1039,12 +1042,12 @@ void FPS::handleReturn(MachineBasicBlock::iterator &I) {
 /// handleZeroArgFP - ST(0) = fld0    ST(0) = flds <mem>
 ///
 void FPS::handleZeroArgFP(MachineBasicBlock::iterator &I) {
-  MachineInstr *MI = I;
-  unsigned DestReg = getFPReg(MI->getOperand(0));
+  MachineInstr &MI = *I;
+  unsigned DestReg = getFPReg(MI.getOperand(0));
 
   // Change from the pseudo instruction to the concrete instruction.
-  MI->RemoveOperand(0);   // Remove the explicit ST(0) operand
-  MI->setDesc(TII->get(getConcreteOpcode(MI->getOpcode())));
+  MI.RemoveOperand(0); // Remove the explicit ST(0) operand
+  MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 
   // Result gets pushed on the stack.
   pushReg(DestReg);
@@ -1053,14 +1056,14 @@ void FPS::handleZeroArgFP(MachineBasicBlock::iterator &I) {
 /// handleOneArgFP - fst <mem>, ST(0)
 ///
 void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
-  MachineInstr *MI = I;
-  unsigned NumOps = MI->getDesc().getNumOperands();
+  MachineInstr &MI = *I;
+  unsigned NumOps = MI.getDesc().getNumOperands();
   assert((NumOps == X86::AddrNumOperands + 1 || NumOps == 1) &&
          "Can only handle fst* & ftst instructions!");
 
   // Is this the last use of the source register?
-  unsigned Reg = getFPReg(MI->getOperand(NumOps-1));
-  bool KillsSrc = MI->killsRegister(X86::FP0+Reg);
+  unsigned Reg = getFPReg(MI.getOperand(NumOps - 1));
+  bool KillsSrc = MI.killsRegister(X86::FP0 + Reg);
 
   // FISTP64m is strange because there isn't a non-popping versions.
   // If we have one _and_ we don't want to pop the operand, duplicate the value
@@ -1068,34 +1071,31 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
   // always ok.
   // Ditto FISTTP16m, FISTTP32m, FISTTP64m, ST_FpP80m.
   //
-  if (!KillsSrc &&
-      (MI->getOpcode() == X86::IST_Fp64m32 ||
-       MI->getOpcode() == X86::ISTT_Fp16m32 ||
-       MI->getOpcode() == X86::ISTT_Fp32m32 ||
-       MI->getOpcode() == X86::ISTT_Fp64m32 ||
-       MI->getOpcode() == X86::IST_Fp64m64 ||
-       MI->getOpcode() == X86::ISTT_Fp16m64 ||
-       MI->getOpcode() == X86::ISTT_Fp32m64 ||
-       MI->getOpcode() == X86::ISTT_Fp64m64 ||
-       MI->getOpcode() == X86::IST_Fp64m80 ||
-       MI->getOpcode() == X86::ISTT_Fp16m80 ||
-       MI->getOpcode() == X86::ISTT_Fp32m80 ||
-       MI->getOpcode() == X86::ISTT_Fp64m80 ||
-       MI->getOpcode() == X86::ST_FpP80m)) {
+  if (!KillsSrc && (MI.getOpcode() == X86::IST_Fp64m32 ||
+                    MI.getOpcode() == X86::ISTT_Fp16m32 ||
+                    MI.getOpcode() == X86::ISTT_Fp32m32 ||
+                    MI.getOpcode() == X86::ISTT_Fp64m32 ||
+                    MI.getOpcode() == X86::IST_Fp64m64 ||
+                    MI.getOpcode() == X86::ISTT_Fp16m64 ||
+                    MI.getOpcode() == X86::ISTT_Fp32m64 ||
+                    MI.getOpcode() == X86::ISTT_Fp64m64 ||
+                    MI.getOpcode() == X86::IST_Fp64m80 ||
+                    MI.getOpcode() == X86::ISTT_Fp16m80 ||
+                    MI.getOpcode() == X86::ISTT_Fp32m80 ||
+                    MI.getOpcode() == X86::ISTT_Fp64m80 ||
+                    MI.getOpcode() == X86::ST_FpP80m)) {
     duplicateToTop(Reg, ScratchFPReg, I);
   } else {
     moveToTop(Reg, I);            // Move to the top of the stack...
   }
 
   // Convert from the pseudo instruction to the concrete instruction.
-  MI->RemoveOperand(NumOps-1);    // Remove explicit ST(0) operand
-  MI->setDesc(TII->get(getConcreteOpcode(MI->getOpcode())));
+  MI.RemoveOperand(NumOps - 1); // Remove explicit ST(0) operand
+  MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 
-  if (MI->getOpcode() == X86::IST_FP64m ||
-      MI->getOpcode() == X86::ISTT_FP16m ||
-      MI->getOpcode() == X86::ISTT_FP32m ||
-      MI->getOpcode() == X86::ISTT_FP64m ||
-      MI->getOpcode() == X86::ST_FP80m) {
+  if (MI.getOpcode() == X86::IST_FP64m || MI.getOpcode() == X86::ISTT_FP16m ||
+      MI.getOpcode() == X86::ISTT_FP32m || MI.getOpcode() == X86::ISTT_FP64m ||
+      MI.getOpcode() == X86::ST_FP80m) {
     if (StackTop == 0)
       report_fatal_error("Stack empty??");
     --StackTop;
@@ -1114,15 +1114,15 @@ void FPS::handleOneArgFP(MachineBasicBlock::iterator &I) {
 ///     R1 = fadd R2, [mem]
 ///
 void FPS::handleOneArgFPRW(MachineBasicBlock::iterator &I) {
-  MachineInstr *MI = I;
+  MachineInstr &MI = *I;
 #ifndef NDEBUG
-  unsigned NumOps = MI->getDesc().getNumOperands();
+  unsigned NumOps = MI.getDesc().getNumOperands();
   assert(NumOps >= 2 && "FPRW instructions must have 2 ops!!");
 #endif
 
   // Is this the last use of the source register?
-  unsigned Reg = getFPReg(MI->getOperand(1));
-  bool KillsSrc = MI->killsRegister(X86::FP0+Reg);
+  unsigned Reg = getFPReg(MI.getOperand(1));
+  bool KillsSrc = MI.killsRegister(X86::FP0 + Reg);
 
   if (KillsSrc) {
     // If this is the last use of the source register, just make sure it's on
@@ -1131,17 +1131,17 @@ void FPS::handleOneArgFPRW(MachineBasicBlock::iterator &I) {
     if (StackTop == 0)
       report_fatal_error("Stack cannot be empty!");
     --StackTop;
-    pushReg(getFPReg(MI->getOperand(0)));
+    pushReg(getFPReg(MI.getOperand(0)));
   } else {
     // If this is not the last use of the source register, _copy_ it to the top
     // of the stack.
-    duplicateToTop(Reg, getFPReg(MI->getOperand(0)), I);
+    duplicateToTop(Reg, getFPReg(MI.getOperand(0)), I);
   }
 
   // Change from the pseudo instruction to the concrete instruction.
-  MI->RemoveOperand(1);   // Drop the source operand.
-  MI->RemoveOperand(0);   // Drop the destination operand.
-  MI->setDesc(TII->get(getConcreteOpcode(MI->getOpcode())));
+  MI.RemoveOperand(1); // Drop the source operand.
+  MI.RemoveOperand(0); // Drop the destination operand.
+  MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 }
 
 
@@ -1225,16 +1225,16 @@ static const TableEntry ReverseSTiTable[] = {
 void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   ASSERT_SORTED(ForwardST0Table); ASSERT_SORTED(ReverseST0Table);
   ASSERT_SORTED(ForwardSTiTable); ASSERT_SORTED(ReverseSTiTable);
-  MachineInstr *MI = I;
+  MachineInstr &MI = *I;
 
-  unsigned NumOperands = MI->getDesc().getNumOperands();
+  unsigned NumOperands = MI.getDesc().getNumOperands();
   assert(NumOperands == 3 && "Illegal TwoArgFP instruction!");
-  unsigned Dest = getFPReg(MI->getOperand(0));
-  unsigned Op0 = getFPReg(MI->getOperand(NumOperands-2));
-  unsigned Op1 = getFPReg(MI->getOperand(NumOperands-1));
-  bool KillsOp0 = MI->killsRegister(X86::FP0+Op0);
-  bool KillsOp1 = MI->killsRegister(X86::FP0+Op1);
-  DebugLoc dl = MI->getDebugLoc();
+  unsigned Dest = getFPReg(MI.getOperand(0));
+  unsigned Op0 = getFPReg(MI.getOperand(NumOperands - 2));
+  unsigned Op1 = getFPReg(MI.getOperand(NumOperands - 1));
+  bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0);
+  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
+  DebugLoc dl = MI.getDebugLoc();
 
   unsigned TOS = getStackEntry(0);
 
@@ -1291,14 +1291,14 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
       InstTable = ReverseSTiTable;
   }
 
-  int Opcode = Lookup(InstTable, MI->getOpcode());
+  int Opcode = Lookup(InstTable, MI.getOpcode());
   assert(Opcode != -1 && "Unknown TwoArgFP pseudo instruction!");
 
   // NotTOS - The register which is not on the top of stack...
   unsigned NotTOS = (TOS == Op0) ? Op1 : Op0;
 
   // Replace the old instruction with a new instruction
-  MBB->remove(I++);
+  MBB->remove(&*I++);
   I = BuildMI(*MBB, I, dl, TII->get(Opcode)).addReg(getSTReg(NotTOS));
 
   // If both operands are killed, pop one off of the stack in addition to
@@ -1314,7 +1314,7 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
   assert(UpdatedSlot < StackTop && Dest < 7);
   Stack[UpdatedSlot]   = Dest;
   RegMap[Dest]         = UpdatedSlot;
-  MBB->getParent()->DeleteMachineInstr(MI); // Remove the old instruction
+  MBB->getParent()->DeleteMachineInstr(&MI); // Remove the old instruction
 }
 
 /// handleCompareFP - Handle FUCOM and FUCOMI instructions, which have two FP
@@ -1323,23 +1323,23 @@ void FPS::handleTwoArgFP(MachineBasicBlock::iterator &I) {
 void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
   ASSERT_SORTED(ForwardST0Table); ASSERT_SORTED(ReverseST0Table);
   ASSERT_SORTED(ForwardSTiTable); ASSERT_SORTED(ReverseSTiTable);
-  MachineInstr *MI = I;
+  MachineInstr &MI = *I;
 
-  unsigned NumOperands = MI->getDesc().getNumOperands();
+  unsigned NumOperands = MI.getDesc().getNumOperands();
   assert(NumOperands == 2 && "Illegal FUCOM* instruction!");
-  unsigned Op0 = getFPReg(MI->getOperand(NumOperands-2));
-  unsigned Op1 = getFPReg(MI->getOperand(NumOperands-1));
-  bool KillsOp0 = MI->killsRegister(X86::FP0+Op0);
-  bool KillsOp1 = MI->killsRegister(X86::FP0+Op1);
+  unsigned Op0 = getFPReg(MI.getOperand(NumOperands - 2));
+  unsigned Op1 = getFPReg(MI.getOperand(NumOperands - 1));
+  bool KillsOp0 = MI.killsRegister(X86::FP0 + Op0);
+  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
 
   // Make sure the first operand is on the top of stack, the other one can be
   // anywhere.
   moveToTop(Op0, I);
 
   // Change from the pseudo instruction to the concrete instruction.
-  MI->getOperand(0).setReg(getSTReg(Op1));
-  MI->RemoveOperand(1);
-  MI->setDesc(TII->get(getConcreteOpcode(MI->getOpcode())));
+  MI.getOperand(0).setReg(getSTReg(Op1));
+  MI.RemoveOperand(1);
+  MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 
   // If any of the operands are killed by this instruction, free them.
   if (KillsOp0) freeStackSlotAfter(I, Op0);
@@ -1351,21 +1351,21 @@ void FPS::handleCompareFP(MachineBasicBlock::iterator &I) {
 /// instructions require that the first operand is at the top of the stack, but
 /// otherwise don't modify the stack at all.
 void FPS::handleCondMovFP(MachineBasicBlock::iterator &I) {
-  MachineInstr *MI = I;
+  MachineInstr &MI = *I;
 
-  unsigned Op0 = getFPReg(MI->getOperand(0));
-  unsigned Op1 = getFPReg(MI->getOperand(2));
-  bool KillsOp1 = MI->killsRegister(X86::FP0+Op1);
+  unsigned Op0 = getFPReg(MI.getOperand(0));
+  unsigned Op1 = getFPReg(MI.getOperand(2));
+  bool KillsOp1 = MI.killsRegister(X86::FP0 + Op1);
 
   // The first operand *must* be on the top of the stack.
   moveToTop(Op0, I);
 
   // Change the second operand to the stack register that the operand is in.
   // Change from the pseudo instruction to the concrete instruction.
-  MI->RemoveOperand(0);
-  MI->RemoveOperand(1);
-  MI->getOperand(0).setReg(getSTReg(Op1));
-  MI->setDesc(TII->get(getConcreteOpcode(MI->getOpcode())));
+  MI.RemoveOperand(0);
+  MI.RemoveOperand(1);
+  MI.getOperand(0).setReg(getSTReg(Op1));
+  MI.setDesc(TII->get(getConcreteOpcode(MI.getOpcode())));
 
   // If we kill the second operand, make sure to pop it from the stack.
   if (Op0 != Op1 && KillsOp1) {
@@ -1380,25 +1380,25 @@ void FPS::handleCondMovFP(MachineBasicBlock::iterator &I) {
 /// instructions.
 ///
 void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
-  MachineInstr *MI = Inst;
+  MachineInstr &MI = *Inst;
 
-  if (MI->isCall()) {
+  if (MI.isCall()) {
     handleCall(Inst);
     return;
   }
 
-  if (MI->isReturn()) {
+  if (MI.isReturn()) {
     handleReturn(Inst);
     return;
   }
 
-  switch (MI->getOpcode()) {
+  switch (MI.getOpcode()) {
   default: llvm_unreachable("Unknown SpecialFP instruction!");
   case TargetOpcode::COPY: {
     // We handle three kinds of copies: FP <- FP, FP <- ST, and ST <- FP.
-    const MachineOperand &MO1 = MI->getOperand(1);
-    const MachineOperand &MO0 = MI->getOperand(0);
-    bool KillsSrc = MI->killsRegister(MO1.getReg());
+    const MachineOperand &MO1 = MI.getOperand(1);
+    const MachineOperand &MO0 = MI.getOperand(0);
+    bool KillsSrc = MI.killsRegister(MO1.getReg());
 
     // FP <- FP copy.
     unsigned DstFP = getFPReg(MO0);
@@ -1420,9 +1420,9 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 
   case TargetOpcode::IMPLICIT_DEF: {
     // All FP registers must be explicitly defined, so load a 0 instead.
-    unsigned Reg = MI->getOperand(0).getReg() - X86::FP0;
+    unsigned Reg = MI.getOperand(0).getReg() - X86::FP0;
     DEBUG(dbgs() << "Emitting LD_F0 for implicit FP" << Reg << '\n');
-    BuildMI(*MBB, Inst, MI->getDebugLoc(), TII->get(X86::LD_F0));
+    BuildMI(*MBB, Inst, MI.getDebugLoc(), TII->get(X86::LD_F0));
     pushReg(Reg);
     break;
   }
@@ -1466,14 +1466,14 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     SmallSet<unsigned, 1> FRegIdx;
     unsigned RCID;
 
-    for (unsigned i = InlineAsm::MIOp_FirstOperand, e = MI->getNumOperands();
-         i != e && MI->getOperand(i).isImm(); i += 1 + NumOps) {
-      unsigned Flags = MI->getOperand(i).getImm();
+    for (unsigned i = InlineAsm::MIOp_FirstOperand, e = MI.getNumOperands();
+         i != e && MI.getOperand(i).isImm(); i += 1 + NumOps) {
+      unsigned Flags = MI.getOperand(i).getImm();
 
       NumOps = InlineAsm::getNumOperandRegisters(Flags);
       if (NumOps != 1)
         continue;
-      const MachineOperand &MO = MI->getOperand(i + 1);
+      const MachineOperand &MO = MI.getOperand(i + 1);
       if (!MO.isReg())
         continue;
       unsigned STReg = MO.getReg() - X86::FP0;
@@ -1506,24 +1506,24 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     }
 
     if (STUses && !isMask_32(STUses))
-      MI->emitError("fixed input regs must be last on the x87 stack");
+      MI.emitError("fixed input regs must be last on the x87 stack");
     unsigned NumSTUses = countTrailingOnes(STUses);
 
     // Defs must be contiguous from the stack top. ST0-STn.
     if (STDefs && !isMask_32(STDefs)) {
-      MI->emitError("output regs must be last on the x87 stack");
+      MI.emitError("output regs must be last on the x87 stack");
       STDefs = NextPowerOf2(STDefs) - 1;
     }
     unsigned NumSTDefs = countTrailingOnes(STDefs);
 
     // So must the clobbered stack slots. ST0-STm, m >= n.
     if (STClobbers && !isMask_32(STDefs | STClobbers))
-      MI->emitError("clobbers must be last on the x87 stack");
+      MI.emitError("clobbers must be last on the x87 stack");
 
     // Popped inputs are the ones that are also clobbered or defined.
     unsigned STPopped = STUses & (STDefs | STClobbers);
     if (STPopped && !isMask_32(STPopped))
-      MI->emitError("implicitly popped regs must be last on the x87 stack");
+      MI.emitError("implicitly popped regs must be last on the x87 stack");
     unsigned NumSTPopped = countTrailingOnes(STPopped);
 
     DEBUG(dbgs() << "Asm uses " << NumSTUses << " fixed regs, pops "
@@ -1532,9 +1532,9 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
 #ifndef NDEBUG
     // If any input operand uses constraint "f", all output register
     // constraints must be early-clobber defs.
-    for (unsigned I = 0, E = MI->getNumOperands(); I < E; ++I)
+    for (unsigned I = 0, E = MI.getNumOperands(); I < E; ++I)
       if (FRegIdx.count(I)) {
-        assert((1 << getFPReg(MI->getOperand(I)) & STDefs) == 0 &&
+        assert((1 << getFPReg(MI.getOperand(I)) & STDefs) == 0 &&
                "Operands with constraint \"f\" cannot overlap with defs");
       }
 #endif
@@ -1542,8 +1542,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     // Collect all FP registers (register operands with constraints "t", "u",
     // and "f") to kill afer the instruction.
     unsigned FPKills = ((1u << NumFPRegs) - 1) & ~0xff;
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &Op = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &Op = MI.getOperand(i);
       if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
         continue;
       unsigned FPReg = getFPReg(Op);
@@ -1568,8 +1568,8 @@ void FPS::handleSpecialFP(MachineBasicBlock::iterator &Inst) {
     DEBUG({dbgs() << "Before asm: "; dumpStack();});
 
     // With the stack layout fixed, rewrite the FP registers.
-    for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-      MachineOperand &Op = MI->getOperand(i);
+    for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+      MachineOperand &Op = MI.getOperand(i);
       if (!Op.isReg() || Op.getReg() < X86::FP0 || Op.getReg() > X86::FP6)
         continue;
 

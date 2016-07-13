@@ -11,6 +11,12 @@ extern "C" int __afl_persistent_loop(unsigned int) {
   return 0;
 }
 
+// This declaration exists to prevent the Darwin linker
+// from complaining about this being a missing weak symbol.
+extern "C" int LLVMFuzzerInitialize(int *argc, char ***argv) {
+  return 0;
+}
+
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size) {
   return 0;
 }

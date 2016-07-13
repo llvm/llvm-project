@@ -16,6 +16,7 @@
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -154,11 +155,11 @@ createSymbolIndexManager(StringRef FilePath) {
 
 void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
   OS << "{\n"
-        "  \"SymbolIdentifier\": \"" << Context.SymbolIdentifier << "\",\n"
+        "  \"SymbolIdentifier\": \"" << Context.getSymbolIdentifier() << "\",\n"
         "  \"Headers\": [ ";
-  for (const auto &Header : Context.Headers) {
+  for (const auto &Header : Context.getHeaders()) {
     OS << " \"" << llvm::yaml::escape(Header) << "\"";
-    if (Header != Context.Headers.back())
+    if (Header != Context.getHeaders().back())
       OS << ", ";
   }
   OS << " ]\n"
@@ -203,17 +204,25 @@ int includeFixerMain(int argc, const char **argv) {
     IncludeFixerContext Context;
     yin >> Context;
 
-    if (Context.Headers.size() != 1) {
+    if (Context.getHeaders().size() != 1) {
       errs() << "Expect exactly one inserted header.\n";
       return 1;
     }
 
-    tooling::Replacements Replacements =
-        clang::include_fixer::createInsertHeaderReplacements(
-            Code->getBuffer(), FilePath, Context.Headers[0], InsertStyle);
-    std::string ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), Replacements);
-    llvm::outs() << ChangedCode;
+    auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
+        Code->getBuffer(), FilePath, Context.getHeaders().front(), InsertStyle);
+    if (!Replacements) {
+      errs() << "Failed to create header insertion replacement: "
+             << llvm::toString(Replacements.takeError()) << "\n";
+      return 1;
+    }
+    auto ChangedCode =
+        tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
+    if (!ChangedCode) {
+      llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+      return 1;
+    }
+    llvm::outs() << *ChangedCode;
     return 0;
   }
 
@@ -239,7 +248,7 @@ int includeFixerMain(int argc, const char **argv) {
     return 0;
   }
 
-  if (Context.Headers.empty())
+  if (Context.getMatchedSymbols().empty())
     return 0;
 
   auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
@@ -249,13 +258,21 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   // FIXME: Rank the results and pick the best one instead of the first one.
-  tooling::Replacements Replacements =
-      clang::include_fixer::createInsertHeaderReplacements(
-          /*Code=*/Buffer.get()->getBuffer(), FilePath, Context.Headers.front(),
-          InsertStyle);
+  auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
+      /*Code=*/Buffer.get()->getBuffer(), FilePath,
+      Context.getHeaders().front(), InsertStyle);
+  if (!Replacements) {
+    errs() << "Failed to create header insertion replacement: "
+           << llvm::toString(Replacements.takeError()) << "\n";
+    return 1;
+  }
 
   if (!Quiet)
-    llvm::errs() << "Added #include" << Context.Headers.front();
+    llvm::errs() << "Added #include" << Context.getHeaders().front();
+
+  // Add missing namespace qualifiers to the unidentified symbol.
+  if (Context.getSymbolRange().getLength() > 0)
+    Replacements->insert(Context.createSymbolReplacement(FilePath, 0));
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
@@ -265,15 +282,19 @@ int includeFixerMain(int argc, const char **argv) {
   Diagnostics.setClient(&DiagnosticPrinter, false);
 
   if (STDINMode) {
-    std::string ChangedCode =
-        tooling::applyAllReplacements(Code->getBuffer(), Replacements);
-    llvm::outs() << ChangedCode;
+    auto ChangedCode =
+        tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
+    if (!ChangedCode) {
+      llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+      return 1;
+    }
+    llvm::outs() << *ChangedCode;
     return 0;
   }
 
   // Write replacements to disk.
   Rewriter Rewrites(SM, LangOptions());
-  tooling::applyAllReplacements(Replacements, Rewrites);
+  tooling::applyAllReplacements(*Replacements, Rewrites);
   return Rewrites.overwriteChangedFiles();
 }
 

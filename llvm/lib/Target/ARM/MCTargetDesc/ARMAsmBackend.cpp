@@ -258,7 +258,9 @@ bool ARMAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
   return reasonForFixupRelaxation(Fixup, Value);
 }
 
-void ARMAsmBackend::relaxInstruction(const MCInst &Inst, MCInst &Res) const {
+void ARMAsmBackend::relaxInstruction(const MCInst &Inst,
+                                     const MCSubtargetInfo &STI,
+                                     MCInst &Res) const {
   unsigned RelaxedOp = getRelaxedOpcode(Inst.getOpcode());
 
   // Sanity check w/ diagnostic if we get here w/ a bogus instruction.

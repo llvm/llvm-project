@@ -40,8 +40,13 @@ struct R600RegisterInfo final : public AMDGPURegisterInfo {
   const RegClassWeight &
     getRegClassWeight(const TargetRegisterClass *RC) const override;
 
-  // \returns true if \p Reg can be defined in one ALU caluse and used in another.
+  // \returns true if \p Reg can be defined in one ALU clause and used in
+  // another.
   bool isPhysRegLiveAcrossClauses(unsigned Reg) const;
+
+  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+                           unsigned FIOperandNum,
+                           RegScavenger *RS = nullptr) const override;
 };
 
 } // End namespace llvm

@@ -1,4 +1,6 @@
-def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddrMM", [frameindex]>;
+def addrimm11 : ComplexPattern<iPTR, 2, "selectIntAddr11MM", [frameindex]>;
+def addrimm12 : ComplexPattern<iPTR, 2, "selectIntAddr12MM", [frameindex]>;
+def addrimm16 : ComplexPattern<iPTR, 2, "selectIntAddr16MM", [frameindex]>;
 def addrimm4lsl2 : ComplexPattern<iPTR, 2, "selectIntAddrLSL2MM", [frameindex]>;
 
 def simm9_addiusp : Operand<i32> {
@@ -106,6 +108,14 @@ def mem_mm_9 : Operand<i32> {
   let OperandType = "OPERAND_MEMORY";
 }
 
+def mem_mm_11 : Operand<i32> {
+  let PrintMethod = "printMemOperand";
+  let MIOperandInfo = (ops GPR32, simm11);
+  let EncoderMethod = "getMemEncodingMMImm11";
+  let ParserMatchClass = MipsMemSimm11AsmOperand;
+  let OperandType = "OPERAND_MEMORY";
+}
+
 def mem_mm_12 : Operand<i32> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, simm12);
@@ -118,7 +128,7 @@ def mem_mm_16 : Operand<i32> {
   let PrintMethod = "printMemOperand";
   let MIOperandInfo = (ops ptr_rc, simm16);
   let EncoderMethod = "getMemEncodingMMImm16";
-  let ParserMatchClass = MipsMemAsmOperand;
+  let ParserMatchClass = MipsMemSimm16AsmOperand;
   let OperandType = "OPERAND_MEMORY";
 }
 
@@ -740,8 +750,8 @@ let DecoderNamespace = "MicroMips", Predicates = [InMicroMips] in {
 
   /// Load and Store Instructions - aligned
   let DecoderMethod = "DecodeMemMMImm16" in {
-    def LB_MM  : Load<"lb", GPR32Opnd>, MMRel, LW_FM_MM<0x7>;
-    def LBu_MM : Load<"lbu", GPR32Opnd>, MMRel, LW_FM_MM<0x5>;
+    def LB_MM  : LoadMemory<"lb", GPR32Opnd, mem_mm_16>, MMRel, LW_FM_MM<0x7>;
+    def LBu_MM : LoadMemory<"lbu", GPR32Opnd, mem_mm_16>, MMRel, LW_FM_MM<0x5>;
     def LH_MM  : LoadMemory<"lh", GPR32Opnd, mem_simm16, sextloadi16, II_LH,
                             addrDefault>, MMRel, LW_FM_MM<0xf>;
     def LHu_MM : LoadMemory<"lhu", GPR32Opnd, mem_simm16, zextloadi16, II_LHU>,

@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstrBundle.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -126,6 +127,19 @@ LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
 #endif
 }
 
+bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
+                             unsigned Reg) const {
+  if (LiveRegs.count(Reg))
+    return false;
+  if (MRI.isReserved(Reg))
+    return false;
+  for (MCRegAliasIterator R(Reg, TRI, false); R.isValid(); ++R) {
+    if (LiveRegs.count(*R))
+      return false;
+  }
+  return true;
+}
+
 /// Add live-in registers of basic block \p MBB to \p LiveRegs.
 static void addLiveIns(LivePhysRegs &LiveRegs, const MachineBasicBlock &MBB) {
   for (const auto &LI : MBB.liveins())
@@ -153,12 +167,13 @@ void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
   const MachineFrameInfo &MFI = *MF.getFrameInfo();
   if (MFI.isCalleeSavedInfoValid()) {
-    addPristines(*this, MF, MFI, *TRI);
     if (MBB.isReturnBlock()) {
       // The return block has no successors whose live-ins we could merge
       // below. So instead we add the callee saved registers manually.
       for (const MCPhysReg *I = TRI->getCalleeSavedRegs(&MF); *I; ++I)
         addReg(*I);
+    } else {
+      addPristines(*this, MF, MFI, *TRI);
     }
   }
 

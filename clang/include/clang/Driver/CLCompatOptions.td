@@ -166,6 +166,8 @@ def _SLASH_Zc_trigraphs_off : CLFlag<"Zc:trigraphs-">,
   HelpText<"Disable trigraphs (default)">, Alias<fno_trigraphs>;
 def _SLASH_Z7 : CLFlag<"Z7">,
   HelpText<"Enable CodeView debug information in object files">;
+def _SLASH_Zd : CLFlag<"Zd">,
+  HelpText<"Emit debug line number tables only">;
 def _SLASH_Zi : CLFlag<"Zi">, Alias<_SLASH_Z7>,
   HelpText<"Alias for /Z7. Does not produce PDBs.">;
 def _SLASH_Zp : CLJoined<"Zp">,

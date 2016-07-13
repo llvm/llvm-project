@@ -257,13 +257,16 @@ static bool format(StringRef FileName) {
   unsigned CursorPosition = Cursor;
   Replacements Replaces = sortIncludes(FormatStyle, Code->getBuffer(), Ranges,
                                        AssumedFileName, &CursorPosition);
-  std::string ChangedCode =
-      tooling::applyAllReplacements(Code->getBuffer(), Replaces);
+  auto ChangedCode = tooling::applyAllReplacements(Code->getBuffer(), Replaces);
+  if (!ChangedCode) {
+    llvm::errs() << llvm::toString(ChangedCode.takeError()) << "\n";
+    return true;
+  }
   for (const auto &R : Replaces)
     Ranges.push_back({R.getOffset(), R.getLength()});
 
   bool IncompleteFormat = false;
-  Replacements FormatChanges = reformat(FormatStyle, ChangedCode, Ranges,
+  Replacements FormatChanges = reformat(FormatStyle, *ChangedCode, Ranges,
                                         AssumedFileName, &IncompleteFormat);
   Replaces = tooling::mergeReplacements(Replaces, FormatChanges);
   if (OutputXML) {

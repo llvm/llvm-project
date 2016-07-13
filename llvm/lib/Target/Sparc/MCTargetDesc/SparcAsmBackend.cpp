@@ -248,7 +248,8 @@ namespace {
       llvm_unreachable("fixupNeedsRelaxation() unimplemented");
       return false;
     }
-    void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {
+    void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                          MCInst &Res) const override {
       // FIXME.
       llvm_unreachable("relaxInstruction() unimplemented");
     }

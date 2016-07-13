@@ -47,7 +47,8 @@ public:
 
   bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
 
-  void relaxInstruction(const MCInst &Inst, MCInst &Res) const override {}
+  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
+                        MCInst &Res) const override {}
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };

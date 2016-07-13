@@ -397,6 +397,8 @@ Fixed Point Facility:
     (set f128:$vT, (int_ppc_vsx_xsxsigqp f128$vB))  // xsxsigqp
 
 - Vector Insert Word: xxinsertw
+  - Useful for inserting f32/i32 elements into vectors (the element to be
+    inserted needs to be prepared)
   . Note: llvm has insertelem in "Vector Operations"
     ; yields <n x <ty>>
     <result> = insertelement <n x <ty>> <val>, <ty> <elt>, <ty2> <idx>
@@ -409,6 +411,10 @@ Fixed Point Facility:
     (set v1f128:$XT, (int_ppc_vsx_xxinsertw v1f128:$XTi, f128:$XB, i4:$UIMM))
 
 - Vector Extract Unsigned Word: xxextractuw
+  - Not useful for extraction of f32 from v4f32 (the current pattern is better -
+    shift->convert)
+  - It is useful for (uint_to_fp (vector_extract v4i32, N))
+  - Unfortunately, it can't be used for (sint_to_fp (vector_extract v4i32, N))
   . Note: llvm has extractelement in "Vector Operations"
     ; yields <ty>
     <result> = extractelement <n x <ty>> <val>, <ty2> <idx>

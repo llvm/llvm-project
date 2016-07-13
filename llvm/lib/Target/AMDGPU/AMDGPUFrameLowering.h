@@ -36,11 +36,6 @@ public:
   int getFrameIndexReference(const MachineFunction &MF, int FI,
                              unsigned &FrameReg) const override;
 
-  const SpillSlot *getCalleeSavedSpillSlots(unsigned &NumEntries) const override {
-    NumEntries = 0;
-    return nullptr;
-  }
-
   bool hasFP(const MachineFunction &MF) const override {
     return false;
   }

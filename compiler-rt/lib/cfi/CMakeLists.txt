@@ -1,4 +1,5 @@
 add_custom_target(cfi)
+set_target_properties(cfi PROPERTIES FOLDER "Compiler-RT Misc")
 
 set(CFI_SOURCES cfi.cc)
 

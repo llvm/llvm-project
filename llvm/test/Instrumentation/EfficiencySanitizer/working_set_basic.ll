@@ -90,6 +90,27 @@ entry:
 ; CHECK-NEXT:   ret i64 %tmp1
 }
 
+define i128 @aligned16(i128* %a) {
+entry:
+  %tmp1 = load i128, i128* %a, align 16
+  ret i128 %tmp1
+; CHECK:        %0 = ptrtoint i128* %a to i64
+; CHECK-NEXT:   %1 = and i64 %0, 17592186044415
+; CHECK-NEXT:   %2 = add i64 %1, 1337006139375616
+; CHECK-NEXT:   %3 = lshr i64 %2, 6
+; CHECK-NEXT:   %4 = inttoptr i64 %3 to i8*
+; CHECK-NEXT:   %5 = load i8, i8* %4
+; CHECK-NEXT:   %6 = and i8 %5, -127
+; CHECK-NEXT:   %7 = icmp ne i8 %6, -127
+; CHECK-NEXT:   br i1 %7, label %8, label %11
+; CHECK:        %9 = or i8 %5, -127
+; CHECK-NEXT:   %10 = inttoptr i64 %3 to i8*
+; CHECK-NEXT:   store i8 %9, i8* %10
+; CHECK-NEXT:   br label %11
+; CHECK:        %tmp1 = load i128, i128* %a, align 16
+; CHECK-NEXT:   ret i128 %tmp1
+}
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Not guaranteed to be intra-cache-line, but our defaults are to
 ; assume they are:
@@ -155,6 +176,27 @@ entry:
 ; CHECK-NEXT:   br label %11
 ; CHECK:        %tmp1 = load i64, i64* %a, align 4
 ; CHECK-NEXT:   ret i64 %tmp1
+}
+
+define i128 @unaligned16(i128* %a) {
+entry:
+  %tmp1 = load i128, i128* %a, align 8
+  ret i128 %tmp1
+; CHECK:        %0 = ptrtoint i128* %a to i64
+; CHECK-NEXT:   %1 = and i64 %0, 17592186044415
+; CHECK-NEXT:   %2 = add i64 %1, 1337006139375616
+; CHECK-NEXT:   %3 = lshr i64 %2, 6
+; CHECK-NEXT:   %4 = inttoptr i64 %3 to i8*
+; CHECK-NEXT:   %5 = load i8, i8* %4
+; CHECK-NEXT:   %6 = and i8 %5, -127
+; CHECK-NEXT:   %7 = icmp ne i8 %6, -127
+; CHECK-NEXT:   br i1 %7, label %8, label %11
+; CHECK:        %9 = or i8 %5, -127
+; CHECK-NEXT:   %10 = inttoptr i64 %3 to i8*
+; CHECK-NEXT:   store i8 %9, i8* %10
+; CHECK-NEXT:   br label %11
+; CHECK:        %tmp1 = load i128, i128* %a, align 8
+; CHECK-NEXT:   ret i128 %tmp1
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

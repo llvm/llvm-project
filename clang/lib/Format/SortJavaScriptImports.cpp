@@ -105,8 +105,8 @@ bool operator<(const JsModuleReference &LHS, const JsModuleReference &RHS) {
   // Empty URLs sort *last* (for export {...};).
   if (LHS.URL.empty() != RHS.URL.empty())
     return LHS.URL.empty() < RHS.URL.empty();
-  if (LHS.URL != RHS.URL)
-    return LHS.URL < RHS.URL;
+  if (int Res = LHS.URL.compare_lower(RHS.URL))
+    return Res < 0;
   // '*' imports (with prefix) sort before {a, b, ...} imports.
   if (LHS.Prefix.empty() != RHS.Prefix.empty())
     return LHS.Prefix.empty() < RHS.Prefix.empty();
@@ -245,7 +245,7 @@ private:
     std::stable_sort(
         Symbols.begin(), Symbols.end(),
         [&](const JsImportedSymbol &LHS, const JsImportedSymbol &RHS) {
-          return LHS.Symbol < RHS.Symbol;
+          return LHS.Symbol.compare_lower(RHS.Symbol) < 0;
         });
     if (Symbols == Reference.Symbols) {
       // No change in symbol order.
@@ -396,6 +396,8 @@ private:
     // {sym as alias, sym2 as ...} from '...';
     nextToken();
     while (true) {
+      if (Current->is(tok::r_brace))
+        return true;
       if (Current->isNot(tok::identifier))
         return false;
 

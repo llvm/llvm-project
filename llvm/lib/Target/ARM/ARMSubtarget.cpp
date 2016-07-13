@@ -219,6 +219,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case CortexA15:
     MaxInterleaveFactor = 2;
     PreISelOperandLatencyAdjustment = 1;
+    PartialUpdateClearance = 12;
     break;
   case CortexA17:
   case CortexA32:
@@ -241,6 +242,7 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     MaxInterleaveFactor = 2;
     LdStMultipleTiming = SingleIssuePlusExtras;
     PreISelOperandLatencyAdjustment = 1;
+    PartialUpdateClearance = 12;
     break;
   }
 }

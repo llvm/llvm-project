@@ -2,45 +2,61 @@
 #include <stdio.h>
 #include "omp_testsuite.h"
 
-int my_iterations;
-#pragma omp threadprivate(my_iterations)
+/*
+ * This test will hang if the nowait is not working properly
+ *
+ * It relies on a one thread skipping to the last single construct to
+ * release the threads in the first three single constructs
+ */
+volatile int release;
+volatile int count;
+
+void wait_for_release_then_increment(int rank)
+{
+  fprintf(stderr, "Thread nr %d enters first section"
+    " and waits.\n", rank);
+  while (release == 0);
+  #pragma omp atomic
+  count++;
+}
+
+void release_and_increment(int rank)
+{
+  fprintf(stderr, "Thread nr %d sets release to 1\n", rank);
+  release = 1;
+  #pragma omp atomic
+  count++;
+}
 
 int test_omp_single_nowait()
 {
-  int nr_iterations;
-  int total_iterations = 0;
-  int i;
+  release = 0;
+  count = 0;
 
-  nr_iterations = 0;
-  my_iterations = 0;
-
-  #pragma omp parallel private(i)
+  #pragma omp parallel num_threads(4)
   {
-    for (i = 0; i < LOOPCOUNT; i++) {
-      #pragma omp single nowait
-      {
-        #pragma omp atomic
-        nr_iterations++;
-      }
-    }
-  }
-
-  #pragma omp parallel private(i)
-  {
-    my_iterations = 0;
-    for (i = 0; i < LOOPCOUNT; i++) {
-      #pragma omp single nowait
-      {
-        my_iterations++;
-      }
-    }
-    #pragma omp critical
+    int rank;
+    rank = omp_get_thread_num ();
+    #pragma omp single nowait
     {
-      total_iterations += my_iterations;
+      wait_for_release_then_increment(rank);
+    }
+    #pragma omp single nowait
+    {
+      wait_for_release_then_increment(rank);
+    }
+    #pragma omp single nowait
+    {
+      wait_for_release_then_increment(rank);
     }
 
+    #pragma omp single
+    {
+      release_and_increment(rank);
+    }
   }
-  return ((nr_iterations == LOOPCOUNT) && (total_iterations == LOOPCOUNT));
+  // Check to make sure all four singles were executed
+  return (count==4);
 } /* end of check_single_nowait*/
 
 int main()

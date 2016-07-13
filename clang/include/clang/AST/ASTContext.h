@@ -825,6 +825,9 @@ public:
   overridden_methods_end(const CXXMethodDecl *Method) const;
 
   unsigned overridden_methods_size(const CXXMethodDecl *Method) const;
+  typedef llvm::iterator_range<overridden_cxx_method_iterator>
+      overridden_method_range;
+  overridden_method_range overridden_methods(const CXXMethodDecl *Method) const;
 
   /// \brief Note that the given C++ \p Method overrides the given \p
   /// Overridden method.
@@ -1234,13 +1237,12 @@ public:
                           TemplateTypeParmDecl *ParmDecl = nullptr) const;
 
   QualType getTemplateSpecializationType(TemplateName T,
-                                         const TemplateArgument *Args,
-                                         unsigned NumArgs,
+                                         ArrayRef<TemplateArgument> Args,
                                          QualType Canon = QualType()) const;
 
-  QualType getCanonicalTemplateSpecializationType(TemplateName T,
-                                                  const TemplateArgument *Args,
-                                                  unsigned NumArgs) const;
+  QualType
+  getCanonicalTemplateSpecializationType(TemplateName T,
+                                         ArrayRef<TemplateArgument> Args) const;
 
   QualType getTemplateSpecializationType(TemplateName T,
                                          const TemplateArgumentListInfo &Args,
@@ -1265,11 +1267,9 @@ public:
                                                   NestedNameSpecifier *NNS,
                                                   const IdentifierInfo *Name,
                                     const TemplateArgumentListInfo &Args) const;
-  QualType getDependentTemplateSpecializationType(ElaboratedTypeKeyword Keyword,
-                                                  NestedNameSpecifier *NNS,
-                                                  const IdentifierInfo *Name,
-                                                  unsigned NumArgs,
-                                            const TemplateArgument *Args) const;
+  QualType getDependentTemplateSpecializationType(
+      ElaboratedTypeKeyword Keyword, NestedNameSpecifier *NNS,
+      const IdentifierInfo *Name, ArrayRef<TemplateArgument> Args) const;
 
   QualType getPackExpansionType(QualType Pattern,
                                 Optional<unsigned> NumExpansions);

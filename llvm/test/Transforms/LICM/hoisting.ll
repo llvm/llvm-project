@@ -1,4 +1,5 @@
 ; RUN: opt < %s -licm -S | FileCheck %s
+; RUN: opt -lcssa %s | opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,loop(licm)' -S | FileCheck %s
 
 @X = global i32 0		; <i32*> [#uses=1]
 

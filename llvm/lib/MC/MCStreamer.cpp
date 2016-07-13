@@ -70,6 +70,9 @@ raw_ostream &MCStreamer::GetCommentOS() {
 
 void MCStreamer::emitRawComment(const Twine &T, bool TabPrefix) {}
 
+void MCStreamer::addExplicitComment(const Twine &T) {}
+void MCStreamer::emitExplicitComments() {}
+
 void MCStreamer::generateCompactUnwindEncodings(MCAsmBackend *MAB) {
   for (auto &FI : DwarfFrameInfos)
     FI.CompactUnwindEncoding =

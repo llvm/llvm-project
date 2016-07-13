@@ -21,20 +21,24 @@ class LinuxCoreTestCase(TestBase):
     _x86_64_pid = 32259
     _s390x_pid  = 1045
 
+    _i386_regions   = 4
+    _x86_64_regions = 5
+    _s390x_regions  = 2
+
     @skipIf(bugnumber="llvm.org/pr26947")
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
-        self.do_test("i386", self._i386_pid)
+        self.do_test("i386", self._i386_pid, self._i386_regions)
 
     def test_x86_64(self):
         """Test that lldb can read the process information from an x86_64 linux core file."""
-        self.do_test("x86_64", self._x86_64_pid)
+        self.do_test("x86_64", self._x86_64_pid, self._x86_64_regions)
 
     # This seems to hang on non-s390x platforms for some reason.  Disabling for now.
     @skipIf(archs=no_match(['s390x'])) 
     def test_s390x(self):
         """Test that lldb can read the process information from an s390x linux core file."""
-        self.do_test("s390x", self._s390x_pid)
+        self.do_test("s390x", self._s390x_pid, self._s390x_regions)
 
     def test_same_pid_running(self):
         """Test that we read the information from the core correctly even if we have a running
@@ -53,7 +57,7 @@ class LinuxCoreTestCase(TestBase):
                     # We insert our own pid, and make sure the test still works.
                     f.seek(pid_offset)
                     f.write(struct.pack("<I", os.getpid()))
-            self.do_test("x86_64-pid", os.getpid())
+            self.do_test("x86_64-pid", os.getpid(), self._x86_64_regions)
         finally:
             self.RemoveTempFile("x86_64-pid.out")
             self.RemoveTempFile("x86_64-pid.core")
@@ -78,9 +82,64 @@ class LinuxCoreTestCase(TestBase):
 
         # without destroying this process, run the test which opens another core file with the
         # same pid
-        self.do_test("x86_64", self._x86_64_pid)
+        self.do_test("x86_64", self._x86_64_pid, self._x86_64_regions)
 
-    def do_test(self, filename, pid):
+    def check_memory_regions(self, process, region_count):
+        region_list = process.GetMemoryRegions()
+        self.assertEqual(region_list.GetSize(), region_count)
+
+        region = lldb.SBMemoryRegionInfo()
+
+        # Check we have the right number of regions.
+        self.assertEqual(region_list.GetSize(), region_count);
+
+        # Check that getting a region beyond the last in the list fails.
+        self.assertFalse(region_list.GetMemoryRegionAtIndex(region_count, region));
+
+        # Check each region is valid.
+        for i in range(region_list.GetSize()):
+            # Check we can actually get this region.
+            self.assertTrue(region_list.GetMemoryRegionAtIndex(i, region))
+
+            #Every region in the list should be mapped.
+            self.assertTrue(region.IsMapped())
+
+            # Test the address at the start of a region returns it's enclosing region.
+            begin_address = region.GetRegionBase()
+            region_at_begin = lldb.SBMemoryRegionInfo()
+            error = process.GetMemoryRegionInfo(begin_address, region_at_begin)
+            self.assertEqual(region, region_at_begin)
+
+            # Test an address in the middle of a region returns it's enclosing region.
+            middle_address = (region.GetRegionBase() + region.GetRegionEnd()) / 2l
+            region_at_middle = lldb.SBMemoryRegionInfo()
+            error = process.GetMemoryRegionInfo(middle_address, region_at_middle)
+            self.assertEqual(region, region_at_middle)
+
+            # Test the address at the end of a region returns it's enclosing region.
+            end_address = region.GetRegionEnd() - 1l
+            region_at_end = lldb.SBMemoryRegionInfo()
+            error = process.GetMemoryRegionInfo(end_address, region_at_end)
+            self.assertEqual(region, region_at_end)
+
+            # Check that quering the end address does not return this region but
+            # the next one.
+            next_region = lldb.SBMemoryRegionInfo()
+            error = process.GetMemoryRegionInfo(region.GetRegionEnd(), next_region)
+            self.assertNotEqual(region, next_region)
+            self.assertEqual(region.GetRegionEnd(), next_region.GetRegionBase())
+
+        # Check that query beyond the last region returns an unmapped region
+        # that ends at LLDB_INVALID_ADDRESS
+        last_region = lldb.SBMemoryRegionInfo()
+        region_list.GetMemoryRegionAtIndex(region_count - 1, last_region)
+        end_region = lldb.SBMemoryRegionInfo()
+        error = process.GetMemoryRegionInfo(last_region.GetRegionEnd(), end_region)
+        self.assertFalse(end_region.IsMapped())
+        self.assertEqual(last_region.GetRegionEnd(), end_region.GetRegionBase())
+        self.assertEqual(end_region.GetRegionEnd(), lldb.LLDB_INVALID_ADDRESS)
+
+    def do_test(self, filename, pid, region_count):
         target = self.dbg.CreateTarget(filename + ".out")
         process = target.LoadCore(filename + ".core")
         self.assertTrue(process, PROCESS_IS_VALID)
@@ -99,5 +158,7 @@ class LinuxCoreTestCase(TestBase):
             self.assertEqual(frame.GetLineEntry().GetLine(),
                     line_number("main.c", "Frame " + backtrace[i]))
             self.assertEqual(frame.FindVariable("F").GetValueAsUnsigned(), ord(backtrace[i][0]))
+
+        self.check_memory_regions(process, region_count)
 
         self.dbg.DeleteTarget(target)

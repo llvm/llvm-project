@@ -46,6 +46,55 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
+# RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
+# RUN: echo "VERSION_1.0{      \
+# RUN:          global: foo2;  \
+# RUN:          local: *; };   \
+# RUN:       VERSION_2.0{      \
+# RUN:          global: foo*;  \
+# RUN:       }; " > %t2.script
+# RUN: ld.lld --version-script %t2.script -shared %t.o -o %t2.so
+# RUN: llvm-readobj -dyn-symbols %t2.so | FileCheck --check-prefix=MIX %s
+
+# MIX:      DynamicSymbols [
+# MIX-NEXT:   Symbol {
+# MIX-NEXT:     Name: @
+# MIX-NEXT:     Value: 0x0
+# MIX-NEXT:     Size: 0
+# MIX-NEXT:     Binding: Local
+# MIX-NEXT:     Type: None
+# MIX-NEXT:     Other: 0
+# MIX-NEXT:     Section: Undefined
+# MIX-NEXT:   }
+# MIX-NEXT:   Symbol {
+# MIX-NEXT:     Name: foo1@@VERSION_2.0
+# MIX-NEXT:     Value: 0x1000
+# MIX-NEXT:     Size: 0
+# MIX-NEXT:     Binding: Global
+# MIX-NEXT:     Type: None
+# MIX-NEXT:     Other: 0
+# MIX-NEXT:     Section: .text
+# MIX-NEXT:   }
+# MIX-NEXT:   Symbol {
+# MIX-NEXT:     Name: foo2@@VERSION_1.0
+# MIX-NEXT:     Value: 0x1001
+# MIX-NEXT:     Size: 0
+# MIX-NEXT:     Binding: Global
+# MIX-NEXT:     Type: None
+# MIX-NEXT:     Other: 0
+# MIX-NEXT:     Section: .text
+# MIX-NEXT:   }
+# MIX-NEXT:   Symbol {
+# MIX-NEXT:     Name: foo3@@VERSION_2.0
+# MIX-NEXT:     Value: 0x1007
+# MIX-NEXT:     Size: 0
+# MIX-NEXT:     Binding: Global
+# MIX-NEXT:     Type: None
+# MIX-NEXT:     Other: 0
+# MIX-NEXT:     Section: .text
+# MIX-NEXT:   }
+# MIX-NEXT: ]
+
 .globl foo1
 foo1:
   ret

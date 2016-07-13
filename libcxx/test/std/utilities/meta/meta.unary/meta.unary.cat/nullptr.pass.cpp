@@ -51,7 +51,7 @@ int main()
 {
     test_nullptr<std::nullptr_t>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_null_pointer<incomplete_type>::value, "");
 }
 #else

@@ -6,10 +6,10 @@ declare i64 @llvm.ctpop.i64(i64) nounwind readnone
 define i32 @test1(i64 %x) nounwind readnone {
 ; CHECK-LABEL: test1:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    leaq -1(%rdi), %rax
-; CHECK-NEXT:    testq %rax, %rdi
+; CHECK-NEXT:    leaq -1(%rdi), %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testq %rcx, %rdi
 ; CHECK-NEXT:    setne %al
-; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cast = trunc i64 %count to i32
@@ -22,10 +22,10 @@ define i32 @test1(i64 %x) nounwind readnone {
 define i32 @test2(i64 %x) nounwind readnone {
 ; CHECK-LABEL: test2:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    leaq -1(%rdi), %rax
-; CHECK-NEXT:    testq %rax, %rdi
+; CHECK-NEXT:    leaq -1(%rdi), %rcx
+; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    testq %rcx, %rdi
 ; CHECK-NEXT:    sete %al
-; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    retq
   %count = tail call i64 @llvm.ctpop.i64(i64 %x)
   %cmp = icmp ult i64 %count, 2

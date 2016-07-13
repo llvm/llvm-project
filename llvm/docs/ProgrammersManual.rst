@@ -480,7 +480,7 @@ The ``function_ref`` class template
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The ``function_ref``
-(`doxygen <http://llvm.org/doxygen/classllvm_1_1function_ref.html>`__) class
+(`doxygen <http://llvm.org/docs/doxygen/html/classllvm_1_1function__ref_3_01Ret_07Params_8_8_8_08_4.html>`__) class
 template represents a reference to a callable object, templated over the type
 of the callable. This is a good choice for passing a callback to a function,
 if you don't need to hold onto the callback after the function returns. In this
@@ -2221,7 +2221,7 @@ sequence of instructions that form a ``BasicBlock``:
     CallInst* callTwo = Builder.CreateCall(...);
     Value* result = Builder.CreateMul(callOne, callTwo);
 
-  See :doc:`tutorial/LangImpl3` for a practical use of the ``IRBuilder``.
+  See :doc:`tutorial/LangImpl03` for a practical use of the ``IRBuilder``.
 
 
 .. _schanges_deleting:

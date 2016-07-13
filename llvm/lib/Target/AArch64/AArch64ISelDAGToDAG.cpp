@@ -2172,7 +2172,8 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
     SDValue Dst, Src;
     unsigned ImmR, ImmS;
     bool BiggerPattern = I / 2;
-    SDNode *OrOpd0 = N->getOperand(I % 2).getNode();
+    SDValue OrOpd0Val = N->getOperand(I % 2);
+    SDNode *OrOpd0 = OrOpd0Val.getNode();
     SDValue OrOpd1Val = N->getOperand((I + 1) % 2);
     SDNode *OrOpd1 = OrOpd1Val.getNode();
 
@@ -2197,7 +2198,7 @@ static bool tryBitfieldInsertOpFromOr(SDNode *N, const APInt &UsefulBits,
 
       // If the mask on the insertee is correct, we have a BFXIL operation. We
       // can share the ImmR and ImmS values from the already-computed UBFM.
-    } else if (isBitfieldPositioningOp(CurDAG, SDValue(OrOpd0, 0),
+    } else if (isBitfieldPositioningOp(CurDAG, OrOpd0Val,
                                        BiggerPattern,
                                        Src, DstLSB, Width)) {
       ImmR = (BitWidth - DstLSB) % BitWidth;
@@ -2437,12 +2438,14 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
 
   // Use the sysreg mapper to map the remaining possible strings to the
   // value for the register to be used for the instruction operand.
-  AArch64SysReg::MRSMapper mapper;
-  bool IsValidSpecialReg;
-  Reg = mapper.fromString(RegString->getString(),
-                          Subtarget->getFeatureBits(),
-                          IsValidSpecialReg);
-  if (IsValidSpecialReg) {
+  auto TheReg = AArch64SysReg::lookupSysRegByName(RegString->getString());
+  if (TheReg && TheReg->Readable &&
+      TheReg->haveFeatures(Subtarget->getFeatureBits()))
+    Reg = TheReg->Encoding;
+  else
+    Reg = AArch64SysReg::parseGenericRegister(RegString->getString());
+
+  if (Reg != -1) {
     ReplaceNode(N, CurDAG->getMachineNode(
                        AArch64::MRS, DL, N->getSimpleValueType(0), MVT::Other,
                        CurDAG->getTargetConstant(Reg, DL, MVT::i32),
@@ -2476,14 +2479,11 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
   // pstatefield for the MSR (immediate) instruction, we also require that an
   // immediate value has been provided as an argument, we know that this is
   // the case as it has been ensured by semantic checking.
-  AArch64PState::PStateMapper PMapper;
-  bool IsValidSpecialReg;
-  Reg = PMapper.fromString(RegString->getString(),
-                           Subtarget->getFeatureBits(),
-                           IsValidSpecialReg);
-  if (IsValidSpecialReg) {
+  auto PMapper = AArch64PState::lookupPStateByName(RegString->getString());;
+  if (PMapper) {
     assert (isa<ConstantSDNode>(N->getOperand(2))
               && "Expected a constant integer expression.");
+    unsigned Reg = PMapper->Encoding;
     uint64_t Immed = cast<ConstantSDNode>(N->getOperand(2))->getZExtValue();
     unsigned State;
     if (Reg == AArch64PState::PAN || Reg == AArch64PState::UAO) {
@@ -2504,16 +2504,17 @@ bool AArch64DAGToDAGISel::tryWriteRegister(SDNode *N) {
   // Use the sysreg mapper to attempt to map the remaining possible strings
   // to the value for the register to be used for the MSR (register)
   // instruction operand.
-  AArch64SysReg::MSRMapper Mapper;
-  Reg = Mapper.fromString(RegString->getString(),
-                          Subtarget->getFeatureBits(),
-                          IsValidSpecialReg);
-
-  if (IsValidSpecialReg) {
-    ReplaceNode(
-        N, CurDAG->getMachineNode(AArch64::MSR, DL, MVT::Other,
-                                  CurDAG->getTargetConstant(Reg, DL, MVT::i32),
-                                  N->getOperand(2), N->getOperand(0)));
+  auto TheReg = AArch64SysReg::lookupSysRegByName(RegString->getString());
+  if (TheReg && TheReg->Writeable &&
+      TheReg->haveFeatures(Subtarget->getFeatureBits()))
+    Reg = TheReg->Encoding;
+  else
+    Reg = AArch64SysReg::parseGenericRegister(RegString->getString());
+  if (Reg != -1) {
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       AArch64::MSR, DL, MVT::Other,
+                       CurDAG->getTargetConstant(Reg, DL, MVT::i32),
+                       N->getOperand(2), N->getOperand(0)));
     return true;
   }
 

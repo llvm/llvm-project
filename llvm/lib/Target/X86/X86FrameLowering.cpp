@@ -699,7 +699,7 @@ MachineInstr *X86FrameLowering::emitStackProbeInline(
 
   // Possible TODO: physreg liveness for InProlog case.
 
-  return ContinueMBBI;
+  return &*ContinueMBBI;
 }
 
 MachineInstr *X86FrameLowering::emitStackProbeCall(
@@ -763,7 +763,7 @@ MachineInstr *X86FrameLowering::emitStackProbeCall(
       ExpansionMBBI->setFlag(MachineInstr::FrameSetup);
   }
 
-  return MBBI;
+  return &*MBBI;
 }
 
 MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
@@ -775,7 +775,7 @@ MachineInstr *X86FrameLowering::emitStackProbeInlineStub(
   BuildMI(MBB, MBBI, DL, TII.get(X86::CALLpcrel32))
       .addExternalSymbol("__chkstk_stub");
 
-  return MBBI;
+  return &*MBBI;
 }
 
 static unsigned calculateSetFPREG(uint64_t SPAdjust) {
@@ -1406,8 +1406,8 @@ bool X86FrameLowering::canUseLEAForSPInEpilogue(
   return !MF.getTarget().getMCAsmInfo()->usesWindowsCFI() || hasFP(MF);
 }
 
-static bool isFuncletReturnInstr(MachineInstr *MI) {
-  switch (MI->getOpcode()) {
+static bool isFuncletReturnInstr(MachineInstr &MI) {
+  switch (MI.getOpcode()) {
   case X86::CATCHRET:
   case X86::CLEANUPRET:
     return true;
@@ -1467,11 +1467,19 @@ X86FrameLowering::getWinEHFuncletFrameSize(const MachineFunction &MF) const {
   return FrameSizeMinusRBP - CSSize;
 }
 
+static bool isTailCallOpcode(unsigned Opc) {
+    return Opc == X86::TCRETURNri || Opc == X86::TCRETURNdi ||
+        Opc == X86::TCRETURNmi ||
+        Opc == X86::TCRETURNri64 || Opc == X86::TCRETURNdi64 ||
+        Opc == X86::TCRETURNmi64;
+}
+
 void X86FrameLowering::emitEpilogue(MachineFunction &MF,
                                     MachineBasicBlock &MBB) const {
   const MachineFrameInfo *MFI = MF.getFrameInfo();
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  unsigned RetOpcode = MBBI->getOpcode();
   DebugLoc DL;
   if (MBBI != MBB.end())
     DL = MBBI->getDebugLoc();
@@ -1484,7 +1492,7 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   bool IsWin64Prologue = MF.getTarget().getMCAsmInfo()->usesWindowsCFI();
   bool NeedsWinCFI =
       IsWin64Prologue && MF.getFunction()->needsUnwindTableEntry();
-  bool IsFunclet = isFuncletReturnInstr(MBBI);
+  bool IsFunclet = isFuncletReturnInstr(*MBBI);
   MachineBasicBlock *TargetMBB = nullptr;
 
   // Get the number of bytes to allocate from the FrameInfo.
@@ -1620,15 +1628,17 @@ void X86FrameLowering::emitEpilogue(MachineFunction &MF,
   if (NeedsWinCFI)
     BuildMI(MBB, MBBI, DL, TII.get(X86::SEH_Epilogue));
 
-  // Add the return addr area delta back since we are not tail calling.
-  int Offset = -1 * X86FI->getTCReturnAddrDelta();
-  assert(Offset >= 0 && "TCDelta should never be positive");
-  if (Offset) {
-    MBBI = MBB.getFirstTerminator();
+  if (!isTailCallOpcode(RetOpcode)) {
+    // Add the return addr area delta back since we are not tail calling.
+    int Offset = -1 * X86FI->getTCReturnAddrDelta();
+    assert(Offset >= 0 && "TCDelta should never be positive");
+    if (Offset) {
+      MBBI = MBB.getFirstTerminator();
 
-    // Check for possible merge with preceding ADD instruction.
-    Offset += mergeSPUpdates(MBB, MBBI, true);
-    emitSPUpdate(MBB, MBBI, Offset, /*InEpilogue=*/true);
+      // Check for possible merge with preceding ADD instruction.
+      Offset += mergeSPUpdates(MBB, MBBI, true);
+      emitSPUpdate(MBB, MBBI, Offset, /*InEpilogue=*/true);
+    }
   }
 }
 
@@ -1946,7 +1956,7 @@ bool X86FrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
   if (CSI.empty())
     return false;
 
-  if (isFuncletReturnInstr(MI) && STI.isOSWindows()) {
+  if (isFuncletReturnInstr(*MI) && STI.isOSWindows()) {
     // Don't restore CSRs in 32-bit EH funclets. Matches
     // spillCalleeSavedRegisters.
     if (STI.is32Bit())

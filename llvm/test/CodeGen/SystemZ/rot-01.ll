@@ -21,9 +21,9 @@ define i32 @f1(i32 %val, i32 %amt) {
 ; Test 64-bit rotate.
 define i64 @f2(i64 %val, i64 %amt) {
 ; CHECK-LABEL: f2:
-; CHECK: nill %r3, 63
+; CHECK: nill %r3, 31
 ; CHECK: rllg %r2, %r2, 0(%r3)
-  %mod = urem i64 %amt, 64
+  %mod = urem i64 %amt, 32
 
   %inv = sub i64 64, %mod
   %parta = shl i64 %val, %mod

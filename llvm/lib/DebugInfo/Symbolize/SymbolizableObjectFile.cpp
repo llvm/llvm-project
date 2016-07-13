@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolizableObjectFile.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/SymbolSize.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"

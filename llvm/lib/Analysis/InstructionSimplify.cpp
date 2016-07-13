@@ -621,6 +621,11 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
         break;
       V = GA->getAliasee();
     } else {
+      if (auto CS = CallSite(V))
+        if (Value *RV = CS.getReturnedArgOperand()) {
+          V = RV;
+          continue;
+        }
       break;
     }
     assert(V->getType()->getScalarType()->isPointerTy() &&

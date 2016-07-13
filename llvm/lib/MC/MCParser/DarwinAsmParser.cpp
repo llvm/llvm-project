@@ -959,8 +959,8 @@ bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc) {
     if (getLexer().isNot(AsmToken::Integer))
       return TokError("invalid OS update number");
     Update = getLexer().getTok().getIntVal();
-  if (Update > 255 || Update < 0)
-    return TokError("invalid OS update number");
+    if (Update > 255 || Update < 0)
+      return TokError("invalid OS update number");
     Lex();
   }
 

@@ -60,14 +60,23 @@ private:
   bool selectAddrRegImm10(SDValue Addr, SDValue &Base,
                           SDValue &Offset) const;
 
+  bool selectAddrRegImm11(SDValue Addr, SDValue &Base,
+                          SDValue &Offset) const;
+
   bool selectAddrRegImm12(SDValue Addr, SDValue &Base,
                           SDValue &Offset) const;
 
   bool selectAddrRegImm16(SDValue Addr, SDValue &Base,
                           SDValue &Offset) const;
 
-  bool selectIntAddrMM(SDValue Addr, SDValue &Base,
-                       SDValue &Offset) const override;
+  bool selectIntAddr11MM(SDValue Addr, SDValue &Base,
+                         SDValue &Offset) const override;
+
+  bool selectIntAddr12MM(SDValue Addr, SDValue &Base,
+                         SDValue &Offset) const override;
+
+  bool selectIntAddr16MM(SDValue Addr, SDValue &Base,
+                         SDValue &Offset) const override;
 
   bool selectIntAddrLSL2MM(SDValue Addr, SDValue &Base,
                            SDValue &Offset) const override;

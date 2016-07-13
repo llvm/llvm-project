@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SourceCoverageView.h"
+#include "SourceCoverageViewHTML.h"
 #include "SourceCoverageViewText.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -74,6 +75,8 @@ CoveragePrinter::create(const CoverageViewOptions &Opts) {
   switch (Opts.Format) {
   case CoverageViewOptions::OutputFormat::Text:
     return llvm::make_unique<CoveragePrinterText>(Opts);
+  case CoverageViewOptions::OutputFormat::HTML:
+    return llvm::make_unique<CoveragePrinterHTML>(Opts);
   }
   llvm_unreachable("Unknown coverage output format!");
 }
@@ -110,6 +113,9 @@ SourceCoverageView::create(StringRef SourceName, const MemoryBuffer &File,
   switch (Options.Format) {
   case CoverageViewOptions::OutputFormat::Text:
     return llvm::make_unique<SourceCoverageViewText>(SourceName, File, Options,
+                                                     std::move(CoverageInfo));
+  case CoverageViewOptions::OutputFormat::HTML:
+    return llvm::make_unique<SourceCoverageViewHTML>(SourceName, File, Options,
                                                      std::move(CoverageInfo));
   }
   llvm_unreachable("Unknown coverage output format!");

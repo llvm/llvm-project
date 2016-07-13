@@ -13,11 +13,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "IndirectCallSiteVisitor.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CFG.h"
+#include "llvm/Analysis/IndirectCallPromotionAnalysis.h"
+#include "llvm/Analysis/IndirectCallSiteVisitor.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
@@ -49,28 +50,6 @@ STATISTIC(NumOfPGOICallsites, "Number of indirect call candidate sites.");
 static cl::opt<bool> DisableICP("disable-icp", cl::init(false), cl::Hidden,
                                 cl::desc("Disable indirect call promotion"));
 
-// The minimum call count for the direct-call target to be considered as the
-// promotion candidate.
-static cl::opt<unsigned>
-    ICPCountThreshold("icp-count-threshold", cl::Hidden, cl::ZeroOrMore,
-                      cl::init(1000),
-                      cl::desc("The minimum count to the direct call target "
-                               "for the promotion"));
-
-// The percent threshold for the direct-call target (this call site vs the
-// total call count) for it to be considered as the promotion target.
-static cl::opt<unsigned>
-    ICPPercentThreshold("icp-percent-threshold", cl::init(33), cl::Hidden,
-                        cl::ZeroOrMore,
-                        cl::desc("The percentage threshold for the promotion"));
-
-// Set the maximum number of targets to promote for a single indirect-call
-// callsite.
-static cl::opt<unsigned>
-    MaxNumPromotions("icp-max-prom", cl::init(2), cl::Hidden, cl::ZeroOrMore,
-                     cl::desc("Max number of promotions for a single indirect "
-                              "call callsite"));
-
 // Set the cutoff value for the promotion. If the value is other than 0, we
 // stop the transformation once the total number of promotions equals the cutoff
 // value.
@@ -91,6 +70,7 @@ static cl::opt<unsigned>
 static cl::opt<bool> ICPLTOMode("icp-lto", cl::init(false), cl::Hidden,
                                 cl::desc("Run indirect-call promotion in LTO "
                                          "mode"));
+
 // If the option is set to true, only call instructions will be considered for
 // transformation -- invoke instructions will be ignored.
 static cl::opt<bool>
@@ -157,14 +137,6 @@ private:
   // defines.
   InstrProfSymtab *Symtab;
 
-  // Allocate space to read the profile annotation.
-  std::unique_ptr<InstrProfValueData[]> ValueDataArray;
-
-  // Count is the call count for the direct-call target and
-  // TotalCount is the call count for the indirect-call callsite.
-  // Return true we should promote this indirect-call target.
-  bool isPromotionProfitable(uint64_t Count, uint64_t TotalCount);
-
   enum TargetStatus {
     OK,                   // Should be able to promote.
     NotAvailableInModule, // Cannot find the target in current module.
@@ -185,10 +157,13 @@ private:
   };
 
   // Check if the indirect-call call site should be promoted. Return the number
-  // of promotions.
+  // of promotions. Inst is the candidate indirect call, ValueDataRef
+  // contains the array of value profile data for profiled targets,
+  // TotalCount is the total profiled count of call executions, and
+  // NumCandidates is the number of candidate entries in ValueDataRef.
   std::vector<PromotionCandidate> getPromotionCandidatesForCallSite(
       Instruction *Inst, const ArrayRef<InstrProfValueData> &ValueDataRef,
-      uint64_t TotalCount);
+      uint64_t TotalCount, uint32_t NumCandidates);
 
   // Main function that transforms Inst (either a indirect-call instruction, or
   // an invoke instruction , to a conditional call to F. This is like:
@@ -232,20 +207,10 @@ private:
 public:
   ICallPromotionFunc(Function &Func, Module *Modu, InstrProfSymtab *Symtab)
       : F(Func), M(Modu), Symtab(Symtab) {
-    ValueDataArray = llvm::make_unique<InstrProfValueData[]>(MaxNumPromotions);
   }
   bool processFunction();
 };
 } // end anonymous namespace
-
-bool ICallPromotionFunc::isPromotionProfitable(uint64_t Count,
-                                               uint64_t TotalCount) {
-  if (Count < ICPCountThreshold)
-    return false;
-
-  unsigned Percentage = (Count * 100) / TotalCount;
-  return (Percentage >= ICPPercentThreshold);
-}
 
 ICallPromotionFunc::TargetStatus
 ICallPromotionFunc::isPromotionLegal(Instruction *Inst, uint64_t Target,
@@ -291,19 +256,19 @@ ICallPromotionFunc::isPromotionLegal(Instruction *Inst, uint64_t Target,
 std::vector<ICallPromotionFunc::PromotionCandidate>
 ICallPromotionFunc::getPromotionCandidatesForCallSite(
     Instruction *Inst, const ArrayRef<InstrProfValueData> &ValueDataRef,
-    uint64_t TotalCount) {
-  uint32_t NumVals = ValueDataRef.size();
+    uint64_t TotalCount, uint32_t NumCandidates) {
   std::vector<PromotionCandidate> Ret;
 
   DEBUG(dbgs() << " \nWork on callsite #" << NumOfPGOICallsites << *Inst
-               << " Num_targets: " << NumVals << "\n");
+               << " Num_targets: " << ValueDataRef.size()
+               << " Num_candidates: " << NumCandidates << "\n");
   NumOfPGOICallsites++;
   if (ICPCSSkip != 0 && NumOfPGOICallsites <= ICPCSSkip) {
     DEBUG(dbgs() << " Skip: User options.\n");
     return Ret;
   }
 
-  for (uint32_t I = 0; I < MaxNumPromotions && I < NumVals; I++) {
+  for (uint32_t I = 0; I < NumCandidates; I++) {
     uint64_t Count = ValueDataRef[I].Count;
     assert(Count <= TotalCount);
     uint64_t Target = ValueDataRef[I].Value;
@@ -320,10 +285,6 @@ ICallPromotionFunc::getPromotionCandidatesForCallSite(
     }
     if (ICPCutOff != 0 && NumOfPGOICallPromotion >= ICPCutOff) {
       DEBUG(dbgs() << " Not promote: Cutoff reached.\n");
-      break;
-    }
-    if (!isPromotionProfitable(Count, TotalCount)) {
-      DEBUG(dbgs() << " Not promote: Cold target.\n");
       break;
     }
     Function *TargetFunction = nullptr;
@@ -633,18 +594,16 @@ uint32_t ICallPromotionFunc::tryToPromote(
 // annotation to perform indirect-call promotion.
 bool ICallPromotionFunc::processFunction() {
   bool Changed = false;
+  ICallPromotionAnalysis ICallAnalysis;
   for (auto &I : findIndirectCallSites(F)) {
-    uint32_t NumVals;
+    uint32_t NumVals, NumCandidates;
     uint64_t TotalCount;
-    bool Res =
-        getValueProfDataFromInst(*I, IPVK_IndirectCallTarget, MaxNumPromotions,
-                                 ValueDataArray.get(), NumVals, TotalCount);
-    if (!Res)
+    auto ICallProfDataRef = ICallAnalysis.getPromotionCandidatesForInstruction(
+        I, NumVals, TotalCount, NumCandidates);
+    if (!NumCandidates)
       continue;
-    ArrayRef<InstrProfValueData> ValueDataArrayRef(ValueDataArray.get(),
-                                                   NumVals);
-    auto PromotionCandidates =
-        getPromotionCandidatesForCallSite(I, ValueDataArrayRef, TotalCount);
+    auto PromotionCandidates = getPromotionCandidatesForCallSite(
+        I, ICallProfDataRef, TotalCount, NumCandidates);
     uint32_t NumPromoted = tryToPromote(I, PromotionCandidates, TotalCount);
     if (NumPromoted == 0)
       continue;
@@ -656,8 +615,8 @@ bool ICallPromotionFunc::processFunction() {
     if (TotalCount == 0 || NumPromoted == NumVals)
       continue;
     // Otherwise we need update with the un-promoted records back.
-    annotateValueSite(*M, *I, ValueDataArrayRef.slice(NumPromoted), TotalCount,
-                      IPVK_IndirectCallTarget, MaxNumPromotions);
+    annotateValueSite(*M, *I, ICallProfDataRef.slice(NumPromoted), TotalCount,
+                      IPVK_IndirectCallTarget, NumCandidates);
   }
   return Changed;
 }

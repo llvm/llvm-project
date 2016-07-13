@@ -66,6 +66,7 @@ define <16 x i8> @mul_v16i8c(<16 x i8> %i) nounwind  {
 ; AVX512BW-NEXT:    vpmovsxbw {{.*}}(%rip), %ymm1
 ; AVX512BW-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
 entry:
   %A = mul <16 x i8> %i, < i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117, i8 117 >
@@ -206,6 +207,7 @@ define <16 x i8> @mul_v16i8(<16 x i8> %i, <16 x i8> %j) nounwind  {
 ; AVX512BW-NEXT:    vpmovsxbw %xmm0, %ymm0
 ; AVX512BW-NEXT:    vpmullw %ymm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    vpmovwb %zmm0, %ymm0
+; AVX512BW-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; AVX512BW-NEXT:    retq
 entry:
   %A = mul <16 x i8> %i, %j

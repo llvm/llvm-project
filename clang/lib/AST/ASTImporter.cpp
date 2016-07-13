@@ -1909,8 +1909,7 @@ QualType ASTNodeImporter::VisitTemplateSpecializationType(
       return QualType();
   }
   return Importer.getToContext().getTemplateSpecializationType(ToTemplate, 
-                                                         ToTemplateArgs.data(), 
-                                                         ToTemplateArgs.size(),
+                                                               ToTemplateArgs,
                                                                ToCanonType);
 }
 

@@ -1758,8 +1758,7 @@ void CodeGenFunction::EmitStoreThroughExtVectorComponentLValue(RValue Src,
 
   if (const VectorType *VTy = Dst.getType()->getAs<VectorType>()) {
     unsigned NumSrcElts = VTy->getNumElements();
-    unsigned NumDstElts =
-       cast<llvm::VectorType>(Vec->getType())->getNumElements();
+    unsigned NumDstElts = Vec->getType()->getVectorNumElements();
     if (NumDstElts == NumSrcElts) {
       // Use shuffle vector is the src and destination are the same number of
       // elements and restore the vector mask since it is on the side it will be

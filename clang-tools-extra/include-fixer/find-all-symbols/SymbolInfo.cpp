@@ -90,6 +90,16 @@ bool SymbolInfo::operator<(const SymbolInfo &Symbol) const {
                   Symbol.Contexts);
 }
 
+std::string SymbolInfo::getQualifiedName() const {
+  std::string QualifiedName = Name;
+  for (const auto &Context : Contexts) {
+    if (Context.first == ContextType::EnumDecl)
+      continue;
+    QualifiedName = Context.second + "::" + QualifiedName;
+  }
+  return QualifiedName;
+}
+
 bool WriteSymbolInfosToStream(llvm::raw_ostream &OS,
                               const std::set<SymbolInfo> &Symbols) {
   llvm::yaml::Output yout(OS);

@@ -105,6 +105,11 @@ public:
 
   /// \name Scalar TTI Implementations
   /// @{
+  bool allowsMisalignedMemoryAccesses(unsigned BitWidth, unsigned AddressSpace,
+                                      unsigned Alignment, bool *Fast) const {
+    MVT M = MVT::getIntegerVT(BitWidth);
+    return getTLI()->allowsMisalignedMemoryAccesses(M, AddressSpace, Alignment, Fast);
+  }
 
   bool hasBranchDivergence() { return false; }
 
@@ -150,6 +155,11 @@ public:
   bool isTypeLegal(Type *Ty) {
     EVT VT = getTLI()->getValueType(DL, Ty);
     return getTLI()->isTypeLegal(VT);
+  }
+
+  int getGEPCost(Type *PointeeType, const Value *Ptr,
+                 ArrayRef<const Value *> Operands) {
+    return BaseT::getGEPCost(PointeeType, Ptr, Operands);
   }
 
   unsigned getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
@@ -315,6 +325,8 @@ public:
     }
 
     // Else, assume that we need to scalarize this op.
+    // TODO: If one of the types get legalized by splitting, handle this
+    // similarly to what getCastInstrCost() does.
     if (Ty->isVectorTy()) {
       unsigned Num = Ty->getVectorNumElements();
       unsigned Cost = static_cast<T *>(this)
@@ -409,12 +421,25 @@ public:
           return SrcLT.first * 1;
       }
 
-      // If we are converting vectors and the operation is illegal, or
-      // if the vectors are legalized to different types, estimate the
-      // scalarization costs.
-      // TODO: This is probably a big overestimate. For splits, we should have
-      // something like getTypeLegalizationCost() + 2 * getCastInstrCost().
-      // The same applies to getCmpSelInstrCost() and getArithmeticInstrCost()
+      // If we are legalizing by splitting, query the concrete TTI for the cost
+      // of casting the original vector twice. We also need to factor int the
+      // cost of the split itself. Count that as 1, to be consistent with
+      // TLI->getTypeLegalizationCost().
+      if ((TLI->getTypeAction(Src->getContext(), TLI->getValueType(DL, Src)) ==
+           TargetLowering::TypeSplitVector) ||
+          (TLI->getTypeAction(Dst->getContext(), TLI->getValueType(DL, Dst)) ==
+           TargetLowering::TypeSplitVector)) {
+        Type *SplitDst = VectorType::get(Dst->getVectorElementType(),
+                                         Dst->getVectorNumElements() / 2);
+        Type *SplitSrc = VectorType::get(Src->getVectorElementType(),
+                                         Src->getVectorNumElements() / 2);
+        T *TTI = static_cast<T *>(this);
+        return TTI->getVectorSplitCost() +
+               (2 * TTI->getCastInstrCost(Opcode, SplitDst, SplitSrc));
+      }
+
+      // In other cases where the source or destination are illegal, assume
+      // the operation will get scalarized.
       unsigned Num = Dst->getVectorNumElements();
       unsigned Cost = static_cast<T *>(this)->getCastInstrCost(
           Opcode, Dst->getScalarType(), Src->getScalarType());
@@ -472,6 +497,8 @@ public:
     }
 
     // Otherwise, assume that the cast is scalarized.
+    // TODO: If one of the types get legalized by splitting, handle this
+    // similarly to what getCastInstrCost() does.
     if (ValTy->isVectorTy()) {
       unsigned Num = ValTy->getVectorNumElements();
       if (CondTy)
@@ -480,8 +507,7 @@ public:
           Opcode, ValTy->getScalarType(), CondTy);
 
       // Return the cost of multiple scalar invocation plus the cost of
-      // inserting
-      // and extracting the values.
+      // inserting and extracting the values.
       return getScalarizationOverhead(ValTy, true, false) + Num * Cost;
     }
 
@@ -905,6 +931,8 @@ public:
             ->getShuffleCost(TTI::SK_ExtractSubvector, Ty, NumVecElts / 2, Ty);
     return ShuffleCost + ArithCost + getScalarizationOverhead(Ty, false, true);
   }
+
+  unsigned getVectorSplitCost() { return 1; }
 
   /// @}
 };

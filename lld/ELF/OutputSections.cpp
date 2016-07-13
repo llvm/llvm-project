@@ -585,9 +585,7 @@ void GnuHashTableSection<ELFT>::addSymbols(
                             });
   if (Mid == V.end())
     return;
-  for (std::vector<std::pair<SymbolBody *, size_t>>::iterator I = Mid,
-                                                              E = V.end();
-       I != E; ++I) {
+  for (auto I = Mid, E = V.end(); I != E; ++I) {
     SymbolBody *B = I->first;
     size_t StrOff = I->second;
     Symbols.push_back({B, StrOff, hashGnu(B->getName())});
@@ -1753,6 +1751,92 @@ void MipsOptionsOutputSection<ELFT>::addSection(InputSectionBase<ELFT> *C) {
   S->OutSec = this;
 }
 
+template <class ELFT>
+std::pair<OutputSectionBase<ELFT> *, bool>
+OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
+                                   StringRef OutsecName) {
+  SectionKey<ELFT::Is64Bits> Key = createKey(C, OutsecName);
+  OutputSectionBase<ELFT> *&Sec = Map[Key];
+  if (Sec)
+    return {Sec, false};
+
+  switch (C->SectionKind) {
+  case InputSectionBase<ELFT>::Regular:
+    Sec = new OutputSection<ELFT>(Key.Name, Key.Type, Key.Flags);
+    break;
+  case InputSectionBase<ELFT>::EHFrame:
+    return {Out<ELFT>::EhFrame, false};
+  case InputSectionBase<ELFT>::Merge:
+    Sec = new MergeOutputSection<ELFT>(Key.Name, Key.Type, Key.Flags,
+                                       Key.Alignment);
+    break;
+  case InputSectionBase<ELFT>::MipsReginfo:
+    Sec = new MipsReginfoOutputSection<ELFT>();
+    break;
+  case InputSectionBase<ELFT>::MipsOptions:
+    Sec = new MipsOptionsOutputSection<ELFT>();
+    break;
+  }
+  return {Sec, true};
+}
+
+template <class ELFT>
+OutputSectionBase<ELFT> *OutputSectionFactory<ELFT>::lookup(StringRef Name,
+                                                            uint32_t Type,
+                                                            uintX_t Flags) {
+  return Map.lookup({Name, Type, Flags, 0});
+}
+
+template <class ELFT>
+SectionKey<ELFT::Is64Bits>
+OutputSectionFactory<ELFT>::createKey(InputSectionBase<ELFT> *C,
+                                      StringRef OutsecName) {
+  const Elf_Shdr *H = C->getSectionHdr();
+  uintX_t Flags = H->sh_flags & ~SHF_GROUP & ~SHF_COMPRESSED;
+
+  // For SHF_MERGE we create different output sections for each alignment.
+  // This makes each output section simple and keeps a single level mapping from
+  // input to output.
+  uintX_t Alignment = 0;
+  if (isa<MergeInputSection<ELFT>>(C))
+    Alignment = std::max(H->sh_addralign, H->sh_entsize);
+
+  uint32_t Type = H->sh_type;
+  return SectionKey<ELFT::Is64Bits>{OutsecName, Type, Flags, Alignment};
+}
+
+template <bool Is64Bits>
+typename lld::elf::SectionKey<Is64Bits>
+DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::getEmptyKey() {
+  return SectionKey<Is64Bits>{DenseMapInfo<StringRef>::getEmptyKey(), 0, 0, 0};
+}
+
+template <bool Is64Bits>
+typename lld::elf::SectionKey<Is64Bits>
+DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::getTombstoneKey() {
+  return SectionKey<Is64Bits>{DenseMapInfo<StringRef>::getTombstoneKey(), 0, 0,
+                              0};
+}
+
+template <bool Is64Bits>
+unsigned
+DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::getHashValue(const Key &Val) {
+  return hash_combine(Val.Name, Val.Type, Val.Flags, Val.Alignment);
+}
+
+template <bool Is64Bits>
+bool DenseMapInfo<lld::elf::SectionKey<Is64Bits>>::isEqual(const Key &LHS,
+                                                           const Key &RHS) {
+  return DenseMapInfo<StringRef>::isEqual(LHS.Name, RHS.Name) &&
+         LHS.Type == RHS.Type && LHS.Flags == RHS.Flags &&
+         LHS.Alignment == RHS.Alignment;
+}
+
+namespace llvm {
+template struct DenseMapInfo<SectionKey<true>>;
+template struct DenseMapInfo<SectionKey<false>>;
+}
+
 namespace lld {
 namespace elf {
 template class OutputSectionBase<ELF32LE>;
@@ -1879,5 +1963,10 @@ template class BuildIdHexstring<ELF32LE>;
 template class BuildIdHexstring<ELF32BE>;
 template class BuildIdHexstring<ELF64LE>;
 template class BuildIdHexstring<ELF64BE>;
+
+template class OutputSectionFactory<ELF32LE>;
+template class OutputSectionFactory<ELF32BE>;
+template class OutputSectionFactory<ELF64LE>;
+template class OutputSectionFactory<ELF64BE>;
 }
 }

@@ -8,12 +8,14 @@
 //===----------------------------------------------------------------------===//
 
 // C Includes
-#include <stdio.h>
-#include <sys/utsname.h>
-#include <sys/types.h>
-#include <sys/stat.h>
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/utsname.h>
 
 // C++ Includes
 // Other libraries and framework includes
@@ -291,15 +293,25 @@ GetProcessAndStatInfo (lldb::pid_t pid, ProcessInstanceInfo &process_info, Proce
     ::memset (&stat_info, 0, sizeof(stat_info));
     stat_info.ppid = LLDB_INVALID_PROCESS_ID;
 
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+
     // Use special code here because proc/[pid]/exe is a symbolic link.
     char link_path[PATH_MAX];
     char exe_path[PATH_MAX] = "";
     if (snprintf (link_path, PATH_MAX, "/proc/%" PRIu64 "/exe", pid) <= 0)
+    {
+        if (log)
+            log->Printf("%s: failed to sprintf pid %" PRIu64, __FUNCTION__, pid);
         return false;
+    }
 
     ssize_t len = readlink (link_path, exe_path, sizeof(exe_path) - 1);
     if (len <= 0)
+    {
+        if (log)
+            log->Printf("%s: failed to read link %s: %s", __FUNCTION__, link_path, strerror(errno));
         return false;
+    }
 
     // readlink does not append a null byte.
     exe_path[len] = 0;

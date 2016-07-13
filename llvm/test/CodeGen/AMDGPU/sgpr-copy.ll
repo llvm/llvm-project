@@ -208,7 +208,7 @@ declare float @llvm.SI.fs.interp(i32, i32, i32, <2 x i32>) #1
 declare <4 x float> @llvm.SI.sample.v2i32(<2 x i32>, <8 x i32>, <16 x i8>, i32) #1
 
 ; Function Attrs: readnone
-declare float @llvm.amdgcn.rsq.f32(float) #3
+declare float @llvm.amdgcn.rsq.f32(float) #1
 
 declare float @llvm.exp2.f32(float) #1
 
@@ -394,10 +394,9 @@ define amdgpu_ps void @mimg_ssamp_sgpr([17 x <4 x i32>] addrspace(2)* byval %arg
 
 declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
-attributes #0 = { "unsafe-fp-math"="true" }
+attributes #0 = { nounwind }
 attributes #1 = { nounwind readnone }
-attributes #2 = { readonly }
-attributes #3 = { readnone }
+attributes #2 = { nounwind readonly }
 
 !0 = !{!1, !1, i64 0, i32 1}
 !1 = !{!"const", null}

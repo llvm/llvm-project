@@ -420,6 +420,8 @@ static void AsanInitInternal() {
   SetCanPoisonMemory(flags()->poison_heap);
   SetMallocContextSize(common_flags()->malloc_context_size);
 
+  InitializePlatformExceptionHandlers();
+
   InitializeHighMemEnd();
 
   // Make sure we are not statically linked.

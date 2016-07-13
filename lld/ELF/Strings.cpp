@@ -11,7 +11,12 @@
 #include "Error.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Config/config.h"
 #include <algorithm>
+
+#ifdef HAVE_CXXABI_H
+#include <cxxabi.h>
+#endif
 
 using namespace llvm;
 using namespace lld;
@@ -67,4 +72,27 @@ static bool isAlnum(char C) { return isAlpha(C) || ('0' <= C && C <= '9'); }
 bool elf::isValidCIdentifier(StringRef S) {
   return !S.empty() && isAlpha(S[0]) &&
          std::all_of(S.begin() + 1, S.end(), isAlnum);
+}
+
+// Returns the demangled C++ symbol name for Name.
+std::string elf::demangle(StringRef Name) {
+#if !defined(HAVE_CXXABI_H)
+  return Name;
+#else
+  // __cxa_demangle can be used to demangle strings other than symbol
+  // names which do not necessarily start with "_Z". Name can be
+  // either a C or C++ symbol. Don't call __cxa_demangle if the name
+  // does not look like a C++ symbol name to avoid getting unexpected
+  // result for a C symbol that happens to match a mangled type name.
+  if (!Name.startswith("_Z"))
+    return Name;
+
+  char *Buf =
+      abi::__cxa_demangle(Name.str().c_str(), nullptr, nullptr, nullptr);
+  if (!Buf)
+    return Name;
+  std::string S(Buf);
+  free(Buf);
+  return S;
+#endif
 }

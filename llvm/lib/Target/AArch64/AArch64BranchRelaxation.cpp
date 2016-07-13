@@ -465,11 +465,11 @@ bool AArch64BranchRelaxation::relaxBranchInstructions() {
   // end() for termination.
   for (MachineFunction::iterator I = MF->begin(); I != MF->end(); ++I) {
     MachineBasicBlock &MBB = *I;
-    MachineInstr *MI = MBB.getFirstTerminator();
-    if (isConditionalBranch(MI->getOpcode()) &&
-        !isBlockInRange(MI, getDestBlock(MI),
-                        getBranchDisplacementBits(MI->getOpcode()))) {
-      fixupConditionalBranch(MI);
+    MachineInstr &MI = *MBB.getFirstTerminator();
+    if (isConditionalBranch(MI.getOpcode()) &&
+        !isBlockInRange(&MI, getDestBlock(&MI),
+                        getBranchDisplacementBits(MI.getOpcode()))) {
+      fixupConditionalBranch(&MI);
       ++NumRelaxed;
       Changed = true;
     }

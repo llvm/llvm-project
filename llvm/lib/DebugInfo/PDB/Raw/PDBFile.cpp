@@ -71,15 +71,15 @@ PDBFile::getStreamBlockList(uint32_t StreamIndex) const {
   return StreamMap[StreamIndex];
 }
 
-size_t PDBFile::getFileSize() const { return Buffer->getLength(); }
+uint32_t PDBFile::getFileSize() const { return Buffer->getLength(); }
 
-ArrayRef<uint8_t> PDBFile::getBlockData(uint32_t BlockIndex,
-                                        uint32_t NumBytes) const {
+Expected<ArrayRef<uint8_t>> PDBFile::getBlockData(uint32_t BlockIndex,
+                                                  uint32_t NumBytes) const {
   uint64_t StreamBlockOffset = blockToOffset(BlockIndex, getBlockSize());
 
   ArrayRef<uint8_t> Result;
   if (auto EC = Buffer->readBytes(StreamBlockOffset, NumBytes, Result))
-    consumeError(std::move(EC));
+    return std::move(EC);
   return Result;
 }
 
@@ -89,7 +89,7 @@ Error PDBFile::setBlockData(uint32_t BlockIndex, uint32_t Offset,
     return make_error<RawError>(
         raw_error_code::invalid_block_address,
         "setBlockData attempted to write out of block bounds.");
-  if (Data.size() >= getBlockSize() - Offset)
+  if (Data.size() > getBlockSize() - Offset)
     return make_error<RawError>(
         raw_error_code::invalid_block_address,
         "setBlockData attempted to write out of block bounds.");
@@ -154,6 +154,12 @@ Error PDBFile::parseStreamData() {
     ArrayRef<support::ulittle32_t> Blocks;
     if (auto EC = Reader.readArray(Blocks, NumExpectedStreamBlocks))
       return EC;
+    for (uint32_t Block : Blocks) {
+      uint64_t BlockEndOffset = (uint64_t)(Block + 1) * SB->BlockSize;
+      if (BlockEndOffset > getFileSize())
+        return make_error<RawError>(raw_error_code::corrupt_file,
+                                    "Stream block map is corrupt.");
+    }
     StreamMap.push_back(Blocks);
   }
 
@@ -335,17 +341,6 @@ Error PDBFile::setSuperBlock(const SuperBlock *Block) {
   return Error::success();
 }
 
-void PDBFile::setStreamSizes(ArrayRef<support::ulittle32_t> Sizes) {
-  StreamSizes = Sizes;
-}
-
-void PDBFile::setStreamMap(
-    ArrayRef<support::ulittle32_t> Directory,
-    std::vector<ArrayRef<support::ulittle32_t>> &Streams) {
-  DirectoryBlocks = Directory;
-  StreamMap = Streams;
-}
-
 Error PDBFile::commit() {
   StreamWriter Writer(*Buffer);
 
@@ -368,6 +363,36 @@ Error PDBFile::commit() {
 
   for (const auto &Blocks : StreamMap) {
     if (auto EC = DW.writeArray(Blocks))
+      return EC;
+  }
+
+  if (Info) {
+    if (auto EC = Info->commit())
+      return EC;
+  }
+
+  if (Dbi) {
+    if (auto EC = Dbi->commit())
+      return EC;
+  }
+
+  if (Symbols) {
+    if (auto EC = Symbols->commit())
+      return EC;
+  }
+
+  if (Publics) {
+    if (auto EC = Publics->commit())
+      return EC;
+  }
+
+  if (Tpi) {
+    if (auto EC = Tpi->commit())
+      return EC;
+  }
+
+  if (Ipi) {
+    if (auto EC = Ipi->commit())
       return EC;
   }
 

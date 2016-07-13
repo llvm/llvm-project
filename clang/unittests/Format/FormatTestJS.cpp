@@ -28,10 +28,10 @@ protected:
     tooling::Replacements Replaces =
         reformat(Style, Code, Ranges, "<stdin>", &IncompleteFormat);
     EXPECT_FALSE(IncompleteFormat);
-    std::string Result = applyAllReplacements(Code, Replaces);
-    EXPECT_NE("", Result);
-    DEBUG(llvm::errs() << "\n" << Result << "\n\n");
-    return Result;
+    auto Result = applyAllReplacements(Code, Replaces);
+    EXPECT_TRUE(static_cast<bool>(Result));
+    DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
+    return *Result;
   }
 
   static std::string format(
@@ -1351,7 +1351,7 @@ TEST_F(FormatTestJS, NonNullAssertionOperator) {
 
 TEST_F(FormatTestJS, Conditional) {
   verifyFormat("y = x ? 1 : 2;");
-  verifyFormat("x ? 1: 2;"); // Known issue with top level conditionals.
+  verifyFormat("x ? 1 : 2;");
   verifyFormat("class Foo {\n"
                "  field = true ? 1 : 2;\n"
                "  method(a = true ? 1 : 2) {}\n"

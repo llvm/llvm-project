@@ -6662,6 +6662,10 @@ public:
     /// \brief The number of template arguments in TemplateArgs.
     unsigned NumTemplateArgs;
 
+    ArrayRef<TemplateArgument> template_arguments() const {
+      return {TemplateArgs, NumTemplateArgs};
+    }
+
     /// \brief The template deduction info object associated with the
     /// substitution or checking of explicit or deduced template arguments.
     sema::TemplateDeductionInfo *DeductionInfo;
@@ -8203,6 +8207,18 @@ public:
   /// \brief Called on well-formed '\#pragma omp distribute parallel for' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPDistributeParallelForDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc,
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
+  /// \brief Called on well-formed '\#pragma omp distribute parallel for simd'
+  /// after parsing of the associated statement.
+  StmtResult ActOnOpenMPDistributeParallelForSimdDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc,
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
+  /// \brief Called on well-formed '\#pragma omp distribute simd' after
+  /// parsing of the associated statement.
+  StmtResult ActOnOpenMPDistributeSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
       llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);

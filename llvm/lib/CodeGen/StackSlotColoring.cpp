@@ -107,7 +107,7 @@ namespace {
     bool OverlapWithAssignments(LiveInterval *li, int Color) const;
     int ColorSlot(LiveInterval *li);
     bool ColorSlots(MachineFunction &MF);
-    void RewriteInstruction(MachineInstr *MI, SmallVectorImpl<int> &SlotMapping,
+    void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
                             MachineFunction &MF);
     bool RemoveDeadStores(MachineBasicBlock* MBB);
   };
@@ -326,13 +326,10 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
   }
 
   // Rewrite all MO_FrameIndex operands.  Look for dead stores.
-  for (MachineFunction::iterator MBBI = MF.begin(), E = MF.end();
-       MBBI != E; ++MBBI) {
-    MachineBasicBlock *MBB = &*MBBI;
-    for (MachineBasicBlock::iterator MII = MBB->begin(), EE = MBB->end();
-         MII != EE; ++MII)
-      RewriteInstruction(MII, SlotMapping, MF);
-    RemoveDeadStores(MBB);
+  for (MachineBasicBlock &MBB : MF) {
+    for (MachineInstr &MI : MBB)
+      RewriteInstruction(MI, SlotMapping, MF);
+    RemoveDeadStores(&MBB);
   }
 
   // Delete unused stack slots.
@@ -347,12 +344,12 @@ bool StackSlotColoring::ColorSlots(MachineFunction &MF) {
 
 /// RewriteInstruction - Rewrite specified instruction by replacing references
 /// to old frame index with new one.
-void StackSlotColoring::RewriteInstruction(MachineInstr *MI,
+void StackSlotColoring::RewriteInstruction(MachineInstr &MI,
                                            SmallVectorImpl<int> &SlotMapping,
                                            MachineFunction &MF) {
   // Update the operands.
-  for (unsigned i = 0, ee = MI->getNumOperands(); i != ee; ++i) {
-    MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, ee = MI.getNumOperands(); i != ee; ++i) {
+    MachineOperand &MO = MI.getOperand(i);
     if (!MO.isFI())
       continue;
     int OldFI = MO.getIndex();
@@ -390,7 +387,7 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
         FirstSS != -1) {
       ++NumDead;
       changed = true;
-      toErase.push_back(I);
+      toErase.push_back(&*I);
       continue;
     }
 
@@ -410,10 +407,10 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
 
     if (NextMI->findRegisterUseOperandIdx(LoadReg, true, nullptr) != -1) {
       ++NumDead;
-      toErase.push_back(I);
+      toErase.push_back(&*I);
     }
 
-    toErase.push_back(NextMI);
+    toErase.push_back(&*NextMI);
     ++I;
   }
 

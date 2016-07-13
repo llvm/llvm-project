@@ -24,7 +24,8 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BlockFrequencyInfoImpl.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/CFLAliasAnalysis.h"
+#include "llvm/Analysis/CFLAndersAliasAnalysis.h"
+#include "llvm/Analysis/CFLSteensAliasAnalysis.h"
 #include "llvm/Analysis/CGSCCPassManager.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/DemandedBits.h"
@@ -46,6 +47,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/CodeGen/UnreachableBlockElim.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/PassManager.h"
@@ -55,6 +57,7 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/GCOVProfiler.h"
 #include "llvm/Transforms/IPO/ConstantMerge.h"
+#include "llvm/Transforms/IPO/CrossDSOCFI.h"
 #include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/Transforms/IPO/ElimAvailExtern.h"
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
@@ -63,6 +66,7 @@
 #include "llvm/Transforms/IPO/GlobalOpt.h"
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
 #include "llvm/Transforms/IPO/Internalize.h"
+#include "llvm/Transforms/IPO/LowerTypeTests.h"
 #include "llvm/Transforms/IPO/PartialInlining.h"
 #include "llvm/Transforms/IPO/SCCP.h"
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
@@ -74,6 +78,7 @@
 #include "llvm/Transforms/Scalar/ADCE.h"
 #include "llvm/Transforms/Scalar/AlignmentFromAssumptions.h"
 #include "llvm/Transforms/Scalar/BDCE.h"
+#include "llvm/Transforms/Scalar/CorrelatedValuePropagation.h"
 #include "llvm/Transforms/Scalar/DCE.h"
 #include "llvm/Transforms/Scalar/ConstantHoisting.h"
 #include "llvm/Transforms/Scalar/DeadStoreElimination.h"
@@ -83,6 +88,8 @@
 #include "llvm/Transforms/Scalar/GuardWidening.h"
 #include "llvm/Transforms/Scalar/IndVarSimplify.h"
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "llvm/Transforms/Scalar/LICM.h"
+#include "llvm/Transforms/Scalar/LoopIdiomRecognize.h"
 #include "llvm/Transforms/Scalar/LoopRotation.h"
 #include "llvm/Transforms/Scalar/LoopSimplifyCFG.h"
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
@@ -92,14 +99,18 @@
 #include "llvm/Transforms/Scalar/PartiallyInlineLibCalls.h"
 #include "llvm/Transforms/Scalar/Reassociate.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
-#include "llvm/Transforms/Scalar/SLPVectorizer.h"
 #include "llvm/Transforms/Scalar/SROA.h"
 #include "llvm/Transforms/Scalar/SimplifyCFG.h"
 #include "llvm/Transforms/Scalar/Sink.h"
+#include "llvm/Transforms/Scalar/TailRecursionElimination.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/LCSSA.h"
+#include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/Mem2Reg.h"
 #include "llvm/Transforms/Utils/MemorySSA.h"
+#include "llvm/Transforms/Utils/SimplifyInstructions.h"
+#include "llvm/Transforms/Vectorize/LoopVectorize.h"
+#include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 
 #include <type_traits>
 
@@ -692,7 +703,8 @@ bool PassBuilder::parsePassPipeline(ModulePassManager &MPM,
                                 DebugLogging) ||
         !PipelineText.empty())
       return false;
-    MPM.addPass(createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM), DebugLogging));
+    MPM.addPass(
+        createModuleToPostOrderCGSCCPassAdaptor(std::move(CGPM), DebugLogging));
     return true;
   }
 

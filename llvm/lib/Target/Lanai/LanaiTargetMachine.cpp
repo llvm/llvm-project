@@ -28,7 +28,6 @@ using namespace llvm;
 
 namespace llvm {
 void initializeLanaiMemAluCombinerPass(PassRegistry &);
-void initializeLanaiSetflagAluCombinerPass(PassRegistry &);
 } // namespace llvm
 
 extern "C" void LLVMInitializeLanaiTarget() {
@@ -112,5 +111,4 @@ void LanaiPassConfig::addPreEmitPass() {
 // scheduling pass.
 void LanaiPassConfig::addPreSched2() {
   addPass(createLanaiMemAluCombinerPass());
-  addPass(createLanaiSetflagAluCombinerPass());
 }

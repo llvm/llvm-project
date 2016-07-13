@@ -65,7 +65,9 @@ define <4 x float> @test_uitofp_v4i32_to_v4f32(<4 x i32> %arg) {
 ;
 ; AVX512F-LABEL: test_uitofp_v4i32_to_v4f32:
 ; AVX512F:       # BB#0:
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v4i32_to_v4f32:
@@ -142,7 +144,9 @@ define <8 x float> @test_uitofp_v8i32_to_v8f32(<8 x i32> %arg) {
 ;
 ; AVX512F-LABEL: test_uitofp_v8i32_to_v8f32:
 ; AVX512F:       # BB#0:
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    vcvtudq2ps %zmm0, %zmm0
+; AVX512F-NEXT:    # kill
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: test_uitofp_v8i32_to_v8f32:

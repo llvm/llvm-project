@@ -2114,12 +2114,8 @@ _mm_sfence(void)
 ///    2: Bits [47:32] are copied to the destination.
 ///    3: Bits [63:48] are copied to the destination.
 /// \returns A 16-bit integer containing the extracted 16 bits of packed data.
-static __inline__ int __DEFAULT_FN_ATTRS
-_mm_extract_pi16(__m64 __a, int __n)
-{
-  __v4hi __b = (__v4hi)__a;
-  return (unsigned short)__b[__n & 3];
-}
+#define _mm_extract_pi16(a, n) __extension__ ({ \
+  (int)__builtin_ia32_vec_ext_v4hi((__m64)a, (int)n); })
 
 /// \brief Copies data from the 64-bit vector of [4 x i16] to the destination,
 ///    and inserts the lower 16-bits of an integer operand at the 16-bit offset
@@ -2145,13 +2141,8 @@ _mm_extract_pi16(__m64 __a, int __n)
 ///    bits in operand __a.
 /// \returns A 64-bit integer vector containing the copied packed data from the
 ///    operands.
-static __inline__ __m64 __DEFAULT_FN_ATTRS
-_mm_insert_pi16(__m64 __a, int __d, int __n)
-{
-   __v4hi __b = (__v4hi)__a;
-   __b[__n & 3] = __d;
-   return (__m64)__b;
-}
+#define _mm_insert_pi16(a, d, n) __extension__ ({ \
+  (__m64)__builtin_ia32_vec_set_v4hi((__m64)a, (int)d, (int)n); })
 
 /// \brief Compares each of the corresponding packed 16-bit integer values of
 ///    the 64-bit integer vectors, and writes the greater value to the

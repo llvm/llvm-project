@@ -913,29 +913,28 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
   Value *FalseVal = SI.getFalseValue();
+  Type *SelType = SI.getType();
 
   if (Value *V =
           SimplifySelectInst(CondVal, TrueVal, FalseVal, DL, TLI, DT, AC))
     return replaceInstUsesWith(SI, V);
 
-  if (SI.getType()->getScalarType()->isIntegerTy(1) &&
+  if (SelType->getScalarType()->isIntegerTy(1) &&
       TrueVal->getType() == CondVal->getType()) {
-    const APInt *TrueC;
-    if (match(TrueVal, m_APInt(TrueC))) {
-      if (TrueC->isAllOnesValue()) {
-        // Change: A = select B, true, C --> A = or B, C
-        return BinaryOperator::CreateOr(CondVal, FalseVal);
-      }
+    if (match(TrueVal, m_One())) {
+      // Change: A = select B, true, C --> A = or B, C
+      return BinaryOperator::CreateOr(CondVal, FalseVal);
+    }
+    if (match(TrueVal, m_Zero())) {
       // Change: A = select B, false, C --> A = and !B, C
       Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
       return BinaryOperator::CreateAnd(NotCond, FalseVal);
     }
-    const APInt *FalseC;
-    if (match(FalseVal, m_APInt(FalseC))) {
-      if (*FalseC == 0) {
-        // Change: A = select B, C, false --> A = and B, C
-        return BinaryOperator::CreateAnd(CondVal, TrueVal);
-      }
+    if (match(FalseVal, m_Zero())) {
+      // Change: A = select B, C, false --> A = and B, C
+      return BinaryOperator::CreateAnd(CondVal, TrueVal);
+    }
+    if (match(FalseVal, m_One())) {
       // Change: A = select B, C, true --> A = or !B, C
       Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
       return BinaryOperator::CreateOr(NotCond, TrueVal);
@@ -956,32 +955,38 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       return BinaryOperator::CreateOr(TrueVal, FalseVal);
   }
 
-  // Selecting between two integer constants?
+  // Selecting between two integer or vector splat integer constants?
+  //
+  // Note that we don't handle a scalar select of vectors:
+  // select i1 %c, <2 x i8> <1, 1>, <2 x i8> <0, 0>
+  // because that may need 3 instructions to splat the condition value:
+  // extend, insertelement, shufflevector.
+  if (CondVal->getType()->isVectorTy() == SelType->isVectorTy()) {
+    // select C, 1, 0 -> zext C to int
+    if (match(TrueVal, m_One()) && match(FalseVal, m_Zero()))
+      return new ZExtInst(CondVal, SelType);
+
+    // select C, -1, 0 -> sext C to int
+    if (match(TrueVal, m_AllOnes()) && match(FalseVal, m_Zero()))
+      return new SExtInst(CondVal, SelType);
+
+    // select C, 0, 1 -> zext !C to int
+    if (match(TrueVal, m_Zero()) && match(FalseVal, m_One())) {
+      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
+      return new ZExtInst(NotCond, SelType);
+    }
+
+    // select C, 0, -1 -> sext !C to int
+    if (match(TrueVal, m_Zero()) && match(FalseVal, m_AllOnes())) {
+      Value *NotCond = Builder->CreateNot(CondVal, "not." + CondVal->getName());
+      return new SExtInst(NotCond, SelType);
+    }
+  }
+
   if (ConstantInt *TrueValC = dyn_cast<ConstantInt>(TrueVal))
-    if (ConstantInt *FalseValC = dyn_cast<ConstantInt>(FalseVal)) {
-      // select C, 1, 0 -> zext C to int
-      if (FalseValC->isZero() && TrueValC->getValue() == 1)
-        return new ZExtInst(CondVal, SI.getType());
-
-      // select C, -1, 0 -> sext C to int
-      if (FalseValC->isZero() && TrueValC->isAllOnesValue())
-        return new SExtInst(CondVal, SI.getType());
-
-      // select C, 0, 1 -> zext !C to int
-      if (TrueValC->isZero() && FalseValC->getValue() == 1) {
-        Value *NotCond = Builder->CreateNot(CondVal, "not."+CondVal->getName());
-        return new ZExtInst(NotCond, SI.getType());
-      }
-
-      // select C, 0, -1 -> sext !C to int
-      if (TrueValC->isZero() && FalseValC->isAllOnesValue()) {
-        Value *NotCond = Builder->CreateNot(CondVal, "not."+CondVal->getName());
-        return new SExtInst(NotCond, SI.getType());
-      }
-
+    if (ConstantInt *FalseValC = dyn_cast<ConstantInt>(FalseVal))
       if (Value *V = foldSelectICmpAnd(SI, TrueValC, FalseValC, Builder))
         return replaceInstUsesWith(SI, V);
-    }
 
   // See if we are selecting two values based on a comparison of the two values.
   if (FCmpInst *FCI = dyn_cast<FCmpInst>(CondVal)) {
@@ -1091,7 +1096,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
       return IV;
 
   // See if we can fold the select into one of our operands.
-  if (SI.getType()->isIntOrIntVectorTy() || SI.getType()->isFPOrFPVectorTy()) {
+  if (SelType->isIntOrIntVectorTy() || SelType->isFPOrFPVectorTy()) {
     if (Instruction *FoldI = FoldSelectIntoOp(SI, TrueVal, FalseVal))
       return FoldI;
 
@@ -1103,7 +1108,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     if (SelectPatternResult::isMinOrMax(SPF)) {
       // Canonicalize so that type casts are outside select patterns.
       if (LHS->getType()->getPrimitiveSizeInBits() !=
-          SI.getType()->getPrimitiveSizeInBits()) {
+          SelType->getPrimitiveSizeInBits()) {
         CmpInst::Predicate Pred = getCmpPredicateForMinMax(SPF, SPR.Ordered);
 
         Value *Cmp;
@@ -1118,7 +1123,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
 
         Value *NewSI = Builder->CreateCast(CastOp,
                                            Builder->CreateSelect(Cmp, LHS, RHS),
-                                           SI.getType());
+                                           SelType);
         return replaceInstUsesWith(SI, NewSI);
       }
     }
@@ -1225,7 +1230,7 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     return &SI;
   }
 
-  if (VectorType* VecTy = dyn_cast<VectorType>(SI.getType())) {
+  if (VectorType* VecTy = dyn_cast<VectorType>(SelType)) {
     unsigned VWidth = VecTy->getNumElements();
     APInt UndefElts(VWidth, 0);
     APInt AllOnesEltMask(APInt::getAllOnesValue(VWidth));

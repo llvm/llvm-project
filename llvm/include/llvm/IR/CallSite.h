@@ -273,6 +273,10 @@ public:
     CALLSITE_DELEGATE_GETTER(getArgOperand(i));
   }
 
+  ValTy *getReturnedArgOperand() const {
+    CALLSITE_DELEGATE_GETTER(getReturnedArgOperand());
+  }
+
   bool isInlineAsm() const {
     if (isCall())
       return cast<CallInst>(getInstruction())->isInlineAsm();

@@ -54,6 +54,10 @@
 #include <wmmintrin.h>
 #endif
 
+#if !defined(_MSC_VER) || __has_feature(modules) || defined(__CLFLUSHOPT__)
+#include <clflushoptintrin.h>
+#endif
+
 #if !defined(_MSC_VER) || __has_feature(modules) || defined(__AVX__)
 #include <avxintrin.h>
 #endif

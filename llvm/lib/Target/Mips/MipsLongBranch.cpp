@@ -179,7 +179,7 @@ void MipsLongBranch::initMBBInfo() {
     // Compute size of MBB.
     for (MachineBasicBlock::instr_iterator MI = MBB->instr_begin();
          MI != MBB->instr_end(); ++MI)
-      MBBInfos[I].Size += TII->GetInstSizeInBytes(&*MI);
+      MBBInfos[I].Size += TII->GetInstSizeInBytes(*MI);
 
     // Search for MBB's branch instruction.
     ReverseIter End = MBB->rend();
@@ -187,7 +187,7 @@ void MipsLongBranch::initMBBInfo() {
 
     if ((Br != End) && !Br->isIndirectBranch() &&
         (Br->isConditionalBranch() || (Br->isUnconditionalBranch() && IsPIC)))
-      MBBInfos[I].Br = (++Br).base();
+      MBBInfos[I].Br = &*(++Br).base();
   }
 }
 
@@ -241,7 +241,7 @@ void MipsLongBranch::replaceBranch(MachineBasicBlock &MBB, Iter Br,
     // Bundle the instruction in the delay slot to the newly created branch
     // and erase the original branch.
     assert(Br->isBundledWithSucc());
-    MachineBasicBlock::instr_iterator II(Br);
+    MachineBasicBlock::instr_iterator II = Br.getInstrIterator();
     MIBundleBuilder(&*MIB).append((++II)->removeFromBundle());
   }
   Br->eraseFromParent();

@@ -122,6 +122,9 @@ public:
 } // end anonymous namespace
 
 void SystemZPassConfig::addIRPasses() {
+  if (getOptLevel() != CodeGenOpt::None)
+    addPass(createSystemZTDCPass());
+
   TargetPassConfig::addIRPasses();
 }
 

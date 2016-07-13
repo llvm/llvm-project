@@ -33,7 +33,6 @@ class TailDuplicator {
   const MachineBranchProbabilityInfo *MBPI;
   const MachineModuleInfo *MMI;
   MachineRegisterInfo *MRI;
-  std::unique_ptr<RegScavenger> RS;
   bool PreRegAlloc;
 
   // A list of virtual registers for which to update SSA form.

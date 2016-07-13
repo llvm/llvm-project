@@ -182,6 +182,19 @@ struct NegativeOverriddenMethod : public VirtualMethod {
   }
 };
 
+struct VirtualMethodWarningOnly {
+  virtual void methodWithExpensiveValueParam(ExpensiveToCopyType T) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'T' is copied
+  // CHECK-FIXES: virtual void methodWithExpensiveValueParam(ExpensiveToCopyType T) {}
+  virtual ~VirtualMethodWarningOnly() {}
+};
+
+struct PositiveNonVirualMethod {
+  void method(const ExpensiveToCopyType T) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:41: warning: the const qualified parameter 'T' is copied
+  // CHECK-FIXES: void method(const ExpensiveToCopyType& T) {}
+};
+
 struct NegativeDeletedMethod {
   ~NegativeDeletedMethod() {}
   NegativeDeletedMethod& operator=(NegativeDeletedMethod N) = delete;

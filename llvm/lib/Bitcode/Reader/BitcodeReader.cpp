@@ -313,6 +313,10 @@ public:
   /// Cheap mechanism to just extract the identification block out of bitcode.
   ErrorOr<std::string> parseIdentificationBlock();
 
+  /// Peak at the module content and return true if any ObjC category or class
+  /// is found.
+  ErrorOr<bool> hasObjCCategory();
+
   static uint64_t decodeSignRotatedValue(uint64_t V);
 
   /// Materialize any deferred Metadata block.
@@ -450,6 +454,7 @@ private:
                               ArrayRef<uint64_t> Record);
   std::error_code parseMetadataAttachment(Function &F);
   ErrorOr<std::string> parseModuleTriple();
+  ErrorOr<bool> hasObjCCategoryInModule();
   std::error_code parseUseLists();
   std::error_code initStream(std::unique_ptr<DataStreamer> Streamer);
   std::error_code initStreamFromBuffer();
@@ -4195,6 +4200,81 @@ std::error_code BitcodeReader::parseGlobalObjectAttachment(
   return std::error_code();
 }
 
+ErrorOr<bool> BitcodeReader::hasObjCCategory() {
+  if (std::error_code EC = initStream(nullptr))
+    return EC;
+
+  // Sniff for the signature.
+  if (!hasValidBitcodeHeader(Stream))
+    return error("Invalid bitcode signature");
+
+  // We expect a number of well-defined blocks, though we don't necessarily
+  // need to understand them all.
+  while (1) {
+    BitstreamEntry Entry = Stream.advance();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      return std::error_code();
+
+    case BitstreamEntry::SubBlock:
+      if (Entry.ID == bitc::MODULE_BLOCK_ID)
+        return hasObjCCategoryInModule();
+
+      // Ignore other sub-blocks.
+      if (Stream.SkipBlock())
+        return error("Malformed block");
+      continue;
+
+    case BitstreamEntry::Record:
+      Stream.skipRecord(Entry.ID);
+      continue;
+    }
+  }
+}
+
+ErrorOr<bool> BitcodeReader::hasObjCCategoryInModule() {
+  if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return error("Invalid record");
+
+  SmallVector<uint64_t, 64> Record;
+  // Read all the records for this module.
+  while (1) {
+    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+
+    switch (Entry.Kind) {
+    case BitstreamEntry::SubBlock: // Handled for us already.
+    case BitstreamEntry::Error:
+      return error("Malformed block");
+    case BitstreamEntry::EndBlock:
+      return false;
+    case BitstreamEntry::Record:
+      // The interesting case.
+      break;
+    }
+
+    // Read a record.
+    switch (Stream.readRecord(Entry.ID, Record)) {
+    default:
+      break; // Default behavior, ignore unknown content.
+    case bitc::MODULE_CODE_SECTIONNAME: { // SECTIONNAME: [strchr x N]
+      std::string S;
+      if (convertToString(Record, 0, S))
+        return error("Invalid record");
+      // Check for the i386 and other (x86_64, ARM) conventions
+      if (S.find("__DATA, __objc_catlist") != std::string::npos ||
+          S.find("__OBJC,__category") != std::string::npos)
+        return true;
+      break;
+    }
+    }
+    Record.clear();
+  }
+  llvm_unreachable("Exit infinite loop");
+}
+
 /// Parse metadata attachments.
 std::error_code BitcodeReader::parseMetadataAttachment(Function &F) {
   if (Stream.EnterSubBlock(bitc::METADATA_ATTACHMENT_ID))
@@ -6546,6 +6626,16 @@ std::string llvm::getBitcodeTargetTriple(MemoryBufferRef Buffer,
   if (Triple.getError())
     return "";
   return Triple.get();
+}
+
+bool llvm::isBitcodeContainingObjCCategory(MemoryBufferRef Buffer,
+                                           LLVMContext &Context) {
+  std::unique_ptr<MemoryBuffer> Buf = MemoryBuffer::getMemBuffer(Buffer, false);
+  auto R = llvm::make_unique<BitcodeReader>(Buf.release(), Context);
+  ErrorOr<bool> hasObjCCategory = R->hasObjCCategory();
+  if (hasObjCCategory.getError())
+    return false;
+  return hasObjCCategory.get();
 }
 
 std::string llvm::getBitcodeProducerString(MemoryBufferRef Buffer,

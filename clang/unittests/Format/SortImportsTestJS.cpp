@@ -25,10 +25,13 @@ protected:
     if (Length == 0U)
       Length = Code.size() - Offset;
     std::vector<tooling::Range> Ranges(1, tooling::Range(Offset, Length));
-    std::string Sorted =
+    auto Sorted =
         applyAllReplacements(Code, sortIncludes(Style, Code, Ranges, FileName));
-    return applyAllReplacements(Sorted,
-                                reformat(Style, Sorted, Ranges, FileName));
+    EXPECT_TRUE(static_cast<bool>(Sorted));
+    auto Formatted = applyAllReplacements(
+        *Sorted, reformat(Style, *Sorted, Ranges, FileName));
+    EXPECT_TRUE(static_cast<bool>(Formatted));
+    return *Formatted;
   }
 
   void verifySort(llvm::StringRef Expected, llvm::StringRef Code,
@@ -232,6 +235,31 @@ TEST_F(SortImportsTestJS, SortingCanShrink) {
              "import {A} from 'b';\n"
              "\n"
              "import {B} from 'a';\n"
+             "\n"
+             "1;");
+}
+
+TEST_F(SortImportsTestJS, TrailingComma) {
+  verifySort("import {A, B,} from 'aa';\n", "import {B, A,} from 'aa';\n");
+}
+
+TEST_F(SortImportsTestJS, SortCaseInsensitive) {
+  verifySort("import {A} from 'aa';\n"
+             "import {A} from 'Ab';\n"
+             "import {A} from 'b';\n"
+             "import {A} from 'Bc';\n"
+             "\n"
+             "1;",
+             "import {A} from 'b';\n"
+             "import {A} from 'Bc';\n"
+             "import {A} from 'Ab';\n"
+             "import {A} from 'aa';\n"
+             "\n"
+             "1;");
+  verifySort("import {aa, Ab, b, Bc} from 'x';\n"
+             "\n"
+             "1;",
+             "import {b, Bc, Ab, aa} from 'x';\n"
              "\n"
              "1;");
 }

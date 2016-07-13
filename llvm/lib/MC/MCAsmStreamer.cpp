@@ -46,6 +46,7 @@ class MCAsmStreamer final : public MCStreamer {
   std::unique_ptr<MCCodeEmitter> Emitter;
   std::unique_ptr<MCAsmBackend> AsmBackend;
 
+  SmallString<128> ExplicitCommentToEmit;
   SmallString<128> CommentToEmit;
   raw_svector_ostream CommentStream;
 
@@ -73,6 +74,8 @@ public:
   }
 
   inline void EmitEOL() {
+    // Dump Explicit Comments here.
+    emitExplicitComments();
     // If we don't have any comments, just emit a \n.
     if (!IsVerboseAsm) {
       OS << '\n';
@@ -111,6 +114,9 @@ public:
   }
 
   void emitRawComment(const Twine &T, bool TabPrefix = true) override;
+
+  void addExplicitComment(const Twine &T) override;
+  void emitExplicitComments() override;
 
   /// AddBlankLine - Emit a blank line to a .s file to pretty it up.
   void AddBlankLine() override {
@@ -325,6 +331,49 @@ void MCAsmStreamer::emitRawComment(const Twine &T, bool TabPrefix) {
   EmitEOL();
 }
 
+void MCAsmStreamer::addExplicitComment(const Twine &T) {
+  StringRef c = T.getSingleStringRef();
+  if (c.equals(StringRef(MAI->getSeparatorString())))
+    return;
+  if (c.startswith(StringRef("//"))) {
+    ExplicitCommentToEmit.append("\t");
+    ExplicitCommentToEmit.append(MAI->getCommentString());
+    // drop //
+    ExplicitCommentToEmit.append(c.slice(2, c.size()).str());
+  } else if (c.startswith(StringRef("/*"))) {
+    size_t p = 2, len = c.size() - 2;
+    // emit each line in comment as separate newline.
+    do {
+      size_t newp = std::min(len, c.find_first_of("\r\n", p));
+      ExplicitCommentToEmit.append("\t");
+      ExplicitCommentToEmit.append(MAI->getCommentString());
+      ExplicitCommentToEmit.append(c.slice(p, newp).str());
+      // If we have another line in this comment add line
+      if (newp < len)
+        ExplicitCommentToEmit.append("\n");
+      p = newp + 1;
+    } while (p < len);
+  } else if (c.startswith(StringRef(MAI->getCommentString()))) {
+    ExplicitCommentToEmit.append("\t");
+    ExplicitCommentToEmit.append(c.str());
+  } else if (c.front() == '#') {
+    // # are comments for ## commentString. Output extra #.
+    ExplicitCommentToEmit.append("\t#");
+    ExplicitCommentToEmit.append(c.str());
+  } else
+    assert(false && "Unexpected Assembly Comment");
+  // full line comments immediately output
+  if (c.back() == '\n')
+    emitExplicitComments();
+}
+
+void MCAsmStreamer::emitExplicitComments() {
+  StringRef Comments = ExplicitCommentToEmit;
+  if (!Comments.empty())
+    OS << Comments;
+  ExplicitCommentToEmit.clear();
+}
+
 void MCAsmStreamer::ChangeSection(MCSection *Section,
                                   const MCExpr *Subsection) {
   assert(Section && "Cannot switch to a null section!");
@@ -510,8 +559,10 @@ void MCAsmStreamer::EmitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
 }
 
 void MCAsmStreamer::EmitSyntaxDirective() {
-  if (MAI->getAssemblerDialect() == 1)
-    OS << "\t.intel_syntax noprefix\n";
+  if (MAI->getAssemblerDialect() == 1) {
+    OS << "\t.intel_syntax noprefix";
+    EmitEOL();
+  }
   // FIXME: Currently emit unprefix'ed registers.
   // The intel_syntax directive has one optional argument 
   // with may have a value of prefix or noprefix.

@@ -92,7 +92,7 @@ public:
   virtual unsigned getOppositeBranchOpc(unsigned Opc) const = 0;
 
   /// Return the number of bytes of code the specified instruction may be.
-  unsigned GetInstSizeInBytes(const MachineInstr *MI) const;
+  unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
 
   void storeRegToStackSlot(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI,

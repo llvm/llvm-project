@@ -104,7 +104,7 @@ bool AArch64InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
     return false;
 
   // Get the last instruction in the block.
-  MachineInstr *LastInst = I;
+  MachineInstr *LastInst = &*I;
 
   // If there is only one terminator instruction, process it.
   unsigned LastOpc = LastInst->getOpcode();
@@ -122,7 +122,7 @@ bool AArch64InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   }
 
   // Get the instruction before it if it is a terminator.
-  MachineInstr *SecondLastInst = I;
+  MachineInstr *SecondLastInst = &*I;
   unsigned SecondLastOpc = SecondLastInst->getOpcode();
 
   // If AllowModify is true and the block ends with two or more unconditional
@@ -137,7 +137,7 @@ bool AArch64InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
         TBB = LastInst->getOperand(0).getMBB();
         return false;
       } else {
-        SecondLastInst = I;
+        SecondLastInst = &*I;
         SecondLastOpc = SecondLastInst->getOpcode();
       }
     }
@@ -620,6 +620,12 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
     return canBeExpandedToORR(MI, 32);
   case AArch64::MOVi64imm:
     return canBeExpandedToORR(MI, 64);
+
+  // It is cheap to move #0 to float registers if the subtarget has 
+  // ZeroCycleZeroing feature.
+  case AArch64::FMOVS0:
+  case AArch64::FMOVD0:
+    return Subtarget.hasZeroCycleZeroing();
   }
 
   llvm_unreachable("Unknown opcode to check as cheap as a move!");
@@ -846,10 +852,9 @@ static bool areCFlagsAccessedBetweenInstrs(
 
   // From must be above To.
   assert(std::find_if(MachineBasicBlock::reverse_iterator(To),
-                   To->getParent()->rend(),
-                   [From](MachineInstr &MI) {
-                     return &MI == From;
-                   }) != To->getParent()->rend());
+                      To->getParent()->rend(), [From](MachineInstr &MI) {
+                        return MachineBasicBlock::iterator(MI) == From;
+                      }) != To->getParent()->rend());
 
   // We iterate backward starting \p To until we hit \p From.
   for (--To; To != From; --To) {

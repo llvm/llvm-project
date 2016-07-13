@@ -352,7 +352,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   //       pointer is used directly.
   if (!I->isCopy() || !I->getOperand(0).isReg())
     return;
-  Context.SPCopy = I++;
+  Context.SPCopy = &*I++;
 
   unsigned StackPtr = Context.SPCopy->getOperand(0).getReg();
 
@@ -406,7 +406,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
     // If the same stack slot is being filled twice, something's fishy.
     if (Context.MovVector[StackDisp] != nullptr)
       return;
-    Context.MovVector[StackDisp] = I;
+    Context.MovVector[StackDisp] = &*I;
 
     for (const MachineOperand &MO : I->uses()) {
       if (!MO.isReg())
@@ -424,7 +424,7 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   if (I == MBB.end() || !I->isCall())
     return;
 
-  Context.Call = I;
+  Context.Call = &*I;
   if ((++I)->getOpcode() != FrameDestroyOpcode)
     return;
 
@@ -567,20 +567,20 @@ MachineInstr *X86CallFrameOptimization::canFoldIntoRegPush(
   if (!MRI->hasOneNonDBGUse(Reg))
     return nullptr;
 
-  MachineBasicBlock::iterator DefMI = MRI->getVRegDef(Reg);
+  MachineInstr &DefMI = *MRI->getVRegDef(Reg);
 
   // Make sure the def is a MOV from memory.
   // If the def is in another block, give up.
-  if ((DefMI->getOpcode() != X86::MOV32rm &&
-       DefMI->getOpcode() != X86::MOV64rm) ||
-      DefMI->getParent() != FrameSetup->getParent())
+  if ((DefMI.getOpcode() != X86::MOV32rm &&
+       DefMI.getOpcode() != X86::MOV64rm) ||
+      DefMI.getParent() != FrameSetup->getParent())
     return nullptr;
 
   // Make sure we don't have any instructions between DefMI and the
   // push that make folding the load illegal.
-  for (auto I = DefMI; I != FrameSetup; ++I)
+  for (MachineBasicBlock::iterator I = DefMI; I != FrameSetup; ++I)
     if (I->isLoadFoldBarrier())
       return nullptr;
 
-  return DefMI;
+  return &DefMI;
 }

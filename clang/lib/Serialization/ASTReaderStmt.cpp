@@ -2720,6 +2720,16 @@ void ASTStmtReader::VisitOMPDistributeParallelForDirective(
   VisitOMPLoopDirective(D);
 }
 
+void ASTStmtReader::VisitOMPDistributeParallelForSimdDirective(
+    OMPDistributeParallelForSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
+void ASTStmtReader::VisitOMPDistributeSimdDirective(
+    OMPDistributeSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
 //===----------------------------------------------------------------------===//
 // ASTReader Implementation
 //===----------------------------------------------------------------------===//
@@ -3400,6 +3410,23 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPDistributeParallelForDirective::CreateEmpty(Context, NumClauses,
                                                          CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_DISTRIBUTE_PARALLEL_FOR_SIMD_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPDistributeParallelForSimdDirective::CreateEmpty(Context, NumClauses,
+                                                             CollapsedNum,
+                                                             Empty);
+      break;
+    }
+
+    case STMT_OMP_DISTRIBUTE_SIMD_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPDistributeSimdDirective::CreateEmpty(Context, NumClauses,
+                                                  CollapsedNum, Empty);
       break;
     }
 

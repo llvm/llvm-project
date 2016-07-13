@@ -2851,6 +2851,10 @@ static void ReplaceUsesOfNonProtoTypeWithRealFunction(llvm::GlobalValue *Old,
 }
 
 void CodeGenModule::HandleCXXStaticMemberVarInstantiation(VarDecl *VD) {
+  auto DK = VD->isThisDeclarationADefinition();
+  if (DK == VarDecl::Definition && VD->hasAttr<DLLImportAttr>())
+    return;
+
   TemplateSpecializationKind TSK = VD->getTemplateSpecializationKind();
   // If we have a definition, this might be a deferred decl. If the
   // instantiation is explicit, make sure we emit it at the end.
@@ -3209,10 +3213,8 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unknown file format");
   case llvm::Triple::COFF:
-    GV->setSection(".rdata.cfstring");
-    break;
   case llvm::Triple::ELF:
-    GV->setSection(".rodata.cfstring");
+    GV->setSection("cfstring");
     break;
   case llvm::Triple::MachO:
     GV->setSection("__DATA,__cfstring");

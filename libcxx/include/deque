@@ -2026,7 +2026,7 @@ deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args)
         }
         else
         {
-            value_type __tmp(_VSTD::forward<_Args>(__args)...);
+            __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
             iterator __b = __base::begin();
             iterator __bm1 = _VSTD::prev(__b);
             __alloc_traits::construct(__a, _VSTD::addressof(*__bm1), _VSTD::move(*__b));
@@ -2034,7 +2034,7 @@ deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args)
             ++__base::size();
             if (__pos > 1)
                 __b = _VSTD::move(_VSTD::next(__b), __b + __pos, __b);
-            *__b = _VSTD::move(__tmp);
+            *__b = _VSTD::move(__tmp.get());
         }
     }
     else
@@ -2050,14 +2050,14 @@ deque<_Tp, _Allocator>::emplace(const_iterator __p, _Args&&... __args)
         }
         else
         {
-            value_type __tmp(_VSTD::forward<_Args>(__args)...);
+            __temp_value<value_type, _Allocator> __tmp(this->__alloc(), _VSTD::forward<_Args>(__args)...);
             iterator __e = __base::end();
             iterator __em1 = _VSTD::prev(__e);
             __alloc_traits::construct(__a, _VSTD::addressof(*__e), _VSTD::move(*__em1));
             ++__base::size();
             if (__de > 1)
                 __e = _VSTD::move_backward(__e - __de, __em1, __e);
-            *--__e = _VSTD::move(__tmp);
+            *--__e = _VSTD::move(__tmp.get());
         }
     }
     return __base::begin() + __pos;

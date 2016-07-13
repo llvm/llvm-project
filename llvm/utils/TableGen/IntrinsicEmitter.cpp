@@ -548,6 +548,12 @@ EmitAttributes(const std::vector<CodeGenIntrinsic> &Ints, raw_ostream &OS) {
             OS << "Attribute::NoCapture";
             addComma = true;
             break;
+          case CodeGenIntrinsic::Returned:
+            if (addComma)
+              OS << ",";
+            OS << "Attribute::Returned";
+            addComma = true;
+            break;
           case CodeGenIntrinsic::ReadOnly:
             if (addComma)
               OS << ",";

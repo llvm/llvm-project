@@ -723,6 +723,18 @@ TEST(IsInteger, ReportsNoFalsePositives) {
                            to(varDecl(hasType(isInteger()))))))));
 }
 
+TEST(IsSignedInteger, MatchesSignedIntegers) {
+  EXPECT_TRUE(matches("int i = 0;", varDecl(hasType(isSignedInteger()))));
+  EXPECT_TRUE(notMatches("unsigned i = 0;",
+                         varDecl(hasType(isSignedInteger()))));
+}
+
+TEST(IsUnsignedInteger, MatchesUnsignedIntegers) {
+  EXPECT_TRUE(notMatches("int i = 0;", varDecl(hasType(isUnsignedInteger()))));
+  EXPECT_TRUE(matches("unsigned i = 0;",
+                      varDecl(hasType(isUnsignedInteger()))));
+}
+
 TEST(IsAnyPointer, MatchesPointers) {
   EXPECT_TRUE(matches("int* i = nullptr;", varDecl(hasType(isAnyPointer()))));
 }
@@ -1366,6 +1378,14 @@ TEST(Member, MatchesMember) {
     memberExpr(hasDeclaration(fieldDecl(hasType(isInteger()))))));
 }
 
+TEST(Member, BitFields) {
+  EXPECT_TRUE(matches("class C { int a : 2; int b; };",
+                      fieldDecl(isBitField(), hasName("a"))));
+  EXPECT_TRUE(notMatches("class C { int a : 2; int b; };",
+                         fieldDecl(isBitField(), hasName("b"))));
+  EXPECT_TRUE(matches("class C { int a : 2; int b : 4; };",
+                      fieldDecl(isBitField(), hasBitWidth(2), hasName("a"))));
+}
 
 TEST(Member, UnderstandsAccess) {
   EXPECT_TRUE(matches(

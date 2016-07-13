@@ -24,5 +24,5 @@ if (SSE42_TRUE AND CMAKE_SIZEOF_VOID_P EQUAL 8)
     ${CMAKE_CURRENT_BINARY_DIR}
     DEPENDS ${SCUDO_TEST_DEPS})
   set_target_properties(check-scudo PROPERTIES FOLDER
-    "Scudo Hardened Allocator tests")
+    "Compiler-RT Misc")
 endif(SSE42_TRUE AND CMAKE_SIZEOF_VOID_P EQUAL 8)

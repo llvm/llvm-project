@@ -235,6 +235,15 @@ def CCOp : Operand<i32> {
   let PrintMethod = "printCCOperand";
 }
 
+// Predicate operand. Default to 0 = true.
+def CondCodeOperand : AsmOperandClass { let Name = "CondCode"; }
+
+def pred : PredicateOperand<i32, (ops i32imm), (ops (i32 0))> {
+  let PrintMethod = "printPredicateOperand";
+  let ParserMatchClass = CondCodeOperand;
+  let DecoderMethod = "decodePredicateOperand";
+}
+
 let hasSideEffects = 0, Inst = 0x00000001 in
   def NOP : InstLanai<(outs), (ins), "nop", []>;
 
@@ -283,16 +292,10 @@ multiclass ALUarith<bits<3> subOp, string AsmStr, SDNode OpNode,
   defm I_ : ALUbase<subOp, AsmStr, OpNode, LoExt, HiExt, [], []>;
 
   // Register Register
-  let JJJJJ = 0, DDDI = 0 in
-    def R : InstRR<subOp, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2),
-                   !strconcat(AsmStr, "\t$Rs1, $Rs2, $Rd"),
+  let JJJJJ = 0 in
+    def R : InstRR<subOp, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2, pred:$DDDI),
+                   !strconcat(AsmStr, "$DDDI\t$Rs1, $Rs2, $Rd"),
                    [(set GPR:$Rd, (OpNode GPR:$Rs1, GPR:$Rs2))]>;
-  // RR Conditional
-  let JJJJJ = 0, Uses = [SR] in
-    def R_CC : InstRR<subOp, (outs GPR:$Rd),
-                      (ins GPR:$Rs1, GPR:$Rs2, CCOp:$DDDI),
-                      !strconcat(AsmStr, ".$DDDI\t$Rs1, $Rs2, $Rd"),
-                      []>;
 }
 
 multiclass ALUlogic<bits<3> subOp, string AsmStr, SDNode OpNode,
@@ -302,16 +305,10 @@ multiclass ALUlogic<bits<3> subOp, string AsmStr, SDNode OpNode,
                     [(set GPR:$Rd, (OpNode GPR:$Rs1, HiExt:$imm16))]>;
 
   // Register Register
-  let JJJJJ = 0, DDDI = 0 in
-    def R : InstRR<subOp, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2),
-                   !strconcat(AsmStr, "\t$Rs1, $Rs2, $Rd"),
+  let JJJJJ = 0 in
+    def R : InstRR<subOp, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2, pred:$DDDI),
+                   !strconcat(AsmStr, "$DDDI\t$Rs1, $Rs2, $Rd"),
                    [(set GPR:$Rd, (OpNode GPR:$Rs1, GPR:$Rs2))]>;
-  // RR Conditional
-  let JJJJJ = 0, Uses = [SR] in
-    def R_CC : InstRR<subOp, (outs GPR:$Rd),
-                      (ins GPR:$Rs1, GPR:$Rs2, CCOp:$DDDI),
-                      !strconcat(AsmStr, ".$DDDI\t$Rs1, $Rs2, $Rd"),
-                      []>;
 }
 
 // Non flag setting ALU operations
@@ -407,7 +404,7 @@ def : Pat<(LanaiSubbF GPR:$Rs1, i32lo16z:$imm),
 def : Pat<(LanaiSubbF GPR:$Rs1, i32hi16:$imm),
           (SUBB_F_I_HI GPR:$Rs1, i32hi16:$imm)>;
 
-def : InstAlias<"mov $src, $dst", (ADD_R GPR:$dst, GPR:$src, R0)>;
+def : InstAlias<"mov $src, $dst", (ADD_R GPR:$dst, GPR:$src, R0, 0)>;
 
 let isAsCheapAsAMove = 1, Rs1 = R0.Num, isCodeGenOnly = 1, H = 1, F = 0,
   isReMaterializable = 1 in
@@ -446,31 +443,30 @@ let F = 1, Defs = [SR] in {
 }
 
 class ShiftRR<string AsmStr, list<dag> Pattern>
-  : InstRR<0b111, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2), AsmStr, Pattern> {
-  let DDDI = 0;
-}
+  : InstRR<0b111, (outs GPR:$Rd), (ins GPR:$Rs1, GPR:$Rs2, pred:$DDDI), AsmStr,
+           Pattern>;
 
 let F = 0 in {
   let JJJJJ = 0b10000 in
-    def SHL_R : ShiftRR<"sh\t$Rs1, $Rs2, $Rd",
+    def SHL_R : ShiftRR<"sh$DDDI\t$Rs1, $Rs2, $Rd",
                         [(set GPR:$Rd, (shl GPR:$Rs1, GPR:$Rs2))]>;
   let isCodeGenOnly = 1 in {
     let JJJJJ = 0b10000 in
-      def SRL_R : ShiftRR<"sh\t$Rs1, $Rs2, $Rd", []>;
+      def SRL_R : ShiftRR<"sh$DDDI\t$Rs1, $Rs2, $Rd", []>;
   }
   let JJJJJ = 0b11000 in
-    def SRA_R : ShiftRR<"sha\t$Rs1, $Rs2, $Rd", []>;
+    def SRA_R : ShiftRR<"sha$DDDI\t$Rs1, $Rs2, $Rd", []>;
 }
 
 let F = 1, Defs = [SR] in {
   let JJJJJ = 0b10000 in
-    def SHL_F_R : ShiftRR<"sh.f\t$Rs1, $Rs2, $Rd", []>;
+    def SHL_F_R : ShiftRR<"sh.f$DDDI\t$Rs1, $Rs2, $Rd", []>;
   let isCodeGenOnly = 1 in {
     let JJJJJ = 0b10000 in
-      def SRL_F_R : ShiftRR<"sh.f\t$Rs1, $Rs2, $Rd", []>;
+      def SRL_F_R : ShiftRR<"sh.f$DDDI\t$Rs1, $Rs2, $Rd", []>;
   }
   let JJJJJ = 0b11000 in
-    def SRA_F_R : ShiftRR<"sha.f\t$Rs1, $Rs2, $Rd", []>;
+    def SRA_F_R : ShiftRR<"sha.f$DDDI\t$Rs1, $Rs2, $Rd", []>;
 }
 
 // Expand shift-right operations
@@ -716,11 +712,15 @@ multiclass SF<bits<3> op2Val, string AsmStr> {
                      !strconcat(AsmStr, "\t$Rs1, $Rs2, %r0"),
                      [(LanaiSetFlag (i32 GPR:$Rs1), (i32 GPR:$Rs2))]>;
   let F = 1, Rd = R0.Num, H = 0, Defs = [SR] in
-    def _RI : InstRI<op2Val, (outs), (ins GPR:$Rs1, i32lo16z:$imm16),
+    def _RI_LO : InstRI<op2Val, (outs), (ins GPR:$Rs1, i32lo16z:$imm16),
                      !strconcat(AsmStr, "\t$Rs1, $imm16, %r0"),
                      [(LanaiSetFlag (i32 GPR:$Rs1), i32lo16z:$imm16)]>;
+  let F = 1, Rd = R0.Num, H = 1, Defs = [SR] in
+    def _RI_HI : InstRI<op2Val, (outs), (ins GPR:$Rs1, i32hi16:$imm16),
+                     !strconcat(AsmStr, "\t$Rs1, $imm16, %r0"),
+                     [(LanaiSetFlag (i32 GPR:$Rs1), i32hi16:$imm16)]>;
 }
-let isCodeGenOnly = 1 in {
+let isCodeGenOnly = 1, isCompare = 1 in {
   defm SFSUB_F : SF<0b010, "sub.f">;
 }
 

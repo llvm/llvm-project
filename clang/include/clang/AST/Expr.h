@@ -1120,6 +1120,10 @@ public:
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
   }
 
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
+  }
+
   /// \brief Returns true if this expression refers to a function that
   /// was resolved from an overloaded set having size greater than 1.
   bool hadMultipleCandidates() const {
@@ -2489,6 +2493,10 @@ public:
       return 0;
 
     return getTrailingObjects<ASTTemplateKWAndArgsInfo>()->NumTemplateArgs;
+  }
+
+  ArrayRef<TemplateArgumentLoc> template_arguments() const {
+    return {getTemplateArgs(), getNumTemplateArgs()};
   }
 
   /// \brief Retrieve the member declaration name info.
@@ -4851,9 +4859,12 @@ public:
   }
 
   AtomicOp getOp() const { return Op; }
-  unsigned getNumSubExprs() { return NumSubExprs; }
+  unsigned getNumSubExprs() const { return NumSubExprs; }
 
   Expr **getSubExprs() { return reinterpret_cast<Expr **>(SubExprs); }
+  const Expr * const *getSubExprs() const {
+    return reinterpret_cast<Expr * const *>(SubExprs);
+  }
 
   bool isVolatile() const {
     return getPtr()->getType()->getPointeeType().isVolatileQualified();

@@ -626,9 +626,20 @@ const AsmToken &AsmParser::Lex() {
   if (Lexer.getTok().is(AsmToken::Error))
     Error(Lexer.getErrLoc(), Lexer.getErr());
 
+  // if it's a end of statement with a comment in it
+  if (getTok().is(AsmToken::EndOfStatement)) {
+    // if this is a line comment output it.
+    if (getTok().getString().front() != '\n' &&
+        getTok().getString().front() != '\r' && MAI.preserveAsmComments())
+      Out.addExplicitComment(Twine(getTok().getString()));
+  }
+
   const AsmToken *tok = &Lexer.Lex();
-  // Drop comments here.
+
+  // Parse comments here to be deferred until end of next statement.
   while (tok->is(AsmToken::Comment)) {
+    if (MAI.preserveAsmComments())
+      Out.addExplicitComment(Twine(tok->getString()));
     tok = &Lexer.Lex();
   }
 

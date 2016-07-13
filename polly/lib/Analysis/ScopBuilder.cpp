@@ -29,6 +29,17 @@ using namespace polly;
 STATISTIC(ScopFound, "Number of valid Scops");
 STATISTIC(RichScopFound, "Number of Scops containing a loop");
 
+// If the loop is nonaffine/boxed, return the first non-boxed surrounding loop
+// for Polly. If the loop is affine, return the loop itself. Do not call
+// `getSCEVAtScope()` on the result of `getFirstNonBoxedLoopFor()`, as we need
+// to analyze the memory accesses of the nonaffine/boxed loops.
+static Loop *getFirstNonBoxedLoopFor(Loop *L, LoopInfo &LI,
+                                     const BoxedLoopsSetTy &BoxedLoops) {
+  while (BoxedLoops.count(L))
+    L = L->getParentLoop();
+  return L;
+}
+
 static cl::opt<bool> ModelReadOnlyScalars(
     "polly-analyze-read-only-scalars",
     cl::desc("Model read-only scalar values in the scop description"),
@@ -150,9 +161,12 @@ bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, Loop *L) {
   std::vector<const SCEV *> SizesSCEV;
 
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
+
+  Loop *SurroundingLoop = getFirstNonBoxedLoopFor(L, LI, scop->getBoxedLoops());
   for (auto *Subscript : Subscripts) {
     InvariantLoadsSetTy AccessILS;
-    if (!isAffineExpr(&scop->getRegion(), L, Subscript, SE, &AccessILS))
+    if (!isAffineExpr(&scop->getRegion(), SurroundingLoop, Subscript, SE,
+                      &AccessILS))
       return false;
 
     for (LoadInst *LInst : AccessILS)
@@ -226,8 +240,10 @@ bool ScopBuilder::buildAccessMemIntrinsic(MemAccInst Inst, Loop *L) {
   // Check if the length val is actually affine or if we overapproximate it
   InvariantLoadsSetTy AccessILS;
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
-  bool LengthIsAffine =
-      isAffineExpr(&scop->getRegion(), L, LengthVal, SE, &AccessILS);
+
+  Loop *SurroundingLoop = getFirstNonBoxedLoopFor(L, LI, scop->getBoxedLoops());
+  bool LengthIsAffine = isAffineExpr(&scop->getRegion(), SurroundingLoop,
+                                     LengthVal, SE, &AccessILS);
   for (LoadInst *LInst : AccessILS)
     if (!ScopRIL.count(LInst))
       LengthIsAffine = false;
@@ -295,6 +311,8 @@ bool ScopBuilder::buildAccessCallInst(MemAccInst Inst, Loop *L) {
     llvm_unreachable("Unknown mod ref behaviour cannot be represented.");
   case llvm::FMRB_DoesNotAccessMemory:
     return true;
+  case llvm::FMRB_DoesNotReadMemory:
+    return false;
   case llvm::FMRB_OnlyReadsMemory:
     GlobalReads.push_back(CI);
     return true;
@@ -345,9 +363,11 @@ void ScopBuilder::buildAccessSingleDim(MemAccInst Inst, Loop *L) {
       isVariantInNonAffineLoop = true;
 
   InvariantLoadsSetTy AccessILS;
-  bool IsAffine =
-      !isVariantInNonAffineLoop &&
-      isAffineExpr(&scop->getRegion(), L, AccessFunction, SE, &AccessILS);
+
+  Loop *SurroundingLoop = getFirstNonBoxedLoopFor(L, LI, BoxedLoops);
+  bool IsAffine = !isVariantInNonAffineLoop &&
+                  isAffineExpr(&scop->getRegion(), SurroundingLoop,
+                               AccessFunction, SE, &AccessILS);
 
   const InvariantLoadsSetTy &ScopRIL = scop->getRequiredInvariantLoads();
   for (LoadInst *LInst : AccessILS)

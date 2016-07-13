@@ -139,8 +139,10 @@ Error MappedBlockStream::readLongestContiguousChunk(
   uint32_t BlockSpan = Last - First + 1;
   uint32_t ByteSpan =
       BytesFromFirstBlock + (BlockSpan - 1) * Pdb.getBlockSize();
-  Buffer = Pdb.getBlockData(BlockList[First], Pdb.getBlockSize());
-  Buffer = Buffer.drop_front(OffsetInFirstBlock);
+  auto Result = Pdb.getBlockData(BlockList[First], Pdb.getBlockSize());
+  if (!Result)
+    return Result.takeError();
+  Buffer = Result->drop_front(OffsetInFirstBlock);
   Buffer = ArrayRef<uint8_t>(Buffer.data(), ByteSpan);
   return Error::success();
 }
@@ -173,8 +175,12 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
   }
 
   uint32_t FirstBlockAddr = BlockList[BlockNum];
-  auto Data = Pdb.getBlockData(FirstBlockAddr, Pdb.getBlockSize());
-  Data = Data.drop_front(OffsetInBlock);
+  auto Result = Pdb.getBlockData(FirstBlockAddr, Pdb.getBlockSize());
+  if (!Result) {
+    consumeError(Result.takeError());
+    return false;
+  }
+  auto Data = Result->drop_front(OffsetInBlock);
   Buffer = ArrayRef<uint8_t>(Data.data(), Size);
   return true;
 }
@@ -197,8 +203,11 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
   while (BytesLeft > 0) {
     uint32_t StreamBlockAddr = BlockList[BlockNum];
 
-    auto Data = Pdb.getBlockData(StreamBlockAddr, Pdb.getBlockSize());
+    auto Result = Pdb.getBlockData(StreamBlockAddr, Pdb.getBlockSize());
+    if (!Result)
+      return Result.takeError();
 
+    auto Data = *Result;
     const uint8_t *ChunkStart = Data.data() + OffsetInBlock;
     uint32_t BytesInChunk =
         std::min(BytesLeft, Pdb.getBlockSize() - OffsetInBlock);

@@ -102,9 +102,9 @@ class RegisterRefs {
   std::vector<BT::RegisterRef> Vector;
 
 public:
-  RegisterRefs(const MachineInstr *MI) : Vector(MI->getNumOperands()) {
+  RegisterRefs(const MachineInstr &MI) : Vector(MI.getNumOperands()) {
     for (unsigned i = 0, n = Vector.size(); i < n; ++i) {
-      const MachineOperand &MO = MI->getOperand(i);
+      const MachineOperand &MO = MI.getOperand(i);
       if (MO.isReg())
         Vector[i] = BT::RegisterRef(MO);
       // For indices that don't correspond to registers, the entry will
@@ -121,13 +121,14 @@ public:
 };
 }
 
-bool HexagonEvaluator::evaluate(const MachineInstr *MI,
-      const CellMapType &Inputs, CellMapType &Outputs) const {
+bool HexagonEvaluator::evaluate(const MachineInstr &MI,
+                                const CellMapType &Inputs,
+                                CellMapType &Outputs) const {
   unsigned NumDefs = 0;
 
   // Sanity verification: there should not be any defs with subregisters.
-  for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (!MO.isReg() || !MO.isDef())
       continue;
     NumDefs++;
@@ -137,7 +138,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr *MI,
   if (NumDefs == 0)
     return false;
 
-  if (MI->mayLoad())
+  if (MI.mayLoad())
     return evaluateLoad(MI, Inputs, Outputs);
 
   // Check COPY instructions that copy formal parameters into virtual
@@ -154,7 +155,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr *MI,
   // was not a COPY, it would not be clear how to mirror that extension
   // on the callee's side. For that reason, only check COPY instructions
   // for potential extensions.
-  if (MI->isCopy()) {
+  if (MI.isCopy()) {
     if (evaluateFormalCopy(MI, Inputs, Outputs))
       return true;
   }
@@ -165,19 +166,19 @@ bool HexagonEvaluator::evaluate(const MachineInstr *MI,
   // checking what kind of operand a given instruction has individually
   // for each instruction, do it here. Global symbols as operands gene-
   // rally do not provide any useful information.
-  for (unsigned i = 0, n = MI->getNumOperands(); i < n; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+  for (unsigned i = 0, n = MI.getNumOperands(); i < n; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (MO.isGlobal() || MO.isBlockAddress() || MO.isSymbol() || MO.isJTI() ||
         MO.isCPI())
       return false;
   }
 
   RegisterRefs Reg(MI);
-  unsigned Opc = MI->getOpcode();
+  unsigned Opc = MI.getOpcode();
   using namespace Hexagon;
-  #define op(i) MI->getOperand(i)
-  #define rc(i) RegisterCell::ref(getCell(Reg[i],Inputs))
-  #define im(i) MI->getOperand(i).getImm()
+#define op(i) MI.getOperand(i)
+#define rc(i) RegisterCell::ref(getCell(Reg[i], Inputs))
+#define im(i) MI.getOperand(i).getImm()
 
   // If the instruction has no register operands, skip it.
   if (Reg.size() == 0)
@@ -190,9 +191,9 @@ bool HexagonEvaluator::evaluate(const MachineInstr *MI,
     return true;
   };
   // Get the cell corresponding to the N-th operand.
-  auto cop = [this,&Reg,&MI,&Inputs] (unsigned N, uint16_t W)
-        -> BT::RegisterCell {
-    const MachineOperand &Op = MI->getOperand(N);
+  auto cop = [this, &Reg, &MI, &Inputs](unsigned N,
+                                        uint16_t W) -> BT::RegisterCell {
+    const MachineOperand &Op = MI.getOperand(N);
     if (Op.isImm())
       return eIMM(Op.getImm(), W);
     if (!Op.isReg())
@@ -879,13 +880,13 @@ bool HexagonEvaluator::evaluate(const MachineInstr *MI,
   return false;
 }
 
-
-bool HexagonEvaluator::evaluate(const MachineInstr *BI,
-      const CellMapType &Inputs, BranchTargetList &Targets,
-      bool &FallsThru) const {
+bool HexagonEvaluator::evaluate(const MachineInstr &BI,
+                                const CellMapType &Inputs,
+                                BranchTargetList &Targets,
+                                bool &FallsThru) const {
   // We need to evaluate one branch at a time. TII::AnalyzeBranch checks
   // all the branches in a basic block at once, so we cannot use it.
-  unsigned Opc = BI->getOpcode();
+  unsigned Opc = BI.getOpcode();
   bool SimpleBranch = false;
   bool Negated = false;
   switch (Opc) {
@@ -901,7 +902,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr *BI,
       SimpleBranch = true;
       break;
     case Hexagon::J2_jump:
-      Targets.insert(BI->getOperand(0).getMBB());
+      Targets.insert(BI.getOperand(0).getMBB());
       FallsThru = false;
       return true;
     default:
@@ -914,7 +915,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr *BI,
     return false;
 
   // BI is a conditional branch if we got here.
-  RegisterRef PR = BI->getOperand(0);
+  RegisterRef PR = BI.getOperand(0);
   RegisterCell PC = getCell(PR, Inputs);
   const BT::BitValue &Test = PC[0];
 
@@ -929,18 +930,18 @@ bool HexagonEvaluator::evaluate(const MachineInstr *BI,
     return true;
   }
 
-  Targets.insert(BI->getOperand(1).getMBB());
+  Targets.insert(BI.getOperand(1).getMBB());
   FallsThru = false;
   return true;
 }
 
-
-bool HexagonEvaluator::evaluateLoad(const MachineInstr *MI,
-      const CellMapType &Inputs, CellMapType &Outputs) const {
-  if (TII.isPredicated(*MI))
+bool HexagonEvaluator::evaluateLoad(const MachineInstr &MI,
+                                    const CellMapType &Inputs,
+                                    CellMapType &Outputs) const {
+  if (TII.isPredicated(MI))
     return false;
-  assert(MI->mayLoad() && "A load that mayn't?");
-  unsigned Opc = MI->getOpcode();
+  assert(MI.mayLoad() && "A load that mayn't?");
+  unsigned Opc = MI.getOpcode();
 
   uint16_t BitNum;
   bool SignEx;
@@ -1067,7 +1068,7 @@ bool HexagonEvaluator::evaluateLoad(const MachineInstr *MI,
       break;
   }
 
-  const MachineOperand &MD = MI->getOperand(0);
+  const MachineOperand &MD = MI.getOperand(0);
   assert(MD.isReg() && MD.isDef());
   RegisterRef RD = MD;
 
@@ -1091,15 +1092,15 @@ bool HexagonEvaluator::evaluateLoad(const MachineInstr *MI,
   return true;
 }
 
-
-bool HexagonEvaluator::evaluateFormalCopy(const MachineInstr *MI,
-      const CellMapType &Inputs, CellMapType &Outputs) const {
+bool HexagonEvaluator::evaluateFormalCopy(const MachineInstr &MI,
+                                          const CellMapType &Inputs,
+                                          CellMapType &Outputs) const {
   // If MI defines a formal parameter, but is not a copy (loads are handled
   // in evaluateLoad), then it's not clear what to do.
-  assert(MI->isCopy());
+  assert(MI.isCopy());
 
-  RegisterRef RD = MI->getOperand(0);
-  RegisterRef RS = MI->getOperand(1);
+  RegisterRef RD = MI.getOperand(0);
+  RegisterRef RS = MI.getOperand(1);
   assert(RD.Sub == 0);
   if (!TargetRegisterInfo::isPhysicalRegister(RS.Reg))
     return false;

@@ -66,9 +66,10 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xffff);
 }
 
-void AMDGPUInstPrinter::printNamedBit(const MCInst* MI, unsigned OpNo, raw_ostream& O, const char* BitName) {
+void AMDGPUInstPrinter::printNamedBit(const MCInst* MI, unsigned OpNo,
+                                      raw_ostream& O, StringRef BitName) {
   if (MI->getOperand(OpNo).getImm()) {
-    O << " " << BitName;
+    O << ' ' << BitName;
   }
 }
 
@@ -164,12 +165,12 @@ void AMDGPUInstPrinter::printUNorm(const MCInst *MI, unsigned OpNo,
 }
 
 void AMDGPUInstPrinter::printDA(const MCInst *MI, unsigned OpNo,
-                                   raw_ostream &O) {
+                                raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "da");
 }
 
 void AMDGPUInstPrinter::printR128(const MCInst *MI, unsigned OpNo,
-                                   raw_ostream &O) {
+                                  raw_ostream &O) {
   printNamedBit(MI, OpNo, O, "r128");
 }
 
@@ -230,64 +231,63 @@ void AMDGPUInstPrinter::printRegOperand(unsigned reg, raw_ostream &O,
     break;
   }
 
-  std::string Type;
-  unsigned NumRegs;
+  // The low 8 bits of the encoding value is the register index, for both VGPRs
+  // and SGPRs.
+  unsigned RegIdx = MRI.getEncodingValue(reg) & ((1 << 8) - 1);
 
+  unsigned NumRegs;
   if (MRI.getRegClass(AMDGPU::VGPR_32RegClassID).contains(reg)) {
-    Type = "v";
+    O << 'v';
     NumRegs = 1;
   } else  if (MRI.getRegClass(AMDGPU::SGPR_32RegClassID).contains(reg)) {
-    Type = "s";
+    O << 's';
     NumRegs = 1;
   } else if (MRI.getRegClass(AMDGPU::VReg_64RegClassID).contains(reg)) {
-    Type = "v";
+    O <<'v';
     NumRegs = 2;
   } else  if (MRI.getRegClass(AMDGPU::SGPR_64RegClassID).contains(reg)) {
-    Type = "s";
-    NumRegs = 2;
-  } else  if (MRI.getRegClass(AMDGPU::TTMP_64RegClassID).contains(reg)) {
-    Type = "ttmp";
+    O << 's';
     NumRegs = 2;
   } else if (MRI.getRegClass(AMDGPU::VReg_128RegClassID).contains(reg)) {
-    Type = "v";
+    O << 'v';
     NumRegs = 4;
   } else  if (MRI.getRegClass(AMDGPU::SGPR_128RegClassID).contains(reg)) {
-    Type = "s";
-    NumRegs = 4;
-  } else  if (MRI.getRegClass(AMDGPU::TTMP_128RegClassID).contains(reg)) {
-    Type = "ttmp";
+    O << 's';
     NumRegs = 4;
   } else if (MRI.getRegClass(AMDGPU::VReg_96RegClassID).contains(reg)) {
-    Type = "v";
+    O << 'v';
     NumRegs = 3;
   } else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(reg)) {
-    Type = "v";
+    O << 'v';
     NumRegs = 8;
   } else if (MRI.getRegClass(AMDGPU::SReg_256RegClassID).contains(reg)) {
-    Type = "s";
+    O << 's';
     NumRegs = 8;
   } else if (MRI.getRegClass(AMDGPU::VReg_512RegClassID).contains(reg)) {
-    Type = "v";
+    O << 'v';
     NumRegs = 16;
   } else if (MRI.getRegClass(AMDGPU::SReg_512RegClassID).contains(reg)) {
-    Type = "s";
+    O << 's';
     NumRegs = 16;
+  } else if (MRI.getRegClass(AMDGPU::TTMP_64RegClassID).contains(reg)) {
+    O << "ttmp";
+    NumRegs = 2;
+    RegIdx -= 112; // Trap temps start at offset 112. TODO: Get this from tablegen.
+  } else if (MRI.getRegClass(AMDGPU::TTMP_128RegClassID).contains(reg)) {
+    O << "ttmp";
+    NumRegs = 4;
+    RegIdx -= 112; // Trap temps start at offset 112. TODO: Get this from tablegen.
   } else {
     O << getRegisterName(reg);
     return;
   }
 
-  // The low 8 bits of the encoding value is the register index, for both VGPRs
-  // and SGPRs.
-  unsigned RegIdx = MRI.getEncodingValue(reg) & ((1 << 8) - 1);
-  if (Type == "ttmp")
-    RegIdx -= 112; // Trap temps start at offset 112. TODO: Get this from tablegen.
   if (NumRegs == 1) {
-    O << Type << RegIdx;
+    O << RegIdx;
     return;
   }
 
-  O << Type << '[' << RegIdx << ':' << (RegIdx + NumRegs - 1) << ']';
+  O << '[' << RegIdx << ':' << (RegIdx + NumRegs - 1) << ']';
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,
@@ -453,10 +453,10 @@ void AMDGPUInstPrinter::printDPPCtrl(const MCInst *MI, unsigned OpNo,
   unsigned Imm = MI->getOperand(OpNo).getImm();
   if (Imm <= 0x0ff) {
     O << " quad_perm:[";
-    O << formatDec(Imm & 0x3)         << ",";
-    O << formatDec((Imm & 0xc)  >> 2) << ",";
-    O << formatDec((Imm & 0x30) >> 4) << ",";
-    O << formatDec((Imm & 0xc0) >> 6) << "]";
+    O << formatDec(Imm & 0x3)         << ',';
+    O << formatDec((Imm & 0xc)  >> 2) << ',';
+    O << formatDec((Imm & 0x30) >> 4) << ',';
+    O << formatDec((Imm & 0xc0) >> 6) << ']';
   } else if ((Imm >= 0x101) && (Imm <= 0x10f)) {
     O << " row_shl:";
     printU4ImmDecOperand(MI, OpNo, O);
@@ -586,9 +586,17 @@ void AMDGPUInstPrinter::printIfSet(const MCInst *MI, unsigned OpNo,
   }
 }
 
+void AMDGPUInstPrinter::printIfSet(const MCInst *MI, unsigned OpNo,
+                                   raw_ostream &O, char Asm) {
+  const MCOperand &Op = MI->getOperand(OpNo);
+  assert(Op.isImm());
+  if (Op.getImm() == 1)
+    O << Asm;
+}
+
 void AMDGPUInstPrinter::printAbs(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  printIfSet(MI, OpNo, O, "|");
+  printIfSet(MI, OpNo, O, '|');
 }
 
 void AMDGPUInstPrinter::printClamp(const MCInst *MI, unsigned OpNo,
@@ -633,7 +641,7 @@ void AMDGPUInstPrinter::printLast(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printNeg(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  printIfSet(MI, OpNo, O, "-");
+  printIfSet(MI, OpNo, O, '-');
 }
 
 void AMDGPUInstPrinter::printOMOD(const MCInst *MI, unsigned OpNo,
@@ -654,7 +662,7 @@ void AMDGPUInstPrinter::printOMOD(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printRel(const MCInst *MI, unsigned OpNo,
                                  raw_ostream &O) {
-  printIfSet(MI, OpNo, O, "+");
+  printIfSet(MI, OpNo, O, '+');
 }
 
 void AMDGPUInstPrinter::printUpdateExecMask(const MCInst *MI, unsigned OpNo,

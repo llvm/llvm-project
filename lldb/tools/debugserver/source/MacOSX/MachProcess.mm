@@ -12,8 +12,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "DNB.h"
+#include <dlfcn.h>
 #include <inttypes.h>
 #include <mach/mach.h>
+#include <mach/task.h>
 #include <signal.h>
 #include <spawn.h>
 #include <sys/fcntl.h>
@@ -417,8 +419,17 @@ MachProcess::MachProcess() :
     m_image_infos_baton(NULL),
     m_sent_interrupt_signo (0),
     m_auto_resume_signo (0),
-    m_did_exec (false)
+    m_did_exec (false),
+    m_dyld_process_info_create (nullptr),
+    m_dyld_process_info_for_each_image (nullptr),
+    m_dyld_process_info_release (nullptr),
+    m_dyld_process_info_get_cache (nullptr)
 {
+    m_dyld_process_info_create = (void * (*) (task_t task, uint64_t timestamp, kern_return_t* kernelError)) dlsym (RTLD_DEFAULT, "_dyld_process_info_create");
+    m_dyld_process_info_for_each_image = (void (*)(void *info, void (^)(uint64_t machHeaderAddress, const uuid_t uuid, const char* path))) dlsym (RTLD_DEFAULT, "_dyld_process_info_for_each_image");
+    m_dyld_process_info_release = (void (*) (void* info)) dlsym (RTLD_DEFAULT, "_dyld_process_info_release");
+    m_dyld_process_info_get_cache = (void (*) (void* info, void* cacheInfo)) dlsym (RTLD_DEFAULT, "_dyld_process_info_get_cache");
+
     DNBLogThreadedIf(LOG_PROCESS | LOG_VERBOSE, "%s", __PRETTY_FUNCTION__);
 }
 
@@ -520,8 +531,232 @@ MachProcess::GetTSDAddressForThread (nub_thread_t tid, uint64_t plo_pthread_tsd_
     return m_thread_list.GetTSDAddressForThread (tid, plo_pthread_tsd_base_address_offset, plo_pthread_tsd_base_offset, plo_pthread_tsd_entry_size);
 }
 
+// Given an address, read the mach-o header and load commands out of memory to fill in
+// the mach_o_information "inf" object.
+//
+// Returns false if there was an error in reading this mach-o file header/load commands.
 
+bool
+MachProcess::GetMachOInformationFromMemory (nub_addr_t mach_o_header_addr, int wordsize, struct mach_o_information &inf)
+{
+    uint64_t load_cmds_p;
+    if (wordsize == 4)
+    {
+        struct mach_header header;
+        if (ReadMemory (mach_o_header_addr, sizeof (struct mach_header), &header) != sizeof (struct mach_header))
+        {
+            return false;
+        }
+        load_cmds_p = mach_o_header_addr + sizeof (struct mach_header);
+        inf.mach_header.magic = header.magic;
+        inf.mach_header.cputype = header.cputype;
+        // high byte of cpusubtype is used for "capability bits", v. CPU_SUBTYPE_MASK, CPU_SUBTYPE_LIB64 in machine.h
+        inf.mach_header.cpusubtype = header.cpusubtype & 0x00ffffff;
+        inf.mach_header.filetype = header.filetype;
+        inf.mach_header.ncmds = header.ncmds;
+        inf.mach_header.sizeofcmds = header.sizeofcmds;
+        inf.mach_header.flags = header.flags;
+    }
+    else
+    {
+        struct mach_header_64 header;
+        if (ReadMemory (mach_o_header_addr, sizeof (struct mach_header_64), &header) != sizeof (struct mach_header_64))
+        {
+            return false;
+        }
+        load_cmds_p = mach_o_header_addr + sizeof (struct mach_header_64);
+        inf.mach_header.magic = header.magic;
+        inf.mach_header.cputype = header.cputype;
+        // high byte of cpusubtype is used for "capability bits", v. CPU_SUBTYPE_MASK, CPU_SUBTYPE_LIB64 in machine.h
+        inf.mach_header.cpusubtype = header.cpusubtype & 0x00ffffff;
+        inf.mach_header.filetype = header.filetype;
+        inf.mach_header.ncmds = header.ncmds;
+        inf.mach_header.sizeofcmds = header.sizeofcmds;
+        inf.mach_header.flags = header.flags;
+    }
+    for (uint32_t j = 0; j < inf.mach_header.ncmds; j++)
+    {
+        struct load_command lc;
+        if (ReadMemory (load_cmds_p, sizeof (struct load_command), &lc) != sizeof (struct load_command))
+        {
+            return false;
+        }
+        if (lc.cmd == LC_SEGMENT)
+        {
+            struct segment_command seg;
+            if (ReadMemory (load_cmds_p, sizeof (struct segment_command), &seg) != sizeof (struct segment_command))
+            {
+                return false;
+            }
+            struct mach_o_segment this_seg;
+            char name[17];
+            ::memset (name, 0, sizeof (name));
+            memcpy (name, seg.segname, sizeof (seg.segname));
+            this_seg.name = name;
+            this_seg.vmaddr = seg.vmaddr;
+            this_seg.vmsize = seg.vmsize;
+            this_seg.fileoff = seg.fileoff;
+            this_seg.filesize = seg.filesize;
+            this_seg.maxprot = seg.maxprot;
+            this_seg.initprot = seg.initprot;
+            this_seg.nsects = seg.nsects;
+            this_seg.flags = seg.flags;
+            inf.segments.push_back(this_seg);
+        }
+        if (lc.cmd == LC_SEGMENT_64)
+        {
+            struct segment_command_64 seg;
+            if (ReadMemory (load_cmds_p, sizeof (struct segment_command_64), &seg) != sizeof (struct segment_command_64))
+            {
+                return false;
+            }
+            struct mach_o_segment this_seg;
+            char name[17];
+            ::memset (name, 0, sizeof (name));
+            memcpy (name, seg.segname, sizeof (seg.segname));
+            this_seg.name = name;
+            this_seg.vmaddr = seg.vmaddr;
+            this_seg.vmsize = seg.vmsize;
+            this_seg.fileoff = seg.fileoff;
+            this_seg.filesize = seg.filesize;
+            this_seg.maxprot = seg.maxprot;
+            this_seg.initprot = seg.initprot;
+            this_seg.nsects = seg.nsects;
+            this_seg.flags = seg.flags;
+            inf.segments.push_back(this_seg);
+        }
+        if (lc.cmd == LC_UUID)
+        {
+            struct uuid_command uuidcmd;
+            if (ReadMemory (load_cmds_p, sizeof (struct uuid_command), &uuidcmd) == sizeof (struct uuid_command))
+                uuid_copy (inf.uuid, uuidcmd.uuid);
+        }
+        bool lc_cmd_known = lc.cmd == LC_VERSION_MIN_IPHONEOS || lc.cmd == LC_VERSION_MIN_MACOSX;
+#if defined(LC_VERSION_MIN_TVOS)
+        lc_cmd_known |= lc.cmd == LC_VERSION_MIN_TVOS;
+#endif
+#if defined(LC_VERSION_MIN_WATCHOS)
+        lc_cmd_known |= lc.cmd == LC_VERSION_MIN_WATCHOS;
+#endif
+        if (lc_cmd_known)
+        {
+            struct version_min_command vers_cmd;
+            if (ReadMemory (load_cmds_p, sizeof (struct version_min_command), &vers_cmd) != sizeof (struct version_min_command))
+            {
+                return false;
+            }
+            switch (lc.cmd)
+            {
+                case LC_VERSION_MIN_IPHONEOS:
+                    inf.min_version_os_name = "iphoneos";
+                    break;
+                case LC_VERSION_MIN_MACOSX:
+                    inf.min_version_os_name = "macosx";
+                    break;
+#if defined(LC_VERSION_MIN_TVOS)
+                case LC_VERSION_MIN_TVOS:
+                    inf.min_version_os_name = "tvos";
+                    break;
+#endif
+#if defined(LC_VERSION_MIN_WATCHOS)
+                case LC_VERSION_MIN_WATCHOS:
+                    inf.min_version_os_name = "watchos";
+                    break;
+#endif
+                default:
+                    return false;
+            }
+            uint32_t xxxx = vers_cmd.sdk >> 16;
+            uint32_t yy = (vers_cmd.sdk >> 8) & 0xffu;
+            uint32_t zz = vers_cmd.sdk & 0xffu;
+            inf.min_version_os_version = "";
+            inf.min_version_os_version += std::to_string(xxxx);
+            inf.min_version_os_version += ".";
+            inf.min_version_os_version += std::to_string(yy);
+            if (zz != 0)
+            {
+                inf.min_version_os_version += ".";
+                inf.min_version_os_version += std::to_string(zz);
+            }
+        }
+        load_cmds_p += lc.cmdsize;
+    }
+    return true;
+}
 
+// Given completely filled in array of binary_image_information structures, create a JSONGenerator object
+// with all the details we want to send to lldb.
+JSONGenerator::ObjectSP
+MachProcess::FormatDynamicLibrariesIntoJSON (const std::vector<struct binary_image_information> &image_infos)
+{
+
+    JSONGenerator::ArraySP image_infos_array_sp (new JSONGenerator::Array());
+
+    const size_t image_count = image_infos.size();
+
+    for (size_t i = 0; i < image_count; i++)
+    {
+        JSONGenerator::DictionarySP image_info_dict_sp (new JSONGenerator::Dictionary());
+        image_info_dict_sp->AddIntegerItem ("load_address", image_infos[i].load_address);
+        image_info_dict_sp->AddIntegerItem ("mod_date", image_infos[i].mod_date);
+        image_info_dict_sp->AddStringItem ("pathname", image_infos[i].filename);
+
+        uuid_string_t uuidstr;
+        uuid_unparse_upper (image_infos[i].macho_info.uuid, uuidstr);
+        image_info_dict_sp->AddStringItem ("uuid", uuidstr);
+
+        if (image_infos[i].macho_info.min_version_os_name.empty() == false
+            && image_infos[i].macho_info.min_version_os_version.empty() == false)
+        {
+            image_info_dict_sp->AddStringItem ("min_version_os_name", image_infos[i].macho_info.min_version_os_name);
+            image_info_dict_sp->AddStringItem ("min_version_os_sdk", image_infos[i].macho_info.min_version_os_version);
+        }
+
+        JSONGenerator::DictionarySP mach_header_dict_sp (new JSONGenerator::Dictionary());
+        mach_header_dict_sp->AddIntegerItem ("magic", image_infos[i].macho_info.mach_header.magic);
+        mach_header_dict_sp->AddIntegerItem ("cputype", (uint32_t) image_infos[i].macho_info.mach_header.cputype);
+        mach_header_dict_sp->AddIntegerItem ("cpusubtype", (uint32_t) image_infos[i].macho_info.mach_header.cpusubtype);
+        mach_header_dict_sp->AddIntegerItem ("filetype", image_infos[i].macho_info.mach_header.filetype);
+
+//          DynamicLoaderMacOSX doesn't currently need these fields, so don't send them.
+//            mach_header_dict_sp->AddIntegerItem ("ncmds", image_infos[i].macho_info.mach_header.ncmds);
+//            mach_header_dict_sp->AddIntegerItem ("sizeofcmds", image_infos[i].macho_info.mach_header.sizeofcmds);
+//            mach_header_dict_sp->AddIntegerItem ("flags", image_infos[i].macho_info.mach_header.flags);
+        image_info_dict_sp->AddItem ("mach_header", mach_header_dict_sp);
+
+        JSONGenerator::ArraySP segments_sp (new JSONGenerator::Array());
+        for (size_t j = 0; j < image_infos[i].macho_info.segments.size(); j++)
+        {
+            JSONGenerator::DictionarySP segment_sp (new JSONGenerator::Dictionary());
+            segment_sp->AddStringItem ("name", image_infos[i].macho_info.segments[j].name);
+            segment_sp->AddIntegerItem ("vmaddr", image_infos[i].macho_info.segments[j].vmaddr);
+            segment_sp->AddIntegerItem ("vmsize", image_infos[i].macho_info.segments[j].vmsize);
+            segment_sp->AddIntegerItem ("fileoff", image_infos[i].macho_info.segments[j].fileoff);
+            segment_sp->AddIntegerItem ("filesize", image_infos[i].macho_info.segments[j].filesize);
+            segment_sp->AddIntegerItem ("maxprot", image_infos[i].macho_info.segments[j].maxprot);
+
+//              DynamicLoaderMacOSX doesn't currently need these fields, so don't send them.
+//                segment_sp->AddIntegerItem ("initprot", image_infos[i].macho_info.segments[j].initprot);
+//                segment_sp->AddIntegerItem ("nsects", image_infos[i].macho_info.segments[j].nsects);
+//                segment_sp->AddIntegerItem ("flags", image_infos[i].macho_info.segments[j].flags);
+            segments_sp->AddItem (segment_sp);
+        }
+        image_info_dict_sp->AddItem ("segments", segments_sp);
+
+        image_infos_array_sp->AddItem (image_info_dict_sp);
+    }
+
+    JSONGenerator::DictionarySP reply_sp (new JSONGenerator::Dictionary());;
+    reply_sp->AddItem ("images", image_infos_array_sp);
+
+    return reply_sp;
+}
+
+// Get the shared library information using the old (pre-macOS 10.12, pre-iOS 10, pre-tvOS 10, pre-watchOS 3)
+// code path.  We'll be given the address of an array of structures in the form
+// {void* load_addr, void* mod_date, void* pathname} 
+//
+// In macOS 10.12 etc and newer, we'll use SPI calls into dyld to gather this information.
 JSONGenerator::ObjectSP
 MachProcess::GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count)
 {
@@ -536,29 +771,7 @@ MachProcess::GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image
         if (processInfo.kp_proc.p_flag & P_LP64)
             pointer_size = 8;
 
-        struct segment
-        {
-            std::string name;
-            uint64_t vmaddr;
-            uint64_t vmsize;
-            uint64_t fileoff;
-            uint64_t filesize;
-            uint64_t maxprot;
-            uint64_t initprot;
-            uint64_t nsects;
-            uint64_t flags;
-        };
-        
-        struct image_info 
-        {
-            uint64_t load_address;
-            std::string pathname;
-            uint64_t mod_date;
-            struct mach_header_64 mach_header;
-            std::vector<struct segment> segments;
-            uuid_t uuid;
-        };
-        std::vector<image_info> image_infos;
+        std::vector<struct binary_image_information> image_infos;
         size_t image_infos_size = image_count * 3 * pointer_size;
 
         uint8_t *image_info_buf = (uint8_t *) malloc (image_infos_size);
@@ -577,7 +790,7 @@ MachProcess::GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image
 
         for (size_t i = 0; i <  image_count; i++)
         {
-            struct image_info info;
+            struct binary_image_information info;
             nub_addr_t pathname_address;
             if (pointer_size == 4)
             {
@@ -604,13 +817,13 @@ MachProcess::GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image
                 pathname_address = pathname_address_64;
             }
             char strbuf[17];
-            info.pathname = "";
+            info.filename = "";
             uint64_t pathname_ptr = pathname_address;
             bool still_reading = true;
             while (still_reading && ReadMemory (pathname_ptr, sizeof (strbuf) - 1, strbuf) == sizeof (strbuf) - 1)
             {
                 strbuf[sizeof(strbuf) - 1] = '\0';
-                info.pathname += strbuf;
+                info.filename += strbuf;
                 pathname_ptr += sizeof (strbuf) - 1;
                 // Stop if we found nul byte indicating the end of the string
                 for (size_t i = 0; i < sizeof(strbuf) - 1; i++)
@@ -622,7 +835,7 @@ MachProcess::GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image
                     }
                 }
             }
-            uuid_clear (info.uuid);
+            uuid_clear (info.macho_info.uuid);
             image_infos.push_back (info);
         }
         if (image_infos.size() == 0)
@@ -630,157 +843,161 @@ MachProcess::GetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image
             return reply_sp;
         }
 
+        free (image_info_buf);
 
         ////  Second, read the mach header / load commands for all the dylibs
 
-
         for (size_t i = 0; i < image_count; i++)
         {
-            uint64_t load_cmds_p;
-            if (pointer_size == 4)
+            if (!GetMachOInformationFromMemory (image_infos[i].load_address, pointer_size, image_infos[i].macho_info))
             {
-                struct mach_header header;
-                if (ReadMemory (image_infos[i].load_address, sizeof (struct mach_header), &header) != sizeof (struct mach_header))
-                {
-                    return reply_sp;
-                }
-                load_cmds_p = image_infos[i].load_address + sizeof (struct mach_header);
-                image_infos[i].mach_header.magic = header.magic;
-                image_infos[i].mach_header.cputype = header.cputype;
-                image_infos[i].mach_header.cpusubtype = header.cpusubtype;
-                image_infos[i].mach_header.filetype = header.filetype;
-                image_infos[i].mach_header.ncmds = header.ncmds;
-                image_infos[i].mach_header.sizeofcmds = header.sizeofcmds;
-                image_infos[i].mach_header.flags = header.flags;
-            }
-            else
-            {
-                struct mach_header_64 header;
-                if (ReadMemory (image_infos[i].load_address, sizeof (struct mach_header_64), &header) != sizeof (struct mach_header_64))
-                {
-                    return reply_sp;
-                }
-                load_cmds_p = image_infos[i].load_address + sizeof (struct mach_header_64);
-                image_infos[i].mach_header.magic = header.magic;
-                image_infos[i].mach_header.cputype = header.cputype;
-                image_infos[i].mach_header.cpusubtype = header.cpusubtype;
-                image_infos[i].mach_header.filetype = header.filetype;
-                image_infos[i].mach_header.ncmds = header.ncmds;
-                image_infos[i].mach_header.sizeofcmds = header.sizeofcmds;
-                image_infos[i].mach_header.flags = header.flags;
-            }
-            for (uint32_t j = 0; j < image_infos[i].mach_header.ncmds; j++)
-            {
-                struct load_command lc;
-                if (ReadMemory (load_cmds_p, sizeof (struct load_command), &lc) != sizeof (struct load_command))
-                {
-                    return reply_sp;
-                }
-                if (lc.cmd == LC_SEGMENT)
-                {
-                    struct segment_command seg;
-                    if (ReadMemory (load_cmds_p, sizeof (struct segment_command), &seg) != sizeof (struct segment_command))
-                    {
-                        return reply_sp;
-                    }
-                    struct segment this_seg;
-                    char name[17];
-                    ::memset (name, 0, sizeof (name));
-                    memcpy (name, seg.segname, sizeof (seg.segname));
-                    this_seg.name = name;
-                    this_seg.vmaddr = seg.vmaddr;
-                    this_seg.vmsize = seg.vmsize;
-                    this_seg.fileoff = seg.fileoff;
-                    this_seg.filesize = seg.filesize;
-                    this_seg.maxprot = seg.maxprot;
-                    this_seg.initprot = seg.initprot;
-                    this_seg.nsects = seg.nsects;
-                    this_seg.flags = seg.flags;
-                    image_infos[i].segments.push_back(this_seg);
-                }
-                if (lc.cmd == LC_SEGMENT_64)
-                {
-                    struct segment_command_64 seg;
-                    if (ReadMemory (load_cmds_p, sizeof (struct segment_command_64), &seg) != sizeof (struct segment_command_64))
-                    {
-                        return reply_sp;
-                    }
-                    struct segment this_seg;
-                    char name[17];
-                    ::memset (name, 0, sizeof (name));
-                    memcpy (name, seg.segname, sizeof (seg.segname));
-                    this_seg.name = name;
-                    this_seg.vmaddr = seg.vmaddr;
-                    this_seg.vmsize = seg.vmsize;
-                    this_seg.fileoff = seg.fileoff;
-                    this_seg.filesize = seg.filesize;
-                    this_seg.maxprot = seg.maxprot;
-                    this_seg.initprot = seg.initprot;
-                    this_seg.nsects = seg.nsects;
-                    this_seg.flags = seg.flags;
-                    image_infos[i].segments.push_back(this_seg);
-                }
-                if (lc.cmd == LC_UUID)
-                {
-                    struct uuid_command uuidcmd;
-                    if (ReadMemory (load_cmds_p, sizeof (struct uuid_command), &uuidcmd) == sizeof (struct uuid_command))
-                        uuid_copy (image_infos[i].uuid, uuidcmd.uuid);
-                }
-                load_cmds_p += lc.cmdsize;
+                return reply_sp;
             }
         }
 
 
-        ////  Thrid, format all of the above in the JSONGenerator object.
+        ////  Third, format all of the above in the JSONGenerator object.
 
 
-        JSONGenerator::ArraySP image_infos_array_sp (new JSONGenerator::Array());
+        return FormatDynamicLibrariesIntoJSON (image_infos);
+    }
+
+    return reply_sp;
+}
+
+// From dyld SPI header dyld_process_info.h
+typedef void* dyld_process_info;
+struct dyld_process_cache_info 
+{
+    uuid_t      cacheUUID;              // UUID of cache used by process
+    uint64_t    cacheBaseAddress;       // load address of dyld shared cache
+    bool        noCache;                // process is running without a dyld cache
+    bool        privateCache;           // process is using a private copy of its dyld cache
+};
+
+
+// Use the dyld SPI present in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer to get
+// the load address, uuid, and filenames of all the libraries.
+// This only fills in those three fields in the 'struct binary_image_information' - call
+// GetMachOInformationFromMemory to fill in the mach-o header/load command details.
+void
+MachProcess::GetAllLoadedBinariesViaDYLDSPI (std::vector<struct binary_image_information> &image_infos)
+{
+    kern_return_t kern_ret;
+    if (m_dyld_process_info_create)
+    {
+        dyld_process_info info = m_dyld_process_info_create (m_task.TaskPort(), 0, &kern_ret);
+        if (info)
+        {
+            m_dyld_process_info_for_each_image (info, ^(uint64_t mach_header_addr, const uuid_t uuid, const char *path) {
+                struct binary_image_information image;
+                image.filename = path;
+                uuid_copy (image.macho_info.uuid, uuid);
+                image.load_address = mach_header_addr;
+                image_infos.push_back (image);
+            });
+            m_dyld_process_info_release (info);
+        }
+    }
+}
+
+// Fetch information about all shared libraries using the dyld SPIs that exist in
+// macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
+JSONGenerator::ObjectSP 
+MachProcess::GetAllLoadedLibrariesInfos (nub_process_t pid)
+{
+    JSONGenerator::DictionarySP reply_sp;
+
+    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, pid };
+    struct kinfo_proc processInfo;
+    size_t bufsize = sizeof(processInfo);
+    if (sysctl(mib, (unsigned)(sizeof(mib)/sizeof(int)), &processInfo, &bufsize, NULL, 0) == 0 && bufsize > 0)
+    {
+        uint32_t pointer_size = 4;
+        if (processInfo.kp_proc.p_flag & P_LP64)
+            pointer_size = 8;
+
+        std::vector<struct binary_image_information> image_infos;
+        GetAllLoadedBinariesViaDYLDSPI (image_infos);
+        const size_t image_count = image_infos.size();
         for (size_t i = 0; i < image_count; i++)
         {
-            JSONGenerator::DictionarySP image_info_dict_sp (new JSONGenerator::Dictionary());
-            image_info_dict_sp->AddIntegerItem ("load_address", image_infos[i].load_address);
-            image_info_dict_sp->AddIntegerItem ("mod_date", image_infos[i].mod_date);
-            image_info_dict_sp->AddStringItem ("pathname", image_infos[i].pathname);
+            GetMachOInformationFromMemory (image_infos[i].load_address, pointer_size, image_infos[i].macho_info);
+        }
+        return FormatDynamicLibrariesIntoJSON (image_infos);
+    }
+    return reply_sp;
+}
+
+// Fetch information about the shared libraries at the given load addresses using the
+// dyld SPIs that exist in macOS 10.12, iOS 10, tvOS 10, watchOS 3 and newer.
+JSONGenerator::ObjectSP 
+MachProcess::GetLibrariesInfoForAddresses (nub_process_t pid, std::vector<uint64_t> &macho_addresses)
+{
+    JSONGenerator::DictionarySP reply_sp;
+
+    int mib[4] = { CTL_KERN, KERN_PROC, KERN_PROC_PID, pid };
+    struct kinfo_proc processInfo;
+    size_t bufsize = sizeof(processInfo);
+    if (sysctl(mib, (unsigned)(sizeof(mib)/sizeof(int)), &processInfo, &bufsize, NULL, 0) == 0 && bufsize > 0)
+    {
+        uint32_t pointer_size = 4;
+        if (processInfo.kp_proc.p_flag & P_LP64)
+            pointer_size = 8;
+
+        std::vector<struct binary_image_information> all_image_infos;
+        GetAllLoadedBinariesViaDYLDSPI (all_image_infos);
+
+        std::vector<struct binary_image_information> image_infos;
+        const size_t macho_addresses_count = macho_addresses.size();
+        const size_t all_image_infos_count = all_image_infos.size();
+        for (size_t i = 0; i < macho_addresses_count; i++)
+        {
+            for (size_t j = 0; j < all_image_infos_count; j++)
+            {
+                if (all_image_infos[j].load_address == macho_addresses[i])
+                {
+                    image_infos.push_back (all_image_infos[j]);
+                }
+            }
+        }
+
+        const size_t image_infos_count = image_infos.size();
+        for (size_t i = 0; i < image_infos_count; i++)
+        {
+            GetMachOInformationFromMemory (image_infos[i].load_address, pointer_size, image_infos[i].macho_info);
+        }
+        return FormatDynamicLibrariesIntoJSON (image_infos);
+    }
+    return reply_sp;
+}
+
+// From dyld's internal podyld_process_info.h:
+
+JSONGenerator::ObjectSP
+MachProcess::GetSharedCacheInfo (nub_process_t pid)
+{
+    JSONGenerator::DictionarySP reply_sp (new JSONGenerator::Dictionary());;
+    kern_return_t kern_ret;
+    if (m_dyld_process_info_create && m_dyld_process_info_get_cache)
+    {
+        dyld_process_info info = m_dyld_process_info_create (m_task.TaskPort(), 0, &kern_ret);
+        if (info)
+        {
+            struct dyld_process_cache_info shared_cache_info;
+            m_dyld_process_info_get_cache (info, &shared_cache_info);
+            
+            reply_sp->AddIntegerItem ("shared_cache_base_address", shared_cache_info.cacheBaseAddress);
 
             uuid_string_t uuidstr;
-            uuid_unparse_upper (image_infos[i].uuid, uuidstr);
-            image_info_dict_sp->AddStringItem ("uuid", uuidstr);
+            uuid_unparse_upper (shared_cache_info.cacheUUID, uuidstr);
+            reply_sp->AddStringItem ("shared_cache_uuid", uuidstr);
+            
+            reply_sp->AddBooleanItem ("no_shared_cache", shared_cache_info.noCache);
+            reply_sp->AddBooleanItem ("shared_cache_private_cache", shared_cache_info.privateCache);
 
-            JSONGenerator::DictionarySP mach_header_dict_sp (new JSONGenerator::Dictionary());
-            mach_header_dict_sp->AddIntegerItem ("magic", image_infos[i].mach_header.magic);
-            mach_header_dict_sp->AddIntegerItem ("cputype", image_infos[i].mach_header.cputype);
-            mach_header_dict_sp->AddIntegerItem ("cpusubtype", image_infos[i].mach_header.cpusubtype);
-            mach_header_dict_sp->AddIntegerItem ("filetype", image_infos[i].mach_header.filetype);
-
-//          DynamicLoaderMacOSX doesn't currently need these fields, so don't send them.
-//            mach_header_dict_sp->AddIntegerItem ("ncmds", image_infos[i].mach_header.ncmds);
-//            mach_header_dict_sp->AddIntegerItem ("sizeofcmds", image_infos[i].mach_header.sizeofcmds);
-//            mach_header_dict_sp->AddIntegerItem ("flags", image_infos[i].mach_header.flags);
-            image_info_dict_sp->AddItem ("mach_header", mach_header_dict_sp);
-
-            JSONGenerator::ArraySP segments_sp (new JSONGenerator::Array());
-            for (size_t j = 0; j < image_infos[i].segments.size(); j++)
-            {
-                JSONGenerator::DictionarySP segment_sp (new JSONGenerator::Dictionary());
-                segment_sp->AddStringItem ("name", image_infos[i].segments[j].name);
-                segment_sp->AddIntegerItem ("vmaddr", image_infos[i].segments[j].vmaddr);
-                segment_sp->AddIntegerItem ("vmsize", image_infos[i].segments[j].vmsize);
-                segment_sp->AddIntegerItem ("fileoff", image_infos[i].segments[j].fileoff);
-                segment_sp->AddIntegerItem ("filesize", image_infos[i].segments[j].filesize);
-                segment_sp->AddIntegerItem ("maxprot", image_infos[i].segments[j].maxprot);
-
-//              DynamicLoaderMacOSX doesn't currently need these fields, so don't send them.
-//                segment_sp->AddIntegerItem ("initprot", image_infos[i].segments[j].initprot);
-//                segment_sp->AddIntegerItem ("nsects", image_infos[i].segments[j].nsects);
-//                segment_sp->AddIntegerItem ("flags", image_infos[i].segments[j].flags);
-                segments_sp->AddItem (segment_sp);
-            }
-            image_info_dict_sp->AddItem ("segments", segments_sp);
-
-            image_infos_array_sp->AddItem (image_info_dict_sp);
+            m_dyld_process_info_release (info);
         }
-        reply_sp.reset (new JSONGenerator::Dictionary());
-        reply_sp->AddItem ("images", image_infos_array_sp);
     }
     return reply_sp;
 }

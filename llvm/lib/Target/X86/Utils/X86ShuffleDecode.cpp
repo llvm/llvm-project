@@ -556,8 +556,9 @@ void DecodeVPERMIL2PMask(MVT VT, unsigned M2Z, ArrayRef<uint64_t> RawMask,
 
 void DecodeVPERMVMask(ArrayRef<uint64_t> RawMask,
                       SmallVectorImpl<int> &ShuffleMask) {
-  for (int i = 0, e = RawMask.size(); i < e; ++i) {
-    uint64_t M = RawMask[i];
+  uint64_t EltMaskSize = RawMask.size() - 1;
+  for (auto M : RawMask) {
+    M &= EltMaskSize;
     ShuffleMask.push_back((int)M);
   }
 }

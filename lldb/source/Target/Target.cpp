@@ -3520,7 +3520,8 @@ enum
     ePropertyDisplayExpressionsInCrashlogs,
     ePropertyTrapHandlerNames,
     ePropertyDisplayRuntimeSupportValues,
-    ePropertyNonStopModeEnabled
+    ePropertyNonStopModeEnabled,
+    ePropertyExperimental
 };
 
 class TargetOptionValueProperties : public OptionValueProperties
@@ -3631,6 +3632,38 @@ protected:
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
+static PropertyDefinition
+g_experimental_properties[] 
+{
+{   "inject-local-vars",        OptionValue::eTypeBoolean     , true, true, nullptr, nullptr, "If true, inject local variables explicitly into the expression text.  "
+                                                                                               "This will fix symbol resolution when there are name collisions between ivars and local variables.  "
+                                                                                               "But it can make expressions run much more slowly." },
+{   nullptr,                    OptionValue::eTypeInvalid     , true, 0    , nullptr, nullptr, nullptr }
+};
+
+enum
+{
+    ePropertyInjectLocalVars = 0
+};
+
+class TargetExperimentalOptionValueProperties : public OptionValueProperties
+{
+public:
+    TargetExperimentalOptionValueProperties () :
+        OptionValueProperties (ConstString(Properties::GetExperimentalSettingsName()))
+    {
+    }
+};
+
+TargetExperimentalProperties::TargetExperimentalProperties() :
+    Properties(OptionValuePropertiesSP(new TargetExperimentalOptionValueProperties()))
+{
+    m_collection_sp->Initialize(g_experimental_properties);
+}
+
+//----------------------------------------------------------------------
+// TargetProperties
+//----------------------------------------------------------------------
 TargetProperties::TargetProperties (Target *target) :
     Properties (),
     m_launch_info ()
@@ -3649,7 +3682,13 @@ TargetProperties::TargetProperties (Target *target) :
         m_collection_sp->SetValueChangedCallback(ePropertyDetachOnError, TargetProperties::DetachOnErrorValueChangedCallback, this);
         m_collection_sp->SetValueChangedCallback(ePropertyDisableASLR, TargetProperties::DisableASLRValueChangedCallback, this);
         m_collection_sp->SetValueChangedCallback(ePropertyDisableSTDIO, TargetProperties::DisableSTDIOValueChangedCallback, this);
-    
+
+        m_experimental_properties_up.reset(new TargetExperimentalProperties());
+        m_collection_sp->AppendProperty (ConstString(Properties::GetExperimentalSettingsName()),
+                                         ConstString("Experimental settings - setting these won't produce errors if the setting is not present."),
+                                         true,
+                                         m_experimental_properties_up->GetValueProperties());
+
         // Update m_launch_info once it was created
         Arg0ValueChangedCallback(this, nullptr);
         RunArgsValueChangedCallback(this, nullptr);
@@ -3665,14 +3704,39 @@ TargetProperties::TargetProperties (Target *target) :
     {
         m_collection_sp.reset (new TargetOptionValueProperties(ConstString("target")));
         m_collection_sp->Initialize(g_properties);
+        m_experimental_properties_up.reset(new TargetExperimentalProperties());
+        m_collection_sp->AppendProperty (ConstString(Properties::GetExperimentalSettingsName()),
+                                         ConstString("Experimental settings - setting these won't produce errors if the setting is not present."),
+                                         true,
+                                         m_experimental_properties_up->GetValueProperties());
         m_collection_sp->AppendProperty(ConstString("process"),
-                                        ConstString("Settings specify to processes."),
+                                        ConstString("Settings specific to processes."),
                                         true,
                                         Process::GetGlobalProperties()->GetValueProperties());
     }
 }
 
 TargetProperties::~TargetProperties() = default;
+
+bool
+TargetProperties::GetInjectLocalVariables(ExecutionContext *exe_ctx) const
+{
+    const Property *exp_property = m_collection_sp->GetPropertyAtIndex(exe_ctx, false, ePropertyExperimental);
+    OptionValueProperties *exp_values = exp_property->GetValue()->GetAsProperties();
+    if (exp_values)
+        return exp_values->GetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars, true);
+    else
+        return true;
+}
+
+void
+TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b)
+{
+    const Property *exp_property = m_collection_sp->GetPropertyAtIndex(exe_ctx, true, ePropertyExperimental);
+    OptionValueProperties *exp_values = exp_property->GetValue()->GetAsProperties();
+    if (exp_values)
+        exp_values->SetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars, true);
+}
 
 ArchSpec
 TargetProperties::GetDefaultArchitecture () const

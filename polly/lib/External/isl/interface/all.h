@@ -8,3 +8,4 @@
 #include <isl/flow.h>
 #include <isl/schedule.h>
 #include <isl/schedule_node.h>
+#include <isl/ast_build.h>

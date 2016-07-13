@@ -5,6 +5,7 @@ entry:
 ; CHECK-LABEL: foo:
 ; CHECK: movzwl 4(%esp), %eax
 ; CHECK-NEXT: xorl $21998, %eax
+; CHECK-NEXT: # kill
 ; CHECK-NEXT: retl
   %0 = xor i16 %x, 21998
   ret i16 %0
@@ -15,6 +16,7 @@ entry:
 ; CHECK-LABEL: bar:
 ; CHECK: movzwl 4(%esp), %eax
 ; CHECK-NEXT: xorl $54766, %eax
+; CHECK-NEXT: # kill
 ; CHECK-NEXT: retl
   %0 = xor i16 %x, 54766
   ret i16 %0

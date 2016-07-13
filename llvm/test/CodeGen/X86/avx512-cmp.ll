@@ -94,9 +94,9 @@ return:                                           ; preds = %if.end, %entry
 define i32 @test6(i32 %a, i32 %b) {
 ; ALL-LABEL: test6:
 ; ALL:       ## BB#0:
+; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    cmpl %esi, %edi
 ; ALL-NEXT:    sete %al
-; ALL-NEXT:    movzbl %al, %eax
 ; ALL-NEXT:    retq
   %cmp = icmp eq i32 %a, %b
   %res = zext i1 %cmp to i32
@@ -106,9 +106,9 @@ define i32 @test6(i32 %a, i32 %b) {
 define i32 @test7(double %x, double %y) #2 {
 ; ALL-LABEL: test7:
 ; ALL:       ## BB#0: ## %entry
+; ALL-NEXT:    xorl %eax, %eax
 ; ALL-NEXT:    vucomisd %xmm1, %xmm0
 ; ALL-NEXT:    setne %al
-; ALL-NEXT:    movzbl %al, %eax
 ; ALL-NEXT:    retq
 entry:
   %0 = fcmp one double %x, %y
@@ -163,12 +163,10 @@ define i32 @test10(i64 %b, i64 %c, i1 %d) {
 ; ALL-NEXT:    kmovw %edx, %k0
 ; ALL-NEXT:    cmpq %rsi, %rdi
 ; ALL-NEXT:    sete %al
-; ALL-NEXT:    andl $1, %eax
 ; ALL-NEXT:    kmovw %eax, %k1
 ; ALL-NEXT:    korw %k1, %k0, %k1
 ; ALL-NEXT:    kxorw %k1, %k0, %k0
 ; ALL-NEXT:    kmovw %k0, %eax
-; ALL-NEXT:    andl $1, %eax
 ; ALL-NEXT:    testb %al, %al
 ; ALL-NEXT:    je LBB8_1
 ; ALL-NEXT:  ## BB#2: ## %if.end.i

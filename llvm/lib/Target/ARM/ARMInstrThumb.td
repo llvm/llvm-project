@@ -125,24 +125,36 @@ def t_adrlabel : Operand<i32> {
   let ParserMatchClass = UnsignedOffset_b8s2;
 }
 
-def t_bcctarget : Operand<i32> {
-  let EncoderMethod = "getThumbBCCTargetOpValue";
-  let DecoderMethod = "DecodeThumbBCCTargetOperand";
+
+def thumb_br_target : Operand<OtherVT> {
+  let ParserMatchClass = ThumbBranchTarget;
+  let EncoderMethod = "getThumbBranchTargetOpValue";
+  let OperandType = "OPERAND_PCREL";
 }
 
-def t_cbtarget : Operand<i32> {
-  let EncoderMethod = "getThumbCBTargetOpValue";
-  let DecoderMethod = "DecodeThumbCmpBROperand";
-}
-
-def t_bltarget : Operand<i32> {
+def thumb_bl_target : Operand<i32> {
+  let ParserMatchClass = ThumbBranchTarget;
   let EncoderMethod = "getThumbBLTargetOpValue";
   let DecoderMethod = "DecodeThumbBLTargetOperand";
 }
 
-def t_blxtarget : Operand<i32> {
+// Target for BLX *from* thumb mode.
+def thumb_blx_target : Operand<i32> {
+  let ParserMatchClass = ARMBranchTarget;
   let EncoderMethod = "getThumbBLXTargetOpValue";
   let DecoderMethod = "DecodeThumbBLXOffset";
+}
+
+def thumb_bcc_target : Operand<OtherVT> {
+  let ParserMatchClass = ThumbBranchTarget;
+  let EncoderMethod = "getThumbBCCTargetOpValue";
+  let DecoderMethod = "DecodeThumbBCCTargetOperand";
+}
+
+def thumb_cb_target : Operand<OtherVT> {
+  let ParserMatchClass = ThumbBranchTarget;
+  let EncoderMethod = "getThumbCBTargetOpValue";
+  let DecoderMethod = "DecodeThumbCmpBROperand";
 }
 
 // t_addrmode_pc := <label> => pc + imm8 * 4
@@ -471,7 +483,7 @@ let isCall = 1,
   Defs = [LR], Uses = [SP] in {
   // Also used for Thumb2
   def tBL  : TIx2<0b11110, 0b11, 1,
-                  (outs), (ins pred:$p, t_bltarget:$func), IIC_Br,
+                  (outs), (ins pred:$p, thumb_bl_target:$func), IIC_Br,
                   "bl${p}\t$func",
                   [(ARMcall tglobaladdr:$func)]>,
              Requires<[IsThumb]>, Sched<[WriteBrL]> {
@@ -485,7 +497,7 @@ let isCall = 1,
 
   // ARMv5T and above, also used for Thumb2
   def tBLXi : TIx2<0b11110, 0b11, 0,
-                 (outs), (ins pred:$p, t_blxtarget:$func), IIC_Br,
+                 (outs), (ins pred:$p, thumb_blx_target:$func), IIC_Br,
                    "blx${p}\t$func", []>,
               Requires<[IsThumb, HasV5T, IsNotMClass]>, Sched<[WriteBrL]> {
     bits<24> func;
@@ -540,8 +552,9 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
   // Just a pseudo for a tBL instruction. Needed to let regalloc know about
   // the clobber of LR.
   let Defs = [LR] in
-  def tBfar : tPseudoExpand<(outs), (ins t_bltarget:$target, pred:$p),
-                          4, IIC_Br, [], (tBL pred:$p, t_bltarget:$target)>,
+  def tBfar : tPseudoExpand<(outs), (ins thumb_bl_target:$target, pred:$p),
+                          4, IIC_Br, [],
+                          (tBL pred:$p, thumb_bl_target:$target)>,
                           Sched<[WriteBrTbl]>;
 
   def tBR_JTr : tPseudoInst<(outs),
@@ -557,7 +570,7 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1 in {
 // FIXME: should be able to write a pattern for ARMBrcond, but can't use
 // a two-value operand where a dag node expects two operands. :(
 let isBranch = 1, isTerminator = 1 in
-  def tBcc : T1I<(outs), (ins t_bcctarget:$target, pred:$p), IIC_Br,
+  def tBcc : T1I<(outs), (ins thumb_bcc_target:$target, pred:$p), IIC_Br,
                  "b${p}\t$target",
                  [/*(ARMbrcond bb:$target, imm:$cc)*/]>,
              T1BranchCond<{1,1,0,1}>, Sched<[WriteBr]> {

@@ -297,3 +297,31 @@
   sd $31, 65536($31)           # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
   sd $31, 32768($31)           # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
   sd $31, -32769($31)          # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  lb $32, 8($5)                # CHECK: :[[@LINE]]:6: error: invalid operand for instruction
+  lb $4, -32769($5)            # CHECK: :[[@LINE]]:10: error: expected memory with 16-bit signed offset
+  lb $4, 32768($5)             # CHECK: :[[@LINE]]:10: error: expected memory with 16-bit signed offset
+  lb $4, 8($32)                # CHECK: :[[@LINE]]:10: error: expected memory with 16-bit signed offset
+  lbu $32, 8($5)               # CHECK: :[[@LINE]]:7: error: invalid operand for instruction
+  lbu $4, -32769($5)           # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  lbu $4, 32768($5)            # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  lbu $4, 8($32)               # CHECK: :[[@LINE]]:11: error: expected memory with 16-bit signed offset
+  ldc1 $f32, 300($10)          # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  ldc1 $f7, -32769($10)        # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  ldc1 $f7, 32768($10)         # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  ldc1 $f7, 300($32)           # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  sdc1 $f32, 64($10)           # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  sdc1 $f7, -32769($10)        # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  sdc1 $f7, 32768($10)         # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  sdc1 $f7, 64($32)            # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  lwc1 $f32, 32($5)            # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  lwc1 $f2, -32769($5)         # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  lwc1 $f2, 32768($5)          # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  lwc1 $f2, 32($32)            # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  swc1 $f32, 369($13)          # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  swc1 $f6, -32769($13)        # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  swc1 $f6, 32768($13)         # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  swc1 $f6, 369($32)           # CHECK: :[[@LINE]]:13: error: expected memory with 16-bit signed offset
+  ldc2 $32, 1023($12)          # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  sdc2 $32, 8($16)             # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  lwc2 $32, 16($4)             # CHECK: :[[@LINE]]:8: error: invalid operand for instruction
+  swc2 $32, 777($17)           # CHECK: :[[@LINE]]:8: error: invalid operand for instruction

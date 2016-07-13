@@ -462,7 +462,24 @@ main_body:
   ret void
 }
 
-
+;CHECK-LABEL: {{^}}gather4_sgpr_bug:
+;
+; This crashed at some point due to a bug in FixSGPRCopies. Derived from the
+; report in https://bugs.freedesktop.org/show_bug.cgi?id=96877
+;
+;CHECK: s_load_dwordx4 s{{\[}}[[LO:[0-9]+]]:[[HI:[0-9]+]]], {{s\[[0-9]+:[0-9]+\]}}, 0x0
+;CHECK: s_waitcnt lgkmcnt(0)
+;CHECK: s_mov_b32 s[[LO]], 0
+;CHECK: image_gather4_lz {{v\[[0-9]+:[0-9]+\]}}, {{v\[[0-9]+:[0-9]+\]}}, {{s\[[0-9]+:[0-9]+\]}}, s{{\[}}[[LO]]:[[HI]]] dmask:0x8
+define amdgpu_ps float @gather4_sgpr_bug() {
+main_body:
+  %tmp = load <4 x i32>, <4 x i32> addrspace(2)* undef, align 16
+  %tmp1 = insertelement <4 x i32> %tmp, i32 0, i32 0
+  %tmp2 = call <4 x float> @llvm.SI.gather4.lz.v2i32(<2 x i32> undef, <8 x i32> undef, <4 x i32> %tmp1, i32 8, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp4 = extractelement <4 x float> %tmp2, i32 1
+  %tmp9 = fadd float undef, %tmp4
+  ret float %tmp9
+}
 
 declare <4 x float> @llvm.SI.gather4.v2i32(<2 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #0
 declare <4 x float> @llvm.SI.gather4.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #0

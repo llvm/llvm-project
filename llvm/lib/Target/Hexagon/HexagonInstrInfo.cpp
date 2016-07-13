@@ -585,7 +585,7 @@ unsigned HexagonInstrInfo::InsertBranch(MachineBasicBlock &MBB,
       // into an infinite loop.
       MachineBasicBlock *NewTBB, *NewFBB;
       SmallVector<MachineOperand, 4> Cond;
-      MachineInstr *Term = MBB.getFirstTerminator();
+      auto Term = MBB.getFirstTerminator();
       if (Term != MBB.end() && isPredicated(*Term) &&
           !AnalyzeBranch(MBB, NewTBB, NewFBB, Cond, false)) {
         MachineBasicBlock *NextBB = &*++MBB.getIterator();

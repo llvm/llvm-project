@@ -1033,7 +1033,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
             .addReg(JumpTarget.getReg(), RegState::Kill);
       }
 
-      MachineInstr *NewMI = std::prev(MBBI);
+      auto NewMI = std::prev(MBBI);
       for (unsigned i = 1, e = MBBI->getNumOperands(); i != e; ++i)
         NewMI->addOperand(MBBI->getOperand(i));
 

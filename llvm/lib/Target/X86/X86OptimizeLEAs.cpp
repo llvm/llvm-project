@@ -503,9 +503,10 @@ bool OptimizeLEAPass::removeRedundantAddrCalc(MemOpMap &LEAs) {
       InstrPos[DefMI] = InstrPos[&MI] - 1;
 
       // Make sure the instructions' position numbers are sane.
-      assert(((InstrPos[DefMI] == 1 && DefMI == MBB->begin()) ||
+      assert(((InstrPos[DefMI] == 1 &&
+               MachineBasicBlock::iterator(DefMI) == MBB->begin()) ||
               InstrPos[DefMI] >
-                  InstrPos[std::prev(MachineBasicBlock::iterator(DefMI))]) &&
+                  InstrPos[&*std::prev(MachineBasicBlock::iterator(DefMI))]) &&
              "Instruction positioning is broken");
     }
 
