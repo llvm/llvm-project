@@ -5,19 +5,19 @@ set(ISL_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/isl")
 # Determine version of isl
 if (EXISTS "${ISL_SOURCE_DIR}/GIT_HEAD_ID")
   # The source comes from a 'make dist' archive
-  file(READ "${ISL_SOURCE_DIR}/GIT_HEAD_ID" GIT_HEAD_ID)
-  string(STRIP "${GIT_HEAD_ID}" GIT_HEAD_ID)
+  file(READ "${ISL_SOURCE_DIR}/GIT_HEAD_ID" ISL_GIT_HEAD_ID)
+  string(STRIP "${ISL_GIT_HEAD_ID}" ISL_GIT_HEAD_ID)
 elseif (EXISTS "${ISL_SOURCE_DIR}/gitversion.h")
   # The source directory is preconfigured
   file(READ "${ISL_SOURCE_DIR}/gitversion.h" GITVERSION_H)
-  string(REGEX REPLACE ".*\\\"([^\\\"]*)\\\".*" "\\1" GIT_HEAD_ID "${GITVERSION_H}")
+  string(REGEX REPLACE ".*\\\"([^\\\"]*)\\\".*" "\\1" ISL_GIT_HEAD_ID "${GITVERSION_H}")
 elseif ()
   # Unknown revision
   # TODO: We could look for a .git and get the revision from HEAD
-  set(GIT_HEAD_ID "UNKNOWN")
+  set(ISL_GIT_HEAD_ID "UNKNOWN")
 endif ()
 
-message(STATUS "ISL version: ${GIT_HEAD_ID}")
+message(STATUS "ISL version: ${ISL_GIT_HEAD_ID}")
 
 # Enable small integer optimization and imath
 set(USE_GMP_FOR_MP OFF)
@@ -155,7 +155,7 @@ endif ()
 # Write configure result
 # configure_file(... COPYONLY) avoids that the time stamp changes if the file is identical
 file(WRITE "${ISL_BINARY_DIR}/gitversion.h.tmp"
-     "#define GIT_HEAD_ID \"${GIT_HEAD_ID}\"")
+     "#define GIT_HEAD_ID \"${ISL_GIT_HEAD_ID}\"")
 configure_file("${ISL_BINARY_DIR}/gitversion.h.tmp"
                "${ISL_BINARY_DIR}/gitversion.h" COPYONLY)
 
@@ -275,6 +275,58 @@ target_enable_c99(PollyISL)
 # We also disable warnings which should be coped with upstream.
 if (NOT MSVC)
   set_target_properties(PollyISL PROPERTIES
+    COMPILE_FLAGS "-fvisibility=hidden -w"
+  )
+endif ()
+
+set(PET_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pet")
+set(PPCG_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ppcg")
+set(PPCG_BINARY_DIR "${CMAKE_CURRENT_BINARY_DIR}/ppcg")
+
+# Determine version of ppcg
+if (EXISTS "${PPCG_SOURCE_DIR}/GIT_HEAD_ID")
+  # The source comes from a 'make dist' archive
+  file(READ "${PPCG_SOURCE_DIR}/GIT_HEAD_ID" PPCG_GIT_HEAD_ID)
+  string(STRIP "${PPCG_GIT_HEAD_ID}" PPCG_GIT_HEAD_ID)
+elseif (EXISTS "${PPCG_SOURCE_DIR}/gitversion.h")
+  # The source directory is preconfigured
+  file(READ "${PPCG_SOURCE_DIR}/gitversion.h" GITVERSION_H)
+  string(REGEX REPLACE ".*\\\"([^\\\"]*)\\\".*" "\\1" PPCG_GIT_HEAD_ID "${GITVERSION_H}")
+elseif ()
+  # Unknown revision
+  # TODO: We could look for a .git and get the revision from HEAD
+  set(PPCG_GIT_HEAD_ID "UNKNOWN")
+endif ()
+
+message(STATUS "PPCG version: ${PPCG_GIT_HEAD_ID}")
+
+set (PPCG_FILES
+     ppcg/cuda.c
+     ppcg/cuda_common.c
+     ppcg/gpu_array_tile.c
+     ppcg/gpu.c
+     ppcg/gpu_group.c
+     ppcg/gpu_print.c
+     ppcg/gpu_tree.c
+     ppcg/ppcg.c
+     ppcg/ppcg_options.c
+     ppcg/schedule.c
+     ppcg/external.c
+     )
+
+include_directories(BEFORE
+  ${PPCG_BINARY_DIR}
+  ${PPCG_SOURCE_DIR}/imath
+  ${PPCG_SOURCE_DIR}/include
+  ${PET_SOURCE_DIR}/include
+)
+
+add_polly_library(PollyPPCG FORCE_STATIC
+  ${PPCG_FILES}
+)
+
+if (NOT MSVC)
+  set_target_properties(PollyPPCG PROPERTIES
     COMPILE_FLAGS "-fvisibility=hidden -w"
   )
 endif ()

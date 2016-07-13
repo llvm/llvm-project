@@ -84,18 +84,19 @@ static std::string runIncludeFixer(
 
   std::string FakeFileName = "input.cc";
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
-  if (FixerContext.getMatchedSymbols().empty())
+  if (FixerContext.getHeaderInfos().empty())
     return Code;
   auto Replaces = clang::include_fixer::createInsertHeaderReplacements(
-      Code, FakeFileName, FixerContext.getHeaders().front());
+      Code, FakeFileName, FixerContext.getHeaderInfos().front().Header);
   EXPECT_TRUE(static_cast<bool>(Replaces))
       << llvm::toString(Replaces.takeError()) << "\n";
   if (!Replaces)
     return "";
   clang::RewriterTestContext Context;
   clang::FileID ID = Context.createInMemoryFile(FakeFileName, Code);
-  if (FixerContext.getSymbolRange().getLength() > 0)
-    Replaces->insert(FixerContext.createSymbolReplacement(FakeFileName, 0));
+  Replaces->insert({FakeFileName, FixerContext.getSymbolRange().getOffset(),
+                    FixerContext.getSymbolRange().getLength(),
+                    FixerContext.getHeaderInfos().front().QualifiedName});
   clang::tooling::applyAllReplacements(*Replaces, Context.Rewrite);
   return Context.getRewrittenText(ID);
 }

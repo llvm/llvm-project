@@ -26,10 +26,13 @@ public:
                       const std::vector<find_all_symbols::SymbolInfo> Symbols,
                       tooling::Range Range);
 
-  /// \brief Create a replacement for adding missing namespace qualifiers to the
-  /// symbol.
-  tooling::Replacement createSymbolReplacement(llvm::StringRef FilePath,
-                                               size_t Idx = 0);
+  struct HeaderInfo {
+    /// \brief The header where QualifiedName comes from.
+    std::string Header;
+    /// \brief A symbol name with completed namespace qualifiers which will
+    /// replace the original symbol.
+    std::string QualifiedName;
+  };
 
   /// \brief Get symbol name.
   llvm::StringRef getSymbolIdentifier() const { return SymbolIdentifier; }
@@ -37,19 +40,13 @@ public:
   /// \brief Get replacement range of the symbol.
   tooling::Range getSymbolRange() const { return SymbolRange; }
 
-  /// \brief Get all matched symbols.
-  const std::vector<find_all_symbols::SymbolInfo> &getMatchedSymbols() const {
-    return MatchedSymbols;
-  }
-
-  /// \brief Get all headers. The headers are sorted in a descending order based
-  /// on the popularity info in SymbolInfo.
-  const std::vector<std::string> &getHeaders() const { return Headers; }
+  const std::vector<HeaderInfo> &getHeaderInfos() const { return HeaderInfos; }
 
 private:
   friend struct llvm::yaml::MappingTraits<IncludeFixerContext>;
 
-  /// \brief The symbol name.
+  /// \brief The raw symbol name being queried in database. This name might miss
+  /// some namespace qualifiers, and will be replaced by a fully qualified one.
   std::string SymbolIdentifier;
 
   /// \brief The qualifiers of the scope in which SymbolIdentifier lookup
@@ -58,15 +55,15 @@ private:
   /// Empty if SymbolIdentifier is not in a specific scope.
   std::string SymbolScopedQualifiers;
 
-  /// \brief The headers which have SymbolIdentifier definitions.
-  std::vector<std::string> Headers;
-
   /// \brief The symbol candidates which match SymbolIdentifier. The symbols are
   /// sorted in a descending order based on the popularity info in SymbolInfo.
   std::vector<find_all_symbols::SymbolInfo> MatchedSymbols;
 
   /// \brief The replacement range of SymbolIdentifier.
   tooling::Range SymbolRange;
+
+  /// \brief The header information.
+  std::vector<HeaderInfo> HeaderInfos;
 };
 
 } // namespace include_fixer
