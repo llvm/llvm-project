@@ -910,6 +910,8 @@ void CXXNameMangler::mangleUnscopedTemplateName(
     assert(!AdditionalAbiTags &&
            "template template param cannot have abi tags");
     mangleTemplateParameter(TTP->getIndex());
+  } else if (isa<BuiltinTemplateDecl>(ND)) {
+    mangleUnscopedName(ND, AdditionalAbiTags);
   } else {
     mangleUnscopedName(ND->getTemplatedDecl(), AdditionalAbiTags);
   }
@@ -1715,7 +1717,10 @@ void CXXNameMangler::mangleTemplatePrefix(const TemplateDecl *ND,
     mangleTemplateParameter(TTP->getIndex());
   } else {
     manglePrefix(getEffectiveDeclContext(ND), NoFunction);
-    mangleUnqualifiedName(ND->getTemplatedDecl(), nullptr);
+    if (isa<BuiltinTemplateDecl>(ND))
+      mangleUnqualifiedName(ND, nullptr);
+    else
+      mangleUnqualifiedName(ND->getTemplatedDecl(), nullptr);
   }
 
   addSubstitution(ND);

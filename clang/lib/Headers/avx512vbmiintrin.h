@@ -40,8 +40,7 @@ _mm512_mask2_permutex2var_epi8 (__m512i __A, __m512i __I,
               (__v64qi) __I
               /* idx */ ,
               (__v64qi) __B,
-              (__mmask64)
-              __U);
+              (__mmask64) __U);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -51,8 +50,7 @@ _mm512_permutex2var_epi8 (__m512i __A, __m512i __I, __m512i __B)
               /* idx */ ,
               (__v64qi) __A,
               (__v64qi) __B,
-              (__mmask64) -
-              1);
+              (__mmask64) -1);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -63,8 +61,7 @@ _mm512_mask_permutex2var_epi8 (__m512i __A, __mmask64 __U,
               /* idx */ ,
               (__v64qi) __A,
               (__v64qi) __B,
-              (__mmask64)
-              __U);
+              (__mmask64) __U);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -75,8 +72,7 @@ _mm512_maskz_permutex2var_epi8 (__mmask64 __U, __m512i __A,
                /* idx */ ,
                (__v64qi) __A,
                (__v64qi) __B,
-               (__mmask64)
-               __U);
+               (__mmask64) __U);
 }
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
@@ -122,8 +118,7 @@ _mm512_maskz_multishift_epi64_epi8 (__mmask64 __M, __m512i __X, __m512i __Y)
 {
   return (__m512i) __builtin_ia32_vpmultishiftqb512_mask ((__v64qi) __X,
                 (__v64qi) __Y,
-                (__v64qi)
-                _mm512_setzero_si512 (),
+                (__v64qi) _mm512_setzero_si512 (),
                 (__mmask64) __M);
 }
 
@@ -132,8 +127,7 @@ _mm512_multishift_epi64_epi8 (__m512i __X, __m512i __Y)
 {
   return (__m512i) __builtin_ia32_vpmultishiftqb512_mask ((__v64qi) __X,
                 (__v64qi) __Y,
-                (__v64qi)
-                _mm512_undefined_epi32 (),
+                (__v64qi) _mm512_undefined_epi32 (),
                 (__mmask64) -1);
 }
 

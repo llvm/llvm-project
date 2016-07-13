@@ -163,8 +163,10 @@ static void EraseUnwantedCUDAMatchesImpl(
       [&](const T &M1, const T &M2) { return GetCFP(M1) < GetCFP(M2); }));
 
   // Erase all functions with lower priority.
-  Matches.erase(llvm::remove_if(
-      Matches, [&](const T &Match) { return GetCFP(Match) < BestCFP; }));
+  Matches.erase(
+      llvm::remove_if(Matches,
+                      [&](const T &Match) { return GetCFP(Match) < BestCFP; }),
+      Matches.end());
 }
 
 void Sema::EraseUnwantedCUDAMatches(const FunctionDecl *Caller,
