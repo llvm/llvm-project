@@ -279,7 +279,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
   unsigned &ParentScope = ((isa<Expr>(S) && !isa<StmtExpr>(S))
                             ? origParentScope : independentParentScope);
 
-  bool SkipFirstSubStmt = false;
+  unsigned StmtsToSkip = 0u;
 
   // If we found a label, remember that it is in ParentScope scope.
   switch (S->getStmtClass()) {
@@ -304,11 +304,15 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     break;
 
   case Stmt::SwitchStmtClass:
-    // Evaluate the condition variable before entering the scope of the switch
-    // statement.
+    // Evaluate the C++17 init stmt and condition variable
+    // before entering the scope of the switch statement.
+    if (Stmt *Init = cast<SwitchStmt>(S)->getInit()) {
+      BuildScopeInformation(Init, ParentScope);
+      ++StmtsToSkip;
+    }
     if (VarDecl *Var = cast<SwitchStmt>(S)->getConditionVariable()) {
       BuildScopeInformation(Var, ParentScope);
-      SkipFirstSubStmt = true;
+      ++StmtsToSkip;
     }
     // Fall through
 
@@ -537,12 +541,12 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
   }
 
   for (Stmt *SubStmt : S->children()) {
-    if (SkipFirstSubStmt) {
-      SkipFirstSubStmt = false;
+    if (!SubStmt)
+        continue;
+    if (StmtsToSkip) {
+      --StmtsToSkip;
       continue;
     }
-
-    if (!SubStmt) continue;
 
     // Cases, labels, and defaults aren't "scope parents".  It's also
     // important to handle these iteratively instead of recursively in

@@ -14,6 +14,7 @@
     .na { background-color: #DDDDDD }
     span:target { background-color: #FFFFBB; outline: #DDDD55 solid thin; }
     th { background-color: #FFDDAA }
+    td { vertical-align: middle }
   </style>
 </head>
 <body>
@@ -698,9 +699,12 @@ as the draft C++1z standard evolves.</p>
       <td class="none" align="center">No</td>
     </tr>
     <tr>
-      <td>Stricter expression evaluation order (chapter 8 alternative)</td>
+      <td rowspan=2>Stricter expression evaluation order</td>
       <td><a href="http://wg21.link/p0145r3">P0145R3</a></td>
-      <td class="none" align="center">No</td>
+      <td class="none" align="center" rowspan=2>No</td>
+    </tr>
+    <tr>
+      <td><a href="http://wg21.link/p0400r0">P0400R0</a></td>
     </tr>
     <tr>
       <td>Requirement to ignore unknown attributes</td>
@@ -725,7 +729,7 @@ as the draft C++1z standard evolves.</p>
     <tr>
       <td>Separate variable and condition for <tt>if</tt> and <tt>switch</tt></td>
       <td><a href="http://wg21.link/p0305r1">P0305R1</a></td>
-      <td class="none" align="center">No</td>
+      <td class="svn" align="center">SVN</td>
     </tr>
 </table>
 
