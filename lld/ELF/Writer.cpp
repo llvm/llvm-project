@@ -604,17 +604,6 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
 
 // Create output section objects and add them to OutputSections.
 template <class ELFT> void Writer<ELFT>::createSections() {
-  // Add .interp first because some loaders want to see that section
-  // on the first page of the executable file when loaded into memory.
-  if (needsInterpSection())
-    OutputSections.push_back(Out<ELFT>::Interp);
-
-  // A core file does not usually contain unmodified segments except
-  // the first page of the executable. Add the build ID section now
-  // so that the section is included in the first page.
-  if (Out<ELFT>::BuildId)
-    OutputSections.push_back(Out<ELFT>::BuildId);
-
   // Create output sections for input object file sections.
   std::vector<OutputSectionBase<ELFT> *> RegularSections;
   OutputSectionFactory<ELFT> Factory;
@@ -792,6 +781,17 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
     if (C)
       OutputSections.push_back(C);
   };
+
+  // A core file does not usually contain unmodified segments except
+  // the first page of the executable. Add the build ID section to beginning of
+  // the file so that the section is included in the first page.
+  if (Out<ELFT>::BuildId)
+    OutputSections.insert(OutputSections.begin(), Out<ELFT>::BuildId);
+
+  // Add .interp at first because some loaders want to see that section
+  // on the first page of the executable file when loaded into memory.
+  if (needsInterpSection())
+    OutputSections.insert(OutputSections.begin(), Out<ELFT>::Interp);
 
   // This order is not the same as the final output order
   // because we sort the sections using their attributes below.
@@ -1022,7 +1022,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->VAStart;
+  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->ImageBase;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
@@ -1030,7 +1030,7 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
 
 // Assign VAs (addresses at run-time) to output sections.
 template <class ELFT> void Writer<ELFT>::assignAddresses() {
-  uintX_t VA = Config->VAStart + Out<ELFT>::ElfHeader->getSize() +
+  uintX_t VA = Config->ImageBase + Out<ELFT>::ElfHeader->getSize() +
                Out<ELFT>::ProgramHeaders->getSize();
 
   uintX_t ThreadBssOffset = 0;

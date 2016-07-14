@@ -106,7 +106,7 @@ void AMDGPUAsmPrinter::EmitStartOfAsmFile(Module &M) {
   AMDGPUTargetStreamer *TS =
       static_cast<AMDGPUTargetStreamer *>(OutStreamer->getTargetStreamer());
 
-  TS->EmitDirectiveHSACodeObjectVersion(2, 0);
+  TS->EmitDirectiveHSACodeObjectVersion(2, 1);
 
   AMDGPU::IsaVersion ISA = AMDGPU::getIsaVersion(STI->getFeatureBits());
   TS->EmitDirectiveHSACodeObjectISA(ISA.Major, ISA.Minor, ISA.Stepping,
@@ -613,6 +613,11 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
     OutStreamer->EmitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
     OutStreamer->EmitIntValue(MFI->getPSInputAddr(), 4);
   }
+
+  OutStreamer->EmitIntValue(R_SPILLED_SGPRS, 4);
+  OutStreamer->EmitIntValue(MFI->getNumSpilledSGPRs(), 4);
+  OutStreamer->EmitIntValue(R_SPILLED_VGPRS, 4);
+  OutStreamer->EmitIntValue(MFI->getNumSpilledVGPRs(), 4);
 }
 
 // This is supposed to be log2(Size)

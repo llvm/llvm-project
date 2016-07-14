@@ -440,7 +440,7 @@ static int compileModule(char **argv, LLVMContext &Context) {
         PM.add(P);
         TPC->printAndVerify(Banner);
       }
-      PM.add(createPrintMIRPass(errs()));
+      PM.add(createPrintMIRPass(*OS));
     } else {
       if (!StartAfter.empty()) {
         const PassInfo *PI = PR->getPassInfo(StartAfter);

@@ -42,6 +42,9 @@ llvm::Pass *createScopInfoRegionPassPass();
 llvm::Pass *createScopInfoWrapperPassPass();
 llvm::Pass *createIslAstInfoPass();
 llvm::Pass *createCodeGenerationPass();
+#ifdef GPU_CODEGEN
+llvm::Pass *createPPCGCodeGenerationPass();
+#endif
 llvm::Pass *createIslScheduleOptimizerPass();
 
 extern char &CodePreparationID;
@@ -71,6 +74,9 @@ struct PollyForcePassLinking {
     polly::createPollyCanonicalizePass();
     polly::createIslAstInfoPass();
     polly::createCodeGenerationPass();
+#ifdef GPU_CODEGEN
+    polly::createPPCGCodeGenerationPass();
+#endif
     polly::createIslScheduleOptimizerPass();
   }
 } PollyForcePassLinking; // Force link by creating a global definition.
@@ -84,6 +90,9 @@ void initializeJSONExporterPass(llvm::PassRegistry &);
 void initializeJSONImporterPass(llvm::PassRegistry &);
 void initializeIslAstInfoPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
+#ifdef GPU_CODEGEN
+void initializePPCGCodeGenerationPass(llvm::PassRegistry &);
+#endif
 void initializeIslScheduleOptimizerPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
 } // namespace llvm

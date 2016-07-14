@@ -3181,6 +3181,33 @@ static bool addSanitizerRuntimes(const ToolChain &TC, const ArgList &Args,
   return !StaticRuntimes.empty();
 }
 
+static bool addXRayRuntime(const ToolChain &TC, const ArgList &Args,
+                           ArgStringList &CmdArgs) {
+  if (Args.hasFlag(options::OPT_fxray_instrument,
+                   options::OPT_fnoxray_instrument, false)) {
+    CmdArgs.push_back("-whole-archive");
+    CmdArgs.push_back(TC.getCompilerRTArgString(Args, "xray", false));
+    CmdArgs.push_back("-no-whole-archive");
+    return true;
+  }
+  return false;
+}
+
+static void linkXRayRuntimeDeps(const ToolChain &TC, const ArgList &Args,
+                                ArgStringList &CmdArgs) {
+  CmdArgs.push_back("--no-as-needed");
+  CmdArgs.push_back("-lpthread");
+  CmdArgs.push_back("-lrt");
+  CmdArgs.push_back("-lm");
+  CmdArgs.push_back("-latomic");
+  if (TC.GetCXXStdlibType(Args) == ToolChain::CST_Libcxx)
+    CmdArgs.push_back("-lc++");
+  else
+    CmdArgs.push_back("-lstdc++");
+  if (TC.getTriple().getOS() != llvm::Triple::FreeBSD)
+    CmdArgs.push_back("-ldl");
+}
+
 static bool areOptimizationsEnabled(const ArgList &Args) {
   // Find the last -O arg and see if it is non-zero.
   if (Arg *A = Args.getLastArg(options::OPT_O_Group))
@@ -4581,6 +4608,27 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fno-unique-section-names");
 
   Args.AddAllArgs(CmdArgs, options::OPT_finstrument_functions);
+
+  if (Args.hasFlag(options::OPT_fxray_instrument,
+                   options::OPT_fnoxray_instrument, false)) {
+    CmdArgs.push_back("-fxray-instrument");
+    if (Arg *A = Args.getLastArg(options::OPT_fxray_instruction_threshold_,
+                                 options::OPT_fxray_instruction_threshold_EQ)) {
+      CmdArgs.push_back("-fxray-instruction-threshold");
+      CmdArgs.push_back(A->getValue());
+    }
+  }
+
+  if (Args.hasFlag(options::OPT_fxray_instrument,
+                   options::OPT_fnoxray_instrument, false)) {
+    CmdArgs.push_back("-fxray-instrument");
+    if (const Arg *A =
+            Args.getLastArg(options::OPT_fxray_instruction_threshold_,
+                            options::OPT_fxray_instruction_threshold_EQ)) {
+      CmdArgs.push_back("-fxray-instruction-threshold");
+      CmdArgs.push_back(A->getValue());
+    }
+  }
 
   addPGOAndCoverageFlags(C, D, Output, Args, CmdArgs);
 
@@ -9390,6 +9438,7 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--no-demangle");
 
   bool NeedsSanitizerDeps = addSanitizerRuntimes(ToolChain, Args, CmdArgs);
+  bool NeedsXRayDeps = addXRayRuntime(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs);
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
@@ -9415,6 +9464,9 @@ void gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
       if (NeedsSanitizerDeps)
         linkSanitizerRuntimeDeps(ToolChain, CmdArgs);
+
+      if (NeedsXRayDeps)
+        linkXRayRuntimeDeps(ToolChain, Args, CmdArgs);
 
       bool WantPthread = Args.hasArg(options::OPT_pthread) ||
                          Args.hasArg(options::OPT_pthreads);

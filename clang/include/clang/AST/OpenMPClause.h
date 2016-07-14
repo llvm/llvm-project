@@ -4217,6 +4217,136 @@ public:
                        reinterpret_cast<Stmt **>(varlist_end()));
   }
 };
+
+/// This represents clause 'use_device_ptr' in the '#pragma omp ...'
+/// directives.
+///
+/// \code
+/// #pragma omp target data use_device_ptr(a,b)
+/// \endcode
+/// In this example directive '#pragma omp target data' has clause
+/// 'use_device_ptr' with the variables 'a' and 'b'.
+///
+class OMPUseDevicePtrClause final
+    : public OMPVarListClause<OMPUseDevicePtrClause>,
+      private llvm::TrailingObjects<OMPUseDevicePtrClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
+  friend class OMPClauseReader;
+  /// Build clause with number of variables \a N.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of the variables in the clause.
+  ///
+  OMPUseDevicePtrClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                        SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause<OMPUseDevicePtrClause>(OMPC_use_device_ptr, StartLoc,
+                                                LParenLoc, EndLoc, N) {}
+
+  /// \brief Build an empty clause.
+  ///
+  /// \param N Number of variables.
+  ///
+  explicit OMPUseDevicePtrClause(unsigned N)
+      : OMPVarListClause<OMPUseDevicePtrClause>(
+            OMPC_use_device_ptr, SourceLocation(), SourceLocation(),
+            SourceLocation(), N) {}
+
+public:
+  /// Creates clause with a list of variables \a VL.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param VL List of references to the variables.
+  ///
+  static OMPUseDevicePtrClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL);
+  /// Creates an empty clause with the place for \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  ///
+  static OMPUseDevicePtrClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_use_device_ptr;
+  }
+};
+
+/// This represents clause 'is_device_ptr' in the '#pragma omp ...'
+/// directives.
+///
+/// \code
+/// #pragma omp target is_device_ptr(a,b)
+/// \endcode
+/// In this example directive '#pragma omp target' has clause
+/// 'is_device_ptr' with the variables 'a' and 'b'.
+///
+class OMPIsDevicePtrClause final
+    : public OMPVarListClause<OMPIsDevicePtrClause>,
+      private llvm::TrailingObjects<OMPIsDevicePtrClause, Expr *> {
+  friend TrailingObjects;
+  friend OMPVarListClause;
+  friend class OMPClauseReader;
+  /// Build clause with number of variables \a N.
+  ///
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param N Number of the variables in the clause.
+  ///
+  OMPIsDevicePtrClause(SourceLocation StartLoc, SourceLocation LParenLoc,
+                       SourceLocation EndLoc, unsigned N)
+      : OMPVarListClause<OMPIsDevicePtrClause>(OMPC_is_device_ptr, StartLoc,
+                                               LParenLoc, EndLoc, N) {}
+
+  /// Build an empty clause.
+  ///
+  /// \param N Number of variables.
+  ///
+  explicit OMPIsDevicePtrClause(unsigned N)
+      : OMPVarListClause<OMPIsDevicePtrClause>(
+            OMPC_is_device_ptr, SourceLocation(), SourceLocation(),
+            SourceLocation(), N) {}
+
+public:
+  /// Creates clause with a list of variables \a VL.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the clause.
+  /// \param LParenLoc Location of '('.
+  /// \param EndLoc Ending location of the clause.
+  /// \param VL List of references to the variables.
+  ///
+  static OMPIsDevicePtrClause *
+  Create(const ASTContext &C, SourceLocation StartLoc, SourceLocation LParenLoc,
+         SourceLocation EndLoc, ArrayRef<Expr *> VL);
+  /// Creates an empty clause with the place for \a N variables.
+  ///
+  /// \param C AST context.
+  /// \param N The number of variables.
+  ///
+  static OMPIsDevicePtrClause *CreateEmpty(const ASTContext &C, unsigned N);
+
+  child_range children() {
+    return child_range(reinterpret_cast<Stmt **>(varlist_begin()),
+                       reinterpret_cast<Stmt **>(varlist_end()));
+  }
+
+  static bool classof(const OMPClause *T) {
+    return T->getClauseKind() == OMPC_is_device_ptr;
+  }
+};
 } // end namespace clang
 
 #endif // LLVM_CLANG_AST_OPENMPCLAUSE_H

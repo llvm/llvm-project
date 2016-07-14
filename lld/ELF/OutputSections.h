@@ -67,12 +67,9 @@ public:
   void setSize(uintX_t Val) { Header.sh_size = Val; }
   uintX_t getFlags() const { return Header.sh_flags; }
   uintX_t getFileOff() const { return Header.sh_offset; }
-  uintX_t getAlignment() const {
-    // The ELF spec states that a value of 0 means the section has no alignment
-    // constraits.
-    return std::max<uintX_t>(Header.sh_addralign, 1);
-  }
+  uintX_t getAlignment() const { return Header.sh_addralign; }
   uint32_t getType() const { return Header.sh_type; }
+
   void updateAlignment(uintX_t Alignment) {
     if (Alignment > Header.sh_addralign)
       Header.sh_addralign = Alignment;

@@ -121,7 +121,10 @@ if (POLLY_ENABLE_GPGPU_CODEGEN)
   # a cuda library.
   FIND_PACKAGE(CUDA)
   set(GPU_CODEGEN TRUE)
+else(POLLY_ENABLE_GPGPU_CODEGEN)
+  set(GPU_CODEGEN FALSE)
 endif(POLLY_ENABLE_GPGPU_CODEGEN)
+
 
 # Support GPGPU code generation if the library is available.
 if (CUDALIB_FOUND)
@@ -134,6 +137,9 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/JSON/include
   ${CMAKE_CURRENT_BINARY_DIR}/lib/External/isl/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/isl/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/pet/include
+  ${CMAKE_CURRENT_BINARY_DIR}/lib/External/ppcg
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/ppcg
   ${CMAKE_CURRENT_BINARY_DIR}/include
   )
 

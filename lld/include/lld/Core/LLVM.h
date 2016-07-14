@@ -23,6 +23,7 @@
 
 namespace llvm {
   // ADT's.
+  class Error;
   class StringRef;
   class Twine;
   class MemoryBuffer;
@@ -54,6 +55,7 @@ namespace lld {
   using llvm::cast_or_null;
 
   // ADT's.
+  using llvm::Error;
   using llvm::StringRef;
   using llvm::Twine;
   using llvm::MemoryBuffer;

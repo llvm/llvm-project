@@ -7,9 +7,6 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// The MIR serialization library is currently a work in progress. It can't
-// serialize machine functions at this time.
-//
 // This file implements the mapping between various MIR data structures and
 // their corresponding YAML representation.
 //

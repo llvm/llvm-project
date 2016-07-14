@@ -1780,6 +1780,17 @@ public:
     return isDefined(Definition);
   }
 
+  /// \brief Get the definition for this declaration.
+  FunctionDecl *getDefinition() {
+    const FunctionDecl *Definition;
+    if (isDefined(Definition))
+      return const_cast<FunctionDecl *>(Definition);
+    return nullptr;
+  }
+  const FunctionDecl *getDefinition() const {
+    return const_cast<FunctionDecl *>(this)->getDefinition();
+  }
+
   /// getBody - Retrieve the body (definition) of the function. The
   /// function body might be in any of the (re-)declarations of this
   /// function. The variant that accepts a FunctionDecl pointer will

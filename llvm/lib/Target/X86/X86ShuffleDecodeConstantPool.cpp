@@ -104,9 +104,11 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
   //   <4 x i32> <i32 -2147483648, i32 -2147483648,
   //              i32 -2147483648, i32 -2147483648>
 
-  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  if (ElSize != 32 && ElSize != 64)
+    return;
 
-  if (MaskTySize != 128 && MaskTySize != 256) // FIXME: Add support for AVX-512.
+  unsigned MaskTySize = MaskTy->getPrimitiveSizeInBits();
+  if (MaskTySize != 128 && MaskTySize != 256 && MaskTySize != 512)
     return;
 
   // Only support vector types.
@@ -126,7 +128,8 @@ void DecodeVPERMILPMask(const Constant *C, unsigned ElSize,
     return;
 
   unsigned NumElements = MaskTySize / ElSize;
-  assert((NumElements == 2 || NumElements == 4 || NumElements == 8) &&
+  assert((NumElements == 2 || NumElements == 4 || NumElements == 8 ||
+          NumElements == 16) &&
          "Unexpected number of vector elements.");
   ShuffleMask.reserve(NumElements);
   unsigned NumElementsPerLane = 128 / ElSize;

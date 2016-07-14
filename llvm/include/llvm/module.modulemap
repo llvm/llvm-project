@@ -202,6 +202,16 @@ module LLVM_Object {
 }
 
 module LLVM_Option { requires cplusplus umbrella "Option" module * { export * } }
+
+module LLVM_ProfileData {
+  requires cplusplus
+
+  umbrella "ProfileData"
+  module * { export * }
+
+  textual header "ProfileData/InstrProfData.inc"
+}
+
 module LLVM_TableGen { requires cplusplus umbrella "TableGen" module * { export * } }
 
 module LLVM_Transforms {

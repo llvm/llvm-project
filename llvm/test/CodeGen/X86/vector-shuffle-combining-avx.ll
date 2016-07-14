@@ -91,6 +91,16 @@ define <8 x float> @combine_vpermilvar_8f32_identity(<8 x float> %a0) {
   ret <8 x float> %2
 }
 
+define <8 x float> @combine_vpermilvar_8f32_10326u4u(<8 x float> %a0) {
+; ALL-LABEL: combine_vpermilvar_8f32_10326u4u:
+; ALL:       # BB#0:
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[1,0,3,2,6,u,4,u]
+; ALL-NEXT:    retq
+  %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 0, i32 1, i32 2, i32 undef>)
+  %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 undef>)
+  ret <8 x float> %2
+}
+
 define <8 x float> @combine_vpermilvar_vperm2f128_8f32(<8 x float> %a0) {
 ; ALL-LABEL: combine_vpermilvar_vperm2f128_8f32:
 ; ALL:       # BB#0:
@@ -111,6 +121,18 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
   %2 = shufflevector <8 x float> %1, <8 x float> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 8, i32 8, i32 0, i32 1, i32 2, i32 3>
   %3 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %2, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   ret <8 x float> %3
+}
+
+define <4 x double> @combine_vperm2f128_vpermilvar_as_vpblendpd(<4 x double> %a0) {
+; ALL-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
+; ALL:       # BB#0:
+; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
+  %2 = shufflevector <4 x double> %1, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %3 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %2, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
+  ret <4 x double> %3
 }
 
 define <8 x float> @combine_vpermilvar_8f32_movddup(<8 x float> %a0) {

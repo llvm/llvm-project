@@ -88,14 +88,14 @@ wait for.
 
 .. code-block:: nasm
 
-   // Wait for all counters to be 0
+   ; Wait for all counters to be 0
    s_waitcnt 0
 
-   // Equivalent to s_waitcnt 0.  Counter names can also be delimited by
-   // '&' or ','.
+   ; Equivalent to s_waitcnt 0.  Counter names can also be delimited by
+   ; '&' or ','.
    s_waitcnt vmcnt(0) expcnt(0) lgkcmt(0)
 
-   // Wait for vmcnt counter to be 1.
+   ; Wait for vmcnt counter to be 1.
    s_waitcnt vmcnt(1)
 
 VOP1, VOP2, VOP3, VOPC Instructions

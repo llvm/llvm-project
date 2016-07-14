@@ -669,24 +669,6 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     SDLoc DL(Op);
     switch(IntrinsicID) {
     default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
-    case AMDGPUIntrinsic::R600_interp_xy:
-    case AMDGPUIntrinsic::R600_interp_zw: {
-      int slot = cast<ConstantSDNode>(Op.getOperand(1))->getZExtValue();
-      MachineSDNode *interp;
-      SDValue RegisterINode = Op.getOperand(2);
-      SDValue RegisterJNode = Op.getOperand(3);
-
-      if (IntrinsicID == AMDGPUIntrinsic::R600_interp_xy)
-        interp = DAG.getMachineNode(AMDGPU::INTERP_PAIR_XY, DL,
-            MVT::f32, MVT::f32, DAG.getTargetConstant(slot, DL, MVT::i32),
-            RegisterJNode, RegisterINode);
-      else
-        interp = DAG.getMachineNode(AMDGPU::INTERP_PAIR_ZW, DL,
-            MVT::f32, MVT::f32, DAG.getTargetConstant(slot, DL, MVT::i32),
-            RegisterJNode, RegisterINode);
-      return DAG.getBuildVector(MVT::v2f32, DL,
-                                {SDValue(interp, 0), SDValue(interp, 1)});
-    }
     case AMDGPUIntrinsic::r600_tex:
     case AMDGPUIntrinsic::r600_texc:
     case AMDGPUIntrinsic::r600_txl:
@@ -696,8 +678,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     case AMDGPUIntrinsic::r600_txf:
     case AMDGPUIntrinsic::r600_txq:
     case AMDGPUIntrinsic::r600_ddx:
-    case AMDGPUIntrinsic::r600_ddy:
-    case AMDGPUIntrinsic::R600_ldptr: {
+    case AMDGPUIntrinsic::r600_ddy: {
       unsigned TextureOp;
       switch (IntrinsicID) {
       case AMDGPUIntrinsic::r600_tex:
@@ -730,9 +711,6 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       case AMDGPUIntrinsic::r600_ddy:
         TextureOp = 9;
         break;
-      case AMDGPUIntrinsic::R600_ldptr:
-        TextureOp = 10;
-        break;
       default:
         llvm_unreachable("Unknow Texture Operation");
       }
@@ -760,7 +738,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
       };
       return DAG.getNode(AMDGPUISD::TEXTURE_FETCH, DL, MVT::v4f32, TexArgs);
     }
-    case AMDGPUIntrinsic::AMDGPU_dp4: {
+    case AMDGPUIntrinsic::r600_dot4: {
       SDValue Args[8] = {
       DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::f32, Op.getOperand(1),
           DAG.getConstant(0, DL, MVT::i32)),

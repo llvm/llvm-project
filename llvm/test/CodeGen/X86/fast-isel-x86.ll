@@ -1,4 +1,5 @@
 ; RUN: llc -fast-isel -O0 -mcpu=generic -mtriple=i386-apple-darwin10 -relocation-model=pic < %s | FileCheck %s
+; RUN: llc -fast-isel -O0 -mcpu=generic -mtriple=i386-apple-darwin10 -relocation-model=pic < %s -fast-isel-verbose 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
 
 ; This should use flds to set the return value.
 ; CHECK-LABEL: test0:
@@ -21,8 +22,9 @@ define void @test1({i32, i32, i32, i32}* sret %p) nounwind {
 ; This should pop 8 bytes on return.
 ; CHECK-LABEL: thiscallfun:
 ; CHECK: retl $8
-define x86_thiscallcc void @thiscallfun(i32* %this, i32 %a, i32 %b) nounwind {
-  ret void
+define x86_thiscallcc i32 @thiscallfun(i32* %this, i32 %a, i32 %b) nounwind {
+; STDERR-NOT: FastISel missed terminator: ret i32 12345
+  ret i32 12345
 }
 
 ; Here, the callee pop doesn't fit the 16 bit immediate -- see x86-big-ret.ll
@@ -36,11 +38,19 @@ define x86_thiscallcc void @thiscall_large(i32* %this, [65533 x i8]* byval %b) n
   ret void
 }
 
+; This should pop 4 bytes on return.
+; CHECK-LABEL: stdcallfun:
+; CHECK: retl $4
+define x86_stdcallcc i32 @stdcallfun(i32 %a) nounwind {
+; STDERR-NOT: FastISel missed terminator: ret i32 54321
+  ret i32 54321
+}
+
 ; Properly initialize the pic base.
 ; CHECK-LABEL: test2:
 ; CHECK-NOT: HHH
-; CHECK: call{{.*}}L4$pb
-; CHECK-NEXT: L4$pb:
+; CHECK: call{{.*}}L5$pb
+; CHECK-NEXT: L5$pb:
 ; CHECK-NEXT: pop
 ; CHECK: HHH
 ; CHECK: retl
@@ -93,7 +103,7 @@ entry:
 ; SDag-ISel's arg push:
 ; CHECK: movl %esp, [[REGISTER:%[a-z]+]]
 ; CHECK: movl $42, ([[REGISTER]])
-; CHECK: movl L_test5dllimport$non_lazy_ptr-L7$pb(%eax), %eax
+; CHECK: movl L_test5dllimport$non_lazy_ptr-L8$pb(%eax), %eax
 
 }
 declare dllimport i32 @test5dllimport(i32)

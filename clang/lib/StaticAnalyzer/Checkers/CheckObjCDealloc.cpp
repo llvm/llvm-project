@@ -315,15 +315,7 @@ void ObjCDeallocChecker::checkBeginFunction(
 /// Returns nullptr if the instance symbol cannot be found.
 const ObjCIvarRegion *
 ObjCDeallocChecker::getIvarRegionForIvarSymbol(SymbolRef IvarSym) const {
-  const MemRegion *RegionLoadedFrom = nullptr;
-  if (auto *DerivedSym = dyn_cast<SymbolDerived>(IvarSym))
-    RegionLoadedFrom = DerivedSym->getRegion();
-  else if (auto *RegionSym = dyn_cast<SymbolRegionValue>(IvarSym))
-    RegionLoadedFrom = RegionSym->getRegion();
-  else
-    return nullptr;
-
-  return dyn_cast<ObjCIvarRegion>(RegionLoadedFrom);
+  return dyn_cast_or_null<ObjCIvarRegion>(IvarSym->getOriginRegion());
 }
 
 /// Given a symbol for an ivar, return a symbol for the instance containing

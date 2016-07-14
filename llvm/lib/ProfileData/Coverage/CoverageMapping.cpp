@@ -456,7 +456,7 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
   return R.Kind == CounterMappingRegion::ExpansionRegion && R.FileID == FileID;
 }
 
-CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) {
+CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   CoverageData FileCoverage(Filename);
   std::vector<coverage::CountedRegion> Regions;
 

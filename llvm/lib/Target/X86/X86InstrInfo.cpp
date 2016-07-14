@@ -117,7 +117,8 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
                                                : X86::ADJCALLSTACKDOWN32),
                       (STI.isTarget64BitLP64() ? X86::ADJCALLSTACKUP64
                                                : X86::ADJCALLSTACKUP32),
-                      X86::CATCHRET),
+                      X86::CATCHRET,
+                      (STI.is64Bit() ? X86::RETQ : X86::RETL)),
       Subtarget(STI), RI(STI.getTargetTriple()) {
 
   static const X86MemoryFoldTableEntry MemoryFoldTable2Addr[] = {

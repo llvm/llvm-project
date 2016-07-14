@@ -508,9 +508,6 @@ Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, Stmt *InitStmt,
                   ConditionResult Cond,
                   Stmt *thenStmt, SourceLocation ElseLoc,
                   Stmt *elseStmt) {
-  if (InitStmt)
-    Diag(InitStmt->getLocStart(), diag::err_init_stmt_not_supported);
-
   if (Cond.isInvalid())
     Cond = ConditionResult(
         *this, nullptr,
@@ -528,12 +525,14 @@ Sema::ActOnIfStmt(SourceLocation IfLoc, bool IsConstexpr, Stmt *InitStmt,
     DiagnoseEmptyStmtBody(CondExpr->getLocEnd(), thenStmt,
                           diag::warn_empty_if_body);
 
-  return BuildIfStmt(IfLoc, IsConstexpr, Cond, thenStmt, ElseLoc, elseStmt);
+  return BuildIfStmt(IfLoc, IsConstexpr, InitStmt, Cond, thenStmt, ElseLoc,
+                     elseStmt);
 }
 
 StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
-                             ConditionResult Cond, Stmt *thenStmt,
-                             SourceLocation ElseLoc, Stmt *elseStmt) {
+                             Stmt *InitStmt, ConditionResult Cond,
+                             Stmt *thenStmt, SourceLocation ElseLoc,
+                             Stmt *elseStmt) {
   if (Cond.isInvalid())
     return StmtError();
 
@@ -543,8 +542,9 @@ StmtResult Sema::BuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
   DiagnoseUnusedExprResult(thenStmt);
   DiagnoseUnusedExprResult(elseStmt);
 
-  return new (Context) IfStmt(Context, IfLoc, IsConstexpr, Cond.get().first,
-                              Cond.get().second, thenStmt, ElseLoc, elseStmt);
+  return new (Context)
+      IfStmt(Context, IfLoc, IsConstexpr, InitStmt, Cond.get().first,
+             Cond.get().second, thenStmt, ElseLoc, elseStmt);
 }
 
 namespace {
@@ -668,13 +668,10 @@ StmtResult Sema::ActOnStartOfSwitchStmt(SourceLocation SwitchLoc,
   if (Cond.isInvalid())
     return StmtError();
 
-  if (InitStmt)
-    Diag(InitStmt->getLocStart(), diag::err_init_stmt_not_supported);
-
   getCurFunction()->setHasBranchIntoScope();
 
-  SwitchStmt *SS =
-      new (Context) SwitchStmt(Context, Cond.get().first, Cond.get().second);
+  SwitchStmt *SS = new (Context)
+      SwitchStmt(Context, InitStmt, Cond.get().first, Cond.get().second);
   getCurFunction()->SwitchStack.push_back(SS);
   return SS;
 }

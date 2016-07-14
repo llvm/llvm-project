@@ -100,7 +100,8 @@ namespace llvm {
           DisableIntegratedAS(false), CompressDebugSections(false),
           RelaxELFRelocations(false), FunctionSections(false),
           DataSections(false), UniqueSectionNames(true), TrapUnreachable(false),
-          EmulatedTLS(false), FloatABIType(FloatABI::Default),
+          EmulatedTLS(false), EnableIPRA(false),
+          FloatABIType(FloatABI::Default),
           AllowFPOpFusion(FPOpFusion::Standard), Reciprocals(TargetRecip()),
           JTType(JumpTable::Single), ThreadModel(ThreadModel::POSIX),
           EABIVersion(EABI::Default), DebuggerTuning(DebuggerKind::Default),
@@ -206,6 +207,9 @@ namespace llvm {
     /// EmulatedTLS - This flag enables emulated TLS model, using emutls
     /// function in the runtime library..
     unsigned EmulatedTLS : 1;
+
+    /// This flag enables InterProcedural Register Allocation (IPRA).
+    unsigned EnableIPRA : 1;
 
     /// FloatABIType - This setting is set by -float-abi=xxx option is specfied
     /// on the command line. This setting may either be Default, Soft, or Hard.

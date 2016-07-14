@@ -12,6 +12,75 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+class NamespaceBreakpointTestCase(TestBase):
+
+    mydir = TestBase.compute_mydir(__file__)
+
+    @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    def test_breakpoints_func_auto(self):
+        """Test that we can set breakpoints correctly by basename to find all functions whose basename is "func"."""
+        self.build()
+
+        names = [ "func()", "func(int)", "A::B::func()", "A::func()", "A::func(int)"]
+
+        # Create a target by the debugger.
+        exe = os.path.join(os.getcwd(), "a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        module_list = lldb.SBFileSpecList()
+        module_list.Append(lldb.SBFileSpec(exe, False))
+        cu_list = lldb.SBFileSpecList()
+        # Set a breakpoint by name "func" which should pick up all functions whose basename is "func"
+        bp = target.BreakpointCreateByName ("func", lldb.eFunctionNameTypeAuto, module_list, cu_list);
+        for bp_loc in bp:
+            name = bp_loc.GetAddress().GetFunction().GetName()
+            self.assertTrue(name in names, "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeAuto")        
+
+    @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    def test_breakpoints_func_full(self):
+        """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "func"
+           (no namespaces)."""
+        self.build()
+
+        names = [ "func()", "func(int)"]
+
+        # Create a target by the debugger.
+        exe = os.path.join(os.getcwd(), "a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        module_list = lldb.SBFileSpecList()
+        module_list.Append(lldb.SBFileSpec(exe, False))
+        cu_list = lldb.SBFileSpecList()
+
+        # Set a breakpoint by name "func" whose fullly qualified named matches "func" which 
+        # should pick up only functions whose basename is "func" and has no containing context
+        bp = target.BreakpointCreateByName ("func", lldb.eFunctionNameTypeFull, module_list, cu_list);
+        for bp_loc in bp:
+            name = bp_loc.GetAddress().GetFunction().GetName()
+            self.assertTrue(name in names, "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeFull")        
+
+    def test_breakpoints_a_func_full(self):
+        """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "A::func"."""
+        self.build()
+
+        names = [ "A::func()", "A::func(int)"]
+
+        # Create a target by the debugger.
+        exe = os.path.join(os.getcwd(), "a.out")
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+        module_list = lldb.SBFileSpecList()
+        module_list.Append(lldb.SBFileSpec(exe, False))
+        cu_list = lldb.SBFileSpecList()
+
+        # Set a breakpoint by name "A::func" whose fullly qualified named matches "A::func" which 
+        # should pick up only functions whose basename is "func" and is contained in the "A" namespace
+        bp = target.BreakpointCreateByName ("A::func", lldb.eFunctionNameTypeFull, module_list, cu_list);
+        for bp_loc in bp:
+            name = bp_loc.GetAddress().GetFunction().GetName()
+            self.assertTrue(name in names, "make sure breakpoint locations are correct for 'A::func' with eFunctionNameTypeFull")        
+
+
 class NamespaceTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)

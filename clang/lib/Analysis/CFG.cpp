@@ -1,4 +1,4 @@
-  //===--- CFG.cpp - Classes for representing and building CFGs----*- C++ -*-===//
+//===--- CFG.cpp - Classes for representing and building CFGs----*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -1945,7 +1945,8 @@ CFGBlock *CFGBuilder::VisitCompoundStmt(CompoundStmt *C) {
     addLocalScopeForStmt(C);
   }
   if (!C->body_empty() && !isa<ReturnStmt>(*C->body_rbegin())) {
-    // If the body ends with a ReturnStmt, the dtors will be added in VisitReturnStmt
+    // If the body ends with a ReturnStmt, the dtors will be added in
+    // VisitReturnStmt.
     addAutomaticObjDtors(ScopePos, scopeBeginPos, C);
   }
 
@@ -2168,6 +2169,13 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
   // won't be restored when traversing AST.
   SaveAndRestore<LocalScope::const_iterator> save_scope_pos(ScopePos);
 
+  // Create local scope for C++17 if init-stmt if one exists.
+  if (Stmt *Init = I->getInit()) {
+    LocalScope::const_iterator BeginScopePos = ScopePos;
+    addLocalScopeForStmt(Init);
+    addAutomaticObjDtors(ScopePos, BeginScopePos, I);
+  }
+
   // Create local scope for possible condition variable.
   // Store scope position. Add implicit destructor.
   if (VarDecl *VD = I->getConditionVariable()) {
@@ -2268,11 +2276,17 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
   // blocks will be pointed to be "Block".
   CFGBlock *LastBlock = addStmt(I->getCond());
 
-  // Finally, if the IfStmt contains a condition variable, add it and its
+  // If the IfStmt contains a condition variable, add it and its
   // initializer to the CFG.
   if (const DeclStmt* DS = I->getConditionVariableDeclStmt()) {
     autoCreateBlock();
     LastBlock = addStmt(const_cast<DeclStmt *>(DS));
+  }
+
+  // Finally, if the IfStmt contains a C++17 init-stmt, add it to the CFG.
+  if (Stmt *Init = I->getInit()) {
+    autoCreateBlock();
+    LastBlock = addStmt(Init);
   }
 
   return LastBlock;
@@ -3059,6 +3073,13 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   // won't be restored when traversing AST.
   SaveAndRestore<LocalScope::const_iterator> save_scope_pos(ScopePos);
 
+  // Create local scope for C++17 switch init-stmt if one exists.
+  if (Stmt *Init = Terminator->getInit()) {
+    LocalScope::const_iterator BeginScopePos = ScopePos;
+    addLocalScopeForStmt(Init);
+    addAutomaticObjDtors(ScopePos, BeginScopePos, Terminator);
+  }
+
   // Create local scope for possible condition variable.
   // Store scope position. Add implicit destructor.
   if (VarDecl *VD = Terminator->getConditionVariable()) {
@@ -3138,7 +3159,7 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   Block = SwitchTerminatedBlock;
   CFGBlock *LastBlock = addStmt(Terminator->getCond());
 
-  // Finally, if the SwitchStmt contains a condition variable, add both the
+  // If the SwitchStmt contains a condition variable, add both the
   // SwitchStmt and the condition variable initialization to the CFG.
   if (VarDecl *VD = Terminator->getConditionVariable()) {
     if (Expr *Init = VD->getInit()) {
@@ -3146,6 +3167,12 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
       appendStmt(Block, Terminator->getConditionVariableDeclStmt());
       LastBlock = addStmt(Init);
     }
+  }
+
+  // Finally, if the SwitchStmt contains a C++17 init-stmt, add it to the CFG.
+  if (Stmt *Init = Terminator->getInit()) {
+    autoCreateBlock();
+    LastBlock = addStmt(Init);
   }
 
   return LastBlock;

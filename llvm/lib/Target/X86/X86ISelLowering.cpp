@@ -3829,6 +3829,7 @@ static bool isTargetShuffleVariableMask(unsigned Opcode) {
   switch (Opcode) {
   default: return false;
   case X86ISD::PSHUFB:
+  case X86ISD::VPERMILPV:
     return true;
   }
 }
@@ -20548,7 +20549,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
     DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                 DAG.getConstant(Cond, DL, MVT::i32),
                 SDValue(Sum.getNode(), 1));
-  
+
   if (N->getValueType(1) == MVT::i1) {
     SetCC = DAG.getNode(ISD::AssertZext, DL, MVT::i8, SetCC,
                         DAG.getValueType(MVT::i1));
@@ -25016,11 +25017,11 @@ static bool matchBinaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
 /// for this operation, or into a PSHUFB instruction which is a fully general
 /// instruction but should only be used to replace chains over a certain depth.
 static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
-                                   ArrayRef<int> Mask, int Depth,
+                                   ArrayRef<int> BaseMask, int Depth,
                                    bool HasVariableMask, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
-  assert(!Mask.empty() && "Cannot combine an empty shuffle mask!");
+  assert(!BaseMask.empty() && "Cannot combine an empty shuffle mask!");
 
   // Find the operand that enters the chain. Note that multiple uses are OK
   // here, we're not going to remove the operand we find.
@@ -25032,23 +25033,24 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 
   SDValue Res;
 
-  unsigned NumMaskElts = Mask.size();
-  if (NumMaskElts == 1) {
-    assert(Mask[0] == 0 && "Invalid shuffle index found!");
+  unsigned NumBaseMaskElts = BaseMask.size();
+  if (NumBaseMaskElts == 1) {
+    assert(BaseMask[0] == 0 && "Invalid shuffle index found!");
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Input),
                   /*AddTo*/ true);
     return true;
   }
 
   unsigned RootSizeInBits = RootVT.getSizeInBits();
-  unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
+  unsigned BaseMaskEltSizeInBits = RootSizeInBits / NumBaseMaskElts;
 
   // Don't combine if we are a AVX512/EVEX target and the mask element size
   // is different from the root element size - this would prevent writemasks
   // from being reused.
+  // TODO - this currently prevents all lane shuffles from occurring.
   // TODO - check for writemasks usage instead of always preventing combining.
   // TODO - attempt to narrow Mask back to writemask size.
-  if (RootVT.getScalarSizeInBits() != MaskEltSizeInBits &&
+  if (RootVT.getScalarSizeInBits() != BaseMaskEltSizeInBits &&
       (RootSizeInBits == 512 ||
        (Subtarget.hasVLX() && RootSizeInBits >= 128))) {
     return false;
@@ -25057,16 +25059,15 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
-  // TODO - handle blend with zero cases.
-  if (VT.is256BitVector() && Mask.size() == 2 &&
-      !isSequentialOrUndefOrZeroInRange(Mask, 0, 2, 0)) {
+  if (VT.is256BitVector() && NumBaseMaskElts == 2 &&
+      !isSequentialOrUndefOrZeroInRange(BaseMask, 0, 2, 0)) {
     if (Depth == 1 && Root.getOpcode() == X86ISD::VPERM2X128)
       return false; // Nothing to do!
     MVT ShuffleVT = (VT.isFloatingPoint() || !Subtarget.hasAVX2() ? MVT::v4f64
                                                                   : MVT::v4i64);
     unsigned PermMask = 0;
-    PermMask |= ((Mask[0] < 0 ? 0x8 : (Mask[0] & 1)) << 0);
-    PermMask |= ((Mask[1] < 0 ? 0x8 : (Mask[1] & 1)) << 4);
+    PermMask |= ((BaseMask[0] < 0 ? 0x8 : (BaseMask[0] & 1)) << 0);
+    PermMask |= ((BaseMask[1] < 0 ? 0x8 : (BaseMask[1] & 1)) << 4);
 
     Res = DAG.getBitcast(ShuffleVT, Input);
     DCI.AddToWorklist(Res.getNode());
@@ -25079,8 +25080,19 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
     return true;
   }
 
-  if (MaskEltSizeInBits > 64)
-    return false;
+  // For masks that have been widened to 128-bit elements or more,
+  // narrow back down to 64-bit elements.
+  SmallVector<int, 64> Mask;
+  if (BaseMaskEltSizeInBits > 64) {
+    assert((BaseMaskEltSizeInBits % 64) == 0 && "Illegal mask size");
+    int MaskScale = BaseMaskEltSizeInBits / 64;
+    scaleShuffleMask(MaskScale, BaseMask, Mask);
+  } else {
+    Mask = SmallVector<int, 64>(BaseMask.begin(), BaseMask.end());
+  }
+
+  unsigned NumMaskElts = Mask.size();
+  unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
 
   // Determine the effective mask value type.
   bool FloatDomain =
@@ -25211,13 +25223,42 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   if (Depth < 2)
     return false;
 
+  if (is128BitLaneCrossingShuffleMask(MaskVT, Mask))
+    return false;
+
+  bool MaskContainsZeros =
+      llvm::any_of(Mask, [](int M) { return M == SM_SentinelZero; });
+
+  // If we have a single input shuffle with different shuffle patterns in the
+  // the 128-bit lanes use the variable mask to VPERMILPS.
+  // TODO Combine other mask types at higher depths.
+  if (HasVariableMask && !MaskContainsZeros &&
+      ((MaskVT == MVT::v8f32 && Subtarget.hasAVX()) ||
+       (MaskVT == MVT::v16f32 && Subtarget.hasAVX512()))) {
+    SmallVector<SDValue, 16> VPermIdx;
+    for (int M : Mask) {
+      SDValue Idx =
+          M < 0 ? DAG.getUNDEF(MVT::i32) : DAG.getConstant(M % 4, DL, MVT::i32);
+      VPermIdx.push_back(Idx);
+    }
+    MVT VPermMaskVT = MVT::getVectorVT(MVT::i32, NumMaskElts);
+    SDValue VPermMask = DAG.getBuildVector(VPermMaskVT, DL, VPermIdx);
+    DCI.AddToWorklist(VPermMask.getNode());
+    Res = DAG.getBitcast(MaskVT, Input);
+    DCI.AddToWorklist(Res.getNode());
+    Res = DAG.getNode(X86ISD::VPERMILPV, DL, MaskVT, Res, VPermMask);
+    DCI.AddToWorklist(Res.getNode());
+    DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Res),
+                  /*AddTo*/ true);
+    return true;
+  }
+
   // If we have 3 or more shuffle instructions or a chain involving a variable
   // mask, we can replace them with a single PSHUFB instruction profitably.
   // Intel's manuals suggest only using PSHUFB if doing so replacing 5
   // instructions, but in practice PSHUFB tends to be *very* fast so we're
   // more aggressive.
   if ((Depth >= 3 || HasVariableMask) &&
-      !is128BitLaneCrossingShuffleMask(MaskVT, Mask) &&
       ((VT.is128BitVector() && Subtarget.hasSSSE3()) ||
        (VT.is256BitVector() && Subtarget.hasAVX2()) ||
        (VT.is512BitVector() && Subtarget.hasBWI()))) {
@@ -28156,6 +28197,42 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// If this is a PCMPEQ or PCMPGT result that is bitwise-anded with 1 (this is
+/// the x86 lowering of a SETCC + ZEXT), replace the 'and' with a shift-right to
+/// eliminate loading the vector constant mask value. This relies on the fact
+/// that a PCMP always creates an all-ones or all-zeros bitmask per element.
+static SDValue combinePCMPAnd1(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = peekThroughBitcasts(N->getOperand(0));
+  SDValue Op1 = peekThroughBitcasts(N->getOperand(1));
+
+  // TODO: Use AssertSext to mark any nodes that have the property of producing
+  // all-ones or all-zeros. Then check for that node rather than particular
+  // opcodes.
+  if (Op0.getOpcode() != X86ISD::PCMPEQ && Op0.getOpcode() != X86ISD::PCMPGT)
+    return SDValue();
+
+  // The existence of the PCMP node guarantees that we have the required SSE2 or
+  // AVX2 for a shift of this vector type, but there is no vector shift by
+  // immediate for a vector with byte elements (PSRLB). 512-bit vectors use the
+  // masked compare nodes, so they should not make it here.
+  EVT VT0 = Op0.getValueType();
+  EVT VT1 = Op1.getValueType();
+  unsigned EltBitWidth = VT0.getScalarType().getSizeInBits();
+  if (VT0 != VT1 || EltBitWidth == 8)
+    return SDValue();
+
+  assert(VT0.getSizeInBits() == 128 || VT0.getSizeInBits() == 256);
+
+  APInt SplatVal;
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ShAmt = DAG.getConstant(EltBitWidth - 1, DL, MVT::i8);
+  SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT0, Op0, ShAmt);
+  return DAG.getBitcast(N->getValueType(0), Shift);
+}
+
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -28173,6 +28250,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineANDXORWithAllOnesIntoANDNP(N, DAG))
     return R;
+
+  if (SDValue ShiftRight = combinePCMPAnd1(N, DAG))
+    return ShiftRight;
 
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);

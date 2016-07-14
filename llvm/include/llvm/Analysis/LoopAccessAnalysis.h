@@ -511,9 +511,8 @@ private:
 /// PSE must be emitted in order for the results of this analysis to be valid.
 class LoopAccessInfo {
 public:
-  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const DataLayout &DL,
-                 const TargetLibraryInfo *TLI, AliasAnalysis *AA,
-                 DominatorTree *DT, LoopInfo *LI);
+  LoopAccessInfo(Loop *L, ScalarEvolution *SE, const TargetLibraryInfo *TLI,
+                 AliasAnalysis *AA, DominatorTree *DT, LoopInfo *LI);
 
   // FIXME:
   // Hack for MSVC 2013 which sems like it can't synthesize this even 
@@ -521,8 +520,7 @@ public:
   // LoopAccessInfo(LoopAccessInfo &&LAI) = default;
   LoopAccessInfo(LoopAccessInfo &&LAI)
       : PSE(std::move(LAI.PSE)), PtrRtChecking(std::move(LAI.PtrRtChecking)),
-        DepChecker(std::move(LAI.DepChecker)), TheLoop(LAI.TheLoop), DL(LAI.DL),
-        TLI(LAI.TLI), AA(LAI.AA), DT(LAI.DT), LI(LAI.LI),
+        DepChecker(std::move(LAI.DepChecker)), TheLoop(LAI.TheLoop),
         NumLoads(LAI.NumLoads), NumStores(LAI.NumStores),
         MaxSafeDepDistBytes(LAI.MaxSafeDepDistBytes), CanVecMem(LAI.CanVecMem),
         StoreToLoopInvariantAddress(LAI.StoreToLoopInvariantAddress),
@@ -537,11 +535,6 @@ public:
     PtrRtChecking = std::move(LAI.PtrRtChecking);
     DepChecker = std::move(LAI.DepChecker);
     TheLoop = LAI.TheLoop;
-    DL = LAI.DL;
-    TLI = LAI.TLI;
-    AA = LAI.AA;
-    DT = LAI.DT;
-    LI = LAI.LI;
     NumLoads = LAI.NumLoads;
     NumStores = LAI.NumStores;
     MaxSafeDepDistBytes = LAI.MaxSafeDepDistBytes;
@@ -638,7 +631,8 @@ public:
 
 private:
   /// \brief Analyze the loop.
-  void analyzeLoop();
+  void analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
+                   const TargetLibraryInfo *TLI, DominatorTree *DT);
 
   /// \brief Check if the structure of the loop allows it to be analyzed by this
   /// pass.
@@ -663,11 +657,6 @@ private:
   std::unique_ptr<MemoryDepChecker> DepChecker;
 
   Loop *TheLoop;
-  const DataLayout *DL;
-  const TargetLibraryInfo *TLI;
-  AliasAnalysis *AA;
-  DominatorTree *DT;
-  LoopInfo *LI;
 
   unsigned NumLoads;
   unsigned NumStores;

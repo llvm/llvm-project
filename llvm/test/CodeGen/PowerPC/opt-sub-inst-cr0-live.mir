@@ -1,4 +1,4 @@
-# RUN: llc -start-after=machine-sink -stop-after=peephole-opt -mtriple=powerpc64-unknown-linux-gnu -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -start-after=machine-sink -stop-after=peephole-opt -mtriple=powerpc64-unknown-linux-gnu -o - %s | FileCheck %s
 
 --- |
   ; ModuleID = '<stdin>'

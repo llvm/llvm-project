@@ -7,6 +7,7 @@ set(ADTSources
   APIntTest.cpp
   APSIntTest.cpp
   ArrayRefTest.cpp
+  BitmaskEnumTest.cpp
   BitVectorTest.cpp
   DAGDeltaAlgorithmTest.cpp
   DeltaAlgorithmTest.cpp

@@ -22,14 +22,19 @@ namespace llvm {
 class StringRef;
 class BasicBlock;
 class MachineBasicBlock;
-class MachineInstr;
 class MachineFunction;
+class MachineInstr;
+class MachineRegisterInfo;
 class MDNode;
 struct SlotMapping;
 class SMDiagnostic;
 class SourceMgr;
 
 struct PerFunctionMIParsingState {
+  MachineFunction &MF;
+  SourceMgr *SM;
+  const SlotMapping &IRSlots;
+
   DenseMap<unsigned, MachineBasicBlock *> MBBSlots;
   DenseMap<unsigned, unsigned> VirtualRegisterSlots;
   DenseMap<unsigned, int> FixedStackObjectSlots;
@@ -38,6 +43,9 @@ struct PerFunctionMIParsingState {
   DenseMap<unsigned, unsigned> JumpTableSlots;
   /// Hold the generic virtual registers.
   SmallSet<unsigned, 8> GenericVRegs;
+
+  PerFunctionMIParsingState(MachineFunction &MF, SourceMgr &SM,
+                            const SlotMapping &IRSlots);
 };
 
 /// Parse the machine basic block definitions, and skip the machine
@@ -52,10 +60,8 @@ struct PerFunctionMIParsingState {
 /// resolve the machine basic block references.
 ///
 /// Return true if an error occurred.
-bool parseMachineBasicBlockDefinitions(MachineFunction &MF, StringRef Src,
-                                       PerFunctionMIParsingState &PFS,
-                                       const SlotMapping &IRSlots,
-                                       SMDiagnostic &Error);
+bool parseMachineBasicBlockDefinitions(PerFunctionMIParsingState &PFS,
+                                       StringRef Src, SMDiagnostic &Error);
 
 /// Parse the machine instructions.
 ///
@@ -67,35 +73,26 @@ bool parseMachineBasicBlockDefinitions(MachineFunction &MF, StringRef Src,
 /// on the given source string.
 ///
 /// Return true if an error occurred.
-bool parseMachineInstructions(MachineFunction &MF, StringRef Src,
-                              const PerFunctionMIParsingState &PFS,
-                              const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseMachineInstructions(const PerFunctionMIParsingState &PFS,
+                              StringRef Src, SMDiagnostic &Error);
 
-bool parseMBBReference(MachineBasicBlock *&MBB, SourceMgr &SM,
-                       MachineFunction &MF, StringRef Src,
-                       const PerFunctionMIParsingState &PFS,
-                       const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseMBBReference(const PerFunctionMIParsingState &PFS,
+                       MachineBasicBlock *&MBB, StringRef Src,
+                       SMDiagnostic &Error);
 
-bool parseNamedRegisterReference(unsigned &Reg, SourceMgr &SM,
-                                 MachineFunction &MF, StringRef Src,
-                                 const PerFunctionMIParsingState &PFS,
-                                 const SlotMapping &IRSlots,
+bool parseNamedRegisterReference(const PerFunctionMIParsingState &PFS,
+                                 unsigned &Reg, StringRef Src,
                                  SMDiagnostic &Error);
 
-bool parseVirtualRegisterReference(unsigned &Reg, SourceMgr &SM,
-                                   MachineFunction &MF, StringRef Src,
-                                   const PerFunctionMIParsingState &PFS,
-                                   const SlotMapping &IRSlots,
+bool parseVirtualRegisterReference(const PerFunctionMIParsingState &PFS,
+                                   unsigned &Reg, StringRef Src,
                                    SMDiagnostic &Error);
 
-bool parseStackObjectReference(int &FI, SourceMgr &SM, MachineFunction &MF,
-                               StringRef Src,
-                               const PerFunctionMIParsingState &PFS,
-                               const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseStackObjectReference(const PerFunctionMIParsingState &PFS,
+                               int &FI, StringRef Src, SMDiagnostic &Error);
 
-bool parseMDNode(MDNode *&Node, SourceMgr &SM, MachineFunction &MF,
-                 StringRef Src, const PerFunctionMIParsingState &PFS,
-                 const SlotMapping &IRSlots, SMDiagnostic &Error);
+bool parseMDNode(const PerFunctionMIParsingState &PFS, MDNode *&Node,
+                 StringRef Src, SMDiagnostic &Error);
 
 } // end namespace llvm
 

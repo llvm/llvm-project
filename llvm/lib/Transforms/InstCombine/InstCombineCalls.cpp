@@ -1038,18 +1038,27 @@ static Value *simplifyMinnumMaxnum(const IntrinsicInst &II) {
   return nullptr;
 }
 
+static bool maskIsAllOneOrUndef(Value *Mask) {
+  auto *ConstMask = dyn_cast<Constant>(Mask);
+  if (!ConstMask)
+    return false;
+  if (ConstMask->isAllOnesValue() || isa<UndefValue>(ConstMask))
+    return true;
+  for (unsigned I = 0, E = ConstMask->getType()->getVectorNumElements(); I != E;
+       ++I) {
+    if (auto *MaskElt = ConstMask->getAggregateElement(I))
+      if (MaskElt->isAllOnesValue() || isa<UndefValue>(MaskElt))
+        continue;
+    return false;
+  }
+  return true;
+}
+
 static Value *simplifyMaskedLoad(const IntrinsicInst &II,
                                  InstCombiner::BuilderTy &Builder) {
-  auto *ConstMask = dyn_cast<Constant>(II.getArgOperand(2));
-  if (!ConstMask)
-    return nullptr;
-
-  // If the mask is all zeros, the "passthru" argument is the result.
-  if (ConstMask->isNullValue())
-    return II.getArgOperand(3);
-
-  // If the mask is all ones, this is a plain vector load of the 1st argument.
-  if (ConstMask->isAllOnesValue()) {
+  // If the mask is all ones or undefs, this is a plain vector load of the 1st
+  // argument.
+  if (maskIsAllOneOrUndef(II.getArgOperand(2))) {
     Value *LoadPtr = II.getArgOperand(0);
     unsigned Alignment = cast<ConstantInt>(II.getArgOperand(1))->getZExtValue();
     return Builder.CreateAlignedLoad(LoadPtr, Alignment, "unmaskedload");

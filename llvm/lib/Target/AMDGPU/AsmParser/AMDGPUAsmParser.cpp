@@ -2554,6 +2554,8 @@ AMDGPUAsmParser::parseDPPCtrl(OperandVector &Operands) {
           Int = 0x142;
         } else if (Int == 31) {
           Int = 0x143;
+        } else {
+          return MatchOperand_ParseFail;
         }
       } else {
         return MatchOperand_ParseFail;

@@ -351,7 +351,7 @@ bool DiagnosticIDs::isDefaultMappingAsError(unsigned DiagID) {
   if (DiagID >= diag::DIAG_UPPER_LIMIT)
     return false;
 
-  return GetDefaultDiagMapping(DiagID).getSeverity() == diag::Severity::Error;
+  return GetDefaultDiagMapping(DiagID).getSeverity() >= diag::Severity::Error;
 }
 
 /// getDescription - Given a diagnostic ID, return a description of the

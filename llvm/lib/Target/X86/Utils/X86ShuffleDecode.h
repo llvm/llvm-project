@@ -88,6 +88,10 @@ void DecodeUNPCKHMask(MVT VT, SmallVectorImpl<int> &ShuffleMask);
 /// datatypes and vector widths.
 void DecodeUNPCKLMask(MVT VT, SmallVectorImpl<int> &ShuffleMask);
 
+/// Decodes a broadcast of a subvector to a larger vector type.
+void DecodeSubVectorBroadcast(MVT DstVT, MVT SrcVT,
+                              SmallVectorImpl<int> &ShuffleMask);
+
 /// Decode a PSHUFB mask from a raw array of constants such as from
 /// BUILD_VECTOR.
 void DecodePSHUFBMask(ArrayRef<uint64_t> RawMask,

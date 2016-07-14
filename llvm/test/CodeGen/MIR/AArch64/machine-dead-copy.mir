@@ -1,5 +1,5 @@
 
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-cp  -verify-machineinstrs  -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-cp  -verify-machineinstrs  -o - %s | FileCheck %s
 
 --- |
   define i32 @copyprop1(i32 %a, i32 %b) { ret i32 %a }

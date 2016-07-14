@@ -71,6 +71,27 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 
   StackMapShadowTracker SMShadowTracker;
 
+  // This describes the kind of sled we're storing in the XRay table.
+  enum class SledKind : uint8_t {
+    FUNCTION_ENTER = 0,
+    FUNCTION_EXIT = 1,
+    TAIL_CALL = 2,
+  };
+
+  // The table will contain these structs that point to the sled, the function
+  // containing the sled, and what kind of sled (and whether they should always
+  // be instrumented).
+  struct XRayFunctionEntry {
+    const MCSymbol *Sled;
+    const MCSymbol *Function;
+    SledKind Kind;
+    bool AlwaysInstrument;
+    const class Function *Fn;
+  };
+
+  // All the sleds to be emitted.
+  std::vector<XRayFunctionEntry> Sleds;
+
   // All instructions emitted by the X86AsmPrinter should use this helper
   // method.
   //
@@ -86,10 +107,22 @@ class LLVM_LIBRARY_VISIBILITY X86AsmPrinter : public AsmPrinter {
 
   void LowerTlsAddr(X86MCInstLower &MCInstLowering, const MachineInstr &MI);
 
- public:
-   explicit X86AsmPrinter(TargetMachine &TM,
-                          std::unique_ptr<MCStreamer> Streamer)
-       : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
+  // XRay-specific lowering for X86.
+  void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
+                                     X86MCInstLower &MCIL);
+  void LowerPATCHABLE_RET(const MachineInstr &MI, X86MCInstLower &MCIL);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI, X86MCInstLower &MCIL);
+
+  // Helper function that emits the XRay sleds we've collected for a particular
+  // function.
+  void EmitXRayTable();
+
+  // Helper function to record a given XRay sled.
+  void recordSled(MCSymbol *Sled, const MachineInstr &MI, SledKind Kind);
+public:
+  explicit X86AsmPrinter(TargetMachine &TM,
+                         std::unique_ptr<MCStreamer> Streamer)
+      : AsmPrinter(TM, std::move(Streamer)), SM(*this), FM(*this) {}
 
   const char *getPassName() const override {
     return "X86 Assembly / Object Emitter";

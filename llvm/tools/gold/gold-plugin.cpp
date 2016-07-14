@@ -524,11 +524,6 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
     cf.name += ".llvm." + std::to_string(file->offset) + "." +
                sys::path::filename(Obj->getModule().getSourceFileName()).str();
 
-  // If we are doing ThinLTO compilation, don't need to process the symbols.
-  // Later we simply build a combined index file after all files are claimed.
-  if (options::thinlto && options::thinlto_index_only)
-    return LDPS_OK;
-
   for (auto &Sym : Obj->symbols()) {
     uint32_t Symflags = Sym.getFlags();
     if (shouldSkip(Symflags))

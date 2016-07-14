@@ -79,20 +79,20 @@ Using the cc1 command line
 --------------------------
 
 To run a plugin, the dynamic library containing the plugin registry must be
-loaded via the :option:`-load` command line option. This will load all plugins
+loaded via the `-load` command line option. This will load all plugins
 that are registered, and you can select the plugins to run by specifying the
-:option:`-plugin` option. Additional parameters for the plugins can be passed with
-:option:`-plugin-arg-<plugin-name>`.
+`-plugin` option. Additional parameters for the plugins can be passed with
+`-plugin-arg-<plugin-name>`.
 
 Note that those options must reach clang's cc1 process. There are two
 ways to do so:
 
-* Directly call the parsing process by using the :option:`-cc1` option; this
+* Directly call the parsing process by using the `-cc1` option; this
   has the downside of not configuring the default header search paths, so
   you'll need to specify the full system path configuration on the command
   line.
 * Use clang as usual, but prefix all arguments to the cc1 process with
-  :option:`-Xclang`.
+  `-Xclang`.
 
 For example, to run the ``print-function-names`` plugin over a source file in
 clang, first build the plugin, and then call clang with the plugin from the
@@ -116,11 +116,11 @@ Also see the print-function-name plugin example's
 Using the clang command line
 ----------------------------
 
-Using :option:`-fplugin=plugin` on the clang command line passes the plugin
-through as an argument to :option:`-load` on the cc1 command line. If the plugin
+Using `-fplugin=plugin` on the clang command line passes the plugin
+through as an argument to `-load` on the cc1 command line. If the plugin
 class implements the ``getActionType`` method then the plugin is run
 automatically. For example, to run the plugin automatically after the main AST
-action (i.e. the same as using :option:`-add-plugin`):
+action (i.e. the same as using `-add-plugin`):
 
 .. code-block:: c++
 

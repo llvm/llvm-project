@@ -1,0 +1,7 @@
+version: 0.04
+date: Wed Jun 17 10:52:58 CEST 2015
+changes:
+	- use schedule trees
+	- fix live-range reordering
+	- improve generation of synchronization
+	- exploit independences during dependence analysis

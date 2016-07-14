@@ -209,6 +209,14 @@ int TargetTransformInfo::getFPOpCost(Type *Ty) const {
   return Cost;
 }
 
+int TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx,
+                                               const APInt &Imm,
+                                               Type *Ty) const {
+  int Cost = TTIImpl->getIntImmCodeSizeCost(Opcode, Idx, Imm, Ty);
+  assert(Cost >= 0 && "TTI should not produce negative costs!");
+  return Cost;
+}
+
 int TargetTransformInfo::getIntImmCost(const APInt &Imm, Type *Ty) const {
   int Cost = TTIImpl->getIntImmCost(Imm, Ty);
   assert(Cost >= 0 && "TTI should not produce negative costs!");

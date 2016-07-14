@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -run-pass=livedebugvalues -march=x86-64 -o - %s | FileCheck %s
 
 # Test the extension of debug ranges from 3 predecessors.
 # Generated from the source file LiveDebugValues-3preds.c:

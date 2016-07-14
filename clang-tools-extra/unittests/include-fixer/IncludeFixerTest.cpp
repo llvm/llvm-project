@@ -63,6 +63,9 @@ static std::string runIncludeFixer(
       SymbolInfo("bar", SymbolInfo::SymbolKind::Class, "\"bar.h\"", 1,
                  {{SymbolInfo::ContextType::Namespace, "b"},
                   {SymbolInfo::ContextType::Namespace, "a"}}),
+      SymbolInfo("bar", SymbolInfo::SymbolKind::Class, "\"bar2.h\"", 1,
+                 {{SymbolInfo::ContextType::Namespace, "c"},
+                  {SymbolInfo::ContextType::Namespace, "a"}}),
       SymbolInfo("Green", SymbolInfo::SymbolKind::Class, "\"color.h\"", 1,
                  {{SymbolInfo::ContextType::EnumDecl, "Color"},
                   {SymbolInfo::ContextType::Namespace, "b"},
@@ -84,18 +87,19 @@ static std::string runIncludeFixer(
 
   std::string FakeFileName = "input.cc";
   runOnCode(&Factory, Code, FakeFileName, ExtraArgs);
-  if (FixerContext.getMatchedSymbols().empty())
+  if (FixerContext.getHeaderInfos().empty())
     return Code;
   auto Replaces = clang::include_fixer::createInsertHeaderReplacements(
-      Code, FakeFileName, FixerContext.getHeaders().front());
+      Code, FakeFileName, FixerContext.getHeaderInfos().front().Header);
   EXPECT_TRUE(static_cast<bool>(Replaces))
       << llvm::toString(Replaces.takeError()) << "\n";
   if (!Replaces)
     return "";
   clang::RewriterTestContext Context;
   clang::FileID ID = Context.createInMemoryFile(FakeFileName, Code);
-  if (FixerContext.getSymbolRange().getLength() > 0)
-    Replaces->insert(FixerContext.createSymbolReplacement(FakeFileName, 0));
+  Replaces->insert({FakeFileName, FixerContext.getSymbolRange().getOffset(),
+                    FixerContext.getSymbolRange().getLength(),
+                    FixerContext.getHeaderInfos().front().QualifiedName});
   clang::tooling::applyAllReplacements(*Replaces, Context.Rewrite);
   return Context.getRewrittenText(ID);
 }
@@ -236,11 +240,15 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
             runIncludeFixer("namespace a {\nnamespace b{\nbar b;\n}\n}\n"));
   EXPECT_EQ("c::b::bar b;\n",
             runIncludeFixer("c::b::bar b;\n"));
-  EXPECT_EQ("#include \"bar.h\"\nnamespace c {\na::b::bar b;\n}\n",
+  EXPECT_EQ("#include \"bar.h\"\nnamespace d {\na::b::bar b;\n}\n",
+            runIncludeFixer("namespace d {\nbar b;\n}\n"));
+  EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar b;\n}\n",
             runIncludeFixer("namespace c {\nbar b;\n}\n"));
 
   // Test nested classes.
-  EXPECT_EQ("#include \"bar.h\"\nnamespace c {\na::b::bar::t b;\n}\n",
+  EXPECT_EQ("#include \"bar.h\"\nnamespace d {\na::b::bar::t b;\n}\n",
+            runIncludeFixer("namespace d {\nbar::t b;\n}\n"));
+  EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar::t b;\n}\n",
             runIncludeFixer("namespace c {\nbar::t b;\n}\n"));
   EXPECT_EQ("#include \"bar.h\"\nnamespace a {\nb::bar::t b;\n}\n",
             runIncludeFixer("namespace a {\nbar::t b;\n}\n"));

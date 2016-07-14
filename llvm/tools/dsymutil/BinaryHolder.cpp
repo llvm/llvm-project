@@ -102,10 +102,8 @@ BinaryHolder::GetArchiveMemberBuffers(StringRef Filename,
   Buffers.reserve(CurrentArchives.size());
 
   for (const auto &CurrentArchive : CurrentArchives) {
-    for (auto ChildOrErr : CurrentArchive->children()) {
-      if (std::error_code Err = ChildOrErr.getError())
-        return Err;
-      const auto &Child = *ChildOrErr;
+    Error Err;
+    for (auto Child : CurrentArchive->children(Err)) {
       if (auto NameOrErr = Child.getName()) {
         if (*NameOrErr == Filename) {
           if (Timestamp != sys::TimeValue::PosixZeroTime() &&
@@ -123,6 +121,8 @@ BinaryHolder::GetArchiveMemberBuffers(StringRef Filename,
         }
       }
     }
+    if (Err)
+      return errorToErrorCode(std::move(Err));
   }
 
   if (Buffers.empty())

@@ -165,7 +165,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotVA() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotOffset() const {
-  return GotIndex * sizeof(typename ELFT::uint);
+  return GotIndex * Target->GotEntrySize;
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
@@ -173,7 +173,7 @@ template <class ELFT> typename ELFT::uint SymbolBody::getGotPltVA() const {
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getGotPltOffset() const {
-  return GotPltIndex * sizeof(typename ELFT::uint);
+  return GotPltIndex * Target->GotPltEntrySize;
 }
 
 template <class ELFT> typename ELFT::uint SymbolBody::getPltVA() const {

@@ -294,10 +294,9 @@ define <16 x i16> @cmpeq_zext_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; SSE-LABEL: cmpeq_zext_v16i16:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpeqw %xmm2, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1]
-; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    psrlw $15, %xmm0
 ; SSE-NEXT:    pcmpeqw %xmm3, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    psrlw $15, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: cmpeq_zext_v16i16:
@@ -313,7 +312,7 @@ define <16 x i16> @cmpeq_zext_v16i16(<16 x i16> %a, <16 x i16> %b) {
 ; AVX2-LABEL: cmpeq_zext_v16i16:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpcmpeqw %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpand {{.*}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlw $15, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
   %cmp = icmp eq <16 x i16> %a, %b
@@ -325,21 +324,14 @@ define <4 x i32> @cmpeq_zext_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; SSE-LABEL: cmpeq_zext_v4i32:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psrld $31, %xmm0
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: cmpeq_zext_v4i32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: cmpeq_zext_v4i32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm1
-; AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX-LABEL: cmpeq_zext_v4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpsrld $31, %xmm0, %xmm0
+; AVX-NEXT:    retq
 ;
   %cmp = icmp eq <4 x i32> %a, %b
   %zext = zext <4 x i1> %cmp to <4 x i32>
@@ -363,10 +355,9 @@ define <4 x i64> @cmpeq_zext_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE42-LABEL: cmpeq_zext_v4i64:
 ; SSE42:       # BB#0:
 ; SSE42-NEXT:    pcmpeqq %xmm2, %xmm0
-; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [1,1]
-; SSE42-NEXT:    pand %xmm2, %xmm0
+; SSE42-NEXT:    psrlq $63, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm3, %xmm1
-; SSE42-NEXT:    pand %xmm2, %xmm1
+; SSE42-NEXT:    psrlq $63, %xmm1
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: cmpeq_zext_v4i64:
@@ -382,8 +373,7 @@ define <4 x i64> @cmpeq_zext_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; AVX2-LABEL: cmpeq_zext_v4i64:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastq {{.*}}(%rip), %ymm1
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $63, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
   %cmp = icmp eq <4 x i64> %a, %b
@@ -426,13 +416,13 @@ define <8 x i16> @cmpgt_zext_v8i16(<8 x i16> %a, <8 x i16> %b) {
 ; SSE-LABEL: cmpgt_zext_v8i16:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpgtw %xmm1, %xmm0
-; SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE-NEXT:    psrlw $15, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: cmpgt_zext_v8i16:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %cmp = icmp sgt <8 x i16> %a, %b
@@ -444,10 +434,9 @@ define <8 x i32> @cmpgt_zext_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; SSE-LABEL: cmpgt_zext_v8i32:
 ; SSE:       # BB#0:
 ; SSE-NEXT:    pcmpgtd %xmm2, %xmm0
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1]
-; SSE-NEXT:    pand %xmm2, %xmm0
+; SSE-NEXT:    psrld $31, %xmm0
 ; SSE-NEXT:    pcmpgtd %xmm3, %xmm1
-; SSE-NEXT:    pand %xmm2, %xmm1
+; SSE-NEXT:    psrld $31, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: cmpgt_zext_v8i32:
@@ -463,8 +452,7 @@ define <8 x i32> @cmpgt_zext_v8i32(<8 x i32> %a, <8 x i32> %b) {
 ; AVX2-LABEL: cmpgt_zext_v8i32:
 ; AVX2:       # BB#0:
 ; AVX2-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastd {{.*}}(%rip), %ymm1
-; AVX2-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
   %cmp = icmp sgt <8 x i32> %a, %b
@@ -492,13 +480,13 @@ define <2 x i64> @cmpgt_zext_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE42-LABEL: cmpgt_zext_v2i64:
 ; SSE42:       # BB#0:
 ; SSE42-NEXT:    pcmpgtq %xmm1, %xmm0
-; SSE42-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE42-NEXT:    psrlq $63, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX-LABEL: cmpgt_zext_v2i64:
 ; AVX:       # BB#0:
 ; AVX-NEXT:    vpcmpgtq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 ;
   %cmp = icmp sgt <2 x i64> %a, %b
