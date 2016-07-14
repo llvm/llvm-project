@@ -2466,6 +2466,12 @@ void ASTStmtWriter::VisitOMPDistributeSimdDirective(
   Code = serialization::STMT_OMP_DISTRIBUTE_SIMD_DIRECTIVE;
 }
 
+void ASTStmtWriter::VisitOMPTargetParallelForSimdDirective(
+    OMPTargetParallelForSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+  Code = serialization::STMT_OMP_TARGET_PARALLEL_FOR_SIMD_DIRECTIVE;
+}
+
 //===----------------------------------------------------------------------===//
 // ASTWriter Implementation
 //===----------------------------------------------------------------------===//

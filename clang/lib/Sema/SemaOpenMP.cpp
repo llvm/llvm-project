@@ -1608,14 +1608,15 @@ void Sema::ActOnOpenMPRegionStart(OpenMPDirectiveKind DKind, Scope *CurScope) {
   case OMPD_single:
   case OMPD_master:
   case OMPD_critical:
+  case OMPD_taskgroup:
+  case OMPD_distribute:
   case OMPD_ordered:
   case OMPD_atomic:
   case OMPD_target_data:
   case OMPD_target:
   case OMPD_target_parallel:
   case OMPD_target_parallel_for:
-  case OMPD_taskgroup:
-  case OMPD_distribute: {
+  case OMPD_target_parallel_for_simd: {
     Sema::CapturedParamNameType Params[] = {
         std::make_pair(StringRef(), QualType()) // __context with shared vars
     };
@@ -1952,6 +1953,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | for              | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | for              | distribute simd | +                                  |
+  // | for              | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | master           | parallel        | *                                  |
   // | master           | for             | +                                  |
@@ -1993,6 +1996,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | master           | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | master           | distribute simd | +                                  |
+  // | master           | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | critical         | parallel        | *                                  |
   // | critical         | for             | +                                  |
@@ -2033,6 +2038,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | critical         | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | critical         | distribute simd | +                                  |
+  // | critical         | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | simd             | parallel        |                                    |
   // | simd             | for             |                                    |
@@ -2074,6 +2081,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | simd             | distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | simd             | distribute simd |                                    |
+  // | simd             | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | for simd         | parallel        |                                    |
   // | for simd         | for             |                                    |
@@ -2115,6 +2124,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | for simd         | distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | for simd         | distribute simd |                                    |
+  // | for simd         | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | parallel for simd| parallel        |                                    |
   // | parallel for simd| for             |                                    |
@@ -2156,6 +2167,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | parallel for simd| distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | parallel for simd| distribute simd |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | sections         | parallel        | *                                  |
   // | sections         | for             | +                                  |
@@ -2197,6 +2209,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | sections         | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | sections         | distribute simd | +                                  |
+  // | sections         | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | section          | parallel        | *                                  |
   // | section          | for             | +                                  |
@@ -2238,6 +2252,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | section          | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | section          | distribute simd | +                                  |
+  // | section          | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | single           | parallel        | *                                  |
   // | single           | for             | +                                  |
@@ -2279,6 +2295,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | single           | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | single           | distribute simd | +                                  |
+  // | single           | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | parallel for     | parallel        | *                                  |
   // | parallel for     | for             | +                                  |
@@ -2320,6 +2338,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | parallel for     | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | parallel for     | distribute simd | +                                  |
+  // | parallel for     | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | parallel sections| parallel        | *                                  |
   // | parallel sections| for             | +                                  |
@@ -2361,6 +2381,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | parallel sections| distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | parallel sections| distribute simd | +                                  |
+  // | parallel sections| target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | task             | parallel        | *                                  |
   // | task             | for             | +                                  |
@@ -2402,6 +2424,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | task             | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | task             | distribute simd | +                                  |
+  // | task             | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | ordered          | parallel        | *                                  |
   // | ordered          | for             | +                                  |
@@ -2443,6 +2467,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | ordered          | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | ordered          | distribute simd | +                                  |
+  // | ordered          | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | atomic           | parallel        |                                    |
   // | atomic           | for             |                                    |
@@ -2484,6 +2510,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | atomic           | distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | atomic           | distribute simd |                                    |
+  // | atomic           | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | target           | parallel        | *                                  |
   // | target           | for             | *                                  |
@@ -2525,6 +2553,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | target           | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | target           | distribute simd | +                                  |
+  // | target           | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | target parallel  | parallel        | *                                  |
   // | target parallel  | for             | *                                  |
@@ -2566,6 +2596,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | target parallel  | distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | target parallel  | distribute simd |                                    |
+  // | target parallel  | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | target parallel  | parallel        | *                                  |
   // | for              |                 |                                    |
@@ -2635,6 +2667,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | for              |parallel for simd|                                    |
   // | target parallel  | distribute simd |                                    |
   // | for              |                 |                                    |
+  // | target parallel  | target parallel |                                    |
+  // | for              | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | teams            | parallel        | *                                  |
   // | teams            | for             | +                                  |
@@ -2676,6 +2710,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | teams            | distribute      | !                                  |
   // |                  |parallel for simd|                                    |
   // | teams            | distribute simd | !                                  |
+  // | teams            | target parallel | +                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | taskloop         | parallel        | *                                  |
   // | taskloop         | for             | +                                  |
@@ -2716,6 +2752,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | taskloop         | distribute      | +                                  |
   // |                  |parallel for simd|                                    |
   // | taskloop         | distribute simd | +                                  |
+  // | taskloop         | target parallel | *                                  |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | taskloop simd    | parallel        |                                    |
   // | taskloop simd    | for             |                                    |
@@ -2757,6 +2795,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | taskloop simd    | distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | taskloop simd    | distribute simd |                                    |
+  // | taskloop simd    | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | distribute       | parallel        | *                                  |
   // | distribute       | for             | *                                  |
@@ -2798,6 +2838,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | distribute       | distribute      |                                    |
   // |                  |parallel for simd|                                    |
   // | distribute       | distribute simd |                                    |
+  // | distribute       | target parallel |                                    |
+  // |                  | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | distribute       | parallel        | *                                  |
   // | parallel for     |                 |                                    |
@@ -2868,6 +2910,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | parallel for     |parallel for simd|                                    |
   // | distribute       | distribute simd |                                    |
   // | parallel for     |                 |                                    |
+  // | distribute       | target parallel |                                    |
+  // | parallel for     | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | distribute       | parallel        | *                                  |
   // | parallel for simd|                 |                                    |
@@ -2937,6 +2981,8 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | parallel for simd|parallel for simd|                                    |
   // | distribute       | distribute simd | *                                  |
   // | parallel for simd|                 |                                    |
+  // | distribute       | target parallel |                                    |
+  // | parallel for simd| for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   // | distribute simd  | parallel        | *                                  |
   // | distribute simd  | for             | *                                  |
@@ -2978,7 +3024,79 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
   // | distribute simd  | distribute      | *                                  |
   // |                  |parallel for simd|                                    |
   // | distribute simd  | distribute simd | *                                  |
-  // |                  |                 |                                    |
+  // | distribute simd  | target parallel | *                                  |
+  // |                  | for simd        |                                    |
+  // +------------------+-----------------+------------------------------------+
+  // | target parallel  | parallel        | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | for             | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | for simd        | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | master          | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | critical        | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | simd            | !                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | sections        | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | section         | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | single          | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | parallel for    | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  |parallel for simd| *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  |parallel sections| *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | task            | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | taskyield       | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | barrier         | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | taskwait        | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | taskgroup       | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | flush           | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | ordered         | + (with simd clause)               |
+  // | for simd         |                 |                                    |
+  // | target parallel  | atomic          | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | target          | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | target parallel | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | target parallel | *                                  |
+  // | for simd         | for             |                                    |
+  // | target parallel  | target enter    | *                                  |
+  // | for simd         | data            |                                    |
+  // | target parallel  | target exit     | *                                  |
+  // | for simd         | data            |                                    |
+  // | target parallel  | teams           | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | cancellation    | *                                  |
+  // | for simd         | point           |                                    |
+  // | target parallel  | cancel          | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | taskloop        | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | taskloop simd   | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | distribute      | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | distribute      | *                                  |
+  // | for simd         | parallel for    |                                    |
+  // | target parallel  | distribute      | *                                  |
+  // | for simd         |parallel for simd|                                    |
+  // | target parallel  | distribute simd | *                                  |
+  // | for simd         |                 |                                    |
+  // | target parallel  | target parallel | *                                  |
+  // | for simd         | for simd        |                                    |
   // +------------------+-----------------+------------------------------------+
   if (Stack->getCurScope()) {
     auto ParentRegion = Stack->getParentDirective();
@@ -3477,6 +3595,12 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
   case OMPD_distribute_simd:
     Res = ActOnOpenMPDistributeSimdDirective(
         ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    break;
+  case OMPD_target_parallel_for_simd:
+    Res = ActOnOpenMPTargetParallelForSimdDirective(
+        ClausesWithImplicit, AStmt, StartLoc, EndLoc, VarsWithInheritedDSA);
+    AllowedNameModifiers.push_back(OMPD_target);
+    AllowedNameModifiers.push_back(OMPD_parallel);
     break;
   case OMPD_declare_target:
   case OMPD_end_declare_target:
@@ -7056,6 +7180,68 @@ StmtResult Sema::ActOnOpenMPDistributeSimdDirective(
   getCurFunction()->setHasBranchProtectedScope();
   return OMPDistributeSimdDirective::Create(Context, StartLoc, EndLoc,
                                             NestedLoopCount, Clauses, AStmt, B);
+}
+
+StmtResult Sema::ActOnOpenMPTargetParallelForSimdDirective(
+    ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+    SourceLocation EndLoc,
+    llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA) {
+  if (!AStmt)
+    return StmtError();
+
+  CapturedStmt *CS = cast<CapturedStmt>(AStmt);
+  // 1.2.2 OpenMP Language Terminology
+  // Structured block - An executable statement with a single entry at the
+  // top and a single exit at the bottom.
+  // The point of exit cannot be a branch out of the structured block.
+  // longjmp() and throw() must not violate the entry/exit criteria.
+  CS->getCapturedDecl()->setNothrow();
+
+  OMPLoopDirective::HelperExprs B;
+  // In presence of clause 'collapse' or 'ordered' with number of loops, it will
+  // define the nested loops number.
+  unsigned NestedLoopCount = CheckOpenMPLoop(
+      OMPD_target_parallel_for_simd, getCollapseNumberExpr(Clauses),
+      getOrderedNumberExpr(Clauses), AStmt, *this, *DSAStack,
+      VarsWithImplicitDSA, B);
+  if (NestedLoopCount == 0)
+    return StmtError();
+
+  assert((CurContext->isDependentContext() || B.builtAll()) &&
+         "omp target parallel for simd loop exprs were not built");
+
+  if (!CurContext->isDependentContext()) {
+    // Finalize the clauses that need pre-built expressions for CodeGen.
+    for (auto C : Clauses) {
+      if (auto LC = dyn_cast<OMPLinearClause>(C))
+        if (FinishOpenMPLinearClause(*LC, cast<DeclRefExpr>(B.IterationVarRef),
+                                     B.NumIterations, *this, CurScope,
+                                     DSAStack))
+          return StmtError();
+    }
+  }
+
+  // OpenMP 4.1 [2.8.1, simd Construct, Restrictions]
+  // If both simdlen and safelen clauses are specified, the value of the simdlen
+  // parameter must be less than or equal to the value of the safelen parameter.
+  OMPSafelenClause *Safelen = nullptr;
+  OMPSimdlenClause *Simdlen = nullptr;
+  for (auto *Clause : Clauses) {
+    if (Clause->getClauseKind() == OMPC_safelen)
+      Safelen = cast<OMPSafelenClause>(Clause);
+    else if (Clause->getClauseKind() == OMPC_simdlen)
+      Simdlen = cast<OMPSimdlenClause>(Clause);
+    if (Safelen && Simdlen)
+      break;
+  }
+  if (Simdlen && Safelen &&
+      checkSimdlenSafelenValues(*this, Simdlen->getSimdlen(),
+                                Safelen->getSafelen()))
+    return StmtError();
+
+  getCurFunction()->setHasBranchProtectedScope();
+  return OMPTargetParallelForSimdDirective::Create(
+      Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
 }
 
 OMPClause *Sema::ActOnOpenMPSingleExprClause(OpenMPClauseKind Kind, Expr *Expr,

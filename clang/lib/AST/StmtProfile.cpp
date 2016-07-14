@@ -722,6 +722,11 @@ void StmtProfiler::VisitOMPDistributeSimdDirective(
   VisitOMPLoopDirective(S);
 }
 
+void StmtProfiler::VisitOMPTargetParallelForSimdDirective(
+    const OMPTargetParallelForSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
 void StmtProfiler::VisitExpr(const Expr *S) {
   VisitStmt(S);
 }
