@@ -34,13 +34,13 @@ int g(int i) {
 // CHECK-NEXT:   `-CompoundStmt
 // CHECK-NEXT:     `-IfStmt {{.*}} <line:25:3, line:28:12>
 // CHECK-NEXT:       |-<<<NULL>>>
+// CHECK-NEXT:       |-<<<NULL>>>
 // CHECK-NEXT:       |-OpaqueValueExpr {{.*}} <<invalid sloc>> '_Bool'
 // CHECK-NEXT:       |-ReturnStmt {{.*}} <line:26:5, col:12>
 // CHECK-NEXT:       | `-IntegerLiteral {{.*}} <col:12> 'int' 4
 // CHECK-NEXT:       `-ReturnStmt {{.*}} <line:28:5, col:12>
 // CHECK-NEXT:         `-ImplicitCastExpr {{.*}} <col:12> 'int' <LValueToRValue>
 // CHECK-NEXT:           `-DeclRefExpr {{.*}} <col:12> 'int' lvalue ParmVar {{.*}} 'i' 'int'
-
 
 namespace TestInvalidFunctionDecl {
 struct Str {

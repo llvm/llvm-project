@@ -4961,6 +4961,9 @@ Stmt *ASTNodeImporter::VisitAttributedStmt(AttributedStmt *S) {
 
 Stmt *ASTNodeImporter::VisitIfStmt(IfStmt *S) {
   SourceLocation ToIfLoc = Importer.Import(S->getIfLoc());
+  Stmt *ToInit = Importer.Import(S->getInit());
+  if (!ToInit && S->getInit())
+    return nullptr;
   VarDecl *ToConditionVariable = nullptr;
   if (VarDecl *FromConditionVariable = S->getConditionVariable()) {
     ToConditionVariable =
@@ -4980,12 +4983,16 @@ Stmt *ASTNodeImporter::VisitIfStmt(IfStmt *S) {
     return nullptr;
   return new (Importer.getToContext()) IfStmt(Importer.getToContext(),
                                               ToIfLoc, S->isConstexpr(),
+                                              ToInit,
                                               ToConditionVariable,
                                               ToCondition, ToThenStmt,
                                               ToElseLoc, ToElseStmt);
 }
 
 Stmt *ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
+  Stmt *ToInit = Importer.Import(S->getInit());
+  if (!ToInit && S->getInit())
+    return nullptr;
   VarDecl *ToConditionVariable = nullptr;
   if (VarDecl *FromConditionVariable = S->getConditionVariable()) {
     ToConditionVariable =
@@ -4997,8 +5004,8 @@ Stmt *ASTNodeImporter::VisitSwitchStmt(SwitchStmt *S) {
   if (!ToCondition && S->getCond())
     return nullptr;
   SwitchStmt *ToStmt = new (Importer.getToContext()) SwitchStmt(
-                         Importer.getToContext(), ToConditionVariable,
-                         ToCondition);
+                         Importer.getToContext(), ToInit,
+                         ToConditionVariable, ToCondition);
   Stmt *ToBody = Importer.Import(S->getBody());
   if (!ToBody && S->getBody())
     return nullptr;

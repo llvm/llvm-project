@@ -129,6 +129,7 @@ void ASTStmtWriter::VisitAttributedStmt(AttributedStmt *S) {
 void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
   Record.push_back(S->isConstexpr());
+  Record.AddStmt(S->getInit());
   Record.AddDeclRef(S->getConditionVariable());
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getThen());
@@ -140,6 +141,7 @@ void ASTStmtWriter::VisitIfStmt(IfStmt *S) {
 
 void ASTStmtWriter::VisitSwitchStmt(SwitchStmt *S) {
   VisitStmt(S);
+  Record.AddStmt(S->getInit());
   Record.AddDeclRef(S->getConditionVariable());
   Record.AddStmt(S->getCond());
   Record.AddStmt(S->getBody());
