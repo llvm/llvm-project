@@ -1,4 +1,5 @@
-; RUN: llc < %s -O0 -fast-isel-abort=1 -march=x86 -mtriple=i686-apple-darwin8 | FileCheck %s
+; RUN: llc < %s -O0 -fast-isel-abort=1 -march=x86 -mtriple=i686-apple-darwin8 2>/dev/null | FileCheck %s
+; RUN: llc < %s -O0 -fast-isel-abort=1 -march=x86 -mtriple=i686-apple-darwin8 2>&1 >/dev/null | FileCheck -check-prefix=STDERR -allow-empty %s
 
 %struct.s = type {i32, i32, i32}
 
@@ -53,3 +54,19 @@ define void @test4(i8* %a, i8* %b) {
 ; CHECK:   movl	$100, 8(%esp)
 ; CHECK:   calll {{.*}}memcpy
 }
+
+; STDERR-NOT: FastISel missed call:   call x86_thiscallcc void @thiscallfun
+%struct.S = type { i8 }
+define void @test5() #0 {
+entry:
+  %s = alloca %struct.S, align 1
+; CHECK-LABEL: test5:
+; CHECK: subl $12, %esp
+; CHECK: leal 8(%esp), %ecx
+; CHECK: movl $43, (%esp)
+; CHECK: calll {{.*}}thiscallfun
+; CHECK: addl $8, %esp
+  call x86_thiscallcc void @thiscallfun(%struct.S* %s, i32 43)
+  ret void
+}
+declare x86_thiscallcc void @thiscallfun(%struct.S*, i32) #1
