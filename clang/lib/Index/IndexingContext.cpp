@@ -83,14 +83,14 @@ bool IndexingContext::importedModule(const ImportDecl *ImportD) {
   if (SEntry.getFile().getFileCharacteristic() != SrcMgr::C_User) {
     switch (IndexOpts.SystemSymbolFilter) {
     case IndexingOptions::SystemSymbolFilterKind::None:
-    case IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly:
       return true;
+    case IndexingOptions::SystemSymbolFilterKind::DeclarationsOnly:
     case IndexingOptions::SystemSymbolFilterKind::All:
       break;
     }
   }
 
-  SymbolRoleSet Roles = (unsigned)SymbolRole::Reference;
+  SymbolRoleSet Roles = (unsigned)SymbolRole::Declaration;
   if (ImportD->isImplicit())
     Roles |= (unsigned)SymbolRole::Implicit;
 
