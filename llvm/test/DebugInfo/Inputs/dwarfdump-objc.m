@@ -10,6 +10,12 @@
 @property (retain) NSObject *Retain;
 @property (copy) NSObject *Copy;
 @property (nonatomic) int NonAtomic;
+@property (atomic) int Atomic;
+@property (strong) NSObject *Strong;
+@property (unsafe_unretained) id UnsafeUnretained;
+@property (nullable) NSObject *Nullability;
+@property (null_resettable) NSObject *NullResettable;
+@property (class) int ClassProperty;
 @end
 
 @implementation TestInterface
