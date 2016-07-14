@@ -32,6 +32,7 @@ LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
 
 void check(std::error_code EC);
+void check(Error Err);
 
 template <class T> T check(ErrorOr<T> EO) {
   if (EO)
@@ -42,7 +43,7 @@ template <class T> T check(ErrorOr<T> EO) {
 template <class T> T check(Expected<T> EO) {
   if (EO)
     return std::move(*EO);
-  check(errorToErrorCode(EO.takeError()));
+  check(EO.takeError());
   return T();
 }
 
