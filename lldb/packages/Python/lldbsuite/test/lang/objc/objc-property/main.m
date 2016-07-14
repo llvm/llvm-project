@@ -6,6 +6,8 @@
 
 @end
 
+static int _class_int = 123;
+
 @interface BaseClass : NSObject
 {
   int _backedInt;
@@ -25,6 +27,7 @@
 @property(getter=myGetUnbackedInt,setter=mySetUnbackedInt:) int unbackedInt;
 @property int backedInt;
 @property (nonatomic, assign) id <MyProtocol> idWithProtocol;
+@property(class) int classInt;
 @end
 
 @implementation BaseClass
@@ -66,6 +69,16 @@
 {
   // NSLog (@"Setting BaseClass::nonexistantInt from 7 to %d.", in_int);
   _access_count++;
+}
+
++ (int) classInt
+{
+    return _class_int;
+}
+
++ (void) setClassInt:(int) n
+{
+    _class_int = n;
 }
 
 - (int) getAccessCount
