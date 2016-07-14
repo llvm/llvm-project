@@ -46,13 +46,12 @@ namespace lldb_private {
                 
                 static std::unique_ptr<SwiftArrayBufferHandler>
                 CreateBufferHandler (ValueObject& valobj);
-                
-                virtual ~SwiftArrayBufferHandler () {}
-                
-            protected:
+
                 virtual bool
                 IsValid () = 0;
-                
+
+                virtual ~SwiftArrayBufferHandler () {}
+            protected:
                 static bool
                 DoesTypeEntailIndirectBuffer (const CompilerType &element_type);
             };
@@ -73,14 +72,14 @@ namespace lldb_private {
                 GetElementAtIndex (size_t) { return lldb::ValueObjectSP(); }
                 
                 virtual ~SwiftArrayEmptyBufferHandler () {}
-                
+
+                virtual bool
+                IsValid () { return true; }
+
             protected:
                 SwiftArrayEmptyBufferHandler (CompilerType elem_type) :
                 m_elem_type(elem_type) {}
                 friend class SwiftArrayBufferHandler;
-                
-                virtual bool
-                IsValid () { return true; }
                 
             private:
                 lldb_private::CompilerType m_elem_type;
@@ -100,15 +99,15 @@ namespace lldb_private {
                 
                 virtual lldb::ValueObjectSP
                 GetElementAtIndex (size_t);
+
+                virtual bool
+                IsValid ();
                 
                 virtual ~SwiftArrayNativeBufferHandler () {}
                 
             protected:
                 SwiftArrayNativeBufferHandler (ValueObject &valobj, lldb::addr_t native_ptr, CompilerType elem_type);
                 friend class SwiftArrayBufferHandler;
-                
-                virtual bool
-                IsValid ();                
                 
             private:
                 lldb::addr_t m_metadata_ptr;
@@ -136,15 +135,15 @@ namespace lldb_private {
                 
                 virtual lldb::ValueObjectSP
                 GetElementAtIndex (size_t);
-                
+
+                virtual bool
+                IsValid ();
+
                 virtual ~SwiftArrayBridgedBufferHandler () {}
                 
             protected:
                 SwiftArrayBridgedBufferHandler (lldb::ProcessSP, lldb::addr_t);
                 friend class SwiftArrayBufferHandler;
-                
-                virtual bool
-                IsValid ();
                 
             private:
                 CompilerType m_elem_type;
@@ -166,15 +165,15 @@ namespace lldb_private {
                 
                 virtual lldb::ValueObjectSP
                 GetElementAtIndex (size_t);
-                
+
+                virtual bool
+                IsValid ();
+
                 virtual ~SwiftArraySliceBufferHandler () {}
                 
             protected:
                 SwiftArraySliceBufferHandler (ValueObject& valobj, CompilerType elem_type);
                 friend class SwiftArrayBufferHandler;
-                
-                virtual bool
-                IsValid ();
                 
             private:
                 lldb::addr_t m_size;
@@ -201,16 +200,16 @@ namespace lldb_private {
                 
                 virtual lldb::ValueObjectSP
                 GetElementAtIndex (size_t);
-                
+
+                virtual bool
+                IsValid ();
+
                 virtual ~SwiftSyntheticFrontEndBufferHandler () {}
 
             protected:
                 SwiftSyntheticFrontEndBufferHandler (lldb::ValueObjectSP valobj_sp);
                 friend class SwiftArrayBufferHandler;
-                
-                virtual bool
-                IsValid ();
-                
+
             private:
                 lldb::ValueObjectSP m_valobj_sp; // reader beware: this entails you must only pass self-rooted valueobjects to this class
                 std::unique_ptr<SyntheticChildrenFrontEnd> m_frontend;
@@ -241,6 +240,9 @@ namespace lldb_private {
                 
                 virtual
                 ~ArraySyntheticFrontEnd () = default;
+
+                bool
+                IsValid ();
             private:
                 
                 std::unique_ptr<SwiftArrayBufferHandler> m_array_buffer;

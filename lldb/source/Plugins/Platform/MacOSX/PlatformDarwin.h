@@ -101,6 +101,9 @@ public:
     static lldb::ModuleSP
     GetUnitTestModule (lldb_private::ModuleList &modules);
 
+    lldb_private::Error
+    LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
+
 protected:
     void
     ReadLibdispatchOffsetsAddress (lldb_private::Process *process);
