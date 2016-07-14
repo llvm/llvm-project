@@ -257,6 +257,11 @@ public:
 
   unsigned getFPOpCost(Type *Ty) { return TargetTransformInfo::TCC_Basic; }
 
+  int getIntImmCodeSizeCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
+                            Type *Ty) {
+    return 0;
+  }
+
   unsigned getIntImmCost(const APInt &Imm, Type *Ty) { return TTI::TCC_Basic; }
 
   unsigned getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,

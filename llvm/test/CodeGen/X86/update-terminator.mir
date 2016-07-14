@@ -1,4 +1,4 @@
-# RUN: llc -march=x86-64 -verify-machineinstrs -run-pass block-placement -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=x86-64 -verify-machineinstrs -run-pass block-placement -o - %s | FileCheck %s
 # Check the conditional jump in bb.1 is changed to unconditional after block placement swaps bb.2 and bb.3.
 
 --- |

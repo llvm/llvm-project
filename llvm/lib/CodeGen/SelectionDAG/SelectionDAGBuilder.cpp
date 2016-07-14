@@ -3831,13 +3831,10 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I) {
   I.getAAMetadata(AAInfo);
   const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
 
-  SDValue InChain = DAG.getRoot();
-  if (AA->pointsToConstantMemory(MemoryLocation(
-          PtrOperand, DAG.getDataLayout().getTypeStoreSize(I.getType()),
-          AAInfo))) {
-    // Do not serialize (non-volatile) loads of constant memory with anything.
-    InChain = DAG.getEntryNode();
-  }
+  // Do not serialize masked loads of constant memory with anything.
+  bool AddToChain = !AA->pointsToConstantMemory(MemoryLocation(
+      PtrOperand, DAG.getDataLayout().getTypeStoreSize(I.getType()), AAInfo));
+  SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
 
   MachineMemOperand *MMO =
     DAG.getMachineFunction().
@@ -3847,8 +3844,10 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I) {
 
   SDValue Load = DAG.getMaskedLoad(VT, sdl, InChain, Ptr, Mask, Src0, VT, MMO,
                                    ISD::NON_EXTLOAD);
-  SDValue OutChain = Load.getValue(1);
-  DAG.setRoot(OutChain);
+  if (AddToChain) {
+    SDValue OutChain = Load.getValue(1);
+    DAG.setRoot(OutChain);
+  }
   setValue(&I, Load);
 }
 

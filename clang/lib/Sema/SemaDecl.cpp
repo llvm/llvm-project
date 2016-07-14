@@ -2327,11 +2327,8 @@ static const Decl *getDefinition(const Decl *D) {
       return Def;
     return VD->getActingDefinition();
   }
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
-    const FunctionDecl* Def;
-    if (FD->isDefined(Def))
-      return Def;
-  }
+  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getDefinition();
   return nullptr;
 }
 

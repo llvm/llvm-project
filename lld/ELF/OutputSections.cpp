@@ -37,6 +37,7 @@ OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
   memset(&Header, 0, sizeof(Elf_Shdr));
   Header.sh_type = Type;
   Header.sh_flags = Flags;
+  Header.sh_addralign = 1;
 }
 
 template <class ELFT>
@@ -47,7 +48,7 @@ void OutputSectionBase<ELFT>::writeHeaderTo(Elf_Shdr *Shdr) {
 template <class ELFT>
 GotPltSection<ELFT>::GotPltSection()
     : OutputSectionBase<ELFT>(".got.plt", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE) {
-  this->Header.sh_addralign = sizeof(uintX_t);
+  this->Header.sh_addralign = Target->GotPltEntrySize;
 }
 
 template <class ELFT> void GotPltSection<ELFT>::addEntry(SymbolBody &Sym) {
@@ -60,13 +61,13 @@ template <class ELFT> bool GotPltSection<ELFT>::empty() const {
 }
 
 template <class ELFT> void GotPltSection<ELFT>::finalize() {
-  this->Header.sh_size =
-      (Target->GotPltHeaderEntriesNum + Entries.size()) * sizeof(uintX_t);
+  this->Header.sh_size = (Target->GotPltHeaderEntriesNum + Entries.size()) *
+                         Target->GotPltEntrySize;
 }
 
 template <class ELFT> void GotPltSection<ELFT>::writeTo(uint8_t *Buf) {
   Target->writeGotPltHeader(Buf);
-  Buf += Target->GotPltHeaderEntriesNum * sizeof(uintX_t);
+  Buf += Target->GotPltHeaderEntriesNum * Target->GotPltEntrySize;
   for (const SymbolBody *B : Entries) {
     Target->writeGotPlt(Buf, *B);
     Buf += sizeof(uintX_t);
@@ -78,7 +79,7 @@ GotSection<ELFT>::GotSection()
     : OutputSectionBase<ELFT>(".got", SHT_PROGBITS, SHF_ALLOC | SHF_WRITE) {
   if (Config->EMachine == EM_MIPS)
     this->Header.sh_flags |= SHF_MIPS_GPREL;
-  this->Header.sh_addralign = sizeof(uintX_t);
+  this->Header.sh_addralign = Target->GotEntrySize;
 }
 
 template <class ELFT>
@@ -393,7 +394,6 @@ template <class ELFT>
 InterpSection<ELFT>::InterpSection()
     : OutputSectionBase<ELFT>(".interp", SHT_PROGBITS, SHF_ALLOC) {
   this->Header.sh_size = Config->DynamicLinker.size() + 1;
-  this->Header.sh_addralign = 1;
 }
 
 template <class ELFT> void InterpSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -724,7 +724,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (Config->EMachine == EM_MIPS) {
     Add({DT_MIPS_RLD_VERSION, 1});
     Add({DT_MIPS_FLAGS, RHF_NOTPOT});
-    Add({DT_MIPS_BASE_ADDRESS, (uintX_t)Target->getVAStart()});
+    Add({DT_MIPS_BASE_ADDRESS, (uintX_t)Target->getImageBase()});
     Add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
     Add({DT_MIPS_LOCAL_GOTNO, Out<ELFT>::Got->getMipsLocalEntriesNum()});
     if (const SymbolBody *B = Out<ELFT>::Got->getMipsFirstGlobalEntry())
@@ -1247,9 +1247,7 @@ template <class ELFT>
 StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
     : OutputSectionBase<ELFT>(Name, SHT_STRTAB,
                               Dynamic ? (uintX_t)SHF_ALLOC : 0),
-      Dynamic(Dynamic) {
-  this->Header.sh_addralign = 1;
-}
+      Dynamic(Dynamic) {}
 
 // Adds a string to the string table. If HashIt is true we hash and check for
 // duplicates. It is optional because the name of global symbols are already

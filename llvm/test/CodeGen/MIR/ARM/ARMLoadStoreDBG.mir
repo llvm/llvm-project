@@ -1,4 +1,4 @@
-# RUN: llc -mtriple thumbv7 -verify-machineinstrs -start-after machine-cp -stop-after if-converter %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple thumbv7 -verify-machineinstrs -start-after machine-cp -stop-after if-converter %s -o - | FileCheck %s
 --- |
   ; ModuleID = '/Volumes/Data/llvm/test/CodeGen/ARM/sched-it-debug-nodes.ll'
   target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"

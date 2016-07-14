@@ -291,6 +291,10 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
   case Stmt::OMPDistributeSimdDirectiveClass:
     EmitOMPDistributeSimdDirective(cast<OMPDistributeSimdDirective>(*S));
     break;
+  case Stmt::OMPTargetParallelForSimdDirectiveClass:
+    EmitOMPTargetParallelForSimdDirective(
+        cast<OMPTargetParallelForSimdDirective>(*S));
+    break;
   }
 }
 
@@ -567,6 +571,9 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
   // C99 6.8.4.1: The first substatement is executed if the expression compares
   // unequal to 0.  The condition must be a scalar type.
   LexicalScope ConditionScope(*this, S.getCond()->getSourceRange());
+
+  if (S.getInit())
+    EmitStmt(S.getInit());
 
   if (S.getConditionVariable())
     EmitAutoVarDecl(*S.getConditionVariable());
@@ -1484,6 +1491,9 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
         incrementProfileCounter(Case);
       RunCleanupsScope ExecutedScope(*this);
 
+      if (S.getInit())
+        EmitStmt(S.getInit());
+
       // Emit the condition variable if needed inside the entire cleanup scope
       // used by this special case for constant folded switches.
       if (S.getConditionVariable())
@@ -1511,6 +1521,10 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
   JumpDest SwitchExit = getJumpDestInCurrentScope("sw.epilog");
 
   RunCleanupsScope ConditionScope(*this);
+
+  if (S.getInit())
+    EmitStmt(S.getInit());
+
   if (S.getConditionVariable())
     EmitAutoVarDecl(*S.getConditionVariable());
   llvm::Value *CondV = EmitScalarExpr(S.getCond());

@@ -62,6 +62,18 @@ define <4 x i64> @combine_permq_pshufb_as_vperm2i128(<4 x i64> %a0) {
   ret <4 x i64> %5
 }
 
+define <32 x i8> @combine_permq_pshufb_as_vpblendd(<4 x i64> %a0) {
+; CHECK-LABEL: combine_permq_pshufb_as_vpblendd:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpxor %ymm1, %ymm1, %ymm1
+; CHECK-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
+; CHECK-NEXT:    retq
+  %1 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %2 = bitcast <4 x i64> %1 to <32 x i8>
+  %3 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %2, <32 x i8> <i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255, i8 255>)
+  ret <32 x i8> %3
+}
+
 define <16 x i8> @combine_pshufb_as_vpbroadcastb128(<16 x i8> %a) {
 ; CHECK-LABEL: combine_pshufb_as_vpbroadcastb128:
 ; CHECK:       # BB#0:

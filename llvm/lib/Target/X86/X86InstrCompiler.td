@@ -1405,7 +1405,7 @@ def : Pat<(store (add (loadi64 addr:$dst), 128), addr:$dst),
 // instructions.
 def : Pat<(add GR64:$src1, 0x0000000080000000),
           (SUB64ri32 GR64:$src1, 0xffffffff80000000)>;
-def : Pat<(store (add (loadi64 addr:$dst), 0x00000000800000000), addr:$dst),
+def : Pat<(store (add (loadi64 addr:$dst), 0x0000000080000000), addr:$dst),
           (SUB64mi32 addr:$dst, 0xffffffff80000000)>;
 
 // To avoid needing to materialize an immediate in a register, use a 32-bit and

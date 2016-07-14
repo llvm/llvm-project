@@ -74,6 +74,14 @@ CODEGENOPT(ForbidGuardVariables , 1, 0) ///< Issue errors if C++ guard variables
 CODEGENOPT(FunctionSections  , 1, 0) ///< Set when -ffunction-sections is enabled.
 CODEGENOPT(InstrumentFunctions , 1, 0) ///< Set when -finstrument-functions is
                                        ///< enabled.
+
+CODEGENOPT(XRayInstrumentFunctions , 1, 0) ///< Set when -fxray-instrument is
+                                           ///< enabled.
+
+///< Set the minimum number of instructions in a function to determine selective
+///< XRay instrumentation.
+VALUE_CODEGENOPT(XRayInstructionThreshold , 32, 200)
+
 CODEGENOPT(InstrumentForProfiling , 1, 0) ///< Set when -pg is enabled.
 CODEGENOPT(LessPreciseFPMAD  , 1, 0) ///< Enable less precise MAD instructions to
                                      ///< be generated.

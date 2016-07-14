@@ -3941,13 +3941,13 @@ define <4 x double> @test_x86_avx_vbroadcastf128_pd_256(i8* %a0) {
 ; AVX-LABEL: test_x86_avx_vbroadcastf128_pd_256:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vbroadcastf128 (%eax), %ymm0
+; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vbroadcastf128_pd_256:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512VL-NEXT:    vbroadcastf128 (%eax), %ymm0
+; AVX512VL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    retl
   %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8* %a0) ; <<4 x double>> [#uses=1]
   ret <4 x double> %res
@@ -3959,13 +3959,13 @@ define <8 x float> @test_x86_avx_vbroadcastf128_ps_256(i8* %a0) {
 ; AVX-LABEL: test_x86_avx_vbroadcastf128_ps_256:
 ; AVX:       ## BB#0:
 ; AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vbroadcastf128 (%eax), %ymm0
+; AVX-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX-NEXT:    retl
 ;
 ; AVX512VL-LABEL: test_x86_avx_vbroadcastf128_ps_256:
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; AVX512VL-NEXT:    vbroadcastf128 (%eax), %ymm0
+; AVX512VL-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX512VL-NEXT:    retl
   %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8* %a0) ; <<8 x float>> [#uses=1]
   ret <8 x float> %res

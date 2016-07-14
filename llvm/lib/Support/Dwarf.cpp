@@ -545,6 +545,12 @@ const char *llvm::dwarf::ApplePropertyString(unsigned Prop) {
     return "DW_APPLE_PROPERTY_strong";
   case DW_APPLE_PROPERTY_unsafe_unretained:
     return "DW_APPLE_PROPERTY_unsafe_unretained";
+  case DW_APPLE_PROPERTY_nullability:
+    return "DW_APPLE_PROPERTY_nullability";
+  case DW_APPLE_PROPERTY_null_resettable:
+    return "DW_APPLE_PROPERTY_null_resettable";
+  case DW_APPLE_PROPERTY_class:
+    return "DW_APPLE_PROPERTY_class";
   }
   return nullptr;
 }

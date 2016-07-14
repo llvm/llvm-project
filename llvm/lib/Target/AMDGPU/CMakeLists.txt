@@ -61,7 +61,6 @@ add_llvm_target(AMDGPUCodeGen
   R600OptimizeVectorRegisters.cpp
   R600Packetizer.cpp
   R600RegisterInfo.cpp
-  R600TextureIntrinsicsReplacer.cpp
   SIAnnotateControlFlow.cpp
   SIDebuggerInsertNops.cpp
   SIFixControlFlowLiveIntervals.cpp

@@ -1,4 +1,4 @@
-; RUN: llc %s -stop-after=livedebugvalues -o %t 2>&1 | FileCheck --check-prefix=SANITY %s
+; RUN: llc %s -stop-after=livedebugvalues -o - | FileCheck --check-prefix=SANITY %s
 ; RUN: llc < %s -filetype=obj | llvm-dwarfdump - | FileCheck %s
 ; Test debug_loc support for floating point constants.
 ;

@@ -781,6 +781,21 @@ def finput_charset_EQ : Joined<["-"], "finput-charset=">, Group<f_Group>;
 def fexec_charset_EQ : Joined<["-"], "fexec-charset=">, Group<f_Group>;
 def finstrument_functions : Flag<["-"], "finstrument-functions">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Generate calls to instrument function entry and exit">;
+
+def fxray_instrument : Flag<["-"], "fxray-instrument">, Group<f_Group>,
+  Flags<[CC1Option]>,
+  HelpText<"Generate XRay instrumentation sleds on function entry and exit">;
+def fnoxray_instrument : Flag<["-"], "fno-xray-instrument">, Group<f_Group>,
+  Flags<[CC1Option]>;
+
+def fxray_instruction_threshold_EQ :
+  JoinedOrSeparate<["-"], "fxray-instruction-threshold=">,
+  Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Sets the minimum function size to instrument with XRay">;
+def fxray_instruction_threshold_ :
+  JoinedOrSeparate<["-"], "fxray-instruction-threshold">,
+  Group<f_Group>, Flags<[CC1Option]>;
+
 def flat__namespace : Flag<["-"], "flat_namespace">;
 def flax_vector_conversions : Flag<["-"], "flax-vector-conversions">, Group<f_Group>;
 def flimited_precision_EQ : Joined<["-"], "flimited-precision=">, Group<f_Group>;

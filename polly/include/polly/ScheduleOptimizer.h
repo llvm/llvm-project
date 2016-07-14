@@ -107,12 +107,17 @@ private:
 
   /// @brief Apply the BLIS matmul optimization pattern
   ///
-  /// Apply the BLIS matmul optimization pattern
-  /// (http://www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf).
-  /// BLIS implements gemm as three nested loops around a macro-kernel,
-  /// plus two packing routines. The macro-kernel is implemented in terms
-  /// of two additional loops around a micro-kernel. The micro-kernel
-  /// is a loop around a rank-1 (i.e., outer product) update.
+  /// Apply the BLIS matmul optimization pattern. BLIS implements gemm
+  /// as three nested loops around a macro-kernel, plus two packing routines.
+  /// The macro-kernel is implemented in terms of two additional loops around
+  /// a micro-kernel. The micro-kernel is a loop around a rank-1
+  /// (i.e., outer product) update.
+  ///
+  /// For a detailed description please see:
+  /// Analytical Modeling is Enough for High Performance BLIS
+  /// Tze Meng Low, Francisco D Igual, Tyler M Smith, Enrique S Quintana-Orti
+  /// Technical Report, 2014
+  /// http://www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf
   ///
   /// We create the BLIS micro-kernel by applying a combination of tiling
   /// and unrolling. In subsequent changes we will add the extraction

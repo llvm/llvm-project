@@ -29,7 +29,6 @@ class TargetMachine;
 
 // R600 Passes
 FunctionPass *createR600VectorRegMerger(TargetMachine &tm);
-FunctionPass *createR600TextureIntrinsicsReplacer();
 FunctionPass *createR600ExpandSpecialInstrsPass(TargetMachine &tm);
 FunctionPass *createR600EmitClauseMarkers();
 FunctionPass *createR600ClauseMergePass(TargetMachine &tm);

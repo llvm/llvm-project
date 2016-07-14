@@ -3,6 +3,8 @@
 
 declare <64 x i8> @llvm.x86.avx512.mask.pshuf.b.512(<64 x i8>, <64 x i8>, <64 x i8>, i64)
 
+declare <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float>, <16 x i32>, <16 x float>, i16)
+
 declare <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double>, <8 x i64>, <8 x double>, i8)
 declare <8 x i64> @llvm.x86.avx512.mask.permvar.di.512(<8 x i64>, <8 x i64>, <8 x i64>, i8)
 declare <16 x i32> @llvm.x86.avx512.mask.permvar.si.512(<16 x i32>, <16 x i32>, <16 x i32>, i16)
@@ -435,6 +437,16 @@ define <8 x double> @combine_permvar_8f64_as_permpd_mask(<8 x double> %x0, <8 x 
 ; CHECK-NEXT:    retq
   %1 = call <8 x double> @llvm.x86.avx512.mask.permvar.df.512(<8 x double> %x0, <8 x i64> <i64 3, i64 2, i64 1, i64 undef, i64 undef, i64 6, i64 5, i64 4>, <8 x double> %x1, i8 %m)
   ret <8 x double> %1
+}
+
+define <16 x float> @combine_vpermilvar_16f32_230146759A8BCFDE(<16 x float> %x0) {
+; CHECK-LABEL: combine_vpermilvar_16f32_230146759A8BCFDE:
+; CHECK:       # BB#0:
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,3,0,1,4,6,7,5,9,10,8,11,12,15,13,14]
+; CHECK-NEXT:    retq
+  %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1, i32 1, i32 0, i32 3, i32 2>, <16 x float> undef, i16 -1)
+  %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %res0, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 3, i32 1, i32 0, i32 2, i32 3, i32 0, i32 2, i32 1, i32 1, i32 2, i32 0, i32 3>, <16 x float> undef, i16 -1)
+  ret <16 x float> %res1
 }
 
 define <64 x i8> @combine_pshufb_as_pslldq(<64 x i8> %a0) {

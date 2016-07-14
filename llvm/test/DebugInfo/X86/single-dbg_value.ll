@@ -1,4 +1,4 @@
-; RUN: %llc_dwarf -stop-after=livedebugvalues -o /dev/null %s 2>&1 \
+; RUN: %llc_dwarf -stop-after=livedebugvalues -o - %s \
 ; RUN:   | FileCheck %s --check-prefix=SANITY
 ; RUN: %llc_dwarf -march=x86-64 -o - %s -filetype=obj \
 ; RUN:   | llvm-dwarfdump -debug-dump=all - | FileCheck %s

@@ -1174,9 +1174,9 @@ public:
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
   StmtResult RebuildIfStmt(SourceLocation IfLoc, bool IsConstexpr,
-                           Sema::ConditionResult Cond, Stmt *Then,
+                           Sema::ConditionResult Cond, Stmt *Init, Stmt *Then,
                            SourceLocation ElseLoc, Stmt *Else) {
-    return getSema().ActOnIfStmt(IfLoc, IsConstexpr, nullptr, Cond, Then,
+    return getSema().ActOnIfStmt(IfLoc, IsConstexpr, Init, Cond, Then,
                                  ElseLoc, Else);
   }
 
@@ -1184,9 +1184,9 @@ public:
   ///
   /// By default, performs semantic analysis to build the new statement.
   /// Subclasses may override this routine to provide different behavior.
-  StmtResult RebuildSwitchStmtStart(SourceLocation SwitchLoc,
+  StmtResult RebuildSwitchStmtStart(SourceLocation SwitchLoc, Stmt *Init,
                                     Sema::ConditionResult Cond) {
-    return getSema().ActOnStartOfSwitchStmt(SwitchLoc, nullptr, Cond);
+    return getSema().ActOnStartOfSwitchStmt(SwitchLoc, Init, Cond);
   }
 
   /// \brief Attach the body to the switch statement.
@@ -1779,6 +1779,30 @@ public:
                                   SourceLocation EndLoc) {
     return getSema().ActOnOpenMPFromClause(VarList, StartLoc, LParenLoc,
                                            EndLoc);
+  }
+
+  /// Build a new OpenMP 'use_device_ptr' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
+                                          SourceLocation StartLoc,
+                                          SourceLocation LParenLoc,
+                                          SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPUseDevicePtrClause(VarList, StartLoc, LParenLoc,
+                                                   EndLoc);
+  }
+
+  /// Build a new OpenMP 'is_device_ptr' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPIsDevicePtrClause(ArrayRef<Expr *> VarList,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPIsDevicePtrClause(VarList, StartLoc, LParenLoc,
+                                                  EndLoc);
   }
 
   /// \brief Rebuild the operand to an Objective-C \@synchronized statement.
@@ -6242,6 +6266,11 @@ StmtResult TreeTransform<Derived>::TransformAttributedStmt(AttributedStmt *S) {
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
+  // Transform the initialization statement
+  StmtResult Init = getDerived().TransformStmt(S->getInit());
+  if (Init.isInvalid())
+    return StmtError();
+
   // Transform the condition
   Sema::ConditionResult Cond = getDerived().TransformCondition(
       S->getIfLoc(), S->getConditionVariable(), S->getCond(),
@@ -6274,18 +6303,25 @@ TreeTransform<Derived>::TransformIfStmt(IfStmt *S) {
   }
 
   if (!getDerived().AlwaysRebuild() &&
+      Init.get() == S->getInit() &&
       Cond.get() == std::make_pair(S->getConditionVariable(), S->getCond()) &&
       Then.get() == S->getThen() &&
       Else.get() == S->getElse())
     return S;
 
   return getDerived().RebuildIfStmt(S->getIfLoc(), S->isConstexpr(), Cond,
-                                    Then.get(), S->getElseLoc(), Else.get());
+                                    Init.get(), Then.get(), S->getElseLoc(),
+                                    Else.get());
 }
 
 template<typename Derived>
 StmtResult
 TreeTransform<Derived>::TransformSwitchStmt(SwitchStmt *S) {
+  // Transform the initialization statement
+  StmtResult Init = getDerived().TransformStmt(S->getInit());
+  if (Init.isInvalid())
+    return StmtError();
+
   // Transform the condition.
   Sema::ConditionResult Cond = getDerived().TransformCondition(
       S->getSwitchLoc(), S->getConditionVariable(), S->getCond(),
@@ -6295,7 +6331,8 @@ TreeTransform<Derived>::TransformSwitchStmt(SwitchStmt *S) {
 
   // Rebuild the switch statement.
   StmtResult Switch
-    = getDerived().RebuildSwitchStmtStart(S->getSwitchLoc(), Cond);
+    = getDerived().RebuildSwitchStmtStart(S->getSwitchLoc(),
+                                          S->getInit(), Cond);
   if (Switch.isInvalid())
     return StmtError();
 
@@ -7577,6 +7614,18 @@ StmtResult TreeTransform<Derived>::TransformOMPDistributeSimdDirective(
   return Res;
 }
 
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformOMPTargetParallelForSimdDirective(
+    OMPTargetParallelForSimdDirective *D) {
+  DeclarationNameInfo DirName;
+  getDerived().getSema().StartOpenMPDSABlock(OMPD_target_parallel_for_simd,
+                                             DirName, nullptr,
+                                             D->getLocStart());
+  StmtResult Res = getDerived().TransformOMPExecutableDirective(D);
+  getDerived().getSema().EndOpenMPDSABlock(Res.get());
+  return Res;
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP clause transformation
 //===----------------------------------------------------------------------===//
@@ -8088,6 +8137,36 @@ OMPClause *TreeTransform<Derived>::TransformOMPFromClause(OMPFromClause *C) {
   }
   return getDerived().RebuildOMPFromClause(Vars, C->getLocStart(),
                                            C->getLParenLoc(), C->getLocEnd());
+}
+
+template <typename Derived>
+OMPClause *TreeTransform<Derived>::TransformOMPUseDevicePtrClause(
+    OMPUseDevicePtrClause *C) {
+  llvm::SmallVector<Expr *, 16> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlists()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  return getDerived().RebuildOMPUseDevicePtrClause(
+      Vars, C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
+  llvm::SmallVector<Expr *, 16> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlists()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  return getDerived().RebuildOMPIsDevicePtrClause(
+      Vars, C->getLocStart(), C->getLParenLoc(), C->getLocEnd());
 }
 
 //===----------------------------------------------------------------------===//

@@ -50,6 +50,14 @@ static void error(std::error_code EC) {
   exit(1);
 }
 
+static void error(Error Err) {
+  if (Err) {
+    logAllUnhandledErrors(std::move(Err), outs(), "Error reading file: ");
+    outs().flush();
+    exit(1);
+  }
+}
+
 } // namespace llvm
 
 static void reportError(StringRef Input, StringRef Message) {
@@ -482,9 +490,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
 }
 
 static void dumpArchive(const Archive *Arc) {
-  for (auto &ErrorOrChild : Arc->children()) {
-    error(ErrorOrChild.getError());
-    const Archive::Child &ArcC = *ErrorOrChild;
+  Error Err;
+  for (auto &ArcC : Arc->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
     if (!ChildOrErr) {
       // Ignore non-object files.
@@ -504,6 +511,7 @@ static void dumpArchive(const Archive *Arc) {
     else
       reportError(Arc->getFileName(), cxxdump_error::unrecognized_file_format);
   }
+  error(std::move(Err));
 }
 
 static void dumpInput(StringRef File) {

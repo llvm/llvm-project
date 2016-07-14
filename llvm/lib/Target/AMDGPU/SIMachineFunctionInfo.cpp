@@ -63,6 +63,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     HasSpilledVGPRs(false),
     HasNonSpillStackObjects(false),
     HasFlatInstructions(false),
+    NumSpilledSGPRs(0),
+    NumSpilledVGPRs(0),
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),

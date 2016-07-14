@@ -1535,13 +1535,11 @@ static void printArchiveChild(const Archive::Child &C, bool verbose,
 }
 
 static void printArchiveHeaders(Archive *A, bool verbose, bool print_offset) {
-  for (Archive::child_iterator I = A->child_begin(false), E = A->child_end();
-       I != E; ++I) {
-    if (std::error_code EC = I->getError())
-      report_fatal_error(EC.message());
-    const Archive::Child &C = **I;
+  Error Err;
+  for (const auto &C : A->children(Err, false))
     printArchiveChild(C, verbose, print_offset);
-  }
+  if (Err)
+    report_fatal_error(std::move(Err));
 }
 
 // ParseInputMachO() parses the named Mach-O file in Filename and handles the
@@ -1572,11 +1570,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
     outs() << "Archive : " << Filename << "\n";
     if (ArchiveHeaders)
       printArchiveHeaders(A, !NonVerbose, ArchiveMemberOffsets);
-    for (Archive::child_iterator I = A->child_begin(), E = A->child_end();
-         I != E; ++I) {
-      if (std::error_code EC = I->getError())
-        report_error(Filename, EC);
-      auto &C = I->get();
+    Error Err;
+    for (auto &C : A->children(Err)) {
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
       if (!ChildOrErr) {
         if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -1589,6 +1584,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
         ProcessMachO(Filename, O, O->getFileName());
       }
     }
+    if (Err)
+      report_error(Filename, std::move(Err));
     return;
   }
   if (UniversalHeaders) {
@@ -1630,12 +1627,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
               outs() << "\n";
               if (ArchiveHeaders)
                 printArchiveHeaders(A.get(), !NonVerbose, ArchiveMemberOffsets);
-              for (Archive::child_iterator AI = A->child_begin(),
-                                           AE = A->child_end();
-                   AI != AE; ++AI) {
-                if (std::error_code EC = AI->getError())
-                  report_error(Filename, EC);
-                auto &C = AI->get();
+              Error Err;
+              for (auto &C : A->children(Err)) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
                 if (!ChildOrErr) {
                   if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -1646,6 +1639,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
                         dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
                   ProcessMachO(Filename, O, O->getFileName(), ArchitectureName);
               }
+              if (Err)
+                report_error(Filename, std::move(Err));
             } else {
               consumeError(AOrErr.takeError());
               error("Mach-O universal file: " + Filename + " for " +
@@ -1687,12 +1682,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
             outs() << "Archive : " << Filename << "\n";
             if (ArchiveHeaders)
               printArchiveHeaders(A.get(), !NonVerbose, ArchiveMemberOffsets);
-            for (Archive::child_iterator AI = A->child_begin(),
-                                         AE = A->child_end();
-                 AI != AE; ++AI) {
-              if (std::error_code EC = AI->getError())
-                report_error(Filename, EC);
-              auto &C = AI->get();
+            Error Err;
+            for (auto &C : A->children(Err)) {
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
               if (!ChildOrErr) {
                 if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -1703,6 +1694,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
                       dyn_cast<MachOObjectFile>(&*ChildOrErr.get()))
                 ProcessMachO(Filename, O, O->getFileName());
             }
+            if (Err)
+              report_error(Filename, std::move(Err));
           } else {
             consumeError(AOrErr.takeError());
             error("Mach-O universal file: " + Filename + " for architecture " +
@@ -1740,11 +1733,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
         outs() << "\n";
         if (ArchiveHeaders)
           printArchiveHeaders(A.get(), !NonVerbose, ArchiveMemberOffsets);
-        for (Archive::child_iterator AI = A->child_begin(), AE = A->child_end();
-             AI != AE; ++AI) {
-          if (std::error_code EC = AI->getError())
-            report_error(Filename, EC);
-          auto &C = AI->get();
+        Error Err;
+        for (auto &C : A->children(Err)) {
           Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
           if (!ChildOrErr) {
             if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -1758,6 +1748,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
                            ArchitectureName);
           }
         }
+        if (Err)
+          report_error(Filename, std::move(Err));
       } else {
         consumeError(AOrErr.takeError());
         error("Mach-O universal file: " + Filename + " for architecture " +

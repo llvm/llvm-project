@@ -1033,6 +1033,7 @@ SelectInlineAsmMemoryOperand(const SDValue &Op, unsigned ConstraintID,
   return true;
 }
 
-FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM) {
-  return new MipsSEDAGToDAGISel(TM);
+FunctionPass *llvm::createMipsSEISelDag(MipsTargetMachine &TM,
+                                        CodeGenOpt::Level OptLevel) {
+  return new MipsSEDAGToDAGISel(TM, OptLevel);
 }

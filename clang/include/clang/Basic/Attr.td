@@ -428,6 +428,22 @@ def AlwaysInline : InheritableAttr {
   let Documentation = [Undocumented];
 }
 
+def XRayInstrument : InheritableAttr {
+  let Spellings = [GNU<"xray_always_instrument">,
+                   CXX11<"clang", "xray_always_instrument">,
+                   GNU<"xray_never_instrument">,
+                   CXX11<"clang", "xray_never_instrument">];
+  let Subjects = SubjectList<[CXXMethod, ObjCMethod, Function], WarnDiag,
+                              "ExpectedFunctionOrMethod">;
+  let Accessors = [Accessor<"alwaysXRayInstrument",
+                     [GNU<"xray_always_instrument">,
+                      CXX11<"clang", "xray_always_instrument">]>,
+                   Accessor<"neverXRayInstrument",
+                     [GNU<"xray_never_instrument">,
+                      CXX11<"clang", "xray_never_instrument">]>];
+  let Documentation = [XRayDocs];
+}
+
 def TLSModel : InheritableAttr {
   let Spellings = [GCC<"tls_model">];
   let Subjects = SubjectList<[TLSVar], ErrorDiag, "ExpectedTLSVar">;

@@ -117,7 +117,7 @@ struct Configuration {
   ELFKind EKind = ELFNoneKind;
   uint16_t EMachine = llvm::ELF::EM_NONE;
   uint64_t EntryAddr = -1;
-  uint64_t VAStart;
+  uint64_t ImageBase;
   unsigned LtoJobs;
   unsigned LtoO;
   unsigned Optimize;

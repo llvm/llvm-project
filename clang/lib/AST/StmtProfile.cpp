@@ -529,6 +529,14 @@ void OMPClauseProfiler::VisitOMPToClause(const OMPToClause *C) {
 void OMPClauseProfiler::VisitOMPFromClause(const OMPFromClause *C) {
   VisitOMPClauseList(C);
 }
+void OMPClauseProfiler::VisitOMPUseDevicePtrClause(
+    const OMPUseDevicePtrClause *C) {
+  VisitOMPClauseList(C);
+}
+void OMPClauseProfiler::VisitOMPIsDevicePtrClause(
+    const OMPIsDevicePtrClause *C) {
+  VisitOMPClauseList(C);
+}
 }
 
 void
@@ -711,6 +719,11 @@ void StmtProfiler::VisitOMPDistributeParallelForSimdDirective(
 
 void StmtProfiler::VisitOMPDistributeSimdDirective(
     const OMPDistributeSimdDirective *S) {
+  VisitOMPLoopDirective(S);
+}
+
+void StmtProfiler::VisitOMPTargetParallelForSimdDirective(
+    const OMPTargetParallelForSimdDirective *S) {
   VisitOMPLoopDirective(S);
 }
 

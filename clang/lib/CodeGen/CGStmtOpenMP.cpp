@@ -1901,6 +1901,18 @@ void CodeGenFunction::EmitOMPDistributeSimdDirective(
       });
 }
 
+void CodeGenFunction::EmitOMPTargetParallelForSimdDirective(
+    const OMPTargetParallelForSimdDirective &S) {
+  OMPLexicalScope Scope(*this, S, /*AsInlined=*/true);
+  CGM.getOpenMPRuntime().emitInlinedDirective(
+      *this, OMPD_target_parallel_for_simd,
+      [&S](CodeGenFunction &CGF, PrePostActionTy &) {
+        OMPLoopScope PreInitScope(CGF, S);
+        CGF.EmitStmt(
+            cast<CapturedStmt>(S.getAssociatedStmt())->getCapturedStmt());
+      });
+}
+
 /// \brief Emit a helper variable and return corresponding lvalue.
 static LValue EmitOMPHelperVar(CodeGenFunction &CGF,
                                const DeclRefExpr *Helper) {
@@ -3186,6 +3198,8 @@ static void EmitOMPAtomicExpr(CodeGenFunction &CGF, OpenMPClauseKind Kind,
   case OMPC_uniform:
   case OMPC_to:
   case OMPC_from:
+  case OMPC_use_device_ptr:
+  case OMPC_is_device_ptr:
     llvm_unreachable("Clause is not allowed in 'omp atomic'.");
   }
 }

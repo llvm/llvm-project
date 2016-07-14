@@ -1,4 +1,4 @@
-; RUN: llc -stop-after block-placement -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: llc -stop-after block-placement -o - %s | FileCheck %s
 
 target triple = "thumbv6m-none-none"
 

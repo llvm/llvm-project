@@ -1,6 +1,6 @@
 {
   "project_id" : "polly",
-  "conduit_uri" : "http://reviews.llvm.org/",
+  "conduit_uri" : "https://reviews.llvm.org/",
   "history.immutable" : true,
   "load" : [
     "utils/arcanist/LitTestEngine"

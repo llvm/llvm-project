@@ -4936,8 +4936,8 @@ void Sema::diagnoseTypo(const TypoCorrection &Correction,
 static NamedDecl *getDefinitionToImport(NamedDecl *D) {
   if (VarDecl *VD = dyn_cast<VarDecl>(D))
     return VD->getDefinition();
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
-    return FD->isDefined(FD) ? const_cast<FunctionDecl*>(FD) : nullptr;
+  if (FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+    return FD->getDefinition();
   if (TagDecl *TD = dyn_cast<TagDecl>(D))
     return TD->getDefinition();
   if (ObjCInterfaceDecl *ID = dyn_cast<ObjCInterfaceDecl>(D))

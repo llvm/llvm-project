@@ -134,6 +134,9 @@ private:
   void collectConstantCandidates(Function &Fn);
   void findAndMakeBaseConstant(ConstCandVecType::iterator S,
                                ConstCandVecType::iterator E);
+  unsigned maximizeConstantsInRange(ConstCandVecType::iterator S,
+                                    ConstCandVecType::iterator E,
+                                    ConstCandVecType::iterator &MaxCostItr);
   void findBaseConstants();
   void emitBaseConstants(Instruction *Base, Constant *Offset,
                          const consthoist::ConstantUser &ConstUser);

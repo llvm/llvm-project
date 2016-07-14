@@ -7807,7 +7807,7 @@ let ExeDomain = SSEPackedDouble, Predicates = [HasAVX, NoVLX] in
 def VBROADCASTSDYrm  : avx_broadcast_rm<0x19, "vbroadcastsd", VR256, f64mem,
                                     v4f64, loadf64, WriteFShuffleLd>, VEX_L;
 
-let ExeDomain = SSEPackedSingle, Predicates = [HasAVX, NoVLX] in {
+let ExeDomain = SSEPackedSingle, Predicates = [HasAVX2, NoVLX] in {
   def VBROADCASTSSrr  : avx2_broadcast_rr<0x18, "vbroadcastss", VR128,
                                           v4f32, v4f32, WriteFShuffle>;
   def VBROADCASTSSYrr : avx2_broadcast_rr<0x18, "vbroadcastss", VR256,

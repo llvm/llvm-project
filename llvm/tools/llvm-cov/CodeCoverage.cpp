@@ -28,6 +28,7 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/ThreadPool.h"
 #include <functional>
 #include <system_error>
 
@@ -47,6 +48,15 @@ public:
 
   /// \brief Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
+
+  /// \brief Record (but do not print) an error message in a thread-safe way.
+  void deferError(const Twine &Message, StringRef Whence = "");
+
+  /// \brief Record (but do not print) a warning message in a thread-safe way.
+  void deferWarning(const Twine &Message, StringRef Whence = "");
+
+  /// \brief Print (and then clear) all deferred error and warning messages.
+  void consumeDeferredMessages();
 
   /// \brief Append a reference to a private copy of \p Path into SourceFiles.
   void addCollectedPath(const std::string &Path);
@@ -85,22 +95,51 @@ public:
   std::string PGOFilename;
   CoverageFiltersMatchAll Filters;
   std::vector<StringRef> SourceFiles;
-  std::vector<std::pair<std::string, std::unique_ptr<MemoryBuffer>>>
-      LoadedSourceFiles;
   bool CompareFilenamesOnly;
   StringMap<std::string> RemappedFilenames;
   std::string CoverageArch;
 
 private:
   std::vector<std::string> CollectedPaths;
+
+  std::mutex DeferredMessagesLock;
+  std::vector<std::string> DeferredMessages;
+
+  std::mutex LoadedSourceFilesLock;
+  std::vector<std::pair<std::string, std::unique_ptr<MemoryBuffer>>>
+      LoadedSourceFiles;
 };
 }
 
-void CodeCoverageTool::error(const Twine &Message, StringRef Whence) {
-  errs() << "error: ";
+static std::string getErrorString(const Twine &Message, StringRef Whence,
+                                  bool Warning) {
+  std::string Str = (Warning ? "warning" : "error");
+  Str += ": ";
   if (!Whence.empty())
-    errs() << Whence << ": ";
-  errs() << Message << "\n";
+    Str += Whence;
+  Str += Message.str() + "\n";
+  return Str;
+}
+
+void CodeCoverageTool::error(const Twine &Message, StringRef Whence) {
+  errs() << getErrorString(Message, Whence, false);
+}
+
+void CodeCoverageTool::deferError(const Twine &Message, StringRef Whence) {
+  std::unique_lock<std::mutex> Guard{DeferredMessagesLock};
+  DeferredMessages.emplace_back(getErrorString(Message, Whence, false));
+}
+
+void CodeCoverageTool::deferWarning(const Twine &Message, StringRef Whence) {
+  std::unique_lock<std::mutex> Guard{DeferredMessagesLock};
+  DeferredMessages.emplace_back(getErrorString(Message, Whence, true));
+}
+
+void CodeCoverageTool::consumeDeferredMessages() {
+  std::unique_lock<std::mutex> Guard{DeferredMessagesLock};
+  for (const std::string &Message : DeferredMessages)
+    ViewOpts.colored_ostream(errs(), raw_ostream::RED) << Message;
+  DeferredMessages.clear();
 }
 
 void CodeCoverageTool::addCollectedPath(const std::string &Path) {
@@ -121,9 +160,10 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
       return *Files.second;
   auto Buffer = MemoryBuffer::getFile(SourceFile);
   if (auto EC = Buffer.getError()) {
-    error(EC.message(), SourceFile);
+    deferError(EC.message(), SourceFile);
     return EC;
   }
+  std::unique_lock<std::mutex> Guard{LoadedSourceFilesLock};
   LoadedSourceFiles.emplace_back(SourceFile, std::move(Buffer.get()));
   return *LoadedSourceFiles.back().second;
 }
@@ -505,25 +545,36 @@ int CodeCoverageTool::show(int argc, const char **argv,
     }
   }
 
-  for (const auto &SourceFile : SourceFiles) {
-    auto mainView = createSourceFileView(SourceFile, *Coverage);
-    if (!mainView) {
-      ViewOpts.colored_ostream(errs(), raw_ostream::RED)
-          << "warning: The file '" << SourceFile << "' isn't covered.";
-      errs() << "\n";
-      continue;
-    }
+  // In -output-dir mode, it's safe to use multiple threads to print files.
+  unsigned ThreadCount = 1;
+  if (ViewOpts.hasOutputDirectory())
+    ThreadCount = std::thread::hardware_concurrency();
+  ThreadPool Pool(ThreadCount);
 
-    auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
-    if (Error E = OSOrErr.takeError()) {
-      error(toString(std::move(E)));
-      return 1;
-    }
-    auto OS = std::move(OSOrErr.get());
-    mainView->print(*OS.get(), /*Wholefile=*/true,
-                    /*ShowSourceName=*/ShowFilenames);
-    Printer->closeViewFile(std::move(OS));
+  for (StringRef &SourceFile : SourceFiles) {
+    Pool.async([this, &SourceFile, &Coverage, &Printer, ShowFilenames] {
+      auto View = createSourceFileView(SourceFile, *Coverage);
+      if (!View) {
+        deferWarning("The file '" + SourceFile.str() + "' isn't covered.");
+        return;
+      }
+
+      auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
+      if (Error E = OSOrErr.takeError()) {
+        deferError(toString(std::move(E)));
+        return;
+      }
+      auto OS = std::move(OSOrErr.get());
+
+      View->print(*OS.get(), /*Wholefile=*/true,
+                  /*ShowSourceName=*/ShowFilenames);
+      Printer->closeViewFile(std::move(OS));
+    });
   }
+
+  Pool.wait();
+
+  consumeDeferredMessages();
 
   return 0;
 }

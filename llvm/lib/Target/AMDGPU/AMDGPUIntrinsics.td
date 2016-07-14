@@ -16,10 +16,6 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
 
   def int_AMDGPU_kill : Intrinsic<[], [llvm_float_ty], []>;
   def int_AMDGPU_kilp : Intrinsic<[], [], []>;
-  def int_AMDGPU_cvt_f32_ubyte0 : Intrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_cvt_f32_ubyte1 : Intrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_cvt_f32_ubyte2 : Intrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_cvt_f32_ubyte3 : Intrinsic<[llvm_float_ty], [llvm_i32_ty], [IntrNoMem]>;
   def int_AMDGPU_flbit_i32 : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 
   // Deprecated in favor of separate int_amdgcn_cube* intrinsics.
@@ -47,12 +43,6 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
 
   // Deprecated in favor of llvm.amdgcn.read.workdim
   def int_AMDGPU_read_workdim : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
-}
-
-// Legacy names for compatibility.
-let TargetPrefix = "AMDIL", isTarget = 1 in {
-  def int_AMDIL_clamp : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>, LLVMMatchType<0>, LLVMMatchType<0>], [IntrNoMem]>;
-  def int_AMDIL_exp : Intrinsic<[llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 }
 
 include "SIIntrinsics.td"

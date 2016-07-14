@@ -1702,10 +1702,8 @@ static void DumpObject(const ObjectFile *o, const Archive *a = nullptr) {
 
 /// @brief Dump each object file in \a a;
 static void DumpArchive(const Archive *a) {
-  for (auto &ErrorOrChild : a->children()) {
-    if (std::error_code EC = ErrorOrChild.getError())
-      report_error(a->getFileName(), EC);
-    const Archive::Child &C = *ErrorOrChild;
+  Error Err;
+  for (auto &C : a->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
     if (!ChildOrErr) {
       if (auto E = isNotObjectErrorInvalidFileType(ChildOrErr.takeError()))
@@ -1717,6 +1715,8 @@ static void DumpArchive(const Archive *a) {
     else
       report_error(a->getFileName(), object_error::invalid_file_type);
   }
+  if (Err)
+    report_error(a->getFileName(), std::move(Err));
 }
 
 /// @brief Open file and figure out how to dump it.

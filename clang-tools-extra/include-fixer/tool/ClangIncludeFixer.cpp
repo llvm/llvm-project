@@ -27,13 +27,44 @@ using clang::include_fixer::IncludeFixerContext;
 
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(IncludeFixerContext)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::HeaderInfo)
 
 namespace llvm {
 namespace yaml {
+
+template <> struct MappingTraits<tooling::Range> {
+  struct NormalizedRange {
+    NormalizedRange(const IO &) : Offset(0), Length(0) {}
+
+    NormalizedRange(const IO &, const tooling::Range &R)
+        : Offset(R.getOffset()), Length(R.getLength()) {}
+
+    tooling::Range denormalize(const IO &) {
+      return tooling::Range(Offset, Length);
+    }
+
+    unsigned Offset;
+    unsigned Length;
+  };
+  static void mapping(IO &IO, tooling::Range &Info) {
+    MappingNormalization<NormalizedRange, tooling::Range> Keys(IO, Info);
+    IO.mapRequired("Offset", Keys->Offset);
+    IO.mapRequired("Length", Keys->Length);
+  }
+};
+
+template <> struct MappingTraits<IncludeFixerContext::HeaderInfo> {
+  static void mapping(IO &io, IncludeFixerContext::HeaderInfo &Info) {
+    io.mapRequired("Header", Info.Header);
+    io.mapRequired("QualifiedName", Info.QualifiedName);
+  }
+};
+
 template <> struct MappingTraits<IncludeFixerContext> {
-  static void mapping(IO &io, IncludeFixerContext &Context) {
-    io.mapRequired("SymbolIdentifier", Context.SymbolIdentifier);
-    io.mapRequired("Headers", Context.Headers);
+  static void mapping(IO &IO, IncludeFixerContext &Context) {
+    IO.mapRequired("SymbolIdentifier", Context.SymbolIdentifier);
+    IO.mapRequired("HeaderInfos", Context.HeaderInfos);
+    IO.mapRequired("Range", Context.SymbolRange);
   }
 };
 } // namespace yaml
@@ -81,7 +112,9 @@ cl::opt<bool> OutputHeaders(
              "JSON format to stdout:\n"
              "  {\n"
              "    \"SymbolIdentifier\": \"foo\",\n"
-             "    \"Headers\": [\"\\\"foo_a.h\\\"\"]\n"
+             "    \"Range\": {\"Offset\":0, \"Length\": 3},\n"
+             "    \"HeaderInfos\": [ {\"Header\": \"\\\"foo_a.h\\\"\",\n"
+             "                      \"QualifiedName\": \"a::foo\"} ]\n"
              "  }"),
     cl::init(false), cl::cat(IncludeFixerCategory));
 
@@ -90,8 +123,11 @@ cl::opt<std::string> InsertHeader(
     cl::desc("Insert a specific header. This should run with STDIN mode.\n"
              "The result is written to stdout. It is currently used for\n"
              "editor integration. Support YAML/JSON format:\n"
-             "  -insert-header=\"{SymbolIdentifier: foo,\n"
-             "                   Headers: ['\\\"foo_a.h\\\"']}\""),
+             "  -insert-header=\"{\n"
+             "     SymbolIdentifier: foo,\n"
+             "     Range: {Offset: 0, Length: 3},\n"
+             "     HeaderInfos: [ {Headers: \"\\\"foo_a.h\\\"\",\n"
+             "                     QualifiedName: \"a::foo\"} ]}\""),
     cl::init(""), cl::cat(IncludeFixerCategory));
 
 cl::opt<std::string>
@@ -155,15 +191,22 @@ createSymbolIndexManager(StringRef FilePath) {
 
 void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
   OS << "{\n"
-        "  \"SymbolIdentifier\": \"" << Context.getSymbolIdentifier() << "\",\n"
-        "  \"Headers\": [ ";
-  for (const auto &Header : Context.getHeaders()) {
-    OS << " \"" << llvm::yaml::escape(Header) << "\"";
-    if (Header != Context.getHeaders().back())
-      OS << ", ";
+        "  \"SymbolIdentifier\": \""
+     << Context.getSymbolIdentifier() << "\",\n";
+  OS << "  \"Range\": {";
+  OS << " \"Offset\":" << Context.getSymbolRange().getOffset() << ",";
+  OS << " \"Length\":" << Context.getSymbolRange().getLength() << " },\n";
+  OS << "  \"HeaderInfos\": [\n";
+  const auto &HeaderInfos = Context.getHeaderInfos();
+  for (const auto &Info : HeaderInfos) {
+    OS << "     {\"Header\": \"" << llvm::yaml::escape(Info.Header) << "\",\n"
+       << "      \"QualifiedName\": \"" << Info.QualifiedName << "\"}";
+    if (&Info != &HeaderInfos.back())
+      OS << ",\n";
   }
-  OS << " ]\n"
-        "}\n";
+  OS << "\n";
+  OS << "  ]\n";
+  OS << "}\n";
 }
 
 int includeFixerMain(int argc, const char **argv) {
@@ -204,18 +247,44 @@ int includeFixerMain(int argc, const char **argv) {
     IncludeFixerContext Context;
     yin >> Context;
 
-    if (Context.getHeaders().size() != 1) {
-      errs() << "Expect exactly one inserted header.\n";
+    const auto &HeaderInfos = Context.getHeaderInfos();
+    assert(!HeaderInfos.empty());
+    // We only accept one unique header.
+    // Check all elements in HeaderInfos have the same header.
+    bool IsUniqueHeader = std::equal(
+        HeaderInfos.begin()+1, HeaderInfos.end(), HeaderInfos.begin(),
+        [](const IncludeFixerContext::HeaderInfo &LHS,
+           const IncludeFixerContext::HeaderInfo &RHS) {
+          return LHS.Header == RHS.Header;
+        });
+    if (!IsUniqueHeader) {
+      errs() << "Expect exactly one unique header.\n";
       return 1;
     }
 
     auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
-        Code->getBuffer(), FilePath, Context.getHeaders().front(), InsertStyle);
+        Code->getBuffer(), FilePath, Context.getHeaderInfos().front().Header,
+        InsertStyle);
     if (!Replacements) {
       errs() << "Failed to create header insertion replacement: "
              << llvm::toString(Replacements.takeError()) << "\n";
       return 1;
     }
+
+    // If a header have multiple symbols, we won't add the missing namespace
+    // qualifiers because we don't know which one is exactly used.
+    //
+    // Check whether all elements in HeaderInfos have the same qualified name.
+    bool IsUniqueQualifiedName = std::equal(
+        HeaderInfos.begin() + 1, HeaderInfos.end(), HeaderInfos.begin(),
+        [](const IncludeFixerContext::HeaderInfo &LHS,
+           const IncludeFixerContext::HeaderInfo &RHS) {
+          return LHS.QualifiedName == RHS.QualifiedName;
+        });
+    if (IsUniqueQualifiedName)
+      Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),
+                            Context.getSymbolRange().getLength(),
+                            Context.getHeaderInfos().front().QualifiedName});
     auto ChangedCode =
         tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
     if (!ChangedCode) {
@@ -248,7 +317,7 @@ int includeFixerMain(int argc, const char **argv) {
     return 0;
   }
 
-  if (Context.getMatchedSymbols().empty())
+  if (Context.getHeaderInfos().empty())
     return 0;
 
   auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
@@ -257,10 +326,9 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
   }
 
-  // FIXME: Rank the results and pick the best one instead of the first one.
   auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
       /*Code=*/Buffer.get()->getBuffer(), FilePath,
-      Context.getHeaders().front(), InsertStyle);
+      Context.getHeaderInfos().front().Header, InsertStyle);
   if (!Replacements) {
     errs() << "Failed to create header insertion replacement: "
            << llvm::toString(Replacements.takeError()) << "\n";
@@ -268,11 +336,12 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   if (!Quiet)
-    llvm::errs() << "Added #include" << Context.getHeaders().front();
+    llvm::errs() << "Added #include" << Context.getHeaderInfos().front().Header;
 
   // Add missing namespace qualifiers to the unidentified symbol.
-  if (Context.getSymbolRange().getLength() > 0)
-    Replacements->insert(Context.createSymbolReplacement(FilePath, 0));
+  Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),
+                        Context.getSymbolRange().getLength(),
+                        Context.getHeaderInfos().front().QualifiedName});
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);

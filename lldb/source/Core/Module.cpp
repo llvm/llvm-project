@@ -734,6 +734,186 @@ Module::FindCompileUnits (const FileSpec &path,
     return sc_list.GetSize() - start_size;
 }
 
+Module::LookupInfo::LookupInfo(const ConstString &name, uint32_t name_type_mask, lldb::LanguageType language) :
+    m_name(name),
+    m_lookup_name(),
+    m_language(language),
+    m_name_type_mask(0),
+    m_match_name_after_lookup(false)
+{
+    const char *name_cstr = name.GetCString();
+    llvm::StringRef basename;
+    llvm::StringRef context;
+
+    if (name_type_mask & eFunctionNameTypeAuto)
+    {
+        if (CPlusPlusLanguage::IsCPPMangledName (name_cstr))
+            m_name_type_mask = eFunctionNameTypeFull;
+        else if ((language == eLanguageTypeUnknown ||
+                  Language::LanguageIsObjC(language)) &&
+                 ObjCLanguage::IsPossibleObjCMethodName (name_cstr))
+            m_name_type_mask = eFunctionNameTypeFull;
+        else if (Language::LanguageIsC(language))
+        {
+            m_name_type_mask = eFunctionNameTypeFull;
+        }
+        else
+        {
+            if ((language == eLanguageTypeUnknown ||
+                 Language::LanguageIsObjC(language)) &&
+                ObjCLanguage::IsPossibleObjCSelector(name_cstr))
+                m_name_type_mask |= eFunctionNameTypeSelector;
+
+            CPlusPlusLanguage::MethodName cpp_method (name);
+            basename = cpp_method.GetBasename();
+            if (basename.empty())
+            {
+                if (CPlusPlusLanguage::ExtractContextAndIdentifier (name_cstr, context, basename))
+                    m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+                else
+                    m_name_type_mask |= eFunctionNameTypeFull;
+            }
+            else
+            {
+                m_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
+            }
+        }
+    }
+    else
+    {
+        m_name_type_mask = name_type_mask;
+        if (name_type_mask & eFunctionNameTypeMethod || name_type_mask & eFunctionNameTypeBase)
+        {
+            // If they've asked for a CPP method or function name and it can't be that, we don't
+            // even need to search for CPP methods or names.
+            CPlusPlusLanguage::MethodName cpp_method (name);
+            if (cpp_method.IsValid())
+            {
+                basename = cpp_method.GetBasename();
+
+                if (!cpp_method.GetQualifiers().empty())
+                {
+                    // There is a "const" or other qualifier following the end of the function parens,
+                    // this can't be a eFunctionNameTypeBase
+                    m_name_type_mask &= ~(eFunctionNameTypeBase);
+                    if (m_name_type_mask == eFunctionNameTypeNone)
+                        return;
+                }
+            }
+            else
+            {
+                // If the CPP method parser didn't manage to chop this up, try to fill in the base name if we can.
+                // If a::b::c is passed in, we need to just look up "c", and then we'll filter the result later.
+                CPlusPlusLanguage::ExtractContextAndIdentifier (name_cstr, context, basename);
+            }
+        }
+
+        if (name_type_mask & eFunctionNameTypeSelector)
+        {
+            if (!ObjCLanguage::IsPossibleObjCSelector(name_cstr))
+            {
+                m_name_type_mask &= ~(eFunctionNameTypeSelector);
+                if (m_name_type_mask == eFunctionNameTypeNone)
+                    return;
+            }
+        }
+
+        // Still try and get a basename in case someone specifies a name type mask of
+        // eFunctionNameTypeFull and a name like "A::func"
+        if (basename.empty())
+        {
+            if (name_type_mask & eFunctionNameTypeFull)
+            {
+                CPlusPlusLanguage::MethodName cpp_method (name);
+                basename = cpp_method.GetBasename();
+                if (basename.empty())
+                    CPlusPlusLanguage::ExtractContextAndIdentifier (name_cstr, context, basename);
+            }
+        }
+    }
+
+    if (!basename.empty())
+    {
+        // The name supplied was a partial C++ path like "a::count". In this case we want to do a
+        // lookup on the basename "count" and then make sure any matching results contain "a::count"
+        // so that it would match "b::a::count" and "a::count". This is why we set "match_name_after_lookup"
+        // to true
+        m_lookup_name.SetString(basename);
+        m_match_name_after_lookup = true;
+    }
+    else
+    {
+        // The name is already correct, just use the exact name as supplied, and we won't need
+        // to check if any matches contain "name"
+        m_lookup_name = name;
+        m_match_name_after_lookup = false;
+    }
+
+}
+
+void
+Module::LookupInfo::Prune(SymbolContextList &sc_list, size_t start_idx) const
+{
+    if (m_match_name_after_lookup && m_name)
+    {
+        SymbolContext sc;
+        size_t i = start_idx;
+        while (i < sc_list.GetSize())
+        {
+            if (!sc_list.GetContextAtIndex(i, sc))
+                break;
+            ConstString full_name(sc.GetFunctionName());
+            if (full_name && ::strstr(full_name.GetCString(), m_name.GetCString()) == nullptr)
+            {
+                sc_list.RemoveContextAtIndex(i);
+            }
+            else
+            {
+                ++i;
+            }
+        }
+    }
+
+    // If we have only full name matches we might have tried to set breakpoint on "func"
+    // and specified eFunctionNameTypeFull, but we might have found "a::func()",
+    // "a::b::func()", "c::func()", "func()" and "func". Only "func()" and "func" should
+    // end up matching.
+    if (m_name_type_mask == eFunctionNameTypeFull)
+    {
+        SymbolContext sc;
+        size_t i = start_idx;
+        while (i < sc_list.GetSize())
+        {
+            if (!sc_list.GetContextAtIndex(i, sc))
+                break;
+            ConstString full_name(sc.GetFunctionName());
+            CPlusPlusLanguage::MethodName cpp_method(full_name);
+            if (cpp_method.IsValid())
+            {
+                if (cpp_method.GetContext().empty())
+                {
+                    if (cpp_method.GetBasename().compare(m_name.GetStringRef()) != 0)
+                    {
+                        sc_list.RemoveContextAtIndex(i);
+                        continue;
+                    }
+                }
+                else
+                {
+                    std::string qualified_name = cpp_method.GetScopeQualifiedName();
+                    if (qualified_name.compare(m_name.GetCString()) != 0)
+                    {
+                        sc_list.RemoveContextAtIndex(i);
+                        continue;
+                    }
+                }
+            }
+            ++i;
+        }
+    }
+}
+
+
 size_t
 Module::FindFunctions (const ConstString &name,
                        const CompilerDeclContext *parent_decl_ctx,
@@ -753,21 +933,13 @@ Module::FindFunctions (const ConstString &name,
     
     if (name_type_mask & eFunctionNameTypeAuto)
     {
-        ConstString lookup_name;
-        uint32_t lookup_name_type_mask = 0;
-        bool match_name_after_lookup = false;
-        Module::PrepareForFunctionNameLookup (name,
-                                              name_type_mask,
-                                              eLanguageTypeUnknown, // TODO: add support
-                                              lookup_name,
-                                              lookup_name_type_mask,
-                                              match_name_after_lookup);
-        
+        LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
+
         if (symbols)
         {
-            symbols->FindFunctions(lookup_name,
+            symbols->FindFunctions(lookup_info.GetLookupName(),
                                    parent_decl_ctx,
-                                   lookup_name_type_mask,
+                                   lookup_info.GetNameTypeMask(),
                                    include_inlines,
                                    append,
                                    sc_list);
@@ -777,30 +949,14 @@ Module::FindFunctions (const ConstString &name,
             {
                 Symtab *symtab = symbols->GetSymtab();
                 if (symtab)
-                    symtab->FindFunctionSymbols(lookup_name, lookup_name_type_mask, sc_list);
+                    symtab->FindFunctionSymbols(lookup_info.GetLookupName(), lookup_info.GetNameTypeMask(), sc_list);
             }
         }
 
-        if (match_name_after_lookup)
-        {
-            SymbolContext sc;
-            size_t i = old_size;
-            while (i < sc_list.GetSize())
-            {
-                if (sc_list.GetContextAtIndex(i, sc))
-                {
-                    const char *func_name = sc.GetFunctionName().GetCString();
-                    if (func_name && strstr(func_name, name.GetCString()) == nullptr)
-                    {
-                        // Remove the current context
-                        sc_list.RemoveContextAtIndex(i);
-                        // Don't increment i and continue in the loop
-                        continue;
-                    }
-                }
-                ++i;
-            }
-        }
+        const size_t new_size = sc_list.GetSize();
+
+        if (old_size < new_size)
+            lookup_info.Prune (sc_list, old_size);
     }
     else
     {
@@ -1726,113 +1882,6 @@ Module::GetVersion (uint32_t *versions, uint32_t num_versions)
             versions[i] = LLDB_INVALID_MODULE_VERSION;
     }
     return 0;
-}
-
-void
-Module::PrepareForFunctionNameLookup (const ConstString &name,
-                                      uint32_t name_type_mask,
-                                      LanguageType language,
-                                      ConstString &lookup_name,
-                                      uint32_t &lookup_name_type_mask,
-                                      bool &match_name_after_lookup)
-{
-    const char *name_cstr = name.GetCString();
-    lookup_name_type_mask = eFunctionNameTypeNone;
-    match_name_after_lookup = false;
-
-    llvm::StringRef basename;
-    llvm::StringRef context;
-    
-    if (name_type_mask & eFunctionNameTypeAuto)
-    {
-        if (CPlusPlusLanguage::IsCPPMangledName (name_cstr))
-            lookup_name_type_mask = eFunctionNameTypeFull;
-        else if ((language == eLanguageTypeUnknown ||
-                  Language::LanguageIsObjC(language)) &&
-                 ObjCLanguage::IsPossibleObjCMethodName (name_cstr))
-            lookup_name_type_mask = eFunctionNameTypeFull;
-        else if (Language::LanguageIsC(language))
-        {
-            lookup_name_type_mask = eFunctionNameTypeFull;
-        }
-        else
-        {
-            if ((language == eLanguageTypeUnknown ||
-                 Language::LanguageIsObjC(language)) &&
-                ObjCLanguage::IsPossibleObjCSelector(name_cstr))
-                lookup_name_type_mask |= eFunctionNameTypeSelector;
-            
-            CPlusPlusLanguage::MethodName cpp_method (name);
-            basename = cpp_method.GetBasename();
-            if (basename.empty())
-            {
-                if (CPlusPlusLanguage::ExtractContextAndIdentifier (name_cstr, context, basename))
-                    lookup_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
-                else
-                    lookup_name_type_mask |= eFunctionNameTypeFull;
-            }
-            else
-            {
-                lookup_name_type_mask |= (eFunctionNameTypeMethod | eFunctionNameTypeBase);
-            }
-        }
-    }
-    else
-    {
-        lookup_name_type_mask = name_type_mask;
-        if (lookup_name_type_mask & eFunctionNameTypeMethod || name_type_mask & eFunctionNameTypeBase)
-        {
-            // If they've asked for a CPP method or function name and it can't be that, we don't
-            // even need to search for CPP methods or names.
-            CPlusPlusLanguage::MethodName cpp_method (name);
-            if (cpp_method.IsValid())
-            {
-                basename = cpp_method.GetBasename();
-
-                if (!cpp_method.GetQualifiers().empty())
-                {
-                    // There is a "const" or other qualifier following the end of the function parens,
-                    // this can't be a eFunctionNameTypeBase
-                    lookup_name_type_mask &= ~(eFunctionNameTypeBase);
-                    if (lookup_name_type_mask == eFunctionNameTypeNone)
-                        return;
-                }
-            }
-            else
-            {
-                // If the CPP method parser didn't manage to chop this up, try to fill in the base name if we can.
-                // If a::b::c is passed in, we need to just look up "c", and then we'll filter the result later.
-                CPlusPlusLanguage::ExtractContextAndIdentifier (name_cstr, context, basename);
-            }
-        }
-        
-        if (lookup_name_type_mask & eFunctionNameTypeSelector)
-        {
-            if (!ObjCLanguage::IsPossibleObjCSelector(name_cstr))
-            {
-                lookup_name_type_mask &= ~(eFunctionNameTypeSelector);
-                if (lookup_name_type_mask == eFunctionNameTypeNone)
-                    return;
-            }
-        }
-    }
-    
-    if (!basename.empty())
-    {
-        // The name supplied was a partial C++ path like "a::count". In this case we want to do a
-        // lookup on the basename "count" and then make sure any matching results contain "a::count"
-        // so that it would match "b::a::count" and "a::count". This is why we set "match_name_after_lookup"
-        // to true
-        lookup_name.SetString(basename);
-        match_name_after_lookup = true;
-    }
-    else
-    {
-        // The name is already correct, just use the exact name as supplied, and we won't need
-        // to check if any matches contain "name"
-        lookup_name = name;
-        match_name_after_lookup = false;
-    }
 }
 
 ModuleSP

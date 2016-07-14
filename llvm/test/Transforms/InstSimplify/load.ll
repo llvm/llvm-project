@@ -20,3 +20,11 @@ define i32 @crash_on_undef() {
   ret i32 %load
 }
 
+@GV = private constant [8 x i32] [i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49]
+
+define <8 x i32> @partial_load() {
+; CHECK-LABEL: @partial_load(
+; CHECK:         ret <8 x i32> <i32 0, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48>
+  %load = load <8 x i32>, <8 x i32>* bitcast (i32* getelementptr ([8 x i32], [8 x i32]* @GV, i64 0, i64 -1) to <8 x i32>*)
+  ret <8 x i32> %load
+}

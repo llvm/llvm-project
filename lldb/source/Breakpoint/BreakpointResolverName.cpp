@@ -22,6 +22,7 @@
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "Plugins/Language/ObjC/ObjCLanguage.h"
+#include "Plugins/Language/CPlusPlus/CPlusPlusLanguage.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -121,11 +122,10 @@ BreakpointResolverName::BreakpointResolverName
     m_language (eLanguageTypeUnknown),
     m_skip_prologue (skip_prologue)
 {
-    LookupInfo lookup;
-    lookup.name.SetCString(method);
-    lookup.lookup_name = lookup.name;
-    lookup.name_type_mask = eFunctionNameTypeMethod;
-    lookup.match_name_after_lookup = false;
+    Module::LookupInfo lookup;
+    lookup.SetName(ConstString(method));
+    lookup.SetLookupName(lookup.GetName());
+    lookup.SetNameTypeMask(eFunctionNameTypeMethod);
     m_lookups.push_back (lookup);
 }
 
@@ -152,44 +152,17 @@ BreakpointResolverName::AddNameLookup (const ConstString &name, uint32_t name_ty
         objc_method.GetFullNames(objc_names, true);
         for (ConstString objc_name : objc_names)
         {
-            LookupInfo lookup;
-            lookup.name = name;
-            lookup.lookup_name = objc_name;
-            lookup.name_type_mask = eFunctionNameTypeFull;
-            lookup.match_name_after_lookup = false;
+            Module::LookupInfo lookup;
+            lookup.SetName(name);
+            lookup.SetLookupName(objc_name);
+            lookup.SetNameTypeMask(eFunctionNameTypeFull);
             m_lookups.push_back (lookup);
         }
     }
     else
     {
-        LookupInfo lookup;
-        lookup.name = name;
-        Module::PrepareForFunctionNameLookup(lookup.name, name_type_mask, m_language, lookup.lookup_name, lookup.name_type_mask, lookup.match_name_after_lookup);
+        Module::LookupInfo lookup(name, name_type_mask, m_language);
         m_lookups.push_back (lookup);
-    }
-}
-
-void
-BreakpointResolverName::LookupInfo::Prune (SymbolContextList &sc_list, size_t start_idx) const
-{
-    if (match_name_after_lookup && name)
-    {
-        SymbolContext sc;
-        size_t i = start_idx;
-        while (i < sc_list.GetSize())
-        {
-            if (!sc_list.GetContextAtIndex(i, sc))
-                break;
-            ConstString full_name (sc.GetFunctionName());
-            if (full_name && ::strstr(full_name.GetCString(), name.GetCString()) == nullptr)
-            {
-                sc_list.RemoveContextAtIndex(i);
-            }
-            else
-            {
-                ++i;
-            }
-        }
     }
 }
 
@@ -230,16 +203,17 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
         case Breakpoint::Exact:
             if (context.module_sp)
             {
-                for (const LookupInfo &lookup : m_lookups)
+                for (const auto &lookup : m_lookups)
                 {
                     const size_t start_func_idx = func_list.GetSize();
-                    context.module_sp->FindFunctions(lookup.lookup_name,
+                    context.module_sp->FindFunctions(lookup.GetLookupName(),
                                                      nullptr,
-                                                     lookup.name_type_mask,
+                                                     lookup.GetNameTypeMask(),
                                                      include_symbols,
                                                      include_inlines,
                                                      append,
                                                      func_list);
+
                     const size_t end_func_idx = func_list.GetSize();
 
                     if (start_func_idx < end_func_idx)
@@ -387,15 +361,15 @@ BreakpointResolverName::GetDescription (Stream *s)
     {
         size_t num_names = m_lookups.size();
         if (num_names == 1)
-            s->Printf("name = '%s'", m_lookups[0].name.GetCString());
+            s->Printf("name = '%s'", m_lookups[0].GetName().GetCString());
         else
         {
             s->Printf("names = {");
-            for (size_t i = 0; i < num_names - 1; i++)
+            for (size_t i = 0; i < num_names; i++)
             {
-                s->Printf ("'%s', ", m_lookups[i].name.GetCString());
+                s->Printf ("%s'%s'", (i == 0 ? "" : ", "), m_lookups[i].GetName().GetCString());
             }
-            s->Printf ("'%s'}", m_lookups[num_names - 1].name.GetCString());
+            s->Printf ("}");
         }
     }
     if (m_language != eLanguageTypeUnknown)

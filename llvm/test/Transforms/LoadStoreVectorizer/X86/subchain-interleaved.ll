@@ -48,8 +48,7 @@ define void @interleave_3L_2S_1L(i32* noalias %ptr) {
 ; CHECK-LABEL: @chain_suffix(
 ; CHECK: load i32
 ; CHECK: store <2 x i32>
-; CHECK: load i32
-; CHECK: load i32
+; CHECK: load <2 x i32>
 define void @chain_suffix(i32* noalias %ptr) {
   %next.gep = getelementptr i32, i32* %ptr, i64 0
   %next.gep1 = getelementptr i32, i32* %ptr, i64 1
@@ -66,12 +65,9 @@ define void @chain_suffix(i32* noalias %ptr) {
 
 
 ; CHECK-LABEL: @chain_prefix_suffix(
-; CHECK: load i32
-; CHECK: load i32
+; CHECK: load <2 x i32>
 ; CHECK: store <2 x i32>
-; CHECK: load i32
-; CHECK: load i32
-; CHECK: load i32
+; CHECK: load <3 x i32>
 define void  @chain_prefix_suffix(i32* noalias %ptr) {
   %next.gep = getelementptr i32, i32* %ptr, i64 0
   %next.gep1 = getelementptr i32, i32* %ptr, i64 1

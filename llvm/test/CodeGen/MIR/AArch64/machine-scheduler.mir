@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-scheduler  -verify-machineinstrs  -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass machine-scheduler  -verify-machineinstrs  -o - %s | FileCheck %s
 
 --- |
   define i64 @load_imp-def(i64* nocapture %P, i32 %v) {

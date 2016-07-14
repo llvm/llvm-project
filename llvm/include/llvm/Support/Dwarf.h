@@ -538,7 +538,7 @@ enum LocationListEntry : unsigned char {
   DW_LLE_offset_pair_entry
 };
 
-/// Contstants for the DW_APPLE_PROPERTY_attributes attribute.
+/// Constants for the DW_APPLE_PROPERTY_attributes attribute.
 /// Keep this list in sync with clang's DeclSpec.h ObjCPropertyAttributeKind.
 enum ApplePropertyAttributes {
   // Apple Objective-C Property Attributes
@@ -553,7 +553,10 @@ enum ApplePropertyAttributes {
   DW_APPLE_PROPERTY_atomic = 0x100,
   DW_APPLE_PROPERTY_weak =   0x200,
   DW_APPLE_PROPERTY_strong = 0x400,
-  DW_APPLE_PROPERTY_unsafe_unretained = 0x800
+  DW_APPLE_PROPERTY_unsafe_unretained = 0x800,
+  DW_APPLE_PROPERTY_nullability = 0x1000,
+  DW_APPLE_PROPERTY_null_resettable = 0x2000,
+  DW_APPLE_PROPERTY_class = 0x4000
 };
 
 // Constants for the DWARF5 Accelerator Table Proposal

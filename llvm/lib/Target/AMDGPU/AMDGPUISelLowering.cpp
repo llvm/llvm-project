@@ -55,15 +55,6 @@ EVT AMDGPUTargetLowering::getEquivalentMemType(LLVMContext &Ctx, EVT VT) {
   return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
 }
 
-// Type for a vector that will be loaded to.
-EVT AMDGPUTargetLowering::getEquivalentLoadRegType(LLVMContext &Ctx, EVT VT) {
-  unsigned StoreSize = VT.getStoreSizeInBits();
-  if (StoreSize <= 32)
-    return EVT::getIntegerVT(Ctx, 32);
-
-  return EVT::getVectorVT(Ctx, MVT::i32, StoreSize / 32);
-}
-
 EVT AMDGPUTargetLowering::getEquivalentBitType(LLVMContext &Ctx, EVT VT) {
   unsigned StoreSize = VT.getStoreSizeInBits();
   if (StoreSize <= 32)
@@ -931,8 +922,7 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
     default: return Op;
-    case AMDGPUIntrinsic::AMDGPU_clamp:
-    case AMDGPUIntrinsic::AMDIL_clamp: // Legacy name.
+    case AMDGPUIntrinsic::AMDGPU_clamp: // Legacy name.
       return DAG.getNode(AMDGPUISD::CLAMP, DL, VT,
                          Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
 
@@ -951,9 +941,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          Op.getOperand(1),
                          Op.getOperand(2),
                          Op.getOperand(3));
-
-    case AMDGPUIntrinsic::AMDIL_exp: // Legacy name.
-      return DAG.getNode(ISD::FEXP2, DL, VT, Op.getOperand(1));
 
     case AMDGPUIntrinsic::AMDGPU_brev: // Legacy name
       return DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(1));

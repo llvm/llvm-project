@@ -12,19 +12,14 @@
 //===----------------------------------------------------------------------===//
 
 // FIXME: Should migrate to using TargetPrefix that matches triple arch name.
-let TargetPrefix = "AMDGPU", isTarget = 1 in {
-  def int_AMDGPU_dp4 : Intrinsic<[llvm_float_ty], [llvm_v4f32_ty, llvm_v4f32_ty], [IntrNoMem]>;
-  def int_AMDGPU_tex : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_txb : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_txf : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_txq : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_txd : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_v4f32_ty, llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_txl : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_ddx : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_AMDGPU_ddy : Intrinsic<[llvm_v4f32_ty], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-}
-
 let TargetPrefix = "R600", isTarget = 1 in {
+  def int_R600_store_swizzle :
+    Intrinsic<[], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+  def int_R600_store_stream_output :
+    Intrinsic<[], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
+} // End TargetPrefix = "R600", isTarget = 1
+
+let TargetPrefix = "r600", isTarget = 1 in {
   class TextureIntrinsicFloatInput :
     Intrinsic<[llvm_v4f32_ty], [
       llvm_v4f32_ty, // Coord
@@ -52,29 +47,7 @@ let TargetPrefix = "R600", isTarget = 1 in {
       llvm_i32_ty // coord_type_w
     ], [IntrNoMem]>;
 
-  def int_R600_ldptr : TextureIntrinsicInt32Input;
 
-  def int_R600_interp_const :
-    Intrinsic<[llvm_v4f32_ty], [llvm_i32_ty], [IntrNoMem]>;
-  def int_R600_interp_xy :
-    Intrinsic<[llvm_v2f32_ty], [llvm_i32_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]>;
-  def int_R600_interp_zw :
-    Intrinsic<[llvm_v2f32_ty], [llvm_i32_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]>;
-  def int_R600_load_texbuf :
-    Intrinsic<[llvm_v4f32_ty], [llvm_i32_ty, llvm_i32_ty], [IntrNoMem]>;
-  def int_R600_store_swizzle :
-    Intrinsic<[], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty], []>;
-  def int_R600_store_stream_output :
-    Intrinsic<[], [llvm_v4f32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], []>;
-  def int_R600_store_pixel_depth :
-      Intrinsic<[], [llvm_float_ty], []>;
-  def int_R600_store_pixel_stencil :
-      Intrinsic<[], [llvm_float_ty], []>;
-  def int_R600_store_dummy :
-      Intrinsic<[], [llvm_i32_ty], []>;
-} // End TargetPrefix = "R600", isTarget = 1
-
-let TargetPrefix = "r600", isTarget = 1 in {
   def int_r600_tex : TextureIntrinsicFloatInput;
   def int_r600_texc : TextureIntrinsicFloatInput;
   def int_r600_txl : TextureIntrinsicFloatInput;
@@ -85,4 +58,8 @@ let TargetPrefix = "r600", isTarget = 1 in {
   def int_r600_txq : TextureIntrinsicInt32Input;
   def int_r600_ddx : TextureIntrinsicFloatInput;
   def int_r600_ddy : TextureIntrinsicFloatInput;
+
+  def int_r600_dot4 : Intrinsic<[llvm_float_ty],
+    [llvm_v4f32_ty, llvm_v4f32_ty], [IntrNoMem]
+  >;
 } // End TargetPrefix = "r600", isTarget = 1

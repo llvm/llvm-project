@@ -22,6 +22,15 @@ define <2 x double> @load_onemask(<2 x double>* %ptr, <2 x double> %passthru)  {
 ; CHECK-NEXT:  ret <2 x double> %unmaskedload
 }
 
+define <2 x double> @load_undefmask(<2 x double>* %ptr, <2 x double> %passthru)  {
+  %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %ptr, i32 2, <2 x i1> <i1 1, i1 undef>, <2 x double> %passthru)
+  ret <2 x double> %res
+
+; CHECK-LABEL: @load_undefmask(
+; CHECK-NEXT:  %unmaskedload = load <2 x double>, <2 x double>* %ptr, align 2
+; CHECK-NEXT:  ret <2 x double> %unmaskedload
+}
+
 define void @store_zeromask(<2 x double>* %ptr, <2 x double> %val)  {
   call void @llvm.masked.store.v2f64.p0v2f64(<2 x double> %val, <2 x double>* %ptr, i32 3, <2 x i1> zeroinitializer)
   ret void

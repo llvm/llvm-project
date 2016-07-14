@@ -946,6 +946,21 @@ def PATCHABLE_OP : Instruction {
   let mayStore = 1;
   let hasSideEffects = 1;
 }
+def PATCHABLE_FUNCTION_ENTER : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let AsmString = "# XRay Function Enter.";
+  let usesCustomInserter = 1;
+  let hasSideEffects = 0;
+}
+def PATCHABLE_RET : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins variable_ops);
+  let AsmString = "# XRay Function Exit.";
+  let usesCustomInserter = 1;
+  let hasSideEffects = 1;
+  let isReturn = 1;
+}
 
 // Generic opcodes used in GlobalISel.
 include "llvm/Target/GenericOpcodes.td"

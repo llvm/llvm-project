@@ -2509,7 +2509,8 @@ static bool serializeUnit(ASTWriter &Writer,
 }
 
 bool ASTUnit::serialize(raw_ostream &OS) {
-  bool hasErrors = getDiagnostics().hasErrorOccurred();
+  // For serialization we are lenient if the errors were only warn-as-error kind.
+  bool hasErrors = getDiagnostics().hasUncompilableErrorOccurred();
 
   if (WriterData)
     return serializeUnit(WriterData->Writer, WriterData->Buffer,

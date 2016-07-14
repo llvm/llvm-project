@@ -6457,6 +6457,15 @@ InitializationSequence::Perform(Sema &S,
                                   ExtendingEntity->getDecl());
 
       CheckForNullPointerDereference(S, CurInit.get());
+
+      S.RefersToMemberWithReducedAlignment(CurInit.get(), [&](Expr *E,
+                                                              RecordDecl *RD,
+                                                              ValueDecl *MD,
+                                                              CharUnits) {
+        S.Diag(Kind.getLocation(), diag::err_binding_reference_to_packed_member)
+            << MD << RD << E->getSourceRange();
+      });
+
       break;
 
     case SK_BindReferenceToTemporary: {
@@ -6645,12 +6654,16 @@ InitializationSequence::Perform(Sema &S,
                                     getAssignmentAction(Entity), CCK);
       if (CurInitExprRes.isInvalid())
         return ExprError();
+
+      S.DiscardMisalignedMemberAddress(Step->Type.getTypePtr(), CurInit.get());
+
       CurInit = CurInitExprRes;
 
       if (Step->Kind == SK_ConversionSequenceNoNarrowing &&
           S.getLangOpts().CPlusPlus && !CurInit.get()->isValueDependent())
         DiagnoseNarrowingInInitList(S, *Step->ICS, SourceType, Entity.getType(),
                                     CurInit.get());
+
       break;
     }
 

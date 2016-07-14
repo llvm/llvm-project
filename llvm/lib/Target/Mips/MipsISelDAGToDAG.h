@@ -31,8 +31,8 @@ namespace llvm {
 
 class MipsDAGToDAGISel : public SelectionDAGISel {
 public:
-  explicit MipsDAGToDAGISel(MipsTargetMachine &TM)
-      : SelectionDAGISel(TM), Subtarget(nullptr) {}
+  explicit MipsDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+      : SelectionDAGISel(TM, OL), Subtarget(nullptr) {}
 
   // Pass Name
   const char *getPassName() const override {

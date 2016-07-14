@@ -185,6 +185,7 @@ void ASTStmtReader::VisitAttributedStmt(AttributedStmt *S) {
 void ASTStmtReader::VisitIfStmt(IfStmt *S) {
   VisitStmt(S);
   S->setConstexpr(Record[Idx++]);
+  S->setInit(Reader.ReadSubStmt());
   S->setConditionVariable(Reader.getContext(),
                           ReadDeclAs<VarDecl>(Record, Idx));
   S->setCond(Reader.ReadSubExpr());
@@ -196,6 +197,7 @@ void ASTStmtReader::VisitIfStmt(IfStmt *S) {
 
 void ASTStmtReader::VisitSwitchStmt(SwitchStmt *S) {
   VisitStmt(S);
+  S->setInit(Reader.ReadSubStmt());
   S->setConditionVariable(Reader.getContext(),
                           ReadDeclAs<VarDecl>(Record, Idx));
   S->setCond(Reader.ReadSubExpr());
@@ -1922,6 +1924,12 @@ OMPClause *OMPClauseReader::readClause() {
                                    NumComponents);
     break;
   }
+  case OMPC_use_device_ptr:
+    C = OMPUseDevicePtrClause::CreateEmpty(Context, Record[Idx++]);
+    break;
+  case OMPC_is_device_ptr:
+    C = OMPIsDevicePtrClause::CreateEmpty(Context, Record[Idx++]);
+    break;
   }
   Visit(C);
   C->setLocStart(Reader->ReadSourceLocation(Record, Idx));
@@ -2439,6 +2447,28 @@ void OMPClauseReader::VisitOMPFromClause(OMPFromClause *C) {
   C->setComponents(Components, ListSizes);
 }
 
+void OMPClauseReader::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
+  C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i)
+    Vars.push_back(Reader->Reader.ReadSubExpr());
+  C->setVarRefs(Vars);
+  Vars.clear();
+}
+
+void OMPClauseReader::VisitOMPIsDevicePtrClause(OMPIsDevicePtrClause *C) {
+  C->setLParenLoc(Reader->ReadSourceLocation(Record, Idx));
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned i = 0; i != NumVars; ++i)
+    Vars.push_back(Reader->Reader.ReadSubExpr());
+  C->setVarRefs(Vars);
+  Vars.clear();
+}
+
 //===----------------------------------------------------------------------===//
 // OpenMP Directives.
 //===----------------------------------------------------------------------===//
@@ -2727,6 +2757,11 @@ void ASTStmtReader::VisitOMPDistributeParallelForSimdDirective(
 
 void ASTStmtReader::VisitOMPDistributeSimdDirective(
     OMPDistributeSimdDirective *D) {
+  VisitOMPLoopDirective(D);
+}
+
+void ASTStmtReader::VisitOMPTargetParallelForSimdDirective(
+    OMPTargetParallelForSimdDirective *D) {
   VisitOMPLoopDirective(D);
 }
 
@@ -3427,6 +3462,14 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
       S = OMPDistributeSimdDirective::CreateEmpty(Context, NumClauses,
                                                   CollapsedNum, Empty);
+      break;
+    }
+
+    case STMT_OMP_TARGET_PARALLEL_FOR_SIMD_DIRECTIVE: {
+      unsigned NumClauses = Record[ASTStmtReader::NumStmtFields];
+      unsigned CollapsedNum = Record[ASTStmtReader::NumStmtFields + 1];
+      S = OMPTargetParallelForSimdDirective::CreateEmpty(Context, NumClauses,
+                                                         CollapsedNum, Empty);
       break;
     }
 

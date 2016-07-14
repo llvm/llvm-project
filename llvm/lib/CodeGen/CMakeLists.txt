@@ -136,6 +136,7 @@ add_llvm_library(LLVMCodeGen
   UnreachableBlockElim.cpp
   VirtRegMap.cpp
   WinEHPrepare.cpp
+  XRayInstrumentation.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/CodeGen
