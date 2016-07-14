@@ -1854,32 +1854,39 @@ Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
     auto *SrcPtr = Operands[0];
     auto *Mask = Operands[2];
     auto *Passthru = Operands[3];
+
     Constant *VecData = ConstantFoldLoadFromConstPtr(SrcPtr, VTy, DL);
-    if (!VecData)
-      return nullptr;
 
     SmallVector<Constant *, 32> NewElements;
     for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
-      auto *MaskElt =
-          dyn_cast_or_null<ConstantInt>(Mask->getAggregateElement(I));
+      auto *MaskElt = Mask->getAggregateElement(I);
       if (!MaskElt)
         break;
-      if (MaskElt->isZero()) {
-        auto *PassthruElt = Passthru->getAggregateElement(I);
+      auto *PassthruElt = Passthru->getAggregateElement(I);
+      auto *VecElt = VecData ? VecData->getAggregateElement(I) : nullptr;
+      if (isa<UndefValue>(MaskElt)) {
+        if (PassthruElt)
+          NewElements.push_back(PassthruElt);
+        else if (VecElt)
+          NewElements.push_back(VecElt);
+        else
+          return nullptr;
+      }
+      if (MaskElt->isNullValue()) {
         if (!PassthruElt)
-          break;
+          return nullptr;
         NewElements.push_back(PassthruElt);
-      } else {
-        assert(MaskElt->isOne());
-        auto *VecElt = VecData->getAggregateElement(I);
+      } else if (MaskElt->isOneValue()) {
         if (!VecElt)
-          break;
+          return nullptr;
         NewElements.push_back(VecElt);
+      } else {
+        return nullptr;
       }
     }
-    if (NewElements.size() == VTy->getNumElements())
-      return ConstantVector::get(NewElements);
-    return nullptr;
+    if (NewElements.size() != VTy->getNumElements())
+      return nullptr;
+    return ConstantVector::get(NewElements);
   }
 
   for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {

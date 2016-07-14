@@ -1454,7 +1454,10 @@ void AArch64TargetInfo::relaxTlsIeToLe(uint8_t *Loc, uint32_t Type,
   llvm_unreachable("invalid relocation for TLS IE to LE relaxation");
 }
 
-AMDGPUTargetInfo::AMDGPUTargetInfo() { GotRel = R_AMDGPU_ABS64; }
+AMDGPUTargetInfo::AMDGPUTargetInfo() {
+  GotRel = R_AMDGPU_ABS64;
+  GotEntrySize = 8;
+}
 
 void AMDGPUTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
                                    uint64_t Val) const {

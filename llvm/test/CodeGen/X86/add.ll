@@ -148,3 +148,39 @@ entry:
 ; X64: incl
 ; X64-NEXT: seto
 }
+
+define void @test11(i32* inreg %a) nounwind {
+  %aa = load i32, i32* %a
+  %b = add i32 %aa, 128
+  store i32 %b, i32* %a
+  ret void
+; X32-LABEL: test11:
+; X32: subl $-128, (%
+; X64-LABEL: test11:
+; X64: subl $-128, (%
+}
+
+define void @test12(i64* inreg %a) nounwind {
+  %aa = load i64, i64* %a
+  %b = add i64 %aa, 2147483648
+  store i64 %b, i64* %a
+  ret void
+; X32-LABEL: test12:
+; X32: addl (%
+; X32-NEXT: adcl $0,
+; X64-LABEL: test12:
+; X64: subq $-2147483648, (%
+}
+
+define void @test13(i64* inreg %a) nounwind {
+  %aa = load i64, i64* %a
+  %b = add i64 %aa, 128
+  store i64 %b, i64* %a
+  ret void
+
+; X32-LABEL: test13:
+; X32: addl (%
+; X32-NEXT: adcl $0,
+; X64-LABEL: test13:
+; X64: subq $-128, (%
+}

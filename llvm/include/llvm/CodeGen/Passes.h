@@ -263,6 +263,10 @@ namespace llvm {
   /// \brief This pass lays out funclets contiguously.
   extern char &FuncletLayoutID;
 
+  /// This pass inserts the XRay instrumentation sleds if they are supported by
+  /// the target platform.
+  extern char &XRayInstrumentationID;
+
   /// \brief This pass implements the "patchable-function" attribute.
   extern char &PatchableFunctionID;
 

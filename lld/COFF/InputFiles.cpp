@@ -79,11 +79,10 @@ void ArchiveFile::parse() {
   // Seen is a map from member files to boolean values. Initially
   // all members are mapped to false, which indicates all these files
   // are not read yet.
-  for (auto &ChildOrErr : File->children()) {
-    error(ChildOrErr, "Failed to parse static library");
-    const Archive::Child &Child = *ChildOrErr;
+  Error Err;
+  for (auto &Child : File->children(Err))
     Seen[Child.getChildOffset()].clear();
-  }
+  error(std::move(Err), "Failed to parse static library");
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.

@@ -1,13 +1,13 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa < %s | FileCheck %s
+; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -amdgpu-promote-alloca < %s | FileCheck %s
 
 ; This is just an arbitrary intrinisic that shouldn't ever need to be
 ; handled to ensure it doesn't crash.
 
-declare void @eh.sjlj.functioncontext(i8*) #2
+declare void @llvm.stackrestore(i8*) #2
 
 ; CHECK-LABEL: @try_promote_unhandled_intrinsic(
 ; CHECK: alloca
-; CHECK: call void @eh.sjlj.functioncontext(i8* %tmp1)
+; CHECK: call void @llvm.stackrestore(i8* %tmp1)
 define void @try_promote_unhandled_intrinsic(i32 addrspace(1)* %arg) #2 {
 bb:
   %tmp = alloca i32, align 4
@@ -15,7 +15,7 @@ bb:
   %tmp2 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 1
   %tmp3 = load i32, i32 addrspace(1)* %tmp2
   store i32 %tmp3, i32* %tmp
-  call void @eh.sjlj.functioncontext(i8* %tmp1)
+  call void @llvm.stackrestore(i8* %tmp1)
   ret void
 }
 

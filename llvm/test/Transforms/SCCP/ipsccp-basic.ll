@@ -82,6 +82,10 @@ define internal {i64,i64} @test4a() {
   ret {i64,i64} %b
 }
 
+; CHECK-LABEL: define internal { i64, i64 } @test4a(
+; CHECK-NEXT:   ret { i64, i64 } { i64 5, i64 4 }
+; CHECK-NEXT: }
+
 define i64 @test4b() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
   %a = invoke {i64,i64} @test4a()
           to label %A unwind label %B
@@ -130,7 +134,7 @@ B:
 
 ; CHECK: define i64 @test5b()
 ; CHECK:     A:
-; CHECK-NEXT:  %c = call i64 @test5c({ i64, i64 } %a)
+; CHECK-NEXT:  %c = call i64 @test5c({ i64, i64 } { i64 5, i64 4 })
 ; CHECK-NEXT:  ret i64 5
 
 define internal i64 @test5c({i64,i64} %a) {
@@ -163,8 +167,7 @@ define internal %T @test7a(i32 %A) {
   %mrv1 = insertvalue %T %mrv0, i32 %A, 1
   ret %T %mrv1
 ; CHECK-LABEL: @test7a(
-; CHECK-NEXT: %mrv0 = insertvalue %T undef, i32 18, 0
-; CHECK-NEXT: %mrv1 = insertvalue %T %mrv0, i32 17, 1
+; CHECK-NEXT: ret %T { i32 18, i32 17 }
 }
 
 define i32 @test7b() {
@@ -207,6 +210,12 @@ entry:
         store {  } %0, {  }* %local_foo
         ret void
 }
+
+; CHECK-LABEL: define void @test9(
+; CHECK-NEXT: entry:
+; CHECK-NEXT: %local_foo = alloca {}
+; CHECK-NEXT:  store {} zeroinitializer, {}* %local_foo
+; CHECK-NEXT: ret void
 
 declare i32 @__gxx_personality_v0(...)
 

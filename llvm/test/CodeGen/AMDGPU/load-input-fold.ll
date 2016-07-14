@@ -88,14 +88,14 @@ main_body:
   %83 = insertelement <4 x float> %82, float %75, i32 1
   %84 = insertelement <4 x float> %83, float %77, i32 2
   %85 = insertelement <4 x float> %84, float 0.000000e+00, i32 3
-  %86 = call float @llvm.AMDGPU.dp4(<4 x float> %81, <4 x float> %85)
+  %86 = call float @llvm.r600.dot4(<4 x float> %81, <4 x float> %85)
   %87 = insertelement <4 x float> undef, float %86, i32 0
   call void @llvm.R600.store.swizzle(<4 x float> %87, i32 2, i32 2)
   ret void
 }
 
 ; Function Attrs: readnone
-declare float @llvm.AMDGPU.dp4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 ; Function Attrs: readonly
 declare float @fabs(float) #2

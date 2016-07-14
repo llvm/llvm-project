@@ -405,35 +405,37 @@ static void performReadOperation(ArchiveOperation Operation,
     fail("extracting from a thin archive is not supported");
 
   bool Filter = !Members.empty();
-  for (auto &ChildOrErr : OldArchive->children()) {
-    failIfError(ChildOrErr.getError());
-    const object::Archive::Child &C = *ChildOrErr;
+  {
+    Error Err;
+    for (auto &C : OldArchive->children(Err)) {
+      ErrorOr<StringRef> NameOrErr = C.getName();
+      failIfError(NameOrErr.getError());
+      StringRef Name = NameOrErr.get();
 
-    ErrorOr<StringRef> NameOrErr = C.getName();
-    failIfError(NameOrErr.getError());
-    StringRef Name = NameOrErr.get();
+      if (Filter) {
+        auto I = std::find(Members.begin(), Members.end(), Name);
+        if (I == Members.end())
+          continue;
+        Members.erase(I);
+      }
 
-    if (Filter) {
-      auto I = std::find(Members.begin(), Members.end(), Name);
-      if (I == Members.end())
-        continue;
-      Members.erase(I);
+      switch (Operation) {
+      default:
+        llvm_unreachable("Not a read operation");
+      case Print:
+        doPrint(Name, C);
+        break;
+      case DisplayTable:
+        doDisplayTable(Name, C);
+        break;
+      case Extract:
+        doExtract(Name, C);
+        break;
+      }
     }
-
-    switch (Operation) {
-    default:
-      llvm_unreachable("Not a read operation");
-    case Print:
-      doPrint(Name, C);
-      break;
-    case DisplayTable:
-      doDisplayTable(Name, C);
-      break;
-    case Extract:
-      doExtract(Name, C);
-      break;
-    }
+    failIfError(std::move(Err));
   }
+
   if (Members.empty())
     return;
   for (StringRef Name : Members)
@@ -531,9 +533,8 @@ computeNewArchiveMembers(ArchiveOperation Operation,
   int InsertPos = -1;
   StringRef PosName = sys::path::filename(RelPos);
   if (OldArchive) {
-    for (auto &ChildOrErr : OldArchive->children()) {
-      failIfError(ChildOrErr.getError());
-      auto &Child = ChildOrErr.get();
+    Error Err;
+    for (auto &Child : OldArchive->children(Err)) {
       int Pos = Ret.size();
       ErrorOr<StringRef> NameOrErr = Child.getName();
       failIfError(NameOrErr.getError());
@@ -568,6 +569,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       if (MemberI != Members.end())
         Members.erase(MemberI);
     }
+    failIfError(std::move(Err));
   }
 
   if (Operation == Delete)
@@ -764,9 +766,11 @@ static void runMRIScript() {
                   "Could not parse library");
       Archives.push_back(std::move(*LibOrErr));
       object::Archive &Lib = *Archives.back();
-      for (auto &MemberOrErr : Lib.children()) {
-        failIfError(MemberOrErr.getError());
-        addMember(NewMembers, *MemberOrErr);
+      {
+        Error Err;
+        for (auto &Member : Lib.children(Err))
+          addMember(NewMembers, Member);
+        failIfError(std::move(Err));
       }
       break;
     }

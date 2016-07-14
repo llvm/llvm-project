@@ -90,7 +90,8 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
       check(Archive::create(MB), "failed to parse archive");
 
   std::vector<MemoryBufferRef> V;
-  for (const ErrorOr<Archive::Child> &COrErr : File->children()) {
+  Error Err;
+  for (const ErrorOr<Archive::Child> &COrErr : File->children(Err)) {
     Archive::Child C = check(COrErr, "could not get the child of the archive " +
                                          File->getFileName());
     MemoryBufferRef MBRef =
@@ -99,6 +100,7 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
                   File->getFileName());
     V.push_back(MBRef);
   }
+  check(std::move(Err));
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())

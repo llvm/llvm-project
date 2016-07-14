@@ -1911,14 +1911,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
                        Denominator, Numerator);
   }
-  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte0:
-    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE0, DL, VT, Op.getOperand(1));
-  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte1:
-    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE1, DL, VT, Op.getOperand(1));
-  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte2:
-    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE2, DL, VT, Op.getOperand(1));
-  case AMDGPUIntrinsic::AMDGPU_cvt_f32_ubyte3:
-    return DAG.getNode(AMDGPUISD::CVT_F32_UBYTE3, DL, VT, Op.getOperand(1));
   default:
     return AMDGPUTargetLowering::LowerOperation(Op, DAG);
   }

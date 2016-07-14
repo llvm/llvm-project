@@ -37,6 +37,7 @@ OutputSectionBase<ELFT>::OutputSectionBase(StringRef Name, uint32_t Type,
   memset(&Header, 0, sizeof(Elf_Shdr));
   Header.sh_type = Type;
   Header.sh_flags = Flags;
+  Header.sh_addralign = 1;
 }
 
 template <class ELFT>
@@ -393,7 +394,6 @@ template <class ELFT>
 InterpSection<ELFT>::InterpSection()
     : OutputSectionBase<ELFT>(".interp", SHT_PROGBITS, SHF_ALLOC) {
   this->Header.sh_size = Config->DynamicLinker.size() + 1;
-  this->Header.sh_addralign = 1;
 }
 
 template <class ELFT> void InterpSection<ELFT>::writeTo(uint8_t *Buf) {
@@ -1247,9 +1247,7 @@ template <class ELFT>
 StringTableSection<ELFT>::StringTableSection(StringRef Name, bool Dynamic)
     : OutputSectionBase<ELFT>(Name, SHT_STRTAB,
                               Dynamic ? (uintX_t)SHF_ALLOC : 0),
-      Dynamic(Dynamic) {
-  this->Header.sh_addralign = 1;
-}
+      Dynamic(Dynamic) {}
 
 // Adds a string to the string table. If HashIt is true we hash and check for
 // duplicates. It is optional because the name of global symbols are already
