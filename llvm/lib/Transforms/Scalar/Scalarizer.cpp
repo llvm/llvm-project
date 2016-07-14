@@ -306,7 +306,11 @@ void Scalarizer::gather(Instruction *Op, const ValueVector &CV) {
   ValueVector &SV = Scattered[Op];
   if (!SV.empty()) {
     for (unsigned I = 0, E = SV.size(); I != E; ++I) {
-      Instruction *Old = cast<Instruction>(SV[I]);
+      Value *V = SV[I];
+      if (V == nullptr)
+        continue;
+
+      Instruction *Old = cast<Instruction>(V);
       CV[I]->takeName(Old);
       Old->replaceAllUsesWith(CV[I]);
       Old->eraseFromParent();

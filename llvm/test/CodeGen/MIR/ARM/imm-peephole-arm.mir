@@ -1,4 +1,4 @@
-# RUN: llc -run-pass=peephole-opt %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -run-pass=peephole-opt %s -o - | FileCheck %s
 
 # CHECK: [[IN:%.*]] = COPY %r0
 # CHECK: [[SUM1TMP:%.*]] = ADDri [[IN]], 133

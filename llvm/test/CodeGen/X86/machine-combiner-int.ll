@@ -1,5 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 | FileCheck %s
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after machine-combiner -o /dev/null 2>&1 | FileCheck %s --check-prefix=DEAD
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -stop-after machine-combiner -o - | FileCheck %s --check-prefix=DEAD
 
 ; Verify that integer multiplies are reassociated. The first multiply in 
 ; each test should be independent of the result of the preceding add (lea).

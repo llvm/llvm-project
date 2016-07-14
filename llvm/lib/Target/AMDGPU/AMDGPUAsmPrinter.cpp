@@ -613,6 +613,11 @@ void AMDGPUAsmPrinter::EmitProgramInfoSI(const MachineFunction &MF,
     OutStreamer->EmitIntValue(R_0286D0_SPI_PS_INPUT_ADDR, 4);
     OutStreamer->EmitIntValue(MFI->getPSInputAddr(), 4);
   }
+
+  OutStreamer->EmitIntValue(R_SPILLED_SGPRS, 4);
+  OutStreamer->EmitIntValue(MFI->getNumSpilledSGPRs(), 4);
+  OutStreamer->EmitIntValue(R_SPILLED_VGPRS, 4);
+  OutStreamer->EmitIntValue(MFI->getNumSpilledVGPRs(), 4);
 }
 
 // This is supposed to be log2(Size)

@@ -85,6 +85,9 @@ private:
   bool HasNonSpillStackObjects;
   bool HasFlatInstructions;
 
+  unsigned NumSpilledSGPRs;
+  unsigned NumSpilledVGPRs;
+
   // Feature bits required for inputs passed in user SGPRs.
   bool PrivateSegmentBuffer : 1;
   bool DispatchPtr : 1;
@@ -311,6 +314,22 @@ public:
 
   void setHasFlatInstructions(bool UseFlat = true) {
     HasFlatInstructions = UseFlat;
+  }
+
+  unsigned getNumSpilledSGPRs() const {
+    return NumSpilledSGPRs;
+  }
+
+  unsigned getNumSpilledVGPRs() const {
+    return NumSpilledVGPRs;
+  }
+
+  void addToSpilledSGPRs(unsigned num) {
+    NumSpilledSGPRs += num;
+  }
+
+  void addToSpilledVGPRs(unsigned num) {
+    NumSpilledVGPRs += num;
   }
 
   unsigned getPSInputAddr() const {

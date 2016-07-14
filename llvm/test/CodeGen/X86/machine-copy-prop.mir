@@ -1,4 +1,4 @@
-# RUN: llc -march=x86 -run-pass machine-cp -verify-machineinstrs -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=x86 -run-pass machine-cp -verify-machineinstrs -o - %s | FileCheck %s
 
 --- |
   declare void @foo()

@@ -17,6 +17,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -26,10 +27,14 @@
 #include "llvm/CodeGen/RegisterUsageInfo.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Target/TargetFrameLowering.h"
 
 using namespace llvm;
 
 #define DEBUG_TYPE "ip-regalloc"
+
+STATISTIC(NumCSROpt,
+          "Number of functions optimized for callee saved registers");
 
 namespace llvm {
 void initializeRegUsageInfoCollectorPass(PassRegistry &);
@@ -101,6 +106,8 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
   unsigned RegMaskSize = (TRI->getNumRegs() + 31) / 32;
   RegMask.resize(RegMaskSize, 0xFFFFFFFF);
 
+  const Function *F = MF.getFunction();
+
   PhysicalRegisterUsageInfo *PRUI = &getAnalysis<PhysicalRegisterUsageInfo>();
 
   PRUI->setTargetMachine(&TM);
@@ -111,11 +118,17 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
     if (MRI->isPhysRegModified(PReg, true))
       markRegClobbered(TRI, &RegMask[0], PReg);
 
-  const uint32_t *CallPreservedMask =
-      TRI->getCallPreservedMask(MF, MF.getFunction()->getCallingConv());
-  // Set callee saved register as preserved.
-  for (unsigned i = 0; i < RegMaskSize; ++i)
-    RegMask[i] = RegMask[i] | CallPreservedMask[i];
+  if (!TargetFrameLowering::isSafeForNoCSROpt(F)) {
+    const uint32_t *CallPreservedMask =
+        TRI->getCallPreservedMask(MF, F->getCallingConv());
+    // Set callee saved register as preserved.
+    for (unsigned i = 0; i < RegMaskSize; ++i)
+      RegMask[i] = RegMask[i] | CallPreservedMask[i];
+  } else {
+    ++NumCSROpt;
+    DEBUG(dbgs() << MF.getName()
+                 << " function optimized for not having CSR.\n");
+  }
 
   for (unsigned PReg = 1, PRegE = TRI->getNumRegs(); PReg < PRegE; ++PReg)
     if (MachineOperand::clobbersPhysReg(&(RegMask[0]), PReg))
@@ -123,7 +136,7 @@ bool RegUsageInfoCollector::runOnMachineFunction(MachineFunction &MF) {
 
   DEBUG(dbgs() << " \n----------------------------------------\n");
 
-  PRUI->storeUpdateRegUsageInfo(MF.getFunction(), std::move(RegMask));
+  PRUI->storeUpdateRegUsageInfo(F, std::move(RegMask));
 
   return false;
 }

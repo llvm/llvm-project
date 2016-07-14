@@ -1,6 +1,5 @@
-# RUN: not llc -mtriple=aarch64-apple-ios -start-after machine-sink -stop-after machine-sink -o /dev/null %s 2> %t.log
-# Everything is written on STDERR with mir, which is bad. So make two runs for now.
-# RUN: FileCheck %s -input-file=%t.log --check-prefix=CHECK
+# RUN: not llc -mtriple=aarch64-apple-ios -start-after machine-sink -stop-after machine-sink -o - %s 2> %t.log \
+# RUN:        | FileCheck %s --check-prefix=CHECK
 # RUN: FileCheck %s -input-file=%t.log --check-prefix=ERR
 # RUN: rm -f %t.log
 # REQUIRES: global-isel

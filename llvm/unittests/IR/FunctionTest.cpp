@@ -70,15 +70,19 @@ TEST(FunctionTest, stealArgumentListFrom) {
   EXPECT_TRUE(F1->hasLazyArguments());
   EXPECT_FALSE(F2->hasLazyArguments());
   unsigned I = 0;
-  for (Argument &A : F2->args())
-    EXPECT_EQ(Args[I++], &A);
+  for (Argument &A : F2->args()) {
+    EXPECT_EQ(Args[I], &A);
+    I++;
+  }
   EXPECT_EQ(2u, I);
 
   // Check that arguments in F1 don't have pointer equality with the saved ones.
   // This also instantiates F1's arguments.
   I = 0;
-  for (Argument &A : F1->args())
-    EXPECT_NE(Args[I++], &A);
+  for (Argument &A : F1->args()) {
+    EXPECT_NE(Args[I], &A);
+    I++;
+  }
   EXPECT_EQ(2u, I);
   EXPECT_FALSE(F1->hasLazyArguments());
   EXPECT_FALSE(F2->hasLazyArguments());
@@ -90,8 +94,10 @@ TEST(FunctionTest, stealArgumentListFrom) {
   EXPECT_FALSE(F1->hasLazyArguments());
   EXPECT_TRUE(F2->hasLazyArguments());
   I = 0;
-  for (Argument &A : F1->args())
-    EXPECT_EQ(Args[I++], &A);
+  for (Argument &A : F1->args()) {
+    EXPECT_EQ(Args[I], &A);
+    I++;
+  }
   EXPECT_EQ(2u, I);
 
   // Steal from F2 a second time.  Now both functions should have lazy

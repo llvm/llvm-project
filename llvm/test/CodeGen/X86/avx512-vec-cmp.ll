@@ -1215,7 +1215,7 @@ define <2 x i64> @test45(<2 x i16> %x, <2 x i16> %y) #0 {
 ; KNL-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; KNL-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm2[1,2,3],xmm0[4],xmm2[5,6,7]
 ; KNL-NEXT:    vpcmpeqq %xmm1, %xmm0, %xmm0
-; KNL-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; KNL-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test45:

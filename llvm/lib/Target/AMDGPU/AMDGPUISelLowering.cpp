@@ -931,8 +931,7 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
   switch (IntrinsicID) {
     default: return Op;
-    case AMDGPUIntrinsic::AMDGPU_clamp:
-    case AMDGPUIntrinsic::AMDIL_clamp: // Legacy name.
+    case AMDGPUIntrinsic::AMDGPU_clamp: // Legacy name.
       return DAG.getNode(AMDGPUISD::CLAMP, DL, VT,
                          Op.getOperand(1), Op.getOperand(2), Op.getOperand(3));
 
@@ -951,9 +950,6 @@ SDValue AMDGPUTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                          Op.getOperand(1),
                          Op.getOperand(2),
                          Op.getOperand(3));
-
-    case AMDGPUIntrinsic::AMDIL_exp: // Legacy name.
-      return DAG.getNode(ISD::FEXP2, DL, VT, Op.getOperand(1));
 
     case AMDGPUIntrinsic::AMDGPU_brev: // Legacy name
       return DAG.getNode(ISD::BITREVERSE, DL, VT, Op.getOperand(1));

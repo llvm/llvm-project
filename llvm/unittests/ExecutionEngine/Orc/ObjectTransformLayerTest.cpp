@@ -62,7 +62,8 @@ public:
     EXPECT_EQ(MockResolver, *Resolver) << "Resolver should pass through";
     size_t I = 0;
     for (auto &ObjPtr : Objects) {
-      EXPECT_EQ(MockObjects[I++] + 1, *ObjPtr) << "Transform should be applied";
+      EXPECT_EQ(MockObjects[I] + 1, *ObjPtr) << "Transform should be applied";
+      I++;
     }
     EXPECT_EQ(MockObjects.size(), I) << "Number of objects should match";
     LastCalled = "addObjectSet";

@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-lower-control-flow -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-lower-control-flow -o - %s | FileCheck %s
 # Getting an undef that is specifically a VGPR is tricky from IR
 
 # CHECK-LABEL: name: extract_undef_offset_vgpr{{$}}

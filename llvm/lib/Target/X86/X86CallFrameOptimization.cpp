@@ -346,15 +346,15 @@ void X86CallFrameOptimization::collectCallInfo(MachineFunction &MF,
   while (I->getOpcode() == X86::LEA32r)
     ++I;
 
-  // We expect a copy instruction here.
-  // TODO: The copy instruction is a lowering artifact.
-  //       We should also support a copy-less version, where the stack
-  //       pointer is used directly.
-  if (!I->isCopy() || !I->getOperand(0).isReg())
-    return;
-  Context.SPCopy = &*I++;
-
-  unsigned StackPtr = Context.SPCopy->getOperand(0).getReg();
+  unsigned StackPtr = RegInfo.getStackRegister();
+  // SelectionDAG (but not FastISel) inserts a copy of ESP into a virtual
+  // register here.  If it's there, use that virtual register as stack pointer
+  // instead.
+  if (I->isCopy() && I->getOperand(0).isReg() && I->getOperand(1).isReg() &&
+      I->getOperand(1).getReg() == StackPtr) {
+    Context.SPCopy = &*I++;
+    StackPtr = Context.SPCopy->getOperand(0).getReg();
+  }
 
   // Scan the call setup sequence for the pattern we're looking for.
   // We only handle a simple case - a sequence of store instructions that
@@ -539,7 +539,7 @@ void X86CallFrameOptimization::adjustCallSequence(MachineFunction &MF,
 
   // The stack-pointer copy is no longer used in the call sequences.
   // There should not be any other users, but we can't commit to that, so:
-  if (MRI->use_empty(Context.SPCopy->getOperand(0).getReg()))
+  if (Context.SPCopy && MRI->use_empty(Context.SPCopy->getOperand(0).getReg()))
     Context.SPCopy->eraseFromParent();
 
   // Once we've done this, we need to make sure PEI doesn't assume a reserved

@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=x86_64-apple-macosx10.9.0 %s -stop-after=livedebugvars \
-; RUN:   -o %t.s 2>&1 | FileCheck %s
+; RUN:   -o - | FileCheck %s
 ; Generated from:
 ; void g(int *);
 ; int f() {

@@ -1044,10 +1044,6 @@ static Value *simplifyMaskedLoad(const IntrinsicInst &II,
   if (!ConstMask)
     return nullptr;
 
-  // If the mask is all zeros, the "passthru" argument is the result.
-  if (ConstMask->isNullValue())
-    return II.getArgOperand(3);
-
   // If the mask is all ones, this is a plain vector load of the 1st argument.
   if (ConstMask->isAllOnesValue()) {
     Value *LoadPtr = II.getArgOperand(0);

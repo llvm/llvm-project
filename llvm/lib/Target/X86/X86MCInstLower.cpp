@@ -1370,10 +1370,12 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     }
     break;
   }
-  case X86::VPERMILPSrm:
+
   case X86::VPERMILPDrm:
-  case X86::VPERMILPSYrm:
-  case X86::VPERMILPDYrm: {
+  case X86::VPERMILPDYrm:
+  case X86::VPERMILPDZ128rm:
+  case X86::VPERMILPDZ256rm:
+  case X86::VPERMILPDZrm: {
     if (!OutStreamer->isVerboseAsm())
       break;
     assert(MI->getNumOperands() > 5 &&
@@ -1382,16 +1384,31 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
     const MachineOperand &SrcOp = MI->getOperand(1);
     const MachineOperand &MaskOp = MI->getOperand(5);
 
-    unsigned ElSize;
-    switch (MI->getOpcode()) {
-    default: llvm_unreachable("Invalid opcode");
-    case X86::VPERMILPSrm: case X86::VPERMILPSYrm: ElSize = 32; break;
-    case X86::VPERMILPDrm: case X86::VPERMILPDYrm: ElSize = 64; break;
+    if (auto *C = getConstantFromPool(*MI, MaskOp)) {
+      SmallVector<int, 8> Mask;
+      DecodeVPERMILPMask(C, 64, Mask);
+      if (!Mask.empty())
+        OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp, SrcOp, Mask));
     }
+    break;
+  }
+
+  case X86::VPERMILPSrm:
+  case X86::VPERMILPSYrm:
+  case X86::VPERMILPSZ128rm:
+  case X86::VPERMILPSZ256rm:
+  case X86::VPERMILPSZrm: {
+    if (!OutStreamer->isVerboseAsm())
+      break;
+    assert(MI->getNumOperands() > 5 &&
+           "We should always have at least 5 operands!");
+    const MachineOperand &DstOp = MI->getOperand(0);
+    const MachineOperand &SrcOp = MI->getOperand(1);
+    const MachineOperand &MaskOp = MI->getOperand(5);
 
     if (auto *C = getConstantFromPool(*MI, MaskOp)) {
       SmallVector<int, 16> Mask;
-      DecodeVPERMILPMask(C, ElSize, Mask);
+      DecodeVPERMILPMask(C, 32, Mask);
       if (!Mask.empty())
         OutStreamer->AddComment(getShuffleComment(DstOp, SrcOp, SrcOp, Mask));
     }

@@ -1,5 +1,5 @@
-; RUN: llc -o /dev/null -verify-machineinstrs -mtriple=powerpc64-unknown-gnu-linux -stop-after machine-sink %s 2>&1 | FileCheck %s --check-prefix=ISEL
-; RUN: llc -o /dev/null -verify-machineinstrs -mtriple=powerpc64-unknown-gnu-linux -fast-isel -fast-isel-abort=1 -stop-after machine-sink %s 2>&1 | FileCheck %s --check-prefix=FAST-ISEL
+; RUN: llc -o - -verify-machineinstrs -mtriple=powerpc64-unknown-gnu-linux -stop-after machine-sink %s | FileCheck %s --check-prefix=ISEL
+; RUN: llc -o - -verify-machineinstrs -mtriple=powerpc64-unknown-gnu-linux -fast-isel -fast-isel-abort=1 -stop-after machine-sink %s | FileCheck %s --check-prefix=FAST-ISEL
 
 define void @caller_meta_leaf() {
 entry:

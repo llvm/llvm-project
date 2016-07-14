@@ -6,7 +6,7 @@ define <4 x i32> @trunc4(<4 x i64> %A) nounwind {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpshufd {{.*#+}} ymm0 = ymm0[0,2,0,2,4,6,4,6]
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,3,2,3]
-; CHECK-NEXT:    ## kill
+; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %B = trunc <4 x i64> %A to <4 x i32>
@@ -18,7 +18,7 @@ define <8 x i16> @trunc8(<8 x i32> %A) nounwind {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,1,4,5,8,9,12,13],zero,zero,zero,zero,zero,zero,zero,zero,ymm0[16,17,20,21,24,25,28,29],zero,zero,zero,zero,zero,zero,zero,zero
 ; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; CHECK-NEXT:    ## kill
+; CHECK-NEXT:    ## kill: %XMM0<def> %XMM0<kill> %YMM0<kill>
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %B = trunc <8 x i32> %A to <8 x i16>
