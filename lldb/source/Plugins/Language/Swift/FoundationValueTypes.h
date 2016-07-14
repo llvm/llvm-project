@@ -45,6 +45,9 @@ namespace lldb_private
             
             bool
             UUID_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+            
+            bool
+            Data_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
         }
     }
 }
