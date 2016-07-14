@@ -309,10 +309,10 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
   return I < J ? -1 : 1;
 }
 
-template <class ELFT>
-void LinkerScript<ELFT>::addScriptedSymbols() {
+template <class ELFT> void LinkerScript<ELFT>::addScriptedSymbols() {
   for (SectionsCommand &Cmd : Opt.Commands)
-    if (Cmd.Kind == SymbolAssignmentKind)
+    if (Cmd.Kind == SymbolAssignmentKind &&
+        Symtab<ELFT>::X->find(Cmd.Name) == nullptr)
       Symtab<ELFT>::X->addAbsolute(Cmd.Name, STV_DEFAULT);
 }
 
