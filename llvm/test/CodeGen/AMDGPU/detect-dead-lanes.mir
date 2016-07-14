@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -run-pass detect-dead-lanes -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -march=amdgcn -run-pass detect-dead-lanes -o - %s | FileCheck %s
 --- |
   define void @test0() { ret void }
   define void @test1() { ret void }

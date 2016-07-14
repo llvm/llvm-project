@@ -1,4 +1,4 @@
-# RUN: llc -run-pass postrapseudos -mtriple=i386-apple-macosx -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -run-pass postrapseudos -mtriple=i386-apple-macosx -o - %s | FileCheck %s
 
 # Verify that we correctly save and restore eax when copying eflags,
 # even when only a smaller alias of eax is used. We used to check only

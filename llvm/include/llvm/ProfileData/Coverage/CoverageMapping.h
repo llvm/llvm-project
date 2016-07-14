@@ -416,14 +416,14 @@ public:
         Expansions(std::move(RHS.Expansions)) {}
 
   /// \brief Get the name of the file this data covers.
-  StringRef getFilename() { return Filename; }
+  StringRef getFilename() const { return Filename; }
 
   std::vector<CoverageSegment>::iterator begin() { return Segments.begin(); }
   std::vector<CoverageSegment>::iterator end() { return Segments.end(); }
   bool empty() { return Segments.empty(); }
 
   /// \brief Expansions that can be further processed.
-  std::vector<ExpansionRecord> getExpansions() { return Expansions; }
+  ArrayRef<ExpansionRecord> getExpansions() { return Expansions; }
 };
 
 /// \brief The mapping of profile information to coverage data.
@@ -461,7 +461,7 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  CoverageData getCoverageForFile(StringRef Filename);
+  CoverageData getCoverageForFile(StringRef Filename) const;
 
   /// \brief Gets all of the functions covered by this profile.
   iterator_range<FunctionRecordIterator> getCoveredFunctions() const {

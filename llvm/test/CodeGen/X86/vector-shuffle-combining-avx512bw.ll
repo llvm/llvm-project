@@ -442,7 +442,7 @@ define <8 x double> @combine_permvar_8f64_as_permpd_mask(<8 x double> %x0, <8 x 
 define <16 x float> @combine_vpermilvar_16f32_230146759A8BCFDE(<16 x float> %x0) {
 ; CHECK-LABEL: combine_vpermilvar_16f32_230146759A8BCFDE:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpermilps {{.*}}(%rip), %zmm0, %zmm0
+; CHECK-NEXT:    vpermilps {{.*#+}} zmm0 = zmm0[2,3,0,1,4,6,7,5,9,10,8,11,12,15,13,14]
 ; CHECK-NEXT:    retq
   %res0 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %x0, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 3, i32 2, i32 1, i32 0, i32 2, i32 3, i32 0, i32 1, i32 1, i32 0, i32 3, i32 2>, <16 x float> undef, i16 -1)
   %res1 = call <16 x float> @llvm.x86.avx512.mask.vpermilvar.ps.512(<16 x float> %res0, <16 x i32> <i32 2, i32 3, i32 0, i32 1, i32 3, i32 1, i32 0, i32 2, i32 3, i32 0, i32 2, i32 1, i32 1, i32 2, i32 0, i32 3>, <16 x float> undef, i16 -1)

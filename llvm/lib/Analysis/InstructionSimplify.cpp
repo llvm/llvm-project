@@ -3991,6 +3991,15 @@ static Value *SimplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
                                   Q.DL);
   }
 
+  // Simplify calls to llvm.masked.load.*
+  if (IID == Intrinsic::masked_load) {
+    IterTy MaskArg = ArgBegin + 2;
+    // If the mask is all zeros, the "passthru" argument is the result.
+    if (auto *ConstMask = dyn_cast<Constant>(*MaskArg))
+      if (ConstMask->isNullValue())
+        return ArgBegin[3];
+  }
+
   // Perform idempotent optimizations
   if (!IsIdempotent(IID))
     return nullptr;

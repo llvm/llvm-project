@@ -442,8 +442,8 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
     return nullptr;
 
   GlobalValue *GVal;
-  APInt Offset;
-  if (!IsConstantOffsetFromGlobal(C, GVal, Offset, DL))
+  APInt OffsetAI;
+  if (!IsConstantOffsetFromGlobal(C, GVal, OffsetAI, DL))
     return nullptr;
 
   auto *GV = dyn_cast<GlobalVariable>(GVal);
@@ -451,19 +451,29 @@ Constant *FoldReinterpretLoadFromConstPtr(Constant *C, Type *LoadTy,
       !GV->getInitializer()->getType()->isSized())
     return nullptr;
 
-  // If we're loading off the beginning of the global, some bytes may be valid,
-  // but we don't try to handle this.
-  if (Offset.isNegative())
-    return nullptr;
+  int64_t Offset = OffsetAI.getSExtValue();
+  int64_t InitializerSize = DL.getTypeAllocSize(GV->getInitializer()->getType());
 
   // If we're not accessing anything in this constant, the result is undefined.
-  if (Offset.getZExtValue() >=
-      DL.getTypeAllocSize(GV->getInitializer()->getType()))
+  if (Offset + BytesLoaded <= 0)
+    return UndefValue::get(IntType);
+
+  // If we're not accessing anything in this constant, the result is undefined.
+  if (Offset >= InitializerSize)
     return UndefValue::get(IntType);
 
   unsigned char RawBytes[32] = {0};
-  if (!ReadDataFromGlobal(GV->getInitializer(), Offset.getZExtValue(), RawBytes,
-                          BytesLoaded, DL))
+  unsigned char *CurPtr = RawBytes;
+  unsigned BytesLeft = BytesLoaded;
+
+  // If we're loading off the beginning of the global, some bytes may be valid.
+  if (Offset < 0) {
+    CurPtr += -Offset;
+    BytesLeft += Offset;
+    Offset = 0;
+  }
+
+  if (!ReadDataFromGlobal(GV->getInitializer(), Offset, CurPtr, BytesLeft, DL))
     return nullptr;
 
   APInt ResultVal = APInt(IntType->getBitWidth(), 0);
@@ -850,13 +860,13 @@ Constant *SymbolicallyEvaluateGEP(const GEPOperator *GEP,
         // index for this level and proceed to the next level to see if it can
         // accommodate the offset.
         NewIdxs.push_back(ConstantInt::get(IntPtrTy, 0));
-      } else if (ElemSize.isAllOnesValue()) {
-        // Avoid signed overflow.
-        break;
       } else {
         // The element size is non-zero divide the offset by the element
         // size (rounding down), to compute the index at this level.
-        APInt NewIdx = Offset.sdiv(ElemSize);
+        bool Overflow;
+        APInt NewIdx = Offset.sdiv_ov(ElemSize, Overflow);
+        if (Overflow)
+          break;
         Offset -= NewIdx * ElemSize;
         NewIdxs.push_back(ConstantInt::get(IntPtrTy, NewIdx));
       }
@@ -1289,6 +1299,7 @@ bool llvm::canConstantFoldCallTo(const Function *F) {
   case Intrinsic::fmuladd:
   case Intrinsic::copysign:
   case Intrinsic::round:
+  case Intrinsic::masked_load:
   case Intrinsic::sadd_with_overflow:
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::ssub_with_overflow:
@@ -1833,10 +1844,43 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
 
 Constant *ConstantFoldVectorCall(StringRef Name, unsigned IntrinsicID,
                                  VectorType *VTy, ArrayRef<Constant *> Operands,
+                                 const DataLayout &DL,
                                  const TargetLibraryInfo *TLI) {
   SmallVector<Constant *, 4> Result(VTy->getNumElements());
   SmallVector<Constant *, 4> Lane(Operands.size());
   Type *Ty = VTy->getElementType();
+
+  if (IntrinsicID == Intrinsic::masked_load) {
+    auto *SrcPtr = Operands[0];
+    auto *Mask = Operands[2];
+    auto *Passthru = Operands[3];
+    Constant *VecData = ConstantFoldLoadFromConstPtr(SrcPtr, VTy, DL);
+    if (!VecData)
+      return nullptr;
+
+    SmallVector<Constant *, 32> NewElements;
+    for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
+      auto *MaskElt =
+          dyn_cast_or_null<ConstantInt>(Mask->getAggregateElement(I));
+      if (!MaskElt)
+        break;
+      if (MaskElt->isZero()) {
+        auto *PassthruElt = Passthru->getAggregateElement(I);
+        if (!PassthruElt)
+          break;
+        NewElements.push_back(PassthruElt);
+      } else {
+        assert(MaskElt->isOne());
+        auto *VecElt = VecData->getAggregateElement(I);
+        if (!VecElt)
+          break;
+        NewElements.push_back(VecElt);
+      }
+    }
+    if (NewElements.size() == VTy->getNumElements())
+      return ConstantVector::get(NewElements);
+    return nullptr;
+  }
 
   for (unsigned I = 0, E = VTy->getNumElements(); I != E; ++I) {
     // Gather a column of constants.
@@ -1870,7 +1914,8 @@ llvm::ConstantFoldCall(Function *F, ArrayRef<Constant *> Operands,
   Type *Ty = F->getReturnType();
 
   if (auto *VTy = dyn_cast<VectorType>(Ty))
-    return ConstantFoldVectorCall(Name, F->getIntrinsicID(), VTy, Operands, TLI);
+    return ConstantFoldVectorCall(Name, F->getIntrinsicID(), VTy, Operands,
+                                  F->getParent()->getDataLayout(), TLI);
 
   return ConstantFoldScalarCall(Name, F->getIntrinsicID(), Ty, Operands, TLI);
 }

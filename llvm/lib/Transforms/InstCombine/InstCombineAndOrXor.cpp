@@ -1589,10 +1589,29 @@ Instruction *InstCombiner::MatchBSwap(BinaryOperator &I) {
   return LastInst;
 }
 
+/// If all elements of two constant vectors are 0/-1 and inverses, return true.
+static bool areInverseVectorBitmasks(Constant *C1, Constant *C2) {
+  unsigned NumElts = C1->getType()->getVectorNumElements();
+  for (unsigned i = 0; i != NumElts; ++i) {
+    Constant *EltC1 = C1->getAggregateElement(i);
+    Constant *EltC2 = C2->getAggregateElement(i);
+    if (!EltC1 || !EltC2)
+      return false;
+
+    // One element must be all ones, and the other must be all zeros.
+    // FIXME: Allow undef elements.
+    if (!((match(EltC1, m_Zero()) && match(EltC2, m_AllOnes())) ||
+          (match(EltC2, m_Zero()) && match(EltC1, m_AllOnes()))))
+      return false;
+  }
+  return true;
+}
+
 /// We have an expression of the form (A & C) | (B & D). If A is a scalar or
 /// vector composed of all-zeros or all-ones values and is the bitwise 'not' of
 /// B, it can be used as the condition operand of a select instruction.
-static Value *getSelectCondition(Value *A, Value *B) {
+static Value *getSelectCondition(Value *A, Value *B,
+                                 InstCombiner::BuilderTy &Builder) {
   // If these are scalars or vectors of i1, A can be used directly.
   Type *Ty = A->getType();
   if (match(A, m_Not(m_Specific(B))) && Ty->getScalarType()->isIntegerTy(1))
@@ -1606,8 +1625,26 @@ static Value *getSelectCondition(Value *A, Value *B) {
                            m_SExt(m_Not(m_Specific(Cond))))))
     return Cond;
 
-  // TODO: Try more matches that only apply to non-splat constant vectors.
+  // All scalar (and most vector) possibilities should be handled now.
+  // Try more matches that only apply to non-splat constant vectors.
+  if (!Ty->isVectorTy())
+    return nullptr;
 
+  // If both operands are constants, see if the constants are inverse bitmasks.
+  Constant *AC, *BC;
+  if (match(A, m_Constant(AC)) && match(B, m_Constant(BC)) &&
+      areInverseVectorBitmasks(AC, BC))
+    return ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
+
+  // If both operands are xor'd with constants using the same sexted boolean
+  // operand, see if the constants are inverse bitmasks.
+  if (match(A, (m_Xor(m_SExt(m_Value(Cond)), m_Constant(AC)))) &&
+      match(B, (m_Xor(m_SExt(m_Specific(Cond)), m_Constant(BC)))) &&
+      Cond->getType()->getScalarType()->isIntegerTy(1) &&
+      areInverseVectorBitmasks(AC, BC)) {
+    AC = ConstantExpr::getTrunc(AC, CmpInst::makeCmpResultType(Ty));
+    return Builder.CreateXor(Cond, AC);
+  }
   return nullptr;
 }
 
@@ -1625,7 +1662,7 @@ static Value *matchSelectFromAndOr(Value *A, Value *C, Value *B, Value *D,
     B = SrcB;
   }
 
-  if (Value *Cond = getSelectCondition(A, B)) {
+  if (Value *Cond = getSelectCondition(A, B, Builder)) {
     // ((bc Cond) & C) | ((bc ~Cond) & D) --> bc (select Cond, (bc C), (bc D))
     // The bitcasts will either all exist or all not exist. The builder will
     // not create unnecessary casts if the types already match.

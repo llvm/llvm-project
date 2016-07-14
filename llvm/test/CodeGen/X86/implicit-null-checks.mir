@@ -1,4 +1,4 @@
-# RUN: llc -run-pass implicit-null-checks -mtriple=x86_64-apple-macosx -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: llc -run-pass implicit-null-checks -mtriple=x86_64-apple-macosx -o - %s | FileCheck %s
 
 --- |
   target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"

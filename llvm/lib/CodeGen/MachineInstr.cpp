@@ -1556,12 +1556,10 @@ bool MachineInstr::hasOrderedMemoryRef() const {
   if (memoperands_empty())
     return true;
 
-  // Check the memory reference information for ordered references.
-  for (mmo_iterator I = memoperands_begin(), E = memoperands_end(); I != E; ++I)
-    if (!(*I)->isUnordered())
-      return true;
-
-  return false;
+  // Check if any of our memory operands are ordered.
+  return any_of(memoperands(), [](const MachineMemOperand *MMO) {
+    return !MMO->isUnordered();
+  });
 }
 
 /// isInvariantLoad - Return true if this instruction is loading from a
@@ -1581,23 +1579,21 @@ bool MachineInstr::isInvariantLoad(AliasAnalysis *AA) const {
 
   const MachineFrameInfo *MFI = getParent()->getParent()->getFrameInfo();
 
-  for (mmo_iterator I = memoperands_begin(),
-       E = memoperands_end(); I != E; ++I) {
-    if ((*I)->isVolatile()) return false;
-    if ((*I)->isStore()) return false;
-    if ((*I)->isInvariant()) return true;
-
+  for (MachineMemOperand *MMO : memoperands()) {
+    if (MMO->isVolatile()) return false;
+    if (MMO->isStore()) return false;
+    if (MMO->isInvariant()) continue;
 
     // A load from a constant PseudoSourceValue is invariant.
-    if (const PseudoSourceValue *PSV = (*I)->getPseudoValue())
+    if (const PseudoSourceValue *PSV = MMO->getPseudoValue())
       if (PSV->isConstant(MFI))
         continue;
 
-    if (const Value *V = (*I)->getValue()) {
+    if (const Value *V = MMO->getValue()) {
       // If we have an AliasAnalysis, ask it whether the memory is constant.
       if (AA &&
           AA->pointsToConstantMemory(
-              MemoryLocation(V, (*I)->getSize(), (*I)->getAAInfo())))
+              MemoryLocation(V, MMO->getSize(), MMO->getAAInfo())))
         continue;
     }
 

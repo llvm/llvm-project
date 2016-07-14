@@ -28186,6 +28186,42 @@ static SDValue convertIntLogicToFPLogic(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+/// If this is a PCMPEQ or PCMPGT result that is bitwise-anded with 1 (this is
+/// the x86 lowering of a SETCC + ZEXT), replace the 'and' with a shift-right to
+/// eliminate loading the vector constant mask value. This relies on the fact
+/// that a PCMP always creates an all-ones or all-zeros bitmask per element.
+static SDValue combinePCMPAnd1(SDNode *N, SelectionDAG &DAG) {
+  SDValue Op0 = peekThroughBitcasts(N->getOperand(0));
+  SDValue Op1 = peekThroughBitcasts(N->getOperand(1));
+
+  // TODO: Use AssertSext to mark any nodes that have the property of producing
+  // all-ones or all-zeros. Then check for that node rather than particular
+  // opcodes.
+  if (Op0.getOpcode() != X86ISD::PCMPEQ && Op0.getOpcode() != X86ISD::PCMPGT)
+    return SDValue();
+
+  // The existence of the PCMP node guarantees that we have the required SSE2 or
+  // AVX2 for a shift of this vector type, but there is no vector shift by
+  // immediate for a vector with byte elements (PSRLB). 512-bit vectors use the
+  // masked compare nodes, so they should not make it here.
+  EVT VT0 = Op0.getValueType();
+  EVT VT1 = Op1.getValueType();
+  unsigned EltBitWidth = VT0.getScalarType().getSizeInBits();
+  if (VT0 != VT1 || EltBitWidth == 8)
+    return SDValue();
+
+  assert(VT0.getSizeInBits() == 128 || VT0.getSizeInBits() == 256);
+
+  APInt SplatVal;
+  if (!ISD::isConstantSplatVector(Op1.getNode(), SplatVal) || SplatVal != 1)
+    return SDValue();
+
+  SDLoc DL(N);
+  SDValue ShAmt = DAG.getConstant(EltBitWidth - 1, DL, MVT::i8);
+  SDValue Shift = DAG.getNode(X86ISD::VSRLI, DL, VT0, Op0, ShAmt);
+  return DAG.getBitcast(N->getValueType(0), Shift);
+}
+
 static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -28203,6 +28239,9 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
 
   if (SDValue R = combineANDXORWithAllOnesIntoANDNP(N, DAG))
     return R;
+
+  if (SDValue ShiftRight = combinePCMPAnd1(N, DAG))
+    return ShiftRight;
 
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);

@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 -mtriple=aarch64-none-linux-gnu -stop-after branch-folder -o /dev/null < %s 2>&1 | FileCheck %s
+; RUN: llc -march=aarch64 -mtriple=aarch64-none-linux-gnu -stop-after branch-folder -o - < %s | FileCheck %s
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; Function Attrs: norecurse nounwind

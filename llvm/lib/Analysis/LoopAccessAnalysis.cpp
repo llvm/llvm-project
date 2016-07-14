@@ -1505,7 +1505,9 @@ bool LoopAccessInfo::canAnalyzeLoop() {
   return true;
 }
 
-void LoopAccessInfo::analyzeLoop() {
+void LoopAccessInfo::analyzeLoop(AliasAnalysis *AA, LoopInfo *LI,
+                                 const TargetLibraryInfo *TLI,
+                                 DominatorTree *DT) {
   typedef SmallPtrSet<Value*, 16> ValueSet;
 
   // Holds the Load and Store instructions.
@@ -1830,8 +1832,9 @@ std::pair<Instruction *, Instruction *> LoopAccessInfo::addRuntimeChecks(
     Instruction *Loc,
     const SmallVectorImpl<RuntimePointerChecking::PointerCheck> &PointerChecks)
     const {
+  const DataLayout &DL = TheLoop->getHeader()->getModule()->getDataLayout();
   auto *SE = PSE->getSE();
-  SCEVExpander Exp(*SE, *DL, "induction");
+  SCEVExpander Exp(*SE, DL, "induction");
   auto ExpandedChecks =
       expandBounds(PointerChecks, TheLoop, Loc, SE, Exp, *PtrRtChecking);
 
@@ -1915,17 +1918,15 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
 }
 
 LoopAccessInfo::LoopAccessInfo(Loop *L, ScalarEvolution *SE,
-                               const DataLayout &DL,
                                const TargetLibraryInfo *TLI, AliasAnalysis *AA,
                                DominatorTree *DT, LoopInfo *LI)
     : PSE(llvm::make_unique<PredicatedScalarEvolution>(*SE, *L)),
       PtrRtChecking(llvm::make_unique<RuntimePointerChecking>(SE)),
       DepChecker(llvm::make_unique<MemoryDepChecker>(*PSE, L)), TheLoop(L),
-      DL(&DL), TLI(TLI), AA(AA), DT(DT), LI(LI), NumLoads(0), NumStores(0),
-      MaxSafeDepDistBytes(-1), CanVecMem(false),
+      NumLoads(0), NumStores(0), MaxSafeDepDistBytes(-1), CanVecMem(false),
       StoreToLoopInvariantAddress(false) {
   if (canAnalyzeLoop())
-    analyzeLoop();
+    analyzeLoop(AA, LI, TLI, DT);
 }
 
 void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
@@ -1971,10 +1972,9 @@ void LoopAccessInfo::print(raw_ostream &OS, unsigned Depth) const {
 const LoopAccessInfo &LoopAccessLegacyAnalysis::getInfo(Loop *L) {
   auto &LAI = LoopAccessInfoMap[L];
 
-  if (!LAI) {
-    const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-    LAI = llvm::make_unique<LoopAccessInfo>(L, SE, DL, TLI, AA, DT, LI);
-  }
+  if (!LAI)
+    LAI = llvm::make_unique<LoopAccessInfo>(L, SE, TLI, AA, DT, LI);
+
   return *LAI.get();
 }
 
@@ -2040,8 +2040,7 @@ LoopAccessInfo LoopAccessAnalysis::run(Loop &L, AnalysisManager<Loop> &AM) {
     report_fatal_error("DominatorTree must have been cached at a higher level");
   if (!LI)
     report_fatal_error("LoopInfo must have been cached at a higher level");
-  const DataLayout &DL = F.getParent()->getDataLayout();
-  return LoopAccessInfo(&L, SE, DL, TLI, AA, DT, LI);
+  return LoopAccessInfo(&L, SE, TLI, AA, DT, LI);
 }
 
 PreservedAnalyses LoopAccessInfoPrinterPass::run(Loop &L,

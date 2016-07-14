@@ -573,6 +573,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
         }
       }
       MI->eraseFromParent();
+      MFI->addToSpilledSGPRs(NumSubRegs);
       break;
     }
 
@@ -642,6 +643,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             FrameInfo->getObjectOffset(Index) +
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), RS);
       MI->eraseFromParent();
+      MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
       break;
     case AMDGPU::SI_SPILL_V32_RESTORE:
     case AMDGPU::SI_SPILL_V64_RESTORE:
