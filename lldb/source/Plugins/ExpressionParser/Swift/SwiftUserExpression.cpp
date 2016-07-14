@@ -321,7 +321,7 @@ SwiftUserExpression::ScanContext(ExecutionContext &exe_ctx, Error &err)
                 log->Printf("  [SUE::SC] Function name: %s", function_name.AsCString());
 
             Error get_type_error;
-            SwiftASTContext *ast_context = llvm::dyn_cast<SwiftASTContext>(sym_ctx.module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+            SwiftASTContext *ast_context = llvm::dyn_cast_or_null<SwiftASTContext>(sym_ctx.module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
             if (!ast_context || ast_context->HasFatalErrors())
                 break;
 

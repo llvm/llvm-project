@@ -2086,7 +2086,7 @@ ValueObject::GetSwiftASTContext ()
         return nullptr;
     lldb::ModuleSP module_sp(GetModule());
     if (module_sp)
-        return llvm::dyn_cast<SwiftASTContext>(module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
+        return llvm::dyn_cast_or_null<SwiftASTContext>(module_sp->GetTypeSystemForLanguage(lldb::eLanguageTypeSwift));
 
     lldb::TargetSP target_sp(GetTargetSP());
     if (target_sp)
