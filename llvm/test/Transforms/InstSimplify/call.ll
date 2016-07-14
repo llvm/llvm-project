@@ -213,6 +213,13 @@ define <8 x i32> @partial_masked_load() {
   ret <8 x i32> %masked.load
 }
 
+define <8 x i32> @masked_load_undef_mask(<8 x i32>* %V) {
+; CHECK-LABEL: @masked_load_undef_mask(
+; CHECK:         ret <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>
+  %masked.load = call <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>* %V, i32 4, <8 x i1> undef, <8 x i32> <i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0>)
+  ret <8 x i32> %masked.load
+}
+
 declare noalias i8* @malloc(i64)
 
 declare <8 x i32> @llvm.masked.load.v8i32.p0v8i32(<8 x i32>*, i32, <8 x i1>, <8 x i32>)

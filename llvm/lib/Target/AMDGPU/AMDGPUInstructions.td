@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-class AMDGPUInst <dag outs, dag ins, string asm, list<dag> pattern> : Instruction {
+class AMDGPUInst <dag outs, dag ins, string asm = "",
+  list<dag> pattern = []> : Instruction {
   field bit isRegisterLoad = 0;
   field bit isRegisterStore = 0;
 
@@ -35,11 +36,10 @@ class AMDGPUInst <dag outs, dag ins, string asm, list<dag> pattern> : Instructio
   let TSFlags{62} = isRegisterStore;
 }
 
-class AMDGPUShaderInst <dag outs, dag ins, string asm, list<dag> pattern>
-    : AMDGPUInst<outs, ins, asm, pattern> {
+class AMDGPUShaderInst <dag outs, dag ins, string asm = "",
+  list<dag> pattern = []> : AMDGPUInst<outs, ins, asm, pattern> {
 
   field bits<32> Inst = 0xffffffff;
-
 }
 
 def FP32Denormals : Predicate<"Subtarget.hasFP32Denormals()">;

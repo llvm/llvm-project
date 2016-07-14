@@ -285,18 +285,109 @@ void ConstantHoistingPass::collectConstantCandidates(Function &Fn) {
       collectConstantCandidates(ConstCandMap, &Inst);
 }
 
+// This helper function is necessary to deal with values that have different
+// bit widths (APInt Operator- does not like that). If the value cannot be
+// represented in uint64 we return an "empty" APInt. This is then interpreted
+// as the value is not in range.
+static llvm::Optional<APInt> calculateOffsetDiff(APInt V1, APInt V2)
+{
+  llvm::Optional<APInt> Res = None;
+  unsigned BW = V1.getBitWidth() > V2.getBitWidth() ?
+                V1.getBitWidth() : V2.getBitWidth();
+  uint64_t LimVal1 = V1.getLimitedValue();
+  uint64_t LimVal2 = V2.getLimitedValue();
+
+  if (LimVal1 == ~0ULL || LimVal2 == ~0ULL)
+    return Res;
+
+  uint64_t Diff = LimVal1 - LimVal2;
+  return APInt(BW, Diff, true);
+}
+
+// From a list of constants, one needs to picked as the base and the other
+// constants will be transformed into an offset from that base constant. The
+// question is which we can pick best? For example, consider these constants
+// and their number of uses:
+//
+//  Constants| 2 | 4 | 12 | 42 |
+//  NumUses  | 3 | 2 |  8 |  7 |
+//
+// Selecting constant 12 because it has the most uses will generate negative
+// offsets for constants 2 and 4 (i.e. -10 and -8 respectively). If negative
+// offsets lead to less optimal code generation, then there might be better
+// solutions. Suppose immediates in the range of 0..35 are most optimally
+// supported by the architecture, then selecting constant 2 is most optimal
+// because this will generate offsets: 0, 2, 10, 40. Offsets 0, 2 and 10 are in
+// range 0..35, and thus 3 + 2 + 8 = 13 uses are in range. Selecting 12 would
+// have only 8 uses in range, so choosing 2 as a base is more optimal. Thus, in
+// selecting the base constant the range of the offsets is a very important
+// factor too that we take into account here. This algorithm calculates a total
+// costs for selecting a constant as the base and substract the costs if
+// immediates are out of range. It has quadratic complexity, so we call this
+// function only when we're optimising for size and there are less than 100
+// constants, we fall back to the straightforward algorithm otherwise
+// which does not do all the offset calculations.
+unsigned
+ConstantHoistingPass::maximizeConstantsInRange(ConstCandVecType::iterator S,
+                                           ConstCandVecType::iterator E,
+                                           ConstCandVecType::iterator &MaxCostItr) {
+  unsigned NumUses = 0;
+
+  if(!Entry->getParent()->optForSize() || std::distance(S,E) > 100) {
+    for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
+      NumUses += ConstCand->Uses.size();
+      if (ConstCand->CumulativeCost > MaxCostItr->CumulativeCost)
+        MaxCostItr = ConstCand;
+    }
+    return NumUses;
+  }
+
+  DEBUG(dbgs() << "== Maximize constants in range ==\n");
+  int MaxCost = -1;
+  for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
+    auto Value = ConstCand->ConstInt->getValue();
+    Type *Ty = ConstCand->ConstInt->getType();
+    int Cost = 0;
+    NumUses += ConstCand->Uses.size();
+    DEBUG(dbgs() << "= Constant: " << ConstCand->ConstInt->getValue() << "\n");
+
+    for (auto User : ConstCand->Uses) {
+      unsigned Opcode = User.Inst->getOpcode();
+      unsigned OpndIdx = User.OpndIdx;
+      Cost += TTI->getIntImmCost(Opcode, OpndIdx, Value, Ty);
+      DEBUG(dbgs() << "Cost: " << Cost << "\n");
+
+      for (auto C2 = S; C2 != E; ++C2) {
+        llvm::Optional<APInt> Diff = calculateOffsetDiff(
+                                      C2->ConstInt->getValue(),
+                                      ConstCand->ConstInt->getValue());
+        if (Diff) {
+          const int ImmCosts =
+            TTI->getIntImmCodeSizeCost(Opcode, OpndIdx, Diff.getValue(), Ty);
+          Cost -= ImmCosts;
+          DEBUG(dbgs() << "Offset " << Diff.getValue() << " "
+                       << "has penalty: " << ImmCosts << "\n"
+                       << "Adjusted cost: " << Cost << "\n");
+        }
+      }
+    }
+    DEBUG(dbgs() << "Cumulative cost: " << Cost << "\n");
+    if (Cost > MaxCost) {
+      MaxCost = Cost;
+      MaxCostItr = ConstCand;
+      DEBUG(dbgs() << "New candidate: " << MaxCostItr->ConstInt->getValue()
+                   << "\n");
+    }
+  }
+  return NumUses;
+}
+
 /// \brief Find the base constant within the given range and rebase all other
 /// constants with respect to the base constant.
 void ConstantHoistingPass::findAndMakeBaseConstant(
     ConstCandVecType::iterator S, ConstCandVecType::iterator E) {
   auto MaxCostItr = S;
-  unsigned NumUses = 0;
-  // Use the constant that has the maximum cost as base constant.
-  for (auto ConstCand = S; ConstCand != E; ++ConstCand) {
-    NumUses += ConstCand->Uses.size();
-    if (ConstCand->CumulativeCost > MaxCostItr->CumulativeCost)
-      MaxCostItr = ConstCand;
-  }
+  unsigned NumUses = maximizeConstantsInRange(S, E, MaxCostItr);
 
   // Don't hoist constants that have only one use.
   if (NumUses <= 1)

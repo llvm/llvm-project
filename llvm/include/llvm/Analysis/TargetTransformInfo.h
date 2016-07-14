@@ -414,6 +414,16 @@ public:
                     Type *Ty) const;
   int getIntImmCost(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
                     Type *Ty) const;
+
+  /// \brief Return the expected cost for the given integer when optimising
+  /// for size. This is different than the other integer immediate cost
+  /// functions in that it is subtarget agnostic. This is useful when you e.g.
+  /// target one ISA such as Aarch32 but smaller encodings could be possible
+  /// with another such as Thumb. This return value is used as a penalty when
+  /// the total costs for a constant is calculated (the bigger the cost, the
+  /// more beneficial constant hoisting is).
+  int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx, const APInt &Imm,
+                            Type *Ty) const;
   /// @}
 
   /// \name Vector Target Information
@@ -665,6 +675,8 @@ public:
   virtual PopcntSupportKind getPopcntSupport(unsigned IntTyWidthInBit) = 0;
   virtual bool haveFastSqrt(Type *Ty) = 0;
   virtual int getFPOpCost(Type *Ty) = 0;
+  virtual int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx, const APInt &Imm,
+                                    Type *Ty) = 0;
   virtual int getIntImmCost(const APInt &Imm, Type *Ty) = 0;
   virtual int getIntImmCost(unsigned Opc, unsigned Idx, const APInt &Imm,
                             Type *Ty) = 0;
@@ -841,6 +853,10 @@ public:
 
   int getFPOpCost(Type *Ty) override { return Impl.getFPOpCost(Ty); }
 
+  int getIntImmCodeSizeCost(unsigned Opc, unsigned Idx, const APInt &Imm,
+                            Type *Ty) override {
+    return Impl.getIntImmCodeSizeCost(Opc, Idx, Imm, Ty);
+  }
   int getIntImmCost(const APInt &Imm, Type *Ty) override {
     return Impl.getIntImmCost(Imm, Ty);
   }

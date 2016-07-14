@@ -101,7 +101,7 @@ main_body:
   %93 = insertelement <4 x float> %92, float %5, i32 1
   %94 = insertelement <4 x float> %93, float %6, i32 2
   %95 = insertelement <4 x float> %94, float 0.000000e+00, i32 3
-  %96 = call float @llvm.AMDGPU.dp4(<4 x float> %91, <4 x float> %95)
+  %96 = call float @llvm.r600.dot4(<4 x float> %91, <4 x float> %95)
   %97 = call float @fabs(float %96)
   %98 = call float @llvm.AMDGPU.rsq.clamped.f32(float %97)
   %99 = fmul float %4, %98
@@ -137,7 +137,7 @@ main_body:
   %129 = insertelement <4 x float> %128, float %121, i32 1
   %130 = insertelement <4 x float> %129, float %123, i32 2
   %131 = insertelement <4 x float> %130, float 0.000000e+00, i32 3
-  %132 = call float @llvm.AMDGPU.dp4(<4 x float> %127, <4 x float> %131)
+  %132 = call float @llvm.r600.dot4(<4 x float> %127, <4 x float> %131)
   %133 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 7)
   %134 = extractelement <4 x float> %133, i32 0
   %135 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 7)
@@ -152,7 +152,7 @@ main_body:
   %144 = insertelement <4 x float> %143, float %136, i32 1
   %145 = insertelement <4 x float> %144, float %138, i32 2
   %146 = insertelement <4 x float> %145, float 0.000000e+00, i32 3
-  %147 = call float @llvm.AMDGPU.dp4(<4 x float> %142, <4 x float> %146)
+  %147 = call float @llvm.r600.dot4(<4 x float> %142, <4 x float> %146)
   %148 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 8)
   %149 = extractelement <4 x float> %148, i32 0
   %150 = fmul float %149, %8
@@ -219,7 +219,7 @@ main_body:
 }
 
 ; Function Attrs: readnone
-declare float @llvm.AMDGPU.dp4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 ; Function Attrs: readonly
 declare float @fabs(float) #2

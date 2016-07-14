@@ -432,7 +432,6 @@ bool R600PassConfig::addPreISel() {
 
   if (EnableR600StructurizeCFG)
     addPass(createStructurizeCFGPass());
-  addPass(createR600TextureIntrinsicsReplacer());
   return false;
 }
 

@@ -142,19 +142,28 @@ HANDLE_TARGET_OPCODE(FAULTING_LOAD_OP, 22)
 /// original instruction.
 HANDLE_TARGET_OPCODE(PATCHABLE_OP, 23)
 
+/// This is a marker instruction which gets translated into a nop sled, useful
+/// for inserting instrumentation instructions at runtime.
+HANDLE_TARGET_OPCODE(PATCHABLE_FUNCTION_ENTER, 24)
+
+/// Wraps a return instruction and its operands to enable adding nop sleds
+/// either before or after the return. The nop sleds are useful for inserting
+/// instrumentation instructions at runtime.
+HANDLE_TARGET_OPCODE(PATCHABLE_RET, 25)
+
 /// The following generic opcodes are not supposed to appear after ISel.
 /// This is something we might want to relax, but for now, this is convenient
 /// to produce diagnostics.
 
 /// Generic ADD instruction. This is an integer add.
-HANDLE_TARGET_OPCODE(G_ADD, 24)
+HANDLE_TARGET_OPCODE(G_ADD, 26)
 HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_START, G_ADD)
 
 /// Generic Bitwise-OR instruction.
 HANDLE_TARGET_OPCODE(G_OR, 25)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
-HANDLE_TARGET_OPCODE(G_BR, 26)
+HANDLE_TARGET_OPCODE(G_BR, 27)
 
 // TODO: Add more generic opcodes as we move along.
 

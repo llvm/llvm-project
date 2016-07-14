@@ -11,7 +11,7 @@ main_body:
   br i1 %3, label %IF, label %ENDIF
 
 IF:                                             ; preds = %main_body
-  %4 = call float @llvm.AMDGPU.dp4(<4 x float> %0, <4 x float> %0)
+  %4 = call float @llvm.r600.dot4(<4 x float> %0, <4 x float> %0)
   br label %ENDIF
 
 ENDIF:                                            ; preds = %IF, %main_body
@@ -21,6 +21,6 @@ ENDIF:                                            ; preds = %IF, %main_body
   ret void
 }
 
-declare float @llvm.AMDGPU.dp4(<4 x float>, <4 x float>) #1
+declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
 attributes #1 = { readnone }

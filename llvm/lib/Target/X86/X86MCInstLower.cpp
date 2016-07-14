@@ -36,9 +36,15 @@
 #include "llvm/MC/MCFixup.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstBuilder.h"
+#include "llvm/MC/MCSection.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/MC/MCSymbolELF.h"
+#include "llvm/MC/MCSectionELF.h"
 #include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/ELF.h"
+#include "llvm/Target/TargetLoweringObjectFile.h"
+
 using namespace llvm;
 
 namespace {
@@ -1018,6 +1024,99 @@ void X86AsmPrinter::LowerPATCHPOINT(const MachineInstr &MI,
            getSubtargetInfo());
 }
 
+void X86AsmPrinter::recordSled(MCSymbol *Sled, const MachineInstr &MI,
+                               SledKind Kind) {
+  auto Fn = MI.getParent()->getParent()->getFunction();
+  auto Attr = Fn->getFnAttribute("function-instrument");
+  bool AlwaysInstrument =
+      Attr.isStringAttribute() && Attr.getValueAsString() == "xray-always";
+  Sleds.emplace_back(
+      XRayFunctionEntry{Sled, CurrentFnSym, Kind, AlwaysInstrument, Fn});
+}
+
+void X86AsmPrinter::LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI,
+                                                  X86MCInstLower &MCIL) {
+  // We want to emit the following pattern:
+  //
+  // .Lxray_sled_N:
+  //   .palign 2, ...
+  //   jmp .tmpN
+  //   # 9 bytes worth of noops
+  // .tmpN
+  //
+  // We need the 9 bytes because at runtime, we'd be patching over the full 11
+  // bytes with the following pattern:
+  //
+  //   mov %r10, <function id, 32-bit>   // 6 bytes
+  //   call <relative offset, 32-bits>   // 5 bytes
+  //
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitLabel(CurSled);
+  OutStreamer->EmitCodeAlignment(4);
+  auto Target = OutContext.createTempSymbol();
+
+  // Use a two-byte `jmp`. This version of JMP takes an 8-bit relative offset as
+  // an operand (computed as an offset from the jmp instruction).
+  // FIXME: Find another less hacky way do force the relative jump.
+  OutStreamer->EmitBytes("\xeb\x09");
+  EmitNops(*OutStreamer, 9, Subtarget->is64Bit(), getSubtargetInfo());
+  OutStreamer->EmitLabel(Target);
+  recordSled(CurSled, MI, SledKind::FUNCTION_ENTER);
+}
+
+void X86AsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
+                                       X86MCInstLower &MCIL) {
+  // Since PATCHABLE_RET takes the opcode of the return statement as an
+  // argument, we use that to emit the correct form of the RET that we want.
+  // i.e. when we see this:
+  //
+  //   PATCHABLE_RET X86::RET ...
+  //
+  // We should emit the RET followed by sleds.
+  //
+  // .Lxray_sled_N:
+  //   ret  # or equivalent instruction
+  //   # 10 bytes worth of noops
+  //
+  // This just makes sure that the alignment for the next instruction is 2.
+  auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
+  OutStreamer->EmitLabel(CurSled);
+  unsigned OpCode = MI.getOperand(0).getImm();
+  MCInst Ret;
+  Ret.setOpcode(OpCode);
+  for (auto &MO : make_range(MI.operands_begin() + 1, MI.operands_end()))
+    if (auto MaybeOperand = MCIL.LowerMachineOperand(&MI, MO))
+      Ret.addOperand(MaybeOperand.getValue());
+  OutStreamer->EmitInstruction(Ret, getSubtargetInfo());
+  EmitNops(*OutStreamer, 10, Subtarget->is64Bit(), getSubtargetInfo());
+  recordSled(CurSled, MI, SledKind::FUNCTION_EXIT);
+}
+
+void X86AsmPrinter::EmitXRayTable() {
+  if (Sleds.empty())
+    return;
+  if (Subtarget->isTargetELF()) {
+    auto *Section = OutContext.getELFSection(
+        "xray_instr_map", ELF::SHT_PROGBITS,
+        ELF::SHF_ALLOC | ELF::SHF_GROUP | ELF::SHF_MERGE, 0,
+        CurrentFnSym->getName());
+    auto PrevSection = OutStreamer->getCurrentSectionOnly();
+    OutStreamer->SwitchSection(Section);
+    for (const auto &Sled : Sleds) {
+      OutStreamer->EmitSymbolValue(Sled.Sled, 8);
+      OutStreamer->EmitSymbolValue(CurrentFnSym, 8);
+      auto Kind = static_cast<uint8_t>(Sled.Kind);
+      OutStreamer->EmitBytes(
+          StringRef(reinterpret_cast<const char *>(&Kind), 1));
+      OutStreamer->EmitBytes(
+          StringRef(reinterpret_cast<const char *>(&Sled.AlwaysInstrument), 1));
+      OutStreamer->EmitZeros(14);
+    }
+    OutStreamer->SwitchSection(PrevSection);
+  }
+  Sleds.clear();
+}
+
 // Returns instruction preceding MBBI in MachineFunction.
 // If MBBI is the first instruction of the first basic block, returns null.
 static MachineBasicBlock::const_iterator
@@ -1258,6 +1357,12 @@ void X86AsmPrinter::EmitInstruction(const MachineInstr *MI) {
 
   case TargetOpcode::PATCHPOINT:
     return LowerPATCHPOINT(*MI, MCInstLowering);
+
+  case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    return LowerPATCHABLE_FUNCTION_ENTER(*MI, MCInstLowering);
+
+  case TargetOpcode::PATCHABLE_RET:
+    return LowerPATCHABLE_RET(*MI, MCInstLowering);
 
   case X86::MORESTACK_RET:
     EmitAndCountInstruction(MCInstBuilder(getRetOpcode(*Subtarget)));

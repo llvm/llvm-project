@@ -1510,16 +1510,15 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
   return false;
 }
 
-template <typename ArgOrInst>
-static bool tryToReplaceWithConstant(SCCPSolver Solver, ArgOrInst *AI) {
+static bool tryToReplaceWithConstant(SCCPSolver Solver, Value *V) {
   Constant *Const = nullptr;
-  if (AI->getType()->isStructTy()) {
-    std::vector<LatticeVal> IVs = Solver.getStructLatticeValueFor(AI);
+  if (V->getType()->isStructTy()) {
+    std::vector<LatticeVal> IVs = Solver.getStructLatticeValueFor(V);
     if (std::any_of(IVs.begin(), IVs.end(),
                     [](LatticeVal &LV) { return LV.isOverdefined(); }))
       return false;
     std::vector<Constant *> ConstVals;
-    StructType *ST = dyn_cast<StructType>(AI->getType());
+    StructType *ST = dyn_cast<StructType>(V->getType());
     for (unsigned i = 0, e = ST->getNumElements(); i != e; ++i) {
       LatticeVal V = IVs[i];
       ConstVals.push_back(V.isConstant()
@@ -1528,16 +1527,16 @@ static bool tryToReplaceWithConstant(SCCPSolver Solver, ArgOrInst *AI) {
     }
     Const = ConstantStruct::get(ST, ConstVals);
   } else {
-    LatticeVal IV = Solver.getLatticeValueFor(AI);
+    LatticeVal IV = Solver.getLatticeValueFor(V);
     if (IV.isOverdefined())
       return false;
-    Const = IV.isConstant() ? IV.getConstant() : UndefValue::get(AI->getType());
+    Const = IV.isConstant() ? IV.getConstant() : UndefValue::get(V->getType());
   }
   assert(Const && "Constant is nullptr here!");
-  DEBUG(dbgs() << "  Constant: " << *Const << " = " << *AI << '\n');
+  DEBUG(dbgs() << "  Constant: " << *Const << " = " << *V << '\n');
 
   // Replaces all of the uses of a variable with uses of the constant.
-  AI->replaceAllUsesWith(Const);
+  V->replaceAllUsesWith(Const);
   return true;
 }
 
@@ -1766,11 +1765,8 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
     if (Solver.isBlockExecutable(&F.front())) {
       for (Function::arg_iterator AI = F.arg_begin(), E = F.arg_end(); AI != E;
            ++AI) {
-        if (AI->use_empty() || AI->getType()->isStructTy()) continue;
-
-        // TODO: Could use getStructLatticeValueFor to find out if the entire
-        // result is a constant and replace it entirely if so.
-
+        if (AI->use_empty())
+          continue;
         if (tryToReplaceWithConstant(Solver, &*AI))
           ++IPNumArgsElimed;
       }
@@ -1793,12 +1789,8 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
 
       for (BasicBlock::iterator BI = BB->begin(), E = BB->end(); BI != E; ) {
         Instruction *Inst = &*BI++;
-        if (Inst->getType()->isVoidTy() || Inst->getType()->isStructTy())
+        if (Inst->getType()->isVoidTy())
           continue;
-
-        // TODO: Could use getStructLatticeValueFor to find out if the entire
-        // result is a constant and replace it entirely if so.
-
         if (tryToReplaceInstWithConstant(
                 Solver, Inst,
                 !isa<CallInst>(Inst) &&

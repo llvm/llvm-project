@@ -940,6 +940,11 @@ private:
   std::function<int(const Error &)> GetExitCode;
 };
 
+/// Report a serious error, calling any installed error handler. See
+/// ErrorHandling.h.
+LLVM_ATTRIBUTE_NORETURN void report_fatal_error(Error Err,
+                                                bool gen_crash_diag = true);
+
 } // namespace llvm
 
 #endif // LLVM_SUPPORT_ERROR_H
