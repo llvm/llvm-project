@@ -71,9 +71,17 @@ INTERCEPTOR_WINAPI(void, RaiseException, void *a, void *b, void *c, void *d) {
   REAL(RaiseException)(a, b, c, d);
 }
 
-// TODO(wwchrome): Win64 has no _except_handler3/4.
-// Need to implement _C_specific_handler instead.
-#ifndef _WIN64
+
+#ifdef _WIN64
+
+INTERCEPTOR_WINAPI(int, __C_specific_handler, void *a, void *b, void *c, void *d) {  // NOLINT
+  CHECK(REAL(__C_specific_handler));
+  __asan_handle_no_return();
+  return REAL(__C_specific_handler)(a, b, c, d);
+}
+
+#else
+
 INTERCEPTOR(int, _except_handler3, void *a, void *b, void *c, void *d) {
   CHECK(REAL(_except_handler3));
   __asan_handle_no_return();
@@ -154,8 +162,9 @@ void InitializePlatformInterceptors() {
   ASAN_INTERCEPT_FUNC(CreateThread);
   ASAN_INTERCEPT_FUNC(RaiseException);
 
-// TODO(wwchrome): Win64 uses _C_specific_handler instead.
-#ifndef _WIN64
+#ifdef _WIN64
+  ASAN_INTERCEPT_FUNC(__C_specific_handler);
+#else
   ASAN_INTERCEPT_FUNC(_except_handler3);
   ASAN_INTERCEPT_FUNC(_except_handler4);
 #endif

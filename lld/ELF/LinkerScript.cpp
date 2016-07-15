@@ -311,7 +311,7 @@ template <class ELFT>
 void LinkerScript<ELFT>::addScriptedSymbols() {
   for (SectionsCommand &Cmd : Opt.Commands)
     if (Cmd.Kind == AssignmentKind)
-      if (Cmd.Name != ".")
+      if (Cmd.Name != "." && Symtab<ELFT>::X->find(Cmd.Name) == nullptr)
         Symtab<ELFT>::X->addAbsolute(Cmd.Name, STV_DEFAULT);
 }
 

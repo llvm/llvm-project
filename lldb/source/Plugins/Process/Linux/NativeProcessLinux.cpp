@@ -161,17 +161,44 @@ DecodeChildExitCode(int exit_code)
     return std::make_pair(LaunchCallSpecifier(exit_code & 0x7), exit_code >> 3);
 }
 
-    void
-    DisplayBytes (StreamString &s, void *bytes, uint32_t count)
+void
+MaybeLogLaunchInfo(const ProcessLaunchInfo &info)
+{
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
+    if (!log)
+        return;
+
+    if (const FileAction *action = info.GetFileActionForFD(STDIN_FILENO))
+        log->Printf("%s: setting STDIN to '%s'", __FUNCTION__, action->GetFileSpec().GetCString());
+    else
+        log->Printf("%s leaving STDIN as is", __FUNCTION__);
+
+    if (const FileAction *action = info.GetFileActionForFD(STDOUT_FILENO))
+        log->Printf("%s setting STDOUT to '%s'", __FUNCTION__, action->GetFileSpec().GetCString());
+    else
+        log->Printf("%s leaving STDOUT as is", __FUNCTION__);
+
+    if (const FileAction *action = info.GetFileActionForFD(STDERR_FILENO))
+        log->Printf("%s setting STDERR to '%s'", __FUNCTION__, action->GetFileSpec().GetCString());
+    else
+        log->Printf("%s leaving STDERR as is", __FUNCTION__);
+
+    int i = 0;
+    for (const char **args = info.GetArguments().GetConstArgumentVector(); *args; ++args, ++i)
+        log->Printf("%s arg %d: \"%s\"", __FUNCTION__, i, *args ? *args : "nullptr");
+}
+
+void
+DisplayBytes(StreamString &s, void *bytes, uint32_t count)
+{
+    uint8_t *ptr = (uint8_t *)bytes;
+    const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
+    for (uint32_t i = 0; i < loop_count; i++)
     {
-        uint8_t *ptr = (uint8_t *)bytes;
-        const uint32_t loop_count = std::min<uint32_t>(DEBUG_PTRACE_MAXBYTES, count);
-        for(uint32_t i=0; i<loop_count; i++)
-        {
-            s.Printf ("[%x]", *ptr);
-            ptr++;
-        }
+        s.Printf("[%x]", *ptr);
+        ptr++;
     }
+}
 
     void
     PtraceDisplayBytes(int &req, void *data, size_t data_size)
@@ -261,22 +288,6 @@ EnsureFDFlags(int fd, int flags)
     return error;
 }
 
-NativeProcessLinux::LaunchArgs::LaunchArgs(char const **argv, char const **envp, const FileSpec &stdin_file_spec,
-                                           const FileSpec &stdout_file_spec, const FileSpec &stderr_file_spec,
-                                           const FileSpec &working_dir, const ProcessLaunchInfo &launch_info)
-    : m_argv(argv),
-      m_envp(envp),
-      m_stdin_file_spec(stdin_file_spec),
-      m_stdout_file_spec(stdout_file_spec),
-      m_stderr_file_spec(stderr_file_spec),
-      m_working_dir(working_dir),
-      m_launch_info(launch_info)
-{
-}
-
-NativeProcessLinux::LaunchArgs::~LaunchArgs()
-{ }
-
 // -----------------------------------------------------------------------------
 // Public Static Methods
 // -----------------------------------------------------------------------------
@@ -303,58 +314,8 @@ NativeProcessProtocol::Launch (
         return error;
     }
 
-    const FileAction *file_action;
-
-    // Default of empty will mean to use existing open file descriptors.
-    FileSpec stdin_file_spec{};
-    FileSpec stdout_file_spec{};
-    FileSpec stderr_file_spec{};
-
-    file_action = launch_info.GetFileActionForFD (STDIN_FILENO);
-    if (file_action)
-        stdin_file_spec = file_action->GetFileSpec();
-
-    file_action = launch_info.GetFileActionForFD (STDOUT_FILENO);
-    if (file_action)
-        stdout_file_spec = file_action->GetFileSpec();
-
-    file_action = launch_info.GetFileActionForFD (STDERR_FILENO);
-    if (file_action)
-        stderr_file_spec = file_action->GetFileSpec();
-
-    if (log)
-    {
-        if (stdin_file_spec)
-            log->Printf ("NativeProcessLinux::%s setting STDIN to '%s'",
-                    __FUNCTION__, stdin_file_spec.GetCString());
-        else
-            log->Printf ("NativeProcessLinux::%s leaving STDIN as is", __FUNCTION__);
-
-        if (stdout_file_spec)
-            log->Printf ("NativeProcessLinux::%s setting STDOUT to '%s'",
-                    __FUNCTION__, stdout_file_spec.GetCString());
-        else
-            log->Printf ("NativeProcessLinux::%s leaving STDOUT as is", __FUNCTION__);
-
-        if (stderr_file_spec)
-            log->Printf ("NativeProcessLinux::%s setting STDERR to '%s'",
-                    __FUNCTION__, stderr_file_spec.GetCString());
-        else
-            log->Printf ("NativeProcessLinux::%s leaving STDERR as is", __FUNCTION__);
-    }
-
     // Create the NativeProcessLinux in launch mode.
     native_process_sp.reset (new NativeProcessLinux ());
-
-    if (log)
-    {
-        int i = 0;
-        for (const char **args = launch_info.GetArguments ().GetConstArgumentVector (); *args; ++args, ++i)
-        {
-            log->Printf ("NativeProcessLinux::%s arg %d: \"%s\"", __FUNCTION__, i, *args ? *args : "nullptr");
-            ++i;
-        }
-    }
 
     if (!native_process_sp->RegisterNativeDelegate (native_delegate))
     {
@@ -363,16 +324,7 @@ NativeProcessProtocol::Launch (
         return error;
     }
 
-    std::static_pointer_cast<NativeProcessLinux> (native_process_sp)->LaunchInferior (
-            mainloop,
-            launch_info.GetArguments ().GetConstArgumentVector (),
-            launch_info.GetEnvironmentEntries ().GetConstArgumentVector (),
-            stdin_file_spec,
-            stdout_file_spec,
-            stderr_file_spec,
-            working_dir,
-            launch_info,
-            error);
+    error = std::static_pointer_cast<NativeProcessLinux>(native_process_sp)->LaunchInferior(mainloop, launch_info);
 
     if (error.Fail ())
     {
@@ -434,31 +386,6 @@ NativeProcessLinux::NativeProcessLinux () :
 }
 
 void
-NativeProcessLinux::LaunchInferior (
-    MainLoop &mainloop,
-    const char *argv[],
-    const char *envp[],
-    const FileSpec &stdin_file_spec,
-    const FileSpec &stdout_file_spec,
-    const FileSpec &stderr_file_spec,
-    const FileSpec &working_dir,
-    const ProcessLaunchInfo &launch_info,
-    Error &error)
-{
-    m_sigchld_handle = mainloop.RegisterSignal(SIGCHLD,
-            [this] (MainLoopBase &) { SigchldHandler(); }, error);
-    if (! m_sigchld_handle)
-        return;
-
-    SetState (eStateLaunching);
-
-    std::unique_ptr<LaunchArgs> args(
-        new LaunchArgs(argv, envp, stdin_file_spec, stdout_file_spec, stderr_file_spec, working_dir, launch_info));
-
-    Launch(args.get(), error);
-}
-
-void
 NativeProcessLinux::AttachToInferior (MainLoop &mainloop, lldb::pid_t pid, Error &error)
 {
     Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
@@ -485,7 +412,7 @@ NativeProcessLinux::AttachToInferior (MainLoop &mainloop, lldb::pid_t pid, Error
 }
 
 void
-NativeProcessLinux::ChildFunc(const LaunchArgs &args)
+NativeProcessLinux::ChildFunc(const ProcessLaunchInfo &info)
 {
     // Start tracing this child that is about to exec.
     if (ptrace(PTRACE_TRACEME, 0, nullptr, nullptr) == -1)
@@ -503,30 +430,30 @@ NativeProcessLinux::ChildFunc(const LaunchArgs &args)
     }
 
     // Dup file descriptors if needed.
-    if (args.m_stdin_file_spec)
-        if (!DupDescriptor(args.m_stdin_file_spec, STDIN_FILENO, O_RDONLY))
+    if (const FileAction *action = info.GetFileActionForFD(STDIN_FILENO))
+        if (!DupDescriptor(action->GetFileSpec(), STDIN_FILENO, O_RDONLY))
             ExitChildAbnormally(eDupStdinFailed);
 
-    if (args.m_stdout_file_spec)
-        if (!DupDescriptor(args.m_stdout_file_spec, STDOUT_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
+    if (const FileAction *action = info.GetFileActionForFD(STDOUT_FILENO))
+        if (!DupDescriptor(action->GetFileSpec(), STDOUT_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
             ExitChildAbnormally(eDupStdoutFailed);
 
-    if (args.m_stderr_file_spec)
-        if (!DupDescriptor(args.m_stderr_file_spec, STDERR_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
+    if (const FileAction *action = info.GetFileActionForFD(STDERR_FILENO))
+        if (!DupDescriptor(action->GetFileSpec(), STDERR_FILENO, O_WRONLY | O_CREAT | O_TRUNC))
             ExitChildAbnormally(eDupStderrFailed);
 
     // Close everything besides stdin, stdout, and stderr that has no file
     // action to avoid leaking
     for (int fd = 3; fd < sysconf(_SC_OPEN_MAX); ++fd)
-        if (!args.m_launch_info.GetFileActionForFD(fd))
+        if (!info.GetFileActionForFD(fd))
             close(fd);
 
     // Change working directory
-    if (args.m_working_dir && 0 != ::chdir(args.m_working_dir.GetCString()))
+    if (info.GetWorkingDirectory() && 0 != ::chdir(info.GetWorkingDirectory().GetCString()))
         ExitChildAbnormally(eChdirFailed);
 
     // Disable ASLR if requested.
-    if (args.m_launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR))
+    if (info.GetFlags().Test(lldb::eLaunchFlagDisableASLR))
     {
         const int old_personality = personality(LLDB_PERSONALITY_GET_CURRENT_SETTINGS);
         if (old_personality == -1)
@@ -553,13 +480,15 @@ NativeProcessLinux::ChildFunc(const LaunchArgs &args)
     if (sigemptyset(&set) != 0 || pthread_sigmask(SIG_SETMASK, &set, nullptr) != 0)
         ExitChildAbnormally(eSetSigMaskFailed);
 
+    const char **argv = info.GetArguments().GetConstArgumentVector();
+
     // Propagate the environment if one is not supplied.
-    const char **envp = args.m_envp;
+    const char **envp = info.GetEnvironmentEntries().GetConstArgumentVector();
     if (envp == NULL || envp[0] == NULL)
         envp = const_cast<const char **>(environ);
 
     // Execute.  We should never return...
-    execve(args.m_argv[0], const_cast<char *const *>(args.m_argv), const_cast<char *const *>(envp));
+    execve(argv[0], const_cast<char *const *>(argv), const_cast<char *const *>(envp));
 
     if (errno == ETXTBSY)
     {
@@ -570,28 +499,35 @@ NativeProcessLinux::ChildFunc(const LaunchArgs &args)
         // an "adb shell" command in the fork() child before it has had a chance to exec.) Since
         // this state should clear up quickly, wait a while and then give it one more go.
         usleep(50000);
-        execve(args.m_argv[0], const_cast<char *const *>(args.m_argv), const_cast<char *const *>(envp));
+        execve(argv[0], const_cast<char *const *>(argv), const_cast<char *const *>(envp));
     }
 
     // ...unless exec fails.  In which case we definitely need to end the child here.
     ExitChildAbnormally(eExecFailed);
 }
 
-::pid_t
-NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
+Error
+NativeProcessLinux::LaunchInferior(MainLoop &mainloop, ProcessLaunchInfo &launch_info)
 {
-    assert (args && "null args");
+    Error error;
+    m_sigchld_handle = mainloop.RegisterSignal(SIGCHLD, [this](MainLoopBase &) { SigchldHandler(); }, error);
+    if (!m_sigchld_handle)
+        return error;
+
+    SetState(eStateLaunching);
 
     lldb_utility::PseudoTerminal terminal;
     const size_t err_len = 1024;
     char err_str[err_len];
     lldb::pid_t pid;
 
+    MaybeLogLaunchInfo(launch_info);
+
     if ((pid = terminal.Fork(err_str, err_len)) == static_cast<lldb::pid_t> (-1))
     {
         error.SetErrorToGenericError();
         error.SetErrorStringWithFormat("Process fork failed: %s", err_str);
-        return -1;
+        return error;
     }
 
     // Child process.
@@ -606,7 +542,7 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
         // leaking descriptors to the debugged process.
         terminal.CloseSlaveFileDescriptor();
 
-        ChildFunc(*args);
+        ChildFunc(launch_info);
     }
 
     Log *log (GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
@@ -625,7 +561,7 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
         // FIXME this could really use a new state - eStateLaunchFailure.  For now, using eStateInvalid.
         SetState (StateType::eStateInvalid);
 
-        return -1;
+        return error;
     }
     else if (WIFEXITED(status))
     {
@@ -672,7 +608,7 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
         // FIXME this could really use a new state - eStateLaunchFailure.  For now, using eStateInvalid.
         SetState (StateType::eStateInvalid);
 
-        return -1;
+        return error;
     }
     assert(WIFSTOPPED(status) && (wpid == static_cast< ::pid_t> (pid)) &&
            "Could not sync with inferior process.");
@@ -691,13 +627,14 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
         // FIXME this could really use a new state - eStateLaunchFailure.  For now, using eStateInvalid.
         SetState (StateType::eStateInvalid);
 
-        return -1;
+        return error;
     }
 
     // Release the master terminal descriptor and pass it off to the
     // NativeProcessLinux instance.  Similarly stash the inferior pid.
     m_terminal_fd = terminal.ReleaseMasterFileDescriptor();
     m_pid = pid;
+    launch_info.SetProcessID(pid);
 
     // Set the terminal fd to be in non blocking mode (it simplifies the
     // implementation of ProcessLinux::GetSTDOUT to have a non-blocking
@@ -713,7 +650,7 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
         // FIXME this could really use a new state - eStateLaunchFailure.  For now, using eStateInvalid.
         SetState (StateType::eStateInvalid);
 
-        return -1;
+        return error;
     }
 
     if (log)
@@ -732,17 +669,11 @@ NativeProcessLinux::Launch(LaunchArgs *args, Error &error)
     if (log)
     {
         if (error.Success ())
-        {
-            log->Printf ("NativeProcessLinux::%s inferior launching succeeded", __FUNCTION__);
-        }
+            log->Printf("NativeProcessLinux::%s inferior launching succeeded", __FUNCTION__);
         else
-        {
-            log->Printf ("NativeProcessLinux::%s inferior launching failed: %s",
-                __FUNCTION__, error.AsCString ());
-            return -1;
-        }
+            log->Printf("NativeProcessLinux::%s inferior launching failed: %s", __FUNCTION__, error.AsCString());
     }
-    return pid;
+    return error;
 }
 
 ::pid_t

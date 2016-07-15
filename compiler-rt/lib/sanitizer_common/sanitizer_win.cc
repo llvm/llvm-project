@@ -28,6 +28,7 @@
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_stacktrace.h"
+#include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
 
@@ -733,6 +734,9 @@ void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
   CONTEXT ctx = *(CONTEXT *)context;
   STACKFRAME64 stack_frame;
   memset(&stack_frame, 0, sizeof(stack_frame));
+
+  InitializeDbgHelpIfNeeded();
+
   size = 0;
 #if defined(_WIN64)
   int machine_type = IMAGE_FILE_MACHINE_AMD64;
