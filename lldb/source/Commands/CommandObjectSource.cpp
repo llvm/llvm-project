@@ -132,14 +132,12 @@ class CommandObjectSourceInfo : public CommandObjectParsed
     };
 
 public:
-    CommandObjectSourceInfo (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "source info",
-                            "Display source line information (as specified) based "
-                            "on the current executable's debug info.",
-                            nullptr,
-                            eCommandRequiresTarget),
-        m_options(interpreter)
+    CommandObjectSourceInfo(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "source info", "Display source line information for the current target "
+                                                          "process.  Defaults to instruction pointer in current stack "
+                                                          "frame.",
+                              nullptr, eCommandRequiresTarget),
+          m_options(interpreter)
     {
     }
 
@@ -821,15 +819,13 @@ class CommandObjectSourceList : public CommandObjectParsed
         bool show_bp_locs;
         bool reverse;
     };
- 
-public:   
-    CommandObjectSourceList(CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "source list",
-                            "Display source code (as specified) based on the current executable's debug info.",
-                            nullptr,
-                            eCommandRequiresTarget),
-        m_options (interpreter)
+
+public:
+    CommandObjectSourceList(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "source list",
+                              "Display source code for the current target process as specified by options.", nullptr,
+                              eCommandRequiresTarget),
+          m_options(interpreter)
     {
     }
 
@@ -1482,11 +1478,11 @@ CommandObjectSourceList::CommandOptions::g_option_table[] =
 // CommandObjectMultiwordSource
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordSource::CommandObjectMultiwordSource (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "source",
-                            "A set of commands for accessing source file information",
-                            "source <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordSource::CommandObjectMultiwordSource(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(
+          interpreter, "source",
+          "Commands for examining source code described by debug information for the current target process.",
+          "source <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("info",   CommandObjectSP (new CommandObjectSourceInfo (interpreter)));
     LoadSubCommand ("list",   CommandObjectSP (new CommandObjectSourceList (interpreter)));

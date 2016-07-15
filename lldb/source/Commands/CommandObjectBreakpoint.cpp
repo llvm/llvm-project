@@ -1294,18 +1294,20 @@ protected:
 class CommandObjectBreakpointDisable : public CommandObjectParsed
 {
 public:
-    CommandObjectBreakpointDisable (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "breakpoint disable",
-                            "Disable the specified breakpoint(s) without removing them.  If none are specified, disable all breakpoints.",
-                            nullptr)
+    CommandObjectBreakpointDisable(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "breakpoint disable", "Disable the specified breakpoint(s) without deleting "
+                                                                 "them.  If none are specified, disable all "
+                                                                 "breakpoints.",
+                              nullptr)
     {
-        SetHelpLong(
-"Disable the specified breakpoint(s) without removing them.  \
-If none are specified, disable all breakpoints." R"(
+        SetHelpLong("Disable the specified breakpoint(s) without deleting them.  \
+If none are specified, disable all breakpoints."
+                    R"(
 
-)" "Note: disabling a breakpoint will cause none of its locations to be hit \
-regardless of whether they are enabled or disabled.  After the sequence:" R"(
+)"
+                    "Note: disabling a breakpoint will cause none of its locations to be hit \
+regardless of whether individual locations are enabled or disabled.  After the sequence:"
+                    R"(
 
     (lldb) break disable 1
     (lldb) break enable 1.1
@@ -1315,10 +1317,10 @@ execution will NOT stop at location 1.1.  To achieve that, type:
     (lldb) break disable 1.*
     (lldb) break enable 1.1
 
-)" "The first command disables all the locations of breakpoint 1, \
-the second re-enables the first location."
-        );
-        
+)"
+                    "The first command disables all locations for breakpoint 1, \
+the second re-enables the first location.");
+
         CommandArgumentEntry arg;
         CommandObject::AddIDsArgumentData(arg, eArgTypeBreakpointID, eArgTypeBreakpointIDRange);
         // Add the entry for the first argument for this command to the object's arguments vector.
@@ -1566,7 +1568,7 @@ protected:
             }
             else
             {
-                result.AppendError ("Invalid breakpoint id.");
+                result.AppendError("Invalid breakpoint ID.");
                 result.SetStatus (eReturnStatusFailed);
             }
         }
@@ -1616,12 +1618,11 @@ public:
         eClearTypeFileAndLine
     } BreakpointClearType;
 
-    CommandObjectBreakpointClear (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "breakpoint clear", 
-                             "Clears a breakpoint or set of breakpoints in the executable.", 
-                             "breakpoint clear <cmd-options>"),
-        m_options (interpreter)
+    CommandObjectBreakpointClear(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "breakpoint clear",
+                              "Delete or disable breakpoints matching the specified source file and line.",
+                              "breakpoint clear <cmd-options>"),
+          m_options(interpreter)
     {
     }
 
@@ -1991,13 +1992,13 @@ CommandObjectBreakpointDelete::CommandOptions::g_option_table[] =
 // CommandObjectBreakpointName
 //-------------------------------------------------------------------------
 
-static OptionDefinition
-g_breakpoint_name_options[] =
-{
-    { LLDB_OPT_SET_1,   false, "name", 'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName, "Specifies a breakpoint name to use."},
-    { LLDB_OPT_SET_2,   false, "breakpoint-id", 'B', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointID,   "Specify a breakpoint id to use."},
-    { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
-        "Operate on Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
+static OptionDefinition g_breakpoint_name_options[] = {
+    {LLDB_OPT_SET_1, false, "name", 'N', OptionParser::eRequiredArgument, nullptr, nullptr, 0, eArgTypeBreakpointName,
+     "Specifies a breakpoint name to use."},
+    {LLDB_OPT_SET_2, false, "breakpoint-id", 'B', OptionParser::eRequiredArgument, nullptr, nullptr, 0,
+     eArgTypeBreakpointID, "Specify a breakpoint ID to use."},
+    {LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, nullptr, 0, eArgTypeNone,
+     "Operate on Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets."},
 };
 class BreakpointNameOptionGroup : public OptionGroup
 {
@@ -2347,11 +2348,9 @@ private:
 class CommandObjectBreakpointName : public CommandObjectMultiword
 {
 public:
-    CommandObjectBreakpointName (CommandInterpreter &interpreter) :
-        CommandObjectMultiword(interpreter,
-                                "name",
-                                "A set of commands to manage name tags for breakpoints",
-                                "breakpoint name <command> [<command-options>]")
+    CommandObjectBreakpointName(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "name", "Commands to manage name tags for breakpoints",
+                                 "breakpoint name <subcommand> [<command-options>]")
     {
         CommandObjectSP add_command_object (new CommandObjectBreakpointNameAdd (interpreter));
         CommandObjectSP delete_command_object (new CommandObjectBreakpointNameDelete (interpreter));
@@ -2370,11 +2369,10 @@ public:
 //-------------------------------------------------------------------------
 #pragma mark MultiwordBreakpoint
 
-CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter, 
-                            "breakpoint",
-                            "A set of commands for operating on breakpoints. Also see _regexp-break.",
-                            "breakpoint <command> [<command-options>]")
+CommandObjectMultiwordBreakpoint::CommandObjectMultiwordBreakpoint(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "breakpoint",
+                             "Commands for operating on breakpoints (see 'help b' for shorthand.)",
+                             "breakpoint <subcommand> [<command-options>]")
 {
     CommandObjectSP list_command_object (new CommandObjectBreakpointList (interpreter));
     CommandObjectSP enable_command_object (new CommandObjectBreakpointEnable (interpreter));
@@ -2481,7 +2479,8 @@ CommandObjectMultiwordBreakpoint::VerifyIDs (Args &args,
             else
             {
                 i = valid_ids->GetSize() + 1;
-                result.AppendErrorWithFormat ("'%d' is not a currently valid breakpoint id.\n", cur_bp_id.GetBreakpointID());
+                result.AppendErrorWithFormat("'%d' is not a currently valid breakpoint ID.\n",
+                                             cur_bp_id.GetBreakpointID());
                 result.SetStatus (eReturnStatusFailed);
             }
         }

@@ -36,7 +36,6 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Host.h"
-#include <cstdlib>
 #include <string>
 
 using namespace llvm;
@@ -83,7 +82,7 @@ ExportFixes(
 #define CLANG_RENAME_VERSION "0.0.1"
 
 static void PrintVersion() {
-  outs() << "clang-rename version " << CLANG_RENAME_VERSION << "\n";
+  outs() << "clang-rename version " << CLANG_RENAME_VERSION << '\n';
 }
 
 using namespace clang;
@@ -101,7 +100,6 @@ int main(int argc, const char **argv) {
 
   if (NewName.empty()) {
     errs() << "clang-rename: no new name provided.\n\n";
-    cl::PrintHelpMessage();
     exit(1);
   }
 
@@ -115,12 +113,14 @@ int main(int argc, const char **argv) {
   const auto &USRs = USRAction.getUSRs();
   const auto &PrevName = USRAction.getUSRSpelling();
 
-  if (PrevName.empty())
+  if (PrevName.empty()) {
     // An error should have already been printed.
     exit(1);
+  }
 
-  if (PrintName)
-    errs() << "clang-rename: found name: " << PrevName << "\n";
+  if (PrintName) {
+    errs() << "clang-rename: found name: " << PrevName << '\n';
+  }
 
   // Perform the renaming.
   rename::RenamingAction RenameAction(NewName, PrevName, USRs,

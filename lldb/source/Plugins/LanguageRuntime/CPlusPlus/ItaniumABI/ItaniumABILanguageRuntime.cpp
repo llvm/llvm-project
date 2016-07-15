@@ -410,11 +410,9 @@ protected:
 class CommandObjectMultiwordItaniumABI : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordItaniumABI (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "cplusplus",
-                            "A set of commands for operating on the C++ Language Runtime.",
-                            "cplusplus <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordItaniumABI(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "cplusplus", "Commands for operating on the C++ language runtime.",
+                                 "cplusplus <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("demangle",   CommandObjectSP (new CommandObjectMultiwordItaniumABI_Demangle (interpreter)));
     }

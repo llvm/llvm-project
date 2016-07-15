@@ -219,19 +219,18 @@ CommandObjectExpression::CommandOptions::GetDefinitions ()
     return g_option_table;
 }
 
-CommandObjectExpression::CommandObjectExpression (CommandInterpreter &interpreter) :
-    CommandObjectRaw(interpreter,
-                     "expression",
-                     "Evaluate an expression in the current program context, using user defined variables and variables currently in scope.",
-                     nullptr,
-                     eCommandProcessMustBePaused | eCommandTryTargetAPILock),
-    IOHandlerDelegate (IOHandlerDelegate::Completion::Expression),
-    m_option_group (interpreter),
-    m_format_options (eFormatDefault),
-    m_repl_option (LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false, true),
-    m_command_options (),
-    m_expr_line_count (0),
-    m_expr_lines ()
+CommandObjectExpression::CommandObjectExpression(CommandInterpreter &interpreter)
+    : CommandObjectRaw(
+          interpreter, "expression",
+          "Evaluate an expression on the current thread.  Displays any returned value with LLDB's default formatting.",
+          nullptr, eCommandProcessMustBePaused | eCommandTryTargetAPILock),
+      IOHandlerDelegate(IOHandlerDelegate::Completion::Expression),
+      m_option_group(interpreter),
+      m_format_options(eFormatDefault),
+      m_repl_option(LLDB_OPT_SET_1, false, "repl", 'r', "Drop into REPL", false, true),
+      m_command_options(),
+      m_expr_line_count(0),
+      m_expr_lines()
 {
     SetHelpLong(
 R"(

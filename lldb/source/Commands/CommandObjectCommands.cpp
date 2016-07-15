@@ -235,12 +235,10 @@ CommandObjectCommandsHistory::CommandOptions::g_option_table[] =
 class CommandObjectCommandsSource : public CommandObjectParsed
 {
 public:
-    CommandObjectCommandsSource(CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "command source",
-                            "Read in debugger commands from the file <filename> and execute them.",
-                            nullptr),
-        m_options (interpreter)
+    CommandObjectCommandsSource(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "command source", "Read and execute LLDB commands from the file <filename>.",
+                              nullptr),
+          m_options(interpreter)
     {
         CommandArgumentEntry arg;
         CommandArgumentData file_arg;
@@ -508,13 +506,11 @@ public:
         return &m_option_group;
     }
 
-    CommandObjectCommandsAlias (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "command alias",
-                         "Allow users to define their own debugger command abbreviations.",
-                         nullptr),
-        m_option_group(interpreter),
-        m_command_options()
+    CommandObjectCommandsAlias(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "command alias", "Define a custom command in terms of an existing command.",
+                           nullptr),
+          m_option_group(interpreter),
+          m_command_options()
     {
         m_option_group.Append(&m_command_options);
         m_option_group.Finalize();
@@ -924,11 +920,9 @@ CommandObjectCommandsAlias::CommandOptions::g_option_table[] =
 class CommandObjectCommandsUnalias : public CommandObjectParsed
 {
 public:
-    CommandObjectCommandsUnalias (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "command unalias",
-                            "Allow the user to remove/delete a user-defined command abbreviation.",
-                            nullptr)
+    CommandObjectCommandsUnalias(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "command unalias",
+                              "Delete one or more custom commands defined by 'command alias'.", nullptr)
     {
         CommandArgumentEntry arg;
         CommandArgumentData alias_arg;
@@ -1014,11 +1008,9 @@ protected:
 class CommandObjectCommandsDelete : public CommandObjectParsed
 {
 public:
-    CommandObjectCommandsDelete (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "command delete",
-                            "Allow the user to delete user-defined regular expression, python or multi-word commands.",
-                            nullptr)
+    CommandObjectCommandsDelete(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "command delete",
+                              "Delete one or more custom commands defined by 'command regex'.", nullptr)
     {
         CommandArgumentEntry arg;
         CommandArgumentData alias_arg;
@@ -1075,7 +1067,9 @@ protected:
         }
         else
         {
-            result.AppendErrorWithFormat ("must call '%s' with one or more valid user defined regular expression, python or multi-word command names", GetCommandName ());
+            result.AppendErrorWithFormat(
+                "must call '%s' with one or more valid user defined regular expression command names",
+                GetCommandName());
             result.SetStatus (eReturnStatusFailed);
         }
 
@@ -1093,13 +1087,12 @@ class CommandObjectCommandsAddRegex :
     public IOHandlerDelegateMultiline
 {
 public:
-    CommandObjectCommandsAddRegex (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                       "command regex",
-                       "Allow the user to create a regular expression command.",
-                       "command regex <cmd-name> [s/<regex>/<subst>/ ...]"),
-        IOHandlerDelegateMultiline ("", IOHandlerDelegate::Completion::LLDBCommand),
-        m_options (interpreter)
+    CommandObjectCommandsAddRegex(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "command regex",
+                              "Define a custom command in terms of existing commands by matching regular expressions.",
+                              "command regex <cmd-name> [s/<regex>/<subst>/ ...]"),
+          IOHandlerDelegateMultiline("", IOHandlerDelegate::Completion::LLDBCommand),
+          m_options(interpreter)
     {
         SetHelpLong(R"(
 )" "This command allows the user to create powerful regular expression commands \
@@ -2266,11 +2259,10 @@ protected:
 class CommandObjectMultiwordCommandsScript : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordCommandsScript (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "command script",
-                            "A set of commands for managing or customizing script commands.",
-                            "command script <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordCommandsScript(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "command script",
+                                 "Commands for managing custom commands implemented by interpreter scripts.",
+                                 "command script <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("add",    CommandObjectSP (new CommandObjectCommandsScriptAdd (interpreter)));
         LoadSubCommand ("delete", CommandObjectSP (new CommandObjectCommandsScriptDelete (interpreter)));
@@ -2288,11 +2280,9 @@ public:
 // CommandObjectMultiwordCommands
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordCommands::CommandObjectMultiwordCommands (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "command",
-                            "A set of commands for managing or customizing the debugger commands.",
-                            "command <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordCommands::CommandObjectMultiwordCommands(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "command", "Commands for managing custom LLDB commands.",
+                             "command <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("source",  CommandObjectSP (new CommandObjectCommandsSource (interpreter)));
     LoadSubCommand ("alias",   CommandObjectSP (new CommandObjectCommandsAlias (interpreter)));

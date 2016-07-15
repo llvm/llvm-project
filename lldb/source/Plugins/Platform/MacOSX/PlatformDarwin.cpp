@@ -1695,3 +1695,28 @@ PlatformDarwin::LocateExecutable (const char *basename)
 
     return FileSpec();
 }
+
+lldb_private::Error
+PlatformDarwin::LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info)
+{
+    // Starting in Fall 2016 OSes, NSLog messages only get mirrored to stderr
+    // if the OS_ACTIVITY_DT_MODE environment variable is set.  (It doesn't
+    // require any specific value; rather, it just needs to exist).
+    // We will set it here as long as the IDE_DISABLED_OS_ACTIVITY_DT_MODE flag
+    // is not set.  Xcode makes use of IDE_DISABLED_OS_ACTIVITY_DT_MODE to tell
+    // LLDB *not* to muck with the OS_ACTIVITY_DT_MODE flag when they
+    // specifically want it unset.
+    const char *disable_env_var = "IDE_DISABLED_OS_ACTIVITY_DT_MODE";
+    auto &env_vars = launch_info.GetEnvironmentEntries();
+    if (!env_vars.ContainsEnvironmentVariable(disable_env_var))
+    {
+        // We want to make sure that OS_ACTIVITY_DT_MODE is set so that
+        // we get os_log and NSLog messages mirrored to the target process
+        // stderr.
+        if (!env_vars.ContainsEnvironmentVariable("OS_ACTIVITY_DT_MODE"))
+            env_vars.AppendArgument("OS_ACTIVITY_DT_MODE=enable");
+    }
+
+    // Let our parent class do the real launching.
+    return PlatformPOSIX::LaunchProcess(launch_info);
+}

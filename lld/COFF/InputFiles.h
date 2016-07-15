@@ -13,7 +13,7 @@
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/LTO/LTOModule.h"
+#include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/StringSaver.h"
@@ -104,7 +104,7 @@ public:
 
   // All symbols returned by ArchiveFiles are of Lazy type.
   std::vector<SymbolBody *> &getSymbols() override {
-    llvm_unreachable("internal error");
+    llvm_unreachable("internal fatal");
   }
 
 private:

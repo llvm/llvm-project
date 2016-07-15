@@ -724,22 +724,20 @@ class CommandObjectTargetVariable : public CommandObjectParsed
     static const uint32_t SHORT_OPTION_SHLB = 0x73686c62;   // 'shlb'
 
 public:
-    CommandObjectTargetVariable (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "target variable",
-                            "Read global variable(s) prior to, or while running your binary.",
-                            nullptr,
-                            eCommandRequiresTarget),
-        m_option_group (interpreter),
-        m_option_variable (false), // Don't include frame options
-        m_option_format (eFormatDefault),
-        m_option_compile_units    (LLDB_OPT_SET_1, false, "file",
-                                   SHORT_OPTION_FILE, 0, eArgTypeFilename,
-                                   "A basename or fullpath to a file that contains global variables. This option can be specified multiple times."),
-        m_option_shared_libraries (LLDB_OPT_SET_1, false, "shlib",
-                                   SHORT_OPTION_SHLB, 0, eArgTypeFilename,
-                                   "A basename or fullpath to a shared library to use in the search for global variables. This option can be specified multiple times."),
-        m_varobj_options()
+    CommandObjectTargetVariable(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "target variable",
+                              "Read global variables for the current target, before or while running a process.",
+                              nullptr, eCommandRequiresTarget),
+          m_option_group(interpreter),
+          m_option_variable(false), // Don't include frame options
+          m_option_format(eFormatDefault),
+          m_option_compile_units(LLDB_OPT_SET_1, false, "file", SHORT_OPTION_FILE, 0, eArgTypeFilename,
+                                 "A basename or fullpath to a file that contains global variables. This option can be "
+                                 "specified multiple times."),
+          m_option_shared_libraries(LLDB_OPT_SET_1, false, "shlib", SHORT_OPTION_SHLB, 0, eArgTypeFilename,
+                                    "A basename or fullpath to a shared library to use in the search for global "
+                                    "variables. This option can be specified multiple times."),
+          m_varobj_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData var_name_arg;
@@ -2685,8 +2683,7 @@ public:
     //------------------------------------------------------------------
     CommandObjectTargetModulesDump(CommandInterpreter &interpreter)
         : CommandObjectMultiword(
-              interpreter, "target modules dump",
-              "A set of commands for dumping information about one or more target modules.",
+              interpreter, "target modules dump", "Commands for dumping information about one or more target modules.",
               "target modules dump [headers|symtab|sections|symfile|line-table] [<file1> <file2> ...]")
     {
         LoadSubCommand("objfile", CommandObjectSP(new CommandObjectTargetModulesDumpObjfile(interpreter)));
@@ -4336,11 +4333,10 @@ CommandObjectTargetModulesLookup::CommandOptions::g_option_table[] =
 class CommandObjectTargetModulesImageSearchPaths : public CommandObjectMultiword
 {
 public:
-    CommandObjectTargetModulesImageSearchPaths (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter, 
-                            "target modules search-paths",
-                            "A set of commands for operating on debugger target image search paths.",
-                            "target modules search-paths <subcommand> [<subcommand-options>]")
+    CommandObjectTargetModulesImageSearchPaths(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "target modules search-paths",
+                                 "Commands for managing module search paths for a target.",
+                                 "target modules search-paths <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("add",     CommandObjectSP (new CommandObjectTargetModulesSearchPathsAdd (interpreter)));
         LoadSubCommand ("clear",   CommandObjectSP (new CommandObjectTargetModulesSearchPathsClear (interpreter)));
@@ -4364,11 +4360,10 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    CommandObjectTargetModules(CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter,
-                                "target modules",
-                                "A set of commands for accessing information for one or more target modules.",
-                                "target modules <sub-command> ...")
+    CommandObjectTargetModules(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "target modules",
+                                 "Commands for accessing information for one or more target modules.",
+                                 "target modules <sub-command> ...")
     {
         LoadSubCommand ("add",          CommandObjectSP (new CommandObjectTargetModulesAdd (interpreter)));
         LoadSubCommand ("load",         CommandObjectSP (new CommandObjectTargetModulesLoad (interpreter)));
@@ -4822,11 +4817,9 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    CommandObjectTargetSymbols(CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter,
-                            "target symbols",
-                            "A set of commands for adding and managing debug symbol files.",
-                            "target symbols <sub-command> ...")
+    CommandObjectTargetSymbols(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "target symbols", "Commands for adding and managing debug symbol files.",
+                                 "target symbols <sub-command> ...")
     {
         LoadSubCommand ("add", CommandObjectSP (new CommandObjectTargetSymbolsAdd (interpreter)));
     }
@@ -5403,11 +5396,10 @@ protected:
 class CommandObjectMultiwordTargetStopHooks : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordTargetStopHooks (CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter, 
-                                "target stop-hook",
-                                "A set of commands for operating on debugger target stop-hooks.",
-                                "target stop-hook <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordTargetStopHooks(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "target stop-hook",
+                                 "Commands for operating on debugger target stop-hooks.",
+                                 "target stop-hook <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("add",      CommandObjectSP (new CommandObjectTargetStopHookAdd (interpreter)));
         LoadSubCommand ("delete",   CommandObjectSP (new CommandObjectTargetStopHookDelete (interpreter)));
@@ -5433,11 +5425,9 @@ public:
 // CommandObjectMultiwordTarget
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordTarget::CommandObjectMultiwordTarget (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "target",
-                            "A set of commands for operating on debugger targets.",
-                            "target <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordTarget::CommandObjectMultiwordTarget(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "target", "Commands for operating on debugger targets.",
+                             "target <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("create",    CommandObjectSP (new CommandObjectTargetCreate (interpreter)));
     LoadSubCommand ("delete",    CommandObjectSP (new CommandObjectTargetDelete (interpreter)));

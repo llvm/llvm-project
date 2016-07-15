@@ -199,7 +199,7 @@ std::unique_ptr<InputFile> Lazy::getMember() {
   else if (Magic == file_magic::bitcode)
     Obj.reset(new BitcodeFile(MBRef));
   else
-    error(Twine(File->getName()) + ": unknown file type");
+    fatal("unknown file type: " + File->getName());
 
   Obj->setParentName(File->getName());
   return Obj;

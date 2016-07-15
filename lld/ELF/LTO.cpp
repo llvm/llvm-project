@@ -25,7 +25,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/LTO/UpdateCompilerUsed.h"
+#include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/StringSaver.h"

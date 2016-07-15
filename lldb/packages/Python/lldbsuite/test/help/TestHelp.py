@@ -82,7 +82,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_version(self):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",
-            substrs = ['Show version of LLDB debugger.'])
+            substrs = ['Show the LLDB debugger version.'])
         version_str = self.version_number_string()
         import re
         match = re.match('[0-9]+', version_str)

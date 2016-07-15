@@ -40,8 +40,7 @@ void error(const Twine &Msg) {
 }
 
 void error(std::error_code EC, const Twine &Prefix) {
-  if (EC)
-    error(Prefix + ": " + EC.message());
+  error(Prefix + ": " + EC.message());
 }
 
 void fatal(const Twine &Msg) {

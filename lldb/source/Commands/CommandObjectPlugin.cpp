@@ -99,11 +99,9 @@ protected:
     }
 };
 
-CommandObjectPlugin::CommandObjectPlugin (CommandInterpreter &interpreter) :
-CommandObjectMultiword (interpreter,
-                        "plugin",
-                        "A set of commands for managing or customizing plugin commands.",
-                        "plugin <subcommand> [<subcommand-options>]")
+CommandObjectPlugin::CommandObjectPlugin(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "plugin", "Commands for managing LLDB plugins.",
+                             "plugin <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("load",  CommandObjectSP (new CommandObjectPluginLoad (interpreter)));
 }
