@@ -54,6 +54,7 @@ The currently supported control are
   * `daz_opt` - subnormal values consumed and produced may be flushed to zero
   * `correctly_rounded_sqrt32` - float square root must be correctly rounded
   * `amd_opt` - use AMD device specific instructions
+  * `ISA_version` - an integer representation of the ISA version of the target device
 
 ### Versioning
 
