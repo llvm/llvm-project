@@ -21,7 +21,8 @@ namespace llvm {
 class MipsSEDAGToDAGISel : public MipsDAGToDAGISel {
 
 public:
-  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM) : MipsDAGToDAGISel(TM) {}
+  explicit MipsSEDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+      : MipsDAGToDAGISel(TM, OL) {}
 
 private:
 
@@ -131,8 +132,8 @@ private:
                                     std::vector<SDValue> &OutOps) override;
 };
 
-FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM);
-
+FunctionPass *createMipsSEISelDag(MipsTargetMachine &TM,
+                                  CodeGenOpt::Level OptLevel);
 }
 
 #endif

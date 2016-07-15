@@ -11044,6 +11044,10 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
     }
   }
 
+  // Bail if the shuffle mask doesn't cross 128-bit lanes.
+  if (!is128BitLaneCrossingShuffleMask(VT, Mask))
+    return SDValue();
+
   // Bail if we already have a repeated lane shuffle mask.
   SmallVector<int, 8> RepeatedShuffleMask;
   if (is128BitLaneRepeatedShuffleMask(VT, Mask, RepeatedShuffleMask))
@@ -11055,52 +11059,89 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
   int NumSubLanes = NumLanes * SubLaneScale;
   int NumSubLaneElts = NumLaneElts / SubLaneScale;
 
-  // Check that all the sources are coming from the same lane and see if we
-  // can form a repeating shuffle mask (local to each lane). At the same time,
+  // Check that all the sources are coming from the same lane and see if we can
+  // form a repeating shuffle mask (local to each sub-lane). At the same time,
   // determine the source sub-lane for each destination sub-lane.
   int TopSrcSubLane = -1;
-  SmallVector<int, 8> RepeatedLaneMask((unsigned)NumLaneElts, -1);
   SmallVector<int, 8> Dst2SrcSubLanes((unsigned)NumSubLanes, -1);
-  for (int i = 0; i != NumElts; ++i) {
-    int M = Mask[i];
-    if (M < 0)
+  SmallVector<int, 8> RepeatedSubLaneMasks[2] = {
+      SmallVector<int, 8>((unsigned)NumSubLaneElts, SM_SentinelUndef),
+      SmallVector<int, 8>((unsigned)NumSubLaneElts, SM_SentinelUndef)};
+
+  for (int DstSubLane = 0; DstSubLane != NumSubLanes; ++DstSubLane) {
+    // Extract the sub-lane mask, check that it all comes from the same lane
+    // and normalize the mask entries to come from the first lane.
+    int SrcLane = -1;
+    SmallVector<int, 8> SubLaneMask((unsigned)NumSubLaneElts, -1);
+    for (int Elt = 0; Elt != NumSubLaneElts; ++Elt) {
+      int M = Mask[(DstSubLane * NumSubLaneElts) + Elt];
+      if (M < 0)
+        continue;
+      int Lane = (M % NumElts) / NumLaneElts;
+      if ((0 <= SrcLane) && (SrcLane != Lane))
+        return SDValue();
+      SrcLane = Lane;
+      int LocalM = (M % NumLaneElts) + (M < NumElts ? 0 : NumElts);
+      SubLaneMask[Elt] = LocalM;
+    }
+
+    // Whole sub-lane is UNDEF.
+    if (SrcLane < 0)
       continue;
-    assert(0 <= M && M < 2 * NumElts);
 
-    // Check that the local mask index is the same for every lane. We always do
-    // this with 128-bit lanes to match in is128BitLaneRepeatedShuffleMask.
-    int LocalM = M < NumElts ? (M % NumLaneElts) : (M % NumLaneElts) + NumElts;
-    int &RepeatM = RepeatedLaneMask[i % NumLaneElts];
-    if (0 <= RepeatM && RepeatM != LocalM)
+    // Attempt to match against the candidate repeated sub-lane masks.
+    for (int SubLane = 0; SubLane != SubLaneScale; ++SubLane) {
+      auto MatchMasks = [NumSubLaneElts](ArrayRef<int> M1, ArrayRef<int> M2) {
+        for (int i = 0; i != NumSubLaneElts; ++i) {
+          if (M1[i] < 0 || M2[i] < 0)
+            continue;
+          if (M1[i] != M2[i])
+            return false;
+        }
+        return true;
+      };
+
+      auto &RepeatedSubLaneMask = RepeatedSubLaneMasks[SubLane];
+      if (!MatchMasks(SubLaneMask, RepeatedSubLaneMask))
+        continue;
+
+      // Merge the sub-lane mask into the matching repeated sub-lane mask.
+      for (int i = 0; i != NumSubLaneElts; ++i) {
+        int M = SubLaneMask[i];
+        if (M < 0)
+          continue;
+        assert((RepeatedSubLaneMask[i] < 0 || RepeatedSubLaneMask[i] == M) &&
+               "Unexpected mask element");
+        RepeatedSubLaneMask[i] = M;
+      }
+
+      // Track the top most source sub-lane - by setting the remaining to UNDEF
+      // we can greatly simplify shuffle matching.
+      int SrcSubLane = (SrcLane * SubLaneScale) + SubLane;
+      TopSrcSubLane = std::max(TopSrcSubLane, SrcSubLane);
+      Dst2SrcSubLanes[DstSubLane] = SrcSubLane;
+      break;
+    }
+
+    // Bail if we failed to find a matching repeated sub-lane mask.
+    if (Dst2SrcSubLanes[DstSubLane] < 0)
       return SDValue();
-    RepeatM = LocalM;
-
-    // Check that the whole of each destination sub-lane comes from the same
-    // sub-lane, we need to calculate the source based off where the repeated
-    // lane mask will have left it.
-    int SrcLane = (M % NumElts) / NumLaneElts;
-    int SrcSubLane = (SrcLane * SubLaneScale) +
-                     ((i % NumLaneElts) / NumSubLaneElts);
-    int &Dst2SrcSubLane = Dst2SrcSubLanes[i / NumSubLaneElts];
-    if (0 <= Dst2SrcSubLane && SrcSubLane != Dst2SrcSubLane)
-      return SDValue();
-    Dst2SrcSubLane = SrcSubLane;
-
-    // Track the top most source sub-lane - by setting the remaining to UNDEF
-    // we can greatly simplify shuffle matching.
-    TopSrcSubLane = std::max(TopSrcSubLane, SrcSubLane);
   }
   assert(0 <= TopSrcSubLane && TopSrcSubLane < NumSubLanes &&
          "Unexpected source lane");
 
   // Create a repeating shuffle mask for the entire vector.
   SmallVector<int, 8> RepeatedMask((unsigned)NumElts, -1);
-  for (int i = 0, e = ((TopSrcSubLane + 1) * NumSubLaneElts); i != e; ++i) {
-    int M = RepeatedLaneMask[i % NumLaneElts];
-    if (M < 0)
-      continue;
-    int Lane = i / NumLaneElts;
-    RepeatedMask[i] = M + (Lane * NumLaneElts);
+  for (int SubLane = 0; SubLane <= TopSrcSubLane; ++SubLane) {
+    int Lane = SubLane / SubLaneScale;
+    auto &RepeatedSubLaneMask = RepeatedSubLaneMasks[SubLane % SubLaneScale];
+    for (int Elt = 0; Elt != NumSubLaneElts; ++Elt) {
+      int M = RepeatedSubLaneMask[Elt];
+      if (M < 0)
+        continue;
+      int Idx = (SubLane * NumSubLaneElts) + Elt;
+      RepeatedMask[Idx] = M + (Lane * NumLaneElts);
+    }
   }
   SDValue RepeatedShuffle = DAG.getVectorShuffle(VT, DL, V1, V2, RepeatedMask);
 
@@ -20549,7 +20590,7 @@ static SDValue LowerXALUO(SDValue Op, SelectionDAG &DAG) {
     DAG.getNode(X86ISD::SETCC, DL, MVT::i8,
                 DAG.getConstant(Cond, DL, MVT::i32),
                 SDValue(Sum.getNode(), 1));
-  
+
   if (N->getValueType(1) == MVT::i1) {
     SetCC = DAG.getNode(ISD::AssertZext, DL, MVT::i8, SetCC,
                         DAG.getValueType(MVT::i1));
@@ -25017,11 +25058,11 @@ static bool matchBinaryVectorShuffle(MVT SrcVT, ArrayRef<int> Mask,
 /// for this operation, or into a PSHUFB instruction which is a fully general
 /// instruction but should only be used to replace chains over a certain depth.
 static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
-                                   ArrayRef<int> Mask, int Depth,
+                                   ArrayRef<int> BaseMask, int Depth,
                                    bool HasVariableMask, SelectionDAG &DAG,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const X86Subtarget &Subtarget) {
-  assert(!Mask.empty() && "Cannot combine an empty shuffle mask!");
+  assert(!BaseMask.empty() && "Cannot combine an empty shuffle mask!");
 
   // Find the operand that enters the chain. Note that multiple uses are OK
   // here, we're not going to remove the operand we find.
@@ -25033,23 +25074,24 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
 
   SDValue Res;
 
-  unsigned NumMaskElts = Mask.size();
-  if (NumMaskElts == 1) {
-    assert(Mask[0] == 0 && "Invalid shuffle index found!");
+  unsigned NumBaseMaskElts = BaseMask.size();
+  if (NumBaseMaskElts == 1) {
+    assert(BaseMask[0] == 0 && "Invalid shuffle index found!");
     DCI.CombineTo(Root.getNode(), DAG.getBitcast(RootVT, Input),
                   /*AddTo*/ true);
     return true;
   }
 
   unsigned RootSizeInBits = RootVT.getSizeInBits();
-  unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
+  unsigned BaseMaskEltSizeInBits = RootSizeInBits / NumBaseMaskElts;
 
   // Don't combine if we are a AVX512/EVEX target and the mask element size
   // is different from the root element size - this would prevent writemasks
   // from being reused.
+  // TODO - this currently prevents all lane shuffles from occurring.
   // TODO - check for writemasks usage instead of always preventing combining.
   // TODO - attempt to narrow Mask back to writemask size.
-  if (RootVT.getScalarSizeInBits() != MaskEltSizeInBits &&
+  if (RootVT.getScalarSizeInBits() != BaseMaskEltSizeInBits &&
       (RootSizeInBits == 512 ||
        (Subtarget.hasVLX() && RootSizeInBits >= 128))) {
     return false;
@@ -25058,16 +25100,15 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
   // TODO - handle 128/256-bit lane shuffles of 512-bit vectors.
 
   // Handle 128-bit lane shuffles of 256-bit vectors.
-  // TODO - handle blend with zero cases.
-  if (VT.is256BitVector() && Mask.size() == 2 &&
-      !isSequentialOrUndefOrZeroInRange(Mask, 0, 2, 0)) {
+  if (VT.is256BitVector() && NumBaseMaskElts == 2 &&
+      !isSequentialOrUndefOrZeroInRange(BaseMask, 0, 2, 0)) {
     if (Depth == 1 && Root.getOpcode() == X86ISD::VPERM2X128)
       return false; // Nothing to do!
     MVT ShuffleVT = (VT.isFloatingPoint() || !Subtarget.hasAVX2() ? MVT::v4f64
                                                                   : MVT::v4i64);
     unsigned PermMask = 0;
-    PermMask |= ((Mask[0] < 0 ? 0x8 : (Mask[0] & 1)) << 0);
-    PermMask |= ((Mask[1] < 0 ? 0x8 : (Mask[1] & 1)) << 4);
+    PermMask |= ((BaseMask[0] < 0 ? 0x8 : (BaseMask[0] & 1)) << 0);
+    PermMask |= ((BaseMask[1] < 0 ? 0x8 : (BaseMask[1] & 1)) << 4);
 
     Res = DAG.getBitcast(ShuffleVT, Input);
     DCI.AddToWorklist(Res.getNode());
@@ -25080,8 +25121,19 @@ static bool combineX86ShuffleChain(SDValue Input, SDValue Root,
     return true;
   }
 
-  if (MaskEltSizeInBits > 64)
-    return false;
+  // For masks that have been widened to 128-bit elements or more,
+  // narrow back down to 64-bit elements.
+  SmallVector<int, 64> Mask;
+  if (BaseMaskEltSizeInBits > 64) {
+    assert((BaseMaskEltSizeInBits % 64) == 0 && "Illegal mask size");
+    int MaskScale = BaseMaskEltSizeInBits / 64;
+    scaleShuffleMask(MaskScale, BaseMask, Mask);
+  } else {
+    Mask = SmallVector<int, 64>(BaseMask.begin(), BaseMask.end());
+  }
+
+  unsigned NumMaskElts = Mask.size();
+  unsigned MaskEltSizeInBits = RootSizeInBits / NumMaskElts;
 
   // Determine the effective mask value type.
   bool FloatDomain =
@@ -31000,6 +31052,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::MOVSS:
   case X86ISD::MOVSD:
   case X86ISD::VPPERM:
+  case X86ISD::VPERMI:
   case X86ISD::VPERMV:
   case X86ISD::VPERMV3:
   case X86ISD::VPERMIL2:

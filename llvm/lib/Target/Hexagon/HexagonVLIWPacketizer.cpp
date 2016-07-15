@@ -1248,7 +1248,7 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       RC = HRI->getMinimalPhysRegClass(DepReg);
     }
 
-    if (I->isCall() || I->isReturn()) {
+    if (I->isCall() || I->isReturn() || HII->isTailCall(I)) {
       if (!isRegDependence(DepType))
         continue;
       if (!isCallDependent(I, DepType, SUJ->Succs[i].getReg()))

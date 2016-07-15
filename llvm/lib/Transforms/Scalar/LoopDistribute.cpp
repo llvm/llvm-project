@@ -773,7 +773,7 @@ public:
     // failed.
     if (Forced)
       Ctx.diagnose(DiagnosticInfoOptimizationFailure(
-          *F, L->getStartLoc(), "loop not disributed: failed "
+          *F, L->getStartLoc(), "loop not distributed: failed "
                                 "explicitly specified loop distribution"));
 
     return false;

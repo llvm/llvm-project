@@ -6662,6 +6662,10 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
 
     unsigned int Arch = MachOOF->getArch();
 
+    // Skip all symbols if this is a stubs file.
+    if (Bytes.size() == 0)
+      return;
+
     // Disassemble symbol by symbol.
     for (unsigned SymIdx = 0; SymIdx != Symbols.size(); SymIdx++) {
       Expected<StringRef> SymNameOrErr = Symbols[SymIdx].getName();
@@ -6704,11 +6708,13 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         outs() << "-dis-symname: __mh_execute_header not in any section\n";
         return;
       }
-      // When this code is trying to disassemble a symbol at a time and in the case
-      // there is only the __mh_execute_header symbol left as in a stripped
-      // executable, we need to deal with this by ignoring this symbol so the whole
-      // section is disassembled and this symbol is then not displayed.
-      if (SymName == "__mh_execute_header")
+      // When this code is trying to disassemble a symbol at a time and in the
+      // case there is only the __mh_execute_header symbol left as in a stripped
+      // executable, we need to deal with this by ignoring this symbol so the
+      // whole section is disassembled and this symbol is then not displayed.
+      if (SymName == "__mh_execute_header" || SymName == "__mh_dylib_header" ||
+          SymName == "__mh_bundle_header" || SymName == "__mh_object_header" ||
+          SymName == "__mh_preload_header" || SymName == "__mh_dylinker_header")
         continue;
 
       // If we are only disassembling one symbol see if this is that symbol.
@@ -6716,9 +6722,16 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         continue;
 
       // Start at the address of the symbol relative to the section's address.
+      uint64_t SectSize = Sections[SectIdx].getSize();
       uint64_t Start = Symbols[SymIdx].getValue();
       uint64_t SectionAddress = Sections[SectIdx].getAddress();
       Start -= SectionAddress;
+
+      if (Start > SectSize) {
+        outs() << "section data ends, " << SymName
+               << " lies outside valid range\n";
+        return;
+      }
 
       // Stop disassembling either at the beginning of the next symbol or at
       // the end of the section.
@@ -6745,8 +6758,7 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         ++NextSymIdx;
       }
 
-      uint64_t SectSize = Sections[SectIdx].getSize();
-      uint64_t End = containsNextSym ? NextSym : SectSize;
+      uint64_t End = containsNextSym ? std::min(NextSym, SectSize) : SectSize;
       uint64_t Size;
 
       symbolTableWorked = true;

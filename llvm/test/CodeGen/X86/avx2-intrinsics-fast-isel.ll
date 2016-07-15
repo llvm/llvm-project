@@ -493,7 +493,7 @@ define <4 x i64> @test_mm256_broadcastsi128_si256(<4 x i64> %a0) {
 ;
 ; X64-LABEL: test_mm256_broadcastsi128_si256:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; X64-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; X64-NEXT:    retq
   %res = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i64> %res

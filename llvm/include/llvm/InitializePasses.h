@@ -175,7 +175,7 @@ void initializeLoadStoreVectorizerPass(PassRegistry&);
 void initializeLocalStackSlotPassPass(PassRegistry&);
 void initializeLoopAccessLegacyAnalysisPass(PassRegistry&);
 void initializeLoopDataPrefetchPass(PassRegistry&);
-void initializeLoopDeletionPass(PassRegistry&);
+void initializeLoopDeletionLegacyPassPass(PassRegistry&);
 void initializeLoopDistributePass(PassRegistry&);
 void initializeLoopExtractorPass(PassRegistry&);
 void initializeLoopIdiomRecognizeLegacyPassPass(PassRegistry&);

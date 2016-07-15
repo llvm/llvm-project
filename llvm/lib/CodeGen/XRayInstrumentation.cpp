@@ -93,4 +93,4 @@ bool XRayInstrumentation::runOnMachineFunction(MachineFunction &MF) {
 char XRayInstrumentation::ID = 0;
 char &llvm::XRayInstrumentationID = XRayInstrumentation::ID;
 INITIALIZE_PASS(XRayInstrumentation, "xray-instrumentation", "Insert XRay ops",
-                false, false);
+                false, false)

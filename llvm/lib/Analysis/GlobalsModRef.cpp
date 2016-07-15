@@ -498,7 +498,7 @@ void GlobalsAAResult::AnalyzeCallGraph(CallGraph &CG, Module &M) {
           // Can't do better than that!
         } else if (F->onlyReadsMemory()) {
           FI.addModRefInfo(MRI_Ref);
-          if (!F->isIntrinsic())
+          if (!F->isIntrinsic() && !F->onlyAccessesArgMemory())
             // This function might call back into the module and read a global -
             // consider every global as possibly being read by this function.
             FI.setMayReadAnyGlobal();

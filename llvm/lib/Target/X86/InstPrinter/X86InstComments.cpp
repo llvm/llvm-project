@@ -944,6 +944,12 @@ bool llvm::EmitAnyX86InstComments(const MCInst *MI, raw_ostream &OS,
     Src2Name = getRegName(MI->getOperand(2).getReg());
     break;
 
+  case X86::VBROADCASTF128:
+  case X86::VBROADCASTI128:
+    DecodeSubVectorBroadcast(MVT::v4f64, MVT::v2f64, ShuffleMask);
+    DestName = getRegName(MI->getOperand(0).getReg());
+    break;
+
   CASE_PMOVZX(PMOVZXBW, r)
   CASE_PMOVZX(PMOVZXBD, r)
   CASE_PMOVZX(PMOVZXBQ, r)

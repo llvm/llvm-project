@@ -1,6 +1,7 @@
 ; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -S | FileCheck %s
 ; RUN: opt < %s -loop-vectorize -force-vector-interleave=1 -force-vector-width=2 -instcombine -S | FileCheck %s --check-prefix=IND
 ; RUN: opt < %s -loop-vectorize -force-vector-interleave=2 -force-vector-width=2 -instcombine -S | FileCheck %s --check-prefix=UNROLL
+; RUN: opt < %s -loop-vectorize -force-vector-interleave=2 -force-vector-width=2 -S | FileCheck %s --check-prefix=UNROLL-NO-IC
 ; RUN: opt < %s -loop-vectorize -force-vector-interleave=2 -force-vector-width=4 -enable-interleaved-mem-accesses -instcombine -S | FileCheck %s --check-prefix=INTERLEAVE
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
@@ -73,6 +74,26 @@ loopexit:
 ; for (int i = 0; i < n; ++i)
 ;   sum += a[i];
 ;
+; CHECK-LABEL: @scalarize_induction_variable_01(
+; CHECK: vector.body:
+; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:   %[[i0:.+]] = add i64 %index, 0
+; CHECK:   %[[i1:.+]] = add i64 %index, 1
+; CHECK:   getelementptr inbounds i64, i64* %a, i64 %[[i0]]
+; CHECK:   getelementptr inbounds i64, i64* %a, i64 %[[i1]]
+;
+; UNROLL-NO-IC-LABEL: @scalarize_induction_variable_01(
+; UNROLL-NO-IC: vector.body:
+; UNROLL-NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; UNROLL-NO-IC:   %[[i0:.+]] = add i64 %index, 0
+; UNROLL-NO-IC:   %[[i1:.+]] = add i64 %index, 1
+; UNROLL-NO-IC:   %[[i2:.+]] = add i64 %index, 2
+; UNROLL-NO-IC:   %[[i3:.+]] = add i64 %index, 3
+; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i0]]
+; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i1]]
+; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i2]]
+; UNROLL-NO-IC:   getelementptr inbounds i64, i64* %a, i64 %[[i3]]
+;
 ; IND-LABEL: @scalarize_induction_variable_01(
 ; IND:     vector.body:
 ; IND:       %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
@@ -111,6 +132,34 @@ for.end:
 ; float s = 0;
 ; for (int i ; 0; i < n; i += 8)
 ;   s += (a[i] + b[i] + 1.0f);
+;
+; CHECK-LABEL: @scalarize_induction_variable_02(
+; CHECK: vector.body:
+; CHECK:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK:   %offset.idx = shl i64 %index, 3
+; CHECK:   %[[i0:.+]] = add i64 %offset.idx, 0
+; CHECK:   %[[i1:.+]] = add i64 %offset.idx, 8
+; CHECK:   getelementptr inbounds float, float* %a, i64 %[[i0]]
+; CHECK:   getelementptr inbounds float, float* %a, i64 %[[i1]]
+; CHECK:   getelementptr inbounds float, float* %b, i64 %[[i0]]
+; CHECK:   getelementptr inbounds float, float* %b, i64 %[[i1]]
+;
+; UNROLL-NO-IC-LABEL: @scalarize_induction_variable_02(
+; UNROLL-NO-IC: vector.body:
+; UNROLL-NO-IC:   %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; UNROLL-NO-IC:   %offset.idx = shl i64 %index, 3
+; UNROLL-NO-IC:   %[[i0:.+]] = add i64 %offset.idx, 0
+; UNROLL-NO-IC:   %[[i1:.+]] = add i64 %offset.idx, 8
+; UNROLL-NO-IC:   %[[i2:.+]] = add i64 %offset.idx, 16
+; UNROLL-NO-IC:   %[[i3:.+]] = add i64 %offset.idx, 24
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %a, i64 %[[i0]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %a, i64 %[[i1]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %a, i64 %[[i2]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %a, i64 %[[i3]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %b, i64 %[[i0]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %b, i64 %[[i1]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %b, i64 %[[i2]]
+; UNROLL-NO-IC:   getelementptr inbounds float, float* %b, i64 %[[i3]]
 ;
 ; IND-LABEL: @scalarize_induction_variable_02(
 ; IND: vector.body:

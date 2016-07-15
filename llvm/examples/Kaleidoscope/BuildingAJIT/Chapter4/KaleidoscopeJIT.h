@@ -66,8 +66,6 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  std::unique_ptr<JITCompileCallbackManager> CompileCallbackMgr;
-  std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
   ObjectLinkingLayer<> ObjectLayer;
   IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
 
@@ -76,19 +74,22 @@ private:
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
+  std::unique_ptr<JITCompileCallbackManager> CompileCallbackMgr;
+  std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
+
 public:
   typedef decltype(OptimizeLayer)::ModuleSetHandleT ModuleHandle;
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()),
         DL(TM->createDataLayout()),
-        CompileCallbackMgr(
-            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
-                      }) {
+                      }),
+        CompileCallbackMgr(
+            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)) {
     auto IndirectStubsMgrBuilder =
       orc::createLocalIndirectStubsManagerBuilder(TM->getTargetTriple());
     IndirectStubsMgr = IndirectStubsMgrBuilder();

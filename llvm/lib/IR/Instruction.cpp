@@ -232,6 +232,10 @@ void Instruction::copyIRFlags(const Value *V) {
   if (auto *FP = dyn_cast<FPMathOperator>(V))
     if (isa<FPMathOperator>(this))
       copyFastMathFlags(FP->getFastMathFlags());
+
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
+    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
+      DestGEP->setIsInBounds(SrcGEP->isInBounds() | DestGEP->isInBounds());
 }
 
 void Instruction::andIRFlags(const Value *V) {
@@ -253,6 +257,10 @@ void Instruction::andIRFlags(const Value *V) {
       copyFastMathFlags(FM);
     }
   }
+
+  if (auto *SrcGEP = dyn_cast<GetElementPtrInst>(V))
+    if (auto *DestGEP = dyn_cast<GetElementPtrInst>(this))
+      DestGEP->setIsInBounds(SrcGEP->isInBounds() & DestGEP->isInBounds());
 }
 
 const char *Instruction::getOpcodeName(unsigned OpCode) {

@@ -28,12 +28,6 @@ class AArch64Subtarget;
 class AArch64TargetMachine;
 
 class AArch64InstrInfo : public AArch64GenInstrInfo {
-  // Reserve bits in the MachineMemOperand target hint flags, starting at 1.
-  // They will be shifted into MOTargetHintStart when accessed.
-  enum TargetMemOperandFlags {
-    MOSuppressPair = 1
-  };
-
   const AArch64RegisterInfo RI;
   const AArch64Subtarget &Subtarget;
 

@@ -1,5 +1,6 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=PTX
 ; RUN: opt < %s -S -separate-const-offset-from-gep -reassociate-geps-verify-no-dead-code -gvn | FileCheck %s --check-prefix=IR
+; XFAIL: *
 
 ; Verifies the SeparateConstOffsetFromGEP pass.
 ; The following code computes

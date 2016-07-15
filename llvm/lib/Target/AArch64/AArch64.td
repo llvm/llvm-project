@@ -224,6 +224,7 @@ def ProcExynosM1 : SubtargetFeature<"exynosm1", "ARMProcFamily", "ExynosM1",
                                     FeatureFPARMv8,
                                     FeatureNEON,
                                     FeaturePerfMon,
+                                    FeaturePostRAScheduler,
                                     FeatureUseRSqrt
                                     ]>;
 

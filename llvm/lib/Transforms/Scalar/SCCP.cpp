@@ -1510,7 +1510,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
   return false;
 }
 
-static bool tryToReplaceWithConstant(SCCPSolver Solver, Value *V) {
+static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
     std::vector<LatticeVal> IVs = Solver.getStructLatticeValueFor(V);
@@ -1540,7 +1540,7 @@ static bool tryToReplaceWithConstant(SCCPSolver Solver, Value *V) {
   return true;
 }
 
-static bool tryToReplaceInstWithConstant(SCCPSolver Solver, Instruction *Inst,
+static bool tryToReplaceInstWithConstant(SCCPSolver &Solver, Instruction *Inst,
                                          bool shouldEraseFromParent) {
   if (!tryToReplaceWithConstant(Solver, Inst))
     return false;
