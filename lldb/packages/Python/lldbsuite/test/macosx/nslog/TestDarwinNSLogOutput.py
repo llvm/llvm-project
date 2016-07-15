@@ -11,6 +11,7 @@ from __future__ import print_function
 import lldb
 import os
 import pexpect
+import platform
 import re
 import sys
 
@@ -128,6 +129,12 @@ class DarwinNSLogOutputTestCase(lldbtest.TestBase):
 
     def test_nslog_output_is_suppressed_with_env_var(self):
         """Test that NSLog() output does not show up with the ignore env var."""
+        # This test will only work properly on macOS 10.12+.  Skip it on earlier versions.
+        # This will require some tweaking on iOS.
+        match = re.match(r"^\d+\.(\d+)", platform.mac_ver()[0])
+        if match is None or int(match.group(1)) < 12:
+            self.skipTest("requires macOS 10.12 or higher")
+
         self.do_test(
             expect_regexes=[
                 re.compile(r"(This is a message from NSLog)"),
