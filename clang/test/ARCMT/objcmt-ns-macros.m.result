@@ -19,9 +19,6 @@ typedef unsigned long long uint64_t;
 #define NS_OPTIONS(_type, _name) enum _name : _type _name; enum _name : _type
 #define DEPRECATED  __attribute__((deprecated))
 
-#ifndef NS_ENUM
-#import <Foundation/Foundation.h>
-#endif
 typedef NS_ENUM(NSInteger, wibble) {
   blah,
   blarg

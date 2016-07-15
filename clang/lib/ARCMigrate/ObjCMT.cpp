@@ -1741,6 +1741,11 @@ bool ObjCMigrateASTConsumer::InsertFoundation(ASTContext &Ctx,
     return true;
   if (Loc.isInvalid())
     return false;
+  auto *nsEnumId = &Ctx.Idents.get("NS_ENUM");
+  if (PP.getMacroDefinitionAtLoc(nsEnumId, Loc)) {
+    FoundationIncluded = true;
+    return true;
+  }
   edit::Commit commit(*Editor);
   if (Ctx.getLangOpts().Modules)
     commit.insert(Loc, "#ifndef NS_ENUM\n@import Foundation;\n#endif\n");
