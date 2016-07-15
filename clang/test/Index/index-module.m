@@ -3,7 +3,7 @@
 @import DependsOnModule;
 int glob;
 
-// RUN: rm -rf %t.cache
+// RUN: rm -rf %t.cache %t.cache.sys
 // RUN: c-index-test -index-file %s -fmodules-cache-path=%t.cache -fmodules -F %S/../Modules/Inputs \
 // RUN:      -Xclang -fdisable-module-hash | FileCheck %s
 // RUN: c-index-test -index-file %s -fmodules-cache-path=%t.cache.sys -fmodules -iframework %S/../Modules/Inputs \
