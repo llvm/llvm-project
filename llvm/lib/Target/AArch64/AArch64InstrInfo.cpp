@@ -29,6 +29,9 @@ using namespace llvm;
 #define GET_INSTRINFO_CTOR_DTOR
 #include "AArch64GenInstrInfo.inc"
 
+static LLVM_CONSTEXPR MachineMemOperand::Flags MOSuppressPair =
+    MachineMemOperand::MOTargetFlag1;
+
 AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
     : AArch64GenInstrInfo(AArch64::ADJCALLSTACKDOWN, AArch64::ADJCALLSTACKUP),
       RI(STI.getTargetTriple()), Subtarget(STI) {}
@@ -621,11 +624,15 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   case AArch64::MOVi64imm:
     return canBeExpandedToORR(MI, 64);
 
-  // It is cheap to move #0 to float registers if the subtarget has 
-  // ZeroCycleZeroing feature.
+  // It is cheap to zero out registers if the subtarget has ZeroCycleZeroing
+  // feature.
   case AArch64::FMOVS0:
   case AArch64::FMOVD0:
     return Subtarget.hasZeroCycleZeroing();
+  case TargetOpcode::COPY:
+    return (Subtarget.hasZeroCycleZeroing() &&
+            (MI.getOperand(1).getReg() == AArch64::WZR ||
+             MI.getOperand(1).getReg() == AArch64::XZR));
   }
 
   llvm_unreachable("Unknown opcode to check as cheap as a move!");
@@ -1449,26 +1456,16 @@ bool AArch64InstrInfo::isScaledAddr(const MachineInstr &MI) const {
 
 /// Check all MachineMemOperands for a hint to suppress pairing.
 bool AArch64InstrInfo::isLdStPairSuppressed(const MachineInstr &MI) const {
-  static_assert(MOSuppressPair < (1 << MachineMemOperand::MOTargetNumBits),
-                "Too many target MO flags");
-  for (auto *MM : MI.memoperands()) {
-    if (MM->getFlags() &
-        (MOSuppressPair << MachineMemOperand::MOTargetStartBit)) {
-      return true;
-    }
-  }
-  return false;
+  return any_of(MI.memoperands(), [](MachineMemOperand *MMO) {
+    return MMO->getFlags() & MOSuppressPair;
+  });
 }
 
 /// Set a flag on the first MachineMemOperand to suppress pairing.
 void AArch64InstrInfo::suppressLdStPair(MachineInstr &MI) const {
   if (MI.memoperands_empty())
     return;
-
-  static_assert(MOSuppressPair < (1 << MachineMemOperand::MOTargetNumBits),
-                "Too many target MO flags");
-  (*MI.memoperands_begin())
-      ->setFlags(MOSuppressPair << MachineMemOperand::MOTargetStartBit);
+  (*MI.memoperands_begin())->setFlags(MOSuppressPair);
 }
 
 bool AArch64InstrInfo::isUnscaledLdSt(unsigned Opc) const {

@@ -123,6 +123,18 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
   ret <8 x float> %3
 }
 
+define <4 x double> @combine_vperm2f128_vpermilvar_as_vpblendpd(<4 x double> %a0) {
+; ALL-LABEL: combine_vperm2f128_vpermilvar_as_vpblendpd:
+; ALL:       # BB#0:
+; ALL-NEXT:    vxorpd %ymm1, %ymm1, %ymm1
+; ALL-NEXT:    vblendpd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3]
+; ALL-NEXT:    retq
+  %1 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %a0, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
+  %2 = shufflevector <4 x double> %1, <4 x double> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
+  %3 = tail call <4 x double> @llvm.x86.avx.vpermilvar.pd.256(<4 x double> %2, <4 x i64> <i64 2, i64 0, i64 2, i64 0>)
+  ret <4 x double> %3
+}
+
 define <8 x float> @combine_vpermilvar_8f32_movddup(<8 x float> %a0) {
 ; ALL-LABEL: combine_vpermilvar_8f32_movddup:
 ; ALL:       # BB#0:

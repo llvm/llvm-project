@@ -1151,6 +1151,7 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
   if (CC != CallingConv::C &&
       CC != CallingConv::Fast &&
       CC != CallingConv::X86_FastCall &&
+      CC != CallingConv::X86_StdCall &&
       CC != CallingConv::X86_ThisCall &&
       CC != CallingConv::X86_64_SysV)
     return false;
@@ -3025,6 +3026,7 @@ bool X86FastISel::fastLowerCall(CallLoweringInfo &CLI) {
   case CallingConv::WebKit_JS:
   case CallingConv::Swift:
   case CallingConv::X86_FastCall:
+  case CallingConv::X86_StdCall:
   case CallingConv::X86_ThisCall:
   case CallingConv::X86_64_Win64:
   case CallingConv::X86_64_SysV:

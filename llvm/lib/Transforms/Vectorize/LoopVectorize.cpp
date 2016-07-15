@@ -403,12 +403,12 @@ protected:
   /// to each vector element of Val. The sequence starts at StartIndex.
   virtual Value *getStepVector(Value *Val, int StartIdx, Value *Step);
 
-  /// Compute a step vector like the above function, but scalarize the
-  /// arithmetic instead. The results of the computation are inserted into a
-  /// new vector with VF elements. \p Val is the initial value, \p Step is the
-  /// size of the step, and \p StartIdx indicates the index of the increment
-  /// from which to start computing the steps.
-  Value *getScalarizedStepVector(Value *Val, int StartIdx, Value *Step);
+  /// Compute scalar induction steps. \p ScalarIV is the scalar induction
+  /// variable on which to base the steps, \p Step is the size of the step, and
+  /// \p EntryVal is the value from the original loop that maps to the steps.
+  /// Note that \p EntryVal doesn't have to be an induction variable (e.g., it
+  /// can be a truncate instruction).
+  void buildScalarSteps(Value *ScalarIV, Value *Step, Value *EntryVal);
 
   /// Create a vector induction phi node based on an existing scalar one. This
   /// currently only works for integer induction variables with a constant
@@ -417,11 +417,11 @@ protected:
   void createVectorIntInductionPHI(const InductionDescriptor &II,
                                    VectorParts &Entry, IntegerType *TruncType);
 
-  /// Widen an integer induction variable \p IV. If \p TruncType is provided,
-  /// the induction variable will first be truncated to the specified type. The
+  /// Widen an integer induction variable \p IV. If \p Trunc is provided, the
+  /// induction variable will first be truncated to the corresponding type. The
   /// widened values are placed in \p Entry.
   void widenIntInduction(PHINode *IV, VectorParts &Entry,
-                         IntegerType *TruncType = nullptr);
+                         TruncInst *Trunc = nullptr);
 
   /// When we go over instructions in the basic block we rely on previous
   /// values within the current basic block or on loop invariant values.
@@ -572,6 +572,17 @@ protected:
   PHINode *OldInduction;
   /// Maps scalars to widened vectors.
   ValueMap WidenMap;
+
+  /// A map of induction variables from the original loop to their
+  /// corresponding VF * UF scalarized values in the vectorized loop. The
+  /// purpose of ScalarIVMap is similar to that of WidenMap. Whereas WidenMap
+  /// maps original loop values to their vector versions in the new loop,
+  /// ScalarIVMap maps induction variables from the original loop that are not
+  /// vectorized to their scalar equivalents in the vector loop. Maintaining a
+  /// separate map for scalarized induction variables allows us to avoid
+  /// unnecessary scalar-to-vector-to-scalar conversions.
+  DenseMap<Value *, SmallVector<Value *, 8>> ScalarIVMap;
+
   /// Store instructions that should be predicated, as a pair
   ///   <StoreInst, Predicate>
   SmallVector<std::pair<StoreInst *, Value *>, 4> PredicatedStores;
@@ -926,14 +937,19 @@ private:
   }
 
   /// \brief Collect all the accesses with a constant stride in program order.
-  void collectConstStridedAccesses(
-      MapVector<Instruction *, StrideDescriptor> &StrideAccesses,
+  void collectConstStrideAccesses(
+      MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
       const ValueToValueMap &Strides);
 
   /// \brief Returns true if \p Stride is allowed in an interleaved group.
   static bool isStrided(int Stride) {
     unsigned Factor = std::abs(Stride);
     return Factor >= 2 && Factor <= MaxInterleaveGroupFactor;
+  }
+
+  /// \brief Returns true if \p BB is a predicated block.
+  bool isPredicated(BasicBlock *BB) const {
+    return LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
   }
 
   /// \brief Returns true if LoopAccessInfo can be used for dependence queries.
@@ -1889,13 +1905,16 @@ void InnerLoopVectorizer::createVectorIntInductionPHI(
 }
 
 void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
-                                            IntegerType *TruncType) {
+                                            TruncInst *Trunc) {
 
   auto II = Legal->getInductionVars()->find(IV);
   assert(II != Legal->getInductionVars()->end() && "IV is not an induction");
 
   auto ID = II->second;
   assert(IV->getType() == ID.getStartValue()->getType() && "Types must match");
+
+  // If a truncate instruction was provided, get the smaller type.
+  auto *TruncType = Trunc ? cast<IntegerType>(Trunc->getType()) : nullptr;
 
   // The step of the induction.
   Value *Step = nullptr;
@@ -1939,20 +1958,21 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
     }
   }
 
-  // If an induction variable is only used for counting loop iterations or
-  // calculating addresses, it shouldn't be widened. Scalarize the step vector
-  // to give InstCombine a better chance of simplifying it.
-  if (VF > 1 && ValuesNotWidened->count(IV)) {
-    for (unsigned Part = 0; Part < UF; ++Part)
-      Entry[Part] = getScalarizedStepVector(ScalarIV, VF * Part, Step);
-    return;
-  }
-
-  // Finally, splat the scalar induction variable, and build the necessary step
-  // vectors.
+  // Splat the scalar induction variable, and build the necessary step vectors.
   Value *Broadcasted = getBroadcastInstrs(ScalarIV);
   for (unsigned Part = 0; Part < UF; ++Part)
     Entry[Part] = getStepVector(Broadcasted, VF * Part, Step);
+
+  // If an induction variable is only used for counting loop iterations or
+  // calculating addresses, it doesn't need to be widened. Create scalar steps
+  // that can be used by instructions we will later scalarize. Note that the
+  // addition of the scalar steps will not increase the number of instructions
+  // in the loop in the common case prior to InstCombine. We will be trading
+  // one vector extract for each scalar step.
+  if (VF > 1 && ValuesNotWidened->count(IV)) {
+    auto *EntryVal = Trunc ? cast<Value>(Trunc) : IV;
+    buildScalarSteps(ScalarIV, Step, EntryVal);
+  }
 }
 
 Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
@@ -1983,27 +2003,25 @@ Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
   return Builder.CreateAdd(Val, Step, "induction");
 }
 
-Value *InnerLoopVectorizer::getScalarizedStepVector(Value *Val, int StartIdx,
-                                                    Value *Step) {
+void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
+                                           Value *EntryVal) {
 
-  // We can't create a vector with less than two elements.
+  // We shouldn't have to build scalar steps if we aren't vectorizing.
   assert(VF > 1 && "VF should be greater than one");
 
   // Get the value type and ensure it and the step have the same integer type.
-  Type *ValTy = Val->getType()->getScalarType();
-  assert(ValTy->isIntegerTy() && ValTy == Step->getType() &&
+  Type *ScalarIVTy = ScalarIV->getType()->getScalarType();
+  assert(ScalarIVTy->isIntegerTy() && ScalarIVTy == Step->getType() &&
          "Val and Step should have the same integer type");
 
-  // Compute the scalarized step vector. We perform scalar arithmetic and then
-  // insert the results into the step vector.
-  Value *StepVector = UndefValue::get(ToVectorTy(ValTy, VF));
-  for (unsigned I = 0; I < VF; ++I) {
-    auto *Mul = Builder.CreateMul(ConstantInt::get(ValTy, StartIdx + I), Step);
-    auto *Add = Builder.CreateAdd(Val, Mul);
-    StepVector = Builder.CreateInsertElement(StepVector, Add, I);
-  }
-
-  return StepVector;
+  // Compute the scalar steps and save the results in ScalarIVMap.
+  for (unsigned Part = 0; Part < UF; ++Part)
+    for (unsigned I = 0; I < VF; ++I) {
+      auto *StartIdx = ConstantInt::get(ScalarIVTy, VF * Part + I);
+      auto *Mul = Builder.CreateMul(StartIdx, Step);
+      auto *Add = Builder.CreateAdd(ScalarIV, Mul);
+      ScalarIVMap[EntryVal].push_back(Add);
+    }
 }
 
 int LoopVectorizationLegality::isConsecutivePtr(Value *Ptr) {
@@ -2459,8 +2477,14 @@ void InnerLoopVectorizer::vectorizeMemoryInstruction(Instruction *Instr) {
                  "Must be last index or loop invariant");
 
           VectorParts &GEPParts = getVectorValue(GepOperand);
-          Value *Index = GEPParts[0];
-          Index = Builder.CreateExtractElement(Index, Zero);
+
+          // If GepOperand is an induction variable, and there's a scalarized
+          // version of it available, use it. Otherwise, we will need to create
+          // an extractelement instruction.
+          Value *Index = ScalarIVMap.count(GepOperand)
+                             ? ScalarIVMap[GepOperand][0]
+                             : Builder.CreateExtractElement(GEPParts[0], Zero);
+
           Gep2->setOperand(i, Index);
           Gep2->setName("gep.indvar.idx");
         }
@@ -2663,11 +2687,17 @@ void InnerLoopVectorizer::scalarizeInstruction(Instruction *Instr,
         Cloned->setName(Instr->getName() + ".cloned");
       // Replace the operands of the cloned instructions with extracted scalars.
       for (unsigned op = 0, e = Instr->getNumOperands(); op != e; ++op) {
-        Value *Op = Params[op][Part];
-        // Param is a vector. Need to extract the right lane.
-        if (Op->getType()->isVectorTy())
-          Op = Builder.CreateExtractElement(Op, Builder.getInt32(Width));
-        Cloned->setOperand(op, Op);
+
+        // If the operand is an induction variable, and there's a scalarized
+        // version of it available, use it. Otherwise, we will need to create
+        // an extractelement instruction if vectorizing.
+        auto *NewOp = Params[op][Part];
+        auto *ScalarOp = Instr->getOperand(op);
+        if (ScalarIVMap.count(ScalarOp))
+          NewOp = ScalarIVMap[ScalarOp][VF * Part + Width];
+        else if (NewOp->getType()->isVectorTy())
+          NewOp = Builder.CreateExtractElement(NewOp, Builder.getInt32(Width));
+        Cloned->setOperand(op, NewOp);
       }
       addNewMetadata(Cloned, Instr);
 
@@ -4160,8 +4190,7 @@ void InnerLoopVectorizer::vectorizeBlockInLoop(BasicBlock *BB, PhiVector *PV) {
       auto ID = Legal->getInductionVars()->lookup(OldInduction);
       if (isa<TruncInst>(CI) && CI->getOperand(0) == OldInduction &&
           ID.getConstIntStepValue()) {
-        auto *TruncType = cast<IntegerType>(CI->getType());
-        widenIntInduction(OldInduction, Entry, TruncType);
+        widenIntInduction(OldInduction, Entry, cast<TruncInst>(CI));
         addMetadata(Entry, &I);
         break;
       }
@@ -4898,56 +4927,41 @@ bool LoopVectorizationLegality::blockCanBePredicated(
   return true;
 }
 
-void InterleavedAccessInfo::collectConstStridedAccesses(
-    MapVector<Instruction *, StrideDescriptor> &StrideAccesses,
+void InterleavedAccessInfo::collectConstStrideAccesses(
+    MapVector<Instruction *, StrideDescriptor> &AccessStrideInfo,
     const ValueToValueMap &Strides) {
-  // Holds load/store instructions in program order.
-  SmallVector<Instruction *, 16> AccessList;
+
+  auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
 
   // Since it's desired that the load/store instructions be maintained in
   // "program order" for the interleaved access analysis, we have to visit the
   // blocks in the loop in reverse postorder (i.e., in a topological order).
   // Such an ordering will ensure that any load/store that may be executed
-  // before a second load/store will precede the second load/store in the
-  // AccessList.
+  // before a second load/store will precede the second load/store in
+  // AccessStrideInfo.
   LoopBlocksDFS DFS(TheLoop);
   DFS.perform(LI);
-  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO())) {
-    bool IsPred = LoopAccessInfo::blockNeedsPredication(BB, TheLoop, DT);
-
+  for (BasicBlock *BB : make_range(DFS.beginRPO(), DFS.endRPO()))
     for (auto &I : *BB) {
-      if (!isa<LoadInst>(&I) && !isa<StoreInst>(&I))
+      auto *LI = dyn_cast<LoadInst>(&I);
+      auto *SI = dyn_cast<StoreInst>(&I);
+      if (!LI && !SI)
         continue;
-      // FIXME: Currently we can't handle mixed accesses and predicated accesses
-      if (IsPred)
-        return;
 
-      AccessList.push_back(&I);
+      Value *Ptr = LI ? LI->getPointerOperand() : SI->getPointerOperand();
+      int64_t Stride = getPtrStride(PSE, Ptr, TheLoop, Strides);
+
+      const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
+      PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
+      uint64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
+
+      // An alignment of 0 means target ABI alignment.
+      unsigned Align = LI ? LI->getAlignment() : SI->getAlignment();
+      if (!Align)
+        Align = DL.getABITypeAlignment(PtrTy->getElementType());
+
+      AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size, Align);
     }
-  }
-
-  if (AccessList.empty())
-    return;
-
-  auto &DL = TheLoop->getHeader()->getModule()->getDataLayout();
-  for (auto I : AccessList) {
-    auto *LI = dyn_cast<LoadInst>(I);
-    auto *SI = dyn_cast<StoreInst>(I);
-
-    Value *Ptr = LI ? LI->getPointerOperand() : SI->getPointerOperand();
-    int64_t Stride = getPtrStride(PSE, Ptr, TheLoop, Strides);
-
-    const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
-    PointerType *PtrTy = dyn_cast<PointerType>(Ptr->getType());
-    uint64_t Size = DL.getTypeAllocSize(PtrTy->getElementType());
-
-    // An alignment of 0 means target ABI alignment.
-    unsigned Align = LI ? LI->getAlignment() : SI->getAlignment();
-    if (!Align)
-      Align = DL.getABITypeAlignment(PtrTy->getElementType());
-
-    StrideAccesses[I] = StrideDescriptor(Stride, Scev, Size, Align);
-  }
 }
 
 // Analyze interleaved accesses and collect them into interleaved load and
@@ -4990,11 +5004,11 @@ void InterleavedAccessInfo::analyzeInterleaving(
     const ValueToValueMap &Strides) {
   DEBUG(dbgs() << "LV: Analyzing interleaved accesses...\n");
 
-  // Holds all the stride accesses.
-  MapVector<Instruction *, StrideDescriptor> StrideAccesses;
-  collectConstStridedAccesses(StrideAccesses, Strides);
+  // Holds all accesses with a constant stride.
+  MapVector<Instruction *, StrideDescriptor> AccessStrideInfo;
+  collectConstStrideAccesses(AccessStrideInfo, Strides);
 
-  if (StrideAccesses.empty())
+  if (AccessStrideInfo.empty())
     return;
 
   // Collect the dependences in the loop.
@@ -5010,8 +5024,8 @@ void InterleavedAccessInfo::analyzeInterleaving(
   //   1. A and B have the same stride.
   //   2. A and B have the same memory object size.
   //   3. B belongs to the group according to the distance.
-  for (auto AI = StrideAccesses.rbegin(), E = StrideAccesses.rend(); AI != E;
-       ++AI) {
+  for (auto AI = AccessStrideInfo.rbegin(), E = AccessStrideInfo.rend();
+       AI != E; ++AI) {
     Instruction *A = AI->first;
     StrideDescriptor DesA = AI->second;
 
@@ -5099,6 +5113,12 @@ void InterleavedAccessInfo::analyzeInterleaving(
       // Skip if the distance is not multiple of size as they are not in the
       // same group.
       if (DistanceToA % static_cast<int64_t>(DesA.Size))
+        continue;
+
+      // If either A or B is in a predicated block, we prevent adding them to a
+      // group. We may be able to relax this limitation in the future once we
+      // handle more complicated blocks.
+      if (isPredicated(A->getParent()) || isPredicated(B->getParent()))
         continue;
 
       // The index of B is the index of A plus the related index to A.

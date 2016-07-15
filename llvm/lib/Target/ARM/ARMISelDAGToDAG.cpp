@@ -195,6 +195,7 @@ public:
 private:
   /// Indexed (pre/post inc/dec) load matching code for ARM.
   bool tryARMIndexedLoad(SDNode *N);
+  bool tryT1IndexedLoad(SDNode *N);
   bool tryT2IndexedLoad(SDNode *N);
 
   /// SelectVLD - Select NEON load intrinsics.  NumVecs should be
@@ -1541,6 +1542,31 @@ bool ARMDAGToDAGISel::tryARMIndexedLoad(SDNode *N) {
   }
 
   return false;
+}
+
+bool ARMDAGToDAGISel::tryT1IndexedLoad(SDNode *N) {
+  LoadSDNode *LD = cast<LoadSDNode>(N);
+  EVT LoadedVT = LD->getMemoryVT();
+  ISD::MemIndexedMode AM = LD->getAddressingMode();
+  if (AM == ISD::UNINDEXED || LD->getExtensionType() != ISD::NON_EXTLOAD ||
+      AM != ISD::POST_INC || LoadedVT.getSimpleVT().SimpleTy != MVT::i32)
+    return false;
+
+  auto *COffs = dyn_cast<ConstantSDNode>(LD->getOffset());
+  if (!COffs || COffs->getZExtValue() != 4)
+    return false;
+
+  // A T1 post-indexed load is just a single register LDM: LDM r0!, {r1}.
+  // The encoding of LDM is not how the rest of ISel expects a post-inc load to
+  // look however, so we use a pseudo here and switch it for a tLDMIA_UPD after
+  // ISel.
+  SDValue Chain = LD->getChain();
+  SDValue Base = LD->getBasePtr();
+  SDValue Ops[]= { Base, getAL(CurDAG, SDLoc(N)),
+                   CurDAG->getRegister(0, MVT::i32), Chain };
+  ReplaceNode(N, CurDAG->getMachineNode(ARM::tLDR_postidx, SDLoc(N), MVT::i32, MVT::i32,
+                                        MVT::Other, Ops));
+  return true;
 }
 
 bool ARMDAGToDAGISel::tryT2IndexedLoad(SDNode *N) {
@@ -3014,6 +3040,9 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
   case ISD::LOAD: {
     if (Subtarget->isThumb() && Subtarget->hasThumb2()) {
       if (tryT2IndexedLoad(N))
+        return;
+    } else if (Subtarget->isThumb()) {
+      if (tryT1IndexedLoad(N))
         return;
     } else if (tryARMIndexedLoad(N))
       return;

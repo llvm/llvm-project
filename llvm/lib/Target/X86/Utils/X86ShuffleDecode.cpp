@@ -275,6 +275,19 @@ void DecodeUNPCKLMask(MVT VT, SmallVectorImpl<int> &ShuffleMask) {
   }
 }
 
+/// Decodes a broadcast of a subvector to a larger vector type.
+void DecodeSubVectorBroadcast(MVT DstVT, MVT SrcVT,
+                              SmallVectorImpl<int> &ShuffleMask) {
+  assert(SrcVT.getScalarType() == DstVT.getScalarType() &&
+         "Non matching vector element types");
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  unsigned Scale = DstVT.getSizeInBits() / SrcVT.getSizeInBits();
+
+  for (unsigned i = 0; i != Scale; ++i)
+    for (unsigned j = 0; j != NumElts; ++j)
+      ShuffleMask.push_back(j);
+}
+
 /// \brief Decode a shuffle packed values at 128-bit granularity
 /// (SHUFF32x4/SHUFF64x2/SHUFI32x4/SHUFI64x2)
 /// immediate mask into a shuffle mask.

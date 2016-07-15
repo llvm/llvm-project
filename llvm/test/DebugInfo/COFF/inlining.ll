@@ -182,17 +182,12 @@
 ; OBJ:     PtrParent: 0x0
 ; OBJ:     PtrEnd: 0x0
 ; OBJ:     Inlinee: bar (0x1002)
-; OBJ:     BinaryAnnotations [
-; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 1}
-; OBJ-NEXT:  ChangeLineOffset: -6
-; OBJ-NEXT:  ChangeCodeOffset: 0x7
-; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xA, LineOffset: 1}
-; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
-; OBJ-NEXT:  ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
-; OBJ-NEXT:  ChangeLineOffset: 5
-; OBJ-NEXT:  ChangeCodeOffset: 0x7
-; OBJ-NEXT:  ChangeCodeLength: 0x7
-; OBJ:     ]
+; OBJ:      BinaryAnnotations [
+; OBJ-NEXT:   ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x8, LineOffset: 1}
+; OBJ-NEXT:   ChangeLineOffset: 2
+; OBJ-NEXT:   ChangeCodeOffset: 0x25
+; OBJ-NEXT:   ChangeCodeLength: 0x7
+; OBJ:      ]
 ; OBJ:   }
 ; OBJ:   InlineSite {
 ; OBJ:     PtrParent: 0x0

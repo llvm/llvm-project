@@ -735,16 +735,6 @@ getModuleForFile(LLVMContext &Context, claimed_file &F, const void *View,
     if (Resolution == LDPR_PREVAILING_DEF_IRONLY_EXP && !Res.IsLinkonceOdr)
       Resolution = LDPR_PREVAILING_DEF;
 
-    // In ThinLTO mode change all prevailing resolutions to LDPR_PREVAILING_DEF.
-    // For ThinLTO the IR files are compiled through the backend independently,
-    // so we need to ensure that any prevailing linkonce copy will be emitted
-    // into the object file by making it weak. Additionally, we can skip the
-    // IRONLY handling for internalization, which isn't performed in ThinLTO
-    // mode currently anyway.
-    if (options::thinlto && (Resolution == LDPR_PREVAILING_DEF_IRONLY_EXP ||
-                             Resolution == LDPR_PREVAILING_DEF_IRONLY))
-      Resolution = LDPR_PREVAILING_DEF;
-
     GV->setUnnamedAddr(Res.UnnamedAddr);
     GV->setVisibility(Res.Visibility);
 
@@ -998,6 +988,9 @@ void CodeGen::runLTOPasses() {
   M->setDataLayout(TM->createDataLayout());
 
   if (CombinedIndex) {
+    // Apply summary-based LinkOnce/Weak resolution decisions.
+    thinLTOResolveWeakForLinkerModule(*M, *DefinedGlobals);
+
     // Apply summary-based internalization decisions. Skip if there are no
     // defined globals from the summary since not only is it unnecessary, but
     // if this module did not have a summary section the internalizer will
@@ -1322,6 +1315,10 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
   // are referenced outside of a single IR module.
   DenseSet<GlobalValue::GUID> Preserve;
 
+  // Keep track of the prevailing copy for each GUID, for use in resolving
+  // weak linkages.
+  DenseMap<GlobalValue::GUID, const GlobalValueSummary *> PrevailingCopy;
+
   ModuleSummaryIndex CombinedIndex;
   uint64_t NextModuleId = 0;
   for (claimed_file &F : Modules) {
@@ -1342,19 +1339,27 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
 
     std::unique_ptr<ModuleSummaryIndex> Index = getModuleSummaryIndexForFile(F);
 
-    // Skip files without a module summary.
-    if (Index)
-      CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
-
     // Use gold's symbol resolution information to identify symbols referenced
-    // by more than a single IR module (before importing, which is checked
-    // separately).
+    // by more than a single IR module (i.e. referenced by multiple IR modules
+    // or by a non-IR module). Cross references introduced by importing are
+    // checked separately via the export lists. Also track the prevailing copy
+    // for later symbol resolution.
     for (auto &Sym : F.syms) {
       ld_plugin_symbol_resolution Resolution =
           (ld_plugin_symbol_resolution)Sym.resolution;
+      GlobalValue::GUID SymGUID = GlobalValue::getGUID(Sym.name);
       if (Resolution != LDPR_PREVAILING_DEF_IRONLY)
-        Preserve.insert(GlobalValue::getGUID(Sym.name));
+        Preserve.insert(SymGUID);
+
+      if (Index && (Resolution == LDPR_PREVAILING_DEF ||
+                    Resolution == LDPR_PREVAILING_DEF_IRONLY ||
+                    Resolution == LDPR_PREVAILING_DEF_IRONLY_EXP))
+        PrevailingCopy[SymGUID] = Index->getGlobalValueSummary(SymGUID);
     }
+
+    // Skip files without a module summary.
+    if (Index)
+      CombinedIndex.mergeFrom(std::move(Index), ++NextModuleId);
   }
 
   // Collect for each module the list of function it defines (GUID ->
@@ -1368,6 +1373,12 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
   ComputeCrossModuleImport(CombinedIndex, ModuleToDefinedGVSummaries,
                            ImportLists, ExportLists);
 
+  auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
+    const auto &Prevailing = PrevailingCopy.find(GUID);
+    assert(Prevailing != PrevailingCopy.end());
+    return Prevailing->second == S;
+  };
+
   // Callback for internalization, to prevent internalization of symbols
   // that were not candidates initially, and those that are being imported
   // (which introduces new cross references).
@@ -1377,6 +1388,11 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
             ExportList->second.count(GUID)) ||
            Preserve.count(GUID);
   };
+
+  thinLTOResolveWeakForLinkerInIndex(
+      CombinedIndex, isPrevailing,
+      [](StringRef ModuleIdentifier, GlobalValue::GUID GUID,
+         GlobalValue::LinkageTypes NewLinkage) {});
 
   // Use global summary-based analysis to identify symbols that can be
   // internalized (because they aren't exported or preserved as per callback).

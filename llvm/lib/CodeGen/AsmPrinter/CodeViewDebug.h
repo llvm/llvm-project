@@ -78,6 +78,9 @@ class LLVM_LIBRARY_VISIBILITY CodeViewDebug : public DebugHandlerBase {
     SmallVector<LocalVariable, 1> InlinedLocals;
     SmallVector<const DILocation *, 1> ChildSites;
     const DISubprogram *Inlinee = nullptr;
+
+    /// The ID of the inline site or function used with .cv_loc. Not a type
+    /// index.
     unsigned SiteFuncId = 0;
   };
 

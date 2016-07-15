@@ -254,8 +254,8 @@ entry:
 define <4 x i32> @srl_trunc_and_v4i64(<4 x i32> %x, <4 x i64> %y) nounwind {
 ; CHECK-LABEL: srl_trunc_and_v4i64:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,0,2,4,6,4,6]
-; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,3,2,3]
+; CHECK-NEXT:    vpshufd {{.*#+}} ymm1 = ymm1[0,2,2,3,4,6,6,7]
+; CHECK-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,2,3]
 ; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %xmm2
 ; CHECK-NEXT:    vpand %xmm2, %xmm1, %xmm1
 ; CHECK-NEXT:    vpsrlvd %xmm1, %xmm0, %xmm0

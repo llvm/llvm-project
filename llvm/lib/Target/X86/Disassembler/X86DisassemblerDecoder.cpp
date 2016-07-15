@@ -1450,10 +1450,10 @@ static int readModRM(struct InternalInstruction* insn) {
 }
 
 #define GENERIC_FIXUP_FUNC(name, base, prefix)            \
-  static uint8_t name(struct InternalInstruction *insn,   \
-                      OperandType type,                   \
-                      uint8_t index,                      \
-                      uint8_t *valid) {                   \
+  static uint16_t name(struct InternalInstruction *insn,  \
+                       OperandType type,                  \
+                       uint8_t index,                     \
+                       uint8_t *valid) {                  \
     *valid = 1;                                           \
     switch (type) {                                       \
     default:                                              \
@@ -1503,6 +1503,10 @@ static int readModRM(struct InternalInstruction* insn) {
       return prefix##_DR0 + index;                        \
     case TYPE_CONTROLREG:                                 \
       return prefix##_CR0 + index;                        \
+    case TYPE_BNDR:                                       \
+      if (index > 3)                                      \
+        *valid = 0;                                       \
+      return prefix##_BND0 + index;                       \
     }                                                     \
   }
 

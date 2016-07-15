@@ -1091,12 +1091,6 @@ MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
   MachineBasicBlock *SplitBB
     = MF->CreateMachineBasicBlock(BB->getBasicBlock());
 
-  SmallSet<unsigned, 8> SplitDefRegs;
-  for (auto I = SplitPoint, E = BB->end(); I != E; ++I) {
-    for (MachineOperand &Def : I->defs())
-      SplitDefRegs.insert(Def.getReg());
-  }
-
   // Fix the block phi references to point to the new block for the defs in the
   // second piece of the block.
   for (MachineBasicBlock *Succ : BB->successors()) {
@@ -1104,13 +1098,10 @@ MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
       if (!MI.isPHI())
         break;
 
-      for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
-        unsigned IncomingReg = MI.getOperand(I).getReg();
-        MachineOperand &FromBB = MI.getOperand(I + 1);
+      for (unsigned I = 2, E = MI.getNumOperands(); I != E; I += 2) {
+        MachineOperand &FromBB = MI.getOperand(I);
         if (BB == FromBB.getMBB()) {
-          if (SplitDefRegs.count(IncomingReg))
-            FromBB.setMBB(SplitBB);
-
+          FromBB.setMBB(SplitBB);
           break;
         }
       }
@@ -1119,7 +1110,6 @@ MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
 
   MF->insert(++MachineFunction::iterator(BB), SplitBB);
   SplitBB->splice(SplitBB->begin(), BB, SplitPoint, BB->end());
-
 
   SplitBB->transferSuccessors(BB);
   BB->addSuccessor(SplitBB);

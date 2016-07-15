@@ -20,3 +20,6 @@ fconsts s1, #1.0
 
 fconstd d2, #1.0
 @ CHECK: error: invalid floating point immediate
+
+vmov.i64 d0, 0x8000000000000000
+@ CHECK: error: invalid operand for instruction

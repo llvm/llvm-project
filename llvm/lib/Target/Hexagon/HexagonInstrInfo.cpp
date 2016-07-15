@@ -2437,6 +2437,17 @@ bool HexagonInstrInfo::isSpillPredRegOp(const MachineInstr *MI) const {
 }
 
 
+bool HexagonInstrInfo::isTailCall(const MachineInstr *MI) const {
+  if (!MI->isBranch())
+    return false;
+
+  for (auto &Op : MI->operands())
+    if (Op.isGlobal() || Op.isSymbol())
+      return true;
+  return false;
+}
+
+
 // Returns true when SU has a timing class TC1.
 bool HexagonInstrInfo::isTC1(const MachineInstr *MI) const {
   unsigned SchedClass = MI->getDesc().getSchedClass();

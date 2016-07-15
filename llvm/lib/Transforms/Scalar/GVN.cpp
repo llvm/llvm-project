@@ -725,6 +725,9 @@ static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   assert(CanCoerceMustAliasedValueToLoad(StoredVal, LoadedTy, DL) &&
          "precondition violation - materialization can't fail");
 
+  if (auto *CExpr = dyn_cast<ConstantExpr>(StoredVal))
+    StoredVal = ConstantFoldConstantExpression(CExpr, DL);
+
   // If this is already the right type, just return it.
   Type *StoredValTy = StoredVal->getType();
 
@@ -735,25 +738,29 @@ static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   if (StoredValSize == LoadedValSize) {
     // Pointer to Pointer -> use bitcast.
     if (StoredValTy->getScalarType()->isPointerTy() &&
-        LoadedTy->getScalarType()->isPointerTy())
-      return IRB.CreateBitCast(StoredVal, LoadedTy);
+        LoadedTy->getScalarType()->isPointerTy()) {
+      StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy);
+    } else {
+      // Convert source pointers to integers, which can be bitcast.
+      if (StoredValTy->getScalarType()->isPointerTy()) {
+        StoredValTy = DL.getIntPtrType(StoredValTy);
+        StoredVal = IRB.CreatePtrToInt(StoredVal, StoredValTy);
+      }
 
-    // Convert source pointers to integers, which can be bitcast.
-    if (StoredValTy->getScalarType()->isPointerTy()) {
-      StoredValTy = DL.getIntPtrType(StoredValTy);
-      StoredVal = IRB.CreatePtrToInt(StoredVal, StoredValTy);
+      Type *TypeToCastTo = LoadedTy;
+      if (TypeToCastTo->getScalarType()->isPointerTy())
+        TypeToCastTo = DL.getIntPtrType(TypeToCastTo);
+
+      if (StoredValTy != TypeToCastTo)
+        StoredVal = IRB.CreateBitCast(StoredVal, TypeToCastTo);
+
+      // Cast to pointer if the load needs a pointer type.
+      if (LoadedTy->getScalarType()->isPointerTy())
+        StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy);
     }
 
-    Type *TypeToCastTo = LoadedTy;
-    if (TypeToCastTo->getScalarType()->isPointerTy())
-      TypeToCastTo = DL.getIntPtrType(TypeToCastTo);
-
-    if (StoredValTy != TypeToCastTo)
-      StoredVal = IRB.CreateBitCast(StoredVal, TypeToCastTo);
-
-    // Cast to pointer if the load needs a pointer type.
-    if (LoadedTy->getScalarType()->isPointerTy())
-      StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy);
+    if (auto *CExpr = dyn_cast<ConstantExpr>(StoredVal))
+      StoredVal = ConstantFoldConstantExpression(CExpr, DL);
 
     return StoredVal;
   }
@@ -788,15 +795,19 @@ static Value *CoerceAvailableValueToLoadType(Value *StoredVal, Type *LoadedTy,
   Type *NewIntTy = IntegerType::get(StoredValTy->getContext(), LoadedValSize);
   StoredVal  = IRB.CreateTrunc(StoredVal, NewIntTy, "trunc");
 
-  if (LoadedTy == NewIntTy)
-    return StoredVal;
+  if (LoadedTy != NewIntTy) {
+    // If the result is a pointer, inttoptr.
+    if (LoadedTy->getScalarType()->isPointerTy())
+      StoredVal = IRB.CreateIntToPtr(StoredVal, LoadedTy, "inttoptr");
+    else
+      // Otherwise, bitcast.
+      StoredVal = IRB.CreateBitCast(StoredVal, LoadedTy, "bitcast");
+  }
 
-  // If the result is a pointer, inttoptr.
-  if (LoadedTy->getScalarType()->isPointerTy())
-    return IRB.CreateIntToPtr(StoredVal, LoadedTy, "inttoptr");
+  if (auto *CExpr = dyn_cast<ConstantExpr>(StoredVal))
+    StoredVal = ConstantFoldConstantExpression(CExpr, DL);
 
-  // Otherwise, bitcast.
-  return IRB.CreateBitCast(StoredVal, LoadedTy, "bitcast");
+  return StoredVal;
 }
 
 /// This function is called when we have a

@@ -14,6 +14,7 @@
 #ifndef LLVM_OBJECT_ARCHIVE_H
 #define LLVM_OBJECT_ARCHIVE_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Object/Binary.h"
@@ -215,7 +216,7 @@ public:
   }
 
   // check if a symbol is in the archive
-  child_iterator findSym(Error &Err, StringRef name) const;
+  Expected<Optional<Child>> findSym(StringRef name) const;
 
   bool hasSymbolTable() const;
   StringRef getSymbolTable() const { return SymbolTable; }

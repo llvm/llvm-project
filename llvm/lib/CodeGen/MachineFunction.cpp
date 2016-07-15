@@ -299,8 +299,11 @@ MachineFunction::getMachineMemOperand(MachinePointerInfo PtrInfo, unsigned f,
                                       uint64_t s, unsigned base_alignment,
                                       const AAMDNodes &AAInfo,
                                       const MDNode *Ranges) {
-  return new (Allocator) MachineMemOperand(PtrInfo, f, s, base_alignment,
-                                           AAInfo, Ranges);
+  // FIXME: Get rid of this static_cast and make getMachineOperand take a
+  // MachineMemOperand::Flags param.
+  return new (Allocator)
+      MachineMemOperand(PtrInfo, static_cast<MachineMemOperand::Flags>(f), s,
+                        base_alignment, AAInfo, Ranges);
 }
 
 MachineMemOperand *

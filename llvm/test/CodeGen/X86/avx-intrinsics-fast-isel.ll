@@ -200,12 +200,12 @@ define <4 x double> @test_mm256_broadcast_pd(<2 x double>* %a0) nounwind {
 ; X32-LABEL: test_mm256_broadcast_pd:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vbroadcastf128 (%eax), %ymm0
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_broadcast_pd:
 ; X64:       # BB#0:
-; X64-NEXT:    vbroadcastf128 (%rdi), %ymm0
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
   %arg0 = bitcast <2 x double>* %a0 to i8*
   %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8* %arg0)
@@ -217,12 +217,12 @@ define <8 x float> @test_mm256_broadcast_ps(<4 x float>* %a0) nounwind {
 ; X32-LABEL: test_mm256_broadcast_ps:
 ; X32:       # BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vbroadcastf128 (%eax), %ymm0
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_broadcast_ps:
 ; X64:       # BB#0:
-; X64-NEXT:    vbroadcastf128 (%rdi), %ymm0
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
   %arg0 = bitcast <4 x float>* %a0 to i8*
   %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8* %arg0)

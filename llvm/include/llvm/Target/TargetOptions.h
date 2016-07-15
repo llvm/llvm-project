@@ -287,7 +287,8 @@ inline bool operator==(const TargetOptions &LHS,
     ARE_EQUAL(EABIVersion) &&
     ARE_EQUAL(DebuggerTuning) &&
     ARE_EQUAL(ExceptionModel) &&
-    ARE_EQUAL(MCOptions);
+    ARE_EQUAL(MCOptions) &&
+    ARE_EQUAL(EnableIPRA);
 #undef ARE_EQUAL
 }
 

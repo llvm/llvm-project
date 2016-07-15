@@ -715,6 +715,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       setIndexedStoreAction(im, MVT::i16, Legal);
       setIndexedStoreAction(im, MVT::i32, Legal);
     }
+  } else {
+    // Thumb-1 has limited post-inc load/store support - LDM r0!, {r1}.
+    setIndexedLoadAction(ISD::POST_INC, MVT::i32,  Legal);
+    setIndexedStoreAction(ISD::POST_INC, MVT::i32,  Legal);
   }
 
   setOperationAction(ISD::SADDO, MVT::i32, Custom);
@@ -1849,36 +1853,50 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           false, false, 0);
     }
   } else if (isa<GlobalAddressSDNode>(Callee)) {
-    isDirect = true;
-    bool isDef = GV->isStrongDefinitionForLinker();
+    // If we're optimizing for minimum size and the function is called three or
+    // more times in this block, we can improve codesize by calling indirectly
+    // as BLXr has a 16-bit encoding.
+    auto *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
+    auto *BB = CLI.CS->getParent();
+    bool PreferIndirect =
+        Subtarget->isThumb() && MF.getFunction()->optForMinSize() &&
+        std::count_if(GV->user_begin(), GV->user_end(), [&BB](const User *U) {
+          return isa<Instruction>(U) && cast<Instruction>(U)->getParent() == BB;
+        }) > 2;
 
-    // ARM call to a local ARM function is predicable.
-    isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
-    // tBX takes a register source operand.
-    if (isStub && Subtarget->isThumb1Only() && !Subtarget->hasV5TOps()) {
-      assert(Subtarget->isTargetMachO() && "WrapperPIC use on non-MachO?");
-      Callee = DAG.getNode(
-          ARMISD::WrapperPIC, dl, PtrVt,
-          DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, ARMII::MO_NONLAZY));
-      Callee = DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
-                           MachinePointerInfo::getGOT(DAG.getMachineFunction()),
-                           false, false, true, 0);
-    } else if (Subtarget->isTargetCOFF()) {
-      assert(Subtarget->isTargetWindows() &&
-             "Windows is the only supported COFF target");
-      unsigned TargetFlags = GV->hasDLLImportStorageClass()
-                                 ? ARMII::MO_DLLIMPORT
-                                 : ARMII::MO_NO_FLAG;
-      Callee =
-          DAG.getTargetGlobalAddress(GV, dl, PtrVt, /*Offset=*/0, TargetFlags);
-      if (GV->hasDLLImportStorageClass())
+    if (!PreferIndirect) {
+      isDirect = true;
+      bool isDef = GV->isStrongDefinitionForLinker();
+
+      // ARM call to a local ARM function is predicable.
+      isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
+      // tBX takes a register source operand.
+      if (isStub && Subtarget->isThumb1Only() && !Subtarget->hasV5TOps()) {
+        assert(Subtarget->isTargetMachO() && "WrapperPIC use on non-MachO?");
+        Callee = DAG.getNode(
+            ARMISD::WrapperPIC, dl, PtrVt,
+            DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, ARMII::MO_NONLAZY));
         Callee =
-            DAG.getLoad(PtrVt, dl, DAG.getEntryNode(),
-                        DAG.getNode(ARMISD::Wrapper, dl, PtrVt, Callee),
+            DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
                         MachinePointerInfo::getGOT(DAG.getMachineFunction()),
-                        false, false, false, 0);
-    } else {
-      Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, 0);
+                        false, false, true, 0);
+      } else if (Subtarget->isTargetCOFF()) {
+        assert(Subtarget->isTargetWindows() &&
+               "Windows is the only supported COFF target");
+        unsigned TargetFlags = GV->hasDLLImportStorageClass()
+                                   ? ARMII::MO_DLLIMPORT
+                                   : ARMII::MO_NO_FLAG;
+        Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, /*Offset=*/0,
+                                            TargetFlags);
+        if (GV->hasDLLImportStorageClass())
+          Callee =
+              DAG.getLoad(PtrVt, dl, DAG.getEntryNode(),
+                          DAG.getNode(ARMISD::Wrapper, dl, PtrVt, Callee),
+                          MachinePointerInfo::getGOT(DAG.getMachineFunction()),
+                          false, false, false, 0);
+      } else {
+        Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, 0, 0);
+      }
     }
   } else if (ExternalSymbolSDNode *S = dyn_cast<ExternalSymbolSDNode>(Callee)) {
     isDirect = true;
@@ -8233,6 +8251,19 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.dump();
     llvm_unreachable("Unexpected instr type to insert");
   }
+
+  // Thumb1 post-indexed loads are really just single-register LDMs.
+  case ARM::tLDR_postidx: {
+    BuildMI(*BB, MI, dl, TII->get(ARM::tLDMIA_UPD))
+      .addOperand(MI.getOperand(1)) // Rn_wb
+      .addOperand(MI.getOperand(2)) // Rn
+      .addOperand(MI.getOperand(3)) // PredImm
+      .addOperand(MI.getOperand(4)) // PredReg
+      .addOperand(MI.getOperand(0)); // Rt
+    MI.eraseFromParent();
+    return BB;
+  }
+
   // The Thumb2 pre-indexed stores have the same MI operands, they just
   // define them differently in the .td files from the isel patterns, so
   // they need pseudos.
@@ -11582,22 +11613,37 @@ bool ARMTargetLowering::getPostIndexedAddressParts(SDNode *N, SDNode *Op,
                                                    SDValue &Offset,
                                                    ISD::MemIndexedMode &AM,
                                                    SelectionDAG &DAG) const {
-  if (Subtarget->isThumb1Only())
-    return false;
-
   EVT VT;
   SDValue Ptr;
-  bool isSEXTLoad = false;
+  bool isSEXTLoad = false, isNonExt;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     VT  = LD->getMemoryVT();
     Ptr = LD->getBasePtr();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
+    isNonExt = LD->getExtensionType() == ISD::NON_EXTLOAD;
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     VT  = ST->getMemoryVT();
     Ptr = ST->getBasePtr();
+    isNonExt = !ST->isTruncatingStore();
   } else
     return false;
 
+  if (Subtarget->isThumb1Only()) {
+    // Thumb-1 can do a limited post-inc load or store as an updating LDM. It
+    // must be non-extending/truncating, i32, with an offset of 4.
+    assert(Op->getValueType(0) == MVT::i32 && "Non-i32 post-inc op?!");
+    if (Op->getOpcode() != ISD::ADD || !isNonExt)
+      return false;
+    auto *RHS = dyn_cast<ConstantSDNode>(Op->getOperand(1));
+    if (!RHS || RHS->getZExtValue() != 4)
+      return false;
+    
+    Offset = Op->getOperand(1);
+    Base = Op->getOperand(0);
+    AM = ISD::POST_INC;
+    return true;
+  }
+  
   bool isInc;
   bool isLegal = false;
   if (Subtarget->isThumb2())
