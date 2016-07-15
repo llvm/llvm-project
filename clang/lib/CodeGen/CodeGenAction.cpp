@@ -46,7 +46,7 @@ namespace clang {
     const CodeGenOptions &CodeGenOpts;
     const TargetOptions &TargetOpts;
     const LangOptions &LangOpts;
-    raw_pwrite_stream *AsmOutStream;
+    std::unique_ptr<raw_pwrite_stream> AsmOutStream;
     ASTContext *Context;
 
     Timer LLVMIRGeneration;
@@ -68,11 +68,12 @@ namespace clang {
         const TargetOptions &TargetOpts, const LangOptions &LangOpts,
         bool TimePasses, const std::string &InFile,
         const SmallVectorImpl<std::pair<unsigned, llvm::Module *>> &LinkModules,
-        raw_pwrite_stream *OS, LLVMContext &C,
+        std::unique_ptr<raw_pwrite_stream> OS, LLVMContext &C,
         CoverageSourceInfo *CoverageInfo = nullptr)
         : Diags(Diags), Action(Action), CodeGenOpts(CodeGenOpts),
-          TargetOpts(TargetOpts), LangOpts(LangOpts), AsmOutStream(OS),
-          Context(nullptr), LLVMIRGeneration("LLVM IR Generation Time"),
+          TargetOpts(TargetOpts), LangOpts(LangOpts),
+          AsmOutStream(std::move(OS)), Context(nullptr),
+          LLVMIRGeneration("LLVM IR Generation Time"),
           Gen(CreateLLVMCodeGen(Diags, InFile, HeaderSearchOpts, PPOpts,
                                 CodeGenOpts, C, CoverageInfo)) {
       llvm::TimePassesIsEnabled = TimePasses;
@@ -177,7 +178,7 @@ namespace clang {
 
       EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
                         C.getTargetInfo().getDataLayout(),
-                        getModule(), Action, AsmOutStream);
+                        getModule(), Action, std::move(AsmOutStream));
 
       Ctx.setInlineAsmDiagnosticHandler(OldHandler, OldContext);
 
@@ -691,7 +692,7 @@ llvm::LLVMContext *CodeGenAction::takeLLVMContext() {
   return VMContext;
 }
 
-static raw_pwrite_stream *
+static std::unique_ptr<raw_pwrite_stream>
 GetOutputStream(CompilerInstance &CI, StringRef InFile, BackendAction Action) {
   switch (Action) {
   case Backend_EmitAssembly:
@@ -714,7 +715,7 @@ GetOutputStream(CompilerInstance &CI, StringRef InFile, BackendAction Action) {
 std::unique_ptr<ASTConsumer>
 CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
   BackendAction BA = static_cast<BackendAction>(Act);
-  raw_pwrite_stream *OS = GetOutputStream(CI, InFile, BA);
+  std::unique_ptr<raw_pwrite_stream> OS = GetOutputStream(CI, InFile, BA);
   if (BA != Backend_EmitNothing && !OS)
     return nullptr;
 
@@ -754,7 +755,7 @@ CodeGenAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
       BA, CI.getDiagnostics(), CI.getHeaderSearchOpts(),
       CI.getPreprocessorOpts(), CI.getCodeGenOpts(), CI.getTargetOpts(),
       CI.getLangOpts(), CI.getFrontendOpts().ShowTimers, InFile, LinkModules,
-      OS, *VMContext, CoverageInfo));
+      std::move(OS), *VMContext, CoverageInfo));
   BEConsumer = Result.get();
   return std::move(Result);
 }
@@ -786,7 +787,8 @@ void CodeGenAction::ExecuteAction() {
   if (getCurrentFileKind() == IK_LLVM_IR) {
     BackendAction BA = static_cast<BackendAction>(Act);
     CompilerInstance &CI = getCompilerInstance();
-    raw_pwrite_stream *OS = GetOutputStream(CI, getCurrentFile(), BA);
+    std::unique_ptr<raw_pwrite_stream> OS =
+        GetOutputStream(CI, getCurrentFile(), BA);
     if (BA != Backend_EmitNothing && !OS)
       return;
 
@@ -843,7 +845,7 @@ void CodeGenAction::ExecuteAction() {
 
     EmitBackendOutput(CI.getDiagnostics(), CI.getCodeGenOpts(), TargetOpts,
                       CI.getLangOpts(), CI.getTarget().getDataLayout(),
-                      TheModule.get(), BA, OS);
+                      TheModule.get(), BA, std::move(OS));
     return;
   }
 

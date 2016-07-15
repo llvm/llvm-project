@@ -329,12 +329,8 @@ protected:
 class CommandObjectPlatformStatus : public CommandObjectParsed
 {
 public:
-    CommandObjectPlatformStatus (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "platform status",
-                            "Display status for the currently selected platform.",
-                            nullptr,
-                            0)
+    CommandObjectPlatformStatus(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "platform status", "Display status for the current platform.", nullptr, 0)
     {
     }
 
@@ -376,12 +372,10 @@ protected:
 class CommandObjectPlatformConnect : public CommandObjectParsed
 {
 public:
-    CommandObjectPlatformConnect (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter, 
-                             "platform connect",
-                             "Connect a platform by name to be the currently selected platform.",
-                             "platform connect <connect-url>",
-                             0)
+    CommandObjectPlatformConnect(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "platform connect",
+                              "Select the current platform by providing a connection URL.",
+                              "platform connect <connect-url>", 0)
     {
     }
 
@@ -444,12 +438,9 @@ protected:
 class CommandObjectPlatformDisconnect : public CommandObjectParsed
 {
 public:
-    CommandObjectPlatformDisconnect (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter, 
-                             "platform disconnect",
-                             "Disconnect a platform by name to be the currently selected platform.",
-                             "platform disconnect",
-                             0)
+    CommandObjectPlatformDisconnect(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "platform disconnect", "Disconnect from the current platform.",
+                              "platform disconnect", 0)
     {
     }
 
@@ -995,11 +986,9 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-    CommandObjectPlatformFile (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "platform file",
-                            "A set of commands to manage file access through a platform",
-                            "platform file [open|close|read|write] ...")
+    CommandObjectPlatformFile(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "platform file", "Commands to access files on the current platform.",
+                                 "platform file [open|close|read|write] ...")
     {
         LoadSubCommand ("open", CommandObjectSP (new CommandObjectPlatformFOpen  (interpreter)));
         LoadSubCommand ("close", CommandObjectSP (new CommandObjectPlatformFClose  (interpreter)));
@@ -1930,11 +1919,10 @@ public:
     //------------------------------------------------------------------
     // Constructors and Destructors
     //------------------------------------------------------------------
-     CommandObjectPlatformProcess (CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter,
-                                "platform process",
-                                "A set of commands to query, launch and attach to platform processes",
-                                "platform process [attach|launch|list] ...")
+    CommandObjectPlatformProcess(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "platform process",
+                                 "Commands to query, launch and attach to processes on the current platform.",
+                                 "platform process [attach|launch|list] ...")
     {
         LoadSubCommand ("attach", CommandObjectSP (new CommandObjectPlatformProcessAttach (interpreter)));
         LoadSubCommand ("launch", CommandObjectSP (new CommandObjectPlatformProcessLaunch (interpreter)));
@@ -2016,14 +2004,11 @@ public:
         static OptionDefinition g_option_table[];
         uint32_t timeout;
     };
-    
-    CommandObjectPlatformShell (CommandInterpreter &interpreter) :
-    CommandObjectRaw (interpreter, 
-                      "platform shell",
-                      "Run a shell command on the selected platform.",
-                      "platform shell <shell-command>",
-                      0),
-    m_options(interpreter)
+
+    CommandObjectPlatformShell(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "platform shell", "Run a shell command on the current platform.",
+                           "platform shell <shell-command>", 0),
+          m_options(interpreter)
     {
     }
 
@@ -2192,11 +2177,9 @@ public:
     }
 };
 
-CommandObjectPlatform::CommandObjectPlatform(CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "platform",
-                            "A set of commands to manage and create platforms.",
-                            "platform [connect|disconnect|info|list|status|select] ...")
+CommandObjectPlatform::CommandObjectPlatform(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "platform", "Commands to manage and create platforms.",
+                             "platform [connect|disconnect|info|list|status|select] ...")
 {
     LoadSubCommand ("select", CommandObjectSP (new CommandObjectPlatformSelect (interpreter)));
     LoadSubCommand ("list"  , CommandObjectSP (new CommandObjectPlatformList (interpreter)));

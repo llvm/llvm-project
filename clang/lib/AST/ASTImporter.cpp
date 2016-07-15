@@ -1029,7 +1029,7 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 /// including the next assigned index (if none of them match). Returns an
 /// empty option if the context is not a record, i.e.. if the anonymous
 /// struct/union is at namespace or block scope.
-static Optional<unsigned> findAnonymousStructOrUnionIndex(RecordDecl *Anon) {
+static Optional<unsigned> findUntaggedStructOrUnionIndex(RecordDecl *Anon) {
   ASTContext &Context = Anon->getASTContext();
   QualType AnonTy = Context.getRecordType(Anon);
 
@@ -1040,13 +1040,29 @@ static Optional<unsigned> findAnonymousStructOrUnionIndex(RecordDecl *Anon) {
   unsigned Index = 0;
   for (const auto *D : Owner->noload_decls()) {
     const auto *F = dyn_cast<FieldDecl>(D);
-    if (!F || !F->isAnonymousStructOrUnion())
+    if (!F)
       continue;
 
-    if (Context.hasSameType(F->getType(), AnonTy))
-      break;
+    if (F->isAnonymousStructOrUnion()) {
+      if (Context.hasSameType(F->getType(), AnonTy))
+        break;
+      ++Index;
+      continue;
+    }
 
-    ++Index;
+    // If the field looks like this:
+    // struct { ... } A;
+    QualType FieldType = F->getType();
+    if (const auto *RecType = dyn_cast<RecordType>(FieldType)) {
+      const RecordDecl *RecDecl = RecType->getDecl();
+      if (RecDecl->getDeclContext() == Owner &&
+          !RecDecl->getIdentifier()) {
+        if (Context.hasSameType(FieldType, AnonTy))
+          break;
+        ++Index;
+        continue;
+      }
+    }
   }
 
   return Index;
@@ -1068,8 +1084,8 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   if (D1->isAnonymousStructOrUnion() && D2->isAnonymousStructOrUnion()) {
     // If both anonymous structs/unions are in a record context, make sure
     // they occur in the same location in the context records.
-    if (Optional<unsigned> Index1 = findAnonymousStructOrUnionIndex(D1)) {
-      if (Optional<unsigned> Index2 = findAnonymousStructOrUnionIndex(D2)) {
+    if (Optional<unsigned> Index1 = findUntaggedStructOrUnionIndex(D1)) {
+      if (Optional<unsigned> Index2 = findUntaggedStructOrUnionIndex(D2)) {
         if (*Index1 != *Index2)
           return false;
       }
@@ -2749,9 +2765,9 @@ Decl *ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
           // If both anonymous structs/unions are in a record context, make sure
           // they occur in the same location in the context records.
           if (Optional<unsigned> Index1
-              = findAnonymousStructOrUnionIndex(D)) {
+              = findUntaggedStructOrUnionIndex(D)) {
             if (Optional<unsigned> Index2 =
-                    findAnonymousStructOrUnionIndex(FoundRecord)) {
+                    findUntaggedStructOrUnionIndex(FoundRecord)) {
               if (*Index1 != *Index2)
                 continue;
             }

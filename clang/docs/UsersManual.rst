@@ -133,13 +133,13 @@ Options to Control Error and Warning Messages
 .. option:: -ferror-limit=123
 
   Stop emitting diagnostics after 123 errors have been produced. The default is
-  20, and the error limit can be disabled with :option:`-ferror-limit=0`.
+  20, and the error limit can be disabled with `-ferror-limit=0`.
 
 .. option:: -ftemplate-backtrace-limit=123
 
   Only emit up to 123 template instantiation notes within the template
   instantiation backtrace for a single warning or error. The default is 10, and
-  the limit can be disabled with :option:`-ftemplate-backtrace-limit=0`.
+  the limit can be disabled with `-ftemplate-backtrace-limit=0`.
 
 .. _cl_diag_formatting:
 

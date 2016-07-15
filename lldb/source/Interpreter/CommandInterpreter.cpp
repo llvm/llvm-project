@@ -345,7 +345,8 @@ CommandInterpreter::Initialize ()
         AddAlias ("call", cmd_obj_sp, "--")->SetHelpLong("");
         if (auto po = AddAlias ("po", cmd_obj_sp, "-O --"))
         {
-            po->SetHelp("Evaluate an expression in the current program context, using user defined variables and variables currently in scope, and display the result of evaluation in a language-specific manner.");
+            po->SetHelp("Evaluate an expression on the current thread.  Displays any returned value with formatting "
+                        "controlled by the type's author.");
             po->SetHelpLong("");
         }
         AddAlias("parray", cmd_obj_sp, "--element-count %1 --")->SetHelpLong("");
@@ -464,22 +465,26 @@ CommandInterpreter::LoadCommandDictionary ()
                                       {"^[\"']?(.*[^[:space:]\"'])[\"']?[[:space:]]*$", "breakpoint set --name '%1'"}};
     
     size_t num_regexes = llvm::array_lengthof(break_regexes);
-        
-    std::unique_ptr<CommandObjectRegexCommand>
-    break_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                      "_regexp-break",
-                                                      "Set a breakpoint using a regular expression to specify the location, where <linenum> is in decimal and <address> is in hex.\n",
-                                                      "\n_regexp-break <filename>:<linenum> # _regexp-break main.c:12      // Break on line 12 of main.c\n"
-                                                      "_regexp-break <linenum>            # _regexp-break 12             // Break on line 12 of current file\n"
-                                                      "_regexp-break <address>            # _regexp-break 0x1234000      // Break on address 0x1234000\n"
-                                                      "_regexp-break <name>               # _regexp-break main           // Break in 'main' after the prologue\n"
-                                                      "_regexp-break &<name>              # _regexp-break &main          // Break on the first instruction in 'main'\n"
-                                                      "_regexp-break <module>`<name>      # _regexp-break libc.so`malloc // Break in 'malloc' only in the 'libc.so' shared library\n"
-                                                      "_regexp-break /<source-regex>/     # _regexp-break /break here/   // Break on all lines that match the regular expression 'break here' in the current file.\n",
-                                                      2,
-                                                      CommandCompletions::eSymbolCompletion |
-                                                      CommandCompletions::eSourceFileCompletion,
-                                                      false));
+
+    std::unique_ptr<CommandObjectRegexCommand> break_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-break", "Set a breakpoint using one of several shorthand formats.\n",
+        "\n"
+        "_regexp-break <filename>:<linenum>\n"
+        "              main.c:12             // Break at line 12 of main.c\n\n"
+        "_regexp-break <linenum>\n"
+        "              12                    // Break at line 12 of current file\n\n"
+        "_regexp-break 0x<address>\n"
+        "              0x1234000             // Break at address 0x1234000\n\n"
+        "_regexp-break <name>\n"
+        "              main                  // Break in 'main' after the prologue\n\n"
+        "_regexp-break &<name>\n"
+        "              &main                 // Break at first instruction in 'main'\n\n"
+        "_regexp-break <module>`<name>\n"
+        "              libc.so`malloc        // Break in 'malloc' from 'libc.so'\n\n"
+        "_regexp-break /<source-regex>/\n"
+        "              /break here/          // Break on source lines in current file\n"
+        "                                    // containing text 'break here'.\n",
+        2, CommandCompletions::eSymbolCompletion | CommandCompletions::eSourceFileCompletion, false));
 
     if (break_regex_cmd_ap.get())
     {
@@ -499,15 +504,25 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    tbreak_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                      "_regexp-tbreak",
-                                                      "Set a one shot breakpoint using a regular expression to specify the location, where <linenum> is in decimal and <address> is in hex.",
-                                                      "_regexp-tbreak [<filename>:<linenum>]\n_regexp-break [<linenum>]\n_regexp-break [<address>]\n_regexp-break <...>",
-                                                       2,
-                                                       CommandCompletions::eSymbolCompletion |
-                                                       CommandCompletions::eSourceFileCompletion,
-                                                       false));
+    std::unique_ptr<CommandObjectRegexCommand> tbreak_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-tbreak", "Set a one-shot breakpoint using one of several shorthand formats.\n",
+        "\n"
+        "_regexp-break <filename>:<linenum>\n"
+        "              main.c:12             // Break at line 12 of main.c\n\n"
+        "_regexp-break <linenum>\n"
+        "              12                    // Break at line 12 of current file\n\n"
+        "_regexp-break 0x<address>\n"
+        "              0x1234000             // Break at address 0x1234000\n\n"
+        "_regexp-break <name>\n"
+        "              main                  // Break in 'main' after the prologue\n\n"
+        "_regexp-break &<name>\n"
+        "              &main                 // Break at first instruction in 'main'\n\n"
+        "_regexp-break <module>`<name>\n"
+        "              libc.so`malloc        // Break in 'malloc' from 'libc.so'\n\n"
+        "_regexp-break /<source-regex>/\n"
+        "              /break here/          // Break on source lines in current file\n"
+        "                                    // containing text 'break here'.\n",
+        2, CommandCompletions::eSymbolCompletion | CommandCompletions::eSourceFileCompletion, false));
 
     if (tbreak_regex_cmd_ap.get())
     {
@@ -532,14 +547,9 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    attach_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                       "_regexp-attach",
-                                                       "Attach to a process id if in decimal, otherwise treat the argument as a process name to attach to.",
-                                                       "_regexp-attach [<pid>]\n_regexp-attach [<process-name>]",
-                                                       2,
-                                                       0,
-                                                       false));
+    std::unique_ptr<CommandObjectRegexCommand> attach_regex_cmd_ap(
+        new CommandObjectRegexCommand(*this, "_regexp-attach", "Attach to process by ID or name.",
+                                      "_regexp-attach <pid> | <process-name>", 2, 0, false));
     if (attach_regex_cmd_ap.get())
     {
         if (attach_regex_cmd_ap->AddRegexCommand("^([0-9]+)[[:space:]]*$", "process attach --pid %1") &&
@@ -551,15 +561,11 @@ CommandInterpreter::LoadCommandDictionary ()
             m_command_dict[attach_regex_cmd_sp->GetCommandName ()] = attach_regex_cmd_sp;
         }
     }
-    
-    std::unique_ptr<CommandObjectRegexCommand>
-    down_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                     "_regexp-down",
-                                                     "Go down \"n\" frames in the stack (1 frame by default).",
-                                                     "_regexp-down [n]",
-                                                     2,
-                                                     0,
-                                                     false));
+
+    std::unique_ptr<CommandObjectRegexCommand> down_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-down", "Select a newer stack frame.  Defaults to moving one frame, a numeric argument can "
+                               "specify an arbitrary number.",
+        "_regexp-down [<count>]", 2, 0, false));
     if (down_regex_cmd_ap.get())
     {
         if (down_regex_cmd_ap->AddRegexCommand("^$", "frame select -r -1") &&
@@ -569,15 +575,11 @@ CommandInterpreter::LoadCommandDictionary ()
             m_command_dict[down_regex_cmd_sp->GetCommandName ()] = down_regex_cmd_sp;
         }
     }
-    
-    std::unique_ptr<CommandObjectRegexCommand>
-    up_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                   "_regexp-up",
-                                                   "Go up \"n\" frames in the stack (1 frame by default).",
-                                                   "_regexp-up [n]",
-                                                   2,
-                                                   0,
-                                                   false));
+
+    std::unique_ptr<CommandObjectRegexCommand> up_regex_cmd_ap(
+        new CommandObjectRegexCommand(*this, "_regexp-up", "Select an older stack frame.  Defaults to moving one "
+                                                           "frame, a numeric argument can specify an arbitrary number.",
+                                      "_regexp-up [<count>]", 2, 0, false));
     if (up_regex_cmd_ap.get())
     {
         if (up_regex_cmd_ap->AddRegexCommand("^$", "frame select -r 1") &&
@@ -588,14 +590,9 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    display_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                        "_regexp-display",
-                                                        "Add an expression evaluation stop-hook.",
-                                                        "_regexp-display expression",
-                                                        2,
-                                                        0,
-                                                        false));
+    std::unique_ptr<CommandObjectRegexCommand> display_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-display", "Evaluate an expression at every stop (see 'help target stop-hook'.)",
+        "_regexp-display expression", 2, 0, false));
     if (display_regex_cmd_ap.get())
     {
         if (display_regex_cmd_ap->AddRegexCommand("^(.+)$", "target stop-hook add -o \"expr -- %1\""))
@@ -605,14 +602,9 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    undisplay_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                          "_regexp-undisplay",
-                                                          "Remove an expression evaluation stop-hook.",
-                                                          "_regexp-undisplay stop-hook-number",
-                                                          2,
-                                                          0,
-                                                          false));
+    std::unique_ptr<CommandObjectRegexCommand> undisplay_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-undisplay", "Stop displaying expression at every stop (specified by stop-hook index.)",
+        "_regexp-undisplay stop-hook-number", 2, 0, false));
     if (undisplay_regex_cmd_ap.get())
     {
         if (undisplay_regex_cmd_ap->AddRegexCommand("^([0-9]+)$", "target stop-hook delete %1"))
@@ -622,14 +614,10 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    connect_gdb_remote_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                             "gdb-remote",
-                                                             "Connect to a remote GDB server.  If no hostname is provided, localhost is assumed.",
-                                                             "gdb-remote [<hostname>:]<portnum>",
-                                                             2,
-                                                             0,
-                                                             false));
+    std::unique_ptr<CommandObjectRegexCommand> connect_gdb_remote_cmd_ap(new CommandObjectRegexCommand(
+        *this, "gdb-remote",
+        "Connect to a process via remote GDB server.  If no host is specifed, localhost is assumed.",
+        "gdb-remote [<hostname>:]<portnum>", 2, 0, false));
     if (connect_gdb_remote_cmd_ap.get())
     {
         if (connect_gdb_remote_cmd_ap->AddRegexCommand("^([^:]+:[[:digit:]]+)$", "process connect --plugin gdb-remote connect://%1") &&
@@ -640,14 +628,10 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    connect_kdp_remote_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                             "kdp-remote",
-                                                             "Connect to a remote KDP server.  udp port 41139 is the default port number.",
-                                                             "kdp-remote <hostname>[:<portnum>]",
-                                                             2,
-                                                             0,
-                                                             false));
+    std::unique_ptr<CommandObjectRegexCommand> connect_kdp_remote_cmd_ap(new CommandObjectRegexCommand(
+        *this, "kdp-remote",
+        "Connect to a process via remote KDP server.  If no UDP port is specified, port 41139 is assumed.",
+        "kdp-remote <hostname>[:<portnum>]", 2, 0, false));
     if (connect_kdp_remote_cmd_ap.get())
     {
         if (connect_kdp_remote_cmd_ap->AddRegexCommand("^([^:]+:[[:digit:]]+)$", "process connect --plugin kdp-remote udp://%1") &&
@@ -658,14 +642,10 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    bt_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                   "_regexp-bt",
-                                                   "Show a backtrace.  An optional argument is accepted; if that argument is a number, it specifies the number of frames to display.  If that argument is 'all', full backtraces of all threads are displayed.",
-                                                   "bt [<digit>|all]",
-                                                   2,
-                                                   0,
-                                                   false));
+    std::unique_ptr<CommandObjectRegexCommand> bt_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-bt", "Show the current thread's call stack.  Any numeric argument displays at most that many "
+                             "frames.  The argument 'all' displays all threads.",
+        "bt [<digit> | all]", 2, 0, false));
     if (bt_regex_cmd_ap.get())
     {
         // accept but don't document "bt -c <number>" -- before bt was a regex command if you wanted to backtrace
@@ -681,14 +661,16 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    list_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                     "_regexp-list",
-                                                     "Implements the GDB 'list' command in all of its forms except FILE:FUNCTION and maps them to the appropriate 'source list' commands.",
-                                                     "_regexp-list [<line>]\n_regexp-list [<file>:<line>]\n_regexp-list [<file>:<line>]",
-                                                     2,
-                                                     CommandCompletions::eSourceFileCompletion,
-                                                     false));
+    std::unique_ptr<CommandObjectRegexCommand> list_regex_cmd_ap(new CommandObjectRegexCommand(
+        *this, "_regexp-list", "List relevant source code using one of several shorthand formats.",
+        "\n"
+        "_regexp-list <file>:<line>   // List around specific file/line\n"
+        "_regexp-list <line>          // List current file around specified line\n"
+        "_regexp-list <function-name> // List specified function\n"
+        "_regexp-list 0x<address>     // List around specified address\n"
+        "_regexp-list -[<count>]      // List previous <count> lines\n"
+        "_regexp-list                 // List subsequent lines",
+        2, CommandCompletions::eSourceFileCompletion, false));
     if (list_regex_cmd_ap.get())
     {
         if (list_regex_cmd_ap->AddRegexCommand("^([0-9]+)[[:space:]]*$", "source list --line %1") &&
@@ -704,14 +686,12 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    env_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                    "_regexp-env",
-                                                    "Implements a shortcut to viewing and setting environment variables.",
-                                                    "_regexp-env\n_regexp-env FOO=BAR",
-                                                    2,
-                                                    0,
-                                                    false));
+    std::unique_ptr<CommandObjectRegexCommand> env_regex_cmd_ap(
+        new CommandObjectRegexCommand(*this, "_regexp-env", "Shorthand for viewing and setting environment variables.",
+                                      "\n"
+                                      "_regexp-env                  // Show enrivonment\n"
+                                      "_regexp-env <name>=<value>   // Set an environment variable",
+                                      2, 0, false));
     if (env_regex_cmd_ap.get())
     {
         if (env_regex_cmd_ap->AddRegexCommand("^$", "settings show target.env-vars") &&
@@ -722,17 +702,14 @@ CommandInterpreter::LoadCommandDictionary ()
         }
     }
 
-    std::unique_ptr<CommandObjectRegexCommand>
-    jump_regex_cmd_ap(new CommandObjectRegexCommand (*this,
-                                                    "_regexp-jump",
-                                                    "Sets the program counter to a new address.",
-                                                    "_regexp-jump [<line>]\n"
-                                                    "_regexp-jump [<+-lineoffset>]\n"
-                                                    "_regexp-jump [<file>:<line>]\n"
-                                                    "_regexp-jump [*<addr>]\n",
-                                                     2,
-                                                     0,
-                                                     false));
+    std::unique_ptr<CommandObjectRegexCommand> jump_regex_cmd_ap(
+        new CommandObjectRegexCommand(*this, "_regexp-jump", "Set the program counter to a new address.",
+                                      "\n"
+                                      "_regexp-jump <line>\n"
+                                      "_regexp-jump +<line-offset> | -<line-offset>\n"
+                                      "_regexp-jump <file>:<line>\n"
+                                      "_regexp-jump *<addr>\n",
+                                      2, 0, false));
     if (jump_regex_cmd_ap.get())
     {
         if (jump_regex_cmd_ap->AddRegexCommand("^\\*(.*)$", "thread jump --addr %1") &&

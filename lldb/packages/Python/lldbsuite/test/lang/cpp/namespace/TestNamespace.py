@@ -16,6 +16,7 @@ class NamespaceBreakpointTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
+    @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     def test_breakpoints_func_auto(self):
         """Test that we can set breakpoints correctly by basename to find all functions whose basename is "func"."""
         self.build()
@@ -35,6 +36,7 @@ class NamespaceBreakpointTestCase(TestBase):
             name = bp_loc.GetAddress().GetFunction().GetName()
             self.assertTrue(name in names, "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeAuto")        
 
+    @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     def test_breakpoints_func_full(self):
         """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "func"
            (no namespaces)."""

@@ -5426,26 +5426,44 @@ static Expr *getOrderedNumberExpr(ArrayRef<OMPClause *> Clauses) {
   return nullptr;
 }
 
-static bool checkSimdlenSafelenValues(Sema &S, const Expr *Simdlen,
-                                      const Expr *Safelen) {
-  llvm::APSInt SimdlenRes, SafelenRes;
-  if (Simdlen->isValueDependent() || Simdlen->isTypeDependent() ||
-      Simdlen->isInstantiationDependent() ||
-      Simdlen->containsUnexpandedParameterPack())
-    return false;
-  if (Safelen->isValueDependent() || Safelen->isTypeDependent() ||
-      Safelen->isInstantiationDependent() ||
-      Safelen->containsUnexpandedParameterPack())
-    return false;
-  Simdlen->EvaluateAsInt(SimdlenRes, S.Context);
-  Safelen->EvaluateAsInt(SafelenRes, S.Context);
-  // OpenMP 4.1 [2.8.1, simd Construct, Restrictions]
-  // If both simdlen and safelen clauses are specified, the value of the simdlen
-  // parameter must be less than or equal to the value of the safelen parameter.
-  if (SimdlenRes > SafelenRes) {
-    S.Diag(Simdlen->getExprLoc(), diag::err_omp_wrong_simdlen_safelen_values)
-        << Simdlen->getSourceRange() << Safelen->getSourceRange();
-    return true;
+static bool checkSimdlenSafelenSpecified(Sema &S,
+                                         const ArrayRef<OMPClause *> Clauses) {
+  OMPSafelenClause *Safelen = nullptr;
+  OMPSimdlenClause *Simdlen = nullptr;
+
+  for (auto *Clause : Clauses) {
+    if (Clause->getClauseKind() == OMPC_safelen)
+      Safelen = cast<OMPSafelenClause>(Clause);
+    else if (Clause->getClauseKind() == OMPC_simdlen)
+      Simdlen = cast<OMPSimdlenClause>(Clause);
+    if (Safelen && Simdlen)
+      break;
+  }
+
+  if (Simdlen && Safelen) {
+    llvm::APSInt SimdlenRes, SafelenRes;
+    auto SimdlenLength = Simdlen->getSimdlen();
+    auto SafelenLength = Safelen->getSafelen();
+    if (SimdlenLength->isValueDependent() || SimdlenLength->isTypeDependent() ||
+        SimdlenLength->isInstantiationDependent() ||
+        SimdlenLength->containsUnexpandedParameterPack())
+      return false;
+    if (SafelenLength->isValueDependent() || SafelenLength->isTypeDependent() ||
+        SafelenLength->isInstantiationDependent() ||
+        SafelenLength->containsUnexpandedParameterPack())
+      return false;
+    SimdlenLength->EvaluateAsInt(SimdlenRes, S.Context);
+    SafelenLength->EvaluateAsInt(SafelenRes, S.Context);
+    // OpenMP 4.5 [2.8.1, simd Construct, Restrictions]
+    // If both simdlen and safelen clauses are specified, the value of the
+    // simdlen parameter must be less than or equal to the value of the safelen
+    // parameter.
+    if (SimdlenRes > SafelenRes) {
+      S.Diag(SimdlenLength->getExprLoc(),
+             diag::err_omp_wrong_simdlen_safelen_values)
+          << SimdlenLength->getSourceRange() << SafelenLength->getSourceRange();
+      return true;
+    }
   }
   return false;
 }
@@ -5481,22 +5499,7 @@ StmtResult Sema::ActOnOpenMPSimdDirective(
     }
   }
 
-  // OpenMP 4.1 [2.8.1, simd Construct, Restrictions]
-  // If both simdlen and safelen clauses are specified, the value of the simdlen
-  // parameter must be less than or equal to the value of the safelen parameter.
-  OMPSafelenClause *Safelen = nullptr;
-  OMPSimdlenClause *Simdlen = nullptr;
-  for (auto *Clause : Clauses) {
-    if (Clause->getClauseKind() == OMPC_safelen)
-      Safelen = cast<OMPSafelenClause>(Clause);
-    else if (Clause->getClauseKind() == OMPC_simdlen)
-      Simdlen = cast<OMPSimdlenClause>(Clause);
-    if (Safelen && Simdlen)
-      break;
-  }
-  if (Simdlen && Safelen &&
-      checkSimdlenSafelenValues(*this, Simdlen->getSimdlen(),
-                                Safelen->getSafelen()))
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
     return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
@@ -5572,22 +5575,7 @@ StmtResult Sema::ActOnOpenMPForSimdDirective(
     }
   }
 
-  // OpenMP 4.1 [2.8.1, simd Construct, Restrictions]
-  // If both simdlen and safelen clauses are specified, the value of the simdlen
-  // parameter must be less than or equal to the value of the safelen parameter.
-  OMPSafelenClause *Safelen = nullptr;
-  OMPSimdlenClause *Simdlen = nullptr;
-  for (auto *Clause : Clauses) {
-    if (Clause->getClauseKind() == OMPC_safelen)
-      Safelen = cast<OMPSafelenClause>(Clause);
-    else if (Clause->getClauseKind() == OMPC_simdlen)
-      Simdlen = cast<OMPSimdlenClause>(Clause);
-    if (Safelen && Simdlen)
-      break;
-  }
-  if (Simdlen && Safelen &&
-      checkSimdlenSafelenValues(*this, Simdlen->getSimdlen(),
-                                Safelen->getSafelen()))
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
     return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
@@ -5831,22 +5819,7 @@ StmtResult Sema::ActOnOpenMPParallelForSimdDirective(
     }
   }
 
-  // OpenMP 4.1 [2.8.1, simd Construct, Restrictions]
-  // If both simdlen and safelen clauses are specified, the value of the simdlen
-  // parameter must be less than or equal to the value of the safelen parameter.
-  OMPSafelenClause *Safelen = nullptr;
-  OMPSimdlenClause *Simdlen = nullptr;
-  for (auto *Clause : Clauses) {
-    if (Clause->getClauseKind() == OMPC_safelen)
-      Safelen = cast<OMPSafelenClause>(Clause);
-    else if (Clause->getClauseKind() == OMPC_simdlen)
-      Simdlen = cast<OMPSimdlenClause>(Clause);
-    if (Safelen && Simdlen)
-      break;
-  }
-  if (Simdlen && Safelen &&
-      checkSimdlenSafelenValues(*this, Simdlen->getSimdlen(),
-                                Safelen->getSafelen()))
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
     return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
@@ -7144,6 +7117,9 @@ StmtResult Sema::ActOnOpenMPDistributeParallelForSimdDirective(
   assert((CurContext->isDependentContext() || B.builtAll()) &&
          "omp for loop exprs were not built");
 
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
+    return StmtError();
+
   getCurFunction()->setHasBranchProtectedScope();
   return OMPDistributeParallelForSimdDirective::Create(
       Context, StartLoc, EndLoc, NestedLoopCount, Clauses, AStmt, B);
@@ -7176,6 +7152,9 @@ StmtResult Sema::ActOnOpenMPDistributeSimdDirective(
 
   assert((CurContext->isDependentContext() || B.builtAll()) &&
          "omp for loop exprs were not built");
+
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
+    return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();
   return OMPDistributeSimdDirective::Create(Context, StartLoc, EndLoc,
@@ -7220,23 +7199,7 @@ StmtResult Sema::ActOnOpenMPTargetParallelForSimdDirective(
           return StmtError();
     }
   }
-
-  // OpenMP 4.1 [2.8.1, simd Construct, Restrictions]
-  // If both simdlen and safelen clauses are specified, the value of the simdlen
-  // parameter must be less than or equal to the value of the safelen parameter.
-  OMPSafelenClause *Safelen = nullptr;
-  OMPSimdlenClause *Simdlen = nullptr;
-  for (auto *Clause : Clauses) {
-    if (Clause->getClauseKind() == OMPC_safelen)
-      Safelen = cast<OMPSafelenClause>(Clause);
-    else if (Clause->getClauseKind() == OMPC_simdlen)
-      Simdlen = cast<OMPSimdlenClause>(Clause);
-    if (Safelen && Simdlen)
-      break;
-  }
-  if (Simdlen && Safelen &&
-      checkSimdlenSafelenValues(*this, Simdlen->getSimdlen(),
-                                Safelen->getSafelen()))
+  if (checkSimdlenSafelenSpecified(*this, Clauses))
     return StmtError();
 
   getCurFunction()->setHasBranchProtectedScope();

@@ -8264,10 +8264,19 @@ ClangASTContext::AddObjCClassProperty (const CompilerType& type,
                     property_decl->setPropertyAttributes (clang::ObjCPropertyDecl::OBJC_PR_copy);
                 if (property_attributes & DW_APPLE_PROPERTY_nonatomic)
                     property_decl->setPropertyAttributes (clang::ObjCPropertyDecl::OBJC_PR_nonatomic);
-                
-                if (!getter_sel.isNull() && !class_interface_decl->lookupInstanceMethod(getter_sel))
+                if (property_attributes & clang::ObjCPropertyDecl::OBJC_PR_nullability)
+                    property_decl->setPropertyAttributes(clang::ObjCPropertyDecl::OBJC_PR_nullability);
+                if (property_attributes & clang::ObjCPropertyDecl::OBJC_PR_null_resettable)
+                    property_decl->setPropertyAttributes(clang::ObjCPropertyDecl::OBJC_PR_null_resettable);
+                if (property_attributes & clang::ObjCPropertyDecl::OBJC_PR_class)
+                    property_decl->setPropertyAttributes(clang::ObjCPropertyDecl::OBJC_PR_class);
+
+                const bool isInstance = (property_attributes & clang::ObjCPropertyDecl::OBJC_PR_class) == 0;
+
+                if (!getter_sel.isNull() &&
+                    !(isInstance ? class_interface_decl->lookupInstanceMethod(getter_sel)
+                                 : class_interface_decl->lookupClassMethod(getter_sel)))
                 {
-                    const bool isInstance = true;
                     const bool isVariadic = false;
                     const bool isSynthesized = false;
                     const bool isImplicitlyDeclared = true;
@@ -8291,12 +8300,12 @@ ClangASTContext::AddObjCClassProperty (const CompilerType& type,
                         class_interface_decl->addDecl(getter);
                     }
                 }
-                
-                if (!setter_sel.isNull() && !class_interface_decl->lookupInstanceMethod(setter_sel))
+
+                if (!setter_sel.isNull() &&
+                    !(isInstance ? class_interface_decl->lookupInstanceMethod(setter_sel)
+                                 : class_interface_decl->lookupClassMethod(setter_sel)))
                 {
                     clang::QualType result_type = clang_ast->VoidTy;
-                    
-                    const bool isInstance = true;
                     const bool isVariadic = false;
                     const bool isSynthesized = false;
                     const bool isImplicitlyDeclared = true;

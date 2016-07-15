@@ -33,8 +33,9 @@ using namespace clang;
 
 std::unique_ptr<ASTConsumer>
 HTMLPrintAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  if (raw_ostream *OS = CI.createDefaultOutputFile(false, InFile))
-    return CreateHTMLPrinter(OS, CI.getPreprocessor());
+  if (std::unique_ptr<raw_ostream> OS =
+          CI.createDefaultOutputFile(false, InFile))
+    return CreateHTMLPrinter(std::move(OS), CI.getPreprocessor());
   return nullptr;
 }
 
@@ -152,14 +153,15 @@ bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
 
 std::unique_ptr<ASTConsumer>
 RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
-  if (raw_ostream *OS = CI.createDefaultOutputFile(false, InFile, "cpp")) {
+  if (std::unique_ptr<raw_ostream> OS =
+          CI.createDefaultOutputFile(false, InFile, "cpp")) {
     if (CI.getLangOpts().ObjCRuntime.isNonFragile())
       return CreateModernObjCRewriter(
-          InFile, OS, CI.getDiagnostics(), CI.getLangOpts(),
+          InFile, std::move(OS), CI.getDiagnostics(), CI.getLangOpts(),
           CI.getDiagnosticOpts().NoRewriteMacros,
           (CI.getCodeGenOpts().getDebugInfo() != codegenoptions::NoDebugInfo));
-    return CreateObjCRewriter(InFile, OS,
-                              CI.getDiagnostics(), CI.getLangOpts(),
+    return CreateObjCRewriter(InFile, std::move(OS), CI.getDiagnostics(),
+                              CI.getLangOpts(),
                               CI.getDiagnosticOpts().NoRewriteMacros);
   }
   return nullptr;
@@ -173,25 +175,28 @@ RewriteObjCAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 void RewriteMacrosAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  raw_ostream *OS = CI.createDefaultOutputFile(true, getCurrentFile());
+  std::unique_ptr<raw_ostream> OS =
+      CI.createDefaultOutputFile(true, getCurrentFile());
   if (!OS) return;
 
-  RewriteMacrosInInput(CI.getPreprocessor(), OS);
+  RewriteMacrosInInput(CI.getPreprocessor(), OS.get());
 }
 
 void RewriteTestAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  raw_ostream *OS = CI.createDefaultOutputFile(false, getCurrentFile());
+  std::unique_ptr<raw_ostream> OS =
+      CI.createDefaultOutputFile(false, getCurrentFile());
   if (!OS) return;
 
-  DoRewriteTest(CI.getPreprocessor(), OS);
+  DoRewriteTest(CI.getPreprocessor(), OS.get());
 }
 
 void RewriteIncludesAction::ExecuteAction() {
   CompilerInstance &CI = getCompilerInstance();
-  raw_ostream *OS = CI.createDefaultOutputFile(true, getCurrentFile());
+  std::unique_ptr<raw_ostream> OS =
+      CI.createDefaultOutputFile(true, getCurrentFile());
   if (!OS) return;
 
-  RewriteIncludesInInput(CI.getPreprocessor(), OS,
+  RewriteIncludesInInput(CI.getPreprocessor(), OS.get(),
                          CI.getPreprocessorOutputOpts());
 }

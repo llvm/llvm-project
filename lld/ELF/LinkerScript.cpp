@@ -150,7 +150,6 @@ uint64_t ExprParser::apply(StringRef Op, uint64_t L, uint64_t R) {
   if (Op == "&")
     return L & R;
   llvm_unreachable("invalid operator");
-  return 0;
 }
 
 // This is a part of the operator-precedence parser.
@@ -227,23 +226,22 @@ void LinkerScript<ELFT>::assignAddresses(
   uintX_t ThreadBssOffset = 0;
 
   for (SectionsCommand &Cmd : Opt.Commands) {
-    switch (Cmd.Kind) {
-    case ExprKind:
-      Dot = evalExpr(Cmd.Expr, Dot);
+    if (Cmd.Kind == AssignmentKind) {
+      uint64_t Val = evalExpr(Cmd.Expr, Dot);
+
+      if (Cmd.Name == ".") {
+        Dot = Val;
+      } else {
+        auto *D = cast<DefinedRegular<ELFT>>(Symtab<ELFT>::X->find(Cmd.Name));
+        D->Value = Val;
+      }
       continue;
-    case SymbolAssignmentKind: {
-      auto *D =
-          cast<DefinedRegular<ELFT>>(Symtab<ELFT>::X->find(Cmd.Name));
-      D->Value = evalExpr(Cmd.Expr, Dot);
-      continue;
-    }
-    default:
-      break;
     }
 
     // Find all the sections with required name. There can be more than
     // ont section with such name, if the alignment, flags or type
     // attribute differs.
+    assert(Cmd.Kind == SectionKind);
     for (OutputSectionBase<ELFT> *Sec : Sections) {
       if (Sec->getName() != Cmd.Name)
         continue;
@@ -309,11 +307,12 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
   return I < J ? -1 : 1;
 }
 
-template <class ELFT> void LinkerScript<ELFT>::addScriptedSymbols() {
+template <class ELFT>
+void LinkerScript<ELFT>::addScriptedSymbols() {
   for (SectionsCommand &Cmd : Opt.Commands)
-    if (Cmd.Kind == SymbolAssignmentKind &&
-        Symtab<ELFT>::X->find(Cmd.Name) == nullptr)
-      Symtab<ELFT>::X->addAbsolute(Cmd.Name, STV_DEFAULT);
+    if (Cmd.Kind == AssignmentKind)
+      if (Cmd.Name != ".")
+        Symtab<ELFT>::X->addAbsolute(Cmd.Name, STV_DEFAULT);
 }
 
 class elf::ScriptParser : public ScriptParserBase {
@@ -525,7 +524,7 @@ void ScriptParser::readLocationCounterValue() {
   if (Expr.empty())
     error("error in location counter expression");
   else
-    Opt.Commands.push_back({ExprKind, std::move(Expr), ""});
+    Opt.Commands.push_back({AssignmentKind, std::move(Expr), "."});
 }
 
 void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
@@ -572,7 +571,7 @@ void ScriptParser::readSymbolAssignment(StringRef Name) {
   if (Expr.empty())
     error("error in symbol assignment expression");
   else
-    Opt.Commands.push_back({SymbolAssignmentKind, std::move(Expr), Name});
+    Opt.Commands.push_back({AssignmentKind, std::move(Expr), Name});
 }
 
 std::vector<StringRef> ScriptParser::readSectionsCommandExpr() {

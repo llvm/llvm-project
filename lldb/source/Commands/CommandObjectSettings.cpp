@@ -30,12 +30,9 @@ using namespace lldb_private;
 class CommandObjectSettingsSet : public CommandObjectRaw
 {
 public:
-    CommandObjectSettingsSet (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "settings set",
-                         "Set or change the value of a single debugger setting variable.",
-                         nullptr),
-        m_options (interpreter)
+    CommandObjectSettingsSet(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "settings set", "Set the value of the specified debugger setting.", nullptr),
+          m_options(interpreter)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -298,11 +295,10 @@ CommandObjectSettingsSet::CommandOptions::g_option_table[] =
 class CommandObjectSettingsShow : public CommandObjectParsed
 {
 public:
-    CommandObjectSettingsShow (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "settings show",
-                            "Show the specified internal debugger setting variable and its value, or show all the currently set variables and their values, if nothing is specified.",
-                            nullptr)
+    CommandObjectSettingsShow(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "settings show",
+              "Show matching debugger settings and their current values.  Defaults to showing all settings.", nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentData var_name_arg;
@@ -383,12 +379,11 @@ protected:
 
 class CommandObjectSettingsList : public CommandObjectParsed
 {
-public: 
-    CommandObjectSettingsList (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "settings list",
-                            "List and describe all the internal debugger settings variables that are available to the user to 'set' or 'show', or describe a particular variable or set of variables (by specifying the variable name or a common prefix).",
-                            nullptr)
+public:
+    CommandObjectSettingsList(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "settings list",
+                              "List and describe matching debugger settings.  Defaults to all listing all settings.",
+                              nullptr)
     {
         CommandArgumentEntry arg;
         CommandArgumentData var_name_arg;
@@ -479,11 +474,9 @@ protected:
 class CommandObjectSettingsRemove : public CommandObjectRaw
 {
 public:
-    CommandObjectSettingsRemove (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "settings remove",
-                         "Remove the specified element from an array or dictionary settings variable.",
-                         nullptr)
+    CommandObjectSettingsRemove(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "settings remove",
+                           "Remove a value from a setting, specified by array index or dictionary key.", nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -598,11 +591,9 @@ protected:
 class CommandObjectSettingsReplace : public CommandObjectRaw
 {
 public:
-    CommandObjectSettingsReplace (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "settings replace",
-                         "Replace the specified element from an internal debugger settings array or dictionary variable with the specified new value.",
-                         nullptr)
+    CommandObjectSettingsReplace(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "settings replace",
+                           "Replace the debugger setting value specified by array index or dictionary key.", nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -723,11 +714,11 @@ protected:
 class CommandObjectSettingsInsertBefore : public CommandObjectRaw
 {
 public:
-    CommandObjectSettingsInsertBefore (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "settings insert-before",
-                         "Insert value(s) into an internal debugger settings array variable, immediately before the specified element.",
-                         nullptr)
+    CommandObjectSettingsInsertBefore(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "settings insert-before", "Insert one or more values into an debugger array "
+                                                                  "setting immediately before the specified element "
+                                                                  "index.",
+                           nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -846,11 +837,10 @@ protected:
 class CommandObjectSettingsInsertAfter : public CommandObjectRaw
 {
 public:
-    CommandObjectSettingsInsertAfter (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "settings insert-after",
-                         "Insert value(s) into an internal debugger settings array variable, immediately after the specified element.",
-                         nullptr)
+    CommandObjectSettingsInsertAfter(CommandInterpreter &interpreter)
+        : CommandObjectRaw(
+              interpreter, "settings insert-after",
+              "Insert one or more values into a debugger array settings after the specified element index.", nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -969,11 +959,9 @@ protected:
 class CommandObjectSettingsAppend : public CommandObjectRaw
 {
 public:
-    CommandObjectSettingsAppend (CommandInterpreter &interpreter) :
-        CommandObjectRaw(interpreter,
-                         "settings append",
-                         "Append a new value to the end of an internal debugger settings array, dictionary or string variable.",
-                         nullptr)
+    CommandObjectSettingsAppend(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "settings append",
+                           "Append one or more values to a debugger array, dictionary, or string setting.", nullptr)
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -1084,11 +1072,9 @@ protected:
 class CommandObjectSettingsClear : public CommandObjectParsed
 {
 public:
-    CommandObjectSettingsClear (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "settings clear",
-                            "Erase all the contents of an internal debugger settings variables; this is only valid for variables with clearable types, i.e. strings, arrays or dictionaries.",
-                            nullptr)
+    CommandObjectSettingsClear(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "settings clear", "Clear a debugger setting array, dictionary, or string.",
+                              nullptr)
     {
         CommandArgumentEntry arg;
         CommandArgumentData var_name_arg;
@@ -1173,11 +1159,9 @@ protected:
 // CommandObjectMultiwordSettings
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordSettings::CommandObjectMultiwordSettings (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "settings",
-                            "A set of commands for manipulating internal settable debugger variables.",
-                            "settings <command> [<command-options>]")
+CommandObjectMultiwordSettings::CommandObjectMultiwordSettings(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "settings", "Commands for managing LLDB settings.",
+                             "settings <subcommand> [<command-options>]")
 {
     LoadSubCommand ("set",           CommandObjectSP (new CommandObjectSettingsSet (interpreter)));
     LoadSubCommand ("show",          CommandObjectSP (new CommandObjectSettingsShow (interpreter)));

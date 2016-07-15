@@ -25,11 +25,8 @@ using namespace lldb_private;
 // CommandObjectApropos
 //-------------------------------------------------------------------------
 
-CommandObjectApropos::CommandObjectApropos (CommandInterpreter &interpreter) :
-    CommandObjectParsed(interpreter,
-                        "apropos",
-                        "Find a list of debugger commands related to a particular word/subject.",
-                        nullptr)
+CommandObjectApropos::CommandObjectApropos(CommandInterpreter &interpreter)
+    : CommandObjectParsed(interpreter, "apropos", "List debugger commands related to a word or subject.", nullptr)
 {
     CommandArgumentEntry arg;
     CommandArgumentData search_word_arg;

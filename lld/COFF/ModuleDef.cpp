@@ -134,13 +134,13 @@ private:
   void readAsInt(uint64_t *I) {
     read();
     if (Tok.K != Identifier || Tok.Value.getAsInteger(10, *I))
-      error("integer expected");
+      fatal("integer expected");
   }
 
   void expect(Kind Expected, StringRef Msg) {
     read();
     if (Tok.K != Expected)
-      error(Msg);
+      fatal(Msg);
   }
 
   void unget() { Stack.push_back(Tok); }
@@ -177,7 +177,7 @@ private:
       parseVersion(&Config->MajorImageVersion, &Config->MinorImageVersion);
       return;
     default:
-      error(Twine("unknown directive: ") + Tok.Value);
+      fatal("unknown directive: " + Tok.Value);
     }
   }
 
@@ -188,7 +188,7 @@ private:
     if (Tok.K == Equal) {
       read();
       if (Tok.K != Identifier)
-        error(Twine("identifier expected, but got ") + Tok.Value);
+        fatal("identifier expected, but got " + Tok.Value);
       E.ExtName = E.Name;
       E.Name = Tok.Value;
     } else {
@@ -264,15 +264,15 @@ private:
   void parseVersion(uint32_t *Major, uint32_t *Minor) {
     read();
     if (Tok.K != Identifier)
-      error(Twine("identifier expected, but got ") + Tok.Value);
+      fatal("identifier expected, but got " + Tok.Value);
     StringRef V1, V2;
     std::tie(V1, V2) = Tok.Value.split('.');
     if (V1.getAsInteger(10, *Major))
-      error(Twine("integer expected, but got ") + Tok.Value);
+      fatal("integer expected, but got " + Tok.Value);
     if (V2.empty())
       *Minor = 0;
     else if (V2.getAsInteger(10, *Minor))
-      error(Twine("integer expected, but got ") + Tok.Value);
+      fatal("integer expected, but got " + Tok.Value);
   }
 
   Lexer Lex;

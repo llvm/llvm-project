@@ -30,11 +30,10 @@ using namespace lldb_private;
 // CommandObjectScript
 //-------------------------------------------------------------------------
 
-CommandObjectScript::CommandObjectScript (CommandInterpreter &interpreter, ScriptLanguage script_lang) :
-    CommandObjectRaw (interpreter, 
-                      "script",
-                      "Pass an expression to the script interpreter for evaluation and return the results. Drop into the interactive interpreter if no expression is given.",
-                      "script [<script-expression-for-evaluation>]")
+CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter, ScriptLanguage script_lang)
+    : CommandObjectRaw(interpreter, "script", "Invoke the script interpreter with provided code and display any "
+                                              "results.  Start the interactive interpreter if no code is supplied.",
+                       "script [<script-code>]")
 {
 }
 

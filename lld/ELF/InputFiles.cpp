@@ -41,7 +41,8 @@ template <class ELFT>
 static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;
   ELFFile<ELFT> F(MB.getBuffer(), EC);
-  check(EC);
+  if (EC)
+    error(EC, "failed to read " + MB.getBufferIdentifier());
   return F;
 }
 

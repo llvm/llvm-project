@@ -279,11 +279,15 @@ namespace lldb_private {
         /// Prompt implementation for EditLine.
         const char *
         Prompt();
-        
-        /// Line break command used when return is pressed in multi-line mode.
+
+        /// Line break command used when meta+return is pressed in multi-line mode.
         unsigned char
         BreakLineCommand (int ch);
-        
+
+        /// Command used when return is pressed in multi-line mode.
+        unsigned char
+        EndOrAddLineCommand(int ch);
+
         /// Delete command used when delete is pressed in multi-line mode.
         unsigned char
         DeleteNextCharCommand (int ch);
@@ -299,7 +303,15 @@ namespace lldb_private {
         /// Line navigation command used when ^N or down arrow are pressed in multi-line mode.
         unsigned char
         NextLineCommand (int ch);
-        
+
+        /// History navigation command used when Alt + up arrow is pressed in multi-line mode.
+        unsigned char
+        PreviousHistoryCommand(int ch);
+
+        /// History navigation command used when Alt + down arrow is pressed in multi-line mode.
+        unsigned char
+        NextHistoryCommand(int ch);
+
         /// Buffer start command used when Esc < is typed in multi-line emacs mode.
         unsigned char
         BufferStartCommand (int ch);

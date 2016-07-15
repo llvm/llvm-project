@@ -613,7 +613,7 @@ private:
   /// \brief A mapping from each of the hidden submodules to the deserialized
   /// declarations in that submodule that could be made visible.
   HiddenNamesMapType HiddenNamesMap;
-  
+
   
   /// \brief A module import, export, or conflict that hasn't yet been resolved.
   struct UnresolvedModuleRef {
@@ -947,6 +947,24 @@ private:
   /// Objective-C protocols.
   std::deque<Decl *> InterestingDecls;
 
+  /// \brief Contains imported interesting declarations from modules that have
+  /// not yet themselves been imported, even indirectly.
+  typedef llvm::SmallVector<Decl *, 8> ModuleInterestingDecls;
+
+  /// Map from top-level modules to their list of interesting declarations.
+  /// Each map entry may be in one of three states: no entry means we've never
+  /// seen this module and never transitively imported it. A null pointer means
+  /// we're not tracking interesting decls: they should be handed straight to
+  /// the consumer because we've transitively imported this module already.
+  /// Otherwise, a list of pending interesting decls.
+  ///
+  /// As an added twist, declarations that are re-exported are listed against
+  /// the owning module and the re-exporting one, but the owning module's list
+  /// is definitive: the decl is there if and only if it has not been handed to
+  /// the consumer already.
+  llvm::DenseMap<Module *, ModuleInterestingDecls *>
+      UnimportedModuleInterestingDecls;
+
   /// \brief The list of redeclaration chains that still need to be 
   /// reconstructed, and the local offset to the corresponding list
   /// of redeclarations.
@@ -1249,6 +1267,9 @@ private:
   llvm::iterator_range<ModuleDeclIterator>
   getModuleFileLevelDecls(ModuleFile &Mod);
 
+  void addInterestingDecl(Decl *D,
+                          llvm::Optional<Module *> OwnerOverride = llvm::None);
+
   void PassInterestingDeclsToConsumer();
   void PassInterestingDeclToConsumer(Decl *D);
 
@@ -1385,6 +1406,11 @@ public:
 
   /// \brief Make the names within this set of hidden names visible.
   void makeNamesVisible(const HiddenNames &Names, Module *Owner);
+
+  /// \brief Mark a module as "used". This implies that any global initializers
+  /// of declarations contained transitively within it should be run as part of
+  /// the current compilation.
+  void markModuleUsed(Module *M);
 
   /// \brief Take the AST callbacks listener.
   std::unique_ptr<ASTReaderListener> takeListener() {

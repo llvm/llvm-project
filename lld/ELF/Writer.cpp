@@ -261,7 +261,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   writeBuildId();
   if (HasError)
     return;
-  check(Buffer->commit());
+  if (auto EC = Buffer->commit())
+    error(EC, "failed to write to the output file");
 }
 
 template <class ELFT>
@@ -1233,10 +1234,10 @@ template <class ELFT> void Writer<ELFT>::openFile() {
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Config->OutputFile, FileSize,
                                FileOutputBuffer::F_executable);
-  if (BufferOrErr)
-    Buffer = std::move(*BufferOrErr);
+  if (auto EC = BufferOrErr.getError())
+    error(EC, "failed to open " + Config->OutputFile);
   else
-    error(BufferOrErr, "failed to open " + Config->OutputFile);
+    Buffer = std::move(*BufferOrErr);
 }
 
 // Write section contents to a mmap'ed file.

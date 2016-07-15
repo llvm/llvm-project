@@ -22,10 +22,12 @@ class ObjectFilePCHContainerWriter : public PCHContainerWriter {
   /// Return an ASTConsumer that can be chained with a
   /// PCHGenerator that produces a wrapper file format
   /// that also contains full debug info for the module.
-  std::unique_ptr<ASTConsumer> CreatePCHContainerGenerator(
-      CompilerInstance &CI, const std::string &MainFileName,
-      const std::string &OutputFileName, llvm::raw_pwrite_stream *OS,
-      std::shared_ptr<PCHBuffer> Buffer) const override;
+  std::unique_ptr<ASTConsumer>
+  CreatePCHContainerGenerator(CompilerInstance &CI,
+                              const std::string &MainFileName,
+                              const std::string &OutputFileName,
+                              std::unique_ptr<llvm::raw_pwrite_stream> OS,
+                              std::shared_ptr<PCHBuffer> Buffer) const override;
 };
 
 /// A PCHContainerReader implementation that uses LLVM to

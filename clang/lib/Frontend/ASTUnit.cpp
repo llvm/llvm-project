@@ -920,17 +920,17 @@ class PrecompilePreambleConsumer : public PCHGenerator {
   unsigned &Hash;
   std::vector<Decl *> TopLevelDecls;
   PrecompilePreambleAction *Action;
-  raw_ostream *Out;
+  std::unique_ptr<raw_ostream> Out;
 
 public:
   PrecompilePreambleConsumer(ASTUnit &Unit, PrecompilePreambleAction *Action,
                              const Preprocessor &PP, StringRef isysroot,
-                             raw_ostream *Out)
+                             std::unique_ptr<raw_ostream> Out)
       : PCHGenerator(PP, "", nullptr, isysroot, std::make_shared<PCHBuffer>(),
                      ArrayRef<llvm::IntrusiveRefCntPtr<ModuleFileExtension>>(),
                      /*AllowASTWithErrors=*/true),
         Unit(Unit), Hash(Unit.getCurrentTopLevelHashValue()), Action(Action),
-        Out(Out) {
+        Out(std::move(Out)) {
     Hash = 0;
   }
 
@@ -982,8 +982,9 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
                                             StringRef InFile) {
   std::string Sysroot;
   std::string OutputFile;
-  raw_ostream *OS = GeneratePCHAction::ComputeASTConsumerArguments(
-      CI, InFile, Sysroot, OutputFile);
+  std::unique_ptr<raw_ostream> OS =
+      GeneratePCHAction::ComputeASTConsumerArguments(CI, InFile, Sysroot,
+                                                     OutputFile);
   if (!OS)
     return nullptr;
 
@@ -994,7 +995,7 @@ PrecompilePreambleAction::CreateASTConsumer(CompilerInstance &CI,
       llvm::make_unique<MacroDefinitionTrackerPPCallbacks>(
                                            Unit.getCurrentTopLevelHashValue()));
   return llvm::make_unique<PrecompilePreambleConsumer>(
-      Unit, this, CI.getPreprocessor(), Sysroot, OS);
+      Unit, this, CI.getPreprocessor(), Sysroot, std::move(OS));
 }
 
 static bool isNonDriverDiag(const StoredDiagnostic &StoredDiag) {

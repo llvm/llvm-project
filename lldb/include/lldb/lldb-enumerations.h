@@ -454,7 +454,7 @@ namespace lldb {
         eAccessPackage
     };
 
-   enum CommandArgumentType
+    enum CommandArgumentType
     {
         eArgTypeAddress = 0,
         eArgTypeAddressOrExpression,
@@ -539,7 +539,8 @@ namespace lldb {
         eArgTypeWatchpointID,
         eArgTypeWatchpointIDRange,
         eArgTypeWatchType,
-        eArgTypeLastArg  // Always keep this entry as the last entry in this enumeration!!
+        eArgRawInput,
+        eArgTypeLastArg // Always keep this entry as the last entry in this enumeration!!
     };
 
     //----------------------------------------------------------------------
