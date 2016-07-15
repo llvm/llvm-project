@@ -91,9 +91,9 @@ swift::SILValue SwiftSILManipulator::emitLValueForVariable(swift::VarDecl *var,
     swift::StructExtractInst *struct_extract = m_builder.createStructExtract(null_loc, struct_argument, value_member_decl, raw_pointer_type);
     swift::IntegerLiteralInst *integer_literal = m_builder.createIntegerLiteral(null_loc, swift::SILType::getBuiltinIntegerType(64, ast_ctx), (intmax_t)info.offset);
     swift::IndexRawPointerInst *index_raw_pointer = m_builder.createIndexRawPointer(null_loc, struct_extract, integer_literal);
-    swift::PointerToAddressInst *pointer_to_return_slot = m_builder.createPointerToAddress(null_loc, index_raw_pointer, raw_pointer_type.getAddressType());
+    swift::PointerToAddressInst *pointer_to_return_slot = m_builder.createPointerToAddress(null_loc, index_raw_pointer, raw_pointer_type.getAddressType(), /*isStrict*/ true);
     swift::LoadInst *pointer_to_variable = m_builder.createLoad(null_loc, pointer_to_return_slot);
-    swift::PointerToAddressInst *address_of_variable = m_builder.createPointerToAddress(null_loc, pointer_to_variable, converter.getLoweredType(var->getType()).getAddressType());
+    swift::PointerToAddressInst *address_of_variable = m_builder.createPointerToAddress(null_loc, pointer_to_variable, converter.getLoweredType(var->getType()).getAddressType(), /*isStrict*/ true);
 
     if (info.needs_init)
     {
