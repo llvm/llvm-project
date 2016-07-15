@@ -153,6 +153,7 @@ public:
           isl_space *Space = isl_map_get_space(Relation);
           Space = isl_space_range(Space);
           Space = isl_space_from_range(Space);
+          Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
           isl_map *Universe = isl_map_universe(Space);
           Relation = isl_map_domain_product(Relation, Universe);
           Accesses = isl_union_map_add_map(Accesses, Relation);
@@ -281,6 +282,7 @@ public:
       isl_space *Space = isl_map_get_space(Access->access);
       Space = isl_space_range(Space);
       Space = isl_space_from_range(Space);
+      Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
       isl_map *Universe = isl_map_universe(Space);
       Access->tagged_access =
           isl_map_domain_product(Acc->getAccessRelation(), Universe);
@@ -408,6 +410,7 @@ public:
       PPCGArray.dep_order = nullptr;
 
       setArrayBounds(PPCGArray, Array);
+      i++;
     }
   }
 
@@ -489,6 +492,20 @@ public:
     auto Id = isl_ast_node_get_annotation(Node);
 
     if (Id) {
+      bool IsUser = !strcmp(isl_id_get_name(Id), "user");
+
+      // If this is a user statement, format it ourselves as ppcg would
+      // otherwise try to call pet functionality that is not available in
+      // Polly.
+      if (IsUser) {
+        P = isl_printer_start_line(P);
+        P = isl_printer_print_ast_node(P, Node);
+        P = isl_printer_end_line(P);
+        isl_id_free(Id);
+        isl_ast_print_options_free(Options);
+        return P;
+      }
+
       auto Kernel = (struct ppcg_kernel *)isl_id_get_user(Id);
       isl_id_free(Id);
       Data->Kernels.push_back(Kernel);
@@ -569,6 +586,7 @@ public:
     // Set scheduling strategy to same strategy PPCG is using.
     isl_options_set_schedule_outer_coincidence(PPCGGen->ctx, true);
     isl_options_set_schedule_maximize_band_depth(PPCGGen->ctx, true);
+    isl_options_set_schedule_whole_component(PPCGGen->ctx, false);
 
     isl_schedule *Schedule = get_schedule(PPCGGen);
 
@@ -619,12 +637,26 @@ public:
     free(PPCGGen);
   }
 
+  /// Free the options in the ppcg scop structure.
+  ///
+  /// ppcg is not freeing these options for us. To avoid leaks we do this
+  /// ourselves.
+  ///
+  /// @param PPCGScop The scop referencing the options to free.
+  void freeOptions(ppcg_scop *PPCGScop) {
+    free(PPCGScop->options->debug);
+    PPCGScop->options->debug = nullptr;
+    free(PPCGScop->options);
+    PPCGScop->options = nullptr;
+  }
+
   bool runOnScop(Scop &CurrentScop) override {
     S = &CurrentScop;
 
     auto PPCGScop = createPPCGScop();
     auto PPCGProg = createPPCGProg(PPCGScop);
     auto PPCGGen = generateGPU(PPCGScop, PPCGProg);
+    freeOptions(PPCGScop);
     freePPCGGen(PPCGGen);
     gpu_prog_free(PPCGProg);
     ppcg_scop_free(PPCGScop);

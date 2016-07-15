@@ -126,12 +126,12 @@ int main(int argc, const char **argv) {
   rename::RenamingAction RenameAction(NewName, PrevName, USRs,
                                       Tool.getReplacements(), PrintLocations);
   auto Factory = tooling::newFrontendActionFactory(&RenameAction);
-  int res;
+  int ExitCode;
 
   if (Inplace) {
-    res = Tool.runAndSave(Factory.get());
+    ExitCode = Tool.runAndSave(Factory.get());
   } else {
-    res = Tool.run(Factory.get());
+    ExitCode = Tool.run(Factory.get());
 
     if (!ExportFixes.empty()) {
       std::error_code EC;
@@ -175,5 +175,5 @@ int main(int argc, const char **argv) {
     }
   }
 
-  exit(res);
+  exit(ExitCode);
 }

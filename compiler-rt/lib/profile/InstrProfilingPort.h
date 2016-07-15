@@ -84,6 +84,20 @@
   (DomType *)lprofPtrFetchAdd((void **)&PtrVar, sizeof(DomType) * PtrIncr)
 #endif
 
+#if defined(_WIN32)
+#define DIR_SEPARATOR '\\'
+#define DIR_SEPARATOR_2 '/'
+#else
+#define DIR_SEPARATOR '/'
+#endif
+
+#ifndef DIR_SEPARATOR_2
+#define IS_DIR_SEPARATOR(ch) ((ch) == DIR_SEPARATOR)
+#else /* DIR_SEPARATOR_2 */
+#define IS_DIR_SEPARATOR(ch)                                                   \
+  (((ch) == DIR_SEPARATOR) || ((ch) == DIR_SEPARATOR_2))
+#endif /* DIR_SEPARATOR_2 */
+
 #define PROF_ERR(Format, ...)                                                  \
   fprintf(stderr, "LLVM Profile Error: " Format, __VA_ARGS__);
 
