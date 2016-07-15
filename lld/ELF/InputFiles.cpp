@@ -308,21 +308,15 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     }
   }
 
-  // We dont need special handling of .eh_frame sections if relocatable
-  // output was choosen. Proccess them as usual input sections.
-  if (!Config->Relocatable && Name == ".eh_frame")
+  // The linker merges EH (exception handling) frames and creates a
+  // .eh_frame_hdr section for runtime. So we handle them with a special
+  // class. For relocatable outputs, they are just passed through.
+  if (Name == ".eh_frame" && !Config->Relocatable)
     return new (EHAlloc.Allocate()) EhInputSection<ELFT>(this, &Sec);
+
   if (shouldMerge<ELFT>(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
   return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
-}
-
-// Print the module names which reference the notified
-// symbols provided through -y or --trace-symbol option.
-template <class ELFT>
-void elf::ObjectFile<ELFT>::traceUndefined(StringRef Name) {
-  if (!Config->TraceSymbol.empty() && Config->TraceSymbol.count(Name))
-    outs() << getFilename(this) << ": reference to " << Name << "\n";
 }
 
 template <class ELFT> void elf::ObjectFile<ELFT>::initializeSymbols() {
@@ -363,7 +357,11 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    traceUndefined(Name);
+    // Handle --trace-symbol option. Prints out a log message
+    // if the current symbol is being watched. Useful for debugging.
+    if (!Config->TraceSymbol.empty() && Config->TraceSymbol.count(Name))
+      outs() << getFilename(this) << ": reference to " << Name << "\n";
+
     return elf::Symtab<ELFT>::X
         ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
                        /*CanOmitFromDynSym*/ false, this)

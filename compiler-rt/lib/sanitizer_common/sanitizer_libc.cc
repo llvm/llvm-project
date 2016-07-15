@@ -234,6 +234,12 @@ char *internal_strstr(const char *haystack, const char *needle) {
   return nullptr;
 }
 
+uptr internal_wcslen(const wchar_t *s) {
+  uptr i = 0;
+  while (s[i]) i++;
+  return i;
+}
+
 s64 internal_simple_strtoll(const char *nptr, char **endptr, int base) {
   CHECK_EQ(base, 10);
   while (IsSpace(*nptr)) nptr++;
