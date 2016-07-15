@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "FoundationValueTypes.h"
+#include "ObjCRuntimeSyntheticProvider.h"
 
 #include "lldb/Core/DataExtractor.h"
 #include "lldb/Core/Error.h"
@@ -307,4 +308,229 @@ lldb_private::formatters::swift::Data_SummaryProvider (ValueObject& valobj, Stre
     }
     
     return false;
+}
+
+class URLComponentsSyntheticChildrenFrontEnd : public SyntheticChildrenFrontEnd
+{
+public:
+    URLComponentsSyntheticChildrenFrontEnd (lldb::ValueObjectSP valobj_sp) :
+    SyntheticChildrenFrontEnd(*valobj_sp),
+    m_synth_up(nullptr),
+    m_urlString(nullptr),
+    m_schemeComponent(nullptr),
+    m_userComponent(nullptr),
+    m_passwordComponent(nullptr),
+    m_hostComponent(nullptr),
+    m_portComponent(nullptr),
+    m_pathComponent(nullptr),
+    m_queryComponent(nullptr),
+    m_fragmentComponent(nullptr)
+    {
+    }
+    
+    ~URLComponentsSyntheticChildrenFrontEnd() override = default;
+    
+    size_t
+    CalculateNumChildren() override
+    {
+        if (IsValid())
+            return 9;
+        return 0;
+    }
+    
+    lldb::ValueObjectSP
+    GetChildAtIndex(size_t idx) override
+    {
+        if (IsValid())
+        {
+            switch (idx)
+            {
+                case 0: return m_urlString->GetSP();
+                case 1: return m_schemeComponent->GetSP();
+                case 2: return m_userComponent->GetSP();
+                case 3: return m_passwordComponent->GetSP();
+                case 4: return m_hostComponent->GetSP();
+                case 5: return m_portComponent->GetSP();
+                case 6: return m_pathComponent->GetSP();
+                case 7: return m_queryComponent->GetSP();
+                case 8: return m_fragmentComponent->GetSP();
+                default: break;
+            }
+        }
+
+        return nullptr;
+    }
+    
+    bool
+    Update() override
+    {
+        static ConstString g__handle("_handle");
+        static ConstString g__pointer("_pointer");
+        
+        static ConstString g__urlString("_urlString");
+        static ConstString g__schemeComponent("_schemeComponent");
+        static ConstString g__userComponent("_userComponent");
+        static ConstString g__passwordComponent("_passwordComponent");
+        static ConstString g__hostComponent("_hostComponent");
+        static ConstString g__portComponent("_portComponent");
+        static ConstString g__pathComponent("_pathComponent");
+        static ConstString g__queryComponent("_queryComponent");
+        static ConstString g__fragmentComponent("_fragmentComponent");
+        
+        m_synth_up.reset();
+        
+        m_urlString = m_schemeComponent = m_userComponent = m_passwordComponent =
+            m_hostComponent = m_pathComponent = m_queryComponent = m_fragmentComponent =
+                nullptr;
+        
+        SetValid(false);
+        
+        ValueObjectSP underlying_sp = m_backend.GetChildAtNamePath( {g__handle, g__pointer} );
+        if (!underlying_sp)
+            return false;
+        
+        ObjCLanguageRuntime *objc_runtime = m_backend.GetProcessSP()->GetObjCLanguageRuntime();
+        if (!objc_runtime)
+            return false;
+        
+        ObjCLanguageRuntime::ClassDescriptorSP class_descriptor_sp = objc_runtime->GetClassDescriptor(*underlying_sp);
+        if (!class_descriptor_sp)
+            return false;
+        
+        m_synth_up = ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags(), class_descriptor_sp).GetFrontEnd(*underlying_sp);
+        if (!m_synth_up)
+            return false;
+        else
+            m_synth_up->Update();
+
+        m_urlString = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__urlString)).get();
+        m_schemeComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__schemeComponent)).get();
+        m_userComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__userComponent)).get();
+        m_passwordComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__passwordComponent)).get();
+        m_hostComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__hostComponent)).get();
+        m_portComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__portComponent)).get();
+        m_pathComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__pathComponent)).get();
+        m_queryComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__queryComponent)).get();
+        m_fragmentComponent = m_synth_up->GetChildAtIndex(m_synth_up->GetIndexOfChildWithName(g__fragmentComponent)).get();
+
+        if (m_urlString)
+            m_urlString->SetName(g_urlString);
+        if (m_schemeComponent)
+            m_schemeComponent->SetName(g_schemeComponent);
+        if (m_userComponent)
+            m_userComponent->SetName(g_userComponent);
+        if (m_passwordComponent)
+            m_passwordComponent->SetName(g_passwordComponent);
+        if (m_hostComponent)
+            m_hostComponent->SetName(g_hostComponent);
+        if (m_portComponent)
+            m_portComponent->SetName(g_portComponent);
+        if (m_pathComponent)
+            m_pathComponent->SetName(g_pathComponent);
+        if (m_queryComponent)
+            m_queryComponent->SetName(g_queryComponent);
+        if (m_fragmentComponent)
+            m_fragmentComponent->SetName(g_fragmentComponent);
+        
+        SetValid(CheckValid());
+        
+        return false;
+    }
+    
+    bool
+    MightHaveChildren() override
+    {
+        return true;
+    }
+    
+    size_t
+    GetIndexOfChildWithName(const ConstString &name) override
+    {
+        if (name == g_urlString)
+            return 0;
+        if (name == g_schemeComponent)
+            return 1;
+        if (name == g_userComponent)
+            return 2;
+        if (name == g_passwordComponent)
+            return 3;
+        if (name == g_hostComponent)
+            return 4;
+        if (name == g_portComponent)
+            return 5;
+        if (name == g_pathComponent)
+            return 6;
+        if (name == g_queryComponent)
+            return 7;
+        if (name == g_fragmentComponent)
+            return 8;
+        
+        return UINT32_MAX;
+    }
+    
+private:
+    const static ConstString g_urlString;
+    const static ConstString g_schemeComponent;
+    const static ConstString g_userComponent;
+    const static ConstString g_passwordComponent;
+    const static ConstString g_hostComponent;
+    const static ConstString g_portComponent;
+    const static ConstString g_pathComponent;
+    const static ConstString g_queryComponent;
+    const static ConstString g_fragmentComponent;
+
+    SyntheticChildrenFrontEnd::AutoPointer m_synth_up;
+    ValueObject *m_urlString;
+    ValueObject *m_schemeComponent;
+    ValueObject *m_userComponent;
+    ValueObject *m_passwordComponent;
+    ValueObject *m_hostComponent;
+    ValueObject *m_portComponent;
+    ValueObject *m_pathComponent;
+    ValueObject *m_queryComponent;
+    ValueObject *m_fragmentComponent;
+    
+    bool
+    CheckValid ()
+    {
+        if (m_urlString == nullptr)
+            return false;
+        if (m_schemeComponent == nullptr)
+            return false;
+        if (m_userComponent == nullptr)
+            return false;
+        if (m_passwordComponent == nullptr)
+            return false;
+        if (m_hostComponent == nullptr)
+            return false;
+        if (m_portComponent == nullptr)
+            return false;
+        if (m_pathComponent == nullptr)
+            return false;
+        if (m_queryComponent == nullptr)
+            return false;
+        if (m_fragmentComponent == nullptr)
+            return false;
+        
+        return true;
+    }
+};
+
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_urlString = ConstString("urlString");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_schemeComponent = ConstString("schemeComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_userComponent = ConstString("userComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_passwordComponent = ConstString("passwordComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_hostComponent = ConstString("hostComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_portComponent = ConstString("portComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_pathComponent = ConstString("pathComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_queryComponent = ConstString("queryComponent");
+const ConstString URLComponentsSyntheticChildrenFrontEnd::g_fragmentComponent = ConstString("fragmentComponent");
+
+SyntheticChildrenFrontEnd*
+lldb_private::formatters::swift::URLComponentsSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
+{
+    if (!valobj_sp)
+        return nullptr;
+    
+    return new URLComponentsSyntheticChildrenFrontEnd(valobj_sp);
 }

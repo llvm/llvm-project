@@ -48,6 +48,8 @@ namespace lldb_private
             
             bool
             Data_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+            
+            SyntheticChildrenFrontEnd* URLComponentsSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
         }
     }
 }
