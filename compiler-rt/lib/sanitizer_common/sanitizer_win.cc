@@ -718,7 +718,7 @@ void BufferedStackTrace::SlowUnwindStack(uptr pc, u32 max_depth) {
   // FIXME: CaptureStackBackTrace might be too slow for us.
   // FIXME: Compare with StackWalk64.
   // FIXME: Look at LLVMUnhandledExceptionFilter in Signals.inc
-  size = CaptureStackBackTrace(2, Min(max_depth, kStackTraceMax),
+  size = CaptureStackBackTrace(1, Min(max_depth, kStackTraceMax),
                                (void**)trace, 0);
   if (size == 0)
     return;

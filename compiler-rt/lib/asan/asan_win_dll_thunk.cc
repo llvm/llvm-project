@@ -21,6 +21,7 @@
 #ifdef ASAN_DLL_THUNK
 #include "asan_init_version.h"
 #include "interception/interception.h"
+#include "sanitizer_common/sanitizer_platform_interceptors.h"
 
 // ---------- Function interception helper functions and macros ----------- {{{1
 extern "C" {
@@ -390,7 +391,9 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 
 INTERCEPT_LIBRARY_FUNCTION(frexp);
 INTERCEPT_LIBRARY_FUNCTION(longjmp);
+#if SANITIZER_INTERCEPT_MEMCHR
 INTERCEPT_LIBRARY_FUNCTION(memchr);
+#endif
 INTERCEPT_LIBRARY_FUNCTION(memcmp);
 INTERCEPT_LIBRARY_FUNCTION(memcpy);
 INTERCEPT_LIBRARY_FUNCTION(memmove);

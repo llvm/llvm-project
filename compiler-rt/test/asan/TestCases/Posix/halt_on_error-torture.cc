@@ -9,15 +9,11 @@
 //
 // Collisions are unlikely but still possible so we need the ||.
 // RUN: %env_asan_opts=halt_on_error=false:suppress_equal_pcs=false %run %t 10 20 >10.txt 2>&1 || true
-// This one is racy although _very_ unlikely to fail:
-// RUN: FileCheck %s < 10.txt
-// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 1.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 1.txt
+// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 10.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 10.txt
 //
 // Collisions are unlikely but still possible so we need the ||.
 // RUN: %env_asan_opts=halt_on_error=false %run %t 10 20 >10.txt 2>&1 || true
-// This one is racy although _very_ unlikely to fail:
-// RUN: FileCheck %s < 10.txt
-// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 1.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 1.txt
+// RUN: FileCheck --check-prefix=CHECK-COLLISION %s < 10.txt || FileCheck --check-prefix=CHECK-NO-COLLISION %s < 10.txt
 
 #include <stdio.h>
 #include <stdlib.h>

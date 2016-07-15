@@ -5309,7 +5309,7 @@ int generate_gpu(isl_ctx *ctx, const char *input, FILE *out,
  * arrays that are not local to "prog" and remove those elements that
  * are definitely killed or definitely written by "prog".
  */
-static __isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog)
+__isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog)
 {
 	int i;
 	isl_union_set *may_persist, *killed;
