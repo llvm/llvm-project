@@ -65,6 +65,10 @@ void ProBoundsConstantArrayIndexCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Matched = Result.Nodes.getNodeAs<Expr>("expr");
   const auto *IndexExpr = Result.Nodes.getNodeAs<Expr>("index");
+
+  if (IndexExpr->isValueDependent())
+    return; // We check in the specialization.
+
   llvm::APSInt Index;
   if (!IndexExpr->isIntegerConstantExpr(Index, *Result.Context, nullptr,
                                         /*isEvaluated=*/true)) {

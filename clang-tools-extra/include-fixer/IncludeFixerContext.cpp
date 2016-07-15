@@ -42,9 +42,12 @@ std::string createQualifiedNameForReplacement(
   }
   // Append the missing stripped qualifiers.
   std::string FullyQualifiedName = QualifiedName + StrippedQualifiers;
-  auto pos = FullyQualifiedName.find(SymbolScopedQualifiers);
-  return FullyQualifiedName.substr(
-      pos == std::string::npos ? 0 : SymbolScopedQualifiers.size());
+
+  // Skips symbol scoped qualifiers prefix.
+  if (llvm::StringRef(FullyQualifiedName).startswith(SymbolScopedQualifiers))
+    return FullyQualifiedName.substr(SymbolScopedQualifiers.size());
+
+  return FullyQualifiedName;
 }
 
 } // anonymous namespace

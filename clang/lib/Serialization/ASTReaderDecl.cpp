@@ -3462,6 +3462,13 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   }
   assert(Idx == Record.size());
 
+  // If we have deserialized a declaration that has a definition the
+  // AST consumer might need to know about, queue it.
+  // We don't pass it to the consumer immediately because we may be in recursive
+  // loading, and some declarations may still be initializing.
+  if (isConsumerInterestedIn(D, Reader.hasPendingBody()))
+    addInterestingDecl(D);
+
   // Load any relevant update records.
   PendingUpdateRecords.push_back(std::make_pair(ID, D));
 
@@ -3470,13 +3477,6 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
     if (Class->isThisDeclarationADefinition())
       loadObjCCategories(ID, Class);
   
-  // If we have deserialized a declaration that has a definition the
-  // AST consumer might need to know about, queue it.
-  // We don't pass it to the consumer immediately because we may be in recursive
-  // loading, and some declarations may still be initializing.
-  if (isConsumerInterestedIn(D, Reader.hasPendingBody()))
-    InterestingDecls.push_back(D);
-
   return D;
 }
 
@@ -3511,7 +3511,7 @@ void ASTReader::loadDeclUpdateRecords(serialization::DeclID ID, Decl *D) {
       // we need to hand it off to the consumer.
       if (!WasInteresting &&
           isConsumerInterestedIn(D, Reader.hasPendingBody())) {
-        InterestingDecls.push_back(D);
+        addInterestingDecl(D);
         WasInteresting = true;
       }
     }
@@ -3945,6 +3945,7 @@ void ASTDeclReader::UpdateDecl(Decl *D, ModuleFile &ModuleFile,
         // The declaration is now visible.
         Exported->Hidden = false;
       }
+      Reader.addInterestingDecl(Exported, Owner);
       break;
     }
 

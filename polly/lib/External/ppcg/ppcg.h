@@ -114,4 +114,8 @@ int ppcg_transform(isl_ctx *ctx, const char *input, FILE *out,
 	__isl_give isl_printer *(*fn)(__isl_take isl_printer *p,
 		struct ppcg_scop *scop, void *user), void *user);
 
+void compute_tagger(struct ppcg_scop *ps);
+void compute_dependences(struct ppcg_scop *scop);
+void *ppcg_scop_free(struct ppcg_scop *ps);
+
 #endif

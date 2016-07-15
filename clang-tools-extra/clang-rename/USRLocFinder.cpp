@@ -34,8 +34,8 @@ namespace {
 class USRLocFindingASTVisitor
     : public clang::RecursiveASTVisitor<USRLocFindingASTVisitor> {
 public:
-  explicit USRLocFindingASTVisitor(StringRef USR, StringRef PrevName) : USR(USR), PrevName(PrevName) {
-  }
+  explicit USRLocFindingASTVisitor(StringRef USR, StringRef PrevName)
+      : USR(USR), PrevName(PrevName) {}
 
   // Declaration visitors:
 
@@ -60,8 +60,7 @@ public:
 
   bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
     const ASTContext &Context = ConstructorDecl->getASTContext();
-    for (clang::CXXConstructorDecl::init_const_iterator it = ConstructorDecl->init_begin(); it != ConstructorDecl->init_end(); ++it) {
-      const clang::CXXCtorInitializer* Initializer = *it;
+    for (auto &Initializer : ConstructorDecl->inits()) {
       if (Initializer->getSourceOrder() == -1) {
         // Ignore implicit initializers.
         continue;
@@ -71,9 +70,12 @@ public:
         if (getUSRForDecl(FieldDecl) == USR) {
           // The initializer refers to a field that is to be renamed.
           SourceLocation Location = Initializer->getSourceLocation();
-          StringRef TokenName = Lexer::getSourceText(CharSourceRange::getTokenRange(Location), Context.getSourceManager(), Context.getLangOpts());
+          StringRef TokenName = Lexer::getSourceText(
+              CharSourceRange::getTokenRange(Location),
+              Context.getSourceManager(), Context.getLangOpts());
           if (TokenName == PrevName) {
-            // The token of the source location we find actually has the old name.
+            // The token of the source location we find actually has the old
+            // name.
             LocationsFound.push_back(Initializer->getSourceLocation());
           }
         }
@@ -183,14 +185,15 @@ private:
   bool handleCXXNamedCastExpr(clang::CXXNamedCastExpr *Expr) {
     clang::QualType Type = Expr->getType();
     // See if this a cast of a pointer.
-    const RecordDecl* Decl = Type->getPointeeCXXRecordDecl();
+    const RecordDecl *Decl = Type->getPointeeCXXRecordDecl();
     if (!Decl) {
       // See if this is a cast of a reference.
       Decl = Type->getAsCXXRecordDecl();
     }
 
     if (Decl && getUSRForDecl(Decl) == USR) {
-      SourceLocation Location = Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
+      SourceLocation Location =
+          Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
       LocationsFound.push_back(Location);
     }
 
@@ -205,8 +208,7 @@ private:
 };
 } // namespace
 
-std::vector<SourceLocation> getLocationsOfUSR(StringRef USR,
-                                              StringRef PrevName,
+std::vector<SourceLocation> getLocationsOfUSR(StringRef USR, StringRef PrevName,
                                               Decl *Decl) {
   USRLocFindingASTVisitor visitor(USR, PrevName);
 

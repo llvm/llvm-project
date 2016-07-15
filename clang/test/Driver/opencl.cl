@@ -15,20 +15,20 @@
 // RUN: not %clang -cl-std=c99 -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-C99 %s
 // RUN: not %clang -cl-std=invalid -DOPENCL %s 2>&1 | FileCheck --check-prefix=CHECK-INVALID %s
 
-// CHECK-CL: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-std=CL"
-// CHECK-CL11: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-std=CL1.1"
-// CHECK-CL12: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-std=CL1.2"
-// CHECK-CL20: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-std=CL2.0"
-// CHECK-OPT-DISABLE: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-opt-disable"
-// CHECK-STRICT-ALIASING: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-strict-aliasing"
-// CHECK-SINGLE-PRECISION-CONST: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-single-precision-constant"
-// CHECK-FINITE-MATH-ONLY: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-finite-math-only"
-// CHECK-KERNEL-ARG-INFO: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-kernel-arg-info"
-// CHECK-UNSAFE-MATH-OPT: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-unsafe-math-optimizations"
-// CHECK-FAST-RELAXED-MATH: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-fast-relaxed-math"
-// CHECK-MAD-ENABLE: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-mad-enable"
-// CHECK-NO-SIGNED-ZEROS: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-no-signed-zeros"
-// CHECK-DENORMS-ARE-ZERO: {{.*}}clang{{.*}} "-cc1" {{.*}} "-cl-denorms-are-zero"
+// CHECK-CL: "-cc1" {{.*}} "-cl-std=CL"
+// CHECK-CL11: "-cc1" {{.*}} "-cl-std=CL1.1"
+// CHECK-CL12: "-cc1" {{.*}} "-cl-std=CL1.2"
+// CHECK-CL20: "-cc1" {{.*}} "-cl-std=CL2.0"
+// CHECK-OPT-DISABLE: "-cc1" {{.*}} "-cl-opt-disable"
+// CHECK-STRICT-ALIASING: "-cc1" {{.*}} "-cl-strict-aliasing"
+// CHECK-SINGLE-PRECISION-CONST: "-cc1" {{.*}} "-cl-single-precision-constant"
+// CHECK-FINITE-MATH-ONLY: "-cc1" {{.*}} "-cl-finite-math-only"
+// CHECK-KERNEL-ARG-INFO: "-cc1" {{.*}} "-cl-kernel-arg-info"
+// CHECK-UNSAFE-MATH-OPT: "-cc1" {{.*}} "-cl-unsafe-math-optimizations"
+// CHECK-FAST-RELAXED-MATH: "-cc1" {{.*}} "-cl-fast-relaxed-math"
+// CHECK-MAD-ENABLE: "-cc1" {{.*}} "-cl-mad-enable"
+// CHECK-NO-SIGNED-ZEROS: "-cc1" {{.*}} "-cl-no-signed-zeros"
+// CHECK-DENORMS-ARE-ZERO: "-cc1" {{.*}} "-cl-denorms-are-zero"
 // CHECK-C99: error: invalid value 'c99' in '-cl-std=c99'
 // CHECK-INVALID: error: invalid value 'invalid' in '-cl-std=invalid'
 

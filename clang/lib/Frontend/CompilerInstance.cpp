@@ -561,15 +561,11 @@ void CompilerInstance::createSema(TranslationUnitKind TUKind,
 // Output Files
 
 void CompilerInstance::addOutputFile(OutputFile &&OutFile) {
-  assert(OutFile.OS && "Attempt to add empty stream to output list!");
   OutputFiles.push_back(std::move(OutFile));
 }
 
 void CompilerInstance::clearOutputFiles(bool EraseFiles) {
   for (OutputFile &OF : OutputFiles) {
-    // Manually close the stream before we rename it.
-    OF.OS.reset();
-
     if (!OF.TempFilename.empty()) {
       if (EraseFiles) {
         llvm::sys::fs::remove(OF.TempFilename);
@@ -589,13 +585,12 @@ void CompilerInstance::clearOutputFiles(bool EraseFiles) {
       }
     } else if (!OF.Filename.empty() && EraseFiles)
       llvm::sys::fs::remove(OF.Filename);
-
   }
   OutputFiles.clear();
   NonSeekStream.reset();
 }
 
-raw_pwrite_stream *
+std::unique_ptr<raw_pwrite_stream>
 CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
                                           StringRef Extension) {
   return createOutputFile(getFrontendOpts().OutputFile, Binary,
@@ -603,14 +598,11 @@ CompilerInstance::createDefaultOutputFile(bool Binary, StringRef InFile,
                           /*UseTemporary=*/true);
 }
 
-llvm::raw_null_ostream *CompilerInstance::createNullOutputFile() {
-  auto OS = llvm::make_unique<llvm::raw_null_ostream>();
-  llvm::raw_null_ostream *Ret = OS.get();
-  addOutputFile(OutputFile("", "", std::move(OS)));
-  return Ret;
+std::unique_ptr<raw_pwrite_stream> CompilerInstance::createNullOutputFile() {
+  return llvm::make_unique<llvm::raw_null_ostream>();
 }
 
-raw_pwrite_stream *
+std::unique_ptr<raw_pwrite_stream>
 CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
                                    bool RemoveFileOnSignal, StringRef InFile,
                                    StringRef Extension, bool UseTemporary,
@@ -626,13 +618,12 @@ CompilerInstance::createOutputFile(StringRef OutputPath, bool Binary,
     return nullptr;
   }
 
-  raw_pwrite_stream *Ret = OS.get();
   // Add the output file -- but don't try to remove "-", since this means we are
   // using stdin.
-  addOutputFile(OutputFile((OutputPathName != "-") ? OutputPathName : "",
-                           TempPathName, std::move(OS)));
+  addOutputFile(
+      OutputFile((OutputPathName != "-") ? OutputPathName : "", TempPathName));
 
-  return Ret;
+  return OS;
 }
 
 std::unique_ptr<llvm::raw_pwrite_stream> CompilerInstance::createOutputFile(

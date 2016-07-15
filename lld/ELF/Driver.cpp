@@ -100,7 +100,8 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
                   File->getFileName());
     V.push_back(MBRef);
   }
-  check(std::move(Err));
+  if (Err)
+    Error(Err);
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
@@ -150,9 +151,10 @@ void LinkerDriver::addFile(StringRef Path) {
 
 Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  error(MBOrErr, "cannot open " + Path);
-  if (HasError)
+  if (auto EC = MBOrErr.getError()) {
+    error(EC, "cannot open " + Path);
     return None;
+  }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
@@ -535,6 +537,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       Config->EntrySym = Symtab.addUndefined(S);
   }
 
+  // Initialize Config->ImageBase.
   if (auto *Arg = Args.getLastArg(OPT_image_base)) {
     StringRef S = Arg->getValue();
     if (S.getAsInteger(0, Config->ImageBase))
@@ -542,7 +545,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     else if ((Config->ImageBase % Target->PageSize) != 0)
       warning(Arg->getSpelling() + ": address isn't multiple of page size");
   } else {
-    Config->ImageBase = Target->getImageBase();
+    Config->ImageBase = Config->Pic ? 0 : Target->DefaultImageBase;
   }
 
   for (std::unique_ptr<InputFile> &F : Files)

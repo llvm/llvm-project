@@ -23,7 +23,6 @@ class SymbolBody;
 
 class TargetInfo {
 public:
-  uint64_t getImageBase() const;
   virtual bool isTlsInitialExecRel(uint32_t Type) const;
   virtual bool isTlsLocalDynamicRel(uint32_t Type) const;
   virtual bool isTlsGlobalDynamicRel(uint32_t Type) const;
@@ -70,7 +69,7 @@ public:
   // Given that, the smallest value that can be used in here is 0x10000.
   // If using 2MB pages, the smallest page aligned address that works is
   // 0x200000, but it looks like every OS uses 4k pages for executables.
-  uint64_t ImageBase = 0x10000;
+  uint64_t DefaultImageBase = 0x10000;
 
   uint32_t CopyRel;
   uint32_t GotRel;

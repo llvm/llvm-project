@@ -724,7 +724,7 @@ template <class ELFT> void DynamicSection<ELFT>::finalize() {
   if (Config->EMachine == EM_MIPS) {
     Add({DT_MIPS_RLD_VERSION, 1});
     Add({DT_MIPS_FLAGS, RHF_NOTPOT});
-    Add({DT_MIPS_BASE_ADDRESS, (uintX_t)Target->getImageBase()});
+    Add({DT_MIPS_BASE_ADDRESS, Config->ImageBase});
     Add({DT_MIPS_SYMTABNO, Out<ELFT>::DynSymTab->getNumSymbols()});
     Add({DT_MIPS_LOCAL_GOTNO, Out<ELFT>::Got->getMipsLocalEntriesNum()});
     if (const SymbolBody *B = Out<ELFT>::Got->getMipsFirstGlobalEntry())

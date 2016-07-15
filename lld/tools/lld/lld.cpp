@@ -109,7 +109,7 @@ int main(int Argc, const char **Argv) {
   case Darwin:
     return !mach_o::link(Args);
   default:
-    die("-flavor option is missing. Available flavors are "
-        "gnu, darwin or link.");
+    die("lld is a generic driver.\n"
+        "Invoke ld.lld (Unix), ld (Mac) or lld-link (Windows) instead.");
   }
 }

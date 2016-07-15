@@ -31,7 +31,7 @@ void warning(const Twine &Msg) {
   if (Config->FatalWarnings)
     error(Msg);
   else
-    errs() << Msg << "\n";
+    *ErrorOS << Msg << "\n";
 }
 
 void error(const Twine &Msg) {
@@ -40,12 +40,11 @@ void error(const Twine &Msg) {
 }
 
 void error(std::error_code EC, const Twine &Prefix) {
-  if (EC)
-    error(Prefix + ": " + EC.message());
+  error(Prefix + ": " + EC.message());
 }
 
 void fatal(const Twine &Msg) {
-  errs() << Msg << "\n";
+  *ErrorOS << Msg << "\n";
   exit(1);
 }
 

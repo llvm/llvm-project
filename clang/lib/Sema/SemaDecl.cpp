@@ -6184,7 +6184,10 @@ Sema::ActOnVariableDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   }
 
   if (D.getDeclSpec().isInlineSpecified()) {
-    if (CurContext->isFunctionOrMethod()) {
+    if (!getLangOpts().CPlusPlus) {
+      Diag(D.getDeclSpec().getInlineSpecLoc(), diag::err_inline_non_function)
+          << 0;
+    } else if (CurContext->isFunctionOrMethod()) {
       // 'inline' is not allowed on block scope variable declaration.
       Diag(D.getDeclSpec().getInlineSpecLoc(),
            diag::err_inline_declaration_block_scope) << Name

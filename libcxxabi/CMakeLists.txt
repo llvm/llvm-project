@@ -113,6 +113,7 @@ option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode.
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBCXXABI_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
 option(LIBCXXABI_USE_LLVM_UNWINDER "Build and use the LLVM unwinder." OFF)
+option(LIBCXXABI_USE_COMPILER_RT "Use compiler-rt instead of libgcc" OFF)
 option(LIBCXXABI_ENABLE_THREADS "Build with threads enabled" ON)
 option(LIBCXXABI_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread API" OFF)
 option(LIBCXXABI_BUILD_32_BITS "Build 32 bit libc++abi." ${LLVM_BUILD_32_BITS})
@@ -243,6 +244,9 @@ if (LIBCXXABI_HAS_NOSTDINCXX_FLAG)
   string(REPLACE "-stdlib=libstdc++" "" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
 endif()
 
+if (LIBCXXABI_USE_COMPILER_RT)
+  list(APPEND LIBCXXABI_LINK_FLAGS "-rtlib=compiler-rt")
+endif ()
 
 append_if(LIBCXXABI_COMPILE_FLAGS LIBCXXABI_HAS_WERROR_FLAG -Werror=return-type)
 

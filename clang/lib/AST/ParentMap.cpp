@@ -28,6 +28,8 @@ enum OpaqueValueMode {
 
 static void BuildParentMap(MapTy& M, Stmt* S,
                            OpaqueValueMode OVMode = OV_Transparent) {
+  if (!S)
+    return;
 
   switch (S->getStmtClass()) {
   case Stmt::PseudoObjectExprClass: {
