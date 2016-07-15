@@ -925,9 +925,7 @@ void TemplateDeclInstantiator::InstantiateEnumDefinition(
     }
   }
 
-  // FIXME: Fixup LBraceLoc
-  SemaRef.ActOnEnumBody(Enum->getLocation(), SourceLocation(),
-                        Enum->getRBraceLoc(), Enum,
+  SemaRef.ActOnEnumBody(Enum->getLocation(), Enum->getBraceRange(), Enum,
                         Enumerators,
                         nullptr, nullptr);
 }
