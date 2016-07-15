@@ -82,7 +82,7 @@ class HelpCommandTestCase(TestBase):
     def test_help_version(self):
         """Test 'help version' and 'version' commands."""
         self.expect("help version",
-            substrs = ['Show version of LLDB debugger.'])
+            substrs = ['Show the LLDB debugger version.'])
 
         valid_version_patterns = []
 

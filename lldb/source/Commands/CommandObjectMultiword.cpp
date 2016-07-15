@@ -178,7 +178,8 @@ CommandObjectMultiword::GenerateHelpText (Stream &output_stream)
     // First time through here, generate the help text for the object and
     // push it to the return result object as well
 
-    output_stream.PutCString ("The following subcommands are supported:\n\n");
+    CommandObject::GenerateHelpText(output_stream);
+    output_stream.PutCString("\nThe following subcommands are supported:\n\n");
 
     CommandMap::iterator pos;
     uint32_t max_len = FindLongestCommandWord (m_subcommand_dict);
@@ -193,7 +194,7 @@ CommandObjectMultiword::GenerateHelpText (Stream &output_stream)
         if (pos->second->WantsRawCommandString ())
         {
             std::string help_text (pos->second->GetHelp());
-            help_text.append ("  This command takes 'raw' input (no need to quote stuff).");
+            help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
             m_interpreter.OutputFormattedHelpText (output_stream,
                                                    indented_command.c_str(),
                                                    "--",

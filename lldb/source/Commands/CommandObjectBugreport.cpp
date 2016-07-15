@@ -130,11 +130,9 @@ private:
 // CommandObjectMultiwordBugreport
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordBugreport::CommandObjectMultiwordBugreport(CommandInterpreter &interpreter) :
-    CommandObjectMultiword(interpreter,
-                           "bugreport",
-                           "Set of commands for creating domain specific bugreports.",
-                           "bugreport <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordBugreport::CommandObjectMultiwordBugreport(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "bugreport", "Commands for creating domain-specific bug reports.",
+                             "bugreport <subcommand> [<subcommand-options>]")
 {
 
     LoadSubCommand("unwind", CommandObjectSP(new CommandObjectBugreportUnwind(interpreter)));

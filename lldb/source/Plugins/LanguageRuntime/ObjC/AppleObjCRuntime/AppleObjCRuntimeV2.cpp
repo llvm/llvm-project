@@ -791,11 +791,9 @@ protected:
 class CommandObjectMultiwordObjC_ClassTable : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordObjC_ClassTable (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "class-table",
-                            "A set of commands for operating on the Objective-C class table.",
-                            "class-table <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordObjC_ClassTable(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "class-table", "Commands for operating on the Objective-C class table.",
+                                 "class-table <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("dump",   CommandObjectSP (new CommandObjectObjC_ClassTable_Dump (interpreter)));
     }
@@ -806,12 +804,10 @@ public:
 class CommandObjectMultiwordObjC_TaggedPointer : public CommandObjectMultiword
 {
 public:
-    
-    CommandObjectMultiwordObjC_TaggedPointer (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "tagged-pointer",
-                            "A set of commands for operating on Objective-C tagged pointers.",
-                            "class-table <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordObjC_TaggedPointer(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "tagged-pointer",
+                                 "Commands for operating on Objective-C tagged pointers.",
+                                 "class-table <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("info",   CommandObjectSP (new CommandObjectMultiwordObjC_TaggedPointer_Info (interpreter)));
     }
@@ -822,11 +818,9 @@ public:
 class CommandObjectMultiwordObjC : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordObjC (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "objc",
-                            "A set of commands for operating on the Objective-C Language Runtime.",
-                            "objc <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordObjC(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "objc", "Commands for operating on the Objective-C language runtime.",
+                                 "objc <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("class-table",   CommandObjectSP (new CommandObjectMultiwordObjC_ClassTable (interpreter)));
         LoadSubCommand ("tagged-pointer",   CommandObjectSP (new CommandObjectMultiwordObjC_TaggedPointer (interpreter)));

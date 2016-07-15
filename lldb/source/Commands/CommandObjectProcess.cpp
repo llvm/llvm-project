@@ -875,15 +875,11 @@ public:
         LazyBool m_keep_stopped;
     };
 
-    CommandObjectProcessDetach (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "process detach",
-                             "Detach from the current process being debugged.",
-                             "process detach",
-                             eCommandRequiresProcess      |
-                             eCommandTryTargetAPILock     |
-                             eCommandProcessMustBeLaunched),
-        m_options(interpreter)
+    CommandObjectProcessDetach(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "process detach", "Detach from the current target process.",
+                              "process detach",
+                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched),
+          m_options(interpreter)
     {
     }
 
@@ -1075,12 +1071,9 @@ CommandObjectProcessConnect::CommandOptions::g_option_table[] =
 class CommandObjectProcessPlugin : public CommandObjectProxy
 {
 public:
-    CommandObjectProcessPlugin (CommandInterpreter &interpreter) :
-        CommandObjectProxy (interpreter,
-                            "process plugin",
-                            "Send a custom command to the current process plug-in.",
-                            "process plugin <args>",
-                            0)
+    CommandObjectProcessPlugin(CommandInterpreter &interpreter)
+        : CommandObjectProxy(interpreter, "process plugin",
+                             "Send a custom command to the current target process plug-in.", "process plugin <args>", 0)
     {
     }
 
@@ -1302,12 +1295,9 @@ protected:
 class CommandObjectProcessSignal : public CommandObjectParsed
 {
 public:
-    CommandObjectProcessSignal (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "process signal",
-                            "Send a UNIX signal to the current process being debugged.",
-                            nullptr,
-                            eCommandRequiresProcess | eCommandTryTargetAPILock)
+    CommandObjectProcessSignal(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "process signal", "Send a UNIX signal to the current target process.",
+                              nullptr, eCommandRequiresProcess | eCommandTryTargetAPILock)
     {
         CommandArgumentEntry arg;
         CommandArgumentData signal_arg;
@@ -1378,14 +1368,10 @@ protected:
 class CommandObjectProcessInterrupt : public CommandObjectParsed
 {
 public:
-    CommandObjectProcessInterrupt (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "process interrupt",
-                             "Interrupt the current process being debugged.",
-                             "process interrupt",
-                             eCommandRequiresProcess      |
-                             eCommandTryTargetAPILock     |
-                             eCommandProcessMustBeLaunched)
+    CommandObjectProcessInterrupt(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "process interrupt", "Interrupt the current target process.",
+                              "process interrupt",
+                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched)
     {
     }
 
@@ -1436,14 +1422,9 @@ protected:
 class CommandObjectProcessKill : public CommandObjectParsed
 {
 public:
-    CommandObjectProcessKill (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter, 
-                             "process kill",
-                             "Terminate the current process being debugged.",
-                             "process kill",
-                             eCommandRequiresProcess      |
-                             eCommandTryTargetAPILock     |
-                             eCommandProcessMustBeLaunched)
+    CommandObjectProcessKill(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "process kill", "Terminate the current target process.", "process kill",
+                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched)
     {
     }
 
@@ -1555,12 +1536,10 @@ protected:
 class CommandObjectProcessStatus : public CommandObjectParsed
 {
 public:
-    CommandObjectProcessStatus (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter, 
-                             "process status",
-                             "Show the current status and location of executing process.",
-                             "process status",
-                             eCommandRequiresProcess | eCommandTryTargetAPILock)
+    CommandObjectProcessStatus(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "process status",
+                              "Show status and stop location for the current target process.", "process status",
+                              eCommandRequiresProcess | eCommandTryTargetAPILock)
     {
     }
 
@@ -1655,12 +1634,12 @@ public:
         std::string pass;
     };
 
-    CommandObjectProcessHandle (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "process handle",
-                            "Show or update what the process and debugger should do with various signals received from the OS.",
-                            nullptr),
-        m_options (interpreter)
+    CommandObjectProcessHandle(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "process handle",
+              "Manage LLDB handling of OS signals for the current target process.  Defaults to showing current policy.",
+              nullptr),
+          m_options(interpreter)
     {
         SetHelpLong ("\nIf no signals are specified, update them all.  If no update "
                      "option is specified, list the current values.");
@@ -1889,11 +1868,9 @@ CommandObjectProcessHandle::CommandOptions::g_option_table[] =
 // CommandObjectMultiwordProcess
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordProcess::CommandObjectMultiwordProcess (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "process",
-                            "A set of commands for operating on a process.",
-                            "process <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordProcess::CommandObjectMultiwordProcess(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "process", "Commands for interacting with processes on the current platform.",
+                             "process <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("attach",      CommandObjectSP (new CommandObjectProcessAttach    (interpreter)));
     LoadSubCommand ("launch",      CommandObjectSP (new CommandObjectProcessLaunch    (interpreter)));

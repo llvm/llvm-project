@@ -467,11 +467,10 @@ protected:
 //----------------------------------------------------------------------
 // CommandObjectRegister constructor
 //----------------------------------------------------------------------
-CommandObjectRegister::CommandObjectRegister(CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "register",
-                            "A set of commands to access thread registers.",
-                            "register [read|write] ...")
+CommandObjectRegister::CommandObjectRegister(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "register",
+                             "Commands to access registers for the current thread and stack frame.",
+                             "register [read|write] ...")
 {
     LoadSubCommand ("read",  CommandObjectSP (new CommandObjectRegisterRead (interpreter)));
     LoadSubCommand ("write", CommandObjectSP (new CommandObjectRegisterWrite (interpreter)));

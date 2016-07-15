@@ -3595,7 +3595,7 @@ class CommandObjectRenderScriptRuntimeModule : public CommandObjectMultiword
 {
 public:
     CommandObjectRenderScriptRuntimeModule(CommandInterpreter &interpreter)
-        : CommandObjectMultiword(interpreter, "renderscript module", "Commands that deal with renderscript modules.",
+        : CommandObjectMultiword(interpreter, "renderscript module", "Commands that deal with RenderScript modules.",
                                  nullptr)
     {
         LoadSubCommand("dump", CommandObjectSP(new CommandObjectRenderScriptRuntimeModuleDump(interpreter)));
@@ -3871,7 +3871,7 @@ class CommandObjectRenderScriptRuntimeKernel : public CommandObjectMultiword
 {
 public:
     CommandObjectRenderScriptRuntimeKernel(CommandInterpreter &interpreter)
-        : CommandObjectMultiword(interpreter, "renderscript kernel", "Commands that deal with renderscript kernels.",
+        : CommandObjectMultiword(interpreter, "renderscript kernel", "Commands that deal with RenderScript kernels.",
                                  nullptr)
     {
         LoadSubCommand("list", CommandObjectSP(new CommandObjectRenderScriptRuntimeKernelList(interpreter)));
@@ -3910,7 +3910,7 @@ class CommandObjectRenderScriptRuntimeContext : public CommandObjectMultiword
 {
 public:
     CommandObjectRenderScriptRuntimeContext(CommandInterpreter &interpreter)
-        : CommandObjectMultiword(interpreter, "renderscript context", "Commands that deal with renderscript contexts.",
+        : CommandObjectMultiword(interpreter, "renderscript context", "Commands that deal with RenderScript contexts.",
                                  nullptr)
     {
         LoadSubCommand("dump", CommandObjectSP(new CommandObjectRenderScriptRuntimeContextDump(interpreter)));
@@ -4271,7 +4271,7 @@ class CommandObjectRenderScriptRuntimeAllocation : public CommandObjectMultiword
 public:
     CommandObjectRenderScriptRuntimeAllocation(CommandInterpreter &interpreter)
         : CommandObjectMultiword(interpreter, "renderscript allocation",
-                                 "Commands that deal with renderscript allocations.", nullptr)
+                                 "Commands that deal with RenderScript allocations.", nullptr)
     {
         LoadSubCommand("list", CommandObjectSP(new CommandObjectRenderScriptRuntimeAllocationList(interpreter)));
         LoadSubCommand("dump", CommandObjectSP(new CommandObjectRenderScriptRuntimeAllocationDump(interpreter)));
@@ -4287,7 +4287,7 @@ class CommandObjectRenderScriptRuntimeStatus : public CommandObjectParsed
 {
 public:
     CommandObjectRenderScriptRuntimeStatus(CommandInterpreter &interpreter)
-        : CommandObjectParsed(interpreter, "renderscript status", "Displays current renderscript runtime status.",
+        : CommandObjectParsed(interpreter, "renderscript status", "Displays current RenderScript runtime status.",
                               "renderscript status", eCommandRequiresProcess | eCommandProcessMustBeLaunched)
     {
     }
@@ -4309,7 +4309,7 @@ class CommandObjectRenderScriptRuntime : public CommandObjectMultiword
 {
 public:
     CommandObjectRenderScriptRuntime(CommandInterpreter &interpreter)
-        : CommandObjectMultiword(interpreter, "renderscript", "A set of commands for operating on renderscript.",
+        : CommandObjectMultiword(interpreter, "renderscript", "Commands for operating on the RenderScript runtime.",
                                  "renderscript <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand("module", CommandObjectSP(new CommandObjectRenderScriptRuntimeModule(interpreter)));
