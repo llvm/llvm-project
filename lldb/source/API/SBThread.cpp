@@ -1271,8 +1271,8 @@ SBThread::UnwindInnermostExpression()
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_API));
 
-    std::unique_lock<std::recursive_mutex> lock;
-    ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
+    Mutex::Locker api_locker;
+    ExecutionContext exe_ctx (m_opaque_sp.get(), api_locker);
 
     if (log)
         log->Printf ("SBThread(%p)::UnwindExpressionEvaluation",
