@@ -44,11 +44,11 @@ entry:
   %bc = fadd <4 x float> %b, %c
   %de = fadd <4 x float> %d, %e
   %bcde = fadd <4 x float> %bc, %de
-  call void @llvm.R600.store.swizzle(<4 x float> %bcde, i32 0, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %bcde, i32 0, i32 1)
   ret void
 }
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 ; Function Attrs: readnone
 declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0

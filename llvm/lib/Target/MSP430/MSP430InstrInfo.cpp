@@ -170,7 +170,7 @@ bool MSP430InstrInfo::isUnpredicatedTerminator(const MachineInstr &MI) const {
   return !isPredicated(MI);
 }
 
-bool MSP430InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool MSP430InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                     MachineBasicBlock *&TBB,
                                     MachineBasicBlock *&FBB,
                                     SmallVectorImpl<MachineOperand> &Cond,

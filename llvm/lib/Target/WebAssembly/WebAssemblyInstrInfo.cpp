@@ -92,7 +92,7 @@ WebAssemblyInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 }
 
 // Branch analysis.
-bool WebAssemblyInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool WebAssemblyInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                          MachineBasicBlock *&TBB,
                                          MachineBasicBlock *&FBB,
                                          SmallVectorImpl<MachineOperand> &Cond,

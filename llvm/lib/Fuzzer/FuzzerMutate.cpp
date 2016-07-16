@@ -313,11 +313,10 @@ void MutationDispatcher::AddWordToManualDictionary(const Word &W) {
       {W, std::numeric_limits<size_t>::max()});
 }
 
-void MutationDispatcher::AddWordToAutoDictionary(const Word &W,
-                                                 size_t PositionHint) {
+void MutationDispatcher::AddWordToAutoDictionary(DictionaryEntry DE) {
   static const size_t kMaxAutoDictSize = 1 << 14;
   if (TempAutoDictionary.size() >= kMaxAutoDictSize) return;
-  TempAutoDictionary.push_back({W, PositionHint});
+  TempAutoDictionary.push_back(DE);
 }
 
 void MutationDispatcher::ClearAutoDictionary() {

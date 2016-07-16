@@ -44,8 +44,7 @@ public:
   LanaiTTIImpl(const LanaiTTIImpl &Arg)
       : BaseT(static_cast<const BaseT &>(Arg)), ST(Arg.ST), TLI(Arg.TLI) {}
   LanaiTTIImpl(LanaiTTIImpl &&Arg)
-      : BaseT(std::move(static_cast<BaseT &>(Arg))), ST(std::move(Arg.ST)),
-        TLI(std::move(Arg.TLI)) {}
+      : BaseT(std::move(static_cast<BaseT &>(Arg))), ST(Arg.ST), TLI(Arg.TLI) {}
 
   bool shouldBuildLookupTables() const { return false; }
 

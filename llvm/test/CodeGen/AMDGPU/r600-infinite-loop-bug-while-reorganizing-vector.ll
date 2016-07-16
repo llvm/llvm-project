@@ -40,7 +40,7 @@ main_body:
   %tmp36 = insertelement <4 x float> %tmp35, float %tmp34, i32 1
   %tmp37 = insertelement <4 x float> %tmp36, float %tmp34, i32 2
   %tmp38 = insertelement <4 x float> %tmp37, float 1.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %tmp38, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %tmp38, i32 0, i32 0)
   ret void
 }
 
@@ -50,7 +50,7 @@ declare <4 x float> @llvm.AMDGPU.cube(<4 x float>) #0
 ; Function Attrs: readnone
 declare float @fabs(float) #0
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 ; Function Attrs: readnone
 declare <4 x float> @llvm.r600.texc(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0

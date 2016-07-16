@@ -439,7 +439,7 @@ void HexagonSplitDoubleRegs::collectIndRegsForLoop(const MachineLoop *L,
   MachineBasicBlock *TB = 0, *FB = 0;
   MachineBasicBlock *TmpLB = const_cast<MachineBasicBlock*>(LB);
   SmallVector<MachineOperand,2> Cond;
-  bool BadLB = TII->AnalyzeBranch(*TmpLB, TB, FB, Cond, false);
+  bool BadLB = TII->analyzeBranch(*TmpLB, TB, FB, Cond, false);
   // Only analyzable conditional branches. HII::AnalyzeBranch will put
   // the branch opcode as the first element of Cond, and the predicate
   // operand as the second.
@@ -642,7 +642,7 @@ void HexagonSplitDoubleRegs::splitMemRef(MachineInstr *MI,
   MachineFunction &MF = *B.getParent();
   for (auto &MO : MI->memoperands()) {
     const MachinePointerInfo &Ptr = MO->getPointerInfo();
-    unsigned F = MO->getFlags();
+    MachineMemOperand::Flags F = MO->getFlags();
     int A = MO->getAlignment();
 
     auto *Tmp1 = MF.getMachineMemOperand(Ptr, F, 4/*size*/, A);

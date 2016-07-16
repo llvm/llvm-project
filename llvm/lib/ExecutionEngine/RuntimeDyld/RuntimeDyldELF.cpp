@@ -1402,8 +1402,12 @@ RuntimeDyldELF::processRelocationRef(
         // Create a new stub function.
         DEBUG(dbgs() << " Create a new stub function\n");
         Stubs[Value] = Section.getStubOffset();
+
+        unsigned AbiVariant;
+        O.getPlatformFlags(AbiVariant);
+
         uint8_t *StubTargetAddr = createStubFunction(
-            Section.getAddressWithOffset(Section.getStubOffset()));
+            Section.getAddressWithOffset(Section.getStubOffset()), AbiVariant);
 
         // Creating Hi and Lo relocations for the filled stub instructions.
         RelocationEntry REHi(SectionID, StubTargetAddr - Section.getAddress(),

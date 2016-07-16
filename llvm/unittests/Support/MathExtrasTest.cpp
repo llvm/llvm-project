@@ -131,6 +131,7 @@ TEST(MathExtras, minIntN) {
 TEST(MathExtras, maxUIntN) {
   EXPECT_EQ(0xffffULL, maxUIntN(16));
   EXPECT_EQ(0xffffffffULL, maxUIntN(32));
+  EXPECT_EQ(0xffffffffffffffffULL, maxUIntN(64));
   EXPECT_EQ(1ULL, maxUIntN(1));
   EXPECT_EQ(0x0fULL, maxUIntN(4));
 }

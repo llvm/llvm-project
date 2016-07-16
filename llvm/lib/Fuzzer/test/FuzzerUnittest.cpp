@@ -311,7 +311,7 @@ void TestAddWordFromDictionaryWithHint(Mutator M, int NumIter) {
   MutationDispatcher MD(Rand, {});
   uint8_t W[] = {0xAA, 0xBB, 0xCC, 0xDD, 0xFF, 0xEE, 0xEF};
   size_t PosHint = 7777;
-  MD.AddWordToAutoDictionary(Word(W, sizeof(W)), PosHint);
+  MD.AddWordToAutoDictionary({Word(W, sizeof(W)), PosHint});
   int FoundMask = 0;
   for (int i = 0; i < NumIter; i++) {
     uint8_t T[10000];

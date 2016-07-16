@@ -1153,10 +1153,8 @@ bool X86FastISel::X86SelectRet(const Instruction *I) {
       CC != CallingConv::X86_FastCall &&
       CC != CallingConv::X86_StdCall &&
       CC != CallingConv::X86_ThisCall &&
-      CC != CallingConv::X86_64_SysV)
-    return false;
-
-  if (Subtarget->isCallingConvWin64(CC))
+      CC != CallingConv::X86_64_SysV &&
+      CC != CallingConv::X86_64_Win64)
     return false;
 
   // Don't handle popping bytes if they don't fit the ret's immediate.

@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_DIAGNOSTICINFO_H
 #define LLVM_IR_DIAGNOSTICINFO_H
 
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/DebugLoc.h"
@@ -383,9 +384,10 @@ public:
   DiagnosticInfoOptimizationBase(enum DiagnosticKind Kind,
                                  enum DiagnosticSeverity Severity,
                                  const char *PassName, const Function &Fn,
-                                 const DebugLoc &DLoc, const Twine &Msg)
+                                 const DebugLoc &DLoc, const Twine &Msg,
+                                 Optional<uint64_t> Hotness = None)
       : DiagnosticInfoWithDebugLocBase(Kind, Severity, Fn, DLoc),
-        PassName(PassName), Msg(Msg) {}
+        PassName(PassName), Msg(Msg), Hotness(Hotness) {}
 
   /// \see DiagnosticInfo::print.
   void print(DiagnosticPrinter &DP) const override;
@@ -413,6 +415,10 @@ private:
 
   /// Message to report.
   const Twine &Msg;
+
+  /// If profile information is available, this is the number of times the
+  /// corresponding code was executed in a profile instrumentation run.
+  Optional<uint64_t> Hotness;
 };
 
 /// Diagnostic information for applied optimization remarks.
@@ -453,9 +459,10 @@ public:
   /// must be valid for the whole life time of the diagnostic.
   DiagnosticInfoOptimizationRemarkMissed(const char *PassName,
                                          const Function &Fn,
-                                         const DebugLoc &DLoc, const Twine &Msg)
+                                         const DebugLoc &DLoc, const Twine &Msg,
+                                         Optional<uint64_t> Hotness = None)
       : DiagnosticInfoOptimizationBase(DK_OptimizationRemarkMissed, DS_Remark,
-                                       PassName, Fn, DLoc, Msg) {}
+                                       PassName, Fn, DLoc, Msg, Hotness) {}
 
   static bool classof(const DiagnosticInfo *DI) {
     return DI->getKind() == DK_OptimizationRemarkMissed;

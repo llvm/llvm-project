@@ -98,43 +98,43 @@ main_body:
   %83 = insertelement <4 x float> %82, float %55, i32 1
   %84 = insertelement <4 x float> %83, float %59, i32 2
   %85 = insertelement <4 x float> %84, float %63, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %85, i32 60, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %85, i32 60, i32 1)
   %86 = insertelement <4 x float> undef, float 0.000000e+00, i32 0
   %87 = insertelement <4 x float> %86, float 0.000000e+00, i32 1
   %88 = insertelement <4 x float> %87, float 0.000000e+00, i32 2
   %89 = insertelement <4 x float> %88, float 0.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %89, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %89, i32 0, i32 2)
   %90 = insertelement <4 x float> undef, float 0.000000e+00, i32 0
   %91 = insertelement <4 x float> %90, float 0.000000e+00, i32 1
   %92 = insertelement <4 x float> %91, float 0.000000e+00, i32 2
   %93 = insertelement <4 x float> %92, float 0.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %93, i32 1, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %93, i32 1, i32 2)
   %94 = insertelement <4 x float> undef, float 0.000000e+00, i32 0
   %95 = insertelement <4 x float> %94, float %65, i32 1
   %96 = insertelement <4 x float> %95, float %67, i32 2
   %97 = insertelement <4 x float> %96, float %69, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %97, i32 2, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %97, i32 2, i32 2)
   %98 = insertelement <4 x float> undef, float %77, i32 0
   %99 = insertelement <4 x float> %98, float %79, i32 1
   %100 = insertelement <4 x float> %99, float %81, i32 2
   %101 = insertelement <4 x float> %100, float %71, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %101, i32 3, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %101, i32 3, i32 2)
   %102 = insertelement <4 x float> undef, float %73, i32 0
   %103 = insertelement <4 x float> %102, float %75, i32 1
   %104 = insertelement <4 x float> %103, float 0.000000e+00, i32 2
   %105 = insertelement <4 x float> %104, float 0.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %105, i32 4, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %105, i32 4, i32 2)
   %106 = insertelement <4 x float> undef, float 0.000000e+00, i32 0
   %107 = insertelement <4 x float> %106, float 0.000000e+00, i32 1
   %108 = insertelement <4 x float> %107, float 0.000000e+00, i32 2
   %109 = insertelement <4 x float> %108, float 0.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %109, i32 5, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %109, i32 5, i32 2)
   %110 = insertelement <4 x float> undef, float 0.000000e+00, i32 0
   %111 = insertelement <4 x float> %110, float 0.000000e+00, i32 1
   %112 = insertelement <4 x float> %111, float 0.000000e+00, i32 2
   %113 = insertelement <4 x float> %112, float 0.000000e+00, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %113, i32 6, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %113, i32 6, i32 2)
   ret void
 }
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

@@ -56,19 +56,15 @@ def int_r600_rat_store_typed :
   Intrinsic<[], [llvm_v4i32_ty, llvm_v4i32_ty, llvm_i32_ty], []>,
   GCCBuiltin<"__builtin_r600_rat_store_typed">;
 
-def int_r600_rsq : Intrinsic<
+def int_r600_recipsqrt_ieee :  Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
 >;
 
+def int_r600_recipsqrt_clamped : Intrinsic<
+  [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
+>;
 
 } // End TargetPrefix = "r600"
-
-// FIXME: These should be renamed/moved to r600
-let TargetPrefix = "AMDGPU" in {
-def int_AMDGPU_ldexp : Intrinsic<
-  [llvm_anyfloat_ty], [LLVMMatchType<0>, llvm_i32_ty], [IntrNoMem]
->;
-}
 
 let TargetPrefix = "amdgcn" in {
 

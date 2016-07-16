@@ -68,8 +68,6 @@ public:
   bool isLegalToSplitMBBAt(MachineBasicBlock &MBB,
                            MachineBasicBlock::iterator MBBI) const override;
 
-  bool isTrig(const MachineInstr &MI) const;
-  bool isPlaceHolderOpcode(unsigned opcode) const;
   bool isReductionOp(unsigned opcode) const;
   bool isCubeOp(unsigned opcode) const;
 
@@ -77,7 +75,6 @@ public:
   bool isALUInstr(unsigned Opcode) const;
   bool hasInstrModifiers(unsigned Opcode) const;
   bool isLDSInstr(unsigned Opcode) const;
-  bool isLDSNoRetInstr(unsigned Opcode) const;
   bool isLDSRetInstr(unsigned Opcode) const;
 
   /// \returns true if this \p Opcode represents an ALU instruction or an
@@ -100,9 +97,6 @@ public:
   bool definesAddressRegister(MachineInstr &MI) const;
   bool readsLDSSrcReg(const MachineInstr &MI) const;
 
-  /// \returns The operand index for the given source number.  Legal values
-  /// for SrcNum are 0, 1, and 2.
-  int getSrcIdx(unsigned Opcode, unsigned SrcNum) const;
   /// \returns The operand Index for the Sel operand given an index to one
   /// of the instruction's src operands.
   int getSelIdx(unsigned Opcode, unsigned SrcIdx) const;
@@ -160,8 +154,7 @@ public:
   bool ReverseBranchCondition(
     SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  bool AnalyzeBranch(MachineBasicBlock &MBB,
-                     MachineBasicBlock *&TBB,
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
@@ -192,9 +185,6 @@ public:
   bool DefinesPredicate(MachineInstr &MI,
                         std::vector<MachineOperand> &Pred) const override;
 
-  bool SubsumesPredicate(ArrayRef<MachineOperand> Pred1,
-                         ArrayRef<MachineOperand> Pred2) const override;
-
   bool isProfitableToUnpredicate(MachineBasicBlock &TMBB,
                                  MachineBasicBlock &FMBB) const override;
 
@@ -206,9 +196,6 @@ public:
   unsigned int getInstrLatency(const InstrItineraryData *ItinData,
                                const MachineInstr &MI,
                                unsigned *PredCost = nullptr) const override;
-
-  int getInstrLatency(const InstrItineraryData *ItinData,
-                      SDNode *Node) const override { return 1;}
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
 
@@ -296,9 +283,6 @@ public:
 
   /// \brief Helper function for setting instruction flag values.
   void setImmOperand(MachineInstr &MI, unsigned Op, int64_t Imm) const;
-
-  /// \returns true if this instruction has an operand for storing target flags.
-  bool hasFlagOperand(const MachineInstr &MI) const;
 
   ///\brief Add one of the MO_FLAG* flags to the specified \p Operand.
   void addFlag(MachineInstr &MI, unsigned Operand, unsigned Flag) const;

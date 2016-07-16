@@ -148,7 +148,7 @@ bool HexagonBranchRelaxation::isJumpOutOfRange(MachineInstr &MI,
   SmallVector<MachineOperand, 4> Cond;
 
   // Try to analyze this branch.
-  if (HII->AnalyzeBranch(B, TBB, FBB, Cond, false)) {
+  if (HII->analyzeBranch(B, TBB, FBB, Cond, false)) {
     // Could not analyze it. See if this is something we can recognize.
     // If it is a NVJ, it should always have its target in
     // a fixed location.

@@ -95,13 +95,12 @@ Error LLVMOutputStyle::dumpFileHeaders() {
 
   DictScope D(P, "FileHeaders");
   P.printNumber("BlockSize", File.getBlockSize());
-  P.printNumber("Unknown0", File.getUnknown0());
+  P.printNumber("FreeBlockMap", File.getFreeBlockMapBlock());
   P.printNumber("NumBlocks", File.getBlockCount());
   P.printNumber("NumDirectoryBytes", File.getNumDirectoryBytes());
   P.printNumber("Unknown1", File.getUnknown1());
   P.printNumber("BlockMapAddr", File.getBlockMapIndex());
   P.printNumber("NumDirectoryBlocks", File.getNumDirectoryBlocks());
-  P.printNumber("BlockMapOffset", File.getBlockMapOffset());
 
   // The directory is not contiguous.  Instead, the block map contains a
   // contiguous list of block numbers whose contents, when concatenated in

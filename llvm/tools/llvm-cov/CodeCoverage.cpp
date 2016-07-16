@@ -26,9 +26,12 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
+#include "llvm/Support/Program.h"
 #include "llvm/Support/ThreadPool.h"
+#include "llvm/Support/ToolOutputFile.h"
 #include <functional>
 #include <system_error>
 
@@ -81,6 +84,12 @@ public:
   /// \brief Load the coverage mapping data. Return nullptr if an error occured.
   std::unique_ptr<CoverageMapping> load();
 
+  /// \brief If a demangler is available, demangle all symbol names.
+  void demangleSymbols(const CoverageMapping &Coverage);
+
+  /// \brief Demangle \p Sym if possible. Otherwise, just return \p Sym.
+  StringRef getSymbolForHumans(StringRef Sym) const;
+
   int run(Command Cmd, int argc, const char **argv);
 
   typedef llvm::function_ref<int(int, const char **)> CommandLineParserType;
@@ -101,11 +110,17 @@ public:
   std::string CoverageArch;
 
 private:
+  /// A cache for demangled symbol names.
+  StringMap<std::string> DemangledNames;
+
+  /// File paths (absolute, or otherwise) to input source files.
   std::vector<std::string> CollectedPaths;
 
+  /// Errors and warnings which have not been printed.
   std::mutex DeferredMessagesLock;
   std::vector<std::string> DeferredMessages;
 
+  /// A container for input source file buffers.
   std::mutex LoadedSourceFilesLock;
   std::vector<std::pair<std::string, std::unique_ptr<MemoryBuffer>>>
       LoadedSourceFiles;
@@ -202,8 +217,9 @@ CodeCoverageTool::createFunctionView(const FunctionRecord &Function,
     return nullptr;
 
   auto Expansions = FunctionCoverage.getExpansions();
-  auto View = SourceCoverageView::create(Function.Name, SourceBuffer.get(),
-                                         ViewOpts, std::move(FunctionCoverage));
+  auto View = SourceCoverageView::create(getSymbolForHumans(Function.Name),
+                                         SourceBuffer.get(), ViewOpts,
+                                         std::move(FunctionCoverage));
   attachExpansionSubViews(*View, Expansions, Coverage);
 
   return View;
@@ -227,9 +243,9 @@ CodeCoverageTool::createSourceFileView(StringRef SourceFile,
   for (const auto *Function : Coverage.getInstantiations(SourceFile)) {
     auto SubViewCoverage = Coverage.getCoverageForFunction(*Function);
     auto SubViewExpansions = SubViewCoverage.getExpansions();
-    auto SubView =
-        SourceCoverageView::create(Function->Name, SourceBuffer.get(), ViewOpts,
-                                   std::move(SubViewCoverage));
+    auto SubView = SourceCoverageView::create(
+        getSymbolForHumans(Function->Name), SourceBuffer.get(), ViewOpts,
+        std::move(SubViewCoverage));
     attachExpansionSubViews(*SubView, SubViewExpansions, Coverage);
 
     if (SubView) {
@@ -286,7 +302,92 @@ std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
     }
   }
 
+  demangleSymbols(*Coverage);
+
   return Coverage;
+}
+
+void CodeCoverageTool::demangleSymbols(const CoverageMapping &Coverage) {
+  if (!ViewOpts.hasDemangler())
+    return;
+
+  // Pass function names to the demangler in a temporary file.
+  int InputFD;
+  SmallString<256> InputPath;
+  std::error_code EC =
+      sys::fs::createTemporaryFile("demangle-in", "list", InputFD, InputPath);
+  if (EC) {
+    error(InputPath, EC.message());
+    return;
+  }
+  tool_output_file InputTOF{InputPath, InputFD};
+
+  unsigned NumSymbols = 0;
+  for (const auto &Function : Coverage.getCoveredFunctions()) {
+    InputTOF.os() << Function.Name << '\n';
+    ++NumSymbols;
+  }
+  InputTOF.os().close();
+
+  // Use another temporary file to store the demangler's output.
+  int OutputFD;
+  SmallString<256> OutputPath;
+  EC = sys::fs::createTemporaryFile("demangle-out", "list", OutputFD,
+                                    OutputPath);
+  if (EC) {
+    error(OutputPath, EC.message());
+    return;
+  }
+  tool_output_file OutputTOF{OutputPath, OutputFD};
+  OutputTOF.os().close();
+
+  // Invoke the demangler.
+  std::vector<const char *> ArgsV;
+  for (const std::string &Arg : ViewOpts.DemanglerOpts)
+    ArgsV.push_back(Arg.c_str());
+  ArgsV.push_back(nullptr);
+  StringRef InputPathRef = InputPath.str();
+  StringRef OutputPathRef = OutputPath.str();
+  StringRef StderrRef;
+  const StringRef *Redirects[] = {&InputPathRef, &OutputPathRef, &StderrRef};
+  std::string ErrMsg;
+  int RC = sys::ExecuteAndWait(ViewOpts.DemanglerOpts[0], ArgsV.data(),
+                               /*env=*/nullptr, Redirects, /*secondsToWait=*/0,
+                               /*memoryLimit=*/0, &ErrMsg);
+  if (RC) {
+    error(ErrMsg, ViewOpts.DemanglerOpts[0]);
+    return;
+  }
+
+  // Parse the demangler's output.
+  auto BufOrError = MemoryBuffer::getFile(OutputPath);
+  if (!BufOrError) {
+    error(OutputPath, BufOrError.getError().message());
+    return;
+  }
+
+  std::unique_ptr<MemoryBuffer> DemanglerBuf = std::move(*BufOrError);
+
+  SmallVector<StringRef, 8> Symbols;
+  StringRef DemanglerData = DemanglerBuf->getBuffer();
+  DemanglerData.split(Symbols, '\n', /*MaxSplit=*/NumSymbols,
+                      /*KeepEmpty=*/false);
+  if (Symbols.size() != NumSymbols) {
+    error("Demangler did not provide expected number of symbols");
+    return;
+  }
+
+  // Cache the demangled names.
+  unsigned I = 0;
+  for (const auto &Function : Coverage.getCoveredFunctions())
+    DemangledNames[Function.Name] = Symbols[I++];
+}
+
+StringRef CodeCoverageTool::getSymbolForHumans(StringRef Sym) const {
+  const auto DemangledName = DemangledNames.find(Sym);
+  if (DemangledName == DemangledNames.end())
+    return Sym;
+  return DemangledName->getValue();
 }
 
 int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
@@ -363,6 +464,9 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
       "use-color", cl::desc("Emit colored output (default=autodetect)"),
       cl::init(cl::BOU_UNSET));
 
+  cl::list<std::string> DemanglerOpts(
+      "Xdemangler", cl::desc("<demangler-path>|<demangler-option>"));
+
   auto commandLineParser = [&, this](int argc, const char **argv) -> int {
     cl::ParseCommandLineOptions(argc, argv, "LLVM code coverage tool\n");
     ViewOpts.Debug = DebugDump;
@@ -380,6 +484,18 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
         error("Color output cannot be disabled when generating html.");
       ViewOpts.Colors = true;
       break;
+    }
+
+    // If a demangler is supplied, check if it exists and register it.
+    if (DemanglerOpts.size()) {
+      auto DemanglerPathOrErr = sys::findProgramByName(DemanglerOpts[0]);
+      if (!DemanglerPathOrErr) {
+        error("Could not find the demangler!",
+              DemanglerPathOrErr.getError().message());
+        return 1;
+      }
+      DemanglerOpts[0] = *DemanglerPathOrErr;
+      ViewOpts.DemanglerOpts.swap(DemanglerOpts);
     }
 
     // Create the function filters

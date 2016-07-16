@@ -1,7 +1,7 @@
 ; RUN: opt < %s -functionattrs -S | FileCheck %s
 @g = global i32* null		; <i32**> [#uses=1]
 
-; CHECK: define i32* @c1(i32* readnone %q)
+; CHECK: define i32* @c1(i32* readnone returned %q)
 define i32* @c1(i32* %q) {
 	ret i32* %q
 }
@@ -140,7 +140,7 @@ define void @test1_1(i8* %x1_1, i8* %y1_1) {
   ret void
 }
 
-; CHECK: define i8* @test1_2(i8* nocapture readnone %x1_2, i8* %y1_2)
+; CHECK: define i8* @test1_2(i8* nocapture readnone %x1_2, i8* returned %y1_2)
 define i8* @test1_2(i8* %x1_2, i8* %y1_2) {
   call void @test1_1(i8* %x1_2, i8* %y1_2)
   store i32* null, i32** @g
@@ -168,7 +168,7 @@ define void @test4_1(i8* %x4_1) {
   ret void
 }
 
-; CHECK: define i8* @test4_2(i8* nocapture readnone %x4_2, i8* readnone %y4_2, i8* nocapture readnone %z4_2)
+; CHECK: define i8* @test4_2(i8* nocapture readnone %x4_2, i8* readnone returned %y4_2, i8* nocapture readnone %z4_2)
 define i8* @test4_2(i8* %x4_2, i8* %y4_2, i8* %z4_2) {
   call void @test4_1(i8* null)
   store i32* null, i32** @g

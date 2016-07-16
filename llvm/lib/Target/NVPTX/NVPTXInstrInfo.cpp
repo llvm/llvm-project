@@ -146,9 +146,11 @@ bool NVPTXInstrInfo::CanTailMerge(const MachineInstr *MI) const {
 /// Note that RemoveBranch and InsertBranch must be implemented to support
 /// cases where this method returns success.
 ///
-bool NVPTXInstrInfo::AnalyzeBranch(
-    MachineBasicBlock &MBB, MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
-    SmallVectorImpl<MachineOperand> &Cond, bool AllowModify) const {
+bool NVPTXInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
+                                   MachineBasicBlock *&TBB,
+                                   MachineBasicBlock *&FBB,
+                                   SmallVectorImpl<MachineOperand> &Cond,
+                                   bool AllowModify) const {
   // If the block has no terminators, it just falls into the block after it.
   MachineBasicBlock::iterator I = MBB.end();
   if (I == MBB.begin() || !isUnpredicatedTerminator(*--I))

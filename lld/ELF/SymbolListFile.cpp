@@ -19,6 +19,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
+using namespace llvm::ELF;
+
 using namespace lld;
 using namespace lld::elf;
 
@@ -26,36 +28,26 @@ using namespace lld::elf;
 //
 //  { symbol1; symbol2; [...]; symbolN };
 //
-// Multiple groups can be defined in the same file and they are merged
-// in only one definition.
+// Multiple groups can be defined in the same file, and they are merged
+// into a single group.
 
 class DynamicListParser final : public ScriptParserBase {
 public:
   DynamicListParser(StringRef S) : ScriptParserBase(S) {}
-
   void run();
-
-private:
-  void readGroup();
 };
 
-// Parse the default group definition using C language symbol name.
-void DynamicListParser::readGroup() {
-  expect("{");
-  while (!Error) {
-    Config->DynamicList.push_back(next());
-    expect(";");
-    if (peek() == "}") {
-      next();
-      break;
-    }
-  }
-  expect(";");
-}
-
 void DynamicListParser::run() {
-  while (!atEOF())
-    readGroup();
+  while (!atEOF()) {
+    expect("{");
+    while (!Error) {
+      Config->DynamicList.push_back(next());
+      expect(";");
+      if (skip("}"))
+        break;
+    }
+    expect(";");
+  }
 }
 
 void elf::parseDynamicList(MemoryBufferRef MB) {
@@ -77,55 +69,49 @@ public:
   void run();
 
 private:
-  void parseVersion(StringRef Version);
+  void parseVersion(StringRef VerStr);
+  void parseGlobal(StringRef VerStr);
   void parseLocal();
-  void parseVersionSymbols(StringRef Version);
 };
 
-size_t elf::defineSymbolVersion(StringRef Version) {
+size_t elf::defineSymbolVersion(StringRef VerStr) {
   // Identifiers start at 2 because 0 and 1 are reserved
   // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
-  size_t VersionId = Config->SymbolVersions.size() + 2;
-  Config->SymbolVersions.push_back(elf::Version(Version, VersionId));
+  size_t VersionId = Config->VersionDefinitions.size() + 2;
+  Config->VersionDefinitions.push_back({VerStr, VersionId});
   return VersionId;
 }
 
-void VersionScriptParser::parseVersion(StringRef Version) {
-  expect("{");
-  defineSymbolVersion(Version);
-  if (peek() == "global:") {
-    next();
-    parseVersionSymbols(Version);
-  }
-  if (peek() == "local:")
-    parseLocal();
-  else if (peek() != "}")
-    parseVersionSymbols(Version);
+void VersionScriptParser::parseVersion(StringRef VerStr) {
+  defineSymbolVersion(VerStr);
 
+  if (skip("global:") || peek() != "local:")
+    parseGlobal(VerStr);
+  if (skip("local:"))
+    parseLocal();
   expect("}");
 
   // Each version may have a parent version. For example, "Ver2" defined as
   // "Ver2 { global: foo; local: *; } Ver1;" has "Ver1" as a parent. This
   // version hierarchy is, probably against your instinct, purely for human; the
   // runtime doesn't care about them at all. In LLD, we simply skip the token.
-  if (!Version.empty() && peek() != ";")
+  if (!VerStr.empty() && peek() != ";")
     next();
   expect(";");
 }
 
 void VersionScriptParser::parseLocal() {
-  expect("local:");
+  Config->DefaultSymbolVersion = VER_NDX_LOCAL;
   expect("*");
   expect(";");
-  Config->VersionScriptGlobalByDefault = false;
 }
 
-void VersionScriptParser::parseVersionSymbols(StringRef Version) {
+void VersionScriptParser::parseGlobal(StringRef VerStr) {
   std::vector<StringRef> *Globals;
-  if (Version.empty())
+  if (VerStr.empty())
     Globals = &Config->VersionScriptGlobals;
   else
-    Globals = &Config->SymbolVersions.back().Globals;
+    Globals = &Config->VersionDefinitions.back().Globals;
 
   for (;;) {
     StringRef Cur = peek();
@@ -142,7 +128,7 @@ void VersionScriptParser::parseVersionSymbols(StringRef Version) {
 void VersionScriptParser::run() {
   StringRef Msg = "anonymous version definition is used in "
                   "combination with other version definitions";
-  if (peek() == "{") {
+  if (skip("{")) {
     parseVersion("");
     if (!atEOF())
       setError(Msg);
@@ -150,11 +136,13 @@ void VersionScriptParser::run() {
   }
 
   while (!atEOF() && !Error) {
-    if (peek() == "{") {
+    StringRef VerStr = next();
+    if (VerStr == "{") {
       setError(Msg);
       return;
     }
-    parseVersion(next());
+    expect("{");
+    parseVersion(VerStr);
   }
 }
 

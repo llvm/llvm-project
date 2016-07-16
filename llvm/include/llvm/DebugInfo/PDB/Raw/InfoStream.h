@@ -27,7 +27,7 @@ class PDBFile;
 class InfoStream {
   friend class InfoStreamBuilder;
 
-  struct Header {
+  struct HeaderInfo {
     support::ulittle32_t Version;
     support::ulittle32_t Signature;
     support::ulittle32_t Age;

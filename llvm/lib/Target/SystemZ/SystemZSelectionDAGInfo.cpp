@@ -68,10 +68,9 @@ static SDValue memsetStore(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
   uint64_t StoreVal = ByteVal;
   for (unsigned I = 1; I < Size; ++I)
     StoreVal |= ByteVal << (I * 8);
-  return DAG.getStore(Chain, DL,
-                      DAG.getConstant(StoreVal, DL,
-                                      MVT::getIntegerVT(Size * 8)),
-                      Dst, DstPtrInfo, false, false, Align);
+  return DAG.getStore(
+      Chain, DL, DAG.getConstant(StoreVal, DL, MVT::getIntegerVT(Size * 8)),
+      Dst, DstPtrInfo, Align);
 }
 
 SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
@@ -112,15 +111,14 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
     } else {
       // Handle one and two bytes using STC.
       if (Bytes <= 2) {
-        SDValue Chain1 = DAG.getStore(Chain, DL, Byte, Dst, DstPtrInfo,
-                                      false, false, Align);
+        SDValue Chain1 = DAG.getStore(Chain, DL, Byte, Dst, DstPtrInfo, Align);
         if (Bytes == 1)
           return Chain1;
         SDValue Dst2 = DAG.getNode(ISD::ADD, DL, PtrVT, Dst,
                                    DAG.getConstant(1, DL, PtrVT));
-        SDValue Chain2 = DAG.getStore(Chain, DL, Byte, Dst2,
-                                      DstPtrInfo.getWithOffset(1),
-                                      false, false, 1);
+        SDValue Chain2 =
+            DAG.getStore(Chain, DL, Byte, Dst2, DstPtrInfo.getWithOffset(1),
+                         /* Alignment = */ 1);
         return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chain1, Chain2);
       }
     }
@@ -134,8 +132,7 @@ SDValue SystemZSelectionDAGInfo::EmitTargetCodeForMemset(
 
     // Copy the byte to the first location and then use MVC to copy
     // it to the rest.
-    Chain = DAG.getStore(Chain, DL, Byte, Dst, DstPtrInfo,
-                         false, false, Align);
+    Chain = DAG.getStore(Chain, DL, Byte, Dst, DstPtrInfo, Align);
     SDValue DstPlus1 = DAG.getNode(ISD::ADD, DL, PtrVT, Dst,
                                    DAG.getConstant(1, DL, PtrVT));
     return emitMemMem(DAG, DL, SystemZISD::MVC, SystemZISD::MVC_LOOP,

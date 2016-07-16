@@ -111,6 +111,9 @@ ModRefInfo AAResults::getModRefInfo(Instruction *I, ImmutableCallSite Call) {
   if (auto CS = ImmutableCallSite(I)) {
     // Check if the two calls modify the same memory
     return getModRefInfo(CS, Call);
+  } else if (I->isFenceLike()) {
+    // If this is a fence, just return MRI_ModRef.
+    return MRI_ModRef;
   } else {
     // Otherwise, check if the call modifies or references the
     // location this memory access defines.  The best we can say

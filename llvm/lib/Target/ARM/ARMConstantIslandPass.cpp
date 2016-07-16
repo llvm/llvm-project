@@ -675,7 +675,7 @@ bool ARMConstantIslands::BBHasFallthrough(MachineBasicBlock *MBB) {
   // have an unconditional branch for whatever reason.
   MachineBasicBlock *TBB, *FBB;
   SmallVector<MachineOperand, 4> Cond;
-  bool TooDifficult = TII->AnalyzeBranch(*MBB, TBB, FBB, Cond);
+  bool TooDifficult = TII->analyzeBranch(*MBB, TBB, FBB, Cond);
   return TooDifficult || FBB == nullptr;
 }
 
@@ -2272,13 +2272,13 @@ adjustJTTargetBlockForward(MachineBasicBlock *BB, MachineBasicBlock *JTBB) {
   MachineFunction::iterator OldPrior = std::prev(BBi);
 
   // If the block terminator isn't analyzable, don't try to move the block
-  bool B = TII->AnalyzeBranch(*BB, TBB, FBB, Cond);
+  bool B = TII->analyzeBranch(*BB, TBB, FBB, Cond);
 
   // If the block ends in an unconditional branch, move it. The prior block
   // has to have an analyzable terminator for us to move this one. Be paranoid
   // and make sure we're not trying to move the entry block of the function.
   if (!B && Cond.empty() && BB != &MF->front() &&
-      !TII->AnalyzeBranch(*OldPrior, TBB, FBB, CondPrior)) {
+      !TII->analyzeBranch(*OldPrior, TBB, FBB, CondPrior)) {
     BB->moveAfter(JTBB);
     OldPrior->updateTerminator();
     BB->updateTerminator();

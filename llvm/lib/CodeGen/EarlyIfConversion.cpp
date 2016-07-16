@@ -386,7 +386,7 @@ bool SSAIfConv::canConvertIf(MachineBasicBlock *MBB) {
 
   // The branch we're looking to eliminate must be analyzable.
   Cond.clear();
-  if (TII->AnalyzeBranch(*Head, TBB, FBB, Cond)) {
+  if (TII->analyzeBranch(*Head, TBB, FBB, Cond)) {
     DEBUG(dbgs() << "Branch not analyzable.\n");
     return false;
   }

@@ -172,6 +172,8 @@ const std::string DiagnosticInfoWithDebugLocBase::getLocationStr() const {
 
 void DiagnosticInfoOptimizationBase::print(DiagnosticPrinter &DP) const {
   DP << getLocationStr() << ": " << getMsg();
+  if (Hotness)
+    DP << " (hotness: " << *Hotness << ")";
 }
 
 bool DiagnosticInfoOptimizationRemark::isEnabled() const {

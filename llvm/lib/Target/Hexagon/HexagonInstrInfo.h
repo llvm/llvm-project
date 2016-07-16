@@ -79,10 +79,10 @@ public:
   /// If AllowModify is true, then this routine is allowed to modify the basic
   /// block (e.g. delete instructions after the unconditional branch).
   ///
-  bool AnalyzeBranch(MachineBasicBlock &MBB,MachineBasicBlock *&TBB,
-                         MachineBasicBlock *&FBB,
-                         SmallVectorImpl<MachineOperand> &Cond,
-                         bool AllowModify) const override;
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
+                     SmallVectorImpl<MachineOperand> &Cond,
+                     bool AllowModify) const override;
 
   /// Remove the branching code at the end of the specific MBB.
   /// This is only invoked in cases where AnalyzeBranch returns success. It
@@ -314,6 +314,8 @@ public:
   bool isTC2(const MachineInstr *MI) const;
   bool isTC2Early(const MachineInstr *MI) const;
   bool isTC4x(const MachineInstr *MI) const;
+  bool isToBeScheduledASAP(const MachineInstr *MI1,
+                           const MachineInstr *MI2) const;
   bool isV60VectorInstruction(const MachineInstr *MI) const;
   bool isValidAutoIncImm(const EVT VT, const int Offset) const;
   bool isValidOffset(unsigned Opcode, int Offset, bool Extend = true) const;
@@ -323,6 +325,8 @@ public:
                              const MachineInstr *ConsMI) const;
   bool isZeroExtendingLoad(const MachineInstr &MI) const;
 
+  bool addLatencyToSchedule(const MachineInstr *MI1,
+                            const MachineInstr *MI2) const;
   bool canExecuteInBundle(const MachineInstr *First,
                           const MachineInstr *Second) const;
   bool hasEHLabel(const MachineBasicBlock *B) const;
