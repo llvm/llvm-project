@@ -67,6 +67,34 @@ TLS models are mutually exclusive.
   }];
 }
 
+def DLLExportDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``__declspec(dllexport)`` attribute declares a variable, function, or
+Objective-C interface to be exported from the module.  It is available under the
+``-fdeclspec`` flag for compatibility with various compilers.  The primary use
+is for COFF object files which explicitly specify what interfaces are available
+for external use.  See the dllexport_ documentation on MSDN for more
+information.
+
+.. _dllexport: https://msdn.microsoft.com/en-us/library/3y1sfaz2.aspx
+  }];
+}
+
+def DLLImportDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+The ``__declspec(dllimport)`` attribute declares a variable, function, or
+Objective-C interface to be imported from an external module.  It is available
+under the ``-fdeclspec`` flag for compatibility with various compilers.  The
+primary use is for COFF object files which explicitly specify what interfaces
+are imported from external modules.  See the dllimport_ documentation on MSDN
+for more information.
+
+.. _dllimport: https://msdn.microsoft.com/en-us/library/3y1sfaz2.aspx
+  }];
+}
+
 def ThreadDocs : Documentation {
   let Category = DocCatVariable;
   let Content = [{

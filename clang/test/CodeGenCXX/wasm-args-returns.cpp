@@ -14,7 +14,7 @@
 
 struct one_field { double d; };
 test(one_field);
-// CHECK: define double @_Z7forward9one_field(double %{{.*}})
+// CHECK: define double @_Z7forward9one_field(double returned %{{.*}})
 //
 // CHECK: define void @_Z14test_one_fieldv()
 // CHECK: %[[call:.*]] = tail call double @_Z13def_one_fieldv()
@@ -89,7 +89,7 @@ struct one_bitfield {
     int d:3;
 };
 test(one_bitfield);
-// CHECK: define i32 @_Z7forward12one_bitfield(i32 %{{.*}})
+// CHECK: define i32 @_Z7forward12one_bitfield(i32 returned %{{.*}})
 //
 // CHECK: define void @_Z17test_one_bitfieldv()
 // CHECK: %[[call:.*]] = tail call i32 @_Z16def_one_bitfieldv()

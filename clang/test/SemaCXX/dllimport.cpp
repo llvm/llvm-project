@@ -15,13 +15,19 @@ namespace { struct Internal {}; }
 
 
 // Invalid usage.
-__declspec(dllimport) typedef int typedef1; // expected-warning{{'dllimport' attribute only applies to variables, functions and classes}}
-typedef __declspec(dllimport) int typedef2; // expected-warning{{'dllimport' attribute only applies to variables, functions and classes}}
-typedef int __declspec(dllimport) typedef3; // expected-warning{{'dllimport' attribute only applies to variables, functions and classes}}
-typedef __declspec(dllimport) void (*FunTy)(); // expected-warning{{'dllimport' attribute only applies to variables, functions and classes}}
-enum __declspec(dllimport) Enum {}; // expected-warning{{'dllimport' attribute only applies to variables, functions and classes}}
+__declspec(dllimport) typedef int typedef1;
+// expected-warning@-1{{'dllimport' attribute only applies to variables, functions and classes}}
+typedef __declspec(dllimport) int typedef2;
+// expected-warning@-1{{'dllimport' attribute only applies to variables, functions and classes}}
+typedef int __declspec(dllimport) typedef3;
+// expected-warning@-1{{'dllimport' attribute only applies to variables, functions and classes}}
+typedef __declspec(dllimport) void (*FunTy)();
+// expected-warning@-1{{'dllimport' attribute only applies to variables, functions and classes}}
+enum __declspec(dllimport) Enum {};
+// expected-warning@-1{{'dllimport' attribute only applies to variables, functions and classes}}
 #if __has_feature(cxx_strong_enums)
-  enum class __declspec(dllimport) EnumClass {}; // expected-warning{{'dllimport' attribute only applies to variables, functions and classes}}
+enum class __declspec(dllimport) EnumClass {};
+// expected-warning@-1{{'dllimport' attribute only applies to variables, functions and classes}}
 #endif
 
 

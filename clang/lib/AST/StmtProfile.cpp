@@ -1632,6 +1632,11 @@ void StmtProfiler::VisitObjCBridgedCastExpr(const ObjCBridgedCastExpr *S) {
   ID.AddBoolean(S->getBridgeKind());
 }
 
+void StmtProfiler::VisitObjCAvailabilityCheckExpr(
+    const ObjCAvailabilityCheckExpr *S) {
+  VisitExpr(S);
+}
+
 void StmtProfiler::VisitDecl(const Decl *D) {
   ID.AddInteger(D? D->getKind() : 0);
 

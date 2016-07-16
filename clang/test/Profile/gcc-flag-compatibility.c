@@ -7,10 +7,11 @@
 // -fprofile-use=<dir>        Uses the profile file <dir>/default.profdata
 // -fprofile-use=<dir>/file   Uses the profile file <dir>/file
 
-// Check that -fprofile-generate uses the runtime default profile file.
+// FIXME: IRPGO shouldn't use the override API when no profraw name is given.
+// Check that -fprofile-generate overrides the default profraw.
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate | FileCheck -check-prefix=PROFILE-GEN %s
-// PROFILE-GEN-NOT: call void @__llvm_profile_override_default_filename
-// PROFILE-GEN-NOT: declare void @__llvm_profile_override_default_filename(i8*)
+// PROFILE-GEN: call void @__llvm_profile_override_default_filename
+// PROFILE-GEN: declare void @__llvm_profile_override_default_filename(i8*)
 
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to | FileCheck -check-prefix=PROFILE-GEN-EQ %s

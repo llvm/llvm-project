@@ -58,6 +58,11 @@ G::A pre_ga // expected-error +{{must be imported}}
 decltype(G::h) pre_gh = G::h; // expected-error +{{must be imported}}
 // expected-note@defs.h:51 +{{here}}
 
+int pre_h = H(); // expected-error +{{must be imported}}
+// expected-note@defs.h:56 +{{here}}
+using pre_i = I<>; // expected-error +{{must be imported}}
+// expected-note@defs.h:57 +{{here}}
+
 J<> pre_j; // expected-error {{declaration of 'J' must be imported}}
 #ifdef IMPORT_USE_2
 // expected-error-re@-2 {{default argument of 'J' must be imported from one of {{.*}}stuff.use{{.*}}stuff.use-2}}
@@ -99,6 +104,8 @@ int post_ff = F<char>().f();
 int post_fg = F<char>().g<int>();
 G::A post_ga = G::a;
 decltype(G::h) post_gh = G::h;
+int post_h = H();
+using post_i = I<>;
 J<> post_j;
 template<typename T, int N, template<typename> class K> struct J;
 J<> post_j2;
