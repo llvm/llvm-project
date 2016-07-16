@@ -369,4 +369,6 @@ __isl_give isl_schedule *map_to_device(struct gpu_gen *gen,
                                        __isl_take isl_schedule *schedule);
 __isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
                                        __isl_take isl_schedule *schedule);
+
+__isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog);
 #endif

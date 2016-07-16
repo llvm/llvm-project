@@ -15,9 +15,17 @@ namespace include_fixer {
 
 namespace {
 
+// Splits a multiply qualified names (e.g. a::b::c).
+llvm::SmallVector<llvm::StringRef, 8>
+SplitQualifiers(llvm::StringRef StringQualifiers) {
+  llvm::SmallVector<llvm::StringRef, 8> Qualifiers;
+  StringQualifiers.split(Qualifiers, "::");
+  return Qualifiers;
+}
+
 std::string createQualifiedNameForReplacement(
     llvm::StringRef RawSymbolName,
-    llvm::StringRef SymbolScopedQualifiers,
+    llvm::StringRef SymbolScopedQualifiersName,
     const find_all_symbols::SymbolInfo &MatchedSymbol) {
   // No need to add missing qualifiers if SymbolIndentifer has a global scope
   // operator "::".
@@ -32,8 +40,7 @@ std::string createQualifiedNameForReplacement(
   // missing stripped qualifiers here.
   //
   // Get stripped qualifiers.
-  llvm::SmallVector<llvm::StringRef, 8> SymbolQualifiers;
-  RawSymbolName.split(SymbolQualifiers, "::");
+  auto SymbolQualifiers = SplitQualifiers(RawSymbolName);
   std::string StrippedQualifiers;
   while (!SymbolQualifiers.empty() &&
          !llvm::StringRef(QualifiedName).endswith(SymbolQualifiers.back())) {
@@ -43,11 +50,26 @@ std::string createQualifiedNameForReplacement(
   // Append the missing stripped qualifiers.
   std::string FullyQualifiedName = QualifiedName + StrippedQualifiers;
 
-  // Skips symbol scoped qualifiers prefix.
-  if (llvm::StringRef(FullyQualifiedName).startswith(SymbolScopedQualifiers))
-    return FullyQualifiedName.substr(SymbolScopedQualifiers.size());
-
-  return FullyQualifiedName;
+  // Try to find and skip the common prefix qualifiers.
+  auto FullySymbolQualifiers = SplitQualifiers(FullyQualifiedName);
+  auto ScopedQualifiers = SplitQualifiers(SymbolScopedQualifiersName);
+  auto FullySymbolQualifiersIter = FullySymbolQualifiers.begin();
+  auto SymbolScopedQualifiersIter = ScopedQualifiers.begin();
+  while (FullySymbolQualifiersIter != FullySymbolQualifiers.end() &&
+         SymbolScopedQualifiersIter != ScopedQualifiers.end()) {
+    if (*FullySymbolQualifiersIter != *SymbolScopedQualifiersIter)
+      break;
+    ++FullySymbolQualifiersIter;
+    ++SymbolScopedQualifiersIter;
+  }
+  std::string Result;
+  for (; FullySymbolQualifiersIter != FullySymbolQualifiers.end();
+       ++FullySymbolQualifiersIter) {
+    if (!Result.empty())
+      Result += "::";
+    Result += *FullySymbolQualifiersIter;
+  }
+  return Result;
 }
 
 } // anonymous namespace

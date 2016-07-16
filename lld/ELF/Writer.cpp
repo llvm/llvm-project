@@ -261,7 +261,8 @@ template <class ELFT> void Writer<ELFT>::run() {
   writeBuildId();
   if (HasError)
     return;
-  check(Buffer->commit());
+  if (auto EC = Buffer->commit())
+    error(EC, "failed to write to the output file");
 }
 
 template <class ELFT>

@@ -139,7 +139,7 @@ private:
   const SourceLocation Point; // The location to find the NamedDecl.
   const std::string Name;
 };
-}
+} // namespace
 
 const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 const SourceLocation Point) {
@@ -191,5 +191,5 @@ std::string getUSRForDecl(const Decl *Decl) {
   return std::string(Buff.data(), Buff.size());
 }
 
-} // namespace clang
 } // namespace rename
+} // namespace clang

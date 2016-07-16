@@ -100,7 +100,8 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
                   File->getFileName());
     V.push_back(MBRef);
   }
-  check(std::move(Err));
+  if (Err)
+    Error(Err);
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
