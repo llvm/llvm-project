@@ -11112,6 +11112,12 @@ TransformObjCBridgedCastExpr(ObjCBridgedCastExpr *E) {
                                       Result.get());
 }
 
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformObjCAvailabilityCheckExpr(
+    ObjCAvailabilityCheckExpr *E) {
+  return E;
+}
+
 template<typename Derived>
 ExprResult
 TreeTransform<Derived>::TransformObjCMessageExpr(ObjCMessageExpr *E) {

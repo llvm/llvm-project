@@ -44,7 +44,7 @@ void generateUSRForObjCMethod(StringRef Sel, bool IsInstanceMethod,
                               raw_ostream &OS);
 
 /// \brief Generate a USR fragment for an Objective-C property.
-void generateUSRForObjCProperty(StringRef Prop, raw_ostream &OS);
+void generateUSRForObjCProperty(StringRef Prop, bool isClassProp, raw_ostream &OS);
 
 /// \brief Generate a USR fragment for an Objective-C protocol.
 void generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS);

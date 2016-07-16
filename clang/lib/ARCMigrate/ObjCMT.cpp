@@ -771,23 +771,11 @@ static void rewriteToNSMacroDecl(ASTContext &Ctx,
   ClassString += ", ";
   
   ClassString += TypedefDcl->getIdentifier()->getName();
-  ClassString += ')';
-  SourceLocation EndLoc;
-  if (EnumDcl->getIntegerTypeSourceInfo()) {
-    TypeSourceInfo *TSourceInfo = EnumDcl->getIntegerTypeSourceInfo();
-    TypeLoc TLoc = TSourceInfo->getTypeLoc();
-    EndLoc = TLoc.getLocEnd();
-    const char *lbrace = Ctx.getSourceManager().getCharacterData(EndLoc);
-    unsigned count = 0;
-    if (lbrace)
-      while (lbrace[count] != '{')
-        ++count;
-    if (count > 0)
-      EndLoc = EndLoc.getLocWithOffset(count-1);
-  }
-  else
-    EndLoc = EnumDcl->getLocStart();
-  SourceRange R(EnumDcl->getLocStart(), EndLoc);
+  ClassString += ") ";
+  SourceLocation EndLoc = EnumDcl->getBraceRange().getBegin();
+  if (EndLoc.isInvalid())
+    return;
+  CharSourceRange R = CharSourceRange::getCharRange(EnumDcl->getLocStart(), EndLoc);
   commit.replace(R, ClassString);
   // This is to remove spaces between '}' and typedef name.
   SourceLocation StartTypedefLoc = EnumDcl->getLocEnd();
@@ -1737,6 +1725,11 @@ bool ObjCMigrateASTConsumer::InsertFoundation(ASTContext &Ctx,
     return true;
   if (Loc.isInvalid())
     return false;
+  auto *nsEnumId = &Ctx.Idents.get("NS_ENUM");
+  if (PP.getMacroDefinitionAtLoc(nsEnumId, Loc)) {
+    FoundationIncluded = true;
+    return true;
+  }
   edit::Commit commit(*Editor);
   if (Ctx.getLangOpts().Modules)
     commit.insert(Loc, "#ifndef NS_ENUM\n@import Foundation;\n#endif\n");
@@ -1895,18 +1888,20 @@ void ObjCMigrateASTConsumer::HandleTranslationUnit(ASTContext &Ctx) {
         if (++N == DEnd)
           continue;
         if (const EnumDecl *ED = dyn_cast<EnumDecl>(*N)) {
-          if (++N != DEnd)
-            if (const TypedefDecl *TDF = dyn_cast<TypedefDecl>(*N)) {
-              // prefer typedef-follows-enum to enum-follows-typedef pattern.
-              if (migrateNSEnumDecl(Ctx, ED, TDF)) {
-                ++D; ++D;
-                CacheObjCNSIntegerTypedefed(TD);
-                continue;
+          if (canModify(ED)) {
+            if (++N != DEnd)
+              if (const TypedefDecl *TDF = dyn_cast<TypedefDecl>(*N)) {
+                // prefer typedef-follows-enum to enum-follows-typedef pattern.
+                if (migrateNSEnumDecl(Ctx, ED, TDF)) {
+                  ++D; ++D;
+                  CacheObjCNSIntegerTypedefed(TD);
+                  continue;
+                }
               }
+            if (migrateNSEnumDecl(Ctx, ED, TD)) {
+              ++D;
+              continue;
             }
-          if (migrateNSEnumDecl(Ctx, ED, TD)) {
-            ++D;
-            continue;
           }
         }
         CacheObjCNSIntegerTypedefed(TD);

@@ -1182,6 +1182,14 @@ void ASTStmtReader::VisitObjCBoolLiteralExpr(ObjCBoolLiteralExpr *E) {
   E->setLocation(ReadSourceLocation(Record, Idx));
 }
 
+void ASTStmtReader::VisitObjCAvailabilityCheckExpr(ObjCAvailabilityCheckExpr *E) {
+  VisitExpr(E);
+  SourceRange R = Reader.ReadSourceRange(F, Record, Idx);
+  E->AtLoc = R.getBegin();
+  E->RParen = R.getEnd();
+  E->VersionToCheck = Reader.ReadVersionTuple(Record, Idx);
+}
+
 //===----------------------------------------------------------------------===//
 // C++ Expressions and Statements
 //===----------------------------------------------------------------------===//
@@ -3220,6 +3228,9 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
       break;
     case EXPR_OBJC_BOOL_LITERAL:
       S = new (Context) ObjCBoolLiteralExpr(Empty);
+      break;
+    case EXPR_OBJC_AVAILABILITY_CHECK:
+      S = new (Context) ObjCAvailabilityCheckExpr(Empty);
       break;
     case STMT_SEH_LEAVE:
       S = new (Context) SEHLeaveStmt(Empty);

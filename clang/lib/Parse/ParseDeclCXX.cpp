@@ -3145,8 +3145,7 @@ void Parser::ParseCXXMemberSpecification(SourceLocation RecordLoc,
   }
 
   if (TagDecl)
-    Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, 
-                                     T.getCloseLocation());
+    Actions.ActOnTagFinishDefinition(getCurScope(), TagDecl, T.getRange());
 
   // Leave the class scope.
   ParsingDef.Pop();
