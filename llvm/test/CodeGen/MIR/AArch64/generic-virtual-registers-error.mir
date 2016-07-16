@@ -1,4 +1,4 @@
-# RUN: not llc -mtriple=aarch64-apple-ios -start-after machine-sink -stop-after machine-sink -o - %s 2> %t.log \
+# RUN: not llc -mtriple=aarch64-apple-ios -run-pass none -o - %s 2> %t.log \
 # RUN:        | FileCheck %s --check-prefix=CHECK
 # RUN: FileCheck %s -input-file=%t.log --check-prefix=ERR
 # RUN: rm -f %t.log

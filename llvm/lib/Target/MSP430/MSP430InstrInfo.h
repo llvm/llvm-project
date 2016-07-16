@@ -74,8 +74,8 @@ public:
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
   bool isUnpredicatedTerminator(const MachineInstr &MI) const override;
-  bool AnalyzeBranch(MachineBasicBlock &MBB,
-                     MachineBasicBlock *&TBB, MachineBasicBlock *&FBB,
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+                     MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
 

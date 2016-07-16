@@ -9,7 +9,6 @@
 
 define void @prologue_end_test() nounwind uwtable !dbg !4 {
   ; CHECK: prologue_end_test:
-  ; CHECK: .cfi_startproc
   ; CHECK: push {r7, lr}
   ; CHECK: {{mov r7, sp|add r7, sp}}
   ; CHECK: sub sp

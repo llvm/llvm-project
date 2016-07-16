@@ -39,7 +39,7 @@ static MCInstrInfo *createLanaiMCInstrInfo() {
   return X;
 }
 
-static MCRegisterInfo *createLanaiMCRegisterInfo(const Triple &TT) {
+static MCRegisterInfo *createLanaiMCRegisterInfo(const Triple & /*TT*/) {
   MCRegisterInfo *X = new MCRegisterInfo();
   InitLanaiMCRegisterInfo(X, Lanai::RCA, 0, 0, Lanai::PC);
   return X;
@@ -63,7 +63,7 @@ static MCStreamer *createMCStreamer(const Triple &T, MCContext &Context,
   return createELFStreamer(Context, MAB, OS, Emitter, RelaxAll);
 }
 
-static MCInstPrinter *createLanaiMCInstPrinter(const Triple &T,
+static MCInstPrinter *createLanaiMCInstPrinter(const Triple & /*T*/,
                                                unsigned SyntaxVariant,
                                                const MCAsmInfo &MAI,
                                                const MCInstrInfo &MII,

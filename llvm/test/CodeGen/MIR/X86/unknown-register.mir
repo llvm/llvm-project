@@ -1,4 +1,4 @@
-# RUN: not llc -march=x86-64 -start-after branch-folder -stop-after branch-folder -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that an error is reported when an unknown register is
 # encountered.
 

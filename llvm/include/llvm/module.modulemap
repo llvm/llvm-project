@@ -257,6 +257,7 @@ module LLVM_Utils {
     textual header "Support/ELFRelocs/AMDGPU.def"
     textual header "Support/ELFRelocs/ARM.def"
     textual header "Support/ELFRelocs/AVR.def"
+    textual header "Support/ELFRelocs/BPF.def"
     textual header "Support/ELFRelocs/Hexagon.def"
     textual header "Support/ELFRelocs/i386.def"
     textual header "Support/ELFRelocs/Lanai.def"

@@ -217,6 +217,7 @@ struct FuzzingOptions {
   bool UseIndirCalls = true;
   bool UseTraces = false;
   bool UseMemcmp = true;
+  bool UseMemmem = true;
   bool UseFullCoverageSet = false;
   bool Reload = true;
   bool ShuffleAtStartUp = true;
@@ -293,7 +294,7 @@ public:
 
   void AddWordToManualDictionary(const Word &W);
 
-  void AddWordToAutoDictionary(const Word &W, size_t PositionHint);
+  void AddWordToAutoDictionary(DictionaryEntry DE);
   void ClearAutoDictionary();
   void PrintRecommendedDictionary();
 

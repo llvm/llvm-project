@@ -957,35 +957,35 @@ private:
     return LAI && LAI->getDepChecker().getDependences();
   }
 
-  /// \brief Returns true if memory accesses \p B and \p A can be reordered, if
+  /// \brief Returns true if memory accesses \p A and \p B can be reordered, if
   /// necessary, when constructing interleaved groups.
   ///
-  /// \p B must precede \p A in program order. We return false if reordering is
-  /// not necessary or is prevented because \p B and \p A may be dependent.
-  bool canReorderMemAccessesForInterleavedGroups(StrideEntry *B,
-                                                 StrideEntry *A) const {
+  /// \p A must precede \p B in program order. We return false if reordering is
+  /// not necessary or is prevented because \p A and \p B may be dependent.
+  bool canReorderMemAccessesForInterleavedGroups(StrideEntry *A,
+                                                 StrideEntry *B) const {
 
     // Code motion for interleaved accesses can potentially hoist strided loads
     // and sink strided stores. The code below checks the legality of the
     // following two conditions:
     //
-    // 1. Potentially moving a strided load (A) before any store (B) that
-    //    precedes A, or
+    // 1. Potentially moving a strided load (B) before any store (A) that
+    //    precedes B, or
     //
-    // 2. Potentially moving a strided store (B) after any load or store (A)
-    //    that B precedes.
+    // 2. Potentially moving a strided store (A) after any load or store (B)
+    //    that A precedes.
     //
-    // It's legal to reorder B and A if we know there isn't a dependence from B
-    // to A. Note that this determination is conservative since some
+    // It's legal to reorder A and B if we know there isn't a dependence from A
+    // to B. Note that this determination is conservative since some
     // dependences could potentially be reordered safely.
 
-    // B is potentially the source of a dependence.
-    auto *Src = B->first;
-    auto SrcDes = B->second;
+    // A is potentially the source of a dependence.
+    auto *Src = A->first;
+    auto SrcDes = A->second;
 
-    // A is potentially the sink of a dependence.
-    auto *Sink = A->first;
-    auto SinkDes = A->second;
+    // B is potentially the sink of a dependence.
+    auto *Sink = B->first;
+    auto SinkDes = B->second;
 
     // Code motion for interleaved accesses can't violate WAR dependences.
     // Thus, reordering is legal if the source isn't a write.
@@ -5019,35 +5019,42 @@ void InterleavedAccessInfo::analyzeInterleaving(
   // Holds all interleaved load groups temporarily.
   SmallSetVector<InterleaveGroup *, 4> LoadGroups;
 
-  // Search the load-load/write-write pair B-A in bottom-up order and try to
-  // insert B into the interleave group of A according to 3 rules:
-  //   1. A and B have the same stride.
-  //   2. A and B have the same memory object size.
-  //   3. B belongs to the group according to the distance.
-  for (auto AI = AccessStrideInfo.rbegin(), E = AccessStrideInfo.rend();
-       AI != E; ++AI) {
-    Instruction *A = AI->first;
-    StrideDescriptor DesA = AI->second;
+  // Search in bottom-up program order for pairs of accesses (A and B) that can
+  // form interleaved load or store groups. In the algorithm below, access A
+  // precedes access B in program order. We initialize a group for B in the
+  // outer loop of the algorithm, and then in the inner loop, we attempt to
+  // insert each A into B's group if:
+  //
+  //  1. A and B have the same stride,
+  //  2. A and B have the same memory object size, and
+  //  3. A belongs in B's group according to its distance from B.
+  //
+  // Special care is taken to ensure group formation will not break any
+  // dependences.
+  for (auto BI = AccessStrideInfo.rbegin(), E = AccessStrideInfo.rend();
+       BI != E; ++BI) {
+    Instruction *B = BI->first;
+    StrideDescriptor DesB = BI->second;
 
-    // Initialize a group for A if it has an allowable stride. Even if we don't
-    // create a group for A, we continue with the bottom-up algorithm to ensure
-    // we don't break any of A's dependences.
+    // Initialize a group for B if it has an allowable stride. Even if we don't
+    // create a group for B, we continue with the bottom-up algorithm to ensure
+    // we don't break any of B's dependences.
     InterleaveGroup *Group = nullptr;
-    if (isStrided(DesA.Stride)) {
-      Group = getInterleaveGroup(A);
+    if (isStrided(DesB.Stride)) {
+      Group = getInterleaveGroup(B);
       if (!Group) {
-        DEBUG(dbgs() << "LV: Creating an interleave group with:" << *A << '\n');
-        Group = createInterleaveGroup(A, DesA.Stride, DesA.Align);
+        DEBUG(dbgs() << "LV: Creating an interleave group with:" << *B << '\n');
+        Group = createInterleaveGroup(B, DesB.Stride, DesB.Align);
       }
-      if (A->mayWriteToMemory())
+      if (B->mayWriteToMemory())
         StoreGroups.insert(Group);
       else
         LoadGroups.insert(Group);
     }
 
-    for (auto BI = std::next(AI); BI != E; ++BI) {
-      Instruction *B = BI->first;
-      StrideDescriptor DesB = BI->second;
+    for (auto AI = std::next(BI); AI != E; ++AI) {
+      Instruction *A = AI->first;
+      StrideDescriptor DesA = AI->second;
 
       // Our code motion strategy implies that we can't have dependences
       // between accesses in an interleaved group and other accesses located
@@ -5068,23 +5075,23 @@ void InterleavedAccessInfo::analyzeInterleaving(
       // Because accesses (2) and (3) are dependent, we can group (2) with (1)
       // but not with (4). If we did, the dependent access (3) would be within
       // the boundaries of the (2, 4) group.
-      if (!canReorderMemAccessesForInterleavedGroups(&*BI, &*AI)) {
+      if (!canReorderMemAccessesForInterleavedGroups(&*AI, &*BI)) {
 
-        // If a dependence exists and B is already in a group, we know that B
-        // must be a store since B precedes A and WAR dependences are allowed.
-        // Thus, B would be sunk below A. We release B's group to prevent this
-        // illegal code motion. B will then be free to form another group with
+        // If a dependence exists and A is already in a group, we know that A
+        // must be a store since A precedes B and WAR dependences are allowed.
+        // Thus, A would be sunk below B. We release A's group to prevent this
+        // illegal code motion. A will then be free to form another group with
         // instructions that precede it.
-        if (isInterleaved(B)) {
-          InterleaveGroup *StoreGroup = getInterleaveGroup(B);
+        if (isInterleaved(A)) {
+          InterleaveGroup *StoreGroup = getInterleaveGroup(A);
           StoreGroups.remove(StoreGroup);
           releaseGroup(StoreGroup);
         }
 
-        // If a dependence exists and B is not already in a group (or it was
-        // and we just released it), A might be hoisted above B (if A is a
-        // load) or another store might be sunk below B (if A is a store). In
-        // either case, we can't add additional instructions to A's group. A
+        // If a dependence exists and A is not already in a group (or it was
+        // and we just released it), B might be hoisted above A (if B is a
+        // load) or another store might be sunk below A (if B is a store). In
+        // either case, we can't add additional instructions to B's group. B
         // will only form a group with instructions that it precedes.
         break;
       }
@@ -5094,49 +5101,52 @@ void InterleavedAccessInfo::analyzeInterleaving(
       if (!isStrided(DesA.Stride) || !isStrided(DesB.Stride))
         continue;
 
-      // Ignore if B is already in a group or B is a different memory operation.
-      if (isInterleaved(B) || A->mayReadFromMemory() != B->mayReadFromMemory())
+      // Ignore A if it's already in a group or isn't the same kind of memory
+      // operation as B.
+      if (isInterleaved(A) || A->mayReadFromMemory() != B->mayReadFromMemory())
         continue;
 
-      // Check the rule 1 and 2.
-      if (DesB.Stride != DesA.Stride || DesB.Size != DesA.Size)
+      // Check rules 1 and 2. Ignore A if its stride or size is different from
+      // that of B.
+      if (DesA.Stride != DesB.Stride || DesA.Size != DesB.Size)
         continue;
 
-      // Calculate the distance and prepare for the rule 3.
-      const SCEVConstant *DistToA = dyn_cast<SCEVConstant>(
-          PSE.getSE()->getMinusSCEV(DesB.Scev, DesA.Scev));
-      if (!DistToA)
+      // Calculate the distance from A to B.
+      const SCEVConstant *DistToB = dyn_cast<SCEVConstant>(
+          PSE.getSE()->getMinusSCEV(DesA.Scev, DesB.Scev));
+      if (!DistToB)
+        continue;
+      int64_t DistanceToB = DistToB->getAPInt().getSExtValue();
+
+      // Check rule 3. Ignore A if its distance to B is not a multiple of the
+      // size.
+      if (DistanceToB % static_cast<int64_t>(DesB.Size))
         continue;
 
-      int64_t DistanceToA = DistToA->getAPInt().getSExtValue();
-
-      // Skip if the distance is not multiple of size as they are not in the
-      // same group.
-      if (DistanceToA % static_cast<int64_t>(DesA.Size))
-        continue;
-
-      // If either A or B is in a predicated block, we prevent adding them to a
-      // group. We may be able to relax this limitation in the future once we
-      // handle more complicated blocks.
+      // Ignore A if either A or B is in a predicated block. Although we
+      // currently prevent group formation for predicated accesses, we may be
+      // able to relax this limitation in the future once we handle more
+      // complicated blocks.
       if (isPredicated(A->getParent()) || isPredicated(B->getParent()))
         continue;
 
-      // The index of B is the index of A plus the related index to A.
-      int IndexB =
-          Group->getIndex(A) + DistanceToA / static_cast<int64_t>(DesA.Size);
+      // The index of A is the index of B plus A's distance to B in multiples
+      // of the size.
+      int IndexA =
+          Group->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
-      // Try to insert B into the group.
-      if (Group->insertMember(B, IndexB, DesB.Align)) {
-        DEBUG(dbgs() << "LV: Inserted:" << *B << '\n'
-                     << "    into the interleave group with" << *A << '\n');
-        InterleaveGroupMap[B] = Group;
+      // Try to insert A into B's group.
+      if (Group->insertMember(A, IndexA, DesA.Align)) {
+        DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
+                     << "    into the interleave group with" << *B << '\n');
+        InterleaveGroupMap[A] = Group;
 
         // Set the first load in program order as the insert position.
-        if (B->mayReadFromMemory())
-          Group->setInsertPos(B);
+        if (A->mayReadFromMemory())
+          Group->setInsertPos(A);
       }
-    } // Iteration on instruction B
-  }   // Iteration on instruction A
+    } // Iteration over A accesses.
+  } // Iteration over B accesses.
 
   // Remove interleaved store groups with gaps.
   for (InterleaveGroup *Group : StoreGroups)

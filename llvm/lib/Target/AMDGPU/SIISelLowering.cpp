@@ -577,12 +577,9 @@ SDValue SITargetLowering::LowerParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
     ExtTy = ISD::EXTLOAD;
 
   SDValue Ptr = LowerParameterPtr(DAG, SL, Chain, Offset);
-  return DAG.getLoad(ISD::UNINDEXED, ExtTy,
-                     VT, SL, Chain, Ptr, PtrOffset, PtrInfo, MemVT,
-                     false, // isVolatile
-                     true, // isNonTemporal
-                     true, // isInvariant
-                     Align); // Alignment
+  return DAG.getLoad(ISD::UNINDEXED, ExtTy, VT, SL, Chain, Ptr, PtrOffset,
+                     PtrInfo, MemVT, Align, MachineMemOperand::MONonTemporal |
+                                                MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::LowerFormalArguments(
@@ -1453,10 +1450,9 @@ SDValue SITargetLowering::getSegmentAperture(unsigned AS,
                                               AMDGPUAS::CONSTANT_ADDRESS));
 
   MachinePointerInfo PtrInfo(V, StructOffset);
-  return DAG.getLoad(MVT::i32, SL, QueuePtr.getValue(1), Ptr,
-                     PtrInfo, false,
-                     false, true,
-                     MinAlign(64, StructOffset));
+  return DAG.getLoad(MVT::i32, SL, QueuePtr.getValue(1), Ptr, PtrInfo,
+                     MinAlign(64, StructOffset),
+                     MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
@@ -1573,8 +1569,8 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   // FIXME: Use a PseudoSourceValue once those can be assigned an address space.
   MachinePointerInfo PtrInfo(UndefValue::get(PtrTy));
 
-  return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr,
-                     PtrInfo, false, false, true, Align);
+  return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr, PtrInfo, Align,
+                     MachineMemOperand::MOInvariant);
 }
 
 SDValue SITargetLowering::lowerTRAP(SDValue Op,
@@ -1686,8 +1682,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
   }
-  case Intrinsic::amdgcn_rsq_clamp:
-  case AMDGPUIntrinsic::AMDGPU_rsq_clamped: { // Legacy name
+  case Intrinsic::amdgcn_rsq_clamp: {
     if (Subtarget->getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
       return DAG.getNode(AMDGPUISD::RSQ_CLAMP, DL, VT, Op.getOperand(1));
 

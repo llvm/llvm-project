@@ -605,7 +605,7 @@ void GnuHashTableSection<ELFT>::addSymbols(
 // Returns the number of version definition entries. Because the first entry
 // is for the version definition itself, it is the number of versioned symbols
 // plus one. Note that we don't support multiple versions yet.
-static unsigned getVerDefNum() { return Config->SymbolVersions.size() + 1; }
+static unsigned getVerDefNum() { return Config->VersionDefinitions.size() + 1; }
 
 template <class ELFT>
 DynamicSection<ELFT>::DynamicSection()
@@ -1098,9 +1098,8 @@ static void writeCieFde(uint8_t *Buf, ArrayRef<uint8_t> D) {
 }
 
 template <class ELFT> void EhOutputSection<ELFT>::finalize() {
-  if (Finalized)
-    return;
-  Finalized = true;
+  if (this->Header.sh_size)
+    return; // Already finalized.
 
   size_t Off = 0;
   for (CieRecord *Cie : Cies) {
@@ -1474,7 +1473,9 @@ SymbolTableSection<ELFT>::getOutputSection(SymbolBody *Sym) {
 
 template <class ELFT>
 VersionDefinitionSection<ELFT>::VersionDefinitionSection()
-    : OutputSectionBase<ELFT>(".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC) {}
+    : OutputSectionBase<ELFT>(".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC) {
+  this->Header.sh_addralign = sizeof(uint32_t);
+}
 
 static StringRef getFileDefName() {
   if (!Config->SoName.empty())
@@ -1484,13 +1485,12 @@ static StringRef getFileDefName() {
 
 template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
   FileDefNameOff = Out<ELFT>::DynStrTab->addString(getFileDefName());
-  for (Version &V : Config->SymbolVersions)
+  for (VersionDefinition &V : Config->VersionDefinitions)
     V.NameOff = Out<ELFT>::DynStrTab->addString(V.Name);
 
   this->Header.sh_size =
       (sizeof(Elf_Verdef) + sizeof(Elf_Verdaux)) * getVerDefNum();
   this->Header.sh_link = Out<ELFT>::DynStrTab->SectionIndex;
-  this->Header.sh_addralign = sizeof(uint32_t);
 
   // sh_info should be set to the number of definitions. This fact is missed in
   // documentation, but confirmed by binutils community:
@@ -1498,40 +1498,35 @@ template <class ELFT> void VersionDefinitionSection<ELFT>::finalize() {
   this->Header.sh_info = getVerDefNum();
 }
 
-template <class Elf_Verdef, class Elf_Verdaux>
-static void writeDefinition(Elf_Verdef *&Verdef, Elf_Verdaux *&Verdaux,
-                            uint32_t Flags, uint32_t Index, StringRef Name,
-                            size_t StrTabOffset) {
+template <class ELFT>
+void VersionDefinitionSection<ELFT>::writeOne(uint8_t *Buf, uint32_t Index,
+                                              StringRef Name, size_t NameOff) {
+  auto *Verdef = reinterpret_cast<Elf_Verdef *>(Buf);
   Verdef->vd_version = 1;
   Verdef->vd_cnt = 1;
-  Verdef->vd_aux =
-      reinterpret_cast<char *>(Verdaux) - reinterpret_cast<char *>(Verdef);
-  Verdef->vd_next = sizeof(Elf_Verdef);
-
-  Verdef->vd_flags = Flags;
+  Verdef->vd_aux = sizeof(Elf_Verdef);
+  Verdef->vd_next = sizeof(Elf_Verdef) + sizeof(Elf_Verdaux);
+  Verdef->vd_flags = (Index == 1 ? VER_FLG_BASE : 0);
   Verdef->vd_ndx = Index;
   Verdef->vd_hash = hashSysv(Name);
-  ++Verdef;
 
-  Verdaux->vda_name = StrTabOffset;
+  auto *Verdaux = reinterpret_cast<Elf_Verdaux *>(Buf + sizeof(Elf_Verdef));
+  Verdaux->vda_name = NameOff;
   Verdaux->vda_next = 0;
-  ++Verdaux;
 }
 
 template <class ELFT>
 void VersionDefinitionSection<ELFT>::writeTo(uint8_t *Buf) {
+  writeOne(Buf, 1, getFileDefName(), FileDefNameOff);
+
+  for (VersionDefinition &V : Config->VersionDefinitions) {
+    Buf += sizeof(Elf_Verdef) + sizeof(Elf_Verdaux);
+    writeOne(Buf, V.Id, V.Name, V.NameOff);
+  }
+
+  // Need to terminate the last version definition.
   Elf_Verdef *Verdef = reinterpret_cast<Elf_Verdef *>(Buf);
-  Elf_Verdaux *Verdaux =
-      reinterpret_cast<Elf_Verdaux *>(Verdef + getVerDefNum());
-
-  writeDefinition(Verdef, Verdaux, VER_FLG_BASE, 1, getFileDefName(),
-                  FileDefNameOff);
-
-  uint32_t I = 2;
-  for (Version &V : Config->SymbolVersions)
-    writeDefinition(Verdef, Verdaux, 0 /* Flags */, I++, V.Name, V.NameOff);
-
-  Verdef[-1].vd_next = 0;
+  Verdef->vd_next = 0;
 }
 
 template <class ELFT>

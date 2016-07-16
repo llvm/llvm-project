@@ -69,10 +69,6 @@ static cl::opt<bool>
 AssumeMisalignedLoadStores("arm-assume-misaligned-load-store", cl::Hidden,
     cl::init(false), cl::desc("Be more conservative in ARM load/store opt"));
 
-namespace llvm {
-void initializeARMLoadStoreOptPass(PassRegistry &);
-}
-
 #define ARM_LOAD_STORE_OPT_NAME "ARM load / store optimization pass"
 
 namespace {
@@ -80,9 +76,7 @@ namespace {
   /// form ldm / stm instructions.
   struct ARMLoadStoreOpt : public MachineFunctionPass {
     static char ID;
-    ARMLoadStoreOpt() : MachineFunctionPass(ID) {
-      initializeARMLoadStoreOptPass(*PassRegistry::getPassRegistry());
-    }
+    ARMLoadStoreOpt() : MachineFunctionPass(ID) {}
 
     const MachineFunction *MF;
     const TargetInstrInfo *TII;
@@ -172,7 +166,8 @@ namespace {
   char ARMLoadStoreOpt::ID = 0;
 }
 
-INITIALIZE_PASS(ARMLoadStoreOpt, "arm-load-store-opt", ARM_LOAD_STORE_OPT_NAME, false, false)
+INITIALIZE_PASS(ARMLoadStoreOpt, "arm-ldst-opt", ARM_LOAD_STORE_OPT_NAME, false,
+                false)
 
 static bool definesCPSR(const MachineInstr &MI) {
   for (const auto &MO : MI.operands()) {
@@ -1939,10 +1934,6 @@ bool ARMLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {
   return Modified;
 }
 
-namespace llvm {
-void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
-}
-
 #define ARM_PREALLOC_LOAD_STORE_OPT_NAME                                       \
   "ARM pre- register allocation load / store optimization pass"
 
@@ -1951,9 +1942,7 @@ namespace {
   /// locations close to make it more likely they will be combined later.
   struct ARMPreAllocLoadStoreOpt : public MachineFunctionPass{
     static char ID;
-    ARMPreAllocLoadStoreOpt() : MachineFunctionPass(ID) {
-      initializeARMPreAllocLoadStoreOptPass(*PassRegistry::getPassRegistry());
-    }
+    ARMPreAllocLoadStoreOpt() : MachineFunctionPass(ID) {}
 
     const DataLayout *TD;
     const TargetInstrInfo *TII;
@@ -1984,7 +1973,7 @@ namespace {
   char ARMPreAllocLoadStoreOpt::ID = 0;
 }
 
-INITIALIZE_PASS(ARMPreAllocLoadStoreOpt, "arm-prera-load-store-opt",
+INITIALIZE_PASS(ARMPreAllocLoadStoreOpt, "arm-prera-ldst-opt",
                 ARM_PREALLOC_LOAD_STORE_OPT_NAME, false, false)
 
 bool ARMPreAllocLoadStoreOpt::runOnMachineFunction(MachineFunction &Fn) {

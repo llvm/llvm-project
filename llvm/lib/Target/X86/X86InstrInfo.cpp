@@ -4117,7 +4117,7 @@ bool X86InstrInfo::AnalyzeBranchImpl(
   return false;
 }
 
-bool X86InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool X86InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                  MachineBasicBlock *&TBB,
                                  MachineBasicBlock *&FBB,
                                  SmallVectorImpl<MachineOperand> &Cond,
@@ -4126,7 +4126,7 @@ bool X86InstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
   return AnalyzeBranchImpl(MBB, TBB, FBB, Cond, CondBranches, AllowModify);
 }
 
-bool X86InstrInfo::AnalyzeBranchPredicate(MachineBasicBlock &MBB,
+bool X86InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
                                           MachineBranchPredicate &MBP,
                                           bool AllowModify) const {
   using namespace std::placeholders;
@@ -5498,9 +5498,9 @@ static void expandLoadStackGuard(MachineInstrBuilder &MIB,
   unsigned Reg = MIB->getOperand(0).getReg();
   const GlobalValue *GV =
       cast<GlobalValue>((*MIB->memoperands_begin())->getValue());
-  unsigned Flag = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;
+  auto Flags = MachineMemOperand::MOLoad | MachineMemOperand::MOInvariant;
   MachineMemOperand *MMO = MBB.getParent()->getMachineMemOperand(
-      MachinePointerInfo::getGOT(*MBB.getParent()), Flag, 8, 8);
+      MachinePointerInfo::getGOT(*MBB.getParent()), Flags, 8, 8);
   MachineBasicBlock::iterator I = MIB.getInstr();
 
   BuildMI(MBB, I, DL, TII.get(X86::MOV64rm), Reg).addReg(X86::RIP).addImm(1)

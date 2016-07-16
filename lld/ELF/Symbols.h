@@ -30,7 +30,6 @@ class BitcodeFile;
 class InputFile;
 class LazyObjectFile;
 class SymbolBody;
-struct Version;
 template <class ELFT> class ObjectFile;
 template <class ELFT> class OutputSection;
 template <class ELFT> class OutputSectionBase;

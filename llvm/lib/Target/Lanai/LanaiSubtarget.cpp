@@ -39,9 +39,9 @@ LanaiSubtarget &LanaiSubtarget::initializeSubtargetDependencies(StringRef CPU,
 
 LanaiSubtarget::LanaiSubtarget(const Triple &TargetTriple, StringRef Cpu,
                                StringRef FeatureString, const TargetMachine &TM,
-                               const TargetOptions &Options,
-                               CodeModel::Model CodeModel,
-                               CodeGenOpt::Level OptLevel)
+                               const TargetOptions & /*Options*/,
+                               CodeModel::Model /*CodeModel*/,
+                               CodeGenOpt::Level /*OptLevel*/)
     : LanaiGenSubtargetInfo(TargetTriple, Cpu, FeatureString),
       FrameLowering(initializeSubtargetDependencies(Cpu, FeatureString)),
       InstrInfo(), TLInfo(TM, *this), TSInfo() {}

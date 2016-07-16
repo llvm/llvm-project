@@ -45,7 +45,7 @@ public:
   }
 
   // There are no TLS LanaiMCExprs at the moment.
-  void fixELFSymbolsInTLSFixups(MCAssembler &Asm) const override {}
+  void fixELFSymbolsInTLSFixups(MCAssembler & /*Asm*/) const override {}
 
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;

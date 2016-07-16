@@ -108,6 +108,8 @@ HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
     : VLIWPacketizerList(MF, MLI, AA), MBPI(MBPI), MLI(&MLI) {
   HII = MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
   HRI = MF.getSubtarget<HexagonSubtarget>().getRegisterInfo();
+
+  addMutation(make_unique<HexagonSubtarget::HexagonDAGMutation>());
 }
 
 // Check if FirstI modifies a register that SecondI reads.

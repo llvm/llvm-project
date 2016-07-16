@@ -33,15 +33,15 @@ protected:
 } // namespace
 
 LanaiELFObjectWriter::LanaiELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(/*Is64Bit=*/false, OSABI, ELF::EM_LANAI,
+    : MCELFObjectTargetWriter(/*Is64Bit_=*/false, OSABI, ELF::EM_LANAI,
                               /*HasRelocationAddend=*/true) {}
 
 LanaiELFObjectWriter::~LanaiELFObjectWriter() {}
 
-unsigned LanaiELFObjectWriter::getRelocType(MCContext &Ctx,
-                                            const MCValue &Target,
+unsigned LanaiELFObjectWriter::getRelocType(MCContext & /*Ctx*/,
+                                            const MCValue & /*Target*/,
                                             const MCFixup &Fixup,
-                                            bool IsPCRel) const {
+                                            bool /*IsPCRel*/) const {
   unsigned Type;
   unsigned Kind = static_cast<unsigned>(Fixup.getKind());
   switch (Kind) {
@@ -74,7 +74,7 @@ unsigned LanaiELFObjectWriter::getRelocType(MCContext &Ctx,
   return Type;
 }
 
-bool LanaiELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &SD,
+bool LanaiELFObjectWriter::needsRelocateWithSymbol(const MCSymbol & /*SD*/,
                                                    unsigned Type) const {
   switch (Type) {
   case ELF::R_LANAI_21:

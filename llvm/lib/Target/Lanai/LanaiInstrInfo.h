@@ -81,7 +81,7 @@ public:
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
 
-  bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TrueBlock,
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TrueBlock,
                      MachineBasicBlock *&FalseBlock,
                      SmallVectorImpl<MachineOperand> &Condition,
                      bool AllowModify) const override;

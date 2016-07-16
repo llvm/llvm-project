@@ -631,7 +631,7 @@ bool TailDuplicator::canCompletelyDuplicateBB(MachineBasicBlock &BB) {
 
     MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
     SmallVector<MachineOperand, 4> PredCond;
-    if (TII->AnalyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
+    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
       return false;
 
     if (!PredCond.empty())
@@ -662,7 +662,7 @@ bool TailDuplicator::duplicateSimpleBB(
 
     MachineBasicBlock *PredTBB = nullptr, *PredFBB = nullptr;
     SmallVector<MachineOperand, 4> PredCond;
-    if (TII->AnalyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
+    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
       continue;
 
     Changed = true;
@@ -750,7 +750,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
 
     MachineBasicBlock *PredTBB, *PredFBB;
     SmallVector<MachineOperand, 4> PredCond;
-    if (TII->AnalyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
+    if (TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true))
       continue;
     if (!PredCond.empty())
       continue;
@@ -788,7 +788,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
     appendCopies(PredBB, CopyInfos, Copies);
 
     // Simplify
-    TII->AnalyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true);
+    TII->analyzeBranch(*PredBB, PredTBB, PredFBB, PredCond, true);
 
     NumTailDupAdded += TailBB->size() - 1; // subtract one for removed branch
 
@@ -814,7 +814,7 @@ bool TailDuplicator::tailDuplicate(MachineFunction &MF, bool IsSimple,
   // This has to check PrevBB->succ_size() because EH edges are ignored by
   // AnalyzeBranch.
   if (PrevBB->succ_size() == 1 &&
-      !TII->AnalyzeBranch(*PrevBB, PriorTBB, PriorFBB, PriorCond, true) &&
+      !TII->analyzeBranch(*PrevBB, PriorTBB, PriorFBB, PriorCond, true) &&
       PriorCond.empty() && !PriorTBB && TailBB->pred_size() == 1 &&
       !TailBB->hasAddressTaken()) {
     DEBUG(dbgs() << "\nMerging into block: " << *PrevBB

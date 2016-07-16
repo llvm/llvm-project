@@ -1489,9 +1489,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
     }
 
     if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-      if (!SI->getNumCases())
-        continue;
-      if (!getValueState(SI->getCondition()).isUnknown())
+      if (!SI->getNumCases() || !getValueState(SI->getCondition()).isUnknown())
         continue;
 
       // If the input to SCCP is actually switch on undef, fix the undef to

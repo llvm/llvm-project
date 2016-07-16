@@ -102,8 +102,8 @@ main_body:
   %94 = insertelement <4 x float> %93, float %6, i32 2
   %95 = insertelement <4 x float> %94, float 0.000000e+00, i32 3
   %96 = call float @llvm.r600.dot4(<4 x float> %91, <4 x float> %95)
-  %97 = call float @fabs(float %96)
-  %98 = call float @llvm.AMDGPU.rsq.clamped.f32(float %97)
+  %97 = call float @llvm.fabs.f32(float %96)
+  %98 = call float @llvm.r600.recipsqrt.clamped.f32(float %97)
   %99 = fmul float %4, %98
   %100 = fmul float %5, %98
   %101 = fmul float %6, %98
@@ -209,12 +209,12 @@ main_body:
   %201 = insertelement <4 x float> %200, float %79, i32 1
   %202 = insertelement <4 x float> %201, float %83, i32 2
   %203 = insertelement <4 x float> %202, float %87, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %203, i32 60, i32 1)
+  call void @llvm.r600.store.swizzle(<4 x float> %203, i32 60, i32 1)
   %204 = insertelement <4 x float> undef, float %197, i32 0
   %205 = insertelement <4 x float> %204, float %198, i32 1
   %206 = insertelement <4 x float> %205, float %199, i32 2
   %207 = insertelement <4 x float> %206, float %117, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %207, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %207, i32 0, i32 2)
   ret void
 }
 
@@ -222,19 +222,19 @@ main_body:
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 ; Function Attrs: readonly
-declare float @fabs(float) #2
+declare float @llvm.fabs.f32(float) #1
 
 ; Function Attrs: readnone
-declare float @llvm.AMDGPU.rsq.clamped.f32(float) #1
+declare float @llvm.r600.recipsqrt.clamped.f32(float) #1
 
 ; Function Attrs: readnone
 declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
 
 ; Function Attrs: nounwind readonly
-declare float @llvm.pow.f32(float, float) #3
+declare float @llvm.pow.f32(float, float) #2
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32) #3
 
-attributes #1 = { readnone }
-attributes #2 = { readonly }
-attributes #3 = { nounwind readonly }
+attributes #1 = { nounwind readnone }
+attributes #2 = { nounwind readonly }
+attributes #3 = { nounwind }

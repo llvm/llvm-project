@@ -53,9 +53,13 @@ class VLIWResourceModel {
   unsigned TotalPackets;
 
 public:
+  /// Save the last formed packet.
+  std::vector<SUnit*> OldPacket;
+
+public:
   VLIWResourceModel(const TargetSubtargetInfo &STI, const TargetSchedModel *SM)
       : SchedModel(SM), TotalPackets(0) {
-  ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
+    ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
 
     // This hard requirement could be relaxed,
     // but for now do not let it proceed.
@@ -63,6 +67,8 @@ public:
 
     Packet.resize(SchedModel->getIssueWidth());
     Packet.clear();
+    OldPacket.resize(SchedModel->getIssueWidth());
+    OldPacket.clear();
     ResourcesModel->clearResources();
   }
 
@@ -85,7 +91,12 @@ public:
 
   bool isResourceAvailable(SUnit *SU);
   bool reserveResources(SUnit *SU);
+  void savePacket();
   unsigned getTotalPackets() const { return TotalPackets; }
+
+  bool isInPacket(SUnit *SU) const {
+    return std::find(Packet.begin(), Packet.end(), SU) != Packet.end();
+  }
 };
 
 /// Extend the standard ScheduleDAGMI to provide more context and override the
@@ -99,8 +110,6 @@ public:
   /// Schedule - This is called back from ScheduleDAGInstrs::Run() when it's
   /// time to do some work.
   void schedule() override;
-  /// Perform platform-specific DAG postprocessing.
-  void postprocessDAG();
 };
 
 /// ConvergingVLIWScheduler shrinks the unscheduled zone using heuristics
@@ -166,6 +175,7 @@ class ConvergingVLIWScheduler : public MachineSchedStrategy {
     void init(VLIWMachineScheduler *dag, const TargetSchedModel *smodel) {
       DAG = dag;
       SchedModel = smodel;
+      IssueCount = 0;
     }
 
     bool isTop() const {

@@ -18,9 +18,9 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-DbiStreamBuilder::DbiStreamBuilder(PDBFile &File)
-    : File(File), Age(1), BuildNumber(0), PdbDllVersion(0), PdbDllRbld(0),
-      Flags(0), MachineType(PDB_Machine::x86) {}
+DbiStreamBuilder::DbiStreamBuilder()
+    : Age(1), BuildNumber(0), PdbDllVersion(0), PdbDllRbld(0), Flags(0),
+      MachineType(PDB_Machine::x86) {}
 
 void DbiStreamBuilder::setVersionHeader(PdbRaw_DbiVer V) { VerHeader = V; }
 
@@ -36,7 +36,12 @@ void DbiStreamBuilder::setFlags(uint16_t F) { Flags = F; }
 
 void DbiStreamBuilder::setMachineType(PDB_Machine M) { MachineType = M; }
 
-Expected<std::unique_ptr<DbiStream>> DbiStreamBuilder::build() {
+uint32_t DbiStreamBuilder::calculateSerializedLength() const {
+  // For now we only support serializing the header.
+  return sizeof(DbiStream::HeaderInfo);
+}
+
+Expected<std::unique_ptr<DbiStream>> DbiStreamBuilder::build(PDBFile &File) {
   if (!VerHeader.hasValue())
     return make_error<RawError>(raw_error_code::unspecified,
                                 "Missing DBI Stream Version");

@@ -194,7 +194,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     MipsRldMap->setSize(sizeof(uintX_t));
     MipsRldMap->updateAlignment(sizeof(uintX_t));
   }
-  if (!Config->SymbolVersions.empty())
+  if (!Config->VersionDefinitions.empty())
     VerDef.reset(new VersionDefinitionSection<ELFT>());
 
   Out<ELFT>::Bss = &Bss;
@@ -1257,8 +1257,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  BuildIdSection<ELFT> *S = Out<ELFT>::BuildId;
-  if (!S)
+  if (!Out<ELFT>::BuildId)
     return;
 
   // Compute a hash of all sections except .debug_* sections.
@@ -1275,7 +1274,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     Last = End;
   }
   Regions.push_back({Last, Start + FileSize});
-  S->writeBuildId(Regions);
+  Out<ELFT>::BuildId->writeBuildId(Regions);
 }
 
 template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);

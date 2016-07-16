@@ -332,7 +332,7 @@ bool ImplicitNullChecks::analyzeBlockForNullChecks(
 
   MachineBranchPredicate MBP;
 
-  if (TII->AnalyzeBranchPredicate(MBB, MBP, true))
+  if (TII->analyzeBranchPredicate(MBB, MBP, true))
     return false;
 
   // Is the predicate comparing an integer to zero?

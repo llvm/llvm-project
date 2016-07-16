@@ -19,13 +19,13 @@ define amdgpu_vs void @main(<4 x float> inreg %reg0, <4 x float> inreg %reg1, <4
    %v2 = insertelement <4 x float> %v1, float %r2, i32 2
    %res = call float @llvm.r600.dot4(<4 x float> %v2, <4 x float> %v2)
    %vecres = insertelement <4 x float> undef, float %res, i32 0
-   call void @llvm.R600.store.swizzle(<4 x float> %vecres, i32 0, i32 2)
+   call void @llvm.r600.store.swizzle(<4 x float> %vecres, i32 0, i32 2)
    ret void
 }
 
 ; Function Attrs: readnone
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #1 = { readnone }

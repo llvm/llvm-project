@@ -886,6 +886,8 @@ StringRef ELFObjectFile<ELFT>::getFileFormatName() const {
       return (EF.getHeader()->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA
               && IsLittleEndian) ?
              "ELF64-amdgpu-hsacobj" : "ELF64-amdgpu";
+    case ELF::EM_BPF:
+      return "ELF64-BPF";
     default:
       return "ELF64-unknown";
     }
@@ -947,6 +949,9 @@ unsigned ELFObjectFile<ELFT>::getArch() const {
          && EF.getHeader()->e_ident[ELF::EI_OSABI] == ELF::ELFOSABI_AMDGPU_HSA
          && IsLittleEndian) ?
       Triple::amdgcn : Triple::UnknownArch;
+
+  case ELF::EM_BPF:
+    return IsLittleEndian ? Triple::bpfel : Triple::bpfeb;
 
   default:
     return Triple::UnknownArch;

@@ -466,7 +466,7 @@ public:
   ///
   /// The CFG information in MBB.Predecessors and MBB.Successors must be valid
   /// before calling this function.
-  virtual bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  virtual bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                              MachineBasicBlock *&FBB,
                              SmallVectorImpl<MachineOperand> &Cond,
                              bool AllowModify = false) const {
@@ -512,7 +512,7 @@ public:
   /// If AllowModify is true, then this routine is allowed to modify the basic
   /// block (e.g. delete instructions after the unconditional branch).
   ///
-  virtual bool AnalyzeBranchPredicate(MachineBasicBlock &MBB,
+  virtual bool analyzeBranchPredicate(MachineBasicBlock &MBB,
                                       MachineBranchPredicate &MBP,
                                       bool AllowModify = false) const {
     return true;

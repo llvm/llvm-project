@@ -83,7 +83,7 @@ char Filler::ID = 0;
 // createLanaiDelaySlotFillerPass - Returns a pass that fills in delay
 // slots in Lanai MachineFunctions
 FunctionPass *
-llvm::createLanaiDelaySlotFillerPass(const LanaiTargetMachine &tm) {
+llvm::createLanaiDelaySlotFillerPass(const LanaiTargetMachine & /*tm*/) {
   return new Filler();
 }
 

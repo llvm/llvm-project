@@ -493,7 +493,7 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
   // The branch we're looking to eliminate must be analyzable.
   HeadCond.clear();
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
-  if (TII->AnalyzeBranch(*Head, TBB, FBB, HeadCond)) {
+  if (TII->analyzeBranch(*Head, TBB, FBB, HeadCond)) {
     DEBUG(dbgs() << "Head branch not analyzable.\n");
     ++NumHeadBranchRejs;
     return false;
@@ -521,7 +521,7 @@ bool SSACCmpConv::canConvert(MachineBasicBlock *MBB) {
 
   CmpBBCond.clear();
   TBB = FBB = nullptr;
-  if (TII->AnalyzeBranch(*CmpBB, TBB, FBB, CmpBBCond)) {
+  if (TII->analyzeBranch(*CmpBB, TBB, FBB, CmpBBCond)) {
     DEBUG(dbgs() << "CmpBB branch not analyzable.\n");
     ++NumCmpBranchRejs;
     return false;

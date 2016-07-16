@@ -18,7 +18,7 @@ using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
-InfoStreamBuilder::InfoStreamBuilder(IPDBFile &File) : File(File) {}
+InfoStreamBuilder::InfoStreamBuilder() {}
 
 void InfoStreamBuilder::setVersion(PdbRaw_ImplVer V) { Ver = V; }
 
@@ -28,7 +28,16 @@ void InfoStreamBuilder::setAge(uint32_t A) { Age = A; }
 
 void InfoStreamBuilder::setGuid(PDB_UniqueId G) { Guid = G; }
 
-Expected<std::unique_ptr<InfoStream>> InfoStreamBuilder::build() {
+NameMapBuilder &InfoStreamBuilder::getNamedStreamsBuilder() {
+  return NamedStreams;
+}
+
+uint32_t InfoStreamBuilder::calculateSerializedLength() const {
+  return sizeof(InfoStream::HeaderInfo) +
+         NamedStreams.calculateSerializedLength();
+}
+
+Expected<std::unique_ptr<InfoStream>> InfoStreamBuilder::build(PDBFile &File) {
   if (!Ver.hasValue())
     return make_error<RawError>(raw_error_code::unspecified,
                                 "Missing PDB Stream Version");
@@ -50,5 +59,9 @@ Expected<std::unique_ptr<InfoStream>> InfoStreamBuilder::build() {
   Info->Signature = *Sig;
   Info->Age = *Age;
   Info->Guid = *Guid;
+  auto NS = NamedStreams.build();
+  if (!NS)
+    return NS.takeError();
+  Info->NamedStreams = **NS;
   return std::move(Info);
 }

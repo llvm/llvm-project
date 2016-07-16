@@ -1,6 +1,5 @@
 ; RUN: llc < %s -march=nvptx64 -mcpu=sm_20 | FileCheck %s --check-prefix=PTX
 ; RUN: opt < %s -S -separate-const-offset-from-gep -reassociate-geps-verify-no-dead-code -gvn | FileCheck %s --check-prefix=IR
-; XFAIL: *
 
 ; Verifies the SeparateConstOffsetFromGEP pass.
 ; The following code computes
@@ -52,7 +51,9 @@ define void @sum_of_array(i32 %x, i32 %y, float* nocapture %output) {
 ; PTX: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
 
 ; IR-LABEL: @sum_of_array(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
+; TODO: GVN is unable to preserve the "inbounds" keyword on the first GEP. Need
+; some infrastructure changes to enable such optimizations.
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 1
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 32
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 33
@@ -95,7 +96,7 @@ define void @sum_of_array2(i32 %x, i32 %y, float* nocapture %output) {
 ; PTX: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
 
 ; IR-LABEL: @sum_of_array2(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 1
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 32
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 33
@@ -145,7 +146,7 @@ define void @sum_of_array3(i32 %x, i32 %y, float* nocapture %output) {
 ; PTX: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
 
 ; IR-LABEL: @sum_of_array3(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 1
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 32
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 33
@@ -191,7 +192,7 @@ define void @sum_of_array4(i32 %x, i32 %y, float* nocapture %output) {
 ; PTX: ld.shared.f32 {{%f[0-9]+}}, {{\[}}[[BASE_REG]]+132{{\]}}
 
 ; IR-LABEL: @sum_of_array4(
-; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr inbounds [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
+; IR: [[BASE_PTR:%[a-zA-Z0-9]+]] = getelementptr [32 x [32 x float]], [32 x [32 x float]] addrspace(3)* @array, i64 0, i64 %{{[a-zA-Z0-9]+}}, i64 %{{[a-zA-Z0-9]+}}
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 1
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 32
 ; IR: getelementptr inbounds float, float addrspace(3)* [[BASE_PTR]], i64 33

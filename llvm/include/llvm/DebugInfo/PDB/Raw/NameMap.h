@@ -21,8 +21,10 @@ class StreamReader;
 class StreamWriter;
 }
 namespace pdb {
-
+class NameMapBuilder;
 class NameMap {
+  friend NameMapBuilder;
+
 public:
   NameMap();
 

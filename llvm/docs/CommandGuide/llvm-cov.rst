@@ -248,6 +248,14 @@ OPTIONS
  PATH/functions.EXTENSION. When used in file view mode, a report for each file
  is written to PATH/REL_PATH_TO_FILE.EXTENSION.
 
+.. option:: -Xdemangler=<TOOL>|<TOOL-OPTION>
+
+ Specify a symbol demangler. This can be used to make reports more
+ human-readable. This option can be specified multiple times to supply
+ arguments to the demangler (e.g `-Xdemangler c++filt -Xdemangler -n` for C++).
+ The demangler is expected to read a newline-separated list of symbols from
+ stdin and write a newline-separated list of the same length to stdout.
+
 .. option:: -line-coverage-gt=<N>
 
  Show code coverage only for functions with line coverage greater than the

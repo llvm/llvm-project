@@ -27,6 +27,7 @@ class FunctionPass;
 class ImmutablePass;
 class MachineInstr;
 class MCInst;
+class PassRegistry;
 class TargetLowering;
 class TargetMachine;
 
@@ -44,6 +45,9 @@ FunctionPass *createThumb2SizeReductionPass(
 
 void LowerARMMachineInstrToMCInst(const MachineInstr *MI, MCInst &OutMI,
                                   ARMAsmPrinter &AP);
+
+void initializeARMLoadStoreOptPass(PassRegistry &);
+void initializeARMPreAllocLoadStoreOptPass(PassRegistry &);
 
 } // end namespace llvm;
 

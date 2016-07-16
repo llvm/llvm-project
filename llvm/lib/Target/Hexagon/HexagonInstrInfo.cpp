@@ -370,7 +370,7 @@ unsigned HexagonInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 /// Cond[1] = R
 /// Cond[2] = Imm
 ///
-bool HexagonInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool HexagonInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *&TBB,
                                      MachineBasicBlock *&FBB,
                                      SmallVectorImpl<MachineOperand> &Cond,
@@ -587,7 +587,7 @@ unsigned HexagonInstrInfo::InsertBranch(MachineBasicBlock &MBB,
       SmallVector<MachineOperand, 4> Cond;
       auto Term = MBB.getFirstTerminator();
       if (Term != MBB.end() && isPredicated(*Term) &&
-          !AnalyzeBranch(MBB, NewTBB, NewFBB, Cond, false)) {
+          !analyzeBranch(MBB, NewTBB, NewFBB, Cond, false)) {
         MachineBasicBlock *NextBB = &*++MBB.getIterator();
         if (NewTBB == NextBB) {
           ReverseBranchCondition(Cond);
@@ -2515,6 +2515,28 @@ bool HexagonInstrInfo::isTC4x(const MachineInstr *MI) const {
 }
 
 
+// Schedule this ASAP.
+bool HexagonInstrInfo::isToBeScheduledASAP(const MachineInstr *MI1,
+      const MachineInstr *MI2) const {
+  if (!MI1 || !MI2)
+    return false;
+  if (mayBeCurLoad(MI1)) {
+    // if (result of SU is used in Next) return true;
+    unsigned DstReg = MI1->getOperand(0).getReg();
+    int N = MI2->getNumOperands();
+    for (int I = 0; I < N; I++)
+      if (MI2->getOperand(I).isReg() && DstReg == MI2->getOperand(I).getReg())
+        return true;
+  }
+  if (mayBeNewStore(MI2))
+    if (MI2->getOpcode() == Hexagon::V6_vS32b_pi)
+      if (MI1->getOperand(0).isReg() && MI2->getOperand(3).isReg() &&
+          MI1->getOperand(0).getReg() == MI2->getOperand(3).getReg())
+        return true;
+  return false;
+}
+
+
 bool HexagonInstrInfo::isV60VectorInstruction(const MachineInstr *MI) const {
   if (!MI)
     return false;
@@ -2612,6 +2634,21 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::J2_loop0i:
   case Hexagon::J2_loop1i:
     return isUInt<10>(Offset);
+
+  case Hexagon::S4_storeirb_io:
+  case Hexagon::S4_storeirbt_io:
+  case Hexagon::S4_storeirbf_io:
+    return isUInt<6>(Offset);
+
+  case Hexagon::S4_storeirh_io:
+  case Hexagon::S4_storeirht_io:
+  case Hexagon::S4_storeirhf_io:
+    return isShiftedUInt<6,1>(Offset);
+
+  case Hexagon::S4_storeiri_io:
+  case Hexagon::S4_storeirit_io:
+  case Hexagon::S4_storeirif_io:
+    return isShiftedUInt<6,2>(Offset);
   }
 
   if (Extend)
@@ -2687,9 +2724,6 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L2_ploadrubf_io:
   case Hexagon::S2_pstorerbt_io:
   case Hexagon::S2_pstorerbf_io:
-  case Hexagon::S4_storeirb_io:
-  case Hexagon::S4_storeirbt_io:
-  case Hexagon::S4_storeirbf_io:
     return isUInt<6>(Offset);
 
   case Hexagon::L2_ploadrht_io:
@@ -2698,18 +2732,12 @@ bool HexagonInstrInfo::isValidOffset(unsigned Opcode, int Offset,
   case Hexagon::L2_ploadruhf_io:
   case Hexagon::S2_pstorerht_io:
   case Hexagon::S2_pstorerhf_io:
-  case Hexagon::S4_storeirh_io:
-  case Hexagon::S4_storeirht_io:
-  case Hexagon::S4_storeirhf_io:
     return isShiftedUInt<6,1>(Offset);
 
   case Hexagon::L2_ploadrit_io:
   case Hexagon::L2_ploadrif_io:
   case Hexagon::S2_pstorerit_io:
   case Hexagon::S2_pstorerif_io:
-  case Hexagon::S4_storeiri_io:
-  case Hexagon::S4_storeirit_io:
-  case Hexagon::S4_storeirif_io:
     return isShiftedUInt<6,2>(Offset);
 
   case Hexagon::L2_ploadrdt_io:
@@ -2830,6 +2858,16 @@ bool HexagonInstrInfo::isZeroExtendingLoad(const MachineInstr &MI) const {
   default:
     return false;
   }
+}
+
+
+// Add latency to instruction.
+bool HexagonInstrInfo::addLatencyToSchedule(const MachineInstr *MI1,
+      const MachineInstr *MI2) const {
+  if (isV60VectorInstruction(MI1) && isV60VectorInstruction(MI2))
+    if (!isVecUsableNextPacket(MI1, MI2))
+      return true;
+  return false;
 }
 
 
@@ -3066,8 +3104,6 @@ bool HexagonInstrInfo::getBaseAndOffsetPosition(const MachineInstr *MI,
       unsigned &BasePos, unsigned &OffsetPos) const {
   // Deal with memops first.
   if (isMemOp(MI)) {
-    assert (MI->getOperand(0).isReg() && MI->getOperand(1).isImm() &&
-            "Bad Memop.");
     BasePos = 0;
     OffsetPos = 1;
   } else if (MI->mayStore()) {

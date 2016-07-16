@@ -2392,8 +2392,8 @@ void TreePattern::dump() const { print(errs()); }
 CodeGenDAGPatterns::CodeGenDAGPatterns(RecordKeeper &R) :
   Records(R), Target(R) {
 
-  Intrinsics = LoadIntrinsics(Records, false);
-  TgtIntrinsics = LoadIntrinsics(Records, true);
+  Intrinsics = CodeGenIntrinsicTable(Records, false);
+  TgtIntrinsics = CodeGenIntrinsicTable(Records, true);
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();

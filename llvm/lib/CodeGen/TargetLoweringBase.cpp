@@ -1234,7 +1234,7 @@ TargetLoweringBase::emitPatchPoint(MachineInstr &InitialMI,
     // Add a new memory operand for this FI.
     assert(MFI.getObjectOffset(FI) != -1);
 
-    unsigned Flags = MachineMemOperand::MOLoad;
+    auto Flags = MachineMemOperand::MOLoad;
     if (MI->getOpcode() == TargetOpcode::STATEPOINT) {
       Flags |= MachineMemOperand::MOStore;
       Flags |= MachineMemOperand::MOVolatile;

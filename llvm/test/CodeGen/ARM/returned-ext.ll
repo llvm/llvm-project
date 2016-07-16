@@ -1,5 +1,5 @@
-; RUN: llc < %s -mtriple=armv6-linux-gnueabi | FileCheck %s -check-prefix=CHECKELF
-; RUN: llc < %s -mtriple=thumbv7-apple-ios5.0 | FileCheck %s -check-prefix=CHECKT2D
+; RUN: llc < %s -mtriple=armv6-linux-gnueabi -arm-this-return-forwarding | FileCheck %s -check-prefix=CHECKELF
+; RUN: llc < %s -mtriple=thumbv7-apple-ios5.0 -arm-this-return-forwarding | FileCheck %s -check-prefix=CHECKT2D
 
 declare i16 @identity16(i16 returned %x)
 declare i32 @identity32(i32 returned %x)

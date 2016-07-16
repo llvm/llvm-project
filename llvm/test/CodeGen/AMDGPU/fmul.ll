@@ -13,7 +13,7 @@ entry:
   ret void
 }
 
-declare float @llvm.R600.load.input(i32) readnone
+declare float @llvm.r600.load.input(i32) readnone
 
 declare void @llvm.AMDGPU.store.output(float, i32)
 

@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mattr=-avx -fast-isel -mcpu=core2 -O0 -regalloc=fast -asm-verbose=0 -fast-isel-abort=1 | FileCheck %s
+; RUN: llc < %s -mattr=-avx -fast-isel -mcpu=core2 -O0 -regalloc=fast -asm-verbose=0 -fast-isel-verbose 2>&1 >/dev/null | FileCheck %s --check-prefix=STDERR --allow-empty
 ; RUN: llc < %s -mattr=+avx -fast-isel -mcpu=core2 -O0 -regalloc=fast -asm-verbose=0 -fast-isel-abort=1 | FileCheck %s --check-prefix=AVX
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
@@ -310,5 +311,12 @@ define void @allocamaterialize() {
   %a = alloca i32
 ; CHECK: leaq {{.*}}, %rdi
   call void @takesi32ptr(i32* %a)
+  ret void
+}
+
+; STDERR-NOT: FastISel missed terminator:   ret void
+; CHECK-LABEL: win64ccfun
+define x86_64_win64cc void @win64ccfun(i32 %i) {
+; CHECK: ret
   ret void
 }

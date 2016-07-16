@@ -58,11 +58,7 @@ public:
   AliasAnalysis *getAliasAnalysis() const { return VN.getAliasAnalysis(); }
   MemoryDependenceResults &getMemDep() const { return *MD; }
 
-private:
-  friend class gvn::GVNLegacyPass;
-
   struct Expression;
-  friend struct DenseMapInfo<Expression>;
 
   /// This class holds the mapping between values and value numbers.  It is used
   /// as an efficient mechanism to determine the expression-wise equivalence of
@@ -103,6 +99,10 @@ private:
     uint32_t getNextUnusedValueNumber() { return nextValueNumber; }
     void verifyRemoved(const Value *) const;
   };
+
+private:
+  friend class gvn::GVNLegacyPass;
+  friend struct DenseMapInfo<Expression>;
 
   MemoryDependenceResults *MD;
   DominatorTree *DT;
@@ -227,6 +227,13 @@ private:
 /// Create a legacy GVN pass. This also allows parameterizing whether or not
 /// loads are eliminated by the pass.
 FunctionPass *createGVNPass(bool NoLoads = false);
+
+/// \brief A simple and fast domtree-based GVN pass to hoist common expressions
+/// from sibling branches.
+struct GVNHoistPass : PassInfoMixin<GVNHoistPass> {
+  /// \brief Run the pass over the function.
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+};
 
 }
 

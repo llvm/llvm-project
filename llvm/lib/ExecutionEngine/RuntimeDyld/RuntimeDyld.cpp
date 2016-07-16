@@ -816,7 +816,10 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     // 8:   03200008        jr      t9.
     // c:   00000000        nop.
     const unsigned LuiT9Instr = 0x3c190000, AdduiT9Instr = 0x27390000;
-    const unsigned JrT9Instr = 0x03200008, NopInstr = 0x0;
+    const unsigned NopInstr = 0x0;
+    unsigned JrT9Instr = 0x03200008;
+    if ((AbiVariant & ELF::EF_MIPS_ARCH) == ELF::EF_MIPS_ARCH_32R6)
+        JrT9Instr = 0x03200009;
 
     writeBytesUnaligned(LuiT9Instr, Addr, 4);
     writeBytesUnaligned(AdduiT9Instr, Addr+4, 4);

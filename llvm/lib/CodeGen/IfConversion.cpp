@@ -87,7 +87,7 @@ namespace {
 
     /// BBInfo - One per MachineBasicBlock, this is used to cache the result
     /// if-conversion feasibility analysis. This includes results from
-    /// TargetInstrInfo::AnalyzeBranch() (i.e. TBB, FBB, and Cond), and its
+    /// TargetInstrInfo::analyzeBranch() (i.e. TBB, FBB, and Cond), and its
     /// classification, and common tail block of its successors (if it's a
     /// diamond shape), its size, whether it's predicable, and whether any
     /// instruction can clobber the 'would-be' predicate.
@@ -96,7 +96,7 @@ namespace {
     /// IsBeingAnalyzed - True if BB is currently being analyzed.
     /// IsAnalyzed      - True if BB has been analyzed (info is still valid).
     /// IsEnqueued      - True if BB has been enqueued to be ifcvt'ed.
-    /// IsBrAnalyzable  - True if AnalyzeBranch() returns false.
+    /// IsBrAnalyzable  - True if analyzeBranch() returns false.
     /// HasFallThrough  - True if BB may fallthrough to the following BB.
     /// IsUnpredicable  - True if BB is known to be unpredicable.
     /// ClobbersPred    - True if BB could modify predicates (e.g. has
@@ -105,7 +105,7 @@ namespace {
     /// ExtraCost       - Extra cost for multi-cycle instructions.
     /// ExtraCost2      - Some instructions are slower when predicated
     /// BB              - Corresponding MachineBasicBlock.
-    /// TrueBB / FalseBB- See AnalyzeBranch().
+    /// TrueBB / FalseBB- See analyzeBranch().
     /// BrCond          - Conditions for end of block conditional branches.
     /// Predicate       - Predicate used in the BB.
     struct BBInfo {
@@ -655,7 +655,7 @@ void IfConverter::ScanInstructions(BBInfo &BBI) {
   BBI.TrueBB = BBI.FalseBB = nullptr;
   BBI.BrCond.clear();
   BBI.IsBrAnalyzable =
-    !TII->AnalyzeBranch(*BBI.BB, BBI.TrueBB, BBI.FalseBB, BBI.BrCond);
+      !TII->analyzeBranch(*BBI.BB, BBI.TrueBB, BBI.FalseBB, BBI.BrCond);
   BBI.HasFallThrough = BBI.IsBrAnalyzable && BBI.FalseBB == nullptr;
 
   if (BBI.BrCond.size()) {
@@ -1041,7 +1041,7 @@ static void InsertUncondBranch(MachineBasicBlock *BB, MachineBasicBlock *ToBB,
 void IfConverter::RemoveExtraEdges(BBInfo &BBI) {
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
   SmallVector<MachineOperand, 4> Cond;
-  if (!TII->AnalyzeBranch(*BBI.BB, TBB, FBB, Cond))
+  if (!TII->analyzeBranch(*BBI.BB, TBB, FBB, Cond))
     BBI.BB->CorrectExtraCFGEdges(TBB, FBB, !Cond.empty());
 }
 

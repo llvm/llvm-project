@@ -13,26 +13,101 @@
 //===----------------------------------------------------------------------===//
 
 #include "HexagonMachineScheduler.h"
+#include "HexagonSubtarget.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
+#include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/IR/Function.h"
+
+static cl::opt<bool> SchedPredsCloser("sched-preds-closer",
+    cl::Hidden, cl::ZeroOrMore, cl::init(true));
+
+static cl::opt<bool> SchedRetvalOptimization("sched-retval-optimization",
+    cl::Hidden, cl::ZeroOrMore, cl::init(true));
 
 using namespace llvm;
 
 #define DEBUG_TYPE "misched"
 
-/// Platform-specific modifications to DAG.
-void VLIWMachineScheduler::postprocessDAG() {
+class HexagonCallMutation : public ScheduleDAGMutation {
+public:
+  void apply(ScheduleDAGInstrs *DAG) override;
+private:
+  bool shouldTFRICallBind(const HexagonInstrInfo &HII,
+                          const SUnit &Inst1, const SUnit &Inst2) const;
+};
+
+// Check if a call and subsequent A2_tfrpi instructions should maintain
+// scheduling affinity. We are looking for the TFRI to be consumed in
+// the next instruction. This should help reduce the instances of
+// double register pairs being allocated and scheduled before a call
+// when not used until after the call. This situation is exacerbated
+// by the fact that we allocate the pair from the callee saves list,
+// leading to excess spills and restores.
+bool HexagonCallMutation::shouldTFRICallBind(const HexagonInstrInfo &HII,
+      const SUnit &Inst1, const SUnit &Inst2) const {
+  if (Inst1.getInstr()->getOpcode() != Hexagon::A2_tfrpi)
+    return false;
+
+  // TypeXTYPE are 64 bit operations.
+  if (HII.getType(Inst2.getInstr()) == HexagonII::TypeXTYPE)
+    return true;
+  return false;
+}
+
+void HexagonCallMutation::apply(ScheduleDAGInstrs *DAG) {
   SUnit* LastSequentialCall = nullptr;
+  unsigned VRegHoldingRet = 0;
+  unsigned RetRegister;
+  SUnit* LastUseOfRet = nullptr;
+  auto &TRI = *DAG->MF.getSubtarget().getRegisterInfo();
+  auto &HII = *DAG->MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+
   // Currently we only catch the situation when compare gets scheduled
   // before preceding call.
-  for (unsigned su = 0, e = SUnits.size(); su != e; ++su) {
+  for (unsigned su = 0, e = DAG->SUnits.size(); su != e; ++su) {
     // Remember the call.
-    if (SUnits[su].getInstr()->isCall())
-      LastSequentialCall = &(SUnits[su]);
+    if (DAG->SUnits[su].getInstr()->isCall())
+      LastSequentialCall = &DAG->SUnits[su];
     // Look for a compare that defines a predicate.
-    else if (SUnits[su].getInstr()->isCompare() && LastSequentialCall)
-      SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
+    else if (DAG->SUnits[su].getInstr()->isCompare() && LastSequentialCall)
+      DAG->SUnits[su].addPred(SDep(LastSequentialCall, SDep::Barrier));
+    // Look for call and tfri* instructions.
+    else if (SchedPredsCloser && LastSequentialCall && su > 1 && su < e-1 &&
+             shouldTFRICallBind(HII, DAG->SUnits[su], DAG->SUnits[su+1]))
+      DAG->SUnits[su].addPred(SDep(&DAG->SUnits[su-1], SDep::Barrier));
+    // Prevent redundant register copies between two calls, which are caused by
+    // both the return value and the argument for the next call being in %R0.
+    // Example:
+    //   1: <call1>
+    //   2: %VregX = COPY %R0
+    //   3: <use of %VregX>
+    //   4: %R0 = ...
+    //   5: <call2>
+    // The scheduler would often swap 3 and 4, so an additional register is
+    // needed. This code inserts a Barrier dependence between 3 & 4 to prevent
+    // this. The same applies for %D0 and %V0/%W0, which are also handled.
+    else if (SchedRetvalOptimization) {
+      const MachineInstr *MI = DAG->SUnits[su].getInstr();
+      if (MI->isCopy() && (MI->readsRegister(Hexagon::R0, &TRI) ||
+                           MI->readsRegister(Hexagon::V0, &TRI)))  {
+        // %vregX = COPY %R0
+        VRegHoldingRet = MI->getOperand(0).getReg();
+        RetRegister = MI->getOperand(1).getReg();
+        LastUseOfRet = nullptr;
+      } else if (VRegHoldingRet && MI->readsVirtualRegister(VRegHoldingRet))
+        // <use of %vregX>
+        LastUseOfRet = &DAG->SUnits[su];
+      else if (LastUseOfRet && MI->definesRegister(RetRegister, &TRI))
+        // %R0 = ...
+        DAG->SUnits[su].addPred(SDep(LastUseOfRet, SDep::Barrier));
+    }
   }
+}
+
+
+/// Save the last formed packet
+void VLIWResourceModel::savePacket() {
+  OldPacket = Packet;
 }
 
 /// Check if scheduling of this SU is possible
@@ -85,6 +160,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
   // Artificially reset state.
   if (!SU) {
     ResourcesModel->clearResources();
+    savePacket();
     Packet.clear();
     TotalPackets++;
     return false;
@@ -93,6 +169,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
   // start a new one.
   if (!isResourceAvailable(SU)) {
     ResourcesModel->clearResources();
+    savePacket();
     Packet.clear();
     TotalPackets++;
     startNewCycle = true;
@@ -129,6 +206,7 @@ bool VLIWResourceModel::reserveResources(SUnit *SU) {
   // we start fresh.
   if (Packet.size() >= SchedModel->getIssueWidth()) {
     ResourcesModel->clearResources();
+    savePacket();
     Packet.clear();
     TotalPackets++;
     startNewCycle = true;
@@ -149,9 +227,6 @@ void VLIWMachineScheduler::schedule() {
         << " \n");
 
   buildDAGWithRegPressure();
-
-  // Postprocess the DAG to add platform-specific artificial dependencies.
-  postprocessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
@@ -223,6 +298,9 @@ void ConvergingVLIWScheduler::initialize(ScheduleDAGMI *dag) {
 
   assert((!llvm::ForceTopDown || !llvm::ForceBottomUp) &&
          "-misched-topdown incompatible with -misched-bottomup");
+
+  DAG->addMutation(make_unique<HexagonSubtarget::HexagonDAGMutation>());
+  DAG->addMutation(make_unique<HexagonCallMutation>());
 }
 
 void ConvergingVLIWScheduler::releaseTopNode(SUnit *SU) {
@@ -482,6 +560,8 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
   if (!SU || SU->isScheduled)
     return ResCount;
 
+  MachineInstr *Instr = SU->getInstr();
+
   // Forced priority is high.
   if (SU->isScheduleHigh)
     ResCount += PriorityOne;
@@ -525,6 +605,46 @@ int ConvergingVLIWScheduler::SchedulingCost(ReadyQueue &Q, SUnit *SU,
   // Factor in reg pressure as a heuristic.
   ResCount -= (Delta.Excess.getUnitInc()*PriorityTwo);
   ResCount -= (Delta.CriticalMax.getUnitInc()*PriorityTwo);
+
+  auto &QST = DAG->MF.getSubtarget<HexagonSubtarget>();
+  auto &QII = *QST.getInstrInfo();
+
+  // Give preference to a zero latency instruction if the dependent
+  // instruction is in the current packet.
+  if (Q.getID() == TopQID) {
+    for (const SDep &PI : SU->Preds) {
+      if (!PI.getSUnit()->getInstr()->isPseudo() && PI.isAssignedRegDep() &&
+          PI.getLatency() == 0 &&
+          Top.ResourceModel->isInPacket(PI.getSUnit())) {
+        ResCount += PriorityTwo;
+        DEBUG(if (verbose) dbgs() << "Z|");
+      }
+    }
+  } else {
+    for (const SDep &SI : SU->Succs) {
+      if (!SI.getSUnit()->getInstr()->isPseudo() && SI.isAssignedRegDep() &&
+          SI.getLatency() == 0 &&
+          Bot.ResourceModel->isInPacket(SI.getSUnit())) {
+        ResCount += PriorityTwo;
+        DEBUG(if (verbose) dbgs() << "Z|");
+      }
+    }
+  }
+
+  // Give less preference to an instruction that will cause a stall with
+  // an instruction in the previous packet.
+  if (QII.isV60VectorInstruction(Instr)) {
+    // Check for stalls in the previous packet.
+    if (Q.getID() == TopQID) {
+      for (auto J : Top.ResourceModel->OldPacket)
+        if (QII.producesStall(J->getInstr(), Instr))
+          ResCount -= PriorityOne;
+    } else {
+      for (auto J : Bot.ResourceModel->OldPacket)
+        if (QII.producesStall(Instr, J->getInstr()))
+          ResCount -= PriorityOne;
+    }
+  }
 
   DEBUG(if (verbose) dbgs() << " Total(" << ResCount << ")");
 
