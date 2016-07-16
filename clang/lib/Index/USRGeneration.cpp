@@ -131,8 +131,8 @@ public:
     generateUSRForObjCCategory(cls, cat, Out);
   }
   /// Generate a USR fragment for an Objective-C property.
-  void GenObjCProperty(StringRef prop) {
-    generateUSRForObjCProperty(prop, Out);
+  void GenObjCProperty(StringRef prop, bool isClassProp) {
+    generateUSRForObjCProperty(prop, isClassProp, Out);
   }
   /// Generate a USR for an Objective-C protocol.
   void GenObjCProtocol(StringRef prot) {
@@ -406,7 +406,7 @@ void USRGenerator::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {
     Visit(ID);
   else
     Visit(cast<Decl>(D->getDeclContext()));
-  GenObjCProperty(D->getName());
+  GenObjCProperty(D->getName(), D->isClassProperty());
 }
 
 void USRGenerator::VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D) {
@@ -867,8 +867,9 @@ void clang::index::generateUSRForObjCMethod(StringRef Sel,
   OS << (IsInstanceMethod ? "(im)" : "(cm)") << Sel;
 }
 
-void clang::index::generateUSRForObjCProperty(StringRef Prop, raw_ostream &OS) {
-  OS << "(py)" << Prop;
+void clang::index::generateUSRForObjCProperty(StringRef Prop, bool isClassProp,
+                                              raw_ostream &OS) {
+  OS << (isClassProp ? "(cpy)" : "(py)") << Prop;
 }
 
 void clang::index::generateUSRForObjCProtocol(StringRef Prot, raw_ostream &OS) {
