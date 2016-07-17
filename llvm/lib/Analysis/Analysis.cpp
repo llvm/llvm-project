@@ -51,7 +51,7 @@ void llvm::initializeAnalysis(PassRegistry &Registry) {
   initializePostDomOnlyPrinterPass(Registry);
   initializeAAResultsWrapperPassPass(Registry);
   initializeGlobalsAAWrapperPassPass(Registry);
-  initializeIVUsersPass(Registry);
+  initializeIVUsersWrapperPassPass(Registry);
   initializeInstCountPass(Registry);
   initializeIntervalPartitionPass(Registry);
   initializeLazyBlockFrequencyInfoPassPass(Registry);

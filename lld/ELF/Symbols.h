@@ -99,9 +99,8 @@ public:
   template <class ELFT> typename ELFT::uint getThunkVA() const;
   template <class ELFT> typename ELFT::uint getSize() const;
 
-  // Returns the file from which the symbol was created.
-  // For logging purpose only.
-  template <class ELFT> InputFile *getSourceFile();
+  // The file from which this symbol was created.
+  InputFile *File = nullptr;
 
 protected:
   SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type);
@@ -163,8 +162,7 @@ class DefinedBitcode : public Defined {
 public:
   DefinedBitcode(StringRef Name, uint8_t StOther, uint8_t Type, BitcodeFile *F);
   static bool classof(const SymbolBody *S);
-
-  BitcodeFile *File;
+  BitcodeFile *file() { return (BitcodeFile *)this->File; }
 };
 
 class DefinedCommon : public Defined {
@@ -197,7 +195,10 @@ public:
       : Defined(SymbolBody::DefinedRegularKind, Name, Sym.st_other,
                 Sym.getType()),
         Value(Sym.st_value), Size(Sym.st_size),
-        Section(Section ? Section->Repl : NullInputSection) {}
+        Section(Section ? Section->Repl : NullInputSection) {
+    if (Section)
+      this->File = Section->getFile();
+  }
 
   DefinedRegular(const Elf_Sym &Sym, InputSectionBase<ELFT> *Section)
       : Defined(SymbolBody::DefinedRegularKind, Sym.st_name, Sym.st_other,
@@ -205,6 +206,8 @@ public:
         Value(Sym.st_value), Size(Sym.st_size),
         Section(Section ? Section->Repl : NullInputSection) {
     assert(isLocal());
+    if (Section)
+      this->File = Section->getFile();
   }
 
   DefinedRegular(StringRef Name, uint8_t StOther)
@@ -263,16 +266,14 @@ public:
 
 class Undefined : public SymbolBody {
 public:
-  Undefined(StringRef Name, uint8_t StOther, uint8_t Type);
-  Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type);
+  Undefined(StringRef Name, uint8_t StOther, uint8_t Type, InputFile *F);
+  Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type, InputFile *F);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == UndefinedKind;
   }
 
-  // The file this undefined symbol was created from.
-  // For logging purpose only.
-  InputFile *File = nullptr;
+  InputFile *file() { return this->File; }
 };
 
 template <class ELFT> class SharedSymbol : public Defined {
@@ -288,13 +289,16 @@ public:
   SharedSymbol(SharedFile<ELFT> *F, StringRef Name, const Elf_Sym &Sym,
                const Elf_Verdef *Verdef)
       : Defined(SymbolBody::SharedKind, Name, Sym.st_other, Sym.getType()),
-        File(F), Sym(Sym), Verdef(Verdef) {
+        Sym(Sym), Verdef(Verdef) {
     // IFuncs defined in DSOs are treated as functions by the static linker.
     if (isGnuIFunc())
       Type = llvm::ELF::STT_FUNC;
+    this->File = F;
   }
 
-  SharedFile<ELFT> *File;
+  SharedFile<ELFT> *file() { return (SharedFile<ELFT> *)this->File; }
+
+public:
   const Elf_Sym &Sym;
 
   // This field is a pointer to the symbol's version definition.
@@ -323,24 +327,23 @@ public:
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
-  std::unique_ptr<InputFile> getFile();
+  std::unique_ptr<InputFile> fetch();
 };
 
 // LazyArchive symbols represents symbols in archive files.
 class LazyArchive : public Lazy {
 public:
   LazyArchive(ArchiveFile &File, const llvm::object::Archive::Symbol S,
-              uint8_t Type)
-      : Lazy(LazyArchiveKind, S.getName(), Type), File(File), Sym(S) {}
+              uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyArchiveKind;
   }
 
-  std::unique_ptr<InputFile> getFile();
+  ArchiveFile *file() { return (ArchiveFile *)this->File; }
+  std::unique_ptr<InputFile> fetch();
 
 private:
-  ArchiveFile &File;
   const llvm::object::Archive::Symbol Sym;
 };
 
@@ -348,17 +351,14 @@ private:
 // --start-lib and --end-lib options.
 class LazyObject : public Lazy {
 public:
-  LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
-      : Lazy(LazyObjectKind, Name, Type), File(File) {}
+  LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == LazyObjectKind;
   }
 
-  std::unique_ptr<InputFile> getFile();
-
-private:
-  LazyObjectFile &File;
+  LazyObjectFile *file() { return (LazyObjectFile *)this->File; }
+  std::unique_ptr<InputFile> fetch();
 };
 
 // Some linker-generated symbols need to be created as

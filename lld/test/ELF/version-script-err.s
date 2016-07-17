@@ -8,8 +8,3 @@
 // RUN: not ld.lld --version-script %terr1.script -shared %t.o -o %t.so 2>&1 | \
 // RUN:   FileCheck -check-prefix=ERR1 %s
 // ERR1: unclosed quote
-
-// RUN: echo "VERSION { extern "C++" {}; }; " > %terr2.script
-// RUN: not ld.lld --version-script %terr2.script -shared %t.o -o %t.so 2>&1 | \
-// RUN:   FileCheck -check-prefix=ERR2 %s
-// ERR2: extern keyword is not supported

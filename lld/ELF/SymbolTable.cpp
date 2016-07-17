@@ -69,7 +69,7 @@ void SymbolTable<ELFT>::addFile(std::unique_ptr<InputFile> File) {
   }
 
   if (Config->Trace)
-    llvm::outs() << getFilename(FileP) << "\n";
+    outs() << getFilename(FileP) << "\n";
 
   // .so file
   if (auto *F = dyn_cast<SharedFile<ELFT>>(FileP)) {
@@ -117,7 +117,7 @@ template <class ELFT> void SymbolTable<ELFT>::addCombinedLtoObject() {
   for (auto &IF : IFs) {
     ObjectFile<ELFT> *Obj = cast<ObjectFile<ELFT>>(IF.release());
 
-    llvm::DenseSet<StringRef> DummyGroups;
+    DenseSet<StringRef> DummyGroups;
     Obj->parse(DummyGroups);
     ObjectFiles.emplace_back(Obj);
   }
@@ -253,7 +253,7 @@ std::string SymbolTable<ELFT>::conflictMsg(SymbolBody *Existing,
   std::string Sym = Existing->getName();
   if (Config->Demangle)
     Sym = demangle(Sym);
-  return Sym + " in " + getFilename(Existing->getSourceFile<ELFT>()) + " and " +
+  return Sym + " in " + getFilename(Existing->File) + " and " +
          getFilename(NewFile);
 }
 
@@ -274,22 +274,21 @@ Symbol *SymbolTable<ELFT>::addUndefined(StringRef Name, uint8_t Binding,
              /*IsUsedInRegularObj*/ !File || !isa<BitcodeFile>(File), File);
   if (WasInserted) {
     S->Binding = Binding;
-    replaceBody<Undefined>(S, Name, StOther, Type);
-    cast<Undefined>(S->body())->File = File;
+    replaceBody<Undefined>(S, Name, StOther, Type, File);
     return S;
   }
   if (Binding != STB_WEAK) {
     if (S->body()->isShared() || S->body()->isLazy())
       S->Binding = Binding;
     if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(S->body()))
-      SS->File->IsUsed = true;
+      SS->file()->IsUsed = true;
   }
   if (auto *L = dyn_cast<Lazy>(S->body())) {
     // An undefined weak will not fetch archive members, but we have to remember
     // its type. See also comment in addLazyArchive.
     if (S->isWeak())
       L->Type = Type;
-    else if (auto F = L->getFile())
+    else if (auto F = L->fetch())
       addFile(std::move(F));
   }
   return S;
@@ -481,8 +480,8 @@ std::vector<SymbolBody *> SymbolTable<ELFT>::findAll(StringRef Pattern) {
 }
 
 template <class ELFT>
-void SymbolTable<ELFT>::addLazyArchive(
-    ArchiveFile *F, const llvm::object::Archive::Symbol Sym) {
+void SymbolTable<ELFT>::addLazyArchive(ArchiveFile *F,
+                                       const object::Archive::Symbol Sym) {
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Sym.getName());
@@ -535,7 +534,7 @@ void SymbolTable<ELFT>::addLazyObject(StringRef Name, LazyObjectFile &Obj) {
 template <class ELFT> void SymbolTable<ELFT>::scanUndefinedFlags() {
   for (StringRef S : Config->Undefined)
     if (auto *L = dyn_cast_or_null<Lazy>(find(S)))
-      if (std::unique_ptr<InputFile> File = L->getFile())
+      if (std::unique_ptr<InputFile> File = L->fetch())
         addFile(std::move(File));
 }
 
@@ -566,6 +565,37 @@ static bool hasWildcard(StringRef S) {
   return S.find_first_of("?*") != StringRef::npos;
 }
 
+static void setVersionId(SymbolBody *Body, StringRef VersionName,
+                         StringRef Name, uint16_t Version) {
+  if (!Body || Body->isUndefined()) {
+    if (Config->NoUndefinedVersion)
+      error("version script assignment of " + VersionName + " to symbol " +
+            Name + " failed: symbol not defined");
+    return;
+  }
+
+  Symbol *Sym = Body->symbol();
+  if (Sym->VersionId != Config->DefaultSymbolVersion)
+    warning("duplicate symbol " + Name + " in version script");
+  Sym->VersionId = Version;
+}
+
+template <class ELFT>
+std::map<std::string, SymbolBody *> SymbolTable<ELFT>::getDemangledSyms() {
+  std::map<std::string, SymbolBody *> Result;
+  for (std::pair<SymName, unsigned> Sym : Symtab)
+    Result[demangle(Sym.first.Val)] = SymVector[Sym.second]->body();
+  return Result;
+}
+
+static bool hasExternCpp() {
+  for (VersionDefinition &V : Config->VersionDefinitions)
+    for (SymbolVersion Sym : V.Globals)
+      if (Sym.IsExternCpp)
+        return true;
+  return false;
+}
+
 // This function processes the --version-script option by marking all global
 // symbols with the VersionScriptGlobal flag, which acts as a filter on the
 // dynamic symbol table.
@@ -573,8 +603,8 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // If version script does not contain versions declarations,
   // we just should mark global symbols.
   if (!Config->VersionScriptGlobals.empty()) {
-    for (StringRef S : Config->VersionScriptGlobals)
-      if (SymbolBody *B = find(S))
+    for (SymbolVersion &Sym : Config->VersionScriptGlobals)
+      if (SymbolBody *B = find(Sym.Name))
         B->symbol()->VersionId = VER_NDX_GLOBAL;
     return;
   }
@@ -585,35 +615,32 @@ template <class ELFT> void SymbolTable<ELFT>::scanVersionScript() {
   // If we have symbols version declarations, we should
   // assign version references for each symbol.
   // Current rules are:
-  // * If there is an exact match for the mangled name, we use it.
+  // * If there is an exact match for the mangled name or we have extern C++
+  //   exact match, then we use it.
   // * Otherwise, we look through the wildcard patterns. We look through the
   //   version tags in reverse order. We use the first match we find (the last
   //   matching version tag in the file).
-  for (size_t I = 0, E = Config->VersionDefinitions.size(); I < E; ++I) {
-    VersionDefinition &V = Config->VersionDefinitions[I];
-    for (StringRef Name : V.Globals) {
-      if (hasWildcard(Name))
-        continue;
+  // Handle exact matches and build a map of demangled externs for
+  // quick search during next step.
+  std::map<std::string, SymbolBody *> Demangled;
+  if (hasExternCpp())
+    Demangled = getDemangledSyms();
 
-      SymbolBody *B = find(Name);
-      if (!B || B->isUndefined()) {
-        if (Config->NoUndefinedVersion)
-          error("version script assignment of " + V.Name + " to symbol " +
-                Name + " failed: symbol not defined");
+  for (VersionDefinition &V : Config->VersionDefinitions) {
+    for (SymbolVersion Sym : V.Globals) {
+      if (hasWildcard(Sym.Name))
         continue;
-      }
-
-      if (B->symbol()->VersionId != Config->DefaultSymbolVersion)
-        warning("duplicate symbol " + Name + " in version script");
-      B->symbol()->VersionId = V.Id;
+      SymbolBody *B = Sym.IsExternCpp ? Demangled[Sym.Name] : find(Sym.Name);
+      setVersionId(B, V.Name, Sym.Name, V.Id);
     }
   }
 
+  // Handle wildcards.
   for (size_t I = Config->VersionDefinitions.size() - 1; I != (size_t)-1; --I) {
     VersionDefinition &V = Config->VersionDefinitions[I];
-    for (StringRef Name : V.Globals)
-      if (hasWildcard(Name))
-        for (SymbolBody *B : findAll(Name))
+    for (SymbolVersion &Sym : V.Globals)
+      if (hasWildcard(Sym.Name))
+        for (SymbolBody *B : findAll(Sym.Name))
           if (B->symbol()->VersionId == Config->DefaultSymbolVersion)
             B->symbol()->VersionId = V.Id;
   }
@@ -625,9 +652,9 @@ template <class ELFT> void SymbolTable<ELFT>::traceDefined() {
   for (const auto &Symbol : Config->TraceSymbol)
     if (SymbolBody *B = find(Symbol.getKey()))
       if (B->isDefined() || B->isCommon())
-        if (InputFile *File = B->getSourceFile<ELFT>())
-          outs() << getFilename(File) << ": definition of "
-                 << B->getName() << "\n";
+        if (B->File)
+          outs() << getFilename(B->File) << ": definition of " << B->getName()
+                 << "\n";
 }
 
 template class elf::SymbolTable<ELF32LE>;

@@ -35,13 +35,18 @@ enum class BuildIdKind { None, Fnv1, Md5, Sha1, Hexstring };
 
 enum class UnresolvedPolicy { NoUndef, Error, Warn, Ignore };
 
+struct SymbolVersion {
+  llvm::StringRef Name;
+  bool IsExternCpp;
+};
+
 // This struct contains symbols version definition that
 // can be found in version script if it is used for link.
 struct VersionDefinition {
   VersionDefinition(llvm::StringRef Name, size_t Id) : Name(Name), Id(Id) {}
   llvm::StringRef Name;
   size_t Id;
-  std::vector<llvm::StringRef> Globals;
+  std::vector<SymbolVersion> Globals;
   size_t NameOff; // Offset in string table.
 };
 
@@ -68,7 +73,7 @@ struct Configuration {
   std::vector<llvm::StringRef> DynamicList;
   std::vector<llvm::StringRef> SearchPaths;
   std::vector<llvm::StringRef> Undefined;
-  std::vector<llvm::StringRef> VersionScriptGlobals;
+  std::vector<SymbolVersion> VersionScriptGlobals;
   std::vector<uint8_t> BuildIdVector;
   bool AllowMultipleDefinition;
   bool AsNeeded = false;

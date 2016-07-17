@@ -143,7 +143,7 @@ void initializeGuardWideningLegacyPassPass(PassRegistry&);
 void initializeIPCPPass(PassRegistry&);
 void initializeIPSCCPLegacyPassPass(PassRegistry &);
 void initializeIRTranslatorPass(PassRegistry &);
-void initializeIVUsersPass(PassRegistry&);
+void initializeIVUsersWrapperPassPass(PassRegistry&);
 void initializeIfConverterPass(PassRegistry&);
 void initializeImplicitNullChecksPass(PassRegistry&);
 void initializeIndVarSimplifyLegacyPassPass(PassRegistry&);

@@ -4949,7 +4949,7 @@ INITIALIZE_PASS_BEGIN(LoopStrengthReduce, "loop-reduce",
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(IVUsers)
+INITIALIZE_PASS_DEPENDENCY(IVUsersWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_END(LoopStrengthReduce, "loop-reduce",
@@ -4979,8 +4979,8 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   // Requiring LoopSimplify a second time here prevents IVUsers from running
   // twice, since LoopSimplify was invalidated by running ScalarEvolution.
   AU.addRequiredID(LoopSimplifyID);
-  AU.addRequired<IVUsers>();
-  AU.addPreserved<IVUsers>();
+  AU.addRequired<IVUsersWrapperPass>();
+  AU.addPreserved<IVUsersWrapperPass>();
   AU.addRequired<TargetTransformInfoWrapperPass>();
 }
 
@@ -4988,7 +4988,7 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   if (skipLoop(L))
     return false;
 
-  auto &IU = getAnalysis<IVUsers>();
+  auto &IU = getAnalysis<IVUsersWrapperPass>().getIU();
   auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
   auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();

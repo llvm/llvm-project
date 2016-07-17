@@ -1,4 +1,5 @@
 ; RUN: opt < %s -analyze -iv-users | FileCheck %s
+; RUN: opt -passes='function(require<scalar-evolution>),print<ivusers>' -S < %s 2>&1| FileCheck %s
 
 ; Provide legal integer types.
 target datalayout = "n8:16:32:64"

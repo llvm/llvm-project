@@ -182,6 +182,7 @@ FUNCTION_PASS("verify<regions>", RegionInfoVerifierPass())
 #endif
 LOOP_ANALYSIS("no-op-loop", NoOpLoopAnalysis())
 LOOP_ANALYSIS("access-info", LoopAccessAnalysis())
+LOOP_ANALYSIS("ivusers", IVUsersAnalysis())
 #undef LOOP_ANALYSIS
 
 #ifndef LOOP_PASS
@@ -198,4 +199,5 @@ LOOP_PASS("loop-deletion", LoopDeletionPass())
 LOOP_PASS("simplify-cfg", LoopSimplifyCFGPass())
 LOOP_PASS("indvars", IndVarSimplifyPass())
 LOOP_PASS("print-access-info", LoopAccessInfoPrinterPass(dbgs()))
+LOOP_PASS("print<ivusers>", IVUsersPrinterPass(dbgs()))
 #undef LOOP_PASS
