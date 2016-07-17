@@ -144,10 +144,11 @@ static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
 }
 
 BitcodeCompiler::BitcodeCompiler()
-    : Combined(new llvm::Module("ld-temp.o", Driver->Context)) {}
+    : Combined(new Module("ld-temp.o", Driver->Context)) {}
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type);
+  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type,
+                         nullptr);
 }
 
 static void handleUndefinedAsmRefs(const BasicSymbolRef &Sym, GlobalValue *GV,
@@ -198,7 +199,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
       continue;
     }
     auto *B = dyn_cast<DefinedBitcode>(S->body());
-    if (!B || B->File != &F)
+    if (!B || B->file() != &F)
       continue;
 
     // We collect the set of symbols we want to internalize here
@@ -224,10 +225,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     switch (GV->getLinkage()) {
     default:
       break;
-    case llvm::GlobalValue::LinkOnceAnyLinkage:
+    case GlobalValue::LinkOnceAnyLinkage:
       GV->setLinkage(GlobalValue::WeakAnyLinkage);
       break;
-    case llvm::GlobalValue::LinkOnceODRLinkage:
+    case GlobalValue::LinkOnceODRLinkage:
       GV->setLinkage(GlobalValue::WeakODRLinkage);
       break;
     }
@@ -238,7 +239,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
   IRMover Mover(*Combined);
   if (Error E = Mover.move(Obj->takeModule(), Keep,
                            [](GlobalValue &, IRMover::ValueAdder) {})) {
-    handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    handleAllErrors(std::move(E), [&](const ErrorInfoBase &EIB) {
       fatal("failed to link module " + F.getName() + ": " + EIB.message());
     });
   }

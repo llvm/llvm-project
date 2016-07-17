@@ -359,7 +359,7 @@ static RelExpr fromPlt(RelExpr Expr) {
 template <class ELFT> static uint32_t getAlignment(SharedSymbol<ELFT> *SS) {
   typedef typename ELFT::uint uintX_t;
 
-  uintX_t SecAlign = SS->File->getSection(SS->Sym)->sh_addralign;
+  uintX_t SecAlign = SS->file()->getSection(SS->Sym)->sh_addralign;
   uintX_t SymValue = SS->Sym.st_value;
   int TrailingZeros =
       std::min(countTrailingZeros(SecAlign), countTrailingZeros(SymValue));
@@ -385,11 +385,11 @@ template <class ELFT> static void addCopyRelSymbol(SharedSymbol<ELFT> *SS) {
   // Look through the DSO's dynamic symbol table for aliases and create a
   // dynamic symbol for each one. This causes the copy relocation to correctly
   // interpose any aliases.
-  for (const Elf_Sym &S : SS->File->getElfSymbols(true)) {
+  for (const Elf_Sym &S : SS->file()->getElfSymbols(true)) {
     if (S.st_shndx != Shndx || S.st_value != Value)
       continue;
     auto *Alias = dyn_cast_or_null<SharedSymbol<ELFT>>(
-        Symtab<ELFT>::X->find(check(S.getName(SS->File->getStringTable()))));
+        Symtab<ELFT>::X->find(check(S.getName(SS->file()->getStringTable()))));
     if (!Alias)
       continue;
     Alias->OffsetInBss = Off;

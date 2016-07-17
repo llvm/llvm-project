@@ -69,6 +69,7 @@ public:
   void run();
 
 private:
+  void parseExtern(std::vector<SymbolVersion> *Globals);
   void parseVersion(StringRef VerStr);
   void parseGlobal(StringRef VerStr);
   void parseLocal();
@@ -106,21 +107,37 @@ void VersionScriptParser::parseLocal() {
   expect(";");
 }
 
+void VersionScriptParser::parseExtern(std::vector<SymbolVersion> *Globals) {
+  expect("C++");
+  expect("{");
+
+  for (;;) {
+    if (peek() == "}" || Error)
+      break;
+    Globals->push_back({next(), true});
+    expect(";");
+  }
+
+  expect("}");
+  expect(";");
+}
+
 void VersionScriptParser::parseGlobal(StringRef VerStr) {
-  std::vector<StringRef> *Globals;
+  std::vector<SymbolVersion> *Globals;
   if (VerStr.empty())
     Globals = &Config->VersionScriptGlobals;
   else
     Globals = &Config->VersionDefinitions.back().Globals;
 
   for (;;) {
+    if (skip("extern"))
+      parseExtern(Globals);
+
     StringRef Cur = peek();
-    if (Cur == "extern")
-      setError("extern keyword is not supported");
     if (Cur == "}" || Cur == "local:" || Error)
       return;
     next();
-    Globals->push_back(Cur);
+    Globals->push_back({Cur, false});
     expect(";");
   }
 }

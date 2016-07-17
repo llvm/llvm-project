@@ -83,7 +83,7 @@ private:
 
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
 
-  std::unique_ptr<llvm::FileOutputBuffer> Buffer;
+  std::unique_ptr<FileOutputBuffer> Buffer;
 
   BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
@@ -275,8 +275,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
     return;
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
-  if (InputFile *File = Sym->getSourceFile<ELFT>())
-    Msg += " in " + getFilename(File);
+  if (Sym->File)
+    Msg += " in " + getFilename(Sym->File);
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
     warning(Msg);
   else
@@ -715,7 +715,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (isOutputDynamic() && S->includeInDynsym()) {
       Out<ELFT>::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
-        if (SS->File->isNeeded())
+        if (SS->file()->isNeeded())
           Out<ELFT>::VerNeed->addSymbol(SS);
     }
   }

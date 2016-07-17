@@ -1185,7 +1185,7 @@ template <class ELFT>
 MergeOutputSection<ELFT>::MergeOutputSection(StringRef Name, uint32_t Type,
                                              uintX_t Flags, uintX_t Alignment)
     : OutputSectionBase<ELFT>(Name, Type, Flags),
-      Builder(llvm::StringTableBuilder::RAW, Alignment) {}
+      Builder(StringTableBuilder::RAW, Alignment) {}
 
 template <class ELFT> void MergeOutputSection<ELFT>::writeTo(uint8_t *Buf) {
   if (shouldTailMerge()) {
@@ -1570,7 +1570,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
     SS->symbol()->VersionId = VER_NDX_GLOBAL;
     return;
   }
-  SharedFile<ELFT> *F = SS->File;
+  SharedFile<ELFT> *F = SS->file();
   // If we don't already know that we need an Elf_Verneed for this DSO, prepare
   // to create one by adding it to our needed list and creating a dynstr entry
   // for the soname.
@@ -1582,7 +1582,7 @@ void VersionNeedSection<ELFT>::addSymbol(SharedSymbol<ELFT> *SS) {
   // dynstr entry for the version name.
   if (NV.Index == 0) {
     NV.StrTab = Out<ELFT>::DynStrTab->addString(
-        SS->File->getStringTable().data() + SS->Verdef->getAux()->vda_name);
+        SS->file()->getStringTable().data() + SS->Verdef->getAux()->vda_name);
     NV.Index = NextIndex++;
   }
   SS->symbol()->VersionId = NV.Index;
@@ -1666,7 +1666,7 @@ void BuildIdFnv1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
 
 template <class ELFT>
 void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
-  llvm::MD5 Hash;
+  MD5 Hash;
   for (ArrayRef<uint8_t> Buf : Bufs)
     Hash.update(Buf);
   MD5::MD5Result Res;
@@ -1676,7 +1676,7 @@ void BuildIdMd5<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
 
 template <class ELFT>
 void BuildIdSha1<ELFT>::writeBuildId(ArrayRef<ArrayRef<uint8_t>> Bufs) {
-  llvm::SHA1 Hash;
+  SHA1 Hash;
   for (ArrayRef<uint8_t> Buf : Bufs)
     Hash.update(Buf);
   memcpy(this->HashBuf, Hash.final().data(), 20);

@@ -422,6 +422,10 @@ public:
     return iterator(New);
   }
 
+  iterator insert(iterator where, const NodeTy &New) {
+    return this->insert(where, new NodeTy(New));
+  }
+
   iterator insertAfter(iterator where, NodeTy *New) {
     if (empty())
       return insert(begin(), New);
@@ -668,7 +672,7 @@ struct ilist : public iplist<NodeTy> {
   typedef typename iplist<NodeTy>::iterator iterator;
 
   ilist() {}
-  ilist(const ilist &right) {
+  ilist(const ilist &right) : iplist<NodeTy>() {
     insert(this->begin(), right.begin(), right.end());
   }
   explicit ilist(size_type count) {
