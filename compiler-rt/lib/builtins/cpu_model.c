@@ -131,22 +131,22 @@ static bool isCpuIdSupported() {
 #if defined(__GNUC__) || defined(__clang__)
 #if defined(__i386__)
   int __cpuid_supported;
-  __asm("  pushfl\n"
-        "  popl   %%eax\n"
-        "  movl   %%eax,%%ecx\n"
-        "  xorl   $0x00200000,%%eax\n"
-        "  pushl  %%eax\n"
-        "  popfl\n"
-        "  pushfl\n"
-        "  popl   %%eax\n"
-        "  movl   $0,%0\n"
-        "  cmpl   %%eax,%%ecx\n"
-        "  je     1f\n"
-        "  movl   $1,%0\n"
-        "1:"
-        : "=r"(__cpuid_supported)
-        :
-        : "eax", "ecx");
+  __asm__("  pushfl\n"
+          "  popl   %%eax\n"
+          "  movl   %%eax,%%ecx\n"
+          "  xorl   $0x00200000,%%eax\n"
+          "  pushl  %%eax\n"
+          "  popfl\n"
+          "  pushfl\n"
+          "  popl   %%eax\n"
+          "  movl   $0,%0\n"
+          "  cmpl   %%eax,%%ecx\n"
+          "  je     1f\n"
+          "  movl   $1,%0\n"
+          "1:"
+          : "=r"(__cpuid_supported)
+          :
+          : "eax", "ecx");
   if (!__cpuid_supported)
     return false;
 #endif
@@ -165,17 +165,17 @@ static void getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
 #if defined(__GNUC__) || defined(__clang__)
 #if defined(__x86_64__)
   // gcc doesn't know cpuid would clobber ebx/rbx. Preseve it manually.
-  asm("movq\t%%rbx, %%rsi\n\t"
-      "cpuid\n\t"
-      "xchgq\t%%rbx, %%rsi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value));
+  __asm__("movq\t%%rbx, %%rsi\n\t"
+          "cpuid\n\t"
+          "xchgq\t%%rbx, %%rsi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value));
 #elif defined(__i386__)
-  asm("movl\t%%ebx, %%esi\n\t"
-      "cpuid\n\t"
-      "xchgl\t%%ebx, %%esi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value));
+  __asm__("movl\t%%ebx, %%esi\n\t"
+          "cpuid\n\t"
+          "xchgl\t%%ebx, %%esi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value));
 // pedantic #else returns to appease -Wunreachable-code (so we don't generate
 // postprocessed code that looks like "return true; return false;")
 #else
@@ -204,11 +204,11 @@ static void getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 #if defined(__GNUC__) || defined(__clang__)
   // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
   // FIXME: should we save this for Clang?
-  asm("movq\t%%rbx, %%rsi\n\t"
-      "cpuid\n\t"
-      "xchgq\t%%rbx, %%rsi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value), "c"(subleaf));
+  __asm__("movq\t%%rbx, %%rsi\n\t"
+          "cpuid\n\t"
+          "xchgq\t%%rbx, %%rsi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value), "c"(subleaf));
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -221,11 +221,11 @@ static void getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
 #endif
 #elif defined(__i386__) || defined(_M_IX86)
 #if defined(__GNUC__) || defined(__clang__)
-  asm("movl\t%%ebx, %%esi\n\t"
-      "cpuid\n\t"
-      "xchgl\t%%ebx, %%esi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value), "c"(subleaf));
+  __asm__("movl\t%%ebx, %%esi\n\t"
+          "cpuid\n\t"
+          "xchgl\t%%ebx, %%esi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value), "c"(subleaf));
 #elif defined(_MSC_VER)
   __asm {
       mov   eax,value
