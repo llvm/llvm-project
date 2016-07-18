@@ -20,8 +20,9 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#include "InstrProfilingUtil.h"
+#include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
+#include "InstrProfilingUtil.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -171,45 +172,16 @@ static uint64_t read_64bit_value() {
 
 static char *mangle_filename(const char *orig_filename) {
   char *new_filename;
-  size_t filename_len, prefix_len;
+  size_t prefix_len;
   int prefix_strip;
-  int level = 0;
-  const char *fname, *ptr;
-  const char *prefix = getenv("GCOV_PREFIX");
-  const char *prefix_strip_str = getenv("GCOV_PREFIX_STRIP");
+  const char *prefix = lprofGetPathPrefix(&prefix_strip, &prefix_len);
 
-  if (prefix == NULL || prefix[0] == '\0')
+  if (prefix == NULL)
     return strdup(orig_filename);
 
-  if (prefix_strip_str) {
-    prefix_strip = atoi(prefix_strip_str);
-
-    /* Negative GCOV_PREFIX_STRIP values are ignored */
-    if (prefix_strip < 0)
-      prefix_strip = 0;
-  } else {
-    prefix_strip = 0;
-  }
-
-  fname = orig_filename;
-  for (level = 0, ptr = fname + 1; level < prefix_strip; ++ptr) {
-    if (*ptr == '\0')
-      break;
-
-    if (!IS_DIR_SEPARATOR(*ptr))
-      continue;
-    fname = ptr;
-    ++level;
-  }
-
-  filename_len = strlen(fname);
-  prefix_len = strlen(prefix);
-  new_filename = malloc(prefix_len + 1 + filename_len + 1);
-  memcpy(new_filename, prefix, prefix_len);
-
-  if (!IS_DIR_SEPARATOR(prefix[prefix_len - 1]))
-    new_filename[prefix_len++] = DIR_SEPARATOR;
-  memcpy(new_filename + prefix_len, fname, filename_len + 1);
+  new_filename = malloc(prefix_len + 1 + strlen(orig_filename) + 1);
+  lprofApplyPathPrefix(new_filename, orig_filename, prefix, prefix_len,
+                       prefix_strip);
 
   return new_filename;
 }

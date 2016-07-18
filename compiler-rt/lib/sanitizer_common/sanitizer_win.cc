@@ -735,8 +735,6 @@ void BufferedStackTrace::SlowUnwindStackWithContext(uptr pc, void *context,
   STACKFRAME64 stack_frame;
   memset(&stack_frame, 0, sizeof(stack_frame));
 
-  InitializeDbgHelpIfNeeded();
-
   size = 0;
 #if defined(_WIN64)
   int machine_type = IMAGE_FILE_MACHINE_AMD64;

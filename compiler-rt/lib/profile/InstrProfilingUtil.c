@@ -26,6 +26,7 @@
 #include <sys/utsname.h>
 #endif
 
+#include <stdlib.h>
 #include <string.h>
 
 COMPILER_RT_VISIBILITY
@@ -131,4 +132,55 @@ COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
 #endif
 
   return f;
+}
+
+COMPILER_RT_VISIBILITY const char *lprofGetPathPrefix(int *PrefixStrip,
+                                                      size_t *PrefixLen) {
+  const char *Prefix = getenv("GCOV_PREFIX");
+  const char *PrefixStripStr = getenv("GCOV_PREFIX_STRIP");
+
+  *PrefixLen = 0;
+  *PrefixStrip = 0;
+  if (Prefix == NULL || Prefix[0] == '\0')
+    return NULL;
+
+  if (PrefixStripStr) {
+    *PrefixStrip = atoi(PrefixStripStr);
+
+    /* Negative GCOV_PREFIX_STRIP values are ignored */
+    if (*PrefixStrip < 0)
+      *PrefixStrip = 0;
+  } else {
+    *PrefixStrip = 0;
+  }
+  *PrefixLen = strlen(Prefix);
+
+  return Prefix;
+}
+
+COMPILER_RT_VISIBILITY void
+lprofApplyPathPrefix(char *Dest, const char *PathStr, const char *Prefix,
+                     size_t PrefixLen, int PrefixStrip) {
+
+  const char *Ptr;
+  int Level;
+  const char *StrippedPathStr = PathStr;
+
+  for (Level = 0, Ptr = PathStr + 1; Level < PrefixStrip; ++Ptr) {
+    if (*Ptr == '\0')
+      break;
+
+    if (!IS_DIR_SEPARATOR(*Ptr))
+      continue;
+
+    StrippedPathStr = Ptr;
+    ++Level;
+  }
+
+  memcpy(Dest, Prefix, PrefixLen);
+
+  if (!IS_DIR_SEPARATOR(Prefix[PrefixLen - 1]))
+    Dest[PrefixLen++] = DIR_SEPARATOR;
+
+  memcpy(Dest + PrefixLen, StrippedPathStr, strlen(StrippedPathStr) + 1);
 }
