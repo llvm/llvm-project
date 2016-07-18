@@ -438,6 +438,23 @@ public:
     void
     LongestCommonPrefix (std::string &common_prefix);
 
+    //------------------------------------------------------------------
+    /// Return whether a given environment variable exists.
+    ///
+    /// This command treats Args like a list of environment variables,
+    /// as used in ProcessLaunchInfo.  It treats each argument as
+    /// an {env_var_name}={value} or an {env_var_name} entry.
+    ///
+    /// @param[in] env_var_name
+    ///     Specifies the name of the environment variable to check.
+    ///
+    /// @return
+    ///     true if the specified env var name exists in the list in
+    ///     either of the above-mentioned formats; otherwise, false.
+    //------------------------------------------------------------------
+    bool
+    ContainsEnvironmentVariable(const char *env_var_name) const;
+
 protected:
     //------------------------------------------------------------------
     // Classes that inherit from Args can see and modify these

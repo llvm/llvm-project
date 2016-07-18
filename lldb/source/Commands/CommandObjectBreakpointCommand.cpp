@@ -36,14 +36,13 @@ class CommandObjectBreakpointCommandAdd :
     public IOHandlerDelegateMultiline
 {
 public:
-    CommandObjectBreakpointCommandAdd (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "add",
-                            "Add a set of commands to a breakpoint, to be executed whenever the breakpoint is hit."
-                            "  If no breakpoint is specified, adds the commands to the last created breakpoint.",
-                            nullptr),
-        IOHandlerDelegateMultiline ("DONE", IOHandlerDelegate::Completion::LLDBCommand),
-        m_options (interpreter)
+    CommandObjectBreakpointCommandAdd(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "add",
+                              "Add LLDB commands to a breakpoint, to be executed whenever the breakpoint is hit."
+                              "  If no breakpoint is specified, adds the commands to the last created breakpoint.",
+                              nullptr),
+          IOHandlerDelegateMultiline("DONE", IOHandlerDelegate::Completion::LLDBCommand),
+          m_options(interpreter)
     {
         SetHelpLong (
 R"(
@@ -855,11 +854,11 @@ protected:
 // CommandObjectBreakpointCommand
 //-------------------------------------------------------------------------
 
-CommandObjectBreakpointCommand::CommandObjectBreakpointCommand (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "command",
-                            "A set of commands for adding, removing and examining bits of code to be executed when the breakpoint is hit (breakpoint 'commands').",
-                            "command <sub-command> [<sub-command-options>] <breakpoint-id>")
+CommandObjectBreakpointCommand::CommandObjectBreakpointCommand(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(
+          interpreter, "command",
+          "Commands for adding, removing and listing LLDB commands executed when a breakpoint is hit.",
+          "command <sub-command> [<sub-command-options>] <breakpoint-id>")
 {
     CommandObjectSP add_command_object (new CommandObjectBreakpointCommandAdd (interpreter));
     CommandObjectSP delete_command_object (new CommandObjectBreakpointCommandDelete (interpreter));

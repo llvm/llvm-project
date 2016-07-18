@@ -311,6 +311,7 @@ enum {
   EM_CSR_KALIMBA   = 219, // CSR Kalimba architecture family
   EM_AMDGPU        = 224, // AMD GPU architecture
   EM_LANAI         = 244, // Lanai 32-bit processor
+  EM_BPF           = 247, // Linux kernel bpf virtual machine
 
   // A request has been made to the maintainer of the official registry for
   // such numbers for an official value for WebAssembly. As soon as one is
@@ -614,6 +615,11 @@ enum {
 // ELF Relocation types for AMDGPU
 enum {
 #include "ELFRelocs/AMDGPU.def"
+};
+
+// ELF Relocation types for BPF
+enum {
+#include "ELFRelocs/BPF.def"
 };
 
 #undef ELF_RELOC

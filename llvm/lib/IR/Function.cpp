@@ -461,17 +461,45 @@ static const char * const IntrinsicNameTable[] = {
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
+/// Table of per-target intrinsic name tables.
+#define GET_INTRINSIC_TARGET_DATA
+#include "llvm/IR/Intrinsics.gen"
+#undef GET_INTRINSIC_TARGET_DATA
+
+/// Find the segment of \c IntrinsicNameTable for intrinsics with the same
+/// target as \c Name, or the generic table if \c Name is not target specific.
+///
+/// Returns the relevant slice of \c IntrinsicNameTable
+static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
+  assert(Name.startswith("llvm."));
+
+  ArrayRef<IntrinsicTargetInfo> Targets(TargetInfos);
+  // Drop "llvm." and take the first dotted component. That will be the target
+  // if this is target specific.
+  StringRef Target = Name.drop_front(5).split('.').first;
+  auto It = std::lower_bound(Targets.begin(), Targets.end(), Target,
+                             [](const IntrinsicTargetInfo &TI,
+                                StringRef Target) { return TI.Name < Target; });
+  // We've either found the target or just fall back to the generic set, which
+  // is always first.
+  const auto &TI = It != Targets.end() && It->Name == Target ? *It : Targets[0];
+  return makeArrayRef(&IntrinsicNameTable[1] + TI.Offset, TI.Count);
+}
+
 /// \brief This does the actual lookup of an intrinsic ID which
 /// matches the given function name.
 static Intrinsic::ID lookupIntrinsicID(const ValueName *ValName) {
   StringRef Name = ValName->getKey();
 
-  ArrayRef<const char *> NameTable(&IntrinsicNameTable[1],
-                                   std::end(IntrinsicNameTable));
+  ArrayRef<const char *> NameTable = findTargetSubtable(Name);
   int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
-  Intrinsic::ID ID = static_cast<Intrinsic::ID>(Idx + 1);
-  if (ID == Intrinsic::not_intrinsic)
-    return ID;
+  if (Idx == -1)
+    return Intrinsic::not_intrinsic;
+
+  // Intrinsic IDs correspond to the location in IntrinsicNameTable, but we have
+  // an index into a sub-table.
+  int Adjust = NameTable.data() - IntrinsicNameTable;
+  Intrinsic::ID ID = static_cast<Intrinsic::ID>(Idx + Adjust);
 
   // If the intrinsic is not overloaded, require an exact match. If it is
   // overloaded, require a prefix match.

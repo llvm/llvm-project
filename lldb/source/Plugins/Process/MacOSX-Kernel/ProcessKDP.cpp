@@ -1187,11 +1187,9 @@ public:
 class CommandObjectMultiwordProcessKDP : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordProcessKDP (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "process plugin",
-                            "A set of commands for operating on a ProcessKDP process.",
-                            "process plugin <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordProcessKDP(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "process plugin", "Commands for operating on a ProcessKDP process.",
+                                 "process plugin <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("packet", CommandObjectSP (new CommandObjectProcessKDPPacket    (interpreter)));
     }

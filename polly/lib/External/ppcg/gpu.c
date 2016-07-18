@@ -1453,6 +1453,7 @@ static int find_array_index(struct ppcg_kernel *kernel, const char *name)
  * to the current kernel.
  */
 struct ppcg_transform_data {
+        struct ppcg_options *options;
 	struct ppcg_kernel *kernel;
 	struct gpu_stmt_access *accesses;
 	isl_pw_multi_aff *iterator_map;
@@ -1787,7 +1788,8 @@ static __isl_give isl_ast_expr *transform_expr(__isl_take isl_ast_expr *expr,
  */
 static __isl_give isl_ast_node *create_domain_leaf(
 	struct ppcg_kernel *kernel, __isl_take isl_ast_node *node,
-	__isl_keep isl_ast_build *build, struct gpu_stmt *gpu_stmt)
+	__isl_keep isl_ast_build *build, struct gpu_stmt *gpu_stmt,
+        struct gpu_gen *gen)
 {
 	struct ppcg_transform_data data;
 	struct ppcg_kernel_stmt *stmt;
@@ -1822,10 +1824,9 @@ static __isl_give isl_ast_node *create_domain_leaf(
 	data.accesses = stmt->u.d.stmt->accesses;
 	data.iterator_map = iterator_map;
 	data.sched2shared = sched2shared;
-	stmt->u.d.ref2expr = pet_stmt_build_ast_exprs(stmt->u.d.stmt->stmt,
+	stmt->u.d.ref2expr = gen->build_ast_expr(stmt->u.d.stmt->stmt,
 					    build, &transform_index, &data,
 					    &transform_expr, &data);
-
 	isl_pw_multi_aff_free(iterator_map);
 	isl_pw_multi_aff_free(sched2shared);
 
@@ -1944,6 +1945,7 @@ static __isl_give isl_ast_node *create_sync_leaf(
  */
 struct ppcg_at_domain_data {
 	struct gpu_prog *prog;
+	struct gpu_gen *gen;
 	struct ppcg_kernel *kernel;
 };
 
@@ -1985,7 +1987,8 @@ static __isl_give isl_ast_node *at_domain(__isl_take isl_ast_node *node,
 	isl_id_free(id);
 
 	if (gpu_stmt)
-		return create_domain_leaf(data->kernel, node, build, gpu_stmt);
+		return create_domain_leaf(data->kernel, node, build, gpu_stmt,
+                                          data->gen);
 
 	if (!prefixcmp(name, "to_device_") || !prefixcmp(name, "from_device_"))
 		return node;
@@ -2294,7 +2297,7 @@ static isl_bool update_depth(__isl_keep isl_schedule_node *node, void *user)
  * The ASTs for the device code are embedded in ppcg_kernel objects
  * attached to the leaf nodes that call "kernel".
  */
-static __isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
+__isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
 	__isl_take isl_schedule *schedule)
 {
 	struct ppcg_at_domain_data data;
@@ -2304,6 +2307,7 @@ static __isl_give isl_ast_node *generate_code(struct gpu_gen *gen,
 	int depth;
 
 	data.prog = gen->prog;
+	data.gen = gen;
 	data.kernel = NULL;
 
 	depth = 0;
@@ -5305,7 +5309,7 @@ int generate_gpu(isl_ctx *ctx, const char *input, FILE *out,
  * arrays that are not local to "prog" and remove those elements that
  * are definitely killed or definitely written by "prog".
  */
-static __isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog)
+__isl_give isl_union_set *compute_may_persist(struct gpu_prog *prog)
 {
 	int i;
 	isl_union_set *may_persist, *killed;

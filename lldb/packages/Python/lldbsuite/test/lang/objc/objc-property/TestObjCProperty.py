@@ -113,3 +113,17 @@ class ObjCPropertyTestCase(TestBase):
         idWithProtocol_error = idWithProtocol_value.GetError()
         self.assertTrue (idWithProtocol_error.Success())
         self.assertTrue (idWithProtocol_value.GetTypeName() == "id")
+
+        # Make sure that class property getter works as expected
+        value = frame.EvaluateExpression("BaseClass.classInt", False)
+        self.assertTrue (value.GetError().Success())
+        self.assertTrue (value.GetValueAsUnsigned (11111) == 123)
+
+        # Make sure that class property setter works as expected
+        value = frame.EvaluateExpression("BaseClass.classInt = 234", False)
+        self.assertTrue (value.GetError().Success())
+
+        # Verify that setter above actually worked
+        value = frame.EvaluateExpression("BaseClass.classInt", False)
+        self.assertTrue (value.GetError().Success())
+        self.assertTrue (value.GetValueAsUnsigned (11111) == 234)

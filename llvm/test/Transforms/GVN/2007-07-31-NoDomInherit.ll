@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | grep "tmp47 = phi i32 "
+; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
 
 	%struct.anon = type { i32 (i32, i32, i32)*, i32, i32, [3 x i32], i8*, i8*, i8* }
 @debug = external constant i32		; <i32*> [#uses=0]
@@ -214,6 +214,7 @@ bb18:		; preds = %bb49
 	%tmp46 = load i32, i32* %i		; <i32> [#uses=1]
 	call void @fix_operands( i32 %tmp46 )
 	%tmp47 = load i32, i32* %i		; <i32> [#uses=1]
+; CHECK: %tmp47 = phi i32 [ %tmp48, %bb18 ], [ 0, %bb17 ]
 	%tmp48 = add i32 %tmp47, 1		; <i32> [#uses=1]
 	store i32 %tmp48, i32* %i
 	br label %bb49

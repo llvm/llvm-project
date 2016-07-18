@@ -112,10 +112,14 @@ public:
   VarStreamArrayIterator(const ArrayType &Array, const Extractor &E,
                          bool *HadError = nullptr)
       : IterRef(Array.Stream), Array(&Array), HadError(HadError), Extract(E) {
-    auto EC = Extract(IterRef, ThisLen, ThisValue);
-    if (EC) {
-      consumeError(std::move(EC));
-      markError();
+    if (IterRef.getLength() == 0)
+      moveToEnd();
+    else {
+      auto EC = Extract(IterRef, ThisLen, ThisValue);
+      if (EC) {
+        consumeError(std::move(EC));
+        markError();
+      }
     }
   }
   VarStreamArrayIterator() {}

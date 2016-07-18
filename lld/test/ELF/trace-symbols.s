@@ -15,14 +15,15 @@
 # OBJECTRFOO: trace-symbols.s.tmp: reference to foo
 
 # RUN: ld.lld -y foo -trace-symbol=common -trace-symbol=hsymbol \
-# RUN:   %t %t1 %t2 -o %t3 2>&1 | not FileCheck -check-prefix=OBJECTDCOMMON %s
-# OBJECTDCOMMON: trace-symbols.s.tmp1: definition of common
+# RUN:   %t %t1 %t2 -o %t3 2>&1 | FileCheck -check-prefix=OBJECTDCOMMON %s
+# OBJECTDCOMMON: trace-symbols.s.tmp1: common definition of common
 
 # RUN: ld.lld -y foo -trace-symbol=common -trace-symbol=hsymbol \
-# RUN:   %t %t1 %t2 -o %t3 2>&1 | not FileCheck -check-prefix=OBJECTD1FOO %s
-# RUN: ld.lld -y foo -y common %t %t2 %t1 -o %t3 2>&1 | not FileCheck \
-# RUN:   -check-prefix=OBJECTD1FOO %s
+# RUN:   %t %t1 %t2 -o %t3 2>&1 | FileCheck -check-prefix=OBJECTD1FOO %s
+# OBJECTD1FOO: trace-symbols.s.tmp: reference to foo
+# OBJECTD1FOO: trace-symbols.s.tmp1: common definition of common
 # OBJECTD1FOO: trace-symbols.s.tmp1: definition of foo
+# OBJECTD1FOO: trace-symbols.s.tmp2: definition of foo
 
 # RUN: ld.lld -y foo -trace-symbol=common -trace-symbol=hsymbol \
 # RUN:   %t %t1 %t2 -o %t3 2>&1 | FileCheck -check-prefix=OBJECTD2FOO %s
@@ -38,23 +39,16 @@
 # RUN:   FileCheck -check-prefix=SHLIBDCOMMON %s
 # SHLIBDCOMMON: trace-symbols.s.tmp1.so: definition of common
 
-# RUN: ld.lld -y foo -y common %t %t1.so %t2 -o %t3 2>&1 | \
-# RUN:   not FileCheck -check-prefix=SHLIBD1FOO %s
-# RUN: ld.lld -y foo -y common %t %t1.so %t2.so -o %t3 2>&1 | \
-# RUN:   FileCheck -check-prefix=SHLIBD1FOO %s
-# RUN: ld.lld -y foo %t %t1.so %t2.a -o %t3 | \
-# RUN:   FileCheck -check-prefix=SHLIBD1FOO %s
-# SHLIBD1FOO: trace-symbols.s.tmp1.so: definition of foo
-
 # RUN: ld.lld -y foo -y common %t %t2.so %t1.so -o %t3 2>&1 | \
 # RUN:   FileCheck -check-prefix=SHLIBD2FOO %s
 # RUN: ld.lld -y foo %t %t1.a %t2.so -o %t3 | \
-# RUN:   not FileCheck -check-prefix=SHLIBD2FOO %s
-# SHLIBD2FOO: trace-symbols.s.tmp2.so: definition of foo
+# RUN:   FileCheck -check-prefix=NO-SHLIBD2FOO %s
+# SHLIBD2FOO:        trace-symbols.s.tmp2.so: definition of foo
+# NO-SHLIBD2FOO-NOT: trace-symbols.s.tmp2.so: definition of foo
 
 # RUN: ld.lld -y foo -y common %t %t2 %t1.a -o %t3 2>&1 | \
-# RUN:   not FileCheck -check-prefix=ARCHIVEDCOMMON %s
-# ARCHIVEDCOMMON: trace-symbols.s.tmp1.a(trace-symbols.s.tmp1): definition of \
+# RUN:   FileCheck -check-prefix=ARCHIVEDCOMMON %s
+# ARCHIVEDCOMMON-NOT: trace-symbols.s.tmp1.a(trace-symbols.s.tmp1): definition of \
 # common
 
 # RUN: ld.lld -y foo %t %t1.a %t2.so -o %t3 | \
@@ -70,8 +64,8 @@
 # SHLIBDBAR: trace-symbols.s.tmp2.so: definition of bar
 
 # RUN: ld.lld -y foo -y bar %t %t1.so %t2.so -o %t3 | \
-# RUN:   not FileCheck -check-prefix=SHLIBRBAR %s
-# SHLIBRBAR: trace-symbols.s.tmp1.so: reference to bar
+# RUN:   FileCheck -check-prefix=SHLIBRBAR %s
+# SHLIBRBAR-NOT: trace-symbols.s.tmp1.so: reference to bar
 
 # RUN: ld.lld -y foo -y bar %t -u bar --start-lib %t1 %t2 --end-lib -o %t3 | \
 # RUN:   FileCheck -check-prefix=STARTLIB %s

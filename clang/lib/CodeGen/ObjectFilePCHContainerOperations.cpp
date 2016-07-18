@@ -55,7 +55,7 @@ class PCHContainerGenerator : public ASTConsumer {
   std::unique_ptr<llvm::LLVMContext> VMContext;
   std::unique_ptr<llvm::Module> M;
   std::unique_ptr<CodeGen::CodeGenModule> Builder;
-  raw_pwrite_stream *OS;
+  std::unique_ptr<raw_pwrite_stream> OS;
   std::shared_ptr<PCHBuffer> Buffer;
 
   /// Visit every type and emit debug info for it.
@@ -138,15 +138,15 @@ class PCHContainerGenerator : public ASTConsumer {
 public:
   PCHContainerGenerator(CompilerInstance &CI, const std::string &MainFileName,
                         const std::string &OutputFileName,
-                        raw_pwrite_stream *OS,
+                        std::unique_ptr<raw_pwrite_stream> OS,
                         std::shared_ptr<PCHBuffer> Buffer)
       : Diags(CI.getDiagnostics()), MainFileName(MainFileName),
         OutputFileName(OutputFileName), Ctx(nullptr),
         MMap(CI.getPreprocessor().getHeaderSearchInfo().getModuleMap()),
         HeaderSearchOpts(CI.getHeaderSearchOpts()),
         PreprocessorOpts(CI.getPreprocessorOpts()),
-        TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()), OS(OS),
-        Buffer(std::move(Buffer)) {
+        TargetOpts(CI.getTargetOpts()), LangOpts(CI.getLangOpts()),
+        OS(std::move(OS)), Buffer(std::move(Buffer)) {
     // The debug info output isn't affected by CodeModel and
     // ThreadModel, but the backend expects them to be nonempty.
     CodeGenOpts.CodeModel = "default";
@@ -281,20 +281,18 @@ public:
     DEBUG({
       // Print the IR for the PCH container to the debug output.
       llvm::SmallString<0> Buffer;
-      llvm::raw_svector_ostream OS(Buffer);
-      clang::EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
-                               Ctx.getTargetInfo().getDataLayout(), M.get(),
-                               BackendAction::Backend_EmitLL, &OS);
+      clang::EmitBackendOutput(
+          Diags, CodeGenOpts, TargetOpts, LangOpts,
+          Ctx.getTargetInfo().getDataLayout(), M.get(),
+          BackendAction::Backend_EmitLL,
+          llvm::make_unique<llvm::raw_svector_ostream>(Buffer));
       llvm::dbgs() << Buffer;
     });
 
     // Use the LLVM backend to emit the pch container.
     clang::EmitBackendOutput(Diags, CodeGenOpts, TargetOpts, LangOpts,
                              Ctx.getTargetInfo().getDataLayout(), M.get(),
-                             BackendAction::Backend_EmitObj, OS);
-
-    // Make sure the pch container hits disk.
-    OS->flush();
+                             BackendAction::Backend_EmitObj, std::move(OS));
 
     // Free the memory for the temporary buffer.
     llvm::SmallVector<char, 0> Empty;
@@ -307,10 +305,11 @@ public:
 std::unique_ptr<ASTConsumer>
 ObjectFilePCHContainerWriter::CreatePCHContainerGenerator(
     CompilerInstance &CI, const std::string &MainFileName,
-    const std::string &OutputFileName, llvm::raw_pwrite_stream *OS,
+    const std::string &OutputFileName,
+    std::unique_ptr<llvm::raw_pwrite_stream> OS,
     std::shared_ptr<PCHBuffer> Buffer) const {
-  return llvm::make_unique<PCHContainerGenerator>(CI, MainFileName,
-                                                  OutputFileName, OS, Buffer);
+  return llvm::make_unique<PCHContainerGenerator>(
+      CI, MainFileName, OutputFileName, std::move(OS), Buffer);
 }
 
 void ObjectFilePCHContainerReader::ExtractPCH(

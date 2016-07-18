@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | grep getelementptr | count 1
+; RUN: opt < %s -gvn -S | FileCheck %s
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "i386-apple-darwin9.5"
@@ -24,3 +24,15 @@ bb21:		; preds = %bb21, %bb
 return:		; preds = %entry
 	ret void
 }
+
+; CHECK: define void @d_print_mod_list(%struct.d_print_info* %dpi, %struct.d_print_mod* %mods, i32 %suffix) #0 {
+; CHECK: entry:
+; CHECK:   %0 = getelementptr %struct.d_print_info, %struct.d_print_info* %dpi, i32 0, i32 1
+; CHECK:   br i1 false, label %return, label %bb
+; CHECK: bb:
+; CHECK:   br label %bb21
+; CHECK: bb21:
+; CHECK:   br label %bb21
+; CHECK: return:
+; CHECK:   ret void
+; CHECK: }

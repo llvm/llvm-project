@@ -6,7 +6,7 @@
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-block-threshold=1  -S | FileCheck %s --check-prefix=CHECK_WITH_CHECK
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-block-threshold=10 -S | FileCheck %s --check-prefix=CHECK3
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -S | FileCheck %s --check-prefix=CHECK4
-; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_TRACE_PC_INDIR
+; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc  -S | FileCheck %s --check-prefix=CHECK_TRACE_PC
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=3 -sanitizer-coverage-8bit-counters=1  -S | FileCheck %s --check-prefix=CHECK-8BIT
 
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=2 -sanitizer-coverage-block-threshold=10 \
@@ -120,10 +120,15 @@ entry:
 ; CHECK4-NOT: call void @__sanitizer_cov_indir_call16({{.*}},[[CACHE]])
 ; CHECK4: ret void
 
-; CHECK_TRACE_PC_INDIR-LABEL: define void @CallViaVptr
-; CHECK_TRACE_PC_INDIR: call void @__sanitizer_cov_trace_pc_indir
-; CHECK_TRACE_PC_INDIR: call void @__sanitizer_cov_trace_pc_indir
-; CHECK_TRACE_PC_INDIR: ret void
+; CHECK_TRACE_PC-LABEL: define void @foo
+; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc
+; CHECK_TRACE_PC: call void asm sideeffect "", ""()
+; CHECK_TRACE_PC: ret void
+
+; CHECK_TRACE_PC-LABEL: define void @CallViaVptr
+; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc_indir
+; CHECK_TRACE_PC: call void @__sanitizer_cov_trace_pc_indir
+; CHECK_TRACE_PC: ret void
 
 define void @call_unreachable() uwtable sanitize_address {
 entry:

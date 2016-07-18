@@ -143,8 +143,8 @@ private:
   bool computeCallAddress(const Value *V, Address &Addr);
   bool simplifyAddress(Address &Addr, MVT VT);
   void addLoadStoreOperands(Address &Addr, const MachineInstrBuilder &MIB,
-                            unsigned Flags, unsigned ScaleFactor,
-                            MachineMemOperand *MMO);
+                            MachineMemOperand::Flags Flags,
+                            unsigned ScaleFactor, MachineMemOperand *MMO);
   bool isMemCpySmall(uint64_t Len, unsigned Alignment);
   bool tryEmitSmallMemCpy(Address Dest, Address Src, uint64_t Len,
                           unsigned Alignment);
@@ -1040,7 +1040,7 @@ bool AArch64FastISel::simplifyAddress(Address &Addr, MVT VT) {
 
 void AArch64FastISel::addLoadStoreOperands(Address &Addr,
                                            const MachineInstrBuilder &MIB,
-                                           unsigned Flags,
+                                           MachineMemOperand::Flags Flags,
                                            unsigned ScaleFactor,
                                            MachineMemOperand *MMO) {
   int64_t Offset = Addr.getOffset() / ScaleFactor;

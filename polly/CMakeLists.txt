@@ -138,8 +138,7 @@ include_directories(
   ${CMAKE_CURRENT_BINARY_DIR}/lib/External/isl/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/isl/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/pet/include
-  ${CMAKE_CURRENT_BINARY_DIR}/lib/External/ppcg
-  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/ppcg
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External
   ${CMAKE_CURRENT_BINARY_DIR}/include
   )
 

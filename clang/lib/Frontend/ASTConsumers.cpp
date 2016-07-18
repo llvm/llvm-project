@@ -35,9 +35,9 @@ namespace {
     typedef RecursiveASTVisitor<ASTPrinter> base;
 
   public:
-    ASTPrinter(raw_ostream *Out = nullptr, bool Dump = false,
+    ASTPrinter(std::unique_ptr<raw_ostream> Out = nullptr, bool Dump = false,
                StringRef FilterString = "", bool DumpLookups = false)
-        : Out(Out ? *Out : llvm::outs()), Dump(Dump),
+        : Out(Out ? *Out : llvm::outs()), OwnedOut(std::move(Out)), Dump(Dump),
           FilterString(FilterString), DumpLookups(DumpLookups) {}
 
     void HandleTranslationUnit(ASTContext &Context) override {
@@ -94,6 +94,7 @@ namespace {
     }
 
     raw_ostream &Out;
+    std::unique_ptr<raw_ostream> OwnedOut;
     bool Dump;
     std::string FilterString;
     bool DumpLookups;
@@ -122,9 +123,11 @@ namespace {
   };
 } // end anonymous namespace
 
-std::unique_ptr<ASTConsumer> clang::CreateASTPrinter(raw_ostream *Out,
-                                                     StringRef FilterString) {
-  return llvm::make_unique<ASTPrinter>(Out, /*Dump=*/false, FilterString);
+std::unique_ptr<ASTConsumer>
+clang::CreateASTPrinter(std::unique_ptr<raw_ostream> Out,
+                        StringRef FilterString) {
+  return llvm::make_unique<ASTPrinter>(std::move(Out), /*Dump=*/false,
+                                       FilterString);
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateASTDumper(StringRef FilterString,

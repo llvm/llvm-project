@@ -98,6 +98,9 @@ public:
     lldb_private::FileSpec
     LocateExecutable (const char *basename) override;
 
+    lldb_private::Error
+    LaunchProcess(lldb_private::ProcessLaunchInfo &launch_info) override;
+
 protected:
     void
     ReadLibdispatchOffsetsAddress (lldb_private::Process *process);

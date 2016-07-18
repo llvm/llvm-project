@@ -76,10 +76,18 @@ template <class... T> tuple<V...>  make_tuple(T&&...); // constexpr in C++14
 template <class... T> tuple<ATypes...> forward_as_tuple(T&&...) noexcept; // constexpr in C++14
 template <class... T> tuple<T&...> tie(T&...) noexcept; // constexpr in C++14
 template <class... Tuples> tuple<CTypes...> tuple_cat(Tuples&&... tpls); // constexpr in C++14
-  
+
+// [tuple.apply], calling a function with a tuple of arguments:
+template <class F, class Tuple>
+  constexpr decltype(auto) apply(F&& f, Tuple&& t); // C++17
+template <class T, class Tuple>
+  constexpr T make_from_tuple(Tuple&& t); // C++17
+
 // 20.4.1.4, tuple helper classes:
 template <class T> class tuple_size; // undefined
 template <class... T> class tuple_size<tuple<T...>>;
+template <class T>
+ constexpr size_t tuple_size_v = tuple_size<T>::value; // C++17
 template <size_t I, class T> class tuple_element; // undefined
 template <size_t I, class... T> class tuple_element<I, tuple<T...>>;
 template <size_t I, class T>
@@ -1360,6 +1368,50 @@ pair<_T1, _T2>::pair(piecewise_construct_t,
 }
 
 #endif  // _LIBCPP_HAS_NO_VARIADICS
+
+#if _LIBCPP_STD_VER > 14
+template <class _Tp>
+constexpr size_t tuple_size_v = tuple_size<_Tp>::value;
+
+#define _LIBCPP_NOEXCEPT_RETURN(...) noexcept(noexcept(__VA_ARGS__)) { return __VA_ARGS__; }
+
+template <class _Fn, class _Tuple, size_t ..._Id>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr decltype(auto) __apply_tuple_impl(_Fn && __f, _Tuple && __t,
+                                            __tuple_indices<_Id...>)
+_LIBCPP_NOEXCEPT_RETURN(
+    _VSTD::__invoke_constexpr(
+        _VSTD::forward<_Fn>(__f),
+        _VSTD::get<_Id>(_VSTD::forward<_Tuple>(__t))...)
+)
+
+template <class _Fn, class _Tuple>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr decltype(auto) apply(_Fn && __f, _Tuple && __t)
+_LIBCPP_NOEXCEPT_RETURN(
+    _VSTD::__apply_tuple_impl(
+        _VSTD::forward<_Fn>(__f), _VSTD::forward<_Tuple>(__t),
+        typename __make_tuple_indices<tuple_size_v<decay_t<_Tuple>>>::type{})
+)
+
+template <class _Tp, class _Tuple, size_t... _Idx>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr _Tp __make_from_tuple_impl(_Tuple&& __t, __tuple_indices<_Idx...>)
+_LIBCPP_NOEXCEPT_RETURN(
+    _Tp(_VSTD::get<_Idx>(_VSTD::forward<_Tuple>(__t))...)
+)
+
+template <class _Tp, class _Tuple>
+inline _LIBCPP_INLINE_VISIBILITY
+constexpr _Tp make_from_tuple(_Tuple&& __t)
+_LIBCPP_NOEXCEPT_RETURN(
+    _VSTD::__make_from_tuple_impl<_Tp>(_VSTD::forward<_Tuple>(__t),
+        typename __make_tuple_indices<tuple_size_v<decay_t<_Tuple>>>::type{})
+)
+
+#undef _LIBCPP_NOEXCEPT_RETURN
+
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

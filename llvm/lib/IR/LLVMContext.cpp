@@ -196,6 +196,13 @@ void LLVMContext::setDiagnosticHandler(DiagnosticHandlerTy DiagnosticHandler,
   pImpl->RespectDiagnosticFilters = RespectFilters;
 }
 
+void LLVMContext::setDiagnosticHotnessRequested(bool Requested) {
+  pImpl->DiagnosticHotnessRequested = Requested;
+}
+bool LLVMContext::getDiagnosticHotnessRequested() const {
+  return pImpl->DiagnosticHotnessRequested;
+}
+
 LLVMContext::DiagnosticHandlerTy LLVMContext::getDiagnosticHandler() const {
   return pImpl->DiagnosticHandler;
 }

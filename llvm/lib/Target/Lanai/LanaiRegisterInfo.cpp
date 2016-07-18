@@ -34,7 +34,7 @@ using namespace llvm;
 LanaiRegisterInfo::LanaiRegisterInfo() : LanaiGenRegisterInfo(Lanai::RCA) {}
 
 const uint16_t *
-LanaiRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
+LanaiRegisterInfo::getCalleeSavedRegs(const MachineFunction * /*MF*/) const {
   return CSR_SaveList;
 }
 
@@ -61,12 +61,12 @@ BitVector LanaiRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
 }
 
 bool LanaiRegisterInfo::requiresRegisterScavenging(
-    const MachineFunction &MF) const {
+    const MachineFunction & /*MF*/) const {
   return true;
 }
 
 bool LanaiRegisterInfo::trackLivenessAfterRegAlloc(
-    const MachineFunction &MF) const {
+    const MachineFunction & /*MF*/) const {
   return true;
 }
 
@@ -257,7 +257,8 @@ bool LanaiRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 
 unsigned LanaiRegisterInfo::getRARegister() const { return Lanai::RCA; }
 
-unsigned LanaiRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+unsigned
+LanaiRegisterInfo::getFrameRegister(const MachineFunction & /*MF*/) const {
   return Lanai::FP;
 }
 
@@ -280,7 +281,7 @@ unsigned LanaiRegisterInfo::getEHHandlerRegister() const {
 }
 
 const uint32_t *
-LanaiRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
-                                        CallingConv::ID CC) const {
+LanaiRegisterInfo::getCallPreservedMask(const MachineFunction & /*MF*/,
+                                        CallingConv::ID /*CC*/) const {
   return CSR_RegMask;
 }

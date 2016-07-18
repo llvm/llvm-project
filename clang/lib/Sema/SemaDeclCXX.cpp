@@ -8885,9 +8885,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S,
     NewND = NewTD;
   }
 
-  if (!Redeclaration)
-    PushOnScopeChains(NewND, S);
-
+  PushOnScopeChains(NewND, S);
   ActOnDocumentableDecl(NewND);
   return NewND;
 }

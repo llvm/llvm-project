@@ -90,7 +90,7 @@ main_body:
   %85 = insertelement <4 x float> %84, float 0.000000e+00, i32 3
   %86 = call float @llvm.r600.dot4(<4 x float> %81, <4 x float> %85)
   %87 = insertelement <4 x float> undef, float %86, i32 0
-  call void @llvm.R600.store.swizzle(<4 x float> %87, i32 2, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %87, i32 2, i32 2)
   ret void
 }
 
@@ -109,7 +109,7 @@ declare float @llvm.AMDGPU.clamp.f32(float, float, float) #1
 ; Function Attrs: nounwind readonly
 declare float @llvm.pow.f32(float, float) #3
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #1 = { readnone }
 attributes #2 = { readonly }

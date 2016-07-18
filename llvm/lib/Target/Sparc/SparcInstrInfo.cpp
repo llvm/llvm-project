@@ -157,7 +157,7 @@ static void parseCondBranch(MachineInstr *LastInst, MachineBasicBlock *&Target,
   Target = LastInst->getOperand(0).getMBB();
 }
 
-bool SparcInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool SparcInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TBB,
                                    MachineBasicBlock *&FBB,
                                    SmallVectorImpl<MachineOperand> &Cond,

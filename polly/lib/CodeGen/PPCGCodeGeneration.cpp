@@ -26,8 +26,11 @@
 #include "isl/union_map.h"
 
 extern "C" {
-#include "gpu.h"
-#include "ppcg.h"
+#include "ppcg/cuda.h"
+#include "ppcg/gpu.h"
+#include "ppcg/gpu_print.h"
+#include "ppcg/ppcg.h"
+#include "ppcg/schedule.h"
 }
 
 #include "llvm/Support/Debug.h"
@@ -41,6 +44,29 @@ static cl::opt<bool> DumpSchedule("polly-acc-dump-schedule",
                                   cl::desc("Dump the computed GPU Schedule"),
                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
                                   cl::cat(PollyCategory));
+
+static cl::opt<bool>
+    DumpCode("polly-acc-dump-code",
+             cl::desc("Dump C code describing the GPU mapping"), cl::Hidden,
+             cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
+
+/// Create the ast expressions for a ScopStmt.
+///
+/// This function is a callback for to generate the ast expressions for each
+/// of the scheduled ScopStmts.
+static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
+    void *Stmt, isl_ast_build *Build,
+    isl_multi_pw_aff *(*FunctionIndex)(__isl_take isl_multi_pw_aff *MPA,
+                                       isl_id *Id, void *User),
+    void *UserIndex,
+    isl_ast_expr *(*FunctionExpr)(isl_ast_expr *Expr, isl_id *Id, void *User),
+    void *User_expr) {
+
+  // TODO: Implement the AST expression generation. For now we just return a
+  // nullptr to ensure that we do not free uninitialized pointers.
+
+  return nullptr;
+}
 
 namespace {
 class PPCGCodeGeneration : public ScopPass {
@@ -127,6 +153,7 @@ public:
           isl_space *Space = isl_map_get_space(Relation);
           Space = isl_space_range(Space);
           Space = isl_space_from_range(Space);
+          Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
           isl_map *Universe = isl_map_universe(Space);
           Relation = isl_map_domain_product(Relation, Universe);
           Accesses = isl_union_map_add_map(Accesses, Relation);
@@ -239,6 +266,171 @@ public:
     return PPCGScop;
   }
 
+  /// Collect the array acesses in a statement.
+  ///
+  /// @param Stmt The statement for which to collect the accesses.
+  ///
+  /// @returns A list of array accesses.
+  gpu_stmt_access *getStmtAccesses(ScopStmt &Stmt) {
+    gpu_stmt_access *Accesses = nullptr;
+
+    for (MemoryAccess *Acc : Stmt) {
+      auto Access = isl_alloc_type(S->getIslCtx(), struct gpu_stmt_access);
+      Access->read = Acc->isRead();
+      Access->write = Acc->isWrite();
+      Access->access = Acc->getAccessRelation();
+      isl_space *Space = isl_map_get_space(Access->access);
+      Space = isl_space_range(Space);
+      Space = isl_space_from_range(Space);
+      Space = isl_space_set_tuple_id(Space, isl_dim_in, Acc->getId());
+      isl_map *Universe = isl_map_universe(Space);
+      Access->tagged_access =
+          isl_map_domain_product(Acc->getAccessRelation(), Universe);
+      Access->exact_write = Acc->isWrite();
+      Access->ref_id = Acc->getId();
+      Access->next = Accesses;
+      Accesses = Access;
+    }
+
+    return Accesses;
+  }
+
+  /// Collect the list of GPU statements.
+  ///
+  /// Each statement has an id, a pointer to the underlying data structure,
+  /// as well as a list with all memory accesses.
+  ///
+  /// TODO: Initialize the list of memory accesses.
+  ///
+  /// @returns A linked-list of statements.
+  gpu_stmt *getStatements() {
+    gpu_stmt *Stmts = isl_calloc_array(S->getIslCtx(), struct gpu_stmt,
+                                       std::distance(S->begin(), S->end()));
+
+    int i = 0;
+    for (auto &Stmt : *S) {
+      gpu_stmt *GPUStmt = &Stmts[i];
+
+      GPUStmt->id = Stmt.getDomainId();
+
+      // We use the pet stmt pointer to keep track of the Polly statements.
+      GPUStmt->stmt = (pet_stmt *)&Stmt;
+      GPUStmt->accesses = getStmtAccesses(Stmt);
+      i++;
+    }
+
+    return Stmts;
+  }
+
+  /// Derive the extent of an array.
+  ///
+  /// The extent of an array is defined by the set of memory locations for
+  /// which a memory access in the iteration domain exists.
+  ///
+  /// @param Array The array to derive the extent for.
+  ///
+  /// @returns An isl_set describing the extent of the array.
+  __isl_give isl_set *getExtent(ScopArrayInfo *Array) {
+    isl_union_map *Accesses = S->getAccesses();
+    Accesses = isl_union_map_intersect_domain(Accesses, S->getDomains());
+    isl_union_set *AccessUSet = isl_union_map_range(Accesses);
+    isl_set *AccessSet =
+        isl_union_set_extract_set(AccessUSet, Array->getSpace());
+    isl_union_set_free(AccessUSet);
+
+    return AccessSet;
+  }
+
+  /// Derive the bounds of an array.
+  ///
+  /// For the first dimension we derive the bound of the array from the extent
+  /// of this dimension. For inner dimensions we obtain their size directly from
+  /// ScopArrayInfo.
+  ///
+  /// @param PPCGArray The array to compute bounds for.
+  /// @param Array The polly array from which to take the information.
+  void setArrayBounds(gpu_array_info &PPCGArray, ScopArrayInfo *Array) {
+    if (PPCGArray.n_index > 0) {
+      isl_set *Dom = isl_set_copy(PPCGArray.extent);
+      Dom = isl_set_project_out(Dom, isl_dim_set, 1, PPCGArray.n_index - 1);
+      isl_pw_aff *Bound = isl_set_dim_max(isl_set_copy(Dom), 0);
+      isl_set_free(Dom);
+      Dom = isl_pw_aff_domain(isl_pw_aff_copy(Bound));
+      isl_local_space *LS = isl_local_space_from_space(isl_set_get_space(Dom));
+      isl_aff *One = isl_aff_zero_on_domain(LS);
+      One = isl_aff_add_constant_si(One, 1);
+      Bound = isl_pw_aff_add(Bound, isl_pw_aff_alloc(Dom, One));
+      Bound = isl_pw_aff_gist(Bound, S->getContext());
+      PPCGArray.bound[0] = Bound;
+    }
+
+    for (unsigned i = 1; i < PPCGArray.n_index; ++i) {
+      isl_pw_aff *Bound = Array->getDimensionSizePw(i);
+      auto LS = isl_pw_aff_get_domain_space(Bound);
+      auto Aff = isl_multi_aff_zero(LS);
+      Bound = isl_pw_aff_pullback_multi_aff(Bound, Aff);
+      PPCGArray.bound[i] = Bound;
+    }
+  }
+
+  /// Create the arrays for @p PPCGProg.
+  ///
+  /// @param PPCGProg The program to compute the arrays for.
+  void createArrays(gpu_prog *PPCGProg) {
+    int i = 0;
+    for (auto &Element : S->arrays()) {
+      ScopArrayInfo *Array = Element.second.get();
+
+      std::string TypeName;
+      raw_string_ostream OS(TypeName);
+
+      OS << *Array->getElementType();
+      TypeName = OS.str();
+
+      gpu_array_info &PPCGArray = PPCGProg->array[i];
+
+      PPCGArray.space = Array->getSpace();
+      PPCGArray.type = strdup(TypeName.c_str());
+      PPCGArray.size = Array->getElementType()->getPrimitiveSizeInBits() / 8;
+      PPCGArray.name = strdup(Array->getName().c_str());
+      PPCGArray.extent = nullptr;
+      PPCGArray.n_index = Array->getNumberOfDimensions();
+      PPCGArray.bound =
+          isl_alloc_array(S->getIslCtx(), isl_pw_aff *, PPCGArray.n_index);
+      PPCGArray.extent = getExtent(Array);
+      PPCGArray.n_ref = 0;
+      PPCGArray.refs = nullptr;
+      PPCGArray.accessed = true;
+      PPCGArray.read_only_scalar = false;
+      PPCGArray.has_compound_element = false;
+      PPCGArray.local = false;
+      PPCGArray.declare_local = false;
+      PPCGArray.global = false;
+      PPCGArray.linearize = false;
+      PPCGArray.dep_order = nullptr;
+
+      setArrayBounds(PPCGArray, Array);
+      i++;
+    }
+  }
+
+  /// Create an identity map between the arrays in the scop.
+  ///
+  /// @returns An identity map between the arrays in the scop.
+  isl_union_map *getArrayIdentity() {
+    isl_union_map *Maps = isl_union_map_empty(S->getParamSpace());
+
+    for (auto &Item : S->arrays()) {
+      ScopArrayInfo *Array = Item.second.get();
+      isl_space *Space = Array->getSpace();
+      Space = isl_space_map_from_set(Space);
+      isl_map *Identity = isl_map_identity(Space);
+      Maps = isl_union_map_add_map(Maps, Identity);
+    }
+
+    return Maps;
+  }
+
   /// Create a default-initialized PPCG GPU program.
   ///
   /// @returns A new gpu grogram description.
@@ -252,21 +444,115 @@ public:
     PPCGProg->ctx = S->getIslCtx();
     PPCGProg->scop = PPCGScop;
     PPCGProg->context = isl_set_copy(PPCGScop->context);
-    PPCGProg->read = nullptr;
-    PPCGProg->may_write = nullptr;
-    PPCGProg->must_write = nullptr;
-    PPCGProg->tagged_must_kill = nullptr;
-    PPCGProg->may_persist = nullptr;
-    PPCGProg->to_outer = nullptr;
-    PPCGProg->to_inner = nullptr;
+    PPCGProg->read = isl_union_map_copy(PPCGScop->reads);
+    PPCGProg->may_write = isl_union_map_copy(PPCGScop->may_writes);
+    PPCGProg->must_write = isl_union_map_copy(PPCGScop->must_writes);
+    PPCGProg->tagged_must_kill =
+        isl_union_map_copy(PPCGScop->tagged_must_kills);
+    PPCGProg->to_inner = getArrayIdentity();
+    PPCGProg->to_outer = getArrayIdentity();
+    PPCGProg->may_persist = compute_may_persist(PPCGProg);
     PPCGProg->any_to_outer = nullptr;
     PPCGProg->array_order = nullptr;
-    PPCGProg->n_stmts = 0;
-    PPCGProg->stmts = nullptr;
-    PPCGProg->n_array = 0;
-    PPCGProg->array = nullptr;
+    PPCGProg->n_stmts = std::distance(S->begin(), S->end());
+    PPCGProg->stmts = getStatements();
+    PPCGProg->n_array = std::distance(S->array_begin(), S->array_end());
+    PPCGProg->array = isl_calloc_array(S->getIslCtx(), struct gpu_array_info,
+                                       PPCGProg->n_array);
+
+    createArrays(PPCGProg);
 
     return PPCGProg;
+  }
+
+  struct PrintGPUUserData {
+    struct cuda_info *CudaInfo;
+    struct gpu_prog *PPCGProg;
+    std::vector<ppcg_kernel *> Kernels;
+  };
+
+  /// Print a user statement node in the host code.
+  ///
+  /// We use ppcg's printing facilities to print the actual statement and
+  /// additionally build up a list of all kernels that are encountered in the
+  /// host ast.
+  ///
+  /// @param P The printer to print to
+  /// @param Options The printing options to use
+  /// @param Node The node to print
+  /// @param User A user pointer to carry additional data. This pointer is
+  ///             expected to be of type PrintGPUUserData.
+  ///
+  /// @returns A printer to which the output has been printed.
+  static __isl_give isl_printer *
+  printHostUser(__isl_take isl_printer *P,
+                __isl_take isl_ast_print_options *Options,
+                __isl_take isl_ast_node *Node, void *User) {
+    auto Data = (struct PrintGPUUserData *)User;
+    auto Id = isl_ast_node_get_annotation(Node);
+
+    if (Id) {
+      bool IsUser = !strcmp(isl_id_get_name(Id), "user");
+
+      // If this is a user statement, format it ourselves as ppcg would
+      // otherwise try to call pet functionality that is not available in
+      // Polly.
+      if (IsUser) {
+        P = isl_printer_start_line(P);
+        P = isl_printer_print_ast_node(P, Node);
+        P = isl_printer_end_line(P);
+        isl_id_free(Id);
+        isl_ast_print_options_free(Options);
+        return P;
+      }
+
+      auto Kernel = (struct ppcg_kernel *)isl_id_get_user(Id);
+      isl_id_free(Id);
+      Data->Kernels.push_back(Kernel);
+    }
+
+    return print_host_user(P, Options, Node, User);
+  }
+
+  /// Print C code corresponding to the control flow in @p Kernel.
+  ///
+  /// @param Kernel The kernel to print
+  void printKernel(ppcg_kernel *Kernel) {
+    auto *P = isl_printer_to_str(S->getIslCtx());
+    P = isl_printer_set_output_format(P, ISL_FORMAT_C);
+    auto *Options = isl_ast_print_options_alloc(S->getIslCtx());
+    P = isl_ast_node_print(Kernel->tree, P, Options);
+    char *String = isl_printer_get_str(P);
+    printf("%s\n", String);
+    free(String);
+    isl_printer_free(P);
+  }
+
+  /// Print C code corresponding to the GPU code described by @p Tree.
+  ///
+  /// @param Tree An AST describing GPU code
+  /// @param PPCGProg The PPCG program from which @Tree has been constructed.
+  void printGPUTree(isl_ast_node *Tree, gpu_prog *PPCGProg) {
+    auto *P = isl_printer_to_str(S->getIslCtx());
+    P = isl_printer_set_output_format(P, ISL_FORMAT_C);
+
+    PrintGPUUserData Data;
+    Data.PPCGProg = PPCGProg;
+
+    auto *Options = isl_ast_print_options_alloc(S->getIslCtx());
+    Options =
+        isl_ast_print_options_set_print_user(Options, printHostUser, &Data);
+    P = isl_ast_node_print(Tree, P, Options);
+    char *String = isl_printer_get_str(P);
+    printf("# host\n");
+    printf("%s\n", String);
+    free(String);
+    isl_printer_free(P);
+
+    for (auto Kernel : Data.Kernels) {
+      printf("# kernel%d\n", Kernel->id);
+      printKernel(Kernel);
+    }
   }
 
   // Generate a GPU program using PPCG.
@@ -288,6 +574,7 @@ public:
     PPCGGen->options = PPCGScop->options;
     PPCGGen->print = nullptr;
     PPCGGen->print_user = nullptr;
+    PPCGGen->build_ast_expr = &pollyBuildAstExprForStmt;
     PPCGGen->prog = PPCGProg;
     PPCGGen->tree = nullptr;
     PPCGGen->types.n = 0;
@@ -299,15 +586,18 @@ public:
     // Set scheduling strategy to same strategy PPCG is using.
     isl_options_set_schedule_outer_coincidence(PPCGGen->ctx, true);
     isl_options_set_schedule_maximize_band_depth(PPCGGen->ctx, true);
+    isl_options_set_schedule_whole_component(PPCGGen->ctx, false);
 
     isl_schedule *Schedule = get_schedule(PPCGGen);
 
     int has_permutable = has_any_permutable_node(Schedule);
 
-    if (!has_permutable || has_permutable < 0)
+    if (!has_permutable || has_permutable < 0) {
       Schedule = isl_schedule_free(Schedule);
-    else
+    } else {
       Schedule = map_to_device(PPCGGen, Schedule);
+      PPCGGen->tree = generate_code(PPCGGen, isl_schedule_copy(Schedule));
+    }
 
     if (DumpSchedule) {
       isl_printer *P = isl_printer_to_str(S->getIslCtx());
@@ -321,6 +611,15 @@ public:
 
       printf("%s\n", isl_printer_get_str(P));
       isl_printer_free(P);
+    }
+
+    if (DumpCode) {
+      printf("Code\n");
+      printf("====\n");
+      if (PPCGGen->tree)
+        printGPUTree(PPCGGen->tree, PPCGProg);
+      else
+        printf("No code generated\n");
     }
 
     isl_schedule_free(Schedule);
@@ -338,12 +637,26 @@ public:
     free(PPCGGen);
   }
 
+  /// Free the options in the ppcg scop structure.
+  ///
+  /// ppcg is not freeing these options for us. To avoid leaks we do this
+  /// ourselves.
+  ///
+  /// @param PPCGScop The scop referencing the options to free.
+  void freeOptions(ppcg_scop *PPCGScop) {
+    free(PPCGScop->options->debug);
+    PPCGScop->options->debug = nullptr;
+    free(PPCGScop->options);
+    PPCGScop->options = nullptr;
+  }
+
   bool runOnScop(Scop &CurrentScop) override {
     S = &CurrentScop;
 
     auto PPCGScop = createPPCGScop();
     auto PPCGProg = createPPCGProg(PPCGScop);
     auto PPCGGen = generateGPU(PPCGScop, PPCGProg);
+    freeOptions(PPCGScop);
     freePPCGGen(PPCGGen);
     gpu_prog_free(PPCGProg);
     ppcg_scop_free(PPCGScop);

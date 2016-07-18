@@ -271,7 +271,7 @@ bool SystemZInstrInfo::isStackSlotCopy(const MachineInstr &MI,
   return true;
 }
 
-bool SystemZInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool SystemZInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                      MachineBasicBlock *&TBB,
                                      MachineBasicBlock *&FBB,
                                      SmallVectorImpl<MachineOperand> &Cond,

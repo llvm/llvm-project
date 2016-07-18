@@ -20,6 +20,8 @@
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     using std::experimental::optional;
@@ -38,7 +40,7 @@ int main()
         std::string s("123");
         optional<std::string> opt = make_optional(std::move(s));
         assert(*opt == "123");
-        assert(s.empty());
+        LIBCPP_ASSERT(s.empty());
     }
     {
         std::unique_ptr<int> s(new int(3));

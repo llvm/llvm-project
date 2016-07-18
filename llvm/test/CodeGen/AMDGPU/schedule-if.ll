@@ -32,7 +32,7 @@ ENDIF:                                            ; preds = %IF13, %ELSE, %main_
   %17 = insertelement <4 x float> %16, float %temp1.0, i32 1
   %18 = insertelement <4 x float> %17, float 0.000000e+00, i32 2
   %19 = insertelement <4 x float> %18, float %temp3.0, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %19, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %19, i32 0, i32 0)
   ret void
 
 IF13:                                             ; preds = %ELSE
@@ -43,4 +43,4 @@ IF13:                                             ; preds = %ELSE
   br label %ENDIF
 }
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

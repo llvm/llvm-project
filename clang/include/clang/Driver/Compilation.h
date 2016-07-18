@@ -98,12 +98,7 @@ public:
   const Driver &getDriver() const { return TheDriver; }
 
   const ToolChain &getDefaultToolChain() const { return DefaultToolChain; }
-  const ToolChain *getOffloadingHostToolChain() const {
-    auto It = OrderedOffloadingToolchains.find(Action::OFK_Host);
-    if (It != OrderedOffloadingToolchains.end())
-      return It->second;
-    return nullptr;
-  }
+
   unsigned isOffloadingHostKind(Action::OffloadKind Kind) const {
     return ActiveOffloadMask & Kind;
   }
@@ -121,8 +116,8 @@ public:
     return OrderedOffloadingToolchains.equal_range(Kind);
   }
 
-  // Return an offload toolchain of the provided kind. Only one is expected to
-  // exist.
+  /// Return an offload toolchain of the provided kind. Only one is expected to
+  /// exist.
   template <Action::OffloadKind Kind>
   const ToolChain *getSingleOffloadToolChain() const {
     auto TCs = getOffloadToolChains<Kind>();

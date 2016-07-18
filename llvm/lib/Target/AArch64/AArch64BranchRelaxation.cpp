@@ -415,7 +415,7 @@ bool AArch64BranchRelaxation::fixupConditionalBranch(MachineInstr *MI) {
     // Analyze the branch so we know how to update the successor lists.
     MachineBasicBlock *TBB, *FBB;
     SmallVector<MachineOperand, 2> Cond;
-    TII->AnalyzeBranch(*MBB, TBB, FBB, Cond, false);
+    TII->analyzeBranch(*MBB, TBB, FBB, Cond, false);
 
     MachineBasicBlock *NewBB = splitBlockBeforeInstr(MI);
     // No need for the branch to the next block. We're adding an unconditional

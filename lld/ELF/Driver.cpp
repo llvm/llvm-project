@@ -100,7 +100,8 @@ LinkerDriver::getArchiveMembers(MemoryBufferRef MB) {
                   File->getFileName());
     V.push_back(MBRef);
   }
-  check(std::move(Err));
+  if (Err)
+    Error(Err);
 
   // Take ownership of memory buffers created for members of thin archives.
   for (std::unique_ptr<MemoryBuffer> &MB : File->takeThinBuffers())
@@ -150,9 +151,10 @@ void LinkerDriver::addFile(StringRef Path) {
 
 Optional<MemoryBufferRef> LinkerDriver::readFile(StringRef Path) {
   auto MBOrErr = MemoryBuffer::getFile(Path);
-  error(MBOrErr, "cannot open " + Path);
-  if (HasError)
+  if (auto EC = MBOrErr.getError()) {
+    error(EC, "cannot open " + Path);
     return None;
+  }
   std::unique_ptr<MemoryBuffer> &MB = *MBOrErr;
   MemoryBufferRef MBRef = MB->getMemBufferRef();
   OwningMBs.push_back(std::move(MB)); // take MB ownership
@@ -441,14 +443,9 @@ void LinkerDriver::readConfigs(opt::InputArgList &Args) {
   for (auto *Arg : Args.filtered(OPT_export_dynamic_symbol))
     Config->DynamicList.push_back(Arg->getValue());
 
-  if (auto *Arg = Args.getLastArg(OPT_version_script)) {
-    Config->HasVersionScript = true;
+  if (auto *Arg = Args.getLastArg(OPT_version_script))
     if (Optional<MemoryBufferRef> Buffer = readFile(Arg->getValue()))
       parseVersionScript(*Buffer);
-  }
-
-  for (auto *Arg : Args.filtered(OPT_trace_symbol))
-    Config->TraceSymbol.insert(Arg->getValue());
 }
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
@@ -528,6 +525,10 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   if (Config->OutputFile.empty())
     Config->OutputFile = "a.out";
 
+  // Handle --trace-symbol.
+  for (auto *Arg : Args.filtered(OPT_trace_symbol))
+    Symtab.trace(Arg->getValue());
+
   // Set either EntryAddr (if S is a number) or EntrySym (otherwise).
   if (!Config->Entry.empty()) {
     StringRef S = Config->Entry;
@@ -535,6 +536,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
       Config->EntrySym = Symtab.addUndefined(S);
   }
 
+  // Initialize Config->ImageBase.
   if (auto *Arg = Args.getLastArg(OPT_image_base)) {
     StringRef S = Arg->getValue();
     if (S.getAsInteger(0, Config->ImageBase))
@@ -542,7 +544,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
     else if ((Config->ImageBase % Target->PageSize) != 0)
       warning(Arg->getSpelling() + ": address isn't multiple of page size");
   } else {
-    Config->ImageBase = Target->getImageBase();
+    Config->ImageBase = Config->Pic ? 0 : Target->DefaultImageBase;
   }
 
   for (std::unique_ptr<InputFile> &F : Files)
@@ -554,7 +556,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanShlibUndefined();
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
-  Symtab.traceDefined();
+  Symtab.scanSymbolVersions();
 
   Symtab.addCombinedLtoObject();
   if (HasError)

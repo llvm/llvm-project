@@ -17,10 +17,10 @@ IF:                                             ; preds = %main_body
 ENDIF:                                            ; preds = %IF, %main_body
   %5 = phi float [%4, %IF], [0.000000e+00, %main_body]
   %6 = insertelement <4 x float> undef, float %5, i32 0
-  call void @llvm.R600.store.swizzle(<4 x float> %6, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %6, i32 0, i32 0)
   ret void
 }
 
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 attributes #1 = { readnone }

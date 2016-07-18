@@ -28,12 +28,6 @@ class AArch64Subtarget;
 class AArch64TargetMachine;
 
 class AArch64InstrInfo : public AArch64GenInstrInfo {
-  // Reserve bits in the MachineMemOperand target hint flags, starting at 1.
-  // They will be shifted into MOTargetHintStart when accessed.
-  enum TargetMemOperandFlags {
-    MOSuppressPair = 1
-  };
-
   const AArch64RegisterInfo RI;
   const AArch64Subtarget &Subtarget;
 
@@ -147,7 +141,7 @@ public:
                         MachineBasicBlock::iterator InsertPt, int FrameIndex,
                         LiveIntervals *LIS = nullptr) const override;
 
-  bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify = false) const override;

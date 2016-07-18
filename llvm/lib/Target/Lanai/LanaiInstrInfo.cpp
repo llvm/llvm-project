@@ -51,7 +51,7 @@ void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     unsigned SourceRegister, bool IsKill, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo *RegisterInfo) const {
+    const TargetRegisterInfo * /*RegisterInfo*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -71,7 +71,7 @@ void LanaiInstrInfo::loadRegFromStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     unsigned DestinationRegister, int FrameIndex,
     const TargetRegisterClass *RegisterClass,
-    const TargetRegisterInfo *RegisterInfo) const {
+    const TargetRegisterInfo * /*RegisterInfo*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
@@ -86,9 +86,8 @@ void LanaiInstrInfo::loadRegFromStackSlot(
       .addImm(LPAC::ADD);
 }
 
-bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
-                                                     MachineInstr &MIb,
-                                                     AliasAnalysis *AA) const {
+bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(
+    MachineInstr &MIa, MachineInstr &MIb, AliasAnalysis * /*AA*/) const {
   assert(MIa.mayLoadOrStore() && "MIa must be a load or store.");
   assert(MIb.mayLoadOrStore() && "MIb must be a load or store.");
 
@@ -118,7 +117,7 @@ bool LanaiInstrInfo::areMemAccessesTriviallyDisjoint(MachineInstr &MIa,
   return false;
 }
 
-bool LanaiInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
+bool LanaiInstrInfo::expandPostRAPseudo(MachineInstr & /*MI*/) const {
   return false;
 }
 
@@ -283,7 +282,7 @@ inline static unsigned flagSettingOpcodeVariant(unsigned OldOpcode) {
 }
 
 bool LanaiInstrInfo::optimizeCompareInstr(
-    MachineInstr &CmpInstr, unsigned SrcReg, unsigned SrcReg2, int CmpMask,
+    MachineInstr &CmpInstr, unsigned SrcReg, unsigned SrcReg2, int /*CmpMask*/,
     int CmpValue, const MachineRegisterInfo *MRI) const {
   // Get the unique definition of SrcReg.
   MachineInstr *MI = MRI->getUniqueVRegDef(SrcReg);
@@ -457,8 +456,7 @@ bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI,
 // Identify instructions that can be folded into a SELECT instruction, and
 // return the defining instruction.
 static MachineInstr *canFoldIntoSelect(unsigned Reg,
-                                       const MachineRegisterInfo &MRI,
-                                       const TargetInstrInfo *TII) {
+                                       const MachineRegisterInfo &MRI) {
   if (!TargetRegisterInfo::isVirtualRegister(Reg))
     return nullptr;
   if (!MRI.hasOneNonDBGUse(Reg))
@@ -495,13 +493,13 @@ static MachineInstr *canFoldIntoSelect(unsigned Reg,
 MachineInstr *
 LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
-                               bool PreferFalse) const {
+                               bool /*PreferFalse*/) const {
   assert(MI.getOpcode() == Lanai::SELECT && "unknown select instruction");
   MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
-  MachineInstr *DefMI = canFoldIntoSelect(MI.getOperand(1).getReg(), MRI, this);
+  MachineInstr *DefMI = canFoldIntoSelect(MI.getOperand(1).getReg(), MRI);
   bool Invert = !DefMI;
   if (!DefMI)
-    DefMI = canFoldIntoSelect(MI.getOperand(2).getReg(), MRI, this);
+    DefMI = canFoldIntoSelect(MI.getOperand(2).getReg(), MRI);
   if (!DefMI)
     return nullptr;
 
@@ -552,7 +550,7 @@ LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
   return NewMI;
 }
 
-// The AnalyzeBranch function is used to examine conditional instructions and
+// The analyzeBranch function is used to examine conditional instructions and
 // remove unnecessary instructions. This method is used by BranchFolder and
 // IfConverter machine function passes to improve the CFG.
 // - TrueBlock is set to the destination if condition evaluates true (it is the
@@ -562,7 +560,7 @@ LanaiInstrInfo::optimizeSelect(MachineInstr &MI,
 // - condition is populated with machine operands needed to generate the branch
 //   to insert in InsertBranch;
 // Returns: false if branch could successfully be analyzed.
-bool LanaiInstrInfo::AnalyzeBranch(MachineBasicBlock &MBB,
+bool LanaiInstrInfo::analyzeBranch(MachineBasicBlock &MBB,
                                    MachineBasicBlock *&TrueBlock,
                                    MachineBasicBlock *&FalseBlock,
                                    SmallVectorImpl<MachineOperand> &Condition,
@@ -749,7 +747,7 @@ unsigned LanaiInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
 
 bool LanaiInstrInfo::getMemOpBaseRegImmOfsWidth(
     MachineInstr &LdSt, unsigned &BaseReg, int64_t &Offset, unsigned &Width,
-    const TargetRegisterInfo *TRI) const {
+    const TargetRegisterInfo * /*TRI*/) const {
   // Handle only loads/stores with base register followed by immediate offset
   // and with add as ALU op.
   if (LdSt.getNumOperands() != 4)

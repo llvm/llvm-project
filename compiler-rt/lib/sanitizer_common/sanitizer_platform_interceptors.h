@@ -83,10 +83,11 @@
 #define SANITIZER_INTERCEPT_MEMMOVE 1
 #define SANITIZER_INTERCEPT_MEMCPY 1
 #define SANITIZER_INTERCEPT_MEMCMP 1
-// TODO(wwchrome): Re-enable intercepting memchr() when ready.
+// FIXME: enable memmem on Windows.
+#define SANITIZER_INTERCEPT_MEMMEM SI_NOT_WINDOWS
 // The function memchr() contains a jump in the first 6 bytes
 // that is problematic to intercept correctly on Win64.
-// Disable memchr() interception for Win64 temporarily.
+// Disable memchr() interception for Win64.
 #if SANITIZER_WINDOWS64
 #define SANITIZER_INTERCEPT_MEMCHR 0
 #else

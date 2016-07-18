@@ -23,7 +23,7 @@ define void @s_fsub_f32(float addrspace(1)* %out, float %a, float %b) {
   ret void
 }
 
-declare float @llvm.R600.load.input(i32) readnone
+declare float @llvm.r600.load.input(i32) readnone
 
 declare void @llvm.AMDGPU.store.output(float, i32)
 

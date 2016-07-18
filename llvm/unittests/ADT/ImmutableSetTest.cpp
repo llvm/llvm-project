@@ -181,19 +181,22 @@ TEST_F(ImmutableSetTest, IterLongSetTest) {
 
   int i = 0;
   for (ImmutableSet<long>::iterator I = S.begin(), E = S.end(); I != E; ++I) {
-    ASSERT_EQ(i++, *I);
+    ASSERT_EQ(i, *I);
+    i++;
   }
   ASSERT_EQ(0, i);
 
   i = 0;
   for (ImmutableSet<long>::iterator I = S2.begin(), E = S2.end(); I != E; ++I) {
-    ASSERT_EQ(i++, *I);
+    ASSERT_EQ(i, *I);
+    i++;
   }
   ASSERT_EQ(3, i);
 
   i = 0;
   for (ImmutableSet<long>::iterator I = S3.begin(), E = S3.end(); I != E; I++) {
-    ASSERT_EQ(i++, *I);
+    ASSERT_EQ(i, *I);
+    i++;
   }
   ASSERT_EQ(6, i);
 }

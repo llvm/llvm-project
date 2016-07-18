@@ -827,7 +827,7 @@ multiclass avx512_broadcast_scalar<bits<8> opc, string OpcodeStr,
 
 multiclass avx512_broadcast_rm<bits<8> opc, string OpcodeStr,
                             X86VectorVTInfo DestInfo, X86VectorVTInfo SrcInfo> {
-
+  let ExeDomain = DestInfo.ExeDomain in {
   defm r : AVX512_maskable<opc, MRMSrcReg, DestInfo, (outs DestInfo.RC:$dst),
                    (ins SrcInfo.RC:$src), OpcodeStr, "$src", "$src",
                    (DestInfo.VT (X86VBroadcast (SrcInfo.VT SrcInfo.RC:$src)))>,
@@ -837,22 +837,36 @@ multiclass avx512_broadcast_rm<bits<8> opc, string OpcodeStr,
                    (DestInfo.VT (X86VBroadcast
                                    (SrcInfo.ScalarLdFrag addr:$src)))>,
                    T8PD, EVEX, EVEX_CD8<SrcInfo.EltSize, CD8VT1>;
+  }
 
-  let isCodeGenOnly = 1 in
-  defm m_Int : AVX512_maskable<opc, MRMSrcMem, DestInfo, (outs DestInfo.RC:$dst),
-                 (ins SrcInfo.ScalarMemOp:$src), OpcodeStr, "$src", "$src",
-                 (DestInfo.VT
-                   (X86VBroadcast
-                     (SrcInfo.VT (scalar_to_vector
-                                   (SrcInfo.ScalarLdFrag addr:$src)))))>,
-                   T8PD, EVEX, EVEX_CD8<SrcInfo.EltSize, CD8VT1>;
+  def : Pat<(DestInfo.VT (X86VBroadcast
+                          (SrcInfo.VT (scalar_to_vector
+                                       (SrcInfo.ScalarLdFrag addr:$src))))),
+            (!cast<Instruction>(NAME#DestInfo.ZSuffix#m) addr:$src)>;
+  let AddedComplexity = 20 in
+  def : Pat<(DestInfo.VT (vselect DestInfo.KRCWM:$mask,
+                          (X86VBroadcast
+                           (SrcInfo.VT (scalar_to_vector
+                                        (SrcInfo.ScalarLdFrag addr:$src)))),
+                          DestInfo.RC:$src0)),
+            (!cast<Instruction>(NAME#DestInfo.ZSuffix#mk)
+             DestInfo.RC:$src0, DestInfo.KRCWM:$mask, addr:$src)>;
+  let AddedComplexity = 30 in
+  def : Pat<(DestInfo.VT (vselect DestInfo.KRCWM:$mask,
+                          (X86VBroadcast
+                           (SrcInfo.VT (scalar_to_vector
+                                        (SrcInfo.ScalarLdFrag addr:$src)))),
+                          DestInfo.ImmAllZerosV)),
+            (!cast<Instruction>(NAME#DestInfo.ZSuffix#mkz)
+             DestInfo.KRCWM:$mask, addr:$src)>;
 }
 
-multiclass avx512_fp_broadcast_vl<bits<8> opc, string OpcodeStr,
+multiclass avx512_fp_broadcast_sd<bits<8> opc, string OpcodeStr,
                                                        AVX512VLVectorVTInfo _> {
-  defm Z  : avx512_broadcast_rm<opc, OpcodeStr, _.info512, _.info128>,
-            avx512_broadcast_scalar<opc, OpcodeStr, _.info512, _.info128>,
-                             EVEX_V512;
+  let Predicates = [HasAVX512] in
+    defm Z  : avx512_broadcast_rm<opc, OpcodeStr, _.info512, _.info128>,
+              avx512_broadcast_scalar<opc, OpcodeStr, _.info512, _.info128>,
+                               EVEX_V512;
 
   let Predicates = [HasVLX] in {
     defm Z256  : avx512_broadcast_rm<opc, OpcodeStr, _.info256, _.info128>,
@@ -861,21 +875,26 @@ multiclass avx512_fp_broadcast_vl<bits<8> opc, string OpcodeStr,
   }
 }
 
-let ExeDomain = SSEPackedSingle in {
-  defm VBROADCASTSS  : avx512_fp_broadcast_vl<0x18, "vbroadcastss",
-                                         avx512vl_f32_info>;
-   let Predicates = [HasVLX] in {
-     defm VBROADCASTSSZ128  :
-           avx512_broadcast_rm<0x18, "vbroadcastss", v4f32x_info, v4f32x_info>,
-           avx512_broadcast_scalar<0x18, "vbroadcastss", v4f32x_info, v4f32x_info>,
-                                        EVEX_V128;
-   }
-}
+multiclass avx512_fp_broadcast_ss<bits<8> opc, string OpcodeStr,
+                                                       AVX512VLVectorVTInfo _> {
+  let Predicates = [HasAVX512] in
+    defm Z  : avx512_broadcast_rm<opc, OpcodeStr, _.info512, _.info128>,
+              avx512_broadcast_scalar<opc, OpcodeStr, _.info512, _.info128>,
+                               EVEX_V512;
 
-let ExeDomain = SSEPackedDouble in {
-  defm VBROADCASTSD  : avx512_fp_broadcast_vl<0x19, "vbroadcastsd",
-                                         avx512vl_f64_info>, VEX_W;
+  let Predicates = [HasVLX] in {
+    defm Z256  : avx512_broadcast_rm<opc, OpcodeStr, _.info256, _.info128>,
+                 avx512_broadcast_scalar<opc, OpcodeStr, _.info256, _.info128>,
+                             EVEX_V256;
+    defm Z128  : avx512_broadcast_rm<opc, OpcodeStr, _.info128, _.info128>,
+                 avx512_broadcast_scalar<opc, OpcodeStr, _.info128, _.info128>,
+                             EVEX_V128;
+  }
 }
+defm VBROADCASTSS  : avx512_fp_broadcast_ss<0x18, "vbroadcastss",
+                                       avx512vl_f32_info>;
+defm VBROADCASTSD  : avx512_fp_broadcast_sd<0x19, "vbroadcastsd",
+                                       avx512vl_f64_info>, VEX_W;
 
 def : Pat<(int_x86_avx512_vbroadcast_ss_512 addr:$src),
           (VBROADCASTSSZm addr:$src)>;

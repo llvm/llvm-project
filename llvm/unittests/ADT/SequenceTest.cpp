@@ -18,8 +18,10 @@ namespace {
 
 TEST(SequenceTest, Basic) {
   int x = 0;
-  for (int i : seq(0, 10))
-    EXPECT_EQ(x++, i);
+  for (int i : seq(0, 10)) {
+    EXPECT_EQ(x, i);
+    x++;
+  }
   EXPECT_EQ(10, x);
 
   auto my_seq = seq(0, 4);

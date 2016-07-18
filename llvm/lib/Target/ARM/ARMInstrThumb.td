@@ -1451,6 +1451,24 @@ def : T1Pat<(extloadi8  t_addrmode_rr:$addr),  (tLDRBr t_addrmode_rr:$addr)>;
 def : T1Pat<(extloadi16 t_addrmode_is2:$addr), (tLDRHi t_addrmode_is2:$addr)>;
 def : T1Pat<(extloadi16 t_addrmode_rr:$addr),  (tLDRHr t_addrmode_rr:$addr)>;
 
+// post-inc loads and stores
+
+// post-inc LDR -> LDM r0!, {r1}. The way operands are layed out in LDMs is
+// different to how ISel expects them for a post-inc load, so use a pseudo
+// and expand it just after ISel.
+let usesCustomInserter = 1,
+    Constraints = "$Rn = $Rn_wb,@earlyclobber $Rn_wb" in
+ def tLDR_postidx: tPseudoInst<(outs rGPR:$Rt, rGPR:$Rn_wb),
+                               (ins rGPR:$Rn, pred:$p),
+                               4, IIC_iStore_ru,
+                               []>;
+
+// post-inc STR -> STM r0!, {r1}. The layout of this (because it doesn't def
+// multiple registers) is the same in ISel as MachineInstr, so there's no need
+// for a pseudo.
+def : T1Pat<(post_store rGPR:$Rt, rGPR:$Rn, 4),
+            (tSTMIA_UPD rGPR:$Rn, rGPR:$Rt)>;
+
 // If it's impossible to use [r,r] address mode for sextload, select to
 // ldr{b|h} + sxt{b|h} instead.
 def : T1Pat<(sextloadi8 t_addrmode_is1:$addr),

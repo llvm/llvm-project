@@ -11,10 +11,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Mangler.h"
-#include "llvm/LTO/UpdateCompilerUsed.h"
 #include "llvm/Target/TargetLowering.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include "llvm/Transforms/IPO/Internalize.h"

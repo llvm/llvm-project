@@ -205,9 +205,11 @@ public:
                 if (byte_size_option_set)
                 {
                     if (byte_size_value > 1)
-                        error.SetErrorStringWithFormat ("display format (bytes/bytes with ascii) conflicts with the specified byte size %" PRIu64 "\n"
-                                                        "\tconsider using a different display format or don't specify the byte size",
-                                                        byte_size_value.GetCurrentValue());
+                        error.SetErrorStringWithFormat(
+                            "display format (bytes/bytes with ASCII) conflicts with the specified byte size %" PRIu64
+                            "\n"
+                            "\tconsider using a different display format or don't specify the byte size.",
+                            byte_size_value.GetCurrentValue());
                 }
                 else
                     byte_size_value = 1;
@@ -318,23 +320,20 @@ public:
 class CommandObjectMemoryRead : public CommandObjectParsed
 {
 public:
-    CommandObjectMemoryRead (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "memory read",
-                            "Read from the memory of the process being debugged.",
-                            nullptr,
-                            eCommandRequiresTarget | eCommandProcessMustBePaused),
-        m_option_group (interpreter),
-        m_format_options (eFormatBytesWithASCII, 1, 8),
-        m_memory_options (),
-        m_outfile_options (),
-        m_varobj_options(),
-        m_next_addr(LLDB_INVALID_ADDRESS),
-        m_prev_byte_size(0),
-        m_prev_format_options (eFormatBytesWithASCII, 1, 8),
-        m_prev_memory_options (),
-        m_prev_outfile_options (),
-        m_prev_varobj_options()
+    CommandObjectMemoryRead(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "memory read", "Read from the memory of the current target process.",
+                              nullptr, eCommandRequiresTarget | eCommandProcessMustBePaused),
+          m_option_group(interpreter),
+          m_format_options(eFormatBytesWithASCII, 1, 8),
+          m_memory_options(),
+          m_outfile_options(),
+          m_varobj_options(),
+          m_next_addr(LLDB_INVALID_ADDRESS),
+          m_prev_byte_size(0),
+          m_prev_format_options(eFormatBytesWithASCII, 1, 8),
+          m_prev_memory_options(),
+          m_prev_outfile_options(),
+          m_prev_varobj_options()
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -1041,15 +1040,12 @@ public:
       OptionValueUInt64 m_count;
       OptionValueUInt64 m_offset;
   };
-  
-  CommandObjectMemoryFind (CommandInterpreter &interpreter) :
-  CommandObjectParsed(interpreter,
-                      "memory find",
-                      "Find a value in the memory of the process being debugged.",
-                      nullptr,
-                      eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-  m_option_group (interpreter),
-  m_memory_options ()
+
+  CommandObjectMemoryFind(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "memory find", "Find a value in the memory of the current target process.",
+                            nullptr, eCommandRequiresProcess | eCommandProcessMustBeLaunched),
+        m_option_group(interpreter),
+        m_memory_options()
   {
     CommandArgumentEntry arg1;
     CommandArgumentEntry arg2;
@@ -1325,15 +1321,12 @@ public:
         off_t m_infile_offset;
     };
 
-    CommandObjectMemoryWrite (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "memory write",
-                            "Write to the memory of the process being debugged.",
-                            nullptr,
-                            eCommandRequiresProcess | eCommandProcessMustBeLaunched),
-        m_option_group (interpreter),
-        m_format_options (eFormatBytes, 1, UINT64_MAX),
-        m_memory_options ()
+    CommandObjectMemoryWrite(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "memory write", "Write to the memory of the current target process.",
+                              nullptr, eCommandRequiresProcess | eCommandProcessMustBeLaunched),
+          m_option_group(interpreter),
+          m_format_options(eFormatBytes, 1, UINT64_MAX),
+          m_memory_options()
     {
         CommandArgumentEntry arg1;
         CommandArgumentEntry arg2;
@@ -1687,13 +1680,12 @@ protected:
 class CommandObjectMemoryHistory : public CommandObjectParsed
 {
 public:
-    CommandObjectMemoryHistory (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "memory history",
-                            "Prints out the recorded stack traces for allocation/deallocation of a memory address.",
-                            nullptr,
-                            eCommandRequiresTarget | eCommandRequiresProcess | eCommandProcessMustBePaused |
-                            eCommandProcessMustBeLaunched)
+    CommandObjectMemoryHistory(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "memory history",
+              "Print recorded stack traces for allocation/deallocation events associated with an address.", nullptr,
+              eCommandRequiresTarget | eCommandRequiresProcess | eCommandProcessMustBePaused |
+                  eCommandProcessMustBeLaunched)
     {
         CommandArgumentEntry arg1;
         CommandArgumentData addr_arg;
@@ -1777,10 +1769,10 @@ class CommandObjectMemoryRegion : public CommandObjectParsed
 {
 public:
     CommandObjectMemoryRegion(CommandInterpreter &interpreter)
-        : CommandObjectParsed(interpreter, "memory region",
-                              "Get information on a memory region that contains an address in the current process.",
-                              "memory region ADDR",
-                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched),
+        : CommandObjectParsed(
+              interpreter, "memory region",
+              "Get information on the memory region containing an address in the current target process.",
+              "memory region ADDR", eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched),
           m_prev_end_addr(LLDB_INVALID_ADDRESS)
     {
     }
@@ -1875,11 +1867,9 @@ protected:
 // CommandObjectMemory
 //-------------------------------------------------------------------------
 
-CommandObjectMemory::CommandObjectMemory (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "memory",
-                            "A set of commands for operating on memory.",
-                            "memory <subcommand> [<subcommand-options>]")
+CommandObjectMemory::CommandObjectMemory(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "memory", "Commands for operating on memory in the current target process.",
+                             "memory <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand("find", CommandObjectSP(new CommandObjectMemoryFind(interpreter)));
     LoadSubCommand("read", CommandObjectSP(new CommandObjectMemoryRead(interpreter)));

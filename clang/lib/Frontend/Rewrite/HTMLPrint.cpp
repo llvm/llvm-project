@@ -32,14 +32,14 @@ using namespace clang;
 namespace {
   class HTMLPrinter : public ASTConsumer {
     Rewriter R;
-    raw_ostream *Out;
+    std::unique_ptr<raw_ostream> Out;
     Preprocessor &PP;
     bool SyntaxHighlight, HighlightMacros;
 
   public:
-    HTMLPrinter(raw_ostream *OS, Preprocessor &pp,
+    HTMLPrinter(std::unique_ptr<raw_ostream> OS, Preprocessor &pp,
                 bool _SyntaxHighlight, bool _HighlightMacros)
-      : Out(OS), PP(pp), SyntaxHighlight(_SyntaxHighlight),
+      : Out(std::move(OS)), PP(pp), SyntaxHighlight(_SyntaxHighlight),
         HighlightMacros(_HighlightMacros) {}
 
     void Initialize(ASTContext &context) override;
@@ -47,11 +47,10 @@ namespace {
   };
 }
 
-std::unique_ptr<ASTConsumer> clang::CreateHTMLPrinter(raw_ostream *OS,
-                                                      Preprocessor &PP,
-                                                      bool SyntaxHighlight,
-                                                      bool HighlightMacros) {
-  return llvm::make_unique<HTMLPrinter>(OS, PP, SyntaxHighlight,
+std::unique_ptr<ASTConsumer>
+clang::CreateHTMLPrinter(std::unique_ptr<raw_ostream> OS, Preprocessor &PP,
+                         bool SyntaxHighlight, bool HighlightMacros) {
+  return llvm::make_unique<HTMLPrinter>(std::move(OS), PP, SyntaxHighlight,
                                         HighlightMacros);
 }
 

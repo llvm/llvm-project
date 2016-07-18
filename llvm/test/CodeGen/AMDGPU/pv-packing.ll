@@ -31,7 +31,7 @@ main_body:
   %23 = insertelement <4 x float> %22, float %19, i32 3
   %24 = call float @llvm.r600.dot4(<4 x float> %23, <4 x float> %10)
   %25 = insertelement <4 x float> undef, float %24, i32 0
-  call void @llvm.R600.store.swizzle(<4 x float> %25, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %25, i32 0, i32 2)
   ret void
 }
 
@@ -39,6 +39,6 @@ main_body:
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #1
 
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #1 = { readnone }

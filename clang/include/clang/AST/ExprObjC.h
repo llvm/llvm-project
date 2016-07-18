@@ -1562,7 +1562,52 @@ public:
     return T->getStmtClass() == ObjCBridgedCastExprClass;
   }
 };
-  
+
+/// \brief A runtime availability query.
+///
+/// There are 2 ways to spell this node:
+/// \code
+///   @available(macos 10.10, ios 8, *); // Objective-C
+///   __builtin_available(macos 10.10, ios 8, *); // C, C++, and Objective-C
+/// \endcode
+///
+/// Note that we only need to keep track of one \c VersionTuple here, which is
+/// the one that corresponds to the current deployment target. This is meant to
+/// be used in the condition of an \c if, but it is also usable as top level
+/// expressions.
+///
+class ObjCAvailabilityCheckExpr : public Expr {
+  VersionTuple VersionToCheck;
+  SourceLocation AtLoc, RParen;
+
+  friend class ASTStmtReader;
+public:
+  ObjCAvailabilityCheckExpr(VersionTuple VersionToCheck, SourceLocation AtLoc,
+                            SourceLocation RParen, QualType Ty)
+      : Expr(ObjCAvailabilityCheckExprClass, Ty, VK_RValue, OK_Ordinary, false,
+             false, false, false),
+        VersionToCheck(VersionToCheck), AtLoc(AtLoc), RParen(RParen) {}
+
+  explicit ObjCAvailabilityCheckExpr(EmptyShell Shell)
+      : Expr(ObjCAvailabilityCheckExprClass, Shell) {}
+
+  SourceLocation getLocStart() const { return AtLoc; }
+  SourceLocation getLocEnd() const { return RParen; }
+  SourceRange getSourceRange() const { return {AtLoc, RParen}; }
+
+  /// \brief This may be '*', in which case this should fold to true.
+  bool hasVersion() const { return !VersionToCheck.empty(); }
+  VersionTuple getVersion() { return VersionToCheck; }
+
+  child_range children() {
+    return child_range(child_iterator(), child_iterator());
+  }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == ObjCAvailabilityCheckExprClass;
+  }
+};
+
 }  // end namespace clang
 
 #endif

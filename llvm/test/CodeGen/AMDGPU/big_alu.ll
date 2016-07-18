@@ -99,7 +99,7 @@ IF137:                                            ; preds = %main_body
   %tmp88 = insertelement <4 x float> %tmp87, float %tmp32, i32 2
   %tmp89 = insertelement <4 x float> %tmp88, float 0.000000e+00, i32 3
   %tmp90 = call float @llvm.r600.dot4(<4 x float> %tmp85, <4 x float> %tmp89)
-  %tmp91 = call float @llvm.AMDGPU.rsq.clamped.f32(float %tmp90)
+  %tmp91 = call float @llvm.r600.recipsqrt.clamped.f32(float %tmp90)
   %tmp92 = fmul float %tmp30, %tmp91
   %tmp93 = fmul float %tmp31, %tmp91
   %tmp94 = fmul float %tmp32, %tmp91
@@ -198,7 +198,7 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp181 = fadd float %tmp180, %tmp28
   %tmp182 = fdiv float 1.000000e+00, %tmp33
   %tmp183 = fmul float %tmp32, %tmp182
-  %tmp184 = call float @fabs(float %tmp183)
+  %tmp184 = call float @llvm.fabs.f32(float %tmp183)
   %tmp185 = fmul float %tmp176, 0x3FD99999A0000000
   %tmp186 = fadd float %tmp185, 0x3FAEB851E0000000
   %tmp187 = fmul float %tmp177, 0x3FE3333340000000
@@ -350,7 +350,7 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp329 = insertelement <4 x float> %tmp328, float %tmp322, i32 2
   %tmp330 = insertelement <4 x float> %tmp329, float 0.000000e+00, i32 3
   %tmp331 = call float @llvm.r600.dot4(<4 x float> %tmp326, <4 x float> %tmp330)
-  %tmp332 = call float @llvm.AMDGPU.rsq.clamped.f32(float %tmp331)
+  %tmp332 = call float @llvm.r600.recipsqrt.clamped.f32(float %tmp331)
   %tmp333 = fmul float %tmp318, %tmp332
   %tmp334 = fmul float %tmp320, %tmp332
   %tmp335 = fmul float %tmp322, %tmp332
@@ -383,9 +383,9 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp362 = insertelement <4 x float> %tmp361, float %tmp45, i32 2
   %tmp363 = insertelement <4 x float> %tmp362, float 0.000000e+00, i32 3
   %tmp364 = call float @llvm.r600.dot4(<4 x float> %tmp359, <4 x float> %tmp363)
-  %tmp365 = call float @llvm.AMDGPU.rsq.clamped.f32(float %tmp364)
+  %tmp365 = call float @llvm.r600.recipsqrt.clamped.f32(float %tmp364)
   %tmp366 = fmul float %tmp45, %tmp365
-  %tmp367 = call float @fabs(float %tmp366)
+  %tmp367 = call float @llvm.fabs.f32(float %tmp366)
   %tmp368 = fmul float %tmp178, 0x3FECCCCCC0000000
   %tmp369 = fadd float %tmp368, %tmp367
   %tmp370 = fadd float %tmp369, 0xBFEFAE1480000000
@@ -409,9 +409,9 @@ ENDIF136:                                         ; preds = %ENDIF154, %main_bod
   %tmp388 = insertelement <4 x float> %tmp387, float %tmp45, i32 2
   %tmp389 = insertelement <4 x float> %tmp388, float 0.000000e+00, i32 3
   %tmp390 = call float @llvm.r600.dot4(<4 x float> %tmp385, <4 x float> %tmp389)
-  %tmp391 = call float @llvm.AMDGPU.rsq.clamped.f32(float %tmp390)
+  %tmp391 = call float @llvm.r600.recipsqrt.clamped.f32(float %tmp390)
   %tmp392 = fmul float %tmp45, %tmp391
-  %tmp393 = call float @fabs(float %tmp392)
+  %tmp393 = call float @llvm.fabs.f32(float %tmp392)
   %tmp394 = fmul float %tmp178, 0x3FF51EB860000000
   %tmp395 = fadd float %tmp394, %tmp393
   %tmp396 = fadd float %tmp395, 0xBFEFAE1480000000
@@ -1150,9 +1150,9 @@ IF179:                                            ; preds = %ENDIF175
   %tmp875 = insertelement <4 x float> %tmp874, float %tmp45, i32 2
   %tmp876 = insertelement <4 x float> %tmp875, float 0.000000e+00, i32 3
   %tmp877 = call float @llvm.r600.dot4(<4 x float> %tmp872, <4 x float> %tmp876)
-  %tmp878 = call float @llvm.AMDGPU.rsq.clamped.f32(float %tmp877)
+  %tmp878 = call float @llvm.r600.recipsqrt.clamped.f32(float %tmp877)
   %tmp879 = fmul float %tmp45, %tmp878
-  %tmp880 = call float @fabs(float %tmp879)
+  %tmp880 = call float @llvm.fabs.f32(float %tmp879)
   %tmp881 = fmul float %tmp178, 0x3FECCCCCC0000000
   %tmp882 = fadd float %tmp881, %tmp880
   %tmp883 = fadd float %tmp882, 0xBFEFAE1480000000
@@ -1284,7 +1284,7 @@ ENDIF178:                                         ; preds = %IF179, %ENDIF175
   %tmp954 = insertelement <4 x float> %tmp953, float %result.i8, i32 1
   %tmp955 = insertelement <4 x float> %tmp954, float %result.i4, i32 2
   %tmp956 = insertelement <4 x float> %tmp955, float %tmp931, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %tmp956, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %tmp956, i32 0, i32 0)
   ret void
 }
 
@@ -1292,10 +1292,10 @@ ENDIF178:                                         ; preds = %IF179, %ENDIF175
 declare float @llvm.r600.dot4(<4 x float>, <4 x float>) #0
 
 ; Function Attrs: nounwind readnone
-declare float @llvm.AMDGPU.rsq.clamped.f32(float) #0
+declare float @llvm.r600.recipsqrt.clamped.f32(float) #0
 
 ; Function Attrs: nounwind readonly
-declare float @fabs(float) #1
+declare float @llvm.fabs.f32(float) #1
 
 ; Function Attrs: nounwind readnone
 declare float @llvm.exp2.f32(float) #0
@@ -1303,7 +1303,7 @@ declare float @llvm.exp2.f32(float) #0
 ; Function Attrs: nounwind readnone
 declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 ; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0

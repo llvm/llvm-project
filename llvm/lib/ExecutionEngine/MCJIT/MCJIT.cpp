@@ -327,14 +327,14 @@ RuntimeDyld::SymbolInfo MCJIT::findSymbol(const std::string &Name,
   for (object::OwningBinary<object::Archive> &OB : Archives) {
     object::Archive *A = OB.getBinary();
     // Look for our symbols in each Archive
-    Error Err;
-    object::Archive::child_iterator ChildIt = A->findSym(Err, Name);
-    if (Err)
-      report_fatal_error(std::move(Err));
-    if (ChildIt != A->child_end()) {
+    auto OptionalChildOrErr = A->findSym(Name);
+    if (!OptionalChildOrErr)
+      report_fatal_error(OptionalChildOrErr.takeError());
+    auto &OptionalChild = *OptionalChildOrErr;
+    if (OptionalChild) {
       // FIXME: Support nested archives?
       Expected<std::unique_ptr<object::Binary>> ChildBinOrErr =
-          ChildIt->getAsBinary();
+          OptionalChild->getAsBinary();
       if (!ChildBinOrErr) {
         // TODO: Actually report errors helpfully.
         consumeError(ChildBinOrErr.takeError());

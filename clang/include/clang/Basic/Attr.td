@@ -2087,14 +2087,14 @@ def MSStruct : InheritableAttr {
 
 def DLLExport : InheritableAttr, TargetSpecificAttr<TargetWindows> {
   let Spellings = [Declspec<"dllexport">, GCC<"dllexport">];
-  let Subjects = SubjectList<[Function, Var, CXXRecord]>;
-  let Documentation = [Undocumented];
+  let Subjects = SubjectList<[Function, Var, CXXRecord, ObjCInterface]>;
+  let Documentation = [DLLExportDocs];
 }
 
 def DLLImport : InheritableAttr, TargetSpecificAttr<TargetWindows> {
   let Spellings = [Declspec<"dllimport">, GCC<"dllimport">];
-  let Subjects = SubjectList<[Function, Var, CXXRecord]>;
-  let Documentation = [Undocumented];
+  let Subjects = SubjectList<[Function, Var, CXXRecord, ObjCInterface]>;
+  let Documentation = [DLLImportDocs];
 }
 
 def SelectAny : InheritableAttr {

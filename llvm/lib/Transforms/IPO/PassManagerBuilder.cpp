@@ -125,6 +125,15 @@ static cl::opt<bool> UseLoopVersioningLICM(
     "enable-loop-versioning-licm", cl::init(false), cl::Hidden,
     cl::desc("Enable the experimental Loop Versioning LICM pass"));
 
+static cl::opt<bool>
+    DisablePreInliner("disable-preinline", cl::init(false), cl::Hidden,
+                      cl::desc("Disable pre-instrumentation inliner"));
+
+static cl::opt<int> PreInlineThreshold(
+    "preinline-threshold", cl::Hidden, cl::init(75), cl::ZeroOrMore,
+    cl::desc("Control the amount of inlining in pre-instrumentation inliner "
+             "(default = 75)"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -223,11 +232,25 @@ void PassManagerBuilder::populateFunctionPassManager(
   FPM.add(createCFGSimplificationPass());
   FPM.add(createSROAPass());
   FPM.add(createEarlyCSEPass());
+  FPM.add(createGVNHoistPass());
   FPM.add(createLowerExpectIntrinsicPass());
 }
 
 // Do PGO instrumentation generation or use pass as the option specified.
 void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
+  if (PGOInstrGen.empty() && PGOInstrUse.empty())
+    return;
+  // Perform the preinline and cleanup passes for O1 and above.
+  // And avoid doing them if optimizing for size.
+  if (OptLevel > 0 && SizeLevel == 0 && !DisablePreInliner) {
+    // Create preinline pass.
+    MPM.add(createFunctionInliningPass(PreInlineThreshold));
+    MPM.add(createSROAPass());
+    MPM.add(createEarlyCSEPass());             // Catch trivial redundancies
+    MPM.add(createCFGSimplificationPass());    // Merge & remove BBs
+    MPM.add(createInstructionCombiningPass()); // Combine silly seq's
+    addExtensionsToPM(EP_Peephole, MPM);
+  }
   if (!PGOInstrGen.empty()) {
     MPM.add(createPGOInstrumentationGenLegacyPass());
     // Add the profile lowering pass.
@@ -384,9 +407,10 @@ void PassManagerBuilder::populateModulePassManager(
     /// PGO instrumentation is added during the compile phase for ThinLTO, do
     /// not run it a second time
     addPGOInstrPasses(MPM);
-    // Indirect call promotion that promotes intra-module targets only.
-    MPM.add(createPGOIndirectCallPromotionLegacyPass());
   }
+
+  // Indirect call promotion that promotes intra-module targets only.
+  MPM.add(createPGOIndirectCallPromotionLegacyPass());
 
   if (EnableNonLTOGlobalsModRef)
     // We add a module alias analysis pass here. In part due to bugs in the

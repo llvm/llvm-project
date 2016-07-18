@@ -115,20 +115,18 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
 void MappingTraits<MsfHeaders>::mapping(IO &IO, MsfHeaders &Obj) {
   IO.mapRequired("SuperBlock", Obj.SuperBlock);
   IO.mapRequired("NumDirectoryBlocks", Obj.NumDirectoryBlocks);
-  IO.mapRequired("BlockMapOffset", Obj.BlockMapOffset);
   IO.mapRequired("DirectoryBlocks", Obj.DirectoryBlocks);
   IO.mapRequired("NumStreams", Obj.NumStreams);
   IO.mapRequired("FileSize", Obj.FileSize);
 }
 
-void MappingTraits<PDBFile::SuperBlock>::mapping(IO &IO,
-                                                 PDBFile::SuperBlock &SB) {
+void MappingTraits<msf::SuperBlock>::mapping(IO &IO, msf::SuperBlock &SB) {
   if (!IO.outputting()) {
-    ::memcpy(SB.MagicBytes, MsfMagic, sizeof(MsfMagic));
+    ::memcpy(SB.MagicBytes, msf::Magic, sizeof(msf::Magic));
   }
 
   IO.mapRequired("BlockSize", SB.BlockSize);
-  IO.mapRequired("Unknown0", SB.Unknown0);
+  IO.mapRequired("FreeBlockMap", SB.FreeBlockMapBlock);
   IO.mapRequired("NumBlocks", SB.NumBlocks);
   IO.mapRequired("NumDirectoryBytes", SB.NumDirectoryBytes);
   IO.mapRequired("Unknown1", SB.Unknown1);
@@ -144,6 +142,7 @@ void MappingTraits<PdbInfoStream>::mapping(IO &IO, PdbInfoStream &Obj) {
   IO.mapRequired("Guid", Obj.Guid);
   IO.mapRequired("Signature", Obj.Signature);
   IO.mapRequired("Version", Obj.Version);
+  IO.mapRequired("NamedStreams", Obj.NamedStreams);
 }
 
 void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
@@ -154,4 +153,10 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapRequired("PdbDllRbld", Obj.PdbDllRbld);
   IO.mapRequired("Flags", Obj.Flags);
   IO.mapRequired("MachineType", Obj.MachineType);
+}
+
+void MappingTraits<NamedStreamMapping>::mapping(IO &IO,
+                                                NamedStreamMapping &Obj) {
+  IO.mapRequired("Name", Obj.StreamName);
+  IO.mapRequired("StreamNum", Obj.StreamNumber);
 }

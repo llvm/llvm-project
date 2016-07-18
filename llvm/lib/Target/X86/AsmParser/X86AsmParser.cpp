@@ -1394,7 +1394,7 @@ X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
     return ErrorOperand(BracLoc, "Expected '[' token!");
   Parser.Lex(); // Eat '['
 
-  SMLoc StartInBrac = Tok.getLoc();
+  SMLoc StartInBrac = Parser.getTok().getLoc();
   // Parse [ Symbol + ImmDisp ] and [ BaseReg + Scale*IndexReg + ImmDisp ].  We
   // may have already parsed an immediate displacement before the bracketed
   // expression.
@@ -1423,7 +1423,10 @@ X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
   // Parse struct field access.  Intel requires a dot, but MSVC doesn't.  MSVC
   // will in fact do global lookup the field name inside all global typedefs,
   // but we don't emulate that.
-  if (Tok.getString().find('.') != StringRef::npos) {
+  if ((Parser.getTok().getKind() == AsmToken::Identifier ||
+       Parser.getTok().getKind() == AsmToken::Dot ||
+       Parser.getTok().getKind() == AsmToken::Real) &&
+      Parser.getTok().getString().find('.') != StringRef::npos) {
     const MCExpr *NewDisp;
     if (ParseIntelDotOperator(Disp, NewDisp))
       return nullptr;

@@ -27,7 +27,7 @@ InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
 Error InfoStream::reload() {
   codeview::StreamReader Reader(*Stream);
 
-  const Header *H;
+  const HeaderInfo *H;
   if (auto EC = Reader.readObject(H))
     return joinErrors(
         std::move(EC),
@@ -78,7 +78,7 @@ PDB_UniqueId InfoStream::getGuid() const { return Guid; }
 Error InfoStream::commit() {
   StreamWriter Writer(*Stream);
 
-  Header H;
+  HeaderInfo H;
   H.Age = Age;
   H.Signature = Signature;
   H.Version = Version;

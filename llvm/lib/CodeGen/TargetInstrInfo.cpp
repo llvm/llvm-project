@@ -497,7 +497,7 @@ static MachineInstr *foldPatchpoint(MachineFunction &MF, MachineInstr &MI,
 MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
                                                  ArrayRef<unsigned> Ops, int FI,
                                                  LiveIntervals *LIS) const {
-  unsigned Flags = 0;
+  auto Flags = MachineMemOperand::MONone;
   for (unsigned i = 0, e = Ops.size(); i != e; ++i)
     if (MI.getOperand(Ops[i]).isDef())
       Flags |= MachineMemOperand::MOStore;

@@ -52,6 +52,7 @@ int test1() {
 @class I5;
 @interface I5
 -(void)meth;
+@property (class) int c;
 @end
 
 // RUN: c-index-test -index-file %s -target x86_64-apple-macosx10.7 > %t
@@ -82,3 +83,4 @@ int test1() {
 // CHECK-NOT: [indexDeclaration]: kind: objc-instance-method {{.*}} loc: 43:
 
 // CHECK: [indexDeclaration]: kind: objc-instance-method | name: meth | {{.*}} loc: 54:1 | {{.*}} | isRedecl: 0 | isDef: 0 |
+// CHECK: [indexDeclaration]: kind: objc-property | name: c | USR: c:objc(cs)I5(cpy)c | lang: ObjC | cursor: ObjCPropertyDecl=c:55:23 [class,] | loc: 55:23

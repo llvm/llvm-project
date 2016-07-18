@@ -114,11 +114,11 @@ struct InterfaceValue {
   unsigned DerefLevel;
 };
 
-inline bool operator==(InterfaceValue lhs, InterfaceValue rhs) {
-  return lhs.Index == rhs.Index && lhs.DerefLevel == rhs.DerefLevel;
+inline bool operator==(InterfaceValue LHS, InterfaceValue RHS) {
+  return LHS.Index == RHS.Index && LHS.DerefLevel == RHS.DerefLevel;
 }
-inline bool operator!=(InterfaceValue lhs, InterfaceValue rhs) {
-  return !(lhs == rhs);
+inline bool operator!=(InterfaceValue LHS, InterfaceValue RHS) {
+  return !(LHS == RHS);
 }
 
 /// We use ExternalRelation to describe an externally visible aliasing relations
@@ -149,6 +149,26 @@ struct InstantiatedValue {
   unsigned DerefLevel;
 };
 Optional<InstantiatedValue> instantiateInterfaceValue(InterfaceValue, CallSite);
+
+inline bool operator==(InstantiatedValue LHS, InstantiatedValue RHS) {
+  return LHS.Val == RHS.Val && LHS.DerefLevel == RHS.DerefLevel;
+}
+inline bool operator!=(InstantiatedValue LHS, InstantiatedValue RHS) {
+  return !(LHS == RHS);
+}
+inline bool operator<(InstantiatedValue LHS, InstantiatedValue RHS) {
+  return std::less<Value *>()(LHS.Val, RHS.Val) ||
+         (LHS.Val == RHS.Val && LHS.DerefLevel < RHS.DerefLevel);
+}
+inline bool operator>(InstantiatedValue LHS, InstantiatedValue RHS) {
+  return RHS < LHS;
+}
+inline bool operator<=(InstantiatedValue LHS, InstantiatedValue RHS) {
+  return !(RHS < LHS);
+}
+inline bool operator>=(InstantiatedValue LHS, InstantiatedValue RHS) {
+  return !(LHS < RHS);
+}
 
 /// This is the result of instantiating ExternalRelation at a particular
 /// callsite

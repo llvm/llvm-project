@@ -480,13 +480,14 @@ public:
   ///
   /// Functions that are instantiated more than once, such as C++ template
   /// specializations, have distinct coverage records for each instantiation.
-  std::vector<const FunctionRecord *> getInstantiations(StringRef Filename);
+  std::vector<const FunctionRecord *>
+  getInstantiations(StringRef Filename) const;
 
   /// \brief Get the coverage for a particular function.
-  CoverageData getCoverageForFunction(const FunctionRecord &Function);
+  CoverageData getCoverageForFunction(const FunctionRecord &Function) const;
 
   /// \brief Get the coverage for an expansion within a coverage set.
-  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion);
+  CoverageData getCoverageForExpansion(const ExpansionRecord &Expansion) const;
 };
 
 // Profile coverage map has the following layout:

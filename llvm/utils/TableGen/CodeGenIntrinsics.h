@@ -114,9 +114,27 @@ struct CodeGenIntrinsic {
   CodeGenIntrinsic(Record *R);
 };
 
-/// Read all of the intrinsics defined in the specified .td file.
-std::vector<CodeGenIntrinsic> LoadIntrinsics(const RecordKeeper &RC,
-                                             bool TargetOnly);
+class CodeGenIntrinsicTable {
+  std::vector<CodeGenIntrinsic> Intrinsics;
+
+public:
+  struct TargetSet {
+    std::string Name;
+    size_t Offset;
+    size_t Count;
+  };
+  std::vector<TargetSet> Targets;
+
+  explicit CodeGenIntrinsicTable(const RecordKeeper &RC, bool TargetOnly);
+  CodeGenIntrinsicTable() = default;
+
+  bool empty() const { return Intrinsics.empty(); }
+  size_t size() const { return Intrinsics.size(); }
+  CodeGenIntrinsic &operator[](size_t Pos) { return Intrinsics[Pos]; }
+  const CodeGenIntrinsic &operator[](size_t Pos) const {
+    return Intrinsics[Pos];
+  }
+};
 }
 
 #endif

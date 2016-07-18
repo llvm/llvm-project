@@ -901,7 +901,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   if (MustSaveLR)
     // FIXME: On PPC32 SVR4, we must not spill before claiming the stackframe.
     BuildMI(MBB, MBBI, dl, StoreInst)
-      .addReg(ScratchReg)
+      .addReg(ScratchReg, getKillRegState(true))
       .addImm(LROffset)
       .addReg(SPReg);
 

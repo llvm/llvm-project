@@ -1,10 +1,11 @@
 // RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=150 -new-name=X %t.cpp -i --
+// RUN: clang-rename -offset=152 -new-name=Bar %t.cpp -i --
 // RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
-class Base {
+
+class Baz {
 };
 
-class Derived : public Base {
+class Foo : public Baz {                          // CHECK: class Bar : public Baz {
 public:
   int getValue() const {
     return 0;
@@ -12,13 +13,13 @@ public:
 };
 
 int main() {
-  Derived D;
-  const Base &Reference = D;
-  const Base *Pointer = &D;
+  Foo foo;                                        // FIXME: Bar foo;
+  const Baz &Reference = foo;
+  const Baz *Pointer = &foo;
 
-  static_cast<const Derived &>(Reference).getValue(); // CHECK: static_cast<const X &>
-  static_cast<const Derived *>(Pointer)->getValue();  // CHECK: static_cast<const X *>
+  static_cast<const Foo &>(Reference).getValue(); // CHECK: static_cast<const Bar &>(Reference).getValue();
+  static_cast<const Foo *>(Pointer)->getValue();  // CHECK: static_cast<const Bar *>(Pointer)->getValue();
 }
 
-// Use grep -FUbo 'Derived' <file> to get the correct offset of foo when changing
+// Use grep -FUbo 'Foo' <file> to get the correct offset of foo when changing
 // this file.

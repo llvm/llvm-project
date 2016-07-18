@@ -716,8 +716,8 @@ public:
 class CodeGenDAGPatterns {
   RecordKeeper &Records;
   CodeGenTarget Target;
-  std::vector<CodeGenIntrinsic> Intrinsics;
-  std::vector<CodeGenIntrinsic> TgtIntrinsics;
+  CodeGenIntrinsicTable Intrinsics;
+  CodeGenIntrinsicTable TgtIntrinsics;
 
   std::map<Record*, SDNodeInfo, LessRecordByID> SDNodes;
   std::map<Record*, std::pair<Record*, std::string>, LessRecordByID> SDNodeXForms;

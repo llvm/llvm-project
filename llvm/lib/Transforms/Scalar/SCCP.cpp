@@ -1489,9 +1489,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
     }
 
     if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-      if (!SI->getNumCases())
-        continue;
-      if (!getValueState(SI->getCondition()).isUnknown())
+      if (!SI->getNumCases() || !getValueState(SI->getCondition()).isUnknown())
         continue;
 
       // If the input to SCCP is actually switch on undef, fix the undef to
@@ -1510,7 +1508,7 @@ bool SCCPSolver::ResolvedUndefsIn(Function &F) {
   return false;
 }
 
-static bool tryToReplaceWithConstant(SCCPSolver Solver, Value *V) {
+static bool tryToReplaceWithConstant(SCCPSolver &Solver, Value *V) {
   Constant *Const = nullptr;
   if (V->getType()->isStructTy()) {
     std::vector<LatticeVal> IVs = Solver.getStructLatticeValueFor(V);
@@ -1540,7 +1538,7 @@ static bool tryToReplaceWithConstant(SCCPSolver Solver, Value *V) {
   return true;
 }
 
-static bool tryToReplaceInstWithConstant(SCCPSolver Solver, Instruction *Inst,
+static bool tryToReplaceInstWithConstant(SCCPSolver &Solver, Instruction *Inst,
                                          bool shouldEraseFromParent) {
   if (!tryToReplaceWithConstant(Solver, Inst))
     return false;

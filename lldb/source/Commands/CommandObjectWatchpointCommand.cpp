@@ -36,13 +36,12 @@ class CommandObjectWatchpointCommandAdd :
     public IOHandlerDelegateMultiline
 {
 public:
-    CommandObjectWatchpointCommandAdd (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "add",
-                            "Add a set of commands to a watchpoint, to be executed whenever the watchpoint is hit.",
-                            nullptr),
-        IOHandlerDelegateMultiline("DONE", IOHandlerDelegate::Completion::LLDBCommand),
-        m_options (interpreter)
+    CommandObjectWatchpointCommandAdd(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "add",
+              "Add a set of LLDB commands to a watchpoint, to be executed whenever the watchpoint is hit.", nullptr),
+          IOHandlerDelegateMultiline("DONE", IOHandlerDelegate::Completion::LLDBCommand),
+          m_options(interpreter)
     {
         SetHelpLong (
 R"(
@@ -708,11 +707,10 @@ protected:
 // CommandObjectWatchpointCommand
 //-------------------------------------------------------------------------
 
-CommandObjectWatchpointCommand::CommandObjectWatchpointCommand (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "command",
-                            "A set of commands for adding, removing and examining bits of code to be executed when the watchpoint is hit (watchpoint 'commmands').",
-                            "command <sub-command> [<sub-command-options>] <watchpoint-id>")
+CommandObjectWatchpointCommand::CommandObjectWatchpointCommand(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "command", "Commands for adding, removing and examining LLDB commands "
+                                                     "executed when the watchpoint is hit (watchpoint 'commmands').",
+                             "command <sub-command> [<sub-command-options>] <watchpoint-id>")
 {
     CommandObjectSP add_command_object (new CommandObjectWatchpointCommandAdd (interpreter));
     CommandObjectSP delete_command_object (new CommandObjectWatchpointCommandDelete (interpreter));

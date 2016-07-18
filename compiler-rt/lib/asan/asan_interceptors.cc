@@ -585,7 +585,7 @@ INTERCEPTOR(char*, __strdup, const char *s) {
 INTERCEPTOR(SIZE_T, wcslen, const wchar_t *s) {
   void *ctx;
   ASAN_INTERCEPTOR_ENTER(ctx, wcslen);
-  SIZE_T length = REAL(wcslen)(s);
+  SIZE_T length = internal_wcslen(s);
   if (!asan_init_is_running) {
     ENSURE_ASAN_INITED();
     ASAN_READ_RANGE(ctx, s, (length + 1) * sizeof(wchar_t));

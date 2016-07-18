@@ -25,7 +25,7 @@
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/LTO/UpdateCompilerUsed.h"
+#include "llvm/LTO/legacy/UpdateCompilerUsed.h"
 #include "llvm/Linker/IRMover.h"
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/StringSaver.h"
@@ -43,23 +43,20 @@ using namespace lld;
 using namespace lld::elf;
 
 // This is for use when debugging LTO.
-static void saveLtoObjectFile(StringRef Buffer, unsigned I, bool Many) {
-  SmallString<128> Filename = Config->OutputFile;
-  if (Many)
-    Filename += utostr(I);
-  Filename += ".lto.o";
+static void saveBuffer(StringRef Buffer, const Twine &Path) {
   std::error_code EC;
-  raw_fd_ostream OS(Filename, EC, sys::fs::OpenFlags::F_None);
-  check(EC);
+  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
+  if (EC)
+    error(EC, "cannot create " + Path);
   OS << Buffer;
 }
 
 // This is for use when debugging LTO.
-static void saveBCFile(Module &M, StringRef Suffix) {
+static void saveBCFile(Module &M, const Twine &Path) {
   std::error_code EC;
-  raw_fd_ostream OS(Config->OutputFile.str() + Suffix.str(), EC,
-                    sys::fs::OpenFlags::F_None);
-  check(EC);
+  raw_fd_ostream OS(Path.str(), EC, sys::fs::OpenFlags::F_None);
+  if (EC)
+    error(EC, "cannot create " + Path);
   WriteBitcodeToFile(&M, OS, /* ShouldPreserveUseListOrder */ true);
 }
 
@@ -136,7 +133,7 @@ static void runLTOPasses(Module &M, TargetMachine &TM) {
   }
 
   if (Config->SaveTemps)
-    saveBCFile(M, ".lto.opt.bc");
+    saveBCFile(M, Config->OutputFile + ".lto.opt.bc");
 }
 
 static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
@@ -147,11 +144,11 @@ static bool shouldInternalize(const SmallPtrSet<GlobalValue *, 8> &Used,
 }
 
 BitcodeCompiler::BitcodeCompiler()
-    : Combined(new llvm::Module("ld-temp.o", Driver->Context)),
-      Mover(*Combined) {}
+    : Combined(new Module("ld-temp.o", Driver->Context)) {}
 
 static void undefine(Symbol *S) {
-  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type);
+  replaceBody<Undefined>(S, S->body()->getName(), STV_DEFAULT, S->body()->Type,
+                         nullptr);
 }
 
 static void handleUndefinedAsmRefs(const BasicSymbolRef &Sym, GlobalValue *GV,
@@ -202,7 +199,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
       continue;
     }
     auto *B = dyn_cast<DefinedBitcode>(S->body());
-    if (!B || B->File != &F)
+    if (!B || B->file() != &F)
       continue;
 
     // We collect the set of symbols we want to internalize here
@@ -228,10 +225,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     switch (GV->getLinkage()) {
     default:
       break;
-    case llvm::GlobalValue::LinkOnceAnyLinkage:
+    case GlobalValue::LinkOnceAnyLinkage:
       GV->setLinkage(GlobalValue::WeakAnyLinkage);
       break;
-    case llvm::GlobalValue::LinkOnceODRLinkage:
+    case GlobalValue::LinkOnceODRLinkage:
       GV->setLinkage(GlobalValue::WeakODRLinkage);
       break;
     }
@@ -239,9 +236,10 @@ void BitcodeCompiler::add(BitcodeFile &F) {
     Keep.push_back(GV);
   }
 
+  IRMover Mover(*Combined);
   if (Error E = Mover.move(Obj->takeModule(), Keep,
                            [](GlobalValue &, IRMover::ValueAdder) {})) {
-    handleAllErrors(std::move(E), [&](const llvm::ErrorInfoBase &EIB) {
+    handleAllErrors(std::move(E), [&](const ErrorInfoBase &EIB) {
       fatal("failed to link module " + F.getName() + ": " + EIB.message());
     });
   }
@@ -272,9 +270,16 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen(
     ObjFiles.push_back(createObjectFile(
         MemoryBufferRef(Obj, "LLD-INTERNAL-combined-lto-object")));
 
-  if (Config->SaveTemps)
-    for (unsigned I = 0; I < NumThreads; ++I)
-      saveLtoObjectFile(OwningData[I], I, NumThreads > 1);
+  // If -save-temps is given, we need to save temporary objects to files.
+  // This is for debugging.
+  if (Config->SaveTemps) {
+    if (NumThreads == 1) {
+      saveBuffer(OwningData[0], Config->OutputFile + ".lto.o");
+    } else {
+      for (unsigned I = 0; I < NumThreads; ++I)
+        saveBuffer(OwningData[I], Config->OutputFile + Twine(I) + ".lto.o");
+    }
+  }
 
   return ObjFiles;
 }
@@ -282,27 +287,25 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::runSplitCodegen(
 // Merge all the bitcode files we have seen, codegen the result
 // and return the resulting ObjectFile.
 std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
-  TheTriple = Combined->getTargetTriple();
   for (const auto &Name : InternalizedSyms) {
     GlobalValue *GV = Combined->getNamedValue(Name.first());
     assert(GV);
     internalize(*GV);
   }
 
+  std::string TheTriple = Combined->getTargetTriple();
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(TheTriple, Msg);
   if (!T)
     fatal("target not found: " + Msg);
-  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
 
-  // lld supports the new relocations.
+  // LLD supports the new relocations.
+  TargetOptions Options = InitTargetOptionsFromCodeGenFlags();
   Options.RelaxELFRelocations = true;
 
-  Reloc::Model R = Config->Pic ? Reloc::PIC_ : Reloc::Static;
-
   auto CreateTargetMachine = [&]() {
-    return std::unique_ptr<TargetMachine>(
-        T->createTargetMachine(TheTriple, "", "", Options, R));
+    return std::unique_ptr<TargetMachine>(T->createTargetMachine(
+        TheTriple, "", "", Options, Config->Pic ? Reloc::PIC_ : Reloc::Static));
   };
 
   std::unique_ptr<TargetMachine> TM = CreateTargetMachine();
@@ -312,7 +315,7 @@ std::vector<std::unique_ptr<InputFile>> BitcodeCompiler::compile() {
   updateCompilerUsed(*Combined, *TM, AsmUndefinedRefs);
 
   if (Config->SaveTemps)
-    saveBCFile(*Combined, ".lto.bc");
+    saveBCFile(*Combined, Config->OutputFile + ".lto.bc");
 
   runLTOPasses(*Combined, *TM);
   if (HasError)

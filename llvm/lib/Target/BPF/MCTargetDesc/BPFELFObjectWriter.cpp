@@ -28,7 +28,7 @@ protected:
 }
 
 BPFELFObjectWriter::BPFELFObjectWriter(uint8_t OSABI)
-    : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_NONE,
+    : MCELFObjectTargetWriter(/*Is64Bit*/ true, OSABI, ELF::EM_BPF,
                               /*HasRelocationAddend*/ false) {}
 
 BPFELFObjectWriter::~BPFELFObjectWriter() {}

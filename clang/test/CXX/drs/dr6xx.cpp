@@ -146,9 +146,9 @@ namespace dr616 { // dr616: no
 #if __cplusplus >= 201103L
   struct S { int n; } s;
   // FIXME: These should all be 'int &&'
-  using T = decltype(S().n); // expected-note 2{{previous}}
+  using T = decltype(S().n);
   using T = decltype(static_cast<S&&>(s).n);
-  using T = decltype(S().*&S::n);
+  using T = decltype(S().*&S::n); // expected-note 2{{previous}}
   using T = decltype(static_cast<S&&>(s).*&S::n); // expected-error {{different type}}
   using T = int&&; // expected-error {{different type}}
 #endif

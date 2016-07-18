@@ -399,6 +399,23 @@ public:
   /// Return true if this instruction may throw an exception.
   bool mayThrow() const;
 
+  /// Return true if this instruction behaves like a memory fence: it can load
+  /// or store to memory location without being given a memory location.
+  bool isFenceLike() const {
+    switch (getOpcode()) {
+    default:
+      return false;
+    // This list should be kept in sync with the list in mayWriteToMemory for
+    // all opcodes which don't have a memory location.
+    case Instruction::Fence:
+    case Instruction::CatchPad:
+    case Instruction::CatchRet:
+    case Instruction::Call:
+    case Instruction::Invoke:
+      return true;
+    }
+  }
+
   /// Return true if the instruction may have side effects.
   ///
   /// Note that this does not consider malloc and alloca to have side

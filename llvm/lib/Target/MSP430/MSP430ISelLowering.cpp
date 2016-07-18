@@ -490,8 +490,7 @@ SDValue MSP430TargetLowering::LowerCCCArguments(
         SDValue FIN = DAG.getFrameIndex(FI, MVT::i16);
         InVal = DAG.getLoad(
             VA.getLocVT(), dl, Chain, FIN,
-            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI),
-            false, false, false, 0);
+            MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FI));
       }
 
       InVals.push_back(InVal);
@@ -625,8 +624,7 @@ SDValue MSP430TargetLowering::LowerCCCCallTo(
                               MachinePointerInfo(),
                               MachinePointerInfo());
       } else {
-        MemOp = DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo(),
-                             false, false, 0);
+        MemOp = DAG.getStore(Chain, dl, Arg, PtrOff, MachinePointerInfo());
       }
 
       MemOpChains.push_back(MemOp);
@@ -1025,13 +1023,13 @@ SDValue MSP430TargetLowering::LowerRETURNADDR(SDValue Op,
         DAG.getConstant(DAG.getDataLayout().getPointerSize(), dl, MVT::i16);
     return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(),
                        DAG.getNode(ISD::ADD, dl, PtrVT, FrameAddr, Offset),
-                       MachinePointerInfo(), false, false, false, 0);
+                       MachinePointerInfo());
   }
 
   // Just load the return address.
   SDValue RetAddrFI = getReturnAddressFrameIndex(DAG);
   return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), RetAddrFI,
-                     MachinePointerInfo(), false, false, false, 0);
+                     MachinePointerInfo());
 }
 
 SDValue MSP430TargetLowering::LowerFRAMEADDR(SDValue Op,
@@ -1046,8 +1044,7 @@ SDValue MSP430TargetLowering::LowerFRAMEADDR(SDValue Op,
                                          MSP430::FP, VT);
   while (Depth--)
     FrameAddr = DAG.getLoad(VT, dl, DAG.getEntryNode(), FrameAddr,
-                            MachinePointerInfo(),
-                            false, false, false, 0);
+                            MachinePointerInfo());
   return FrameAddr;
 }
 
@@ -1063,9 +1060,8 @@ SDValue MSP430TargetLowering::LowerVASTART(SDValue Op,
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
 
   // Create a store of the frame index to the location operand
-  return DAG.getStore(Op.getOperand(0), SDLoc(Op), FrameIndex,
-                      Op.getOperand(1), MachinePointerInfo(SV),
-                      false, false, 0);
+  return DAG.getStore(Op.getOperand(0), SDLoc(Op), FrameIndex, Op.getOperand(1),
+                      MachinePointerInfo(SV));
 }
 
 SDValue MSP430TargetLowering::LowerJumpTable(SDValue Op,

@@ -18,7 +18,6 @@
 #include "HexagonISelLowering.h"
 #include "HexagonInstrInfo.h"
 #include "HexagonSelectionDAGInfo.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 #include <string>
@@ -46,6 +45,11 @@ public:
   /// True if the target should use Back-Skip-Back scheduling. This is the
   /// default for V60.
   bool UseBSBScheduling;
+
+  class HexagonDAGMutation : public ScheduleDAGMutation {
+  public:
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
 
 private:
   std::string CPUString;
@@ -119,6 +123,20 @@ public:
   const HexagonArchEnum &getHexagonArchVersion() const {
     return HexagonArchVersion;
   }
+
+  void getPostRAMutations(
+      std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations)
+      const override;
+
+  /// \brief Perform target specific adjustments to the latency of a schedule
+  /// dependency.
+  void adjustSchedDependency(SUnit *def, SUnit *use, SDep& dep) const override;
+
+private:
+  // Helper function responsible for increasing the latency only.
+  void updateLatency(MachineInstr *SrcInst, MachineInstr *DstInst, SDep &Dep) const;
+  bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII) const;
+  void changePhiLatency(MachineInstr *SrcInst, SUnit *Dst, SDep &Dep) const;
 };
 
 } // end namespace llvm

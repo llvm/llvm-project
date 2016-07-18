@@ -257,12 +257,12 @@ CommandObjectDisassemble::CommandOptions::g_option_table[] =
 // CommandObjectDisassemble
 //-------------------------------------------------------------------------
 
-CommandObjectDisassemble::CommandObjectDisassemble (CommandInterpreter &interpreter) :
-    CommandObjectParsed (interpreter,
-                         "disassemble",
-                         "Disassemble bytes in the current function, or elsewhere in the executable program as specified by the user.",
-                         "disassemble [<cmd-options>]"),
-    m_options (interpreter)
+CommandObjectDisassemble::CommandObjectDisassemble(CommandInterpreter &interpreter)
+    : CommandObjectParsed(interpreter, "disassemble", "Disassemble specified instructions in the current target.  "
+                                                      "Defaults to the current function for the current thread and "
+                                                      "stack frame.",
+                          "disassemble [<cmd-options>]"),
+      m_options(interpreter)
 {
 }
 

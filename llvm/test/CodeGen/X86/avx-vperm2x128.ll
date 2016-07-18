@@ -42,7 +42,7 @@ define <8 x float> @shuffle_v8f32_01230123(<8 x float> %a, <8 x float> %b) nounw
 ;
 ; AVX2-LABEL: shuffle_v8f32_01230123:
 ; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[0,1,0,1]
 ; AVX2-NEXT:    retq
 entry:
   %shuffle = shufflevector <8 x float> %a, <8 x float> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
@@ -58,7 +58,7 @@ define <8 x float> @shuffle_v8f32_01230123_mem(<8 x float>* %pa, <8 x float>* %p
 ;
 ; AVX2-LABEL: shuffle_v8f32_01230123_mem:
 ; AVX2:       ## BB#0: ## %entry
-; AVX2-NEXT:    vpermpd {{.*#+}} ymm0 = mem[0,1,0,1]
+; AVX2-NEXT:    vperm2f128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX2-NEXT:    retq
 entry:
   %a = load <8 x float>, <8 x float>* %pa

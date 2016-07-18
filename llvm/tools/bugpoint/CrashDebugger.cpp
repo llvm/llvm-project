@@ -54,6 +54,9 @@ namespace {
   cl::opt<bool> NoNamedMDRM("disable-namedmd-remove",
                             cl::desc("Do not remove global named metadata"),
                             cl::init(false));
+  cl::opt<bool> VerboseErrors("verbose-errors",
+                            cl::desc("Print the output of crashing program"),
+                            cl::init(false));
 }
 
 namespace llvm {
@@ -905,7 +908,10 @@ static bool TestForCodeGenCrash(const BugDriver &BD, Module *M) {
   std::string Error;
   BD.compileProgram(M, &Error);
   if (!Error.empty()) {
-    errs() << "<crash>\n";
+    if (VerboseErrors)
+      errs() << Error << "\n";
+    else
+      errs() << "<crash>\n";
     return true;  // Tool is still crashing.
   }
   errs() << '\n';

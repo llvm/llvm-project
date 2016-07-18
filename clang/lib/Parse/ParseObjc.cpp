@@ -2858,6 +2858,8 @@ ExprResult Parser::ParseObjCAtExpression(SourceLocation AtLoc) {
       return ParsePostfixExpressionSuffix(ParseObjCProtocolExpression(AtLoc));
     case tok::objc_selector:
       return ParsePostfixExpressionSuffix(ParseObjCSelectorExpression(AtLoc));
+    case tok::objc_available:
+      return ParseAvailabilityCheckExpr(AtLoc);
       default: {
         const char *str = nullptr;
         if (GetLookAheadToken(1).is(tok::l_brace)) {

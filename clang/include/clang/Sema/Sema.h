@@ -16,6 +16,7 @@
 #define LLVM_CLANG_SEMA_SEMA_H
 
 #include "clang/AST/Attr.h"
+#include "clang/AST/Availability.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/ExprObjC.h"
@@ -2039,7 +2040,7 @@ public:
   /// ActOnTagFinishDefinition - Invoked once we have finished parsing
   /// the definition of a tag (enumeration, class, struct, or union).
   void ActOnTagFinishDefinition(Scope *S, Decl *TagDecl,
-                                SourceLocation RBraceLoc);
+                                SourceRange BraceRange);
 
   void ActOnTagFinishSkippedDefinition(SkippedDefinitionContext Context);
 
@@ -2076,8 +2077,8 @@ public:
                           SourceLocation IdLoc, IdentifierInfo *Id,
                           AttributeList *Attrs,
                           SourceLocation EqualLoc, Expr *Val);
-  void ActOnEnumBody(SourceLocation EnumLoc, SourceLocation LBraceLoc,
-                     SourceLocation RBraceLoc, Decl *EnumDecl,
+  void ActOnEnumBody(SourceLocation EnumLoc, SourceRange BraceRange,
+                     Decl *EnumDecl,
                      ArrayRef<Decl *> Elements,
                      Scope *S, AttributeList *Attr);
 
@@ -4738,6 +4739,10 @@ public:
 
   /// ActOnObjCBoolLiteral - Parse {__objc_yes,__objc_no} literals.
   ExprResult ActOnObjCBoolLiteral(SourceLocation OpLoc, tok::TokenKind Kind);
+
+  ExprResult
+  ActOnObjCAvailabilityCheckExpr(llvm::ArrayRef<AvailabilitySpec> AvailSpecs,
+                                 SourceLocation AtLoc, SourceLocation RParen);
 
   /// ActOnCXXNullPtrLiteral - Parse 'nullptr'.
   ExprResult ActOnCXXNullPtrLiteral(SourceLocation Loc);
@@ -9518,10 +9523,6 @@ private:
   void CheckArgumentWithTypeTag(const ArgumentWithTypeTagAttr *Attr,
                                 const Expr * const *ExprArgs);
 
-  /// \brief Check if we are taking the address of a packed field
-  /// as this may be a problem if the pointer value is dereferenced.
-  void CheckAddressOfPackedMember(Expr *rhs);
-
   /// \brief The parser's current scope.
   ///
   /// The parser maintains this state here.
@@ -9600,51 +9601,6 @@ public:
   // Emitting members of dllexported classes is delayed until the class
   // (including field initializers) is fully parsed.
   SmallVector<CXXRecordDecl*, 4> DelayedDllExportClasses;
-
-private:
-  /// \brief Helper class that collects misaligned member designations and
-  /// their location info for delayed diagnostics.
-  struct MisalignedMember {
-    Expr *E;
-    RecordDecl *RD;
-    ValueDecl *MD;
-    CharUnits Alignment;
-
-    MisalignedMember() : E(), RD(), MD(), Alignment() {}
-    MisalignedMember(Expr *E, RecordDecl *RD, ValueDecl *MD,
-                     CharUnits Alignment)
-        : E(E), RD(RD), MD(MD), Alignment(Alignment) {}
-    explicit MisalignedMember(Expr *E)
-        : MisalignedMember(E, nullptr, nullptr, CharUnits()) {}
-
-    bool operator==(const MisalignedMember &m) { return this->E == m.E; }
-  };
-  /// \brief Small set of gathered accesses to potentially misaligned members
-  /// due to the packed attribute.
-  SmallVector<MisalignedMember, 4> MisalignedMembers;
-
-  /// \brief Adds an expression to the set of gathered misaligned members.
-  void AddPotentialMisalignedMembers(Expr *E, RecordDecl *RD, ValueDecl *MD,
-                                     CharUnits Alignment);
-
-public:
-  /// \brief Diagnoses the current set of gathered accesses. This typically
-  /// happens at full expression level. The set is cleared after emitting the
-  /// diagnostics.
-  void DiagnoseMisalignedMembers();
-
-  /// \brief This function checks if the expression is in the sef of potentially
-  /// misaligned members and it is converted to some pointer type T with lower
-  /// or equal alignment requirements.  If so it removes it. This is used when
-  /// we do not want to diagnose such misaligned access (e.g. in conversions to void*).
-  void DiscardMisalignedMemberAddress(const Type *T, Expr *E);
-
-  /// \brief This function calls Action when it determines that E designates a
-  /// misaligned member due to the packed attribute. This is used to emit
-  /// local diagnostics like in reference binding.
-  void RefersToMemberWithReducedAlignment(
-      Expr *E,
-      std::function<void(Expr *, RecordDecl *, ValueDecl *, CharUnits)> Action);
 };
 
 /// \brief RAII object that enters a new expression evaluation context.

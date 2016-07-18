@@ -169,10 +169,10 @@ llvm::DIScope *CGDebugInfo::getContextDescriptor(const Decl *Context,
   }
 
   // Check namespace.
-  if (const NamespaceDecl *NSDecl = dyn_cast<NamespaceDecl>(Context))
+  if (const auto *NSDecl = dyn_cast<NamespaceDecl>(Context))
     return getOrCreateNameSpace(NSDecl);
 
-  if (const RecordDecl *RDecl = dyn_cast<RecordDecl>(Context))
+  if (const auto *RDecl = dyn_cast<RecordDecl>(Context))
     if (!RDecl->isDependentType())
       return getOrCreateType(CGM.getContext().getTypeDeclType(RDecl),
                              getOrCreateMainFile());
@@ -222,21 +222,18 @@ StringRef CGDebugInfo::getObjCMethodName(const ObjCMethodDecl *OMD) {
   llvm::raw_svector_ostream OS(MethodName);
   OS << (OMD->isInstanceMethod() ? '-' : '+') << '[';
   const DeclContext *DC = OMD->getDeclContext();
-  if (const ObjCImplementationDecl *OID =
-          dyn_cast<const ObjCImplementationDecl>(DC)) {
+  if (const auto *OID = dyn_cast<ObjCImplementationDecl>(DC)) {
     OS << OID->getName();
-  } else if (const ObjCInterfaceDecl *OID =
-                 dyn_cast<const ObjCInterfaceDecl>(DC)) {
+  } else if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(DC)) {
     OS << OID->getName();
-  } else if (const ObjCCategoryDecl *OC = dyn_cast<ObjCCategoryDecl>(DC)) {
+  } else if (const auto *OC = dyn_cast<ObjCCategoryDecl>(DC)) {
     if (OC->IsClassExtension()) {
       OS << OC->getClassInterface()->getName();
     } else {
-      OS << ((const NamedDecl *)OC)->getIdentifier()->getNameStart() << '('
+      OS << OC->getIdentifier()->getNameStart() << '('
          << OC->getIdentifier()->getNameStart() << ')';
     }
-  } else if (const ObjCCategoryImplDecl *OCD =
-                 dyn_cast<const ObjCCategoryImplDecl>(DC)) {
+  } else if (const auto *OCD = dyn_cast<ObjCCategoryImplDecl>(DC)) {
     OS << ((const NamedDecl *)OCD)->getIdentifier()->getNameStart() << '('
        << OCD->getIdentifier()->getNameStart() << ')';
   } else if (isa<ObjCProtocolDecl>(DC)) {
@@ -846,7 +843,7 @@ llvm::DIType *CGDebugInfo::CreateType(const TemplateSpecializationType *Ty,
       OS, Ty->template_arguments(),
       CGM.getContext().getPrintingPolicy());
 
-  TypeAliasDecl *AliasDecl = cast<TypeAliasTemplateDecl>(
+  auto *AliasDecl = cast<TypeAliasTemplateDecl>(
       Ty->getTemplateName().getAsTemplateDecl())->getTemplatedDecl();
 
   SourceLocation Loc = AliasDecl->getLocation();
@@ -912,9 +909,9 @@ llvm::DIType *CGDebugInfo::CreateType(const FunctionType *Ty,
   // otherwise emit it as a variadic function.
   if (isa<FunctionNoProtoType>(Ty))
     EltTys.push_back(DBuilder.createUnspecifiedParameter());
-  else if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(Ty)) {
-    for (unsigned i = 0, e = FPT->getNumParams(); i != e; ++i)
-      EltTys.push_back(getOrCreateType(FPT->getParamType(i), Unit));
+  else if (const auto *FPT = dyn_cast<FunctionProtoType>(Ty)) {
+    for (const QualType &ParamType : FPT->param_types())
+      EltTys.push_back(getOrCreateType(ParamType, Unit));
     if (FPT->isVariadic())
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
   }
@@ -1097,7 +1094,7 @@ void CGDebugInfo::CollectRecordFields(
     const RecordDecl *record, llvm::DIFile *tunit,
     SmallVectorImpl<llvm::Metadata *> &elements,
     llvm::DICompositeType *RecordTy) {
-  const CXXRecordDecl *CXXDecl = dyn_cast<CXXRecordDecl>(record);
+  const auto *CXXDecl = dyn_cast<CXXRecordDecl>(record);
 
   if (CXXDecl && CXXDecl->isLambda())
     CollectRecordLambdaFields(CXXDecl, elements, RecordTy);
@@ -1201,7 +1198,7 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateInstanceMethodType(
 /// isFunctionLocalClass - Return true if CXXRecordDecl is defined
 /// inside a function.
 static bool isFunctionLocalClass(const CXXRecordDecl *RD) {
-  if (const CXXRecordDecl *NRD = dyn_cast<CXXRecordDecl>(RD->getDeclContext()))
+  if (const auto *NRD = dyn_cast<CXXRecordDecl>(RD->getDeclContext()))
     return isFunctionLocalClass(NRD);
   if (isa<FunctionDecl>(RD->getDeclContext()))
     return true;
@@ -1283,11 +1280,10 @@ llvm::DISubprogram *CGDebugInfo::CreateCXXMemberFunction(
   if (Method->isImplicit())
     Flags |= llvm::DINode::FlagArtificial;
   Flags |= getAccessFlag(Method->getAccess(), Method->getParent());
-  if (const CXXConstructorDecl *CXXC = dyn_cast<CXXConstructorDecl>(Method)) {
+  if (const auto *CXXC = dyn_cast<CXXConstructorDecl>(Method)) {
     if (CXXC->isExplicit())
       Flags |= llvm::DINode::FlagExplicit;
-  } else if (const CXXConversionDecl *CXXC =
-                 dyn_cast<CXXConversionDecl>(Method)) {
+  } else if (const auto *CXXC = dyn_cast<CXXConversionDecl>(Method)) {
     if (CXXC->isExplicit())
       Flags |= llvm::DINode::FlagExplicit;
   }
@@ -1356,7 +1352,7 @@ void CGDebugInfo::CollectCXXBases(const CXXRecordDecl *RD, llvm::DIFile *Unit,
     unsigned BFlags = 0;
     uint64_t BaseOffset;
 
-    const CXXRecordDecl *Base =
+    const auto *Base =
         cast<CXXRecordDecl>(BI.getType()->getAs<RecordType>()->getDecl());
 
     if (BI.isVirtual()) {
@@ -1444,8 +1440,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       llvm::Constant *V = nullptr;
       // Special case member data pointer null values since they're actually -1
       // instead of zero.
-      if (const MemberPointerType *MPT =
-              dyn_cast<MemberPointerType>(T.getTypePtr()))
+      if (const auto *MPT = dyn_cast<MemberPointerType>(T.getTypePtr()))
         // But treat member function pointers as simple zero integers because
         // it's easier than having a special case in LLVM's CodeGen. If LLVM
         // CodeGen grows handling for values of non-null member function
@@ -1456,7 +1451,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       if (!V)
         V = llvm::ConstantInt::get(CGM.Int8Ty, 0);
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, cast<llvm::Constant>(V)));
+          TheCU, Name, TTy, V));
     } break;
     case TemplateArgument::Template:
       TemplateParams.push_back(DBuilder.createTemplateTemplateParameter(
@@ -1477,7 +1472,7 @@ CGDebugInfo::CollectTemplateParams(const TemplateParameterList *TPList,
       assert(V && "Expression in template argument isn't constant");
       llvm::DIType *TTy = getOrCreateType(T, Unit);
       TemplateParams.push_back(DBuilder.createTemplateValueParameter(
-          TheCU, Name, TTy, cast<llvm::Constant>(V->stripPointerCasts())));
+          TheCU, Name, TTy, V->stripPointerCasts()));
     } break;
     // And the following should never occur:
     case TemplateArgument::TemplateExpansion:
@@ -1600,7 +1595,7 @@ void CGDebugInfo::completeRequiredType(const RecordDecl *RD) {
   if (DebugKind <= codegenoptions::DebugLineTablesOnly)
     return;
 
-  if (const CXXRecordDecl *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
+  if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
     if (CXXDecl->isDynamicClass())
       return;
 
@@ -1628,10 +1623,10 @@ void CGDebugInfo::completeClassData(const RecordDecl *RD) {
 
 static bool hasExplicitMemberDefinition(CXXRecordDecl::method_iterator I,
                                         CXXRecordDecl::method_iterator End) {
-  for (; I != End; ++I)
-    if (FunctionDecl *Tmpl = I->getInstantiatedFromMemberFunction())
+  for (CXXMethodDecl *MD : llvm::make_range(I, End))
+    if (FunctionDecl *Tmpl = MD->getInstantiatedFromMemberFunction())
       if (!Tmpl->isImplicit() && Tmpl->isThisDeclarationADefinition() &&
-          !I->getMemberSpecializationInfo()->isExplicitSpecialization())
+          !MD->getMemberSpecializationInfo()->isExplicitSpecialization())
         return true;
   return false;
 }
@@ -1668,7 +1663,7 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
   if (!RD->isCompleteDefinitionRequired())
     return true;
 
-  const CXXRecordDecl *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
+  const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
 
   if (!CXXDecl)
     return false;
@@ -1677,8 +1672,7 @@ static bool shouldOmitDefinition(codegenoptions::DebugInfoKind DebugKind,
     return true;
 
   TemplateSpecializationKind Spec = TSK_Undeclared;
-  if (const ClassTemplateSpecializationDecl *SD =
-          dyn_cast<ClassTemplateSpecializationDecl>(RD))
+  if (const auto *SD = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     Spec = SD->getSpecializationKind();
 
   if (Spec == TSK_ExplicitInstantiationDeclaration &&
@@ -1720,7 +1714,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   if (!D || !D->isCompleteDefinition())
     return FwdDecl;
 
-  if (const CXXRecordDecl *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
+  if (const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD))
     CollectContainingType(CXXDecl, FwdDecl);
 
   // Push the struct on region stack.
@@ -1735,7 +1729,7 @@ llvm::DIType *CGDebugInfo::CreateTypeDefinition(const RecordType *Ty) {
   // gdb tests will depend on a certain ordering at printout. The debug
   // information offsets are still correct if we merge them all together
   // though.
-  const CXXRecordDecl *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
+  const auto *CXXDecl = dyn_cast<CXXRecordDecl>(RD);
   if (CXXDecl) {
     CollectCXXBases(CXXDecl, DefUnit, EltTys, FwdDecl);
     CollectVTableInfo(CXXDecl, DefUnit, EltTys);
@@ -2068,7 +2062,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
   uint64_t Align;
 
   // FIXME: make getTypeAlign() aware of VLAs and incomplete array types
-  if (const VariableArrayType *VAT = dyn_cast<VariableArrayType>(Ty)) {
+  if (const auto *VAT = dyn_cast<VariableArrayType>(Ty)) {
     Size = 0;
     Align =
         CGM.getContext().getTypeAlign(CGM.getContext().getBaseElementType(VAT));
@@ -2101,7 +2095,7 @@ llvm::DIType *CGDebugInfo::CreateType(const ArrayType *Ty, llvm::DIFile *Unit) {
     //     int x[0];
     //   };
     int64_t Count = -1; // Count == -1 is an unbounded array.
-    if (const ConstantArrayType *CAT = dyn_cast<ConstantArrayType>(Ty))
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(Ty))
       Count = CAT->getSize().getZExtValue();
 
     // FIXME: Verify this is right for VLAs.
@@ -2559,8 +2553,7 @@ llvm::DICompositeType *CGDebugInfo::CreateLimitedType(const RecordType *Ty) {
   RegionMap[Ty->getDecl()].reset(RealDecl);
   TypeCache[QualType(Ty, 0).getAsOpaquePtr()].reset(RealDecl);
 
-  if (const ClassTemplateSpecializationDecl *TSpecial =
-          dyn_cast<ClassTemplateSpecializationDecl>(RD))
+  if (const auto *TSpecial = dyn_cast<ClassTemplateSpecializationDecl>(RD))
     DBuilder.replaceArrays(RealDecl, llvm::DINodeArray(),
                            CollectCXXTemplateParams(TSpecial, DefUnit));
   return RealDecl;
@@ -2607,7 +2600,7 @@ void CGDebugInfo::collectFunctionDeclProps(GlobalDecl GD, llvm::DIFile *Unit,
                                            llvm::DIScope *&FDContext,
                                            llvm::DINodeArray &TParamsArray,
                                            unsigned &Flags) {
-  const FunctionDecl *FD = cast<FunctionDecl>(GD.getDecl());
+  const auto *FD = cast<FunctionDecl>(GD.getDecl());
   Name = getFunctionName(FD);
   // Use mangled name as linkage name for C/C++ functions.
   if (FD->hasPrototype()) {
@@ -2707,7 +2700,7 @@ CGDebugInfo::getFunctionForwardDeclaration(const FunctionDecl *FD) {
       getOrCreateFunctionType(FD, FnType, Unit), !FD->isExternallyVisible(),
       /* isDefinition = */ false, 0, Flags, CGM.getLangOpts().Optimize,
       TParamsArray.get(), getFunctionDeclaration(FD));
-  const FunctionDecl *CanonDecl = cast<FunctionDecl>(FD->getCanonicalDecl());
+  const auto *CanonDecl = cast<FunctionDecl>(FD->getCanonicalDecl());
   FwdDeclReplaceMap.emplace_back(std::piecewise_construct,
                                  std::make_tuple(CanonDecl),
                                  std::make_tuple(SP));
@@ -2739,7 +2732,7 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
   // we would otherwise do to get a type for a pointee. (forward declarations in
   // limited debug info, full definitions (if the type definition is available)
   // in unlimited debug info)
-  if (const TypeDecl *TD = dyn_cast<TypeDecl>(D))
+  if (const auto *TD = dyn_cast<TypeDecl>(D))
     return getOrCreateType(CGM.getContext().getTypeDeclType(TD),
                            getOrCreateFile(TD->getLocation()));
   auto I = DeclCache.find(D->getCanonicalDecl());
@@ -2749,7 +2742,7 @@ llvm::DINode *CGDebugInfo::getDeclarationOrDefinition(const Decl *D) {
 
   // No definition for now. Emit a forward definition that might be
   // merged with a potential upcoming definition.
-  if (const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D))
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
     return getFunctionForwardDeclaration(FD);
   else if (const auto *VD = dyn_cast<VarDecl>(D))
     return getGlobalVariableForwardDeclaration(VD);
@@ -2761,7 +2754,7 @@ llvm::DISubprogram *CGDebugInfo::getFunctionDeclaration(const Decl *D) {
   if (!D || DebugKind <= codegenoptions::DebugLineTablesOnly)
     return nullptr;
 
-  const FunctionDecl *FD = dyn_cast<FunctionDecl>(D);
+  const auto *FD = dyn_cast<FunctionDecl>(D);
   if (!FD)
     return nullptr;
 
@@ -2770,8 +2763,7 @@ llvm::DISubprogram *CGDebugInfo::getFunctionDeclaration(const Decl *D) {
 
   auto MI = SPCache.find(FD->getCanonicalDecl());
   if (MI == SPCache.end()) {
-    if (const CXXMethodDecl *MD =
-            dyn_cast<CXXMethodDecl>(FD->getCanonicalDecl())) {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(FD->getCanonicalDecl())) {
       return CreateCXXMemberFunction(MD, getOrCreateFile(MD->getLocation()),
                                      cast<llvm::DICompositeType>(S));
     }
@@ -2803,13 +2795,13 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
     // subprogram DIE will miss DW_AT_decl_file and DW_AT_decl_line fields.
     return DBuilder.createSubroutineType(DBuilder.getOrCreateTypeArray(None));
 
-  if (const CXXMethodDecl *Method = dyn_cast<CXXMethodDecl>(D))
+  if (const auto *Method = dyn_cast<CXXMethodDecl>(D))
     return getOrCreateMethodType(Method, F);
 
   const auto *FTy = FnType->getAs<FunctionType>();
   CallingConv CC = FTy ? FTy->getCallConv() : CallingConv::CC_C;
 
-  if (const ObjCMethodDecl *OMethod = dyn_cast<ObjCMethodDecl>(D)) {
+  if (const auto *OMethod = dyn_cast<ObjCMethodDecl>(D)) {
     // Add "self" and "_cmd"
     SmallVector<llvm::Metadata *, 16> Elts;
 
@@ -2847,13 +2839,13 @@ llvm::DISubroutineType *CGDebugInfo::getOrCreateFunctionType(const Decl *D,
 
   // Handle variadic function types; they need an additional
   // unspecified parameter.
-  if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D))
+  if (const auto *FD = dyn_cast<FunctionDecl>(D))
     if (FD->isVariadic()) {
       SmallVector<llvm::Metadata *, 16> EltTys;
       EltTys.push_back(getOrCreateType(FD->getReturnType(), F));
-      if (const FunctionProtoType *FPT = dyn_cast<FunctionProtoType>(FnType))
-        for (unsigned i = 0, e = FPT->getNumParams(); i != e; ++i)
-          EltTys.push_back(getOrCreateType(FPT->getParamType(i), F));
+      if (const auto *FPT = dyn_cast<FunctionProtoType>(FnType))
+        for (QualType ParamType : FPT->param_types())
+          EltTys.push_back(getOrCreateType(ParamType, F));
       EltTys.push_back(DBuilder.createUnspecifiedParameter());
       llvm::DITypeRefArray EltTypeArray = DBuilder.getOrCreateTypeArray(EltTys);
       return DBuilder.createSubroutineType(EltTypeArray, 0, getDwarfCC(CC));
@@ -2881,7 +2873,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   if (!HasDecl) {
     // Use llvm function name.
     LinkageName = Fn->getName();
-  } else if (const FunctionDecl *FD = dyn_cast<FunctionDecl>(D)) {
+  } else if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
     // If there is a subprogram for this function available then use it.
     auto FI = SPCache.find(FD->getCanonicalDecl());
     if (FI != SPCache.end()) {
@@ -2894,7 +2886,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     }
     collectFunctionDeclProps(GD, Unit, Name, LinkageName, FDContext,
                              TParamsArray, Flags);
-  } else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D)) {
+  } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D)) {
     Name = getObjCMethodName(OMD);
     Flags |= llvm::DINode::FlagPrototyped;
   } else {
@@ -2902,7 +2894,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
     Name = Fn->getName();
     Flags |= llvm::DINode::FlagPrototyped;
   }
-  if (!Name.empty() && Name[0] == '\01')
+  if (Name.startswith("\01"))
     Name = Name.substr(1);
 
   if (!HasDecl || D->isImplicit()) {
@@ -2929,7 +2921,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
   // code for the initialization of globals. Do not record these decls
   // as they will overwrite the actual VarDecl Decl in the cache.
   if (HasDecl && isa<FunctionDecl>(D))
-    DeclCache[D->getCanonicalDecl()].reset(static_cast<llvm::Metadata *>(SP));
+    DeclCache[D->getCanonicalDecl()].reset(SP);
 
   // Push the function onto the lexical block stack.
   LexicalBlockStack.emplace_back(SP);
@@ -2955,7 +2947,7 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
     // If there is a DISubprogram for this function available then use it.
     collectFunctionDeclProps(GD, Unit, Name, LinkageName, FDContext,
                              TParamsArray, Flags);
-  } else if (const ObjCMethodDecl *OMD = dyn_cast<ObjCMethodDecl>(D)) {
+  } else if (const auto *OMD = dyn_cast<ObjCMethodDecl>(D)) {
     Name = getObjCMethodName(OMD);
     Flags |= llvm::DINode::FlagPrototyped;
   } else {
@@ -3160,7 +3152,7 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
   // otherwise it is 'self' or 'this'.
   if (isa<ImplicitParamDecl>(VD) && ArgNo && *ArgNo == 1)
     Flags |= llvm::DINode::FlagObjectPointer;
-  if (llvm::Argument *Arg = dyn_cast<llvm::Argument>(Storage))
+  if (auto *Arg = dyn_cast<llvm::Argument>(Storage))
     if (Arg->getType()->isPointerTy() && !Arg->hasByValAttr() &&
         !VD->getType()->isPointerType())
       Expr.push_back(llvm::dwarf::DW_OP_deref);
@@ -3196,10 +3188,10 @@ void CGDebugInfo::EmitDeclare(const VarDecl *VD, llvm::Value *Storage,
       return;
     } else if (isa<VariableArrayType>(VD->getType()))
       Expr.push_back(llvm::dwarf::DW_OP_deref);
-  } else if (const RecordType *RT = dyn_cast<RecordType>(VD->getType())) {
+  } else if (const auto *RT = dyn_cast<RecordType>(VD->getType())) {
     // If VD is an anonymous union then Storage represents value for
     // all union fields.
-    const RecordDecl *RD = cast<RecordDecl>(RT->getDecl());
+    const auto *RD = cast<RecordDecl>(RT->getDecl());
     if (RD->isUnion() && RD->isAnonymousStructOrUnion()) {
       // GDB has trouble finding local variables in anonymous unions, so we emit
       // artifical local variables for each of the members.
@@ -3420,11 +3412,9 @@ void CGDebugInfo::EmitDeclareOfBlockLiteralArgVariable(const CGBlockInfo &block,
   // Sort by offset.
   llvm::array_pod_sort(chunks.begin(), chunks.end());
 
-  for (SmallVectorImpl<BlockLayoutChunk>::iterator i = chunks.begin(),
-                                                   e = chunks.end();
-       i != e; ++i) {
-    uint64_t offsetInBits = i->OffsetInBits;
-    const BlockDecl::Capture *capture = i->Capture;
+  for (const BlockLayoutChunk &Chunk : chunks) {
+    uint64_t offsetInBits = Chunk.OffsetInBits;
+    const BlockDecl::Capture *capture = Chunk.Capture;
 
     // If we have a null capture, this must be the C++ 'this' capture.
     if (!capture) {
@@ -3526,8 +3516,7 @@ llvm::DIGlobalVariable *CGDebugInfo::CollectAnonRecordDecls(
 
     // Ignore unnamed fields, but recurse into anonymous records.
     if (FieldName.empty()) {
-      const RecordType *RT = dyn_cast<RecordType>(Field->getType());
-      if (RT)
+      if (const auto *RT = dyn_cast<RecordType>(Field->getType()))
         GV = CollectAnonRecordDecls(RT->getDecl(), Unit, LineNo, LinkageName,
                                     Var, DContext);
       continue;
@@ -3571,7 +3560,7 @@ void CGDebugInfo::EmitGlobalVariable(llvm::GlobalVariable *Var,
         Var->hasLocalLinkage(), Var,
         getOrCreateStaticDataMemberDeclarationOrNull(D));
   }
-  DeclCache[D->getCanonicalDecl()].reset(static_cast<llvm::Metadata *>(GV));
+  DeclCache[D->getCanonicalDecl()].reset(GV);
 }
 
 void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
@@ -3583,8 +3572,8 @@ void CGDebugInfo::EmitGlobalVariable(const ValueDecl *VD,
   llvm::DIFile *Unit = getOrCreateFile(VD->getLocation());
   StringRef Name = VD->getName();
   llvm::DIType *Ty = getOrCreateType(VD->getType(), Unit);
-  if (const EnumConstantDecl *ECD = dyn_cast<EnumConstantDecl>(VD)) {
-    const EnumDecl *ED = cast<EnumDecl>(ECD->getDeclContext());
+  if (const auto *ECD = dyn_cast<EnumConstantDecl>(VD)) {
+    const auto *ED = cast<EnumDecl>(ECD->getDeclContext());
     assert(isa<EnumType>(ED->getTypeForDecl()) && "Enum without EnumType?");
     Ty = getOrCreateType(QualType(ED->getTypeForDecl(), 0), Unit);
   }
@@ -3675,7 +3664,7 @@ CGDebugInfo::EmitNamespaceAlias(const NamespaceAliasDecl &NA) {
   if (VH)
     return cast<llvm::DIImportedEntity>(VH);
   llvm::DIImportedEntity *R;
-  if (const NamespaceAliasDecl *Underlying =
+  if (const auto *Underlying =
           dyn_cast<NamespaceAliasDecl>(NA.getAliasedNamespace()))
     // This could cache & dedup here rather than relying on metadata deduping.
     R = DBuilder.createImportedDeclaration(
