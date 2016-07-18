@@ -72,6 +72,16 @@ New Pragmas in Clang
 
 Clang now supports the ...
 
+
+Attribute Changes in Clang
+--------------------------
+
+- The ``nodebug`` attribute may now be applied to static, global, and local
+  variables (but not parameters or non-static data members). This will suppress
+  all debugging information for the variable (and its type, if there are no
+  other uses of the type).
+
+
 Windows Support
 ---------------
 

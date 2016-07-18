@@ -855,32 +855,29 @@ protected:
 
   llvm::Value *LookupIMPSuper(CodeGenFunction &CGF, Address ObjCSuper,
                               llvm::Value *cmd, MessageSendInfo &MSI) override {
-      CGBuilderTy &Builder = CGF.Builder;
-      llvm::Value *lookupArgs[] = {EnforceType(Builder, ObjCSuper.getPointer(),
-          PtrToObjCSuperTy), cmd};
+    CGBuilderTy &Builder = CGF.Builder;
+    llvm::Value *lookupArgs[] = {
+        EnforceType(Builder, ObjCSuper.getPointer(), PtrToObjCSuperTy), cmd,
+    };
 
-      if (CGM.ReturnTypeUsesSRet(MSI.CallInfo))
-        return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFnSRet, lookupArgs);
-      else
-        return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFn, lookupArgs);
-    }
+    if (CGM.ReturnTypeUsesSRet(MSI.CallInfo))
+      return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFnSRet, lookupArgs);
+    else
+      return CGF.EmitNounwindRuntimeCall(MsgLookupSuperFn, lookupArgs);
+  }
 
-  llvm::Value *GetClassNamed(CodeGenFunction &CGF,
-                             const std::string &Name, bool isWeak) override {
+  llvm::Value *GetClassNamed(CodeGenFunction &CGF, const std::string &Name,
+                             bool isWeak) override {
     if (isWeak)
       return CGObjCGNU::GetClassNamed(CGF, Name, isWeak);
 
     EmitClassRef(Name);
-
     std::string SymbolName = "_OBJC_CLASS_" + Name;
-
     llvm::GlobalVariable *ClassSymbol = TheModule.getGlobalVariable(SymbolName);
-
     if (!ClassSymbol)
       ClassSymbol = new llvm::GlobalVariable(TheModule, LongTy, false,
                                              llvm::GlobalValue::ExternalLinkage,
                                              nullptr, SymbolName);
-
     return ClassSymbol;
   }
 
@@ -1054,8 +1051,7 @@ CGObjCGNU::CGObjCGNU(CodeGenModule &cgm, unsigned runtimeABIVersion,
 }
 
 llvm::Value *CGObjCGNU::GetClassNamed(CodeGenFunction &CGF,
-                                      const std::string &Name,
-                                      bool isWeak) {
+                                      const std::string &Name, bool isWeak) {
   llvm::Constant *ClassName = MakeConstantString(Name);
   // With the incompatible ABI, this will need to be replaced with a direct
   // reference to the class symbol.  For the compatible nonfragile ABI we are
@@ -1077,11 +1073,44 @@ llvm::Value *CGObjCGNU::GetClassNamed(CodeGenFunction &CGF,
 // techniques can modify the name -> class mapping.
 llvm::Value *CGObjCGNU::GetClass(CodeGenFunction &CGF,
                                  const ObjCInterfaceDecl *OID) {
-  return GetClassNamed(CGF, OID->getNameAsString(), OID->isWeakImported());
+  auto *Value =
+      GetClassNamed(CGF, OID->getNameAsString(), OID->isWeakImported());
+  if (CGM.getTriple().isOSBinFormatCOFF()) {
+    if (auto *ClassSymbol = dyn_cast<llvm::GlobalVariable>(Value)) {
+      auto DLLStorage = llvm::GlobalValue::DefaultStorageClass;
+      if (OID->hasAttr<DLLExportAttr>())
+        DLLStorage = llvm::GlobalValue::DLLExportStorageClass;
+      else if (OID->hasAttr<DLLImportAttr>())
+        DLLStorage = llvm::GlobalValue::DLLImportStorageClass;
+      ClassSymbol->setDLLStorageClass(DLLStorage);
+    }
+  }
+  return Value;
 }
 
 llvm::Value *CGObjCGNU::EmitNSAutoreleasePoolClassRef(CodeGenFunction &CGF) {
-  return GetClassNamed(CGF, "NSAutoreleasePool", false);
+  auto *Value  = GetClassNamed(CGF, "NSAutoreleasePool", false);
+  if (CGM.getTriple().isOSBinFormatCOFF()) {
+    if (auto *ClassSymbol = dyn_cast<llvm::GlobalVariable>(Value)) {
+      IdentifierInfo &II = CGF.CGM.getContext().Idents.get("NSAutoreleasePool");
+      TranslationUnitDecl *TUDecl = CGM.getContext().getTranslationUnitDecl();
+      DeclContext *DC = TranslationUnitDecl::castToDeclContext(TUDecl);
+
+      const VarDecl *VD = nullptr;
+      for (const auto &Result : DC->lookup(&II))
+        if ((VD = dyn_cast<VarDecl>(Result)))
+          break;
+
+      auto DLLStorage = llvm::GlobalValue::DefaultStorageClass;
+      if (!VD || VD->hasAttr<DLLImportAttr>())
+        DLLStorage = llvm::GlobalValue::DLLImportStorageClass;
+      else if (VD->hasAttr<DLLExportAttr>())
+        DLLStorage = llvm::GlobalValue::DLLExportStorageClass;
+
+      ClassSymbol->setDLLStorageClass(DLLStorage);
+    }
+  }
+  return Value;
 }
 
 llvm::Value *CGObjCGNU::GetSelector(CodeGenFunction &CGF, Selector Sel,
@@ -2177,18 +2206,19 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
 
   // Get the class name
   ObjCInterfaceDecl *ClassDecl =
-    const_cast<ObjCInterfaceDecl *>(OID->getClassInterface());
+      const_cast<ObjCInterfaceDecl *>(OID->getClassInterface());
   std::string ClassName = ClassDecl->getNameAsString();
+
   // Emit the symbol that is used to generate linker errors if this class is
   // referenced in other modules but not declared.
   std::string classSymbolName = "__objc_class_name_" + ClassName;
-  if (llvm::GlobalVariable *symbol =
-      TheModule.getGlobalVariable(classSymbolName)) {
+  if (auto *symbol = TheModule.getGlobalVariable(classSymbolName)) {
     symbol->setInitializer(llvm::ConstantInt::get(LongTy, 0));
   } else {
     new llvm::GlobalVariable(TheModule, LongTy, false,
-    llvm::GlobalValue::ExternalLinkage, llvm::ConstantInt::get(LongTy, 0),
-    classSymbolName);
+                             llvm::GlobalValue::ExternalLinkage,
+                             llvm::ConstantInt::get(LongTy, 0),
+                             classSymbolName);
   }
 
   // Get the size of instances.
@@ -2351,19 +2381,35 @@ void CGObjCGNU::GenerateClass(const ObjCImplementationDecl *OID) {
       ++ivarIndex;
   }
   llvm::Constant *ZeroPtr = llvm::ConstantInt::get(IntPtrTy, 0);
+
   //Generate metaclass for class methods
-  llvm::Constant *MetaClassStruct = GenerateClassStructure(NULLPtr,
-      NULLPtr, 0x12L, ClassName.c_str(), nullptr, Zeros[0], GenerateIvarList(
-        empty, empty, empty), ClassMethodList, NULLPtr,
-      NULLPtr, NULLPtr, ZeroPtr, ZeroPtr, true);
+  llvm::Constant *MetaClassStruct = GenerateClassStructure(
+      NULLPtr, NULLPtr, 0x12L, ClassName.c_str(), nullptr, Zeros[0],
+      GenerateIvarList(empty, empty, empty), ClassMethodList, NULLPtr, NULLPtr,
+      NULLPtr, ZeroPtr, ZeroPtr, true);
+  if (CGM.getTriple().isOSBinFormatCOFF()) {
+    auto Storage = llvm::GlobalValue::DefaultStorageClass;
+    if (OID->getClassInterface()->hasAttr<DLLImportAttr>())
+      Storage = llvm::GlobalValue::DLLImportStorageClass;
+    else if (OID->getClassInterface()->hasAttr<DLLExportAttr>())
+      Storage = llvm::GlobalValue::DLLExportStorageClass;
+    cast<llvm::GlobalValue>(MetaClassStruct)->setDLLStorageClass(Storage);
+  }
 
   // Generate the class structure
-  llvm::Constant *ClassStruct =
-    GenerateClassStructure(MetaClassStruct, SuperClass, 0x11L,
-                           ClassName.c_str(), nullptr,
-      llvm::ConstantInt::get(LongTy, instanceSize), IvarList,
-      MethodList, GenerateProtocolList(Protocols), IvarOffsetArray,
-      Properties, StrongIvarBitmap, WeakIvarBitmap);
+  llvm::Constant *ClassStruct = GenerateClassStructure(
+      MetaClassStruct, SuperClass, 0x11L, ClassName.c_str(), nullptr,
+      llvm::ConstantInt::get(LongTy, instanceSize), IvarList, MethodList,
+      GenerateProtocolList(Protocols), IvarOffsetArray, Properties,
+      StrongIvarBitmap, WeakIvarBitmap);
+  if (CGM.getTriple().isOSBinFormatCOFF()) {
+    auto Storage = llvm::GlobalValue::DefaultStorageClass;
+    if (OID->getClassInterface()->hasAttr<DLLImportAttr>())
+      Storage = llvm::GlobalValue::DLLImportStorageClass;
+    else if (OID->getClassInterface()->hasAttr<DLLExportAttr>())
+      Storage = llvm::GlobalValue::DLLExportStorageClass;
+    cast<llvm::GlobalValue>(ClassStruct)->setDLLStorageClass(Storage);
+  }
 
   // Resolve the class aliases, if they exist.
   if (ClassPtrAlias) {
@@ -2857,7 +2903,12 @@ llvm::Value *CGObjCGNU::EmitIvarOffset(CodeGenFunction &CGF,
                          const ObjCIvarDecl *Ivar) {
   if (CGM.getLangOpts().ObjCRuntime.isNonFragile()) {
     Interface = FindIvarInterface(CGM.getContext(), Interface, Ivar);
-    if (RuntimeVersion < 10)
+
+    // The MSVC linker cannot have a single global defined as LinkOnceAnyLinkage
+    // and ExternalLinkage, so create a reference to the ivar global and rely on
+    // the definition being created as part of GenerateClass.
+    if (RuntimeVersion < 10 ||
+        CGF.CGM.getTarget().getTriple().isKnownWindowsMSVCEnvironment())
       return CGF.Builder.CreateZExtOrBitCast(
           CGF.Builder.CreateDefaultAlignedLoad(CGF.Builder.CreateAlignedLoad(
                   ObjCIvarOffsetVariable(Interface, Ivar),

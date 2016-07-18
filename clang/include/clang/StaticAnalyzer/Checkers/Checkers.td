@@ -247,6 +247,10 @@ def NewDeleteLeaksChecker : Checker<"NewDeleteLeaks">,
   HelpText<"Check for memory leaks. Traces memory managed by new/delete.">,
   DescFile<"MallocChecker.cpp">;
 
+def CXXSelfAssignmentChecker : Checker<"SelfAssignment">,
+  HelpText<"Checks C++ copy and move assignment operators for self assignment">,
+  DescFile<"CXXSelfAssignmentChecker.cpp">;
+
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusAlpha in {
