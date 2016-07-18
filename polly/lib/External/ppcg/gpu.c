@@ -55,7 +55,7 @@ static const char *get_outer_array_name(__isl_keep isl_map *access)
 /* Collect all references to the given array and store pointers to them
  * in array->refs.
  */
-static void collect_references(struct gpu_prog *prog,
+void collect_references(struct gpu_prog *prog,
 	struct gpu_array_info *array)
 {
 	int i;

@@ -212,6 +212,7 @@ bool ELFAsmParser::ParseDirectiveSize(StringRef, SMLoc) {
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+  Lex();
 
   getStreamer().emitELFSize(Sym, Expr);
   return false;
@@ -478,6 +479,7 @@ bool ELFAsmParser::ParseSectionArguments(bool IsPush, SMLoc loc) {
 EndStmt:
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+  Lex();
 
   unsigned Type = ELF::SHT_PROGBITS;
 
@@ -629,6 +631,10 @@ bool ELFAsmParser::ParseDirectiveIdent(StringRef, SMLoc) {
 
   Lex();
 
+  if (getLexer().isNot(AsmToken::EndOfStatement))
+    return TokError("unexpected token in '.ident' directive");
+  Lex();
+
   getStreamer().EmitIdent(Data);
   return false;
 }
@@ -726,6 +732,8 @@ bool ELFAsmParser::ParseDirectiveSubsection(StringRef, SMLoc) {
 
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in directive");
+
+  Lex();
 
   getStreamer().SubSection(Subsection);
   return false;

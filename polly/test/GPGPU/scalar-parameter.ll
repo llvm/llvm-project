@@ -13,7 +13,7 @@
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_b);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -63,7 +63,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_b);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -113,7 +113,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_b);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -163,7 +163,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_b);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -213,7 +213,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_b);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -263,7 +263,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_b);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -312,7 +312,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -361,7 +361,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -410,7 +410,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -459,7 +459,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -508,7 +508,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -557,7 +557,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -606,7 +606,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -655,7 +655,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -704,7 +704,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -753,7 +753,7 @@ bb7:                                              ; preds = %bb1
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 

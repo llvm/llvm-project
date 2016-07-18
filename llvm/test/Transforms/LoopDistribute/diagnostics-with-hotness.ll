@@ -3,7 +3,10 @@
 ; RUN: opt -loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:                                < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 
-; REQUIRES: asserts
+; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
+; RUN:     -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
+; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
+; RUN:                                < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 
 ; This is the input program:
 ;

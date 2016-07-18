@@ -25,7 +25,7 @@
 #include "../../../generic/lib/clcmacro.h"
 
 #ifdef __HAS_LDEXPF__
-#define BUILTINF __builtin_amdgpu_ldexpf
+#define BUILTINF __builtin_amdgcn_ldexpf
 #else
 #include "math/clc_ldexp.h"
 #define BUILTINF __clc_ldexp
@@ -37,7 +37,7 @@ _CLC_DEFINE_BINARY_BUILTIN(float, ldexp, BUILTINF, float, int);
 #ifdef cl_khr_fp64
   #pragma OPENCL EXTENSION cl_khr_fp64 : enable
     // This defines all the ldexp(doubleN, intN) variants.
-  _CLC_DEFINE_BINARY_BUILTIN(double, ldexp, __builtin_amdgpu_ldexp, double, int);
+  _CLC_DEFINE_BINARY_BUILTIN(double, ldexp, __builtin_amdgcn_ldexp, double, int);
 #endif
 
 // This defines all the ldexp(GENTYPE, int);

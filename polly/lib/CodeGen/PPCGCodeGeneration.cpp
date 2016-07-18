@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "polly/CodeGen/IslNodeBuilder.h"
+#include "polly/CodeGen/Utils.h"
 #include "polly/DependenceInfo.h"
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
@@ -68,6 +69,38 @@ static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
   return nullptr;
 }
 
+/// Generate code for a GPU specific isl AST.
+///
+/// The GPUNodeBuilder augments the general existing IslNodeBuilder, which
+/// generates code for general-prupose AST nodes, with special functionality
+/// for generating GPU specific user nodes.
+///
+/// @see GPUNodeBuilder::createUser
+class GPUNodeBuilder : public IslNodeBuilder {
+public:
+  GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
+                 const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
+                 DominatorTree &DT, Scop &S)
+      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S) {}
+
+private:
+  /// Create code for user-defined AST nodes.
+  ///
+  /// These AST nodes can be of type:
+  ///
+  ///   - ScopStmt:      A computational statement (TODO)
+  ///   - Kernel:        A GPU kernel call (TODO)
+  ///   - Data-Transfer: A GPU <-> CPU data-transfer (TODO)
+  ///
+  /// @param UserStmt The ast node to generate code for.
+  virtual void createUser(__isl_take isl_ast_node *UserStmt);
+};
+
+void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
+  isl_ast_node_free(UserStmt);
+  return;
+}
+
 namespace {
 class PPCGCodeGeneration : public ScopPass {
 public:
@@ -75,6 +108,12 @@ public:
 
   /// The scop that is currently processed.
   Scop *S;
+
+  LoopInfo *LI;
+  DominatorTree *DT;
+  ScalarEvolution *SE;
+  const DataLayout *DL;
+  RegionInfo *RI;
 
   PPCGCodeGeneration() : ScopPass(ID) {}
 
@@ -411,6 +450,8 @@ public:
 
       setArrayBounds(PPCGArray, Array);
       i++;
+
+      collect_references(PPCGProg, &PPCGArray);
     }
   }
 
@@ -650,12 +691,58 @@ public:
     PPCGScop->options = nullptr;
   }
 
+  /// Generate code for a given GPU AST described by @p Root.
+  ///
+  /// @param An isl_ast_node pointing to the root of the GPU AST.
+  void generateCode(__isl_take isl_ast_node *Root) {
+    ScopAnnotator Annotator;
+    Annotator.buildAliasScopes(*S);
+
+    Region *R = &S->getRegion();
+
+    simplifyRegion(R, DT, LI, RI);
+
+    BasicBlock *EnteringBB = R->getEnteringBlock();
+
+    PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
+
+    GPUNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT,
+                               *S);
+
+    // Only build the run-time condition and parameters _after_ having
+    // introduced the conditional branch. This is important as the conditional
+    // branch will guard the original scop from new induction variables that
+    // the SCEVExpander may introduce while code generating the parameters and
+    // which may introduce scalar dependences that prevent us from correctly
+    // code generating this scop.
+    BasicBlock *StartBlock =
+        executeScopConditionally(*S, this, Builder.getTrue());
+
+    // TODO: Handle LICM
+    // TODO: Verify run-time checks
+    auto SplitBlock = StartBlock->getSinglePredecessor();
+    Builder.SetInsertPoint(SplitBlock->getTerminator());
+    NodeBuilder.addParameters(S->getContext());
+    Builder.SetInsertPoint(&*StartBlock->begin());
+    NodeBuilder.create(Root);
+    NodeBuilder.finalizeSCoP(*S);
+  }
+
   bool runOnScop(Scop &CurrentScop) override {
     S = &CurrentScop;
+    LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+    DL = &S->getRegion().getEntry()->getParent()->getParent()->getDataLayout();
+    RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
 
     auto PPCGScop = createPPCGScop();
     auto PPCGProg = createPPCGProg(PPCGScop);
     auto PPCGGen = generateGPU(PPCGScop, PPCGProg);
+
+    if (PPCGGen->tree)
+      generateCode(isl_ast_node_copy(PPCGGen->tree));
+
     freeOptions(PPCGScop);
     freePPCGGen(PPCGGen);
     gpu_prog_free(PPCGProg);

@@ -20,7 +20,7 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(16);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (p_0, p_1);
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_Q, p_0, p_1);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -28,14 +28,14 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; CODE-NEXT:     {
 ; CODE-NEXT:       dim3 k1_dimBlock(32);
 ; CODE-NEXT:       dim3 k1_dimGrid(p_1 <= -1048034 ? 32768 : -p_1 + floord(31 * p_1 + 30, 32) + 16);
-; CODE-NEXT:       kernel1 <<<k1_dimGrid, k1_dimBlock>>> (p_0, p_1);
+; CODE-NEXT:       kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_A, dev_MemRef_R, dev_MemRef_Q, p_0, p_1);
 ; CODE-NEXT:       cudaCheckKernel();
 ; CODE-NEXT:     }
 
 ; CODE:     {
 ; CODE-NEXT:       dim3 k2_dimBlock(16, 32);
 ; CODE-NEXT:       dim3 k2_dimGrid(16, p_1 <= -7650 ? 256 : -p_1 + floord(31 * p_1 + 30, 32) + 16);
-; CODE-NEXT:       kernel2 <<<k2_dimGrid, k2_dimBlock>>> (p_0, p_1);
+; CODE-NEXT:       kernel2 <<<k2_dimGrid, k2_dimBlock>>> (dev_MemRef_A, dev_MemRef_R, dev_MemRef_Q,  p_0, p_1);
 ; CODE-NEXT:       cudaCheckKernel();
 ; CODE-NEXT:     }
 
@@ -53,11 +53,13 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 
 ; CODE: # kernel1
 ; CODE-NEXT: for (int c0 = 0; c0 <= (-p_1 - 32 * b0 + 510) / 1048576; c0 += 1)
-; CODE-NEXT:   if (p_1 + 32 * b0 + t0 + 1048576 * c0 <= 510) {
-; CODE-NEXT:     Stmt_for_body35(32 * b0 + t0 + 1048576 * c0);
-; CODE-NEXT:     for (int c1 = 0; c1 <= 15; c1 += 1)
+; CODE-NEXT:   for (int c1 = 0; c1 <= 15; c1 += 1) {
+; CODE-NEXT:     if (p_1 + 32 * b0 + t0 + 1048576 * c0 <= 510 && c1 == 0)
+; CODE-NEXT:       Stmt_for_body35(32 * b0 + t0 + 1048576 * c0);
+; CODE-NEXT:     if (p_1 + 32 * b0 + t0 + 1048576 * c0 <= 510)
 ; CODE-NEXT:       for (int c3 = 0; c3 <= 31; c3 += 1)
 ; CODE-NEXT:         Stmt_for_body42(32 * b0 + t0 + 1048576 * c0, 32 * c1 + c3);
+; CODE-NEXT:     sync0();
 ; CODE-NEXT:   }
 
 ; CODE: # kernel2

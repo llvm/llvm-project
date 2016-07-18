@@ -78,6 +78,7 @@ now we'll be treating it as an opaque utility: We just need to pass a reference
 to it into our new CompileOnDemandLayer, and the layer will do all the work of
 setting up the callbacks using the callback manager we gave it.
 
+.. code-block:: c++
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
@@ -123,6 +124,8 @@ in all modules added. If/when the module set is removed from the JIT the
 indirect stubs manager will be deleted, freeing any memory allocated to the
 stubs. We supply this function by using the
 createLocalIndirectStubsManagerBuilder utility.
+
+.. code-block:: c++
 
   // ...
           if (auto Sym = CODLayer.findSymbol(Name, false))

@@ -537,7 +537,6 @@ bool DarwinAsmParser::parseDirectiveLinkerOption(StringRef IDVal, SMLoc) {
 
     Args.push_back(Data);
 
-    Lex();
     if (getLexer().is(AsmToken::EndOfStatement))
       break;
 

@@ -7,6 +7,9 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
+; RUN: opt %loadPolly -polly-codegen-ppcg -S < %s | \
+; RUN: FileCheck %s -check-prefix=IR
+
 ; REQUIRES: pollyacc
 
 ; CHECK: Stmt_bb5
@@ -66,7 +69,7 @@
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(16, 32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32, 32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -77,7 +80,14 @@
 ; CODE-NEXT: for (int c3 = 0; c3 <= 1; c3 += 1)
 ; CODE-NEXT:   Stmt_bb5(32 * b0 + t0, 32 * b1 + t1 + 16 * c3);
 
+; IR: polly.split_new_and_old:
+; IR-NEXT:    br i1 true, label %polly.start, label %bb2
 
+; IR: polly.start:
+; IR-NEXT:    br label %polly.exiting
+
+; IR: polly.exiting:
+; IR-NEXT:    br label %polly.merge_new_and_old
 
 ;    void double_parallel_loop(float A[][1024]) {
 ;      for (long i = 0; i < 1024; i++)

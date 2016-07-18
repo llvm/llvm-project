@@ -910,7 +910,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     map& operator=(const map& __m)
         {
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
             __tree_ = __m.__tree_;
 #else
             if (this != &__m) {
@@ -1637,7 +1637,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     multimap& operator=(const multimap& __m)
         {
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
             __tree_ = __m.__tree_;
 #else
             if (this != &__m) {
