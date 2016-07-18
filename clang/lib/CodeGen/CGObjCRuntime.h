@@ -281,7 +281,7 @@ public:
                                            QualType T) = 0;
 
   virtual llvm::Constant *GetClassGlobal(StringRef Name, bool ForDefinition,
-                                         bool Weak = false) = 0;
+                                         bool Weak = false, bool DLLImport = false) = 0;
 
   struct MessageSendInfo {
     const CGFunctionInfo &CallInfo;
