@@ -12,6 +12,10 @@
 // XFAIL: with_system_cxx_lib=x86_64-apple-darwin11
 // XFAIL: with_system_cxx_lib=x86_64-apple-darwin12
 
+// Due to C++17 inline variables ASAN flags this test as containing an ODR
+// violation because Clock::is_steady is defined in both the dylib and this TU.
+// UNSUPPORTED: asan
+
 // <chrono>
 
 // system_clock

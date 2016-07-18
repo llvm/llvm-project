@@ -673,6 +673,7 @@ DWARFCallFrameInfo::FDEToUnwindPlan (dw_offset_t dwarf_offset, Address startaddr
 
                         // TODO: Figure out how we should handle this.
                         m_cfi_data.GetULEB128(&offset);
+                        break;
                     }
 
                     case DW_CFA_val_offset          :   // 0x14

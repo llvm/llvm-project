@@ -11,7 +11,7 @@
 // <optional>
 
 // A program that necessitates the instantiation of template optional for
-// (possibly cv-qualified) null_opt_t is ill-formed.
+// (possibly cv-qualified) nullopt_t is ill-formed.
 
 #include <experimental/optional>
 

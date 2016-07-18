@@ -352,7 +352,7 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
       return new (this->Alloc)
-          Undefined(Sym->st_name, Sym->st_other, Sym->getType());
+          Undefined(Sym->st_name, Sym->st_other, Sym->getType(), this);
     return new (this->Alloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
@@ -360,11 +360,6 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    // Handle --trace-symbol option. Prints out a log message
-    // if the current symbol is being watched. Useful for debugging.
-    if (!Config->TraceSymbol.empty() && Config->TraceSymbol.count(Name))
-      outs() << getFilename(this) << ": reference to " << Name << "\n";
-
     return elf::Symtab<ELFT>::X
         ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
                        /*CanOmitFromDynSym*/ false, this)
@@ -807,10 +802,10 @@ template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
 template void ArchiveFile::parse<ELF64BE>();
 
-template void BitcodeFile::parse<ELF32LE>(llvm::DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF32BE>(llvm::DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64LE>(llvm::DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64BE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32LE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32BE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64LE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64BE>(DenseSet<StringRef> &);
 
 template void LazyObjectFile::parse<ELF32LE>();
 template void LazyObjectFile::parse<ELF32BE>();

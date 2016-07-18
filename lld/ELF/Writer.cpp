@@ -83,7 +83,7 @@ private:
 
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
 
-  std::unique_ptr<llvm::FileOutputBuffer> Buffer;
+  std::unique_ptr<FileOutputBuffer> Buffer;
 
   BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
@@ -194,7 +194,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
     MipsRldMap->setSize(sizeof(uintX_t));
     MipsRldMap->updateAlignment(sizeof(uintX_t));
   }
-  if (!Config->SymbolVersions.empty())
+  if (!Config->VersionDefinitions.empty())
     VerDef.reset(new VersionDefinitionSection<ELFT>());
 
   Out<ELFT>::Bss = &Bss;
@@ -275,8 +275,8 @@ static void reportUndefined(SymbolTable<ELFT> &Symtab, SymbolBody *Sym) {
     return;
 
   std::string Msg = "undefined symbol: " + Sym->getName().str();
-  if (InputFile *File = Sym->getSourceFile<ELFT>())
-    Msg += " in " + getFilename(File);
+  if (Sym->File)
+    Msg += " in " + getFilename(Sym->File);
   if (Config->UnresolvedSymbols == UnresolvedPolicy::Warn)
     warning(Msg);
   else
@@ -715,7 +715,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (isOutputDynamic() && S->includeInDynsym()) {
       Out<ELFT>::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
-        if (SS->File->isNeeded())
+        if (SS->file()->isNeeded())
           Out<ELFT>::VerNeed->addSymbol(SS);
     }
   }
@@ -1257,8 +1257,7 @@ template <class ELFT> void Writer<ELFT>::writeSections() {
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  BuildIdSection<ELFT> *S = Out<ELFT>::BuildId;
-  if (!S)
+  if (!Out<ELFT>::BuildId)
     return;
 
   // Compute a hash of all sections except .debug_* sections.
@@ -1275,7 +1274,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     Last = End;
   }
   Regions.push_back({Last, Start + FileSize});
-  S->writeBuildId(Regions);
+  Out<ELFT>::BuildId->writeBuildId(Regions);
 }
 
 template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);

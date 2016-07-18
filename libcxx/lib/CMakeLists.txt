@@ -79,7 +79,7 @@ add_library_flags_if(LIBCXX_HAS_C_LIB c)
 add_library_flags_if(LIBCXX_HAS_M_LIB m)
 add_library_flags_if(LIBCXX_HAS_RT_LIB rt)
 add_library_flags_if(LIBCXX_HAS_GCC_S_LIB gcc_s)
-add_library_flags_if(LIBCXX_HAS_ATOMIC_LIB atomic)
+add_library_flags_if(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB atomic)
 
 # Setup flags.
 add_flags_if_supported(-fPIC)

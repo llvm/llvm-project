@@ -98,10 +98,12 @@ SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
 
 StringRef SymbolBody::getName() const {
   assert(!isLocal());
-  StringRef S = StringRef(Name.S, Name.Len);
-  if (!symbol()->VersionedName)
-    return S;
-  return S.substr(0, S.find('@'));
+  return StringRef(Name.S, Name.Len);
+}
+
+void SymbolBody::setName(StringRef S) {
+  Name.S = S.data();
+  Name.Len = S.size();
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -140,18 +142,6 @@ template <class ELFT> bool SymbolBody::hasThunk() const {
   if (auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
     return S->ThunkData != nullptr;
   return false;
-}
-
-template <class ELFT> InputFile *SymbolBody::getSourceFile() {
-  if (auto *S = dyn_cast<DefinedRegular<ELFT>>(this))
-    return S->Section ? S->Section->getFile() : nullptr;
-  if (auto *S = dyn_cast<SharedSymbol<ELFT>>(this))
-    return S->File;
-  if (auto *S = dyn_cast<DefinedBitcode>(this))
-    return S->File;
-  if (auto *S = dyn_cast<Undefined>(this))
-    return S->File;
-  return nullptr;
 }
 
 template <class ELFT>
@@ -207,17 +197,25 @@ Defined::Defined(Kind K, uint32_t NameOffset, uint8_t StOther, uint8_t Type)
 
 DefinedBitcode::DefinedBitcode(StringRef Name, uint8_t StOther, uint8_t Type,
                                BitcodeFile *F)
-    : Defined(DefinedBitcodeKind, Name, StOther, Type), File(F) {}
+    : Defined(DefinedBitcodeKind, Name, StOther, Type) {
+  this->File = F;
+}
 
 bool DefinedBitcode::classof(const SymbolBody *S) {
   return S->kind() == DefinedBitcodeKind;
 }
 
-Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type)
-    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {}
+Undefined::Undefined(StringRef Name, uint8_t StOther, uint8_t Type,
+                     InputFile *File)
+    : SymbolBody(SymbolBody::UndefinedKind, Name, StOther, Type) {
+  this->File = File;
+}
 
-Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type)
-    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {}
+Undefined::Undefined(uint32_t NameOffset, uint8_t StOther, uint8_t Type,
+                     InputFile *File)
+    : SymbolBody(SymbolBody::UndefinedKind, NameOffset, StOther, Type) {
+  this->File = File;
+}
 
 template <typename ELFT>
 DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
@@ -226,28 +224,41 @@ DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
       Value(Value), Section(Section) {}
 
 DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
-                             uint8_t StOther, uint8_t Type)
+                             uint8_t StOther, uint8_t Type, InputFile *File)
     : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
-      Alignment(Alignment), Size(Size) {}
-
-std::unique_ptr<InputFile> Lazy::getFile() {
-  if (auto *S = dyn_cast<LazyArchive>(this))
-    return S->getFile();
-  return cast<LazyObject>(this)->getFile();
+      Alignment(Alignment), Size(Size) {
+  this->File = File;
 }
 
-std::unique_ptr<InputFile> LazyArchive::getFile() {
-  MemoryBufferRef MBRef = File.getMember(&Sym);
+std::unique_ptr<InputFile> Lazy::fetch() {
+  if (auto *S = dyn_cast<LazyArchive>(this))
+    return S->fetch();
+  return cast<LazyObject>(this)->fetch();
+}
+
+LazyArchive::LazyArchive(ArchiveFile &File,
+                         const llvm::object::Archive::Symbol S, uint8_t Type)
+    : Lazy(LazyArchiveKind, S.getName(), Type), Sym(S) {
+  this->File = &File;
+}
+
+LazyObject::LazyObject(StringRef Name, LazyObjectFile &File, uint8_t Type)
+    : Lazy(LazyObjectKind, Name, Type) {
+  this->File = &File;
+}
+
+std::unique_ptr<InputFile> LazyArchive::fetch() {
+  MemoryBufferRef MBRef = file()->getMember(&Sym);
 
   // getMember returns an empty buffer if the member was already
   // read from the library.
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
-  return createObjectFile(MBRef, File.getName());
+  return createObjectFile(MBRef, file()->getName());
 }
 
-std::unique_ptr<InputFile> LazyObject::getFile() {
-  MemoryBufferRef MBRef = File.getBuffer();
+std::unique_ptr<InputFile> LazyObject::fetch() {
+  MemoryBufferRef MBRef = file()->getBuffer();
   if (MBRef.getBuffer().empty())
     return std::unique_ptr<InputFile>(nullptr);
   return createObjectFile(MBRef);
@@ -259,15 +270,25 @@ bool Symbol::includeInDynsym() const {
   return (ExportDynamic && VersionId != VER_NDX_LOCAL) || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
+
+// Print out a log message for --trace-symbol.
+void elf::printTraceSymbol(Symbol *Sym) {
+  SymbolBody *B = Sym->body();
+  outs() << getFilename(B->File);
+
+  if (B->isUndefined())
+    outs() << ": reference to ";
+  else if (B->isCommon())
+    outs() << ": common definition of ";
+  else
+    outs() << ": definition of ";
+  outs() << B->getName() << "\n";
+}
+
 template bool SymbolBody::hasThunk<ELF32LE>() const;
 template bool SymbolBody::hasThunk<ELF32BE>() const;
 template bool SymbolBody::hasThunk<ELF64LE>() const;
 template bool SymbolBody::hasThunk<ELF64BE>() const;
-
-template InputFile *SymbolBody::template getSourceFile<ELF32LE>();
-template InputFile *SymbolBody::template getSourceFile<ELF32BE>();
-template InputFile *SymbolBody::template getSourceFile<ELF64LE>();
-template InputFile *SymbolBody::template getSourceFile<ELF64BE>();
 
 template uint32_t SymbolBody::template getVA<ELF32LE>(uint32_t) const;
 template uint32_t SymbolBody::template getVA<ELF32BE>(uint32_t) const;
