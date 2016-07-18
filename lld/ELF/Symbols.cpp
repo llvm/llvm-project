@@ -98,10 +98,12 @@ SymbolBody::SymbolBody(Kind K, StringRef Name, uint8_t StOther, uint8_t Type)
 
 StringRef SymbolBody::getName() const {
   assert(!isLocal());
-  StringRef S = StringRef(Name.S, Name.Len);
-  if (!symbol()->VersionedName)
-    return S;
-  return S.substr(0, S.find('@'));
+  return StringRef(Name.S, Name.Len);
+}
+
+void SymbolBody::setName(StringRef S) {
+  Name.S = S.data();
+  Name.Len = S.size();
 }
 
 // Returns true if a symbol can be replaced at load-time by a symbol
@@ -222,9 +224,11 @@ DefinedSynthetic<ELFT>::DefinedSynthetic(StringRef N, uintX_t Value,
       Value(Value), Section(Section) {}
 
 DefinedCommon::DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment,
-                             uint8_t StOther, uint8_t Type)
+                             uint8_t StOther, uint8_t Type, InputFile *File)
     : Defined(SymbolBody::DefinedCommonKind, N, StOther, Type),
-      Alignment(Alignment), Size(Size) {}
+      Alignment(Alignment), Size(Size) {
+  this->File = File;
+}
 
 std::unique_ptr<InputFile> Lazy::fetch() {
   if (auto *S = dyn_cast<LazyArchive>(this))
@@ -266,6 +270,21 @@ bool Symbol::includeInDynsym() const {
   return (ExportDynamic && VersionId != VER_NDX_LOCAL) || body()->isShared() ||
          (body()->isUndefined() && Config->Shared);
 }
+
+// Print out a log message for --trace-symbol.
+void elf::printTraceSymbol(Symbol *Sym) {
+  SymbolBody *B = Sym->body();
+  outs() << getFilename(B->File);
+
+  if (B->isUndefined())
+    outs() << ": reference to ";
+  else if (B->isCommon())
+    outs() << ": common definition of ";
+  else
+    outs() << ": definition of ";
+  outs() << B->getName() << "\n";
+}
+
 template bool SymbolBody::hasThunk<ELF32LE>() const;
 template bool SymbolBody::hasThunk<ELF32BE>() const;
 template bool SymbolBody::hasThunk<ELF64LE>() const;

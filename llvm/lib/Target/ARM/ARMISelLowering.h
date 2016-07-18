@@ -478,6 +478,10 @@ namespace llvm {
       return true;
     }
 
+    bool hasStandaloneRem(EVT VT) const override {
+      return HasStandaloneRem;
+    }
+
   protected:
     std::pair<const TargetRegisterClass *, uint8_t>
     findRepresentativeClass(const TargetRegisterInfo *TRI,
@@ -499,6 +503,8 @@ namespace llvm {
     // TODO: remove this, and have shouldInsertFencesForAtomic do the proper
     // check.
     bool InsertFencesForAtomic;
+
+    bool HasStandaloneRem = true;
 
     void addTypeForNEON(MVT VT, MVT PromotedLdStVT, MVT PromotedBitwiseVT);
     void addDRTypeForNEON(MVT VT);

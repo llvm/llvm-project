@@ -264,10 +264,10 @@ define <2 x i64> @mul_v2i64(<2 x i64> %i, <2 x i64> %j) nounwind  {
 ; SSE-NEXT:    psrlq $32, %xmm3
 ; SSE-NEXT:    pmuludq %xmm0, %xmm3
 ; SSE-NEXT:    psllq $32, %xmm3
-; SSE-NEXT:    paddq %xmm3, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm0
 ; SSE-NEXT:    pmuludq %xmm1, %xmm0
 ; SSE-NEXT:    psllq $32, %xmm0
+; SSE-NEXT:    paddq %xmm3, %xmm0
 ; SSE-NEXT:    paddq %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
@@ -277,10 +277,10 @@ define <2 x i64> @mul_v2i64(<2 x i64> %i, <2 x i64> %j) nounwind  {
 ; AVX-NEXT:    vpsrlq $32, %xmm1, %xmm3
 ; AVX-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
 ; AVX-NEXT:    vpsllq $32, %xmm3, %xmm3
-; AVX-NEXT:    vpaddq %xmm3, %xmm2, %xmm2
 ; AVX-NEXT:    vpsrlq $32, %xmm0, %xmm0
 ; AVX-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpsllq $32, %xmm0, %xmm0
+; AVX-NEXT:    vpaddq %xmm0, %xmm3, %xmm0
 ; AVX-NEXT:    vpaddq %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    retq
 entry:
@@ -352,33 +352,55 @@ define <2 x i64> @mul_v2i64spill(<2 x i64> %i, <2 x i64> %j) nounwind  {
 ; SSE-NEXT:    psrlq $32, %xmm1
 ; SSE-NEXT:    pmuludq %xmm0, %xmm1
 ; SSE-NEXT:    psllq $32, %xmm1
-; SSE-NEXT:    paddq %xmm1, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm0
 ; SSE-NEXT:    pmuludq %xmm3, %xmm0
 ; SSE-NEXT:    psllq $32, %xmm0
+; SSE-NEXT:    paddq %xmm1, %xmm0
 ; SSE-NEXT:    paddq %xmm2, %xmm0
 ; SSE-NEXT:    addq $40, %rsp
 ; SSE-NEXT:    retq
 ;
-; AVX-LABEL: mul_v2i64spill:
-; AVX:       # BB#0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    callq foo
-; AVX-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
-; AVX-NEXT:    vmovdqa (%rsp), %xmm3 # 16-byte Reload
-; AVX-NEXT:    vpmuludq %xmm2, %xmm3, %xmm0
-; AVX-NEXT:    vpsrlq $32, %xmm2, %xmm1
-; AVX-NEXT:    vpmuludq %xmm1, %xmm3, %xmm1
-; AVX-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpsrlq $32, %xmm3, %xmm1
-; AVX-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
-; AVX-NEXT:    vpsllq $32, %xmm1, %xmm1
-; AVX-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    retq
+; AVX2-LABEL: mul_v2i64spill:
+; AVX2:       # BB#0: # %entry
+; AVX2-NEXT:    subq $40, %rsp
+; AVX2-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX2-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX2-NEXT:    callq foo
+; AVX2-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX2-NEXT:    vmovdqa (%rsp), %xmm4 # 16-byte Reload
+; AVX2-NEXT:    vpmuludq %xmm2, %xmm4, %xmm0
+; AVX2-NEXT:    vpsrlq $32, %xmm2, %xmm1
+; AVX2-NEXT:    vmovdqa %xmm2, %xmm3
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm4, %xmm1
+; AVX2-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX2-NEXT:    vpsrlq $32, %xmm4, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX2-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    addq $40, %rsp
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: mul_v2i64spill:
+; AVX512:       # BB#0: # %entry
+; AVX512-NEXT:    subq $40, %rsp
+; AVX512-NEXT:    vmovaps %xmm1, {{[0-9]+}}(%rsp) # 16-byte Spill
+; AVX512-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
+; AVX512-NEXT:    callq foo
+; AVX512-NEXT:    vmovdqa {{[0-9]+}}(%rsp), %xmm2 # 16-byte Reload
+; AVX512-NEXT:    vmovdqa (%rsp), %xmm4 # 16-byte Reload
+; AVX512-NEXT:    vpmuludq %xmm2, %xmm4, %xmm0
+; AVX512-NEXT:    vpsrlq $32, %xmm2, %xmm1
+; AVX512-NEXT:    vmovaps %zmm2, %zmm3
+; AVX512-NEXT:    vpmuludq %xmm1, %xmm4, %xmm1
+; AVX512-NEXT:    vpsllq $32, %xmm1, %xmm1
+; AVX512-NEXT:    vpsrlq $32, %xmm4, %xmm2
+; AVX512-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
+; AVX512-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX512-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    addq $40, %rsp
+; AVX512-NEXT:    retq
 entry:
   ; Use a call to force spills.
   call void @foo()
@@ -745,10 +767,10 @@ define <4 x i64> @mul_v4i64(<4 x i64> %i, <4 x i64> %j) nounwind  {
 ; SSE-NEXT:    psrlq $32, %xmm5
 ; SSE-NEXT:    pmuludq %xmm0, %xmm5
 ; SSE-NEXT:    psllq $32, %xmm5
-; SSE-NEXT:    paddq %xmm5, %xmm4
 ; SSE-NEXT:    psrlq $32, %xmm0
 ; SSE-NEXT:    pmuludq %xmm2, %xmm0
 ; SSE-NEXT:    psllq $32, %xmm0
+; SSE-NEXT:    paddq %xmm5, %xmm0
 ; SSE-NEXT:    paddq %xmm4, %xmm0
 ; SSE-NEXT:    movdqa %xmm1, %xmm2
 ; SSE-NEXT:    pmuludq %xmm3, %xmm2
@@ -756,10 +778,10 @@ define <4 x i64> @mul_v4i64(<4 x i64> %i, <4 x i64> %j) nounwind  {
 ; SSE-NEXT:    psrlq $32, %xmm4
 ; SSE-NEXT:    pmuludq %xmm1, %xmm4
 ; SSE-NEXT:    psllq $32, %xmm4
-; SSE-NEXT:    paddq %xmm4, %xmm2
 ; SSE-NEXT:    psrlq $32, %xmm1
 ; SSE-NEXT:    pmuludq %xmm3, %xmm1
 ; SSE-NEXT:    psllq $32, %xmm1
+; SSE-NEXT:    paddq %xmm4, %xmm1
 ; SSE-NEXT:    paddq %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
@@ -769,10 +791,10 @@ define <4 x i64> @mul_v4i64(<4 x i64> %i, <4 x i64> %j) nounwind  {
 ; AVX-NEXT:    vpsrlq $32, %ymm1, %ymm3
 ; AVX-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
 ; AVX-NEXT:    vpsllq $32, %ymm3, %ymm3
-; AVX-NEXT:    vpaddq %ymm3, %ymm2, %ymm2
 ; AVX-NEXT:    vpsrlq $32, %ymm0, %ymm0
 ; AVX-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX-NEXT:    vpsllq $32, %ymm0, %ymm0
+; AVX-NEXT:    vpaddq %ymm0, %ymm3, %ymm0
 ; AVX-NEXT:    vpaddq %ymm0, %ymm2, %ymm0
 ; AVX-NEXT:    retq
 entry:

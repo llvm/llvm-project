@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -S | grep "ret i8 [%]tmp3"
+; RUN: opt < %s -basicaa -gvn -S | FileCheck %s
 ; PR2503
 
 @g_3 = external global i8		; <i8*> [#uses=2]
@@ -29,6 +29,7 @@ forinc:		; preds = %forbody
 afterfor:		; preds = %forcond, %forcond.thread
 	%tmp10 = load i8, i8* @g_3		; <i8> [#uses=0]
 	ret i8 %tmp10
+; CHECK: ret i8 %tmp3
 
 ifend:		; preds = %afterfor, %ifthen
 	ret i8 0

@@ -1,4 +1,4 @@
-; RUN: opt < %s -basicaa -gvn -instcombine -S | grep "ret i32 0"
+; RUN: opt < %s -basicaa -gvn -instcombine -S | FileCheck %s
 ; PR4189
 @G = external constant [4 x i32]
 
@@ -11,3 +11,9 @@ entry:
 	%C = sub i32 %A, %B
 	ret i32 %C
 }
+
+; CHECK: define i32 @test(i8* %p, i32 %i) #0 {
+; CHECK-NEXT: entry:
+; CHECK-NEXT:   store i8 4, i8* %p, align 1
+; CHECK-NEXT:   ret i32 0
+; CHECK-NEXT: }

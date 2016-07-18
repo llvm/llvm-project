@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-pre -S | grep ".pre"
+; RUN: opt < %s -gvn -enable-pre -S | FileCheck %s
 
 @H = common global i32 0		; <i32*> [#uses=2]
 @G = common global i32 0		; <i32*> [#uses=1]
@@ -12,6 +12,7 @@ entry:
 
 bb:		; preds = %entry
 	%3 = add i32 %0, 42		; <i32> [#uses=1]
+; CHECK: %.pre = add i32 %0, 42
 	store i32 %3, i32* @G, align 4
 	br label %bb1
 
@@ -19,6 +20,10 @@ bb1:		; preds = %bb, %entry
 	%4 = add i32 %0, 42		; <i32> [#uses=1]
 	store i32 %4, i32* @H, align 4
 	br label %return
+
+; CHECK: %.pre-phi = phi i32 [ %.pre, %entry.bb1_crit_edge ], [ %3, %bb ]
+; CHECK-NEXT: store i32 %.pre-phi, i32* @H, align 4
+; CHECK-NEXT: ret i32 0
 
 return:		; preds = %bb1
 	ret i32 0

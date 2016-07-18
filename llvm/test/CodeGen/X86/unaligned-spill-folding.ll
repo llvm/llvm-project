@@ -34,7 +34,7 @@ middle.block:
 ; doesn't force stack realignment though
 ; UNALIGNED-LABEL: @test1
 ; UNALIGNED-NOT: andl $-{{..}}, %esp
-; UNALIGNED: movdqu {{.*}} # 16-byte Folded Spill
+; UNALIGNED: movdqu {{.*}} # 16-byte Spill
 ; UNALIGNED-NOT: paddd {{.*}} # 16-byte Folded Reload
 
 ; ALIGNED-LABEL: @test1

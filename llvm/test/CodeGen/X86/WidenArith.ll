@@ -9,8 +9,8 @@ define <8 x i32> @test(<8 x float> %a, <8 x float> %b) {
 ; CHECK-NEXT:    vsubps %ymm2, %ymm1, %ymm3
 ; CHECK-NEXT:    vcmpltps %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    vcmpltps %ymm3, %ymm2, %ymm1
+; CHECK-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
 ; CHECK-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; CHECK-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
  %c1 = fadd <8 x float> %a, %b
  %b1 = fmul <8 x float> %b, %a

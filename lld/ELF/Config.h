@@ -12,7 +12,6 @@
 
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/ELF.h"
 
 #include <vector>
@@ -67,7 +66,6 @@ struct Configuration {
   llvm::StringRef OutputFile;
   llvm::StringRef SoName;
   llvm::StringRef Sysroot;
-  llvm::StringSet<> TraceSymbol;
   std::string RPath;
   std::vector<VersionDefinition> VersionDefinitions;
   std::vector<llvm::StringRef> DynamicList;
@@ -90,7 +88,6 @@ struct Configuration {
   bool FatalWarnings;
   bool GcSections;
   bool GnuHash = false;
-  bool HasVersionScript = false;
   bool ICF;
   bool Mips64EL = false;
   bool NoGnuUnique;

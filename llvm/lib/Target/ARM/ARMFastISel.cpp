@@ -1718,6 +1718,13 @@ bool ARMFastISel::SelectRem(const Instruction *I, bool isSigned) {
   if (!isTypeLegal(Ty, VT))
     return false;
 
+  // Many ABIs do not provide a libcall for standalone remainder, so we need to
+  // use divrem (see the RTABI 4.3.1). Since FastISel can't handle non-double
+  // multi-reg returns, we'll have to bail out.
+  if (!TLI.hasStandaloneRem(VT)) {
+    return false;
+  }
+
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;
   if (VT == MVT::i8)
     LC = isSigned ? RTLIB::SREM_I8 : RTLIB::UREM_I8;

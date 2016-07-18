@@ -6,6 +6,7 @@
 
 define void @t() nounwind {
 entry:
+; CHECK-LABEL: t
 ; CHECK: vmov.I64 q15, #0
 ; CHECK: vmov.32 d30[0],
 ; CHECK: vmov q8, q15
@@ -19,6 +20,7 @@ entry:
 
 define void @t2() nounwind {
 entry:
+; CHECK-LABEL: t2
 ; CHECK: vmov d30, d16
 ; CHECK: vmov.32 r0, d30[0]
   %asmtmp2 = tail call i32 asm sideeffect "vmov d30, $1\0Avmov.32 $0, d30[0]\0A", "=r,w,~{d30}"(<2 x i32> undef) nounwind
@@ -64,7 +66,7 @@ ret i32 0
 
 define float @t6(float %y) nounwind {
 entry:
-; CHECK: t6
+; CHECK-LABEL: t6
 ; CHECK: flds s15, s0
   %0 = tail call float asm "flds s15, $0", "=x"() nounwind
   ret float %0
@@ -74,7 +76,7 @@ entry:
 
 define double @t7(double %y) nounwind {
 entry:
-; CHECK: t7
+; CHECK-LABEL: t7
 ; CHECK: flds s15, d0
   %0 = tail call double asm "flds s15, $0", "=x"() nounwind
   ret double %0
@@ -84,7 +86,7 @@ entry:
 
 define float @t8(float %y) nounwind {
 entry:
-; CHECK: t8
+; CHECK-LABEL: t8
 ; CHECK: flds s15, s0
   %0 = tail call float asm "flds s15, $0", "=t"() nounwind
   ret float %0
@@ -94,7 +96,7 @@ entry:
 
 define i32 @t9(i32 %r0) nounwind {
 entry:
-; CHECK: t9
+; CHECK-LABEL: t9
 ; CHECK: movw r0, #27182
   %0 = tail call i32 asm "movw $0, $1", "=r,j"(i32 27182) nounwind
   ret i32 %0
@@ -104,7 +106,7 @@ entry:
 
 define void @t10(i8* %f, i32 %g) nounwind {
 entry:
-; CHECK: t10
+; CHECK-LABEL: t10
 ; CHECK: str r1, [r0]
   %f.addr = alloca i8*, align 4
   store i8* %f, i8** %f.addr, align 4
@@ -116,8 +118,19 @@ entry:
 
 define <4 x i32> @t11(i32* %p) nounwind {
 entry:
-; CHECK: t11
+; CHECK-LABEL: t11
 ; CHECK: vld1.s32 {d16[], d17[]}, [r0]
   %0 = tail call <4 x i32> asm "vld1.s32 {${0:e}[], ${0:f}[]}, [$1]", "=w,r"(i32* %p) nounwind
   ret <4 x i32> %0
+}
+
+; Bugzilla PR26038
+
+define i32 @fn1() local_unnamed_addr nounwind {
+; CHECK-LABEL: fn1
+entry:
+; CHECK: mov [[addr:r[0-9]+]], #5
+; CHECK: ldrh {{.*}}[[addr]]
+  %0 = tail call i32 asm "ldrh  $0, $1", "=r,*Q"(i8* inttoptr (i32 5 to i8*)) nounwind
+  ret i32 %0
 }

@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -S | not grep phi
+; RUN: opt < %s -gvn -S | FileCheck %s
 
 	%struct..0anon = type { i32 }
 	%struct.FILE = type { i8*, i32, i32, i16, i16, %struct.__sbuf, i32, i8*, i32 (i8*)*, i32 (i8*, i8*, i32)*, i64 (i8*, i64, i32)*, i32 (i8*, i8*, i32)*, %struct.__sbuf, %struct.__sFILEX*, i32, [3 x i8], [1 x i8], %struct.__sbuf, i32, i64 }
@@ -26,3 +26,19 @@ bb2982.preheader:		; preds = %cond_next2943
 	ret i32 %tmp298316
 
 }
+
+; CHECK: define i32 @reload(%struct.rtx_def* %first, i32 %global, %struct.FILE* %dumpfile) {
+; CHECK-NEXT: cond_next2835.1:
+; CHECK-NEXT:   br label %bb2928
+; CHECK: bb2928:
+; CHECK-NEXT:   br i1 false, label %bb2928.cond_next2943_crit_edge, label %cond_true2935
+; CHECK: bb2928.cond_next2943_crit_edge:
+; CHECK-NEXT:   br label %cond_next2943
+; CHECK: cond_true2935:
+; CHECK-NEXT:   br label %cond_next2943
+; CHECK: cond_next2943:
+; CHECK-NEXT:   br i1 false, label %bb2982.preheader, label %bb2928
+; CHECK: bb2982.preheader:
+; CHECK-NEXT:   %tmp298316 = load i32, i32* @n_spills, align 4
+; CHECK-NEXT:   ret i32 %tmp298316
+; CHECK-NEXT: }

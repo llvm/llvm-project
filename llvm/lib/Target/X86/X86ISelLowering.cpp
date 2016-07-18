@@ -187,7 +187,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::SINT_TO_FP       , MVT::i8   , Promote);
 
   if (!Subtarget.useSoftFloat()) {
-    // SSE has no i16 to fp conversion, only i32
+    // SSE has no i16 to fp conversion, only i32.
     if (X86ScalarSSEf32) {
       setOperationAction(ISD::SINT_TO_FP     , MVT::i16  , Promote);
       // f32 and f64 cases are Legal, f80 case is not
@@ -8803,9 +8803,9 @@ static SDValue lowerVectorShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
 
   bool UnpackLo = NumLoInputs >= NumHiInputs;
 
-  auto TryUnpack = [&](MVT UnpackVT, int Scale) {
-    SmallVector<int, 16> V1Mask(Mask.size(), -1);
-    SmallVector<int, 16> V2Mask(Mask.size(), -1);
+  auto TryUnpack = [&](int ScalarSize, int Scale) {
+    SmallVector<int, 16> V1Mask((unsigned)Size, -1);
+    SmallVector<int, 16> V2Mask((unsigned)Size, -1);
 
     for (int i = 0; i < Size; ++i) {
       if (Mask[i] < 0)
@@ -8837,6 +8837,7 @@ static SDValue lowerVectorShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
     V2 = DAG.getVectorShuffle(VT, DL, V2, DAG.getUNDEF(VT), V2Mask);
 
     // Cast the inputs to the type we will use to unpack them.
+    MVT UnpackVT = MVT::getVectorVT(MVT::getIntegerVT(ScalarSize), Size / Scale);
     V1 = DAG.getBitcast(UnpackVT, V1);
     V2 = DAG.getBitcast(UnpackVT, V2);
 
@@ -8848,15 +8849,10 @@ static SDValue lowerVectorShuffleAsPermuteAndUnpack(const SDLoc &DL, MVT VT,
 
   // We try each unpack from the largest to the smallest to try and find one
   // that fits this mask.
-  int OrigNumElements = VT.getVectorNumElements();
   int OrigScalarSize = VT.getScalarSizeInBits();
-  for (int ScalarSize = 64; ScalarSize >= OrigScalarSize; ScalarSize /= 2) {
-    int Scale = ScalarSize / OrigScalarSize;
-    int NumElements = OrigNumElements / Scale;
-    MVT UnpackVT = MVT::getVectorVT(MVT::getIntegerVT(ScalarSize), NumElements);
-    if (SDValue Unpack = TryUnpack(UnpackVT, Scale))
+  for (int ScalarSize = 64; ScalarSize >= OrigScalarSize; ScalarSize /= 2)
+    if (SDValue Unpack = TryUnpack(ScalarSize, ScalarSize / OrigScalarSize))
       return Unpack;
-  }
 
   // If none of the unpack-rooted lowerings worked (or were profitable) try an
   // initial unpack.
@@ -9993,6 +9989,7 @@ static SDValue lowerV8I16VectorShuffle(const SDLoc &DL, ArrayRef<int> Mask,
           lowerVectorShuffleAsBitBlend(DL, MVT::v8i16, V1, V2, Mask, DAG))
     return BitBlend;
 
+  // Try to lower by permuting the inputs into an unpack instruction.
   if (SDValue Unpack = lowerVectorShuffleAsPermuteAndUnpack(DL, MVT::v8i16, V1,
                                                             V2, Mask, DAG))
     return Unpack;

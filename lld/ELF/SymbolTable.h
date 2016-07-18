@@ -82,9 +82,11 @@ public:
   void scanShlibUndefined();
   void scanDynamicList();
   void scanVersionScript();
-  void traceDefined();
+  void scanSymbolVersions();
 
   SymbolBody *find(StringRef Name);
+
+  void trace(StringRef Name);
   void wrap(StringRef Name);
 
 private:
@@ -99,6 +101,11 @@ private:
 
   std::map<std::string, SymbolBody *> getDemangledSyms();
 
+  struct SymIndex {
+    int Idx : 31;
+    unsigned Traced : 1;
+  };
+
   // The order the global symbols are in is not defined. We can use an arbitrary
   // order, but it has to be reproducible. That is true even when cross linking.
   // The default hashing of StringRef produces different results on 32 and 64
@@ -106,7 +113,7 @@ private:
   // but a bit inefficient.
   // FIXME: Experiment with passing in a custom hashing or sorting the symbols
   // once symbol resolution is finished.
-  llvm::DenseMap<SymName, unsigned> Symtab;
+  llvm::DenseMap<SymName, SymIndex> Symtab;
   std::vector<Symbol *> SymVector;
   llvm::BumpPtrAllocator Alloc;
 

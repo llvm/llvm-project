@@ -1,4 +1,5 @@
-; RUN: opt < %s -gvn -enable-load-pre -S | not grep pre1
+; RUN: opt < %s -gvn -enable-load-pre -S | FileCheck %s
+; CHECK-NOT: pre1
 ; GVN load pre was hoisting the loads at %13 and %16 up to bb4.outer.  
 ; This is invalid as it bypasses the check for %m.0.ph==null in bb4. 
 ; ModuleID = 'mbuf.c'

@@ -1,4 +1,4 @@
 // RUN: llvm-cov show %S/Inputs/templateInstantiations.covmapping -instr-profile %S/Inputs/templateInstantiations.profdata -Xdemangler sed -Xdemangler 's/_/X/g' -filename-equivalence %S/showTemplateInstantiations.cpp | FileCheck %s
 
-// CHECK: XZ4funcIbEiTX:
-// CHECK: XZ4funcIiEiTX:
+// CHECK-DAG: XZ4funcIbEiTX
+// CHECK-DAG: XZ4funcIiEiTX

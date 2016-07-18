@@ -27,7 +27,11 @@
 
 #include <queue>
 #include <cassert>
+#include <deque>
+#include <functional>
+#include <memory>
 #include <type_traits>
+#include <vector>
 
 struct test
     : private std::priority_queue<int>
