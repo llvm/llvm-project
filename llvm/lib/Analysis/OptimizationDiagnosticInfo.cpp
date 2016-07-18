@@ -20,10 +20,6 @@
 
 using namespace llvm;
 
-OptimizationRemarkEmitter::OptimizationRemarkEmitter() : FunctionPass(ID) {
-  initializeOptimizationRemarkEmitterPass(*PassRegistry::getPassRegistry());
-}
-
 Optional<uint64_t> OptimizationRemarkEmitter::computeHotness(Value *V) {
   if (!BFI)
     return None;
@@ -43,27 +39,50 @@ void OptimizationRemarkEmitter::emitOptimizationRemarkMissed(
   emitOptimizationRemarkMissed(PassName, L->getStartLoc(), L->getHeader(), Msg);
 }
 
-bool OptimizationRemarkEmitter::runOnFunction(Function &Fn) {
-  F = &Fn;
+OptimizationRemarkEmitterWrapperPass::OptimizationRemarkEmitterWrapperPass()
+    : FunctionPass(ID) {
+  initializeOptimizationRemarkEmitterWrapperPassPass(
+      *PassRegistry::getPassRegistry());
+}
+
+bool OptimizationRemarkEmitterWrapperPass::runOnFunction(Function &Fn) {
+  BlockFrequencyInfo *BFI;
 
   if (Fn.getContext().getDiagnosticHotnessRequested())
     BFI = &getAnalysis<LazyBlockFrequencyInfoPass>().getBFI();
   else
     BFI = nullptr;
 
+  ORE = llvm::make_unique<OptimizationRemarkEmitter>(&Fn, BFI);
   return false;
 }
 
-void OptimizationRemarkEmitter::getAnalysisUsage(AnalysisUsage &AU) const {
+void OptimizationRemarkEmitterWrapperPass::getAnalysisUsage(
+    AnalysisUsage &AU) const {
   LazyBlockFrequencyInfoPass::getLazyBFIAnalysisUsage(AU);
   AU.setPreservesAll();
 }
 
-char OptimizationRemarkEmitter::ID = 0;
+char OptimizationRemarkEmitterAnalysis::PassID;
+
+OptimizationRemarkEmitter
+OptimizationRemarkEmitterAnalysis::run(Function &F, AnalysisManager<Function> &AM) {
+  BlockFrequencyInfo *BFI;
+
+  if (F.getContext().getDiagnosticHotnessRequested())
+    BFI = &AM.getResult<BlockFrequencyAnalysis>(F);
+  else
+    BFI = nullptr;
+
+  return OptimizationRemarkEmitter(&F, BFI);
+}
+
+char OptimizationRemarkEmitterWrapperPass::ID = 0;
 static const char ore_name[] = "Optimization Remark Emitter";
 #define ORE_NAME "opt-remark-emitter"
 
-INITIALIZE_PASS_BEGIN(OptimizationRemarkEmitter, ORE_NAME, ore_name, false,
-                      true)
+INITIALIZE_PASS_BEGIN(OptimizationRemarkEmitterWrapperPass, ORE_NAME, ore_name,
+                      false, true)
 INITIALIZE_PASS_DEPENDENCY(LazyBFIPass)
-INITIALIZE_PASS_END(OptimizationRemarkEmitter, ORE_NAME, ore_name, false, true)
+INITIALIZE_PASS_END(OptimizationRemarkEmitterWrapperPass, ORE_NAME, ore_name,
+                    false, true)

@@ -865,7 +865,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     unordered_map& operator=(const unordered_map& __u)
     {
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
         __table_ = __u.__table_;
 #else
         if (this != &__u) {
@@ -1619,7 +1619,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     unordered_multimap& operator=(const unordered_multimap& __u)
     {
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
         __table_ = __u.__table_;
 #else
         if (this != &__u) {

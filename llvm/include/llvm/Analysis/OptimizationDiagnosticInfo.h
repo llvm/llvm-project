@@ -16,6 +16,7 @@
 #define LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
@@ -28,9 +29,19 @@ class Pass;
 class Twine;
 class Value;
 
-class OptimizationRemarkEmitter : public FunctionPass {
+class OptimizationRemarkEmitter {
 public:
-  OptimizationRemarkEmitter();
+  OptimizationRemarkEmitter(Function *F, BlockFrequencyInfo *BFI)
+      : F(F), BFI(BFI) {}
+
+  OptimizationRemarkEmitter(OptimizationRemarkEmitter &&Arg)
+      : F(Arg.F), BFI(Arg.BFI) {}
+
+  OptimizationRemarkEmitter &operator=(OptimizationRemarkEmitter &&RHS) {
+    F = RHS.F;
+    BFI = RHS.BFI;
+    return *this;
+  }
 
   /// Emit an optimization-missed message.
   ///
@@ -48,19 +59,46 @@ public:
   void emitOptimizationRemarkMissed(const char *PassName, Loop *L,
                                     const Twine &Msg);
 
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-
-  static char ID;
-
 private:
   Function *F;
 
   BlockFrequencyInfo *BFI;
 
   Optional<uint64_t> computeHotness(Value *V);
+
+  OptimizationRemarkEmitter(const OptimizationRemarkEmitter &) = delete;
+  void operator=(const OptimizationRemarkEmitter &) = delete;
+};
+
+class OptimizationRemarkEmitterWrapperPass : public FunctionPass {
+  std::unique_ptr<OptimizationRemarkEmitter> ORE;
+
+public:
+  OptimizationRemarkEmitterWrapperPass();
+
+  bool runOnFunction(Function &F) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+  OptimizationRemarkEmitter &getORE() {
+    assert(ORE && "pass not run yet");
+    return *ORE;
+  }
+
+  static char ID;
+};
+
+class OptimizationRemarkEmitterAnalysis
+    : public AnalysisInfoMixin<OptimizationRemarkEmitterAnalysis> {
+  friend AnalysisInfoMixin<OptimizationRemarkEmitterAnalysis>;
+  static char PassID;
+
+public:
+  /// \brief Provide the result typedef for this analysis pass.
+  typedef OptimizationRemarkEmitter Result;
+
+  /// \brief Run the analysis pass over a function and produce BFI.
+  Result run(Function &F, AnalysisManager<Function> &AM);
 };
 }
-
 #endif // LLVM_IR_OPTIMIZATIONDIAGNOSTICINFO_H
