@@ -8706,6 +8706,7 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/",
+					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -12507,6 +12508,7 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/",
+					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
@@ -13069,6 +13071,7 @@
 					__info_plist,
 					"$(PROJECT_DIR)/tools/lldb-mi/lldb-Info.plist",
 					"-Wl,-rpath,@loader_path/",
+					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
 				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;

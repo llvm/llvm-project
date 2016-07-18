@@ -51,5 +51,8 @@ test/crashinfo.so
 crashinfo.lock
 crashinfo.so
 
+# ctags files
+tags
+
 /clang
 /swift
