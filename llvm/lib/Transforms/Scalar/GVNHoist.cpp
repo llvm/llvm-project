@@ -86,7 +86,7 @@ typedef DenseMap<std::pair<unsigned, unsigned>, SmallVector<Instruction *, 4>>
     VNtoInsns;
 // An invalid value number Used when inserting a single value number into
 // VNtoInsns.
-enum { InvalidVN = ~2U };
+enum : unsigned { InvalidVN = ~2U };
 
 // Records all scalar instructions candidate for code hoisting.
 class InsnInfo {
