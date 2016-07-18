@@ -34,16 +34,20 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class _LIBCPP_TYPE_VIS _LIBCPP_THREAD_SAFETY_ANNOTATION(capability("mutex")) mutex
 {
+#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+    __libcpp_mutex_t __m_ = _LIBCPP_MUTEX_INITIALIZER;
+#else
     __libcpp_mutex_t __m_;
+#endif
 
 public:
     _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_HAS_NO_CONSTEXPR
-    constexpr mutex() _NOEXCEPT : __m_(_LIBCPP_MUTEX_INITIALIZER) {}
+    constexpr mutex() _NOEXCEPT _LIBCPP_DEFAULT
 #else
     mutex() _NOEXCEPT {__m_ = (__libcpp_mutex_t)_LIBCPP_MUTEX_INITIALIZER;}
 #endif
-     ~mutex();
+    ~mutex();
 
 private:
     mutex(const mutex&);// = delete;
@@ -287,13 +291,18 @@ _LIBCPP_DECLARE_STRONG_ENUM_EPILOG(cv_status)
 
 class _LIBCPP_TYPE_VIS condition_variable
 {
-    __libcpp_condvar_t  __cv_;
+#ifndef _LIBCPP_HAS_NO_CONSTEXPR
+    __libcpp_condvar_t __cv_ = _LIBCPP_CONDVAR_INITIALIZER;
+#else
+    __libcpp_condvar_t __cv_;
+#endif
+
 public:
     _LIBCPP_INLINE_VISIBILITY
 #ifndef _LIBCPP_HAS_NO_CONSTEXPR
-    constexpr condition_variable() : __cv_(_LIBCPP_CONDVAR_INITIALIZER) {}
+    constexpr condition_variable() _NOEXCEPT _LIBCPP_DEFAULT
 #else
-    condition_variable() {__cv_ = (__libcpp_condvar_t)_LIBCPP_CONDVAR_INITIALIZER;}
+    condition_variable() _NOEXCEPT {__cv_ = (__libcpp_condvar_t)_LIBCPP_CONDVAR_INITIALIZER;}
 #endif
     ~condition_variable();
 
