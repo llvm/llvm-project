@@ -2453,17 +2453,6 @@ def : Pat <
   (S_WAITCNT (as_i16imm $simm16))
 >;
 
-// FIXME: These should be removed eventually
-def : Pat <
-  (int_AMDGPU_barrier_global),
-  (S_BARRIER)
->;
-
-def : Pat <
-  (int_AMDGPU_barrier_local),
-  (S_BARRIER)
->;
-
 //===----------------------------------------------------------------------===//
 // VOP1 Patterns
 //===----------------------------------------------------------------------===//

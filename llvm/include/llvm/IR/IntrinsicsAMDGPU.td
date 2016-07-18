@@ -43,6 +43,8 @@ defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 
 def int_r600_read_workdim : AMDGPUReadPreloadRegisterIntrinsic;
 
+def int_r600_group_barrier : GCCBuiltin<"__builtin_r600_group_barrier">,
+  Intrinsic<[], [], [IntrConvergent]>;
 
 // AS 7 is PARAM_I_ADDRESS, used for kernel arguments
 def int_r600_implicitarg_ptr :

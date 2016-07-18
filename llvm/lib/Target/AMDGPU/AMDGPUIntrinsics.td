@@ -30,10 +30,6 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
     [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
   >;
 
-  // Deprecated in favor of llvm.amdgcn.s.barrier
-  def int_AMDGPU_barrier_local  : Intrinsic<[], [], [IntrConvergent]>;
-  def int_AMDGPU_barrier_global : Intrinsic<[], [], [IntrConvergent]>;
-
   // Deprecated in favor of llvm.amdgcn.read.workdim
   def int_AMDGPU_read_workdim : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }
