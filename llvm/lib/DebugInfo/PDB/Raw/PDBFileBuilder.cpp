@@ -9,6 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/PDBFileBuilder.h"
 
+#include "llvm/ADT/BitVector.h"
+
 #include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/CodeView/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
@@ -20,99 +22,72 @@
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
+using namespace llvm::support;
 
 PDBFileBuilder::PDBFileBuilder(
-    std::unique_ptr<codeview::StreamInterface> PdbFileBuffer)
-    : File(llvm::make_unique<PDBFile>(std::move(PdbFileBuffer))) {}
+    std::unique_ptr<codeview::StreamInterface> FileBuffer)
+    : File(llvm::make_unique<PDBFile>(std::move(FileBuffer))) {}
 
-Error PDBFileBuilder::setSuperBlock(const PDBFile::SuperBlock &B) {
-  auto SB = static_cast<PDBFile::SuperBlock *>(
-      File->Allocator.Allocate(sizeof(PDBFile::SuperBlock),
-                               llvm::AlignOf<PDBFile::SuperBlock>::Alignment));
-  ::memcpy(SB, &B, sizeof(PDBFile::SuperBlock));
-  return File->setSuperBlock(SB);
-}
+Error PDBFileBuilder::initialize(const msf::SuperBlock &Super) {
+  auto ExpectedMsf =
+      MsfBuilder::create(File->Allocator, Super.BlockSize, Super.NumBlocks);
+  if (!ExpectedMsf)
+    return ExpectedMsf.takeError();
 
-void PDBFileBuilder::setStreamSizes(ArrayRef<support::ulittle32_t> S) {
-  File->StreamSizes = S;
-}
-
-void PDBFileBuilder::setDirectoryBlocks(ArrayRef<support::ulittle32_t> D) {
-  File->DirectoryBlocks = D;
-}
-
-void PDBFileBuilder::setStreamMap(
-    const std::vector<ArrayRef<support::ulittle32_t>> &S) {
-  File->StreamMap = S;
-}
-
-Error PDBFileBuilder::generateSimpleStreamMap() {
-  if (File->StreamSizes.empty())
-    return Error::success();
-
-  static std::vector<std::vector<support::ulittle32_t>> StaticMap;
-  File->StreamMap.clear();
-  StaticMap.clear();
-
-  // Figure out how many blocks are needed for all streams, and set the first
-  // used block to the highest block so that we can write the rest of the
-  // blocks contiguously.
-  uint32_t TotalFileBlocks = File->getBlockCount();
-  std::vector<support::ulittle32_t> ReservedBlocks;
-  ReservedBlocks.push_back(support::ulittle32_t(0));
-  ReservedBlocks.push_back(File->SB->BlockMapAddr);
-  ReservedBlocks.insert(ReservedBlocks.end(), File->DirectoryBlocks.begin(),
-                        File->DirectoryBlocks.end());
-
-  uint32_t BlocksNeeded = 0;
-  for (auto Size : File->StreamSizes)
-    BlocksNeeded += File->bytesToBlocks(Size, File->getBlockSize());
-
-  support::ulittle32_t NextBlock(TotalFileBlocks - BlocksNeeded -
-                                 ReservedBlocks.size());
-
-  StaticMap.resize(File->StreamSizes.size());
-  for (uint32_t S = 0; S < File->StreamSizes.size(); ++S) {
-    uint32_t Size = File->StreamSizes[S];
-    uint32_t NumBlocks = File->bytesToBlocks(Size, File->getBlockSize());
-    auto &ThisStream = StaticMap[S];
-    for (uint32_t I = 0; I < NumBlocks;) {
-      NextBlock += 1;
-      if (std::find(ReservedBlocks.begin(), ReservedBlocks.end(), NextBlock) !=
-          ReservedBlocks.end())
-        continue;
-
-      ++I;
-      assert(NextBlock < File->getBlockCount());
-      ThisStream.push_back(NextBlock);
-    }
-    File->StreamMap.push_back(ThisStream);
-  }
+  auto &MsfResult = *ExpectedMsf;
+  if (auto EC = MsfResult.setBlockMapAddr(Super.BlockMapAddr))
+    return EC;
+  Msf = llvm::make_unique<MsfBuilder>(std::move(MsfResult));
+  Msf->setFreePageMap(Super.FreeBlockMapBlock);
+  Msf->setUnknown1(Super.Unknown1);
   return Error::success();
 }
 
+MsfBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
+
 InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
   if (!Info)
-    Info = llvm::make_unique<InfoStreamBuilder>(*File);
+    Info = llvm::make_unique<InfoStreamBuilder>();
   return *Info;
 }
 
 DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   if (!Dbi)
-    Dbi = llvm::make_unique<DbiStreamBuilder>(*File);
+    Dbi = llvm::make_unique<DbiStreamBuilder>();
   return *Dbi;
 }
 
 Expected<std::unique_ptr<PDBFile>> PDBFileBuilder::build() {
   if (Info) {
-    auto ExpectedInfo = Info->build();
+    uint32_t Length = Info->calculateSerializedLength();
+    if (auto EC = Msf->setStreamSize(StreamPDB, Length))
+      return std::move(EC);
+  }
+  if (Dbi) {
+    uint32_t Length = Dbi->calculateSerializedLength();
+    if (auto EC = Msf->setStreamSize(StreamDBI, Length))
+      return std::move(EC);
+  }
+
+  auto ExpectedLayout = Msf->build();
+  if (!ExpectedLayout)
+    return ExpectedLayout.takeError();
+
+  const msf::Layout &L = *ExpectedLayout;
+  File->StreamMap = L.StreamMap;
+  File->StreamSizes = L.StreamSizes;
+  File->DirectoryBlocks = L.DirectoryBlocks;
+  File->SB = L.SB;
+
+  if (Info) {
+    auto ExpectedInfo = Info->build(*File);
     if (!ExpectedInfo)
       return ExpectedInfo.takeError();
     File->Info = std::move(*ExpectedInfo);
   }
 
   if (Dbi) {
-    auto ExpectedDbi = Dbi->build();
+    auto ExpectedDbi = Dbi->build(*File);
     if (!ExpectedDbi)
       return ExpectedDbi.takeError();
     File->Dbi = std::move(*ExpectedDbi);

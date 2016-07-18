@@ -44,6 +44,17 @@
 #define _LIBCPP_ABI_FORWARD_LIST_REMOVE_NODE_POINTER_UB
 #define _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
 #define _LIBCPP_ABI_VARIADIC_LOCK_GUARD
+#elif _LIBCPP_ABI_VERSION == 1
+// Feature macros for disabling pre ABI v1 features. All of these options
+// are deprecated.
+#if defined(__FreeBSD__)
+#define _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR
+#endif
+#endif
+
+#ifdef _LIBCPP_TRIVIAL_PAIR_COPY_CTOR
+#error "_LIBCPP_TRIVIAL_PAIR_COPY_CTOR" is no longer supported. \
+       use _LIBCPP_DEPRECATED_ABI_DISABLE_PAIR_TRIVIAL_COPY_CTOR instead
 #endif
 
 #define _LIBCPP_CONCAT1(_LIBCPP_X,_LIBCPP_Y) _LIBCPP_X##_LIBCPP_Y
@@ -744,10 +755,6 @@ template <unsigned> struct __static_assert_check {};
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__sun__)
 #define _LIBCPP_WCTYPE_IS_MASK
-#endif
-
-#ifndef _LIBCPP_TRIVIAL_PAIR_COPY_CTOR
-#  define _LIBCPP_TRIVIAL_PAIR_COPY_CTOR 1
 #endif
 
 #ifndef _LIBCPP_STD_VER

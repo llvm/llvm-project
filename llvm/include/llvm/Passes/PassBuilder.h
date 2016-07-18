@@ -41,8 +41,8 @@ public:
   /// level has a specific goal and rationale.
   enum OptimizationLevel {
     /// Disable as many optimizations as possible. This doesn't completely
-    /// disable the optimizer in many cases as there are correctness issues
-    /// such as always_inline functions.
+    /// disable the optimizer in all cases, for example always_inline functions
+    /// can be required to be inlined for correctness.
     O0,
 
     /// Optimize quickly without destroying debuggability.

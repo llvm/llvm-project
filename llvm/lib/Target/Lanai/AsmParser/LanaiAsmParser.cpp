@@ -627,7 +627,7 @@ public:
   }
 };
 
-bool LanaiAsmParser::ParseDirective(AsmToken DirectiveId) { return true; }
+bool LanaiAsmParser::ParseDirective(AsmToken /*DirectiveId*/) { return true; }
 
 bool LanaiAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
                                              OperandVector &Operands,
@@ -640,6 +640,7 @@ bool LanaiAsmParser::MatchAndEmitInstruction(SMLoc IdLoc, unsigned &Opcode,
   switch (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm)) {
   case Match_Success:
     Out.EmitInstruction(Inst, SubtargetInfo);
+    Opcode = Inst.getOpcode();
     return false;
   case Match_MissingFeature:
     return Error(IdLoc, "Instruction use requires option to be enabled");
@@ -688,10 +689,13 @@ std::unique_ptr<LanaiOperand> LanaiAsmParser::parseRegister() {
 
 bool LanaiAsmParser::ParseRegister(unsigned &RegNum, SMLoc &StartLoc,
                                    SMLoc &EndLoc) {
+  const AsmToken &Tok = getParser().getTok();
+  StartLoc = Tok.getLoc();
+  EndLoc = Tok.getEndLoc();
   std::unique_ptr<LanaiOperand> Op = parseRegister();
-  if (Op != 0)
+  if (Op != nullptr)
     RegNum = Op->getReg();
-  return (Op == 0);
+  return (Op == nullptr);
 }
 
 std::unique_ptr<LanaiOperand> LanaiAsmParser::parseIdentifier() {
@@ -1133,7 +1137,7 @@ static bool MaybePredicatedInst(const OperandVector &Operands) {
       .Default(false);
 }
 
-bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo &Info,
+bool LanaiAsmParser::ParseInstruction(ParseInstructionInfo & /*Info*/,
                                       StringRef Name, SMLoc NameLoc,
                                       OperandVector &Operands) {
   // First operand is token for instruction

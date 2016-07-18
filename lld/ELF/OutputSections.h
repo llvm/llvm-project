@@ -25,7 +25,6 @@ namespace elf {
 
 class SymbolBody;
 struct SectionPiece;
-struct Version;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
@@ -262,12 +261,15 @@ class VersionDefinitionSection final : public OutputSectionBase<ELFT> {
   typedef typename ELFT::Verdef Elf_Verdef;
   typedef typename ELFT::Verdaux Elf_Verdaux;
 
-  unsigned FileDefNameOff;
-
 public:
   VersionDefinitionSection();
   void finalize() override;
   void writeTo(uint8_t *Buf) override;
+
+private:
+  void writeOne(uint8_t *Buf, uint32_t Index, StringRef Name, size_t NameOff);
+
+  unsigned FileDefNameOff;
 };
 
 // The .gnu.version section specifies the required version of each symbol in the
@@ -411,8 +413,6 @@ private:
 
   // CIE records are uniquified by their contents and personality functions.
   llvm::DenseMap<std::pair<ArrayRef<uint8_t>, SymbolBody *>, CieRecord> CieMap;
-
-  bool Finalized = false;
 };
 
 template <class ELFT>

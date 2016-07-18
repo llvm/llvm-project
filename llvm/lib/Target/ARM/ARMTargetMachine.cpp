@@ -54,6 +54,10 @@ extern "C" void LLVMInitializeARMTarget() {
   RegisterTargetMachine<ARMBETargetMachine> Y(TheARMBETarget);
   RegisterTargetMachine<ThumbLETargetMachine> A(TheThumbLETarget);
   RegisterTargetMachine<ThumbBETargetMachine> B(TheThumbBETarget);
+
+  PassRegistry &Registry = *PassRegistry::getPassRegistry();
+  initializeARMLoadStoreOptPass(Registry);
+  initializeARMPreAllocLoadStoreOptPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {

@@ -1146,6 +1146,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::ObjCIndirectCopyRestoreExprClass:
   case Expr::ObjCProtocolExprClass:
   case Expr::ObjCSelectorExprClass:
+  case Expr::ObjCAvailabilityCheckExprClass:
   case Expr::OffsetOfExprClass:
   case Expr::PackExpansionExprClass:
   case Expr::PseudoObjectExprClass:

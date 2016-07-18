@@ -137,7 +137,7 @@ CXString clang_constructUSR_ObjCProperty(const char *property,
   SmallString<128> Buf(getUSRSpacePrefix());
   llvm::raw_svector_ostream OS(Buf);
   OS << extractUSRSuffix(clang_getCString(classUSR));
-  generateUSRForObjCProperty(property, OS);
+  generateUSRForObjCProperty(property, /*isClassProp=*/false, OS);
   return cxstring::createDup(OS.str());
 }
 

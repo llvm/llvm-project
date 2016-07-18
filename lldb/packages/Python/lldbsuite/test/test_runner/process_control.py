@@ -246,33 +246,25 @@ class ProcessHelper(object):
     def is_exceptional_exit(self, popen_status):
         """Returns whether the program exit status is exceptional.
 
-        Returns whether the return code from a Popen process is exceptional
-        (e.g. signals on POSIX systems).
-
-        Derived classes should override this if they can detect exceptional
-        program exit.
+        Returns whether the return code from a Popen process is exceptional.
 
         @return True if the given popen_status represents an exceptional
         program exit; False otherwise.
         """
-        return False
+        return popen_status != 0
 
     def exceptional_exit_details(self, popen_status):
         """Returns the normalized exceptional exit code and a description.
 
         Given an exceptional exit code, returns the integral value of the
-        exception (e.g. signal number for POSIX) and a description (e.g.
-        signal name on POSIX) for the result.
+        exception and a description for the result.
 
-        Derived classes should override this if they can detect exceptional
-        program exit.
-
-        It is fine to not implement this so long as is_exceptional_exit()
-        always returns False.
+        Derived classes can override this if they want to want custom
+        exceptional exit code handling.
 
         @return (normalized exception code, symbolic exception description)
         """
-        raise Exception("exception_exit_details() called on unsupported class")
+        return (popen_status, "exit")
 
 
 class UnixProcessHelper(ProcessHelper):
@@ -397,9 +389,6 @@ class UnixProcessHelper(ProcessHelper):
     def soft_terminate_signals(self):
         return [signal.SIGQUIT, signal.SIGTERM]
 
-    def is_exceptional_exit(self, popen_status):
-        return popen_status < 0
-
     @classmethod
     def _signal_names_by_number(cls):
         return dict(
@@ -407,6 +396,8 @@ class UnixProcessHelper(ProcessHelper):
             if v.startswith('SIG') and not v.startswith('SIG_'))
 
     def exceptional_exit_details(self, popen_status):
+        if popen_status >= 0:
+            return (popen_status, "exit")
         signo = -popen_status
         signal_names_by_number = self._signal_names_by_number()
         signal_name = signal_names_by_number.get(signo, "")

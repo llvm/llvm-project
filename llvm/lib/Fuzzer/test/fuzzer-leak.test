@@ -2,6 +2,8 @@ REQUIRES: lsan
 RUN: not LLVMFuzzer-LeakTest -runs=100000 -detect_leaks=1 2>&1 | FileCheck %s --check-prefix=LEAK_DURING
 LEAK_DURING: ERROR: LeakSanitizer: detected memory leaks
 LEAK_DURING: Direct leak of 4 byte(s) in 1 object(s) allocated from:
+LEAK_DURING: INFO: to ignore leaks on libFuzzer side use -detect_leaks=0
+LEAK_DURING: Test unit written to ./leak-
 LEAK_DURING-NOT: DONE
 LEAK_DURING-NOT: Done
 
@@ -12,6 +14,8 @@ LEAK_IN_CORPUS: INFO: a leak has been found in the initial corpus.
 
 RUN: not LLVMFuzzer-LeakTest -runs=100000 -detect_leaks=0 2>&1 | FileCheck %s --check-prefix=LEAK_AFTER
 RUN: not LLVMFuzzer-LeakTest -runs=100000                 2>&1 | FileCheck %s --check-prefix=LEAK_DURING
+RUN: not LLVMFuzzer-ThreadedLeakTest -runs=100000 -detect_leaks=0 2>&1 | FileCheck %s --check-prefix=LEAK_AFTER
+RUN: not LLVMFuzzer-ThreadedLeakTest -runs=100000                 2>&1 | FileCheck %s --check-prefix=LEAK_DURING
 LEAK_AFTER: Done 100000 runs in
 LEAK_AFTER: ERROR: LeakSanitizer: detected memory leaks
 
@@ -24,3 +28,4 @@ LEAK_TIMEOUT-NOT: LeakSanitizer
 
 RUN: LLVMFuzzer-AccumulateAllocationsTest -detect_leaks=1 -runs=100000 2>&1 | FileCheck %s --check-prefix=ACCUMULATE_ALLOCS
 ACCUMULATE_ALLOCS: INFO: libFuzzer disabled leak detection after every mutation
+

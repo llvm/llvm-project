@@ -111,6 +111,12 @@ StringRef getELFRelocationTypeName(uint32_t Machine, uint32_t Type) {
     default:
       break;
     }
+  case ELF::EM_BPF:
+    switch (Type) {
+#include "llvm/Support/ELFRelocs/BPF.def"
+    default:
+      break;
+    }
     break;
   default:
     break;

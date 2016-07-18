@@ -99,6 +99,8 @@ int ppcg_scop_any_hidden_declarations(struct ppcg_scop *scop)
 	if (!scop)
 		return 0;
 
+        // This is a pet feature not available in Polly.
+        return 0;
 	for (i = 0; i < scop->pet->n_array; ++i)
 		if (scop->pet->arrays[i]->declared &&
 		    !scop->pet->arrays[i]->exposed)

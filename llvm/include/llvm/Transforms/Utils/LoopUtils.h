@@ -323,6 +323,20 @@ private:
 BasicBlock *InsertPreheaderForLoop(Loop *L, DominatorTree *DT, LoopInfo *LI,
                                    bool PreserveLCSSA);
 
+/// Ensures LCSSA form for every instruction from the Worklist in the scope of
+/// innermost containing loop.
+///
+/// For the given instruction which have uses outside of the loop, an LCSSA PHI
+/// node is inserted and the uses outside the loop are rewritten to use this
+/// node.
+///
+/// LoopInfo and DominatorTree are required and, since the routine makes no
+/// changes to CFG, preserved.
+///
+/// Returns true if any modifications are made.
+bool formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
+                              DominatorTree &DT, LoopInfo &LI);
+
 /// \brief Put loop into LCSSA form.
 ///
 /// Looks at all instructions in the loop which have uses outside of the

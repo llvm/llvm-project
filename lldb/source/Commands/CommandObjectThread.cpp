@@ -229,17 +229,14 @@ public:
         bool     m_extended_backtrace;
     };
 
-    CommandObjectThreadBacktrace (CommandInterpreter &interpreter) :
-        CommandObjectIterateOverThreads(interpreter,
-                                        "thread backtrace",
-                                        "Show the stack for one or more threads.  If no threads are specified, show the currently selected thread.  Use the thread-index \"all\" to see all threads.",
-                                        nullptr,
-                                        eCommandRequiresProcess       |
-                                        eCommandRequiresThread        |
-                                        eCommandTryTargetAPILock      |
-                                        eCommandProcessMustBeLaunched |
-                                        eCommandProcessMustBePaused   ),
-        m_options(interpreter)
+    CommandObjectThreadBacktrace(CommandInterpreter &interpreter)
+        : CommandObjectIterateOverThreads(
+              interpreter, "thread backtrace", "Show thread call stacks.  Defaults to the current thread, thread "
+                                               "indexes can be specified as arguments.  Use the thread-index \"all\" "
+                                               "to see all threads.",
+              nullptr, eCommandRequiresProcess | eCommandRequiresThread | eCommandTryTargetAPILock |
+                           eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
+          m_options(interpreter)
     {
     }
 
@@ -804,15 +801,12 @@ CommandObjectThreadStepWithTypeAndScope::CommandOptions::g_option_table[] =
 class CommandObjectThreadContinue : public CommandObjectParsed
 {
 public:
-    CommandObjectThreadContinue (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "thread continue",
-                            "Continue execution of one or more threads in an active process.",
-                            nullptr,
-                            eCommandRequiresThread        |
-                            eCommandTryTargetAPILock      |
-                            eCommandProcessMustBeLaunched |
-                            eCommandProcessMustBePaused)
+    CommandObjectThreadContinue(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "thread continue", "Continue execution of the current target process.  One "
+                                                              "or more threads may be specified, by default all "
+                                                              "threads continue.",
+                              nullptr, eCommandRequiresThread | eCommandTryTargetAPILock |
+                                           eCommandProcessMustBeLaunched | eCommandProcessMustBePaused)
     {
         CommandArgumentEntry arg;
         CommandArgumentData thread_idx_arg;
@@ -1101,16 +1095,13 @@ public:
         // Instance variables to hold the values for command options.
     };
 
-    CommandObjectThreadUntil (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "thread until",
-                            "Run the current or specified thread until it reaches a given line number or address or leaves the current function.",
-                            nullptr,
-                            eCommandRequiresThread        |
-                            eCommandTryTargetAPILock      |
-                            eCommandProcessMustBeLaunched |
-                            eCommandProcessMustBePaused   ),
-        m_options (interpreter)
+    CommandObjectThreadUntil(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "thread until", "Continue until a line number or address is reached by the "
+                                                           "current or specified thread.  Stops when returning from "
+                                                           "the current function as a safety measure.",
+                              nullptr, eCommandRequiresThread | eCommandTryTargetAPILock |
+                                           eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
+          m_options(interpreter)
     {
         CommandArgumentEntry arg;
         CommandArgumentData line_num_arg;
@@ -1366,15 +1357,10 @@ CommandObjectThreadUntil::CommandOptions::g_option_table[] =
 class CommandObjectThreadSelect : public CommandObjectParsed
 {
 public:
-    CommandObjectThreadSelect (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "thread select",
-                            "Select a thread as the currently active thread.",
-                            nullptr,
-                            eCommandRequiresProcess       |
-                            eCommandTryTargetAPILock      |
-                            eCommandProcessMustBeLaunched |
-                            eCommandProcessMustBePaused   )
+    CommandObjectThreadSelect(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "thread select", "Change the currently selected thread.", nullptr,
+                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                                  eCommandProcessMustBePaused)
     {
         CommandArgumentEntry arg;
         CommandArgumentData thread_idx_arg;
@@ -1434,15 +1420,11 @@ protected:
 class CommandObjectThreadList : public CommandObjectParsed
 {
 public:
-    CommandObjectThreadList (CommandInterpreter &interpreter):
-        CommandObjectParsed (interpreter,
-                             "thread list",
-                             "Show a summary of all current threads in a process.",
-                             "thread list",
-                             eCommandRequiresProcess       |
-                             eCommandTryTargetAPILock      |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused   )
+    CommandObjectThreadList(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "thread list",
+                              "Show a summary of each thread in the current target process.", "thread list",
+                              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                                  eCommandProcessMustBePaused)
     {
     }
 
@@ -1528,16 +1510,13 @@ public:
         static OptionDefinition g_option_table[];
     };
 
-    CommandObjectThreadInfo (CommandInterpreter &interpreter) :
-        CommandObjectIterateOverThreads (interpreter,
-                                         "thread info",
-                                         "Show an extended summary of information about thread(s) in a process.",
-                                         "thread info",
-                                         eCommandRequiresProcess       |
-                                         eCommandTryTargetAPILock      |
-                                         eCommandProcessMustBeLaunched |
-                                         eCommandProcessMustBePaused),
-        m_options (interpreter)
+    CommandObjectThreadInfo(CommandInterpreter &interpreter)
+        : CommandObjectIterateOverThreads(
+              interpreter, "thread info",
+              "Show an extended summary of one or more threads.  Defaults to the current thread.", "thread info",
+              eCommandRequiresProcess | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                  eCommandProcessMustBePaused),
+          m_options(interpreter)
     {
         m_add_return = false;
     }
@@ -1653,17 +1632,14 @@ public:
         // Instance variables to hold the values for command options.
     };
 
-    CommandObjectThreadReturn (CommandInterpreter &interpreter) :
-        CommandObjectRaw (interpreter,
-                          "thread return",
-                          "Return from the currently selected frame, short-circuiting execution of the frames below it, with an optional return value,"
-                          " or with the -x option from the innermost function evaluation.",
-                          "thread return",
-                          eCommandRequiresFrame         |
-                          eCommandTryTargetAPILock      |
-                          eCommandProcessMustBeLaunched |
-                          eCommandProcessMustBePaused   ),
-        m_options (interpreter)
+    CommandObjectThreadReturn(CommandInterpreter &interpreter)
+        : CommandObjectRaw(interpreter, "thread return",
+                           "Prematurely return from a stack frame, short-circuiting execution of newer frames "
+                           "and optionally yielding a specified value.  Defaults to the exiting the current stack "
+                           "frame.",
+                           "thread return", eCommandRequiresFrame | eCommandTryTargetAPILock |
+                                                eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
+          m_options(interpreter)
     {
         CommandArgumentEntry arg;
         CommandArgumentData expression_arg;
@@ -2043,18 +2019,14 @@ public:
         bool m_internal;
     };
 
-    CommandObjectThreadPlanList (CommandInterpreter &interpreter) :
-        CommandObjectIterateOverThreads(interpreter,
-                                        "thread plan list",
-                                        "Show thread plans for one or more threads.  If no threads are specified, show the "
-                                        "currently selected thread.  Use the thread-index \"all\" to see all threads.",
-                                        nullptr,
-                                        eCommandRequiresProcess       |
-                                        eCommandRequiresThread        |
-                                        eCommandTryTargetAPILock      |
-                                        eCommandProcessMustBeLaunched |
-                                        eCommandProcessMustBePaused   ),
-        m_options(interpreter)
+    CommandObjectThreadPlanList(CommandInterpreter &interpreter)
+        : CommandObjectIterateOverThreads(
+              interpreter, "thread plan list",
+              "Show thread plans for one or more threads.  If no threads are specified, show the "
+              "current thread.  Use the thread-index \"all\" to see all threads.",
+              nullptr, eCommandRequiresProcess | eCommandRequiresThread | eCommandTryTargetAPILock |
+                           eCommandProcessMustBeLaunched | eCommandProcessMustBePaused),
+          m_options(interpreter)
     {
     }
 
@@ -2103,18 +2075,13 @@ CommandObjectThreadPlanList::CommandOptions::g_option_table[] =
 class CommandObjectThreadPlanDiscard : public CommandObjectParsed
 {
 public:
-    CommandObjectThreadPlanDiscard (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "thread plan discard",
-                            "Discards thread plans up to and including the plan passed as the command argument."
-                            "Only user visible plans can be discarded, use the index from \"thread plan list\""
-                            " without the \"-i\" argument.",
-                            nullptr,
-                            eCommandRequiresProcess       |
-                            eCommandRequiresThread        |
-                            eCommandTryTargetAPILock      |
-                            eCommandProcessMustBeLaunched |
-                            eCommandProcessMustBePaused   )
+    CommandObjectThreadPlanDiscard(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "thread plan discard",
+              "Discards thread plans up to and including the specified index (see 'thread plan list'.)  "
+              "Only user visible plans can be discarded.",
+              nullptr, eCommandRequiresProcess | eCommandRequiresThread | eCommandTryTargetAPILock |
+                           eCommandProcessMustBeLaunched | eCommandProcessMustBePaused)
     {
         CommandArgumentEntry arg;
         CommandArgumentData plan_index_arg;
@@ -2183,11 +2150,9 @@ public:
 class CommandObjectMultiwordThreadPlan : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordThreadPlan(CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter,
-                                "plan",
-                                "A set of subcommands for accessing the thread plans controlling execution control on one or more threads.",
-                                "thread plan <subcommand> [<subcommand objects]")
+    CommandObjectMultiwordThreadPlan(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "plan", "Commands for managing thread plans that control execution.",
+                                 "thread plan <subcommand> [<subcommand objects]")
     {
         LoadSubCommand ("list", CommandObjectSP (new CommandObjectThreadPlanList (interpreter)));
         LoadSubCommand ("discard", CommandObjectSP (new CommandObjectThreadPlanDiscard (interpreter)));
@@ -2200,11 +2165,10 @@ public:
 // CommandObjectMultiwordThread
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordThread::CommandObjectMultiwordThread (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "thread",
-                            "A set of commands for operating on one or more threads within a running process.",
-                            "thread <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordThread::CommandObjectMultiwordThread(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "thread",
+                             "Commands for operating on one or more threads in the current process.",
+                             "thread <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("backtrace",  CommandObjectSP (new CommandObjectThreadBacktrace (interpreter)));
     LoadSubCommand ("continue",   CommandObjectSP (new CommandObjectThreadContinue (interpreter)));
@@ -2214,45 +2178,37 @@ CommandObjectMultiwordThread::CommandObjectMultiwordThread (CommandInterpreter &
     LoadSubCommand ("select",     CommandObjectSP (new CommandObjectThreadSelect (interpreter)));
     LoadSubCommand ("until",      CommandObjectSP (new CommandObjectThreadUntil (interpreter)));
     LoadSubCommand ("info",       CommandObjectSP (new CommandObjectThreadInfo (interpreter)));
-    LoadSubCommand ("step-in",    CommandObjectSP (new CommandObjectThreadStepWithTypeAndScope (
-                                                    interpreter,
-                                                    "thread step-in",
-                                                    "Source level single step in specified thread (current thread, if none specified).",
-                                                    nullptr,
-                                                    eStepTypeInto,
-                                                    eStepScopeSource)));
-   
-    LoadSubCommand ("step-out",   CommandObjectSP (new CommandObjectThreadStepWithTypeAndScope (
-                                                    interpreter,
-                                                    "thread step-out",
-                                                    "Finish executing the function of the currently selected frame and return to its call site in specified thread (current thread, if none specified).",
-                                                    nullptr,
-                                                    eStepTypeOut,
-                                                    eStepScopeSource)));
+    LoadSubCommand("step-in",
+                   CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
+                       interpreter, "thread step-in",
+                       "Source level single step, stepping into calls.  Defaults to current thread unless specified.",
+                       nullptr, eStepTypeInto, eStepScopeSource)));
 
-    LoadSubCommand ("step-over",   CommandObjectSP (new CommandObjectThreadStepWithTypeAndScope (
-                                                    interpreter,
-                                                    "thread step-over",
-                                                    "Source level single step in specified thread (current thread, if none specified), stepping over calls.",
-                                                    nullptr,
-                                                    eStepTypeOver,
-                                                    eStepScopeSource)));
+    LoadSubCommand("step-out",
+                   CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
+                       interpreter, "thread step-out", "Finish executing the current stack frame and stop after "
+                                                       "returning.  Defaults to current thread unless specified.",
+                       nullptr, eStepTypeOut, eStepScopeSource)));
 
-    LoadSubCommand ("step-inst",   CommandObjectSP (new CommandObjectThreadStepWithTypeAndScope (
-                                                    interpreter,
-                                                    "thread step-inst",
-                                                    "Single step one instruction in specified thread (current thread, if none specified).",
-                                                    nullptr,
-                                                    eStepTypeTrace,
-                                                    eStepScopeInstruction)));
+    LoadSubCommand("step-over",
+                   CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
+                       interpreter, "thread step-over",
+                       "Source level single step, stepping over calls.  Defaults to current thread unless specified.",
+                       nullptr, eStepTypeOver, eStepScopeSource)));
 
-    LoadSubCommand ("step-inst-over", CommandObjectSP (new CommandObjectThreadStepWithTypeAndScope (
-                                                    interpreter,
-                                                    "thread step-inst-over",
-                                                    "Single step one instruction in specified thread (current thread, if none specified), stepping over calls.",
-                                                    nullptr,
-                                                    eStepTypeTraceOver,
-                                                    eStepScopeInstruction)));
+    LoadSubCommand(
+        "step-inst",
+        CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
+            interpreter, "thread step-inst",
+            "Instruction level single step, stepping into calls.  Defaults to current thread unless specified.",
+            nullptr, eStepTypeTrace, eStepScopeInstruction)));
+
+    LoadSubCommand(
+        "step-inst-over",
+        CommandObjectSP(new CommandObjectThreadStepWithTypeAndScope(
+            interpreter, "thread step-inst-over",
+            "Instruction level single step, stepping over calls.  Defaults to current thread unless specified.",
+            nullptr, eStepTypeTraceOver, eStepScopeInstruction)));
 
     LoadSubCommand ("step-scripted", CommandObjectSP (new CommandObjectThreadStepWithTypeAndScope (
                                                     interpreter,

@@ -34,7 +34,7 @@ target triple = "x86_64-apple-macosx10.11.0"
 
 ; MISSED_REMARKS: remark:  /tmp/t.c:3:3: loop not distributed: use -Rpass-analysis=loop-distribute for more info
 ; ALWAYS:         remark: /tmp/t.c:3:3: loop not distributed: memory operations are safe for vectorization
-; ALWAYS:         warning: /tmp/t.c:3:3: loop not disributed: failed explicitly specified loop distribution
+; ALWAYS:         warning: /tmp/t.c:3:3: loop not distributed: failed explicitly specified loop distribution
 
 define void @forced(i8* %A, i8* %B, i8* %C, i32 %N) !dbg !7 {
 entry:
@@ -65,7 +65,7 @@ for.cond.cleanup:
 ; NO_REMARKS-NOT: remark: /tmp/t.c:9:3: loop not distributed: memory operations are safe for vectorization
 ; MISSED_REMARKS: remark: /tmp/t.c:9:3: loop not distributed: use -Rpass-analysis=loop-distribute for more info
 ; ANALYSIS_REMARKS: remark: /tmp/t.c:9:3: loop not distributed: memory operations are safe for vectorization
-; ALWAYS-NOT: warning: /tmp/t.c:9:3: loop not disributed: failed explicitly specified loop distribution
+; ALWAYS-NOT: warning: /tmp/t.c:9:3: loop not distributed: failed explicitly specified loop distribution
 
 define void @not_forced(i8* %A, i8* %B, i8* %C, i32 %N) !dbg !22 {
 entry:

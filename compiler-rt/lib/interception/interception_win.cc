@@ -385,6 +385,11 @@ static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
 
 // Returns 0 on error.
 static size_t GetInstructionSize(uptr address) {
+  switch (*(u64*)address) {
+    case 0x90909090909006EB:  // stub: jmp over 6 x nop.
+      return 8;
+  }
+
   switch (*(u8*)address) {
     case 0x90:  // 90 : nop
       return 1;
@@ -499,7 +504,8 @@ static size_t GetInstructionSize(uptr address) {
   }
 
   switch (*(u32*)(address)) {
-    case 0x24448b48:  // 48 8b 44 24 XX : mov rax, qword ptr [rsp + XX]
+    case 0x24448b48:  // 48 8b 44 24 XX : mov rax, QWORD ptr [rsp + XX]
+    case 0x246c8948:  // 48 89 6C 24 XX : mov QWORD ptr [rsp + XX], rbp
     case 0x245c8948:  // 48 89 5c 24 XX : mov QWORD PTR [rsp + XX], rbx
     case 0x24748948:  // 48 89 74 24 XX : mov QWORD PTR [rsp + XX], rsi
       return 5;

@@ -245,6 +245,14 @@ TEST(IncludeFixer, FixNamespaceQualifiers) {
   EXPECT_EQ("#include \"bar2.h\"\nnamespace c {\na::c::bar b;\n}\n",
             runIncludeFixer("namespace c {\nbar b;\n}\n"));
 
+  // Test common qualifers reduction.
+  EXPECT_EQ(
+      "#include \"bar.h\"\nnamespace a {\nnamespace d {\nb::bar b;\n}\n}\n",
+      runIncludeFixer("namespace a {\nnamespace d {\nbar b;\n}\n}\n"));
+  EXPECT_EQ(
+      "#include \"bar.h\"\nnamespace d {\nnamespace a {\na::b::bar b;\n}\n}\n",
+      runIncludeFixer("namespace d {\nnamespace a {\nbar b;\n}\n}\n"));
+
   // Test nested classes.
   EXPECT_EQ("#include \"bar.h\"\nnamespace d {\na::b::bar::t b;\n}\n",
             runIncludeFixer("namespace d {\nbar::t b;\n}\n"));

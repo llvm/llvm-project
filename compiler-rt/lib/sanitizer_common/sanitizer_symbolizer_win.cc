@@ -42,6 +42,8 @@ bool TrySymInitialize() {
   // FIXME: We don't call SymCleanup() on exit yet - should we?
 }
 
+}  // namespace
+
 // Initializes DbgHelp library, if it's not yet initialized. Calls to this
 // function should be synchronized with respect to other calls to DbgHelp API
 // (e.g. from WinSymbolizerTool).
@@ -96,8 +98,6 @@ void InitializeDbgHelpIfNeeded() {
     return;
   }
 }
-
-}  // namespace
 
 bool WinSymbolizerTool::SymbolizePC(uptr addr, SymbolizedStack *frame) {
   InitializeDbgHelpIfNeeded();

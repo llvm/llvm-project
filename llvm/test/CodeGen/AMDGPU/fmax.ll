@@ -8,8 +8,8 @@ define amdgpu_ps void @test(<4 x float> inreg %reg0) {
    %r2 = fcmp oge float %r0, %r1
    %r3 = select i1 %r2, float %r0, float %r1
    %vec = insertelement <4 x float> undef, float %r3, i32 0
-   call void @llvm.R600.store.swizzle(<4 x float> %vec, i32 0, i32 0)
+   call void @llvm.r600.store.swizzle(<4 x float> %vec, i32 0, i32 0)
    ret void
 }
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

@@ -124,7 +124,7 @@ ThreadPlanStepThrough::GetDescription (Stream *s, lldb::DescriptionLevel level)
         s->Address(m_start_address, sizeof (addr_t));
         if (m_backstop_bkpt_id != LLDB_INVALID_BREAK_ID)
         {
-            s->Printf (" with backstop breakpoint id: %d at address: ", m_backstop_bkpt_id);
+            s->Printf(" with backstop breakpoint ID: %d at address: ", m_backstop_bkpt_id);
             s->Address (m_backstop_addr, sizeof (addr_t));
         }
         else

@@ -377,14 +377,8 @@ void StructurizeCFG::analyzeLoops(RegionNode *N) {
 /// \brief Invert the given condition
 Value *StructurizeCFG::invert(Value *Condition) {
   // First: Check if it's a constant
-  if (Condition == BoolTrue)
-    return BoolFalse;
-
-  if (Condition == BoolFalse)
-    return BoolTrue;
-
-  if (Condition == BoolUndef)
-    return BoolUndef;
+  if (Constant *C = dyn_cast<Constant>(Condition))
+    return ConstantExpr::getNot(C);
 
   // Second: If the condition is already inverted, return the original value
   if (match(Condition, m_Not(m_Value(Condition))))

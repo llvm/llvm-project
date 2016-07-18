@@ -687,46 +687,47 @@ RegisterNameHelpTextCallback ()
 static const char *
 BreakpointIDHelpTextCallback ()
 {
-    return "Breakpoint ID's consist major and minor numbers;  the major number "
-    "corresponds to the single entity that was created with a 'breakpoint set' "
-    "command; the minor numbers correspond to all the locations that were actually "
-    "found/set based on the major breakpoint.  A full breakpoint ID might look like "
-    "3.14, meaning the 14th location set for the 3rd breakpoint.  You can specify "
-    "all the locations of a breakpoint by just indicating the major breakpoint "
-    "number. A valid breakpoint id consists either of just the major id number, "
-    "or the major number, a dot, and the location number (e.g. 3 or 3.2 could "
-    "both be valid breakpoint ids).";
+    return "Breakpoints are identified using major and minor numbers; the major "
+           "number corresponds to the single entity that was created with a 'breakpoint "
+           "set' command; the minor numbers correspond to all the locations that were "
+           "actually found/set based on the major breakpoint.  A full breakpoint ID might "
+           "look like 3.14, meaning the 14th location set for the 3rd breakpoint.  You "
+           "can specify all the locations of a breakpoint by just indicating the major "
+           "breakpoint number. A valid breakpoint ID consists either of just the major "
+           "number, or the major number followed by a dot and the location number (e.g. "
+           "3 or 3.2 could both be valid breakpoint IDs.)";
 }
 
 static const char *
 BreakpointIDRangeHelpTextCallback ()
 {
-    return "A 'breakpoint id list' is a manner of specifying multiple breakpoints. "
-    "This can be done  through several mechanisms.  The easiest way is to just "
-    "enter a space-separated list of breakpoint ids.  To specify all the "
-    "breakpoint locations under a major breakpoint, you can use the major "
-    "breakpoint number followed by '.*', eg. '5.*' means all the locations under "
-    "breakpoint 5.  You can also indicate a range of breakpoints by using "
-    "<start-bp-id> - <end-bp-id>.  The start-bp-id and end-bp-id for a range can "
-    "be any valid breakpoint ids.  It is not legal, however, to specify a range "
-    "using specific locations that cross major breakpoint numbers.  I.e. 3.2 - 3.7"
-    " is legal; 2 - 5 is legal; but 3.2 - 4.4 is not legal.";
+    return "A 'breakpoint ID list' is a manner of specifying multiple breakpoints. "
+           "This can be done through several mechanisms.  The easiest way is to just "
+           "enter a space-separated list of breakpoint IDs.  To specify all the "
+           "breakpoint locations under a major breakpoint, you can use the major "
+           "breakpoint number followed by '.*', eg. '5.*' means all the locations under "
+           "breakpoint 5.  You can also indicate a range of breakpoints by using "
+           "<start-bp-id> - <end-bp-id>.  The start-bp-id and end-bp-id for a range can "
+           "be any valid breakpoint IDs.  It is not legal, however, to specify a range "
+           "using specific locations that cross major breakpoint numbers.  I.e. 3.2 - 3.7"
+           " is legal; 2 - 5 is legal; but 3.2 - 4.4 is not legal.";
 }
 
 static const char *
 BreakpointNameHelpTextCallback ()
 {
     return "A name that can be added to a breakpoint when it is created, or later "
-    "on with the \"breakpoint name add\" command.  "
-    "Breakpoint names can be used to specify breakpoints in all the places breakpoint ID's "
-    "and breakpoint ID ranges can be used.  As such they provide a convenient way to group breakpoints, "
-    "and to operate on breakpoints you create without having to track the breakpoint number.  "
-    "Note, the attributes you set when using a breakpoint name in a breakpoint command don't "
-    "adhere to the name, but instead are set individually on all the breakpoints currently tagged with that name.  Future breakpoints "
-    "tagged with that name will not pick up the attributes previously given using that name.  "
-    "In order to distinguish breakpoint names from breakpoint ID's and ranges, "
-    "names must start with a letter from a-z or A-Z and cannot contain spaces, \".\" or \"-\".  "
-    "Also, breakpoint names can only be applied to breakpoints, not to breakpoint locations.";
+           "on with the \"breakpoint name add\" command.  "
+           "Breakpoint names can be used to specify breakpoints in all the places breakpoint IDs "
+           "and breakpoint ID ranges can be used.  As such they provide a convenient way to group breakpoints, "
+           "and to operate on breakpoints you create without having to track the breakpoint number.  "
+           "Note, the attributes you set when using a breakpoint name in a breakpoint command don't "
+           "adhere to the name, but instead are set individually on all the breakpoints currently tagged with that "
+           "name.  Future breakpoints "
+           "tagged with that name will not pick up the attributes previously given using that name.  "
+           "In order to distinguish breakpoint names from breakpoint IDs and ranges, "
+           "names must start with a letter from a-z or A-Z and cannot contain spaces, \".\" or \"-\".  "
+           "Also, breakpoint names can only be applied to breakpoints, not to breakpoint locations.";
 }
 
 static const char *
@@ -916,71 +917,46 @@ void
 CommandObject::GenerateHelpText (Stream &output_strm)
 {
     CommandInterpreter& interpreter = GetCommandInterpreter();
-    if (GetOptions() != nullptr)
+    if (WantsRawCommandString())
     {
-        if (WantsRawCommandString())
-        {
-            std::string help_text (GetHelp());
-            help_text.append ("  This command takes 'raw' input (no need to quote stuff).");
-            interpreter.OutputFormattedHelpText (output_strm, "", "", help_text.c_str(), 1);
-        }
-        else
-            interpreter.OutputFormattedHelpText (output_strm, "", "", GetHelp(), 1);
-        output_strm.Printf ("\nSyntax: %s\n", GetSyntax());
-        GetOptions()->GenerateOptionUsage (output_strm, this);
-        const char *long_help = GetHelpLong();
-        if ((long_help != nullptr)
-            && (strlen (long_help) > 0))
-            FormatLongHelpText (output_strm, long_help);
-        if (!IsDashDashCommand())
-        {
-            if (WantsRawCommandString() && !WantsCompletion())
-            {
-                // Emit the message about using ' -- ' between the end of the command options and the raw input
-                // conditionally, i.e., only if the command object does not want completion.
-                interpreter.OutputFormattedHelpText (output_strm, "", "",
-                                                     "\nIMPORTANT NOTE:  Because this command takes 'raw' input, if you use any command options"
-                                                     " you must use ' -- ' between the end of the command options and the beginning of the raw input.", 1);
-            }
-            else if (GetNumArgumentEntries() > 0
-                     && GetOptions()
-                     && GetOptions()->NumCommandOptions() > 0)
-            {
-                // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
-                interpreter.OutputFormattedHelpText (output_strm, "", "",
-                                                     "\nThis command takes options and free-form arguments.  If your arguments resemble"
-                                                     " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
-                                                     " the end of the command options and the beginning of the arguments.", 1);
-            }
-        }
-    }
-    else if (IsMultiwordObject())
-    {
-        if (WantsRawCommandString())
-        {
-            std::string help_text (GetHelp());
-            help_text.append ("  This command takes 'raw' input (no need to quote stuff).");
-            interpreter.OutputFormattedHelpText (output_strm, "", "", help_text.c_str(), 1);
-        }
-        else
-            interpreter.OutputFormattedHelpText (output_strm, "", "", GetHelp(), 1);
-        GenerateHelpText (output_strm);
+        std::string help_text(GetHelp());
+        help_text.append("  Expects 'raw' input (see 'help raw-input'.)");
+        interpreter.OutputFormattedHelpText(output_strm, "", "", help_text.c_str(), 1);
     }
     else
+        interpreter.OutputFormattedHelpText(output_strm, "", "", GetHelp(), 1);
+    output_strm.Printf("\nSyntax: %s\n", GetSyntax());
+    Options *options = GetOptions();
+    if (options != nullptr)
     {
-        const char *long_help = GetHelpLong();
-        if ((long_help != nullptr)
-            && (strlen (long_help) > 0))
-            FormatLongHelpText (output_strm, long_help);
-        else if (WantsRawCommandString())
+        options->GenerateOptionUsage(output_strm, this);
+    }
+    const char *long_help = GetHelpLong();
+    if ((long_help != nullptr) && (strlen(long_help) > 0))
+    {
+        FormatLongHelpText(output_strm, long_help);
+    }
+    if (!IsDashDashCommand() && options && options->NumCommandOptions() > 0)
+    {
+        if (WantsRawCommandString() && !WantsCompletion())
         {
-            std::string help_text (GetHelp());
-            help_text.append ("  This command takes 'raw' input (no need to quote stuff).");
-            interpreter.OutputFormattedHelpText (output_strm, "", "", help_text.c_str(), 1);
+            // Emit the message about using ' -- ' between the end of the command options and the raw input
+            // conditionally, i.e., only if the command object does not want completion.
+            interpreter.OutputFormattedHelpText(
+                output_strm, "", "",
+                "\nImportant Note: Because this command takes 'raw' input, if you use any command options"
+                " you must use ' -- ' between the end of the command options and the beginning of the raw input.",
+                1);
         }
-        else
-            interpreter.OutputFormattedHelpText (output_strm, "", "", GetHelp(), 1);
-        output_strm.Printf ("\nSyntax: %s\n", GetSyntax());
+        else if (GetNumArgumentEntries() > 0)
+        {
+            // Also emit a warning about using "--" in case you are using a command that takes options and arguments.
+            interpreter.OutputFormattedHelpText(
+                output_strm, "", "", "\nThis command takes options and free-form arguments.  If your arguments resemble"
+                                     " option specifiers (i.e., they start with a - or --), you must use ' -- ' between"
+                                     " the end of the command options and the beginning of the arguments.",
+                1);
+        }
     }
 }
 
@@ -1126,9 +1102,8 @@ const char *arch_helper()
     return g_archs_help.GetData();
 }
 
-CommandObject::ArgumentTableEntry
-CommandObject::g_arguments_data[] =
-{
+CommandObject::ArgumentTableEntry CommandObject::g_arguments_data[] = {
+    // clang-format off
     { eArgTypeAddress, "address", CommandCompletions::eNoCompletion, { nullptr, false }, "A valid address in the target program's execution space." },
     { eArgTypeAddressOrExpression, "address-expression", CommandCompletions::eNoCompletion, { nullptr, false }, "An expression that resolves to an address." },
     { eArgTypeAliasName, "alias-name", CommandCompletions::eNoCompletion, { nullptr, false }, "The name of an abbreviation (alias) for a debugger command." },
@@ -1186,7 +1161,7 @@ CommandObject::g_arguments_data[] =
     { eArgTypeRunMode, "run-mode", CommandCompletions::eNoCompletion, { nullptr, false }, "Help text goes here." },
     { eArgTypeScriptedCommandSynchronicity, "script-cmd-synchronicity", CommandCompletions::eNoCompletion, { nullptr, false }, "The synchronicity to use to run scripted commands with regard to LLDB event system." },
     { eArgTypeScriptLang, "script-language", CommandCompletions::eNoCompletion, { nullptr, false }, "The scripting language to be used for script-based commands.  Currently only Python is valid." },
-    { eArgTypeSearchWord, "search-word", CommandCompletions::eNoCompletion, { nullptr, false }, "The word for which you wish to search for information about." },
+    { eArgTypeSearchWord, "search-word", CommandCompletions::eNoCompletion, { nullptr, false }, "Any word of interest for search purposes." },
     { eArgTypeSelector, "selector", CommandCompletions::eNoCompletion, { nullptr, false }, "An Objective-C selector name." },
     { eArgTypeSettingIndex, "setting-index", CommandCompletions::eNoCompletion, { nullptr, false }, "An index into a settings variable that is an array (try 'settings list' to see all the possible settings variables and their types)." },
     { eArgTypeSettingKey, "setting-key", CommandCompletions::eNoCompletion, { nullptr, false }, "A key into a settings variables that is a dictionary (try 'settings list' to see all the possible settings variables and their types)." },
@@ -1211,7 +1186,9 @@ CommandObject::g_arguments_data[] =
     { eArgTypePlatform, "platform-name", CommandCompletions::ePlatformPluginCompletion, { nullptr, false }, "The name of an installed platform plug-in . Type 'platform list' to see a complete list of installed platforms." },
     { eArgTypeWatchpointID, "watchpt-id", CommandCompletions::eNoCompletion, { nullptr, false }, "Watchpoint IDs are positive integers." },
     { eArgTypeWatchpointIDRange, "watchpt-id-list", CommandCompletions::eNoCompletion, { nullptr, false }, "For example, '1-3' or '1 to 3'." },
-    { eArgTypeWatchType, "watch-type", CommandCompletions::eNoCompletion, { nullptr, false }, "Specify the type for a watchpoint." }
+    { eArgTypeWatchType, "watch-type", CommandCompletions::eNoCompletion, { nullptr, false }, "Specify the type for a watchpoint." },
+    { eArgRawInput, "raw-input", CommandCompletions::eNoCompletion, { nullptr, false }, "Free-form text passed to a command without prior interpretation, allowing spaces without requiring quotes.  To pass arguments and free form text put two dashes ' -- ' between the last argument and any raw input." }
+    // clang-format on
 };
 
 const CommandObject::ArgumentTableEntry*

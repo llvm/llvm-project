@@ -44,7 +44,7 @@ main_body:
   %37 = insertelement <4 x float> %36, float %33, i32 1
   %38 = insertelement <4 x float> %37, float %34, i32 2
   %39 = insertelement <4 x float> %38, float %35, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %39, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %39, i32 0, i32 0)
   ret void
 }
 
@@ -92,9 +92,9 @@ main_body:
   %37 = insertelement <4 x float> %36, float %33, i32 1
   %38 = insertelement <4 x float> %37, float %34, i32 2
   %39 = insertelement <4 x float> %38, float %35, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %39, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %39, i32 0, i32 0)
   ret void
 }
 
 declare float @llvm.AMDGPU.clamp.f32(float, float, float) readnone
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)

@@ -29,7 +29,7 @@ addFrameReference(const MachineInstrBuilder &MIB, int FI) {
   MachineFunction &MF = *MI->getParent()->getParent();
   MachineFrameInfo *MFFrame = MF.getFrameInfo();
   const MCInstrDesc &MCID = MI->getDesc();
-  unsigned Flags = 0;
+  auto Flags = MachineMemOperand::MONone;
   if (MCID.mayLoad())
     Flags |= MachineMemOperand::MOLoad;
   if (MCID.mayStore())

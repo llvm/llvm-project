@@ -42,7 +42,6 @@ class KaleidoscopeJIT {
 private:
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  std::unique_ptr<JITCompileCallbackManager> CompileCallbackManager;
   ObjectLinkingLayer<> ObjectLayer;
   IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
 
@@ -50,6 +49,8 @@ private:
     OptimizeFunction;
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
+
+  std::unique_ptr<JITCompileCallbackManager> CompileCallbackManager;
   CompileOnDemandLayer<decltype(OptimizeLayer)> CODLayer;
 
 public:
@@ -57,13 +58,13 @@ public:
 
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        CompileCallbackManager(
-            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
+        CompileCallbackManager(
+            orc::createLocalCompileCallbackManager(TM->getTargetTriple(), 0)),
         CODLayer(OptimizeLayer,
                  [this](Function &F) { return std::set<Function*>({&F}); },
                  *CompileCallbackManager,

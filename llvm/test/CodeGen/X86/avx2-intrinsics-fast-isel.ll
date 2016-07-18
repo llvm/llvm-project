@@ -485,17 +485,37 @@ define <4 x double> @test_mm256_broadcastsd_pd(<4 x double> %a0) {
   ret <4 x double> %res
 }
 
-define <4 x i64> @test_mm256_broadcastsi128_si256(<4 x i64> %a0) {
+define <4 x i64> @test_mm256_broadcastsi128_si256(<2 x i64> %a0) {
 ; X32-LABEL: test_mm256_broadcastsi128_si256:
 ; X32:       # BB#0:
-; X32-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; X32-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_mm256_broadcastsi128_si256:
 ; X64:       # BB#0:
-; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,1,0,1]
+; X64-NEXT:    # kill: %XMM0<def> %XMM0<kill> %YMM0<def>
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; X64-NEXT:    retq
-  %res = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  ret <4 x i64> %res
+}
+
+define <4 x i64> @test_mm256_broadcastsi128_si256_mem(<2 x i64>* %p0) {
+; X32-LABEL: test_mm256_broadcastsi128_si256_mem:
+; X32:       # BB#0:
+; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NEXT:    vmovaps (%eax), %xmm0
+; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm256_broadcastsi128_si256_mem:
+; X64:       # BB#0:
+; X64-NEXT:    vmovaps (%rdi), %xmm0
+; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    retq
+  %a0 = load <2 x i64>, <2 x i64>* %p0
+  %res = shufflevector <2 x i64> %a0, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x i64> %res
 }
 

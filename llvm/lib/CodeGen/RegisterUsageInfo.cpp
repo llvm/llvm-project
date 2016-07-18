@@ -54,8 +54,9 @@ void PhysicalRegisterUsageInfo::storeUpdateRegUsageInfo(
 
 const std::vector<uint32_t> *
 PhysicalRegisterUsageInfo::getRegUsageInfo(const Function *FP) {
-  if (RegMasks.find(FP) != RegMasks.end())
-    return &(RegMasks.find(FP)->second);
+  auto It = RegMasks.find(FP);
+  if (It != RegMasks.end())
+    return &(It->second);
   return nullptr;
 }
 

@@ -86,5 +86,23 @@ entry:
   ret void
 }
 
+define void @write8To15AndThen0To7(i64* nocapture %P) {
+entry:
+; CHECK-LABEL: @write8To15AndThen0To7(
+; CHECK: [[GEP:%[0-9]+]] = getelementptr inbounds i8, i8* %mybase0, i64 16
+; CHECK: tail call void @llvm.memset.p0i8.i64(i8* [[GEP]], i8 0, i64 16, i32 8, i1 false)
+
+  %base0 = bitcast i64* %P to i8*
+  %mybase0 = getelementptr inbounds i8, i8* %base0, i64 0
+  tail call void @llvm.memset.p0i8.i64(i8* %mybase0, i8 0, i64 32, i32 8, i1 false)
+
+  %base64_0 = getelementptr inbounds i64, i64* %P, i64 0
+  %base64_1 = getelementptr inbounds i64, i64* %P, i64 1
+
+  store i64 1, i64* %base64_1
+  store i64 2, i64* %base64_0
+  ret void
+}
+
 declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i32, i1) nounwind
 

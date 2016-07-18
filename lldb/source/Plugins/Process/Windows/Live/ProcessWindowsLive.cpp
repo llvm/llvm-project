@@ -748,6 +748,7 @@ ProcessWindowsLive::GetMemoryRegionInfo(lldb::addr_t vm_addr, MemoryRegionInfo &
 {
     Error error;
     llvm::sys::ScopedLock lock(m_mutex);
+    info.Clear();
 
     if (!m_session_data)
     {
@@ -755,7 +756,6 @@ ProcessWindowsLive::GetMemoryRegionInfo(lldb::addr_t vm_addr, MemoryRegionInfo &
         WINERR_IFALL(WINDOWS_LOG_MEMORY, error.AsCString());
         return error;
     }
-
     HostProcess process = m_session_data->m_debugger->GetProcess();
     lldb::process_t handle = process.GetNativeProcess().GetSystemHandle();
     if (handle == nullptr || handle == LLDB_INVALID_PROCESS)
@@ -772,22 +772,67 @@ ProcessWindowsLive::GetMemoryRegionInfo(lldb::addr_t vm_addr, MemoryRegionInfo &
     SIZE_T result = ::VirtualQueryEx(handle, addr, &mem_info, sizeof(mem_info));
     if (result == 0)
     {
-        error.SetError(::GetLastError(), eErrorTypeWin32);
-        WINERR_IFALL(WINDOWS_LOG_MEMORY,
-                     "VirtualQueryEx returned error %u while getting memory region info for address 0x%I64x",
-                     error.GetError(), vm_addr);
-        return error;
+        if (::GetLastError() == ERROR_INVALID_PARAMETER)
+        {
+            // ERROR_INVALID_PARAMETER is returned if VirtualQueryEx is called with an address
+            // past the highest accessible address. We should return a range from the vm_addr
+            // to LLDB_INVALID_ADDRESS
+            info.GetRange().SetRangeBase(vm_addr);
+            info.GetRange().SetRangeEnd(LLDB_INVALID_ADDRESS);
+            info.SetReadable(MemoryRegionInfo::eNo);
+            info.SetExecutable(MemoryRegionInfo::eNo);
+            info.SetWritable(MemoryRegionInfo::eNo);
+            info.SetMapped(MemoryRegionInfo::eNo);
+            return error;
+        }
+        else
+        {
+            error.SetError(::GetLastError(), eErrorTypeWin32);
+            WINERR_IFALL(WINDOWS_LOG_MEMORY,
+                    "VirtualQueryEx returned error %u while getting memory region info for address 0x%I64x",
+                    error.GetError(), vm_addr);
+            return error;
+        }
     }
-    const bool readable = IsPageReadable(mem_info.Protect);
-    const bool executable = IsPageExecutable(mem_info.Protect);
-    const bool writable = IsPageWritable(mem_info.Protect);
-    info.SetReadable(readable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
-    info.SetExecutable(executable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
-    info.SetWritable(writable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+
+    // Protect bits are only valid for MEM_COMMIT regions.
+    if (mem_info.State == MEM_COMMIT) {
+        const bool readable = IsPageReadable(mem_info.Protect);
+        const bool executable = IsPageExecutable(mem_info.Protect);
+        const bool writable = IsPageWritable(mem_info.Protect);
+        info.SetReadable(readable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+        info.SetExecutable(executable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+        info.SetWritable(writable ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+    }
+    else
+    {
+        info.SetReadable(MemoryRegionInfo::eNo);
+        info.SetExecutable(MemoryRegionInfo::eNo);
+        info.SetWritable(MemoryRegionInfo::eNo);
+    }
+
+    // AllocationBase is defined for MEM_COMMIT and MEM_RESERVE but not MEM_FREE.
+    if (mem_info.State != MEM_FREE) {
+        info.GetRange().SetRangeBase(reinterpret_cast<addr_t>(mem_info.AllocationBase));
+        info.GetRange().SetRangeEnd(reinterpret_cast<addr_t>(mem_info.BaseAddress) + mem_info.RegionSize);
+        info.SetMapped(MemoryRegionInfo::eYes);
+    }
+    else
+    {
+        // In the unmapped case we need to return the distance to the next block of memory.
+        // VirtualQueryEx nearly does that except that it gives the distance from the start
+        // of the page containing vm_addr.
+        SYSTEM_INFO data;
+        GetSystemInfo(&data);
+        DWORD page_offset = vm_addr % data.dwPageSize;
+        info.GetRange().SetRangeBase(vm_addr);
+        info.GetRange().SetByteSize(mem_info.RegionSize - page_offset);
+        info.SetMapped(MemoryRegionInfo::eNo);
+    }
 
     error.SetError(::GetLastError(), eErrorTypeWin32);
     WINLOGV_IFALL(WINDOWS_LOG_MEMORY, "Memory region info for address 0x%I64u: readable=%s, executable=%s, writable=%s",
-                  BOOL_STR(readable), BOOL_STR(executable), BOOL_STR(writable));
+                  BOOL_STR(info.GetReadable()), BOOL_STR(info.GetExecutable()), BOOL_STR(info.GetWritable()));
     return error;
 }
 

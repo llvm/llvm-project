@@ -160,10 +160,10 @@ HANDLE_TARGET_OPCODE(G_ADD, 26)
 HANDLE_TARGET_OPCODE_MARKER(PRE_ISEL_GENERIC_OPCODE_START, G_ADD)
 
 /// Generic Bitwise-OR instruction.
-HANDLE_TARGET_OPCODE(G_OR, 25)
+HANDLE_TARGET_OPCODE(G_OR, 27)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
-HANDLE_TARGET_OPCODE(G_BR, 27)
+HANDLE_TARGET_OPCODE(G_BR, 28)
 
 // TODO: Add more generic opcodes as we move along.
 

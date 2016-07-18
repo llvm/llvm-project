@@ -1252,7 +1252,7 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
 
   // Conservatively, fences are always clobbers, so don't perform the walk if we
   // hit a fence.
-  if (isa<FenceInst>(I))
+  if (!ImmutableCallSite(I) && I->isFenceLike())
     return StartingUseOrDef;
 
   UpwardsMemoryQuery Q;
@@ -1287,15 +1287,17 @@ MemorySSA::CachingWalker::getClobberingMemoryAccess(const Instruction *I) {
   // access, since we only map BB's to PHI's. So, this must be a use or def.
   auto *StartingAccess = cast<MemoryUseOrDef>(MSSA->getMemoryAccess(I));
 
-  // We can't sanely do anything with a FenceInst, they conservatively
+  bool IsCall = bool(ImmutableCallSite(I));
+
+  // We can't sanely do anything with a fences, they conservatively
   // clobber all memory, and have no locations to get pointers from to
-  // try to disambiguate
-  if (isa<FenceInst>(I))
+  // try to disambiguate.
+  if (!IsCall && I->isFenceLike())
     return StartingAccess;
 
   UpwardsMemoryQuery Q;
   Q.OriginalAccess = StartingAccess;
-  Q.IsCall = bool(ImmutableCallSite(I));
+  Q.IsCall = IsCall;
   if (!Q.IsCall)
     Q.StartingLoc = MemoryLocation::get(I);
   Q.Inst = I;

@@ -182,9 +182,11 @@ Error DbiStream::reload() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "Found unexpected bytes in DBI Stream.");
 
-  StreamReader ECReader(ECSubstream);
-  if (auto EC = ECNames.load(ECReader))
-    return EC;
+  if (ECSubstream.getLength() > 0) {
+    StreamReader ECReader(ECSubstream);
+    if (auto EC = ECNames.load(ECReader))
+      return EC;
+  }
 
   return Error::success();
 }
@@ -267,6 +269,9 @@ void llvm::pdb::DbiStream::visitSectionContributions(
 }
 
 Error DbiStream::initializeSectionContributionData() {
+  if (SecContrSubstream.getLength() == 0)
+    return Error::success();
+
   StreamReader SCReader(SecContrSubstream);
   if (auto EC = SCReader.readEnum(SectionContribVersion))
     return EC;
@@ -282,6 +287,9 @@ Error DbiStream::initializeSectionContributionData() {
 
 // Initializes this->SectionHeaders.
 Error DbiStream::initializeSectionHeadersData() {
+  if (DbgStreams.size() == 0)
+    return Error::success();
+
   uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::SectionHdr);
   if (StreamNum >= Pdb.getNumStreams())
     return make_error<RawError>(raw_error_code::no_stream);
@@ -307,6 +315,9 @@ Error DbiStream::initializeSectionHeadersData() {
 
 // Initializes this->Fpos.
 Error DbiStream::initializeFpoRecords() {
+  if (DbgStreams.size() == 0)
+    return Error::success();
+
   uint32_t StreamNum = getDebugStreamIndex(DbgHeaderType::NewFPO);
 
   // This means there is no FPO data.
@@ -335,6 +346,9 @@ Error DbiStream::initializeFpoRecords() {
 }
 
 Error DbiStream::initializeSectionMapData() {
+  if (SecMapSubstream.getLength() == 0)
+    return Error::success();
+
   StreamReader SMReader(SecMapSubstream);
   const SecMapHeader *Header;
   if (auto EC = SMReader.readObject(Header))
@@ -357,6 +371,9 @@ Error DbiStream::initializeFileInfo() {
   // with the caveat that `NumSourceFiles` cannot be trusted, so
   // it is computed by summing `ModFileCounts`.
   //
+  if (FileInfoSubstream.getLength() == 0)
+    return Error::success();
+
   const FileInfoSubstreamHeader *FH;
   StreamReader FISR(FileInfoSubstream);
   if (auto EC = FISR.readObject(FH))
@@ -436,4 +453,10 @@ Expected<StringRef> DbiStream::getFileNameForIndex(uint32_t Index) const {
   return Name;
 }
 
-Error DbiStream::commit() { return Error::success(); }
+Error DbiStream::commit() {
+  StreamWriter Writer(*Stream);
+  if (auto EC = Writer.writeObject(*Header))
+    return EC;
+
+  return Error::success();
+}

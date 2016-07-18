@@ -46,7 +46,7 @@ public:
   eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
                                 MachineBasicBlock::iterator I) const override;
 
-  bool hasFP(const MachineFunction &MF) const override { return true; }
+  bool hasFP(const MachineFunction & /*MF*/) const override { return true; }
 
   void determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
                             RegScavenger *RS = nullptr) const override;

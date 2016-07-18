@@ -667,23 +667,20 @@ uint32_t Archive::getNumberOfSymbols() const {
   return read32le(buf);
 }
 
-Archive::child_iterator Archive::findSym(Error &Err, StringRef name) const {
+Expected<Optional<Archive::Child>> Archive::findSym(StringRef name) const {
   Archive::symbol_iterator bs = symbol_begin();
   Archive::symbol_iterator es = symbol_end();
 
   for (; bs != es; ++bs) {
     StringRef SymName = bs->getName();
     if (SymName == name) {
-      if (auto MemberOrErr = bs->getMember()) {
-        return child_iterator(*MemberOrErr, &Err);
-      } else {
-        ErrorAsOutParameter ErrAsOutParam(Err);
-        Err = errorCodeToError(MemberOrErr.getError());
-        return child_end();
-      }
+      if (auto MemberOrErr = bs->getMember())
+        return Child(*MemberOrErr);
+      else
+        return errorCodeToError(MemberOrErr.getError());
     }
   }
-  return child_end();
+  return Optional<Child>();
 }
 
 bool Archive::hasSymbolTable() const { return !SymbolTable.empty(); }

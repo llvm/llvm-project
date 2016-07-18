@@ -3,46 +3,91 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=SCHED %s
 
+; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-code \
+; RUN: -disable-output < %s | \
+; RUN: FileCheck -check-prefix=CODE %s
+
+; RUN: opt %loadPolly -polly-codegen-ppcg -S < %s | \
+; RUN: FileCheck %s -check-prefix=IR
+
 ; REQUIRES: pollyacc
 
 ; CHECK: Stmt_bb5
-; CHECK:       Domain :=
-; CHECK:           { Stmt_bb5[i0, i1] : 0 <= i0 <= 1023 and 0 <= i1 <= 1023 };
-; CHECK:       Schedule :=
-; CHECK:           { Stmt_bb5[i0, i1] -> [i0, i1] };
-; CHECK:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb5[i0, i1] -> MemRef_A[i0, i1] };
-; CHECK:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
-; CHECK:           { Stmt_bb5[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT:       Domain :=
+; CHECK-NEXT:           { Stmt_bb5[i0, i1] : 0 <= i0 <= 1023 and 0 <= i1 <= 1023 };
+; CHECK-NEXT:       Schedule :=
+; CHECK-NEXT:           { Stmt_bb5[i0, i1] -> [i0, i1] };
+; CHECK-NEXT:       ReadAccess :=       [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:           { Stmt_bb5[i0, i1] -> MemRef_A[i0, i1] };
+; CHECK-NEXT:       MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
+; CHECK-NEXT:           { Stmt_bb5[i0, i1] -> MemRef_A[i0, i1] };
 
 ; SCHED: domain: "{ Stmt_bb5[i0, i1] : 0 <= i0 <= 1023 and 0 <= i1 <= 1023 }"
-; SCHED: child:
-; SCHED:   context: "{ [] }"
-; SCHED:   child:
-; SCHED:     extension: "{  }"
-; SCHED:     child:
-; SCHED:       sequence:
-; SCHED:       - filter: "{  }"
-; SCHED:       - filter: "{ Stmt_bb5[i0, i1] }"
-; SCHED:         child:
-; SCHED:           guard: "{ [] }"
-; SCHED:           child:
-; SCHED:             mark: "kernel"
-; SCHED:             child:
-; SCHED:               context: "[b0, b1, t0, t1] -> { [] : 0 <= b0 <= 31 and 0 <= b1 <= 31 and 0 <= t0 <= 31 and 0 <= t1 <= 15 }"
-; SCHED:               child:
-; SCHED:                 filter: "[b0, b1] -> { Stmt_bb5[i0, i1] : -31 - 32b0 + i0 <= 8192*floor((i0)/8192) <= -32b0 + i0 and -31 - 32b1 + i1 <= 8192*floor((i1)/8192) <= -32b1 + i1 }"
-; SCHED:                 child:
-; SCHED:                   schedule: "[{ Stmt_bb5[i0, i1] -> [(floor((i0)/8192))] }, { Stmt_bb5[i0, i1] -> [(floor((i1)/8192))] }]"
-; SCHED:                   permutable: 1
-; SCHED:                   coincident: [ 1, 1 ]
-; SCHED:                   child:
-; SCHED:                     filter: "[t0, t1] -> { Stmt_bb5[i0, i1] : 32*floor((-t0 + i0)/32) = -t0 + i0 and 16*floor((-t1 + i1)/16) = -t1 + i1 and 0 <= t0 <= 31 and 0 <= t1 <= 15 }"
-; SCHED:                     child:
-; SCHED:                       schedule: "[{ Stmt_bb5[i0, i1] -> [(0)] }, { Stmt_bb5[i0, i1] -> [(floor((i1)/16) - 2*floor((i1)/32))] }]"
-; SCHED:                       permutable: 1
-; SCHED:                       coincident: [ 1, 1 ]
-; SCHED:       - filter: "{  }"
+; SCHED-NEXT: child:
+; SCHED-NEXT:   context: "{ [] }"
+; SCHED-NEXT:   child:
+; SCHED-NEXT:     extension: "{ [] -> from_device_MemRef_A[]; [] -> to_device_MemRef_A[] }"
+; SCHED-NEXT:     child:
+; SCHED-NEXT:       sequence:
+; SCHED-NEXT:       - filter: "{ to_device_MemRef_A[] }"
+; SCHED-NEXT:         child:
+; SCHED-NEXT:           set:
+; SCHED-NEXT:           - filter: "{ to_device_MemRef_A[] }"
+; SCHED-NEXT:             child:
+; SCHED-NEXT:               guard: "{ [] }"
+; SCHED-NEXT:       - filter: "{ Stmt_bb5[i0, i1] }"
+; SCHED-NEXT:         child:
+; SCHED-NEXT:           guard: "{ [] }"
+; SCHED-NEXT:           child:
+; SCHED-NEXT:             mark: "kernel"
+; SCHED-NEXT:             child:
+; SCHED-NEXT:               context: "[b0, b1, t0, t1] -> { [] : 0 <= b0 <= 31 and 0 <= b1 <= 31 and 0 <= t0 <= 31 and 0 <= t1 <= 15 }"
+; SCHED-NEXT:               child:
+; SCHED-NEXT:                 filter: "[b0, b1] -> { Stmt_bb5[i0, i1] : -31 - 32b0 + i0 <= 8192*floor((i0)/8192) <= -32b0 + i0 and -31 - 32b1 + i1 <= 8192*floor((i1)/8192) <= -32b1 + i1 }"
+; SCHED-NEXT:                 child:
+; SCHED-NEXT:                   schedule: "[{ Stmt_bb5[i0, i1] -> [(floor((i0)/8192))] }, { Stmt_bb5[i0, i1] -> [(floor((i1)/8192))] }]"
+; SCHED-NEXT:                   permutable: 1
+; SCHED-NEXT:                   coincident: [ 1, 1 ]
+; SCHED-NEXT:                   child:
+; SCHED-NEXT:                     filter: "[t0, t1] -> { Stmt_bb5[i0, i1] : 32*floor((-t0 + i0)/32) = -t0 + i0 and 16*floor((-t1 + i1)/16) = -t1 + i1 and 0 <= t0 <= 31 and 0 <= t1 <= 15 }"
+; SCHED-NEXT:                     child:
+; SCHED-NEXT:                       schedule: "[{ Stmt_bb5[i0, i1] -> [(0)] }, { Stmt_bb5[i0, i1] -> [(floor((i1)/16) - 2*floor((i1)/32))] }]"
+; SCHED-NEXT:                       permutable: 1
+; SCHED-NEXT:                       coincident: [ 1, 1 ]
+; SCHED-NEXT:       - filter: "{ from_device_MemRef_A[] }"
+; SCHED-NEXT:         child:
+; SCHED-NEXT:           set:
+; SCHED-NEXT:           - filter: "{ from_device_MemRef_A[] }"
+; SCHED-NEXT:             child:
+; SCHED-NEXT:               guard: "{ [] }"
+
+; CODE: Code
+; CODE-NEXT: ====
+; CODE-NEXT: # host
+; CODE-NEXT: {
+; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (1024) * (1024) * sizeof(float), cudaMemcpyHostToDevice));
+; CODE-NEXT:   {
+; CODE-NEXT:     dim3 k0_dimBlock(16, 32);
+; CODE-NEXT:     dim3 k0_dimGrid(32, 32);
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     cudaCheckKernel();
+; CODE-NEXT:   }
+
+; CODE:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (1024) * (1024) * sizeof(float), cudaMemcpyDeviceToHost));
+; CODE-NEXT: }
+
+; CODE: # kernel0
+; CODE-NEXT: for (int c3 = 0; c3 <= 1; c3 += 1)
+; CODE-NEXT:   Stmt_bb5(32 * b0 + t0, 32 * b1 + t1 + 16 * c3);
+
+; IR: polly.split_new_and_old:
+; IR-NEXT:    br i1 true, label %polly.start, label %bb2
+
+; IR: polly.start:
+; IR-NEXT:    br label %polly.exiting
+
+; IR: polly.exiting:
+; IR-NEXT:    br label %polly.merge_new_and_old
 
 ;    void double_parallel_loop(float A[][1024]) {
 ;      for (long i = 0; i < 1024; i++)

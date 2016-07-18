@@ -127,6 +127,10 @@ public:
                        unsigned AsmVariant, const char *ExtraCode,
                        raw_ostream &O) override;
 
+  void emitStartOfRuntimeMetadata(const Module &M);
+
+  void emitRuntimeMetadata(const Function &F);
+
 protected:
   std::vector<std::string> DisasmLines, HexLines;
   size_t DisasmLineMaxLen;

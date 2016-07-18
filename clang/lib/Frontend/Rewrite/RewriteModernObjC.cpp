@@ -72,7 +72,7 @@ namespace {
     Stmt *CurrentBody;
     ParentMap *PropParentMap; // created lazily.
     std::string InFileName;
-    raw_ostream* OutFile;
+    std::unique_ptr<raw_ostream> OutFile;
     std::string Preamble;
     
     TypeDecl *ProtocolTypeDecl;
@@ -239,9 +239,9 @@ namespace {
     
     void HandleTopLevelSingleDecl(Decl *D);
     void HandleDeclInMainFile(Decl *D);
-    RewriteModernObjC(std::string inFile, raw_ostream *OS,
-                DiagnosticsEngine &D, const LangOptions &LOpts,
-                bool silenceMacroWarn, bool LineInfo);
+    RewriteModernObjC(std::string inFile, std::unique_ptr<raw_ostream> OS,
+                      DiagnosticsEngine &D, const LangOptions &LOpts,
+                      bool silenceMacroWarn, bool LineInfo);
 
     ~RewriteModernObjC() override {}
 
@@ -638,12 +638,13 @@ static bool IsHeaderFile(const std::string &Filename) {
   return Ext == "h" || Ext == "hh" || Ext == "H";
 }
 
-RewriteModernObjC::RewriteModernObjC(std::string inFile, raw_ostream* OS,
-                         DiagnosticsEngine &D, const LangOptions &LOpts,
-                         bool silenceMacroWarn,
-                         bool LineInfo)
-      : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(OS),
-        SilenceRewriteMacroWarning(silenceMacroWarn), GenerateLineInfo(LineInfo) {
+RewriteModernObjC::RewriteModernObjC(std::string inFile,
+                                     std::unique_ptr<raw_ostream> OS,
+                                     DiagnosticsEngine &D,
+                                     const LangOptions &LOpts,
+                                     bool silenceMacroWarn, bool LineInfo)
+    : Diags(D), LangOpts(LOpts), InFileName(inFile), OutFile(std::move(OS)),
+      SilenceRewriteMacroWarning(silenceMacroWarn), GenerateLineInfo(LineInfo) {
   IsHeader = IsHeaderFile(inFile);
   RewriteFailedDiag = Diags.getCustomDiagID(DiagnosticsEngine::Warning,
                "rewriting sub-expression within a macro (may not be correct)");
@@ -659,10 +660,12 @@ RewriteModernObjC::RewriteModernObjC(std::string inFile, raw_ostream* OS,
 }
 
 std::unique_ptr<ASTConsumer> clang::CreateModernObjCRewriter(
-    const std::string &InFile, raw_ostream *OS, DiagnosticsEngine &Diags,
-    const LangOptions &LOpts, bool SilenceRewriteMacroWarning, bool LineInfo) {
-  return llvm::make_unique<RewriteModernObjC>(
-      InFile, OS, Diags, LOpts, SilenceRewriteMacroWarning, LineInfo);
+    const std::string &InFile, std::unique_ptr<raw_ostream> OS,
+    DiagnosticsEngine &Diags, const LangOptions &LOpts,
+    bool SilenceRewriteMacroWarning, bool LineInfo) {
+  return llvm::make_unique<RewriteModernObjC>(InFile, std::move(OS), Diags,
+                                              LOpts, SilenceRewriteMacroWarning,
+                                              LineInfo);
 }
 
 void RewriteModernObjC::InitializeCommon(ASTContext &context) {

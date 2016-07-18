@@ -272,6 +272,16 @@ public:
     return Kind | (NumOps << 3);
   }
 
+  static bool isRegDefKind(unsigned Flag){ return getKind(Flag) == Kind_RegDef;}
+  static bool isImmKind(unsigned Flag) { return getKind(Flag) == Kind_Imm; }
+  static bool isMemKind(unsigned Flag) { return getKind(Flag) == Kind_Mem; }
+  static bool isRegDefEarlyClobberKind(unsigned Flag) {
+    return getKind(Flag) == Kind_RegDefEarlyClobber;
+  }
+  static bool isClobberKind(unsigned Flag) {
+    return getKind(Flag) == Kind_Clobber;
+  }
+
   /// getFlagWordForMatchingOp - Augment an existing flag word returned by
   /// getFlagWord with information indicating that this input operand is tied
   /// to a previous output operand.
@@ -290,6 +300,8 @@ public:
   static unsigned getFlagWordForRegClass(unsigned InputFlag, unsigned RC) {
     // Store RC + 1, reserve the value 0 to mean 'no register class'.
     ++RC;
+    assert(!isImmKind(InputFlag) && "Immediates cannot have a register class");
+    assert(!isMemKind(InputFlag) && "Memory operand cannot have a register class");
     assert(RC <= 0x7fff && "Too large register class ID");
     assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
     return InputFlag | (RC << 16);
@@ -298,6 +310,7 @@ public:
   /// Augment an existing flag word returned by getFlagWord with the constraint
   /// code for a memory constraint.
   static unsigned getFlagWordForMem(unsigned InputFlag, unsigned Constraint) {
+    assert(isMemKind(InputFlag) && "InputFlag is not a memory constraint!");
     assert(Constraint <= 0x7fff && "Too large a memory constraint ID");
     assert(Constraint <= Constraints_Max && "Unknown constraint ID");
     assert((InputFlag & ~0xffff) == 0 && "High bits already contain data");
@@ -311,16 +324,6 @@ public:
 
   static unsigned getKind(unsigned Flags) {
     return Flags & 7;
-  }
-
-  static bool isRegDefKind(unsigned Flag){ return getKind(Flag) == Kind_RegDef;}
-  static bool isImmKind(unsigned Flag) { return getKind(Flag) == Kind_Imm; }
-  static bool isMemKind(unsigned Flag) { return getKind(Flag) == Kind_Mem; }
-  static bool isRegDefEarlyClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind_RegDefEarlyClobber;
-  }
-  static bool isClobberKind(unsigned Flag) {
-    return getKind(Flag) == Kind_Clobber;
   }
 
   static unsigned getMemoryConstraintID(unsigned Flag) {

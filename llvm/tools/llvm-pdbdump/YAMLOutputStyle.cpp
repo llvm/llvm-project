@@ -23,8 +23,7 @@ using namespace llvm::pdb;
 YAMLOutputStyle::YAMLOutputStyle(PDBFile &File) : File(File), Out(outs()) {}
 
 Error YAMLOutputStyle::dump() {
-  if (opts::pdb2yaml::StreamDirectory || opts::pdb2yaml::PdbStream ||
-      opts::pdb2yaml::DbiStream)
+  if (opts::pdb2yaml::StreamDirectory)
     opts::pdb2yaml::StreamMetadata = true;
 
   if (auto EC = dumpFileHeaders())
@@ -54,7 +53,6 @@ Error YAMLOutputStyle::dumpFileHeaders() {
   Obj.Headers.emplace();
   Obj.Headers->SuperBlock.NumBlocks = File.getBlockCount();
   Obj.Headers->SuperBlock.BlockMapAddr = File.getBlockMapIndex();
-  Obj.Headers->BlockMapOffset = File.getBlockMapOffset();
   Obj.Headers->SuperBlock.BlockSize = File.getBlockSize();
   auto Blocks = File.getDirectoryBlockArray();
   Obj.Headers->DirectoryBlocks.assign(Blocks.begin(), Blocks.end());
@@ -62,7 +60,7 @@ Error YAMLOutputStyle::dumpFileHeaders() {
   Obj.Headers->SuperBlock.NumDirectoryBytes = File.getNumDirectoryBytes();
   Obj.Headers->NumStreams =
       opts::pdb2yaml::StreamMetadata ? File.getNumStreams() : 0;
-  Obj.Headers->SuperBlock.Unknown0 = File.getUnknown0();
+  Obj.Headers->SuperBlock.FreeBlockMapBlock = File.getFreeBlockMapBlock();
   Obj.Headers->SuperBlock.Unknown1 = File.getUnknown1();
   Obj.Headers->FileSize = File.getFileSize();
 
@@ -73,7 +71,9 @@ Error YAMLOutputStyle::dumpStreamMetadata() {
   if (!opts::pdb2yaml::StreamMetadata)
     return Error::success();
 
-  Obj.StreamSizes = File.getStreamSizes();
+  Obj.StreamSizes.emplace();
+  Obj.StreamSizes->assign(File.getStreamSizes().begin(),
+                          File.getStreamSizes().end());
   return Error::success();
 }
 
@@ -85,7 +85,7 @@ Error YAMLOutputStyle::dumpStreamDirectory() {
   Obj.StreamMap.emplace();
   for (auto &Stream : StreamMap) {
     pdb::yaml::StreamBlockList BlockList;
-    BlockList.Blocks = Stream;
+    BlockList.Blocks.assign(Stream.begin(), Stream.end());
     Obj.StreamMap->push_back(BlockList);
   }
 
@@ -106,6 +106,12 @@ Error YAMLOutputStyle::dumpPDBStream() {
   Obj.PdbStream->Guid = InfoS.getGuid();
   Obj.PdbStream->Signature = InfoS.getSignature();
   Obj.PdbStream->Version = InfoS.getVersion();
+  for (auto &NS : InfoS.named_streams()) {
+    yaml::NamedStreamMapping Mapping;
+    Mapping.StreamName = NS.getKey();
+    Mapping.StreamNumber = NS.getValue();
+    Obj.PdbStream->NamedStreams.push_back(Mapping);
+  }
 
   return Error::success();
 }

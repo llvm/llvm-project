@@ -77,6 +77,7 @@
 #include <cstring>
 #include <thread>
 #include <map>
+#include <set>
 
 #if !LLVM_FUZZER_SUPPORTS_DFSAN
 // Stubs for dfsan for platforms where dfsan does not exist and weak
@@ -171,6 +172,7 @@ struct TraceBasedMutation {
 // Declared as static globals for faster checks inside the hooks.
 static bool RecordingTraces = false;
 static bool RecordingMemcmp = false;
+static bool RecordingMemmem = false;
 
 class TraceState {
 public:
@@ -204,7 +206,9 @@ public:
       return;
     RecordingTraces = Options.UseTraces;
     RecordingMemcmp = Options.UseMemcmp;
+    RecordingMemmem = Options.UseMemmem;
     NumMutations = 0;
+    InterestingWords.clear();
     MD.ClearAutoDictionary();
   }
 
@@ -233,8 +237,10 @@ public:
           }
         }
       }
-      MD.AddWordToAutoDictionary(M.W, M.Pos);
+      MD.AddWordToAutoDictionary({M.W, M.Pos});
     }
+    for (auto &W : InterestingWords)
+      MD.AddWordToAutoDictionary({W});
   }
 
   void AddMutation(uint32_t Pos, uint32_t Size, const uint8_t *Data) {
@@ -247,6 +253,14 @@ public:
   void AddMutation(uint32_t Pos, uint32_t Size, uint64_t Data) {
     assert(Size <= sizeof(Data));
     AddMutation(Pos, Size, reinterpret_cast<uint8_t*>(&Data));
+  }
+
+  void AddInterestingWord(const uint8_t *Data, size_t Size) {
+    if (!RecordingMemmem || !F->InFuzzingThread()) return;
+    if (Size <= 1) return;
+    Size = std::min(Size, Word::GetMaxSize());
+    Word W(Data, Size);
+    InterestingWords.insert(W);
   }
 
   void EnsureDfsanLabels(size_t Size) {
@@ -285,6 +299,8 @@ public:
   static const size_t kMaxMutations = 1 << 16;
   size_t NumMutations;
   TraceBasedMutation Mutations[kMaxMutations];
+  // TODO: std::set is too inefficient, need to have a custom DS here.
+  std::set<Word> InterestingWords;
   LabelRange LabelRanges[1 << (sizeof(dfsan_label) * 8)];
   size_t LastDfsanLabel = 0;
   MutationDispatcher &MD;
@@ -603,6 +619,27 @@ void __sanitizer_weak_hook_strcmp(void *caller_pc, const char *s1,
   if (N <= 1) return;  // Not interesting.
   TS->TraceMemcmpCallback(N, reinterpret_cast<const uint8_t *>(s1),
                           reinterpret_cast<const uint8_t *>(s2));
+}
+
+void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
+                                       const char *s2, size_t n, int result) {
+  return __sanitizer_weak_hook_strncmp(called_pc, s1, s2, n, result);
+}
+void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
+                                      const char *s2, int result) {
+  return __sanitizer_weak_hook_strcmp(called_pc, s1, s2, result);
+}
+void __sanitizer_weak_hook_strstr(void *called_pc, const char *s1,
+                                  const char *s2, char *result) {
+  TS->AddInterestingWord(reinterpret_cast<const uint8_t *>(s2), strlen(s2));
+}
+void __sanitizer_weak_hook_strcasestr(void *called_pc, const char *s1,
+                                      const char *s2, char *result) {
+  TS->AddInterestingWord(reinterpret_cast<const uint8_t *>(s2), strlen(s2));
+}
+void __sanitizer_weak_hook_memmem(void *called_pc, const void *s1, size_t len1,
+                                  const void *s2, size_t len2, void *result) {
+  // TODO: can't hook memmem since memmem is used by libFuzzer.
 }
 
 #endif  // LLVM_FUZZER_DEFINES_SANITIZER_WEAK_HOOOKS

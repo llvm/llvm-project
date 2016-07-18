@@ -1828,7 +1828,7 @@ define <8 x float>  @test_gather_mask(<8 x float> %a0, float* %a, <8 x i32> %idx
 ; AVX512VL:       ## BB#0:
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512VL-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; AVX512VL-NEXT:    vmovaps %zmm2, %zmm3
+; AVX512VL-NEXT:    vmovaps %ymm2, %ymm3
 ; AVX512VL-NEXT:    vgatherdps %ymm3, (%ecx,%ymm1,4), %ymm0
 ; AVX512VL-NEXT:    vmovups %ymm2, (%eax)
 ; AVX512VL-NEXT:    retl

@@ -50,7 +50,7 @@ public:
   static const MipsInstrInfo *create(MipsSubtarget &STI);
 
   /// Branch Analysis
-  bool AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  bool analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                      MachineBasicBlock *&FBB,
                      SmallVectorImpl<MachineOperand> &Cond,
                      bool AllowModify) const override;
@@ -64,11 +64,11 @@ public:
   bool
   ReverseBranchCondition(SmallVectorImpl<MachineOperand> &Cond) const override;
 
-  BranchType AnalyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
+  BranchType analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
                            MachineBasicBlock *&FBB,
                            SmallVectorImpl<MachineOperand> &Cond,
                            bool AllowModify,
-                           SmallVectorImpl<MachineInstr*> &BranchInstrs) const;
+                           SmallVectorImpl<MachineInstr *> &BranchInstrs) const;
 
   /// Determine the opcode of a non-delay slot form for a branch if one exists.
   unsigned getEquivalentCompactForm(const MachineBasicBlock::iterator I) const;
@@ -137,7 +137,7 @@ protected:
   bool isZeroImm(const MachineOperand &op) const;
 
   MachineMemOperand *GetMemOperand(MachineBasicBlock &MBB, int FI,
-                                   unsigned Flag) const;
+                                   MachineMemOperand::Flags Flags) const;
 
 private:
   virtual unsigned getAnalyzableBrOpc(unsigned Opc) const = 0;

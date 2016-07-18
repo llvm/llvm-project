@@ -544,7 +544,8 @@ void SanitizerCoverageModule::InjectCoverageAtBlock(Function &F, BasicBlock &BB,
   Type *Int32PtrTy = PointerType::getUnqual(IRB.getInt32Ty());
   GuardP = IRB.CreateIntToPtr(GuardP, Int32PtrTy);
   if (Options.TracePC) {
-    IRB.CreateCall(SanCovTracePC);
+    IRB.CreateCall(SanCovTracePC); // gets the PC using GET_CALLER_PC.
+    IRB.CreateCall(EmptyAsm, {}); // Avoids callback merge.
   } else if (Options.TraceBB) {
     IRB.CreateCall(IsEntryBB ? SanCovTraceEnter : SanCovTraceBB, GuardP);
   } else if (UseCalls) {

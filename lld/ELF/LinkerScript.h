@@ -40,7 +40,7 @@ struct SectionRule {
 // This enum represents what we can observe in SECTIONS tag of script:
 // ExprKind is a location counter change, like ". = . + 0x1000"
 // SectionKind is a description of output section, like ".data :..."
-enum SectionsCommandKind { ExprKind, SectionKind, SymbolAssignmentKind };
+enum SectionsCommandKind { SectionKind, AssignmentKind };
 
 struct SectionsCommand {
   SectionsCommandKind Kind;

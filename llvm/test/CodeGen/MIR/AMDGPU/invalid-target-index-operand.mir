@@ -1,4 +1,4 @@
-# RUN: not llc -march=amdgcn -mcpu=SI -start-after postrapseudos -stop-after postrapseudos -o /dev/null %s 2>&1 | FileCheck %s
+# RUN: not llc -march=amdgcn -mcpu=SI -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 
 --- |
 

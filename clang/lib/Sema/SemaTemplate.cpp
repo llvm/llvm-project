@@ -7509,7 +7509,7 @@ Sema::ActOnExplicitInstantiation(Scope *S,
   // Set source locations for keywords.
   Specialization->setExternLoc(ExternLoc);
   Specialization->setTemplateKeywordLoc(TemplateLoc);
-  Specialization->setRBraceLoc(SourceLocation());
+  Specialization->setBraceRange(SourceRange());
 
   if (Attr)
     ProcessDeclAttributeList(S, Specialization, Attr);

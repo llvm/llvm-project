@@ -128,7 +128,7 @@ std::string elf::relativeToRoot(StringRef Path) {
   return Res.str();
 }
 
-CpioFile::CpioFile(std::unique_ptr<llvm::raw_fd_ostream> OS, StringRef S)
+CpioFile::CpioFile(std::unique_ptr<raw_fd_ostream> OS, StringRef S)
     : OS(std::move(OS)), Basename(S) {}
 
 CpioFile *CpioFile::create(StringRef OutputPath) {

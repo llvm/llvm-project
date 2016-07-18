@@ -7,7 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <unordered_map>
+#include "ErrorChecking.h"
 
 #include "llvm/DebugInfo/CodeView/ByteStream.h"
 #include "llvm/DebugInfo/CodeView/StreamReader.h"
@@ -19,27 +19,13 @@
 #include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "gtest/gtest.h"
 
+#include <unordered_map>
+
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::pdb;
 
 namespace {
-
-#define EXPECT_NO_ERROR(Err)                                                   \
-  {                                                                            \
-    auto E = Err;                                                              \
-    EXPECT_FALSE(static_cast<bool>(E));                                        \
-    if (E)                                                                     \
-      consumeError(std::move(E));                                              \
-  }
-
-#define EXPECT_ERROR(Err)                                                      \
-  {                                                                            \
-    auto E = Err;                                                              \
-    EXPECT_TRUE(static_cast<bool>(E));                                         \
-    if (E)                                                                     \
-      consumeError(std::move(E));                                              \
-  }
 
 static const uint32_t BlocksAry[] = {0, 1, 2, 5, 4, 3, 6, 7, 8, 9};
 static uint8_t DataAry[] = {'A', 'B', 'C', 'F', 'E', 'D', 'G', 'H', 'I', 'J'};

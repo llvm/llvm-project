@@ -40,11 +40,11 @@ bb:
   %tmp34 = fadd <4 x float> %tmp33, %tmp23
   %tmp35 = fadd <4 x float> %tmp34, %tmp25
   %tmp36 = fadd <4 x float> %tmp35, %tmp27
-  call void @llvm.R600.store.swizzle(<4 x float> %tmp36, i32 0, i32 2)
+  call void @llvm.r600.store.swizzle(<4 x float> %tmp36, i32 0, i32 2)
   ret void
 }
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 ; Function Attrs: nounwind readnone
 declare <4 x float> @llvm.r600.tex(<4 x float>, i32, i32, i32, i32, i32, i32, i32, i32, i32) #0

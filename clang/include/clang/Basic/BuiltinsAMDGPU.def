@@ -61,6 +61,7 @@ BUILTIN(__builtin_amdgcn_frexp_exp, "id", "nc")
 BUILTIN(__builtin_amdgcn_frexp_expf, "if", "nc")
 BUILTIN(__builtin_amdgcn_fract, "dd", "nc")
 BUILTIN(__builtin_amdgcn_fractf, "ff", "nc")
+BUILTIN(__builtin_amdgcn_lerp, "UiUiUiUi", "nc")
 BUILTIN(__builtin_amdgcn_class, "bdi", "nc")
 BUILTIN(__builtin_amdgcn_classf, "bfi", "nc")
 BUILTIN(__builtin_amdgcn_cubeid, "ffff", "nc")
@@ -95,14 +96,8 @@ BUILTIN(__builtin_r600_read_tidig_x, "Ui", "nc")
 BUILTIN(__builtin_r600_read_tidig_y, "Ui", "nc")
 BUILTIN(__builtin_r600_read_tidig_z, "Ui", "nc")
 
-//===----------------------------------------------------------------------===//
-// Legacy names with amdgpu prefix
-//===----------------------------------------------------------------------===//
-
-BUILTIN(__builtin_amdgpu_rsq, "dd", "nc")
-BUILTIN(__builtin_amdgpu_rsqf, "ff", "nc")
-BUILTIN(__builtin_amdgpu_ldexp, "ddi", "nc")
-BUILTIN(__builtin_amdgpu_ldexpf, "ffi", "nc")
+BUILTIN(__builtin_r600_recipsqrt_ieee, "dd", "nc")
+BUILTIN(__builtin_r600_recipsqrt_ieeef, "ff", "nc")
 
 #undef BUILTIN
 #undef TARGET_BUILTIN

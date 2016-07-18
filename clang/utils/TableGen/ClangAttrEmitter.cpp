@@ -2653,6 +2653,15 @@ static std::string CalculateDiagnostic(const Record &S) {
       return "(S.getLangOpts().CPlusPlus ? ExpectedFunctionVariableOrClass : "
                                            "ExpectedVariableOrFunction)";
 
+    case Func | Var | Class | ObjCInterface:
+      return "(S.getLangOpts().CPlusPlus"
+             "     ? ((S.getLangOpts().ObjC1 || S.getLangOpts().ObjC2)"
+             "            ? ExpectedFunctionVariableClassOrObjCInterface"
+             "            : ExpectedFunctionVariableOrClass)"
+             "     : ((S.getLangOpts().ObjC1 || S.getLangOpts().ObjC2)"
+             "            ? ExpectedFunctionVariableOrObjCInterface"
+             "            : ExpectedVariableOrFunction))";
+
     case ObjCMethod | ObjCProp: return "ExpectedMethodOrProperty";
     case ObjCProtocol | ObjCInterface:
       return "ExpectedObjectiveCInterfaceOrProtocol";

@@ -162,6 +162,49 @@ static void ClearSubclassDataAfterReassociation(BinaryOperator &I) {
   I.setFastMathFlags(FMF);
 }
 
+/// Combine constant operands of associative operations either before or after a
+/// cast to eliminate one of the associative operations:
+/// (op (cast (op X, C2)), C1) --> (cast (op X, op (C1, C2)))
+/// (op (cast (op X, C2)), C1) --> (op (cast X), op (C1, C2))
+static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1) {
+  auto *Cast = dyn_cast<CastInst>(BinOp1->getOperand(0));
+  if (!Cast || !Cast->hasOneUse())
+    return false;
+
+  // TODO: Enhance logic for other casts and remove this check.
+  auto CastOpcode = Cast->getOpcode();
+  if (CastOpcode != Instruction::ZExt)
+    return false;
+
+  // TODO: Enhance logic for other BinOps and remove this check.
+  auto AssocOpcode = BinOp1->getOpcode();
+  if (AssocOpcode != Instruction::Xor && AssocOpcode != Instruction::And &&
+      AssocOpcode != Instruction::Or)
+    return false;
+
+  auto *BinOp2 = dyn_cast<BinaryOperator>(Cast->getOperand(0));
+  if (!BinOp2 || !BinOp2->hasOneUse() || BinOp2->getOpcode() != AssocOpcode)
+    return false;
+
+  Constant *C1, *C2;
+  if (!match(BinOp1->getOperand(1), m_Constant(C1)) ||
+      !match(BinOp2->getOperand(1), m_Constant(C2)))
+    return false;
+
+  // TODO: This assumes a zext cast.
+  // Eg, if it was a trunc, we'd cast C1 to the source type because casting C2
+  // to the destination type might lose bits.
+
+  // Fold the constants together in the destination type:
+  // (op (cast (op X, C2)), C1) --> (op (cast X), FoldedC)
+  Type *DestTy = C1->getType();
+  Constant *CastC2 = ConstantExpr::getCast(CastOpcode, C2, DestTy);
+  Constant *FoldedC = ConstantExpr::get(AssocOpcode, C1, CastC2);
+  Cast->setOperand(0, BinOp2->getOperand(0));
+  BinOp1->setOperand(1, FoldedC);
+  return true;
+}
+
 /// This performs a few simplifications for operators that are associative or
 /// commutative:
 ///
@@ -249,6 +292,12 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
     }
 
     if (I.isAssociative() && I.isCommutative()) {
+      if (simplifyAssocCastAssoc(&I)) {
+        Changed = true;
+        ++NumReassoc;
+        continue;
+      }
+
       // Transform: "(A op B) op C" ==> "(C op A) op B" if "C op A" simplifies.
       if (Op0 && Op0->getOpcode() == Opcode) {
         Value *A = Op0->getOperand(0);

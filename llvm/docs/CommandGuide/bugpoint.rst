@@ -176,6 +176,14 @@ OPTIONS
  **--safe-{int,jit,llc,custom}**
  option.
 
+**--verbose-errors**\ =\ *{true,false}*
+
+ The default behavior of bugpoint is to print "<crash>" when it finds a reduced
+ test that crashes compilation. This flag prints the output of the crashing
+ program to stderr. This is useful to make sure it is the same error being
+ tracked down and not a different error that happens to crash the compiler as
+ well. Defaults to false.
+
 EXIT STATUS
 -----------
 

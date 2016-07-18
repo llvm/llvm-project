@@ -172,8 +172,9 @@ static void GetEHSpillList(SmallVectorImpl<StackSlotInfo> &SpillList,
   std::sort(SpillList.begin(), SpillList.end(), CompareSSIOffset);
 }
 
-static MachineMemOperand *
-getFrameIndexMMO(MachineBasicBlock &MBB, int FrameIndex, unsigned flags) {
+static MachineMemOperand *getFrameIndexMMO(MachineBasicBlock &MBB,
+                                           int FrameIndex,
+                                           MachineMemOperand::Flags flags) {
   MachineFunction *MF = MBB.getParent();
   const MachineFrameInfo &MFI = *MF->getFrameInfo();
   MachineMemOperand *MMO = MF->getMachineMemOperand(

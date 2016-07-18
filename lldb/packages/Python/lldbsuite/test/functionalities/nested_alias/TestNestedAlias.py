@@ -65,4 +65,4 @@ class NestedAliasTestCase(TestBase):
         self.runCmd('command alias foself fo self')
         
         self.expect('help foself', substrs=['--show-all-children', '--raw-output'], matching=False)
-        self.expect('help foself', substrs=['Show frame variables.'], matching=True)
+        self.expect('help foself', substrs=['Show variables for the current', 'stack frame.'], matching=True)

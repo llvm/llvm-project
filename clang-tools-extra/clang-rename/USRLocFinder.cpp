@@ -210,10 +210,10 @@ private:
 
 std::vector<SourceLocation> getLocationsOfUSR(StringRef USR, StringRef PrevName,
                                               Decl *Decl) {
-  USRLocFindingASTVisitor visitor(USR, PrevName);
+  USRLocFindingASTVisitor Visitor(USR, PrevName);
 
-  visitor.TraverseDecl(Decl);
-  return visitor.getLocationsFound();
+  Visitor.TraverseDecl(Decl);
+  return Visitor.getLocationsFound();
 }
 
 } // namespace rename

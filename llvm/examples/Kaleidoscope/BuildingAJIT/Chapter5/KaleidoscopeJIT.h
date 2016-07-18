@@ -69,11 +69,8 @@ typedef remote::OrcRemoteTargetClient<FDRPCChannel> MyRemote;
 
 class KaleidoscopeJIT {
 private:
-  MyRemote &Remote;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  JITCompileCallbackManager *CompileCallbackMgr;
-  std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
   ObjectLinkingLayer<> ObjectLayer;
   IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
 
@@ -82,18 +79,22 @@ private:
 
   IRTransformLayer<decltype(CompileLayer), OptimizeFunction> OptimizeLayer;
 
+  JITCompileCallbackManager *CompileCallbackMgr;
+  std::unique_ptr<IndirectStubsManager> IndirectStubsMgr;
+  MyRemote &Remote;
+
 public:
   typedef decltype(OptimizeLayer)::ModuleSetHandleT ModuleHandle;
 
   KaleidoscopeJIT(MyRemote &Remote)
-      : Remote(Remote),
-        TM(EngineBuilder().selectTarget()),
+      : TM(EngineBuilder().selectTarget()),
         DL(TM->createDataLayout()),
         CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
         OptimizeLayer(CompileLayer,
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
-                      }) {
+                      }),
+        Remote(Remote) {
     auto CCMgrOrErr = Remote.enableCompileCallbacks(0);
     if (!CCMgrOrErr) {
       logAllUnhandledErrors(CCMgrOrErr.takeError(), errs(),

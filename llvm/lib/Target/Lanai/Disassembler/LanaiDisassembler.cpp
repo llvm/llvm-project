@@ -30,7 +30,7 @@ namespace llvm {
 extern Target TheLanaiTarget;
 }
 
-static MCDisassembler *createLanaiDisassembler(const Target &T,
+static MCDisassembler *createLanaiDisassembler(const Target & /*T*/,
                                                const MCSubtargetInfo &STI,
                                                MCContext &Ctx) {
   return new LanaiDisassembler(STI, Ctx);
@@ -71,8 +71,8 @@ static DecodeStatus decodeShiftImm(MCInst &Inst, unsigned Insn,
 
 #include "LanaiGenDisassemblerTables.inc"
 
-static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t Address,
-                                      uint64_t &Size, uint32_t &Insn) {
+static DecodeStatus readInstruction32(ArrayRef<uint8_t> Bytes, uint64_t &Size,
+                                      uint32_t &Insn) {
   // We want to read exactly 4 bytes of data.
   if (Bytes.size() < 4) {
     Size = 0;
@@ -127,14 +127,12 @@ static void PostOperandDecodeAdjust(MCInst &Instr, uint32_t Insn) {
   }
 }
 
-DecodeStatus LanaiDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
-                                               ArrayRef<uint8_t> Bytes,
-                                               uint64_t Address,
-                                               raw_ostream &VStream,
-                                               raw_ostream &CStream) const {
+DecodeStatus LanaiDisassembler::getInstruction(
+    MCInst &Instr, uint64_t &Size, ArrayRef<uint8_t> Bytes, uint64_t Address,
+    raw_ostream & /*VStream*/, raw_ostream & /*CStream*/) const {
   uint32_t Insn;
 
-  DecodeStatus Result = readInstruction32(Bytes, Address, Size, Insn);
+  DecodeStatus Result = readInstruction32(Bytes, Size, Insn);
 
   if (Result == MCDisassembler::Fail)
     return MCDisassembler::Fail;
@@ -161,7 +159,8 @@ static const unsigned GPRDecoderTable[] = {
     Lanai::R30, Lanai::R31};
 
 DecodeStatus DecodeGPRRegisterClass(MCInst &Inst, unsigned RegNo,
-                                    uint64_t Address, const void *Decoder) {
+                                    uint64_t /*Address*/,
+                                    const void * /*Decoder*/) {
   if (RegNo > 31)
     return MCDisassembler::Fail;
 

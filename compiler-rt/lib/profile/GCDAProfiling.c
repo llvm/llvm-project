@@ -21,6 +21,7 @@
 \*===----------------------------------------------------------------------===*/
 
 #include "InstrProfilingUtil.h"
+#include "InstrProfilingPort.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -194,7 +195,8 @@ static char *mangle_filename(const char *orig_filename) {
   for (level = 0, ptr = fname + 1; level < prefix_strip; ++ptr) {
     if (*ptr == '\0')
       break;
-    if (*ptr != '/')
+
+    if (!IS_DIR_SEPARATOR(*ptr))
       continue;
     fname = ptr;
     ++level;
@@ -205,8 +207,8 @@ static char *mangle_filename(const char *orig_filename) {
   new_filename = malloc(prefix_len + 1 + filename_len + 1);
   memcpy(new_filename, prefix, prefix_len);
 
-  if (prefix[prefix_len - 1] != '/')
-    new_filename[prefix_len++] = '/';
+  if (!IS_DIR_SEPARATOR(prefix[prefix_len - 1]))
+    new_filename[prefix_len++] = DIR_SEPARATOR;
   memcpy(new_filename + prefix_len, fname, filename_len + 1);
 
   return new_filename;

@@ -2503,7 +2503,9 @@ def err_ifunc_resolver_params : Error<
   "ifunc resolver function must have no parameters">;
 def warn_attribute_wrong_decl_type : Warning<
   "%0 attribute only applies to %select{functions|unions|"
-  "variables and functions|functions and methods|parameters|"
+  "variables and functions|"
+  "functions, variables, and Objective-C interfaces|"
+  "functions and methods|parameters|"
   "functions, methods and blocks|functions, methods, and classes|"
   "functions, methods, and parameters|classes|enums|variables|methods|"
   "fields and global variables|structs|parameters and typedefs|variables and typedefs|"
@@ -2511,7 +2513,9 @@ def warn_attribute_wrong_decl_type : Warning<
   "types and namespaces|Objective-C interfaces|methods and properties|"
   "struct or union|struct, union or class|types|"
   "Objective-C instance methods|init methods of interface or class extension declarations|"
-  "variables, functions and classes|Objective-C protocols|"
+  "variables, functions and classes|"
+  "functions, variables, classes, and Objective-C interfaces|"
+  "Objective-C protocols|"
   "functions and global variables|structs, unions, and typedefs|structs and typedefs|"
   "interface or protocol declarations|kernel functions|non-K&R-style functions|"
   "variables, enums, fields and typedefs|functions, methods, enums, and classes|"
@@ -2594,6 +2598,9 @@ def note_overridden_method : Note<
   "overridden method is here">;
 def note_protocol_method : Note<
   "protocol method is here">;
+
+def warn_available_using_star_case : Warning<
+  "using '*' case here, platform %0 is not accounted for">, InGroup<UnguardedAvailability>;
 
 // Thread Safety Attributes
 def warn_invalid_capability_name : Warning<
@@ -5425,11 +5432,6 @@ def warn_pointer_indirection_from_incompatible_type : Warning<
   "dereference of type %1 that was reinterpret_cast from type %0 has undefined "
   "behavior">,
   InGroup<UndefinedReinterpretCast>, DefaultIgnore;
-def warn_taking_address_of_packed_member : Warning<
-  "taking address of packed member %0 of class or structure %q1 may result in an unaligned pointer value">,
-  InGroup<DiagGroup<"address-of-packed-member">>;
-def err_binding_reference_to_packed_member : Error<
-  "binding reference to packed member %0 of class or structure %q1">;
 
 def err_objc_object_assignment : Error<
   "cannot assign to class object (%0 invalid)">;

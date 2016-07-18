@@ -13,8 +13,8 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X32-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
 ; X32-NEXT:    vmovups (%eax), %ymm2
 ; X32-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
+; X32-NEXT:    vandps LCPI0_0, %ymm1, %ymm1
 ; X32-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X32-NEXT:    vandps LCPI0_0, %ymm0, %ymm0
 ; X32-NEXT:    vmovaps %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
@@ -26,8 +26,8 @@ define void @and_masks(<8 x float>* %a, <8 x float>* %b, <8 x float>* %c) nounwi
 ; X64-NEXT:    vcmpltps %ymm0, %ymm1, %ymm1
 ; X64-NEXT:    vmovups (%rdx), %ymm2
 ; X64-NEXT:    vcmpltps %ymm0, %ymm2, %ymm0
+; X64-NEXT:    vandps {{.*}}(%rip), %ymm1, %ymm1
 ; X64-NEXT:    vandps %ymm1, %ymm0, %ymm0
-; X64-NEXT:    vandps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    vmovaps %ymm0, (%rax)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

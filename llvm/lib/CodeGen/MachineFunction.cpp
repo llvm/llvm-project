@@ -294,13 +294,11 @@ MachineFunction::DeleteMachineBasicBlock(MachineBasicBlock *MBB) {
   BasicBlockRecycler.Deallocate(Allocator, MBB);
 }
 
-MachineMemOperand *
-MachineFunction::getMachineMemOperand(MachinePointerInfo PtrInfo, unsigned f,
-                                      uint64_t s, unsigned base_alignment,
-                                      const AAMDNodes &AAInfo,
-                                      const MDNode *Ranges) {
-  return new (Allocator) MachineMemOperand(PtrInfo, f, s, base_alignment,
-                                           AAInfo, Ranges);
+MachineMemOperand *MachineFunction::getMachineMemOperand(
+    MachinePointerInfo PtrInfo, MachineMemOperand::Flags f, uint64_t s,
+    unsigned base_alignment, const AAMDNodes &AAInfo, const MDNode *Ranges) {
+  return new (Allocator)
+      MachineMemOperand(PtrInfo, f, s, base_alignment, AAInfo, Ranges);
 }
 
 MachineMemOperand *

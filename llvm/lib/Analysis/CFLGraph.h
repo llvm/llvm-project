@@ -45,7 +45,7 @@ public:
   typedef std::vector<Edge> EdgeList;
 
   struct NodeInfo {
-    EdgeList Edges;
+    EdgeList Edges, ReverseEdges;
     AliasAttrs Attr;
   };
 
@@ -77,12 +77,6 @@ private:
   typedef DenseMap<Value *, ValueInfo> ValueMap;
   ValueMap ValueImpls;
 
-  const NodeInfo *getNode(Node N) const {
-    auto Itr = ValueImpls.find(N.Val);
-    if (Itr == ValueImpls.end() || Itr->second.getNumLevels() <= N.DerefLevel)
-      return nullptr;
-    return &Itr->second.getNodeInfoAtLevel(N.DerefLevel);
-  }
   NodeInfo *getNode(Node N) {
     auto Itr = ValueImpls.find(N.Val);
     if (Itr == ValueImpls.end() || Itr->second.getNumLevels() <= N.DerefLevel)
@@ -108,11 +102,20 @@ public:
   }
 
   void addEdge(Node From, Node To, int64_t Offset = 0) {
-    assert(getNode(To) != nullptr);
-
     auto *FromInfo = getNode(From);
     assert(FromInfo != nullptr);
+    auto *ToInfo = getNode(To);
+    assert(ToInfo != nullptr);
+
     FromInfo->Edges.push_back(Edge{To});
+    ToInfo->ReverseEdges.push_back(Edge{From});
+  }
+
+  const NodeInfo *getNode(Node N) const {
+    auto Itr = ValueImpls.find(N.Val);
+    if (Itr == ValueImpls.end() || Itr->second.getNumLevels() <= N.DerefLevel)
+      return nullptr;
+    return &Itr->second.getNodeInfoAtLevel(N.DerefLevel);
   }
 
   AliasAttrs attrFor(Node N) const {
@@ -203,15 +206,23 @@ template <typename CFLAA> class CFLGraphBuilder {
       }
     }
 
-    void addDerefEdge(Value *From, Value *To) {
+    void addDerefEdge(Value *From, Value *To, bool IsRead) {
       assert(From != nullptr && To != nullptr);
       if (!From->getType()->isPointerTy() || !To->getType()->isPointerTy())
         return;
       addNode(From);
       addNode(To);
-      Graph.addNode(InstantiatedValue{From, 1});
-      Graph.addEdge(InstantiatedValue{From, 1}, InstantiatedValue{To, 0});
+      if (IsRead) {
+        Graph.addNode(InstantiatedValue{From, 1});
+        Graph.addEdge(InstantiatedValue{From, 1}, InstantiatedValue{To, 0});
+      } else {
+        Graph.addNode(InstantiatedValue{To, 1});
+        Graph.addEdge(InstantiatedValue{From, 0}, InstantiatedValue{To, 1});
+      }
     }
+
+    void addLoadEdge(Value *From, Value *To) { addDerefEdge(From, To, true); }
+    void addStoreEdge(Value *From, Value *To) { addDerefEdge(From, To, false); }
 
   public:
     GetEdgesVisitor(CFLGraphBuilder &Builder)
@@ -256,13 +267,13 @@ template <typename CFLAA> class CFLGraphBuilder {
     void visitAtomicCmpXchgInst(AtomicCmpXchgInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getNewValOperand();
-      addDerefEdge(Ptr, Val);
+      addStoreEdge(Val, Ptr);
     }
 
     void visitAtomicRMWInst(AtomicRMWInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getValOperand();
-      addDerefEdge(Ptr, Val);
+      addStoreEdge(Val, Ptr);
     }
 
     void visitPHINode(PHINode &Inst) {
@@ -292,13 +303,13 @@ template <typename CFLAA> class CFLGraphBuilder {
     void visitLoadInst(LoadInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = &Inst;
-      addDerefEdge(Ptr, Val);
+      addLoadEdge(Ptr, Val);
     }
 
     void visitStoreInst(StoreInst &Inst) {
       auto *Ptr = Inst.getPointerOperand();
       auto *Val = Inst.getValueOperand();
-      addDerefEdge(Ptr, Val);
+      addStoreEdge(Val, Ptr);
     }
 
     void visitVAArgInst(VAArgInst &Inst) {
@@ -419,14 +430,14 @@ template <typename CFLAA> class CFLGraphBuilder {
     void visitExtractElementInst(ExtractElementInst &Inst) {
       auto *Ptr = Inst.getVectorOperand();
       auto *Val = &Inst;
-      addDerefEdge(Ptr, Val);
+      addLoadEdge(Ptr, Val);
     }
 
     void visitInsertElementInst(InsertElementInst &Inst) {
       auto *Vec = Inst.getOperand(0);
       auto *Val = Inst.getOperand(1);
       addAssignEdge(Vec, &Inst);
-      addDerefEdge(&Inst, Val);
+      addStoreEdge(Val, &Inst);
     }
 
     void visitLandingPadInst(LandingPadInst &Inst) {
@@ -440,12 +451,12 @@ template <typename CFLAA> class CFLGraphBuilder {
       auto *Agg = Inst.getOperand(0);
       auto *Val = Inst.getOperand(1);
       addAssignEdge(Agg, &Inst);
-      addDerefEdge(&Inst, Val);
+      addStoreEdge(Val, &Inst);
     }
 
     void visitExtractValueInst(ExtractValueInst &Inst) {
       auto *Ptr = Inst.getAggregateOperand();
-      addDerefEdge(Ptr, &Inst);
+      addLoadEdge(Ptr, &Inst);
     }
 
     void visitShuffleVectorInst(ShuffleVectorInst &Inst) {

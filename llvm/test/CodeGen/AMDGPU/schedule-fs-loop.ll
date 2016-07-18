@@ -38,7 +38,7 @@ IF:                                               ; preds = %LOOP
   %22 = insertelement <4 x float> %21, float %18, i32 1
   %23 = insertelement <4 x float> %22, float %19, i32 2
   %24 = insertelement <4 x float> %23, float %20, i32 3
-  call void @llvm.R600.store.swizzle(<4 x float> %24, i32 0, i32 0)
+  call void @llvm.r600.store.swizzle(<4 x float> %24, i32 0, i32 0)
   ret void
 
 ENDIF:                                            ; preds = %LOOP
@@ -50,6 +50,6 @@ ENDIF:                                            ; preds = %LOOP
 
 declare float @llvm.AMDGPU.clamp.f32(float, float, float) #0
 
-declare void @llvm.R600.store.swizzle(<4 x float>, i32, i32)
+declare void @llvm.r600.store.swizzle(<4 x float>, i32, i32)
 
 attributes #0 = { readnone }

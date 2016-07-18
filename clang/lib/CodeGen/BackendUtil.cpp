@@ -61,9 +61,7 @@ class EmitAssemblyHelper {
 
   Timer CodeGenerationTime;
 
-  mutable legacy::PassManager *CodeGenPasses;
-  mutable legacy::PassManager *PerModulePasses;
-  mutable legacy::FunctionPassManager *PerFunctionPasses;
+  std::unique_ptr<raw_pwrite_stream> OS;
 
 private:
   TargetIRAnalysis getTargetIRAnalysis() const {
@@ -73,73 +71,44 @@ private:
     return TargetIRAnalysis();
   }
 
-  legacy::PassManager *getCodeGenPasses() const {
-    if (!CodeGenPasses) {
-      CodeGenPasses = new legacy::PassManager();
-      CodeGenPasses->add(
-          createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-    }
-    return CodeGenPasses;
-  }
-
-  legacy::PassManager *getPerModulePasses() const {
-    if (!PerModulePasses) {
-      PerModulePasses = new legacy::PassManager();
-      PerModulePasses->add(
-          createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-    }
-    return PerModulePasses;
-  }
-
-  legacy::FunctionPassManager *getPerFunctionPasses() const {
-    if (!PerFunctionPasses) {
-      PerFunctionPasses = new legacy::FunctionPassManager(TheModule);
-      PerFunctionPasses->add(
-          createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
-    }
-    return PerFunctionPasses;
-  }
-
   /// Set LLVM command line options passed through -backend-option.
   void setCommandLineOpts();
 
-  void CreatePasses(ModuleSummaryIndex *ModuleSummary);
+  void CreatePasses(legacy::PassManager &MPM, legacy::FunctionPassManager &FPM,
+                    ModuleSummaryIndex *ModuleSummary);
 
   /// Generates the TargetMachine.
-  /// Returns Null if it is unable to create the target machine.
+  /// Leaves TM unchanged if it is unable to create the target machine.
   /// Some of our clang tests specify triples which are not built
   /// into clang. This is okay because these tests check the generated
   /// IR, and they require DataLayout which depends on the triple.
   /// In this case, we allow this method to fail and not report an error.
   /// When MustCreateTM is used, we print an error if we are unable to load
   /// the requested target.
-  TargetMachine *CreateTargetMachine(bool MustCreateTM);
+  void CreateTargetMachine(bool MustCreateTM);
 
   /// Add passes necessary to emit assembly or LLVM IR.
   ///
   /// \return True on success.
-  bool AddEmitPasses(BackendAction Action, raw_pwrite_stream &OS);
+  bool AddEmitPasses(legacy::PassManager &CodeGenPasses, BackendAction Action,
+                     raw_pwrite_stream &OS);
 
 public:
   EmitAssemblyHelper(DiagnosticsEngine &_Diags, const CodeGenOptions &CGOpts,
                      const clang::TargetOptions &TOpts,
                      const LangOptions &LOpts, Module *M)
       : Diags(_Diags), CodeGenOpts(CGOpts), TargetOpts(TOpts), LangOpts(LOpts),
-        TheModule(M), CodeGenerationTime("Code Generation Time"),
-        CodeGenPasses(nullptr), PerModulePasses(nullptr),
-        PerFunctionPasses(nullptr) {}
+        TheModule(M), CodeGenerationTime("Code Generation Time") {}
 
   ~EmitAssemblyHelper() {
-    delete CodeGenPasses;
-    delete PerModulePasses;
-    delete PerFunctionPasses;
     if (CodeGenOpts.DisableFree)
       BuryPointer(std::move(TM));
   }
 
   std::unique_ptr<TargetMachine> TM;
 
-  void EmitAssembly(BackendAction Action, raw_pwrite_stream *OS);
+  void EmitAssembly(BackendAction Action,
+                    std::unique_ptr<raw_pwrite_stream> OS);
 };
 
 // We need this wrapper to access LangOpts and CGOpts from extension functions
@@ -311,7 +280,9 @@ static void addSymbolRewriterPass(const CodeGenOptions &Opts,
   MPM->add(createRewriteSymbolsPass(DL));
 }
 
-void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
+void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
+                                      legacy::FunctionPassManager &FPM,
+                                      ModuleSummaryIndex *ModuleSummary) {
   if (CodeGenOpts.DisableLLVMPasses)
     return;
 
@@ -362,13 +333,11 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   PMBuilder.PrepareForLTO = CodeGenOpts.PrepareForLTO;
   PMBuilder.RerollLoops = CodeGenOpts.RerollLoops;
 
-  legacy::PassManager *MPM = getPerModulePasses();
-
   // If we are performing a ThinLTO importing compile, invoke the LTO
   // pipeline and pass down the in-memory module summary index.
   if (ModuleSummary) {
     PMBuilder.ModuleSummary = ModuleSummary;
-    PMBuilder.populateThinLTOPassManager(*MPM);
+    PMBuilder.populateThinLTOPassManager(MPM);
     return;
   }
 
@@ -452,13 +421,12 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
   }
 
   // Set up the per-function pass manager.
-  legacy::FunctionPassManager *FPM = getPerFunctionPasses();
   if (CodeGenOpts.VerifyModule)
-    FPM->add(createVerifierPass());
+    FPM.add(createVerifierPass());
 
   // Set up the per-module pass manager.
   if (!CodeGenOpts.RewriteMapFiles.empty())
-    addSymbolRewriterPass(CodeGenOpts, MPM);
+    addSymbolRewriterPass(CodeGenOpts, &MPM);
 
   if (!CodeGenOpts.DisableGCov &&
       (CodeGenOpts.EmitGcovArcs || CodeGenOpts.EmitGcovNotes)) {
@@ -473,16 +441,16 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
     Options.FunctionNamesInData =
         !CodeGenOpts.CoverageNoFunctionNamesInData;
     Options.ExitBlockBeforeBody = CodeGenOpts.CoverageExitBlockBeforeBody;
-    MPM->add(createGCOVProfilerPass(Options));
+    MPM.add(createGCOVProfilerPass(Options));
     if (CodeGenOpts.getDebugInfo() == codegenoptions::NoDebugInfo)
-      MPM->add(createStripSymbolsPass(true));
+      MPM.add(createStripSymbolsPass(true));
   }
 
   if (CodeGenOpts.hasProfileClangInstr()) {
     InstrProfOptions Options;
     Options.NoRedZone = CodeGenOpts.DisableRedZone;
     Options.InstrProfileOutput = CodeGenOpts.InstrProfileOutput;
-    MPM->add(createInstrProfilingLegacyPass(Options));
+    MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (CodeGenOpts.hasProfileIRInstr()) {
     if (!CodeGenOpts.InstrProfileOutput.empty())
@@ -494,14 +462,14 @@ void EmitAssemblyHelper::CreatePasses(ModuleSummaryIndex *ModuleSummary) {
     PMBuilder.PGOInstrUse = CodeGenOpts.ProfileInstrumentUsePath;
 
   if (!CodeGenOpts.SampleProfileFile.empty()) {
-    MPM->add(createPruneEHPass());
-    MPM->add(createSampleProfileLoaderPass(CodeGenOpts.SampleProfileFile));
+    MPM.add(createPruneEHPass());
+    MPM.add(createSampleProfileLoaderPass(CodeGenOpts.SampleProfileFile));
     PMBuilder.addExtension(PassManagerBuilder::EP_EarlyAsPossible,
                            addCleanupPassesForSampleProfiler);
   }
 
-  PMBuilder.populateFunctionPassManager(*FPM);
-  PMBuilder.populateModulePassManager(*MPM);
+  PMBuilder.populateFunctionPassManager(FPM);
+  PMBuilder.populateModulePassManager(MPM);
 }
 
 void EmitAssemblyHelper::setCommandLineOpts() {
@@ -522,7 +490,7 @@ void EmitAssemblyHelper::setCommandLineOpts() {
                                     BackendArgs.data());
 }
 
-TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
+void EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   // Create the TargetMachine for generating code.
   std::string Error;
   std::string Triple = TheModule->getTargetTriple();
@@ -530,7 +498,7 @@ TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   if (!TheTarget) {
     if (MustCreateTM)
       Diags.Report(diag::err_fe_unable_to_create_target) << Error;
-    return nullptr;
+    return;
   }
 
   unsigned CodeModel =
@@ -637,24 +605,18 @@ TargetMachine *EmitAssemblyHelper::CreateTargetMachine(bool MustCreateTM) {
   Options.MCOptions.AsmVerbose = CodeGenOpts.AsmVerbose;
   Options.MCOptions.ABIName = TargetOpts.ABI;
 
-  TargetMachine *TM = TheTarget->createTargetMachine(Triple, TargetOpts.CPU,
-                                                     FeaturesStr, Options,
-                                                     RM, CM, OptLevel);
-
-  return TM;
+  TM.reset(TheTarget->createTargetMachine(Triple, TargetOpts.CPU, FeaturesStr,
+                                          Options, RM, CM, OptLevel));
 }
 
-bool EmitAssemblyHelper::AddEmitPasses(BackendAction Action,
+bool EmitAssemblyHelper::AddEmitPasses(legacy::PassManager &CodeGenPasses,
+                                       BackendAction Action,
                                        raw_pwrite_stream &OS) {
-
-  // Create the code generator passes.
-  legacy::PassManager *PM = getCodeGenPasses();
-
   // Add LibraryInfo.
   llvm::Triple TargetTriple(TheModule->getTargetTriple());
   std::unique_ptr<TargetLibraryInfoImpl> TLII(
       createTLII(TargetTriple, CodeGenOpts));
-  PM->add(new TargetLibraryInfoWrapperPass(*TLII));
+  CodeGenPasses.add(new TargetLibraryInfoWrapperPass(*TLII));
 
   // Normal mode, emit a .s or .o file by running the code generator. Note,
   // this also adds codegenerator level optimization passes.
@@ -670,9 +632,9 @@ bool EmitAssemblyHelper::AddEmitPasses(BackendAction Action,
   // "codegen" passes so that it isn't run multiple times when there is
   // inlining happening.
   if (CodeGenOpts.OptimizationLevel > 0)
-    PM->add(createObjCARCContractPass());
+    CodeGenPasses.add(createObjCARCContractPass());
 
-  if (TM->addPassesToEmitFile(*PM, OS, CGFT,
+  if (TM->addPassesToEmitFile(CodeGenPasses, OS, CGFT,
                               /*DisableVerify=*/!CodeGenOpts.VerifyModule)) {
     Diags.Report(diag::err_fe_unable_to_interface_with_target);
     return false;
@@ -682,7 +644,7 @@ bool EmitAssemblyHelper::AddEmitPasses(BackendAction Action,
 }
 
 void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
-                                      raw_pwrite_stream *OS) {
+                                      std::unique_ptr<raw_pwrite_stream> OS) {
   TimeRegion Region(llvm::TimePassesIsEnabled ? &CodeGenerationTime : nullptr);
 
   setCommandLineOpts();
@@ -690,8 +652,7 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   bool UsesCodeGen = (Action != Backend_EmitNothing &&
                       Action != Backend_EmitBC &&
                       Action != Backend_EmitLL);
-  if (!TM)
-    TM.reset(CreateTargetMachine(UsesCodeGen));
+  CreateTargetMachine(UsesCodeGen);
 
   if (UsesCodeGen && !TM)
     return;
@@ -718,25 +679,37 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
     assert(ModuleSummary && "Expected non-empty module summary index");
   }
 
-  CreatePasses(ModuleSummary.get());
+  legacy::PassManager PerModulePasses;
+  PerModulePasses.add(
+      createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
+
+  legacy::FunctionPassManager PerFunctionPasses(TheModule);
+  PerFunctionPasses.add(
+      createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
+
+  CreatePasses(PerModulePasses, PerFunctionPasses, ModuleSummary.get());
+
+  legacy::PassManager CodeGenPasses;
+  CodeGenPasses.add(
+      createTargetTransformInfoWrapperPass(getTargetIRAnalysis()));
 
   switch (Action) {
   case Backend_EmitNothing:
     break;
 
   case Backend_EmitBC:
-    getPerModulePasses()->add(createBitcodeWriterPass(
+    PerModulePasses.add(createBitcodeWriterPass(
         *OS, CodeGenOpts.EmitLLVMUseLists, CodeGenOpts.EmitSummaryIndex,
         CodeGenOpts.EmitSummaryIndex));
     break;
 
   case Backend_EmitLL:
-    getPerModulePasses()->add(
+    PerModulePasses.add(
         createPrintModulePass(*OS, "", CodeGenOpts.EmitLLVMUseLists));
     break;
 
   default:
-    if (!AddEmitPasses(Action, *OS))
+    if (!AddEmitPasses(CodeGenPasses, Action, *OS))
       return;
   }
 
@@ -746,24 +719,24 @@ void EmitAssemblyHelper::EmitAssembly(BackendAction Action,
   // Run passes. For now we do all passes at once, but eventually we
   // would like to have the option of streaming code generation.
 
-  if (PerFunctionPasses) {
+  {
     PrettyStackTraceString CrashInfo("Per-function optimization");
 
-    PerFunctionPasses->doInitialization();
+    PerFunctionPasses.doInitialization();
     for (Function &F : *TheModule)
       if (!F.isDeclaration())
-        PerFunctionPasses->run(F);
-    PerFunctionPasses->doFinalization();
+        PerFunctionPasses.run(F);
+    PerFunctionPasses.doFinalization();
   }
 
-  if (PerModulePasses) {
+  {
     PrettyStackTraceString CrashInfo("Per-module optimization passes");
-    PerModulePasses->run(*TheModule);
+    PerModulePasses.run(*TheModule);
   }
 
-  if (CodeGenPasses) {
+  {
     PrettyStackTraceString CrashInfo("Code generation");
-    CodeGenPasses->run(*TheModule);
+    CodeGenPasses.run(*TheModule);
   }
 }
 
@@ -772,10 +745,10 @@ void clang::EmitBackendOutput(DiagnosticsEngine &Diags,
                               const clang::TargetOptions &TOpts,
                               const LangOptions &LOpts, const llvm::DataLayout &TDesc,
                               Module *M, BackendAction Action,
-                              raw_pwrite_stream *OS) {
+                              std::unique_ptr<raw_pwrite_stream> OS) {
   EmitAssemblyHelper AsmHelper(Diags, CGOpts, TOpts, LOpts, M);
 
-  AsmHelper.EmitAssembly(Action, OS);
+  AsmHelper.EmitAssembly(Action, std::move(OS));
 
   // Verify clang's TargetInfo DataLayout against the LLVM TargetMachine's
   // DataLayout.

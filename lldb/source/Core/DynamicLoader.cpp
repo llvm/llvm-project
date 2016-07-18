@@ -194,7 +194,7 @@ DynamicLoader::LoadModuleAtAddress(const FileSpec &file,
         {
             // Try to fetch the load address of the file from the process as we need absolute load
             // address to read the file out of the memory instead of a load bias.
-            bool is_loaded;
+            bool is_loaded = false;
             lldb::addr_t load_addr;
             Error error = m_process->GetFileLoadAddress(file, is_loaded, load_addr);
             if (error.Success() && is_loaded)

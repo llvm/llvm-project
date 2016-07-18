@@ -14,7 +14,7 @@
 #include "Symbols.h"
 #include "lld/Core/Parallel.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/LTO/LTOCodeGenerator.h"
+#include "llvm/LTO/legacy/LTOCodeGenerator.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
@@ -164,7 +164,7 @@ void SymbolTable::reportRemainingUndefines(bool Resolve) {
           llvm::errs() << File->getShortName() << ": undefined symbol: "
                        << Sym->getName() << "\n";
   if (!Config->Force)
-    error("Link failed");
+    fatal("link failed");
 }
 
 void SymbolTable::addLazy(Lazy *New, std::vector<Symbol *> *Accum) {
@@ -211,7 +211,7 @@ void SymbolTable::addSymbol(SymbolBody *New) {
   // equivalent (conflicting), or more preferable, respectively.
   int Comp = Existing->compare(New);
   if (Comp == 0)
-    error(Twine("duplicate symbol: ") + Existing->getDebugName() + " and " +
+    fatal("duplicate symbol: " + Existing->getDebugName() + " and " +
           New->getDebugName());
   if (Comp < 0)
     Sym->Body = New;
@@ -356,7 +356,7 @@ void SymbolTable::addCombinedLTOObject(ObjectFile *Obj) {
 
     int Comp = Existing->compare(Body);
     if (Comp == 0)
-      error(Twine("LTO: unexpected duplicate symbol: ") + Name);
+      fatal("LTO: unexpected duplicate symbol: " + Name);
     if (Comp < 0)
       Sym->Body = Body;
   }
@@ -383,7 +383,7 @@ void SymbolTable::addCombinedLTOObjects() {
   size_t NumBitcodeFiles = BitcodeFiles.size();
   run();
   if (BitcodeFiles.size() != NumBitcodeFiles)
-    error("LTO: late loaded symbol created new bitcode reference");
+    fatal("LTO: late loaded symbol created new bitcode reference");
 }
 
 // Combine and compile bitcode files and then return the result
@@ -418,7 +418,7 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
   DisableVerify = false;
 #endif
   if (!CG->optimize(DisableVerify, false, false, false))
-    error(""); // optimize() should have emitted any error message.
+    fatal(""); // optimize() should have emitted any error message.
 
   Objs.resize(Config->LTOJobs);
   // Use std::list to avoid invalidation of pointers in OSPtrs.
@@ -430,7 +430,7 @@ std::vector<ObjectFile *> SymbolTable::createLTOObjects(LTOCodeGenerator *CG) {
   }
 
   if (!CG->compileOptimized(OSPtrs))
-    error(""); // compileOptimized() should have emitted any error message.
+    fatal(""); // compileOptimized() should have emitted any error message.
 
   std::vector<ObjectFile *> ObjFiles;
   for (SmallString<0> &Obj : Objs) {

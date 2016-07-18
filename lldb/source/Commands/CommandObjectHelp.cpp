@@ -49,11 +49,11 @@ CommandObjectHelp::GenerateAdditionalHelpAvenuesMessage (Stream *s,
     }
 }
 
-CommandObjectHelp::CommandObjectHelp (CommandInterpreter &interpreter) :
-    CommandObjectParsed (interpreter,
-                         "help",
-                         "Show a list of all debugger commands, or give details about specific commands.",
-                         "help [<cmd-name>]"), m_options (interpreter)
+CommandObjectHelp::CommandObjectHelp(CommandInterpreter &interpreter)
+    : CommandObjectParsed(interpreter, "help",
+                          "Show a list of all debugger commands, or give details about a specific command.",
+                          "help [<cmd-name>]"),
+      m_options(interpreter)
 {
     CommandArgumentEntry arg;
     CommandArgumentData command_arg;

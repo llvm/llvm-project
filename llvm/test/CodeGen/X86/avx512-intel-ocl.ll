@@ -69,10 +69,10 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 ; WIN64: vmovups {{.*(%rbp).*}}, %zmm21     # 64-byte Reload
 
 ; X64-LABEL: test_prolog_epilog
-; X64:  kmovq   %k7, {{.*}}(%rsp)         ## 8-byte Folded Spill
-; X64:  kmovq   %k6, {{.*}}(%rsp)         ## 8-byte Folded Spill
-; X64:  kmovq   %k5, {{.*}}(%rsp)         ## 8-byte Folded Spill
-; X64:  kmovq   %k4, {{.*}}(%rsp)         ## 8-byte Folded Spill
+; X64:  kmovq   %k7, {{.*}}(%rsp)         ## 8-byte Spill
+; X64:  kmovq   %k6, {{.*}}(%rsp)         ## 8-byte Spill
+; X64:  kmovq   %k5, {{.*}}(%rsp)         ## 8-byte Spill
+; X64:  kmovq   %k4, {{.*}}(%rsp)         ## 8-byte Spill
 ; X64: vmovups %zmm31, {{.*}}(%rsp)  ## 64-byte Spill
 ; X64: vmovups %zmm16, {{.*}}(%rsp)  ## 64-byte Spill
 ; X64: call

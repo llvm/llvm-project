@@ -142,7 +142,7 @@ public:
       return clang::CreateASTDumper(ASTDumpFilter, /*DumpDecls=*/true,
                                     /*DumpLookups=*/false);
     if (ASTPrint)
-      return clang::CreateASTPrinter(&llvm::outs(), ASTDumpFilter);
+      return clang::CreateASTPrinter(nullptr, ASTDumpFilter);
     return llvm::make_unique<clang::ASTConsumer>();
   }
 };

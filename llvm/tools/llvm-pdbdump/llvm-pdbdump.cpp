@@ -279,14 +279,12 @@ cl::opt<bool> StreamDirectory(
     "stream-directory",
     cl::desc("Dump each stream's block map (implies -stream-metadata)"),
     cl::sub(PdbToYamlSubcommand), cl::init(false));
-cl::opt<bool> PdbStream(
-    "pdb-stream",
-    cl::desc("Dump the PDB Stream (Stream 1) (implies -stream-metadata)"),
-    cl::sub(PdbToYamlSubcommand), cl::init(false));
-cl::opt<bool> DbiStream(
-    "dbi-stream",
-    cl::desc("Dump the DBI Stream (Stream 2) (implies -stream-metadata)"),
-    cl::sub(PdbToYamlSubcommand), cl::init(false));
+cl::opt<bool> PdbStream("pdb-stream",
+                        cl::desc("Dump the PDB Stream (Stream 1)"),
+                        cl::sub(PdbToYamlSubcommand), cl::init(false));
+cl::opt<bool> DbiStream("dbi-stream",
+                        cl::desc("Dump the DBI Stream (Stream 2)"),
+                        cl::sub(PdbToYamlSubcommand), cl::init(false));
 
 cl::list<std::string> InputFilename(cl::Positional,
                                     cl::desc("<input PDB file>"), cl::Required,
@@ -324,20 +322,37 @@ static void yamlToPdb(StringRef Path) {
       llvm::make_unique<FileBufferByteStream>(std::move(*OutFileOrError));
   PDBFileBuilder Builder(std::move(FileByteStream));
 
-  ExitOnErr(Builder.setSuperBlock(YamlObj.Headers->SuperBlock));
-  if (YamlObj.StreamSizes.hasValue()) {
-    Builder.setStreamSizes(YamlObj.StreamSizes.getValue());
+  ExitOnErr(Builder.initialize(YamlObj.Headers->SuperBlock));
+  ExitOnErr(Builder.getMsfBuilder().setDirectoryBlocksHint(
+      YamlObj.Headers->DirectoryBlocks));
+  if (!YamlObj.StreamSizes.hasValue()) {
+    ExitOnErr(make_error<GenericError>(
+        generic_error_code::unspecified,
+        "Cannot generate a PDB when stream sizes are not known"));
   }
-  Builder.setDirectoryBlocks(YamlObj.Headers->DirectoryBlocks);
 
   if (YamlObj.StreamMap.hasValue()) {
-    std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
-    for (auto &E : YamlObj.StreamMap.getValue()) {
-      StreamMap.push_back(E.Blocks);
+    if (YamlObj.StreamMap->size() != YamlObj.StreamSizes->size()) {
+      ExitOnErr(make_error<GenericError>(generic_error_code::unspecified,
+                                         "YAML specifies different number of "
+                                         "streams in stream sizes and stream "
+                                         "map"));
     }
-    Builder.setStreamMap(StreamMap);
+
+    auto &Sizes = *YamlObj.StreamSizes;
+    auto &Map = *YamlObj.StreamMap;
+    for (uint32_t I = 0; I < Sizes.size(); ++I) {
+      uint32_t Size = Sizes[I];
+      std::vector<uint32_t> Blocks;
+      for (auto E : Map[I].Blocks)
+        Blocks.push_back(E);
+      ExitOnErr(Builder.getMsfBuilder().addStream(Size, Blocks));
+    }
   } else {
-    ExitOnErr(Builder.generateSimpleStreamMap());
+    auto &Sizes = *YamlObj.StreamSizes;
+    for (auto S : Sizes) {
+      ExitOnErr(Builder.getMsfBuilder().addStream(S));
+    }
   }
 
   if (YamlObj.PdbStream.hasValue()) {
@@ -346,6 +361,9 @@ static void yamlToPdb(StringRef Path) {
     InfoBuilder.setGuid(YamlObj.PdbStream->Guid);
     InfoBuilder.setSignature(YamlObj.PdbStream->Signature);
     InfoBuilder.setVersion(YamlObj.PdbStream->Version);
+    for (auto &NM : YamlObj.PdbStream->NamedStreams)
+      InfoBuilder.getNamedStreamsBuilder().addMapping(NM.StreamName,
+                                                      NM.StreamNumber);
   }
 
   if (YamlObj.DbiStream.hasValue()) {

@@ -55,9 +55,9 @@ public:
   MCObjectWriter *createObjectWriter(raw_pwrite_stream &OS) const override;
 
   // No instruction requires relaxation
-  bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
-                            const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
+  bool fixupNeedsRelaxation(const MCFixup & /*Fixup*/, uint64_t /*Value*/,
+                            const MCRelaxableFragment * /*DF*/,
+                            const MCAsmLayout & /*Layout*/) const override {
     return false;
   }
 
@@ -67,10 +67,13 @@ public:
     return Lanai::NumTargetFixupKinds;
   }
 
-  bool mayNeedRelaxation(const MCInst &Inst) const override { return false; }
+  bool mayNeedRelaxation(const MCInst & /*Inst*/) const override {
+    return false;
+  }
 
-  void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {}
+  void relaxInstruction(const MCInst & /*Inst*/,
+                        const MCSubtargetInfo & /*STI*/,
+                        MCInst & /*Res*/) const override {}
 
   bool writeNopData(uint64_t Count, MCObjectWriter *OW) const override;
 };
@@ -86,8 +89,8 @@ bool LanaiAsmBackend::writeNopData(uint64_t Count, MCObjectWriter *OW) const {
 }
 
 void LanaiAsmBackend::applyFixup(const MCFixup &Fixup, char *Data,
-                                 unsigned DataSize, uint64_t Value,
-                                 bool IsPCRel) const {
+                                 unsigned /*DataSize*/, uint64_t Value,
+                                 bool /*IsPCRel*/) const {
   MCFixupKind Kind = Fixup.getKind();
   Value = adjustFixupValue(static_cast<unsigned>(Kind), Value);
 
@@ -159,9 +162,9 @@ LanaiAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
 } // namespace
 
 MCAsmBackend *llvm::createLanaiAsmBackend(const Target &T,
-                                          const MCRegisterInfo &MRI,
+                                          const MCRegisterInfo & /*MRI*/,
                                           const Triple &TheTriple,
-                                          StringRef CPU) {
+                                          StringRef /*CPU*/) {
   if (!TheTriple.isOSBinFormatELF())
     llvm_unreachable("OS not supported");
 

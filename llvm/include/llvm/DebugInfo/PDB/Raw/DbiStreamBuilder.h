@@ -24,7 +24,7 @@ class PDBFile;
 
 class DbiStreamBuilder {
 public:
-  DbiStreamBuilder(PDBFile &File);
+  DbiStreamBuilder();
 
   DbiStreamBuilder(const DbiStreamBuilder &) = delete;
   DbiStreamBuilder &operator=(const DbiStreamBuilder &) = delete;
@@ -37,10 +37,11 @@ public:
   void setFlags(uint16_t F);
   void setMachineType(PDB_Machine M);
 
-  Expected<std::unique_ptr<DbiStream>> build();
+  uint32_t calculateSerializedLength() const;
+
+  Expected<std::unique_ptr<DbiStream>> build(PDBFile &File);
 
 private:
-  PDBFile &File;
   Optional<PdbRaw_DbiVer> VerHeader;
   uint32_t Age;
   uint16_t BuildNumber;

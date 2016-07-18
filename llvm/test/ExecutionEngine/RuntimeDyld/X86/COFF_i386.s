@@ -1,5 +1,5 @@
 // RUN: llvm-mc -triple i686-windows -filetype obj -o %t.obj %s
-// RUN: llvm-rtdyld -triple i686-windows -dummy-extern _OutputDebugStringA@4=0xfffffffe -dummy-extern _ExitProcess@4=0xffffffff -verify -check=%s %t.obj
+// RUN: llvm-rtdyld -triple i686-windows -dummy-extern _printf=0xfffffffd -dummy-extern _OutputDebugStringA@4=0xfffffffe -dummy-extern _ExitProcess@4=0xffffffff -verify -check=%s %t.obj
 
 	.text
 
@@ -13,7 +13,9 @@ rel1:
 	call _function				// IMAGE_REL_I386_REL32
 # rtdyld-check: decode_operand(rel1, 0) = (_function-_main-4-1)
 	xorl %eax, %eax
-	retl
+rel12:
+	jmp _printf
+# rtdyld-check: decode_operand(rel12, 0)[31:0] = (_printf-_main-4-8)
 
 	.def _function
 		.scl 2

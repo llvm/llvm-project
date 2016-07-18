@@ -71,7 +71,7 @@ public:
     /// The destructor is virtual since this class is designed to be
     /// inherited from by the plug-in instance.
     //------------------------------------------------------------------
-    ~DynamicLoader() override;
+    virtual ~DynamicLoader() override;
 
     //------------------------------------------------------------------
     /// Called after attaching a process.

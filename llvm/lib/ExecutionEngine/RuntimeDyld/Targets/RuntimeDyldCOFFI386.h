@@ -174,8 +174,10 @@ public:
     }
     case COFF::IMAGE_REL_I386_REL32: {
       // 32-bit relative displacement to the target.
-      uint64_t Result = Sections[RE.Sections.SectionA].getLoadAddress() -
-                        Section.getLoadAddress() + RE.Addend - 4 - RE.Offset;
+      uint64_t Result = RE.Sections.SectionA == static_cast<uint32_t>(-1)
+                            ? Value
+                            : Sections[RE.Sections.SectionA].getLoadAddress();
+      Result = Result - Section.getLoadAddress() + RE.Addend - 4 - RE.Offset;
       assert(static_cast<int32_t>(Result) <= INT32_MAX &&
              "relocation overflow");
       assert(static_cast<int32_t>(Result) >= INT32_MIN &&

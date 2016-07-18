@@ -158,6 +158,8 @@ static bool opcodeEmitsNoInsts(unsigned Opc) {
 
 bool SILowerControlFlow::shouldSkip(MachineBasicBlock *From,
                                     MachineBasicBlock *To) {
+  if (From->succ_empty())
+    return false;
 
   unsigned NumInstr = 0;
   MachineFunction *MF = From->getParent();
@@ -217,7 +219,7 @@ bool SILowerControlFlow::skipIfDead(MachineInstr &MI, MachineBasicBlock &NextBB)
     return false;
 
   MachineBasicBlock *SkipBB = insertSkipBlock(MBB, MI.getIterator());
-  SkipBB->addSuccessor(&NextBB);
+  MBB.addSuccessor(SkipBB);
 
   const DebugLoc &DL = MI.getDebugLoc();
 
@@ -493,7 +495,6 @@ MachineBasicBlock *SILowerControlFlow::insertSkipBlock(
   ++MBBI;
 
   MF->insert(MBBI, SkipBB);
-  MBB.addSuccessor(SkipBB);
 
   return SkipBB;
 }
@@ -747,13 +748,9 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
         case AMDGPU::SI_END_CF:
           if (--Depth == 0 && HaveKill) {
             HaveKill = false;
-
-            if (skipIfDead(MI, *NextBB)) {
-              NextBB = std::next(BI);
-              BE = MF.end();
-              Next = MBB.end();
-            }
+            // TODO: Insert skip if exec is 0?
           }
+
           EndCf(MI);
           break;
 
@@ -762,7 +759,6 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
             if (skipIfDead(MI, *NextBB)) {
               NextBB = std::next(BI);
               BE = MF.end();
-              Next = MBB.end();
             }
           } else
             HaveKill = true;

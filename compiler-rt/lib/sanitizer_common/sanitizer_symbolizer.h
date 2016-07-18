@@ -177,6 +177,10 @@ class Symbolizer final {
   };
 };
 
+#ifdef SANITIZER_WINDOWS
+void InitializeDbgHelpIfNeeded();
+#endif
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_SYMBOLIZER_H

@@ -37,7 +37,7 @@ public:
                      CodeModel::Model CodeModel, CodeGenOpt::Level OptLevel);
 
   const LanaiSubtarget *
-  getSubtargetImpl(const llvm::Function &Fn) const override {
+  getSubtargetImpl(const llvm::Function & /*Fn*/) const override {
     return &Subtarget;
   }
 

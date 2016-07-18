@@ -38,19 +38,16 @@ public:
 
   void EmitPrefix(raw_ostream &OS);
 
-  void EmitEnumInfo(const std::vector<CodeGenIntrinsic> &Ints,
-                    raw_ostream &OS);
-
-  void EmitIntrinsicToNameTable(const std::vector<CodeGenIntrinsic> &Ints,
+  void EmitEnumInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitTargetInfo(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitIntrinsicToNameTable(const CodeGenIntrinsicTable &Ints,
                                 raw_ostream &OS);
-  void EmitIntrinsicToOverloadTable(const std::vector<CodeGenIntrinsic> &Ints,
+  void EmitIntrinsicToOverloadTable(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS);
-  void EmitGenerator(const std::vector<CodeGenIntrinsic> &Ints,
-                     raw_ostream &OS);
-  void EmitAttributes(const std::vector<CodeGenIntrinsic> &Ints,
-                      raw_ostream &OS);
-  void EmitIntrinsicToBuiltinMap(const std::vector<CodeGenIntrinsic> &Ints,
-                                 bool IsGCC, raw_ostream &OS);
+  void EmitGenerator(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitAttributes(const CodeGenIntrinsicTable &Ints, raw_ostream &OS);
+  void EmitIntrinsicToBuiltinMap(const CodeGenIntrinsicTable &Ints, bool IsGCC,
+                                 raw_ostream &OS);
   void EmitSuffix(raw_ostream &OS);
 };
 } // End anonymous namespace
@@ -62,7 +59,7 @@ public:
 void IntrinsicEmitter::run(raw_ostream &OS) {
   emitSourceFileHeader("Intrinsic Function Source Fragment", OS);
 
-  std::vector<CodeGenIntrinsic> Ints = LoadIntrinsics(Records, TargetOnly);
+  CodeGenIntrinsicTable Ints(Records, TargetOnly);
 
   if (TargetOnly && !Ints.empty())
     TargetPrefix = Ints[0].TargetPrefix;
@@ -71,6 +68,9 @@ void IntrinsicEmitter::run(raw_ostream &OS) {
 
   // Emit the enum information.
   EmitEnumInfo(Ints, OS);
+
+  // Emit the target metadata.
+  EmitTargetInfo(Ints, OS);
 
   // Emit the intrinsic ID -> name table.
   EmitIntrinsicToNameTable(Ints, OS);
@@ -114,7 +114,7 @@ void IntrinsicEmitter::EmitSuffix(raw_ostream &OS) {
         "#endif\n\n";
 }
 
-void IntrinsicEmitter::EmitEnumInfo(const std::vector<CodeGenIntrinsic> &Ints,
+void IntrinsicEmitter::EmitEnumInfo(const CodeGenIntrinsicTable &Ints,
                                     raw_ostream &OS) {
   OS << "// Enum values for Intrinsics.h\n";
   OS << "#ifdef GET_INTRINSIC_ENUM_VALUES\n";
@@ -128,9 +128,25 @@ void IntrinsicEmitter::EmitEnumInfo(const std::vector<CodeGenIntrinsic> &Ints,
   OS << "#endif\n\n";
 }
 
-void IntrinsicEmitter::
-EmitIntrinsicToNameTable(const std::vector<CodeGenIntrinsic> &Ints,
-                         raw_ostream &OS) {
+void IntrinsicEmitter::EmitTargetInfo(const CodeGenIntrinsicTable &Ints,
+                                    raw_ostream &OS) {
+  OS << "// Target mapping\n";
+  OS << "#ifdef GET_INTRINSIC_TARGET_DATA\n";
+  OS << "struct IntrinsicTargetInfo {\n"
+     << "  StringRef Name;\n"
+     << "  size_t Offset;\n"
+     << "  size_t Count;\n"
+     << "};\n";
+  OS << "static const IntrinsicTargetInfo TargetInfos[] = {\n";
+  for (auto Target : Ints.Targets)
+    OS << "  {\"" << Target.Name << "\", " << Target.Offset << ", "
+       << Target.Count << "},\n";
+  OS << "};\n";
+  OS << "#endif\n\n";
+}
+
+void IntrinsicEmitter::EmitIntrinsicToNameTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   OS << "// Intrinsic ID to name table\n";
   OS << "#ifdef GET_INTRINSIC_NAME_TABLE\n";
   OS << "  // Note that entry #0 is the invalid intrinsic!\n";
@@ -139,9 +155,8 @@ EmitIntrinsicToNameTable(const std::vector<CodeGenIntrinsic> &Ints,
   OS << "#endif\n\n";
 }
 
-void IntrinsicEmitter::
-EmitIntrinsicToOverloadTable(const std::vector<CodeGenIntrinsic> &Ints,
-                         raw_ostream &OS) {
+void IntrinsicEmitter::EmitIntrinsicToOverloadTable(
+    const CodeGenIntrinsicTable &Ints, raw_ostream &OS) {
   OS << "// Intrinsic ID to overload bitset\n";
   OS << "#ifdef GET_INTRINSIC_OVERLOAD_TABLE\n";
   OS << "static const uint8_t OTable[] = {\n";
@@ -363,7 +378,7 @@ static void printIITEntry(raw_ostream &OS, unsigned char X) {
   OS << (unsigned)X;
 }
 
-void IntrinsicEmitter::EmitGenerator(const std::vector<CodeGenIntrinsic> &Ints,
+void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
                                      raw_ostream &OS) {
   // If we can compute a 32-bit fixed encoding for this intrinsic, do so and
   // capture it in this vector, otherwise store a ~0U.
@@ -474,8 +489,8 @@ struct AttributeComparator {
 } // End anonymous namespace
 
 /// EmitAttributes - This emits the Intrinsic::getAttributes method.
-void IntrinsicEmitter::
-EmitAttributes(const std::vector<CodeGenIntrinsic> &Ints, raw_ostream &OS) {
+void IntrinsicEmitter::EmitAttributes(const CodeGenIntrinsicTable &Ints,
+                                      raw_ostream &OS) {
   OS << "// Add parameter attributes that are not common to all intrinsics.\n";
   OS << "#ifdef GET_INTRINSIC_ATTRIBUTES\n";
   if (TargetOnly)
@@ -670,7 +685,7 @@ EmitAttributes(const std::vector<CodeGenIntrinsic> &Ints, raw_ostream &OS) {
 }
 
 void IntrinsicEmitter::EmitIntrinsicToBuiltinMap(
-    const std::vector<CodeGenIntrinsic> &Ints, bool IsGCC, raw_ostream &OS) {
+    const CodeGenIntrinsicTable &Ints, bool IsGCC, raw_ostream &OS) {
   StringRef CompilerName = (IsGCC ? "GCC" : "MS");
   typedef std::map<std::string, std::map<std::string, std::string>> BIMTy;
   BIMTy BuiltinMap;

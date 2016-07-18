@@ -704,7 +704,7 @@ static bool SinkingPreventsImplicitNullCheck(MachineInstr &MI,
     return false;
 
   MachineBranchPredicate MBP;
-  if (TII->AnalyzeBranchPredicate(*PredMBB, MBP, false))
+  if (TII->analyzeBranchPredicate(*PredMBB, MBP, false))
     return false;
 
   return MBP.LHS.isReg() && MBP.RHS.isImm() && MBP.RHS.getImm() == 0 &&

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -march=arm64 -aarch64-this-return-forwarding | FileCheck %s
 
 %struct.A = type { i8 }
 %struct.B = type { i32 }

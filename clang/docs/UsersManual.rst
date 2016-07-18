@@ -133,13 +133,13 @@ Options to Control Error and Warning Messages
 .. option:: -ferror-limit=123
 
   Stop emitting diagnostics after 123 errors have been produced. The default is
-  20, and the error limit can be disabled with :option:`-ferror-limit=0`.
+  20, and the error limit can be disabled with `-ferror-limit=0`.
 
 .. option:: -ftemplate-backtrace-limit=123
 
   Only emit up to 123 template instantiation notes within the template
   instantiation backtrace for a single warning or error. The default is 10, and
-  the limit can be disabled with :option:`-ftemplate-backtrace-limit=0`.
+  the limit can be disabled with `-ftemplate-backtrace-limit=0`.
 
 .. _cl_diag_formatting:
 
@@ -543,15 +543,15 @@ vectorize a loop body.
 Clang offers a family of flags which the optimizers can use to emit
 a diagnostic in three cases:
 
-1. When the pass makes a transformation (:option:`-Rpass`).
+1. When the pass makes a transformation (`-Rpass`).
 
-2. When the pass fails to make a transformation (:option:`-Rpass-missed`).
+2. When the pass fails to make a transformation (`-Rpass-missed`).
 
 3. When the pass determines whether or not to make a transformation
-   (:option:`-Rpass-analysis`).
+   (`-Rpass-analysis`).
 
-NOTE: Although the discussion below focuses on :option:`-Rpass`, the exact
-same options apply to :option:`-Rpass-missed` and :option:`-Rpass-analysis`.
+NOTE: Although the discussion below focuses on `-Rpass`, the exact
+same options apply to `-Rpass-missed` and `-Rpass-analysis`.
 
 Since there are dozens of passes inside the compiler, each of these flags
 take a regular expression that identifies the name of the pass which should
@@ -567,7 +567,7 @@ compile the code with:
 
 Note that remarks from the inliner are identified with `[-Rpass=inline]`.
 To request a report from every optimization pass, you should use
-:option:`-Rpass=.*` (in fact, you can use any valid POSIX regular
+`-Rpass=.*` (in fact, you can use any valid POSIX regular
 expression). However, do not expect a report from every transformation
 made by the compiler. Optimization remarks do not really make sense
 outside of the major transformations (e.g., inlining, vectorization,
@@ -585,7 +585,7 @@ Current limitations
 2. Some source locations are not displayed correctly. The front end has
    a more detailed source location tracking than the locations included
    in the debug info (e.g., the front end can locate code inside macro
-   expansions). However, the locations used by :option:`-Rpass` are
+   expansions). However, the locations used by `-Rpass` are
    translated from debug annotations. That translation can be lossy,
    which results in some remarks having no location information.
 
@@ -783,7 +783,7 @@ the pragma onwards within the same file.
   #if foo
   #endif foo // no warning
 
-The :option:`--system-header-prefix=` and :option:`--no-system-header-prefix=`
+The `--system-header-prefix=` and `--no-system-header-prefix=`
 command-line arguments can be used to override whether subsets of an include
 path are treated as system headers. When the name in a ``#include`` directive
 is found within a header search path and starts with a system prefix, the
@@ -852,7 +852,7 @@ Generating a PCH File
 ^^^^^^^^^^^^^^^^^^^^^
 
 To generate a PCH file using Clang, one invokes Clang with the
-:option:`-x <language>-header` option. This mirrors the interface in GCC
+`-x <language>-header` option. This mirrors the interface in GCC
 for generating PCH files:
 
 .. code-block:: console
@@ -915,7 +915,7 @@ location.
 Building a relocatable precompiled header requires two additional
 arguments. First, pass the ``--relocatable-pch`` flag to indicate that
 the resulting PCH file should be relocatable. Second, pass
-:option:`-isysroot /path/to/build`, which makes all includes for your library
+`-isysroot /path/to/build`, which makes all includes for your library
 relative to the build directory. For example:
 
 .. code-block:: console
@@ -925,9 +925,9 @@ relative to the build directory. For example:
 When loading the relocatable PCH file, the various headers used in the
 PCH file are found from the system header root. For example, ``mylib.h``
 can be found in ``/usr/include/mylib.h``. If the headers are installed
-in some other system root, the :option:`-isysroot` option can be used provide
+in some other system root, the `-isysroot` option can be used provide
 a different system root from which the headers will be based. For
-example, :option:`-isysroot /Developer/SDKs/MacOSX10.4u.sdk` will look for
+example, `-isysroot /Developer/SDKs/MacOSX10.4u.sdk` will look for
 ``mylib.h`` in ``/Developer/SDKs/MacOSX10.4u.sdk/usr/include/mylib.h``.
 
 Relocatable precompiled headers are intended to be used in a limited
@@ -1502,19 +1502,21 @@ instrumentation:
    profile. As you make changes to your code, clang may no longer be able to
    use the profile data. It will warn you when this happens.
 
-Profile generation and use can also be controlled by the GCC-compatible flags
-``-fprofile-generate`` and ``-fprofile-use``. Although these flags are
-semantically equivalent to their GCC counterparts, they *do not* handle
-GCC-compatible profiles. They are only meant to implement GCC's semantics
-with respect to profile creation and use.
+Profile generation using an alternative instrumentation method can be
+controlled by the GCC-compatible flags ``-fprofile-generate`` and
+``-fprofile-use``. Although these flags are semantically equivalent to
+their GCC counterparts, they *do not* handle GCC-compatible profiles.
+They are only meant to implement GCC's semantics with respect to
+profile creation and use.
 
 .. option:: -fprofile-generate[=<dirname>]
 
-  Without any other arguments, ``-fprofile-generate`` behaves identically to
-  ``-fprofile-instr-generate``. When given a directory name, it generates the
-  profile file ``default.profraw`` in the directory named ``dirname``. If
-  ``dirname`` does not exist, it will be created at runtime. The environment
-  variable ``LLVM_PROFILE_FILE`` can be used to override the directory and
+  The ``-fprofile-generate`` and ``-fprofile-generate=`` flags will use
+  an alterantive instrumentation method for profile generation. When
+  given a directory name, it generates the profile file
+  ``default.profraw`` in the directory named ``dirname``. If ``dirname``
+  does not exist, it will be created at runtime. The environment variable
+  ``LLVM_PROFILE_FILE`` can be used to override the directory and
   filename for the profile file at runtime. For example,
 
   .. code-block:: console
@@ -1872,8 +1874,8 @@ directives, ``depend`` clause for ``#pragma omp task`` directive (except for
 array sections), ``#pragma omp cancel`` and ``#pragma omp cancellation point``
 directives, and ``#pragma omp taskgroup`` directive.
 
-Use :option:`-fopenmp` to enable OpenMP. Support for OpenMP can be disabled with
-:option:`-fno-openmp`.
+Use `-fopenmp` to enable OpenMP. Support for OpenMP can be disabled with
+`-fno-openmp`.
 
 Controlling implementation limits
 ---------------------------------
@@ -1882,7 +1884,7 @@ Controlling implementation limits
 
  Controls code generation for OpenMP threadprivate variables. In presence of
  this option all threadprivate variables are generated the same way as thread
- local variables, using TLS support. If :option:`-fno-openmp-use-tls`
+ local variables, using TLS support. If `-fno-openmp-use-tls`
  is provided or target does not support TLS, code generation for threadprivate
  variables relies on OpenMP runtime library.
 
@@ -1906,7 +1908,7 @@ On ``x86_64-mingw32``, passing i128(by value) is incompatible with the
 Microsoft x64 calling convention. You might need to tweak
 ``WinX86_64ABIInfo::classify()`` in lib/CodeGen/TargetInfo.cpp.
 
-For the X86 target, clang supports the :option:`-m16` command line
+For the X86 target, clang supports the `-m16` command line
 argument which enables 16-bit code output. This is broadly similar to
 using ``asm(".code16gcc")`` with the GNU toolchain. The generated code
 and the ABI remains 32-bit but the assembler emits instructions

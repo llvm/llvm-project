@@ -9,7 +9,7 @@ define <8 x float> @_256_broadcast_ss_spill(float %x) {
 ; CHECK-NEXT:  .Ltmp0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Folded Spill
+; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
 ; CHECK-NEXT:    callq func_f32
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %ymm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rax
@@ -28,7 +28,7 @@ define <4 x float> @_128_broadcast_ss_spill(float %x) {
 ; CHECK-NEXT:  .Ltmp1:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vaddss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Folded Spill
+; CHECK-NEXT:    vmovss %xmm0, {{[0-9]+}}(%rsp) # 4-byte Spill
 ; CHECK-NEXT:    callq func_f32
 ; CHECK-NEXT:    vbroadcastss {{[0-9]+}}(%rsp), %xmm0 # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rax
@@ -48,7 +48,7 @@ define <4 x double> @_256_broadcast_sd_spill(double %x) {
 ; CHECK-NEXT:  .Ltmp2:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Folded Spill
+; CHECK-NEXT:    vmovsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    callq func_f64
 ; CHECK-NEXT:    vbroadcastsd (%rsp), %ymm0 # 8-byte Folded Reload
 ; CHECK-NEXT:    popq %rax

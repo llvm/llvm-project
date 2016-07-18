@@ -1139,6 +1139,47 @@ Args::LongestCommonPrefix (std::string &common_prefix)
     }
 }
 
+bool
+Args::ContainsEnvironmentVariable(const char *env_var_name) const
+{
+    // Validate args.
+    if (!env_var_name)
+        return false;
+
+    // Check each arg to see if it matches the env var name.
+    for (size_t i = 0; i < GetArgumentCount(); ++i)
+    {
+        // Get the arg value.
+        const char *argument_value = GetArgumentAtIndex(i);
+        if (!argument_value)
+            continue;
+
+        // Check if we are the "{env_var_name}={env_var_value}" style.
+        const char *equal_p = strchr(argument_value, '=');
+        if (equal_p)
+        {
+            if (strncmp(env_var_name, argument_value,
+                        equal_p - argument_value) == 0)
+            {
+                // We matched.
+                return true;
+            }
+        }
+        else
+        {
+            // We're a simple {env_var_name}-style entry.
+            if (strcmp(argument_value, env_var_name) == 0)
+            {
+                // We matched.
+                return true;
+            }
+        }
+    }
+
+    // We didn't find a match.
+    return false;
+}
+
 size_t
 Args::FindArgumentIndexForOption (Option *long_options, int long_options_index)
 {

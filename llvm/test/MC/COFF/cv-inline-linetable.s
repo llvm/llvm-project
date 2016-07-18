@@ -90,13 +90,8 @@ Ltmp4:
 # CHECK:      PtrEnd: 0x0
 # CHECK:      Inlinee: bar (0x1003)
 # CHECK:      BinaryAnnotations [
-# CHECK:        ChangeLineOffset: -6
-# CHECK:        ChangeCodeOffset: 0xF
-# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0xA, LineOffset: 1}
-# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x6, LineOffset: 1}
-# CHECK:        ChangeCodeOffsetAndLineOffset: {CodeOffset: 0x7, LineOffset: 1}
-# CHECK:        ChangeLineOffset: 5
-# CHECK:        ChangeCodeOffset: 0x7
+# CHECK:        ChangeLineOffset: 2
+# CHECK:        ChangeCodeOffset: 0x2D
 # CHECK:        ChangeCodeLength: 0x7
 # CHECK:      ]
 # CHECK:    }

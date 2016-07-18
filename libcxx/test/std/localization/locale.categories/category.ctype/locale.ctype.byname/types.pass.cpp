@@ -45,19 +45,6 @@ int main()
         }
     }
     {
-        std::locale l("");
-        {
-            assert(std::has_facet<std::ctype_byname<char> >(l));
-            assert(&std::use_facet<std::ctype<char> >(l)
-                == &std::use_facet<std::ctype_byname<char> >(l));
-        }
-        {
-            assert(std::has_facet<std::ctype_byname<wchar_t> >(l));
-            assert(&std::use_facet<std::ctype<wchar_t> >(l)
-                == &std::use_facet<std::ctype_byname<wchar_t> >(l));
-        }
-    }
-    {
         std::locale l("C");
         {
             assert(std::has_facet<std::ctype_byname<char> >(l));

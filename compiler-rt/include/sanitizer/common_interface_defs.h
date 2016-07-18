@@ -131,8 +131,19 @@ extern "C" {
                                     const void *s2, size_t n, int result);
   void __sanitizer_weak_hook_strncmp(void *called_pc, const char *s1,
                                     const char *s2, size_t n, int result);
+  void __sanitizer_weak_hook_strncasecmp(void *called_pc, const char *s1,
+                                         const char *s2, size_t n, int result);
   void __sanitizer_weak_hook_strcmp(void *called_pc, const char *s1,
                                     const char *s2, int result);
+  void __sanitizer_weak_hook_strcasecmp(void *called_pc, const char *s1,
+                                        const char *s2, int result);
+  void __sanitizer_weak_hook_strstr(void *called_pc, const char *s1,
+                                    const char *s2, char *result);
+  void __sanitizer_weak_hook_strcasestr(void *called_pc, const char *s1,
+                                        const char *s2, char *result);
+  void __sanitizer_weak_hook_memmem(void *called_pc,
+                                    const void *s1, size_t len1,
+                                    const void *s2, size_t len2, void *result);
 
   // Prints stack traces for all live heap allocations ordered by total
   // allocation size until `top_percent` of total live heap is shown.

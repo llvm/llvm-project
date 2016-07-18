@@ -249,7 +249,142 @@ exit:
   ret void
 }
 
+; bug 28550
+; CHECK-LABEL: {{^}}phi_use_def_before_kill:
+; CHECK: v_cndmask_b32_e64 [[PHIREG:v[0-9]+]], 0, -1.0,
+; CHECK: v_cmpx_le_f32_e32 vcc, 0,
+; CHECK-NEXT: s_cbranch_execnz [[BB4:BB[0-9]+_[0-9]+]]
+
+; CHECK: exp
+; CHECK-NEXT: s_endpgm
+
+; CHECK: [[KILLBB:BB[0-9]+_[0-9]+]]:
+; CHECK: s_and_b64 vcc, exec,
+; CHECK-NEXT: s_cbranch_vccz [[PHIBB:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[PHIBB]]:
+; CHECK: v_cmp_eq_f32_e32 vcc, 0, [[PHIREG]]
+; CHECK: s_and_b64 vcc, exec, vcc
+; CHECK: s_cbranch_vccz [[ENDBB:BB[0-9]+_[0-9]+]]
+
+; CHECK: ; BB#3: ; %bb10
+; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 9
+; CHECK: buffer_store_dword
+
+; CHECK: [[ENDBB]]:
+; CHECK-NEXT: s_endpgm
+define amdgpu_ps void @phi_use_def_before_kill() #0 {
+bb:
+  %tmp = fadd float undef, 1.000000e+00
+  %tmp1 = fcmp olt float 0.000000e+00, %tmp
+  %tmp2 = select i1 %tmp1, float -1.000000e+00, float 0.000000e+00
+  call void @llvm.AMDGPU.kill(float %tmp2)
+  br i1 undef, label %phibb, label %bb8
+
+phibb:
+  %tmp5 = phi float [ %tmp2, %bb ], [ 4.0, %bb8 ]
+  %tmp6 = fcmp oeq float %tmp5, 0.000000e+00
+  br i1 %tmp6, label %bb10, label %end
+
+bb8:
+  store volatile i32 8, i32 addrspace(1)* undef
+  br label %phibb
+
+bb10:
+  store volatile i32 9, i32 addrspace(1)* undef
+  br label %end
+
+end:
+  ret void
+}
+
+; CHECK-LABEL: {{^}}no_skip_no_successors:
+; CHECK: v_cmp_nle_f32
+; CHECK: s_and_b64 vcc, exec,
+; CHECK: s_cbranch_vccz [[SKIPKILL:BB[0-9]+_[0-9]+]]
+
+; CHECK: ; BB#3: ; %bb6
+; CHECK: s_mov_b64 exec, 0
+
+; CHECK: [[SKIPKILL]]:
+; CHECK: v_cmp_nge_f32
+; CHECK: s_and_b64 vcc, exec, vcc
+; CHECK: s_cbranch_vccz [[UNREACHABLE:BB[0-9]+_[0-9]+]]
+
+; CHECK: [[UNREACHABLE]]:
+; CHECK-NEXT: .Lfunc_end{{[0-9]+}}
+define amdgpu_ps void @no_skip_no_successors(float inreg %arg, float inreg %arg1) #0 {
+bb:
+  %tmp = fcmp ult float %arg1, 0.000000e+00
+  %tmp2 = fcmp ult float %arg, 0x3FCF5C2900000000
+  br i1 %tmp, label %bb6, label %bb3
+
+bb3:                                              ; preds = %bb
+  br i1 %tmp2, label %bb5, label %bb4
+
+bb4:                                              ; preds = %bb3
+  br i1 true, label %bb5, label %bb7
+
+bb5:                                              ; preds = %bb4, %bb3
+  unreachable
+
+bb6:                                              ; preds = %bb
+  call void @llvm.AMDGPU.kill(float -1.000000e+00)
+  unreachable
+
+bb7:                                              ; preds = %bb4
+  ret void
+}
+
+; CHECK-LABEL: {{^}}if_after_kill_block:
+; CHECK: ; BB#0:
+; CHECK: s_and_saveexec_b64
+; CHECK: s_xor_b64
+; CHECK-NEXT: mask branch [[BB4:BB[0-9]+_[0-9]+]]
+
+; CHECK: v_cmpx_le_f32_e32 vcc, 0,
+; CHECK: [[BB4]]:
+; CHECK: s_or_b64 exec, exec
+; CHECK: image_sample_c
+
+; CHECK: v_cmp_neq_f32_e32 vcc, 0,
+; CHECK: s_and_b64 exec, exec,
+; CHECK: s_and_saveexec_b64 s{{\[[0-9]+:[0-9]+\]}}, vcc
+; CHECK: s_xor_b64 s{{\[[0-9]+:[0-9]+\]}}, exec
+; CHECK: mask branch [[END:BB[0-9]+_[0-9]+]]
+; CHECK-NOT: branch
+
+; CHECK: ; BB#3: ; %bb8
+; CHECK: buffer_store_dword
+
+; CHECK: [[END]]:
+; CHECK: s_or_b64 exec, exec
+; CHECK: s_endpgm
+define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, <4 x i32> %arg2) #0 {
+bb:
+  %tmp = fcmp ult float %arg1, 0.000000e+00
+  br i1 %tmp, label %bb3, label %bb4
+
+bb3:                                              ; preds = %bb
+  call void @llvm.AMDGPU.kill(float %arg)
+  br label %bb4
+
+bb4:                                              ; preds = %bb3, %bb
+  %tmp5 = call <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32> %arg2, <8 x i32> undef, <4 x i32> undef, i32 15, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0)
+  %tmp6 = extractelement <4 x float> %tmp5, i32 0
+  %tmp7 = fcmp une float %tmp6, 0.000000e+00
+  br i1 %tmp7, label %bb8, label %bb9
+
+bb8:                                              ; preds = %bb9, %bb4
+  store volatile i32 9, i32 addrspace(1)* undef
+  ret void
+
+bb9:                                              ; preds = %bb4
+  ret void
+}
 
 declare void @llvm.AMDGPU.kill(float) #0
+declare <4 x float> @llvm.SI.image.sample.c.v4i32(<4 x i32>, <8 x i32>, <4 x i32>, i32, i32, i32, i32, i32, i32, i32, i32) #1
 
 attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

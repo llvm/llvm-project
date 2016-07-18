@@ -45,6 +45,7 @@ LLVMContextImpl::LLVMContextImpl(LLVMContext &C)
   DiagnosticHandler = nullptr;
   DiagnosticContext = nullptr;
   RespectDiagnosticFilters = false;
+  DiagnosticHotnessRequested = false;
   YieldCallback = nullptr;
   YieldOpaqueHandle = nullptr;
   NamedStructTypesUniqueID = 0;

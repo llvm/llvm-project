@@ -336,6 +336,23 @@ void test_simdlen() {
     ;
 }
 
+void test_safelen_simdlen() {
+  int i;
+#pragma omp target
+#pragma omp teams
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp distribute simd simdlen(6) safelen(5)
+  for (i = 0; i < 16; ++i)
+    ;
+
+#pragma omp target
+#pragma omp teams
+// expected-error@+1 {{the value of 'simdlen' parameter must be less than or equal to the value of the 'safelen' parameter}}
+#pragma omp distribute simd safelen(5) simdlen(6)
+  for (i = 0; i < 16; ++i)
+    ;
+}
+
 void test_collapse() {
   int i;
 #pragma omp target
