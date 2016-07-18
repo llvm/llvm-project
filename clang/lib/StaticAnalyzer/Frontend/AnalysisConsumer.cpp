@@ -431,13 +431,6 @@ static bool shouldSkipFunction(const Decl *D,
   //   Count naming convention errors more aggressively.
   if (isa<ObjCMethodDecl>(D))
     return false;
-  // We also want to reanalyze all C++ copy and move assignment operators to
-  // separately check the two cases where 'this' aliases with the parameter and
-  // where it may not. (cplusplus.SelfAssignmentChecker)
-  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
-    if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
-      return false;
-  }
 
   // Otherwise, if we visited the function before, do not reanalyze it.
   return Visited.count(D);
@@ -449,7 +442,9 @@ AnalysisConsumer::getInliningModeForFunction(const Decl *D,
   // We want to reanalyze all ObjC methods as top level to report Retain
   // Count naming convention errors more aggressively. But we should tune down
   // inlining when reanalyzing an already inlined function.
-  if (Visited.count(D) && isa<ObjCMethodDecl>(D)) {
+  if (Visited.count(D)) {
+    assert(isa<ObjCMethodDecl>(D) &&
+           "We are only reanalyzing ObjCMethods.");
     const ObjCMethodDecl *ObjCM = cast<ObjCMethodDecl>(D);
     if (ObjCM->getMethodFamily() != OMF_init)
       return ExprEngine::Inline_Minimal;
