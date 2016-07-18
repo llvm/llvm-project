@@ -892,6 +892,8 @@
 		AF25AB26188F685C0030DEC3 /* AppleGetQueuesHandler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF25AB24188F685C0030DEC3 /* AppleGetQueuesHandler.cpp */; };
 		AF26703A1852D01E00B6CC36 /* Queue.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670381852D01E00B6CC36 /* Queue.cpp */; };
 		AF26703B1852D01E00B6CC36 /* QueueList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670391852D01E00B6CC36 /* QueueList.cpp */; };
+		AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */; };
+		AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */; };
 		AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33064C991A5C7A330033D415 /* UriParser.cpp */; };
 		AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */; };
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
@@ -2813,6 +2815,8 @@
 		AF25AB25188F685C0030DEC3 /* AppleGetQueuesHandler.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = AppleGetQueuesHandler.h; sourceTree = "<group>"; };
 		AF2670381852D01E00B6CC36 /* Queue.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Queue.cpp; path = source/Target/Queue.cpp; sourceTree = "<group>"; };
 		AF2670391852D01E00B6CC36 /* QueueList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = QueueList.cpp; path = source/Target/QueueList.cpp; sourceTree = "<group>"; };
+		AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DynamicLoaderDarwin.cpp; sourceTree = "<group>"; };
+		AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderDarwin.h; sourceTree = "<group>"; };
 		AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JITLoaderGDB.cpp; sourceTree = "<group>"; };
 		AF2BCA6A18C7EFDE005B4526 /* JITLoaderGDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JITLoaderGDB.h; sourceTree = "<group>"; };
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
@@ -3291,6 +3295,8 @@
 		260C897910F57C5600BB2B04 /* MacOSX-DYLD */ = {
 			isa = PBXGroup;
 			children = (
+				AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */,
+				AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */,
 				260C897A10F57C5600BB2B04 /* DynamicLoaderMacOSXDYLD.cpp */,
 				260C897B10F57C5600BB2B04 /* DynamicLoaderMacOSXDYLD.h */,
 			);
@@ -6072,6 +6078,7 @@
 				260A63171861008E00FECF8E /* IOHandler.h in Headers */,
 				267F68581CC02EAE0086832B /* RegisterContextPOSIX_s390x.h in Headers */,
 				6D0F614F1C80AB0C00A4ECEE /* JavaLanguageRuntime.h in Headers */,
+				AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */,
 				AFCB2BBE1BF577F40018B553 /* PythonExceptionState.h in Headers */,
 				267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */,
 				AF8AD6311BEC28A400150209 /* PlatformAppleWatchSimulator.h in Headers */,
@@ -6825,6 +6832,7 @@
 				2689008413353E2200698AC0 /* CommandObjectRegexCommand.cpp in Sources */,
 				2689008513353E2200698AC0 /* CommandReturnObject.cpp in Sources */,
 				6D95DC001B9DC057000E318A /* DIERef.cpp in Sources */,
+				AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */,
 				3FDFE53519A29327009756A7 /* HostInfoBase.cpp in Sources */,
 				26474CBE18D0CB2D0073DEBA /* RegisterContextMach_i386.cpp in Sources */,
 				2689008613353E2200698AC0 /* Options.cpp in Sources */,

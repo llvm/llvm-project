@@ -360,11 +360,6 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
-    // Handle --trace-symbol option. Prints out a log message
-    // if the current symbol is being watched. Useful for debugging.
-    if (!Config->TraceSymbol.empty() && Config->TraceSymbol.count(Name))
-      outs() << getFilename(this) << ": reference to " << Name << "\n";
-
     return elf::Symtab<ELFT>::X
         ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
                        /*CanOmitFromDynSym*/ false, this)

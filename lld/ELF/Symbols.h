@@ -53,6 +53,8 @@ public:
     LazyObjectKind,
   };
 
+  SymbolBody(Kind K) : SymbolKind(K) {}
+
   Symbol *symbol();
   const Symbol *symbol() const {
     return const_cast<SymbolBody *>(this)->symbol();
@@ -70,8 +72,9 @@ public:
   bool isLocal() const { return IsLocal; }
   bool isPreemptible() const;
 
-  // Returns the symbol name.
   StringRef getName() const;
+  void setName(StringRef S);
+
   uint32_t getNameOffset() const {
     assert(isLocal());
     return NameOffset;
@@ -168,7 +171,7 @@ public:
 class DefinedCommon : public Defined {
 public:
   DefinedCommon(StringRef N, uint64_t Size, uint64_t Alignment, uint8_t StOther,
-                uint8_t Type);
+                uint8_t Type, InputFile *File);
 
   static bool classof(const SymbolBody *S) {
     return S->kind() == SymbolBody::DefinedCommonKind;
@@ -298,7 +301,6 @@ public:
 
   SharedFile<ELFT> *file() { return (SharedFile<ELFT> *)this->File; }
 
-public:
   const Elf_Sym &Sym;
 
   // This field is a pointer to the symbol's version definition.
@@ -320,14 +322,15 @@ public:
 // the same name, it will ask the Lazy to load a file.
 class Lazy : public SymbolBody {
 public:
-  Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
-      : SymbolBody(K, Name, llvm::ELF::STV_DEFAULT, Type) {}
-
   static bool classof(const SymbolBody *S) { return S->isLazy(); }
 
   // Returns an object file for this symbol, or a nullptr if the file
   // was already returned.
   std::unique_ptr<InputFile> fetch();
+
+protected:
+  Lazy(SymbolBody::Kind K, StringRef Name, uint8_t Type)
+      : SymbolBody(K, Name, llvm::ELF::STV_DEFAULT, Type) {}
 };
 
 // LazyArchive symbols represents symbols in archive files.
@@ -419,10 +422,8 @@ struct Symbol {
   // --export-dynamic, and by dynamic lists.
   unsigned ExportDynamic : 1;
 
-  // If this flag is true then symbol name also contains version name. Such
-  // name can have single or double symbol @. Double means that version is
-  // used as default. Single signals about depricated symbol version.
-  unsigned VersionedName : 1;
+  // True if this symbol is specified by --trace-symbol option.
+  unsigned Traced : 1;
 
   bool includeInDynsym() const;
   bool isWeak() const { return Binding == llvm::ELF::STB_WEAK; }
@@ -442,6 +443,8 @@ struct Symbol {
   const SymbolBody *body() const { return const_cast<Symbol *>(this)->body(); }
 };
 
+void printTraceSymbol(Symbol *Sym);
+
 template <typename T, typename... ArgT>
 void replaceBody(Symbol *S, ArgT &&... Arg) {
   static_assert(sizeof(T) <= sizeof(S->Body), "Body too small");
@@ -450,7 +453,13 @@ void replaceBody(Symbol *S, ArgT &&... Arg) {
                 "Body not aligned enough");
   assert(static_cast<SymbolBody *>(static_cast<T *>(nullptr)) == nullptr &&
          "Not a SymbolBody");
+
   new (S->Body.buffer) T(std::forward<ArgT>(Arg)...);
+
+  // Print out a log message if --trace-symbol was specified.
+  // This is for debugging.
+  if (S->Traced)
+    printTraceSymbol(S);
 }
 
 inline Symbol *SymbolBody::symbol() {

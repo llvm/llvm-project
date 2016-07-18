@@ -806,6 +806,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
+    HasStandaloneRem = false;
 
     setLibcallName(RTLIB::SDIVREM_I8,  "__aeabi_idivmod");
     setLibcallName(RTLIB::SDIVREM_I16, "__aeabi_idivmod");

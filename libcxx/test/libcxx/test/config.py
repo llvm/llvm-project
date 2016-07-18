@@ -290,6 +290,9 @@ class Configuration(object):
         if self.cxx.hasCompileFlag('-fsized-deallocation'):
             self.config.available_features.add('fsized-deallocation')
 
+        if self.get_lit_bool('has_libatomic', False):
+            self.config.available_features.add('libatomic')
+
     def configure_compile_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:

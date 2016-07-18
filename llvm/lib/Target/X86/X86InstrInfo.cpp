@@ -1680,12 +1680,28 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     // AVX-512 foldable instructions
     { X86::VADDPSZrr,         X86::VADDPSZrm,           0 },
     { X86::VADDPDZrr,         X86::VADDPDZrm,           0 },
+    { X86::VADDSSZrr,         X86::VADDSSZrm,           0 },
+    { X86::VADDSSZrr_Int,     X86::VADDSSZrm_Int,       0 },
+    { X86::VADDSDZrr,         X86::VADDSDZrm,           0 },
+    { X86::VADDSDZrr_Int,     X86::VADDSDZrm_Int,       0 },
     { X86::VSUBPSZrr,         X86::VSUBPSZrm,           0 },
     { X86::VSUBPDZrr,         X86::VSUBPDZrm,           0 },
+    { X86::VSUBSSZrr,         X86::VSUBSSZrm,           0 },
+    { X86::VSUBSSZrr_Int,     X86::VSUBSSZrm_Int,       0 },
+    { X86::VSUBSDZrr,         X86::VSUBSDZrm,           0 },
+    { X86::VSUBSDZrr_Int,     X86::VSUBSDZrm_Int,       0 },
     { X86::VMULPSZrr,         X86::VMULPSZrm,           0 },
     { X86::VMULPDZrr,         X86::VMULPDZrm,           0 },
+    { X86::VMULSSZrr,         X86::VMULSSZrm,           0 },
+    { X86::VMULSSZrr_Int,     X86::VMULSSZrm_Int,       0 },
+    { X86::VMULSDZrr,         X86::VMULSDZrm,           0 },
+    { X86::VMULSDZrr_Int,     X86::VMULSDZrm_Int,       0 },
     { X86::VDIVPSZrr,         X86::VDIVPSZrm,           0 },
     { X86::VDIVPDZrr,         X86::VDIVPDZrm,           0 },
+    { X86::VDIVSSZrr,         X86::VDIVSSZrm,           0 },
+    { X86::VDIVSSZrr_Int,     X86::VDIVSSZrm_Int,       0 },
+    { X86::VDIVSDZrr,         X86::VDIVSDZrm,           0 },
+    { X86::VDIVSDZrr_Int,     X86::VDIVSDZrm_Int,       0 },
     { X86::VMINPSZrr,         X86::VMINPSZrm,           0 },
     { X86::VMINPDZrr,         X86::VMINPDZrm,           0 },
     { X86::VMAXPSZrr,         X86::VMAXPSZrm,           0 },
@@ -2193,13 +2209,19 @@ static bool isFrameLoadOpcode(int Opcode) {
   case X86::MOVSSrm:
   case X86::MOVSDrm:
   case X86::MOVAPSrm:
+  case X86::MOVUPSrm:
   case X86::MOVAPDrm:
+  case X86::MOVUPDrm:
   case X86::MOVDQArm:
+  case X86::MOVDQUrm:
   case X86::VMOVSSrm:
   case X86::VMOVSDrm:
   case X86::VMOVAPSrm:
+  case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
+  case X86::VMOVUPDrm:
   case X86::VMOVDQArm:
+  case X86::VMOVDQUrm:
   case X86::VMOVUPSYrm:
   case X86::VMOVAPSYrm:
   case X86::VMOVUPDYrm:
@@ -2208,8 +2230,42 @@ static bool isFrameLoadOpcode(int Opcode) {
   case X86::VMOVDQAYrm:
   case X86::MMX_MOVD64rm:
   case X86::MMX_MOVQ64rm:
+  case X86::VMOVSSZrm:
+  case X86::VMOVSDZrm:
   case X86::VMOVAPSZrm:
+  case X86::VMOVAPSZ128rm:
+  case X86::VMOVAPSZ256rm:
   case X86::VMOVUPSZrm:
+  case X86::VMOVUPSZ128rm:
+  case X86::VMOVUPSZ256rm:
+  case X86::VMOVAPDZrm:
+  case X86::VMOVAPDZ128rm:
+  case X86::VMOVAPDZ256rm:
+  case X86::VMOVUPDZrm:
+  case X86::VMOVUPDZ128rm:
+  case X86::VMOVUPDZ256rm:
+  case X86::VMOVDQA32Zrm:
+  case X86::VMOVDQA32Z128rm:
+  case X86::VMOVDQA32Z256rm:
+  case X86::VMOVDQU32Zrm:
+  case X86::VMOVDQU32Z128rm:
+  case X86::VMOVDQU32Z256rm:
+  case X86::VMOVDQA64Zrm:
+  case X86::VMOVDQA64Z128rm:
+  case X86::VMOVDQA64Z256rm:
+  case X86::VMOVDQU64Zrm:
+  case X86::VMOVDQU64Z128rm:
+  case X86::VMOVDQU64Z256rm:
+  case X86::VMOVDQU8Zrm:
+  case X86::VMOVDQU8Z128rm:
+  case X86::VMOVDQU8Z256rm:
+  case X86::VMOVDQU16Zrm:
+  case X86::VMOVDQU16Z128rm:
+  case X86::VMOVDQU16Z256rm:
+  case X86::KMOVBkm:
+  case X86::KMOVWkm:
+  case X86::KMOVDkm:
+  case X86::KMOVQkm:
     return true;
   }
 }
@@ -2225,24 +2281,64 @@ static bool isFrameStoreOpcode(int Opcode) {
   case X86::MOVSSmr:
   case X86::MOVSDmr:
   case X86::MOVAPSmr:
+  case X86::MOVUPSmr:
   case X86::MOVAPDmr:
+  case X86::MOVUPDmr:
   case X86::MOVDQAmr:
+  case X86::MOVDQUmr:
   case X86::VMOVSSmr:
   case X86::VMOVSDmr:
   case X86::VMOVAPSmr:
+  case X86::VMOVUPSmr:
   case X86::VMOVAPDmr:
+  case X86::VMOVUPDmr:
   case X86::VMOVDQAmr:
+  case X86::VMOVDQUmr:
   case X86::VMOVUPSYmr:
   case X86::VMOVAPSYmr:
   case X86::VMOVUPDYmr:
   case X86::VMOVAPDYmr:
   case X86::VMOVDQUYmr:
   case X86::VMOVDQAYmr:
+  case X86::VMOVSSZmr:
+  case X86::VMOVSDZmr:
   case X86::VMOVUPSZmr:
+  case X86::VMOVUPSZ128mr:
+  case X86::VMOVUPSZ256mr:
   case X86::VMOVAPSZmr:
+  case X86::VMOVAPSZ128mr:
+  case X86::VMOVAPSZ256mr:
+  case X86::VMOVUPDZmr:
+  case X86::VMOVUPDZ128mr:
+  case X86::VMOVUPDZ256mr:
+  case X86::VMOVAPDZmr:
+  case X86::VMOVAPDZ128mr:
+  case X86::VMOVAPDZ256mr:
+  case X86::VMOVDQA32Zmr:
+  case X86::VMOVDQA32Z128mr:
+  case X86::VMOVDQA32Z256mr:
+  case X86::VMOVDQU32Zmr:
+  case X86::VMOVDQU32Z128mr:
+  case X86::VMOVDQU32Z256mr:
+  case X86::VMOVDQA64Zmr:
+  case X86::VMOVDQA64Z128mr:
+  case X86::VMOVDQA64Z256mr:
+  case X86::VMOVDQU64Zmr:
+  case X86::VMOVDQU64Z128mr:
+  case X86::VMOVDQU64Z256mr:
+  case X86::VMOVDQU8Zmr:
+  case X86::VMOVDQU8Z128mr:
+  case X86::VMOVDQU8Z256mr:
+  case X86::VMOVDQU16Zmr:
+  case X86::VMOVDQU16Z128mr:
+  case X86::VMOVDQU16Z256mr:
   case X86::MMX_MOVD64mr:
   case X86::MMX_MOVQ64mr:
   case X86::MMX_MOVNTQmr:
+  case X86::KMOVBmk:
+  case X86::KMOVWmk:
+  case X86::KMOVDmk:
+  case X86::KMOVQmk:
     return true;
   }
   return false;
@@ -4342,16 +4438,18 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   if (X86::GR64RegClass.contains(DestReg)) {
     if (X86::VR128XRegClass.contains(SrcReg))
       // Copy from a VR128 register to a GR64 register.
-      return HasAVX512 ? X86::VMOVPQIto64Zrr: (HasAVX ? X86::VMOVPQIto64rr :
-                                               X86::MOVPQIto64rr);
+      return HasAVX512 ? X86::VMOVPQIto64Zrr :
+             HasAVX    ? X86::VMOVPQIto64rr  :
+                         X86::MOVPQIto64rr;
     if (X86::VR64RegClass.contains(SrcReg))
       // Copy from a VR64 register to a GR64 register.
       return X86::MMX_MOVD64from64rr;
   } else if (X86::GR64RegClass.contains(SrcReg)) {
     // Copy from a GR64 register to a VR128 register.
     if (X86::VR128XRegClass.contains(DestReg))
-      return HasAVX512 ? X86::VMOV64toPQIZrr: (HasAVX ? X86::VMOV64toPQIrr :
-                                               X86::MOV64toPQIrr);
+      return HasAVX512 ? X86::VMOV64toPQIZrr :
+             HasAVX    ? X86::VMOV64toPQIrr  :
+                         X86::MOV64toPQIrr;
     // Copy from a GR64 register to a VR64 register.
     if (X86::VR64RegClass.contains(DestReg))
       return X86::MMX_MOVD64to64rr;
@@ -4360,13 +4458,19 @@ static unsigned CopyToFromAsymmetricReg(unsigned DestReg, unsigned SrcReg,
   // SrcReg(FR32) -> DestReg(GR32)
   // SrcReg(GR32) -> DestReg(FR32)
 
-  if (X86::GR32RegClass.contains(DestReg) && X86::FR32XRegClass.contains(SrcReg))
+  if (X86::GR32RegClass.contains(DestReg) &&
+      X86::FR32XRegClass.contains(SrcReg))
     // Copy from a FR32 register to a GR32 register.
-    return HasAVX512 ? X86::VMOVSS2DIZrr : (HasAVX ? X86::VMOVSS2DIrr : X86::MOVSS2DIrr);
+    return HasAVX512 ? X86::VMOVSS2DIZrr :
+           HasAVX    ? X86::VMOVSS2DIrr  :
+                       X86::MOVSS2DIrr;
 
-  if (X86::FR32XRegClass.contains(DestReg) && X86::GR32RegClass.contains(SrcReg))
+  if (X86::FR32XRegClass.contains(DestReg) &&
+      X86::GR32RegClass.contains(SrcReg))
     // Copy from a GR32 register to a FR32 register.
-    return HasAVX512 ? X86::VMOVDI2SSZrr : (HasAVX ? X86::VMOVDI2SSrr : X86::MOVDI2SSrr);
+    return HasAVX512 ? X86::VMOVDI2SSZrr :
+           HasAVX    ? X86::VMOVDI2SSrr  :
+                       X86::MOVDI2SSrr;
   return 0;
 }
 
@@ -4424,13 +4528,22 @@ unsigned copyPhysRegOpcode_AVX512(unsigned& DestReg, unsigned& SrcReg,
   if (Subtarget.hasBWI())
     if (auto Opc = copyPhysRegOpcode_AVX512_BW(DestReg, SrcReg))
       return Opc;
-  if (X86::VR128XRegClass.contains(DestReg, SrcReg) ||
-      X86::VR256XRegClass.contains(DestReg, SrcReg) ||
-      X86::VR512RegClass.contains(DestReg, SrcReg)) {
-     DestReg = get512BitSuperRegister(DestReg);
-     SrcReg = get512BitSuperRegister(SrcReg);
-     return X86::VMOVAPSZrr;
+  if (X86::VR128XRegClass.contains(DestReg, SrcReg)) {
+    if (Subtarget.hasVLX())
+      return X86::VMOVAPSZ128rr;
+   DestReg = get512BitSuperRegister(DestReg);
+   SrcReg = get512BitSuperRegister(SrcReg);
+   return X86::VMOVAPSZrr;
   }
+  if (X86::VR256XRegClass.contains(DestReg, SrcReg)) {
+    if (Subtarget.hasVLX())
+      return X86::VMOVAPSZ256rr;
+   DestReg = get512BitSuperRegister(DestReg);
+   SrcReg = get512BitSuperRegister(SrcReg);
+   return X86::VMOVAPSZrr;
+  }
+  if (X86::VR512RegClass.contains(DestReg, SrcReg))
+     return X86::VMOVAPSZrr;
   if (MaskRegClassContains(DestReg) && MaskRegClassContains(SrcReg))
     return X86::KMOVWkk;
   if (MaskRegClassContains(DestReg) && GRRegClassContains(SrcReg)) {
@@ -6170,15 +6283,16 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
   unsigned RegSize =
       MF.getRegInfo().getRegClass(LoadMI.getOperand(0).getReg())->getSize();
 
-  if ((Opc == X86::MOVSSrm || Opc == X86::VMOVSSrm) && RegSize > 4) {
+  if ((Opc == X86::MOVSSrm || Opc == X86::VMOVSSrm || Opc == X86::VMOVSSZrm) &&
+      RegSize > 4) {
     // These instructions only load 32 bits, we can't fold them if the
     // destination register is wider than 32 bits (4 bytes), and its user
     // instruction isn't scalar (SS).
     switch (UserOpc) {
-    case X86::ADDSSrr_Int: case X86::VADDSSrr_Int:
-    case X86::DIVSSrr_Int: case X86::VDIVSSrr_Int:
-    case X86::MULSSrr_Int: case X86::VMULSSrr_Int:
-    case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int:
+    case X86::ADDSSrr_Int: case X86::VADDSSrr_Int: case X86::VADDSSZrr_Int:
+    case X86::DIVSSrr_Int: case X86::VDIVSSrr_Int: case X86::VDIVSSZrr_Int:
+    case X86::MULSSrr_Int: case X86::VMULSSrr_Int: case X86::VMULSSZrr_Int:
+    case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int: case X86::VSUBSSZrr_Int:
     case X86::VFMADDSSr132r_Int: case X86::VFNMADDSSr132r_Int:
     case X86::VFMADDSSr213r_Int: case X86::VFNMADDSSr213r_Int:
     case X86::VFMADDSSr231r_Int: case X86::VFNMADDSSr231r_Int:
@@ -6191,15 +6305,16 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     }
   }
 
-  if ((Opc == X86::MOVSDrm || Opc == X86::VMOVSDrm) && RegSize > 8) {
+  if ((Opc == X86::MOVSDrm || Opc == X86::VMOVSDrm || Opc == X86::VMOVSDZrm) &&
+      RegSize > 8) {
     // These instructions only load 64 bits, we can't fold them if the
     // destination register is wider than 64 bits (8 bytes), and its user
     // instruction isn't scalar (SD).
     switch (UserOpc) {
-    case X86::ADDSDrr_Int: case X86::VADDSDrr_Int:
-    case X86::DIVSDrr_Int: case X86::VDIVSDrr_Int:
-    case X86::MULSDrr_Int: case X86::VMULSDrr_Int:
-    case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int:
+    case X86::ADDSDrr_Int: case X86::VADDSDrr_Int: case X86::VADDSDZrr_Int:
+    case X86::DIVSDrr_Int: case X86::VDIVSDrr_Int: case X86::VDIVSDZrr_Int:
+    case X86::MULSDrr_Int: case X86::VMULSDrr_Int: case X86::VMULSDZrr_Int:
+    case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int: case X86::VSUBSDZrr_Int:
     case X86::VFMADDSDr132r_Int: case X86::VFNMADDSDr132r_Int:
     case X86::VFMADDSDr213r_Int: case X86::VFNMADDSDr213r_Int:
     case X86::VFMADDSDr231r_Int: case X86::VFNMADDSDr231r_Int:
@@ -6631,6 +6746,7 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
+  case X86::MOVUPDrm:
   case X86::MOVDQArm:
   case X86::MOVDQUrm:
   // AVX load instructions
@@ -6641,13 +6757,52 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
+  case X86::VMOVUPDrm:
   case X86::VMOVDQArm:
   case X86::VMOVDQUrm:
   case X86::VMOVAPSYrm:
   case X86::VMOVUPSYrm:
   case X86::VMOVAPDYrm:
+  case X86::VMOVUPDYrm:
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
+  // AVX512 load instructions
+  case X86::VMOVSSZrm:
+  case X86::VMOVSDZrm:
+  case X86::VMOVAPSZ128rm:
+  case X86::VMOVUPSZ128rm:
+  case X86::VMOVAPDZ128rm:
+  case X86::VMOVUPDZ128rm:
+  case X86::VMOVDQU8Z128rm:
+  case X86::VMOVDQU16Z128rm:
+  case X86::VMOVDQA32Z128rm:
+  case X86::VMOVDQU32Z128rm:
+  case X86::VMOVDQA64Z128rm:
+  case X86::VMOVDQU64Z128rm:
+  case X86::VMOVAPSZ256rm:
+  case X86::VMOVUPSZ256rm:
+  case X86::VMOVAPDZ256rm:
+  case X86::VMOVUPDZ256rm:
+  case X86::VMOVDQU8Z256rm:
+  case X86::VMOVDQU16Z256rm:
+  case X86::VMOVDQA32Z256rm:
+  case X86::VMOVDQU32Z256rm:
+  case X86::VMOVDQA64Z256rm:
+  case X86::VMOVDQU64Z256rm:
+  case X86::VMOVAPSZrm:
+  case X86::VMOVUPSZrm:
+  case X86::VMOVAPDZrm:
+  case X86::VMOVUPDZrm:
+  case X86::VMOVDQU8Zrm:
+  case X86::VMOVDQU16Zrm:
+  case X86::VMOVDQA32Zrm:
+  case X86::VMOVDQU32Zrm:
+  case X86::VMOVDQA64Zrm:
+  case X86::VMOVDQU64Zrm:
+  case X86::KMOVBkm:
+  case X86::KMOVWkm:
+  case X86::KMOVDkm:
+  case X86::KMOVQkm:
     break;
   }
   switch (Opc2) {
@@ -6668,6 +6823,7 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::MOVAPSrm:
   case X86::MOVUPSrm:
   case X86::MOVAPDrm:
+  case X86::MOVUPDrm:
   case X86::MOVDQArm:
   case X86::MOVDQUrm:
   // AVX load instructions
@@ -6678,13 +6834,52 @@ X86InstrInfo::areLoadsFromSameBasePtr(SDNode *Load1, SDNode *Load2,
   case X86::VMOVAPSrm:
   case X86::VMOVUPSrm:
   case X86::VMOVAPDrm:
+  case X86::VMOVUPDrm:
   case X86::VMOVDQArm:
   case X86::VMOVDQUrm:
   case X86::VMOVAPSYrm:
   case X86::VMOVUPSYrm:
   case X86::VMOVAPDYrm:
+  case X86::VMOVUPDYrm:
   case X86::VMOVDQAYrm:
   case X86::VMOVDQUYrm:
+  // AVX512 load instructions
+  case X86::VMOVSSZrm:
+  case X86::VMOVSDZrm:
+  case X86::VMOVAPSZ128rm:
+  case X86::VMOVUPSZ128rm:
+  case X86::VMOVAPDZ128rm:
+  case X86::VMOVUPDZ128rm:
+  case X86::VMOVDQU8Z128rm:
+  case X86::VMOVDQU16Z128rm:
+  case X86::VMOVDQA32Z128rm:
+  case X86::VMOVDQU32Z128rm:
+  case X86::VMOVDQA64Z128rm:
+  case X86::VMOVDQU64Z128rm:
+  case X86::VMOVAPSZ256rm:
+  case X86::VMOVUPSZ256rm:
+  case X86::VMOVAPDZ256rm:
+  case X86::VMOVUPDZ256rm:
+  case X86::VMOVDQU8Z256rm:
+  case X86::VMOVDQU16Z256rm:
+  case X86::VMOVDQA32Z256rm:
+  case X86::VMOVDQU32Z256rm:
+  case X86::VMOVDQA64Z256rm:
+  case X86::VMOVDQU64Z256rm:
+  case X86::VMOVAPSZrm:
+  case X86::VMOVUPSZrm:
+  case X86::VMOVAPDZrm:
+  case X86::VMOVUPDZrm:
+  case X86::VMOVDQU8Zrm:
+  case X86::VMOVDQU16Zrm:
+  case X86::VMOVDQA32Zrm:
+  case X86::VMOVDQU32Zrm:
+  case X86::VMOVDQA64Zrm:
+  case X86::VMOVDQU64Zrm:
+  case X86::KMOVBkm:
+  case X86::KMOVWkm:
+  case X86::KMOVDkm:
+  case X86::KMOVQkm:
     break;
   }
 
@@ -7104,6 +7299,10 @@ unsigned X86InstrInfo::getJumpInstrTableEntryBound() const {
 bool X86InstrInfo::isHighLatencyDef(int opc) const {
   switch (opc) {
   default: return false;
+  case X86::DIVPDrm:
+  case X86::DIVPDrr:
+  case X86::DIVPSrm:
+  case X86::DIVPSrr:
   case X86::DIVSDrm:
   case X86::DIVSDrm_Int:
   case X86::DIVSDrr:
@@ -7125,6 +7324,14 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::SQRTSSr:
   case X86::SQRTSSr_Int:
   // AVX instructions with high latency
+  case X86::VDIVPDrm:
+  case X86::VDIVPDrr:
+  case X86::VDIVPDYrm:
+  case X86::VDIVPDYrr:
+  case X86::VDIVPSrm:
+  case X86::VDIVPSrr:
+  case X86::VDIVPSYrm:
+  case X86::VDIVPSYrr:
   case X86::VDIVSDrm:
   case X86::VDIVSDrm_Int:
   case X86::VDIVSDrr:
@@ -7135,45 +7342,266 @@ bool X86InstrInfo::isHighLatencyDef(int opc) const {
   case X86::VDIVSSrr_Int:
   case X86::VSQRTPDm:
   case X86::VSQRTPDr:
+  case X86::VSQRTPDYm:
+  case X86::VSQRTPDYr:
   case X86::VSQRTPSm:
   case X86::VSQRTPSr:
+  case X86::VSQRTPSYm:
+  case X86::VSQRTPSYr:
   case X86::VSQRTSDm:
   case X86::VSQRTSDm_Int:
   case X86::VSQRTSDr:
+  case X86::VSQRTSDr_Int:
   case X86::VSQRTSSm:
   case X86::VSQRTSSm_Int:
   case X86::VSQRTSSr:
-  case X86::VSQRTPDZm:
-  case X86::VSQRTPDZr:
-  case X86::VSQRTPSZm:
-  case X86::VSQRTPSZr:
-  case X86::VSQRTSDZm:
-  case X86::VSQRTSDZm_Int:
-  case X86::VSQRTSDZr:
-  case X86::VSQRTSSZm_Int:
-  case X86::VSQRTSSZr:
-  case X86::VSQRTSSZm:
+  case X86::VSQRTSSr_Int:
+  // AVX512 instructions with high latency
+  case X86::VDIVPDZ128rm:
+  case X86::VDIVPDZ128rmb:
+  case X86::VDIVPDZ128rmbk:
+  case X86::VDIVPDZ128rmbkz:
+  case X86::VDIVPDZ128rmk:
+  case X86::VDIVPDZ128rmkz:
+  case X86::VDIVPDZ128rr:
+  case X86::VDIVPDZ128rrk:
+  case X86::VDIVPDZ128rrkz:
+  case X86::VDIVPDZ256rm:
+  case X86::VDIVPDZ256rmb:
+  case X86::VDIVPDZ256rmbk:
+  case X86::VDIVPDZ256rmbkz:
+  case X86::VDIVPDZ256rmk:
+  case X86::VDIVPDZ256rmkz:
+  case X86::VDIVPDZ256rr:
+  case X86::VDIVPDZ256rrk:
+  case X86::VDIVPDZ256rrkz:
+  case X86::VDIVPDZrb:
+  case X86::VDIVPDZrbk:
+  case X86::VDIVPDZrbkz:
+  case X86::VDIVPDZrm:
+  case X86::VDIVPDZrmb:
+  case X86::VDIVPDZrmbk:
+  case X86::VDIVPDZrmbkz:
+  case X86::VDIVPDZrmk:
+  case X86::VDIVPDZrmkz:
+  case X86::VDIVPDZrr:
+  case X86::VDIVPDZrrk:
+  case X86::VDIVPDZrrkz:
+  case X86::VDIVPSZ128rm:
+  case X86::VDIVPSZ128rmb:
+  case X86::VDIVPSZ128rmbk:
+  case X86::VDIVPSZ128rmbkz:
+  case X86::VDIVPSZ128rmk:
+  case X86::VDIVPSZ128rmkz:
+  case X86::VDIVPSZ128rr:
+  case X86::VDIVPSZ128rrk:
+  case X86::VDIVPSZ128rrkz:
+  case X86::VDIVPSZ256rm:
+  case X86::VDIVPSZ256rmb:
+  case X86::VDIVPSZ256rmbk:
+  case X86::VDIVPSZ256rmbkz:
+  case X86::VDIVPSZ256rmk:
+  case X86::VDIVPSZ256rmkz:
+  case X86::VDIVPSZ256rr:
+  case X86::VDIVPSZ256rrk:
+  case X86::VDIVPSZ256rrkz:
+  case X86::VDIVPSZrb:
+  case X86::VDIVPSZrbk:
+  case X86::VDIVPSZrbkz:
+  case X86::VDIVPSZrm:
+  case X86::VDIVPSZrmb:
+  case X86::VDIVPSZrmbk:
+  case X86::VDIVPSZrmbkz:
+  case X86::VDIVPSZrmk:
+  case X86::VDIVPSZrmkz:
+  case X86::VDIVPSZrr:
+  case X86::VDIVPSZrrk:
+  case X86::VDIVPSZrrkz:
   case X86::VDIVSDZrm:
   case X86::VDIVSDZrr:
+  case X86::VDIVSDZrm_Int:
+  case X86::VDIVSDZrm_Intk:
+  case X86::VDIVSDZrm_Intkz:
+  case X86::VDIVSDZrr_Int:
+  case X86::VDIVSDZrr_Intk:
+  case X86::VDIVSDZrr_Intkz:
+  case X86::VDIVSDZrrb:
+  case X86::VDIVSDZrrbk:
+  case X86::VDIVSDZrrbkz:
   case X86::VDIVSSZrm:
   case X86::VDIVSSZrr:
+  case X86::VDIVSSZrm_Int:
+  case X86::VDIVSSZrm_Intk:
+  case X86::VDIVSSZrm_Intkz:
+  case X86::VDIVSSZrr_Int:
+  case X86::VDIVSSZrr_Intk:
+  case X86::VDIVSSZrr_Intkz:
+  case X86::VDIVSSZrrb:
+  case X86::VDIVSSZrrbk:
+  case X86::VDIVSSZrrbkz:
+  case X86::VSQRTPDZ128m:
+  case X86::VSQRTPDZ128mb:
+  case X86::VSQRTPDZ128mbk:
+  case X86::VSQRTPDZ128mbkz:
+  case X86::VSQRTPDZ128mk:
+  case X86::VSQRTPDZ128mkz:
+  case X86::VSQRTPDZ128r:
+  case X86::VSQRTPDZ128rk:
+  case X86::VSQRTPDZ128rkz:
+  case X86::VSQRTPDZ256m:
+  case X86::VSQRTPDZ256mb:
+  case X86::VSQRTPDZ256mbk:
+  case X86::VSQRTPDZ256mbkz:
+  case X86::VSQRTPDZ256mk:
+  case X86::VSQRTPDZ256mkz:
+  case X86::VSQRTPDZ256r:
+  case X86::VSQRTPDZ256rk:
+  case X86::VSQRTPDZ256rkz:
+  case X86::VSQRTPDZm:
+  case X86::VSQRTPDZmb:
+  case X86::VSQRTPDZmbk:
+  case X86::VSQRTPDZmbkz:
+  case X86::VSQRTPDZmk:
+  case X86::VSQRTPDZmkz:
+  case X86::VSQRTPDZr:
+  case X86::VSQRTPDZrb:
+  case X86::VSQRTPDZrbk:
+  case X86::VSQRTPDZrbkz:
+  case X86::VSQRTPDZrk:
+  case X86::VSQRTPDZrkz:
+  case X86::VSQRTPSZ128m:
+  case X86::VSQRTPSZ128mb:
+  case X86::VSQRTPSZ128mbk:
+  case X86::VSQRTPSZ128mbkz:
+  case X86::VSQRTPSZ128mk:
+  case X86::VSQRTPSZ128mkz:
+  case X86::VSQRTPSZ128r:
+  case X86::VSQRTPSZ128rk:
+  case X86::VSQRTPSZ128rkz:
+  case X86::VSQRTPSZ256m:
+  case X86::VSQRTPSZ256mb:
+  case X86::VSQRTPSZ256mbk:
+  case X86::VSQRTPSZ256mbkz:
+  case X86::VSQRTPSZ256mk:
+  case X86::VSQRTPSZ256mkz:
+  case X86::VSQRTPSZ256r:
+  case X86::VSQRTPSZ256rk:
+  case X86::VSQRTPSZ256rkz:
+  case X86::VSQRTPSZm:
+  case X86::VSQRTPSZmb:
+  case X86::VSQRTPSZmbk:
+  case X86::VSQRTPSZmbkz:
+  case X86::VSQRTPSZmk:
+  case X86::VSQRTPSZmkz:
+  case X86::VSQRTPSZr:
+  case X86::VSQRTPSZrb:
+  case X86::VSQRTPSZrbk:
+  case X86::VSQRTPSZrbkz:
+  case X86::VSQRTPSZrk:
+  case X86::VSQRTPSZrkz:
+  case X86::VSQRTSDZm:
+  case X86::VSQRTSDZm_Int:
+  case X86::VSQRTSDZm_Intk:
+  case X86::VSQRTSDZm_Intkz:
+  case X86::VSQRTSDZr:
+  case X86::VSQRTSDZr_Int:
+  case X86::VSQRTSDZr_Intk:
+  case X86::VSQRTSDZr_Intkz:
+  case X86::VSQRTSDZrb_Int:
+  case X86::VSQRTSDZrb_Intk:
+  case X86::VSQRTSDZrb_Intkz:
+  case X86::VSQRTSSZm:
+  case X86::VSQRTSSZm_Int:
+  case X86::VSQRTSSZm_Intk:
+  case X86::VSQRTSSZm_Intkz:
+  case X86::VSQRTSSZr:
+  case X86::VSQRTSSZr_Int:
+  case X86::VSQRTSSZr_Intk:
+  case X86::VSQRTSSZr_Intkz:
+  case X86::VSQRTSSZrb_Int:
+  case X86::VSQRTSSZrb_Intk:
+  case X86::VSQRTSSZrb_Intkz:
 
-  case X86::VGATHERQPSZrm:
-  case X86::VGATHERQPDZrm:
+  case X86::VGATHERDPDYrm:
+  case X86::VGATHERDPDZ128rm:
+  case X86::VGATHERDPDZ256rm:
   case X86::VGATHERDPDZrm:
+  case X86::VGATHERDPDrm:
+  case X86::VGATHERDPSYrm:
+  case X86::VGATHERDPSZ128rm:
+  case X86::VGATHERDPSZ256rm:
   case X86::VGATHERDPSZrm:
-  case X86::VPGATHERQDZrm:
-  case X86::VPGATHERQQZrm:
+  case X86::VGATHERDPSrm:
+  case X86::VGATHERPF0DPDm:
+  case X86::VGATHERPF0DPSm:
+  case X86::VGATHERPF0QPDm:
+  case X86::VGATHERPF0QPSm:
+  case X86::VGATHERPF1DPDm:
+  case X86::VGATHERPF1DPSm:
+  case X86::VGATHERPF1QPDm:
+  case X86::VGATHERPF1QPSm:
+  case X86::VGATHERQPDYrm:
+  case X86::VGATHERQPDZ128rm:
+  case X86::VGATHERQPDZ256rm:
+  case X86::VGATHERQPDZrm:
+  case X86::VGATHERQPDrm:
+  case X86::VGATHERQPSYrm:
+  case X86::VGATHERQPSZ128rm:
+  case X86::VGATHERQPSZ256rm:
+  case X86::VGATHERQPSZrm:
+  case X86::VGATHERQPSrm:
+  case X86::VPGATHERDDYrm:
+  case X86::VPGATHERDDZ128rm:
+  case X86::VPGATHERDDZ256rm:
   case X86::VPGATHERDDZrm:
+  case X86::VPGATHERDDrm:
+  case X86::VPGATHERDQYrm:
+  case X86::VPGATHERDQZ128rm:
+  case X86::VPGATHERDQZ256rm:
   case X86::VPGATHERDQZrm:
-  case X86::VSCATTERQPDZmr:
-  case X86::VSCATTERQPSZmr:
+  case X86::VPGATHERDQrm:
+  case X86::VPGATHERQDYrm:
+  case X86::VPGATHERQDZ128rm:
+  case X86::VPGATHERQDZ256rm:
+  case X86::VPGATHERQDZrm:
+  case X86::VPGATHERQDrm:
+  case X86::VPGATHERQQYrm:
+  case X86::VPGATHERQQZ128rm:
+  case X86::VPGATHERQQZ256rm:
+  case X86::VPGATHERQQZrm:
+  case X86::VPGATHERQQrm:
+  case X86::VSCATTERDPDZ128mr:
+  case X86::VSCATTERDPDZ256mr:
   case X86::VSCATTERDPDZmr:
+  case X86::VSCATTERDPSZ128mr:
+  case X86::VSCATTERDPSZ256mr:
   case X86::VSCATTERDPSZmr:
-  case X86::VPSCATTERQDZmr:
-  case X86::VPSCATTERQQZmr:
+  case X86::VSCATTERPF0DPDm:
+  case X86::VSCATTERPF0DPSm:
+  case X86::VSCATTERPF0QPDm:
+  case X86::VSCATTERPF0QPSm:
+  case X86::VSCATTERPF1DPDm:
+  case X86::VSCATTERPF1DPSm:
+  case X86::VSCATTERPF1QPDm:
+  case X86::VSCATTERPF1QPSm:
+  case X86::VSCATTERQPDZ128mr:
+  case X86::VSCATTERQPDZ256mr:
+  case X86::VSCATTERQPDZmr:
+  case X86::VSCATTERQPSZ128mr:
+  case X86::VSCATTERQPSZ256mr:
+  case X86::VSCATTERQPSZmr:
+  case X86::VPSCATTERDDZ128mr:
+  case X86::VPSCATTERDDZ256mr:
   case X86::VPSCATTERDDZmr:
+  case X86::VPSCATTERDQZ128mr:
+  case X86::VPSCATTERDQZ256mr:
   case X86::VPSCATTERDQZmr:
+  case X86::VPSCATTERQDZ128mr:
+  case X86::VPSCATTERQDZ256mr:
+  case X86::VPSCATTERQDZmr:
+  case X86::VPSCATTERQQZ128mr:
+  case X86::VPSCATTERQQZ256mr:
+  case X86::VPSCATTERQQZmr:
     return true;
   }
 }
@@ -7233,12 +7661,119 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case X86::PANDrr:
   case X86::PORrr:
   case X86::PXORrr:
+  case X86::ANDPDrr:
+  case X86::ANDPSrr:
+  case X86::ORPDrr:
+  case X86::ORPSrr:
+  case X86::XORPDrr:
+  case X86::XORPSrr:
+  case X86::PADDBrr:
+  case X86::PADDWrr:
+  case X86::PADDDrr:
+  case X86::PADDQrr:
   case X86::VPANDrr:
   case X86::VPANDYrr:
+  case X86::VPANDDZ128rr:
+  case X86::VPANDDZ256rr:
+  case X86::VPANDDZrr:
+  case X86::VPANDQZ128rr:
+  case X86::VPANDQZ256rr:
+  case X86::VPANDQZrr:
   case X86::VPORrr:
   case X86::VPORYrr:
+  case X86::VPORDZ128rr:
+  case X86::VPORDZ256rr:
+  case X86::VPORDZrr:
+  case X86::VPORQZ128rr:
+  case X86::VPORQZ256rr:
+  case X86::VPORQZrr:
   case X86::VPXORrr:
   case X86::VPXORYrr:
+  case X86::VPXORDZ128rr:
+  case X86::VPXORDZ256rr:
+  case X86::VPXORDZrr:
+  case X86::VPXORQZ128rr:
+  case X86::VPXORQZ256rr:
+  case X86::VPXORQZrr:
+  case X86::VANDPDrr:
+  case X86::VANDPSrr:
+  case X86::VANDPDYrr:
+  case X86::VANDPSYrr:
+  case X86::VANDPDZ128rr:
+  case X86::VANDPSZ128rr:
+  case X86::VANDPDZ256rr:
+  case X86::VANDPSZ256rr:
+  case X86::VANDPDZrr:
+  case X86::VANDPSZrr:
+  case X86::VORPDrr:
+  case X86::VORPSrr:
+  case X86::VORPDYrr:
+  case X86::VORPSYrr:
+  case X86::VORPDZ128rr:
+  case X86::VORPSZ128rr:
+  case X86::VORPDZ256rr:
+  case X86::VORPSZ256rr:
+  case X86::VORPDZrr:
+  case X86::VORPSZrr:
+  case X86::VXORPDrr:
+  case X86::VXORPSrr:
+  case X86::VXORPDYrr:
+  case X86::VXORPSYrr:
+  case X86::VXORPDZ128rr:
+  case X86::VXORPSZ128rr:
+  case X86::VXORPDZ256rr:
+  case X86::VXORPSZ256rr:
+  case X86::VXORPDZrr:
+  case X86::VXORPSZrr:
+  case X86::KADDBrr:
+  case X86::KADDWrr:
+  case X86::KADDDrr:
+  case X86::KADDQrr:
+  case X86::KANDBrr:
+  case X86::KANDWrr:
+  case X86::KANDDrr:
+  case X86::KANDQrr:
+  case X86::KORBrr:
+  case X86::KORWrr:
+  case X86::KORDrr:
+  case X86::KORQrr:
+  case X86::KXORBrr:
+  case X86::KXORWrr:
+  case X86::KXORDrr:
+  case X86::KXORQrr:
+  case X86::VPADDBrr:
+  case X86::VPADDWrr:
+  case X86::VPADDDrr:
+  case X86::VPADDQrr:
+  case X86::VPADDBYrr:
+  case X86::VPADDWYrr:
+  case X86::VPADDDYrr:
+  case X86::VPADDQYrr:
+  case X86::VPADDBZ128rr:
+  case X86::VPADDWZ128rr:
+  case X86::VPADDDZ128rr:
+  case X86::VPADDQZ128rr:
+  case X86::VPADDBZ256rr:
+  case X86::VPADDWZ256rr:
+  case X86::VPADDDZ256rr:
+  case X86::VPADDQZ256rr:
+  case X86::VPADDBZrr:
+  case X86::VPADDWZrr:
+  case X86::VPADDDZrr:
+  case X86::VPADDQZrr:
+  case X86::VPMULLWrr:
+  case X86::VPMULLWYrr:
+  case X86::VPMULLWZ128rr:
+  case X86::VPMULLWZ256rr:
+  case X86::VPMULLWZrr:
+  case X86::VPMULLDrr:
+  case X86::VPMULLDYrr:
+  case X86::VPMULLDZ128rr:
+  case X86::VPMULLDZ256rr:
+  case X86::VPMULLDZrr:
+  case X86::VPMULLQZ128rr:
+  case X86::VPMULLQZ256rr:
+  case X86::VPMULLQZrr:
   // Normal min/max instructions are not commutative because of NaN and signed
   // zero semantics, but these are. Thus, there's no need to check for global
   // relaxed math; the instructions themselves have the properties we need.
@@ -7254,14 +7789,30 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case X86::VMAXCPSrr:
   case X86::VMAXCPDYrr:
   case X86::VMAXCPSYrr:
+  case X86::VMAXCPDZ128rr:
+  case X86::VMAXCPSZ128rr:
+  case X86::VMAXCPDZ256rr:
+  case X86::VMAXCPSZ256rr:
+  case X86::VMAXCPDZrr:
+  case X86::VMAXCPSZrr:
   case X86::VMAXCSDrr:
   case X86::VMAXCSSrr:
+  case X86::VMAXCSDZrr:
+  case X86::VMAXCSSZrr:
   case X86::VMINCPDrr:
   case X86::VMINCPSrr:
   case X86::VMINCPDYrr:
   case X86::VMINCPSYrr:
+  case X86::VMINCPDZ128rr:
+  case X86::VMINCPSZ128rr:
+  case X86::VMINCPDZ256rr:
+  case X86::VMINCPSZ256rr:
+  case X86::VMINCPDZrr:
+  case X86::VMINCPSZrr:
   case X86::VMINCSDrr:
   case X86::VMINCSSrr:
+  case X86::VMINCSDZrr:
+  case X86::VMINCSSZrr:
     return true;
   case X86::ADDPDrr:
   case X86::ADDPSrr:
@@ -7275,14 +7826,30 @@ bool X86InstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
   case X86::VADDPSrr:
   case X86::VADDPDYrr:
   case X86::VADDPSYrr:
+  case X86::VADDPDZ128rr:
+  case X86::VADDPSZ128rr:
+  case X86::VADDPDZ256rr:
+  case X86::VADDPSZ256rr:
+  case X86::VADDPDZrr:
+  case X86::VADDPSZrr:
   case X86::VADDSDrr:
   case X86::VADDSSrr:
+  case X86::VADDSDZrr:
+  case X86::VADDSSZrr:
   case X86::VMULPDrr:
   case X86::VMULPSrr:
   case X86::VMULPDYrr:
   case X86::VMULPSYrr:
+  case X86::VMULPDZ128rr:
+  case X86::VMULPSZ128rr:
+  case X86::VMULPDZ256rr:
+  case X86::VMULPSZ256rr:
+  case X86::VMULPDZrr:
+  case X86::VMULPSZrr:
   case X86::VMULSDrr:
   case X86::VMULSSrr:
+  case X86::VMULSDZrr:
+  case X86::VMULSSZrr:
     return Inst.getParent()->getParent()->getTarget().Options.UnsafeFPMath;
   default:
     return false;

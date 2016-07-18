@@ -407,9 +407,10 @@ void PassManagerBuilder::populateModulePassManager(
     /// PGO instrumentation is added during the compile phase for ThinLTO, do
     /// not run it a second time
     addPGOInstrPasses(MPM);
-    // Indirect call promotion that promotes intra-module targets only.
-    MPM.add(createPGOIndirectCallPromotionLegacyPass());
   }
+
+  // Indirect call promotion that promotes intra-module targets only.
+  MPM.add(createPGOIndirectCallPromotionLegacyPass());
 
   if (EnableNonLTOGlobalsModRef)
     // We add a module alias analysis pass here. In part due to bugs in the

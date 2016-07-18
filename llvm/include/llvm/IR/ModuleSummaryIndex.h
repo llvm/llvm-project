@@ -80,6 +80,7 @@ struct ValueInfo {
     assert(Kind == VI_Value && "Not a Value type");
     return TheValue.V;
   }
+  bool isGUID() const { return Kind == VI_GUID; }
 };
 
 /// \brief Function and variable summary information to aid decisions and
@@ -259,6 +260,14 @@ public:
   /// count (across all calls from this function) or 0 if no PGO.
   void addCallGraphEdge(GlobalValue::GUID CalleeGUID, CalleeInfo Info) {
     CallGraphEdgeList.push_back(std::make_pair(CalleeGUID, Info));
+  }
+
+  /// Record a call graph edge from this function to each function GUID recorded
+  /// in \p CallGraphEdges.
+  void
+  addCallGraphEdges(DenseMap<GlobalValue::GUID, CalleeInfo> &CallGraphEdges) {
+    for (auto &EI : CallGraphEdges)
+      addCallGraphEdge(EI.first, EI.second);
   }
 
   /// Record a call graph edge from this function to the function identified

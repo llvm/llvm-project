@@ -649,6 +649,12 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
 
   const Function &ContainingFunction = *I.getParent()->getParent();
 
+  // Don't promote the alloca to LDS for shader calling conventions as the work
+  // item ID intrinsics are not supported for these calling conventions.
+  // Furthermore not all LDS is available for some of the stages.
+  if (AMDGPU::isShader(ContainingFunction.getCallingConv()))
+    return;
+
   // FIXME: We should also try to get this value from the reqd_work_group_size
   // function attribute if it is available.
   unsigned WorkGroupSize = AMDGPU::getMaximumWorkGroupSize(ContainingFunction);

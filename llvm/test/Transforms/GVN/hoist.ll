@@ -8,8 +8,8 @@ target triple = "x86_64-unknown-linux-gnu"
 ;
 ; CHECK-LABEL: @scalarsHoisting
 ; CHECK: fsub
-; CHECK: fmul
 ; CHECK: fsub
+; CHECK: fmul
 ; CHECK: fmul
 ; CHECK-NOT: fmul
 ; CHECK-NOT: fsub
@@ -48,8 +48,8 @@ if.end:                                           ; preds = %if.else, %if.then
 ; CHECK: load
 ; CHECK: load
 ; CHECK: fsub
-; CHECK: fmul
 ; CHECK: fsub
+; CHECK: fmul
 ; CHECK: fmul
 ; CHECK-NOT: load
 ; CHECK-NOT: fmul
@@ -223,10 +223,10 @@ if.end:
 
 ; Check that all independent expressions are hoisted.
 ; CHECK-LABEL: @independentScalarsHoisting
-; CHECK: fmul
 ; CHECK: fadd
-; CHECK: fdiv
 ; CHECK: fsub
+; CHECK: fdiv
+; CHECK: fmul
 ; CHECK-NOT: fsub
 ; CHECK-NOT: fdiv
 ; CHECK-NOT: fmul

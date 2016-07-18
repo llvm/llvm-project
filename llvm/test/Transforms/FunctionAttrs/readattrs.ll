@@ -11,7 +11,7 @@ define void @test1_2(i8* %x1_2, i8* %y1_2, i8* %z1_2) {
   ret void
 }
 
-; CHECK: define i8* @test2(i8* readnone returned %p)
+; CHECK: define i8* @test2(i8* readnone %p)
 define i8* @test2(i8* %p) {
   store i32 0, i32* @x
   ret i8* %p
@@ -53,7 +53,7 @@ define void @test7_1(i32* inalloca %a) {
   ret void
 }
 
-; CHECK: define i32* @test8_1(i32* readnone returned %p)
+; CHECK: define i32* @test8_1(i32* readnone %p)
 define i32* @test8_1(i32* %p) {
 entry:
   ret i32* %p
