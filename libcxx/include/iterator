@@ -700,7 +700,7 @@ operator<=(const reverse_iterator<_Iter1>& __x, const reverse_iterator<_Iter2>& 
     return __x.base() >= __y.base();
 }
 
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY
 auto
@@ -1117,7 +1117,7 @@ operator<=(const move_iterator<_Iter1>& __x, const move_iterator<_Iter2>& __y)
     return __x.base() <= __y.base();
 }
 
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY
 auto
@@ -1186,7 +1186,7 @@ _LIBCPP_INLINE_VISIBILITY
 bool
 operator<=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
 
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
 _LIBCPP_INLINE_VISIBILITY
 auto
@@ -1379,7 +1379,7 @@ private:
     bool
     operator<=(const __wrap_iter<_Iter1>&, const __wrap_iter<_Iter2>&) _NOEXCEPT;
 
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
     template <class _Iter1, class _Iter2>
     friend
     auto
@@ -1496,7 +1496,7 @@ operator<=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEX
     return !(__y < __x);
 }
 
-#if __cplusplus >= 201103L
+#ifndef _LIBCPP_CXX03_LANG
 template <class _Iter1, class _Iter2>
 inline _LIBCPP_INLINE_VISIBILITY
 auto
