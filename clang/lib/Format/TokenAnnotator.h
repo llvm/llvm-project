@@ -18,7 +18,6 @@
 
 #include "UnwrappedLineParser.h"
 #include "clang/Format/Format.h"
-#include <string>
 
 namespace clang {
 class SourceManager;

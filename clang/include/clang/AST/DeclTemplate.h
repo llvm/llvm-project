@@ -21,7 +21,6 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/TrailingObjects.h"
-#include <limits>
 #include <utility>
 
 namespace clang {

@@ -109,7 +109,7 @@ void fn_type_conversions() {
   void (*ambiguous)(int *) = &foo; // expected-error{{initializing 'void (*)(int *)' with an expression of incompatible type '<overloaded function type>'}} expected-note@105{{candidate function}} expected-note@106{{candidate function}}
   void *vp_ambiguous = &foo; // expected-error{{initializing 'void *' with an expression of incompatible type '<overloaded function type>'}} expected-note@105{{candidate function}} expected-note@106{{candidate function}}
 
-  void (*specific1)(int *) = (void (*)(void *))&foo; // expected-warning{{incompatible pointer types initializing 'void (*)(int *)' with an expression of type 'void (*)(void *)'}}
+  void (*specific1)(int *) = (void (*)(void *))&foo; // expected-warning{{incompatible function pointer types initializing 'void (*)(int *)' with an expression of type 'void (*)(void *)'}}
   void *specific2 = (void (*)(void *))&foo;
 
   void disabled(void *c) __attribute__((overloadable, enable_if(0, "")));

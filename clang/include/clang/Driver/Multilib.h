@@ -12,7 +12,6 @@
 
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Option/Option.h"
 #include <functional>
 #include <string>

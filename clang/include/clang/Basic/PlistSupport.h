@@ -10,7 +10,6 @@
 #ifndef LLVM_CLANG_BASIC_PLISTSUPPORT_H
 #define LLVM_CLANG_BASIC_PLISTSUPPORT_H
 
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/raw_ostream.h"
 

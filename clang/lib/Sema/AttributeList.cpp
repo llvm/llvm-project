@@ -20,7 +20,6 @@
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 using namespace clang;
 
 IdentifierLoc *IdentifierLoc::create(ASTContext &Ctx, SourceLocation Loc,

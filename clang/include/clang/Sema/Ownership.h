@@ -17,7 +17,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/PointerIntPair.h"
 
 //===----------------------------------------------------------------------===//
 // OpaquePtr

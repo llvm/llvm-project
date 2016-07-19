@@ -16,9 +16,8 @@
 
 #include "clang/AST/ASTMutationListener.h"
 #include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
-#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/AST/TemplateBase.h"
+#include "clang/Frontend/PCHContainerOperations.h"
 #include "clang/Sema/SemaConsumer.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "clang/Serialization/ASTDeserializationListener.h"
@@ -26,21 +25,19 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Bitcode/BitstreamWriter.h"
-#include <map>
 #include <queue>
 #include <vector>
 
 namespace llvm {
   class APFloat;
   class APInt;
-  class BitstreamWriter;
 }
 
 namespace clang {
 
+class DeclarationName;
 class ASTContext;
 class Attr;
 class NestedNameSpecifier;

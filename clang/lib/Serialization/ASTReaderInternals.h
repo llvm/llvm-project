@@ -13,14 +13,12 @@
 #ifndef LLVM_CLANG_LIB_SERIALIZATION_ASTREADERINTERNALS_H
 #define LLVM_CLANG_LIB_SERIALIZATION_ASTREADERINTERNALS_H
 
+#include "MultiOnDiskHashTable.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/Serialization/ASTBitCodes.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/PointerUnion.h"
-#include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/OnDiskHashTable.h"
-#include "MultiOnDiskHashTable.h"
 #include <utility>
 
 namespace clang {
