@@ -51,6 +51,11 @@ static cl::opt<bool>
              cl::desc("Dump C code describing the GPU mapping"), cl::Hidden,
              cl::init(false), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
+                                  cl::desc("Dump the kernel LLVM-IR"),
+                                  cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                                  cl::cat(PollyCategory));
+
 /// Create the ast expressions for a ScopStmt.
 ///
 /// This function is a callback for to generate the ast expressions for each
@@ -80,10 +85,29 @@ class GPUNodeBuilder : public IslNodeBuilder {
 public:
   GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
-                 DominatorTree &DT, Scop &S)
-      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S) {}
+                 DominatorTree &DT, Scop &S, gpu_prog *Prog)
+      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S), Prog(Prog) {}
 
 private:
+  /// A module containing GPU code.
+  ///
+  /// This pointer is only set in case we are currently generating GPU code.
+  std::unique_ptr<Module> GPUModule;
+
+  /// The GPU program we generate code for.
+  gpu_prog *Prog;
+
+  /// Class to free isl_ids.
+  class IslIdDeleter {
+  public:
+    void operator()(__isl_take isl_id *Id) { isl_id_free(Id); };
+  };
+
+  /// A set containing all isl_ids allocated in a GPU kernel.
+  ///
+  /// By releasing this set all isl_ids will be freed.
+  std::set<std::unique_ptr<isl_id, IslIdDeleter>> KernelIDs;
+
   /// Create code for user-defined AST nodes.
   ///
   /// These AST nodes can be of type:
@@ -91,14 +115,266 @@ private:
   ///   - ScopStmt:      A computational statement (TODO)
   ///   - Kernel:        A GPU kernel call (TODO)
   ///   - Data-Transfer: A GPU <-> CPU data-transfer (TODO)
+  ///   - In-kernel synchronization
+  ///   - In-kernel memory copy statement
   ///
   /// @param UserStmt The ast node to generate code for.
   virtual void createUser(__isl_take isl_ast_node *UserStmt);
+
+  /// Create GPU kernel.
+  ///
+  /// Code generate the kernel described by @p KernelStmt.
+  ///
+  /// @param KernelStmt The ast node to generate kernel code for.
+  void createKernel(__isl_take isl_ast_node *KernelStmt);
+
+  /// Create kernel function.
+  ///
+  /// Create a kernel function located in a newly created module that can serve
+  /// as target for device code generation. Set the Builder to point to the
+  /// start block of this newly created function.
+  ///
+  /// @param Kernel The kernel to generate code for.
+  void createKernelFunction(ppcg_kernel *Kernel);
+
+  /// Create the declaration of a kernel function.
+  ///
+  /// The kernel function takes as arguments:
+  ///
+  ///   - One i8 pointer for each external array reference used in the kernel.
+  ///   - Host iterators
+  ///   - Parameters
+  ///   - Other LLVM Value references (TODO)
+  ///
+  /// @param Kernel The kernel to generate the function declaration for.
+  /// @returns The newly declared function.
+  Function *createKernelFunctionDecl(ppcg_kernel *Kernel);
+
+  /// Insert intrinsic functions to obtain thread and block ids.
+  ///
+  /// @param The kernel to generate the intrinsic functions for.
+  void insertKernelIntrinsics(ppcg_kernel *Kernel);
+
+  /// Create an in-kernel synchronization call.
+  void createKernelSync();
+
+  /// Finalize the generation of the kernel function.
+  ///
+  /// Free the LLVM-IR module corresponding to the kernel and -- if requested --
+  /// dump its IR to stderr.
+  void finalizeKernelFunction();
 };
 
+/// Check if one string is a prefix of another.
+///
+/// @param String The string in which to look for the prefix.
+/// @param Prefix The prefix to look for.
+static bool isPrefix(std::string String, std::string Prefix) {
+  return String.find(Prefix) == 0;
+}
+
 void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
+  isl_ast_expr *Expr = isl_ast_node_user_get_expr(UserStmt);
+  isl_ast_expr *StmtExpr = isl_ast_expr_get_op_arg(Expr, 0);
+  isl_id *Id = isl_ast_expr_get_id(StmtExpr);
+  isl_id_free(Id);
+  isl_ast_expr_free(StmtExpr);
+
+  const char *Str = isl_id_get_name(Id);
+  if (!strcmp(Str, "kernel")) {
+    createKernel(UserStmt);
+    isl_ast_expr_free(Expr);
+    return;
+  }
+
+  if (isPrefix(Str, "to_device") || isPrefix(Str, "from_device")) {
+    // TODO: Insert memory copies
+    isl_ast_expr_free(Expr);
+    isl_ast_node_free(UserStmt);
+    return;
+  }
+
+  isl_id *Anno = isl_ast_node_get_annotation(UserStmt);
+  struct ppcg_kernel_stmt *KernelStmt =
+      (struct ppcg_kernel_stmt *)isl_id_get_user(Anno);
+  isl_id_free(Anno);
+
+  switch (KernelStmt->type) {
+  case ppcg_kernel_domain:
+    // TODO Create kernel user stmt
+    isl_ast_expr_free(Expr);
+    isl_ast_node_free(UserStmt);
+    return;
+  case ppcg_kernel_copy:
+    // TODO: Create kernel copy stmt
+    isl_ast_expr_free(Expr);
+    isl_ast_node_free(UserStmt);
+    return;
+  case ppcg_kernel_sync:
+    createKernelSync();
+    isl_ast_expr_free(Expr);
+    isl_ast_node_free(UserStmt);
+    return;
+  }
+
+  isl_ast_expr_free(Expr);
   isl_ast_node_free(UserStmt);
   return;
+}
+
+void GPUNodeBuilder::createKernelSync() {
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  auto *Sync = Intrinsic::getDeclaration(M, Intrinsic::nvvm_barrier0);
+  Builder.CreateCall(Sync, {});
+}
+
+void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
+  isl_id *Id = isl_ast_node_get_annotation(KernelStmt);
+  ppcg_kernel *Kernel = (ppcg_kernel *)isl_id_get_user(Id);
+  isl_id_free(Id);
+  isl_ast_node_free(KernelStmt);
+
+  assert(Kernel->tree && "Device AST of kernel node is empty");
+
+  Instruction &HostInsertPoint = *Builder.GetInsertPoint();
+  IslExprBuilder::IDToValueTy HostIDs = IDToValue;
+
+  createKernelFunction(Kernel);
+
+  create(isl_ast_node_copy(Kernel->tree));
+
+  Builder.SetInsertPoint(&HostInsertPoint);
+  IDToValue = HostIDs;
+
+  finalizeKernelFunction();
+}
+
+/// Compute the DataLayout string for the NVPTX backend.
+///
+/// @param is64Bit Are we looking for a 64 bit architecture?
+static std::string computeNVPTXDataLayout(bool is64Bit) {
+  std::string Ret = "e";
+
+  if (!is64Bit)
+    Ret += "-p:32:32";
+
+  Ret += "-i64:64-v16:16-v32:32-n16:32:64";
+
+  return Ret;
+}
+
+Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
+  std::vector<Type *> Args;
+  std::string Identifier = "kernel_" + std::to_string(Kernel->id);
+
+  for (long i = 0; i < Prog->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    Args.push_back(Builder.getInt8PtrTy());
+  }
+
+  int NumHostIters = isl_space_dim(Kernel->space, isl_dim_set);
+
+  for (long i = 0; i < NumHostIters; i++)
+    Args.push_back(Builder.getInt64Ty());
+
+  int NumVars = isl_space_dim(Kernel->space, isl_dim_param);
+
+  for (long i = 0; i < NumVars; i++)
+    Args.push_back(Builder.getInt64Ty());
+
+  auto *FT = FunctionType::get(Builder.getVoidTy(), Args, false);
+  auto *FN = Function::Create(FT, Function::ExternalLinkage, Identifier,
+                              GPUModule.get());
+  FN->setCallingConv(CallingConv::PTX_Kernel);
+
+  auto Arg = FN->arg_begin();
+  for (long i = 0; i < Kernel->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    Arg->setName(Prog->array[i].name);
+    Arg++;
+  }
+
+  for (long i = 0; i < NumHostIters; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_set, i);
+    Arg->setName(isl_id_get_name(Id));
+    IDToValue[Id] = &*Arg;
+    KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
+    Arg++;
+  }
+
+  for (long i = 0; i < NumVars; i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_param, i);
+    Arg->setName(isl_id_get_name(Id));
+    IDToValue[Id] = &*Arg;
+    KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
+    Arg++;
+  }
+
+  return FN;
+}
+
+void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
+  Intrinsic::ID IntrinsicsBID[] = {Intrinsic::nvvm_read_ptx_sreg_ctaid_x,
+                                   Intrinsic::nvvm_read_ptx_sreg_ctaid_y};
+
+  Intrinsic::ID IntrinsicsTID[] = {Intrinsic::nvvm_read_ptx_sreg_tid_x,
+                                   Intrinsic::nvvm_read_ptx_sreg_tid_y,
+                                   Intrinsic::nvvm_read_ptx_sreg_tid_z};
+
+  auto addId = [this](__isl_take isl_id *Id, Intrinsic::ID Intr) mutable {
+    std::string Name = isl_id_get_name(Id);
+    Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+    Function *IntrinsicFn = Intrinsic::getDeclaration(M, Intr);
+    Value *Val = Builder.CreateCall(IntrinsicFn, {});
+    Val = Builder.CreateIntCast(Val, Builder.getInt64Ty(), false, Name);
+    IDToValue[Id] = Val;
+    KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
+  };
+
+  for (int i = 0; i < Kernel->n_grid; ++i) {
+    isl_id *Id = isl_id_list_get_id(Kernel->block_ids, i);
+    addId(Id, IntrinsicsBID[i]);
+  }
+
+  for (int i = 0; i < Kernel->n_block; ++i) {
+    isl_id *Id = isl_id_list_get_id(Kernel->thread_ids, i);
+    addId(Id, IntrinsicsTID[i]);
+  }
+}
+
+void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel) {
+
+  std::string Identifier = "kernel_" + std::to_string(Kernel->id);
+  GPUModule.reset(new Module(Identifier, Builder.getContext()));
+  GPUModule->setTargetTriple(Triple::normalize("nvptx64-nvidia-cuda"));
+  GPUModule->setDataLayout(computeNVPTXDataLayout(true /* is64Bit */));
+
+  Function *FN = createKernelFunctionDecl(Kernel);
+
+  BasicBlock *PrevBlock = Builder.GetInsertBlock();
+  auto EntryBlock = BasicBlock::Create(Builder.getContext(), "entry", FN);
+
+  DominatorTree &DT = P->getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  DT.addNewBlock(EntryBlock, PrevBlock);
+
+  Builder.SetInsertPoint(EntryBlock);
+  Builder.CreateRetVoid();
+  Builder.SetInsertPoint(EntryBlock, EntryBlock->begin());
+
+  insertKernelIntrinsics(Kernel);
+}
+
+void GPUNodeBuilder::finalizeKernelFunction() {
+
+  if (DumpKernelIR)
+    outs() << *GPUModule << "\n";
+
+  GPUModule.release();
+  KernelIDs.clear();
 }
 
 namespace {
@@ -693,8 +969,9 @@ public:
 
   /// Generate code for a given GPU AST described by @p Root.
   ///
-  /// @param An isl_ast_node pointing to the root of the GPU AST.
-  void generateCode(__isl_take isl_ast_node *Root) {
+  /// @param Root An isl_ast_node pointing to the root of the GPU AST.
+  /// @param Prog The GPU Program to generate code for.
+  void generateCode(__isl_take isl_ast_node *Root, gpu_prog *Prog) {
     ScopAnnotator Annotator;
     Annotator.buildAliasScopes(*S);
 
@@ -706,8 +983,8 @@ public:
 
     PollyIRBuilder Builder = createPollyIRBuilder(EnteringBB, Annotator);
 
-    GPUNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT,
-                               *S);
+    GPUNodeBuilder NodeBuilder(Builder, Annotator, this, *DL, *LI, *SE, *DT, *S,
+                               Prog);
 
     // Only build the run-time condition and parameters _after_ having
     // introduced the conditional branch. This is important as the conditional
@@ -741,7 +1018,7 @@ public:
     auto PPCGGen = generateGPU(PPCGScop, PPCGProg);
 
     if (PPCGGen->tree)
-      generateCode(isl_ast_node_copy(PPCGGen->tree));
+      generateCode(isl_ast_node_copy(PPCGGen->tree), PPCGProg);
 
     freeOptions(PPCGScop);
     freePPCGGen(PPCGGen);

@@ -239,7 +239,7 @@ void LinkerScript<ELFT>::assignAddresses(
     }
 
     // Find all the sections with required name. There can be more than
-    // ont section with such name, if the alignment, flags or type
+    // one section with such name, if the alignment, flags or type
     // attribute differs.
     assert(Cmd.Kind == SectionKind);
     for (OutputSectionBase<ELFT> *Sec : Sections) {
@@ -265,8 +265,7 @@ void LinkerScript<ELFT>::assignAddresses(
   }
 
   // ELF and Program headers need to be right before the first section in
-  // memory.
-  // Set their addresses accordingly.
+  // memory. Set their addresses accordingly.
   MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
                         Out<ELFT>::ProgramHeaders->getSize(),
                     Target->PageSize);

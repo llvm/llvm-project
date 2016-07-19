@@ -816,6 +816,7 @@ bool DAGTypeLegalizer::CanSkipSoftenFloatOperand(SDNode *N, unsigned OpNo) {
     case ISD::FCOPYSIGN:
     case ISD::FNEG:
     case ISD::Register:
+    case ISD::SELECT:
       return true;
   }
   return false;

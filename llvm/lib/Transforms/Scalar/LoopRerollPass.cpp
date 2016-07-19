@@ -739,11 +739,11 @@ void LoopReroll::DAGRootTracker::collectInLoopUserSet(
     collectInLoopUserSet(Root, Exclude, Final, Users);
 }
 
-static bool isSimpleLoadStore(Instruction *I) {
+static bool isUnorderedLoadStore(Instruction *I) {
   if (LoadInst *LI = dyn_cast<LoadInst>(I))
-    return LI->isSimple();
+    return LI->isUnordered();
   if (StoreInst *SI = dyn_cast<StoreInst>(I))
-    return SI->isSimple();
+    return SI->isUnordered();
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I))
     return !MI->isVolatile();
   return false;
@@ -1283,7 +1283,7 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
         // which while a valid (somewhat arbitrary) micro-optimization, is
         // needed because otherwise isSafeToSpeculativelyExecute returns
         // false on PHI nodes.
-        if (!isa<PHINode>(I) && !isSimpleLoadStore(I) &&
+        if (!isa<PHINode>(I) && !isUnorderedLoadStore(I) &&
             !isSafeToSpeculativelyExecute(I))
           // Intervening instructions cause side effects.
           FutureSideEffects = true;
@@ -1313,10 +1313,10 @@ bool LoopReroll::DAGRootTracker::validate(ReductionTracker &Reductions) {
       // If we've past an instruction from a future iteration that may have
       // side effects, and this instruction might also, then we can't reorder
       // them, and this matching fails. As an exception, we allow the alias
-      // set tracker to handle regular (simple) load/store dependencies.
-      if (FutureSideEffects && ((!isSimpleLoadStore(BaseInst) &&
+      // set tracker to handle regular (unordered) load/store dependencies.
+      if (FutureSideEffects && ((!isUnorderedLoadStore(BaseInst) &&
                                  !isSafeToSpeculativelyExecute(BaseInst)) ||
-                                (!isSimpleLoadStore(RootInst) &&
+                                (!isUnorderedLoadStore(RootInst) &&
                                  !isSafeToSpeculativelyExecute(RootInst)))) {
         DEBUG(dbgs() << "LRR: iteration root match failed at " << *BaseInst <<
                         " vs. " << *RootInst <<

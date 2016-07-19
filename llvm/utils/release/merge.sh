@@ -31,7 +31,7 @@ while [ $# -gt 0 ]; do
     case $1 in
         -rev | --rev | -r )
             shift
-            rev=${$1#r}
+            rev=$1
             ;;
         -proj | --proj | -project | --project | -p )
             shift

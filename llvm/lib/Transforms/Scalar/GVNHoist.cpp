@@ -86,7 +86,7 @@ typedef DenseMap<std::pair<unsigned, unsigned>, SmallVector<Instruction *, 4>>
     VNtoInsns;
 // An invalid value number Used when inserting a single value number into
 // VNtoInsns.
-enum { InvalidVN = ~2U };
+enum : unsigned { InvalidVN = ~2U };
 
 // Records all scalar instructions candidate for code hoisting.
 class InsnInfo {
@@ -574,19 +574,6 @@ public:
     llvm_unreachable("Both I and J must be from same BB");
   }
 
-  // Replace the use of From with To in Insn.
-  void replaceUseWith(Instruction *Insn, Value *From, Value *To) const {
-    for (Value::use_iterator UI = From->use_begin(), UE = From->use_end();
-         UI != UE;) {
-      Use &U = *UI++;
-      if (U.getUser() == Insn) {
-        U.set(To);
-        return;
-      }
-    }
-    llvm_unreachable("should replace exactly once");
-  }
-
   bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt) const {
     // Check whether the GEP of a ld/st can be synthesized at HoistPt.
     Instruction *Gep = nullptr;
@@ -612,13 +599,13 @@ public:
     // Copy the gep before moving the ld/st.
     Instruction *ClonedGep = Gep->clone();
     ClonedGep->insertBefore(HoistPt->getTerminator());
-    replaceUseWith(Repl, Gep, ClonedGep);
+    Repl->replaceUsesOfWith(Gep, ClonedGep);
 
     // Also copy Val.
     if (Val) {
       Instruction *ClonedVal = Val->clone();
       ClonedVal->insertBefore(HoistPt->getTerminator());
-      replaceUseWith(Repl, Val, ClonedVal);
+      Repl->replaceUsesOfWith(Val, ClonedVal);
     }
 
     return true;

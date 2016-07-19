@@ -147,18 +147,19 @@ public:
     // The starting ValueId is just after the number of values in the
     // ValueEnumerator, so that they can be emitted in the VST.
     GlobalValueId = VE.getValues().size();
-    if (Index)
-      for (const auto &GUIDSummaryLists : *Index)
-        // Examine all summaries for this GUID.
-        for (auto &Summary : GUIDSummaryLists.second)
-          if (auto FS = dyn_cast<FunctionSummary>(Summary.get()))
-            // For each call in the function summary, see if the call
-            // is to a GUID (which means it is for an indirect call,
-            // otherwise we would have a Value for it). If so, synthesize
-            // a value id.
-            for (auto &CallEdge : FS->calls())
-              if (CallEdge.first.isGUID())
-                assignValueId(CallEdge.first.getGUID());
+    if (!Index)
+      return;
+    for (const auto &GUIDSummaryLists : *Index)
+      // Examine all summaries for this GUID.
+      for (auto &Summary : GUIDSummaryLists.second)
+        if (auto FS = dyn_cast<FunctionSummary>(Summary.get()))
+          // For each call in the function summary, see if the call
+          // is to a GUID (which means it is for an indirect call,
+          // otherwise we would have a Value for it). If so, synthesize
+          // a value id.
+          for (auto &CallEdge : FS->calls())
+            if (CallEdge.first.isGUID())
+              assignValueId(CallEdge.first.getGUID());
   }
 
 private:
@@ -293,7 +294,10 @@ private:
   }
   unsigned getValueId(GlobalValue::GUID ValGUID) {
     const auto &VMI = GUIDToValueIdMap.find(ValGUID);
-    assert(VMI != GUIDToValueIdMap.end());
+    // Expect that any GUID value had a value Id assigned by an
+    // earlier call to assignValueId.
+    assert(VMI != GUIDToValueIdMap.end() &&
+           "GUID does not have assigned value Id");
     return VMI->second;
   }
   // Helper to get the valueId for the type of value recorded in VI.

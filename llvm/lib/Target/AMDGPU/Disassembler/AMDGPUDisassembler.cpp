@@ -235,6 +235,11 @@ MCOperand AMDGPUDisassembler::decodeOperand_VS_64(unsigned Val) const {
 }
 
 MCOperand AMDGPUDisassembler::decodeOperand_VGPR_32(unsigned Val) const {
+  // Some instructions have operand restrictions beyond what the encoding
+  // allows. Some ordinarily VSrc_32 operands are VGPR_32, so clear the extra
+  // high bit.
+  Val &= 255;
+
   return createRegOperand(AMDGPU::VGPR_32RegClassID, Val);
 }
 

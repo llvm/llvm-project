@@ -53,7 +53,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/LoopStrengthReduce.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
@@ -61,6 +61,7 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/Analysis/IVUsers.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/Constants.h"
@@ -73,6 +74,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include <algorithm>
@@ -4940,12 +4942,11 @@ private:
   bool runOnLoop(Loop *L, LPPassManager &LPM) override;
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
-
 }
 
 char LoopStrengthReduce::ID = 0;
 INITIALIZE_PASS_BEGIN(LoopStrengthReduce, "loop-reduce",
-                "Loop Strength Reduction", false, false)
+                      "Loop Strength Reduction", false, false)
 INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
@@ -4953,12 +4954,9 @@ INITIALIZE_PASS_DEPENDENCY(IVUsersWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_END(LoopStrengthReduce, "loop-reduce",
-                "Loop Strength Reduction", false, false)
+                    "Loop Strength Reduction", false, false)
 
-
-Pass *llvm::createLoopStrengthReducePass() {
-  return new LoopStrengthReduce();
-}
+Pass *llvm::createLoopStrengthReducePass() { return new LoopStrengthReduce(); }
 
 LoopStrengthReduce::LoopStrengthReduce() : LoopPass(ID) {
   initializeLoopStrengthReducePass(*PassRegistry::getPassRegistry());
@@ -4984,16 +4982,9 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addRequired<TargetTransformInfoWrapperPass>();
 }
 
-bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
-  if (skipLoop(L))
-    return false;
-
-  auto &IU = getAnalysis<IVUsersWrapperPass>().getIU();
-  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-      *L->getHeader()->getParent());
+static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
+                               DominatorTree &DT, LoopInfo &LI,
+                               const TargetTransformInfo &TTI) {
   bool Changed = false;
 
   // Run the main LSR transformation.
@@ -5004,15 +4995,11 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   if (EnablePhiElim && L->isLoopSimplifyForm()) {
     SmallVector<WeakVH, 16> DeadInsts;
     const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
-    SCEVExpander Rewriter(getAnalysis<ScalarEvolutionWrapperPass>().getSE(), DL,
-                          "lsr");
+    SCEVExpander Rewriter(SE, DL, "lsr");
 #ifndef NDEBUG
     Rewriter.setDebugType(DEBUG_TYPE);
 #endif
-    unsigned numFolded = Rewriter.replaceCongruentIVs(
-        L, &getAnalysis<DominatorTreeWrapperPass>().getDomTree(), DeadInsts,
-        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
-            *L->getHeader()->getParent()));
+    unsigned numFolded = Rewriter.replaceCongruentIVs(L, &DT, DeadInsts, &TTI);
     if (numFolded) {
       Changed = true;
       DeleteTriviallyDeadInstructions(DeadInsts);
@@ -5020,4 +5007,37 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
     }
   }
   return Changed;
+}
+
+bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
+  if (skipLoop(L))
+    return false;
+
+  auto &IU = getAnalysis<IVUsersWrapperPass>().getIU();
+  auto &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
+  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
+      *L->getHeader()->getParent());
+  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI);
+}
+
+PreservedAnalyses LoopStrengthReducePass::run(Loop &L,
+                                              AnalysisManager<Loop> &AM) {
+  const auto &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
+  Function *F = L.getHeader()->getParent();
+
+  auto &IU = AM.getResult<IVUsersAnalysis>(L);
+  auto *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
+  auto *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
+  auto *LI = FAM.getCachedResult<LoopAnalysis>(*F);
+  auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
+  assert((SE && DT && LI && TTI) &&
+         "Analyses for Loop Strength Reduce not available");
+
+  if (!ReduceLoopStrength(&L, IU, *SE, *DT, *LI, *TTI))
+    return PreservedAnalyses::all();
+
+  return getLoopPassPreservedAnalyses();
 }

@@ -43,6 +43,8 @@ defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 
 def int_r600_read_workdim : AMDGPUReadPreloadRegisterIntrinsic;
 
+def int_r600_group_barrier : GCCBuiltin<"__builtin_r600_group_barrier">,
+  Intrinsic<[], [], [IntrConvergent]>;
 
 // AS 7 is PARAM_I_ADDRESS, used for kernel arguments
 def int_r600_implicitarg_ptr :
@@ -171,6 +173,11 @@ def int_amdgcn_cubetc : GCCBuiltin<"__builtin_amdgcn_cubetc">,
   Intrinsic<[llvm_float_ty],
     [llvm_float_ty, llvm_float_ty, llvm_float_ty], [IntrNoMem]
 >;
+
+// v_ffbh_i32, as opposed to v_ffbh_u32. For v_ffbh_u32, llvm.ctlz
+// should be used.
+def int_amdgcn_sffbh :
+  Intrinsic<[llvm_anyint_ty], [LLVMMatchType<0>], [IntrNoMem]>;
 
 // TODO: Do we want an ordering for these?
 def int_amdgcn_atomic_inc : Intrinsic<[llvm_anyint_ty],

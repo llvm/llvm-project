@@ -355,14 +355,16 @@ private:
                             SmallVectorImpl<Value *> &NewIndices);
   Instruction *FoldOpIntoSelect(Instruction &Op, SelectInst *SI);
 
-  /// \brief Classify whether a cast is worth optimizing.
+  /// Classify whether a cast is worth optimizing.
   ///
-  /// Returns true if the cast from "V to Ty" actually results in any code
-  /// being generated and is interesting to optimize out. If the cast can be
-  /// eliminated by some other simple transformation, we prefer to do the
-  /// simplification first.
-  bool ShouldOptimizeCast(Instruction::CastOps opcode, const Value *V,
-                          Type *Ty);
+  /// This is a helper to decide whether the simplification of
+  /// logic(cast(A), cast(B)) to cast(logic(A, B)) should be performed.
+  ///
+  /// \param CI The cast we are interested in.
+  ///
+  /// \return true if this cast actually results in any code being generated and
+  /// if it cannot already be eliminated by some other transformation.
+  bool shouldOptimizeCast(CastInst *CI);
 
   /// \brief Try to optimize a sequence of instructions checking if an operation
   /// on LHS and RHS overflows.
@@ -385,8 +387,22 @@ private:
   bool transformConstExprCastCall(CallSite CS);
   Instruction *transformCallThroughTrampoline(CallSite CS,
                                               IntrinsicInst *Tramp);
-  Instruction *transformZExtICmp(ICmpInst *ICI, Instruction &CI,
-                                 bool DoXform = true);
+
+  /// Transform (zext icmp) to bitwise / integer operations in order to
+  /// eliminate it.
+  ///
+  /// \param ICI The icmp of the (zext icmp) pair we are interested in.
+  /// \parem CI The zext of the (zext icmp) pair we are interested in.
+  /// \param DoTransform Pass false to just test whether the given (zext icmp)
+  /// would be transformed. Pass true to actually perform the transformation.
+  ///
+  /// \return null if the transformation cannot be performed. If the
+  /// transformation can be performed the new instruction that replaces the
+  /// (zext icmp) pair will be returned (if \p DoTransform is false the
+  /// unmodified \p ICI will be returned in this case).
+  Instruction *transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
+                                 bool DoTransform = true);
+
   Instruction *transformSExtICmp(ICmpInst *ICI, Instruction &CI);
   bool WillNotOverflowSignedAdd(Value *LHS, Value *RHS, Instruction &CxtI);
   bool WillNotOverflowSignedSub(Value *LHS, Value *RHS, Instruction &CxtI);
@@ -396,6 +412,19 @@ private:
   Instruction *scalarizePHI(ExtractElementInst &EI, PHINode *PN);
   Value *EvaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask);
   Instruction *foldCastedBitwiseLogic(BinaryOperator &I);
+
+  /// Determine if a pair of casts can be replaced by a single cast.
+  ///
+  /// \param CI1 The first of a pair of casts.
+  /// \param CI2 The second of a pair of casts.
+  ///
+  /// \return 0 if the cast pair cannot be eliminated, otherwise returns an
+  /// Instruction::CastOps value for a cast that can replace the pair, casting
+  /// CI1->getSrcTy() to CI2->getDstTy().
+  ///
+  /// \see CastInst::isEliminableCastPair
+  Instruction::CastOps isEliminableCastPair(const CastInst *CI1,
+                                            const CastInst *CI2);
 
 public:
   /// \brief Inserts an instruction \p New before instruction \p Old

@@ -394,7 +394,7 @@ def FLT_TO_UINT_eg : FLT_TO_UINT_Common<0x9A> {
 def UINT_TO_FLT_eg : UINT_TO_FLT_Common<0x9C>;
 
 def GROUP_BARRIER : InstR600 <
-    (outs), (ins), "  GROUP_BARRIER", [(int_AMDGPU_barrier_local), (int_AMDGPU_barrier_global)], AnyALU>,
+    (outs), (ins), "  GROUP_BARRIER", [(int_r600_group_barrier)], AnyALU>,
     R600ALU_Word0,
     R600ALU_Word1_OP2 <0x54> {
 
@@ -422,11 +422,6 @@ def GROUP_BARRIER : InstR600 <
 
   let ALUInst = 1;
 }
-
-def : Pat <
-	(int_AMDGPU_barrier_global),
-	(GROUP_BARRIER)
->;
 
 //===----------------------------------------------------------------------===//
 // LDS Instructions

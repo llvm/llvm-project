@@ -115,7 +115,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SmallVector<PHINode *, 16> AddedPHIs;
     SmallVector<PHINode *, 8> PostProcessPHIs;
 
-    SSAUpdater SSAUpdate;
+    SmallVector<PHINode *, 4> InsertedPHIs;
+    SSAUpdater SSAUpdate(&InsertedPHIs);
     SSAUpdate.Initialize(I->getType(), I->getName());
 
     // Insert the LCSSA phi's into all of the exit blocks dominated by the
@@ -184,6 +185,14 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
       // Otherwise, do full PHI insertion.
       SSAUpdate.RewriteUse(*UseToRewrite);
+
+      // SSAUpdater might have inserted phi-nodes inside other loops. We'll need
+      // to post-process them to keep LCSSA form.
+      for (PHINode *InsertedPN : InsertedPHIs) {
+        if (auto *OtherLoop = LI.getLoopFor(InsertedPN->getParent()))
+          if (!L->contains(OtherLoop))
+            PostProcessPHIs.push_back(InsertedPN);
+      }
     }
 
     // Post process PHI instructions that were inserted into another disjoint

@@ -266,6 +266,7 @@ enum NodeType : unsigned {
   BFI, // (src0 & src1) | (~src0 & src2)
   BFM, // Insert a range of bits into a 32-bit word.
   FFBH_U32, // ctlz with -1 if input is zero.
+  FFBH_I32,
   MUL_U24,
   MUL_I24,
   MAD_U24,

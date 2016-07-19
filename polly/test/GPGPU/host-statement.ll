@@ -2,6 +2,10 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
 
+; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
+; RUN: -disable-output < %s | \
+; RUN: FileCheck -check-prefix=KERNEL-IR %s
+
 ; REQUIRES: pollyacc
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
@@ -68,6 +72,7 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; CODE-NEXT:     for (int c3 = 0; c3 <= 1; c3 += 1)
 ; CODE-NEXT:       Stmt_for_body62(32 * b0 + t0 + 8192 * c0, 32 * b1 + t1 + 16 * c3);
 
+; KERNEL-IR: call void @llvm.nvvm.barrier0()
 
 ; Function Attrs: nounwind uwtable
 define internal void @kernel_gramschmidt(i32 %ni, i32 %nj, [512 x double]* %A, [512 x double]* %R, [512 x double]* %Q) #1 {

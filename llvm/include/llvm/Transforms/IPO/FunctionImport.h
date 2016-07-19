@@ -13,6 +13,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ModuleSummaryIndex.h"
+#include "llvm/IR/PassManager.h"
 
 #include <functional>
 #include <map>
@@ -61,6 +62,17 @@ private:
 
   /// Factory function to load a Module for a given identifier
   std::function<std::unique_ptr<Module>(StringRef Identifier)> ModuleLoader;
+};
+
+/// The function importing pass
+class FunctionImportPass : public PassInfoMixin<FunctionImportPass> {
+public:
+  FunctionImportPass(const ModuleSummaryIndex *Index = nullptr)
+      : Index(Index) {}
+  PreservedAnalyses run(Module &M, AnalysisManager<Module> &AM);
+
+private:
+  const ModuleSummaryIndex *Index;
 };
 
 /// Compute all the imports and exports for every module in the Index.

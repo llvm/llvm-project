@@ -118,11 +118,16 @@ loopend:
 ; }
 
 ; CHECK-LABEL: @reverse_forward_induction_i64_i8(
-; CHECK: vector.body
 ; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %vec.ind = phi <4 x i64> [ <i64 1023, i64 1022, i64 1021, i64 1020>, %vector.ph ]
-; CHECK: %step.add = add <4 x i64> %vec.ind, <i64 -4, i64 -4, i64 -4, i64 -4>
-; CHECK: trunc i64 %index to i8
+; CHECK: %offset.idx = sub i64 1023, %index
+; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
+; CHECK: %[[a1:.+]] = add i64 %offset.idx, -1
+; CHECK: %[[a2:.+]] = add i64 %offset.idx, -2
+; CHECK: %[[a3:.+]] = add i64 %offset.idx, -3
+; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
+; CHECK: %[[a5:.+]] = add i64 %offset.idx, -5
+; CHECK: %[[a6:.+]] = add i64 %offset.idx, -6
+; CHECK: %[[a7:.+]] = add i64 %offset.idx, -7
 
 define void @reverse_forward_induction_i64_i8() {
 entry:
@@ -145,10 +150,16 @@ while.end:
 }
 
 ; CHECK-LABEL: @reverse_forward_induction_i64_i8_signed(
-; CHECK: vector.body:
-; CHECK:  %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; CHECK: %vec.ind = phi <4 x i64> [ <i64 1023, i64 1022, i64 1021, i64 1020>, %vector.ph ]
-; CHECK: %step.add = add <4 x i64> %vec.ind, <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
+; CHECK: %offset.idx = sub i64 1023, %index
+; CHECK: %[[a0:.+]] = add i64 %offset.idx, 0
+; CHECK: %[[a1:.+]] = add i64 %offset.idx, -1
+; CHECK: %[[a2:.+]] = add i64 %offset.idx, -2
+; CHECK: %[[a3:.+]] = add i64 %offset.idx, -3
+; CHECK: %[[a4:.+]] = add i64 %offset.idx, -4
+; CHECK: %[[a5:.+]] = add i64 %offset.idx, -5
+; CHECK: %[[a6:.+]] = add i64 %offset.idx, -6
+; CHECK: %[[a7:.+]] = add i64 %offset.idx, -7
 
 define void @reverse_forward_induction_i64_i8_signed() {
 entry:

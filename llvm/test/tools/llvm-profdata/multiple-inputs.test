@@ -51,3 +51,43 @@ DISJOINT-2: Block counts: [2, 3]
 DISJOINT: Total functions: 2
 DISJOINT: Maximum function count: 1
 DISJOINT: Maximum internal block count: 3
+
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     -num-threads 2 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO4
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     -j 3 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO4
+FOO4: foo:
+FOO4: Counters: 3
+FOO4: Function count: 4
+FOO4: Block counts: [8, 12]
+FOO4: Total functions: 1
+FOO4: Maximum function count: 4
+FOO4: Maximum internal block count: 12
+
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -j 2 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -j 3 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+RUN: llvm-profdata merge %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext %p/Inputs/foo3-1.proftext \
+RUN:                     %p/Inputs/foo3-1.proftext -j 1 -o %t
+RUN: llvm-profdata show %t -all-functions -counts | FileCheck %s --check-prefix=FOO5
+FOO5: foo:
+FOO5: Counters: 3
+FOO5: Function count: 5
+FOO5: Block counts: [10, 15]
+FOO5: Total functions: 1
+FOO5: Maximum function count: 5
+FOO5: Maximum internal block count: 15

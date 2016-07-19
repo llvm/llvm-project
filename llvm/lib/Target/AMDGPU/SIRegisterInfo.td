@@ -397,6 +397,17 @@ def VSrc_64 : RegisterOperand<VS_64> {
 }
 
 //===----------------------------------------------------------------------===//
+//  VSrc_* Operands with an VGPR
+//===----------------------------------------------------------------------===//
+
+// This is for operands with the enum(9), VSrc encoding restriction,
+// but only allows VGPRs.
+def VRegSrc_32 : RegisterOperand<VGPR_32> {
+  //let ParserMatchClass = RegImmMatcher<"VRegSrc32">;
+  let DecoderMethod = "DecodeVS_32RegisterClass";
+}
+
+//===----------------------------------------------------------------------===//
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
