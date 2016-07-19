@@ -62,20 +62,26 @@ int main(int argc, char **argv) {
 
   // Set linkage of every external definition to linkonce_odr.
   for (Module::iterator i = M->begin(), e = M->end(); i != e; ++i) {
-    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage)
-      i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage) {
+        i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+        i->setVisibility(GlobalValue::ProtectedVisibility);
+    }
   }
 
   for (Module::global_iterator i = M->global_begin(), e = M->global_end();
        i != e; ++i) {
-    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage)
-      i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage) {
+        i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+        i->setVisibility(GlobalValue::ProtectedVisibility);
+    }
   }
 
   for (Module::alias_iterator i = M->alias_begin(), e = M->alias_end();
        i != e; ++i) {
-    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage)
-      i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage) {
+        i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+        i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+    }
   }
 
 
