@@ -39,6 +39,10 @@ extern "C" {
 // data for that point in the run be reported from the tool.
 void COMPILER_RT_WEAK __esan_report();
 
+// This function returns the number of samples that the esan tool has collected
+// to this point.  This is useful for testing.
+unsigned int COMPILER_RT_WEAK __esan_get_sample_count();
+
 #ifdef __cplusplus
 } // extern "C"
 #endif
