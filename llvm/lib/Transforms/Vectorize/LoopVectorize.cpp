@@ -6156,6 +6156,16 @@ bool LoopVectorizationCostModel::isConsecutiveLoadOrStore(Instruction *Inst) {
   return false;
 }
 
+/// Take the pointer operand from the Load/Store instruction.
+/// Returns NULL if this is not a valid Load/Store instruction.
+static Value *getPointerOperand(Value *I) {
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerOperand();
+  if (StoreInst *SI = dyn_cast<StoreInst>(I))
+    return SI->getPointerOperand();
+  return nullptr;
+}
+
 void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Ignore ephemeral values.
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
@@ -6168,61 +6178,42 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
 
-  // Ignore induction phis that are only used in either GetElementPtr or ICmp
-  // instruction to exit loop. Induction variables usually have large types and
-  // can have big impact when estimating register usage.
-  // This is for when VF > 1.
+  // Insert uniform instruction into VecValuesToIgnore.
+  // Collect non-gather/scatter and non-consecutive ptr in NonConsecutivePtr.
+  SmallPtrSet<Instruction *, 8> NonConsecutivePtr;
+  for (auto *BB : TheLoop->getBlocks()) {
+    for (auto &I : *BB) {
+      if (Legal->isUniformAfterVectorization(&I))
+        VecValuesToIgnore.insert(&I);
+      Instruction *PI = dyn_cast_or_null<Instruction>(getPointerOperand(&I));
+      if (PI && !Legal->isConsecutivePtr(PI) &&
+          !isGatherOrScatterLegal(&I, PI, Legal))
+        NonConsecutivePtr.insert(PI);
+    }
+  }
+
+  // Ignore induction phis that are either used in uniform instructions or
+  // NonConsecutivePtr.
   for (auto &Induction : *Legal->getInductionVars()) {
     auto *PN = Induction.first;
     auto *UpdateV = PN->getIncomingValueForBlock(TheLoop->getLoopLatch());
 
-    // Check that the PHI is only used by the induction increment (UpdateV) or
-    // by GEPs. Then check that UpdateV is only used by a compare instruction,
-    // the loop header PHI, or by GEPs.
-    // FIXME: Need precise def-use analysis to determine if this instruction
-    // variable will be vectorized.
-    if (all_of(PN->users(),
-               [&](const User *U) -> bool {
-                 return U == UpdateV || isa<GetElementPtrInst>(U);
-               }) &&
-        all_of(UpdateV->users(), [&](const User *U) -> bool {
-          return U == PN || isa<ICmpInst>(U) || isa<GetElementPtrInst>(U);
-        })) {
+    if (std::all_of(PN->user_begin(), PN->user_end(),
+                    [&](User *U) -> bool {
+                      Instruction *UI = dyn_cast<Instruction>(U);
+                      return U == UpdateV || !TheLoop->contains(UI) ||
+                             Legal->isUniformAfterVectorization(UI) ||
+                             NonConsecutivePtr.count(UI);
+                    }) &&
+        std::all_of(UpdateV->user_begin(), UpdateV->user_end(),
+                    [&](User *U) -> bool {
+                      Instruction *UI = dyn_cast<Instruction>(U);
+                      return U == PN || !TheLoop->contains(UI) ||
+                             Legal->isUniformAfterVectorization(UI) ||
+                             NonConsecutivePtr.count(UI);
+                    })) {
       VecValuesToIgnore.insert(PN);
       VecValuesToIgnore.insert(UpdateV);
-    }
-  }
-
-  // Ignore instructions that will not be vectorized.
-  // This is for when VF > 1.
-  for (BasicBlock *BB : TheLoop->blocks()) {
-    for (auto &Inst : *BB) {
-      switch (Inst.getOpcode())
-      case Instruction::GetElementPtr: {
-        // Ignore GEP if its last operand is an induction variable so that it is
-        // a consecutive load/store and won't be vectorized as scatter/gather
-        // pattern.
-
-        GetElementPtrInst *Gep = cast<GetElementPtrInst>(&Inst);
-        unsigned NumOperands = Gep->getNumOperands();
-        unsigned InductionOperand = getGEPInductionOperand(Gep);
-        bool GepToIgnore = true;
-
-        // Check that all of the gep indices are uniform except for the
-        // induction operand.
-        for (unsigned i = 0; i != NumOperands; ++i) {
-          if (i != InductionOperand &&
-              !PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getOperand(i)),
-                                            TheLoop)) {
-            GepToIgnore = false;
-            break;
-          }
-        }
-
-        if (GepToIgnore)
-          VecValuesToIgnore.insert(&Inst);
-        break;
-      }
     }
   }
 }

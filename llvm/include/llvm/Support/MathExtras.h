@@ -290,10 +290,21 @@ inline bool isShiftedInt(int64_t x) {
 }
 
 /// isUInt - Checks if an unsigned integer fits into the given bit width.
-template<unsigned N>
-inline bool isUInt(uint64_t x) {
-  static_assert(N > 0, "isUInt<0> doesn't make sense.");
-  return N >= 64 || x < (UINT64_C(1)<<(N));
+///
+/// This is written as two functions rather than as simply
+///
+///   return N >= 64 || X < (UINT64_C(1) << N);
+///
+/// to keep MSVC from (incorrectly) warning on isUInt<64> that we're shifting
+/// left too many places.
+template <unsigned N>
+inline typename std::enable_if<(N < 64), bool>::type isUInt(uint64_t X) {
+  static_assert(N > 0, "isUInt<0> doesn't make sense");
+  return X < (UINT64_C(1) << N);
+}
+template <unsigned N>
+inline typename std::enable_if<N >= 64, bool>::type isUInt(uint64_t X) {
+  return true;
 }
 
 // Template specializations to get better code for common cases.

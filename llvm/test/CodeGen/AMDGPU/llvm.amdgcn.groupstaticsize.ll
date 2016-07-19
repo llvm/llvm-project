@@ -2,13 +2,12 @@
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
 
-
 @lds0 = addrspace(3) global [512 x float] undef, align 4
 @lds1 = addrspace(3) global [256 x float] undef, align 4
 
-; FUNC-LABEL: {{^}}groupstaticsize_test0:
+; CHECK-LABEL: {{^}}groupstaticsize_test0:
 ; CHECK: s_movk_i32 s{{[0-9]+}}, 0x800
-define void @get_groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1)* %lds_size) #0 {
+define void @groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1)* %lds_size) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 64
   %static_lds_size = call i32 @llvm.amdgcn.groupstaticsize() #1
@@ -20,8 +19,7 @@ define void @get_groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1
   ret void
 }
 
-
-; FUNC-LABEL: {{^}}groupstaticsize_test1:
+; CHECK-LABEL: {{^}}groupstaticsize_test1:
 ; CHECK: s_movk_i32 s{{[0-9]+}}, 0xc00
 define void @groupstaticsize_test1(float addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %lds_size) {
 entry:
@@ -47,7 +45,6 @@ else:                                             ; preds = %entry
 endif:                                            ; preds = %else, %if
   ret void
 }
-
 
 declare i32 @llvm.amdgcn.groupstaticsize() #1
 declare i32 @llvm.amdgcn.workitem.id.x() #1

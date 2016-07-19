@@ -275,6 +275,12 @@ void DecodeUNPCKLMask(MVT VT, SmallVectorImpl<int> &ShuffleMask) {
   }
 }
 
+/// Decodes a broadcast of the first element of a vector.
+void DecodeVectorBroadcast(MVT DstVT, SmallVectorImpl<int> &ShuffleMask) {
+  unsigned NumElts = DstVT.getVectorNumElements();
+  ShuffleMask.append(NumElts, 0);
+}
+
 /// Decodes a broadcast of a subvector to a larger vector type.
 void DecodeSubVectorBroadcast(MVT DstVT, MVT SrcVT,
                               SmallVectorImpl<int> &ShuffleMask) {

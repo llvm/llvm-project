@@ -207,7 +207,6 @@ define <16 x i8> @combine_vpbroadcast_pshufb_as_vpbroadcastb128(<16 x i8> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_pshufb_as_vpbroadcastb128:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpbroadcastb %xmm0, %xmm0
-; CHECK-NEXT:    vpbroadcastb %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = shufflevector <16 x i8> %a, <16 x i8> undef, <16 x i32> zeroinitializer
   %2 = call <16 x i8> @llvm.x86.ssse3.pshuf.b.128(<16 x i8> %1, <16 x i8> zeroinitializer)
@@ -218,8 +217,6 @@ define <32 x i8> @combine_vpbroadcast_pshufb_as_vpbroadcastb256(<32 x i8> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_pshufb_as_vpbroadcastb256:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    vpbroadcastb %xmm0, %ymm0
-; CHECK-NEXT:    vpxor %ymm1, %ymm1, %ymm1
-; CHECK-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %1 = shufflevector <32 x i8> %a, <32 x i8> undef, <32 x i32> zeroinitializer
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> zeroinitializer)
@@ -229,7 +226,6 @@ define <32 x i8> @combine_vpbroadcast_pshufb_as_vpbroadcastb256(<32 x i8> %a) {
 define <4 x float> @combine_vpbroadcast_pshufb_as_vpbroadcastss128(<4 x float> %a) {
 ; CHECK-LABEL: combine_vpbroadcast_pshufb_as_vpbroadcastss128:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0
 ; CHECK-NEXT:    vbroadcastss %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> zeroinitializer

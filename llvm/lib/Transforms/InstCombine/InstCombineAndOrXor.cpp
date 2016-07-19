@@ -1193,6 +1193,28 @@ static Instruction *matchDeMorgansLaws(BinaryOperator &I,
   return nullptr;
 }
 
+bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
+  Value *CastSrc = CI->getOperand(0);
+
+  // Noop casts and casts of constants should be eliminated trivially.
+  if (CI->getSrcTy() == CI->getDestTy() || isa<Constant>(CastSrc))
+    return false;
+
+  // If this cast is paired with another cast that can be eliminated, we prefer
+  // to have it eliminated.
+  if (const auto *PrecedingCI = dyn_cast<CastInst>(CastSrc))
+    if (isEliminableCastPair(PrecedingCI, CI))
+      return false;
+
+  // If this is a vector sext from a compare, then we don't want to break the
+  // idiom where each element of the extended vector is either zero or all ones.
+  if (CI->getOpcode() == Instruction::SExt &&
+      isa<CmpInst>(CastSrc) && CI->getDestTy()->isVectorTy())
+    return false;
+
+  return true;
+}
+
 Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   auto LogicOpc = I.getOpcode();
   assert((LogicOpc == Instruction::And || LogicOpc == Instruction::Or ||
@@ -1237,12 +1259,9 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   Value *Cast0Src = Cast0->getOperand(0);
   Value *Cast1Src = Cast1->getOperand(0);
 
-  // fold (logic (cast A), (cast B)) -> (cast (logic A, B))
-
-  // Only do this if the casts both really cause code to be generated.
+  // fold logic(cast(A), cast(B)) -> cast(logic(A, B))
   if ((!isa<ICmpInst>(Cast0Src) || !isa<ICmpInst>(Cast1Src)) &&
-      ShouldOptimizeCast(CastOpcode, Cast0Src, DestTy) &&
-      ShouldOptimizeCast(CastOpcode, Cast1Src, DestTy)) {
+      shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder->CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                         I.getName());
     return CastInst::Create(CastOpcode, NewOp, DestTy);

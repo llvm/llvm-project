@@ -1566,7 +1566,7 @@ public:
   op_iterator arg_end() {
     // [ call args ], [ operand bundles ], callee
     return op_end() - getNumTotalBundleOperands() - 1;
-  };
+  }
 
   /// \brief Iteration adapter for range-for loops.
   iterator_range<op_iterator> arg_operands() {
@@ -1580,7 +1580,7 @@ public:
   const_op_iterator arg_end() const {
     // [ call args ], [ operand bundles ], callee
     return op_end() - getNumTotalBundleOperands() - 1;
-  };
+  }
 
   /// \brief Iteration adapter for range-for loops.
   iterator_range<const_op_iterator> arg_operands() const {
@@ -3539,7 +3539,7 @@ public:
   op_iterator arg_end() {
     // [ invoke args ], [ operand bundles ], normal dest, unwind dest, callee
     return op_end() - getNumTotalBundleOperands() - 3;
-  };
+  }
 
   /// \brief Iteration adapter for range-for loops.
   iterator_range<op_iterator> arg_operands() {
@@ -3553,7 +3553,7 @@ public:
   const_op_iterator arg_end() const {
     // [ invoke args ], [ operand bundles ], normal dest, unwind dest, callee
     return op_end() - getNumTotalBundleOperands() - 3;
-  };
+  }
 
   /// \brief Iteration adapter for range-for loops.
   iterator_range<const_op_iterator> arg_operands() const {

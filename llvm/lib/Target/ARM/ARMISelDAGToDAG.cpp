@@ -4264,17 +4264,6 @@ bool ARMDAGToDAGISel::tryInlineAsm(SDNode *N){
     if (Changed && InlineAsm::isUseOperandTiedToDef(Flag, DefIdx))
       IsTiedToChangedOp = OpChanged[DefIdx];
 
-    // Memory operands to inline asm in the SelectionDAG are modeled with two
-    // operands: a constant of value InlineAsm::Kind_Mem followed by the input
-    // operand. If we get here and we have a Kind_Mem, skip the next operand (so
-    // it doesn't get misinterpreted), and continue. We do this here because
-    // it's important to update the OpChanged array correctly before moving on.
-    if (Kind == InlineAsm::Kind_Mem) {
-      SDValue op = N->getOperand(++i);
-      AsmNodeOperands.push_back(op);
-      continue;
-    }
-
     if (Kind != InlineAsm::Kind_RegUse && Kind != InlineAsm::Kind_RegDef
         && Kind != InlineAsm::Kind_RegDefEarlyClobber)
       continue;

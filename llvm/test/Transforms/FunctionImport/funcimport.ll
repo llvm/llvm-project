@@ -5,6 +5,8 @@
 
 ; Do the import now
 ; RUN: opt -disable-force-link-odr -function-import -stats -print-imports -enable-import-metadata -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
+; Try again with new pass manager
+; RUN: opt -disable-force-link-odr -passes='function-import' -stats -print-imports -enable-import-metadata -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=INSTLIMDEF
 ; "-stats" requires +Asserts.
 ; REQUIRES: asserts
 

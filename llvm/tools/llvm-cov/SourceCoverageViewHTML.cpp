@@ -210,8 +210,9 @@ std::string tag(const std::string &Name, const std::string &Str,
 }
 
 // Create an anchor to \p Link with the label \p Str.
-std::string a(const std::string &Link, const std::string &Str) {
-  return "<a href='" + Link + "'>" + Str + "</a>";
+std::string a(const std::string &Link, const std::string &Str,
+              const std::string &TargetType = "href") {
+  return "<a " + TargetType + "='" + Link + "'>" + Str + "</a>";
 }
 
 } // anonymous namespace
@@ -402,7 +403,9 @@ void SourceCoverageViewHTML::renderLineCoverageColumn(
 
 void SourceCoverageViewHTML::renderLineNumberColumn(raw_ostream &OS,
                                                     unsigned LineNo) {
-  OS << tag("td", tag("pre", utostr(uint64_t(LineNo))), "line-number");
+  std::string LineNoStr = utostr(uint64_t(LineNo));
+  OS << tag("td", a("L" + LineNoStr, tag("pre", LineNoStr), "name"),
+            "line-number");
 }
 
 void SourceCoverageViewHTML::renderRegionMarkers(raw_ostream &,

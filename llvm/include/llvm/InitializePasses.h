@@ -130,7 +130,7 @@ void initializeFloat2IntLegacyPassPass(PassRegistry&);
 void initializeForceFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeForwardControlFlowIntegrityPass(PassRegistry&);
 void initializeFuncletLayoutPass(PassRegistry &);
-void initializeFunctionImportPassPass(PassRegistry &);
+void initializeFunctionImportLegacyPassPass(PassRegistry &);
 void initializeGCMachineCodeAnalysisPass(PassRegistry&);
 void initializeGCModuleInfoPass(PassRegistry&);
 void initializeGCOVProfilerLegacyPassPass(PassRegistry&);

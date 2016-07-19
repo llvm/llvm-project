@@ -2610,10 +2610,12 @@ bool AsmParser::parseDirectiveReloc(SMLoc DirectiveLoc) {
   }
 
   if (parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in .reloc directive") ||
-      check(getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc),
-            NameLoc, "unknown relocation name"))
-    return true;
+                 "unexpected token in .reloc directive"))
+      return true;
+
+  if (getStreamer().EmitRelocDirective(*Offset, Name, Expr, DirectiveLoc))
+    return Error(NameLoc, "unknown relocation name");
+
   return false;
 }
 
@@ -3144,10 +3146,11 @@ bool AsmParser::parseDirectiveCVFile() {
       // directory. Allow the strings to have escaped octal character sequence.
       parseEscapedString(Filename) ||
       parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.cv_file' directive") ||
-      check(getStreamer().EmitCVFileDirective(FileNumber, Filename) == 0,
-            FileNumberLoc, "file number already allocated"))
-    return true;
+                 "unexpected token in '.cv_file' directive"))
+    return true; 
+
+ if (getStreamer().EmitCVFileDirective(FileNumber, Filename) == 0)
+    Error(FileNumberLoc, "file number already allocated");
 
   return false;
 }
@@ -3927,10 +3930,11 @@ bool AsmParser::parseDirectivePurgeMacro(SMLoc DirectiveLoc) {
   if (getTokenLoc(Loc) || check(parseIdentifier(Name), Loc,
                                 "expected identifier in '.purgem' directive") ||
       parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.purgem' directive") ||
-      check(!lookupMacro(Name), DirectiveLoc,
-            "macro '" + Name + "' is not defined"))
+                 "unexpected token in '.purgem' directive"))
     return true;
+
+  if (!lookupMacro(Name))
+    return Error(DirectiveLoc, "macro '" + Name + "' is not defined");
 
   undefineMacro(Name);
   return false;
@@ -4210,11 +4214,12 @@ bool AsmParser::parseDirectiveIncbin() {
             "expected string in '.incbin' directive") ||
       parseEscapedString(Filename) ||
       parseToken(AsmToken::EndOfStatement,
-                 "unexpected token in '.incbin' directive") ||
-      // Attempt to process the included file.
-      check(processIncbinFile(Filename), IncbinLoc,
-            "Could not find incbin file '" + Filename + "'"))
+                 "unexpected token in '.incbin' directive"))
     return true;
+
+  // Attempt to process the included file.
+  if (processIncbinFile(Filename))
+    return Error(IncbinLoc, "Could not find incbin file '" + Filename + "'");
   return false;
 }
 

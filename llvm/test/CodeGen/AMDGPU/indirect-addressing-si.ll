@@ -5,12 +5,13 @@
 ; indexing of vectors.
 
 ; CHECK-LABEL: {{^}}extract_w_offset:
+; CHECK-DAG: s_load_dword [[IN:s[0-9]+]]
 ; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 4.0
 ; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40400000
-; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 2.0
+; CHECK-DAG: v_mov_b32_e32 [[BASEREG:v[0-9]+]], 2.0
 ; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 1.0
-; CHECK: s_mov_b32 m0
-; CHECK-NEXT: v_movrels_b32_e32
+; CHECK-DAG: s_mov_b32 m0, [[IN]]
+; CHECK: v_movrels_b32_e32 v{{[0-9]+}}, [[BASEREG]]
 define void @extract_w_offset(float addrspace(1)* %out, i32 %in) {
 entry:
   %idx = add i32 %in, 1
@@ -41,12 +42,13 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}extract_wo_offset:
+; CHECK-DAG: s_load_dword [[IN:s[0-9]+]]
 ; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 4.0
 ; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x40400000
 ; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 2.0
-; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 1.0
-; CHECK: s_mov_b32 m0
-; CHECK-NEXT: v_movrels_b32_e32
+; CHECK-DAG: v_mov_b32_e32 [[BASEREG:v[0-9]+]], 1.0
+; CHECK-DAG: s_mov_b32 m0, [[IN]]
+; CHECK: v_movrels_b32_e32 v{{[0-9]+}}, [[BASEREG]]
 define void @extract_wo_offset(float addrspace(1)* %out, i32 %in) {
 entry:
   %elt = extractelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, i32 %in
@@ -81,10 +83,17 @@ entry:
 
 ; CHECK-LABEL: {{^}}extract_neg_offset_vgpr:
 ; The offset depends on the register that holds the first element of the vector.
-; CHECK: v_readfirstlane_b32
-; CHECK: s_add_i32 m0, m0, 0xfffffe{{[0-9a-z]+}}
-; CHECK-NEXT: v_movrels_b32_e32 v{{[0-9]}}, v0
+
+; FIXME: The waitcnt for the argument load can go after the loop
+; CHECK: s_mov_b64 s{{\[[0-9]+:[0-9]+\]}}, exec
+; CHECK: s_waitcnt lgkmcnt(0)
+
+; CHECK: v_readfirstlane_b32 [[READLANE:s[0-9]+]], v{{[0-9]+}}
+; CHECK: s_add_i32 m0, [[READLANE]], 0xfffffe0
+; CHECK: v_movrels_b32_e32 [[RESULT:v[0-9]+]], v1
 ; CHECK: s_cbranch_execnz
+
+; CHECK: buffer_store_dword [[RESULT]]
 define void @extract_neg_offset_vgpr(i32 addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
@@ -104,9 +113,9 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}insert_undef_offset_sgpr_vector_src:
-; CHECK: buffer_load_dwordx4
-; CHECK: s_mov_b32 m0,
-; CHECK-NEXT: v_movreld_b32
+; CHECK-DAG: buffer_load_dwordx4
+; CHECK-DAG: s_mov_b32 m0,
+; CHECK: v_movreld_b32
 define void @insert_undef_offset_sgpr_vector_src(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
 entry:
   %ld = load <4 x i32>, <4  x i32> addrspace(1)* %in
@@ -116,8 +125,9 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}insert_w_offset:
-; CHECK: s_mov_b32 m0
-; CHECK-NEXT: v_movreld_b32_e32
+; CHECK: s_load_dword [[IN:s[0-9]+]]
+; CHECK: s_mov_b32 m0, [[IN]]
+; CHECK: v_movreld_b32_e32
 define void @insert_w_offset(float addrspace(1)* %out, i32 %in) {
 entry:
   %0 = add i32 %in, 1
@@ -128,8 +138,9 @@ entry:
 }
 
 ; CHECK-LABEL: {{^}}insert_wo_offset:
-; CHECK: s_mov_b32 m0
-; CHECK-NEXT: v_movreld_b32_e32
+; CHECK: s_load_dword [[IN:s[0-9]+]]
+; CHECK: s_mov_b32 m0, [[IN]]
+; CHECK: v_movreld_b32_e32
 define void @insert_wo_offset(float addrspace(1)* %out, i32 %in) {
 entry:
   %0 = insertelement <4 x float> <float 1.0, float 2.0, float 3.0, float 4.0>, float 5.0, i32 %in
@@ -141,7 +152,7 @@ entry:
 ; CHECK-LABEL: {{^}}insert_neg_offset_sgpr:
 ; The offset depends on the register that holds the first element of the vector.
 ; CHECK: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
-; CHECK: v_movreld_b32_e32 v0, v{{[0-9]}}
+; CHECK: v_movreld_b32_e32 v0, 5
 define void @insert_neg_offset_sgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out, i32 %offset) {
 entry:
   %index = add i32 %offset, -512
@@ -156,7 +167,7 @@ entry:
 ; CHECK-LABEL: {{^}}insert_neg_offset_sgpr_loadreg:
 ; The offset depends on the register that holds the first element of the vector.
 ; CHECK: s_add_i32 m0, s{{[0-9]+}}, 0xfffffe{{[0-9a-z]+}}
-; CHECK: v_movreld_b32_e32 v0, v{{[0-9]}}
+; CHECK: v_movreld_b32_e32 v0, 5
 define void @insert_neg_offset_sgpr_loadreg(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out, <4 x i32> %vec, i32 %offset) {
 entry:
   %index = add i32 %offset, -512
@@ -167,30 +178,53 @@ entry:
 
 ; CHECK-LABEL: {{^}}insert_neg_offset_vgpr:
 ; The offset depends on the register that holds the first element of the vector.
-; CHECK: v_readfirstlane_b32
-; CHECK: s_add_i32 m0, m0, 0xfffffe{{[0-9a-z]+}}
-; CHECK-NEXT: v_movreld_b32_e32 v0, v{{[0-9]}}
-; CHECK: s_cbranch_execnz
+
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], 1{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], 2{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT2:v[0-9]+]], 3{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
+
+; CHECK: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_waitcnt lgkmcnt(0)
+
+; CHECK: [[LOOPBB:BB[0-9]+_[0-9]+]]:
+; CHECK: v_readfirstlane_b32 [[READLANE:s[0-9]+]]
+; CHECK: s_add_i32 m0, [[READLANE]], 0xfffffe00
+; CHECK: v_movreld_b32_e32 [[VEC_ELT0]], 5
+; CHECK: s_cbranch_execnz [[LOOPBB]]
+
+; CHECK: s_mov_b64 exec, [[SAVEEXEC]]
+; CHECK: buffer_store_dword
 define void @insert_neg_offset_vgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -512
-  %value = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 5, i32 %index
+  %value = insertelement <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i32 5, i32 %index
   store <4 x i32> %value, <4 x i32> addrspace(1)* %out
   ret void
 }
 
 ; CHECK-LABEL: {{^}}insert_neg_inline_offset_vgpr:
+
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], 1{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], 2{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT2:v[0-9]+]], 3{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT3:v[0-9]+]], 4{{$}}
+; CHECK-DAG: v_mov_b32_e32 [[VAL:v[0-9]+]], 0x1f4{{$}}
+
+; CHECK: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_waitcnt lgkmcnt(0)
+
 ; The offset depends on the register that holds the first element of the vector.
-; CHECK: v_readfirstlane_b32
-; CHECK: s_add_i32 m0, m0, -{{[0-9]+}}
-; CHECK-NEXT: v_movreld_b32_e32 v0, v{{[0-9]}}
+; CHECK: v_readfirstlane_b32 [[READLANE:s[0-9]+]]
+; CHECK: s_add_i32 m0, [[READLANE]], -16
+; CHECK: v_movreld_b32_e32 [[VEC_ELT0]], [[VAL]]
 ; CHECK: s_cbranch_execnz
 define void @insert_neg_inline_offset_vgpr(i32 addrspace(1)* %in, <4 x i32> addrspace(1)* %out) {
 entry:
   %id = call i32 @llvm.amdgcn.workitem.id.x() #1
   %index = add i32 %id, -16
-  %value = insertelement <4 x i32> <i32 0, i32 1, i32 2, i32 3>, i32 5, i32 %index
+  %value = insertelement <4 x i32> <i32 1, i32 2, i32 3, i32 4>, i32 500, i32 %index
   store <4 x i32> %value, <4 x i32> addrspace(1)* %out
   ret void
 }
@@ -200,34 +234,37 @@ entry:
 
 ; CHECK-LABEL: {{^}}extract_vgpr_offset_multiple_in_block:
 
+; FIXME: Why is vector copied in between?
+
 ; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
 ; CHECK-DAG: s_mov_b32 [[S_ELT0:s[0-9]+]], 7
 ; CHECK-DAG: s_mov_b32 [[S_ELT1:s[0-9]+]], 9
 ; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], [[S_ELT0]]
 ; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT1:v[0-9]+]], [[S_ELT1]]
-; CHECK: s_waitcnt vmcnt(0)
 
 ; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK: s_waitcnt vmcnt(0) lgkmcnt(0)
 
 ; CHECK: [[LOOP0:BB[0-9]+_[0-9]+]]:
-; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
-; CHECK: s_mov_b32 m0, vcc_lo
-; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
+; CHECK: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
+; CHECK: s_mov_b32 m0, [[READLANE]]
 ; CHECK: s_and_saveexec_b64 vcc, vcc
-; CHECK-NEXT: v_movrels_b32_e32 [[MOVREL0:v[0-9]+]], [[VEC_ELT0]]
+; CHECK: v_movrels_b32_e32 [[MOVREL0:v[0-9]+]], [[VEC_ELT0]]
 ; CHECK-NEXT: s_xor_b64 exec, exec, vcc
-; CHECK: s_cbranch_execnz [[LOOP0]]
+; CHECK-NEXT: s_cbranch_execnz [[LOOP0]]
 
 ; FIXME: Redundant copy
 ; CHECK: s_mov_b64 exec, [[MASK]]
+; CHECK: v_mov_b32_e32 [[VEC_ELT1_2:v[0-9]+]], [[S_ELT1]]
 ; CHECK: s_mov_b64 [[MASK2:s\[[0-9]+:[0-9]+\]]], exec
 
 ; CHECK: [[LOOP1:BB[0-9]+_[0-9]+]]:
-; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
-; CHECK: s_mov_b32 m0, vcc_lo
-; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
+; CHECK: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
+; CHECK: s_mov_b32 m0, [[READLANE]]
 ; CHECK: s_and_saveexec_b64 vcc, vcc
-; CHECK-NEXT: v_movrels_b32_e32 [[MOVREL1:v[0-9]+]], [[VEC_ELT1]]
+; CHECK-NEXT: v_movrels_b32_e32 [[MOVREL1:v[0-9]+]], [[VEC_ELT1_2]]
 ; CHECK-NEXT: s_xor_b64 exec, exec, vcc
 ; CHECK: s_cbranch_execnz [[LOOP1]]
 
@@ -259,36 +296,34 @@ bb2:
 ; CHECK-LABEL: {{^}}insert_vgpr_offset_multiple_in_block:
 ; CHECK-DAG: s_load_dwordx4 s{{\[}}[[S_ELT0:[0-9]+]]:[[S_ELT3:[0-9]+]]{{\]}}
 ; CHECK-DAG: {{buffer|flat}}_load_dword [[IDX0:v[0-9]+]]
-; CHECK-DAG: v_mov_b32_e32 [[VEC_ELT0:v[0-9]+]], s[[S_ELT0]]
 ; CHECK-DAG: v_mov_b32 [[INS0:v[0-9]+]], 62
-; CHECK-DAG: s_waitcnt vmcnt(0)
 
-; CHECK: s_mov_b64 [[MASK:s\[[0-9]+:[0-9]+\]]], exec
+; CHECK-DAG: v_mov_b32_e32 v[[VEC_ELT0:[0-9]+]], s[[S_ELT0]]
+; CHECK-DAG: v_mov_b32_e32 v[[VEC_ELT3:[0-9]+]], s[[S_ELT3]]
 
 ; CHECK: [[LOOP0:BB[0-9]+_[0-9]+]]:
-; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
-; CHECK: s_mov_b32 m0, vcc_lo
-; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
+; CHECK: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
+; CHECK: s_mov_b32 m0, [[READLANE]]
 ; CHECK: s_and_saveexec_b64 vcc, vcc
-; CHECK-NEXT: v_movreld_b32_e32 v[[MOVREL0:[0-9]+]], [[INS0]]
+; CHECK-NEXT: v_movreld_b32_e32 v[[VEC_ELT0]], [[INS0]]
 ; CHECK-NEXT: s_xor_b64 exec, exec, vcc
 ; CHECK: s_cbranch_execnz [[LOOP0]]
 
 ; FIXME: Redundant copy
-; CHECK: s_mov_b64 exec, [[MASK]]
-; CHECK: v_mov_b32_e32 [[INS1:v[0-9]+]], 63
+; CHECK: s_mov_b64 exec, [[MASK:s\[[0-9]+:[0-9]+\]]]
 ; CHECK: s_mov_b64 [[MASK]], exec
 
 ; CHECK: [[LOOP1:BB[0-9]+_[0-9]+]]:
-; CHECK: v_readfirstlane_b32 vcc_lo, [[IDX0]]
-; CHECK: s_mov_b32 m0, vcc_lo
-; CHECK: v_cmp_eq_u32_e32 vcc, m0, [[IDX0]]
+; CHECK-NEXT: v_readfirstlane_b32 [[READLANE:s[0-9]+]], [[IDX0]]
+; CHECK: v_cmp_eq_u32_e32 vcc, [[READLANE]], [[IDX0]]
+; CHECK: s_mov_b32 m0, [[READLANE]]
 ; CHECK: s_and_saveexec_b64 vcc, vcc
-; CHECK-NEXT: v_movreld_b32_e32 v[[MOVREL1:[0-9]+]], [[INS1]]
+; CHECK-NEXT: v_movreld_b32_e32 [[VEC_ELT1]], 63
 ; CHECK-NEXT: s_xor_b64 exec, exec, vcc
 ; CHECK: s_cbranch_execnz [[LOOP1]]
 
-; CHECK: buffer_store_dwordx4 v{{\[}}[[MOVREL0]]:
+; CHECK: buffer_store_dwordx4 v{{\[}}[[VEC_ELT0]]:
 
 ; CHECK: buffer_store_dword [[INS0]]
 define void @insert_vgpr_offset_multiple_in_block(<4 x i32> addrspace(1)* %out0, <4 x i32> addrspace(1)* %out1, i32 addrspace(1)* %in, <4 x i32> %vec0) #0 {
@@ -394,13 +429,26 @@ bb7:                                              ; preds = %bb4, %bb1
 ; FIXME: Should be able to fold zero input to movreld to inline imm?
 
 ; CHECK-LABEL: {{^}}multi_same_block:
-; CHECK: s_load_dword [[ARG:s[0-9]+]]
-; CHECK-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; CHECK-DAG: s_add_i32 m0, [[ARG]], -16
-; CHECK: v_movreld_b32_e32 v{{[0-9]+}}, [[ZERO]]
 
-; CHECK: s_add_i32 m0, [[ARG]], -14
-; CHECK: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; CHECK-DAG: v_mov_b32_e32 v[[VEC0_ELT0:[0-9]+]], 0x41880000
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41900000
+; CHECK-DAG: v_mov_b32_e32 v[[VEC0_ELT2:[0-9]+]], 0x41980000
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41a00000
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41a80000
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41b00000
+; CHECK-DAG: s_load_dword [[ARG:s[0-9]+]]
+
+; CHECK-DAG: s_add_i32 m0, [[ARG]], -16
+; CHECK: v_movreld_b32_e32 v[[VEC0_ELT0]], 4.0
+; CHECK-NOT: m0
+
+; CHECK: v_mov_b32_e32 v[[VEC0_ELT2]], 0x4188cccd
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x4190cccd
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x4198cccd
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41a0cccd
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41a8cccd
+; CHECK-DAG: v_mov_b32_e32 v{{[0-9]+}}, 0x41b0cccd
+; CHECK: v_movreld_b32_e32 v[[VEC0_ELT2]], -4.0
 
 ; CHECK: s_mov_b32 m0, -1
 ; CHECK: ds_write_b32
@@ -409,9 +457,9 @@ bb7:                                              ; preds = %bb4, %bb1
 define void @multi_same_block(i32 %arg) #0 {
 bb:
   %tmp1 = add i32 %arg, -16
-  %tmp2 = insertelement <6 x float> <float 1.700000e+01, float 1.800000e+01, float 1.900000e+01, float 2.000000e+01, float 2.100000e+01, float 2.200000e+01>, float 0.000000e+00, i32 %tmp1
+  %tmp2 = insertelement <6 x float> <float 1.700000e+01, float 1.800000e+01, float 1.900000e+01, float 2.000000e+01, float 2.100000e+01, float 2.200000e+01>, float 4.000000e+00, i32 %tmp1
   %tmp3 = add i32 %arg, -16
-  %tmp4 = insertelement <6 x float> <float 0x40311999A0000000, float 0x40321999A0000000, float 0x40331999A0000000, float 0x40341999A0000000, float 0x40351999A0000000, float 0x40361999A0000000>, float 0x3FB99999A0000000, i32 %tmp3
+  %tmp4 = insertelement <6 x float> <float 0x40311999A0000000, float 0x40321999A0000000, float 0x40331999A0000000, float 0x40341999A0000000, float 0x40351999A0000000, float 0x40361999A0000000>, float -4.0, i32 %tmp3
   %tmp5 = bitcast <6 x float> %tmp2 to <6 x i32>
   %tmp6 = extractelement <6 x i32> %tmp5, i32 1
   %tmp7 = bitcast <6 x float> %tmp4 to <6 x i32>
@@ -423,10 +471,10 @@ bb:
 
 ; offset puts outside of superegister bounaries, so clamp to 1st element.
 ; CHECK-LABEL: {{^}}extract_largest_inbounds_offset:
-; CHECK: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
-; CHECK: s_load_dword [[IDX:s[0-9]+]]
+; CHECK-DAG: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
+; CHECK-DAG: s_load_dword [[IDX:s[0-9]+]]
 ; CHECK: s_mov_b32 m0, [[IDX]]
-; CHECK-NEXT: v_movrels_b32_e32 [[EXTRACT:v[0-9]+]], v[[HI_ELT]]
+; CHECK: v_movrels_b32_e32 [[EXTRACT:v[0-9]+]], v[[HI_ELT]]
 ; CHECK: buffer_store_dword [[EXTRACT]]
 define void @extract_largest_inbounds_offset(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx) {
 entry:
@@ -437,11 +485,11 @@ entry:
   ret void
 }
 
-; CHECK-LABL: {{^}}extract_out_of_bounds_offset:
-; CHECK: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
-; CHECK: s_load_dword [[IDX:s[0-9]+]]
+; CHECK-LABEL: {{^}}extract_out_of_bounds_offset:
+; CHECK-DAG: buffer_load_dwordx4 v{{\[}}[[LO_ELT:[0-9]+]]:[[HI_ELT:[0-9]+]]{{\]}}
+; CHECK-DAG: s_load_dword [[IDX:s[0-9]+]]
 ; CHECK: s_add_i32 m0, [[IDX]], 4
-; CHECK-NEXT: v_movrels_b32_e32 [[EXTRACT:v[0-9]+]], v[[LO_ELT]]
+; CHECK: v_movrels_b32_e32 [[EXTRACT:v[0-9]+]], v[[LO_ELT]]
 ; CHECK: buffer_store_dword [[EXTRACT]]
 define void @extract_out_of_bounds_offset(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx) {
 entry:

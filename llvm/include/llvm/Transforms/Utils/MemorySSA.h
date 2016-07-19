@@ -580,6 +580,10 @@ public:
   /// whether MemoryAccess \p A dominates MemoryAccess \p B.
   bool locallyDominates(const MemoryAccess *A, const MemoryAccess *B) const;
 
+  /// \brief Given two memory accesses in potentially different blocks,
+  /// determine whether MemoryAccess \p A dominates MemoryAccess \p B.
+  bool dominates(const MemoryAccess *A, const MemoryAccess *B) const;
+
   /// \brief Verify that MemorySSA is self consistent (IE definitions dominate
   /// all uses, uses appear in the right places).  This is used by unit tests.
   void verifyMemorySSA() const;
@@ -594,6 +598,8 @@ protected:
 
 private:
   class CachingWalker;
+
+  CachingWalker *getWalkerImpl();
   void buildMemorySSA();
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
   using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;

@@ -227,20 +227,14 @@ Value *InstCombiner::EvaluateInDifferentType(Value *V, Type *Ty,
   return InsertNewInstWith(Res, *I);
 }
 
+Instruction::CastOps InstCombiner::isEliminableCastPair(const CastInst *CI1,
+                                                        const CastInst *CI2) {
+  Type *SrcTy = CI1->getSrcTy();
+  Type *MidTy = CI1->getDestTy();
+  Type *DstTy = CI2->getDestTy();
 
-/// This function is a wrapper around CastInst::isEliminableCastPair. It
-/// simply extracts arguments and returns what that function returns.
-static Instruction::CastOps
-isEliminableCastPair(const CastInst *CI, ///< First cast instruction
-                     unsigned opcode,    ///< Opcode for the second cast
-                     Type *DstTy,        ///< Target type for the second cast
-                     const DataLayout &DL) {
-  Type *SrcTy = CI->getOperand(0)->getType();   // A from above
-  Type *MidTy = CI->getType();                  // B from above
-
-  // Get the opcodes of the two Cast instructions
-  Instruction::CastOps firstOp = Instruction::CastOps(CI->getOpcode());
-  Instruction::CastOps secondOp = Instruction::CastOps(opcode);
+  Instruction::CastOps firstOp = Instruction::CastOps(CI1->getOpcode());
+  Instruction::CastOps secondOp = Instruction::CastOps(CI2->getOpcode());
   Type *SrcIntPtrTy =
       SrcTy->isPtrOrPtrVectorTy() ? DL.getIntPtrType(SrcTy) : nullptr;
   Type *MidIntPtrTy =
@@ -260,30 +254,6 @@ isEliminableCastPair(const CastInst *CI, ///< First cast instruction
   return Instruction::CastOps(Res);
 }
 
-/// Return true if the cast from "V to Ty" actually results in any code being
-/// generated and is interesting to optimize out.
-/// If the cast can be eliminated by some other simple transformation, we prefer
-/// to do the simplification first.
-bool InstCombiner::ShouldOptimizeCast(Instruction::CastOps opc, const Value *V,
-                                      Type *Ty) {
-  // Noop casts and casts of constants should be eliminated trivially.
-  if (V->getType() == Ty || isa<Constant>(V)) return false;
-
-  // If this is another cast that can be eliminated, we prefer to have it
-  // eliminated.
-  if (const CastInst *CI = dyn_cast<CastInst>(V))
-    if (isEliminableCastPair(CI, opc, Ty, DL))
-      return false;
-
-  // If this is a vector sext from a compare, then we don't want to break the
-  // idiom where each element of the extended vector is either zero or all ones.
-  if (opc == Instruction::SExt && isa<CmpInst>(V) && Ty->isVectorTy())
-    return false;
-
-  return true;
-}
-
-
 /// @brief Implement the transforms common to all CastInst visitors.
 Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
   Value *Src = CI.getOperand(0);
@@ -292,7 +262,7 @@ Instruction *InstCombiner::commonCastTransforms(CastInst &CI) {
   // eliminate it now.
   if (CastInst *CSrc = dyn_cast<CastInst>(Src)) {   // A->B->C cast
     if (Instruction::CastOps opc =
-            isEliminableCastPair(CSrc, CI.getOpcode(), CI.getType(), DL)) {
+            isEliminableCastPair(CSrc, &CI)) {
       // The first cast (CSrc) is eliminable so we need to fix up or replace
       // the second cast (CI). CSrc will then have a good chance of being dead.
       return CastInst::Create(opc, CSrc->getOperand(0), CI.getType());
@@ -578,10 +548,8 @@ Instruction *InstCombiner::visitTrunc(TruncInst &CI) {
   return nullptr;
 }
 
-/// Transform (zext icmp) to bitwise / integer operations in order to eliminate
-/// the icmp.
-Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, Instruction &CI,
-                                             bool DoXform) {
+Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, ZExtInst &CI,
+                                             bool DoTransform) {
   // If we are just checking for a icmp eq of a single bit and zext'ing it
   // to an integer, then shift the bit to the appropriate place and then
   // cast to integer to avoid the comparison.
@@ -592,7 +560,7 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, Instruction &CI,
     // zext (x >s -1) to i32 --> (x>>u31)^1  true if signbit clear.
     if ((ICI->getPredicate() == ICmpInst::ICMP_SLT && Op1CV == 0) ||
         (ICI->getPredicate() == ICmpInst::ICMP_SGT && Op1CV.isAllOnesValue())) {
-      if (!DoXform) return ICI;
+      if (!DoTransform) return ICI;
 
       Value *In = ICI->getOperand(0);
       Value *Sh = ConstantInt::get(In->getType(),
@@ -627,7 +595,7 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, Instruction &CI,
 
       APInt KnownZeroMask(~KnownZero);
       if (KnownZeroMask.isPowerOf2()) { // Exactly 1 possible 1?
-        if (!DoXform) return ICI;
+        if (!DoTransform) return ICI;
 
         bool isNE = ICI->getPredicate() == ICmpInst::ICMP_NE;
         if (Op1CV != 0 && (Op1CV != KnownZeroMask)) {
@@ -678,7 +646,7 @@ Instruction *InstCombiner::transformZExtICmp(ICmpInst *ICI, Instruction &CI,
         APInt KnownBits = KnownZeroLHS | KnownOneLHS;
         APInt UnknownBit = ~KnownBits;
         if (UnknownBit.countPopulation() == 1) {
-          if (!DoXform) return ICI;
+          if (!DoTransform) return ICI;
 
           Value *Result = Builder->CreateXor(LHS, RHS);
 

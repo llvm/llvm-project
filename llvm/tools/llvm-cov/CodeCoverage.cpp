@@ -52,16 +52,10 @@ public:
   /// \brief Print the error message to the error output stream.
   void error(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Record (but do not print) an error message in a thread-safe way.
-  void deferError(const Twine &Message, StringRef Whence = "");
+  /// \brief Print the warning message to the error output stream.
+  void warning(const Twine &Message, StringRef Whence = "");
 
-  /// \brief Record (but do not print) a warning message in a thread-safe way.
-  void deferWarning(const Twine &Message, StringRef Whence = "");
-
-  /// \brief Print (and then clear) all deferred error and warning messages.
-  void consumeDeferredMessages();
-
-  /// \brief Append a reference to a private copy of \p Path into SourceFiles.
+  /// \brief Copy \p Path into the list of input source files.
   void addCollectedPath(const std::string &Path);
 
   /// \brief Return a memory buffer for the given source file.
@@ -117,8 +111,7 @@ private:
   std::vector<std::string> CollectedPaths;
 
   /// Errors and warnings which have not been printed.
-  std::mutex DeferredMessagesLock;
-  std::vector<std::string> DeferredMessages;
+  std::mutex ErrsLock;
 
   /// A container for input source file buffers.
   std::mutex LoadedSourceFilesLock;
@@ -138,24 +131,15 @@ static std::string getErrorString(const Twine &Message, StringRef Whence,
 }
 
 void CodeCoverageTool::error(const Twine &Message, StringRef Whence) {
-  errs() << getErrorString(Message, Whence, false);
+  std::unique_lock<std::mutex> Guard{ErrsLock};
+  ViewOpts.colored_ostream(errs(), raw_ostream::RED)
+      << getErrorString(Message, Whence, false);
 }
 
-void CodeCoverageTool::deferError(const Twine &Message, StringRef Whence) {
-  std::unique_lock<std::mutex> Guard{DeferredMessagesLock};
-  DeferredMessages.emplace_back(getErrorString(Message, Whence, false));
-}
-
-void CodeCoverageTool::deferWarning(const Twine &Message, StringRef Whence) {
-  std::unique_lock<std::mutex> Guard{DeferredMessagesLock};
-  DeferredMessages.emplace_back(getErrorString(Message, Whence, true));
-}
-
-void CodeCoverageTool::consumeDeferredMessages() {
-  std::unique_lock<std::mutex> Guard{DeferredMessagesLock};
-  for (const std::string &Message : DeferredMessages)
-    ViewOpts.colored_ostream(errs(), raw_ostream::RED) << Message;
-  DeferredMessages.clear();
+void CodeCoverageTool::warning(const Twine &Message, StringRef Whence) {
+  std::unique_lock<std::mutex> Guard{ErrsLock};
+  ViewOpts.colored_ostream(errs(), raw_ostream::RED)
+      << getErrorString(Message, Whence, true);
 }
 
 void CodeCoverageTool::addCollectedPath(const std::string &Path) {
@@ -177,7 +161,7 @@ CodeCoverageTool::getSourceFile(StringRef SourceFile) {
       return *Files.second;
   auto Buffer = MemoryBuffer::getFile(SourceFile);
   if (auto EC = Buffer.getError()) {
-    deferError(EC.message(), SourceFile);
+    error(EC.message(), SourceFile);
     return EC;
   }
   LoadedSourceFiles.emplace_back(SourceFile, std::move(Buffer.get()));
@@ -273,21 +257,18 @@ static bool modifiedTimeGT(StringRef LHS, StringRef RHS) {
 
 std::unique_ptr<CoverageMapping> CodeCoverageTool::load() {
   if (modifiedTimeGT(ObjectFilename, PGOFilename))
-    errs() << "warning: profile data may be out of date - object is newer\n";
-  auto CoverageOrErr = CoverageMapping::load(ObjectFilename, PGOFilename,
-                                             CoverageArch);
+    warning("profile data may be out of date - object is newer",
+            ObjectFilename);
+  auto CoverageOrErr =
+      CoverageMapping::load(ObjectFilename, PGOFilename, CoverageArch);
   if (Error E = CoverageOrErr.takeError()) {
-    colored_ostream(errs(), raw_ostream::RED)
-        << "error: Failed to load coverage: " << toString(std::move(E)) << "\n";
+    error("Failed to load coverage: " + toString(std::move(E)), ObjectFilename);
     return nullptr;
   }
   auto Coverage = std::move(CoverageOrErr.get());
   unsigned Mismatched = Coverage->getMismatchedCount();
-  if (Mismatched) {
-    colored_ostream(errs(), raw_ostream::RED)
-        << "warning: " << Mismatched << " functions have mismatched data. ";
-    errs() << "\n";
-  }
+  if (Mismatched)
+    warning(utostr(Mismatched) + " functions have mismatched data");
 
   if (CompareFilenamesOnly) {
     auto CoveredFiles = Coverage.get()->getUniqueSourceFiles();
@@ -530,18 +511,19 @@ int CodeCoverageTool::run(Command Cmd, int argc, const char **argv) {
 
     if (!Arch.empty() &&
         Triple(Arch).getArch() == llvm::Triple::ArchType::UnknownArch) {
-      errs() << "error: Unknown architecture: " << Arch << "\n";
+      error("Unknown architecture: " + Arch);
       return 1;
     }
     CoverageArch = Arch;
 
     for (const auto &File : InputSourceFiles) {
       SmallString<128> Path(File);
-      if (!CompareFilenamesOnly)
+      if (!CompareFilenamesOnly) {
         if (std::error_code EC = sys::fs::make_absolute(Path)) {
-          errs() << "error: " << File << ": " << EC.message();
+          error(EC.message(), File);
           return 1;
         }
+      }
       addCollectedPath(Path.str());
     }
     return 0;
@@ -632,9 +614,7 @@ int CodeCoverageTool::show(int argc, const char **argv,
 
       auto mainView = createFunctionView(Function, *Coverage);
       if (!mainView) {
-        ViewOpts.colored_ostream(errs(), raw_ostream::RED)
-            << "warning: Could not read coverage for '" << Function.Name << "'."
-            << "\n";
+        warning("Could not read coverage for '" + Function.Name + "'.");
         continue;
       }
 
@@ -671,13 +651,13 @@ int CodeCoverageTool::show(int argc, const char **argv,
     Pool.async([this, SourceFile, &Coverage, &Printer, ShowFilenames] {
       auto View = createSourceFileView(SourceFile, *Coverage);
       if (!View) {
-        deferWarning("The file '" + SourceFile.str() + "' isn't covered.");
+        warning("The file '" + SourceFile.str() + "' isn't covered.");
         return;
       }
 
       auto OSOrErr = Printer->createViewFile(SourceFile, /*InToplevel=*/false);
       if (Error E = OSOrErr.takeError()) {
-        deferError("Could not create view file!", toString(std::move(E)));
+        error("Could not create view file!", toString(std::move(E)));
         return;
       }
       auto OS = std::move(OSOrErr.get());
@@ -689,8 +669,6 @@ int CodeCoverageTool::show(int argc, const char **argv,
   }
 
   Pool.wait();
-
-  consumeDeferredMessages();
 
   return 0;
 }

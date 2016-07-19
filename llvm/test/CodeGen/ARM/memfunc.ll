@@ -386,6 +386,8 @@ entry:
 @arr5 = weak global [7 x i8] c"\01\02\03\04\05\06\07", align 1
 @arr6 = weak_odr global [7 x i8] c"\01\02\03\04\05\06\07", align 1
 @arr7 = external global [7 x i8], align 1
+@arr8 = internal global [128 x i8] undef
+@arr9 = weak_odr global [128 x i8] undef
 define void @f9(i8* %dest, i32 %n) {
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr1, i32 0, i32 0), i32 %n, i32 1, i1 false)
@@ -395,6 +397,8 @@ entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr5, i32 0, i32 0), i32 %n, i32 1, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr6, i32 0, i32 0), i32 %n, i32 1, i1 false)
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([7 x i8], [7 x i8]* @arr7, i32 0, i32 0), i32 %n, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([128 x i8], [128 x i8]* @arr8, i32 0, i32 0), i32 %n, i32 1, i1 false)
+  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %dest, i8* getelementptr inbounds ([128 x i8], [128 x i8]* @arr9, i32 0, i32 0), i32 %n, i32 1, i1 false)
 
   unreachable
 }
@@ -417,6 +421,11 @@ entry:
 ; CHECK: arr5:
 ; CHECK-NOT: .p2align
 ; CHECK: arr6:
+; CHECK: .p2align 4
+; CHECK: arr8:
+; CHECK: .p2align 4
+; CHECK: arr9:
+
 ; CHECK-NOT: arr7:
 
 declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture, i32, i32, i1) nounwind

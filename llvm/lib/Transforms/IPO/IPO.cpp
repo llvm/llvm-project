@@ -53,7 +53,7 @@ void llvm::initializeIPO(PassRegistry &Registry) {
   initializeBarrierNoopPass(Registry);
   initializeEliminateAvailableExternallyLegacyPassPass(Registry);
   initializeSampleProfileLoaderLegacyPassPass(Registry);
-  initializeFunctionImportPassPass(Registry);
+  initializeFunctionImportLegacyPassPass(Registry);
   initializeWholeProgramDevirtPass(Registry);
 }
 

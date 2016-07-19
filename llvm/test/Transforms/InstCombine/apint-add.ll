@@ -54,6 +54,32 @@ define i49 @test4(i49 %x) {
   ret i49 %tmp.4
 }
 
+define i7 @sext(i4 %x) {
+; CHECK-LABEL: @sext(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 %x, -8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[XOR]] to i7
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i7 [[ZEXT]], -8
+; CHECK-NEXT:    ret i7 [[ADD]]
+;
+  %xor = xor i4 %x, -8
+  %zext = zext i4 %xor to i7
+  %add = add nsw i7 %zext, -8
+  ret i7 %add
+}
+
+define <2 x i10> @sext_vec(<2 x i3> %x) {
+; CHECK-LABEL: @sext_vec(
+; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i3> %x, <i3 -4, i3 -4>
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i3> [[XOR]] to <2 x i10>
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i10> [[ZEXT]], <i10 -4, i10 -4>
+; CHECK-NEXT:    ret <2 x i10> [[ADD]]
+;
+  %xor = xor <2 x i3> %x, <i3 -4, i3 -4>
+  %zext = zext <2 x i3> %xor to <2 x i10>
+  %add = add nsw <2 x i10> %zext, <i10 -4, i10 -4>
+  ret <2 x i10> %add
+}
+
 ; Tests for Integer BitWidth > 64 && BitWidth <= 1024.
 
 ;; Flip sign bit then add INT_MIN -> nop.

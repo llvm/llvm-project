@@ -22,26 +22,43 @@ Lazy Compilation
 When we add a module to the KaleidoscopeJIT class described in Chapter 2 it is
 immediately optimized, compiled and linked for us by the IRTransformLayer,
 IRCompileLayer and ObjectLinkingLayer respectively. This scheme, where all the
-work to make a Module executable is done up front, is relatively simple to
-understand its performance characteristics are easy to reason about. However,
-it will lead to very high startup times if the amount of code to be compiled is
-large, and may also do a lot of unnecessary compilation if only a few compiled
-functions are ever called at runtime. A truly "just-in-time" compiler should
-allow us to defer the compilation of any given function until the moment that
-function is first called, improving launch times and eliminating redundant work.
-In fact, the ORC APIs provide us with a layer to lazily compile LLVM IR:
+work to make a Module executable is done up front, is simple to understand its
+performance characteristics are easy to reason about. However, it will lead to
+very high startup times if the amount of code to be compiled is large, and may
+also do a lot of unnecessary compilation if only a few compiled functions are
+ever called at runtime. A truly "just-in-time" compiler should allow us to
+defer the compilation of any given function until the moment that function is
+first called, improving launch times and eliminating redundant work. In fact,
+the ORC APIs provide us with a layer to lazily compile LLVM IR:
 *CompileOnDemandLayer*.
 
-The CompileOnDemandLayer conforms to the layer interface described in Chapter 2,
-but the addModuleSet method behaves quite differently from the layers we have
-seen so far: rather than doing any work up front, it just constructs a *stub*
-for each function in the module and arranges for the stub to trigger compilation
-of the actual function the first time it is called. Because stub functions are
-very cheap to produce CompileOnDemand's addModuleSet method runs very quickly,
-reducing the time required to launch the first function to be executed, and
-saving us from doing any redundant compilation. By conforming to the layer
-interface, CompileOnDemand can be easily added on top of our existing JIT class.
-We just need a few changes:
+The CompileOnDemandLayer class conforms to the layer interface described in
+Chapter 2, but its addModuleSet method behaves quite differently from the layers
+we have seen so far: rather than doing any work up front, it just scans the
+Modules being added and arranges for each function in them to be compiled the
+first time it is called. To do this, the CompileOnDemandLayer creates two small
+utilities for each function that it scans: a *stub* and a *compile
+callback*. The stub is a pair of a function pointer (which will be pointed at
+the function's implementation once the function has been compiled) and an
+indirect jump through the pointer. By fixing the address of the indirect jump
+for the lifetime of the program we can give the function a permanent "effective
+address", one that can be safely used for indirection and function pointer
+comparison even if the function's implementation is never compiled, or if it is
+compiled more than once (due to, for example, recompiling the function at a
+higher optimization level) and changes address. The second utility, the compile
+callback, represents a re-entry point from the program into the compiler that
+will trigger compilation and then execution of a function. By initializing the
+function's stub to point at the function's compile callback, we enable lazy
+compilation: The first attempted call to the function will follow the function
+pointer and trigger the compile callback instead. The compile callback will
+compile the function, update the function pointer for the stub, then execute
+the function. On all subsequent calls to the function, the function pointer
+will point at the already-compiled function, so there is no further overhead
+from the compiler. We will look at this process in more detail in the next
+chapter of this tutorial, but for now we'll trust the CompileOnDemandLayer to
+set all the stubs and callbacks up for us. All we need to do is to add the
+CompileOnDemandLayer to the top of our stack and we'll get the benefits of
+lazy compilation. We just need a few changes to the source:
 
 .. code-block:: c++
 
@@ -71,12 +88,8 @@ We just need a few changes:
 
 First we need to include the CompileOnDemandLayer.h header, then add two new
 members: a std::unique_ptr<CompileCallbackManager> and a CompileOnDemandLayer,
-to our class. The CompileCallbackManager is a utility that enables us to
-create re-entry points into the compiler for functions that we want to lazily
-compile. In the next chapter we'll be looking at this class in detail, but for
-now we'll be treating it as an opaque utility: We just need to pass a reference
-to it into our new CompileOnDemandLayer, and the layer will do all the work of
-setting up the callbacks using the callback manager we gave it.
+to our class. The CompileCallbackManager member is used by the CompileOnDemandLayer
+to create the compile callback needed for each function.
 
 .. code-block:: c++
 
@@ -103,7 +116,7 @@ createLocalCompileCallbackManager function, which takes a TargetMachine and a
 TargetAddress to call if it receives a request to compile an unknown function.
 In our simple JIT this situation is unlikely to come up, so we'll cheat and
 just pass '0' here. In a production quality JIT you could give the address of a
-function that throws an exception in order to unwind the JIT'd code stack.
+function that throws an exception in order to unwind the JIT'd code's stack.
 
 Now we can construct our CompileOnDemandLayer. Following the pattern from
 previous layers we start by passing a reference to the next layer down in our
@@ -116,13 +129,13 @@ functions that are unconditionally called (or highly likely to be called) from
 the function being called. For KaleidoscopeJIT we'll keep it simple and just
 request compilation of the function that was called. Next we pass a reference to
 our CompileCallbackManager. Finally, we need to supply an "indirect stubs
-manager builder". This is a function that constructs IndirectStubManagers, which
-are in turn used to build the stubs for each module. The CompileOnDemandLayer
-will call the indirect stub manager builder once for each call to addModuleSet,
-and use the resulting indirect stubs manager to create stubs for all functions
-in all modules added. If/when the module set is removed from the JIT the
-indirect stubs manager will be deleted, freeing any memory allocated to the
-stubs. We supply this function by using the
+manager builder": a utility function that constructs IndirectStubManagers, which
+are in turn used to build the stubs for the functions in each module. The
+CompileOnDemandLayer will call the indirect stub manager builder once for each
+call to addModuleSet, and use the resulting indirect stubs manager to create
+stubs for all functions in all modules in the set. If/when the module set is
+removed from the JIT the indirect stubs manager will be deleted, freeing any
+memory allocated to the stubs. We supply this function by using the
 createLocalIndirectStubsManagerBuilder utility.
 
 .. code-block:: c++
@@ -148,7 +161,7 @@ findSymbol, and removeModule methods. With that, we're up and running.
 
 **To be done:**
 
-** Discuss CompileCallbackManagers and IndirectStubManagers in more detail.**
+** Chapter conclusion.**
 
 Full Code Listing
 =================
