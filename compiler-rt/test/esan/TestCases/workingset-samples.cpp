@@ -1,6 +1,7 @@
 // RUN: %clang_esan_wset -O0 %s -o %t 2>&1
 // RUN: %run %t 2>&1 | FileCheck %s
 
+#include <sanitizer/esan_interface.h>
 #include <sched.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,15 +13,15 @@ const int iters = 6;
 int main(int argc, char **argv) {
   char *buf = (char *)mmap(0, size, PROT_READ | PROT_WRITE,
                            MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-  // Try to increase the probability that the sideline thread is
-  // scheduled.  Unfortunately we can't do proper synchronization
-  // without some form of annotation or something.
-  sched_yield();
-  // Do enough work to get at least 4 samples.
-  for (int j = 0; j < iters; ++j) {
-    for (int i = 0; i < size; ++i)
-      buf[i] = i;
-    sched_yield();
+  // To avoid flakiness stemming from whether the sideline thread
+  // is scheduled enough on a loaded test machine, we coordinate
+  // with esan itself:
+  if (__esan_get_sample_count) {
+    while (__esan_get_sample_count() < 4) {
+      for (int i = 0; i < size; ++i)
+        buf[i] = i;
+      sched_yield();
+    }
   }
   munmap(buf, size);
   // We only check for a few samples here to reduce the chance of flakiness.

@@ -36,6 +36,8 @@ ninja/
 test/20*
 __pycache__/
 
+clang-module-cache
+
 # We should ignore Xcode-style embedding of llvm/ at lldb root dir.
 # Do not add trailing '/'s, they skip symlinks.
 /llvm

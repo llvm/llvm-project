@@ -25,7 +25,7 @@ import sys
 def main():
     binary = 'clang-rename'
     if vim.eval('exists("g:clang_rename_path")') == "1":
-        binary = vim.eval('g:clang_rename')
+        binary = vim.eval('g:clang_rename_path')
 
     # Get arguments for clang-rename binary.
     offset = int(vim.eval('line2byte(line("."))+col(".")')) - 2

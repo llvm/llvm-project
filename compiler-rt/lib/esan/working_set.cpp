@@ -190,6 +190,11 @@ static void takeSample(void *Arg) {
   }
 }
 
+unsigned int getSampleCountWorkingSet()
+{
+  return SnapshotNum;
+}
+
 // Initialization that must be done before any instrumented code is executed.
 void initializeShadowWorkingSet() {
   CHECK(getFlags()->cache_line_size == CacheLineSize);

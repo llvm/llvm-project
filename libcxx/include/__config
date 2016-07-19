@@ -27,7 +27,7 @@
 #define _GNUC_VER 0
 #endif
 
-#define _LIBCPP_VERSION 3900
+#define _LIBCPP_VERSION 4000
 
 #ifndef _LIBCPP_ABI_VERSION
 #define _LIBCPP_ABI_VERSION 1

@@ -115,4 +115,8 @@ extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE void __esan_report() {
   reportResults();
 }
+
+SANITIZER_INTERFACE_ATTRIBUTE unsigned int __esan_get_sample_count() {
+  return getSampleCount();
+}
 } // extern "C"
