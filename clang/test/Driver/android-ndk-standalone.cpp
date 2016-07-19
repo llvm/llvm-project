@@ -237,15 +237,14 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR2 %s
 // CHECK-MIPSR2: {{.*}}clang{{.*}}" "-cc1"
 // CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9"
-// NOT-YET-CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android/mips-r2"
-// CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android"
+// CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android/mips-r2"
 // CHECK-MIPSR2: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
 // CHECK-MIPSR2: "-internal-externc-isystem" "{{.*}}/sysroot/include"
 // CHECK-MIPSR2: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-MIPSR2: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/mips-r2"
-// CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib"
-// CHECK-MIPSR2: "-L{{.*}}/sysroot/usr/lib"
+// CHECK-MIPSR2: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib/../libr2"
+// CHECK-MIPSR2: "-L{{.*}}/sysroot/usr/lib/../libr2"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target mipsel-linux-android \
@@ -255,15 +254,48 @@
 // RUN:   | FileCheck --check-prefix=CHECK-MIPSR6 %s
 // CHECK-MIPSR6: {{.*}}clang{{.*}}" "-cc1"
 // CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9"
-// NOT-YET-CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android/mips-r6"
-// CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android"
+// CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9/mipsel-linux-android/mips-r6"
 // CHECK-MIPSR6: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
 // CHECK-MIPSR6: "-internal-externc-isystem" "{{.*}}/sysroot/include"
 // CHECK-MIPSR6: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
 // CHECK-MIPSR6: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
 // CHECK-MIPSR6: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/mips-r6"
-// CHECK-MIPSR6: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib"
-// CHECK-MIPSR6: "-L{{.*}}/sysroot/usr/lib"
+// CHECK-MIPSR6: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib/../libr6"
+// CHECK-MIPSR6: "-L{{.*}}/sysroot/usr/lib/../libr6"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target mips64el-linux-android \
+// RUN:     -march=mips32 -mips32r2 -stdlib=libstdc++ \
+// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64-R2 %s
+// CHECK-MIPS64-R2: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-MIPS64-R2: "-internal-isystem" "{{.*}}/include/c++/4.9"
+// CHECK-MIPS64-R2: "-internal-isystem" "{{.*}}/include/mips64el-linux-android/c++/4.9/mips-r2"
+// CHECK-MIPS64-R2: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
+// CHECK-MIPS64-R2: "-internal-externc-isystem" "{{.*}}/sysroot/include"
+// CHECK-MIPS64-R2: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
+// CHECK-MIPS64-R2: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-MIPS64-R2: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/32/mips-r2"
+// CHECK-MIPS64-R2: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/../../../../mips64el-linux-android/lib/../libr2"
+// CHECK-MIPS64-R2: "-L{{.*}}/sysroot/usr/lib/../libr2"
+//
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN:     -target mips64el-linux-android \
+// RUN:     -march=mips32 -mips32r6 -stdlib=libstdc++ \
+// RUN:     -B%S/Inputs/basic_android_ndk_tree \
+// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
+// RUN:   | FileCheck --check-prefix=CHECK-MIPS64-R6 %s
+// CHECK-MIPS64-R6: {{.*}}clang{{.*}}" "-cc1"
+// CHECK-MIPS64-R6: "-internal-isystem" "{{.*}}/include/c++/4.9"
+// CHECK-MIPS64-R6: "-internal-isystem" "{{.*}}/include/mips64el-linux-android/c++/4.9/mips-r6"
+// CHECK-MIPS64-R6: "-internal-isystem" "{{.*}}/include/c++/4.9/backward"
+// CHECK-MIPS64-R6: "-internal-externc-isystem" "{{.*}}/sysroot/include"
+// CHECK-MIPS64-R6: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
+// CHECK-MIPS64-R6: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-MIPS64-R6: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/32/mips-r6"
+// CHECK-MIPS64-R6: "-L{{.*}}/lib/gcc/mips64el-linux-android/4.9/../../../../mips64el-linux-android/lib/../libr6"
+// CHECK-MIPS64-R6: "-L{{.*}}/sysroot/usr/lib/../libr6"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -target i686-linux-android \

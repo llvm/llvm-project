@@ -44,7 +44,6 @@
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstring>
 #include <functional>
@@ -6873,6 +6872,8 @@ bool IntExprEvaluator::VisitCallExpr(const CallExpr *E) {
       // Reduce it to a constant now.
       return Success((Type & 2) ? 0 : -1, E);
     }
+
+    llvm_unreachable("unexpected EvalMode");
   }
 
   case Builtin::BI__builtin_bswap16:

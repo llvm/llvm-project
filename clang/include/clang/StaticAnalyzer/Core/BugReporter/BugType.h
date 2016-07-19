@@ -17,7 +17,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
-#include "llvm/ADT/FoldingSet.h"
 #include <string>
 
 namespace clang {

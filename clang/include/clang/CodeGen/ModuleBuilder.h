@@ -20,6 +20,7 @@ namespace llvm {
   class Constant;
   class LLVMContext;
   class Module;
+  class StringRef;
 }
 
 namespace clang {

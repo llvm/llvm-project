@@ -16,7 +16,6 @@
 
 #include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeOrdering.h"
 #include "llvm/ADT/MapVector.h"
@@ -24,7 +23,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <list>
-#include <map>
 
 namespace clang {
   
