@@ -49,22 +49,22 @@ struct ResolvedReloc {
 };
 
 template <class ELFT>
-static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
+static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
                                      const typename ELFT::Rel &Rel) {
-  return Target->getImplicitAddend(Sec->getSectionData().begin(),
+  return Target->getImplicitAddend(Sec.getSectionData().begin(),
                                    Rel.getType(Config->Mips64EL));
 }
 
 template <class ELFT>
-static typename ELFT::uint getAddend(InputSectionBase<ELFT> *Sec,
+static typename ELFT::uint getAddend(InputSectionBase<ELFT> &Sec,
                                      const typename ELFT::Rela &Rel) {
   return Rel.r_addend;
 }
 
 template <class ELFT, class RelT>
-static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> *Sec,
+static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> &Sec,
                                         RelT &Rel) {
-  SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
+  SymbolBody &B = Sec.getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
     return {nullptr, 0};
@@ -75,7 +75,7 @@ static ResolvedReloc<ELFT> resolveReloc(InputSectionBase<ELFT> *Sec,
 }
 
 template <class ELFT, class Elf_Shdr>
-static void run(ELFFile<ELFT> &Obj, InputSectionBase<ELFT> *Sec,
+static void run(ELFFile<ELFT> &Obj, InputSectionBase<ELFT> &Sec,
                 Elf_Shdr *RelSec, std::function<void(ResolvedReloc<ELFT>)> Fn) {
   if (RelSec->sh_type == SHT_RELA) {
     for (const typename ELFT::Rela &RI : Obj.relas(RelSec))
@@ -88,10 +88,10 @@ static void run(ELFFile<ELFT> &Obj, InputSectionBase<ELFT> *Sec,
 
 // Calls Fn for each section that Sec refers to via relocations.
 template <class ELFT>
-static void forEachSuccessor(InputSection<ELFT> *Sec,
+static void forEachSuccessor(InputSection<ELFT> &Sec,
                              std::function<void(ResolvedReloc<ELFT>)> Fn) {
-  ELFFile<ELFT> &Obj = Sec->getFile()->getObj();
-  for (const typename ELFT::Shdr *RelSec : Sec->RelocSections)
+  ELFFile<ELFT> &Obj = Sec.getFile()->getObj();
+  for (const typename ELFT::Shdr *RelSec : Sec.RelocSections)
     run(Obj, Sec, RelSec, Fn);
 }
 
@@ -101,7 +101,7 @@ static void scanEhFrameSection(EhInputSection<ELFT> &EH,
   if (!EH.RelocSection)
     return;
   ELFFile<ELFT> &EObj = EH.getFile()->getObj();
-  run<ELFT>(EObj, &EH, EH.RelocSection, [&](ResolvedReloc<ELFT> R) {
+  run<ELFT>(EObj, EH, EH.RelocSection, [&](ResolvedReloc<ELFT> R) {
     if (!R.Sec || R.Sec == &InputSection<ELFT>::Discarded)
       return;
     if (R.Sec->getSectionHdr()->sh_flags & SHF_EXECINSTR)
@@ -192,7 +192,7 @@ template <class ELFT> void elf::markLive() {
 
   // Mark all reachable sections.
   while (!Q.empty())
-    forEachSuccessor<ELFT>(Q.pop_back_val(), Enqueue);
+    forEachSuccessor<ELFT>(*Q.pop_back_val(), Enqueue);
 }
 
 template void elf::markLive<ELF32LE>();

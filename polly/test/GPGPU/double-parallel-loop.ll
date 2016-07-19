@@ -69,7 +69,7 @@
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(16, 32);
 ; CODE-NEXT:     dim3 k0_dimGrid(32, 32);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 

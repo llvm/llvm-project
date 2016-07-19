@@ -92,11 +92,14 @@ private:
   ///   - Kernel:        A GPU kernel call (TODO)
   ///   - Data-Transfer: A GPU <-> CPU data-transfer (TODO)
   ///
-  virtual void createUser(__isl_take isl_ast_node *User) {
-    isl_ast_node_free(User);
-    return;
-  }
+  /// @param UserStmt The ast node to generate code for.
+  virtual void createUser(__isl_take isl_ast_node *UserStmt);
 };
+
+void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
+  isl_ast_node_free(UserStmt);
+  return;
+}
 
 namespace {
 class PPCGCodeGeneration : public ScopPass {
@@ -447,6 +450,8 @@ public:
 
       setArrayBounds(PPCGArray, Array);
       i++;
+
+      collect_references(PPCGProg, &PPCGArray);
     }
   }
 
