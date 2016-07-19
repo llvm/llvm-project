@@ -40,17 +40,21 @@ namespace {
         ListEntry
         next ()
         {
+            static ConstString g_next("__next_");
+            
             if (!m_entry_sp)
                 return ListEntry();
-            return ListEntry(m_entry_sp->GetChildAtIndexPath({0,1}));
+            return ListEntry(m_entry_sp->GetChildMemberWithName(g_next, true));
         }
 
         ListEntry
         prev ()
         {
+            static ConstString g_prev("__prev_");
+
             if (!m_entry_sp)
                 return ListEntry();
-            return ListEntry(m_entry_sp->GetChildAtIndexPath({0,0}));
+            return ListEntry(m_entry_sp->GetChildMemberWithName(g_prev, true));
         }
 
         uint64_t
@@ -304,6 +308,9 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::CalculateNumChildren (
 lldb::ValueObjectSP
 lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetChildAtIndex (size_t idx)
 {
+    static ConstString g_value("__value_");
+    static ConstString g_next("__next_");
+
     if (idx >= CalculateNumChildren())
         return lldb::ValueObjectSP();
     
@@ -335,6 +342,23 @@ lldb_private::formatters::LibcxxStdListSyntheticFrontEnd::GetChildAtIndex (size_
     current_sp = current_sp->GetChildAtIndex(1, true); // get the __value_ child
     if (!current_sp)
         return lldb::ValueObjectSP();
+    
+    if (current_sp->GetName() == g_next)
+    {
+        ProcessSP process_sp(current_sp->GetProcessSP());
+        if (!process_sp)
+            return nullptr;
+
+        // if we grabbed the __next_ pointer, then the child is one pointer deep-er
+        lldb::addr_t addr = current_sp->GetParent()->GetPointerValue();
+        addr = addr + 2*process_sp->GetAddressByteSize();
+        ExecutionContext exe_ctx(process_sp);
+        current_sp = CreateValueObjectFromAddress("__value_",
+                                                  addr,
+                                                  exe_ctx,
+                                                  m_element_type);
+    }
+    
     // we need to copy current_sp into a new object otherwise we will end up with all items named __value_
     DataExtractor data;
     Error error;
