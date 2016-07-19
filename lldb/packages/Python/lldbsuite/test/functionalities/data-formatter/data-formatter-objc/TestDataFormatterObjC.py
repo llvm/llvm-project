@@ -255,7 +255,7 @@ class ObjCDataFormatterTestCase(TestBase):
     def nsbundle_data_formatter_commands(self):
         self.expect('frame variable bundle_string bundle_url main_bundle',
                     substrs = ['(NSBundle *) bundle_string = ',' @"/System/Library/Frameworks/Accelerate.framework"',
-                    '(NSBundle *) bundle_url = ',' @"/System/Library/Frameworks/Cocoa.framework"',
+                    '(NSBundle *) bundle_url = ',' @"/System/Library/Frameworks/Foundation.framework"',
                     '(NSBundle *) main_bundle = ','data-formatter-objc'])
 
     def nsexception_data_formatter_commands(self):
