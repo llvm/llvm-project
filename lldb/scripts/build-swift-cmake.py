@@ -55,30 +55,19 @@ def use_gold_linker():
 
 uname = str(subprocess.check_output(["uname", "-s"])).rstrip()
 
-<<<<<<< HEAD
 checkout_git("llvm", "ssh://git@github.com/apple/swift-llvm.git", "stable-next")
 checkout_git("clang", "ssh://git@github.com/apple/swift-clang.git", "stable-next")
 checkout_git("swift", "ssh://git@github.com/apple/swift.git", "master-next")
-=======
-checkout_git("llvm", "ssh://git@github.com/apple/swift-llvm.git", "stable")
-checkout_git("clang", "ssh://git@github.com/apple/swift-clang.git", "stable")
-checkout_git("swift", "ssh://git@github.com/apple/swift.git", "master")
->>>>>>> origin/master
 checkout_git("cmark", "ssh://git@github.com/apple/swift-cmark.git", "master")
 checkout_git("ninja", "https://github.com/ninja-build/ninja.git", "master")
 checkout_git("lldb", "ssh://git@github.com/apple/swift-lldb.git", "master-next")
 
 if args.package:
-<<<<<<< HEAD
     checkout_git("llbuild", "ssh://git@github.com/apple/swift-llbuild.git", "master-next")
     checkout_git("swiftpm", "ssh://git@github.com/apple/swift-package-manager.git", "master-next")
-=======
-    checkout_git("llbuild", "ssh://git@github.com/apple/swift-llbuild.git", "master")
-    checkout_git("swiftpm", "ssh://git@github.com/apple/swift-package-manager.git", "master")
-    checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master")
-    checkout_git("swift-corelibs-xctest", "ssh://git@github.com/apple/swift-corelibs-xctest.git", "master")
-    checkout_git("swift-integration-tests", "ssh://git@github.com/apple/swift-integration-tests.git", "master")
->>>>>>> origin/master
+    checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master-next")
+    checkout_git("swift-corelibs-xctest", "ssh://git@github.com/apple/swift-corelibs-xctest.git", "master-next")
+    checkout_git("swift-integration-tests", "ssh://git@github.com/apple/swift-integration-tests.git", "master-next")
 
 if args.update:
     update_git("llvm")
