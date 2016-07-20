@@ -24,6 +24,9 @@ struct Node
     Node* __parent_;
     bool __is_black_;
 
+    Node* __parent_unsafe() const { return __parent_; }
+    void __set_parent(Node* x) { __parent_ = x;}
+
     Node() : __left_(), __right_(), __parent_(), __is_black_() {}
 };
 

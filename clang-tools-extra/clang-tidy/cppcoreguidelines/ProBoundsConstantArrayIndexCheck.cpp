@@ -45,9 +45,12 @@ void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
+  // Note: if a struct contains an array member, the compiler-generated
+  // constructor has an arraySubscriptExpr.
   Finder->addMatcher(arraySubscriptExpr(hasBase(ignoringImpCasts(hasType(
                                             constantArrayType().bind("type")))),
-                                        hasIndex(expr().bind("index")))
+                                        hasIndex(expr().bind("index")),
+                                        unless(hasAncestor(isImplicit())))
                          .bind("expr"),
                      this);
 

@@ -3787,6 +3787,7 @@ enum Distro {
   UbuntuVivid,
   UbuntuWily,
   UbuntuXenial,
+  UbuntuYakkety,
   UnknownDistro
 };
 
@@ -3801,7 +3802,7 @@ static bool IsDebian(enum Distro Distro) {
 }
 
 static bool IsUbuntu(enum Distro Distro) {
-  return Distro >= UbuntuHardy && Distro <= UbuntuXenial;
+  return Distro >= UbuntuHardy && Distro <= UbuntuYakkety;
 }
 
 static Distro DetectDistro(const Driver &D, llvm::Triple::ArchType Arch) {
@@ -3832,6 +3833,7 @@ static Distro DetectDistro(const Driver &D, llvm::Triple::ArchType Arch) {
                       .Case("vivid", UbuntuVivid)
                       .Case("wily", UbuntuWily)
                       .Case("xenial", UbuntuXenial)
+                      .Case("yakkety", UbuntuYakkety)
                       .Default(UnknownDistro);
     if (Version != UnknownDistro)
       return Version;

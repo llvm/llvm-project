@@ -198,3 +198,62 @@ Environment Variables
   If ``LIBCXX_COLOR_DIAGNOSTICS`` is defined then the test suite will attempt
   to use color diagnostic outputs from the compiler.
   Also see :option:`color_diagnostics`.
+
+Benchmarks
+==========
+
+Libc++ contains benchmark tests separately from the test of the test suite.
+The benchmarks are written using the `Google Benchmark`_ library, a copy of which
+is stored in the libc++ repository.
+
+For more information about using the Google Benchmark library see the
+`official documentation <https://github.com/google/benchmark>`_.
+
+.. _`Google Benchmark`: https://github.com/google/benchmark
+
+Building Benchmarks
+-------------------
+
+The benchmark tests are not enabled by default. To build the benchmarks
+libc++ must be configured using the CMake option ``-DLIBCXX_INCLUDE_BENCHMARKS=ON``.
+Then the benchmarks can be built using the ``libcxx-benchmarks`` target.
+
+An example build would look like:
+
+.. code-block:: bash
+
+  $ cd build
+  $ cmake [options] -DLIBCXX_INCLUDE_BENCHMARKS=ON <path to libcxx sources>
+  $ make libcxx-benchmarks
+
+This will build all of the benchmarks under ``<libcxx-src>/benchmarks`` to be
+built against the just-built libc++. The compiled tests are output into
+``build/benchmarks``.
+
+The benchmarks can also be built against the platforms native standard library
+using the ``-DLIBCXX_BUILD_BENCHMARKS_NATIVE_STDLIB=ON`` CMake option. This
+is useful for comparing the performance of libc++ to other standard libraries.
+The compiled benchmarks are named ``<test>.libcxx.out`` if they test libc++ and
+``<test>.native.out`` otherwise.
+
+Also See:
+
+  * :ref:`Building Libc++ <build instructions>`
+  * :ref:`CMake Options`
+
+Running Benchmarks
+------------------
+
+The benchmarks must be run manually by the user. Currently there is no way
+to run them as part of the build.
+
+For example:
+
+.. code-block:: bash
+
+  $ cd build/benchmarks
+  $ make libcxx-benchmarks
+  $ ./algorithms.libcxx.out # Runs all the benchmarks
+  $ ./algorithms.libcxx.out --benchmark_filter=BM_Sort.* # Only runs the sort benchmarks
+
+For more information about running benchmarks see `Google Benchmark`_.

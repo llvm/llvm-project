@@ -1,2 +1,1 @@
-fun:*__tree*
 fun:*__hash_table*

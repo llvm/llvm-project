@@ -1013,6 +1013,10 @@ public:
     DL = &S->getRegion().getEntry()->getParent()->getParent()->getDataLayout();
     RI = &getAnalysis<RegionInfoPass>().getRegionInfo();
 
+    // We currently do not support scops with invariant loads.
+    if (S->hasInvariantAccesses())
+      return false;
+
     auto PPCGScop = createPPCGScop();
     auto PPCGProg = createPPCGProg(PPCGScop);
     auto PPCGGen = generateGPU(PPCGScop, PPCGProg);

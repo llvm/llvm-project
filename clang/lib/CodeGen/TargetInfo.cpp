@@ -6836,6 +6836,8 @@ public:
 
 }
 
+static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM);
+
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const Decl *D,
   llvm::GlobalValue *GV,
@@ -6857,6 +6859,8 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     if (NumSGPR != 0)
       F->addFnAttr("amdgpu_num_sgpr", llvm::utostr(NumSGPR));
   }
+
+  appendOpenCLVersionMD(M);
 }
 
 
@@ -7530,6 +7534,13 @@ void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   llvm::NamedMDNode *SPIRVerMD =
       M.getOrInsertNamedMetadata("opencl.spir.version");
   SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
+  appendOpenCLVersionMD(CGM);
+}
+
+static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM) {
+  llvm::LLVMContext &Ctx = CGM.getModule().getContext();
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
+  llvm::Module &M = CGM.getModule();
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
   llvm::Metadata *OCLVerElts[] = {

@@ -97,3 +97,23 @@ void AssignAndInitNonNullFromFn() {
 
   TakeNonnull(ReturnNullable()); //expected-warning{{implicit conversion from nullable pointer 'void * _Nullable' to non-nullable pointer type 'void * _Nonnull}}
 }
+
+void ConditionalExpr(bool c) {
+  struct Base {};
+  struct Derived : Base {};
+
+  Base * _Nonnull p;
+  Base * _Nonnull nonnullB;
+  Base * _Nullable nullableB;
+  Derived * _Nonnull nonnullD;
+  Derived * _Nullable nullableD;
+
+  p = c ? nonnullB : nonnullD;
+  p = c ? nonnullB : nullableD; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableB : nonnullD; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableB : nullableD; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nonnullD : nonnullB;
+  p = c ? nonnullD : nullableB; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableD : nonnullB; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+  p = c ? nullableD : nullableB; // expected-warning{{implicit conversion from nullable pointer 'Base * _Nullable' to non-nullable pointer type 'Base * _Nonnull}}
+}

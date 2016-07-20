@@ -75,8 +75,8 @@ struct unw_proc_info_t {
   unw_word_t  gp;               /* not used */
   unw_word_t  flags;            /* not used */
   uint32_t    format;           /* compact unwind encoding, or zero if none */
-  uint32_t    unwind_info_size; /* size of dwarf unwind info, or zero if none */
-  unw_word_t  unwind_info;      /* address of dwarf unwind info, or zero */
+  uint32_t    unwind_info_size; /* size of DWARF unwind info, or zero if none */
+  unw_word_t  unwind_info;      /* address of DWARF unwind info, or zero */
   unw_word_t  extra;            /* mach_header of mach-o image containing func */
 };
 typedef struct unw_proc_info_t unw_proc_info_t;
