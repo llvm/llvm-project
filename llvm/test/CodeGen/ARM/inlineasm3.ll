@@ -121,3 +121,14 @@ entry:
   %0 = tail call <4 x i32> asm "vld1.s32 {${0:e}[], ${0:f}[]}, [$1]", "=w,r"(i32* %p) nounwind
   ret <4 x i32> %0
 }
+
+; Bugzilla PR26038
+
+define i32 @fn1() local_unnamed_addr nounwind {
+; CHECK-LABEL: fn1
+entry:
+; CHECK: mov [[addr:r[0-9]+]], #5
+; CHECK: ldrh {{.*}}[[addr]]
+  %0 = tail call i32 asm "ldrh  $0, $1", "=r,*Q"(i8* inttoptr (i32 5 to i8*)) nounwind
+  ret i32 %0
+}

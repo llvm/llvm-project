@@ -34,17 +34,17 @@ entry:
 ; MIPS32-ANY:    lw      $[[R0:[0-9]+]], %got(x)
 ; MIPS64-ANY:    ld      $[[R0:[0-9]+]], %got_disp(x)(
 
-; O0:        $[[BB0:[A-Z_0-9]+]]:
+; O0:        [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; O0:            ld      $[[R1:[0-9]+]]
 ; O0-NEXT:       ll      $[[R2:[0-9]+]], 0($[[R1]])
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R3:[0-9]+]], 0($[[R0]])
 ; ALL:           addu    $[[R4:[0-9]+]], $[[R3]], $4
 ; ALL:           sc      $[[R4]], 0($[[R0]])
-; NOT-MICROMIPS: beqz    $[[R4]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R4]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R4]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R4]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R4]], [[BB0]]
+; MIPSR6:        beqzc   $[[R4]], [[BB0]]
 }
 
 define i32 @AtomicLoadNand32(i32 signext %incr) nounwind {
@@ -59,14 +59,14 @@ entry:
 
 
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R1:[0-9]+]], 0($[[R0]])
 ; ALL:           and     $[[R3:[0-9]+]], $[[R1]], $4
 ; ALL:           nor     $[[R2:[0-9]+]], $zero, $[[R3]]
 ; ALL:           sc      $[[R2]], 0($[[R0]])
-; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R2]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R2]], [[BB0]]
+; MIPSR6:        beqzc   $[[R2]], [[BB0]]
 }
 
 define i32 @AtomicSwap32(i32 signext %newval) nounwind {
@@ -82,12 +82,12 @@ entry:
 ; MIPS32-ANY:    lw      $[[R0:[0-9]+]], %got(x)
 ; MIPS64-ANY:    ld      $[[R0:[0-9]+]], %got_disp(x)
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      ${{[0-9]+}}, 0($[[R0]])
 ; ALL:           sc      $[[R2:[0-9]+]], 0($[[R0]])
-; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R2]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R2]], [[BB0]]
+; MIPSR6:        beqzc   $[[R2]], [[BB0]]
 }
 
 define i32 @AtomicCmpSwap32(i32 signext %oldval, i32 signext %newval) nounwind {
@@ -104,16 +104,16 @@ entry:
 ; MIPS32-ANY:    lw      $[[R0:[0-9]+]], %got(x)
 ; MIPS64-ANY:    ld      $[[R0:[0-9]+]], %got_disp(x)(
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $2, 0($[[R0]])
-; NOT-MICROMIPS: bne     $2, $4, $[[BB1:[A-Z_0-9]+]]
-; MICROMIPS:     bne     $2, $4, $[[BB1:[A-Z_0-9]+]]
-; MIPSR6:        bnec    $2, $4, $[[BB1:[A-Z_0-9]+]]
+; NOT-MICROMIPS: bne     $2, $4, [[BB1:(\$|\.L)[A-Z_0-9]+]]
+; MICROMIPS:     bne     $2, $4, [[BB1:(\$|\.L)[A-Z_0-9]+]]
+; MIPSR6:        bnec    $2, $4, [[BB1:(\$|\.L)[A-Z_0-9]+]]
 ; ALL:           sc      $[[R2:[0-9]+]], 0($[[R0]])
-; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
-; ALL:       $[[BB1]]:
+; NOT-MICROMIPS: beqz    $[[R2]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R2]], [[BB0]]
+; MIPSR6:        beqzc   $[[R2]], [[BB0]]
+; ALL:       [[BB1]]:
 }
 
 
@@ -141,20 +141,20 @@ entry:
 ; ALL:           nor     $[[R8:[0-9]+]], $zero, $[[R7]]
 ; ALL:           sllv    $[[R9:[0-9]+]], $4, $[[R5]]
 
-; O0:        $[[BB0:[A-Z_0-9]+]]:
+; O0:        [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; O0:            ld      $[[R10:[0-9]+]]
 ; O0-NEXT:       ll      $[[R11:[0-9]+]], 0($[[R10]])
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R12:[0-9]+]], 0($[[R2]])
 ; ALL:           addu    $[[R13:[0-9]+]], $[[R12]], $[[R9]]
 ; ALL:           and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
 ; ALL:           and     $[[R15:[0-9]+]], $[[R12]], $[[R8]]
 ; ALL:           or      $[[R16:[0-9]+]], $[[R15]], $[[R14]]
 ; ALL:           sc      $[[R16]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R16]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R16]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R16]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R16]], [[BB0]]
+; MIPSR6:        beqzc   $[[R16]], [[BB0]]
 
 ; ALL:           and     $[[R17:[0-9]+]], $[[R12]], $[[R7]]
 ; ALL:           srlv    $[[R18:[0-9]+]], $[[R17]], $[[R5]]
@@ -186,20 +186,20 @@ entry:
 ; ALL:        nor     $[[R8:[0-9]+]], $zero, $[[R7]]
 ; ALL:        sllv    $[[R9:[0-9]+]], $4, $[[R5]]
 
-; O0:        $[[BB0:[A-Z_0-9]+]]:
+; O0:        [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; O0:            ld      $[[R10:[0-9]+]]
 ; O0-NEXT:       ll      $[[R11:[0-9]+]], 0($[[R10]])
 
-; ALL:    $[[BB0:[A-Z_0-9]+]]:
+; ALL:    [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:        ll      $[[R12:[0-9]+]], 0($[[R2]])
 ; ALL:        subu    $[[R13:[0-9]+]], $[[R12]], $[[R9]]
 ; ALL:        and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
 ; ALL:        and     $[[R15:[0-9]+]], $[[R12]], $[[R8]]
 ; ALL:        or      $[[R16:[0-9]+]], $[[R15]], $[[R14]]
 ; ALL:        sc      $[[R16]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
-; MICROMIPS:  beqzc   $[[R16]], $[[BB0]]
-; MIPSR6:     beqzc   $[[R16]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R16]], [[BB0]]
+; MICROMIPS:  beqzc   $[[R16]], [[BB0]]
+; MIPSR6:     beqzc   $[[R16]], [[BB0]]
 
 ; ALL:        and     $[[R17:[0-9]+]], $[[R12]], $[[R7]]
 ; ALL:        srlv    $[[R18:[0-9]+]], $[[R17]], $[[R5]]
@@ -231,11 +231,11 @@ entry:
 ; ALL:           nor     $[[R8:[0-9]+]], $zero, $[[R7]]
 ; ALL:           sllv    $[[R9:[0-9]+]], $4, $[[R5]]
 
-; O0:        $[[BB0:[A-Z_0-9]+]]:
+; O0:        [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; O0:            ld      $[[R10:[0-9]+]]
 ; O0-NEXT:       ll      $[[R11:[0-9]+]], 0($[[R10]])
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R12:[0-9]+]], 0($[[R2]])
 ; ALL:           and     $[[R13:[0-9]+]], $[[R12]], $[[R9]]
 ; ALL:           nor     $[[R14:[0-9]+]], $zero, $[[R13]]
@@ -243,9 +243,9 @@ entry:
 ; ALL:           and     $[[R16:[0-9]+]], $[[R12]], $[[R8]]
 ; ALL:           or      $[[R17:[0-9]+]], $[[R16]], $[[R15]]
 ; ALL:           sc      $[[R17]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R17]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R17]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R17]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R17]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R17]], [[BB0]]
+; MIPSR6:        beqzc   $[[R17]], [[BB0]]
 
 ; ALL:           and     $[[R18:[0-9]+]], $[[R12]], $[[R7]]
 ; ALL:           srlv    $[[R19:[0-9]+]], $[[R18]], $[[R5]]
@@ -277,15 +277,15 @@ entry:
 ; ALL:           nor     $[[R8:[0-9]+]], $zero, $[[R7]]
 ; ALL:           sllv    $[[R9:[0-9]+]], $4, $[[R5]]
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R10:[0-9]+]], 0($[[R2]])
 ; ALL:           and     $[[R18:[0-9]+]], $[[R9]], $[[R7]]
 ; ALL:           and     $[[R13:[0-9]+]], $[[R10]], $[[R8]]
 ; ALL:           or      $[[R14:[0-9]+]], $[[R13]], $[[R18]]
 ; ALL:           sc      $[[R14]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R14]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R14]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R14]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R14]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R14]], [[BB0]]
+; MIPSR6:        beqzc   $[[R14]], [[BB0]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R10]], $[[R7]]
 ; ALL:           srlv    $[[R16:[0-9]+]], $[[R15]], $[[R5]]
@@ -322,21 +322,21 @@ entry:
 ; ALL:           andi    $[[R11:[0-9]+]], $5, 255
 ; ALL:           sllv    $[[R12:[0-9]+]], $[[R11]], $[[R5]]
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R13:[0-9]+]], 0($[[R2]])
 ; ALL:           and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
-; NOT-MICROMIPS: bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
-; MICROMIPS:     bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
-; MIPSR6:        bnec    $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; NOT-MICROMIPS: bne     $[[R14]], $[[R10]], [[BB1:(\$|\.L)[A-Z_0-9]+]]
+; MICROMIPS:     bne     $[[R14]], $[[R10]], [[BB1:(\$|\.L)[A-Z_0-9]+]]
+; MIPSR6:        bnec    $[[R14]], $[[R10]], [[BB1:(\$|\.L)[A-Z_0-9]+]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R13]], $[[R8]]
 ; ALL:           or      $[[R16:[0-9]+]], $[[R15]], $[[R12]]
 ; ALL:           sc      $[[R16]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R16]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R16]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R16]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R16]], [[BB0]]
+; MIPSR6:        beqzc   $[[R16]], [[BB0]]
 
-; ALL:       $[[BB1]]:
+; ALL:       [[BB1]]:
 ; ALL:           srlv    $[[R17:[0-9]+]], $[[R14]], $[[R5]]
 
 ; NO-SEB-SEH:    sll     $[[R18:[0-9]+]], $[[R17]], 24
@@ -366,21 +366,21 @@ entry:
 ; ALL:           andi    $[[R11:[0-9]+]], $6, 255
 ; ALL:           sllv    $[[R12:[0-9]+]], $[[R11]], $[[R5]]
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R13:[0-9]+]], 0($[[R2]])
 ; ALL:           and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
-; NOT-MICROMIPS: bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
-; MICROMIPS:     bne     $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
-; MIPSR6:        bnec    $[[R14]], $[[R10]], $[[BB1:[A-Z_0-9]+]]
+; NOT-MICROMIPS: bne     $[[R14]], $[[R10]], [[BB1:(\$|\.L)[A-Z_0-9]+]]
+; MICROMIPS:     bne     $[[R14]], $[[R10]], [[BB1:(\$|\.L)[A-Z_0-9]+]]
+; MIPSR6:        bnec    $[[R14]], $[[R10]], [[BB1:(\$|\.L)[A-Z_0-9]+]]
 
 ; ALL:           and     $[[R15:[0-9]+]], $[[R13]], $[[R8]]
 ; ALL:           or      $[[R16:[0-9]+]], $[[R15]], $[[R12]]
 ; ALL:           sc      $[[R16]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R16]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R16]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R16]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R16]], [[BB0]]
+; MIPSR6:        beqzc   $[[R16]], [[BB0]]
 
-; ALL:       $[[BB1]]:
+; ALL:       [[BB1]]:
 ; ALL:           srlv    $[[R17:[0-9]+]], $[[R14]], $[[R5]]
 
 ; NO-SEB-SEH:    sll     $[[R18:[0-9]+]], $[[R17]], 24
@@ -423,20 +423,20 @@ entry:
 ; ALL:           nor     $[[R8:[0-9]+]], $zero, $[[R7]]
 ; ALL:           sllv    $[[R9:[0-9]+]], $4, $[[R5]]
 
-; O0:        $[[BB0:[A-Z_0-9]+]]:
+; O0:        [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; O0:            ld      $[[R10:[0-9]+]]
 ; O0-NEXT:       ll      $[[R11:[0-9]+]], 0($[[R10]])
 
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R12:[0-9]+]], 0($[[R2]])
 ; ALL:           addu    $[[R13:[0-9]+]], $[[R12]], $[[R9]]
 ; ALL:           and     $[[R14:[0-9]+]], $[[R13]], $[[R7]]
 ; ALL:           and     $[[R15:[0-9]+]], $[[R12]], $[[R8]]
 ; ALL:           or      $[[R16:[0-9]+]], $[[R15]], $[[R14]]
 ; ALL:           sc      $[[R16]], 0($[[R2]])
-; NOT-MICROMIPS: beqz    $[[R16]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R16]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R16]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R16]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R16]], [[BB0]]
+; MIPSR6:        beqzc   $[[R16]], [[BB0]]
 
 ; ALL:           and     $[[R17:[0-9]+]], $[[R12]], $[[R7]]
 ; ALL:           srlv    $[[R18:[0-9]+]], $[[R17]], $[[R5]]
@@ -465,15 +465,15 @@ define {i16, i1} @foo(i16* %addr, i16 %l, i16 %r, i16 %new) {
 ; ALL:           sync
 
 ; ALL:           andi    $[[R3:[0-9]+]], $[[R2]], 65535
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R4:[0-9]+]], 0($[[R5:[0-9]+]])
 ; ALL:           and     $[[R6:[0-9]+]], $[[R4]], $
 ; ALL:           and     $[[R7:[0-9]+]], $[[R4]], $
 ; ALL:           or      $[[R8:[0-9]+]], $[[R7]], $
 ; ALL:           sc      $[[R8]], 0($[[R5]])
-; NOT-MICROMIPS: beqz    $[[R8]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R8]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R8]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R8]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R8]], [[BB0]]
+; MIPSR6:        beqzc   $[[R8]], [[BB0]]
 
 ; ALL:           srlv    $[[R9:[0-9]+]], $[[R6]], $
 
@@ -538,11 +538,11 @@ entry:
 ; MIPS64-ANY:    ld      $[[R0:[0-9]+]], %got_disp(x)(
 
 ; ALL:           addiu   $[[PTR:[0-9]+]], $[[R0]], 1024
-; ALL:       $[[BB0:[A-Z_0-9]+]]:
+; ALL:       [[BB0:(\$|\.L)[A-Z_0-9]+]]:
 ; ALL:           ll      $[[R1:[0-9]+]], 0($[[PTR]])
 ; ALL:           addu    $[[R2:[0-9]+]], $[[R1]], $4
 ; ALL:           sc      $[[R2]], 0($[[PTR]])
-; NOT-MICROMIPS: beqz    $[[R2]], $[[BB0]]
-; MICROMIPS:     beqzc   $[[R2]], $[[BB0]]
-; MIPSR6:        beqzc   $[[R2]], $[[BB0]]
+; NOT-MICROMIPS: beqz    $[[R2]], [[BB0]]
+; MICROMIPS:     beqzc   $[[R2]], [[BB0]]
+; MIPSR6:        beqzc   $[[R2]], [[BB0]]
 }

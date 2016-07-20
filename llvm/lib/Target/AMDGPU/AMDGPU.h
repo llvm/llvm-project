@@ -20,6 +20,7 @@ class AMDGPUInstrPrinter;
 class AMDGPUSubtarget;
 class AMDGPUTargetMachine;
 class FunctionPass;
+class GCNTargetMachine;
 struct MachineSchedContext;
 class MCAsmInfo;
 class raw_ostream;
@@ -50,7 +51,7 @@ FunctionPass *createSIFixSGPRCopiesPass();
 FunctionPass *createSICodeEmitterPass(formatted_raw_ostream &OS);
 FunctionPass *createSIDebuggerInsertNopsPass();
 FunctionPass *createSIInsertWaitsPass();
-FunctionPass *createAMDGPUCodeGenPreparePass(const TargetMachine *TM = nullptr);
+FunctionPass *createAMDGPUCodeGenPreparePass(const GCNTargetMachine *TM = nullptr);
 
 ScheduleDAGInstrs *createSIMachineScheduler(MachineSchedContext *C);
 

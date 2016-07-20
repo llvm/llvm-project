@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone | FileCheck %s
 
 %struct.x = type { i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8 }
 

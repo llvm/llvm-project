@@ -64,6 +64,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     DominatorTree &DT, LoopInfo &LI) {
   SmallVector<Use *, 16> UsesToRewrite;
   SmallVector<BasicBlock *, 8> ExitBlocks;
+  SmallSetVector<PHINode *, 16> PHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
 
@@ -205,12 +206,18 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       Worklist.push_back(PostProcessPN);
     }
 
-    // Remove PHI nodes that did not have any uses rewritten.
+    // Keep track of PHI nodes that we want to remove because they did not have
+    // any uses rewritten.
     for (PHINode *PN : AddedPHIs)
       if (PN->use_empty())
-        PN->eraseFromParent();
+        PHIsToRemove.insert(PN);
 
     Changed = true;
+  }
+  // Remove PHI nodes that did not have any uses rewritten.
+  for (PHINode *PN : PHIsToRemove) {
+    assert (PN->use_empty() && "Trying to remove a phi with uses.");
+    PN->eraseFromParent();
   }
   return Changed;
 }

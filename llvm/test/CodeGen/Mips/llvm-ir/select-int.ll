@@ -35,10 +35,11 @@ entry:
   ; ALL-LABEL: tst_select_i1_i1:
 
   ; M2-M3:  andi    $[[T0:[0-9]+]], $4, 1
-  ; M2-M3:  bnez    $[[T0]], $[[BB0:BB[0-9_]+]]
+  ; M2:     bnez    $[[T0]], [[BB0:\$BB[0-9_]+]]
+  ; M3:     bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
   ; M2-M3:  nop
   ; M2-M3:  move    $5, $6
-  ; M2-M3:  $[[BB0]]:
+  ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
   ; M2-M3:  move    $2, $5
 
@@ -70,10 +71,11 @@ entry:
   ; ALL-LABEL: tst_select_i1_i8:
 
   ; M2-M3:  andi    $[[T0:[0-9]+]], $4, 1
-  ; M2-M3:  bnez    $[[T0]], $[[BB0:BB[0-9_]+]]
+  ; M2:     bnez    $[[T0]], [[BB0:\$BB[0-9_]+]]
+  ; M3:     bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
   ; M2-M3:  nop
   ; M2-M3:  move    $5, $6
-  ; M2-M3:  $[[BB0]]:
+  ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
   ; M2-M3:  move    $2, $5
 
@@ -105,10 +107,11 @@ entry:
   ; ALL-LABEL: tst_select_i1_i32:
 
   ; M2-M3:  andi    $[[T0:[0-9]+]], $4, 1
-  ; M2-M3:  bnez    $[[T0]], $[[BB0:BB[0-9_]+]]
+  ; M2:     bnez    $[[T0]], [[BB0:\$BB[0-9_]+]]
+  ; M3:     bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
   ; M2-M3:  nop
   ; M2-M3:  move    $5, $6
-  ; M2-M3:  $[[BB0]]:
+  ; M2-M3:  [[BB0]]:
   ; M2-M3:  jr      $ra
   ; M2-M3:  move    $2, $5
 
@@ -170,10 +173,10 @@ entry:
   ; SEL-32:     or      $3, $[[T4]], $[[T6]]
 
   ; M3:         andi    $[[T0:[0-9]+]], $4, 1
-  ; M3:         bnez    $[[T0]], $[[BB0:BB[0-9_]+]]
+  ; M3:         bnez    $[[T0]], [[BB0:\.LBB[0-9_]+]]
   ; M3:         nop
   ; M3:         move    $5, $6
-  ; M3:         $[[BB0]]:
+  ; M3:         [[BB0]]:
   ; M3:         jr      $ra
   ; M3:         move    $2, $5
 
@@ -214,19 +217,19 @@ define i8* @tst_select_word_cst(i8* %a, i8* %b) {
   ; M2:         addiu   $[[T0:[0-9]+]], $zero, -1
   ; M2:         xor     $[[T1:[0-9]+]], $5, $[[T0]]
   ; M2:         sltu    $[[T2:[0-9]+]], $zero, $[[T1]]
-  ; M2:         bnez    $[[T2]], $[[BB0:BB[0-9_]+]]
+  ; M2:         bnez    $[[T2]], [[BB0:\$BB[0-9_]+]]
   ; M2:         addiu   $2, $zero, 0
   ; M2:         move    $2, $4
-  ; M2: $[[BB0]]:
+  ; M2: [[BB0]]:
   ; M2:         jr      $ra
 
   ; M3:         daddiu  $[[T0:[0-9]+]], $zero, -1
   ; M3:         xor     $[[T1:[0-9]+]], $5, $[[T0]]
   ; M3:         sltu    $[[T2:[0-9]+]], $zero, $[[T1]]
-  ; M3:         bnez    $[[T2]], $[[BB0:BB[0-9_]+]]
+  ; M3:         bnez    $[[T2]], [[BB0:\.LBB[0-9_]+]]
   ; M3:         daddiu  $2, $zero, 0
   ; M3:         move    $2, $4
-  ; M3: $[[BB0]]:
+  ; M3: [[BB0]]:
   ; M3:         jr      $ra
 
   ; CMOV-32:    addiu   $[[T0:[0-9]+]], $zero, -1

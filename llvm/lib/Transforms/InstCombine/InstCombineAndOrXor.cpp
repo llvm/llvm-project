@@ -1212,6 +1212,13 @@ bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
       isa<CmpInst>(CastSrc) && CI->getDestTy()->isVectorTy())
     return false;
 
+  // Don't optimize the cast if it is a (zext icmp) that can already be
+  // eliminated.
+  if (auto *ZExt = dyn_cast<ZExtInst>(CI))
+    if (auto *ICmp = dyn_cast<ICmpInst>(CastSrc))
+      if (transformZExtICmp(ICmp, *ZExt, false))
+        return false;
+
   return true;
 }
 
@@ -1260,8 +1267,7 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   Value *Cast1Src = Cast1->getOperand(0);
 
   // fold logic(cast(A), cast(B)) -> cast(logic(A, B))
-  if ((!isa<ICmpInst>(Cast0Src) || !isa<ICmpInst>(Cast1Src)) &&
-      shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
+  if (shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder->CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                         I.getName());
     return CastInst::Create(CastOpcode, NewOp, DestTy);

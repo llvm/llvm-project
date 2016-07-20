@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-stp-suppress=false -verify-machineinstrs -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-stp-suppress=false -verify-machineinstrs -mcpu=cyclone | FileCheck %s
 
 ; CHECK-LABEL: stp_int
 ; CHECK: stp w0, w1, [x2]

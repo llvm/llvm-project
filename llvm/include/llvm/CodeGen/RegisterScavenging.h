@@ -75,6 +75,12 @@ public:
   /// Start tracking liveness from the begin of basic block \p MBB.
   void enterBasicBlock(MachineBasicBlock &MBB);
 
+  /// Start tracking liveness from the end of basic block \p MBB.
+  /// Use backward() to move towards the beginning of the block. This is
+  /// preferred to enterBasicBlock() and forward() because it does not depend
+  /// on the presence of kill flags.
+  void enterBasicBlockEnd(MachineBasicBlock &MBB);
+
   /// Move the internal MBB iterator and update register states.
   void forward();
 
@@ -92,6 +98,17 @@ public:
   /// Unprocess instructions until you reach the provided iterator.
   void unprocess(MachineBasicBlock::iterator I) {
     while (MBBI != I) unprocess();
+  }
+
+  /// Update internal register state and move MBB iterator backwards.
+  /// Contrary to unprocess() this method gives precise results even in the
+  /// absence of kill flags.
+  void backward();
+
+  /// Call backward() as long as the internal iterator does not point to \p I.
+  void backward(MachineBasicBlock::iterator I) {
+    while (MBBI != I)
+      backward();
   }
 
   /// Move the internal MBB iterator but do not update register states.
@@ -168,6 +185,9 @@ private:
   /// Add all Reg Units that Reg contains to BV.
   void addRegUnits(BitVector &BV, unsigned Reg);
 
+  /// Remove all Reg Units that \p Reg contains from \p BV.
+  void removeRegUnits(BitVector &BV, unsigned Reg);
+
   /// Return the candidate register that is unused for the longest after
   /// StartMI. UseMI is set to the instruction where the search stopped.
   ///
@@ -177,9 +197,11 @@ private:
                            unsigned InstrLimit,
                            MachineBasicBlock::iterator &UseMI);
 
-  /// Allow resetting register state info for multiple
-  /// passes over/within the same function.
-  void initRegState();
+  /// Initialize RegisterScavenger.
+  void init(MachineBasicBlock &MBB);
+
+  /// Mark live-in registers of basic block as used.
+  void setLiveInsUsed(const MachineBasicBlock &MBB);
 };
 
 } // End llvm namespace

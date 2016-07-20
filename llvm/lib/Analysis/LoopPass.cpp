@@ -131,8 +131,8 @@ void LPPassManager::deleteSimpleAnalysisLoop(Loop *L) {
 // Recurse through all subloops and all loops  into LQ.
 static void addLoopIntoQueue(Loop *L, std::deque<Loop *> &LQ) {
   LQ.push_back(L);
-  for (Loop::reverse_iterator I = L->rbegin(), E = L->rend(); I != E; ++I)
-    addLoopIntoQueue(*I, LQ);
+  for (Loop *I : reverse(*L))
+    addLoopIntoQueue(I, LQ);
 }
 
 /// Pass Manager itself does not invalidate any analysis info.
@@ -162,16 +162,14 @@ bool LPPassManager::runOnFunction(Function &F) {
   // Note that LoopInfo::iterator visits loops in reverse program
   // order. Here, reverse_iterator gives us a forward order, and the LoopQueue
   // reverses the order a third time by popping from the back.
-  for (LoopInfo::reverse_iterator I = LI->rbegin(), E = LI->rend(); I != E; ++I)
-    addLoopIntoQueue(*I, LQ);
+  for (Loop *L : reverse(*LI))
+    addLoopIntoQueue(L, LQ);
 
   if (LQ.empty()) // No loops, skip calling finalizers
     return false;
 
   // Initialization
-  for (std::deque<Loop *>::const_iterator I = LQ.begin(), E = LQ.end();
-       I != E; ++I) {
-    Loop *L = *I;
+  for (Loop *L : LQ) {
     for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
       LoopPass *P = getContainedPass(Index);
       Changed |= P->doInitialization(L, *this);

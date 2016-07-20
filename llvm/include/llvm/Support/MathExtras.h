@@ -300,7 +300,7 @@ inline bool isShiftedInt(int64_t x) {
 template <unsigned N>
 inline typename std::enable_if<(N < 64), bool>::type isUInt(uint64_t X) {
   static_assert(N > 0, "isUInt<0> doesn't make sense");
-  return X < (UINT64_C(1) << N);
+  return X < (UINT64_C(1) << (N));
 }
 template <unsigned N>
 inline typename std::enable_if<N >= 64, bool>::type isUInt(uint64_t X) {

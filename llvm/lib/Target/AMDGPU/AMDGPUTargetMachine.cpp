@@ -309,6 +309,7 @@ public:
   ScheduleDAGInstrs *
   createMachineScheduler(MachineSchedContext *C) const override;
 
+  void addIRPasses() override;
   bool addPreISel() override;
   void addMachineSSAOptimization() override;
   bool addInstSelector() override;
@@ -497,6 +498,13 @@ void GCNPassConfig::addMachineSSAOptimization() {
   // XXX - Can we get away without running DeadMachineInstructionElim again?
   addPass(&SIFoldOperandsID);
   addPass(&DeadMachineInstructionElimID);
+}
+
+void GCNPassConfig::addIRPasses() {
+  // TODO: May want to move later or split into an early and late one.
+  addPass(createAMDGPUCodeGenPreparePass(&getGCNTargetMachine()));
+
+  AMDGPUPassConfig::addIRPasses();
 }
 
 bool GCNPassConfig::addInstSelector() {

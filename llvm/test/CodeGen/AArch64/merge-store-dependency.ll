@@ -1,4 +1,4 @@
-; RUN: llc -mcpu cortex-a53 -march aarch64 %s -o - | FileCheck %s --check-prefix=A53
+; RUN: llc < %s -mcpu cortex-a53 -mtriple=aarch64-eabi | FileCheck %s --check-prefix=A53
 
 ; PR26827 - Merge stores causes wrong dependency.
 %struct1 = type { %struct1*, %struct1*, i32, i32, i16, i16, void (i32, i32, i8*)*, i8* }

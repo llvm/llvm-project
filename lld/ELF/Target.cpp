@@ -178,6 +178,8 @@ public:
   RelExpr getRelExpr(uint32_t Type, const SymbolBody &S) const override;
   uint32_t getDynRel(uint32_t Type) const override;
   uint64_t getImplicitAddend(const uint8_t *Buf, uint32_t Type) const override;
+  bool isTlsGlobalDynamicRel(uint32_t Type) const override;
+  bool isTlsInitialExecRel(uint32_t Type) const override;
   void writeGotPlt(uint8_t *Buf, const SymbolBody &S) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotEntryAddr, uint64_t PltEntryAddr,
@@ -1491,6 +1493,8 @@ ARMTargetInfo::ARMTargetInfo() {
   GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 20;
+  // ARM uses Variant 1 TLS
+  TcbSize = 8;
 }
 
 RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
@@ -1514,8 +1518,11 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
     // GOT(S) + A - GOT_ORG
     return R_GOT_OFF;
   case R_ARM_GOT_PREL:
-    // GOT(S) + - GOT_ORG
+  case R_ARM_TLS_IE32:
+    // GOT(S) + A - P
     return R_GOT_PC;
+  case R_ARM_TLS_GD32:
+    return R_TLSGD_PC;
   case R_ARM_BASE_PREL:
     // B(S) + A - P
     // FIXME: currently B(S) assumed to be .got, this may not hold for all
@@ -1528,6 +1535,8 @@ RelExpr ARMTargetInfo::getRelExpr(uint32_t Type, const SymbolBody &S) const {
   case R_ARM_THM_MOVW_PREL_NC:
   case R_ARM_THM_MOVT_PREL:
     return R_PC;
+  case R_ARM_TLS_LE32:
+    return R_TLS;
   }
 }
 
@@ -1613,6 +1622,9 @@ void ARMTargetInfo::relocateOne(uint8_t *Loc, uint32_t Type,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_TLS_GD32:
+  case R_ARM_TLS_IE32:
+  case R_ARM_TLS_LE32:
     write32le(Loc, Val);
     break;
   case R_ARM_PREL31:
@@ -1736,6 +1748,9 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
   case R_ARM_REL32:
+  case R_ARM_TLS_GD32:
+  case R_ARM_TLS_IE32:
+  case R_ARM_TLS_LE32:
     return SignExtend64<32>(read32le(Buf));
   case R_ARM_PREL31:
     return SignExtend64<31>(read32le(Buf));
@@ -1791,6 +1806,14 @@ uint64_t ARMTargetInfo::getImplicitAddend(const uint8_t *Buf,
                             (Lo & 0x00ff));         // imm8
   }
   }
+}
+
+bool ARMTargetInfo::isTlsGlobalDynamicRel(uint32_t Type) const {
+  return Type == R_ARM_TLS_GD32;
+}
+
+bool ARMTargetInfo::isTlsInitialExecRel(uint32_t Type) const {
+  return Type == R_ARM_TLS_IE32;
 }
 
 template <class ELFT> MipsTargetInfo<ELFT>::MipsTargetInfo() {

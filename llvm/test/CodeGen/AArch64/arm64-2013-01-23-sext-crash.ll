@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64
+; RUN: llc < %s -mtriple=arm64-eabi
 
 ; Make sure we are not crashing on this test.
 

@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -mtriple=arm64-apple-ios < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios | FileCheck %s
 ; rdar://12829704
 
 define void @t8() nounwind ssp {

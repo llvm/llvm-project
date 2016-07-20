@@ -1595,12 +1595,10 @@ public:
     function(nullptr_t) _NOEXCEPT : __f_(0) {}
     function(const function&);
     function(function&&) _NOEXCEPT;
-    template<class _Fp>
-      function(_Fp, typename enable_if
-                                     <
-                                        __callable<_Fp>::value &&
-                                        !is_same<_Fp, function>::value
-                                      >::type* = 0);
+    template<class _Fp, class = typename enable_if<
+        __callable<_Fp>::value && !is_same<_Fp, function>::value
+    >::type>
+    function(_Fp);
 
     template<class _Alloc>
       _LIBCPP_INLINE_VISIBILITY
@@ -1612,9 +1610,8 @@ public:
       function(allocator_arg_t, const _Alloc&, const function&);
     template<class _Alloc>
       function(allocator_arg_t, const _Alloc&, function&&);
-    template<class _Fp, class _Alloc>
-      function(allocator_arg_t, const _Alloc& __a, _Fp __f,
-               typename enable_if<__callable<_Fp>::value>::type* = 0);
+    template<class _Fp, class _Alloc, class = typename enable_if<__callable<_Fp>::value>::type>
+      function(allocator_arg_t, const _Alloc& __a, _Fp __f);
 
     function& operator=(const function&);
     function& operator=(function&&) _NOEXCEPT;
@@ -1728,13 +1725,8 @@ function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc&,
 }
 
 template<class _Rp, class ..._ArgTypes>
-template <class _Fp>
-function<_Rp(_ArgTypes...)>::function(_Fp __f,
-                                     typename enable_if
-                                     <
-                                        __callable<_Fp>::value &&
-                                        !is_same<_Fp, function>::value
-                                     >::type*)
+template <class _Fp, class>
+function<_Rp(_ArgTypes...)>::function(_Fp __f)
     : __f_(0)
 {
     if (__function::__not_null(__f))
@@ -1757,9 +1749,8 @@ function<_Rp(_ArgTypes...)>::function(_Fp __f,
 }
 
 template<class _Rp, class ..._ArgTypes>
-template <class _Fp, class _Alloc>
-function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp __f,
-                                     typename enable_if<__callable<_Fp>::value>::type*)
+template <class _Fp, class _Alloc, class>
+function<_Rp(_ArgTypes...)>::function(allocator_arg_t, const _Alloc& __a0, _Fp __f)
     : __f_(0)
 {
     typedef allocator_traits<_Alloc> __alloc_traits;

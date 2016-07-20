@@ -53,13 +53,6 @@ cl::opt<bool> EnableAArch64ELFLocalDynamicTLSGeneration(
     cl::desc("Allow AArch64 Local Dynamic TLS code generation"),
     cl::init(false));
 
-// Disabled for causing self-hosting failures once returned-attribute inference
-// was enabled.
-static cl::opt<bool>
-EnableThisRetForwarding("aarch64-this-return-forwarding", cl::Hidden,
-                        cl::desc("Directly forward this return"),
-                        cl::init(false));
-
 /// Value type used for condition codes.
 static const MVT MVT_CC = MVT::i32;
 
@@ -2735,7 +2728,7 @@ SDValue AArch64TargetLowering::LowerCallResult(
 
     // Pass 'this' value directly from the argument to return value, to avoid
     // reg unit interference
-    if (i == 0 && isThisReturn && EnableThisRetForwarding) {
+    if (i == 0 && isThisReturn) {
       assert(!VA.needsCustom() && VA.getLocVT() == MVT::i64 &&
              "unexpected return calling convention register assignment");
       InVals.push_back(ThisVal);
@@ -4568,6 +4561,12 @@ static SDValue getEstimate(const AArch64Subtarget &ST,
     return SDValue();
 
   EVT VT = Operand.getValueType();
+  if (VT != MVT::f64 && VT != MVT::v1f64 && VT != MVT::v2f64 &&
+      VT != MVT::f32 && VT != MVT::v1f32 &&
+      VT != MVT::v2f32 && VT != MVT::v4f32 &&
+      (!ST.hasFullFP16() ||
+       (VT != MVT::f16 && VT != MVT::v4f16 && VT != MVT::v8f16)))
+    return SDValue();
 
   std::string RecipOp;
   RecipOp = Opcode == (AArch64ISD::FRECPE) ? "div": "sqrt";

@@ -359,35 +359,12 @@ define <4 x double> @test_x86_avx_cvt_ps2_pd_256(<4 x float> %a0) {
 declare <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float>) nounwind readnone
 
 
-define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) {
-; CHECK-LABEL: test_x86_avx_cvtt_pd2dq_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retl
-  %res = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
-  ret <4 x i32> %res
-}
-declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>) nounwind readnone
-
-
-define <8 x i32> @test_x86_avx_cvtt_ps2dq_256(<8 x float> %a0) {
-; CHECK-LABEL: test_x86_avx_cvtt_ps2dq_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
-; CHECK-NEXT:    retl
-  %res = call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %a0) ; <<8 x i32>> [#uses=1]
-  ret <8 x i32> %res
-}
-declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>) nounwind readnone
-
-
 define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {
   ; add operation forces the execution domain.
 ; CHECK-LABEL: test_x86_sse2_storeu_dq:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    vpaddb LCPI34_0, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddb LCPI32_0, %xmm0, %xmm0
 ; CHECK-NEXT:    vmovdqu %xmm0, (%eax)
 ; CHECK-NEXT:    retl
   %a2 = add <16 x i8> %a1, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>

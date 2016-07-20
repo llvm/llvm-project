@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=aarch64-none-linux-gnu -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 
 define <4 x i16> @fptosi_v4f64_to_v4i16(<4 x double>* %ptr) {

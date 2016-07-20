@@ -2180,7 +2180,13 @@ static int same_divs(__isl_keep isl_basic_map *bmap1,
 /* Expand info->tab in the same way info->bmap was expanded in
  * isl_basic_map_expand_divs using the expansion "exp" and
  * update info->ineq with respect to the redundant constraints
- * in the resulting tableau.
+ * in the resulting tableau. "bmap" is the original version
+ * of info->bmap, i.e., the one that corresponds to the current
+ * state of info->tab.  The number of constraints in "bmap"
+ * is assumed to be the same as the number of constraints
+ * in info->tab.  This is required to be able to detect
+ * the extra constraints in info->bmap.
+ *
  * In particular, introduce extra variables corresponding
  * to the extra integer divisions and add the div constraints
  * that were added to info->bmap after info->tab was created
@@ -2189,12 +2195,20 @@ static int same_divs(__isl_keep isl_basic_map *bmap1,
  * does not take into account the redundant constraints
  * in the tableau.  Mark them here.
  */
-static isl_stat expand_tab(struct isl_coalesce_info *info, int *exp)
+static isl_stat expand_tab(struct isl_coalesce_info *info, int *exp,
+	__isl_keep isl_basic_map *bmap)
 {
 	unsigned total, pos, n_div;
 	int extra_var;
 	int i, n, j, n_ineq;
 	unsigned n_eq;
+
+	if (!bmap)
+		return isl_stat_error;
+	if (bmap->n_eq + bmap->n_ineq != info->tab->n_con)
+		isl_die(isl_basic_map_get_ctx(bmap), isl_error_internal,
+			"original tableau does not correspond "
+			"to original basic map", return isl_stat_error);
 
 	total = isl_basic_map_dim(info->bmap, isl_dim_all);
 	n_div = isl_basic_map_dim(info->bmap, isl_dim_div);
@@ -2280,7 +2294,7 @@ static enum isl_change coalesce_expand_tab_divs(__isl_take isl_basic_map *bmap,
 	bmap_i = info[i].bmap;
 	info[i].bmap = isl_basic_map_copy(bmap);
 	snap = isl_tab_snap(info[i].tab);
-	if (!info[i].bmap || expand_tab(&info[i], exp) < 0)
+	if (!info[i].bmap || expand_tab(&info[i], exp, bmap_i) < 0)
 		change = isl_change_error;
 
 	init_status(&info[j]);
