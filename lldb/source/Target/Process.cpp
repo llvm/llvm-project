@@ -1236,7 +1236,7 @@ Process::HandleProcessStateChangedEvent (const EventSP &event_sp,
                                 case eStopReasonBreakpoint:
                                 case eStopReasonWatchpoint:
                                     check_for_repl_breakpoint = repl_is_enabled;
-                                    // Fall through...
+                                    LLVM_FALLTHROUGH;
                                 case eStopReasonException:
                                 case eStopReasonExec:
                                 case eStopReasonThreadExiting:
