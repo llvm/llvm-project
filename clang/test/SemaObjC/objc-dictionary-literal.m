@@ -63,3 +63,10 @@ int main() {
 	return 0;
 }
 
+enum XXXYYYZZZType { XXXYYYZZZTypeAny }; // expected-note {{'XXXYYYZZZTypeAny' declared here}}
+void foo() {
+  NSDictionary *d = @{
+    @"A" : @(XXXYYYZZZTypeA), // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeA'; did you mean 'XXXYYYZZZTypeAny'}}
+    @"F" : @(XXXYYYZZZTypeSomethingSomething), // expected-error {{use of undeclared identifier 'XXXYYYZZZTypeSomethingSomething'}}
+  };
+}

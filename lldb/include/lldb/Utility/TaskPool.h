@@ -35,8 +35,8 @@
 #include <vector>
 
 // Global TaskPool class for running tasks in parallel on a set of worker thread created the first
-// time the task pool is used. The TaskPool provide no gurantee about the order the task will be run
-// and about what tasks will run in parrallel. None of the task added to the task pool should block
+// time the task pool is used. The TaskPool provide no guarantee about the order the task will be run
+// and about what tasks will run in parallel. None of the task added to the task pool should block
 // on something (mutex, future, condition variable) what will be set only by the completion of an
 // other task on the task pool as they may run on the same thread sequentally.
 class TaskPool

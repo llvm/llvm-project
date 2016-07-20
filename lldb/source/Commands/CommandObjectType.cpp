@@ -752,7 +752,7 @@ Adding default formatting:
 (lldb) type format add -f hex AInt
 (lldb) frame variable iy
 
-)" "    Produces hexidecimal display of iy, because no formatter is available for Bint and \
+)" "    Produces hexadecimal display of iy, because no formatter is available for Bint and \
 the one for Aint is used instead." R"(
 
 To prevent this use the cascade option '-C no' to prevent evaluation of typedef chains:

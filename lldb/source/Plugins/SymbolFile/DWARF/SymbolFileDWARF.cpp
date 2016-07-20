@@ -1567,7 +1567,7 @@ SymbolFileDWARF::ResolveTypeUID (const DWARFDIE &die, bool assert_not_being_pars
                                                       die.GetName());
 
         // We might be coming in in the middle of a type tree (a class
-        // withing a class, an enum within a class), so parse any needed
+        // within a class, an enum within a class), so parse any needed
         // parent DIEs before we get to this one...
         DWARFDIE decl_ctx_die = GetDeclContextDIEContainingDIE (die);
         if (decl_ctx_die)

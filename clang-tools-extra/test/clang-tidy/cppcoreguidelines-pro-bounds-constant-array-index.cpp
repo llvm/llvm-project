@@ -74,3 +74,14 @@ void customOperator() {
   int i = 0;
   s[i] = 3; // OK, custom operator
 }
+
+struct A {
+  // The compiler-generated copy constructor uses an ArraySubscriptExpr. Don't warn.
+  int x[3];
+};
+
+void use_A() {
+  // Force the compiler to generate a copy constructor.
+  A a;
+  A a2(a);
+}

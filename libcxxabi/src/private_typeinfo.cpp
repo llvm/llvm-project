@@ -171,8 +171,12 @@ __pointer_to_member_type_info::~__pointer_to_member_type_info()
 // catch (D2& d2) : adjustedPtr == &d2  (d2 is base class of thrown object)
 // catch (D2* d2) : adjustedPtr == d2
 // catch (D2*& d2) : adjustedPtr == d2
-// 
+//
 // catch (...) : adjustedPtr == & of the exception
+//
+// If the thrown type is nullptr_t and the caught type is a pointer to
+// member type, adjustedPtr points to a statically-allocated null pointer
+// representation of that type.
 
 // Handles bullet 1
 bool
@@ -337,12 +341,11 @@ __vmi_class_type_info::has_unambiguous_public_base(__dynamic_cast_info* info,
     }
 }
 
-// Handles bullets 1 and 4 for both pointers and member pointers
+// Handles bullet 1 for both pointers and member pointers
 bool
 __pbase_type_info::can_catch(const __shim_type_info* thrown_type,
                              void*&) const
 {
-    if (is_equal(thrown_type, &typeid(std::nullptr_t), false)) return true;
     bool use_strcmp = this->__flags & (__incomplete_class_mask |
                                        __incomplete_mask);
     if (!use_strcmp) {
@@ -367,7 +370,13 @@ bool
 __pointer_type_info::can_catch(const __shim_type_info* thrown_type,
                                void*& adjustedPtr) const
 {
-    // bullets 1 and 4
+    // bullet 4
+    if (is_equal(thrown_type, &typeid(std::nullptr_t), false)) {
+      adjustedPtr = nullptr;
+      return true;
+    }
+
+    // bullet 1
     if (__pbase_type_info::can_catch(thrown_type, adjustedPtr)) {
         if (adjustedPtr != NULL)
             adjustedPtr = *static_cast<void**>(adjustedPtr);
@@ -468,7 +477,22 @@ bool __pointer_type_info::can_catch_nested(
 
 bool __pointer_to_member_type_info::can_catch(
     const __shim_type_info* thrown_type, void*& adjustedPtr) const {
-    // bullets 1 and 4
+    // bullet 4
+    if (is_equal(thrown_type, &typeid(std::nullptr_t), false)) {
+      // We assume that the pointer to member representation is the same for
+      // all pointers to data members and for all pointers to member functions.
+      struct X {};
+      if (dynamic_cast<const __function_type_info*>(__pointee)) {
+        static int (X::*const null_ptr_rep)() = nullptr;
+        adjustedPtr = const_cast<int (X::**)()>(&null_ptr_rep);
+      } else {
+        static int X::*const null_ptr_rep = nullptr;
+        adjustedPtr = const_cast<int X::**>(&null_ptr_rep);
+      }
+      return true;
+    }
+
+    // bullet 1
     if (__pbase_type_info::can_catch(thrown_type, adjustedPtr))
         return true;
 

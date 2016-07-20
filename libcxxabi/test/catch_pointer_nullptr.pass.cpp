@@ -21,8 +21,9 @@ void test1()
         throw nullptr;
         assert(false);
     }
-    catch (int*)
+    catch (int* p)
     {
+        assert(!p);
     }
     catch (long*)
     {
@@ -37,8 +38,9 @@ void test2()
         throw nullptr;
         assert(false);
     }
-    catch (A*)
+    catch (A* p)
     {
+        assert(!p);
     }
     catch (int*)
     {
@@ -51,8 +53,8 @@ void catch_nullptr_test() {
   try {
     throw nullptr;
     assert(false);
-  } catch (Catch) {
-    // nothing todo
+  } catch (Catch c) {
+    assert(!c);
   } catch (...) {
     assert(false);
   }

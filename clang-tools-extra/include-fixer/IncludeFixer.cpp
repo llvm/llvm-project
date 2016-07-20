@@ -37,7 +37,6 @@ public:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
-    Filename = InFile;
     return llvm::make_unique<clang::ASTConsumer>();
   }
 
@@ -188,8 +187,6 @@ public:
     return clang::TypoCorrection();
   }
 
-  StringRef filename() const { return Filename; }
-
   /// Get the minimal include for a given path.
   std::string minimizeInclude(StringRef Include,
                               const clang::SourceManager &SourceManager,
@@ -230,8 +227,7 @@ public:
                                     Symbol.getContexts(),
                                     Symbol.getNumOccurrences());
     }
-    return IncludeFixerContext(QuerySymbol, SymbolScopedQualifiers,
-                               SymbolCandidates, QuerySymbolRange);
+    return IncludeFixerContext(QuerySymbolInfo, SymbolCandidates);
   }
 
 private:
@@ -252,9 +248,7 @@ private:
               .print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
     DEBUG(llvm::dbgs() << " ...");
 
-    QuerySymbol = Query.str();
-    QuerySymbolRange = Range;
-    SymbolScopedQualifiers = ScopedQualifiers;
+    QuerySymbolInfo = {Query.str(), ScopedQualifiers, Range};
 
     // Query the symbol based on C++ name Lookup rules.
     // Firstly, lookup the identifier with scoped namespace contexts;
@@ -280,19 +274,8 @@ private:
   /// The client to use to find cross-references.
   SymbolIndexManager &SymbolIndexMgr;
 
-  /// The absolute path to the file being processed.
-  std::string Filename;
-
-  /// The symbol being queried.
-  std::string QuerySymbol;
-
-  /// The scoped qualifiers of QuerySymbol. It is represented as a sequence of
-  /// names and scope resolution operatiors ::, ending with a scope resolution
-  /// operator (e.g. a::b::). Empty if the symbol is not in a specific scope.
-  std::string SymbolScopedQualifiers;
-
-  /// The replacement range of the first discovered QuerySymbol.
-  tooling::Range QuerySymbolRange;
+  /// The symbol information.
+  IncludeFixerContext::QuerySymbolInfo QuerySymbolInfo;
 
   /// All symbol candidates which match QuerySymbol. We only include the first
   /// discovered identifier to avoid getting caught in results from error

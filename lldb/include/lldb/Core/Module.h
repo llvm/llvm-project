@@ -250,7 +250,7 @@ public:
                                      SymbolContextList &sc_list);
 
     //------------------------------------------------------------------
-    /// Find a funciton symbols in the object file's symbol table.
+    /// Find a function symbols in the object file's symbol table.
     ///
     /// @param[in] name
     ///     The name of the symbol that we are looking for.

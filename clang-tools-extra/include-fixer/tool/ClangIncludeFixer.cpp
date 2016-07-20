@@ -61,11 +61,17 @@ template <> struct MappingTraits<IncludeFixerContext::HeaderInfo> {
   }
 };
 
+template <> struct MappingTraits<IncludeFixerContext::QuerySymbolInfo> {
+  static void mapping(IO &io, IncludeFixerContext::QuerySymbolInfo &Info) {
+    io.mapRequired("RawIdentifier", Info.RawIdentifier);
+    io.mapRequired("Range", Info.Range);
+  }
+};
+
 template <> struct MappingTraits<IncludeFixerContext> {
   static void mapping(IO &IO, IncludeFixerContext &Context) {
-    IO.mapRequired("SymbolIdentifier", Context.SymbolIdentifier);
+    IO.mapRequired("QuerySymbolInfo", Context.QuerySymbol);
     IO.mapRequired("HeaderInfos", Context.HeaderInfos);
-    IO.mapRequired("Range", Context.SymbolRange);
   }
 };
 } // namespace yaml
@@ -112,8 +118,10 @@ cl::opt<bool> OutputHeaders(
     cl::desc("Print the symbol being queried and all its relevant headers in\n"
              "JSON format to stdout:\n"
              "  {\n"
-             "    \"SymbolIdentifier\": \"foo\",\n"
-             "    \"Range\": {\"Offset\":0, \"Length\": 3},\n"
+             "    \"QuerySymbolInfo\": {\n"
+             "       \"RawIdentifier\": \"foo\",\n"
+             "       \"Range\": {\"Offset\": 0, \"Length\": 3}\n"
+             "    },\n"
              "    \"HeaderInfos\": [ {\"Header\": \"\\\"foo_a.h\\\"\",\n"
              "                      \"QualifiedName\": \"a::foo\"} ]\n"
              "  }"),
@@ -125,8 +133,10 @@ cl::opt<std::string> InsertHeader(
              "The result is written to stdout. It is currently used for\n"
              "editor integration. Support YAML/JSON format:\n"
              "  -insert-header=\"{\n"
-             "     SymbolIdentifier: foo,\n"
-             "     Range: {Offset: 0, Length: 3},\n"
+             "     QuerySymbolInfo: {\n"
+             "       RawIdentifier: foo,\n"
+             "       Range: {Offset: 0, Length: 3}\n"
+             "     },\n"
              "     HeaderInfos: [ {Headers: \"\\\"foo_a.h\\\"\",\n"
              "                     QualifiedName: \"a::foo\"} ]}\""),
     cl::init(""), cl::cat(IncludeFixerCategory));
@@ -192,11 +202,13 @@ createSymbolIndexManager(StringRef FilePath) {
 
 void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
   OS << "{\n"
-        "  \"SymbolIdentifier\": \""
+        "  \"QuerySymbolInfo\": {\n"
+        "     \"RawIdentifier\": \""
      << Context.getSymbolIdentifier() << "\",\n";
-  OS << "  \"Range\": {";
+  OS << "     \"Range\": {";
   OS << " \"Offset\":" << Context.getSymbolRange().getOffset() << ",";
-  OS << " \"Length\":" << Context.getSymbolRange().getLength() << " },\n";
+  OS << " \"Length\":" << Context.getSymbolRange().getLength() << " }\n";
+  OS << "  },\n";
   OS << "  \"HeaderInfos\": [\n";
   const auto &HeaderInfos = Context.getHeaderInfos();
   for (const auto &Info : HeaderInfos) {

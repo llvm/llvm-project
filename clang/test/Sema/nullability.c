@@ -128,3 +128,70 @@ void nullable_to_nonnull(_Nullable int *ptr) {
 
   accepts_nonnull_1(ptr); // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
 }
+
+// Check nullability of conditional expressions.
+void conditional_expr(int c) {
+  int * _Nonnull p;
+  int * _Nonnull nonnullP;
+  int * _Nullable nullableP;
+  int * _Null_unspecified unspecifiedP;
+  int *noneP;
+
+  p = c ? nonnullP : nonnullP;
+  p = c ? nonnullP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nonnullP : unspecifiedP;
+  p = c ? nonnullP : noneP;
+  p = c ? nullableP : nonnullP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nullableP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nullableP : unspecifiedP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nullableP : noneP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? unspecifiedP : nonnullP;
+  p = c ? unspecifiedP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? unspecifiedP : unspecifiedP;
+  p = c ? unspecifiedP : noneP;
+  p = c ? noneP : nonnullP;
+  p = c ? noneP : nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? noneP : unspecifiedP;
+  p = c ? noneP : noneP;
+
+  // Check that we don't remove all sugar when creating a new QualType for the
+  // conditional expression.
+  typedef int *IntP;
+  typedef IntP _Nonnull NonnullIntP0;
+  typedef NonnullIntP0 _Nonnull NonnullIntP1;
+  typedef IntP _Nullable NullableIntP0;
+  typedef NullableIntP0 _Nullable NullableIntP1;
+  NonnullIntP1 nonnullP2;
+  NullableIntP1 nullableP2;
+
+  p = c ? nonnullP2 : nonnullP2;
+  p = c ? nonnullP2 : nullableP2; // expected-warning{{implicit conversion from nullable pointer 'IntP _Nullable' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nullableP2 : nonnullP2; // expected-warning{{implicit conversion from nullable pointer 'NullableIntP1' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
+  p = c ? nullableP2 : nullableP2; // expected-warning{{implicit conversion from nullable pointer 'NullableIntP1' (aka 'int *') to non-nullable pointer type 'int * _Nonnull'}}
+}
+
+// Check nullability of binary conditional expressions.
+void binary_conditional_expr() {
+  int * _Nonnull p;
+  int * _Nonnull nonnullP;
+  int * _Nullable nullableP;
+  int * _Null_unspecified unspecifiedP;
+  int *noneP;
+
+  p = nonnullP ?: nonnullP;
+  p = nonnullP ?: nullableP;
+  p = nonnullP ?: unspecifiedP;
+  p = nonnullP ?: noneP;
+  p = nullableP ?: nonnullP;
+  p = nullableP ?: nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = nullableP ?: unspecifiedP;
+  p = nullableP ?: noneP;
+  p = unspecifiedP ?: nonnullP;
+  p = unspecifiedP ?: nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = unspecifiedP ?: unspecifiedP;
+  p = unspecifiedP ?: noneP;
+  p = noneP ?: nonnullP;
+  p = noneP ?: nullableP; // expected-warning{{implicit conversion from nullable pointer 'int * _Nullable' to non-nullable pointer type 'int * _Nonnull'}}
+  p = noneP ?: unspecifiedP;
+  p = noneP ?: noneP;
+}

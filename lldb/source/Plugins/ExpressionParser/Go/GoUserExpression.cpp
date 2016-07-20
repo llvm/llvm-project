@@ -413,7 +413,7 @@ GoUserExpression::GoInterpreter::VisitIdent(const GoASTIdent *e)
                         type.append("float");
                         break;
                     default:
-                        m_error.SetErrorString("Invaild register encoding");
+                        m_error.SetErrorString("Invalid register encoding");
                         return nullptr;
                 }
                 switch (reg->byte_size)
@@ -431,7 +431,7 @@ GoUserExpression::GoInterpreter::VisitIdent(const GoASTIdent *e)
                         type.append("8");
                         break;
                     default:
-                        m_error.SetErrorString("Invaild register size");
+                        m_error.SetErrorString("Invalid register size");
                         return nullptr;
                 }
                 ValueObjectSP regVal =
@@ -443,7 +443,7 @@ GoUserExpression::GoInterpreter::VisitIdent(const GoASTIdent *e)
                     return regVal;
                 }
             }
-            m_error.SetErrorString("Invaild register name");
+            m_error.SetErrorString("Invalid register name");
             return nullptr;
         }
         VariableListSP var_list_sp(m_frame->GetInScopeVariableList(false));

@@ -44,18 +44,7 @@ public:
   void run();
 
 private:
-  // This describes a program header entry.
-  // Each contains type, access flags and range of output sections that will be
-  // placed in it.
-  struct Phdr {
-    Phdr(unsigned Type, unsigned Flags) {
-      H.p_type = Type;
-      H.p_flags = Flags;
-    }
-    Elf_Phdr H = {};
-    OutputSectionBase<ELFT> *First = nullptr;
-    OutputSectionBase<ELFT> *Last = nullptr;
-  };
+  typedef PhdrEntry<ELFT> Phdr;
 
   void copyLocalSymbols();
   void addReservedSymbols();
@@ -74,12 +63,6 @@ private:
   void writeHeader();
   void writeSections();
   void writeBuildId();
-  bool needsInterpSection() const {
-    return !Symtab.getSharedFiles().empty() && !Config->DynamicLinker.empty();
-  }
-  bool isOutputDynamic() const {
-    return !Symtab.getSharedFiles().empty() || Config->Pic;
-  }
 
   void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
 
@@ -240,7 +223,10 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    createPhdrs();
+    if (Script<ELFT>::X->hasPhdrsCommands())
+      Phdrs = Script<ELFT>::X->createPhdrs(OutputSections);
+    else
+      createPhdrs();
     fixHeaders();
     if (ScriptConfig->DoLayout) {
       Script<ELFT>::X->assignAddresses(OutputSections);
@@ -376,7 +362,7 @@ static int getPPC64SectionRank(StringRef SectionName) {
       .Default(1);
 }
 
-template <class ELFT> static bool isRelroSection(OutputSectionBase<ELFT> *Sec) {
+template <class ELFT> bool elf::isRelroSection(OutputSectionBase<ELFT> *Sec) {
   if (!Config->ZRelro)
     return false;
   typename ELFT::uint Flags = Sec->getFlags();
@@ -472,6 +458,40 @@ static bool compareSections(OutputSectionBase<ELFT> *A,
   return false;
 }
 
+uint32_t elf::toPhdrFlags(uint64_t Flags) {
+  uint32_t Ret = PF_R;
+  if (Flags & SHF_WRITE)
+    Ret |= PF_W;
+  if (Flags & SHF_EXECINSTR)
+    Ret |= PF_X;
+  return Ret;
+}
+
+// Various helper functions
+template <class ELFT> bool elf::needsInterpSection() {
+  return !Symtab<ELFT>::X->getSharedFiles().empty() &&
+         !Config->DynamicLinker.empty();
+}
+
+template <class ELFT> bool elf::isOutputDynamic() {
+  return !Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic;
+}
+
+// Program header entry
+template<class ELFT>
+PhdrEntry<ELFT>::PhdrEntry(unsigned Type, unsigned Flags) {
+  H.p_type = Type;
+  H.p_flags = Flags;
+}
+
+template<class ELFT>
+void PhdrEntry<ELFT>::AddSec(OutputSectionBase<ELFT> *Sec) {
+  Last = Sec;
+  if (!First)
+    First = Sec;
+  H.p_align = std::max<typename ELFT::uint>(H.p_align, Sec->getAlignment());
+}
+
 // Until this function is called, common symbols do not belong to any section.
 // This function adds them to end of BSS section.
 template <class ELFT>
@@ -515,7 +535,7 @@ static Symbol *addOptionalSynthetic(SymbolTable<ELFT> &Table, StringRef Name,
 // need these symbols, since IRELATIVE relocs are resolved through GOT
 // and PLT. For details, see http://www.airs.com/blog/archives/403.
 template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
-  if (isOutputDynamic() || !Out<ELFT>::RelaPlt)
+  if (isOutputDynamic<ELFT>() || !Out<ELFT>::RelaPlt)
     return;
   StringRef S = Config->Rela ? "__rela_iplt_start" : "__rel_iplt_start";
   addOptionalSynthetic(Symtab, S, Out<ELFT>::RelaPlt, 0);
@@ -569,7 +589,7 @@ template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
   // static linking the linker is required to optimize away any references to
   // __tls_get_addr, so it's not defined anywhere. Create a hidden definition
   // to avoid the undefined symbol error.
-  if (!isOutputDynamic())
+  if (!isOutputDynamic<ELFT>())
     Symtab.addIgnored("__tls_get_addr");
 
   auto Define = [this](StringRef S, DefinedRegular<ELFT> *&Sym1,
@@ -658,7 +678,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
   // It should be okay as no one seems to care about the type.
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (isOutputDynamic())
+  if (isOutputDynamic<ELFT>())
     Symtab.addSynthetic("_DYNAMIC", Out<ELFT>::Dynamic, 0);
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
@@ -712,7 +732,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (Out<ELFT>::SymTab)
       Out<ELFT>::SymTab->addSymbol(Body);
 
-    if (isOutputDynamic() && S->includeInDynsym()) {
+    if (isOutputDynamic<ELFT>() && S->includeInDynsym()) {
       Out<ELFT>::DynSymTab->addSymbol(Body);
       if (auto *SS = dyn_cast<SharedSymbol<ELFT>>(Body))
         if (SS->file()->isNeeded())
@@ -741,7 +761,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
 
   // Finalizers fix each section's size.
   // .dynsym is finalized early since that may fill up .gnu.hash.
-  if (isOutputDynamic())
+  if (isOutputDynamic<ELFT>())
     Out<ELFT>::DynSymTab->finalize();
 
   // Fill other section headers. The dynamic table is finalized
@@ -753,7 +773,7 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     if (Sec != Out<ELFT>::DynStrTab && Sec != Out<ELFT>::Dynamic)
       Sec->finalize();
 
-  if (isOutputDynamic())
+  if (isOutputDynamic<ELFT>())
     Out<ELFT>::Dynamic->finalize();
 
   // Now that all output offsets are fixed. Finalize mergeable sections
@@ -791,7 +811,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // Add .interp at first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
-  if (needsInterpSection())
+  if (needsInterpSection<ELFT>())
     OutputSections.insert(OutputSections.begin(), Out<ELFT>::Interp);
 
   // This order is not the same as the final output order
@@ -799,7 +819,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   Add(Out<ELFT>::SymTab);
   Add(Out<ELFT>::ShStrTab);
   Add(Out<ELFT>::StrTab);
-  if (isOutputDynamic()) {
+  if (isOutputDynamic<ELFT>()) {
     Add(Out<ELFT>::DynSymTab);
 
     bool HasVerNeed = Out<ELFT>::VerNeed->getNeedNum() != 0;
@@ -822,7 +842,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
   // Even during static linking it can contain R_[*]_IRELATIVE relocations.
   if (Out<ELFT>::RelaPlt && Out<ELFT>::RelaPlt->hasRelocs()) {
     Add(Out<ELFT>::RelaPlt);
-    Out<ELFT>::RelaPlt->Static = !isOutputDynamic();
+    Out<ELFT>::RelaPlt->Static = !isOutputDynamic<ELFT>();
   }
 
   if (needsGot())
@@ -882,7 +902,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
       Symtab.addSynthetic(Stop, Sec, DefinedSynthetic<ELFT>::SectionEnd);
 }
 
-template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
+template <class ELFT> bool elf::needsPtLoad(OutputSectionBase<ELFT> *Sec) {
   if (!(Sec->getFlags() & SHF_ALLOC))
     return false;
 
@@ -894,15 +914,6 @@ template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
   return true;
 }
 
-static uint32_t toPhdrFlags(uint64_t Flags) {
-  uint32_t Ret = PF_R;
-  if (Flags & SHF_WRITE)
-    Ret |= PF_W;
-  if (Flags & SHF_EXECINSTR)
-    Ret |= PF_X;
-  return Ret;
-}
-
 // Decide which program headers to create and which sections to include in each
 // one.
 template <class ELFT> void Writer<ELFT>::createPhdrs() {
@@ -910,28 +921,21 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     return &*Phdrs.emplace(Phdrs.end(), Type, Flags);
   };
 
-  auto AddSec = [](Phdr &Hdr, OutputSectionBase<ELFT> *Sec) {
-    Hdr.Last = Sec;
-    if (!Hdr.First)
-      Hdr.First = Sec;
-    Hdr.H.p_align = std::max<uintX_t>(Hdr.H.p_align, Sec->getAlignment());
-  };
-
   // The first phdr entry is PT_PHDR which describes the program header itself.
   Phdr &Hdr = *AddHdr(PT_PHDR, PF_R);
-  AddSec(Hdr, Out<ELFT>::ProgramHeaders);
+  Hdr.AddSec(Out<ELFT>::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
-  if (needsInterpSection()) {
+  if (needsInterpSection<ELFT>()) {
     Phdr &Hdr = *AddHdr(PT_INTERP, toPhdrFlags(Out<ELFT>::Interp->getFlags()));
-    AddSec(Hdr, Out<ELFT>::Interp);
+    Hdr.AddSec(Out<ELFT>::Interp);
   }
 
   // Add the first PT_LOAD segment for regular output sections.
   uintX_t Flags = PF_R;
   Phdr *Load = AddHdr(PT_LOAD, Flags);
-  AddSec(*Load, Out<ELFT>::ElfHeader);
-  AddSec(*Load, Out<ELFT>::ProgramHeaders);
+  Load->AddSec(Out<ELFT>::ElfHeader);
+  Load->AddSec(Out<ELFT>::ProgramHeaders);
 
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);
@@ -944,7 +948,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     // and put all TLS sections inside for futher use when
     // assign addresses.
     if (Sec->getFlags() & SHF_TLS)
-      AddSec(TlsHdr, Sec);
+      TlsHdr.AddSec(Sec);
 
     if (!needsPtLoad<ELFT>(Sec))
       continue;
@@ -956,12 +960,12 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
       Flags = NewFlags;
     }
 
-    AddSec(*Load, Sec);
+    Load->AddSec(Sec);
 
     if (isRelroSection(Sec))
-      AddSec(RelRo, Sec);
+      RelRo.AddSec(Sec);
     if (Sec->getType() == SHT_NOTE)
-      AddSec(Note, Sec);
+      Note.AddSec(Sec);
   }
 
   // Add the TLS segment unless it's empty.
@@ -969,9 +973,9 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     Phdrs.push_back(std::move(TlsHdr));
 
   // Add an entry for .dynamic.
-  if (isOutputDynamic()) {
+  if (isOutputDynamic<ELFT>()) {
     Phdr &H = *AddHdr(PT_DYNAMIC, toPhdrFlags(Out<ELFT>::Dynamic->getFlags()));
-    AddSec(H, Out<ELFT>::Dynamic);
+    H.AddSec(Out<ELFT>::Dynamic);
   }
 
   // PT_GNU_RELRO includes all sections that should be marked as
@@ -983,7 +987,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
   if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
     Phdr &Hdr = *AddHdr(PT_GNU_EH_FRAME,
                         toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags()));
-    AddSec(Hdr, Out<ELFT>::EhFrameHdr);
+    Hdr.AddSec(Out<ELFT>::EhFrameHdr);
   }
 
   // PT_GNU_STACK is a special section to tell the loader to make the
@@ -993,8 +997,6 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
 
   if (Note.First)
     Phdrs.push_back(std::move(Note));
-
-  Out<ELFT>::ProgramHeaders->setSize(sizeof(Elf_Phdr) * Phdrs.size());
 }
 
 // The first section of each PT_LOAD and the first section after PT_GNU_RELRO
@@ -1027,6 +1029,7 @@ template <class ELFT> void Writer<ELFT>::fixHeaders() {
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);
+  Out<ELFT>::ProgramHeaders->setSize(sizeof(Elf_Phdr) * Phdrs.size());
 }
 
 // Assign VAs (addresses at run-time) to output sections.
@@ -1281,3 +1284,28 @@ template void elf::writeResult<ELF32LE>(SymbolTable<ELF32LE> *Symtab);
 template void elf::writeResult<ELF32BE>(SymbolTable<ELF32BE> *Symtab);
 template void elf::writeResult<ELF64LE>(SymbolTable<ELF64LE> *Symtab);
 template void elf::writeResult<ELF64BE>(SymbolTable<ELF64BE> *Symtab);
+
+template struct elf::PhdrEntry<ELF32LE>;
+template struct elf::PhdrEntry<ELF32BE>;
+template struct elf::PhdrEntry<ELF64LE>;
+template struct elf::PhdrEntry<ELF64BE>;
+
+template bool elf::needsInterpSection<ELF32LE>();
+template bool elf::needsInterpSection<ELF32BE>();
+template bool elf::needsInterpSection<ELF64LE>();
+template bool elf::needsInterpSection<ELF64BE>();
+
+template bool elf::isOutputDynamic<ELF32LE>();
+template bool elf::isOutputDynamic<ELF32BE>();
+template bool elf::isOutputDynamic<ELF64LE>();
+template bool elf::isOutputDynamic<ELF64BE>();
+
+template bool elf::isRelroSection<ELF32LE>(OutputSectionBase<ELF32LE> *);
+template bool elf::isRelroSection<ELF32BE>(OutputSectionBase<ELF32BE> *);
+template bool elf::isRelroSection<ELF64LE>(OutputSectionBase<ELF64LE> *);
+template bool elf::isRelroSection<ELF64BE>(OutputSectionBase<ELF64BE> *);
+
+template bool elf::needsPtLoad<ELF32LE>(OutputSectionBase<ELF32LE> *);
+template bool elf::needsPtLoad<ELF32BE>(OutputSectionBase<ELF32BE> *);
+template bool elf::needsPtLoad<ELF64LE>(OutputSectionBase<ELF64LE> *);
+template bool elf::needsPtLoad<ELF64BE>(OutputSectionBase<ELF64BE> *);
