@@ -1,12 +1,7 @@
 #include <stdio.h>
 
-<<<<<<< HEAD
 inline void test1(int) __attribute__ ((always_inline));
 inline void test2(int) __attribute__ ((always_inline));
-=======
-void test1(int) __attribute__ ((always_inline));
-void test2(int) __attribute__ ((always_inline));
->>>>>>> origin/master
 
 void test2(int b) {
     printf("test2(%d)\n", b); //% self.expect("expression b", DATA_TYPES_DISPLAYED_CORRECTLY, substrs = ["42"])

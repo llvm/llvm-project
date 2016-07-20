@@ -259,20 +259,12 @@ ifeq "$(MAKE_DWO)" "YES"
 endif
 
 ifeq "$(MAKE_GMODULES)" "YES"
-<<<<<<< HEAD
-	CFLAGS += -fmodules -gmodules
-=======
 	CFLAGS += -fmodules -gmodules -fmodules-cache-path=./clang-module-cache
->>>>>>> origin/master
 endif
 
 CXXFLAGS += -std=c++11
 # FIXME: C++ modules aren't supported on all platforms.
-<<<<<<< HEAD
-CXXFLAGS += $(subst -fmodules,, $(CFLAGS))
-=======
 CXXFLAGS += $(subst -fmodules,, $(subst -fmodules-cache-path=./clang-module-cache,, $(CFLAGS)))
->>>>>>> origin/master
 LD = $(CC)
 LDFLAGS ?= $(CFLAGS)
 LDFLAGS += $(LD_EXTRAS)

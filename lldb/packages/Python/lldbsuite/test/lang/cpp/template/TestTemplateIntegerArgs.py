@@ -47,10 +47,6 @@ class TemplateIntegerArgsTestCase(TestBase):
         testpos = frame.FindVariable('testpos') 
         self.assertTrue(testpos.IsValid(), 'make sure we find a local variabble named "testpos"')
         self.assertTrue(testpos.GetType().GetName() == 'TestObj<1>')
-<<<<<<< HEAD
-=======
-        
->>>>>>> origin/master
         expr_result = frame.EvaluateExpression("testpos.getArg()")
         self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "testpos.getArg()"');
         self.assertTrue(expr_result.GetValue() == "1", "testpos.getArg() == 1")
@@ -64,8 +60,6 @@ class TemplateIntegerArgsTestCase(TestBase):
         self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "testneg.getArg()"');
         self.assertTrue(expr_result.GetValue() == "-1", "testneg.getArg() == -1")
         self.assertTrue(expr_result.GetType().GetName() == "int", 'expr_result.GetType().GetName() == "int"')
-<<<<<<< HEAD
-=======
 
         # Make sure "member" can be displayed and also used in an expression correctly
         member = frame.FindVariable('member') 
@@ -86,4 +80,3 @@ class TemplateIntegerArgsTestCase(TestBase):
         self.assertTrue(expr_result.IsValid(), 'got a valid expression result from expression "subclass.getMember()"');
         self.assertTrue(expr_result.GetValue() == "246", "subclass.getMember() == 246")
         self.assertTrue(expr_result.GetType().GetName() == "int", 'expr_result.GetType().GetName() == "int"')     
->>>>>>> origin/master

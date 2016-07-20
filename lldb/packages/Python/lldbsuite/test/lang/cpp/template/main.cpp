@@ -17,8 +17,6 @@ public:
   }
 };
 
-<<<<<<< HEAD
-=======
 //----------------------------------------------------------------------
 // Define a template class that we can specialize with an enumeration
 //----------------------------------------------------------------------
@@ -64,16 +62,11 @@ public:
     }    
 };
 
->>>>>>> origin/master
 int main(int argc, char **argv)
 {
   TestObj<1> testpos;
   TestObj<-1> testneg;
-<<<<<<< HEAD
-  return testpos.getArg() - testneg.getArg(); // Breakpoint 1
-=======
   EnumTemplate<EnumType::Member> member(123);
   EnumTemplate<EnumType::Subclass> subclass(123*2);
   return testpos.getArg() - testneg.getArg() + member.getMember()*2 - subclass.getMember(); // Breakpoint 1
->>>>>>> origin/master
 }
