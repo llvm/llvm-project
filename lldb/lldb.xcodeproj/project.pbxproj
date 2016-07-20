@@ -114,6 +114,7 @@
 		233B007F1960CB280090E598 /* ProcessLaunchInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 233B007E1960CB280090E598 /* ProcessLaunchInfo.cpp */; };
 		236124A41986B4E2004EFC37 /* IOObject.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A21986B4E2004EFC37 /* IOObject.cpp */; };
 		236124A51986B4E2004EFC37 /* Socket.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 236124A31986B4E2004EFC37 /* Socket.cpp */; };
+		237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF6335E01C87B21E00F7D554 /* SymbolFilePDB.cpp */; };
 		2377C2F819E613C100737875 /* PipePosix.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2377C2F719E613C100737875 /* PipePosix.cpp */; };
 		239481861C59EBDD00DF7168 /* libncurses.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 239481851C59EBDD00DF7168 /* libncurses.dylib */; };
 		239504DE1BDD453200963CEA /* SocketAddressTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9391BDD332400BA9A93 /* SocketAddressTest.cpp */; };
@@ -7304,6 +7305,7 @@
 				948C86D51B97764D00F3CAC3 /* SwiftHashedContainer.cpp in Sources */,
 				2689007413353E1A00698AC0 /* Terminal.cpp in Sources */,
 				2689007513353E1A00698AC0 /* TimeValue.cpp in Sources */,
+				237211D41D3FD10D008D2754 /* SymbolFilePDB.cpp in Sources */,
 				942612F01B94D33200EF842E /* SwiftLanguage.cpp in Sources */,
 				6D0F61431C80AAAE00A4ECEE /* JavaASTContext.cpp in Sources */,
 				2689007613353E1A00698AC0 /* CFCBundle.cpp in Sources */,
