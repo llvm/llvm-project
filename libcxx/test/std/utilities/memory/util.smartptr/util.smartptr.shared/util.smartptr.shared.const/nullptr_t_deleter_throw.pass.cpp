@@ -8,18 +8,22 @@
 //===----------------------------------------------------------------------===//
 
 // XFAIL: libcpp-no-exceptions
+// UNSUPPORTED: sanitizer-new-delete
+
 // <memory>
 
 // shared_ptr
 
 // template<class D> shared_ptr(nullptr_t, D d);
 
-// UNSUPPORTED: sanitizer-new-delete
-
 #include <memory>
 #include <cassert>
 #include <new>
 #include <cstdlib>
+
+#include "test_macros.h"
+#include "count_new.hpp"
+
 #include "../test_deleter.h"
 
 struct A
@@ -33,23 +37,10 @@ struct A
 
 int A::count = 0;
 
-bool throw_next = false;
-
-void* operator new(std::size_t s) throw(std::bad_alloc)
-{
-    if (throw_next)
-        throw std::bad_alloc();
-    return std::malloc(s);
-}
-
-void  operator delete(void* p) throw()
-{
-    std::free(p);
-}
 
 int main()
 {
-    throw_next = true;
+    globalMemCounter.throw_after = 0;
     try
     {
         std::shared_ptr<A> p(nullptr, test_deleter<A>(3));

@@ -21,7 +21,9 @@
 #include <string>
 #include <cassert>
 
-#if __cplusplus > 201103L
+#include "test_macros.h"
+
+#if TEST_STD_VER > 11
 
 struct Empty {};
 

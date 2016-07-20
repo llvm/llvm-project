@@ -86,9 +86,13 @@ libomp_check_variable(LIBOMP_ARCH 32e x86_64 32 i386 arm ppc64 ppc64le aarch64 m
 set(LIBOMP_LIB_TYPE normal CACHE STRING
   "Performance,Profiling,Stubs library (normal/profile/stubs)")
 libomp_check_variable(LIBOMP_LIB_TYPE normal profile stubs)
-set(LIBOMP_OMP_VERSION 41 CACHE STRING
-  "The OpenMP version (41/40/30)")
-libomp_check_variable(LIBOMP_OMP_VERSION 41 40 30)
+set(LIBOMP_OMP_VERSION 45 CACHE STRING
+  "The OpenMP version (45/40/30)")
+if(LIBOMP_OMP_VERSION EQUAL 41)
+  libomp_warning_say("LIBOMP_OMP_VERSION=41 is deprecated and will be removed in a later version. Please use 45.")
+  set(LIBOMP_OMP_VERSION 45)
+endif()
+libomp_check_variable(LIBOMP_OMP_VERSION 45 40 30)
 # Set the OpenMP Year and Month assiociated with version
 if(${LIBOMP_OMP_VERSION} GREATER 40 OR ${LIBOMP_OMP_VERSION} EQUAL 40)
   set(LIBOMP_OMP_YEAR_MONTH 201307)

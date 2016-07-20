@@ -156,7 +156,7 @@ bool DeclFinderASTVisitor::VisitTypeLoc(TypeLoc TL) {
 const Expr *digThroughConstructors(const Expr *E) {
   if (!E)
     return nullptr;
-  E = E->IgnoreParenImpCasts();
+  E = E->IgnoreImplicit();
   if (const auto *ConstructExpr = dyn_cast<CXXConstructExpr>(E)) {
     // The initial constructor must take exactly one parameter, but base class
     // and deferred constructors can take more.
@@ -876,20 +876,6 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   // Finally, determine if the symbol was used in the loop or a child context.
   DeclFinderASTVisitor DeclFinder(Symbol, GeneratedDecls);
   return DeclFinder.findUsages(SourceStmt);
-}
-
-std::string VariableNamer::AppendWithStyle(StringRef Str,
-                                           StringRef Suffix) const {
-  std::string Name = Str;
-  if (!Suffix.empty()) {
-    if (Style == NS_LowerCase || Style == NS_UpperCase)
-      Name += "_";
-    int SuffixStart = Name.size();
-    Name += Suffix;
-    if (Style == NS_CamelBack)
-      Name[SuffixStart] = toupper(Name[SuffixStart]);
-  }
-  return Name;
 }
 
 } // namespace modernize

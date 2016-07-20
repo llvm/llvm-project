@@ -160,26 +160,26 @@ protected:
           allocator(a)
     {}
 
-    template <class ...Args>
+    template <class ...Args, class ArgsIDL = detail::TakeNArgs<sizeof...(Args) - 1, Args&&...>>
     UsesAllocatorTestBase(AllocLastTag, Args&&... args)
-        : args_id(nullptr),
-          constructor_called(UA_AllocLast)
+        : args_id(&makeTypeID<typename ArgsIDL::type>()),
+          constructor_called(UA_AllocLast),
+          allocator(getAllocatorFromPack(
+            typename ArgsIDL::type{},
+            std::forward<Args>(args)...))
     {
-        typedef typename detail::TakeNArgs<sizeof...(Args) - 1, Args&&...>::type
-            ArgIDL;
-        args_id = &makeTypeID<ArgIDL>();
-        getAllocatorFromPack(ArgIDL{}, std::forward<Args>(args)...);
     }
 
 private:
     template <class ...LArgs, class ...Args>
-    void getAllocatorFromPack(ArgumentListID<LArgs...>, Args&&... args) {
-        getAllocatorFromPackImp<LArgs const&...>(args...);
+    static CtorAlloc getAllocatorFromPack(ArgumentListID<LArgs...>, Args&&... args) {
+        return getAllocatorFromPackImp<LArgs const&...>(args...);
     }
 
     template <class ...LArgs>
-    void getAllocatorFromPackImp(typename detail::Identity<LArgs>::type..., CtorAlloc const& alloc) {
-        allocator = alloc;
+    static CtorAlloc getAllocatorFromPackImp(
+        typename detail::Identity<LArgs>::type..., CtorAlloc const& alloc) {
+        return alloc;
     }
 
     const TypeID* args_id;

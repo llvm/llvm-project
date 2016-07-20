@@ -283,7 +283,9 @@ CLEANFILES = \
 	manual.out \
 	manual.blg \
 	manual.log \
-	manual.brf
+	manual.brf \
+	manual.bcf \
+	manual.run.xml
 
 all: all-am
 

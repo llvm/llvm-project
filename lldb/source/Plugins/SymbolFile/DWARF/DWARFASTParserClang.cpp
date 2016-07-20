@@ -329,7 +329,7 @@ DWARFASTParserClang::ParseTypeFromDWARF (const SymbolContext& sc,
                         }
                     }
 
-                    if (tag == DW_TAG_typedef)
+                    if (tag == DW_TAG_typedef && encoding_uid.IsValid())
                     {
                         // Try to parse a typedef from the DWO file first as modules
                         // can contain typedef'ed structures that have no names like:
@@ -3048,19 +3048,6 @@ DWARFASTParserClang::ParseChildMembers(const SymbolContext &sc, const DWARFDIE &
                                         {
                                             this_field_info.bit_offset += bit_offset;
                                         }
-                                    }
-
-                                    if ((this_field_info.bit_offset >= parent_bit_size) || !last_field_info.NextBitfieldOffsetIsValid(this_field_info.bit_offset))
-                                    {
-                                        ObjectFile *objfile = die.GetDWARF()->GetObjectFile();
-                                        objfile->GetModule()->ReportWarning("0x%8.8" PRIx64 ": %s bitfield named \"%s\" has invalid bit offset (0x%8.8" PRIx64 ") member will be ignored. Please file a bug against the compiler and include the preprocessed output for %s\n",
-                                                                            die.GetID(),
-                                                                            DW_TAG_value_to_name(tag),
-                                                                            name,
-                                                                            this_field_info.bit_offset,
-                                                                            sc.comp_unit ? sc.comp_unit->GetPath().c_str() : "the source file");
-                                        this_field_info.Clear();
-                                        continue;
                                     }
 
                                     if ((this_field_info.bit_offset >= parent_bit_size) || !last_field_info.NextBitfieldOffsetIsValid(this_field_info.bit_offset))

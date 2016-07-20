@@ -63,9 +63,9 @@ RuntimeDebugBuilder::getGPUThreadIdentifiers(PollyIRBuilder &Builder) {
   auto M = Builder.GetInsertBlock()->getParent()->getParent();
 
   std::vector<Function *> BlockIDs = {
-      Intrinsic::getDeclaration(M, Intrinsic::ptx_read_ctaid_x),
-      Intrinsic::getDeclaration(M, Intrinsic::ptx_read_ctaid_y),
-      Intrinsic::getDeclaration(M, Intrinsic::ptx_read_ctaid_z),
+      Intrinsic::getDeclaration(M, Intrinsic::nvvm_read_ptx_sreg_ctaid_x),
+      Intrinsic::getDeclaration(M, Intrinsic::nvvm_read_ptx_sreg_ctaid_y),
+      Intrinsic::getDeclaration(M, Intrinsic::nvvm_read_ptx_sreg_ctaid_z),
   };
 
   Identifiers.push_back(Builder.CreateGlobalStringPtr("> block-id: ", "", 4));
@@ -79,9 +79,9 @@ RuntimeDebugBuilder::getGPUThreadIdentifiers(PollyIRBuilder &Builder) {
   Identifiers.push_back(Builder.CreateGlobalStringPtr("| ", "", 4));
 
   std::vector<Function *> ThreadIDs = {
-      Intrinsic::getDeclaration(M, Intrinsic::ptx_read_tid_x),
-      Intrinsic::getDeclaration(M, Intrinsic::ptx_read_tid_y),
-      Intrinsic::getDeclaration(M, Intrinsic::ptx_read_tid_z),
+      Intrinsic::getDeclaration(M, Intrinsic::nvvm_read_ptx_sreg_tid_x),
+      Intrinsic::getDeclaration(M, Intrinsic::nvvm_read_ptx_sreg_tid_y),
+      Intrinsic::getDeclaration(M, Intrinsic::nvvm_read_ptx_sreg_tid_z),
   };
 
   Identifiers.push_back(Builder.CreateGlobalStringPtr("thread-id: ", "", 4));

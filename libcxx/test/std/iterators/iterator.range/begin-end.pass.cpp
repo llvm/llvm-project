@@ -15,7 +15,9 @@
 // template <class E> reverse_iterator<const E*> rbegin(initializer_list<E> il);
 // template <class E> reverse_iterator<const E*> rend(initializer_list<E> il);
 
-#if __cplusplus >= 201103L
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 11
 #include <iterator>
 #include <cassert>
 #include <vector>

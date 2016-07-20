@@ -10,7 +10,7 @@
 
 # CHECK: duplicate symbol: foo {{.+}}1.obj and foo {{.+}}2.obj
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

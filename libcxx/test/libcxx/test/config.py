@@ -103,6 +103,7 @@ class Configuration(object):
         self.configure_execute_external()
         self.configure_ccache()
         self.configure_compile_flags()
+        self.configure_filesystem_compile_flags()
         self.configure_link_flags()
         self.configure_env()
         self.configure_color_diagnostics()
@@ -289,6 +290,9 @@ class Configuration(object):
         if self.cxx.hasCompileFlag('-fsized-deallocation'):
             self.config.available_features.add('fsized-deallocation')
 
+        if self.get_lit_bool('has_libatomic', False):
+            self.config.available_features.add('libatomic')
+
     def configure_compile_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:
@@ -427,6 +431,37 @@ class Configuration(object):
           self.config.available_features.add('libcpp-abi-unstable')
           self.cxx.compile_flags += ['-D_LIBCPP_ABI_UNSTABLE']
 
+    def configure_filesystem_compile_flags(self):
+        enable_fs = self.get_lit_bool('enable_filesystem', default=False)
+        if not enable_fs:
+            return
+        enable_experimental = self.get_lit_bool('enable_experimental', default=False)
+        if not enable_experimental:
+            self.lit_config.fatal(
+                'filesystem is enabled but libc++experimental.a is not.')
+        self.config.available_features.add('c++filesystem')
+        static_env = os.path.join(self.libcxx_src_root, 'test', 'std',
+                                  'experimental', 'filesystem', 'Inputs', 'static_test_env')
+        static_env = os.path.realpath(static_env)
+        assert os.path.isdir(static_env)
+        self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_STATIC_TEST_ROOT="%s"' % static_env]
+
+        dynamic_env = os.path.join(self.libcxx_obj_root, 'test',
+                                   'filesystem', 'Output', 'dynamic_env')
+        dynamic_env = os.path.realpath(dynamic_env)
+        if not os.path.isdir(dynamic_env):
+            os.makedirs(dynamic_env)
+        self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT="%s"' % dynamic_env]
+        self.env['LIBCXX_FILESYSTEM_DYNAMIC_TEST_ROOT'] = ("%s" % dynamic_env)
+
+        dynamic_helper = os.path.join(self.libcxx_src_root, 'test', 'support',
+                                      'filesystem_dynamic_test_helper.py')
+        assert os.path.isfile(dynamic_helper)
+
+        self.cxx.compile_flags += ['-DLIBCXX_FILESYSTEM_DYNAMIC_TEST_HELPER="%s %s"'
+                                   % (sys.executable, dynamic_helper)]
+
+
     def configure_link_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
         if not no_default_flags:
@@ -538,6 +573,7 @@ class Configuration(object):
                 '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
                 '-Wall', '-Wextra', '-Werror'
             ]
+            self.cxx.addWarningFlagIfSupported('-Wno-unused-command-line-argument')
             self.cxx.addWarningFlagIfSupported('-Wno-attributes')
             self.cxx.addWarningFlagIfSupported('-Wno-pessimizing-move')
             self.cxx.addWarningFlagIfSupported('-Wno-c++11-extensions')
@@ -574,6 +610,9 @@ class Configuration(object):
                 self.cxx.flags += ['-fsanitize=address']
                 if llvm_symbolizer is not None:
                     self.env['ASAN_SYMBOLIZER_PATH'] = llvm_symbolizer
+                # FIXME: Turn ODR violation back on after PR28391 is resolved
+                # https://llvm.org/bugs/show_bug.cgi?id=28391
+                self.env['ASAN_OPTIONS'] = 'detect_odr_violation=0'
                 self.config.available_features.add('asan')
                 self.config.available_features.add('sanitizer-new-delete')
             elif san == 'Memory' or san == 'MemoryWithOrigins':
@@ -586,9 +625,12 @@ class Configuration(object):
                 self.config.available_features.add('msan')
                 self.config.available_features.add('sanitizer-new-delete')
             elif san == 'Undefined':
+                blacklist = os.path.join(self.libcxx_src_root,
+                                         'test/ubsan_blacklist.txt')
                 self.cxx.flags += ['-fsanitize=undefined',
-                                   '-fno-sanitize=vptr,function',
-                                   '-fno-sanitize-recover']
+                                   '-fno-sanitize=vptr,function,float-divide-by-zero',
+                                   '-fno-sanitize-recover=all',
+                                   '-fsanitize-blacklist=' + blacklist]
                 self.cxx.compile_flags += ['-O3']
                 self.env['UBSAN_OPTIONS'] = 'print_stacktrace=1'
                 self.config.available_features.add('ubsan')

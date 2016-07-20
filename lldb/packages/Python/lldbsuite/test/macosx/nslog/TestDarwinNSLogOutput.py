@@ -10,7 +10,6 @@ from __future__ import print_function
 
 import lldb
 import os
-import pexpect
 import platform
 import re
 import sys
@@ -58,6 +57,7 @@ class DarwinNSLogOutputTestCase(lldbtest.TestBase):
         prompt = self.child_prompt
 
         # So that the child gets torn down after the test.
+        import pexpect
         self.child = pexpect.spawn('%s %s %s' % (lldbtest_config.lldbExec,
                                                  self.lldbOption, exe))
         child = self.child

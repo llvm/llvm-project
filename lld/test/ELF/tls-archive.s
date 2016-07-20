@@ -7,4 +7,4 @@
 
 .globl _start,tlsvar
 _start:
-  movl tlsvar@GOTTPOFF(%rip),%edx
+  movq tlsvar@GOTTPOFF(%rip),%rdx

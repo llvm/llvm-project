@@ -42,7 +42,7 @@ int main()
     assert(*next(m.begin(), 2) == V(3, 1));
     assert(m.key_comp() == C(3));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     typedef test_compare<std::less<int> > C;

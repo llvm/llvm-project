@@ -13,6 +13,9 @@
 #include "../ClangTidy.h"
 
 namespace clang {
+
+class MacroInfo;
+
 namespace tidy {
 namespace readability {
 
@@ -36,6 +39,7 @@ public:
   void storeOptions(ClangTidyOptions::OptionMap &Opts) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
+  void registerPPCallbacks(CompilerInstance &Compiler) override;
   void onEndOfTranslationUnit() override;
 
   enum CaseType {
@@ -64,7 +68,7 @@ public:
 
   /// \brief Holds an identifier name check failure, tracking the kind of the
   /// identifer, its possible fixup and the starting locations of all the
-  /// idenfiier usages.
+  /// identifier usages.
   struct NamingCheckFailure {
     std::string KindName;
     std::string Fixup;
@@ -81,8 +85,18 @@ public:
 
     NamingCheckFailure() : ShouldFix(true) {}
   };
-  typedef llvm::DenseMap<const NamedDecl *, NamingCheckFailure>
+
+  typedef std::pair<SourceLocation, std::string> NamingCheckId;
+
+  typedef llvm::DenseMap<NamingCheckId, NamingCheckFailure>
       NamingCheckFailureMap;
+
+  /// Check Macros for style violations.
+  void checkMacro(SourceManager &sourceMgr, const Token &MacroNameTok,
+                  const MacroInfo *MI);
+
+  /// Add a usage of a macro if it already has a violation.
+  void expandMacro(const Token &MacroNameTok, const MacroInfo *MI);
 
 private:
   std::vector<NamingStyle> NamingStyles;

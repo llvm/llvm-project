@@ -74,13 +74,13 @@ test()
     }
 }
 
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
 constexpr int il[] = { 2, 4, 6, 8, 7, 5, 3, 1 };
 #endif
 
 void constexpr_test()
 {
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
     constexpr auto p = std::minmax_element(il, il+8);
     static_assert ( *(p.first)  == 1, "" );
     static_assert ( *(p.second) == 8, "" );

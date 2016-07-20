@@ -30,6 +30,12 @@ namespace rename {
 const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 const SourceLocation Point);
 
+// Given an AST context and a fully qualified name, returns a NamedDecl
+// identifying the symbol with a matching name. Returns null if nothing is
+// found for the name.
+const NamedDecl *getNamedDeclFor(const ASTContext &Context,
+                                 const std::string &Name);
+
 // Converts a Decl into a USR.
 std::string getUSRForDecl(const Decl *Decl);
 

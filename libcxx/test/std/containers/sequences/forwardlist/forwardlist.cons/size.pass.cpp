@@ -45,7 +45,7 @@ int main()
 #endif
         assert(n == N);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef DefaultOnly T;
         typedef std::forward_list<T, min_allocator<T>> C;

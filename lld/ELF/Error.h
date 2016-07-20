@@ -31,25 +31,28 @@ template <typename T> void error(const ErrorOr<T> &V, const Twine &Prefix) {
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg);
 LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &Msg, const Twine &Prefix);
 
-void check(std::error_code EC);
-
-template <class T> T check(ErrorOr<T> EO) {
-  if (EO)
-    return std::move(*EO);
-  fatal(EO.getError().message());
+template <class T> T check(ErrorOr<T> E) {
+  if (auto EC = E.getError())
+    fatal(EC.message());
+  return std::move(*E);
 }
 
-template <class T> T check(Expected<T> EO) {
-  if (EO)
-    return std::move(*EO);
-  check(errorToErrorCode(EO.takeError()));
-  return T();
+template <class T> T check(Expected<T> E) {
+  if (!E)
+    fatal(errorToErrorCode(E.takeError()).message());
+  return std::move(*E);
 }
 
-template <class T> T check(ErrorOr<T> EO, const Twine &Prefix) {
-  if (EO)
-    return std::move(*EO);
-  fatal(EO.getError().message(), Prefix);
+template <class T> T check(ErrorOr<T> E, const Twine &Prefix) {
+  if (auto EC = E.getError())
+    fatal(EC.message(), Prefix);
+  return std::move(*E);
+}
+
+template <class T> T check(Expected<T> E, const Twine &Prefix) {
+  if (!E)
+    fatal(errorToErrorCode(E.takeError()).message(), Prefix);
+  return std::move(*E);
 }
 
 } // namespace elf

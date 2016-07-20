@@ -60,7 +60,9 @@ namespace std
 template <>
 struct pointer_traits<C<char>::pointer>
 {
-    typedef signed char difference_type;
+    typedef C<char>::pointer pointer;
+    typedef char             element_type;
+    typedef signed char      difference_type;
 };
 
 }

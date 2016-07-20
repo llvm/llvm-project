@@ -289,7 +289,7 @@ ParallelLoopGenerator::storeValuesIntoStruct(SetVector<Value *> &Values) {
   BasicBlock &EntryBB = Builder.GetInsertBlock()->getParent()->getEntryBlock();
   Instruction *IP = &*EntryBB.getFirstInsertionPt();
   StructType *Ty = StructType::get(Builder.getContext(), Members);
-  AllocaInst *Struct = new AllocaInst(Ty, 0, "polly.par.userContext", IP);
+  AllocaInst *Struct = new AllocaInst(Ty, nullptr, "polly.par.userContext", IP);
 
   // Mark the start of the lifetime for the parameter struct.
   ConstantInt *SizeOf = Builder.getInt64(DL.getTypeAllocSize(Ty));
@@ -338,8 +338,8 @@ Value *ParallelLoopGenerator::createSubFn(Value *Stride, AllocaInst *StructData,
 
   // Fill up basic block HeaderBB.
   Builder.SetInsertPoint(HeaderBB);
-  LBPtr = Builder.CreateAlloca(LongType, 0, "polly.par.LBPtr");
-  UBPtr = Builder.CreateAlloca(LongType, 0, "polly.par.UBPtr");
+  LBPtr = Builder.CreateAlloca(LongType, nullptr, "polly.par.LBPtr");
+  UBPtr = Builder.CreateAlloca(LongType, nullptr, "polly.par.UBPtr");
   UserContext = Builder.CreateBitCast(
       &*SubFn->arg_begin(), StructData->getType(), "polly.par.userContext");
 

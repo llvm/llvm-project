@@ -55,7 +55,7 @@ int main()
         }
     }
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     // splicing different containers
     typedef std::forward_list<T, min_allocator<T>> C;

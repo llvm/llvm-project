@@ -12,7 +12,9 @@
 // make sure that we can hash enumeration values
 // Not very portable
 
-#if __cplusplus >= 201402L
+#include "test_macros.h"
+
+#if TEST_STD_VER >= 14
 
 #include <functional>
 #include <cassert>

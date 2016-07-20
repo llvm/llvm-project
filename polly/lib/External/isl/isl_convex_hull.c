@@ -79,6 +79,11 @@ int isl_basic_set_constraint_is_redundant(struct isl_basic_set **bset,
  * constraints.  If the minimal value along the normal of a constraint
  * is the same if the constraint is removed, then the constraint is redundant.
  *
+ * Since some constraints may be mutually redundant, sort the constraints
+ * first such that constraints that involve existentially quantified
+ * variables are considered for removal before those that do not.
+ * The sorting is also need for the use in map_simple_hull.
+ *
  * Alternatively, we could have intersected the basic map with the
  * corresponding equality and then checked if the dimension was that
  * of a facet.
@@ -99,6 +104,7 @@ __isl_give isl_basic_map *isl_basic_map_remove_redundancies(
 	if (bmap->n_ineq <= 1)
 		return bmap;
 
+	bmap = isl_basic_map_sort_constraints(bmap);
 	tab = isl_tab_from_basic_map(bmap, 0);
 	if (isl_tab_detect_implicit_equalities(tab) < 0)
 		goto error;
@@ -2399,11 +2405,12 @@ static __isl_give isl_basic_map *cached_simple_hull(__isl_take isl_map *map,
  * by only (translates of) the constraints in the constituents of map.
  * Translation is only allowed if "shift" is set.
  *
- * Sort the constraints before removing redundant constraints
+ * The constraints are sorted while removing redundant constraints
  * in order to indicate a preference of which constraints should
  * be preserved.  In particular, pairs of constraints that are
  * sorted together are preferred to either both be preserved
- * or both be removed.
+ * or both be removed.  The sorting is performed inside
+ * isl_basic_map_remove_redundancies.
  *
  * The result of the computation is stored in map->cached_simple_hull[shift]
  * such that it can be reused in subsequent calls.  The cache is cleared
@@ -2444,7 +2451,6 @@ static __isl_give isl_basic_map *map_simple_hull(__isl_take isl_map *map,
 	hull = isl_basic_map_overlying_set(bset, model);
 
 	hull = isl_basic_map_intersect(hull, affine_hull);
-	hull = isl_basic_map_sort_constraints(hull);
 	hull = isl_basic_map_remove_redundancies(hull);
 
 	if (hull) {

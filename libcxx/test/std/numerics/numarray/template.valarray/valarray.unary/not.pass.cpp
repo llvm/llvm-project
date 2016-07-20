@@ -36,6 +36,6 @@ int main()
         std::valarray<bool> v2 = !(v + v);
         assert(v2.size() == v.size());
         for (int i = 0; i < v2.size(); ++i)
-            assert(v2[i] == !2*v[i]);
+            assert(v2[i] == !(2 * v[i]));
     }
 }

@@ -502,7 +502,7 @@ __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid)
     this_thr    = __kmp_threads[ global_tid ];
     serial_team = this_thr->th.th_serial_team;
 
-   #if OMP_41_ENABLED
+   #if OMP_45_ENABLED
    kmp_task_team_t *   task_team = this_thr->th.th_task_team;
 
    // we need to wait for the proxy tasks before finishing the thread
@@ -988,7 +988,7 @@ __kmp_init_indirect_csptr(kmp_critical_name * crit, ident_t const * loc, kmp_int
 // Fast-path test futex lock
 #define KMP_TEST_FUTEX_LOCK(lock, gtid, rc) {                                                                       \
     kmp_futex_lock_t *ftx = (kmp_futex_lock_t *)lock;                                                               \
-    if (KMP_COMPARE_AND_STORE_ACQ32(&(ftx->lk.poll), KMP_LOCK_FREE(futex), KMP_LOCK_BUSY(gtid+1, futex) << 1)) {    \
+    if (KMP_COMPARE_AND_STORE_ACQ32(&(ftx->lk.poll), KMP_LOCK_FREE(futex), KMP_LOCK_BUSY(gtid+1 << 1, futex))) {    \
         KMP_FSYNC_ACQUIRED(ftx);                                                                                    \
         rc = TRUE;                                                                                                  \
     } else {                                                                                                        \
@@ -1096,7 +1096,7 @@ __kmpc_critical( ident_t * loc, kmp_int32 global_tid, kmp_critical_name * crit )
       && ( sizeof( lck->tas.lk.poll ) <= OMP_CRITICAL_SIZE ) ) {
         lck = (kmp_user_lock_p)crit;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_CRITICAL_SIZE ) ) {
         lck = (kmp_user_lock_p)crit;
@@ -1308,7 +1308,7 @@ __kmpc_end_critical(ident_t *loc, kmp_int32 global_tid, kmp_critical_name *crit)
       && ( sizeof( lck->tas.lk.poll ) <= OMP_CRITICAL_SIZE ) ) {
         lck = (kmp_user_lock_p)crit;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_CRITICAL_SIZE ) ) {
         lck = (kmp_user_lock_p)crit;
@@ -1913,7 +1913,7 @@ __kmpc_init_lock( ident_t * loc, kmp_int32 gtid,  void ** user_lock ) {
       && ( sizeof( lck->tas.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
@@ -1968,7 +1968,7 @@ __kmpc_init_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
       + sizeof( lck->tas.lk.depth_locked ) <= OMP_NEST_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
      && ( sizeof( lck->futex.lk.poll ) + sizeof( lck->futex.lk.depth_locked )
      <= OMP_NEST_LOCK_T_SIZE ) ) {
@@ -2017,7 +2017,7 @@ __kmpc_destroy_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
       && ( sizeof( lck->tas.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
@@ -2043,7 +2043,7 @@ __kmpc_destroy_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
       && ( sizeof( lck->tas.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         ;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         ;
@@ -2074,7 +2074,7 @@ __kmpc_destroy_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
       + sizeof( lck->tas.lk.depth_locked ) <= OMP_NEST_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
      && ( sizeof( lck->futex.lk.poll ) + sizeof( lck->futex.lk.depth_locked )
      <= OMP_NEST_LOCK_T_SIZE ) ) {
@@ -2102,7 +2102,7 @@ __kmpc_destroy_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
      + sizeof( lck->tas.lk.depth_locked ) <= OMP_NEST_LOCK_T_SIZE ) ) {
         ;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
      && ( sizeof( lck->futex.lk.poll ) + sizeof( lck->futex.lk.depth_locked )
      <= OMP_NEST_LOCK_T_SIZE ) ) {
@@ -2147,7 +2147,7 @@ __kmpc_set_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
       && ( sizeof( lck->tas.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
@@ -2203,7 +2203,7 @@ __kmpc_set_nest_lock( ident_t * loc, kmp_int32 gtid, void ** user_lock ) {
       + sizeof( lck->tas.lk.depth_locked ) <= OMP_NEST_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
      && ( sizeof( lck->futex.lk.poll ) + sizeof( lck->futex.lk.depth_locked )
      <= OMP_NEST_LOCK_T_SIZE ) ) {
@@ -2282,7 +2282,7 @@ __kmpc_unset_lock( ident_t *loc, kmp_int32 gtid, void **user_lock )
         lck = (kmp_user_lock_p)user_lock;
 #endif
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
@@ -2342,7 +2342,7 @@ __kmpc_unset_nest_lock( ident_t *loc, kmp_int32 gtid, void **user_lock )
         lck = (kmp_user_lock_p)user_lock;
 #endif
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
      && ( sizeof( lck->futex.lk.poll ) + sizeof( lck->futex.lk.depth_locked )
      <= OMP_NEST_LOCK_T_SIZE ) ) {
@@ -2421,7 +2421,7 @@ __kmpc_test_lock( ident_t *loc, kmp_int32 gtid, void **user_lock )
       && ( sizeof( lck->tas.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
       && ( sizeof( lck->futex.lk.poll ) <= OMP_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
@@ -2478,7 +2478,7 @@ __kmpc_test_nest_lock( ident_t *loc, kmp_int32 gtid, void **user_lock )
       + sizeof( lck->tas.lk.depth_locked ) <= OMP_NEST_LOCK_T_SIZE ) ) {
         lck = (kmp_user_lock_p)user_lock;
     }
-#if KMP_OS_LINUX && (KMP_ARCH_X86 || KMP_ARCH_X86_64 || KMP_ARCH_ARM || KMP_ARCH_AARCH64)
+#if KMP_USE_FUTEX
     else if ( ( __kmp_user_lock_kind == lk_futex )
      && ( sizeof( lck->futex.lk.poll ) + sizeof( lck->futex.lk.depth_locked )
      <= OMP_NEST_LOCK_T_SIZE ) ) {
@@ -3036,7 +3036,7 @@ void __kmpc_place_threads(int nS, int sO, int nC, int cO, int nT)
     __kmp_place_num_threads_per_core = nT;
 }
 
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 /*!
 @ingroup WORK_SHARING
 @param loc  source location information.

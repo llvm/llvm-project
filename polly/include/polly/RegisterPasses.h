@@ -19,11 +19,11 @@
 namespace llvm {
 namespace legacy {
 class PassManagerBase;
-}
-}
+} // namespace legacy
+} // namespace llvm
 
 namespace polly {
 void initializePollyPasses(llvm::PassRegistry &Registry);
 void registerPollyPasses(llvm::legacy::PassManagerBase &PM);
-}
+} // namespace polly
 #endif

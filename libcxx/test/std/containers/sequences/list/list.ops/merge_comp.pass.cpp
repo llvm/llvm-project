@@ -28,7 +28,7 @@ int main()
     c1.merge(c2, std::greater<int>());
     assert(c1 == std::list<int>(a3, a3+sizeof(a3)/sizeof(a3[0])));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a1[] = {10, 9, 7, 3, 1};
     int a2[] = {11, 8, 6, 5, 4, 2, 0};

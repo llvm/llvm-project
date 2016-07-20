@@ -23,12 +23,15 @@
 // atomic_compare_exchange_strong(shared_ptr<T>* p, shared_ptr<T>* v,
 //                                shared_ptr<T> w);
 
+// UNSUPPORTED: c++98, c++03
+
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
-#if __has_feature(cxx_atomic)
     {
         std::shared_ptr<int> p(new int(4));
         std::shared_ptr<int> v(new int(3));
@@ -49,5 +52,4 @@ int main()
         assert(*v == 4);
         assert(*w == 2);
     }
-#endif
 }

@@ -29,7 +29,7 @@ namespace llvm {
 class Pass;
 class Region;
 class ScalarEvolution;
-}
+} // namespace llvm
 
 namespace polly {
 using namespace llvm;
@@ -162,7 +162,7 @@ public:
   void finalizeSCoP(Scop &S);
 
   /// @brief An empty destructor
-  virtual ~BlockGenerator(){};
+  virtual ~BlockGenerator() {}
 
   BlockGenerator(const BlockGenerator &) = default;
 
@@ -732,7 +732,7 @@ public:
   /// @param BlockGen A generator for basic blocks.
   RegionGenerator(BlockGenerator &BlockGen) : BlockGenerator(BlockGen) {}
 
-  virtual ~RegionGenerator(){};
+  virtual ~RegionGenerator() {}
 
   /// @brief Copy the region statement @p Stmt.
   ///
@@ -833,5 +833,5 @@ private:
                                   ValueMapT &BBMap,
                                   LoopToScevMapT &LTS) override;
 };
-}
+} // namespace polly
 #endif

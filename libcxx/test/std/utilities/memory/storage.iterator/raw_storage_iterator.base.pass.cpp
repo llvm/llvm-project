@@ -13,6 +13,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int A_constructed = 0;
 
 struct A
@@ -29,7 +31,7 @@ public:
 
 int main()
 {
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
     typedef std::aligned_storage<3*sizeof(A), std::alignment_of<A>::value>::type
             Storage;
     Storage buffer;

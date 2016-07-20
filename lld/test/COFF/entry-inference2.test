@@ -4,7 +4,7 @@
 
 # CHECK: Entry name inferred: WinMainCRTStartup
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

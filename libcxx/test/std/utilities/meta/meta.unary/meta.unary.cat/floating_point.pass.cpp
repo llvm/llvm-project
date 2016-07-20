@@ -52,6 +52,6 @@ int main()
     test_floating_point<double>();
     test_floating_point<long double>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_floating_point<incomplete_type>::value, "");
 }

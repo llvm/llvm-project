@@ -8,25 +8,33 @@
 //===----------------------------------------------------------------------===//
 
 // Other libraries and framework includes
-#include "lldb/Core/DataBuffer.h"
-#include "lldb/Core/DataBufferHeap.h"
-#include "lldb/Core/DataEncoder.h"
-#include "lldb/Core/DataExtractor.h"
-#include "lldb/Core/StreamString.h"
-#include "lldb/Host/FileSpec.h"
+#include "AdbClient.h"
+
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/FileUtilities.h"
 
-// Project includes
-#include "AdbClient.h"
+#include "lldb/Core/DataBuffer.h"
+#include "lldb/Core/DataBufferHeap.h"
+#include "lldb/Core/DataEncoder.h"
+#include "lldb/Core/DataExtractor.h"
+#include "lldb/Core/StreamString.h"
+#include "lldb/Host/ConnectionFileDescriptor.h"
+#include "lldb/Host/FileSpec.h"
 
 #include <limits.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <fstream>
 #include <sstream>
+
+// On Windows, transitive dependencies pull in <Windows.h>, which defines a
+// macro that clashes with a method name.
+#ifdef SendMessage
+#undef SendMessage
+#endif
 
 using namespace lldb;
 using namespace lldb_private;
@@ -53,6 +61,35 @@ const uint32_t kDefaultMode = 0100770; // S_IFREG | S_IRWXU | S_IRWXG
 const char * kSocketNamespaceAbstract = "localabstract";
 const char * kSocketNamespaceFileSystem = "localfilesystem";
 
+Error
+ReadAllBytes (Connection &conn, void *buffer, size_t size)
+{
+    using namespace std::chrono;
+
+    Error error;
+    ConnectionStatus status;
+    char *read_buffer = static_cast<char*>(buffer);
+
+    auto now = steady_clock::now();
+    const auto deadline = now + kReadTimeout;
+    size_t total_read_bytes = 0;
+    while (total_read_bytes < size && now < deadline)
+    {
+        uint32_t timeout_usec = duration_cast<microseconds>(deadline - now).count();
+        auto read_bytes =
+            conn.Read(read_buffer + total_read_bytes, size - total_read_bytes, timeout_usec, status, &error);
+        if (error.Fail ())
+            return error;
+        total_read_bytes += read_bytes;
+        if (status != eConnectionStatusSuccess)
+            break;
+        now = steady_clock::now();
+    }
+    if (total_read_bytes < size)
+        error = Error("Unable to read requested number of bytes. Connection status: %d.", status);
+    return error;
+}
+
 }  // namespace
 
 Error
@@ -63,29 +100,38 @@ AdbClient::CreateByDeviceID(const std::string &device_id, AdbClient &adb)
     if (error.Fail())
         return error;
 
-    if (device_id.empty())
+    std::string android_serial;
+    if (!device_id.empty())
+        android_serial = device_id;
+    else if (const char *env_serial = std::getenv("ANDROID_SERIAL"))
+        android_serial = env_serial;
+
+    if (android_serial.empty())
     {
         if (connect_devices.size() != 1)
-            return Error("Expected a single connected device, got instead %" PRIu64,
-                    static_cast<uint64_t>(connect_devices.size()));
-
+            return Error("Expected a single connected device, got instead %zu - try setting 'ANDROID_SERIAL'",
+                         connect_devices.size());
         adb.SetDeviceID(connect_devices.front());
     }
     else
     {
-        auto find_it = std::find(connect_devices.begin(), connect_devices.end(), device_id);
+        auto find_it = std::find(connect_devices.begin(), connect_devices.end(), android_serial);
         if (find_it == connect_devices.end())
-            return Error("Device \"%s\" not found", device_id.c_str());
+            return Error("Device \"%s\" not found", android_serial.c_str());
 
         adb.SetDeviceID(*find_it);
     }
     return error;
 }
 
+AdbClient::AdbClient () {}
+
 AdbClient::AdbClient (const std::string &device_id)
     : m_device_id (device_id)
 {
 }
+
+AdbClient::~AdbClient() {}
 
 void
 AdbClient::SetDeviceID (const std::string &device_id)
@@ -103,7 +149,8 @@ Error
 AdbClient::Connect ()
 {
     Error error;
-    m_conn.Connect ("connect://localhost:5037", &error);
+    m_conn.reset (new ConnectionFileDescriptor);
+    m_conn->Connect ("connect://localhost:5037", &error);
 
     return error;
 }
@@ -131,6 +178,9 @@ AdbClient::GetDevices (DeviceIDList &device_list)
     for (const auto device: devices)
         device_list.push_back (device.split ('\t').first);
 
+    // Force disconnect since ADB closes connection after host:devices
+    // response is sent.
+    m_conn.reset ();
     return error;
 }
 
@@ -184,7 +234,7 @@ Error
 AdbClient::SendMessage (const std::string &packet, const bool reconnect)
 {
     Error error;
-    if (reconnect)
+    if (!m_conn || reconnect)
     {
         error = Connect ();
         if (error.Fail ())
@@ -196,11 +246,11 @@ AdbClient::SendMessage (const std::string &packet, const bool reconnect)
 
     ConnectionStatus status;
 
-    m_conn.Write (length_buffer, 4, status, &error);
+    m_conn->Write (length_buffer, 4, status, &error);
     if (error.Fail ())
         return error;
 
-    m_conn.Write (packet.c_str (), packet.size (), status, &error);
+    m_conn->Write (packet.c_str (), packet.size (), status, &error);
     return error;
 }
 
@@ -251,7 +301,7 @@ AdbClient::ReadMessageStream (std::vector<char>& message, uint32_t timeout_ms)
         if (elapsed_time >= timeout_ms)
             return Error("Timed out");
 
-        size_t n = m_conn.Read(buffer, sizeof(buffer), 1000 * (timeout_ms - elapsed_time), status, &error);
+        size_t n = m_conn->Read(buffer, sizeof(buffer), 1000 * (timeout_ms - elapsed_time), status, &error);
         if (n > 0)
             message.insert(message.end(), &buffer[0], &buffer[n]);
     }
@@ -304,12 +354,118 @@ AdbClient::SwitchDeviceTransport ()
 }
 
 Error
-AdbClient::PullFile (const FileSpec &remote_file, const FileSpec &local_file)
+AdbClient::StartSync ()
 {
-    auto error = StartSync ();
+    auto error = SwitchDeviceTransport ();
+    if (error.Fail ())
+        return Error ("Failed to switch to device transport: %s", error.AsCString ());
+
+    error = Sync ();
+    if (error.Fail ())
+        return Error ("Sync failed: %s", error.AsCString ());
+
+    return error;
+}
+
+Error
+AdbClient::Sync ()
+{
+    auto error = SendMessage ("sync:", false);
     if (error.Fail ())
         return error;
 
+    return ReadResponseStatus ();
+}
+
+Error
+AdbClient::ReadAllBytes (void *buffer, size_t size)
+{
+    return ::ReadAllBytes (*m_conn, buffer, size);
+}
+
+Error
+AdbClient::internalShell(const char *command, uint32_t timeout_ms, std::vector<char> &output_buf)
+{
+    output_buf.clear();
+
+    auto error = SwitchDeviceTransport();
+    if (error.Fail())
+        return Error("Failed to switch to device transport: %s", error.AsCString());
+
+    StreamString adb_command;
+    adb_command.Printf("shell:%s", command);
+    error = SendMessage(adb_command.GetData(), false);
+    if (error.Fail())
+        return error;
+
+    error = ReadResponseStatus();
+    if (error.Fail())
+        return error;
+
+    error = ReadMessageStream(output_buf, timeout_ms);
+    if (error.Fail())
+        return error;
+
+    // ADB doesn't propagate return code of shell execution - if
+    // output starts with /system/bin/sh: most likely command failed.
+    static const char *kShellPrefix = "/system/bin/sh:";
+    if (output_buf.size() > strlen(kShellPrefix))
+    {
+        if (!memcmp(&output_buf[0], kShellPrefix, strlen(kShellPrefix)))
+            return Error("Shell command %s failed: %s", command,
+                         std::string(output_buf.begin(), output_buf.end()).c_str());
+    }
+
+    return Error();
+}
+
+Error
+AdbClient::Shell(const char *command, uint32_t timeout_ms, std::string *output)
+{
+    std::vector<char> output_buffer;
+    auto error = internalShell(command, timeout_ms, output_buffer);
+    if (error.Fail())
+        return error;
+
+    if (output)
+        output->assign(output_buffer.begin(), output_buffer.end());
+    return error;
+}
+
+Error
+AdbClient::ShellToFile(const char *command, uint32_t timeout_ms, const FileSpec &output_file_spec)
+{
+    std::vector<char> output_buffer;
+    auto error = internalShell(command, timeout_ms, output_buffer);
+    if (error.Fail())
+        return error;
+
+    const auto output_filename = output_file_spec.GetPath();
+    std::ofstream dst(output_filename, std::ios::out | std::ios::binary);
+    if (!dst.is_open())
+        return Error("Unable to open local file %s", output_filename.c_str());
+
+    dst.write(&output_buffer[0], output_buffer.size());
+    dst.close();
+    if (!dst)
+        return Error("Failed to write file %s", output_filename.c_str());
+    return Error();
+}
+
+std::unique_ptr<AdbClient::SyncService>
+AdbClient::GetSyncService (Error &error)
+{
+    std::unique_ptr<SyncService> sync_service;
+    error = StartSync ();
+    if (error.Success ())
+        sync_service.reset (new SyncService(std::move(m_conn)));
+
+    return sync_service;
+}
+
+Error
+AdbClient::SyncService::internalPullFile (const FileSpec &remote_file, const FileSpec &local_file)
+{
     const auto local_file_path = local_file.GetPath ();
     llvm::FileRemover local_file_remover (local_file_path.c_str ());
 
@@ -318,7 +474,7 @@ AdbClient::PullFile (const FileSpec &remote_file, const FileSpec &local_file)
         return Error ("Unable to open local file %s", local_file_path.c_str());
 
     const auto remote_file_path = remote_file.GetPath (false);
-    error = SendSyncRequest (kRECV, remote_file_path.length (), remote_file_path.c_str ());
+    auto error = SendSyncRequest (kRECV, remote_file_path.length (), remote_file_path.c_str ());
     if (error.Fail ())
         return error;
 
@@ -338,12 +494,8 @@ AdbClient::PullFile (const FileSpec &remote_file, const FileSpec &local_file)
 }
 
 Error
-AdbClient::PushFile (const FileSpec &local_file, const FileSpec &remote_file)
+AdbClient::SyncService::internalPushFile (const FileSpec &local_file, const FileSpec &remote_file)
 {
-    auto error = StartSync ();
-    if (error.Fail ())
-        return error;
-
     const auto local_file_path (local_file.GetPath ());
     std::ifstream src (local_file_path.c_str(), std::ios::in | std::ios::binary);
     if (!src.is_open ())
@@ -352,7 +504,7 @@ AdbClient::PushFile (const FileSpec &local_file, const FileSpec &remote_file)
     std::stringstream file_description;
     file_description << remote_file.GetPath(false).c_str() << "," << kDefaultMode;
     std::string file_description_str = file_description.str();
-    error = SendSyncRequest (kSEND, file_description_str.length(), file_description_str.c_str());
+    auto error = SendSyncRequest (kSEND, file_description_str.length(), file_description_str.c_str());
     if (error.Fail ())
         return error;
 
@@ -392,31 +544,125 @@ AdbClient::PushFile (const FileSpec &local_file, const FileSpec &remote_file)
 }
 
 Error
-AdbClient::StartSync ()
+AdbClient::SyncService::internalStat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime)
 {
-    auto error = SwitchDeviceTransport ();
+    const std::string remote_file_path (remote_file.GetPath (false));
+    auto error = SendSyncRequest (kSTAT, remote_file_path.length (), remote_file_path.c_str ());
     if (error.Fail ())
-        return Error ("Failed to switch to device transport: %s", error.AsCString ());
+        return Error ("Failed to send request: %s", error.AsCString ());
 
-    error = Sync ();
+    static const size_t stat_len = strlen (kSTAT);
+    static const size_t response_len = stat_len + (sizeof (uint32_t) * 3);
+
+    std::vector<char> buffer (response_len);
+    error = ReadAllBytes (&buffer[0], buffer.size ());
     if (error.Fail ())
-        return Error ("Sync failed: %s", error.AsCString ());
+        return Error ("Failed to read response: %s", error.AsCString ());
+
+    DataExtractor extractor (&buffer[0], buffer.size (), eByteOrderLittle, sizeof (void*));
+    offset_t offset = 0;
+
+    const void* command = extractor.GetData (&offset, stat_len);
+    if (!command)
+        return Error ("Failed to get response command");
+    const char* command_str = static_cast<const char*> (command);
+    if (strncmp (command_str, kSTAT, stat_len))
+        return Error ("Got invalid stat command: %s", command_str);
+
+    mode = extractor.GetU32 (&offset);
+    size = extractor.GetU32 (&offset);
+    mtime = extractor.GetU32 (&offset);
+    return Error ();
+}
+
+Error
+AdbClient::SyncService::PullFile (const FileSpec &remote_file, const FileSpec &local_file)
+{
+    return executeCommand ([this, &remote_file, &local_file]() {
+        return internalPullFile (remote_file, local_file);
+    });
+}
+
+Error
+AdbClient::SyncService::PushFile (const FileSpec &local_file, const FileSpec &remote_file)
+{
+    return executeCommand ([this, &local_file, &remote_file]() {
+        return internalPushFile (local_file, remote_file);
+    });
+}
+
+Error
+AdbClient::SyncService::Stat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime)
+{
+    return executeCommand ([this, &remote_file, &mode, &size, &mtime]() {
+        return internalStat (remote_file, mode, size, mtime);
+    });
+}
+
+bool
+AdbClient::SyncService::IsConnected () const
+{
+    return m_conn && m_conn->IsConnected ();
+}
+
+AdbClient::SyncService::SyncService(std::unique_ptr<Connection> &&conn):
+m_conn(std::move(conn))
+{
+}
+
+Error
+AdbClient::SyncService::executeCommand (const std::function<Error()> &cmd)
+{
+    if (!m_conn)
+        return Error ("SyncService is disconnected");
+
+    const auto error = cmd ();
+    if (error.Fail ())
+        m_conn.reset ();
+
+    return error;
+}
+
+AdbClient::SyncService::~SyncService () {}
+
+Error
+AdbClient::SyncService::SendSyncRequest (const char *request_id, const uint32_t data_len, const void *data)
+{
+    const DataBufferSP data_sp (new DataBufferHeap (kSyncPacketLen, 0));
+    DataEncoder encoder (data_sp, eByteOrderLittle, sizeof (void*));
+    auto offset = encoder.PutData (0, request_id, strlen(request_id));
+    encoder.PutU32 (offset, data_len);
+
+    Error error;
+    ConnectionStatus status;
+    m_conn->Write (data_sp->GetBytes (), kSyncPacketLen, status, &error);
+    if (error.Fail ())
+        return error;
+
+    if (data)
+        m_conn->Write (data, data_len, status, &error);
+    return error;
+}
+
+Error
+AdbClient::SyncService::ReadSyncHeader (std::string &response_id, uint32_t &data_len)
+{
+    char buffer[kSyncPacketLen];
+
+    auto error = ReadAllBytes (buffer, kSyncPacketLen);
+    if (error.Success ())
+    {
+        response_id.assign (&buffer[0], 4);
+        DataExtractor extractor (&buffer[4], 4, eByteOrderLittle, sizeof (void*));
+        offset_t offset = 0;
+        data_len = extractor.GetU32 (&offset);
+    }
 
     return error;
 }
 
 Error
-AdbClient::Sync ()
-{
-    auto error = SendMessage ("sync:", false);
-    if (error.Fail ())
-        return error;
-
-    return ReadResponseStatus ();
-}
-
-Error
-AdbClient::PullFileChunk (std::vector<char> &buffer, bool &eof)
+AdbClient::SyncService::PullFileChunk (std::vector<char> &buffer, bool &eof)
 {
     buffer.clear ();
 
@@ -452,129 +698,8 @@ AdbClient::PullFileChunk (std::vector<char> &buffer, bool &eof)
 }
 
 Error
-AdbClient::SendSyncRequest (const char *request_id, const uint32_t data_len, const void *data)
+AdbClient::SyncService::ReadAllBytes (void *buffer, size_t size)
 {
-    const DataBufferSP data_sp (new DataBufferHeap (kSyncPacketLen, 0));
-    DataEncoder encoder (data_sp, eByteOrderLittle, sizeof (void*));
-    auto offset = encoder.PutData (0, request_id, strlen(request_id));
-    encoder.PutU32 (offset, data_len);
-
-    Error error;
-    ConnectionStatus status;
-    m_conn.Write (data_sp->GetBytes (), kSyncPacketLen, status, &error);
-    if (error.Fail ())
-        return error;
-
-    if (data)
-        m_conn.Write (data, data_len, status, &error);
-    return error;
+    return ::ReadAllBytes (*m_conn, buffer, size);
 }
 
-Error
-AdbClient::ReadSyncHeader (std::string &response_id, uint32_t &data_len)
-{
-    char buffer[kSyncPacketLen];
-
-    auto error = ReadAllBytes (buffer, kSyncPacketLen);
-    if (error.Success ())
-    {
-        response_id.assign (&buffer[0], 4);
-        DataExtractor extractor (&buffer[4], 4, eByteOrderLittle, sizeof (void*));
-        offset_t offset = 0;
-        data_len = extractor.GetU32 (&offset);
-    }
-
-    return error;
-}
-
-Error
-AdbClient::ReadAllBytes (void *buffer, size_t size)
-{
-    using namespace std::chrono;
-
-    Error error;
-    ConnectionStatus status;
-    char *read_buffer = static_cast<char*>(buffer);
-
-    auto now = steady_clock::now();
-    const auto deadline = now + kReadTimeout;
-    size_t total_read_bytes = 0;
-    while (total_read_bytes < size && now < deadline)
-    {
-        uint32_t timeout_usec = duration_cast<microseconds>(deadline - now).count();
-        auto read_bytes =
-            m_conn.Read(read_buffer + total_read_bytes, size - total_read_bytes, timeout_usec, status, &error);
-        if (error.Fail ())
-            return error;
-        total_read_bytes += read_bytes;
-        if (status != eConnectionStatusSuccess)
-            break;
-        now = steady_clock::now();
-    }
-    if (total_read_bytes < size)
-        error = Error("Unable to read requested number of bytes. Connection status: %d.", status);
-    return error;
-}
-
-Error
-AdbClient::Stat (const FileSpec &remote_file, uint32_t &mode, uint32_t &size, uint32_t &mtime)
-{
-    auto error = StartSync ();
-    if (error.Fail ())
-        return error;
-
-    const std::string remote_file_path (remote_file.GetPath (false));
-    error = SendSyncRequest (kSTAT, remote_file_path.length (), remote_file_path.c_str ());
-    if (error.Fail ())
-        return Error ("Failed to send request: %s", error.AsCString ());
-
-    static const size_t stat_len = strlen (kSTAT);
-    static const size_t response_len = stat_len + (sizeof (uint32_t) * 3);
-
-    std::vector<char> buffer (response_len);
-    error = ReadAllBytes (&buffer[0], buffer.size ());
-    if (error.Fail ())
-        return Error ("Failed to read response: %s", error.AsCString ());
-
-    DataExtractor extractor (&buffer[0], buffer.size (), eByteOrderLittle, sizeof (void*));
-    offset_t offset = 0;
-
-    const void* command = extractor.GetData (&offset, stat_len);
-    if (!command)
-        return Error ("Failed to get response command");
-    const char* command_str = static_cast<const char*> (command);
-    if (strncmp (command_str, kSTAT, stat_len))
-        return Error ("Got invalid stat command: %s", command_str);
-
-    mode = extractor.GetU32 (&offset);
-    size = extractor.GetU32 (&offset);
-    mtime = extractor.GetU32 (&offset);
-    return Error ();
-}
-
-Error
-AdbClient::Shell (const char* command, uint32_t timeout_ms, std::string* output)
-{
-    auto error = SwitchDeviceTransport ();
-    if (error.Fail ())
-        return Error ("Failed to switch to device transport: %s", error.AsCString ());
-
-    StreamString adb_command;
-    adb_command.Printf("shell:%s", command);
-    error = SendMessage (adb_command.GetData(), false);
-    if (error.Fail ())
-        return error;
-
-    error = ReadResponseStatus ();
-    if (error.Fail ())
-        return error;
-
-    std::vector<char> in_buffer;
-    error = ReadMessageStream (in_buffer, timeout_ms);
-    if (error.Fail())
-        return error;
-
-    if (output)
-        output->assign(in_buffer.begin(), in_buffer.end());
-    return error;
-}

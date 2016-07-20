@@ -50,7 +50,7 @@ int main()
     assert(c == std::list<int>(a2, a2+2));
     assert(cp.count() == 4);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {3, 4};

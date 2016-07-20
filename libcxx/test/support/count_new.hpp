@@ -14,15 +14,23 @@
 # include <cassert>
 # include <new>
 
-#ifndef __has_feature
-#  define __has_feature(x) 0
-#endif
+#include "test_macros.h"
 
-#if  __has_feature(address_sanitizer) \
-  || __has_feature(memory_sanitizer) \
-  || __has_feature(thread_sanitizer)
+#if defined(TEST_HAS_SANITIZERS)
 #define DISABLE_NEW_COUNT
 #endif
+
+namespace detail
+{
+   TEST_NORETURN
+   inline void throw_bad_alloc_helper() {
+#ifndef TEST_HAS_NO_EXCEPTIONS
+       throw std::bad_alloc();
+#else
+       std::abort();
+#endif
+   }
+}
 
 class MemCounter
 {
@@ -43,6 +51,11 @@ public:
     // code doesn't perform any allocations.
     bool disable_allocations;
 
+    // number of allocations to throw after. Default (unsigned)-1. If
+    // throw_after has the default value it will never be decremented.
+    static const unsigned never_throw_value = static_cast<unsigned>(-1);
+    unsigned throw_after;
+
     int outstanding_new;
     int new_called;
     int delete_called;
@@ -58,6 +71,12 @@ public:
     {
         assert(disable_allocations == false);
         assert(s);
+        if (throw_after == 0) {
+            throw_after = never_throw_value;
+            detail::throw_bad_alloc_helper();
+        } else if (throw_after != never_throw_value) {
+            --throw_after;
+        }
         ++new_called;
         ++outstanding_new;
         last_new_size = s;
@@ -74,6 +93,12 @@ public:
     {
         assert(disable_allocations == false);
         assert(s);
+        if (throw_after == 0) {
+            throw_after = never_throw_value;
+            detail::throw_bad_alloc_helper();
+        } else {
+            // don't decrement throw_after here. newCalled will end up doing that.
+        }
         ++outstanding_array_new;
         ++new_array_called;
         last_new_array_size = s;
@@ -96,9 +121,11 @@ public:
         disable_allocations = false;
     }
 
+
     void reset()
     {
         disable_allocations = false;
+        throw_after = never_throw_value;
 
         outstanding_new = 0;
         new_called = 0;
@@ -130,6 +157,11 @@ public:
     bool checkNewCalledNotEq(int n) const
     {
         return disable_checking || n != new_called;
+    }
+
+    bool checkNewCalledGreaterThan(int n) const
+    {
+        return disable_checking || new_called > n;
     }
 
     bool checkDeleteCalledEq(int n) const
@@ -205,7 +237,10 @@ MemCounter globalMemCounter((MemCounter::MemCounterCtorArg_()));
 void* operator new(std::size_t s) throw(std::bad_alloc)
 {
     globalMemCounter.newCalled(s);
-    return std::malloc(s);
+    void* ret = std::malloc(s);
+    if (ret == nullptr)
+        detail::throw_bad_alloc_helper();
+    return ret;
 }
 
 void  operator delete(void* p) throw()
@@ -253,6 +288,35 @@ private:
 
     DisableAllocationGuard(DisableAllocationGuard const&);
     DisableAllocationGuard& operator=(DisableAllocationGuard const&);
+};
+
+
+struct RequireAllocationGuard {
+    explicit RequireAllocationGuard(std::size_t RequireAtLeast = 1)
+            : m_req_alloc(RequireAtLeast),
+              m_new_count_on_init(globalMemCounter.new_called),
+              m_outstanding_new_on_init(globalMemCounter.outstanding_new),
+              m_exactly(false)
+    {
+    }
+
+    void requireAtLeast(std::size_t N) { m_req_alloc = N; m_exactly = false; }
+    void requireExactly(std::size_t N) { m_req_alloc = N; m_exactly = true; }
+
+    ~RequireAllocationGuard() {
+        assert(globalMemCounter.checkOutstandingNewEq(m_outstanding_new_on_init));
+        std::size_t Expect = m_new_count_on_init + m_req_alloc;
+        assert(globalMemCounter.checkNewCalledEq(Expect) ||
+               (!m_exactly && globalMemCounter.checkNewCalledGreaterThan(Expect)));
+    }
+
+private:
+    std::size_t m_req_alloc;
+    const std::size_t m_new_count_on_init;
+    const std::size_t m_outstanding_new_on_init;
+    bool m_exactly;
+    RequireAllocationGuard(RequireAllocationGuard const&);
+    RequireAllocationGuard& operator=(RequireAllocationGuard const&);
 };
 
 #endif /* COUNT_NEW_HPP */

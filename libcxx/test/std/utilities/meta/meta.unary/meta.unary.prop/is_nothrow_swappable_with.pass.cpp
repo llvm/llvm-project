@@ -68,14 +68,14 @@ int main()
     }
     {
         // test we guard against cv void inputs as required.
-        static_assert(!std::is_nothrow_swappable_with_v<void, int>);
-        static_assert(!std::is_nothrow_swappable_with_v<int, void>);
-        static_assert(!std::is_nothrow_swappable_with_v<const void, const volatile void>);
+        static_assert(!std::is_nothrow_swappable_with_v<void, int>, "");
+        static_assert(!std::is_nothrow_swappable_with_v<int, void>, "");
+        static_assert(!std::is_nothrow_swappable_with_v<const void, const volatile void>, "");
 
     }
     {
-        // test for presense of is_nothrow_swappable_with_v
-        static_assert(std::is_nothrow_swappable_with_v<int&, int&>);
-        static_assert(!std::is_nothrow_swappable_with_v<int&&, int&&>);
+        // test for presence of is_nothrow_swappable_with_v
+        static_assert(std::is_nothrow_swappable_with_v<int&, int&>, "");
+        static_assert(!std::is_nothrow_swappable_with_v<int&&, int&&>, "");
     }
 }

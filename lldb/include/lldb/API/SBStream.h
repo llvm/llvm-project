@@ -76,6 +76,7 @@ protected:
     friend class SBInstruction;
     friend class SBInstructionList;
     friend class SBLineEntry;
+    friend class SBMemoryRegionInfo;
     friend class SBModule;
     friend class SBModuleSpec;
     friend class SBModuleSpecList;

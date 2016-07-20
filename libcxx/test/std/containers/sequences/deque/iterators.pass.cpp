@@ -33,7 +33,7 @@ int main()
     j = c.cbegin();
     assert(i == j);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::deque<int, min_allocator<int>> C;
     C c;

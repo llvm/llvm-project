@@ -47,7 +47,7 @@ int main()
         assert(*r == 3);
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::multiset<MoveOnly, std::less<MoveOnly>, min_allocator<MoveOnly>> M;
         typedef M::iterator R;

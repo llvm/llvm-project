@@ -71,7 +71,7 @@ class CallInst;
 class Instruction;
 class Value;
 class IntrinsicInst;
-}
+} // namespace llvm
 
 namespace polly {
 typedef std::set<const SCEV *> ParamSetType;
@@ -590,6 +590,6 @@ public:
 namespace llvm {
 class PassRegistry;
 void initializeScopDetectionPass(llvm::PassRegistry &);
-}
+} // namespace llvm
 
 #endif

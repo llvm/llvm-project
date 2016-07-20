@@ -57,7 +57,7 @@ int main()
     assert(m.get_allocator() == A(5));
     }
 #endif  // _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef test_compare<std::less<int> > Cmp;
     typedef min_allocator<std::pair<const int, double> > A;

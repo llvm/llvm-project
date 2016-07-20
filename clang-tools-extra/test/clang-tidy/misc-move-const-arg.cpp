@@ -71,3 +71,90 @@ void f11() {
   f10<int>(1);
   f10<double>(1);
 }
+
+class NoMoveSemantics {
+ public:
+  NoMoveSemantics();
+  NoMoveSemantics(const NoMoveSemantics &);
+
+  NoMoveSemantics &operator=(const NoMoveSemantics &);
+};
+
+void callByConstRef(const NoMoveSemantics &);
+void callByConstRef(int i, const NoMoveSemantics &);
+
+void moveToConstReferencePositives() {
+  NoMoveSemantics obj;
+
+  // Basic case.
+  callByConstRef(std::move(obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: passing result of std::move() as
+  // CHECK-FIXES: callByConstRef(obj);
+
+  // Also works for second argument.
+  callByConstRef(1, std::move(obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:21: warning: passing result of std::move() as
+  // CHECK-FIXES: callByConstRef(1, obj);
+
+  // Works if std::move() applied to a temporary.
+  callByConstRef(std::move(NoMoveSemantics()));
+  // CHECK-MESSAGES: :[[@LINE-1]]:18: warning: passing result of std::move() as
+  // CHECK-FIXES: callByConstRef(NoMoveSemantics());
+
+  // Works if calling a copy constructor.
+  NoMoveSemantics other(std::move(obj));
+  // CHECK-MESSAGES: :[[@LINE-1]]:25: warning: passing result of std::move() as
+  // CHECK-FIXES: NoMoveSemantics other(obj);
+
+  // Works if calling assignment operator.
+  other = std::move(obj);
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: passing result of std::move() as
+  // CHECK-FIXES: other = obj;
+}
+
+class MoveSemantics {
+ public:
+  MoveSemantics();
+  MoveSemantics(MoveSemantics &&);
+
+  MoveSemantics &operator=(MoveSemantics &&);
+};
+
+void callByValue(MoveSemantics);
+
+void callByRValueRef(MoveSemantics &&);
+
+template <class T>
+void templateFunction(T obj) {
+  T other = std::move(obj);
+}
+
+#define M3(T, obj)            \
+  do {                        \
+    T other = std::move(obj); \
+  } while (true)
+
+#define CALL(func) (func)()
+
+void moveToConstReferenceNegatives() {
+  // No warning when actual move takes place.
+  MoveSemantics move_semantics;
+  callByValue(std::move(move_semantics));
+  callByRValueRef(std::move(move_semantics));
+  MoveSemantics other(std::move(move_semantics));
+  other = std::move(move_semantics);
+
+  // No warning if std::move() not used.
+  NoMoveSemantics no_move_semantics;
+  callByConstRef(no_move_semantics);
+
+  // No warning if instantiating a template.
+  templateFunction(no_move_semantics);
+
+  // No warning inside of macro expansions.
+  M3(NoMoveSemantics, no_move_semantics);
+
+  // No warning inside of macro expansion, even if the macro expansion is inside
+  // a lambda that is, in turn, an argument to a macro.
+  CALL([no_move_semantics] { M3(NoMoveSemantics, no_move_semantics); });
+}

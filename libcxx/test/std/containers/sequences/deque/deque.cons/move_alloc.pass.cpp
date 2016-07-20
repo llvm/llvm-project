@@ -66,7 +66,7 @@ int main()
         assert(c3.get_allocator() == A(3));
         assert(c1.size() != 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         int ab[] = {3, 4, 2, 8, 0, 1, 44, 34, 45, 96, 80, 1, 13, 31, 45};
         int* an = ab + sizeof(ab)/sizeof(ab[0]);

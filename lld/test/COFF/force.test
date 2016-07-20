@@ -6,7 +6,7 @@
 
 # CHECK: .obj: undefined symbol: foo
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

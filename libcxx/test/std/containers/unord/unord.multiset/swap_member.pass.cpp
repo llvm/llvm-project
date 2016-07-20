@@ -386,7 +386,7 @@ int main()
         assert(std::distance(c2.cbegin(), c2.cend()) == c2.size());
         assert(c2.max_load_factor() == 1);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef test_hash<std::hash<int> > Hash;
         typedef test_compare<std::equal_to<int> > Compare;

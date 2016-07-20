@@ -19,17 +19,19 @@ namespace tidy {
 namespace misc {
 
 // A function that helps to tell whether a TargetDecl in a UsingDecl will be
-// checked. Only variable, function, function template, class template and class
-// are considered.
+// checked. Only variable, function, function template, class template, class,
+// enum declaration and enum constant declaration are considered.
 static bool ShouldCheckDecl(const Decl *TargetDecl) {
   return isa<RecordDecl>(TargetDecl) || isa<ClassTemplateDecl>(TargetDecl) ||
          isa<FunctionDecl>(TargetDecl) || isa<VarDecl>(TargetDecl) ||
-         isa<FunctionTemplateDecl>(TargetDecl);
+         isa<FunctionTemplateDecl>(TargetDecl) || isa<EnumDecl>(TargetDecl) ||
+         isa<EnumConstantDecl>(TargetDecl);
 }
 
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
   auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
+  Finder->addMatcher(loc(enumType(DeclMatcher)), this);
   Finder->addMatcher(loc(recordType(DeclMatcher)), this);
   Finder->addMatcher(loc(templateSpecializationType(DeclMatcher)), this);
   Finder->addMatcher(declRefExpr().bind("used"), this);
@@ -91,6 +93,10 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
         removeFromFoundDecls(FD);
     } else if (const auto *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       removeFromFoundDecls(VD);
+    } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl())) {
+      removeFromFoundDecls(ECD);
+      if (const auto *ET = ECD->getType()->getAs<EnumType>())
+        removeFromFoundDecls(ET->getDecl());
     }
   }
   // Check the uninstantiated template function usage.

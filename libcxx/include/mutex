@@ -617,7 +617,7 @@ call_once(once_flag& __flag, const _Callable& __func)
 template <>
 class _LIBCPP_TYPE_VIS_ONLY lock_guard<> {
 public:
-    explicit lock_guard() = default;
+    explicit lock_guard() {}
     ~lock_guard() = default;
 
     _LIBCPP_INLINE_VISIBILITY

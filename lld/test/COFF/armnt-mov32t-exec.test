@@ -19,7 +19,7 @@
 # AFTER:     1008: c0 f2 40 00   movt r0, #64
 # AFTER:     100c: 70 47         bx lr
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_ARMNT
   Characteristics: [  ]

@@ -21,7 +21,7 @@
 
 #include "min_allocator.h"
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
 template <typename Unordered>
 bool only_deletions ( const Unordered &whole, const Unordered &part ) {
     typename Unordered::const_iterator w = whole.begin();
@@ -95,7 +95,7 @@ int main()
         assert(c.erase(3) == 0);
         assert(c.size() == 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multiset<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;

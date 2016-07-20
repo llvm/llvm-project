@@ -34,7 +34,7 @@ int main()
     test(S("abcdefghij", A(2)), A(2));
     test(S("abcdefghijklmnopqrst", A(3)), A(3));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;

@@ -907,6 +907,57 @@ error:
 	return NULL;
 }
 
+/* Return the "isolate" option associated to "band", assuming
+ * it at appears at schedule depth "depth".
+ *
+ * The isolate option is of the form
+ *
+ *	isolate[[flattened outer bands] -> band]
+ */
+__isl_give isl_set *isl_schedule_band_get_ast_isolate_option(
+	__isl_keep isl_schedule_band *band, int depth)
+{
+	isl_space *space;
+	isl_set *isolate;
+
+	if (!band)
+		return NULL;
+
+	space = isl_schedule_band_get_space(band);
+	space = isl_space_from_range(space);
+	space = isl_space_add_dims(space, isl_dim_in, depth);
+	space = isl_space_wrap(space);
+	space = isl_space_set_tuple_name(space, isl_dim_set, "isolate");
+
+	isolate = isl_union_set_extract_set(band->ast_build_options, space);
+
+	return isolate;
+}
+
+/* Replace the option "drop" in the AST build options by "add".
+ * That is, remove "drop" and add "add".
+ */
+__isl_give isl_schedule_band *isl_schedule_band_replace_ast_build_option(
+	__isl_take isl_schedule_band *band, __isl_take isl_set *drop,
+	__isl_take isl_set *add)
+{
+	isl_union_set *options;
+
+	band = isl_schedule_band_cow(band);
+	if (!band)
+		return NULL;
+
+	options = band->ast_build_options;
+	options = isl_union_set_subtract(options, isl_union_set_from_set(drop));
+	options = isl_union_set_union(options, isl_union_set_from_set(add));
+	band->ast_build_options = options;
+
+	if (!band->ast_build_options)
+		return isl_schedule_band_free(band);
+
+	return band;
+}
+
 /* Multiply the partial schedule of "band" with the factors in "mv".
  * Replace the result by its greatest integer part to ensure
  * that the schedule is always integral.
@@ -1117,8 +1168,7 @@ error:
  * We apply the transformation even if "n" is zero to ensure consistent
  * behavior with respect to changes in the schedule space.
  *
- * The loop AST generation types for the isolated part become
- * meaningless after dropping dimensions, so we remove them.
+ * The caller is responsible for updating the isolate option.
  */
 __isl_give isl_schedule_band *isl_schedule_band_drop(
 	__isl_take isl_schedule_band *band, int pos, int n)
@@ -1144,8 +1194,10 @@ __isl_give isl_schedule_band *isl_schedule_band_drop(
 	if (band->loop_type)
 		for (i = pos + n; i < band->n; ++i)
 			band->loop_type[i - n] = band->loop_type[i];
-	free(band->isolate_loop_type);
-	band->isolate_loop_type = NULL;
+	if (band->isolate_loop_type)
+		for (i = pos + n; i < band->n; ++i)
+			band->isolate_loop_type[i - n] =
+						    band->isolate_loop_type[i];
 
 	band->n -= n;
 

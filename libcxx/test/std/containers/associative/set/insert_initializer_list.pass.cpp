@@ -38,7 +38,7 @@ int main()
     assert(*++i == V(8));
     assert(*++i == V(10));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::set<int, std::less<int>, min_allocator<int>> C;
     typedef C::value_type V;

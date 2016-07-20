@@ -45,7 +45,7 @@ int main()
     test<int, std::allocator<int> >(4096, 1165);
     test<int, std::allocator<int> >(4097, 157);
     test<int, stack_allocator<int, 4096> >(4095, 90);
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test<int, min_allocator<int> >(4095, 90);
 #endif
 }

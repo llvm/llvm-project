@@ -16,13 +16,13 @@
 //     size_t operator()(T val) const;
 // };
 
-// Not very portable
-
 #include <functional>
 #include <cassert>
 #include <type_traits>
 #include <cstddef>
 #include <limits>
+
+#include "test_macros.h"
 
 template <class T>
 void
@@ -37,7 +37,11 @@ test()
     {
         T t(i);
         if (sizeof(T) <= sizeof(std::size_t))
-            assert(h(t) == t);
+        {
+            const std::size_t result = h(t);
+            LIBCPP_ASSERT(result == t);
+            ((void)result); // Prevent unused warning
+        }
     }
 }
 

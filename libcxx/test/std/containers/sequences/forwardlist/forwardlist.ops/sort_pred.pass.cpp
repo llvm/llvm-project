@@ -41,7 +41,7 @@ int main()
 {
     for (int i = 0; i < 40; ++i)
         test<std::forward_list<int> >(i);
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     for (int i = 0; i < 40; ++i)
         test<std::forward_list<int, min_allocator<int>> >(i);
 #endif

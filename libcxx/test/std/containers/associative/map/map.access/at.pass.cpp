@@ -86,7 +86,7 @@ int main()
         assert(m.at(8) == 8.5);
         assert(m.size() == 7);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<const int, double> V;
         V ar[] =

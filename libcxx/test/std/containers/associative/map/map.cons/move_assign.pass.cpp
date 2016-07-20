@@ -144,7 +144,7 @@ int main()
         assert(m3.key_comp() == C(5));
         assert(m1.empty());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<MoveOnly, MoveOnly> V;
         typedef std::pair<const MoveOnly, MoveOnly> VC;

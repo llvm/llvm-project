@@ -41,7 +41,7 @@ int main()
     assert(*next(m.begin()) == V(2, 1));
     assert(*next(m.begin(), 2) == V(3, 1));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     std::map<int, double, std::less<int>, min_allocator<V>> m =

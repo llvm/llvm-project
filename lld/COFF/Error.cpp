@@ -10,20 +10,23 @@
 #include "Error.h"
 
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace lld {
 namespace coff {
 
-void error(const Twine &Msg) {
+void fatal(const Twine &Msg) {
   llvm::errs() << Msg << "\n";
   exit(1);
 }
 
-void error(std::error_code EC, const Twine &Prefix) {
-  if (!EC)
-    return;
-  error(Prefix + ": " + EC.message());
+void fatal(std::error_code EC, const Twine &Msg) {
+  fatal(Msg + ": " + EC.message());
+}
+
+void fatal(llvm::Error &Err, const Twine &Msg) {
+  fatal(errorToErrorCode(std::move(Err)), Msg);
 }
 
 } // namespace coff

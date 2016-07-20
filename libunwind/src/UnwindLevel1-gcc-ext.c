@@ -180,7 +180,7 @@ _Unwind_Backtrace(_Unwind_Trace_Fn callback, void *ref) {
 }
 
 
-/// Find dwarf unwind info for an address 'pc' in some function.
+/// Find DWARF unwind info for an address 'pc' in some function.
 _LIBUNWIND_EXPORT const void *_Unwind_Find_FDE(const void *pc,
                                                struct dwarf_eh_bases *bases) {
   // This is slow, but works.

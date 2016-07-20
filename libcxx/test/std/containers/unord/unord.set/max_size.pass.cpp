@@ -26,7 +26,7 @@ int main()
         std::unordered_set<int> u;
         assert(u.max_size() > 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::unordered_set<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> u;

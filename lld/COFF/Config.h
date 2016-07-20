@@ -106,6 +106,9 @@ struct Configuration {
   // Used for /merge:from=to (e.g. /merge:.rdata=.text)
   std::map<StringRef, StringRef> Merge;
 
+  // Used for /section=.name,{DEKPRSW} to set section attributes.
+  std::map<StringRef, uint32_t> Section;
+
   // Options for manifest files.
   ManifestKind Manifest = SideBySide;
   int ManifestID = 1;

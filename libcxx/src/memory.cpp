@@ -124,7 +124,7 @@ __shared_weak_count::__get_deleter(const type_info&) const _NOEXCEPT
 
 #endif  // _LIBCPP_NO_RTTI
 
-#if defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_NO_THREADS)
+#if !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 
 static const std::size_t __sp_mut_count = 16;
 static __libcpp_mutex_t mut_back_imp[__sp_mut_count] =
@@ -177,7 +177,7 @@ __get_sp_mut(const void* p)
     return muts[hash<const void*>()(p) & (__sp_mut_count-1)];
 }
 
-#endif // defined(_LIBCPP_HAS_C_ATOMIC_IMP) && !defined(_LIBCPP_HAS_NO_THREADS)
+#endif // !defined(_LIBCPP_HAS_NO_ATOMIC_HEADER)
 
 void
 declare_reachable(void*)

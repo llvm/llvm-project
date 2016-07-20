@@ -116,6 +116,14 @@ private:
     lldb::UnwindAssemblySP
     GetUnwindAssemblyProfiler (Target& target);
 
+    // Do a simplistic comparison for the register restore rule for getting 
+    // the caller's pc value on two UnwindPlans -- returns LazyBoolYes if
+    // they have the same unwind rule for the pc, LazyBoolNo if they do not
+    // have the same unwind rule for the pc, and LazyBoolCalculate if it was
+    // unable to determine this for some reason.
+    lldb_private::LazyBool 
+    CompareUnwindPlansForIdenticalInitialPCLocation (Thread& thread, const lldb::UnwindPlanSP &a, const lldb::UnwindPlanSP &b);
+
     UnwindTable& m_unwind_table;
     AddressRange m_range;
 

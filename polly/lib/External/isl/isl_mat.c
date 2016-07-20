@@ -1725,6 +1725,25 @@ void isl_mat_gcd(__isl_keep isl_mat *mat, isl_int *gcd)
 	isl_int_clear(g);
 }
 
+/* Return the result of scaling "mat" by a factor of "m".
+ */
+__isl_give isl_mat *isl_mat_scale(__isl_take isl_mat *mat, isl_int m)
+{
+	int i;
+
+	if (isl_int_is_one(m))
+		return mat;
+
+	mat = isl_mat_cow(mat);
+	if (!mat)
+		return NULL;
+
+	for (i = 0; i < mat->n_row; ++i)
+		isl_seq_scale(mat->row[i], mat->row[i], m, mat->n_col);
+
+	return mat;
+}
+
 __isl_give isl_mat *isl_mat_scale_down(__isl_take isl_mat *mat, isl_int m)
 {
 	int i;

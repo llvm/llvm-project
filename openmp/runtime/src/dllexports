@@ -186,19 +186,15 @@
         __kmp_omp_debug_struct_info             DATA
     %endif
 
-        # Symbols for MS mutual detection:
-        _You_must_link_with_exactly_one_OpenMP_library    DATA
-        _You_must_link_with_Intel_OpenMP_library          DATA
-        %ifdef msvc_compat
-            _You_must_link_with_Microsoft_OpenMP_library  DATA
-        %endif
+    # Symbols for MS mutual detection:
+    _You_must_link_with_exactly_one_OpenMP_library    DATA
+    _You_must_link_with_Intel_OpenMP_library          DATA
+    %ifdef msvc_compat
+        _You_must_link_with_Microsoft_OpenMP_library  DATA
+    %endif
 
-        __kmp_wait_32
-        __kmp_wait_64
-        __kmp_wait_oncore
-        __kmp_release_32
-        __kmp_release_64
-        __kmp_release_oncore
+    __kmp_wait_64
+    __kmp_release_64
 
 
 #    VT_getthid                              1
@@ -384,11 +380,11 @@ kmpc_set_defaults                           224
     %endif # OMP_40
 %endif
 
-# OpenMP 4.1 entry points
+# OpenMP 4.5 entry points
 %ifndef stub
-    %ifdef OMP_41
-	__kmpc_proxy_task_completed	    259
-	__kmpc_proxy_task_completed_ooo	    260
+    %ifdef OMP_45
+        __kmpc_proxy_task_completed         259
+        __kmpc_proxy_task_completed_ooo     260
         __kmpc_doacross_init                261
         __kmpc_doacross_wait                262
         __kmpc_doacross_post                263
@@ -505,9 +501,9 @@ kmp_set_warnings_off                        780
     %endif
 %endif # OMP_40
 
-# OpenMP 41
+# OpenMP 45
 
-%ifdef OMP_41
+%ifdef OMP_45
     omp_init_lock_with_hint                 870
     omp_init_nest_lock_with_hint            871
     omp_get_max_task_priority               872
@@ -527,7 +523,7 @@ kmp_set_warnings_off                        780
         omp_target_associate_ptr            888
         omp_target_disassociate_ptr         889
     %endif
-%endif # OMP_41
+%endif # OMP_45
 
 kmp_set_disp_num_buffers                    890
 

@@ -16,10 +16,12 @@ add_lld_library(lldELF
   OutputSections.cpp
   Relocations.cpp
   ScriptParser.cpp
+  Strings.cpp
   SymbolListFile.cpp
   SymbolTable.cpp
   Symbols.cpp
   Target.cpp
+  Thunks.cpp
   Writer.cpp
 
   LINK_COMPONENTS
@@ -31,6 +33,7 @@ add_lld_library(lldELF
   Core
   IPO
   Linker
+  LTO
   Object
   Option
   Passes

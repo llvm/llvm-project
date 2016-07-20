@@ -24,7 +24,7 @@ namespace llvm {
 class Value;
 class Pass;
 class BasicBlock;
-}
+} // namespace llvm
 
 namespace polly {
 using namespace llvm;

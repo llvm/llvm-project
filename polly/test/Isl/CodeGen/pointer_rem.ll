@@ -1,5 +1,5 @@
-; RUN: opt %loadPolly -polly-process-unprofitable -polly-code-generator=isl -polly-scops -polly-ast -analyze -S < %s | FileCheck %s --check-prefix=AST
-; RUN: opt %loadPolly -polly-process-unprofitable -polly-code-generator=isl -polly-scops  -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-scops -polly-ast -analyze -S < %s | FileCheck %s --check-prefix=AST
+; RUN: opt %loadPolly -polly-process-unprofitable -polly-scops -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 
 target datalayout = "e-m:e-i64:64-i128:128-n8:16:32:64-S128"
 target triple = "aarch64--linux-gnu"

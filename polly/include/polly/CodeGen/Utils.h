@@ -17,7 +17,7 @@ namespace llvm {
 class Pass;
 class Value;
 class BasicBlock;
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -57,5 +57,5 @@ class Scop;
 /// @return The 'StartBlock' to which new code can be added.
 llvm::BasicBlock *executeScopConditionally(Scop &S, llvm::Pass *P,
                                            llvm::Value *RTC);
-}
+} // namespace polly
 #endif

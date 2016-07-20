@@ -21,7 +21,7 @@
 namespace llvm {
 class DataLayout;
 class ScalarEvolution;
-}
+} // namespace llvm
 
 struct isl_id;
 
@@ -36,7 +36,7 @@ public:
   }
   enum { NumLowBitsAvailable = 0 };
 };
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -227,6 +227,6 @@ private:
   llvm::Value *createMul(llvm::Value *LHS, llvm::Value *RHS,
                          const llvm::Twine &Name = "");
 };
-}
+} // namespace polly
 
 #endif

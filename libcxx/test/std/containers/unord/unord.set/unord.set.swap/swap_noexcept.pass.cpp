@@ -63,6 +63,7 @@ struct some_hash
     typedef T value_type;
     some_hash() {}
     some_hash(const some_hash&);
+    std::size_t operator()(const T&) const { return 0; }
 };
 
 template <class T>
@@ -71,6 +72,7 @@ struct some_hash2
     typedef T value_type;
     some_hash2() {}
     some_hash2(const some_hash2&);
+    std::size_t operator()(const T&) const { return 0; }
 };
 
 #if TEST_STD_VER >= 14

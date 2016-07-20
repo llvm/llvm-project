@@ -12,7 +12,6 @@
 
 // C Includes
 // C++ Includes
-#include <mutex>
 #include <vector>
 #include <mutex>
 

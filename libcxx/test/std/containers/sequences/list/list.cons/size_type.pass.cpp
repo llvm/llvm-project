@@ -80,7 +80,7 @@ int main()
         assert(std::distance(l.begin(), l.end()) == 3);
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::list<int, min_allocator<int>> l(3);
         assert(l.size() == 3);

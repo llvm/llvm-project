@@ -32,10 +32,10 @@
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
+#include "clang/Tooling/ReplacementsYaml.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Host.h"
-#include <cstdlib>
 #include <string>
 
 using namespace llvm;
@@ -52,6 +52,11 @@ SymbolOffset(
     "offset",
     cl::desc("Locates the symbol by offset as opposed to <line>:<column>."),
     cl::cat(ClangRenameCategory));
+static cl::opt<std::string>
+OldName(
+    "old-name",
+    cl::desc("The fully qualified name of the symbol, if -offset is not used."),
+    cl::cat(ClangRenameCategory));
 static cl::opt<bool>
 Inplace(
     "i",
@@ -67,11 +72,17 @@ PrintLocations(
     "pl",
     cl::desc("Print the locations affected by renaming to stderr."),
     cl::cat(ClangRenameCategory));
+static cl::opt<std::string>
+ExportFixes(
+    "export-fixes",
+    cl::desc("YAML file to store suggested fixes in."),
+    cl::value_desc("filename"),
+    cl::cat(ClangRenameCategory));
 
 #define CLANG_RENAME_VERSION "0.0.1"
 
 static void PrintVersion() {
-  outs() << "clang-rename version " << CLANG_RENAME_VERSION << "\n";
+  outs() << "clang-rename version " << CLANG_RENAME_VERSION << '\n';
 }
 
 using namespace clang;
@@ -89,37 +100,58 @@ int main(int argc, const char **argv) {
 
   if (NewName.empty()) {
     errs() << "clang-rename: no new name provided.\n\n";
-    cl::PrintHelpMessage();
     exit(1);
   }
 
   // Get the USRs.
   auto Files = OP.getSourcePathList();
   tooling::RefactoringTool Tool(OP.getCompilations(), Files);
-  rename::USRFindingAction USRAction(SymbolOffset);
+  rename::USRFindingAction USRAction(SymbolOffset, OldName);
 
   // Find the USRs.
   Tool.run(tooling::newFrontendActionFactory(&USRAction).get());
   const auto &USRs = USRAction.getUSRs();
   const auto &PrevName = USRAction.getUSRSpelling();
 
-  if (PrevName.empty())
+  if (PrevName.empty()) {
     // An error should have already been printed.
     exit(1);
+  }
 
-  if (PrintName)
-    errs() << "clang-rename: found name: " << PrevName << "\n";
+  if (PrintName) {
+    errs() << "clang-rename: found name: " << PrevName << '\n';
+  }
 
   // Perform the renaming.
   rename::RenamingAction RenameAction(NewName, PrevName, USRs,
                                       Tool.getReplacements(), PrintLocations);
   auto Factory = tooling::newFrontendActionFactory(&RenameAction);
-  int res;
+  int ExitCode;
 
   if (Inplace) {
-    res = Tool.runAndSave(Factory.get());
+    ExitCode = Tool.runAndSave(Factory.get());
   } else {
-    res = Tool.run(Factory.get());
+    ExitCode = Tool.run(Factory.get());
+
+    if (!ExportFixes.empty()) {
+      std::error_code EC;
+      llvm::raw_fd_ostream OS(ExportFixes, EC, llvm::sys::fs::F_None);
+      if (EC) {
+        llvm::errs() << "Error opening output file: " << EC.message() << '\n';
+        exit(1);
+      }
+
+      // Export replacements.
+      tooling::TranslationUnitReplacements TUR;
+      const tooling::Replacements &Replacements = Tool.getReplacements();
+      TUR.Replacements.insert(TUR.Replacements.end(), Replacements.begin(),
+                              Replacements.end());
+
+      yaml::Output YAML(OS);
+      YAML << TUR;
+      OS.close();
+      exit(0);
+    }
 
     // Write every file to stdout. Right now we just barf the files without any
     // indication of which files start where, other than that we print the files
@@ -143,5 +175,5 @@ int main(int argc, const char **argv) {
     }
   }
 
-  exit(res);
+  exit(ExitCode);
 }

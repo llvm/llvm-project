@@ -50,6 +50,6 @@ int main()
 {
     test_void<void>();
 
-//  LWG#2581
+//  LWG#2582
     static_assert(!std::is_void<incomplete_type>::value, "");
 }

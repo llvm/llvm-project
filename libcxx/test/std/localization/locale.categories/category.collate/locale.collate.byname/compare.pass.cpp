@@ -53,23 +53,6 @@ int main()
         }
     }
     {
-        std::locale l("");
-        {
-            const std::collate<char>& f = std::use_facet<std::collate<char> >(l);
-            std::string s2("aaaaaaA");
-            std::string s3("BaaaaaA");
-            assert(f.compare(s2.data(), s2.data() + s2.size(),
-                             s3.data(), s3.data() + s3.size()) == 1);
-        }
-        {
-            const std::collate<wchar_t>& f = std::use_facet<std::collate<wchar_t> >(l);
-            std::wstring s2(L"aaaaaaA");
-            std::wstring s3(L"BaaaaaA");
-            assert(f.compare(s2.data(), s2.data() + s2.size(),
-                             s3.data(), s3.data() + s3.size()) == 1);
-        }
-    }
-    {
         std::locale l("C");
         {
             const std::collate<char>& f = std::use_facet<std::collate<char> >(l);

@@ -19,6 +19,8 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
+using namespace llvm::ELF;
+
 using namespace lld;
 using namespace lld::elf;
 
@@ -26,36 +28,26 @@ using namespace lld::elf;
 //
 //  { symbol1; symbol2; [...]; symbolN };
 //
-// Multiple groups can be defined in the same file and they are merged
-// in only one definition.
+// Multiple groups can be defined in the same file, and they are merged
+// into a single group.
 
 class DynamicListParser final : public ScriptParserBase {
 public:
   DynamicListParser(StringRef S) : ScriptParserBase(S) {}
-
   void run();
-
-private:
-  void readGroup();
 };
 
-// Parse the default group definition using C language symbol name.
-void DynamicListParser::readGroup() {
-  expect("{");
-  while (!Error) {
-    Config->DynamicList.push_back(next());
-    expect(";");
-    if (peek() == "}") {
-      next();
-      break;
-    }
-  }
-  expect(";");
-}
-
 void DynamicListParser::run() {
-  while (!atEOF())
-    readGroup();
+  while (!atEOF()) {
+    expect("{");
+    while (!Error) {
+      Config->DynamicList.push_back(next());
+      expect(";");
+      if (skip("}"))
+        break;
+    }
+    expect(";");
+  }
 }
 
 void elf::parseDynamicList(MemoryBufferRef MB) {
@@ -75,26 +67,100 @@ public:
   VersionScriptParser(StringRef S) : ScriptParserBase(S) {}
 
   void run();
+
+private:
+  void parseExtern(std::vector<SymbolVersion> *Globals);
+  void parseVersion(StringRef VerStr);
+  void parseGlobal(StringRef VerStr);
+  void parseLocal();
 };
 
-void VersionScriptParser::run() {
-  expect("{");
-  if (peek() == "global:") {
+size_t elf::defineSymbolVersion(StringRef VerStr) {
+  // Identifiers start at 2 because 0 and 1 are reserved
+  // for VER_NDX_LOCAL and VER_NDX_GLOBAL constants.
+  size_t VersionId = Config->VersionDefinitions.size() + 2;
+  Config->VersionDefinitions.push_back({VerStr, VersionId});
+  return VersionId;
+}
+
+void VersionScriptParser::parseVersion(StringRef VerStr) {
+  defineSymbolVersion(VerStr);
+
+  if (skip("global:") || peek() != "local:")
+    parseGlobal(VerStr);
+  if (skip("local:"))
+    parseLocal();
+  expect("}");
+
+  // Each version may have a parent version. For example, "Ver2" defined as
+  // "Ver2 { global: foo; local: *; } Ver1;" has "Ver1" as a parent. This
+  // version hierarchy is, probably against your instinct, purely for human; the
+  // runtime doesn't care about them at all. In LLD, we simply skip the token.
+  if (!VerStr.empty() && peek() != ";")
     next();
-    while (!Error) {
-      Config->VersionScriptGlobals.push_back(next());
-      expect(";");
-      if (peek() == "local:")
-        break;
-    }
-  }
-  expect("local:");
+  expect(";");
+}
+
+void VersionScriptParser::parseLocal() {
+  Config->DefaultSymbolVersion = VER_NDX_LOCAL;
   expect("*");
   expect(";");
+}
+
+void VersionScriptParser::parseExtern(std::vector<SymbolVersion> *Globals) {
+  expect("C++");
+  expect("{");
+
+  for (;;) {
+    if (peek() == "}" || Error)
+      break;
+    Globals->push_back({next(), true});
+    expect(";");
+  }
+
   expect("}");
   expect(";");
-  if (!atEOF())
-    setError("expected EOF");
+}
+
+void VersionScriptParser::parseGlobal(StringRef VerStr) {
+  std::vector<SymbolVersion> *Globals;
+  if (VerStr.empty())
+    Globals = &Config->VersionScriptGlobals;
+  else
+    Globals = &Config->VersionDefinitions.back().Globals;
+
+  for (;;) {
+    if (skip("extern"))
+      parseExtern(Globals);
+
+    StringRef Cur = peek();
+    if (Cur == "}" || Cur == "local:" || Error)
+      return;
+    next();
+    Globals->push_back({Cur, false});
+    expect(";");
+  }
+}
+
+void VersionScriptParser::run() {
+  StringRef Msg = "anonymous version definition is used in "
+                  "combination with other version definitions";
+  if (skip("{")) {
+    parseVersion("");
+    if (!atEOF())
+      setError(Msg);
+    return;
+  }
+
+  while (!atEOF() && !Error) {
+    StringRef VerStr = next();
+    if (VerStr == "{") {
+      setError(Msg);
+      return;
+    }
+    expect("{");
+    parseVersion(VerStr);
+  }
 }
 
 void elf::parseVersionScript(MemoryBufferRef MB) {

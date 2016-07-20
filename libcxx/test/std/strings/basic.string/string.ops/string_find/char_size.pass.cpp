@@ -65,7 +65,7 @@ int main()
     test(S("abcdeabcde"), 'c', 2);
     test(S("abcdeabcdeabcdeabcde"), 'c', 2);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
     test(S(""), 'c', 0, S::npos);

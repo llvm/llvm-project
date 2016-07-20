@@ -64,12 +64,12 @@ void test() {
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(&*end - oa == std::min(os, is));
+  assert(end.base() - oa == std::min(os, is));
   assert(std::equal(oa, oa + os, oa1));
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(&*end - oa == std::min(os, is));
+  assert(end.base() - oa == std::min(os, is));
   assert(std::equal(oa, oa + os, oa2));
 }
 
@@ -85,7 +85,7 @@ void test_empty_population() {
   SampleIterator end =
       std::experimental::sample(PopulationIterator(ia), PopulationIterator(ia),
                                 SampleIterator(oa), os, g);
-  assert(&*end == oa);
+  assert(end.base() == oa);
 }
 
 template <template<class> class PopulationIteratorType, class PopulationItem,
@@ -100,7 +100,7 @@ void test_empty_sample() {
   SampleIterator end =
       std::experimental::sample(PopulationIterator(ia), PopulationIterator(ia + is),
                                 SampleIterator(oa), 0, g);
-  assert(&*end == oa);
+  assert(end.base() == oa);
 }
 
 template <template<class> class PopulationIteratorType, class PopulationItem,
@@ -119,8 +119,8 @@ void test_small_population() {
   end = std::experimental::sample(PopulationIterator(ia),
                                   PopulationIterator(ia + is),
                                   SampleIterator(oa), os, g);
-  assert(&*end - oa == std::min(os, is));
-  assert(std::equal(oa, &*end, oa1));
+  assert(end.base() - oa == std::min(os, is));
+  assert(std::equal(oa, end.base(), oa1));
 }
 
 int main() {

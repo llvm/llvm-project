@@ -12,6 +12,7 @@
 
 #include "Config.h"
 #include "Relocations.h"
+#include "Thunks.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/TinyPtrVector.h"
@@ -19,6 +20,8 @@
 
 namespace lld {
 namespace elf {
+
+template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
 
 class SymbolBody;
 
@@ -31,6 +34,7 @@ template <class ELFT> class OutputSectionBase;
 // This corresponds to a section of an input file.
 template <class ELFT> class InputSectionBase {
 protected:
+  typedef typename ELFT::Chdr Elf_Chdr;
   typedef typename ELFT::Rel Elf_Rel;
   typedef typename ELFT::Rela Elf_Rela;
   typedef typename ELFT::Shdr Elf_Shdr;
@@ -41,6 +45,9 @@ protected:
   // The file this section is from.
   ObjectFile<ELFT> *File;
 
+  // If a section is compressed, this vector has uncompressed section data.
+  SmallVector<char, 0> Uncompressed;
+
 public:
   enum Kind { Regular, EHFrame, Merge, MipsReginfo, MipsOptions };
   Kind SectionKind;
@@ -50,7 +57,7 @@ public:
   InputSectionBase(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
                    Kind SectionKind);
   OutputSectionBase<ELFT> *OutSec = nullptr;
-  uint32_t Align;
+  uint32_t Alignment;
 
   // Used for garbage collection.
   bool Live;
@@ -70,16 +77,20 @@ public:
   StringRef getSectionName() const;
   const Elf_Shdr *getSectionHdr() const { return Header; }
   ObjectFile<ELFT> *getFile() const { return File; }
-  uintX_t getOffset(const DefinedRegular<ELFT> &Sym);
+  uintX_t getOffset(const DefinedRegular<ELFT> &Sym) const;
 
   // Translate an offset in the input section to an offset in the output
   // section.
-  uintX_t getOffset(uintX_t Offset);
+  uintX_t getOffset(uintX_t Offset) const;
 
   ArrayRef<uint8_t> getSectionData() const;
 
+  void uncompress();
+
   void relocate(uint8_t *Buf, uint8_t *BufEnd);
-  std::vector<Relocation> Relocations;
+  std::vector<Relocation<ELFT>> Relocations;
+
+  bool Compressed;
 };
 
 template <class ELFT> InputSectionBase<ELFT> InputSectionBase<ELFT>::Discarded;
@@ -125,6 +136,7 @@ public:
 
   // Returns the SectionPiece at a given input section offset.
   SectionPiece *getSectionPiece(uintX_t Offset);
+  const SectionPiece *getSectionPiece(uintX_t Offset) const;
 };
 
 // This corresponds to a SHF_MERGE section of an input file.
@@ -143,7 +155,7 @@ public:
 
   // Translate an offset in the input section to an offset
   // in the output section.
-  uintX_t getOffset(uintX_t Offset);
+  uintX_t getOffset(uintX_t Offset) const;
 
   void finalizePieces();
 
@@ -163,7 +175,7 @@ public:
 
   // Translate an offset in the input section to an offset in the output
   // section.
-  uintX_t getOffset(uintX_t Offset);
+  uintX_t getOffset(uintX_t Offset) const;
 
   // Relocation section that refer to this one.
   const Elf_Shdr *RelocSection = nullptr;
@@ -199,8 +211,8 @@ public:
 
   // Register thunk related to the symbol. When the section is written
   // to a mmap'ed file, target is requested to write an actual thunk code.
-  // Now thunks is supported for MIPS target only.
-  void addThunk(SymbolBody &Body);
+  // Now thunks is supported for MIPS and ARM target only.
+  void addThunk(const Thunk<ELFT> *T);
 
   // The offset of synthetic thunk code from beginning of this section.
   uint64_t getThunkOff() const;
@@ -221,7 +233,7 @@ private:
   // Used by ICF.
   uint64_t GroupId = 0;
 
-  llvm::TinyPtrVector<const SymbolBody *> Thunks;
+  llvm::TinyPtrVector<const Thunk<ELFT> *> Thunks;
 };
 
 // MIPS .reginfo section provides information on the registers used by the code

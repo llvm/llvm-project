@@ -121,7 +121,7 @@ int main()
                 assert(i->second == d);
             }
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::pair<const int, double> V;
         V ar[] =

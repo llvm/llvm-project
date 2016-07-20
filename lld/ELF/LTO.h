@@ -44,10 +44,9 @@ private:
       const std::function<std::unique_ptr<llvm::TargetMachine>()> &TMFactory);
 
   std::unique_ptr<llvm::Module> Combined;
-  llvm::IRMover Mover;
   std::vector<SmallString<0>> OwningData;
   llvm::StringSet<> InternalizedSyms;
-  std::string TheTriple;
+  llvm::StringSet<> AsmUndefinedRefs;
 };
 }
 }

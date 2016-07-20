@@ -100,7 +100,7 @@ int main()
 
     test1<DefaultOnly, stack_allocator<DefaultOnly, 4096> >(4095);
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test<DefaultOnly, min_allocator<DefaultOnly> >(4095);
 #endif
 

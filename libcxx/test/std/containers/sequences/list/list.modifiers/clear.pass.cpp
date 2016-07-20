@@ -24,7 +24,7 @@ int main()
     c.clear();
     assert(c.empty());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     int a[] = {1, 2, 3};
     std::list<int, min_allocator<int>> c(a, a+3);

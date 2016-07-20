@@ -49,7 +49,7 @@ int main()
     assert(*++i == V(3, 1.5));
     assert(*++i == V(3, 2));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> C;
     typedef C::value_type V;

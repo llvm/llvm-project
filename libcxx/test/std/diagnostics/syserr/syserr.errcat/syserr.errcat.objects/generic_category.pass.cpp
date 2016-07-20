@@ -18,10 +18,13 @@
 #include <string>
 #include <cerrno>
 
-void test_message_leaves_errno_unchanged() {
+#include "test_macros.h"
+
+void test_message_for_bad_value() {
     errno = E2BIG; // something that message will never generate
     const std::error_category& e_cat1 = std::generic_category();
-    e_cat1.message(-1);
+    const std::string msg = e_cat1.message(-1);
+    LIBCPP_ASSERT(msg == "Unknown error -1");
     assert(errno == E2BIG);
 }
 
@@ -31,6 +34,6 @@ int main()
     std::string m1 = e_cat1.name();
     assert(m1 == "generic");
     {
-        test_message_leaves_errno_unchanged();
+        test_message_for_bad_value();
     }
 }

@@ -19,6 +19,17 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+inline _LIBCPP_ALWAYS_INLINE float strtof_l(const char *nptr,
+                                            char **endptr, locale_t) {
+  return ::strtof(nptr, endptr);
+}
+
+inline _LIBCPP_ALWAYS_INLINE double strtod_l(const char *nptr,
+                                                   char **endptr, locale_t) {
+  return ::strtod(nptr, endptr);
+}
+
 inline _LIBCPP_ALWAYS_INLINE long double strtold_l(const char *nptr,
                                                    char **endptr, locale_t) {
   return ::strtold(nptr, endptr);

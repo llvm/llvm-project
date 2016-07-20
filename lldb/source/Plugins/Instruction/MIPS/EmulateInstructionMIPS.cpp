@@ -1482,56 +1482,56 @@ EmulateInstructionMIPS::Emulate_BXX_3ops_C (llvm::MCInst& insn)
     if (!strcasecmp (op_name, "BEQC"))
     {
         if (rs_val == rt_val)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BNEC"))
     {
         if (rs_val != rt_val)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BLTC"))
     {
         if (rs_val < rt_val)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BGEC"))
     {
         if (rs_val >= rt_val)
-            target = pc + 4 + offset;
+            target = pc  + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BLTUC"))
     {
         if (rs_val < rt_val)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BGEUC"))
     {
         if ((uint32_t)rs_val >= (uint32_t)rt_val)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BOVC"))
     {
         if (IsAdd64bitOverflow (rs_val, rt_val))
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BNVC"))
     {
         if (!IsAdd64bitOverflow (rs_val, rt_val))
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
@@ -1773,42 +1773,42 @@ EmulateInstructionMIPS::Emulate_BXX_2ops_C (llvm::MCInst& insn)
     if (!strcasecmp (op_name, "BLTZC"))
     {
         if (rs_val < 0)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BLEZC"))
     {
         if (rs_val <= 0)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BGEZC"))
     {
         if (rs_val >= 0)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BGTZC"))
     {
         if (rs_val > 0)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BEQZC"))
     {
         if (rs_val == 0)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
     else if (!strcasecmp (op_name, "BNEZC"))
     {
         if (rs_val != 0)
-            target = pc + 4 + offset;
+            target = pc + offset;
         else
             target = pc + 4;
     }
@@ -2129,7 +2129,7 @@ EmulateInstructionMIPS::Emulate_BALC (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    target = pc + 4 + offset;
+    target = pc + offset;
 
     Context context;
 
@@ -2159,7 +2159,7 @@ EmulateInstructionMIPS::Emulate_BC (llvm::MCInst& insn)
     if (!success)
         return false;
 
-    target = pc + 4 + offset;
+    target = pc + offset;
 
     Context context;
 

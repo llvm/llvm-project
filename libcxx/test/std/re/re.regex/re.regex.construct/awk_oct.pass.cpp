@@ -25,5 +25,5 @@ int main()
     assert(std::regex_match("\4", std::regex("\\4", awk)));
     assert(std::regex_match("\41", std::regex("\\41", awk)));
     assert(std::regex_match("\141", std::regex("\\141", awk)));
-    assert(std::regex_match("\1411", std::regex("\\1411", awk)));
+    assert(std::regex_match("\141" "1", std::regex("\\1411", awk)));
 }

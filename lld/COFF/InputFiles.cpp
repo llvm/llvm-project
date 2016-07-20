@@ -16,7 +16,7 @@
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/LTO/LTOModule.h"
+#include "llvm/LTO/legacy/LTOModule.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/COFF.h"
@@ -63,9 +63,7 @@ std::string InputFile::getShortName() {
 
 void ArchiveFile::parse() {
   // Parse a MemoryBufferRef as an archive file.
-  auto ArchiveOrErr = Archive::create(MB);
-  error(ArchiveOrErr, "Failed to parse static library");
-  File = std::move(*ArchiveOrErr);
+  File = check(Archive::create(MB), "failed to parse static library");
 
   // Allocate a buffer for Lazy objects.
   size_t NumSyms = File->getNumberOfSymbols();
@@ -78,42 +76,38 @@ void ArchiveFile::parse() {
   // Seen is a map from member files to boolean values. Initially
   // all members are mapped to false, which indicates all these files
   // are not read yet.
-  for (auto &ChildOrErr : File->children()) {
-    error(ChildOrErr, "Failed to parse static library");
-    const Archive::Child &Child = *ChildOrErr;
+  Error Err;
+  for (auto &Child : File->children(Err))
     Seen[Child.getChildOffset()].clear();
-  }
+  if (Err)
+    fatal(Err, "failed to parse static library");
 }
 
 // Returns a buffer pointing to a member file containing a given symbol.
 // This function is thread-safe.
 MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
-  auto COrErr = Sym->getMember();
-  error(COrErr, Twine("Could not get the member for symbol ") + Sym->getName());
-  const Archive::Child &C = *COrErr;
+  const Archive::Child &C =
+      check(Sym->getMember(),
+            "could not get the member for symbol " + Sym->getName());
 
   // Return an empty buffer if we have already returned the same buffer.
   if (Seen[C.getChildOffset()].test_and_set())
     return MemoryBufferRef();
-  ErrorOr<MemoryBufferRef> Ret = C.getMemoryBufferRef();
-  error(Ret, Twine("Could not get the buffer for the member defining symbol ") +
-                 Sym->getName());
-  return *Ret;
+  return check(C.getMemoryBufferRef(),
+               "could not get the buffer for the member defining symbol " +
+                   Sym->getName());
 }
 
 void ObjectFile::parse() {
   // Parse a memory buffer as a COFF file.
-  auto BinOrErr = createBinary(MB);
-  if (!BinOrErr)
-    error(errorToErrorCode(BinOrErr.takeError()),
-                           "Failed to parse object file");
-  std::unique_ptr<Binary> Bin = std::move(*BinOrErr);
+  std::unique_ptr<Binary> Bin =
+      check(createBinary(MB), "failed to parse object file");
 
   if (auto *Obj = dyn_cast<COFFObjectFile>(Bin.get())) {
     Bin.release();
     COFFObj.reset(Obj);
   } else {
-    error(Twine(getName()) + " is not a COFF file.");
+    fatal(getName() + " is not a COFF file");
   }
 
   // Read section and symbol tables.
@@ -129,10 +123,10 @@ void ObjectFile::initializeChunks() {
   for (uint32_t I = 1; I < NumSections + 1; ++I) {
     const coff_section *Sec;
     StringRef Name;
-    std::error_code EC = COFFObj->getSection(I, Sec);
-    error(EC, Twine("getSection failed: #") + Twine(I));
-    EC = COFFObj->getSectionName(Sec, Name);
-    error(EC, Twine("getSectionName failed: #") + Twine(I));
+    if (auto EC = COFFObj->getSection(I, Sec))
+      fatal(EC, "getSection failed: #" + Twine(I));
+    if (auto EC = COFFObj->getSectionName(Sec, Name))
+      fatal(EC, "getSectionName failed: #" + Twine(I));
     if (Name == ".sxdata") {
       SXData = Sec;
       continue;
@@ -166,10 +160,8 @@ void ObjectFile::initializeSymbols() {
   int32_t LastSectionNumber = 0;
   for (uint32_t I = 0; I < NumSymbols; ++I) {
     // Get a COFFSymbolRef object.
-    auto SymOrErr = COFFObj->getSymbol(I);
-    error(SymOrErr, Twine("broken object file: ") + getName());
-
-    COFFSymbolRef Sym = *SymOrErr;
+    COFFSymbolRef Sym =
+        check(COFFObj->getSymbol(I), "broken object file: " + getName());
 
     const void *AuxP = nullptr;
     if (Sym.getNumberOfAuxSymbols())
@@ -231,12 +223,12 @@ Defined *ObjectFile::createDefined(COFFSymbolRef Sym, const void *AuxP,
 
   // Reserved sections numbers don't have contents.
   if (llvm::COFF::isReservedSectionNumber(SectionNumber))
-    error(Twine("broken object file: ") + getName());
+    fatal("broken object file: " + getName());
 
   // This symbol references a section which is not present in the section
   // header.
   if ((uint32_t)SectionNumber >= SparseChunks.size())
-    error(Twine("broken object file: ") + getName());
+    fatal("broken object file: " + getName());
 
   // Nothing else to do without a section chunk.
   auto *SC = cast_or_null<SectionChunk>(SparseChunks[SectionNumber]);
@@ -266,7 +258,7 @@ void ObjectFile::initializeSEH() {
   ArrayRef<uint8_t> A;
   COFFObj->getSectionContents(SXData, A);
   if (A.size() % 4 != 0)
-    error(".sxdata must be an array of symbol table indices");
+    fatal(".sxdata must be an array of symbol table indices");
   auto *I = reinterpret_cast<const ulittle32_t *>(A.data());
   auto *E = reinterpret_cast<const ulittle32_t *>(A.data() + A.size());
   for (; I != E; ++I)
@@ -292,11 +284,11 @@ void ImportFile::parse() {
 
   // Check if the total size is valid.
   if ((size_t)(End - Buf) != (sizeof(*Hdr) + Hdr->SizeOfData))
-    error("broken import library");
+    fatal("broken import library");
 
   // Read names and create an __imp_ symbol.
   StringRef Name = StringAlloc.save(StringRef(Buf + sizeof(*Hdr)));
-  StringRef ImpName = StringAlloc.save(Twine("__imp_") + Name);
+  StringRef ImpName = StringAlloc.save("__imp_" + Name);
   const char *NameStart = Buf + sizeof(coff_import_header) + Name.size() + 1;
   DLLName = StringRef(NameStart);
   StringRef ExtName;
@@ -334,8 +326,7 @@ void BitcodeFile::parse() {
   Context.enableDebugTypeODRUniquing();
   ErrorOr<std::unique_ptr<LTOModule>> ModOrErr = LTOModule::createFromBuffer(
       Context, MB.getBufferStart(), MB.getBufferSize(), llvm::TargetOptions());
-  error(ModOrErr, "Could not create lto module");
-  M = std::move(*ModOrErr);
+  M = check(std::move(ModOrErr), "could not create LTO module");
 
   llvm::StringSaver Saver(Alloc);
   for (unsigned I = 0, E = M->getSymbolCount(); I != E; ++I) {

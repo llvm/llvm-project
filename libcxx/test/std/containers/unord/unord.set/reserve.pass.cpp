@@ -73,7 +73,7 @@ int main()
         assert(c.bucket_count() >= 16);
         test(c);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_set<int, std::hash<int>,
                                       std::equal_to<int>, min_allocator<int>> C;

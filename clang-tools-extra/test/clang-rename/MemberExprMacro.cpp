@@ -1,25 +1,21 @@
 // RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=151 -new-name=Y %t.cpp -i --
+// RUN: clang-rename -offset=156 -new-name=Bar %t.cpp -i --
 // RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
-class C
-{
+
+class Baz {
 public:
-  int X;
+  int Foo;          // CHECK: int Bar;
 };
 
-int foo(int x)
-{
-  return 0;
-}
-#define FOO(a) foo(a)
+int qux(int x) { return 0; }
+#define MACRO(a) qux(a)
 
-int main()
-{
-  C C;
-  C.X = 1; // CHECK: C.Y
-  FOO(C.X); // CHECK: C.Y
-  int y = C.X; // CHECK: C.Y
+int main() {
+  Baz baz;
+  baz.Foo = 1;      // CHECK: baz.Bar = 1;
+  MACRO(baz.Foo);   // CHECK: MACRO(baz.Bar);
+  int y = baz.Foo;  // CHECK: int y = baz.Bar;
 }
 
-// Use grep -FUbo 'C' <file> to get the correct offset of foo when changing
+// Use grep -FUbo 'Foo' <file> to get the correct offset of foo when changing
 // this file.

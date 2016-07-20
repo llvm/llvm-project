@@ -76,7 +76,7 @@ private:
   isl_union_set *getLiveOut(Scop &S);
   bool eliminateDeadCode(Scop &S, int PreciseSteps);
 };
-}
+} // namespace
 
 char DeadCodeElim::ID = 0;
 

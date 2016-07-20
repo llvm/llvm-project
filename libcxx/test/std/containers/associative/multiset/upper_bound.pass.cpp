@@ -86,7 +86,7 @@ int main()
         assert(r == next(m.begin(), 9));
     }
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef int V;
     typedef std::multiset<int, std::less<int>, min_allocator<int>> M;

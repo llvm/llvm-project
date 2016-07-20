@@ -606,7 +606,7 @@ ConnectionFileDescriptor::BytesAvailable(uint32_t timeout_usec, Error *error_ptr
     struct timeval tv;
     if (timeout_usec == UINT32_MAX)
     {
-        // Inifinite wait...
+        // Infinite wait...
         tv_ptr = nullptr;
     }
     else

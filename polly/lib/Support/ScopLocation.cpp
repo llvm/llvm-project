@@ -43,4 +43,4 @@ void getDebugLocation(const Region *R, unsigned &LineBegin, unsigned &LineEnd,
       LineEnd = std::max(LineEnd, NewLine);
     }
 }
-}
+} // namespace polly

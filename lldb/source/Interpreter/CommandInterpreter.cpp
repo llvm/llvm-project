@@ -3154,8 +3154,12 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line, CommandReturnO
         if (cmd_obj == nullptr)
         {
             std::string full_name;
-            if (GetAliasFullName(next_word.c_str(), full_name))
+            bool is_alias = GetAliasFullName(next_word.c_str(), full_name);
+            cmd_obj = GetCommandObject(next_word.c_str(), &matches);
+            bool is_real_command = (is_alias == false) || (cmd_obj != nullptr && cmd_obj->IsAlias() == false);
+            if (!is_real_command)
             {
+                matches.Clear();
                 std::string alias_result;
                 cmd_obj = BuildAliasResult(full_name.c_str(), scratch_command, alias_result, result);
                 revised_command_line.Printf("%s", alias_result.c_str());
@@ -3167,7 +3171,8 @@ CommandInterpreter::ResolveCommandImpl(std::string &command_line, CommandReturnO
             }
             else
             {
-                cmd_obj = GetCommandObject(next_word.c_str(), &matches);
+                if (!cmd_obj)
+                    cmd_obj = GetCommandObject(next_word.c_str(), &matches);
                 if (cmd_obj)
                 {
                     actual_cmd_name_len += strlen(cmd_obj->GetCommandName());

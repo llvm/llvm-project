@@ -1,18 +1,45 @@
 // RUN: %libomp-compile-and-run
 #include <stdio.h>
 #include "omp_testsuite.h"
-#include "omp_my_sleep.h"
+
+/*
+ * This test will hang if the nowait is not working properly
+ *
+ * It relies on a thread skipping to the second sections construct to
+ * release the threads in the first sections construct
+ *
+ * Also, since scheduling of sections is implementation defined, it is
+ * necessary to have all four sections in the second sections construct
+ * release the threads since we can't guarantee which section a single thread
+ * will execute.
+ */
+volatile int release;
+volatile int count;
+
+void wait_for_release_then_increment(int rank)
+{
+  fprintf(stderr, "Thread nr %d enters first section"
+    " and waits.\n", rank);
+  while (release == 0);
+  #pragma omp atomic
+  count++;
+}
+
+void release_and_increment(int rank)
+{
+  fprintf(stderr, "Thread nr %d sets release to 1\n", rank);
+  release = 1;
+  #pragma omp flush(release)
+  #pragma omp atomic
+  count++;
+}
 
 int test_omp_sections_nowait()
 {
-  int result;
-  int count;
-  int j;
-
-  result = 0;
+  release = 0;
   count = 0;
 
-  #pragma omp parallel
+  #pragma omp parallel num_threads(4)
   {
     int rank;
     rank = omp_get_thread_num ();
@@ -20,18 +47,22 @@ int test_omp_sections_nowait()
     {
       #pragma omp section
       {
-        fprintf(stderr, "Thread nr %d enters first section"
-          " and gets sleeping.\n", rank);
-        my_sleep(SLEEPTIME);
-        count = 1;
-        fprintf(stderr, "Thread nr %d woke up an set"
-          " count to 1.\n", rank);
-        #pragma omp flush(count)
+        wait_for_release_then_increment(rank);
       }
       #pragma omp section
       {
-        fprintf(stderr, "Thread nr %d executed work in the"
-          " first section.\n", rank);
+        wait_for_release_then_increment(rank);
+      }
+      #pragma omp section
+      {
+        wait_for_release_then_increment(rank);
+      }
+      #pragma omp section
+      {
+        fprintf(stderr, "Thread nr %d enters first sections and goes "
+          "immediately to next sections construct to release.\n", rank);
+        #pragma omp atomic
+        count++;
       }
     }
     /* Begin of second sections environment */
@@ -39,20 +70,24 @@ int test_omp_sections_nowait()
     {
       #pragma omp section
       {
-        fprintf(stderr, "Thread nr %d executed work in the"
-          " second section.\n", rank);
+        release_and_increment(rank);
       }
       #pragma omp section
       {
-        fprintf(stderr, "Thread nr %d executed work in the"
-          " second section and controls the value of count\n", rank);
-        if (count == 0)
-          result = 1;
-        fprintf(stderr, "count was %d\n", count);
+        release_and_increment(rank);
+      }
+      #pragma omp section
+      {
+        release_and_increment(rank);
+      }
+      #pragma omp section
+      {
+        release_and_increment(rank);
       }
     }
   }
-  return result;
+  // Check to make sure all eight sections were executed
+  return (count==8);
 }
 
 int main()

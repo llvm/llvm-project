@@ -156,6 +156,9 @@ public:
     SBError
     ReturnFromFrame (SBFrame &frame, SBValue &return_value);
 
+    SBError
+    UnwindInnermostExpression();
+
     //--------------------------------------------------------------------------
     /// LLDB currently supports process centric debugging which means when any
     /// thread in a process stops, all other threads are stopped. The Suspend()

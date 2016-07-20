@@ -75,7 +75,7 @@ int main()
         for (int j = 0; j < c.size(); ++j)
             assert(c[j] == j);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> c;
         c.push_back(0);

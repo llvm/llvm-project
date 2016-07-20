@@ -19,7 +19,7 @@
 # BASEREL-NEXT:   }
 # BASEREL-NEXT: ]
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

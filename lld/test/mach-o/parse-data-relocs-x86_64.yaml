@@ -76,6 +76,13 @@ sections:
 # Note the addend here is -16 because that is the offset from here back
 # to _d.
                        0xF0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+#  .quad   . - _foo
+# This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
+# The subtractor references _d which is the first nonlocal label in this
+# section.  The unsigned references _foo.
+# Note the addend here is -16 because that is the offset from here back
+# to _d.
+                       0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 #  .quad   L1
 # This is a X86_64_RELOC_UNSIGNED without extern set.
 # In this case, we encode the section number for L1 in the relocation, and
@@ -95,49 +102,92 @@ sections:
 # section.  The unsigned references _foo.
 # Note the addend here is -40 because that is the offset from here back
 # to _d.
-                       0xD8, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                       0xD0, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 #  .quad   _foo + 4 - .
 # This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
 # The subtractor references _d which is the first nonlocal label in this
 # section.  The unsigned references _foo.
-# Note the addend here is -44.  It would have been -48 because that
+# Note the addend here is -52.  It would have been -56 because that
 # would take us from the address of this relocation back to _d.  But as
-# we also add 4 for the offset, we get -44.
-                       0xD4, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+# we also add 4 for the offset, we get -52.
+                       0xCC, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 #  .quad   L1 - .
 # This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
 # The subtractor references _d which is the first nonlocal label in this
 # section.  The unsigned does not have extern set, so the relocation
 # number is the section number for L1.
-# Note the addend here is -54. Of that, -56 would be the offset from
+# Note the addend here is -62. Of that, -64 would be the offset from
 # this location from _d.  The remaining 2 is the absolute address
 # of L1.
-                       0xCA, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                       0xC2, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
 #  .long   _foo - .
 # This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
 # The subtractor references _d which is the first nonlocal label in this
 # section.  The unsigned references _foo.
-# Note the addend here is -64 because that is the offset from here back
+# Note the addend here is -72 because that is the offset from here back
 # to _d.
-                       0xC0, 0xFF, 0xFF, 0xFF,
+                       0xB8, 0xFF, 0xFF, 0xFF,
+#  .long   . - _foo
+# This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
+# The subtractor references _d which is the first nonlocal label in this
+# section.  The unsigned references _foo.
+# Note the addend here is -76 because that is the offset from here back
+# to _d.
+                       0xB4, 0xFF, 0xFF, 0xFF,
 #  .long   _foo + 4 - .
 # This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
 # The subtractor references _d which is the first nonlocal label in this
 # section.  The unsigned references _foo.
-# Note the addend here is -64.  It would have been -68 because that
+# Note the addend here is -76.  It would have been -80 because that
 # would take us from the address of this relocation back to _d.  But as
-# we also add 4 for the offset, we get -64.
-                       0xC0, 0xFF, 0xFF, 0xFF,
+# we also add 4 for the offset, we get -76.
+                       0xB4, 0xFF, 0xFF, 0xFF,
 #  .long   L1 - .
 # This is the pair X86_64_RELOC_SUBTRACTOR and X86_64_RELOC_UNSIGNED.
 # The subtractor references _d which is the first nonlocal label in this
 # section.  The unsigned does not have extern set, so the relocation
 # number is the section number for L1.
-# Note the addend here is -70. Of that, -72 would be the offset from
+# Note the addend here is -82. Of that, -84 would be the offset from
 # this location from _d.  The remaining 2 is the absolute address
 # of L1.
-                       0xBA, 0xFF, 0xFF, 0xFF ]
+                       0xAE, 0xFF, 0xFF, 0xFF ]
     relocations:
+      - offset:          0x00000054
+        type:            X86_64_RELOC_SUBTRACTOR
+        length:          2
+        pc-rel:          false
+        extern:          true
+        symbol:          2
+      - offset:          0x00000054
+        type:            X86_64_RELOC_UNSIGNED
+        length:          2
+        pc-rel:          false
+        extern:          false
+        symbol:          2
+      - offset:          0x00000050
+        type:            X86_64_RELOC_SUBTRACTOR
+        length:          2
+        pc-rel:          false
+        extern:          true
+        symbol:          2
+      - offset:          0x00000050
+        type:            X86_64_RELOC_UNSIGNED
+        length:          2
+        pc-rel:          false
+        extern:          true
+        symbol:          0
+      - offset:          0x0000004C
+        type:            X86_64_RELOC_SUBTRACTOR
+        length:          2
+        pc-rel:          false
+        extern:          true
+        symbol:          0
+      - offset:          0x0000004C
+        type:            X86_64_RELOC_UNSIGNED
+        length:          2
+        pc-rel:          false
+        extern:          true
+        symbol:          2
       - offset:          0x00000048
         type:            X86_64_RELOC_SUBTRACTOR
         length:          2
@@ -148,32 +198,20 @@ sections:
         type:            X86_64_RELOC_UNSIGNED
         length:          2
         pc-rel:          false
+        extern:          true
+        symbol:          0
+      - offset:          0x00000040
+        type:            X86_64_RELOC_SUBTRACTOR
+        length:          3
+        pc-rel:          false
+        extern:          true
+        symbol:          2
+      - offset:          0x00000040
+        type:            X86_64_RELOC_UNSIGNED
+        length:          3
+        pc-rel:          false
         extern:          false
         symbol:          2
-      - offset:          0x00000044
-        type:            X86_64_RELOC_SUBTRACTOR
-        length:          2
-        pc-rel:          false
-        extern:          true
-        symbol:          2
-      - offset:          0x00000044
-        type:            X86_64_RELOC_UNSIGNED
-        length:          2
-        pc-rel:          false
-        extern:          true
-        symbol:          0
-      - offset:          0x00000040
-        type:            X86_64_RELOC_SUBTRACTOR
-        length:          2
-        pc-rel:          false
-        extern:          true
-        symbol:          2
-      - offset:          0x00000040
-        type:            X86_64_RELOC_UNSIGNED
-        length:          2
-        pc-rel:          false
-        extern:          true
-        symbol:          0
       - offset:          0x00000038
         type:            X86_64_RELOC_SUBTRACTOR
         length:          3
@@ -184,8 +222,8 @@ sections:
         type:            X86_64_RELOC_UNSIGNED
         length:          3
         pc-rel:          false
-        extern:          false
-        symbol:          2
+        extern:          true
+        symbol:          0
       - offset:          0x00000030
         type:            X86_64_RELOC_SUBTRACTOR
         length:          3
@@ -199,17 +237,11 @@ sections:
         extern:          true
         symbol:          0
       - offset:          0x00000028
-        type:            X86_64_RELOC_SUBTRACTOR
-        length:          3
-        pc-rel:          false
-        extern:          true
-        symbol:          2
-      - offset:          0x00000028
         type:            X86_64_RELOC_UNSIGNED
         length:          3
         pc-rel:          false
-        extern:          true
-        symbol:          0
+        extern:          false
+        symbol:          2
       - offset:          0x00000020
         type:            X86_64_RELOC_UNSIGNED
         length:          3
@@ -217,10 +249,16 @@ sections:
         extern:          false
         symbol:          2
       - offset:          0x00000018
+        type:            X86_64_RELOC_SUBTRACTOR
+        length:          3
+        pc-rel:          false
+        extern:          true
+        symbol:          0
+      - offset:          0x00000018
         type:            X86_64_RELOC_UNSIGNED
         length:          3
         pc-rel:          false
-        extern:          false
+        extern:          true
         symbol:          2
       - offset:          0x00000010
         type:            X86_64_RELOC_SUBTRACTOR
@@ -266,12 +304,13 @@ page-size:       0x00000000
 # CHECK:defined-atoms:   
 # CHECK:  - name:            _d
 # CHECK:    type:            data
-# CHECK:    content:         [ 00, 00, 00, 00, 00, 00, 00, 00, 04, 00, 00, 00, 
-# CHECK:                       00, 00, 00, 00, F0, FF, FF, FF, FF, FF, FF, FF, 
-# CHECK:                       {{..}}, {{..}}, 00, 00, 00, 00, 00, 00, {{..}}, {{..}}, 00, 00,
-# CHECK:                       00, 00, 00, 00, D8, FF, FF, FF, FF, FF, FF, FF, 
-# CHECK:                       D4, FF, FF, FF, FF, FF, FF, FF, {{..}}, {{..}}, {{..}}, {{..}},
-# CHECK:                       {{..}}, {{..}}, {{..}}, {{..}}, C0, FF, FF, FF, C0, FF, FF, FF,
+# CHECK:    content:         [ 00, 00, 00, 00, 00, 00, 00, 00, 04, 00, 00, 00,
+# CHECK:                       00, 00, 00, 00, F0, FF, FF, FF, FF, FF, FF, FF,
+# CHECK:                       18, 00, 00, 00, 00, 00, 00, 00, {{..}}, {{..}}, 00, 00,
+# CHECK:                       00, 00, 00, 00, {{..}}, {{..}}, 00, 00, 00, 00, 00, 00,
+# CHECK:                       D0, FF, FF, FF, FF, FF, FF, FF, CC, FF, FF, FF,
+# CHECK:                       FF, FF, FF, FF, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}}, {{..}},
+# CHECK:                       B8, FF, FF, FF, B4, FF, FF, FF, B4, FF, FF, FF,
 # CHECK:                       {{..}}, {{..}}, {{..}}, {{..}} ]
 # CHECK:    dead-strip:      never
 # CHECK:    references:      
@@ -285,32 +324,38 @@ page-size:       0x00000000
 # CHECK:      - kind:            delta64
 # CHECK:        offset:          16
 # CHECK:        target:          _foo
-# CHECK:      - kind:            pointer64Anon
+# CHECK:      - kind:            negDelta64
 # CHECK:        offset:          24
-# CHECK:        target:          L003
+# CHECK:        target:          _foo
 # CHECK:      - kind:            pointer64Anon
 # CHECK:        offset:          32
 # CHECK:        target:          L003
-# CHECK:        addend:          2
-# CHECK:      - kind:            delta64
+# CHECK:      - kind:            pointer64Anon
 # CHECK:        offset:          40
-# CHECK:        target:          _foo
+# CHECK:        target:          L003
+# CHECK:        addend:          2
 # CHECK:      - kind:            delta64
 # CHECK:        offset:          48
 # CHECK:        target:          _foo
+# CHECK:      - kind:            delta64
+# CHECK:        offset:          56
+# CHECK:        target:          _foo
 # CHECK:        addend:          4
 # CHECK:      - kind:            delta64Anon
-# CHECK:        offset:          56
+# CHECK:        offset:          64
 # CHECK:        target:          L003
 # CHECK:      - kind:            delta32
-# CHECK:        offset:          64
+# CHECK:        offset:          72
+# CHECK:        target:          _foo
+# CHECK:      - kind:            negDelta32
+# CHECK:        offset:          76
 # CHECK:        target:          _foo
 # CHECK:      - kind:            delta32
-# CHECK:        offset:          68
+# CHECK:        offset:          80
 # CHECK:        target:          _foo
 # CHECK:        addend:          4
 # CHECK:      - kind:            delta32Anon
-# CHECK:        offset:          72
+# CHECK:        offset:          84
 # CHECK:        target:          L003
 # CHECK:  - name:            _foo
 # CHECK:    content:         [ C3 ]

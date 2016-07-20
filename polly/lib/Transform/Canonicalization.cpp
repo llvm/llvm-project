@@ -1,4 +1,4 @@
-//===---- Canonicalization.cpp - Run canonicalization passes ======-------===//
+//===---- Canonicalization.cpp - Run canonicalization passes --------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -65,7 +65,7 @@ public:
   virtual void print(raw_ostream &OS, const Module *) const;
   //@}
 };
-}
+} // namespace
 
 PollyCanonicalize::~PollyCanonicalize() {}
 

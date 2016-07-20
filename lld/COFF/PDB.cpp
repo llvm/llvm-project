@@ -38,7 +38,8 @@ void lld::coff::createPDB(StringRef Path) {
   size_t FileSize = PageSize * 3;
   ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
       FileOutputBuffer::create(Path, FileSize);
-  error(BufferOrErr, Twine("failed to open ") + Path);
+  if (auto EC = BufferOrErr.getError())
+    fatal(EC, "failed to open " + Path);
   std::unique_ptr<FileOutputBuffer> Buffer = std::move(*BufferOrErr);
 
   // Write the file header.

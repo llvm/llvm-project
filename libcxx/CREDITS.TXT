@@ -37,6 +37,10 @@ E: mclow.lists@gmail.com
 E: marshall@idio.com
 D: C++14 support, patches and bug fixes.
 
+N: Jonathan B Coe
+E: jbcoe@me.com
+D: Implementation of propagate_const.
+
 N: Eric Fiselier
 E: eric@efcs.ca
 D: LFTS support, patches and bug fixes.

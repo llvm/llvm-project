@@ -1,3 +1,4 @@
+# REQUIRES: mips
 # Check LA25 stubs creation. This stub code is necessary when
 # non-PIC code calls PIC function.
 
@@ -6,8 +7,6 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t-npic.o
 # RUN: ld.lld %t-npic.o %t-pic.o %p/Inputs/mips-sto-pic.o -o %t.exe
 # RUN: llvm-objdump -d %t.exe | FileCheck %s
-
-# REQUIRES: mips
 
 # CHECK:     Disassembly of section .text:
 # CHECK-NEXT: __start:
@@ -71,6 +70,68 @@
 # CHECK-NEXT:    200a0:       3c 19 00 02     lui     $25, 2
 # CHECK-NEXT:    200a4:       08 00 80 20     j       131200 <fpic>
 # CHECK-NEXT:    200a8:       27 39 00 80     addiu   $25, $25, 128
+
+# Make sure tha thunks are created properly no matter how
+# objects are laid out.
+#
+# RUN: ld.lld %t-pic.o %t-npic.o %p/Inputs/mips-sto-pic.o -o %t.exe
+# RUN: llvm-objdump -d %t.exe | FileCheck -check-prefix=REVERSE %s
+
+# REVERSE:      foo1a:
+# REVERSE-NEXT:    20000:       00 00 00 00     nop
+#
+# REVERSE:      foo1b:
+# REVERSE-NEXT:    20004:       00 00 00 00     nop
+# REVERSE-NEXT:    20008:       3c 19 00 02     lui     $25, 2
+# REVERSE-NEXT:    2000c:       08 00 80 00     j       131072 <foo1a>
+# REVERSE-NEXT:    20010:       27 39 00 00     addiu   $25, $25, 0
+# REVERSE-NEXT:    20014:       00 00 00 00     nop
+# REVERSE-NEXT:    20018:       3c 19 00 02     lui     $25, 2
+# REVERSE-NEXT:    2001c:       08 00 80 01     j       131076 <foo1b>
+# REVERSE-NEXT:    20020:       27 39 00 04     addiu   $25, $25, 4
+# REVERSE-NEXT:    20024:       00 00 00 00     nop
+# REVERSE-NEXT:    20028:       00 00 00 00     nop
+# REVERSE-NEXT:    2002c:       00 00 00 00     nop
+#
+# REVERSE:      foo2:
+# REVERSE-NEXT:    20030:       00 00 00 00     nop
+# REVERSE-NEXT:    20034:       3c 19 00 02     lui     $25, 2
+# REVERSE-NEXT:    20038:       08 00 80 0c     j       131120 <foo2>
+# REVERSE-NEXT:    2003c:       27 39 00 30     addiu   $25, $25, 48
+# REVERSE-NEXT:    20040:       00 00 00 00     nop
+# REVERSE-NEXT:    20044:       00 00 00 00     nop
+# REVERSE-NEXT:    20048:       00 00 00 00     nop
+# REVERSE-NEXT:    2004c:       00 00 00 00     nop
+#
+# REVERSE:      __start:
+# REVERSE-NEXT:    20050:       0c 00 80 02     jal     131080 <foo1b+0x4>
+# REVERSE-NEXT:    20054:       00 00 00 00     nop
+# REVERSE-NEXT:    20058:       0c 00 80 0d     jal     131124 <foo2+0x4>
+# REVERSE-NEXT:    2005c:       00 00 00 00     nop
+# REVERSE-NEXT:    20060:       0c 00 80 06     jal     131096 <foo1b+0x14>
+# REVERSE-NEXT:    20064:       00 00 00 00     nop
+# REVERSE-NEXT:    20068:       0c 00 80 0d     jal     131124 <foo2+0x4>
+# REVERSE-NEXT:    2006c:       00 00 00 00     nop
+# REVERSE-NEXT:    20070:       0c 00 80 28     jal     131232 <fnpic+0x10>
+# REVERSE-NEXT:    20074:       00 00 00 00     nop
+# REVERSE-NEXT:    20078:       0c 00 80 24     jal     131216 <fnpic>
+# REVERSE-NEXT:    2007c:       00 00 00 00     nop
+#
+# REVERSE:      fpic:
+# REVERSE-NEXT:    20080:       00 00 00 00     nop
+# REVERSE-NEXT:    20084:       00 00 00 00     nop
+# REVERSE-NEXT:    20088:       00 00 00 00     nop
+# REVERSE-NEXT:    2008c:       00 00 00 00     nop
+#
+# REVERSE:      fnpic:
+# REVERSE-NEXT:    20090:       00 00 00 00     nop
+# REVERSE-NEXT:    20094:       00 00 00 00     nop
+# REVERSE-NEXT:    20098:       00 00 00 00     nop
+# REVERSE-NEXT:    2009c:       00 00 00 00     nop
+# REVERSE-NEXT:    200a0:       3c 19 00 02     lui     $25, 2
+# REVERSE-NEXT:    200a4:       08 00 80 20     j       131200 <fpic>
+# REVERSE-NEXT:    200a8:       27 39 00 80     addiu   $25, $25, 128
+# REVERSE-NEXT:    200ac:       00 00 00 00     nop
 
   .text
   .globl __start

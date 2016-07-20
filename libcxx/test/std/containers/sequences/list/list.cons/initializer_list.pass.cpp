@@ -28,7 +28,7 @@ int main()
     assert(*i++ == 5);
     assert(*i++ == 6);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     std::list<int, min_allocator<int>> d = {3, 4, 5, 6};
     assert(d.size() == 4);

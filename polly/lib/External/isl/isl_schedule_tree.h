@@ -142,6 +142,8 @@ __isl_give isl_union_set *isl_schedule_tree_band_get_ast_build_options(
 	__isl_keep isl_schedule_tree *tree);
 __isl_give isl_schedule_tree *isl_schedule_tree_band_set_ast_build_options(
 	__isl_take isl_schedule_tree *tree, __isl_take isl_union_set *options);
+__isl_give isl_set *isl_schedule_tree_band_get_ast_isolate_option(
+	__isl_keep isl_schedule_tree *tree, int depth);
 __isl_give isl_set *isl_schedule_tree_context_get_context(
 	__isl_keep isl_schedule_tree *tree);
 __isl_give isl_union_set *isl_schedule_tree_domain_get_domain(
@@ -230,7 +232,7 @@ __isl_give isl_schedule_tree *isl_schedule_tree_band_shift(
 	__isl_take isl_schedule_tree *tree,
 	__isl_take isl_multi_union_pw_aff *shift);
 __isl_give isl_schedule_tree *isl_schedule_tree_band_split(
-	__isl_take isl_schedule_tree *tree, int pos);
+	__isl_take isl_schedule_tree *tree, int pos, int depth);
 __isl_give isl_schedule_tree *isl_schedule_tree_band_gist(
 	__isl_take isl_schedule_tree *tree, __isl_take isl_union_set *context);
 

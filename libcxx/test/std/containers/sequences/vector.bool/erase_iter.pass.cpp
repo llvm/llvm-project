@@ -40,7 +40,7 @@ int main()
     assert(l1.size() == 0);
     assert(distance(l1.begin(), l1.end()) == 0);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     std::vector<bool, min_allocator<bool>> l1(a1, a1+3);
     std::vector<bool, min_allocator<bool>>::const_iterator i = l1.begin();

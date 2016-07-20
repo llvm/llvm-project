@@ -112,7 +112,7 @@ int main()
     assert(test_allocator<Two>::alloc_count == 0);
 
     test<bare_allocator<void> >();
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test<min_allocator<void> >();
 #endif
 }

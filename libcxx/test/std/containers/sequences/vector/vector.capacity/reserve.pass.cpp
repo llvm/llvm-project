@@ -47,7 +47,7 @@ int main()
         assert(v.capacity() == 150);
         assert(is_contiguous_container_asan_correct(v));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> v;
         v.reserve(10);

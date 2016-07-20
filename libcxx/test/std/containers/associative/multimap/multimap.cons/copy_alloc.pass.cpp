@@ -47,7 +47,7 @@ int main()
     assert(mo.get_allocator() == A(7));
     assert(mo.key_comp() == C(5));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     V ar[] =

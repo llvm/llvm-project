@@ -45,9 +45,12 @@ void ProBoundsConstantArrayIndexCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
 
+  // Note: if a struct contains an array member, the compiler-generated
+  // constructor has an arraySubscriptExpr.
   Finder->addMatcher(arraySubscriptExpr(hasBase(ignoringImpCasts(hasType(
                                             constantArrayType().bind("type")))),
-                                        hasIndex(expr().bind("index")))
+                                        hasIndex(expr().bind("index")),
+                                        unless(hasAncestor(isImplicit())))
                          .bind("expr"),
                      this);
 
@@ -65,6 +68,10 @@ void ProBoundsConstantArrayIndexCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *Matched = Result.Nodes.getNodeAs<Expr>("expr");
   const auto *IndexExpr = Result.Nodes.getNodeAs<Expr>("index");
+
+  if (IndexExpr->isValueDependent())
+    return; // We check in the specialization.
+
   llvm::APSInt Index;
   if (!IndexExpr->isIntegerConstantExpr(Index, *Result.Context, nullptr,
                                         /*isEvaluated=*/true)) {

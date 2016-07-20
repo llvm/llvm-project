@@ -6,40 +6,37 @@
 // NORELOC:      Relocations [
 // NORELOC-NEXT: ]
 
-// DISASM:      Disassembly of section .text:
-// DISASM-NEXT: _start:
-// DISASM-NEXT: 11000: 48 c7 c0 f8 ff ff ff movq $-8, %rax
-// DISASM-NEXT: 11007: 49 c7 c7 f8 ff ff ff movq $-8, %r15
-// DISASM-NEXT: 1100e: 48 8d 80 f8 ff ff ff leaq -8(%rax), %rax
-// DISASM-NEXT: 11015: 4d 8d bf f8 ff ff ff leaq -8(%r15), %r15
-// DISASM-NEXT: 1101c: 48 81 c4 f8 ff ff ff addq $-8, %rsp
-// DISASM-NEXT: 11023: 49 81 c4 f8 ff ff ff addq $-8, %r12
-// DISASM-NEXT: 1102a: 48 c7 c0 fc ff ff ff movq $-4, %rax
-// DISASM-NEXT: 11031: 49 c7 c7 fc ff ff ff movq $-4, %r15
-// DISASM-NEXT: 11038: 48 8d 80 fc ff ff ff leaq -4(%rax), %rax
-// DISASM-NEXT: 1103f: 4d 8d bf fc ff ff ff leaq -4(%r15), %r15
-// DISASM-NEXT: 11046: 48 81 c4 fc ff ff ff addq $-4, %rsp
-// DISASM-NEXT: 1104d: 49 81 c4 fc ff ff ff addq $-4, %r12
-// Corrupred output:
-// DISASM-NEXT: 11054: 48 8d 80 f8 ff ff ff leaq -8(%rax), %rax
-// DISASM-NEXT: 1105b: 48 d1 81 c4 fc ff ff rolq -828(%rcx)
-// DISASM-NEXT: 11062: ff 48 d1 decl -47(%rax)
-// DISASM-NEXT: 11065: 81 c4 fc ff ff ff addl $4294967292, %esp
+// DISASM:      _start:
+// DISASM-NEXT: 11000: 48 c7 c0 f8 ff ff ff  movq $-8, %rax
+// DISASM-NEXT: 11007: 49 c7 c7 f8 ff ff ff  movq $-8, %r15
+// DISASM-NEXT: 1100e: 48 8d 80 f8 ff ff ff  leaq -8(%rax), %rax
+// DISASM-NEXT: 11015: 4d 8d bf f8 ff ff ff  leaq -8(%r15), %r15
+// DISASM-NEXT: 1101c: 48 81 c4 f8 ff ff ff  addq $-8, %rsp
+// DISASM-NEXT: 11023: 49 81 c4 f8 ff ff ff  addq $-8, %r12
+// DISASM-NEXT: 1102a: 48 c7 c0 fc ff ff ff  movq $-4, %rax
+// DISASM-NEXT: 11031: 49 c7 c7 fc ff ff ff  movq $-4, %r15
+// DISASM-NEXT: 11038: 48 8d 80 fc ff ff ff  leaq -4(%rax), %rax
+// DISASM-NEXT: 1103f: 4d 8d bf fc ff ff ff  leaq -4(%r15), %r15
+// DISASM-NEXT: 11046: 48 81 c4 fc ff ff ff  addq $-4, %rsp
+// DISASM-NEXT: 1104d: 49 81 c4 fc ff ff ff  addq $-4, %r12
+
 // LD to LE:
-// DISASM-NEXT: 1106b: 66 66 66 64 48 8b 04 25 00 00 00 00 movq %fs:0, %rax
-// DISASM-NEXT: 11077: 48 8d 88 f8 ff ff ff                leaq -8(%rax), %rcx
-// DISASM-NEXT: 1107e: 66 66 66 64 48 8b 04 25 00 00 00 00 movq %fs:0, %rax
-// DISASM-NEXT: 1108a: 48 8d 88 fc ff ff ff                leaq -4(%rax), %rcx
+// DISASM-NEXT: 11054: 66 66 66 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 11060: 48 8d 88 f8 ff ff ff                 leaq -8(%rax), %rcx
+// DISASM-NEXT: 11067: 66 66 66 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 11073: 48 8d 88 fc ff ff ff                 leaq -4(%rax), %rcx
+
 // GD to LE:
-// DISASM-NEXT: 11091: 64 48 8b 04 25 00 00 00 00          movq %fs:0, %rax
-// DISASM-NEXT: 1109a: 48 8d 80 f8 ff ff ff                leaq -8(%rax), %rax
-// DISASM-NEXT: 110a1: 64 48 8b 04 25 00 00 00 00          movq %fs:0, %rax
-// DISASM-NEXT: 110aa: 48 8d 80 fc ff ff ff                leaq -4(%rax), %rax
-// LD to LE (2):
-// DISASM:      _DTPOFF64_1:
-// DISASM-NEXT: 110b1: f8
+// DISASM-NEXT: 1107a: 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 11083: 48 8d 80 f8 ff ff ff        leaq -8(%rax), %rax
+// DISASM-NEXT: 1108a: 64 48 8b 04 25 00 00 00 00  movq %fs:0, %rax
+// DISASM-NEXT: 11093: 48 8d 80 fc ff ff ff        leaq -4(%rax), %rax
+
+// LD to LE:
+// DISASM:     _DTPOFF64_1:
+// DISASM-NEXT: 1109a: f8 clc
 // DISASM:      _DTPOFF64_2:
-// DISASM-NEXT: 110ba: fc
+// DISASM-NEXT: 110a3: fc cld
 
 .type tls0,@object
 .section .tbss,"awT",@nobits
@@ -72,12 +69,7 @@ _start:
  addq tls1@GOTTPOFF(%rip), %rsp
  addq tls1@GOTTPOFF(%rip), %r12
 
- //Invalid input case:
- xchgq tls0@gottpoff(%rip),%rax
- shlq tls0@gottpoff
- rolq tls0@gottpoff
-
- //LD to LE:
+ // LD to LE
  leaq tls0@tlsld(%rip), %rdi
  callq __tls_get_addr@PLT
  leaq tls0@dtpoff(%rax),%rcx
@@ -85,7 +77,7 @@ _start:
  callq __tls_get_addr@PLT
  leaq tls1@dtpoff(%rax),%rcx
 
- //GD to LE:
+ // GD to LE
  .byte 0x66
  leaq tls0@tlsgd(%rip),%rdi
  .word 0x6666
@@ -97,7 +89,7 @@ _start:
  rex64
  call __tls_get_addr@plt
  
- //LD to LE (2):
+ // LD to LE
 _DTPOFF64_1:
  .quad tls0@DTPOFF
  nop

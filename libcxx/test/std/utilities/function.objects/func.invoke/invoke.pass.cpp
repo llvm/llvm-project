@@ -325,19 +325,19 @@ struct MemberObj {
 
 void noexcept_test() {
     {
-        NoThrowCallable obj;
-        CopyThrows arg;
-        static_assert(noexcept(std::invoke(obj)));
-        static_assert(!noexcept(std::invoke(obj, arg)));
-        static_assert(noexcept(std::invoke(obj, std::move(arg))));
+        NoThrowCallable obj; ((void)obj); // suppress unused warning
+        CopyThrows arg; ((void)arg); // suppress unused warning
+        static_assert(noexcept(std::invoke(obj)), "");
+        static_assert(!noexcept(std::invoke(obj, arg)), "");
+        static_assert(noexcept(std::invoke(obj, std::move(arg))), "");
     }
     {
-        ThrowsCallable obj;
-        static_assert(!noexcept(std::invoke(obj)));
+        ThrowsCallable obj; ((void)obj); // suppress unused warning
+        static_assert(!noexcept(std::invoke(obj)), "");
     }
     {
-        MemberObj obj{42};
-        static_assert(noexcept(std::invoke(&MemberObj::x, obj)));
+        MemberObj obj{42}; ((void)obj); // suppress unused warning.
+        static_assert(noexcept(std::invoke(&MemberObj::x, obj)), "");
     }
 }
 

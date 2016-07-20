@@ -687,7 +687,7 @@ class kmp_stats_output_module {
     };
 
  private:
-    static const char* outputFileName;
+    std::string outputFileName;
     static const char* eventsFileName;
     static const char* plotFileName;
     static int printPerThreadFlag;

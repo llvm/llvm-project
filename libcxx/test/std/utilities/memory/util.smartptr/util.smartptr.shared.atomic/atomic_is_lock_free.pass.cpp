@@ -17,15 +17,17 @@
 // bool
 // atomic_is_lock_free(const shared_ptr<T>* p);
 
+// UNSUPPORTED: c++98, c++03
+
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
-#if __has_feature(cxx_atomic)
     {
         const std::shared_ptr<int> p(new int(3));
         assert(std::atomic_is_lock_free(&p) == false);
     }
-#endif
 }

@@ -371,7 +371,7 @@ AllocatedBlock::ReserveBlock (uint32_t size)
 //            {
 //                // No more bits are set starting from unallocated_idx, so we
 //                // either have enough chunks for the request, or we don't.
-//                // Eiter way we break out of the while loop...
+//                // Either way we break out of the while loop...
 //                num_chunks = total_chunks - unallocated_idx;
 //                if (needed_chunks <= num_chunks)
 //                    first_chunk_idx = unallocated_idx;

@@ -18,16 +18,22 @@ namespace tidy {
 namespace utils {
 namespace type_traits {
 
-// \brief Returns true If \c Type is expensive to copy.
+/// Returns `true` if `Type` is expensive to copy.
 llvm::Optional<bool> isExpensiveToCopy(QualType Type,
                                        const ASTContext &Context);
 
-// \brief Returns true If \c Type is trivially default constructible.
+/// Returns `true` if `Type` is trivially default constructible.
 bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context);
 
-// \brief Returns true If \c RecordDecl is trivially default constructible.
+/// Returns `true` if `RecordDecl` is trivially default constructible.
 bool recordIsTriviallyDefaultConstructible(const RecordDecl &RecordDecl,
                                            const ASTContext &Context);
+
+/// Returns true if `Type` has a non-trivial move constructor.
+bool hasNonTrivialMoveConstructor(QualType Type);
+
+/// Return true if `Type` has a non-trivial move assignment operator.
+bool hasNonTrivialMoveAssignment(QualType Type);
 
 } // type_traits
 } // namespace utils

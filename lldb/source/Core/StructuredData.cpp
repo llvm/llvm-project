@@ -203,50 +203,64 @@ StructuredData::Object::GetObjectForDotSeparatedPath (llvm::StringRef path)
 }
 
 void
-StructuredData::Object::DumpToStdout() const
+StructuredData::Object::DumpToStdout(bool pretty_print) const
 {
     StreamString stream;
-    Dump(stream);
+    Dump(stream, pretty_print);
     printf("%s\n", stream.GetString().c_str());
 }
 
 void
-StructuredData::Array::Dump(Stream &s) const
+StructuredData::Array::Dump(Stream &s, bool pretty_print) const
 {
     bool first = true;
-    s << "[\n";
-    s.IndentMore();
+    s << "[";
+    if (pretty_print)
+    {
+        s << "\n";
+        s.IndentMore();
+    }
     for (const auto &item_sp : m_items)
     {
         if (first)
+        {
             first = false;
+        }
         else
-            s << ",\n";
+        {
+            s << ",";
+            if (pretty_print)
+                s << "\n";
+        }
 
-        s.Indent();
-        item_sp->Dump(s);
+        if (pretty_print)
+            s.Indent();
+        item_sp->Dump(s, pretty_print);
     }
-    s.IndentLess();
-    s.EOL();
-    s.Indent();
+    if (pretty_print)
+    {
+        s.IndentLess();
+        s.EOL();
+        s.Indent();
+    }
     s << "]";
 }
 
 void
-StructuredData::Integer::Dump (Stream &s) const
+StructuredData::Integer::Dump (Stream &s, bool pretty_print) const
 {
     s.Printf ("%" PRIu64, m_value);
 }
 
 
 void
-StructuredData::Float::Dump (Stream &s) const
+StructuredData::Float::Dump (Stream &s, bool pretty_print) const
 {
     s.Printf ("%lg", m_value);
 }
 
 void
-StructuredData::Boolean::Dump (Stream &s) const
+StructuredData::Boolean::Dump (Stream &s, bool pretty_print) const
 {
     if (m_value == true)
         s.PutCString ("true");
@@ -256,7 +270,7 @@ StructuredData::Boolean::Dump (Stream &s) const
 
 
 void
-StructuredData::String::Dump (Stream &s) const
+StructuredData::String::Dump (Stream &s, bool pretty_print) const
 {
     std::string quoted;
     const size_t strsize = m_value.size();
@@ -271,35 +285,47 @@ StructuredData::String::Dump (Stream &s) const
 }
 
 void
-StructuredData::Dictionary::Dump (Stream &s) const
+StructuredData::Dictionary::Dump (Stream &s, bool pretty_print) const
 {
     bool first = true;
-    s << "{\n";
-    s.IndentMore();
+    s << "{";
+    if (pretty_print)
+    {
+        s << "{\n";
+        s.IndentMore();
+    }
     for (const auto &pair : m_dict)
     {
         if (first)
             first = false;
         else
-            s << ",\n";
-        s.Indent();
+        {
+            s << ",";
+            if (pretty_print)
+                s << "\n";
+        }
+        if (pretty_print)
+            s.Indent();
         s << "\"" << pair.first.AsCString() << "\" : ";
-        pair.second->Dump(s);
+        pair.second->Dump(s, pretty_print);
     }
-    s.IndentLess();
-    s.EOL();
-    s.Indent();
+    if (pretty_print)
+    {
+        s.IndentLess();
+        s.EOL();
+        s.Indent();
+    }
     s << "}";
 }
 
 void
-StructuredData::Null::Dump (Stream &s) const
+StructuredData::Null::Dump (Stream &s, bool pretty_print) const
 {
     s << "null";
 }
 
 void
-StructuredData::Generic::Dump(Stream &s) const
+StructuredData::Generic::Dump(Stream &s, bool pretty_print) const
 {
     s << "0x" << m_object;
 }

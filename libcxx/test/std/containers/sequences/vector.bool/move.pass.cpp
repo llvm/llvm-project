@@ -45,7 +45,7 @@ int main()
         assert(l.empty());
         assert(l2.get_allocator() == lo.get_allocator());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<bool, min_allocator<bool> > l(min_allocator<bool>{});
         std::vector<bool, min_allocator<bool> > lo(min_allocator<bool>{});

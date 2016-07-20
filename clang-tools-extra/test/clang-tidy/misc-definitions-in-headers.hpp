@@ -29,6 +29,7 @@ void CA::f2() { }
 template <>
 int CA::f3() {
 // CHECK-MESSAGES: :[[@LINE-1]]:9: warning: function 'f3<int>' defined in a header file;
+// CHECK-FIXES: inline int CA::f3() {
   int a = 1;
   return a;
 }
@@ -90,8 +91,9 @@ T f3() {
 }
 
 template <>
-// CHECK-MESSAGES: :[[@LINE+1]]:5: warning: function 'f3<int>' defined in a header file;
 int f3() {
+// CHECK-MESSAGES: :[[@LINE-1]]:5: warning: function 'f3<int>' defined in a header file;
+// CHECK-FIXES: inline int f3() {
   int a = 1;
   return a;
 }
@@ -153,6 +155,7 @@ struct CD<int, int> {
 
 int CD<int, int>::f() {
 // CHECK-MESSAGES: :[[@LINE-1]]:19: warning: function 'f' defined in a header file;
+// CHECK-FIXES: inline int CD<int, int>::f() {
   return 0;
 }
 

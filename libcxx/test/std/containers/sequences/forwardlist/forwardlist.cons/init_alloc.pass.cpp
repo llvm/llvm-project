@@ -31,7 +31,7 @@ int main()
         assert(n == 10);
         assert(c.get_allocator() == A(14));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef min_allocator<T> A;

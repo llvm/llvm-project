@@ -25,7 +25,7 @@ int main()
     int a[] = {4, 3, 2, 1, 0};
     assert(c == std::list<int>(a, a+5));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     std::list<int, min_allocator<int>> c;
     for (int i = 0; i < 5; ++i)

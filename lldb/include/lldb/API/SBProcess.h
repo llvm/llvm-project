@@ -393,6 +393,34 @@ public:
     lldb::SBError
     SaveCore(const char *file_name);
 
+    //------------------------------------------------------------------
+    /// Query the address load_addr and store the details of the memory
+    /// region that contains it in the supplied SBMemoryRegionInfo object.
+    /// To iterate over all memory regions use GetMemoryRegionList.
+    ///
+    /// @param[in] load_addr
+    ///     The address to be queried.
+    ///
+    /// @param[out] region_info
+    ///     A reference to an SBMemoryRegionInfo object that will contain
+    ///     the details of the memory region containing load_addr.
+    ///
+    /// @return
+    ///     An error object describes any errors that occurred while
+    ///     querying load_addr.
+    //------------------------------------------------------------------
+    lldb::SBError
+    GetMemoryRegionInfo (lldb::addr_t load_addr, lldb::SBMemoryRegionInfo &region_info);
+
+    //------------------------------------------------------------------
+    /// Return the list of memory regions within the process.
+    ///
+    /// @return
+    ///     A list of all witin the process memory regions.
+    //------------------------------------------------------------------
+    lldb::SBMemoryRegionInfoList
+    GetMemoryRegions();
+
 protected:
     friend class SBAddress;
     friend class SBBreakpoint;

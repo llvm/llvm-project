@@ -121,7 +121,10 @@ if (POLLY_ENABLE_GPGPU_CODEGEN)
   # a cuda library.
   FIND_PACKAGE(CUDA)
   set(GPU_CODEGEN TRUE)
+else(POLLY_ENABLE_GPGPU_CODEGEN)
+  set(GPU_CODEGEN FALSE)
 endif(POLLY_ENABLE_GPGPU_CODEGEN)
+
 
 # Support GPGPU code generation if the library is available.
 if (CUDALIB_FOUND)
@@ -134,23 +137,27 @@ include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/JSON/include
   ${CMAKE_CURRENT_BINARY_DIR}/lib/External/isl/include
   ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/isl/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External/pet/include
+  ${CMAKE_CURRENT_SOURCE_DIR}/lib/External
   ${CMAKE_CURRENT_BINARY_DIR}/include
   )
 
-install(DIRECTORY include/
-  DESTINATION include
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN ".svn" EXCLUDE
-  )
+if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
+  install(DIRECTORY include/
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN ".svn" EXCLUDE
+    )
 
-install(DIRECTORY ${POLLY_BINARY_DIR}/include/
-  DESTINATION include
-  FILES_MATCHING
-  PATTERN "*.h"
-  PATTERN "CMakeFiles" EXCLUDE
-  PATTERN ".svn" EXCLUDE
-  )
+  install(DIRECTORY ${POLLY_BINARY_DIR}/include/
+    DESTINATION include
+    FILES_MATCHING
+    PATTERN "*.h"
+    PATTERN "CMakeFiles" EXCLUDE
+    PATTERN ".svn" EXCLUDE
+    )
+endif()
 
 add_definitions( -D_GNU_SOURCE )
 
@@ -167,10 +174,8 @@ configure_file( ${CMAKE_CURRENT_SOURCE_DIR}/include/polly/Config/config.h.cmake
 # Add target to check formatting of polly files
 file( GLOB_RECURSE files *.h lib/*.cpp lib/*.c tools/*.cpp tools/*.c tools/*.h)
 file( GLOB_RECURSE jsonfiles lib/JSON/*.h lib/JSON/*.cpp)
-file( GLOB_RECURSE islfiles lib/External/isl/*.h lib/External/isl/*.c
-                   lib/External/isl/include/isl/*.h lib/External/isl/imath/*.h
-                   lib/External/isl/imath/*.c)
-list( REMOVE_ITEM files ${jsonfiles} ${islfiles})
+file( GLOB_RECURSE external lib/External/*.h lib/External/*.c)
+list( REMOVE_ITEM files ${jsonfiles} ${external})
 
 set(check_format_depends)
 set(update_format_depends)

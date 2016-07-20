@@ -23,12 +23,13 @@ class Pass;
 class PassInfo;
 class PassRegistry;
 class RegionPass;
-}
+} // namespace llvm
 
 namespace polly {
 llvm::Pass *createCodePreparationPass();
 llvm::Pass *createDeadCodeElimPass();
 llvm::Pass *createDependenceInfoPass();
+llvm::Pass *createDependenceInfoWrapperPassPass();
 llvm::Pass *createDOTOnlyPrinterPass();
 llvm::Pass *createDOTOnlyViewerPass();
 llvm::Pass *createDOTPrinterPass();
@@ -38,12 +39,16 @@ llvm::Pass *createJSONImporterPass();
 llvm::Pass *createPollyCanonicalizePass();
 llvm::Pass *createScopDetectionPass();
 llvm::Pass *createScopInfoRegionPassPass();
+llvm::Pass *createScopInfoWrapperPassPass();
 llvm::Pass *createIslAstInfoPass();
 llvm::Pass *createCodeGenerationPass();
+#ifdef GPU_CODEGEN
+llvm::Pass *createPPCGCodeGenerationPass();
+#endif
 llvm::Pass *createIslScheduleOptimizerPass();
 
 extern char &CodePreparationID;
-}
+} // namespace polly
 
 namespace {
 struct PollyForcePassLinking {
@@ -69,10 +74,13 @@ struct PollyForcePassLinking {
     polly::createPollyCanonicalizePass();
     polly::createIslAstInfoPass();
     polly::createCodeGenerationPass();
+#ifdef GPU_CODEGEN
+    polly::createPPCGCodeGenerationPass();
+#endif
     polly::createIslScheduleOptimizerPass();
   }
 } PollyForcePassLinking; // Force link by creating a global definition.
-}
+} // namespace
 
 namespace llvm {
 class PassRegistry;
@@ -82,8 +90,11 @@ void initializeJSONExporterPass(llvm::PassRegistry &);
 void initializeJSONImporterPass(llvm::PassRegistry &);
 void initializeIslAstInfoPass(llvm::PassRegistry &);
 void initializeCodeGenerationPass(llvm::PassRegistry &);
+#ifdef GPU_CODEGEN
+void initializePPCGCodeGenerationPass(llvm::PassRegistry &);
+#endif
 void initializeIslScheduleOptimizerPass(llvm::PassRegistry &);
 void initializePollyCanonicalizePass(llvm::PassRegistry &);
-}
+} // namespace llvm
 
 #endif

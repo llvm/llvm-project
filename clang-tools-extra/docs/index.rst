@@ -24,6 +24,7 @@ Contents
    include-fixer
    modularize
    pp-trace
+   clang-rename
 
 
 Doxygen Documentation

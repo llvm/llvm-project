@@ -74,6 +74,9 @@ namespace process_linux {
         GetWatchpointHitIndex(uint32_t &wp_index, lldb::addr_t trap_addr) override;
 
         lldb::addr_t
+        GetWatchpointHitAddress (uint32_t wp_index) override;
+
+        lldb::addr_t
         GetWatchpointAddress (uint32_t wp_index) override;
 
         uint32_t
@@ -161,6 +164,8 @@ namespace process_linux {
         struct DREG
         {
             lldb::addr_t address;  // Breakpoint/watchpoint address value.
+            lldb::addr_t hit_addr; // Address at which last watchpoint trigger exception occurred.
+            lldb::addr_t real_addr;  // Address value that should cause target to stop.
             uint32_t control;  // Breakpoint/watchpoint control value.
             uint32_t refcount;  // Serves as enable/disable and refernce counter.
         };

@@ -19,6 +19,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/ValueHandle.h"
+#include <tuple>
+#include <vector>
 
 namespace llvm {
 class LoopInfo;
@@ -29,7 +31,8 @@ class Region;
 class Pass;
 class DominatorTree;
 class RegionInfo;
-}
+class GetElementPtrInst;
+} // namespace llvm
 
 namespace polly {
 class Scop;
@@ -275,7 +278,7 @@ private:
     return llvm::cast<llvm::MemTransferInst>(I);
   }
 };
-}
+} // namespace polly
 
 namespace llvm {
 /// @brief Specialize simplify_type for MemAccInst to enable dyn_cast and cast
@@ -286,7 +289,7 @@ template <> struct simplify_type<polly::MemAccInst> {
     return I.asInstruction();
   }
 };
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -414,5 +417,21 @@ bool canSynthesize(const llvm::Value *V, const Scop &S,
 /// Non-instructions do not use operands at a specific point such that in this
 /// case this function returns nullptr.
 llvm::BasicBlock *getUseBlock(llvm::Use &U);
-}
+
+/// @brief Derive the individual index expressions from a GEP instruction.
+///
+/// This function optimistically assumes the GEP references into a fixed size
+/// array. If this is actually true, this function returns a list of array
+/// subscript expressions as SCEV as well as a list of integers describing
+/// the size of the individual array dimensions. Both lists have either equal
+/// length or the size list is one element shorter in case there is no known
+/// size available for the outermost array dimension.
+///
+/// @param GEP The GetElementPtr instruction to analyze.
+///
+/// @return A tuple with the subscript expressions and the dimension sizes.
+std::tuple<std::vector<const llvm::SCEV *>, std::vector<int>>
+getIndexExpressionsFromGEP(llvm::GetElementPtrInst *GEP,
+                           llvm::ScalarEvolution &SE);
+} // namespace polly
 #endif

@@ -59,7 +59,7 @@ public:
     static bool dtor_called;
     constexpr Z() : i_(0) {}
     constexpr Z(int i) : i_(i) {}
-    constexpr Z(std::initializer_list<int> il) : i_(il.begin()[0]), j_(il.begin()[1])
+    Z(std::initializer_list<int> il) : i_(il.begin()[0]), j_(il.begin()[1])
         {throw 6;}
     ~Z() {dtor_called = true;}
 

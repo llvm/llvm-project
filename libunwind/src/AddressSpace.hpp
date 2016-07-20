@@ -330,7 +330,7 @@ LocalAddressSpace::getEncodedP(pint_t &addr, pint_t end, uint8_t encoding,
         return false;
       const mach_header *mh = (const mach_header *)dlinfo.dli_saddr;
       
-      // Find dwarf unwind section in that image.
+      // Find DWARF unwind section in that image.
       unsigned long size;
       const uint8_t *p = getsectiondata(mh, "__TEXT", "__eh_frame", &size);
       if (!p)

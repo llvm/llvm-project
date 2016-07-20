@@ -795,6 +795,27 @@ operator!=(const _Tp& __x, const complex<_Tp>& __y)
 
 // 26.3.7 values:
 
+template <class _Tp, bool = is_integral<_Tp>::value,
+                     bool = is_floating_point<_Tp>::value
+                     >
+struct __libcpp_complex_overload_traits {};
+
+// Integral Types
+template <class _Tp>
+struct __libcpp_complex_overload_traits<_Tp, true, false>
+{
+    typedef double _ValueType;
+    typedef complex<double> _ComplexType;
+};
+
+// Floating point types
+template <class _Tp>
+struct __libcpp_complex_overload_traits<_Tp, false, true>
+{
+    typedef _Tp _ValueType;
+    typedef complex<_Tp> _ComplexType;
+};
+
 // real
 
 template<class _Tp>
@@ -805,35 +826,10 @@ real(const complex<_Tp>& __c)
     return __c.real();
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-long double
-real(long double __re)
-{
-    return __re;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-double
-real(double __re)
-{
-    return __re;
-}
-
-template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    double
->::type
-real(_Tp  __re)
-{
-    return __re;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-float
-real(float  __re)
+typename __libcpp_complex_overload_traits<_Tp>::_ValueType
+real(_Tp __re)
 {
     return __re;
 }
@@ -848,35 +844,10 @@ imag(const complex<_Tp>& __c)
     return __c.imag();
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-long double
-imag(long double __re)
-{
-    return 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-double
-imag(double __re)
-{
-    return 0;
-}
-
-template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    double
->::type
-imag(_Tp  __re)
-{
-    return 0;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
-float
-imag(float  __re)
+typename __libcpp_complex_overload_traits<_Tp>::_ValueType
+imag(_Tp __re)
 {
     return 0;
 }
@@ -901,25 +872,22 @@ arg(const complex<_Tp>& __c)
     return atan2(__c.imag(), __c.real());
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-long double
-arg(long double __re)
+typename enable_if<
+    is_same<_Tp, long double>::value,
+    long double
+>::type
+arg(_Tp __re)
 {
     return atan2l(0.L, __re);
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-double
-arg(double __re)
-{
-    return atan2(0., __re);
 }
 
 template<class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
-    is_integral<_Tp>::value,
+    is_integral<_Tp>::value || is_same<_Tp, double>::value,
     double
 >::type
 arg(_Tp __re)
@@ -927,9 +895,13 @@ arg(_Tp __re)
     return atan2(0., __re);
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-float
-arg(float __re)
+typename enable_if<
+    is_same<_Tp, float>::value,
+    float
+>::type
+arg(_Tp __re)
 {
     return atan2f(0.F, __re);
 }
@@ -948,37 +920,13 @@ norm(const complex<_Tp>& __c)
     return __c.real() * __c.real() + __c.imag() * __c.imag();
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-long double
-norm(long double __re)
-{
-    return __re * __re;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-double
-norm(double __re)
-{
-    return __re * __re;
-}
-
-template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    double
->::type
+typename __libcpp_complex_overload_traits<_Tp>::_ValueType
 norm(_Tp __re)
 {
-    return (double)__re * __re;
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-float
-norm(float __re)
-{
-    return __re * __re;
+    typedef typename __libcpp_complex_overload_traits<_Tp>::_ValueType _ValueType;
+    return static_cast<_ValueType>(__re) * __re;
 }
 
 // conj
@@ -991,38 +939,16 @@ conj(const complex<_Tp>& __c)
     return complex<_Tp>(__c.real(), -__c.imag());
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-complex<long double>
-conj(long double __re)
-{
-    return complex<long double>(__re);
-}
-
-inline _LIBCPP_INLINE_VISIBILITY
-complex<double>
-conj(double __re)
-{
-    return complex<double>(__re);
-}
-
-template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename enable_if
-<
-    is_integral<_Tp>::value,
-    complex<double>
->::type
+typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
 conj(_Tp __re)
 {
-    return complex<double>(__re);
+    typedef typename __libcpp_complex_overload_traits<_Tp>::_ComplexType _ComplexType;
+    return _ComplexType(__re);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
-complex<float>
-conj(float __re)
-{
-    return complex<float>(__re);
-}
+
 
 // proj
 
@@ -1037,44 +963,33 @@ proj(const complex<_Tp>& __c)
     return __r;
 }
 
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
-complex<long double>
-proj(long double __re)
+typename enable_if
+<
+    is_floating_point<_Tp>::value,
+    typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
+>::type
+proj(_Tp __re)
 {
     if (isinf(__re))
         __re = abs(__re);
-    return complex<long double>(__re);
+    return complex<_Tp>(__re);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
-complex<double>
-proj(double __re)
-{
-    if (isinf(__re))
-        __re = abs(__re);
-    return complex<double>(__re);
-}
-
-template<class _Tp>
+template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename enable_if
 <
     is_integral<_Tp>::value,
-    complex<double>
+    typename __libcpp_complex_overload_traits<_Tp>::_ComplexType
 >::type
 proj(_Tp __re)
 {
-    return complex<double>(__re);
+    typedef typename __libcpp_complex_overload_traits<_Tp>::_ComplexType _ComplexType;
+    return _ComplexType(__re);
 }
 
-inline _LIBCPP_INLINE_VISIBILITY
-complex<float>
-proj(float __re)
-{
-    if (isinf(__re))
-        __re = abs(__re);
-    return complex<float>(__re);
-}
 
 // polar
 

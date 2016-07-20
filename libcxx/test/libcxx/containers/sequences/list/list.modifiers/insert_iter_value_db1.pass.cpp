@@ -1,0 +1,29 @@
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// <list>
+
+// iterator insert(const_iterator position, const value_type& x);
+
+#define _LIBCPP_DEBUG 1
+#define _LIBCPP_ASSERT(x, m) ((x) ? (void)0 : std::exit(0))
+
+#include <list>
+#include <cstdlib>
+#include <cassert>
+
+
+int main()
+{
+    std::list<int> v1(3);
+    std::list<int> v2(3);
+    int i = 4;
+    v1.insert(v2.begin(), i);
+    assert(false);
+}

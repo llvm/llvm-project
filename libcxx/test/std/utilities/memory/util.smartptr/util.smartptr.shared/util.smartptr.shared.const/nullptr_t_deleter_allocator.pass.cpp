@@ -65,7 +65,7 @@ int main()
     assert(test_deleter<A>::count == 0);
     assert(test_deleter<A>::dealloc_count == 1);
     test_deleter<A>::dealloc_count = 0;
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     // Test an allocator that returns class-type pointers
     {
     std::shared_ptr<A> p(nullptr, test_deleter<A>(1), min_allocator<void>());

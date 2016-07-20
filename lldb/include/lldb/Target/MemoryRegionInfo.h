@@ -30,7 +30,8 @@ namespace lldb_private
         m_range (),
         m_read (eDontKnow),
         m_write (eDontKnow),
-        m_execute (eDontKnow)
+        m_execute (eDontKnow),
+        m_mapped (eDontKnow)
         {
         }
         
@@ -75,6 +76,12 @@ namespace lldb_private
             return m_execute;
         }
         
+        OptionalBool
+        GetMapped () const
+        {
+            return m_mapped;
+        }
+        
         void
         SetReadable (OptionalBool val)
         {
@@ -91,6 +98,12 @@ namespace lldb_private
         SetExecutable (OptionalBool val)
         {
             m_execute = val;
+        }
+        
+        void
+        SetMapped (OptionalBool val)
+        {
+            m_mapped = val;
         }
 
         //----------------------------------------------------------------------
@@ -122,11 +135,28 @@ namespace lldb_private
             m_execute = (permissions & lldb::ePermissionsExecutable) ? eYes : eNo;
         }
 
+        bool
+        operator == (const MemoryRegionInfo &rhs) const
+        {
+            return m_range == rhs.m_range &&
+                   m_read == rhs.m_read &&
+                   m_write == rhs.m_write &&
+                   m_execute == rhs.m_execute &&
+                   m_mapped == rhs.m_mapped;
+        }
+        
+        bool
+        operator != (const MemoryRegionInfo &rhs) const
+        {
+            return !(*this == rhs);
+        }
+        
     protected:
         RangeType m_range;
         OptionalBool m_read;
         OptionalBool m_write;
         OptionalBool m_execute;
+        OptionalBool m_mapped;
     };
 }
 

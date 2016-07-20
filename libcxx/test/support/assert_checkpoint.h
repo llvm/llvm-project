@@ -11,6 +11,11 @@ struct Checkpoint {
   int line;
   const char* msg;
 
+  Checkpoint() : file(nullptr), func(nullptr), line(-1), msg(nullptr) {}
+  Checkpoint(const char* xfile, const char* xfunc, int xline, const char* xmsg)
+      : file(xfile), func(xfunc), line(xline), msg(xmsg)
+  {}
+
   template <class Stream>
   void print(Stream& s) const {
       if (!file) {
@@ -30,7 +35,7 @@ inline Checkpoint& globalCheckpoint() {
 }
 
 inline void clearCheckpoint() {
-    globalCheckpoint() = {};
+    globalCheckpoint() = Checkpoint();
 }
 
 #if defined(__GNUC__)
@@ -39,7 +44,7 @@ inline void clearCheckpoint() {
 #define CHECKPOINT_FUNCTION_NAME __func__
 #endif
 
-#define CHECKPOINT(msg) globalCheckpoint() = Checkpoint{__FILE__, CHECKPOINT_FUNCTION_NAME, __LINE__, msg}
+#define CHECKPOINT(msg) globalCheckpoint() = Checkpoint(__FILE__, CHECKPOINT_FUNCTION_NAME, __LINE__, msg);
 
 inline void checkpointSignalHandler(int signal) {
     if (signal == SIGABRT) {

@@ -33,7 +33,7 @@ int main()
         getline(std::wistringstream(L" abc\n  def\n   ghij"), s);
         assert(s == L" abc");
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
         S s("initial text");

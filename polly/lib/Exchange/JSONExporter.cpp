@@ -87,7 +87,7 @@ struct JSONImporter : public ScopPass {
   /// @brief Register all analyses and transformation required.
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 };
-}
+} // namespace
 
 char JSONExporter::ID = 0;
 std::string JSONExporter::getFileName(Scop &S) const {

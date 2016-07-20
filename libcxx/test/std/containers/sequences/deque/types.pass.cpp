@@ -80,7 +80,7 @@ int main()
     static_assert((std::is_same<std::deque<char>::allocator_type,
                                 std::allocator<char> >::value), "");
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::deque<short, min_allocator<short>> C;
         static_assert((std::is_same<C::value_type, short>::value), "");

@@ -225,8 +225,36 @@ PlatformAndroid::GetFile (const FileSpec& source,
     if (source_spec.IsRelative())
         source_spec = GetRemoteWorkingDirectory ().CopyByAppendingPathComponent (source_spec.GetCString (false));
 
-    AdbClient adb (m_device_id);
-    return adb.PullFile (source_spec, destination);
+    Error error;
+    auto sync_service = GetSyncService (error);
+    if (error.Fail ())
+        return error;
+
+    uint32_t mode = 0, size = 0, mtime = 0;
+    error = sync_service->Stat(source_spec, mode, size, mtime);
+    if (error.Fail())
+        return error;
+
+    if (mode != 0)
+        return sync_service->PullFile(source_spec, destination);
+
+    auto source_file = source_spec.GetCString(false);
+
+    Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
+    if (log)
+        log->Printf("Got mode == 0 on '%s': try to get file via 'shell cat'", source_file);
+
+    if (strchr(source_file, '\'') != nullptr)
+        return Error("Doesn't support single-quotes in filenames");
+
+    // mode == 0 can signify that adbd cannot access the file
+    // due security constraints - try "cat ..." as a fallback.
+    AdbClient adb(m_device_id);
+
+    char cmd[PATH_MAX];
+    snprintf(cmd, sizeof(cmd), "cat '%s'", source_file);
+
+    return adb.ShellToFile(cmd, 60000 /* ms */, destination);
 }
 
 Error
@@ -242,9 +270,12 @@ PlatformAndroid::PutFile (const FileSpec& source,
     if (destination_spec.IsRelative())
         destination_spec = GetRemoteWorkingDirectory ().CopyByAppendingPathComponent (destination_spec.GetCString (false));
 
-    AdbClient adb (m_device_id);
     // TODO: Set correct uid and gid on remote file.
-    return adb.PushFile(source, destination_spec);
+    Error error;
+    auto sync_service = GetSyncService (error);
+    if (error.Fail ())
+        return error;
+    return sync_service->PushFile(source, destination_spec);
 }
 
 const char *
@@ -315,8 +346,9 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
                                      const FileSpec& dst_file_spec)
 {
     // For oat file we can try to fetch additional debug info from the device
-    if (module_sp->GetFileSpec().GetFileNameExtension() != ConstString("oat"))
-        return Error("Symbol file downloading only supported for oat files");
+    ConstString extension = module_sp->GetFileSpec().GetFileNameExtension();
+    if (extension != ConstString("oat") && extension != ConstString("odex"))
+        return Error("Symbol file downloading only supported for oat and odex files");
 
     // If we have no information about the platform file we can't execute oatdump
     if (!module_sp->GetPlatformFileSpec())
@@ -331,7 +363,6 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
         return Error("Symtab already available in the module");
 
     AdbClient adb(m_device_id);
-
     std::string tmpdir;
     Error error = adb.Shell("mktemp --directory --tmpdir /data/local/tmp", 5000 /* ms */, &tmpdir);
     if (error.Fail() || tmpdir.empty())
@@ -387,3 +418,15 @@ PlatformAndroid::GetLibdlFunctionDeclarations() const
               extern "C" char* dlerror(void) asm("__dl_dlerror");
              )";
 }
+
+AdbClient::SyncService*
+PlatformAndroid::GetSyncService (Error &error)
+{
+    if (m_adb_sync_svc && m_adb_sync_svc->IsConnected ())
+        return m_adb_sync_svc.get ();
+
+    AdbClient adb (m_device_id);
+    m_adb_sync_svc = adb.GetSyncService (error);
+    return (error.Success ()) ? m_adb_sync_svc.get () : nullptr;
+}
+

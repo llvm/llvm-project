@@ -36,7 +36,9 @@ void* operator new(std::size_t s) throw(std::bad_alloc)
         throw std::bad_alloc();
     --throw_one;
     ++outstanding_new;
-    return std::malloc(s);
+    void* ret = std::malloc(s);
+    if (!ret) std::abort(); // placate MSVC's unchecked malloc warning
+    return ret;
 }
 
 void  operator delete(void* p) throw()

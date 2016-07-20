@@ -5,7 +5,7 @@
 # CHECK: Name: .data_long_section_name
 # CHECK: Name: .text_long_section_name
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: [  ]

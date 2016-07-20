@@ -42,7 +42,7 @@ int main()
         c.max_load_factor(2.5);
         assert(c.max_load_factor() == 2.5);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::unordered_multimap<int, std::string, std::hash<int>, std::equal_to<int>,
                             min_allocator<std::pair<const int, std::string>>> C;

@@ -88,7 +88,7 @@ int main()
         assert(c1 == c2);
         assert(cp.count() == std::distance(std::begin(t1), std::end(t1)));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef unary_counting_predicate<bool(*)(T), T> Predicate;

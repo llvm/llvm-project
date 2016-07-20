@@ -142,7 +142,7 @@ int main()
         assert(m1.empty());
     }
 #endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef MoveOnly V;
         typedef test_compare<std::less<MoveOnly> > C;

@@ -45,6 +45,8 @@ void test_is_not_scalar()
 #endif
 }
 
+class incomplete_type;
+
 class Empty
 {
 };
@@ -104,6 +106,7 @@ int main()
     test_is_not_scalar<char[]>();
     test_is_not_scalar<Union>();
     test_is_not_scalar<Empty>();
+    test_is_not_scalar<incomplete_type>();
     test_is_not_scalar<bit_zero>();
     test_is_not_scalar<NotEmpty>();
     test_is_not_scalar<Abstract>();

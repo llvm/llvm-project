@@ -33,7 +33,7 @@ int main()
         for (unsigned i = 50; i < 200; ++i)
             assert(v[i] == 1);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<bool, min_allocator<bool>> v(100);
         v.resize(50, 1);

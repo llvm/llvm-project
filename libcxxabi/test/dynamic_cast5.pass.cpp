@@ -10,6 +10,12 @@
 #include <cassert>
 #include "support/timer.hpp"
 
+// This test explicitly tests dynamic cast with types that have inaccessible
+// bases.
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Winaccessible-base"
+#endif
+
 namespace t1
 {
 

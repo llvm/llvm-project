@@ -59,7 +59,7 @@ int main()
         assert(false);
     }
 #endif
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<MoveOnly, min_allocator<MoveOnly>> v(100);
         std::vector<MoveOnly, min_allocator<MoveOnly>>::iterator i = v.insert(v.cbegin() + 10, MoveOnly(3));

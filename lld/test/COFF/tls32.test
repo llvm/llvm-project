@@ -5,7 +5,7 @@
 # CHECK: TLSTableRVA: 0x1000
 # CHECK: TLSTableSize: 0x18
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: []

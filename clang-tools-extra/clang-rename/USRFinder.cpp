@@ -40,6 +40,14 @@ public:
         Point(Point) {
   }
 
+  // \brief Finds the NamedDecl for a name in the source.
+  // \param Name the fully qualified name.
+  explicit NamedDeclFindingASTVisitor(const SourceManager &SourceMgr,
+                                      const std::string &Name)
+      : Result(nullptr), SourceMgr(SourceMgr),
+        Name(Name) {
+  }
+
   // Declaration visitors:
 
   // \brief Checks if the point falls within the NameDecl. This covers every
@@ -93,9 +101,17 @@ private:
   // \returns false on success.
   bool setResult(const NamedDecl *Decl, SourceLocation Start,
                  SourceLocation End) {
-    if (!Start.isValid() || !Start.isFileID() || !End.isValid() ||
-        !End.isFileID() || !isPointWithin(Start, End)) {
-      return true;
+    if (Name.empty()) {
+      // Offset is used to find the declaration.
+      if (!Start.isValid() || !Start.isFileID() || !End.isValid() ||
+          !End.isFileID() || !isPointWithin(Start, End)) {
+        return true;
+      }
+    } else {
+      // Fully qualified name is used to find the declaration.
+      if (Name != Decl->getQualifiedNameAsString()) {
+        return true;
+      }
     }
     Result = Decl;
     return false;
@@ -121,8 +137,9 @@ private:
   const NamedDecl *Result;
   const SourceManager &SourceMgr;
   const SourceLocation Point; // The location to find the NamedDecl.
+  const std::string Name;
 };
-}
+} // namespace
 
 const NamedDecl *getNamedDeclAt(const ASTContext &Context,
                                 const SourceLocation Point) {
@@ -148,6 +165,22 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
   return nullptr;
 }
 
+const NamedDecl *getNamedDeclFor(const ASTContext &Context,
+                                 const std::string &Name) {
+  const auto &SourceMgr = Context.getSourceManager();
+  NamedDeclFindingASTVisitor Visitor(SourceMgr, Name);
+  auto Decls = Context.getTranslationUnitDecl()->decls();
+
+  for (auto &CurrDecl : Decls) {
+    Visitor.TraverseDecl(CurrDecl);
+    if (const NamedDecl *Result = Visitor.getNamedDecl()) {
+      return Result;
+    }
+  }
+
+  return nullptr;
+}
+
 std::string getUSRForDecl(const Decl *Decl) {
   llvm::SmallVector<char, 128> Buff;
 
@@ -158,5 +191,5 @@ std::string getUSRForDecl(const Decl *Decl) {
   return std::string(Buff.data(), Buff.size());
 }
 
-} // namespace clang
 } // namespace rename
+} // namespace clang

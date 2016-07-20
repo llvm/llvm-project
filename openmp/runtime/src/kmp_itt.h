@@ -264,6 +264,9 @@ __kmp_inline void __kmp_itt_stack_callee_leave(__itt_caller);
     extern __itt_domain* __kmp_itt_imbalance_domains[KMP_MAX_FRAME_DOMAINS];
     extern kmp_int32 __kmp_itt_region_team_size[KMP_MAX_FRAME_DOMAINS];
     extern __itt_domain * metadata_domain;
+    extern __itt_string_handle * string_handle_imbl;
+    extern __itt_string_handle * string_handle_loop;
+    extern __itt_string_handle * string_handle_sngl;
 
 #else
 

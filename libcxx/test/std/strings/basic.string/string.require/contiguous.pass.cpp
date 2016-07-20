@@ -41,7 +41,7 @@ int main()
     test_contiguous(S("1", A(5)));
     test_contiguous(S("1234567890123456789012345678901234567890123456789012345678901234567890", A(7)));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef min_allocator<char> A;
     typedef std::basic_string<char, std::char_traits<char>, A> S;

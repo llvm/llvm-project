@@ -16,11 +16,13 @@
 #include <iterator>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct S { S(); }; // not constexpr
 
 int main()
 {
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     constexpr std::istream_iterator<S> it;
     }

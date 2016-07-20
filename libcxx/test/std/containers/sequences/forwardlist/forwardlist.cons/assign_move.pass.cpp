@@ -159,7 +159,7 @@ int main()
         assert(c1.get_allocator() == A(10));
         assert(c0.empty());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef MoveOnly T;
         typedef min_allocator<T> A;

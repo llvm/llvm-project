@@ -44,11 +44,6 @@ long strtol_l(const char *__nptr, char **__endptr,
   return strtol(__nptr, __endptr, __base);
 }
 static inline
-long double strtold_l(const char *__nptr, char **__endptr,
-    locale_t __loc) {
-  return strtold(__nptr, __endptr);
-}
-static inline
 unsigned long long strtoull_l(const char *__nptr, char **__endptr,
     int __base, locale_t __loc) {
   return strtoull(__nptr, __endptr, __base);
@@ -57,6 +52,21 @@ static inline
 unsigned long strtoul_l(const char *__nptr, char **__endptr,
     int __base, locale_t __loc) {
   return strtoul(__nptr, __endptr, __base);
+}
+static inline
+float strtof_l(const char *__nptr, char **__endptr,
+    locale_t __loc) {
+  return strtof(__nptr, __endptr);
+}
+static inline
+double strtod_l(const char *__nptr, char **__endptr,
+    locale_t __loc) {
+  return strtod(__nptr, __endptr);
+}
+static inline
+long double strtold_l(const char *__nptr, char **__endptr,
+    locale_t __loc) {
+  return strtold(__nptr, __endptr);
 }
 
 

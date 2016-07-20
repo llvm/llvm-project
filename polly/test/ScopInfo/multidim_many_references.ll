@@ -1,4 +1,5 @@
 ; RUN: opt %loadPolly -polly-scops -analyze -polly-ignore-aliasing < %s | FileCheck %s
+; RUN: opt %loadPolly -polly-function-scops -analyze -polly-ignore-aliasing < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -34,42 +35,42 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 %struct.Mat = type { float*, i64, i64, i64 }
 
 ; CHECK: Assumed Context:
-; CHECK-DAG: a2.cols >= -1 + a1.cols
-; CHECK-DAG: a2.deps >= -1 + a1.deps
-; CHECK-DAG: a3.cols >= -1 + a1.cols
-; CHECK-DAG: a3.deps >= -1 + a1.deps
-; CHECK-DAG: a4.cols >= -1 + a1.cols
-; CHECK-DAG: a4.deps >= -1 + a1.deps
-; CHECK-DAG: a5.cols >= -1 + a1.cols
-; CHECK-DAG: a5.deps >= -1 + a1.deps
-; CHECK-DAG: a6.cols >= -1 + a1.cols
-; CHECK-DAG: a6.deps >= -1 + a1.deps
-; CHECK-DAG: a7.cols >= -1 + a1.cols
-; CHECK-DAG: a7.deps >= -1 + a1.deps
-; CHECK-DAG: a8.cols >= -1 + a1.cols
-; CHECK-DAG: a8.deps >= -1 + a1.deps
-; CHECK-DAG: a9.deps >= -1 + a1.deps
-; CHECK-DAG: a9.cols >= -1 + a1.cols
-; CHECK-DAG: a10.cols >= -1 + a1.cols
-; CHECK-DAG: a10.deps >= -1 + a1.deps
-; CHECK-DAG: a11.cols >= -1 + a1.cols
-; CHECK-DAG: a11.deps >= -1 + a1.deps
-; CHECK-DAG: a12.cols >= -1 + a1.cols
-; CHECK-DAG: a12.deps >= -1 + a1.deps
-; CHECK-DAG: a13.cols >= -1 + a1.cols
-; CHECK-DAG: a13.deps >= -1 + a1.deps
-; CHECK-DAG: a14.cols >= -1 + a1.cols
-; CHECK-DAG: a14.deps >= -1 + a1.deps
-; CHECK-DAG: a15.cols >= -1 + a1.cols
-; CHECK-DAG: a15.deps >= -1 + a1.deps
-; CHECK-DAG: a16.cols >= -1 + a1.cols
-; CHECK-DAG: a16.deps >= -1 + a1.deps
-; CHECK-DAG: a17.cols >= -1 + a1.cols
-; CHECK-DAG: a17.deps >= -1 + a1.deps
-; CHECK-DAG: a18.cols >= -1 + a1.cols
-; CHECK-DAG: a18.deps >= -1 + a1.deps
-; CHECK-DAG: a19.deps >= -1 + a1.deps
-; CHECK-DAG: a19.cols >= -1 + a1.cols
+; CHECK-DAG: a2_cols >= -1 + a1_cols
+; CHECK-DAG: a2_deps >= -1 + a1_deps
+; CHECK-DAG: a3_cols >= -1 + a1_cols
+; CHECK-DAG: a3_deps >= -1 + a1_deps
+; CHECK-DAG: a4_cols >= -1 + a1_cols
+; CHECK-DAG: a4_deps >= -1 + a1_deps
+; CHECK-DAG: a5_cols >= -1 + a1_cols
+; CHECK-DAG: a5_deps >= -1 + a1_deps
+; CHECK-DAG: a6_cols >= -1 + a1_cols
+; CHECK-DAG: a6_deps >= -1 + a1_deps
+; CHECK-DAG: a7_cols >= -1 + a1_cols
+; CHECK-DAG: a7_deps >= -1 + a1_deps
+; CHECK-DAG: a8_cols >= -1 + a1_cols
+; CHECK-DAG: a8_deps >= -1 + a1_deps
+; CHECK-DAG: a9_deps >= -1 + a1_deps
+; CHECK-DAG: a9_cols >= -1 + a1_cols
+; CHECK-DAG: a10_cols >= -1 + a1_cols
+; CHECK-DAG: a10_deps >= -1 + a1_deps
+; CHECK-DAG: a11_cols >= -1 + a1_cols
+; CHECK-DAG: a11_deps >= -1 + a1_deps
+; CHECK-DAG: a12_cols >= -1 + a1_cols
+; CHECK-DAG: a12_deps >= -1 + a1_deps
+; CHECK-DAG: a13_cols >= -1 + a1_cols
+; CHECK-DAG: a13_deps >= -1 + a1_deps
+; CHECK-DAG: a14_cols >= -1 + a1_cols
+; CHECK-DAG: a14_deps >= -1 + a1_deps
+; CHECK-DAG: a15_cols >= -1 + a1_cols
+; CHECK-DAG: a15_deps >= -1 + a1_deps
+; CHECK-DAG: a16_cols >= -1 + a1_cols
+; CHECK-DAG: a16_deps >= -1 + a1_deps
+; CHECK-DAG: a17_cols >= -1 + a1_cols
+; CHECK-DAG: a17_deps >= -1 + a1_deps
+; CHECK-DAG: a18_cols >= -1 + a1_cols
+; CHECK-DAG: a18_deps >= -1 + a1_deps
+; CHECK-DAG: a19_deps >= -1 + a1_deps
+; CHECK-DAG: a19_cols >= -1 + a1_cols
 
 define void @jacobi(i64 %nn,
   %struct.Mat* %a1,

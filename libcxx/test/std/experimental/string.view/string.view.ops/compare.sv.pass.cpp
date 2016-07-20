@@ -70,7 +70,7 @@ int main () {
     test(L"abcdefghijklmnopqrst", L"abcdefghij", 10);
     test(L"abcdefghijklmnopqrst", L"abcdefghijklmnopqrst", 0);
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test(u"",                     u"", 0);
     test(u"",                     u"abcde", -5);
     test(u"",                     u"abcdefghij", -10);

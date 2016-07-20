@@ -66,6 +66,8 @@ public:
     bool            ParseCompileUnitLineTable (const lldb_private::SymbolContext& sc) override;
     bool            ParseCompileUnitDebugMacros (const lldb_private::SymbolContext& sc) override;
     bool            ParseCompileUnitSupportFiles (const lldb_private::SymbolContext& sc, lldb_private::FileSpecList &support_files) override;
+    bool
+    ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc) override;
     bool            ParseImportedModules (const lldb_private::SymbolContext &sc, std::vector<lldb_private::ConstString> &imported_modules) override;
     size_t          ParseFunctionBlocks (const lldb_private::SymbolContext& sc) override;
     size_t          ParseTypes (const lldb_private::SymbolContext& sc) override;

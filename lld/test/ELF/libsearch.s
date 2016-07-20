@@ -44,6 +44,12 @@
 // RUN: ld.lld -o %t3 %t.o -L%t.dir -lls
 // RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=DYNAMIC %s
 
+// Check for library search order
+// RUN: mkdir -p %t.dir2
+// RUN: cp %t.dir/libls.a %t.dir2
+// RUN: ld.lld -o %t3 %t.o -L%t.dir2 -L%t.dir -lls
+// RUN: llvm-readobj --symbols %t3 | FileCheck --check-prefix=STATIC %s
+
 // -L can be placed after -l
 // RUN: ld.lld -o %t3 %t.o -lls -L%t.dir
 

@@ -8,7 +8,7 @@
 
 # CHECK: /safeseh: {{.*}} is not compatible with SEH
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [  ]

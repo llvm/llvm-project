@@ -94,11 +94,11 @@ private:
 /// base class's methods. E.g. to implement a check that validates namespace
 /// declarations, override ``registerMatchers``:
 ///
-/// ```c++
+/// ~~~{.cpp}
 /// void registerMatchers(ast_matchers::MatchFinder *Finder) override {
 ///   Finder->addMatcher(namespaceDecl().bind("namespace"), this);
 /// }
-/// ```
+/// ~~~
 ///
 /// and then override ``check(const MatchResult &Result)`` to do the actual
 /// check for each match.
@@ -127,7 +127,7 @@ public:
   /// dependent properties, e.g. the order of include directives.
   virtual void registerPPCallbacks(CompilerInstance &Compiler) {}
 
-  /// \brief Override this to register ASTMatchers with \p Finder.
+  /// \brief Override this to register AST matchers with \p Finder.
   ///
   /// This should be used by clang-tidy checks that analyze code properties that
   /// dependent on AST knowledge.

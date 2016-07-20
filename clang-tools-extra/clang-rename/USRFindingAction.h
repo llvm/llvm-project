@@ -8,7 +8,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Provides an action to find all relevent USRs at a point.
+/// \brief Provides an action to find all relevant USRs at a point.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -25,26 +25,23 @@ class NamedDecl;
 namespace rename {
 
 struct USRFindingAction {
-  USRFindingAction(unsigned Offset) : SymbolOffset(Offset) {
-  }
+  USRFindingAction(unsigned Offset, const std::string &Name)
+      : SymbolOffset(Offset), OldName(Name) {}
   std::unique_ptr<ASTConsumer> newASTConsumer();
 
   // \brief get the spelling of the USR(s) as it would appear in source files.
-  const std::string &getUSRSpelling() {
-    return SpellingName;
-  }
+  const std::string &getUSRSpelling() { return SpellingName; }
 
-  const std::vector<std::string> &getUSRs() {
-    return USRs;
-  }
+  const std::vector<std::string> &getUSRs() { return USRs; }
 
 private:
   unsigned SymbolOffset;
+  std::string OldName;
   std::string SpellingName;
   std::vector<std::string> USRs;
 };
 
-}
-}
+} // namespace rename
+} // namespace clang
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_RENAME_USR_FINDING_ACTION_H_

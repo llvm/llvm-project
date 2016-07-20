@@ -11,6 +11,7 @@ set(LIBCXX_LIT_VARIANT "libcxx" CACHE STRING
 
 pythonize_bool(LIBCXX_ENABLE_EXCEPTIONS)
 pythonize_bool(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
+pythonize_bool(LIBCXX_ENABLE_FILESYSTEM)
 pythonize_bool(LIBCXX_ENABLE_RTTI)
 pythonize_bool(LIBCXX_ENABLE_SHARED)
 pythonize_bool(LIBCXX_BUILD_32_BITS)
@@ -18,6 +19,7 @@ pythonize_bool(LIBCXX_GENERATE_COVERAGE)
 pythonize_bool(LIBCXXABI_ENABLE_SHARED)
 pythonize_bool(LIBCXXABI_USE_LLVM_UNWINDER)
 pythonize_bool(LIBCXX_HAS_ATOMIC_LIB)
+pythonize_bool(LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB)
 
 # The tests shouldn't link to any ABI library when it has been linked into
 # libc++ statically or via a linker script.

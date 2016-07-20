@@ -401,6 +401,12 @@ public:
     lldb::SBError
     SaveCore(const char *file_name);
 
+    lldb::SBError
+    GetMemoryRegionInfo(lldb::addr_t load_addr, lldb::SBMemoryRegionInfo &region_info);
+
+    lldb::SBMemoryRegionInfoList
+    GetMemoryRegions();
+
     %pythoncode %{
         def __get_is_alive__(self):
             '''Returns "True" if the process is currently alive, "False" otherwise'''
@@ -422,7 +428,7 @@ public:
                 return True
             return False
 
-        def __get_is_running__(self):
+        def __get_is_stopped__(self):
             '''Returns "True" if the process is currently stopped, "False" otherwise'''
             state = self.GetState()
             if state == eStateStopped or state == eStateCrashed or state == eStateSuspended:
@@ -468,8 +474,8 @@ public:
         __swig_getmethods__["is_running"] = __get_is_running__
         if _newclass: is_running = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently running.''')
 
-        __swig_getmethods__["is_stopped"] = __get_is_running__
-        if _newclass: is_stopped = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
+        __swig_getmethods__["is_stopped"] = __get_is_stopped__
+        if _newclass: is_stopped = property(__get_is_stopped__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
 
         __swig_getmethods__["id"] = GetProcessID
         if _newclass: id = property(GetProcessID, None, doc='''A read only property that returns the process ID as an integer.''')

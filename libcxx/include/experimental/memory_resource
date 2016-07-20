@@ -176,7 +176,7 @@ public:
     {}
 
     polymorphic_allocator &
-    operator=(polymorphic_allocator const &) = default;
+    operator=(polymorphic_allocator const &) = delete;
 
     // 8.6.3, memory.polymorphic.allocator.mem
     _LIBCPP_INLINE_VISIBILITY

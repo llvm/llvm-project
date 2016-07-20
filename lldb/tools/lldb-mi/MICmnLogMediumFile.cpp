@@ -351,7 +351,7 @@ CMICmnLogMediumFile::FileWriteHeader()
 
 //++ ------------------------------------------------------------------------------------
 // Details: Convert any carriage line returns to be compatible with the platform the
-//          Log fiel is being written to.
+//          Log file is being written to.
 // Type:    Method.
 // Args:    vData   - (R) Text data.
 // Return:  CMIUtilString - Converted string data.

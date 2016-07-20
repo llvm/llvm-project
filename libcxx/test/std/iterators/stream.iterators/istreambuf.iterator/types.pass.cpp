@@ -33,12 +33,16 @@
 #include <string>
 #include <type_traits>
 
+#include "test_macros.h"
+
 int main()
 {
     typedef std::istreambuf_iterator<char> I1;
-    static_assert((std::is_convertible<I1,
-        std::iterator<std::input_iterator_tag, char, std::char_traits<char>::off_type,
-        char*, char> >::value), "");
+    static_assert((std::is_same<I1::iterator_category, std::input_iterator_tag>::value), "");
+    static_assert((std::is_same<I1::value_type, char>::value), "");
+    static_assert((std::is_same<I1::difference_type, std::char_traits<char>::off_type>::value), "");
+    LIBCPP_STATIC_ASSERT((std::is_same<I1::pointer, char*>::value), "");
+    static_assert((std::is_same<I1::reference, char>::value), "");
     static_assert((std::is_same<I1::char_type, char>::value), "");
     static_assert((std::is_same<I1::traits_type, std::char_traits<char> >::value), "");
     static_assert((std::is_same<I1::int_type, I1::traits_type::int_type>::value), "");
@@ -49,9 +53,11 @@ int main()
     static_assert((std::is_trivially_destructible<I1>::value), "" );
 
     typedef std::istreambuf_iterator<wchar_t> I2;
-    static_assert((std::is_convertible<I2,
-        std::iterator<std::input_iterator_tag, wchar_t, std::char_traits<wchar_t>::off_type,
-        wchar_t*, wchar_t> >::value), "");
+    static_assert((std::is_same<I2::iterator_category, std::input_iterator_tag>::value), "");
+    static_assert((std::is_same<I2::value_type, wchar_t>::value), "");
+    static_assert((std::is_same<I2::difference_type, std::char_traits<wchar_t>::off_type>::value), "");
+    LIBCPP_STATIC_ASSERT((std::is_same<I2::pointer, wchar_t*>::value), "");
+    static_assert((std::is_same<I2::reference, wchar_t>::value), "");
     static_assert((std::is_same<I2::char_type, wchar_t>::value), "");
     static_assert((std::is_same<I2::traits_type, std::char_traits<wchar_t> >::value), "");
     static_assert((std::is_same<I2::int_type, I2::traits_type::int_type>::value), "");

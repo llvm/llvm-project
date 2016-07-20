@@ -47,14 +47,15 @@ void test_array()
 typedef char array[3];
 typedef const char const_array[3];
 typedef char incomplete_array[];
-struct incomplete_type;
+struct Incomplete;
 
 int main()
 {
     test_array<array>();
     test_array<const_array>();
     test_array<incomplete_array>();
+    test_array<Incomplete[]>();
 
-//  LWG#2581
-    static_assert(!std::is_array<incomplete_type>::value, "");
+//  LWG#2582
+    static_assert(!std::is_array<Incomplete>::value, "");
 }

@@ -21,6 +21,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 template <class T>
 struct A
 {
@@ -61,7 +63,7 @@ int main()
         const B<int> b = {};
         assert(std::allocator_traits<B<int> >::max_size(b) == 100);
     }
-#if __cplusplus >= 201103
+#if TEST_STD_VER >= 11
     {
         std::allocator<int> a;
         static_assert(noexcept(std::allocator_traits<std::allocator<int>>::max_size(a)) == true, "");

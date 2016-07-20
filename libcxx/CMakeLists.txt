@@ -53,7 +53,11 @@ MACRO_ENSURE_OUT_OF_SOURCE_BUILD(
 option(LIBCXX_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXX_ENABLE_SHARED "Build libc++ as a shared library." ON)
 option(LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY "Build libc++experimental.a" ON)
+option(LIBCXX_ENABLE_FILESYSTEM
+        "Build filesystem as part of libc++experimental.a" ${LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY})
 option(LIBCXX_INCLUDE_TESTS "Build the libc++ tests." ${LLVM_INCLUDE_TESTS})
+option(LIBCXX_INCLUDE_BENCHMARKS "Build the libc++ benchmarks and their dependancies" OFF)
+option(LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB "Build the benchmarks against the native STL" OFF)
 option(LIBCXX_INCLUDE_DOCS "Build the libc++ documentation." ${LLVM_INCLUDE_DOCS})
 set(LIBCXX_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}" CACHE STRING
     "Define suffix of library directory name (32/64)")
@@ -133,6 +137,7 @@ option(LIBCXX_HAS_PTHREAD_API "Ignore auto-detection and force use of pthread AP
 # about #include_next which is used everywhere.
 option(LIBCXX_ENABLE_PEDANTIC "Compile with pedantic enabled." OFF)
 option(LIBCXX_ENABLE_WERROR "Fail and stop if a warning is triggered." OFF)
+option(LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS "Disable #warnings about conflicting macros." OFF)
 
 option(LIBCXX_GENERATE_COVERAGE "Enable generating code coverage." OFF)
 set(LIBCXX_COVERAGE_LIBRARY "" CACHE STRING
@@ -165,6 +170,11 @@ option(LIBCXX_CONFIGURE_IDE "Configure libcxx for use within an IDE"
 #===============================================================================
 # Check option configurations
 #===============================================================================
+
+if (LIBCXX_ENABLE_FILESYSTEM AND NOT LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY)
+  message(FATAL_ERROR
+    "LIBCXX_ENABLE_FILESYSTEM cannot be turned on when LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF")
+endif()
 
 # Ensure LIBCXX_ENABLE_MONOTONIC_CLOCK is set to ON only when
 # LIBCXX_ENABLE_THREADS is on.
@@ -302,7 +312,8 @@ add_compile_flags_if_supported(-nostdinc++)
 add_definitions(-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 add_compile_flags_if_supported(
     -Wall -W -Wwrite-strings
-    -Wno-unused-parameter -Wno-long-long
+    -Wno-unused-parameter -Wno-long-long -Wno-user-defined-literals
+    -Wno-covered-switch-default
     -Werror=return-type)
 if (LIBCXX_ENABLE_WERROR)
   add_compile_flags_if_supported(-Werror)
@@ -314,6 +325,9 @@ else()
 endif()
 if (LIBCXX_ENABLE_PEDANTIC)
   add_compile_flags_if_supported(-pedantic)
+endif()
+if (LIBCXX_DISABLE_MACRO_CONFLICT_WARNINGS)
+  add_definitions(-D_LIBCPP_DISABLE_MACRO_CONFLICT_WARNINGS)
 endif()
 
 # Exception flags =============================================================
@@ -414,6 +428,9 @@ include_directories(include)
 add_subdirectory(include)
 add_subdirectory(lib)
 
+if (LIBCXX_INCLUDE_BENCHMARKS)
+  add_subdirectory(benchmarks)
+endif()
 if (LIBCXX_INCLUDE_TESTS)
   add_subdirectory(test)
 endif()

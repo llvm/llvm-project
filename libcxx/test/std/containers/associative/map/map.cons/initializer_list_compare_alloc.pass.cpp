@@ -45,7 +45,7 @@ int main()
     assert(m.key_comp() == C(3));
     assert(m.get_allocator() == A(6));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef std::pair<const int, double> V;
     typedef test_compare<std::less<int> > C;

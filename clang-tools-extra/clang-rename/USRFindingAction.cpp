@@ -8,7 +8,8 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Provides an action to rename every symbol at a point.
+/// \brief Provides an action to find USR for the symbol at <offset>, as well as
+/// all additional USRs.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -17,6 +18,9 @@
 #include "clang/AST/AST.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/Decl.h"
+#include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -25,50 +29,115 @@
 #include "clang/Tooling/CommonOptionsParser.h"
 #include "clang/Tooling/Refactoring.h"
 #include "clang/Tooling/Tooling.h"
+#include <algorithm>
 #include <string>
+#include <set>
 #include <vector>
 
+
 using namespace llvm;
+using namespace clang::ast_matchers;
 
 namespace clang {
 namespace rename {
 
-// Get the USRs for the constructors of the class.
-static std::vector<std::string> getAllConstructorUSRs(
-    const CXXRecordDecl *Decl) {
-  std::vector<std::string> USRs;
+namespace {
+// \brief NamedDeclFindingConsumer should delegate finding USRs of given Decl to
+// AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
+// Decl refers to class and adds USRs of all overridden methods if Decl refers
+// to virtual method.
+//
+// FIXME: It's better to match ctors/dtors via typeLoc's instead of adding
+// their USRs to the storage, because we can also match CXXConversionDecl's by
+// typeLoc and we won't have to "manually" handle them here.
+class AdditionalUSRFinder : public MatchFinder::MatchCallback {
+public:
+  explicit AdditionalUSRFinder(const Decl *FoundDecl, ASTContext &Context,
+                             std::vector<std::string> *USRs)
+    : FoundDecl(FoundDecl), Context(Context), USRs(USRs), USRSet(), Finder() {}
 
-  // We need to get the definition of the record (as opposed to any forward
-  // declarations) in order to find the constructor and destructor.
-  const auto *RecordDecl = Decl->getDefinition();
+  void Find() {
+    USRSet.insert(getUSRForDecl(FoundDecl));
+    addUSRsFromOverrideSetsAndCtorDtors();
+    addMatchers();
+    Finder.matchAST(Context);
+    USRs->insert(USRs->end(), USRSet.begin(), USRSet.end());
+  }
 
-  // Iterate over all the constructors and add their USRs.
-  for (const auto *CtorDecl : RecordDecl->ctors())
-    USRs.push_back(getUSRForDecl(CtorDecl));
+private:
+  void addMatchers() {
+    const auto CXXMethodDeclMatcher =
+        cxxMethodDecl(isVirtual()).bind("cxxMethodDecl");
+    Finder.addMatcher(CXXMethodDeclMatcher, this);
+  }
 
-  // Ignore destructors. GetLocationsOfUSR will find the declaration of and
-  // explicit calls to a destructor through TagTypeLoc (and it is better for the
-  // purpose of renaming).
-  //
-  // For example, in the following code segment,
-  //  1  class C {
-  //  2    ~C();
-  //  3  };
-  // At line 3, there is a NamedDecl starting from '~' and a TagTypeLoc starting
-  // from 'C'.
+  // FIXME: Implement hasOverriddenMethod and matchesUSR matchers to make
+  // lookups more efficient.
+  virtual void run(const MatchFinder::MatchResult &Result) {
+    const auto *VirtualMethod =
+        Result.Nodes.getNodeAs<CXXMethodDecl>("cxxMethodDecl");
+    bool Found = false;
+    for (const auto &OverriddenMethod : VirtualMethod->overridden_methods()) {
+      if (USRSet.find(getUSRForDecl(OverriddenMethod)) != USRSet.end()) {
+        Found = true;
+      }
+    }
+    if (Found) {
+      USRSet.insert(getUSRForDecl(VirtualMethod));
+    }
+  }
 
-  return USRs;
-}
+  void addUSRsFromOverrideSetsAndCtorDtors() {
+    // If D is CXXRecordDecl we should add all USRs of its constructors.
+    if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
+      // Ignore destructors. Find the declaration of and explicit calls to a
+      // destructor through TagTypeLoc (and it is better for the purpose of
+      // renaming).
+      //
+      // For example, in the following code segment,
+      //  1  class C {
+      //  2    ~C();
+      //  3  };
+      //
+      // At line 3, there is a NamedDecl starting from '~' and a TagTypeLoc
+      // starting from 'C'.
+      RecordDecl = RecordDecl->getDefinition();
+
+      // Iterate over all the constructors and add their USRs.
+      for (const auto *CtorDecl : RecordDecl->ctors()) {
+        USRSet.insert(getUSRForDecl(CtorDecl));
+      }
+    }
+    // If D is CXXMethodDecl we should add all USRs of its overriden methods.
+    if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {
+      for (auto &OverriddenMethod : MethodDecl->overridden_methods()) {
+        USRSet.insert(getUSRForDecl(OverriddenMethod));
+      }
+    }
+  }
+
+  const Decl *FoundDecl;
+  ASTContext &Context;
+  std::vector<std::string> *USRs;
+  std::set<std::string> USRSet;
+  MatchFinder Finder;
+};
+} // namespace
 
 struct NamedDeclFindingConsumer : public ASTConsumer {
   void HandleTranslationUnit(ASTContext &Context) override {
     const auto &SourceMgr = Context.getSourceManager();
     // The file we look for the USR in will always be the main source file.
-    const auto Point = SourceMgr.getLocForStartOfFile(
-        SourceMgr.getMainFileID()).getLocWithOffset(SymbolOffset);
+    const auto Point = SourceMgr.getLocForStartOfFile(SourceMgr.getMainFileID())
+                           .getLocWithOffset(SymbolOffset);
     if (!Point.isValid())
       return;
-    const NamedDecl *FoundDecl = getNamedDeclAt(Context, Point);
+    const NamedDecl *FoundDecl = nullptr;
+    if (OldName.empty()) {
+      FoundDecl = getNamedDeclAt(Context, Point);
+    } else {
+      FoundDecl = getNamedDeclFor(Context, OldName);
+    }
     if (FoundDecl == nullptr) {
       FullSourceLoc FullLoc(Point, SourceMgr);
       errs() << "clang-rename: could not find symbol at "
@@ -79,33 +148,31 @@ struct NamedDeclFindingConsumer : public ASTConsumer {
       return;
     }
 
-    // If the decl is a constructor or destructor, we want to instead take the
-    // decl of the parent record.
-    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl))
+    // If FoundDecl is a constructor or destructor, we want to instead take the
+    // Decl of the corresponding class.
+    if (const auto *CtorDecl = dyn_cast<CXXConstructorDecl>(FoundDecl)) {
       FoundDecl = CtorDecl->getParent();
-    else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl))
+    } else if (const auto *DtorDecl = dyn_cast<CXXDestructorDecl>(FoundDecl)) {
       FoundDecl = DtorDecl->getParent();
-
-    // If the decl is in any way relatedpp to a class, we want to make sure we
-    // search for the constructor and destructor as well as everything else.
-    if (const auto *Record = dyn_cast<CXXRecordDecl>(FoundDecl))
-      *USRs = getAllConstructorUSRs(Record);
-
-    USRs->push_back(getUSRForDecl(FoundDecl));
+    }
     *SpellingName = FoundDecl->getNameAsString();
+
+    AdditionalUSRFinder Finder(FoundDecl, Context, USRs);
+    Finder.Find();
   }
 
   unsigned SymbolOffset;
+  std::string OldName;
   std::string *SpellingName;
   std::vector<std::string> *USRs;
 };
 
-std::unique_ptr<ASTConsumer>
-USRFindingAction::newASTConsumer() {
+std::unique_ptr<ASTConsumer> USRFindingAction::newASTConsumer() {
   std::unique_ptr<NamedDeclFindingConsumer> Consumer(
       new NamedDeclFindingConsumer);
   SpellingName = "";
   Consumer->SymbolOffset = SymbolOffset;
+  Consumer->OldName = OldName;
   Consumer->USRs = &USRs;
   Consumer->SpellingName = &SpellingName;
   return std::move(Consumer);

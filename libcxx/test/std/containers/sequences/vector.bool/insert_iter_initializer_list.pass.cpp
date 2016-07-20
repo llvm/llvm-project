@@ -39,7 +39,7 @@ int main()
     assert(d[12] == true);
     assert(d[13] == true);
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     std::vector<bool, min_allocator<bool>> d(10, true);
     std::vector<bool, min_allocator<bool>>::iterator i = d.insert(d.cbegin() + 2, {false, true, true, false});

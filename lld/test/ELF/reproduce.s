@@ -25,7 +25,7 @@
 # RUN: mkdir -p %t.dir/build2/a/b/c
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.dir/build2/foo.o
 # RUN: cd %t.dir/build2/a/b/c
-# RUN: ld.lld ./../../../foo.o -o bar -shared --as-needed --reproduce repro
+# RUN: env LLD_REPRODUCE=repro ld.lld ./../../../foo.o -o bar -shared --as-needed
 # RUN: cpio -id < repro.cpio
 # RUN: diff %t.dir/build2/foo.o repro/%:t.dir/build2/foo.o
 

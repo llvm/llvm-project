@@ -818,7 +818,7 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread, ValueList &dis
     // if other threads were calling into here, but actually it isn't because we allocate a new args structure for
     // this call by passing args_addr = LLDB_INVALID_ADDRESS...
 
-    if (impl_function_caller->WriteFunctionArguments(exe_ctx, args_addr, dispatch_values, diagnostics))
+    if (!impl_function_caller->WriteFunctionArguments(exe_ctx, args_addr, dispatch_values, diagnostics))
     {
         if (log)
         {

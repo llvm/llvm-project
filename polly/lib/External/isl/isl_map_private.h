@@ -189,8 +189,8 @@ unsigned isl_basic_set_offset(struct isl_basic_set *bset,
 int isl_basic_map_may_be_set(__isl_keep isl_basic_map *bmap);
 int isl_map_may_be_set(__isl_keep isl_map *map);
 int isl_map_compatible_domain(struct isl_map *map, struct isl_set *set);
-int isl_basic_map_compatible_domain(struct isl_basic_map *bmap,
-		struct isl_basic_set *bset);
+isl_bool isl_basic_map_compatible_domain(__isl_keep isl_basic_map *bmap,
+	__isl_keep isl_basic_set *bset);
 int isl_basic_map_compatible_range(struct isl_basic_map *bmap,
 		struct isl_basic_set *bset);
 
@@ -262,6 +262,7 @@ struct isl_basic_map *isl_basic_map_set_to_empty(struct isl_basic_map *bmap);
 struct isl_basic_set *isl_basic_set_set_to_empty(struct isl_basic_set *bset);
 struct isl_basic_set *isl_basic_set_order_divs(struct isl_basic_set *bset);
 void isl_basic_map_swap_div(struct isl_basic_map *bmap, int a, int b);
+void isl_basic_set_swap_div(struct isl_basic_set *bset, int a, int b);
 struct isl_basic_map *isl_basic_map_order_divs(struct isl_basic_map *bmap);
 __isl_give isl_map *isl_map_order_divs(__isl_take isl_map *map);
 struct isl_basic_map *isl_basic_map_align_divs(
@@ -422,6 +423,9 @@ __isl_give isl_basic_map *isl_basic_map_expand_divs(
 
 __isl_give isl_basic_map *isl_basic_map_mark_div_unknown(
 	__isl_take isl_basic_map *bmap, int div);
+isl_bool isl_basic_map_div_is_marked_unknown(__isl_keep isl_basic_map *bmap,
+	int div);
+isl_bool isl_basic_set_div_is_known(__isl_keep isl_basic_set *bset, int div);
 isl_bool isl_basic_map_div_is_known(__isl_keep isl_basic_map *bmap, int div);
 int isl_basic_map_first_unknown_div(__isl_keep isl_basic_map *bmap);
 isl_bool isl_basic_map_divs_known(__isl_keep isl_basic_map *bmap);

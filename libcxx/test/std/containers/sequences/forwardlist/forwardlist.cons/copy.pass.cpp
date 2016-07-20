@@ -50,7 +50,7 @@ int main()
         assert(c.get_allocator() == A(-2));
     }
 #endif  // _LIBCPP_HAS_NO_ADVANCED_SFINAE
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef int T;
         typedef min_allocator<int> A;

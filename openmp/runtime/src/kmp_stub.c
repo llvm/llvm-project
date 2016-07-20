@@ -111,9 +111,13 @@ void * kmp_aligned_malloc( size_t sz, size_t a ) {
     errno = ENOSYS; // not supported
     return NULL;    // no standard aligned allocator on Windows (pre - C11)
 #else
-    void **res;
-    errno = posix_memalign( res, a, sz );
-    return *res;
+    void *res;
+    int err;
+    if( err = posix_memalign( &res, a, sz ) ) {
+        errno = err; // can be EINVAL or ENOMEM
+        return NULL;
+    }
+    return res;
 #endif
 }
 void * kmp_calloc( size_t nelem, size_t elsize ) { i; return calloc( nelem, elsize ); }

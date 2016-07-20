@@ -74,4 +74,16 @@ int main()
         assert(std::get<1>(t1) == int('a'));
         assert(std::get<2>(t1).id_ == 2);
     }
+    {
+        // Test that tuple evaluates correctly applies an lvalue reference
+        // before evaluating is_assignable (ie 'is_assignable<int&, int&>')
+        // instead of evaluating 'is_assignable<int&&, int&>' which is false.
+        int x = 42;
+        int y = 43;
+        std::tuple<int&&> t(std::move(x));
+        std::tuple<int&> t2(y);
+        t = t2;
+        assert(std::get<0>(t) == 43);
+        assert(&std::get<0>(t) == &x);
+    }
 }

@@ -59,6 +59,7 @@ private:
   void openFile(StringRef OutputPath);
   template <typename PEHeaderTy> void writeHeader();
   void fixSafeSEHSymbols();
+  void setSectionPermissions();
   void writeSections();
   void sortExceptionTable();
   void applyRelocations();
@@ -114,6 +115,7 @@ public:
   StringRef getName() { return Name; }
   std::vector<Chunk *> &getChunks() { return Chunks; }
   void addPermissions(uint32_t C);
+  void setPermissions(uint32_t C);
   uint32_t getPermissions() { return Header.Characteristics & PermMask; }
   uint32_t getCharacteristics() { return Header.Characteristics; }
   uint64_t getRVA() { return Header.VirtualAddress; }
@@ -176,6 +178,10 @@ void OutputSection::addPermissions(uint32_t C) {
   Header.Characteristics |= C & PermMask;
 }
 
+void OutputSection::setPermissions(uint32_t C) {
+  Header.Characteristics = C & PermMask;
+}
+
 // Write the section header to a given buffer.
 void OutputSection::writeHeaderTo(uint8_t *Buf) {
   auto *Hdr = reinterpret_cast<coff_section *>(Buf);
@@ -193,13 +199,13 @@ void OutputSection::writeHeaderTo(uint8_t *Buf) {
 uint64_t Defined::getSecrel() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return getRVA() - D->getChunk()->getOutputSection()->getRVA();
-  error("SECREL relocation points to a non-regular symbol");
+  fatal("SECREL relocation points to a non-regular symbol");
 }
 
 uint64_t Defined::getSectionIndex() {
   if (auto *D = dyn_cast<DefinedRegular>(this))
     return D->getChunk()->getOutputSection()->SectionIndex;
-  error("SECTION relocation points to a non-regular symbol");
+  fatal("SECTION relocation points to a non-regular symbol");
 }
 
 bool Defined::isExecutable() {
@@ -222,6 +228,7 @@ void Writer::run() {
     createSection(".reloc");
   assignAddresses();
   removeEmptySections();
+  setSectionPermissions();
   createSymbolAndStringTable();
   openFile(Config->OutputFile);
   if (Config->is64()) {
@@ -232,7 +239,8 @@ void Writer::run() {
   fixSafeSEHSymbols();
   writeSections();
   sortExceptionTable();
-  error(Buffer->commit(), "Failed to write the output file");
+  if (auto EC = Buffer->commit())
+    fatal(EC, "failed to write the output file");
 }
 
 static StringRef getOutputSection(StringRef Name) {
@@ -607,13 +615,13 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       assert(B->getRVA() >= SC->getRVA());
       uint64_t OffsetInChunk = B->getRVA() - SC->getRVA();
       if (!SC->hasData() || OffsetInChunk + 4 > SC->getSize())
-        error("_load_config_used is malformed");
+        fatal("_load_config_used is malformed");
 
       ArrayRef<uint8_t> SecContents = SC->getContents();
       uint32_t LoadConfigSize =
           *reinterpret_cast<const ulittle32_t *>(&SecContents[OffsetInChunk]);
       if (OffsetInChunk + LoadConfigSize > SC->getSize())
-        error("_load_config_used is too large");
+        fatal("_load_config_used is too large");
       Dir[LOAD_CONFIG_TABLE].RelativeVirtualAddress = B->getRVA();
       Dir[LOAD_CONFIG_TABLE].Size = LoadConfigSize;
     }
@@ -644,10 +652,9 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
 }
 
 void Writer::openFile(StringRef Path) {
-  ErrorOr<std::unique_ptr<FileOutputBuffer>> BufferOrErr =
-      FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable);
-  error(BufferOrErr, Twine("failed to open ") + Path);
-  Buffer = std::move(*BufferOrErr);
+  Buffer = check(
+      FileOutputBuffer::create(Path, FileSize, FileOutputBuffer::F_executable),
+      "failed to open " + Path);
 }
 
 void Writer::fixSafeSEHSymbols() {
@@ -655,6 +662,17 @@ void Writer::fixSafeSEHSymbols() {
     return;
   Config->SEHTable->setRVA(SEHTable->getRVA());
   Config->SEHCount->setVA(SEHTable->getSize() / 4);
+}
+
+// Handles /section options to allow users to overwrite
+// section attributes.
+void Writer::setSectionPermissions() {
+  for (auto &P : Config->Section) {
+    StringRef Name = P.first;
+    uint32_t Perm = P.second;
+    if (auto *Sec = findSection(Name))
+      Sec->setPermissions(Perm);
+  }
 }
 
 // Write section contents to a mmap'ed file.

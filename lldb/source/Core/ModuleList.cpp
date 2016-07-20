@@ -348,6 +348,7 @@ ModuleList::FindFunctions (const ConstString &name,
     if (name_type_mask & eFunctionNameTypeAuto)
     {
         Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
+
         std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
         collection::const_iterator pos, end = m_modules.end();
         for (pos = m_modules.begin(); pos != end; ++pos)
@@ -388,6 +389,7 @@ ModuleList::FindFunctionSymbols (const ConstString &name,
     if (name_type_mask & eFunctionNameTypeAuto)
     {
         Module::LookupInfo lookup_info(name, name_type_mask, eLanguageTypeUnknown);
+
         std::lock_guard<std::recursive_mutex> guard(m_modules_mutex);
         collection::const_iterator pos, end = m_modules.end();
         for (pos = m_modules.begin(); pos != end; ++pos)

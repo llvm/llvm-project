@@ -49,12 +49,10 @@ public:
     auto member = _symbolMemberMap.find(name);
     if (member == _symbolMemberMap.end())
       return nullptr;
-    Archive::child_iterator ci = member->second;
-    if (ci->getError())
-      return nullptr;
+    Archive::Child c = member->second;
 
     // Don't return a member already returned
-    ErrorOr<StringRef> buf = (*ci)->getBuffer();
+    ErrorOr<StringRef> buf = c.getBuffer();
     if (!buf)
       return nullptr;
     const char *memberStart = buf->data();
@@ -63,7 +61,7 @@ public:
     _membersInstantiated.insert(memberStart);
 
     std::unique_ptr<File> result;
-    if (instantiateMember(ci, result))
+    if (instantiateMember(c, result))
       return nullptr;
 
     File *file = result.get();
@@ -78,13 +76,20 @@ public:
   parseAllMembers(std::vector<std::unique_ptr<File>> &result) override {
     if (std::error_code ec = parse())
       return ec;
-    for (auto mf = _archive->child_begin(), me = _archive->child_end();
+    llvm::Error err;
+    for (auto mf = _archive->child_begin(err), me = _archive->child_end();
          mf != me; ++mf) {
       std::unique_ptr<File> file;
-      if (std::error_code ec = instantiateMember(mf, file))
+      if (std::error_code ec = instantiateMember(*mf, file)) {
+        // err is Success (or we wouldn't be in the loop body) but we can't
+        // return without testing or consuming it.
+        consumeError(std::move(err));
         return ec;
+      }
       result.push_back(std::move(file));
     }
+    if (err)
+      return errorToErrorCode(std::move(err));
     return std::error_code();
   }
 
@@ -114,22 +119,20 @@ public:
 protected:
   std::error_code doParse() override {
     // Make Archive object which will be owned by FileArchive object.
+    llvm::Error Err;
+    _archive.reset(new Archive(_mb->getMemBufferRef(), Err));
+    if (Err)
+      return errorToErrorCode(std::move(Err));
     std::error_code ec;
-    _archive.reset(new Archive(_mb->getMemBufferRef(), ec));
-    if (ec)
-      return ec;
     if ((ec = buildTableOfContents()))
       return ec;
     return std::error_code();
   }
 
 private:
-  std::error_code instantiateMember(Archive::child_iterator cOrErr,
+  std::error_code instantiateMember(Archive::Child member,
                                     std::unique_ptr<File> &result) const {
-    if (std::error_code ec = cOrErr->getError())
-      return ec;
-    Archive::child_iterator member = cOrErr->get();
-    ErrorOr<llvm::MemoryBufferRef> mbOrErr = (*member)->getMemoryBufferRef();
+    ErrorOr<llvm::MemoryBufferRef> mbOrErr = member.getMemoryBufferRef();
     if (std::error_code ec = mbOrErr.getError())
       return ec;
     llvm::MemoryBufferRef mb = mbOrErr.get();
@@ -163,21 +166,21 @@ private:
                                        << _archive->getFileName() << "':\n");
     for (const Archive::Symbol &sym : _archive->symbols()) {
       StringRef name = sym.getName();
-      ErrorOr<Archive::child_iterator> memberOrErr = sym.getMember();
+      ErrorOr<Archive::Child> memberOrErr = sym.getMember();
       if (std::error_code ec = memberOrErr.getError())
         return ec;
-      Archive::child_iterator member = memberOrErr.get();
+      Archive::Child member = memberOrErr.get();
       DEBUG_WITH_TYPE("FileArchive",
                       llvm::dbgs()
                           << llvm::format("0x%08llX ",
-                                          (*member)->getBuffer()->data())
+                                          member.getBuffer()->data())
                           << "'" << name << "'\n");
       _symbolMemberMap.insert(std::make_pair(name, member));
     }
     return std::error_code();
   }
 
-  typedef std::unordered_map<StringRef, Archive::child_iterator> MemberMap;
+  typedef std::unordered_map<StringRef, Archive::Child> MemberMap;
   typedef std::set<const char *> InstantiatedSet;
 
   std::shared_ptr<MemoryBuffer> _mb;

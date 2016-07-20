@@ -45,6 +45,8 @@ void test_is_not_member_pointer()
 #endif
 }
 
+class incomplete_type;
+
 class Empty
 {
 };
@@ -93,6 +95,7 @@ int main()
     test_is_not_member_pointer<char[]>();
     test_is_not_member_pointer<Union>();
     test_is_not_member_pointer<Empty>();
+    test_is_not_member_pointer<incomplete_type>();
     test_is_not_member_pointer<bit_zero>();
     test_is_not_member_pointer<NotEmpty>();
     test_is_not_member_pointer<Abstract>();

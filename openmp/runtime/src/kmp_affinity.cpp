@@ -227,6 +227,8 @@ __kmp_affinity_assign_child_nums(AddrUnsPair *address2os,
             address2os[i].first.childNums[labCt] = 0;
         }
     }
+    __kmp_free(lastLabel);
+    __kmp_free(counts);
 }
 
 
@@ -249,6 +251,7 @@ static int __kmp_nThreadsPerCore;
 #ifndef KMP_DFLT_NTH_CORES
 static int __kmp_ncores;
 #endif
+static int *__kmp_pu_os_idx = NULL;
 
 //
 // __kmp_affinity_uniform_topology() doesn't work when called from
@@ -389,9 +392,6 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     int pkgLevel = 0;
     int coreLevel = 1;
     int threadLevel = 2;
-    nPackages = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_root_obj(__kmp_hwloc_topology), HWLOC_OBJ_SOCKET);
-    nCoresPerPkg = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, 0), HWLOC_OBJ_CORE);
-    __kmp_nThreadsPerCore = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_CORE, 0), HWLOC_OBJ_PU);
 
     if (! KMP_AFFINITY_CAPABLE())
     {
@@ -401,6 +401,8 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
         //
         KMP_ASSERT(__kmp_affinity_type == affinity_none);
 
+        nCoresPerPkg = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, 0), HWLOC_OBJ_CORE);
+        __kmp_nThreadsPerCore = __kmp_hwloc_get_nobjs_under_obj(hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_CORE, 0), HWLOC_OBJ_PU);
         __kmp_ncores = __kmp_xproc / __kmp_nThreadsPerCore;
         nPackages = (__kmp_xproc + nCoresPerPkg - 1) / nCoresPerPkg;
         if (__kmp_affinity_verbose) {
@@ -414,6 +416,7 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
             KMP_INFORM(Topology, "KMP_AFFINITY", nPackages, nCoresPerPkg,
               __kmp_nThreadsPerCore, __kmp_ncores);
         }
+        KMP_CPU_FREE(oldMask);
         return 0;
     }
 
@@ -421,24 +424,36 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     // Allocate the data structure to be returned.
     //
     AddrUnsPair *retval = (AddrUnsPair *)__kmp_allocate(sizeof(AddrUnsPair) * __kmp_avail_proc);
+    __kmp_pu_os_idx = (int*)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
+
+    //
+    // When affinity is off, this routine will still be called to set
+    // __kmp_ncores, as well as __kmp_nThreadsPerCore,
+    // nCoresPerPkg, & nPackages.  Make sure all these vars are set
+    // correctly, and return if affinity is not enabled.
+    //
 
     hwloc_obj_t pu;
     hwloc_obj_t core;
     hwloc_obj_t socket;
     int nActiveThreads = 0;
     int socket_identifier = 0;
+    // re-calculate globals to count only accessible resources
+    __kmp_ncores = nPackages = nCoresPerPkg = __kmp_nThreadsPerCore = 0;
     for(socket = hwloc_get_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, 0);
         socket != NULL;
         socket = hwloc_get_next_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET, socket),
         socket_identifier++)
     {
         int core_identifier = 0;
+        int num_active_cores = 0;
         for(core = hwloc_get_obj_below_by_type(__kmp_hwloc_topology, socket->type, socket->logical_index, HWLOC_OBJ_CORE, 0);
             core != NULL && hwloc_get_ancestor_obj_by_type(__kmp_hwloc_topology, socket->type, core) == socket;
             core = hwloc_get_next_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_CORE, core),
             core_identifier++)
         {
             int pu_identifier = 0;
+            int num_active_threads = 0;
             for(pu = hwloc_get_obj_below_by_type(__kmp_hwloc_topology, core->type, core->logical_index, HWLOC_OBJ_PU, 0);
                 pu != NULL && hwloc_get_ancestor_obj_by_type(__kmp_hwloc_topology, core->type, pu) == core;
                 pu = hwloc_get_next_obj_by_type(__kmp_hwloc_topology, HWLOC_OBJ_PU, pu),
@@ -446,21 +461,35 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
             {
                 Address addr(3);
                 if(! KMP_CPU_ISSET(pu->os_index, __kmp_affin_fullMask))
-                    continue;
+                    continue;         // skip inactive (inaccessible) unit
                 KA_TRACE(20, ("Hwloc inserting %d (%d) %d (%d) %d (%d) into address2os\n",
                     socket->os_index, socket->logical_index, core->os_index, core->logical_index, pu->os_index,pu->logical_index));
                 addr.labels[0] = socket_identifier; // package
                 addr.labels[1] = core_identifier; // core
                 addr.labels[2] = pu_identifier; // pu
                 retval[nActiveThreads] = AddrUnsPair(addr, pu->os_index);
+                __kmp_pu_os_idx[nActiveThreads] = pu->os_index; // keep os index for each active pu
                 nActiveThreads++;
+                ++num_active_threads; // count active threads per core
             }
+            if (num_active_threads) { // were there any active threads on the core?
+                ++__kmp_ncores;       // count total active cores
+                ++num_active_cores;   // count active cores per socket
+                if (num_active_threads > __kmp_nThreadsPerCore)
+                    __kmp_nThreadsPerCore = num_active_threads; // calc maximum
+            }
+        }
+        if (num_active_cores) {       // were there any active cores on the socket?
+            ++nPackages;              // count total active packages
+            if (num_active_cores > nCoresPerPkg)
+                nCoresPerPkg = num_active_cores; // calc maximum
         }
     }
 
     //
     // If there's only one thread context to bind to, return now.
     //
+    KMP_DEBUG_ASSERT(nActiveThreads == __kmp_avail_proc);
     KMP_ASSERT(nActiveThreads > 0);
     if (nActiveThreads == 1) {
         __kmp_ncores = nPackages = 1;
@@ -513,20 +542,9 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     qsort(retval, nActiveThreads, sizeof(*retval), __kmp_affinity_cmp_Address_labels);
 
     //
-    // When affinity is off, this routine will still be called to set
-    // __kmp_ncores, as well as __kmp_nThreadsPerCore,
-    // nCoresPerPkg, & nPackages.  Make sure all these vars are set
-    // correctly, and return if affinity is not enabled.
-    //
-    __kmp_ncores = hwloc_get_nbobjs_by_type(__kmp_hwloc_topology, HWLOC_OBJ_CORE);
-
-    //
     // Check to see if the machine topology is uniform
     //
-    unsigned npackages = hwloc_get_nbobjs_by_type(__kmp_hwloc_topology, HWLOC_OBJ_SOCKET);
-    unsigned ncores = __kmp_ncores;
-    unsigned nthreads = hwloc_get_nbobjs_by_type(__kmp_hwloc_topology, HWLOC_OBJ_PU);
-    unsigned uniform = (npackages * nCoresPerPkg * __kmp_nThreadsPerCore == nthreads);
+    unsigned uniform = (nPackages * nCoresPerPkg * __kmp_nThreadsPerCore == nActiveThreads);
 
     //
     // Print the machine topology summary.
@@ -551,7 +569,7 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
         kmp_str_buf_t buf;
         __kmp_str_buf_init(&buf);
 
-        __kmp_str_buf_print(&buf, "%d", npackages);
+        __kmp_str_buf_print(&buf, "%d", nPackages);
         //for (level = 1; level <= pkgLevel; level++) {
         //    __kmp_str_buf_print(&buf, " x %d", maxCt[level]);
        // }
@@ -562,6 +580,7 @@ __kmp_affinity_create_hwloc_map(AddrUnsPair **address2os,
     }
 
     if (__kmp_affinity_type == affinity_none) {
+        __kmp_free(retval);
         KMP_CPU_FREE(oldMask);
         return 0;
     }
@@ -654,7 +673,16 @@ __kmp_affinity_create_flat_map(AddrUnsPair **address2os,
         KMP_INFORM(Topology, "KMP_AFFINITY", nPackages, nCoresPerPkg,
           __kmp_nThreadsPerCore, __kmp_ncores);
     }
+    KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
+    __kmp_pu_os_idx = (int*)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
     if (__kmp_affinity_type == affinity_none) {
+        int avail_ct = 0;
+        unsigned int i;
+        KMP_CPU_SET_ITERATE(i, __kmp_affin_fullMask) {
+            if (! KMP_CPU_ISSET(i, __kmp_affin_fullMask))
+                continue;
+            __kmp_pu_os_idx[avail_ct++] = i; // suppose indices are flat
+        }
         return 0;
     }
 
@@ -672,7 +700,7 @@ __kmp_affinity_create_flat_map(AddrUnsPair **address2os,
         if (! KMP_CPU_ISSET(i, __kmp_affin_fullMask)) {
             continue;
         }
-
+        __kmp_pu_os_idx[avail_ct] = i; // suppose indices are flat
         Address addr(1);
         addr.labels[0] = i;
         (*address2os)[avail_ct++] = AddrUnsPair(addr,i);
@@ -728,6 +756,8 @@ __kmp_affinity_create_proc_group_map(AddrUnsPair **address2os,
     //
     *address2os = (AddrUnsPair*)
       __kmp_allocate(sizeof(**address2os) * __kmp_avail_proc);
+    KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
+    __kmp_pu_os_idx = (int*)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
     int avail_ct = 0;
     int i;
     KMP_CPU_SET_ITERATE(i, __kmp_affin_fullMask) {
@@ -737,7 +767,7 @@ __kmp_affinity_create_proc_group_map(AddrUnsPair **address2os,
         if (! KMP_CPU_ISSET(i, __kmp_affin_fullMask)) {
             continue;
         }
-
+        __kmp_pu_os_idx[avail_ct] = i;  // suppose indices are flat
         Address addr(2);
         addr.labels[0] = i / (CHAR_BIT * sizeof(DWORD_PTR));
         addr.labels[1] = i % (CHAR_BIT * sizeof(DWORD_PTR));
@@ -1253,7 +1283,12 @@ __kmp_affinity_create_apicid_map(AddrUnsPair **address2os,
           __kmp_nThreadsPerCore, __kmp_ncores);
 
     }
-
+    KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
+    KMP_DEBUG_ASSERT(nApics == __kmp_avail_proc);
+    __kmp_pu_os_idx = (int*)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
+    for (i = 0; i < nApics; ++i) {
+        __kmp_pu_os_idx[i] = threadInfo[i].osId;
+    }
     if (__kmp_affinity_type == affinity_none) {
         __kmp_free(threadInfo);
         KMP_CPU_FREE(oldMask);
@@ -1731,7 +1766,12 @@ __kmp_affinity_create_x2apicid_map(AddrUnsPair **address2os,
 
         __kmp_str_buf_free(&buf);
     }
-
+    KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
+    KMP_DEBUG_ASSERT(nApics == __kmp_avail_proc);
+    __kmp_pu_os_idx = (int*)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
+    for (proc = 0; (int)proc < nApics; ++proc) {
+        __kmp_pu_os_idx[proc] = retval[proc].second;
+    }
     if (__kmp_affinity_type == affinity_none) {
         __kmp_free(last);
         __kmp_free(maxCt);
@@ -2476,6 +2516,13 @@ __kmp_affinity_create_cpuinfo_map(AddrUnsPair **address2os, int *line,
           __kmp_dflt_team_nth));
     }
 # endif // KMP_MIC && REDUCE_TEAM_SIZE
+
+    KMP_DEBUG_ASSERT(__kmp_pu_os_idx == NULL);
+    KMP_DEBUG_ASSERT(num_avail == __kmp_avail_proc);
+    __kmp_pu_os_idx = (int*)__kmp_allocate(sizeof(int) * __kmp_avail_proc);
+    for (i = 0; i < num_avail; ++i) { // fill the os indices
+        __kmp_pu_os_idx[i] = threadInfo[i][osIdIndex];
+    }
 
     if (__kmp_affinity_type == affinity_none) {
         __kmp_free(lastId);
@@ -3377,10 +3424,11 @@ __kmp_affinity_process_placelist(kmp_affin_mask_t **out_masks,
 static void
 __kmp_apply_thread_places(AddrUnsPair **pAddr, int depth)
 {
+    int i, j, k, n_old = 0, n_new = 0, proc_num = 0;
     if (__kmp_place_num_sockets == 0 &&
         __kmp_place_num_cores == 0 &&
         __kmp_place_num_threads_per_core == 0 )
-        return;   // no topology limiting actions requested, exit
+        goto _exit;   // no topology limiting actions requested, exit
     if (__kmp_place_num_sockets == 0)
         __kmp_place_num_sockets = nPackages;    // use all available sockets
     if (__kmp_place_num_cores == 0)
@@ -3390,43 +3438,67 @@ __kmp_apply_thread_places(AddrUnsPair **pAddr, int depth)
         __kmp_place_num_threads_per_core = __kmp_nThreadsPerCore; // use all HW contexts
 
     if ( !__kmp_affinity_uniform_topology() ) {
-        KMP_WARNING( AffThrPlaceNonUniform );
-        return; // don't support non-uniform topology
+        KMP_WARNING( AffHWSubsetNonUniform );
+        goto _exit; // don't support non-uniform topology
     }
-    if ( depth != 3 ) {
-        KMP_WARNING( AffThrPlaceNonThreeLevel );
-        return; // don't support not-3-level topology
+    if ( depth > 3 ) {
+        KMP_WARNING( AffHWSubsetNonThreeLevel );
+        goto _exit; // don't support not-3-level topology
     }
     if (__kmp_place_socket_offset + __kmp_place_num_sockets > nPackages) {
-        KMP_WARNING(AffThrPlaceManySockets);
-        return;
+        KMP_WARNING(AffHWSubsetManySockets);
+        goto _exit;
     }
     if ( __kmp_place_core_offset + __kmp_place_num_cores > nCoresPerPkg ) {
-        KMP_WARNING( AffThrPlaceManyCores );
-        return;
+        KMP_WARNING( AffHWSubsetManyCores );
+        goto _exit;
     }
 
-    AddrUnsPair *newAddr = (AddrUnsPair *)__kmp_allocate( sizeof(AddrUnsPair) *
-        __kmp_place_num_sockets * __kmp_place_num_cores * __kmp_place_num_threads_per_core);
+    AddrUnsPair *newAddr;
+    if (pAddr) // pAddr is NULL in case of affinity_none
+        newAddr = (AddrUnsPair *)__kmp_allocate( sizeof(AddrUnsPair) *
+            __kmp_place_num_sockets * __kmp_place_num_cores * __kmp_place_num_threads_per_core);
 
-    int i, j, k, n_old = 0, n_new = 0;
-    for (i = 0; i < nPackages; ++i)
+    for (i = 0; i < nPackages; ++i) {
         if (i < __kmp_place_socket_offset ||
-            i >= __kmp_place_socket_offset + __kmp_place_num_sockets)
+            i >= __kmp_place_socket_offset + __kmp_place_num_sockets) {
             n_old += nCoresPerPkg * __kmp_nThreadsPerCore; // skip not-requested socket
-        else
-            for (j = 0; j < nCoresPerPkg; ++j) // walk through requested socket
+            if (__kmp_pu_os_idx != NULL) {
+                for (j = 0; j < nCoresPerPkg; ++j) { // walk through skipped socket
+                    for (k = 0; k < __kmp_nThreadsPerCore; ++k) {
+                        KMP_CPU_CLR(__kmp_pu_os_idx[proc_num], __kmp_affin_fullMask);
+                        ++proc_num;
+                    }
+                }
+            }
+        } else {
+            for (j = 0; j < nCoresPerPkg; ++j) { // walk through requested socket
                 if (j < __kmp_place_core_offset ||
-                    j >= __kmp_place_core_offset + __kmp_place_num_cores)
+                    j >= __kmp_place_core_offset + __kmp_place_num_cores) {
                     n_old += __kmp_nThreadsPerCore; // skip not-requested core
-                else
+                    if (__kmp_pu_os_idx != NULL) {
+                        for (k = 0; k < __kmp_nThreadsPerCore; ++k) { // walk through skipped core
+                            KMP_CPU_CLR(__kmp_pu_os_idx[proc_num], __kmp_affin_fullMask);
+                            ++proc_num;
+                        }
+                    }
+                } else {
                     for (k = 0; k < __kmp_nThreadsPerCore; ++k) { // walk through requested core
                         if (k < __kmp_place_num_threads_per_core) {
-                            newAddr[n_new] = (*pAddr)[n_old]; // collect requested thread's data
+                            if (pAddr)
+                                newAddr[n_new] = (*pAddr)[n_old]; // collect requested thread's data
                             n_new++;
+                        } else {
+                            if (__kmp_pu_os_idx != NULL)
+                                KMP_CPU_CLR(__kmp_pu_os_idx[proc_num], __kmp_affin_fullMask);
                         }
                         n_old++;
+                        ++proc_num;
                     }
+                }
+            }
+        }
+    }
     KMP_DEBUG_ASSERT(n_old == nPackages * nCoresPerPkg * __kmp_nThreadsPerCore);
     KMP_DEBUG_ASSERT(n_new == __kmp_place_num_sockets * __kmp_place_num_cores *
                      __kmp_place_num_threads_per_core);
@@ -3437,14 +3509,27 @@ __kmp_apply_thread_places(AddrUnsPair **pAddr, int depth)
     __kmp_avail_proc = n_new;                                 // correct avail_proc
     __kmp_ncores = nPackages * __kmp_place_num_cores;         // correct ncores
 
-    __kmp_free( *pAddr );
-    *pAddr = newAddr;      // replace old topology with new one
+    if (pAddr) {
+        __kmp_free( *pAddr );
+        *pAddr = newAddr;      // replace old topology with new one
+    }
+_exit:
+    if (__kmp_pu_os_idx != NULL) {
+        __kmp_free(__kmp_pu_os_idx);
+        __kmp_pu_os_idx = NULL;
+    }
 }
 
 
 static AddrUnsPair *address2os = NULL;
 static int           * procarr = NULL;
 static int     __kmp_aff_depth = 0;
+
+#define KMP_EXIT_AFF_NONE                             \
+    KMP_ASSERT(__kmp_affinity_type == affinity_none); \
+    KMP_ASSERT(address2os == NULL);                   \
+    __kmp_apply_thread_places(NULL, 0);               \
+    return;
 
 static void
 __kmp_aux_affinity_initialize(void)
@@ -3522,9 +3607,7 @@ __kmp_aux_affinity_initialize(void)
             if(!__kmp_hwloc_error) {
                 depth = __kmp_affinity_create_hwloc_map(&address2os, &msg_id);
                 if (depth == 0) {
-                    KMP_ASSERT(__kmp_affinity_type == affinity_none);
-                    KMP_ASSERT(address2os == NULL);
-                    return;
+                    KMP_EXIT_AFF_NONE;
                 } else if(depth < 0 && __kmp_affinity_verbose) {
                     KMP_INFORM(AffIgnoringHwloc, "KMP_AFFINITY");
                 }
@@ -3544,9 +3627,7 @@ __kmp_aux_affinity_initialize(void)
             file_name = NULL;
             depth = __kmp_affinity_create_x2apicid_map(&address2os, &msg_id);
             if (depth == 0) {
-                KMP_ASSERT(__kmp_affinity_type == affinity_none);
-                KMP_ASSERT(address2os == NULL);
-                return;
+                KMP_EXIT_AFF_NONE;
             }
 
             if (depth < 0) {
@@ -3563,9 +3644,7 @@ __kmp_aux_affinity_initialize(void)
                 file_name = NULL;
                 depth = __kmp_affinity_create_apicid_map(&address2os, &msg_id);
                 if (depth == 0) {
-                    KMP_ASSERT(__kmp_affinity_type == affinity_none);
-                    KMP_ASSERT(address2os == NULL);
-                    return;
+                    KMP_EXIT_AFF_NONE;
                 }
             }
         }
@@ -3593,9 +3672,7 @@ __kmp_aux_affinity_initialize(void)
                 depth = __kmp_affinity_create_cpuinfo_map(&address2os, &line, &msg_id, f);
                 fclose(f);
                 if (depth == 0) {
-                    KMP_ASSERT(__kmp_affinity_type == affinity_none);
-                    KMP_ASSERT(address2os == NULL);
-                    return;
+                    KMP_EXIT_AFF_NONE;
                 }
             }
         }
@@ -3632,9 +3709,7 @@ __kmp_aux_affinity_initialize(void)
             file_name = "";
             depth = __kmp_affinity_create_flat_map(&address2os, &msg_id);
             if (depth == 0) {
-                KMP_ASSERT(__kmp_affinity_type == affinity_none);
-                KMP_ASSERT(address2os == NULL);
-                return;
+                KMP_EXIT_AFF_NONE;
             }
             KMP_ASSERT(depth > 0);
             KMP_ASSERT(address2os != NULL);
@@ -3657,9 +3732,7 @@ __kmp_aux_affinity_initialize(void)
 
         depth = __kmp_affinity_create_x2apicid_map(&address2os, &msg_id);
         if (depth == 0) {
-            KMP_ASSERT(__kmp_affinity_type == affinity_none);
-            KMP_ASSERT(address2os == NULL);
-            return;
+            KMP_EXIT_AFF_NONE;
         }
         if (depth < 0) {
             KMP_ASSERT(msg_id != kmp_i18n_null);
@@ -3674,9 +3747,7 @@ __kmp_aux_affinity_initialize(void)
 
         depth = __kmp_affinity_create_apicid_map(&address2os, &msg_id);
         if (depth == 0) {
-            KMP_ASSERT(__kmp_affinity_type == affinity_none);
-            KMP_ASSERT(address2os == NULL);
-            return;
+            KMP_EXIT_AFF_NONE;
         }
         if (depth < 0) {
             KMP_ASSERT(msg_id != kmp_i18n_null);
@@ -3734,8 +3805,7 @@ __kmp_aux_affinity_initialize(void)
         }
         if (__kmp_affinity_type == affinity_none) {
             KMP_ASSERT(depth == 0);
-            KMP_ASSERT(address2os == NULL);
-            return;
+            KMP_EXIT_AFF_NONE;
         }
     }
 
@@ -3763,9 +3833,7 @@ __kmp_aux_affinity_initialize(void)
 
         depth = __kmp_affinity_create_flat_map(&address2os, &msg_id);
         if (depth == 0) {
-            KMP_ASSERT(__kmp_affinity_type == affinity_none);
-            KMP_ASSERT(address2os == NULL);
-            return;
+            KMP_EXIT_AFF_NONE;
         }
         // should not fail
         KMP_ASSERT(depth > 0);
@@ -3779,9 +3847,7 @@ __kmp_aux_affinity_initialize(void)
         }
         depth = __kmp_affinity_create_hwloc_map(&address2os, &msg_id);
         if (depth == 0) {
-            KMP_ASSERT(__kmp_affinity_type == affinity_none);
-            KMP_ASSERT(address2os == NULL);
-            return;
+            KMP_EXIT_AFF_NONE;
         }
     }
 # endif // KMP_USE_HWLOC
@@ -4000,6 +4066,7 @@ __kmp_aux_affinity_initialize(void)
     __kmp_free(osId2Mask);
     machine_hierarchy.init(address2os, __kmp_avail_proc);
 }
+#undef KMP_EXIT_AFF_NONE
 
 
 void

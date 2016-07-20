@@ -11,6 +11,7 @@
 #include "algorithm"
 #include "climits"
 #include "cstring"
+#include "__debug"
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -167,11 +168,13 @@ strstreambuf::overflow(int_type __c)
             buf = new char[new_size];
         if (buf == nullptr)
             return int_type(EOF);
-        memcpy(buf, eback(), static_cast<size_t>(old_size));
+        if (old_size != 0) {
+            _LIBCPP_ASSERT(eback(), "overflow copying from NULL");
+            memcpy(buf, eback(), static_cast<size_t>(old_size));
+        }
         ptrdiff_t ninp = gptr()  - eback();
         ptrdiff_t einp = egptr() - eback();
         ptrdiff_t nout = pptr()  - pbase();
-        ptrdiff_t eout = epptr() - pbase();
         if (__strmode_ & __allocated)
         {
             if (__pfree_)
@@ -180,7 +183,7 @@ strstreambuf::overflow(int_type __c)
                 delete [] eback();
         }
         setg(buf, buf + ninp, buf + einp);
-        setp(buf + einp, buf + einp + eout);
+        setp(buf + einp, buf + new_size);
         pbump(static_cast<int>(nout));
         __strmode_ |= __allocated;
     }

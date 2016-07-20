@@ -11,7 +11,7 @@
 # CHECK: Name: .reloc
 
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [  ]

@@ -39,7 +39,7 @@ class SCEV;
 class BasicBlock;
 class Value;
 class Region;
-}
+} // namespace llvm
 
 namespace polly {
 
@@ -84,6 +84,7 @@ enum RejectReasonKind {
   rrkLastAffFunc,
 
   rrkLoopBound,
+  rrkLoopOverlapWithNonAffineSubRegion,
 
   rrkFuncCall,
   rrkNonSimpleMemoryAccess,
@@ -134,9 +135,7 @@ public:
   /// regions amenable to Polly.
   ///
   /// @return A short message representing this error.
-  virtual std::string getEndUserMessage() const {
-    return "Unspecified error.";
-  };
+  virtual std::string getEndUserMessage() const { return "Unspecified error."; }
 
   /// @brief Get the source location of this error.
   ///
@@ -254,7 +253,7 @@ public:
   //@{
   virtual const DebugLoc &getDebugLoc() const override {
     return Inst->getDebugLoc();
-  };
+  }
   //@}
 };
 
@@ -497,6 +496,37 @@ public:
   ReportLoopBound(Loop *L, const SCEV *LoopCount);
 
   const SCEV *loopCount() { return LoopCount; }
+
+  /// @name LLVM-RTTI interface
+  //@{
+  static bool classof(const RejectReason *RR);
+  //@}
+
+  /// @name RejectReason interface
+  //@{
+  virtual std::string getMessage() const override;
+  virtual const DebugLoc &getDebugLoc() const override;
+  virtual std::string getEndUserMessage() const override;
+  //@}
+};
+
+//===----------------------------------------------------------------------===//
+/// @brief Captures errors when loop overlap with nonaffine subregion.
+class ReportLoopOverlapWithNonAffineSubRegion : public RejectReason {
+  //===--------------------------------------------------------------------===//
+
+  /// @brief If L and R are set then L and R overlap.
+
+  /// The loop contains stmt overlapping nonaffine subregion.
+  Loop *L;
+
+  /// The nonaffine subregion that contains infinite loop.
+  Region *R;
+
+  const DebugLoc Loc;
+
+public:
+  ReportLoopOverlapWithNonAffineSubRegion(Loop *L, Region *R);
 
   /// @name LLVM-RTTI interface
   //@{

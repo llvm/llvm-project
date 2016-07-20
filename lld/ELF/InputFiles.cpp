@@ -14,6 +14,7 @@
 #include "SymbolTable.h"
 #include "Symbols.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -28,7 +29,7 @@ using namespace lld;
 using namespace lld::elf;
 
 // Returns "(internal)", "foo.a(bar.o)" or "baz.o".
-std::string elf::getFilename(InputFile *F) {
+std::string elf::getFilename(const InputFile *F) {
   if (!F)
     return "(internal)";
   if (!F->ArchiveName.empty())
@@ -40,19 +41,22 @@ template <class ELFT>
 static ELFFile<ELFT> createELFObj(MemoryBufferRef MB) {
   std::error_code EC;
   ELFFile<ELFT> F(MB.getBuffer(), EC);
-  check(EC);
+  if (EC)
+    error(EC, "failed to read " + MB.getBufferIdentifier());
   return F;
+}
+
+template <class ELFT> static ELFKind getELFKind() {
+  if (ELFT::TargetEndianness == support::little)
+    return ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
+  return ELFT::Is64Bits ? ELF64BEKind : ELF32BEKind;
 }
 
 template <class ELFT>
 ELFFileBase<ELFT>::ELFFileBase(Kind K, MemoryBufferRef MB)
-    : InputFile(K, MB), ELFObj(createELFObj<ELFT>(MB)) {}
-
-template <class ELFT>
-ELFKind ELFFileBase<ELFT>::getELFKind() {
-  if (ELFT::TargetEndianness == support::little)
-    return ELFT::Is64Bits ? ELF64LEKind : ELF32LEKind;
-  return ELFT::Is64Bits ? ELF64BEKind : ELF32BEKind;
+    : InputFile(K, MB), ELFObj(createELFObj<ELFT>(MB)) {
+  EKind = getELFKind<ELFT>();
+  EMachine = ELFObj.getHeader()->e_machine;
 }
 
 template <class ELFT>
@@ -63,7 +67,7 @@ typename ELFT::SymRange ELFFileBase<ELFT>::getElfSymbols(bool OnlyGlobals) {
   uint32_t NumSymbols = std::distance(Syms.begin(), Syms.end());
   uint32_t FirstNonLocal = Symtab->sh_info;
   if (FirstNonLocal > NumSymbols)
-    fatal("invalid sh_info in symbol table");
+    fatal(getFilename(this) + ": invalid sh_info in symbol table");
 
   if (OnlyGlobals)
     return makeArrayRef(Syms.begin() + FirstNonLocal, Syms.end());
@@ -134,12 +138,10 @@ void elf::ObjectFile<ELFT>::parse(DenseSet<StringRef> &ComdatGroups) {
 template <class ELFT>
 StringRef elf::ObjectFile<ELFT>::getShtGroupSignature(const Elf_Shdr &Sec) {
   const ELFFile<ELFT> &Obj = this->ELFObj;
-  uint32_t SymtabdSectionIndex = Sec.sh_link;
-  const Elf_Shdr *SymtabSec = check(Obj.getSection(SymtabdSectionIndex));
-  uint32_t SymIndex = Sec.sh_info;
-  const Elf_Sym *Sym = Obj.getSymbol(SymtabSec, SymIndex);
-  StringRef StringTable = check(Obj.getStringTableForSymtab(*SymtabSec));
-  return check(Sym->getName(StringTable));
+  const Elf_Shdr *Symtab = check(Obj.getSection(Sec.sh_link));
+  const Elf_Sym *Sym = Obj.getSymbol(Symtab, Sec.sh_info);
+  StringRef Strtab = check(Obj.getStringTableForSymtab(*Symtab));
+  return check(Sym->getName(Strtab));
 }
 
 template <class ELFT>
@@ -149,13 +151,12 @@ elf::ObjectFile<ELFT>::getShtGroupEntries(const Elf_Shdr &Sec) {
   ArrayRef<Elf_Word> Entries =
       check(Obj.template getSectionContentsAsArray<Elf_Word>(&Sec));
   if (Entries.empty() || Entries[0] != GRP_COMDAT)
-    fatal("unsupported SHT_GROUP format");
+    fatal(getFilename(this) + ": unsupported SHT_GROUP format");
   return Entries.slice(1);
 }
 
-template <class ELFT> static bool shouldMerge(const typename ELFT::Shdr &Sec) {
-  typedef typename ELFT::uint uintX_t;
-
+template <class ELFT>
+bool elf::ObjectFile<ELFT>::shouldMerge(const Elf_Shdr &Sec) {
   // We don't merge sections if -O0 (default is -O1). This makes sometimes
   // the linker significantly faster, although the output will be bigger.
   if (Config->Optimize == 0)
@@ -165,10 +166,11 @@ template <class ELFT> static bool shouldMerge(const typename ELFT::Shdr &Sec) {
   if (!(Flags & SHF_MERGE))
     return false;
   if (Flags & SHF_WRITE)
-    fatal("writable SHF_MERGE sections are not supported");
+    fatal(getFilename(this) + ": writable SHF_MERGE section is not supported");
   uintX_t EntSize = Sec.sh_entsize;
   if (!EntSize || Sec.sh_size % EntSize)
-    fatal("SHF_MERGE section size must be a multiple of sh_entsize");
+    fatal(getFilename(this) +
+          ": SHF_MERGE section size must be a multiple of sh_entsize");
 
   // Don't try to merge if the alignment is larger than the sh_entsize and this
   // is not SHF_STRINGS.
@@ -201,7 +203,8 @@ void elf::ObjectFile<ELFT>::initializeSections(
         continue;
       for (uint32_t SecIndex : getShtGroupEntries(Sec)) {
         if (SecIndex >= Size)
-          fatal("invalid section index in group");
+          fatal(getFilename(this) + ": invalid section index in group: " +
+                Twine(SecIndex));
         Sections[SecIndex] = &InputSection<ELFT>::Discarded;
       }
       break;
@@ -235,11 +238,14 @@ void elf::ObjectFile<ELFT>::initializeSections(
       }
       if (auto *S = dyn_cast<EhInputSection<ELFT>>(Target)) {
         if (S->RelocSection)
-          fatal("multiple relocation sections to .eh_frame are not supported");
+          fatal(
+              getFilename(this) +
+              ": multiple relocation sections to .eh_frame are not supported");
         S->RelocSection = &Sec;
         break;
       }
-      fatal("relocations pointing to SHF_MERGE are not supported");
+      fatal(getFilename(this) +
+            ": relocations pointing to SHF_MERGE are not supported");
     }
     case SHT_ARM_ATTRIBUTES:
       // FIXME: ARM meta-data section. At present attributes are ignored,
@@ -257,7 +263,8 @@ InputSectionBase<ELFT> *
 elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
   uint32_t Idx = Sec.sh_info;
   if (Idx >= Sections.size())
-    fatal("invalid relocated section index");
+    fatal(getFilename(this) + ": invalid relocated section index: " +
+          Twine(Idx));
   InputSectionBase<ELFT> *Target = Sections[Idx];
 
   // Strictly speaking, a relocation section must be included in the
@@ -267,7 +274,7 @@ elf::ObjectFile<ELFT>::getRelocTarget(const Elf_Shdr &Sec) {
     return nullptr;
 
   if (!Target)
-    fatal("unsupported relocation reference");
+    fatal(getFilename(this) + ": unsupported relocation reference");
   return Target;
 }
 
@@ -304,11 +311,13 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
     }
   }
 
-  // We dont need special handling of .eh_frame sections if relocatable
-  // output was choosen. Proccess them as usual input sections.
-  if (!Config->Relocatable && Name == ".eh_frame")
+  // The linker merges EH (exception handling) frames and creates a
+  // .eh_frame_hdr section for runtime. So we handle them with a special
+  // class. For relocatable outputs, they are just passed through.
+  if (Name == ".eh_frame" && !Config->Relocatable)
     return new (EHAlloc.Allocate()) EhInputSection<ELFT>(this, &Sec);
-  if (shouldMerge<ELFT>(Sec))
+
+  if (shouldMerge(Sec))
     return new (MAlloc.Allocate()) MergeInputSection<ELFT>(this, &Sec);
   return new (IAlloc.Allocate()) InputSection<ELFT>(this, &Sec);
 }
@@ -329,7 +338,7 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
   if (Index == 0)
     return nullptr;
   if (Index >= Sections.size() || !Sections[Index])
-    fatal("invalid section index");
+    fatal(getFilename(this) + ": invalid section index: " + Twine(Index));
   InputSectionBase<ELFT> *S = Sections[Index];
   if (S == &InputSectionBase<ELFT>::Discarded)
     return S;
@@ -338,12 +347,13 @@ elf::ObjectFile<ELFT>::getSection(const Elf_Sym &Sym) const {
 
 template <class ELFT>
 SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
-  unsigned char Binding = Sym->getBinding();
+  int Binding = Sym->getBinding();
   InputSectionBase<ELFT> *Sec = getSection(*Sym);
   if (Binding == STB_LOCAL) {
     if (Sym->st_shndx == SHN_UNDEF)
-      return new (Alloc) Undefined(Sym->st_name, Sym->st_other, Sym->getType());
-    return new (Alloc) DefinedRegular<ELFT>(*Sym, Sec);
+      return new (this->Alloc)
+          Undefined(Sym->st_name, Sym->st_other, Sym->getType(), this);
+    return new (this->Alloc) DefinedRegular<ELFT>(*Sym, Sec);
   }
 
   StringRef Name = check(Sym->getName(this->StringTable));
@@ -351,7 +361,8 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
   switch (Sym->st_shndx) {
   case SHN_UNDEF:
     return elf::Symtab<ELFT>::X
-        ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(), this)
+        ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
+                       /*CanOmitFromDynSym*/ false, this)
         ->body();
   case SHN_COMMON:
     return elf::Symtab<ELFT>::X
@@ -362,13 +373,14 @@ SymbolBody *elf::ObjectFile<ELFT>::createSymbolBody(const Elf_Sym *Sym) {
 
   switch (Binding) {
   default:
-    fatal("unexpected binding");
+    fatal(getFilename(this) + ": unexpected binding: " + Twine(Binding));
   case STB_GLOBAL:
   case STB_WEAK:
   case STB_GNU_UNIQUE:
     if (Sec == &InputSection<ELFT>::Discarded)
       return elf::Symtab<ELFT>::X
-          ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(), this)
+          ->addUndefined(Name, Binding, Sym->st_other, Sym->getType(),
+                         /*CanOmitFromDynSym*/ false, this)
           ->body();
     return elf::Symtab<ELFT>::X->addRegular(Name, *Sym, Sec)->body();
   }
@@ -459,7 +471,7 @@ template <class ELFT> void SharedFile<ELFT>::parseSoName() {
     if (Dyn.d_tag == DT_SONAME) {
       uintX_t Val = Dyn.getVal();
       if (Val >= this->StringTable.size())
-        fatal("invalid DT_SONAME entry");
+        fatal(getFilename(this) + ": invalid DT_SONAME entry");
       SoName = StringRef(this->StringTable.data() + Val);
       return;
     }
@@ -539,7 +551,46 @@ template <class ELFT> void SharedFile<ELFT>::parseRest() {
   }
 }
 
-BitcodeFile::BitcodeFile(MemoryBufferRef M) : InputFile(BitcodeKind, M) {}
+static ELFKind getELFKind(MemoryBufferRef MB) {
+  std::string TripleStr = getBitcodeTargetTriple(MB, Driver->Context);
+  Triple TheTriple(TripleStr);
+  bool Is64Bits = TheTriple.isArch64Bit();
+  if (TheTriple.isLittleEndian())
+    return Is64Bits ? ELF64LEKind : ELF32LEKind;
+  return Is64Bits ? ELF64BEKind : ELF32BEKind;
+}
+
+static uint8_t getMachineKind(MemoryBufferRef MB) {
+  std::string TripleStr = getBitcodeTargetTriple(MB, Driver->Context);
+  switch (Triple(TripleStr).getArch()) {
+  case Triple::aarch64:
+    return EM_AARCH64;
+  case Triple::arm:
+    return EM_ARM;
+  case Triple::mips:
+  case Triple::mipsel:
+  case Triple::mips64:
+  case Triple::mips64el:
+    return EM_MIPS;
+  case Triple::ppc:
+    return EM_PPC;
+  case Triple::ppc64:
+    return EM_PPC64;
+  case Triple::x86:
+    return EM_386;
+  case Triple::x86_64:
+    return EM_X86_64;
+  default:
+    fatal(MB.getBufferIdentifier() +
+          ": could not infer e_machine from bitcode target triple " +
+          TripleStr);
+  }
+}
+
+BitcodeFile::BitcodeFile(MemoryBufferRef MB) : InputFile(BitcodeKind, MB) {
+  EKind = getELFKind(MB);
+  EMachine = getMachineKind(MB);
+}
 
 static uint8_t getGvVisibility(const GlobalValue *GV) {
   switch (GV->getVisibility()) {
@@ -589,12 +640,12 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
     if (const Comdat *C = GV->getComdat())
       if (!KeptComdats.count(C))
         return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                             this);
+                                             CanOmitFromDynSym, this);
 
   const Module &M = Obj.getModule();
   if (Flags & BasicSymbolRef::SF_Undefined)
     return Symtab<ELFT>::X->addUndefined(NameRef, Binding, Visibility, Type,
-                                         this);
+                                         CanOmitFromDynSym, this);
   if (Flags & BasicSymbolRef::SF_Common) {
     // FIXME: Set SF_Common flag correctly for module asm symbols, and expose
     // size and alignment.
@@ -609,11 +660,8 @@ Symbol *BitcodeFile::createSymbol(const DenseSet<const Comdat *> &KeptComdats,
 }
 
 bool BitcodeFile::shouldSkip(uint32_t Flags) {
-  if (!(Flags & BasicSymbolRef::SF_Global))
-    return true;
-  if (Flags & BasicSymbolRef::SF_FormatSpecific)
-    return true;
-  return false;
+  return !(Flags & BasicSymbolRef::SF_Global) ||
+         (Flags & BasicSymbolRef::SF_FormatSpecific);
 }
 
 template <class ELFT>
@@ -633,23 +681,6 @@ void BitcodeFile::parse(DenseSet<StringRef> &ComdatGroups) {
       Symbols.push_back(createSymbol<ELFT>(KeptComdats, *Obj, Sym));
 }
 
-template <typename T>
-static std::unique_ptr<InputFile> createELFFileAux(MemoryBufferRef MB) {
-  std::unique_ptr<T> Ret = llvm::make_unique<T>(MB);
-
-  if (!Config->FirstElf)
-    Config->FirstElf = Ret.get();
-
-  if (Config->EKind == ELFNoneKind) {
-    Config->EKind = Ret->getELFKind();
-    Config->EMachine = Ret->getEMachine();
-    if (Config->EMachine == EM_MIPS && Config->EKind == ELF64LEKind)
-      Config->Mips64EL = true;
-  }
-
-  return std::move(Ret);
-}
-
 template <template <class> class T>
 static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   unsigned char Size;
@@ -658,17 +689,21 @@ static std::unique_ptr<InputFile> createELFFile(MemoryBufferRef MB) {
   if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
     fatal("invalid data encoding: " + MB.getBufferIdentifier());
 
-  if (Size == ELFCLASS32) {
-    if (Endian == ELFDATA2LSB)
-      return createELFFileAux<T<ELF32LE>>(MB);
-    return createELFFileAux<T<ELF32BE>>(MB);
-  }
-  if (Size == ELFCLASS64) {
-    if (Endian == ELFDATA2LSB)
-      return createELFFileAux<T<ELF64LE>>(MB);
-    return createELFFileAux<T<ELF64BE>>(MB);
-  }
-  fatal("invalid file class: " + MB.getBufferIdentifier());
+  std::unique_ptr<InputFile> Obj;
+  if (Size == ELFCLASS32 && Endian == ELFDATA2LSB)
+    Obj.reset(new T<ELF32LE>(MB));
+  else if (Size == ELFCLASS32 && Endian == ELFDATA2MSB)
+    Obj.reset(new T<ELF32BE>(MB));
+  else if (Size == ELFCLASS64 && Endian == ELFDATA2LSB)
+    Obj.reset(new T<ELF64LE>(MB));
+  else if (Size == ELFCLASS64 && Endian == ELFDATA2MSB)
+    Obj.reset(new T<ELF64BE>(MB));
+  else
+    fatal("invalid file class: " + MB.getBufferIdentifier());
+
+  if (!Config->FirstElf)
+    Config->FirstElf = Obj.get();
+  return Obj;
 }
 
 static bool isBitcode(MemoryBufferRef MB) {
@@ -691,10 +726,17 @@ std::unique_ptr<InputFile> elf::createSharedFile(MemoryBufferRef MB) {
   return createELFFile<SharedFile>(MB);
 }
 
+MemoryBufferRef LazyObjectFile::getBuffer() {
+  if (Seen)
+    return MemoryBufferRef();
+  Seen = true;
+  return MB;
+}
+
 template <class ELFT>
 void LazyObjectFile::parse() {
   for (StringRef Sym : getSymbols())
-    Symtab<ELFT>::X->addLazyObject(Sym, this->MB);
+    Symtab<ELFT>::X->addLazyObject(Sym, *this);
 }
 
 template <class ELFT> std::vector<StringRef> LazyObjectFile::getElfSymbols() {
@@ -760,10 +802,10 @@ template void ArchiveFile::parse<ELF32BE>();
 template void ArchiveFile::parse<ELF64LE>();
 template void ArchiveFile::parse<ELF64BE>();
 
-template void BitcodeFile::parse<ELF32LE>(llvm::DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF32BE>(llvm::DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64LE>(llvm::DenseSet<StringRef> &);
-template void BitcodeFile::parse<ELF64BE>(llvm::DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32LE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF32BE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64LE>(DenseSet<StringRef> &);
+template void BitcodeFile::parse<ELF64BE>(DenseSet<StringRef> &);
 
 template void LazyObjectFile::parse<ELF32LE>();
 template void LazyObjectFile::parse<ELF32BE>();

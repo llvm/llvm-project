@@ -11,6 +11,9 @@
 #define MIN_ALLOCATOR_H
 
 #include <cstddef>
+#include <cstdlib>
+#include <cstddef>
+#include <cassert>
 
 #include "test_macros.h"
 
@@ -39,8 +42,59 @@ public:
     friend bool operator!=(bare_allocator x, bare_allocator y) {return !(x == y);}
 };
 
+struct malloc_allocator_base {
+    static size_t alloc_count;
+    static size_t dealloc_count;
+    static bool disable_default_constructor;
 
-#if __cplusplus >= 201103L
+    static size_t outstanding_alloc() {
+      assert(alloc_count >= dealloc_count);
+      return (alloc_count - dealloc_count);
+    }
+
+    static void reset() {
+        assert(outstanding_alloc() == 0);
+        disable_default_constructor = false;
+        alloc_count = 0;
+        dealloc_count = 0;
+    }
+};
+
+
+size_t malloc_allocator_base::alloc_count = 0;
+size_t malloc_allocator_base::dealloc_count = 0;
+bool malloc_allocator_base::disable_default_constructor = false;
+
+
+template <class T>
+class malloc_allocator : public malloc_allocator_base
+{
+public:
+    typedef T value_type;
+
+    malloc_allocator() TEST_NOEXCEPT { assert(!disable_default_constructor); }
+
+    template <class U>
+    malloc_allocator(malloc_allocator<U>) TEST_NOEXCEPT {}
+
+    T* allocate(std::size_t n)
+    {
+        ++alloc_count;
+        return static_cast<T*>(std::malloc(n*sizeof(T)));
+    }
+
+    void deallocate(T* p, std::size_t)
+    {
+        ++dealloc_count;
+        std::free(static_cast<void*>(p));
+    }
+
+    friend bool operator==(malloc_allocator, malloc_allocator) {return true;}
+    friend bool operator!=(malloc_allocator x, malloc_allocator y) {return !(x == y);}
+};
+
+
+#if TEST_STD_VER >= 11
 
 #include <memory>
 
@@ -286,6 +340,6 @@ public:
     friend bool operator!=(min_allocator x, min_allocator y) {return !(x == y);}
 };
 
-#endif  // __cplusplus >= 201103L
+#endif  // TEST_STD_VER >= 11
 
 #endif  // MIN_ALLOCATOR_H

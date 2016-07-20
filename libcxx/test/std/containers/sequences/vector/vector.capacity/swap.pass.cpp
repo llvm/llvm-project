@@ -32,7 +32,7 @@ int main()
         assert(v2.capacity() == 100);
         assert(is_contiguous_container_asan_correct(v2));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         std::vector<int, min_allocator<int>> v1(100);
         std::vector<int, min_allocator<int>> v2(200);

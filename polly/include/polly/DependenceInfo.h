@@ -141,11 +141,15 @@ struct Dependences {
   /// @brief Dump the dependence information stored to the dbgs stream.
   void dump() const;
 
+  /// @brief Return the granularity of this dependence analysis.
+  AnalyisLevel getDependenceLevel() { return Level; }
+
   /// @brief Allow the DependenceInfo access to private members and methods.
   ///
   /// To restrict access to the internal state, only the DependenceInfo class
   /// is able to call or modify a Dependences struct.
   friend class DependenceInfo;
+  friend class DependenceInfoWrapperPass;
 
   /// @brief Destructor that will free internal objects.
   ~Dependences() { releaseMemory(); }
@@ -232,11 +236,52 @@ private:
   std::unique_ptr<Dependences> D[Dependences::NumAnalysisLevels];
 };
 
-} // End polly namespace.
+/// @brief Construct a new DependenceInfoWrapper pass.
+class DependenceInfoWrapperPass : public FunctionPass {
+public:
+  static char ID;
+
+  /// @brief Construct a new DependenceInfoWrapper pass.
+  DependenceInfoWrapperPass() : FunctionPass(ID) {}
+
+  /// @brief Return the dependence information for the given SCoP.
+  ///
+  /// @param S     SCoP object.
+  /// @param Level The granularity of dependence analysis result.
+  ///
+  /// @return The dependence analysis result
+  ///
+  const Dependences &getDependences(Scop *S, Dependences::AnalyisLevel Level);
+
+  /// @brief Recompute dependences from schedule and memory accesses.
+  const Dependences &recomputeDependences(Scop *S,
+                                          Dependences::AnalyisLevel Level);
+
+  /// @brief Compute the dependence information on-the-fly for the function.
+  bool runOnFunction(Function &F) override;
+
+  /// @brief Print the dependences for the current function to @p OS.
+  void print(raw_ostream &OS, const Module *M = nullptr) const override;
+
+  /// @brief Release the internal memory.
+  void releaseMemory() override { ScopToDepsMap.clear(); }
+
+  /// @brief Register all analyses and transformation required.
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+
+private:
+  using ScopToDepsMapTy = DenseMap<Scop *, std::unique_ptr<Dependences>>;
+
+  /// @brief Scop to Dependence map for the current function.
+  ScopToDepsMapTy ScopToDepsMap;
+};
+
+} // namespace polly
 
 namespace llvm {
 class PassRegistry;
 void initializeDependenceInfoPass(llvm::PassRegistry &);
-}
+void initializeDependenceInfoWrapperPassPass(llvm::PassRegistry &);
+} // namespace llvm
 
 #endif

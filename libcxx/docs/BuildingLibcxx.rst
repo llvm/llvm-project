@@ -177,6 +177,14 @@ libc++experimental Specific Options
   Install libc++experimental.a alongside libc++.
 
 
+.. option:: LIBCXX_ENABLE_FILESYSTEM:BOOL
+
+  **Default**: ``LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY``
+
+  Build filesystem as part of libc++experimental.a. This allows filesystem
+  to be disabled without turning off the entire experimental library.
+
+
 .. _ABI Library Specific Options:
 
 ABI Library Specific Options
@@ -219,7 +227,7 @@ ABI Library Specific Options
   libc++abi is the C++ ABI library used.
 
 
-libc++ Feature options
+libc++ Feature Options
 ----------------------
 
 .. option:: LIBCXX_ENABLE_EXCEPTIONS:BOOL
@@ -234,9 +242,25 @@ libc++ Feature options
 
   Build libc++ with run time type information.
 
+.. option:: LIBCXX_INCLUDE_BENCHMARKS:BOOL
 
-libc++ Feature options
-----------------------
+  **Default**: ``OFF``
+
+  Build the libc++ benchmark tests and the Google Benchmark library needed
+  to support them.
+
+.. option:: LIBCXX_BUILD_BENCHMARK_NATIVE_STDLIB:BOOL
+
+  **Default**:: ``OFF``
+
+  Build the libc++ benchmark tests and Google Benchmark library against the
+  native standard library on the platform. On linux this can be used to compare
+  libc++ to libstdc++ by building the benchmark tests against both standard
+  libraries.
+
+
+libc++ ABI Feature Options
+--------------------------
 
 The following options allow building libc++ for a different ABI version.
 

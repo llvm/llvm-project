@@ -22,16 +22,18 @@
 // shared_ptr<T>
 // atomic_load(const shared_ptr<T>* p)
 
+// UNSUPPORTED: c++98, c++03
+
 #include <memory>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
-#if __has_feature(cxx_atomic)
     {
         std::shared_ptr<int> p(new int(3));
         std::shared_ptr<int> q = std::atomic_load(&p);
         assert(*q == *p);
     }
-#endif
 }

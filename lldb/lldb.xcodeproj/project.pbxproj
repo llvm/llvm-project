@@ -45,7 +45,7 @@
 				AF3059151B4B390800E25622 /* Run Script - remove unneeded Resources and Swift dirs from iOS LLDB.framework bundle */,
 			);
 			dependencies = (
-				AF8587621D18F0B400E6B9EB /* PBXTargetDependency */,
+				AFCA21D21D18E556004386B8 /* PBXTargetDependency */,
 				26CEF3C214FD5973007286B2 /* PBXTargetDependency */,
 				2687EACF1508116300DD8C2E /* PBXTargetDependency */,
 			);
@@ -127,6 +127,8 @@
 		239504E51BDD454B00963CEA /* UriParserTest.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2321F9461BDD346100BA9A93 /* UriParserTest.cpp */; };
 		23D4007D1C2101F2000C3885 /* DWARFDebugMacro.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */; };
 		23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */; };
+		23DCEA461D1C4D0F00A602B4 /* SBMemoryRegionInfo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DCEA421D1C4C6900A602B4 /* SBMemoryRegionInfo.cpp */; };
+		23DCEA471D1C4D0F00A602B4 /* SBMemoryRegionInfoList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DCEA431D1C4C6900A602B4 /* SBMemoryRegionInfoList.cpp */; };
 		23DDF226196C3EE600BB8417 /* CommandOptionValidators.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */; };
 		23EFE389193D1ABC00E54E54 /* SBTypeEnumMember.h in Headers */ = {isa = PBXBuildFile; fileRef = 23EFE388193D1ABC00E54E54 /* SBTypeEnumMember.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		23EFE38B193D1AEC00E54E54 /* SBTypeEnumMember.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23EFE38A193D1AEC00E54E54 /* SBTypeEnumMember.cpp */; };
@@ -190,6 +192,8 @@
 		263F921F1B4DFEEE001244A6 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 26F5C39010F3FA26009D5894 /* CoreFoundation.framework */; };
 		263FDE601A79A01500E68013 /* FormatEntity.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263FDE5F1A79A01500E68013 /* FormatEntity.cpp */; };
 		2640E19F15DC78FD00F23B50 /* Property.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2640E19E15DC78FD00F23B50 /* Property.cpp */; };
+		264297571D1DF247003F2BF4 /* SBMemoryRegionInfoList.h in Headers */ = {isa = PBXBuildFile; fileRef = 264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		264297581D1DF250003F2BF4 /* SBMemoryRegionInfo.h in Headers */ = {isa = PBXBuildFile; fileRef = 264297531D1DF209003F2BF4 /* SBMemoryRegionInfo.h */; settings = {ATTRIBUTES = (Public, ); }; };
 		2642FBAE13D003B400ED6808 /* CommunicationKDP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBA813D003B400ED6808 /* CommunicationKDP.cpp */; };
 		2642FBB013D003B400ED6808 /* ProcessKDP.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBAA13D003B400ED6808 /* ProcessKDP.cpp */; };
 		2642FBB213D003B400ED6808 /* ProcessKDPLog.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 2642FBAC13D003B400ED6808 /* ProcessKDPLog.cpp */; };
@@ -1214,7 +1218,7 @@
 			remoteGlobalIDString = AF6967871B4609A80014D221;
 			remoteInfo = "install-headers-noop";
 		};
-		AF8587611D18F0B400E6B9EB /* PBXContainerItemProxy */ = {
+		AFCA21D11D18E556004386B8 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 265E9BE1115C2BAA00D0DCCB /* debugserver.xcodeproj */;
 			proxyType = 1;
@@ -1382,6 +1386,8 @@
 		23AB0530199FF639003B8084 /* ProcessFreeBSD.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcessFreeBSD.h; sourceTree = "<group>"; };
 		23AB0531199FF639003B8084 /* ProcessMonitor.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessMonitor.cpp; sourceTree = "<group>"; };
 		23AB0532199FF639003B8084 /* ProcessMonitor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ProcessMonitor.h; sourceTree = "<group>"; };
+		23DCEA421D1C4C6900A602B4 /* SBMemoryRegionInfo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBMemoryRegionInfo.cpp; path = source/API/SBMemoryRegionInfo.cpp; sourceTree = "<group>"; };
+		23DCEA431D1C4C6900A602B4 /* SBMemoryRegionInfoList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = SBMemoryRegionInfoList.cpp; path = source/API/SBMemoryRegionInfoList.cpp; sourceTree = "<group>"; };
 		23DDF224196C3EE600BB8417 /* CommandOptionValidators.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CommandOptionValidators.cpp; path = source/Interpreter/CommandOptionValidators.cpp; sourceTree = "<group>"; };
 		23E77CD61C20F29F007192AD /* DWARFDebugMacro.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DWARFDebugMacro.cpp; sourceTree = "<group>"; };
 		23E77CD71C20F29F007192AD /* DWARFDebugMacro.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DWARFDebugMacro.h; sourceTree = "<group>"; };
@@ -1630,6 +1636,10 @@
 		2640E19E15DC78FD00F23B50 /* Property.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Property.cpp; path = source/Interpreter/Property.cpp; sourceTree = "<group>"; };
 		26424E3C125986CB0016D82C /* ValueObjectConstResult.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ValueObjectConstResult.cpp; path = source/Core/ValueObjectConstResult.cpp; sourceTree = "<group>"; };
 		26424E3E125986D30016D82C /* ValueObjectConstResult.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ValueObjectConstResult.h; path = include/lldb/Core/ValueObjectConstResult.h; sourceTree = "<group>"; };
+		264297531D1DF209003F2BF4 /* SBMemoryRegionInfo.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBMemoryRegionInfo.h; path = include/lldb/API/SBMemoryRegionInfo.h; sourceTree = "<group>"; };
+		264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SBMemoryRegionInfoList.h; path = include/lldb/API/SBMemoryRegionInfoList.h; sourceTree = "<group>"; };
+		264297591D1DF2AA003F2BF4 /* SBMemoryRegionInfo.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBMemoryRegionInfo.i; sourceTree = "<group>"; };
+		2642975A1D1DF2AA003F2BF4 /* SBMemoryRegionInfoList.i */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.c.preprocessed; path = SBMemoryRegionInfoList.i; sourceTree = "<group>"; };
 		2642FBA813D003B400ED6808 /* CommunicationKDP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = CommunicationKDP.cpp; sourceTree = "<group>"; };
 		2642FBA913D003B400ED6808 /* CommunicationKDP.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = CommunicationKDP.h; sourceTree = "<group>"; };
 		2642FBAA13D003B400ED6808 /* ProcessKDP.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ProcessKDP.cpp; sourceTree = "<group>"; };
@@ -3741,6 +3751,8 @@
 				2611FF03142D83060017FEA3 /* SBInstructionList.i */,
 				2611FF04142D83060017FEA3 /* SBLineEntry.i */,
 				2611FF05142D83060017FEA3 /* SBListener.i */,
+				264297591D1DF2AA003F2BF4 /* SBMemoryRegionInfo.i */,
+				2642975A1D1DF2AA003F2BF4 /* SBMemoryRegionInfoList.i */,
 				2611FF06142D83060017FEA3 /* SBModule.i */,
 				263C493B178B61CC0070F12D /* SBModuleSpec.i */,
 				262F12B8183546C900AEB384 /* SBPlatform.i */,
@@ -3851,6 +3863,10 @@
 				26DE20621161904200A093E2 /* SBLineEntry.cpp */,
 				9A9831021125FC5800A56CB0 /* SBListener.h */,
 				9A9831011125FC5800A56CB0 /* SBListener.cpp */,
+				264297531D1DF209003F2BF4 /* SBMemoryRegionInfo.h */,
+				23DCEA421D1C4C6900A602B4 /* SBMemoryRegionInfo.cpp */,
+				264297541D1DF209003F2BF4 /* SBMemoryRegionInfoList.h */,
+				23DCEA431D1C4C6900A602B4 /* SBMemoryRegionInfoList.cpp */,
 				26DE204E11618E9800A093E2 /* SBModule.h */,
 				26DE204C11618E7A00A093E2 /* SBModule.cpp */,
 				263C4939178B50CF0070F12D /* SBModuleSpec.h */,
@@ -4012,7 +4028,7 @@
 			isa = PBXGroup;
 			children = (
 				26CE05A0115C31E50022F371 /* debugserver */,
-				AF05B4441AFC1D1900F65880 /* debugserver-nonui */,
+				239504C51BDD3FD700963CEA /* debugserver-nonui */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -6345,8 +6361,10 @@
 				26680225115FD13D008E1FE4 /* SBFrame.h in Headers */,
 				26DE205311618FAC00A093E2 /* SBFunction.h in Headers */,
 				9A3576A8116E9AB700E8ED2F /* SBHostOS.h in Headers */,
+				264297571D1DF247003F2BF4 /* SBMemoryRegionInfoList.h in Headers */,
 				9AC7038E117674FB0086C050 /* SBInstruction.h in Headers */,
 				9AC70390117675270086C050 /* SBInstructionList.h in Headers */,
+				264297581D1DF250003F2BF4 /* SBMemoryRegionInfo.h in Headers */,
 				26DE205911618FE700A093E2 /* SBLineEntry.h in Headers */,
 				254FBB971A81B03100BD6378 /* SBLaunchInfo.h in Headers */,
 				AF0EBBED185941360059E52F /* SBQueueItem.h in Headers */,
@@ -6767,11 +6785,11 @@
 			remoteRef = 26CE059F115C31E50022F371 /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
-		AF05B4441AFC1D1900F65880 /* debugserver-nonui */ = {
+		239504C51BDD3FD700963CEA /* debugserver-nonui */ = {
 			isa = PBXReferenceProxy;
 			fileType = "compiled.mach-o.executable";
 			path = "debugserver-nonui";
-			remoteRef = AF05B4431AFC1D1900F65880 /* PBXContainerItemProxy */;
+			remoteRef = 239504C41BDD3FD700963CEA /* PBXContainerItemProxy */;
 			sourceTree = BUILT_PRODUCTS_DIR;
 		};
 /* End PBXReferenceProxy section */
@@ -7034,6 +7052,7 @@
 				2668032D116005E3008E1FE4 /* SBFileSpec.cpp in Sources */,
 				2668032E116005E5008E1FE4 /* SBEvent.cpp in Sources */,
 				2668032F116005E6008E1FE4 /* SBError.cpp in Sources */,
+				23DCEA461D1C4D0F00A602B4 /* SBMemoryRegionInfo.cpp in Sources */,
 				26680330116005E7008E1FE4 /* SBDebugger.cpp in Sources */,
 				26680331116005E9008E1FE4 /* SBCommunication.cpp in Sources */,
 				26680332116005EA008E1FE4 /* SBCommandReturnObject.cpp in Sources */,
@@ -7070,6 +7089,7 @@
 				8CCB018319BA51BF0009FD44 /* SBThreadCollection.cpp in Sources */,
 				26B82840142D020F002DBC64 /* SBSection.cpp in Sources */,
 				B2A58724143119D50092BFBA /* SBWatchpoint.cpp in Sources */,
+				23DCEA471D1C4D0F00A602B4 /* SBMemoryRegionInfoList.cpp in Sources */,
 				263C4938178B50C40070F12D /* SBModuleSpec.cpp in Sources */,
 				2660AAB914622483003A9694 /* LLDBWrapPython.cpp in Sources */,
 				9475C18814E5E9FA001BFC6D /* SBTypeCategory.cpp in Sources */,
@@ -7966,10 +7986,10 @@
 			target = AF6967871B4609A80014D221 /* install-headers-mini */;
 			targetProxy = AF6967AA1B46128A0014D221 /* PBXContainerItemProxy */;
 		};
-		AF8587621D18F0B400E6B9EB /* PBXTargetDependency */ = {
+		AFCA21D21D18E556004386B8 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			name = "debugserver-mini";
-			targetProxy = AF8587611D18F0B400E6B9EB /* PBXContainerItemProxy */;
+			targetProxy = AFCA21D11D18E556004386B8 /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -8043,8 +8063,13 @@
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
+				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
+				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_LDFLAGS_1 = "-fprofile-instr-generate";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
+				LLDB_ENABLE_COVERAGE = 0;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
 				LLDB_GUI_CFLAGS = "";
 				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
@@ -8082,11 +8107,13 @@
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
@@ -8164,8 +8191,13 @@
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
+				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
+				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_LDFLAGS_1 = "-fprofile-instr-generate";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
+				LLDB_ENABLE_COVERAGE = 0;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
 				LLDB_GUI_CFLAGS = "";
 				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
@@ -8203,11 +8235,13 @@
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
 					"$(LLDB_VERSION_SCHEME_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
 					"-Wimplicit-fallthrough",
 				);
 				OTHER_LDFLAGS = (
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
 				PYTHON_FRAMEWORK_PATH = /System/Library/Frameworks/Python.framework;
 				PYTHON_VERSION_MAJOR = 2;
@@ -11228,8 +11262,13 @@
 				"LLDB_COMPRESSION_LDFLAGS[sdk=macosx10.11internal]" = "-weak-lcompression";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_0 = "";
 				LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_1 = "-DLLDB_USE_OSS_VERSION_SCHEME";
+				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
+				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_LDFLAGS_1 = "-fprofile-instr-generate";
 				LLDB_DISABLE_PYTHON = 0;
 				"LLDB_DISABLE_PYTHON[sdk=iphoneos*]" = 1;
+				LLDB_ENABLE_COVERAGE = 0;
 				LLDB_FRAMEWORK_INSTALL_DIR = /Applications/Xcode.app/Contents/SharedFrameworks;
 				LLDB_GUI_CFLAGS = "";
 				"LLDB_GUI_CFLAGS[sdk=appletvos*]" = "-DLLDB_DISABLE_CURSES=1";
@@ -11264,6 +11303,7 @@
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_CFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",
@@ -11546,6 +11586,7 @@
 					Foundation,
 					"$(LLDB_COMPRESSION_LDFLAGS)",
 					"$(LLDB_ZLIB_LDFLAGS)",
+					"$(LLDB_COVERAGE_LDFLAGS)",
 				);
 				"OTHER_LDFLAGS[sdk=macosx*]" = (
 					"$(inherited)",
@@ -12767,6 +12808,11 @@
 				LLDB_TOOLS_INSTALL_DIR = "$(LLDB_TOOLCHAIN_PREFIX)/usr/bin";
 				LLDB_USE_OSS_VERSION_SCHEME = 1;
 				LLDB_VERSION_SCHEME_CFLAGS = "$(LLDB_DEFINES_FOR_USE_OSS_VERSION_SCHEME_$(LLDB_USE_OSS_VERSION_SCHEME))";
+				LLDB_COVERAGE_CFLAGS = "$(LLDB_COVERAGE_CFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_CFLAGS_1 = "-fprofile-instr-generate -fcoverage-mapping";
+				LLDB_COVERAGE_LDFLAGS = "$(LLDB_COVERAGE_LDFLAGS_$(LLDB_ENABLE_COVERAGE))";
+				LLDB_COVERAGE_LDFLAGS_1 = "-fprofile-instr-generate";
+				LLDB_ENABLE_COVERAGE = 0;
 				LLDB_ZLIB_CFLAGS = "-DHAVE_LIBZ=1";
 				LLDB_ZLIB_LDFLAGS = "-lz";
 				LLVM_BUILD_DIR = "$(LLDB_PATH_TO_LLVM_BUILD)";
@@ -12781,6 +12827,7 @@
 					"-Wparentheses",
 					"$(LLDB_ZLIB_CFLAGS)",
 					"$(LLDB_COMPRESSION_CFLAGS)",
+					"$(LLDB_COVERAGE_LDFLAGS)",
 					"$(LLDB_GUI_CFLAGS)",
 					"$(LLDB_BUILDBOT_BUILD_CFLAGS)",
 					"-DLLDB_BUILD_DATE=\"$(LLDB_BUILD_DATE)\"",

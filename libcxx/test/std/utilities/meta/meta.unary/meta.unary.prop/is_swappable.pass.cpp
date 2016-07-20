@@ -49,7 +49,20 @@ struct M {
 
 void swap(M&&, M&&) {}
 
+struct DeletedSwap {
+  friend void swap(DeletedSwap&, DeletedSwap&) = delete;
+};
+
 } // namespace MyNS
+
+namespace MyNS2 {
+
+struct AmbiguousSwap {};
+
+template <class T>
+void swap(T&, T&) {}
+
+} // end namespace MyNS2
 
 int main()
 {
@@ -70,8 +83,16 @@ int main()
         static_assert(!std::is_swappable<int() &>::value, "");
     }
     {
-        // test for presense of is_swappable_v
-        static_assert(std::is_swappable_v<int>);
-        static_assert(!std::is_swappable_v<M>);
+        // test that a deleted swap is correctly handled.
+        static_assert(!std::is_swappable<DeletedSwap>::value, "");
+    }
+    {
+        // test that a swap with ambiguous overloads is handled correctly.
+        static_assert(!std::is_swappable<MyNS2::AmbiguousSwap>::value, "");
+    }
+    {
+        // test for presence of is_swappable_v
+        static_assert(std::is_swappable_v<int>, "");
+        static_assert(!std::is_swappable_v<M>, "");
     }
 }

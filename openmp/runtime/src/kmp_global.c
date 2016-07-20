@@ -35,10 +35,6 @@ __thread kmp_stats_list* __kmp_stats_thread_ptr = &__kmp_stats_list;
 // gives reference tick for all events (considered the 0 tick)
 tsc_tick_count __kmp_stats_start_time;
 #endif
-#if KMP_USE_HWLOC
-int __kmp_hwloc_error = FALSE;
-hwloc_topology_t __kmp_hwloc_topology = NULL;
-#endif
 
 /* ----------------------------------------------------- */
 /* INITIALIZATION VARIABLES */
@@ -220,6 +216,11 @@ enum mic_type __kmp_mic_type = non_mic;
 
 #if KMP_AFFINITY_SUPPORTED
 
+# if KMP_USE_HWLOC
+int __kmp_hwloc_error = FALSE;
+hwloc_topology_t __kmp_hwloc_topology = NULL;
+# endif
+
 # if KMP_GROUP_AFFINITY
 
 int __kmp_num_proc_groups = 1;
@@ -262,7 +263,7 @@ int __kmp_place_core_offset = 0;
 int __kmp_place_num_threads_per_core = 0;
 
 kmp_tasking_mode_t __kmp_tasking_mode = tskm_task_teams;
-#if OMP_41_ENABLED
+#if OMP_45_ENABLED
 kmp_int32 __kmp_max_task_priority = 0;
 #endif
 

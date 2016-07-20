@@ -3,7 +3,7 @@
 # RUN: llvm-as -o %t.lto.obj %S/Inputs/entry-mangled.ll
 # RUN: lld-link /out:%t.exe /entry:main %t.lto.obj
 
----
+--- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_AMD64
   Characteristics: []

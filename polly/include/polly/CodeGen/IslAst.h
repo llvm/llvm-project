@@ -28,7 +28,7 @@
 
 namespace llvm {
 class raw_ostream;
-}
+} // namespace llvm
 
 struct isl_pw_aff;
 struct isl_ast_node;
@@ -183,10 +183,10 @@ public:
 
   ///}
 };
-}
+} // namespace polly
 
 namespace llvm {
 class PassRegistry;
 void initializeIslAstInfoPass(llvm::PassRegistry &);
-}
+} // namespace llvm
 #endif /* POLLY_ISL_AST_H */

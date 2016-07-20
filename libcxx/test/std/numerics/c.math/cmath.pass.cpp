@@ -13,6 +13,7 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
 #include "hexfloat.h"
 
 // convertible to int/float/double/etc

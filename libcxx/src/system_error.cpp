@@ -21,6 +21,10 @@
 #include "string"
 #include "string.h"
 
+#if defined(__ANDROID__)
+#include <android/api-level.h>
+#endif
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 // class error_category
@@ -58,7 +62,8 @@ constexpr size_t strerror_buff_size = 1024;
 
 string do_strerror_r(int ev);
 
-#if defined(__linux__) && !defined(_LIBCPP_HAS_MUSL_LIBC)
+#if defined(__linux__) && !defined(_LIBCPP_HAS_MUSL_LIBC)                      \
+    && (!defined(__ANDROID__) || __ANDROID_API__ >= 23)
 // GNU Extended version
 string do_strerror_r(int ev) {
     char buffer[strerror_buff_size];
@@ -70,8 +75,11 @@ string do_strerror_r(int ev) {
 string do_strerror_r(int ev) {
     char buffer[strerror_buff_size];
     const int old_errno = errno;
-    if (::strerror_r(ev, buffer, strerror_buff_size) == -1) {
-        const int new_errno = errno;
+    int ret;
+    if ((ret = ::strerror_r(ev, buffer, strerror_buff_size)) != 0) {
+        // If `ret == -1` then the error is specified using `errno`, otherwise
+        // `ret` represents the error.
+        const int new_errno = ret == -1 ? errno : ret;
         errno = old_errno;
         if (new_errno == EINVAL) {
             std::snprintf(buffer, strerror_buff_size, "Unknown error %d", ev);

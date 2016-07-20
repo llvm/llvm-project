@@ -205,6 +205,7 @@ __isl_constructor
 __isl_give isl_map *isl_map_read_from_str(isl_ctx *ctx, const char *str);
 void isl_basic_map_dump(__isl_keep isl_basic_map *bmap);
 void isl_map_dump(__isl_keep isl_map *map);
+__isl_give char *isl_basic_map_to_str(__isl_keep isl_basic_map *bmap);
 __isl_give isl_printer *isl_printer_print_basic_map(
 	__isl_take isl_printer *printer, __isl_keep isl_basic_map *bmap);
 __isl_give char *isl_map_to_str(__isl_keep isl_map *map);
@@ -671,6 +672,7 @@ __isl_give isl_basic_map *isl_basic_map_from_aff_list(
 __isl_give isl_map *isl_map_from_aff(__isl_take isl_aff *aff);
 __isl_give isl_map *isl_map_from_multi_aff(__isl_take isl_multi_aff *maff);
 
+__isl_give isl_pw_aff *isl_map_dim_min(__isl_take isl_map *map, int pos);
 __isl_give isl_pw_aff *isl_map_dim_max(__isl_take isl_map *map, int pos);
 
 ISL_DECLARE_LIST_FN(basic_map)

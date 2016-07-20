@@ -1,4 +1,4 @@
-//===------ polly/ScopInfo.h - Create Scops from LLVM IR --------*- C++ -*-===//
+//===------ polly/ScopInfo.h -----------------------------------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,10 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Create a polyhedral description for a static control flow region.
-//
-// The pass creates a polyhedral description of the Scops detected by the Scop
-// detection derived from their LLVM-IR code.
+// Store the polyhedral model representation of a static control flow region,
+// also called SCoP (Static Control Part).
 //
 // This representation is shared among several tools in the polyhedral
 // community, which are e.g. CLooG, Pluto, Loopo, Graphite.
@@ -43,7 +41,7 @@ class ScalarEvolution;
 class SCEV;
 class SCEVAddRecExpr;
 class Type;
-}
+} // namespace llvm
 
 struct isl_ctx;
 struct isl_map;
@@ -274,7 +272,7 @@ public:
   /// @brief The set of derived indirect SAIs for this origin SAI.
   const SmallPtrSetImpl<ScopArrayInfo *> &getDerivedSAIs() const {
     return DerivedSAIs;
-  };
+  }
 
   /// @brief Return the number of dimensions.
   unsigned getNumberOfDimensions() const {
@@ -320,7 +318,7 @@ public:
   __isl_give isl_id *getBasePtrId() const;
 
   /// @brief Is this array info modeling an llvm::Value?
-  bool isValueKind() const { return Kind == MK_Value; };
+  bool isValueKind() const { return Kind == MK_Value; }
 
   /// @brief Is this array info modeling special PHI node memory?
   ///
@@ -332,13 +330,13 @@ public:
   /// original PHI node as virtual base pointer, we have this additional
   /// attribute to distinguish the PHI node specific array modeling from the
   /// normal scalar array modeling.
-  bool isPHIKind() const { return Kind == MK_PHI; };
+  bool isPHIKind() const { return Kind == MK_PHI; }
 
   /// @brief Is this array info modeling an MK_ExitPHI?
-  bool isExitPHIKind() const { return Kind == MK_ExitPHI; };
+  bool isExitPHIKind() const { return Kind == MK_ExitPHI; }
 
   /// @brief Is this array info modeling an array?
-  bool isArrayKind() const { return Kind == MK_Array; };
+  bool isArrayKind() const { return Kind == MK_Array; }
 
   /// @brief Dump a readable representation to stderr.
   void dump() const;
@@ -924,17 +922,30 @@ struct InvariantAccess {
 using InvariantAccessesTy = SmallVector<InvariantAccess, 8>;
 
 /// @brief Type for equivalent invariant accesses and their domain context.
-///
-/// The first element is the SCEV for the pointer/location that identifies this
-/// equivalence class. The second is a list of memory accesses to that location
-/// that are now treated as invariant and hoisted during code generation. The
-/// third element is the execution context under which the invariant memory
-/// location is accessed, hence the union of all domain contexts for the memory
-/// accesses in the list. The last element describes the type of the invariant
-/// accesss in order to differentiate between different typed invariant loads of
-/// the same location.
-using InvariantEquivClassTy =
-    std::tuple<const SCEV *, MemoryAccessList, isl_set *, Type *>;
+struct InvariantEquivClassTy {
+
+  /// The pointer that identifies this equivalence class
+  const SCEV *IdentifyingPointer;
+
+  /// Memory accesses now treated invariant
+  ///
+  /// These memory accesses access the pointer location that identifies
+  /// this equivalence class. They are treated as invariant and hoisted during
+  /// code generation.
+  MemoryAccessList InvariantAccesses;
+
+  /// The execution context under which the memory location is accessed
+  ///
+  /// It is the union of the execution domains of the memory accesses in the
+  /// InvariantAccesses list.
+  isl_set *ExecutionContext;
+
+  /// The type of the invariant access
+  ///
+  /// It is used to differentiate between differently typed invariant loads from
+  /// the same location.
+  Type *AccessType;
+};
 
 /// @brief Type for invariant accesses equivalence classes.
 using InvariantEquivClassesTy = SmallVector<InvariantEquivClassTy, 8>;
@@ -1429,7 +1440,7 @@ private:
     /// @brief The location that caused this assumption.
     DebugLoc Loc;
 
-    /// @brief An optional block whos domain can simplify the assumption.
+    /// @brief An optional block whose domain can simplify the assumption.
     BasicBlock *BB;
   };
 
@@ -1755,7 +1766,7 @@ private:
 
     LoopStackElement(Loop *L, __isl_give isl_schedule *S,
                      unsigned NumBlocksProcessed)
-        : L(L), Schedule(S), NumBlocksProcessed(NumBlocksProcessed){};
+        : L(L), Schedule(S), NumBlocksProcessed(NumBlocksProcessed) {}
   } LoopStackElementTy;
 
   /// @brief The loop stack used for schedule construction.
@@ -1844,15 +1855,29 @@ public:
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
 
+  typedef ArrayInfoMapTy::iterator array_iterator;
+  typedef ArrayInfoMapTy::const_iterator const_array_iterator;
   typedef iterator_range<ArrayInfoMapTy::iterator> array_range;
   typedef iterator_range<ArrayInfoMapTy::const_iterator> const_array_range;
 
+  inline array_iterator array_begin() { return ScopArrayInfoMap.begin(); }
+
+  inline array_iterator array_end() { return ScopArrayInfoMap.end(); }
+
+  inline const_array_iterator array_begin() const {
+    return ScopArrayInfoMap.begin();
+  }
+
+  inline const_array_iterator array_end() const {
+    return ScopArrayInfoMap.end();
+  }
+
   inline array_range arrays() {
-    return array_range(ScopArrayInfoMap.begin(), ScopArrayInfoMap.end());
+    return array_range(array_begin(), array_end());
   }
 
   inline const_array_range arrays() const {
-    return const_array_range(ScopArrayInfoMap.begin(), ScopArrayInfoMap.end());
+    return const_array_range(array_begin(), array_end());
   }
 
   /// @brief Return the isl_id that represents a certain parameter.
@@ -1913,6 +1938,9 @@ public:
   InvariantEquivClassesTy &getInvariantAccesses() {
     return InvariantEquivClasses;
   }
+
+  /// @brief Check if the scop has any invariant access.
+  bool hasInvariantAccesses() { return !InvariantEquivClasses.empty(); }
 
   /// @brief Mark the SCoP as optimized by the scheduler.
   void markAsOptimized() { IsOptimized = true; }
@@ -2255,248 +2283,11 @@ static inline raw_ostream &operator<<(raw_ostream &O, const Scop &scop) {
   return O;
 }
 
-/// @brief Build the Polly IR (Scop and ScopStmt) on a Region.
-class ScopBuilder {
-  //===-------------------------------------------------------------------===//
-  ScopBuilder(const ScopBuilder &) = delete;
-  const ScopBuilder &operator=(const ScopBuilder &) = delete;
-
-  /// @brief The AliasAnalysis to build AliasSetTracker.
-  AliasAnalysis &AA;
-
-  /// @brief Target data for element size computing.
-  const DataLayout &DL;
-
-  /// @brief DominatorTree to reason about guaranteed execution.
-  DominatorTree &DT;
-
-  /// @brief LoopInfo for information about loops
-  LoopInfo &LI;
-
-  /// @biref Valid Regions for Scop
-  ScopDetection &SD;
-
-  /// @brief The ScalarEvolution to help building Scop.
-  ScalarEvolution &SE;
-
-  /// @brief Set of instructions that might read any memory location.
-  SmallVector<Instruction *, 16> GlobalReads;
-
-  /// @brief Set of all accessed array base pointers.
-  SmallSetVector<Value *, 16> ArrayBasePointers;
-
-  // The Scop
-  std::unique_ptr<Scop> scop;
-
-  // Clear the context.
-  void clear();
-
-  // Build the SCoP for Region @p R.
-  void buildScop(Region &R, AssumptionCache &AC);
-
-  /// @brief Try to build a multi-dimensional fixed sized MemoryAccess from
-  ///        the Load/Store instruction.
-  ///
-  /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  ///
-  /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMultiDimFixed(MemAccInst Inst, Loop *L);
-
-  /// @brief Try to build a multi-dimensional parameteric sized MemoryAccess
-  ///        from the Load/Store instruction.
-  ///
-  /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  ///
-  /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMultiDimParam(MemAccInst Inst, Loop *L);
-
-  /// @brief Try to build a MemoryAccess for a memory intrinsic.
-  ///
-  /// @param Inst       The instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  ///
-  /// @returns True if the access could be built, False otherwise.
-  bool buildAccessMemIntrinsic(MemAccInst Inst, Loop *L);
-
-  /// @brief Try to build a MemoryAccess for a call instruction.
-  ///
-  /// @param Inst       The call instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  ///
-  /// @returns True if the access could be built, False otherwise.
-  bool buildAccessCallInst(MemAccInst Inst, Loop *L);
-
-  /// @brief Build a single-dimensional parameteric sized MemoryAccess
-  ///        from the Load/Store instruction.
-  ///
-  /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  void buildAccessSingleDim(MemAccInst Inst, Loop *L);
-
-  /// @brief Build an instance of MemoryAccess from the Load/Store instruction.
-  ///
-  /// @param Inst       The Load/Store instruction that access the memory
-  /// @param L          The parent loop of the instruction
-  void buildMemoryAccess(MemAccInst Inst, Loop *L);
-
-  /// @brief Analyze and extract the cross-BB scalar dependences (or,
-  ///        dataflow dependencies) of an instruction.
-  ///
-  /// @param Inst    The instruction to be analyzed.
-  void buildScalarDependences(Instruction *Inst);
-
-  /// @brief Search for uses of the llvm::Value defined by @p Inst that are not
-  ///        within the SCoP. If there is such use, add a SCALAR WRITE such that
-  ///        it is available after the SCoP as escaping value.
-  ///
-  /// @param Inst The instruction to be analyzed.
-  void buildEscapingDependences(Instruction *Inst);
-
-  /// @brief Create MemoryAccesses for the given PHI node in the given region.
-  ///
-  /// @param PHI                The PHI node to be handled
-  /// @param NonAffineSubRegion The non affine sub-region @p PHI is in.
-  /// @param IsExitBlock        Flag to indicate that @p PHI is in the exit BB.
-  void buildPHIAccesses(PHINode *PHI, Region *NonAffineSubRegion,
-                        bool IsExitBlock = false);
-
-  /// @brief Build the access functions for the subregion @p SR.
-  ///
-  /// @param SR           A subregion of @p R.
-  /// @param InsnToMemAcc The Instruction to MemoryAccess mapping.
-  void buildAccessFunctions(Region &SR);
-
-  /// @brief Create ScopStmt for all BBs and non-affine subregions of @p SR.
-  ///
-  /// @param SR A subregion of @p R.
-  ///
-  /// Some of the statments might be optimized away later when they do not
-  /// access any memory and thus have no effect.
-  void buildStmts(Region &SR);
-
-  /// @brief Build the access functions for the basic block @p BB
-  ///
-  /// @param BB                 A basic block in @p R.
-  /// @param NonAffineSubRegion The non affine sub-region @p BB is in.
-  /// @param IsExitBlock        Flag to indicate that @p BB is in the exit BB.
-  void buildAccessFunctions(BasicBlock &BB,
-                            Region *NonAffineSubRegion = nullptr,
-                            bool IsExitBlock = false);
-
-  /// @brief Create a new MemoryAccess object and add it to #AccFuncMap.
-  ///
-  /// @param BB          The block where the access takes place.
-  /// @param Inst        The instruction doing the access. It is not necessarily
-  ///                    inside @p BB.
-  /// @param AccType     The kind of access.
-  /// @param BaseAddress The accessed array's base address.
-  /// @param ElemType    The type of the accessed array elements.
-  /// @param Affine      Whether all subscripts are affine expressions.
-  /// @param AccessValue Value read or written.
-  /// @param Subscripts  Access subscripts per dimension.
-  /// @param Sizes       The array diminsion's sizes.
-  /// @param Kind        The kind of memory accessed.
-  ///
-  /// @return The created MemoryAccess, or nullptr if the access is not within
-  ///         the SCoP.
-  MemoryAccess *addMemoryAccess(BasicBlock *BB, Instruction *Inst,
-                                MemoryAccess::AccessType AccType,
-                                Value *BaseAddress, Type *ElemType, bool Affine,
-                                Value *AccessValue,
-                                ArrayRef<const SCEV *> Subscripts,
-                                ArrayRef<const SCEV *> Sizes,
-                                ScopArrayInfo::MemoryKind Kind);
-
-  /// @brief Create a MemoryAccess that represents either a LoadInst or
-  /// StoreInst.
-  ///
-  /// @param MemAccInst  The LoadInst or StoreInst.
-  /// @param AccType     The kind of access.
-  /// @param BaseAddress The accessed array's base address.
-  /// @param ElemType    The type of the accessed array elements.
-  /// @param IsAffine    Whether all subscripts are affine expressions.
-  /// @param Subscripts  Access subscripts per dimension.
-  /// @param Sizes       The array dimension's sizes.
-  /// @param AccessValue Value read or written.
-  ///
-  /// @see ScopArrayInfo::MemoryKind
-  void addArrayAccess(MemAccInst MemAccInst, MemoryAccess::AccessType AccType,
-                      Value *BaseAddress, Type *ElemType, bool IsAffine,
-                      ArrayRef<const SCEV *> Subscripts,
-                      ArrayRef<const SCEV *> Sizes, Value *AccessValue);
-
-  /// @brief Create a MemoryAccess for writing an llvm::Instruction.
-  ///
-  /// The access will be created at the position of @p Inst.
-  ///
-  /// @param Inst The instruction to be written.
-  ///
-  /// @see ensureValueRead()
-  /// @see ScopArrayInfo::MemoryKind
-  void ensureValueWrite(Instruction *Inst);
-
-  /// @brief Ensure an llvm::Value is available in the BB's statement, creating
-  ///        a MemoryAccess for reloading it if necessary.
-  ///
-  /// @param V      The value expected to be loaded.
-  /// @param UserBB Where to reload the value.
-  ///
-  /// @see ensureValueStore()
-  /// @see ScopArrayInfo::MemoryKind
-  void ensureValueRead(Value *V, BasicBlock *UserBB);
-
-  /// @brief Create a write MemoryAccess for the incoming block of a phi node.
-  ///
-  /// Each of the incoming blocks write their incoming value to be picked in the
-  /// phi's block.
-  ///
-  /// @param PHI           PHINode under consideration.
-  /// @param IncomingBlock Some predecessor block.
-  /// @param IncomingValue @p PHI's value when coming from @p IncomingBlock.
-  /// @param IsExitBlock   When true, uses the .s2a alloca instead of the
-  ///                      .phiops one. Required for values escaping through a
-  ///                      PHINode in the SCoP region's exit block.
-  /// @see addPHIReadAccess()
-  /// @see ScopArrayInfo::MemoryKind
-  void ensurePHIWrite(PHINode *PHI, BasicBlock *IncomingBlock,
-                      Value *IncomingValue, bool IsExitBlock);
-
-  /// @brief Create a MemoryAccess for reading the value of a phi.
-  ///
-  /// The modeling assumes that all incoming blocks write their incoming value
-  /// to the same location. Thus, this access will read the incoming block's
-  /// value as instructed by this @p PHI.
-  ///
-  /// @param PHI PHINode under consideration; the READ access will be added
-  /// here.
-  ///
-  /// @see ensurePHIWrite()
-  /// @see ScopArrayInfo::MemoryKind
-  void addPHIReadAccess(PHINode *PHI);
-
-public:
-  explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,
-                       const DataLayout &DL, DominatorTree &DT, LoopInfo &LI,
-                       ScopDetection &SD, ScalarEvolution &SE);
-  ~ScopBuilder() {}
-
-  /// @brief Try to build the Polly IR of static control part on the current
-  ///        SESE-Region.
-  ///
-  /// @return If the current region is a valid for a static control part,
-  ///         return the Polly IR representing this static control part,
-  ///         return null otherwise.
-  Scop *getScop() { return scop.get(); }
-  const Scop *getScop() const { return scop.get(); }
-};
-
 /// @brief The legacy pass manager's analysis pass to compute scop information
 ///        for a region.
 class ScopInfoRegionPass : public RegionPass {
-  /// @brief The ScopBuilder pointer which is used to construct a Scop.
-  std::unique_ptr<ScopBuilder> SI;
+  /// @brief The Scop pointer which is used to construct a Scop.
+  std::unique_ptr<Scop> S;
 
 public:
   static char ID; // Pass identification, replacement for typeid
@@ -2504,27 +2295,73 @@ public:
   ScopInfoRegionPass() : RegionPass(ID) {}
   ~ScopInfoRegionPass() {}
 
-  /// @brief Build ScopBuilder object, which constructs Polly IR of static
-  ///        control part for the current SESE-Region.
+  /// @brief Build Scop object, the Polly IR of static control
+  ///        part for the current SESE-Region.
   ///
-  /// @return Return Scop for the current Region.
-  Scop *getScop() {
-    if (SI)
-      return SI.get()->getScop();
-    else
-      return nullptr;
-  }
-  const Scop *getScop() const {
-    if (SI)
-      return SI.get()->getScop();
-    else
-      return nullptr;
-  }
+  /// @return If the current region is a valid for a static control part,
+  ///         return the Polly IR representing this static control part,
+  ///         return null otherwise.
+  Scop *getScop() { return S.get(); }
+  const Scop *getScop() const { return S.get(); }
 
   /// @brief Calculate the polyhedral scop information for a given Region.
   bool runOnRegion(Region *R, RGPassManager &RGM) override;
 
-  void releaseMemory() override { SI.reset(); }
+  void releaseMemory() override { S.reset(); }
+
+  void print(raw_ostream &O, const Module *M = nullptr) const override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
+};
+
+//===----------------------------------------------------------------------===//
+/// @brief The legacy pass manager's analysis pass to compute scop information
+///        for the whole function.
+///
+/// This pass will maintain a map of the maximal region within a scop to its
+/// scop object for all the feasible scops present in a function.
+/// This pass is an alternative to the ScopInfoRegionPass in order to avoid a
+/// region pass manager.
+class ScopInfoWrapperPass : public FunctionPass {
+
+public:
+  using RegionToScopMapTy = DenseMap<Region *, std::unique_ptr<Scop>>;
+  using iterator = RegionToScopMapTy::iterator;
+  using const_iterator = RegionToScopMapTy::const_iterator;
+
+private:
+  /// @brief A map of Region to its Scop object containing
+  ///        Polly IR of static control part
+  RegionToScopMapTy RegionToScopMap;
+
+public:
+  static char ID; // Pass identification, replacement for typeid
+
+  ScopInfoWrapperPass() : FunctionPass(ID) {}
+  ~ScopInfoWrapperPass() {}
+
+  /// @brief Get the Scop object for the given Region
+  ///
+  /// @return If the given region is the maximal region within a scop, return
+  ///         the scop object. If the given region is a subregion, return a
+  ///         nullptr. Top level region containing the entry block of a function
+  ///         is not considered in the scop creation.
+  Scop *getScop(Region *R) const {
+    auto MapIt = RegionToScopMap.find(R);
+    if (MapIt != RegionToScopMap.end())
+      return MapIt->second.get();
+    return nullptr;
+  }
+
+  iterator begin() { return RegionToScopMap.begin(); }
+  iterator end() { return RegionToScopMap.end(); }
+  const_iterator begin() const { return RegionToScopMap.begin(); }
+  const_iterator end() const { return RegionToScopMap.end(); }
+
+  /// @brief Calculate all the polyhedral scops for a given function.
+  bool runOnFunction(Function &F) override;
+
+  void releaseMemory() override { RegionToScopMap.clear(); }
 
   void print(raw_ostream &O, const Module *M = nullptr) const override;
 
@@ -2536,6 +2373,7 @@ public:
 namespace llvm {
 class PassRegistry;
 void initializeScopInfoRegionPassPass(llvm::PassRegistry &);
-}
+void initializeScopInfoWrapperPassPass(llvm::PassRegistry &);
+} // namespace llvm
 
 #endif

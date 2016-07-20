@@ -1,4 +1,4 @@
-//===--- MoveConstandArgumentCheck.cpp - clang-tidy -----------------------===//
+//===--- MoveConstantArgumentCheck.cpp - clang-tidy -----------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -17,30 +17,62 @@ namespace clang {
 namespace tidy {
 namespace misc {
 
+static void ReplaceCallWithArg(const CallExpr *Call, DiagnosticBuilder &Diag,
+                               const SourceManager &SM,
+                               const LangOptions &LangOpts) {
+  const Expr *Arg = Call->getArg(0);
+
+  CharSourceRange BeforeArgumentsRange = Lexer::makeFileCharRange(
+      CharSourceRange::getCharRange(Call->getLocStart(), Arg->getLocStart()),
+      SM, LangOpts);
+  CharSourceRange AfterArgumentsRange = Lexer::makeFileCharRange(
+      CharSourceRange::getCharRange(Call->getLocEnd(),
+                                    Call->getLocEnd().getLocWithOffset(1)),
+      SM, LangOpts);
+
+  if (BeforeArgumentsRange.isValid() && AfterArgumentsRange.isValid()) {
+    Diag << FixItHint::CreateRemoval(BeforeArgumentsRange)
+         << FixItHint::CreateRemoval(AfterArgumentsRange);
+  }
+}
+
 void MoveConstantArgumentCheck::registerMatchers(MatchFinder *Finder) {
   if (!getLangOpts().CPlusPlus)
     return;
-  Finder->addMatcher(callExpr(callee(functionDecl(hasName("::std::move"))),
-                              argumentCountIs(1),
-                              unless(isInTemplateInstantiation()))
-                         .bind("call-move"),
+
+  auto MoveCallMatcher =
+      callExpr(callee(functionDecl(hasName("::std::move"))), argumentCountIs(1),
+               unless(isInTemplateInstantiation()))
+          .bind("call-move");
+
+  Finder->addMatcher(MoveCallMatcher, this);
+
+  auto ConstParamMatcher = forEachArgumentWithParam(
+      MoveCallMatcher, parmVarDecl(hasType(references(isConstQualified()))));
+
+  Finder->addMatcher(callExpr(ConstParamMatcher).bind("receiving-expr"), this);
+  Finder->addMatcher(cxxConstructExpr(ConstParamMatcher).bind("receiving-expr"),
                      this);
 }
 
 void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *CallMove = Result.Nodes.getNodeAs<CallExpr>("call-move");
+  const auto *ReceivingExpr = Result.Nodes.getNodeAs<Expr>("receiving-expr");
   const Expr *Arg = CallMove->getArg(0);
   SourceManager &SM = Result.Context->getSourceManager();
+
+  CharSourceRange MoveRange =
+      CharSourceRange::getCharRange(CallMove->getSourceRange());
+  CharSourceRange FileMoveRange =
+      Lexer::makeFileCharRange(MoveRange, SM, getLangOpts());
+  if (!FileMoveRange.isValid())
+    return;
 
   bool IsConstArg = Arg->getType().isConstQualified();
   bool IsTriviallyCopyable =
       Arg->getType().isTriviallyCopyableType(*Result.Context);
 
   if (IsConstArg || IsTriviallyCopyable) {
-    auto MoveRange = CharSourceRange::getCharRange(CallMove->getSourceRange());
-    auto FileMoveRange = Lexer::makeFileCharRange(MoveRange, SM, getLangOpts());
-    if (!FileMoveRange.isValid())
-      return;
     bool IsVariable = isa<DeclRefExpr>(Arg);
     auto Diag = diag(FileMoveRange.getBegin(),
                      "std::move of the %select{|const }0"
@@ -49,19 +81,13 @@ void MoveConstantArgumentCheck::check(const MatchFinder::MatchResult &Result) {
                      "has no effect; remove std::move()")
                 << IsConstArg << IsVariable << IsTriviallyCopyable;
 
-    auto BeforeArgumentsRange = Lexer::makeFileCharRange(
-        CharSourceRange::getCharRange(CallMove->getLocStart(),
-                                      Arg->getLocStart()),
-        SM, getLangOpts());
-    auto AfterArgumentsRange = Lexer::makeFileCharRange(
-        CharSourceRange::getCharRange(
-            CallMove->getLocEnd(), CallMove->getLocEnd().getLocWithOffset(1)),
-        SM, getLangOpts());
+    ReplaceCallWithArg(CallMove, Diag, SM, getLangOpts());
+  } else if (ReceivingExpr) {
+    auto Diag = diag(FileMoveRange.getBegin(),
+                     "passing result of std::move() as a const reference "
+                     "argument; no move will actually happen");
 
-    if (BeforeArgumentsRange.isValid() && AfterArgumentsRange.isValid()) {
-      Diag << FixItHint::CreateRemoval(BeforeArgumentsRange)
-           << FixItHint::CreateRemoval(AfterArgumentsRange);
-    }
+    ReplaceCallWithArg(CallMove, Diag, SM, getLangOpts());
   }
 }
 

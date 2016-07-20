@@ -43,6 +43,8 @@ using namespace llvm;
 
 BADSCOP_STAT(CFG, "CFG too complex");
 BADSCOP_STAT(LoopBound, "Loop bounds can not be computed");
+BADSCOP_STAT(LoopOverlapWithNonAffineSubRegion,
+             "Loop overlap with nonaffine subregion");
 BADSCOP_STAT(FuncCall, "Function call with side effects appeared");
 BADSCOP_STAT(AffFunc, "Expression not affine");
 BADSCOP_STAT(Alias, "Found base address alias");
@@ -58,7 +60,7 @@ template <typename T> std::string operator+(Twine LHS, const T &RHS) {
 
   return LHS.concat(Buf).str();
 }
-}
+} // namespace polly
 
 namespace llvm {
 // @brief Lexicographic order on (line, col) of our debug locations.
@@ -66,7 +68,7 @@ static bool operator<(const llvm::DebugLoc &LHS, const llvm::DebugLoc &RHS) {
   return LHS.getLine() < RHS.getLine() ||
          (LHS.getLine() == RHS.getLine() && LHS.getCol() < RHS.getCol());
 }
-}
+} // namespace llvm
 
 namespace polly {
 BBPair getBBPairForRegion(const Region *R) {
@@ -325,6 +327,33 @@ bool ReportLoopBound::classof(const RejectReason *RR) {
 
 std::string ReportLoopBound::getEndUserMessage() const {
   return "Failed to derive an affine function from the loop bounds.";
+}
+
+//===----------------------------------------------------------------------===//
+// ReportLoopOverlapWithNonAffineSubRegion.
+
+ReportLoopOverlapWithNonAffineSubRegion::
+    ReportLoopOverlapWithNonAffineSubRegion(Loop *L, Region *R)
+    : RejectReason(rrkLoopOverlapWithNonAffineSubRegion), L(L), R(R),
+      Loc(L->getStartLoc()) {
+  ++BadLoopOverlapWithNonAffineSubRegionForScop;
+}
+
+std::string ReportLoopOverlapWithNonAffineSubRegion::getMessage() const {
+  return "Non affine subregion: " + R->getNameStr() + " overlaps Loop " +
+         L->getHeader()->getName();
+}
+
+const DebugLoc &ReportLoopOverlapWithNonAffineSubRegion::getDebugLoc() const {
+  return Loc;
+}
+
+bool ReportLoopOverlapWithNonAffineSubRegion::classof(const RejectReason *RR) {
+  return RR->getKind() == rrkLoopOverlapWithNonAffineSubRegion;
+}
+
+std::string ReportLoopOverlapWithNonAffineSubRegion::getEndUserMessage() const {
+  return "Loop overlaps with nonaffine subregion.";
 }
 
 //===----------------------------------------------------------------------===//

@@ -16,6 +16,8 @@
 #include <experimental/string_view>
 #include <cassert>
 
+#include "test_macros.h"
+
 template<typename CharT>
 void test ( const CharT *s ) {
     typedef std::experimental::basic_string_view<CharT> string_view_t;
@@ -49,7 +51,7 @@ int main () {
     test ( L"a" );
     test ( L"" );
 
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     test ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );
     test ( u"ABCDE" );
     test ( u"a" );

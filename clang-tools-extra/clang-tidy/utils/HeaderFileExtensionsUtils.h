@@ -21,17 +21,17 @@ namespace utils {
 
 typedef llvm::SmallSet<llvm::StringRef, 5> HeaderFileExtensionsSet;
 
-/// \brief Checks whether expansion location of Loc is in header file.
+/// \brief Checks whether expansion location of \p Loc is in header file.
 bool isExpansionLocInHeaderFile(
     SourceLocation Loc, const SourceManager &SM,
     const HeaderFileExtensionsSet &HeaderFileExtensions);
 
-/// \brief Checks whether presumed location of Loc is in header file.
+/// \brief Checks whether presumed location of \p Loc is in header file.
 bool isPresumedLocInHeaderFile(
     SourceLocation Loc, SourceManager &SM,
     const HeaderFileExtensionsSet &HeaderFileExtensions);
 
-/// \brief Checks whether spelling location of Loc is in header file.
+/// \brief Checks whether spelling location of \p Loc is in header file.
 bool isSpellingLocInHeaderFile(
     SourceLocation Loc, SourceManager &SM,
     const HeaderFileExtensionsSet &HeaderFileExtensions);

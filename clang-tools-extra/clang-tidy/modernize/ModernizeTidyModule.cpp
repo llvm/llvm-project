@@ -23,8 +23,10 @@
 #include "UseAutoCheck.h"
 #include "UseBoolLiteralsCheck.h"
 #include "UseDefaultCheck.h"
+#include "UseEmplaceCheck.h"
 #include "UseNullptrCheck.h"
 #include "UseOverrideCheck.h"
+#include "UseUsingCheck.h"
 
 using namespace clang::ast_matchers;
 
@@ -54,8 +56,10 @@ public:
     CheckFactories.registerCheck<UseBoolLiteralsCheck>(
         "modernize-use-bool-literals");
     CheckFactories.registerCheck<UseDefaultCheck>("modernize-use-default");
+    CheckFactories.registerCheck<UseEmplaceCheck>("modernize-use-emplace");
     CheckFactories.registerCheck<UseNullptrCheck>("modernize-use-nullptr");
     CheckFactories.registerCheck<UseOverrideCheck>("modernize-use-override");
+    CheckFactories.registerCheck<UseUsingCheck>("modernize-use-using");
   }
 
   ClangTidyOptions getModuleOptions() override {

@@ -31,7 +31,7 @@ int main()
     assert(m.key_comp() == C(4));
     assert(m.get_allocator() == A(5));
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
     typedef test_compare<std::less<int> > C;
     typedef min_allocator<std::pair<const int, double> > A;

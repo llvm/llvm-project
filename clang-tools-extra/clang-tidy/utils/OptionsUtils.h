@@ -21,7 +21,7 @@ namespace options {
 std::vector<std::string> parseStringList(StringRef Option);
 
 /// \brief Serialize a sequence of names that can be parsed by
-/// 'parseStringList'.
+/// ``parseStringList``.
 std::string serializeStringList(ArrayRef<std::string> Strings);
 
 } // namespace options

@@ -12,10 +12,6 @@
 
 #include <cerrno>
 
-#ifndef _LIBCPP_VERSION
-#error _LIBCPP_VERSION not defined
-#endif
-
 #ifndef E2BIG
 #error E2BIG not defined
 #endif

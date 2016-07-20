@@ -21,7 +21,7 @@
 
 namespace llvm {
 class ScalarEvolution;
-}
+} // namespace llvm
 
 namespace polly {
 class Scop;
@@ -140,5 +140,5 @@ static inline PollyIRBuilder createPollyIRBuilder(llvm::BasicBlock *BB,
   Builder.SetInsertPoint(BB->getTerminator());
   return Builder;
 }
-}
+} // namespace polly
 #endif

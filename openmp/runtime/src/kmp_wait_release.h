@@ -97,6 +97,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
     kmp_uint32 hibernate;
     int th_gtid;
     int tasks_completed = FALSE;
+    int oversubscribed;
 
     KMP_FSYNC_SPIN_INIT(spin, NULL);
     if (flag->done_check()) {
@@ -166,6 +167,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
                       hibernate - __kmp_global.g.g_time.dt.t_value));
     }
 
+    oversubscribed = (TCR_4(__kmp_nth) > __kmp_avail_proc);
     KMP_MB();
 
     // Main wait spin loop
@@ -201,7 +203,7 @@ __kmp_wait_template(kmp_info_t *this_thr, C *flag, int final_spin
         }
 
         // If we are oversubscribed, or have waited a bit (and KMP_LIBRARY=throughput), then yield
-        KMP_YIELD(TCR_4(__kmp_nth) > __kmp_avail_proc);
+        KMP_YIELD(oversubscribed);
         // TODO: Should it be number of cores instead of thread contexts? Like:
         // KMP_YIELD(TCR_4(__kmp_nth) > __kmp_ncores);
         // Need performance improvement data to make the change...

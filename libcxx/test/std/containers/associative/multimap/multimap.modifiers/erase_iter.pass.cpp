@@ -155,7 +155,7 @@ int main()
         assert(i == m.begin());
         assert(i == m.end());
     }
-#if __cplusplus >= 201103L
+#if TEST_STD_VER >= 11
     {
         typedef std::multimap<int, double, std::less<int>, min_allocator<std::pair<const int, double>>> M;
         typedef std::pair<int, double> P;
@@ -284,7 +284,7 @@ int main()
         assert(i == m.end());
     }
 #endif
-#if __cplusplus >= 201402L
+#if TEST_STD_VER >= 14
     {
     //  This is LWG #2059
         typedef TemplateConstructor T;

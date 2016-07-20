@@ -40,6 +40,8 @@ add_lldb_library(liblldb SHARED
   SBLaunchInfo.cpp
   SBLineEntry.cpp
   SBListener.cpp
+  SBMemoryRegionInfo.cpp
+  SBMemoryRegionInfoList.cpp
   SBModule.cpp
   SBModuleSpec.cpp
   SBPlatform.cpp

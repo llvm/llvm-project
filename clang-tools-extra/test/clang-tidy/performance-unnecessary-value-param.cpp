@@ -1,5 +1,7 @@
 // RUN: %check_clang_tidy %s performance-unnecessary-value-param %t
 
+// CHECK-FIXES: #include <utility>
+
 struct ExpensiveToCopyType {
   const ExpensiveToCopyType & constReference() const {
     return *this;
@@ -28,6 +30,15 @@ struct MoveOnlyType {
   MoveOnlyType(MoveOnlyType &&) = default;
   ~MoveOnlyType();
   void constMethod() const;
+};
+
+struct ExpensiveMovableType {
+  ExpensiveMovableType();
+  ExpensiveMovableType(ExpensiveMovableType &&);
+  ExpensiveMovableType(const ExpensiveMovableType &) = default;
+  ExpensiveMovableType &operator=(const ExpensiveMovableType &) = default;
+  ExpensiveMovableType &operator=(ExpensiveMovableType &&);
+  ~ExpensiveMovableType();
 };
 
 void positiveExpensiveConstValue(const ExpensiveToCopyType Obj);
@@ -171,6 +182,19 @@ struct NegativeOverriddenMethod : public VirtualMethod {
   }
 };
 
+struct VirtualMethodWarningOnly {
+  virtual void methodWithExpensiveValueParam(ExpensiveToCopyType T) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:66: warning: the parameter 'T' is copied
+  // CHECK-FIXES: virtual void methodWithExpensiveValueParam(ExpensiveToCopyType T) {}
+  virtual ~VirtualMethodWarningOnly() {}
+};
+
+struct PositiveNonVirualMethod {
+  void method(const ExpensiveToCopyType T) {}
+  // CHECK-MESSAGES: [[@LINE-1]]:41: warning: the const qualified parameter 'T' is copied
+  // CHECK-FIXES: void method(const ExpensiveToCopyType& T) {}
+};
+
 struct NegativeDeletedMethod {
   ~NegativeDeletedMethod() {}
   NegativeDeletedMethod& operator=(NegativeDeletedMethod N) = delete;
@@ -179,4 +203,37 @@ struct NegativeDeletedMethod {
 
 void NegativeMoveOnlyTypePassedByValue(MoveOnlyType M) {
   M.constMethod();
+}
+
+void PositiveMoveOnCopyConstruction(ExpensiveMovableType E) {
+  auto F = E;
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: parameter 'E' is passed by value and only copied once; consider moving it to avoid unnecessary copies [performance-unnecessary-value-param]
+  // CHECK-FIXES: auto F = std::move(E);
+}
+
+void PositiveConstRefNotMoveSinceReferencedMultipleTimes(ExpensiveMovableType E) {
+  // CHECK-MESSAGES: [[@LINE-1]]:79: warning: the parameter 'E' is copied
+  // CHECK-FIXES: void PositiveConstRefNotMoveSinceReferencedMultipleTimes(const ExpensiveMovableType& E) {
+  auto F = E;
+  auto G = E;
+}
+
+void PositiveMoveOnCopyAssignment(ExpensiveMovableType E) {
+  ExpensiveMovableType F;
+  F = E;
+  // CHECK-MESSAGES: [[@LINE-1]]:7: warning: parameter 'E' is passed by value
+  // CHECK-FIXES: F = std::move(E);
+}
+
+void PositiveConstRefNotMoveConstructible(ExpensiveToCopyType T) {
+  // CHECK-MESSAGES: [[@LINE-1]]:63: warning: the parameter 'T' is copied
+  // CHECK-FIXES: void PositiveConstRefNotMoveConstructible(const ExpensiveToCopyType& T) {
+  auto U = T;
+}
+
+void PositiveConstRefNotMoveAssignable(ExpensiveToCopyType A) {
+  // CHECK-MESSAGES: [[@LINE-1]]:60: warning: the parameter 'A' is copied
+  // CHECK-FIXES: void PositiveConstRefNotMoveAssignable(const ExpensiveToCopyType& A) {
+  ExpensiveToCopyType B;
+  B = A;
 }

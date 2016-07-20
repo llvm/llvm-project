@@ -325,6 +325,22 @@
             return getattr(_lldb,self.__class__.__name__+"___ne__")(self, rhs)
     %}
 }
+
+%extend lldb::SBMemoryRegionInfo {
+        PyObject *lldb::SBMemoryRegionInfo::__str__ (){
+                lldb::SBStream description;
+                $self->GetDescription (description);
+                const char *desc = description.GetData();
+                size_t desc_len = description.GetSize();
+                if (desc_len > 0 && (desc[desc_len-1] == '\n' || desc[desc_len-1] == '\r'))
+                    --desc_len;
+                if (desc_len > 0)
+                    return lldb_private::PythonString(llvm::StringRef(desc, desc_len)).release();
+                else
+                    return lldb_private::PythonString("").release();
+        }
+}
+
 %extend lldb::SBModule {
         PyObject *lldb::SBModule::__str__ (){
                 lldb::SBStream description;
@@ -810,6 +826,7 @@
 
 def command(*args, **kwargs):
     import lldb
+    import inspect
     """A decorator function that registers an LLDB command line
         command that is bound to the function it is attached to."""
     class obj(object):
@@ -821,11 +838,15 @@ def command(*args, **kwargs):
             command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name)
             lldb.debugger.HandleCommand(command)
             self.function = function
-        def __call__(self, *args, **kwargs):
-            self.function(*args, **kwargs)
+        def __call__(self, debugger, command, exe_ctx, result, dict):
+            if len(inspect.getargspec(self.function).args) == 5:
+                self.function(debugger, command, exe_ctx, result, dict)
+            else:
+                self.function(debugger, command, result, dict)
     def callable(function):
         """Creates a callable object that gets used."""
-        return obj(function, *args, **kwargs)
+        f = obj(function, *args, **kwargs)
+        return f.__call__
     return callable
 
 class declaration(object):

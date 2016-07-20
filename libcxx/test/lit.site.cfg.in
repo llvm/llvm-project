@@ -6,6 +6,7 @@ config.libcxx_obj_root          = "@LIBCXX_BINARY_DIR@"
 config.cxx_library_root         = "@LIBCXX_LIBRARY_DIR@"
 config.enable_exceptions        = "@LIBCXX_ENABLE_EXCEPTIONS@"
 config.enable_experimental      = "@LIBCXX_ENABLE_EXPERIMENTAL_LIBRARY@"
+config.enable_filesystem        = "@LIBCXX_ENABLE_FILESYSTEM@"
 config.enable_rtti              = "@LIBCXX_ENABLE_RTTI@"
 config.enable_shared            = "@LIBCXX_ENABLE_SHARED@"
 config.enable_32bit             = "@LIBCXX_BUILD_32_BITS@"
@@ -21,7 +22,9 @@ config.generate_coverage        = "@LIBCXX_GENERATE_COVERAGE@"
 config.target_info              = "@LIBCXX_TARGET_INFO@"
 config.executor                 = "@LIBCXX_EXECUTOR@"
 config.llvm_unwinder            = "@LIBCXXABI_USE_LLVM_UNWINDER@"
-config.use_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
+config.has_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
+config.use_libatomic            = "@LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB@"
+
 config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
 
 # Let the main config do the real work.
