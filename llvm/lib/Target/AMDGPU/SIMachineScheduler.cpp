@@ -464,6 +464,9 @@ void SIScheduleBlock::releaseSuccessors(SUnit *SU, bool InOrOutBlock) {
   for (SDep& Succ : SU->Succs) {
     SUnit *SuccSU = Succ.getSUnit();
 
+    if (SuccSU->NodeNum >= DAG->SUnits.size())
+        continue;
+
     if (BC->isSUInBlock(SuccSU, ID) != InOrOutBlock)
       continue;
 
