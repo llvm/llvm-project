@@ -193,10 +193,10 @@ public:
         ObjectSP
         GetObjectForDotSeparatedPath (llvm::StringRef path);
 
-        void DumpToStdout() const;
+        void DumpToStdout(bool pretty_print = true) const;
 
         virtual void
-        Dump (Stream &s) const = 0; 
+        Dump (Stream &s, bool pretty_print = true) const = 0; 
 
     private:
         Type m_type;
@@ -357,7 +357,7 @@ public:
             m_items.push_back(item);
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     protected:
         typedef std::vector<ObjectSP> collection;
@@ -387,7 +387,7 @@ public:
             return m_value;
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     protected:
         uint64_t m_value;
@@ -416,7 +416,7 @@ public:
             return m_value;
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     protected:
         double m_value;
@@ -445,7 +445,7 @@ public:
             return m_value;
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     protected:
         bool m_value;
@@ -486,7 +486,7 @@ public:
             return m_value;
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     protected:
         std::string m_value;
@@ -697,7 +697,7 @@ public:
             AddItem (key, ObjectSP (new Boolean(value)));
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     protected:
         typedef std::map<ConstString, ObjectSP> collection;
@@ -720,7 +720,7 @@ public:
             return false;
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
     };
 
     class Generic : public Object
@@ -750,7 +750,7 @@ public:
             return m_object != nullptr;
         }
 
-        void Dump(Stream &s) const override;
+        void Dump(Stream &s, bool pretty_print = true) const override;
 
     private:
         void *m_object;
