@@ -20,7 +20,6 @@
 |*
 \*===----------------------------------------------------------------------===*/
 
-#include "InstrProfilingInternal.h"
 #include "InstrProfilingPort.h"
 #include "InstrProfilingUtil.h"
 

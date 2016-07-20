@@ -35,7 +35,7 @@ void __llvm_profile_recursive_mkdir(char *path) {
 
   for (i = 1; path[i] != '\0'; ++i) {
     char save = path[i];
-    if (!(path[i] == '/' || path[i] == '\\'))
+    if (!IS_DIR_SEPARATOR(path[i]))
       continue;
     path[i] = '\0';
 #ifdef _WIN32
@@ -183,4 +183,27 @@ lprofApplyPathPrefix(char *Dest, const char *PathStr, const char *Prefix,
     Dest[PrefixLen++] = DIR_SEPARATOR;
 
   memcpy(Dest + PrefixLen, StrippedPathStr, strlen(StrippedPathStr) + 1);
+}
+
+COMPILER_RT_VISIBILITY const char *
+lprofFindFirstDirSeparator(const char *Path) {
+  const char *Sep;
+  Sep = strchr(Path, DIR_SEPARATOR);
+  if (Sep)
+    return Sep;
+#if defined(DIR_SEPARATOR_2)
+  Sep = strchr(Path, DIR_SEPARATOR_2);
+#endif
+  return Sep;
+}
+
+COMPILER_RT_VISIBILITY const char *lprofFindLastDirSeparator(const char *Path) {
+  const char *Sep;
+  Sep = strrchr(Path, DIR_SEPARATOR);
+  if (Sep)
+    return Sep;
+#if defined(DIR_SEPARATOR_2)
+  Sep = strrchr(Path, DIR_SEPARATOR_2);
+#endif
+  return Sep;
 }

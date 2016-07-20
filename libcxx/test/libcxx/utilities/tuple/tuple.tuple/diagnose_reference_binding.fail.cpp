@@ -1,0 +1,33 @@
+//===----------------------------------------------------------------------===//
+//
+//                     The LLVM Compiler Infrastructure
+//
+// This file is dual licensed under the MIT and the University of Illinois Open
+// Source Licenses. See LICENSE.TXT for details.
+//
+//===----------------------------------------------------------------------===//
+
+// UNSUPPORTED: c++98, c++03
+
+// <tuple>
+
+// Test the diagnostics libc++ generates for invalid reference binding.
+// Libc++ attempts to diagnose the following cases:
+//  * Constructing an lvalue reference from an rvalue.
+//  * Constructing an rvalue reference from an lvalue.
+
+#include <tuple>
+#include <string>
+
+int main() {
+    std::allocator<void> alloc;
+
+    // expected-error@tuple:* 4 {{static_assert failed "Attempted to construct a reference element in a tuple with an rvalue"}}
+
+    // bind lvalue to rvalue
+    std::tuple<int const&> t(42); // expected-note {{requested here}}
+    std::tuple<int const&> t1(std::allocator_arg, alloc, 42); // expected-note {{requested here}}
+    // bind rvalue to constructed non-rvalue
+    std::tuple<std::string &&> t2("hello"); // expected-note {{requested here}}
+    std::tuple<std::string &&> t3(std::allocator_arg, alloc, "hello"); // expected-note {{requested here}}
+}

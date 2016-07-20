@@ -148,6 +148,16 @@ int __llvm_profile_register_write_file_atexit(void);
 /*! \brief Initialize file handling. */
 void __llvm_profile_initialize_file(void);
 
+/*!
+ * \brief Return path prefix (excluding the base filename) of the profile data.
+ * This is useful for users using \c -fprofile-generate=./path_prefix who do
+ * not care about the default raw profile name. It is also useful to collect
+ * more than more profile data files dumped in the same directory (Online
+ * merge mode is turned on for instrumented programs with shared libs).
+ * Side-effect: this API call will invoke malloc with dynamic memory allocation.
+ */
+const char *__llvm_profile_get_path_prefix();
+
 /*! \brief Get the magic token for the file format. */
 uint64_t __llvm_profile_get_magic(void);
 
