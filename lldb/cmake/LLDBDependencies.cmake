@@ -15,8 +15,7 @@ set( LLDB_USED_LIBS
   # Plugins
   lldbPluginDisassemblerLLVM
   lldbPluginSymbolFileDWARF
-  # TODO add this back in once LLVM catches up to SymbolFilePDB requirements
-  # lldbPluginSymbolFilePDB
+  lldbPluginSymbolFilePDB
   lldbPluginSymbolFileSymtab
   lldbPluginDynamicLoaderStatic
   lldbPluginDynamicLoaderPosixDYLD
