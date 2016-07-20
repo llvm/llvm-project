@@ -16,6 +16,7 @@
 #include "lldb/Host/HostInfo.h"
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
+#include "Plugins/ExpressionParser/Clang/ClangUserExpression.h"
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/DebugMacros.h"
@@ -283,9 +284,7 @@ ExpressionSourceCode::SaveExpressionTextToTempFile (const char *text, const Eval
 bool
 ExpressionSourceCode::GetText (std::string &text,
                                lldb::LanguageType wrapping_language,
-                               bool swift_instance_method,
-                               bool static_method,
-                               bool is_swift_class,
+                               uint32_t language_flags,
                                const EvaluateExpressionOptions &options,
                                const Expression::SwiftGenericInfo &generic_info,
                                ExecutionContext &exe_ctx,
@@ -296,9 +295,10 @@ ExpressionSourceCode::GetText (std::string &text,
     const char *target_specific_defines = "typedef signed char BOOL;\n";
     std::string module_macros;
     
+    Target *target = exe_ctx.GetTargetPtr();
     if (ClangModulesDeclVendor::LanguageSupportsClangModules(wrapping_language))
     {
-        if (Target *target = exe_ctx.GetTargetPtr())
+        if (target)
         {            
             if (target->GetArchitecture().GetMachine() == llvm::Triple::aarch64)
             {
@@ -379,8 +379,11 @@ ExpressionSourceCode::GetText (std::string &text,
         ConstString object_name;
         if (Language::LanguageIsCPlusPlus(frame->GetLanguage()))
         {
-            lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
-            AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+            if (target->GetInjectLocalVariables(&exe_ctx))
+            {
+                lldb::VariableListSP var_list_sp = frame->GetInScopeVariableList(false, true);
+                AddLocalVariableDecls(var_list_sp, lldb_local_var_decls);
+            }
         }
     }
     
@@ -469,7 +472,7 @@ ExpressionSourceCode::GetText (std::string &text,
                                tagged_body.c_str());
             break;
         case lldb::eLanguageTypeObjC:
-            if (static_method)
+            if (language_flags & ClangUserExpression::eLanguageFlagInStaticMethod)
             {
                 wrap_stream.Printf("@interface $__lldb_objc_class ($__lldb_category)        \n"
                                    "+(void)%s:(void *)$__lldb_arg;                          \n"
@@ -504,9 +507,7 @@ ExpressionSourceCode::GetText (std::string &text,
             {
                 SwiftASTManipulator::WrapExpression (wrap_stream,
                                                      m_body.c_str(),
-                                                     swift_instance_method,
-                                                     static_method,
-                                                     is_swift_class,
+                                                     language_flags,
                                                      options,
                                                      generic_info,
                                                      first_body_line);

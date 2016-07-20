@@ -26,6 +26,7 @@ class TsanSwiftTestCase(lldbtest.TestBase):
     mydir = lldbtest.TestBase.compute_mydir(__file__)
 
     @decorators.swiftTest
+    @decorators.skipIfLinux
     @decorators.skipUnlessCompilerRt
     @decorators.skipUnlessThreadSanitizer
     def test_tsan_swift(self):
@@ -67,3 +68,5 @@ class TsanSwiftTestCase(lldbtest.TestBase):
         self.assertEqual(data["instrumentation_class"], "ThreadSanitizer")
         self.assertEqual(data["issue_type"], "data-race")
         self.assertEqual(len(data["mops"]), 2)
+        self.assertTrue(data["location_filename"].endswith("/main.swift"))
+        self.assertEqual(data["location_line"], lldbtest.line_number('main.swift', '// global variable'))

@@ -157,6 +157,12 @@ public:
     
     bool
     IsSynthetic ();
+    
+    bool
+    IsSyntheticChildrenGenerated ();
+    
+    void
+    SetSyntheticChildrenGenerated (bool);
 
     const char *
     GetLocation ();
@@ -533,6 +539,23 @@ public:
         
         __swig_getmethods__["path"] = get_expr_path
         if _newclass: path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
+        
+        def synthetic_child_from_expression(self, name, expr, options=None):
+            if options is None: options = lldb.SBExpressionOptions()
+            child = self.CreateValueFromExpression(name, expr, options)
+            child.SetSyntheticChildrenGenerated(True)
+            return child
+        
+        def synthetic_child_from_data(self, name, data, type):
+            child = self.CreateValueFromData(name, data, type)
+            child.SetSyntheticChildrenGenerated(True)
+            return child
+                
+        def synthetic_child_from_address(self, name, addr, type):
+            child = self.CreateValueFromAddress(name, addr, type)
+            child.SetSyntheticChildrenGenerated(True)
+            return child
+
     %}
 
 };

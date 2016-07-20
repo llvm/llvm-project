@@ -13,5 +13,4 @@ import lldbsuite.test.lldbinline as lldbinline
 import lldbsuite.test.lldbtest as lldbtest
 import lldbsuite.test.decorators as decorators
 
-# <rdar://problem/22738516>
-lldbinline.MakeInlineTest(__file__, globals(), decorators=decorators.expectedFailureAll())
+lldbinline.MakeInlineTest(__file__, globals())

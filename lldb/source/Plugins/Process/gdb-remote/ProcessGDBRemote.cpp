@@ -5265,11 +5265,9 @@ public:
 class CommandObjectMultiwordProcessGDBRemote : public CommandObjectMultiword
 {
 public:
-    CommandObjectMultiwordProcessGDBRemote (CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter,
-                                "process plugin",
-                                "A set of commands for operating on a ProcessGDBRemote process.",
-                                "process plugin <subcommand> [<subcommand-options>]")
+    CommandObjectMultiwordProcessGDBRemote(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "process plugin", "Commands for operating on a ProcessGDBRemote process.",
+                                 "process plugin <subcommand> [<subcommand-options>]")
     {
         LoadSubCommand ("packet", CommandObjectSP (new CommandObjectProcessGDBRemotePacket    (interpreter)));
     }

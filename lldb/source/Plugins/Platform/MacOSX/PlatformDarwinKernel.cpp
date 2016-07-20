@@ -30,6 +30,7 @@
 #include "lldb/Interpreter/OptionValueFileSpecList.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 #include "lldb/Interpreter/Property.h"
+#include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Platform.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
@@ -881,11 +882,23 @@ PlatformDarwinKernel::GetSharedModule (const ModuleSpec &module_spec,
                 ModuleSP module_sp (new Module (kern_spec));
                 if (module_sp && module_sp->GetObjectFile() && module_sp->MatchesModuleSpec (kern_spec))
                 {
-                    Error error;
-                    error = ModuleList::GetSharedModule (kern_spec, module_sp, NULL, NULL, NULL);
-                    if (module_sp && module_sp->GetObjectFile())
+                    // module_sp is an actual kernel binary we want to add.
+                    if (process)
                     {
+                        process->GetTarget().GetImages().AppendIfNeeded (module_sp);
+                        error.Clear();
                         return error;
+                    }
+                    else
+                    {
+                        error = ModuleList::GetSharedModule (kern_spec, module_sp, NULL, NULL, NULL);
+                        if (module_sp 
+                            && module_sp->GetObjectFile() 
+                            && module_sp->GetObjectFile()->GetType() != ObjectFile::Type::eTypeCoreFile)
+                        {
+                            return error;
+                        }
+                        module_sp.reset();
                     }
                 }
             }

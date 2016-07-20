@@ -779,6 +779,7 @@ Process::Process(lldb::TargetSP target_sp, ListenerSP listener_sp, const UnixSig
     CheckInWithManager();
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
+
     if (log)
         log->Printf("%p Process::Process()", static_cast<void *>(this));
 
@@ -3831,7 +3832,7 @@ Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp)
             StateType private_state = m_private_state.GetValue();
             if (private_state != eStateStopped)
             {
-                return error;
+                return Error("Attempt to stop the target in order to detach timed out. State = %s", StateAsCString(GetState()));
             }
         }
     }

@@ -15,10 +15,17 @@ import os, time
 import unittest2
 import lldb
 from lldbsuite.test.lldbrepl import REPLTest, load_tests
+import lldbsuite.test.decorators as decorators
 
 class REPLPOTestCase (REPLTest):
 
     mydir = REPLTest.compute_mydir(__file__)
+
+    @decorators.swiftTest
+    @decorators.no_debug_info_test
+    @decorators.expectedFailureAll(oslist=["macosx", "linux"], bugnumber="rdar://26725839")
+    def testREPL(self):
+        REPLTest.testREPL(self)
 
     def doTest(self):
         self.command('struct S {}')

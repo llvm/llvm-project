@@ -1237,7 +1237,7 @@ DataExtractor::GetULEB128 (offset_t *offset_ptr) const
             while (src < end)
             {
                 uint8_t byte = *src++;
-                result |= (byte & 0x7f) << shift;
+                result |= (uint64_t)(byte & 0x7f) << shift;
                 if ((byte & 0x80) == 0)
                     break;
                 shift += 7;
@@ -1280,7 +1280,7 @@ DataExtractor::GetSLEB128 (offset_t *offset_ptr) const
         {
             bytecount++;
             byte = *src++;
-            result |= (byte & 0x7f) << shift;
+            result |= (int64_t)(byte & 0x7f) << shift;
             shift += 7;
             if ((byte & 0x80) == 0)
                 break;

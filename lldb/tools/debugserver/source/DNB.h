@@ -144,6 +144,10 @@ nub_addr_t      DNBGetPThreadT                  (nub_process_t pid, nub_thread_t
 nub_addr_t      DNBGetDispatchQueueT            (nub_process_t pid, nub_thread_t tid);
 nub_addr_t      DNBGetTSDAddressForThread       (nub_process_t pid, nub_thread_t tid, uint64_t plo_pthread_tsd_base_address_offset, uint64_t plo_pthread_tsd_base_offset, uint64_t plo_pthread_tsd_entry_size);
 JSONGenerator::ObjectSP DNBGetLoadedDynamicLibrariesInfos (nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count);
+JSONGenerator::ObjectSP DNBGetAllLoadedLibrariesInfos (nub_process_t pid);
+JSONGenerator::ObjectSP DNBGetLibrariesInfoForAddresses (nub_process_t pid, std::vector<uint64_t> &macho_addresses);
+JSONGenerator::ObjectSP DNBGetSharedCacheInfo (nub_process_t pid);
+
 //
 //----------------------------------------------------------------------
 // Breakpoint functions

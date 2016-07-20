@@ -157,10 +157,10 @@ public:
         if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())
             return false;
         InferiorSizedWord isw(userinfo,*process_sp);
-        m_child_sp = ValueObject::CreateValueObjectFromData("userInfo",
-                                                            isw.GetAsData(process_sp->GetByteOrder()),
-                                                            m_backend.GetExecutionContextRef(),
-                                                            process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(lldb::eBasicTypeObjCID));
+        m_child_sp = CreateValueObjectFromData("userInfo",
+                                               isw.GetAsData(process_sp->GetByteOrder()),
+                                               m_backend.GetExecutionContextRef(),
+                                               process_sp->GetTarget().GetScratchClangASTContext()->GetBasicType(lldb::eBasicTypeObjCID));
         return false;
     }
     

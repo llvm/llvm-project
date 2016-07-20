@@ -1802,14 +1802,30 @@ Platform::GetRemoteSharedModule (const ModuleSpec &module_spec,
     {
         // Try to get module information from the process
         if (process->GetModuleSpec (module_spec.GetFileSpec (), module_spec.GetArchitecture (), resolved_module_spec))
-            got_module_spec = true;
+        {
+            if (module_spec.GetUUID().IsValid() == false || module_spec.GetUUID() == resolved_module_spec.GetUUID())
+            {
+                got_module_spec = true;
+            }
+        }
     }
 
     if (!got_module_spec)
     {
         // Get module information from a target.
         if (!GetModuleSpec (module_spec.GetFileSpec (), module_spec.GetArchitecture (), resolved_module_spec))
-            return module_resolver (module_spec);
+        {
+            if (module_spec.GetUUID().IsValid() == false || module_spec.GetUUID() == resolved_module_spec.GetUUID())
+            {
+                return module_resolver (module_spec);
+            }
+        }
+    }
+
+    // If we are looking for a specific UUID, make sure resolved_module_spec has the same one before we search.
+    if (module_spec.GetUUID().IsValid())
+    {
+        resolved_module_spec.GetUUID() = module_spec.GetUUID();
     }
 
     // Trying to find a module by UUID on local file system.

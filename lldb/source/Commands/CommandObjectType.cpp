@@ -3572,11 +3572,9 @@ private:
 class CommandObjectTypeFormat : public CommandObjectMultiword
 {
 public:
-    CommandObjectTypeFormat (CommandInterpreter &interpreter) :
-        CommandObjectMultiword (interpreter,
-                                "type format",
-                                "A set of commands for editing variable value display options",
-                                "type format [<sub-command-options>] ")
+    CommandObjectTypeFormat(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "type format", "Commands for customizing value display formats.",
+                                 "type format [<sub-command-options>] ")
     {
         LoadSubCommand ("add",    CommandObjectSP (new CommandObjectTypeFormatAdd (interpreter)));
         LoadSubCommand ("clear",  CommandObjectSP (new CommandObjectTypeFormatClear (interpreter)));
@@ -3597,11 +3595,10 @@ public:
 class CommandObjectTypeSynth : public CommandObjectMultiword
 {
 public:
-    CommandObjectTypeSynth (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "type synthetic",
-                            "A set of commands for operating on synthetic type representations",
-                            "type synthetic [<sub-command-options>] ")
+    CommandObjectTypeSynth(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "type synthetic",
+                                 "Commands for operating on synthetic type representations.",
+                                 "type synthetic [<sub-command-options>] ")
     {
         LoadSubCommand ("add",           CommandObjectSP (new CommandObjectTypeSynthAdd (interpreter)));
         LoadSubCommand ("clear",         CommandObjectSP (new CommandObjectTypeSynthClear (interpreter)));
@@ -3622,11 +3619,9 @@ public:
 class CommandObjectTypeFilter : public CommandObjectMultiword
 {
 public:
-    CommandObjectTypeFilter (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "type filter",
-                            "A set of commands for operating on type filters",
-                            "type synthetic [<sub-command-options>] ")
+    CommandObjectTypeFilter(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "type filter", "Commands for operating on type filters.",
+                                 "type synthetic [<sub-command-options>] ")
     {
         LoadSubCommand ("add",           CommandObjectSP (new CommandObjectTypeFilterAdd (interpreter)));
         LoadSubCommand ("clear",         CommandObjectSP (new CommandObjectTypeFilterClear (interpreter)));
@@ -3640,11 +3635,9 @@ public:
 class CommandObjectTypeCategory : public CommandObjectMultiword
 {
 public:
-    CommandObjectTypeCategory (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "type category",
-                            "A set of commands for operating on categories",
-                            "type category [<sub-command-options>] ")
+    CommandObjectTypeCategory(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "type category", "Commands for operating on type categories.",
+                                 "type category [<sub-command-options>] ")
     {
         LoadSubCommand ("define",        CommandObjectSP (new CommandObjectTypeCategoryDefine (interpreter)));
         LoadSubCommand ("enable",        CommandObjectSP (new CommandObjectTypeCategoryEnable (interpreter)));
@@ -3659,11 +3652,9 @@ public:
 class CommandObjectTypeSummary : public CommandObjectMultiword
 {
 public:
-    CommandObjectTypeSummary (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "type summary",
-                            "A set of commands for editing variable summary display options",
-                            "type summary [<sub-command-options>] ")
+    CommandObjectTypeSummary(CommandInterpreter &interpreter)
+        : CommandObjectMultiword(interpreter, "type summary", "Commands for editing variable summary display options.",
+                                 "type summary [<sub-command-options>] ")
     {
         LoadSubCommand ("add",           CommandObjectSP (new CommandObjectTypeSummaryAdd (interpreter)));
         LoadSubCommand ("clear",         CommandObjectSP (new CommandObjectTypeSummaryClear (interpreter)));
@@ -3683,11 +3674,9 @@ public:
 // CommandObjectType
 //-------------------------------------------------------------------------
 
-CommandObjectType::CommandObjectType (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "type",
-                            "A set of commands for operating on the type system",
-                            "type [<sub-command-options>]")
+CommandObjectType::CommandObjectType(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "type", "Commands for operating on the type system.",
+                             "type [<sub-command-options>]")
 {
     LoadSubCommand ("category",  CommandObjectSP (new CommandObjectTypeCategory (interpreter)));
     LoadSubCommand ("filter",    CommandObjectSP (new CommandObjectTypeFilter (interpreter)));

@@ -271,17 +271,17 @@ namespace lldb {
         eErrorTypeWin32         ///< Standard Win32 error codes.
     };
 
-
     enum ValueType
     {
-        eValueTypeInvalid           = 0,
-        eValueTypeVariableGlobal    = 1,    // globals variable
-        eValueTypeVariableStatic    = 2,    // static variable
-        eValueTypeVariableArgument  = 3,    // function argument variables
-        eValueTypeVariableLocal     = 4,    // function local variables
-        eValueTypeRegister          = 5,    // stack frame register value
-        eValueTypeRegisterSet       = 6,    // A collection of stack frame register values
-        eValueTypeConstResult       = 7     // constant result variables
+        eValueTypeInvalid = 0,
+        eValueTypeVariableGlobal = 1,     // globals variable
+        eValueTypeVariableStatic = 2,     // static variable
+        eValueTypeVariableArgument = 3,   // function argument variables
+        eValueTypeVariableLocal = 4,      // function local variables
+        eValueTypeRegister = 5,           // stack frame register value
+        eValueTypeRegisterSet = 6,        // A collection of stack frame register values
+        eValueTypeConstResult = 7,        // constant result variables
+        eValueTypeVariableThreadLocal = 8 // thread local storage variable
     };
 
     //----------------------------------------------------------------------
@@ -454,7 +454,7 @@ namespace lldb {
         eAccessPackage
     };
 
-   enum CommandArgumentType
+    enum CommandArgumentType
     {
         eArgTypeAddress = 0,
         eArgTypeAddressOrExpression,
@@ -539,7 +539,8 @@ namespace lldb {
         eArgTypeWatchpointID,
         eArgTypeWatchpointIDRange,
         eArgTypeWatchType,
-        eArgTypeLastArg  // Always keep this entry as the last entry in this enumeration!!
+        eArgRawInput,
+        eArgTypeLastArg // Always keep this entry as the last entry in this enumeration!!
     };
 
     //----------------------------------------------------------------------

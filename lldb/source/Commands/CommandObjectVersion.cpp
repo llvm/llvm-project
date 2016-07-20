@@ -24,8 +24,8 @@ using namespace lldb_private;
 // CommandObjectVersion
 //-------------------------------------------------------------------------
 
-CommandObjectVersion::CommandObjectVersion (CommandInterpreter &interpreter) :
-    CommandObjectParsed (interpreter, "version", "Show version of LLDB debugger.", "version")
+CommandObjectVersion::CommandObjectVersion(CommandInterpreter &interpreter)
+    : CommandObjectParsed(interpreter, "version", "Show the LLDB debugger version.", "version")
 {
 }
 

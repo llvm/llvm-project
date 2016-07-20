@@ -50,7 +50,6 @@ namespace lldb_private {
             CompilerType m_element_type;
             uint32_t m_element_size;
             size_t m_num_elements;
-            std::map<size_t,lldb::ValueObjectSP> m_children;
         };
     } // namespace formatters
 } // namespace lldb_private
@@ -60,8 +59,7 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::LibcxxInitiali
     m_start(nullptr),
     m_element_type(),
     m_element_size(0),
-    m_num_elements(0),
-    m_children()
+    m_num_elements(0)
 {
     if (valobj_sp)
         Update();
@@ -90,17 +88,11 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::GetChildAtInde
     if (!m_start)
         return lldb::ValueObjectSP();
     
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
-    
     uint64_t offset = idx * m_element_size;
     offset = offset + m_start->GetValueAsUnsigned(0);
     StreamString name;
     name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    ValueObjectSP child_sp = CreateValueObjectFromAddress(name.GetData(), offset, m_backend.GetExecutionContextRef(), m_element_type);
-    m_children[idx] = child_sp;
-    return child_sp;
+    return CreateValueObjectFromAddress(name.GetData(), offset, m_backend.GetExecutionContextRef(), m_element_type);
 }
 
 bool
@@ -110,7 +102,6 @@ lldb_private::formatters::LibcxxInitializerListSyntheticFrontEnd::Update()
 
     m_start = nullptr;
     m_num_elements = 0;
-    m_children.clear();
     lldb::TemplateArgumentKind kind;
     m_element_type = m_backend.GetCompilerType().GetTemplateArgument(0, kind);
     if (kind != lldb::eTemplateArgumentKindType || !m_element_type.IsValid())

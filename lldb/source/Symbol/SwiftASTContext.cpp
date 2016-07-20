@@ -45,6 +45,7 @@
 #include "swift/AST/Types.h"
 #include "swift/ASTSectionImporter/ASTSectionImporter.h"
 #include "swift/Basic/Demangle.h"
+#include "swift/Basic/Dwarf.h"
 #include "swift/Basic/LangOptions.h"
 #include "swift/Basic/Platform.h"
 #include "swift/Basic/SourceManager.h"
@@ -94,6 +95,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
+#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 
 #ifdef LLDB_CONFIGURATION_DEBUG
 #define VALID_OR_RETURN(value) do { lldbassert (!HasFatalErrors()); if (HasFatalErrors()) { return (value); } } while (0)
@@ -1313,6 +1315,11 @@ SwiftASTContext::SwiftASTContext (const char *triple, Target *target) :
     swift::IRGenOptions &ir_gen_opts = m_compiler_invocation_ap->getIRGenOptions();
     ir_gen_opts.OutputKind = swift::IRGenOutputKind::Module;
     ir_gen_opts.UseJIT = true;
+#if defined(__CYGWIN__)
+    ir_gen_opts.DWARFVersion = swift::CygwinDWARFVersion;
+#else
+    ir_gen_opts.DWARFVersion = swift::GenericDWARFVersion;
+#endif
 }
 
 SwiftASTContext::SwiftASTContext (const SwiftASTContext &rhs) :
@@ -1829,6 +1836,20 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             // First, prime the compiler with the options from the main executable:
             bool read_options_from_ast = false;
             ModuleSP exe_module_sp (target->GetExecutableModule());
+            
+            // If we're debugging a testsuite, then treat the main test bundle as the executable
+            static ConstString s_XCTest("XCTest");
+            
+            if (exe_module_sp->GetFileSpec().GetFilename() == s_XCTest)
+            {
+                ModuleSP unit_test_module = PlatformDarwin::GetUnitTestModule(target->GetImages());
+                
+                if (unit_test_module)
+                {
+                    exe_module_sp = unit_test_module;
+                }
+            }
+                
             if (exe_module_sp)
             {
                 SymbolVendor *sym_vendor = exe_module_sp->GetSymbolVendor();
@@ -3067,6 +3088,7 @@ namespace lldb_private
                           uint32_t last_line = UINT32_MAX,
                           uint32_t line_offset = 0)
         {
+            bool added_one_diagnostic = false;
             for (const RawDiagnostic &diagnostic : m_diagnostics)
             {
                 // We often make expressions and wrap them in some code.
@@ -3079,6 +3101,7 @@ namespace lldb_private
                 
                 const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
                 const DiagnosticOrigin origin = eDiagnosticOriginSwift;
+
                 
                 if (first_line > 0 &&
                     bufferID != UINT32_MAX &&
@@ -3121,15 +3144,32 @@ namespace lldb_private
                                 new_diagnostic->AddFixIt(fixit);
 
                             diagnostic_manager.AddDiagnostic(new_diagnostic);
+                            added_one_diagnostic = true;
                             
                             continue;
                         }
                     }
                 }
                 
-                diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
-                                                 severity,
-                                                 origin);
+            }
+            
+            // In general, we don't want to see diagnostics from outside of the source text range of the actual user
+            // expression.  But if we didn't find any diagnostics in the text range, it's probably because the source
+            // range was not specified correctly, and we don't want to lose legit errors because of that.  So in that
+            // case we'll add them all here:
+            
+            if (!added_one_diagnostic)
+            {
+                // This will report diagnostic errors from outside the expression's source range.  Those are
+                // not interesting to users, so we only emit them in debug builds.
+                for (const RawDiagnostic &diagnostic : m_diagnostics)
+                {
+                    const DiagnosticSeverity severity = SeverityForKind(diagnostic.kind);
+                    const DiagnosticOrigin origin = eDiagnosticOriginSwift;
+                    diagnostic_manager.AddDiagnostic(diagnostic.description.c_str(),
+                                                     severity,
+                                                     origin);
+                }
             }
         }
         
@@ -3741,7 +3781,7 @@ SwiftASTContext::LoadModule (swift::ModuleDecl *swift_module, Process &process, 
 
         swift::LibraryKind library_kind = link_lib.getKind();
 
-        Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES|LIBLLDB_LOG_TEMPORARY));
+        Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES));
         if (log)
             log->Printf ("\nLoading link library \"%s\" of kind: %d.", library_name, library_kind);
 
@@ -3908,6 +3948,25 @@ SwiftASTContext::LoadLibraryUsingPaths (Process &process,
 
     Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TYPES|LIBLLDB_LOG_TEMPORARY));
     
+    SwiftLanguageRuntime *runtime = process.GetSwiftLanguageRuntime();
+    if (!runtime)
+    {
+        all_dlopen_errors.PutCString("Can't load Swift libraries without a language runtime.");
+        return false;
+    }
+    
+    if (ConstString::Equals(runtime->GetStandardLibraryBaseName(), ConstString(library_name)))
+    {
+        // Never dlopen the standard library.  Some binaries statically link to the Swift standard library
+        // and dlopening it here will cause ObjC runtime conflicts.
+        // If you want to run Swift expressions you have to arrange to load the swift standard library 
+        // by hand before doing so.
+        if (log)
+            log->Printf("Skipping swift standard library \"%s\" - we don't hand load that one.",
+                        runtime->GetStandardLibraryBaseName().AsCString());
+        return true;
+    }
+
     PlatformSP platform_sp(process.GetTarget().GetPlatform());
     
     std::string library_fullname;
@@ -3926,7 +3985,7 @@ SwiftASTContext::LoadLibraryUsingPaths (Process &process,
         return false;
 #endif
     }
-    
+        
     ModuleSpec module_spec;
     module_spec.GetFileSpec().GetFilename().SetCString(library_fullname.c_str());
     lldb_private::ModuleList matching_module_list;
@@ -4775,7 +4834,7 @@ SwiftASTContext::GetIRGenModule ()
                                                                                 "generic", // cpu
                                                                                 "",            // features
                                                                                 *getTargetOptions(),
-                                                                                llvm::Reloc::Default,
+                                                                                llvm::Reloc::Static, // TODO verify with Sean, Default went away
                                                                                 llvm::CodeModel::Default,
                                                                                 optimization_level);
         if (target_machine)
@@ -4874,7 +4933,7 @@ SwiftASTContext::CreateFunctionType (CompilerType arg_type, CompilerType ret_typ
 
 
 CompilerType
-SwiftASTContext::GetErrorProtocolType ()
+SwiftASTContext::GetErrorType ()
 {
     VALID_OR_RETURN(CompilerType());
 
@@ -4884,7 +4943,7 @@ SwiftASTContext::GetErrorProtocolType ()
         // Getting the error type requires the Stdlib module be loaded, but doesn't cause it to be loaded.
         // Do that here:
         swift_ctx->getStdlibModule(true);
-        swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorProtocolDecl();
+        swift::NominalTypeDecl *error_type_decl = GetASTContext()->getErrorDecl();
         if (error_type_decl)
         {
             auto error_type = error_type_decl->getType().getPointer();
@@ -5993,7 +6052,7 @@ SwiftASTContext::GetProtocolTypeInfo (const CompilerType& type,
                 protocol_info.m_num_payload_words = 3;
                 protocol_info.m_is_objc = t->getDecl()->isObjC();
                 protocol_info.m_is_anyobject = (t->getDecl() == ast->GetASTContext()->getProtocol(swift::KnownProtocolKind::AnyObject));
-                protocol_info.m_is_errortype = (t->getDecl() == ast->GetASTContext()->getErrorProtocolDecl());
+                protocol_info.m_is_errortype = (t->getDecl() == ast->GetASTContext()->getErrorDecl());
                 protocol_info.m_num_payload_words = (protocol_info.m_is_errortype ? 0 : 3);
                 if (protocol_info.IsOneWordStorage()) // @objc protocols only wrap an ISA/metadata pointer
                     protocol_info.m_num_storage_words = 1;
@@ -8673,7 +8732,7 @@ SwiftASTContext::GetTemplateArgument (void* type,
                 swift::BoundGenericType *bound_generic_type = swift_can_type->getAs<swift::BoundGenericType>();
                 if (!bound_generic_type)
                     break;
-                const llvm::ArrayRef<swift::Substitution>& substitutions = bound_generic_type->getSubstitutions(nullptr,nullptr);
+                const llvm::ArrayRef<swift::Substitution>& substitutions = bound_generic_type->gatherAllSubstitutions(nullptr,nullptr);
                 if (arg_idx >= substitutions.size())
                     break;
                 kind = eTemplateArgumentKindType;

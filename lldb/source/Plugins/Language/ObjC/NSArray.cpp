@@ -87,7 +87,6 @@ namespace  lldb_private {
             ExecutionContextRef m_exe_ctx_ref;
             uint8_t m_ptr_size;
             CompilerType m_id_type;
-            std::vector<lldb::ValueObjectSP> m_children;
         };
         
         class NSArrayMSyntheticFrontEnd_109 : public NSArrayMSyntheticFrontEnd
@@ -216,7 +215,6 @@ namespace  lldb_private {
             uint64_t m_items;
             lldb::addr_t m_data_ptr;
             CompilerType m_id_type;
-            std::vector<lldb::ValueObjectSP> m_children;
         };
         
         class NSArray0SyntheticFrontEnd : public SyntheticChildrenFrontEnd
@@ -368,8 +366,7 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd::NSArrayMSyntheticFrontEnd (
 SyntheticChildrenFrontEnd(*valobj_sp),
 m_exe_ctx_ref(),
 m_ptr_size(8),
-m_id_type(),
-m_children()
+m_id_type()
 {
     if (valobj_sp)
     {
@@ -414,18 +411,15 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd::GetChildAtIndex (size_t idx
     object_at_idx += (pyhs_idx * m_ptr_size);
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    lldb::ValueObjectSP retval_sp = CreateValueObjectFromAddress(idx_name.GetData(),
-                                                                 object_at_idx,
-                                                                 m_exe_ctx_ref,
-                                                                 m_id_type);
-    m_children.push_back(retval_sp);
-    return retval_sp;
+    return CreateValueObjectFromAddress(idx_name.GetData(),
+                                        object_at_idx,
+                                        m_exe_ctx_ref,
+                                        m_id_type);
 }
 
 bool
 lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::Update()
 {
-    m_children.clear();
     ValueObjectSP valobj_sp = m_backend.GetSP();
     m_ptr_size = 0;
     delete m_data_32;
@@ -460,7 +454,6 @@ lldb_private::formatters::NSArrayMSyntheticFrontEnd_109::Update()
 bool
 lldb_private::formatters::NSArrayMSyntheticFrontEnd_1010::Update()
 {
-    m_children.clear();
     ValueObjectSP valobj_sp = m_backend.GetSP();
     m_ptr_size = 0;
     delete m_data_32;
@@ -637,7 +630,6 @@ lldb_private::formatters::NSArrayISyntheticFrontEnd::Update()
     m_ptr_size = 0;
     m_items = 0;
     m_data_ptr = 0;
-    m_children.clear();
     ValueObjectSP valobj_sp = m_backend.GetSP();
     if (!valobj_sp)
         return false;
@@ -677,12 +669,10 @@ lldb_private::formatters::NSArrayISyntheticFrontEnd::GetChildAtIndex (size_t idx
         return lldb::ValueObjectSP();
     StreamString idx_name;
     idx_name.Printf("[%" PRIu64 "]", (uint64_t)idx);
-    lldb::ValueObjectSP retval_sp = CreateValueObjectFromAddress(idx_name.GetData(),
-                                                                 object_at_idx,
-                                                                 m_exe_ctx_ref,
-                                                                 m_id_type);
-    m_children.push_back(retval_sp);
-    return retval_sp;
+    return CreateValueObjectFromAddress(idx_name.GetData(),
+                                        object_at_idx,
+                                        m_exe_ctx_ref,
+                                        m_id_type);
 }
 
 lldb_private::formatters::NSArray0SyntheticFrontEnd::NSArray0SyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :

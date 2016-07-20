@@ -796,10 +796,10 @@ public:
         return false;
     }
     
-    bool
+    virtual bool
     IsSyntheticChildrenGenerated ();
     
-    void
+    virtual void
     SetSyntheticChildrenGenerated (bool b);
     
     virtual SymbolContextScope *

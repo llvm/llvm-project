@@ -19,7 +19,7 @@ class Foo {
     }
 }
 
-enum MyError : ErrorProtocol
+enum MyError : Error
 {
     case TrivialError
     case WorrisomeError

@@ -409,7 +409,7 @@ public:
                         bool throws = false);
 
     CompilerType
-    GetErrorProtocolType ();
+    GetErrorType ();
     
     CompilerType
     GetNSErrorType (Error& error);
@@ -523,7 +523,7 @@ public:
     //----------------------------------------------------------------------
     ConstString
     DeclGetName (void *opaque_decl) override { return ConstString(""); }
-        
+
     //----------------------------------------------------------------------
     // CompilerDeclContext functions
     //----------------------------------------------------------------------

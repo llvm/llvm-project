@@ -329,6 +329,39 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
 #endif // LLDB_DISABLE_PYTHON
 }
 
+static void
+LoadFoundationValueTypesFormatters (lldb::TypeCategoryImplSP swift_category_sp)
+{
+    if (!swift_category_sp)
+        return;
+    
+    TypeSummaryImpl::Flags summary_flags;
+    summary_flags.SetCascades(true)
+    .SetDontShowChildren(false)
+    .SetSkipPointers(true)
+    .SetSkipReferences(false)
+    .SetHideItemNames(false)
+    .SetShowMembersOneLiner(false);
+    
+#ifndef LLDB_DISABLE_PYTHON
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Date_SummaryProvider, "Foundation.Date summary provider", ConstString("Foundation.Date"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::NotificationName_SummaryProvider, "Notification.Name summary provider", ConstString("Foundation.Notification.Type.Name"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::URL_SummaryProvider, "URL summary provider", ConstString("Foundation.URL"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::IndexPath_SummaryProvider, "IndexPath summary provider", ConstString("Foundation.IndexPath"), summary_flags);
+
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Measurement_SummaryProvider, "Measurement summary provider", ConstString("Foundation.Measurement<Foundation.Unit>"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::UUID_SummaryProvider, "UUID summary provider", ConstString("Foundation.UUID"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    
+    lldb_private::formatters::AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Data_SummaryProvider, "Data summary provider", ConstString("Foundation.Data"), TypeSummaryImpl::Flags(summary_flags).SetDontShowChildren(true));
+    
+    lldb_private::formatters::AddCXXSynthetic(swift_category_sp, lldb_private::formatters::swift::URLComponentsSyntheticFrontEndCreator, "URLComponents synthetic children", ConstString("Foundation.URLComponents"), SyntheticChildren::Flags().SetSkipPointers(true).SetCascades(true).SetSkipReferences(false).SetNonCacheable(false));
+#endif
+}
+
 lldb::TypeCategoryImplSP
 SwiftLanguage::GetFormatters ()
 {
@@ -338,7 +371,10 @@ SwiftLanguage::GetFormatters ()
     std::call_once(g_initialize, [this] () -> void {
         DataVisualization::Categories::GetCategory(GetPluginName(), g_category);
         if (g_category)
+        {
             LoadSwiftFormatters(g_category);
+            LoadFoundationValueTypesFormatters(g_category);
+        }
     });
     return g_category;
 }
@@ -467,8 +503,14 @@ SwiftLanguage::GetHardcodedSynthetics ()
                 ObjCLanguageRuntime *objc_runtime = process_sp->GetObjCLanguageRuntime();
                 ObjCLanguageRuntime::ClassDescriptorSP valobj_descriptor_sp = objc_runtime->GetClassDescriptor(valobj);
                 if (valobj_descriptor_sp)
-                    return SyntheticChildrenSP(new ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags().SetCascades(true).SetSkipPointers(true).SetSkipReferences(true).SetNonCacheable(true),
+                {
+                    return SyntheticChildrenSP(new ObjCRuntimeSyntheticProvider(SyntheticChildren::Flags()
+                                                                                .SetCascades(true)
+                                                                                .SetSkipPointers(true)
+                                                                                .SetSkipReferences(true)
+                                                                                .SetNonCacheable(true),
                                                                                 valobj_descriptor_sp));
+                }
             }
             return nullptr;
         });

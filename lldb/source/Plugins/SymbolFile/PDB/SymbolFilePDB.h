@@ -169,10 +169,10 @@ public:
     uint32_t
     GetPluginVersion() override;
 
-    llvm::IPDBSession &
+    llvm::pdb::IPDBSession &
     GetPDBSession();
 
-    const llvm::IPDBSession &
+    const llvm::pdb::IPDBSession &
     GetPDBSession() const;
 
 private:
@@ -183,7 +183,7 @@ private:
     ParseCompileUnitLineTable(const lldb_private::SymbolContext &sc, uint32_t match_line);
 
     void
-    BuildSupportFileIdToSupportFileIndexMap(const llvm::PDBSymbolCompiland &cu,
+    BuildSupportFileIdToSupportFileIndexMap(const llvm::pdb::PDBSymbolCompiland &cu,
                                             llvm::DenseMap<uint32_t, uint32_t> &index_map) const;
 
     void
@@ -196,7 +196,7 @@ private:
     llvm::DenseMap<uint32_t, lldb::TypeSP> m_types;
 
     std::vector<lldb::TypeSP> m_builtin_types;
-    std::unique_ptr<llvm::IPDBSession> m_session_up;
+    std::unique_ptr<llvm::pdb::IPDBSession> m_session_up;
     uint32_t m_cached_compile_unit_count;
     std::unique_ptr<lldb_private::CompilerDeclContext> m_tu_decl_ctx_up;
 };

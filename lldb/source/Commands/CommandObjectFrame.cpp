@@ -58,15 +58,11 @@ using namespace lldb_private;
 class CommandObjectFrameInfo : public CommandObjectParsed
 {
 public:
-    CommandObjectFrameInfo (CommandInterpreter &interpreter) :
-        CommandObjectParsed (interpreter,
-                             "frame info",
-                             "List information about the currently selected frame in the current thread.",
-                             "frame info",
-                             eCommandRequiresFrame         |
-                             eCommandTryTargetAPILock      |
-                             eCommandProcessMustBeLaunched |
-                             eCommandProcessMustBePaused   )
+    CommandObjectFrameInfo(CommandInterpreter &interpreter)
+        : CommandObjectParsed(interpreter, "frame info",
+                              "List information about the current stack frame in the current thread.", "frame info",
+                              eCommandRequiresFrame | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                                  eCommandProcessMustBePaused)
     {
     }
 
@@ -141,17 +137,14 @@ public:
         static OptionDefinition g_option_table[];
         int32_t relative_frame_offset;
     };
-    
-    CommandObjectFrameSelect (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "frame select",
-                            "Select a frame by index from within the current thread and make it the current frame.",
-                            nullptr,
-                            eCommandRequiresThread        |
-                            eCommandTryTargetAPILock      |
-                            eCommandProcessMustBeLaunched |
-                            eCommandProcessMustBePaused   ),
-        m_options (interpreter)
+
+    CommandObjectFrameSelect(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "frame select",
+              "Select the current stack frame by index from within the current thread (see 'thread backtrace'.)",
+              nullptr, eCommandRequiresThread | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                           eCommandProcessMustBePaused),
+          m_options(interpreter)
     {
         CommandArgumentEntry arg;
         CommandArgumentData index_arg;
@@ -199,7 +192,7 @@ protected:
                     if (frame_idx == 0)
                     {
                         //If you are already at the bottom of the stack, then just warn and don't reset the frame.
-                        result.AppendError("Already at the bottom of the stack");
+                        result.AppendError("Already at the bottom of the stack.");
                         result.SetStatus(eReturnStatusFailed);
                         return false;
                     }
@@ -219,7 +212,7 @@ protected:
                     if (frame_idx == num_frames - 1)
                     {
                         //If we are already at the top of the stack, just warn and don't reset the frame.
-                        result.AppendError("Already at the top of the stack");
+                        result.AppendError("Already at the top of the stack.");
                         result.SetStatus(eReturnStatusFailed);
                         return false;
                     }
@@ -237,7 +230,7 @@ protected:
                 frame_idx = StringConvert::ToUInt32 (frame_idx_cstr, UINT32_MAX, 0, &success);
                 if (!success)
                 {
-                    result.AppendErrorWithFormat ("invalid frame index argument '%s'", frame_idx_cstr);
+                    result.AppendErrorWithFormat("invalid frame index argument '%s'.", frame_idx_cstr);
                     result.SetStatus (eReturnStatusFailed);
                     return false;
                 }
@@ -292,25 +285,19 @@ CommandObjectFrameSelect::CommandOptions::g_option_table[] =
 class CommandObjectFrameVariable : public CommandObjectParsed
 {
 public:
-    CommandObjectFrameVariable (CommandInterpreter &interpreter) :
-        CommandObjectParsed(interpreter,
-                            "frame variable",
-                            "Show frame variables. All argument and local variables "
-                            "that are in scope will be shown when no arguments are given. "
-                            "If any arguments are specified, they can be names of "
-                            "argument, local, file static and file global variables. "
-                            "Children of aggregate variables can be specified such as "
-                            "'var->child.x'.",
-                            nullptr,
-                            eCommandRequiresFrame |
-                            eCommandTryTargetAPILock |
-                            eCommandProcessMustBeLaunched |
-                            eCommandProcessMustBePaused |
-                            eCommandRequiresProcess),
-        m_option_group (interpreter),
-        m_option_variable(true), // Include the frame specific options by passing "true"
-        m_option_format (eFormatDefault),
-        m_varobj_options()
+    CommandObjectFrameVariable(CommandInterpreter &interpreter)
+        : CommandObjectParsed(
+              interpreter, "frame variable", "Show variables for the current stack frame. Defaults to all "
+                                             "arguments and local variables in scope. Names of argument, "
+                                             "local, file static and file global variables can be specified. "
+                                             "Children of aggregate variables can be specified such as "
+                                             "'var->child.x'.",
+              nullptr, eCommandRequiresFrame | eCommandTryTargetAPILock | eCommandProcessMustBeLaunched |
+                           eCommandProcessMustBePaused | eCommandRequiresProcess),
+          m_option_group(interpreter),
+          m_option_variable(true), // Include the frame specific options by passing "true"
+          m_option_format(eFormatDefault),
+          m_varobj_options()
     {
         CommandArgumentEntry arg;
         CommandArgumentData var_name_arg;
@@ -495,7 +482,9 @@ protected:
                             if (error_cstr)
                                 result.GetErrorStream().Printf("error: %s\n", error_cstr);
                             else
-                                result.GetErrorStream().Printf ("error: unable to find any variable expression path that matches '%s'\n", name_cstr);
+                                result.GetErrorStream().Printf(
+                                    "error: unable to find any variable expression path that matches '%s'.\n",
+                                    name_cstr);
                         }
                     }
                 }
@@ -539,6 +528,10 @@ protected:
                                     scope_string = " LOCAL: ";
                                 break;
 
+                            case eValueTypeVariableThreadLocal:
+                                if (dump_variable && m_option_variable.show_scope)
+                                    scope_string = "THREAD: ";
+                                break;
                             default:
                                 break;
                         }
@@ -608,11 +601,10 @@ protected:
 // CommandObjectMultiwordFrame
 //-------------------------------------------------------------------------
 
-CommandObjectMultiwordFrame::CommandObjectMultiwordFrame (CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "frame",
-                            "A set of commands for operating on the current thread's frames.",
-                            "frame <subcommand> [<subcommand-options>]")
+CommandObjectMultiwordFrame::CommandObjectMultiwordFrame(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "frame",
+                             "Commands for selecting and examing the current thread's stack frames.",
+                             "frame <subcommand> [<subcommand-options>]")
 {
     LoadSubCommand ("info",   CommandObjectSP (new CommandObjectFrameInfo (interpreter)));
     LoadSubCommand ("select", CommandObjectSP (new CommandObjectFrameSelect (interpreter)));

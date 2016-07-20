@@ -46,6 +46,7 @@ namespace swift
     class ModuleDecl;
     class ModuleLoader;
     class ModuleLoadListener;
+    class NameAliasType;
     class NominalType;
     class NominalTypeDecl;
     class ProtocolDecl;

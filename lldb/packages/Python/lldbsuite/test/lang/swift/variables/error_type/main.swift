@@ -22,25 +22,25 @@ enum EError {
 	case OutOfCookies
 }
 
-extension SError : ErrorProtocol {
+extension SError : Error {
 	var _domain: String { get { return "" } }
 	var _code: Int { get { return 0 } }
 }
 
-extension CError : ErrorProtocol {
+extension CError : Error {
 	var _domain: String { get { return "" } }
 	var _code: Int { get { return 0 } }
 }
 
-extension EError : ErrorProtocol {
+extension EError : Error {
 	var _domain: String { get { return "" } }
 	var _code: Int { get { return 0 } }
 }
 
 func main() {
-	var s: ErrorProtocol = SError()
-	var c: ErrorProtocol = CError()
-	var e: ErrorProtocol = EError.OutOfCookies
+	var s: Error = SError()
+	var c: Error = CError()
+	var e: Error = EError.OutOfCookies
 	
 	print("break here") //% self.expect('frame variable -d run -- s', substrs=['SError','payload = 1'])
 	print("break here") //% self.expect('frame variable -d run -- c', substrs=['CError','payload = 2'])

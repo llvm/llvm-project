@@ -32,46 +32,47 @@
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm;
+using namespace llvm::pdb;
 
 namespace
 {
-int
-TranslateUdtKind(PDB_UdtType pdb_kind)
-{
-    switch (pdb_kind)
+    int
+    TranslateUdtKind(PDB_UdtType pdb_kind)
     {
-        case PDB_UdtType::Class:
-            return clang::TTK_Class;
-        case PDB_UdtType::Struct:
-            return clang::TTK_Struct;
-        case PDB_UdtType::Union:
-            return clang::TTK_Union;
-        case PDB_UdtType::Interface:
-            return clang::TTK_Interface;
+        switch (pdb_kind)
+        {
+            case PDB_UdtType::Class:
+                return clang::TTK_Class;
+            case PDB_UdtType::Struct:
+                return clang::TTK_Struct;
+            case PDB_UdtType::Union:
+                return clang::TTK_Union;
+            case PDB_UdtType::Interface:
+                return clang::TTK_Interface;
+        }
+        return clang::TTK_Class;
     }
-    return clang::TTK_Class;
-}
 
-lldb::Encoding
-TranslateBuiltinEncoding(PDB_BuiltinType type)
-{
-    switch (type)
+    lldb::Encoding
+    TranslateBuiltinEncoding(PDB_BuiltinType type)
     {
-        case PDB_BuiltinType::Float:
-            return lldb::eEncodingIEEE754;
-        case PDB_BuiltinType::Int:
-        case PDB_BuiltinType::Long:
-        case PDB_BuiltinType::Char:
-            return lldb::eEncodingSint;
-        case PDB_BuiltinType::Bool:
-        case PDB_BuiltinType::UInt:
-        case PDB_BuiltinType::ULong:
-        case PDB_BuiltinType::HResult:
-            return lldb::eEncodingUint;
-        default:
-            return lldb::eEncodingInvalid;
+        switch (type)
+        {
+            case PDB_BuiltinType::Float:
+                return lldb::eEncodingIEEE754;
+            case PDB_BuiltinType::Int:
+            case PDB_BuiltinType::Long:
+            case PDB_BuiltinType::Char:
+                return lldb::eEncodingSint;
+            case PDB_BuiltinType::Bool:
+            case PDB_BuiltinType::UInt:
+            case PDB_BuiltinType::ULong:
+            case PDB_BuiltinType::HResult:
+                return lldb::eEncodingUint;
+            default:
+                return lldb::eEncodingInvalid;
+        }
     }
-}
 }
 
 PDBASTParser::PDBASTParser(lldb_private::ClangASTContext &ast) : m_ast(ast)
@@ -85,7 +86,7 @@ PDBASTParser::~PDBASTParser()
 // DebugInfoASTParser interface
 
 lldb::TypeSP
-PDBASTParser::CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type)
+PDBASTParser::CreateLLDBTypeFromPDBType(const PDBSymbol &type)
 {
     // PDB doesn't maintain enough information to robustly rebuild the entire
     // tree, and this is most problematic when it comes to figure out the
@@ -103,8 +104,8 @@ PDBASTParser::CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type)
             access = lldb::eAccessPrivate;
 
         CompilerType clang_type =
-            m_ast.CreateRecordType(tu_decl_ctx, access, udt->getName().c_str(), TranslateUdtKind(udt_kind),
-                                   lldb::eLanguageTypeC_plus_plus, nullptr);
+        m_ast.CreateRecordType(tu_decl_ctx, access, udt->getName().c_str(), TranslateUdtKind(udt_kind),
+                               lldb::eLanguageTypeC_plus_plus, nullptr);
 
         m_ast.SetHasExternalStorage(clang_type.GetOpaqueQualType(), true);
 
@@ -171,7 +172,7 @@ PDBASTParser::CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type)
         if (func_sig->isVolatileType())
             type_quals |= clang::Qualifiers::Volatile;
         CompilerType func_sig_ast_type =
-            m_ast.CreateFunctionType(return_ast_type, &arg_list[0], num_args, false, type_quals);
+        m_ast.CreateFunctionType(return_ast_type, &arg_list[0], num_args, false, type_quals);
 
         return std::make_shared<Type>(func_sig->getSymIndexId(), m_ast.GetSymbolFile(), ConstString(), 0, nullptr,
                                       LLDB_INVALID_UID, Type::eEncodingIsUID, decl, func_sig_ast_type,
@@ -194,7 +195,7 @@ PDBASTParser::CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type)
 }
 
 bool
-PDBASTParser::AddEnumValue(CompilerType enum_type, const llvm::PDBSymbolData &enum_value) const
+PDBASTParser::AddEnumValue(CompilerType enum_type, const PDBSymbolData &enum_value) const
 {
     Declaration decl;
     Variant v = enum_value.getValue();

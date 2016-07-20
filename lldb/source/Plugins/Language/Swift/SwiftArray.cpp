@@ -473,9 +473,9 @@ lldb_private::formatters::swift::Array_SummaryProvider (ValueObject& valobj, Str
     
     if (!handler)
         return false;
-    
+
     auto count = handler->GetCount();
-    
+
     stream.Printf("%zu value%s",
                   count,
                   (count == 1 ? "" : "s"));
@@ -485,8 +485,7 @@ lldb_private::formatters::swift::Array_SummaryProvider (ValueObject& valobj, Str
 
 lldb_private::formatters::swift::ArraySyntheticFrontEnd::ArraySyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
 SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_array_buffer(),
-m_children()
+m_array_buffer()
 {
     if (valobj_sp)
         Update();
@@ -504,14 +503,9 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex (size_t
     if (!m_array_buffer)
         return ValueObjectSP();
     
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
-    
     lldb::ValueObjectSP child_sp = m_array_buffer->GetElementAtIndex(idx);
-    
     if (child_sp)
-        m_children[idx] = child_sp;
+        child_sp->SetSyntheticChildrenGenerated(true);
     
     return child_sp;
 }
@@ -519,8 +513,15 @@ lldb_private::formatters::swift::ArraySyntheticFrontEnd::GetChildAtIndex (size_t
 bool
 lldb_private::formatters::swift::ArraySyntheticFrontEnd::Update()
 {
-    m_children.clear();
     m_array_buffer = SwiftArrayBufferHandler::CreateBufferHandler(m_backend);
+    return false;
+}
+
+bool
+lldb_private::formatters::swift::ArraySyntheticFrontEnd::IsValid ()
+{
+    if (m_array_buffer)
+        return m_array_buffer->IsValid();
     return false;
 }
 
@@ -546,6 +547,10 @@ SyntheticChildrenFrontEnd*
 lldb_private::formatters::swift::ArraySyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP valobj_sp)
 {
     if (!valobj_sp)
-        return NULL;
-    return (new ArraySyntheticFrontEnd(valobj_sp));
+        return nullptr;
+
+    ArraySyntheticFrontEnd *front_end = new ArraySyntheticFrontEnd(valobj_sp);
+    if (front_end && front_end->IsValid())
+        return front_end;
+    return nullptr;
 }

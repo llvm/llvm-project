@@ -11,20 +11,23 @@
 // -----------------------------------------------------------------------------
 import Foundation
 
-var my_global: Int = 0
+var my_global: Int = 0  // global variable
 
 func main() {
-  let q = dispatch_get_global_queue(DISPATCH_QUEUE_PRIORITY_DEFAULT, 0)
-  dispatch_async(q) {
+  var thread1: pthread_t? = nil
+  var thread2: pthread_t? = nil
+
+  pthread_create(&thread1, nil, { _ in
     my_global = 42
     sleep(100)
-  }
-  dispatch_async(q) {
+    return nil
+  }, nil)
+
+  pthread_create(&thread2, nil, { _ in
     usleep(10000)
     my_global = 43
     exit(1)
-  }
-  sleep(100)
+  }, nil)
 }
 
 main()

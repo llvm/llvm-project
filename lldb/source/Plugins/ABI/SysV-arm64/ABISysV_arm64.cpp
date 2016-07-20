@@ -322,7 +322,7 @@ ABISysV_arm64::GetArgumentValues (Thread &thread, ValueList &values) const
         {
             bool is_signed = false;
             size_t bit_width = 0;
-            if (value_type.IsIntegerType (is_signed))
+            if (value_type.IsIntegerOrEnumerationType (is_signed))
             {
                 bit_width = value_type.GetBitSize(&thread);
             }

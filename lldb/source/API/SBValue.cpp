@@ -528,6 +528,10 @@ SBValue::GetValueType ()
                 log->Printf ("SBValue(%p)::GetValueType () => eValueTypeConstResult",
                              static_cast<void*>(value_sp.get()));
                 break;
+            case eValueTypeVariableThreadLocal:
+                log->Printf("SBValue(%p)::GetValueType () => eValueTypeVariableThreadLocal",
+                            static_cast<void *>(value_sp.get()));
+                break;
         }
     }
     return result;
@@ -1139,6 +1143,25 @@ SBValue::IsSynthetic ()
     if (value_sp)
         return value_sp->IsSynthetic();
     return false;
+}
+
+bool
+SBValue::IsSyntheticChildrenGenerated ()
+{
+    ValueLocker locker;
+    lldb::ValueObjectSP value_sp(GetSP(locker));
+    if (value_sp)
+        return value_sp->IsSyntheticChildrenGenerated();
+    return false;
+}
+
+void
+SBValue::SetSyntheticChildrenGenerated (bool is)
+{
+    ValueLocker locker;
+    lldb::ValueObjectSP value_sp(GetSP(locker));
+    if (value_sp)
+        return value_sp->SetSyntheticChildrenGenerated(is);
 }
 
 lldb::SBValue

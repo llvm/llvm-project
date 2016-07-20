@@ -9,13 +9,13 @@
 // See http://swift.org/CONTRIBUTORS.txt for the list of Swift project authors
 //
 // -----------------------------------------------------------------------------
-enum EnumError : ErrorProtocol
+enum EnumError : Error
 {
     case ImportantError
     case TrivialError
 }
 
-class ClassError : ErrorProtocol
+class ClassError : Error
 {
     var _code : Int = 10
     var _domain : String = "ClassError"

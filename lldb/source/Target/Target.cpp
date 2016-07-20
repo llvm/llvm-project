@@ -32,6 +32,7 @@
 #include "lldb/Core/StreamString.h"
 #include "lldb/Core/Timer.h"
 #include "lldb/Core/ValueObject.h"
+#include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/REPL.h"
 #include "lldb/Expression/UserExpression.h"
 #include "Plugins/ExpressionParser/Clang/ClangASTSource.h"
@@ -2037,8 +2038,14 @@ Target::ImageSearchPathsChanged(const PathMappingList &path_list,
         target->SetExecutableModule (exe_module_sp, true);
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+TypeSystem *
+Target::GetScratchTypeSystemForLanguageImpl (Error *error, lldb::LanguageType language, bool create_on_demand, const char *compiler_options)
+#else
 TypeSystem *
 Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType language, bool create_on_demand, const char *compiler_options)
+#endif
 {
     if (!m_valid)
         return nullptr;
@@ -2073,16 +2080,49 @@ Target::GetScratchTypeSystemForLanguage (Error *error, lldb::LanguageType langua
         }
     }
 
+    if (m_cant_make_scratch_type_system.find(language) != m_cant_make_scratch_type_system.end())
+    {
+        return nullptr;
+    }
 
     TypeSystem *type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand, compiler_options);
     if (language == eLanguageTypeSwift)
     {
         if (SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(type_system))
         {
-            if (swift_ast_ctx->CheckProcessChanged())
+            if (swift_ast_ctx->CheckProcessChanged() || swift_ast_ctx->HasFatalErrors())
             {
+                if (swift_ast_ctx->HasFatalErrors())
+                {
+                    if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream())
+                    {
+                        error_stream_sp->PutCString("Shared Swift state for %s has developed fatal errors and is being discarded.\n");
+                        error_stream_sp->PutCString("REPL definitions and persistent names/types will be lost.\n");
+                        error_stream_sp->Flush();
+                    }
+                }
                 m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
                 type_system = m_scratch_type_system_map.GetTypeSystemForLanguage(language, this, create_on_demand, compiler_options);
+                
+                if (SwiftASTContext *new_swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(type_system))
+                {
+                    if (new_swift_ast_ctx->HasFatalErrors())
+                    {
+                        if (StreamSP error_stream_sp = GetDebugger().GetAsyncErrorStream())
+                        {
+                            error_stream_sp->PutCString("Can't construct shared Swift state for this process after repeated attempts.\n");
+                            error_stream_sp->PutCString("Giving up.  Fatal errors:\n");
+                            DiagnosticManager diag_mgr;
+                            new_swift_ast_ctx->PrintDiagnostics(diag_mgr);
+                            error_stream_sp->PutCString(diag_mgr.GetString().c_str());
+                            error_stream_sp->Flush();
+                        }
+                        
+                        m_cant_make_scratch_type_system[language] = true;
+                        m_scratch_type_system_map.RemoveTypeSystemsForLanguage(language);
+                        type_system = nullptr;
+                    }
+                }
             }
         }
     }
@@ -2095,8 +2135,14 @@ Target::GetTypeSystemMap ()
     return m_scratch_type_system_map;
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+PersistentExpressionState *
+Target::GetPersistentExpressionStateForLanguageImpl (lldb::LanguageType language)
+#else
 PersistentExpressionState *
 Target::GetPersistentExpressionStateForLanguage (lldb::LanguageType language)
+#endif
 {
     TypeSystem *type_system = GetScratchTypeSystemForLanguage(nullptr, language, true);
     
@@ -2184,8 +2230,14 @@ Target::GetUtilityFunctionForLanguage (const char *text,
     return utility_fn;
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+ClangASTContext *
+Target::GetScratchClangASTContextImpl(bool create_on_demand)
+#else
 ClangASTContext *
 Target::GetScratchClangASTContext(bool create_on_demand)
+#endif
 {
     if (m_valid)
     {
@@ -2209,13 +2261,16 @@ Target::GetClangASTImporter()
     return ClangASTImporterSP();
 }
 
+#ifdef __clang_analyzer__
+// See GetScratchTypeSystemForLanguage() in Target.h
+SwiftASTContext *
+Target::GetScratchSwiftASTContextImpl(Error &error, bool create_on_demand, const char *extra_options)
+#else
 SwiftASTContext *
 Target::GetScratchSwiftASTContext(Error &error, bool create_on_demand, const char *extra_options)
+#endif
 {
-    SwiftASTContext *swift_ast_ctx = llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
-    if (swift_ast_ctx && !swift_ast_ctx->HasFatalErrors())
-        return swift_ast_ctx;
-    return nullptr;
+    return llvm::dyn_cast_or_null<SwiftASTContext>(GetScratchTypeSystemForLanguage(&error, eLanguageTypeSwift, create_on_demand, extra_options));
 }
 
 void
@@ -2893,10 +2948,10 @@ Target::Install (ProcessLaunchInfo *launch_info)
                 const size_t num_images = modules.GetSize();
                 for (size_t idx = 0; idx < num_images; ++idx)
                 {
-                    const bool is_main_executable = idx == 0;
                     ModuleSP module_sp(modules.GetModuleAtIndex(idx));
                     if (module_sp)
                     {
+                        const bool is_main_executable = module_sp == GetExecutableModule();
                         FileSpec local_file (module_sp->GetFileSpec());
                         if (local_file)
                         {
@@ -3545,7 +3600,7 @@ g_properties[] =
     { "swift-module-search-paths"          , OptionValue::eTypeFileSpecList, false, 0                       , nullptr, nullptr, "List of directories to be searched when locating modules for Swift." },
     { "auto-import-clang-modules"          , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically load Clang modules referred to by the program." },
     { "use-all-compiler-flags"             , OptionValue::eTypeBoolean   , false, false                     , nullptr, nullptr, "Try to use compiler flags for all modules when setting up the Swift expression parser, not just the main executable." },
-    { "auto-apply-fixits"                  , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically apply fixit hints to expressions." },
+    { "auto-apply-fixits"                  , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Automatically apply fix-it hints to expressions." },
     { "notify-about-fixits"                , OptionValue::eTypeBoolean   , false, true                      , nullptr, nullptr, "Print the fixed expression text." },
     { "max-children-count"                 , OptionValue::eTypeSInt64    , false, 256                       , nullptr, nullptr, "Maximum number of children to expand in any level of depth." },
     { "max-string-summary-length"          , OptionValue::eTypeSInt64    , false, 1024                      , nullptr, nullptr, "Maximum number of characters to show when using %s in summary strings." },
@@ -3637,7 +3692,8 @@ enum
     ePropertySDKPath,
     ePropertyModuleCachePath,
     ePropertyDisplayRuntimeSupportValues,
-    ePropertyNonStopModeEnabled
+    ePropertyNonStopModeEnabled,
+    ePropertyExperimental
 };
 
 class TargetOptionValueProperties : public OptionValueProperties
@@ -3748,6 +3804,38 @@ protected:
 //----------------------------------------------------------------------
 // TargetProperties
 //----------------------------------------------------------------------
+static PropertyDefinition
+g_experimental_properties[] 
+{
+{   "inject-local-vars",        OptionValue::eTypeBoolean     , true, false, nullptr, nullptr, "If true, inject local variables explicitly into the expression text.  "
+                                                                                               "This will fix symbol resolution when there are name collisions between ivars and local variables.  "
+                                                                                               "But it can make expressions run much more slowly." },
+{   nullptr,                    OptionValue::eTypeInvalid     , true, 0    , nullptr, nullptr, nullptr }
+};
+
+enum
+{
+    ePropertyInjectLocalVars = 0
+};
+
+class TargetExperimentalOptionValueProperties : public OptionValueProperties
+{
+public:
+    TargetExperimentalOptionValueProperties () :
+        OptionValueProperties (ConstString(Properties::GetExperimentalSettingsName()))
+    {
+    }
+};
+
+TargetExperimentalProperties::TargetExperimentalProperties() :
+    Properties(OptionValuePropertiesSP(new TargetExperimentalOptionValueProperties()))
+{
+    m_collection_sp->Initialize(g_experimental_properties);
+}
+
+//----------------------------------------------------------------------
+// TargetProperties
+//----------------------------------------------------------------------
 TargetProperties::TargetProperties (Target *target) :
     Properties (),
     m_launch_info ()
@@ -3766,7 +3854,13 @@ TargetProperties::TargetProperties (Target *target) :
         m_collection_sp->SetValueChangedCallback(ePropertyDetachOnError, TargetProperties::DetachOnErrorValueChangedCallback, this);
         m_collection_sp->SetValueChangedCallback(ePropertyDisableASLR, TargetProperties::DisableASLRValueChangedCallback, this);
         m_collection_sp->SetValueChangedCallback(ePropertyDisableSTDIO, TargetProperties::DisableSTDIOValueChangedCallback, this);
-    
+
+        m_experimental_properties_up.reset(new TargetExperimentalProperties());
+        m_collection_sp->AppendProperty (ConstString(Properties::GetExperimentalSettingsName()),
+                                         ConstString("Experimental settings - setting these won't produce errors if the setting is not present."),
+                                         true,
+                                         m_experimental_properties_up->GetValueProperties());
+
         // Update m_launch_info once it was created
         Arg0ValueChangedCallback(this, nullptr);
         RunArgsValueChangedCallback(this, nullptr);
@@ -3782,14 +3876,39 @@ TargetProperties::TargetProperties (Target *target) :
     {
         m_collection_sp.reset (new TargetOptionValueProperties(ConstString("target")));
         m_collection_sp->Initialize(g_properties);
+        m_experimental_properties_up.reset(new TargetExperimentalProperties());
+        m_collection_sp->AppendProperty (ConstString(Properties::GetExperimentalSettingsName()),
+                                         ConstString("Experimental settings - setting these won't produce errors if the setting is not present."),
+                                         true,
+                                         m_experimental_properties_up->GetValueProperties());
         m_collection_sp->AppendProperty(ConstString("process"),
-                                        ConstString("Settings specify to processes."),
+                                        ConstString("Settings specific to processes."),
                                         true,
                                         Process::GetGlobalProperties()->GetValueProperties());
     }
 }
 
 TargetProperties::~TargetProperties() = default;
+
+bool
+TargetProperties::GetInjectLocalVariables(ExecutionContext *exe_ctx) const
+{
+    const Property *exp_property = m_collection_sp->GetPropertyAtIndex(exe_ctx, false, ePropertyExperimental);
+    OptionValueProperties *exp_values = exp_property->GetValue()->GetAsProperties();
+    if (exp_values)
+        return exp_values->GetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars, true);
+    else
+        return true;
+}
+
+void
+TargetProperties::SetInjectLocalVariables(ExecutionContext *exe_ctx, bool b)
+{
+    const Property *exp_property = m_collection_sp->GetPropertyAtIndex(exe_ctx, true, ePropertyExperimental);
+    OptionValueProperties *exp_values = exp_property->GetValue()->GetAsProperties();
+    if (exp_values)
+        exp_values->SetPropertyAtIndexAsBoolean(exe_ctx, ePropertyInjectLocalVars, true);
+}
 
 ArchSpec
 TargetProperties::GetDefaultArchitecture () const

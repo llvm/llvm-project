@@ -218,7 +218,7 @@ GetNameFromModule (swift::Module *module, std::string &result)
 bool
 SwiftExpressionParser::PerformAutoImport (swift::SourceFile &source_file, bool user_imports, Error &error)
 {
-    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EXPRESSIONS|LIBLLDB_LOG_TEMPORARY));
+    Log *log(lldb_private::GetLogIfAnyCategoriesSet (LIBLLDB_LOG_EXPRESSIONS));
 
     const std::vector<ConstString> *cu_modules = nullptr;
     
@@ -750,6 +750,31 @@ AddRequiredAliases(Block *block,
         {
             if (is_bound)
                 imported_self_type = imported_self_type.GetUnboundType();
+        }
+        
+        // if 'self' is a weak storage type, it must be an optional.  Look through it and unpack the argument of "optional".
+        
+        if (swift::WeakStorageType *weak_storage_type = ((swift::TypeBase*)imported_self_type.GetOpaqueQualType())->getAs<swift::WeakStorageType>())
+        {
+            swift::Type referent_type = weak_storage_type->getReferentType();
+            
+            swift::BoundGenericEnumType *optional_type = referent_type->getAs<swift::BoundGenericEnumType>();
+            
+            if (!optional_type)
+            {
+                break;
+            }
+            
+            swift::Type first_arg_type = optional_type->getGenericArgs()[0];
+            
+            swift::ClassType *self_class_type = first_arg_type->getAs<swift::ClassType>();
+            
+            if (!self_class_type)
+            {
+                break;
+            }
+            
+            imported_self_type = CompilerType(imported_self_type.GetTypeSystem(), self_class_type);
         }
 
         imported_self_type_flags.Reset(imported_self_type.GetTypeInfo());
@@ -1610,17 +1635,16 @@ SwiftExpressionParser::Parse (DiagnosticManager &diagnostic_manager,
                             }
                         }
                     }
-                    swift::TypeBase *actual_swift_type = (swift::TypeBase*)actual_type.GetOpaqueQualType();
-                    if (swift::NameAliasType *actual_swift_namealias = llvm::dyn_cast_or_null<swift::NameAliasType>(actual_swift_type))
+                    swift::Type actual_swift_type = swift::Type((swift::TypeBase*)actual_type.GetOpaqueQualType());
+                                        
+                    swift::Type fixed_type = code_manipulator->FixupResultType(actual_swift_type, user_expression->GetLanguageFlags());
+
+                    if (!fixed_type.isNull())
                     {
-                        if (actual_swift_namealias->getDecl()->getNameStr().equals("$__lldb_context"))
-                        {
-                            actual_swift_type = actual_swift_namealias->getSinglyDesugaredType();
-                            actual_type.SetCompilerType(actual_type.GetTypeSystem(), (lldb::opaque_compiler_type_t)actual_swift_type);
-                        }
+                        actual_type = CompilerType(actual_type.GetTypeSystem(), fixed_type.getPointer());
+                        variable.SetType(actual_type);
                     }
-                    // if we add one more fixup here, we should break each of the above cases into a separate fixup to keep things clean
-                    
+                                        
                     if (is_result)
                         offset = materializer->AddResultVariable(actual_type,
                                                                  false,

@@ -63,6 +63,7 @@ ValueObjectSynthetic::ValueObjectSynthetic (ValueObject &parent, lldb::Synthetic
     m_children_byindex(),
     m_name_toindex(),
     m_synthetic_children_count(UINT32_MAX),
+    m_synthetic_children_cache(),
     m_parent_type_name(parent.GetTypeName()),
     m_might_have_children(eLazyBoolCalculate),
     m_provides_value(eLazyBoolCalculate)
@@ -212,6 +213,7 @@ ValueObjectSynthetic::UpdateValue ()
         // for a synthetic VO that might indeed happen, so we need to tell the upper echelons
         // that they need to come back to us asking for children
         m_children_count_valid = false;
+        m_synthetic_children_cache.Clear();
         m_synthetic_children_count = UINT32_MAX;
         m_might_have_children = eLazyBoolCalculate;
     }
@@ -271,13 +273,17 @@ ValueObjectSynthetic::GetChildAtIndex (size_t idx, bool can_create)
             lldb::ValueObjectSP synth_guy = m_synth_filter_ap->GetChildAtIndex (idx);
             
             if (log)
-                log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu created as %p",
+                log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu created as %p (is synthetic: %s)",
                             GetName().AsCString(),
                             idx,
-                            synth_guy.get());
+                            synth_guy.get(),
+                            synth_guy.get() ? (synth_guy->IsSyntheticChildrenGenerated() ? "yes" : "no") : "no");
 
             if (!synth_guy)
                 return synth_guy;
+            
+            if (synth_guy->IsSyntheticChildrenGenerated())
+                m_synthetic_children_cache.AppendObject(synth_guy);
             m_children_byindex.SetValueForKey(idx, synth_guy.get());
             synth_guy->SetPreferredDisplayLanguageIfNeeded(GetPreferredDisplayLanguage());
             return synth_guy;
@@ -408,6 +414,22 @@ ValueObjectSynthetic::GetPreferredDisplayLanguage ()
     }
     else
         return m_preferred_display_language;
+}
+
+bool
+ValueObjectSynthetic::IsSyntheticChildrenGenerated ()
+{
+    if (m_parent)
+        return m_parent->IsSyntheticChildrenGenerated();
+    return false;
+}
+
+void
+ValueObjectSynthetic::SetSyntheticChildrenGenerated (bool b)
+{
+    if (m_parent)
+        m_parent->SetSyntheticChildrenGenerated(b);
+    this->ValueObject::SetSyntheticChildrenGenerated(b);
 }
 
 bool

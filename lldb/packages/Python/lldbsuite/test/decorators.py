@@ -523,8 +523,15 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
 def skipUnlessCompilerRt(func):
     """Decorate the item to skip tests if testing remotely."""
     def is_compiler_rt_missing():
-        compilerRtPath = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
-        return "compiler-rt not found" if not os.path.exists(compilerRtPath) else None
+        # This path is where compiler-rt sources would be on LLVM.org LLDB
+        # builds and Swift LLDB builds driven by Xcode.
+        compilerRtPathXcode = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "llvm","projects","compiler-rt")
+
+        # This path is where compiler-rt sources would be on Swift
+        # build-script-driven builds as found on our CI.
+        compilerRtPathBuildScript = os.path.join(os.path.dirname(__file__), "..", "..", "..", "..", "..", "llvm","projects","compiler-rt")
+        compiler_rt_exists = os.path.exists(compilerRtPathXcode) or os.path.exists(compilerRtPathBuildScript)
+        return "compiler-rt not found" if not compiler_rt_exists else None
     return skipTestIfFn(is_compiler_rt_missing)(func)
 
 def skipUnlessThreadSanitizer(func):

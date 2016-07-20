@@ -451,11 +451,9 @@ protected:
     }
 };
 
-CommandObjectLog::CommandObjectLog(CommandInterpreter &interpreter) :
-    CommandObjectMultiword (interpreter,
-                            "log",
-                            "A set of commands for operating on logs.",
-                            "log <command> [<command-options>]")
+CommandObjectLog::CommandObjectLog(CommandInterpreter &interpreter)
+    : CommandObjectMultiword(interpreter, "log", "Commands controlling LLDB internal logging.",
+                             "log <subcommand> [<command-options>]")
 {
     LoadSubCommand ("enable",  CommandObjectSP (new CommandObjectLogEnable (interpreter)));
     LoadSubCommand ("disable", CommandObjectSP (new CommandObjectLogDisable (interpreter)));

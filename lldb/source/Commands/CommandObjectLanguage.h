@@ -27,9 +27,6 @@ namespace lldb_private {
         
         ~CommandObjectLanguage() override;
         
-        void
-        GenerateHelpText(Stream &output_stream) override;
-        
     protected:
         bool
         DoExecute (Args& command, CommandReturnObject &result);

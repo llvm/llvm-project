@@ -232,7 +232,7 @@ SwiftHashedContainerNativeBufferHandler::SwiftHashedContainerNativeBufferHandler
     if (value_type)
     {
         m_value_stride = value_type.GetByteStride();
-        if (SwiftASTContext *swift_ast = llvm::dyn_cast<SwiftASTContext>(key_type.GetTypeSystem()))
+        if (SwiftASTContext *swift_ast = llvm::dyn_cast_or_null<SwiftASTContext>(key_type.GetTypeSystem()))
         {
             std::vector<SwiftASTContext::TupleElement> tuple_elements{ {g_key,key_type}, {g_value,value_type} };
             m_element_type = swift_ast->CreateTupleType(tuple_elements);
@@ -441,8 +441,7 @@ SwiftHashedContainerBufferHandler::CreateBufferHandler (ValueObject& valobj,
 
 lldb_private::formatters::swift::HashedContainerSyntheticFrontEnd::HashedContainerSyntheticFrontEnd (lldb::ValueObjectSP valobj_sp) :
 SyntheticChildrenFrontEnd(*valobj_sp.get()),
-m_buffer(),
-m_children()
+m_buffer()
 {
 }
 
@@ -458,14 +457,10 @@ lldb_private::formatters::swift::HashedContainerSyntheticFrontEnd::GetChildAtInd
     if (!m_buffer)
         return ValueObjectSP();
     
-    auto cached = m_children.find(idx);
-    if (cached != m_children.end())
-        return cached->second;
-    
     lldb::ValueObjectSP child_sp = m_buffer->GetElementAtIndex(idx);
     
     if (child_sp)
-        m_children[idx] = child_sp;
+        child_sp->SetSyntheticChildrenGenerated(true);
     
     return child_sp;
 }

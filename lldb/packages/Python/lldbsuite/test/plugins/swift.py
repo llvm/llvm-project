@@ -14,7 +14,7 @@
 
 import os
 import os.path
-import commands
+import subprocess
 
 configurations = ['Ninja-DebugAssert', 'Ninja-ReleaseAssert', 'Ninja-RelWithDebInfoAssert'] #TODO: add more configurations
 
@@ -57,10 +57,13 @@ def getSwiftSDKRoot():
         if "SWIFTSDKROOT" in os.environ:
             swift_sdk_root = os.environ["SWIFTSDKROOT"]
         else:
-            sdk_path = commands.getoutput("xcrun -sdk macosx --show-sdk-path")
-            if sdk_path[-1] == '\n': sdk_path = sdk_path[0:-1]
-            if os.path.isdir(sdk_path):
-                swift_sdk_root = sdk_path
+            try:
+                sdk_path = subprocess.check_output('xcrun -sdk macosx --show-sdk-path', shell=True)
+                if sdk_path[-1] == '\n': sdk_path = sdk_path[0:-1]
+                if os.path.isdir(sdk_path):
+                    swift_sdk_root = sdk_path
+            except:
+                pass
     if swift_sdk_root is None:
         swift_sdk_root = "/"
     return swift_sdk_root

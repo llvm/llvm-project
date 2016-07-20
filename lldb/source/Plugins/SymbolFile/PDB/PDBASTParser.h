@@ -16,23 +16,26 @@
 
 namespace clang
 {
-class CharUnits;
-class CXXRecordDecl;
-class FieldDecl;
-class RecordDecl;
+    class CharUnits;
+    class CXXRecordDecl;
+    class FieldDecl;
+    class RecordDecl;
 }
 
 namespace lldb_private
 {
-class ClangASTContext;
-class CompilerType;
+    class ClangASTContext;
+    class CompilerType;
 }
 
 namespace llvm
 {
-class PDBSymbol;
-class PDBSymbolData;
-class PDBSymbolTypeBuiltin;
+    namespace pdb
+    {
+        class PDBSymbol;
+        class PDBSymbolData;
+        class PDBSymbolTypeBuiltin;
+    }
 }
 
 class PDBASTParser
@@ -42,11 +45,11 @@ public:
     ~PDBASTParser();
 
     lldb::TypeSP
-    CreateLLDBTypeFromPDBType(const llvm::PDBSymbol &type);
+    CreateLLDBTypeFromPDBType(const llvm::pdb::PDBSymbol &type);
 
 private:
     bool
-    AddEnumValue(lldb_private::CompilerType enum_type, const llvm::PDBSymbolData &data) const;
+    AddEnumValue(lldb_private::CompilerType enum_type, const llvm::pdb::PDBSymbolData &data) const;
 
     lldb_private::ClangASTContext &m_ast;
     lldb_private::ClangASTImporter m_ast_importer;
