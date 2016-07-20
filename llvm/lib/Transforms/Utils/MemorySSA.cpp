@@ -336,8 +336,7 @@ class ClobberWalker {
 
   void addCacheEntry(const MemoryAccess *What, MemoryAccess *To,
                      const MemoryLocation &Loc) const {
-// EXPENSIVE_CHECKS because most of these queries are redundant, and if What
-// and To are in the same BB, that gives us n^2 behavior.
+// EXPENSIVE_CHECKS because most of these queries are redundant.
 #ifdef EXPENSIVE_CHECKS
     assert(MSSA.dominates(To, What));
 #endif
@@ -623,8 +622,6 @@ class ClobberWalker {
     // Paths.
     auto MoveDominatedPathToEnd = [&](SmallVectorImpl<TerminatedPath> &Paths) {
       assert(!Paths.empty() && "Need a path to move");
-      // FIXME: This is technically n^2 (n = distance(DefPath.First,
-      // DefPath.Last)) because of local dominance checks.
       auto Dom = Paths.begin();
       for (auto I = std::next(Dom), E = Paths.end(); I != E; ++I)
         if (!MSSA.dominates(I->Clobber, Dom->Clobber))
@@ -1212,6 +1209,7 @@ MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
   ValueToMemoryAccess.insert(std::make_pair(BB, Phi));
   // Phi's always are placed at the front of the block.
   Accesses->push_front(Phi);
+  BlockNumberingValid.erase(BB);
   return Phi;
 }
 
@@ -1242,7 +1240,7 @@ MemoryAccess *MemorySSA::createMemoryAccessInBB(Instruction *I,
   } else {
     Accesses->push_back(NewAccess);
   }
-
+  BlockNumberingValid.erase(BB);
   return NewAccess;
 }
 MemoryAccess *MemorySSA::createMemoryAccessBefore(Instruction *I,
@@ -1253,6 +1251,7 @@ MemoryAccess *MemorySSA::createMemoryAccessBefore(Instruction *I,
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
   auto *Accesses = getOrCreateAccessList(InsertPt->getBlock());
   Accesses->insert(AccessList::iterator(InsertPt), NewAccess);
+  BlockNumberingValid.erase(InsertPt->getBlock());
   return NewAccess;
 }
 
@@ -1264,6 +1263,7 @@ MemoryAccess *MemorySSA::createMemoryAccessAfter(Instruction *I,
   MemoryUseOrDef *NewAccess = createDefinedAccess(I, Definition);
   auto *Accesses = getOrCreateAccessList(InsertPt->getBlock());
   Accesses->insertAfter(AccessList::iterator(InsertPt), NewAccess);
+  BlockNumberingValid.erase(InsertPt->getBlock());
   return NewAccess;
 }
 
@@ -1364,6 +1364,7 @@ static MemoryAccess *onlySingleValue(MemoryPhi *MP) {
 void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   assert(MA->use_empty() &&
          "Trying to remove memory access that still has uses");
+  BlockNumbering.erase(MA);
   if (MemoryUseOrDef *MUD = dyn_cast<MemoryUseOrDef>(MA))
     MUD->setDefiningAccess(nullptr);
   // Invalidate our walker's cache if necessary
@@ -1568,14 +1569,32 @@ MemoryPhi *MemorySSA::getMemoryAccess(const BasicBlock *BB) const {
   return cast_or_null<MemoryPhi>(getMemoryAccess((const Value *)BB));
 }
 
+/// Perform a local numbering on blocks so that instruction ordering can be
+/// determined in constant time.
+/// TODO: We currently just number in order.  If we numbered by N, we could
+/// allow at least N-1 sequences of insertBefore or insertAfter (and at least
+/// log2(N) sequences of mixed before and after) without needing to invalidate
+/// the numbering.
+void MemorySSA::renumberBlock(const BasicBlock *B) const {
+  // The pre-increment ensures the numbers really start at 1.
+  unsigned long CurrentNumber = 0;
+  const AccessList *AL = getBlockAccesses(B);
+  assert(AL != nullptr && "Asking to renumber an empty block");
+  for (const auto &I : *AL)
+    BlockNumbering[&I] = ++CurrentNumber;
+  BlockNumberingValid.insert(B);
+}
+
 /// \brief Determine, for two memory accesses in the same block,
 /// whether \p Dominator dominates \p Dominatee.
 /// \returns True if \p Dominator dominates \p Dominatee.
 bool MemorySSA::locallyDominates(const MemoryAccess *Dominator,
                                  const MemoryAccess *Dominatee) const {
-  assert((Dominator->getBlock() == Dominatee->getBlock()) &&
-         "Asking for local domination when accesses are in different blocks!");
 
+  const BasicBlock *DominatorBlock = Dominator->getBlock();
+
+  assert((DominatorBlock == Dominatee->getBlock()) &&
+         "Asking for local domination when accesses are in different blocks!");
   // A node dominates itself.
   if (Dominatee == Dominator)
     return true;
@@ -1590,14 +1609,15 @@ bool MemorySSA::locallyDominates(const MemoryAccess *Dominator,
   if (isLiveOnEntryDef(Dominator))
     return true;
 
-  // Get the access list for the block
-  const AccessList *AccessList = getBlockAccesses(Dominator->getBlock());
-  AccessList::const_reverse_iterator It(Dominator->getIterator());
+  if (!BlockNumberingValid.count(DominatorBlock))
+    renumberBlock(DominatorBlock);
 
-  // If we hit the beginning of the access list before we hit dominatee, we must
-  // dominate it
-  return std::none_of(It, AccessList->rend(),
-                      [&](const MemoryAccess &MA) { return &MA == Dominatee; });
+  unsigned long DominatorNum = BlockNumbering.lookup(Dominator);
+  // All numbers start with 1
+  assert(DominatorNum != 0 && "Block was not numbered properly");
+  unsigned long DominateeNum = BlockNumbering.lookup(Dominatee);
+  assert(DominateeNum != 0 && "Block was not numbered properly");
+  return DominatorNum < DominateeNum;
 }
 
 bool MemorySSA::dominates(const MemoryAccess *Dominator,
@@ -1743,8 +1763,7 @@ MemorySSAWalker::MemorySSAWalker(MemorySSA *M) : MSSA(M) {}
 
 MemorySSA::CachingWalker::CachingWalker(MemorySSA *M, AliasAnalysis *A,
                                         DominatorTree *D)
-    : MemorySSAWalker(M), Walker(*M, *A, *D, Cache),
-      AutoResetWalker(true) {}
+    : MemorySSAWalker(M), Walker(*M, *A, *D, Cache), AutoResetWalker(true) {}
 
 MemorySSA::CachingWalker::~CachingWalker() {}
 

@@ -56,9 +56,7 @@ define i49 @test4(i49 %x) {
 
 define i7 @sext(i4 %x) {
 ; CHECK-LABEL: @sext(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i4 %x, -8
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[XOR]] to i7
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i7 [[ZEXT]], -8
+; CHECK-NEXT:    [[ADD:%.*]] = sext i4 %x to i7
 ; CHECK-NEXT:    ret i7 [[ADD]]
 ;
   %xor = xor i4 %x, -8
@@ -69,15 +67,34 @@ define i7 @sext(i4 %x) {
 
 define <2 x i10> @sext_vec(<2 x i3> %x) {
 ; CHECK-LABEL: @sext_vec(
-; CHECK-NEXT:    [[XOR:%.*]] = xor <2 x i3> %x, <i3 -4, i3 -4>
-; CHECK-NEXT:    [[ZEXT:%.*]] = zext <2 x i3> [[XOR]] to <2 x i10>
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw <2 x i10> [[ZEXT]], <i10 -4, i10 -4>
+; CHECK-NEXT:    [[ADD:%.*]] = sext <2 x i3> %x to <2 x i10>
 ; CHECK-NEXT:    ret <2 x i10> [[ADD]]
 ;
   %xor = xor <2 x i3> %x, <i3 -4, i3 -4>
   %zext = zext <2 x i3> %xor to <2 x i10>
   %add = add nsw <2 x i10> %zext, <i10 -4, i10 -4>
   ret <2 x i10> %add
+}
+
+; Multiple uses of the operands don't prevent the fold.
+
+define i4 @sext_multiuse(i4 %x) {
+; CHECK-LABEL: @sext_multiuse(
+; CHECK-NEXT:    [[XOR:%.*]] = xor i4 %x, -8
+; CHECK-NEXT:    [[ZEXT:%.*]] = zext i4 [[XOR]] to i7
+; CHECK-NEXT:    [[ADD:%.*]] = sext i4 %x to i7
+; CHECK-NEXT:    [[MUL:%.*]] = sdiv i7 [[ZEXT]], [[ADD]]
+; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i7 [[MUL]] to i4
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i4 [[TRUNC]], [[XOR]]
+; CHECK-NEXT:    ret i4 [[DIV]]
+;
+  %xor = xor i4 %x, -8
+  %zext = zext i4 %xor to i7
+  %add = add nsw i7 %zext, -8
+  %mul = sdiv i7 %zext, %add
+  %trunc = trunc i7 %mul to i4
+  %div = sdiv i4 %trunc, %xor
+  ret i4 %div
 }
 
 ; Tests for Integer BitWidth > 64 && BitWidth <= 1024.

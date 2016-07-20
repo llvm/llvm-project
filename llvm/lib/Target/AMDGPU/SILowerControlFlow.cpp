@@ -91,10 +91,6 @@ private:
 
   MachineBasicBlock *insertSkipBlock(MachineBasicBlock &MBB,
                                      MachineBasicBlock::iterator I) const;
-
-  std::pair<MachineBasicBlock *, MachineBasicBlock *>
-  splitBlock(MachineBasicBlock &MBB, MachineBasicBlock::iterator I);
-
 public:
   static char ID;
 
@@ -403,30 +399,6 @@ MachineBasicBlock *SILowerControlFlow::insertSkipBlock(
   MF->insert(MBBI, SkipBB);
 
   return SkipBB;
-}
-
-std::pair<MachineBasicBlock *, MachineBasicBlock *>
-SILowerControlFlow::splitBlock(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator I) {
-  MachineFunction *MF = MBB.getParent();
-
-  // To insert the loop we need to split the block. Move everything after this
-  // point to a new block, and insert a new empty block between the two.
-  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock();
-  MachineBasicBlock *RemainderBB = MF->CreateMachineBasicBlock();
-  MachineFunction::iterator MBBI(MBB);
-  ++MBBI;
-
-  MF->insert(MBBI, LoopBB);
-  MF->insert(MBBI, RemainderBB);
-
-  // Move the rest of the block into a new block.
-  RemainderBB->transferSuccessors(&MBB);
-  RemainderBB->splice(RemainderBB->begin(), &MBB, I, MBB.end());
-
-  MBB.addSuccessor(LoopBB);
-
-  return std::make_pair(LoopBB, RemainderBB);
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {

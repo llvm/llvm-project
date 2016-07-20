@@ -1,5 +1,5 @@
-; RUN: llc -march=arm64 -O0 -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -march=arm64 -O3 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -O0 -verify-machineinstrs | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -O3 -verify-machineinstrs | FileCheck %s
 
 @.str = private unnamed_addr constant [9 x i8] c"%lf %lu\0A\00", align 1
 @.str1 = private unnamed_addr constant [8 x i8] c"%lf %u\0A\00", align 1

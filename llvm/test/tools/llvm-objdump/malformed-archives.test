@@ -5,16 +5,16 @@
 # RUN:   %p/Inputs/libbogus1.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus1 %s 
 
-# bogus1: Invalid data was encountered while parsing the file
+# bogus1: libbogus1.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '10%')
 
 # RUN: not llvm-objdump -macho -archive-headers \
 # RUN:   %p/Inputs/libbogus2.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus2 %s 
 
-# bogus2: LLVM ERROR: Invalid data was encountered while parsing the file
+# bogus2: libbogus2.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '1%')
 
 # RUN: not llvm-objdump -macho -archive-headers \
 # RUN:   %p/Inputs/libbogus3.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus3 %s 
 
-# bogus3: LLVM ERROR: Invalid data was encountered while parsing the file
+# bogus3: libbogus3.a': truncated or malformed archive (offset to next archive member past the end of the archive)

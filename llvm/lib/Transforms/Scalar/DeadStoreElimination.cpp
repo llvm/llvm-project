@@ -612,6 +612,9 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
       if (!AA->isMustAlias(F->getArgOperand(0), DepPointer))
         break;
 
+      DEBUG(dbgs() << "DSE: Dead Store to soon to be freed memory:\n  DEAD: "
+                   << *Dependency << '\n');
+
       // DCE instructions only used to calculate that store.
       BasicBlock::iterator BBI(Dependency);
       deleteDeadInstruction(Dependency, &BBI, *MD, *TLI);
@@ -737,6 +740,8 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
     // Remove any dead non-memory-mutating instructions.
     if (isInstructionTriviallyDead(&*BBI, TLI)) {
+      DEBUG(dbgs() << "DSE: Removing trivially dead instruction:\n  DEAD: "
+                   << *&*BBI << '\n');
       deleteDeadInstruction(&*BBI, &BBI, *MD, *TLI, &DeadStackObjects);
       ++NumFastOther;
       MadeChange = true;

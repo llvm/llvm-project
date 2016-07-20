@@ -973,14 +973,18 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       TiedDefIdx = Idx;
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+
     // Virtual registers may have a size with GlobalISel.
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       return error("unexpected size on physical register");
+    if (MRI.getRegClassOrRegBank(Reg).is<const TargetRegisterClass *>())
+      return error("unexpected size on non-generic virtual register");
+
     unsigned Size;
     if (parseSize(Size))
       return true;
 
-    MachineRegisterInfo &MRI = MF.getRegInfo();
     MRI.setSize(Reg, Size);
   } else if (PFS.GenericVRegs.count(Reg)) {
     // Generic virtual registers must have a size.

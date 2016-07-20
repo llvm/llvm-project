@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <2 x i64> @test_v2f32_to_signed_v2i64(<2 x float> %in) {
 ; CHECK-LABEL: test_v2f32_to_signed_v2i64:

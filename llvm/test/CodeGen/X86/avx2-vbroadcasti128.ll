@@ -107,8 +107,8 @@ define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
  ret <16 x i16> %3
 }
 
-define <32 x i8> @test_broadcast_16i8_32i7(<16 x i8> *%p) nounwind {
-; X32-LABEL: test_broadcast_16i8_32i7:
+define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
+; X32-LABEL: test_broadcast_16i8_32i8:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    vmovdqa (%eax), %xmm0
@@ -116,7 +116,7 @@ define <32 x i8> @test_broadcast_16i8_32i7(<16 x i8> *%p) nounwind {
 ; X32-NEXT:    vpaddb LCPI5_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
-; X64-LABEL: test_broadcast_16i8_32i7:
+; X64-LABEL: test_broadcast_16i8_32i8:
 ; X64:       ## BB#0:
 ; X64-NEXT:    vmovdqa (%rdi), %xmm0
 ; X64-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0

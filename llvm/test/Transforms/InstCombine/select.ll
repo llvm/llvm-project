@@ -241,14 +241,15 @@ define i32 @test12a(i1 %cond, i32 %a) {
 }
 
 define i32 @test12b(i1 %cond, i32 %a) {
-        %b = ashr i32 %a, 1
-        %c = select i1 %cond, i32 %a, i32 %b
-        ret i32 %c
 ; CHECK-LABEL: @test12b(
-; CHECK: zext i1 %cond to i32
-; CHECK: %b = xor i32
-; CHECK: %c = ashr i32 %a, %b
-; CHECK: ret i32 %c
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 %cond to i32
+; CHECK-NEXT:    [[B:%.*]] = xor i32 [[TMP1]], 1
+; CHECK-NEXT:    [[D:%.*]] = ashr i32 %a, [[B]]
+; CHECK-NEXT:    ret i32 [[D]]
+;
+  %b = ashr i32 %a, 1
+  %d = select i1 %cond, i32 %a, i32 %b
+  ret i32 %d
 }
 
 define i32 @test13(i32 %a, i32 %b) {
@@ -1189,10 +1190,14 @@ define i64 @select_icmp_x_and_8_ne_0_y_xor_8(i32 %x, i64 %y) {
   ret i64 %xor.y
 }
 
-; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8(
-; CHECK: xor i64 %1, 8
-; CHECK: or i64 %2, %y
 define i64 @select_icmp_x_and_8_ne_0_y_or_8(i32 %x, i64 %y) {
+; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 8
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
+; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], %y
+; CHECK-NEXT:    ret i64 [[TMP3]]
+;
   %and = and i32 %x, 8
   %cmp = icmp eq i32 %and, 0
   %or = or i64 %y, 8

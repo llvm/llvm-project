@@ -221,6 +221,9 @@ unsigned ARMELFObjectWriter::GetRelocTypeInner(const MCValue &Target,
       case MCSymbolRefExpr::VK_TLSDESC:
         Type = ELF::R_ARM_TLS_GOTDESC;
         break;
+      case MCSymbolRefExpr::VK_TLSLDM:
+        Type = ELF::R_ARM_TLS_LDM32;
+        break;
       case MCSymbolRefExpr::VK_ARM_TLSDESCSEQ:
         Type = ELF::R_ARM_TLS_DESCSEQ;
         break;

@@ -422,6 +422,7 @@ namespace llvm {
     /// exceeds the number of characters remaining in the string, the string
     /// suffix (starting with \p Start) will be returned.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef substr(size_t Start, size_t N = npos) const {
       Start = std::min(Start, Length);
       return StringRef(Data + Start, std::min(N, Length - Start));
@@ -430,6 +431,7 @@ namespace llvm {
     /// Return a StringRef equal to 'this' but with the first \p N elements
     /// dropped.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef drop_front(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return substr(N);
@@ -438,6 +440,7 @@ namespace llvm {
     /// Return a StringRef equal to 'this' but with the last \p N elements
     /// dropped.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef drop_back(size_t N = 1) const {
       assert(size() >= N && "Dropping more elements than exist");
       return substr(0, size()-N);
@@ -455,6 +458,7 @@ namespace llvm {
     /// will be returned. If this is less than \p Start, an empty string will
     /// be returned.
     LLVM_ATTRIBUTE_ALWAYS_INLINE
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef slice(size_t Start, size_t End) const {
       Start = std::min(Start, Length);
       End = std::min(std::max(Start, End), Length);
@@ -549,36 +553,42 @@ namespace llvm {
 
     /// Return string with consecutive \p Char characters starting from the
     /// the left removed.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef ltrim(char Char) const {
       return drop_front(std::min(Length, find_first_not_of(Char)));
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the left removed.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef ltrim(StringRef Chars = " \t\n\v\f\r") const {
       return drop_front(std::min(Length, find_first_not_of(Chars)));
     }
 
     /// Return string with consecutive \p Char characters starting from the
     /// right removed.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef rtrim(char Char) const {
       return drop_back(Length - std::min(Length, find_last_not_of(Char) + 1));
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the right removed.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef rtrim(StringRef Chars = " \t\n\v\f\r") const {
       return drop_back(Length - std::min(Length, find_last_not_of(Chars) + 1));
     }
 
     /// Return string with consecutive \p Char characters starting from the
     /// left and right removed.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef trim(char Char) const {
       return ltrim(Char).rtrim(Char);
     }
 
     /// Return string with consecutive characters in \p Chars starting from
     /// the left and right removed.
+    LLVM_ATTRIBUTE_UNUSED_RESULT
     StringRef trim(StringRef Chars = " \t\n\v\f\r") const {
       return ltrim(Chars).rtrim(Chars);
     }

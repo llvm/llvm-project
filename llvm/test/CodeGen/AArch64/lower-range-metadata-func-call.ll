@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 -mtriple=aarch64-none-linux-gnu < %s | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-none-linux-gnu | FileCheck %s
 
 ; and can be eliminated
 ; CHECK-LABEL: {{^}}test_call_known_max_range:

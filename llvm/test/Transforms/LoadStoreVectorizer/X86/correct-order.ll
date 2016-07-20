@@ -3,12 +3,13 @@
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
 
 ; CHECK-LABEL: @correct_order(
-; CHECK: bitcast i32*
-; CHECK: load <2 x i32>
-; CHECK: load i32
-; CHECK: bitcast i32*
+; CHECK: [[LOAD_PTR:%[0-9]+]] = bitcast i32* %next.gep1
+; CHECK: load <2 x i32>, <2 x i32>* [[LOAD_PTR]]
+; CHECK: load i32, i32* %next.gep
+; CHECK: [[STORE_PTR:%[0-9]+]] = bitcast i32* %next.gep
 ; CHECK: store <2 x i32>
-; CHECK: load i32
+; CHECK-SAME: <2 x i32>* [[STORE_PTR]]
+; CHECK: load i32, i32* %next.gep1
 define void @correct_order(i32* noalias %ptr) {
   %next.gep = getelementptr i32, i32* %ptr, i64 0
   %next.gep1 = getelementptr i32, i32* %ptr, i64 1

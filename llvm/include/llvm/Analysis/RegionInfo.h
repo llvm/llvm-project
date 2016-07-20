@@ -39,6 +39,7 @@
 
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PointerIntPair.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/PassManager.h"
@@ -278,7 +279,7 @@ class RegionBase : public RegionNodeBase<Tr> {
   // The subregions of this region.
   RegionSet children;
 
-  typedef std::map<BlockT *, RegionNodeT *> BBNodeMapT;
+  typedef std::map<BlockT *, std::unique_ptr<RegionNodeT>> BBNodeMapT;
 
   // Save the BasicBlock RegionNodes that are element of this Region.
   mutable BBNodeMapT BBNodeMap;
@@ -634,9 +635,15 @@ public:
 
   element_iterator element_begin();
   element_iterator element_end();
+  iterator_range<element_iterator> elements() {
+    return make_range(element_begin(), element_end());
+  }
 
   const_element_iterator element_begin() const;
   const_element_iterator element_end() const;
+  iterator_range<const_element_iterator> elements() const {
+    return make_range(element_begin(), element_end());
+  }
   //@}
 };
 

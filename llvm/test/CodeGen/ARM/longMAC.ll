@@ -2,6 +2,8 @@
 ; RUN: llc -mtriple=armv7-eabi %s -o - | FileCheck %s --check-prefix=CHECK-V7-LE
 ; RUN: llc -mtriple=armeb-eabi %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
 ; RUN: llc -mtriple=armebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-BE
+; RUN: llc -mtriple=thumbv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB
+; RUN: llc -mtriple=thumbebv7-eabi %s -o - | FileCheck %s -check-prefix=CHECK-V7-THUMB-BE
 ; Check generated signed and unsigned multiply accumulate long.
 
 define i64 @MACLongTest1(i32 %a, i32 %b, i64 %c) {
@@ -118,8 +120,18 @@ define i64 @MACLongTest8(i64 %acc, i32 %lhs, i32 %rhs) {
 
 define i64 @MACLongTest9(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-LABEL: MACLongTest9:
-;CHECK-V7-LE:umaal
-;CHECK-V7-BE:umaal
+;CHECK-V7-LE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-LE: mov r0, [[RDLO]]
+;CHECK-V7-LE: mov r1, [[RDHI]]
+;CHECK-V7-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-BE: mov r0, [[RDHI]]
+;CHECK-V7-BE: mov r1, [[RDLO]]
+;CHECK-V7-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB: mov r0, [[RDLO]]
+;CHECK-V7-THUMB: mov r1, [[RDHI]]
+;CHECK-V7-THUMB-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
+;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
 ;CHECK-NOT:umaal
   %conv = zext i32 %lhs to i64
   %conv1 = zext i32 %rhs to i64
@@ -133,8 +145,18 @@ define i64 @MACLongTest9(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 
 define i64 @MACLongTest10(i32 %lhs, i32 %rhs, i32 %lo, i32 %hi) {
 ;CHECK-LABEL: MACLongTest10:
-;CHECK-V7-LE:umaal
-;CHECK-V7-BE:umaal
+;CHECK-V7-LE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-LE: mov r0, [[RDLO]]
+;CHECK-V7-LE: mov r1, [[RDHI]]
+;CHECK-V7-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-BE: mov r0, [[RDHI]]
+;CHECK-V7-BE: mov r1, [[RDLO]]
+;CHECK-V7-THUMB: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB: mov r0, [[RDLO]]
+;CHECK-V7-THUMB: mov r1, [[RDHI]]
+;CHECK-V7-THUMB-BE: umaal [[RDLO:r[0-9]+]], [[RDHI:r[0-9]+]], [[LHS:r[0-9]+]], [[RHS:r[0-9]+]]
+;CHECK-V7-THUMB-BE: mov r0, [[RDHI]]
+;CHECK-V7-THUMB-BE: mov r1, [[RDLO]]
 ;CHECK-NOT:umaal
   %conv = zext i32 %lhs to i64
   %conv1 = zext i32 %rhs to i64

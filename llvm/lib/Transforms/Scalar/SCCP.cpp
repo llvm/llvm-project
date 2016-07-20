@@ -301,7 +301,8 @@ public:
   }
 
   void markOverdefined(Value *V) {
-    assert(!V->getType()->isStructTy() && "Should use other method");
+    assert(!V->getType()->isStructTy() &&
+           "structs should use markAnythingOverdefined");
     markOverdefined(ValueState[V], V);
   }
 
@@ -334,12 +335,12 @@ private:
   }
 
   void markConstant(Value *V, Constant *C) {
-    assert(!V->getType()->isStructTy() && "Should use other method");
+    assert(!V->getType()->isStructTy() && "structs should use mergeInValue");
     markConstant(ValueState[V], V, C);
   }
 
   void markForcedConstant(Value *V, Constant *C) {
-    assert(!V->getType()->isStructTy() && "Should use other method");
+    assert(!V->getType()->isStructTy() && "structs should use mergeInValue");
     LatticeVal &IV = ValueState[V];
     IV.markForcedConstant(C);
     DEBUG(dbgs() << "markForcedConstant: " << *C << ": " << *V << '\n');
@@ -374,7 +375,8 @@ private:
   }
 
   void mergeInValue(Value *V, LatticeVal MergeWithV) {
-    assert(!V->getType()->isStructTy() && "Should use other method");
+    assert(!V->getType()->isStructTy() &&
+           "non-structs should use markConstant");
     mergeInValue(ValueState[V], V, MergeWithV);
   }
 

@@ -1,6 +1,5 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone -enable-misched=false -disable-fp-elim | FileCheck %s
-; RUN: llc < %s -O0 -disable-fp-elim | FileCheck -check-prefix=FAST %s
-target triple = "arm64-apple-darwin"
+; RUN: llc < %s -mtriple=arm64-apple-darwin -mcpu=cyclone -enable-misched=false -disable-fp-elim | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-darwin -O0 -disable-fp-elim | FileCheck -check-prefix=FAST %s
 
 ; rdar://12648441
 ; Generated from arm64-arguments.c with -O2.

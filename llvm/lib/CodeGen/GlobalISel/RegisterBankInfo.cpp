@@ -173,11 +173,9 @@ RegisterBankInfo::getRegBank(unsigned Reg, const MachineRegisterInfo &MRI,
 
   assert(Reg && "NoRegister does not have a register bank");
   const RegClassOrRegBank &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
-  if (RegClassOrBank.is<const RegisterBank *>())
-    return RegClassOrBank.get<const RegisterBank *>();
-  const TargetRegisterClass *RC =
-      RegClassOrBank.get<const TargetRegisterClass *>();
-  if (RC)
+  if (auto *RB = RegClassOrBank.dyn_cast<const RegisterBank *>())
+    return RB;
+  if (auto *RC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>())
     return &getRegBankFromRegClass(*RC);
   return nullptr;
 }

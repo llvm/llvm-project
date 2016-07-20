@@ -1472,8 +1472,9 @@ static void printMachOUniversalHeaders(const object::MachOUniversalBinary *UB,
   }
 }
 
-static void printArchiveChild(const Archive::Child &C, bool verbose,
-                              bool print_offset) {
+static void printArchiveChild(StringRef Filename, const Archive::Child &C,
+                              bool verbose, bool print_offset,
+                              StringRef ArchitectureName = StringRef()) {
   if (print_offset)
     outs() << C.getChildOffset() << "\t";
   sys::fs::perms Mode = C.getAccessMode();
@@ -1498,9 +1499,9 @@ static void printArchiveChild(const Archive::Child &C, bool verbose,
   outs() << format("%3d/", UID);
   unsigned GID = C.getGID();
   outs() << format("%-3d ", GID);
-  ErrorOr<uint64_t> Size = C.getRawSize();
-  if (std::error_code EC = Size.getError())
-    report_fatal_error(EC.message());
+  Expected<uint64_t> Size = C.getRawSize();
+  if (!Size)
+    report_error(Filename, C, Size.takeError(), ArchitectureName);
   outs() << format("%5" PRId64, Size.get()) << " ";
 
   StringRef RawLastModified = C.getRawLastModified();
@@ -1534,12 +1535,15 @@ static void printArchiveChild(const Archive::Child &C, bool verbose,
   }
 }
 
-static void printArchiveHeaders(Archive *A, bool verbose, bool print_offset) {
+static void printArchiveHeaders(StringRef Filename, Archive *A, bool verbose,
+                                bool print_offset,
+                                StringRef ArchitectureName = StringRef()) {
   Error Err;
   for (const auto &C : A->children(Err, false))
-    printArchiveChild(C, verbose, print_offset);
+    printArchiveChild(Filename, C, verbose, print_offset, ArchitectureName);
+
   if (Err)
-    report_fatal_error(std::move(Err));
+    report_error(Filename, std::move(Err));
 }
 
 // ParseInputMachO() parses the named Mach-O file in Filename and handles the
@@ -1569,7 +1573,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
   if (Archive *A = dyn_cast<Archive>(&Bin)) {
     outs() << "Archive : " << Filename << "\n";
     if (ArchiveHeaders)
-      printArchiveHeaders(A, !NonVerbose, ArchiveMemberOffsets);
+      printArchiveHeaders(Filename, A, !NonVerbose, ArchiveMemberOffsets);
+
     Error Err;
     for (auto &C : A->children(Err)) {
       Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -1626,7 +1631,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
                 outs() << " (architecture " << ArchitectureName << ")";
               outs() << "\n";
               if (ArchiveHeaders)
-                printArchiveHeaders(A.get(), !NonVerbose, ArchiveMemberOffsets);
+                printArchiveHeaders(Filename, A.get(), !NonVerbose,
+                                    ArchiveMemberOffsets, ArchitectureName);
               Error Err;
               for (auto &C : A->children(Err)) {
                 Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -1681,7 +1687,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
             std::unique_ptr<Archive> &A = *AOrErr;
             outs() << "Archive : " << Filename << "\n";
             if (ArchiveHeaders)
-              printArchiveHeaders(A.get(), !NonVerbose, ArchiveMemberOffsets);
+              printArchiveHeaders(Filename, A.get(), !NonVerbose,
+                                  ArchiveMemberOffsets);
             Error Err;
             for (auto &C : A->children(Err)) {
               Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();
@@ -1732,7 +1739,8 @@ void llvm::ParseInputMachO(StringRef Filename) {
           outs() << " (architecture " << ArchitectureName << ")";
         outs() << "\n";
         if (ArchiveHeaders)
-          printArchiveHeaders(A.get(), !NonVerbose, ArchiveMemberOffsets);
+          printArchiveHeaders(Filename, A.get(), !NonVerbose,
+                              ArchiveMemberOffsets, ArchitectureName);
         Error Err;
         for (auto &C : A->children(Err)) {
           Expected<std::unique_ptr<Binary>> ChildOrErr = C.getAsBinary();

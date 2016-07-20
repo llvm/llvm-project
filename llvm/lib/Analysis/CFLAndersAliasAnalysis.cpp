@@ -27,12 +27,23 @@
 // codes: all we do here is to selectively expand the transitive closure by
 // discarding edges that are not recognized by the state machine.
 //
-// There is one difference between our current implementation and the one
-// described in the paper: out algorithm eagerly computes all alias pairs after
-// the CFLGraph is built, while in the paper the authors did the computation in
-// a demand-driven fashion. We did not implement the demand-driven algorithm due
-// to the additional coding complexity and higher memory profile, but if we
-// found it necessary we may switch to it eventually.
+// There are two differences between our current implementation and the one
+// described in the paper:
+// - Our algorithm eagerly computes all alias pairs after the CFLGraph is built,
+// while in the paper the authors did the computation in a demand-driven
+// fashion. We did not implement the demand-driven algorithm due to the
+// additional coding complexity and higher memory profile, but if we found it
+// necessary we may switch to it eventually.
+// - In the paper the authors use a state machine that does not distinguish
+// value reads from value writes. For example, if Y is reachable from X at state
+// S3, it may be the case that X is written into Y, or it may be the case that
+// there's a third value Z that writes into both X and Y. To make that
+// distinction (which is crucial in building function summary as well as
+// retrieving mod-ref info), we choose to duplicate some of the states in the
+// paper's proposed state machine. The duplication does not change the set the
+// machine accepts. Given a pair of reachable values, it only provides more
+// detailed information on which value is being written into and which is being
+// read from.
 //
 //===----------------------------------------------------------------------===//
 
@@ -71,16 +82,43 @@ static const Function *parentFunctionOfValue(const Value *Val) {
 namespace {
 
 enum class MatchState : uint8_t {
-  FlowFrom = 0,     // S1 in the paper
-  FlowFromMemAlias, // S2 in the paper
-  FlowTo,           // S3 in the paper
-  FlowToMemAlias    // S4 in the paper
+  // The following state represents S1 in the paper.
+  FlowFromReadOnly = 0,
+  // The following two states together represent S2 in the paper.
+  // The 'NoReadWrite' suffix indicates that there exists an alias path that
+  // does not contain assignment and reverse assignment edges.
+  // The 'ReadOnly' suffix indicates that there exists an alias path that
+  // contains reverse assignment edges only.
+  FlowFromMemAliasNoReadWrite,
+  FlowFromMemAliasReadOnly,
+  // The following two states together represent S3 in the paper.
+  // The 'WriteOnly' suffix indicates that there exists an alias path that
+  // contains assignment edges only.
+  // The 'ReadWrite' suffix indicates that there exists an alias path that
+  // contains both assignment and reverse assignment edges. Note that if X and Y
+  // are reachable at 'ReadWrite' state, it does NOT mean X is both read from
+  // and written to Y. Instead, it means that a third value Z is written to both
+  // X and Y.
+  FlowToWriteOnly,
+  FlowToReadWrite,
+  // The following two states together represent S4 in the paper.
+  FlowToMemAliasWriteOnly,
+  FlowToMemAliasReadWrite,
 };
+
+typedef std::bitset<7> StateSet;
+// N.B. These are unsigned instead of StateSets because some MSVC versions
+// apparently lack constexpr bitset ctors.
+LLVM_CONSTEXPR unsigned ReadOnlyStateMask =
+    (1U << static_cast<uint8_t>(MatchState::FlowFromReadOnly)) |
+    (1U << static_cast<uint8_t>(MatchState::FlowFromMemAliasReadOnly));
+LLVM_CONSTEXPR unsigned WriteOnlyStateMask =
+    (1U << static_cast<uint8_t>(MatchState::FlowToWriteOnly)) |
+    (1U << static_cast<uint8_t>(MatchState::FlowToMemAliasWriteOnly));
 
 // We use ReachabilitySet to keep track of value aliases (The nonterminal "V" in
 // the paper) during the analysis.
 class ReachabilitySet {
-  typedef std::bitset<4> StateSet;
   typedef DenseMap<InstantiatedValue, StateSet> ValueStateMap;
   typedef DenseMap<InstantiatedValue, ValueStateMap> ValueReachMap;
   ValueReachMap ReachMap;
@@ -91,6 +129,7 @@ public:
 
   // Insert edge 'From->To' at state 'State'
   bool insert(InstantiatedValue From, InstantiatedValue To, MatchState State) {
+    assert(From != To);
     auto &States = ReachMap[To][From];
     auto Idx = static_cast<size_t>(State);
     if (!States.test(Idx)) {
@@ -178,6 +217,14 @@ struct WorkListItem {
   InstantiatedValue To;
   MatchState State;
 };
+
+struct ValueSummary {
+  struct Record {
+    InterfaceValue IValue;
+    unsigned DerefLevel;
+  };
+  SmallVector<Record, 4> FromRecords, ToRecords;
+};
 }
 
 class CFLAndersAAResult::FunctionInfo {
@@ -196,15 +243,39 @@ class CFLAndersAAResult::FunctionInfo {
   AliasAttrs getAttrs(const Value *) const;
 
 public:
-  FunctionInfo(const ReachabilitySet &, AliasAttrMap);
+  FunctionInfo(const Function &, const SmallVectorImpl<Value *> &,
+               const ReachabilitySet &, AliasAttrMap);
 
   bool mayAlias(const Value *LHS, const Value *RHS) const;
   const AliasSummary &getAliasSummary() const { return Summary; }
 };
 
-CFLAndersAAResult::FunctionInfo::FunctionInfo(const ReachabilitySet &ReachSet,
-                                              AliasAttrMap AMap) {
-  // Populate AttrMap
+static bool hasReadOnlyState(StateSet Set) {
+  return (Set & StateSet(ReadOnlyStateMask)).any();
+}
+
+static bool hasWriteOnlyState(StateSet Set) {
+  return (Set & StateSet(WriteOnlyStateMask)).any();
+}
+
+static Optional<InterfaceValue>
+getInterfaceValue(InstantiatedValue IValue,
+                  const SmallVectorImpl<Value *> &RetVals) {
+  auto Val = IValue.Val;
+
+  Optional<unsigned> Index;
+  if (auto Arg = dyn_cast<Argument>(Val))
+    Index = Arg->getArgNo() + 1;
+  else if (is_contained(RetVals, Val))
+    Index = 0;
+
+  if (Index)
+    return InterfaceValue{*Index, IValue.DerefLevel};
+  return None;
+}
+
+static void populateAttrMap(DenseMap<const Value *, AliasAttrs> &AttrMap,
+                            const AliasAttrMap &AMap) {
   for (const auto &Mapping : AMap.mappings()) {
     auto IVal = Mapping.first;
 
@@ -212,8 +283,11 @@ CFLAndersAAResult::FunctionInfo::FunctionInfo(const ReachabilitySet &ReachSet,
     if (IVal.DerefLevel == 0)
       AttrMap[IVal.Val] = Mapping.second;
   }
+}
 
-  // Populate AliasMap
+static void
+populateAliasMap(DenseMap<const Value *, std::vector<const Value *>> &AliasMap,
+                 const ReachabilitySet &ReachSet) {
   for (const auto &OuterMapping : ReachSet.value_mappings()) {
     // AliasMap only cares about top-level values
     if (OuterMapping.first.DerefLevel > 0)
@@ -230,8 +304,112 @@ CFLAndersAAResult::FunctionInfo::FunctionInfo(const ReachabilitySet &ReachSet,
     // Sort AliasList for faster lookup
     std::sort(AliasList.begin(), AliasList.end(), std::less<const Value *>());
   }
+}
 
-  // TODO: Populate function summary here
+static void populateExternalRelations(
+    SmallVectorImpl<ExternalRelation> &ExtRelations, const Function &Fn,
+    const SmallVectorImpl<Value *> &RetVals, const ReachabilitySet &ReachSet) {
+  // If a function only returns one of its argument X, then X will be both an
+  // argument and a return value at the same time. This is an edge case that
+  // needs special handling here.
+  for (const auto &Arg : Fn.args()) {
+    if (is_contained(RetVals, &Arg)) {
+      auto ArgVal = InterfaceValue{Arg.getArgNo() + 1, 0};
+      auto RetVal = InterfaceValue{0, 0};
+      ExtRelations.push_back(ExternalRelation{ArgVal, RetVal});
+    }
+  }
+
+  // Below is the core summary construction logic.
+  // A naive solution of adding only the value aliases that are parameters or
+  // return values in ReachSet to the summary won't work: It is possible that a
+  // parameter P is written into an intermediate value I, and the function
+  // subsequently returns *I. In that case, *I is does not value alias anything
+  // in ReachSet, and the naive solution will miss a summary edge from (P, 1) to
+  // (I, 1).
+  // To account for the aforementioned case, we need to check each non-parameter
+  // and non-return value for the possibility of acting as an intermediate.
+  // 'ValueMap' here records, for each value, which InterfaceValues read from or
+  // write into it. If both the read list and the write list of a given value
+  // are non-empty, we know that a particular value is an intermidate and we
+  // need to add summary edges from the writes to the reads.
+  DenseMap<Value *, ValueSummary> ValueMap;
+  for (const auto &OuterMapping : ReachSet.value_mappings()) {
+    if (auto Dst = getInterfaceValue(OuterMapping.first, RetVals)) {
+      for (const auto &InnerMapping : OuterMapping.second) {
+        // If Src is a param/return value, we get a same-level assignment.
+        if (auto Src = getInterfaceValue(InnerMapping.first, RetVals)) {
+          // This may happen if both Dst and Src are return values
+          if (*Dst == *Src)
+            continue;
+
+          if (hasReadOnlyState(InnerMapping.second))
+            ExtRelations.push_back(ExternalRelation{*Dst, *Src});
+          // No need to check for WriteOnly state, since ReachSet is symmetric
+        } else {
+          // If Src is not a param/return, add it to ValueMap
+          auto SrcIVal = InnerMapping.first;
+          if (hasReadOnlyState(InnerMapping.second))
+            ValueMap[SrcIVal.Val].FromRecords.push_back(
+                ValueSummary::Record{*Dst, SrcIVal.DerefLevel});
+          if (hasWriteOnlyState(InnerMapping.second))
+            ValueMap[SrcIVal.Val].ToRecords.push_back(
+                ValueSummary::Record{*Dst, SrcIVal.DerefLevel});
+        }
+      }
+    }
+  }
+
+  for (const auto &Mapping : ValueMap) {
+    for (const auto &FromRecord : Mapping.second.FromRecords) {
+      for (const auto &ToRecord : Mapping.second.ToRecords) {
+        auto ToLevel = ToRecord.DerefLevel;
+        auto FromLevel = FromRecord.DerefLevel;
+        // Same-level assignments should have already been processed by now
+        if (ToLevel == FromLevel)
+          continue;
+
+        auto SrcIndex = FromRecord.IValue.Index;
+        auto SrcLevel = FromRecord.IValue.DerefLevel;
+        auto DstIndex = ToRecord.IValue.Index;
+        auto DstLevel = ToRecord.IValue.DerefLevel;
+        if (ToLevel > FromLevel)
+          SrcLevel += ToLevel - FromLevel;
+        else
+          DstLevel += FromLevel - ToLevel;
+
+        ExtRelations.push_back(
+            ExternalRelation{InterfaceValue{SrcIndex, SrcLevel},
+                             InterfaceValue{DstIndex, DstLevel}});
+      }
+    }
+  }
+
+  // Remove duplicates in ExtRelations
+  std::sort(ExtRelations.begin(), ExtRelations.end());
+  ExtRelations.erase(std::unique(ExtRelations.begin(), ExtRelations.end()),
+                     ExtRelations.end());
+}
+
+static void populateExternalAttributes(
+    SmallVectorImpl<ExternalAttribute> &ExtAttributes, const Function &Fn,
+    const SmallVectorImpl<Value *> &RetVals, const AliasAttrMap &AMap) {
+  for (const auto &Mapping : AMap.mappings()) {
+    if (auto IVal = getInterfaceValue(Mapping.first, RetVals)) {
+      auto Attr = getExternallyVisibleAttrs(Mapping.second);
+      if (Attr.any())
+        ExtAttributes.push_back(ExternalAttribute{*IVal, Attr});
+    }
+  }
+}
+
+CFLAndersAAResult::FunctionInfo::FunctionInfo(
+    const Function &Fn, const SmallVectorImpl<Value *> &RetVals,
+    const ReachabilitySet &ReachSet, AliasAttrMap AMap) {
+  populateAttrMap(AttrMap, AMap);
+  populateExternalAttributes(Summary.RetParamAttributes, Fn, RetVals, AMap);
+  populateAliasMap(AliasMap, ReachSet);
+  populateExternalRelations(Summary.RetParamRelations, Fn, RetVals, ReachSet);
 }
 
 AliasAttrs CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
@@ -292,8 +470,10 @@ static void initializeWorkList(std::vector<WorkListItem> &WorkList,
       // If there's an assignment edge from X to Y, it means Y is reachable from
       // X at S2 and X is reachable from Y at S1
       for (auto &Edge : ValueInfo.getNodeInfoAtLevel(I).Edges) {
-        propagate(Edge.Other, Src, MatchState::FlowFrom, ReachSet, WorkList);
-        propagate(Src, Edge.Other, MatchState::FlowTo, ReachSet, WorkList);
+        propagate(Edge.Other, Src, MatchState::FlowFromReadOnly, ReachSet,
+                  WorkList);
+        propagate(Src, Edge.Other, MatchState::FlowToWriteOnly, ReachSet,
+                  WorkList);
       }
     }
   }
@@ -328,16 +508,21 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
   auto ToNodeBelow = getNodeBelow(Graph, ToNode);
   if (FromNodeBelow && ToNodeBelow &&
       MemSet.insert(*FromNodeBelow, *ToNodeBelow)) {
-    propagate(*FromNodeBelow, *ToNodeBelow, MatchState::FlowFromMemAlias,
-              ReachSet, WorkList);
+    propagate(*FromNodeBelow, *ToNodeBelow,
+              MatchState::FlowFromMemAliasNoReadWrite, ReachSet, WorkList);
     for (const auto &Mapping : ReachSet.reachableValueAliases(*FromNodeBelow)) {
       auto Src = Mapping.first;
-      if (Mapping.second.test(static_cast<size_t>(MatchState::FlowFrom)))
-        propagate(Src, *ToNodeBelow, MatchState::FlowFromMemAlias, ReachSet,
-                  WorkList);
-      if (Mapping.second.test(static_cast<size_t>(MatchState::FlowTo)))
-        propagate(Src, *ToNodeBelow, MatchState::FlowToMemAlias, ReachSet,
-                  WorkList);
+      auto MemAliasPropagate = [&](MatchState FromState, MatchState ToState) {
+        if (Mapping.second.test(static_cast<size_t>(FromState)))
+          propagate(Src, *ToNodeBelow, ToState, ReachSet, WorkList);
+      };
+
+      MemAliasPropagate(MatchState::FlowFromReadOnly,
+                        MatchState::FlowFromMemAliasReadOnly);
+      MemAliasPropagate(MatchState::FlowToWriteOnly,
+                        MatchState::FlowToMemAliasWriteOnly);
+      MemAliasPropagate(MatchState::FlowToReadWrite,
+                        MatchState::FlowToMemAliasReadWrite);
     }
   }
 
@@ -349,45 +534,54 @@ static void processWorkListItem(const WorkListItem &Item, const CFLGraph &Graph,
   // - If *X and *Y are memory aliases, then X and Y are value aliases
   // - If Y is an alias of X, then reverse assignment edges (if there is any)
   // should precede any assignment edges on the path from X to Y.
+  auto NextAssignState = [&](MatchState State) {
+    for (const auto &AssignEdge : NodeInfo->Edges)
+      propagate(FromNode, AssignEdge.Other, State, ReachSet, WorkList);
+  };
+  auto NextRevAssignState = [&](MatchState State) {
+    for (const auto &RevAssignEdge : NodeInfo->ReverseEdges)
+      propagate(FromNode, RevAssignEdge.Other, State, ReachSet, WorkList);
+  };
+  auto NextMemState = [&](MatchState State) {
+    if (auto AliasSet = MemSet.getMemoryAliases(ToNode)) {
+      for (const auto &MemAlias : *AliasSet)
+        propagate(FromNode, MemAlias, State, ReachSet, WorkList);
+    }
+  };
+
   switch (Item.State) {
-  case MatchState::FlowFrom: {
-    for (const auto &RevAssignEdge : NodeInfo->ReverseEdges)
-      propagate(FromNode, RevAssignEdge.Other, MatchState::FlowFrom, ReachSet,
-                WorkList);
-    for (const auto &AssignEdge : NodeInfo->Edges)
-      propagate(FromNode, AssignEdge.Other, MatchState::FlowTo, ReachSet,
-                WorkList);
-    if (auto AliasSet = MemSet.getMemoryAliases(ToNode)) {
-      for (const auto &MemAlias : *AliasSet)
-        propagate(FromNode, MemAlias, MatchState::FlowFromMemAlias, ReachSet,
-                  WorkList);
-    }
+  case MatchState::FlowFromReadOnly: {
+    NextRevAssignState(MatchState::FlowFromReadOnly);
+    NextAssignState(MatchState::FlowToReadWrite);
+    NextMemState(MatchState::FlowFromMemAliasReadOnly);
     break;
   }
-  case MatchState::FlowFromMemAlias: {
-    for (const auto &RevAssignEdge : NodeInfo->ReverseEdges)
-      propagate(FromNode, RevAssignEdge.Other, MatchState::FlowFrom, ReachSet,
-                WorkList);
-    for (const auto &AssignEdge : NodeInfo->Edges)
-      propagate(FromNode, AssignEdge.Other, MatchState::FlowTo, ReachSet,
-                WorkList);
+  case MatchState::FlowFromMemAliasNoReadWrite: {
+    NextRevAssignState(MatchState::FlowFromReadOnly);
+    NextAssignState(MatchState::FlowToWriteOnly);
     break;
   }
-  case MatchState::FlowTo: {
-    for (const auto &AssignEdge : NodeInfo->Edges)
-      propagate(FromNode, AssignEdge.Other, MatchState::FlowTo, ReachSet,
-                WorkList);
-    if (auto AliasSet = MemSet.getMemoryAliases(ToNode)) {
-      for (const auto &MemAlias : *AliasSet)
-        propagate(FromNode, MemAlias, MatchState::FlowToMemAlias, ReachSet,
-                  WorkList);
-    }
+  case MatchState::FlowFromMemAliasReadOnly: {
+    NextRevAssignState(MatchState::FlowFromReadOnly);
+    NextAssignState(MatchState::FlowToReadWrite);
     break;
   }
-  case MatchState::FlowToMemAlias: {
-    for (const auto &AssignEdge : NodeInfo->Edges)
-      propagate(FromNode, AssignEdge.Other, MatchState::FlowTo, ReachSet,
-                WorkList);
+  case MatchState::FlowToWriteOnly: {
+    NextAssignState(MatchState::FlowToWriteOnly);
+    NextMemState(MatchState::FlowToMemAliasWriteOnly);
+    break;
+  }
+  case MatchState::FlowToReadWrite: {
+    NextAssignState(MatchState::FlowToReadWrite);
+    NextMemState(MatchState::FlowToMemAliasReadWrite);
+    break;
+  }
+  case MatchState::FlowToMemAliasWriteOnly: {
+    NextAssignState(MatchState::FlowToWriteOnly);
+    break;
+  }
+  case MatchState::FlowToMemAliasReadWrite: {
+    NextAssignState(MatchState::FlowToReadWrite);
     break;
   }
   }
@@ -465,7 +659,8 @@ CFLAndersAAResult::buildInfoFrom(const Function &Fn) {
   // to it
   auto IValueAttrMap = buildAttrMap(Graph, ReachSet);
 
-  return FunctionInfo(ReachSet, std::move(IValueAttrMap));
+  return FunctionInfo(Fn, GraphBuilder.getReturnValues(), ReachSet,
+                      std::move(IValueAttrMap));
 }
 
 void CFLAndersAAResult::scan(const Function &Fn) {

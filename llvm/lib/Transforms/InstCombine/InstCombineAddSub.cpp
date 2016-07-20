@@ -1047,6 +1047,16 @@ Instruction *InstCombiner::visitAdd(BinaryOperator &I) {
     // X + (signbit) --> X ^ signbit
     if (Val->isSignBit())
       return BinaryOperator::CreateXor(LHS, RHS);
+
+    // Is this add the last step in a convoluted sext?
+    Value *X;
+    const APInt *C;
+    if (match(LHS, m_ZExt(m_Xor(m_Value(X), m_APInt(C)))) &&
+        C->isMinSignedValue() &&
+        C->sext(LHS->getType()->getScalarSizeInBits()) == *Val) {
+      // add(zext(xor i16 X, -32768), -32768) --> sext X
+      return CastInst::Create(Instruction::SExt, X, LHS->getType());
+    }
   }
 
   // FIXME: Use the match above instead of dyn_cast to allow these transforms

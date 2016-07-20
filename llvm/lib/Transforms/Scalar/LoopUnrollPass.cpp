@@ -12,12 +12,14 @@
 // counts of loops easily.
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/CodeMetrics.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
@@ -1053,4 +1055,35 @@ Pass *llvm::createLoopUnrollPass(int Threshold, int Count, int AllowPartial,
 
 Pass *llvm::createSimpleLoopUnrollPass() {
   return llvm::createLoopUnrollPass(-1, -1, 0, 0);
+}
+
+PreservedAnalyses LoopUnrollPass::run(Loop &L, AnalysisManager<Loop> &AM) {
+  const auto &FAM =
+      AM.getResult<FunctionAnalysisManagerLoopProxy>(L).getManager();
+  Function *F = L.getHeader()->getParent();
+
+
+  DominatorTree *DT = FAM.getCachedResult<DominatorTreeAnalysis>(*F);
+  LoopInfo *LI = FAM.getCachedResult<LoopAnalysis>(*F);
+  ScalarEvolution *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
+  auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
+  auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
+  if (!DT)
+    report_fatal_error("LoopUnrollPass: DominatorTreeAnalysis not cached at a higher level");
+  if (!LI)
+    report_fatal_error("LoopUnrollPass: LoopAnalysis not cached at a higher level");
+  if (!SE)
+    report_fatal_error("LoopUnrollPass: ScalarEvolutionAnalysis not cached at a higher level");
+  if (!TTI)
+    report_fatal_error("LoopUnrollPass: TargetIRAnalysis not cached at a higher level");
+  if (!AC)
+    report_fatal_error("LoopUnrollPass: AssumptionAnalysis not cached at a higher level");
+
+  bool Changed = tryToUnrollLoop(
+      &L, *DT, LI, SE, *TTI, *AC, /*PreserveLCSSA*/ true, ProvidedCount,
+      ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime);
+
+  if (!Changed)
+    return PreservedAnalyses::all();
+  return getLoopPassPreservedAnalyses();
 }

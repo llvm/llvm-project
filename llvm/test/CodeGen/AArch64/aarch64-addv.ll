@@ -1,4 +1,4 @@
-; RUN: llc -march=aarch64 -aarch64-neon-syntax=generic < %s | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-eabi -aarch64-neon-syntax=generic | FileCheck %s
 
 define i8 @add_B(<16 x i8>* %arr)  {
 ; CHECK-LABEL: add_B

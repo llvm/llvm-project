@@ -120,12 +120,44 @@ inline bool operator==(InterfaceValue LHS, InterfaceValue RHS) {
 inline bool operator!=(InterfaceValue LHS, InterfaceValue RHS) {
   return !(LHS == RHS);
 }
+inline bool operator<(InterfaceValue LHS, InterfaceValue RHS) {
+  return LHS.Index < RHS.Index ||
+         (LHS.Index == RHS.Index && LHS.DerefLevel < RHS.DerefLevel);
+}
+inline bool operator>(InterfaceValue LHS, InterfaceValue RHS) {
+  return RHS < LHS;
+}
+inline bool operator<=(InterfaceValue LHS, InterfaceValue RHS) {
+  return !(RHS < LHS);
+}
+inline bool operator>=(InterfaceValue LHS, InterfaceValue RHS) {
+  return !(LHS < RHS);
+}
 
 /// We use ExternalRelation to describe an externally visible aliasing relations
 /// between parameters/return value of a function.
 struct ExternalRelation {
   InterfaceValue From, To;
 };
+
+inline bool operator==(ExternalRelation LHS, ExternalRelation RHS) {
+  return LHS.From == RHS.From && LHS.To == RHS.To;
+}
+inline bool operator!=(ExternalRelation LHS, ExternalRelation RHS) {
+  return !(LHS == RHS);
+}
+inline bool operator<(ExternalRelation LHS, ExternalRelation RHS) {
+  return LHS.From < RHS.From || (LHS.From == RHS.From && LHS.To < RHS.To);
+}
+inline bool operator>(ExternalRelation LHS, ExternalRelation RHS) {
+  return RHS < LHS;
+}
+inline bool operator<=(ExternalRelation LHS, ExternalRelation RHS) {
+  return !(RHS < LHS);
+}
+inline bool operator>=(ExternalRelation LHS, ExternalRelation RHS) {
+  return !(LHS < RHS);
+}
 
 /// We use ExternalAttribute to describe an externally visible AliasAttrs
 /// for parameters/return value.

@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=aarch64 -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 
 ; Function Attrs: nounwind readnone
 declare i8* @llvm.thread.pointer() #1

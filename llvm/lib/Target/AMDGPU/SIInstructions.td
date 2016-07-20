@@ -1996,7 +1996,7 @@ def SI_END_CF : PseudoInstSI <
 let Uses = [EXEC], Defs = [EXEC,VCC] in {
 def SI_KILL : PseudoInstSI <
   (outs), (ins VSrc_32:$src),
-  [(int_AMDGPU_kill f32:$src)]> {
+  [(AMDGPUkill i32:$src)]> {
   let isConvergent = 1;
   let usesCustomInserter = 1;
 }

@@ -28,12 +28,19 @@ MipsMCAsmInfo::MipsMCAsmInfo(const Triple &TheTriple) {
     PointerSize = CalleeSaveStackSlotSize = 8;
   }
 
+  // FIXME: This condition isn't quite right but it's the best we can do until
+  //        this object can identify the ABI. It will misbehave when using O32
+  //        on a mips64*-* triple.
+  if ((TheTriple.getArch() == Triple::mipsel) ||
+      (TheTriple.getArch() == Triple::mips)) {
+    PrivateGlobalPrefix = "$";
+    PrivateLabelPrefix = "$";
+  }
+
   AlignmentIsInBytes          = false;
   Data16bitsDirective         = "\t.2byte\t";
   Data32bitsDirective         = "\t.4byte\t";
   Data64bitsDirective         = "\t.8byte\t";
-  PrivateGlobalPrefix         = "$";
-  PrivateLabelPrefix          = "$";
   CommentString               = "#";
   ZeroDirective               = "\t.space\t";
   GPRel32Directive            = "\t.gpword\t";

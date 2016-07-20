@@ -66,7 +66,7 @@ The macros will be undef'd automatically as they're used, in the include file.
 On all LLVM back-ends, the ``llvm-tblgen`` binary will be executed on the root
 TableGen file ``<Target>.td``, which should include all others. This guarantees
 that all information needed is accessible, and that no duplication is needed
-in the TbleGen files.
+in the TableGen files.
 
 CodeEmitter
 -----------
@@ -100,11 +100,12 @@ InstrInfo
 **Purpose**: This tablegen backend is responsible for emitting a description of the target
 instruction set for the code generator. (what are the differences from CodeEmitter?)
 
-**Output**: C++ code with enums and structures representing the register mappings,
+**Output**: C++ code with enums and structures representing the instruction mappings,
 properties, masks, etc.
 
 **Usage**: Both on ``<Target>BaseInstrInfo`` and ``<Target>MCTargetDesc`` (headers
 and source files) with macros defining in which they are for declaration vs.
+initialization issues.
 
 AsmWriter
 ---------
@@ -146,7 +147,7 @@ PseudoLowering
 
 **Purpose**: Generate pseudo instruction lowering.
 
-**Output**: Implements ``ARMAsmPrinter::emitPseudoExpansionLowering()``.
+**Output**: Implements ``<Target>AsmPrinter::emitPseudoExpansionLowering()``.
 
 **Usage**: Included directly into ``<Target>AsmPrinter.cpp``.
 
@@ -160,7 +161,7 @@ conventions supported by this target.
 chained by matching styles, returning false on no match.
 
 **Usage**: Used in ISelLowering and FastIsel as function pointers to
-implementation returned by a CC sellection function.
+implementation returned by a CC selection function.
 
 DAGISel
 -------

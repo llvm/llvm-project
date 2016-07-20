@@ -335,7 +335,8 @@ int includeFixerMain(int argc, const char **argv) {
 
   auto Buffer = llvm::MemoryBuffer::getFile(FilePath);
   if (!Buffer) {
-    errs() << "Couldn't open file: " << FilePath;
+    errs() << "Couldn't open file: " << FilePath << ": "
+           << Buffer.getError().message() << '\n';
     return 1;
   }
 
@@ -349,7 +350,8 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   if (!Quiet)
-    llvm::errs() << "Added #include" << Context.getHeaderInfos().front().Header;
+    errs() << "Added #include " << Context.getHeaderInfos().front().Header
+           << '\n';
 
   // Add missing namespace qualifiers to the unidentified symbol.
   Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),

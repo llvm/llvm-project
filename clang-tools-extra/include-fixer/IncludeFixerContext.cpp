@@ -76,7 +76,7 @@ std::string createQualifiedNameForReplacement(
 
 IncludeFixerContext::IncludeFixerContext(
     const QuerySymbolInfo &QuerySymbol,
-    const std::vector<find_all_symbols::SymbolInfo> Symbols)
+    std::vector<find_all_symbols::SymbolInfo> Symbols)
     : MatchedSymbols(std::move(Symbols)), QuerySymbol(QuerySymbol) {
   for (const auto &Symbol : MatchedSymbols) {
     HeaderInfos.push_back(

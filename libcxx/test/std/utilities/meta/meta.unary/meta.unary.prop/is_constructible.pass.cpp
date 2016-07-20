@@ -151,9 +151,21 @@ int main()
     test_is_constructible<PrivateDtor&, PrivateDtor&>();
     test_is_not_constructible<PrivateDtor, int>();
 
+    test_is_not_constructible<void() const, void() const>();
+    test_is_not_constructible<void() const, void*>();
+
+// TODO: Remove this workaround once Clang <= 3.7 are no longer used regularly.
+// In those compiler versions the __is_constructible builtin gives the wrong
+// results for abominable function types.
+#if defined(__clang__) && __clang_major__ == 3 && __clang_minor__ < 8
+#define WORKAROUND_CLANG_BUG
+#endif
+#if !defined(WORKAROUND_CLANG_BUG)
+    test_is_not_constructible<void()>();
     test_is_not_constructible<void() const> ();
     test_is_not_constructible<void() volatile> ();
     test_is_not_constructible<void() &> ();
     test_is_not_constructible<void() &&> ();
+#endif
 #endif
 }

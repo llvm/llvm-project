@@ -518,6 +518,10 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
       return true;
     return false;
 
+  case ELF::R_MIPS_GOT_PAGE:
+  case ELF::R_MICROMIPS_GOT_PAGE:
+  case ELF::R_MIPS_GOT_OFST:
+  case ELF::R_MICROMIPS_GOT_OFST:
   case ELF::R_MIPS_16:
   case ELF::R_MIPS_32:
   case ELF::R_MIPS_GPREL32:
@@ -539,8 +543,6 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MIPS_SHIFT5:
   case ELF::R_MIPS_SHIFT6:
   case ELF::R_MIPS_GOT_DISP:
-  case ELF::R_MIPS_GOT_PAGE:
-  case ELF::R_MIPS_GOT_OFST:
   case ELF::R_MIPS_GOT_HI16:
   case ELF::R_MIPS_GOT_LO16:
   case ELF::R_MIPS_INSERT_A:
@@ -589,8 +591,6 @@ bool MipsELFObjectWriter::needsRelocateWithSymbol(const MCSymbol &Sym,
   case ELF::R_MICROMIPS_PC16_S1:
   case ELF::R_MICROMIPS_CALL16:
   case ELF::R_MICROMIPS_GOT_DISP:
-  case ELF::R_MICROMIPS_GOT_PAGE:
-  case ELF::R_MICROMIPS_GOT_OFST:
   case ELF::R_MICROMIPS_GOT_HI16:
   case ELF::R_MICROMIPS_GOT_LO16:
   case ELF::R_MICROMIPS_SUB:

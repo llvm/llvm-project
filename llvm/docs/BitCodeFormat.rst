@@ -596,7 +596,7 @@ will be encoded as 1.
 
 For example, instead of
 
-.. code-block:: llvm
+.. code-block:: none
 
   #n = load #n-1
   #n+1 = icmp eq #n, #const0
@@ -604,7 +604,7 @@ For example, instead of
 
 version 1 will encode the instructions as
 
-.. code-block:: llvm
+.. code-block:: none
 
   #n = load #1
   #n+1 = icmp eq #1, (#n+1)-#const0

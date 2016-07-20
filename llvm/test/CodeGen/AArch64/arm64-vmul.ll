@@ -1,4 +1,4 @@
-; RUN: llc -asm-verbose=false < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 
 define <8 x i16> @smull8h(<8 x i8>* %A, <8 x i8>* %B) nounwind {

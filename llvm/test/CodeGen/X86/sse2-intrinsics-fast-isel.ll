@@ -1208,6 +1208,21 @@ define i32 @test_mm_cvtsd_si32(<2 x double> %a0) nounwind {
 }
 declare i32 @llvm.x86.sse2.cvtsd2si(<2 x double>) nounwind readnone
 
+define <4 x float> @test_mm_cvtsd_ss(<4 x float> %a0, <2 x double> %a1) {
+; X32-LABEL: test_mm_cvtsd_ss:
+; X32:       # BB#0:
+; X32-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X32-NEXT:    retl
+;
+; X64-LABEL: test_mm_cvtsd_ss:
+; X64:       # BB#0:
+; X64-NEXT:    cvtsd2ss %xmm1, %xmm0
+; X64-NEXT:    retq
+  %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1)
+  ret <4 x float> %res
+}
+declare <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float>, <2 x double>) nounwind readnone
+
 define i32 @test_mm_cvtsi128_si32(<2 x i64> %a0) nounwind {
 ; X32-LABEL: test_mm_cvtsi128_si32:
 ; X32:       # BB#0:
@@ -1303,10 +1318,11 @@ define <2 x i64> @test_mm_cvttps_epi32(<4 x float> %a0) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    cvttps2dq %xmm0, %xmm0
 ; X64-NEXT:    retq
-  %res = fptosi <4 x float> %a0 to <4 x i32>
+  %res = call <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float> %a0)
   %bc = bitcast <4 x i32> %res to <2 x i64>
   ret <2 x i64> %bc
 }
+declare <4 x i32> @llvm.x86.sse2.cvttps2dq(<4 x float>) nounwind readnone
 
 define i32 @test_mm_cvttsd_si32(<2 x double> %a0) nounwind {
 ; X32-LABEL: test_mm_cvttsd_si32:
@@ -1318,10 +1334,10 @@ define i32 @test_mm_cvttsd_si32(<2 x double> %a0) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    cvttsd2si %xmm0, %eax
 ; X64-NEXT:    retq
-  %ext = extractelement <2 x double> %a0, i32 0
-  %res = fptosi double %ext to i32
+  %res = call i32 @llvm.x86.sse2.cvttsd2si(<2 x double> %a0)
   ret i32 %res
 }
+declare i32 @llvm.x86.sse2.cvttsd2si(<2 x double>) nounwind readnone
 
 define <2 x double> @test_mm_div_pd(<2 x double> %a0, <2 x double> %a1) nounwind {
 ; X32-LABEL: test_mm_div_pd:

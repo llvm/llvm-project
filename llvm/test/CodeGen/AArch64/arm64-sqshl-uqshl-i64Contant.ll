@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -march=arm64 | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=arm64-eabi | FileCheck %s
 
 ; Check if sqshl/uqshl with constant shift amout can be selected. 
 define i64 @test_vqshld_s64_i(i64 %a) {

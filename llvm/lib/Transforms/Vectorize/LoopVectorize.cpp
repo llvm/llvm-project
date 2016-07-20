@@ -1313,9 +1313,9 @@ static void emitAnalysisDiag(const Function *TheFunction, const Loop *TheLoop,
 }
 
 static void emitMissedWarning(Function *F, Loop *L,
-                              const LoopVectorizeHints &LH) {
-  emitOptimizationRemarkMissed(F->getContext(), LV_NAME, *F, L->getStartLoc(),
-                               LH.emitRemark());
+                              const LoopVectorizeHints &LH,
+                              OptimizationRemarkEmitter *ORE) {
+  ORE->emitOptimizationRemarkMissed(LV_NAME, L, LH.emitRemark());
 
   if (LH.getForce() == LoopVectorizeHints::FK_Enabled) {
     if (LH.getWidth() != 1)
@@ -1819,12 +1819,13 @@ struct LoopVectorize : public FunctionPass {
     auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
+    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
     return Impl.runImpl(F, *SE, *LI, *TTI, *DT, *BFI, TLI, *DB, *AA, *AC,
-                        GetLAA);
+                        GetLAA, *ORE);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1839,6 +1840,7 @@ struct LoopVectorize : public FunctionPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<LoopAccessLegacyAnalysis>();
     AU.addRequired<DemandedBitsWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<BasicAAWrapperPass>();
@@ -6136,6 +6138,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(LoopVectorize, LV_NAME, lv_name, false, false)
 
 namespace llvm {
@@ -6428,7 +6431,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                                 &Requirements, &Hints);
   if (!LVL.canVectorize()) {
     DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6465,7 +6468,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
         F, L, Hints,
         VectorizationReport()
             << "loop not vectorized due to NoImplicitFloat attribute");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6479,7 +6482,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     emitAnalysisDiag(F, L, Hints,
                      VectorizationReport()
                          << "loop not vectorized due to unsafe FP support.");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6496,11 +6499,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Identify the diagnostic messages that should be produced.
   std::string VecDiagMsg, IntDiagMsg;
   bool VectorizeLoop = true, InterleaveLoop = true;
-
   if (Requirements.doesNotMeet(F, L, Hints)) {
     DEBUG(dbgs() << "LV: Not vectorizing: loop did not meet vectorization "
                     "requirements.\n");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6596,7 +6598,8 @@ bool LoopVectorizePass::runImpl(
     Function &F, ScalarEvolution &SE_, LoopInfo &LI_, TargetTransformInfo &TTI_,
     DominatorTree &DT_, BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
     DemandedBits &DB_, AliasAnalysis &AA_, AssumptionCache &AC_,
-    std::function<const LoopAccessInfo &(Loop &)> &GetLAA_) {
+    std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
+    OptimizationRemarkEmitter &ORE_) {
 
   SE = &SE_;
   LI = &LI_;
@@ -6608,6 +6611,7 @@ bool LoopVectorizePass::runImpl(
   AC = &AC_;
   GetLAA = &GetLAA_;
   DB = &DB_;
+  ORE = &ORE_;
 
   // Compute some weights outside of the loop over the loops. Compute this
   // using a BranchProbability to re-use its scaling math.
@@ -6656,13 +6660,15 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &AA = AM.getResult<AAManager>(F);
     auto &AC = AM.getResult<AssumptionAnalysis>(F);
     auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
+    auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & {
       return LAM.getResult<LoopAccessAnalysis>(L);
     };
-    bool Changed = runImpl(F, SE, LI, TTI, DT, BFI, TLI, DB, AA, AC, GetLAA);
+    bool Changed =
+        runImpl(F, SE, LI, TTI, DT, BFI, TLI, DB, AA, AC, GetLAA, ORE);
     if (!Changed)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;

@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64-unknown-unknown %s -mcpu=cyclone -o - | FileCheck %s --check-prefix=CYCLONE --check-prefix=CHECK
-; RUN: llc -march aarch64 %s -mattr=-slow-misaligned-128store -o - | FileCheck %s --check-prefix=MISALIGNED --check-prefix=CHECK
+; RUN: llc < %s -mtriple=aarch64-unknown-unknown -mcpu=cyclone | FileCheck %s --check-prefix=CYCLONE --check-prefix=CHECK
+; RUN: llc < %s -mtriple=aarch64-eabi -mattr=-slow-misaligned-128store | FileCheck %s --check-prefix=MISALIGNED --check-prefix=CHECK
 
 @g0 = external global <3 x float>, align 16
 @g1 = external global <3 x float>, align 4
