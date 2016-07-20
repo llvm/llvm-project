@@ -86,5 +86,134 @@ DECL_CONST_OCKL_BINARY_U32(mul24)
 
 DECL_OCKL_NULLARY_U32(activelane)
 
+#define SSHARP __constant uint *
+#define TSHARP __constant uint *
+
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,1D)(TSHARP i, int c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,1Da)(TSHARP i, int2 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,1Db)(TSHARP i, int c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,2D)(TSHARP i, int2 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,2Da)(TSHARP i, int4 c);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_load,2Dad)(TSHARP i, int4 c);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_load,2Dd)(TSHARP i, int2 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_load,3D)(TSHARP i, int4 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,1D)(TSHARP i, int c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,1Da)(TSHARP i, int2 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,1Db)(TSHARP i, int c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,2D)(TSHARP i, int2 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,2Da)(TSHARP i, int4 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_loadh,3D)(TSHARP i, int4 c);
+
+extern void OCKL_MANGLE_T(image_store,1D)(TSHARP i, int c, float4 p);
+extern void OCKL_MANGLE_T(image_store,1Da)(TSHARP i, int2 c, float4 p);
+extern void OCKL_MANGLE_T(image_store,1Db)(TSHARP i, int c, float4 p);
+extern void OCKL_MANGLE_T(image_store,2D)(TSHARP i, int2 c, float4 p);
+extern void OCKL_MANGLE_T(image_store,2Da)(TSHARP i, int4 c, float4 p);
+extern void OCKL_MANGLE_T(image_store,2Dad)(TSHARP i, int4 c, float4 p);
+extern void OCKL_MANGLE_T(image_store,2Dd)(TSHARP i, int2 c, float4 p);
+extern void OCKL_MANGLE_T(image_store,3D)(TSHARP i, int4 c, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,1D)(TSHARP i, int c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,1Da)(TSHARP i, int2 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,2D)(TSHARP i, int2 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,2Da)(TSHARP i, int4 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,2Dad)(TSHARP i, int4 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,2Dd)(TSHARP i, int2 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_store_lod,3D)(TSHARP i, int4 c, int l, float4 p);
+extern void OCKL_MANGLE_T(image_storeh,1D)(TSHARP i, int c, half4 p);
+extern void OCKL_MANGLE_T(image_storeh,1Da)(TSHARP i, int2 c, half4 p);
+extern void OCKL_MANGLE_T(image_storeh,1Db)(TSHARP i, int c, half4 p);
+extern void OCKL_MANGLE_T(image_storeh,2D)(TSHARP i, int2 c, half4 p);
+extern void OCKL_MANGLE_T(image_storeh,2Da)(TSHARP i, int4 c, half4 p);
+extern void OCKL_MANGLE_T(image_storeh,3D)(TSHARP i, int4 c, half4 p);
+extern void OCKL_MANGLE_T(image_storeh_lod,1D)(TSHARP i, int c, int l, half4 p);
+extern void OCKL_MANGLE_T(image_storeh_lod,1Da)(TSHARP i, int2 c, int l, half4 p);
+extern void OCKL_MANGLE_T(image_storeh_lod,2D)(TSHARP i, int2 c, int l, half4 p);
+extern void OCKL_MANGLE_T(image_storeh_lod,2Da)(TSHARP i, int4 c, int l, half4 p);
+extern void OCKL_MANGLE_T(image_storeh_lod,3D)(TSHARP i, int4 c, int l, half4 p);
+
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample,1D)(TSHARP i, SSHARP s, float c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample,1Da)(TSHARP i, SSHARP s, float2 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample,2D)(TSHARP i, SSHARP s, float2 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample,2Da)(TSHARP i, SSHARP s, float4 c);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_sample,2Dad)(TSHARP i, SSHARP s, float4 c);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_sample,2Dd)(TSHARP i, SSHARP s, float2 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample,3D)(TSHARP i, SSHARP s, float4 c);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_grad,1D)(TSHARP i, SSHARP s, float c, float dx, float dy);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_grad,1Da)(TSHARP i, SSHARP s, float2 c, float dx, float dy);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_grad,2D)(TSHARP i, SSHARP s, float2 c, float2 dx, float2 dy);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_grad,2Da)(TSHARP i, SSHARP s, float4 c, float2 dx, float2 dy);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_sample_grad,2Dad)(TSHARP i, SSHARP s, float4 c, float2 dx, float2 dy);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_sample_grad,2Dd)(TSHARP i, SSHARP s, float2 c, float2 dx, float2 dy);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_grad,3D)(TSHARP i, SSHARP s, float4 c, float4 dx, float4 dy);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_lod,1D)(TSHARP i, SSHARP s, float c, float l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_lod,1Da)(TSHARP i, SSHARP s, float2 c, float l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_lod,2D)(TSHARP i, SSHARP s, float2 c, float l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_lod,2Da)(TSHARP i, SSHARP s, float4 c, float l);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_sample_lod,2Dad)(TSHARP i, SSHARP s, float4 c, float l);
+extern __attribute__((pure)) float OCKL_MANGLE_T(image_sample_lod,2Dd)(TSHARP i, SSHARP s, float2 c, float l);
+extern __attribute__((pure)) float4 OCKL_MANGLE_T(image_sample_lod,3D)(TSHARP i, SSHARP s, float4 c, float l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh,1D)(TSHARP i, SSHARP s, float c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh,1Da)(TSHARP i, SSHARP s, float2 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh,2D)(TSHARP i, SSHARP s, float2 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh,2Da)(TSHARP i, SSHARP s, float4 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh,3D)(TSHARP i, SSHARP s, float4 c);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_grad,1D)(TSHARP i, SSHARP s, float c, float dx, float dy);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_grad,1Da)(TSHARP i, SSHARP s, float2 c, float dx, float dy);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_grad,2D)(TSHARP i, SSHARP s, float2 c, float2 dx, float2 dy);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_grad,2Da)(TSHARP i, SSHARP s, float4 c, float2 dx, float2 dy);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_grad,3D)(TSHARP i, SSHARP s, float4 c, float4 dx, float4 dy);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_lod,1D)(TSHARP i, SSHARP s, float c, float l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_lod,1Da)(TSHARP i, SSHARP s, float2 c, float l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_lod,2D)(TSHARP i, SSHARP s, float2 c, float l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_lod,2Da)(TSHARP i, SSHARP s, float4 c, float l);
+extern __attribute__((pure)) half4 OCKL_MANGLE_T(image_sampleh_lod,3D)(TSHARP i, SSHARP s, float4 c, float l);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_array_size,1Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_array_size,2Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_array_size,2Dad)(TSHARP i);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,1D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,1Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,1Db)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,2D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,2Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,2Dad)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,2Dd)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_data_type,3D)(TSHARP i);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,1D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,1Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,1Db)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,2D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,2Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,2Dad)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,2Dd)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_channel_order,3D)(TSHARP i);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_depth,3D)(TSHARP i);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_height,2D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_height,2Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_height,2Dad)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_height,2Dd)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_height,3D)(TSHARP i);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,1D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,1Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,2D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,2Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,2Dad)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,2Dd)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_num_mip_levels,3D)(TSHARP i);
+
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,1D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,1Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,1Db)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2D)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Da)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Dad)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Dd)(TSHARP i);
+extern __attribute__((const)) int OCKL_MANGLE_T(image_width,3D)(TSHARP i);
+
 #endif // OCKL_H
 
