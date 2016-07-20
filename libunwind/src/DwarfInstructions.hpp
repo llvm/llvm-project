@@ -6,7 +6,7 @@
 // Source Licenses. See LICENSE.TXT for details.
 //
 //
-//  Processor specific interpretation of dwarf unwind info.
+//  Processor specific interpretation of DWARF unwind info.
 //
 //===----------------------------------------------------------------------===//
 
@@ -27,7 +27,7 @@
 namespace libunwind {
 
 
-/// DwarfInstructions maps abtract dwarf unwind instructions to a particular
+/// DwarfInstructions maps abtract DWARF unwind instructions to a particular
 /// architecture
 template <typename A, typename R>
 class DwarfInstructions {
@@ -164,7 +164,7 @@ int DwarfInstructions<A, R>::stepWithDwarf(A &addressSpace, pint_t pc,
       // get pointer to cfa (architecture specific)
       pint_t cfa = getCFA(addressSpace, prolog, registers);
 
-       // restore registers that dwarf says were saved
+       // restore registers that DWARF says were saved
       R newRegisters = registers;
       pint_t returnAddress = 0;
       const int lastReg = R::lastDwarfRegNum();
@@ -744,7 +744,7 @@ DwarfInstructions<A, R>::evaluateExpression(pint_t expression, A &addressSpace,
     case DW_OP_call4:
     case DW_OP_call_ref:
     default:
-      _LIBUNWIND_ABORT("dwarf opcode not implemented");
+      _LIBUNWIND_ABORT("DWARF opcode not implemented");
     }
 
   }

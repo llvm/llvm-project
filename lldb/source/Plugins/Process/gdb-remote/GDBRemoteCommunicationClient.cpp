@@ -4499,7 +4499,7 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
     // symbols and we can stop asking.
     bool symbol_response_provided = false;
 
-    // Is this the inital qSymbol:: packet?
+    // Is this the initial qSymbol:: packet?
     bool first_qsymbol_query = true;
 
     if (m_supports_qSymbol && m_qSymbol_requests_done == false)

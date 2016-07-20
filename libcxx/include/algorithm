@@ -749,14 +749,28 @@ struct __debug_less
 {
     _Compare __comp_;
     __debug_less(_Compare& __c) : __comp_(__c) {}
+
     template <class _Tp, class _Up>
     bool operator()(const _Tp& __x, const _Up& __y)
     {
         bool __r = __comp_(__x, __y);
         if (__r)
-            _LIBCPP_ASSERT(!__comp_(__y, __x), "Comparator does not induce a strict weak ordering");
+            __do_compare_assert(0, __y, __x);
         return __r;
     }
+
+    template <class _LHS, class _RHS>
+    inline _LIBCPP_INLINE_VISIBILITY
+    decltype((void)_VSTD::declval<_Compare&>()(
+        _VSTD::declval<_LHS const&>(), _VSTD::declval<_RHS const&>()))
+    __do_compare_assert(int, _LHS const& __l, _RHS const& __r) {
+        _LIBCPP_ASSERT(!__comp_(__l, __r),
+            "Comparator does not induce a strict weak ordering");
+    }
+
+    template <class _LHS, class _RHS>
+    inline _LIBCPP_INLINE_VISIBILITY
+    void __do_compare_assert(long, _LHS const&, _RHS const&) {}
 };
 
 #endif  // _LIBCPP_DEBUG

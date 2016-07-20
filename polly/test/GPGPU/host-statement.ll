@@ -1,6 +1,12 @@
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-code \
+; RUN: -polly-invariant-load-hoisting=false \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=CODE %s
+
+; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
+; RUN: -polly-invariant-load-hoisting=false \
+; RUN: -disable-output < %s | \
+; RUN: FileCheck -check-prefix=KERNEL-IR %s
 
 ; REQUIRES: pollyacc
 
@@ -12,15 +18,16 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; This test case tests that we can correctly handle a ScopStmt that is
 ; scheduled on the host, instead of within a kernel.
 
-; CODE: Code
+; CODE-LABEL: Code
 ; CODE-NEXT: ====
 ; CODE-NEXT: # host
 ; CODE-NEXT: {
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_A, MemRef_A, (512) * (512) * sizeof(double), cudaMemcpyHostToDevice));
+; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(dev_MemRef_R, MemRef_R, (p_0 + 1) * (512) * sizeof(double), cudaMemcpyHostToDevice));
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(32);
 ; CODE-NEXT:     dim3 k0_dimGrid(16);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_Q, p_0, p_1);
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_A, dev_MemRef_R, dev_MemRef_Q, p_0, p_1);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
@@ -35,14 +42,13 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; CODE:     {
 ; CODE-NEXT:       dim3 k2_dimBlock(16, 32);
 ; CODE-NEXT:       dim3 k2_dimGrid(16, p_1 <= -7650 ? 256 : -p_1 + floord(31 * p_1 + 30, 32) + 16);
-; CODE-NEXT:       kernel2 <<<k2_dimGrid, k2_dimBlock>>> (dev_MemRef_A, dev_MemRef_R, dev_MemRef_Q,  p_0, p_1);
+; CODE-NEXT:       kernel2 <<<k2_dimGrid, k2_dimBlock>>> (dev_MemRef_A, dev_MemRef_R, dev_MemRef_Q, p_0, p_1);
 ; CODE-NEXT:       cudaCheckKernel();
 ; CODE-NEXT:     }
 
 ; CODE:   }
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(MemRef_A, dev_MemRef_A, (512) * (512) * sizeof(double), cudaMemcpyDeviceToHost));
-; CODE-NEXT:   if (p_0 <= 510 && p_1 <= 510)
-; CODE-NEXT:     cudaCheckReturn(cudaMemcpy(MemRef_R, dev_MemRef_R, (p_0 + 1) * (512) * sizeof(double), cudaMemcpyDeviceToHost));
+; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(MemRef_R, dev_MemRef_R, (p_0 + 1) * (512) * sizeof(double), cudaMemcpyDeviceToHost));
 ; CODE-NEXT:   cudaCheckReturn(cudaMemcpy(MemRef_Q, dev_MemRef_Q, (512) * (512) * sizeof(double), cudaMemcpyDeviceToHost));
 ; CODE-NEXT:     Stmt_for_cond33_preheader();
 
@@ -68,6 +74,7 @@ declare void @llvm.lifetime.start(i64, i8* nocapture) #0
 ; CODE-NEXT:     for (int c3 = 0; c3 <= 1; c3 += 1)
 ; CODE-NEXT:       Stmt_for_body62(32 * b0 + t0 + 8192 * c0, 32 * b1 + t1 + 16 * c3);
 
+; KERNEL-IR: call void @llvm.nvvm.barrier0()
 
 ; Function Attrs: nounwind uwtable
 define internal void @kernel_gramschmidt(i32 %ni, i32 %nj, [512 x double]* %A, [512 x double]* %R, [512 x double]* %Q) #1 {

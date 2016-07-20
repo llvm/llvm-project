@@ -315,7 +315,7 @@ StackFrame::GetFrameBlock ()
         }
         else
         {
-            // This block is not contained withing any inlined function blocks
+            // This block is not contained within any inlined function blocks
             // with so we want to use the top most function block.
             return &m_sc.function->GetBlock (false);
         }

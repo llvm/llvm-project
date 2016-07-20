@@ -75,15 +75,14 @@ std::string createQualifiedNameForReplacement(
 } // anonymous namespace
 
 IncludeFixerContext::IncludeFixerContext(
-    llvm::StringRef Name, llvm::StringRef ScopeQualifiers,
-    std::vector<find_all_symbols::SymbolInfo> Symbols,
-    tooling::Range Range)
-    : SymbolIdentifier(Name), SymbolScopedQualifiers(ScopeQualifiers),
-      MatchedSymbols(std::move(Symbols)), SymbolRange(Range) {
+    const QuerySymbolInfo &QuerySymbol,
+    const std::vector<find_all_symbols::SymbolInfo> Symbols)
+    : MatchedSymbols(std::move(Symbols)), QuerySymbol(QuerySymbol) {
   for (const auto &Symbol : MatchedSymbols) {
-    HeaderInfos.push_back({Symbol.getFilePath().str(),
-                           createQualifiedNameForReplacement(
-                               SymbolIdentifier, ScopeQualifiers, Symbol)});
+    HeaderInfos.push_back(
+        {Symbol.getFilePath().str(),
+         createQualifiedNameForReplacement(
+             QuerySymbol.RawIdentifier, QuerySymbol.ScopedQualifiers, Symbol)});
   }
   // Deduplicate header infos.
   HeaderInfos.erase(std::unique(HeaderInfos.begin(), HeaderInfos.end(),

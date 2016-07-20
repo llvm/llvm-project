@@ -60,7 +60,7 @@ public:
         return GetValue() && GetValue() != Py_None;
     }
 
-    void Dump(Stream &s) const override;
+    void Dump(Stream &s, bool pretty_print = true) const override;
 
 private:
     DISALLOW_COPY_AND_ASSIGN(StructuredPythonObject);

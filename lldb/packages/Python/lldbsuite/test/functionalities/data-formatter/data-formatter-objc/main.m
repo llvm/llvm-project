@@ -463,7 +463,7 @@ int main (int argc, const char * argv[])
 	    NSError **nserrorptr = &nserror;
 
 	    NSBundle* bundle_string = [[NSBundle alloc] initWithPath:@"/System/Library/Frameworks/Accelerate.framework"];
-	    NSBundle* bundle_url = [[NSBundle alloc] initWithURL:[[NSURL alloc] initWithString:@"file://localhost/System/Library/Frameworks/Cocoa.framework"]];
+	    NSBundle* bundle_url = [[NSBundle alloc] initWithURL:[[NSURL alloc] initWithString:@"file://localhost/System/Library/Frameworks/Foundation.framework"]];
 
 	    NSBundle* main_bundle = [NSBundle mainBundle];
 

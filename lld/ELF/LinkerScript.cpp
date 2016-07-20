@@ -23,6 +23,7 @@
 #include "Symbols.h"
 #include "SymbolTable.h"
 #include "Target.h"
+#include "Writer.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/FileSystem.h"
@@ -217,7 +218,7 @@ void LinkerScript<ELFT>::assignAddresses(
   for (OutputSectionBase<ELFT> *Sec : Sections) {
     StringRef Name = Sec->getName();
     if (getSectionIndex(Name) == INT_MAX)
-      Opt.Commands.push_back({SectionKind, {}, Name});
+      Opt.Commands.push_back({SectionKind, {}, Name, {}});
   }
 
   // Assign addresses as instructed by linker script SECTIONS sub-commands.
@@ -239,7 +240,7 @@ void LinkerScript<ELFT>::assignAddresses(
     }
 
     // Find all the sections with required name. There can be more than
-    // ont section with such name, if the alignment, flags or type
+    // one section with such name, if the alignment, flags or type
     // attribute differs.
     assert(Cmd.Kind == SectionKind);
     for (OutputSectionBase<ELFT> *Sec : Sections) {
@@ -265,13 +266,97 @@ void LinkerScript<ELFT>::assignAddresses(
   }
 
   // ELF and Program headers need to be right before the first section in
-  // memory.
-  // Set their addresses accordingly.
+  // memory. Set their addresses accordingly.
   MinVA = alignDown(MinVA - Out<ELFT>::ElfHeader->getSize() -
                         Out<ELFT>::ProgramHeaders->getSize(),
                     Target->PageSize);
   Out<ELFT>::ElfHeader->setVA(MinVA);
   Out<ELFT>::ProgramHeaders->setVA(Out<ELFT>::ElfHeader->getSize() + MinVA);
+}
+
+template <class ELFT>
+std::vector<PhdrEntry<ELFT>>
+LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
+  int TlsNum = -1;
+  int NoteNum = -1;
+  int RelroNum = -1;
+  Phdr *Load = nullptr;
+  uintX_t Flags = PF_R;
+  std::vector<Phdr> Phdrs;
+
+  for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
+    Phdrs.emplace_back(Cmd.Type, PF_R);
+    Phdr &Added = Phdrs.back();
+
+    if (Cmd.HasFilehdr)
+      Added.AddSec(Out<ELFT>::ElfHeader);
+    if (Cmd.HasPhdrs)
+      Added.AddSec(Out<ELFT>::ProgramHeaders);
+
+    switch (Cmd.Type) {
+    case PT_INTERP:
+      if (needsInterpSection<ELFT>())
+        Added.AddSec(Out<ELFT>::Interp);
+      break;
+    case PT_DYNAMIC:
+      if (isOutputDynamic<ELFT>()) {
+        Added.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
+        Added.AddSec(Out<ELFT>::Dynamic);
+      }
+      break;
+    case PT_TLS:
+      TlsNum = Phdrs.size() - 1;
+      break;
+    case PT_NOTE:
+      NoteNum = Phdrs.size() - 1;
+      break;
+    case PT_GNU_RELRO:
+      RelroNum = Phdrs.size() - 1;
+      break;
+    case PT_GNU_EH_FRAME:
+      if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
+        Added.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
+        Added.AddSec(Out<ELFT>::EhFrameHdr);
+      }
+      break;
+    }
+  }
+
+  for (OutputSectionBase<ELFT> *Sec : Sections) {
+    if (!(Sec->getFlags() & SHF_ALLOC))
+      break;
+
+    if (TlsNum != -1 && (Sec->getFlags() & SHF_TLS))
+      Phdrs[TlsNum].AddSec(Sec);
+
+    if (!needsPtLoad<ELFT>(Sec))
+      continue;
+
+    const std::vector<size_t> &PhdrIds =
+        getPhdrIndicesForSection(Sec->getName());
+    if (!PhdrIds.empty()) {
+      // Assign headers specified by linker script
+      for (size_t Id : PhdrIds) {
+        Phdrs[Id].AddSec(Sec);
+        Phdrs[Id].H.p_flags |= toPhdrFlags(Sec->getFlags());
+      }
+    } else {
+      // If we have no load segment or flags've changed then we want new load
+      // segment.
+      uintX_t NewFlags = toPhdrFlags(Sec->getFlags());
+      if (Load == nullptr || Flags != NewFlags) {
+        Load = &*Phdrs.emplace(Phdrs.end(), PT_LOAD, NewFlags);
+        Flags = NewFlags;
+      }
+      Load->AddSec(Sec);
+    }
+
+    if (RelroNum != -1 && isRelroSection(Sec))
+      Phdrs[RelroNum].AddSec(Sec);
+    if (NoteNum != -1 && Sec->getType() == SHT_NOTE)
+      Phdrs[NoteNum].AddSec(Sec);
+  }
+  return Phdrs;
 }
 
 template <class ELFT>
@@ -315,6 +400,35 @@ void LinkerScript<ELFT>::addScriptedSymbols() {
         Symtab<ELFT>::X->addAbsolute(Cmd.Name, STV_DEFAULT);
 }
 
+template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
+  return !Opt.PhdrsCommands.empty();
+}
+
+// Returns indices of ELF headers containing specific section, identified
+// by Name. Each index is a zero based number of ELF header listed within
+// PHDRS {} script block.
+template <class ELFT>
+std::vector<size_t>
+LinkerScript<ELFT>::getPhdrIndicesForSection(StringRef Name) {
+  std::vector<size_t> Indices;
+  auto ItSect = std::find_if(
+      Opt.Commands.begin(), Opt.Commands.end(),
+      [Name](const SectionsCommand &Cmd) { return Cmd.Name == Name; });
+  if (ItSect != Opt.Commands.end()) {
+    SectionsCommand &SecCmd = (*ItSect);
+    for (StringRef PhdrName : SecCmd.Phdrs) {
+      auto ItPhdr = std::find_if(
+          Opt.PhdrsCommands.rbegin(), Opt.PhdrsCommands.rend(),
+          [PhdrName](PhdrsCommand &Cmd) { return Cmd.Name == PhdrName; });
+      if (ItPhdr == Opt.PhdrsCommands.rend())
+        error("section header '" + PhdrName + "' is not listed in PHDRS");
+      else
+        Indices.push_back(std::distance(ItPhdr, Opt.PhdrsCommands.rend()) - 1);
+    }
+  }
+  return Indices;
+}
+
 class elf::ScriptParser : public ScriptParserBase {
   typedef void (ScriptParser::*Handler)();
 
@@ -335,11 +449,14 @@ private:
   void readOutput();
   void readOutputArch();
   void readOutputFormat();
+  void readPhdrs();
   void readSearchDir();
   void readSections();
 
   void readLocationCounterValue();
   void readOutputSectionDescription(StringRef OutSec);
+  std::vector<StringRef> readOutputSectionPhdrs();
+  unsigned readPhdrType();
   void readSymbolAssignment(StringRef Name);
   std::vector<StringRef> readSectionsCommandExpr();
 
@@ -358,6 +475,7 @@ const StringMap<elf::ScriptParser::Handler> elf::ScriptParser::Cmd = {
     {"OUTPUT", &ScriptParser::readOutput},
     {"OUTPUT_ARCH", &ScriptParser::readOutputArch},
     {"OUTPUT_FORMAT", &ScriptParser::readOutputFormat},
+    {"PHDRS", &ScriptParser::readPhdrs},
     {"SEARCH_DIR", &ScriptParser::readSearchDir},
     {"SECTIONS", &ScriptParser::readSections},
     {";", &ScriptParser::readNothing}};
@@ -494,6 +612,28 @@ void ScriptParser::readOutputFormat() {
   expect(")");
 }
 
+void ScriptParser::readPhdrs() {
+  expect("{");
+  while (!Error && !skip("}")) {
+    StringRef Tok = next();
+    Opt.PhdrsCommands.push_back({Tok, PT_NULL, false, false});
+    PhdrsCommand &PhdrCmd = Opt.PhdrsCommands.back();
+
+    PhdrCmd.Type = readPhdrType();
+    do {
+      Tok = next();
+      if (Tok == ";")
+        break;
+      if (Tok == "FILEHDR")
+        PhdrCmd.HasFilehdr = true;
+      else if (Tok == "PHDRS")
+        PhdrCmd.HasPhdrs = true;
+      else
+        setError("unexpected header attribute: " + Tok);
+    } while (!Error);
+  }
+}
+
 void ScriptParser::readSearchDir() {
   expect("(");
   Config->SearchPaths.push_back(next());
@@ -524,11 +664,12 @@ void ScriptParser::readLocationCounterValue() {
   if (Expr.empty())
     error("error in location counter expression");
   else
-    Opt.Commands.push_back({AssignmentKind, std::move(Expr), "."});
+    Opt.Commands.push_back({AssignmentKind, std::move(Expr), ".", {}});
 }
 
 void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
-  Opt.Commands.push_back({SectionKind, {}, OutSec});
+  Opt.Commands.push_back({SectionKind, {}, OutSec, {}});
+  SectionsCommand &Cmd = Opt.Commands.back();
   expect(":");
   expect("{");
 
@@ -552,6 +693,7 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       setError("unknown command " + Tok);
     }
   }
+  Cmd.Phdrs = readOutputSectionPhdrs();
 
   StringRef Tok = peek();
   if (Tok.startswith("=")) {
@@ -571,7 +713,7 @@ void ScriptParser::readSymbolAssignment(StringRef Name) {
   if (Expr.empty())
     error("error in symbol assignment expression");
   else
-    Opt.Commands.push_back({AssignmentKind, std::move(Expr), Name});
+    Opt.Commands.push_back({AssignmentKind, std::move(Expr), Name, {}});
 }
 
 std::vector<StringRef> ScriptParser::readSectionsCommandExpr() {
@@ -583,6 +725,41 @@ std::vector<StringRef> ScriptParser::readSectionsCommandExpr() {
     Expr.push_back(Tok);
   }
   return Expr;
+}
+
+std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {
+  std::vector<StringRef> Phdrs;
+  while (!Error && peek().startswith(":")) {
+    StringRef Tok = next();
+    Tok = (Tok.size() == 1) ? next() : Tok.substr(1);
+    if (Tok.empty()) {
+      setError("section header name is empty");
+      break;
+    }
+    else
+      Phdrs.push_back(Tok);
+  }
+  return Phdrs;
+}
+
+unsigned ScriptParser::readPhdrType() {
+  static const char *typeNames[] = {
+      "PT_NULL",         "PT_LOAD",      "PT_DYNAMIC",  "PT_INTERP",
+      "PT_NOTE",         "PT_SHLIB",     "PT_PHDR",     "PT_TLS",
+      "PT_GNU_EH_FRAME", "PT_GNU_STACK", "PT_GNU_RELRO"};
+  static unsigned typeCodes[] = {
+      PT_NULL, PT_LOAD, PT_DYNAMIC,      PT_INTERP,    PT_NOTE,     PT_SHLIB,
+      PT_PHDR, PT_TLS,  PT_GNU_EH_FRAME, PT_GNU_STACK, PT_GNU_RELRO};
+
+  unsigned PhdrType = PT_NULL;
+  StringRef Tok = next();
+  auto It = std::find(std::begin(typeNames), std::end(typeNames), Tok);
+  if (It != std::end(typeNames))
+    PhdrType = typeCodes[std::distance(std::begin(typeNames), It)];
+  else
+    setError("invalid program header type");
+
+  return PhdrType;
 }
 
 static bool isUnderSysroot(StringRef Path) {

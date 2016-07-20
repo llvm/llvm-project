@@ -192,6 +192,20 @@ class __tuple_leaf
 {
     _Hp value;
 
+    template <class _Tp>
+    static constexpr bool __can_bind_reference() {
+        using _RawTp = typename remove_reference<_Tp>::type;
+        using _RawHp = typename remove_reference<_Hp>::type;
+        using _CheckLValueArg = integral_constant<bool,
+            is_lvalue_reference<_Tp>::value
+        ||  is_same<_RawTp, reference_wrapper<_RawHp>>::value
+        ||  is_same<_RawTp, reference_wrapper<typename remove_const<_RawHp>::type>>::value
+        >;
+        return  !is_reference<_Hp>::value
+            || (is_lvalue_reference<_Hp>::value && _CheckLValueArg::value)
+            || (is_rvalue_reference<_Hp>::value && !is_lvalue_reference<_Tp>::value);
+    }
+
     __tuple_leaf& operator=(const __tuple_leaf&);
 public:
     _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR __tuple_leaf()
@@ -231,59 +245,29 @@ public:
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_((is_nothrow_constructible<_Hp, _Tp>::value))
             : value(_VSTD::forward<_Tp>(__t))
-        {static_assert(!is_reference<_Hp>::value ||
-                       (is_lvalue_reference<_Hp>::value &&
-                        (is_lvalue_reference<_Tp>::value ||
-                         is_same<typename remove_reference<_Tp>::type,
-                                 reference_wrapper<
-                                    typename remove_reference<_Hp>::type
-                                 >
-                                >::value)) ||
-                        (is_rvalue_reference<_Hp>::value &&
-                         !is_lvalue_reference<_Tp>::value),
+        {static_assert(__can_bind_reference<_Tp>(),
        "Attempted to construct a reference element in a tuple with an rvalue");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit __tuple_leaf(integral_constant<int, 0>, const _Alloc&, _Tp&& __t)
             : value(_VSTD::forward<_Tp>(__t))
-        {static_assert(!is_lvalue_reference<_Hp>::value ||
-                       (is_lvalue_reference<_Hp>::value &&
-                        (is_lvalue_reference<_Tp>::value ||
-                         is_same<typename remove_reference<_Tp>::type,
-                                 reference_wrapper<
-                                    typename remove_reference<_Hp>::type
-                                 >
-                                >::value)),
+        {static_assert(__can_bind_reference<_Tp>(),
        "Attempted to construct a reference element in a tuple with an rvalue");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit __tuple_leaf(integral_constant<int, 1>, const _Alloc& __a, _Tp&& __t)
             : value(allocator_arg_t(), __a, _VSTD::forward<_Tp>(__t))
-        {static_assert(!is_lvalue_reference<_Hp>::value ||
-                       (is_lvalue_reference<_Hp>::value &&
-                        (is_lvalue_reference<_Tp>::value ||
-                         is_same<typename remove_reference<_Tp>::type,
-                                 reference_wrapper<
-                                    typename remove_reference<_Hp>::type
-                                 >
-                                >::value)),
-       "Attempted to construct a reference element in a tuple with an rvalue");}
+        {static_assert(!is_reference<_Hp>::value,
+            "Attempted to uses-allocator construct a reference element in a tuple");}
 
     template <class _Tp, class _Alloc>
         _LIBCPP_INLINE_VISIBILITY
         explicit __tuple_leaf(integral_constant<int, 2>, const _Alloc& __a, _Tp&& __t)
             : value(_VSTD::forward<_Tp>(__t), __a)
-        {static_assert(!is_lvalue_reference<_Hp>::value ||
-                       (is_lvalue_reference<_Hp>::value &&
-                        (is_lvalue_reference<_Tp>::value ||
-                         is_same<typename remove_reference<_Tp>::type,
-                                 reference_wrapper<
-                                    typename remove_reference<_Hp>::type
-                                 >
-                                >::value)),
-       "Attempted to construct a reference element in a tuple with an rvalue");}
+        {static_assert(!is_reference<_Hp>::value,
+           "Attempted to uses-allocator construct a reference element in a tuple");}
 
     __tuple_leaf(const __tuple_leaf& __t) = default;
     __tuple_leaf(__tuple_leaf&& __t) = default;

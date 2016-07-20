@@ -321,7 +321,7 @@ extern void __deregister_frame(const void *fde);
 
 // _Unwind_Find_FDE() will locate the FDE if the pc is in some function that has
 // an associated FDE. Note, Mac OS X 10.6 and later, introduces "compact unwind
-// info" which the runtime uses in preference to dwarf unwind info.  This
+// info" which the runtime uses in preference to DWARF unwind info.  This
 // function will only work if the target function has an FDE but no compact
 // unwind info.
 struct dwarf_eh_bases {
@@ -334,7 +334,7 @@ extern const void *_Unwind_Find_FDE(const void *pc, struct dwarf_eh_bases *);
 
 // This function attempts to find the start (address of first instruction) of
 // a function given an address inside the function.  It only works if the
-// function has an FDE (dwarf unwind info).
+// function has an FDE (DWARF unwind info).
 // This function is unimplemented on Mac OS X 10.6 and later.  Instead, use
 // _Unwind_Find_FDE() and look at the dwarf_eh_bases.func result.
 extern void *_Unwind_FindEnclosingFunction(void *pc);

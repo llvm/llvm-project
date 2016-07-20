@@ -1055,7 +1055,7 @@ class ModuleCache;
         ///     contain the error message.
         ///
         /// @return
-        ///     The number of processes we are succesfully connected to.
+        ///     The number of processes we are successfully connected to.
         //------------------------------------------------------------------
         virtual size_t
         ConnectToWaitingProcesses(lldb_private::Debugger& debugger, lldb_private::Error& error);

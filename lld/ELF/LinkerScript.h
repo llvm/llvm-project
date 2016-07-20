@@ -10,6 +10,7 @@
 #ifndef LLD_ELF_LINKER_SCRIPT_H
 #define LLD_ELF_LINKER_SCRIPT_H
 
+#include "Writer.h"
 #include "lld/Core/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -46,6 +47,14 @@ struct SectionsCommand {
   SectionsCommandKind Kind;
   std::vector<StringRef> Expr;
   StringRef Name;
+  std::vector<StringRef> Phdrs;
+};
+
+struct PhdrsCommand {
+  StringRef Name;
+  unsigned Type;
+  bool HasFilehdr;
+  bool HasPhdrs;
 };
 
 // ScriptConfiguration holds linker script parse results.
@@ -59,6 +68,9 @@ struct ScriptConfiguration {
   // Used to assign addresses to sections.
   std::vector<SectionsCommand> Commands;
 
+  // Used to assign sections to headers.
+  std::vector<PhdrsCommand> PhdrsCommands;  
+  
   bool DoLayout = false;
 
   llvm::BumpPtrAllocator Alloc;
@@ -75,6 +87,8 @@ template <class ELFT> class LinkerScript {
   typedef typename ELFT::uint uintX_t;
 
 public:
+  typedef PhdrEntry<ELFT> Phdr;
+
   StringRef getOutputSection(InputSectionBase<ELFT> *S);
   ArrayRef<uint8_t> getFiller(StringRef Name);
   bool isDiscarded(InputSectionBase<ELFT> *S);
@@ -82,12 +96,15 @@ public:
   void assignAddresses(ArrayRef<OutputSectionBase<ELFT> *> S);
   int compareSections(StringRef A, StringRef B);
   void addScriptedSymbols();
+  std::vector<Phdr> createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
+  bool hasPhdrsCommands();
 
 private:
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
 
   int getSectionIndex(StringRef Name);
+  std::vector<size_t> getPhdrIndicesForSection(StringRef Name);
 
   uintX_t Dot;
 };

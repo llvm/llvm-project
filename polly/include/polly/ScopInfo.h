@@ -1939,6 +1939,9 @@ public:
     return InvariantEquivClasses;
   }
 
+  /// @brief Check if the scop has any invariant access.
+  bool hasInvariantAccesses() { return !InvariantEquivClasses.empty(); }
+
   /// @brief Mark the SCoP as optimized by the scheduler.
   void markAsOptimized() { IsOptimized = true; }
 

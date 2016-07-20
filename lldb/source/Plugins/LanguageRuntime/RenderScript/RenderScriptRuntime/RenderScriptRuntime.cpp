@@ -1463,7 +1463,7 @@ RenderScriptRuntime::FixupScriptDetails(RSModuleDescriptorSP rsmodule_sp)
 }
 
 // Uses the Target API to evaluate the expression passed as a parameter to the function
-// The result of that expression is returned an unsigned 64 bit int, via the result* paramter.
+// The result of that expression is returned an unsigned 64 bit int, via the result* parameter.
 // Function returns true on success, and false on failure
 bool
 RenderScriptRuntime::EvalRSExpression(const char *expression, StackFrame *frame_ptr, uint64_t *result)
@@ -1898,7 +1898,7 @@ RenderScriptRuntime::JITSubelements(Element &elem, const lldb::addr_t context, S
 }
 
 // JITs the RS runtime for the address of the last element in the allocation.
-// The `elem_size` paramter represents the size of a single element, including padding.
+// The `elem_size` parameter represents the size of a single element, including padding.
 // Which is needed as an offset from the last element pointer.
 // Using this offset minus the starting address we can calculate the size of the allocation.
 // Returns true on success, false otherwise
@@ -1931,7 +1931,7 @@ RenderScriptRuntime::JITAllocationSize(AllocationDetails *allocation, StackFrame
         allocation->size = dim_x * dim_y * dim_z * *allocation->element.datum_size.get();
 
         if (log)
-            log->Printf("%s - infered size of struct allocation %" PRIu32 ".", __FUNCTION__,
+            log->Printf("%s - inferred size of struct allocation %" PRIu32 ".", __FUNCTION__,
                         *allocation->size.get());
         return true;
     }
@@ -2229,7 +2229,7 @@ RenderScriptRuntime::GetAllocationData(AllocationDetails *allocation, StackFrame
 
 // Function copies data from a binary file into an allocation.
 // There is a header at the start of the file, FileHeader, before the data content itself.
-// Information from this header is used to display warnings to the user about incompatabilities
+// Information from this header is used to display warnings to the user about incompatibilities
 bool
 RenderScriptRuntime::LoadAllocation(Stream &strm, const uint32_t alloc_id, const char *filename, StackFrame *frame_ptr)
 {
@@ -3422,7 +3422,7 @@ RenderScriptRuntime::PlaceBreakpointOnKernel(Stream &strm, const char *name, con
         uint32_t *baton = new uint32_t[coords.size()];
         baton[0] = coords[0]; baton[1] = coords[1]; baton[2] = coords[2];
 
-        // Create a callback that will be invoked everytime the breakpoint is hit.
+        // Create a callback that will be invoked every time the breakpoint is hit.
         // The baton object passed to the handler is the target coordinate we want to break on.
         bp->SetCallback(KernelBreakpointHit, baton, true);
 

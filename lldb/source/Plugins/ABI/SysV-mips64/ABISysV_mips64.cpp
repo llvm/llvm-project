@@ -723,7 +723,7 @@ ABISysV_mips64::GetReturnValueObjectImpl (Thread &thread, CompilerType &return_c
                     }
                 }
             }
-            // Vector types upto 16 bytes are returned in GP return registers
+            // Vector types up to 16 bytes are returned in GP return registers
             if (type_flags & eTypeIsVector)
             {
                 if (byte_size <= 8)
