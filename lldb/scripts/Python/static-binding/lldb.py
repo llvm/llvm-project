@@ -291,6 +291,7 @@ eValueTypeVariableLocal = _lldb.eValueTypeVariableLocal
 eValueTypeRegister = _lldb.eValueTypeRegister
 eValueTypeRegisterSet = _lldb.eValueTypeRegisterSet
 eValueTypeConstResult = _lldb.eValueTypeConstResult
+eValueTypeVariableThreadLocal = _lldb.eValueTypeVariableThreadLocal
 eInputReaderGranularityInvalid = _lldb.eInputReaderGranularityInvalid
 eInputReaderGranularityByte = _lldb.eInputReaderGranularityByte
 eInputReaderGranularityWord = _lldb.eInputReaderGranularityWord
@@ -471,6 +472,7 @@ eArgTypePlatform = _lldb.eArgTypePlatform
 eArgTypeWatchpointID = _lldb.eArgTypeWatchpointID
 eArgTypeWatchpointIDRange = _lldb.eArgTypeWatchpointIDRange
 eArgTypeWatchType = _lldb.eArgTypeWatchType
+eArgRawInput = _lldb.eArgRawInput
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 eSymbolTypeAny = _lldb.eSymbolTypeAny
 eSymbolTypeInvalid = _lldb.eSymbolTypeInvalid
@@ -4171,7 +4173,7 @@ class SBExpressionOptions(_object):
         SetAutoApplyFixIts(self, bool b = True)
         SetAutoApplyFixIts(self)
 
-        Sets whether to auto-apply FixIt hints to the expression being evaluated.
+        Sets whether to auto-apply fix-it hints to the expression being evaluated.
         """
         return _lldb.SBExpressionOptions_SetAutoApplyFixIts(self, b)
 
@@ -4179,7 +4181,7 @@ class SBExpressionOptions(_object):
         """
         GetAutoApplyFixIts(self) -> bool
 
-        Gets whether to auto-apply FixIt hints to an expression.
+        Gets whether to auto-apply fix-it hints to an expression.
         """
         return _lldb.SBExpressionOptions_GetAutoApplyFixIts(self)
 
@@ -5711,6 +5713,109 @@ class SBListener(_object):
 SBListener_swigregister = _lldb.SBListener_swigregister
 SBListener_swigregister(SBListener)
 
+class SBMemoryRegionInfo(_object):
+    """API clients can get information about memory regions in processes."""
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBMemoryRegionInfo, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBMemoryRegionInfo, name)
+    __repr__ = _swig_repr
+    def __init__(self, *args): 
+        """
+        __init__(self) -> SBMemoryRegionInfo
+        __init__(self, SBMemoryRegionInfo rhs) -> SBMemoryRegionInfo
+        """
+        this = _lldb.new_SBMemoryRegionInfo(*args)
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _lldb.delete_SBMemoryRegionInfo
+    __del__ = lambda self : None;
+    def Clear(self):
+        """Clear(self)"""
+        return _lldb.SBMemoryRegionInfo_Clear(self)
+
+    def GetRegionBase(self):
+        """GetRegionBase(self) -> addr_t"""
+        return _lldb.SBMemoryRegionInfo_GetRegionBase(self)
+
+    def GetRegionEnd(self):
+        """GetRegionEnd(self) -> addr_t"""
+        return _lldb.SBMemoryRegionInfo_GetRegionEnd(self)
+
+    def IsReadable(self):
+        """IsReadable(self) -> bool"""
+        return _lldb.SBMemoryRegionInfo_IsReadable(self)
+
+    def IsWritable(self):
+        """IsWritable(self) -> bool"""
+        return _lldb.SBMemoryRegionInfo_IsWritable(self)
+
+    def IsExecutable(self):
+        """IsExecutable(self) -> bool"""
+        return _lldb.SBMemoryRegionInfo_IsExecutable(self)
+
+    def IsMapped(self):
+        """IsMapped(self) -> bool"""
+        return _lldb.SBMemoryRegionInfo_IsMapped(self)
+
+    def __eq__(self, *args):
+        """__eq__(self, SBMemoryRegionInfo rhs) -> bool"""
+        return _lldb.SBMemoryRegionInfo___eq__(self, *args)
+
+    def __ne__(self, *args):
+        """__ne__(self, SBMemoryRegionInfo rhs) -> bool"""
+        return _lldb.SBMemoryRegionInfo___ne__(self, *args)
+
+    def GetDescription(self, *args):
+        """GetDescription(self, SBStream description) -> bool"""
+        return _lldb.SBMemoryRegionInfo_GetDescription(self, *args)
+
+    def __str__(self):
+        """__str__(self) -> PyObject"""
+        return _lldb.SBMemoryRegionInfo___str__(self)
+
+SBMemoryRegionInfo_swigregister = _lldb.SBMemoryRegionInfo_swigregister
+SBMemoryRegionInfo_swigregister(SBMemoryRegionInfo)
+
+class SBMemoryRegionInfoList(_object):
+    """Proxy of C++ lldb::SBMemoryRegionInfoList class"""
+    __swig_setmethods__ = {}
+    __setattr__ = lambda self, name, value: _swig_setattr(self, SBMemoryRegionInfoList, name, value)
+    __swig_getmethods__ = {}
+    __getattr__ = lambda self, name: _swig_getattr(self, SBMemoryRegionInfoList, name)
+    __repr__ = _swig_repr
+    def __init__(self, *args): 
+        """
+        __init__(self) -> SBMemoryRegionInfoList
+        __init__(self, SBMemoryRegionInfoList rhs) -> SBMemoryRegionInfoList
+        """
+        this = _lldb.new_SBMemoryRegionInfoList(*args)
+        try: self.this.append(this)
+        except: self.this = this
+    __swig_destroy__ = _lldb.delete_SBMemoryRegionInfoList
+    __del__ = lambda self : None;
+    def GetSize(self):
+        """GetSize(self) -> uint32_t"""
+        return _lldb.SBMemoryRegionInfoList_GetSize(self)
+
+    def GetMemoryRegionAtIndex(self, *args):
+        """GetMemoryRegionAtIndex(self, uint32_t idx, SBMemoryRegionInfo region_info) -> bool"""
+        return _lldb.SBMemoryRegionInfoList_GetMemoryRegionAtIndex(self, *args)
+
+    def Append(self, *args):
+        """
+        Append(self, SBMemoryRegionInfo region)
+        Append(self, SBMemoryRegionInfoList region_list)
+        """
+        return _lldb.SBMemoryRegionInfoList_Append(self, *args)
+
+    def Clear(self):
+        """Clear(self)"""
+        return _lldb.SBMemoryRegionInfoList_Clear(self)
+
+SBMemoryRegionInfoList_swigregister = _lldb.SBMemoryRegionInfoList_swigregister
+SBMemoryRegionInfoList_swigregister(SBMemoryRegionInfoList)
+
 class SBModule(_object):
     """
     Represents an executable image and its associated object and symbol files.
@@ -7140,6 +7245,14 @@ class SBProcess(_object):
         """SaveCore(self, str file_name) -> SBError"""
         return _lldb.SBProcess_SaveCore(self, *args)
 
+    def GetMemoryRegionInfo(self, *args):
+        """GetMemoryRegionInfo(self, addr_t load_addr, SBMemoryRegionInfo region_info) -> SBError"""
+        return _lldb.SBProcess_GetMemoryRegionInfo(self, *args)
+
+    def GetMemoryRegions(self):
+        """GetMemoryRegions(self) -> SBMemoryRegionInfoList"""
+        return _lldb.SBProcess_GetMemoryRegions(self)
+
     def __get_is_alive__(self):
         '''Returns "True" if the process is currently alive, "False" otherwise'''
         s = self.GetState()
@@ -7160,7 +7273,7 @@ class SBProcess(_object):
             return True
         return False
 
-    def __get_is_running__(self):
+    def __get_is_stopped__(self):
         '''Returns "True" if the process is currently stopped, "False" otherwise'''
         state = self.GetState()
         if state == eStateStopped or state == eStateCrashed or state == eStateSuspended:
@@ -7206,8 +7319,8 @@ class SBProcess(_object):
     __swig_getmethods__["is_running"] = __get_is_running__
     if _newclass: is_running = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently running.''')
 
-    __swig_getmethods__["is_stopped"] = __get_is_running__
-    if _newclass: is_stopped = property(__get_is_running__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
+    __swig_getmethods__["is_stopped"] = __get_is_stopped__
+    if _newclass: is_stopped = property(__get_is_stopped__, None, doc='''A read only property that returns a boolean value that indicates if this process is currently stopped.''')
 
     __swig_getmethods__["id"] = GetProcessID
     if _newclass: id = property(GetProcessID, None, doc='''A read only property that returns the process ID as an integer.''')
@@ -9448,6 +9561,13 @@ class SBThread(_object):
         """
         return _lldb.SBThread_ReturnFromFrame(self, *args)
 
+    def UnwindInnermostExpression(self):
+        """
+        Unwind the stack frames from the innermost expression evaluation.
+        This API is equivalent to 'thread return -x'.
+        """
+        return _lldb.SBThread_UnwindInnermostExpression(self)
+
     def Suspend(self):
         """
         Suspend(self) -> bool
@@ -11568,6 +11688,14 @@ class SBValue(_object):
         """IsSynthetic(self) -> bool"""
         return _lldb.SBValue_IsSynthetic(self)
 
+    def IsSyntheticChildrenGenerated(self):
+        """IsSyntheticChildrenGenerated(self) -> bool"""
+        return _lldb.SBValue_IsSyntheticChildrenGenerated(self)
+
+    def SetSyntheticChildrenGenerated(self, *args):
+        """SetSyntheticChildrenGenerated(self, bool arg0)"""
+        return _lldb.SBValue_SetSyntheticChildrenGenerated(self, *args)
+
     def GetLocation(self):
         """GetLocation(self) -> str"""
         return _lldb.SBValue_GetLocation(self)
@@ -11960,6 +12088,23 @@ class SBValue(_object):
 
     __swig_getmethods__["path"] = get_expr_path
     if _newclass: path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
+
+    def synthetic_child_from_expression(self, name, expr, options=None):
+        if options is None: options = lldb.SBExpressionOptions()
+        child = self.CreateValueFromExpression(name, expr, options)
+        child.SetSyntheticChildrenGenerated(True)
+        return child
+
+    def synthetic_child_from_data(self, name, data, type):
+        child = self.CreateValueFromData(name, data, type)
+        child.SetSyntheticChildrenGenerated(True)
+        return child
+            
+    def synthetic_child_from_address(self, name, addr, type):
+        child = self.CreateValueFromAddress(name, addr, type)
+        child.SetSyntheticChildrenGenerated(True)
+        return child
+
 
     def __str__(self):
         """__str__(self) -> PyObject"""
@@ -12402,6 +12547,7 @@ SBUnixSignals_swigregister(SBUnixSignals)
 
 def command(*args, **kwargs):
     import lldb
+    import inspect
     """A decorator function that registers an LLDB command line
         command that is bound to the function it is attached to."""
     class obj(object):
@@ -12413,11 +12559,15 @@ def command(*args, **kwargs):
             command = "command script add -f %s.%s %s" % (function.__module__, function.__name__, command_name)
             lldb.debugger.HandleCommand(command)
             self.function = function
-        def __call__(self, *args, **kwargs):
-            self.function(*args, **kwargs)
+        def __call__(self, debugger, command, exe_ctx, result, dict):
+            if len(inspect.getargspec(self.function).args) == 5:
+                self.function(debugger, command, exe_ctx, result, dict)
+            else:
+                self.function(debugger, command, result, dict)
     def callable(function):
         """Creates a callable object that gets used."""
-        return obj(function, *args, **kwargs)
+        f = obj(function, *args, **kwargs)
+        return f.__call__
     return callable
 
 class declaration(object):
