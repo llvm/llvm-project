@@ -1905,6 +1905,32 @@ static int test_coalesce_special(struct isl_ctx *ctx)
 	return 0;
 }
 
+/* A specialized coalescing test case that would result in an assertion
+ * in an earlier version of isl.
+ * The explicit call to isl_basic_set_union prevents the implicit
+ * equality constraints in the first basic map from being detected prior
+ * to the call to isl_set_coalesce, at least at the point
+ * where this test case was introduced.
+ */
+static int test_coalesce_special2(struct isl_ctx *ctx)
+{
+	const char *str;
+	isl_basic_set *bset1, *bset2;
+	isl_set *set;
+
+	str = "{ [x, y] : x, y >= 0 and x + 2y <= 1 and 2x + y <= 1 }";
+	bset1 = isl_basic_set_read_from_str(ctx, str);
+	str = "{ [x,0] : -1 <= x <= 1 and x mod 2 = 1 }" ;
+	bset2 = isl_basic_set_read_from_str(ctx, str);
+	set = isl_basic_set_union(bset1, bset2);
+	set = isl_set_coalesce(set);
+	isl_set_free(set);
+
+	if (!set)
+		return -1;
+	return 0;
+}
+
 /* Test the functionality of isl_set_coalesce.
  * That is, check that the output is always equal to the input
  * and in some cases that the result consists of a single disjunct.
@@ -1923,6 +1949,8 @@ static int test_coalesce(struct isl_ctx *ctx)
 	if (test_coalesce_unbounded_wrapping(ctx) < 0)
 		return -1;
 	if (test_coalesce_special(ctx) < 0)
+		return -1;
+	if (test_coalesce_special2(ctx) < 0)
 		return -1;
 
 	return 0;
@@ -2269,6 +2297,11 @@ struct {
 		"247j >= 62738 - i and 509j <= 129795 + i and "
 		"742j >= 188724 - i; "
 	    "[0, k, j] -> [1, 0, 248, 1] : k <= 255 and 248 <= j <= 254, k }" },
+	{ "{ [a] -> [b] : 0 <= b <= 255 and -509 + a <= 512b < a and "
+			"16*floor((8 + b)/16) <= 7 + b; "
+	    "[a] -> [1] }",
+	  "{ [a] -> [b = 1] : a >= 510 or a <= 0; "
+	    "[a] -> [b = 0] : 0 < a <= 509 }" },
 };
 
 static int test_lexmin(struct isl_ctx *ctx)

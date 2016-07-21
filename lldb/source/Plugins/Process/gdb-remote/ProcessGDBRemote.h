@@ -261,6 +261,15 @@ public:
     StructuredData::ObjectSP
     GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_address, lldb::addr_t image_count) override;
 
+    StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos () override;
+
+    StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos (const std::vector<lldb::addr_t> &load_addresses) override;
+
+    StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos_sender (StructuredData::ObjectSP args);
+
 protected:
     friend class ThreadGDBRemote;
     friend class GDBRemoteCommunicationClient;

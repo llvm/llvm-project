@@ -19,6 +19,9 @@
 
 namespace lld {
 namespace elf {
+template <class ELFT> class InputSectionBase;
+template <class ELFT> class OutputSectionBase;
+template <class ELFT> class OutputSectionFactory;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
@@ -38,16 +41,37 @@ struct SectionRule {
   StringRef SectionPattern;
 };
 
-// This enum represents what we can observe in SECTIONS tag of script:
-// ExprKind is a location counter change, like ". = . + 0x1000"
-// SectionKind is a description of output section, like ".data :..."
-enum SectionsCommandKind { SectionKind, AssignmentKind };
+// This enum represents what we can observe in SECTIONS tag of script.
+// Each sections-command may of be one of the following:
+// (https://sourceware.org/binutils/docs/ld/SECTIONS.html#SECTIONS)
+// * An ENTRY command.
+// * A symbol assignment.
+// * An output section description.
+// * An overlay description.
+// We support only AssignmentKind and OutputSectionKind for now.
+enum SectionsCommandKind { AssignmentKind, OutputSectionKind };
 
-struct SectionsCommand {
-  SectionsCommandKind Kind;
+struct BaseCommand {
+  BaseCommand(int K) : Kind(K) {}
+  virtual ~BaseCommand() {}
+  int Kind;
+};
+
+struct SymbolAssignment : BaseCommand {
+  SymbolAssignment(StringRef Name, std::vector<StringRef> &Expr)
+      : BaseCommand(AssignmentKind), Name(Name), Expr(std::move(Expr)) {}
+  static bool classof(const BaseCommand *C);
+  StringRef Name;
   std::vector<StringRef> Expr;
+};
+
+struct OutputSectionCommand : BaseCommand {
+  OutputSectionCommand(StringRef Name)
+      : BaseCommand(OutputSectionKind), Name(Name) {}
+  static bool classof(const BaseCommand *C);
   StringRef Name;
   std::vector<StringRef> Phdrs;
+  std::vector<uint8_t> Filler;
 };
 
 struct PhdrsCommand {
@@ -62,15 +86,12 @@ struct ScriptConfiguration {
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 
-  // Section fill attribute for each section.
-  llvm::StringMap<std::vector<uint8_t>> Filler;
-
   // Used to assign addresses to sections.
-  std::vector<SectionsCommand> Commands;
+  std::vector<std::unique_ptr<BaseCommand>> Commands;
 
   // Used to assign sections to headers.
-  std::vector<PhdrsCommand> PhdrsCommands;  
-  
+  std::vector<PhdrsCommand> PhdrsCommands;
+
   bool DoLayout = false;
 
   llvm::BumpPtrAllocator Alloc;
@@ -88,6 +109,9 @@ template <class ELFT> class LinkerScript {
 
 public:
   typedef PhdrEntry<ELFT> Phdr;
+
+  std::vector<OutputSectionBase<ELFT> *>
+  createSections(OutputSectionFactory<ELFT> &Factory);
 
   StringRef getOutputSection(InputSectionBase<ELFT> *S);
   ArrayRef<uint8_t> getFiller(StringRef Name);

@@ -894,6 +894,8 @@
 		AF26703B1852D01E00B6CC36 /* QueueList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2670391852D01E00B6CC36 /* QueueList.cpp */; };
 		AF27AD551D3603EA00CF2833 /* DynamicLoaderDarwin.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */; };
 		AF27AD561D3603EA00CF2833 /* DynamicLoaderDarwin.h in Headers */ = {isa = PBXBuildFile; fileRef = AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */; };
+		AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */; };
+		AF2907C01D3F082400E10654 /* DynamicLoaderMacOS.h in Headers */ = {isa = PBXBuildFile; fileRef = AF2907BE1D3F082400E10654 /* DynamicLoaderMacOS.h */; };
 		AF2BA6EC1A707E3400C5248A /* UriParser.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 33064C991A5C7A330033D415 /* UriParser.cpp */; };
 		AF2BCA6C18C7EFDE005B4526 /* JITLoaderGDB.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */; };
 		AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */; };
@@ -2817,6 +2819,8 @@
 		AF2670391852D01E00B6CC36 /* QueueList.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = QueueList.cpp; path = source/Target/QueueList.cpp; sourceTree = "<group>"; };
 		AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DynamicLoaderDarwin.cpp; sourceTree = "<group>"; };
 		AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderDarwin.h; sourceTree = "<group>"; };
+		AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DynamicLoaderMacOS.cpp; sourceTree = "<group>"; };
+		AF2907BE1D3F082400E10654 /* DynamicLoaderMacOS.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DynamicLoaderMacOS.h; sourceTree = "<group>"; };
 		AF2BCA6918C7EFDE005B4526 /* JITLoaderGDB.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = JITLoaderGDB.cpp; sourceTree = "<group>"; };
 		AF2BCA6A18C7EFDE005B4526 /* JITLoaderGDB.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = JITLoaderGDB.h; sourceTree = "<group>"; };
 		AF33B4BC1C1FA441001B28D9 /* NetBSDSignals.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = NetBSDSignals.cpp; path = Utility/NetBSDSignals.cpp; sourceTree = "<group>"; };
@@ -3297,6 +3301,8 @@
 			children = (
 				AF27AD531D3603EA00CF2833 /* DynamicLoaderDarwin.cpp */,
 				AF27AD541D3603EA00CF2833 /* DynamicLoaderDarwin.h */,
+				AF2907BD1D3F082400E10654 /* DynamicLoaderMacOS.cpp */,
+				AF2907BE1D3F082400E10654 /* DynamicLoaderMacOS.h */,
 				260C897A10F57C5600BB2B04 /* DynamicLoaderMacOSXDYLD.cpp */,
 				260C897B10F57C5600BB2B04 /* DynamicLoaderMacOSXDYLD.h */,
 			);
@@ -6950,6 +6956,7 @@
 				268900ED13353E6F00698AC0 /* ObjCLanguageRuntime.cpp in Sources */,
 				268900EE13353E6F00698AC0 /* PathMappingList.cpp in Sources */,
 				4C2479BD1BA39295009C9A7B /* FunctionCaller.cpp in Sources */,
+				AF2907BF1D3F082400E10654 /* DynamicLoaderMacOS.cpp in Sources */,
 				268900EF13353E6F00698AC0 /* Platform.cpp in Sources */,
 				268900F013353E6F00698AC0 /* Process.cpp in Sources */,
 				26BC17AD18C7F4CB00D2196D /* RegisterContextPOSIXCore_mips64.cpp in Sources */,

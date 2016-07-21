@@ -1918,6 +1918,9 @@ public:
 
     //------------------------------------------------------------------
     /// Retrieve the list of shared libraries that are loaded for this process
+    /// This method is used on pre-macOS 10.12, pre-iOS 10, pre-tvOS 10, 
+    /// pre-watchOS 3 systems.  The following two methods are for newer versions
+    /// of those OSes.
     /// 
     /// For certain platforms, the time it takes for the DynamicLoader plugin to
     /// read all of the shared libraries out of memory over a slow communication
@@ -1942,6 +1945,22 @@ public:
     //------------------------------------------------------------------
     virtual lldb_private::StructuredData::ObjectSP
     GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_address, lldb::addr_t image_count)
+    {
+        return StructuredData::ObjectSP();
+    }
+
+    // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can return
+    // the full list of loaded shared libraries without needing any input.
+    virtual lldb_private::StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos ()
+    {
+        return StructuredData::ObjectSP();
+    }
+
+    // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can return
+    // information about binaries given their load addresses.
+    virtual lldb_private::StructuredData::ObjectSP
+    GetLoadedDynamicLibrariesInfos (const std::vector<lldb::addr_t> &load_addresses)
     {
         return StructuredData::ObjectSP();
     }

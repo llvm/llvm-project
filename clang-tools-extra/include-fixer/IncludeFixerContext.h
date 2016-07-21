@@ -47,7 +47,7 @@ public:
 
   IncludeFixerContext() = default;
   IncludeFixerContext(const QuerySymbolInfo &QuerySymbol,
-                      const std::vector<find_all_symbols::SymbolInfo> Symbols);
+                      std::vector<find_all_symbols::SymbolInfo> Symbols);
 
   /// \brief Get symbol name.
   llvm::StringRef getSymbolIdentifier() const {

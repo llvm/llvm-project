@@ -37,7 +37,7 @@ uint32_t toPhdrFlags(uint64_t Flags);
 template<class ELFT>
 struct PhdrEntry {
   PhdrEntry(unsigned Type, unsigned Flags);
-  void AddSec(OutputSectionBase<ELFT> *Sec);
+  void add(OutputSectionBase<ELFT> *Sec);
 
   typename ELFT::Phdr H = {};
   OutputSectionBase<ELFT> *First = nullptr;
