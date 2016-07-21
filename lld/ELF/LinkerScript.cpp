@@ -410,10 +410,11 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
 
 template <class ELFT>
 ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
-  auto I = Opt.Filler.find(Name);
-  if (I == Opt.Filler.end())
-    return {};
-  return I->second;
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
+      if (Cmd->Name == Name)
+        return Cmd->Filler;
+  return {};
 }
 
 // Returns the index of the given section name in linker script
@@ -754,7 +755,7 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       return;
     }
     Tok = Tok.substr(3);
-    Opt.Filler[OutSec] = parseHex(Tok);
+    Cmd->Filler = parseHex(Tok);
     next();
   }
 }

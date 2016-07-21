@@ -236,6 +236,11 @@ static void truncateCurrentFile(void) {
     __llvm_profile_recursive_mkdir(Copy);
   }
 
+  /* By pass file truncation to allow online raw profile
+   * merging. */
+  if (lprofCurFilename.MergePoolSize)
+    return;
+
   /* Truncate the file.  Later we'll reopen and append. */
   File = fopen(Filename, "w");
   if (!File)
@@ -350,8 +355,7 @@ static void parseAndSetFilename(const char *FilenamePat,
               getPNSStr(PNS));
   }
 
-  if (!lprofCurFilename.MergePoolSize)
-    truncateCurrentFile();
+  truncateCurrentFile();
 }
 
 /* Return buffer length that is required to store the current profile

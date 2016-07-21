@@ -125,6 +125,12 @@ void ThreadContext::OnStarted(void *arg) {
 }
 
 void ThreadContext::OnFinished() {
+#ifdef SANITIZER_GO
+  internal_free(thr->shadow_stack);
+  thr->shadow_stack = nullptr;
+  thr->shadow_stack_pos = nullptr;
+  thr->shadow_stack_end = nullptr;
+#endif
   if (!detached) {
     thr->fast_state.IncrementEpoch();
     // Can't increment epoch w/o writing to the trace as well.
