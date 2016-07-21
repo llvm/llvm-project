@@ -67,7 +67,8 @@ if args.package:
     checkout_git("swiftpm", "ssh://git@github.com/apple/swift-package-manager.git", "master-next")
     checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master-next")
     checkout_git("swift-corelibs-xctest", "ssh://git@github.com/apple/swift-corelibs-xctest.git", "master-next")
-    checkout_git("swift-integration-tests", "ssh://git@github.com/apple/swift-integration-tests.git", "master-next")
+    # swift-integration-tests does not have a master-next branch at this time
+    checkout_git("swift-integration-tests", "ssh://git@github.com/apple/swift-integration-tests.git", "master")
 
 if args.update:
     update_git("llvm")
