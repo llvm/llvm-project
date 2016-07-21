@@ -1318,7 +1318,7 @@ SwiftLanguageRuntime::MemberVariableOffsetResolver::ResolveOffset (ValueObject *
     if (result)
     {
         if (log)
-            log->Printf("[MemberVariableOffsetResolver] offset discovered = %llu", (uint64_t)result.getValue());
+            log->Printf("[MemberVariableOffsetResolver] offset discovered = %" PRIu64, (uint64_t)result.getValue());
         m_offsets.emplace(ivar_name.AsCString(), result.getValue());
         return result.getValue();
     }

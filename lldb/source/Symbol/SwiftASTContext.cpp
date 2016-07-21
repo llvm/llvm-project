@@ -15,6 +15,7 @@
 // C++ Includes
 #include <mutex> // std::once
 #include <queue>
+#include <regex>
 #include <set>
 
 #include "clang/Basic/TargetInfo.h"
@@ -2637,76 +2638,183 @@ GetResourceDir ()
     static ConstString g_cached_resource_dir;
     static std::once_flag g_once_flag;
     std::call_once(g_once_flag, [](){
+        Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_TYPES));
+
         // First, check if there's something in our bundle
-        
         {
             FileSpec swift_dir_spec;
-            
             if (HostInfo::GetLLDBPath (ePathTypeSwiftDir, swift_dir_spec))
             {
-                // We can't just check for the Swift directory, because that always exists.  We have to look for "clang" inside that.
-                
+                if (log)
+                    log->Printf("%s: trying ePathTypeSwiftDir: %s",
+                                __FUNCTION__,
+                                swift_dir_spec.GetCString());
+                // We can't just check for the Swift directory, because that
+                // always exists.  We have to look for "clang" inside that.
                 FileSpec swift_clang_dir_spec = swift_dir_spec;
                 swift_clang_dir_spec.AppendPathComponent("clang");
                 
                 if (swift_clang_dir_spec.IsDirectory())
                 {
-                    g_cached_resource_dir = ConstString(swift_dir_spec.GetPath());
+                    g_cached_resource_dir =
+                        ConstString(swift_dir_spec.GetPath());
+                    if (log)
+                        log->Printf("%s: found Swift resource dir via "
+                                    "ePathTypeSwiftDir': %s",
+                                    __FUNCTION__,
+                                    g_cached_resource_dir.AsCString());
                     return;
                 }
             }
         }
         
-        // Nothing in our bundle.  Are we in a toolchain that has its own Swift compiler resource dir?
+        // Nothing in our bundle.  Are we in a toolchain that has its own Swift
+        // compiler resource dir?
         
         {
             std::string xcode_toolchain_path = GetCurrentToolchainPath();
+            if (log)
+                log->Printf("%s: trying toolchain path: %s",
+                            __FUNCTION__,
+                            xcode_toolchain_path.c_str());
             
             if (!xcode_toolchain_path.empty())
             {
                 xcode_toolchain_path.append("usr/lib/swift");
+                if (log)
+                    log->Printf("%s: trying toolchain-based lib path: %s",
+                                __FUNCTION__,
+                                xcode_toolchain_path.c_str());
                 
                 if (FileSpec(xcode_toolchain_path, false).IsDirectory())
                 {
                     g_cached_resource_dir = ConstString(xcode_toolchain_path);
+                    if (log)
+                        log->Printf("%s: found Swift resource dir via "
+                                    "toolchain path + 'usr/lib/swift': %s",
+                                    __FUNCTION__,
+                                    g_cached_resource_dir.AsCString());
                     return;
                 }
             }
         }
         
-        // We're not in a toolchain that has one.  Use the Xcode default toolchain.
+        // We're not in a toolchain that has one.  Use the Xcode default
+        // toolchain.
         
         {
             std::string xcode_contents_path = GetXcodeContentsPath();
+            if (log)
+                log->Printf("%s: trying Xcode path: %s",
+                            __FUNCTION__,
+                            xcode_contents_path.c_str());
             
             if (!xcode_contents_path.empty())
             {
-                xcode_contents_path.append("Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift");
+                xcode_contents_path.append("Developer/Toolchains/"
+                                           "XcodeDefault.xctoolchain"
+                                           "/usr/lib/swift");
+                if (log)
+                    log->Printf("%s: trying Xcode-based lib path: %s",
+                                __FUNCTION__,
+                                xcode_contents_path.c_str());
 
                 if (FileSpec(xcode_contents_path, false).IsDirectory())
                 {
                     g_cached_resource_dir = ConstString(xcode_contents_path);
+                    if (log)
+                        log->Printf("%s: found Swift resource dir via "
+                                    "Xcode contents path + default toolchain "
+                                    "relative dir: %s",
+                                    __FUNCTION__,
+                                    g_cached_resource_dir.AsCString());
                     return;
                 }
             }
         }
 
-        // We're not in Xcode.  We must be in the command-line tools.
+        // We're not in Xcode.  We might be in the command-line tools.
 
         {
             std::string cl_tools_path = GetCurrentCLToolsPath();
+            if (log)
+                log->Printf("%s: trying command-line tools path: %s",
+                            __FUNCTION__,
+                            cl_tools_path.c_str());
 
             if (!cl_tools_path.empty())
             {
                 cl_tools_path.append("usr/lib/swift");
+                if (log)
+                    log->Printf("%s: trying command-line tools-based lib "
+                                "path: %s",
+                                __FUNCTION__,
+                                cl_tools_path.c_str());
 
                 if (FileSpec(cl_tools_path, false).IsDirectory())
                 {
                     g_cached_resource_dir = ConstString(cl_tools_path);
+                    if (log)
+                        log->Printf("%s: found Swift resource dir via "
+                                    "command-line tools path + "
+                                    "usr/lib/swift: %s",
+                                    __FUNCTION__,
+                                    g_cached_resource_dir.AsCString());
                     return;
                 }
             }
         }
+
+        // For non-Apple platforms, we might be in the build-dir configuration
+        // rather than the install-dir configuration.  If that is the case, we
+        // have to look for a Swift build-dir that is sibling to the lldb
+        // build dir.
+        {
+            FileSpec swift_dir_spec;
+            if (HostInfo::GetLLDBPath (ePathTypeSwiftDir, swift_dir_spec))
+            {
+                // Let's try to regex this.
+                // We're looking for /some/path/lldb-{os}-{arch}, and want to
+                // build the following:
+                //    /some/path/swift-{os}-{arch}/lib/swift/{os}/{arch}
+                // In a match, these are the following assignments for
+                // backrefs:
+                //   $1 - first part of path before swift build dir
+                //   $2 - the host OS path separator character
+                //   $3 - all the stuff that should come after changing
+                //        lldb to swift for the lib dir.
+                auto match_regex =
+                    std::regex("^(.+([/\\\\]))lldb-(.+)$");
+                auto replace_format = "$1swift-$3";
+                auto build_tree_resource_dir
+                    = std::regex_replace(swift_dir_spec.GetCString(),
+                                         match_regex, replace_format);
+                if (log)
+                    log->Printf("%s: trying ePathTypeSwiftDir regex-based "
+                                "build dir: %s",
+                                __FUNCTION__,
+                                build_tree_resource_dir.c_str());
+                FileSpec swift_resource_dir_spec(
+                    build_tree_resource_dir.c_str(), false);
+                if (swift_resource_dir_spec.IsDirectory())
+                {
+                    g_cached_resource_dir =
+                        ConstString(swift_resource_dir_spec.GetPath());
+                    if (log)
+                        log->Printf("%s: found Swift resource dir via "
+                                    "ePathTypeSwiftDir + inferred build-tree "
+                                    "dir: %s", __FUNCTION__,
+                                    g_cached_resource_dir.AsCString());
+                    return;
+                }
+            }
+        }
+
+
+        // We failed to find a reasonable Swift resource dir.
+        if (log)
+            log->Printf("%s: failed to find a Swift resource dir",
+                        __FUNCTION__);
     });
     
     return g_cached_resource_dir;
