@@ -783,15 +783,19 @@ void AMDGPUAsmPrinter::emitStartOfRuntimeMetadata(const Module &M) {
   emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyMDVersion,
                         RuntimeMD::MDVersion << 8 | RuntimeMD::MDRevision, 2);
   if (auto MD = M.getNamedMetadata("opencl.ocl.version")) {
-    emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyLanguage,
-                          RuntimeMD::OpenCL_C, 1);
-    auto Node = MD->getOperand(0);
-    unsigned short Major = mdconst::extract<ConstantInt>(Node->getOperand(0))
-                             ->getZExtValue();
-    unsigned short Minor = mdconst::extract<ConstantInt>(Node->getOperand(1))
-                             ->getZExtValue();
-    emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyLanguageVersion,
-                          Major * 100 + Minor * 10, 2);
+    if (MD->getNumOperands()) {
+      auto Node = MD->getOperand(0);
+      if (Node->getNumOperands() > 1) {
+        emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyLanguage,
+                              RuntimeMD::OpenCL_C, 1);
+        uint16_t Major = mdconst::extract<ConstantInt>(Node->getOperand(0))
+                         ->getZExtValue();
+        uint16_t Minor = mdconst::extract<ConstantInt>(Node->getOperand(1))
+                         ->getZExtValue();
+        emitRuntimeMDIntValue(OutStreamer, RuntimeMD::KeyLanguageVersion,
+                              Major * 100 + Minor * 10, 2);
+      }
+    }
   }
 }
 

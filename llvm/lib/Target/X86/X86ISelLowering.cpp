@@ -21052,6 +21052,8 @@ static SDValue LowerVectorCTPOPBitmath(SDValue Op, const SDLoc &DL,
       DAG);
 }
 
+// Please ensure that any codegen change from LowerVectorCTPOP is reflected in
+// updated cost models in X86TTIImpl::getIntrinsicInstrCost.
 static SDValue LowerVectorCTPOP(SDValue Op, const X86Subtarget &Subtarget,
                                 SelectionDAG &DAG) {
   MVT VT = Op.getSimpleValueType();

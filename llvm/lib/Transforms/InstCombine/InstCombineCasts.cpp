@@ -920,14 +920,6 @@ Instruction *InstCombiner::visitZExt(ZExtInst &CI) {
     return BinaryOperator::CreateXor(Builder->CreateAnd(X, ZC), ZC);
   }
 
-  // zext (xor i1 X, true) to i32  --> xor (zext i1 X to i32), 1
-  if (SrcI && SrcI->hasOneUse() &&
-      SrcI->getType()->getScalarType()->isIntegerTy(1) &&
-      match(SrcI, m_Not(m_Value(X))) && (!X->hasOneUse() || !isa<CmpInst>(X))) {
-    Value *New = Builder->CreateZExt(X, CI.getType());
-    return BinaryOperator::CreateXor(New, ConstantInt::get(CI.getType(), 1));
-  }
-
   return nullptr;
 }
 

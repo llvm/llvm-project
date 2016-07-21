@@ -900,7 +900,8 @@ public:
   CachingWalker(MemorySSA *, AliasAnalysis *, DominatorTree *);
   ~CachingWalker() override;
 
-  MemoryAccess *getClobberingMemoryAccess(const Instruction *) override;
+  using MemorySSAWalker::getClobberingMemoryAccess;
+  MemoryAccess *getClobberingMemoryAccess(MemoryAccess *) override;
   MemoryAccess *getClobberingMemoryAccess(MemoryAccess *,
                                           MemoryLocation &) override;
   void invalidateInfo(MemoryAccess *) override;
@@ -1850,11 +1851,13 @@ MemoryAccess *MemorySSA::CachingWalker::getClobberingMemoryAccess(
 }
 
 MemoryAccess *
-MemorySSA::CachingWalker::getClobberingMemoryAccess(const Instruction *I) {
-  // There should be no way to lookup an instruction and get a phi as the
-  // access, since we only map BB's to PHI's. So, this must be a use or def.
-  auto *StartingAccess = cast<MemoryUseOrDef>(MSSA->getMemoryAccess(I));
+MemorySSA::CachingWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
+  auto *StartingAccess = dyn_cast<MemoryUseOrDef>(MA);
+  // If this is a MemoryPhi, we can't do anything.
+  if (!StartingAccess)
+    return MA;
 
+  const Instruction *I = StartingAccess->getMemoryInst();
   UpwardsMemoryQuery Q(I, StartingAccess);
   // We can't sanely do anything with a fences, they conservatively
   // clobber all memory, and have no locations to get pointers from to
@@ -1888,8 +1891,7 @@ void MemorySSA::CachingWalker::verifyRemoved(MemoryAccess *MA) {
 }
 
 MemoryAccess *
-DoNothingMemorySSAWalker::getClobberingMemoryAccess(const Instruction *I) {
-  MemoryAccess *MA = MSSA->getMemoryAccess(I);
+DoNothingMemorySSAWalker::getClobberingMemoryAccess(MemoryAccess *MA) {
   if (auto *Use = dyn_cast<MemoryUseOrDef>(MA))
     return Use->getDefiningAccess();
   return MA;

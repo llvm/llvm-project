@@ -23,8 +23,8 @@ define i41 @sext(i1 %C) {
 
 define i999 @not_zext(i1 %C) {
 ; CHECK-LABEL: @not_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 %C to i999
-; CHECK-NEXT:    [[V:%.*]] = xor i999 [[TMP1]], 1
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 %C, true
+; CHECK-NEXT:    [[V:%.*]] = zext i1 [[NOT_C]] to i999
 ; CHECK-NEXT:    ret i999 [[V]]
 ;
   %V = select i1 %C, i999 0, i999 1
@@ -63,8 +63,8 @@ define <2 x i32> @sext_vec(<2 x i1> %C) {
 
 define <2 x i999> @not_zext_vec(<2 x i1> %C) {
 ; CHECK-LABEL: @not_zext_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> %C to <2 x i999>
-; CHECK-NEXT:    [[V:%.*]] = xor <2 x i999> [[TMP1]], <i999 1, i999 1>
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor <2 x i1> %C, <i1 true, i1 true>
+; CHECK-NEXT:    [[V:%.*]] = zext <2 x i1> [[NOT_C]] to <2 x i999>
 ; CHECK-NEXT:    ret <2 x i999> [[V]]
 ;
   %V = select <2 x i1> %C, <2 x i999> <i999 0, i999 0>, <2 x i999> <i999 1, i999 1>

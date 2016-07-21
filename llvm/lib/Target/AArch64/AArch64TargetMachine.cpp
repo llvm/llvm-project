@@ -116,6 +116,7 @@ extern "C" void LLVMInitializeAArch64Target() {
   auto PR = PassRegistry::getPassRegistry();
   initializeGlobalISel(*PR);
   initializeAArch64ExpandPseudoPass(*PR);
+  initializeAArch64LoadStoreOptPass(*PR);
 }
 
 //===----------------------------------------------------------------------===//

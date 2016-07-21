@@ -3416,7 +3416,10 @@ static Value *simplifySelectWithICmpCond(Value *CondVal, Value *TrueVal,
   if (!match(CondVal, m_ICmp(Pred, m_Value(CmpLHS), m_Value(CmpRHS))))
     return nullptr;
 
-  unsigned BitWidth = Q.DL.getTypeSizeInBits(TrueVal->getType());
+  // FIXME: This code is nearly duplicated in InstCombine. Using/refactoring
+  // decomposeBitTestICmp() might help.
+  unsigned BitWidth =
+      Q.DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
   APInt MinSignedValue = APInt::getSignBit(BitWidth);
   if (ICmpInst::isEquality(Pred) && match(CmpRHS, m_Zero())) {
     Value *X;

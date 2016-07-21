@@ -10,3 +10,5 @@ set(CodeGenSources
 add_llvm_unittest(CodeGenTests
   ${CodeGenSources}
   )
+
+add_subdirectory(GlobalISel)

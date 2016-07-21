@@ -300,6 +300,12 @@ public:
     return TrackedGlobals;
   }
 
+  /// getMRVFunctionsTracked - Get the set of functions which return multiple
+  /// values tracked by the pass.
+  const SmallPtrSet<Function *, 16> getMRVFunctionsTracked() {
+    return MRVFunctionsTracked;
+  }
+
   void markOverdefined(Value *V) {
     assert(!V->getType()->isStructTy() &&
            "structs should use markAnythingOverdefined");
@@ -314,6 +320,20 @@ public:
         markOverdefined(getStructValueState(V, i), V);
     else
       markOverdefined(V);
+  }
+
+  // isStructLatticeConstant - Return true if all the lattice values
+  // corresponding to elements of the structure are not overdefined,
+  // false otherwise.
+  bool isStructLatticeConstant(Function *F, StructType *STy) {
+    for (unsigned i = 0, e = STy->getNumElements(); i != e; ++i) {
+      const auto &It = TrackedMultipleRetVals.find(std::make_pair(F, i));
+      assert(It != TrackedMultipleRetVals.end());
+      LatticeVal LV = It->second;
+      if (LV.isOverdefined())
+        return false;
+    }
+    return true;
   }
 
 private:
@@ -1690,6 +1710,19 @@ static bool AddressIsTaken(const GlobalValue *GV) {
   return false;
 }
 
+static void findReturnsToZap(Function &F,
+                             SmallPtrSet<Function *, 32> &AddressTakenFunctions,
+                             SmallVector<ReturnInst *, 8> &ReturnsToZap) {
+  // We can only do this if we know that nothing else can call the function.
+  if (!F.hasLocalLinkage() || AddressTakenFunctions.count(&F))
+    return;
+
+  for (BasicBlock &BB : F)
+    if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
+      if (!isa<UndefValue>(RI->getOperand(0)))
+        ReturnsToZap.push_back(RI);
+}
+
 static bool runIPSCCP(Module &M, const DataLayout &DL,
                       const TargetLibraryInfo *TLI) {
   SCCPSolver Solver(DL, TLI);
@@ -1866,21 +1899,20 @@ static bool runIPSCCP(Module &M, const DataLayout &DL,
   // whether other functions are optimizable.
   SmallVector<ReturnInst*, 8> ReturnsToZap;
 
-  // TODO: Process multiple value ret instructions also.
   const DenseMap<Function*, LatticeVal> &RV = Solver.getTrackedRetVals();
   for (const auto &I : RV) {
     Function *F = I.first;
     if (I.second.isOverdefined() || F->getReturnType()->isVoidTy())
       continue;
+    findReturnsToZap(*F, AddressTakenFunctions, ReturnsToZap);
+  }
 
-    // We can only do this if we know that nothing else can call the function.
-    if (!F->hasLocalLinkage() || AddressTakenFunctions.count(F))
-      continue;
-
-    for (BasicBlock &BB : *F)
-      if (ReturnInst *RI = dyn_cast<ReturnInst>(BB.getTerminator()))
-        if (!isa<UndefValue>(RI->getOperand(0)))
-          ReturnsToZap.push_back(RI);
+  for (const auto &F : Solver.getMRVFunctionsTracked()) {
+    assert(F->getReturnType()->isStructTy() &&
+           "The return type should be a struct");
+    StructType *STy = cast<StructType>(F->getReturnType());
+    if (Solver.isStructLatticeConstant(F, STy))
+      findReturnsToZap(*F, AddressTakenFunctions, ReturnsToZap);
   }
 
   // Zap all returns which we've identified as zap to change.

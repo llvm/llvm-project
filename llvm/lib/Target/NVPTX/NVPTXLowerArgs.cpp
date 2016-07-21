@@ -1,4 +1,4 @@
-//===-- NVPTXLowerKernelArgs.cpp - Lower kernel arguments -----------------===//
+//===-- NVPTXLowerArgs.cpp - Lower arguments ------------------------------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,20 +7,28 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Pointer arguments to kernel functions need to be lowered specially.
 //
-// 1. Copy byval struct args to local memory. This is a preparation for handling
-//    cases like
+// Arguments to kernel and device functions are passed via param space,
+// which imposes certain restrictions:
+// http://docs.nvidia.com/cuda/parallel-thread-execution/#state-spaces
 //
-//    kernel void foo(struct A arg, ...)
-//    {
-//      struct A *p = &arg;
-//      ...
-//      ... = p->filed1 ...  (this is no generic address for .param)
-//      p->filed2 = ...      (this is no write access to .param)
-//    }
+// Kernel parameters are read-only and accessible only via ld.param
+// instruction, directly or via a pointer. Pointers to kernel
+// arguments can't be converted to generic address space.
 //
-// 2. Convert non-byval pointer arguments of CUDA kernels to pointers in the
+// Device function parameters are directly accessible via
+// ld.param/st.param, but taking the address of one returns a pointer
+// to a copy created in local space which *can't* be used with
+// ld.param/st.param.
+//
+// Copying a byval struct into local memory in IR allows us to enforce
+// the param space restrictions, gives the rest of IR a pointer w/o
+// param space restrictions, and gives us an opportunity to eliminate
+// the copy.
+//
+// Pointer arguments to kernel functions need more work to be lowered:
+//
+// 1. Convert non-byval pointer arguments of CUDA kernels to pointers in the
 //    global address space. This allows later optimizations to emit
 //    ld.global.*/st.global.* for accessing these pointer arguments. For
 //    example,
@@ -47,7 +55,7 @@
 //      ...
 //    }
 //
-// 3. Convert pointers in a byval kernel parameter to pointers in the global
+// 2. Convert pointers in a byval kernel parameter to pointers in the global
 //    address space. As #2, it allows NVPTX to emit more ld/st.global. E.g.,
 //
 //    struct S {
@@ -94,12 +102,15 @@
 using namespace llvm;
 
 namespace llvm {
-void initializeNVPTXLowerKernelArgsPass(PassRegistry &);
+void initializeNVPTXLowerArgsPass(PassRegistry &);
 }
 
 namespace {
-class NVPTXLowerKernelArgs : public FunctionPass {
+class NVPTXLowerArgs : public FunctionPass {
   bool runOnFunction(Function &F) override;
+
+  bool runOnKernelFunction(Function &F);
+  bool runOnDeviceFunction(Function &F);
 
   // handle byval parameters
   void handleByValParam(Argument *Arg);
@@ -111,7 +122,7 @@ class NVPTXLowerKernelArgs : public FunctionPass {
 
 public:
   static char ID; // Pass identification, replacement for typeid
-  NVPTXLowerKernelArgs(const NVPTXTargetMachine *TM = nullptr)
+  NVPTXLowerArgs(const NVPTXTargetMachine *TM = nullptr)
       : FunctionPass(ID), TM(TM) {}
   const char *getPassName() const override {
     return "Lower pointer arguments of CUDA kernels";
@@ -122,10 +133,10 @@ private:
 };
 } // namespace
 
-char NVPTXLowerKernelArgs::ID = 1;
+char NVPTXLowerArgs::ID = 1;
 
-INITIALIZE_PASS(NVPTXLowerKernelArgs, "nvptx-lower-kernel-args",
-                "Lower kernel arguments (NVPTX)", false, false)
+INITIALIZE_PASS(NVPTXLowerArgs, "nvptx-lower-args",
+                "Lower arguments (NVPTX)", false, false)
 
 // =============================================================================
 // If the function had a byval struct ptr arg, say foo(%struct.x* byval %d),
@@ -140,7 +151,7 @@ INITIALIZE_PASS(NVPTXLowerKernelArgs, "nvptx-lower-kernel-args",
 // struct from param space to local space.
 // Then replace all occurrences of %d by %temp.
 // =============================================================================
-void NVPTXLowerKernelArgs::handleByValParam(Argument *Arg) {
+void NVPTXLowerArgs::handleByValParam(Argument *Arg) {
   Function *Func = Arg->getParent();
   Instruction *FirstInst = &(Func->getEntryBlock().front());
   PointerType *PType = dyn_cast<PointerType>(Arg->getType());
@@ -162,7 +173,7 @@ void NVPTXLowerKernelArgs::handleByValParam(Argument *Arg) {
   new StoreInst(LI, AllocA, FirstInst);
 }
 
-void NVPTXLowerKernelArgs::markPointerAsGlobal(Value *Ptr) {
+void NVPTXLowerArgs::markPointerAsGlobal(Value *Ptr) {
   if (Ptr->getType()->getPointerAddressSpace() == ADDRESS_SPACE_GLOBAL)
     return;
 
@@ -192,11 +203,7 @@ void NVPTXLowerKernelArgs::markPointerAsGlobal(Value *Ptr) {
 // =============================================================================
 // Main function for this pass.
 // =============================================================================
-bool NVPTXLowerKernelArgs::runOnFunction(Function &F) {
-  // Skip non-kernels. See the comments at the top of this file.
-  if (!isKernelFunction(F))
-    return false;
-
+bool NVPTXLowerArgs::runOnKernelFunction(Function &F) {
   if (TM && TM->getDrvInterface() == NVPTX::CUDA) {
     // Mark pointers in byval structs as global.
     for (auto &B : F) {
@@ -228,7 +235,19 @@ bool NVPTXLowerKernelArgs::runOnFunction(Function &F) {
   return true;
 }
 
+// Device functions only need to copy byval args into local memory.
+bool NVPTXLowerArgs::runOnDeviceFunction(Function &F) {
+  for (Argument &Arg : F.args())
+    if (Arg.getType()->isPointerTy() && Arg.hasByValAttr())
+      handleByValParam(&Arg);
+  return true;
+}
+
+bool NVPTXLowerArgs::runOnFunction(Function &F) {
+  return isKernelFunction(F) ? runOnKernelFunction(F) : runOnDeviceFunction(F);
+}
+
 FunctionPass *
-llvm::createNVPTXLowerKernelArgsPass(const NVPTXTargetMachine *TM) {
-  return new NVPTXLowerKernelArgs(TM);
+llvm::createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM) {
+  return new NVPTXLowerArgs(TM);
 }

@@ -637,9 +637,9 @@ define i32 @test52(i64 %A) {
 
 define i64 @test53(i32 %A) {
 ; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[B:%.*]] = zext i32 %A to i64
-; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 7224
-; CHECK-NEXT:    [[D:%.*]] = or i64 [[C]], 32962
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %A, 7224
+; CHECK-NEXT:    [[TMP2:%.*]] = or i32 [[TMP1]], 32962
+; CHECK-NEXT:    [[D:%.*]] = zext i32 [[TMP2]] to i64
 ; CHECK-NEXT:    ret i64 [[D]]
 ;
   %B = trunc i32 %A to i16
@@ -665,8 +665,8 @@ define i32 @test54(i64 %A) {
 
 define i64 @test55(i32 %A) {
 ; CHECK-LABEL: @test55(
-; CHECK-NEXT:    [[B:%.*]] = zext i32 %A to i64
-; CHECK-NEXT:    [[C:%.*]] = and i64 [[B]], 7224
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 %A, 7224
+; CHECK-NEXT:    [[C:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[D:%.*]] = or i64 [[C]], -32574
 ; CHECK-NEXT:    ret i64 [[D]]
 ;

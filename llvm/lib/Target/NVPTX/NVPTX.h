@@ -53,7 +53,7 @@ FunctionPass *createNVVMReflectPass(const StringMap<int> &Mapping);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
-FunctionPass *createNVPTXLowerKernelArgsPass(const NVPTXTargetMachine *TM);
+FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
 BasicBlockPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
 

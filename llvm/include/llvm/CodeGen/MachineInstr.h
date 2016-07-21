@@ -23,6 +23,7 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/MachineOperand.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -39,9 +40,6 @@ class DIExpression;
 class TargetInstrInfo;
 class TargetRegisterClass;
 class TargetRegisterInfo;
-#ifdef LLVM_BUILD_GLOBAL_ISEL
-class Type;
-#endif
 class MachineFunction;
 class MachineMemOperand;
 
@@ -108,9 +106,9 @@ private:
 
 #ifdef LLVM_BUILD_GLOBAL_ISEL
   /// Type of the instruction in case of a generic opcode.
-  /// \invariant This must be nullptr is getOpcode() is not
+  /// \invariant This must be LLT{} if getOpcode() is not
   /// in the range of generic opcodes.
-  Type *Ty;
+  LLT Ty;
 #endif
 
   MachineInstr(const MachineInstr&) = delete;
@@ -189,8 +187,8 @@ public:
 
   /// Set the type of the instruction.
   /// \pre getOpcode() is in the range of the generic opcodes.
-  void setType(Type *Ty);
-  Type *getType() const;
+  void setType(LLT Ty);
+  LLT getType() const;
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///

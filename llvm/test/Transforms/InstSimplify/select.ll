@@ -119,6 +119,17 @@ define i32 @test11(i32 %X) {
   ret i32 %cond
 }
 
+define <2 x i8> @test11vec(<2 x i8> %X) {
+; CHECK-LABEL: @test11vec(
+; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> %X, <i8 127, i8 127>
+; CHECK-NEXT:    ret <2 x i8> [[AND]]
+;
+  %cmp = icmp sgt <2 x i8> %X, <i8 -1, i8 -1>
+  %and = and <2 x i8> %X, <i8 127, i8 127>
+  %sel = select <2 x i1> %cmp, <2 x i8> %X, <2 x i8> %and
+  ret <2 x i8> %sel
+}
+
 define i32 @select_icmp_and_8_eq_0_or_8(i32 %x) {
 ; CHECK-LABEL: @select_icmp_and_8_eq_0_or_8(
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 8

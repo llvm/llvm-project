@@ -574,18 +574,23 @@ public:
     llvm_unreachable("Both I and J must be from same BB");
   }
 
-  bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt) const {
+  bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt,
+                             const SmallVecInsn &InstructionsToHoist) const {
     // Check whether the GEP of a ld/st can be synthesized at HoistPt.
-    Instruction *Gep = nullptr;
+    GetElementPtrInst *Gep = nullptr;
     Instruction *Val = nullptr;
     if (auto *Ld = dyn_cast<LoadInst>(Repl))
-      Gep = dyn_cast<Instruction>(Ld->getPointerOperand());
+      Gep = dyn_cast<GetElementPtrInst>(Ld->getPointerOperand());
     if (auto *St = dyn_cast<StoreInst>(Repl)) {
-      Gep = dyn_cast<Instruction>(St->getPointerOperand());
+      Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
       Val = dyn_cast<Instruction>(St->getValueOperand());
     }
 
-    if (!Gep || !isa<GetElementPtrInst>(Gep))
+    if (!Gep)
+      return false;
+
+    // PHIs may only be inserted at the start of a block.
+    if (Val && isa<PHINode>(Val))
       return false;
 
     // Check whether we can compute the Gep at HoistPt.
@@ -599,12 +604,33 @@ public:
     // Copy the gep before moving the ld/st.
     Instruction *ClonedGep = Gep->clone();
     ClonedGep->insertBefore(HoistPt->getTerminator());
+    // Conservatively discard any optimization hints, they may differ on the
+    // other paths.
+    ClonedGep->dropUnknownNonDebugMetadata();
+    for (const Instruction *OtherInst : InstructionsToHoist) {
+      const GetElementPtrInst *OtherGep;
+      if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
+        OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
+      else
+        OtherGep = cast<GetElementPtrInst>(
+            cast<StoreInst>(OtherInst)->getPointerOperand());
+      ClonedGep->intersectOptionalDataWith(OtherGep);
+    }
     Repl->replaceUsesOfWith(Gep, ClonedGep);
 
     // Also copy Val.
     if (Val) {
       Instruction *ClonedVal = Val->clone();
       ClonedVal->insertBefore(HoistPt->getTerminator());
+      // Conservatively discard any optimization hints, they may differ on the
+      // other paths.
+      ClonedVal->dropUnknownNonDebugMetadata();
+      for (const Instruction *OtherInst : InstructionsToHoist) {
+        const auto *OtherVal =
+            cast<Instruction>(cast<StoreInst>(OtherInst)->getValueOperand());
+        ClonedVal->intersectOptionalDataWith(OtherVal);
+      }
+      ClonedVal->clearSubclassOptionalData();
       Repl->replaceUsesOfWith(Val, ClonedVal);
     }
 
@@ -640,9 +666,12 @@ public:
         // The order in which hoistings are done may influence the availability
         // of operands.
         if (!allOperandsAvailable(Repl, HoistPt) &&
-            !makeOperandsAvailable(Repl, HoistPt))
+            !makeOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
           continue;
         Repl->moveBefore(HoistPt->getTerminator());
+        // TBAA may differ on one of the other paths, we need to get rid of
+        // anything which might conflict.
+        Repl->dropUnknownNonDebugMetadata();
       }
 
       if (isa<LoadInst>(Repl))
@@ -664,6 +693,7 @@ public:
             ++NumStoresRemoved;
           else if (isa<CallInst>(Repl))
             ++NumCallsRemoved;
+          Repl->intersectOptionalDataWith(I);
           I->replaceAllUsesWith(Repl);
           I->eraseFromParent();
         }

@@ -656,7 +656,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
       debugLoc(std::move(dl))
 #ifdef LLVM_BUILD_GLOBAL_ISEL
       ,
-      Ty(nullptr)
+      Ty(LLT{})
 #endif
 {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
@@ -680,7 +680,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
       MemRefs(MI.MemRefs), debugLoc(MI.getDebugLoc())
 #ifdef LLVM_BUILD_GLOBAL_ISEL
       ,
-      Ty(nullptr)
+      Ty(LLT{})
 #endif
 {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
@@ -710,18 +710,18 @@ MachineRegisterInfo *MachineInstr::getRegInfo() {
 // The proper implementation is WIP and is tracked here:
 // PR26576.
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-void MachineInstr::setType(Type *Ty) {}
+void MachineInstr::setType(LLT Ty) {}
 
-Type *MachineInstr::getType() const { return nullptr; }
+LLT MachineInstr::getType() const { return LLT{}; }
 
 #else
-void MachineInstr::setType(Type *Ty) {
-  assert((!Ty || isPreISelGenericOpcode(getOpcode())) &&
+void MachineInstr::setType(LLT Ty) {
+  assert((!Ty.isValid() || isPreISelGenericOpcode(getOpcode())) &&
          "Non generic instructions are not supposed to be typed");
   this->Ty = Ty;
 }
 
-Type *MachineInstr::getType() const { return Ty; }
+LLT MachineInstr::getType() const { return Ty; }
 #endif // LLVM_BUILD_GLOBAL_ISEL
 
 /// RemoveRegOperandsFromUseLists - Unlink all of the register operands in
@@ -1724,9 +1724,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   else
     OS << "UNKNOWN";
 
-  if (getType()) {
+  if (getType().isValid()) {
     OS << ' ';
-    getType()->print(OS, /*IsForDebug*/ false, /*NoDetails*/ true);
+    getType().print(OS);
     OS << ' ';
   }
 

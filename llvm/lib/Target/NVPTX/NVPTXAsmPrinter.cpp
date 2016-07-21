@@ -368,13 +368,13 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
     } else if (isa<PointerType>(Ty)) {
       O << ".param .b" << TLI->getPointerTy(DL).getSizeInBits()
         << " func_retval0";
-    } else if ((Ty->getTypeID() == Type::StructTyID) || isa<VectorType>(Ty)) {
+    } else if (Ty->isAggregateType() || Ty->isVectorTy()) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
-       unsigned retAlignment = 0;
-       if (!llvm::getAlign(*F, 0, retAlignment))
-         retAlignment = DL.getABITypeAlignment(Ty);
-       O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
-         << "]";
+      unsigned retAlignment = 0;
+      if (!llvm::getAlign(*F, 0, retAlignment))
+        retAlignment = DL.getABITypeAlignment(Ty);
+      O << ".param .align " << retAlignment << " .b8 func_retval0[" << totalsz
+        << "]";
     } else
       llvm_unreachable("Unknown return type");
   } else {

@@ -83,7 +83,7 @@ define internal {i64,i64} @test4a() {
 }
 
 ; CHECK-LABEL: define internal { i64, i64 } @test4a(
-; CHECK-NEXT:   ret { i64, i64 } { i64 5, i64 4 }
+; CHECK-NEXT:   ret { i64, i64 } undef
 ; CHECK-NEXT: }
 
 define i64 @test4b() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
@@ -167,7 +167,7 @@ define internal %T @test7a(i32 %A) {
   %mrv1 = insertvalue %T %mrv0, i32 %A, 1
   ret %T %mrv1
 ; CHECK-LABEL: @test7a(
-; CHECK-NEXT: ret %T { i32 18, i32 17 }
+; CHECK-NEXT: ret %T undef
 }
 
 define i32 @test7b() {
