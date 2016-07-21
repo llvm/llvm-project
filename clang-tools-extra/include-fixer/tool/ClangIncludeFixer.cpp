@@ -29,6 +29,7 @@ using clang::include_fixer::IncludeFixerContext;
 LLVM_YAML_IS_DOCUMENT_LIST_VECTOR(IncludeFixerContext)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(std::string)
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::HeaderInfo)
+LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(IncludeFixerContext::QuerySymbolInfo)
 
 namespace llvm {
 namespace yaml {
@@ -70,7 +71,7 @@ template <> struct MappingTraits<IncludeFixerContext::QuerySymbolInfo> {
 
 template <> struct MappingTraits<IncludeFixerContext> {
   static void mapping(IO &IO, IncludeFixerContext &Context) {
-    IO.mapRequired("QuerySymbolInfo", Context.QuerySymbol);
+    IO.mapRequired("QuerySymbolInfos", Context.QuerySymbolInfos);
     IO.mapRequired("HeaderInfos", Context.HeaderInfos);
   }
 };
@@ -118,10 +119,10 @@ cl::opt<bool> OutputHeaders(
     cl::desc("Print the symbol being queried and all its relevant headers in\n"
              "JSON format to stdout:\n"
              "  {\n"
-             "    \"QuerySymbolInfo\": {\n"
-             "       \"RawIdentifier\": \"foo\",\n"
-             "       \"Range\": {\"Offset\": 0, \"Length\": 3}\n"
-             "    },\n"
+             "    \"QuerySymbolInfos\": [\n"
+             "       {\"RawIdentifier\": \"foo\",\n"
+             "        \"Range\": {\"Offset\": 0, \"Length\": 3}}\n"
+             "    ],\n"
              "    \"HeaderInfos\": [ {\"Header\": \"\\\"foo_a.h\\\"\",\n"
              "                      \"QualifiedName\": \"a::foo\"} ]\n"
              "  }"),
@@ -133,10 +134,10 @@ cl::opt<std::string> InsertHeader(
              "The result is written to stdout. It is currently used for\n"
              "editor integration. Support YAML/JSON format:\n"
              "  -insert-header=\"{\n"
-             "     QuerySymbolInfo: {\n"
-             "       RawIdentifier: foo,\n"
-             "       Range: {Offset: 0, Length: 3}\n"
-             "     },\n"
+             "     QuerySymbolInfos: [\n"
+             "       {RawIdentifier: foo,\n"
+             "        Range: {Offset: 0, Length: 3}}\n"
+             "     ],\n"
              "     HeaderInfos: [ {Headers: \"\\\"foo_a.h\\\"\",\n"
              "                     QualifiedName: \"a::foo\"} ]}\""),
     cl::init(""), cl::cat(IncludeFixerCategory));
@@ -202,13 +203,16 @@ createSymbolIndexManager(StringRef FilePath) {
 
 void writeToJson(llvm::raw_ostream &OS, const IncludeFixerContext& Context) {
   OS << "{\n"
-        "  \"QuerySymbolInfo\": {\n"
-        "     \"RawIdentifier\": \""
-     << Context.getSymbolIdentifier() << "\",\n";
-  OS << "     \"Range\": {";
-  OS << " \"Offset\":" << Context.getSymbolRange().getOffset() << ",";
-  OS << " \"Length\":" << Context.getSymbolRange().getLength() << " }\n";
-  OS << "  },\n";
+        "  \"QuerySymbolInfos\": [\n";
+  for (const auto &Info : Context.getQuerySymbolInfos()) {
+    OS << "     {\"RawIdentifier\": \"" << Info.RawIdentifier << "\",\n";
+    OS << "      \"Range\":{";
+    OS << "\"Offset\":" << Info.Range.getOffset() << ",";
+    OS << "\"Length\":" << Info.Range.getLength() << "}}";
+    if (&Info != &Context.getQuerySymbolInfos().back())
+      OS << ",\n";
+  }
+  OS << "\n  ],\n";
   OS << "  \"HeaderInfos\": [\n";
   const auto &HeaderInfos = Context.getHeaderInfos();
   for (const auto &Info : HeaderInfos) {
@@ -275,16 +279,7 @@ int includeFixerMain(int argc, const char **argv) {
       return 1;
     }
 
-    auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
-        Code->getBuffer(), FilePath, Context.getHeaderInfos().front().Header,
-        InsertStyle);
-    if (!Replacements) {
-      errs() << "Failed to create header insertion replacement: "
-             << llvm::toString(Replacements.takeError()) << "\n";
-      return 1;
-    }
-
-    // If a header have multiple symbols, we won't add the missing namespace
+    // If a header has multiple symbols, we won't add the missing namespace
     // qualifiers because we don't know which one is exactly used.
     //
     // Check whether all elements in HeaderInfos have the same qualified name.
@@ -294,10 +289,16 @@ int includeFixerMain(int argc, const char **argv) {
            const IncludeFixerContext::HeaderInfo &RHS) {
           return LHS.QualifiedName == RHS.QualifiedName;
         });
-    if (IsUniqueQualifiedName)
-      Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),
-                            Context.getSymbolRange().getLength(),
-                            Context.getHeaderInfos().front().QualifiedName});
+
+    auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
+        Code->getBuffer(), FilePath, Context, InsertStyle,
+        /*AddQualifiers=*/IsUniqueQualifiedName);
+    if (!Replacements) {
+      errs() << "Failed to create replacements: "
+             << llvm::toString(Replacements.takeError()) << "\n";
+      return 1;
+    }
+
     auto ChangedCode =
         tooling::applyAllReplacements(Code->getBuffer(), *Replacements);
     if (!ChangedCode) {
@@ -340,9 +341,8 @@ int includeFixerMain(int argc, const char **argv) {
     return 1;
   }
 
-  auto Replacements = clang::include_fixer::createInsertHeaderReplacements(
-      /*Code=*/Buffer.get()->getBuffer(), FilePath,
-      Context.getHeaderInfos().front().Header, InsertStyle);
+  auto Replacements = clang::include_fixer::createIncludeFixerReplacements(
+      /*Code=*/Buffer.get()->getBuffer(), FilePath, Context, InsertStyle);
   if (!Replacements) {
     errs() << "Failed to create header insertion replacement: "
            << llvm::toString(Replacements.takeError()) << "\n";
@@ -352,11 +352,6 @@ int includeFixerMain(int argc, const char **argv) {
   if (!Quiet)
     errs() << "Added #include " << Context.getHeaderInfos().front().Header
            << '\n';
-
-  // Add missing namespace qualifiers to the unidentified symbol.
-  Replacements->insert({FilePath, Context.getSymbolRange().getOffset(),
-                        Context.getSymbolRange().getLength(),
-                        Context.getHeaderInfos().front().QualifiedName});
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);

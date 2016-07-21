@@ -24,7 +24,7 @@ namespace lld {
 namespace elf {
 
 class SymbolBody;
-struct SectionPiece;
+struct EhSectionPiece;
 template <class ELFT> class SymbolTable;
 template <class ELFT> class SymbolTableSection;
 template <class ELFT> class StringTableSection;
@@ -372,8 +372,8 @@ private:
 };
 
 struct CieRecord {
-  SectionPiece *Piece = nullptr;
-  std::vector<SectionPiece *> FdePieces;
+  EhSectionPiece *Piece = nullptr;
+  std::vector<EhSectionPiece *> FdePieces;
 };
 
 // Output section for .eh_frame.
@@ -399,12 +399,12 @@ private:
   void addSectionAux(EhInputSection<ELFT> *S, llvm::ArrayRef<RelTy> Rels);
 
   template <class RelTy>
-  CieRecord *addCie(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
-                    ArrayRef<RelTy> &Rels);
+  CieRecord *addCie(EhSectionPiece &Piece, EhInputSection<ELFT> *Sec,
+                    ArrayRef<RelTy> Rels);
 
   template <class RelTy>
-  bool isFdeLive(SectionPiece &Piece, EhInputSection<ELFT> *Sec,
-                 ArrayRef<RelTy> &Rels);
+  bool isFdeLive(EhSectionPiece &Piece, EhInputSection<ELFT> *Sec,
+                 ArrayRef<RelTy> Rels);
 
   uintX_t getFdePc(uint8_t *Buf, size_t Off, uint8_t Enc);
 

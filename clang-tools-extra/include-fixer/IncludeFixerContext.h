@@ -46,21 +46,32 @@ public:
   };
 
   IncludeFixerContext() = default;
-  IncludeFixerContext(const QuerySymbolInfo &QuerySymbol,
+  IncludeFixerContext(std::vector<QuerySymbolInfo> QuerySymbols,
                       std::vector<find_all_symbols::SymbolInfo> Symbols);
 
   /// \brief Get symbol name.
   llvm::StringRef getSymbolIdentifier() const {
-    return QuerySymbol.RawIdentifier;
+    return QuerySymbolInfos.front().RawIdentifier;
   }
 
   /// \brief Get replacement range of the symbol.
-  tooling::Range getSymbolRange() const { return QuerySymbol.Range; }
+  tooling::Range getSymbolRange() const {
+    return QuerySymbolInfos.front().Range;
+  }
 
+  /// \brief Get header information.
   const std::vector<HeaderInfo> &getHeaderInfos() const { return HeaderInfos; }
+
+  /// \brief Get information of symbols being querid.
+  const std::vector<QuerySymbolInfo> &getQuerySymbolInfos() const {
+    return QuerySymbolInfos;
+  }
 
 private:
   friend struct llvm::yaml::MappingTraits<IncludeFixerContext>;
+
+  /// \brief All instances of an unidentified symbol being queried.
+  std::vector<QuerySymbolInfo> QuerySymbolInfos;
 
   /// \brief The symbol candidates which match SymbolIdentifier. The symbols are
   /// sorted in a descending order based on the popularity info in SymbolInfo.
@@ -68,9 +79,6 @@ private:
 
   /// \brief The header information.
   std::vector<HeaderInfo> HeaderInfos;
-
-  /// \brief The information of the symbol being queried.
-  QuerySymbolInfo QuerySymbol;
 };
 
 } // namespace include_fixer

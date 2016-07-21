@@ -34,27 +34,82 @@
 ; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, 98
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit
 
-; KERNEL-IR-LABEL: define ptx_kernel void @kernel_0(i8* %MemRef_A, i64 %c0) {
-; KERNEL-IR-NEXT: entry:
+; KERNEL-IR: define ptx_kernel void @kernel_0(i8* %MemRef_A, i64 %c0) {
+; KERNEL-IR-LABEL: entry:
 ; KERNEL-IR-NEXT:   %0 = call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
 ; KERNEL-IR-NEXT:   %b0 = zext i32 %0 to i64
 ; KERNEL-IR-NEXT:   %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; KERNEL-IR-NEXT:   %t0 = zext i32 %1 to i64
 ; KERNEL-IR-NEXT:   br label %polly.cond
 
-; KERNEL-IR-LABEL: polly.cond:
+; KERNEL-IR-LABEL: polly.cond:                                       ; preds = %entry
 ; KERNEL-IR-NEXT:   %2 = mul nsw i64 32, %b0
 ; KERNEL-IR-NEXT:   %3 = add nsw i64 %2, %t0
 ; KERNEL-IR-NEXT:   %4 = icmp sle i64 %3, 97
 ; KERNEL-IR-NEXT:   br i1 %4, label %polly.then, label %polly.else
 
-; KERNEL-IR-LABEL: polly.merge:
+; KERNEL-IR-LABEL: polly.merge:                                      ; preds = %polly.else, %polly.stmt.for.body3
 ; KERNEL-IR-NEXT:   ret void
 
-; KERNEL-IR-LABEL: polly.then:
+; KERNEL-IR-LABEL: polly.then:                                       ; preds = %polly.cond
+; KERNEL-IR-NEXT:   %5 = mul nsw i64 32, %b0
+; KERNEL-IR-NEXT:   %6 = add nsw i64 %5, %t0
+; KERNEL-IR-NEXT:   br label %polly.stmt.for.body3
+
+; KERNEL-IR-LABEL: polly.stmt.for.body3:                             ; preds = %polly.then
+; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A = bitcast i8* %MemRef_A to float*
+; KERNEL-IR-NEXT:   %pexp.pdiv_r = urem i64 %c0, 2
+; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A = mul nsw i64 %pexp.pdiv_r, 100
+; KERNEL-IR-NEXT:   %7 = mul nsw i64 32, %b0
+; KERNEL-IR-NEXT:   %8 = add nsw i64 %7, %t0
+; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A = add nsw i64 %polly.access.mul.MemRef_A, %8
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A = getelementptr float, float* %polly.access.cast.MemRef_A, i64 %polly.access.add.MemRef_A
+; KERNEL-IR-NEXT:   %tmp_p_scalar_ = load float, float* %polly.access.MemRef_A, align 4
+; KERNEL-IR-NEXT:   %9 = add i64 %6, 1
+; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A1 = bitcast i8* %MemRef_A to float*
+; KERNEL-IR-NEXT:   %pexp.pdiv_r2 = urem i64 %c0, 2
+; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A3 = mul nsw i64 %pexp.pdiv_r2, 100
+; KERNEL-IR-NEXT:   %10 = mul nsw i64 32, %b0
+; KERNEL-IR-NEXT:   %11 = add nsw i64 %10, %t0
+; KERNEL-IR-NEXT:   %12 = add nsw i64 %11, 1
+; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A4 = add nsw i64 %polly.access.mul.MemRef_A3, %12
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A5 = getelementptr float, float* %polly.access.cast.MemRef_A1, i64 %polly.access.add.MemRef_A4
+; KERNEL-IR-NEXT:   %tmp2_p_scalar_ = load float, float* %polly.access.MemRef_A5, align 4
+; KERNEL-IR-NEXT:   %p_add = fadd float %tmp_p_scalar_, %tmp2_p_scalar_
+; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A6 = bitcast i8* %MemRef_A to float*
+; KERNEL-IR-NEXT:   %pexp.pdiv_r7 = urem i64 %c0, 2
+; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A8 = mul nsw i64 %pexp.pdiv_r7, 100
+; KERNEL-IR-NEXT:   %13 = mul nsw i64 32, %b0
+; KERNEL-IR-NEXT:   %14 = add nsw i64 %13, %t0
+; KERNEL-IR-NEXT:   %15 = add nsw i64 %14, 2
+; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A9 = add nsw i64 %polly.access.mul.MemRef_A8, %15
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A10 = getelementptr float, float* %polly.access.cast.MemRef_A6, i64 %polly.access.add.MemRef_A9
+; KERNEL-IR-NEXT:   %tmp3_p_scalar_ = load float, float* %polly.access.MemRef_A10, align 4
+; KERNEL-IR-NEXT:   %p_add12 = fadd float %p_add, %tmp3_p_scalar_
+; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A11 = bitcast i8* %MemRef_A to float*
+; KERNEL-IR-NEXT:   %16 = add nsw i64 %c0, 1
+; KERNEL-IR-NEXT:   %pexp.pdiv_r12 = urem i64 %16, 2
+; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A13 = mul nsw i64 %pexp.pdiv_r12, 100
+; KERNEL-IR-NEXT:   %17 = mul nsw i64 32, %b0
+; KERNEL-IR-NEXT:   %18 = add nsw i64 %17, %t0
+; KERNEL-IR-NEXT:   %19 = add nsw i64 %18, 1
+; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A14 = add nsw i64 %polly.access.mul.MemRef_A13, %19
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A15 = getelementptr float, float* %polly.access.cast.MemRef_A11, i64 %polly.access.add.MemRef_A14
+; KERNEL-IR-NEXT:   %tmp4_p_scalar_ = load float, float* %polly.access.MemRef_A15, align 4
+; KERNEL-IR-NEXT:   %p_add17 = fadd float %tmp4_p_scalar_, %p_add12
+; KERNEL-IR-NEXT:   %polly.access.cast.MemRef_A16 = bitcast i8* %MemRef_A to float*
+; KERNEL-IR-NEXT:   %20 = add nsw i64 %c0, 1
+; KERNEL-IR-NEXT:   %pexp.pdiv_r17 = urem i64 %20, 2
+; KERNEL-IR-NEXT:   %polly.access.mul.MemRef_A18 = mul nsw i64 %pexp.pdiv_r17, 100
+; KERNEL-IR-NEXT:   %21 = mul nsw i64 32, %b0
+; KERNEL-IR-NEXT:   %22 = add nsw i64 %21, %t0
+; KERNEL-IR-NEXT:   %23 = add nsw i64 %22, 1
+; KERNEL-IR-NEXT:   %polly.access.add.MemRef_A19 = add nsw i64 %polly.access.mul.MemRef_A18, %23
+; KERNEL-IR-NEXT:   %polly.access.MemRef_A20 = getelementptr float, float* %polly.access.cast.MemRef_A16, i64 %polly.access.add.MemRef_A19
+; KERNEL-IR-NEXT:   store float %p_add17, float* %polly.access.MemRef_A20, align 4
 ; KERNEL-IR-NEXT:   br label %polly.merge
 
-; KERNEL-IR-LABEL: polly.else:
+; KERNEL-IR-LABEL: polly.else:                                       ; preds = %polly.cond
 ; KERNEL-IR-NEXT:   br label %polly.merge
 ; KERNEL-IR-NEXT: }
 

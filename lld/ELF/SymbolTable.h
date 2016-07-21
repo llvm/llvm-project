@@ -82,7 +82,6 @@ public:
   void scanShlibUndefined();
   void scanDynamicList();
   void scanVersionScript();
-  void scanSymbolVersions();
 
   SymbolBody *find(StringRef Name);
 
@@ -91,8 +90,8 @@ public:
 
 private:
   std::vector<SymbolBody *> findAll(StringRef Pattern);
-  std::pair<Symbol *, bool> insert(StringRef Name);
-  std::pair<Symbol *, bool> insert(StringRef Name, uint8_t Type,
+  std::pair<Symbol *, bool> insert(StringRef &Name);
+  std::pair<Symbol *, bool> insert(StringRef &Name, uint8_t Type,
                                    uint8_t Visibility, bool CanOmitFromDynSym,
                                    bool IsUsedInRegularObj, InputFile *File);
 

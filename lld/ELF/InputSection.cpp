@@ -429,15 +429,9 @@ void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
 }
 
 template <class ELFT>
-SplitInputSection<ELFT>::SplitInputSection(
-    elf::ObjectFile<ELFT> *File, const Elf_Shdr *Header,
-    typename InputSectionBase<ELFT>::Kind SectionKind)
-    : InputSectionBase<ELFT>(File, Header, SectionKind) {}
-
-template <class ELFT>
 EhInputSection<ELFT>::EhInputSection(elf::ObjectFile<ELFT> *F,
                                      const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {
+    : InputSectionBase<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {
   // Mark .eh_frame sections as live by default because there are
   // usually no relocations that point to .eh_frames. Otherwise,
   // the garbage collector would drop all .eh_frame sections.
@@ -449,14 +443,53 @@ bool EhInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::EHFrame;
 }
 
+// Returns the index of the first relocation that points to a region between
+// Begin and Begin+Size.
+template <class IntTy, class RelTy>
+static unsigned getReloc(IntTy Begin, IntTy Size, const ArrayRef<RelTy> &Rels,
+                         unsigned &RelocI) {
+  // Start search from RelocI for fast access. That works because the
+  // relocations are sorted in .eh_frame.
+  for (unsigned N = Rels.size(); RelocI < N; ++RelocI) {
+    const RelTy &Rel = Rels[RelocI];
+    if (Rel.r_offset < Begin)
+      continue;
+
+    if (Rel.r_offset < Begin + Size)
+      return RelocI;
+    return -1;
+  }
+  return -1;
+}
+
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT>
 void EhInputSection<ELFT>::split() {
+  // Early exit if already split.
+  if (!this->Pieces.empty())
+    return;
+
+  if (RelocSection) {
+    ELFFile<ELFT> &Obj = this->File->getObj();
+    if (RelocSection->sh_type == SHT_RELA)
+      split(Obj.relas(RelocSection));
+    else
+      split(Obj.rels(RelocSection));
+    return;
+  }
+  split(makeArrayRef<typename ELFT::Rela>(nullptr, nullptr));
+}
+
+template <class ELFT>
+template <class RelTy>
+void EhInputSection<ELFT>::split(ArrayRef<RelTy> Rels) {
   ArrayRef<uint8_t> Data = this->getSectionData();
+  unsigned RelI = 0;
   for (size_t Off = 0, End = Data.size(); Off != End;) {
     size_t Size = readEhRecordSize<ELFT>(Data.slice(Off));
-    this->Pieces.emplace_back(Off, Data.slice(Off, Size));
+    this->Pieces.emplace_back(Off, Data.slice(Off, Size),
+                              getReloc(Off, Size, Rels, RelI));
     // The empty record is the end marker.
     if (Size == 4)
       break;
@@ -511,7 +544,7 @@ static std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> Data,
 template <class ELFT>
 MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
+    : InputSectionBase<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
 
 template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->getSectionData();
@@ -533,14 +566,14 @@ bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 
 // Do binary search to get a section piece at a given input offset.
 template <class ELFT>
-SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
-  auto *This = static_cast<const SplitInputSection<ELFT> *>(this);
+SectionPiece *MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
+  auto *This = static_cast<const MergeInputSection<ELFT> *>(this);
   return const_cast<SectionPiece *>(This->getSectionPiece(Offset));
 }
 
 template <class ELFT>
 const SectionPiece *
-SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
+MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
@@ -642,11 +675,6 @@ template class elf::InputSection<ELF32LE>;
 template class elf::InputSection<ELF32BE>;
 template class elf::InputSection<ELF64LE>;
 template class elf::InputSection<ELF64BE>;
-
-template class elf::SplitInputSection<ELF32LE>;
-template class elf::SplitInputSection<ELF32BE>;
-template class elf::SplitInputSection<ELF64LE>;
-template class elf::SplitInputSection<ELF64BE>;
 
 template class elf::EhInputSection<ELF32LE>;
 template class elf::EhInputSection<ELF32BE>;

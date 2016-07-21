@@ -30,6 +30,13 @@
 # RUN:  .eq : { *(.eq) } \
 # RUN:  . = 0x2 != 0x1 ? 0x23000 : 0x999999; \
 # RUN:  .neq : { *(.neq) } \
+# RUN:  . = CONSTANT (MAXPAGESIZE) * 0x24; \
+# RUN:  .maxpagesize : { *(.maxpagesize) } \
+# RUN:  . = CONSTANT (COMMONPAGESIZE) * 0x25; \
+# RUN:  .commonpagesize : { *(.commonpagesize) } \
+# RUN:  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE)); \
+# RUN:  .datasegmentalign : { *(.datasegmentalign) } \
+# RUN:  . = DATA_SEGMENT_END (.); \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-readobj -s %t2 | FileCheck %s
@@ -244,6 +251,51 @@
 # CHECK-NEXT:   AddressAlignment:
 # CHECK-NEXT:   EntrySize:
 # CHECK-NEXT: }
+# CHECK-NEXT: Section {
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Name: .maxpagesize
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x24000
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment:
+# CHECK-NEXT:   EntrySize: 0
+# CHECK-NEXT: }
+# CHECK-NEXT: Section {
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Name: .commonpagesize
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x25000
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment:
+# CHECK-NEXT:   EntrySize:
+# CHECK-NEXT: }
+# CHECK-NEXT: Section {
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Name: .datasegmentalign
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x26008
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment:
+# CHECK-NEXT:   EntrySize:
+# CHECK-NEXT: }
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { \
@@ -337,4 +389,13 @@ nop
 .quad 0
 
 .section .neq, "a"
+.quad 0
+
+.section .maxpagesize, "a"
+.quad 0
+
+.section .commonpagesize, "a"
+.quad 0
+
+.section .datasegmentalign, "a"
 .quad 0

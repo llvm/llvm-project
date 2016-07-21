@@ -554,7 +554,7 @@ static void scanRelocs(InputSectionBase<ELFT> &C, ArrayRef<RelTy> Rels) {
     uintX_t Offset;
     if (PieceI != PieceE) {
       assert(PieceI->InputOff <= RI.r_offset && "Relocation not in any piece");
-      if (PieceI->OutputOff == (uintX_t)-1)
+      if (PieceI->OutputOff == (size_t)-1)
         continue;
       Offset = PieceI->OutputOff + RI.r_offset - PieceI->InputOff;
     } else {

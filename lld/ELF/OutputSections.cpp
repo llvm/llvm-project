@@ -963,41 +963,22 @@ template <class ELFT>
 EhOutputSection<ELFT>::EhOutputSection()
     : OutputSectionBase<ELFT>(".eh_frame", SHT_PROGBITS, SHF_ALLOC) {}
 
-// Returns the first relocation that points to a region
-// between Begin and Begin+Size.
-template <class IntTy, class RelTy>
-static const RelTy *getReloc(IntTy Begin, IntTy Size, ArrayRef<RelTy> &Rels) {
-  for (auto I = Rels.begin(), E = Rels.end(); I != E; ++I) {
-    if (I->r_offset < Begin)
-      continue;
-
-    // Truncate Rels for fast access. That means we expect that the
-    // relocations are sorted and we are looking up symbols in
-    // sequential order. It is naturally satisfied for .eh_frame.
-    Rels = Rels.slice(I - Rels.begin());
-    if (I->r_offset < Begin + Size)
-      return I;
-    return nullptr;
-  }
-  Rels = ArrayRef<RelTy>();
-  return nullptr;
-}
-
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
 // and where their relocations point to.
 template <class ELFT>
 template <class RelTy>
-CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
+CieRecord *EhOutputSection<ELFT>::addCie(EhSectionPiece &Piece,
                                          EhInputSection<ELFT> *Sec,
-                                         ArrayRef<RelTy> &Rels) {
+                                         ArrayRef<RelTy> Rels) {
   const endianness E = ELFT::TargetEndianness;
   if (read32<E>(Piece.data().data() + 4) != 0)
     fatal("CIE expected at beginning of .eh_frame: " + Sec->getSectionName());
 
   SymbolBody *Personality = nullptr;
-  if (const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels))
-    Personality = &Sec->getFile()->getRelocTargetSym(*Rel);
+  unsigned FirstRelI = Piece.FirstRelocation;
+  if (FirstRelI != (unsigned)-1)
+    Personality = &Sec->getFile()->getRelocTargetSym(Rels[FirstRelI]);
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *Cie = &CieMap[{Piece.data(), Personality}];
@@ -1014,13 +995,14 @@ CieRecord *EhOutputSection<ELFT>::addCie(SectionPiece &Piece,
 // points to a live function.
 template <class ELFT>
 template <class RelTy>
-bool EhOutputSection<ELFT>::isFdeLive(SectionPiece &Piece,
+bool EhOutputSection<ELFT>::isFdeLive(EhSectionPiece &Piece,
                                       EhInputSection<ELFT> *Sec,
-                                      ArrayRef<RelTy> &Rels) {
-  const RelTy *Rel = getReloc(Piece.InputOff, Piece.size(), Rels);
-  if (!Rel)
+                                      ArrayRef<RelTy> Rels) {
+  unsigned FirstRelI = Piece.FirstRelocation;
+  if (FirstRelI == (unsigned)-1)
     fatal("FDE doesn't reference another section");
-  SymbolBody &B = Sec->getFile()->getRelocTargetSym(*Rel);
+  const RelTy &Rel = Rels[FirstRelI];
+  SymbolBody &B = Sec->getFile()->getRelocTargetSym(Rel);
   auto *D = dyn_cast<DefinedRegular<ELFT>>(&B);
   if (!D || !D->Section)
     return false;
@@ -1039,7 +1021,7 @@ void EhOutputSection<ELFT>::addSectionAux(EhInputSection<ELFT> *Sec,
   const endianness E = ELFT::TargetEndianness;
 
   DenseMap<size_t, CieRecord *> OffsetToCie;
-  for (SectionPiece &Piece : Sec->Pieces) {
+  for (EhSectionPiece &Piece : Sec->Pieces) {
     // The empty record is the end marker.
     if (Piece.size() == 4)
       return;

@@ -121,7 +121,7 @@
 // CHECK-SAME:                         flags: DIFlagFwdDecl,
 // CHECK-SAME:                         identifier: "_ZTS9Template1IPvE")
 
-// Explicit instatiation.
+// Explicit instantiation.
 // CHECK: !DICompositeType(tag: DW_TAG_class_type, name: "Template1<int>",
 // CHECK-SAME:             templateParams:
 // CHECK-SAME:             identifier: "_ZTS9Template1IiE")

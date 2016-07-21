@@ -90,10 +90,6 @@ private:
 
 template <class ELFT>
 StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
-  StringRef Dest = Script<ELFT>::X->getOutputSection(S);
-  if (!Dest.empty())
-    return Dest;
-
   StringRef Name = S->getSectionName();
   for (StringRef V : {".text.", ".rodata.", ".data.rel.ro.", ".data.", ".bss.",
                       ".init_array.", ".fini_array.", ".ctors.", ".dtors.",
@@ -112,6 +108,11 @@ void elf::reportDiscarded(InputSectionBase<ELFT> *IS,
          << "' in file '" << File->getName() << "'\n";
 }
 
+template <class ELFT> static bool needsInterpSection() {
+  return !Symtab<ELFT>::X->getSharedFiles().empty() &&
+         !Config->DynamicLinker.empty();
+}
+
 template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Ehdr Elf_Ehdr;
@@ -121,7 +122,6 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   DynamicSection<ELFT> Dynamic;
   EhOutputSection<ELFT> EhFrame;
   GotSection<ELFT> Got;
-  InterpSection<ELFT> Interp;
   PltSection<ELFT> Plt;
   RelocationSection<ELFT> RelaDyn(Config->Rela ? ".rela.dyn" : ".rel.dyn",
                                   Config->ZCombreloc);
@@ -137,6 +137,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   ProgramHeaders.updateAlignment(sizeof(uintX_t));
 
   // Instantiate optional output sections if they are needed.
+  std::unique_ptr<InterpSection<ELFT>> Interp;
   std::unique_ptr<BuildIdSection<ELFT>> BuildId;
   std::unique_ptr<EhFrameHeader<ELFT>> EhFrameHdr;
   std::unique_ptr<GnuHashTableSection<ELFT>> GnuHashTab;
@@ -147,6 +148,9 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   std::unique_ptr<SymbolTableSection<ELFT>> SymTabSec;
   std::unique_ptr<OutputSection<ELFT>> MipsRldMap;
   std::unique_ptr<VersionDefinitionSection<ELFT>> VerDef;
+
+  if (needsInterpSection<ELFT>())
+    Interp.reset(new InterpSection<ELFT>);
 
   if (Config->BuildId == BuildIdKind::Fnv1)
     BuildId.reset(new BuildIdFnv1<ELFT>);
@@ -195,7 +199,7 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   Out<ELFT>::Got = &Got;
   Out<ELFT>::GotPlt = GotPlt.get();
   Out<ELFT>::HashTab = HashTab.get();
-  Out<ELFT>::Interp = &Interp;
+  Out<ELFT>::Interp = Interp.get();
   Out<ELFT>::Plt = &Plt;
   Out<ELFT>::RelaDyn = &RelaDyn;
   Out<ELFT>::RelaPlt = RelaPlt.get();
@@ -472,12 +476,6 @@ uint32_t elf::toPhdrFlags(uint64_t Flags) {
   if (Flags & SHF_EXECINSTR)
     Ret |= PF_X;
   return Ret;
-}
-
-// Various helper functions
-template <class ELFT> bool elf::needsInterpSection() {
-  return !Symtab<ELFT>::X->getSharedFiles().empty() &&
-         !Config->DynamicLinker.empty();
 }
 
 template <class ELFT> bool elf::isOutputDynamic() {
@@ -843,7 +841,7 @@ template <class ELFT> void Writer<ELFT>::addPredefinedSections() {
 
   // Add .interp at first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
-  if (needsInterpSection<ELFT>())
+  if (Out<ELFT>::Interp)
     OutputSections.insert(OutputSections.begin(), Out<ELFT>::Interp);
 
   // This order is not the same as the final output order
@@ -962,7 +960,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
   Hdr.add(Out<ELFT>::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
-  if (needsInterpSection<ELFT>()) {
+  if (Out<ELFT>::Interp) {
     Phdr &Hdr = *AddHdr(PT_INTERP, toPhdrFlags(Out<ELFT>::Interp->getFlags()));
     Hdr.add(Out<ELFT>::Interp);
   }
@@ -1331,11 +1329,6 @@ template struct elf::PhdrEntry<ELF32LE>;
 template struct elf::PhdrEntry<ELF32BE>;
 template struct elf::PhdrEntry<ELF64LE>;
 template struct elf::PhdrEntry<ELF64BE>;
-
-template bool elf::needsInterpSection<ELF32LE>();
-template bool elf::needsInterpSection<ELF32BE>();
-template bool elf::needsInterpSection<ELF64LE>();
-template bool elf::needsInterpSection<ELF64BE>();
 
 template bool elf::isOutputDynamic<ELF32LE>();
 template bool elf::isOutputDynamic<ELF32BE>();

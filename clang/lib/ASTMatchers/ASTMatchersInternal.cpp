@@ -72,10 +72,10 @@ private:
 };
 
 class IdDynMatcher : public DynMatcherInterface {
- public:
+public:
   IdDynMatcher(StringRef ID,
-               const IntrusiveRefCntPtr<DynMatcherInterface> &InnerMatcher)
-      : ID(ID), InnerMatcher(InnerMatcher) {}
+               IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher)
+      : ID(ID), InnerMatcher(std::move(InnerMatcher)) {}
 
   bool dynMatches(const ast_type_traits::DynTypedNode &DynNode,
                   ASTMatchFinder *Finder,
@@ -85,7 +85,7 @@ class IdDynMatcher : public DynMatcherInterface {
     return Result;
   }
 
- private:
+private:
   const std::string ID;
   const IntrusiveRefCntPtr<DynMatcherInterface> InnerMatcher;
 };
@@ -210,8 +210,9 @@ bool DynTypedMatcher::matchesNoKindCheck(
 llvm::Optional<DynTypedMatcher> DynTypedMatcher::tryBind(StringRef ID) const {
   if (!AllowBind) return llvm::None;
   auto Result = *this;
-  Result.Implementation = new IdDynMatcher(ID, Result.Implementation);
-  return Result;
+  Result.Implementation =
+      new IdDynMatcher(ID, std::move(Result.Implementation));
+  return std::move(Result);
 }
 
 bool DynTypedMatcher::canConvertTo(ast_type_traits::ASTNodeKind To) const {
