@@ -94,6 +94,7 @@ class RegisterVariableTestCase(TestBase):
     @expectedFailureAll(compiler="clang", compiler_version=['<', '3.5'])
     @expectedFailureAll(oslist=["macosx"], bugnumber="rdar://26050265")
     @expectedFailureAll(compiler="gcc", compiler_version=['>=', '4.8.2'], archs=["i386", "x86_64"])
+    @expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-2140")
     def test_and_run_command(self):
         """Test expressions on register values."""
 

@@ -8,8 +8,10 @@ from __future__ import print_function
 
 import os, time
 import lldb
+from lldbsuite.test import decorators
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
+
 
 class ThreadExitTestCase(TestBase):
 
@@ -24,6 +26,7 @@ class ThreadExitTestCase(TestBase):
         self.break_3 = line_number('main.cpp', '// Set third breakpoint here')
         self.break_4 = line_number('main.cpp', '// Set fourth breakpoint here')
 
+    @decorators.expectedFailureAll(oslist=['linux'], bugnumber="bugs.swift.org/SR-2141")
     def test(self):
         """Test thread exit handling."""
         self.build(dictionary=self.getBuildFlags())
