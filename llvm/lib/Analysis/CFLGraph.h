@@ -24,6 +24,19 @@
 namespace llvm {
 namespace cflaa {
 
+// We use UnknownOffset to represent pointer offsets that cannot be determined
+// at compile time. Note that MemoryLocation::UnknownSize cannot be used here
+// because we require a signed value.
+static LLVM_CONSTEXPR int64_t UnknownOffset =
+    std::numeric_limits<int64_t>::max();
+
+inline int64_t addOffset(int64_t LHS, int64_t RHS) {
+  if (LHS == UnknownOffset || RHS == UnknownOffset)
+    return UnknownOffset;
+  // FIXME: Do we need to guard against integer overflow here?
+  return LHS + RHS;
+}
+
 /// \brief The Program Expression Graph (PEG) of CFL analysis
 /// CFLGraph is auxiliary data structure used by CFL-based alias analysis to
 /// describe flow-insensitive pointer-related behaviors. Given an LLVM function,
@@ -40,6 +53,7 @@ public:
 
   struct Edge {
     Node Other;
+    int64_t Offset;
   };
 
   typedef std::vector<Edge> EdgeList;
@@ -107,8 +121,8 @@ public:
     auto *ToInfo = getNode(To);
     assert(ToInfo != nullptr);
 
-    FromInfo->Edges.push_back(Edge{To});
-    ToInfo->ReverseEdges.push_back(Edge{From});
+    FromInfo->Edges.push_back(Edge{To, Offset});
+    ToInfo->ReverseEdges.push_back(Edge{From, Offset});
   }
 
   const NodeInfo *getNode(Node N) const {
@@ -151,6 +165,7 @@ template <typename CFLAA> class CFLGraphBuilder {
   /// Gets the edges our graph should have, based on an Instruction*
   class GetEdgesVisitor : public InstVisitor<GetEdgesVisitor, void> {
     CFLAA &AA;
+    const DataLayout &DL;
     const TargetLibraryInfo &TLI;
 
     CFLGraph &Graph;
@@ -225,8 +240,8 @@ template <typename CFLAA> class CFLGraphBuilder {
     void addStoreEdge(Value *From, Value *To) { addDerefEdge(From, To, false); }
 
   public:
-    GetEdgesVisitor(CFLGraphBuilder &Builder)
-        : AA(Builder.Analysis), TLI(Builder.TLI), Graph(Builder.Graph),
+    GetEdgesVisitor(CFLGraphBuilder &Builder, const DataLayout &DL)
+        : AA(Builder.Analysis), DL(DL), TLI(Builder.TLI), Graph(Builder.Graph),
           ReturnValues(Builder.ReturnedValues) {}
 
     void visitInstruction(Instruction &) {
@@ -281,9 +296,20 @@ template <typename CFLAA> class CFLGraphBuilder {
         addAssignEdge(Val, &Inst);
     }
 
+    void visitGEP(GEPOperator &GEPOp) {
+      uint64_t Offset = UnknownOffset;
+      APInt APOffset(DL.getPointerSizeInBits(GEPOp.getPointerAddressSpace()),
+                     0);
+      if (GEPOp.accumulateConstantOffset(DL, APOffset))
+        Offset = APOffset.getSExtValue();
+
+      auto *Op = GEPOp.getPointerOperand();
+      addAssignEdge(Op, &GEPOp, Offset);
+    }
+
     void visitGetElementPtrInst(GetElementPtrInst &Inst) {
-      auto *Op = Inst.getPointerOperand();
-      addAssignEdge(Op, &Inst);
+      auto *GEPOp = cast<GEPOperator>(&Inst);
+      visitGEP(*GEPOp);
     }
 
     void visitSelectInst(SelectInst &Inst) {
@@ -468,14 +494,97 @@ template <typename CFLAA> class CFLGraphBuilder {
 
     void visitConstantExpr(ConstantExpr *CE) {
       switch (CE->getOpcode()) {
+      case Instruction::GetElementPtr: {
+        auto GEPOp = cast<GEPOperator>(CE);
+        visitGEP(*GEPOp);
+        break;
+      }
+      case Instruction::PtrToInt: {
+        auto *Ptr = CE->getOperand(0);
+        addNode(Ptr, getAttrEscaped());
+        break;
+      }
+      case Instruction::IntToPtr: {
+        addNode(CE, getAttrUnknown());
+        break;
+      }
+      case Instruction::BitCast:
+      case Instruction::AddrSpaceCast:
+      case Instruction::Trunc:
+      case Instruction::ZExt:
+      case Instruction::SExt:
+      case Instruction::FPExt:
+      case Instruction::FPTrunc:
+      case Instruction::UIToFP:
+      case Instruction::SIToFP:
+      case Instruction::FPToUI:
+      case Instruction::FPToSI: {
+        auto *Src = CE->getOperand(0);
+        addAssignEdge(Src, CE);
+        break;
+      }
+      case Instruction::Select: {
+        auto *TrueVal = CE->getOperand(0);
+        auto *FalseVal = CE->getOperand(1);
+        addAssignEdge(TrueVal, CE);
+        addAssignEdge(FalseVal, CE);
+        break;
+      }
+      case Instruction::InsertElement: {
+        auto *Vec = CE->getOperand(0);
+        auto *Val = CE->getOperand(1);
+        addAssignEdge(Vec, CE);
+        addStoreEdge(Val, CE);
+        break;
+      }
+      case Instruction::ExtractElement: {
+        auto *Ptr = CE->getOperand(0);
+        addLoadEdge(Ptr, CE);
+        break;
+      }
+      case Instruction::InsertValue: {
+        auto *Agg = CE->getOperand(0);
+        auto *Val = CE->getOperand(1);
+        addAssignEdge(Agg, CE);
+        addStoreEdge(Val, CE);
+        break;
+      }
+      case Instruction::ExtractValue: {
+        auto *Ptr = CE->getOperand(0);
+        addLoadEdge(Ptr, CE);
+      }
+      case Instruction::ShuffleVector: {
+        auto *From1 = CE->getOperand(0);
+        auto *From2 = CE->getOperand(1);
+        addAssignEdge(From1, CE);
+        addAssignEdge(From2, CE);
+        break;
+      }
+      case Instruction::Add:
+      case Instruction::Sub:
+      case Instruction::FSub:
+      case Instruction::Mul:
+      case Instruction::FMul:
+      case Instruction::UDiv:
+      case Instruction::SDiv:
+      case Instruction::FDiv:
+      case Instruction::URem:
+      case Instruction::SRem:
+      case Instruction::FRem:
+      case Instruction::And:
+      case Instruction::Or:
+      case Instruction::Xor:
+      case Instruction::Shl:
+      case Instruction::LShr:
+      case Instruction::AShr:
+      case Instruction::ICmp:
+      case Instruction::FCmp: {
+        addAssignEdge(CE->getOperand(0), CE);
+        addAssignEdge(CE->getOperand(1), CE);
+        break;
+      }
       default:
         llvm_unreachable("Unknown instruction type encountered!");
-// Build the switch statement using the Instruction.def file.
-#define HANDLE_INST(NUM, OPCODE, CLASS)                                        \
-  case Instruction::OPCODE:                                                    \
-    this->visit##OPCODE(*(CLASS *)CE);                                         \
-    break;
-#include "llvm/IR/Instruction.def"
       }
     }
   };
@@ -517,7 +626,7 @@ template <typename CFLAA> class CFLGraphBuilder {
   // Builds the graph needed for constructing the StratifiedSets for the given
   // function
   void buildGraphFrom(Function &Fn) {
-    GetEdgesVisitor Visitor(*this);
+    GetEdgesVisitor Visitor(*this, Fn.getParent()->getDataLayout());
 
     for (auto &Bb : Fn.getBasicBlockList())
       for (auto &Inst : Bb.getInstList())

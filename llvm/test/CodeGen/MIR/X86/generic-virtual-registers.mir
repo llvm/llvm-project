@@ -33,16 +33,16 @@ registers:
 body: |
   bb.0.entry:
     liveins: %edi
-    ; CHECK:      %0(32) = G_ADD i32 %edi
-    %0(32) = G_ADD i32 %edi, %edi
-    ; CHECK:      %1(64) = G_ADD <2 x i32> %edi
-    %1(64) = G_ADD <2 x i32> %edi, %edi
-    ; CHECK:      %2(64) = G_ADD <2 x i32> %edi
-    %2(64) = G_ADD %type_alias %edi, %edi
+    ; CHECK:      %0(32) = G_ADD s32 %edi
+    %0(32) = G_ADD s32 %edi, %edi
+    ; CHECK:      %1(64) = G_ADD <2 x s32> %edi
+    %1(64) = G_ADD <2 x s32> %edi, %edi
+    ; CHECK:      %2(64) = G_ADD s64 %edi
+    %2(64) = G_ADD s64 %edi, %edi
     ; G_ADD is actually not a valid operand for structure type,
     ; but that is the only one we have for now for testing.
-    ; CHECK:      %3(64) = G_ADD { i32, i32 } %edi
-    %3(64) = G_ADD {i32, i32} %edi, %edi
-    ; CHECK:      %4(48) = G_ADD %structure_alias %edi
-    %4(48) = G_ADD %structure_alias %edi, %edi
+    ; CHECK:      %3(64) = G_ADD s64 %edi
+    %3(64) = G_ADD s64 %edi, %edi
+    ; CHECK:      %4(48) = G_ADD s48 %edi
+    %4(48) = G_ADD s48 %edi, %edi
 ...

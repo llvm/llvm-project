@@ -109,12 +109,12 @@ static void handleMergeWriterError(Error E, StringRef WhenceFile = "",
 }
 
 struct WeightedFile {
-  StringRef Filename;
+  std::string Filename;
   uint64_t Weight;
 
   WeightedFile() {}
 
-  WeightedFile(StringRef F, uint64_t W) : Filename{F}, Weight{W} {}
+  WeightedFile(const std::string &F, uint64_t W) : Filename{F}, Weight{W} {}
 };
 typedef SmallVector<WeightedFile, 5> WeightedFileVector;
 
@@ -305,10 +305,6 @@ static WeightedFile parseWeightedFile(const StringRef &WeightedFilename) {
   if (WeightStr.getAsInteger(10, Weight) || Weight < 1)
     exitWithError("Input weight must be a positive integer.");
 
-  if (!sys::fs::exists(FileName))
-    exitWithErrorCode(make_error_code(errc::no_such_file_or_directory),
-                      FileName);
-
   return WeightedFile(FileName, Weight);
 }
 
@@ -322,6 +318,33 @@ getInputFilenamesFileBuf(const StringRef &InputFilenamesFile) {
     exitWithErrorCode(BufOrError.getError(), InputFilenamesFile);
 
   return std::move(*BufOrError);
+}
+
+static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
+  StringRef Filename = WF.Filename;
+  uint64_t Weight = WF.Weight;
+  llvm::sys::fs::file_status Status;
+  llvm::sys::fs::status(Filename, Status);
+  if (!llvm::sys::fs::exists(Status))
+    exitWithErrorCode(make_error_code(errc::no_such_file_or_directory),
+                      Filename);
+  // If it's a source file, collect it.
+  if (llvm::sys::fs::is_regular_file(Status)) {
+    WNI.emplace_back(Filename, Weight);
+    return;
+  }
+
+  if (llvm::sys::fs::is_directory(Status)) {
+    std::error_code EC;
+    for (llvm::sys::fs::recursive_directory_iterator F(Filename, EC), E;
+         F != E && !EC; F.increment(EC)) {
+      if (llvm::sys::fs::is_regular_file(F->path())) {
+        addWeightedInput(WNI, {F->path(), Weight});
+      }
+    }
+    if (EC)
+      exitWithErrorCode(EC, Filename);
+  }
 }
 
 static void parseInputFilenamesFile(MemoryBuffer *Buffer,
@@ -339,9 +362,9 @@ static void parseInputFilenamesFile(MemoryBuffer *Buffer,
       continue;
     // If there's no comma, it's an unweighted profile.
     else if (SanitizedEntry.find(',') == StringRef::npos)
-      WFV.emplace_back(SanitizedEntry, 1);
+      addWeightedInput(WFV, {SanitizedEntry, 1});
     else
-      WFV.emplace_back(parseWeightedFile(SanitizedEntry));
+      addWeightedInput(WFV, parseWeightedFile(SanitizedEntry));
   }
 }
 
@@ -387,9 +410,9 @@ static int merge_main(int argc, const char *argv[]) {
 
   WeightedFileVector WeightedInputs;
   for (StringRef Filename : InputFilenames)
-    WeightedInputs.emplace_back(Filename, 1);
+    addWeightedInput(WeightedInputs, {Filename, 1});
   for (StringRef WeightedFilename : WeightedInputFilenames)
-    WeightedInputs.emplace_back(parseWeightedFile(WeightedFilename));
+    addWeightedInput(WeightedInputs, parseWeightedFile(WeightedFilename));
 
   // Make sure that the file buffer stays alive for the duration of the
   // weighted input vector's lifetime.

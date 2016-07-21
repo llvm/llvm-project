@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/Types.h"
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
 
 namespace llvm {
@@ -96,7 +97,7 @@ public:
   /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
   ///
   /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, Type *Ty);
+  MachineInstr *buildInstr(unsigned Opcode, LLT Ty);
 
   /// Build and insert <empty> = \p Opcode [\p Ty] \p BB.
   ///
@@ -104,7 +105,7 @@ public:
   /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
   ///
   /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, Type *Ty, MachineBasicBlock &BB);
+  MachineInstr *buildInstr(unsigned Opcode, LLT Ty, MachineBasicBlock &BB);
 
   /// Build and insert \p Res<def> = \p Opcode [\p Ty] \p Op0, \p Op1.
   ///
@@ -112,7 +113,7 @@ public:
   /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
   ///
   /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, Type *Ty, unsigned Res,
+  MachineInstr *buildInstr(unsigned Opcode, LLT Ty, unsigned Res,
                            unsigned Op0, unsigned Op1);
 
   /// Build and insert \p Res<def> = \p Opcode \p Op0, \p Op1.

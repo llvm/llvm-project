@@ -429,6 +429,18 @@ ArrayRef<Value *> Vectorizer::getVectorizablePrefix(ArrayRef<Value *> Chain) {
   SmallVector<std::pair<Value *, unsigned>, 16> MemoryInstrs;
   SmallVector<std::pair<Value *, unsigned>, 16> ChainInstrs;
 
+  bool IsLoadChain = isa<LoadInst>(Chain[0]);
+  DEBUG({
+    for (Value *V : Chain) {
+      if (IsLoadChain)
+        assert(isa<LoadInst>(V) &&
+               "All elements of Chain must be loads, or all must be stores.");
+      else
+        assert(isa<StoreInst>(V) &&
+               "All elements of Chain must be loads, or all must be stores.");
+    }
+  });
+
   unsigned InstrIdx = 0;
   for (Instruction &I : make_range(getBoundaryInstrs(Chain))) {
     ++InstrIdx;
@@ -437,14 +449,15 @@ ArrayRef<Value *> Vectorizer::getVectorizablePrefix(ArrayRef<Value *> Chain) {
         MemoryInstrs.push_back({&I, InstrIdx});
       else
         ChainInstrs.push_back({&I, InstrIdx});
-    } else if (I.mayHaveSideEffects()) {
-      DEBUG(dbgs() << "LSV: Found side-effecting operation: " << I << '\n');
-      return 0;
+    } else if (IsLoadChain && (I.mayWriteToMemory() || I.mayThrow())) {
+      DEBUG(dbgs() << "LSV: Found may-write/throw operation: " << I << '\n');
+      break;
+    } else if (!IsLoadChain && (I.mayReadOrWriteMemory() || I.mayThrow())) {
+      DEBUG(dbgs() << "LSV: Found may-read/write/throw operation: " << I
+                   << '\n');
+      break;
     }
   }
-
-  assert(Chain.size() == ChainInstrs.size() &&
-         "All instrs in Chain must be within range getBoundaryInstrs(Chain).");
 
   // Loop until we find an instruction in ChainInstrs that we can't vectorize.
   unsigned ChainInstrIdx, ChainInstrsLen;
@@ -479,7 +492,6 @@ ArrayRef<Value *> Vectorizer::getVectorizablePrefix(ArrayRef<Value *> Chain) {
         DEBUG({
           Value *Ptr0 = getPointerOperand(M0);
           Value *Ptr1 = getPointerOperand(M1);
-
           dbgs() << "LSV: Found alias:\n"
                     "  Aliasing instruction and pointer:\n"
                  << "  " << *MemInstr << '\n'
@@ -713,7 +725,7 @@ bool Vectorizer::vectorizeStoreChain(
 
   ArrayRef<Value *> NewChain = getVectorizablePrefix(Chain);
   if (NewChain.empty()) {
-    // There exists a side effect instruction, no vectorization possible.
+    // No vectorization possible.
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
     return false;
   }
@@ -867,7 +879,7 @@ bool Vectorizer::vectorizeLoadChain(
 
   ArrayRef<Value *> NewChain = getVectorizablePrefix(Chain);
   if (NewChain.empty()) {
-    // There exists a side effect instruction, no vectorization possible.
+    // No vectorization possible.
     InstructionsProcessed->insert(Chain.begin(), Chain.end());
     return false;
   }

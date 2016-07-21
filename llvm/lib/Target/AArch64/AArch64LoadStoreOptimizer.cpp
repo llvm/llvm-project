@@ -55,10 +55,6 @@ static cl::opt<bool> EnableNarrowLdMerge("enable-narrow-ld-merge", cl::Hidden,
                                          cl::init(false),
                                          cl::desc("Enable narrow load merge"));
 
-namespace llvm {
-void initializeAArch64LoadStoreOptPass(PassRegistry &);
-}
-
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
 namespace {

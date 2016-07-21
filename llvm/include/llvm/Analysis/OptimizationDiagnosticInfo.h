@@ -43,28 +43,89 @@ public:
     return *this;
   }
 
+  /// Emit an optimization-applied message.
+  ///
+  /// \p PassName is the name of the pass emitting the message. If -Rpass= is
+  /// given and \p PassName matches the regular expression in -Rpass, then the
+  /// remark will be emitted. \p Fn is the function triggering the remark, \p
+  /// DLoc is the debug location where the diagnostic is generated. \p V is the
+  /// IR Value that identifies the code region. \p Msg is the message string to
+  /// use.
+  void emitOptimizationRemark(const char *PassName, const DebugLoc &DLoc,
+                              const Value *V, const Twine &Msg);
+
+  /// \brief Same as above but derives the IR Value for the code region and the
+  /// debug location from the Loop parameter \p L.
+  void emitOptimizationRemark(const char *PassName, Loop *L, const Twine &Msg);
+
   /// Emit an optimization-missed message.
   ///
   /// \p PassName is the name of the pass emitting the message. If
   /// -Rpass-missed= is given and the name matches the regular expression in
-  /// -Rpass, then the remark will be emitted. \p Fn is the function triggering
-  /// the remark, \p DLoc is the debug location where the diagnostic is
-  /// generated. \p V is the IR Value that identifies the code region. \p Msg is
-  /// the message string to use.
+  /// -Rpass, then the remark will be emitted.  \p DLoc is the debug location
+  /// where the diagnostic is generated. \p V is the IR Value that identifies
+  /// the code region. \p Msg is the message string to use.
   void emitOptimizationRemarkMissed(const char *PassName, const DebugLoc &DLoc,
-                                    Value *V, const Twine &Msg);
+                                    const Value *V, const Twine &Msg);
 
   /// \brief Same as above but derives the IR Value for the code region and the
   /// debug location from the Loop parameter \p L.
   void emitOptimizationRemarkMissed(const char *PassName, Loop *L,
                                     const Twine &Msg);
 
+  /// Emit an optimization analysis remark message.
+  ///
+  /// \p PassName is the name of the pass emitting the message. If
+  /// -Rpass-analysis= is given and \p PassName matches the regular expression
+  /// in -Rpass, then the remark will be emitted. \p DLoc is the debug location
+  /// where the diagnostic is generated. \p V is the IR Value that identifies
+  /// the code region. \p Msg is the message string to use.
+  void emitOptimizationRemarkAnalysis(const char *PassName,
+                                      const DebugLoc &DLoc, const Value *V,
+                                      const Twine &Msg);
+
+  /// \brief Same as above but derives the IR Value for the code region and the
+  /// debug location from the Loop parameter \p L.
+  void emitOptimizationRemarkAnalysis(const char *PassName, Loop *L,
+                                      const Twine &Msg);
+
+  /// \brief Emit an optimization analysis remark related to floating-point
+  /// non-commutativity.
+  ///
+  /// \p PassName is the name of the pass emitting the message. If
+  /// -Rpass-analysis= is given and \p PassName matches the regular expression
+  /// in -Rpass, then the remark will be emitted. \p Fn is the function
+  /// triggering the remark, \p DLoc is the debug location where the diagnostic
+  /// is generated.\p V is the IR Value that identifies the code region.  \p Msg
+  /// is the message string to use.
+  void emitOptimizationRemarkAnalysisFPCommute(const char *PassName,
+                                               const DebugLoc &DLoc,
+                                               const Value *V,
+                                               const Twine &Msg);
+
+  /// \brief Emit an optimization analysis remark related to pointer aliasing.
+  ///
+  /// \p PassName is the name of the pass emitting the message. If
+  /// -Rpass-analysis= is given and \p PassName matches the regular expression
+  /// in -Rpass, then the remark will be emitted. \p Fn is the function
+  /// triggering the remark, \p DLoc is the debug location where the diagnostic
+  /// is generated.\p V is the IR Value that identifies the code region.  \p Msg
+  /// is the message string to use.
+  void emitOptimizationRemarkAnalysisAliasing(const char *PassName,
+                                              const DebugLoc &DLoc,
+                                              const Value *V, const Twine &Msg);
+
+  /// \brief Same as above but derives the IR Value for the code region and the
+  /// debug location from the Loop parameter \p L.
+  void emitOptimizationRemarkAnalysisAliasing(const char *PassName, Loop *L,
+                                              const Twine &Msg);
+
 private:
   Function *F;
 
   BlockFrequencyInfo *BFI;
 
-  Optional<uint64_t> computeHotness(Value *V);
+  Optional<uint64_t> computeHotness(const Value *V);
 
   OptimizationRemarkEmitter(const OptimizationRemarkEmitter &) = delete;
   void operator=(const OptimizationRemarkEmitter &) = delete;

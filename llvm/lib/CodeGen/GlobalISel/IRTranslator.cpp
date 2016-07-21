@@ -69,7 +69,7 @@ bool IRTranslator::translateBinaryOp(unsigned Opcode, const Instruction &Inst) {
   unsigned Op0 = getOrCreateVReg(*Inst.getOperand(0));
   unsigned Op1 = getOrCreateVReg(*Inst.getOperand(1));
   unsigned Res = getOrCreateVReg(Inst);
-  MIRBuilder.buildInstr(Opcode, Inst.getType(), Res, Op0, Op1);
+  MIRBuilder.buildInstr(Opcode, LLT{*Inst.getType()}, Res, Op0, Op1);
   return true;
 }
 
@@ -88,7 +88,7 @@ bool IRTranslator::translateBr(const Instruction &Inst) {
   if (BrInst.isUnconditional()) {
     const BasicBlock &BrTgt = *cast<BasicBlock>(BrInst.getOperand(0));
     MachineBasicBlock &TgtBB = getOrCreateBB(BrTgt);
-    MIRBuilder.buildInstr(TargetOpcode::G_BR, BrTgt.getType(), TgtBB);
+    MIRBuilder.buildInstr(TargetOpcode::G_BR, LLT{*BrTgt.getType()}, TgtBB);
   } else {
     assert(0 && "Not yet implemented");
   }

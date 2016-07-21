@@ -37,7 +37,7 @@ code. By default, the back-end will emit device functions. Metadata is used to
 declare a function as a kernel function. This metadata is attached to the
 ``nvvm.annotations`` named metadata object, and has the following format:
 
-.. code-block:: llvm
+.. code-block:: text
 
    !0 = !{<function-ref>, metadata !"kernel", i32 1}
 

@@ -242,8 +242,8 @@ define i32 @test12a(i1 %cond, i32 %a) {
 
 define i32 @test12b(i1 %cond, i32 %a) {
 ; CHECK-LABEL: @test12b(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 %cond to i32
-; CHECK-NEXT:    [[B:%.*]] = xor i32 [[TMP1]], 1
+; CHECK-NEXT:    [[NOT_COND:%.*]] = xor i1 %cond, true
+; CHECK-NEXT:    [[B:%.*]] = zext i1 [[NOT_COND]] to i32
 ; CHECK-NEXT:    [[D:%.*]] = ashr i32 %a, [[B]]
 ; CHECK-NEXT:    ret i32 [[D]]
 ;
@@ -1193,8 +1193,8 @@ define i64 @select_icmp_x_and_8_ne_0_y_xor_8(i32 %x, i64 %y) {
 define i64 @select_icmp_x_and_8_ne_0_y_or_8(i32 %x, i64 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_or_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 8
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[AND]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i64 [[TMP1]], 8
+; CHECK-NEXT:    [[TMP1:%.*]] = xor i32 [[AND]], 8
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = or i64 [[TMP2]], %y
 ; CHECK-NEXT:    ret i64 [[TMP3]]
 ;
@@ -1742,3 +1742,26 @@ define i32 @PR27137(i32 %a) {
   %s1 = select i1 %c1, i32 %s0, i32 -1
   ret i32 %s1
 }
+
+define i32 @select_icmp_slt0_xor(i32 %x) {
+; CHECK-LABEL: @select_icmp_slt0_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 %x, -2147483648
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %cmp = icmp slt i32 %x, zeroinitializer
+  %xor = xor i32 %x, 2147483648
+  %x.xor = select i1 %cmp, i32 %x, i32 %xor
+  ret i32 %x.xor
+}
+
+define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
+; CHECK-LABEL: @select_icmp_slt0_xor_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> %x, <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %cmp = icmp slt <2 x i32> %x, zeroinitializer
+  %xor = xor <2 x i32> %x, <i32 2147483648, i32 2147483648>
+  %x.xor = select <2 x i1> %cmp, <2 x i32> %x, <2 x i32> %xor
+  ret <2 x i32> %x.xor
+}
+

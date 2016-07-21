@@ -503,12 +503,12 @@ entry:
 ; Test that the or is folded into the base address register instead of
 ; added to m0
 
-; GCN-LABEL: {{^}}extractelement_v4i32_or_index:
-; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
-; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
-; GCN-NOT: [[IDX_SHL]]
-; GCN: s_mov_b32 m0, [[IDX_SHL]]
-; GCN: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; CHECK-LABEL: {{^}}extractelement_v4i32_or_index:
+; CHECK: s_load_dword [[IDX_IN:s[0-9]+]]
+; CHECK: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
+; CHECK-NOT: [[IDX_SHL]]
+; CHECK: s_mov_b32 m0, [[IDX_SHL]]
+; CHECK: v_movrels_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 define void @extractelement_v4i32_or_index(i32 addrspace(1)* %out, <4 x i32> addrspace(1)* %in, i32 %idx.in) {
 entry:
   %ld = load volatile <4 x i32>, <4  x i32> addrspace(1)* %in
@@ -519,17 +519,52 @@ entry:
   ret void
 }
 
-; GCN-LABEL: {{^}}insertelement_v4f32_or_index:
-; GCN: s_load_dword [[IDX_IN:s[0-9]+]]
-; GCN: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
-; GCN-NOT: [[IDX_SHL]]
-; GCN: s_mov_b32 m0, [[IDX_SHL]]
-; GCN: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
+; CHECK-LABEL: {{^}}insertelement_v4f32_or_index:
+; CHECK: s_load_dword [[IDX_IN:s[0-9]+]]
+; CHECK: s_lshl_b32 [[IDX_SHL:s[0-9]+]], [[IDX_IN]]
+; CHECK-NOT: [[IDX_SHL]]
+; CHECK: s_mov_b32 m0, [[IDX_SHL]]
+; CHECK: v_movreld_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}
 define void @insertelement_v4f32_or_index(<4 x float> addrspace(1)* %out, <4 x float> %a, i32 %idx.in) nounwind {
   %idx.shl = shl i32 %idx.in, 2
   %idx = or i32 %idx.shl, 1
   %vecins = insertelement <4 x float> %a, float 5.000000e+00, i32 %idx
   store <4 x float> %vecins, <4 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
+; CHECK-LABEL: {{^}}broken_phi_bb:
+; CHECK: v_mov_b32_e32 [[PHIREG:v[0-9]+]], 8
+
+; CHECK: s_branch [[BB2:BB[0-9]+_[0-9]+]]
+
+; CHECK: {{^BB[0-9]+_[0-9]+}}:
+; CHECK: s_mov_b64 exec,
+
+; CHECK: [[BB2]]:
+; CHECK: v_cmp_le_i32_e32 vcc, s{{[0-9]+}}, [[PHIREG]]
+; CHECK: buffer_load_dword
+
+; CHECK: [[REGLOOP:BB[0-9]+_[0-9]+]]:
+; CHECK: v_movreld_b32_e32
+; CHECK: s_cbranch_execnz [[REGLOOP]]
+define void @broken_phi_bb(i32 %arg, i32 %arg1) #0 {
+bb:
+  br label %bb2
+
+bb2:                                              ; preds = %bb4, %bb
+  %tmp = phi i32 [ 8, %bb ], [ %tmp7, %bb4 ]
+  %tmp3 = icmp slt i32 %tmp, %arg
+  br i1 %tmp3, label %bb4, label %bb8
+
+bb4:                                              ; preds = %bb2
+  %vgpr = load volatile i32, i32 addrspace(1)* undef
+  %tmp5 = insertelement <8 x i32> undef, i32 undef, i32 %vgpr
+  %tmp6 = insertelement <8 x i32> %tmp5, i32 %arg1, i32 %vgpr
+  %tmp7 = extractelement <8 x i32> %tmp6, i32 0
+  br label %bb2
+
+bb8:                                              ; preds = %bb2
   ret void
 }
 

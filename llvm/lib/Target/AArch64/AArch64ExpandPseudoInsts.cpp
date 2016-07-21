@@ -23,10 +23,6 @@
 #include "llvm/Support/MathExtras.h"
 using namespace llvm;
 
-namespace llvm {
-void initializeAArch64ExpandPseudoPass(PassRegistry &);
-}
-
 #define AARCH64_EXPAND_PSEUDO_NAME "AArch64 pseudo instruction expansion pass"
 
 namespace {
