@@ -2,12 +2,6 @@ include(BuiltinTests)
 
 # Make all the tests only check the compiler
 set(TEST_COMPILE_ONLY On)
-# Temporary fix for Mips buildbots this broke. It's the linker that rejects
-# inappropriate multilibs on this system.
-check_compile_definition("__mips__" "" IS_MIPS_HOST)
-if(IS_MIPS_HOST)
-  set(TEST_COMPILE_ONLY OFF)
-endif()
 
 builtin_check_c_compiler_flag(-fPIC                 COMPILER_RT_HAS_FPIC_FLAG)
 builtin_check_c_compiler_flag(-fPIE                 COMPILER_RT_HAS_FPIE_FLAG)

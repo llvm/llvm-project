@@ -62,10 +62,12 @@ int internal_snprintf(char *buffer, uptr length, const char *format, ...);
 bool mem_is_zero(const char *mem, uptr size);
 
 // I/O
-const fd_t kInvalidFd = (fd_t)-1;
-const fd_t kStdinFd = 0;
-const fd_t kStdoutFd = (fd_t)1;
-const fd_t kStderrFd = (fd_t)2;
+// Define these as macros so we can use them in linker initialized global
+// structs without dynamic initialization.
+#define kInvalidFd ((fd_t)-1)
+#define kStdinFd ((fd_t)0)
+#define kStdoutFd ((fd_t)1)
+#define kStderrFd ((fd_t)2)
 
 uptr internal_ftruncate(fd_t fd, uptr size);
 

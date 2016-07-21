@@ -235,8 +235,7 @@ void AsanOnDeadlySignal(int, void *siginfo, void *context) {
 // Exception handler for dealing with shadow memory.
 static LONG CALLBACK
 ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
-  static uptr page_size = GetPageSizeCached();
-  static uptr alloc_granularity = GetMmapGranularity();
+  uptr page_size = GetPageSizeCached();
   // Only handle access violations.
   if (exception_pointers->ExceptionRecord->ExceptionCode !=
       EXCEPTION_ACCESS_VIOLATION) {
