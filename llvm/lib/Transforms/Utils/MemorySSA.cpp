@@ -1225,7 +1225,6 @@ MemoryAccessPair MemorySSA::CachingWalker::UpwardsDFSWalk(
     MemoryAccess *CacheAccess = DFI.getPath(N - 1);
     doCacheInsert(CacheAccess, ModifyingAccess, Q, Loc);
   }
-  assert(Q.Visited.size() < 1000 && "Visited too much");
 
   return {ModifyingAccess, Loc};
 }
