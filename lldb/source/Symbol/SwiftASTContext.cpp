@@ -15,8 +15,8 @@
 // C++ Includes
 #include <mutex> // std::once
 #include <queue>
-#include <regex>
 #include <set>
+#include <sstream>
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -2773,6 +2773,12 @@ GetResourceDir ()
             FileSpec faux_swift_dir_spec;
             if (HostInfo::GetLLDBPath (ePathTypeSwiftDir, faux_swift_dir_spec))
             {
+                // We can't use a C++11 stdlib regex feature here because it
+                // doesn't work on Ubuntu 14.04 x86_64.  Once we don't care
+                // about supporting that anymore, let's pull the code below
+                // back in since it is a simpler implementation using
+                // std::regex.
+#if 0
                 // Let's try to regex this.
                 // We're looking for /some/path/lldb-{os}-{arch}, and want to
                 // build the following:
@@ -2791,24 +2797,54 @@ GetResourceDir ()
                 const std::string build_tree_resource_dir =
                     std::regex_replace(faux_swift_dir, match_regex,
                                        replace_format);
-                if (log)
-                    log->Printf("%s: trying ePathTypeSwiftDir regex-based "
-                                "build dir: %s",
-                                __FUNCTION__,
-                                build_tree_resource_dir.c_str());
-                FileSpec swift_resource_dir_spec(
-                    build_tree_resource_dir.c_str(), false);
-                if (swift_resource_dir_spec.IsDirectory())
+#else
+                std::string build_tree_resource_dir;
+                const std::string faux_swift_dir =
+                    faux_swift_dir_spec.GetCString();
+
+                // Find something that matches lldb- (particularly,
+                // the last one).
+                const std::string lldb_dash("lldb-");
+                auto lldb_pos = faux_swift_dir.rfind(lldb_dash);
+                if ((lldb_pos != std::string::npos) &&
+                    (lldb_pos > 0) &&
+                    ((faux_swift_dir[lldb_pos - 1] == '\\') ||
+                     (faux_swift_dir[lldb_pos - 1] == '/')))
                 {
-                    g_cached_resource_dir =
-                        ConstString(swift_resource_dir_spec.GetPath());
+                    // We found something that matches ^.+[/\\]lldb-.+$
+                    std::ostringstream stream;
+                    // Take everything before lldb- (the path leading up to
+                    // the lldb dir).
+                    stream << faux_swift_dir.substr(0, lldb_pos);
+
+                    // replace lldb- with swift-.
+                    stream << "swift-";
+
+                    // and now tack on the same components from after
+                    // the lldb- part.
+                    stream << faux_swift_dir.substr(lldb_pos +
+                                                    lldb_dash.length());
+                    const std::string build_tree_resource_dir = stream.str();
                     if (log)
-                        log->Printf("%s: found Swift resource dir via "
-                                    "ePathTypeSwiftDir + inferred build-tree "
-                                    "dir: %s", __FUNCTION__,
-                                    g_cached_resource_dir.AsCString());
-                    return;
+                        log->Printf("%s: trying ePathTypeSwiftDir regex-based "
+                                    "build dir: %s",
+                                    __FUNCTION__,
+                                    build_tree_resource_dir.c_str());
+                    FileSpec swift_resource_dir_spec(
+                        build_tree_resource_dir.c_str(), false);
+                    if (swift_resource_dir_spec.IsDirectory())
+                    {
+                        g_cached_resource_dir =
+                            ConstString(swift_resource_dir_spec.GetPath());
+                        if (log)
+                            log->Printf("%s: found Swift resource dir via "
+                                        "ePathTypeSwiftDir + inferred "
+                                        "build-tree dir: %s", __FUNCTION__,
+                                        g_cached_resource_dir.AsCString());
+                        return;
+                    }
                 }
+#endif
             }
         }
 
