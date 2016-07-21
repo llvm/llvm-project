@@ -44,6 +44,7 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/async/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/geometric/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/image/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/integer/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/math/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.cl
