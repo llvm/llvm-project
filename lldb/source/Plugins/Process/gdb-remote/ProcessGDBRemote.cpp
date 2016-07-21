@@ -4165,7 +4165,7 @@ ProcessGDBRemote::GetExtendedInfoForThread (lldb::tid_t tid)
 
         StreamString packet;
         packet << "jThreadExtendedInfo:";
-        args_dict->Dump (packet);
+        args_dict->Dump (packet, false);
 
         // FIXME the final character of a JSON dictionary, '}', is the escape
         // character in gdb-remote binary mode.  lldb currently doesn't escape
@@ -4194,6 +4194,44 @@ ProcessGDBRemote::GetExtendedInfoForThread (lldb::tid_t tid)
 StructuredData::ObjectSP
 ProcessGDBRemote::GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_address, lldb::addr_t image_count)
 {
+
+    StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
+    args_dict->GetAsDictionary()->AddIntegerItem ("image_list_address", image_list_address);
+    args_dict->GetAsDictionary()->AddIntegerItem ("image_count", image_count);
+
+    return GetLoadedDynamicLibrariesInfos_sender (args_dict);
+}
+
+StructuredData::ObjectSP
+ProcessGDBRemote::GetLoadedDynamicLibrariesInfos ()
+{
+    StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
+
+    args_dict->GetAsDictionary()->AddBooleanItem ("fetch_all_solibs", true);
+
+    return GetLoadedDynamicLibrariesInfos_sender (args_dict);
+}
+
+StructuredData::ObjectSP
+ProcessGDBRemote::GetLoadedDynamicLibrariesInfos (const std::vector<lldb::addr_t> &load_addresses)
+{
+    StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
+    StructuredData::ArraySP addresses(new StructuredData::Array);
+
+    for (auto addr : load_addresses)
+    {
+        StructuredData::ObjectSP addr_sp (new StructuredData::Integer (addr));
+        addresses->AddItem (addr_sp);
+    }
+
+    args_dict->GetAsDictionary()->AddItem ("solib_addresses", addresses);
+
+    return GetLoadedDynamicLibrariesInfos_sender (args_dict);
+}
+
+StructuredData::ObjectSP
+ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender (StructuredData::ObjectSP args_dict)
+{
     StructuredData::ObjectSP object_sp;
 
     if (m_gdb_comm.GetLoadedDynamicLibrariesInfosSupported())
@@ -4201,13 +4239,9 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_addres
         // Scope for the scoped timeout object
         GDBRemoteCommunication::ScopedTimeout timeout (m_gdb_comm, 10);
 
-        StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
-        args_dict->GetAsDictionary()->AddIntegerItem ("image_list_address", image_list_address);
-        args_dict->GetAsDictionary()->AddIntegerItem ("image_count", image_count);
-
         StreamString packet;
         packet << "jGetLoadedDynamicLibrariesInfos:";
-        args_dict->Dump (packet);
+        args_dict->Dump (packet, false);
 
         // FIXME the final character of a JSON dictionary, '}', is the escape
         // character in gdb-remote binary mode.  lldb currently doesn't escape
@@ -4232,6 +4266,9 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos (lldb::addr_t image_list_addres
     }
     return object_sp;
 }
+
+
+
 
 // Establish the largest memory read/write payloads we should use.
 // If the remote stub has a max packet size, stay under that size.

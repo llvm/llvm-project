@@ -9,12 +9,28 @@
 // IR level instrumentation
 // RUN: %clang_pgogen -O2 -mllvm -disable-vp=false -mllvm -vp-static-alloc=true -mllvm -vp-counters-per-site=256 -fPIC -shared -o %t.d/t.ir.shared -DSHARED_LIB  %S/Inputs/instrprof-value-prof-real.c
 // RUN: %clang_pgogen -O2 -mllvm -disable-vp=false -mllvm -vp-static-alloc=true -mllvm -vp-counters-per-site=256 -rpath %t.d -o %t.ir %t.d/t.ir.shared -DCALL_SHARED  %S/Inputs/instrprof-value-prof-real.c
+// Profile data from shared library will be concatenated to the same raw file.
 // RUN: env LLVM_PROFILE_FILE=%t.ir.profraw  LLVM_VP_MAX_NUM_VALS_PER_SITE=255 %run %t.ir
 // RUN: llvm-profdata merge -o %t.ir.profdata %t.ir.profraw
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
 // RUN: llvm-profdata merge -text  %t.ir.profdata -o %t.ir.proftxt 
 // RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=SHARED
 // RUN: FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=IR < %t.ir.proftxt
+
+// Same as above but with profile online merging enabled.
+// RUN: rm -fr %t.prof/
+// RUN: mkdir -p %t.prof/
+// RUN: %clang_pgogen -O2 -mllvm -disable-vp=false -mllvm -vp-static-alloc=true -mllvm -vp-counters-per-site=256 -fPIC -shared -o %t.d/t.ir.m.shared -DSHARED_LIB  %S/Inputs/instrprof-value-prof-real.c
+// RUN: %clang_pgogen -O2 -mllvm -disable-vp=false -mllvm -vp-static-alloc=true -mllvm -vp-counters-per-site=256 -rpath %t.d -o %t.ir.m %t.d/t.ir.m.shared -DCALL_SHARED  %S/Inputs/instrprof-value-prof-real.c
+// FIXME: When pgogen's behavior changed to enable merging by default, there is no need to use env var.
+// Two profile data files should be dumped to %t.prof/ dir.
+// RUN: env LLVM_PROFILE_FILE=%t.prof/default_%m.profraw LLVM_VP_MAX_NUM_VALS_PER_SITE=255 %run %t.ir.m
+// RUN: llvm-profdata merge -o %t.ir.m.profdata %t.prof/
+// RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.m.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c
+// RUN: llvm-profdata merge -text  %t.ir.m.profdata -o %t.ir.m.proftxt 
+// RUN: llvm-profdata show --all-functions -ic-targets  %t.ir.m.profdata | FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=SHARED
+// RUN: FileCheck  %S/Inputs/instrprof-value-prof-real.c --check-prefix=IR < %t.ir.m.proftxt
+
 
 // IR level instrumentation: dynamic memory allocation
 // RUN: %clang_pgogen -O2 -mllvm -disable-vp=false -mllvm -vp-static-alloc=false -mllvm -vp-counters-per-site=256 -fPIC -shared -o %t.d/t.ir.dyn.shared -DSHARED_LIB  %S/Inputs/instrprof-value-prof-real.c

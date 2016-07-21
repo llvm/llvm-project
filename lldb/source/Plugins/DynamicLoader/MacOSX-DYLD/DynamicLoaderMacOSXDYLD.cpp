@@ -89,6 +89,11 @@ DynamicLoaderMacOSXDYLD::CreateInstance (Process* process, bool force)
             }
         }
     }
+
+    if (UseDYLDSPI (process) == true)
+    {
+        create = false;
+    }
     
     if (create)
         return new DynamicLoaderMacOSXDYLD (process);
@@ -296,6 +301,7 @@ DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(lldb::
 {
     std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
     DataExtractor data; // Load command data
+    static ConstString g_dyld_all_image_infos ("dyld_all_image_infos");
     if (ReadMachHeader (addr, &m_dyld.header, &data))
     {
         if (m_dyld.header.filetype == llvm::MachO::MH_DYLINKER)
@@ -316,7 +322,6 @@ DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(lldb::
 
             if (m_dyld_all_image_infos_addr == LLDB_INVALID_ADDRESS && dyld_module_sp.get())
             {
-                static ConstString g_dyld_all_image_infos ("dyld_all_image_infos");
                 const Symbol *symbol = dyld_module_sp->FindFirstSymbolWithNameAndType (g_dyld_all_image_infos, eSymbolTypeData);
                 if (symbol)
                     m_dyld_all_image_infos_addr = symbol->GetLoadAddress(&target);
@@ -340,6 +345,7 @@ DynamicLoaderMacOSXDYLD::ReadDYLDInfoFromMemoryAndSetNotificationCallback(lldb::
                 target.ModulesDidLoad(modules);
                 SetDYLDModule (dyld_module_sp);
             }
+
             return true;
         }
     }
@@ -592,7 +598,7 @@ DynamicLoaderMacOSXDYLD::AddModulesUsingImageInfosAddress (lldb::addr_t image_in
         bool return_value = false;
         if (JSONImageInformationIntoImageInfo (image_infos_json_sp, image_infos))
         {
-            AddExecutableModuleIfInImageInfos (image_infos);
+            UpdateSpecialBinariesFromNewImageInfos (image_infos);
             return_value = AddModulesUsingImageInfos (image_infos);
         }
         m_dyld_image_infos_stop_id = m_process->GetStopID();
@@ -1105,7 +1111,7 @@ DynamicLoaderMacOSXDYLD::SetNotificationBreakpoint ()
             bool resolved = m_process->GetTarget().ResolveLoadAddress(m_dyld_all_image_infos.notification, so_addr);
             if (!resolved)
             {
-                ModuleSP dyld_module_sp = m_dyld_module_wp.lock();
+                ModuleSP dyld_module_sp = GetDYLDModule();
                 if (dyld_module_sp)
                 {
                     std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());

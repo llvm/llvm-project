@@ -19,7 +19,6 @@ int main(int argc, char **argv) {
   //
   // A2: AddressSanitizer: stack-buffer-overflow
   // A2: {{#0.*memmem}}
-  // A2-NEXT: {{#1.*main}}
   // A2: 'a2' <== Memory access at offset
   return res == NULL;
 }

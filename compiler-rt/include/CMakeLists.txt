@@ -10,11 +10,18 @@ set(SANITIZER_HEADERS
   sanitizer/msan_interface.h
   sanitizer/tsan_interface_atomic.h)
 
+set(XRAY_HEADERS
+  xray/xray_interface.h)
+
+set(COMPILER_RT_HEADERS
+  ${SANITIZER_HEADERS}
+	${XRAY_HEADERS})
+
 set(output_dir ${COMPILER_RT_OUTPUT_DIR}/include)
 
 # Copy compiler-rt headers to the build tree.
 set(out_files)
-foreach( f ${SANITIZER_HEADERS} )
+foreach( f ${COMPILER_RT_HEADERS} )
   set( src ${CMAKE_CURRENT_SOURCE_DIR}/${f} )
   set( dst ${output_dir}/${f} )
   add_custom_command(OUTPUT ${dst}
@@ -32,3 +39,7 @@ set_target_properties(compiler-rt-headers PROPERTIES FOLDER "Compiler-RT Misc")
 install(FILES ${SANITIZER_HEADERS}
   PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
   DESTINATION ${COMPILER_RT_INSTALL_PATH}/include/sanitizer)
+# Install xray headers.
+install(FILES ${XRAY_HEADERS}
+  PERMISSIONS OWNER_READ OWNER_WRITE GROUP_READ WORLD_READ
+  DESTINATION ${COMPILER_RT_INSTALL_PATH}/include/xray)

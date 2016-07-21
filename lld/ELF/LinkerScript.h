@@ -86,9 +86,6 @@ struct ScriptConfiguration {
   // SECTIONS commands.
   std::vector<SectionRule> Sections;
 
-  // Section fill attribute for each section.
-  llvm::StringMap<std::vector<uint8_t>> Filler;
-
   // Used to assign addresses to sections.
   std::vector<std::unique_ptr<BaseCommand>> Commands;
 

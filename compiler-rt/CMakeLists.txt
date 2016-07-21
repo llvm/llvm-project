@@ -38,6 +38,10 @@ mark_as_advanced(COMPILER_RT_BUILD_BUILTINS)
 option(COMPILER_RT_BUILD_SANITIZERS "Build sanitizers" ON)
 mark_as_advanced(COMPILER_RT_BUILD_SANITIZERS)
 
+# TODO: Flip this to default ON when build bots recognize this new option.
+option(COMPILER_RT_BUILD_XRAY "Build xray" OFF)
+mark_as_advanced(COMPILER_RT_BUILD_XRAY)
+
 if (COMPILER_RT_STANDALONE_BUILD)
   if (NOT LLVM_CONFIG_PATH)
     find_program(LLVM_CONFIG_PATH "llvm-config"
