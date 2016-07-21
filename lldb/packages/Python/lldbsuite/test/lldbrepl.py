@@ -27,7 +27,6 @@ class REPLTest(PExpectTest):
     
     @swiftTest
     @no_debug_info_test
-    @skipIfLinux  # https://bugs.swift.org/browse/SR-1300
     def testREPL(self):
         # setup the regexp for the prompt
         self.prompt = re.compile('\\d+>')
