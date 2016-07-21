@@ -1278,7 +1278,7 @@ template <class ELFT>
 typename ELFT::uint DynamicReloc<ELFT>::getOffset() const {
   if (OutputSec)
     return OutputSec->getVA() + OffsetInSec;
-  return InputSec->OutSec->getVA() + InputSec->getOffset(OffsetInSec);
+  return InputSec->OutSec->getVA() + OffsetInSec;
 }
 
 template <class ELFT>
@@ -1770,6 +1770,7 @@ OutputSectionFactory<ELFT>::create(InputSectionBase<ELFT> *C,
     Sec = new MipsOptionsOutputSection<ELFT>();
     break;
   }
+  OwningSections.emplace_back(Sec);
   return {Sec, true};
 }
 

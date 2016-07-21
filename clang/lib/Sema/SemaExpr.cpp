@@ -4304,14 +4304,13 @@ ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                           diag::err_omp_section_incomplete_type, Base))
     return ExprError();
 
-  if (LowerBound) {
+  if (LowerBound && !OriginalTy->isAnyPointerType()) {
     llvm::APSInt LowerBoundValue;
     if (LowerBound->EvaluateAsInt(LowerBoundValue, Context)) {
-      // OpenMP 4.0, [2.4 Array Sections]
-      // The lower-bound and length must evaluate to non-negative integers.
+      // OpenMP 4.5, [2.4 Array Sections]
+      // The array section must be a subset of the original array.
       if (LowerBoundValue.isNegative()) {
-        Diag(LowerBound->getExprLoc(), diag::err_omp_section_negative)
-            << 0 << LowerBoundValue.toString(/*Radix=*/10, /*Signed=*/true)
+        Diag(LowerBound->getExprLoc(), diag::err_omp_section_not_subset_of_array)
             << LowerBound->getSourceRange();
         return ExprError();
       }
@@ -4321,11 +4320,11 @@ ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   if (Length) {
     llvm::APSInt LengthValue;
     if (Length->EvaluateAsInt(LengthValue, Context)) {
-      // OpenMP 4.0, [2.4 Array Sections]
-      // The lower-bound and length must evaluate to non-negative integers.
+      // OpenMP 4.5, [2.4 Array Sections]
+      // The length must evaluate to non-negative integers.
       if (LengthValue.isNegative()) {
-        Diag(Length->getExprLoc(), diag::err_omp_section_negative)
-            << 1 << LengthValue.toString(/*Radix=*/10, /*Signed=*/true)
+        Diag(Length->getExprLoc(), diag::err_omp_section_length_negative)
+            << LengthValue.toString(/*Radix=*/10, /*Signed=*/true)
             << Length->getSourceRange();
         return ExprError();
       }
@@ -4333,7 +4332,7 @@ ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   } else if (ColonLoc.isValid() &&
              (OriginalTy.isNull() || (!OriginalTy->isConstantArrayType() &&
                                       !OriginalTy->isVariableArrayType()))) {
-    // OpenMP 4.0, [2.4 Array Sections]
+    // OpenMP 4.5, [2.4 Array Sections]
     // When the size of the array dimension is not known, the length must be
     // specified explicitly.
     Diag(ColonLoc, diag::err_omp_section_length_undefined)

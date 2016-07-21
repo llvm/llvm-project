@@ -21,8 +21,6 @@
 namespace lld {
 namespace elf {
 
-template <class ELFT> bool isDiscarded(InputSectionBase<ELFT> *S);
-
 class SymbolBody;
 
 template <class ELFT> class ICF;
@@ -172,10 +170,6 @@ public:
   EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
   void split();
-
-  // Translate an offset in the input section to an offset in the output
-  // section.
-  uintX_t getOffset(uintX_t Offset) const;
 
   // Relocation section that refer to this one.
   const Elf_Shdr *RelocSection = nullptr;

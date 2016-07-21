@@ -102,6 +102,7 @@ private:
   std::map<std::string, SymbolBody *> getDemangledSyms();
 
   struct SymIndex {
+    SymIndex(int Idx, bool Traced) : Idx(Idx), Traced(Traced) {}
     int Idx : 31;
     unsigned Traced : 1;
   };

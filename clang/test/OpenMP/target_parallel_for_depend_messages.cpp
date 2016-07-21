@@ -67,7 +67,7 @@ int main(int argc, char **argv, char *env[]) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for depend (in : argv[0:-1]) // expected-error {{section length is evaluated to a negative value -1}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target parallel for depend (in : argv[-1:0]) // expected-error {{section lower bound is evaluated to a negative value -1}}
+  #pragma omp target parallel for depend (in : argv[-1:0])
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target parallel for depend (in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   for (i = 0; i < argc; ++i) foo();

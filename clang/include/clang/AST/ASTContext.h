@@ -312,6 +312,18 @@ class ASTContext : public RefCountedBase<ASTContext> {
   /// definitions of that entity.
   llvm::DenseMap<NamedDecl*, llvm::TinyPtrVector<Module*>> MergedDefModules;
 
+  /// \brief Initializers for a module, in order. Each Decl will be either
+  /// something that has a semantic effect on startup (such as a variable with
+  /// a non-constant initializer), or an ImportDecl (which recursively triggers
+  /// initialization of another module).
+  struct PerModuleInitializers {
+    llvm::SmallVector<Decl*, 4> Initializers;
+    llvm::SmallVector<uint32_t, 4> LazyInitializers;
+
+    void resolve(ASTContext &Ctx);
+  };
+  llvm::DenseMap<Module*, PerModuleInitializers*> ModuleInitializers;
+
 public:
   /// \brief A type synonym for the TemplateOrInstantiation mapping.
   typedef llvm::PointerUnion<VarTemplateDecl *, MemberSpecializationInfo *>
@@ -882,6 +894,17 @@ public:
       return None;
     return MergedIt->second;
   }
+
+  /// Add a declaration to the list of declarations that are initialized
+  /// for a module. This will typically be a global variable (with internal
+  /// linkage) that runs module initializers, such as the iostream initializer,
+  /// or an ImportDecl nominating another module that has initializers.
+  void addModuleInitializer(Module *M, Decl *Init);
+
+  void addLazyModuleInitializers(Module *M, ArrayRef<uint32_t> IDs);
+
+  /// Get the initializations to perform when importing a module, if any.
+  ArrayRef<Decl*> getModuleInitializers(Module *M);
 
   TranslationUnitDecl *getTranslationUnitDecl() const { return TUDecl; }
 

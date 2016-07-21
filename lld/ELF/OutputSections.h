@@ -685,6 +685,7 @@ private:
   Key createKey(InputSectionBase<ELFT> *C, StringRef OutsecName);
 
   llvm::SmallDenseMap<Key, OutputSectionBase<ELFT> *> Map;
+  std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
 };
 
 template <class ELFT> BuildIdSection<ELFT> *Out<ELFT>::BuildId;

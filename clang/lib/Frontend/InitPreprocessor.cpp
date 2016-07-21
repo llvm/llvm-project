@@ -961,6 +961,11 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
 #include "clang/Basic/OpenCLExtensions.def"
   }
 
+  if (TI.hasInt128Type() && LangOpts.CPlusPlus && LangOpts.GNUMode) {
+    Builder.defineMacro("__GLIBCXX_TYPE_INT_N_0", "__int128");
+    Builder.defineMacro("__GLIBCXX_BITSIZE_INT_N_0", "128");
+  }
+
   // Get other target #defines.
   TI.getTargetDefines(LangOpts, Builder);
 }

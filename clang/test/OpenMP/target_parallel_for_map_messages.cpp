@@ -80,6 +80,10 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
   for (i = 0; i < argc; ++i) foo();
+#pragma omp target parallel for map(l[-1:]) // expected-error 2 {{array section must be a subset of the original array}}
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target parallel for map(l[:-1]) // expected-error 2 {{section length is evaluated to a negative value -1}}
+  for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(x)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(tofrom: t[:I])
@@ -195,6 +199,10 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for map(from: argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(x: y) // expected-error {{incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'}}
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target parallel for map(l[-1:]) // expected-error {{array section must be a subset of the original array}}
+  for (i = 0; i < argc; ++i) foo();
+#pragma omp target parallel for map(l[:-1]) // expected-error {{section length is evaluated to a negative value -1}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for map(x)
   for (i = 0; i < argc; ++i) foo();

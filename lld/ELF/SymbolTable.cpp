@@ -174,13 +174,13 @@ static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
 // Find an existing symbol or create and insert a new one.
 template <class ELFT>
 std::pair<Symbol *, bool> SymbolTable<ELFT>::insert(StringRef Name) {
-  auto P = Symtab.insert({Name, {(int)SymVector.size(), false}});
+  auto P = Symtab.insert({Name, SymIndex((int)SymVector.size(), false)});
   SymIndex &V = P.first->second;
   bool IsNew = P.second;
 
   if (V.Idx == -1) {
     IsNew = true;
-    V = {(int)SymVector.size(), true};
+    V = SymIndex((int)SymVector.size(), true);
   }
 
   Symbol *Sym;

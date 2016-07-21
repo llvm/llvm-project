@@ -5911,8 +5911,10 @@ _mm512_kmov (__mmask16 __A)
   (int)__builtin_ia32_vcomiss((__v4sf)(__m128)(A), (__v4sf)(__m128)(B), \
                               (int)(P), (int)(R)); })
 
+#ifdef __x86_64__
 #define _mm_cvt_roundsd_si64(A, R) __extension__ ({ \
   (long long)__builtin_ia32_vcvtsd2si64((__v2df)(__m128d)(A), (int)(R)); })
+#endif
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask2_permutex2var_epi32 (__m512i __A, __m512i __I,
@@ -6309,8 +6311,10 @@ _mm512_maskz_srlv_epi64 (__mmask8 __U, __m512i __X, __m512i __Y)
                                              (__v8di)(__m512i)(C), (int)(imm), \
                                              (__mmask8)(U)); })
 
+#ifdef __x86_64__
 #define _mm_cvt_roundsd_i64(A, R) __extension__ ({ \
   (long long)__builtin_ia32_vcvtsd2si64((__v2df)(__m128d)(A), (int)(R)); })
+#endif
 
 #define _mm_cvt_roundsd_si32(A, R) __extension__ ({ \
   (int)__builtin_ia32_vcvtsd2si32((__v2df)(__m128d)(A), (int)(R)); })
@@ -6328,6 +6332,7 @@ _mm_cvtsd_u32 (__m128d __A)
              _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvt_roundsd_u64(A, R) __extension__ ({ \
   (unsigned long long)__builtin_ia32_vcvtsd2usi64((__v2df)(__m128d)(A), \
                                                   (int)(R)); })
@@ -6339,6 +6344,7 @@ _mm_cvtsd_u64 (__m128d __A)
                  __A,
                  _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 #define _mm_cvt_roundss_si32(A, R) __extension__ ({ \
   (int)__builtin_ia32_vcvtss2si32((__v4sf)(__m128)(A), (int)(R)); })
@@ -6346,11 +6352,13 @@ _mm_cvtsd_u64 (__m128d __A)
 #define _mm_cvt_roundss_i32(A, R) __extension__ ({ \
   (int)__builtin_ia32_vcvtss2si32((__v4sf)(__m128)(A), (int)(R)); })
 
+#ifdef __x86_64__
 #define _mm_cvt_roundss_si64(A, R) __extension__ ({ \
   (long long)__builtin_ia32_vcvtss2si64((__v4sf)(__m128)(A), (int)(R)); })
 
 #define _mm_cvt_roundss_i64(A, R) __extension__ ({ \
   (long long)__builtin_ia32_vcvtss2si64((__v4sf)(__m128)(A), (int)(R)); })
+#endif
 
 #define _mm_cvt_roundss_u32(A, R) __extension__ ({ \
   (unsigned int)__builtin_ia32_vcvtss2usi32((__v4sf)(__m128)(A), (int)(R)); })
@@ -6362,6 +6370,7 @@ _mm_cvtss_u32 (__m128 __A)
              _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvt_roundss_u64(A, R) __extension__ ({ \
   (unsigned long long)__builtin_ia32_vcvtss2usi64((__v4sf)(__m128)(A), \
                                                   (int)(R)); })
@@ -6373,6 +6382,7 @@ _mm_cvtss_u64 (__m128 __A)
                  __A,
                  _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 #define _mm_cvtt_roundsd_i32(A, R) __extension__ ({ \
   (int)__builtin_ia32_vcvttsd2si32((__v2df)(__m128d)(A), (int)(R)); })
@@ -6387,6 +6397,7 @@ _mm_cvttsd_i32 (__m128d __A)
               _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvtt_roundsd_si64(A, R) __extension__ ({ \
   (long long)__builtin_ia32_vcvttsd2si64((__v2df)(__m128d)(A), (int)(R)); })
 
@@ -6399,6 +6410,7 @@ _mm_cvttsd_i64 (__m128d __A)
   return (long long) __builtin_ia32_vcvttsd2si64 ((__v2df) __A,
               _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 #define _mm_cvtt_roundsd_u32(A, R) __extension__ ({ \
   (unsigned int)__builtin_ia32_vcvttsd2usi32((__v2df)(__m128d)(A), (int)(R)); })
@@ -6410,6 +6422,7 @@ _mm_cvttsd_u32 (__m128d __A)
               _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvtt_roundsd_u64(A, R) __extension__ ({ \
   (unsigned long long)__builtin_ia32_vcvttsd2usi64((__v2df)(__m128d)(A), \
                                                    (int)(R)); })
@@ -6421,6 +6434,7 @@ _mm_cvttsd_u64 (__m128d __A)
                   __A,
                   _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 #define _mm_cvtt_roundss_i32(A, R) __extension__ ({ \
   (int)__builtin_ia32_vcvttss2si32((__v4sf)(__m128)(A), (int)(R)); })
@@ -6435,6 +6449,7 @@ _mm_cvttss_i32 (__m128 __A)
               _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvtt_roundss_i64(A, R) __extension__ ({ \
   (long long)__builtin_ia32_vcvttss2si64((__v4sf)(__m128)(A), (int)(R)); })
 
@@ -6447,6 +6462,7 @@ _mm_cvttss_i64 (__m128 __A)
   return (long long) __builtin_ia32_vcvttss2si64 ((__v4sf) __A,
               _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 #define _mm_cvtt_roundss_u32(A, R) __extension__ ({ \
   (unsigned int)__builtin_ia32_vcvttss2usi32((__v4sf)(__m128)(A), (int)(R)); })
@@ -6458,6 +6474,7 @@ _mm_cvttss_u32 (__m128 __A)
               _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvtt_roundss_u64(A, R) __extension__ ({ \
   (unsigned long long)__builtin_ia32_vcvttss2usi64((__v4sf)(__m128)(A), \
                                                    (int)(R)); })
@@ -6469,6 +6486,7 @@ _mm_cvttss_u64 (__m128 __A)
                   __A,
                   _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 static __inline__ __m512d __DEFAULT_FN_ATTRS
 _mm512_mask2_permutex2var_pd (__m512d __A, __m512i __I, __mmask8 __U,
@@ -9341,14 +9359,17 @@ _mm_maskz_cvtsd_ss (__mmask8 __U, __m128 __A, __m128d __B)
 }
 
 #define _mm_cvtss_i32 _mm_cvtss_si32
-#define _mm_cvtss_i64 _mm_cvtss_si64
 #define _mm_cvtsd_i32 _mm_cvtsd_si32
-#define _mm_cvtsd_i64 _mm_cvtsd_si64
 #define _mm_cvti32_sd _mm_cvtsi32_sd
-#define _mm_cvti64_sd _mm_cvtsi64_sd
 #define _mm_cvti32_ss _mm_cvtsi32_ss
+#ifdef __x86_64__
+#define _mm_cvtss_i64 _mm_cvtss_si64
+#define _mm_cvtsd_i64 _mm_cvtsd_si64
+#define _mm_cvti64_sd _mm_cvtsi64_sd
 #define _mm_cvti64_ss _mm_cvtsi64_ss
+#endif
 
+#ifdef __x86_64__
 #define _mm_cvt_roundi64_sd(A, B, R) __extension__ ({ \
   (__m128d)__builtin_ia32_cvtsi2sd64((__v2df)(__m128d)(A), (long long)(B), \
                                      (int)(R)); })
@@ -9356,6 +9377,7 @@ _mm_maskz_cvtsd_ss (__mmask8 __U, __m128 __A, __m128d __B)
 #define _mm_cvt_roundsi64_sd(A, B, R) __extension__ ({ \
   (__m128d)__builtin_ia32_cvtsi2sd64((__v2df)(__m128d)(A), (long long)(B), \
                                      (int)(R)); })
+#endif
 
 #define _mm_cvt_roundsi32_ss(A, B, R) __extension__ ({ \
   (__m128)__builtin_ia32_cvtsi2ss32((__v4sf)(__m128)(A), (int)(B), (int)(R)); })
@@ -9363,6 +9385,7 @@ _mm_maskz_cvtsd_ss (__mmask8 __U, __m128 __A, __m128d __B)
 #define _mm_cvt_roundi32_ss(A, B, R) __extension__ ({ \
   (__m128)__builtin_ia32_cvtsi2ss32((__v4sf)(__m128)(A), (int)(B), (int)(R)); })
 
+#ifdef __x86_64__
 #define _mm_cvt_roundsi64_ss(A, B, R) __extension__ ({ \
   (__m128)__builtin_ia32_cvtsi2ss64((__v4sf)(__m128)(A), (long long)(B), \
                                     (int)(R)); })
@@ -9370,6 +9393,7 @@ _mm_maskz_cvtsd_ss (__mmask8 __U, __m128 __A, __m128d __B)
 #define _mm_cvt_roundi64_ss(A, B, R) __extension__ ({ \
   (__m128)__builtin_ia32_cvtsi2ss64((__v4sf)(__m128)(A), (long long)(B), \
                                     (int)(R)); })
+#endif
 
 #define _mm_cvt_roundss_sd(A, B, R) __extension__ ({ \
   (__m128d)__builtin_ia32_cvtss2sd_round_mask((__v2df)(__m128d)(A), \
@@ -9413,6 +9437,7 @@ _mm_cvtu32_sd (__m128d __A, unsigned __B)
   return (__m128d) __builtin_ia32_cvtusi2sd32 ((__v2df) __A, __B);
 }
 
+#ifdef __x86_64__
 #define _mm_cvt_roundu64_sd(A, B, R) __extension__ ({ \
   (__m128d)__builtin_ia32_cvtusi2sd64((__v2df)(__m128d)(A), \
                                       (unsigned long long)(B), (int)(R)); })
@@ -9423,6 +9448,7 @@ _mm_cvtu64_sd (__m128d __A, unsigned long long __B)
   return (__m128d) __builtin_ia32_cvtusi2sd64 ((__v2df) __A, __B,
                  _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 #define _mm_cvt_roundu32_ss(A, B, R) __extension__ ({ \
   (__m128)__builtin_ia32_cvtusi2ss32((__v4sf)(__m128)(A), (unsigned int)(B), \
@@ -9435,6 +9461,7 @@ _mm_cvtu32_ss (__m128 __A, unsigned __B)
                 _MM_FROUND_CUR_DIRECTION);
 }
 
+#ifdef __x86_64__
 #define _mm_cvt_roundu64_ss(A, B, R) __extension__ ({ \
   (__m128)__builtin_ia32_cvtusi2ss64((__v4sf)(__m128)(A), \
                                      (unsigned long long)(B), (int)(R)); })
@@ -9445,6 +9472,7 @@ _mm_cvtu64_ss (__m128 __A, unsigned long long __B)
   return (__m128) __builtin_ia32_cvtusi2ss64 ((__v4sf) __A, __B,
                 _MM_FROUND_CUR_DIRECTION);
 }
+#endif
 
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
@@ -9453,12 +9481,14 @@ _mm512_mask_set1_epi32 (__m512i __O, __mmask16 __M, int __A)
                  __M);
 }
 
+#ifdef __x86_64__
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_set1_epi64 (__m512i __O, __mmask8 __M, long long __A)
 {
   return (__m512i) __builtin_ia32_pbroadcastq512_gpr_mask (__A, (__v8di) __O,
                  __M);
 }
+#endif
 
 static __inline __m512i __DEFAULT_FN_ATTRS
 _mm512_set_epi32 (int __A, int __B, int __C, int __D,

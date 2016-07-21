@@ -562,6 +562,20 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
                                           isBaseVirtual);
 }
 
+/// Initialize a member of aggregate type using the given expression
+/// as an initializer.
+///
+/// The member may be an array.  If so:
+/// - the destination l-value will be a pointer of the *base* element type,
+/// - ArrayIndexVar will be a pointer to a variable containing the current
+///   index within the destination array, and
+/// - ArrayIndexes will be an array of index variables, one for each level
+///   of array nesting, which will need to be updated as appropriate for the
+///   array structure.
+///
+/// On an array, this function will invoke itself recursively.  Each time,
+/// it drills into one nesting level of the member type and sets up a
+/// loop updating the appropriate array index variable.
 static void EmitAggMemberInitializer(CodeGenFunction &CGF,
                                      LValue LHS,
                                      Expr *Init,
@@ -569,10 +583,18 @@ static void EmitAggMemberInitializer(CodeGenFunction &CGF,
                                      QualType T,
                                      ArrayRef<VarDecl *> ArrayIndexes,
                                      unsigned Index) {
+  assert(ArrayIndexVar.isValid() == (ArrayIndexes.size() != 0));
+
   if (Index == ArrayIndexes.size()) {
     LValue LV = LHS;
 
+    Optional<CodeGenFunction::RunCleanupsScope> Scope;
+
     if (ArrayIndexVar.isValid()) {
+      // When we're processing an array, the temporaries from each
+      // element's construction are destroyed immediately.
+      Scope.emplace(CGF);
+
       // If we have an array index variable, load it and use it as an offset.
       // Then, increment the value.
       llvm::Value *Dest = LHS.getPointer();
@@ -586,6 +608,19 @@ static void EmitAggMemberInitializer(CodeGenFunction &CGF,
       CharUnits EltSize = CGF.getContext().getTypeSizeInChars(T);
       CharUnits Align = LV.getAlignment().alignmentOfArrayElement(EltSize);
       LV.setAddress(Address(Dest, Align));
+
+      // Enter a partial-array EH cleanup to destroy previous members
+      // of the array if this initialization throws.
+      if (CGF.CGM.getLangOpts().Exceptions) {
+        if (auto DtorKind = T.isDestructedType()) {
+          if (CGF.needsEHCleanup(DtorKind)) {
+            CGF.pushRegularPartialArrayCleanup(LHS.getPointer(),
+                                               LV.getPointer(), T,
+                                               LV.getAlignment(),
+                                               CGF.getDestroyer(DtorKind));
+          }
+        }
+      }
     }
 
     switch (CGF.getEvaluationKind(T)) {

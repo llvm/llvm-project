@@ -8351,8 +8351,10 @@ def warn_omp_section_is_char : Warning<"array section %select{lower bound|length
   InGroup<CharSubscript>, DefaultIgnore;
 def err_omp_section_incomplete_type : Error<
   "section of pointer to incomplete type %0">;
-def err_omp_section_negative : Error<
-  "section %select{lower bound|length}0 is evaluated to a negative value %1">;
+def err_omp_section_not_subset_of_array : Error<
+  "array section must be a subset of the original array">;
+def err_omp_section_length_negative : Error<
+  "section length is evaluated to a negative value %0">;
 def err_omp_section_length_undefined : Error<
   "section length is unspecified and cannot be inferred because subscripted value is %select{not an array|an array of unknown bound}0">;
 def err_omp_wrong_linear_modifier : Error<

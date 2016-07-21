@@ -2887,6 +2887,7 @@ _mm256_maskz_mov_epi8 (__mmask32 __U, __m256i __A)
 }
 
 
+#ifdef __x86_64__
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mask_set1_epi8 (__m128i __O, __mmask16 __M, char __A)
 {
@@ -2920,6 +2921,7 @@ _mm256_maskz_set1_epi8 (__mmask32 __M, char __A)
                  _mm256_setzero_si256 (),
                  __M);
 }
+#endif
 
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_mask_loadu_epi16 (__m128i __W, __mmask8 __U, void const *__P)

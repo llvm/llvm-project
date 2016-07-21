@@ -650,6 +650,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::OMPTargetParallelForSimdDirectiveClass:
     K = CXCursor_OMPTargetParallelForSimdDirective;
     break;
+  case Stmt::OMPTargetSimdDirectiveClass:
+    K = CXCursor_OMPTargetSimdDirective;
+    break;
   }
 
   CXCursor C = { K, 0, { Parent, S, TU } };

@@ -51,6 +51,10 @@ struct SA {
     {}
     #pragma omp target map(to:b,e[:])
     {}
+    #pragma omp target map(b[-1:]) // expected-error {{array section must be a subset of the original array}}
+    {}
+    #pragma omp target map(b[:-1]) // expected-error {{section length is evaluated to a negative value -1}}
+    {}
 
     #pragma omp target map(always, tofrom: c,f)
     {}

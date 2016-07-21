@@ -739,9 +739,10 @@ bool parse(llvm::ArrayRef<const char *> args, MachOLinkingContext &ctx,
         }
         break;
       case MachOLinkingContext::OS::iOS_simulator:
-        if (pie->getOption().getID() == OPT_no_pie)
+        if (pie->getOption().getID() == OPT_no_pie) {
           diagnostics << "iOS simulator programs must be built PIE\n";
           return false;
+        }
         break;
       case MachOLinkingContext::OS::unknown:
         break;

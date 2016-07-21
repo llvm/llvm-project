@@ -295,6 +295,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
     EmitOMPTargetParallelForSimdDirective(
         cast<OMPTargetParallelForSimdDirective>(*S));
     break;
+  case Stmt::OMPTargetSimdDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetSimdDirective>(*S));
+    break;
   }
 }
 

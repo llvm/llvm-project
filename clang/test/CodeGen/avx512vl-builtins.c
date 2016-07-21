@@ -4145,6 +4145,7 @@ __m256i test_mm256_maskz_set1_epi32(__mmask8 __M) {
   return _mm256_maskz_set1_epi32(__M, 5); 
 }
 
+#ifdef __x86_64__
 __m128i test_mm_mask_set1_epi64(__m128i __O, __mmask8 __M, long long __A) {
   // CHECK-LABEL: @test_mm_mask_set1_epi64
   // CHECK: @llvm.x86.avx512.mask.pbroadcast.q.gpr.128
@@ -4168,6 +4169,7 @@ __m256i test_mm256_maskz_set1_epi64(__mmask8 __M, long long __A) {
   // CHECK: @llvm.x86.avx512.mask.pbroadcast.q.gpr.256
   return _mm256_maskz_set1_epi64(__M, __A); 
 }
+#endif
 
 __m128d test_mm_fixupimm_pd(__m128d __A, __m128d __B, __m128i __C) {
   // CHECK-LABEL: @test_mm_fixupimm_pd

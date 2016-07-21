@@ -375,6 +375,11 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
 unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::C;
 }
+
+unsigned TargetCodeGenInfo::getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const {
+  return CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+}
+
 static bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays);
 
 /// isEmptyField - Return true iff a the field is "empty", that is it
@@ -6832,6 +6837,7 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const override;
 };
 
 }
@@ -6866,6 +6872,10 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
 
 unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
+}
+
+unsigned AMDGPUTargetCodeGenInfo::getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const {
+  return CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant);
 }
 
 //===----------------------------------------------------------------------===//
