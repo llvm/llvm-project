@@ -23,7 +23,8 @@
 ; KERNEL-NEXT:     %b0 = zext i32 %0 to i64
 ; KERNEL-NEXT:     %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; KERNEL-NEXT:     %t0 = zext i32 %1 to i64
-; KERNEL-NEXT:     ret void
+
+; KERNEL:     ret void
 ; KERNEL-NEXT: }
 
 ; KERNEL: ; ModuleID = 'kernel_1'
@@ -37,7 +38,8 @@
 ; KERNEL-NEXT:     %b0 = zext i32 %0 to i64
 ; KERNEL-NEXT:     %1 = call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
 ; KERNEL-NEXT:     %t0 = zext i32 %1 to i64
-; KERNEL-NEXT:     ret void
+
+; KERNEL:     ret void
 ; KERNEL-NEXT: }
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

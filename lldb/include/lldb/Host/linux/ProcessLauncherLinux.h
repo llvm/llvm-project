@@ -15,10 +15,11 @@
 namespace lldb_private
 {
 
-class ProcessLauncherAndroid : public ProcessLauncher
+class ProcessLauncherLinux : public ProcessLauncher
 {
-  public:
-    virtual HostProcess LaunchProcess(const ProcessLaunchInfo &launch_info, Error &error);
+public:
+    virtual HostProcess
+    LaunchProcess(const ProcessLaunchInfo &launch_info, Error &error);
 };
 
 } // end of namespace lldb_private

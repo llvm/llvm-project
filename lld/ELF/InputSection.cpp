@@ -429,15 +429,9 @@ void InputSection<ELFT>::replace(InputSection<ELFT> *Other) {
 }
 
 template <class ELFT>
-SplitInputSection<ELFT>::SplitInputSection(
-    elf::ObjectFile<ELFT> *File, const Elf_Shdr *Header,
-    typename InputSectionBase<ELFT>::Kind SectionKind)
-    : InputSectionBase<ELFT>(File, Header, SectionKind) {}
-
-template <class ELFT>
 EhInputSection<ELFT>::EhInputSection(elf::ObjectFile<ELFT> *F,
                                      const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {
+    : InputSectionBase<ELFT>(F, Header, InputSectionBase<ELFT>::EHFrame) {
   // Mark .eh_frame sections as live by default because there are
   // usually no relocations that point to .eh_frames. Otherwise,
   // the garbage collector would drop all .eh_frame sections.
@@ -511,7 +505,7 @@ static std::vector<SectionPiece> splitNonStrings(ArrayRef<uint8_t> Data,
 template <class ELFT>
 MergeInputSection<ELFT>::MergeInputSection(elf::ObjectFile<ELFT> *F,
                                            const Elf_Shdr *Header)
-    : SplitInputSection<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
+    : InputSectionBase<ELFT>(F, Header, InputSectionBase<ELFT>::Merge) {}
 
 template <class ELFT> void MergeInputSection<ELFT>::splitIntoPieces() {
   ArrayRef<uint8_t> Data = this->getSectionData();
@@ -533,14 +527,14 @@ bool MergeInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
 
 // Do binary search to get a section piece at a given input offset.
 template <class ELFT>
-SectionPiece *SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
-  auto *This = static_cast<const SplitInputSection<ELFT> *>(this);
+SectionPiece *MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) {
+  auto *This = static_cast<const MergeInputSection<ELFT> *>(this);
   return const_cast<SectionPiece *>(This->getSectionPiece(Offset));
 }
 
 template <class ELFT>
 const SectionPiece *
-SplitInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
+MergeInputSection<ELFT>::getSectionPiece(uintX_t Offset) const {
   ArrayRef<uint8_t> D = this->getSectionData();
   StringRef Data((const char *)D.data(), D.size());
   uintX_t Size = Data.size();
@@ -642,11 +636,6 @@ template class elf::InputSection<ELF32LE>;
 template class elf::InputSection<ELF32BE>;
 template class elf::InputSection<ELF64LE>;
 template class elf::InputSection<ELF64BE>;
-
-template class elf::SplitInputSection<ELF32LE>;
-template class elf::SplitInputSection<ELF32BE>;
-template class elf::SplitInputSection<ELF64LE>;
-template class elf::SplitInputSection<ELF64BE>;
 
 template class elf::EhInputSection<ELF32LE>;
 template class elf::EhInputSection<ELF32BE>;

@@ -18,6 +18,7 @@
 #include "polly/LinkAllPasses.h"
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
+#include "polly/Support/SCEVValidator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
@@ -61,17 +62,37 @@ static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
 /// This function is a callback for to generate the ast expressions for each
 /// of the scheduled ScopStmts.
 static __isl_give isl_id_to_ast_expr *pollyBuildAstExprForStmt(
-    void *Stmt, isl_ast_build *Build,
+    void *StmtT, isl_ast_build *Build,
     isl_multi_pw_aff *(*FunctionIndex)(__isl_take isl_multi_pw_aff *MPA,
                                        isl_id *Id, void *User),
     void *UserIndex,
     isl_ast_expr *(*FunctionExpr)(isl_ast_expr *Expr, isl_id *Id, void *User),
-    void *User_expr) {
+    void *UserExpr) {
 
-  // TODO: Implement the AST expression generation. For now we just return a
-  // nullptr to ensure that we do not free uninitialized pointers.
+  ScopStmt *Stmt = (ScopStmt *)StmtT;
 
-  return nullptr;
+  isl_ctx *Ctx;
+
+  if (!Stmt || !Build)
+    return NULL;
+
+  Ctx = isl_ast_build_get_ctx(Build);
+  isl_id_to_ast_expr *RefToExpr = isl_id_to_ast_expr_alloc(Ctx, 0);
+
+  for (MemoryAccess *Acc : *Stmt) {
+    isl_map *AddrFunc = Acc->getAddressFunction();
+    AddrFunc = isl_map_intersect_domain(AddrFunc, Stmt->getDomain());
+    isl_id *RefId = Acc->getId();
+    isl_pw_multi_aff *PMA = isl_pw_multi_aff_from_map(AddrFunc);
+    isl_multi_pw_aff *MPA = isl_multi_pw_aff_from_pw_multi_aff(PMA);
+    MPA = isl_multi_pw_aff_coalesce(MPA);
+    MPA = FunctionIndex(MPA, RefId, UserIndex);
+    isl_ast_expr *Access = isl_ast_build_access_from_multi_pw_aff(Build, MPA);
+    Access = FunctionExpr(Access, RefId, UserExpr);
+    RefToExpr = isl_id_to_ast_expr_set(RefToExpr, RefId, Access);
+  }
+
+  return RefToExpr;
 }
 
 /// Generate code for a GPU specific isl AST.
@@ -86,7 +107,9 @@ public:
   GPUNodeBuilder(PollyIRBuilder &Builder, ScopAnnotator &Annotator, Pass *P,
                  const DataLayout &DL, LoopInfo &LI, ScalarEvolution &SE,
                  DominatorTree &DT, Scop &S, gpu_prog *Prog)
-      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S), Prog(Prog) {}
+      : IslNodeBuilder(Builder, Annotator, P, DL, LI, SE, DT, S), Prog(Prog) {
+    getExprBuilder().setIDToSAI(&IDToSAI);
+  }
 
 private:
   /// A module containing GPU code.
@@ -108,6 +131,8 @@ private:
   /// By releasing this set all isl_ids will be freed.
   std::set<std::unique_ptr<isl_id, IslIdDeleter>> KernelIDs;
 
+  IslExprBuilder::IDToScopArrayInfoTy IDToSAI;
+
   /// Create code for user-defined AST nodes.
   ///
   /// These AST nodes can be of type:
@@ -120,6 +145,13 @@ private:
   ///
   /// @param UserStmt The ast node to generate code for.
   virtual void createUser(__isl_take isl_ast_node *UserStmt);
+
+  /// Find llvm::Values referenced in GPU kernel.
+  ///
+  /// @param Kernel The kernel to scan for llvm::Values
+  ///
+  /// @returns A set of values referenced by the kernel.
+  SetVector<Value *> getReferencesInKernel(ppcg_kernel *Kernel);
 
   /// Create GPU kernel.
   ///
@@ -135,7 +167,9 @@ private:
   /// start block of this newly created function.
   ///
   /// @param Kernel The kernel to generate code for.
-  void createKernelFunction(ppcg_kernel *Kernel);
+  /// @param SubtreeValues The set of llvm::Values referenced by this kernel.
+  void createKernelFunction(ppcg_kernel *Kernel,
+                            SetVector<Value *> &SubtreeValues);
 
   /// Create the declaration of a kernel function.
   ///
@@ -147,13 +181,22 @@ private:
   ///   - Other LLVM Value references (TODO)
   ///
   /// @param Kernel The kernel to generate the function declaration for.
+  /// @param SubtreeValues The set of llvm::Values referenced by this kernel.
+  ///
   /// @returns The newly declared function.
-  Function *createKernelFunctionDecl(ppcg_kernel *Kernel);
+  Function *createKernelFunctionDecl(ppcg_kernel *Kernel,
+                                     SetVector<Value *> &SubtreeValues);
 
   /// Insert intrinsic functions to obtain thread and block ids.
   ///
   /// @param The kernel to generate the intrinsic functions for.
   void insertKernelIntrinsics(ppcg_kernel *Kernel);
+
+  /// Create code for a ScopStmt called in @p Expr.
+  ///
+  /// @param Expr The expression containing the call.
+  /// @param KernelStmt The kernel statement referenced in the call.
+  void createScopStmt(isl_ast_expr *Expr, ppcg_kernel_stmt *KernelStmt);
 
   /// Create an in-kernel synchronization call.
   void createKernelSync();
@@ -201,8 +244,7 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
 
   switch (KernelStmt->type) {
   case ppcg_kernel_domain:
-    // TODO Create kernel user stmt
-    isl_ast_expr_free(Expr);
+    createScopStmt(Expr, KernelStmt);
     isl_ast_node_free(UserStmt);
     return;
   case ppcg_kernel_copy:
@@ -222,10 +264,100 @@ void GPUNodeBuilder::createUser(__isl_take isl_ast_node *UserStmt) {
   return;
 }
 
+void GPUNodeBuilder::createScopStmt(isl_ast_expr *Expr,
+                                    ppcg_kernel_stmt *KernelStmt) {
+  auto Stmt = (ScopStmt *)KernelStmt->u.d.stmt->stmt;
+  isl_id_to_ast_expr *Indexes = KernelStmt->u.d.ref2expr;
+
+  LoopToScevMapT LTS;
+  LTS.insert(OutsideLoopIterations.begin(), OutsideLoopIterations.end());
+
+  createSubstitutions(Expr, Stmt, LTS);
+
+  if (Stmt->isBlockStmt())
+    BlockGen.copyStmt(*Stmt, LTS, Indexes);
+  else
+    assert(0 && "Region statement not supported\n");
+}
+
 void GPUNodeBuilder::createKernelSync() {
   Module *M = Builder.GetInsertBlock()->getParent()->getParent();
   auto *Sync = Intrinsic::getDeclaration(M, Intrinsic::nvvm_barrier0);
   Builder.CreateCall(Sync, {});
+}
+
+/// Collect llvm::Values referenced from @p Node
+///
+/// This function only applies to isl_ast_nodes that are user_nodes referring
+/// to a ScopStmt. All other node types are ignore.
+///
+/// @param Node The node to collect references for.
+/// @param User A user pointer used as storage for the data that is collected.
+///
+/// @returns isl_bool_true if data could be collected successfully.
+isl_bool collectReferencesInGPUStmt(__isl_keep isl_ast_node *Node, void *User) {
+  if (isl_ast_node_get_type(Node) != isl_ast_node_user)
+    return isl_bool_true;
+
+  isl_ast_expr *Expr = isl_ast_node_user_get_expr(Node);
+  isl_ast_expr *StmtExpr = isl_ast_expr_get_op_arg(Expr, 0);
+  isl_id *Id = isl_ast_expr_get_id(StmtExpr);
+  const char *Str = isl_id_get_name(Id);
+  isl_id_free(Id);
+  isl_ast_expr_free(StmtExpr);
+  isl_ast_expr_free(Expr);
+
+  if (!isPrefix(Str, "Stmt"))
+    return isl_bool_true;
+
+  Id = isl_ast_node_get_annotation(Node);
+  auto *KernelStmt = (ppcg_kernel_stmt *)isl_id_get_user(Id);
+  auto Stmt = (ScopStmt *)KernelStmt->u.d.stmt->stmt;
+  isl_id_free(Id);
+
+  addReferencesFromStmt(Stmt, User);
+
+  return isl_bool_true;
+}
+
+SetVector<Value *> GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
+  SetVector<Value *> SubtreeValues;
+  SetVector<const SCEV *> SCEVs;
+  SetVector<const Loop *> Loops;
+  SubtreeReferences References = {
+      LI, SE, S, ValueMap, SubtreeValues, SCEVs, getBlockGenerator()};
+
+  for (const auto &I : IDToValue)
+    SubtreeValues.insert(I.second);
+
+  isl_ast_node_foreach_descendant_top_down(
+      Kernel->tree, collectReferencesInGPUStmt, &References);
+
+  for (const SCEV *Expr : SCEVs)
+    findValues(Expr, SE, SubtreeValues);
+
+  for (auto &SAI : S.arrays())
+    SubtreeValues.remove(SAI.second->getBasePtr());
+
+  isl_space *Space = S.getParamSpace();
+  for (long i = 0; i < isl_space_dim(Space, isl_dim_param); i++) {
+    isl_id *Id = isl_space_get_dim_id(Space, isl_dim_param, i);
+    assert(IDToValue.count(Id));
+    Value *Val = IDToValue[Id];
+    SubtreeValues.remove(Val);
+    isl_id_free(Id);
+  }
+  isl_space_free(Space);
+
+  for (long i = 0; i < isl_space_dim(Kernel->space, isl_dim_set); i++) {
+    isl_id *Id = isl_space_get_dim_id(Kernel->space, isl_dim_set, i);
+    assert(IDToValue.count(Id));
+    Value *Val = IDToValue[Id];
+    SubtreeValues.remove(Val);
+    isl_id_free(Id);
+  }
+
+  return SubtreeValues;
 }
 
 void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
@@ -234,17 +366,40 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_id_free(Id);
   isl_ast_node_free(KernelStmt);
 
+  SetVector<Value *> SubtreeValues = getReferencesInKernel(Kernel);
+
   assert(Kernel->tree && "Device AST of kernel node is empty");
 
   Instruction &HostInsertPoint = *Builder.GetInsertPoint();
   IslExprBuilder::IDToValueTy HostIDs = IDToValue;
+  ValueMapT HostValueMap = ValueMap;
 
-  createKernelFunction(Kernel);
+  SetVector<const Loop *> Loops;
+
+  // Create for all loops we depend on values that contain the current loop
+  // iteration. These values are necessary to generate code for SCEVs that
+  // depend on such loops. As a result we need to pass them to the subfunction.
+  for (const Loop *L : Loops) {
+    const SCEV *OuterLIV = SE.getAddRecExpr(SE.getUnknown(Builder.getInt64(0)),
+                                            SE.getUnknown(Builder.getInt64(1)),
+                                            L, SCEV::FlagAnyWrap);
+    Value *V = generateSCEV(OuterLIV);
+    OutsideLoopIterations[L] = SE.getUnknown(V);
+    SubtreeValues.insert(V);
+  }
+
+  createKernelFunction(Kernel, SubtreeValues);
 
   create(isl_ast_node_copy(Kernel->tree));
 
   Builder.SetInsertPoint(&HostInsertPoint);
   IDToValue = HostIDs;
+
+  ValueMap = HostValueMap;
+  ScalarMap.clear();
+  PHIOpMap.clear();
+  EscapeMap.clear();
+  IDToSAI.clear();
 
   finalizeKernelFunction();
 }
@@ -263,7 +418,9 @@ static std::string computeNVPTXDataLayout(bool is64Bit) {
   return Ret;
 }
 
-Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
+Function *
+GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
+                                         SetVector<Value *> &SubtreeValues) {
   std::vector<Type *> Args;
   std::string Identifier = "kernel_" + std::to_string(Kernel->id);
 
@@ -284,6 +441,9 @@ Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
   for (long i = 0; i < NumVars; i++)
     Args.push_back(Builder.getInt64Ty());
 
+  for (auto *V : SubtreeValues)
+    Args.push_back(V->getType());
+
   auto *FT = FunctionType::get(Builder.getVoidTy(), Args, false);
   auto *FN = Function::Create(FT, Function::ExternalLinkage, Identifier,
                               GPUModule.get());
@@ -294,7 +454,27 @@ Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
     if (!ppcg_kernel_requires_array_argument(Kernel, i))
       continue;
 
-    Arg->setName(Prog->array[i].name);
+    Arg->setName(Kernel->array[i].array->name);
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(isl_id_copy(Id));
+    Type *EleTy = SAI->getElementType();
+    Value *Val = &*Arg;
+    SmallVector<const SCEV *, 4> Sizes;
+    isl_ast_build *Build =
+        isl_ast_build_from_context(isl_set_copy(Prog->context));
+    for (long j = 1; j < Kernel->array[i].array->n_index; j++) {
+      isl_ast_expr *DimSize = isl_ast_build_expr_from_pw_aff(
+          Build, isl_pw_aff_copy(Kernel->array[i].array->bound[j]));
+      auto V = ExprBuilder.create(DimSize);
+      Sizes.push_back(SE.getSCEV(V));
+    }
+    const ScopArrayInfo *SAIRep =
+        S.getOrCreateScopArrayInfo(Val, EleTy, Sizes, ScopArrayInfo::MK_Array);
+
+    isl_ast_build_free(Build);
+    isl_id_free(Id);
+    IDToSAI[Id] = SAIRep;
     Arg++;
   }
 
@@ -311,6 +491,12 @@ Function *GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel) {
     Arg->setName(isl_id_get_name(Id));
     IDToValue[Id] = &*Arg;
     KernelIDs.insert(std::unique_ptr<isl_id, IslIdDeleter>(Id));
+    Arg++;
+  }
+
+  for (auto *V : SubtreeValues) {
+    Arg->setName(V->getName());
+    ValueMap[V] = &*Arg;
     Arg++;
   }
 
@@ -346,14 +532,15 @@ void GPUNodeBuilder::insertKernelIntrinsics(ppcg_kernel *Kernel) {
   }
 }
 
-void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel) {
+void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
+                                          SetVector<Value *> &SubtreeValues) {
 
   std::string Identifier = "kernel_" + std::to_string(Kernel->id);
   GPUModule.reset(new Module(Identifier, Builder.getContext()));
   GPUModule->setTargetTriple(Triple::normalize("nvptx64-nvidia-cuda"));
   GPUModule->setDataLayout(computeNVPTXDataLayout(true /* is64Bit */));
 
-  Function *FN = createKernelFunctionDecl(Kernel);
+  Function *FN = createKernelFunctionDecl(Kernel, SubtreeValues);
 
   BasicBlock *PrevBlock = Builder.GetInsertBlock();
   auto EntryBlock = BasicBlock::Create(Builder.getContext(), "entry", FN);

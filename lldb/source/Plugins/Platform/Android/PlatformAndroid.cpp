@@ -378,7 +378,7 @@ PlatformAndroid::DownloadSymbolFile (const lldb::ModuleSP& module_sp,
             Error error = adb.Shell(command.GetData(), 5000 /* ms */, nullptr);
 
             Log *log(GetLogIfAllCategoriesSet (LIBLLDB_LOG_PLATFORM));
-            if (error.Fail())
+            if (log && error.Fail())
                 log->Printf("Failed to remove temp directory: %s", error.AsCString());
         }
     );

@@ -116,29 +116,8 @@ public:
   uint32_t Live : 1;
 };
 
-// Usually sections are copied to the output as atomic chunks of data,
-// but some special types of sections are split into small pieces of data
-// and each piece is copied to a different place in the output.
-// This class represents such special sections.
-template <class ELFT> class SplitInputSection : public InputSectionBase<ELFT> {
-  typedef typename ELFT::Shdr Elf_Shdr;
-  typedef typename ELFT::uint uintX_t;
-
-public:
-  SplitInputSection(ObjectFile<ELFT> *File, const Elf_Shdr *Header,
-                    typename InputSectionBase<ELFT>::Kind SectionKind);
-
-  // Splittable sections are handled as a sequence of data
-  // rather than a single large blob of data.
-  std::vector<SectionPiece> Pieces;
-
-  // Returns the SectionPiece at a given input section offset.
-  SectionPiece *getSectionPiece(uintX_t Offset);
-  const SectionPiece *getSectionPiece(uintX_t Offset) const;
-};
-
 // This corresponds to a SHF_MERGE section of an input file.
-template <class ELFT> class MergeInputSection : public SplitInputSection<ELFT> {
+template <class ELFT> class MergeInputSection : public InputSectionBase<ELFT> {
   typedef typename ELFT::uint uintX_t;
   typedef typename ELFT::Sym Elf_Sym;
   typedef typename ELFT::Shdr Elf_Shdr;
@@ -157,19 +136,31 @@ public:
 
   void finalizePieces();
 
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<SectionPiece> Pieces;
+
+  // Returns the SectionPiece at a given input section offset.
+  SectionPiece *getSectionPiece(uintX_t Offset);
+  const SectionPiece *getSectionPiece(uintX_t Offset) const;
+
 private:
   llvm::DenseMap<uintX_t, uintX_t> OffsetMap;
   llvm::DenseSet<uintX_t> LiveOffsets;
 };
 
 // This corresponds to a .eh_frame section of an input file.
-template <class ELFT> class EhInputSection : public SplitInputSection<ELFT> {
+template <class ELFT> class EhInputSection : public InputSectionBase<ELFT> {
 public:
   typedef typename ELFT::Shdr Elf_Shdr;
   typedef typename ELFT::uint uintX_t;
   EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
   void split();
+
+  // Splittable sections are handled as a sequence of data
+  // rather than a single large blob of data.
+  std::vector<SectionPiece> Pieces;
 
   // Relocation section that refer to this one.
   const Elf_Shdr *RelocSection = nullptr;
