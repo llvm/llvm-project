@@ -10,7 +10,7 @@
 
 // TSHARP/SSHARP access
 #define FIELD(P,B,W) ((P[B >> 5] >> (B & 0x1f)) & ((1 << W) - 1))
-#define WORD(P,I) P{I}
+#define WORD(P,I) P[I]
 
 #if 0
 RATTR float4 OCKL_MANGLE_T(image_load,1D)(TSHARP i, int c);
