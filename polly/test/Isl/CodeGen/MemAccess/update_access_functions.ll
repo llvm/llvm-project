@@ -14,9 +14,9 @@
 
 ; CHECK-LABEL: polly.stmt.loop3:
 ; CHECK-NEXT:   %val.s2a.reload = load double, double* %val.s2a
-; CHECK-NEXT:   %7 = mul nsw i64 13, %polly.indvar16
-; CHECK-NEXT:   %8 = add nsw i64 %7, 5
-; CHECK-NEXT:   %polly.access.A20 = getelementptr double, double* %A, i64 %8
+; CHECK-NEXT:   [[REG0:%.*]] = mul nsw i64 13, %polly.indvar16
+; CHECK-NEXT:   [[REG1:%.*]] = add nsw i64 [[REG0]], 5
+; CHECK-NEXT:   %polly.access.A20 = getelementptr double, double* %A, i64 [[REG1]]
 ; CHECK-NEXT:   store double %val.s2a.reload, double* %polly.access.A20, align 8,
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

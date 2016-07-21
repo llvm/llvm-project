@@ -73,7 +73,6 @@ public:
   bool isPreemptible() const;
 
   StringRef getName() const;
-  void setName(StringRef S);
 
   uint32_t getNameOffset() const {
     assert(isLocal());

@@ -556,7 +556,6 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &Args) {
   Symtab.scanShlibUndefined();
   Symtab.scanDynamicList();
   Symtab.scanVersionScript();
-  Symtab.scanSymbolVersions();
 
   Symtab.addCombinedLtoObject();
   if (HasError)

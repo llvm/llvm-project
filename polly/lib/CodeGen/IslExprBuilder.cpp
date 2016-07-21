@@ -223,7 +223,18 @@ Value *IslExprBuilder::createAccessAddress(isl_ast_expr *Expr) {
   BaseId = isl_ast_expr_get_id(BaseExpr);
   isl_ast_expr_free(BaseExpr);
 
-  const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(BaseId);
+  const ScopArrayInfo *SAI = nullptr;
+
+  if (IDToSAI)
+    SAI = (*IDToSAI)[BaseId];
+
+  if (!SAI)
+    SAI = ScopArrayInfo::getFromId(BaseId);
+  else
+    isl_id_free(BaseId);
+
+  assert(SAI && "No ScopArrayInfo found for this isl_id.");
+
   Base = SAI->getBasePtr();
 
   if (auto NewBase = GlobalMap.lookup(Base))
