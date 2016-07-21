@@ -102,10 +102,17 @@ bool IRTranslator::translateBr(const Instruction &Inst) {
 bool IRTranslator::translate(const Instruction &Inst) {
   MIRBuilder.setDebugLoc(Inst.getDebugLoc());
   switch(Inst.getOpcode()) {
+  // Arithmetic operations.
   case Instruction::Add:
     return translateBinaryOp(TargetOpcode::G_ADD, Inst);
+  case Instruction::Sub:
+    return translateBinaryOp(TargetOpcode::G_SUB, Inst);
+  // Bitwise operations.
+  case Instruction::And:
+    return translateBinaryOp(TargetOpcode::G_AND, Inst);
   case Instruction::Or:
     return translateBinaryOp(TargetOpcode::G_OR, Inst);
+  // Branch operations.
   case Instruction::Br:
     return translateBr(Inst);
   case Instruction::Ret:

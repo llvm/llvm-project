@@ -1176,8 +1176,8 @@ const SCEVAddRecExpr *WidenIV::getWideRecurrence(Instruction *NarrowUse) {
     return nullptr;
 
   const SCEV *NarrowExpr = SE->getSCEV(NarrowUse);
-  if (SE->getTypeSizeInBits(NarrowExpr->getType())
-      >= SE->getTypeSizeInBits(WideType)) {
+  if (SE->getTypeSizeInBits(NarrowExpr->getType()) >=
+      SE->getTypeSizeInBits(WideType)) {
     // NarrowUse implicitly widens its operand. e.g. a gep with a narrow
     // index. So don't follow this use.
     return nullptr;

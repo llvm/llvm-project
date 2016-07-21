@@ -111,6 +111,10 @@ E: sabre@nondot.org
 W: http://nondot.org/~sabre/
 D: Everything not covered by someone else
 
+N: Robert Lytton
+E: robert@xmos.com
+D: XCore Backend
+
 N: David Majnemer
 E: david.majnemer@gmail.com
 D: IR Constant Folder, InstCombine
@@ -130,10 +134,6 @@ D: SampleProfile and related parts of ProfileData
 N: Jakob Olesen
 E: stoklund@2pi.dk
 D: TableGen
-
-N: Richard Osborne
-E: richard@xmos.com
-D: XCore Backend
 
 N: Krzysztof Parzyszek
 E: kparzysz@codeaurora.org

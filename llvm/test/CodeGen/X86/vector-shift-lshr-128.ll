@@ -551,8 +551,7 @@ define <4 x i32> @splatvar_shift_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <8 x i16> @splatvar_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; SSE2-LABEL: splatvar_shift_v8i16:
 ; SSE2:       # BB#0:
-; SSE2-NEXT:    movd %xmm1, %eax
-; SSE2-NEXT:    movzwl %ax, %eax
+; SSE2-NEXT:    pextrw $0, %xmm1, %eax
 ; SSE2-NEXT:    movd %eax, %xmm1
 ; SSE2-NEXT:    psrlw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
@@ -587,8 +586,7 @@ define <8 x i16> @splatvar_shift_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ;
 ; X32-SSE-LABEL: splatvar_shift_v8i16:
 ; X32-SSE:       # BB#0:
-; X32-SSE-NEXT:    movd %xmm1, %eax
-; X32-SSE-NEXT:    movzwl %ax, %eax
+; X32-SSE-NEXT:    pextrw $0, %xmm1, %eax
 ; X32-SSE-NEXT:    movd %eax, %xmm1
 ; X32-SSE-NEXT:    psrlw %xmm1, %xmm0
 ; X32-SSE-NEXT:    retl

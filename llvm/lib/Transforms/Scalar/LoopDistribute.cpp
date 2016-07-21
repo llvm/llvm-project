@@ -748,8 +748,7 @@ public:
 
     ++NumLoopsDistributed;
     // Report the success.
-    emitOptimizationRemark(F->getContext(), LDIST_NAME, *F, L->getStartLoc(),
-                           "distributed loop");
+    ORE->emitOptimizationRemark(LDIST_NAME, L, "distributed loop");
     return true;
   }
 
@@ -768,10 +767,10 @@ public:
 
     // With Rpass-analysis report why.  This is on by default if distribution
     // was requested explicitly.
-    emitOptimizationRemarkAnalysis(
-        Ctx, Forced ? DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint
-                    : LDIST_NAME,
-        *F, L->getStartLoc(), Twine("loop not distributed: ") + Message);
+    ORE->emitOptimizationRemarkAnalysis(
+        Forced ? DiagnosticInfoOptimizationRemarkAnalysis::AlwaysPrint
+               : LDIST_NAME,
+        L, Twine("loop not distributed: ") + Message);
 
     // Also issue a warning if distribution was requested explicitly but it
     // failed.

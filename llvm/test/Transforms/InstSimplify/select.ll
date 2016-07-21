@@ -228,11 +228,8 @@ define i32 @select_icmp_and_8_ne_0_and_not_8_alt(i32 %x) {
 
 define i32 @select_icmp_trunc_8_ne_0_or_128(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_ne_0_or_128(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TRUNC]], -1
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 %x
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %trunc = trunc i32 %x to i8
   %cmp = icmp sgt i8 %trunc, -1
@@ -243,11 +240,8 @@ define i32 @select_icmp_trunc_8_ne_0_or_128(i32 %x) {
 
 define i32 @select_icmp_trunc_8_ne_0_or_128_alt(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_ne_0_or_128_alt(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TRUNC]], 0
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 [[OR]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[OR]]
 ;
   %trunc = trunc i32 %x to i8
   %cmp = icmp slt i8 %trunc, 0
@@ -258,11 +252,7 @@ define i32 @select_icmp_trunc_8_ne_0_or_128_alt(i32 %x) {
 
 define i32 @select_icmp_trunc_8_eq_0_or_128(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_eq_0_or_128(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i8 [[TRUNC]], 0
-; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[OR]], i32 %x
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 %x
 ;
   %trunc = trunc i32 %x to i8
   %cmp = icmp slt i8 %trunc, 0
@@ -273,11 +263,7 @@ define i32 @select_icmp_trunc_8_eq_0_or_128(i32 %x) {
 
 define i32 @select_icmp_trunc_8_eq_0_or_128_alt(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_eq_0_or_128_alt(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i8
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[TRUNC]], -1
-; CHECK-NEXT:    [[OR:%.*]] = or i32 %x, 128
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 [[OR]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 %x
 ;
   %trunc = trunc i32 %x to i8
   %cmp = icmp sgt i8 %trunc, -1
@@ -288,11 +274,8 @@ define i32 @select_icmp_trunc_8_eq_0_or_128_alt(i32 %x) {
 
 define i32 @select_icmp_trunc_8_eq_0_and_not_8(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_eq_0_and_not_8(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i4 [[TRUNC]], -1
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, -9
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 [[AND]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %trunc = trunc i32 %x to i4
   %cmp = icmp sgt i4 %trunc, -1
@@ -303,11 +286,8 @@ define i32 @select_icmp_trunc_8_eq_0_and_not_8(i32 %x) {
 
 define i32 @select_icmp_trunc_8_eq_0_and_not_8_alt(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_eq_0_and_not_8_alt(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[TRUNC]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, -9
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 %x
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %trunc = trunc i32 %x to i4
   %cmp = icmp slt i4 %trunc, 0
@@ -318,11 +298,7 @@ define i32 @select_icmp_trunc_8_eq_0_and_not_8_alt(i32 %x) {
 
 define i32 @select_icmp_trunc_8_ne_0_and_not_8(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_ne_0_and_not_8(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i4 [[TRUNC]], 0
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, -9
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 %x, i32 [[AND]]
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 %x
 ;
   %trunc = trunc i32 %x to i4
   %cmp = icmp slt i4 %trunc, 0
@@ -333,11 +309,7 @@ define i32 @select_icmp_trunc_8_ne_0_and_not_8(i32 %x) {
 
 define i32 @select_icmp_trunc_8_ne_0_and_not_8_alt(i32 %x) {
 ; CHECK-LABEL: @select_icmp_trunc_8_ne_0_and_not_8_alt(
-; CHECK-NEXT:    [[TRUNC:%.*]] = trunc i32 %x to i4
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i4 [[TRUNC]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, -9
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 [[AND]], i32 %x
-; CHECK-NEXT:    ret i32 [[SEL]]
+; CHECK-NEXT:    ret i32 %x
 ;
   %trunc = trunc i32 %x to i4
   %cmp = icmp sgt i4 %trunc, -1
@@ -346,8 +318,49 @@ define i32 @select_icmp_trunc_8_ne_0_and_not_8_alt(i32 %x) {
   ret i32 %sel
 }
 
-define i64 @select_icmp_x_and_8_eq_0_y_and_not_8(i32 %x, i64 %y) {
+; Make sure that at least a few of the same patterns are repeated with vector types.
+
+define <2 x i32> @select_icmp_and_8_ne_0_and_not_8_vec(<2 x i32> %x) {
+; CHECK-LABEL: @select_icmp_and_8_ne_0_and_not_8_vec(
+; CHECK-NEXT:    ret <2 x i32> %x
+;
+  %and = and <2 x i32> %x, <i32 8, i32 8>
+  %cmp = icmp ne <2 x i32> %and, zeroinitializer
+  %and1 = and <2 x i32> %x, <i32 -9, i32 -9>
+  %sel = select <2 x i1> %cmp, <2 x i32> %x, <2 x i32> %and1
+  ret <2 x i32> %sel
+}
+
+define <2 x i32> @select_icmp_trunc_8_ne_0_and_not_8_alt_vec(<2 x i32> %x) {
+; CHECK-LABEL: @select_icmp_trunc_8_ne_0_and_not_8_alt_vec(
+; CHECK-NEXT:    ret <2 x i32> %x
+;
+  %trunc = trunc <2 x i32> %x to <2 x i4>
+  %cmp = icmp sgt <2 x i4> %trunc, <i4 -1, i4 -1>
+  %and = and <2 x i32> %x, <i32 -9, i32 -9>
+  %sel = select <2 x i1> %cmp, <2 x i32> %and, <2 x i32> %x
+  ret <2 x i32> %sel
+}
+
+; Insert a bit from x into y? This should be possible in InstCombine, but not InstSimplify?
+
+define i32 @select_icmp_x_and_8_eq_0_y_and_not_8(i32 %x, i32 %y) {
 ; CHECK-LABEL: @select_icmp_x_and_8_eq_0_y_and_not_8(
+; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 8
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
+; CHECK-NEXT:    [[AND1:%.*]] = and i32 %y, -9
+; CHECK-NEXT:    [[Y_AND1:%.*]] = select i1 [[CMP]], i32 %y, i32 [[AND1]]
+; CHECK-NEXT:    ret i32 [[Y_AND1]]
+;
+  %and = and i32 %x, 8
+  %cmp = icmp eq i32 %and, 0
+  %and1 = and i32 %y, -9
+  %y.and1 = select i1 %cmp, i32 %y, i32 %and1
+  ret i32 %y.and1
+}
+
+define i64 @select_icmp_x_and_8_eq_0_y64_and_not_8(i32 %x, i64 %y) {
+; CHECK-LABEL: @select_icmp_x_and_8_eq_0_y64_and_not_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[AND1:%.*]] = and i64 %y, -9
@@ -361,8 +374,8 @@ define i64 @select_icmp_x_and_8_eq_0_y_and_not_8(i32 %x, i64 %y) {
   ret i64 %y.and1
 }
 
-define i64 @select_icmp_x_and_8_ne_0_y_and_not_8(i32 %x, i64 %y) {
-; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y_and_not_8(
+define i64 @select_icmp_x_and_8_ne_0_y64_and_not_8(i32 %x, i64 %y) {
+; CHECK-LABEL: @select_icmp_x_and_8_ne_0_y64_and_not_8(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 %x, 8
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], 0
 ; CHECK-NEXT:    [[AND1:%.*]] = and i64 %y, -9

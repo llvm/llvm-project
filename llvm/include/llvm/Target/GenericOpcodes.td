@@ -23,6 +23,22 @@ def G_ADD : Instruction {
   let isCommutable = 1;
 }
 
+// Generic subtraction.
+def G_SUB : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 0;
+}
+
+// Generic bitwise and.
+def G_AND : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src1, unknown:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 // Generic bitwise or.
 def G_OR : Instruction {
   let OutOperandList = (outs unknown:$dst);

@@ -6,15 +6,13 @@ define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
 ; X32-LABEL: test_broadcast_2f64_4f64:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovapd (%eax), %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vaddpd LCPI0_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2f64_4f64:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovapd (%rdi), %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <2 x double>, <2 x double> *%p
@@ -27,15 +25,13 @@ define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 ; X32-LABEL: test_broadcast_2i64_4i64:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovdqa (%eax), %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddq LCPI1_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_2i64_4i64:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <2 x i64>, <2 x i64> *%p
@@ -48,15 +44,13 @@ define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 ; X32-LABEL: test_broadcast_4f32_8f32:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovaps (%eax), %xmm0
-; X32-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vaddps LCPI2_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4f32_8f32:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovaps (%rdi), %xmm0
-; X64-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <4 x float>, <4 x float> *%p
@@ -69,15 +63,13 @@ define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 ; X32-LABEL: test_broadcast_4i32_8i32:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovdqa (%eax), %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddd LCPI3_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_4i32_8i32:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <4 x i32>, <4 x i32> *%p
@@ -90,15 +82,13 @@ define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 ; X32-LABEL: test_broadcast_8i16_16i16:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovdqa (%eax), %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddw LCPI4_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_8i16_16i16:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <8 x i16>, <8 x i16> *%p
@@ -111,15 +101,13 @@ define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 ; X32-LABEL: test_broadcast_16i8_32i8:
 ; X32:       ## BB#0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NEXT:    vmovdqa (%eax), %xmm0
-; X32-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X32-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X32-NEXT:    vpaddb LCPI5_0, %ymm0, %ymm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: test_broadcast_16i8_32i8:
 ; X64:       ## BB#0:
-; X64-NEXT:    vmovdqa (%rdi), %xmm0
-; X64-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
+; X64-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
 ; X64-NEXT:    retq
  %1 = load <16 x i8>, <16 x i8> *%p

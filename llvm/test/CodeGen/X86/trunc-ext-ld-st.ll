@@ -25,8 +25,7 @@ define void @load_2_i8(<2 x i8>* %A)  {
 ; SSE41-NEXT:    pmovzxbq {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero,mem[1],zero,zero,zero,zero,zero,zero,zero
 ; SSE41-NEXT:    paddq {{.*}}(%rip), %xmm0
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; SSE41-NEXT:    movd %xmm0, %eax
-; SSE41-NEXT:    movw %ax, (%rdi)
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
    %T = load <2 x i8>, <2 x i8>* %A
    %G = add <2 x i8> %T, <i8 9, i8 7>

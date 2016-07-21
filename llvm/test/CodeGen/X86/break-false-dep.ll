@@ -199,3 +199,13 @@ for.end16:                                        ; preds = %for.inc14
 ;AVX-NEXT: vmulsd {{.*}}, [[XMM0]], [[XMM0]]
 ;AVX-NEXT: vmovsd [[XMM0]],
 }
+
+define double @inlineasmdep(i64 %arg) {
+top:
+  tail call void asm sideeffect "", "~{xmm0},~{dirflag},~{fpsr},~{flags}"()
+  %tmp1 = sitofp i64 %arg to double
+  ret double %tmp1
+;AVX-LABEL:@inlineasmdep
+;AVX: vxorps  [[XMM0:%xmm[0-9]+]], [[XMM0]], [[XMM0]]
+;AVX-NEXT: vcvtsi2sdq {{.*}}, [[XMM0]], {{%xmm[0-9]+}}
+}
