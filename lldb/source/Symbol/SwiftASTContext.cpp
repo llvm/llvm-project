@@ -2765,13 +2765,13 @@ GetResourceDir ()
             }
         }
 
-        // For non-Apple platforms, we might be in the build-dir configuration
-        // rather than the install-dir configuration.  If that is the case, we
-        // have to look for a Swift build-dir that is sibling to the lldb
-        // build dir.
+        // We might be in the build-dir configuration for a build-script-driven
+        // LLDB build, which has the Swift build dir as a sibling directory
+        // to the lldb build dir.  This looks much different than the install-
+        // dir layout that the previous checks would try.
         {
-            FileSpec swift_dir_spec;
-            if (HostInfo::GetLLDBPath (ePathTypeSwiftDir, swift_dir_spec))
+            FileSpec faux_swift_dir_spec;
+            if (HostInfo::GetLLDBPath (ePathTypeSwiftDir, faux_swift_dir_spec))
             {
                 // Let's try to regex this.
                 // We're looking for /some/path/lldb-{os}-{arch}, and want to
@@ -2785,10 +2785,12 @@ GetResourceDir ()
                 //        lldb to swift for the lib dir.
                 auto match_regex =
                     std::regex("^(.+([/\\\\]))lldb-(.+)$");
-                auto replace_format = "$1swift-$3";
-                auto build_tree_resource_dir
-                    = std::regex_replace(swift_dir_spec.GetCString(),
-                                         match_regex, replace_format);
+                const std::string replace_format = "$1swift-$3";
+                const std::string faux_swift_dir =
+                    faux_swift_dir_spec.GetCString();
+                const std::string build_tree_resource_dir =
+                    std::regex_replace(faux_swift_dir, match_regex,
+                                       replace_format);
                 if (log)
                     log->Printf("%s: trying ePathTypeSwiftDir regex-based "
                                 "build dir: %s",
