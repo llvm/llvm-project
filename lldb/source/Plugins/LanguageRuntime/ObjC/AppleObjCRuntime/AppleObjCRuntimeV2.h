@@ -306,26 +306,26 @@ private:
     
     struct DescriptorMapUpdateResult
     {
-        bool update_ran;
-        bool any_found;
+        bool m_update_ran;
+        uint32_t m_num_found;
         
         DescriptorMapUpdateResult (bool ran,
-                                   bool found)
+                                   uint32_t found)
         {
-            update_ran = ran;
-            any_found = found;
+            m_update_ran = ran;
+            m_num_found = found;
         }
         
         static DescriptorMapUpdateResult
         Fail ()
         {
-            return {false, false};
+            return {false, 0};
         }
         
         static DescriptorMapUpdateResult
-        Success ()
+        Success (uint32_t found)
         {
-            return {true, true};
+            return {true, found};
         }
     };
 
@@ -341,8 +341,9 @@ private:
     bool
     UpdateISAToDescriptorMapFromMemory (RemoteNXMapTable &hash_table, uint32_t &discovered_classes_count);
     
-    bool
-    UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table, uint32_t &discovered_classes_count);
+
+    DescriptorMapUpdateResult
+    UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table);
     
     uint32_t
     ParseClassInfoArray (const lldb_private::DataExtractor &data,
