@@ -274,6 +274,10 @@ MDNode *getPGOFuncNameMetadata(const Function &F);
 /// declared by users only.
 void createPGOFuncNameMetadata(Function &F, StringRef PGOFuncName);
 
+/// Check if we can use Comdat for profile variables. This will eliminate
+/// the duplicated profile variables for Comdat functions.
+bool needsComdatForCounter(const Function &F, const Module &M);
+
 const std::error_category &instrprof_category();
 
 enum class instrprof_error {

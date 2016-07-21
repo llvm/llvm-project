@@ -19,8 +19,6 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %vector.ph ], [ [[INDEX:%.*]].next, %vector.body ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <16 x i64> [ 
 ; CHECK-NEXT:    [[VEC_IND3:%.*]] = phi <16 x i64> [ 
-; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <16 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
-; CHECK-NEXT:    [[STEP_ADD4:%.*]] = add <16 x i64> [[VEC_IND3]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
 ; CHECK-NEXT:    [[TMP10:%.*]] = sub nsw <16 x i64> <i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8, i64 8>, [[VEC_IND]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <16 x i64> [[VEC_IND]], i32 0
 ; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [10 x [10 x i32]], [10 x [10 x i32]]* @d, i64 0, i64 [[TMP11]]
@@ -137,6 +135,8 @@ define void @_Z3fn1v() #0 {
 ; CHECK-NEXT:    [[TMP123:%.*]] = insertelement <16 x i32*> [[TMP119]], i32* [[TMP122]], i32 15
 ; CHECK-NEXT:    [[VECTORGEP:%.*]] = getelementptr inbounds [10 x i32], <16 x [10 x i32]*> [[TMP58]], <16 x i64> [[TMP59]], i64 0
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v16i32(<16 x i32> <i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8, i32 8>, <16 x i32*> [[VECTORGEP]], i32 16, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK:         [[STEP_ADD:%.*]] = add <16 x i64> [[VEC_IND]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
+; CHECK:         [[STEP_ADD4:%.*]] = add <16 x i64> [[VEC_IND3]], <i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32, i64 32>
 entry:
   %0 = load i32, i32* @c, align 4
   %cmp34 = icmp sgt i32 %0, 8

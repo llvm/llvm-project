@@ -39,8 +39,7 @@ define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) no
 ; X86-NEXT:    pextrb $8, %xmm0, 2(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; X86-NEXT:    movd %xmm0, %ecx
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    pextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
@@ -51,8 +50,7 @@ define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) no
 ; X64-NEXT:    pextrb $8, %xmm0, 2(%rdi)
 ; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
 	%load = load <3 x i32>, <3 x i32>* %src.addr

@@ -1352,20 +1352,17 @@ define <4 x double> @splat_mem_v4f64_from_v2f64(<2 x double>* %ptr) {
 define <4 x i64> @splat128_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
 ; AVX1-LABEL: splat128_mem_v4i64_from_v2i64:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps (%rdi), %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splat128_mem_v4i64_from_v2i64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcasti128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splat128_mem_v4i64_from_v2i64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; AVX512VL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; AVX512VL-NEXT:    retq
   %v = load <2 x i64>, <2 x i64>* %ptr
   %shuffle = shufflevector <2 x i64> %v, <2 x i64> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
@@ -1375,20 +1372,17 @@ define <4 x i64> @splat128_mem_v4i64_from_v2i64(<2 x i64>* %ptr) {
 define <4 x double> @splat128_mem_v4f64_from_v2f64(<2 x double>* %ptr) {
 ; AVX1-LABEL: splat128_mem_v4f64_from_v2f64:
 ; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps (%rdi), %xmm0
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splat128_mem_v4f64_from_v2f64:
 ; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps (%rdi), %xmm0
-; AVX2-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX2-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512VL-LABEL: splat128_mem_v4f64_from_v2f64:
 ; AVX512VL:       # BB#0:
-; AVX512VL-NEXT:    vmovapd (%rdi), %xmm0
-; AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; AVX512VL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; AVX512VL-NEXT:    retq
   %v = load <2 x double>, <2 x double>* %ptr
   %shuffle = shufflevector <2 x double> %v, <2 x double> undef, <4 x i32> <i32 0, i32 1, i32 0, i32 1>

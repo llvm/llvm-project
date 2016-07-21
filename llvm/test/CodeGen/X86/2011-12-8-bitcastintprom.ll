@@ -19,8 +19,7 @@ define void @prom_bug(<4 x i8> %t, i16* %p) {
 ; SSE41:       ## BB#0:
 ; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; SSE41-NEXT:    movd %xmm0, %eax
-; SSE41-NEXT:    movw %ax, (%rdi)
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; SSE41-NEXT:    retq
   %r = bitcast <4 x i8> %t to <2 x i16>
   %o = extractelement <2 x i16> %r, i32 0

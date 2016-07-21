@@ -7759,23 +7759,50 @@ let ExeDomain = SSEPackedDouble, Predicates = [HasAVX2, NoVLX] in
 def VBROADCASTSDYrr  : avx2_broadcast_rr<0x19, "vbroadcastsd", VR256,
                                          v4f64, v2f64, WriteFShuffle256>, VEX_L;
 
+//===----------------------------------------------------------------------===//
+// VBROADCAST*128 - Load from memory and broadcast 128-bit vector to both
+//                  halves of a 256-bit vector.
+//
 let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX2] in
 def VBROADCASTI128 : AVX8I<0x5A, MRMSrcMem, (outs VR256:$dst),
                            (ins i128mem:$src),
                            "vbroadcasti128\t{$src, $dst|$dst, $src}", []>,
                            Sched<[WriteLoad]>, VEX, VEX_L;
 
+let mayLoad = 1, hasSideEffects = 0, Predicates = [HasAVX] in
 def VBROADCASTF128 : AVX8I<0x1A, MRMSrcMem, (outs VR256:$dst),
                            (ins f128mem:$src),
-                           "vbroadcastf128\t{$src, $dst|$dst, $src}",
-                           [(set VR256:$dst,
-                              (int_x86_avx_vbroadcastf128_pd_256 addr:$src))]>,
+                           "vbroadcastf128\t{$src, $dst|$dst, $src}", []>,
                            Sched<[WriteFShuffleLd]>, VEX, VEX_L;
 
-let Predicates = [HasAVX] in
-def : Pat<(int_x86_avx_vbroadcastf128_ps_256 addr:$src),
-          (VBROADCASTF128 addr:$src)>;
+let Predicates = [HasAVX2, NoVLX] in {
+def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
+          (VBROADCASTI128 addr:$src)>;
+def : Pat<(v8i32 (X86SubVBroadcast (bc_v4i32 (loadv2i64 addr:$src)))),
+          (VBROADCASTI128 addr:$src)>;
+def : Pat<(v16i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
+          (VBROADCASTI128 addr:$src)>;
+def : Pat<(v32i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
+          (VBROADCASTI128 addr:$src)>;
+}
 
+let Predicates = [HasAVX, NoVLX] in {
+def : Pat<(v4f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v8f32 (X86SubVBroadcast (loadv4f32 addr:$src))),
+          (VBROADCASTF128 addr:$src)>;
+}
+
+let Predicates = [HasAVX1Only] in {
+def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v8i32 (X86SubVBroadcast (bc_v4i32 (loadv2i64 addr:$src)))),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v16i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
+          (VBROADCASTF128 addr:$src)>;
+def : Pat<(v32i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
+          (VBROADCASTF128 addr:$src)>;
+}
 
 //===----------------------------------------------------------------------===//
 // VINSERTF128 - Insert packed floating-point values

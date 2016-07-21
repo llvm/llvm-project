@@ -296,6 +296,7 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
          Name.startswith("avx.blend.p") ||
          Name == "avx2.pblendw" ||
          Name.startswith("avx2.pblendd.") ||
+         Name.startswith("avx.vbroadcastf128") ||
          Name == "avx2.vbroadcasti128" ||
          Name == "xop.vpcmov" ||
          (Name.startswith("xop.vpcom") && F->arg_size() == 2))) {
@@ -886,7 +887,7 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       Value *Trunc0 = Builder.CreateTrunc(CI->getArgOperand(0), Type::getInt32Ty(C));
       Rep = Builder.CreateCall(CRC32, {Trunc0, CI->getArgOperand(1)});
       Rep = Builder.CreateZExt(Rep, CI->getType(), "");
-    } else if (IsX86 && Name.startswith("avx.vbroadcast")) {
+    } else if (IsX86 && Name.startswith("avx.vbroadcast.s")) {
       // Replace broadcasts with a series of insertelements.
       Type *VecTy = CI->getType();
       Type *EltTy = VecTy->getVectorElementType();
@@ -918,15 +919,21 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
       bool DoSext = (StringRef::npos != Name.find("pmovsx"));
       Rep = DoSext ? Builder.CreateSExt(SV, DstTy)
                    : Builder.CreateZExt(SV, DstTy);
-    } else if (IsX86 && Name == "avx2.vbroadcasti128") {
-      // Replace vbroadcasts with a vector shuffle.
-      Type *VT = VectorType::get(Type::getInt64Ty(C), 2);
+    } else if (IsX86 && (Name.startswith("avx.vbroadcastf128") ||
+                         Name == "avx2.vbroadcasti128")) {
+      // Replace vbroadcastf128/vbroadcasti128 with a vector load+shuffle.
+      Type *EltTy = CI->getType()->getVectorElementType();
+      unsigned NumSrcElts = 128 / EltTy->getPrimitiveSizeInBits();
+      Type *VT = VectorType::get(EltTy, NumSrcElts);
       Value *Op = Builder.CreatePointerCast(CI->getArgOperand(0),
                                             PointerType::getUnqual(VT));
       Value *Load = Builder.CreateLoad(VT, Op);
-      uint32_t Idxs[4] = { 0, 1, 0, 1 };
-      Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
-                                        Idxs);
+      if (NumSrcElts == 2)
+        Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
+                                          { 0, 1, 0, 1 });
+      else
+        Rep = Builder.CreateShuffleVector(Load, UndefValue::get(Load->getType()),
+                                          { 0, 1, 2, 3, 0, 1, 2, 3 });
     } else if (IsX86 && (Name.startswith("avx2.pbroadcast") ||
                          Name.startswith("avx2.vbroadcast") ||
                          Name.startswith("avx512.pbroadcast") ||

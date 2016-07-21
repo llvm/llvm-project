@@ -9230,8 +9230,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX-NEXT:    testb $1, %al
 ; AVX-NEXT:    je LBB59_2
 ; AVX-NEXT:  ## BB#1: ## %cond.store
-; AVX-NEXT:    vmovd %xmm1, %eax
-; AVX-NEXT:    movw %ax, (%rdi)
+; AVX-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX-NEXT:  LBB59_2: ## %else
 ; AVX-NEXT:    vpextrb $2, %xmm0, %eax
 ; AVX-NEXT:    testb $1, %al
@@ -9288,8 +9287,7 @@ define void @test_mask_store_8xi16(<8 x i1> %mask, <8 x i16>* %addr, <8 x i16> %
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB59_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    movw %ax, (%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:  LBB59_2: ## %else
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
@@ -9367,8 +9365,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    je LBB60_2
 ; AVX1-NEXT:  ## BB#1: ## %cond.store
-; AVX1-NEXT:    vmovd %xmm1, %eax
-; AVX1-NEXT:    movw %ax, (%rdi)
+; AVX1-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX1-NEXT:  LBB60_2: ## %else
 ; AVX1-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX1-NEXT:    testb $1, %al
@@ -9417,8 +9414,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX1-NEXT:    je LBB60_18
 ; AVX1-NEXT:  ## BB#17: ## %cond.store15
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1-NEXT:    vmovd %xmm2, %eax
-; AVX1-NEXT:    movw %ax, 16(%rdi)
+; AVX1-NEXT:    vpextrw $0, %xmm2, 16(%rdi)
 ; AVX1-NEXT:  LBB60_18: ## %else16
 ; AVX1-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX1-NEXT:    testb $1, %al
@@ -9478,8 +9474,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    je LBB60_2
 ; AVX2-NEXT:  ## BB#1: ## %cond.store
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    movw %ax, (%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX2-NEXT:  LBB60_2: ## %else
 ; AVX2-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX2-NEXT:    testb $1, %al
@@ -9528,8 +9523,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX2-NEXT:    je LBB60_18
 ; AVX2-NEXT:  ## BB#17: ## %cond.store15
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    movw %ax, 16(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm2, 16(%rdi)
 ; AVX2-NEXT:  LBB60_18: ## %else16
 ; AVX2-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX2-NEXT:    testb $1, %al
@@ -9594,8 +9588,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    testb %al, %al
 ; AVX512F-NEXT:    je LBB60_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    movw %ax, (%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:  LBB60_2: ## %else
 ; AVX512F-NEXT:    kshiftlw $14, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
@@ -9660,8 +9653,7 @@ define void @test_mask_store_16xi16(<16 x i1> %mask, <16 x i16>* %addr, <16 x i1
 ; AVX512F-NEXT:    je LBB60_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.store15
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm0
-; AVX512F-NEXT:    vmovd %xmm0, %eax
-; AVX512F-NEXT:    movw %ax, 16(%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm0, 16(%rdi)
 ; AVX512F-NEXT:  LBB60_18: ## %else16
 ; AVX512F-NEXT:    kshiftlw $6, %k0, %k1
 ; AVX512F-NEXT:    kshiftrw $15, %k1, %k1
@@ -9746,8 +9738,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    je LBB61_2
 ; AVX1-NEXT:  ## BB#1: ## %cond.store
-; AVX1-NEXT:    vmovd %xmm1, %eax
-; AVX1-NEXT:    movw %ax, (%rdi)
+; AVX1-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX1-NEXT:  LBB61_2: ## %else
 ; AVX1-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX1-NEXT:    testb $1, %al
@@ -9796,8 +9787,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX1-NEXT:    je LBB61_18
 ; AVX1-NEXT:  ## BB#17: ## %cond.store15
 ; AVX1-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; AVX1-NEXT:    vmovd %xmm3, %eax
-; AVX1-NEXT:    movw %ax, 16(%rdi)
+; AVX1-NEXT:    vpextrw $0, %xmm3, 16(%rdi)
 ; AVX1-NEXT:  LBB61_18: ## %else16
 ; AVX1-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX1-NEXT:    testb $1, %al
@@ -9853,8 +9843,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX1-NEXT:    testb $1, %al
 ; AVX1-NEXT:    je LBB61_34
 ; AVX1-NEXT:  ## BB#33: ## %cond.store31
-; AVX1-NEXT:    vmovd %xmm2, %eax
-; AVX1-NEXT:    movw %ax, 32(%rdi)
+; AVX1-NEXT:    vpextrw $0, %xmm2, 32(%rdi)
 ; AVX1-NEXT:  LBB61_34: ## %else32
 ; AVX1-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX1-NEXT:    testb $1, %al
@@ -9903,8 +9892,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX1-NEXT:    je LBB61_50
 ; AVX1-NEXT:  ## BB#49: ## %cond.store47
 ; AVX1-NEXT:    vextractf128 $1, %ymm2, %xmm1
-; AVX1-NEXT:    vmovd %xmm1, %eax
-; AVX1-NEXT:    movw %ax, 48(%rdi)
+; AVX1-NEXT:    vpextrw $0, %xmm1, 48(%rdi)
 ; AVX1-NEXT:  LBB61_50: ## %else48
 ; AVX1-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX1-NEXT:    testb $1, %al
@@ -9964,8 +9952,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    je LBB61_2
 ; AVX2-NEXT:  ## BB#1: ## %cond.store
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    movw %ax, (%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX2-NEXT:  LBB61_2: ## %else
 ; AVX2-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX2-NEXT:    testb $1, %al
@@ -10014,8 +10001,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX2-NEXT:    je LBB61_18
 ; AVX2-NEXT:  ## BB#17: ## %cond.store15
 ; AVX2-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX2-NEXT:    vmovd %xmm3, %eax
-; AVX2-NEXT:    movw %ax, 16(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm3, 16(%rdi)
 ; AVX2-NEXT:  LBB61_18: ## %else16
 ; AVX2-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX2-NEXT:    testb $1, %al
@@ -10071,8 +10057,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX2-NEXT:    testb $1, %al
 ; AVX2-NEXT:    je LBB61_34
 ; AVX2-NEXT:  ## BB#33: ## %cond.store31
-; AVX2-NEXT:    vmovd %xmm2, %eax
-; AVX2-NEXT:    movw %ax, 32(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm2, 32(%rdi)
 ; AVX2-NEXT:  LBB61_34: ## %else32
 ; AVX2-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX2-NEXT:    testb $1, %al
@@ -10121,8 +10106,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX2-NEXT:    je LBB61_50
 ; AVX2-NEXT:  ## BB#49: ## %cond.store47
 ; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; AVX2-NEXT:    vmovd %xmm1, %eax
-; AVX2-NEXT:    movw %ax, 48(%rdi)
+; AVX2-NEXT:    vpextrw $0, %xmm1, 48(%rdi)
 ; AVX2-NEXT:  LBB61_50: ## %else48
 ; AVX2-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX2-NEXT:    testb $1, %al
@@ -10182,8 +10166,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX512F-NEXT:    testb $1, %al
 ; AVX512F-NEXT:    je LBB61_2
 ; AVX512F-NEXT:  ## BB#1: ## %cond.store
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    movw %ax, (%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm1, (%rdi)
 ; AVX512F-NEXT:  LBB61_2: ## %else
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512F-NEXT:    testb $1, %al
@@ -10232,8 +10215,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX512F-NEXT:    je LBB61_18
 ; AVX512F-NEXT:  ## BB#17: ## %cond.store15
 ; AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm3
-; AVX512F-NEXT:    vmovd %xmm3, %eax
-; AVX512F-NEXT:    movw %ax, 16(%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm3, 16(%rdi)
 ; AVX512F-NEXT:  LBB61_18: ## %else16
 ; AVX512F-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX512F-NEXT:    testb $1, %al
@@ -10289,8 +10271,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX512F-NEXT:    testb $1, %al
 ; AVX512F-NEXT:    je LBB61_34
 ; AVX512F-NEXT:  ## BB#33: ## %cond.store31
-; AVX512F-NEXT:    vmovd %xmm2, %eax
-; AVX512F-NEXT:    movw %ax, 32(%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm2, 32(%rdi)
 ; AVX512F-NEXT:  LBB61_34: ## %else32
 ; AVX512F-NEXT:    vpextrb $1, %xmm0, %eax
 ; AVX512F-NEXT:    testb $1, %al
@@ -10339,8 +10320,7 @@ define void @test_mask_store_32xi16(<32 x i1> %mask, <32 x i16>* %addr, <32 x i1
 ; AVX512F-NEXT:    je LBB61_50
 ; AVX512F-NEXT:  ## BB#49: ## %cond.store47
 ; AVX512F-NEXT:    vextracti128 $1, %ymm2, %xmm1
-; AVX512F-NEXT:    vmovd %xmm1, %eax
-; AVX512F-NEXT:    movw %ax, 48(%rdi)
+; AVX512F-NEXT:    vpextrw $0, %xmm1, 48(%rdi)
 ; AVX512F-NEXT:  LBB61_50: ## %else48
 ; AVX512F-NEXT:    vpextrb $9, %xmm0, %eax
 ; AVX512F-NEXT:    testb $1, %al

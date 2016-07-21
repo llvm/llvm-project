@@ -986,6 +986,10 @@ multiclass avx512_subvec_broadcast_rm<bits<8> opc, string OpcodeStr,
                             AVX5128IBase, EVEX;
 }
 
+//===----------------------------------------------------------------------===//
+// AVX-512 BROADCAST SUBVECTORS
+//
+
 defm VBROADCASTI32X4 : avx512_subvec_broadcast_rm<0x5a, "vbroadcasti32x4",
                        v16i32_info, v4i32x_info>,
                        EVEX_V512, EVEX_CD8<32, CD8VT4>;
@@ -1006,7 +1010,13 @@ defm VBROADCASTI32X4Z256 : avx512_subvec_broadcast_rm<0x5a, "vbroadcasti32x4",
 defm VBROADCASTF32X4Z256 : avx512_subvec_broadcast_rm<0x1a, "vbroadcastf32x4",
                            v8f32x_info, v4f32x_info>,
                            EVEX_V256, EVEX_CD8<32, CD8VT4>;
+
+def : Pat<(v16i16 (X86SubVBroadcast (bc_v8i16 (loadv2i64 addr:$src)))),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
+def : Pat<(v32i8 (X86SubVBroadcast (bc_v16i8 (loadv2i64 addr:$src)))),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
 }
+
 let Predicates = [HasVLX, HasDQI] in {
 defm VBROADCASTI64X2Z128 : avx512_subvec_broadcast_rm<0x5a, "vbroadcasti64x2",
                            v4i64x_info, v2i64x_info>, VEX_W,
@@ -1015,6 +1025,14 @@ defm VBROADCASTF64X2Z128 : avx512_subvec_broadcast_rm<0x1a, "vbroadcastf64x2",
                            v4f64x_info, v2f64x_info>, VEX_W,
                            EVEX_V256, EVEX_CD8<64, CD8VT2>;
 }
+
+let Predicates = [HasVLX, NoDQI] in {
+def : Pat<(v4f64 (X86SubVBroadcast (loadv2f64 addr:$src))),
+          (VBROADCASTF32X4Z256rm addr:$src)>;
+def : Pat<(v4i64 (X86SubVBroadcast (loadv2i64 addr:$src))),
+          (VBROADCASTI32X4Z256rm addr:$src)>;
+}
+
 let Predicates = [HasDQI] in {
 defm VBROADCASTI64X2 : avx512_subvec_broadcast_rm<0x5a, "vbroadcasti64x2",
                        v8i64_info, v2i64x_info>, VEX_W,

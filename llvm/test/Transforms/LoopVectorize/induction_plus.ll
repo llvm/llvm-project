@@ -7,10 +7,11 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 ;CHECK-LABEL: @array_at_plus_one(
 ;CHECK: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-;CHECK: %vec.ind = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %step.add, %vector.body ]
-;CHECK: %vec.ind1 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ %step.add2, %vector.body ]
-;CHECK: add <4 x i64> %vec.ind, <i64 4, i64 4, i64 4, i64 4>
+;CHECK: %vec.ind = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %vector.ph ], [ %vec.ind.next, %vector.body ]
+;CHECK: %vec.ind1 = phi <4 x i32> [ <i32 0, i32 1, i32 2, i32 3>, %vector.ph ], [ %vec.ind.next2, %vector.body ]
 ;CHECK: add nsw <4 x i64> %vec.ind, <i64 12, i64 12, i64 12, i64 12>
+;CHECK: %vec.ind.next = add <4 x i64> %vec.ind, <i64 4, i64 4, i64 4, i64 4>
+;CHECK: %vec.ind.next2 = add <4 x i32> %vec.ind1, <i32 4, i32 4, i32 4, i32 4>
 ;CHECK: ret i32
 define i32 @array_at_plus_one(i32 %n) nounwind uwtable ssp {
   %1 = icmp sgt i32 %n, 0

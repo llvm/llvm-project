@@ -172,8 +172,7 @@ define void @add3i8(%i8vec3* nocapture sret %ret, %i8vec3* %ap, %i8vec3* %bp) no
 ; CHECK-NEXT:    pextrb $8, %xmm1, 2(%rdi)
 ; CHECK-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 	%a = load %i8vec3, %i8vec3* %ap, align 16
@@ -214,14 +213,12 @@ define void @rot(%i8vec3pack* nocapture sret %result, %i8vec3pack* %X, %i8vec3pa
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <158,158,158,u>
 ; CHECK-NEXT:    pshufb %xmm0, %xmm1
 ; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; CHECK-NEXT:    movd %xmm1, %eax
-; CHECK-NEXT:    movw %ax, (%rsi)
+; CHECK-NEXT:    pextrw $0, %xmm1, (%rsi)
 ; CHECK-NEXT:    movb $-98, 2(%rsi)
 ; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <1,1,1,u>
 ; CHECK-NEXT:    pshufb %xmm0, %xmm1
 ; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movw %ax, (%rdx)
+; CHECK-NEXT:    pextrw $0, %xmm0, (%rdx)
 ; CHECK-NEXT:    movb $1, 2(%rdx)
 ; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero
 ; CHECK-NEXT:    movdqa %xmm0, %xmm1
@@ -230,8 +227,7 @@ define void @rot(%i8vec3pack* nocapture sret %result, %i8vec3pack* %X, %i8vec3pa
 ; CHECK-NEXT:    pextrb $8, %xmm1, 2(%rdi)
 ; CHECK-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; CHECK-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movw %ax, (%rdi)
+; CHECK-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:

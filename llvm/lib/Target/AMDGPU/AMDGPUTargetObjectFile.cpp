@@ -24,7 +24,8 @@ MCSection *AMDGPUTargetObjectFile::SelectSectionForGlobal(const GlobalValue *GV,
                                                           SectionKind Kind,
                                                           Mangler &Mang,
                                                 const TargetMachine &TM) const {
-  if (Kind.isReadOnly() && AMDGPU::isReadOnlySegment(GV))
+  if (Kind.isReadOnly() && AMDGPU::isReadOnlySegment(GV) &&
+      TM.getTargetTriple().getOS() != Triple::AMDHSA)
     return TextSection;
 
   return TargetLoweringObjectFileELF::SelectSectionForGlobal(GV, Kind, Mang, TM);

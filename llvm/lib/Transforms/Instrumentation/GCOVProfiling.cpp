@@ -251,11 +251,7 @@ namespace {
   class GCOVBlock : public GCOVRecord {
    public:
     GCOVLines &getFile(StringRef Filename) {
-      GCOVLines *&Lines = LinesByFile[Filename];
-      if (!Lines) {
-        Lines = new GCOVLines(Filename, os);
-      }
-      return *Lines;
+      return LinesByFile.try_emplace(Filename, Filename, os).first->second;
     }
 
     void addEdge(GCOVBlock &Successor) {
@@ -264,9 +260,9 @@ namespace {
 
     void writeOut() {
       uint32_t Len = 3;
-      SmallVector<StringMapEntry<GCOVLines *> *, 32> SortedLinesByFile;
+      SmallVector<StringMapEntry<GCOVLines> *, 32> SortedLinesByFile;
       for (auto &I : LinesByFile) {
-        Len += I.second->length();
+        Len += I.second.length();
         SortedLinesByFile.push_back(&I);
       }
 
@@ -274,19 +270,15 @@ namespace {
       write(Len);
       write(Number);
 
-      std::sort(SortedLinesByFile.begin(), SortedLinesByFile.end(),
-                [](StringMapEntry<GCOVLines *> *LHS,
-                   StringMapEntry<GCOVLines *> *RHS) {
-        return LHS->getKey() < RHS->getKey();
-      });
+      std::sort(
+          SortedLinesByFile.begin(), SortedLinesByFile.end(),
+          [](StringMapEntry<GCOVLines> *LHS, StringMapEntry<GCOVLines> *RHS) {
+            return LHS->getKey() < RHS->getKey();
+          });
       for (auto &I : SortedLinesByFile)
-        I->getValue()->writeOut();
+        I->getValue().writeOut();
       write(0);
       write(0);
-    }
-
-    ~GCOVBlock() {
-      DeleteContainerSeconds(LinesByFile);
     }
 
     GCOVBlock(const GCOVBlock &RHS) : GCOVRecord(RHS), Number(RHS.Number) {
@@ -306,7 +298,7 @@ namespace {
     }
 
     uint32_t Number;
-    StringMap<GCOVLines *> LinesByFile;
+    StringMap<GCOVLines> LinesByFile;
     SmallVector<GCOVBlock *, 4> OutEdges;
   };
 

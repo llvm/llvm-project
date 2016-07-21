@@ -1910,14 +1910,23 @@ void InnerLoopVectorizer::createVectorIntInductionPHI(
   // factor. The last of those goes into the PHI.
   PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind",
                                     &*LoopVectorBody->getFirstInsertionPt());
-  Value *LastInduction = VecInd;
+  Instruction *LastInduction = VecInd;
   for (unsigned Part = 0; Part < UF; ++Part) {
     Entry[Part] = LastInduction;
-    LastInduction = Builder.CreateAdd(LastInduction, SplatVF, "step.add");
+    LastInduction = cast<Instruction>(
+        Builder.CreateAdd(LastInduction, SplatVF, "step.add"));
   }
 
+  // Move the last step to the end of the latch block. This ensures consistent
+  // placement of all induction updates.
+  auto *LoopVectorLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
+  auto *Br = cast<BranchInst>(LoopVectorLatch->getTerminator());
+  auto *ICmp = cast<Instruction>(Br->getCondition());
+  LastInduction->moveBefore(ICmp);
+  LastInduction->setName("vec.ind.next");
+
   VecInd->addIncoming(SteppedStart, LoopVectorPreHeader);
-  VecInd->addIncoming(LastInduction, LoopVectorBody);
+  VecInd->addIncoming(LastInduction, LoopVectorLatch);
 }
 
 void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,

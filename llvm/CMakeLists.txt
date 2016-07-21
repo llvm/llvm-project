@@ -77,7 +77,7 @@ if(LLVM_PARALLEL_COMPILE_JOBS)
   endif()
 endif()
 
-set(LLVM_BUILD_GLOBAL_ISEL OFF CACHE BOOL "Experimental: Build GlobalISel")
+option(LLVM_BUILD_GLOBAL_ISEL "Experimental: Build GlobalISel" OFF)
 if(LLVM_BUILD_GLOBAL_ISEL)
   add_definitions(-DLLVM_BUILD_GLOBAL_ISEL)
 endif()
@@ -722,6 +722,7 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/not)
   add_subdirectory(utils/llvm-lit)
   add_subdirectory(utils/yaml-bench)
+  add_subdirectory(utils/unittest)
 else()
   if ( LLVM_INCLUDE_TESTS )
     message(FATAL_ERROR "Including tests when not building utils will not work.
@@ -732,10 +733,6 @@ endif()
 # Use LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION instead of LLVM_INCLUDE_UTILS because it is not really a util
 if (LLVM_ADD_NATIVE_VISUALIZERS_TO_SOLUTION)
   add_subdirectory(utils/LLVMVisualizers)
-endif()
-
-if(LLVM_INCLUDE_TESTS)
-  add_subdirectory(utils/unittest)
 endif()
 
 foreach( binding ${LLVM_BINDINGS_LIST} )

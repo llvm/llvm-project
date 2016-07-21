@@ -3779,6 +3779,14 @@ static bool MayFoldIntoStore(SDValue Op) {
   return Op.hasOneUse() && ISD::isNormalStore(*Op.getNode()->use_begin());
 }
 
+static bool MayFoldIntoZeroExtend(SDValue Op) {
+  if (Op.hasOneUse()) {
+    unsigned Opcode = Op.getNode()->use_begin()->getOpcode();
+    return (ISD::ZERO_EXTEND == Opcode);
+  }
+  return false;
+}
+
 static bool isTargetShuffle(unsigned Opcode) {
   switch(Opcode) {
   default: return false;
@@ -12373,21 +12381,6 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Assert);
   }
 
-  if (VT.getSizeInBits() == 16) {
-    // If Idx is 0, it's cheaper to do a move instead of a pextrw.
-    if (isNullConstant(Op.getOperand(1)))
-      return DAG.getNode(
-          ISD::TRUNCATE, dl, MVT::i16,
-          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
-                      DAG.getBitcast(MVT::v4i32, Op.getOperand(0)),
-                      Op.getOperand(1)));
-    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32,
-                                  Op.getOperand(0), Op.getOperand(1));
-    SDValue Assert  = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Extract,
-                                  DAG.getValueType(VT));
-    return DAG.getNode(ISD::TRUNCATE, dl, VT, Assert);
-  }
-
   if (VT == MVT::f32) {
     // EXTRACTPS outputs to a GPR32 register which will require a movd to copy
     // the result back to FR32 register. It's only worth matching if the
@@ -12413,6 +12406,7 @@ static SDValue LowerEXTRACT_VECTOR_ELT_SSE4(SDValue Op, SelectionDAG &DAG) {
     if (isa<ConstantSDNode>(Op.getOperand(1)))
       return Op;
   }
+
   return SDValue();
 }
 
@@ -12512,25 +12506,30 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   assert(VecVT.is128BitVector() && "Unexpected vector length");
 
-  if (Subtarget.hasSSE41())
-    if (SDValue Res = LowerEXTRACT_VECTOR_ELT_SSE4(Op, DAG))
-      return Res;
-
   MVT VT = Op.getSimpleValueType();
-  // TODO: handle v16i8.
+
   if (VT.getSizeInBits() == 16) {
-    if (IdxVal == 0)
+    // If IdxVal is 0, it's cheaper to do a move instead of a pextrw, unless
+    // we're going to zero extend the register or fold the store (SSE41 only).
+    if (IdxVal == 0 && !MayFoldIntoZeroExtend(Op) &&
+        !(Subtarget.hasSSE41() && MayFoldIntoStore(Op)))
       return DAG.getNode(ISD::TRUNCATE, dl, MVT::i16,
                          DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                      DAG.getBitcast(MVT::v4i32, Vec), Idx));
 
     // Transform it so it match pextrw which produces a 32-bit result.
-    MVT EltVT = MVT::i32;
-    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, EltVT, Vec, Idx);
-    SDValue Assert  = DAG.getNode(ISD::AssertZext, dl, EltVT, Extract,
+    SDValue Extract = DAG.getNode(X86ISD::PEXTRW, dl, MVT::i32,
+                                  Op.getOperand(0), Op.getOperand(1));
+    SDValue Assert  = DAG.getNode(ISD::AssertZext, dl, MVT::i32, Extract,
                                   DAG.getValueType(VT));
     return DAG.getNode(ISD::TRUNCATE, dl, VT, Assert);
   }
+
+  if (Subtarget.hasSSE41())
+    if (SDValue Res = LowerEXTRACT_VECTOR_ELT_SSE4(Op, DAG))
+      return Res;
+
+  // TODO: handle v16i8.
 
   if (VT.getSizeInBits() == 32) {
     if (IdxVal == 0)
@@ -12805,6 +12804,10 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
   // (insert_subvector (insert_subvector undef, (load addr), 0),
   //                   (load addr + 16), Elts/2)
   // --> load32 addr
+  // or a 16-byte broadcast:
+  // (insert_subvector (insert_subvector undef, (load addr), 0),
+  //                   (load addr), Elts/2)
+  // --> X86SubVBroadcast(load16 addr)
   if ((IdxVal == OpVT.getVectorNumElements() / 2) &&
       Vec.getOpcode() == ISD::INSERT_SUBVECTOR &&
       OpVT.is256BitVector() && SubVecVT.is128BitVector()) {
@@ -12823,6 +12826,10 @@ static SDValue LowerINSERT_SUBVECTOR(SDValue Op, const X86Subtarget &Subtarget,
           if (SDValue Ld = EltsFromConsecutiveLoads(OpVT, Ops, dl, DAG, false))
             return Ld;
         }
+
+        // If lower/upper loads are the same then lower to a VBROADCASTF128.
+        if (SubVec2 == peekThroughBitcasts(SubVec))
+          return DAG.getNode(X86ISD::SUBV_BROADCAST, dl, OpVT, SubVec);
       }
     }
   }

@@ -10,22 +10,19 @@
 define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_2f64_4f64:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_2f64_4f64:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_2f64_4f64:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinsertf64x2 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vbroadcastf64x2 (%rdi), %ymm0
 ; X64-AVX512DQVL-NEXT:    vaddpd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512DQVL-NEXT:    retq
  %1 = load <2 x double>, <2 x double> *%p
@@ -37,22 +34,19 @@ define <4 x double> @test_broadcast_2f64_4f64(<2 x double> *%p) nounwind {
 define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_2i64_4i64:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_2i64_4i64:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_2i64_4i64:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti64x2 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vbroadcasti64x2 (%rdi), %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddq {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512DQVL-NEXT:    retq
  %1 = load <2 x i64>, <2 x i64> *%p
@@ -64,8 +58,7 @@ define <4 x i64> @test_broadcast_2i64_4i64(<2 x i64> *%p) nounwind {
 define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_4f32_8f32:
 ; X64-AVX512:       ## BB#0:
-; X64-AVX512-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512-NEXT:    vaddps {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    retq
  %1 = load <4 x float>, <4 x float> *%p
@@ -77,8 +70,7 @@ define <8 x float> @test_broadcast_4f32_8f32(<4 x float> *%p) nounwind {
 define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 ; X64-AVX512-LABEL: test_broadcast_4i32_8i32:
 ; X64-AVX512:       ## BB#0:
-; X64-AVX512-NEXT:    vmovdqa32 (%rdi), %xmm0
-; X64-AVX512-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512-NEXT:    vpaddd {{.*}}(%rip), %ymm0, %ymm0
 ; X64-AVX512-NEXT:    retq
  %1 = load <4 x i32>, <4 x i32> *%p
@@ -88,26 +80,11 @@ define <8 x i32> @test_broadcast_4i32_8i32(<4 x i32> *%p) nounwind {
 }
 
 define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
-; X64-AVX512VL-LABEL: test_broadcast_8i16_16i16:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512VL-NEXT:    retq
-;
-; X64-AVX512BWVL-LABEL: test_broadcast_8i16_16i16:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqu16 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512BWVL-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512BWVL-NEXT:    retq
-;
-; X64-AVX512DQVL-LABEL: test_broadcast_8i16_16i16:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512DQVL-NEXT:    retq
+; X64-AVX512-LABEL: test_broadcast_8i16_16i16:
+; X64-AVX512:       ## BB#0:
+; X64-AVX512-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
+; X64-AVX512-NEXT:    vpaddw {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
  %1 = load <8 x i16>, <8 x i16> *%p
  %2 = shufflevector <8 x i16> %1, <8 x i16> undef, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
  %3  = add <16 x i16> %2, <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8, i16 9, i16 10, i16 11, i16 12, i16 13, i16 14, i16 15, i16 16>
@@ -115,26 +92,11 @@ define <16 x i16> @test_broadcast_8i16_16i16(<8 x i16> *%p) nounwind {
 }
 
 define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
-; X64-AVX512VL-LABEL: test_broadcast_16i8_32i8:
-; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512VL-NEXT:    retq
-;
-; X64-AVX512BWVL-LABEL: test_broadcast_16i8_32i8:
-; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqu8 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512BWVL-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512BWVL-NEXT:    retq
-;
-; X64-AVX512DQVL-LABEL: test_broadcast_16i8_32i8:
-; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
-; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
-; X64-AVX512DQVL-NEXT:    retq
+; X64-AVX512-LABEL: test_broadcast_16i8_32i8:
+; X64-AVX512:       ## BB#0:
+; X64-AVX512-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
+; X64-AVX512-NEXT:    vpaddb {{.*}}(%rip), %ymm0, %ymm0
+; X64-AVX512-NEXT:    retq
  %1 = load <16 x i8>, <16 x i8> *%p
  %2 = shufflevector <16 x i8> %1, <16 x i8> undef, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
  %3 = add <32 x i8> %2, <i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 8, i8 9, i8 10, i8 11, i8 12, i8 13, i8 14, i8 15, i8 16, i8 17, i8 18, i8 19, i8 20, i8 21, i8 22, i8 23, i8 24, i8 25, i8 26, i8 27, i8 28, i8 29, i8 30, i8 31, i8 32>
@@ -148,24 +110,21 @@ define <32 x i8> @test_broadcast_16i8_32i8(<16 x i8> *%p) nounwind {
 define <8 x double> @test_broadcast_2f64_8f64(<2 x double> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_2f64_8f64:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_2f64_8f64:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_2f64_8f64:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovapd (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinsertf64x2 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vbroadcastf64x2 (%rdi), %ymm0
 ; X64-AVX512DQVL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    vaddpd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    retq
@@ -178,24 +137,21 @@ define <8 x double> @test_broadcast_2f64_8f64(<2 x double> *%p) nounwind {
 define <8 x i64> @test_broadcast_2i64_8i64(<2 x i64> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_2i64_8i64:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_2i64_8i64:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_2i64_8i64:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti64x2 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vbroadcasti64x2 (%rdi), %ymm0
 ; X64-AVX512DQVL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    vpaddq {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    retq
@@ -208,24 +164,21 @@ define <8 x i64> @test_broadcast_2i64_8i64(<2 x i64> *%p) nounwind {
 define <16 x float> @test_broadcast_4f32_16f32(<4 x float> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_4f32_16f32:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    vaddps {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_4f32_16f32:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vaddps {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_4f32_16f32:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovaps (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinsertf32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vbroadcastf32x4 (%rdi), %ymm0
 ; X64-AVX512DQVL-NEXT:    vinsertf32x8 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    vaddps {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    retq
@@ -238,24 +191,21 @@ define <16 x float> @test_broadcast_4f32_16f32(<4 x float> *%p) nounwind {
 define <16 x i32> @test_broadcast_4i32_16i32(<4 x i32> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_4i32_16i32:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa32 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512VL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    vpaddd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_4i32_16i32:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqa32 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vpaddd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_4i32_16i32:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa32 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512DQVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512DQVL-NEXT:    vinserti32x8 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    vpaddd {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512DQVL-NEXT:    retq
@@ -268,24 +218,21 @@ define <16 x i32> @test_broadcast_4i32_16i32(<4 x i32> *%p) nounwind {
 define <32 x i16> @test_broadcast_8i16_32i16(<8 x i16> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_8i16_32i16:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX512VL-NEXT:    vbroadcasti32x4 (%rdi), %ymm1
 ; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512VL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_8i16_32i16:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqu16 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vpaddw {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_8i16_32i16:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX512DQVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm1
 ; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddw {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512DQVL-NEXT:    retq
@@ -298,24 +245,21 @@ define <32 x i16> @test_broadcast_8i16_32i16(<8 x i16> *%p) nounwind {
 define <64 x i8> @test_broadcast_16i8_64i8(<16 x i8> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_16i8_64i8:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512VL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX512VL-NEXT:    vbroadcasti32x4 (%rdi), %ymm1
 ; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512VL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_16i8_64i8:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovdqu8 (%rdi), %xmm0
-; X64-AVX512BWVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm0
+; X64-AVX512BWVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vpaddb {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq
 ;
 ; X64-AVX512DQVL-LABEL: test_broadcast_16i8_64i8:
 ; X64-AVX512DQVL:       ## BB#0:
-; X64-AVX512DQVL-NEXT:    vmovdqa64 (%rdi), %xmm0
-; X64-AVX512DQVL-NEXT:    vinserti32x4 $1, %xmm0, %ymm0, %ymm1
+; X64-AVX512DQVL-NEXT:    vbroadcasti32x4 (%rdi), %ymm1
 ; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm0
 ; X64-AVX512DQVL-NEXT:    vpaddb {{.*}}(%rip), %ymm1, %ymm1
 ; X64-AVX512DQVL-NEXT:    retq

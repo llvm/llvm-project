@@ -48,16 +48,20 @@ define void @extract_i8_15(i8* nocapture %dst, <16 x i8> %foo) {
 }
 
 define void @extract_i16_0(i16* nocapture %dst, <8 x i16> %foo) {
-; SSE-LABEL: extract_i16_0:
-; SSE:       # BB#0:
-; SSE-NEXT:    movd %xmm0, %eax
-; SSE-NEXT:    movw %ax, (%rdi)
-; SSE-NEXT:    retq
+; SSE2-LABEL: extract_i16_0:
+; SSE2:       # BB#0:
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    movw %ax, (%rdi)
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: extract_i16_0:
+; SSE41:       # BB#0:
+; SSE41-NEXT:    pextrw $0, %xmm0, (%rdi)
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: extract_i16_0:
 ; AVX:       # BB#0:
-; AVX-NEXT:    vmovd %xmm0, %eax
-; AVX-NEXT:    movw %ax, (%rdi)
+; AVX-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; AVX-NEXT:    retq
   %vecext = extractelement <8 x i16> %foo, i32 0
   store i16 %vecext, i16* %dst, align 1

@@ -262,29 +262,8 @@ public:
   Instruction *visitAShr(BinaryOperator &I);
   Instruction *visitLShr(BinaryOperator &I);
   Instruction *commonShiftTransforms(BinaryOperator &I);
-  Instruction *FoldFCmp_IntToFP_Cst(FCmpInst &I, Instruction *LHSI,
-                                    Constant *RHSC);
-  Instruction *FoldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
-                                            GlobalVariable *GV, CmpInst &ICI,
-                                            ConstantInt *AndCst = nullptr);
   Instruction *visitFCmpInst(FCmpInst &I);
   Instruction *visitICmpInst(ICmpInst &I);
-  Instruction *visitICmpInstWithCastAndCast(ICmpInst &ICI);
-  Instruction *visitICmpInstWithInstAndIntCst(ICmpInst &ICI, Instruction *LHS,
-                                              ConstantInt *RHS);
-  Instruction *FoldICmpDivCst(ICmpInst &ICI, BinaryOperator *DivI,
-                              ConstantInt *DivRHS);
-  Instruction *FoldICmpShrCst(ICmpInst &ICI, BinaryOperator *DivI,
-                              ConstantInt *DivRHS);
-  Instruction *FoldICmpCstShrCst(ICmpInst &I, Value *Op, Value *A,
-                                 ConstantInt *CI1, ConstantInt *CI2);
-  Instruction *FoldICmpCstShlCst(ICmpInst &I, Value *Op, Value *A,
-                                 ConstantInt *CI1, ConstantInt *CI2);
-  Instruction *FoldICmpAddOpCst(Instruction &ICI, Value *X, ConstantInt *CI,
-                                ICmpInst::Predicate Pred);
-  Instruction *FoldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
-                           ICmpInst::Predicate Cond, Instruction &I);
-  Instruction *FoldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca, Value *Other);
   Instruction *FoldShiftByConstant(Value *Op0, Constant *Op1,
                                    BinaryOperator &I);
   Instruction *commonCastTransforms(CastInst &CI);
@@ -582,6 +561,30 @@ private:
   Instruction *FoldPHIArgGEPIntoPHI(PHINode &PN);
   Instruction *FoldPHIArgLoadIntoPHI(PHINode &PN);
   Instruction *FoldPHIArgZextsIntoPHI(PHINode &PN);
+
+  Instruction *foldGEPICmp(GEPOperator *GEPLHS, Value *RHS,
+                           ICmpInst::Predicate Cond, Instruction &I);
+  Instruction *foldAllocaCmp(ICmpInst &ICI, AllocaInst *Alloca, Value *Other);
+  Instruction *foldCmpLoadFromIndexedGlobal(GetElementPtrInst *GEP,
+                                            GlobalVariable *GV, CmpInst &ICI,
+                                            ConstantInt *AndCst = nullptr);
+  Instruction *foldFCmpIntToFPConst(FCmpInst &I, Instruction *LHSI,
+                                    Constant *RHSC);
+  Instruction *foldICmpDivConst(ICmpInst &ICI, BinaryOperator *DivI,
+                                ConstantInt *DivRHS);
+  Instruction *foldICmpShrConst(ICmpInst &ICI, BinaryOperator *DivI,
+                                ConstantInt *DivRHS);
+  Instruction *foldICmpCstShrConst(ICmpInst &I, Value *Op, Value *A,
+                                   ConstantInt *CI1, ConstantInt *CI2);
+  Instruction *foldICmpCstShlConst(ICmpInst &I, Value *Op, Value *A,
+                                   ConstantInt *CI1, ConstantInt *CI2);
+  Instruction *foldICmpAddOpConst(Instruction &ICI, Value *X, ConstantInt *CI,
+                                  ICmpInst::Predicate Pred);
+  Instruction *foldICmpWithCastAndCast(ICmpInst &ICI);
+  Instruction *foldICmpWithConstant(ICmpInst &ICI, Instruction *LHS,
+                                    ConstantInt *RHS);
+  Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI, Instruction *LHS,
+                                            ConstantInt *RHS);
 
   Instruction *OptAndOp(Instruction *Op, ConstantInt *OpRHS,
                         ConstantInt *AndRHS, BinaryOperator &TheAnd);
