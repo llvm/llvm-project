@@ -656,15 +656,12 @@ if( LLVM_INCLUDE_UTILS )
   add_subdirectory(utils/not)
   add_subdirectory(utils/llvm-lit)
   add_subdirectory(utils/yaml-bench)
+  add_subdirectory(utils/unittest)
 else()
   if ( LLVM_INCLUDE_TESTS )
     message(FATAL_ERROR "Including tests when not building utils will not work.
     Either set LLVM_INCLUDE_UTILS to On, or set LLVM_INCLDE_TESTS to Off.")
   endif()
-endif()
-
-if(LLVM_INCLUDE_TESTS)
-  add_subdirectory(utils/unittest)
 endif()
 
 foreach( binding ${LLVM_BINDINGS_LIST} )
