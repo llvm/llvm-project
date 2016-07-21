@@ -13,11 +13,17 @@ import libcxx.util
 
 
 class CXXCompiler(object):
+    CM_Default = 0
+    CM_PreProcess = 1
+    CM_Compile = 2
+    CM_Link = 3
+
     def __init__(self, path, flags=None, compile_flags=None, link_flags=None,
                  use_ccache=False):
         self.path = path
         self.flags = list(flags or [])
         self.compile_flags = list(compile_flags or [])
+        self.warning_flags = []
         self.link_flags = list(link_flags or [])
         self.use_ccache = use_ccache
         self.type = None
@@ -47,10 +53,13 @@ class CXXCompiler(object):
         self.type = compiler_type
         self.version = (major_ver, minor_ver, patchlevel)
 
-    def _basicCmd(self, source_files, out, is_link=False, input_is_cxx=False,
-                  disable_ccache=False):
+    def _basicCmd(self, source_files, out, mode=CM_Default, flags=[],
+                  input_is_cxx=False,
+                  enable_warnings=True, disable_ccache=False):
         cmd = []
-        if self.use_ccache and not disable_ccache and not is_link:
+        if self.use_ccache and not disable_ccache \
+                and not mode == self.CM_Link \
+                and not mode == self.CM_PreProcess:
             cmd += ['ccache']
         cmd += [self.path]
         if out is not None:
@@ -63,30 +72,45 @@ class CXXCompiler(object):
             cmd += [source_files]
         else:
             raise TypeError('source_files must be a string or list')
+        if mode == self.CM_PreProcess:
+            cmd += ['-E']
+        elif mode == self.CM_Compile:
+            cmd += ['-c']
+        cmd += self.flags
+        if mode != self.CM_Link:
+            cmd += self.compile_flags
+            if enable_warnings:
+                cmd += self.warning_flags
+        if mode != self.CM_PreProcess and mode != self.CM_Compile:
+            cmd += self.link_flags
+        cmd += flags
         return cmd
 
-    def preprocessCmd(self, source_files, out=None, flags=[]):
-        cmd = self._basicCmd(source_files, out, input_is_cxx=True,
-                             disable_ccache=True) + ['-E']
-        cmd += self.flags + self.compile_flags + flags
-        return cmd
+    def _getWarningFlags(self, enable_warnings=True):
+        return self.warning_flags if enable_warnings else []
+
+    def preprocessCmd(self, source_files, out=None, flags=[],
+                      enable_warnings=True):
+        return self._basicCmd(source_files, out, flags=flags,
+                             mode=self.CM_PreProcess,
+                             enable_warnings=enable_warnings,
+                             input_is_cxx=True)
 
     def compileCmd(self, source_files, out=None, flags=[],
-                   disable_ccache=False):
-        cmd = self._basicCmd(source_files, out, input_is_cxx=True,
+                   disable_ccache=False, enable_warnings=True):
+        return self._basicCmd(source_files, out, flags=flags,
+                             mode=self.CM_Compile,
+                             input_is_cxx=True,
+                             enable_warnings=enable_warnings,
                              disable_ccache=disable_ccache) + ['-c']
-        cmd += self.flags + self.compile_flags + flags
-        return cmd
 
     def linkCmd(self, source_files, out=None, flags=[]):
-        cmd = self._basicCmd(source_files, out, is_link=True)
-        cmd += self.flags + self.link_flags + flags
-        return cmd
+        return self._basicCmd(source_files, out, mode=self.CM_Link)
 
-    def compileLinkCmd(self, source_files, out=None, flags=[]):
-        cmd = self._basicCmd(source_files, out, is_link=True)
-        cmd += self.flags + self.compile_flags + self.link_flags + flags
-        return cmd
+    def compileLinkCmd(self, source_files, out=None, flags=[],
+                       enable_warnings=True):
+        return self._basicCmd(source_files, out, flags=flags,
+                              enable_warnings=enable_warnings)
 
     def preprocess(self, source_files, out=None, flags=[], env=None, cwd=None):
         cmd = self.preprocessCmd(source_files, out, flags)
@@ -94,9 +118,10 @@ class CXXCompiler(object):
         return cmd, out, err, rc
 
     def compile(self, source_files, out=None, flags=[], env=None, cwd=None,
-                disable_ccache=False):
+                disable_ccache=False, enable_warnings=True):
         cmd = self.compileCmd(source_files, out, flags,
-                              disable_ccache=disable_ccache)
+                              disable_ccache=disable_ccache,
+                              enable_warnings=enable_warnings)
         out, err, rc = lit.util.executeCommand(cmd, env=env, cwd=cwd)
         return cmd, out, err, rc
 
@@ -189,9 +214,12 @@ class CXXCompiler(object):
         """
         assert isinstance(flag, str)
         if not flag.startswith('-Wno-'):
-            return self.addCompileFlagIfSupported(flag)
+            if self.hasCompileFlag(flag):
+                self.warning_flags += [flag]
+                return True
+            return False
         flags = ['-Werror', flag]
-        cmd = self.compileCmd('-', os.devnull, flags)
+        cmd = self.compileCmd('-', os.devnull, flags, enable_warnings=False)
         # Remove '-v' because it will cause the command line invocation
         # to be printed as part of the error output.
         # TODO(EricWF): Are there other flags we need to worry about?
@@ -201,5 +229,5 @@ class CXXCompiler(object):
         assert rc != 0
         if flag in err:
             return False
-        self.compile_flags += [flag]
+        self.warning_flags += [flag]
         return True

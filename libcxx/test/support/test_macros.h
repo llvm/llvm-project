@@ -34,6 +34,14 @@
 #define TEST_HAS_BUILTIN(X) 0
 #endif
 
+#if defined(__apple_build_version__)
+#define TEST_APPLE_CLANG_VER (__clang_major__ * 100) + __clang_minor__
+#elif defined(__clang_major__)
+#define TEST_CLANG_VER (__clang_major__ * 100) + __clang_minor__
+#elif defined(__GNUC__)
+#define TEST_GCC_VER (__GNUC__ * 100 + __GNUC_MINOR__)
+#endif
+
 /* Make a nice name for the standard version */
 #ifndef TEST_STD_VER
 #if  __cplusplus <= 199711L

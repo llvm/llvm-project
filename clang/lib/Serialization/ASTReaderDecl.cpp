@@ -2493,9 +2493,15 @@ inline void ASTReader::LoadedDecl(unsigned Index, Decl *D) {
 /// This routine should return true for anything that might affect
 /// code generation, e.g., inline function definitions, Objective-C
 /// declarations with metadata, etc.
-static bool isConsumerInterestedIn(Decl *D, bool HasBody) {
+static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   // An ObjCMethodDecl is never considered as "interesting" because its
   // implementation container always is.
+
+  // An ImportDecl or VarDecl imported from a module will get emitted when
+  // we import the relevant module.
+  if ((isa<ImportDecl>(D) || isa<VarDecl>(D)) && Ctx.DeclMustBeEmitted(D) &&
+      D->getImportedOwningModule())
+    return false;
 
   if (isa<FileScopeAsmDecl>(D) || 
       isa<ObjCProtocolDecl>(D) || 
@@ -3473,7 +3479,7 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   // AST consumer might need to know about, queue it.
   // We don't pass it to the consumer immediately because we may be in recursive
   // loading, and some declarations may still be initializing.
-  if (isConsumerInterestedIn(D, Reader.hasPendingBody()))
+  if (isConsumerInterestedIn(Context, D, Reader.hasPendingBody()))
     InterestingDecls.push_back(D);
 
   return D;
@@ -3488,7 +3494,7 @@ void ASTReader::loadDeclUpdateRecords(serialization::DeclID ID, Decl *D) {
     auto UpdateOffsets = std::move(UpdI->second);
     DeclUpdateOffsets.erase(UpdI);
 
-    bool WasInteresting = isConsumerInterestedIn(D, false);
+    bool WasInteresting = isConsumerInterestedIn(Context, D, false);
     for (auto &FileAndOffset : UpdateOffsets) {
       ModuleFile *F = FileAndOffset.first;
       uint64_t Offset = FileAndOffset.second;
@@ -3509,7 +3515,7 @@ void ASTReader::loadDeclUpdateRecords(serialization::DeclID ID, Decl *D) {
       // We might have made this declaration interesting. If so, remember that
       // we need to hand it off to the consumer.
       if (!WasInteresting &&
-          isConsumerInterestedIn(D, Reader.hasPendingBody())) {
+          isConsumerInterestedIn(Context, D, Reader.hasPendingBody())) {
         InterestingDecls.push_back(D);
         WasInteresting = true;
       }

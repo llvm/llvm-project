@@ -10479,6 +10479,11 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
   // Require the destructor.
   if (const RecordType *recordType = baseType->getAs<RecordType>())
     FinalizeVarWithDestructor(var, recordType);
+
+  // If this variable must be emitted, add it as an initializer for the current
+  // module.
+  if (Context.DeclMustBeEmitted(var) && !ModuleScopes.empty())
+    Context.addModuleInitializer(ModuleScopes.back().Module, var);
 }
 
 /// \brief Determines if a variable's alignment is dependent.
@@ -15108,11 +15113,13 @@ DeclResult Sema::ActOnModuleImport(SourceLocation AtLoc,
     IdentifierLocs.push_back(Path[I].second);
   }
 
-  ImportDecl *Import = ImportDecl::Create(Context,
-                                          Context.getTranslationUnitDecl(),
+  TranslationUnitDecl *TU = getASTContext().getTranslationUnitDecl();
+  ImportDecl *Import = ImportDecl::Create(Context, TU,
                                           AtLoc.isValid()? AtLoc : ImportLoc,
                                           Mod, IdentifierLocs);
-  Context.getTranslationUnitDecl()->addDecl(Import);
+  if (!ModuleScopes.empty())
+    Context.addModuleInitializer(ModuleScopes.back().Module, Import);
+  TU->addDecl(Import);
   return Import;
 }
 
@@ -15128,13 +15135,7 @@ void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
       TUKind == TU_Module &&
       getSourceManager().isWrittenInMainFile(DirectiveLoc);
 
-  // Similarly, if we're in the implementation of a module, don't
-  // synthesize an illegal module import. FIXME: Why not?
-  bool ShouldAddImport =
-      !IsInModuleIncludes &&
-      (getLangOpts().CompilingModule ||
-       getLangOpts().CurrentModule.empty() ||
-       getLangOpts().CurrentModule != Mod->getTopLevelModuleName());
+  bool ShouldAddImport = !IsInModuleIncludes;
 
   // If this module import was due to an inclusion directive, create an
   // implicit import declaration to capture it in the AST.
@@ -15143,6 +15144,8 @@ void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
     ImportDecl *ImportD = ImportDecl::CreateImplicit(getASTContext(), TU,
                                                      DirectiveLoc, Mod,
                                                      DirectiveLoc);
+    if (!ModuleScopes.empty())
+      Context.addModuleInitializer(ModuleScopes.back().Module, ImportD);
     TU->addDecl(ImportD);
     Consumer.HandleImplicitImportDecl(ImportD);
   }
@@ -15154,8 +15157,11 @@ void Sema::ActOnModuleInclude(SourceLocation DirectiveLoc, Module *Mod) {
 void Sema::ActOnModuleBegin(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext);
 
+  ModuleScopes.push_back({});
+  ModuleScopes.back().Module = Mod;
   if (getLangOpts().ModulesLocalVisibility)
-    VisibleModulesStack.push_back(std::move(VisibleModules));
+    ModuleScopes.back().OuterVisibleModules = std::move(VisibleModules);
+
   VisibleModules.setVisible(Mod, DirectiveLoc);
 }
 
@@ -15163,8 +15169,11 @@ void Sema::ActOnModuleEnd(SourceLocation DirectiveLoc, Module *Mod) {
   checkModuleImportContext(*this, Mod, DirectiveLoc, CurContext);
 
   if (getLangOpts().ModulesLocalVisibility) {
-    VisibleModules = std::move(VisibleModulesStack.back());
-    VisibleModulesStack.pop_back();
+    assert(!ModuleScopes.empty() && ModuleScopes.back().Module == Mod &&
+           "left the wrong module scope");
+    VisibleModules = std::move(ModuleScopes.back().OuterVisibleModules);
+    ModuleScopes.pop_back();
+
     VisibleModules.setVisible(Mod, DirectiveLoc);
     // Leaving a module hides namespace names, so our visible namespace cache
     // is now out of date.

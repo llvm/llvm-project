@@ -230,10 +230,28 @@ OptionGroupFormat::ParserGDBFormatLetter (CommandInterpreter &interpreter, char 
         case 's': format = eFormatCString;      m_prev_gdb_format = format_letter; return true;
         case 'T': format = eFormatOSType;       m_prev_gdb_format = format_letter; return true;
         case 'A': format = eFormatHexFloat;     m_prev_gdb_format = format_letter; return true;
-        case 'b': byte_size = 1;                m_prev_gdb_size = format_letter;   return true;
-        case 'h': byte_size = 2;                m_prev_gdb_size = format_letter;   return true;
-        case 'w': byte_size = 4;                m_prev_gdb_size = format_letter;   return true;
-        case 'g': byte_size = 8;                m_prev_gdb_size = format_letter;   return true;
+        
+        // Size isn't used for printing instructions, so if a size is specified, and the previous format was
+        // 'i', then we should reset it to the default ('x').  Otherwise we'll continue to print as instructions,
+        // which isn't expected.
+        case 'b': 
+            byte_size = 1;                
+            LLVM_FALLTHROUGH; 
+        case 'h': 
+            byte_size = 2;
+            LLVM_FALLTHROUGH; 
+        case 'w': 
+            byte_size = 4;
+            LLVM_FALLTHROUGH; 
+        case 'g': 
+            byte_size = 8;
+            
+            m_prev_gdb_size = format_letter;
+            if (m_prev_gdb_format == 'i')
+                m_prev_gdb_format = 'x';
+            return true;
+            
+            break; 
         default:  break;
     }
     return false;

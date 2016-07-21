@@ -1410,8 +1410,14 @@ private:
   bool RequireCompleteTypeImpl(SourceLocation Loc, QualType T,
                                TypeDiagnoser *Diagnoser);
 
+  struct ModuleScope {
+    clang::Module *Module;
+    VisibleModuleSet OuterVisibleModules;
+  };
+  /// The modules we're currently parsing.
+  llvm::SmallVector<ModuleScope, 16> ModuleScopes;
+
   VisibleModuleSet VisibleModules;
-  llvm::SmallVector<VisibleModuleSet, 16> VisibleModulesStack;
 
   Module *CachedFakeTopLevelModule;
 
@@ -8267,6 +8273,12 @@ public:
   /// \brief Called on well-formed '\#pragma omp target parallel for simd' after
   /// parsing of the associated statement.
   StmtResult ActOnOpenMPTargetParallelForSimdDirective(
+      ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
+      SourceLocation EndLoc,
+      llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);
+  /// \brief Called on well-formed '\#pragma omp target simd' after parsing of
+  /// the associated statement.
+  StmtResult ActOnOpenMPTargetSimdDirective(
       ArrayRef<OMPClause *> Clauses, Stmt *AStmt, SourceLocation StartLoc,
       SourceLocation EndLoc,
       llvm::DenseMap<ValueDecl *, Expr *> &VarsWithImplicitDSA);

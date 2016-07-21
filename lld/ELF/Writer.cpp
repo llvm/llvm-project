@@ -48,11 +48,15 @@ private:
 
   void copyLocalSymbols();
   void addReservedSymbols();
-  void createSections();
+  std::vector<OutputSectionBase<ELFT> *> createSections();
+  void forEachRelSec(
+      std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
+          Fn);
+  void finalizeSections();
   void addPredefinedSections();
   bool needsGot();
 
-  void createPhdrs();
+  std::vector<Phdr> createPhdrs();
   void assignAddresses();
   void assignFileOffsets();
   void setPhdrs();
@@ -70,7 +74,7 @@ private:
 
   BumpPtrAllocator Alloc;
   std::vector<OutputSectionBase<ELFT> *> OutputSections;
-  std::vector<std::unique_ptr<OutputSectionBase<ELFT>>> OwningSections;
+  OutputSectionFactory<ELFT> Factory;
 
   void addRelIpltSymbols();
   void addStartEndSymbols();
@@ -216,17 +220,20 @@ template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
-  createSections();
+
+  OutputSections = ScriptConfig->DoLayout
+                       ? Script<ELFT>::X->createSections(Factory)
+                       : createSections();
+  finalizeSections();
   if (HasError)
     return;
 
   if (Config->Relocatable) {
     assignFileOffsets();
   } else {
-    if (Script<ELFT>::X->hasPhdrsCommands())
-      Phdrs = Script<ELFT>::X->createPhdrs(OutputSections);
-    else
-      createPhdrs();
+    Phdrs = Script<ELFT>::X->hasPhdrsCommands()
+                ? Script<ELFT>::X->createPhdrs(OutputSections)
+                : createPhdrs();
     fixHeaders();
     if (ScriptConfig->DoLayout) {
       Script<ELFT>::X->assignAddresses(OutputSections);
@@ -477,6 +484,10 @@ template <class ELFT> bool elf::isOutputDynamic() {
   return !Symtab<ELFT>::X->getSharedFiles().empty() || Config->Pic;
 }
 
+template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
+  return !S || S == &InputSection<ELFT>::Discarded || !S->Live;
+}
+
 // Program header entry
 template<class ELFT>
 PhdrEntry<ELFT>::PhdrEntry(unsigned Type, unsigned Flags) {
@@ -485,7 +496,7 @@ PhdrEntry<ELFT>::PhdrEntry(unsigned Type, unsigned Flags) {
 }
 
 template<class ELFT>
-void PhdrEntry<ELFT>::AddSec(OutputSectionBase<ELFT> *Sec) {
+void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
   Last = Sec;
   if (!First)
     First = Sec;
@@ -623,11 +634,38 @@ template <class ELFT> static void sortCtorsDtors(OutputSectionBase<ELFT> *S) {
     reinterpret_cast<OutputSection<ELFT> *>(S)->sortCtorsDtors();
 }
 
-// Create output section objects and add them to OutputSections.
-template <class ELFT> void Writer<ELFT>::createSections() {
-  // Create output sections for input object file sections.
-  std::vector<OutputSectionBase<ELFT> *> RegularSections;
-  OutputSectionFactory<ELFT> Factory;
+template <class ELFT>
+void Writer<ELFT>::forEachRelSec(
+    std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
+        Fn) {
+  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
+       Symtab.getObjectFiles()) {
+    for (InputSectionBase<ELFT> *C : F->getSections()) {
+      if (isDiscarded(C))
+        continue;
+      // Scan all relocations. Each relocation goes through a series
+      // of tests to determine if it needs special treatment, such as
+      // creating GOT, PLT, copy relocations, etc.
+      // Note that relocations for non-alloc sections are directly
+      // processed by InputSection::relocateNonAlloc.
+      if (!(C->getSectionHdr()->sh_flags & SHF_ALLOC))
+        continue;
+      if (auto *S = dyn_cast<InputSection<ELFT>>(C)) {
+        for (const Elf_Shdr *RelSec : S->RelocSections)
+          Fn(*S, *RelSec);
+        continue;
+      }
+      if (auto *S = dyn_cast<EhInputSection<ELFT>>(C))
+        if (S->RelocSection)
+          Fn(*S, *S->RelocSection);
+    }
+  }
+}
+
+template <class ELFT>
+std::vector<OutputSectionBase<ELFT> *> Writer<ELFT>::createSections() {
+  std::vector<OutputSectionBase<ELFT> *> Result;
+
   for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
        Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
@@ -638,14 +676,18 @@ template <class ELFT> void Writer<ELFT>::createSections() {
       OutputSectionBase<ELFT> *Sec;
       bool IsNew;
       std::tie(Sec, IsNew) = Factory.create(C, getOutputSectionName(C));
-      if (IsNew) {
-        OwningSections.emplace_back(Sec);
-        OutputSections.push_back(Sec);
-        RegularSections.push_back(Sec);
-      }
+      if (IsNew)
+        Result.push_back(Sec);
       Sec->addSection(C);
     }
   }
+  return Result;
+}
+
+// Create output section objects and add them to OutputSections.
+template <class ELFT> void Writer<ELFT>::finalizeSections() {
+  // Create output sections for input object file sections.
+  std::vector<OutputSectionBase<ELFT> *> RegularSections = OutputSections;
 
   // If we have a .opd section (used under PPC64 for function descriptors),
   // store a pointer to it here so that we can use it later when processing
@@ -693,25 +735,15 @@ template <class ELFT> void Writer<ELFT>::createSections() {
     Out<ELFT>::EhFrame->finalize();
   }
 
-  // Scan relocations. This must be done after every symbol is declared so that
-  // we can correctly decide if a dynamic relocation is needed.
-  for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
-       Symtab.getObjectFiles()) {
-    for (InputSectionBase<ELFT> *C : F->getSections()) {
-      if (isDiscarded(C))
-        continue;
-      if (auto *S = dyn_cast<InputSection<ELFT>>(C)) {
-        scanRelocations(*S);
-        continue;
-      }
-      if (auto *S = dyn_cast<EhInputSection<ELFT>>(C))
-        if (S->RelocSection)
-          scanRelocations(*S, *S->RelocSection);
-    }
-  }
+  if (Target->NeedsThunks)
+    forEachRelSec(createThunks<ELFT>);
 
   for (OutputSectionBase<ELFT> *Sec : OutputSections)
     Sec->assignOffsets();
+
+  // Scan relocations. This must be done after every symbol is declared so that
+  // we can correctly decide if a dynamic relocation is needed.
+  forEachRelSec(scanRelocations<ELFT>);
 
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
@@ -916,26 +948,30 @@ template <class ELFT> bool elf::needsPtLoad(OutputSectionBase<ELFT> *Sec) {
 
 // Decide which program headers to create and which sections to include in each
 // one.
-template <class ELFT> void Writer<ELFT>::createPhdrs() {
-  auto AddHdr = [this](unsigned Type, unsigned Flags) {
-    return &*Phdrs.emplace(Phdrs.end(), Type, Flags);
+template <class ELFT>
+std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
+  std::vector<Phdr> Ret;
+
+  auto AddHdr = [&](unsigned Type, unsigned Flags) -> Phdr * {
+    Ret.emplace_back(Type, Flags);
+    return &Ret.back();
   };
 
   // The first phdr entry is PT_PHDR which describes the program header itself.
   Phdr &Hdr = *AddHdr(PT_PHDR, PF_R);
-  Hdr.AddSec(Out<ELFT>::ProgramHeaders);
+  Hdr.add(Out<ELFT>::ProgramHeaders);
 
   // PT_INTERP must be the second entry if exists.
   if (needsInterpSection<ELFT>()) {
     Phdr &Hdr = *AddHdr(PT_INTERP, toPhdrFlags(Out<ELFT>::Interp->getFlags()));
-    Hdr.AddSec(Out<ELFT>::Interp);
+    Hdr.add(Out<ELFT>::Interp);
   }
 
   // Add the first PT_LOAD segment for regular output sections.
   uintX_t Flags = PF_R;
   Phdr *Load = AddHdr(PT_LOAD, Flags);
-  Load->AddSec(Out<ELFT>::ElfHeader);
-  Load->AddSec(Out<ELFT>::ProgramHeaders);
+  Load->add(Out<ELFT>::ElfHeader);
+  Load->add(Out<ELFT>::ProgramHeaders);
 
   Phdr TlsHdr(PT_TLS, PF_R);
   Phdr RelRo(PT_GNU_RELRO, PF_R);
@@ -948,7 +984,7 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     // and put all TLS sections inside for futher use when
     // assign addresses.
     if (Sec->getFlags() & SHF_TLS)
-      TlsHdr.AddSec(Sec);
+      TlsHdr.add(Sec);
 
     if (!needsPtLoad<ELFT>(Sec))
       continue;
@@ -960,34 +996,34 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
       Flags = NewFlags;
     }
 
-    Load->AddSec(Sec);
+    Load->add(Sec);
 
     if (isRelroSection(Sec))
-      RelRo.AddSec(Sec);
+      RelRo.add(Sec);
     if (Sec->getType() == SHT_NOTE)
-      Note.AddSec(Sec);
+      Note.add(Sec);
   }
 
   // Add the TLS segment unless it's empty.
   if (TlsHdr.First)
-    Phdrs.push_back(std::move(TlsHdr));
+    Ret.push_back(std::move(TlsHdr));
 
   // Add an entry for .dynamic.
   if (isOutputDynamic<ELFT>()) {
     Phdr &H = *AddHdr(PT_DYNAMIC, toPhdrFlags(Out<ELFT>::Dynamic->getFlags()));
-    H.AddSec(Out<ELFT>::Dynamic);
+    H.add(Out<ELFT>::Dynamic);
   }
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
   if (RelRo.First)
-    Phdrs.push_back(std::move(RelRo));
+    Ret.push_back(std::move(RelRo));
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
   if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
     Phdr &Hdr = *AddHdr(PT_GNU_EH_FRAME,
                         toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags()));
-    Hdr.AddSec(Out<ELFT>::EhFrameHdr);
+    Hdr.add(Out<ELFT>::EhFrameHdr);
   }
 
   // PT_GNU_STACK is a special section to tell the loader to make the
@@ -996,7 +1032,8 @@ template <class ELFT> void Writer<ELFT>::createPhdrs() {
     AddHdr(PT_GNU_STACK, PF_R | PF_W);
 
   if (Note.First)
-    Phdrs.push_back(std::move(Note));
+    Ret.push_back(std::move(Note));
+  return Ret;
 }
 
 // The first section of each PT_LOAD and the first section after PT_GNU_RELRO
@@ -1129,16 +1166,21 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
   }
 }
 
-static uint32_t getMipsEFlags(bool Is64Bits) {
-  // FIXME: In fact ELF flags depends on ELF flags of input object files
-  // and selected emulation. For now just use hard coded values.
-  if (Is64Bits)
-    return EF_MIPS_CPIC | EF_MIPS_PIC | EF_MIPS_ARCH_64R2;
-
-  uint32_t V = EF_MIPS_CPIC | EF_MIPS_ABI_O32 | EF_MIPS_ARCH_32R2;
-  if (Config->Shared)
-    V |= EF_MIPS_PIC;
-  return V;
+template <class ELFT> static uint32_t getMipsEFlags() {
+  // FIXME: ELF flags depends on ELF flags of all input object files and
+  // selected emulation. For now pick the arch flag from the fisrt input file
+  // and use hard coded values for other flags.
+  uint32_t FirstElfFlags =
+      cast<ELFFileBase<ELFT>>(Config->FirstElf)->getObj().getHeader()->e_flags;
+  uint32_t ElfFlags = FirstElfFlags & EF_MIPS_ARCH;
+  if (ELFT::Is64Bits)
+    ElfFlags |= EF_MIPS_CPIC | EF_MIPS_PIC;
+  else {
+    ElfFlags |= EF_MIPS_CPIC | EF_MIPS_ABI_O32;
+    if (Config->Shared)
+      ElfFlags |= EF_MIPS_PIC;
+  }
+  return ElfFlags;
 }
 
 template <class ELFT> static typename ELFT::uint getEntryAddr() {
@@ -1215,7 +1257,7 @@ template <class ELFT> void Writer<ELFT>::writeHeader() {
   EHdr->e_shstrndx = Out<ELFT>::ShStrTab->SectionIndex;
 
   if (Config->EMachine == EM_MIPS)
-    EHdr->e_flags = getMipsEFlags(ELFT::Is64Bits);
+    EHdr->e_flags = getMipsEFlags<ELFT>();
 
   if (!Config->Relocatable) {
     EHdr->e_phoff = sizeof(Elf_Ehdr);
@@ -1309,3 +1351,21 @@ template bool elf::needsPtLoad<ELF32LE>(OutputSectionBase<ELF32LE> *);
 template bool elf::needsPtLoad<ELF32BE>(OutputSectionBase<ELF32BE> *);
 template bool elf::needsPtLoad<ELF64LE>(OutputSectionBase<ELF64LE> *);
 template bool elf::needsPtLoad<ELF64BE>(OutputSectionBase<ELF64BE> *);
+
+template StringRef elf::getOutputSectionName<ELF32LE>(InputSectionBase<ELF32LE> *);
+template StringRef elf::getOutputSectionName<ELF32BE>(InputSectionBase<ELF32BE> *);
+template StringRef elf::getOutputSectionName<ELF64LE>(InputSectionBase<ELF64LE> *);
+template StringRef elf::getOutputSectionName<ELF64BE>(InputSectionBase<ELF64BE> *);
+
+template void elf::reportDiscarded<ELF32LE>(
+    InputSectionBase<ELF32LE> *,
+    const std::unique_ptr<elf::ObjectFile<ELF32LE>> &);
+template void elf::reportDiscarded<ELF32BE>(
+    InputSectionBase<ELF32BE> *,
+    const std::unique_ptr<elf::ObjectFile<ELF32BE>> &);
+template void elf::reportDiscarded<ELF64LE>(
+    InputSectionBase<ELF64LE> *,
+    const std::unique_ptr<elf::ObjectFile<ELF64LE>> &);
+template void elf::reportDiscarded<ELF64BE>(
+    InputSectionBase<ELF64BE> *,
+    const std::unique_ptr<elf::ObjectFile<ELF64BE>> &);

@@ -2508,6 +2508,7 @@ public:
   void EmitOMPDistributeSimdDirective(const OMPDistributeSimdDirective &S);
   void EmitOMPTargetParallelForSimdDirective(
       const OMPTargetParallelForSimdDirective &S);
+  void EmitOMPTargetSimdDirective(const OMPTargetSimdDirective &S);
 
   /// Emit outlined function for the target directive.
   static std::pair<llvm::Function * /*OutlinedFn*/,

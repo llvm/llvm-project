@@ -28,11 +28,6 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-template <class ELFT> bool elf::isDiscarded(InputSectionBase<ELFT> *S) {
-  return !S || S == &InputSection<ELFT>::Discarded || !S->Live ||
-         Script<ELFT>::X->isDiscarded(S);
-}
-
 template <class ELFT>
 InputSectionBase<ELFT>::InputSectionBase(elf::ObjectFile<ELFT> *File,
                                          const Elf_Shdr *Header,
@@ -73,7 +68,10 @@ typename ELFT::uint InputSectionBase<ELFT>::getOffset(uintX_t Offset) const {
   case Regular:
     return cast<InputSection<ELFT>>(this)->OutSecOff + Offset;
   case EHFrame:
-    return cast<EhInputSection<ELFT>>(this)->getOffset(Offset);
+    // The file crtbeginT.o has relocations pointing to the start of an empty
+    // .eh_frame that is known to be the first in the link. It does that to
+    // identify the start of the output .eh_frame.
+    return Offset;
   case Merge:
     return cast<MergeInputSection<ELFT>>(this)->getOffset(Offset);
   case MipsReginfo:
@@ -343,7 +341,7 @@ void InputSectionBase<ELFT>::relocate(uint8_t *Buf, uint8_t *BufEnd) {
 
   const unsigned Bits = sizeof(uintX_t) * 8;
   for (const Relocation<ELFT> &Rel : Relocations) {
-    uintX_t Offset = Rel.InputSec->getOffset(Rel.Offset);
+    uintX_t Offset = Rel.Offset;
     uint8_t *BufLoc = Buf + Offset;
     uint32_t Type = Rel.Type;
     uintX_t A = Rel.Addend;
@@ -464,21 +462,6 @@ void EhInputSection<ELFT>::split() {
       break;
     Off += Size;
   }
-}
-
-template <class ELFT>
-typename ELFT::uint EhInputSection<ELFT>::getOffset(uintX_t Offset) const {
-  // The file crtbeginT.o has relocations pointing to the start of an empty
-  // .eh_frame that is known to be the first in the link. It does that to
-  // identify the start of the output .eh_frame. Handle this special case.
-  if (this->getSectionHdr()->sh_size == 0)
-    return Offset;
-  const SectionPiece *Piece = this->getSectionPiece(Offset);
-  if (Piece->OutputOff == size_t(-1))
-    return -1; // Not in the output
-
-  uintX_t Addend = Offset - Piece->InputOff;
-  return Piece->OutputOff + Addend;
 }
 
 static size_t findNull(ArrayRef<uint8_t> A, size_t EntSize) {
@@ -649,11 +632,6 @@ template <class ELFT>
 bool MipsOptionsInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::MipsOptions;
 }
-
-template bool elf::isDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
-template bool elf::isDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);
-template bool elf::isDiscarded<ELF64LE>(InputSectionBase<ELF64LE> *);
-template bool elf::isDiscarded<ELF64BE>(InputSectionBase<ELF64BE> *);
 
 template class elf::InputSectionBase<ELF32LE>;
 template class elf::InputSectionBase<ELF32BE>;

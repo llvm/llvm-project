@@ -6,7 +6,7 @@
          "accesses" : [
             {
                "kind" : "write",
-               "relation" : "[arg] -> { Stmt_loop1[i0] -> MemRef_A[1 + i0] }"
+               "relation" : "[arg] -> { Stmt_loop1[i0] -> MemRef_A[5 * i0 - 10]  }"
             }
          ],
          "domain" : "[arg] -> { Stmt_loop1[i0] : i0 >= 0 and i0 <= -2 + arg }",
@@ -31,12 +31,12 @@
       {
          "accesses" : [
             {
-               "kind" : "read",
-               "relation" : "[arg] -> { Stmt_loop3[i0] -> MemRef_val[] }"
+               "kind" : "write",
+               "relation" : "[arg] -> { Stmt_loop3[i0] -> MemRef_A[13 * i0 + 5] }"
             },
             {
-               "kind" : "write",
-               "relation" : "[arg] -> { Stmt_loop3[i0] -> MemRef_A[42] }"
+               "kind" : "read",
+               "relation" : "[arg] -> { Stmt_loop3[i0] -> MemRef_val[] }"
             }
          ],
          "domain" : "[arg] -> { Stmt_loop3[i0] : i0 >= 0 and i0 <= -2 + arg }",

@@ -1367,8 +1367,9 @@ Module *Sema::getOwningModule(Decl *Entity) {
       auto &SrcMgr = PP.getSourceManager();
       SourceLocation StartLoc =
           SrcMgr.getLocForStartOfFile(SrcMgr.getMainFileID());
-      auto &TopLevel =
-          VisibleModulesStack.empty() ? VisibleModules : VisibleModulesStack[0];
+      auto &TopLevel = ModuleScopes.empty()
+                           ? VisibleModules
+                           : ModuleScopes[0].OuterVisibleModules;
       TopLevel.setVisible(CachedFakeTopLevelModule, StartLoc);
     }
 

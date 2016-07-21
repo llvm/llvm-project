@@ -92,6 +92,8 @@ public:
   // Set to 0 for variant 2
   unsigned TcbSize = 0;
 
+  bool NeedsThunks = false;
+
   virtual RelExpr adjustRelaxExpr(uint32_t Type, const uint8_t *Data,
                                   RelExpr Expr) const;
   virtual void relaxGot(uint8_t *Loc, uint64_t Val) const;

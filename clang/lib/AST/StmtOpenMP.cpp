@@ -1270,3 +1270,44 @@ OMPTargetParallelForSimdDirective::CreateEmpty(const ASTContext &C,
           numLoopChildren(CollapsedNum, OMPD_target_parallel_for_simd));
   return new (Mem) OMPTargetParallelForSimdDirective(CollapsedNum, NumClauses);
 }
+
+OMPTargetSimdDirective *
+OMPTargetSimdDirective::Create(const ASTContext &C, SourceLocation StartLoc, 
+                               SourceLocation EndLoc, unsigned CollapsedNum,
+                               ArrayRef<OMPClause *> Clauses,
+                               Stmt *AssociatedStmt, const HelperExprs &Exprs) {
+  unsigned Size = llvm::alignTo(sizeof(OMPTargetSimdDirective),
+                                llvm::alignOf<OMPClause *>());
+  void *Mem = C.Allocate(Size + sizeof(OMPClause *) * Clauses.size() +
+                         sizeof(Stmt *) * 
+                             numLoopChildren(CollapsedNum, OMPD_target_simd));
+  OMPTargetSimdDirective *Dir = new (Mem)
+      OMPTargetSimdDirective(StartLoc, EndLoc, CollapsedNum, Clauses.size());
+  Dir->setClauses(Clauses);
+  Dir->setAssociatedStmt(AssociatedStmt);
+  Dir->setIterationVariable(Exprs.IterationVarRef);
+  Dir->setLastIteration(Exprs.LastIteration);
+  Dir->setCalcLastIteration(Exprs.CalcLastIteration);
+  Dir->setPreCond(Exprs.PreCond);
+  Dir->setCond(Exprs.Cond);
+  Dir->setInit(Exprs.Init);
+  Dir->setInc(Exprs.Inc);
+  Dir->setCounters(Exprs.Counters);
+  Dir->setPrivateCounters(Exprs.PrivateCounters);
+  Dir->setInits(Exprs.Inits);
+  Dir->setUpdates(Exprs.Updates);
+  Dir->setFinals(Exprs.Finals);
+  Dir->setPreInits(Exprs.PreInits);
+  return Dir;
+}
+
+OMPTargetSimdDirective *
+OMPTargetSimdDirective::CreateEmpty(const ASTContext &C, unsigned NumClauses,
+                                    unsigned CollapsedNum, EmptyShell) {
+  unsigned Size = llvm::alignTo(sizeof(OMPTargetSimdDirective),
+                                llvm::alignOf<OMPClause *>());
+  void *Mem = C.Allocate(Size + sizeof(OMPClause *) * NumClauses +
+                         sizeof(Stmt *) * 
+                             numLoopChildren(CollapsedNum, OMPD_target_simd));
+  return new (Mem) OMPTargetSimdDirective(CollapsedNum, NumClauses);
+}
