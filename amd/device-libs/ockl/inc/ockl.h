@@ -62,6 +62,8 @@
 #define DECL_PURE_OCKL_BINARY_U64(N) _DECL_X_OCKL_BINARY_U64(pure, N)
 #define DECL_CONST_OCKL_BINARY_U64(N) _DECL_X_OCKL_BINARY_U64(const, N)
 
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
 DECL_CONST_OCKL_UNARY_U32(clz)
 DECL_CONST_OCKL_UNARY_U32(ctz)
 DECL_CONST_OCKL_UNARY_U32(popcount)
@@ -85,6 +87,73 @@ DECL_CONST_OCKL_BINARY_I32(mul24)
 DECL_CONST_OCKL_BINARY_U32(mul24)
 
 DECL_OCKL_NULLARY_U32(activelane)
+
+extern half OCKL_MANGLE_T(wfred_add,f16)(half x);
+extern float OCKL_MANGLE_T(wfred_add,f32)(float x);
+extern double OCKL_MANGLE_T(wfred_add,f64)(double x);
+extern int OCKL_MANGLE_T(wfred_add,i32)(int x);
+extern long OCKL_MANGLE_T(wfred_add,i64)(long x);
+extern uint OCKL_MANGLE_T(wfred_add,u32)(uint x);
+extern ulong OCKL_MANGLE_T(wfred_add,u64)(ulong x);
+extern int OCKL_MANGLE_T(wfred_and,i32)(int x);
+extern long OCKL_MANGLE_T(wfred_and,i64)(long x);
+extern uint OCKL_MANGLE_T(wfred_and,u32)(uint x);
+extern ulong OCKL_MANGLE_T(wfred_and,u64)(ulong x);
+extern half OCKL_MANGLE_T(wfred_max,f16)(half x);
+extern float OCKL_MANGLE_T(wfred_max,f32)(float x);
+extern double OCKL_MANGLE_T(wfred_max,f64)(double x);
+extern int OCKL_MANGLE_T(wfred_max,i32)(int x);
+extern long OCKL_MANGLE_T(wfred_max,i64)(long x);
+extern uint OCKL_MANGLE_T(wfred_max,u32)(uint x);
+extern ulong OCKL_MANGLE_T(wfred_max,u64)(ulong x);
+extern half OCKL_MANGLE_T(wfred_min,f16)(half x);
+extern float OCKL_MANGLE_T(wfred_min,f32)(float x);
+extern double OCKL_MANGLE_T(wfred_min,f64)(double x);
+extern int OCKL_MANGLE_T(wfred_min,i32)(int x);
+extern long OCKL_MANGLE_T(wfred_min,i64)(long x);
+extern uint OCKL_MANGLE_T(wfred_min,u32)(uint x);
+extern ulong OCKL_MANGLE_T(wfred_min,u64)(ulong x);
+extern int OCKL_MANGLE_T(wfred_or,i32)(int x);
+extern long OCKL_MANGLE_T(wfred_or,i64)(long x);
+extern uint OCKL_MANGLE_T(wfred_or,u32)(uint x);
+extern ulong OCKL_MANGLE_T(wfred_or,u64)(ulong x);
+extern int OCKL_MANGLE_T(wfred_xor,i32)(int x);
+extern long OCKL_MANGLE_T(wfred_xor,i64)(long x);
+extern uint OCKL_MANGLE_T(wfred_xor,u32)(uint x);
+extern ulong OCKL_MANGLE_T(wfred_xor,u64)(ulong x);
+extern half OCKL_MANGLE_T(wfscan_add,f16)(half x, bool inclusive);
+extern float OCKL_MANGLE_T(wfscan_add,f32)(float x, bool inclusive);
+extern double OCKL_MANGLE_T(wfscan_add,f64)(double x, bool inclusive);
+extern int OCKL_MANGLE_T(wfscan_add,i32)(int x, bool inclusive);
+extern long OCKL_MANGLE_T(wfscan_add,i64)(long x, bool inclusive);
+extern uint OCKL_MANGLE_T(wfscan_add,u32)(uint x, bool inclusive);
+extern ulong OCKL_MANGLE_T(wfscan_add,u64)(ulong x, bool inclusive);
+extern int OCKL_MANGLE_T(wfscan_and,i32)(int x, bool inclusive);
+extern long OCKL_MANGLE_T(wfscan_and,i64)(long x, bool inclusive);
+extern uint OCKL_MANGLE_T(wfscan_and,u32)(uint x, bool inclusive);
+extern ulong OCKL_MANGLE_T(wfscan_and,u64)(ulong x, bool inclusive);
+extern half OCKL_MANGLE_T(wfscan_max,f16)(half x, bool inclusive);
+extern float OCKL_MANGLE_T(wfscan_max,f32)(float x, bool inclusive);
+extern double OCKL_MANGLE_T(wfscan_max,f64)(double x, bool inclusive);
+extern int OCKL_MANGLE_T(wfscan_max,i32)(int x, bool inclusive);
+extern long OCKL_MANGLE_T(wfscan_max,i64)(long x, bool inclusive);
+extern uint OCKL_MANGLE_T(wfscan_max,u32)(uint x, bool inclusive);
+extern ulong OCKL_MANGLE_T(wfscan_max,u64)(ulong x, bool inclusive);
+extern half OCKL_MANGLE_T(wfscan_min,f16)(half x, bool inclusive);
+extern float OCKL_MANGLE_T(wfscan_min,f32)(float x, bool inclusive);
+extern double OCKL_MANGLE_T(wfscan_min,f64)(double x, bool inclusive);
+extern int OCKL_MANGLE_T(wfscan_min,i32)(int x, bool inclusive);
+extern long OCKL_MANGLE_T(wfscan_min,i64)(long x, bool inclusive);
+extern uint OCKL_MANGLE_T(wfscan_min,u32)(uint x, bool inclusive);
+extern ulong OCKL_MANGLE_T(wfscan_min,u64)(ulong x, bool inclusive);
+extern int OCKL_MANGLE_T(wfscan_or,i32)(int x, bool inclusive);
+extern long OCKL_MANGLE_T(wfscan_or,i64)(long x, bool inclusive);
+extern uint OCKL_MANGLE_T(wfscan_or,u32)(uint x, bool inclusive);
+extern ulong OCKL_MANGLE_T(wfscan_or,u64)(ulong x, bool inclusive);
+extern int OCKL_MANGLE_T(wfscan_xor,i32)(int x, bool inclusive);
+extern long OCKL_MANGLE_T(wfscan_xor,i64)(long x, bool inclusive);
+extern uint OCKL_MANGLE_T(wfscan_xor,u32)(uint x, bool inclusive);
+extern ulong OCKL_MANGLE_T(wfscan_xor,u64)(ulong x, bool inclusive);
 
 #define SSHARP __constant uint *
 #define TSHARP __constant uint *
@@ -214,6 +283,8 @@ extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Da)(TSHARP i);
 extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Dad)(TSHARP i);
 extern __attribute__((const)) int OCKL_MANGLE_T(image_width,2Dd)(TSHARP i);
 extern __attribute__((const)) int OCKL_MANGLE_T(image_width,3D)(TSHARP i);
+
+#pragma OPENCL EXTENSION cl_khr_fp16 : disable
 
 #endif // OCKL_H
 
