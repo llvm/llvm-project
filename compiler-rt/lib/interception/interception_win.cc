@@ -229,10 +229,6 @@ static void WritePadding(uptr from, uptr size) {
   _memset((void*)from, 0xCC, (size_t)size);
 }
 
-static void CopyInstructions(uptr from, uptr to, uptr size) {
-  _memcpy((void*)from, (void*)to, (size_t)size);
-}
-
 static void WriteJumpInstruction(uptr from, uptr target) {
   if (!DistanceIsWithin2Gig(from + kJumpInstructionLength, target))
     InterceptionFailed();
@@ -384,7 +380,7 @@ static uptr AllocateMemoryForTrampoline(uptr image_address, size_t size) {
 }
 
 // Returns 0 on error.
-static size_t GetInstructionSize(uptr address) {
+static size_t GetInstructionSize(uptr address, size_t* rel_offset = nullptr) {
   switch (*(u64*)address) {
     case 0x90909090909006EB:  // stub: jmp over 6 x nop.
       return 8;
@@ -505,8 +501,11 @@ static size_t GetInstructionSize(uptr address) {
                       //   mov rax, QWORD PTR [rip + XXXXXXXX]
     case 0x25ff48:    // 48 ff 25 XX XX XX XX :
                       //   rex.W jmp QWORD PTR [rip + XXXXXXXX]
-      // Instructions having offset relative to 'rip' cannot be copied.
-      return 0;
+
+      // Instructions having offset relative to 'rip' need offset adjustment.
+      if (rel_offset)
+        *rel_offset = 3;
+      return 7;
 
     case 0x2444c7:    // C7 44 24 XX YY YY YY YY
                       //   mov dword ptr [rsp + XX], YYYYYYYY
@@ -579,6 +578,28 @@ static size_t RoundUpToInstrBoundary(size_t size, uptr address) {
   }
   return cursor;
 }
+
+static bool CopyInstructions(uptr to, uptr from, size_t size) {
+  size_t cursor = 0;
+  while (cursor != size) {
+    size_t rel_offset = 0;
+    size_t instruction_size = GetInstructionSize(from + cursor, &rel_offset);
+    _memcpy((void*)(to + cursor), (void*)(from + cursor),
+            (size_t)instruction_size);
+    if (rel_offset) {
+      uptr delta = to - from;
+      uptr relocated_offset = *(u32*)(to + cursor + rel_offset) - delta;
+#if SANITIZER_WINDOWS64
+      if (relocated_offset + 0x80000000U >= 0xFFFFFFFFU)
+        return false;
+#endif
+      *(u32*)(to + cursor + rel_offset) = relocated_offset;
+    }
+    cursor += instruction_size;
+  }
+  return true;
+}
+
 
 #if !SANITIZER_WINDOWS64
 bool OverrideFunctionWithDetour(
@@ -670,7 +691,8 @@ bool OverrideFunctionWithHotPatch(
     uptr trampoline = AllocateMemoryForTrampoline(old_func, trampoline_length);
     if (!trampoline)
       return false;
-    CopyInstructions(trampoline, old_func, instruction_size);
+    if (!CopyInstructions(trampoline, old_func, instruction_size))
+      return false;
     WriteDirectBranch(trampoline + instruction_size,
                       old_func + instruction_size);
     *orig_old_func = trampoline;
@@ -719,7 +741,8 @@ bool OverrideFunctionWithTrampoline(
     uptr trampoline = AllocateMemoryForTrampoline(old_func, trampoline_length);
     if (!trampoline)
       return false;
-    CopyInstructions(trampoline, old_func, instructions_length);
+    if (!CopyInstructions(trampoline, old_func, instructions_length))
+      return false;
     WriteDirectBranch(trampoline + instructions_length,
                       old_func + instructions_length);
     *orig_old_func = trampoline;

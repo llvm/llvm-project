@@ -198,7 +198,7 @@ if(MSVC)
   # VS 2015 (version 1900) added support for thread safe static initialization.
   # However, ASan interceptors run before CRT initialization, which causes the
   # new thread safe code to crash. Disable this feature for now.
-  if (MSVC_VERSION GREATER 1899)
+  if (MSVC_VERSION GREATER 1899 OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     list(APPEND SANITIZER_COMMON_CFLAGS /Zc:threadSafeInit-)
   endif()
 endif()

@@ -219,9 +219,6 @@ class SizeClassAllocator64 {
   uptr SpaceEnd() const { return  SpaceBeg() + kSpaceSize; }
   // kRegionSize must be >= 2^32.
   COMPILER_CHECK((kRegionSize) >= (1ULL << (SANITIZER_WORDSIZE / 2)));
-  // Populate the free list with at most this number of bytes at once
-  // or with one element if its size is greater.
-  static const uptr kPopulateSize = 1 << 14;
   // Call mmap for user memory with at least this size.
   static const uptr kUserMapSize = 1 << 16;
   // Call mmap for metadata memory with at least this size.
@@ -261,7 +258,7 @@ class SizeClassAllocator64 {
     if (b)
       return b;
     uptr size = SizeClassMap::Size(class_id);
-    uptr count = size < kPopulateSize ? SizeClassMap::MaxCached(class_id) : 1;
+    uptr count = SizeClassMap::MaxCached(class_id);
     uptr beg_idx = region->allocated_user;
     uptr end_idx = beg_idx + count * size;
     uptr region_beg = SpaceBeg() + kRegionSize * class_id;
@@ -296,10 +293,7 @@ class SizeClassAllocator64 {
       Die();
     }
     for (;;) {
-      if (SizeClassMap::SizeClassRequiresSeparateTransferBatch(class_id))
-        b = (Batch*)c->Allocate(this, SizeClassMap::ClassID(sizeof(Batch)));
-      else
-        b = (Batch*)(region_beg + beg_idx);
+      b = c->CreateBatch(class_id, this, (Batch*)(region_beg + beg_idx));
       b->count = count;
       for (uptr i = 0; i < count; i++)
         b->batch[i] = (void*)(region_beg + beg_idx + i * size);

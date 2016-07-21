@@ -231,10 +231,7 @@ class SizeClassAllocator32 {
     Batch *b = nullptr;
     for (uptr i = reg; i < reg + n_chunks * size; i += size) {
       if (!b) {
-        if (SizeClassMap::SizeClassRequiresSeparateTransferBatch(class_id))
-          b = (Batch*)c->Allocate(this, SizeClassMap::ClassID(sizeof(Batch)));
-        else
-          b = (Batch*)i;
+        b = c->CreateBatch(class_id, this, (Batch*)i);
         b->count = 0;
       }
       b->batch[b->count++] = (void*)i;

@@ -87,14 +87,17 @@ class SizeClassMap {
 
  public:
   static const uptr kMaxNumCached = kMaxNumCachedT;
+  COMPILER_CHECK(((kMaxNumCached + 2) & (kMaxNumCached + 1)) == 0);
   // We transfer chunks between central and thread-local free lists in batches.
   // For small size classes we allocate batches separately.
   // For large size classes we use one of the chunks to store the batch.
+  // sizeof(TransferBatch) must be a power of 2 for more efficient allocation.
   struct TransferBatch {
     TransferBatch *next;
     uptr count;
     void *batch[kMaxNumCached];
   };
+  COMPILER_CHECK((sizeof(TransferBatch) & (sizeof(TransferBatch) - 1)) == 0);
 
   static const uptr kMaxSize = 1UL << kMaxSizeLog;
   static const uptr kNumClasses =
@@ -180,7 +183,7 @@ class SizeClassMap {
   }
 };
 
-typedef SizeClassMap<17, 128, 16> DefaultSizeClassMap;
-typedef SizeClassMap<17, 64,  14> CompactSizeClassMap;
+typedef SizeClassMap<17, 126, 16> DefaultSizeClassMap;
+typedef SizeClassMap<17, 62,  14> CompactSizeClassMap;
 template<class SizeClassAllocator> struct SizeClassAllocatorLocalCache;
 
