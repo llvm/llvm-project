@@ -110,13 +110,13 @@ extension SomeValues
     {
         switch self
         {
-        case Five:
+        case .Five:
             return 5
-        case Six:
+        case .Six:
             return 6
-        case Eleven:
+        case .Eleven:
             return 11
-        case AnyValue:
+        case .AnyValue:
             return 46
         }
     }
