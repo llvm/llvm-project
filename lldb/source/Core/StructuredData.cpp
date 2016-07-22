@@ -291,7 +291,7 @@ StructuredData::Dictionary::Dump (Stream &s, bool pretty_print) const
     s << "{";
     if (pretty_print)
     {
-        s << "{\n";
+        s << "\n";
         s.IndentMore();
     }
     for (const auto &pair : m_dict)

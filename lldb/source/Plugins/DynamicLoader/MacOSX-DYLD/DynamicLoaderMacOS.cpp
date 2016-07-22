@@ -480,6 +480,13 @@ DynamicLoaderMacOS::CanLoadImage ()
             }
         }
     }
+    else
+    {
+        // If we were unable to find _dyld_global_lock_held in any modules, or it is not loaded into
+        // memory yet, we may be at process startup (sitting at _dyld_start) - so we should not allow
+        // dlopen calls.
+        error.SetErrorToGenericError();
+    }
     return error;
 }
 

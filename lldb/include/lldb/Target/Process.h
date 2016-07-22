@@ -1966,6 +1966,19 @@ public:
     }
 
     //------------------------------------------------------------------
+    // Get information about the library shared cache, if that exists
+    //
+    // On macOS 10.12, tvOS 10, iOS 10, watchOS 3 and newer, debugserver can return
+    // information about the library shared cache (a set of standard libraries that are
+    // loaded at the same location for all processes on a system) in use.
+    //------------------------------------------------------------------
+    virtual lldb_private::StructuredData::ObjectSP
+    GetSharedCacheInfo ()
+    {
+        return StructuredData::ObjectSP();
+    }
+
+    //------------------------------------------------------------------
     /// Print a user-visible warning about a module being built with optimization
     ///
     /// Prints a async warning message to the user one time per Module
