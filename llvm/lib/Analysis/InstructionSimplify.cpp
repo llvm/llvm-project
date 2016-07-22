@@ -3412,6 +3412,9 @@ static Value *simplifySelectWithFakeICmpEq(Value *CmpLHS, Value *TrueVal,
                                            Value *FalseVal,
                                            bool TrueWhenUnset) {
   unsigned BitWidth = TrueVal->getType()->getScalarSizeInBits();
+  if (!BitWidth)
+    return nullptr;
+  
   APInt MinSignedValue;
   Value *X;
   if (match(CmpLHS, m_Trunc(m_Value(X))) && (X == TrueVal || X == FalseVal)) {

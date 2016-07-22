@@ -2805,7 +2805,7 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG)
     SDValue Val = DAG.getNode(ISD::BITCAST, dl, MVT::v2i32, St->getValue());
     SDValue Chain = DAG.getStore(
         St->getChain(), dl, Val, St->getBasePtr(), St->getPointerInfo(),
-        St->isVolatile(), St->getMemOperand()->getFlags(), St->getAAInfo());
+        St->getAlignment(), St->getMemOperand()->getFlags(), St->getAAInfo());
     return Chain;
   }
 

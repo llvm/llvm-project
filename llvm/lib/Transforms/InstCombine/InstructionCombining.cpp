@@ -2830,7 +2830,8 @@ bool InstCombiner::run() {
         // Add operands to the worklist.
         replaceInstUsesWith(*I, C);
         ++NumConstProp;
-        eraseInstFromFunction(*I);
+        if (isInstructionTriviallyDead(I, TLI))
+          eraseInstFromFunction(*I);
         MadeIRChange = true;
         continue;
       }
@@ -2851,7 +2852,8 @@ bool InstCombiner::run() {
         // Add operands to the worklist.
         replaceInstUsesWith(*I, C);
         ++NumConstProp;
-        eraseInstFromFunction(*I);
+        if (isInstructionTriviallyDead(I, TLI))
+          eraseInstFromFunction(*I);
         MadeIRChange = true;
         continue;
       }
@@ -3007,7 +3009,8 @@ static bool AddReachableCodeToWorklist(BasicBlock *BB, const DataLayout &DL,
                        << *Inst << '\n');
           Inst->replaceAllUsesWith(C);
           ++NumConstProp;
-          Inst->eraseFromParent();
+          if (isInstructionTriviallyDead(Inst, TLI))
+            Inst->eraseFromParent();
           continue;
         }
 

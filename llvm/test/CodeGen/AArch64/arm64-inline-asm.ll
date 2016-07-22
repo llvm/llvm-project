@@ -246,3 +246,11 @@ define <4 x float> @test_vreg_128bit(<4 x float> %in) nounwind {
   ; CHECK fadd v14.4s, v0.4s, v0.4s:
   ret <4 x float> %1
 }
+
+define void @test_constraint_w(i32 %a) {
+  ; CHECK: fmov [[SREG:s[0-9]+]], {{w[0-9]+}}
+  ; CHECK: sqxtn h0, [[SREG]]
+
+  tail call void asm sideeffect "sqxtn h0, ${0:s}\0A", "w"(i32 %a)
+  ret void
+}

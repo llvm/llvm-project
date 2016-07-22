@@ -9,7 +9,7 @@ define void @mismatched_types_1() {
 ; loop is of type [i32, i32) while the backedge taken count is of type
 ; i64.
 
-; CHECK-LABEL: mismatched_types_1
+; CHECK-LABEL: @mismatched_types_1(
 entry:
   br label %for.body
 
@@ -36,7 +36,7 @@ define void @mismatched_types_2() {
 ; safe range of type [i32, i32) and one with a safe range of type
 ; [i64, i64).
 
-; CHECK-LABEL: mismatched_types_2
+; CHECK-LABEL: @mismatched_types_2(
 entry:
   br label %for.body.a
 

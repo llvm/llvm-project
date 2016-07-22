@@ -105,7 +105,7 @@ define <32 x i16> @testv32i16u(<32 x i16> %in) nounwind {
 define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512CD-LABEL: testv64i8:
 ; AVX512CD:       ## BB#0:
-; AVX512CD-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512CD-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512CD-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512CD-NEXT:    vplzcntd %zmm2, %zmm2
 ; AVX512CD-NEXT:    vpmovdb %zmm2, %xmm2
@@ -116,7 +116,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 ; AVX512CD-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512CD-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512CD-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX512CD-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512CD-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512CD-NEXT:    vplzcntd %zmm2, %zmm2
 ; AVX512CD-NEXT:    vpmovdb %zmm2, %xmm2
@@ -161,7 +161,7 @@ define <64 x i8> @testv64i8(<64 x i8> %in) nounwind {
 define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; AVX512CD-LABEL: testv64i8u:
 ; AVX512CD:       ## BB#0:
-; AVX512CD-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX512CD-NEXT:    vextracti128 $1, %ymm0, %xmm2
 ; AVX512CD-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512CD-NEXT:    vplzcntd %zmm2, %zmm2
 ; AVX512CD-NEXT:    vpmovdb %zmm2, %xmm2
@@ -172,7 +172,7 @@ define <64 x i8> @testv64i8u(<64 x i8> %in) nounwind {
 ; AVX512CD-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512CD-NEXT:    vpsubb %xmm3, %xmm0, %xmm0
 ; AVX512CD-NEXT:    vinserti128 $1, %xmm2, %ymm0, %ymm0
-; AVX512CD-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; AVX512CD-NEXT:    vextracti128 $1, %ymm1, %xmm2
 ; AVX512CD-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
 ; AVX512CD-NEXT:    vplzcntd %zmm2, %zmm2
 ; AVX512CD-NEXT:    vpmovdb %zmm2, %xmm2

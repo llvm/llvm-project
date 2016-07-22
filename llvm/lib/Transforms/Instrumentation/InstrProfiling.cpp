@@ -575,8 +575,23 @@ void InstrProfiling::emitUses() {
 void InstrProfiling::emitInitialization() {
   StringRef InstrProfileOutput = Options.InstrProfileOutput;
 
+  if (!InstrProfileOutput.empty()) {
+    // Create variable for profile name.
+    Constant *ProfileNameConst =
+        ConstantDataArray::getString(M->getContext(), InstrProfileOutput, true);
+    GlobalVariable *ProfileNameVar = new GlobalVariable(
+        *M, ProfileNameConst->getType(), true, GlobalValue::WeakAnyLinkage,
+        ProfileNameConst, INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR));
+    Triple TT(M->getTargetTriple());
+    if (TT.supportsCOMDAT()) {
+      ProfileNameVar->setLinkage(GlobalValue::ExternalLinkage);
+      ProfileNameVar->setComdat(M->getOrInsertComdat(
+          StringRef(INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_NAME_VAR))));
+    }
+  }
+
   Constant *RegisterF = M->getFunction(getInstrProfRegFuncsName());
-  if (!RegisterF && InstrProfileOutput.empty())
+  if (!RegisterF)
     return;
 
   // Create the initialization function.
@@ -593,21 +608,6 @@ void InstrProfiling::emitInitialization() {
   IRBuilder<> IRB(BasicBlock::Create(M->getContext(), "", F));
   if (RegisterF)
     IRB.CreateCall(RegisterF, {});
-  if (!InstrProfileOutput.empty()) {
-    auto *Int8PtrTy = Type::getInt8PtrTy(M->getContext());
-    auto *SetNameTy = FunctionType::get(VoidTy, Int8PtrTy, false);
-    auto *SetNameF = Function::Create(SetNameTy, GlobalValue::ExternalLinkage,
-                                      getInstrProfFileOverriderFuncName(), M);
-
-    // Create variable for profile name.
-    Constant *ProfileNameConst =
-        ConstantDataArray::getString(M->getContext(), InstrProfileOutput, true);
-    GlobalVariable *ProfileName =
-        new GlobalVariable(*M, ProfileNameConst->getType(), true,
-                           GlobalValue::PrivateLinkage, ProfileNameConst);
-
-    IRB.CreateCall(SetNameF, IRB.CreatePointerCast(ProfileName, Int8PtrTy));
-  }
   IRB.CreateRetVoid();
 
   appendToGlobalCtors(*M, F, 0);

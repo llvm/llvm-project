@@ -269,7 +269,9 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
   if (Subtarget.inMicroMipsMode()) {
     switch (Opcode) {
     case Mips::BNE:
+    case Mips::BNE_MM:
     case Mips::BEQ:
+    case Mips::BEQ_MM:
     // microMIPS has NE,EQ branches that do not have delay slots provided one
     // of the operands is zero.
       if (I->getOperand(1).getReg() == Subtarget.getABI().GetZeroReg())
@@ -302,12 +304,14 @@ unsigned MipsInstrInfo::getEquivalentCompactForm(
     case Mips::BAL:
       return Mips::BALC;
     case Mips::BEQ:
+    case Mips::BEQ_MM:
       if (canUseShortMicroMipsCTI)
         return Mips::BEQZC_MM;
       else if (I->getOperand(0).getReg() == I->getOperand(1).getReg())
         return 0;
       return Mips::BEQC;
     case Mips::BNE:
+    case Mips::BNE_MM:
       if (canUseShortMicroMipsCTI)
         return Mips::BNEZC_MM;
       else if (I->getOperand(0).getReg() == I->getOperand(1).getReg())

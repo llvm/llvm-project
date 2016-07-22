@@ -1,6 +1,6 @@
 # RUN: not llc -march=x86-64 -run-pass none -o /dev/null %s 2>&1 | FileCheck %s
 # This test ensures that an error is reported when a register operand is sized
-# but isn't generic.
+# but isn't generic like a regular virtual register (gr32).
 
 ---
 name:            test_size_regclass
@@ -12,15 +12,4 @@ body: |
     liveins: %edi
     ; CHECK: [[@LINE+1]]:8: unexpected size on non-generic virtual register
     %0(32) = G_ADD i32 %edi, %edi
-...
-
----
-name:            test_size_physreg
-isSSA:           true
-registers:
-body: |
-  bb.0.entry:
-    liveins: %edi
-    ; CHECK: [[@LINE+1]]:10: unexpected size on physical register
-    %edi(32) = G_ADD i32 %edi, %edi
 ...

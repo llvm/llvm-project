@@ -204,7 +204,7 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 ; KNL-NEXT:    testb %al, %al
 ; KNL-NEXT:    je LBB10_2
 ; KNL-NEXT:  ## BB#1: ## %A
-; KNL-NEXT:    vmovaps %zmm1, %zmm0
+; KNL-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; KNL-NEXT:    retq
 ; KNL-NEXT:  LBB10_2: ## %B
 ; KNL-NEXT:    vpaddd %zmm0, %zmm1, %zmm0
@@ -219,7 +219,7 @@ define <16 x i32> @test11(<16 x i32>%a, <16 x i32>%b) {
 ; SKX-NEXT:    testb %al, %al
 ; SKX-NEXT:    je LBB10_2
 ; SKX-NEXT:  ## BB#1: ## %A
-; SKX-NEXT:    vmovaps %zmm1, %zmm0
+; SKX-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; SKX-NEXT:    retq
 ; SKX-NEXT:  LBB10_2: ## %B
 ; SKX-NEXT:    vpaddd %zmm0, %zmm1, %zmm0

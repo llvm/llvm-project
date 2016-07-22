@@ -319,7 +319,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR2 %s
-# BRACKETERR2: stray token: )
+# BRACKETERR2: expected, but got *
 
 ## Empty expression.
 # RUN: echo "SECTIONS { \

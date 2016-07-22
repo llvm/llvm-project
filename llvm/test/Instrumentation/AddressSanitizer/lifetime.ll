@@ -91,6 +91,26 @@ bb1:
   ret void
 }
 
+; Check that arguments of lifetime may come from getelementptr nodes.
+define void @getelementptr_args() sanitize_address{
+  ; CHECK-LABEL: define void @getelementptr_args
+entry:
+  %x = alloca [1024 x i8], align 16
+  %d = alloca i8*, align 8
+
+  %0 = getelementptr inbounds [1024 x i8], [1024 x i8]* %x, i64 0, i64 0
+  call void @llvm.lifetime.start(i64 1024, i8* %0)
+  ; CHECK: __asan_unpoison_stack_memory
+
+  store i8* %0, i8** %d, align 8
+
+  call void @llvm.lifetime.end(i64 1024, i8* %0)
+  ; CHECK: __asan_poison_stack_memory
+
+  ret void
+  ; CHECK: __asan_unpoison_stack_memory
+}
+
 define void @zero_sized(i64 %a) #0 {
 ; CHECK-LABEL: define void @zero_sized(i64 %a)
 

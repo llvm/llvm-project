@@ -236,7 +236,7 @@ void initializeMetaRenamerPass(PassRegistry&);
 void initializeModuleDebugInfoPrinterPass(PassRegistry&);
 void initializeModuleSummaryIndexWrapperPassPass(PassRegistry &);
 void initializeNameAnonFunctionPass(PassRegistry &);
-void initializeNaryReassociatePass(PassRegistry&);
+void initializeNaryReassociateLegacyPassPass(PassRegistry &);
 void initializeNoAAPass(PassRegistry&);
 void initializeObjCARCAAWrapperPassPass(PassRegistry&);
 void initializeObjCARCAPElimPass(PassRegistry&);

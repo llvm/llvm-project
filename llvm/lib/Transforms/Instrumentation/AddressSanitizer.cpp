@@ -2286,6 +2286,10 @@ AllocaInst *FunctionStackPoisoner::findAllocaForValue(Value *V) {
         return nullptr;
       Res = IncValueAI;
     }
+  } else if (GetElementPtrInst *EP = dyn_cast<GetElementPtrInst>(V)) {
+    Res = findAllocaForValue(EP->getPointerOperand());
+  } else {
+    DEBUG(dbgs() << "Alloca search canceled on unknown instruction: " << *V << "\n");
   }
   if (Res) AllocaForValue[V] = Res;
   return Res;

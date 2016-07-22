@@ -1536,7 +1536,7 @@ define <8 x double> @test_unaligned_v8f64(<8 x double>* %src) {
 ;
 ; AVX512-LABEL: test_unaligned_v8f64:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovupd (%rdi), %zmm0
+; AVX512-NEXT:    vmovups (%rdi), %zmm0
 ; AVX512-NEXT:    retq
   %1 = load <8 x double>, <8 x double>* %src, align 1, !nontemporal !1
   ret <8 x double> %1

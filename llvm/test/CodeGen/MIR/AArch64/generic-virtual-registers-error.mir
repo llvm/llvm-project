@@ -1,37 +1,16 @@
-# RUN: not llc -mtriple=aarch64-apple-ios -run-pass none -o - %s 2> %t.log \
-# RUN:        | FileCheck %s --check-prefix=CHECK
-# RUN: FileCheck %s -input-file=%t.log --check-prefix=ERR
-# RUN: rm -f %t.log
+# RUN: not llc -mtriple=aarch64-apple-ios -run-pass none -o - %s 2>&1 \
+# RUN:        | FileCheck %s --check-prefix=ERR
 # REQUIRES: global-isel
 # This test ensures that the MIR parser errors out when
 # generic virtual register definitions are not correct.
 
 --- |
-  define void @bar() { ret void }
-
   define void @baz() { ret void }
-...
-
----
-name:            bar
-isSSA:           true
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: gpr }
-registers:
-  - { id: 0, class: gpr }
-body: |
-  bb.0:
-    liveins: %w0
-    ; ERR: generic virtual registers must have a size
-    ; ERR-NEXT: %0
-    %0 = G_ADD i32 %w0, %w0
 ...
 
 ---
 name:            baz
 isSSA:           true
-# CHECK:      registers:
-# CHECK-NEXT:   - { id: 0, class: _ }
 registers:
   - { id: 0, class: _ }
 body: |
@@ -39,5 +18,6 @@ body: |
     liveins: %w0
     ; ERR: generic virtual registers must have a size
     ; ERR-NEXT: %0
+    ; ERR: Unable to initialize machine function
     %0 = G_ADD i32 %w0, %w0
 ...

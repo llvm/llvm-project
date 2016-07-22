@@ -38,5 +38,5 @@ if.end6:                                          ; preds = %if.else3, %if.then2
 ; CHECK: %[[gep0:.*]] = getelementptr inbounds i1, i1* %[[load]], i64 0
 ; CHECK: store i1 %[[phi]], i1* %[[gep0]], align 4
 
-; CHECK: %[[gep1:.*]] = getelementptr inbounds i1, i1* %[[load]], i64 0
-; CHECK: store i1 %[[phi]], i1* %[[gep1]], align 4
+; Check that store instructions are hoisted.
+; CHECK-NOT: store

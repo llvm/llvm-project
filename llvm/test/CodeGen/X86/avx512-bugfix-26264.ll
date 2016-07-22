@@ -13,10 +13,10 @@ define <32 x double> @test_load_32f64(<32 x double>* %ptrs, <32 x i1> %mask, <32
 ; AVX512BW-NEXT:    vmovupd 64(%rdi), %zmm2 {%k1}
 ; AVX512BW-NEXT:    kshiftrw $8, %k2, %k1
 ; AVX512BW-NEXT:    vmovupd 192(%rdi), %zmm4 {%k1}
-; AVX512BW-NEXT:    vmovaps %zmm1, %zmm0
-; AVX512BW-NEXT:    vmovaps %zmm2, %zmm1
-; AVX512BW-NEXT:    vmovaps %zmm3, %zmm2
-; AVX512BW-NEXT:    vmovaps %zmm4, %zmm3
+; AVX512BW-NEXT:    vmovapd %zmm1, %zmm0
+; AVX512BW-NEXT:    vmovapd %zmm2, %zmm1
+; AVX512BW-NEXT:    vmovapd %zmm3, %zmm2
+; AVX512BW-NEXT:    vmovapd %zmm4, %zmm3
 ; AVX512BW-NEXT:    retq
   %res = call <32 x double> @llvm.masked.load.v32f64.p0v32f64(<32 x double>* %ptrs, i32 4, <32 x i1> %mask, <32 x double> %src0)
   ret <32 x double> %res
@@ -34,10 +34,10 @@ define <32 x i64> @test_load_32i64(<32 x i64>* %ptrs, <32 x i1> %mask, <32 x i64
 ; AVX512BW-NEXT:    vmovdqu64 64(%rdi), %zmm2 {%k1}
 ; AVX512BW-NEXT:    kshiftrw $8, %k2, %k1
 ; AVX512BW-NEXT:    vmovdqu64 192(%rdi), %zmm4 {%k1}
-; AVX512BW-NEXT:    vmovaps %zmm1, %zmm0
-; AVX512BW-NEXT:    vmovaps %zmm2, %zmm1
-; AVX512BW-NEXT:    vmovaps %zmm3, %zmm2
-; AVX512BW-NEXT:    vmovaps %zmm4, %zmm3
+; AVX512BW-NEXT:    vmovdqa64 %zmm1, %zmm0
+; AVX512BW-NEXT:    vmovdqa64 %zmm2, %zmm1
+; AVX512BW-NEXT:    vmovdqa64 %zmm3, %zmm2
+; AVX512BW-NEXT:    vmovdqa64 %zmm4, %zmm3
 ; AVX512BW-NEXT:    retq
   %res = call <32 x i64> @llvm.masked.load.v32i64.p0v32i64(<32 x i64>* %ptrs, i32 4, <32 x i1> %mask, <32 x i64> %src0)
   ret <32 x i64> %res

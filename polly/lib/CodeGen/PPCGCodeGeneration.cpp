@@ -19,11 +19,18 @@
 #include "polly/Options.h"
 #include "polly/ScopInfo.h"
 #include "polly/Support/SCEVValidator.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/PostDominators.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
 
 #include "isl/union_map.h"
 
@@ -56,6 +63,21 @@ static cl::opt<bool> DumpKernelIR("polly-acc-dump-kernel-ir",
                                   cl::desc("Dump the kernel LLVM-IR"),
                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
                                   cl::cat(PollyCategory));
+
+static cl::opt<bool> DumpKernelASM("polly-acc-dump-kernel-asm",
+                                   cl::desc("Dump the kernel assembly code"),
+                                   cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                                   cl::cat(PollyCategory));
+
+static cl::opt<bool> FastMath("polly-acc-fastmath",
+                              cl::desc("Allow unsafe math optimizations"),
+                              cl::Hidden, cl::init(false), cl::ZeroOrMore,
+                              cl::cat(PollyCategory));
+
+static cl::opt<std::string>
+    CudaVersion("polly-acc-cuda-version",
+                cl::desc("The CUDA version to compile for"), cl::Hidden,
+                cl::init("sm_30"), cl::ZeroOrMore, cl::cat(PollyCategory));
 
 /// Create the ast expressions for a ScopStmt.
 ///
@@ -112,6 +134,12 @@ public:
   }
 
 private:
+  /// A vector of array base pointers for which a new ScopArrayInfo was created.
+  ///
+  /// This vector is used to delete the ScopArrayInfo when it is not needed any
+  /// more.
+  std::vector<Value *> LocalArrays;
+
   /// A module containing GPU code.
   ///
   /// This pointer is only set in case we are currently generating GPU code.
@@ -200,6 +228,26 @@ private:
 
   /// Create an in-kernel synchronization call.
   void createKernelSync();
+
+  /// Create a PTX assembly string for the current GPU kernel.
+  ///
+  /// @returns A string containing the corresponding PTX assembly code.
+  std::string createKernelASM();
+
+  /// Remove references from the dominator tree to the kernel function @p F.
+  ///
+  /// @param F The function to remove references to.
+  void clearDominators(Function *F);
+
+  /// Remove references from scalar evolution to the kernel function @p F.
+  ///
+  /// @param F The function to remove references to.
+  void clearScalarEvolution(Function *F);
+
+  /// Remove references from loop info to the kernel function @p F.
+  ///
+  /// @param F The function to remove references to.
+  void clearLoops(Function *F);
 
   /// Finalize the generation of the kernel function.
   ///
@@ -360,6 +408,33 @@ SetVector<Value *> GPUNodeBuilder::getReferencesInKernel(ppcg_kernel *Kernel) {
   return SubtreeValues;
 }
 
+void GPUNodeBuilder::clearDominators(Function *F) {
+  DomTreeNode *N = DT.getNode(&F->getEntryBlock());
+  std::vector<BasicBlock *> Nodes;
+  for (po_iterator<DomTreeNode *> I = po_begin(N), E = po_end(N); I != E; ++I)
+    Nodes.push_back(I->getBlock());
+
+  for (BasicBlock *BB : Nodes)
+    DT.eraseNode(BB);
+}
+
+void GPUNodeBuilder::clearScalarEvolution(Function *F) {
+  for (BasicBlock &BB : *F) {
+    Loop *L = LI.getLoopFor(&BB);
+    if (L)
+      SE.forgetLoop(L);
+  }
+}
+
+void GPUNodeBuilder::clearLoops(Function *F) {
+  for (BasicBlock &BB : *F) {
+    Loop *L = LI.getLoopFor(&BB);
+    if (L)
+      SE.forgetLoop(L);
+    LI.removeBlock(&BB);
+  }
+}
+
 void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_id *Id = isl_ast_node_get_annotation(KernelStmt);
   ppcg_kernel *Kernel = (ppcg_kernel *)isl_id_get_user(Id);
@@ -392,6 +467,11 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
 
   create(isl_ast_node_copy(Kernel->tree));
 
+  Function *F = Builder.GetInsertBlock()->getParent();
+  clearDominators(F);
+  clearScalarEvolution(F);
+  clearLoops(F);
+
   Builder.SetInsertPoint(&HostInsertPoint);
   IDToValue = HostIDs;
 
@@ -400,6 +480,10 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   PHIOpMap.clear();
   EscapeMap.clear();
   IDToSAI.clear();
+  Annotator.resetAlternativeAliasBases();
+  for (auto &BasePtr : LocalArrays)
+    S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
+  LocalArrays.clear();
 
   finalizeKernelFunction();
 }
@@ -471,6 +555,7 @@ GPUNodeBuilder::createKernelFunctionDecl(ppcg_kernel *Kernel,
     }
     const ScopArrayInfo *SAIRep =
         S.getOrCreateScopArrayInfo(Val, EleTy, Sizes, ScopArrayInfo::MK_Array);
+    LocalArrays.push_back(Val);
 
     isl_ast_build_free(Build);
     isl_id_free(Id);
@@ -555,10 +640,48 @@ void GPUNodeBuilder::createKernelFunction(ppcg_kernel *Kernel,
   insertKernelIntrinsics(Kernel);
 }
 
+std::string GPUNodeBuilder::createKernelASM() {
+  llvm::Triple GPUTriple(Triple::normalize("nvptx64-nvidia-cuda"));
+  std::string ErrMsg;
+  auto GPUTarget = TargetRegistry::lookupTarget(GPUTriple.getTriple(), ErrMsg);
+
+  if (!GPUTarget) {
+    errs() << ErrMsg << "\n";
+    return "";
+  }
+
+  TargetOptions Options;
+  Options.UnsafeFPMath = FastMath;
+  std::unique_ptr<TargetMachine> TargetM(
+      GPUTarget->createTargetMachine(GPUTriple.getTriple(), CudaVersion, "",
+                                     Options, Optional<Reloc::Model>()));
+
+  SmallString<0> ASMString;
+  raw_svector_ostream ASMStream(ASMString);
+  llvm::legacy::PassManager PM;
+
+  PM.add(createTargetTransformInfoWrapperPass(TargetM->getTargetIRAnalysis()));
+
+  if (TargetM->addPassesToEmitFile(
+          PM, ASMStream, TargetMachine::CGFT_AssemblyFile, true /* verify */)) {
+    errs() << "The target does not support generation of this file type!\n";
+    return "";
+  }
+
+  PM.run(*GPUModule);
+
+  return ASMStream.str();
+}
+
 void GPUNodeBuilder::finalizeKernelFunction() {
 
   if (DumpKernelIR)
     outs() << *GPUModule << "\n";
+
+  std::string Assembly = createKernelASM();
+
+  if (DumpKernelASM)
+    outs() << Assembly << "\n";
 
   GPUModule.release();
   KernelIDs.clear();

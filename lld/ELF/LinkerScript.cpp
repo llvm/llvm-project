@@ -338,7 +338,7 @@ void LinkerScript<ELFT>::dispatchAssignment(SymbolAssignment *Cmd) {
   uint64_t Val = evalExpr(Cmd->Expr, Dot);
   if (Cmd->Name == ".") {
     Dot = Val;
-  } else {
+  } else if (!Cmd->Ignore) {
     auto *D = cast<DefinedRegular<ELFT>>(Symtab<ELFT>::X->find(Cmd->Name));
     D->Value = Val;
   }
@@ -528,10 +528,19 @@ int LinkerScript<ELFT>::compareSections(StringRef A, StringRef B) {
 }
 
 template <class ELFT> void LinkerScript<ELFT>::addScriptedSymbols() {
-  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands)
-    if (auto *Cmd = dyn_cast<SymbolAssignment>(Base.get()))
-      if (Cmd->Name != "." && Symtab<ELFT>::X->find(Cmd->Name) == nullptr)
-        Symtab<ELFT>::X->addAbsolute(Cmd->Name, STV_DEFAULT);
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    auto *Cmd = dyn_cast<SymbolAssignment>(Base.get());
+    if (!Cmd || Cmd->Name == ".")
+      continue;
+
+    if (Symtab<ELFT>::X->find(Cmd->Name) == nullptr)
+      Symtab<ELFT>::X->addAbsolute(Cmd->Name,
+                                   Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
+    else
+      // Symbol already exists in symbol table. If it is provided
+      // then we can't override its value.
+      Cmd->Ignore = Cmd->Provide;
+  }
 }
 
 template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
@@ -592,7 +601,8 @@ private:
   void readOutputSectionDescription(StringRef OutSec);
   std::vector<StringRef> readOutputSectionPhdrs();
   unsigned readPhdrType();
-  void readSymbolAssignment(StringRef Name);
+  void readProvide(bool Hidden);
+  SymbolAssignment *readSymbolAssignment(StringRef Name);
   std::vector<StringRef> readSectionsCommandExpr();
 
   const static StringMap<Handler> Cmd;
@@ -789,7 +799,11 @@ void ScriptParser::readSections() {
       continue;
     }
     next();
-    if (peek() == "=")
+    if (Tok == "PROVIDE")
+      readProvide(false);
+    else if (Tok == "PROVIDE_HIDDEN")
+      readProvide(true);
+    else if (peek() == "=")
       readSymbolAssignment(Tok);
     else
       readOutputSectionDescription(Tok);
@@ -855,19 +869,42 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   }
 }
 
-void ScriptParser::readSymbolAssignment(StringRef Name) {
-  expect("=");
-  std::vector<StringRef> Expr = readSectionsCommandExpr();
-  if (Expr.empty())
-    error("error in symbol assignment expression");
-  else
-    Opt.Commands.push_back(llvm::make_unique<SymbolAssignment>(Name, Expr));
+void ScriptParser::readProvide(bool Hidden) {
+  expect("(");
+  if (SymbolAssignment *Assignment = readSymbolAssignment(next())) {
+    Assignment->Provide = true;
+    Assignment->Hidden = Hidden;
+  }
+  expect(")");
+  expect(";");
 }
 
+SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef Name) {
+  expect("=");
+  std::vector<StringRef> Expr = readSectionsCommandExpr();
+  if (Expr.empty()) {
+    error("error in symbol assignment expression");
+  } else {
+    Opt.Commands.push_back(llvm::make_unique<SymbolAssignment>(Name, Expr));
+    return static_cast<SymbolAssignment *>(Opt.Commands.back().get());
+  }
+  return nullptr;
+}
+
+// This function reads balanced expression until semicolon is seen.
 std::vector<StringRef> ScriptParser::readSectionsCommandExpr() {
+  int Braces = 0;
   std::vector<StringRef> Expr;
   while (!Error) {
-    StringRef Tok = next();
+    StringRef Tok = peek();
+
+    if (Tok == "(")
+      Braces++;
+    else if (Tok == ")")
+      if (--Braces < 0)
+        break;
+
+    next();
     if (Tok == ";")
       break;
     Expr.push_back(Tok);
