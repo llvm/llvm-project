@@ -1263,5 +1263,5 @@ DynamicLoaderDarwin::UseDYLDSPI (Process *process)
             log->Printf ("DynamicLoaderDarwin::UseDYLDSPI: Use old DynamicLoader plugin");
 
     }
-	return use_new_spi_interface;
+    return use_new_spi_interface;
 }

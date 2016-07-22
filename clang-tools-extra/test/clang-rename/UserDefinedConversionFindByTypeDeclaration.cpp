@@ -1,7 +1,6 @@
-// Currently unsupported test.
 // RUN: cat %s > %t.cpp
-// FIXME: while renaming class/struct clang-rename should be able to change
-// this type name corresponding user-defined conversions, too.
+// RUN: clang-rename -offset=136 -new-name=Bar %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 
 class Foo {                         // CHECK: class Bar {
 //    ^ offset must be here
@@ -22,3 +21,6 @@ int main() {
   Foo foo = static_cast<Foo>(boo);  // CHECK: Bar foo = static_cast<Bar>(boo);
   return 0;
 }
+
+// Use grep -FUbo 'Foo' <file> to get the correct offset of Cla when changing
+// this file.

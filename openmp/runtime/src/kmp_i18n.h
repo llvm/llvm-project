@@ -128,7 +128,7 @@ extern kmp_msg_t __kmp_msg_null;   // Denotes the end of variadic list of argume
 // Helper functions. Creates messages either from message catalog or from system. Note: these
 // functions allocate memory. You should pass created messages to __kmp_msg() function, it will
 // print messages and destroy them.
-kmp_msg_t  __kmp_msg_format( kmp_i18n_id_t id, ... );
+kmp_msg_t  __kmp_msg_format( unsigned id_arg, ... );
 kmp_msg_t  __kmp_msg_error_code( int code );
 kmp_msg_t  __kmp_msg_error_mesg( char const * mesg );
 
