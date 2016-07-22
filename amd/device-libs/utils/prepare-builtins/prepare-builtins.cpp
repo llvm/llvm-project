@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
        i != e; ++i) {
     if (!i->isDeclaration() && i->getLinkage() == GlobalValue::ExternalLinkage) {
         i->setLinkage(GlobalValue::LinkOnceODRLinkage);
-        i->setLinkage(GlobalValue::LinkOnceODRLinkage);
+        i->setVisibility(GlobalValue::ProtectedVisibility);
     }
   }
 
