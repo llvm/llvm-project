@@ -3404,8 +3404,12 @@ SwiftLanguageRuntime::MaskMaybeBridgedPointer (lldb::addr_t addr,
     bool is_intel = false;
     bool is_32 = false;
     bool is_64 = false;
-    if (core_kind >= ArchSpec::Core::kCore_arm_first &&
-        core_kind <= ArchSpec::Core::kCore_arm_last)
+    if (core_kind == ArchSpec::Core::eCore_arm_arm64)
+    {
+        is_arm = is_64 = true;
+    }
+    else if (core_kind >= ArchSpec::Core::kCore_arm_first &&
+             core_kind <= ArchSpec::Core::kCore_arm_last)
     {
         is_arm = true;
     }
