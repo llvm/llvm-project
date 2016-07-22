@@ -75,7 +75,7 @@ define x86_fp80 @s32_to_x(i32 %a) nounwind {
 
 ; CHECK-LABEL: u64_to_f
 ; AVX512_32: vmovq {{.*#+}} xmm0 = mem[0],zero
-; AVX512_32: vmovlpd %xmm0, {{[0-9]+}}(%esp)
+; AVX512_32: vmovlps %xmm0, {{[0-9]+}}(%esp)
 ; AVX512_32: fildll
 
 ; AVX512_64: vcvtusi2ssq
@@ -111,7 +111,7 @@ define float @s64_to_f(i64 %a) nounwind {
 
 ; AVX512_32:    vmovd %eax, %xmm0
 ; AVX512_32:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX512_32:    vmovlpd %xmm0, {{[0-9]+}}(%esp)
+; AVX512_32:    vmovq %xmm0, {{[0-9]+}}(%esp)
 ; AVX512_32:    fildll {{[0-9]+}}(%esp)
 
 define float @s64_to_f_2(i64 %a) nounwind {
@@ -151,7 +151,7 @@ define double @s64_to_d(i64 %a) nounwind {
 
 ; AVX512_32:    vmovd %eax, %xmm0
 ; AVX512_32:    vpinsrd $1, %ecx, %xmm0, %xmm0
-; AVX512_32:    vmovlpd %xmm0, {{[0-9]+}}(%esp)
+; AVX512_32:    vmovq %xmm0, {{[0-9]+}}(%esp)
 ; AVX512_32: fildll
 
 define double @s64_to_d_2(i64 %a) nounwind {

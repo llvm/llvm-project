@@ -55,7 +55,8 @@ define double @log_exp2_not_fast(double %x) {
 ; CHECK-NEXT:  %call3 = call fast double @log(double %call2)
 ; CHECK-NEXT:  ret double %call3
 
-declare double @log(double)
+declare double @log(double) #0
 declare double @exp2(double)
 declare double @llvm.pow.f64(double, double)
 
+attributes #0 = { nounwind readnone }

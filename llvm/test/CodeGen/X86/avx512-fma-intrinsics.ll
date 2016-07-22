@@ -129,7 +129,7 @@ define <8 x double>@test_int_x86_avx512_mask_vfmaddsub_pd_512(<8 x double> %x0, 
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfmaddsub_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfmaddsub213pd %zmm2, %zmm1, %zmm3 {%k1}
 ; CHECK-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -146,7 +146,7 @@ define <8 x double>@test_int_x86_avx512_mask3_vfmaddsub_pd_512(<8 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmaddsub_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovapd %zmm2, %zmm3
 ; CHECK-NEXT:    vfmaddsub231pd %zmm1, %zmm0, %zmm3 {%k1}
 ; CHECK-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -163,7 +163,7 @@ define <8 x double>@test_int_x86_avx512_maskz_vfmaddsub_pd_512(<8 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vfmaddsub_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfmaddsub213pd %zmm2, %zmm1, %zmm3 {%k1} {z}
 ; CHECK-NEXT:    vfmaddsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -229,7 +229,7 @@ define <8 x double>@test_int_x86_avx512_mask3_vfmsubadd_pd_512(<8 x double> %x0,
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsubadd_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovapd %zmm2, %zmm3
 ; CHECK-NEXT:    vfmsubadd231pd %zmm1, %zmm0, %zmm3 {%k1}
 ; CHECK-NEXT:    vfmsubadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -358,7 +358,7 @@ define <8 x double>@test_int_x86_avx512_mask3_vfmsub_pd_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmsub_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovapd %zmm2, %zmm3
 ; CHECK-NEXT:    vfmsub231pd %zmm1, %zmm0, %zmm3 {%k1}
 ; CHECK-NEXT:    vfmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -485,7 +485,7 @@ define <8 x double>@test_int_x86_avx512_mask_vfmadd_pd_512(<8 x double> %x0, <8 
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfmadd_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfmadd213pd %zmm2, %zmm1, %zmm3 {%k1}
 ; CHECK-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -502,7 +502,7 @@ define <8 x double>@test_int_x86_avx512_mask3_vfmadd_pd_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfmadd_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovapd %zmm2, %zmm3
 ; CHECK-NEXT:    vfmadd231pd %zmm1, %zmm0, %zmm3 {%k1}
 ; CHECK-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -519,7 +519,7 @@ define <8 x double>@test_int_x86_avx512_maskz_vfmadd_pd_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_maskz_vfmadd_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfmadd213pd %zmm2, %zmm1, %zmm3 {%k1} {z}
 ; CHECK-NEXT:    vfmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -679,7 +679,7 @@ define <8 x double>@test_int_x86_avx512_mask_vfnmsub_pd_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfnmsub_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfnmsub213pd %zmm2, %zmm1, %zmm3 {%k1}
 ; CHECK-NEXT:    vfnmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -696,7 +696,7 @@ define <8 x double>@test_int_x86_avx512_mask3_vfnmsub_pd_512(<8 x double> %x0, <
 ; CHECK-LABEL: test_int_x86_avx512_mask3_vfnmsub_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm2, %zmm3
+; CHECK-NEXT:    vmovapd %zmm2, %zmm3
 ; CHECK-NEXT:    vfnmsub231pd %zmm1, %zmm0, %zmm3 {%k1}
 ; CHECK-NEXT:    vfnmsub213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0
@@ -743,7 +743,7 @@ define <8 x double>@test_int_x86_avx512_mask_vfnmadd_pd_512(<8 x double> %x0, <8
 ; CHECK-LABEL: test_int_x86_avx512_mask_vfnmadd_pd_512:
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    kmovw %edi, %k1
-; CHECK-NEXT:    vmovaps %zmm0, %zmm3
+; CHECK-NEXT:    vmovapd %zmm0, %zmm3
 ; CHECK-NEXT:    vfnmadd213pd %zmm2, %zmm1, %zmm3 {%k1}
 ; CHECK-NEXT:    vfnmadd213pd {rn-sae}, %zmm2, %zmm1, %zmm0
 ; CHECK-NEXT:    vaddpd %zmm0, %zmm3, %zmm0

@@ -389,3 +389,16 @@ define i64 @select_icmp_x_and_8_ne_0_y64_and_not_8(i32 %x, i64 %y) {
   ret i64 %and1.y
 }
 
+; Don't crash on a pointer or aggregate type.
+
+define i32* @select_icmp_pointers(i32* %x, i32* %y) {
+; CHECK-LABEL: @select_icmp_pointers(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32* %x, null
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32* %x, i32* %y
+; CHECK-NEXT:    ret i32* [[SEL]]
+;
+  %cmp = icmp slt i32* %x, null
+  %sel = select i1 %cmp, i32* %x, i32* %y
+  ret i32* %sel
+}
+

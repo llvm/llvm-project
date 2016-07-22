@@ -49,8 +49,10 @@ bool MachineFunctionAnalysis::runOnFunction(Function &F) {
   assert(!MF && "MachineFunctionAnalysis already initialized!");
   MF = new MachineFunction(&F, TM, NextFnNum++,
                            getAnalysis<MachineModuleInfo>());
-  if (MFInitializer)
-    MFInitializer->initializeMachineFunction(*MF);
+  if (MFInitializer) {
+    if (MFInitializer->initializeMachineFunction(*MF))
+      report_fatal_error("Unable to initialize machine function");
+  }
   return false;
 }
 

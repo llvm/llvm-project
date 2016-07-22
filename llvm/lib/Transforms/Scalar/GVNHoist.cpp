@@ -584,21 +584,19 @@ public:
     if (auto *St = dyn_cast<StoreInst>(Repl)) {
       Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
       Val = dyn_cast<Instruction>(St->getValueOperand());
+      // Check that the stored value is available.
+      if (Val) {
+        if (isa<GetElementPtrInst>(Val)) {
+          // Check whether we can compute the GEP at HoistPt.
+          if (!allOperandsAvailable(Val, HoistPt))
+            return false;
+        } else if (!DT->dominates(Val->getParent(), HoistPt))
+          return false;
+      }
     }
 
-    if (!Gep)
-      return false;
-
-    // PHIs may only be inserted at the start of a block.
-    if (Val && isa<PHINode>(Val))
-      return false;
-
     // Check whether we can compute the Gep at HoistPt.
-    if (!allOperandsAvailable(Gep, HoistPt))
-      return false;
-
-    // Also check that the stored value is available.
-    if (Val && !allOperandsAvailable(Val, HoistPt))
+    if (!Gep || !allOperandsAvailable(Gep, HoistPt))
       return false;
 
     // Copy the gep before moving the ld/st.
@@ -618,8 +616,8 @@ public:
     }
     Repl->replaceUsesOfWith(Gep, ClonedGep);
 
-    // Also copy Val.
-    if (Val) {
+    // Also copy Val when it is a GEP.
+    if (Val && isa<GetElementPtrInst>(Val)) {
       Instruction *ClonedVal = Val->clone();
       ClonedVal->insertBefore(HoistPt->getTerminator());
       // Conservatively discard any optimization hints, they may differ on the

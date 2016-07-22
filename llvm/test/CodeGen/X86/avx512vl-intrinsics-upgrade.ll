@@ -2330,7 +2330,7 @@ declare <8 x i32> @llvm.x86.avx512.mask.pandn.d.256(<8 x i32>, <8 x i32>, <8 x i
 define <2 x i64> @test_mask_andnot_epi64_rr_128(<2 x i64> %a, <2 x i64> %b) {
 ; CHECK-LABEL: test_mask_andnot_epi64_rr_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpandnq %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xdf,0xc1]
+; CHECK-NEXT:    vandnps %xmm1, %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x55,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <2 x i64> @llvm.x86.avx512.mask.pandn.q.128(<2 x i64> %a, <2 x i64> %b, <2 x i64> zeroinitializer, i8 -1)
   ret <2 x i64> %res
@@ -2360,7 +2360,7 @@ define <2 x i64> @test_mask_andnot_epi64_rrkz_128(<2 x i64> %a, <2 x i64> %b, i8
 define <2 x i64> @test_mask_andnot_epi64_rm_128(<2 x i64> %a, <2 x i64>* %ptr_b) {
 ; CHECK-LABEL: test_mask_andnot_epi64_rm_128:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpandnq (%rdi), %xmm0, %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0xdf,0x07]
+; CHECK-NEXT:    vandnps (%rdi), %xmm0, %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x55,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <2 x i64>, <2 x i64>* %ptr_b
   %res = call <2 x i64> @llvm.x86.avx512.mask.pandn.q.128(<2 x i64> %a, <2 x i64> %b, <2 x i64> zeroinitializer, i8 -1)
@@ -2434,7 +2434,7 @@ declare <2 x i64> @llvm.x86.avx512.mask.pandn.q.128(<2 x i64>, <2 x i64>, <2 x i
 define <4 x i64> @test_mask_andnot_epi64_rr_256(<4 x i64> %a, <4 x i64> %b) {
 ; CHECK-LABEL: test_mask_andnot_epi64_rr_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpandnq %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xdf,0xc1]
+; CHECK-NEXT:    vandnps %ymm1, %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x55,0xc1]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <4 x i64> @llvm.x86.avx512.mask.pandn.q.256(<4 x i64> %a, <4 x i64> %b, <4 x i64> zeroinitializer, i8 -1)
   ret <4 x i64> %res
@@ -2464,7 +2464,7 @@ define <4 x i64> @test_mask_andnot_epi64_rrkz_256(<4 x i64> %a, <4 x i64> %b, i8
 define <4 x i64> @test_mask_andnot_epi64_rm_256(<4 x i64> %a, <4 x i64>* %ptr_b) {
 ; CHECK-LABEL: test_mask_andnot_epi64_rm_256:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vpandnq (%rdi), %ymm0, %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0xdf,0x07]
+; CHECK-NEXT:    vandnps (%rdi), %ymm0, %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x55,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %b = load <4 x i64>, <4 x i64>* %ptr_b
   %res = call <4 x i64> @llvm.x86.avx512.mask.pandn.q.256(<4 x i64> %a, <4 x i64> %b, <4 x i64> zeroinitializer, i8 -1)

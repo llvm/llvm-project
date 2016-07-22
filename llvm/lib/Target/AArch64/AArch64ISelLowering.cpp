@@ -4703,7 +4703,7 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
         return std::make_pair(0U, &AArch64::GPR64commonRegClass);
       return std::make_pair(0U, &AArch64::GPR32commonRegClass);
     case 'w':
-      if (VT == MVT::f32)
+      if (VT.getSizeInBits() == 32)
         return std::make_pair(0U, &AArch64::FPR32RegClass);
       if (VT.getSizeInBits() == 64)
         return std::make_pair(0U, &AArch64::FPR64RegClass);

@@ -82,6 +82,9 @@ static cl::opt<bool> PrintRangeChecks("irce-print-range-checks", cl::Hidden,
 static cl::opt<int> MaxExitProbReciprocal("irce-max-exit-prob-reciprocal",
                                           cl::Hidden, cl::init(10));
 
+static cl::opt<bool> SkipProfitabilityChecks("irce-skip-profitability-checks",
+                                             cl::Hidden, cl::init(false));
+
 #define DEBUG_TYPE "irce"
 
 namespace {
@@ -392,7 +395,8 @@ void InductiveRangeCheck::extractRangeChecksFromBranch(
 
   BranchProbability LikelyTaken(15, 16);
 
-  if (BPI.getEdgeProbability(BI->getParent(), (unsigned)0) < LikelyTaken)
+  if (!SkipProfitabilityChecks &&
+      BPI.getEdgeProbability(BI->getParent(), (unsigned)0) < LikelyTaken)
     return;
 
   SmallPtrSet<Value *, 8> Visited;
@@ -648,7 +652,8 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, BranchProbabilityInfo &BP
   BranchProbability ExitProbability =
     BPI.getEdgeProbability(LatchBr->getParent(), LatchBrExitIdx);
 
-  if (ExitProbability > BranchProbability(1, MaxExitProbReciprocal)) {
+  if (!SkipProfitabilityChecks &&
+      ExitProbability > BranchProbability(1, MaxExitProbReciprocal)) {
     FailureReason = "short running loop, not profitable";
     return None;
   }

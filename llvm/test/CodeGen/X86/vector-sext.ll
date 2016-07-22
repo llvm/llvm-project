@@ -3744,7 +3744,7 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX512-NEXT:    vpmovdb %zmm1, %xmm1
 ; AVX512-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k2} {z}
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
 ;
 ; X32-SSE41-LABEL: load_sext_32i1_to_32i8:

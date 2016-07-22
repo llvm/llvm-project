@@ -758,7 +758,8 @@ bool JumpThreadingPass::ProcessBlock(BasicBlock *BB) {
         ConstantFoldInstruction(I, BB->getModule()->getDataLayout(), TLI);
     if (SimpleVal) {
       I->replaceAllUsesWith(SimpleVal);
-      I->eraseFromParent();
+      if (isInstructionTriviallyDead(I, TLI))
+        I->eraseFromParent();
       Condition = SimpleVal;
     }
   }

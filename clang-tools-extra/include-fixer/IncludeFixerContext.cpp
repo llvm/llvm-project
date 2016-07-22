@@ -86,9 +86,8 @@ IncludeFixerContext::IncludeFixerContext(
   // triggered at the same position or unidentified symbol multiple times.
   std::sort(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),
             [&](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
-              if (A.Range.getOffset() != B.Range.getOffset())
-                return A.Range.getOffset() < B.Range.getOffset();
-              return A.Range.getLength() == B.Range.getLength();
+              return std::make_pair(A.Range.getOffset(), A.Range.getLength()) <
+                     std::make_pair(B.Range.getOffset(), B.Range.getLength());
             });
   QuerySymbolInfos.erase(
       std::unique(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),

@@ -51,6 +51,10 @@ struct SymbolAssignment : BaseCommand {
   static bool classof(const BaseCommand *C);
   StringRef Name;
   std::vector<StringRef> Expr;
+  bool Provide = false;
+  // Hidden and Ignore can be true, only if Provide is true
+  bool Hidden = false;
+  bool Ignore = false;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
