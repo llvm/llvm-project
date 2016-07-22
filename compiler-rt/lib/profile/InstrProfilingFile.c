@@ -330,12 +330,6 @@ static void parseAndSetFilename(const char *FilenamePat,
   if (!FilenamePat)
     FilenamePat = DefaultProfileName;
 
-  /* When -fprofile-instr-generate=<path> is specified on the
-   * command line, each module will be instrumented with runtime
-   * init call to __llvm_profile_init function which calls
-   * __llvm_profile_override_default_filename. In most of the cases,
-   * the path will be identical, so bypass the parsing completely.
-   */
   if (OldFilenamePat && !strcmp(OldFilenamePat, FilenamePat)) {
     lprofCurFilename.PNS = PNS;
     return;
@@ -472,10 +466,24 @@ const char *__llvm_profile_get_path_prefix(void) {
  * environment variable can override this default value. */
 COMPILER_RT_VISIBILITY
 void __llvm_profile_initialize_file(void) {
-  const char *FilenamePat;
+  const char *EnvFilenamePat;
+  const char *SelectedPat = NULL;
+  ProfileNameSpecifier PNS = PNS_unknown;
+  int hasCommandLineOverrider = (INSTR_PROF_PROFILE_NAME_VAR[0] != 0);
 
-  FilenamePat = getFilenamePatFromEnv();
-  parseAndSetFilename(FilenamePat, FilenamePat ? PNS_environment : PNS_default);
+  EnvFilenamePat = getFilenamePatFromEnv();
+  if (EnvFilenamePat) {
+    SelectedPat = EnvFilenamePat;
+    PNS = PNS_environment;
+  } else if (hasCommandLineOverrider) {
+    SelectedPat = INSTR_PROF_PROFILE_NAME_VAR;
+    PNS = PNS_command_line;
+  } else {
+    SelectedPat = NULL;
+    PNS = PNS_default;
+  }
+
+  parseAndSetFilename(SelectedPat, PNS);
 }
 
 /* This API is directly called by the user application code. It has the
@@ -485,17 +493,6 @@ void __llvm_profile_initialize_file(void) {
 COMPILER_RT_VISIBILITY
 void __llvm_profile_set_filename(const char *FilenamePat) {
   parseAndSetFilename(FilenamePat, PNS_runtime_api);
-}
-
-/*
- * This API is invoked by the global initializers emitted by Clang/LLVM when
- * -fprofile-instr-generate=<..> is specified (vs -fprofile-instr-generate
- *  without an argument). This option has lower precedence than the
- *  LLVM_PROFILE_FILE environment variable.
- */
-COMPILER_RT_VISIBILITY
-void __llvm_profile_override_default_filename(const char *FilenamePat) {
-  parseAndSetFilename(FilenamePat, PNS_command_line);
 }
 
 /* The public API for writing profile data into the file with name

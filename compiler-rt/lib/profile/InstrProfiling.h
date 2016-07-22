@@ -112,9 +112,8 @@ void INSTR_PROF_VALUE_PROF_FUNC(
  * Writes to the file with the last name given to \a *
  * __llvm_profile_set_filename(),
  * or if it hasn't been called, the \c LLVM_PROFILE_FILE environment variable,
- * or if that's not set, the last name given to
- * \a __llvm_profile_override_default_filename(), or if that's not set,
- * \c "default.profraw".
+ * or if that's not set, the last name set to INSTR_PROF_PROFILE_NAME_VAR,
+ * or if that's not set,  \c "default.profraw".
  */
 int __llvm_profile_write_file(void);
 
@@ -128,19 +127,6 @@ int __llvm_profile_write_file(void);
  * filename logic to the default behaviour.
  */
 void __llvm_profile_set_filename(const char *Name);
-
-/*!
- * \brief Set the filename for writing instrumentation data, unless the
- * \c LLVM_PROFILE_FILE environment variable was set.
- *
- * Unless overridden, sets the filename to be used for subsequent calls to
- * \a __llvm_profile_write_file().
- *
- * \c Name is not copied, so it must remain valid.  Passing NULL resets the
- * filename logic to the default behaviour (unless the \c LLVM_PROFILE_FILE
- * was set in which case it has no effect).
- */
-void __llvm_profile_override_default_filename(const char *Name);
 
 /*! \brief Register to write instrumentation data to file at exit. */
 int __llvm_profile_register_write_file_atexit(void);
@@ -176,8 +162,8 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
  * Note that this variable's visibility needs to be hidden so that the
  * definition of this variable in an instrumented shared library won't
  * affect runtime initialization decision of the main program.
- */
-COMPILER_RT_VISIBILITY extern int __llvm_profile_runtime;
+ *  __llvm_profile_profile_runtime. */
+COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
 
 /*!
  * This variable is defined in InstrProfiling.c. Its main purpose is to
@@ -189,6 +175,13 @@ COMPILER_RT_VISIBILITY extern int __llvm_profile_runtime;
  * main program are expected to be instrumented in the same way), there is
  * no need for this variable to be hidden.
  */
-extern uint64_t __llvm_profile_raw_version;
+extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
+
+/*!
+ * This variable is a weak symbol defined in InstrProfiling.c. It allows
+ * compiler instrumentation to provide overriding definition with value
+ * from compiler command line. This variable has default visibility.
+ */
+extern char INSTR_PROF_PROFILE_NAME_VAR[1]; /* __llvm_profile_filename. */
 
 #endif /* PROFILE_INSTRPROFILING_H_ */

@@ -27,6 +27,7 @@
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
+#include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
 
@@ -883,6 +884,10 @@ bool IsProcessRunning(pid_t pid) {
 }
 
 int WaitForProcess(pid_t pid) { return -1; }
+
+// FIXME implement on this platform.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+
 
 }  // namespace __sanitizer
 

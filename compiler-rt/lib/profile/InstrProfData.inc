@@ -603,7 +603,12 @@ serializeValueProfDataFrom(ValueProfRecordClosure *Closure,
 #define VARIANT_MASKS_ALL 0xff00000000000000ULL
 #define GET_VERSION(V) ((V) & ~VARIANT_MASKS_ALL)
 #define VARIANT_MASK_IR_PROF (0x1ULL << 56)
-#define IR_LEVEL_PROF_VERSION_VAR __llvm_profile_raw_version
+#define INSTR_PROF_RAW_VERSION_VAR __llvm_profile_raw_version
+#define INSTR_PROF_PROFILE_RUNTIME_VAR __llvm_profile_runtime
+
+/* The variable that holds the name of the profile data
+ * specified via command line. */
+#define INSTR_PROF_PROFILE_NAME_VAR __llvm_profile_filename
 
 /* Runtime section names and name strings.  */
 #define INSTR_PROF_DATA_SECT_NAME __llvm_prf_data

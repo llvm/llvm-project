@@ -32,6 +32,9 @@
 //  - kMaxNumCached is the maximal number of chunks per size class.
 //  - (1 << kMaxBytesCachedLog) is the maximal number of bytes per size class.
 //
+// There is one extra size class kBatchClassID that is used for allocating
+// objects of TransferBatch type when kUseSeparateSizeClassForBatch is true.
+//
 // Part of output of SizeClassMap::Print():
 // c00 => s: 0 diff: +0 00% l 0 cached: 0 0; id 0
 // c01 => s: 16 diff: +16 00% l 4 cached: 256 4096; id 1
@@ -93,15 +96,42 @@ class SizeClassMap {
   // For large size classes we use one of the chunks to store the batch.
   // sizeof(TransferBatch) must be a power of 2 for more efficient allocation.
   struct TransferBatch {
+    void SetFromRange(uptr region_beg, uptr beg_offset, uptr step, uptr count) {
+      count_ = count;
+      for (uptr i = 0; i < count; i++)
+        batch_[i] = (void*)(region_beg + beg_offset + i * step);
+    }
+    void SetFromArray(void *batch[], uptr count) {
+      count_ = count;
+      for (uptr i = 0; i < count; i++)
+        batch_[i] = batch[i];
+    }
+    void *Get(uptr idx) {
+      CHECK_LT(idx, count_);
+      return batch_[idx];
+    }
+    uptr Count() const { return count_; }
     TransferBatch *next;
-    uptr count;
-    void *batch[kMaxNumCached];
+   private:
+    uptr count_;
+    void *batch_[kMaxNumCached];
   };
-  COMPILER_CHECK((sizeof(TransferBatch) & (sizeof(TransferBatch) - 1)) == 0);
+  static const uptr kBatchSize = sizeof(TransferBatch);
+  COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
+
+  // If true, all TransferBatch objects are allocated from kBatchClassID
+  // size class (except for those that are needed for kBatchClassID itself).
+  // The goal is to have TransferBatches in a totally different region of RAM
+  // to improve security and allow more efficient RAM reclamation.
+  // This is experimental and may currently increase memory usage by up to 3%
+  // in extreme cases.
+  static const bool kUseSeparateSizeClassForBatch = false;
+
 
   static const uptr kMaxSize = 1UL << kMaxSizeLog;
   static const uptr kNumClasses =
-      kMidClass + ((kMaxSizeLog - kMidSizeLog) << S) + 1;
+      kMidClass + ((kMaxSizeLog - kMidSizeLog) << S) + 1 + 1;
+  static const uptr kBatchClassID = kNumClasses - 1;
   COMPILER_CHECK(kNumClasses >= 32 && kNumClasses <= 256);
   static const uptr kNumClassesRounded =
       kNumClasses == 32  ? 32 :
@@ -111,6 +141,8 @@ class SizeClassMap {
   static uptr Size(uptr class_id) {
     if (class_id <= kMidClass)
       return kMinSize * class_id;
+    if (class_id == kBatchClassID)
+      return kBatchSize;
     class_id -= kMidClass;
     uptr t = kMidSize << (class_id >> S);
     return t + (t >> S) * (class_id & M);
@@ -144,6 +176,8 @@ class SizeClassMap {
       uptr p = prev_s ? (d * 100 / prev_s) : 0;
       uptr l = s ? MostSignificantSetBitIndex(s) : 0;
       uptr cached = MaxCached(i) * s;
+      if (i == kBatchClassID)
+        d = l = p = 0;
       Printf("c%02zd => s: %zd diff: +%zd %02zd%% l %zd "
              "cached: %zd %zd; id %zd\n",
              i, Size(i), d, p, l, MaxCached(i), cached, ClassID(s));
@@ -153,18 +187,23 @@ class SizeClassMap {
     Printf("Total cached: %zd\n", total_cached);
   }
 
-  static bool SizeClassRequiresSeparateTransferBatch(uptr class_id) {
-    return Size(class_id) < sizeof(TransferBatch) -
-        sizeof(uptr) * (kMaxNumCached - MaxCached(class_id));
+  static uptr SizeClassForTransferBatch(uptr class_id) {
+    if (kUseSeparateSizeClassForBatch)
+      return class_id == kBatchClassID ? 0 : kBatchClassID;
+    if (Size(class_id) < sizeof(TransferBatch) -
+        sizeof(uptr) * (kMaxNumCached - MaxCached(class_id)))
+      return ClassID(sizeof(TransferBatch));
+    return 0;
   }
 
   static void Validate() {
     for (uptr c = 1; c < kNumClasses; c++) {
+      if (c == kBatchClassID) continue;
       // Printf("Validate: c%zd\n", c);
       uptr s = Size(c);
       CHECK_NE(s, 0U);
       CHECK_EQ(ClassID(s), c);
-      if (c != kNumClasses - 1)
+      if (c != kBatchClassID - 1 && c != kNumClasses - 1)
         CHECK_EQ(ClassID(s + 1), c + 1);
       CHECK_EQ(ClassID(s - 1), c);
       if (c)
@@ -186,4 +225,3 @@ class SizeClassMap {
 typedef SizeClassMap<17, 126, 16> DefaultSizeClassMap;
 typedef SizeClassMap<17, 62,  14> CompactSizeClassMap;
 template<class SizeClassAllocator> struct SizeClassAllocatorLocalCache;
-
