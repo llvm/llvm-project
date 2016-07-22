@@ -155,7 +155,7 @@ Error::GetType () const
 }
 
 //----------------------------------------------------------------------
-// Retuns true if this object contains an value that describes an
+// Returns true if this object contains a value that describes an
 // error or otherwise non-success result.
 //----------------------------------------------------------------------
 bool

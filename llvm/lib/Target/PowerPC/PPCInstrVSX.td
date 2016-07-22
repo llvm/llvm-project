@@ -1029,6 +1029,28 @@ def : Pat<(int_ppc_vsx_xvrsqrtesp v4f32:$A),
 def : Pat<(int_ppc_vsx_xvrsqrtedp v2f64:$A),
           (XVRSQRTEDP $A)>;
 
+let Predicates = [IsLittleEndian] in {
+def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+          (f64 (XSCVSXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+          (f64 (XSCVSXDDP (COPY_TO_REGCLASS (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
+def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+          (f64 (XSCVUXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+          (f64 (XSCVUXDDP (COPY_TO_REGCLASS (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
+} // IsLittleEndian
+
+let Predicates = [IsBigEndian] in {
+def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+          (f64 (XSCVSXDDP (COPY_TO_REGCLASS $S, VSFRC)))>;
+def : Pat<(f64 (PPCfcfid (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+          (f64 (XSCVSXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+          (f64 (XSCVUXDDP (COPY_TO_REGCLASS $S, VSFRC)))>;
+def : Pat<(f64 (PPCfcfidu (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+          (f64 (XSCVUXDDP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+} // IsBigEndian
+
 } // AddedComplexity
 } // HasVSX
 
@@ -1235,6 +1257,27 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
   def XSCVSPDPN : XX2Form<60, 331, (outs vssrc:$XT), (ins vsrc:$XB),
                           "xscvspdpn $XT, $XB", IIC_VecFP, []>;
 
+  let Predicates = [IsLittleEndian] in {
+  def : Pat<(f32 (PPCfcfids (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+  def : Pat<(f32 (PPCfcfids (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (f64 (COPY_TO_REGCLASS $S, VSRC)), VSFRC)))>;
+  }
+
+  let Predicates = [IsBigEndian] in {
+  def : Pat<(f32 (PPCfcfids (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS $S, VSFRC)))>;
+  def : Pat<(f32 (PPCfcfids (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+            (f32 (XSCVSXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsra (i64 (vector_extract v2i64:$S, 0))))),
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS $S, VSFRC)))>;
+  def : Pat<(f32 (PPCfcfidus (PPCmtvsra (i64 (vector_extract v2i64:$S, 1))))),
+            (f32 (XSCVUXDSP (COPY_TO_REGCLASS (XXPERMDI $S, $S, 2), VSFRC)))>;
+  }
 } // AddedComplexity = 400
 } // HasP8Vector
 

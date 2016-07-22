@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -mcpu=cyclone < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-eabi -mcpu=cyclone < %s | FileCheck %s
 
 ; CHECK: foo
 ; CHECK: str w[[REG0:[0-9]+]], [x19, #264]

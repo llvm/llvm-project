@@ -117,8 +117,7 @@ define <16 x i32> @splatvar_shift_v16i32(<16 x i32> %a, <16 x i32> %b) nounwind 
 define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind {
 ; AVX512DQ-LABEL: splatvar_shift_v32i16:
 ; AVX512DQ:       ## BB#0:
-; AVX512DQ-NEXT:    vmovd %xmm2, %eax
-; AVX512DQ-NEXT:    movzwl %ax, %eax
+; AVX512DQ-NEXT:    vpextrw $0, %xmm2, %eax
 ; AVX512DQ-NEXT:    vmovd %eax, %xmm2
 ; AVX512DQ-NEXT:    vpsllw %xmm2, %ymm0, %ymm0
 ; AVX512DQ-NEXT:    vpsllw %xmm2, %ymm1, %ymm1
@@ -126,8 +125,7 @@ define <32 x i16> @splatvar_shift_v32i16(<32 x i16> %a, <32 x i16> %b) nounwind 
 ;
 ; AVX512BW-LABEL: splatvar_shift_v32i16:
 ; AVX512BW:       ## BB#0:
-; AVX512BW-NEXT:    vmovd %xmm1, %eax
-; AVX512BW-NEXT:    movzwl %ax, %eax
+; AVX512BW-NEXT:    vpextrw $0, %xmm1, %eax
 ; AVX512BW-NEXT:    vmovd %eax, %xmm1
 ; AVX512BW-NEXT:    vpsllw %xmm1, %zmm0, %zmm0
 ; AVX512BW-NEXT:    retq

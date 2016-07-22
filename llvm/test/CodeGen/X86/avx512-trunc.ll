@@ -96,8 +96,7 @@ define void @trunc_qb_128_mem(<2 x i64> %i, <2 x i8>* %res) #0 {
 ; KNL-LABEL: trunc_qb_128_mem:
 ; KNL:       ## BB#0:
 ; KNL-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,8,u,u,u,u,u,u,u,u,u,u,u,u,u,u]
-; KNL-NEXT:    vmovd %xmm0, %eax
-; KNL-NEXT:    movw %ax, (%rdi)
+; KNL-NEXT:    vpextrw $0, %xmm0, (%rdi)
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: trunc_qb_128_mem:

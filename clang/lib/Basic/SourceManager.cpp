@@ -25,7 +25,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cstring>
-#include <string>
 
 using namespace clang;
 using namespace SrcMgr;

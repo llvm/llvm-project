@@ -602,7 +602,9 @@ static void addIncludeLinkerOption(const ToolChain &TC,
   CmdArgs.push_back(Args.MakeArgString(LinkerOptionFlag));
 }
 
-void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
+void SanitizerArgs::addArgs(const ToolChain &TC,
+                            const llvm::Triple &EffectiveTriple,
+                            const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs,
                             types::ID InputType) const {
   // Translate available CoverageFeatures to corresponding clang-cc1 flags.
@@ -626,21 +628,24 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
     // Instruct the code generator to embed linker directives in the object file
     // that cause the required runtime libraries to be linked.
     CmdArgs.push_back(Args.MakeArgString(
-        "--dependent-lib=" + TC.getCompilerRT(Args, "ubsan_standalone")));
+        "--dependent-lib=" +
+        TC.getCompilerRT(EffectiveTriple, Args, "ubsan_standalone")));
     if (types::isCXX(InputType))
       CmdArgs.push_back(Args.MakeArgString(
-          "--dependent-lib=" + TC.getCompilerRT(Args, "ubsan_standalone_cxx")));
+          "--dependent-lib=" +
+          TC.getCompilerRT(EffectiveTriple, Args, "ubsan_standalone_cxx")));
   }
   if (TC.getTriple().isOSWindows() && needsStatsRt()) {
-    CmdArgs.push_back(Args.MakeArgString("--dependent-lib=" +
-                                         TC.getCompilerRT(Args, "stats_client")));
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" +
+        TC.getCompilerRT(EffectiveTriple, Args, "stats_client")));
 
     // The main executable must export the stats runtime.
     // FIXME: Only exporting from the main executable (e.g. based on whether the
     // translation unit defines main()) would save a little space, but having
     // multiple copies of the runtime shouldn't hurt.
-    CmdArgs.push_back(Args.MakeArgString("--dependent-lib=" +
-                                         TC.getCompilerRT(Args, "stats")));
+    CmdArgs.push_back(Args.MakeArgString(
+        "--dependent-lib=" + TC.getCompilerRT(EffectiveTriple, Args, "stats")));
     addIncludeLinkerOption(TC, Args, CmdArgs, "__sanitizer_stats_register");
   }
 

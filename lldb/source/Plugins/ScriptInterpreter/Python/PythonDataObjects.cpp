@@ -32,7 +32,7 @@ using namespace lldb_private;
 using namespace lldb;
 
 void
-StructuredPythonObject::Dump(Stream &s) const
+StructuredPythonObject::Dump(Stream &s, bool pretty_print) const
 {
     s << "Python Obj: 0x" << GetValue();
 }

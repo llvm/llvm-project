@@ -13,9 +13,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "ContinuationIndenter.h"
 #include "FormatToken.h"
-#include "clang/Format/Format.h"
+#include "ContinuationIndenter.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Debug.h"
 #include <climits>

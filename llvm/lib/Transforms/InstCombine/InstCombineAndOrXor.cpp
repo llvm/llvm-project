@@ -524,53 +524,6 @@ static unsigned conjugateICmpMask(unsigned Mask) {
   return NewMask;
 }
 
-/// Decompose an icmp into the form ((X & Y) pred Z) if possible.
-/// The returned predicate is either == or !=. Returns false if
-/// decomposition fails.
-static bool decomposeBitTestICmp(const ICmpInst *I, ICmpInst::Predicate &Pred,
-                                 Value *&X, Value *&Y, Value *&Z) {
-  ConstantInt *C = dyn_cast<ConstantInt>(I->getOperand(1));
-  if (!C)
-    return false;
-
-  switch (I->getPredicate()) {
-  default:
-    return false;
-  case ICmpInst::ICMP_SLT:
-    // X < 0 is equivalent to (X & SignBit) != 0.
-    if (!C->isZero())
-      return false;
-    Y = ConstantInt::get(I->getContext(), APInt::getSignBit(C->getBitWidth()));
-    Pred = ICmpInst::ICMP_NE;
-    break;
-  case ICmpInst::ICMP_SGT:
-    // X > -1 is equivalent to (X & SignBit) == 0.
-    if (!C->isAllOnesValue())
-      return false;
-    Y = ConstantInt::get(I->getContext(), APInt::getSignBit(C->getBitWidth()));
-    Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_ULT:
-    // X <u 2^n is equivalent to (X & ~(2^n-1)) == 0.
-    if (!C->getValue().isPowerOf2())
-      return false;
-    Y = ConstantInt::get(I->getContext(), -C->getValue());
-    Pred = ICmpInst::ICMP_EQ;
-    break;
-  case ICmpInst::ICMP_UGT:
-    // X >u 2^n-1 is equivalent to (X & ~(2^n-1)) != 0.
-    if (!(C->getValue() + 1).isPowerOf2())
-      return false;
-    Y = ConstantInt::get(I->getContext(), ~C->getValue());
-    Pred = ICmpInst::ICMP_NE;
-    break;
-  }
-
-  X = I->getOperand(0);
-  Z = ConstantInt::getNullValue(C->getType());
-  return true;
-}
-
 /// Handle (icmp(A & B) ==/!= C) &/| (icmp(A & D) ==/!= E)
 /// Return the set of pattern classes (from MaskedICmpType)
 /// that both LHS and RHS satisfy.
@@ -1170,27 +1123,29 @@ static Instruction *matchDeMorgansLaws(BinaryOperator &I,
         return BinaryOperator::CreateNot(LogicOp);
       }
 
-  // De Morgan's Law in disguise:
-  // (zext(bool A) ^ 1) & (zext(bool B) ^ 1) -> zext(~(A | B))
-  // (zext(bool A) ^ 1) | (zext(bool B) ^ 1) -> zext(~(A & B))
-  Value *A = nullptr;
-  Value *B = nullptr;
-  ConstantInt *C1 = nullptr;
-  if (match(Op0, m_OneUse(m_Xor(m_ZExt(m_Value(A)), m_ConstantInt(C1)))) &&
-      match(Op1, m_OneUse(m_Xor(m_ZExt(m_Value(B)), m_Specific(C1))))) {
-    // TODO: This check could be loosened to handle different type sizes.
-    // Alternatively, we could fix the definition of m_Not to recognize a not
-    // operation hidden by a zext?
-    if (A->getType()->isIntegerTy(1) && B->getType()->isIntegerTy(1) &&
-        C1->isOne()) {
-      Value *LogicOp = Builder->CreateBinOp(Opcode, A, B,
-                                            I.getName() + ".demorgan");
-      Value *Not = Builder->CreateNot(LogicOp);
-      return CastInst::CreateZExtOrBitCast(Not, I.getType());
-    }
-  }
-
   return nullptr;
+}
+
+bool InstCombiner::shouldOptimizeCast(CastInst *CI) {
+  Value *CastSrc = CI->getOperand(0);
+
+  // Noop casts and casts of constants should be eliminated trivially.
+  if (CI->getSrcTy() == CI->getDestTy() || isa<Constant>(CastSrc))
+    return false;
+
+  // If this cast is paired with another cast that can be eliminated, we prefer
+  // to have it eliminated.
+  if (const auto *PrecedingCI = dyn_cast<CastInst>(CastSrc))
+    if (isEliminableCastPair(PrecedingCI, CI))
+      return false;
+
+  // If this is a vector sext from a compare, then we don't want to break the
+  // idiom where each element of the extended vector is either zero or all ones.
+  if (CI->getOpcode() == Instruction::SExt &&
+      isa<CmpInst>(CastSrc) && CI->getDestTy()->isVectorTy())
+    return false;
+
+  return true;
 }
 
 Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
@@ -1224,6 +1179,22 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
     return CastInst::CreateBitOrPointerCast(NewOp, DestTy);
   }
 
+  // Similarly, if one operand is zexted and the other is a constant, move the
+  // logic operation ahead of the zext if the constant is unchanged in the
+  // smaller source type. Performing the logic in a smaller type may provide
+  // more information to later folds, and the smaller logic instruction may be
+  // cheaper (particularly in the case of vectors).
+  Value *X;
+  if (match(Op0, m_OneUse(m_ZExt(m_Value(X)))) && match(Op1, m_Constant(C))) {
+    Constant *TruncC = ConstantExpr::getTrunc(C, SrcTy);
+    Constant *ZextTruncC = ConstantExpr::getZExt(TruncC, DestTy);
+    if (ZextTruncC == C) {
+      // LogicOpc (zext X), C --> zext (LogicOpc X, C)
+      Value *NewOp = Builder->CreateBinOp(LogicOpc, X, TruncC);
+      return new ZExtInst(NewOp, DestTy);
+    }
+  }
+
   CastInst *Cast1 = dyn_cast<CastInst>(Op1);
   if (!Cast1)
     return nullptr;
@@ -1237,12 +1208,9 @@ Instruction *InstCombiner::foldCastedBitwiseLogic(BinaryOperator &I) {
   Value *Cast0Src = Cast0->getOperand(0);
   Value *Cast1Src = Cast1->getOperand(0);
 
-  // fold (logic (cast A), (cast B)) -> (cast (logic A, B))
-
-  // Only do this if the casts both really cause code to be generated.
+  // fold logic(cast(A), cast(B)) -> cast(logic(A, B))
   if ((!isa<ICmpInst>(Cast0Src) || !isa<ICmpInst>(Cast1Src)) &&
-      ShouldOptimizeCast(CastOpcode, Cast0Src, DestTy) &&
-      ShouldOptimizeCast(CastOpcode, Cast1Src, DestTy)) {
+      shouldOptimizeCast(Cast0) && shouldOptimizeCast(Cast1)) {
     Value *NewOp = Builder->CreateBinOp(LogicOpc, Cast0Src, Cast1Src,
                                         I.getName());
     return CastInst::Create(CastOpcode, NewOp, DestTy);

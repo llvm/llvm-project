@@ -7,6 +7,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/Driver/ToolChain.h"
 #include "Tools.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Config/config.h"
@@ -15,16 +16,15 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
-#include "clang/Driver/ToolChain.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/TargetParser.h"
+#include "llvm/Support/TargetRegistry.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -267,46 +267,52 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   llvm_unreachable("Invalid tool kind.");
 }
 
-static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
-                                             const ArgList &Args) {
-  const llvm::Triple &Triple = TC.getTriple();
-  bool IsWindows = Triple.isOSWindows();
+static StringRef
+getArchNameForCompilerRTLib(const ToolChain &TC,
+                            const llvm::Triple &EffectiveTriple,
+                            const ArgList &Args) {
+  bool IsWindows = EffectiveTriple.isOSWindows();
 
-  if (Triple.isWindowsMSVCEnvironment() && TC.getArch() == llvm::Triple::x86)
+  if (EffectiveTriple.isWindowsMSVCEnvironment() &&
+      TC.getArch() == llvm::Triple::x86)
     return "i386";
 
   if (TC.getArch() == llvm::Triple::arm || TC.getArch() == llvm::Triple::armeb)
-    return (arm::getARMFloatABI(TC, Args) == arm::FloatABI::Hard && !IsWindows)
+    return (arm::getARMFloatABI(TC, EffectiveTriple, Args) ==
+                arm::FloatABI::Hard &&
+            !IsWindows)
                ? "armhf"
                : "arm";
 
   return TC.getArchName();
 }
 
-std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
+std::string ToolChain::getCompilerRT(const llvm::Triple &EffectiveTriple,
+                                     const ArgList &Args, StringRef Component,
                                      bool Shared) const {
-  const llvm::Triple &TT = getTriple();
-  const char *Env = TT.isAndroid() ? "-android" : "";
-  bool IsITANMSVCWindows =
-      TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
+  const char *Env = EffectiveTriple.isAndroid() ? "-android" : "";
+  bool IsITANMSVCWindows = EffectiveTriple.isWindowsMSVCEnvironment() ||
+                           EffectiveTriple.isWindowsItaniumEnvironment();
 
-  StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
+  StringRef Arch = getArchNameForCompilerRTLib(*this, EffectiveTriple, Args);
   const char *Prefix = IsITANMSVCWindows ? "" : "lib";
-  const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
+  const char *Suffix = Shared ? (EffectiveTriple.isOSWindows() ? ".dll" : ".so")
                               : (IsITANMSVCWindows ? ".lib" : ".a");
 
   SmallString<128> Path(getDriver().ResourceDir);
-  StringRef OSLibName = Triple.isOSFreeBSD() ? "freebsd" : getOS();
+  StringRef OSLibName = EffectiveTriple.isOSFreeBSD() ? "freebsd" : getOS();
   llvm::sys::path::append(Path, "lib", OSLibName);
   llvm::sys::path::append(Path, Prefix + Twine("clang_rt.") + Component + "-" +
                                     Arch + Env + Suffix);
   return Path.str();
 }
 
-const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
-                                              StringRef Component,
-                                              bool Shared) const {
-  return Args.MakeArgString(getCompilerRT(Args, Component, Shared));
+const char *
+ToolChain::getCompilerRTArgString(const llvm::Triple &EffectiveTriple,
+                                  const llvm::opt::ArgList &Args,
+                                  StringRef Component, bool Shared) const {
+  return Args.MakeArgString(
+      getCompilerRT(EffectiveTriple, Args, Component, Shared));
 }
 
 bool ToolChain::needsProfileRT(const ArgList &Args) {
@@ -517,11 +523,13 @@ void ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
 
 void ToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {}
 
-void ToolChain::addProfileRTLibs(const llvm::opt::ArgList &Args,
+void ToolChain::addProfileRTLibs(const llvm::Triple &EffectiveTriple,
+                                 const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) const {
-  if (!needsProfileRT(Args)) return;
+  if (!needsProfileRT(Args))
+    return;
 
-  CmdArgs.push_back(getCompilerRTArgString(Args, "profile"));
+  CmdArgs.push_back(getCompilerRTArgString(EffectiveTriple, Args, "profile"));
 }
 
 ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(

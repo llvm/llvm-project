@@ -13,17 +13,14 @@
 
 #include "clang/StaticAnalyzer/Frontend/AnalysisConsumer.h"
 #include "ModelInjector.h"
-#include "clang/AST/ASTConsumer.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
-#include "clang/AST/ParentMap.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Analysis/Analyses/LiveVariables.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CallGraph.h"
 #include "clang/Analysis/CodeInjector.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
@@ -36,9 +33,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/AnalysisManager.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ExprEngine.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistration.h"
-#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
-#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -431,6 +426,13 @@ static bool shouldSkipFunction(const Decl *D,
   //   Count naming convention errors more aggressively.
   if (isa<ObjCMethodDecl>(D))
     return false;
+  // We also want to reanalyze all C++ copy and move assignment operators to
+  // separately check the two cases where 'this' aliases with the parameter and
+  // where it may not. (cplusplus.SelfAssignmentChecker)
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(D)) {
+    if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
+      return false;
+  }
 
   // Otherwise, if we visited the function before, do not reanalyze it.
   return Visited.count(D);
@@ -442,9 +444,7 @@ AnalysisConsumer::getInliningModeForFunction(const Decl *D,
   // We want to reanalyze all ObjC methods as top level to report Retain
   // Count naming convention errors more aggressively. But we should tune down
   // inlining when reanalyzing an already inlined function.
-  if (Visited.count(D)) {
-    assert(isa<ObjCMethodDecl>(D) &&
-           "We are only reanalyzing ObjCMethods.");
+  if (Visited.count(D) && isa<ObjCMethodDecl>(D)) {
     const ObjCMethodDecl *ObjCM = cast<ObjCMethodDecl>(D);
     if (ObjCM->getMethodFamily() != OMF_init)
       return ExprEngine::Inline_Minimal;

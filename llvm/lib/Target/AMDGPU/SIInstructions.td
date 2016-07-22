@@ -139,7 +139,7 @@ defm S_FLBIT_I32_B32 : SOP1_32 <sop1<0x15, 0x12>, "s_flbit_i32_b32",
 
 defm S_FLBIT_I32_B64 : SOP1_32_64 <sop1<0x16, 0x13>, "s_flbit_i32_b64", []>;
 defm S_FLBIT_I32 : SOP1_32 <sop1<0x17, 0x14>, "s_flbit_i32",
-  [(set i32:$sdst, (int_AMDGPU_flbit_i32 i32:$src0))]
+  [(set i32:$sdst, (AMDGPUffbh_i32 i32:$src0))]
 >;
 defm S_FLBIT_I32_I64 : SOP1_32_64 <sop1<0x18, 0x15>, "s_flbit_i32_i64", []>;
 defm S_SEXT_I32_I8 : SOP1_32 <sop1<0x19, 0x16>, "s_sext_i32_i8",
@@ -1388,9 +1388,16 @@ defm V_CLREXCP : VOP1Inst <vop1<0x41,0x35>, "v_clrexcp", VOP_NO_EXT<VOP_NONE>>;
 }
 
 let Uses = [M0, EXEC] in {
-defm V_MOVRELD_B32 : VOP1Inst <vop1<0x42, 0x36>, "v_movreld_b32", VOP_NO_EXT<VOP_I32_I32>>;
-defm V_MOVRELS_B32 : VOP1Inst <vop1<0x43, 0x37>, "v_movrels_b32", VOP_NO_EXT<VOP_I32_I32>>;
+// v_movreld_b32 is a special case because the destination output
+ // register is really a source. It isn't actually read (but may be
+ // written), and is only to provide the base register to start
+ // indexing from. Tablegen seems to not let you define an implicit
+ // virtual register output for the super register being written into,
+ // so this must have an implicit def of the register added to it.
+defm V_MOVRELD_B32 : VOP1Inst <vop1<0x42, 0x36>, "v_movreld_b32", VOP_MOVRELD>;
+defm V_MOVRELS_B32 : VOP1Inst <vop1<0x43, 0x37>, "v_movrels_b32", VOP_I32_VI32_NO_EXT>;
 defm V_MOVRELSD_B32 : VOP1Inst <vop1<0x44, 0x38>, "v_movrelsd_b32", VOP_NO_EXT<VOP_I32_I32>>;
+
 } // End Uses = [M0, EXEC]
 
 // These instruction only exist on SI and CI
@@ -1989,7 +1996,7 @@ def SI_END_CF : PseudoInstSI <
 let Uses = [EXEC], Defs = [EXEC,VCC] in {
 def SI_KILL : PseudoInstSI <
   (outs), (ins VSrc_32:$src),
-  [(int_AMDGPU_kill f32:$src)]> {
+  [(AMDGPUkill i32:$src)]> {
   let isConvergent = 1;
   let usesCustomInserter = 1;
 }
@@ -2031,17 +2038,20 @@ def SI_RETURN : PseudoInstSI <
   let hasNoSchedulingInfo = 1;
 }
 
-let Uses = [EXEC], Defs = [EXEC, VCC, M0],
+let Uses = [EXEC], Defs = [M0, EXEC],
   UseNamedOperandTable = 1 in {
 
 class SI_INDIRECT_SRC<RegisterClass rc> : PseudoInstSI <
-  (outs VGPR_32:$vdst, SReg_64:$sdst),
-  (ins rc:$src, VS_32:$idx, i32imm:$offset)>;
+  (outs VGPR_32:$vdst),
+  (ins rc:$src, VS_32:$idx, i32imm:$offset)> {
+  let usesCustomInserter = 1;
+}
 
 class SI_INDIRECT_DST<RegisterClass rc> : PseudoInstSI <
-  (outs rc:$vdst, SReg_64:$sdst),
-  (ins unknown:$src, VS_32:$idx, i32imm:$offset, VGPR_32:$val)> {
+  (outs rc:$vdst),
+  (ins rc:$src, VS_32:$idx, i32imm:$offset, VGPR_32:$val)> {
   let Constraints = "$src = $vdst";
+  let usesCustomInserter = 1;
 }
 
 // TODO: We can support indirect SGPR access.
@@ -2057,7 +2067,7 @@ def SI_INDIRECT_DST_V4 : SI_INDIRECT_DST<VReg_128>;
 def SI_INDIRECT_DST_V8 : SI_INDIRECT_DST<VReg_256>;
 def SI_INDIRECT_DST_V16 : SI_INDIRECT_DST<VReg_512>;
 
-} // End Uses = [EXEC], Defs = [EXEC,VCC,M0]
+} // End Uses = [EXEC], Defs = [M0, EXEC]
 
 multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1, Uses = [EXEC] in {
@@ -2451,17 +2461,6 @@ def : Pat <
 def : Pat <
   (int_amdgcn_s_waitcnt i32:$simm16),
   (S_WAITCNT (as_i16imm $simm16))
->;
-
-// FIXME: These should be removed eventually
-def : Pat <
-  (int_AMDGPU_barrier_global),
-  (S_BARRIER)
->;
-
-def : Pat <
-  (int_AMDGPU_barrier_local),
-  (S_BARRIER)
 >;
 
 //===----------------------------------------------------------------------===//

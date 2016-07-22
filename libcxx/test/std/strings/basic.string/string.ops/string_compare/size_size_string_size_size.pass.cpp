@@ -31,7 +31,7 @@ int sign(int x)
 
 template <class S>
 void
-test(const S& s, typename S::size_type pos1, typename S::size_type n1,
+test(const S& s,   typename S::size_type pos1, typename S::size_type n1,
      const S& str, typename S::size_type pos2, typename S::size_type n2, int x)
 {
     try
@@ -40,7 +40,7 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
         assert(pos1 <= s.size());
         assert(pos2 <= str.size());
     }
-    catch (std::out_of_range&)
+    catch (const std::out_of_range&)
     {
         assert(pos1 > s.size() || pos2 > str.size());
     }
@@ -48,8 +48,8 @@ test(const S& s, typename S::size_type pos1, typename S::size_type n1,
 
 template <class S>
 void
-test_npos(const S& s, typename S::size_type pos1, typename S::size_type n1,
-     const S& str, typename S::size_type pos2, int x)
+test_npos(const S& s,   typename S::size_type pos1, typename S::size_type n1,
+          const S& str, typename S::size_type pos2, int x)
 {
     try
     {
@@ -57,7 +57,7 @@ test_npos(const S& s, typename S::size_type pos1, typename S::size_type n1,
         assert(pos1 <= s.size());
         assert(pos2 <= str.size());
     }
-    catch (std::out_of_range&)
+    catch (const std::out_of_range&)
     {
         assert(pos1 > s.size() || pos2 > str.size());
     }

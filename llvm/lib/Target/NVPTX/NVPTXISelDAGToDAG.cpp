@@ -5076,11 +5076,12 @@ bool NVPTXDAGToDAGISel::SelectDirectAddr(SDValue N, SDValue &Address) {
     Address = N.getOperand(0);
     return true;
   }
-  if (N.getOpcode() == ISD::INTRINSIC_WO_CHAIN) {
-    unsigned IID = cast<ConstantSDNode>(N.getOperand(0))->getZExtValue();
-    if (IID == Intrinsic::nvvm_ptr_gen_to_param)
-      if (N.getOperand(1).getOpcode() == NVPTXISD::MoveParam)
-        return (SelectDirectAddr(N.getOperand(1).getOperand(0), Address));
+  // addrspacecast(MoveParam(arg_symbol) to addrspace(PARAM)) -> arg_symbol
+  if (AddrSpaceCastSDNode *CastN = dyn_cast<AddrSpaceCastSDNode>(N)) {
+    if (CastN->getSrcAddressSpace() == ADDRESS_SPACE_GENERIC &&
+        CastN->getDestAddressSpace() == ADDRESS_SPACE_PARAM &&
+        CastN->getOperand(0).getOpcode() == NVPTXISD::MoveParam)
+      return SelectDirectAddr(CastN->getOperand(0).getOperand(0), Address);
   }
   return false;
 }

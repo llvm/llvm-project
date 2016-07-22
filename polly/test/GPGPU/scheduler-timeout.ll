@@ -40,14 +40,14 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CODE-NEXT:   {
 ; CODE-NEXT:     dim3 k0_dimBlock(16, 32);
 ; CODE-NEXT:     dim3 k0_dimGrid(128, 128);
-; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> ();
+; CODE-NEXT:     kernel0 <<<k0_dimGrid, k0_dimBlock>>> (dev_MemRef_tmp, dev_MemRef_A, dev_MemRef_alpha, dev_MemRef_B);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 
 ; CODE:   {
 ; CODE-NEXT:     dim3 k1_dimBlock(16, 32);
 ; CODE-NEXT:     dim3 k1_dimGrid(128, 128);
-; CODE-NEXT:     kernel1 <<<k1_dimGrid, k1_dimBlock>>> ();
+; CODE-NEXT:     kernel1 <<<k1_dimGrid, k1_dimBlock>>> (dev_MemRef_tmp, dev_MemRef_D, dev_MemRef_beta, dev_MemRef_C);
 ; CODE-NEXT:     cudaCheckKernel();
 ; CODE-NEXT:   }
 

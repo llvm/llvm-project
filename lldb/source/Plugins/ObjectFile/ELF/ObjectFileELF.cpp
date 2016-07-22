@@ -2390,7 +2390,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
             /*
              * MIPS:
              * The bit #0 of an address is used for ISA mode (1 for microMIPS, 0 for MIPS).
-             * This allows processer to switch between microMIPS and MIPS without any need
+             * This allows processor to switch between microMIPS and MIPS without any need
              * for special mode-control register. However, apart from .debug_line, none of
              * the ELF/DWARF sections set the ISA bit (for symbol or section). Use st_other
              * flag to check whether the symbol is microMIPS and then set the address class

@@ -40,6 +40,8 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
   [SDTCisFP<0>, SDTCisSameAs<0, 1>, SDTCisSameAs<0, 2>, SDTCisSameAs<0, 3>, SDTCisInt<4>]
 >;
 
+def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
+
 //===----------------------------------------------------------------------===//
 // AMDGPU DAG Nodes
 //
@@ -202,6 +204,7 @@ def AMDGPUbfi : SDNode<"AMDGPUISD::BFI", AMDGPUDTIntTernaryOp>;
 def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
 def AMDGPUffbh_u32 : SDNode<"AMDGPUISD::FFBH_U32", SDTIntUnaryOp>;
+def AMDGPUffbh_i32 : SDNode<"AMDGPUISD::FFBH_I32", SDTIntUnaryOp>;
 
 // Signed and unsigned 24-bit mulitply.  The highest 8-bits are ignore when
 // performing the mulitply.  The result is a 32-bit value.
@@ -244,6 +247,9 @@ def AMDGPUinterp_p1 : SDNode<"AMDGPUISD::INTERP_P1",
 def AMDGPUinterp_p2 : SDNode<"AMDGPUISD::INTERP_P2",
                       SDTypeProfile<1, 4, [SDTCisFP<0>]>,
                       [SDNPInGlue]>;
+
+def AMDGPUkill : SDNode<"AMDGPUISD::KILL", AMDGPUKillSDT,
+  [SDNPHasChain, SDNPSideEffect]>;
 
 //===----------------------------------------------------------------------===//
 // Flow Control Profile Types

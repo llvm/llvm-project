@@ -21,11 +21,6 @@ namespace include_fixer {
 /// \brief A context for the symbol being queried.
 class IncludeFixerContext {
 public:
-  IncludeFixerContext() = default;
-  IncludeFixerContext(llvm::StringRef Name, llvm::StringRef ScopeQualifiers,
-                      const std::vector<find_all_symbols::SymbolInfo> Symbols,
-                      tooling::Range Range);
-
   struct HeaderInfo {
     /// \brief The header where QualifiedName comes from.
     std::string Header;
@@ -34,33 +29,53 @@ public:
     std::string QualifiedName;
   };
 
+  struct QuerySymbolInfo {
+    /// \brief The raw symbol name being queried in database. This name might
+    /// miss some namespace qualifiers, and will be replaced by a fully
+    /// qualified one.
+    std::string RawIdentifier;
+
+    /// \brief The qualifiers of the scope in which SymbolIdentifier lookup
+    /// occurs. It is represented as a sequence of names and scope resolution
+    /// operatiors ::, ending with a scope resolution operator (e.g. a::b::).
+    /// Empty if SymbolIdentifier is not in a specific scope.
+    std::string ScopedQualifiers;
+
+    /// \brief The replacement range of RawIdentifier.
+    tooling::Range Range;
+  };
+
+  IncludeFixerContext() = default;
+  IncludeFixerContext(std::vector<QuerySymbolInfo> QuerySymbols,
+                      std::vector<find_all_symbols::SymbolInfo> Symbols);
+
   /// \brief Get symbol name.
-  llvm::StringRef getSymbolIdentifier() const { return SymbolIdentifier; }
+  llvm::StringRef getSymbolIdentifier() const {
+    return QuerySymbolInfos.front().RawIdentifier;
+  }
 
   /// \brief Get replacement range of the symbol.
-  tooling::Range getSymbolRange() const { return SymbolRange; }
+  tooling::Range getSymbolRange() const {
+    return QuerySymbolInfos.front().Range;
+  }
 
+  /// \brief Get header information.
   const std::vector<HeaderInfo> &getHeaderInfos() const { return HeaderInfos; }
+
+  /// \brief Get information of symbols being querid.
+  const std::vector<QuerySymbolInfo> &getQuerySymbolInfos() const {
+    return QuerySymbolInfos;
+  }
 
 private:
   friend struct llvm::yaml::MappingTraits<IncludeFixerContext>;
 
-  /// \brief The raw symbol name being queried in database. This name might miss
-  /// some namespace qualifiers, and will be replaced by a fully qualified one.
-  std::string SymbolIdentifier;
-
-  /// \brief The qualifiers of the scope in which SymbolIdentifier lookup
-  /// occurs. It is represented as a sequence of names and scope resolution
-  /// operatiors ::, ending with a scope resolution operator (e.g. a::b::).
-  /// Empty if SymbolIdentifier is not in a specific scope.
-  std::string SymbolScopedQualifiers;
+  /// \brief All instances of an unidentified symbol being queried.
+  std::vector<QuerySymbolInfo> QuerySymbolInfos;
 
   /// \brief The symbol candidates which match SymbolIdentifier. The symbols are
   /// sorted in a descending order based on the popularity info in SymbolInfo.
   std::vector<find_all_symbols::SymbolInfo> MatchedSymbols;
-
-  /// \brief The replacement range of SymbolIdentifier.
-  tooling::Range SymbolRange;
 
   /// \brief The header information.
   std::vector<HeaderInfo> HeaderInfos;

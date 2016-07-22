@@ -619,4 +619,14 @@ TEST(DenseMapCustomTest, SmallDenseMapGrowTest) {
   EXPECT_TRUE(map.find(32) == map.end());
 }
 
+TEST(DenseMapCustomTest, TryEmplaceTest) {
+  DenseMap<int, std::unique_ptr<int>> Map;
+  std::unique_ptr<int> P(new int(2));
+  auto Try1 = Map.try_emplace(0, new int(1));
+  EXPECT_TRUE(Try1.second);
+  auto Try2 = Map.try_emplace(0, std::move(P));
+  EXPECT_FALSE(Try2.second);
+  EXPECT_EQ(Try1.first, Try2.first);
+  EXPECT_NE(nullptr, P);
+}
 }

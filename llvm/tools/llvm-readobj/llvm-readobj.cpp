@@ -120,6 +120,8 @@ namespace opts {
   // -dynamic-table
   cl::opt<bool> DynamicTable("dynamic-table",
     cl::desc("Display the ELF .dynamic section table"));
+  cl::alias DynamicTableShort("d", cl::desc("Alias for --dynamic-table"),
+                              cl::aliasopt(DynamicTable));
 
   // -needed-libs
   cl::opt<bool> NeededLibraries("needed-libs",
@@ -128,6 +130,8 @@ namespace opts {
   // -program-headers
   cl::opt<bool> ProgramHeaders("program-headers",
     cl::desc("Display ELF program headers"));
+  cl::alias ProgramHeadersShort("l", cl::desc("Alias for --program-headers"),
+                                cl::aliasopt(ProgramHeaders));
 
   // -hash-table
   cl::opt<bool> HashTable("hash-table",

@@ -1,7 +1,6 @@
-; RUN: llc < %s -march=arm64 |  FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0.0 |  FileCheck %s
 
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-target triple = "arm64-apple-ios7.0.0"
 
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.ctlz.i32(i32, i1) #0

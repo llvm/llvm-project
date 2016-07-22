@@ -56,6 +56,7 @@ unsigned AMDGPUELFObjectWriter::getRelocType(MCContext &Ctx,
   default: break;
   case FK_PCRel_4:
     return ELF::R_AMDGPU_REL32;
+  case FK_Data_4:
   case FK_SecRel_4:
     return ELF::R_AMDGPU_ABS32;
   }

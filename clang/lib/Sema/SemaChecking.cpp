@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
@@ -33,14 +32,14 @@
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/Sema.h"
+#include "clang/Sema/SemaInternal.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Locale.h"
-#include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/raw_ostream.h"
-#include <limits>
 
 using namespace clang;
 using namespace sema;
@@ -1598,6 +1597,56 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     return SemaBuiltinCpuSupports(*this, TheCall);
   case X86::BI__builtin_ms_va_start:
     return SemaBuiltinMSVAStart(TheCall);
+  case X86::BI__builtin_ia32_addcarryx_u64:
+  case X86::BI__builtin_ia32_addcarry_u64:
+  case X86::BI__builtin_ia32_subborrow_u64:
+  case X86::BI__builtin_ia32_readeflags_u64:
+  case X86::BI__builtin_ia32_writeeflags_u64:
+  case X86::BI__builtin_ia32_bextr_u64:
+  case X86::BI__builtin_ia32_bextri_u64:
+  case X86::BI__builtin_ia32_bzhi_di:
+  case X86::BI__builtin_ia32_pdep_di:
+  case X86::BI__builtin_ia32_pext_di:
+  case X86::BI__builtin_ia32_crc32di:
+  case X86::BI__builtin_ia32_fxsave64:
+  case X86::BI__builtin_ia32_fxrstor64:
+  case X86::BI__builtin_ia32_xsave64:
+  case X86::BI__builtin_ia32_xrstor64:
+  case X86::BI__builtin_ia32_xsaveopt64:
+  case X86::BI__builtin_ia32_xrstors64:
+  case X86::BI__builtin_ia32_xsavec64:
+  case X86::BI__builtin_ia32_xsaves64:
+  case X86::BI__builtin_ia32_rdfsbase64:
+  case X86::BI__builtin_ia32_rdgsbase64:
+  case X86::BI__builtin_ia32_wrfsbase64:
+  case X86::BI__builtin_ia32_wrgsbase64:
+  case X86::BI__builtin_ia32_pbroadcastb512_gpr_mask:
+  case X86::BI__builtin_ia32_pbroadcastb256_gpr_mask:
+  case X86::BI__builtin_ia32_pbroadcastb128_gpr_mask:
+  case X86::BI__builtin_ia32_vcvtsd2si64:
+  case X86::BI__builtin_ia32_vcvtsd2usi64:
+  case X86::BI__builtin_ia32_vcvtss2si64:
+  case X86::BI__builtin_ia32_vcvtss2usi64:
+  case X86::BI__builtin_ia32_vcvttsd2si64:
+  case X86::BI__builtin_ia32_vcvttsd2usi64:
+  case X86::BI__builtin_ia32_vcvttss2si64:
+  case X86::BI__builtin_ia32_vcvttss2usi64:
+  case X86::BI__builtin_ia32_cvtss2si64:
+  case X86::BI__builtin_ia32_cvttss2si64:
+  case X86::BI__builtin_ia32_cvtsd2si64:
+  case X86::BI__builtin_ia32_cvttsd2si64:
+  case X86::BI__builtin_ia32_cvtsi2sd64:
+  case X86::BI__builtin_ia32_cvtsi2ss64:
+  case X86::BI__builtin_ia32_cvtusi2sd64:
+  case X86::BI__builtin_ia32_cvtusi2ss64:
+  case X86::BI__builtin_ia32_rdseed64_step: {
+    // These builtins only work on x86-64 targets.
+    const llvm::Triple &TT = Context.getTargetInfo().getTriple();
+    if (TT.getArch() != llvm::Triple::x86_64)
+      return Diag(TheCall->getCallee()->getLocStart(),
+                  diag::err_x86_builtin_32_bit_tgt);
+    return false;
+  }
   case X86::BI__builtin_ia32_extractf64x4_mask:
   case X86::BI__builtin_ia32_extracti64x4_mask:
   case X86::BI__builtin_ia32_extractf32x8_mask:
@@ -2399,7 +2448,11 @@ ExprResult Sema::SemaAtomicOpsOverloaded(ExprResult TheCallResult,
 
   // Inspect the first argument of the atomic operation.
   Expr *Ptr = TheCall->getArg(0);
-  Ptr = DefaultFunctionArrayLvalueConversion(Ptr).get();
+  ExprResult ConvertedPtr = DefaultFunctionArrayLvalueConversion(Ptr);
+  if (ConvertedPtr.isInvalid())
+    return ExprError();
+
+  Ptr = ConvertedPtr.get();
   const PointerType *pointerType = Ptr->getType()->getAs<PointerType>();
   if (!pointerType) {
     Diag(DRE->getLocStart(), diag::err_atomic_builtin_must_be_pointer)

@@ -55,10 +55,6 @@ static cl::opt<bool> EnableNarrowLdMerge("enable-narrow-ld-merge", cl::Hidden,
                                          cl::init(false),
                                          cl::desc("Enable narrow load merge"));
 
-namespace llvm {
-void initializeAArch64LoadStoreOptPass(PassRegistry &);
-}
-
 #define AARCH64_LOAD_STORE_OPT_NAME "AArch64 load / store optimization pass"
 
 namespace {
@@ -1118,8 +1114,9 @@ bool AArch64LoadStoreOpt::findMatchingStore(
     --MBBI;
     MachineInstr &MI = *MBBI;
 
-    // Don't count DBG_VALUE instructions towards the search limit.
-    if (!MI.isDebugValue())
+    // Don't count transient instructions towards the search limit since there
+    // may be different numbers of them if e.g. debug information is present.
+    if (!MI.isTransient())
       ++Count;
 
     // If the load instruction reads directly from the address to which the
@@ -1229,13 +1226,11 @@ AArch64LoadStoreOpt::findMatchingInsn(MachineBasicBlock::iterator I,
 
   for (unsigned Count = 0; MBBI != E && Count < Limit; ++MBBI) {
     MachineInstr &MI = *MBBI;
-    // Skip DBG_VALUE instructions. Otherwise debug info can affect the
-    // optimization by changing how far we scan.
-    if (MI.isDebugValue())
-      continue;
 
-    // Now that we know this is a real instruction, count it.
-    ++Count;
+    // Don't count transient instructions towards the search limit since there
+    // may be different numbers of them if e.g. debug information is present.
+    if (!MI.isTransient())
+      ++Count;
 
     Flags.setSExtIdx(-1);
     if (areCandidatesToMergeOrPair(FirstMI, MI, Flags, TII) &&
@@ -1502,12 +1497,11 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnForward(
   ++MBBI;
   for (unsigned Count = 0; MBBI != E && Count < Limit; ++MBBI) {
     MachineInstr &MI = *MBBI;
-    // Skip DBG_VALUE instructions.
-    if (MI.isDebugValue())
-      continue;
 
-    // Now that we know this is a real instruction, count it.
-    ++Count;
+    // Don't count transient instructions towards the search limit since there
+    // may be different numbers of them if e.g. debug information is present.
+    if (!MI.isTransient())
+      ++Count;
 
     // If we found a match, return it.
     if (isMatchingUpdateInsn(*I, MI, BaseReg, UnscaledOffset))
@@ -1556,8 +1550,9 @@ MachineBasicBlock::iterator AArch64LoadStoreOpt::findMatchingUpdateInsnBackward(
     --MBBI;
     MachineInstr &MI = *MBBI;
 
-    // Don't count DBG_VALUE instructions towards the search limit.
-    if (!MI.isDebugValue())
+    // Don't count transient instructions towards the search limit since there
+    // may be different numbers of them if e.g. debug information is present.
+    if (!MI.isTransient())
       ++Count;
 
     // If we found a match, return it.

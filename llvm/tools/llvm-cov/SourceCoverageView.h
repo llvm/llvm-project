@@ -99,8 +99,6 @@ struct LineCoverageStats {
 
 /// \brief A file manager that handles format-aware file creation.
 class CoveragePrinter {
-  const CoverageViewOptions &Opts;
-
 public:
   struct StreamDestructor {
     void operator()(raw_ostream *OS) const;
@@ -109,6 +107,8 @@ public:
   using OwnedStream = std::unique_ptr<raw_ostream, StreamDestructor>;
 
 protected:
+  const CoverageViewOptions &Opts;
+
   CoveragePrinter(const CoverageViewOptions &Opts) : Opts(Opts) {}
 
   /// \brief Return `OutputDir/ToplevelDir/Path.Extension`. If \p InToplevel is

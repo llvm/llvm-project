@@ -390,7 +390,7 @@ static inline void StrstrCheck(void *ctx, char *r, const char *s1,
 #if SANITIZER_INTERCEPT_STRSTR
 
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strstr, uptr called_pc,
-                              const char *s1, const char *s2, char *result);
+                              const char *s1, const char *s2, char *result)
 
 INTERCEPTOR(char*, strstr, const char *s1, const char *s2) {
   if (COMMON_INTERCEPTOR_NOTHING_IS_INITIALIZED)
@@ -413,7 +413,7 @@ INTERCEPTOR(char*, strstr, const char *s1, const char *s2) {
 #if SANITIZER_INTERCEPT_STRCASESTR
 
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_strcasestr, uptr called_pc,
-                              const char *s1, const char *s2, char *result);
+                              const char *s1, const char *s2, char *result)
 
 INTERCEPTOR(char*, strcasestr, const char *s1, const char *s2) {
   void *ctx;
@@ -434,7 +434,7 @@ INTERCEPTOR(char*, strcasestr, const char *s1, const char *s2) {
 #if SANITIZER_INTERCEPT_MEMMEM
 DECLARE_WEAK_INTERCEPTOR_HOOK(__sanitizer_weak_hook_memmem, uptr called_pc,
                               const void *s1, SIZE_T len1, const void *s2,
-                              SIZE_T len2, void *result);
+                              SIZE_T len2, void *result)
 
 INTERCEPTOR(void*, memmem, const void *s1, SIZE_T len1, const void *s2,
             SIZE_T len2) {
@@ -663,7 +663,12 @@ INTERCEPTOR(void*, memchr, const void *s, int c, SIZE_T n) {
     return internal_memchr(s, c, n);
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, memchr, s, c, n);
-  void *res = REAL(memchr)(s, c, n);
+  void *res;
+  if (REAL(memchr)) {
+    res = REAL(memchr)(s, c, n);
+  } else {
+    res = internal_memchr(s, c, n);
+  }
   uptr len = res ? (char *)res - (const char *)s + 1 : n;
   COMMON_INTERCEPTOR_READ_RANGE(ctx, s, len);
   return res;

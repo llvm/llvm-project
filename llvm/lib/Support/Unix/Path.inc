@@ -90,7 +90,8 @@ namespace sys  {
 namespace fs {
 #if defined(__FreeBSD__) || defined (__NetBSD__) || defined(__Bitrig__) || \
     defined(__OpenBSD__) || defined(__minix) || defined(__FreeBSD_kernel__) || \
-    defined(__linux__) || defined(__CYGWIN__) || defined(__DragonFly__)
+    defined(__linux__) || defined(__CYGWIN__) || defined(__DragonFly__) || \
+    defined(_AIX)
 static int
 test_dir(char ret[PATH_MAX], const char *dir, const char *bin)
 {
@@ -161,7 +162,7 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
   }
 #elif defined(__FreeBSD__) || defined (__NetBSD__) || defined(__Bitrig__) || \
       defined(__OpenBSD__) || defined(__minix) || defined(__DragonFly__) || \
-      defined(__FreeBSD_kernel__)
+      defined(__FreeBSD_kernel__) || defined(_AIX)
   char exe_path[PATH_MAX];
 
   if (getprogpath(exe_path, argv0) != NULL)
@@ -329,8 +330,17 @@ std::error_code rename(const Twine &from, const Twine &to) {
 }
 
 std::error_code resize_file(int FD, uint64_t Size) {
+#if defined(HAVE_POSIX_FALLOCATE)
+  // If we have posix_fallocate use it. Unlike ftruncate it always allocates
+  // space, so we get an error if the disk is full.
+  if (int Err = ::posix_fallocate(FD, 0, Size))
+    return std::error_code(Err, std::generic_category());
+#else
+  // Use ftruncate as a fallback. It may or may not allocate space. At least on
+  // OS X with HFS+ it does.
   if (::ftruncate(FD, Size) == -1)
     return std::error_code(errno, std::generic_category());
+#endif
 
   return std::error_code();
 }

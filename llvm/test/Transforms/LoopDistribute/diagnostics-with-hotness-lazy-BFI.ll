@@ -5,6 +5,11 @@
 ; RUN: opt -loop-distribute -S -pass-remarks-missed=loop-distribute \
 ; RUN:     -debug-only=block-freq                            < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 
+; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
+; RUN:     -debug-only=block-freq -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
+; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
+; RUN:     -debug-only=block-freq                            < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
+
 ; REQUIRES: asserts
 
 ; HOTNESS: block-frequency: forced

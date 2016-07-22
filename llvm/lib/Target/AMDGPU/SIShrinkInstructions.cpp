@@ -398,9 +398,13 @@ bool SIShrinkInstructions::runOnMachineFunction(MachineFunction &MF) {
       }
 
       ++NumInstructionsShrunk;
-      MI.eraseFromParent();
 
+      // Copy extra operands not present in the instruction definition.
+      Inst32->copyImplicitOps(MF, MI);
+
+      MI.eraseFromParent();
       foldImmediates(*Inst32, TII, MRI);
+
       DEBUG(dbgs() << "e32 MI = " << *Inst32 << '\n');
 
 

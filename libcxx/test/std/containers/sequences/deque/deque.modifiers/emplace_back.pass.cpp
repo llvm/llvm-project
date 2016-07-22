@@ -7,9 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <deque>
 
-// template <class... Args> void emplace_back(Args&&... args);
+// template <class... Args> reference emplace_back(Args&&... args);
 
 #include <deque>
 #include <cassert>
@@ -17,8 +19,6 @@
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 template <class C>
 C
@@ -47,12 +47,14 @@ void
 test(C& c1)
 {
     typedef typename C::iterator I;
+    typedef typename C::reference Ref;
     std::size_t c1_osize = c1.size();
-    c1.emplace_back(Emplaceable(1, 2.5));
+    Ref ref = c1.emplace_back(Emplaceable(1, 2.5));
     assert(c1.size() == c1_osize + 1);
     assert(distance(c1.begin(), c1.end()) == c1.size());
     I i = c1.end();
     assert(*--i == Emplaceable(1, 2.5));
+    assert(&(*i) == &ref);
 }
 
 template <class C>
@@ -63,11 +65,8 @@ testN(int start, int N)
     test(c1);
 }
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng)/sizeof(rng[0]);
@@ -75,7 +74,6 @@ int main()
         for (int j = 0; j < N; ++j)
             testN<std::deque<Emplaceable> >(rng[i], rng[j]);
     }
-#if TEST_STD_VER >= 11
     {
     int rng[] = {0, 1, 2, 3, 1023, 1024, 1025, 2047, 2048, 2049};
     const int N = sizeof(rng)/sizeof(rng[0]);
@@ -94,6 +92,4 @@ int main()
         c.emplace_front(1, 2, 3);
         assert(c.size() == 4);
     }
-#endif
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

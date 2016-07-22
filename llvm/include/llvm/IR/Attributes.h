@@ -210,6 +210,7 @@ public:
 private:
   friend class AttrBuilder;
   friend class AttributeSetImpl;
+  friend class AttributeSetNode;
   template <typename Ty> friend struct DenseMapInfo;
 
   /// \brief The attributes that we are managing. This can be null to represent

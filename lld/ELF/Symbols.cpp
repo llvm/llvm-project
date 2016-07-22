@@ -101,11 +101,6 @@ StringRef SymbolBody::getName() const {
   return StringRef(Name.S, Name.Len);
 }
 
-void SymbolBody::setName(StringRef S) {
-  Name.S = S.data();
-  Name.Len = S.size();
-}
-
 // Returns true if a symbol can be replaced at load-time by a symbol
 // with the same name defined in other ELF executable or DSO.
 bool SymbolBody::isPreemptible() const {

@@ -413,7 +413,7 @@ else ()
                               STATIC
                               ARCHS ${arch}
                               SOURCES ${${arch}_SOURCES}
-                              CFLAGS ${maybe_stdc99}
+                              CFLAGS ${maybe_stdc99} ${CMAKE_C_FLAGS}
                               PARENT_TARGET builtins)
     endif ()
   endforeach ()

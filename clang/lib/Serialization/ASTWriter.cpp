@@ -12,7 +12,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Serialization/ASTWriter.h"
-#include "clang/Serialization/ModuleFileExtension.h"
 #include "ASTCommon.h"
 #include "ASTReaderInternals.h"
 #include "MultiOnDiskHashTable.h"
@@ -44,6 +43,7 @@
 #include "clang/Sema/IdentifierResolver.h"
 #include "clang/Sema/Sema.h"
 #include "clang/Serialization/ASTReader.h"
+#include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/SerializationDiagnostic.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -52,7 +52,6 @@
 #include "llvm/Bitcode/BitstreamWriter.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/OnDiskHashTable.h"
 #include "llvm/Support/Path.h"
@@ -1018,6 +1017,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(SUBMODULE_PRIVATE_HEADER);
   RECORD(SUBMODULE_TEXTUAL_HEADER);
   RECORD(SUBMODULE_PRIVATE_TEXTUAL_HEADER);
+  RECORD(SUBMODULE_INITIALIZERS);
 
   // Comments Block.
   BLOCK(COMMENTS_BLOCK);
@@ -2418,7 +2418,9 @@ unsigned ASTWriter::getLocalOrImportedSubmoduleID(Module *Mod) {
   if (Known != SubmoduleIDs.end())
     return Known->second;
 
-  if (Mod->getTopLevelModule() != WritingModule)
+  auto *Top = Mod->getTopLevelModule();
+  if (Top != WritingModule &&
+      !Top->fullModuleNameIs(StringRef(getLangOpts().CurrentModule)))
     return 0;
 
   return SubmoduleIDs[Mod] = NextSubmoduleID++;
@@ -2649,6 +2651,13 @@ void ASTWriter::WriteSubmodules(Module *WritingModule) {
       RecordData::value_type Record[] = {SUBMODULE_CONFIG_MACRO};
       Stream.EmitRecordWithBlob(ConfigMacroAbbrev, Record, CM);
     }
+
+    // Emit the initializers, if any.
+    RecordData Inits;
+    for (Decl *D : Context->getModuleInitializers(Mod))
+      Inits.push_back(GetDeclRef(D));
+    if (!Inits.empty())
+      Stream.EmitRecord(SUBMODULE_INITIALIZERS, Inits);
 
     // Queue up the submodules of this module.
     for (auto *M : Mod->submodules())
@@ -4515,6 +4524,17 @@ uint64_t ASTWriter::WriteASTCore(Sema &SemaRef, StringRef isysroot,
   // If we're emitting a module, write out the submodule information.  
   if (WritingModule)
     WriteSubmodules(WritingModule);
+  else if (!getLangOpts().CurrentModule.empty()) {
+    // If we're building a PCH in the implementation of a module, we may need
+    // the description of the current module.
+    //
+    // FIXME: We may need other modules that we did not load from an AST file,
+    // such as if a module declares a 'conflicts' on a different module.
+    Module *M = PP.getHeaderSearchInfo().getModuleMap().findModule(
+        getLangOpts().CurrentModule);
+    if (M && !M->IsFromModuleFile)
+      WriteSubmodules(M);
+  }
 
   Stream.EmitRecord(SPECIAL_TYPES, SpecialTypes);
 

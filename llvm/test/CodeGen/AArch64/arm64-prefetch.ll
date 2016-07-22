@@ -1,4 +1,4 @@
-; RUN: llc %s -march arm64 -o - | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 @a = common global i32* null, align 8
 

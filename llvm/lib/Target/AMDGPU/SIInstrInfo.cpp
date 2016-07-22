@@ -1643,6 +1643,16 @@ static bool shouldReadExec(const MachineInstr &MI) {
   return true;
 }
 
+static bool isSubRegOf(const SIRegisterInfo &TRI,
+                       const MachineOperand &SuperVec,
+                       const MachineOperand &SubReg) {
+  if (TargetRegisterInfo::isPhysicalRegister(SubReg.getReg()))
+    return TRI.isSubRegister(SuperVec.getReg(), SubReg.getReg());
+
+  return SubReg.getSubReg() != AMDGPU::NoSubRegister &&
+         SubReg.getReg() == SuperVec.getReg();
+}
+
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
   uint16_t Opcode = MI.getOpcode();
@@ -1764,6 +1774,47 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
         ErrInfo = "v_div_scale_{f32|f64} require src0 = src1 or src2";
         return false;
       }
+    }
+  }
+
+  if (Desc.getOpcode() == AMDGPU::V_MOVRELS_B32_e32 ||
+      Desc.getOpcode() == AMDGPU::V_MOVRELS_B32_e64 ||
+      Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
+      Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64) {
+    const bool IsDst = Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e32 ||
+                       Desc.getOpcode() == AMDGPU::V_MOVRELD_B32_e64;
+
+    const unsigned StaticNumOps = Desc.getNumOperands() +
+      Desc.getNumImplicitUses();
+    const unsigned NumImplicitOps = IsDst ? 2 : 1;
+
+    if (MI.getNumOperands() != StaticNumOps + NumImplicitOps) {
+      ErrInfo = "missing implicit register operands";
+      return false;
+    }
+
+    const MachineOperand *Dst = getNamedOperand(MI, AMDGPU::OpName::vdst);
+    if (IsDst) {
+      if (!Dst->isUse()) {
+        ErrInfo = "v_movreld_b32 vdst should be a use operand";
+        return false;
+      }
+
+      unsigned UseOpIdx;
+      if (!MI.isRegTiedToUseOperand(StaticNumOps, &UseOpIdx) ||
+          UseOpIdx != StaticNumOps + 1) {
+        ErrInfo = "movrel implicit operands should be tied";
+        return false;
+      }
+    }
+
+    const MachineOperand &Src0 = MI.getOperand(Src0Idx);
+    const MachineOperand &ImpUse
+      = MI.getOperand(StaticNumOps + NumImplicitOps - 1);
+    if (!ImpUse.isReg() || !ImpUse.isUse() ||
+        !isSubRegOf(RI, ImpUse, IsDst ? *Dst : Src0)) {
+      ErrInfo = "src0 should be subreg of implicit vector use";
+      return false;
     }
   }
 

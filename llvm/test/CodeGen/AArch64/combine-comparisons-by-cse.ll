@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=aarch64 -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 
 ; marked as external to prevent possible optimizations
 @a = external global i32

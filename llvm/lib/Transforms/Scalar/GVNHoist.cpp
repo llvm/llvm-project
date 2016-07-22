@@ -86,7 +86,7 @@ typedef DenseMap<std::pair<unsigned, unsigned>, SmallVector<Instruction *, 4>>
     VNtoInsns;
 // An invalid value number Used when inserting a single value number into
 // VNtoInsns.
-enum { InvalidVN = ~2U };
+enum : unsigned { InvalidVN = ~2U };
 
 // Records all scalar instructions candidate for code hoisting.
 class InsnInfo {
@@ -574,51 +574,62 @@ public:
     llvm_unreachable("Both I and J must be from same BB");
   }
 
-  // Replace the use of From with To in Insn.
-  void replaceUseWith(Instruction *Insn, Value *From, Value *To) const {
-    for (Value::use_iterator UI = From->use_begin(), UE = From->use_end();
-         UI != UE;) {
-      Use &U = *UI++;
-      if (U.getUser() == Insn) {
-        U.set(To);
-        return;
-      }
-    }
-    llvm_unreachable("should replace exactly once");
-  }
-
-  bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt) const {
+  bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt,
+                             const SmallVecInsn &InstructionsToHoist) const {
     // Check whether the GEP of a ld/st can be synthesized at HoistPt.
-    Instruction *Gep = nullptr;
+    GetElementPtrInst *Gep = nullptr;
     Instruction *Val = nullptr;
     if (auto *Ld = dyn_cast<LoadInst>(Repl))
-      Gep = dyn_cast<Instruction>(Ld->getPointerOperand());
+      Gep = dyn_cast<GetElementPtrInst>(Ld->getPointerOperand());
     if (auto *St = dyn_cast<StoreInst>(Repl)) {
-      Gep = dyn_cast<Instruction>(St->getPointerOperand());
+      Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
       Val = dyn_cast<Instruction>(St->getValueOperand());
+      // Check that the stored value is available.
+      if (Val) {
+        if (isa<GetElementPtrInst>(Val)) {
+          // Check whether we can compute the GEP at HoistPt.
+          if (!allOperandsAvailable(Val, HoistPt))
+            return false;
+        } else if (!DT->dominates(Val->getParent(), HoistPt))
+          return false;
+      }
     }
 
-    if (!Gep || !isa<GetElementPtrInst>(Gep))
-      return false;
-
     // Check whether we can compute the Gep at HoistPt.
-    if (!allOperandsAvailable(Gep, HoistPt))
-      return false;
-
-    // Also check that the stored value is available.
-    if (Val && !allOperandsAvailable(Val, HoistPt))
+    if (!Gep || !allOperandsAvailable(Gep, HoistPt))
       return false;
 
     // Copy the gep before moving the ld/st.
     Instruction *ClonedGep = Gep->clone();
     ClonedGep->insertBefore(HoistPt->getTerminator());
-    replaceUseWith(Repl, Gep, ClonedGep);
+    // Conservatively discard any optimization hints, they may differ on the
+    // other paths.
+    ClonedGep->dropUnknownNonDebugMetadata();
+    for (const Instruction *OtherInst : InstructionsToHoist) {
+      const GetElementPtrInst *OtherGep;
+      if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
+        OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
+      else
+        OtherGep = cast<GetElementPtrInst>(
+            cast<StoreInst>(OtherInst)->getPointerOperand());
+      ClonedGep->intersectOptionalDataWith(OtherGep);
+    }
+    Repl->replaceUsesOfWith(Gep, ClonedGep);
 
-    // Also copy Val.
-    if (Val) {
+    // Also copy Val when it is a GEP.
+    if (Val && isa<GetElementPtrInst>(Val)) {
       Instruction *ClonedVal = Val->clone();
       ClonedVal->insertBefore(HoistPt->getTerminator());
-      replaceUseWith(Repl, Val, ClonedVal);
+      // Conservatively discard any optimization hints, they may differ on the
+      // other paths.
+      ClonedVal->dropUnknownNonDebugMetadata();
+      for (const Instruction *OtherInst : InstructionsToHoist) {
+        const auto *OtherVal =
+            cast<Instruction>(cast<StoreInst>(OtherInst)->getValueOperand());
+        ClonedVal->intersectOptionalDataWith(OtherVal);
+      }
+      ClonedVal->clearSubclassOptionalData();
+      Repl->replaceUsesOfWith(Val, ClonedVal);
     }
 
     return true;
@@ -653,9 +664,12 @@ public:
         // The order in which hoistings are done may influence the availability
         // of operands.
         if (!allOperandsAvailable(Repl, HoistPt) &&
-            !makeOperandsAvailable(Repl, HoistPt))
+            !makeOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
           continue;
         Repl->moveBefore(HoistPt->getTerminator());
+        // TBAA may differ on one of the other paths, we need to get rid of
+        // anything which might conflict.
+        Repl->dropUnknownNonDebugMetadata();
       }
 
       if (isa<LoadInst>(Repl))
@@ -677,6 +691,7 @@ public:
             ++NumStoresRemoved;
           else if (isa<CallInst>(Repl))
             ++NumCallsRemoved;
+          Repl->intersectOptionalDataWith(I);
           I->replaceAllUsesWith(Repl);
           I->eraseFromParent();
         }
@@ -779,6 +794,8 @@ public:
   }
 
   bool runOnFunction(Function &F) override {
+    if (skipFunction(F))
+      return false;
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &AA = getAnalysis<AAResultsWrapperPass>().getAAResults();
     auto &MD = getAnalysis<MemoryDependenceWrapperPass>().getMemDep();

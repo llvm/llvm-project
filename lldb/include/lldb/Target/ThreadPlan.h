@@ -214,7 +214,7 @@ namespace lldb_private {
 //  The private process running thread will take care of ensuring that only one "eStateRunning" event will be
 //  delivered to the public Process broadcaster per public eStateStopped event.  However there are some cases
 //  where the public state of this process is eStateStopped, but a thread plan needs to restart the target, but
-//  doesn't want the running event to be publically broadcast.  The obvious example of this is running functions
+//  doesn't want the running event to be publicly broadcast.  The obvious example of this is running functions
 //  by hand as part of expression evaluation.  To suppress the running event return eVoteNo from ShouldReportStop,
 //  to force a running event to be reported return eVoteYes, in general though you should return eVoteNoOpinion
 //  which will allow the ThreadList to figure out the right thing to do.

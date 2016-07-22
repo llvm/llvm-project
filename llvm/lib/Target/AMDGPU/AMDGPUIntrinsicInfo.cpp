@@ -29,16 +29,39 @@ static const char *const IntrinsicNameTable[] = {
 #undef GET_INTRINSIC_NAME_TABLE
 };
 
-std::string AMDGPUIntrinsicInfo::getName(unsigned IntrID, Type **Tys,
-                                         unsigned numTys) const {
-  if (IntrID < Intrinsic::num_intrinsics) {
-    return nullptr;
-  }
+namespace {
+#define GET_INTRINSIC_ATTRIBUTES
+#include "AMDGPUGenIntrinsics.inc"
+#undef GET_INTRINSIC_ATTRIBUTES
+}
+
+StringRef AMDGPUIntrinsicInfo::getName(unsigned IntrID,
+                                       ArrayRef<Type *> Tys) const {
+  if (IntrID < Intrinsic::num_intrinsics)
+    return StringRef();
+
   assert(IntrID < AMDGPUIntrinsic::num_AMDGPU_intrinsics &&
          "Invalid intrinsic ID");
 
-  std::string Result(IntrinsicNameTable[IntrID - Intrinsic::num_intrinsics]);
-  return Result;
+  return IntrinsicNameTable[IntrID - Intrinsic::num_intrinsics];
+}
+
+std::string AMDGPUIntrinsicInfo::getName(unsigned IntrID, Type **Tys,
+                                         unsigned NumTys) const {
+  return getName(IntrID, makeArrayRef(Tys, NumTys)).str();
+}
+
+FunctionType *AMDGPUIntrinsicInfo::getType(LLVMContext &Context, unsigned ID,
+                                           ArrayRef<Type*> Tys) const {
+  // FIXME: Re-use Intrinsic::getType machinery
+  switch (ID) {
+  case AMDGPUIntrinsic::amdgcn_fdiv_fast: {
+    Type *F32Ty = Type::getFloatTy(Context);
+    return FunctionType::get(F32Ty, { F32Ty, F32Ty }, false);
+  }
+  default:
+    llvm_unreachable("unhandled intrinsic");
+  }
 }
 
 unsigned AMDGPUIntrinsicInfo::lookupName(const char *NameData,
@@ -69,7 +92,19 @@ bool AMDGPUIntrinsicInfo::isOverloaded(unsigned id) const {
 }
 
 Function *AMDGPUIntrinsicInfo::getDeclaration(Module *M, unsigned IntrID,
+                                              ArrayRef<Type *> Tys) const {
+  FunctionType *FTy = getType(M->getContext(), IntrID, Tys);
+  Function *F
+    = cast<Function>(M->getOrInsertFunction(getName(IntrID, Tys), FTy));
+
+  AttributeSet AS = getAttributes(M->getContext(),
+                                  static_cast<AMDGPUIntrinsic::ID>(IntrID));
+  F->setAttributes(AS);
+  return F;
+}
+
+Function *AMDGPUIntrinsicInfo::getDeclaration(Module *M, unsigned IntrID,
                                               Type **Tys,
-                                              unsigned numTys) const {
-  llvm_unreachable("Not implemented");
+                                              unsigned NumTys) const {
+  return getDeclaration(M, IntrID, makeArrayRef(Tys, NumTys));
 }

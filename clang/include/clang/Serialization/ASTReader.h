@@ -18,10 +18,8 @@
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/TemplateBase.h"
 #include "clang/Basic/Diagnostic.h"
-#include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
 #include "clang/Basic/IdentifierTable.h"
-#include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
 #include "clang/Lex/ExternalPreprocessorSource.h"
 #include "clang/Lex/HeaderSearch.h"
@@ -33,9 +31,6 @@
 #include "clang/Serialization/Module.h"
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Serialization/ModuleManager.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/ADT/APInt.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -43,11 +38,9 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
-#include "llvm/Bitcode/BitstreamReader.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/Timer.h"
 #include <deque>
-#include <map>
 #include <memory>
 #include <string>
 #include <utility>
@@ -55,10 +48,16 @@
 
 namespace llvm {
   class MemoryBuffer;
+  class APInt;
+  class APSInt;
+  class APFloat;
 }
 
 namespace clang {
 
+class SourceManager;
+class HeaderSearchOptions;
+class FileManager;
 class AddrLabelExpr;
 class ASTConsumer;
 class ASTContext;

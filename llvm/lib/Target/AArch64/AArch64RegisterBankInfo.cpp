@@ -155,6 +155,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
 void AArch64RegisterBankInfo::applyMappingImpl(
     const OperandsMapper &OpdMapper) const {
   switch (OpdMapper.getMI().getOpcode()) {
+  case TargetOpcode::G_ADD:
   case TargetOpcode::G_OR: {
     // Those ID must match getInstrAlternativeMappings.
     assert((OpdMapper.getInstrMapping().getID() == 1 ||
@@ -165,4 +166,28 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   default:
     llvm_unreachable("Don't know how to handle that operation");
   }
+}
+
+RegisterBankInfo::InstructionMapping
+AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
+  RegisterBankInfo::InstructionMapping Mapping = getInstrMappingImpl(MI);
+  if (Mapping.isValid())
+    return Mapping;
+
+  // As a top-level guess, vectors go in FPRs, scalars in GPRs. Obviously this
+  // won't work for normal floating-point types (or NZCV). When such
+  // instructions exist we'll need to look at the MI's opcode.
+  LLT Ty = MI.getType();
+  unsigned BankID;
+  if (Ty.isVector())
+    BankID = AArch64::FPRRegBankID;
+  else
+    BankID = AArch64::GPRRegBankID;
+
+  Mapping = InstructionMapping{1, 1, MI.getNumOperands()};
+  int Size = Ty.isSized() ? Ty.getSizeInBits() : 0;
+  for (unsigned Idx = 0; Idx < MI.getNumOperands(); ++Idx)
+    Mapping.setOperandMapping(Idx, Size, getRegBank(BankID));
+
+  return Mapping;
 }

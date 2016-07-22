@@ -2693,24 +2693,8 @@ bool X86InstrInfo::classifyLEAReg(MachineInstr &MI, const MachineOperand &Src,
     ImplicitOp.setImplicit();
 
     NewSrc = getX86SubSuperRegister(Src.getReg(), 64);
-    MachineBasicBlock::LivenessQueryResult LQR =
-        MI.getParent()->computeRegisterLiveness(&getRegisterInfo(), NewSrc, MI);
-
-    switch (LQR) {
-    case MachineBasicBlock::LQR_Unknown:
-      // We can't give sane liveness flags to the instruction, abandon LEA
-      // formation.
-      return false;
-    case MachineBasicBlock::LQR_Live:
-      isKill = MI.killsRegister(SrcReg);
-      isUndef = false;
-      break;
-    default:
-      // The physreg itself is dead, so we have to use it as an <undef>.
-      isKill = false;
-      isUndef = true;
-      break;
-    }
+    isKill = Src.isKill();
+    isUndef = Src.isUndef();
   } else {
     // Virtual register of the wrong class, we have to create a temporary 64-bit
     // vreg to feed into the LEA.

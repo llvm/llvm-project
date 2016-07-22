@@ -19,7 +19,6 @@
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/raw_ostream.h"
 

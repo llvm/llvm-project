@@ -14,8 +14,6 @@
 #ifndef LLVM_CLANG_AST_ASTCONSUMER_H
 #define LLVM_CLANG_AST_ASTCONSUMER_H
 
-#include "llvm/ADT/StringRef.h"
-
 namespace clang {
   class ASTContext;
   class CXXMethodDecl;

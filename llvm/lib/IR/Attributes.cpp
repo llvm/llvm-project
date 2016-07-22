@@ -1158,7 +1158,7 @@ uint64_t AttributeSet::getDereferenceableOrNullBytes(unsigned Index) const {
 std::pair<unsigned, Optional<unsigned>>
 AttributeSet::getAllocSizeArgs(unsigned Index) const {
   AttributeSetNode *ASN = getAttributes(Index);
-  return ASN ? ASN->getAllocSizeArgs() : std::make_pair(0, 0);
+  return ASN ? ASN->getAllocSizeArgs() : std::make_pair(0u, Optional<unsigned>(0u));
 }
 
 std::string AttributeSet::getAsString(unsigned Index, bool InAttrGrp) const {

@@ -3,7 +3,7 @@
 define void @f_0(i32 *%arr, i32 *%a_len_ptr, i32 %n, i1* %cond_buf) {
 ; CHECK-LABEL: @f_0(
 
-; CHECK-LABEL: loop.preheader:
+; CHECK: loop.preheader:
 ; CHECK: [[not_n:[^ ]+]] = sub i32 -1, %n
 ; CHECK: [[not_safe_range_end:[^ ]+]] = sub i32 3, %len
 ; CHECK: [[not_exit_main_loop_at_hiclamp_cmp:[^ ]+]] = icmp sgt i32 [[not_n]], [[not_safe_range_end]]
@@ -50,7 +50,7 @@ define void @f_1(
     i32* %arr_a, i32* %a_len_ptr, i32* %arr_b, i32* %b_len_ptr, i32 %n) {
 ; CHECK-LABEL: @f_1(
 
-; CHECK-LABEL: loop.preheader:
+; CHECK: loop.preheader:
 ; CHECK: [[not_len_b:[^ ]+]] = sub i32 -1, %len.b
 ; CHECK: [[not_len_a:[^ ]+]] = sub i32 -1, %len.a
 ; CHECK: [[smax_not_len_cond:[^ ]+]] = icmp sgt i32 [[not_len_b]], [[not_len_a]]

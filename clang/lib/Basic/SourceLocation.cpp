@@ -14,7 +14,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdio>
 using namespace clang;

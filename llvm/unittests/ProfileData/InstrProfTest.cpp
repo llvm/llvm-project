@@ -204,6 +204,31 @@ TEST_F(InstrProfTest, get_profile_summary) {
   delete PSFromMD;
 }
 
+TEST_F(InstrProfTest, test_writer_merge) {
+  InstrProfRecord Record1("func1", 0x1234, {42});
+  NoError(Writer.addRecord(std::move(Record1)));
+
+  InstrProfWriter Writer2;
+  InstrProfRecord Record2("func2", 0x1234, {0, 0});
+  NoError(Writer2.addRecord(std::move(Record2)));
+
+  NoError(Writer.mergeRecordsFromWriter(std::move(Writer2)));
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  Expected<InstrProfRecord> R = Reader->getInstrProfRecord("func1", 0x1234);
+  ASSERT_TRUE(NoError(R.takeError()));
+  ASSERT_EQ(1U, R->Counts.size());
+  ASSERT_EQ(42U, R->Counts[0]);
+
+  R = Reader->getInstrProfRecord("func2", 0x1234);
+  ASSERT_TRUE(NoError(R.takeError()));
+  ASSERT_EQ(2U, R->Counts.size());
+  ASSERT_EQ(0U, R->Counts[0]);
+  ASSERT_EQ(0U, R->Counts[1]);
+}
+
 static const char callee1[] = "callee1";
 static const char callee2[] = "callee2";
 static const char callee3[] = "callee3";

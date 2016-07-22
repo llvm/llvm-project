@@ -295,6 +295,9 @@ void CodeGenFunction::EmitStmt(const Stmt *S) {
     EmitOMPTargetParallelForSimdDirective(
         cast<OMPTargetParallelForSimdDirective>(*S));
     break;
+  case Stmt::OMPTargetSimdDirectiveClass:
+    EmitOMPTargetSimdDirective(cast<OMPTargetSimdDirective>(*S));
+    break;
   }
 }
 
@@ -620,14 +623,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     RunCleanupsScope ThenScope(*this);
     EmitStmt(S.getThen());
   }
-  {
-    auto CurBlock = Builder.GetInsertBlock();
-    EmitBranch(ContBlock);
-    // Eliminate any empty blocks that may have been created by nested
-    // control flow statements in the 'then' clause.
-    if (CurBlock)
-      SimplifyForwardingBlocks(CurBlock); 
-  }
+  EmitBranch(ContBlock);
 
   // Emit the 'else' code if present.
   if (const Stmt *Else = S.getElse()) {
@@ -643,12 +639,7 @@ void CodeGenFunction::EmitIfStmt(const IfStmt &S) {
     {
       // There is no need to emit line number for an unconditional branch.
       auto NL = ApplyDebugLocation::CreateEmpty(*this);
-      auto CurBlock = Builder.GetInsertBlock();
       EmitBranch(ContBlock);
-      // Eliminate any empty blocks that may have been created by nested
-      // control flow statements emitted in the 'else' clause.
-      if (CurBlock)
-        SimplifyForwardingBlocks(CurBlock); 
     }
   }
 
@@ -1261,6 +1252,14 @@ void CodeGenFunction::EmitCaseStmt(const CaseStmt &S) {
 }
 
 void CodeGenFunction::EmitDefaultStmt(const DefaultStmt &S) {
+  // If there is no enclosing switch instance that we're aware of, then this
+  // default statement can be elided. This situation only happens when we've
+  // constant-folded the switch.
+  if (!SwitchInsn) {
+    EmitStmt(S.getSubStmt());
+    return;
+  }
+
   llvm::BasicBlock *DefaultBlock = SwitchInsn->getDefaultDest();
   assert(DefaultBlock->empty() &&
          "EmitDefaultStmt: Default block already defined?");

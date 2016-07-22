@@ -50,7 +50,7 @@ int tmain(T argc, S **argv, R *env[]) {
   #pragma omp target update to(z) depend(in : argv[argc: // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[argc:argc] // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[0:-1]) // expected-error {{section length is evaluated to a negative value -1}}
-  #pragma omp target update to(z) depend(in : argv[-1:0]) // expected-error {{section lower bound is evaluated to a negative value -1}}
+  #pragma omp target update to(z) depend(in : argv[-1:0])
   #pragma omp target update to(z) depend(in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp target update to(z) depend(in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   #pragma omp target update to(z) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}
@@ -98,7 +98,7 @@ int main(int argc, char **argv, char *env[]) {
   #pragma omp target update to(z) depend(in : argv[argc: // expected-error {{expected expression}} expected-error {{expected ']'}} expected-error {{expected ')'}} expected-note {{to match this '['}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[argc:argc] // expected-error {{expected ')'}} expected-note {{to match this '('}}
   #pragma omp target update to(z) depend(in : argv[0:-1]) // expected-error {{section length is evaluated to a negative value -1}}
-  #pragma omp target update to(z) depend(in : argv[-1:0]) // expected-error {{section lower bound is evaluated to a negative value -1}}
+  #pragma omp target update to(z) depend(in : argv[-1:0])
   #pragma omp target update to(z) depend(in : argv[:]) // expected-error {{section length is unspecified and cannot be inferred because subscripted value is not an array}}
   #pragma omp target update to(z) depend(in : argv[3:4:1]) // expected-error {{expected ']'}} expected-note {{to match this '['}}
   #pragma omp target update to(z) depend(in:a[0:1]) // expected-error {{subscripted value is not an array or pointer}}

@@ -259,4 +259,12 @@ void processCompilationUnitExit(void *Ptr) {
   }
 }
 
+unsigned int getSampleCount() {
+  VPrintf(1, "in esan::%s\n", __FUNCTION__);
+  if (__esan_which_tool == ESAN_WorkingSet) {
+    return getSampleCountWorkingSet();
+  }
+  return 0;
+}
+
 } // namespace __esan

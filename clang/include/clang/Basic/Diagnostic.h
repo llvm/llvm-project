@@ -344,11 +344,10 @@ private:
   std::string FlagValue;
 
 public:
-  explicit DiagnosticsEngine(
-                      const IntrusiveRefCntPtr<DiagnosticIDs> &Diags,
-                      DiagnosticOptions *DiagOpts,
-                      DiagnosticConsumer *client = nullptr,
-                      bool ShouldOwnClient = true);
+  explicit DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> Diags,
+                             DiagnosticOptions *DiagOpts,
+                             DiagnosticConsumer *client = nullptr,
+                             bool ShouldOwnClient = true);
   ~DiagnosticsEngine();
 
   const IntrusiveRefCntPtr<DiagnosticIDs> &getDiagnosticIDs() const {

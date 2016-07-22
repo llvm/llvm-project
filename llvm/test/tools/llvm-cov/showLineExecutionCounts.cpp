@@ -45,27 +45,27 @@ int main() {                              // TEXT:   161| [[@LINE]]|int main(
 // RUN: FileCheck -check-prefixes=HTML,HTML-WHOLE-FILE -input-file %t.html.dir/coverage/tmp/showLineExecutionCounts.cpp.html %s
 // RUN: FileCheck -check-prefixes=HTML,HTML-FILTER -input-file %t.html.dir/functions.html %s
 //
-// HTML-WHOLE-FILE: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>// before
-// HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-45]]</pre></td><td class='code'><pre>// before
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>int main() {
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  int x = 0
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>
-// HTML: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre><span class='red'>  if (x) {
-// HTML: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre><span class='red'>  }</span>
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>    x = 1;
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  }
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>
-// HTML: <td class='covered-line'><pre>16.2k</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  for (int i = 0; i &lt; 100; ++i)
-// HTML: <td class='covered-line'><pre>16.1k</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>    x = 1;
-// HTML: <td class='covered-line'><pre>16.1k</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  }
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  x = x &lt; 10
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  x = x &gt; 10
-// HTML: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre><span class='red'>        x - 1:
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>        x + 1;
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>  return 0;
-// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>}
-// HTML-WHOLE-FILE: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-44]]</pre></td><td class='code'><pre>// after
-// HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><pre>[[@LINE-45]]</pre></td><td class='code'><pre>// after
+// HTML-WHOLE-FILE: <td class='uncovered-line'></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>// before
+// HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><a name='L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='code'><pre>// before
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>int main() {
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  int x = 0
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>
+// HTML: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre><span class='red'>  if (x) {
+// HTML: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre><span class='red'>  }</span>
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>    x = 1;
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  }
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>
+// HTML: <td class='covered-line'><pre>16.2k</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  for (int i = 0; i &lt; 100; ++i)
+// HTML: <td class='covered-line'><pre>16.1k</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>    x = 1;
+// HTML: <td class='covered-line'><pre>16.1k</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  }
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  x = x &lt; 10
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  x = x &gt; 10
+// HTML: <td class='uncovered-line'><pre>0</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre><span class='red'>        x - 1:
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>        x + 1;
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>  return 0;
+// HTML: <td class='covered-line'><pre>161</pre></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>}
+// HTML-WHOLE-FILE: <td class='uncovered-line'></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>// after
+// HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><a name='L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='code'><pre>// after

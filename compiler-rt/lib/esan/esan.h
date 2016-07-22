@@ -38,6 +38,7 @@ extern bool EsanDuringInit;
 void initializeLibrary(ToolType Tool);
 int finalizeLibrary();
 void reportResults();
+unsigned int getSampleCount();
 // Esan creates the variable per tool per compilation unit at compile time
 // and passes its pointer Ptr to the runtime library.
 void processCompilationUnitInit(void *Ptr);

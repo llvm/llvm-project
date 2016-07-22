@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 
 define <8 x i8> @addhn8b(<8 x i16>* %A, <8 x i16>* %B) nounwind {
 ;CHECK-LABEL: addhn8b:

@@ -5,7 +5,7 @@
 
 ; Tests for add.
 ; CHECK: name: addi32
-; CHECK: G_ADD i32
+; CHECK: G_ADD s32
 define i32 @addi32(i32 %arg1, i32 %arg2) {
   %res = add i32 %arg1, %arg2
   ret i32 %res

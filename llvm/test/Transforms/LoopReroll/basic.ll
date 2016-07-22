@@ -576,6 +576,137 @@ for.end:                                          ; preds = %for.body
 }
 
 
+define void @unordered_atomic_ops(i32* noalias %buf_0, i32* noalias %buf_1) {
+; CHECK-LABEL: @unordered_atomic_ops(
+
+; CHECK: for.body:
+; CHECK-NEXT:   %indvar = phi i32 [ %indvar.next, %for.body ], [ 0, %entry ]
+; CHECK-NEXT:   %buf0_a = getelementptr i32, i32* %buf_0, i32 %indvar
+; CHECK-NEXT:   %buf1_a = getelementptr i32, i32* %buf_1, i32 %indvar
+; CHECK-NEXT:   %va = load atomic i32, i32* %buf0_a unordered, align 4
+; CHECK-NEXT:   store atomic i32 %va, i32* %buf1_a unordered, align 4
+; CHECK-NEXT:   %indvar.next = add i32 %indvar, 1
+; CHECK-NEXT:   %exitcond = icmp eq i32 %indvar, 3199
+; CHECK-NEXT:   br i1 %exitcond, label %for.end, label %for.body
+
+entry:
+  br label %for.body
+
+for.body:
+  %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %indvars.iv.next = add i32 %indvars.iv, 2
+  %indvars.mid = add i32 %indvars.iv, 1
+  %buf0_a = getelementptr i32, i32* %buf_0, i32 %indvars.iv
+  %buf0_b = getelementptr i32, i32* %buf_0, i32 %indvars.mid
+  %buf1_a = getelementptr i32, i32* %buf_1, i32 %indvars.iv
+  %buf1_b = getelementptr i32, i32* %buf_1, i32 %indvars.mid
+  %va = load atomic i32, i32* %buf0_a unordered, align 4
+  %vb = load atomic i32, i32* %buf0_b unordered, align 4
+  store atomic i32 %va, i32* %buf1_a unordered, align 4
+  store atomic i32 %vb, i32* %buf1_b unordered, align 4
+  %cmp = icmp slt i32 %indvars.iv.next, 3200
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define void @unordered_atomic_ops_nomatch(i32* noalias %buf_0, i32* noalias %buf_1) {
+; Negative test
+
+; CHECK-LABEL: @unordered_atomic_ops_nomatch(
+entry:
+  br label %for.body
+
+for.body:
+; CHECK: for.body:
+; CHECK:   %indvars.iv.next = add i32 %indvars.iv, 2
+; CHECK:   %indvars.mid = add i32 %indvars.iv, 1
+; CHECK:   %cmp = icmp slt i32 %indvars.iv.next, 3200
+; CHECK:   br i1 %cmp, label %for.body, label %for.end
+
+  %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %indvars.iv.next = add i32 %indvars.iv, 2
+  %indvars.mid = add i32 %indvars.iv, 1
+  %buf0_a = getelementptr i32, i32* %buf_0, i32 %indvars.iv
+  %buf0_b = getelementptr i32, i32* %buf_0, i32 %indvars.mid
+  %buf1_a = getelementptr i32, i32* %buf_1, i32 %indvars.iv
+  %buf1_b = getelementptr i32, i32* %buf_1, i32 %indvars.mid
+  %va = load atomic i32, i32* %buf0_a unordered, align 4
+  %vb = load atomic i32, i32* %buf0_b unordered, align 4
+  store i32 %va, i32* %buf1_a, align 4  ;; Not atomic
+  store atomic i32 %vb, i32* %buf1_b unordered, align 4
+  %cmp = icmp slt i32 %indvars.iv.next, 3200
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define void @ordered_atomic_ops(i32* noalias %buf_0, i32* noalias %buf_1) {
+; Negative test
+
+; CHECK-LABEL: @ordered_atomic_ops(
+entry:
+  br label %for.body
+
+for.body:
+; CHECK: for.body:
+; CHECK:   %indvars.iv.next = add i32 %indvars.iv, 2
+; CHECK:   %indvars.mid = add i32 %indvars.iv, 1
+; CHECK:   %cmp = icmp slt i32 %indvars.iv.next, 3200
+; CHECK:   br i1 %cmp, label %for.body, label %for.end
+
+  %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %indvars.iv.next = add i32 %indvars.iv, 2
+  %indvars.mid = add i32 %indvars.iv, 1
+  %buf0_a = getelementptr i32, i32* %buf_0, i32 %indvars.iv
+  %buf0_b = getelementptr i32, i32* %buf_0, i32 %indvars.mid
+  %buf1_a = getelementptr i32, i32* %buf_1, i32 %indvars.iv
+  %buf1_b = getelementptr i32, i32* %buf_1, i32 %indvars.mid
+  %va = load atomic i32, i32* %buf0_a acquire, align 4
+  %vb = load atomic i32, i32* %buf0_b acquire, align 4
+  store atomic i32 %va, i32* %buf1_a release, align 4
+  store atomic i32 %vb, i32* %buf1_b release, align 4
+  %cmp = icmp slt i32 %indvars.iv.next, 3200
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
+define void @unordered_atomic_ops_with_fence(i32* noalias %buf_0, i32* noalias %buf_1) {
+; CHECK-LABEL: @unordered_atomic_ops_with_fence(
+entry:
+  br label %for.body
+
+for.body:
+; CHECK: for.body:
+; CHECK:  %va = load atomic i32, i32* %buf0_a unordered, align 4
+; CHECK-NEXT:  %vb = load atomic i32, i32* %buf0_b unordered, align 4
+; CHECK-NEXT:  fence seq_cst
+; CHECK-NEXT:  store atomic i32 %va, i32* %buf1_a unordered, align 4
+; CHECK-NEXT:  store atomic i32 %vb, i32* %buf1_b unordered, align 4
+
+  %indvars.iv = phi i32 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
+  %indvars.iv.next = add i32 %indvars.iv, 2
+  %indvars.mid = add i32 %indvars.iv, 1
+  %buf0_a = getelementptr i32, i32* %buf_0, i32 %indvars.iv
+  %buf0_b = getelementptr i32, i32* %buf_0, i32 %indvars.mid
+  %buf1_a = getelementptr i32, i32* %buf_1, i32 %indvars.iv
+  %buf1_b = getelementptr i32, i32* %buf_1, i32 %indvars.mid
+  %va = load atomic i32, i32* %buf0_a unordered, align 4
+  %vb = load atomic i32, i32* %buf0_b unordered, align 4
+  fence seq_cst
+  store atomic i32 %va, i32* %buf1_a unordered, align 4
+  store atomic i32 %vb, i32* %buf1_b unordered, align 4
+  %cmp = icmp slt i32 %indvars.iv.next, 3200
+  br i1 %cmp, label %for.body, label %for.end
+
+for.end:
+  ret void
+}
+
 attributes #0 = { nounwind uwtable }
 attributes #1 = { nounwind }
 

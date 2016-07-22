@@ -4673,6 +4673,13 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       UnresolvedModuleRefs.push_back(Unresolved);
       break;
     }
+
+    case SUBMODULE_INITIALIZERS:
+      SmallVector<uint32_t, 16> Inits;
+      for (auto &ID : Record)
+        Inits.push_back(getGlobalDeclID(F, ID));
+      Context.addLazyModuleInitializers(CurrentModule, Inits);
+      break;
     }
   }
 }

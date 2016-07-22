@@ -417,8 +417,7 @@ _mm_cvtsd_si32(__m128d __a)
 static __inline__ __m128 __DEFAULT_FN_ATTRS
 _mm_cvtsd_ss(__m128 __a, __m128d __b)
 {
-  __a[0] = __b[0];
-  return __a;
+  return (__m128)__builtin_ia32_cvtsd2ss((__v4sf)__a, (__v2df)__b);
 }
 
 static __inline__ __m128d __DEFAULT_FN_ATTRS
@@ -444,7 +443,7 @@ _mm_cvttpd_epi32(__m128d __a)
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvttsd_si32(__m128d __a)
 {
-  return __a[0];
+  return __builtin_ia32_cvttsd2si((__v2df)__a);
 }
 
 static __inline__ __m64 __DEFAULT_FN_ATTRS
@@ -1707,7 +1706,7 @@ _mm_cvtsd_si64(__m128d __a)
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm_cvttsd_si64(__m128d __a)
 {
-  return __a[0];
+  return __builtin_ia32_cvttsd2si64((__v2df)__a);
 }
 #endif
 
@@ -1755,7 +1754,7 @@ _mm_cvtps_epi32(__m128 __a)
 static __inline__ __m128i __DEFAULT_FN_ATTRS
 _mm_cvttps_epi32(__m128 __a)
 {
-  return (__m128i)__builtin_convertvector((__v4sf)__a, __v4si);
+  return (__m128i)__builtin_ia32_cvttps2dq((__v4sf)__a);
 }
 
 /// \brief Returns a vector of [4 x i32] where the lowest element is the input

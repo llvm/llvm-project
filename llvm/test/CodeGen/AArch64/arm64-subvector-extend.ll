@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 
 ; Test efficient codegen of vector extends up from legal type to 128 bit
 ; and 256 bit vector types.

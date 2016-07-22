@@ -250,6 +250,7 @@ def ProcVulcan  : SubtargetFeature<"vulcan", "ARMProcFamily", "Vulcan",
                                    FeatureMacroOpFusion,
                                    FeatureNEON,
                                    FeaturePostRAScheduler,
+                                   FeaturePredictableSelectIsExpensive,
                                    HasV8_1aOps]>;
 
 def : ProcessorModel<"generic", NoSchedModel, [

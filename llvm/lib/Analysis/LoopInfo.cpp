@@ -715,6 +715,13 @@ void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {
   LI.print(OS);
 }
 
+PreservedAnalyses LoopVerifierPass::run(Function &F,
+                                        AnalysisManager<Function> &AM) {
+  LoopInfo &LI = AM.getResult<LoopAnalysis>(F);
+  LI.verify();
+  return PreservedAnalyses::all();
+}
+
 //===----------------------------------------------------------------------===//
 // LoopBlocksDFS implementation
 //

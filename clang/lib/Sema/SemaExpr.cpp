@@ -11,7 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Sema/SemaInternal.h"
 #include "TreeTransform.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
@@ -42,6 +41,7 @@
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaFixItUtils.h"
+#include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/Support/ConvertUTF.h"
 using namespace clang;
@@ -4304,14 +4304,13 @@ ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
                           diag::err_omp_section_incomplete_type, Base))
     return ExprError();
 
-  if (LowerBound) {
+  if (LowerBound && !OriginalTy->isAnyPointerType()) {
     llvm::APSInt LowerBoundValue;
     if (LowerBound->EvaluateAsInt(LowerBoundValue, Context)) {
-      // OpenMP 4.0, [2.4 Array Sections]
-      // The lower-bound and length must evaluate to non-negative integers.
+      // OpenMP 4.5, [2.4 Array Sections]
+      // The array section must be a subset of the original array.
       if (LowerBoundValue.isNegative()) {
-        Diag(LowerBound->getExprLoc(), diag::err_omp_section_negative)
-            << 0 << LowerBoundValue.toString(/*Radix=*/10, /*Signed=*/true)
+        Diag(LowerBound->getExprLoc(), diag::err_omp_section_not_subset_of_array)
             << LowerBound->getSourceRange();
         return ExprError();
       }
@@ -4321,11 +4320,11 @@ ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   if (Length) {
     llvm::APSInt LengthValue;
     if (Length->EvaluateAsInt(LengthValue, Context)) {
-      // OpenMP 4.0, [2.4 Array Sections]
-      // The lower-bound and length must evaluate to non-negative integers.
+      // OpenMP 4.5, [2.4 Array Sections]
+      // The length must evaluate to non-negative integers.
       if (LengthValue.isNegative()) {
-        Diag(Length->getExprLoc(), diag::err_omp_section_negative)
-            << 1 << LengthValue.toString(/*Radix=*/10, /*Signed=*/true)
+        Diag(Length->getExprLoc(), diag::err_omp_section_length_negative)
+            << LengthValue.toString(/*Radix=*/10, /*Signed=*/true)
             << Length->getSourceRange();
         return ExprError();
       }
@@ -4333,7 +4332,7 @@ ExprResult Sema::ActOnOMPArraySectionExpr(Expr *Base, SourceLocation LBLoc,
   } else if (ColonLoc.isValid() &&
              (OriginalTy.isNull() || (!OriginalTy->isConstantArrayType() &&
                                       !OriginalTy->isVariableArrayType()))) {
-    // OpenMP 4.0, [2.4 Array Sections]
+    // OpenMP 4.5, [2.4 Array Sections]
     // When the size of the array dimension is not known, the length must be
     // specified explicitly.
     Diag(ColonLoc, diag::err_omp_section_length_undefined)
@@ -5052,7 +5051,11 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   for (QualType ParamType : FT->param_types()) {
 
     // Convert array arguments to pointer to simplify type lookup.
-    Expr *Arg = Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]).get();
+    ExprResult ArgRes =
+        Sema->DefaultFunctionArrayLvalueConversion(ArgExprs[i++]);
+    if (ArgRes.isInvalid())
+      return nullptr;
+    Expr *Arg = ArgRes.get();
     QualType ArgType = Arg->getType();
     if (!ParamType->isPointerType() ||
         ParamType.getQualifiers().hasAddressSpace() ||
@@ -7002,6 +7005,55 @@ static void DiagnoseConditionalPrecedence(Sema &Self,
     SourceRange(CondRHS->getLocStart(), RHSExpr->getLocEnd()));
 }
 
+/// Compute the nullability of a conditional expression.
+static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
+                                              QualType LHSTy, QualType RHSTy,
+                                              ASTContext &Ctx) {
+  if (!ResTy->isPointerType())
+    return ResTy;
+
+  auto GetNullability = [&Ctx](QualType Ty) {
+    Optional<NullabilityKind> Kind = Ty->getNullability(Ctx);
+    if (Kind)
+      return *Kind;
+    return NullabilityKind::Unspecified;
+  };
+
+  auto LHSKind = GetNullability(LHSTy), RHSKind = GetNullability(RHSTy);
+  NullabilityKind MergedKind;
+
+  // Compute nullability of a binary conditional expression.
+  if (IsBin) {
+    if (LHSKind == NullabilityKind::NonNull)
+      MergedKind = NullabilityKind::NonNull;
+    else
+      MergedKind = RHSKind;
+  // Compute nullability of a normal conditional expression.
+  } else {
+    if (LHSKind == NullabilityKind::Nullable ||
+        RHSKind == NullabilityKind::Nullable)
+      MergedKind = NullabilityKind::Nullable;
+    else if (LHSKind == NullabilityKind::NonNull)
+      MergedKind = RHSKind;
+    else if (RHSKind == NullabilityKind::NonNull)
+      MergedKind = LHSKind;
+    else
+      MergedKind = NullabilityKind::Unspecified;
+  }
+
+  // Return if ResTy already has the correct nullability.
+  if (GetNullability(ResTy) == MergedKind)
+    return ResTy;
+
+  // Strip all nullability from ResTy.
+  while (ResTy->getNullability(Ctx))
+    ResTy = ResTy.getSingleStepDesugaredType(Ctx);
+
+  // Create a new AttributedType with the new nullability kind.
+  auto NewAttr = AttributedType::getNullabilityAttrKind(MergedKind);
+  return Ctx.getAttributedType(NewAttr, ResTy, ResTy);
+}
+
 /// ActOnConditionalOp - Parse a ?: operation.  Note that 'LHS' may be null
 /// in the case of a the GNU conditional expr extension.
 ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
@@ -7069,6 +7121,7 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
     LHSExpr = CondExpr = opaqueValue;
   }
 
+  QualType LHSTy = LHSExpr->getType(), RHSTy = RHSExpr->getType();
   ExprValueKind VK = VK_RValue;
   ExprObjectKind OK = OK_Ordinary;
   ExprResult Cond = CondExpr, LHS = LHSExpr, RHS = RHSExpr;
@@ -7082,6 +7135,9 @@ ExprResult Sema::ActOnConditionalOp(SourceLocation QuestionLoc,
                                 RHS.get());
 
   CheckBoolLikeConversion(Cond.get(), QuestionLoc);
+
+  result = computeConditionalNullability(result, commonExpr, LHSTy, RHSTy,
+                                         Context);
 
   if (!commonExpr)
     return new (Context)
@@ -12423,10 +12479,14 @@ bool Sema::DiagnoseAssignmentResult(AssignConvertType ConvTy,
     MayHaveConvFixit = true;
     break;
   case IncompatiblePointer:
-      DiagKind =
-        (Action == AA_Passing_CFAudited ?
-          diag::err_arc_typecheck_convert_incompatible_pointer :
-          diag::ext_typecheck_convert_incompatible_pointer);
+    if (Action == AA_Passing_CFAudited)
+      DiagKind = diag::err_arc_typecheck_convert_incompatible_pointer;
+    else if (SrcType->isFunctionPointerType() &&
+             DstType->isFunctionPointerType())
+      DiagKind = diag::ext_typecheck_convert_incompatible_function_pointer;
+    else
+      DiagKind = diag::ext_typecheck_convert_incompatible_pointer;
+
     CheckInferredResultType = DstType->isObjCObjectPointerType() &&
       SrcType->isObjCObjectPointerType();
     if (Hint.isNull() && !CheckInferredResultType) {

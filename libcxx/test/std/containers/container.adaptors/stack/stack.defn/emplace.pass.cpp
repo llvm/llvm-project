@@ -7,9 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03
+
 // <stack>
 
-// template <class... Args> void emplace(Args&&... args);
+// template <class... Args> reference emplace(Args&&... args);
 
 #include <stack>
 #include <cassert>
@@ -18,12 +20,14 @@
 
 int main()
 {
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
+    typedef Emplaceable T;
     std::stack<Emplaceable> q;
-    q.emplace(1, 2.5);
-    q.emplace(2, 3.5);
-    q.emplace(3, 4.5);
+    T& r1 = q.emplace(1, 2.5);
+    assert(&r1 == &q.top());
+    T& r2 = q.emplace(2, 3.5);
+    assert(&r2 == &q.top());
+    T& r3 = q.emplace(3, 4.5);
+    assert(&r3 == &q.top());
     assert(q.size() == 3);
     assert(q.top() == Emplaceable(3, 4.5));
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 }

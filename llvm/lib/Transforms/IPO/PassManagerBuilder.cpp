@@ -91,7 +91,7 @@ static cl::opt<CFLAAType>
                         clEnumValN(CFLAAType::Andersen, "anders",
                                    "Enable inclusion-based CFL-AA"),
                         clEnumValN(CFLAAType::Both, "both",
-                                   "Enable both variants of CFL-aa"),
+                                   "Enable both variants of CFL-AA"),
                         clEnumValEnd));
 
 static cl::opt<bool>

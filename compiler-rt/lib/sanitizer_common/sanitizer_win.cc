@@ -27,6 +27,7 @@
 #include "sanitizer_libc.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_placement_new.h"
+#include "sanitizer_procmaps.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_symbolizer.h"
 
@@ -173,10 +174,10 @@ void *MmapFixedNoReserve(uptr fixed_addr, uptr size, const char *name) {
   // FIXME: is this really "NoReserve"? On Win32 this does not matter much,
   // but on Win64 it does.
   (void)name;  // unsupported
-#if SANITIZER_WINDOWS64
-  // On Windows64, use MEM_COMMIT would result in error
+#if !SANITIZER_GO && SANITIZER_WINDOWS64
+  // On asan/Windows64, use MEM_COMMIT would result in error
   // 1455:ERROR_COMMITMENT_LIMIT.
-  // We use exception handler to commit page on demand.
+  // Asan uses exception handler to commit page on demand.
   void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE, PAGE_READWRITE);
 #else
   void *p = VirtualAlloc((LPVOID)fixed_addr, size, MEM_RESERVE | MEM_COMMIT,
@@ -883,6 +884,10 @@ bool IsProcessRunning(pid_t pid) {
 }
 
 int WaitForProcess(pid_t pid) { return -1; }
+
+// FIXME implement on this platform.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+
 
 }  // namespace __sanitizer
 

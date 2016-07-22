@@ -31,6 +31,7 @@ namespace __esan {
 
 static const int SigAltStackSize = 4*1024;
 static const int SidelineStackSize = 4*1024;
+static const uptr SidelineIdUninitialized = 1;
 
 // FIXME: we'll need some kind of TLS (can we trust that a pthread key will
 // work in our non-POSIX thread?) to access our data in our signal handler
@@ -113,6 +114,10 @@ bool SidelineThread::launchThread(SidelineFunc takeSample, void *Arg,
 
   // We do without a guard page.
   Stack = static_cast<char*>(MmapOrDie(SidelineStackSize, "SidelineStack"));
+  // We need to handle the return value from internal_clone() not having been
+  // assigned yet (for our CHECK in adjustTimer()) so we ensure this has a
+  // sentinel value.
+  SidelineId = SidelineIdUninitialized;
   // By omitting CLONE_THREAD, the child is in its own thread group and will not
   // receive any of the application's signals.
   SidelineId = internal_clone(
@@ -151,7 +156,9 @@ bool SidelineThread::joinThread() {
 
 // Must be called from the sideline thread itself.
 bool SidelineThread::adjustTimer(u32 FreqMilliSec) {
-  CHECK(internal_getpid() == SidelineId);
+  // The return value of internal_clone() may not have been assigned yet:
+  CHECK(internal_getpid() == SidelineId ||
+        SidelineId == SidelineIdUninitialized);
   Freq = FreqMilliSec;
   struct itimerval TimerVal;
   TimerVal.it_interval.tv_sec = (time_t) Freq / 1000;

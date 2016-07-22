@@ -505,7 +505,6 @@ static bool CommaSeparateAndAddOccurrence(Option *Handler, unsigned pos,
         return true;
       // Erase the portion before the comma, AND the comma.
       Val = Val.substr(Pos + 1);
-      Value.substr(Pos + 1); // Increment the original value pointer as well.
       // Check for another comma.
       Pos = Val.find(',');
     }

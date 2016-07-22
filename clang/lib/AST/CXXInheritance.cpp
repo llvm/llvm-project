@@ -16,7 +16,6 @@
 #include "clang/AST/RecordLayout.h"
 #include "llvm/ADT/SetVector.h"
 #include <algorithm>
-#include <set>
 
 using namespace clang;
 

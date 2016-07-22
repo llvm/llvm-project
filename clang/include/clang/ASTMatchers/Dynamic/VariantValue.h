@@ -21,7 +21,6 @@
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/Optional.h"
-#include "llvm/ADT/Twine.h"
 #include <memory>
 #include <vector>
 

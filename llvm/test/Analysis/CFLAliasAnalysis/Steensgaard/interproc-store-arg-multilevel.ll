@@ -29,7 +29,6 @@ define void @store_arg_multilevel_callee(i32*** %arg1, i32* %arg2) {
 
 ; We could've proven the following facts if the analysis were inclusion-based:
 ; NoAlias: i32* %a, i32* %b
-; NoAlias: i32* %b, i32* %lp
 define void @test_store_arg_multilevel() {
   %a = alloca i32, align 4
   %b = alloca i32, align 4
@@ -46,3 +45,4 @@ define void @test_store_arg_multilevel() {
 
   ret void
 }
+

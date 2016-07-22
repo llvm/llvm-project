@@ -55,10 +55,12 @@ static void DummyArgToStringFn(DiagnosticsEngine::ArgumentKind AK, intptr_t QT,
   Output.append(Str.begin(), Str.end());
 }
 
-DiagnosticsEngine::DiagnosticsEngine(
-    const IntrusiveRefCntPtr<DiagnosticIDs> &diags, DiagnosticOptions *DiagOpts,
-    DiagnosticConsumer *client, bool ShouldOwnClient)
-    : Diags(diags), DiagOpts(DiagOpts), Client(nullptr), SourceMgr(nullptr) {
+DiagnosticsEngine::DiagnosticsEngine(IntrusiveRefCntPtr<DiagnosticIDs> diags,
+                                     DiagnosticOptions *DiagOpts,
+                                     DiagnosticConsumer *client,
+                                     bool ShouldOwnClient)
+    : Diags(std::move(diags)), DiagOpts(DiagOpts), Client(nullptr),
+      SourceMgr(nullptr) {
   setClient(client, ShouldOwnClient);
   ArgToStringFn = DummyArgToStringFn;
   ArgToStringCookie = nullptr;

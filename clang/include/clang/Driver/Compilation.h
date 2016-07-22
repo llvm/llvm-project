@@ -14,7 +14,6 @@
 #include "clang/Driver/Job.h"
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/Path.h"
 #include <map>
 
 namespace llvm {

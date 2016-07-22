@@ -17,11 +17,8 @@
 
 #include "clang-c/Index.h"
 #include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/Lex/ModuleLoader.h"
-#include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Path.h"
+#include "llvm/ADT/STLExtras.h"
 #include <utility>
-#include <vector>
 
 namespace llvm {
   class CrashRecoveryContext;

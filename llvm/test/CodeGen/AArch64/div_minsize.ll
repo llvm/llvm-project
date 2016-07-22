@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=aarch64 -mtriple=aarch64-linux-gnu | FileCheck %s
+; RUN: llc < %s -mtriple=aarch64-linux-gnu | FileCheck %s
 
 define i32 @testsize1(i32 %x) minsize nounwind {
 entry:

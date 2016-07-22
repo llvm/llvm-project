@@ -75,15 +75,33 @@ std::string createQualifiedNameForReplacement(
 } // anonymous namespace
 
 IncludeFixerContext::IncludeFixerContext(
-    llvm::StringRef Name, llvm::StringRef ScopeQualifiers,
-    std::vector<find_all_symbols::SymbolInfo> Symbols,
-    tooling::Range Range)
-    : SymbolIdentifier(Name), SymbolScopedQualifiers(ScopeQualifiers),
-      MatchedSymbols(std::move(Symbols)), SymbolRange(Range) {
+    std::vector<QuerySymbolInfo> QuerySymbols,
+    std::vector<find_all_symbols::SymbolInfo> Symbols)
+    : QuerySymbolInfos(std::move(QuerySymbols)),
+      MatchedSymbols(std::move(Symbols)) {
+  // Remove replicated QuerySymbolInfos with the same range.
+  //
+  // QuerySymbolInfos may contain replicated elements. Because CorrectTypo
+  // callback doesn't always work as we expected. In somecases, it will be
+  // triggered at the same position or unidentified symbol multiple times.
+  std::sort(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),
+            [&](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
+              if (A.Range.getOffset() != B.Range.getOffset())
+                return A.Range.getOffset() < B.Range.getOffset();
+              return A.Range.getLength() == B.Range.getLength();
+            });
+  QuerySymbolInfos.erase(
+      std::unique(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),
+                  [](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
+                    return A.Range == B.Range;
+                  }),
+      QuerySymbolInfos.end());
   for (const auto &Symbol : MatchedSymbols) {
-    HeaderInfos.push_back({Symbol.getFilePath().str(),
-                           createQualifiedNameForReplacement(
-                               SymbolIdentifier, ScopeQualifiers, Symbol)});
+    HeaderInfos.push_back(
+        {Symbol.getFilePath().str(),
+         createQualifiedNameForReplacement(
+             QuerySymbolInfos.front().RawIdentifier,
+             QuerySymbolInfos.front().ScopedQualifiers, Symbol)});
   }
   // Deduplicate header infos.
   HeaderInfos.erase(std::unique(HeaderInfos.begin(), HeaderInfos.end(),

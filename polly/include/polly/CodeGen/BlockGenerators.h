@@ -540,6 +540,12 @@ protected:
   ///
   /// @returns false, iff @p Inst can be synthesized in @p Stmt.
   bool canSyntheziseInStmt(ScopStmt &Stmt, Instruction *Inst);
+
+  /// @brief Remove dead instructions generated for BB
+  ///
+  /// @param BB The basic block code for which code has been generated.
+  /// @param BBMap A local map from old to new instructions.
+  void removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap);
 };
 
 /// @brief Generate a new vector basic block for a polyhedral statement.

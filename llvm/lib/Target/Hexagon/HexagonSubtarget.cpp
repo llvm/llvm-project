@@ -219,6 +219,35 @@ void HexagonSubtarget::updateLatency(MachineInstr *SrcInst,
   }
 }
 
+/// If the SUnit has a zero latency edge, return the other SUnit.
+static SUnit *getZeroLatency(SUnit *N, SmallVector<SDep, 4> &Deps) {
+  for (auto &I : Deps)
+    if (I.isAssignedRegDep() && I.getLatency() == 0 &&
+        !I.getSUnit()->getInstr()->isPseudo())
+      return I.getSUnit();
+  return nullptr;
+}
+
+/// Change the latency between the two SUnits.
+void HexagonSubtarget::changeLatency(SUnit *Src, SmallVector<SDep, 4> &Deps,
+      SUnit *Dst, unsigned Lat) const {
+  MachineInstr *SrcI = Src->getInstr();
+  for (auto &I : Deps) {
+    if (I.getSUnit() != Dst)
+      continue;
+    I.setLatency(Lat);
+    SUnit *UpdateDst = I.getSUnit();
+    updateLatency(SrcI, UpdateDst->getInstr(), I);
+    // Update the latency of opposite edge too.
+    for (auto &PI : UpdateDst->Preds) {
+      if (PI.getSUnit() != Src || !PI.isAssignedRegDep())
+        continue;
+      PI.setLatency(Lat);
+      updateLatency(SrcI, UpdateDst->getInstr(), PI);
+    }
+  }
+}
+
 // Return true if these are the best two instructions to schedule
 // together with a zero latency. Only one dependence should have a zero
 // latency. If there are multiple choices, choose the best, and change
@@ -227,51 +256,40 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       const HexagonInstrInfo *TII) const {
   MachineInstr *SrcInst = Src->getInstr();
   MachineInstr *DstInst = Dst->getInstr();
-  // Check if the instructions can be scheduled together.
-  assert((TII->isToBeScheduledASAP(SrcInst, DstInst) ||
-          TII->canExecuteInBundle(SrcInst, DstInst)) &&
-         "Unable to schedule instructions together.");
 
   if (SrcInst->isPHI() || DstInst->isPHI())
     return false;
 
-  // Look for the best candidate to schedule together. If there are
-  // multiple choices, then the best candidate is the one with the
-  // greatest height, i.e., longest critical path.
-  SUnit *Best = Dst;
-  SUnit *PrevBest = nullptr;
-  for (const SDep &SI : Src->Succs) {
-    if (!SI.isAssignedRegDep())
-      continue;
-    if (SI.getLatency() == 0)
-      PrevBest = SI.getSUnit();
-    MachineInstr *Inst = SI.getSUnit()->getInstr();
-    if (!TII->isToBeScheduledASAP(SrcInst, Inst) ||
-        !TII->canExecuteInBundle(SrcInst, Inst))
-      continue;
-    if (SI.getSUnit()->getHeight() > Best->getHeight())
-      Best = SI.getSUnit();
+  // Check if the Dst instruction is the best candidate first.
+  SUnit *Best = nullptr;
+  SUnit *DstBest = nullptr;
+  SUnit *SrcBest = getZeroLatency(Dst, Dst->Preds);
+  if (SrcBest == nullptr || Src->NodeNum >= SrcBest->NodeNum) {
+    // Check that Src doesn't have a better candidate.
+    DstBest = getZeroLatency(Src, Src->Succs);
+    if (DstBest == nullptr || Dst->NodeNum <= DstBest->NodeNum)
+      Best = Dst;
   }
+  if (Best != Dst)
+    return false;
 
-  // Reassign the latency for the previous best, which requires setting
+  // The caller frequents adds the same dependence twice. If so, then
+  // return true for this case too.
+  if (Src == SrcBest && Dst == DstBest)
+    return true;
+
+  // Reassign the latency for the previous bests, which requires setting
   // the dependence edge in both directions.
-  if (Best != PrevBest) {
-    for (SDep &SI : Src->Succs) {
-      if (SI.getSUnit() != PrevBest)
-        continue;
-      SI.setLatency(1);
-      updateLatency(SrcInst, DstInst, SI);
-      // Update the latency of the predecessor edge too.
-      for (SDep &PI : PrevBest->Preds) {
-        if (PI.getSUnit() != Src || !PI.isAssignedRegDep())
-          continue;
-        PI.setLatency(1);
-        updateLatency(SrcInst, DstInst, PI);
-      }
-    }
-  }
+  if (SrcBest != nullptr)
+    changeLatency(SrcBest, SrcBest->Succs, Dst, 1);
+  if (DstBest != nullptr)
+    changeLatency(Src, Src->Succs, DstBest, 1);
+  // If there is an edge from SrcBest to DstBst, then try to change that
+  // to 0 now.
+  if (SrcBest && DstBest)
+    changeLatency(SrcBest, SrcBest->Succs, DstBest, 0);
 
-  return Best == Dst;
+  return true;
 }
 
 // Update the latency of a Phi when the Phi bridges two instructions that
@@ -333,6 +351,11 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
     changePhiLatency(SrcInst, Dst, Dep);
     return;
   }
+
+  // If it's a REG_SEQUENCE, use its destination instruction to determine
+  // the correct latency.
+  if (DstInst->isRegSequence() && Dst->NumSuccs == 1)
+    DstInst = Dst->Succs[0].getSUnit()->getInstr();
 
   // Try to schedule uses near definitions to generate .cur.
   if (EnableDotCurSched && QII->isToBeScheduledASAP(SrcInst, DstInst) &&

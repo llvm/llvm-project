@@ -68,11 +68,11 @@ OPTIONS
 
 .. option:: -B    (default)
 
- Use BSD output format.  Alias for :option:`--format=bsd`.
+ Use BSD output format.  Alias for `--format=bsd`.
 
 .. option:: -P
 
- Use POSIX.2 output format.  Alias for :option:`--format=posix`.
+ Use POSIX.2 output format.  Alias for `--format=posix`.
 
 .. option:: --debug-syms, -a
 

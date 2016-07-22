@@ -15,9 +15,6 @@
 #ifndef LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 #define LLVM_CLANG_BASIC_OPENCLOPTIONS_H
 
-#include <string>
-#include <vector>
-
 namespace clang {
 
 /// \brief OpenCL supported extensions and optional core features

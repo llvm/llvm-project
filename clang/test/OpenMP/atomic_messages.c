@@ -313,6 +313,8 @@ int captureint() {
 #pragma omp atomic capture
   {c = a; a++;}
 #pragma omp atomic capture
+  {c = a; (a)++;}
+#pragma omp atomic capture
   {++a;c = a;}
 #pragma omp atomic capture
   {c = a;a--;}
@@ -320,6 +322,8 @@ int captureint() {
   {--a;c = a;}
 #pragma omp atomic capture
   {c = a; a += b;}
+#pragma omp atomic capture
+  {c = a; (a) += b;}
 #pragma omp atomic capture
   {a %= b; c = a;}
 #pragma omp atomic capture

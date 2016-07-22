@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple -asm-verbose=false | FileCheck %s
 define <2 x i32> @fcmp_one(<2 x float> %x, <2 x float> %y) nounwind optsize readnone {
 ; CHECK-LABEL: fcmp_one:
 ; CHECK-NEXT: fcmgt.2s [[REG:v[0-9]+]], v0, v1

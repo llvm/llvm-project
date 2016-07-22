@@ -109,14 +109,13 @@ def report_test_failure(name, command, output, timeout):
     with output_lock:
         if not (RESULTS_FORMATTER and RESULTS_FORMATTER.is_using_terminal()):
             print(file=sys.stderr)
+            print(output, file=sys.stderr)
             if timeout:
                 timeout_str = " (TIMEOUT)"
             else:
                 timeout_str = ""
             print("[%s FAILED]%s" % (name, timeout_str), file=sys.stderr)
             print("Command invoked: %s" % ' '.join(command), file=sys.stderr)
-            print("Command stderr:\n", output[1], file=sys.stderr)
-            print("Command stdout:\n", output[0], file=sys.stderr)
         update_progress(name)
 
 
@@ -211,7 +210,7 @@ class DoTestProcessDriver(process_control.ProcessDriver):
             # only stderr does.
             report_test_pass(self.file_name, output[1])
         else:
-            report_test_failure(self.file_name, command, output, was_timeout)
+            report_test_failure(self.file_name, command, output[1], was_timeout)
 
         # Save off the results for the caller.
         self.results = (

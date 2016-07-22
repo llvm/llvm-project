@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone | FileCheck %s
 
 define i128 @shl(i128 %r, i128 %s) nounwind readnone {
 ; CHECK-LABEL: shl:

@@ -43,6 +43,7 @@
 #include "Plugins/ABI/SysV-x86_64/ABISysV_x86_64.h"
 #include "Plugins/Disassembler/llvm/DisassemblerLLVMC.h"
 #include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOSXDYLD.h"
+#include "Plugins/DynamicLoader/MacOSX-DYLD/DynamicLoaderMacOS.h"
 #include "Plugins/DynamicLoader/POSIX-DYLD/DynamicLoaderPOSIXDYLD.h"
 #include "Plugins/DynamicLoader/Static/DynamicLoaderStatic.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
@@ -383,6 +384,7 @@ SystemInitializerFull::Initialize()
 
     process_gdb_remote::ProcessGDBRemote::Initialize();
     DynamicLoaderMacOSXDYLD::Initialize();
+    DynamicLoaderMacOS::Initialize();
     DynamicLoaderPOSIXDYLD::Initialize();
     DynamicLoaderStatic::Initialize();
     DynamicLoaderWindowsDYLD::Initialize();
@@ -506,6 +508,7 @@ SystemInitializerFull::Terminate()
     platform_gdb_server::PlatformRemoteGDBServer::Terminate();
     process_gdb_remote::ProcessGDBRemote::Terminate();
     DynamicLoaderMacOSXDYLD::Terminate();
+    DynamicLoaderMacOS::Terminate();
     DynamicLoaderPOSIXDYLD::Terminate();
     DynamicLoaderStatic::Terminate();
     DynamicLoaderWindowsDYLD::Terminate();

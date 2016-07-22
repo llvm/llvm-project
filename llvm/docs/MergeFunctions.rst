@@ -394,7 +394,7 @@ and in right function "*FR*". And every part of *left* place is equal to the
 corresponding part of *right* place, and (!) both parts use *Value* instances,
 for example:
 
-.. code-block:: llvm
+.. code-block:: text
 
    instr0 i32 %LV   ; left side, function FL
    instr0 i32 %RV   ; right side, function FR
@@ -409,13 +409,13 @@ in "*FL*" and "*FR*".
 
 Consider small example here:
 
-.. code-block:: llvm
+.. code-block:: text
 
   define void %f(i32 %pf0, i32 %pf1) {
     instr0 i32 %pf0 instr1 i32 %pf1 instr2 i32 123
   }
 
-.. code-block:: llvm
+.. code-block:: text
 
   define void %g(i32 %pg0, i32 %pg1) {
     instr0 i32 %pg0 instr1 i32 %pg0 instr2 i32 123

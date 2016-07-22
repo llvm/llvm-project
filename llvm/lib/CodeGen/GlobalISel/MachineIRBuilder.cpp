@@ -56,9 +56,9 @@ MachineBasicBlock::iterator MachineIRBuilder::getInsertPt() {
 //------------------------------------------------------------------------------
 // Build instruction variants.
 //------------------------------------------------------------------------------
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, Type *Ty) {
+MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty) {
   MachineInstr *NewMI = BuildMI(getMF(), DL, getTII().get(Opcode));
-  if (Ty) {
+  if (Ty.isValid()) {
     assert(isPreISelGenericOpcode(Opcode) &&
            "Only generic instruction can have a type");
     NewMI->setType(Ty);
@@ -71,10 +71,10 @@ MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, Type *Ty) {
 
 MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, unsigned Res,
                                            unsigned Op0, unsigned Op1) {
-  return buildInstr(Opcode, nullptr, Res, Op0, Op1);
+  return buildInstr(Opcode, LLT{}, Res, Op0, Op1);
 }
 
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, Type *Ty,
+MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty,
                                            unsigned Res, unsigned Op0,
                                            unsigned Op1) {
   MachineInstr *NewMI = buildInstr(Opcode, Ty);
@@ -87,16 +87,16 @@ MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, Type *Ty,
 
 MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, unsigned Res,
                                            unsigned Op0) {
-  MachineInstr *NewMI = buildInstr(Opcode, nullptr);
+  MachineInstr *NewMI = buildInstr(Opcode, LLT{});
   MachineInstrBuilder(getMF(), NewMI).addReg(Res, RegState::Define).addReg(Op0);
   return NewMI;
 }
 
 MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode) {
-  return buildInstr(Opcode, nullptr);
+  return buildInstr(Opcode, LLT{});
 }
 
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, Type *Ty,
+MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty,
                                            MachineBasicBlock &BB) {
   MachineInstr *NewMI = buildInstr(Opcode, Ty);
   MachineInstrBuilder(getMF(), NewMI).addMBB(&BB);

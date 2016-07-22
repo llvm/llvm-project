@@ -248,11 +248,6 @@ def VGPR_512 : RegisterTuples<[sub0, sub1, sub2, sub3, sub4, sub5, sub6, sub7,
 //  Register classes used as source and destination
 //===----------------------------------------------------------------------===//
 
-class RegImmMatcher<string name> : AsmOperandClass {
-  let Name = name;
-  let RenderMethod = "addRegOrImmOperands";
-}
-
 // Subset of SReg_32 without M0 for SMRD instructions and alike.
 // See comments in SIInstructions.td for more info.
 def SReg_32_XM0 : RegisterClass<"AMDGPU", [i32, f32], 32,
@@ -344,6 +339,16 @@ def VReg_1 : RegisterClass<"AMDGPU", [i1], 32, (add VGPR_32)> {
   let Size = 32;
 }
 
+def VS_32 : RegisterClass<"AMDGPU", [i32, f32], 32, (add VGPR_32, SReg_32)>;
+
+def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add VReg_64, SReg_64)> {
+  let CopyCost = 2;
+}
+
+//===----------------------------------------------------------------------===//
+//  Register operands
+//===----------------------------------------------------------------------===//
+
 class RegImmOperand <RegisterClass rc> : RegisterOperand<rc> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_REG_IMM32";
@@ -352,6 +357,11 @@ class RegImmOperand <RegisterClass rc> : RegisterOperand<rc> {
 class RegInlineOperand <RegisterClass rc> : RegisterOperand<rc> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_REG_INLINE_C";
+}
+
+class RegImmMatcher<string name> : AsmOperandClass {
+  let Name = name;
+  let RenderMethod = "addRegOrImmOperands";
 }
 
 //===----------------------------------------------------------------------===//
@@ -374,50 +384,41 @@ def SCSrc_32 : RegInlineOperand<SReg_32> {
   let ParserMatchClass = RegImmMatcher<"SCSrc32">;
 }
 
+def SCSrc_64 : RegInlineOperand<SReg_64> {
+  let ParserMatchClass = RegImmMatcher<"SCSrc64">;
+}
+
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
-def VS_32 : RegisterClass<"AMDGPU", [i32, f32], 32, (add VGPR_32, SReg_32)>;
-
-def VS_64 : RegisterClass<"AMDGPU", [i64, f64], 32, (add VReg_64, SReg_64)> {
-  let CopyCost = 2;
-}
-
-def VSrc_32 : RegisterOperand<VS_32> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_IMM32";
+def VSrc_32 : RegImmOperand<VS_32> {
   let ParserMatchClass = RegImmMatcher<"VSrc32">;
 }
 
-def VSrc_64 : RegisterOperand<VS_64> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_IMM32";
+def VSrc_64 : RegImmOperand<VS_64> {
   let ParserMatchClass = RegImmMatcher<"VSrc64">;
+}
+
+//===----------------------------------------------------------------------===//
+//  VSrc_* Operands with an VGPR
+//===----------------------------------------------------------------------===//
+
+// This is for operands with the enum(9), VSrc encoding restriction,
+// but only allows VGPRs.
+def VRegSrc_32 : RegisterOperand<VGPR_32> {
+  //let ParserMatchClass = RegImmMatcher<"VRegSrc32">;
+  let DecoderMethod = "DecodeVS_32RegisterClass";
 }
 
 //===----------------------------------------------------------------------===//
 //  VCSrc_* Operands with an SGPR, VGPR or an inline constant
 //===----------------------------------------------------------------------===//
 
-def VCSrc_32 : RegisterOperand<VS_32> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_INLINE_C";
+def VCSrc_32 : RegInlineOperand<VS_32> {
   let ParserMatchClass = RegImmMatcher<"VCSrc32">;
 }
 
-def VCSrc_64 : RegisterOperand<VS_64> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_INLINE_C";
+def VCSrc_64 : RegInlineOperand<VS_64> {
   let ParserMatchClass = RegImmMatcher<"VCSrc64">;
-}
-
-//===----------------------------------------------------------------------===//
-//  SCSrc_* Operands with an SGPR or an inline constant
-//===----------------------------------------------------------------------===//
-
-def SCSrc_64 : RegisterOperand<SReg_64> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_INLINE_C";
-  let ParserMatchClass = RegImmMatcher<"SCSrc64">;
 }

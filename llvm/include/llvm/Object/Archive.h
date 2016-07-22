@@ -38,7 +38,7 @@ struct ArchiveMemberHeader {
   llvm::StringRef getName() const;
 
   /// Members are not larger than 4GB.
-  ErrorOr<uint32_t> getSize() const;
+  Expected<uint32_t> getSize() const;
 
   sys::fs::perms getAccessMode() const;
   sys::TimeValue getLastModified() const;
@@ -67,7 +67,7 @@ public:
     bool isThinMember() const;
 
   public:
-    Child(const Archive *Parent, const char *Start, std::error_code *EC);
+    Child(const Archive *Parent, const char *Start, Error *Err);
     Child(const Archive *Parent, StringRef Data, uint16_t StartOfFile);
 
     bool operator ==(const Child &other) const {
@@ -76,7 +76,7 @@ public:
     }
 
     const Archive *getParent() const { return Parent; }
-    ErrorOr<Child> getNext() const;
+    Expected<Child> getNext() const;
 
     ErrorOr<StringRef> getName() const;
     ErrorOr<std::string> getFullName() const;
@@ -93,9 +93,9 @@ public:
       return getHeader()->getAccessMode();
     }
     /// \return the size of the archive member without the header or padding.
-    ErrorOr<uint64_t> getSize() const;
+    Expected<uint64_t> getSize() const;
     /// \return the size in the archive header for this member.
-    ErrorOr<uint64_t> getRawSize() const;
+    Expected<uint64_t> getRawSize() const;
 
     ErrorOr<StringRef> getBuffer() const;
     uint64_t getChildOffset() const;
@@ -136,7 +136,7 @@ public:
       else {
         ErrorAsOutParameter ErrAsOutParam(*E);
         C = C.getParent()->child_end().C;
-        *E = errorCodeToError(ChildOrErr.getError());
+        *E = ChildOrErr.takeError();
         E = nullptr;
       }
       return *this;

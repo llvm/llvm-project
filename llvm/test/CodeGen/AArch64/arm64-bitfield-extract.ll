@@ -1,5 +1,5 @@
 ; RUN: opt -codegenprepare -mtriple=arm64-apple=ios -S -o - %s | FileCheck --check-prefix=OPT %s
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 %struct.X = type { i8, i8, [2 x i8] }
 %struct.Y = type { i32, i8 }
 %struct.Z = type { i8, i8, [2 x i8], i16 }

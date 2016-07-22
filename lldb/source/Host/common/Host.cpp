@@ -66,8 +66,8 @@
 
 #if defined(_WIN32)
 #include "lldb/Host/windows/ProcessLauncherWindows.h"
-#elif defined(__ANDROID__) || defined(__ANDROID_NDK__)
-#include "lldb/Host/android/ProcessLauncherAndroid.h"
+#elif defined(__linux__)
+#include "lldb/Host/linux/ProcessLauncherLinux.h"
 #else
 #include "lldb/Host/posix/ProcessLauncherPosix.h"
 #endif
@@ -1009,8 +1009,8 @@ Host::LaunchProcess (ProcessLaunchInfo &launch_info)
     std::unique_ptr<ProcessLauncher> delegate_launcher;
 #if defined(_WIN32)
     delegate_launcher.reset(new ProcessLauncherWindows());
-#elif defined(__ANDROID__) || defined(__ANDROID_NDK__)
-    delegate_launcher.reset(new ProcessLauncherAndroid());
+#elif defined(__linux__)
+    delegate_launcher.reset(new ProcessLauncherLinux());
 #else
     delegate_launcher.reset(new ProcessLauncherPosix());
 #endif

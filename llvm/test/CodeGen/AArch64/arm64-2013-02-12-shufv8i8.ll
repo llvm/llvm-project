@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple
 
 ;CHECK-LABEL: Shuff:
 ;CHECK: tbl.8b

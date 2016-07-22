@@ -120,24 +120,17 @@ else()
       add_host_subdirectory(android
         android/HostInfoAndroid.cpp
         android/LibcGlue.cpp
-        android/ProcessLauncherAndroid.cpp
-        linux/AbstractSocket.cpp
-        linux/Host.cpp
-        linux/HostInfoLinux.cpp
-        linux/HostThreadLinux.cpp
-        linux/LibcGlue.cpp
-        linux/ThisThread.cpp
-        )
-    else()
-      add_host_subdirectory(linux
-        linux/AbstractSocket.cpp
-        linux/Host.cpp
-        linux/HostInfoLinux.cpp
-        linux/HostThreadLinux.cpp
-        linux/LibcGlue.cpp
-        linux/ThisThread.cpp
         )
     endif()
+    add_host_subdirectory(linux
+      linux/AbstractSocket.cpp
+      linux/Host.cpp
+      linux/HostInfoLinux.cpp
+      linux/HostThreadLinux.cpp
+      linux/LibcGlue.cpp
+      linux/ProcessLauncherLinux.cpp
+      linux/ThisThread.cpp
+      )
 
   elseif (CMAKE_SYSTEM_NAME MATCHES "FreeBSD")
     add_host_subdirectory(freebsd

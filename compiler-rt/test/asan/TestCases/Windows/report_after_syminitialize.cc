@@ -16,8 +16,8 @@ int main() {
   // CHECK: ERROR: AddressSanitizer: access-violation on unknown address
   // CHECK: The signal is caused by a WRITE memory access.
   // CHECK: Hint: address points to the zero page.
-  // CHECK-NEXT: {{WARNING: Failed to use and restart external symbolizer}}
-  // CHECK-NEXT: {{WARNING: .*DbgHelp}}
+  // CHECK: {{WARNING: .*DbgHelp}}
+  // CHECK: {{WARNING: Failed to use and restart external symbolizer}}
   // CHECK: {{#0 0x.* in main.*report_after_syminitialize.cc:}}[[@LINE-6]]
   // CHECK: AddressSanitizer can not provide additional info.
 }

@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -mtriple=arm64-apple-ios < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios | FileCheck %s
 ;
 ; <rdar://problem/13820218>
 

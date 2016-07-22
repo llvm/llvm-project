@@ -21,7 +21,6 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/Bitcode/ReaderWriter.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DiagnosticInfo.h"
@@ -50,6 +49,7 @@ namespace clang {
     ASTContext *Context;
 
     Timer LLVMIRGeneration;
+    unsigned LLVMIRGenerationRefCount;
 
     std::unique_ptr<CodeGenerator> Gen;
 
@@ -74,6 +74,7 @@ namespace clang {
           TargetOpts(TargetOpts), LangOpts(LangOpts),
           AsmOutStream(std::move(OS)), Context(nullptr),
           LLVMIRGeneration("LLVM IR Generation Time"),
+          LLVMIRGenerationRefCount(0),
           Gen(CreateLLVMCodeGen(Diags, InFile, HeaderSearchOpts, PPOpts,
                                 CodeGenOpts, C, CoverageInfo)) {
       llvm::TimePassesIsEnabled = TimePasses;
@@ -113,13 +114,20 @@ namespace clang {
                                      Context->getSourceManager(),
                                      "LLVM IR generation of declaration");
 
-      if (llvm::TimePassesIsEnabled)
-        LLVMIRGeneration.startTimer();
+      // Recurse.
+      if (llvm::TimePassesIsEnabled) {
+        LLVMIRGenerationRefCount += 1;
+        if (LLVMIRGenerationRefCount == 1)
+          LLVMIRGeneration.startTimer();
+      }
 
       Gen->HandleTopLevelDecl(D);
 
-      if (llvm::TimePassesIsEnabled)
-        LLVMIRGeneration.stopTimer();
+      if (llvm::TimePassesIsEnabled) {
+        LLVMIRGenerationRefCount -= 1;
+        if (LLVMIRGenerationRefCount == 0)
+          LLVMIRGeneration.stopTimer();
+      }
 
       return true;
     }
@@ -140,13 +148,19 @@ namespace clang {
     void HandleTranslationUnit(ASTContext &C) override {
       {
         PrettyStackTraceString CrashInfo("Per-file LLVM IR generation");
-        if (llvm::TimePassesIsEnabled)
-          LLVMIRGeneration.startTimer();
+        if (llvm::TimePassesIsEnabled) {
+          LLVMIRGenerationRefCount += 1;
+          if (LLVMIRGenerationRefCount == 1)
+            LLVMIRGeneration.startTimer();
+        }
 
         Gen->HandleTranslationUnit(C);
 
-        if (llvm::TimePassesIsEnabled)
-          LLVMIRGeneration.stopTimer();
+        if (llvm::TimePassesIsEnabled) {
+          LLVMIRGenerationRefCount -= 1;
+          if (LLVMIRGenerationRefCount == 0)
+            LLVMIRGeneration.stopTimer();
+        }
       }
 
       // Silently ignore if we weren't initialized for some reason.

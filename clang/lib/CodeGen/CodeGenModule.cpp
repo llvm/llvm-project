@@ -43,7 +43,6 @@
 #include "clang/Basic/Version.h"
 #include "clang/Frontend/CodeGenOptions.h"
 #include "clang/Sema/SemaDiagnostic.h"
-#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/CallingConv.h"
@@ -3911,13 +3910,19 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
   case Decl::Import: {
     auto *Import = cast<ImportDecl>(D);
 
-    // Ignore import declarations that come from imported modules.
-    if (Import->getImportedOwningModule())
+    // If we've already imported this module, we're done.
+    if (!ImportedModules.insert(Import->getImportedModule()))
       break;
-    if (CGDebugInfo *DI = getModuleDebugInfo())
-      DI->EmitImportDecl(*Import);
 
-    ImportedModules.insert(Import->getImportedModule());
+    // Emit debug information for direct imports.
+    if (!Import->getImportedOwningModule()) {
+      if (CGDebugInfo *DI = getModuleDebugInfo())
+        DI->EmitImportDecl(*Import);
+    }
+
+    // Emit the module initializers.
+    for (auto *D : Context.getModuleInitializers(Import->getImportedModule()))
+      EmitTopLevelDecl(D);
     break;
   }
 

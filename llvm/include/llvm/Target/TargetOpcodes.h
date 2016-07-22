@@ -20,7 +20,7 @@ namespace llvm {
 ///
 namespace TargetOpcode {
 enum {
-#define HANDLE_TARGET_OPCODE(OPC, NUM) OPC = NUM,
+#define HANDLE_TARGET_OPCODE(OPC) OPC,
 #define HANDLE_TARGET_OPCODE_MARKER(IDENT, OPC) IDENT = OPC,
 #include "llvm/Target/TargetOpcodes.def"
 };

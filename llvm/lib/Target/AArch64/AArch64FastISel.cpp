@@ -134,6 +134,7 @@ private:
   bool selectFRem(const Instruction *I);
   bool selectSDiv(const Instruction *I);
   bool selectGetElementPtr(const Instruction *I);
+  bool selectAtomicCmpXchg(const AtomicCmpXchgInst *I);
 
   // Utility helper routines.
   bool isTypeLegal(Type *Ty, MVT &VT);
@@ -185,6 +186,8 @@ private:
                     MachineMemOperand *MMO = nullptr);
   bool emitStore(MVT VT, unsigned SrcReg, Address Addr,
                  MachineMemOperand *MMO = nullptr);
+  bool emitStoreRelease(MVT VT, unsigned SrcReg, unsigned AddrReg,
+                        MachineMemOperand *MMO = nullptr);
   unsigned emitIntExt(MVT SrcVT, unsigned SrcReg, MVT DestVT, bool isZExt);
   unsigned emiti1Ext(unsigned SrcReg, MVT DestVT, bool isZExt);
   unsigned emitAdd(MVT RetVT, const Value *LHS, const Value *RHS,
@@ -1997,6 +2000,28 @@ bool AArch64FastISel::selectLoad(const Instruction *I) {
   return true;
 }
 
+bool AArch64FastISel::emitStoreRelease(MVT VT, unsigned SrcReg,
+                                       unsigned AddrReg,
+                                       MachineMemOperand *MMO) {
+  unsigned Opc;
+  switch (VT.SimpleTy) {
+  default: return false;
+  case MVT::i8:  Opc = AArch64::STLRB; break;
+  case MVT::i16: Opc = AArch64::STLRH; break;
+  case MVT::i32: Opc = AArch64::STLRW; break;
+  case MVT::i64: Opc = AArch64::STLRX; break;
+  }
+
+  const MCInstrDesc &II = TII.get(Opc);
+  SrcReg = constrainOperandRegClass(II, SrcReg, 0);
+  AddrReg = constrainOperandRegClass(II, AddrReg, 1);
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
+      .addReg(SrcReg)
+      .addReg(AddrReg)
+      .addMemOperand(MMO);
+  return true;
+}
+
 bool AArch64FastISel::emitStore(MVT VT, unsigned SrcReg, Address Addr,
                                 MachineMemOperand *MMO) {
   if (!TLI.allowsMisalignedMemoryAccesses(VT))
@@ -2071,8 +2096,7 @@ bool AArch64FastISel::selectStore(const Instruction *I) {
   // Verify we have a legal type before going any further.  Currently, we handle
   // simple types that will directly fit in a register (i32/f32/i64/f64) or
   // those that can be sign or zero-extended to a basic operation (i1/i8/i16).
-  if (!isTypeSupported(Op0->getType(), VT, /*IsVectorAllowed=*/true) ||
-      cast<StoreInst>(I)->isAtomic())
+  if (!isTypeSupported(Op0->getType(), VT, /*IsVectorAllowed=*/true))
     return false;
 
   const Value *PtrV = I->getOperand(1);
@@ -2109,9 +2133,23 @@ bool AArch64FastISel::selectStore(const Instruction *I) {
   if (!SrcReg)
     return false;
 
+  auto *SI = cast<StoreInst>(I);
+
+  // Try to emit a STLR for seq_cst/release.
+  if (SI->isAtomic()) {
+    AtomicOrdering Ord = SI->getOrdering();
+    // The non-atomic instructions are sufficient for relaxed stores.
+    if (isReleaseOrStronger(Ord)) {
+      // The STLR addressing mode only supports a base reg; pass that directly.
+      unsigned AddrReg = getRegForValue(PtrV);
+      return emitStoreRelease(VT, SrcReg, AddrReg,
+                              createMachineMemOperandFor(I));
+    }
+  }
+
   // See if we can handle this address.
   Address Addr;
-  if (!computeAddress(I->getOperand(1), Addr, I->getOperand(0)->getType()))
+  if (!computeAddress(PtrV, Addr, Op0->getType()))
     return false;
 
   if (!emitStore(VT, SrcReg, Addr, createMachineMemOperandFor(I)))
@@ -4903,6 +4941,58 @@ bool AArch64FastISel::selectGetElementPtr(const Instruction *I) {
   return true;
 }
 
+bool AArch64FastISel::selectAtomicCmpXchg(const AtomicCmpXchgInst *I) {
+  assert(TM.getOptLevel() == CodeGenOpt::None &&
+         "cmpxchg survived AtomicExpand at optlevel > -O0");
+
+  auto *RetPairTy = cast<StructType>(I->getType());
+  Type *RetTy = RetPairTy->getTypeAtIndex(0U);
+  assert(RetPairTy->getTypeAtIndex(1U)->isIntegerTy(1) &&
+         "cmpxchg has a non-i1 status result");
+
+  MVT VT;
+  if (!isTypeLegal(RetTy, VT))
+    return false;
+
+  const TargetRegisterClass *ResRC;
+  unsigned Opc;
+  // This only supports i32/i64, because i8/i16 aren't legal, and the generic
+  // extractvalue selection doesn't support that.
+  if (VT == MVT::i32) {
+    Opc = AArch64::CMP_SWAP_32;
+    ResRC = &AArch64::GPR32RegClass;
+  } else if (VT == MVT::i64) {
+    Opc = AArch64::CMP_SWAP_64;
+    ResRC = &AArch64::GPR64RegClass;
+  } else {
+    return false;
+  }
+
+  const MCInstrDesc &II = TII.get(Opc);
+
+  const unsigned AddrReg = constrainOperandRegClass(
+      II, getRegForValue(I->getPointerOperand()), II.getNumDefs());
+  const unsigned DesiredReg = constrainOperandRegClass(
+      II, getRegForValue(I->getCompareOperand()), II.getNumDefs() + 1);
+  const unsigned NewReg = constrainOperandRegClass(
+      II, getRegForValue(I->getNewValOperand()), II.getNumDefs() + 2);
+
+  const unsigned ResultReg1 = createResultReg(ResRC);
+  const unsigned ResultReg2 = createResultReg(&AArch64::GPR32RegClass);
+
+  // FIXME: MachineMemOperand doesn't support cmpxchg yet.
+  BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, II)
+      .addReg(ResultReg1, RegState::Define)
+      .addReg(ResultReg2, RegState::Define)
+      .addReg(AddrReg)
+      .addReg(DesiredReg)
+      .addReg(NewReg);
+
+  assert((ResultReg1 + 1) == ResultReg2 && "Nonconsecutive result registers.");
+  updateValueMap(I, ResultReg1, 2);
+  return true;
+}
+
 bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
   switch (I->getOpcode()) {
   default:
@@ -4976,6 +5066,8 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
     return selectFRem(I);
   case Instruction::GetElementPtr:
     return selectGetElementPtr(I);
+  case Instruction::AtomicCmpXchg:
+    return selectAtomicCmpXchg(cast<AtomicCmpXchgInst>(I));
   }
 
   // fall-back to target-independent instruction selection.

@@ -64,6 +64,8 @@ public:
   /// Alternative in the sense different from getInstrMapping.
   InstructionMappings
   getInstrAlternativeMappings(const MachineInstr &MI) const override;
+
+  InstructionMapping getInstrMapping(const MachineInstr &MI) const override;
 };
 } // End llvm namespace.
 #endif

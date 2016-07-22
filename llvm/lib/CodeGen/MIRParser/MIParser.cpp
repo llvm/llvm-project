@@ -130,10 +130,8 @@ public:
   bool parseIRConstant(StringRef::iterator Loc, StringRef Source,
                        const Constant *&C);
   bool parseIRConstant(StringRef::iterator Loc, const Constant *&C);
-  bool parseIRType(StringRef::iterator Loc, StringRef Source, unsigned &Read,
-                   Type *&Ty);
-  // \p MustBeSized defines whether or not \p Ty must be sized.
-  bool parseIRType(StringRef::iterator Loc, Type *&Ty, bool MustBeSized = true);
+  bool parseLowLevelType(StringRef::iterator Loc, LLT &Ty,
+                         bool MustBeSized = true);
   bool parseTypedImmediateOperand(MachineOperand &Dest);
   bool parseFPImmediateOperand(MachineOperand &Dest);
   bool parseMBBReference(MachineBasicBlock *&MBB);
@@ -597,11 +595,11 @@ bool MIParser::parse(MachineInstr *&MI) {
   if (Token.isError() || parseInstruction(OpCode, Flags))
     return true;
 
-  Type *Ty = nullptr;
+  LLT Ty{};
   if (isPreISelGenericOpcode(OpCode)) {
     // For generic opcode, a type is mandatory.
     auto Loc = Token.location();
-    if (parseIRType(Loc, Ty))
+    if (parseLowLevelType(Loc, Ty))
       return true;
   }
 
@@ -660,7 +658,7 @@ bool MIParser::parse(MachineInstr *&MI) {
   // TODO: Check for extraneous machine operands.
   MI = MF.CreateMachineInstr(MCID, DebugLocation, /*NoImplicit=*/true);
   MI->setFlags(Flags);
-  if (Ty)
+  if (Ty.isValid())
     MI->setType(Ty);
   for (const auto &Operand : Operands)
     MI->addOperand(MF, Operand.Operand);
@@ -973,14 +971,18 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
       TiedDefIdx = Idx;
     }
   } else if (consumeIfPresent(MIToken::lparen)) {
+    MachineRegisterInfo &MRI = MF.getRegInfo();
+
     // Virtual registers may have a size with GlobalISel.
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
       return error("unexpected size on physical register");
+    if (MRI.getRegClassOrRegBank(Reg).is<const TargetRegisterClass *>())
+      return error("unexpected size on non-generic virtual register");
+
     unsigned Size;
     if (parseSize(Size))
       return true;
 
-    MachineRegisterInfo &MRI = MF.getRegInfo();
     MRI.setSize(Reg, Size);
   } else if (PFS.GenericVRegs.count(Reg)) {
     // Generic virtual registers must have a size.
@@ -1024,35 +1026,44 @@ bool MIParser::parseIRConstant(StringRef::iterator Loc, const Constant *&C) {
   return false;
 }
 
-bool MIParser::parseIRType(StringRef::iterator Loc, StringRef StringValue,
-                           unsigned &Read, Type *&Ty) {
-  auto Source = StringValue.str(); // The source has to be null terminated.
-  SMDiagnostic Err;
-  Ty = parseTypeAtBeginning(Source.c_str(), Read, Err,
-                            *MF.getFunction()->getParent(), &PFS.IRSlots);
-  if (!Ty)
-    return error(Loc + Err.getColumnNo(), Err.getMessage());
-  return false;
-}
+bool MIParser::parseLowLevelType(StringRef::iterator Loc, LLT &Ty,
+                                 bool MustBeSized) {
+  if (Token.is(MIToken::Identifier) && Token.stringValue() == "unsized") {
+    if (MustBeSized)
+      return error(Loc, "expected sN or <N x sM> for sized GlobalISel type");
+    lex();
+    Ty = LLT::unsized();
+    return false;
+  } else if (Token.is(MIToken::ScalarType)) {
+    Ty = LLT::scalar(APSInt(Token.range().drop_front()).getZExtValue());
+    lex();
+    return false;
+  }
 
-bool MIParser::parseIRType(StringRef::iterator Loc, Type *&Ty,
-                           bool MustBeSized) {
-  // At this point we enter in the IR world, i.e., to get the correct type,
-  // we need to hand off the whole string, not just the current token.
-  // E.g., <4 x i64> would give '<' as a token and there is not much
-  // the IR parser can do with that.
-  unsigned Read = 0;
-  if (parseIRType(Loc, StringRef(Loc), Read, Ty))
-    return true;
-  // The type must be sized, otherwise there is not much the backend
-  // can do with it.
-  if (MustBeSized && !Ty->isSized())
-    return error("expected a sized type");
-  // The next token is Read characters from the Loc.
-  // However, the current location is not Loc, but Loc + the length of Token.
-  // Therefore, subtract the length of Token (range().end() - Loc) to the
-  // number of characters to skip before the next token.
-  lex(Read - (Token.range().end() - Loc));
+  // Now we're looking for a vector.
+  if (Token.isNot(MIToken::less))
+    return error(Loc, "expected unsized, sN or <N x sM> for GlobalISel type");
+  lex();
+
+  if (Token.isNot(MIToken::IntegerLiteral))
+    return error(Loc, "expected <N x sM> for vctor type");
+  uint64_t NumElements = Token.integerValue().getZExtValue();
+  lex();
+
+  if (Token.isNot(MIToken::Identifier) || Token.stringValue() != "x")
+    return error(Loc, "expected '<N x sM>' for vector type");
+  lex();
+
+  if (Token.isNot(MIToken::ScalarType))
+    return error(Loc, "expected '<N x sM>' for vector type");
+  uint64_t ScalarSize = APSInt(Token.range().drop_front()).getZExtValue();
+  lex();
+
+  if (Token.isNot(MIToken::greater))
+    return error(Loc, "expected '<N x sM>' for vector type");
+  lex();
+
+  Ty = LLT::vector(NumElements, ScalarSize);
   return false;
 }
 

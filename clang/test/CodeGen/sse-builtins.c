@@ -295,22 +295,19 @@ long long test_mm_cvtss_si64(__m128 A) {
 
 int test_mm_cvtt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvtt_ss2si
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
-  // CHECK: fptosi float %{{.*}} to i32
+  // CHECK: call i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
   return _mm_cvtt_ss2si(A);
 }
 
 int test_mm_cvttss_si32(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si32
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
-  // CHECK: fptosi float %{{.*}} to i32
+  // CHECK: call i32 @llvm.x86.sse.cvttss2si(<4 x float> %{{.*}})
   return _mm_cvttss_si32(A);
 }
 
 long long test_mm_cvttss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si64
-  // CHECK: extractelement <4 x float> %{{.*}}, i32 0
-  // CHECK: fptosi float %{{.*}} to i64
+  // CHECK: call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %{{.*}})
   return _mm_cvttss_si64(A);
 }
 

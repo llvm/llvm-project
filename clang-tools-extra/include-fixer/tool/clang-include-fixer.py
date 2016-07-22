@@ -127,7 +127,11 @@ def main():
     return
 
   include_fixer_context = json.loads(stdout)
-  symbol = include_fixer_context["SymbolIdentifier"]
+  query_symbol_infos = include_fixer_context["QuerySymbolInfos"]
+  if not query_symbol_infos:
+    print "The file is fine, no need to add a header."
+    return
+  symbol = query_symbol_infos[0]["RawIdentifier"]
   # The header_infos is already sorted by include-fixer.
   header_infos = include_fixer_context["HeaderInfos"]
   # Deduplicate headers while keeping the order, so that the same header would
@@ -140,10 +144,6 @@ def main():
       seen.add(header)
       unique_headers.append(header)
 
-  if not symbol:
-    print "The file is fine, no need to add a header."
-    return
-
   if not unique_headers:
     print "Couldn't find a header for {0}.".format(symbol)
     return
@@ -151,8 +151,7 @@ def main():
   try:
     # If there is only one suggested header, insert it directly.
     if len(unique_headers) == 1 or maximum_suggested_headers == 1:
-      InsertHeaderToVimBuffer({"SymbolIdentifier": symbol,
-                               "Range": include_fixer_context["Range"],
+      InsertHeaderToVimBuffer({"QuerySymbolInfos": query_symbol_infos,
                                "HeaderInfos": header_infos}, text)
       print "Added #include {0} for {1}.".format(unique_headers[0], symbol)
       return
@@ -163,8 +162,7 @@ def main():
       header for header in header_infos if header["Header"] == selected]
 
     # Insert a selected header.
-    InsertHeaderToVimBuffer({"SymbolIdentifier": symbol,
-                             "Range": include_fixer_context["Range"],
+    InsertHeaderToVimBuffer({"QuerySymbolInfos": query_symbol_infos,
                              "HeaderInfos": selected_header_infos}, text)
     print "Added #include {0} for {1}.".format(selected, symbol)
   except Exception as error:

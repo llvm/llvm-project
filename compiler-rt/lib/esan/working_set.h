@@ -24,6 +24,7 @@ void initializeWorkingSet();
 void initializeShadowWorkingSet();
 int finalizeWorkingSet();
 void reportWorkingSet();
+unsigned int getSampleCountWorkingSet();
 void processRangeAccessWorkingSet(uptr PC, uptr Addr, SIZE_T Size,
                                   bool IsWrite);
 

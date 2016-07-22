@@ -1,4 +1,4 @@
-; RUN: llc < %s -march arm64 -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -mcpu=cyclone | FileCheck %s
 ; <rdar://problem/11294426>
 
 @b = private unnamed_addr constant [3 x i32] [i32 1768775988, i32 1685481784, i32 1836253201], align 4

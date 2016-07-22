@@ -132,7 +132,7 @@ class LitConfig(object):
         # Step out of _write_message, and then out of wrapper.
         f = f.f_back.f_back
         file,line,_,_,_ = inspect.getframeinfo(f)
-        location = '%s:%d' % (os.path.basename(file), line)
+        location = '%s:%d' % (file, line)
 
         sys.stderr.write('%s: %s: %s: %s\n' % (self.progname, location,
                                                kind, message))

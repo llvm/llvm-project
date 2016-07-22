@@ -8,7 +8,7 @@ define void @convert_v2i64_to_v2i32(<2 x i32>* %dst.addr, <2 x i64> %src) nounwi
 ; X86-LABEL: convert_v2i64_to_v2i32:
 ; X86:       # BB#0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    paddd .LCPI0_0, %xmm0
+; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; X86-NEXT:    movq %xmm0, (%eax)
 ; X86-NEXT:    retl
@@ -35,12 +35,11 @@ define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) no
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movdqa (%ecx), %xmm0
-; X86-NEXT:    paddd .LCPI1_0, %xmm0
+; X86-NEXT:    paddd {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    pextrb $8, %xmm0, 2(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; X86-NEXT:    movd %xmm0, %ecx
-; X86-NEXT:    movw %cx, (%eax)
+; X86-NEXT:    pextrw $0, %xmm0, (%eax)
 ; X86-NEXT:    popl %eax
 ; X86-NEXT:    retl
 ;
@@ -51,8 +50,7 @@ define void @convert_v3i32_to_v3i8(<3 x i8>* %dst.addr, <3 x i32>* %src.addr) no
 ; X64-NEXT:    pextrb $8, %xmm0, 2(%rdi)
 ; X64-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
 ; X64-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
-; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movw %ax, (%rdi)
+; X64-NEXT:    pextrw $0, %xmm0, (%rdi)
 ; X64-NEXT:    retq
 entry:
 	%load = load <3 x i32>, <3 x i32>* %src.addr
@@ -74,7 +72,7 @@ define void @convert_v5i16_to_v5i8(<5 x i8>* %dst.addr, <5 x i16>* %src.addr) no
 ; X86-NEXT:    movl 8(%ebp), %eax
 ; X86-NEXT:    movl 12(%ebp), %ecx
 ; X86-NEXT:    movdqa (%ecx), %xmm0
-; X86-NEXT:    paddw .LCPI2_0, %xmm0
+; X86-NEXT:    paddw {{\.LCPI.*}}, %xmm0
 ; X86-NEXT:    pextrb $8, %xmm0, 4(%eax)
 ; X86-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,2,4,6,8,10,12,14,u,u,u,u,u,u,u,u]
 ; X86-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero

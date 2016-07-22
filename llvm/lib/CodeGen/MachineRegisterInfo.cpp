@@ -114,6 +114,9 @@ MachineRegisterInfo::getSize(unsigned VReg) const {
 }
 
 void MachineRegisterInfo::setSize(unsigned VReg, unsigned Size) {
+  // Check that VReg doesn't have a class.
+  assert(!getRegClassOrRegBank(VReg).is<const TargetRegisterClass *>() &&
+         "Can't set the size of a non-generic virtual register");
   getVRegToSize()[VReg] = Size;
 }
 
@@ -124,8 +127,8 @@ MachineRegisterInfo::createGenericVirtualRegister(unsigned Size) {
   // New virtual register number.
   unsigned Reg = TargetRegisterInfo::index2VirtReg(getNumVirtRegs());
   VRegInfo.grow(Reg);
-  // FIXME: Should we use a dummy register class?
-  VRegInfo[Reg].first = static_cast<TargetRegisterClass *>(nullptr);
+  // FIXME: Should we use a dummy register bank?
+  VRegInfo[Reg].first = static_cast<RegisterBank *>(nullptr);
   getVRegToSize()[Reg] = Size;
   RegAllocHints.grow(Reg);
   if (TheDelegate)

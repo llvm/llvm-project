@@ -95,6 +95,30 @@ define <2 x double> @test_x86_avx_extractf128_pd_256_2(<4 x double> %a0) {
 }
 
 
+define <4 x double> @test_x86_avx_vbroadcastf128_pd_256(i8* %a0) {
+; CHECK-LABEL: test_x86_avx_vbroadcastf128_pd_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; CHECK-NEXT:    retl
+  %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8* %a0) ; <<4 x double>> [#uses=1]
+  ret <4 x double> %res
+}
+declare <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8*) nounwind readonly
+
+
+define <8 x float> @test_x86_avx_vbroadcastf128_ps_256(i8* %a0) {
+; CHECK-LABEL: test_x86_avx_vbroadcastf128_ps_256:
+; CHECK:       ## BB#0:
+; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
+; CHECK-NEXT:    retl
+  %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8* %a0) ; <<8 x float>> [#uses=1]
+  ret <8 x float> %res
+}
+declare <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8*) nounwind readonly
+
+
 define <4 x double> @test_x86_avx_blend_pd_256(<4 x double> %a0, <4 x double> %a1) {
 ; CHECK-LABEL: test_x86_avx_blend_pd_256:
 ; CHECK:       ## BB#0:
@@ -357,29 +381,6 @@ define <4 x double> @test_x86_avx_cvt_ps2_pd_256(<4 x float> %a0) {
   ret <4 x double> %res
 }
 declare <4 x double> @llvm.x86.avx.cvt.ps2.pd.256(<4 x float>) nounwind readnone
-
-
-define <4 x i32> @test_x86_avx_cvtt_pd2dq_256(<4 x double> %a0) {
-; CHECK-LABEL: test_x86_avx_cvtt_pd2dq_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcvttpd2dqy %ymm0, %xmm0
-; CHECK-NEXT:    vzeroupper
-; CHECK-NEXT:    retl
-  %res = call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %a0) ; <<4 x i32>> [#uses=1]
-  ret <4 x i32> %res
-}
-declare <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double>) nounwind readnone
-
-
-define <8 x i32> @test_x86_avx_cvtt_ps2dq_256(<8 x float> %a0) {
-; CHECK-LABEL: test_x86_avx_cvtt_ps2dq_256:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
-; CHECK-NEXT:    retl
-  %res = call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %a0) ; <<8 x i32>> [#uses=1]
-  ret <8 x i32> %res
-}
-declare <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float>) nounwind readnone
 
 
 define void @test_x86_sse2_storeu_dq(i8* %a0, <16 x i8> %a1) {

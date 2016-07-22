@@ -34,13 +34,23 @@ enum ID {
 class AMDGPUIntrinsicInfo final : public TargetIntrinsicInfo {
 public:
   AMDGPUIntrinsicInfo();
+
+  StringRef getName(unsigned IntrId, ArrayRef<Type *> Tys = None) const;
+
   std::string getName(unsigned IntrId, Type **Tys = nullptr,
-                      unsigned numTys = 0) const override;
+                      unsigned NumTys = 0) const override;
+
   unsigned lookupName(const char *Name, unsigned Len) const override;
   bool isOverloaded(unsigned IID) const override;
   Function *getDeclaration(Module *M, unsigned ID,
                            Type **Tys = nullptr,
-                           unsigned numTys = 0) const override;
+                           unsigned NumTys = 0) const override;
+
+  Function *getDeclaration(Module *M, unsigned ID,
+                           ArrayRef<Type *> = None) const;
+
+  FunctionType *getType(LLVMContext &Context, unsigned ID,
+                        ArrayRef<Type*> Tys = None) const;
 };
 
 } // end namespace llvm
