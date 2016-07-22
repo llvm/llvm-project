@@ -53,6 +53,13 @@ struct SymbolAssignment : BaseCommand {
   std::vector<StringRef> Expr;
 };
 
+// Linker scripts allow additional constraints to be put on ouput sections.
+// An output section will only be created if all of its input sections are
+// read-only
+// or all of its input sections are read-write by using the keyword ONLY_IF_RO
+// and ONLY_IF_RW respectively.
+enum ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
+
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
       : BaseCommand(OutputSectionKind), Name(Name) {}
@@ -61,6 +68,7 @@ struct OutputSectionCommand : BaseCommand {
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
+  ConstraintKind Constraint = NoConstraint;
 };
 
 struct InputSectionDescription : BaseCommand {

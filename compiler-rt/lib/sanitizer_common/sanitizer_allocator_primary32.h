@@ -96,7 +96,7 @@ class SizeClassAllocator32 {
     CHECK_LT(class_id, kNumClasses);
     SizeClassInfo *sci = GetSizeClassInfo(class_id);
     SpinMutexLock l(&sci->mutex);
-    CHECK_GT(b->count, 0);
+    CHECK_GT(b->Count(), 0);
     sci->free_list.push_front(b);
   }
 
@@ -229,20 +229,15 @@ class SizeClassAllocator32 {
     uptr n_chunks = kRegionSize / (size + kMetadataSize);
     uptr max_count = SizeClassMap::MaxCached(class_id);
     Batch *b = nullptr;
-    for (uptr i = reg; i < reg + n_chunks * size; i += size) {
-      if (!b) {
-        b = c->CreateBatch(class_id, this, (Batch*)i);
-        b->count = 0;
-      }
-      b->batch[b->count++] = (void*)i;
-      if (b->count == max_count) {
-        CHECK_GT(b->count, 0);
-        sci->free_list.push_back(b);
-        b = nullptr;
-      }
-    }
-    if (b) {
-      CHECK_GT(b->count, 0);
+
+    uptr beg = reg;
+    uptr remaining_chunks = n_chunks;
+    while (remaining_chunks) {
+      b = c->CreateBatch(class_id, this, (Batch*)beg);
+      uptr count = Min(remaining_chunks, max_count);
+      b->SetFromRange(0, beg, size, count);
+      remaining_chunks -= count;
+      beg += count * size;
       sci->free_list.push_back(b);
     }
   }

@@ -20,6 +20,7 @@
 #include "sanitizer_list.h"
 #include "sanitizer_mutex.h"
 #include "sanitizer_lfstack.h"
+#include "sanitizer_procmaps.h"
 
 namespace __sanitizer {
 

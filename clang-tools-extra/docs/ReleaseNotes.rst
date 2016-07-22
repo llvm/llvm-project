@@ -59,12 +59,12 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
-...
+The improvements are...
 
-Clang-tidy changes from 3.9 to 4.0
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Improvements to include-fixer
+-----------------------------
 
-...
+The improvements are...
 
 Improvements to modularize
 --------------------------

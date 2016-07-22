@@ -60,6 +60,25 @@ static void thread_dtor(void *v) {
   allocator.SwallowCache(&cache);
 }
 
+static size_t GetRss() {
+  if (FILE *f = fopen("/proc/self/statm", "r")) {
+    size_t size = 0, rss = 0;
+    fscanf(f, "%zd %zd", &size, &rss);
+    fclose(f);
+    return rss << 12;  // rss is in pages.
+  }
+  return 0;
+}
+
+struct AtExit {
+  ~AtExit() {
+    allocator.PrintStats();
+    Printf("RSS: %zdM\n", GetRss() >> 20);
+  }
+};
+
+static AtExit at_exit;
+
 static void NOINLINE thread_init() {
   if (!global_inited) {
     global_inited = true;

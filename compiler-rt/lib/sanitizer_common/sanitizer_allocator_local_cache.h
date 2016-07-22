@@ -92,8 +92,8 @@ struct SizeClassAllocatorLocalCache {
   // For small size classes allocates the batch from the allocator.
   // For large size classes simply returns b.
   Batch *CreateBatch(uptr class_id, SizeClassAllocator *allocator, Batch *b) {
-    if (SizeClassMap::SizeClassRequiresSeparateTransferBatch(class_id))
-      return (Batch*)Allocate(allocator, SizeClassMap::ClassID(sizeof(Batch)));
+    if (uptr batch_class_id = SizeClassMap::SizeClassForTransferBatch(class_id))
+      return (Batch*)Allocate(allocator, batch_class_id);
     return b;
   }
 
@@ -101,18 +101,18 @@ struct SizeClassAllocatorLocalCache {
   // For small size classes deallocates b to the allocator.
   // Does notthing for large size classes.
   void DestroyBatch(uptr class_id, SizeClassAllocator *allocator, Batch *b) {
-    if (SizeClassMap::SizeClassRequiresSeparateTransferBatch(class_id))
-      Deallocate(allocator, SizeClassMap::ClassID(sizeof(Batch)), b);
+    if (uptr batch_class_id = SizeClassMap::SizeClassForTransferBatch(class_id))
+      Deallocate(allocator, batch_class_id, b);
   }
 
   NOINLINE void Refill(SizeClassAllocator *allocator, uptr class_id) {
     InitCache();
     PerClass *c = &per_class_[class_id];
     Batch *b = allocator->AllocateBatch(&stats_, this, class_id);
-    CHECK_GT(b->count, 0);
-    for (uptr i = 0; i < b->count; i++)
-      c->batch[i] = b->batch[i];
-    c->count = b->count;
+    CHECK_GT(b->Count(), 0);
+    for (uptr i = 0; i < b->Count(); i++)
+      c->batch[i] = b->Get(i);
+    c->count = b->Count();
     DestroyBatch(class_id, allocator, b);
   }
 
@@ -121,13 +121,11 @@ struct SizeClassAllocatorLocalCache {
     PerClass *c = &per_class_[class_id];
     Batch *b = CreateBatch(class_id, allocator, (Batch*)c->batch[0]);
     uptr cnt = Min(c->max_count / 2, c->count);
-    for (uptr i = 0; i < cnt; i++) {
-      b->batch[i] = c->batch[i];
+    b->SetFromArray(c->batch, cnt);
+    for (uptr i = 0; i < cnt; i++)
       c->batch[i] = c->batch[i + c->max_count / 2];
-    }
-    b->count = cnt;
+
     c->count -= cnt;
-    CHECK_GT(b->count, 0);
     allocator->DeallocateBatch(&stats_, class_id, b);
   }
 };

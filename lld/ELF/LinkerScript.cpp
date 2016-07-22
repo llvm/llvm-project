@@ -262,15 +262,26 @@ std::vector<OutputSectionBase<ELFT> *>
 LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   typedef const std::unique_ptr<ObjectFile<ELFT>> ObjectFile;
   std::vector<OutputSectionBase<ELFT> *> Result;
+  DenseSet<OutputSectionBase<ELFT> *> Removed;
 
   // Add input section to output section. If there is no output section yet,
   // then create it and add to output section list.
-  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name) {
+  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name,
+                         ConstraintKind Constraint) {
     OutputSectionBase<ELFT> *Sec;
     bool IsNew;
     std::tie(Sec, IsNew) = Factory.create(C, Name);
     if (IsNew)
       Result.push_back(Sec);
+    if ((!(C->getSectionHdr()->sh_flags & SHF_WRITE)) &&
+        Constraint == ReadWrite) {
+      Removed.insert(Sec);
+      return;
+    }
+    if ((C->getSectionHdr()->sh_flags & SHF_WRITE) && Constraint == ReadOnly) {
+      Removed.insert(Sec);
+      return;
+    }
     Sec->addSection(C);
   };
 
@@ -296,7 +307,7 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
             if (OutCmd->Name == "/DISCARD/")
               S->Live = false;
             else
-              AddInputSec(S, OutCmd->Name);
+              AddInputSec(S, OutCmd->Name, OutCmd->Constraint);
           }
         }
       }
@@ -308,11 +319,17 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
     for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (!isDiscarded(S)) {
         if (!S->OutSec)
-          AddInputSec(S, getOutputSectionName(S));
+          AddInputSec(S, getOutputSectionName(S), NoConstraint);
       } else
         reportDiscarded(S, F);
     }
 
+  // Remove from the output all the sections which did not met the constraints.
+  Result.erase(std::remove_if(Result.begin(), Result.end(),
+                              [&](OutputSectionBase<ELFT> *Sec) {
+                                return Removed.count(Sec);
+                              }),
+               Result.end());
   return Result;
 }
 
@@ -793,6 +810,12 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
   Opt.Commands.emplace_back(Cmd);
   expect(":");
+
+  // Parse constraints.
+  if (skip("ONLY_IF_RO"))
+    Cmd->Constraint = ReadOnly;
+  if (skip("ONLY_IF_RW"))
+    Cmd->Constraint = ReadWrite;
   expect("{");
 
   while (!Error && !skip("}")) {
