@@ -2384,8 +2384,13 @@ void CodeGenModule::maybeSetTrivialComdat(const Decl &D,
 /// Pass IsTentative as true if you want to create a tentative definition.
 void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
                                             bool IsTentative) {
-  llvm::Constant *Init = nullptr;
+  // OpenCL global variables of sampler type are translated to function calls,
+  // therefore no need to be translated.
   QualType ASTTy = D->getType();
+  if (getLangOpts().OpenCL && ASTTy->isSamplerT())
+    return;
+
+  llvm::Constant *Init = nullptr;
   CXXRecordDecl *RD = ASTTy->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   bool NeedsGlobalCtor = false;
   bool NeedsGlobalDtor = RD && !RD->hasTrivialDestructor();
@@ -4315,4 +4320,14 @@ llvm::SanitizerStatReport &CodeGenModule::getSanStats() {
     SanStats = llvm::make_unique<llvm::SanitizerStatReport>(&getModule());
 
   return *SanStats;
+}
+llvm::Value *
+CodeGenModule::createOpenCLIntToSamplerConversion(const Expr *E,
+                                                  CodeGenFunction &CGF) {
+  llvm::Constant *C = EmitConstantExpr(E, E->getType(), &CGF);
+  auto SamplerT = getOpenCLRuntime().getSamplerType();
+  auto FTy = llvm::FunctionType::get(SamplerT, {C->getType()}, false);
+  return CGF.Builder.CreateCall(CreateRuntimeFunction(FTy,
+                                "__translate_sampler_initializer"),
+                                {C});
 }

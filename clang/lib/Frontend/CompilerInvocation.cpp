@@ -2395,6 +2395,13 @@ bool CompilerInvocation::CreateFromArgs(CompilerInvocation &Res,
   ParsePreprocessorArgs(Res.getPreprocessorOpts(), Args, FileMgr, Diags);
   ParsePreprocessorOutputArgs(Res.getPreprocessorOutputOpts(), Args,
                               Res.getFrontendOpts().ProgramAction);
+
+  // Turn on -Wspir-compat for SPIR target.
+  llvm::Triple T(Res.getTargetOpts().Triple);
+  auto Arch = T.getArch();
+  if (Arch == llvm::Triple::spir || Arch == llvm::Triple::spir64) {
+    Res.getDiagnosticOpts().Warnings.push_back("spir-compat");
+  }
   return Success;
 }
 
