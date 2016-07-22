@@ -1,8 +1,7 @@
-; RUN: llc < %s -march=arm64
+; RUN: llc < %s -mtriple=aarch64-unknown-linux-gnu
 ; Make sure we are not crashing on this test.
 
 target datalayout = "e-m:e-i64:64-i128:128-n32:64-S128"
-target triple = "aarch64-unknown-linux-gnu"
 
 declare void @extern(i8*)
 

@@ -488,6 +488,25 @@ This channel has several bots.
 * clang-bot - A `geordi <http://www.eelis.net/geordi/>`_ instance running
   near-trunk clang instead of gcc.
 
+Community wide proposals
+------------------------
+
+Proposals for massive changes in how the community behaves and how the work flow
+can be better.
+
+.. toctree::
+   :hidden:
+
+   CodeOfConduct
+   Proposals/GitHubSubMod
+
+:doc:`CodeOfConduct`
+   Proposal to adopt a code of conduct on the LLVM social spaces (lists, events,
+   IRC, etc).
+
+:doc:`Proposals/GitHubSubMod`
+   Proposal to move from SVN/Git to GitHub.
+
 
 Indices and tables
 ==================

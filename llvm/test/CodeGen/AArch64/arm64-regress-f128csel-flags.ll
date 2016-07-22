@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -verify-machineinstrs | FileCheck %s
 
 ; We used to not mark NZCV as being used in the continuation basic-block
 ; when lowering a 128-bit "select" to branches. This meant a subsequent use

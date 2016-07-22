@@ -27,9 +27,9 @@ entry:
 ; PIC-O32: addu $[[R5:[0-9]+]], $[[R4:[0-9]+]]
 ; PIC-O32: jr  $[[R5]]
 ; N64: dsll $[[R0:[0-9]+]], ${{[0-9]+}}, 3
-; N64: ld $[[R1:[0-9]+]], %got_page($JTI0_0)
+; N64: ld $[[R1:[0-9]+]], %got_page(.LJTI0_0)
 ; N64: daddu $[[R2:[0-9]+]], $[[R0:[0-9]+]], $[[R1]]
-; N64: ld $[[R4:[0-9]+]], %got_ofst($JTI0_0)($[[R2]])
+; N64: ld $[[R4:[0-9]+]], %got_ofst(.LJTI0_0)($[[R2]])
 ; N64: daddu $[[R5:[0-9]+]], $[[R4:[0-9]+]]
 ; N64: jr  $[[R5]]
   switch i32 %0, label %bb4 [
@@ -68,7 +68,7 @@ bb5:                                              ; preds = %entry
 ; PIC-O32: .gpword 
 ; PIC-O32: .gpword 
 ; N64: .p2align  3
-; N64: $JTI0_0:
+; N64: .LJTI0_0:
 ; N64: .gpdword
 ; N64: .gpdword
 ; N64: .gpdword 

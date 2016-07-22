@@ -14,6 +14,7 @@
 clang++ -std=c++11 -fno-exceptions  -g -fPIC -I. -I../include -Isanitizer \
  sanitizer_common/tests/sanitizer_allocator_testlib.cc \
  $(\ls sanitizer_common/sanitizer_*.cc | grep -v sanitizer_common_nolibc.cc) \
+  sanitizer_common/sanitizer_linux_x86_64.S \
  -shared -lpthread -o testmalloc.so
 LD_PRELOAD=`pwd`/testmalloc.so /your/app
 */

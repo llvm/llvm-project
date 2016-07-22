@@ -17,7 +17,6 @@
 #include "clang/AST/CanonicalType.h"
 #include "clang/AST/CharUnits.h"
 #include "clang/AST/Type.h"
-#include "llvm/ADT/FoldingSet.h"
 #include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 

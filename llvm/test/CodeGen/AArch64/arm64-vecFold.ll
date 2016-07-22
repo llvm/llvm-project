@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 -aarch64-neon-syntax=apple -o - %s| FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 define <16 x i8> @foov16i8(<8 x i16> %a0, <8 x i16> %b0) nounwind readnone ssp {
 ; CHECK-LABEL: foov16i8:

@@ -1,0 +1,420 @@
+// Copyright 2015 Google Inc. All rights reserved.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#include "sysinfo.h"
+#include "internal_macros.h"
+
+#ifdef BENCHMARK_OS_WINDOWS
+#include <Shlwapi.h>
+#include <Windows.h>
+#include <VersionHelpers.h>
+#else
+#include <fcntl.h>
+#include <sys/resource.h>
+#include <sys/types.h> // this header must be included before 'sys/sysctl.h' to avoid compilation error on FreeBSD
+#include <sys/time.h>
+#include <unistd.h>
+#if defined BENCHMARK_OS_FREEBSD || defined BENCHMARK_OS_MACOSX
+#include <sys/sysctl.h>
+#endif
+#endif
+
+#include <cerrno>
+#include <cstdio>
+#include <cstdint>
+#include <cstdlib>
+#include <cstring>
+#include <iostream>
+#include <limits>
+#include <mutex>
+
+#include "arraysize.h"
+#include "check.h"
+#include "cycleclock.h"
+#include "internal_macros.h"
+#include "log.h"
+#include "sleep.h"
+#include "string_util.h"
+
+namespace benchmark {
+namespace {
+std::once_flag cpuinfo_init;
+double cpuinfo_cycles_per_second = 1.0;
+int cpuinfo_num_cpus = 1;  // Conservative guess
+std::mutex cputimens_mutex;
+
+#if !defined BENCHMARK_OS_MACOSX
+const int64_t estimate_time_ms = 1000;
+
+// Helper function estimates cycles/sec by observing cycles elapsed during
+// sleep(). Using small sleep time decreases accuracy significantly.
+int64_t EstimateCyclesPerSecond() {
+  const int64_t start_ticks = cycleclock::Now();
+  SleepForMilliseconds(estimate_time_ms);
+  return cycleclock::Now() - start_ticks;
+}
+#endif
+
+#if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
+// Helper function for reading an int from a file. Returns true if successful
+// and the memory location pointed to by value is set to the value read.
+bool ReadIntFromFile(const char* file, long* value) {
+  bool ret = false;
+  int fd = open(file, O_RDONLY);
+  if (fd != -1) {
+    char line[1024];
+    char* err;
+    memset(line, '\0', sizeof(line));
+    CHECK(read(fd, line, sizeof(line) - 1));
+    const long temp_value = strtol(line, &err, 10);
+    if (line[0] != '\0' && (*err == '\n' || *err == '\0')) {
+      *value = temp_value;
+      ret = true;
+    }
+    close(fd);
+  }
+  return ret;
+}
+#endif
+
+void InitializeSystemInfo() {
+#if defined BENCHMARK_OS_LINUX || defined BENCHMARK_OS_CYGWIN
+  char line[1024];
+  char* err;
+  long freq;
+
+  bool saw_mhz = false;
+
+  // If the kernel is exporting the tsc frequency use that. There are issues
+  // where cpuinfo_max_freq cannot be relied on because the BIOS may be
+  // exporintg an invalid p-state (on x86) or p-states may be used to put the
+  // processor in a new mode (turbo mode). Essentially, those frequencies
+  // cannot always be relied upon. The same reasons apply to /proc/cpuinfo as
+  // well.
+  if (!saw_mhz &&
+      ReadIntFromFile("/sys/devices/system/cpu/cpu0/tsc_freq_khz", &freq)) {
+    // The value is in kHz (as the file name suggests).  For example, on a
+    // 2GHz warpstation, the file contains the value "2000000".
+    cpuinfo_cycles_per_second = freq * 1000.0;
+    saw_mhz = true;
+  }
+
+  // If CPU scaling is in effect, we want to use the *maximum* frequency,
+  // not whatever CPU speed some random processor happens to be using now.
+  if (!saw_mhz &&
+      ReadIntFromFile("/sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq",
+                      &freq)) {
+    // The value is in kHz.  For example, on a 2GHz warpstation, the file
+    // contains the value "2000000".
+    cpuinfo_cycles_per_second = freq * 1000.0;
+    saw_mhz = true;
+  }
+
+  // Read /proc/cpuinfo for other values, and if there is no cpuinfo_max_freq.
+  const char* pname = "/proc/cpuinfo";
+  int fd = open(pname, O_RDONLY);
+  if (fd == -1) {
+    perror(pname);
+    if (!saw_mhz) {
+      cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+    }
+    return;
+  }
+
+  double bogo_clock = 1.0;
+  bool saw_bogo = false;
+  long max_cpu_id = 0;
+  int num_cpus = 0;
+  line[0] = line[1] = '\0';
+  size_t chars_read = 0;
+  do {  // we'll exit when the last read didn't read anything
+    // Move the next line to the beginning of the buffer
+    const size_t oldlinelen = strlen(line);
+    if (sizeof(line) == oldlinelen + 1)  // oldlinelen took up entire line
+      line[0] = '\0';
+    else  // still other lines left to save
+      memmove(line, line + oldlinelen + 1, sizeof(line) - (oldlinelen + 1));
+    // Terminate the new line, reading more if we can't find the newline
+    char* newline = strchr(line, '\n');
+    if (newline == nullptr) {
+      const size_t linelen = strlen(line);
+      const size_t bytes_to_read = sizeof(line) - 1 - linelen;
+      CHECK(bytes_to_read > 0);  // because the memmove recovered >=1 bytes
+      chars_read = read(fd, line + linelen, bytes_to_read);
+      line[linelen + chars_read] = '\0';
+      newline = strchr(line, '\n');
+    }
+    if (newline != nullptr) *newline = '\0';
+
+    // When parsing the "cpu MHz" and "bogomips" (fallback) entries, we only
+    // accept postive values. Some environments (virtual machines) report zero,
+    // which would cause infinite looping in WallTime_Init.
+    if (!saw_mhz && strncasecmp(line, "cpu MHz", sizeof("cpu MHz") - 1) == 0) {
+      const char* freqstr = strchr(line, ':');
+      if (freqstr) {
+        cpuinfo_cycles_per_second = strtod(freqstr + 1, &err) * 1000000.0;
+        if (freqstr[1] != '\0' && *err == '\0' && cpuinfo_cycles_per_second > 0)
+          saw_mhz = true;
+      }
+    } else if (strncasecmp(line, "bogomips", sizeof("bogomips") - 1) == 0) {
+      const char* freqstr = strchr(line, ':');
+      if (freqstr) {
+        bogo_clock = strtod(freqstr + 1, &err) * 1000000.0;
+        if (freqstr[1] != '\0' && *err == '\0' && bogo_clock > 0)
+          saw_bogo = true;
+      }
+    } else if (strncmp(line, "processor", sizeof("processor") - 1) == 0) {
+      // The above comparison is case-sensitive because ARM kernels often
+      // include a "Processor" line that tells you about the CPU, distinct
+      // from the usual "processor" lines that give you CPU ids. No current
+      // Linux architecture is using "Processor" for CPU ids.
+      num_cpus++;  // count up every time we see an "processor :" entry
+      const char* id_str = strchr(line, ':');
+      if (id_str) {
+        const long cpu_id = strtol(id_str + 1, &err, 10);
+        if (id_str[1] != '\0' && *err == '\0' && max_cpu_id < cpu_id)
+          max_cpu_id = cpu_id;
+      }
+    }
+  } while (chars_read > 0);
+  close(fd);
+
+  if (!saw_mhz) {
+    if (saw_bogo) {
+      // If we didn't find anything better, we'll use bogomips, but
+      // we're not happy about it.
+      cpuinfo_cycles_per_second = bogo_clock;
+    } else {
+      // If we don't even have bogomips, we'll use the slow estimation.
+      cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+    }
+  }
+  if (num_cpus == 0) {
+    fprintf(stderr, "Failed to read num. CPUs correctly from /proc/cpuinfo\n");
+  } else {
+    if ((max_cpu_id + 1) != num_cpus) {
+      fprintf(stderr,
+              "CPU ID assignments in /proc/cpuinfo seem messed up."
+              " This is usually caused by a bad BIOS.\n");
+    }
+    cpuinfo_num_cpus = num_cpus;
+  }
+
+#elif defined BENCHMARK_OS_FREEBSD
+// For this sysctl to work, the machine must be configured without
+// SMP, APIC, or APM support.  hz should be 64-bit in freebsd 7.0
+// and later.  Before that, it's a 32-bit quantity (and gives the
+// wrong answer on machines faster than 2^32 Hz).  See
+//  http://lists.freebsd.org/pipermail/freebsd-i386/2004-November/001846.html
+// But also compare FreeBSD 7.0:
+//  http://fxr.watson.org/fxr/source/i386/i386/tsc.c?v=RELENG70#L223
+//  231         error = sysctl_handle_quad(oidp, &freq, 0, req);
+// To FreeBSD 6.3 (it's the same in 6-STABLE):
+//  http://fxr.watson.org/fxr/source/i386/i386/tsc.c?v=RELENG6#L131
+//  139         error = sysctl_handle_int(oidp, &freq, sizeof(freq), req);
+#if __FreeBSD__ >= 7
+  uint64_t hz = 0;
+#else
+  unsigned int hz = 0;
+#endif
+  size_t sz = sizeof(hz);
+  const char* sysctl_path = "machdep.tsc_freq";
+  if (sysctlbyname(sysctl_path, &hz, &sz, nullptr, 0) != 0) {
+    fprintf(stderr, "Unable to determine clock rate from sysctl: %s: %s\n",
+            sysctl_path, strerror(errno));
+    cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+  } else {
+    cpuinfo_cycles_per_second = hz;
+  }
+// TODO: also figure out cpuinfo_num_cpus
+
+#elif defined BENCHMARK_OS_WINDOWS
+  // In NT, read MHz from the registry. If we fail to do so or we're in win9x
+  // then make a crude estimate.
+  DWORD data, data_size = sizeof(data);
+  if (IsWindowsXPOrGreater() &&
+      SUCCEEDED(
+          SHGetValueA(HKEY_LOCAL_MACHINE,
+                      "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                      "~MHz", nullptr, &data, &data_size)))
+    cpuinfo_cycles_per_second = static_cast<double>((int64_t)data * (int64_t)(1000 * 1000));  // was mhz
+  else
+    cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+// TODO: also figure out cpuinfo_num_cpus
+
+#elif defined BENCHMARK_OS_MACOSX
+  // returning "mach time units" per second. the current number of elapsed
+  // mach time units can be found by calling uint64 mach_absolute_time();
+  // while not as precise as actual CPU cycles, it is accurate in the face
+  // of CPU frequency scaling and multi-cpu/core machines.
+  // Our mac users have these types of machines, and accuracy
+  // (i.e. correctness) trumps precision.
+  // See cycleclock.h: CycleClock::Now(), which returns number of mach time
+  // units on Mac OS X.
+  mach_timebase_info_data_t timebase_info;
+  mach_timebase_info(&timebase_info);
+  double mach_time_units_per_nanosecond =
+      static_cast<double>(timebase_info.denom) /
+      static_cast<double>(timebase_info.numer);
+  cpuinfo_cycles_per_second = mach_time_units_per_nanosecond * 1e9;
+
+  int num_cpus = 0;
+  size_t size = sizeof(num_cpus);
+  int numcpus_name[] = {CTL_HW, HW_NCPU};
+  if (::sysctl(numcpus_name, arraysize(numcpus_name), &num_cpus, &size, nullptr, 0) ==
+          0 &&
+      (size == sizeof(num_cpus)))
+    cpuinfo_num_cpus = num_cpus;
+
+#else
+  // Generic cycles per second counter
+  cpuinfo_cycles_per_second = static_cast<double>(EstimateCyclesPerSecond());
+#endif
+}
+}  // end namespace
+
+// getrusage() based implementation of MyCPUUsage
+static double MyCPUUsageRUsage() {
+#ifndef BENCHMARK_OS_WINDOWS
+  struct rusage ru;
+  if (getrusage(RUSAGE_SELF, &ru) == 0) {
+    return (static_cast<double>(ru.ru_utime.tv_sec) +
+            static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
+            static_cast<double>(ru.ru_stime.tv_sec) +
+            static_cast<double>(ru.ru_stime.tv_usec) * 1e-6);
+  } else {
+    return 0.0;
+  }
+#else
+  HANDLE proc = GetCurrentProcess();
+  FILETIME creation_time;
+  FILETIME exit_time;
+  FILETIME kernel_time;
+  FILETIME user_time;
+  ULARGE_INTEGER kernel;
+  ULARGE_INTEGER user;
+  GetProcessTimes(proc, &creation_time, &exit_time, &kernel_time, &user_time);
+  kernel.HighPart = kernel_time.dwHighDateTime;
+  kernel.LowPart = kernel_time.dwLowDateTime;
+  user.HighPart = user_time.dwHighDateTime;
+  user.LowPart = user_time.dwLowDateTime;
+  return (static_cast<double>(kernel.QuadPart) +
+          static_cast<double>(user.QuadPart)) * 1e-7;
+#endif  // OS_WINDOWS
+}
+
+#ifndef BENCHMARK_OS_WINDOWS
+static bool MyCPUUsageCPUTimeNsLocked(double* cputime) {
+  static int cputime_fd = -1;
+  if (cputime_fd == -1) {
+    cputime_fd = open("/proc/self/cputime_ns", O_RDONLY);
+    if (cputime_fd < 0) {
+      cputime_fd = -1;
+      return false;
+    }
+  }
+  char buff[64];
+  memset(buff, 0, sizeof(buff));
+  if (pread(cputime_fd, buff, sizeof(buff) - 1, 0) <= 0) {
+    close(cputime_fd);
+    cputime_fd = -1;
+    return false;
+  }
+  unsigned long long result = strtoull(buff, nullptr, 0);
+  if (result == (std::numeric_limits<unsigned long long>::max)()) {
+    close(cputime_fd);
+    cputime_fd = -1;
+    return false;
+  }
+  *cputime = static_cast<double>(result) / 1e9;
+  return true;
+}
+#endif  // OS_WINDOWS
+
+double MyCPUUsage() {
+#ifndef BENCHMARK_OS_WINDOWS
+  {
+    std::lock_guard<std::mutex> l(cputimens_mutex);
+    static bool use_cputime_ns = true;
+    if (use_cputime_ns) {
+      double value;
+      if (MyCPUUsageCPUTimeNsLocked(&value)) {
+        return value;
+      }
+      // Once MyCPUUsageCPUTimeNsLocked fails once fall back to getrusage().
+      VLOG(1) << "Reading /proc/self/cputime_ns failed. Using getrusage().\n";
+      use_cputime_ns = false;
+    }
+  }
+#endif  // OS_WINDOWS
+  return MyCPUUsageRUsage();
+}
+
+double ChildrenCPUUsage() {
+#ifndef BENCHMARK_OS_WINDOWS
+  struct rusage ru;
+  if (getrusage(RUSAGE_CHILDREN, &ru) == 0) {
+    return (static_cast<double>(ru.ru_utime.tv_sec) +
+            static_cast<double>(ru.ru_utime.tv_usec) * 1e-6 +
+            static_cast<double>(ru.ru_stime.tv_sec) +
+            static_cast<double>(ru.ru_stime.tv_usec) * 1e-6);
+  } else {
+    return 0.0;
+  }
+#else
+  // TODO: Not sure what this even means on Windows
+  return 0.0;
+#endif  // OS_WINDOWS
+}
+
+double CyclesPerSecond(void) {
+  std::call_once(cpuinfo_init, InitializeSystemInfo);
+  return cpuinfo_cycles_per_second;
+}
+
+int NumCPUs(void) {
+  std::call_once(cpuinfo_init, InitializeSystemInfo);
+  return cpuinfo_num_cpus;
+}
+
+// The ""'s catch people who don't pass in a literal for "str"
+#define strliterallen(str) (sizeof("" str "") - 1)
+
+// Must use a string literal for prefix.
+#define memprefix(str, len, prefix)                       \
+  ((((len) >= strliterallen(prefix)) &&                   \
+    std::memcmp(str, prefix, strliterallen(prefix)) == 0) \
+       ? str + strliterallen(prefix)                      \
+       : nullptr)
+
+bool CpuScalingEnabled() {
+#ifndef BENCHMARK_OS_WINDOWS
+  // On Linux, the CPUfreq subsystem exposes CPU information as files on the
+  // local file system. If reading the exported files fails, then we may not be
+  // running on Linux, so we silently ignore all the read errors.
+  for (int cpu = 0, num_cpus = NumCPUs(); cpu < num_cpus; ++cpu) {
+    std::string governor_file = StrCat("/sys/devices/system/cpu/cpu", cpu,
+                                       "/cpufreq/scaling_governor");
+    FILE* file = fopen(governor_file.c_str(), "r");
+    if (!file) break;
+    char buff[16];
+    size_t bytes_read = fread(buff, 1, sizeof(buff), file);
+    fclose(file);
+    if (memprefix(buff, bytes_read, "performance") == nullptr) return true;
+  }
+#endif
+  return false;
+}
+
+}  // end namespace benchmark

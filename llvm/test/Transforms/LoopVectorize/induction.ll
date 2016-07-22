@@ -437,18 +437,18 @@ entry:
 ; IND-LABEL: veciv
 ; IND: vector.body:
 ; IND: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; IND: %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %step.add, %vector.body ]
-; IND: %step.add = add <2 x i32> %vec.ind, <i32 2, i32 2>
+; IND: %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; IND: %index.next = add i32 %index, 2
+; IND: %vec.ind.next = add <2 x i32> %vec.ind, <i32 2, i32 2>
 ; IND: %[[CMP:.*]] = icmp eq i32 %index.next
 ; IND: br i1 %[[CMP]]
 ; UNROLL-LABEL: veciv
 ; UNROLL: vector.body:
 ; UNROLL: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; UNROLL: %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %step.add1, %vector.body ]
+; UNROLL: %vec.ind = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; UNROLL: %step.add = add <2 x i32> %vec.ind, <i32 2, i32 2>
-; UNROLL: %step.add1 = add <2 x i32> %vec.ind, <i32 4, i32 4>
 ; UNROLL: %index.next = add i32 %index, 4
+; UNROLL: %vec.ind.next = add <2 x i32> %vec.ind, <i32 4, i32 4>
 ; UNROLL: %[[CMP:.*]] = icmp eq i32 %index.next
 ; UNROLL: br i1 %[[CMP]]
 define void @veciv(i32* nocapture %a, i32 %start, i32 %k) {
@@ -471,8 +471,8 @@ exit:
 ; IND: vector.body:
 ; IND: %index = phi i64 [ 0, %vector.ph ], [ %index.next, %vector.body ]
 ; IND: %[[VECIND:.*]] = phi <2 x i32> [ <i32 0, i32 1>, %vector.ph ], [ %[[STEPADD:.*]], %vector.body ]
-; IND: %[[STEPADD]] = add <2 x i32> %[[VECIND]], <i32 2, i32 2>
 ; IND: %index.next = add i64 %index, 2
+; IND: %[[STEPADD]] = add <2 x i32> %[[VECIND]], <i32 2, i32 2>
 ; IND: %[[CMP:.*]] = icmp eq i64 %index.next
 ; IND: br i1 %[[CMP]]
 define void @trunciv(i32* nocapture %a, i32 %start, i64 %k) {
@@ -499,9 +499,9 @@ exit:
 ; IND: %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 42>
 ; IND-LABEL: vector.body:
 ; IND: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; IND: %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %step.add, %vector.body ]
-; IND: %step.add = add <2 x i32> %vec.ind, <i32 84, i32 84>
+; IND: %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; IND: %index.next = add i32 %index, 2
+; IND: %vec.ind.next = add <2 x i32> %vec.ind, <i32 84, i32 84>
 ; IND: %[[CMP:.*]] = icmp eq i32 %index.next
 ; IND: br i1 %[[CMP]]
 ; UNROLL-LABEL: nonprimary
@@ -511,10 +511,10 @@ exit:
 ; UNROLL: %[[START:.*]] = add <2 x i32> %[[SPLAT]], <i32 0, i32 42>
 ; UNROLL-LABEL: vector.body:
 ; UNROLL: %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-; UNROLL: %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %step.add1, %vector.body ]
+; UNROLL: %vec.ind = phi <2 x i32> [ %[[START]], %vector.ph ], [ %vec.ind.next, %vector.body ]
 ; UNROLL: %step.add = add <2 x i32> %vec.ind, <i32 84, i32 84>
-; UNROLL: %step.add1 = add <2 x i32> %vec.ind, <i32 168, i32 168>
 ; UNROLL: %index.next = add i32 %index, 4
+; UNROLL: %vec.ind.next = add <2 x i32> %vec.ind, <i32 168, i32 168>
 ; UNROLL: %[[CMP:.*]] = icmp eq i32 %index.next
 ; UNROLL: br i1 %[[CMP]]
 define void @nonprimary(i32* nocapture %a, i32 %start, i32 %i, i32 %k) {

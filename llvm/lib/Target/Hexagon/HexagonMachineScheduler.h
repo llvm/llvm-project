@@ -59,7 +59,7 @@ public:
 public:
   VLIWResourceModel(const TargetSubtargetInfo &STI, const TargetSchedModel *SM)
       : SchedModel(SM), TotalPackets(0) {
-    ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
+  ResourcesModel = STI.getInstrInfo()->CreateTargetScheduleState(STI);
 
     // This hard requirement could be relaxed,
     // but for now do not let it proceed.
@@ -243,7 +243,10 @@ protected:
                                SchedCandidate &Candidate);
 #ifndef NDEBUG
   void traceCandidate(const char *Label, const ReadyQueue &Q, SUnit *SU,
-                      PressureChange P = PressureChange());
+                      int Cost, PressureChange P = PressureChange());
+
+  void readyQueueVerboseDump(const RegPressureTracker &RPTracker,
+                             SchedCandidate &Candidate, ReadyQueue &Q);
 #endif
 };
 

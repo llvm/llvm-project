@@ -122,13 +122,16 @@ struct _Unwind_Exception {
   uintptr_t private_1; // non-zero means forced unwind
   uintptr_t private_2; // holds sp that phase1 found for phase2 to use
 #ifndef __LP64__
-  // The gcc implementation of _Unwind_Exception used attribute mode on the
-  // above fields which had the side effect of causing this whole struct to
+  // The implementation of _Unwind_Exception uses an attribute mode on the
+  // above fields which has the side effect of causing this whole struct to
   // round up to 32 bytes in size. To be more explicit, we add pad fields
   // added for binary compatibility.
   uint32_t reserved[3];
 #endif
-};
+  // The Itanium ABI requires that _Unwind_Exception objects are "double-word
+  // aligned".  GCC has interpreted this to mean "use the maximum useful
+  // alignment for the target"; so do we.
+} __attribute__((__aligned__));
 
 typedef _Unwind_Reason_Code (*_Unwind_Stop_Fn)
     (int version,
@@ -321,7 +324,7 @@ extern void __deregister_frame(const void *fde);
 
 // _Unwind_Find_FDE() will locate the FDE if the pc is in some function that has
 // an associated FDE. Note, Mac OS X 10.6 and later, introduces "compact unwind
-// info" which the runtime uses in preference to dwarf unwind info.  This
+// info" which the runtime uses in preference to DWARF unwind info.  This
 // function will only work if the target function has an FDE but no compact
 // unwind info.
 struct dwarf_eh_bases {
@@ -334,7 +337,7 @@ extern const void *_Unwind_Find_FDE(const void *pc, struct dwarf_eh_bases *);
 
 // This function attempts to find the start (address of first instruction) of
 // a function given an address inside the function.  It only works if the
-// function has an FDE (dwarf unwind info).
+// function has an FDE (DWARF unwind info).
 // This function is unimplemented on Mac OS X 10.6 and later.  Instead, use
 // _Unwind_Find_FDE() and look at the dwarf_eh_bases.func result.
 extern void *_Unwind_FindEnclosingFunction(void *pc);

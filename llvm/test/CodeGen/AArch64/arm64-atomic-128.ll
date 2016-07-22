@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-linux-gnu -verify-machineinstrs -mcpu=cyclone | FileCheck %s
 
 @var = global i128 0
 

@@ -17,14 +17,12 @@
 
 #include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Lex/DirectoryLookup.h"
+#include "clang/Basic/SourceManager.h"
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Pragma.h"
 #include "llvm/ADT/StringRef.h"
-#include <string>
 
 namespace clang {
-  class SourceLocation;
   class Token;
   class IdentifierInfo;
   class MacroDefinition;

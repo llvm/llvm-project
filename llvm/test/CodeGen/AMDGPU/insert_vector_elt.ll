@@ -145,8 +145,7 @@ define void @dynamic_insertelement_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32>
 }
 
 ; GCN-LABEL: {{^}}dynamic_insertelement_v3i32:
-; GCN: v_mov_b32_e32 [[CONST:v[0-9]+]], 5
-; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], [[CONST]]
+; GCN: v_movreld_b32_e32 v[[LOW_RESULT_REG:[0-9]+]], 5
 ; GCN-DAG: buffer_store_dwordx2 {{v\[}}[[LOW_RESULT_REG]]:
 ; GCN-DAG: buffer_store_dword v
 define void @dynamic_insertelement_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32> %a, i32 %b) nounwind {
@@ -156,10 +155,12 @@ define void @dynamic_insertelement_v3i32(<3 x i32> addrspace(1)* %out, <3 x i32>
 }
 
 ; GCN-LABEL: {{^}}dynamic_insertelement_v4i32:
-; GCN: v_movreld_b32
+; GCN: s_load_dword [[SVAL:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x12|0x48}}
+; GCN: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[SVAL]]
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, [[VVAL]]
 ; GCN: buffer_store_dwordx4
-define void @dynamic_insertelement_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, i32 %b) nounwind {
-  %vecins = insertelement <4 x i32> %a, i32 5, i32 %b
+define void @dynamic_insertelement_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> %a, i32 %b, i32 %val) nounwind {
+  %vecins = insertelement <4 x i32> %a, i32 %val, i32 %b
   store <4 x i32> %vecins, <4 x i32> addrspace(1)* %out, align 16
   ret void
 }
@@ -332,25 +333,25 @@ endif:
 }
 
 ; GCN-LABEL: {{^}}dynamic_insertelement_v2f64:
-; GCN: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x11|0x44}}{{$}}
+; GCN-DAG: s_load_dwordx4 s{{\[}}[[A_ELT0:[0-9]+]]:[[A_ELT3:[0-9]+]]{{\]}}
+; GCN-DAG: s_load_dword [[IDX:s[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, {{0x11|0x44}}{{$}}
+
 ; GCN-DAG: s_lshl_b32 [[SCALEDIDX:s[0-9]+]], [[IDX]], 1{{$}}
-; GCN-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 0{{$}}
 
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
 ; GCN-DAG: v_mov_b32_e32 v{{[0-9]+}}, s{{[0-9]+}}
+; GCN-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
 
 ; GCN: s_mov_b32 m0, [[SCALEDIDX]]
-; GCN: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]
+; GCN: v_movreld_b32_e32 v{{[0-9]+}}, 0
 
-; Increment to next element.
-; FIXME: Should be able to manipulate m0 directly instead of add and
-; copy.
+; Increment to next element folded into base register, but FileCheck
+; can't do math expressions
 
-; FIXME: Should avoid resetting m0 to same value
-; GCN-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0x40200000
-; GCN-DAG: s_mov_b32 m0, [[SCALEDIDX]]
+; FIXME: Should be able to manipulate m0 directly instead of s_lshl_b32 + copy to m0
+
 ; GCN: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
 
 ; GCN: buffer_store_dwordx4
@@ -361,14 +362,10 @@ define void @dynamic_insertelement_v2f64(<2 x double> addrspace(1)* %out, <2 x d
   ret void
 }
 
-; FIXME: Inline immediate should be folded into v_movreld_b32.
 ; GCN-LABEL: {{^}}dynamic_insertelement_v2i64:
 
-; GCN-DAG: v_mov_b32_e32 [[ELT0:v[0-9]+]], 5{{$}}
-; GCN-DAG: v_mov_b32_e32 [[ELT1:v[0-9]+]], 0{{$}}
-
-; GCN-DAG: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT0]]
-; GCN-DAG: v_movreld_b32_e32 v{{[0-9]+}}, [[ELT1]]
+; GCN-DAG: v_movreld_b32_e32 v{{[0-9]+}}, 5
+; GCN-DAG: v_movreld_b32_e32 v{{[0-9]+}}, 0
 
 ; GCN: buffer_store_dwordx4
 ; GCN: s_endpgm

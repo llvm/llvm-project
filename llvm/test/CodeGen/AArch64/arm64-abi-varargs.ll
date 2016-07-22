@@ -1,5 +1,4 @@
-; RUN: llc < %s -march=arm64 -mcpu=cyclone -enable-misched=false | FileCheck %s
-target triple = "arm64-apple-ios7.0.0"
+; RUN: llc < %s -mtriple=arm64-apple-ios7.0.0 -mcpu=cyclone -enable-misched=false | FileCheck %s
 
 ; rdar://13625505
 ; Here we have 9 fixed integer arguments the 9th argument in on stack, the

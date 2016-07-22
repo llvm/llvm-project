@@ -193,11 +193,13 @@ entry:
   ret i1 %b
 }
 
-; TODO: Inexact values should not fold as they are dependent on rounding mode
+; Inexact values should not fold as they are dependent on rounding mode
 define i1 @test_sse_cvts_inexact() nounwind readnone {
 ; CHECK-LABEL: @test_sse_cvts_inexact(
-; CHECK-NOT: call
-; CHECK: ret i1 true
+; CHECK: call
+; CHECK: call
+; CHECK: call
+; CHECK: call
 entry:
   %i0 = tail call i32 @llvm.x86.sse.cvtss2si(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind
   %i1 = tail call i64 @llvm.x86.sse.cvtss2si64(<4 x float> <float 1.75, float undef, float undef, float undef>) nounwind

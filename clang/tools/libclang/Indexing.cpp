@@ -26,7 +26,7 @@
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/PPConditionalDirectiveRecord.h"
 #include "clang/Lex/Preprocessor.h"
-#include "clang/Sema/SemaConsumer.h"
+#include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"

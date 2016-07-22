@@ -160,6 +160,10 @@ extern "C" {
   SANITIZER_INTERFACE_ATTRIBUTE
   extern int __asan_option_detect_stack_use_after_return;
 
+// Global flag, copy of ASAN_OPTIONS=detect_stack_use_after_scope
+  SANITIZER_INTERFACE_ATTRIBUTE
+  extern int __asan_option_detect_stack_use_after_scope;
+
   SANITIZER_INTERFACE_ATTRIBUTE
   extern uptr *__asan_test_only_reported_buggy_pointer;
 

@@ -343,8 +343,8 @@ static void doDisplayTable(StringRef Name, const object::Archive::Child &C) {
     printMode(Mode & 007);
     outs() << ' ' << C.getUID();
     outs() << '/' << C.getGID();
-    ErrorOr<uint64_t> Size = C.getSize();
-    failIfError(Size.getError());
+    Expected<uint64_t> Size = C.getSize();
+    failIfError(Size.takeError());
     outs() << ' ' << format("%6llu", Size.get());
     outs() << ' ' << C.getLastModified().str();
     outs() << ' ';

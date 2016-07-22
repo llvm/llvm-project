@@ -26,7 +26,7 @@
 namespace libunwind {
 
 /// CFI_Parser does basic parsing of a CFI (Call Frame Information) records.
-/// See Dwarf Spec for details:
+/// See DWARF Spec for details:
 ///    http://refspecs.linuxbase.org/LSB_3.1.0/LSB-Core-generic/LSB-Core-generic/ehframechpt.html
 ///
 template <typename A>
@@ -62,7 +62,7 @@ public:
   };
 
   enum {
-    kMaxRegisterNumber = 120
+    kMaxRegisterNumber = _LIBUNWIND_HIGHEST_DWARF_REGISTER
   };
   enum RegisterSavedWhere {
     kRegisterUnused,
@@ -77,7 +77,7 @@ public:
     int64_t value;
   };
   /// Information about a frame layout and registers saved determined
-  /// by "running" the dwarf FDE "instructions"
+  /// by "running" the DWARF FDE "instructions"
   struct PrologInfo {
     uint32_t          cfaRegister;
     int32_t           cfaRegisterOffset;  // CFA = (cfaRegister)+cfaRegisterOffset
@@ -138,23 +138,23 @@ const char *CFI_Parser<A>::decodeFDE(A &addressSpace, pint_t fdeStart,
   if (err != NULL)
     return err;
   p += 4;
-  // parse pc begin and range
+  // Parse pc begin and range.
   pint_t pcStart =
       addressSpace.getEncodedP(p, nextCFI, cieInfo->pointerEncoding);
   pint_t pcRange =
       addressSpace.getEncodedP(p, nextCFI, cieInfo->pointerEncoding & 0x0F);
-  // parse rest of info
+  // Parse rest of info.
   fdeInfo->lsda = 0;
-  // check for augmentation length
+  // Check for augmentation length.
   if (cieInfo->fdesHaveAugmentationData) {
     pint_t augLen = (pint_t)addressSpace.getULEB128(p, nextCFI);
     pint_t endOfAug = p + augLen;
     if (cieInfo->lsdaEncoding != DW_EH_PE_omit) {
-      // peek at value (without indirection).  Zero means no lsda
+      // Peek at value (without indirection).  Zero means no LSDA.
       pint_t lsdaStart = p;
       if (addressSpace.getEncodedP(p, nextCFI, cieInfo->lsdaEncoding & 0x0F) !=
           0) {
-        // reset pointer and re-parse lsda address
+        // Reset pointer and re-parse LSDA address.
         p = lsdaStart;
         fdeInfo->lsda =
             addressSpace.getEncodedP(p, nextCFI, cieInfo->lsdaEncoding);
@@ -192,23 +192,23 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
       return false; // end marker
     uint32_t id = addressSpace.get32(p);
     if (id == 0) {
-      // skip over CIEs
+      // Skip over CIEs.
       p += cfiLength;
     } else {
-      // process FDE to see if it covers pc
+      // Process FDE to see if it covers pc.
       pint_t nextCFI = p + cfiLength;
       uint32_t ciePointer = addressSpace.get32(p);
       pint_t cieStart = p - ciePointer;
-      // validate pointer to CIE is within section
+      // Validate pointer to CIE is within section.
       if ((ehSectionStart <= cieStart) && (cieStart < ehSectionEnd)) {
         if (parseCIE(addressSpace, cieStart, cieInfo) == NULL) {
           p += 4;
-          // parse pc begin and range
+          // Parse pc begin and range.
           pint_t pcStart =
               addressSpace.getEncodedP(p, nextCFI, cieInfo->pointerEncoding);
           pint_t pcRange = addressSpace.getEncodedP(
               p, nextCFI, cieInfo->pointerEncoding & 0x0F);
-          // test if pc is within the function this FDE covers
+          // Test if pc is within the function this FDE covers.
           if ((pcStart < pc) && (pc <= pcStart + pcRange)) {
             // parse rest of info
             fdeInfo->lsda = 0;
@@ -217,11 +217,11 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
               pint_t augLen = (pint_t)addressSpace.getULEB128(p, nextCFI);
               pint_t endOfAug = p + augLen;
               if (cieInfo->lsdaEncoding != DW_EH_PE_omit) {
-                // peek at value (without indirection).  Zero means no lsda
+                // Peek at value (without indirection).  Zero means no LSDA.
                 pint_t lsdaStart = p;
                 if (addressSpace.getEncodedP(
                         p, nextCFI, cieInfo->lsdaEncoding & 0x0F) != 0) {
-                  // reset pointer and re-parse lsda address
+                  // Reset pointer and re-parse LSDA address.
                   p = lsdaStart;
                   fdeInfo->lsda = addressSpace
                       .getEncodedP(p, nextCFI, cieInfo->lsdaEncoding);
@@ -239,7 +239,7 @@ bool CFI_Parser<A>::findFDE(A &addressSpace, pint_t pc, pint_t ehSectionStart,
             // pc is not in begin/range, skip this FDE
           }
         } else {
-          // malformed CIE, now augmentation describing pc range encoding
+          // Malformed CIE, now augmentation describing pc range encoding.
         }
       } else {
         // malformed FDE.  CIE is bad
@@ -338,7 +338,7 @@ const char *CFI_Parser<A>::parseCIE(A &addressSpace, pint_t cie,
 }
 
 
-/// "run" the dwarf instructions and create the abstact PrologInfo for an FDE
+/// "run" the DWARF instructions and create the abstact PrologInfo for an FDE
 template <typename A>
 bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
                                          const FDE_Info &fdeInfo,
@@ -357,7 +357,7 @@ bool CFI_Parser<A>::parseFDEInstructions(A &addressSpace,
                            upToPC - fdeInfo.pcStart, rememberStack, results);
 }
 
-/// "run" the dwarf instructions
+/// "run" the DWARF instructions
 template <typename A>
 bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
                                       pint_t instructionsEnd,
@@ -372,7 +372,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     fprintf(stderr, "parseInstructions(instructions=0x%0" PRIx64 ")\n",
             (uint64_t)instructionsEnd);
 
-  // see Dwarf Spec, section 6.4.2 for details on unwind opcodes
+  // see DWARF Spec, section 6.4.2 for details on unwind opcodes
   while ((p < instructionsEnd) && (codeOffset < pcoffset)) {
     uint64_t reg;
     uint64_t reg2;
@@ -422,7 +422,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
                                                   * cieInfo.dataAlignFactor;
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_offset_extended dwarf unwind, reg too big\n");
+                "malformed DW_CFA_offset_extended DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterInCFA;
@@ -438,7 +438,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       if (reg > kMaxRegisterNumber) {
         fprintf(
             stderr,
-            "malformed DW_CFA_restore_extended dwarf unwind, reg too big\n");
+            "malformed DW_CFA_restore_extended DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg] = initialState.savedRegisters[reg];
@@ -449,7 +449,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_undefined dwarf unwind, reg too big\n");
+                "malformed DW_CFA_undefined DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterUnused;
@@ -460,7 +460,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_same_value dwarf unwind, reg too big\n");
+                "malformed DW_CFA_same_value DWARF unwind, reg too big\n");
         return false;
       }
       // <rdar://problem/8456377> DW_CFA_same_value unsupported
@@ -478,12 +478,12 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg2 = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_register dwarf unwind, reg too big\n");
+                "malformed DW_CFA_register DWARF unwind, reg too big\n");
         return false;
       }
       if (reg2 > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_register dwarf unwind, reg2 too big\n");
+                "malformed DW_CFA_register DWARF unwind, reg2 too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterInRegister;
@@ -525,7 +525,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       offset = (int64_t)addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        fprintf(stderr, "malformed DW_CFA_def_cfa dwarf unwind, reg too big\n");
+        fprintf(stderr, "malformed DW_CFA_def_cfa DWARF unwind, reg too big\n");
         return false;
       }
       results->cfaRegister = (uint32_t)reg;
@@ -539,7 +539,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       if (reg > kMaxRegisterNumber) {
         fprintf(
             stderr,
-            "malformed DW_CFA_def_cfa_register dwarf unwind, reg too big\n");
+            "malformed DW_CFA_def_cfa_register DWARF unwind, reg too big\n");
         return false;
       }
       results->cfaRegister = (uint32_t)reg;
@@ -568,7 +568,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_expression dwarf unwind, reg too big\n");
+                "malformed DW_CFA_expression DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterAtExpression;
@@ -585,7 +585,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       if (reg > kMaxRegisterNumber) {
         fprintf(
             stderr,
-            "malformed DW_CFA_offset_extended_sf dwarf unwind, reg too big\n");
+            "malformed DW_CFA_offset_extended_sf DWARF unwind, reg too big\n");
         return false;
       }
       offset =
@@ -603,7 +603,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
           addressSpace.getSLEB128(p, instructionsEnd) * cieInfo.dataAlignFactor;
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_def_cfa_sf dwarf unwind, reg too big\n");
+                "malformed DW_CFA_def_cfa_sf DWARF unwind, reg too big\n");
         return false;
       }
       results->cfaRegister = (uint32_t)reg;
@@ -636,7 +636,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_val_offset_sf dwarf unwind, reg too big\n");
+                "malformed DW_CFA_val_offset_sf DWARF unwind, reg too big\n");
         return false;
       }
       offset =
@@ -652,7 +652,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
         fprintf(stderr,
-                "malformed DW_CFA_val_expression dwarf unwind, reg too big\n");
+                "malformed DW_CFA_val_expression DWARF unwind, reg too big\n");
         return false;
       }
       results->savedRegisters[reg].location = kRegisterIsExpression;
@@ -673,7 +673,7 @@ bool CFI_Parser<A>::parseInstructions(A &addressSpace, pint_t instructions,
     case DW_CFA_GNU_negative_offset_extended:
       reg = addressSpace.getULEB128(p, instructionsEnd);
       if (reg > kMaxRegisterNumber) {
-        fprintf(stderr, "malformed DW_CFA_GNU_negative_offset_extended dwarf "
+        fprintf(stderr, "malformed DW_CFA_GNU_negative_offset_extended DWARF "
                         "unwind, reg too big\n");
         return false;
       }

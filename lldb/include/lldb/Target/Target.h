@@ -1074,7 +1074,7 @@ public:
     /// dependent modules that are discovered from the object files, or
     /// discovered at runtime as things are dynamically loaded.
     ///
-    /// Setting the executable causes any of the current dependant
+    /// Setting the executable causes any of the current dependent
     /// image information to be cleared and replaced with the static
     /// dependent image information found by calling
     /// ObjectFile::GetDependentModules (FileSpecList&) on the main

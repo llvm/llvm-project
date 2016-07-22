@@ -656,7 +656,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
       debugLoc(std::move(dl))
 #ifdef LLVM_BUILD_GLOBAL_ISEL
       ,
-      Ty(nullptr)
+      Ty(LLT{})
 #endif
 {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
@@ -680,7 +680,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
       MemRefs(MI.MemRefs), debugLoc(MI.getDebugLoc())
 #ifdef LLVM_BUILD_GLOBAL_ISEL
       ,
-      Ty(nullptr)
+      Ty(LLT{})
 #endif
 {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
@@ -710,18 +710,18 @@ MachineRegisterInfo *MachineInstr::getRegInfo() {
 // The proper implementation is WIP and is tracked here:
 // PR26576.
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-void MachineInstr::setType(Type *Ty) {}
+void MachineInstr::setType(LLT Ty) {}
 
-Type *MachineInstr::getType() const { return nullptr; }
+LLT MachineInstr::getType() const { return LLT{}; }
 
 #else
-void MachineInstr::setType(Type *Ty) {
-  assert((!Ty || isPreISelGenericOpcode(getOpcode())) &&
+void MachineInstr::setType(LLT Ty) {
+  assert((!Ty.isValid() || isPreISelGenericOpcode(getOpcode())) &&
          "Non generic instructions are not supposed to be typed");
   this->Ty = Ty;
 }
 
-Type *MachineInstr::getType() const { return Ty; }
+LLT MachineInstr::getType() const { return Ty; }
 #endif // LLVM_BUILD_GLOBAL_ISEL
 
 /// RemoveRegOperandsFromUseLists - Unlink all of the register operands in
@@ -1201,7 +1201,10 @@ MachineInstr::getRegClassConstraint(unsigned OpIdx,
 
   unsigned Flag = getOperand(FlagIdx).getImm();
   unsigned RCID;
-  if (InlineAsm::hasRegClassConstraint(Flag, RCID))
+  if ((InlineAsm::getKind(Flag) == InlineAsm::Kind_RegUse ||
+       InlineAsm::getKind(Flag) == InlineAsm::Kind_RegDef ||
+       InlineAsm::getKind(Flag) == InlineAsm::Kind_RegDefEarlyClobber) &&
+      InlineAsm::hasRegClassConstraint(Flag, RCID))
     return TRI->getRegClass(RCID);
 
   // Assume that all registers in a memory operand are pointers.
@@ -1721,9 +1724,9 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   else
     OS << "UNKNOWN";
 
-  if (getType()) {
+  if (getType().isValid()) {
     OS << ' ';
-    getType()->print(OS, /*IsForDebug*/ false, /*NoDetails*/ true);
+    getType().print(OS);
     OS << ' ';
   }
 
@@ -1826,11 +1829,39 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
       }
 
       unsigned RCID = 0;
-      if (InlineAsm::hasRegClassConstraint(Flag, RCID)) {
+      if (!InlineAsm::isImmKind(Flag) && !InlineAsm::isMemKind(Flag) &&
+          InlineAsm::hasRegClassConstraint(Flag, RCID)) {
         if (TRI) {
           OS << ':' << TRI->getRegClassName(TRI->getRegClass(RCID));
         } else
           OS << ":RC" << RCID;
+      }
+
+      if (InlineAsm::isMemKind(Flag)) {
+        unsigned MCID = InlineAsm::getMemoryConstraintID(Flag);
+        switch (MCID) {
+        case InlineAsm::Constraint_es: OS << ":es"; break;
+        case InlineAsm::Constraint_i:  OS << ":i"; break;
+        case InlineAsm::Constraint_m:  OS << ":m"; break;
+        case InlineAsm::Constraint_o:  OS << ":o"; break;
+        case InlineAsm::Constraint_v:  OS << ":v"; break;
+        case InlineAsm::Constraint_Q:  OS << ":Q"; break;
+        case InlineAsm::Constraint_R:  OS << ":R"; break;
+        case InlineAsm::Constraint_S:  OS << ":S"; break;
+        case InlineAsm::Constraint_T:  OS << ":T"; break;
+        case InlineAsm::Constraint_Um: OS << ":Um"; break;
+        case InlineAsm::Constraint_Un: OS << ":Un"; break;
+        case InlineAsm::Constraint_Uq: OS << ":Uq"; break;
+        case InlineAsm::Constraint_Us: OS << ":Us"; break;
+        case InlineAsm::Constraint_Ut: OS << ":Ut"; break;
+        case InlineAsm::Constraint_Uv: OS << ":Uv"; break;
+        case InlineAsm::Constraint_Uy: OS << ":Uy"; break;
+        case InlineAsm::Constraint_X:  OS << ":X"; break;
+        case InlineAsm::Constraint_Z:  OS << ":Z"; break;
+        case InlineAsm::Constraint_ZC: OS << ":ZC"; break;
+        case InlineAsm::Constraint_Zy: OS << ":Zy"; break;
+        default: OS << ":?"; break;
+        }
       }
 
       unsigned TiedTo = 0;

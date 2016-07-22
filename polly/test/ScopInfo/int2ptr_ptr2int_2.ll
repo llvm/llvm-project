@@ -21,10 +21,6 @@
 ; IR:      polly.stmt.for.body:
 ; IR-NEXT:  %p_tmp = ptrtoint i64* %scevgep to i64
 ; IR-NEXT:  %p_add = add nsw i64 %p_tmp, 1
-; IR-NEXT:  %p_tmp1 = inttoptr i64 %26 to i64*
-; IR-NEXT:  %p_add.ptr2 = getelementptr inbounds i64, i64* %p_tmp1, i64 1
-; IR-NEXT:  %p_tmp2 = ptrtoint i64* %p_add.ptr2 to i64
-; IR-NEXT:  %p_arrayidx = getelementptr inbounds i64, i64* %B, i64 %p_tmp2
 ; IR-NEXT:  %p_arrayidx3 = getelementptr inbounds i64, i64* %A, i64 %p_add
 ; IR-NEXT:  %tmp4_p_scalar_ = load i64, i64* %p_arrayidx3
 ; IR-NEXT:  %p_add4 = add nsw i64 %tmp4_p_scalar_, %polly.preload.tmp3.merge
@@ -32,7 +28,6 @@
 ;
 ; IR:      polly.loop_preheader:
 ; IR-NEXT:   %scevgep = getelementptr i64, i64* %ptr, i64 1
-; IR-NEXT:   %26 = add i64 %val, 1
 ; IR-NEXT:   br label %polly.loop_header
 ;
 ;

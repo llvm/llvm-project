@@ -428,8 +428,9 @@ namespace clang {
     };
 
     ImplicitConversionSequence()
-      : ConversionKind(Uninitialized), StdInitializerListElement(false)
-    {}
+        : ConversionKind(Uninitialized), StdInitializerListElement(false) {
+      Standard.setAsIdentityConversion();
+    }
     ~ImplicitConversionSequence() {
       destruct();
     }

@@ -182,6 +182,14 @@ Error InstrProfWriter::addRecord(InstrProfRecord &&I, uint64_t Weight) {
   return Dest.takeError();
 }
 
+Error InstrProfWriter::mergeRecordsFromWriter(InstrProfWriter &&IPW) {
+  for (auto &I : IPW.FunctionData)
+    for (auto &Func : I.getValue())
+      if (Error E = addRecord(std::move(Func.second), 1))
+        return E;
+  return Error::success();
+}
+
 bool InstrProfWriter::shouldEncodeData(const ProfilingData &PD) {
   if (!Sparse)
     return true;

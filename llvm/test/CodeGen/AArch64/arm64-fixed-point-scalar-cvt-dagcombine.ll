@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-neon-syntax=apple | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-neon-syntax=apple | FileCheck %s
 
 ; DAGCombine to transform a conversion of an extract_vector_elt to an
 ; extract_vector_elt of a conversion, which saves a round trip of copies

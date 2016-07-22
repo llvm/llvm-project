@@ -3738,11 +3738,11 @@ define <32 x i8> @load_sext_32i1_to_32i8(<32 x i1> *%ptr) nounwind readnone {
 ; AVX512-LABEL: load_sext_32i1_to_32i8:
 ; AVX512:       # BB#0: # %entry
 ; AVX512-NEXT:    kmovw (%rdi), %k1
+; AVX512-NEXT:    kmovw 2(%rdi), %k2
 ; AVX512-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    vmovdqa32 %zmm0, %zmm1 {%k1} {z}
 ; AVX512-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512-NEXT:    kmovw 2(%rdi), %k1
-; AVX512-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k1} {z}
+; AVX512-NEXT:    vmovdqa32 %zmm0, %zmm0 {%k2} {z}
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq

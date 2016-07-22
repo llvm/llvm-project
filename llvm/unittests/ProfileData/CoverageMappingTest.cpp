@@ -116,7 +116,7 @@ struct CoverageMappingTest : ::testing::Test {
     if (R != Files.end())
       return R->second;
     unsigned Index = Files.size();
-    Files.emplace_second(Name, Index);
+    Files.try_emplace(Name, Index);
     return Index;
   }
 

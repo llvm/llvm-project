@@ -48,6 +48,8 @@ public:
     CT_CamelBack,
     CT_UpperCase,
     CT_CamelCase,
+    CT_CamelSnakeCase,
+    CT_CamelSnakeBack
   };
 
   struct NamingStyle {

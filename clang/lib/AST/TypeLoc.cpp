@@ -16,7 +16,6 @@
 #include "clang/AST/Expr.h"
 #include "clang/AST/TypeLocVisitor.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
 static const unsigned TypeLocMaxDataAlign = llvm::alignOf<void *>();

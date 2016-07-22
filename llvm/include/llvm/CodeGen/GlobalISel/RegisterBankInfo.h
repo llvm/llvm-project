@@ -291,9 +291,6 @@ protected:
   /// Total number of register banks.
   unsigned NumRegBanks;
 
-  /// Mapping from MVT::SimpleValueType to register banks.
-  std::unique_ptr<const RegisterBank *[]> VTToRegBank;
-
   /// Create a RegisterBankInfo that can accomodate up to \p NumRegBanks
   /// RegisterBank instances.
   ///
@@ -325,14 +322,6 @@ protected:
   /// It also adjusts the size of the register bank to reflect the maximal
   /// size of a value that can be hold into that register bank.
   ///
-  /// If \p AddTypeMapping is true, this method also records what types can
-  /// be mapped to \p ID. Although this done by default, targets may want to
-  /// disable it, espicially if a given type may be mapped on different
-  /// register bank. Indeed, in such case, this method only records the
-  /// first register bank where the type matches.
-  /// This information is only used to provide default mapping
-  /// (see getInstrMappingImpl).
-  ///
   /// \note This method does *not* add the super classes of \p RCId.
   /// The rationale is if \p ID covers the registers of \p RCId, that
   /// does not necessarily mean that \p ID covers the set of registers
@@ -343,43 +332,12 @@ protected:
   ///
   /// \todo TableGen should just generate the BitSet vector for us.
   void addRegBankCoverage(unsigned ID, unsigned RCId,
-                          const TargetRegisterInfo &TRI,
-                          bool AddTypeMapping = true);
+                          const TargetRegisterInfo &TRI);
 
   /// Get the register bank identified by \p ID.
   RegisterBank &getRegBank(unsigned ID) {
     assert(ID < getNumRegBanks() && "Accessing an unknown register bank");
     return RegBanks[ID];
-  }
-
-  /// Get the register bank that has been recorded to cover \p SVT.
-  const RegisterBank *getRegBankForType(MVT::SimpleValueType SVT) const {
-    if (!VTToRegBank)
-      return nullptr;
-    assert(SVT < MVT::SimpleValueType::LAST_VALUETYPE && "Out-of-bound access");
-    return VTToRegBank.get()[SVT];
-  }
-
-  /// Record \p RegBank as the register bank that covers \p SVT.
-  /// If a record was already set for \p SVT, the mapping is not
-  /// updated, unless \p Force == true
-  ///
-  /// \post if getRegBankForType(SVT)\@pre == nullptr then
-  ///                       getRegBankForType(SVT) == &RegBank
-  /// \post if Force == true then getRegBankForType(SVT) == &RegBank
-  void recordRegBankForType(const RegisterBank &RegBank,
-                            MVT::SimpleValueType SVT, bool Force = false) {
-    if (!VTToRegBank) {
-      VTToRegBank.reset(
-          new const RegisterBank *[MVT::SimpleValueType::LAST_VALUETYPE]);
-      std::fill(&VTToRegBank[0],
-                &VTToRegBank[MVT::SimpleValueType::LAST_VALUETYPE], nullptr);
-    }
-    assert(SVT < MVT::SimpleValueType::LAST_VALUETYPE && "Out-of-bound access");
-    // If we want to override the mapping or the mapping does not exits yet,
-    // set the register bank for SVT.
-    if (Force || !getRegBankForType(SVT))
-      VTToRegBank.get()[SVT] = &RegBank;
   }
 
   /// Try to get the mapping of \p MI.

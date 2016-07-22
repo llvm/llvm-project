@@ -19,7 +19,6 @@
 #include "clang/Tooling/Refactoring.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <string>
-#include <vector>
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(clang::tooling::Replacement)
 

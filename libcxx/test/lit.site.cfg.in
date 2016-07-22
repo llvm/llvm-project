@@ -22,7 +22,9 @@ config.generate_coverage        = "@LIBCXX_GENERATE_COVERAGE@"
 config.target_info              = "@LIBCXX_TARGET_INFO@"
 config.executor                 = "@LIBCXX_EXECUTOR@"
 config.llvm_unwinder            = "@LIBCXXABI_USE_LLVM_UNWINDER@"
-config.use_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
+config.has_libatomic            = "@LIBCXX_HAS_ATOMIC_LIB@"
+config.use_libatomic            = "@LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB@"
+
 config.libcxxabi_shared         = "@LIBCXXABI_ENABLE_SHARED@"
 
 # Let the main config do the real work.

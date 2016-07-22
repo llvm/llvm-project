@@ -20,7 +20,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/ParsedTemplate.h"
 #include "clang/Sema/Scope.h"
-#include "llvm/Support/raw_ostream.h"
 using namespace clang;
 
 

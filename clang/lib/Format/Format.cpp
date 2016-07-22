@@ -36,7 +36,6 @@
 #include "llvm/Support/YAMLTraits.h"
 #include <algorithm>
 #include <memory>
-#include <queue>
 #include <string>
 
 #define DEBUG_TYPE "format-formatter"

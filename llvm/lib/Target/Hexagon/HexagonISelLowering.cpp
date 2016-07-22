@@ -447,7 +447,13 @@ static bool RetCC_Hexagon32(unsigned ValNo, MVT ValVT,
                             MVT LocVT, CCValAssign::LocInfo LocInfo,
                             ISD::ArgFlagsTy ArgFlags, CCState &State) {
   if (LocVT == MVT::i32 || LocVT == MVT::f32) {
-    if (unsigned Reg = State.AllocateReg(Hexagon::R0)) {
+    // Note that use of registers beyond R1 is not ABI compliant. However there
+    // are (experimental) IR passes which generate internal functions that
+    // return structs using these additional registers.
+    static const uint16_t RegList[] = { Hexagon::R0, Hexagon::R1,
+                                        Hexagon::R2, Hexagon::R3,
+                                        Hexagon::R4, Hexagon::R5};
+    if (unsigned Reg = State.AllocateReg(RegList)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }

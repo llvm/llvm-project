@@ -12,22 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIndexer.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclVisitor.h"
-#include "clang/AST/StmtVisitor.h"
-#include "clang/Basic/FileManager.h"
-#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/Version.h"
-#include "clang/Sema/CodeCompleteConsumer.h"
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cstdio>
-#include <sstream>
-#include <vector>
 
 #ifdef __CYGWIN__
 #include <cygwin/version.h>

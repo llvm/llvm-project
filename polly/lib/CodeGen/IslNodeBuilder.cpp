@@ -177,16 +177,6 @@ int IslNodeBuilder::getNumberOfIterations(__isl_keep isl_ast_node *For) {
     return NumberIterations + 1;
 }
 
-struct SubtreeReferences {
-  LoopInfo &LI;
-  ScalarEvolution &SE;
-  Scop &S;
-  ValueMapT &GlobalMap;
-  SetVector<Value *> &Values;
-  SetVector<const SCEV *> &SCEVs;
-  BlockGenerator &BlockGen;
-};
-
 /// @brief Extract the values and SCEVs needed to generate code for a block.
 static int findReferencesInBlock(struct SubtreeReferences &References,
                                  const ScopStmt *Stmt, const BasicBlock *BB) {
@@ -213,7 +203,7 @@ static int findReferencesInBlock(struct SubtreeReferences &References,
 /// @param Stmt    The statement for which to extract the information.
 /// @param UserPtr A void pointer that can be casted to a SubtreeReferences
 ///                structure.
-static isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
+isl_stat addReferencesFromStmt(const ScopStmt *Stmt, void *UserPtr) {
   auto &References = *static_cast<struct SubtreeReferences *>(UserPtr);
 
   if (Stmt->isBlockStmt())

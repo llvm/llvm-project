@@ -29,8 +29,9 @@ void test1()
         throw nullptr;
         assert(false);
     }
-    catch (A*)
+    catch (A* p)
     {
+        assert(!p);
     }
     catch (const A*)
     {
@@ -46,8 +47,9 @@ void test2()
         throw nullptr;
         assert(false);
     }
-    catch (const A*)
+    catch (const A* p)
     {
+        assert(!p);
     }
     catch (A*)
     {
@@ -62,8 +64,9 @@ void test3()
         throw nullptr;
         assert(false);
     }
-    catch (const A* const)
+    catch (const A* const p)
     {
+        assert(!p);
     }
     catch (A*)
     {
@@ -78,8 +81,9 @@ void test4()
         throw nullptr;
         assert(false);
     }
-    catch (A*)
+    catch (A* p)
     {
+        assert(!p);
     }
     catch (const A* const)
     {
@@ -94,8 +98,9 @@ void test5()
         throw nullptr;
         assert(false);
     }
-    catch (A const*)
+    catch (A const* p)
     {
+        assert(!p);
     }
     catch (A*)
     {
@@ -110,8 +115,9 @@ void test6()
         throw nullptr;
         assert(false);
     }
-    catch (A*)
+    catch (A* p)
     {
+        assert(!p);
     }
     catch (A const*)
     {

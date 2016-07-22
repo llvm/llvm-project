@@ -57,7 +57,10 @@ static std::string computeDataLayout(const Triple &TT, StringRef CPU,
   else
     Ret += "E";
 
-  Ret += "-m:m";
+  if (ABI.IsO32())
+    Ret += "-m:m";
+  else
+    Ret += "-m:e";
 
   // Pointers are 32 bit on some ABIs.
   if (!ABI.IsN64())

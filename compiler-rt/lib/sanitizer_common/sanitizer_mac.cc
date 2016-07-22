@@ -740,6 +740,9 @@ char **GetArgv() {
   return *_NSGetArgv();
 }
 
+// FIXME implement on this platform.
+void GetMemoryProfile(fill_profile_f cb, uptr *stats, uptr stats_size) { }
+
 }  // namespace __sanitizer
 
 #endif  // SANITIZER_MAC

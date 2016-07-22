@@ -144,7 +144,7 @@ exists anywhere in the file.
 The FileCheck -check-prefix option
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The FileCheck :option:`-check-prefix` option allows multiple test
+The FileCheck `-check-prefix` option allows multiple test
 configurations to be driven from one `.ll` file.  This is useful in many
 circumstances, for example, testing different architectural variants with
 :program:`llc`.  Here's a simple example:
@@ -303,7 +303,7 @@ be aware that the definition rule can match `after` its use.
 
 So, for instance, the code below will pass:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ; CHECK-DAG: vmov.32 [[REG2:d[0-9]+]][0]
   ; CHECK-DAG: vmov.32 [[REG2]][1]
@@ -312,7 +312,7 @@ So, for instance, the code below will pass:
 
 While this other code, will not:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ; CHECK-DAG: vmov.32 [[REG2:d[0-9]+]][0]
   ; CHECK-DAG: vmov.32 [[REG2]][1]
@@ -473,7 +473,7 @@ To match newline characters in regular expressions the character class
 
 matches output of the form (from llvm-dwarfdump):
 
-.. code-block:: llvm
+.. code-block:: text
 
        DW_AT_location [DW_FORM_sec_offset]   (0x00000233)
        DW_AT_name [DW_FORM_strp]  ( .debug_str[0x000000c9] = "intd")

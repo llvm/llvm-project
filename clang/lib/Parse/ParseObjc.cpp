@@ -3416,6 +3416,7 @@ ExprResult Parser::ParseObjCArrayLiteral(SourceLocation AtLoc) {
   ExprVector ElementExprs;                   // array elements.
   ConsumeBracket(); // consume the l_square.
 
+  bool HasInvalidEltExpr = false;
   while (Tok.isNot(tok::r_square)) {
     // Parse list of array element expressions (all must be id types).
     ExprResult Res(ParseAssignmentExpression());
@@ -3427,11 +3428,15 @@ ExprResult Parser::ParseObjCArrayLiteral(SourceLocation AtLoc) {
       return Res;
     }    
     
+    Res = Actions.CorrectDelayedTyposInExpr(Res.get());
+    if (Res.isInvalid())
+      HasInvalidEltExpr = true;
+
     // Parse the ellipsis that indicates a pack expansion.
     if (Tok.is(tok::ellipsis))
       Res = Actions.ActOnPackExpansion(Res.get(), ConsumeToken());    
     if (Res.isInvalid())
-      return true;
+      HasInvalidEltExpr = true;
 
     ElementExprs.push_back(Res.get());
 
@@ -3442,6 +3447,10 @@ ExprResult Parser::ParseObjCArrayLiteral(SourceLocation AtLoc) {
                                                             << tok::comma);
   }
   SourceLocation EndLoc = ConsumeBracket(); // location of ']'
+
+  if (HasInvalidEltExpr)
+    return ExprError();
+
   MultiExprArg Args(ElementExprs);
   return Actions.BuildObjCArrayLiteral(SourceRange(AtLoc, EndLoc), Args);
 }
@@ -3449,6 +3458,7 @@ ExprResult Parser::ParseObjCArrayLiteral(SourceLocation AtLoc) {
 ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
   SmallVector<ObjCDictionaryElement, 4> Elements; // dictionary elements.
   ConsumeBrace(); // consume the l_square.
+  bool HasInvalidEltExpr = false;
   while (Tok.isNot(tok::r_brace)) {
     // Parse the comma separated key : value expressions.
     ExprResult KeyExpr;
@@ -3478,7 +3488,15 @@ ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
       return ValueExpr;
     }
     
-    // Parse the ellipsis that designates this as a pack expansion.
+    // Check the key and value for possible typos
+    KeyExpr = Actions.CorrectDelayedTyposInExpr(KeyExpr.get());
+    ValueExpr = Actions.CorrectDelayedTyposInExpr(ValueExpr.get());
+    if (KeyExpr.isInvalid() || ValueExpr.isInvalid())
+      HasInvalidEltExpr = true;
+
+    // Parse the ellipsis that designates this as a pack expansion. Do not
+    // ActOnPackExpansion here, leave it to template instantiation time where
+    // we can get better diagnostics.
     SourceLocation EllipsisLoc;
     if (getLangOpts().CPlusPlus)
       TryConsumeToken(tok::ellipsis, EllipsisLoc);
@@ -3495,6 +3513,9 @@ ExprResult Parser::ParseObjCDictionaryLiteral(SourceLocation AtLoc) {
                                                             << tok::comma);
   }
   SourceLocation EndLoc = ConsumeBrace();
+
+  if (HasInvalidEltExpr)
+    return ExprError();
   
   // Create the ObjCDictionaryLiteral.
   return Actions.BuildObjCDictionaryLiteral(SourceRange(AtLoc, EndLoc),

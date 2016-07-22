@@ -4,7 +4,6 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
 #include "clang/Analysis/Analyses/FormatString.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace clang {
 

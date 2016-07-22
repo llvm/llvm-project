@@ -120,6 +120,8 @@ class Configuration(object):
         self.lit_config.note('Using flags: %s' % self.cxx.flags)
         self.lit_config.note('Using compile flags: %s'
                              % self.cxx.compile_flags)
+        if len(self.cxx.warning_flags):
+            self.lit_config.note('Using warnings: %s' % self.cxx.warning_flags)
         self.lit_config.note('Using link flags: %s' % self.cxx.link_flags)
         # Print as list to prevent "set([...])" from being printed.
         self.lit_config.note('Using available_features: %s' %
@@ -289,6 +291,9 @@ class Configuration(object):
         # in test/std/language.support/support.dynamic/new.delete
         if self.cxx.hasCompileFlag('-fsized-deallocation'):
             self.config.available_features.add('fsized-deallocation')
+
+        if self.get_lit_bool('has_libatomic', False):
+            self.config.available_features.add('libatomic')
 
     def configure_compile_flags(self):
         no_default_flags = self.get_lit_bool('no_default_flags', False)
@@ -566,7 +571,7 @@ class Configuration(object):
     def configure_warnings(self):
         enable_warnings = self.get_lit_bool('enable_warnings', False)
         if enable_warnings:
-            self.cxx.compile_flags += [
+            self.cxx.warning_flags += [
                 '-D_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER',
                 '-Wall', '-Wextra', '-Werror'
             ]

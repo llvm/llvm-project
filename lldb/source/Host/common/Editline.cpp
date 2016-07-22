@@ -1144,7 +1144,7 @@ Editline::ConfigureEditor (bool multiline)
             }));
 
     // Register the complete callback under two names for compatibility with older clients using
-    // custom .editrc files (largely becuase libedit has a bad bug where if you have a bind command
+    // custom .editrc files (largely because libedit has a bad bug where if you have a bind command
     // that tries to bind to a function name that doesn't exist, it can corrupt the heap and
     // crash your process later.)
     EditlineCommandCallbackType complete_callback = [] (EditLine * editline, int ch) {

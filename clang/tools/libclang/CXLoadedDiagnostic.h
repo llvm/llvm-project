@@ -17,7 +17,6 @@
 #include "CIndexDiagnostic.h"
 #include "llvm/ADT/StringRef.h"
 #include "clang/Basic/LLVM.h"
-#include <string>
 #include <vector>
 
 namespace clang {

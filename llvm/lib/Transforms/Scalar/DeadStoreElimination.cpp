@@ -290,8 +290,8 @@ enum OverwriteResult {
 };
 }
 
-typedef std::map<int64_t, int64_t> OverlapIntervalsTy;
-typedef DenseMap<Instruction *, OverlapIntervalsTy> InstOverlapIntervalsTy;
+typedef DenseMap<Instruction *,
+                 std::map<int64_t, int64_t>> InstOverlapIntervalsTy;
 
 /// Return 'OverwriteComplete' if a store to the 'Later' location completely
 /// overwrites a store to the 'Earlier' location, 'OverwriteEnd' if the end of
@@ -438,9 +438,9 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
   //
   // In this case we may want to trim the size of earlier to avoid generating
   // writes to addresses which will definitely be overwritten later
-  if (!EnablePartialOverwriteTracking &&
-      (LaterOff > EarlierOff && LaterOff < int64_t(EarlierOff + Earlier.Size) &&
-       int64_t(LaterOff + Later.Size) >= int64_t(EarlierOff + Earlier.Size)))
+  if (LaterOff > EarlierOff &&
+      LaterOff < int64_t(EarlierOff + Earlier.Size) &&
+      int64_t(LaterOff + Later.Size) >= int64_t(EarlierOff + Earlier.Size))
     return OverwriteEnd;
 
   // Finally, we also need to check if the later store overwrites the beginning
@@ -452,11 +452,9 @@ static OverwriteResult isOverwrite(const MemoryLocation &Later,
   // In this case we may want to move the destination address and trim the size
   // of earlier to avoid generating writes to addresses which will definitely
   // be overwritten later.
-  if (!EnablePartialOverwriteTracking &&
-      (LaterOff <= EarlierOff && int64_t(LaterOff + Later.Size) > EarlierOff)) {
-    assert(int64_t(LaterOff + Later.Size) <
-               int64_t(EarlierOff + Earlier.Size) &&
-           "Expect to be handled as OverwriteComplete");
+  if (LaterOff <= EarlierOff && int64_t(LaterOff + Later.Size) > EarlierOff) {
+    assert (int64_t(LaterOff + Later.Size) < int64_t(EarlierOff + Earlier.Size)
+            && "Expect to be handled as OverwriteComplete" );
     return OverwriteBegin;
   }
   // Otherwise, they don't completely overlap.
@@ -614,6 +612,9 @@ static bool handleFree(CallInst *F, AliasAnalysis *AA,
       if (!AA->isMustAlias(F->getArgOperand(0), DepPointer))
         break;
 
+      DEBUG(dbgs() << "DSE: Dead Store to soon to be freed memory:\n  DEAD: "
+                   << *Dependency << '\n');
+
       // DCE instructions only used to calculate that store.
       BasicBlock::iterator BBI(Dependency);
       deleteDeadInstruction(Dependency, &BBI, *MD, *TLI);
@@ -739,6 +740,8 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
 
     // Remove any dead non-memory-mutating instructions.
     if (isInstructionTriviallyDead(&*BBI, TLI)) {
+      DEBUG(dbgs() << "DSE: Removing trivially dead instruction:\n  DEAD: "
+                   << *&*BBI << '\n');
       deleteDeadInstruction(&*BBI, &BBI, *MD, *TLI, &DeadStackObjects);
       ++NumFastOther;
       MadeChange = true;
@@ -819,119 +822,6 @@ static bool handleEndBlock(BasicBlock &BB, AliasAnalysis *AA,
   }
 
   return MadeChange;
-}
-
-static bool tryToShorten(Instruction *EarlierWrite, int64_t &EarlierOffset,
-                         int64_t &EarlierSize, int64_t LaterOffset,
-                         int64_t LaterSize, bool IsOverwriteEnd) {
-  // TODO: base this on the target vector size so that if the earlier
-  // store was too small to get vector writes anyway then its likely
-  // a good idea to shorten it
-  // Power of 2 vector writes are probably always a bad idea to optimize
-  // as any store/memset/memcpy is likely using vector instructions so
-  // shortening it to not vector size is likely to be slower
-  MemIntrinsic *EarlierIntrinsic = cast<MemIntrinsic>(EarlierWrite);
-  unsigned EarlierWriteAlign = EarlierIntrinsic->getAlignment();
-  if (!IsOverwriteEnd)
-    LaterOffset = int64_t(LaterOffset + LaterSize);
-
-  if (!(llvm::isPowerOf2_64(LaterOffset) && EarlierWriteAlign <= LaterOffset) &&
-      !((EarlierWriteAlign != 0) && LaterOffset % EarlierWriteAlign == 0))
-    return false;
-
-  DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
-               << (IsOverwriteEnd ? "END" : "BEGIN") << ": " << *EarlierWrite
-               << "\n  KILLER (offset " << LaterOffset << ", " << EarlierSize
-               << ")\n");
-
-  int64_t NewLength = IsOverwriteEnd
-                          ? LaterOffset - EarlierOffset
-                          : EarlierSize - (LaterOffset - EarlierOffset);
-
-  Value *EarlierWriteLength = EarlierIntrinsic->getLength();
-  Value *TrimmedLength =
-      ConstantInt::get(EarlierWriteLength->getType(), NewLength);
-  EarlierIntrinsic->setLength(TrimmedLength);
-
-  EarlierSize = NewLength;
-  if (!IsOverwriteEnd) {
-    int64_t OffsetMoved = (LaterOffset - EarlierOffset);
-    Value *Indices[1] = {
-        ConstantInt::get(EarlierWriteLength->getType(), OffsetMoved)};
-    GetElementPtrInst *NewDestGEP = GetElementPtrInst::CreateInBounds(
-        EarlierIntrinsic->getRawDest(), Indices, "", EarlierWrite);
-    EarlierIntrinsic->setDest(NewDestGEP);
-    EarlierOffset = EarlierOffset + OffsetMoved;
-  }
-  return true;
-}
-
-static bool tryToShortenEnd(Instruction *EarlierWrite,
-                            OverlapIntervalsTy &IntervalMap,
-                            int64_t &EarlierStart, int64_t &EarlierSize) {
-  if (IntervalMap.empty() || !isShortenableAtTheEnd(EarlierWrite))
-    return false;
-
-  OverlapIntervalsTy::iterator OII = --IntervalMap.end();
-  int64_t LaterStart = OII->second;
-  int64_t LaterSize = OII->first - LaterStart;
-
-  if (LaterStart > EarlierStart && LaterStart < EarlierStart + EarlierSize &&
-      LaterStart + LaterSize >= EarlierStart + EarlierSize) {
-    if (tryToShorten(EarlierWrite, EarlierStart, EarlierSize, LaterStart,
-                     LaterSize, true)) {
-      IntervalMap.erase(OII);
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool tryToShortenBegin(Instruction *EarlierWrite,
-                              OverlapIntervalsTy &IntervalMap,
-                              int64_t &EarlierStart, int64_t &EarlierSize) {
-  if (IntervalMap.empty() || !isShortenableAtTheBeginning(EarlierWrite))
-    return false;
-
-  OverlapIntervalsTy::iterator OII = IntervalMap.begin();
-  int64_t LaterStart = OII->second;
-  int64_t LaterSize = OII->first - LaterStart;
-
-  if (LaterStart <= EarlierStart && LaterStart + LaterSize > EarlierStart) {
-    assert(LaterStart + LaterSize < EarlierStart + EarlierSize &&
-           "Should have been handled as OverwriteComplete");
-    if (tryToShorten(EarlierWrite, EarlierStart, EarlierSize, LaterStart,
-                     LaterSize, false)) {
-      IntervalMap.erase(OII);
-      return true;
-    }
-  }
-  return false;
-}
-
-static bool removePartiallyOverlappedStores(AliasAnalysis *AA,
-                                            const DataLayout &DL,
-                                            InstOverlapIntervalsTy &IOL) {
-  bool Changed = false;
-  for (auto OI : IOL) {
-    Instruction *EarlierWrite = OI.first;
-    MemoryLocation Loc = getLocForWrite(EarlierWrite, *AA);
-    assert(isRemovable(EarlierWrite) && "Expect only removable instruction");
-    assert(Loc.Size != MemoryLocation::UnknownSize && "Unexpected mem loc");
-
-    const Value *Ptr = Loc.Ptr->stripPointerCasts();
-    int64_t EarlierStart = 0;
-    int64_t EarlierSize = int64_t(Loc.Size);
-    GetPointerBaseWithConstantOffset(Ptr, EarlierStart, DL);
-    OverlapIntervalsTy &IntervalMap = OI.second;
-    Changed =
-        tryToShortenEnd(EarlierWrite, IntervalMap, EarlierStart, EarlierSize);
-    if (IntervalMap.empty())
-      continue;
-    Changed |=
-        tryToShortenBegin(EarlierWrite, IntervalMap, EarlierStart, EarlierSize);
-  }
-  return Changed;
 }
 
 static bool eliminateNoopStore(Instruction *Inst, BasicBlock::iterator &BBI,
@@ -1051,7 +941,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
         if (OR == OverwriteComplete) {
           DEBUG(dbgs() << "DSE: Remove Dead Store:\n  DEAD: "
                 << *DepWrite << "\n  KILLER: " << *Inst << '\n');
-          IOL.erase(DepWrite);
+
           // Delete the store and now-dead instructions that feed it.
           deleteDeadInstruction(DepWrite, &BBI, *MD, *TLI);
           ++NumFastStores;
@@ -1063,14 +953,48 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
         } else if ((OR == OverwriteEnd && isShortenableAtTheEnd(DepWrite)) ||
                    ((OR == OverwriteBegin &&
                      isShortenableAtTheBeginning(DepWrite)))) {
-          assert(!EnablePartialOverwriteTracking && "Do not expect to perform "
-                                                    "when partial-overwrite "
-                                                    "tracking is enabled");
-          int64_t EarlierSize = DepLoc.Size;
-          int64_t LaterSize = Loc.Size;
+          // TODO: base this on the target vector size so that if the earlier
+          // store was too small to get vector writes anyway then its likely
+          // a good idea to shorten it
+          // Power of 2 vector writes are probably always a bad idea to optimize
+          // as any store/memset/memcpy is likely using vector instructions so
+          // shortening it to not vector size is likely to be slower
+          MemIntrinsic *DepIntrinsic = cast<MemIntrinsic>(DepWrite);
+          unsigned DepWriteAlign = DepIntrinsic->getAlignment();
           bool IsOverwriteEnd = (OR == OverwriteEnd);
-          MadeChange = tryToShorten(DepWrite, DepWriteOffset, EarlierSize,
-                                    InstWriteOffset, LaterSize, IsOverwriteEnd);
+          if (!IsOverwriteEnd)
+            InstWriteOffset = int64_t(InstWriteOffset + Loc.Size);
+
+          if ((llvm::isPowerOf2_64(InstWriteOffset) &&
+               DepWriteAlign <= InstWriteOffset) ||
+              ((DepWriteAlign != 0) && InstWriteOffset % DepWriteAlign == 0)) {
+
+            DEBUG(dbgs() << "DSE: Remove Dead Store:\n  OW "
+                         << (IsOverwriteEnd ? "END" : "BEGIN") << ": "
+                         << *DepWrite << "\n  KILLER (offset "
+                         << InstWriteOffset << ", " << DepLoc.Size << ")"
+                         << *Inst << '\n');
+
+            int64_t NewLength =
+                IsOverwriteEnd
+                    ? InstWriteOffset - DepWriteOffset
+                    : DepLoc.Size - (InstWriteOffset - DepWriteOffset);
+
+            Value *DepWriteLength = DepIntrinsic->getLength();
+            Value *TrimmedLength =
+                ConstantInt::get(DepWriteLength->getType(), NewLength);
+            DepIntrinsic->setLength(TrimmedLength);
+
+            if (!IsOverwriteEnd) {
+              int64_t OffsetMoved = (InstWriteOffset - DepWriteOffset);
+              Value *Indices[1] = {
+                  ConstantInt::get(DepWriteLength->getType(), OffsetMoved)};
+              GetElementPtrInst *NewDestGEP = GetElementPtrInst::CreateInBounds(
+                  DepIntrinsic->getRawDest(), Indices, "", DepWrite);
+              DepIntrinsic->setDest(NewDestGEP);
+            }
+            MadeChange = true;
+          }
         }
       }
 
@@ -1092,9 +1016,6 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
                                              DepWrite->getIterator(), &BB);
     }
   }
-
-  if (EnablePartialOverwriteTracking)
-    MadeChange |= removePartiallyOverlappedStores(AA, DL, IOL);
 
   // If this block ends in a return, unwind, or unreachable, all allocas are
   // dead at its end, which means stores to them are also dead.

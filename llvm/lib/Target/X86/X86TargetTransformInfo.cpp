@@ -945,6 +945,10 @@ int X86TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy, Type *CondTy) {
 
 int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
                                       ArrayRef<Type *> Tys, FastMathFlags FMF) {
+  // Costs should match the codegen from:
+  // BITREVERSE: llvm\test\CodeGen\X86\vector-bitreverse.ll
+  // BSWAP: llvm\test\CodeGen\X86\bswap-vector.ll
+  // CTPOP: llvm\test\CodeGen\X86\vector-popcnt-*.ll
   static const CostTblEntry XOPCostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,   4 },
     { ISD::BITREVERSE, MVT::v8i32,   4 },
@@ -966,7 +970,11 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::BITREVERSE, MVT::v32i8,   5 },
     { ISD::BSWAP,      MVT::v4i64,   1 },
     { ISD::BSWAP,      MVT::v8i32,   1 },
-    { ISD::BSWAP,      MVT::v16i16,  1 }
+    { ISD::BSWAP,      MVT::v16i16,  1 },
+    { ISD::CTPOP,      MVT::v4i64,   7 },
+    { ISD::CTPOP,      MVT::v8i32,  11 },
+    { ISD::CTPOP,      MVT::v16i16,  9 },
+    { ISD::CTPOP,      MVT::v32i8,   6 }
   };
   static const CostTblEntry AVX1CostTbl[] = {
     { ISD::BITREVERSE, MVT::v4i64,  10 },
@@ -975,7 +983,11 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::BITREVERSE, MVT::v32i8,  10 },
     { ISD::BSWAP,      MVT::v4i64,   4 },
     { ISD::BSWAP,      MVT::v8i32,   4 },
-    { ISD::BSWAP,      MVT::v16i16,  4 }
+    { ISD::BSWAP,      MVT::v16i16,  4 },
+    { ISD::CTPOP,      MVT::v4i64,  14 },
+    { ISD::CTPOP,      MVT::v8i32,  22 },
+    { ISD::CTPOP,      MVT::v16i16, 18 },
+    { ISD::CTPOP,      MVT::v32i8,  12 }
   };
   static const CostTblEntry SSSE3CostTbl[] = {
     { ISD::BITREVERSE, MVT::v2i64,   5 },
@@ -984,12 +996,20 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     { ISD::BITREVERSE, MVT::v16i8,   5 },
     { ISD::BSWAP,      MVT::v2i64,   1 },
     { ISD::BSWAP,      MVT::v4i32,   1 },
-    { ISD::BSWAP,      MVT::v8i16,   1 }
+    { ISD::BSWAP,      MVT::v8i16,   1 },
+    { ISD::CTPOP,      MVT::v2i64,   7 },
+    { ISD::CTPOP,      MVT::v4i32,  11 },
+    { ISD::CTPOP,      MVT::v8i16,   9 },
+    { ISD::CTPOP,      MVT::v16i8,   6 }
   };
   static const CostTblEntry SSE2CostTbl[] = {
     { ISD::BSWAP,      MVT::v2i64,   7 },
     { ISD::BSWAP,      MVT::v4i32,   7 },
-    { ISD::BSWAP,      MVT::v8i16,   7 }
+    { ISD::BSWAP,      MVT::v8i16,   7 },
+    { ISD::CTPOP,      MVT::v2i64,  12 },
+    { ISD::CTPOP,      MVT::v4i32,  15 },
+    { ISD::CTPOP,      MVT::v8i16,  13 },
+    { ISD::CTPOP,      MVT::v16i8,  10 }
   };
 
   unsigned ISD = ISD::DELETED_NODE;
@@ -1001,6 +1021,9 @@ int X86TTIImpl::getIntrinsicInstrCost(Intrinsic::ID IID, Type *RetTy,
     break;
   case Intrinsic::bswap:
     ISD = ISD::BSWAP;
+    break;
+  case Intrinsic::ctpop:
+    ISD = ISD::CTPOP;
     break;
   }
 

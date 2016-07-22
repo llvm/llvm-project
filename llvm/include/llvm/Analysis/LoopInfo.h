@@ -791,6 +791,11 @@ public:
   PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
 };
 
+/// \brief Verifier pass for the \c LoopAnalysis results.
+struct LoopVerifierPass : public PassInfoMixin<LoopVerifierPass> {
+  PreservedAnalyses run(Function &F, AnalysisManager<Function> &AM);
+};
+
 /// \brief The legacy pass manager's analysis pass to compute loop information.
 class LoopInfoWrapperPass : public FunctionPass {
   LoopInfo LI;

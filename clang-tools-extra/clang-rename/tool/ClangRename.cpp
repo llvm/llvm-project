@@ -99,7 +99,18 @@ int main(int argc, const char **argv) {
   // Check the arguments for correctness.
 
   if (NewName.empty()) {
-    errs() << "clang-rename: no new name provided.\n\n";
+    errs() << "ERROR: no new name provided.\n\n";
+    exit(1);
+  }
+
+  // Check if NewName is a valid identifier in C++17.
+  LangOptions Options;
+  Options.CPlusPlus = true;
+  Options.CPlusPlus1z = true;
+  IdentifierTable Table(Options);
+  auto NewNameTokKind = Table.get(NewName).getTokenID();
+  if (!tok::isAnyIdentifier(NewNameTokKind)) {
+    errs() << "ERROR: new name is not a valid identifier in  C++17.\n\n";
     exit(1);
   }
 

@@ -362,6 +362,7 @@ WaitForProcessToSIGSTOP (const lldb::pid_t pid, const int timeout_in_seconds)
 
 const char *applscript_in_new_tty = 
 "tell application \"Terminal\"\n"
+"   activate\n"
 "	do script \"%s\"\n"
 "end tell\n";
 

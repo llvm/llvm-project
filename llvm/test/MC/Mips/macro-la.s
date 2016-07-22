@@ -1,11 +1,11 @@
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r2 | \
-# RUN:   FileCheck %s
+# RUN:   FileCheck %s --check-prefixes=CHECK,O32
 # RUN: llvm-mc %s -triple=mips-unknown-linux -show-encoding -mcpu=mips32r6 | \
-# RUN:   FileCheck %s
+# RUN:   FileCheck %s --check-prefixes=CHECK,O32
 # RUN: llvm-mc %s -triple=mips64-unknown-linux -show-encoding -mcpu=mips64r2 -target-abi=n32 | \
-# RUN:   FileCheck %s
+# RUN:   FileCheck %s --check-prefixes=CHECK,N32
 # RUN: llvm-mc %s -triple=mips64-unknown-linux -show-encoding -mcpu=mips64r6 -target-abi=n32 | \
-# RUN:   FileCheck %s
+# RUN:   FileCheck %s --check-prefixes=CHECK,N32
 
 # N64 should be acceptable too but we cannot convert la to dla yet.
 
@@ -272,8 +272,12 @@ la $6, symbol+8($6)   # CHECK: lui $1, %hi(symbol+8)       # encoding: [0x3c,0x0
                       # CHECK: addiu $1, $1, %lo(symbol+8) # encoding: [0x24,0x21,A,A]
                       # CHECK:                             #   fixup A - offset: 0, value: %lo(symbol+8), kind: fixup_Mips_LO16
                       # CHECK: addu $6, $1, $6             # encoding: [0x00,0x26,0x30,0x21]
-la $5, 1f             # CHECK: lui $5, %hi($tmp0)          # encoding: [0x3c,0x05,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %hi($tmp0), kind: fixup_Mips_HI16
-                      # CHECK: addiu $5, $5, %lo($tmp0)    # encoding: [0x24,0xa5,A,A]
-                      # CHECK:                             #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
+la $5, 1f             # O32: lui $5, %hi($tmp0)            # encoding: [0x3c,0x05,A,A]
+                      # O32:                               #   fixup A - offset: 0, value: %hi($tmp0), kind: fixup_Mips_HI16
+                      # O32: addiu $5, $5, %lo($tmp0)      # encoding: [0x24,0xa5,A,A]
+                      # O32:                               #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_Mips_LO16
+                      # N32: lui $5, %hi(.Ltmp0)           # encoding: [0x3c,0x05,A,A]
+                      # N32:                               #   fixup A - offset: 0, value: %hi(.Ltmp0), kind: fixup_Mips_HI16
+                      # N32: addiu $5, $5, %lo(.Ltmp0)     # encoding: [0x24,0xa5,A,A]
+                      # N32:                               #   fixup A - offset: 0, value: %lo(.Ltmp0), kind: fixup_Mips_LO16
 1:

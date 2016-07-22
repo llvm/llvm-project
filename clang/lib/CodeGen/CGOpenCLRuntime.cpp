@@ -15,6 +15,7 @@
 
 #include "CGOpenCLRuntime.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/GlobalValue.h"
 #include <assert.h>
@@ -35,7 +36,7 @@ llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
 
   llvm::LLVMContext& Ctx = CGM.getLLVMContext();
   uint32_t ImgAddrSpc =
-    CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+    CGM.getTargetCodeGenInfo().getOpenCLImageAddrSpace(CGM);
   switch (cast<BuiltinType>(T)->getKind()) {
   default: 
     llvm_unreachable("Unexpected opencl builtin type!");

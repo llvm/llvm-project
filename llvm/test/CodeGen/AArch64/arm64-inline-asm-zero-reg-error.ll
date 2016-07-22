@@ -1,4 +1,4 @@
-; RUN: not llc < %s -march=arm64 2>&1 | FileCheck %s
+; RUN: not llc < %s -mtriple=arm64-eabi 2>&1 | FileCheck %s
 
 
 ; The 'z' constraint allocates either xzr or wzr, but obviously an input of 1 is

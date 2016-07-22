@@ -47,6 +47,8 @@ public:
   /// for this function and the hash and number of counts match, each counter is
   /// summed. Optionally scale counts by \p Weight.
   Error addRecord(InstrProfRecord &&I, uint64_t Weight = 1);
+  /// Merge existing function counts from the given writer.
+  Error mergeRecordsFromWriter(InstrProfWriter &&IPW);
   /// Write the profile to \c OS
   void write(raw_fd_ostream &OS);
   /// Write the profile in text format to \c OS

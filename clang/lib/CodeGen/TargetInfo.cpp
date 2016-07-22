@@ -375,6 +375,11 @@ TargetCodeGenInfo::getDependentLibraryOption(llvm::StringRef Lib,
 unsigned TargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::C;
 }
+
+unsigned TargetCodeGenInfo::getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const {
+  return CGM.getContext().getTargetAddressSpace(LangAS::opencl_global);
+}
+
 static bool isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays);
 
 /// isEmptyField - Return true iff a the field is "empty", that is it
@@ -6832,9 +6837,12 @@ public:
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
   unsigned getOpenCLKernelCallingConv() const override;
+  unsigned getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const override;
 };
 
 }
+
+static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM);
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   const Decl *D,
@@ -6857,11 +6865,17 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     if (NumSGPR != 0)
       F->addFnAttr("amdgpu_num_sgpr", llvm::utostr(NumSGPR));
   }
+
+  appendOpenCLVersionMD(M);
 }
 
 
 unsigned AMDGPUTargetCodeGenInfo::getOpenCLKernelCallingConv() const {
   return llvm::CallingConv::AMDGPU_KERNEL;
+}
+
+unsigned AMDGPUTargetCodeGenInfo::getOpenCLImageAddrSpace(CodeGen::CodeGenModule &CGM) const {
+  return CGM.getContext().getTargetAddressSpace(LangAS::opencl_constant);
 }
 
 //===----------------------------------------------------------------------===//
@@ -7530,6 +7544,13 @@ void SPIRTargetCodeGenInfo::emitTargetMD(const Decl *D, llvm::GlobalValue *GV,
   llvm::NamedMDNode *SPIRVerMD =
       M.getOrInsertNamedMetadata("opencl.spir.version");
   SPIRVerMD->addOperand(llvm::MDNode::get(Ctx, SPIRVerElts));
+  appendOpenCLVersionMD(CGM);
+}
+
+static void appendOpenCLVersionMD (CodeGen::CodeGenModule &CGM) {
+  llvm::LLVMContext &Ctx = CGM.getModule().getContext();
+  llvm::Type *Int32Ty = llvm::Type::getInt32Ty(Ctx);
+  llvm::Module &M = CGM.getModule();
   // SPIR v2.0 s2.13 - The OpenCL version used by the module is stored in the
   // opencl.ocl.version named metadata node.
   llvm::Metadata *OCLVerElts[] = {

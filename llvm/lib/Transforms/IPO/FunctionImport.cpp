@@ -719,9 +719,48 @@ static std::unique_ptr<ModuleSummaryIndex> getModuleSummaryIndexForFile(
   return (*ObjOrErr)->takeIndex();
 }
 
+static bool doImportingForModule(Module &M, const ModuleSummaryIndex *Index) {
+  if (SummaryFile.empty() && !Index)
+    report_fatal_error("error: -function-import requires -summary-file or "
+                       "file from frontend\n");
+  std::unique_ptr<ModuleSummaryIndex> IndexPtr;
+  if (!SummaryFile.empty()) {
+    if (Index)
+      report_fatal_error("error: -summary-file and index from frontend\n");
+    std::string Error;
+    IndexPtr =
+        getModuleSummaryIndexForFile(SummaryFile, Error, diagnosticHandler);
+    if (!IndexPtr) {
+      errs() << "Error loading file '" << SummaryFile << "': " << Error << "\n";
+      return false;
+    }
+    Index = IndexPtr.get();
+  }
+
+  // First step is collecting the import list.
+  FunctionImporter::ImportMapTy ImportList;
+  ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
+                                    ImportList);
+
+  // Next we need to promote to global scope and rename any local values that
+  // are potentially exported to other modules.
+  if (renameModuleForThinLTO(M, *Index, nullptr)) {
+    errs() << "Error renaming module\n";
+    return false;
+  }
+
+  // Perform the import now.
+  auto ModuleLoader = [&M](StringRef Identifier) {
+    return loadFile(Identifier, M.getContext());
+  };
+  FunctionImporter Importer(*Index, ModuleLoader);
+  return Importer.importFunctions(M, ImportList,
+                                  !DontForceImportReferencedDiscardableSymbols);
+}
+
 namespace {
 /// Pass that performs cross-module function import provided a summary file.
-class FunctionImportPass : public ModulePass {
+class FunctionImportLegacyPass : public ModulePass {
   /// Optional module summary index to use for importing, otherwise
   /// the summary-file option must be specified.
   const ModuleSummaryIndex *Index;
@@ -733,62 +772,32 @@ public:
   /// Specify pass name for debug output
   const char *getPassName() const override { return "Function Importing"; }
 
-  explicit FunctionImportPass(const ModuleSummaryIndex *Index = nullptr)
+  explicit FunctionImportLegacyPass(const ModuleSummaryIndex *Index = nullptr)
       : ModulePass(ID), Index(Index) {}
 
   bool runOnModule(Module &M) override {
     if (skipModule(M))
       return false;
 
-    if (SummaryFile.empty() && !Index)
-      report_fatal_error("error: -function-import requires -summary-file or "
-                         "file from frontend\n");
-    std::unique_ptr<ModuleSummaryIndex> IndexPtr;
-    if (!SummaryFile.empty()) {
-      if (Index)
-        report_fatal_error("error: -summary-file and index from frontend\n");
-      std::string Error;
-      IndexPtr =
-          getModuleSummaryIndexForFile(SummaryFile, Error, diagnosticHandler);
-      if (!IndexPtr) {
-        errs() << "Error loading file '" << SummaryFile << "': " << Error
-               << "\n";
-        return false;
-      }
-      Index = IndexPtr.get();
-    }
-
-    // First step is collecting the import list.
-    FunctionImporter::ImportMapTy ImportList;
-    ComputeCrossModuleImportForModule(M.getModuleIdentifier(), *Index,
-                                      ImportList);
-
-    // Next we need to promote to global scope and rename any local values that
-    // are potentially exported to other modules.
-    if (renameModuleForThinLTO(M, *Index, nullptr)) {
-      errs() << "Error renaming module\n";
-      return false;
-    }
-
-    // Perform the import now.
-    auto ModuleLoader = [&M](StringRef Identifier) {
-      return loadFile(Identifier, M.getContext());
-    };
-    FunctionImporter Importer(*Index, ModuleLoader);
-    return Importer.importFunctions(
-        M, ImportList, !DontForceImportReferencedDiscardableSymbols);
+    return doImportingForModule(M, Index);
   }
 };
 } // anonymous namespace
 
-char FunctionImportPass::ID = 0;
-INITIALIZE_PASS_BEGIN(FunctionImportPass, "function-import",
-                      "Summary Based Function Import", false, false)
-INITIALIZE_PASS_END(FunctionImportPass, "function-import",
-                    "Summary Based Function Import", false, false)
+PreservedAnalyses FunctionImportPass::run(Module &M,
+                                          AnalysisManager<Module> &AM) {
+  if (!doImportingForModule(M, Index))
+    return PreservedAnalyses::all();
+
+  return PreservedAnalyses::none();
+}
+
+char FunctionImportLegacyPass::ID = 0;
+INITIALIZE_PASS(FunctionImportLegacyPass, "function-import",
+                "Summary Based Function Import", false, false)
 
 namespace llvm {
 Pass *createFunctionImportPass(const ModuleSummaryIndex *Index = nullptr) {
-  return new FunctionImportPass(Index);
+  return new FunctionImportLegacyPass(Index);
 }
 }

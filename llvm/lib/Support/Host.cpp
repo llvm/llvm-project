@@ -21,6 +21,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include <string.h>
+#include <assert.h>
 
 // Include the platform-specific parts of this class.
 #ifdef LLVM_ON_UNIX
@@ -69,9 +70,12 @@ static ssize_t LLVM_ATTRIBUTE_UNUSED readCpuInfo(void *Buf, size_t Size) {
 }
 #endif
 
-#if defined(i386) || defined(__i386__) || defined(__x86__) ||                  \
-    defined(_M_IX86) || defined(__x86_64__) || defined(_M_AMD64) ||            \
-    defined(_M_X64)
+#if defined(__i386__) || defined(_M_IX86) || \
+    defined(__x86_64__) || defined(_M_X64)
+
+#if defined(__GNUC__) || defined(__clang__)
+#include <cpuid.h>
+#endif
 
 enum VendorSignatures {
   SIG_INTEL = 0x756e6547 /* Genu */,
@@ -173,26 +177,24 @@ enum ProcessorFeatures {
 /// the specified arguments.  If we can't run cpuid on the host, return true.
 static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
                                unsigned *rECX, unsigned *rEDX) {
+#if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
 #if defined(__GNUC__) || defined(__clang__)
-#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
-  // gcc doesn't know cpuid would clobber ebx/rbx. Preseve it manually.
-  asm("movq\t%%rbx, %%rsi\n\t"
-      "cpuid\n\t"
-      "xchgq\t%%rbx, %%rsi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value));
-  return false;
-#elif defined(i386) || defined(__i386__) || defined(__x86__) || defined(_M_IX86)
-  asm("movl\t%%ebx, %%esi\n\t"
-      "cpuid\n\t"
-      "xchgl\t%%ebx, %%esi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value));
-  return false;
-// pedantic #else returns to appease -Wunreachable-code (so we don't generate
-// postprocessed code that looks like "return true; return false;")
+#if defined(__x86_64__)
+  // gcc doesn't know cpuid would clobber ebx/rbx. Preserve it manually.
+  // FIXME: should we save this for Clang?
+  __asm__("movq\t%%rbx, %%rsi\n\t"
+          "cpuid\n\t"
+          "xchgq\t%%rbx, %%rsi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value));
+#elif defined(__i386__)
+  __asm__("movl\t%%ebx, %%esi\n\t"
+          "cpuid\n\t"
+          "xchgl\t%%ebx, %%esi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value));
 #else
-  return true;
+  assert(0 && "This method is defined only for x86.");
 #endif
 #elif defined(_MSC_VER)
   // The MSVC intrinsic is portable across x86 and x64.
@@ -202,6 +204,7 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
   *rEBX = registers[1];
   *rECX = registers[2];
   *rEDX = registers[3];
+#endif
   return false;
 #else
   return true;
@@ -214,15 +217,16 @@ static bool getX86CpuIDAndInfo(unsigned value, unsigned *rEAX, unsigned *rEBX,
 static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
                                  unsigned *rEAX, unsigned *rEBX, unsigned *rECX,
                                  unsigned *rEDX) {
-#if defined(__x86_64__) || defined(_M_AMD64) || defined(_M_X64)
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__) || defined(_MSC_VER)
+#if defined(__x86_64__) || defined(_M_X64)
+#if defined(__GNUC__) || defined(__clang__)
   // gcc doesn't know cpuid would clobber ebx/rbx. Preseve it manually.
-  asm("movq\t%%rbx, %%rsi\n\t"
-      "cpuid\n\t"
-      "xchgq\t%%rbx, %%rsi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value), "c"(subleaf));
-  return false;
+  // FIXME: should we save this for Clang?
+  __asm__("movq\t%%rbx, %%rsi\n\t"
+          "cpuid\n\t"
+          "xchgq\t%%rbx, %%rsi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value), "c"(subleaf));
 #elif defined(_MSC_VER)
   int registers[4];
   __cpuidex(registers, value, subleaf);
@@ -230,18 +234,14 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
   *rEBX = registers[1];
   *rECX = registers[2];
   *rEDX = registers[3];
-  return false;
-#else
-  return true;
 #endif
-#elif defined(i386) || defined(__i386__) || defined(__x86__) || defined(_M_IX86)
-#if defined(__GNUC__)
-  asm("movl\t%%ebx, %%esi\n\t"
-      "cpuid\n\t"
-      "xchgl\t%%ebx, %%esi\n\t"
-      : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
-      : "a"(value), "c"(subleaf));
-  return false;
+#elif defined(__i386__) || defined(_M_IX86)
+#if defined(__GNUC__) || defined(__clang__)
+  __asm__("movl\t%%ebx, %%esi\n\t"
+          "cpuid\n\t"
+          "xchgl\t%%ebx, %%esi\n\t"
+          : "=a"(*rEAX), "=S"(*rEBX), "=c"(*rECX), "=d"(*rEDX)
+          : "a"(value), "c"(subleaf));
 #elif defined(_MSC_VER)
   __asm {
       mov   eax,value
@@ -256,17 +256,18 @@ static bool getX86CpuIDAndInfoEx(unsigned value, unsigned subleaf,
       mov   esi,rEDX
       mov   dword ptr [esi],edx
   }
-  return false;
-#else
-  return true;
 #endif
+#else
+  assert(0 && "This method is defined only for x86.");
+#endif
+  return false;
 #else
   return true;
 #endif
 }
 
 static bool getX86XCR0(unsigned *rEAX, unsigned *rEDX) {
-#if defined(__GNUC__)
+#if defined(__GNUC__) || defined(__clang__)
   // Check xgetbv; this uses a .byte sequence instead of the instruction
   // directly because older assemblers do not include support for xgetbv and
   // there is no easy way to conditionally compile based on the assembler used.
@@ -743,6 +744,13 @@ StringRef sys::getHostCPUName() {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLeaf, Vendor;
 
+#if defined(__GNUC__) || defined(__clang__)
+  //FIXME: include cpuid.h from clang or copy __get_cpuid_max here
+  // and simplify it to not invoke __cpuid (like cpu_model.c in
+  // compiler-rt/lib/builtins/cpu_model.c?
+  if(!__get_cpuid_max(0, &Vendor))
+    return "generic";
+#endif
   if (getX86CpuIDAndInfo(0, &MaxLeaf, &Vendor, &ECX, &EDX))
     return "generic";
   if (getX86CpuIDAndInfo(0x1, &EAX, &EBX, &ECX, &EDX))
@@ -1148,9 +1156,8 @@ StringRef sys::getHostCPUName() {
 StringRef sys::getHostCPUName() { return "generic"; }
 #endif
 
-#if defined(i386) || defined(__i386__) || defined(__x86__) ||                  \
-    defined(_M_IX86) || defined(__x86_64__) || defined(_M_AMD64) ||            \
-    defined(_M_X64)
+#if defined(__i386__) || defined(_M_IX86) || \
+    defined(__x86_64__) || defined(_M_X64)
 bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   unsigned EAX = 0, EBX = 0, ECX = 0, EDX = 0;
   unsigned MaxLevel;

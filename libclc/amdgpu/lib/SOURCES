@@ -1,5 +1,4 @@
 atomic/atomic.cl
-math/ldexp.cl
 math/nextafter.cl
 math/sqrt.cl
 workitem/get_num_groups.ll

@@ -10,7 +10,7 @@ define double @foo(double %a, double %b) nounwind readnone {
 entry:
 ; ALL-LABEL: foo:
 
-; FCC:           bc1f $BB
+; FCC:           bc1f {{\$|\.L}}BB
 ; FCC:           nop
 
 ; 32-GPR:        mtc1      $zero, $[[Z:f[0-9]]]
@@ -19,7 +19,7 @@ entry:
 ; GPR:           cmp.lt.d  $[[FGRCC:f[0-9]+]], $[[Z]], $f12
 ; GPR:           mfc1      $[[GPRCC:[0-9]+]], $[[FGRCC]]
 ; GPR-NOT:       not       $[[GPRCC]], $[[GPRCC]]
-; GPR:           bnezc     $[[GPRCC]], $BB
+; GPR:           bnezc     $[[GPRCC]], {{\$|\.L}}BB
 
   %cmp = fcmp ogt double %a, 0.000000e+00
   br i1 %cmp, label %if.end6, label %if.else
@@ -43,7 +43,7 @@ define void @f1(float %f) nounwind {
 entry:
 ; ALL-LABEL: f1:
 
-; FCC:           bc1f $BB
+; FCC:           bc1f {{\$|\.L}}BB
 ; FCC:           nop
 
 ; GPR:           mtc1     $zero, $[[Z:f[0-9]]]

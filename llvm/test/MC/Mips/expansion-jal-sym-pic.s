@@ -10,7 +10,7 @@
 # RUN: llvm-mc %s -arch=mips -mcpu=mips32 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MICROMIPS,O32-MICROMIPS
 
-# RUN: llvm-mc %s -arch=mips -mcpu=mips64 -target-abi n32 -mattr=micromips -show-encoding |\
+# RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n32 -mattr=micromips -show-encoding |\
 # RUN:   FileCheck %s -check-prefixes=ALL,MICROMIPS,N32-MICROMIPS
 
 # RUN: llvm-mc %s -arch=mips64 -mcpu=mips64 -target-abi n64 -mattr=micromips -show-encoding |\
@@ -164,19 +164,19 @@ local_label:
 # N32: lw  $25, %got_disp($tmp0)($gp) # encoding: [0x8f,0x99,A,A]
 # N32:                                #   fixup A - offset: 0, value: %got_disp($tmp0), kind:   fixup_Mips_GOT_DISP
 
-# N64: ld  $25, %got_disp($tmp0)($gp) # encoding: [0xdf,0x99,A,A]
-# N64:                                #   fixup A - offset: 0, value: %got_disp($tmp0), kind:   fixup_Mips_GOT_DISP
+# N64: ld  $25, %got_disp(.Ltmp0)($gp) # encoding: [0xdf,0x99,A,A]
+# N64:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp0), kind:   fixup_Mips_GOT_DISP
 
 # O32-MICROMIPS: lw    $25, %got($tmp0)($gp)    # encoding: [0xff,0x3c,A,A]
 # O32-MICROMIPS:                                #   fixup A - offset: 0, value: %got($tmp0), kind: fixup_MICROMIPS_GOT16
 # O32-MICROMIPS: addiu $25, $25, %lo($tmp0)     # encoding: [0x33,0x39,A,A]
 # O32-MICROMIPS:                                #   fixup A - offset: 0, value: %lo($tmp0), kind: fixup_MICROMIPS_LO16
 
-# N32-MICROMIPS: lw  $25, %got_disp($tmp0)($gp) # encoding: [0xff,0x3c,A,A]
-# N32-MICROMIPS:                                #   fixup A - offset: 0, value: %got_disp($tmp0), kind: fixup_MICROMIPS_GOT_DISP
+# N32-MICROMIPS: lw  $25, %got_disp(.Ltmp0)($gp) # encoding: [0xff,0x3c,A,A]
+# N32-MICROMIPS:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp0), kind: fixup_MICROMIPS_GOT_DISP
 
-# N64-MICROMIPS: ld  $25, %got_disp($tmp0)($gp) # encoding: [0xdf,0x99,A,A]
-# N64-MICROMIPS:                                #   fixup A - offset: 0, value: %got_disp($tmp0), kind: fixup_MICROMIPS_GOT_DISP
+# N64-MICROMIPS: ld  $25, %got_disp(.Ltmp0)($gp) # encoding: [0xdf,0x99,A,A]
+# N64-MICROMIPS:                                 #   fixup A - offset: 0, value: %got_disp(.Ltmp0), kind: fixup_MICROMIPS_GOT_DISP
 
 # NORMAL:    jalr $25      # encoding: [0x03,0x20,0xf8,0x09]
 # MICROMIPS: jalr $ra, $25 # encoding: [0x03,0xf9,0x0f,0x3c]

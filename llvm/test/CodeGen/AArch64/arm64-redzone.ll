@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 -aarch64-redzone | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi -aarch64-redzone | FileCheck %s
 
 define i32 @foo(i32 %a, i32 %b) nounwind ssp {
 ; CHECK-LABEL: foo:

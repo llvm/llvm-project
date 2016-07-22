@@ -60,6 +60,9 @@ TEST_CASE(create_existing_directory)
 TEST_CASE(create_directory_one_level)
 {
     scoped_test_env env;
+    // Remove setgid which mkdir would inherit
+    permissions(env.test_root, perms::remove_perms | perms::set_gid);
+
     const path dir = env.make_env_path("dir1");
     const path attr_dir = env.create_dir("dir2");
     permissions(attr_dir, perms::none);

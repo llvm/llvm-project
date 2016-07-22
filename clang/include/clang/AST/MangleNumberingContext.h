@@ -16,7 +16,6 @@
 #define LLVM_CLANG_AST_MANGLENUMBERINGCONTEXT_H
 
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 
 namespace clang {

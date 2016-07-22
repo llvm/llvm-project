@@ -585,4 +585,6 @@
 /* Define to 1 if you have the `_chsize_s' function. */
 #cmakedefine HAVE__CHSIZE_S ${HAVE__CHSIZE_S}
 
+#cmakedefine HAVE_POSIX_FALLOCATE ${HAVE_POSIX_FALLOCATE}
+
 #endif

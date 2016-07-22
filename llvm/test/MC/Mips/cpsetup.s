@@ -1,22 +1,22 @@
-# RUN: llvm-mc -triple mips64-unknown-linux -target-abi o32 -filetype=obj -o - %s | \
+# RUN: llvm-mc -triple mips-unknown-linux -target-abi o32 -filetype=obj -o - %s | \
 # RUN:   llvm-objdump -d -r - | FileCheck -check-prefixes=ALL,O32 %s
 
-# RUN: llvm-mc -triple mips64-unknown-unknown -target-abi o32 %s | \
-# RUN:   FileCheck -check-prefixes=ALL,ASM %s
+# RUN: llvm-mc -triple mips-unknown-unknown -target-abi o32 %s | \
+# RUN:   FileCheck -check-prefixes=ALL,ASM,ASM-O32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux -target-abi n32 -filetype=obj -o - %s | \
 # RUN:   llvm-objdump -d -r - | \
 # RUN:   FileCheck -check-prefixes=ALL,NXX,N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown -target-abi n32 %s | \
-# RUN:   FileCheck -check-prefixes=ALL,ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM,ASM-N32 %s
 
 # RUN: llvm-mc -triple mips64-unknown-linux %s -filetype=obj -o - | \
 # RUN:   llvm-objdump -d -r - | \
 # RUN:   FileCheck -check-prefixes=ALL,NXX,N64 %s
 
 # RUN: llvm-mc -triple mips64-unknown-unknown %s | \
-# RUN:   FileCheck -check-prefixes=ALL,ASM %s
+# RUN:   FileCheck -check-prefixes=ALL,ASM,ASM-N64 %s
 
         .text
         .option pic2
@@ -105,8 +105,10 @@ t3:
 # NXX-NEXT: nop
 # NXX-NEXT: sub $3, $3, $2
 
-# ASM: $tmp0:
-# ASM-NEXT: .cpsetup $25, $2, $tmp0
+# ASM-O32: [[LABEL:\$tmp0]]:
+# ASM-N32: [[LABEL:\.Ltmp0]]:
+# ASM-N64: [[LABEL:\.Ltmp0]]:
+# ASM-NEXT: .cpsetup $25, $2, [[LABEL]]
 
 # Ensure we have at least one instruction between labels so that the labels
 # we're matching aren't removed.

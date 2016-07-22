@@ -510,8 +510,7 @@ for llvm users and not imposing a big burden on llvm developers:
 * Additions and changes to the IR should be reflected in
   ``test/Bitcode/compatibility.ll``.
 
-* The bitcode format produced by a X.Y release will be readable by all
-  following X.Z releases and the (X+1).0 release.
+* The current LLVM version supports loading any bitcode since version 3.0.
 
 * After each X.Y release, ``compatibility.ll`` must be copied to
   ``compatibility-X.Y.ll``. The corresponding bitcode file should be assembled

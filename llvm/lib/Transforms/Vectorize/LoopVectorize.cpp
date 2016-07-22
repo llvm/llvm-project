@@ -290,9 +290,10 @@ public:
                       LoopInfo *LI, DominatorTree *DT,
                       const TargetLibraryInfo *TLI,
                       const TargetTransformInfo *TTI, AssumptionCache *AC,
-                      unsigned VecWidth, unsigned UnrollFactor)
+                      OptimizationRemarkEmitter *ORE, unsigned VecWidth,
+                      unsigned UnrollFactor)
       : OrigLoop(OrigLoop), PSE(PSE), LI(LI), DT(DT), TLI(TLI), TTI(TTI),
-        AC(AC), VF(VecWidth), UF(UnrollFactor),
+        AC(AC), ORE(ORE), VF(VecWidth), UF(UnrollFactor),
         Builder(PSE.getSE()->getContext()), Induction(nullptr),
         OldInduction(nullptr), WidenMap(UnrollFactor), TripCount(nullptr),
         VectorTripCount(nullptr), Legal(nullptr), AddedSafetyChecks(false) {}
@@ -529,6 +530,8 @@ protected:
   const TargetTransformInfo *TTI;
   /// Assumption Cache.
   AssumptionCache *AC;
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter *ORE;
 
   /// \brief LoopVersioning.  It's only set up (non-null) if memchecks were
   /// used.
@@ -613,8 +616,8 @@ public:
                     LoopInfo *LI, DominatorTree *DT,
                     const TargetLibraryInfo *TLI,
                     const TargetTransformInfo *TTI, AssumptionCache *AC,
-                    unsigned UnrollFactor)
-      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, 1,
+                    OptimizationRemarkEmitter *ORE, unsigned UnrollFactor)
+      : InnerLoopVectorizer(OrigLoop, PSE, LI, DT, TLI, TTI, AC, ORE, 1,
                             UnrollFactor) {}
 
 private:
@@ -1073,12 +1076,13 @@ public:
     FK_Enabled = 1,    ///< Forcing enabled.
   };
 
-  LoopVectorizeHints(const Loop *L, bool DisableInterleaving)
+  LoopVectorizeHints(const Loop *L, bool DisableInterleaving,
+                     OptimizationRemarkEmitter &ORE)
       : Width("vectorize.width", VectorizerParams::VectorizationFactor,
               HK_WIDTH),
         Interleave("interleave.count", DisableInterleaving, HK_UNROLL),
         Force("vectorize.enable", FK_Undefined, HK_FORCE),
-        PotentiallyUnsafe(false), TheLoop(L) {
+        PotentiallyUnsafe(false), TheLoop(L), ORE(ORE) {
     // Populate values with existing loop metadata.
     getHintsFromMetadata();
 
@@ -1100,17 +1104,15 @@ public:
   bool allowVectorization(Function *F, Loop *L, bool AlwaysVectorize) const {
     if (getForce() == LoopVectorizeHints::FK_Disabled) {
       DEBUG(dbgs() << "LV: Not vectorizing: #pragma vectorize disable.\n");
-      emitOptimizationRemarkAnalysis(F->getContext(),
-                                     vectorizeAnalysisPassName(), *F,
-                                     L->getStartLoc(), emitRemark());
+      ORE.emitOptimizationRemarkAnalysis(vectorizeAnalysisPassName(), L,
+                                         emitRemark());
       return false;
     }
 
     if (!AlwaysVectorize && getForce() != LoopVectorizeHints::FK_Enabled) {
       DEBUG(dbgs() << "LV: Not vectorizing: No #pragma vectorize enable.\n");
-      emitOptimizationRemarkAnalysis(F->getContext(),
-                                     vectorizeAnalysisPassName(), *F,
-                                     L->getStartLoc(), emitRemark());
+      ORE.emitOptimizationRemarkAnalysis(vectorizeAnalysisPassName(), L,
+                                         emitRemark());
       return false;
     }
 
@@ -1121,8 +1123,8 @@ public:
       // FIXME: Add interleave.disable metadata. This will allow
       // vectorize.disable to be used without disabling the pass and errors
       // to differentiate between disabled vectorization and a width of 1.
-      emitOptimizationRemarkAnalysis(
-          F->getContext(), vectorizeAnalysisPassName(), *F, L->getStartLoc(),
+      ORE.emitOptimizationRemarkAnalysis(
+          vectorizeAnalysisPassName(), L,
           "loop not vectorized: vectorization and interleaving are explicitly "
           "disabled, or vectorize width and interleave count are both set to "
           "1");
@@ -1303,19 +1305,23 @@ private:
 
   /// The loop these hints belong to.
   const Loop *TheLoop;
+
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter &ORE;
 };
 
-static void emitAnalysisDiag(const Function *TheFunction, const Loop *TheLoop,
+static void emitAnalysisDiag(const Loop *TheLoop,
                              const LoopVectorizeHints &Hints,
+                             OptimizationRemarkEmitter &ORE,
                              const LoopAccessReport &Message) {
   const char *Name = Hints.vectorizeAnalysisPassName();
-  LoopAccessReport::emitAnalysis(Message, TheFunction, TheLoop, Name);
+  LoopAccessReport::emitAnalysis(Message, TheLoop, Name, ORE);
 }
 
 static void emitMissedWarning(Function *F, Loop *L,
-                              const LoopVectorizeHints &LH) {
-  emitOptimizationRemarkMissed(F->getContext(), LV_NAME, *F, L->getStartLoc(),
-                               LH.emitRemark());
+                              const LoopVectorizeHints &LH,
+                              OptimizationRemarkEmitter *ORE) {
+  ORE->emitOptimizationRemarkMissed(LV_NAME, L, LH.emitRemark());
 
   if (LH.getForce() == LoopVectorizeHints::FK_Enabled) {
     if (LH.getWidth() != 1)
@@ -1349,12 +1355,12 @@ public:
       TargetLibraryInfo *TLI, AliasAnalysis *AA, Function *F,
       const TargetTransformInfo *TTI,
       std::function<const LoopAccessInfo &(Loop &)> *GetLAA, LoopInfo *LI,
-      LoopVectorizationRequirements *R, LoopVectorizeHints *H)
-      : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TheFunction(F),
-        TTI(TTI), DT(DT), GetLAA(GetLAA), LAI(nullptr),
-        InterleaveInfo(PSE, L, DT, LI), Induction(nullptr),
-        WidestIndTy(nullptr), HasFunNoNaNAttr(false), Requirements(R),
-        Hints(H) {}
+      OptimizationRemarkEmitter *ORE, LoopVectorizationRequirements *R,
+      LoopVectorizeHints *H)
+      : NumPredStores(0), TheLoop(L), PSE(PSE), TLI(TLI), TTI(TTI), DT(DT),
+        GetLAA(GetLAA), LAI(nullptr), ORE(ORE), InterleaveInfo(PSE, L, DT, LI),
+        Induction(nullptr), WidestIndTy(nullptr), HasFunNoNaNAttr(false),
+        Requirements(R), Hints(H) {}
 
   /// ReductionList contains the reduction descriptors for all
   /// of the reductions that were found in the loop.
@@ -1512,7 +1518,7 @@ private:
   /// VectorizationReport because the << operator of VectorizationReport returns
   /// LoopAccessReport.
   void emitAnalysis(const LoopAccessReport &Message) const {
-    emitAnalysisDiag(TheFunction, TheLoop, *Hints, Message);
+    emitAnalysisDiag(TheLoop, *Hints, *ORE, Message);
   }
 
   /// \brief If an access has a symbolic strides, this maps the pointer value to
@@ -1537,8 +1543,6 @@ private:
   PredicatedScalarEvolution &PSE;
   /// Target Library Info.
   TargetLibraryInfo *TLI;
-  /// Parent function
-  Function *TheFunction;
   /// Target Transform Info
   const TargetTransformInfo *TTI;
   /// Dominator Tree.
@@ -1548,6 +1552,8 @@ private:
   // And the loop-accesses info corresponding to this loop.  This pointer is
   // null until canVectorizeMemory sets it up.
   const LoopAccessInfo *LAI;
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter *ORE;
 
   /// The interleave access information contains groups of interleaved accesses
   /// with the same stride and close to each other.
@@ -1603,10 +1609,11 @@ public:
                              LoopInfo *LI, LoopVectorizationLegality *Legal,
                              const TargetTransformInfo &TTI,
                              const TargetLibraryInfo *TLI, DemandedBits *DB,
-                             AssumptionCache *AC, const Function *F,
+                             AssumptionCache *AC,
+                             OptimizationRemarkEmitter *ORE, const Function *F,
                              const LoopVectorizeHints *Hints)
       : TheLoop(L), PSE(PSE), LI(LI), Legal(Legal), TTI(TTI), TLI(TLI), DB(DB),
-        AC(AC), TheFunction(F), Hints(Hints) {}
+        AC(AC), ORE(ORE), TheFunction(F), Hints(Hints) {}
 
   /// Information about vectorization costs
   struct VectorizationFactor {
@@ -1689,7 +1696,7 @@ private:
   /// VectorizationReport because the << operator of VectorizationReport returns
   /// LoopAccessReport.
   void emitAnalysis(const LoopAccessReport &Message) const {
-    emitAnalysisDiag(TheFunction, TheLoop, *Hints, Message);
+    emitAnalysisDiag(TheLoop, *Hints, *ORE, Message);
   }
 
 public:
@@ -1714,6 +1721,9 @@ public:
   DemandedBits *DB;
   /// Assumption cache.
   AssumptionCache *AC;
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter *ORE;
+
   const Function *TheFunction;
   /// Loop Vectorize Hint.
   const LoopVectorizeHints *Hints;
@@ -1737,8 +1747,8 @@ public:
 /// followed by a non-expert user.
 class LoopVectorizationRequirements {
 public:
-  LoopVectorizationRequirements()
-      : NumRuntimePointerChecks(0), UnsafeAlgebraInst(nullptr) {}
+  LoopVectorizationRequirements(OptimizationRemarkEmitter &ORE)
+      : NumRuntimePointerChecks(0), UnsafeAlgebraInst(nullptr), ORE(ORE) {}
 
   void addUnsafeAlgebraInst(Instruction *I) {
     // First unsafe algebra instruction.
@@ -1752,8 +1762,9 @@ public:
     const char *Name = Hints.vectorizeAnalysisPassName();
     bool Failed = false;
     if (UnsafeAlgebraInst && !Hints.allowReordering()) {
-      emitOptimizationRemarkAnalysisFPCommute(
-          F->getContext(), Name, *F, UnsafeAlgebraInst->getDebugLoc(),
+      ORE.emitOptimizationRemarkAnalysisFPCommute(
+          Name, UnsafeAlgebraInst->getDebugLoc(),
+          UnsafeAlgebraInst->getParent(),
           VectorizationReport() << "cannot prove it is safe to reorder "
                                    "floating-point operations");
       Failed = true;
@@ -1766,8 +1777,8 @@ public:
         NumRuntimePointerChecks > VectorizerParams::RuntimeMemoryCheckThreshold;
     if ((ThresholdReached && !Hints.allowReordering()) ||
         PragmaThresholdReached) {
-      emitOptimizationRemarkAnalysisAliasing(
-          F->getContext(), Name, *F, L->getStartLoc(),
+      ORE.emitOptimizationRemarkAnalysisAliasing(
+          Name, L,
           VectorizationReport()
               << "cannot prove it is safe to reorder memory operations");
       DEBUG(dbgs() << "LV: Too many memory checks needed.\n");
@@ -1780,6 +1791,9 @@ public:
 private:
   unsigned NumRuntimePointerChecks;
   Instruction *UnsafeAlgebraInst;
+
+  /// Interface to emit optimization remarks.
+  OptimizationRemarkEmitter &ORE;
 };
 
 static void addInnerLoop(Loop &L, SmallVectorImpl<Loop *> &V) {
@@ -1819,12 +1833,13 @@ struct LoopVectorize : public FunctionPass {
     auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto *LAA = &getAnalysis<LoopAccessLegacyAnalysis>();
     auto *DB = &getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
+    auto *ORE = &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
 
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & { return LAA->getInfo(&L); };
 
     return Impl.runImpl(F, *SE, *LI, *TTI, *DT, *BFI, TLI, *DB, *AA, *AC,
-                        GetLAA);
+                        GetLAA, *ORE);
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
@@ -1839,6 +1854,7 @@ struct LoopVectorize : public FunctionPass {
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<LoopAccessLegacyAnalysis>();
     AU.addRequired<DemandedBitsWrapperPass>();
+    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
     AU.addPreserved<LoopInfoWrapperPass>();
     AU.addPreserved<DominatorTreeWrapperPass>();
     AU.addPreserved<BasicAAWrapperPass>();
@@ -1894,14 +1910,23 @@ void InnerLoopVectorizer::createVectorIntInductionPHI(
   // factor. The last of those goes into the PHI.
   PHINode *VecInd = PHINode::Create(SteppedStart->getType(), 2, "vec.ind",
                                     &*LoopVectorBody->getFirstInsertionPt());
-  Value *LastInduction = VecInd;
+  Instruction *LastInduction = VecInd;
   for (unsigned Part = 0; Part < UF; ++Part) {
     Entry[Part] = LastInduction;
-    LastInduction = Builder.CreateAdd(LastInduction, SplatVF, "step.add");
+    LastInduction = cast<Instruction>(
+        Builder.CreateAdd(LastInduction, SplatVF, "step.add"));
   }
 
+  // Move the last step to the end of the latch block. This ensures consistent
+  // placement of all induction updates.
+  auto *LoopVectorLatch = LI->getLoopFor(LoopVectorBody)->getLoopLatch();
+  auto *Br = cast<BranchInst>(LoopVectorLatch->getTerminator());
+  auto *ICmp = cast<Instruction>(Br->getCondition());
+  LastInduction->moveBefore(ICmp);
+  LastInduction->setName("vec.ind.next");
+
   VecInd->addIncoming(SteppedStart, LoopVectorPreHeader);
-  VecInd->addIncoming(LastInduction, LoopVectorBody);
+  VecInd->addIncoming(LastInduction, LoopVectorLatch);
 }
 
 void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
@@ -3123,7 +3148,7 @@ void InnerLoopVectorizer::createEmptyLoop() {
   if (MDNode *LID = OrigLoop->getLoopID())
     Lp->setLoopID(LID);
 
-  LoopVectorizeHints Hints(Lp, true);
+  LoopVectorizeHints Hints(Lp, true, *ORE);
   Hints.setAlreadyVectorized();
 }
 
@@ -6136,6 +6161,7 @@ INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopSimplify)
 INITIALIZE_PASS_DEPENDENCY(LoopAccessLegacyAnalysis)
 INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
 INITIALIZE_PASS_END(LoopVectorize, LV_NAME, lv_name, false, false)
 
 namespace llvm {
@@ -6156,6 +6182,16 @@ bool LoopVectorizationCostModel::isConsecutiveLoadOrStore(Instruction *Inst) {
   return false;
 }
 
+/// Take the pointer operand from the Load/Store instruction.
+/// Returns NULL if this is not a valid Load/Store instruction.
+static Value *getPointerOperand(Value *I) {
+  if (LoadInst *LI = dyn_cast<LoadInst>(I))
+    return LI->getPointerOperand();
+  if (StoreInst *SI = dyn_cast<StoreInst>(I))
+    return SI->getPointerOperand();
+  return nullptr;
+}
+
 void LoopVectorizationCostModel::collectValuesToIgnore() {
   // Ignore ephemeral values.
   CodeMetrics::collectEphemeralValues(TheLoop, AC, ValuesToIgnore);
@@ -6168,61 +6204,42 @@ void LoopVectorizationCostModel::collectValuesToIgnore() {
     VecValuesToIgnore.insert(Casts.begin(), Casts.end());
   }
 
-  // Ignore induction phis that are only used in either GetElementPtr or ICmp
-  // instruction to exit loop. Induction variables usually have large types and
-  // can have big impact when estimating register usage.
-  // This is for when VF > 1.
+  // Insert uniform instruction into VecValuesToIgnore.
+  // Collect non-gather/scatter and non-consecutive ptr in NonConsecutivePtr.
+  SmallPtrSet<Instruction *, 8> NonConsecutivePtr;
+  for (auto *BB : TheLoop->getBlocks()) {
+    for (auto &I : *BB) {
+      if (Legal->isUniformAfterVectorization(&I))
+        VecValuesToIgnore.insert(&I);
+      Instruction *PI = dyn_cast_or_null<Instruction>(getPointerOperand(&I));
+      if (PI && !Legal->isConsecutivePtr(PI) &&
+          !isGatherOrScatterLegal(&I, PI, Legal))
+        NonConsecutivePtr.insert(PI);
+    }
+  }
+
+  // Ignore induction phis that are either used in uniform instructions or
+  // NonConsecutivePtr.
   for (auto &Induction : *Legal->getInductionVars()) {
     auto *PN = Induction.first;
     auto *UpdateV = PN->getIncomingValueForBlock(TheLoop->getLoopLatch());
 
-    // Check that the PHI is only used by the induction increment (UpdateV) or
-    // by GEPs. Then check that UpdateV is only used by a compare instruction,
-    // the loop header PHI, or by GEPs.
-    // FIXME: Need precise def-use analysis to determine if this instruction
-    // variable will be vectorized.
-    if (all_of(PN->users(),
-               [&](const User *U) -> bool {
-                 return U == UpdateV || isa<GetElementPtrInst>(U);
-               }) &&
-        all_of(UpdateV->users(), [&](const User *U) -> bool {
-          return U == PN || isa<ICmpInst>(U) || isa<GetElementPtrInst>(U);
-        })) {
+    if (std::all_of(PN->user_begin(), PN->user_end(),
+                    [&](User *U) -> bool {
+                      Instruction *UI = dyn_cast<Instruction>(U);
+                      return U == UpdateV || !TheLoop->contains(UI) ||
+                             Legal->isUniformAfterVectorization(UI) ||
+                             NonConsecutivePtr.count(UI);
+                    }) &&
+        std::all_of(UpdateV->user_begin(), UpdateV->user_end(),
+                    [&](User *U) -> bool {
+                      Instruction *UI = dyn_cast<Instruction>(U);
+                      return U == PN || !TheLoop->contains(UI) ||
+                             Legal->isUniformAfterVectorization(UI) ||
+                             NonConsecutivePtr.count(UI);
+                    })) {
       VecValuesToIgnore.insert(PN);
       VecValuesToIgnore.insert(UpdateV);
-    }
-  }
-
-  // Ignore instructions that will not be vectorized.
-  // This is for when VF > 1.
-  for (BasicBlock *BB : TheLoop->blocks()) {
-    for (auto &Inst : *BB) {
-      switch (Inst.getOpcode())
-      case Instruction::GetElementPtr: {
-        // Ignore GEP if its last operand is an induction variable so that it is
-        // a consecutive load/store and won't be vectorized as scatter/gather
-        // pattern.
-
-        GetElementPtrInst *Gep = cast<GetElementPtrInst>(&Inst);
-        unsigned NumOperands = Gep->getNumOperands();
-        unsigned InductionOperand = getGEPInductionOperand(Gep);
-        bool GepToIgnore = true;
-
-        // Check that all of the gep indices are uniform except for the
-        // induction operand.
-        for (unsigned i = 0; i != NumOperands; ++i) {
-          if (i != InductionOperand &&
-              !PSE.getSE()->isLoopInvariant(PSE.getSCEV(Gep->getOperand(i)),
-                                            TheLoop)) {
-            GepToIgnore = false;
-            break;
-          }
-        }
-
-        if (GepToIgnore)
-          VecValuesToIgnore.insert(&Inst);
-        break;
-      }
     }
   }
 }
@@ -6384,7 +6401,7 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                << L->getHeader()->getParent()->getName() << "\" from "
                << DebugLocStr << "\n");
 
-  LoopVectorizeHints Hints(L, DisableUnrolling);
+  LoopVectorizeHints Hints(L, DisableUnrolling, *ORE);
 
   DEBUG(dbgs() << "LV: Loop hints:"
                << " force="
@@ -6422,9 +6439,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       DEBUG(dbgs() << " But vectorizing was explicitly forced.\n");
     else {
       DEBUG(dbgs() << "\n");
-      emitAnalysisDiag(F, L, Hints, VectorizationReport()
-                                        << "vectorization is not beneficial "
-                                           "and is not explicitly forced");
+      emitAnalysisDiag(L, Hints, *ORE, VectorizationReport()
+                                           << "vectorization is not beneficial "
+                                              "and is not explicitly forced");
       return false;
     }
   }
@@ -6432,17 +6449,17 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   PredicatedScalarEvolution PSE(*SE, *L);
 
   // Check if it is legal to vectorize the loop.
-  LoopVectorizationRequirements Requirements;
-  LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, GetLAA, LI,
+  LoopVectorizationRequirements Requirements(*ORE);
+  LoopVectorizationLegality LVL(L, PSE, DT, TLI, AA, F, TTI, GetLAA, LI, ORE,
                                 &Requirements, &Hints);
   if (!LVL.canVectorize()) {
     DEBUG(dbgs() << "LV: Not vectorizing: Cannot prove legality.\n");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
   // Use the cost model.
-  LoopVectorizationCostModel CM(L, PSE, LI, &LVL, *TTI, TLI, DB, AC, F,
+  LoopVectorizationCostModel CM(L, PSE, LI, &LVL, *TTI, TLI, DB, AC, ORE, F,
                                 &Hints);
   CM.collectValuesToIgnore();
 
@@ -6471,10 +6488,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     DEBUG(dbgs() << "LV: Can't vectorize when the NoImplicitFloat"
                     "attribute is used.\n");
     emitAnalysisDiag(
-        F, L, Hints,
+        L, Hints, *ORE,
         VectorizationReport()
             << "loop not vectorized due to NoImplicitFloat attribute");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6485,10 +6502,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   if (Hints.isPotentiallyUnsafe() &&
       TTI->isFPVectorizationPotentiallyUnsafe()) {
     DEBUG(dbgs() << "LV: Potentially unsafe FP op prevents vectorization.\n");
-    emitAnalysisDiag(F, L, Hints,
+    emitAnalysisDiag(L, Hints, *ORE,
                      VectorizationReport()
                          << "loop not vectorized due to unsafe FP support.");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6505,11 +6522,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   // Identify the diagnostic messages that should be produced.
   std::string VecDiagMsg, IntDiagMsg;
   bool VectorizeLoop = true, InterleaveLoop = true;
-
   if (Requirements.doesNotMeet(F, L, Hints)) {
     DEBUG(dbgs() << "LV: Not vectorizing: loop did not meet vectorization "
                     "requirements.\n");
-    emitMissedWarning(F, L, Hints);
+    emitMissedWarning(F, L, Hints, ORE);
     return false;
   }
 
@@ -6545,20 +6561,16 @@ bool LoopVectorizePass::processLoop(Loop *L) {
   const char *VAPassName = Hints.vectorizeAnalysisPassName();
   if (!VectorizeLoop && !InterleaveLoop) {
     // Do not vectorize or interleaving the loop.
-    emitOptimizationRemarkAnalysis(F->getContext(), VAPassName, *F,
-                                   L->getStartLoc(), VecDiagMsg);
-    emitOptimizationRemarkAnalysis(F->getContext(), LV_NAME, *F,
-                                   L->getStartLoc(), IntDiagMsg);
+    ORE->emitOptimizationRemarkAnalysis(VAPassName, L, VecDiagMsg);
+    ORE->emitOptimizationRemarkAnalysis(LV_NAME, L, IntDiagMsg);
     return false;
   } else if (!VectorizeLoop && InterleaveLoop) {
     DEBUG(dbgs() << "LV: Interleave Count is " << IC << '\n');
-    emitOptimizationRemarkAnalysis(F->getContext(), VAPassName, *F,
-                                   L->getStartLoc(), VecDiagMsg);
+    ORE->emitOptimizationRemarkAnalysis(VAPassName, L, VecDiagMsg);
   } else if (VectorizeLoop && !InterleaveLoop) {
     DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
                  << DebugLocStr << '\n');
-    emitOptimizationRemarkAnalysis(F->getContext(), LV_NAME, *F,
-                                   L->getStartLoc(), IntDiagMsg);
+    ORE->emitOptimizationRemarkAnalysis(LV_NAME, L, IntDiagMsg);
   } else if (VectorizeLoop && InterleaveLoop) {
     DEBUG(dbgs() << "LV: Found a vectorizable loop (" << VF.Width << ") in "
                  << DebugLocStr << '\n');
@@ -6569,15 +6581,15 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     assert(IC > 1 && "interleave count should not be 1 or 0");
     // If we decided that it is not legal to vectorize the loop, then
     // interleave it.
-    InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, IC);
+    InnerLoopUnroller Unroller(L, PSE, LI, DT, TLI, TTI, AC, ORE, IC);
     Unroller.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
 
-    emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
-                           Twine("interleaved loop (interleaved count: ") +
-                               Twine(IC) + ")");
+    ORE->emitOptimizationRemark(LV_NAME, L,
+                                Twine("interleaved loop (interleaved count: ") +
+                                    Twine(IC) + ")");
   } else {
     // If we decided that it is *legal* to vectorize the loop, then do it.
-    InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, VF.Width, IC);
+    InnerLoopVectorizer LB(L, PSE, LI, DT, TLI, TTI, AC, ORE, VF.Width, IC);
     LB.vectorize(&LVL, CM.MinBWs, CM.VecValuesToIgnore);
     ++LoopsVectorized;
 
@@ -6588,10 +6600,10 @@ bool LoopVectorizePass::processLoop(Loop *L) {
       AddRuntimeUnrollDisableMetaData(L);
 
     // Report the vectorization decision.
-    emitOptimizationRemark(F->getContext(), LV_NAME, *F, L->getStartLoc(),
-                           Twine("vectorized loop (vectorization width: ") +
-                               Twine(VF.Width) + ", interleaved count: " +
-                               Twine(IC) + ")");
+    ORE->emitOptimizationRemark(
+        LV_NAME, L, Twine("vectorized loop (vectorization width: ") +
+                        Twine(VF.Width) + ", interleaved count: " + Twine(IC) +
+                        ")");
   }
 
   // Mark the loop as already vectorized to avoid vectorizing again.
@@ -6605,7 +6617,8 @@ bool LoopVectorizePass::runImpl(
     Function &F, ScalarEvolution &SE_, LoopInfo &LI_, TargetTransformInfo &TTI_,
     DominatorTree &DT_, BlockFrequencyInfo &BFI_, TargetLibraryInfo *TLI_,
     DemandedBits &DB_, AliasAnalysis &AA_, AssumptionCache &AC_,
-    std::function<const LoopAccessInfo &(Loop &)> &GetLAA_) {
+    std::function<const LoopAccessInfo &(Loop &)> &GetLAA_,
+    OptimizationRemarkEmitter &ORE_) {
 
   SE = &SE_;
   LI = &LI_;
@@ -6617,6 +6630,7 @@ bool LoopVectorizePass::runImpl(
   AC = &AC_;
   GetLAA = &GetLAA_;
   DB = &DB_;
+  ORE = &ORE_;
 
   // Compute some weights outside of the loop over the loops. Compute this
   // using a BranchProbability to re-use its scaling math.
@@ -6665,13 +6679,15 @@ PreservedAnalyses LoopVectorizePass::run(Function &F,
     auto &AA = AM.getResult<AAManager>(F);
     auto &AC = AM.getResult<AssumptionAnalysis>(F);
     auto &DB = AM.getResult<DemandedBitsAnalysis>(F);
+    auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
     auto &LAM = AM.getResult<LoopAnalysisManagerFunctionProxy>(F).getManager();
     std::function<const LoopAccessInfo &(Loop &)> GetLAA =
         [&](Loop &L) -> const LoopAccessInfo & {
       return LAM.getResult<LoopAccessAnalysis>(L);
     };
-    bool Changed = runImpl(F, SE, LI, TTI, DT, BFI, TLI, DB, AA, AC, GetLAA);
+    bool Changed =
+        runImpl(F, SE, LI, TTI, DT, BFI, TLI, DB, AA, AC, GetLAA, ORE);
     if (!Changed)
       return PreservedAnalyses::all();
     PreservedAnalyses PA;

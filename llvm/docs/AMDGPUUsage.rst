@@ -171,7 +171,7 @@ keys, see the comments in lib/Target/AMDGPU/AmdKernelCodeT.h
 
 Here is an example of a minimal amd_kernel_code_t specification:
 
-.. code-block:: nasm
+.. code-block:: none
 
    .hsa_code_object_version 1,0
    .hsa_code_object_isa

@@ -1202,7 +1202,7 @@ struct OperandBundleUse {
 
     // Conservative answer:  no operands have any attributes.
     return false;
-  };
+  }
 
   /// \brief Return the tag of this operand bundle as a string.
   StringRef getTagName() const {
@@ -1471,7 +1471,7 @@ public:
 
     return std::equal(bundle_op_info_begin(), bundle_op_info_end(),
                       Other.bundle_op_info_begin());
-  };
+  }
 
   /// \brief Return true if this operand bundle user contains operand bundles
   /// with tags other than those specified in \p IDs.

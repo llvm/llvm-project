@@ -277,6 +277,7 @@ ProcessWinMiniDump::Impl::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_priva
 {
     Error error;
     size_t size;
+    info.Clear();
     const auto list = reinterpret_cast<const MINIDUMP_MEMORY_INFO_LIST *>(FindDumpStream(MemoryInfoListStream, &size));
     if (list == nullptr || size < sizeof(MINIDUMP_MEMORY_INFO_LIST))
     {
@@ -296,6 +297,8 @@ ProcessWinMiniDump::Impl::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_priva
         return error;
     }
 
+    const MINIDUMP_MEMORY_INFO *next_entry = nullptr;
+
     for (int i = 0; i < list->NumberOfEntries; ++i)
     {
         const auto entry = reinterpret_cast<const MINIDUMP_MEMORY_INFO *>(reinterpret_cast<const char *>(list) +
@@ -304,16 +307,34 @@ ProcessWinMiniDump::Impl::GetMemoryRegionInfo(lldb::addr_t load_addr, lldb_priva
         const auto tail = head + entry->RegionSize;
         if (head <= load_addr && load_addr < tail)
         {
+            info.GetRange().SetRangeBase((entry->State != MEM_FREE) ? head : load_addr);
+            info.GetRange().SetRangeEnd(tail);
             info.SetReadable(IsPageReadable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
             info.SetWritable(IsPageWritable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
             info.SetExecutable(IsPageExecutable(entry->Protect) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
+            info.SetMapped((entry->State != MEM_FREE) ? MemoryRegionInfo::eYes : MemoryRegionInfo::eNo);
             return error;
         }
+        else if (head > load_addr && (next_entry == nullptr || head < next_entry->BaseAddress) )
+        {
+            // In case there is no region containing load_addr keep track of the nearest region
+            // after load_addr so we can return the distance to it.
+            next_entry = entry;
+        }
     }
+
+    // No containing region found. Create an unmapped region that extends to the next region
+    // or LLDB_INVALID_ADDRESS
+    info.GetRange().SetRangeBase(load_addr);
+    info.GetRange().SetRangeEnd((next_entry != nullptr)?next_entry->BaseAddress:LLDB_INVALID_ADDRESS);
+    info.SetReadable(MemoryRegionInfo::eNo);
+    info.SetWritable(MemoryRegionInfo::eNo);
+    info.SetExecutable(MemoryRegionInfo::eNo);
+    info.SetMapped(MemoryRegionInfo::eNo);
+
     // Note that the memory info list doesn't seem to contain ranges in kernel space,
     // so if you're walking a stack that has kernel frames, the stack may appear
     // truncated.
-    error.SetErrorString("address is not in a known range");
     return error;
 }
 

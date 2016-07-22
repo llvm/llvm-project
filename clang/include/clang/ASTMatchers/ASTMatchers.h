@@ -51,7 +51,6 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchersInternal.h"
 #include "clang/ASTMatchers/ASTMatchersMacros.h"
-#include "llvm/ADT/Twine.h"
 #include "llvm/Support/Regex.h"
 #include <iterator>
 

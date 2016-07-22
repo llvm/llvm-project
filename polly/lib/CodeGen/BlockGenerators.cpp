@@ -278,6 +278,27 @@ void BlockGenerator::copyInstruction(ScopStmt &Stmt, Instruction *Inst,
   copyInstScalar(Stmt, Inst, BBMap, LTS);
 }
 
+void BlockGenerator::removeDeadInstructions(BasicBlock *BB, ValueMapT &BBMap) {
+  for (auto I = BB->rbegin(), E = BB->rend(); I != E; I++) {
+    Instruction *Inst = &*I;
+    Value *NewVal = BBMap[Inst];
+
+    if (!NewVal)
+      continue;
+
+    Instruction *NewInst = dyn_cast<Instruction>(NewVal);
+
+    if (!NewInst)
+      continue;
+
+    if (!isInstructionTriviallyDead(NewInst))
+      continue;
+
+    BBMap.erase(Inst);
+    NewInst->eraseFromParent();
+  }
+}
+
 void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
                               isl_id_to_ast_expr *NewAccesses) {
   assert(Stmt.isBlockStmt() &&
@@ -287,6 +308,7 @@ void BlockGenerator::copyStmt(ScopStmt &Stmt, LoopToScevMapT &LTS,
 
   BasicBlock *BB = Stmt.getBasicBlock();
   copyBB(Stmt, BB, BBMap, LTS, NewAccesses);
+  removeDeadInstructions(BB, BBMap);
 }
 
 BasicBlock *BlockGenerator::splitBB(BasicBlock *BB) {

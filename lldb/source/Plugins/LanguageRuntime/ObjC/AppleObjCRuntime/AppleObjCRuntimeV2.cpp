@@ -1350,13 +1350,15 @@ AppleObjCRuntimeV2::GetISAHashTablePointer ()
     return m_isa_hash_table_ptr;
 }
 
-bool
+AppleObjCRuntimeV2::DescriptorMapUpdateResult
 AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table)
 {
     Process *process = GetProcess();
     
     if (process == NULL)
-        return false;
+        return DescriptorMapUpdateResult::Fail();
+    
+    uint32_t num_class_infos = 0;
     
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
     
@@ -1365,13 +1367,13 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     ThreadSP thread_sp = process->GetThreadList().GetExpressionExecutionThread();
     
     if (!thread_sp)
-        return false;
+        return DescriptorMapUpdateResult::Fail();
     
     thread_sp->CalculateExecutionContext(exe_ctx);
     ClangASTContext *ast = process->GetTarget().GetScratchClangASTContext();
     
     if (!ast)
-        return false;
+        return DescriptorMapUpdateResult::Fail();
 
     Address function_address;
 
@@ -1387,7 +1389,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     {
         if (log)
             log->Printf ("No dynamic classes found in gdb_objc_realized_classes.");
-        return false;
+        return DescriptorMapUpdateResult::Fail();
     }
     
     // Make some types for our arguments
@@ -1425,7 +1427,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
             }
         }
         if (!m_get_class_info_code.get())
-            return false;
+            return DescriptorMapUpdateResult::Fail();
         
         // Next make the runner function for our implementation utility function.
         Value value;
@@ -1448,7 +1450,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         {
             if (log)
                 log->Printf("Failed to make function caller for implementation lookup: %s.", error.AsCString());
-            return false;
+            return DescriptorMapUpdateResult::Fail();
         }
     }
     else
@@ -1462,7 +1464,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
                 diagnostics.Dump(log);
             }
 
-            return false;
+            return DescriptorMapUpdateResult::Fail();
         }
         arguments = get_class_info_function->GetArgumentValues();
     }
@@ -1476,7 +1478,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
                                                             err);
     
     if (class_infos_addr == LLDB_INVALID_ADDRESS)
-        return false;
+        return DescriptorMapUpdateResult::Fail();
 
     std::lock_guard<std::mutex> guard(m_get_class_info_args_mutex);
 
@@ -1516,7 +1518,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
         if (results == eExpressionCompleted)
         {
             // The result is the number of ClassInfo structures that were filled in
-            uint32_t num_class_infos = return_value.GetScalar().ULong();
+            num_class_infos = return_value.GetScalar().ULong();
             if (log)
                 log->Printf("Discovered %u ObjC classes\n",num_class_infos);
             if (num_class_infos > 0)
@@ -1555,7 +1557,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapDynamic(RemoteNXMapTable &hash_table
     // Deallocate the memory we allocated for the ClassInfo array
     process->DeallocateMemory(class_infos_addr);
     
-    return success;
+    return DescriptorMapUpdateResult(success, num_class_infos);
 }
 
 uint32_t
@@ -1635,6 +1637,8 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     const uint32_t addr_size = process->GetAddressByteSize();
 
     Error err;
+    
+    uint32_t num_class_infos = 0;
     
     const lldb::addr_t objc_opt_ptr = GetSharedCacheReadOnlyAddress();
     
@@ -1770,7 +1774,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
         if (results == eExpressionCompleted)
         {
             // The result is the number of ClassInfo structures that were filled in
-            uint32_t num_class_infos = return_value.GetScalar().ULong();
+            num_class_infos = return_value.GetScalar().ULong();
             if (log)
                 log->Printf("Discovered %u ObjC classes in shared cache\n",num_class_infos);
 #ifdef LLDB_CONFIGURATION_DEBUG
@@ -1830,7 +1834,7 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapSharedCache()
     // Deallocate the memory we allocated for the ClassInfo array
     process->DeallocateMemory(class_infos_addr);
     
-    return DescriptorMapUpdateResult(success, any_found);
+    return DescriptorMapUpdateResult(success, num_class_infos);
 }
 
 bool
@@ -1927,16 +1931,30 @@ AppleObjCRuntimeV2::UpdateISAToDescriptorMapIfNeeded()
         m_hash_signature.UpdateSignature (hash_table);
 
         // Grab the dynamically loaded objc classes from the hash table in memory
-        UpdateISAToDescriptorMapDynamic(hash_table);
+        DescriptorMapUpdateResult dynamic_update_result = UpdateISAToDescriptorMapDynamic(hash_table);
 
         // Now get the objc classes that are baked into the Objective C runtime
         // in the shared cache, but only once per process as this data never
         // changes
         if (!m_loaded_objc_opt)
         {
+            // it is legitimately possible for the shared cache to be empty - in that case, the dynamic hash table
+            // will contain all the class information we need; the situation we're trying to detect is one where
+            // we aren't seeing class information from the runtime - in order to detect that vs. just the shared cache
+            // being empty or sparsely populated, we set an arbitrary (very low) threshold for the number of classes
+            // that we want to see in a "good" scenario - anything below that is suspicious (Foundation alone has thousands
+            // of classes)
+            const uint32_t num_classes_to_warn_at = 500;
+            
             DescriptorMapUpdateResult shared_cache_update_result = UpdateISAToDescriptorMapSharedCache();
-            if (!shared_cache_update_result.any_found)
-                WarnIfNoClassesCached ();
+            
+            // warn if:
+            // - we could not run either expression
+            // - we found fewer than num_classes_to_warn_at classes total
+            if ((false == shared_cache_update_result.m_update_ran) || (false == dynamic_update_result.m_update_ran))
+                WarnIfNoClassesCached();
+            else if (dynamic_update_result.m_num_found + shared_cache_update_result.m_num_found < num_classes_to_warn_at)
+                WarnIfNoClassesCached();
             else
                 m_loaded_objc_opt = true;
         }

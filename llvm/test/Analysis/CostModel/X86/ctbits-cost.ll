@@ -58,72 +58,88 @@ declare <32 x i8> @llvm.ctpop.v32i8(<32 x i8>)
 
 define <2 x i64> @var_ctpop_v2i64(<2 x i64> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v2i64':
-; SSE: Found an estimated cost of 2 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 12 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 7 for instruction:   %ctpop
+; AVX: Found an estimated cost of 7 for instruction:   %ctpop
+; XOP: Found an estimated cost of 7 for instruction:   %ctpop
   %ctpop = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
   ret <2 x i64> %ctpop
 }
 
 define <4 x i64> @var_ctpop_v4i64(<4 x i64> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v4i64':
-; SSE: Found an estimated cost of 4 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 24 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 14 for instruction:   %ctpop
+; AVX1: Found an estimated cost of 14 for instruction:   %ctpop
+; AVX2: Found an estimated cost of 7 for instruction:   %ctpop
+; XOPAVX1: Found an estimated cost of 14 for instruction:   %ctpop
+; XOPAVX2: Found an estimated cost of 7 for instruction:   %ctpop
   %ctpop = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %a)
   ret <4 x i64> %ctpop
 }
 
 define <4 x i32> @var_ctpop_v4i32(<4 x i32> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v4i32':
-; SSE: Found an estimated cost of 2 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 15 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 11 for instruction:   %ctpop
+; AVX: Found an estimated cost of 11 for instruction:   %ctpop
+; XOP: Found an estimated cost of 11 for instruction:   %ctpop
   %ctpop = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %a)
   ret <4 x i32> %ctpop
 }
 
 define <8 x i32> @var_ctpop_v8i32(<8 x i32> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v8i32':
-; SSE: Found an estimated cost of 4 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 30 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 22 for instruction:   %ctpop
+; AVX1: Found an estimated cost of 22 for instruction:   %ctpop
+; AVX2: Found an estimated cost of 11 for instruction:   %ctpop
+; XOPAVX1: Found an estimated cost of 22 for instruction:   %ctpop
+; XOPAVX2: Found an estimated cost of 11 for instruction:   %ctpop
   %ctpop = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %a)
   ret <8 x i32> %ctpop
 }
 
 define <8 x i16> @var_ctpop_v8i16(<8 x i16> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v8i16':
-; SSE: Found an estimated cost of 2 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 13 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 9 for instruction:   %ctpop
+; AVX: Found an estimated cost of 9 for instruction:   %ctpop
+; XOP: Found an estimated cost of 9 for instruction:   %ctpop
   %ctpop = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %a)
   ret <8 x i16> %ctpop
 }
 
 define <16 x i16> @var_ctpop_v16i16(<16 x i16> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v16i16':
-; SSE: Found an estimated cost of 4 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 26 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 18 for instruction:   %ctpop
+; AVX1: Found an estimated cost of 18 for instruction:   %ctpop
+; AVX2: Found an estimated cost of 9 for instruction:   %ctpop
+; XOPAVX1: Found an estimated cost of 18 for instruction:   %ctpop
+; XOPAVX2: Found an estimated cost of 9 for instruction:   %ctpop
   %ctpop = call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %a)
   ret <16 x i16> %ctpop
 }
 
 define <16 x i8> @var_ctpop_v16i8(<16 x i8> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v16i8':
-; SSE: Found an estimated cost of 2 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 10 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 6 for instruction:   %ctpop
+; AVX: Found an estimated cost of 6 for instruction:   %ctpop
+; XOP: Found an estimated cost of 6 for instruction:   %ctpop
   %ctpop = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %a)
   ret <16 x i8> %ctpop
 }
 
 define <32 x i8> @var_ctpop_v32i8(<32 x i8> %a) {
 ; CHECK: 'Cost Model Analysis' for function 'var_ctpop_v32i8':
-; SSE: Found an estimated cost of 4 for instruction:   %ctpop
-; AVX: Found an estimated cost of 2 for instruction:   %ctpop
-; XOP: Found an estimated cost of 2 for instruction:   %ctpop
+; SSE2: Found an estimated cost of 20 for instruction:   %ctpop
+; SSE42: Found an estimated cost of 12 for instruction:   %ctpop
+; AVX1: Found an estimated cost of 12 for instruction:   %ctpop
+; AVX2: Found an estimated cost of 6 for instruction:   %ctpop
+; XOPAVX1: Found an estimated cost of 12 for instruction:   %ctpop
+; XOPAVX2: Found an estimated cost of 6 for instruction:   %ctpop
   %ctpop = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
   ret <32 x i8> %ctpop
 }

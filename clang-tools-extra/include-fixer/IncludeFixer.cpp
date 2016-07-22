@@ -37,7 +37,6 @@ public:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
-    Filename = InFile;
     return llvm::make_unique<clang::ASTConsumer>();
   }
 
@@ -188,8 +187,6 @@ public:
     return clang::TypoCorrection();
   }
 
-  StringRef filename() const { return Filename; }
-
   /// Get the minimal include for a given path.
   std::string minimizeInclude(StringRef Include,
                               const clang::SourceManager &SourceManager,
@@ -230,18 +227,28 @@ public:
                                     Symbol.getContexts(),
                                     Symbol.getNumOccurrences());
     }
-    return IncludeFixerContext(QuerySymbol, SymbolScopedQualifiers,
-                               SymbolCandidates, QuerySymbolRange);
+    return IncludeFixerContext(QuerySymbolInfos, SymbolCandidates);
   }
 
 private:
   /// Query the database for a given identifier.
-  bool query(StringRef Query, StringRef ScopedQualifiers, tooling::Range Range) {
+  bool query(StringRef Query, StringRef ScopedQualifiers,
+             tooling::Range Range) {
     assert(!Query.empty() && "Empty query!");
 
-    // Skip other identifiers once we have discovered an identfier successfully.
-    if (!MatchedSymbols.empty())
+    // Save all instances of an unidentified symbol.
+    //
+    // We use conservative behavior for detecting the same unidentified symbol
+    // here. The symbols which have the same ScopedQualifier and RawIdentifier
+    // are considered equal. So that include-fixer avoids false positives, and
+    // always adds missing qualifiers to correct symbols.
+    if (!QuerySymbolInfos.empty()) {
+      if (ScopedQualifiers == QuerySymbolInfos.front().ScopedQualifiers &&
+          Query == QuerySymbolInfos.front().RawIdentifier) {
+        QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});
+      }
       return false;
+    }
 
     DEBUG(llvm::dbgs() << "Looking up '" << Query << "' at ");
     DEBUG(getCompilerInstance()
@@ -252,9 +259,7 @@ private:
               .print(llvm::dbgs(), getCompilerInstance().getSourceManager()));
     DEBUG(llvm::dbgs() << " ...");
 
-    QuerySymbol = Query.str();
-    QuerySymbolRange = Range;
-    SymbolScopedQualifiers = ScopedQualifiers;
+    QuerySymbolInfos.push_back({Query.str(), ScopedQualifiers, Range});
 
     // Query the symbol based on C++ name Lookup rules.
     // Firstly, lookup the identifier with scoped namespace contexts;
@@ -280,19 +285,8 @@ private:
   /// The client to use to find cross-references.
   SymbolIndexManager &SymbolIndexMgr;
 
-  /// The absolute path to the file being processed.
-  std::string Filename;
-
-  /// The symbol being queried.
-  std::string QuerySymbol;
-
-  /// The scoped qualifiers of QuerySymbol. It is represented as a sequence of
-  /// names and scope resolution operatiors ::, ending with a scope resolution
-  /// operator (e.g. a::b::). Empty if the symbol is not in a specific scope.
-  std::string SymbolScopedQualifiers;
-
-  /// The replacement range of the first discovered QuerySymbol.
-  tooling::Range QuerySymbolRange;
+  /// The information of the symbols being queried.
+  std::vector<IncludeFixerContext::QuerySymbolInfo> QuerySymbolInfos;
 
   /// All symbol candidates which match QuerySymbol. We only include the first
   /// discovered identifier to avoid getting caught in results from error
@@ -349,13 +343,13 @@ bool IncludeFixerActionFactory::runInvocation(
   return !Compiler.getDiagnostics().hasFatalErrorOccurred();
 }
 
-llvm::Expected<tooling::Replacements>
-createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
-                               StringRef Header,
-                               const clang::format::FormatStyle &Style) {
-  if (Header.empty())
+llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
+    StringRef Code, StringRef FilePath, const IncludeFixerContext &Context,
+    const clang::format::FormatStyle &Style, bool AddQualifiers) {
+  if (Context.getHeaderInfos().empty())
     return tooling::Replacements();
-  std::string IncludeName = "#include " + Header.str() + "\n";
+  std::string IncludeName =
+      "#include " + Context.getHeaderInfos().front().Header + "\n";
   // Create replacements for the new header.
   clang::tooling::Replacements Insertions = {
       tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName)};
@@ -363,6 +357,14 @@ createInsertHeaderReplacements(StringRef Code, StringRef FilePath,
   auto CleanReplaces = cleanupAroundReplacements(Code, Insertions, Style);
   if (!CleanReplaces)
     return CleanReplaces;
+
+  if (AddQualifiers) {
+    for (const auto &Info : Context.getQuerySymbolInfos()) {
+      CleanReplaces->insert({FilePath, Info.Range.getOffset(),
+                             Info.Range.getLength(),
+                             Context.getHeaderInfos().front().QualifiedName});
+    }
+  }
   return formatReplacements(Code, *CleanReplaces, Style);
 }
 

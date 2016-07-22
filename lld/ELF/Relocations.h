@@ -73,10 +73,11 @@ template <class ELFT> struct Relocation {
   SymbolBody *Sym;
 };
 
-template <class ELFT> void scanRelocations(InputSection<ELFT> &);
-
 template <class ELFT>
 void scanRelocations(InputSectionBase<ELFT> &, const typename ELFT::Shdr &);
+
+template <class ELFT>
+void createThunks(InputSectionBase<ELFT> &, const typename ELFT::Shdr &);
 
 template <class ELFT>
 static inline typename ELFT::uint getAddend(const typename ELFT::Rel &Rel) {

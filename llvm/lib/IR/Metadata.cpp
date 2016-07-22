@@ -416,7 +416,7 @@ void ValueAsMetadata::handleRAUW(Value *From, Value *To) {
 
 MDString *MDString::get(LLVMContext &Context, StringRef Str) {
   auto &Store = Context.pImpl->MDStringCache;
-  auto I = Store.emplace_second(Str);
+  auto I = Store.try_emplace(Str);
   auto &MapEntry = I.first->getValue();
   if (!I.second)
     return &MapEntry;

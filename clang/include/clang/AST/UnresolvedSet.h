@@ -17,7 +17,6 @@
 
 #include "clang/AST/DeclAccessPair.h"
 #include "clang/Basic/LLVM.h"
-#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 

@@ -15,11 +15,11 @@
 #include "llvm/Analysis/LoopAccessAnalysis.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPassManager.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/PassManager.h"
@@ -94,14 +94,15 @@ bool VectorizerParams::isInterleaveForced() {
 }
 
 void LoopAccessReport::emitAnalysis(const LoopAccessReport &Message,
-                                    const Function *TheFunction,
-                                    const Loop *TheLoop,
-                                    const char *PassName) {
+                                    const Loop *TheLoop, const char *PassName,
+                                    OptimizationRemarkEmitter &ORE) {
   DebugLoc DL = TheLoop->getStartLoc();
-  if (const Instruction *I = Message.getInstr())
+  const Value *V = TheLoop->getHeader();
+  if (const Instruction *I = Message.getInstr()) {
     DL = I->getDebugLoc();
-  emitOptimizationRemarkAnalysis(TheFunction->getContext(), PassName,
-                                 *TheFunction, DL, Message.str());
+    V = I->getParent();
+  }
+  ORE.emitOptimizationRemarkAnalysis(PassName, DL, V, Message.str());
 }
 
 Value *llvm::stripIntegerCast(Value *V) {

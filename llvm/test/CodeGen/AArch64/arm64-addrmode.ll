@@ -1,4 +1,4 @@
-; RUN: llc -march=arm64 < %s | FileCheck %s
+; RUN: llc -mtriple=arm64-eabi < %s | FileCheck %s
 ; rdar://10232252
 
 @object = external hidden global i64, section "__DATA, __objc_ivar", align 8

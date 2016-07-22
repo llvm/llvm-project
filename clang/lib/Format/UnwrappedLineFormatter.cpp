@@ -10,6 +10,7 @@
 #include "UnwrappedLineFormatter.h"
 #include "WhitespaceManager.h"
 #include "llvm/Support/Debug.h"
+#include <queue>
 
 #define DEBUG_TYPE "format-formatter"
 

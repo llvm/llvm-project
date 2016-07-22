@@ -23,6 +23,7 @@
 #include "llvm/ProfileData/Coverage/CoverageMappingWriter.h"
 #include "llvm/ProfileData/InstrProfReader.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -920,15 +921,23 @@ struct CounterCoverageMappingBuilder
     // propagate counts into them.
   }
 };
-}
 
-static bool isMachO(const CodeGenModule &CGM) {
+bool isMachO(const CodeGenModule &CGM) {
   return CGM.getTarget().getTriple().isOSBinFormatMachO();
 }
 
-static StringRef getCoverageSection(const CodeGenModule &CGM) {
+StringRef getCoverageSection(const CodeGenModule &CGM) {
   return llvm::getInstrProfCoverageSectionName(isMachO(CGM));
 }
+
+std::string normalizeFilename(StringRef Filename) {
+  llvm::SmallString<256> Path(Filename);
+  llvm::sys::fs::make_absolute(Path);
+  llvm::sys::path::remove_dots(Path, /*remove_dot_dots=*/true);
+  return Path.str().str();
+}
+
+} // end anonymous namespace
 
 static void dump(llvm::raw_ostream &OS, StringRef FunctionName,
                  ArrayRef<CounterExpression> Expressions,
@@ -994,7 +1003,7 @@ void CoverageMappingModuleGen::addFunctionMappingRecord(
     llvm::SmallVector<StringRef, 16> FilenameRefs;
     FilenameRefs.resize(FileEntries.size());
     for (const auto &Entry : FileEntries)
-      FilenameRefs[Entry.second] = Entry.first->getName();
+      FilenameRefs[Entry.second] = normalizeFilename(Entry.first->getName());
     RawCoverageMappingReader Reader(CoverageMapping, FilenameRefs, Filenames,
                                     Expressions, Regions);
     if (Reader.read())
@@ -1015,11 +1024,8 @@ void CoverageMappingModuleGen::emit() {
   FilenameStrs.resize(FileEntries.size());
   FilenameRefs.resize(FileEntries.size());
   for (const auto &Entry : FileEntries) {
-    llvm::SmallString<256> Path(Entry.first->getName());
-    llvm::sys::fs::make_absolute(Path);
-
     auto I = Entry.second;
-    FilenameStrs[I] = std::string(Path.begin(), Path.end());
+    FilenameStrs[I] = normalizeFilename(Entry.first->getName());
     FilenameRefs[I] = FilenameStrs[I];
   }
 

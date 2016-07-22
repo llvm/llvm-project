@@ -116,7 +116,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ?????: R_MIPS_SHIFT5 foo
                                            // ?????: R_MIPS_SHIFT6 foo
 
-// DATA-NEXT:  0060: 24620000 24620000 24620000 24620000
+// DATA-NEXT:  0060: 24620000 24620000 24620004 24620000
         addiu $2, $3, %got_disp(foo)       // RELOC: R_MIPS_GOT_DISP foo
                                            // ENCBE: addiu $2, $3, %got_disp(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %got_disp(foo) # encoding: [A,A,0x62,0x24]
@@ -127,17 +127,27 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %got_page(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %got_page(foo), kind: fixup_Mips_GOT_PAGE
 
+        addiu $2, $3, %got_page(bar)       // RELOC: R_MIPS_GOT_PAGE .data
+                                           // ENCBE: addiu $2, $3, %got_page(bar) # encoding: [0x24,0x62,A,A]
+                                           // ENCLE: addiu $2, $3, %got_page(bar) # encoding: [A,A,0x62,0x24]
+                                           // FIXUP: # fixup A - offset: 0, value: %got_page(bar), kind: fixup_Mips_GOT_PAGE
+
         addiu $2, $3, %got_ofst(foo)       // RELOC: R_MIPS_GOT_OFST foo
                                            // ENCBE: addiu $2, $3, %got_ofst(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %got_ofst(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %got_ofst(foo), kind: fixup_Mips_GOT_OFST
+
+// DATA-NEXT:  0070: 24620004 24620000 24620000 64620000
+        addiu $2, $3, %got_ofst(bar)       // RELOC: R_MIPS_GOT_OFST .data
+                                           // ENCBE: addiu $2, $3, %got_ofst(bar) # encoding: [0x24,0x62,A,A]
+                                           // ENCLE: addiu $2, $3, %got_ofst(bar) # encoding: [A,A,0x62,0x24]
+                                           // FIXUP: # fixup A - offset: 0, value: %got_ofst(bar), kind: fixup_Mips_GOT_OFST
 
         addiu $2, $3, %got_hi(foo)         // RELOC: R_MIPS_GOT_HI16 foo
                                            // ENCBE: addiu $2, $3, %got_hi(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %got_hi(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %got_hi(foo), kind: fixup_Mips_GOT_HI16
 
-// DATA-NEXT:  0070: 24620000 64620000 64620000 24620000
         addiu $2, $3, %got_lo(foo)         // RELOC: R_MIPS_GOT_LO16 foo
                                            // ENCBE: addiu $2, $3, %got_lo(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %got_lo(foo) # encoding: [A,A,0x62,0x24]
@@ -154,6 +164,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: daddiu $2, $3, %higher(foo) # encoding: [A,A,0x62,0x64]
                                            // FIXUP: # fixup A - offset: 0, value: %higher(foo), kind: fixup_Mips_HIGHER
 
+// DATA-NEXT:  0080: 64620000 24620000 24620000 24620000
         daddiu $2, $3, %highest(foo)       // RELOC: R_MIPS_HIGHEST foo
                                            // ENCBE: daddiu $2, $3, %highest(foo) # encoding: [0x64,0x62,A,A]
                                            // ENCLE: daddiu $2, $3, %highest(foo) # encoding: [A,A,0x62,0x64]
@@ -165,7 +176,7 @@ baz:    .long foo                          // RELOC: R_MIPS_32 foo
                                            // ENCLE: addiu $2, $3, %call_hi(foo) # encoding: [A,A,0x62,0x24]
                                            // FIXUP: # fixup A - offset: 0, value: %call_hi(foo), kind: fixup_Mips_CALL_HI16
 
-// DATA-NEXT:  0080: 24620000 24620000 24620000 24620000
+// DATA-NEXT:  0090: 24620000 24620000 24620000 24620000
         addiu $2, $3, %call_lo(foo)        // RELOC: R_MIPS_CALL_LO16 foo
                                            // ENCBE: addiu $2, $3, %call_lo(foo) # encoding: [0x24,0x62,A,A]
                                            // ENCLE: addiu $2, $3, %call_lo(foo) # encoding: [A,A,0x62,0x24]
@@ -321,7 +332,22 @@ foo_mm:
                                            // ENCLE: addiu $2, $2, %lo(long_mm) # encoding: [0x42'A',0x30'A',0x00,0x00]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(long_mm), kind: fixup_MICROMIPS_LO16
 
-// DATA-NEXT:  0020: 30430000 30420000 30430000 30420004
+// DATA-NEXT:  0020: 30430004 00000000 30430004 00000000
+        addiu $2, $3, %got_page(bar)       // RELOC: R_MICROMIPS_GOT_PAGE .data
+                                           // ENCBE: addiu $2, $3, %got_page(bar) # encoding: [0x30,0x43,A,A]
+                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
+                                           // ENCLE: addiu $2, $3, %got_page(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %got_page(bar), kind: fixup_MICROMIPS_GOT_PAGE
+        nop
+
+        addiu $2, $3, %got_ofst(bar)       // RELOC: R_MICROMIPS_GOT_OFST .data
+                                           // ENCBE: addiu $2, $3, %got_ofst(bar) # encoding: [0x30,0x43,A,A]
+                                           // The placement of the 'A' annotations is incorrect. They use 32-bit little endian instead of 2x 16-bit little endian.
+                                           // ENCLE: addiu $2, $3, %got_ofst(bar) # encoding: [0x43'A',0x30'A',0x00,0x00]
+                                           // FIXUP: # fixup A - offset: 0, value: %got_ofst(bar), kind: fixup_MICROMIPS_GOT_OFST
+        nop
+
+// DATA-NEXT:  0030: 30430000 30420000 30430000 30420004
         addiu $2, $3, %hi(foo_mm)          // RELOC: R_MICROMIPS_HI16 foo_mm
                                            // ENCBE: addiu $2, $3, %hi(foo_mm) # encoding: [0x30,0x43,A,A]
                                            // ENCLE: addiu $2, $3, %hi(foo_mm) # encoding: [0x43'A',0x30'A',0x00,0x00]
@@ -342,5 +368,5 @@ foo_mm:
                                            // ENCLE: addiu $2, $2, %lo(bar) # encoding: [0x42'A',0x30'A',0x00,0x00]
                                            // FIXUP: # fixup A - offset: 0, value: %lo(bar), kind: fixup_MICROMIPS_LO16
 
-        .space 65536, 0
+        .space 65520, 0
 long_mm:

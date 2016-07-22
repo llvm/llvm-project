@@ -136,8 +136,8 @@ a:
         floor.l.s $f12,$f5
         floor.w.d $f14,$f11
         floor.w.s $f8,$f9
-        j         1f                   # CHECK: j $tmp0 # encoding: [0b000010AA,A,A,A]
-                                       # CHECK:         #   fixup A - offset: 0, value: ($tmp0), kind: fixup_Mips_26
+        j         1f                   # CHECK: j .Ltmp0 # encoding: [0b000010AA,A,A,A]
+                                       # CHECK:          #   fixup A - offset: 0, value: .Ltmp0, kind: fixup_Mips_26
         j         a                    # CHECK: j a     # encoding: [0b000010AA,A,A,A]
                                        # CHECK:         #   fixup A - offset: 0, value: a, kind: fixup_Mips_26
         j         1328                 # CHECK: j 1328  # encoding: [0x08,0x00,0x01,0x4c]

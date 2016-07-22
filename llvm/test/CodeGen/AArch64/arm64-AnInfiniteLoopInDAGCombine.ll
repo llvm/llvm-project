@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64
+; RUN: llc < %s -mtriple=arm64-eabi
 
 ; This test case tests an infinite loop bug in DAG combiner.
 ; It just tries to do the following replacing endlessly:

@@ -13,62 +13,29 @@
 ; YAML-NEXT:     Unknown1:        0
 ; YAML-NEXT:     BlockMapAddr:    24
 ; YAML-NEXT:   NumDirectoryBlocks: 1
-; YAML-NEXT:   DirectoryBlocks:
-; YAML-NEXT:     - 23
+; YAML-NEXT:   DirectoryBlocks: [ 23 ]
 ; YAML-NEXT:   NumStreams:      17
 ; YAML-NEXT:   FileSize:        102400
-; YAML-NEXT: StreamSizes:
-; YAML-NEXT:   - 40
-; YAML-NEXT:   - 118
-; YAML-NEXT:   - 5392
-; YAML-NEXT:   - 739
-; YAML-NEXT:   - 784
-; YAML-NEXT:   - 0
-; YAML-NEXT:   - 556
-; YAML-NEXT:   - 604
-; YAML-NEXT:   - 104
-; YAML-NEXT:   - 0
-; YAML-NEXT:   - 160
-; YAML-NEXT:   - 32
-; YAML-NEXT:   - 308
-; YAML-NEXT:   - 239
-; YAML-NEXT:   - 520
-; YAML-NEXT:   - 308
-; YAML-NEXT:   - 68
+; YAML-NEXT: StreamSizes: [ 40, 118, 5392, 739, 784, 0, 556, 604, 104, 0, 160, 32,
+; YAML-NEXT:                308, 239, 520, 308, 68 ]
 ; YAML-NEXT: StreamMap:
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 8
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 19
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 18
-; YAML-NEXT:       - 17
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 14
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 20
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 11
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 13
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 12
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 10
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 15
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 6
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 16
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 7
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 21
-; YAML-NEXT:   - Stream:
-; YAML-NEXT:       - 22
+; YAML-NEXT:   - Stream: [ 8 ]
+; YAML-NEXT:   - Stream: [ 19 ]
+; YAML-NEXT:   - Stream: [ 18, 17 ]
+; YAML-NEXT:   - Stream: [ 14 ]
+; YAML-NEXT:   - Stream: [ 20 ]
+; YAML-NEXT:   - Stream: [ ]
+; YAML-NEXT:   - Stream: [ 11 ]
+; YAML-NEXT:   - Stream: [ 13 ]
+; YAML-NEXT:   - Stream: [ 12 ]
+; YAML-NEXT:   - Stream: [ ]
+; YAML-NEXT:   - Stream: [ 10 ]
+; YAML-NEXT:   - Stream: [ 15 ]
+; YAML-NEXT:   - Stream: [ 6 ]
+; YAML-NEXT:   - Stream: [ 16 ]
+; YAML-NEXT:   - Stream: [ 7 ]
+; YAML-NEXT:   - Stream: [ 21 ]
+; YAML-NEXT:   - Stream: [ 22 ]
 ; YAML-NEXT: PdbStream:
 ; YAML-NEXT:   Age:             1
 ; YAML-NEXT:   Guid:            '{0B355641-86A0-A249-896F-9988FAE52FF0}'

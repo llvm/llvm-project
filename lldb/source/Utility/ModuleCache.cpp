@@ -323,7 +323,7 @@ ModuleCache::GetAndPut (const FileSpec &root_dir_spec,
     llvm::FileRemover tmp_symfile_remover (tmp_download_sym_file_spec.GetPath ().c_str ());
     if (error.Fail ())
         // Failed to download a symfile but fetching the module was successful. The module might
-        // contain the neccessary symbols and the debugging is also possible without a symfile.
+        // contain the necessary symbols and the debugging is also possible without a symfile.
         return Error ();
 
     error = Put (root_dir_spec, escaped_hostname.c_str(), module_spec, tmp_download_sym_file_spec, GetSymbolFileSpec(module_spec.GetFileSpec ()));

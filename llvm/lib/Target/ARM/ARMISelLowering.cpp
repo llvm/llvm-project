@@ -65,13 +65,6 @@ ARMInterworking("arm-interworking", cl::Hidden,
   cl::desc("Enable / disable ARM interworking (for debugging only)"),
   cl::init(true));
 
-// Disabled for causing self-hosting failures once returned-attribute inference
-// was enabled.
-static cl::opt<bool>
-EnableThisRetForwarding("arm-this-return-forwarding", cl::Hidden,
-                        cl::desc("Directly forward this return"),
-                        cl::init(false));
-
 namespace {
   class ARMCCState : public CCState {
   public:
@@ -806,6 +799,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       Subtarget->isTargetGNUAEABI() || Subtarget->isTargetMuslAEABI()) {
     setOperationAction(ISD::SREM, MVT::i64, Custom);
     setOperationAction(ISD::UREM, MVT::i64, Custom);
+    HasStandaloneRem = false;
 
     setLibcallName(RTLIB::SDIVREM_I8,  "__aeabi_idivmod");
     setLibcallName(RTLIB::SDIVREM_I16, "__aeabi_idivmod");
@@ -1473,7 +1467,7 @@ SDValue ARMTargetLowering::LowerCallResult(
 
     // Pass 'this' value directly from the argument to return value, to avoid
     // reg unit interference
-    if (i == 0 && isThisReturn && EnableThisRetForwarding) {
+    if (i == 0 && isThisReturn) {
       assert(!VA.needsCustom() && VA.getLocVT() == MVT::i32 &&
              "unexpected return calling convention register assignment");
       InVals.push_back(ThisVal);

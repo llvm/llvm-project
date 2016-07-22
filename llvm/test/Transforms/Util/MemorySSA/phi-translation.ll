@@ -138,8 +138,7 @@ loop.3:
 ; CHECK: 4 = MemoryDef(5)
 ; CHECK-NEXT: store i8 2, i8* %p2
   store i8 2, i8* %p2
-; FIXME: This should be MemoryUse(1)
-; CHECK: MemoryUse(5)
+; CHECK: MemoryUse(1)
 ; CHECK-NEXT: load i8, i8* %p1
   load i8, i8* %p1
   br i1 undef, label %loop.2, label %loop.1

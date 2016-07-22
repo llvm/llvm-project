@@ -2325,7 +2325,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPTargetParallelForSimdDirective = 269,
 
-  CXCursor_LastStmt = CXCursor_OMPTargetParallelForSimdDirective,
+  /** \brief OpenMP target simd directive.
+   */
+  CXCursor_OMPTargetSimdDirective = 270,
+
+  CXCursor_LastStmt = CXCursor_OMPTargetSimdDirective,
 
   /**
    * \brief Cursor that represents the translation unit itself.

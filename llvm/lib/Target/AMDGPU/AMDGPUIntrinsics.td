@@ -16,6 +16,8 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
 
   def int_AMDGPU_kill : Intrinsic<[], [llvm_float_ty], []>;
   def int_AMDGPU_kilp : Intrinsic<[], [], []>;
+
+  // Deprecated in favor of llvm.amdgcn.sffbh
   def int_AMDGPU_flbit_i32 : Intrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem]>;
 
   // Deprecated in favor of separate int_amdgcn_cube* intrinsics.
@@ -29,10 +31,6 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
   def int_AMDGPU_rsq : Intrinsic<
     [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
   >;
-
-  // Deprecated in favor of llvm.amdgcn.s.barrier
-  def int_AMDGPU_barrier_local  : Intrinsic<[], [], [IntrConvergent]>;
-  def int_AMDGPU_barrier_global : Intrinsic<[], [], [IntrConvergent]>;
 
   // Deprecated in favor of llvm.amdgcn.read.workdim
   def int_AMDGPU_read_workdim : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;

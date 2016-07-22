@@ -230,7 +230,7 @@ following C fragment, for example:
 
 Compiled to LLVM, this function would be represented like this:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ; Function Attrs: nounwind ssp uwtable
   define void @foo() #0 !dbg !4 {
@@ -303,7 +303,7 @@ The first intrinsic ``%llvm.dbg.declare`` encodes debugging information for the
 variable ``X``.  The metadata ``!dbg !14`` attached to the intrinsic provides
 scope information for the variable ``X``.
 
-.. code-block:: llvm
+.. code-block:: text
 
   !14 = !DILocation(line: 2, column: 9, scope: !4)
   !4 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !5,
@@ -327,7 +327,7 @@ The third intrinsic ``%llvm.dbg.declare`` encodes debugging information for
 variable ``Z``.  The metadata ``!dbg !19`` attached to the intrinsic provides
 scope information for the variable ``Z``.
 
-.. code-block:: llvm
+.. code-block:: text
 
   !18 = distinct !DILexicalBlock(scope: !4, file: !1, line: 4, column: 5)
   !19 = !DILocation(line: 5, column: 11, scope: !18)
@@ -390,7 +390,7 @@ Given an integer global variable declared as follows:
 
 a C/C++ front-end would generate the following descriptors:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;;
   ;; Define the global itself.
@@ -456,7 +456,7 @@ Given a function declared as follows:
 
 a C/C++ front-end would generate the following descriptors:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;;
   ;; Define the anchor for subprograms.

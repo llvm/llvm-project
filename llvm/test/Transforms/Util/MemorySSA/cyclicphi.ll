@@ -56,8 +56,7 @@ bb68:                                             ; preds = %bb26
 
 bb77:                                             ; preds = %bb68, %bb26
 ; CHECK: 2 = MemoryPhi({bb26,3},{bb68,1})
-; FIXME: This should be MemoryUse(liveOnEntry)
-; CHECK: MemoryUse(3)
+; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %tmp78 = load i64*, i64** %tmp25, align 8
   %tmp78 = load i64*, i64** %tmp25, align 8
   br label %bb26

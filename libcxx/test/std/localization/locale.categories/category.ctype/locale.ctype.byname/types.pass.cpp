@@ -28,12 +28,10 @@
 #include <cassert>
 
 #include "platform_support.h" // locale name macros
-#include "assert_checkpoint.h"
 
 int main()
 {
     {
-        CHECKPOINT("constructing en-US.UTF-8");
         std::locale l(LOCALE_en_US_UTF_8);
         {
             assert(std::has_facet<std::ctype_byname<char> >(l));
@@ -47,21 +45,6 @@ int main()
         }
     }
     {
-        CHECKPOINT("constructing default locale");
-        std::locale l("");
-        {
-            assert(std::has_facet<std::ctype_byname<char> >(l));
-            assert(&std::use_facet<std::ctype<char> >(l)
-                == &std::use_facet<std::ctype_byname<char> >(l));
-        }
-        {
-            assert(std::has_facet<std::ctype_byname<wchar_t> >(l));
-            assert(&std::use_facet<std::ctype<wchar_t> >(l)
-                == &std::use_facet<std::ctype_byname<wchar_t> >(l));
-        }
-    }
-    {
-        CHECKPOINT("constructing C locale");
         std::locale l("C");
         {
             assert(std::has_facet<std::ctype_byname<char> >(l));

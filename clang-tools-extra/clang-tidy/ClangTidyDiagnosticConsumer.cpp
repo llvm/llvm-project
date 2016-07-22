@@ -176,8 +176,7 @@ DiagnosticBuilder ClangTidyContext::diag(
   assert(Loc.isValid());
   unsigned ID = DiagEngine->getDiagnosticIDs()->getCustomDiagID(
       Level, (Description + " [" + CheckName + "]").str());
-  if (CheckNamesByDiagnosticID.count(ID) == 0)
-    CheckNamesByDiagnosticID.insert(std::make_pair(ID, CheckName.str()));
+  CheckNamesByDiagnosticID.try_emplace(ID, CheckName);
   return DiagEngine->Report(Loc, ID);
 }
 

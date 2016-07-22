@@ -238,6 +238,11 @@ public:
     return false;
   }
 
+  /// Return true if the target can handle a standalone remainder operation.
+  virtual bool hasStandaloneRem(EVT VT) const {
+    return true;
+  }
+
   /// Return true if sqrt(x) is as cheap or cheaper than 1 / rsqrt(x)
   bool isFsqrtCheap() const {
     return FsqrtIsCheap;

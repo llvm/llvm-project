@@ -435,7 +435,7 @@ public:
     /// @param[in] cpu The required CPU type.
     ///
     /// @param[in] os The optional OS type
-    /// The default value of 0 was choosen to from the ELF spec value
+    /// The default value of 0 was chosen to from the ELF spec value
     /// ELFOSABI_NONE.  ELF is the only one using this parameter.  If another
     /// format uses this parameter and 0 does not work, use a value over
     /// 255 because in the ELF header this is value is only a byte.

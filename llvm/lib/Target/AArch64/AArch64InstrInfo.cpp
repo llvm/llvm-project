@@ -3462,7 +3462,7 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
       unsigned Val = Root.getOperand(3).getImm();
       Imm = Imm << Val;
     }
-    uint64_t UImm = Imm << (64 - BitSize) >> (64 - BitSize);
+    uint64_t UImm = SignExtend64(Imm, BitSize);
     uint64_t Encoding;
     if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
       MachineInstrBuilder MIB1 =
@@ -3548,12 +3548,12 @@ void AArch64InstrInfo::genAlternativeCodeSequence(
       RC = &AArch64::GPR64RegClass;
     }
     unsigned NewVR = MRI.createVirtualRegister(OrrRC);
-    int Imm = Root.getOperand(2).getImm();
+    uint64_t Imm = Root.getOperand(2).getImm();
     if (Root.getOperand(3).isImm()) {
       unsigned Val = Root.getOperand(3).getImm();
       Imm = Imm << Val;
     }
-    uint64_t UImm = -Imm << (64 - BitSize) >> (64 - BitSize);
+    uint64_t UImm = SignExtend64(-Imm, BitSize);
     uint64_t Encoding;
     if (AArch64_AM::processLogicalImmediate(UImm, BitSize, Encoding)) {
       MachineInstrBuilder MIB1 =

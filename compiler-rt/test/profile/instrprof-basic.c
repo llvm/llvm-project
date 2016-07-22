@@ -1,20 +1,21 @@
-// REQUIRES: shell
 // RUN: %clang_profgen -o %t -O3 %s
 // RUN: env LLVM_PROFILE_FILE=%t.profraw %run %t
 // RUN: llvm-profdata merge -o %t.profdata %t.profraw
 // RUN: %clang_profuse=%t.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=ORIG
 //
-// RUN: rm -f %t.profraw_e_*
-// RUN: env LLVM_PROFILE_FILE=%t.profraw_e_%1m %run %t
-// RUN: env LLVM_PROFILE_FILE=%t.profraw_e_%1m %run %t
-// RUN: llvm-profdata merge -o %t.em.profdata %t.profraw_e_*
+// RUN: rm -fr %t.dir1
+// RUN: mkdir -p %t.dir1
+// RUN: env LLVM_PROFILE_FILE=%t.dir1/profraw_e_%1m %run %t
+// RUN: env LLVM_PROFILE_FILE=%t.dir1/profraw_e_%1m %run %t
+// RUN: llvm-profdata merge -o %t.em.profdata %t.dir1
 // RUN: %clang_profuse=%t.em.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=MERGE
 //
-// RUN: %clang_profgen=%t.%m.profraw -o %t.merge -O3 %s
-// RUN: rm -f %t.*.profraw*
+// RUN: rm -fr %t.dir2
+// RUN: mkdir -p %t.dir2
+// RUN: %clang_profgen=%t.dir2/%m.profraw -o %t.merge -O3 %s
 // RUN: %run %t.merge
 // RUN: %run %t.merge
-// RUN: llvm-profdata merge -o %t.m.profdata %t.*.profraw
+// RUN: llvm-profdata merge -o %t.m.profdata %t.dir2/
 // RUN: %clang_profuse=%t.m.profdata -o - -S -emit-llvm %s | FileCheck %s --check-prefix=COMMON --check-prefix=MERGE
 
 int begin(int i) {

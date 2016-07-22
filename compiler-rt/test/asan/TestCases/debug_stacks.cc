@@ -5,6 +5,12 @@
 // FIXME: Figure out why allocation/free stack traces may be too short on ARM.
 // REQUIRES: stable-runtime
 
+#if _WIN64
+#define PTR "%llx"
+#else
+#define PTR "%lx"
+#endif
+
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,9 +41,9 @@ int main() {
   // CHECK: alloc stack retval ok
   fprintf(stderr, "thread id = %d\n", thread_id);
   // CHECK: thread id = 0
-  fprintf(stderr, "0x%lx\n", trace[0]);
+  fprintf(stderr, "0x" PTR "\n", trace[0]);
   // CHECK: [[ALLOC_FRAME_0:0x[0-9a-f]+]]
-  fprintf(stderr, "0x%lx\n", trace[1]);
+  fprintf(stderr, "0x" PTR "\n", trace[1]);
   // CHECK: [[ALLOC_FRAME_1:0x[0-9a-f]+]]
 
   num_frames = 100;
@@ -48,9 +54,9 @@ int main() {
   // CHECK: free stack retval ok
   fprintf(stderr, "thread id = %d\n", thread_id);
   // CHECK: thread id = 0
-  fprintf(stderr, "0x%lx\n", trace[0]);
+  fprintf(stderr, "0x" PTR "\n", trace[0]);
   // CHECK: [[FREE_FRAME_0:0x[0-9a-f]+]]
-  fprintf(stderr, "0x%lx\n", trace[1]);
+  fprintf(stderr, "0x" PTR "\n", trace[1]);
   // CHECK: [[FREE_FRAME_1:0x[0-9a-f]+]]
 
   mem[0] = 'A'; // BOOM

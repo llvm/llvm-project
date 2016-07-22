@@ -1424,8 +1424,8 @@ Constant *ConstantFoldBinaryFP(double (*NativeFP)(double, double), double V,
 /// integer type Ty is used to select how many bits are available for the
 /// result. Returns null if the conversion cannot be performed, otherwise
 /// returns the Constant value resulting from the conversion.
-Constant *ConstantFoldConvertToInt(const APFloat &Val, bool roundTowardZero,
-                                   Type *Ty) {
+Constant *ConstantFoldSSEConvertToInt(const APFloat &Val, bool roundTowardZero,
+                                      Type *Ty) {
   // All of these conversion intrinsics form an integer of at most 64bits.
   unsigned ResultWidth = Ty->getIntegerBitWidth();
   assert(ResultWidth <= 64 &&
@@ -1438,7 +1438,8 @@ Constant *ConstantFoldConvertToInt(const APFloat &Val, bool roundTowardZero,
   APFloat::opStatus status = Val.convertToInteger(&UIntVal, ResultWidth,
                                                   /*isSigned=*/true, mode,
                                                   &isExact);
-  if (status != APFloat::opOK && status != APFloat::opInexact)
+  if (status != APFloat::opOK &&
+      (!roundTowardZero || status != APFloat::opInexact))
     return nullptr;
   return ConstantInt::get(Ty, UIntVal, /*isSigned=*/true);
 }
@@ -1676,17 +1677,17 @@ Constant *ConstantFoldScalarCall(StringRef Name, unsigned IntrinsicID, Type *Ty,
       case Intrinsic::x86_sse2_cvtsd2si:
       case Intrinsic::x86_sse2_cvtsd2si64:
         if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
-          return ConstantFoldConvertToInt(FPOp->getValueAPF(),
-                                          /*roundTowardZero=*/false, Ty);
+                dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+          return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
+                                             /*roundTowardZero=*/false, Ty);
       case Intrinsic::x86_sse_cvttss2si:
       case Intrinsic::x86_sse_cvttss2si64:
       case Intrinsic::x86_sse2_cvttsd2si:
       case Intrinsic::x86_sse2_cvttsd2si64:
         if (ConstantFP *FPOp =
-              dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
-          return ConstantFoldConvertToInt(FPOp->getValueAPF(),
-                                          /*roundTowardZero=*/true, Ty);
+                dyn_cast_or_null<ConstantFP>(Op->getAggregateElement(0U)))
+          return ConstantFoldSSEConvertToInt(FPOp->getValueAPF(),
+                                             /*roundTowardZero=*/true, Ty);
       }
     }
 

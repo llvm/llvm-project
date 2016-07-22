@@ -1,4 +1,4 @@
-; RUN: llc < %s -march=arm64 | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-eabi | FileCheck %s
 
 define void @t1(i8* nocapture %c) nounwind optsize {
 entry:

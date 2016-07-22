@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 #include "clang/Serialization/Module.h"
 #include "ASTReaderInternals.h"
-#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;

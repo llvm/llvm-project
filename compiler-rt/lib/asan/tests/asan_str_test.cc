@@ -456,12 +456,14 @@ TEST(AddressSanitizer, StrArgsOverlapTest) {
 // memmove().
 #if !defined(__APPLE__) || !defined(MAC_OS_X_VERSION_10_7) || \
     (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_7)
+#if PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE
   // Check "memcpy". Use Ident() to avoid inlining.
   memset(str, 'z', size);
   Ident(memcpy)(str + 1, str + 11, 10);
   Ident(memcpy)(str, str, 0);
   EXPECT_DEATH(Ident(memcpy)(str, str + 14, 15), OverlapErrorMessage("memcpy"));
   EXPECT_DEATH(Ident(memcpy)(str + 14, str, 15), OverlapErrorMessage("memcpy"));
+#endif
 #endif
 
   // We do not treat memcpy with to==from as a bug.

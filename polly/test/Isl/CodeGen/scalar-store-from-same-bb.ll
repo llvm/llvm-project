@@ -4,8 +4,8 @@
 ; This test ensures that the expression N + 1 that is stored in the phi-node
 ; alloca, is directly computed and not incorrectly transfered through memory.
 
-; CHECK: store i64 %2, i64* %res.phiops
-; CHECK: %2 = add i64 %N, 1
+; CHECK: store i64 [[REG:%.*]], i64* %res.phiops
+; CHECK: [[REG]] = add i64 %N, 1
 
 define i64 @foo(float* %A, i64 %N) {
 entry:
