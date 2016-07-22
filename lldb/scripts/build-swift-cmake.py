@@ -35,6 +35,8 @@ parser.add_argument('--no-system-debugserver', action='store_false',
                     help='do not copy in the system debugserver (default is to copy it in)')
 parser.add_argument('--package', action='store_true',
                     help='build for packaging')
+parser.add_argument('--foundation', action='store_true',
+                    help='build swift foundation')
 
 args = parser.parse_args()
 
@@ -68,6 +70,8 @@ if args.package:
     checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master")
     checkout_git("swift-corelibs-xctest", "ssh://git@github.com/apple/swift-corelibs-xctest.git", "master")
     checkout_git("swift-integration-tests", "ssh://git@github.com/apple/swift-integration-tests.git", "master")
+elif args.foundation:
+    checkout_git("swift-corelibs-foundation", "ssh://git@github.com/apple/swift-corelibs-foundation.git", "master")
 
 if args.update:
     update_git("llvm")
@@ -76,11 +80,14 @@ if args.update:
     update_git("cmark")
     update_git("ninja")
     update_git("lldb")
-    # update_git("swift/benchmark/PerfTestSuite")
     if args.package:
         update_git("llbuild")
         update_git("swiftpm")
-        #update_git("SourceKit")
+        update_git("swift-corelibs-foundation")
+        update_git("swift-corelibs-xctest")
+        update_git("swift-integration-tests")
+    elif args.foundation:
+        update_git("swift-corelibs-foundation")
 
 if not os.path.exists("install"):
     os.makedirs("install")
@@ -111,6 +118,8 @@ else:
         build_script_arguments += ["--release", "--assertions", "--lldb"]
     else:
         build_script_arguments += ["--debug-swift", "--debug-lldb","--skip-build-benchmarks"]
+    if args.foundation:
+        build_script_arguments += ["--foundation"]
     build_script_impl_arguments += ["--build-swift-static-stdlib=1"]
 
     if args.lldb_extra_cmake_args and len(args.lldb_extra_cmake_args) > 0:
