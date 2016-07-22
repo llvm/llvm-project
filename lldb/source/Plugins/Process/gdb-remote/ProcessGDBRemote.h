@@ -270,6 +270,9 @@ public:
     StructuredData::ObjectSP
     GetLoadedDynamicLibrariesInfos_sender (StructuredData::ObjectSP args);
 
+    StructuredData::ObjectSP
+    GetSharedCacheInfo () override;
+
 protected:
     friend class ThreadGDBRemote;
     friend class GDBRemoteCommunicationClient;

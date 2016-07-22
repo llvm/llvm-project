@@ -8,8 +8,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This file contains the parser/evaluator of the linker script.
-// It does not construct an AST but consume linker script directives directly.
-// Results are written to Driver or Config object.
+// It parses a linker script and write the result to Config or ScriptConfig
+// objects.
+//
+// If SECTIONS command is used, a ScriptConfig contains an AST
+// of the command which will later be consumed by createSections() and
+// assignAddresses().
 //
 //===----------------------------------------------------------------------===//
 
@@ -101,6 +105,13 @@ uint64_t ExprParser::run() {
   return V;
 }
 
+uint64_t static getConstantValue(StringRef C) {
+  if (C == "COMMONPAGESIZE" || C == "MAXPAGESIZE")
+    return Target->PageSize;
+  error("unknown constant: " + C);
+  return 0;
+}
+
 // This is a part of the operator-precedence parser to evaluate
 // arithmetic expressions in SECTIONS command. This function evaluates an
 // integer literal, a parenthesized expression, the ALIGN function,
@@ -119,6 +130,34 @@ uint64_t ExprParser::parsePrimary() {
     uint64_t V = parseExpr();
     expect(")");
     return alignTo(Dot, V);
+  }
+  if (Tok == "CONSTANT") {
+    expect("(");
+    uint64_t V = getConstantValue(next());
+    expect(")");
+    return V;
+  }
+  // Documentations says there are two ways to compute
+  // the value of DATA_SEGMENT_ALIGN command, depending on whether the second
+  // uses fewer COMMONPAGESIZE sized pages for the data segment(area between the
+  // result of this expression and `DATA_SEGMENT_END') than the first or not.
+  // That is possible optimization, that we do not support, so we compute that
+  // function always as (ALIGN(MAXPAGESIZE) + (. & (MAXPAGESIZE - 1))) now.
+  if (Tok == "DATA_SEGMENT_ALIGN") {
+    expect("(");
+    uint64_t L = parseExpr();
+    expect(",");
+    parseExpr();
+    expect(")");
+    return alignTo(Dot, L) + (Dot & (L - 1));
+  }
+  // Since we do not support the optimization from comment above,
+  // we can just ignore that command.
+  if (Tok == "DATA_SEGMENT_END") {
+    expect("(");
+    expect(".");
+    expect(")");
+    return Dot;
   }
   uint64_t V = 0;
   if (Tok.getAsInteger(0, V))
@@ -266,12 +305,13 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
 
   // Add all other input sections, which are not listed in script.
   for (ObjectFile &F : Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *S : F->getSections())
+    for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (!isDiscarded(S)) {
         if (!S->OutSec)
           AddInputSec(S, getOutputSectionName(S));
       } else
         reportDiscarded(S, F);
+    }
 
   return Result;
 }

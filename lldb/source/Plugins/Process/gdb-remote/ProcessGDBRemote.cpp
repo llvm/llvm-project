@@ -4270,6 +4270,43 @@ ProcessGDBRemote::GetLoadedDynamicLibrariesInfos_sender (StructuredData::ObjectS
 
 
 
+StructuredData::ObjectSP
+ProcessGDBRemote::GetSharedCacheInfo ()
+{
+    StructuredData::ObjectSP object_sp;
+    StructuredData::ObjectSP args_dict(new StructuredData::Dictionary());
+
+    if (m_gdb_comm.GetSharedCacheInfoSupported())
+    {
+        StreamString packet;
+        packet << "jGetSharedCacheInfo:";
+        args_dict->Dump (packet, false);
+
+        // FIXME the final character of a JSON dictionary, '}', is the escape
+        // character in gdb-remote binary mode.  lldb currently doesn't escape
+        // these characters in its packet output -- so we add the quoted version
+        // of the } character here manually in case we talk to a debugserver which
+        // un-escapes the characters at packet read time.
+        packet << (char) (0x7d ^ 0x20);
+
+        StringExtractorGDBRemote response;
+        response.SetResponseValidatorToJSON();
+        if (m_gdb_comm.SendPacketAndWaitForResponse(packet.GetData(), packet.GetSize(), response, false) == GDBRemoteCommunication::PacketResult::Success)
+        {
+            StringExtractorGDBRemote::ResponseType response_type = response.GetResponseType();
+            if (response_type == StringExtractorGDBRemote::eResponse)
+            {
+                if (!response.Empty())
+                {
+                    object_sp = StructuredData::ParseJSON (response.GetStringRef());
+                }
+            }
+        }
+    }
+    return object_sp;
+}
+
+
 // Establish the largest memory read/write payloads we should use.
 // If the remote stub has a max packet size, stay under that size.
 //

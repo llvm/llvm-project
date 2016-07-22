@@ -149,6 +149,12 @@ private:
   llvm::DenseSet<uintX_t> LiveOffsets;
 };
 
+struct EhSectionPiece : public SectionPiece {
+  EhSectionPiece(size_t Off, ArrayRef<uint8_t> Data, unsigned FirstRelocation)
+      : SectionPiece(Off, Data), FirstRelocation(FirstRelocation) {}
+  unsigned FirstRelocation;
+};
+
 // This corresponds to a .eh_frame section of an input file.
 template <class ELFT> class EhInputSection : public InputSectionBase<ELFT> {
 public:
@@ -157,10 +163,11 @@ public:
   EhInputSection(ObjectFile<ELFT> *F, const Elf_Shdr *Header);
   static bool classof(const InputSectionBase<ELFT> *S);
   void split();
+  template <class RelTy> void split(ArrayRef<RelTy> Rels);
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
-  std::vector<SectionPiece> Pieces;
+  std::vector<EhSectionPiece> Pieces;
 
   // Relocation section that refer to this one.
   const Elf_Shdr *RelocSection = nullptr;

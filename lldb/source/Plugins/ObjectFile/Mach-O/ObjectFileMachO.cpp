@@ -5449,6 +5449,33 @@ UUID
 ObjectFileMachO::GetProcessSharedCacheUUID (Process *process)
 {
     UUID uuid;
+
+    // First see if we can get the shared cache details from debugserver
+    if (process)
+    {
+        StructuredData::ObjectSP info = process->GetSharedCacheInfo();
+        StructuredData::Dictionary *info_dict = nullptr;
+        if (info.get() && info->GetAsDictionary())
+        {
+            info_dict = info->GetAsDictionary();
+        }
+
+        // {"shared_cache_base_address":140735683125248,"shared_cache_uuid":"DDB8D70C-C9A2-3561-B2C8-BE48A4F33F96","no_shared_cache":false,"shared_cache_private_cache":false}
+
+        if (info_dict
+            && info_dict->HasKey("shared_cache_uuid")
+            && info_dict->HasKey("no_shared_cache")
+            && info_dict->HasKey("shared_cache_base_address"))
+        {
+            bool process_using_shared_cache = info_dict->GetValueForKey("no_shared_cache")->GetBooleanValue() == false;
+            std::string uuid_str = info_dict->GetValueForKey("shared_cache_uuid")->GetStringValue();
+
+            if (process_using_shared_cache && !uuid_str.empty() && uuid.SetFromCString (uuid_str.c_str()) == 0)
+                return uuid;
+        }
+    }
+
+    // Fall back to trying to read the shared cache info out of dyld's internal data structures
     if (process)
     {
         addr_t all_image_infos = process->GetImageInfoAddress();

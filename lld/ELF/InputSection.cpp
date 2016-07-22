@@ -443,14 +443,53 @@ bool EhInputSection<ELFT>::classof(const InputSectionBase<ELFT> *S) {
   return S->SectionKind == InputSectionBase<ELFT>::EHFrame;
 }
 
+// Returns the index of the first relocation that points to a region between
+// Begin and Begin+Size.
+template <class IntTy, class RelTy>
+static unsigned getReloc(IntTy Begin, IntTy Size, const ArrayRef<RelTy> &Rels,
+                         unsigned &RelocI) {
+  // Start search from RelocI for fast access. That works because the
+  // relocations are sorted in .eh_frame.
+  for (unsigned N = Rels.size(); RelocI < N; ++RelocI) {
+    const RelTy &Rel = Rels[RelocI];
+    if (Rel.r_offset < Begin)
+      continue;
+
+    if (Rel.r_offset < Begin + Size)
+      return RelocI;
+    return -1;
+  }
+  return -1;
+}
+
 // .eh_frame is a sequence of CIE or FDE records.
 // This function splits an input section into records and returns them.
 template <class ELFT>
 void EhInputSection<ELFT>::split() {
+  // Early exit if already split.
+  if (!this->Pieces.empty())
+    return;
+
+  if (RelocSection) {
+    ELFFile<ELFT> &Obj = this->File->getObj();
+    if (RelocSection->sh_type == SHT_RELA)
+      split(Obj.relas(RelocSection));
+    else
+      split(Obj.rels(RelocSection));
+    return;
+  }
+  split(makeArrayRef<typename ELFT::Rela>(nullptr, nullptr));
+}
+
+template <class ELFT>
+template <class RelTy>
+void EhInputSection<ELFT>::split(ArrayRef<RelTy> Rels) {
   ArrayRef<uint8_t> Data = this->getSectionData();
+  unsigned RelI = 0;
   for (size_t Off = 0, End = Data.size(); Off != End;) {
     size_t Size = readEhRecordSize<ELFT>(Data.slice(Off));
-    this->Pieces.emplace_back(Off, Data.slice(Off, Size));
+    this->Pieces.emplace_back(Off, Data.slice(Off, Size),
+                              getReloc(Off, Size, Rels, RelI));
     // The empty record is the end marker.
     if (Size == 4)
       break;
