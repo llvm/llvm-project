@@ -589,16 +589,20 @@ public:
 
   bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt) const {
     // Check whether the GEP of a ld/st can be synthesized at HoistPt.
-    Instruction *Gep = nullptr;
+    GetElementPtrInst *Gep = nullptr;
     Instruction *Val = nullptr;
     if (auto *Ld = dyn_cast<LoadInst>(Repl))
-      Gep = dyn_cast<Instruction>(Ld->getPointerOperand());
+      Gep = dyn_cast<GetElementPtrInst>(Ld->getPointerOperand());
     if (auto *St = dyn_cast<StoreInst>(Repl)) {
-      Gep = dyn_cast<Instruction>(St->getPointerOperand());
+      Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
       Val = dyn_cast<Instruction>(St->getValueOperand());
     }
 
-    if (!Gep || !isa<GetElementPtrInst>(Gep))
+    if (!Gep)
+      return false;
+
+    // PHIs may only be inserted at the start of a block.
+    if (Val && isa<PHINode>(Val))
       return false;
 
     // Check whether we can compute the Gep at HoistPt.
