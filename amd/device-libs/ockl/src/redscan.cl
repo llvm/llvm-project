@@ -1,9 +1,20 @@
 
 #include "llvm.h"
+extern uint __llvm_readlane(uint, int); // FIXME
 #include "ockl.h"
 #include "oclc.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+#define AS_USHORT(X) __builtin_astype(X, ushort)
+#define AS_INT(X) __builtin_astype(X, int)
+#define AS_UINT(X) __builtin_astype(X, uint)
+#define AS_UINT2(X) __builtin_astype(X, uint2)
+#define AS_LONG(X) __builtin_astype(X, long)
+#define AS_ULONG(X) __builtin_astype(X, ulong)
+#define AS_DOUBLE(X) __builtin_astype(X, double)
+#define AS_FLOAT(X) __builtin_astype(X, float)
+#define AS_HALF(X) __builtin_astype(X, half)
 
 #define _C(X,Y) X##Y
 #define C(X,Y) _C(X,Y)
@@ -38,7 +49,7 @@
 #define int_swizzle(X,Y) AS_INT(uint_swizzle(AS_UINT(X),Y))
 #define long_swizzle(X,Y) AS_LONG(ulong_swizzle(AS_ULONG(X),Y))
 #define float_swizzle(X,Y) AS_FLOAT(uint_swizzle(AS_UINT(X),Y))
-#define double_swizzle(X,Y) AS_FLOAT(ulong_swizzle(AS_ULONG(X),Y))
+#define double_swizzle(X,Y) AS_DOUBLE(ulong_swizzle(AS_ULONG(X),Y))
 #define half_swizzle(X,Y) AS_HALF((ushort)uint_swizzle((uint)AS_USHORT(X),Y))
 
 // DPP
@@ -60,15 +71,15 @@
 #define uint_readlane(X,L) __llvm_readlane(X,L)
 #define ulong_readlane(X,L) ({ \
     uint2 __x = AS_UINT2(X); \
-    uint2 r; \
-    r.lo = uint_readlane(__x.lo, L); \
-    r.hi = uint_readlane(__x.hi, L); \
-    AS_ULONG(r); \
+    uint2 __r; \
+    __r.lo = uint_readlane(__x.lo, L); \
+    __r.hi = uint_readlane(__x.hi, L); \
+    AS_ULONG(__r); \
 })
 #define int_readlane(X,L) AS_INT(uint_readlane(AS_UINT(X),L))
 #define long_readlane(X,L) AS_LONG(ulong_readlane(AS_ULONG(X),L))
 #define float_readlane(X,L) AS_FLOAT(uint_readlane(AS_UINT(X),L))
-#define double_readlane(X,L) AS_FLOAT(ulong_readlane(AS_ULONG(X),L))
+#define double_readlane(X,L) AS_DOUBLE(ulong_readlane(AS_ULONG(X),L))
 #define half_readlane(X,L) AS_HALF((ushort)uint_readlane((uint)AS_USHORT(X),L))
 
 // Select
@@ -81,9 +92,9 @@
     uint2 __b = AS_UINT2(B); \
     uint2 __a = AS_UINT2(A); \
     uint2 __r; \
-    __r.lo = (__c & b.lo) | (~__c & a.lo); \
-    __r.hi = (__c & b.hi) | (~__c & a.hi); \
-    AS_ULONG(r); \
+    __r.lo = (__c & __b.lo) | (~__c & __a.lo); \
+    __r.hi = (__c & __b.hi) | (~__c & __a.hi); \
+    AS_ULONG(__r); \
 })
 #define int_sel(C,B,A) AS_INT(uint_sel(C, AS_UINT(B), AS_UINT(A)))
 #define long_sel(C,B,A) AS_LONG(ulong_sel(C, AS_ULONG(B), AS_ULONG(A)))
@@ -371,33 +382,33 @@ GENMAX(ulong)
     }
 
 // Shift right 1 on entire wavefront using swizzle
-// input is r, l is lane, output is r
+// input is s, l is lane, output is s
 #define SR1_SWIZZLE(T,ID) \
     T v; \
-    T t = r; \
+    T t = s; \
  \
-    r = T##_swizzle(t, SWIZZLE_QUAD_PERM(0x0,0x0,0x1,0x2)); \
+    s = T##_swizzle(t, SWIZZLE_QUAD_PERM(0x0,0x0,0x1,0x2)); \
  \
     v = T##_swizzle(t, SWIZZLE_32_LIMITED(0x18, 0x03, 0x00)); \
-    r = (l & 0x7) == 0x4 ? v : r; \
+    s = (l & 0x7) == 0x4 ? v : s; \
  \
     v = T##_swizzle(t, SWIZZLE_32_LIMITED(0x10, 0x07, 0x00)); \
-    r = (l & 0xf) == 0x8 ? v : r; \
+    s = (l & 0xf) == 0x8 ? v : s; \
  \
     v = T##_swizzle(t, SWIZZLE_32_LIMITED(0x00, 0x0f, 0x00)); \
-    r = (l & 0x1f) == 0x10 ? v : r; \
+    s = (l & 0x1f) == 0x10 ? v : s; \
  \
     v = T##_readlane(t, 31); \
-    r = l == 32 ? v : r; \
+    s = l == 32 ? v : s; \
  \
-    r = l == 0 ? ID : r
+    s = l == 0 ? ID : s
 
 // Shift right 1 on entire wavefront using DPP
-// input is r, l is lane, output is r
+// input is s, l is lane, output is s
 #define SR1_DPP(T,ID) \
-    r = T##_dpp(r, DPP_WF_SR1, 0xf, 0xf, true); \
+    s = T##_dpp(s, DPP_WF_SR1, 0xf, 0xf, true); \
     if (ID != (T)0) {\
-        r = l == 0 ? ID : r; \
+        s = l == 0 ? ID : s; \
     }
 
 IATTR static bool
@@ -432,8 +443,8 @@ C(__ockl_wfred_,C(OP,T##_suf))(T x) \
 IATTR T \
 C(__ockl_wfscan_,C(OP,T##_suf))(T x, bool inclusive) \
 { \
-    T r; \
-    uint l = __ockl_activelane(); \
+    T s; \
+    uint l = __ockl_activelane_u32(); \
  \
     if (__oclc_ISA_version() < 800) { \
         ISCAN_SWIZZLE(T,OP,ID); \
@@ -449,7 +460,7 @@ C(__ockl_wfscan_,C(OP,T##_suf))(T x, bool inclusive) \
         } \
     } \
  \
-    return r; \
+    return s; \
 }
 
 #define GEN(T,OP,ID) \
