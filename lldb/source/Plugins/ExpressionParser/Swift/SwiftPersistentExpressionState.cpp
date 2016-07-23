@@ -154,7 +154,7 @@ SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(swift::Decl *lh
             for (int idx = 0; idx < num_patterns; idx++)
             {
                 auto *lhs_param = lhs_patterns[idx];
-                auto *rhs_param = lhs_patterns[idx];
+                auto *rhs_param = rhs_patterns[idx];
                 
                 auto lhs_type = lhs_param->getType(context).getCanonicalTypeOrNull();
                 auto rhs_type = rhs_param->getType(context).getCanonicalTypeOrNull();
