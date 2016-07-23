@@ -91,7 +91,7 @@ instantiateExternalRelation(ExternalRelation ERelation, CallSite CS) {
   auto To = instantiateInterfaceValue(ERelation.To, CS);
   if (!To)
     return None;
-  return InstantiatedRelation{*From, *To};
+  return InstantiatedRelation{*From, *To, ERelation.Offset};
 }
 
 Optional<InstantiatedAttr> instantiateExternalAttribute(ExternalAttribute EAttr,

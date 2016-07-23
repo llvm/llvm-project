@@ -11,8 +11,9 @@
 
 #include "llvm/ADT/BitVector.h"
 
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
-#include "llvm/DebugInfo/CodeView/StreamWriter.h"
+#include "llvm/DebugInfo/Msf/MsfBuilder.h"
+#include "llvm/DebugInfo/Msf/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
@@ -21,16 +22,16 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 using namespace llvm::support;
 
-PDBFileBuilder::PDBFileBuilder(
-    std::unique_ptr<codeview::StreamInterface> FileBuffer)
-    : File(llvm::make_unique<PDBFile>(std::move(FileBuffer))) {}
+PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
+    : Allocator(Allocator) {}
 
 Error PDBFileBuilder::initialize(const msf::SuperBlock &Super) {
   auto ExpectedMsf =
-      MsfBuilder::create(File->Allocator, Super.BlockSize, Super.NumBlocks);
+      MsfBuilder::create(Allocator, Super.BlockSize, Super.NumBlocks);
   if (!ExpectedMsf)
     return ExpectedMsf.takeError();
 
@@ -53,11 +54,12 @@ InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
 
 DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   if (!Dbi)
-    Dbi = llvm::make_unique<DbiStreamBuilder>();
+    Dbi = llvm::make_unique<DbiStreamBuilder>(Allocator);
   return *Dbi;
 }
 
-Expected<std::unique_ptr<PDBFile>> PDBFileBuilder::build() {
+Expected<std::unique_ptr<PDBFile>>
+PDBFileBuilder::build(std::unique_ptr<msf::StreamInterface> PdbFileBuffer) {
   if (Info) {
     uint32_t Length = Info->calculateSerializedLength();
     if (auto EC = Msf->setStreamSize(StreamPDB, Length))
@@ -73,11 +75,8 @@ Expected<std::unique_ptr<PDBFile>> PDBFileBuilder::build() {
   if (!ExpectedLayout)
     return ExpectedLayout.takeError();
 
-  const msf::Layout &L = *ExpectedLayout;
-  File->StreamMap = L.StreamMap;
-  File->StreamSizes = L.StreamSizes;
-  File->DirectoryBlocks = L.DirectoryBlocks;
-  File->SB = L.SB;
+  auto File = llvm::make_unique<PDBFile>(std::move(PdbFileBuffer), Allocator);
+  File->MsfLayout = *ExpectedLayout;
 
   if (Info) {
     auto ExpectedInfo = Info->build(*File);

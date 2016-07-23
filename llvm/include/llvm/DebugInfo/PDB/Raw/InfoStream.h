@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBINFOSTREAM_H
 
 #include "llvm/ADT/StringMap.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 
@@ -35,7 +35,7 @@ class InfoStream {
   };
 
 public:
-  InfoStream(std::unique_ptr<MappedBlockStream> Stream);
+  InfoStream(std::unique_ptr<msf::MappedBlockStream> Stream);
 
   Error reload();
   Error commit();
@@ -49,7 +49,7 @@ public:
   iterator_range<StringMapConstIterator<uint32_t>> named_streams() const;
 
 private:
-  std::unique_ptr<MappedBlockStream> Stream;
+  std::unique_ptr<msf::MappedBlockStream> Stream;
 
   // PDB file format version.  We only support VC70.  See the enumeration
   // `PdbRaw_ImplVer` for the other possible values.

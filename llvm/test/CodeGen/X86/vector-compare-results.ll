@@ -1236,7 +1236,7 @@ define <32 x i1> @test_cmp_v32i16(<32 x i16> %a0, <32 x i16> %a1) nounwind {
 ; AVX512-NEXT:    vpcmpgtw %ymm3, %ymm1, %ymm1
 ; AVX512-NEXT:    vpmovsxwd %ymm1, %zmm1
 ; AVX512-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = icmp sgt <32 x i16> %a0, %a1
   ret <32 x i1> %1
@@ -2859,7 +2859,7 @@ define <32 x i1> @test_cmp_v32f32(<32 x float> %a0, <32 x float> %a1) nounwind {
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
-; AVX512-NEXT:    vinsertf128 $1, %xmm0, %ymm8, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm8, %ymm0
 ; AVX512-NEXT:    retq
   %1 = fcmp ogt <32 x float> %a0, %a1
   ret <32 x i1> %1
@@ -3769,7 +3769,7 @@ define <32 x i1> @test_cmp_v32i32(<32 x i32> %a0, <32 x i32> %a1) nounwind {
 ; AVX512-NEXT:    vinserti128 $1, %xmm4, %ymm1, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm2, %zmm1, %zmm1
 ; AVX512-NEXT:    vpmovdb %zmm1, %xmm1
-; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
   %1 = icmp sgt <32 x i32> %a0, %a1
   ret <32 x i1> %1

@@ -307,6 +307,8 @@ bool serialization::isRedeclarableDeclKind(unsigned Kind) {
   case Decl::OMPCapturedExpr:
   case Decl::OMPDeclareReduction:
   case Decl::BuiltinTemplate:
+  case Decl::Decomposition:
+  case Decl::Binding:
     return false;
 
   // These indirectly derive from Redeclarable<T> but are not actually

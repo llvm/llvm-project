@@ -11,10 +11,10 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
-#include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/MsfCommon.h"
+#include "llvm/DebugInfo/Msf/IMsfFile.h"
+#include "llvm/DebugInfo/Msf/MsfCommon.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
+#include "llvm/DebugInfo/Msf/StreamInterface.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -24,25 +24,26 @@
 
 namespace llvm {
 
-namespace codeview {
+namespace msf {
+class MappedBlockStream;
 class StreamInterface;
 }
 
 namespace pdb {
 class DbiStream;
 class InfoStream;
-class MappedBlockStream;
 class NameHashTable;
 class PDBFileBuilder;
 class PublicsStream;
 class SymbolStream;
 class TpiStream;
 
-class PDBFile : public IPDBFile {
+class PDBFile : public msf::IMsfFile {
   friend PDBFileBuilder;
 
 public:
-  explicit PDBFile(std::unique_ptr<codeview::StreamInterface> PdbFileBuffer);
+  PDBFile(std::unique_ptr<msf::StreamInterface> PdbFileBuffer,
+          BumpPtrAllocator &Allocator);
   ~PDBFile() override;
 
   uint32_t getFreeBlockMapBlock() const;
@@ -66,9 +67,11 @@ public:
   Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                      ArrayRef<uint8_t> Data) const override;
 
-  ArrayRef<support::ulittle32_t> getStreamSizes() const { return StreamSizes; }
+  ArrayRef<support::ulittle32_t> getStreamSizes() const {
+    return MsfLayout.StreamSizes;
+  }
   ArrayRef<ArrayRef<support::ulittle32_t>> getStreamMap() const {
-    return StreamMap;
+    return MsfLayout.StreamMap;
   }
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
@@ -87,15 +90,11 @@ public:
   Error commit();
 
 private:
-  Error setSuperBlock(const msf::SuperBlock *Block);
+  BumpPtrAllocator &Allocator;
 
-  BumpPtrAllocator Allocator;
+  std::unique_ptr<msf::StreamInterface> Buffer;
 
-  std::unique_ptr<codeview::StreamInterface> Buffer;
-  const msf::SuperBlock *SB;
-  ArrayRef<support::ulittle32_t> StreamSizes;
-  ArrayRef<support::ulittle32_t> DirectoryBlocks;
-  std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
+  msf::Layout MsfLayout;
 
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;
@@ -103,8 +102,8 @@ private:
   std::unique_ptr<TpiStream> Ipi;
   std::unique_ptr<PublicsStream> Publics;
   std::unique_ptr<SymbolStream> Symbols;
-  std::unique_ptr<MappedBlockStream> DirectoryStream;
-  std::unique_ptr<MappedBlockStream> StringTableStream;
+  std::unique_ptr<msf::MappedBlockStream> DirectoryStream;
+  std::unique_ptr<msf::MappedBlockStream> StringTableStream;
   std::unique_ptr<NameHashTable> StringTable;
 };
 }

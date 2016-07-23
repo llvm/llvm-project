@@ -102,3 +102,43 @@ MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty,
   MachineInstrBuilder(getMF(), NewMI).addMBB(&BB);
   return NewMI;
 }
+
+MachineInstr *MachineIRBuilder::buildFrameIndex(LLT Ty, unsigned Res, int Idx) {
+  MachineInstr *NewMI = buildInstr(TargetOpcode::G_FRAME_INDEX, Ty);
+  auto MIB = MachineInstrBuilder(getMF(), NewMI);
+  MIB.addReg(Res, RegState::Define);
+  MIB.addImm(Idx);
+  return NewMI;
+}
+
+MachineInstr *MachineIRBuilder::buildAdd(LLT Ty, unsigned Res, unsigned Op0,
+                                         unsigned Op1) {
+  return buildInstr(TargetOpcode::G_ADD, Ty, Res, Op0, Op1);
+}
+
+MachineInstr *MachineIRBuilder::buildExtract(LLT Ty, ArrayRef<unsigned> Results,
+                                             unsigned Src,
+                                             ArrayRef<unsigned> Indexes) {
+  assert(Results.size() == Indexes.size() && "inconsistent number of regs");
+
+  MachineInstr *NewMI = buildInstr(TargetOpcode::G_EXTRACT, Ty);
+  auto MIB = MachineInstrBuilder(getMF(), NewMI);
+  for (auto Res : Results)
+    MIB.addReg(Res, RegState::Define);
+
+  MIB.addReg(Src);
+
+  for (auto Idx : Indexes)
+    MIB.addImm(Idx);
+  return NewMI;
+}
+
+MachineInstr *MachineIRBuilder::buildSequence(LLT Ty, unsigned Res,
+                                              ArrayRef<unsigned> Ops) {
+  MachineInstr *NewMI = buildInstr(TargetOpcode::G_SEQUENCE, Ty);
+  auto MIB = MachineInstrBuilder(getMF(), NewMI);
+  MIB.addReg(Res, RegState::Define);
+  for (auto Op : Ops)
+    MIB.addReg(Op);
+  return NewMI;
+}

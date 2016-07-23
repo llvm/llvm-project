@@ -8578,6 +8578,16 @@ ScalarEvolution::isImpliedCondOperandsHelper(ICmpInst::Predicate Pred,
   return false;
 }
 
+Optional<APInt> ScalarEvolution::getConstantDifference(const SCEV *LHS,
+                                                       const SCEV *RHS) {
+  if (const SCEVAddExpr *AddLHS = dyn_cast<SCEVAddExpr>(LHS))
+    if (AddLHS->getOperand(1) == RHS)
+      if (auto *Addend = dyn_cast<SCEVConstant>(AddLHS->getOperand(0)))
+        return Addend->getAPInt();
+
+  return None;
+}
+
 bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
                                                      const SCEV *LHS,
                                                      const SCEV *RHS,
@@ -8588,9 +8598,8 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
     // reduce the compile time impact of this optimization.
     return false;
 
-  const SCEVAddExpr *AddLHS = dyn_cast<SCEVAddExpr>(LHS);
-  if (!AddLHS || AddLHS->getOperand(1) != FoundLHS ||
-      !isa<SCEVConstant>(AddLHS->getOperand(0)))
+  Optional<APInt> Addend = getConstantDifference(LHS, FoundLHS);
+  if (!Addend)
     return false;
 
   APInt ConstFoundRHS = cast<SCEVConstant>(FoundRHS)->getAPInt();
@@ -8600,10 +8609,8 @@ bool ScalarEvolution::isImpliedCondOperandsViaRanges(ICmpInst::Predicate Pred,
   ConstantRange FoundLHSRange =
       ConstantRange::makeAllowedICmpRegion(Pred, ConstFoundRHS);
 
-  // Since `LHS` is `FoundLHS` + `AddLHS->getOperand(0)`, we can compute a range
-  // for `LHS`:
-  APInt Addend = cast<SCEVConstant>(AddLHS->getOperand(0))->getAPInt();
-  ConstantRange LHSRange = FoundLHSRange.add(ConstantRange(Addend));
+  // Since `LHS` is `FoundLHS` + `Addend`, we can compute a range for `LHS`:
+  ConstantRange LHSRange = FoundLHSRange.add(ConstantRange(*Addend));
 
   // We can also compute the range of values for `LHS` that satisfy the
   // consequent, "`LHS` `Pred` `RHS`":

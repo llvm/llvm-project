@@ -408,7 +408,9 @@ unsigned MipsSEInstrInfo::getOppositeBranchOpc(unsigned Opc) const {
   switch (Opc) {
   default:           llvm_unreachable("Illegal opcode!");
   case Mips::BEQ:    return Mips::BNE;
+  case Mips::BEQ_MM: return Mips::BNE_MM;
   case Mips::BNE:    return Mips::BEQ;
+  case Mips::BNE_MM: return Mips::BEQ_MM;
   case Mips::BGTZ:   return Mips::BLEZ;
   case Mips::BGEZ:   return Mips::BLTZ;
   case Mips::BLTZ:   return Mips::BGEZ;
@@ -506,16 +508,17 @@ unsigned MipsSEInstrInfo::loadImmediate(int64_t Imm, MachineBasicBlock &MBB,
 }
 
 unsigned MipsSEInstrInfo::getAnalyzableBrOpc(unsigned Opc) const {
-  return (Opc == Mips::BEQ    || Opc == Mips::BNE    || Opc == Mips::BGTZ   ||
-          Opc == Mips::BGEZ   || Opc == Mips::BLTZ   || Opc == Mips::BLEZ   ||
-          Opc == Mips::BEQ64  || Opc == Mips::BNE64  || Opc == Mips::BGTZ64 ||
-          Opc == Mips::BGEZ64 || Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 ||
-          Opc == Mips::BC1T   || Opc == Mips::BC1F   || Opc == Mips::B      ||
-          Opc == Mips::J  || Opc == Mips::BEQZC_MM || Opc == Mips::BNEZC_MM ||
-          Opc == Mips::BEQC   || Opc == Mips::BNEC   || Opc == Mips::BLTC   ||
-          Opc == Mips::BGEC   || Opc == Mips::BLTUC  || Opc == Mips::BGEUC  ||
-          Opc == Mips::BGTZC  || Opc == Mips::BLEZC  || Opc == Mips::BGEZC  ||
-          Opc == Mips::BLTZC  || Opc == Mips::BEQZC  || Opc == Mips::BNEZC  ||
+  return (Opc == Mips::BEQ    || Opc == Mips::BEQ_MM || Opc == Mips::BNE    ||
+          Opc == Mips::BNE_MM || Opc == Mips::BGTZ   || Opc == Mips::BGEZ   ||
+          Opc == Mips::BLTZ   || Opc == Mips::BLEZ   || Opc == Mips::BEQ64  ||
+          Opc == Mips::BNE64  || Opc == Mips::BGTZ64 || Opc == Mips::BGEZ64 ||
+          Opc == Mips::BLTZ64 || Opc == Mips::BLEZ64 || Opc == Mips::BC1T   ||
+          Opc == Mips::BC1F   || Opc == Mips::B      || Opc == Mips::J      ||
+          Opc == Mips::BEQZC_MM || Opc == Mips::BNEZC_MM || Opc == Mips::BEQC ||
+          Opc == Mips::BNEC   || Opc == Mips::BLTC   || Opc == Mips::BGEC   ||
+          Opc == Mips::BLTUC  || Opc == Mips::BGEUC  || Opc == Mips::BGTZC  ||
+          Opc == Mips::BLEZC  || Opc == Mips::BGEZC  || Opc == Mips::BLTZC  ||
+          Opc == Mips::BEQZC  || Opc == Mips::BNEZC  ||
           Opc == Mips::BC) ? Opc : 0;
 }
 

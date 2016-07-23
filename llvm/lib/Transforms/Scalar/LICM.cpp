@@ -377,9 +377,11 @@ bool llvm::hoistRegion(DomTreeNode *N, AliasAnalysis *AA, LoopInfo *LI,
               &I, I.getModule()->getDataLayout(), TLI)) {
         DEBUG(dbgs() << "LICM folding inst: " << I << "  --> " << *C << '\n');
         CurAST->copyValue(&I, C);
-        CurAST->deleteValue(&I);
         I.replaceAllUsesWith(C);
-        I.eraseFromParent();
+        if (isInstructionTriviallyDead(&I, TLI)) {
+          CurAST->deleteValue(&I);
+          I.eraseFromParent();
+        }
         continue;
       }
 

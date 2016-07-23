@@ -162,8 +162,8 @@ uint64_t __llvm_profile_get_data_size(const __llvm_profile_data *Begin,
  * Note that this variable's visibility needs to be hidden so that the
  * definition of this variable in an instrumented shared library won't
  * affect runtime initialization decision of the main program.
- */
-COMPILER_RT_VISIBILITY extern int __llvm_profile_runtime;
+ *  __llvm_profile_profile_runtime. */
+COMPILER_RT_VISIBILITY extern int INSTR_PROF_PROFILE_RUNTIME_VAR;
 
 /*!
  * This variable is defined in InstrProfiling.c. Its main purpose is to
@@ -175,7 +175,7 @@ COMPILER_RT_VISIBILITY extern int __llvm_profile_runtime;
  * main program are expected to be instrumented in the same way), there is
  * no need for this variable to be hidden.
  */
-extern uint64_t __llvm_profile_raw_version;
+extern uint64_t INSTR_PROF_RAW_VERSION_VAR; /* __llvm_profile_raw_version */
 
 /*!
  * This variable is a weak symbol defined in InstrProfiling.c. It allows

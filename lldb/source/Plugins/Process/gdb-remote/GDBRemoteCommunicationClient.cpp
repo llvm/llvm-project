@@ -2458,6 +2458,13 @@ GDBRemoteCommunicationClient::GetMemoryRegionInfo (lldb::addr_t addr,
                         region_info.SetMapped(MemoryRegionInfo::eNo);
                     }
                 }
+                else if (name.compare ("name") == 0)
+                {
+                    StringExtractorGDBRemote name_extractor;
+                    name_extractor.GetStringRef().swap(value);
+                    name_extractor.GetHexByteString(value);
+                    region_info.SetName(value.c_str());
+                }
                 else if (name.compare ("error") == 0)
                 {
                     StringExtractorGDBRemote name_extractor;

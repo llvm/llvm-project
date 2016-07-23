@@ -51,7 +51,18 @@ struct SymbolAssignment : BaseCommand {
   static bool classof(const BaseCommand *C);
   StringRef Name;
   std::vector<StringRef> Expr;
+  bool Provide = false;
+  // Hidden and Ignore can be true, only if Provide is true
+  bool Hidden = false;
+  bool Ignore = false;
 };
+
+// Linker scripts allow additional constraints to be put on ouput sections.
+// An output section will only be created if all of its input sections are
+// read-only
+// or all of its input sections are read-write by using the keyword ONLY_IF_RO
+// and ONLY_IF_RW respectively.
+enum ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
@@ -61,6 +72,7 @@ struct OutputSectionCommand : BaseCommand {
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
+  ConstraintKind Constraint = NoConstraint;
 };
 
 struct InputSectionDescription : BaseCommand {

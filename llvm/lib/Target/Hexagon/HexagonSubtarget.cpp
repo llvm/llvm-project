@@ -367,3 +367,11 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
   updateLatency(SrcInst, DstInst, Dep);
 }
 
+unsigned HexagonSubtarget::getL1CacheLineSize() const {
+  return 32;
+}
+
+unsigned HexagonSubtarget::getL1PrefetchDistance() const {
+  return 32;
+}
+

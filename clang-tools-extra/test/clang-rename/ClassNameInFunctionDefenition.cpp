@@ -1,17 +1,10 @@
-// Currently unsupported test.
 // RUN: cat %s > %t.cpp
-// FIXME: clang-rename doesn't recognize symbol in class function definition.
+// RUN: clang-rename -offset=136 -new-name=Bar %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 
-class Foo {
+class Foo {             // CHECK: class Bar {
 public:
   void foo(int x);
 };
 
-void Foo::foo(int x) {}
-//   ^ this one
-
-int main() {
-  Foo obj;
-  obj.foo(0);
-  return 0;
-}
+void Foo::foo(int x) {} // CHECK: void Bar::foo(int x) {}

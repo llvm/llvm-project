@@ -19,6 +19,8 @@ public:
       return "An unknown error has occurred.";
     case raw_error_code::feature_unsupported:
       return "The feature is unsupported by the implementation.";
+    case raw_error_code::invalid_format:
+      return "The record is in an unexpected format.";
     case raw_error_code::corrupt_file:
       return "The PDB file is corrupt.";
     case raw_error_code::insufficient_buffer:
@@ -30,6 +32,10 @@ public:
       return "The specified item does not exist in the array.";
     case raw_error_code::invalid_block_address:
       return "The specified block address is not valid.";
+    case raw_error_code::duplicate_entry:
+      return "The entry already exists.";
+    case raw_error_code::no_entry:
+      return "The entry does not exist.";
     case raw_error_code::not_writable:
       return "The PDB does not support writing.";
     case raw_error_code::invalid_tpi_hash:

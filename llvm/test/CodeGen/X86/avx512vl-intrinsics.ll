@@ -857,7 +857,7 @@ declare <4 x float> @llvm.x86.avx512.mask.compress.ps.128(<4 x float> %data, <4 
 define void @compr7(i8* %addr, <8 x double> %data) {
 ; CHECK-LABEL: compr7:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovupd %zmm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x48,0x11,0x07]
+; CHECK-NEXT:    vmovups %zmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x48,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   call void @llvm.x86.avx512.mask.compress.store.pd.512(i8* %addr, <8 x double> %data, i8 -1)
   ret void
@@ -973,7 +973,7 @@ declare <4 x float> @llvm.x86.avx512.mask.expand.ps.128(<4 x float> %data, <4 x 
 define <8 x double> @expand7(i8* %addr, <8 x double> %data) {
 ; CHECK-LABEL: expand7:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovupd (%rdi), %zmm0 ## encoding: [0x62,0xf1,0xfd,0x48,0x10,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %zmm0 ## encoding: [0x62,0xf1,0x7c,0x48,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %res = call <8 x double> @llvm.x86.avx512.mask.expand.load.pd.512(i8* %addr, <8 x double> %data, i8 -1)
   ret <8 x double> %res

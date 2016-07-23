@@ -9,132 +9,44 @@ declare <2 x i16> @llvm.bitreverse.v2i16(<2 x i16>) readnone
 define <2 x i16> @test_bitreverse_v2i16(<2 x i16> %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_v2i16:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %edi
-; CHECK-NEXT:    pushl %esi
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %edx
-; CHECK-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $15, %ecx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    andl $2, %esi
-; CHECK-NEXT:    shll $13, %esi
-; CHECK-NEXT:    orl %ecx, %esi
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $4, %ecx
-; CHECK-NEXT:    shll $11, %ecx
-; CHECK-NEXT:    orl %esi, %ecx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    shll $9, %esi
-; CHECK-NEXT:    orl %ecx, %esi
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    andl $16, %edi
-; CHECK-NEXT:    shll $7, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $32, %ecx
-; CHECK-NEXT:    shll $5, %ecx
-; CHECK-NEXT:    orl %edi, %ecx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    andl $64, %esi
-; CHECK-NEXT:    shll $3, %esi
-; CHECK-NEXT:    leal (%eax,%eax), %edi
-; CHECK-NEXT:    andl $256, %edi # imm = 0x100
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    andl $128, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    shrl $3, %edi
-; CHECK-NEXT:    andl $64, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl $5, %esi
-; CHECK-NEXT:    andl $32, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    shrl $7, %edi
-; CHECK-NEXT:    andl $16, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl $9, %esi
-; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    shrl $11, %edi
-; CHECK-NEXT:    andl $4, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl $13, %esi
-; CHECK-NEXT:    andl $2, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    shrl $15, %eax
-; CHECK-NEXT:    orl %esi, %eax
-; CHECK-NEXT:    orl %ecx, %eax
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    shll $15, %ecx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    andl $2, %esi
-; CHECK-NEXT:    shll $13, %esi
-; CHECK-NEXT:    orl %ecx, %esi
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    andl $4, %ecx
-; CHECK-NEXT:    shll $11, %ecx
-; CHECK-NEXT:    orl %esi, %ecx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    shll $9, %esi
-; CHECK-NEXT:    orl %ecx, %esi
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    andl $16, %edi
-; CHECK-NEXT:    shll $7, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    andl $32, %ecx
-; CHECK-NEXT:    shll $5, %ecx
-; CHECK-NEXT:    orl %edi, %ecx
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    andl $64, %esi
-; CHECK-NEXT:    shll $3, %esi
-; CHECK-NEXT:    leal (%edx,%edx), %edi
-; CHECK-NEXT:    andl $256, %edi # imm = 0x100
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shrl %esi
-; CHECK-NEXT:    andl $128, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    shrl $3, %edi
-; CHECK-NEXT:    andl $64, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shrl $5, %esi
-; CHECK-NEXT:    andl $32, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    shrl $7, %edi
-; CHECK-NEXT:    andl $16, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shrl $9, %esi
-; CHECK-NEXT:    andl $8, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    shrl $11, %edi
-; CHECK-NEXT:    andl $4, %edi
-; CHECK-NEXT:    orl %esi, %edi
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    shrl $13, %esi
-; CHECK-NEXT:    andl $2, %esi
-; CHECK-NEXT:    orl %edi, %esi
-; CHECK-NEXT:    shrl $15, %edx
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    orl %ecx, %edx
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %cx
+; CHECK-NEXT:    movw {{[0-9]+}}(%esp), %ax
+; CHECK-NEXT:    rolw $8, %ax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $3855, %edx # imm = 0xF0F
+; CHECK-NEXT:    shll $4, %edx
+; CHECK-NEXT:    andl $61680, %eax # imm = 0xF0F0
+; CHECK-NEXT:    shrl $4, %eax
+; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $13107, %edx # imm = 0x3333
+; CHECK-NEXT:    andl $52428, %eax # imm = 0xCCCC
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    leal (%eax,%edx,4), %eax
+; CHECK-NEXT:    movl %eax, %edx
+; CHECK-NEXT:    andl $21845, %edx # imm = 0x5555
+; CHECK-NEXT:    andl $43690, %eax # imm = 0xAAAA
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    leal (%eax,%edx,2), %eax
+; CHECK-NEXT:    rolw $8, %cx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $3855, %edx # imm = 0xF0F
+; CHECK-NEXT:    shll $4, %edx
+; CHECK-NEXT:    andl $61680, %ecx # imm = 0xF0F0
+; CHECK-NEXT:    shrl $4, %ecx
+; CHECK-NEXT:    orl %edx, %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $13107, %edx # imm = 0x3333
+; CHECK-NEXT:    andl $52428, %ecx # imm = 0xCCCC
+; CHECK-NEXT:    shrl $2, %ecx
+; CHECK-NEXT:    leal (%ecx,%edx,4), %ecx
+; CHECK-NEXT:    movl %ecx, %edx
+; CHECK-NEXT:    andl $21845, %edx # imm = 0x5555
+; CHECK-NEXT:    andl $43690, %ecx # imm = 0xAAAA
+; CHECK-NEXT:    shrl %ecx
+; CHECK-NEXT:    leal (%ecx,%edx,2), %edx
 ; CHECK-NEXT:    # kill: %AX<def> %AX<kill> %EAX<kill>
 ; CHECK-NEXT:    # kill: %DX<def> %DX<kill> %EDX<kill>
-; CHECK-NEXT:    popl %esi
-; CHECK-NEXT:    popl %edi
 ; CHECK-NEXT:    retl
   %b = call <2 x i16> @llvm.bitreverse.v2i16(<2 x i16> %a)
   ret <2 x i16> %b
@@ -145,101 +57,25 @@ declare i24 @llvm.bitreverse.i24(i24) readnone
 define i24 @test_bitreverse_i24(i24 %a) nounwind {
 ; CHECK-LABEL: test_bitreverse_i24:
 ; CHECK:       # BB#0:
-; CHECK-NEXT:    pushl %esi
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    bswapl %eax
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shll $31, %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andl $2, %edx
-; CHECK-NEXT:    shll $29, %edx
-; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $4, %ecx
-; CHECK-NEXT:    shll $27, %ecx
-; CHECK-NEXT:    orl %edx, %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andl $8, %edx
-; CHECK-NEXT:    shll $25, %edx
-; CHECK-NEXT:    orl %ecx, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    andl $16, %esi
-; CHECK-NEXT:    shll $23, %esi
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    andl $32, %ecx
-; CHECK-NEXT:    shll $21, %ecx
-; CHECK-NEXT:    orl %esi, %ecx
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    andl $64, %edx
-; CHECK-NEXT:    shll $19, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shll $17, %esi
-; CHECK-NEXT:    andl $16777216, %esi # imm = 0x1000000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shll $15, %edx
-; CHECK-NEXT:    andl $8388608, %edx # imm = 0x800000
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shll $13, %esi
-; CHECK-NEXT:    andl $4194304, %esi # imm = 0x400000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shll $11, %edx
-; CHECK-NEXT:    andl $2097152, %edx # imm = 0x200000
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shll $9, %esi
-; CHECK-NEXT:    andl $1048576, %esi # imm = 0x100000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shll $7, %edx
-; CHECK-NEXT:    andl $524288, %edx # imm = 0x80000
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shll $5, %esi
-; CHECK-NEXT:    andl $262144, %esi # imm = 0x40000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    leal (,%eax,8), %edx
-; CHECK-NEXT:    andl $131072, %edx # imm = 0x20000
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    leal (%eax,%eax), %esi
-; CHECK-NEXT:    andl $65536, %esi # imm = 0x10000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl %edx
-; CHECK-NEXT:    andl $32768, %edx # imm = 0x8000
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl $3, %esi
-; CHECK-NEXT:    andl $16384, %esi # imm = 0x4000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl $5, %edx
-; CHECK-NEXT:    andl $8192, %edx # imm = 0x2000
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl $7, %esi
-; CHECK-NEXT:    andl $4096, %esi # imm = 0x1000
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl $9, %edx
-; CHECK-NEXT:    andl $2048, %edx # imm = 0x800
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    shrl $11, %esi
-; CHECK-NEXT:    andl $1024, %esi # imm = 0x400
-; CHECK-NEXT:    orl %edx, %esi
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrl $13, %edx
-; CHECK-NEXT:    andl $512, %edx # imm = 0x200
-; CHECK-NEXT:    orl %esi, %edx
-; CHECK-NEXT:    shrl $15, %eax
-; CHECK-NEXT:    andl $256, %eax # imm = 0x100
-; CHECK-NEXT:    orl %edx, %eax
+; CHECK-NEXT:    andl $252645135, %ecx # imm = 0xF0F0F0F
+; CHECK-NEXT:    shll $4, %ecx
+; CHECK-NEXT:    andl $-252645136, %eax # imm = 0xF0F0F0F0
+; CHECK-NEXT:    shrl $4, %eax
 ; CHECK-NEXT:    orl %ecx, %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; CHECK-NEXT:    andl $-858993460, %eax # imm = 0xCCCCCCCC
+; CHECK-NEXT:    shrl $2, %eax
+; CHECK-NEXT:    leal (%eax,%ecx,4), %eax
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andl $1431655680, %ecx # imm = 0x55555500
+; CHECK-NEXT:    andl $-1431655936, %eax # imm = 0xAAAAAA00
+; CHECK-NEXT:    shrl %eax
+; CHECK-NEXT:    leal (%eax,%ecx,2), %eax
 ; CHECK-NEXT:    shrl $8, %eax
-; CHECK-NEXT:    popl %esi
 ; CHECK-NEXT:    retl
   %b = call i24 @llvm.bitreverse.i24(i24 %a)
   ret i24 %b
@@ -251,33 +87,18 @@ define i8 @test_bitreverse_i8(i8 %a) {
 ; CHECK-LABEL: test_bitreverse_i8:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    rolb $4, %al
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shlb $7, %cl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shlb $5, %dl
-; CHECK-NEXT:    andb $64, %dl
-; CHECK-NEXT:    movb %al, %ah
-; CHECK-NEXT:    shlb $3, %ah
-; CHECK-NEXT:    andb $32, %ah
-; CHECK-NEXT:    orb %dl, %ah
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    addb %dl, %dl
-; CHECK-NEXT:    andb $16, %dl
-; CHECK-NEXT:    orb %ah, %dl
-; CHECK-NEXT:    movb %al, %ah
-; CHECK-NEXT:    shrb %ah
-; CHECK-NEXT:    andb $8, %ah
-; CHECK-NEXT:    orb %dl, %ah
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shrb $3, %dl
-; CHECK-NEXT:    andb $4, %dl
-; CHECK-NEXT:    orb %ah, %dl
-; CHECK-NEXT:    movb %al, %ah
-; CHECK-NEXT:    shrb $5, %ah
-; CHECK-NEXT:    andb $2, %ah
-; CHECK-NEXT:    orb %dl, %ah
-; CHECK-NEXT:    shrb $7, %al
-; CHECK-NEXT:    orb %ah, %al
+; CHECK-NEXT:    andb $51, %cl
+; CHECK-NEXT:    shlb $2, %cl
+; CHECK-NEXT:    andb $-52, %al
+; CHECK-NEXT:    shrb $2, %al
+; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andb $85, %cl
+; CHECK-NEXT:    addb %cl, %cl
+; CHECK-NEXT:    andb $-86, %al
+; CHECK-NEXT:    shrb %al
 ; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    retl
   %b = call i8 @llvm.bitreverse.i8(i8 %a)
@@ -290,18 +111,18 @@ define i4 @test_bitreverse_i4(i4 %a) {
 ; CHECK-LABEL: test_bitreverse_i4:
 ; CHECK:       # BB#0:
 ; CHECK-NEXT:    movb {{[0-9]+}}(%esp), %al
+; CHECK-NEXT:    rolb $4, %al
 ; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    shlb $7, %cl
-; CHECK-NEXT:    movl %eax, %edx
-; CHECK-NEXT:    shlb $5, %dl
-; CHECK-NEXT:    andb $64, %dl
-; CHECK-NEXT:    movb %al, %ah
-; CHECK-NEXT:    shlb $3, %ah
-; CHECK-NEXT:    andb $32, %ah
-; CHECK-NEXT:    orb %dl, %ah
-; CHECK-NEXT:    addb %al, %al
-; CHECK-NEXT:    andb $16, %al
-; CHECK-NEXT:    orb %ah, %al
+; CHECK-NEXT:    andb $51, %cl
+; CHECK-NEXT:    shlb $2, %cl
+; CHECK-NEXT:    andb $-52, %al
+; CHECK-NEXT:    shrb $2, %al
+; CHECK-NEXT:    orb %cl, %al
+; CHECK-NEXT:    movl %eax, %ecx
+; CHECK-NEXT:    andb $80, %cl
+; CHECK-NEXT:    addb %cl, %cl
+; CHECK-NEXT:    andb $-96, %al
+; CHECK-NEXT:    shrb %al
 ; CHECK-NEXT:    orb %cl, %al
 ; CHECK-NEXT:    shrb $4, %al
 ; CHECK-NEXT:    retl

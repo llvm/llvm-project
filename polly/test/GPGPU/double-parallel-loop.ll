@@ -14,6 +14,10 @@
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck %s -check-prefix=KERNEL-IR
 
+; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-asm \
+; RUN: -disable-output < %s | \
+; RUN: FileCheck %s -check-prefix=KERNEL-ASM
+
 ; REQUIRES: pollyacc
 
 ; CHECK: Stmt_bb5
@@ -151,6 +155,16 @@
 ; KERNEL-IR-LABEL: polly.loop_preheader:                             ; preds = %entry
 ; KERNEL-IR-NEXT:   br label %polly.loop_header
 
+
+; KERNEL-ASM: .version 3.2
+; KERNEL-ASM-NEXT: .target sm_30
+; KERNEL-ASM-NEXT: .address_size 64
+
+; KERNEL-ASM:   // .globl     kernel_0
+
+; KERNEL-ASM: .visible .entry kernel_0(
+; KERNEL-ASM-NEXT:   .param .u64 kernel_0_param_0
+; KERNEL-ASM-NEXT: )
 
 ;    void double_parallel_loop(float A[][1024]) {
 ;      for (long i = 0; i < 1024; i++)

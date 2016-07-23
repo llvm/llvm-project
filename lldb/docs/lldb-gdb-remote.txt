@@ -888,6 +888,12 @@ tuples to return are:
     
     permissions:<permissions>;  // <permissions> is a string that contains one
                                 // or more of the characters from "rwx"
+
+    name:<name>; // <name> is a hex encoded string that contains the name of
+                 // the memory region mapped at the given address. In case of
+                 // regions backed by a file it have to be the absolute path of
+                 // the file while for anonymous regions it have to be the name
+                 // associated to the region if that is available.
                                 
     error:<ascii-byte-error-string>; // where <ascii-byte-error-string> is
                                      // a hex encoded string value that 

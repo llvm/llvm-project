@@ -4224,7 +4224,7 @@ void Parser::ParseEnumBody(SourceLocation StartLoc, Decl *EnumDecl) {
 
     if (Tok.is(tok::identifier)) {
       // We're missing a comma between enumerators.
-      SourceLocation Loc = PP.getLocForEndOfToken(PrevTokLocation);
+      SourceLocation Loc = getEndOfPreviousToken();
       Diag(Loc, diag::err_enumerator_list_missing_comma)
         << FixItHint::CreateInsertion(Loc, ", ");
       continue;
@@ -5200,12 +5200,22 @@ static SourceLocation getMissingDeclaratorIdLoc(Declarator &D,
 ///          '~' class-name
 ///         template-id
 ///
+/// C++17 adds the following, which we also handle here:
+///
+///       simple-declaration:
+///         <decl-spec> '[' identifier-list ']' brace-or-equal-initializer ';'
+///
 /// Note, any additional constructs added here may need corresponding changes
 /// in isConstructorDeclarator.
 void Parser::ParseDirectDeclarator(Declarator &D) {
   DeclaratorScopeObj DeclScopeObj(*this, D.getCXXScopeSpec());
 
   if (getLangOpts().CPlusPlus && D.mayHaveIdentifier()) {
+    // This might be a C++17 structured binding.
+    if (Tok.is(tok::l_square) && !D.mayOmitIdentifier() &&
+        D.getCXXScopeSpec().isEmpty())
+      return ParseDecompositionDeclarator(D);
+
     // Don't parse FOO:BAR as if it were a typo for FOO::BAR inside a class, in
     // this context it is a bitfield. Also in range-based for statement colon
     // may delimit for-range-declaration.
@@ -5433,6 +5443,70 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
       break;
     }
   }
+}
+
+void Parser::ParseDecompositionDeclarator(Declarator &D) {
+  assert(Tok.is(tok::l_square));
+
+  // If this doesn't look like a structured binding, maybe it's a misplaced
+  // array declarator.
+  // FIXME: Consume the l_square first so we don't need extra lookahead for
+  // this.
+  if (!(NextToken().is(tok::identifier) &&
+        GetLookAheadToken(2).isOneOf(tok::comma, tok::r_square)) &&
+      !(NextToken().is(tok::r_square) &&
+        GetLookAheadToken(2).isOneOf(tok::equal, tok::l_brace)))
+    return ParseMisplacedBracketDeclarator(D);
+
+  BalancedDelimiterTracker T(*this, tok::l_square);
+  T.consumeOpen();
+
+  SmallVector<DecompositionDeclarator::Binding, 32> Bindings;
+  while (Tok.isNot(tok::r_square)) {
+    if (!Bindings.empty()) {
+      if (Tok.is(tok::comma))
+        ConsumeToken();
+      else {
+        if (Tok.is(tok::identifier)) {
+          SourceLocation EndLoc = getEndOfPreviousToken();
+          Diag(EndLoc, diag::err_expected)
+              << tok::comma << FixItHint::CreateInsertion(EndLoc, ",");
+        } else {
+          Diag(Tok, diag::err_expected_comma_or_rsquare);
+        }
+
+        SkipUntil(tok::r_square, tok::comma, tok::identifier,
+                  StopAtSemi | StopBeforeMatch);
+        if (Tok.is(tok::comma))
+          ConsumeToken();
+        else if (Tok.isNot(tok::identifier))
+          break;
+      }
+    }
+
+    if (Tok.isNot(tok::identifier)) {
+      Diag(Tok, diag::err_expected) << tok::identifier;
+      break;
+    }
+
+    Bindings.push_back({Tok.getIdentifierInfo(), Tok.getLocation()});
+    ConsumeToken();
+  }
+
+  if (Tok.isNot(tok::r_square))
+    // We've already diagnosed a problem here.
+    T.skipToEnd();
+  else {
+    // C++17 does not allow the identifier-list in a structured binding
+    // to be empty.
+    if (Bindings.empty())
+      Diag(Tok.getLocation(), diag::ext_decomp_decl_empty);
+
+    T.consumeClose();
+  }
+
+  return D.setDecompositionBindings(T.getOpenLocation(), Bindings,
+                                    T.getCloseLocation());
 }
 
 /// ParseParenDeclarator - We parsed the declarator D up to a paren.  This is

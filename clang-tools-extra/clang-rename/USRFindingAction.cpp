@@ -46,10 +46,6 @@ namespace {
 // AdditionalUSRFinder. AdditionalUSRFinder adds USRs of ctor and dtor if given
 // Decl refers to class and adds USRs of all overridden methods if Decl refers
 // to virtual method.
-//
-// FIXME: It's better to match ctors/dtors via typeLoc's instead of adding
-// their USRs to the storage, because we can also match CXXConversionDecl's by
-// typeLoc and we won't have to "manually" handle them here.
 class AdditionalUSRFinder : public MatchFinder::MatchCallback {
 public:
   explicit AdditionalUSRFinder(const Decl *FoundDecl, ASTContext &Context,
@@ -90,23 +86,11 @@ private:
   void addUSRsFromOverrideSetsAndCtorDtors() {
     // If D is CXXRecordDecl we should add all USRs of its constructors.
     if (const auto *RecordDecl = dyn_cast<CXXRecordDecl>(FoundDecl)) {
-      // Ignore destructors. Find the declaration of and explicit calls to a
-      // destructor through TagTypeLoc (and it is better for the purpose of
-      // renaming).
-      //
-      // For example, in the following code segment,
-      //  1  class C {
-      //  2    ~C();
-      //  3  };
-      //
-      // At line 3, there is a NamedDecl starting from '~' and a TagTypeLoc
-      // starting from 'C'.
       RecordDecl = RecordDecl->getDefinition();
-
-      // Iterate over all the constructors and add their USRs.
       for (const auto *CtorDecl : RecordDecl->ctors()) {
         USRSet.insert(getUSRForDecl(CtorDecl));
       }
+      USRSet.insert(getUSRForDecl(RecordDecl->getDestructor()));
     }
     // If D is CXXMethodDecl we should add all USRs of its overriden methods.
     if (const auto *MethodDecl = dyn_cast<CXXMethodDecl>(FoundDecl)) {

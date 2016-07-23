@@ -93,6 +93,10 @@ private:
   /// \return true if the translation succeeded.
   bool translate(const Instruction &Inst);
 
+  /// Translate alloca instruction (i.e. one of constant size and in the first
+  /// basic block).
+  bool translateStaticAlloca(const AllocaInst &Inst);
+
   /// Translate \p Inst into a binary operation \p Opcode.
   /// \pre \p Inst is a binary operation.
   bool translateBinaryOp(unsigned Opcode, const Instruction &Inst);
@@ -116,6 +120,8 @@ private:
 
   /// MachineRegisterInfo used to create virtual registers.
   MachineRegisterInfo *MRI;
+
+  const DataLayout *DL;
 
   // * Insert all the code needed to materialize the constants
   // at the proper place. E.g., Entry block or dominator block

@@ -842,6 +842,9 @@ private:
   /// \brief Whether we have tried loading the global module index yet.
   bool TriedLoadingGlobalIndex;
 
+  ///\brief Whether we are currently processing update records.
+  bool ProcessingUpdateRecords;
+
   typedef llvm::DenseMap<unsigned, SwitchCase *> SwitchCaseMapTy;
   /// \brief Mapping from switch-case IDs in the chain to switch-case statements
   ///
@@ -1039,6 +1042,23 @@ private:
     }
 
     ~ReadingKindTracker() { Reader.ReadingKind = PrevKind; }
+  };
+
+  /// \brief RAII object to mark the start of processing updates.
+  class ProcessingUpdatesRAIIObj {
+    ASTReader &Reader;
+    bool PrevState;
+
+    ProcessingUpdatesRAIIObj(const ProcessingUpdatesRAIIObj &) = delete;
+    void operator=(const ProcessingUpdatesRAIIObj &) = delete;
+
+  public:
+    ProcessingUpdatesRAIIObj(ASTReader &reader)
+      : Reader(reader), PrevState(Reader.ProcessingUpdateRecords) {
+      Reader.ProcessingUpdateRecords = true;
+    }
+
+    ~ProcessingUpdatesRAIIObj() { Reader.ProcessingUpdateRecords = PrevState; }
   };
 
   /// \brief Suggested contents of the predefines buffer, after this
@@ -2129,6 +2149,8 @@ public:
 
   /// \brief Loads comments ranges.
   void ReadComments() override;
+
+  bool isProcessingUpdateRecords() { return ProcessingUpdateRecords; }
 };
 
 /// \brief Helper class that saves the current stream position and

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARM.h"
+#include "ARMBasicBlockInfo.h"
 #include "ARMMachineFunctionInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "Thumb2InstrInfo.h"
@@ -57,19 +58,6 @@ static cl::opt<unsigned>
 CPMaxIteration("arm-constant-island-max-iteration", cl::Hidden, cl::init(30),
           cl::desc("The max number of iteration for converge"));
 
-
-/// UnknownPadding - Return the worst case padding that could result from
-/// unknown offset bits.  This does not include alignment padding caused by
-/// known offset bits.
-///
-/// @param LogAlign log2(alignment)
-/// @param KnownBits Number of known low offset bits.
-static inline unsigned UnknownPadding(unsigned LogAlign, unsigned KnownBits) {
-  if (KnownBits < LogAlign)
-    return (1u << LogAlign) - (1u << KnownBits);
-  return 0;
-}
-
 namespace {
   /// ARMConstantIslands - Due to limited PC-relative displacements, ARM
   /// requires constant pool entries to be scattered among the instructions
@@ -83,78 +71,6 @@ namespace {
   ///   CPE     - A constant pool entry that has been placed somewhere, which
   ///             tracks a list of users.
   class ARMConstantIslands : public MachineFunctionPass {
-    /// BasicBlockInfo - Information about the offset and size of a single
-    /// basic block.
-    struct BasicBlockInfo {
-      /// Offset - Distance from the beginning of the function to the beginning
-      /// of this basic block.
-      ///
-      /// Offsets are computed assuming worst case padding before an aligned
-      /// block. This means that subtracting basic block offsets always gives a
-      /// conservative estimate of the real distance which may be smaller.
-      ///
-      /// Because worst case padding is used, the computed offset of an aligned
-      /// block may not actually be aligned.
-      unsigned Offset;
-
-      /// Size - Size of the basic block in bytes.  If the block contains
-      /// inline assembly, this is a worst case estimate.
-      ///
-      /// The size does not include any alignment padding whether from the
-      /// beginning of the block, or from an aligned jump table at the end.
-      unsigned Size;
-
-      /// KnownBits - The number of low bits in Offset that are known to be
-      /// exact.  The remaining bits of Offset are an upper bound.
-      uint8_t KnownBits;
-
-      /// Unalign - When non-zero, the block contains instructions (inline asm)
-      /// of unknown size.  The real size may be smaller than Size bytes by a
-      /// multiple of 1 << Unalign.
-      uint8_t Unalign;
-
-      /// PostAlign - When non-zero, the block terminator contains a .align
-      /// directive, so the end of the block is aligned to 1 << PostAlign
-      /// bytes.
-      uint8_t PostAlign;
-
-      BasicBlockInfo() : Offset(0), Size(0), KnownBits(0), Unalign(0),
-        PostAlign(0) {}
-
-      /// Compute the number of known offset bits internally to this block.
-      /// This number should be used to predict worst case padding when
-      /// splitting the block.
-      unsigned internalKnownBits() const {
-        unsigned Bits = Unalign ? Unalign : KnownBits;
-        // If the block size isn't a multiple of the known bits, assume the
-        // worst case padding.
-        if (Size & ((1u << Bits) - 1))
-          Bits = countTrailingZeros(Size);
-        return Bits;
-      }
-
-      /// Compute the offset immediately following this block.  If LogAlign is
-      /// specified, return the offset the successor block will get if it has
-      /// this alignment.
-      unsigned postOffset(unsigned LogAlign = 0) const {
-        unsigned PO = Offset + Size;
-        unsigned LA = std::max(unsigned(PostAlign), LogAlign);
-        if (!LA)
-          return PO;
-        // Add alignment padding from the terminator.
-        return PO + UnknownPadding(LA, internalKnownBits());
-      }
-
-      /// Compute the number of known low bits of postOffset.  If this block
-      /// contains inline asm, the number of known bits drops to the
-      /// instruction alignment.  An aligned terminator may increase the number
-      /// of know bits.
-      /// If LogAlign is given, also consider the alignment of the next block.
-      unsigned postKnownBits(unsigned LogAlign = 0) const {
-        return std::max(std::max(unsigned(PostAlign), LogAlign),
-                        internalKnownBits());
-      }
-    };
 
     std::vector<BasicBlockInfo> BBInfo;
 
@@ -330,7 +246,6 @@ namespace {
     MachineBasicBlock *adjustJTTargetBlockForward(MachineBasicBlock *BB,
                                                   MachineBasicBlock *JTBB);
 
-    void computeBlockSize(MachineBasicBlock *MBB);
     unsigned getOffsetOf(MachineInstr *MI) const;
     unsigned getUserOffset(CPUser&) const;
     void dumpBBs();
@@ -734,15 +649,8 @@ void ARMConstantIslands::scanFunctionJumpTables() {
 /// and finding all of the constant pool users.
 void ARMConstantIslands::
 initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
-  BBInfo.clear();
-  BBInfo.resize(MF->getNumBlockIDs());
 
-  // First thing, compute the size of all basic blocks, and see if the function
-  // has any inline assembly in it. If so, we have to be conservative about
-  // alignment assumptions, as we don't know for sure the size of any
-  // instructions in the inline assembly.
-  for (MachineBasicBlock &MBB : *MF)
-    computeBlockSize(&MBB);
+  BBInfo = computeAllBlockSizes(MF);
 
   // The known bits of the entry block offset are determined by the function
   // alignment.
@@ -901,32 +809,6 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
   }
 }
 
-/// computeBlockSize - Compute the size and some alignment information for MBB.
-/// This function updates BBInfo directly.
-void ARMConstantIslands::computeBlockSize(MachineBasicBlock *MBB) {
-  BasicBlockInfo &BBI = BBInfo[MBB->getNumber()];
-  BBI.Size = 0;
-  BBI.Unalign = 0;
-  BBI.PostAlign = 0;
-
-  for (MachineInstr &I : *MBB) {
-    BBI.Size += TII->GetInstSizeInBytes(I);
-    // For inline asm, GetInstSizeInBytes returns a conservative estimate.
-    // The actual size may be smaller, but still a multiple of the instr size.
-    if (I.isInlineAsm())
-      BBI.Unalign = isThumb ? 1 : 2;
-    // Also consider instructions that may be shrunk later.
-    else if (isThumb && mayOptimizeThumb2Instruction(&I))
-      BBI.Unalign = 1;
-  }
-
-  // tBR_JTr contains a .align 2 directive.
-  if (!MBB->empty() && MBB->back().getOpcode() == ARM::tBR_JTr) {
-    BBI.PostAlign = 2;
-    MBB->getParent()->ensureAlignment(2);
-  }
-}
-
 /// getOffsetOf - Return the current offset of the specified machine instruction
 /// from the start of the function.  This offset changes as stuff is moved
 /// around inside the function.
@@ -1034,11 +916,11 @@ MachineBasicBlock *ARMConstantIslands::splitBlockBeforeInstr(MachineInstr *MI) {
   // the new jump we added.  (It should be possible to do this without
   // recounting everything, but it's very confusing, and this is rarely
   // executed.)
-  computeBlockSize(OrigBB);
+  computeBlockSize(MF, OrigBB, BBInfo[OrigBB->getNumber()]);
 
   // Figure out how large the NewMBB is.  As the second half of the original
   // block, it may contain a tablejump.
-  computeBlockSize(NewBB);
+  computeBlockSize(MF, NewBB, BBInfo[NewBB->getNumber()]);
 
   // All BBOffsets following these blocks must be modified.
   adjustBBOffsetsAfter(OrigBB);
@@ -1400,7 +1282,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
       unsigned MaxDisp = getUnconditionalBrDisp(UncondBr);
       ImmBranches.push_back(ImmBranch(&UserMBB->back(),
                                       MaxDisp, false, UncondBr));
-      computeBlockSize(UserMBB);
+      computeBlockSize(MF, UserMBB, BBInfo[UserMBB->getNumber()]);
       adjustBBOffsetsAfter(UserMBB);
       return;
     }

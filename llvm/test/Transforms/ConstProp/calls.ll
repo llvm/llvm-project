@@ -1,47 +1,47 @@
 ; RUN: opt < %s -constprop -S | FileCheck %s
 ; RUN: opt < %s -constprop -disable-simplify-libcalls -S | FileCheck %s --check-prefix=FNOBUILTIN
 
-declare double @acos(double)
-declare double @asin(double)
-declare double @atan(double)
-declare double @atan2(double, double)
-declare double @ceil(double)
-declare double @cos(double)
-declare double @cosh(double)
-declare double @exp(double)
-declare double @exp2(double)
-declare double @fabs(double)
-declare double @floor(double)
-declare double @fmod(double, double)
-declare double @log(double)
-declare double @log10(double)
-declare double @pow(double, double)
-declare double @sin(double)
-declare double @sinh(double)
-declare double @sqrt(double)
-declare double @tan(double)
-declare double @tanh(double)
+declare double @acos(double) readnone nounwind
+declare double @asin(double) readnone nounwind
+declare double @atan(double) readnone nounwind
+declare double @atan2(double, double) readnone nounwind
+declare double @ceil(double) readnone nounwind
+declare double @cos(double) readnone nounwind
+declare double @cosh(double) readnone nounwind
+declare double @exp(double) readnone nounwind
+declare double @exp2(double) readnone nounwind
+declare double @fabs(double) readnone nounwind
+declare double @floor(double) readnone nounwind
+declare double @fmod(double, double) readnone nounwind
+declare double @log(double) readnone nounwind
+declare double @log10(double) readnone nounwind
+declare double @pow(double, double) readnone nounwind
+declare double @sin(double) readnone nounwind
+declare double @sinh(double) readnone nounwind
+declare double @sqrt(double) readnone nounwind
+declare double @tan(double) readnone nounwind
+declare double @tanh(double) readnone nounwind
 
-declare float @acosf(float)
-declare float @asinf(float)
-declare float @atanf(float)
-declare float @atan2f(float, float)
-declare float @ceilf(float)
-declare float @cosf(float)
-declare float @coshf(float)
-declare float @expf(float)
-declare float @exp2f(float)
-declare float @fabsf(float)
-declare float @floorf(float)
-declare float @fmodf(float, float)
-declare float @logf(float)
-declare float @log10f(float)
-declare float @powf(float, float)
-declare float @sinf(float)
-declare float @sinhf(float)
-declare float @sqrtf(float)
-declare float @tanf(float)
-declare float @tanhf(float)
+declare float @acosf(float) readnone nounwind
+declare float @asinf(float) readnone nounwind
+declare float @atanf(float) readnone nounwind
+declare float @atan2f(float, float) readnone nounwind
+declare float @ceilf(float) readnone nounwind
+declare float @cosf(float) readnone nounwind
+declare float @coshf(float) readnone nounwind
+declare float @expf(float) readnone nounwind
+declare float @exp2f(float) readnone nounwind
+declare float @fabsf(float) readnone nounwind
+declare float @floorf(float) readnone nounwind
+declare float @fmodf(float, float) readnone nounwind
+declare float @logf(float) readnone nounwind
+declare float @log10f(float) readnone nounwind
+declare float @powf(float, float) readnone nounwind
+declare float @sinf(float) readnone nounwind
+declare float @sinhf(float) readnone nounwind
+declare float @sqrtf(float) readnone nounwind
+declare float @tanf(float) readnone nounwind
+declare float @tanhf(float) readnone nounwind
 
 define double @T() {
 ; CHECK-LABEL: @T(

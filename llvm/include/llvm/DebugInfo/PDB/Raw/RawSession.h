@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -20,7 +21,8 @@ class PDBFile;
 
 class RawSession : public IPDBSession {
 public:
-  explicit RawSession(std::unique_ptr<PDBFile> PdbFile);
+  RawSession(std::unique_ptr<PDBFile> PdbFile,
+             std::unique_ptr<BumpPtrAllocator> Allocator);
   ~RawSession() override;
 
   static Error createFromPdb(StringRef Path,
@@ -68,6 +70,7 @@ public:
 
 private:
   std::unique_ptr<PDBFile> Pdb;
+  std::unique_ptr<BumpPtrAllocator> Allocator;
 };
 }
 }

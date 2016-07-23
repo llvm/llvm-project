@@ -70,10 +70,10 @@ DynamicLoaderMacOS::CreateInstance (Process* process, bool force)
         }
     }
 
-	if (UseDYLDSPI (process) == false)
-	{
-		create = false;
-	}
+    if (UseDYLDSPI (process) == false)
+    {
+        create = false;
+    }
     
     if (create)
         return new DynamicLoaderMacOS (process);
@@ -189,8 +189,8 @@ DynamicLoaderMacOS::DoInitialImageFetch()
     {
         if (JSONImageInformationIntoImageInfo (all_image_info_json_sp, image_infos))
         {
-    	    if (log)
-        	    log->Printf ("Initial module fetch:  Adding %" PRId64 " modules.\n", (uint64_t) image_infos.size());
+            if (log)
+                log->Printf ("Initial module fetch:  Adding %" PRId64 " modules.\n", (uint64_t) image_infos.size());
 
             UpdateSpecialBinariesFromNewImageInfos (image_infos);
             AddModulesUsingImageInfos (image_infos);
@@ -233,11 +233,11 @@ DynamicLoaderMacOS::NotifyBreakpointHit (void *baton,
     if (process != dyld_instance->m_process)
         return false;
 
-	if (dyld_instance->m_image_infos_stop_id != UINT32_MAX 
+    if (dyld_instance->m_image_infos_stop_id != UINT32_MAX 
         && process->GetStopID() < dyld_instance->m_image_infos_stop_id)
-	{
-		return false;
-	}
+    {
+        return false;
+    }
 
     const lldb::ABISP &abi = process->GetABI();
     if (abi)
@@ -249,7 +249,7 @@ DynamicLoaderMacOS::NotifyBreakpointHit (void *baton,
 
         Value mode_value;  // enum dyld_notify_mode { dyld_notify_adding=0, dyld_notify_removing=1, dyld_notify_remove_all=2 };
         Value count_value;  // unsigned long count
-		Value headers_value; // uint64_t machHeaders[] (aka void*) 
+        Value headers_value; // uint64_t machHeaders[] (aka void*) 
         
         CompilerType clang_void_ptr_type = clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
         CompilerType clang_uint32_type = clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint, 32);
@@ -258,7 +258,7 @@ DynamicLoaderMacOS::NotifyBreakpointHit (void *baton,
         mode_value.SetValueType (Value::eValueTypeScalar);
         mode_value.SetCompilerType (clang_uint32_type);
 
-		if (process->GetTarget().GetArchitecture().GetAddressByteSize() == 4)
+        if (process->GetTarget().GetArchitecture().GetAddressByteSize() == 4)
         {
             count_value.SetValueType (Value::eValueTypeScalar);
             count_value.SetCompilerType (clang_uint32_type);
@@ -422,7 +422,7 @@ DynamicLoaderMacOS::GetDyldLockVariableAddressFromModule (Module *module)
 
 //  Look for this symbol:
 //
-//  int	__attribute__((visibility("hidden")))			_dyld_global_lock_held = 0;
+//  int __attribute__((visibility("hidden")))           _dyld_global_lock_held = 0;
 //
 //  in libdyld.dylib.
 Error

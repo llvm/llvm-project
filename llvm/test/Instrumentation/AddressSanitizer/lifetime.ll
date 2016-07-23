@@ -1,4 +1,4 @@
-; Test hanlding of llvm.lifetime intrinsics.
+; Test handling of llvm.lifetime intrinsics.
 ; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -S | FileCheck %s
 ; RUN: opt < %s -asan -asan-module -asan-use-after-scope -asan-use-after-return=0 -asan-instrument-allocas=0 -S | FileCheck %s --check-prefix=CHECK-NO-DYNAMIC
 

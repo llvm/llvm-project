@@ -598,6 +598,16 @@ TemplateDeclInstantiator::VisitTypeAliasTemplateDecl(TypeAliasTemplateDecl *D) {
   return Inst;
 }
 
+Decl *TemplateDeclInstantiator::VisitBindingDecl(BindingDecl *D) {
+  return BindingDecl::Create(SemaRef.Context, Owner, D->getLocation(),
+                             D->getIdentifier());
+}
+
+Decl *TemplateDeclInstantiator::VisitDecompositionDecl(DecompositionDecl *D) {
+  // FIXME: Instantiate bindings and pass them in.
+  return VisitVarDecl(D, /*InstantiatingVarTemplate=*/false);
+}
+
 Decl *TemplateDeclInstantiator::VisitVarDecl(VarDecl *D) {
   return VisitVarDecl(D, /*InstantiatingVarTemplate=*/false);
 }

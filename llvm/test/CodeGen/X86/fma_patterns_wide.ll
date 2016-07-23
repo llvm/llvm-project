@@ -244,7 +244,7 @@ define <8 x double> @test_8f64_fmsub_load(<8 x double>* %a0, <8 x double> %a1, <
 ; AVX512:       # BB#0:
 ; AVX512-NEXT:    vmovapd (%rdi), %zmm2
 ; AVX512-NEXT:    vfmsub213pd %zmm1, %zmm0, %zmm2
-; AVX512-NEXT:    vmovaps %zmm2, %zmm0
+; AVX512-NEXT:    vmovapd %zmm2, %zmm0
 ; AVX512-NEXT:    retq
   %x = load <8 x double>, <8 x double>* %a0
   %y = fmul <8 x double> %x, %a1
@@ -573,7 +573,7 @@ define <8 x double> @test_v8f64_interp(<8 x double> %x, <8 x double> %y, <8 x do
 ;
 ; AVX512-LABEL: test_v8f64_interp:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovaps %zmm2, %zmm3
+; AVX512-NEXT:    vmovapd %zmm2, %zmm3
 ; AVX512-NEXT:    vfnmadd213pd %zmm1, %zmm1, %zmm3
 ; AVX512-NEXT:    vfmadd213pd %zmm3, %zmm2, %zmm0
 ; AVX512-NEXT:    retq

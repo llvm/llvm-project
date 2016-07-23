@@ -16,7 +16,7 @@ main:
     addiu   $sp, $sp, -16
     bnez    $9, lab1
 
-# CHECK:    09 b4 04 00    bne $9, $zero, 8
+# CHECK:    09 b4 04 00    bnez $9, 8
 
     addu    $zero, $zero, $zero
 lab1:

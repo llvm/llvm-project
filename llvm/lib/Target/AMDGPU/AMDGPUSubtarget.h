@@ -116,10 +116,10 @@ public:
   AMDGPUSubtarget &initializeSubtargetDependencies(const Triple &TT,
                                                    StringRef GPU, StringRef FS);
 
-  const AMDGPUInstrInfo *getInstrInfo() const override;
-  const AMDGPUFrameLowering *getFrameLowering() const override;
-  const AMDGPUTargetLowering *getTargetLowering() const override;
-  const AMDGPURegisterInfo *getRegisterInfo() const override;
+  const AMDGPUInstrInfo *getInstrInfo() const override = 0;
+  const AMDGPUFrameLowering *getFrameLowering() const override = 0;
+  const AMDGPUTargetLowering *getTargetLowering() const override = 0;
+  const AMDGPURegisterInfo *getRegisterInfo() const override = 0;
 
   const InstrItineraryData *getInstrItineraryData() const override {
     return &InstrItins;
@@ -427,35 +427,6 @@ public:
     return SGPRInitBug;
   }
 };
-
-
-inline const AMDGPUInstrInfo *AMDGPUSubtarget::getInstrInfo() const {
-  if (getGeneration() >= SOUTHERN_ISLANDS)
-    return static_cast<const SISubtarget *>(this)->getInstrInfo();
-
-  return static_cast<const R600Subtarget *>(this)->getInstrInfo();
-}
-
-inline const AMDGPUFrameLowering *AMDGPUSubtarget::getFrameLowering() const  {
-  if (getGeneration() >= SOUTHERN_ISLANDS)
-    return static_cast<const SISubtarget *>(this)->getFrameLowering();
-
-  return static_cast<const R600Subtarget *>(this)->getFrameLowering();
-}
-
-inline const AMDGPUTargetLowering *AMDGPUSubtarget::getTargetLowering() const  {
-  if (getGeneration() >= SOUTHERN_ISLANDS)
-    return static_cast<const SISubtarget *>(this)->getTargetLowering();
-
-  return static_cast<const R600Subtarget *>(this)->getTargetLowering();
-}
-
-inline const AMDGPURegisterInfo *AMDGPUSubtarget::getRegisterInfo() const  {
-  if (getGeneration() >= SOUTHERN_ISLANDS)
-    return static_cast<const SISubtarget *>(this)->getRegisterInfo();
-
-  return static_cast<const R600Subtarget *>(this)->getRegisterInfo();
-}
 
 } // End namespace llvm
 

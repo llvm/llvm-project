@@ -3058,7 +3058,7 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
 
   // Remove empty statements.
   // Exit early in case there are no executable statements left in this scop.
-  simplifySCoP(false, DT, LI);
+  simplifySCoP(false);
   if (Stmts.empty())
     return;
 
@@ -3090,7 +3090,7 @@ void Scop::init(AliasAnalysis &AA, AssumptionCache &AC, DominatorTree &DT,
 
   hoistInvariantLoads();
   verifyInvariantLoads();
-  simplifySCoP(true, DT, LI);
+  simplifySCoP(true);
 
   // Check late for a feasible runtime context because profitability did not
   // change.
@@ -3161,7 +3161,7 @@ void Scop::updateAccessDimensionality() {
       Access->updateDimensionality();
 }
 
-void Scop::simplifySCoP(bool AfterHoisting, DominatorTree &DT, LoopInfo &LI) {
+void Scop::simplifySCoP(bool AfterHoisting) {
   for (auto StmtIt = Stmts.begin(), StmtEnd = Stmts.end(); StmtIt != StmtEnd;) {
     ScopStmt &Stmt = *StmtIt;
 

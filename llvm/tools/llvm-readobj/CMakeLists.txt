@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Support
   DebugInfoCodeView
+  DebugInfoMsf
   )
 
 add_llvm_tool(llvm-readobj

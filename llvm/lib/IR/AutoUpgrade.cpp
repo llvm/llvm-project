@@ -148,7 +148,31 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
   }
-
+  case 'i': {
+    if (Name.startswith("invariant.start")) {
+      auto Args = F->getFunctionType()->params();
+      Type* ObjectPtr[1] = {Args[1]};
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::invariant_start, ObjectPtr)) {
+        F->setName(Name + ".old");
+        NewFn = Intrinsic::getDeclaration(
+            F->getParent(), Intrinsic::invariant_start, ObjectPtr);
+        return true;
+      }
+    }
+    if (Name.startswith("invariant.end")) {
+      auto Args = F->getFunctionType()->params();
+      Type* ObjectPtr[1] = {Args[2]};
+      if (F->getName() !=
+          Intrinsic::getName(Intrinsic::invariant_end, ObjectPtr)) {
+        F->setName(Name + ".old");
+        NewFn = Intrinsic::getDeclaration(F->getParent(),
+                                          Intrinsic::invariant_end, ObjectPtr);
+        return true;
+      }
+    }
+    break;
+  }
   case 'm': {
     if (Name.startswith("masked.load.")) {
       Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
@@ -1339,6 +1363,8 @@ void llvm::UpgradeIntrinsicCall(CallInst *CI, Function *NewFn) {
     return;
   }
 
+  case Intrinsic::invariant_start:
+  case Intrinsic::invariant_end:
   case Intrinsic::masked_load:
   case Intrinsic::masked_store: {
     SmallVector<Value *, 4> Args(CI->arg_operands().begin(),

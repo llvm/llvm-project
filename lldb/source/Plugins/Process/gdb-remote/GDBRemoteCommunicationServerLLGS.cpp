@@ -2221,6 +2221,15 @@ GDBRemoteCommunicationServerLLGS::Handle_qMemoryRegionInfo (StringExtractorGDBRe
 
             response.PutChar (';');
         }
+
+        // Name
+        ConstString name = region_info.GetName();
+        if (name)
+        {
+            response.PutCString("name:");
+            response.PutCStringAsRawHex8(name.AsCString());
+            response.PutChar(';');
+        }
     }
 
     return SendPacketNoLock(response.GetData(), response.GetSize());

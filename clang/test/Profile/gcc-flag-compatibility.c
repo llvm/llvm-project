@@ -12,7 +12,7 @@
 
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to | FileCheck -check-prefix=PROFILE-GEN-EQ %s
-// PROFILE-GEN-EQ: constant [25 x i8] c"/path/to{{/|\\5C}}default.profraw\00"
+// PROFILE-GEN-EQ: constant [{{.*}} x i8] c"/path/to{{/|\\5C}}{{.*}}\00"
 
 // Check that -fprofile-use=some/path reads some/path/default.profdata
 // RUN: rm -rf %t.dir

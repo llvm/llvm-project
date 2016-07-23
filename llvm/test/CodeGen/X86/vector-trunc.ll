@@ -443,7 +443,7 @@ define <8 x i32> @trunc2x4i64_8i32(<4 x i64> %a, <4 x i64> %b) {
 ; AVX512BW-NEXT:    # kill: %YMM0<def> %YMM0<kill> %ZMM0<def>
 ; AVX512BW-NEXT:    vpmovqd %zmm0, %ymm0
 ; AVX512BW-NEXT:    vpmovqd %zmm1, %ymm1
-; AVX512BW-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512BW-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; AVX512BW-NEXT:    retq
 entry:
   %0 = trunc <4 x i64> %a to <4 x i32>

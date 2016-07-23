@@ -3761,6 +3761,7 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
     break;
 
   case Decl::Var:
+  case Decl::Decomposition:
     // Skip variable templates
     if (cast<VarDecl>(D)->getDescribedVarTemplate())
       return;

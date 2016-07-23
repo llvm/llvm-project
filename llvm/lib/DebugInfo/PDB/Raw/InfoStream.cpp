@@ -10,22 +10,23 @@
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
-#include "llvm/DebugInfo/CodeView/StreamWriter.h"
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 InfoStream::InfoStream(std::unique_ptr<MappedBlockStream> Stream)
     : Stream(std::move(Stream)) {}
 
 Error InfoStream::reload() {
-  codeview::StreamReader Reader(*Stream);
+  StreamReader Reader(*Stream);
 
   const HeaderInfo *H;
   if (auto EC = Reader.readObject(H))

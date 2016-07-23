@@ -2306,6 +2306,44 @@ StaticAssertDecl *StaticAssertDecl::CreateDeserialized(ASTContext &C,
                                       nullptr, SourceLocation(), false);
 }
 
+void BindingDecl::anchor() {}
+
+BindingDecl *BindingDecl::Create(ASTContext &C, DeclContext *DC,
+                                 SourceLocation IdLoc, IdentifierInfo *Id) {
+  return new (C, DC) BindingDecl(DC, IdLoc, Id);
+}
+
+BindingDecl *BindingDecl::CreateDeserialized(ASTContext &C, unsigned ID) {
+  return new (C, ID) BindingDecl(nullptr, SourceLocation(), nullptr);
+}
+
+void DecompositionDecl::anchor() {}
+
+DecompositionDecl *DecompositionDecl::Create(ASTContext &C, DeclContext *DC,
+                                             SourceLocation StartLoc,
+                                             SourceLocation LSquareLoc,
+                                             QualType T, TypeSourceInfo *TInfo,
+                                             StorageClass SC,
+                                             ArrayRef<BindingDecl *> Bindings) {
+  size_t Extra = additionalSizeToAlloc<BindingDecl *>(Bindings.size());
+  return new (C, DC, Extra)
+      DecompositionDecl(C, DC, StartLoc, LSquareLoc, T, TInfo, SC, Bindings);
+}
+
+DecompositionDecl *DecompositionDecl::CreateDeserialized(ASTContext &C,
+                                                         unsigned ID,
+                                                         unsigned NumBindings) {
+  size_t Extra = additionalSizeToAlloc<BindingDecl *>(NumBindings);
+  auto *Result = new (C, ID, Extra) DecompositionDecl(
+      C, nullptr, SourceLocation(), SourceLocation(), QualType(), nullptr, StorageClass(), None);
+  // Set up and clean out the bindings array.
+  Result->NumBindings = NumBindings;
+  auto *Trail = Result->getTrailingObjects<BindingDecl *>();
+  for (unsigned I = 0; I != NumBindings; ++I)
+    new (Trail + I) BindingDecl*(nullptr);
+  return Result;
+}
+
 MSPropertyDecl *MSPropertyDecl::Create(ASTContext &C, DeclContext *DC,
                                        SourceLocation L, DeclarationName N,
                                        QualType T, TypeSourceInfo *TInfo,
