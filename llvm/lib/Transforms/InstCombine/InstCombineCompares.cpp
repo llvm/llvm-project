@@ -2341,6 +2341,14 @@ Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI,
       }
     }
     break;
+  case Instruction::UDiv:
+    if (RHSV == 0) {
+      // (icmp eq/ne (udiv A, B), 0) -> (icmp ugt/ule i32 B, A)
+      ICmpInst::Predicate Pred =
+          isICMP_NE ? ICmpInst::ICMP_ULE : ICmpInst::ICMP_UGT;
+      return new ICmpInst(Pred, BO->getOperand(1), BO->getOperand(0));
+    }
+    break;
   default:
     break;
   }
@@ -3634,7 +3642,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
   // See if we are doing a comparison between a constant and an instruction that
   // can be folded into the comparison.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
-    Value *A = nullptr, *B = nullptr;
     // Since the RHS is a ConstantInt (CI), if the left hand side is an
     // instruction, see if that instruction also has constants so that the
     // instruction can be folded into the icmp
@@ -3645,14 +3652,6 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         return Res;
       if (Instruction *Res = foldICmpIntrinsicWithConstant(I, LHSI, CI))
         return Res;
-    }
-    // (icmp eq/ne (udiv A, B), 0) -> (icmp ugt/ule i32 B, A)
-    if (I.isEquality() && CI->isZero() &&
-        match(Op0, m_UDiv(m_Value(A), m_Value(B)))) {
-      ICmpInst::Predicate Pred = I.getPredicate() == ICmpInst::ICMP_EQ
-                                     ? ICmpInst::ICMP_UGT
-                                     : ICmpInst::ICMP_ULE;
-      return new ICmpInst(Pred, B, A);
     }
   }
 
