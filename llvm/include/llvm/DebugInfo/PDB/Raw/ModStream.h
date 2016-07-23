@@ -13,10 +13,10 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
-#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
@@ -26,7 +26,8 @@ class ModInfo;
 
 class ModStream {
 public:
-  ModStream(const ModInfo &Module, std::unique_ptr<MappedBlockStream> Stream);
+  ModStream(const ModInfo &Module,
+            std::unique_ptr<msf::MappedBlockStream> Stream);
   ~ModStream();
 
   Error reload();
@@ -42,12 +43,12 @@ public:
 private:
   const ModInfo &Mod;
 
-  std::unique_ptr<MappedBlockStream> Stream;
+  std::unique_ptr<msf::MappedBlockStream> Stream;
 
   codeview::CVSymbolArray SymbolsSubstream;
-  codeview::StreamRef LinesSubstream;
-  codeview::StreamRef C13LinesSubstream;
-  codeview::StreamRef GlobalRefsSubstream;
+  msf::StreamRef LinesSubstream;
+  msf::StreamRef C13LinesSubstream;
+  msf::StreamRef GlobalRefsSubstream;
 
   codeview::ModuleSubstreamArray LineInfo;
 };

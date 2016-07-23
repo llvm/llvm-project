@@ -266,6 +266,7 @@ For API clients and LLVM developers.
    TypeMetadata
    FaultMaps
    MIRLangRef
+   Coroutines
 
 :doc:`WritingAnLLVMPass`
    Information on how to write LLVM transformations and analyses.
@@ -377,6 +378,9 @@ For API clients and LLVM developers.
 
 :doc:`CompileCudaWithLLVM`
   LLVM support for CUDA.
+
+:doc:`Coroutines`
+  LLVM support for coroutines.
 
 Development Process Documentation
 =================================

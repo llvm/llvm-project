@@ -7,14 +7,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMREF_H
-#define LLVM_DEBUGINFO_CODEVIEW_STREAMREF_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMREF_H
+#define LLVM_DEBUGINFO_MSF_STREAMREF_H
 
-#include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/MsfError.h"
+#include "llvm/DebugInfo/Msf/StreamInterface.h"
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 
 class StreamRef {
 public:
@@ -30,9 +30,9 @@ public:
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const {
     if (ViewOffset + Offset < Offset)
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
     if (Size + Offset > Length)
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
     return Stream->readBytes(ViewOffset + Offset, Size, Buffer);
   }
 
@@ -41,7 +41,7 @@ public:
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) const {
     if (Offset >= Length)
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
     if (auto EC = Stream->readLongestContiguousChunk(Offset, Buffer))
       return EC;
@@ -56,7 +56,7 @@ public:
 
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const {
     if (Data.size() + Offset > Length)
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
     return Stream->writeBytes(ViewOffset + Offset, Data);
   }
 
@@ -98,7 +98,7 @@ private:
   uint32_t ViewOffset;
   uint32_t Length;
 };
-}
-}
+} // namespace msf
+} // namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_STREAMREF_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMREF_H

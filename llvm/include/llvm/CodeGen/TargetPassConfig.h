@@ -218,6 +218,14 @@ public:
   virtual bool addIRTranslator() { return true; }
 
   /// This method may be implemented by targets that want to run passes
+  /// immediately before legalization.
+  virtual void addPreLegalizeMachineIR() {}
+
+  /// This method should install a legalize pass, which converts the instruction
+  /// sequence into one that can be selected by the target.
+  virtual bool addLegalizeMachineIR() { return true; }
+
+  /// This method may be implemented by targets that want to run passes
   /// immediately before the register bank selection.
   virtual void addPreRegBankSelect() {}
 

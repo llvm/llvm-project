@@ -10,6 +10,6 @@ registers:
 body: |
   bb.0.entry:
     liveins: %edi
-    ; CHECK: [[@LINE+1]]:16: expected sN or <N x sM> for sized GlobalISel type
+    ; CHECK: [[@LINE+1]]:16: expected pN, sN or <N x sM> for sized GlobalISel type
     %0 = G_ADD unsized %edi, %edi
 ...

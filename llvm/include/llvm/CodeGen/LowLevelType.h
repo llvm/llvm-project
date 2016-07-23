@@ -42,6 +42,7 @@ public:
   enum TypeKind : uint16_t {
     Invalid,
     Scalar,
+    Pointer,
     Vector,
     Unsized,
   };
@@ -49,6 +50,12 @@ public:
   /// \brief get a low-level scalar or aggregate "bag of bits".
   static LLT scalar(unsigned SizeInBits) {
     return LLT{Scalar, 1, SizeInBits};
+  }
+
+  /// \brief get a low-level pointer in the given address space (defaulting to
+  /// 0).
+  static LLT pointer(unsigned AddressSpace) {
+    return LLT{Pointer, 1, AddressSpace};
   }
 
   /// \brief get a low-level vector of some number of elements and element
@@ -72,13 +79,13 @@ public:
     return LLT{Unsized, 1, 0};
   }
 
-  explicit LLT(TypeKind Kind, uint16_t NumElements, unsigned ScalarSizeInBits)
-    : ScalarSize(ScalarSizeInBits), NumElements(NumElements), Kind(Kind) {
+  explicit LLT(TypeKind Kind, uint16_t NumElements, unsigned SizeOrAddrSpace)
+    : SizeOrAddrSpace(SizeOrAddrSpace), NumElements(NumElements), Kind(Kind) {
     assert((Kind != Vector || NumElements > 1) &&
            "invalid number of vector elements");
   }
 
-  explicit LLT() : ScalarSize(0), NumElements(0), Kind(Invalid) {}
+  explicit LLT() : SizeOrAddrSpace(0), NumElements(0), Kind(Invalid) {}
 
   /// \brief construct a low-level type based on an LLVM type.
   explicit LLT(const Type &Ty);
@@ -86,6 +93,8 @@ public:
   bool isValid() const { return Kind != Invalid; }
 
   bool isScalar() const { return Kind == Scalar; }
+
+  bool isPointer() const { return Kind == Pointer; }
 
   bool isVector() const { return Kind == Vector; }
 
@@ -102,18 +111,23 @@ public:
   /// types.
   unsigned getSizeInBits() const {
     assert(isSized() && "attempt to get size of unsized type");
-    return ScalarSize * NumElements;
+    return SizeOrAddrSpace * NumElements;
   }
 
   unsigned getScalarSizeInBits() const {
     assert(isSized() && "cannot get size of this type");
-    return ScalarSize;
+    return SizeOrAddrSpace;
+  }
+
+  unsigned getAddressSpace() const {
+    assert(isPointer() && "cannot get address space of non-pointer type");
+    return SizeOrAddrSpace;
   }
 
   /// \brief Returns the vector's element type. Only valid for vector types.
   LLT getElementType() const {
     assert(isVector() && "cannot get element type of scalar/aggregate");
-    return scalar(ScalarSize);
+    return scalar(SizeOrAddrSpace);
   }
 
   /// \brief get a low-level type with half the size of the original, by halving
@@ -121,7 +135,7 @@ public:
   /// `s16`, `<2 x s32>` will become `<2 x s16>`.
   LLT halfScalarSize() const {
     assert(isSized() && "cannot change size of this type");
-    return LLT{Kind, NumElements, ScalarSize / 2};
+    return LLT{Kind, NumElements, SizeOrAddrSpace / 2};
   }
 
   /// \brief get a low-level type with twice the size of the original, by
@@ -129,7 +143,7 @@ public:
   /// become `s64`, `<2 x s32>` will become `<2 x s64>`.
   LLT doubleScalarSize() const {
     assert(isSized() && "cannot change size of this type");
-    return LLT{Kind, NumElements, ScalarSize * 2};
+    return LLT{Kind, NumElements, SizeOrAddrSpace * 2};
   }
 
   /// \brief get a low-level type with half the size of the original, by halving
@@ -139,9 +153,9 @@ public:
   LLT halfElements() const {
     assert(isVector() && NumElements % 2 == 0 && "cannot half odd vector");
     if (NumElements == 2)
-      return scalar(ScalarSize);
+      return scalar(SizeOrAddrSpace);
 
-    return LLT{Vector, static_cast<uint16_t>(NumElements / 2), ScalarSize};
+    return LLT{Vector, static_cast<uint16_t>(NumElements / 2), SizeOrAddrSpace};
   }
 
   /// \brief get a low-level type with twice the size of the original, by
@@ -149,19 +163,19 @@ public:
   /// source must be a vector type. For example `<2 x s32>` will become `<4 x
   /// s32>`. Doubling the number of elements in sN produces <2 x sN>.
   LLT doubleElements() const {
-    return LLT{Vector, static_cast<uint16_t>(NumElements * 2), ScalarSize};
+    return LLT{Vector, static_cast<uint16_t>(NumElements * 2), SizeOrAddrSpace};
   }
 
   void print(raw_ostream &OS) const;
 
   bool operator ==(const LLT &RHS) const {
-    return Kind == RHS.Kind && ScalarSize == RHS.ScalarSize &&
+    return Kind == RHS.Kind && SizeOrAddrSpace == RHS.SizeOrAddrSpace &&
            NumElements == RHS.NumElements;
   }
 
   friend struct DenseMapInfo<LLT>;
 private:
-  unsigned ScalarSize;
+  unsigned SizeOrAddrSpace;
   uint16_t NumElements;
   TypeKind Kind;
 };
@@ -174,7 +188,7 @@ template<> struct DenseMapInfo<LLT> {
     return LLT{LLT::Invalid, 0, -2u};
   }
   static inline unsigned getHashValue(const LLT &Ty) {
-    uint64_t Val = ((uint64_t)Ty.ScalarSize << 32) |
+    uint64_t Val = ((uint64_t)Ty.SizeOrAddrSpace << 32) |
                    ((uint64_t)Ty.NumElements << 16) | (uint64_t)Ty.Kind;
     return DenseMapInfo<uint64_t>::getHashValue(Val);
   }

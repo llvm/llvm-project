@@ -9,28 +9,27 @@
 
 #include "ErrorChecking.h"
 
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
-#include "llvm/DebugInfo/CodeView/StreamRef.h"
-#include "llvm/DebugInfo/CodeView/StreamWriter.h"
-#include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/Msf/IMsfFile.h"
+#include "llvm/DebugInfo/Msf/IMsfStreamData.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
+#include "llvm/DebugInfo/Msf/StreamWriter.h"
 #include "gtest/gtest.h"
 
 #include <unordered_map>
 
 using namespace llvm;
-using namespace llvm::codeview;
-using namespace llvm::pdb;
+using namespace llvm::msf;
 
 namespace {
 
 static const uint32_t BlocksAry[] = {0, 1, 2, 5, 4, 3, 6, 7, 8, 9};
 static uint8_t DataAry[] = {'A', 'B', 'C', 'F', 'E', 'D', 'G', 'H', 'I', 'J'};
 
-class DiscontiguousFile : public IPDBFile {
+class DiscontiguousFile : public IMsfFile {
 public:
   DiscontiguousFile(ArrayRef<uint32_t> Blocks, MutableArrayRef<uint8_t> Data)
       : Blocks(Blocks.begin(), Blocks.end()), Data(Data.begin(), Data.end()) {}
@@ -55,9 +54,9 @@ public:
   Error setBlockData(uint32_t BlockIndex, uint32_t Offset,
                      ArrayRef<uint8_t> SrcData) const override {
     if (BlockIndex >= Blocks.size())
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
     if (Offset > getBlockSize() - SrcData.size())
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
     ::memcpy(&Data[BlockIndex] + Offset, SrcData.data(), SrcData.size());
     return Error::success();
   }
@@ -69,8 +68,8 @@ private:
 
 class MappedBlockStreamImpl : public MappedBlockStream {
 public:
-  MappedBlockStreamImpl(std::unique_ptr<IPDBStreamData> Data,
-                        const IPDBFile &File)
+  MappedBlockStreamImpl(std::unique_ptr<IMsfStreamData> Data,
+                        const IMsfFile &File)
       : MappedBlockStream(std::move(Data), File) {}
 };
 

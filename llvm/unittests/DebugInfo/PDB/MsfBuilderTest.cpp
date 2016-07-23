@@ -9,14 +9,13 @@
 
 #include "ErrorChecking.h"
 
-#include "llvm/DebugInfo/PDB/Raw/MsfBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/MsfCommon.h"
+#include "llvm/DebugInfo/Msf/MsfBuilder.h"
+#include "llvm/DebugInfo/Msf/MsfCommon.h"
 
 #include "gtest/gtest.h"
 
 using namespace llvm;
-using namespace llvm::pdb;
-using namespace llvm::pdb::msf;
+using namespace llvm::msf;
 
 namespace {
 class MsfBuilderTest : public testing::Test {

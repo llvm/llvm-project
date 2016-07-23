@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_MSFCOMMON_H
-#define LLVM_DEBUGINFO_PDB_RAW_MSFCOMMON_H
+#ifndef LLVM_DEBUGINFO_MSF_MSFCOMMON_H
+#define LLVM_DEBUGINFO_MSF_MSFCOMMON_H
 
 #include "llvm/ADT/ArrayRef.h"
 
@@ -19,7 +19,6 @@
 #include <vector>
 
 namespace llvm {
-namespace pdb {
 namespace msf {
 static const char Magic[] = {'M',  'i',  'c',    'r', 'o', 's',  'o',  'f',
                              't',  ' ',  'C',    '/', 'C', '+',  '+',  ' ',
@@ -38,7 +37,7 @@ struct SuperBlock {
   // The index of the free block map.
   support::ulittle32_t FreeBlockMapBlock;
   // This contains the number of blocks resident in the file system.  In
-  // practice, NumBlocks * BlockSize is equivalent to the size of the PDB
+  // practice, NumBlocks * BlockSize is equivalent to the size of the MSF
   // file.
   support::ulittle32_t NumBlocks;
   // This contains the number of bytes which make up the directory.
@@ -50,7 +49,8 @@ struct SuperBlock {
 };
 
 struct Layout {
-  SuperBlock *SB;
+  Layout() : SB(nullptr) {}
+  const SuperBlock *SB;
   ArrayRef<support::ulittle32_t> DirectoryBlocks;
   ArrayRef<support::ulittle32_t> StreamSizes;
   std::vector<ArrayRef<support::ulittle32_t>> StreamMap;
@@ -83,8 +83,7 @@ inline uint64_t blockToOffset(uint64_t BlockNumber, uint64_t BlockSize) {
 }
 
 Error validateSuperBlock(const SuperBlock &SB);
-}
-}
-}
+} // namespace msf
+} // namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_MSF_MSFCOMMON_H

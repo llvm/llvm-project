@@ -76,6 +76,21 @@ define void @tests.masked.store(<2 x double>* %ptr, <2 x i1> %mask, <2 x double>
   ret void
 }
 
+
+declare {}* @llvm.invariant.start(i64, i8* nocapture) nounwind readonly
+declare void @llvm.invariant.end({}*, i64, i8* nocapture) nounwind
+
+define void @tests.invariant.start.end() {
+  ; CHECK-LABEL: @tests.invariant.start.end(
+  %a = alloca i8
+  %i = call {}* @llvm.invariant.start(i64 1, i8* %a)
+  ; CHECK: call {}* @llvm.invariant.start.p0i8
+  store i8 0, i8* %a
+  call void @llvm.invariant.end({}* %i, i64 1, i8* %a)
+  ; CHECK: call void @llvm.invariant.end.p0i8
+  ret void
+}
+
 @__stack_chk_guard = external global i8*
 declare void @llvm.stackprotectorcheck(i8**)
 

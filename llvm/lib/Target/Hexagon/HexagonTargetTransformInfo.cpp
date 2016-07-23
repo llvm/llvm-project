@@ -36,3 +36,11 @@ void HexagonTTIImpl::getUnrollingPreferences(Loop *L,
 unsigned HexagonTTIImpl::getNumberOfRegisters(bool vector) const {
   return vector ? 0 : 32;
 }
+
+unsigned HexagonTTIImpl::getPrefetchDistance() const {
+  return getST()->getL1PrefetchDistance();
+}
+
+unsigned HexagonTTIImpl::getCacheLineSize() const {
+  return getST()->getL1CacheLineSize();
+}

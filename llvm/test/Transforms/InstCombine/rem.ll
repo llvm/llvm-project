@@ -53,6 +53,19 @@ define i1 @test3a(i32 %A) {
 	ret i1 %C
 }
 
+; FIXME: Vectors should fold the same way.
+
+define <2 x i1> @test3a_vec(<2 x i32> %A) {
+; CHECK-LABEL: @test3a_vec(
+; CHECK-NEXT:    [[B:%.*]] = srem <2 x i32> %A, <i32 8, i32 8>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %B = srem <2 x i32> %A, <i32 -8, i32 -8>
+  %C = icmp ne <2 x i32> %B, zeroinitializer
+  ret <2 x i1> %C
+}
+
 define i32 @test4(i32 %X, i1 %C) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT: [[SEL:%.*]] = select i1 %C, i32 0, i32 7

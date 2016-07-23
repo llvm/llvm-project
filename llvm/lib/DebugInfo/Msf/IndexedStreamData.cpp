@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/IPDBFile.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/IMsfFile.h"
 
 using namespace llvm;
-using namespace llvm::pdb;
+using namespace llvm::msf;
 
-IndexedStreamData::IndexedStreamData(uint32_t StreamIdx, const IPDBFile &File)
+IndexedStreamData::IndexedStreamData(uint32_t StreamIdx, const IMsfFile &File)
     : StreamIdx(StreamIdx), File(File) {}
 
 uint32_t IndexedStreamData::getLength() {

@@ -68,8 +68,8 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     PrivateSegmentBuffer(false),
     DispatchPtr(false),
     QueuePtr(false),
-    DispatchID(false),
     KernargSegmentPtr(false),
+    DispatchID(false),
     FlatScratchInit(false),
     GridWorkgroupCountX(false),
     GridWorkgroupCountY(false),
@@ -127,6 +127,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
 
     if (F->hasFnAttribute("amdgpu-queue-ptr"))
       QueuePtr = true;
+
+    if (F->hasFnAttribute("amdgpu-dispatch-id"))
+      DispatchID = true;
   }
 
   // We don't need to worry about accessing spills with flat instructions.
@@ -172,6 +175,13 @@ unsigned SIMachineFunctionInfo::addKernargSegmentPtr(const SIRegisterInfo &TRI) 
     getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
   NumUserSGPRs += 2;
   return KernargSegmentPtrUserSGPR;
+}
+
+unsigned SIMachineFunctionInfo::addDispatchID(const SIRegisterInfo &TRI) {
+  DispatchIDUserSGPR = TRI.getMatchingSuperReg(
+    getNextUserSGPR(), AMDGPU::sub0, &AMDGPU::SReg_64RegClass);
+  NumUserSGPRs += 2;
+  return DispatchIDUserSGPR;
 }
 
 unsigned SIMachineFunctionInfo::addFlatScratchInit(const SIRegisterInfo &TRI) {

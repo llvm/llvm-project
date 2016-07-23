@@ -188,6 +188,16 @@ namespace options {
   // the import decisions, and exit afterwards. The assumption is
   // that the build system will launch the backend processes.
   static bool thinlto_index_only = false;
+  // If non-empty, holds the name of a file in which to write the list of
+  // oject files gold selected for inclusion in the link after symbol
+  // resolution (i.e. they had selected symbols). This will only be non-empty
+  // in the thinlto_index_only case. It is used to identify files, which may
+  // have originally been within archive libraries specified via
+  // --start-lib/--end-lib pairs, that should be included in the final
+  // native link process (since intervening function importing and inlining
+  // may change the symbol resolution detected in the final link and which
+  // files to include out of --start-lib/--end-lib libraries as a result).
+  static std::string thinlto_linked_objects_file;
   // If true, when generating individual index files for distributed backends,
   // also generate a "${bitcodefile}.imports" file at the same location for each
   // bitcode file, listing the files it imports from in plain text. This is to
@@ -233,6 +243,9 @@ namespace options {
       thinlto = true;
     } else if (opt == "thinlto-index-only") {
       thinlto_index_only = true;
+    } else if (opt.startswith("thinlto-index-only=")) {
+      thinlto_index_only = true;
+      thinlto_linked_objects_file = opt.substr(strlen("thinlto-index-only="));
     } else if (opt == "thinlto-emit-imports-files") {
       thinlto_emit_imports_files = true;
     } else if (opt.startswith("thinlto-prefix-replace=")) {
@@ -1409,6 +1422,18 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
     std::string OldPrefix, NewPrefix;
     getThinLTOOldAndNewPrefix(OldPrefix, NewPrefix);
 
+    // If the user requested a list of objects gold included in the link,
+    // create and open the requested file.
+    raw_fd_ostream *ObjFileOS = nullptr;
+    if (!options::thinlto_linked_objects_file.empty()) {
+      std::error_code EC;
+      ObjFileOS = new raw_fd_ostream(options::thinlto_linked_objects_file, EC,
+                                     sys::fs::OpenFlags::F_None);
+      if (EC)
+        message(LDPL_FATAL, "Unable to open %s for writing: %s",
+                options::thinlto_linked_objects_file.c_str(),
+                EC.message().c_str());
+    }
     // For each input bitcode file, generate an individual index that
     // contains summaries only for its own global values, and for any that
     // should be imported.
@@ -1417,6 +1442,18 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
 
       std::string NewModulePath =
           getThinLTOOutputFile(F.name, OldPrefix, NewPrefix);
+
+      if (!options::thinlto_linked_objects_file.empty()) {
+        // If gold included any symbols from ths file in the link, emit path
+        // to the final object file, which should be included in the final
+        // native link.
+        if (get_symbols(F.handle, F.syms.size(), F.syms.data()) !=
+            LDPS_NO_SYMS) {
+          assert(ObjFileOS);
+          *ObjFileOS << NewModulePath << "\n";
+        }
+      }
+
       raw_fd_ostream OS((Twine(NewModulePath) + ".thinlto.bc").str(), EC,
                         sys::fs::OpenFlags::F_None);
       if (EC)
@@ -1437,6 +1474,9 @@ static ld_plugin_status thinLTOLink(raw_fd_ostream *ApiFile) {
                   NewModulePath.c_str(), EC.message().c_str());
       }
     }
+
+    if (ObjFileOS)
+      ObjFileOS->close();
 
     cleanup_hook();
     exit(0);

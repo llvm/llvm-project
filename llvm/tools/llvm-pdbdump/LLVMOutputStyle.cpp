@@ -13,11 +13,13 @@
 #include "llvm/DebugInfo/CodeView/EnumTables.h"
 #include "llvm/DebugInfo/CodeView/ModuleSubstreamVisitor.h"
 #include "llvm/DebugInfo/CodeView/SymbolDumper.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/DebugInfo/PDB/PDBExtras.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/EnumTables.h"
 #include "llvm/DebugInfo/PDB/Raw/ISectionContribVisitor.h"
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/ModStream.h"
@@ -31,6 +33,7 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 static void printSectionOffset(llvm::raw_ostream &OS,
@@ -260,7 +263,7 @@ Error LLVMOutputStyle::dumpStreamData() {
   auto S = MappedBlockStream::createIndexedStream(DumpStreamNum, File);
   if (!S)
     return S.takeError();
-  codeview::StreamReader R(**S);
+  StreamReader R(**S);
   while (R.bytesRemaining() > 0) {
     ArrayRef<uint8_t> Data;
     uint32_t BytesToReadInBlock = std::min(
@@ -313,7 +316,7 @@ Error LLVMOutputStyle::dumpNamedStream() {
         MappedBlockStream::createIndexedStream(NameStreamIndex, File);
     if (!NameStream)
       return NameStream.takeError();
-    codeview::StreamReader Reader(**NameStream);
+    StreamReader Reader(**NameStream);
 
     NameHashTable NameTable;
     if (auto EC = NameTable.load(Reader))

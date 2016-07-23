@@ -7,14 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_MSFBUILDER_H
-#define LLVM_DEBUGINFO_PDB_RAW_MSFBUILDER_H
+#ifndef LLVM_DEBUGINFO_MSF_MSFBUILDER_H
+#define LLVM_DEBUGINFO_MSF_MSFBUILDER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 
-#include "llvm/DebugInfo/PDB/Raw/MsfCommon.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/Msf/MsfCommon.h"
 
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
@@ -24,7 +23,7 @@
 #include <vector>
 
 namespace llvm {
-namespace pdb {
+namespace msf {
 class MsfBuilder {
 public:
   /// \brief Create a new `MsfBuilder`.
@@ -34,9 +33,9 @@ public:
   ///
   /// \param MinBlockCount Causes the builder to reserve up front space for
   /// at least `MinBlockCount` blocks.  This is useful when using `MsfBuilder`
-  /// to read an existing PDB that you want to write back out later.  The
-  /// original PDB file's SuperBlock contains the exact number of blocks used
-  /// by the file, so is a good hint as to how many blocks the new PDB file
+  /// to read an existing MSF that you want to write back out later.  The
+  /// original MSF file's SuperBlock contains the exact number of blocks used
+  /// by the file, so is a good hint as to how many blocks the new MSF file
   /// will contain.  Furthermore, it is actually necessary in this case.  To
   /// preserve stability of the file's layout, it is helpful to try to keep
   /// all streams mapped to their original block numbers.  To ensure that this
@@ -45,7 +44,7 @@ public:
   ///
   /// \param CanGrow If true, any operation which results in an attempt to
   /// locate a free block when all available blocks have been exhausted will
-  /// allocate a new block, thereby growing the size of the final PDB file.
+  /// allocate a new block, thereby growing the size of the final MSF file.
   /// When false, any such attempt will result in an error.  This is especially
   /// useful in testing scenarios when you know your test isn't going to do
   /// anything to increase the size of the file, so having an Error returned if
@@ -61,14 +60,14 @@ public:
                                      bool CanGrow = true);
 
   /// Request the block map to be at a specific block address.  This is useful
-  /// when editing a PDB and you want the layout to be as stable as possible.
+  /// when editing a MSF and you want the layout to be as stable as possible.
   Error setBlockMapAddr(uint32_t Addr);
   Error setDirectoryBlocksHint(ArrayRef<uint32_t> DirBlocks);
   void setFreePageMap(uint32_t Fpm);
   void setUnknown1(uint32_t Unk1);
 
   /// Add a stream to the MSF file with the given size, occupying the given
-  /// list of blocks.  This is useful when reading a PDB file and you want a
+  /// list of blocks.  This is useful when reading a MSF file and you want a
   /// particular stream to occupy the original set of blocks.  If the given
   /// blocks are already allocated, or if the number of blocks specified is
   /// incorrect for the given stream size, this function will return an Error.
@@ -112,7 +111,7 @@ public:
 
   /// Finalize the layout and build the headers and structures that describe the
   /// MSF layout and can be written directly to the MSF file.
-  Expected<msf::Layout> build();
+  Expected<Layout> build();
 
 private:
   MsfBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
@@ -135,7 +134,7 @@ private:
   std::vector<uint32_t> DirectoryBlocks;
   std::vector<std::pair<uint32_t, BlockList>> StreamData;
 };
-}
-}
+} // namespace msf
+} // namespace llvm
 
-#endif
+#endif // LLVM_DEBUGINFO_MSF_MSFBUILDER_H

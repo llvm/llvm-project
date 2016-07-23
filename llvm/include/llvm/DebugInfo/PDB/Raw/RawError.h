@@ -19,11 +19,14 @@ namespace pdb {
 enum class raw_error_code {
   unspecified = 1,
   feature_unsupported,
+  invalid_format,
   corrupt_file,
   insufficient_buffer,
   no_stream,
   index_out_of_bounds,
   invalid_block_address,
+  duplicate_entry,
+  no_entry,
   not_writable,
   invalid_tpi_hash,
 };

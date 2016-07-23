@@ -7,20 +7,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMREADER_H
-#define LLVM_DEBUGINFO_CODEVIEW_STREAMREADER_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMREADER_H
+#define LLVM_DEBUGINFO_MSF_STREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/MsfError.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
+#include "llvm/DebugInfo/Msf/StreamInterface.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include <string>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 
 class StreamRef;
 
@@ -61,8 +61,8 @@ public:
       return Error::success();
     }
 
-    if (NumElements > UINT32_MAX/sizeof(T))
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    if (NumElements > UINT32_MAX / sizeof(T))
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
     if (auto EC = readBytes(Bytes, NumElements * sizeof(T)))
       return EC;
@@ -87,9 +87,9 @@ public:
     }
     uint32_t Length = NumItems * sizeof(T);
     if (Length / sizeof(T) != NumItems)
-      return make_error<CodeViewError>(cv_error_code::corrupt_record);
+      return make_error<MsfError>(msf_error_code::invalid_format);
     if (Offset + Length > Stream.getLength())
-      return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+      return make_error<MsfError>(msf_error_code::insufficient_buffer);
     StreamRef View = Stream.slice(Offset, Length);
     Array = FixedStreamArray<T>(View);
     Offset += Length;
@@ -105,7 +105,7 @@ private:
   StreamRef Stream;
   uint32_t Offset;
 };
-} // namespace codeview
+} // namespace msf
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_STREAMREADER_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMREADER_H

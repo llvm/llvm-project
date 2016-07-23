@@ -196,6 +196,18 @@ define i1 @test18(i32 %A) {
   ret i1 %C
 }
 
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @test18_vec(<2 x i32> %A) {
+; CHECK-LABEL: @test18_vec(
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i32> %A, <i32 -128, i32 -128>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i32> [[B]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %B = and <2 x i32> %A, <i32 -128, i32 -128>
+  %C = icmp ne <2 x i32> %B, zeroinitializer
+  ret <2 x i1> %C
+}
+
 define i1 @test18a(i8 %A) {
 ; CHECK-LABEL: @test18a(
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i8 %A, 2
@@ -204,6 +216,18 @@ define i1 @test18a(i8 %A) {
   %B = and i8 %A, -2
   %C = icmp eq i8 %B, 0
   ret i1 %C
+}
+
+; FIXME: Vectors should fold the same way.
+define <2 x i1> @test18a_vec(<2 x i8> %A) {
+; CHECK-LABEL: @test18a_vec(
+; CHECK-NEXT:    [[B:%.*]] = and <2 x i8> %A, <i8 -2, i8 -2>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[B]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %B = and <2 x i8> %A, <i8 -2, i8 -2>
+  %C = icmp eq <2 x i8> %B, zeroinitializer
+  ret <2 x i1> %C
 }
 
 define i32 @test19(i32 %A) {

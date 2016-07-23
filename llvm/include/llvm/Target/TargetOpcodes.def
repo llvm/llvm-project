@@ -168,6 +168,18 @@ HANDLE_TARGET_OPCODE(G_AND)
 /// Generic Bitwise-OR instruction.
 HANDLE_TARGET_OPCODE(G_OR)
 
+/// Generic instruction to materialize the address of an alloca or other
+/// stack-based object.
+HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
+
+/// Generic instruction to extract blocks of bits from the register given
+/// (typically a sub-register COPY after instruction selection).
+HANDLE_TARGET_OPCODE(G_EXTRACT)
+
+/// Generic instruction to paste a variable number of components together into a
+/// larger register.
+HANDLE_TARGET_OPCODE(G_SEQUENCE)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 

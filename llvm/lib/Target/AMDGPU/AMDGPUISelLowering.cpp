@@ -745,94 +745,6 @@ void AMDGPUTargetLowering::ReplaceNodeResults(SDNode *N,
   }
 }
 
-// FIXME: This implements accesses to initialized globals in the constant
-// address space by copying them to private and accessing that. It does not
-// properly handle illegal types or vectors. The private vector loads are not
-// scalarized, and the illegal scalars hit an assertion. This technique will not
-// work well with large initializers, and this should eventually be
-// removed. Initialized globals should be placed into a data section that the
-// runtime will load into a buffer before the kernel is executed. Uses of the
-// global need to be replaced with a pointer loaded from an implicit kernel
-// argument into this buffer holding the copy of the data, which will remove the
-// need for any of this.
-SDValue AMDGPUTargetLowering::LowerConstantInitializer(const Constant* Init,
-                                                       const GlobalValue *GV,
-                                                       const SDValue &InitPtr,
-                                                       SDValue Chain,
-                                                       SelectionDAG &DAG) const {
-  const DataLayout &TD = DAG.getDataLayout();
-  SDLoc DL(InitPtr);
-  Type *InitTy = Init->getType();
-
-  if (const ConstantInt *CI = dyn_cast<ConstantInt>(Init)) {
-    EVT VT = EVT::getEVT(InitTy);
-    PointerType *PtrTy = PointerType::get(InitTy, AMDGPUAS::PRIVATE_ADDRESS);
-    return DAG.getStore(Chain, DL, DAG.getConstant(*CI, DL, VT), InitPtr,
-                        MachinePointerInfo(UndefValue::get(PtrTy)),
-                        TD.getPrefTypeAlignment(InitTy));
-  }
-
-  if (const ConstantFP *CFP = dyn_cast<ConstantFP>(Init)) {
-    EVT VT = EVT::getEVT(CFP->getType());
-    PointerType *PtrTy = PointerType::get(CFP->getType(), 0);
-    return DAG.getStore(Chain, DL, DAG.getConstantFP(*CFP, DL, VT), InitPtr,
-                        MachinePointerInfo(UndefValue::get(PtrTy)),
-                        TD.getPrefTypeAlignment(CFP->getType()));
-  }
-
-  if (StructType *ST = dyn_cast<StructType>(InitTy)) {
-    const StructLayout *SL = TD.getStructLayout(ST);
-
-    EVT PtrVT = InitPtr.getValueType();
-    SmallVector<SDValue, 8> Chains;
-
-    for (unsigned I = 0, N = ST->getNumElements(); I != N; ++I) {
-      SDValue Offset = DAG.getConstant(SL->getElementOffset(I), DL, PtrVT);
-      SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, InitPtr, Offset);
-
-      Constant *Elt = Init->getAggregateElement(I);
-      Chains.push_back(LowerConstantInitializer(Elt, GV, Ptr, Chain, DAG));
-    }
-
-    return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
-  }
-
-  if (SequentialType *SeqTy = dyn_cast<SequentialType>(InitTy)) {
-    EVT PtrVT = InitPtr.getValueType();
-
-    unsigned NumElements;
-    if (ArrayType *AT = dyn_cast<ArrayType>(SeqTy))
-      NumElements = AT->getNumElements();
-    else if (VectorType *VT = dyn_cast<VectorType>(SeqTy))
-      NumElements = VT->getNumElements();
-    else
-      llvm_unreachable("Unexpected type");
-
-    unsigned EltSize = TD.getTypeAllocSize(SeqTy->getElementType());
-    SmallVector<SDValue, 8> Chains;
-    for (unsigned i = 0; i < NumElements; ++i) {
-      SDValue Offset = DAG.getConstant(i * EltSize, DL, PtrVT);
-      SDValue Ptr = DAG.getNode(ISD::ADD, DL, PtrVT, InitPtr, Offset);
-
-      Constant *Elt = Init->getAggregateElement(i);
-      Chains.push_back(LowerConstantInitializer(Elt, GV, Ptr, Chain, DAG));
-    }
-
-    return DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
-  }
-
-  if (isa<UndefValue>(Init)) {
-    EVT VT = EVT::getEVT(InitTy);
-    PointerType *PtrTy = PointerType::get(InitTy, AMDGPUAS::PRIVATE_ADDRESS);
-    return DAG.getStore(Chain, DL, DAG.getUNDEF(VT), InitPtr,
-                        MachinePointerInfo(UndefValue::get(PtrTy)),
-                        TD.getPrefTypeAlignment(InitTy));
-  }
-
-  Init->dump();
-  llvm_unreachable("Unhandled constant initializer");
-}
-
 static bool hasDefinedInitializer(const GlobalValue *GV) {
   const GlobalVariable *GVar = dyn_cast<GlobalVariable>(GV);
   if (!GVar || !GVar->hasInitializer())
@@ -850,11 +762,6 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
   const GlobalValue *GV = G->getGlobal();
 
   switch (G->getAddressSpace()) {
-  case AMDGPUAS::CONSTANT_ADDRESS: {
-    MVT ConstPtrVT = getPointerTy(DL, AMDGPUAS::CONSTANT_ADDRESS);
-    SDValue GA = DAG.getTargetGlobalAddress(GV, SDLoc(G), ConstPtrVT);
-    return DAG.getNode(AMDGPUISD::CONST_DATA_PTR, SDLoc(G), ConstPtrVT, GA);
-  }
   case AMDGPUAS::LOCAL_ADDRESS: {
     // XXX: What does the value of G->getOffset() mean?
     assert(G->getOffset() == 0 &&

@@ -131,10 +131,10 @@ public:
     // iteration.  And if there is an error break out of the loop.
     child_iterator &operator++() { // Preincrement
       assert(E && "Can't increment iterator with no Error attached");
+      ErrorAsOutParameter ErrAsOutParam(E);
       if (auto ChildOrErr = C.getNext())
         C = *ChildOrErr;
       else {
-        ErrorAsOutParameter ErrAsOutParam(*E);
         C = C.getParent()->child_end().C;
         *E = ChildOrErr.takeError();
         E = nullptr;

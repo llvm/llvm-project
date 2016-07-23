@@ -15,6 +15,7 @@
 #define LLVM_ANALYSIS_INLINECOST_H
 
 #include "llvm/Analysis/CallGraphSCCPass.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include <cassert>
 #include <climits>
 
@@ -110,18 +111,21 @@ public:
 ///
 /// Also note that calling this function *dynamically* computes the cost of
 /// inlining the callsite. It is an expensive, heavyweight call.
-InlineCost getInlineCost(CallSite CS, int DefaultThreshold,
-                         TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT, ProfileSummaryInfo *PSI);
+InlineCost
+getInlineCost(CallSite CS, int DefaultThreshold, TargetTransformInfo &CalleeTTI,
+              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+              ProfileSummaryInfo *PSI);
 
 /// \brief Get an InlineCost with the callee explicitly specified.
 /// This allows you to calculate the cost of inlining a function via a
 /// pointer. This behaves exactly as the version with no explicit callee
 /// parameter in all other respects.
 //
-InlineCost getInlineCost(CallSite CS, Function *Callee, int DefaultThreshold,
-                         TargetTransformInfo &CalleeTTI,
-                         AssumptionCacheTracker *ACT, ProfileSummaryInfo *PSI);
+InlineCost
+getInlineCost(CallSite CS, Function *Callee, int DefaultThreshold,
+              TargetTransformInfo &CalleeTTI,
+              std::function<AssumptionCache &(Function &)> &GetAssumptionCache,
+              ProfileSummaryInfo *PSI);
 
 int computeThresholdFromOptLevels(unsigned OptLevel, unsigned SizeOptLevel);
 

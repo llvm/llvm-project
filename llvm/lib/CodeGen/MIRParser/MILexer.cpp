@@ -174,14 +174,18 @@ static Cursor lexName(Cursor C, MIToken &Token, MIToken::TokenKind Type,
 }
 
 static Cursor maybeLexIntegerOrScalarType(Cursor C, MIToken &Token) {
-  if ((C.peek() != 'i' && C.peek() != 's') || !isdigit(C.peek(1)))
+  if ((C.peek() != 'i' && C.peek() != 's' && C.peek() != 'p') ||
+      !isdigit(C.peek(1)))
     return None;
   char Kind = C.peek();
   auto Range = C;
-  C.advance(); // Skip 'i'
+  C.advance(); // Skip 'i', 's', or 'p'
   while (isdigit(C.peek()))
     C.advance();
-  Token.reset(Kind == 'i' ? MIToken::IntegerType : MIToken::ScalarType,
+
+  Token.reset(Kind == 'i'
+                  ? MIToken::IntegerType
+                  : (Kind == 's' ? MIToken::ScalarType : MIToken::PointerType),
               Range.upto(C));
   return C;
 }

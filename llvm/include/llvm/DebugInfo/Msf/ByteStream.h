@@ -7,19 +7,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_BYTESTREAM_H
-#define LLVM_DEBUGINFO_CODEVIEW_BYTESTREAM_H
+#ifndef LLVM_DEBUGINFO_MSF_BYTESTREAM_H
+#define LLVM_DEBUGINFO_MSF_BYTESTREAM_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/StreamInterface.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <memory>
 #include <type_traits>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 class StreamReader;
 
 template <bool Writable = false> class ByteStream : public StreamInterface {
@@ -52,7 +52,7 @@ private:
 extern template class ByteStream<true>;
 extern template class ByteStream<false>;
 
-} // end namespace pdb
+} // end namespace msf
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_BYTESTREAM_H
+#endif // LLVM_DEBUGINFO_MSF_BYTESTREAM_H

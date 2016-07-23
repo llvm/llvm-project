@@ -1,4 +1,4 @@
-//===- IPDBFile.h - Abstract base class for a PDB file ----------*- C++ -*-===//
+//===- IMsfFile.h - Abstract base class for an MSF file ---------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,23 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_IPDBFILE_H
-#define LLVM_DEBUGINFO_PDB_RAW_IPDBFILE_H
+#ifndef LLVM_DEBUGINFO_MSF_IMSFFILE_H
+#define LLVM_DEBUGINFO_MSF_IMSFFILE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 #include <stdint.h>
 
 namespace llvm {
-namespace pdb {
+namespace msf {
 
-class IPDBFile {
+class IMsfFile {
 public:
-  virtual ~IPDBFile() {}
+  virtual ~IMsfFile() {}
 
   virtual uint32_t getBlockSize() const = 0;
   virtual uint32_t getBlockCount() const = 0;
@@ -41,4 +41,4 @@ public:
 }
 }
 
-#endif // LLVM_DEBUGINFO_PDB_RAW_IPDBFILE_H
+#endif // LLVM_DEBUGINFO_MSF_IMSFFILE_H

@@ -210,6 +210,7 @@
 #include <functional>
 #include <map>
 #include <set>
+#include <unordered_map>
 #include <vector>
 
 namespace llvm {
@@ -679,7 +680,14 @@ namespace rdf {
       StorageType Stack;
     };
 
-    typedef std::map<RegisterRef,DefStack> DefStackMap;
+    struct RegisterRefHasher {
+      unsigned operator() (RegisterRef RR) const {
+        return RR.Reg | (RR.Sub << 24);
+      }
+    };
+    // Make this std::unordered_map for speed of accessing elements.
+    typedef std::unordered_map<RegisterRef,DefStack,RegisterRefHasher>
+          DefStackMap;
 
     void build(unsigned Options = BuildOptions::None);
     void pushDefs(NodeAddr<InstrNode*> IA, DefStackMap &DM);
@@ -783,9 +791,15 @@ namespace rdf {
       IA.Addr->removeMember(RA, *this);
     }
 
+    NodeAddr<BlockNode*> findBlock(MachineBasicBlock *BB) {
+      return BlockNodes[BB];
+    }
+
     TimerGroup TimeG;
     NodeAddr<FuncNode*> Func;
     NodeAllocator Memory;
+    // Local map:  MachineBasicBlock -> NodeAddr<BlockNode*>
+    std::map<MachineBasicBlock*,NodeAddr<BlockNode*>> BlockNodes;
 
     MachineFunction &MF;
     const TargetInstrInfo &TII;

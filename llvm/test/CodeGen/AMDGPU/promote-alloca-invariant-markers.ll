@@ -1,7 +1,7 @@
 ; RUN: llc -march=amdgcn -mattr=+promote-alloca -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-declare {}* @llvm.invariant.start(i64, i8* nocapture) #0
-declare void @llvm.invariant.end({}*, i64, i8* nocapture) #0
+declare {}* @llvm.invariant.start.p0i8(i64, i8* nocapture) #0
+declare void @llvm.invariant.end.p0i8({}*, i64, i8* nocapture) #0
 declare i8* @llvm.invariant.group.barrier(i8*) #1
 
 ; GCN-LABEL: {{^}}use_invariant_promotable_lds:
@@ -14,8 +14,8 @@ bb:
   %tmp2 = getelementptr inbounds i32, i32 addrspace(1)* %arg, i64 1
   %tmp3 = load i32, i32 addrspace(1)* %tmp2
   store i32 %tmp3, i32* %tmp
-  %tmp4 = call {}* @llvm.invariant.start(i64 4, i8* %tmp1) #0
-  call void @llvm.invariant.end({}* %tmp4, i64 4, i8* %tmp1) #0
+  %tmp4 = call {}* @llvm.invariant.start.p0i8(i64 4, i8* %tmp1) #0
+  call void @llvm.invariant.end.p0i8({}* %tmp4, i64 4, i8* %tmp1) #0
   %tmp5 = call i8* @llvm.invariant.group.barrier(i8* %tmp1) #1
   ret void
 }

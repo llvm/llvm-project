@@ -931,7 +931,8 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
     assert(MFI->hasKernargSegmentPtr());
     return MFI->KernargSegmentPtrUserSGPR;
   case SIRegisterInfo::DISPATCH_ID:
-    llvm_unreachable("unimplemented");
+    assert(MFI->hasDispatchID());
+    return MFI->DispatchIDUserSGPR;
   case SIRegisterInfo::FLAT_SCRATCH_INIT:
     assert(MFI->hasFlatScratchInit());
     return MFI->FlatScratchInitUserSGPR;

@@ -138,6 +138,8 @@ public:
   bool PrepareForThinLTO;
   bool PerformThinLTO;
 
+  /// Enable profile instrumentation pass.
+  bool EnablePGOInstrGen;
   /// Profile data file name that the instrumentation will be written to.
   std::string PGOInstrGen;
   /// Path of the profile data file.

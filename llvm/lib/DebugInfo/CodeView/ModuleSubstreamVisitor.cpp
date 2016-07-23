@@ -11,6 +11,7 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 
 Error IModuleSubstreamVisitor::visitSymbols(StreamRef Data) {
   return visitUnknown(ModuleSubstreamKind::Symbols, Data);

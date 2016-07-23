@@ -3154,150 +3154,311 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
 /// the function. It is set to true if the given instruction has FMA3 opcode
 /// that is used for lowering of scalar FMA intrinsics, and it is set to false
 /// otherwise.
-static bool isFMA3(unsigned Opcode, bool *IsIntrinsic = nullptr) {
-  if (IsIntrinsic)
-    *IsIntrinsic = false;
+static bool isFMA3(unsigned Opcode, bool &IsIntrinsic) {
+  IsIntrinsic = false;
+
+#define FMA3_CASE(Name, Modifier) \
+case X86::Name##r##Modifier: case X86::Name##m##Modifier:
+
+#define FMA3_SCALAR_PAIR(Name, Form, Modifier) \
+  FMA3_CASE(Name##SD##Form, Modifier) \
+  FMA3_CASE(Name##SS##Form, Modifier)
+
+#define FMA3_PACKED_PAIR(Name, Form, Modifier) \
+  FMA3_CASE(Name##PD##Form, Modifier) \
+  FMA3_CASE(Name##PS##Form, Modifier)
+
+#define FMA3_PACKED_SET(Form, Modifier) \
+  FMA3_PACKED_PAIR(VFMADD,    Form, Modifier) \
+  FMA3_PACKED_PAIR(VFMSUB,    Form, Modifier) \
+  FMA3_PACKED_PAIR(VFNMADD,   Form, Modifier) \
+  FMA3_PACKED_PAIR(VFNMSUB,   Form, Modifier) \
+  FMA3_PACKED_PAIR(VFMADDSUB, Form, Modifier) \
+  FMA3_PACKED_PAIR(VFMSUBADD, Form, Modifier)
+
+#define FMA3_CASES(Form) \
+  FMA3_SCALAR_PAIR(VFMADD,  Form, ) \
+  FMA3_SCALAR_PAIR(VFMSUB,  Form, ) \
+  FMA3_SCALAR_PAIR(VFNMADD, Form, ) \
+  FMA3_SCALAR_PAIR(VFNMSUB, Form, ) \
+  FMA3_PACKED_SET(Form, ) \
+  FMA3_PACKED_SET(Form, Y) \
+
+#define FMA3_SCALAR_PAIR_AVX512(Name, Modifier) \
+  FMA3_CASE(Name##SD, Modifier) \
+  FMA3_CASE(Name##SS, Modifier)
+
+#define FMA3_PACKED_PAIR_AVX512(Name, Size) \
+  FMA3_CASE(Name##PD##Size, ) \
+  FMA3_CASE(Name##PS##Size, )
+
+#define FMA3_PACKED_SET_AVX512(Form, Size) \
+  FMA3_PACKED_PAIR_AVX512(VFMADD##Form, Size) \
+  FMA3_PACKED_PAIR_AVX512(VFMSUB##Form, Size) \
+  FMA3_PACKED_PAIR_AVX512(VFNMADD##Form, Size) \
+  FMA3_PACKED_PAIR_AVX512(VFNMSUB##Form, Size) \
+  FMA3_PACKED_PAIR_AVX512(VFMADDSUB##Form, Size) \
+  FMA3_PACKED_PAIR_AVX512(VFMSUBADD##Form, Size)
+
+#define FMA3_CASES_AVX512(Form) \
+  FMA3_SCALAR_PAIR_AVX512(VFMADD##Form, ) \
+  FMA3_SCALAR_PAIR_AVX512(VFMSUB##Form, ) \
+  FMA3_SCALAR_PAIR_AVX512(VFNMADD##Form, ) \
+  FMA3_SCALAR_PAIR_AVX512(VFNMSUB##Form, ) \
+  FMA3_PACKED_SET_AVX512(Form, Z128) \
+  FMA3_PACKED_SET_AVX512(Form, Z256) \
+  FMA3_PACKED_SET_AVX512(Form, Z)
+
+#define FMA3_CASES_SCALAR_INT(Form) \
+  FMA3_SCALAR_PAIR(VFMADD,  Form, _Int) \
+  FMA3_SCALAR_PAIR(VFMSUB,  Form, _Int) \
+  FMA3_SCALAR_PAIR(VFNMADD, Form, _Int) \
+  FMA3_SCALAR_PAIR(VFNMSUB, Form, _Int)
+
+#define FMA3_CASES_SCALAR_INT_AVX512(Form) \
+  FMA3_SCALAR_PAIR_AVX512(VFMADD##Form, _Int) \
+  FMA3_SCALAR_PAIR_AVX512(VFMSUB##Form, _Int) \
+  FMA3_SCALAR_PAIR_AVX512(VFNMADD##Form, _Int) \
+  FMA3_SCALAR_PAIR_AVX512(VFNMSUB##Form, _Int)
 
   switch (Opcode) {
-    case X86::VFMADDSDr132r:      case X86::VFMADDSDr132m:
-    case X86::VFMADDSSr132r:      case X86::VFMADDSSr132m:
-    case X86::VFMSUBSDr132r:      case X86::VFMSUBSDr132m:
-    case X86::VFMSUBSSr132r:      case X86::VFMSUBSSr132m:
-    case X86::VFNMADDSDr132r:     case X86::VFNMADDSDr132m:
-    case X86::VFNMADDSSr132r:     case X86::VFNMADDSSr132m:
-    case X86::VFNMSUBSDr132r:     case X86::VFNMSUBSDr132m:
-    case X86::VFNMSUBSSr132r:     case X86::VFNMSUBSSr132m:
+  FMA3_CASES(r132)
+  FMA3_CASES(r213)
+  FMA3_CASES(r231)
 
-    case X86::VFMADDSDr213r:      case X86::VFMADDSDr213m:
-    case X86::VFMADDSSr213r:      case X86::VFMADDSSr213m:
-    case X86::VFMSUBSDr213r:      case X86::VFMSUBSDr213m:
-    case X86::VFMSUBSSr213r:      case X86::VFMSUBSSr213m:
-    case X86::VFNMADDSDr213r:     case X86::VFNMADDSDr213m:
-    case X86::VFNMADDSSr213r:     case X86::VFNMADDSSr213m:
-    case X86::VFNMSUBSDr213r:     case X86::VFNMSUBSDr213m:
-    case X86::VFNMSUBSSr213r:     case X86::VFNMSUBSSr213m:
+  // AVX-512 instructions
+  FMA3_CASES_AVX512(132)
+  FMA3_CASES_AVX512(213)
+  FMA3_CASES_AVX512(231)
+    return true;
 
-    case X86::VFMADDSDr231r:      case X86::VFMADDSDr231m:
-    case X86::VFMADDSSr231r:      case X86::VFMADDSSr231m:
-    case X86::VFMSUBSDr231r:      case X86::VFMSUBSDr231m:
-    case X86::VFMSUBSSr231r:      case X86::VFMSUBSSr231m:
-    case X86::VFNMADDSDr231r:     case X86::VFNMADDSDr231m:
-    case X86::VFNMADDSSr231r:     case X86::VFNMADDSSr231m:
-    case X86::VFNMSUBSDr231r:     case X86::VFNMSUBSDr231m:
-    case X86::VFNMSUBSSr231r:     case X86::VFNMSUBSSr231m:
+  FMA3_CASES_SCALAR_INT(r132)
+  FMA3_CASES_SCALAR_INT(r213)
+  FMA3_CASES_SCALAR_INT(r231)
 
-    case X86::VFMADDSUBPDr132r:   case X86::VFMADDSUBPDr132m:
-    case X86::VFMADDSUBPSr132r:   case X86::VFMADDSUBPSr132m:
-    case X86::VFMSUBADDPDr132r:   case X86::VFMSUBADDPDr132m:
-    case X86::VFMSUBADDPSr132r:   case X86::VFMSUBADDPSr132m:
-    case X86::VFMADDSUBPDr132rY:  case X86::VFMADDSUBPDr132mY:
-    case X86::VFMADDSUBPSr132rY:  case X86::VFMADDSUBPSr132mY:
-    case X86::VFMSUBADDPDr132rY:  case X86::VFMSUBADDPDr132mY:
-    case X86::VFMSUBADDPSr132rY:  case X86::VFMSUBADDPSr132mY:
-
-    case X86::VFMADDPDr132r:      case X86::VFMADDPDr132m:
-    case X86::VFMADDPSr132r:      case X86::VFMADDPSr132m:
-    case X86::VFMSUBPDr132r:      case X86::VFMSUBPDr132m:
-    case X86::VFMSUBPSr132r:      case X86::VFMSUBPSr132m:
-    case X86::VFNMADDPDr132r:     case X86::VFNMADDPDr132m:
-    case X86::VFNMADDPSr132r:     case X86::VFNMADDPSr132m:
-    case X86::VFNMSUBPDr132r:     case X86::VFNMSUBPDr132m:
-    case X86::VFNMSUBPSr132r:     case X86::VFNMSUBPSr132m:
-    case X86::VFMADDPDr132rY:     case X86::VFMADDPDr132mY:
-    case X86::VFMADDPSr132rY:     case X86::VFMADDPSr132mY:
-    case X86::VFMSUBPDr132rY:     case X86::VFMSUBPDr132mY:
-    case X86::VFMSUBPSr132rY:     case X86::VFMSUBPSr132mY:
-    case X86::VFNMADDPDr132rY:    case X86::VFNMADDPDr132mY:
-    case X86::VFNMADDPSr132rY:    case X86::VFNMADDPSr132mY:
-    case X86::VFNMSUBPDr132rY:    case X86::VFNMSUBPDr132mY:
-    case X86::VFNMSUBPSr132rY:    case X86::VFNMSUBPSr132mY:
-
-    case X86::VFMADDSUBPDr213r:   case X86::VFMADDSUBPDr213m:
-    case X86::VFMADDSUBPSr213r:   case X86::VFMADDSUBPSr213m:
-    case X86::VFMSUBADDPDr213r:   case X86::VFMSUBADDPDr213m:
-    case X86::VFMSUBADDPSr213r:   case X86::VFMSUBADDPSr213m:
-    case X86::VFMADDSUBPDr213rY:  case X86::VFMADDSUBPDr213mY:
-    case X86::VFMADDSUBPSr213rY:  case X86::VFMADDSUBPSr213mY:
-    case X86::VFMSUBADDPDr213rY:  case X86::VFMSUBADDPDr213mY:
-    case X86::VFMSUBADDPSr213rY:  case X86::VFMSUBADDPSr213mY:
-
-    case X86::VFMADDPDr213r:      case X86::VFMADDPDr213m:
-    case X86::VFMADDPSr213r:      case X86::VFMADDPSr213m:
-    case X86::VFMSUBPDr213r:      case X86::VFMSUBPDr213m:
-    case X86::VFMSUBPSr213r:      case X86::VFMSUBPSr213m:
-    case X86::VFNMADDPDr213r:     case X86::VFNMADDPDr213m:
-    case X86::VFNMADDPSr213r:     case X86::VFNMADDPSr213m:
-    case X86::VFNMSUBPDr213r:     case X86::VFNMSUBPDr213m:
-    case X86::VFNMSUBPSr213r:     case X86::VFNMSUBPSr213m:
-    case X86::VFMADDPDr213rY:     case X86::VFMADDPDr213mY:
-    case X86::VFMADDPSr213rY:     case X86::VFMADDPSr213mY:
-    case X86::VFMSUBPDr213rY:     case X86::VFMSUBPDr213mY:
-    case X86::VFMSUBPSr213rY:     case X86::VFMSUBPSr213mY:
-    case X86::VFNMADDPDr213rY:    case X86::VFNMADDPDr213mY:
-    case X86::VFNMADDPSr213rY:    case X86::VFNMADDPSr213mY:
-    case X86::VFNMSUBPDr213rY:    case X86::VFNMSUBPDr213mY:
-    case X86::VFNMSUBPSr213rY:    case X86::VFNMSUBPSr213mY:
-
-    case X86::VFMADDSUBPDr231r:   case X86::VFMADDSUBPDr231m:
-    case X86::VFMADDSUBPSr231r:   case X86::VFMADDSUBPSr231m:
-    case X86::VFMSUBADDPDr231r:   case X86::VFMSUBADDPDr231m:
-    case X86::VFMSUBADDPSr231r:   case X86::VFMSUBADDPSr231m:
-    case X86::VFMADDSUBPDr231rY:  case X86::VFMADDSUBPDr231mY:
-    case X86::VFMADDSUBPSr231rY:  case X86::VFMADDSUBPSr231mY:
-    case X86::VFMSUBADDPDr231rY:  case X86::VFMSUBADDPDr231mY:
-    case X86::VFMSUBADDPSr231rY:  case X86::VFMSUBADDPSr231mY:
-
-    case X86::VFMADDPDr231r:      case X86::VFMADDPDr231m:
-    case X86::VFMADDPSr231r:      case X86::VFMADDPSr231m:
-    case X86::VFMSUBPDr231r:      case X86::VFMSUBPDr231m:
-    case X86::VFMSUBPSr231r:      case X86::VFMSUBPSr231m:
-    case X86::VFNMADDPDr231r:     case X86::VFNMADDPDr231m:
-    case X86::VFNMADDPSr231r:     case X86::VFNMADDPSr231m:
-    case X86::VFNMSUBPDr231r:     case X86::VFNMSUBPDr231m:
-    case X86::VFNMSUBPSr231r:     case X86::VFNMSUBPSr231m:
-    case X86::VFMADDPDr231rY:     case X86::VFMADDPDr231mY:
-    case X86::VFMADDPSr231rY:     case X86::VFMADDPSr231mY:
-    case X86::VFMSUBPDr231rY:     case X86::VFMSUBPDr231mY:
-    case X86::VFMSUBPSr231rY:     case X86::VFMSUBPSr231mY:
-    case X86::VFNMADDPDr231rY:    case X86::VFNMADDPDr231mY:
-    case X86::VFNMADDPSr231rY:    case X86::VFNMADDPSr231mY:
-    case X86::VFNMSUBPDr231rY:    case X86::VFNMSUBPDr231mY:
-    case X86::VFNMSUBPSr231rY:    case X86::VFNMSUBPSr231mY:
-      return true;
-
-    case X86::VFMADDSDr132r_Int:  case X86::VFMADDSDr132m_Int:
-    case X86::VFMADDSSr132r_Int:  case X86::VFMADDSSr132m_Int:
-    case X86::VFMSUBSDr132r_Int:  case X86::VFMSUBSDr132m_Int:
-    case X86::VFMSUBSSr132r_Int:  case X86::VFMSUBSSr132m_Int:
-    case X86::VFNMADDSDr132r_Int: case X86::VFNMADDSDr132m_Int:
-    case X86::VFNMADDSSr132r_Int: case X86::VFNMADDSSr132m_Int:
-    case X86::VFNMSUBSDr132r_Int: case X86::VFNMSUBSDr132m_Int:
-    case X86::VFNMSUBSSr132r_Int: case X86::VFNMSUBSSr132m_Int:
-
-    case X86::VFMADDSDr213r_Int:  case X86::VFMADDSDr213m_Int:
-    case X86::VFMADDSSr213r_Int:  case X86::VFMADDSSr213m_Int:
-    case X86::VFMSUBSDr213r_Int:  case X86::VFMSUBSDr213m_Int:
-    case X86::VFMSUBSSr213r_Int:  case X86::VFMSUBSSr213m_Int:
-    case X86::VFNMADDSDr213r_Int: case X86::VFNMADDSDr213m_Int:
-    case X86::VFNMADDSSr213r_Int: case X86::VFNMADDSSr213m_Int:
-    case X86::VFNMSUBSDr213r_Int: case X86::VFNMSUBSDr213m_Int:
-    case X86::VFNMSUBSSr213r_Int: case X86::VFNMSUBSSr213m_Int:
-
-    case X86::VFMADDSDr231r_Int:  case X86::VFMADDSDr231m_Int:
-    case X86::VFMADDSSr231r_Int:  case X86::VFMADDSSr231m_Int:
-    case X86::VFMSUBSDr231r_Int:  case X86::VFMSUBSDr231m_Int:
-    case X86::VFMSUBSSr231r_Int:  case X86::VFMSUBSSr231m_Int:
-    case X86::VFNMADDSDr231r_Int: case X86::VFNMADDSDr231m_Int:
-    case X86::VFNMADDSSr231r_Int: case X86::VFNMADDSSr231m_Int:
-    case X86::VFNMSUBSDr231r_Int: case X86::VFNMSUBSDr231m_Int:
-    case X86::VFNMSUBSSr231r_Int: case X86::VFNMSUBSSr231m_Int:
-      if (IsIntrinsic)
-        *IsIntrinsic = true;
-      return true;
-    default:
-      return false;
+  // AVX-512 instructions
+  FMA3_CASES_SCALAR_INT_AVX512(132)
+  FMA3_CASES_SCALAR_INT_AVX512(213)
+  FMA3_CASES_SCALAR_INT_AVX512(231)
+    IsIntrinsic = true;
+    return true;
+  default:
+    return false;
   }
   llvm_unreachable("Opcode not handled by the switch");
+
+#undef FMA3_CASE
+#undef FMA3_SCALAR_PAIR
+#undef FMA3_PACKED_PAIR
+#undef FMA3_PACKED_SET
+#undef FMA3_CASES
+#undef FMA3_SCALAR_PAIR_AVX512
+#undef FMA3_PACKED_PAIR_AVX512
+#undef FMA3_PACKED_SET_AVX512
+#undef FMA3_CASES_AVX512
+#undef FMA3_CASES_SCALAR_INT
+#undef FMA3_CASES_SCALAR_INT_AVX512
+}
+
+/// Returns an adjusted FMA opcode that must be used in FMA instruction that
+/// performs the same computations as the given MI but which has the operands
+/// \p SrcOpIdx1 and \p SrcOpIdx2 commuted.
+/// It may return 0 if it is unsafe to commute the operands.
+///
+/// The returned FMA opcode may differ from the opcode in the given \p MI.
+/// For example, commuting the operands #1 and #3 in the following FMA
+///     FMA213 #1, #2, #3
+/// results into instruction with adjusted opcode:
+///     FMA231 #3, #2, #1
+static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
+                                               bool IsIntrinOpcode,
+                                               unsigned SrcOpIdx1,
+                                               unsigned SrcOpIdx2) {
+#define FMA3_ENTRY(Name, Suffix) \
+  { X86::Name##132##Suffix, X86::Name##213##Suffix, X86::Name##231##Suffix },
+
+#define FMA3_SCALAR_PAIR(Name, Suffix) \
+  FMA3_ENTRY(Name##SSr, Suffix) \
+  FMA3_ENTRY(Name##SDr, Suffix)
+
+#define FMA3_PACKED_PAIR(Name, Suffix) \
+  FMA3_ENTRY(Name##PSr, Suffix) \
+  FMA3_ENTRY(Name##PDr, Suffix)
+
+#define FMA3_PACKED_SIZES(Name, Suffix) \
+  FMA3_PACKED_PAIR(Name, Suffix) \
+  FMA3_PACKED_PAIR(Name, Suffix##Y)
+
+#define FMA3_TABLE_ALL(Name) \
+  FMA3_SCALAR_PAIR(Name, r) \
+  FMA3_PACKED_SIZES(Name, r) \
+  FMA3_SCALAR_PAIR(Name, m) \
+  FMA3_PACKED_SIZES(Name, m)
+
+#define FMA3_TABLE_PACKED(Name) \
+  FMA3_PACKED_SIZES(Name, r) \
+  FMA3_PACKED_SIZES(Name, m)
+
+#define FMA3_TABLE_SCALAR_INT(Name) \
+  FMA3_SCALAR_PAIR(Name, r_Int) \
+  FMA3_SCALAR_PAIR(Name, m_Int)
+
+#define FMA3_SCALAR_PAIR_AVX512(Name, Suffix) \
+  FMA3_ENTRY(Name, SS##Suffix) \
+  FMA3_ENTRY(Name, SD##Suffix)
+
+#define FMA3_PACKED_PAIR_AVX512(Name, Suffix) \
+  FMA3_ENTRY(Name, PS##Suffix) \
+  FMA3_ENTRY(Name, PD##Suffix)
+
+#define FMA3_PACKED_SIZES_AVX512(Name, Suffix) \
+  FMA3_PACKED_PAIR_AVX512(Name, Z128##Suffix) \
+  FMA3_PACKED_PAIR_AVX512(Name, Z256##Suffix) \
+  FMA3_PACKED_PAIR_AVX512(Name, Z##Suffix)
+
+#define FMA3_TABLE_ALL_AVX512(Name) \
+  FMA3_SCALAR_PAIR_AVX512(Name, r) \
+  FMA3_PACKED_SIZES_AVX512(Name, r) \
+  FMA3_SCALAR_PAIR_AVX512(Name, m) \
+  FMA3_PACKED_SIZES_AVX512(Name, m)
+
+#define FMA3_TABLE_PACKED_AVX512(Name) \
+  FMA3_PACKED_SIZES_AVX512(Name, r) \
+  FMA3_PACKED_SIZES_AVX512(Name, m)
+
+#define FMA3_TABLE_SCALAR_INT_AVX512(Name) \
+  FMA3_SCALAR_PAIR_AVX512(Name, r_Int) \
+  FMA3_SCALAR_PAIR_AVX512(Name, m_Int)
+
+  // Define the array that holds FMA opcodes in groups
+  // of 3 opcodes(132, 213, 231) in each group.
+  static const uint16_t RegularOpcodeGroups[][3] = {
+    FMA3_TABLE_ALL(VFMADD)
+    FMA3_TABLE_ALL(VFMSUB)
+    FMA3_TABLE_ALL(VFNMADD)
+    FMA3_TABLE_ALL(VFNMSUB)
+    FMA3_TABLE_PACKED(VFMADDSUB)
+    FMA3_TABLE_PACKED(VFMSUBADD)
+
+    // AVX-512 instructions
+    FMA3_TABLE_ALL_AVX512(VFMADD)
+    FMA3_TABLE_ALL_AVX512(VFMSUB)
+    FMA3_TABLE_ALL_AVX512(VFNMADD)
+    FMA3_TABLE_ALL_AVX512(VFNMSUB)
+    FMA3_TABLE_PACKED_AVX512(VFMADDSUB)
+    FMA3_TABLE_PACKED_AVX512(VFMSUBADD)
+  };
+
+  // Define the array that holds FMA*_Int opcodes in groups
+  // of 3 opcodes(132, 213, 231) in each group.
+  static const uint16_t IntrinOpcodeGroups[][3] = {
+    FMA3_TABLE_SCALAR_INT(VFMADD)
+    FMA3_TABLE_SCALAR_INT(VFMSUB)
+    FMA3_TABLE_SCALAR_INT(VFNMADD)
+    FMA3_TABLE_SCALAR_INT(VFNMSUB)
+
+    // AVX-512 instructio
+    FMA3_TABLE_SCALAR_INT_AVX512(VFMADD)
+    FMA3_TABLE_SCALAR_INT_AVX512(VFMSUB)
+    FMA3_TABLE_SCALAR_INT_AVX512(VFNMADD)
+    FMA3_TABLE_SCALAR_INT_AVX512(VFNMSUB)
+  };
+
+#undef FMA3_ENTRY
+#undef FMA3_SCALAR_PAIR
+#undef FMA3_PACKED_PAIR
+#undef FMA3_PACKED_SIZES
+#undef FMA3_TABLE_ALL
+#undef FMA3_TABLE_PACKED
+#undef FMA3_TABLE_SCALAR_INT
+#undef FMA3_SCALAR_PAIR_AVX512
+#undef FMA3_PACKED_PAIR_AVX512
+#undef FMA3_PACKED_SIZES_AVX512
+#undef FMA3_TABLE_ALL_AVX512
+#undef FMA3_TABLE_PACKED_AVX512
+#undef FMA3_TABLE_SCALAR_INT_AVX512
+
+  const unsigned Form132Index = 0;
+  const unsigned Form213Index = 1;
+  const unsigned Form231Index = 2;
+  const unsigned FormsNum = 3;
+
+  size_t GroupsNum;
+  const uint16_t (*OpcodeGroups)[3];
+  if (IsIntrinOpcode) {
+    GroupsNum = array_lengthof(IntrinOpcodeGroups);
+    OpcodeGroups = IntrinOpcodeGroups;
+  } else {
+    GroupsNum = array_lengthof(RegularOpcodeGroups);
+    OpcodeGroups = RegularOpcodeGroups;
+  }
+
+  const uint16_t *FoundOpcodesGroup = nullptr;
+  size_t FormIndex;
+
+  // Look for the input opcode in the corresponding opcodes table.
+  for (size_t GroupIndex = 0; GroupIndex < GroupsNum && !FoundOpcodesGroup;
+         ++GroupIndex) {
+    for (FormIndex = 0; FormIndex < FormsNum; ++FormIndex) {
+      if (OpcodeGroups[GroupIndex][FormIndex] == Opc) {
+        FoundOpcodesGroup = OpcodeGroups[GroupIndex];
+        break;
+      }
+    }
+  }
+
+  // The input opcode does not match with any of the opcodes from the tables.
+  // The unsupported FMA opcode must be added to one of the two opcode groups
+  // defined above.
+  assert(FoundOpcodesGroup != nullptr && "Unexpected FMA3 opcode");
+
+  // Put the lowest index to SrcOpIdx1 to simplify the checks below.
+  if (SrcOpIdx1 > SrcOpIdx2)
+    std::swap(SrcOpIdx1, SrcOpIdx2);
+
+  // TODO: Commuting the 1st operand of FMA*_Int requires some additional
+  // analysis. The commute optimization is legal only if all users of FMA*_Int
+  // use only the lowest element of the FMA*_Int instruction. Such analysis are
+  // not implemented yet. So, just return 0 in that case.
+  // When such analysis are available this place will be the right place for
+  // calling it.
+  if (IsIntrinOpcode && SrcOpIdx1 == 1)
+    return 0;
+
+  unsigned Case;
+  if (SrcOpIdx1 == 1 && SrcOpIdx2 == 2)
+    Case = 0;
+  else if (SrcOpIdx1 == 1 && SrcOpIdx2 == 3)
+    Case = 1;
+  else if (SrcOpIdx1 == 2 && SrcOpIdx2 == 3)
+    Case = 2;
+  else
+    return 0;
+
+  // Define the FMA forms mapping array that helps to map input FMA form
+  // to output FMA form to preserve the operation semantics after
+  // commuting the operands.
+  static const unsigned FormMapping[][3] = {
+    // 0: SrcOpIdx1 == 1 && SrcOpIdx2 == 2;
+    // FMA132 A, C, b; ==> FMA231 C, A, b;
+    // FMA213 B, A, c; ==> FMA213 A, B, c;
+    // FMA231 C, A, b; ==> FMA132 A, C, b;
+    { Form231Index, Form213Index, Form132Index },
+    // 1: SrcOpIdx1 == 1 && SrcOpIdx2 == 3;
+    // FMA132 A, c, B; ==> FMA132 B, c, A;
+    // FMA213 B, a, C; ==> FMA231 C, a, B;
+    // FMA231 C, a, B; ==> FMA213 B, a, C;
+    { Form132Index, Form231Index, Form213Index },
+    // 2: SrcOpIdx1 == 2 && SrcOpIdx2 == 3;
+    // FMA132 a, C, B; ==> FMA213 a, B, C;
+    // FMA213 b, A, C; ==> FMA132 b, C, A;
+    // FMA231 c, A, B; ==> FMA231 c, B, A;
+    { Form213Index, Form132Index, Form231Index }
+  };
+
+  // Everything is ready, just adjust the FMA opcode and return it.
+  FormIndex = FormMapping[Case][FormIndex];
+  return FoundOpcodesGroup[FormIndex];
 }
 
 MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
@@ -3506,8 +3667,11 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
                                                    OpIdx1, OpIdx2);
   }
   default:
-    if (isFMA3(MI.getOpcode())) {
-      unsigned Opc = getFMA3OpcodeToCommuteOperands(MI, OpIdx1, OpIdx2);
+    bool IsIntrinOpcode;
+    if (isFMA3(MI.getOpcode(), IsIntrinOpcode)) {
+      unsigned Opc = getFMA3OpcodeToCommuteOperands(MI.getOpcode(),
+                                                    IsIntrinOpcode,
+                                                    OpIdx1, OpIdx2);
       if (Opc == 0)
         return nullptr;
       auto &WorkingMI = cloneIfNew(MI);
@@ -3521,6 +3685,7 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 }
 
 bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
+                                             bool IsIntrinOpcode,
                                              unsigned &SrcOpIdx1,
                                              unsigned &SrcOpIdx2) const {
 
@@ -3577,195 +3742,8 @@ bool X86InstrInfo::findFMA3CommutedOpIndices(MachineInstr &MI,
 
   // Check if we can adjust the opcode to preserve the semantics when
   // commute the register operands.
-  return getFMA3OpcodeToCommuteOperands(MI, SrcOpIdx1, SrcOpIdx2) != 0;
-}
-
-unsigned X86InstrInfo::getFMA3OpcodeToCommuteOperands(
-    MachineInstr &MI, unsigned SrcOpIdx1, unsigned SrcOpIdx2) const {
-  unsigned Opc = MI.getOpcode();
-
-  // Define the array that holds FMA opcodes in groups
-  // of 3 opcodes(132, 213, 231) in each group.
-  static const uint16_t RegularOpcodeGroups[][3] = {
-    { X86::VFMADDSSr132r,   X86::VFMADDSSr213r,   X86::VFMADDSSr231r  },
-    { X86::VFMADDSDr132r,   X86::VFMADDSDr213r,   X86::VFMADDSDr231r  },
-    { X86::VFMADDPSr132r,   X86::VFMADDPSr213r,   X86::VFMADDPSr231r  },
-    { X86::VFMADDPDr132r,   X86::VFMADDPDr213r,   X86::VFMADDPDr231r  },
-    { X86::VFMADDPSr132rY,  X86::VFMADDPSr213rY,  X86::VFMADDPSr231rY },
-    { X86::VFMADDPDr132rY,  X86::VFMADDPDr213rY,  X86::VFMADDPDr231rY },
-    { X86::VFMADDSSr132m,   X86::VFMADDSSr213m,   X86::VFMADDSSr231m  },
-    { X86::VFMADDSDr132m,   X86::VFMADDSDr213m,   X86::VFMADDSDr231m  },
-    { X86::VFMADDPSr132m,   X86::VFMADDPSr213m,   X86::VFMADDPSr231m  },
-    { X86::VFMADDPDr132m,   X86::VFMADDPDr213m,   X86::VFMADDPDr231m  },
-    { X86::VFMADDPSr132mY,  X86::VFMADDPSr213mY,  X86::VFMADDPSr231mY },
-    { X86::VFMADDPDr132mY,  X86::VFMADDPDr213mY,  X86::VFMADDPDr231mY },
-
-    { X86::VFMSUBSSr132r,   X86::VFMSUBSSr213r,   X86::VFMSUBSSr231r  },
-    { X86::VFMSUBSDr132r,   X86::VFMSUBSDr213r,   X86::VFMSUBSDr231r  },
-    { X86::VFMSUBPSr132r,   X86::VFMSUBPSr213r,   X86::VFMSUBPSr231r  },
-    { X86::VFMSUBPDr132r,   X86::VFMSUBPDr213r,   X86::VFMSUBPDr231r  },
-    { X86::VFMSUBPSr132rY,  X86::VFMSUBPSr213rY,  X86::VFMSUBPSr231rY },
-    { X86::VFMSUBPDr132rY,  X86::VFMSUBPDr213rY,  X86::VFMSUBPDr231rY },
-    { X86::VFMSUBSSr132m,   X86::VFMSUBSSr213m,   X86::VFMSUBSSr231m  },
-    { X86::VFMSUBSDr132m,   X86::VFMSUBSDr213m,   X86::VFMSUBSDr231m  },
-    { X86::VFMSUBPSr132m,   X86::VFMSUBPSr213m,   X86::VFMSUBPSr231m  },
-    { X86::VFMSUBPDr132m,   X86::VFMSUBPDr213m,   X86::VFMSUBPDr231m  },
-    { X86::VFMSUBPSr132mY,  X86::VFMSUBPSr213mY,  X86::VFMSUBPSr231mY },
-    { X86::VFMSUBPDr132mY,  X86::VFMSUBPDr213mY,  X86::VFMSUBPDr231mY },
-
-    { X86::VFNMADDSSr132r,  X86::VFNMADDSSr213r,  X86::VFNMADDSSr231r  },
-    { X86::VFNMADDSDr132r,  X86::VFNMADDSDr213r,  X86::VFNMADDSDr231r  },
-    { X86::VFNMADDPSr132r,  X86::VFNMADDPSr213r,  X86::VFNMADDPSr231r  },
-    { X86::VFNMADDPDr132r,  X86::VFNMADDPDr213r,  X86::VFNMADDPDr231r  },
-    { X86::VFNMADDPSr132rY, X86::VFNMADDPSr213rY, X86::VFNMADDPSr231rY },
-    { X86::VFNMADDPDr132rY, X86::VFNMADDPDr213rY, X86::VFNMADDPDr231rY },
-    { X86::VFNMADDSSr132m,  X86::VFNMADDSSr213m,  X86::VFNMADDSSr231m  },
-    { X86::VFNMADDSDr132m,  X86::VFNMADDSDr213m,  X86::VFNMADDSDr231m  },
-    { X86::VFNMADDPSr132m,  X86::VFNMADDPSr213m,  X86::VFNMADDPSr231m  },
-    { X86::VFNMADDPDr132m,  X86::VFNMADDPDr213m,  X86::VFNMADDPDr231m  },
-    { X86::VFNMADDPSr132mY, X86::VFNMADDPSr213mY, X86::VFNMADDPSr231mY },
-    { X86::VFNMADDPDr132mY, X86::VFNMADDPDr213mY, X86::VFNMADDPDr231mY },
-
-    { X86::VFNMSUBSSr132r,  X86::VFNMSUBSSr213r,  X86::VFNMSUBSSr231r  },
-    { X86::VFNMSUBSDr132r,  X86::VFNMSUBSDr213r,  X86::VFNMSUBSDr231r  },
-    { X86::VFNMSUBPSr132r,  X86::VFNMSUBPSr213r,  X86::VFNMSUBPSr231r  },
-    { X86::VFNMSUBPDr132r,  X86::VFNMSUBPDr213r,  X86::VFNMSUBPDr231r  },
-    { X86::VFNMSUBPSr132rY, X86::VFNMSUBPSr213rY, X86::VFNMSUBPSr231rY },
-    { X86::VFNMSUBPDr132rY, X86::VFNMSUBPDr213rY, X86::VFNMSUBPDr231rY },
-    { X86::VFNMSUBSSr132m,  X86::VFNMSUBSSr213m,  X86::VFNMSUBSSr231m  },
-    { X86::VFNMSUBSDr132m,  X86::VFNMSUBSDr213m,  X86::VFNMSUBSDr231m  },
-    { X86::VFNMSUBPSr132m,  X86::VFNMSUBPSr213m,  X86::VFNMSUBPSr231m  },
-    { X86::VFNMSUBPDr132m,  X86::VFNMSUBPDr213m,  X86::VFNMSUBPDr231m  },
-    { X86::VFNMSUBPSr132mY, X86::VFNMSUBPSr213mY, X86::VFNMSUBPSr231mY },
-    { X86::VFNMSUBPDr132mY, X86::VFNMSUBPDr213mY, X86::VFNMSUBPDr231mY },
-
-    { X86::VFMADDSUBPSr132r,  X86::VFMADDSUBPSr213r,  X86::VFMADDSUBPSr231r  },
-    { X86::VFMADDSUBPDr132r,  X86::VFMADDSUBPDr213r,  X86::VFMADDSUBPDr231r  },
-    { X86::VFMADDSUBPSr132rY, X86::VFMADDSUBPSr213rY, X86::VFMADDSUBPSr231rY },
-    { X86::VFMADDSUBPDr132rY, X86::VFMADDSUBPDr213rY, X86::VFMADDSUBPDr231rY },
-    { X86::VFMADDSUBPSr132m,  X86::VFMADDSUBPSr213m,  X86::VFMADDSUBPSr231m  },
-    { X86::VFMADDSUBPDr132m,  X86::VFMADDSUBPDr213m,  X86::VFMADDSUBPDr231m  },
-    { X86::VFMADDSUBPSr132mY, X86::VFMADDSUBPSr213mY, X86::VFMADDSUBPSr231mY },
-    { X86::VFMADDSUBPDr132mY, X86::VFMADDSUBPDr213mY, X86::VFMADDSUBPDr231mY },
-
-    { X86::VFMSUBADDPSr132r,  X86::VFMSUBADDPSr213r,  X86::VFMSUBADDPSr231r  },
-    { X86::VFMSUBADDPDr132r,  X86::VFMSUBADDPDr213r,  X86::VFMSUBADDPDr231r  },
-    { X86::VFMSUBADDPSr132rY, X86::VFMSUBADDPSr213rY, X86::VFMSUBADDPSr231rY },
-    { X86::VFMSUBADDPDr132rY, X86::VFMSUBADDPDr213rY, X86::VFMSUBADDPDr231rY },
-    { X86::VFMSUBADDPSr132m,  X86::VFMSUBADDPSr213m,  X86::VFMSUBADDPSr231m  },
-    { X86::VFMSUBADDPDr132m,  X86::VFMSUBADDPDr213m,  X86::VFMSUBADDPDr231m  },
-    { X86::VFMSUBADDPSr132mY, X86::VFMSUBADDPSr213mY, X86::VFMSUBADDPSr231mY },
-    { X86::VFMSUBADDPDr132mY, X86::VFMSUBADDPDr213mY, X86::VFMSUBADDPDr231mY }
-  };
-
-  // Define the array that holds FMA*_Int opcodes in groups
-  // of 3 opcodes(132, 213, 231) in each group.
-  static const uint16_t IntrinOpcodeGroups[][3] = {
-    { X86::VFMADDSSr132r_Int,  X86::VFMADDSSr213r_Int,  X86::VFMADDSSr231r_Int },
-    { X86::VFMADDSDr132r_Int,  X86::VFMADDSDr213r_Int,  X86::VFMADDSDr231r_Int },
-    { X86::VFMADDSSr132m_Int,  X86::VFMADDSSr213m_Int,  X86::VFMADDSSr231m_Int },
-    { X86::VFMADDSDr132m_Int,  X86::VFMADDSDr213m_Int,  X86::VFMADDSDr231m_Int },
-
-    { X86::VFMSUBSSr132r_Int,  X86::VFMSUBSSr213r_Int,  X86::VFMSUBSSr231r_Int },
-    { X86::VFMSUBSDr132r_Int,  X86::VFMSUBSDr213r_Int,  X86::VFMSUBSDr231r_Int },
-    { X86::VFMSUBSSr132m_Int,  X86::VFMSUBSSr213m_Int,  X86::VFMSUBSSr231m_Int },
-    { X86::VFMSUBSDr132m_Int,  X86::VFMSUBSDr213m_Int,  X86::VFMSUBSDr231m_Int },
-
-    { X86::VFNMADDSSr132r_Int, X86::VFNMADDSSr213r_Int, X86::VFNMADDSSr231r_Int },
-    { X86::VFNMADDSDr132r_Int, X86::VFNMADDSDr213r_Int, X86::VFNMADDSDr231r_Int },
-    { X86::VFNMADDSSr132m_Int, X86::VFNMADDSSr213m_Int, X86::VFNMADDSSr231m_Int },
-    { X86::VFNMADDSDr132m_Int, X86::VFNMADDSDr213m_Int, X86::VFNMADDSDr231m_Int },
-
-    { X86::VFNMSUBSSr132r_Int, X86::VFNMSUBSSr213r_Int, X86::VFNMSUBSSr231r_Int },
-    { X86::VFNMSUBSDr132r_Int, X86::VFNMSUBSDr213r_Int, X86::VFNMSUBSDr231r_Int },
-    { X86::VFNMSUBSSr132m_Int, X86::VFNMSUBSSr213m_Int, X86::VFNMSUBSSr231m_Int },
-    { X86::VFNMSUBSDr132m_Int, X86::VFNMSUBSDr213m_Int, X86::VFNMSUBSDr231m_Int },
-  };
-
-  const unsigned Form132Index = 0;
-  const unsigned Form213Index = 1;
-  const unsigned Form231Index = 2;
-  const unsigned FormsNum = 3;
-
-  bool IsIntrinOpcode;
-  isFMA3(Opc, &IsIntrinOpcode);
-
-  size_t GroupsNum;
-  const uint16_t (*OpcodeGroups)[3];
-  if (IsIntrinOpcode) {
-    GroupsNum = array_lengthof(IntrinOpcodeGroups);
-    OpcodeGroups = IntrinOpcodeGroups;
-  } else {
-    GroupsNum = array_lengthof(RegularOpcodeGroups);
-    OpcodeGroups = RegularOpcodeGroups;
-  }
-
-  const uint16_t *FoundOpcodesGroup = nullptr;
-  size_t FormIndex;
-
-  // Look for the input opcode in the corresponding opcodes table.
-  for (size_t GroupIndex = 0; GroupIndex < GroupsNum && !FoundOpcodesGroup;
-         ++GroupIndex) {
-    for (FormIndex = 0; FormIndex < FormsNum; ++FormIndex) {
-      if (OpcodeGroups[GroupIndex][FormIndex] == Opc) {
-        FoundOpcodesGroup = OpcodeGroups[GroupIndex];
-        break;
-      }
-    }
-  }
-
-  // The input opcode does not match with any of the opcodes from the tables.
-  // The unsupported FMA opcode must be added to one of the two opcode groups
-  // defined above.
-  assert(FoundOpcodesGroup != nullptr && "Unexpected FMA3 opcode");
-
-  // Put the lowest index to SrcOpIdx1 to simplify the checks below.
-  if (SrcOpIdx1 > SrcOpIdx2)
-    std::swap(SrcOpIdx1, SrcOpIdx2);
-
-  // TODO: Commuting the 1st operand of FMA*_Int requires some additional
-  // analysis. The commute optimization is legal only if all users of FMA*_Int
-  // use only the lowest element of the FMA*_Int instruction. Such analysis are
-  // not implemented yet. So, just return 0 in that case.
-  // When such analysis are available this place will be the right place for
-  // calling it.
-  if (IsIntrinOpcode && SrcOpIdx1 == 1)
-    return 0;
-
-  unsigned Case;
-  if (SrcOpIdx1 == 1 && SrcOpIdx2 == 2)
-    Case = 0;
-  else if (SrcOpIdx1 == 1 && SrcOpIdx2 == 3)
-    Case = 1;
-  else if (SrcOpIdx1 == 2 && SrcOpIdx2 == 3)
-    Case = 2;
-  else
-    return 0;
-
-  // Define the FMA forms mapping array that helps to map input FMA form
-  // to output FMA form to preserve the operation semantics after
-  // commuting the operands.
-  static const unsigned FormMapping[][3] = {
-    // 0: SrcOpIdx1 == 1 && SrcOpIdx2 == 2;
-    // FMA132 A, C, b; ==> FMA231 C, A, b;
-    // FMA213 B, A, c; ==> FMA213 A, B, c;
-    // FMA231 C, A, b; ==> FMA132 A, C, b;
-    { Form231Index, Form213Index, Form132Index },
-    // 1: SrcOpIdx1 == 1 && SrcOpIdx2 == 3;
-    // FMA132 A, c, B; ==> FMA132 B, c, A;
-    // FMA213 B, a, C; ==> FMA231 C, a, B;
-    // FMA231 C, a, B; ==> FMA213 B, a, C;
-    { Form132Index, Form231Index, Form213Index },
-    // 2: SrcOpIdx1 == 2 && SrcOpIdx2 == 3;
-    // FMA132 a, C, B; ==> FMA213 a, B, C;
-    // FMA213 b, A, C; ==> FMA132 b, C, A;
-    // FMA231 c, A, B; ==> FMA231 c, B, A;
-    { Form213Index, Form132Index, Form231Index }
-  };
-
-  // Everything is ready, just adjust the FMA opcode and return it.
-  FormIndex = FormMapping[Case][FormIndex];
-  return FoundOpcodesGroup[FormIndex];
+  return getFMA3OpcodeToCommuteOperands(MI.getOpcode(), IsIntrinOpcode,
+                                        SrcOpIdx1, SrcOpIdx2) != 0;
 }
 
 bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
@@ -3792,8 +3770,10 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     return false;
   }
   default:
-    if (isFMA3(MI.getOpcode()))
-      return findFMA3CommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+    bool IsIntrinOpcode;
+    if (isFMA3(MI.getOpcode(), IsIntrinOpcode))
+      return findFMA3CommutedOpIndices(MI, IsIntrinOpcode,
+                                       SrcOpIdx1, SrcOpIdx2);
     return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
   }
   return false;

@@ -260,6 +260,14 @@ APInt& APInt::operator+=(const APInt& RHS) {
   return clearUnusedBits();
 }
 
+APInt& APInt::operator+=(uint64_t RHS) {
+  if (isSingleWord())
+    VAL += RHS;
+  else
+    add_1(pVal, pVal, getNumWords(), RHS);
+  return clearUnusedBits();
+}
+
 /// Subtracts the integer array y from the integer array x
 /// @returns returns the borrow out.
 /// @brief Generalized subtraction of 64-bit integer arrays.
@@ -283,6 +291,14 @@ APInt& APInt::operator-=(const APInt& RHS) {
     VAL -= RHS.VAL;
   else
     sub(pVal, pVal, RHS.pVal, getNumWords());
+  return clearUnusedBits();
+}
+
+APInt& APInt::operator-=(uint64_t RHS) {
+  if (isSingleWord())
+    VAL -= RHS;
+  else
+    sub_1(pVal, getNumWords(), RHS);
   return clearUnusedBits();
 }
 
@@ -467,44 +483,6 @@ APInt APInt::operator*(const APInt& RHS) const {
     return APInt(BitWidth, VAL * RHS.VAL);
   APInt Result(*this);
   Result *= RHS;
-  return Result;
-}
-
-APInt APInt::operator+(const APInt& RHS) const {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
-    return APInt(BitWidth, VAL + RHS.VAL);
-  APInt Result(BitWidth, 0);
-  add(Result.pVal, this->pVal, RHS.pVal, getNumWords());
-  Result.clearUnusedBits();
-  return Result;
-}
-
-APInt APInt::operator+(uint64_t RHS) const {
-  if (isSingleWord())
-    return APInt(BitWidth, VAL + RHS);
-  APInt Result(*this);
-  add_1(Result.pVal, Result.pVal, getNumWords(), RHS);
-  Result.clearUnusedBits();
-  return Result;
-}
-
-APInt APInt::operator-(const APInt& RHS) const {
-  assert(BitWidth == RHS.BitWidth && "Bit widths must be the same");
-  if (isSingleWord())
-    return APInt(BitWidth, VAL - RHS.VAL);
-  APInt Result(BitWidth, 0);
-  sub(Result.pVal, this->pVal, RHS.pVal, getNumWords());
-  Result.clearUnusedBits();
-  return Result;
-}
-
-APInt APInt::operator-(uint64_t RHS) const {
-  if (isSingleWord())
-    return APInt(BitWidth, VAL - RHS);
-  APInt Result(*this);
-  sub_1(Result.pVal, getNumWords(), RHS);
-  Result.clearUnusedBits();
   return Result;
 }
 
