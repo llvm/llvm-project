@@ -153,7 +153,7 @@ CFLSteensAAResult::FunctionInfo::FunctionInfo(
       if (Itr != InterfaceMap.end()) {
         if (CurrValue != Itr->second)
           Summary.RetParamRelations.push_back(
-              ExternalRelation{CurrValue, Itr->second});
+              ExternalRelation{CurrValue, Itr->second, UnknownOffset});
         break;
       }
 

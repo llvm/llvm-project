@@ -656,7 +656,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MCInstrDesc &tid,
       debugLoc(std::move(dl))
 #ifdef LLVM_BUILD_GLOBAL_ISEL
       ,
-      Ty(LLT{})
+      Tys(0)
 #endif
 {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
@@ -680,7 +680,7 @@ MachineInstr::MachineInstr(MachineFunction &MF, const MachineInstr &MI)
       MemRefs(MI.MemRefs), debugLoc(MI.getDebugLoc())
 #ifdef LLVM_BUILD_GLOBAL_ISEL
       ,
-      Ty(LLT{})
+      Tys(0)
 #endif
 {
   assert(debugLoc.hasTrivialDestructor() && "Expected trivial destructor");
@@ -710,18 +710,24 @@ MachineRegisterInfo *MachineInstr::getRegInfo() {
 // The proper implementation is WIP and is tracked here:
 // PR26576.
 #ifndef LLVM_BUILD_GLOBAL_ISEL
-void MachineInstr::setType(LLT Ty) {}
+unsigned MachineInstr::getNumTypes() const { return 0; }
 
-LLT MachineInstr::getType() const { return LLT{}; }
+void MachineInstr::setType(LLT Ty, unsigned Idx) {}
+
+LLT MachineInstr::getType(unsigned Idx) const { return LLT{}; }
 
 #else
-void MachineInstr::setType(LLT Ty) {
+unsigned MachineInstr::getNumTypes() const { return Tys.size(); }
+
+void MachineInstr::setType(LLT Ty, unsigned Idx) {
   assert((!Ty.isValid() || isPreISelGenericOpcode(getOpcode())) &&
          "Non generic instructions are not supposed to be typed");
-  this->Ty = Ty;
+  if (Tys.size() < Idx + 1)
+    Tys.resize(Idx+1);
+  Tys[Idx] = Ty;
 }
 
-LLT MachineInstr::getType() const { return Ty; }
+LLT MachineInstr::getType(unsigned Idx) const { return Tys[Idx]; }
 #endif // LLVM_BUILD_GLOBAL_ISEL
 
 /// RemoveRegOperandsFromUseLists - Unlink all of the register operands in
@@ -1724,10 +1730,14 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
   else
     OS << "UNKNOWN";
 
-  if (getType().isValid()) {
-    OS << ' ';
-    getType().print(OS);
-    OS << ' ';
+  if (getNumTypes() > 0) {
+    OS << " { ";
+    for (unsigned i = 0; i < getNumTypes(); ++i) {
+      getType(i).print(OS);
+      if (i + 1 != getNumTypes())
+        OS << ", ";
+    }
+    OS << " } ";
   }
 
   if (SkipOpers)

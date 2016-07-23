@@ -319,6 +319,13 @@ getInputFilenamesFileBuf(const StringRef &InputFilenamesFile) {
 static void addWeightedInput(WeightedFileVector &WNI, const WeightedFile &WF) {
   StringRef Filename = WF.Filename;
   uint64_t Weight = WF.Weight;
+
+  // If it's STDIN just pass it on.
+  if (Filename == "-") {
+    WNI.push_back({Filename, Weight});
+    return;
+  }
+
   llvm::sys::fs::file_status Status;
   llvm::sys::fs::status(Filename, Status);
   if (!llvm::sys::fs::exists(Status))

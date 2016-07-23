@@ -9,17 +9,17 @@
 
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
-#include "llvm/DebugInfo/CodeView/StreamWriter.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;
-using namespace llvm::codeview;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 NameMap::NameMap() {}
 
-Error NameMap::load(codeview::StreamReader &Stream) {
+Error NameMap::load(StreamReader &Stream) {
 
   // This is some sort of weird string-set/hash table encoded in the stream.
   // It starts with the number of bytes in the table.
@@ -145,7 +145,7 @@ Error NameMap::load(codeview::StreamReader &Stream) {
   return Error::success();
 }
 
-Error NameMap::commit(codeview::StreamWriter &Writer) {
+Error NameMap::commit(StreamWriter &Writer) {
   // The first field is the number of bytes of string data.  So add
   // up the length of all strings plus a null terminator for each
   // one.

@@ -19,15 +19,23 @@ import sys
 kThresh = 1.0
 
 FileCoverage = collections.namedtuple('FileCoverage',
-        ['Regions', 'Missed', 'Coverage', 'Functions', 'Executed'])
+        ['Regions', 'MissedRegions', 'RegionCoverage',
+         'Functions', 'MissedFunctions', 'Executed',
+         'Lines', 'MissedLines', 'LineCoverage'])
 
-CoverageEntry = re.compile('^(.*) +(\d+) +(\d+) +([\d.]+)% +(\d+) +([\d.]+)%$')
+CoverageEntry = re.compile(r'^(.*)'
+                           r' +(\d+) +(\d+) +([\d.]+)%'
+                           r' +(\d+) +(\d+) +([\d.]+)%'
+                           r' +(\d+) +(\d+) +([\d.]+)%$')
 
 def parse_file_coverage_line(line):
     '''Parse @line as a summary of a file's coverage information.
 
-    >>> parse_file_coverage_line('foo.cpp 10 5 50.0% 10 0.0%')
-    ('foo.cpp', FileCoverage(Regions=10, Missed=5, Coverage=50.0, Functions=10, Executed=0.0))
+    >>> parse_file_coverage_line('report.cpp 5 2 60.00% 4 1 75.00% 13 4 69.23%')
+    ('report.cpp', FileCoverage(\
+Regions=5, MissedRegions=2, RegionCoverage=60.0, \
+Functions=4, MissedFunctions=1, Executed=75.0, \
+Lines=13, MissedLines=4, LineCoverage=69.23))
     '''
 
     m = re.match(CoverageEntry, line)
@@ -38,12 +46,18 @@ def parse_file_coverage_line(line):
     groups = m.groups()
     filename = groups[0].strip()
     regions = int(groups[1])
-    missed = int(groups[2])
-    coverage = float(groups[3])
+    missed_regions = int(groups[2])
+    region_coverage = float(groups[3])
     functions = int(groups[4])
-    executed = float(groups[5])
+    missed_functions = int(groups[5])
+    executed = float(groups[6])
+    lines = int(groups[7])
+    missed_lines = int(groups[8])
+    line_coverage = float(groups[9])
     return (filename,
-            FileCoverage(regions, missed, coverage, functions, executed))
+            FileCoverage(regions, missed_regions, region_coverage,
+                         functions, missed_functions, executed,
+                         lines, missed_lines, line_coverage))
 
 def parse_summary(path):
     '''Parse the summary at @path. Return a dictionary mapping filenames to
@@ -71,7 +85,7 @@ def find_coverage_regressions(old_coverage, new_coverage):
 
         old_fc = old_coverage[filename]
         new_fc = new_coverage[filename]
-        if new_fc.Coverage < kThresh * old_fc.Coverage or \
+        if new_fc.RegionCoverage < kThresh * old_fc.RegionCoverage or \
                 new_fc.Executed < kThresh * old_fc.Executed:
             yield (filename, old_fc, new_fc)
 
@@ -79,41 +93,31 @@ def print_regression(filename, old_fc, new_fc):
     '''Pretty-print a coverage regression in @filename. @old_fc is the old
        FileCoverage and @new_fc is the new one.
 
-    >>> print_regression('foo.cpp', FileCoverage(10, 5, 50.0, 10, 0), \
-                         FileCoverage(10, 7, 30.0, 10, 0))
+    >>> print_regression('foo.cpp', \
+                         FileCoverage(10, 5, 50.0, 10, 10, 0, 20, 10, 50.0), \
+                         FileCoverage(10, 7, 30.0, 10, 10, 0, 20, 14, 30.0))
     Code coverage regression:
       File: foo.cpp
-      Change in region coverage: -20.00%
-      Change in function coverage: 0.00%
-      No functions were added or removed.
-      No regions were added or removed.
-
-    >>> print_regression('foo.cpp', FileCoverage(10, 5, 50.0, 10, 0), \
-                         FileCoverage(5, 4, 20.0, 5, 0))
-    Code coverage regression:
-      File: foo.cpp
-      Change in region coverage: -30.00%
-      Change in function coverage: 0.00%
-      Change in the number of functions: -5
-      Change in the number of regions: -5
+      Change in function coverage: 0.00% (0/10 -> 0/10)
+      Change in line coverage    : -20.00% (10/20 -> 6/20)
+      Change in region coverage  : -20.00% (5/10 -> 3/10)
     '''
 
-    region_coverage_delta = new_fc.Coverage - old_fc.Coverage
     func_coverage_delta = new_fc.Executed - old_fc.Executed
-    num_functions_delta = new_fc.Functions - old_fc.Functions
-    num_regions_delta = new_fc.Regions - old_fc.Regions
+    line_coverage_delta = new_fc.LineCoverage - old_fc.LineCoverage
+    region_coverage_delta = new_fc.RegionCoverage - old_fc.RegionCoverage
     print("Code coverage regression:")
     print("  File:", filename)
-    print("  Change in region coverage: {0:.2f}%".format(region_coverage_delta))
-    print("  Change in function coverage: {0:.2f}%".format(func_coverage_delta))
-    if num_functions_delta:
-        print("  Change in the number of functions:", num_functions_delta)
-    else:
-        print("  No functions were added or removed.")
-    if num_regions_delta:
-        print("  Change in the number of regions:", num_regions_delta)
-    else:
-        print("  No regions were added or removed.")
+    print("  Change in function coverage: {0:.2f}% ({1}/{2} -> {3}/{4})".format(
+        func_coverage_delta, old_fc.Functions - old_fc.MissedFunctions,
+        old_fc.Functions, new_fc.Functions - new_fc.MissedFunctions,
+        new_fc.Functions))
+    print("  Change in line coverage    : {0:.2f}% ({1}/{2} -> {3}/{4})".format(
+        line_coverage_delta, old_fc.Lines - old_fc.MissedLines, old_fc.Lines,
+        new_fc.Lines - new_fc.MissedLines, new_fc.Lines))
+    print("  Change in region coverage  : {0:.2f}% ({1}/{2} -> {3}/{4})".format(
+        region_coverage_delta, old_fc.Regions - old_fc.MissedRegions,
+        old_fc.Regions, new_fc.Regions - new_fc.MissedRegions, new_fc.Regions))
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)

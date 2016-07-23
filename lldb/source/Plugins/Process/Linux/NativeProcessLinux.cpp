@@ -1678,6 +1678,20 @@ ParseMemoryRegionInfoFromProcMapsLine (const std::string &maps_line, MemoryRegio
     else
         return Error ("unexpected /proc/{pid}/maps exec permission char");
 
+    line_extractor.GetChar();              // Read the private bit
+    line_extractor.SkipSpaces();           // Skip the separator
+    line_extractor.GetHexMaxU64(false, 0); // Read the offset
+    line_extractor.GetHexMaxU64(false, 0); // Read the major device number
+    line_extractor.GetChar();              // Read the device id separator
+    line_extractor.GetHexMaxU64(false, 0); // Read the major device number
+    line_extractor.SkipSpaces();           // Skip the separator
+    line_extractor.GetU64(0, 10);          // Read the inode number
+
+    line_extractor.SkipSpaces();
+    const char* name = line_extractor.Peek();
+    if (name)
+        memory_region_info.SetName(name);
+
     return Error ();
 }
 

@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::yaml;
 using namespace llvm::pdb;
 using namespace llvm::pdb::yaml;
@@ -153,10 +154,17 @@ void MappingTraits<PdbDbiStream>::mapping(IO &IO, PdbDbiStream &Obj) {
   IO.mapRequired("PdbDllRbld", Obj.PdbDllRbld);
   IO.mapRequired("Flags", Obj.Flags);
   IO.mapRequired("MachineType", Obj.MachineType);
+  IO.mapOptional("Modules", Obj.ModInfos);
 }
 
 void MappingTraits<NamedStreamMapping>::mapping(IO &IO,
                                                 NamedStreamMapping &Obj) {
   IO.mapRequired("Name", Obj.StreamName);
   IO.mapRequired("StreamNum", Obj.StreamNumber);
+}
+
+void MappingTraits<PdbDbiModuleInfo>::mapping(IO &IO, PdbDbiModuleInfo &Obj) {
+  IO.mapRequired("Module", Obj.Mod);
+  IO.mapRequired("ObjFile", Obj.Obj);
+  IO.mapOptional("SourceFiles", Obj.SourceFiles);
 }

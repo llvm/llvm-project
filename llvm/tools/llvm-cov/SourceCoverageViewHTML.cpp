@@ -247,7 +247,8 @@ Error CoveragePrinterHTML::createIndexFile(ArrayRef<StringRef> SourceFiles) {
   raw_ostream &OSRef = *OS.get();
 
   // Emit a table containing links to reports for each file in the covmapping.
-  emitPrelude(OSRef);
+  assert(Opts.hasOutputDirectory() && "No output directory for index file");
+  emitPrelude(OSRef, getPathToStyle(""));
   OSRef << BeginSourceNameDiv << "Index" << EndSourceNameDiv;
   OSRef << BeginTable;
   for (StringRef SF : SourceFiles) {

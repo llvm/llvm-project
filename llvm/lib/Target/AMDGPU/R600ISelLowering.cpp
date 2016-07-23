@@ -122,6 +122,7 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SETCC, MVT::i32, Expand);
   setOperationAction(ISD::SETCC, MVT::f32, Expand);
   setOperationAction(ISD::FP_TO_UINT, MVT::i1, Custom);
+  setOperationAction(ISD::FP_TO_SINT, MVT::i1, Custom);
   setOperationAction(ISD::FP_TO_SINT, MVT::i64, Custom);
   setOperationAction(ISD::FP_TO_UINT, MVT::i64, Custom);
 
@@ -591,12 +592,6 @@ R600TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     break;
   }
   case AMDGPU::RETURN: {
-    // RETURN instructions must have the live-out registers as implicit uses,
-    // otherwise they appear dead.
-    R600MachineFunctionInfo *MFI = MF->getInfo<R600MachineFunctionInfo>();
-    MachineInstrBuilder MIB(*MF, MI);
-    for (unsigned i = 0, e = MFI->LiveOuts.size(); i != e; ++i)
-      MIB.addReg(MFI->LiveOuts[i], RegState::Implicit);
     return BB;
   }
   }
@@ -670,15 +665,7 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
     switch(IntrinsicID) {
     default: return AMDGPUTargetLowering::LowerOperation(Op, DAG);
     case AMDGPUIntrinsic::r600_tex:
-    case AMDGPUIntrinsic::r600_texc:
-    case AMDGPUIntrinsic::r600_txl:
-    case AMDGPUIntrinsic::r600_txlc:
-    case AMDGPUIntrinsic::r600_txb:
-    case AMDGPUIntrinsic::r600_txbc:
-    case AMDGPUIntrinsic::r600_txf:
-    case AMDGPUIntrinsic::r600_txq:
-    case AMDGPUIntrinsic::r600_ddx:
-    case AMDGPUIntrinsic::r600_ddy: {
+    case AMDGPUIntrinsic::r600_texc: {
       unsigned TextureOp;
       switch (IntrinsicID) {
       case AMDGPUIntrinsic::r600_tex:
@@ -686,30 +673,6 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
         break;
       case AMDGPUIntrinsic::r600_texc:
         TextureOp = 1;
-        break;
-      case AMDGPUIntrinsic::r600_txl:
-        TextureOp = 2;
-        break;
-      case AMDGPUIntrinsic::r600_txlc:
-        TextureOp = 3;
-        break;
-      case AMDGPUIntrinsic::r600_txb:
-        TextureOp = 4;
-        break;
-      case AMDGPUIntrinsic::r600_txbc:
-        TextureOp = 5;
-        break;
-      case AMDGPUIntrinsic::r600_txf:
-        TextureOp = 6;
-        break;
-      case AMDGPUIntrinsic::r600_txq:
-        TextureOp = 7;
-        break;
-      case AMDGPUIntrinsic::r600_ddx:
-        TextureOp = 8;
-        break;
-      case AMDGPUIntrinsic::r600_ddy:
-        TextureOp = 9;
         break;
       default:
         llvm_unreachable("Unknow Texture Operation");
@@ -832,13 +795,18 @@ void R600TargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::FP_TO_UINT:
     if (N->getValueType(0) == MVT::i1) {
-      Results.push_back(LowerFPTOUINT(N->getOperand(0), DAG));
+      Results.push_back(lowerFP_TO_UINT(N->getOperand(0), DAG));
       return;
     }
     // Fall-through. Since we don't care about out of bounds values
     // we can use FP_TO_SINT for uints too. The DAGLegalizer code for uint
     // considers some extra cases which are not necessary here.
   case ISD::FP_TO_SINT: {
+    if (N->getValueType(0) == MVT::i1) {
+      Results.push_back(lowerFP_TO_SINT(N->getOperand(0), DAG));
+      return;
+    }
+
     SDValue Result;
     if (expandFP_TO_SINT(N, Result, DAG))
       Results.push_back(Result);
@@ -1052,15 +1020,24 @@ SDValue R600TargetLowering::LowerUADDSUBO(SDValue Op, SelectionDAG &DAG,
   return DAG.getNode(ISD::MERGE_VALUES, DL, DAG.getVTList(VT, VT), Res, OVF);
 }
 
-SDValue R600TargetLowering::LowerFPTOUINT(SDValue Op, SelectionDAG &DAG) const {
+SDValue R600TargetLowering::lowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   return DAG.getNode(
       ISD::SETCC,
       DL,
       MVT::i1,
-      Op, DAG.getConstantFP(0.0f, DL, MVT::f32),
-      DAG.getCondCode(ISD::SETNE)
-      );
+      Op, DAG.getConstantFP(1.0f, DL, MVT::f32),
+      DAG.getCondCode(ISD::SETEQ));
+}
+
+SDValue R600TargetLowering::lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  return DAG.getNode(
+      ISD::SETCC,
+      DL,
+      MVT::i1,
+      Op, DAG.getConstantFP(-1.0f, DL, MVT::f32),
+      DAG.getCondCode(ISD::SETEQ));
 }
 
 SDValue R600TargetLowering::LowerImplicitParameter(SelectionDAG &DAG, EVT VT,

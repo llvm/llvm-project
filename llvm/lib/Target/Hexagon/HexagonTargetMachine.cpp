@@ -68,6 +68,10 @@ static cl::opt<bool> EnableGenPred("hexagon-gen-pred", cl::init(true),
   cl::Hidden, cl::desc("Enable conversion of arithmetic operations to "
   "predicate instructions"));
 
+static cl::opt<bool> EnableLoopPrefetch("hexagon-loop-prefetch",
+  cl::init(false), cl::Hidden, cl::ZeroOrMore,
+  cl::desc("Enable loop data prefetch on Hexagon"));
+
 static cl::opt<bool> DisableHSDR("disable-hsdr", cl::init(false), cl::Hidden,
   cl::desc("Disable splitting double registers"));
 
@@ -225,6 +229,8 @@ void HexagonPassConfig::addIRPasses() {
 
   addPass(createAtomicExpandPass(TM));
   if (!NoOpt) {
+    if (EnableLoopPrefetch)
+      addPass(createLoopDataPrefetchPass());
     if (EnableCommGEP)
       addPass(createHexagonCommonGEP());
     // Replace certain combinations of shifts and ands with extracts.

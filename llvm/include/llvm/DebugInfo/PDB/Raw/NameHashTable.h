@@ -12,15 +12,15 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
-#include "llvm/DebugInfo/CodeView/StreamRef.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 #include <vector>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 class StreamReader;
 }
 namespace pdb {
@@ -29,7 +29,7 @@ class NameHashTable {
 public:
   NameHashTable();
 
-  Error load(codeview::StreamReader &Stream);
+  Error load(msf::StreamReader &Stream);
 
   uint32_t getNameCount() const { return NameCount; }
   uint32_t getHashVersion() const { return HashVersion; }
@@ -38,11 +38,11 @@ public:
   StringRef getStringForID(uint32_t ID) const;
   uint32_t getIDForString(StringRef Str) const;
 
-  codeview::FixedStreamArray<support::ulittle32_t> name_ids() const;
+  msf::FixedStreamArray<support::ulittle32_t> name_ids() const;
 
 private:
-  codeview::StreamRef NamesBuffer;
-  codeview::FixedStreamArray<support::ulittle32_t> IDs;
+  msf::StreamRef NamesBuffer;
+  msf::FixedStreamArray<support::ulittle32_t> IDs;
   uint32_t Signature;
   uint32_t HashVersion;
   uint32_t NameCount;

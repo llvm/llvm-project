@@ -19,6 +19,14 @@
 #include __CLC_BODY
 #undef __CLC_FLOATN
 
+#define __CLC_FLOATN float8
+#include __CLC_BODY
+#undef __CLC_FLOATN
+
+#define __CLC_FLOATN float16
+#include __CLC_BODY
+#undef __CLC_FLOATN
+
 #undef __CLC_FLOAT
 #undef __CLC_FPSIZE
 
@@ -43,6 +51,14 @@
 #undef __CLC_FLOATN
 
 #define __CLC_FLOATN double4
+#include __CLC_BODY
+#undef __CLC_FLOATN
+
+#define __CLC_FLOATN double8
+#include __CLC_BODY
+#undef __CLC_FLOATN
+
+#define __CLC_FLOATN double16
 #include __CLC_BODY
 #undef __CLC_FLOATN
 

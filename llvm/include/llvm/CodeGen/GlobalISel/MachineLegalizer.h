@@ -71,17 +71,6 @@ public:
 
   MachineLegalizer();
 
-  /// Replace \p MI by a sequence of legal instructions that can implement the
-  /// same operation. Note that this means \p MI may be deleted, so any iterator
-  /// steps should be performed before calling this function.
-  ///
-  /// Considered as an opaque blob, the legal code will use and define the same
-  /// registers as \p MI.
-  ///
-  /// \returns true if the function is modified, false if the instruction was
-  /// already legal.
-  bool legalizeInstr(MachineInstr &MI) const;
-
   /// Compute any ancillary tables needed to quickly decide how an operation
   /// should be handled. This must be called after all "set*Action"methods but
   /// before any query is made or incorrect results may be returned.

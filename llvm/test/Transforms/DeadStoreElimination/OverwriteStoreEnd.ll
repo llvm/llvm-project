@@ -93,3 +93,20 @@ entry:
   store i64 3, i64* %tf_trapno, align 8
   ret void
 }
+
+define void @write16To23AndThen24To31(i64* nocapture %P, i64 %n64, i32 %n32, i16 %n16, i8 %n8) {
+entry:
+; CHECK-LABEL: @write16To23AndThen24To31(
+; CHECK: tail call void @llvm.memset.p0i8.i64(i8* %mybase0, i8 0, i64 16, i32 8, i1 false)
+
+  %base0 = bitcast i64* %P to i8*
+  %mybase0 = getelementptr inbounds i8, i8* %base0, i64 0
+  tail call void @llvm.memset.p0i8.i64(i8* %mybase0, i8 0, i64 32, i32 8, i1 false)
+
+  %base64_2 = getelementptr inbounds i64, i64* %P, i64 2
+  %base64_3 = getelementptr inbounds i64, i64* %P, i64 3
+
+  store i64 3, i64* %base64_2
+  store i64 3, i64* %base64_3
+  ret void
+}

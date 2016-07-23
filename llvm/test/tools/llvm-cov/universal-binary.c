@@ -8,3 +8,6 @@ int main(int argc, const char *argv[]) {}
 
 // RUN: not llvm-cov show %S/Inputs/universal-binary -instr-profile %t.profdata -filename-equivalence %s -arch i386 2>&1 | FileCheck --check-prefix=WRONG-ARCH %s
 // WRONG-ARCH: Failed to load coverage
+
+// RUN: not llvm-cov report -instr-profile %t.profdata 2>&1 | FileCheck --check-prefix=MISSING-BINARY %s
+// MISSING-BINARY: 1 positional argument: See:

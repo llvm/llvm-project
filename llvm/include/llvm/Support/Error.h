@@ -571,24 +571,32 @@ inline void consumeError(Error Err) {
 /// RAII:
 ///
 /// Result foo(Error &Err) {
-///   ErrorAsOutParameter ErrAsOutParam(Err); // 'Checked' flag set
+///   ErrorAsOutParameter ErrAsOutParam(&Err); // 'Checked' flag set
 ///   // <body of foo>
 ///   // <- 'Checked' flag auto-cleared when ErrAsOutParam is destructed.
 /// }
+///
+/// ErrorAsOutParameter takes an Error* rather than Error& so that it can be
+/// used with optional Errors (Error pointers that are allowed to be null). If
+/// ErrorAsOutParameter took an Error reference, an instance would have to be
+/// created inside every condition that verified that Error was non-null. By
+/// taking an Error pointer we can just create one instance at the top of the
+/// function.
 class ErrorAsOutParameter {
 public:
-  ErrorAsOutParameter(Error &Err) : Err(Err) {
+  ErrorAsOutParameter(Error *Err) : Err(Err) {
     // Raise the checked bit if Err is success.
-    (void)!!Err;
+    if (Err)
+      (void)!!*Err;
   }
   ~ErrorAsOutParameter() {
     // Clear the checked bit.
-    if (!Err)
-      Err = Error::success();
+    if (Err && !*Err)
+      *Err = Error::success();
   }
 
 private:
-  Error &Err;
+  Error *Err;
 };
 
 /// Tagged union holding either a T or a Error.

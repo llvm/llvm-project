@@ -132,6 +132,9 @@ public:
   /// dependency.
   void adjustSchedDependency(SUnit *def, SUnit *use, SDep& dep) const override;
 
+  unsigned getL1CacheLineSize() const;
+  unsigned getL1PrefetchDistance() const;
+
 private:
   // Helper function responsible for increasing the latency only.
   void updateLatency(MachineInstr *SrcInst, MachineInstr *DstInst, SDep &Dep)

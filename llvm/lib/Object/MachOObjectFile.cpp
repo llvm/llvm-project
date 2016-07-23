@@ -267,7 +267,7 @@ MachOObjectFile::MachOObjectFile(MemoryBufferRef Object, bool IsLittleEndian,
       DataInCodeLoadCmd(nullptr), LinkOptHintsLoadCmd(nullptr),
       DyldInfoLoadCmd(nullptr), UuidLoadCmd(nullptr),
       HasPageZeroSegment(false) {
-  ErrorAsOutParameter ErrAsOutParam(Err);
+  ErrorAsOutParameter ErrAsOutParam(&Err);
   uint64_t BigSize;
   if (is64Bit()) {
     parseHeader(this, Header64, Err);

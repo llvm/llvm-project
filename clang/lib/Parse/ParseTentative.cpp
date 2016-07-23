@@ -74,11 +74,18 @@ bool Parser::isCXXDeclarationStatement() {
 ///
 /// simple-declaration:
 ///   decl-specifier-seq init-declarator-list[opt] ';'
+///   decl-specifier-seq ref-qualifier[opt] '[' identifier-list ']'
+///                      brace-or-equal-initializer ';'    [C++17]
 ///
 /// (if AllowForRangeDecl specified)
 /// for ( for-range-declaration : for-range-initializer ) statement
+///
 /// for-range-declaration: 
-///    attribute-specifier-seqopt type-specifier-seq declarator
+///    decl-specifier-seq declarator
+///    decl-specifier-seq ref-qualifier[opt] '[' identifier-list ']'
+/// 
+/// In any of the above cases there can be a preceding attribute-specifier-seq,
+/// but the caller is expected to handle that.
 bool Parser::isCXXSimpleDeclaration(bool AllowForRangeDecl) {
   // C++ 6.8p1:
   // There is an ambiguity in the grammar involving expression-statements and

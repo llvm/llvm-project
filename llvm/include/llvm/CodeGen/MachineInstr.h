@@ -108,7 +108,7 @@ private:
   /// Type of the instruction in case of a generic opcode.
   /// \invariant This must be LLT{} if getOpcode() is not
   /// in the range of generic opcodes.
-  LLT Ty;
+  SmallVector<LLT, 1>  Tys;
 #endif
 
   MachineInstr(const MachineInstr&) = delete;
@@ -187,8 +187,9 @@ public:
 
   /// Set the type of the instruction.
   /// \pre getOpcode() is in the range of the generic opcodes.
-  void setType(LLT Ty);
-  LLT getType() const;
+  void setType(LLT Ty, unsigned Idx = 0);
+  LLT getType(int unsigned = 0) const;
+  unsigned getNumTypes() const;
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///

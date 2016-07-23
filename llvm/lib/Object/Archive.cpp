@@ -108,16 +108,15 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
     : Parent(Parent) {
   if (!Start)
     return;
+  ErrorAsOutParameter ErrAsOutParam(Err);
 
   uint64_t Size = sizeof(ArchiveMemberHeader);
   Data = StringRef(Start, Size);
   if (!isThinMember()) {
     Expected<uint64_t> MemberSize = getRawSize();
     if (!MemberSize) {
-      if (Err) {
-        ErrorAsOutParameter ErrAsOutParam(*Err);
+      if (Err)
         *Err = MemberSize.takeError();
-      }
       return;
     }
     Size += MemberSize.get();
@@ -299,7 +298,7 @@ void Archive::setFirstRegular(const Child &C) {
 
 Archive::Archive(MemoryBufferRef Source, Error &Err)
     : Binary(Binary::ID_Archive, Source) {
-  ErrorAsOutParameter ErrAsOutParam(Err);
+  ErrorAsOutParameter ErrAsOutParam(&Err);
   StringRef Buffer = Data.getBuffer();
   // Check for sufficient magic.
   if (Buffer.startswith(ThinMagic)) {

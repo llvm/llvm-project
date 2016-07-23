@@ -10,11 +10,9 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAM_H
 
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
-#include "llvm/DebugInfo/CodeView/StreamRef.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include "llvm/Support/raw_ostream.h"
@@ -22,6 +20,9 @@
 #include "llvm/Support/Error.h"
 
 namespace llvm {
+namespace msf {
+class MappedBlockStream;
+}
 namespace pdb {
 class PDBFile;
 
@@ -29,7 +30,8 @@ class TpiStream {
   struct HeaderInfo;
 
 public:
-  TpiStream(const PDBFile &File, std::unique_ptr<MappedBlockStream> Stream);
+  TpiStream(const PDBFile &File,
+            std::unique_ptr<msf::MappedBlockStream> Stream);
   ~TpiStream();
   Error reload();
 
@@ -43,9 +45,9 @@ public:
 
   uint32_t getHashKeySize() const;
   uint32_t NumHashBuckets() const;
-  codeview::FixedStreamArray<support::ulittle32_t> getHashValues() const;
-  codeview::FixedStreamArray<TypeIndexOffset> getTypeIndexOffsets() const;
-  codeview::FixedStreamArray<TypeIndexOffset> getHashAdjustments() const;
+  msf::FixedStreamArray<support::ulittle32_t> getHashValues() const;
+  msf::FixedStreamArray<TypeIndexOffset> getTypeIndexOffsets() const;
+  msf::FixedStreamArray<TypeIndexOffset> getHashAdjustments() const;
 
   iterator_range<codeview::CVTypeArray::Iterator> types(bool *HadError) const;
 
@@ -55,14 +57,14 @@ private:
   Error verifyHashValues();
 
   const PDBFile &Pdb;
-  std::unique_ptr<MappedBlockStream> Stream;
+  std::unique_ptr<msf::MappedBlockStream> Stream;
 
   codeview::CVTypeArray TypeRecords;
 
-  std::unique_ptr<MappedBlockStream> HashStream;
-  codeview::FixedStreamArray<support::ulittle32_t> HashValues;
-  codeview::FixedStreamArray<TypeIndexOffset> TypeIndexOffsets;
-  codeview::FixedStreamArray<TypeIndexOffset> HashAdjustments;
+  std::unique_ptr<msf::MappedBlockStream> HashStream;
+  msf::FixedStreamArray<support::ulittle32_t> HashValues;
+  msf::FixedStreamArray<TypeIndexOffset> TypeIndexOffsets;
+  msf::FixedStreamArray<TypeIndexOffset> HashAdjustments;
 
   const HeaderInfo *Header;
 };

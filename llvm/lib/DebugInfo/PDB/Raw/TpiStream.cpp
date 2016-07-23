@@ -11,12 +11,12 @@
 
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/Hash.h"
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
@@ -27,6 +27,7 @@
 using namespace llvm;
 using namespace llvm::codeview;
 using namespace llvm::support;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 namespace {

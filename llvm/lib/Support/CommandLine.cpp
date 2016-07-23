@@ -1211,7 +1211,8 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
       errs() << ProgramName
              << ": Not enough positional command line arguments specified!\n"
              << "Must specify at least " << NumPositionalRequired
-             << " positional arguments: See: " << argv[0] << " -help\n";
+             << " positional argument" << (NumPositionalRequired > 1 ? "s" : "")
+             << ": See: " << argv[0] << " - help\n";
     }
 
     ErrorParsing = true;

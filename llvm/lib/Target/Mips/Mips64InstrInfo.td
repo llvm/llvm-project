@@ -537,21 +537,21 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : WrapperPat<tglobaltlsaddr, DADDiu, GPR64>;
 }
 
-defm : BrcondPats<GPR64, BEQ64, BNE64, SLT64, SLTu64, SLTi64, SLTiu64,
+defm : BrcondPats<GPR64, BEQ64, BEQ, BNE64, SLT64, SLTu64, SLTi64, SLTiu64,
                   ZERO_64>;
-
 def : MipsPat<(brcond (i32 (setlt i64:$lhs, 1)), bb:$dst),
               (BLEZ64 i64:$lhs, bb:$dst)>;
 def : MipsPat<(brcond (i32 (setgt i64:$lhs, -1)), bb:$dst),
               (BGEZ64 i64:$lhs, bb:$dst)>;
 
 // setcc patterns
-defm : SeteqPats<GPR64, SLTiu64, XOR64, SLTu64, ZERO_64>;
-defm : SetlePats<GPR64, SLT64, SLTu64>;
-defm : SetgtPats<GPR64, SLT64, SLTu64>;
-defm : SetgePats<GPR64, SLT64, SLTu64>;
-defm : SetgeImmPats<GPR64, SLTi64, SLTiu64>;
-
+let AdditionalPredicates = [NotInMicroMips] in {
+  defm : SeteqPats<GPR64, SLTiu64, XOR64, SLTu64, ZERO_64>;
+  defm : SetlePats<GPR64, XORi, SLT64, SLTu64>;
+  defm : SetgtPats<GPR64, SLT64, SLTu64>;
+  defm : SetgePats<GPR64, XORi, SLT64, SLTu64>;
+  defm : SetgeImmPats<GPR64, XORi, SLTi64, SLTiu64>;
+}
 // truncate
 def : MipsPat<(trunc (assertsext GPR64:$src)),
               (EXTRACT_SUBREG GPR64:$src, sub_32)>;

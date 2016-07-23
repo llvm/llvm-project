@@ -116,6 +116,30 @@ LLVM_CONSTEXPR unsigned WriteOnlyStateMask =
     (1U << static_cast<uint8_t>(MatchState::FlowToWriteOnly)) |
     (1U << static_cast<uint8_t>(MatchState::FlowToMemAliasWriteOnly));
 
+// A pair that consists of a value and an offset
+struct OffsetValue {
+  const Value *Val;
+  int64_t Offset;
+};
+
+bool operator==(OffsetValue LHS, OffsetValue RHS) {
+  return LHS.Val == RHS.Val && LHS.Offset == RHS.Offset;
+}
+bool operator<(OffsetValue LHS, OffsetValue RHS) {
+  return std::less<const Value *>()(LHS.Val, RHS.Val) ||
+         (LHS.Val == RHS.Val && LHS.Offset < RHS.Offset);
+}
+
+// A pair that consists of an InstantiatedValue and an offset
+struct OffsetInstantiatedValue {
+  InstantiatedValue IVal;
+  int64_t Offset;
+};
+
+bool operator==(OffsetInstantiatedValue LHS, OffsetInstantiatedValue RHS) {
+  return LHS.IVal == RHS.IVal && LHS.Offset == RHS.Offset;
+}
+
 // We use ReachabilitySet to keep track of value aliases (The nonterminal "V" in
 // the paper) during the analysis.
 class ReachabilitySet {
@@ -227,12 +251,55 @@ struct ValueSummary {
 };
 }
 
+namespace llvm {
+// Specialize DenseMapInfo for OffsetValue.
+template <> struct DenseMapInfo<OffsetValue> {
+  static OffsetValue getEmptyKey() {
+    return OffsetValue{DenseMapInfo<const Value *>::getEmptyKey(),
+                       DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+  static OffsetValue getTombstoneKey() {
+    return OffsetValue{DenseMapInfo<const Value *>::getTombstoneKey(),
+                       DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+  static unsigned getHashValue(const OffsetValue &OVal) {
+    return DenseMapInfo<std::pair<const Value *, int64_t>>::getHashValue(
+        std::make_pair(OVal.Val, OVal.Offset));
+  }
+  static bool isEqual(const OffsetValue &LHS, const OffsetValue &RHS) {
+    return LHS == RHS;
+  }
+};
+
+// Specialize DenseMapInfo for OffsetInstantiatedValue.
+template <> struct DenseMapInfo<OffsetInstantiatedValue> {
+  static OffsetInstantiatedValue getEmptyKey() {
+    return OffsetInstantiatedValue{
+        DenseMapInfo<InstantiatedValue>::getEmptyKey(),
+        DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+  static OffsetInstantiatedValue getTombstoneKey() {
+    return OffsetInstantiatedValue{
+        DenseMapInfo<InstantiatedValue>::getTombstoneKey(),
+        DenseMapInfo<int64_t>::getEmptyKey()};
+  }
+  static unsigned getHashValue(const OffsetInstantiatedValue &OVal) {
+    return DenseMapInfo<std::pair<InstantiatedValue, int64_t>>::getHashValue(
+        std::make_pair(OVal.IVal, OVal.Offset));
+  }
+  static bool isEqual(const OffsetInstantiatedValue &LHS,
+                      const OffsetInstantiatedValue &RHS) {
+    return LHS == RHS;
+  }
+};
+}
+
 class CFLAndersAAResult::FunctionInfo {
   /// Map a value to other values that may alias it
   /// Since the alias relation is symmetric, to save some space we assume values
   /// are properly ordered: if a and b alias each other, and a < b, then b is in
   /// AliasMap[a] but not vice versa.
-  DenseMap<const Value *, std::vector<const Value *>> AliasMap;
+  DenseMap<const Value *, std::vector<OffsetValue>> AliasMap;
 
   /// Map a value to its corresponding AliasAttrs
   DenseMap<const Value *, AliasAttrs> AttrMap;
@@ -246,7 +313,7 @@ public:
   FunctionInfo(const Function &, const SmallVectorImpl<Value *> &,
                const ReachabilitySet &, AliasAttrMap);
 
-  bool mayAlias(const Value *LHS, const Value *RHS) const;
+  bool mayAlias(const Value *, uint64_t, const Value *, uint64_t) const;
   const AliasSummary &getAliasSummary() const { return Summary; }
 };
 
@@ -281,12 +348,12 @@ static void populateAttrMap(DenseMap<const Value *, AliasAttrs> &AttrMap,
 
     // AttrMap only cares about top-level values
     if (IVal.DerefLevel == 0)
-      AttrMap[IVal.Val] = Mapping.second;
+      AttrMap[IVal.Val] |= Mapping.second;
   }
 }
 
 static void
-populateAliasMap(DenseMap<const Value *, std::vector<const Value *>> &AliasMap,
+populateAliasMap(DenseMap<const Value *, std::vector<OffsetValue>> &AliasMap,
                  const ReachabilitySet &ReachSet) {
   for (const auto &OuterMapping : ReachSet.value_mappings()) {
     // AliasMap only cares about top-level values
@@ -298,11 +365,11 @@ populateAliasMap(DenseMap<const Value *, std::vector<const Value *>> &AliasMap,
     for (const auto &InnerMapping : OuterMapping.second) {
       // Again, AliasMap only cares about top-level values
       if (InnerMapping.first.DerefLevel == 0)
-        AliasList.push_back(InnerMapping.first.Val);
+        AliasList.push_back(OffsetValue{InnerMapping.first.Val, UnknownOffset});
     }
 
     // Sort AliasList for faster lookup
-    std::sort(AliasList.begin(), AliasList.end(), std::less<const Value *>());
+    std::sort(AliasList.begin(), AliasList.end());
   }
 }
 
@@ -316,7 +383,7 @@ static void populateExternalRelations(
     if (is_contained(RetVals, &Arg)) {
       auto ArgVal = InterfaceValue{Arg.getArgNo() + 1, 0};
       auto RetVal = InterfaceValue{0, 0};
-      ExtRelations.push_back(ExternalRelation{ArgVal, RetVal});
+      ExtRelations.push_back(ExternalRelation{ArgVal, RetVal, 0});
     }
   }
 
@@ -344,7 +411,7 @@ static void populateExternalRelations(
             continue;
 
           if (hasReadOnlyState(InnerMapping.second))
-            ExtRelations.push_back(ExternalRelation{*Dst, *Src});
+            ExtRelations.push_back(ExternalRelation{*Dst, *Src, UnknownOffset});
           // No need to check for WriteOnly state, since ReachSet is symmetric
         } else {
           // If Src is not a param/return, add it to ValueMap
@@ -378,9 +445,9 @@ static void populateExternalRelations(
         else
           DstLevel += FromLevel - ToLevel;
 
-        ExtRelations.push_back(
-            ExternalRelation{InterfaceValue{SrcIndex, SrcLevel},
-                             InterfaceValue{DstIndex, DstLevel}});
+        ExtRelations.push_back(ExternalRelation{
+            InterfaceValue{SrcIndex, SrcLevel},
+            InterfaceValue{DstIndex, DstLevel}, UnknownOffset});
       }
     }
   }
@@ -423,27 +490,69 @@ AliasAttrs CFLAndersAAResult::FunctionInfo::getAttrs(const Value *V) const {
 }
 
 bool CFLAndersAAResult::FunctionInfo::mayAlias(const Value *LHS,
-                                               const Value *RHS) const {
+                                               uint64_t LHSSize,
+                                               const Value *RHS,
+                                               uint64_t RHSSize) const {
   assert(LHS && RHS);
+
+  // Check AliasAttrs first since it's cheaper
+  auto AttrsA = getAttrs(LHS);
+  auto AttrsB = getAttrs(RHS);
+  if (hasUnknownOrCallerAttr(AttrsA))
+    return AttrsB.any();
+  if (hasUnknownOrCallerAttr(AttrsB))
+    return AttrsA.any();
+  if (isGlobalOrArgAttr(AttrsA))
+    return isGlobalOrArgAttr(AttrsB);
+  if (isGlobalOrArgAttr(AttrsB))
+    return isGlobalOrArgAttr(AttrsA);
+
+  // At this point both LHS and RHS should point to locally allocated objects
 
   auto Itr = AliasMap.find(LHS);
   if (Itr != AliasMap.end()) {
-    if (std::binary_search(Itr->second.begin(), Itr->second.end(), RHS,
-                           std::less<const Value *>()))
-      return true;
+
+    // Find out all (X, Offset) where X == RHS
+    auto Comparator = [](OffsetValue LHS, OffsetValue RHS) {
+      return std::less<const Value *>()(LHS.Val, RHS.Val);
+    };
+#ifdef EXPENSIVE_CHECKS
+    assert(std::is_sorted(Itr->second.begin(), Itr->second.end(), Comparator));
+#endif
+    auto RangePair = std::equal_range(Itr->second.begin(), Itr->second.end(),
+                                      OffsetValue{RHS, 0}, Comparator);
+
+    if (RangePair.first != RangePair.second) {
+      // Be conservative about UnknownSize
+      if (LHSSize == MemoryLocation::UnknownSize ||
+          RHSSize == MemoryLocation::UnknownSize)
+        return true;
+
+      for (const auto &OVal : make_range(RangePair)) {
+        // Be conservative about UnknownOffset
+        if (OVal.Offset == UnknownOffset)
+          return true;
+
+        // We know that LHS aliases (RHS + OVal.Offset) if the control flow
+        // reaches here. The may-alias query essentially becomes integer
+        // range-overlap queries over two ranges [OVal.Offset, OVal.Offset +
+        // LHSSize) and [0, RHSSize).
+
+        // Try to be conservative on super large offsets
+        if (LLVM_UNLIKELY(LHSSize > INT64_MAX || RHSSize > INT64_MAX))
+          return true;
+
+        auto LHSStart = OVal.Offset;
+        // FIXME: Do we need to guard against integer overflow?
+        auto LHSEnd = OVal.Offset + static_cast<int64_t>(LHSSize);
+        auto RHSStart = 0;
+        auto RHSEnd = static_cast<int64_t>(RHSSize);
+        if (LHSEnd > RHSStart && LHSStart < RHSEnd)
+          return true;
+      }
+    }
   }
 
-  // Even if LHS and RHS are not reachable, they may still alias due to their
-  // AliasAttrs
-  auto AttrsA = getAttrs(LHS);
-  auto AttrsB = getAttrs(RHS);
-
-  if (AttrsA.none() || AttrsB.none())
-    return false;
-  if (hasUnknownOrCallerAttr(AttrsA) || hasUnknownOrCallerAttr(AttrsB))
-    return true;
-  if (isGlobalOrArgAttr(AttrsA) && isGlobalOrArgAttr(AttrsB))
-    return true;
   return false;
 }
 
@@ -725,7 +834,7 @@ AliasResult CFLAndersAAResult::query(const MemoryLocation &LocA,
   auto &FunInfo = ensureCached(*Fn);
 
   // AliasMap lookup
-  if (FunInfo->mayAlias(ValA, ValB))
+  if (FunInfo->mayAlias(ValA, LocA.Size, ValB, LocB.Size))
     return MayAlias;
   return NoAlias;
 }

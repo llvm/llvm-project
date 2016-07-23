@@ -1195,7 +1195,7 @@ private:
 };
 
 typedef CVRecord<TypeLeafKind> CVType;
-typedef VarStreamArray<CVType> CVTypeArray;
+typedef msf::VarStreamArray<CVType> CVTypeArray;
 }
 }
 

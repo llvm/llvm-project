@@ -703,7 +703,7 @@ __kmp_i18n_dump_catalog(
 
 kmp_msg_t
 __kmp_msg_format(
-    kmp_i18n_id_t id,
+    unsigned id_arg,
     ...
 ) {
 
@@ -712,7 +712,13 @@ __kmp_msg_format(
     kmp_str_buf_t  buffer;
     __kmp_str_buf_init( & buffer );
 
-    va_start( args, id );
+    va_start( args, id_arg );
+
+    // We use unsigned for the ID argument and explicitly cast it here to the
+    // right enumerator because variadic functions are not compatible with
+    // default promotions.
+    kmp_i18n_id_t id = (kmp_i18n_id_t)id_arg;
+
     #if KMP_OS_UNIX
         // On Linux* OS and OS X*, printf() family functions process parameter numbers, for example:
         // "%2$s %1$s".

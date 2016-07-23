@@ -16,6 +16,9 @@ declare double @llvm.powi.f64(double, i32) nounwind readonly
 declare i32 @llvm.cttz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctlz.i32(i32, i1) nounwind readnone
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
+declare <2 x i32> @llvm.cttz.v2i32(<2 x i32>, i1) nounwind readnone
+declare <2 x i32> @llvm.ctlz.v2i32(<2 x i32>, i1) nounwind readnone
+declare <2 x i32> @llvm.ctpop.v2i32(<2 x i32>) nounwind readnone
 declare i8 @llvm.ctlz.i8(i8, i1) nounwind readnone
 declare double @llvm.cos.f64(double %Val) nounwind readonly
 declare double @llvm.sin.f64(double %Val) nounwind readonly
@@ -264,8 +267,8 @@ entry:
   ret void
 ; CHECK-LABEL: @powi(
 ; CHECK: %A = fdiv double 1.0{{.*}}, %V
-; CHECK: store volatile double %A, 
-; CHECK: store volatile double 1.0 
+; CHECK: store volatile double %A,
+; CHECK: store volatile double 1.0
 ; CHECK: store volatile double %V
 }
 
@@ -311,6 +314,41 @@ entry:
 ; CHECK-NEXT: store volatile i1 %tz.cmp, i1* %c
 ; CHECK-NEXT: %pop.cmp = icmp eq i32 %b, 0
 ; CHECK-NEXT: store volatile i1 %pop.cmp, i1* %c
+}
+
+; FIXME: Vectors should get the same folds as scalars.
+
+define <2 x i1> @ctlz_cmp_vec(<2 x i32> %a) {
+; CHECK-LABEL: @ctlz_cmp_vec(
+; CHECK-NEXT:    [[X:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) #0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X]], <i32 32, i32 32>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
+  %cmp = icmp eq <2 x i32> %x, <i32 32, i32 32>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @cttz_cmp_vec(<2 x i32> %a) {
+; CHECK-LABEL: @cttz_cmp_vec(
+; CHECK-NEXT:    [[X:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) #0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[X]], <i32 32, i32 32>
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
+  %cmp = icmp ne <2 x i32> %x, <i32 32, i32 32>
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @ctpop_cmp_vec(<2 x i32> %a) {
+; CHECK-LABEL: @ctpop_cmp_vec(
+; CHECK-NEXT:    [[X:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) #0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[CMP]]
+;
+  %x = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone
+  %cmp = icmp eq <2 x i32> %x, zeroinitializer
+  ret <2 x i1> %cmp
 }
 
 define i32 @cttz_simplify1a(i32 %x) nounwind readnone ssp {

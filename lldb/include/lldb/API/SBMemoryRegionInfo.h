@@ -86,6 +86,19 @@ public:
     bool
     IsMapped ();
 
+    
+    //------------------------------------------------------------------
+    /// Returns the name of the memory region mapped at the given
+    /// address.
+    ///
+    /// @return
+    ///     In case of memory mapped files it is the absolute path of
+    ///     the file otherwise it is a name associated with the memory
+    ///     region. If no name can be determined the returns nullptr.
+    //------------------------------------------------------------------
+    const char *
+    GetName();
+
     bool
     operator == (const lldb::SBMemoryRegionInfo &rhs) const;
 

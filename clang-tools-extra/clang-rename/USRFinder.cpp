@@ -35,18 +35,15 @@ public:
   // \brief Finds the NamedDecl at a point in the source.
   // \param Point the location in the source to search for the NamedDecl.
   explicit NamedDeclFindingASTVisitor(const SourceManager &SourceMgr,
-                                      const SourceLocation Point)
-      : Result(nullptr), SourceMgr(SourceMgr),
-        Point(Point) {
-  }
+                                      const SourceLocation Point,
+                                      const ASTContext *Context)
+      : Result(nullptr), SourceMgr(SourceMgr), Point(Point), Context(Context) {}
 
   // \brief Finds the NamedDecl for a name in the source.
   // \param Name the fully qualified name.
   explicit NamedDeclFindingASTVisitor(const SourceManager &SourceMgr,
                                       const std::string &Name)
-      : Result(nullptr), SourceMgr(SourceMgr),
-        Name(Name) {
-  }
+      : Result(nullptr), SourceMgr(SourceMgr), Name(Name) {}
 
   // Declaration visitors:
 
@@ -62,10 +59,6 @@ public:
   // Expression visitors:
 
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
-    // Check the namespace specifier first.
-    if (!checkNestedNameSpecifierLoc(Expr->getQualifierLoc()))
-      return false;
-
     const auto *Decl = Expr->getFoundDecl();
     return setResult(Decl, Expr->getLocation(),
                      Decl->getNameAsString().length());
@@ -77,26 +70,33 @@ public:
                      Decl->getNameAsString().length());
   }
 
+  // Other visitors:
+
+  bool VisitTypeLoc(const TypeLoc Loc) {
+    const auto TypeBeginLoc = Loc.getBeginLoc();
+    const auto TypeEndLoc = Lexer::getLocForEndOfToken(
+                   TypeBeginLoc, 0, SourceMgr, Context->getLangOpts());
+    return setResult(Loc.getType()->getAsCXXRecordDecl(), TypeBeginLoc,
+                     TypeEndLoc);
+  }
+
   // Other:
 
-  const NamedDecl *getNamedDecl() {
-    return Result;
+  const NamedDecl *getNamedDecl() { return Result; }
+
+  // \brief Determines if a namespace qualifier contains the point.
+  // \returns false on success and sets Result.
+  void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
+    while (NameLoc) {
+      const auto *Decl = NameLoc.getNestedNameSpecifier()->getAsNamespace();
+      if (Decl) {
+        setResult(Decl, NameLoc.getLocalBeginLoc(), NameLoc.getLocalEndLoc());
+      }
+      NameLoc = NameLoc.getPrefix();
+    }
   }
 
 private:
-  // \brief Determines if a namespace qualifier contains the point.
-  // \returns false on success and sets Result.
-  bool checkNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
-    while (NameLoc) {
-      const auto *Decl = NameLoc.getNestedNameSpecifier()->getAsNamespace();
-      if (Decl && !setResult(Decl, NameLoc.getLocalBeginLoc(),
-                             Decl->getNameAsString().length()))
-        return false;
-      NameLoc = NameLoc.getPrefix();
-    }
-    return true;
-  }
-
   // \brief Sets Result to Decl if the Point is within Start and End.
   // \returns false on success.
   bool setResult(const NamedDecl *Decl, SourceLocation Start,
@@ -119,8 +119,7 @@ private:
 
   // \brief Sets Result to Decl if Point is within Loc and Loc + Offset.
   // \returns false on success.
-  bool setResult(const NamedDecl *Decl, SourceLocation Loc,
-                 unsigned Offset) {
+  bool setResult(const NamedDecl *Decl, SourceLocation Loc, unsigned Offset) {
     // FIXME: Add test for Offset == 0. Add test for Offset - 1 (vs -2 etc).
     return Offset == 0 ||
            setResult(Decl, Loc, Loc.getLocWithOffset(Offset - 1));
@@ -138,6 +137,7 @@ private:
   const SourceManager &SourceMgr;
   const SourceLocation Point; // The location to find the NamedDecl.
   const std::string Name;
+  const ASTContext *Context;
 };
 } // namespace
 
@@ -146,7 +146,7 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
   const auto &SourceMgr = Context.getSourceManager();
   const auto SearchFile = SourceMgr.getFilename(Point);
 
-  NamedDeclFindingASTVisitor Visitor(SourceMgr, Point);
+  NamedDeclFindingASTVisitor Visitor(SourceMgr, Point, &Context);
 
   // We only want to search the decls that exist in the same file as the point.
   auto Decls = Context.getTranslationUnitDecl()->decls();
@@ -156,29 +156,24 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
     // FIXME: Add test.
     if (FileName == SearchFile) {
       Visitor.TraverseDecl(CurrDecl);
-      if (const NamedDecl *Result = Visitor.getNamedDecl()) {
-        return Result;
-      }
     }
   }
 
-  return nullptr;
+  NestedNameSpecifierLocFinder Finder(const_cast<ASTContext &>(Context));
+  for (const auto &Location : Finder.getNestedNameSpecifierLocations()) {
+    Visitor.handleNestedNameSpecifierLoc(Location);
+  }
+
+  return Visitor.getNamedDecl();
 }
 
 const NamedDecl *getNamedDeclFor(const ASTContext &Context,
                                  const std::string &Name) {
   const auto &SourceMgr = Context.getSourceManager();
   NamedDeclFindingASTVisitor Visitor(SourceMgr, Name);
-  auto Decls = Context.getTranslationUnitDecl()->decls();
+  Visitor.TraverseDecl(Context.getTranslationUnitDecl());
 
-  for (auto &CurrDecl : Decls) {
-    Visitor.TraverseDecl(CurrDecl);
-    if (const NamedDecl *Result = Visitor.getNamedDecl()) {
-      return Result;
-    }
-  }
-
-  return nullptr;
+  return Visitor.getNamedDecl();
 }
 
 std::string getUSRForDecl(const Decl *Decl) {

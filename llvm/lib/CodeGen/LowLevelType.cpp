@@ -19,26 +19,32 @@ using namespace llvm;
 
 LLT::LLT(const Type &Ty) {
   if (auto VTy = dyn_cast<VectorType>(&Ty)) {
-    ScalarSize = VTy->getElementType()->getPrimitiveSizeInBits();
+    SizeOrAddrSpace = VTy->getElementType()->getPrimitiveSizeInBits();
     NumElements = VTy->getNumElements();
     Kind = NumElements == 1 ? Scalar : Vector;
+  } else if (auto PTy = dyn_cast<PointerType>(&Ty)) {
+    Kind = Pointer;
+    SizeOrAddrSpace = PTy->getAddressSpace();
+    NumElements = 1;
   } else if (Ty.isSized()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
     Kind = Scalar;
-    ScalarSize = Ty.getPrimitiveSizeInBits();
+    SizeOrAddrSpace = Ty.getPrimitiveSizeInBits();
     NumElements = 1;
   } else {
     Kind = Unsized;
-    ScalarSize = NumElements = 0;
+    SizeOrAddrSpace = NumElements = 0;
   }
 }
 
 void LLT::print(raw_ostream &OS) const {
   if (isVector())
-    OS << "<" << NumElements << " x s" << ScalarSize << ">";
+    OS << "<" << NumElements << " x s" << SizeOrAddrSpace << ">";
+  else if (isPointer())
+    OS << "p" << getAddressSpace();
   else if (isSized())
-    OS << "s" << ScalarSize;
+    OS << "s" << getScalarSizeInBits();
   else if (isValid())
     OS << "unsized";
   else

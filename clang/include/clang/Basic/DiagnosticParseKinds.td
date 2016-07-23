@@ -355,6 +355,10 @@ def err_expected_end_of_enumerator : Error<
 def err_expected_coloncolon_after_super : Error<
   "expected '::' after '__super'">;
 
+def ext_decomp_decl_empty : ExtWarn<
+  "ISO C++1z does not allow a decomposition group to be empty">,
+  InGroup<DiagGroup<"empty-decomposition">>;
+
 /// Objective-C parser diagnostics
 def err_expected_minus_or_plus : Error<
   "method type specifier must start with '-' or '+'">;

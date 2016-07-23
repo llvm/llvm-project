@@ -1,11 +1,11 @@
 // RUN: llvm-cov report %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -filename-equivalence 2>&1 | FileCheck %s
 // RUN: llvm-cov report %S/Inputs/report.covmapping -instr-profile %S/Inputs/report.profdata -filename-equivalence report.cpp 2>&1 | FileCheck -check-prefix=FILT-NEXT %s
 
-// CHECK:      Filename   Regions  Miss   Cover  Functions  Executed
+// CHECK:      Filename   Regions    Missed Regions     Cover   Functions  Missed Functions  Executed       Lines      Missed Lines     Cover
 // CHECK-NEXT: ---
-// CHECK-NEXT: report.cpp       5     2  60.00%          4    75.00%
+// CHECK-NEXT: report.cpp       5                2     60.00%           4                 1    75.00%          13                 4    69.23%
 // CHECK-NEXT: ---
-// CHECK-NEXT: TOTAL            5     2  60.00%          4    75.00%
+// CHECK-NEXT: TOTAL            5                2     60.00%           4                 1    75.00%          13                 4    69.23%
 
 // FILT: File 'report.cpp':
 // FILT-NEXT: Name        Regions  Miss   Cover  Lines  Miss   Cover

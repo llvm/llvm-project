@@ -109,7 +109,7 @@ TEST(Error, UncheckedSuccess) {
 
 // ErrorAsOutParameter tester.
 void errAsOutParamHelper(Error &Err) {
-  ErrorAsOutParameter ErrAsOutParam(Err);
+  ErrorAsOutParameter ErrAsOutParam(&Err);
   // Verify that checked flag is raised - assignment should not crash.
   Err = Error::success();
   // Raise the checked bit manually - caller should still have to test the

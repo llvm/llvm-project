@@ -92,8 +92,8 @@ struct SizeClassAllocatorLocalCache {
   // For small size classes allocates the batch from the allocator.
   // For large size classes simply returns b.
   Batch *CreateBatch(uptr class_id, SizeClassAllocator *allocator, Batch *b) {
-    if (SizeClassMap::SizeClassRequiresSeparateTransferBatch(class_id))
-      return (Batch*)Allocate(allocator, SizeClassMap::ClassID(sizeof(Batch)));
+    if (uptr batch_class_id = SizeClassMap::SizeClassForTransferBatch(class_id))
+      return (Batch*)Allocate(allocator, batch_class_id);
     return b;
   }
 
@@ -101,8 +101,8 @@ struct SizeClassAllocatorLocalCache {
   // For small size classes deallocates b to the allocator.
   // Does notthing for large size classes.
   void DestroyBatch(uptr class_id, SizeClassAllocator *allocator, Batch *b) {
-    if (SizeClassMap::SizeClassRequiresSeparateTransferBatch(class_id))
-      Deallocate(allocator, SizeClassMap::ClassID(sizeof(Batch)), b);
+    if (uptr batch_class_id = SizeClassMap::SizeClassForTransferBatch(class_id))
+      Deallocate(allocator, batch_class_id, b);
   }
 
   NOINLINE void Refill(SizeClassAllocator *allocator, uptr class_id) {

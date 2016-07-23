@@ -38,7 +38,7 @@ define void @test() {
 ; ASM: .size external_global_program, 4
 
 ; ASM: .type internal_readonly,@object
-; ASM: .section .rodata.cst4,"aM",@progbits,4
+; ASM: .text
 ; ASM: internal_readonly:
 ; ASM: .long 0
 ; ASM: .size internal_readonly, 4

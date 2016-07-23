@@ -17,6 +17,7 @@
 
 namespace llvm {
 class CallLowering;
+class MachineLegalizer;
 class RegisterBankInfo;
 
 /// The goal of this helper class is to gather the accessor to all
@@ -27,6 +28,9 @@ class RegisterBankInfo;
 struct GISelAccessor {
   virtual ~GISelAccessor() {}
   virtual const CallLowering *getCallLowering() const { return nullptr;}
+  virtual const MachineLegalizer *getMachineLegalizer() const {
+    return nullptr;
+  }
   virtual const RegisterBankInfo *getRegBankInfo() const { return nullptr;}
 };
 } // End namespace llvm;

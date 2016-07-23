@@ -9,14 +9,15 @@
 
 #include "llvm/DebugInfo/PDB/Raw/ModStream.h"
 
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 ModStream::ModStream(const ModInfo &Module,
@@ -26,7 +27,7 @@ ModStream::ModStream(const ModInfo &Module,
 ModStream::~ModStream() {}
 
 Error ModStream::reload() {
-  codeview::StreamReader Reader(*Stream);
+  StreamReader Reader(*Stream);
 
   uint32_t SymbolSize = Mod.getSymbolDebugInfoByteSize();
   uint32_t C11Size = Mod.getLineInfoByteSize();
@@ -36,7 +37,7 @@ Error ModStream::reload() {
     return llvm::make_error<RawError>(raw_error_code::corrupt_file,
                                       "Module has both C11 and C13 line info");
 
-  codeview::StreamRef S;
+  StreamRef S;
 
   uint32_t SymbolSubstreamSig = 0;
   if (auto EC = Reader.readInteger(SymbolSubstreamSig))
@@ -49,7 +50,7 @@ Error ModStream::reload() {
   if (auto EC = Reader.readStreamRef(C13LinesSubstream, C13Size))
     return EC;
 
-  codeview::StreamReader LineReader(C13LinesSubstream);
+  StreamReader LineReader(C13LinesSubstream);
   if (auto EC = LineReader.readArray(LineInfo, LineReader.bytesRemaining()))
     return EC;
 

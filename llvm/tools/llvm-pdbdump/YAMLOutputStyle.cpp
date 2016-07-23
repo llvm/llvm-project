@@ -25,6 +25,10 @@ YAMLOutputStyle::YAMLOutputStyle(PDBFile &File) : File(File), Out(outs()) {}
 Error YAMLOutputStyle::dump() {
   if (opts::pdb2yaml::StreamDirectory)
     opts::pdb2yaml::StreamMetadata = true;
+  if (opts::pdb2yaml::DbiModuleSourceFileInfo)
+    opts::pdb2yaml::DbiModuleInfo = true;
+  if (opts::pdb2yaml::DbiModuleInfo)
+    opts::pdb2yaml::DbiStream = true;
 
   if (auto EC = dumpFileHeaders())
     return EC;
@@ -133,6 +137,16 @@ Error YAMLOutputStyle::dumpDbiStream() {
   Obj.DbiStream->PdbDllRbld = DS.getPdbDllRbld();
   Obj.DbiStream->PdbDllVersion = DS.getPdbDllVersion();
   Obj.DbiStream->VerHeader = DS.getDbiVersion();
+  if (opts::pdb2yaml::DbiModuleInfo) {
+    for (const auto &MI : DS.modules()) {
+      yaml::PdbDbiModuleInfo DMI;
+      DMI.Mod = MI.Info.getModuleName();
+      DMI.Obj = MI.Info.getObjFileName();
+      if (opts::pdb2yaml::DbiModuleSourceFileInfo)
+        DMI.SourceFiles = MI.SourceFiles;
+      Obj.DbiStream->ModInfos.push_back(DMI);
+    }
+  }
   return Error::success();
 }
 

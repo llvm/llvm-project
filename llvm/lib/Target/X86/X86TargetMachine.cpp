@@ -321,7 +321,7 @@ void X86PassConfig::addPreSched2() { addPass(createX86ExpandPseudoPass()); }
 
 void X86PassConfig::addPreEmitPass() {
   if (getOptLevel() != CodeGenOpt::None)
-    addPass(createExecutionDependencyFixPass(&X86::VR128RegClass));
+    addPass(createExecutionDependencyFixPass(&X86::VR128XRegClass));
 
   if (UseVZeroUpper)
     addPass(createX86IssueVZeroUpperPass());

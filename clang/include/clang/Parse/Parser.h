@@ -314,6 +314,10 @@ public:
     return true;
   }
 
+  SourceLocation getEndOfPreviousToken() {
+    return PP.getLocForEndOfToken(PrevTokLocation);
+  }
+
   /// Retrieve the underscored keyword (_Nonnull, _Nullable) that corresponds
   /// to the given nullability kind.
   IdentifierInfo *getNullabilityKeyword(NullabilityKind nullability) {
@@ -2352,6 +2356,7 @@ private:
                                  bool AtomicAllowed = true,
                                  bool IdentifierRequired = false);
   void ParseDirectDeclarator(Declarator &D);
+  void ParseDecompositionDeclarator(Declarator &D);
   void ParseParenDeclarator(Declarator &D);
   void ParseFunctionDeclarator(Declarator &D,
                                ParsedAttributes &attrs,

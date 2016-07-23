@@ -1633,11 +1633,7 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
           // FIXME: Passing U.getOrigUnit().getCompilationDir()
           // instead of "" would allow more uniquing, but for now, do
           // it this way to match dsymutil-classic.
-          std::string File;
-          if (LT->getFileNameByIndex(
-                  FileNum, "",
-                  DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                  File)) {
+          if (LT->hasFileAtIndex(FileNum)) {
             Line = DIE->getAttributeValueAsUnsignedConstant(
                 &U.getOrigUnit(), dwarf::DW_AT_decl_line, 0);
             // Cache the resolved paths, because calling realpath is expansive.
@@ -1645,6 +1641,13 @@ PointerIntPair<DeclContext *, 1> DeclContextTree::getChildDeclContext(
             if (!ResolvedPath.empty()) {
               FileRef = ResolvedPath;
             } else {
+              std::string File;
+              bool gotFileName =
+                LT->getFileNameByIndex(FileNum, "",
+                        DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                        File);
+              (void)gotFileName;
+              assert(gotFileName && "Must get file name from line table");
 #ifdef HAVE_REALPATH
               char RealPath[PATH_MAX + 1];
               RealPath[PATH_MAX] = 0;

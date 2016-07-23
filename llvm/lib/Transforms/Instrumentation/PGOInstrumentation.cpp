@@ -784,7 +784,7 @@ void PGOUseFunc::annotateIndirectCallSites() {
 }
 } // end anonymous namespace
 
-// Create a COMDAT variable IR_LEVEL_PROF_VARNAME to make the runtime
+// Create a COMDAT variable INSTR_PROF_RAW_VERSION_VAR to make the runtime
 // aware this is an ir_level profile so it can set the version flag.
 static void createIRLevelProfileFlagVariable(Module &M) {
   Type *IntTy64 = Type::getInt64Ty(M.getContext());
@@ -792,14 +792,14 @@ static void createIRLevelProfileFlagVariable(Module &M) {
   auto IRLevelVersionVariable = new GlobalVariable(
       M, IntTy64, true, GlobalVariable::ExternalLinkage,
       Constant::getIntegerValue(IntTy64, APInt(64, ProfileVersion)),
-      INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR));
+      INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR));
   IRLevelVersionVariable->setVisibility(GlobalValue::DefaultVisibility);
   Triple TT(M.getTargetTriple());
   if (!TT.supportsCOMDAT())
     IRLevelVersionVariable->setLinkage(GlobalValue::WeakAnyLinkage);
   else
     IRLevelVersionVariable->setComdat(M.getOrInsertComdat(
-        StringRef(INSTR_PROF_QUOTE(IR_LEVEL_PROF_VERSION_VAR))));
+        StringRef(INSTR_PROF_QUOTE(INSTR_PROF_RAW_VERSION_VAR))));
 }
 
 static bool InstrumentAllFunctions(

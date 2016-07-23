@@ -20,5 +20,6 @@ target_link_libraries(ClangRenameTests
   clangBasic
   clangFrontend
   clangIndex
+  clangLex
   clangTooling
   )

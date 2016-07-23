@@ -10,7 +10,7 @@ define void @bar__512(<16 x i32>* %var) #0 {
 ; CHECK-NEXT:    subq $112, %rsp
 ; CHECK-NEXT:    movq %rdi, %rbx
 ; CHECK-NEXT:    vmovdqu32 (%rbx), %zmm0
-; CHECK-NEXT:    vmovups %zmm0, (%rsp) ## 64-byte Spill
+; CHECK-NEXT:    vmovdqu64 %zmm0, (%rsp) ## 64-byte Spill
 ; CHECK-NEXT:    vpbroadcastd {{.*}}(%rip), %zmm1
 ; CHECK-NEXT:    vmovdqa32 %zmm1, (%rbx)
 ; CHECK-NEXT:    callq _Print__512

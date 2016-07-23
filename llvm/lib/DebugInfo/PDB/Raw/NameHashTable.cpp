@@ -10,18 +10,19 @@
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/Hash.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/Support/Endian.h"
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::support;
 using namespace llvm::pdb;
 
 NameHashTable::NameHashTable() : Signature(0), HashVersion(0), NameCount(0) {}
 
-Error NameHashTable::load(codeview::StreamReader &Stream) {
+Error NameHashTable::load(StreamReader &Stream) {
   struct Header {
     support::ulittle32_t Signature;
     support::ulittle32_t HashVersion;
@@ -72,7 +73,7 @@ StringRef NameHashTable::getStringForID(uint32_t ID) const {
   // the starting offset of the string we're looking for.  So just seek into
   // the desired offset and a read a null terminated stream from that offset.
   StringRef Result;
-  codeview::StreamReader NameReader(NamesBuffer);
+  StreamReader NameReader(NamesBuffer);
   NameReader.setOffset(ID);
   if (auto EC = NameReader.readZeroString(Result))
     consumeError(std::move(EC));
@@ -98,7 +99,6 @@ uint32_t NameHashTable::getIDForString(StringRef Str) const {
   return IDs[0];
 }
 
-codeview::FixedStreamArray<support::ulittle32_t>
-NameHashTable::name_ids() const {
+FixedStreamArray<support::ulittle32_t> NameHashTable::name_ids() const {
   return IDs;
 }

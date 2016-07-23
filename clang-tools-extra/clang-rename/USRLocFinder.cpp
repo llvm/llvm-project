@@ -34,38 +34,18 @@ namespace {
 class USRLocFindingASTVisitor
     : public clang::RecursiveASTVisitor<USRLocFindingASTVisitor> {
 public:
-  explicit USRLocFindingASTVisitor(StringRef USR, StringRef PrevName)
-      : USR(USR), PrevName(PrevName) {}
+  explicit USRLocFindingASTVisitor(StringRef USR, StringRef PrevName,
+                                   const ASTContext &Context)
+      : USR(USR), PrevName(PrevName), Context(Context) {}
 
   // Declaration visitors:
 
-  bool VisitNamedDecl(const NamedDecl *Decl) {
-    if (getUSRForDecl(Decl) == USR) {
-      LocationsFound.push_back(Decl->getLocation());
-    }
-    return true;
-  }
-
-  bool VisitVarDecl(clang::VarDecl *Decl) {
-    clang::QualType Type = Decl->getType();
-    const clang::RecordDecl *RecordDecl = Type->getPointeeCXXRecordDecl();
-    if (RecordDecl) {
-      if (getUSRForDecl(RecordDecl) == USR) {
-        // The declaration refers to a type that is to be renamed.
-        LocationsFound.push_back(Decl->getTypeSpecStartLoc());
-      }
-    }
-    return true;
-  }
-
   bool VisitCXXConstructorDecl(clang::CXXConstructorDecl *ConstructorDecl) {
-    const ASTContext &Context = ConstructorDecl->getASTContext();
     for (auto &Initializer : ConstructorDecl->inits()) {
       if (Initializer->getSourceOrder() == -1) {
         // Ignore implicit initializers.
         continue;
       }
-
       if (const clang::FieldDecl *FieldDecl = Initializer->getAnyMember()) {
         if (getUSRForDecl(FieldDecl) == USR) {
           // The initializer refers to a field that is to be renamed.
@@ -81,33 +61,13 @@ public:
         }
       }
     }
-
-    if (getUSRForDecl(ConstructorDecl) == USR) {
-      // This takes care of the class name part of a non-inline ctor definition.
-      LocationsFound.push_back(ConstructorDecl->getLocStart());
-    }
     return true;
   }
 
-  bool VisitCXXDestructorDecl(clang::CXXDestructorDecl *DestructorDecl) {
-    if (getUSRForDecl(DestructorDecl->getParent()) == USR) {
-      // Handles "~Foo" from "Foo::~Foo".
-      SourceLocation Location = DestructorDecl->getLocation();
-      const ASTContext &Context = DestructorDecl->getASTContext();
-      StringRef LLVM_ATTRIBUTE_UNUSED TokenName = Lexer::getSourceText(
-          CharSourceRange::getTokenRange(Location), Context.getSourceManager(),
-          Context.getLangOpts());
-      // 1 is the length of the "~" string that is not to be touched by the
-      // rename.
-      assert(TokenName.startswith("~"));
-      LocationsFound.push_back(Location.getLocWithOffset(1));
-
-      if (DestructorDecl->isThisDeclarationADefinition()) {
-        // Handles "Foo" from "Foo::~Foo".
-        LocationsFound.push_back(DestructorDecl->getLocStart());
-      }
+  bool VisitNamedDecl(const NamedDecl *Decl) {
+    if (getUSRForDecl(Decl) == USR) {
+      checkAndAddLocation(Decl->getLocation());
     }
-
     return true;
   }
 
@@ -116,11 +76,10 @@ public:
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
     const auto *Decl = Expr->getFoundDecl();
 
-    checkNestedNameSpecifierLoc(Expr->getQualifierLoc());
     if (getUSRForDecl(Decl) == USR) {
       const SourceManager &Manager = Decl->getASTContext().getSourceManager();
       SourceLocation Location = Manager.getSpellingLoc(Expr->getLocation());
-      LocationsFound.push_back(Location);
+      checkAndAddLocation(Location);
     }
 
     return true;
@@ -131,19 +90,8 @@ public:
     if (getUSRForDecl(Decl) == USR) {
       const SourceManager &Manager = Decl->getASTContext().getSourceManager();
       SourceLocation Location = Manager.getSpellingLoc(Expr->getMemberLoc());
-      LocationsFound.push_back(Location);
+      checkAndAddLocation(Location);
     }
-    return true;
-  }
-
-  bool VisitCXXConstructExpr(const CXXConstructExpr *Expr) {
-    CXXConstructorDecl *Decl = Expr->getConstructor();
-
-    if (getUSRForDecl(Decl) == USR) {
-      // This takes care of 'new <name>' expressions.
-      LocationsFound.push_back(Expr->getLocation());
-    }
-
     return true;
   }
 
@@ -163,6 +111,15 @@ public:
     return handleCXXNamedCastExpr(Expr);
   }
 
+  // Other visitors:
+
+  bool VisitTypeLoc(const TypeLoc Loc) {
+    if (getUSRForDecl(Loc.getType()->getAsCXXRecordDecl()) == USR) {
+      checkAndAddLocation(Loc.getBeginLoc());
+    }
+    return true;
+  }
+
   // Non-visitors:
 
   // \brief Returns a list of unique locations. Duplicate or overlapping
@@ -171,13 +128,13 @@ public:
     return LocationsFound;
   }
 
-private:
   // Namespace traversal:
-  void checkNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
+  void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
       const auto *Decl = NameLoc.getNestedNameSpecifier()->getAsNamespace();
-      if (Decl && getUSRForDecl(Decl) == USR)
-        LocationsFound.push_back(NameLoc.getLocalBeginLoc());
+      if (Decl && getUSRForDecl(Decl) == USR) {
+        checkAndAddLocation(NameLoc.getLocalBeginLoc());
+      }
       NameLoc = NameLoc.getPrefix();
     }
   }
@@ -194,10 +151,27 @@ private:
     if (Decl && getUSRForDecl(Decl) == USR) {
       SourceLocation Location =
           Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
-      LocationsFound.push_back(Location);
+      checkAndAddLocation(Location);
     }
 
     return true;
+  }
+
+private:
+  void checkAndAddLocation(SourceLocation Loc) {
+    const auto BeginLoc = Loc;
+    const auto EndLoc = Lexer::getLocForEndOfToken(
+                                   BeginLoc, 0, Context.getSourceManager(),
+                                   Context.getLangOpts());
+    StringRef TokenName =
+        Lexer::getSourceText(CharSourceRange::getTokenRange(BeginLoc, EndLoc),
+                             Context.getSourceManager(), Context.getLangOpts());
+    size_t Offset = TokenName.find(PrevName);
+    if (Offset != StringRef::npos) {
+      // The token of the source location we find actually has the old
+      // name.
+      LocationsFound.push_back(BeginLoc.getLocWithOffset(Offset));
+    }
   }
 
   // All the locations of the USR were found.
@@ -205,14 +179,18 @@ private:
   // Old name that is renamed.
   const std::string PrevName;
   std::vector<clang::SourceLocation> LocationsFound;
+  const ASTContext &Context;
 };
 } // namespace
 
 std::vector<SourceLocation> getLocationsOfUSR(StringRef USR, StringRef PrevName,
                                               Decl *Decl) {
-  USRLocFindingASTVisitor Visitor(USR, PrevName);
-
+  USRLocFindingASTVisitor Visitor(USR, PrevName, Decl->getASTContext());
   Visitor.TraverseDecl(Decl);
+  NestedNameSpecifierLocFinder Finder(Decl->getASTContext());
+  for (const auto &Location : Finder.getNestedNameSpecifierLocations()) {
+    Visitor.handleNestedNameSpecifierLoc(Location);
+  }
   return Visitor.getLocationsFound();
 }
 

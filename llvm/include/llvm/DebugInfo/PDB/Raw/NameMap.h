@@ -16,7 +16,7 @@
 #include <cstdint>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 class StreamReader;
 class StreamWriter;
 }
@@ -28,8 +28,8 @@ class NameMap {
 public:
   NameMap();
 
-  Error load(codeview::StreamReader &Stream);
-  Error commit(codeview::StreamWriter &Writer);
+  Error load(msf::StreamReader &Stream);
+  Error commit(msf::StreamWriter &Writer);
 
   bool tryGetValue(StringRef Name, uint32_t &Value) const;
 

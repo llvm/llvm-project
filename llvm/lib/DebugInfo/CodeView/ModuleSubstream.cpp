@@ -9,10 +9,11 @@
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
 
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;
+using namespace llvm::msf;
 
 ModuleSubstream::ModuleSubstream() : Kind(ModuleSubstreamKind::None) {}
 
