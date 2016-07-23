@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -176,13 +177,14 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 class InlineFunctionInfo {
 public:
   explicit InlineFunctionInfo(CallGraph *cg = nullptr,
-                              AssumptionCacheTracker *ACT = nullptr)
-      : CG(cg), ACT(ACT) {}
+                              std::function<AssumptionCache &(Function &)>
+                                  *GetAssumptionCache = nullptr)
+      : CG(cg), GetAssumptionCache(GetAssumptionCache) {}
 
   /// CG - If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
   CallGraph *CG;
-  AssumptionCacheTracker *ACT;
+  std::function<AssumptionCache &(Function &)> *GetAssumptionCache;
 
   /// StaticAllocas - InlineFunction fills this in with all static allocas that
   /// get copied into the caller.

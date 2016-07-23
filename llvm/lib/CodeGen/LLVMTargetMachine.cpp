@@ -165,6 +165,11 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
     if (PassConfig->addIRTranslator())
       return nullptr;
 
+    PassConfig->addPreLegalizeMachineIR();
+
+    if (PassConfig->addLegalizeMachineIR())
+      return nullptr;
+
     // Before running the register bank selector, ask the target if it
     // wants to run some passes.
     PassConfig->addPreRegBankSelect();

@@ -28,10 +28,6 @@ MachineLegalizer::MachineLegalizer() : TablesInitialized(false) {
   DefaultActions[TargetOpcode::G_ADD] = NarrowScalar;
 }
 
-bool MachineLegalizer::legalizeInstr(MachineInstr &MI) const {
-  llvm_unreachable("Unimplemented functionality");
-}
-
 void MachineLegalizer::computeTables() {
   for (auto &Op : Actions) {
     LLT Ty = Op.first.second;
@@ -55,6 +51,11 @@ MachineLegalizer::getAction(unsigned Opcode, LLT Ty) const {
   assert(TablesInitialized && "backend forgot to call computeTables");
   // These *have* to be implemented for now, they're the fundamental basis of
   // how everything else is transformed.
+
+  // FIXME: the long-term plan calls for expansion in terms of load/store (if
+  // they're not legal).
+  if (Opcode == TargetOpcode::G_SEQUENCE || Opcode == TargetOpcode::G_EXTRACT)
+    return std::make_pair(Legal, Ty);
 
   auto ActionIt = Actions.find(std::make_pair(Opcode, Ty));
   if (ActionIt != Actions.end())

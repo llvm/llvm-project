@@ -7,17 +7,17 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMARRAY_H
-#define LLVM_DEBUGINFO_CODEVIEW_STREAMARRAY_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMARRAY_H
+#define LLVM_DEBUGINFO_MSF_STREAMARRAY_H
 
-#include "llvm/DebugInfo/CodeView/StreamRef.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 #include "llvm/Support/Error.h"
 
 #include <functional>
 #include <type_traits>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 
 /// VarStreamArrayExtractor is intended to be specialized to provide customized
 /// extraction logic.  On input it receives a StreamRef pointing to the
@@ -269,7 +269,7 @@ private:
   uint32_t Index;
 };
 
-} // namespace codeview
+} // namespace msf
 } // namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_STREAMARRAY_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMARRAY_H

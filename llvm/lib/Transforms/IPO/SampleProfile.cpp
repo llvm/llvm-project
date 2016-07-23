@@ -627,6 +627,8 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 bool SampleProfileLoader::inlineHotFunctions(Function &F) {
   bool Changed = false;
   LLVMContext &Ctx = F.getContext();
+  std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
+      Function &F) -> AssumptionCache & { return ACT->getAssumptionCache(F); };
   while (true) {
     bool LocalChanged = false;
     SmallVector<CallInst *, 10> CIS;
@@ -638,7 +640,7 @@ bool SampleProfileLoader::inlineHotFunctions(Function &F) {
       }
     }
     for (auto CI : CIS) {
-      InlineFunctionInfo IFI(nullptr, ACT);
+      InlineFunctionInfo IFI(nullptr, ACT ? &GetAssumptionCache : nullptr);
       Function *CalledFunction = CI->getCalledFunction();
       DebugLoc DLoc = CI->getDebugLoc();
       uint64_t NumSamples = findCalleeFunctionSamples(*CI)->getTotalSamples();

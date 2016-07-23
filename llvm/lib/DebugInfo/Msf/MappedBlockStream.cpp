@@ -1,4 +1,4 @@
-//===- MappedBlockStream.cpp - Reads stream data from a PDBFile -----------===//
+//===- MappedBlockStream.cpp - Reads stream data from an MSF file ---------===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -7,24 +7,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
-#include "llvm/DebugInfo/PDB/Raw/DirectoryStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/IndexedStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/DirectoryStreamData.h"
+#include "llvm/DebugInfo/Msf/IMsfStreamData.h"
+#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
+#include "llvm/DebugInfo/Msf/MsfError.h"
 
 using namespace llvm;
-using namespace llvm::pdb;
+using namespace llvm::msf;
 
 namespace {
-// This exists so that we can use make_unique while still keeping the
-// constructor of MappedBlockStream private, forcing users to go through
-// the `create` interface.
+// This exists so that we can use make_unique (which requires a public default
+// constructor, while still keeping the constructor of MappedBlockStream
+// protected, forcing users to go through the `create` interface.
 class MappedBlockStreamImpl : public MappedBlockStream {
 public:
-  MappedBlockStreamImpl(std::unique_ptr<IPDBStreamData> Data,
-                        const IPDBFile &File)
+  MappedBlockStreamImpl(std::unique_ptr<IMsfStreamData> Data,
+                        const IMsfFile &File)
       : MappedBlockStream(std::move(Data), File) {}
 };
 }
@@ -35,17 +34,17 @@ static Interval intersect(const Interval &I1, const Interval &I2) {
                         std::min(I1.second, I2.second));
 }
 
-MappedBlockStream::MappedBlockStream(std::unique_ptr<IPDBStreamData> Data,
-                                     const IPDBFile &Pdb)
-    : Pdb(Pdb), Data(std::move(Data)) {}
+MappedBlockStream::MappedBlockStream(std::unique_ptr<IMsfStreamData> Data,
+                                     const IMsfFile &File)
+    : Msf(File), Data(std::move(Data)) {}
 
 Error MappedBlockStream::readBytes(uint32_t Offset, uint32_t Size,
                                    ArrayRef<uint8_t> &Buffer) const {
   // Make sure we aren't trying to read beyond the end of the stream.
   if (Size > Data->getLength())
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   if (Offset > Data->getLength() - Size)
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
   if (tryReadContiguously(Offset, Size, Buffer))
     return Error::success();
@@ -123,23 +122,23 @@ Error MappedBlockStream::readLongestContiguousChunk(
     uint32_t Offset, ArrayRef<uint8_t> &Buffer) const {
   // Make sure we aren't trying to read beyond the end of the stream.
   if (Offset >= Data->getLength())
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
-  uint32_t First = Offset / Pdb.getBlockSize();
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
+  uint32_t First = Offset / Msf.getBlockSize();
   uint32_t Last = First;
 
   auto BlockList = Data->getStreamBlocks();
-  while (Last < Pdb.getBlockCount() - 1) {
+  while (Last < Msf.getBlockCount() - 1) {
     if (BlockList[Last] != BlockList[Last + 1] - 1)
       break;
     ++Last;
   }
 
-  uint32_t OffsetInFirstBlock = Offset % Pdb.getBlockSize();
-  uint32_t BytesFromFirstBlock = Pdb.getBlockSize() - OffsetInFirstBlock;
+  uint32_t OffsetInFirstBlock = Offset % Msf.getBlockSize();
+  uint32_t BytesFromFirstBlock = Msf.getBlockSize() - OffsetInFirstBlock;
   uint32_t BlockSpan = Last - First + 1;
   uint32_t ByteSpan =
-      BytesFromFirstBlock + (BlockSpan - 1) * Pdb.getBlockSize();
-  auto Result = Pdb.getBlockData(BlockList[First], Pdb.getBlockSize());
+      BytesFromFirstBlock + (BlockSpan - 1) * Msf.getBlockSize();
+  auto Result = Msf.getBlockData(BlockList[First], Msf.getBlockSize());
   if (!Result)
     return Result.takeError();
   Buffer = Result->drop_front(OffsetInFirstBlock);
@@ -158,13 +157,13 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
   // all subsequent blocks are contiguous.  For example, a 10k read with a 4k
   // block size can be filled with a reference if, from the starting offset,
   // 3 blocks in a row are contiguous.
-  uint32_t BlockNum = Offset / Pdb.getBlockSize();
-  uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
+  uint32_t BlockNum = Offset / Msf.getBlockSize();
+  uint32_t OffsetInBlock = Offset % Msf.getBlockSize();
   uint32_t BytesFromFirstBlock =
-      std::min(Size, Pdb.getBlockSize() - OffsetInBlock);
+      std::min(Size, Msf.getBlockSize() - OffsetInBlock);
   uint32_t NumAdditionalBlocks =
-      llvm::alignTo(Size - BytesFromFirstBlock, Pdb.getBlockSize()) /
-      Pdb.getBlockSize();
+      llvm::alignTo(Size - BytesFromFirstBlock, Msf.getBlockSize()) /
+      Msf.getBlockSize();
 
   auto BlockList = Data->getStreamBlocks();
   uint32_t RequiredContiguousBlocks = NumAdditionalBlocks + 1;
@@ -175,7 +174,7 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
   }
 
   uint32_t FirstBlockAddr = BlockList[BlockNum];
-  auto Result = Pdb.getBlockData(FirstBlockAddr, Pdb.getBlockSize());
+  auto Result = Msf.getBlockData(FirstBlockAddr, Msf.getBlockSize());
   if (!Result) {
     consumeError(Result.takeError());
     return false;
@@ -187,14 +186,14 @@ bool MappedBlockStream::tryReadContiguously(uint32_t Offset, uint32_t Size,
 
 Error MappedBlockStream::readBytes(uint32_t Offset,
                                    MutableArrayRef<uint8_t> Buffer) const {
-  uint32_t BlockNum = Offset / Pdb.getBlockSize();
-  uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
+  uint32_t BlockNum = Offset / Msf.getBlockSize();
+  uint32_t OffsetInBlock = Offset % Msf.getBlockSize();
 
   // Make sure we aren't trying to read beyond the end of the stream.
   if (Buffer.size() > Data->getLength())
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   if (Offset > Data->getLength() - Buffer.size())
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
   uint32_t BytesLeft = Buffer.size();
   uint32_t BytesWritten = 0;
@@ -203,14 +202,14 @@ Error MappedBlockStream::readBytes(uint32_t Offset,
   while (BytesLeft > 0) {
     uint32_t StreamBlockAddr = BlockList[BlockNum];
 
-    auto Result = Pdb.getBlockData(StreamBlockAddr, Pdb.getBlockSize());
+    auto Result = Msf.getBlockData(StreamBlockAddr, Msf.getBlockSize());
     if (!Result)
       return Result.takeError();
 
     auto Data = *Result;
     const uint8_t *ChunkStart = Data.data() + OffsetInBlock;
     uint32_t BytesInChunk =
-        std::min(BytesLeft, Pdb.getBlockSize() - OffsetInBlock);
+        std::min(BytesLeft, Msf.getBlockSize() - OffsetInBlock);
     ::memcpy(WriteBuffer + BytesWritten, ChunkStart, BytesInChunk);
 
     BytesWritten += BytesInChunk;
@@ -226,13 +225,13 @@ Error MappedBlockStream::writeBytes(uint32_t Offset,
                                     ArrayRef<uint8_t> Buffer) const {
   // Make sure we aren't trying to write beyond the end of the stream.
   if (Buffer.size() > Data->getLength())
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
   if (Offset > Data->getLength() - Buffer.size())
-    return make_error<RawError>(raw_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
-  uint32_t BlockNum = Offset / Pdb.getBlockSize();
-  uint32_t OffsetInBlock = Offset % Pdb.getBlockSize();
+  uint32_t BlockNum = Offset / Msf.getBlockSize();
+  uint32_t OffsetInBlock = Offset % Msf.getBlockSize();
 
   uint32_t BytesLeft = Buffer.size();
   auto BlockList = Data->getStreamBlocks();
@@ -240,11 +239,11 @@ Error MappedBlockStream::writeBytes(uint32_t Offset,
   while (BytesLeft > 0) {
     uint32_t StreamBlockAddr = BlockList[BlockNum];
     uint32_t BytesToWriteInChunk =
-        std::min(BytesLeft, Pdb.getBlockSize() - OffsetInBlock);
+        std::min(BytesLeft, Msf.getBlockSize() - OffsetInBlock);
 
     const uint8_t *Chunk = Buffer.data() + BytesWritten;
     ArrayRef<uint8_t> ChunkData(Chunk, BytesToWriteInChunk);
-    if (auto EC = Pdb.setBlockData(StreamBlockAddr, OffsetInBlock, ChunkData))
+    if (auto EC = Msf.setBlockData(StreamBlockAddr, OffsetInBlock, ChunkData))
       return EC;
 
     BytesLeft -= BytesToWriteInChunk;
@@ -295,16 +294,18 @@ uint32_t MappedBlockStream::getNumBytesCopied() const {
 
 Expected<std::unique_ptr<MappedBlockStream>>
 MappedBlockStream::createIndexedStream(uint32_t StreamIdx,
-                                       const IPDBFile &File) {
+                                       const IMsfFile &File) {
   if (StreamIdx >= File.getNumStreams())
-    return make_error<RawError>(raw_error_code::no_stream);
+    return make_error<MsfError>(msf_error_code::no_stream);
 
   auto Data = llvm::make_unique<IndexedStreamData>(StreamIdx, File);
   return llvm::make_unique<MappedBlockStreamImpl>(std::move(Data), File);
 }
 
 Expected<std::unique_ptr<MappedBlockStream>>
-MappedBlockStream::createDirectoryStream(const PDBFile &File) {
-  auto Data = llvm::make_unique<DirectoryStreamData>(File);
+MappedBlockStream::createDirectoryStream(uint32_t Length,
+                                         ArrayRef<support::ulittle32_t> Blocks,
+                                         const IMsfFile &File) {
+  auto Data = llvm::make_unique<DirectoryStreamData>(Length, Blocks);
   return llvm::make_unique<MappedBlockStreamImpl>(std::move(Data), File);
 }

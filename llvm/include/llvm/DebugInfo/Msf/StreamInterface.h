@@ -7,15 +7,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_CODEVIEW_STREAMINTERFACE_H
-#define LLVM_DEBUGINFO_CODEVIEW_STREAMINTERFACE_H
+#ifndef LLVM_DEBUGINFO_MSF_STREAMINTERFACE_H
+#define LLVM_DEBUGINFO_MSF_STREAMINTERFACE_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Error.h"
 #include <cstdint>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 
 /// StreamInterface abstracts the notion of a data stream.  This way, an
 /// implementation could implement trivial reading from a contiguous memory
@@ -49,7 +49,7 @@ public:
   virtual Error commit() const = 0;
 };
 
-} // end namespace codeview
+} // end namespace msf
 } // end namespace llvm
 
-#endif // LLVM_DEBUGINFO_CODEVIEW_STREAMINTERFACE_H
+#endif // LLVM_DEBUGINFO_MSF_STREAMINTERFACE_H

@@ -13,45 +13,44 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
-
-#include "llvm/DebugInfo/PDB/Raw/MsfBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 
 #include <memory>
 #include <vector>
 
 namespace llvm {
-namespace codeview {
+namespace msf {
+class MsfBuilder;
 class StreamInterface;
 }
 namespace pdb {
 class DbiStreamBuilder;
 class InfoStreamBuilder;
-class PDBFile;
 
 class PDBFileBuilder {
 public:
-  explicit PDBFileBuilder(
-      std::unique_ptr<codeview::StreamInterface> FileBuffer);
+  explicit PDBFileBuilder(BumpPtrAllocator &Allocator);
   PDBFileBuilder(const PDBFileBuilder &) = delete;
   PDBFileBuilder &operator=(const PDBFileBuilder &) = delete;
 
   Error initialize(const msf::SuperBlock &Super);
 
-  MsfBuilder &getMsfBuilder();
+  msf::MsfBuilder &getMsfBuilder();
   InfoStreamBuilder &getInfoBuilder();
   DbiStreamBuilder &getDbiBuilder();
 
-  Expected<std::unique_ptr<PDBFile>> build();
+  Expected<std::unique_ptr<PDBFile>>
+  build(std::unique_ptr<msf::StreamInterface> PdbFileBuffer);
 
 private:
+  BumpPtrAllocator &Allocator;
+
+  std::unique_ptr<msf::MsfBuilder> Msf;
   std::unique_ptr<InfoStreamBuilder> Info;
   std::unique_ptr<DbiStreamBuilder> Dbi;
-
-  std::unique_ptr<PDBFile> File;
-  std::unique_ptr<MsfBuilder> Msf;
 };
 }
 }

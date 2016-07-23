@@ -12,7 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
+#include "llvm/DebugInfo/Msf/ByteStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;
@@ -681,9 +681,9 @@ Error CVTypeDumper::dump(const CVTypeArray &Types) {
 }
 
 Error CVTypeDumper::dump(ArrayRef<uint8_t> Data) {
-  ByteStream<> Stream(Data);
+  msf::ByteStream<> Stream(Data);
   CVTypeArray Types;
-  StreamReader Reader(Stream);
+  msf::StreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Types, Reader.getLength()))
     return EC;
 

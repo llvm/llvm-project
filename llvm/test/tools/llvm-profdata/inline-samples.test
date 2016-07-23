@@ -23,6 +23,7 @@ RUN: diff %t-bintext %t-text
 4- Merge the binary and text encodings of the profile and check that the
    counters have doubled.
 RUN: llvm-profdata merge --sample --text %t.profbin %p/Inputs/inline-samples.afdo -o - | FileCheck %s --check-prefix=MERGE1
+RUN: llvm-profdata merge --sample --text - < %t.profbin %p/Inputs/inline-samples.afdo -o - | FileCheck %s --check-prefix=MERGE1
 MERGE1: main:733692:0
 MERGE1: 2.3: 120802
 MERGE1: 2.3: _Z3fool:492088

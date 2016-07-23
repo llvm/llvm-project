@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/PDB/Raw/MsfBuilder.h"
-#include "llvm/DebugInfo/PDB/Raw/RawError.h"
+#include "llvm/DebugInfo/Msf/MsfBuilder.h"
+#include "llvm/DebugInfo/Msf/MsfError.h"
 
 using namespace llvm;
-using namespace llvm::pdb;
-using namespace llvm::pdb::msf;
+using namespace llvm::msf;
 using namespace llvm::support;
 
 namespace {
@@ -38,8 +37,8 @@ MsfBuilder::MsfBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,
 Expected<MsfBuilder> MsfBuilder::create(BumpPtrAllocator &Allocator,
                                         uint32_t BlockSize,
                                         uint32_t MinBlockCount, bool CanGrow) {
-  if (!msf::isValidBlockSize(BlockSize))
-    return make_error<RawError>(raw_error_code::unspecified,
+  if (!isValidBlockSize(BlockSize))
+    return make_error<MsfError>(msf_error_code::invalid_format,
                                 "The requested block size is unsupported");
 
   return MsfBuilder(BlockSize,
@@ -53,14 +52,15 @@ Error MsfBuilder::setBlockMapAddr(uint32_t Addr) {
 
   if (Addr >= FreeBlocks.size()) {
     if (!IsGrowable)
-      return make_error<RawError>(raw_error_code::unspecified,
+      return make_error<MsfError>(msf_error_code::insufficient_buffer,
                                   "Cannot grow the number of blocks");
     FreeBlocks.resize(Addr + 1);
   }
 
   if (!isBlockFree(Addr))
-    return make_error<RawError>(raw_error_code::unspecified,
-                                "Attempt to reuse an allocated block");
+    return make_error<MsfError>(
+        msf_error_code::block_in_use,
+        "Requested block map address is already in use");
   FreeBlocks[BlockMapAddr] = true;
   FreeBlocks[Addr] = false;
   BlockMapAddr = Addr;
@@ -76,7 +76,7 @@ Error MsfBuilder::setDirectoryBlocksHint(ArrayRef<uint32_t> DirBlocks) {
     FreeBlocks[B] = true;
   for (auto B : DirBlocks) {
     if (!isBlockFree(B)) {
-      return make_error<RawError>(raw_error_code::unspecified,
+      return make_error<MsfError>(msf_error_code::unspecified,
                                   "Attempt to reuse an allocated block");
     }
     FreeBlocks[B] = false;
@@ -94,7 +94,7 @@ Error MsfBuilder::allocateBlocks(uint32_t NumBlocks,
   uint32_t NumFreeBlocks = FreeBlocks.count();
   if (NumFreeBlocks < NumBlocks) {
     if (!IsGrowable)
-      return make_error<RawError>(raw_error_code::unspecified,
+      return make_error<MsfError>(msf_error_code::insufficient_buffer,
                                   "There are no free Blocks in the file");
     uint32_t AllocBlocks = NumBlocks - NumFreeBlocks;
     FreeBlocks.resize(AllocBlocks + FreeBlocks.size(), true);
@@ -129,16 +129,16 @@ Error MsfBuilder::addStream(uint32_t Size, ArrayRef<uint32_t> Blocks) {
   // of bytes, and verify that all requested blocks are free.
   uint32_t ReqBlocks = bytesToBlocks(Size, BlockSize);
   if (ReqBlocks != Blocks.size())
-    return make_error<RawError>(
-        raw_error_code::unspecified,
+    return make_error<MsfError>(
+        msf_error_code::invalid_format,
         "Incorrect number of blocks for requested stream size");
   for (auto Block : Blocks) {
     if (Block >= FreeBlocks.size())
       FreeBlocks.resize(Block + 1, true);
 
     if (!FreeBlocks.test(Block))
-      return make_error<RawError>(
-          raw_error_code::unspecified,
+      return make_error<MsfError>(
+          msf_error_code::unspecified,
           "Attempt to re-use an already allocated block");
   }
   // Mark all the blocks occupied by the new stream as not free.
@@ -219,17 +219,18 @@ uint32_t MsfBuilder::computeDirectoryByteSize() const {
 }
 
 Expected<Layout> MsfBuilder::build() {
+  SuperBlock *SB = Allocator.Allocate<SuperBlock>();
   Layout L;
-  L.SB = Allocator.Allocate<SuperBlock>();
-  std::memcpy(L.SB->MagicBytes, Magic, sizeof(Magic));
-  L.SB->BlockMapAddr = BlockMapAddr;
-  L.SB->BlockSize = BlockSize;
-  L.SB->NumDirectoryBytes = computeDirectoryByteSize();
-  L.SB->FreeBlockMapBlock = FreePageMap;
-  L.SB->Unknown1 = Unknown1;
+  L.SB = SB;
 
-  uint32_t NumDirectoryBlocks =
-      bytesToBlocks(L.SB->NumDirectoryBytes, BlockSize);
+  std::memcpy(SB->MagicBytes, Magic, sizeof(Magic));
+  SB->BlockMapAddr = BlockMapAddr;
+  SB->BlockSize = BlockSize;
+  SB->NumDirectoryBytes = computeDirectoryByteSize();
+  SB->FreeBlockMapBlock = FreePageMap;
+  SB->Unknown1 = Unknown1;
+
+  uint32_t NumDirectoryBlocks = bytesToBlocks(SB->NumDirectoryBytes, BlockSize);
   if (NumDirectoryBlocks > DirectoryBlocks.size()) {
     // Our hint wasn't enough to satisfy the entire directory.  Allocate
     // remaining pages.
@@ -249,9 +250,9 @@ Expected<Layout> MsfBuilder::build() {
   }
 
   // Don't set the number of blocks in the file until after allocating Blocks
-  // for
-  // the directory, since the allocation might cause the file to need to grow.
-  L.SB->NumBlocks = FreeBlocks.size();
+  // for the directory, since the allocation might cause the file to need to
+  // grow.
+  SB->NumBlocks = FreeBlocks.size();
 
   ulittle32_t *DirBlocks = Allocator.Allocate<ulittle32_t>(NumDirectoryBlocks);
   std::uninitialized_copy_n(DirectoryBlocks.begin(), NumDirectoryBlocks,

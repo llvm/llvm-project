@@ -40,7 +40,7 @@ public:
   ~AMDGPUTargetMachine();
 
   const AMDGPUSubtarget *getSubtargetImpl() const;
-  const AMDGPUSubtarget *getSubtargetImpl(const Function &) const override;
+  const AMDGPUSubtarget *getSubtargetImpl(const Function &) const override = 0;
 
   const AMDGPUIntrinsicInfo *getIntrinsicInfo() const override {
     return &IntrinsicInfo;
@@ -89,13 +89,6 @@ public:
 
   const SISubtarget *getSubtargetImpl(const Function &) const override;
 };
-
-inline const AMDGPUSubtarget *AMDGPUTargetMachine::getSubtargetImpl(
-  const Function &F) const {
-  if (getTargetTriple().getArch() == Triple::amdgcn)
-    return static_cast<const GCNTargetMachine *>(this)->getSubtargetImpl(F);
-  return static_cast<const R600TargetMachine *>(this)->getSubtargetImpl(F);
-}
 
 } // End namespace llvm
 

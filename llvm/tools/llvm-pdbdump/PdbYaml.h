@@ -13,8 +13,8 @@
 #include "OutputStyle.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/Msf/MsfCommon.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/DebugInfo/PDB/Raw/MsfCommon.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/Support/Endian.h"
@@ -51,6 +51,12 @@ struct PdbInfoStream {
   std::vector<NamedStreamMapping> NamedStreams;
 };
 
+struct PdbDbiModuleInfo {
+  StringRef Obj;
+  StringRef Mod;
+  std::vector<StringRef> SourceFiles;
+};
+
 struct PdbDbiStream {
   PdbRaw_DbiVer VerHeader;
   uint32_t Age;
@@ -59,6 +65,8 @@ struct PdbDbiStream {
   uint16_t PdbDllRbld;
   uint16_t Flags;
   PDB_Machine MachineType;
+
+  std::vector<PdbDbiModuleInfo> ModInfos;
 };
 
 struct PdbObject {
@@ -83,8 +91,8 @@ template <> struct MappingTraits<pdb::yaml::MsfHeaders> {
   static void mapping(IO &IO, pdb::yaml::MsfHeaders &Obj);
 };
 
-template <> struct MappingTraits<pdb::msf::SuperBlock> {
-  static void mapping(IO &IO, pdb::msf::SuperBlock &SB);
+template <> struct MappingTraits<msf::SuperBlock> {
+  static void mapping(IO &IO, msf::SuperBlock &SB);
 };
 
 template <> struct MappingTraits<pdb::yaml::StreamBlockList> {
@@ -102,11 +110,17 @@ template <> struct MappingTraits<pdb::yaml::PdbDbiStream> {
 template <> struct MappingTraits<pdb::yaml::NamedStreamMapping> {
   static void mapping(IO &IO, pdb::yaml::NamedStreamMapping &Obj);
 };
+
+template <> struct MappingTraits<pdb::yaml::PdbDbiModuleInfo> {
+  static void mapping(IO &IO, pdb::yaml::PdbDbiModuleInfo &Obj);
+};
 }
 }
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(uint32_t)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::StringRef)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::NamedStreamMapping)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::PdbDbiModuleInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::pdb::yaml::StreamBlockList)
 
 #endif // LLVM_TOOLS_LLVMPDBDUMP_PDBYAML_H

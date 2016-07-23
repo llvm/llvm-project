@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s --check-prefix=SI --check-prefix=FUNC
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck %s --check-prefix=EG --check-prefix=FUNC
 
-declare float @llvm.fabs.f32(float) #0
+declare float @llvm.fabs.f32(float) #1
 
 ; FUNC-LABEL: {{^}}fp_to_sint_i32:
 ; EG: FLT_TO_INT {{\** *}}T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
@@ -17,7 +17,7 @@ define void @fp_to_sint_i32(i32 addrspace(1)* %out, float %in) {
 ; FUNC-LABEL: {{^}}fp_to_sint_i32_fabs:
 ; SI: v_cvt_i32_f32_e64 v{{[0-9]+}}, |s{{[0-9]+}}|{{$}}
 define void @fp_to_sint_i32_fabs(i32 addrspace(1)* %out, float %in) {
-  %in.fabs = call float @llvm.fabs.f32(float %in) #0
+  %in.fabs = call float @llvm.fabs.f32(float %in)
   %conv = fptosi float %in.fabs to i32
   store i32 %conv, i32 addrspace(1)* %out
   ret void
@@ -227,4 +227,26 @@ define void @fp_to_sint_v4i64(<4 x i64> addrspace(1)* %out, <4 x float> %x) {
   ret void
 }
 
-attributes #0 = { nounwind readnone }
+; FUNC-LABEL: {{^}}fp_to_uint_f32_to_i1:
+; SI: v_cmp_eq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, -1.0, s{{[0-9]+}}
+
+; EG: AND_INT
+; EG: SETE_DX10 {{[*]?}} T{{[0-9]+}}.{{[XYZW]}}, KC0[2].Z, literal.y,
+; EG-NEXT: -1082130432(-1.000000e+00)
+define void @fp_to_uint_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
+  %conv = fptosi float %in to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fp_to_uint_fabs_f32_to_i1:
+; SI: v_cmp_eq_f32_e64 s{{\[[0-9]+:[0-9]+\]}}, -1.0, |s{{[0-9]+}}|
+define void @fp_to_uint_fabs_f32_to_i1(i1 addrspace(1)* %out, float %in) #0 {
+  %in.fabs = call float @llvm.fabs.f32(float %in)
+  %conv = fptosi float %in.fabs to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }

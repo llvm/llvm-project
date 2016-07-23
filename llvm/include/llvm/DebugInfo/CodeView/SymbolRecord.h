@@ -15,18 +15,17 @@
 #include "llvm/DebugInfo/CodeView/CVRecord.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
 namespace llvm {
 namespace codeview {
 
-using llvm::support::ulittle16_t;
-using llvm::support::ulittle32_t;
-using llvm::support::little32_t;
+using support::ulittle16_t;
+using support::ulittle32_t;
+using support::little32_t;
 
 class SymbolRecord {
 protected:
@@ -1444,7 +1443,7 @@ public:
 };
 
 typedef CVRecord<SymbolKind> CVSymbol;
-typedef VarStreamArray<CVSymbol> CVSymbolArray;
+typedef msf::VarStreamArray<CVSymbol> CVSymbolArray;
 
 } // namespace codeview
 } // namespace llvm

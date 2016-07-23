@@ -155,19 +155,13 @@ inline StringRef getInstrProfInitFuncName() { return "__llvm_profile_init"; }
 /// A reference to the variable causes the linker to link in the runtime
 /// initialization module (which defines the hook variable).
 inline StringRef getInstrProfRuntimeHookVarName() {
-  return "__llvm_profile_runtime";
+  return INSTR_PROF_QUOTE(INSTR_PROF_PROFILE_RUNTIME_VAR);
 }
 
 /// Return the name of the compiler generated function that references the
 /// runtime hook variable. The function is a weak global.
 inline StringRef getInstrProfRuntimeHookVarUseFuncName() {
   return "__llvm_profile_runtime_user";
-}
-
-/// Return the name of the profile runtime interface that overrides the default
-/// profile data file name.
-inline StringRef getInstrProfFileOverriderFuncName() {
-  return "__llvm_profile_override_default_filename";
 }
 
 /// Return the marker used to separate PGO names during serialization.

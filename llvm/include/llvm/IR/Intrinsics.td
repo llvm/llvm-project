@@ -554,11 +554,11 @@ def int_lifetime_end    : Intrinsic<[],
                                     [llvm_i64_ty, llvm_ptr_ty],
                                     [IntrArgMemOnly, NoCapture<1>]>;
 def int_invariant_start : Intrinsic<[llvm_descriptor_ty],
-                                    [llvm_i64_ty, llvm_ptr_ty],
+                                    [llvm_i64_ty, llvm_anyptr_ty],
                                     [IntrArgMemOnly, NoCapture<1>]>;
 def int_invariant_end   : Intrinsic<[],
                                     [llvm_descriptor_ty, llvm_i64_ty,
-                                     llvm_ptr_ty],
+                                     llvm_anyptr_ty],
                                     [IntrArgMemOnly, NoCapture<2>]>;
 
 def int_invariant_group_barrier : Intrinsic<[llvm_ptr_ty], 

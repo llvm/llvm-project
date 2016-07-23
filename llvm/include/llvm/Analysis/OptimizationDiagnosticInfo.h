@@ -58,6 +58,14 @@ public:
   /// debug location from the Loop parameter \p L.
   void emitOptimizationRemark(const char *PassName, Loop *L, const Twine &Msg);
 
+  /// \brief Same as above but derives the debug location and the code region
+  /// from the debug location and the basic block of \p Inst, respectively.
+  void emitOptimizationRemark(const char *PassName, Instruction *Inst,
+                              const Twine &Msg) {
+    emitOptimizationRemark(PassName, Inst->getDebugLoc(), Inst->getParent(),
+                           Msg);
+  }
+
   /// Emit an optimization-missed message.
   ///
   /// \p PassName is the name of the pass emitting the message. If
@@ -72,6 +80,14 @@ public:
   /// debug location from the Loop parameter \p L.
   void emitOptimizationRemarkMissed(const char *PassName, Loop *L,
                                     const Twine &Msg);
+
+  /// \brief Same as above but derives the debug location and the code region
+  /// from the debug location and the basic block of \p Inst, respectively.
+  void emitOptimizationRemarkMissed(const char *PassName, Instruction *Inst,
+                                    const Twine &Msg) {
+    emitOptimizationRemarkMissed(PassName, Inst->getDebugLoc(),
+                                 Inst->getParent(), Msg);
+  }
 
   /// Emit an optimization analysis remark message.
   ///
@@ -88,6 +104,14 @@ public:
   /// debug location from the Loop parameter \p L.
   void emitOptimizationRemarkAnalysis(const char *PassName, Loop *L,
                                       const Twine &Msg);
+
+  /// \brief Same as above but derives the debug location and the code region
+  /// from the debug location and the basic block of \p Inst, respectively.
+  void emitOptimizationRemarkAnalysis(const char *PassName, Instruction *Inst,
+                                      const Twine &Msg) {
+    emitOptimizationRemarkAnalysis(PassName, Inst->getDebugLoc(),
+                                   Inst->getParent(), Msg);
+  }
 
   /// \brief Emit an optimization analysis remark related to floating-point
   /// non-commutativity.

@@ -105,6 +105,19 @@ define i1 @test9(i8 %A) {
   ret i1 %C
 }
 
+; FIXME: Vectors should fold the same way.
+
+define <2 x i1> @test9vec(<2 x i8> %a) {
+; CHECK-LABEL: @test9vec(
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> %a, <i8 123, i8 123>
+; CHECK-NEXT:    [[C:%.*]] = icmp eq <2 x i8> [[B]], <i8 34, i8 34>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = xor <2 x i8> %a, <i8 123, i8 123>
+  %c = icmp eq <2 x i8> %b, <i8 34, i8 34>
+  ret <2 x i1> %c
+}
+
 define i8 @test10(i8 %A) {
 ; CHECK-LABEL: @test10(
 ; CHECK-NEXT:    [[B:%.*]] = and i8 %A, 3
@@ -135,6 +148,19 @@ define i1 @test12(i8 %A) {
   %B = xor i8 %A, 4
   %c = icmp ne i8 %B, 0
   ret i1 %c
+}
+
+; FIXME: Vectors should fold the same way.
+
+define <2 x i1> @test12vec(<2 x i8> %a) {
+; CHECK-LABEL: @test12vec(
+; CHECK-NEXT:    [[B:%.*]] = xor <2 x i8> %a, <i8 4, i8 4>
+; CHECK-NEXT:    [[C:%.*]] = icmp ne <2 x i8> [[B]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[C]]
+;
+  %b = xor <2 x i8> %a, <i8 4, i8 4>
+  %c = icmp ne <2 x i8> %b, zeroinitializer
+  ret <2 x i1> %c
 }
 
 define i1 @test13(i8 %A, i8 %B) {
@@ -233,8 +259,8 @@ define i32 @test21(i1 %C, i32 %A, i32 %B) {
 
 define i32 @test22(i1 %X) {
 ; CHECK-LABEL: @test22(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 %X to i32
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 %X to i32
+; CHECK-NEXT:    ret i32 [[Z]]
 ;
   %Y = xor i1 %X, true
   %Z = zext i1 %Y to i32
@@ -246,8 +272,8 @@ define i32 @test22(i1 %X) {
 
 define i32 @fold_zext_xor_sandwich(i1 %X) {
 ; CHECK-LABEL: @fold_zext_xor_sandwich(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 %X to i32
-; CHECK-NEXT:    [[Q:%.*]] = xor i32 [[TMP1]], 3
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 %X to i32
+; CHECK-NEXT:    [[Q:%.*]] = xor i32 [[Z]], 3
 ; CHECK-NEXT:    ret i32 [[Q]]
 ;
   %Y = xor i1 %X, true
@@ -258,8 +284,8 @@ define i32 @fold_zext_xor_sandwich(i1 %X) {
 
 define <2 x i32> @fold_zext_xor_sandwich_vec(<2 x i1> %X) {
 ; CHECK-LABEL: @fold_zext_xor_sandwich_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i1> %X to <2 x i32>
-; CHECK-NEXT:    [[Q:%.*]] = xor <2 x i32> [[TMP1]], <i32 3, i32 3>
+; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i1> %X to <2 x i32>
+; CHECK-NEXT:    [[Q:%.*]] = xor <2 x i32> [[Z]], <i32 3, i32 3>
 ; CHECK-NEXT:    ret <2 x i32> [[Q]]
 ;
   %Y = xor <2 x i1> %X, <i1 true, i1 true>

@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/RawSession.h"
 
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/Msf/StreamInterface.h"
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
@@ -23,13 +23,14 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 using namespace llvm;
+using namespace llvm::msf;
 using namespace llvm::pdb;
 
 namespace {
 // We need a class which behaves like an immutable ByteStream, but whose data
 // is backed by an llvm::MemoryBuffer.  It also needs to own the underlying
 // MemoryBuffer, so this simple adapter is a good way to achieve that.
-class InputByteStream : public codeview::ByteStream<false> {
+class InputByteStream : public ByteStream<false> {
 public:
   explicit InputByteStream(std::unique_ptr<MemoryBuffer> Buffer)
       : ByteStream(ArrayRef<uint8_t>(Buffer->getBuffer().bytes_begin(),
@@ -40,8 +41,9 @@ public:
 };
 }
 
-RawSession::RawSession(std::unique_ptr<PDBFile> PdbFile)
-    : Pdb(std::move(PdbFile)) {}
+RawSession::RawSession(std::unique_ptr<PDBFile> PdbFile,
+                       std::unique_ptr<BumpPtrAllocator> Allocator)
+    : Pdb(std::move(PdbFile)), Allocator(std::move(Allocator)) {}
 
 RawSession::~RawSession() {}
 
@@ -57,13 +59,15 @@ Error RawSession::createFromPdb(StringRef Path,
   std::unique_ptr<MemoryBuffer> Buffer = std::move(*ErrorOrBuffer);
   auto Stream = llvm::make_unique<InputByteStream>(std::move(Buffer));
 
-  std::unique_ptr<PDBFile> File(new PDBFile(std::move(Stream)));
+  auto Allocator = llvm::make_unique<BumpPtrAllocator>();
+  auto File = llvm::make_unique<PDBFile>(std::move(Stream), *Allocator);
   if (auto EC = File->parseFileHeaders())
     return EC;
   if (auto EC = File->parseStreamData())
     return EC;
 
-  Session.reset(new RawSession(std::move(File)));
+  Session =
+      llvm::make_unique<RawSession>(std::move(File), std::move(Allocator));
 
   return Error::success();
 }

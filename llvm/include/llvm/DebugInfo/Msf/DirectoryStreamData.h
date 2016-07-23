@@ -7,29 +7,31 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_DEBUGINFO_PDB_RAW_DIRECTORYSTREAMDATA_H
-#define LLVM_DEBUGINFO_PDB_RAW_DIRECTORYSTREAMDATA_H
+#ifndef LLVM_DEBUGINFO_MSF_DIRECTORYSTREAMDATA_H
+#define LLVM_DEBUGINFO_MSF_DIRECTORYSTREAMDATA_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/PDB/Raw/IPDBStreamData.h"
-#include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
+#include "llvm/DebugInfo/Msf/IMsfFile.h"
+#include "llvm/DebugInfo/Msf/IMsfStreamData.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
-namespace pdb {
-class IPDBFile;
+namespace msf {
+class IMsfFile;
 
-class DirectoryStreamData : public IPDBStreamData {
+class DirectoryStreamData : public IMsfStreamData {
 public:
-  DirectoryStreamData(const PDBFile &File) : File(File) {}
+  DirectoryStreamData(uint32_t Length, ArrayRef<support::ulittle32_t> Blocks)
+      : Length(Length), Blocks(Blocks) {}
 
-  virtual uint32_t getLength() { return File.getNumDirectoryBytes(); }
+  virtual uint32_t getLength() { return Length; }
   virtual llvm::ArrayRef<llvm::support::ulittle32_t> getStreamBlocks() {
-    return File.getDirectoryBlockArray();
+    return Blocks;
   }
 
 private:
-  const PDBFile &File;
+  uint32_t Length;
+  ArrayRef<support::ulittle32_t> Blocks;
 };
 }
 }

@@ -7,13 +7,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 
-#include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/StreamRef.h"
+#include "llvm/DebugInfo/Msf/MsfError.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 
 using namespace llvm;
-using namespace llvm::codeview;
+using namespace llvm::msf;
 
 StreamReader::StreamReader(StreamRef S) : Stream(S), Offset(0) {}
 
@@ -86,7 +86,7 @@ Error StreamReader::readStreamRef(StreamRef &Ref) {
 
 Error StreamReader::readStreamRef(StreamRef &Ref, uint32_t Length) {
   if (bytesRemaining() < Length)
-    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   Ref = Stream.slice(Offset, Length);
   Offset += Length;
   return Error::success();

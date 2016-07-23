@@ -72,7 +72,8 @@ private:
 
   SDValue lowerPrivateTruncStore(StoreSDNode *Store, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerFPTOUINT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_UINT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
 
   SDValue lowerPrivateExtLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLOAD(SDValue Op, SelectionDAG &DAG) const;

@@ -680,7 +680,7 @@ public:
             .addImm(Alu->getOperand(8).getImm());
         Alu->eraseFromParent();
       }
-      MFI->StackSize = CFStack.MaxStackSize;
+      MFI->CFStackSize = CFStack.MaxStackSize;
     }
 
     return false;

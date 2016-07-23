@@ -10,10 +10,10 @@
 #ifndef LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 #define LLVM_DEBUGINFO_PDB_RAW_PUBLICSSTREAM_H
 
-#include "llvm/DebugInfo/CodeView/StreamArray.h"
 #include "llvm/DebugInfo/CodeView/SymbolRecord.h"
+#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
+#include "llvm/DebugInfo/Msf/StreamArray.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
-#include "llvm/DebugInfo/PDB/Raw/MappedBlockStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 
@@ -29,7 +29,7 @@ class PublicsStream {
   struct HeaderInfo;
 
 public:
-  PublicsStream(PDBFile &File, std::unique_ptr<MappedBlockStream> Stream);
+  PublicsStream(PDBFile &File, std::unique_ptr<msf::MappedBlockStream> Stream);
   ~PublicsStream();
   Error reload();
 
@@ -38,16 +38,16 @@ public:
   uint32_t getNumBuckets() const { return NumBuckets; }
   iterator_range<codeview::CVSymbolArray::Iterator>
   getSymbols(bool *HadError) const;
-  codeview::FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
+  msf::FixedStreamArray<support::ulittle32_t> getHashBuckets() const {
     return HashBuckets;
   }
-  codeview::FixedStreamArray<support::ulittle32_t> getAddressMap() const {
+  msf::FixedStreamArray<support::ulittle32_t> getAddressMap() const {
     return AddressMap;
   }
-  codeview::FixedStreamArray<support::ulittle32_t> getThunkMap() const {
+  msf::FixedStreamArray<support::ulittle32_t> getThunkMap() const {
     return ThunkMap;
   }
-  codeview::FixedStreamArray<SectionOffset> getSectionOffsets() const {
+  msf::FixedStreamArray<SectionOffset> getSectionOffsets() const {
     return SectionOffsets;
   }
 
@@ -56,14 +56,14 @@ public:
 private:
   PDBFile &Pdb;
 
-  std::unique_ptr<MappedBlockStream> Stream;
+  std::unique_ptr<msf::MappedBlockStream> Stream;
   uint32_t NumBuckets = 0;
   ArrayRef<uint8_t> Bitmap;
-  codeview::FixedStreamArray<PSHashRecord> HashRecords;
-  codeview::FixedStreamArray<support::ulittle32_t> HashBuckets;
-  codeview::FixedStreamArray<support::ulittle32_t> AddressMap;
-  codeview::FixedStreamArray<support::ulittle32_t> ThunkMap;
-  codeview::FixedStreamArray<SectionOffset> SectionOffsets;
+  msf::FixedStreamArray<PSHashRecord> HashRecords;
+  msf::FixedStreamArray<support::ulittle32_t> HashBuckets;
+  msf::FixedStreamArray<support::ulittle32_t> AddressMap;
+  msf::FixedStreamArray<support::ulittle32_t> ThunkMap;
+  msf::FixedStreamArray<SectionOffset> SectionOffsets;
 
   const HeaderInfo *Header;
   const GSIHashHeader *HashHdr;

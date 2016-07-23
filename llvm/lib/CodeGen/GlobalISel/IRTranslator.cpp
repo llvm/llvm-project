@@ -15,6 +15,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Function.h"
@@ -43,7 +44,7 @@ unsigned IRTranslator::getOrCreateVReg(const Value &Val) {
     assert(Val.getType()->isSized() &&
            "Don't know how to create an empty vreg");
     assert(!Val.getType()->isAggregateType() && "Not yet implemented");
-    unsigned Size = Val.getType()->getPrimitiveSizeInBits();
+    unsigned Size = DL->getTypeSizeInBits(Val.getType());
     unsigned VReg = MRI->createGenericVirtualRegister(Size);
     ValReg = VReg;
     assert(!isa<Constant>(Val) && "Not yet implemented");
@@ -99,6 +100,23 @@ bool IRTranslator::translateBr(const Instruction &Inst) {
   return true;
 }
 
+bool IRTranslator::translateStaticAlloca(const AllocaInst &AI) {
+  assert(AI.isStaticAlloca() && "only handle static allocas now");
+  MachineFunction &MF = MIRBuilder.getMF();
+  unsigned ElementSize = DL->getTypeStoreSize(AI.getAllocatedType());
+  unsigned Size =
+      ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
+
+  unsigned Alignment = AI.getAlignment();
+  if (!Alignment)
+    Alignment = DL->getABITypeAlignment(AI.getAllocatedType());
+
+  unsigned Res = getOrCreateVReg(AI);
+  int FI = MF.getFrameInfo()->CreateStackObject(Size, Alignment, false, &AI);
+  MIRBuilder.buildFrameIndex(LLT::pointer(0), Res, FI);
+  return true;
+}
+
 bool IRTranslator::translate(const Instruction &Inst) {
   MIRBuilder.setDebugLoc(Inst.getDebugLoc());
   switch(Inst.getOpcode()) {
@@ -107,16 +125,21 @@ bool IRTranslator::translate(const Instruction &Inst) {
     return translateBinaryOp(TargetOpcode::G_ADD, Inst);
   case Instruction::Sub:
     return translateBinaryOp(TargetOpcode::G_SUB, Inst);
+
   // Bitwise operations.
   case Instruction::And:
     return translateBinaryOp(TargetOpcode::G_AND, Inst);
   case Instruction::Or:
     return translateBinaryOp(TargetOpcode::G_OR, Inst);
+
   // Branch operations.
   case Instruction::Br:
     return translateBr(Inst);
   case Instruction::Ret:
     return translateReturn(Inst);
+
+  case Instruction::Alloca:
+    return translateStaticAlloca(cast<AllocaInst>(Inst));
 
   default:
     llvm_unreachable("Opcode not supported");
@@ -138,6 +161,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &MF) {
   CLI = MF.getSubtarget().getCallLowering();
   MIRBuilder.setMF(MF);
   MRI = &MF.getRegInfo();
+  DL = &F.getParent()->getDataLayout();
+
   // Setup the arguments.
   MachineBasicBlock &MBB = getOrCreateBB(F.front());
   MIRBuilder.setMBB(MBB);

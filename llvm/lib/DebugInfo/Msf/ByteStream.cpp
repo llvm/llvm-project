@@ -7,26 +7,26 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/DebugInfo/CodeView/ByteStream.h"
-#include "llvm/DebugInfo/CodeView/CodeViewError.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/Msf/MsfError.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 #include <cstring>
 
 using namespace llvm;
-using namespace llvm::codeview;
+using namespace llvm::msf;
 
 static Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Src,
                         ArrayRef<uint8_t> Dest) {
-  return make_error<CodeViewError>(cv_error_code::operation_unsupported,
-                                   "ByteStream is immutable.");
+  return make_error<MsfError>(msf_error_code::not_writable,
+                              "ByteStream is immutable.");
 }
 
 static Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Src,
                         MutableArrayRef<uint8_t> Dest) {
   if (Dest.size() < Src.size())
-    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   if (Offset > Src.size() - Dest.size())
-    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
 
   ::memcpy(Dest.data() + Offset, Src.data(), Src.size());
   return Error::success();
@@ -36,9 +36,9 @@ template <bool Writable>
 Error ByteStream<Writable>::readBytes(uint32_t Offset, uint32_t Size,
                                       ArrayRef<uint8_t> &Buffer) const {
   if (Offset > Data.size())
-    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   if (Data.size() < Size + Offset)
-    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   Buffer = Data.slice(Offset, Size);
   return Error::success();
 }
@@ -47,7 +47,7 @@ template <bool Writable>
 Error ByteStream<Writable>::readLongestContiguousChunk(
     uint32_t Offset, ArrayRef<uint8_t> &Buffer) const {
   if (Offset >= Data.size())
-    return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
+    return make_error<MsfError>(msf_error_code::insufficient_buffer);
   Buffer = Data.slice(Offset);
   return Error::success();
 }
@@ -72,7 +72,7 @@ template <bool Writable> StringRef ByteStream<Writable>::str() const {
 }
 
 namespace llvm {
-namespace codeview {
+namespace msf {
 template class ByteStream<true>;
 template class ByteStream<false>;
 }

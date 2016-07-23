@@ -11,8 +11,11 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAMBUILDER_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
+#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -24,7 +27,7 @@ class PDBFile;
 
 class DbiStreamBuilder {
 public:
-  DbiStreamBuilder();
+  DbiStreamBuilder(BumpPtrAllocator &Allocator);
 
   DbiStreamBuilder(const DbiStreamBuilder &) = delete;
   DbiStreamBuilder &operator=(const DbiStreamBuilder &) = delete;
@@ -39,9 +42,27 @@ public:
 
   uint32_t calculateSerializedLength() const;
 
+  Error addModuleInfo(StringRef ObjFile, StringRef Module);
+  Error addModuleSourceFile(StringRef Module, StringRef File);
+
   Expected<std::unique_ptr<DbiStream>> build(PDBFile &File);
 
 private:
+  uint32_t calculateModiSubstreamSize() const;
+  uint32_t calculateFileInfoSubstreamSize() const;
+  uint32_t calculateNamesBufferSize() const;
+
+  Error generateModiSubstream();
+  Error generateFileInfoSubstream();
+
+  struct ModuleInfo {
+    std::vector<StringRef> SourceFiles;
+    StringRef Obj;
+    StringRef Mod;
+  };
+
+  BumpPtrAllocator &Allocator;
+
   Optional<PdbRaw_DbiVer> VerHeader;
   uint32_t Age;
   uint16_t BuildNumber;
@@ -49,6 +70,15 @@ private:
   uint16_t PdbDllRbld;
   uint16_t Flags;
   PDB_Machine MachineType;
+
+  StringMap<std::unique_ptr<ModuleInfo>> ModuleInfos;
+  std::vector<ModuleInfo *> ModuleInfoList;
+
+  StringMap<uint32_t> SourceFileNames;
+
+  msf::StreamRef NamesBuffer;
+  msf::ByteStream<true> ModInfoBuffer;
+  msf::ByteStream<true> FileInfoBuffer;
 };
 }
 }

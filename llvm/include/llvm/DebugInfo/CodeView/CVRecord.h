@@ -12,9 +12,10 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/DebugInfo/CodeView/CodeViewError.h"
 #include "llvm/DebugInfo/CodeView/RecordSerialization.h"
-#include "llvm/DebugInfo/CodeView/StreamInterface.h"
-#include "llvm/DebugInfo/CodeView/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 #include "llvm/Support/Endian.h"
 
 namespace llvm {
@@ -26,10 +27,14 @@ template <typename Kind> struct CVRecord {
   ArrayRef<uint8_t> Data;
   ArrayRef<uint8_t> RawData;
 };
+}
+namespace msf {
 
-template <typename Kind> struct VarStreamArrayExtractor<CVRecord<Kind>> {
+template <typename Kind>
+struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
   Error operator()(StreamRef Stream, uint32_t &Len,
-                   CVRecord<Kind> &Item) const {
+                   codeview::CVRecord<Kind> &Item) const {
+    using namespace codeview;
     const RecordPrefix *Prefix = nullptr;
     StreamReader Reader(Stream);
     uint32_t Offset = Reader.getOffset();

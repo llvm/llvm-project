@@ -207,11 +207,10 @@ define <4 x double> @test_mm256_broadcast_pd(<2 x double>* %a0) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
-  %arg0 = bitcast <2 x double>* %a0 to i8*
-  %res = call <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8* %arg0)
+  %ld = load <2 x double>, <2 x double>* %a0
+  %res = shufflevector <2 x double> %ld, <2 x double> %ld, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
   ret <4 x double> %res
 }
-declare <4 x double> @llvm.x86.avx.vbroadcastf128.pd.256(i8*) nounwind readonly
 
 define <8 x float> @test_mm256_broadcast_ps(<4 x float>* %a0) nounwind {
 ; X32-LABEL: test_mm256_broadcast_ps:
@@ -224,11 +223,10 @@ define <8 x float> @test_mm256_broadcast_ps(<4 x float>* %a0) nounwind {
 ; X64:       # BB#0:
 ; X64-NEXT:    vbroadcastf128 {{.*#+}} ymm0 = mem[0,1,0,1]
 ; X64-NEXT:    retq
-  %arg0 = bitcast <4 x float>* %a0 to i8*
-  %res = call <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8* %arg0)
+  %ld = load <4 x float>, <4 x float>* %a0
+  %res = shufflevector <4 x float> %ld, <4 x float> %ld, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
   ret <8 x float> %res
 }
-declare <8 x float> @llvm.x86.avx.vbroadcastf128.ps.256(i8*) nounwind readonly
 
 define <4 x double> @test_mm256_broadcast_sd(double* %a0) nounwind {
 ; X32-LABEL: test_mm256_broadcast_sd:

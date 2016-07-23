@@ -446,6 +446,11 @@ public:
   /// If the pointer isn't i8* it will be converted.
   CallInst *CreateLifetimeEnd(Value *Ptr, ConstantInt *Size = nullptr);
 
+  /// Create a call to invariant.start intrinsic.
+  ///
+  /// If the pointer isn't i8* it will be converted.
+  CallInst *CreateInvariantStart(Value *Ptr, ConstantInt *Size = nullptr);
+
   /// \brief Create a call to Masked Load intrinsic
   CallInst *CreateMaskedLoad(Value *Ptr, unsigned Align, Value *Mask,
                              Value *PassThru = nullptr, const Twine &Name = "");

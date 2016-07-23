@@ -27,6 +27,7 @@ class CallLowering;
 class DataLayout;
 class MachineFunction;
 class MachineInstr;
+class MachineLegalizer;
 class RegisterBankInfo;
 class SDep;
 class SUnit;
@@ -91,6 +92,10 @@ public:
   /// Target can subclass this hook to select a different DAG scheduler.
   virtual RegisterScheduler::FunctionPassCtor
       getDAGScheduler(CodeGenOpt::Level) const {
+    return nullptr;
+  }
+
+  virtual const MachineLegalizer *getMachineLegalizer() const {
     return nullptr;
   }
 

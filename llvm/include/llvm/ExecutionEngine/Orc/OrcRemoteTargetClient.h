@@ -688,7 +688,7 @@ public:
 
 private:
   OrcRemoteTargetClient(ChannelT &Channel, Error &Err) : Channel(Channel) {
-    ErrorAsOutParameter EAO(Err);
+    ErrorAsOutParameter EAO(&Err);
     if (auto RIOrErr = callST<GetRemoteInfo>(Channel)) {
       std::tie(RemoteTargetTriple, RemotePointerSize, RemotePageSize,
                RemoteTrampolineSize, RemoteIndirectStubSize) = *RIOrErr;
