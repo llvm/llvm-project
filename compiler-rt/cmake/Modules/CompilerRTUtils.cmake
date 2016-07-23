@@ -113,16 +113,18 @@ macro(test_target_arch arch def)
     set(argstring "${argstring} ${arg}")
   endforeach()
   check_compile_definition("${def}" "${argstring}" HAS_${arch}_DEF)
-  if(NOT HAS_${arch}_DEF)
-    set(CAN_TARGET_${arch} FALSE)
-  elseif(TEST_COMPILE_ONLY)
-    try_compile_only(CAN_TARGET_${arch} ${TARGET_${arch}_CFLAGS})
-  else()
-    set(argstring "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
-    try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
-                COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS}"
-                OUTPUT_VARIABLE TARGET_${arch}_OUTPUT
-                CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS:STRING=${argstring}")
+  if(NOT DEFINED CAN_TARGET_${arch})
+    if(NOT HAS_${arch}_DEF)
+      set(CAN_TARGET_${arch} FALSE)
+    elseif(TEST_COMPILE_ONLY)
+      try_compile_only(CAN_TARGET_${arch} ${TARGET_${arch}_CFLAGS})
+    else()
+      set(argstring "${CMAKE_EXE_LINKER_FLAGS} ${argstring}")
+      try_compile(CAN_TARGET_${arch} ${CMAKE_BINARY_DIR} ${SIMPLE_SOURCE}
+                  COMPILE_DEFINITIONS "${TARGET_${arch}_CFLAGS}"
+                  OUTPUT_VARIABLE TARGET_${arch}_OUTPUT
+                  CMAKE_FLAGS "-DCMAKE_EXE_LINKER_FLAGS:STRING=${argstring}")
+    endif()
   endif()
   if(${CAN_TARGET_${arch}})
     list(APPEND COMPILER_RT_SUPPORTED_ARCH ${arch})
