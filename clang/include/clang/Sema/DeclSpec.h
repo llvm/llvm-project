@@ -1752,13 +1752,17 @@ private:
   /// \brief The asm label, if specified.
   Expr *AsmLabel;
 
+#ifndef _MSC_VER
   union {
+#endif
     /// InlineParams - This is a local array used for the first function decl
     /// chunk to avoid going to the heap for the common case when we have one
     /// function chunk in the declarator.
     DeclaratorChunk::ParamInfo InlineParams[16];
     DecompositionDeclarator::Binding InlineBindings[16];
+#ifndef _MSC_VER
   };
+#endif
 
   /// \brief If this is the second or subsequent declarator in this declaration,
   /// the location of the comma before this declarator.

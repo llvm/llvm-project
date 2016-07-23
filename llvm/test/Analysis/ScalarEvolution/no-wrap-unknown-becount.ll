@@ -63,6 +63,50 @@ leave:
   ret void
 }
 
+define void @s_3(i32 %start, i1* %cond) {
+; CHECK-LABEL: Classifying expressions for: @s_3
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.inc, %be ]
+  %cmp = icmp slt i32 %iv, 10000
+  br i1 %cmp, label %be, label %leave
+
+be:
+  %iv.inc = add i32 %iv, 3
+  %iv.inc.sext = sext i32 %iv.inc to i64
+; CHECK:  %iv.inc.sext = sext i32 %iv.inc to i64
+; CHECK-NEXT:  -->  {(sext i32 (3 + %start) to i64),+,3}<nsw><%loop>
+  %c = load volatile i1, i1* %cond
+  br i1 %c, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @s_4(i32 %start, i1* %cond) {
+; CHECK-LABEL: Classifying expressions for: @s_4
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.inc, %be ]
+  %cmp = icmp sgt i32 %iv, -1000
+  br i1 %cmp, label %be, label %leave
+
+be:
+  %iv.inc = add i32 %iv, -3
+  %iv.inc.sext = sext i32 %iv.inc to i64
+; CHECK:  %iv.inc.sext = sext i32 %iv.inc to i64
+; CHECK-NEXT:  -->  {(sext i32 (-3 + %start) to i64),+,-3}<nsw><%loop>
+  %c = load volatile i1, i1* %cond
+  br i1 %c, label %loop, label %leave
+
+leave:
+  ret void
+}
+
 define void @u_0(i32 %n, i1* %cond) {
 ; CHECK-LABEL: Classifying expressions for: @u_0
 entry:
@@ -116,6 +160,28 @@ loop:
 ; CHECK:  %iv.zext = zext i32 %iv to i64
 ; CHECK-NEXT:  -->  {30000,+,-2}<nw><%loop>
   call void @llvm.assume(i1 %cmp)
+  %c = load volatile i1, i1* %cond
+  br i1 %c, label %loop, label %leave
+
+leave:
+  ret void
+}
+
+define void @u_3(i32 %start, i1* %cond) {
+; CHECK-LABEL: Classifying expressions for: @u_3
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ %start, %entry ], [ %iv.inc, %be ]
+  %cmp = icmp ult i32 %iv, 10000
+  br i1 %cmp, label %be, label %leave
+
+be:
+  %iv.inc = add i32 %iv, 3
+  %iv.inc.zext = zext i32 %iv.inc to i64
+; CHECK:  %iv.inc.zext = zext i32 %iv.inc to i64
+; CHECK-NEXT:  -->  {(zext i32 (3 + %start) to i64),+,3}<nuw><%loop>
   %c = load volatile i1, i1* %cond
   br i1 %c, label %loop, label %leave
 

@@ -1099,10 +1099,14 @@ namespace llvm {
     bool splitBinaryAdd(const SCEV *Expr, const SCEV *&L, const SCEV *&R,
                         SCEV::NoWrapFlags &Flags);
 
-    /// Return true if More == (Less + C), where C is a constant.  This is
-    /// intended to be used as a cheaper substitute for full SCEV subtraction.
-    bool computeConstantDifference(const SCEV *Less, const SCEV *More,
-                                   APInt &C);
+    /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
+    /// constant, and None if it isn't.
+    ///
+    /// This is intended to be a cheaper version of getMinusSCEV.  We can be
+    /// frugal here since we just bail out of actually constructing and
+    /// canonicalizing an expression in the cases where the result isn't going
+    /// to be a constant.
+    Optional<APInt> computeConstantDifference(const SCEV *LHS, const SCEV *RHS);
 
     /// Drop memoized information computed for S.
     void forgetMemoizedResults(const SCEV *S);
@@ -1170,15 +1174,6 @@ namespace llvm {
     /// if \p I will never generate poison under the assumption that \p I is an
     /// add recurrence on the loop \p L.
     bool isAddRecNeverPoison(const Instruction *I, const Loop *L);
-
-    /// Compute \p LHS - \p RHS and returns the result as an APInt if it is a
-    /// constant, and None if it isn't.
-    ///
-    /// This is intended to be a cheaper version of getMinusSCEV.  We can be
-    /// frugal here since we just bail out of actually constructing and
-    /// canonicalizing an expression in the cases where the result isn't going
-    /// to be a constant.
-    Optional<APInt> getConstantDifference(const SCEV *LHS, const SCEV *RHS);
 
   public:
     ScalarEvolution(Function &F, TargetLibraryInfo &TLI, AssumptionCache &AC,
