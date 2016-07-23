@@ -96,25 +96,9 @@ class SizeClassMap {
   // For large size classes we use one of the chunks to store the batch.
   // sizeof(TransferBatch) must be a power of 2 for more efficient allocation.
   struct TransferBatch {
-    void SetFromRange(uptr region_beg, uptr beg_offset, uptr step, uptr count) {
-      count_ = count;
-      for (uptr i = 0; i < count; i++)
-        batch_[i] = (void*)(region_beg + beg_offset + i * step);
-    }
-    void SetFromArray(void *batch[], uptr count) {
-      count_ = count;
-      for (uptr i = 0; i < count; i++)
-        batch_[i] = batch[i];
-    }
-    void *Get(uptr idx) {
-      CHECK_LT(idx, count_);
-      return batch_[idx];
-    }
-    uptr Count() const { return count_; }
     TransferBatch *next;
-   private:
-    uptr count_;
-    void *batch_[kMaxNumCached];
+    uptr count;
+    void *batch[kMaxNumCached];
   };
   static const uptr kBatchSize = sizeof(TransferBatch);
   COMPILER_CHECK((kBatchSize & (kBatchSize - 1)) == 0);
@@ -225,3 +209,4 @@ class SizeClassMap {
 typedef SizeClassMap<17, 126, 16> DefaultSizeClassMap;
 typedef SizeClassMap<17, 62,  14> CompactSizeClassMap;
 template<class SizeClassAllocator> struct SizeClassAllocatorLocalCache;
+

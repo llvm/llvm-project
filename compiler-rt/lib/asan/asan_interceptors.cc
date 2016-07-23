@@ -725,12 +725,11 @@ void InitializeAsanInterceptors() {
   InitializeCommonInterceptors();
 
   // Intercept mem* functions.
+  ASAN_INTERCEPT_FUNC(memcpy);
   ASAN_INTERCEPT_FUNC(memset);
-  ASAN_INTERCEPT_FUNC(memmove);
   if (PLATFORM_HAS_DIFFERENT_MEMCPY_AND_MEMMOVE) {
-    ASAN_INTERCEPT_FUNC(memcpy);
-  } else {
-    ASSIGN_REAL(memcpy, memmove);
+    // In asan, REAL(memmove) is not used, but it is used in msan.
+    ASAN_INTERCEPT_FUNC(memmove);
   }
   CHECK(REAL(memcpy));
 

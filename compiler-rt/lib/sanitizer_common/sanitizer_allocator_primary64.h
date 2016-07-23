@@ -76,15 +76,15 @@ class SizeClassAllocator64 {
     Batch *b = region->free_list.Pop();
     if (!b)
       b = PopulateFreeList(stat, c, class_id, region);
-    region->n_allocated += b->Count();
+    region->n_allocated += b->count;
     return b;
   }
 
   NOINLINE void DeallocateBatch(AllocatorStats *stat, uptr class_id, Batch *b) {
     RegionInfo *region = GetRegionInfo(class_id);
-    CHECK_GT(b->Count(), 0);
+    CHECK_GT(b->count, 0);
     region->free_list.Push(b);
-    region->n_freed += b->Count();
+    region->n_freed += b->count;
   }
 
   bool PointerIsMine(const void *p) {
@@ -310,13 +310,15 @@ class SizeClassAllocator64 {
     }
     for (;;) {
       b = c->CreateBatch(class_id, this, (Batch*)(region_beg + beg_idx));
-      b->SetFromRange(region_beg, beg_idx, size, count);
+      b->count = count;
+      for (uptr i = 0; i < count; i++)
+        b->batch[i] = (void*)(region_beg + beg_idx + i * size);
       region->allocated_user += count * size;
       CHECK_LE(region->allocated_user, region->mapped_user);
       beg_idx += count * size;
       if (beg_idx + count * size + size > region->mapped_user)
         break;
-      CHECK_GT(b->Count(), 0);
+      CHECK_GT(b->count, 0);
       region->free_list.Push(b);
     }
     return b;

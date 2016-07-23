@@ -47,6 +47,13 @@ void RunTestCase(MultiStringType const& MS) {
     assert(p.string<CharT>() == TestPath);
     assert(p.string<CharT>() == S);
   }
+  {
+    const std::basic_string_view<CharT> S(TestPath);
+    path p(S);
+    assert(p.native() == Expect);
+    assert(p.string<CharT>() == TestPath);
+    assert(p.string<CharT>() == S);
+  }
   // Char* pointers
   {
     path p(TestPath);

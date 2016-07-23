@@ -80,6 +80,7 @@ int main()
     const path p1(TC.LHS);
     const path p2(TC.RHS);
     const std::string R(TC.RHS);
+    const std::string_view RV(TC.RHS);
     const int E = TC.expect;
     { // compare(...) functions
       DisableAllocationGuard g; // none of these operations should allocate
@@ -88,7 +89,8 @@ int main()
       int ret1 = p1.compare(p2);
       int ret2 = p1.compare(R);
       int ret3 = p1.compare(TC.RHS);
-      assert(ret1 == ret2 && ret1 == ret3);
+      int ret4 = p1.compare(RV);
+      assert(ret1 == ret2 && ret1 == ret3 && ret1 == ret4);
       int normalized_ret = ret1 < 0 ? -1 : (ret1 > 0 ? 1 : 0);
       assert(normalized_ret == E);
 

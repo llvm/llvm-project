@@ -1,4 +1,5 @@
 synchronization/barrier.cl
+workitem/get_global_id.cl
 workitem/get_group_id.cl
 workitem/get_local_id.cl
 workitem/get_local_size.cl

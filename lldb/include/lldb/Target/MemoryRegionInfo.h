@@ -10,6 +10,7 @@
 #ifndef lldb_MemoryRegionInfo_h
 #define lldb_MemoryRegionInfo_h
 
+#include "lldb/Core/ConstString.h"
 #include "lldb/Core/RangeMap.h"
 #include "lldb/Utility/Range.h"
 
@@ -81,6 +82,12 @@ namespace lldb_private
         {
             return m_mapped;
         }
+
+        const ConstString&
+        GetName () const
+        {
+            return m_name;
+        }
         
         void
         SetReadable (OptionalBool val)
@@ -104,6 +111,12 @@ namespace lldb_private
         SetMapped (OptionalBool val)
         {
             m_mapped = val;
+        }
+
+        void
+        SetName (const char* name)
+        {
+            m_name = ConstString(name);
         }
 
         //----------------------------------------------------------------------
@@ -157,6 +170,7 @@ namespace lldb_private
         OptionalBool m_write;
         OptionalBool m_execute;
         OptionalBool m_mapped;
+        ConstString m_name;
     };
 }
 

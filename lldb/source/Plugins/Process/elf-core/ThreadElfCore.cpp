@@ -228,8 +228,8 @@ ELFLinuxPrStatus::Parse(DataExtractor &data, ArchSpec &arch)
     {
         case ArchSpec::eCore_s390x_generic:
         case ArchSpec::eCore_x86_64_x86_64:
-            len = data.ExtractBytes(0, ELFLINUXPRSTATUS64_SIZE, byteorder, this);
-            return len == ELFLINUXPRSTATUS64_SIZE;
+            len = data.ExtractBytes(0, sizeof(ELFLinuxPrStatus), byteorder, this);
+            return len == sizeof(ELFLinuxPrStatus);
         default:
             return false;
     }
@@ -252,8 +252,8 @@ ELFLinuxPrPsInfo::Parse(DataExtractor &data, ArchSpec &arch)
     {
         case ArchSpec::eCore_s390x_generic:
         case ArchSpec::eCore_x86_64_x86_64:
-            len = data.ExtractBytes(0, ELFLINUXPRPSINFO64_SIZE, byteorder, this);
-            return len == ELFLINUXPRPSINFO64_SIZE;
+            len = data.ExtractBytes(0, sizeof(ELFLinuxPrPsInfo), byteorder, this);
+            return len == sizeof(ELFLinuxPrPsInfo);
         default:
             return false;
     }

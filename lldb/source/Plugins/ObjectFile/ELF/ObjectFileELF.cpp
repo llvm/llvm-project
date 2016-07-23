@@ -2211,10 +2211,12 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
             break;
 
         const char *symbol_name = strtab_data.PeekCStr(symbol.st_name);
+        if (!symbol_name)
+            symbol_name = "";
 
         // No need to add non-section symbols that have no names
         if (symbol.getType() != STT_SECTION &&
-            (symbol_name == NULL || symbol_name[0] == '\0'))
+            (symbol_name == nullptr || symbol_name[0] == '\0'))
             continue;
 
         // Skipping oatdata and oatexec sections if it is requested. See details above the
@@ -2461,7 +2463,7 @@ ObjectFileELF::ParseSymbols (Symtab *symtab,
 
         bool is_global = symbol.getBinding() == STB_GLOBAL;
         uint32_t flags = symbol.st_other << 8 | symbol.st_info | additional_flags;
-        bool is_mangled = symbol_name ? (symbol_name[0] == '_' && symbol_name[1] == 'Z') : false;
+        bool is_mangled = (symbol_name[0] == '_' && symbol_name[1] == 'Z');
 
         llvm::StringRef symbol_ref(symbol_name);
 
