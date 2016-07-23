@@ -593,7 +593,7 @@ bool ItaniumMangleContextImpl::shouldMangleCXXName(const NamedDecl *D) {
     return false;
 
   const VarDecl *VD = dyn_cast<VarDecl>(D);
-  if (VD) {
+  if (VD && !isa<DecompositionDecl>(D)) {
     // C variables are not mangled.
     if (VD->isExternC())
       return false;
@@ -1193,7 +1193,23 @@ void CXXNameMangler::mangleUnqualifiedName(const NamedDecl *ND,
   //                     ::= <source-name>
   switch (Name.getNameKind()) {
   case DeclarationName::Identifier: {
-    if (const IdentifierInfo *II = Name.getAsIdentifierInfo()) {
+    const IdentifierInfo *II = Name.getAsIdentifierInfo();
+
+    // We mangle decomposition declarations as the name of their first binding.
+    if (auto *DD = dyn_cast<DecompositionDecl>(ND)) {
+      auto B = DD->bindings();
+      if (B.begin() == B.end()) {
+        // FIXME: This is ill-formed but we accept it as an extension.
+        DiagnosticsEngine &Diags = Context.getDiags();
+        unsigned DiagID = Diags.getCustomDiagID(DiagnosticsEngine::Error,
+            "cannot mangle global empty decomposition decl");
+        Diags.Report(DD->getLocation(), DiagID);
+        break;
+      }
+      II = (*B.begin())->getIdentifier();
+    }
+
+    if (II) {
       // We must avoid conflicts between internally- and externally-
       // linked variable and function declaration names in the same TU:
       //   void test() { extern void foo(); }

@@ -3609,7 +3609,7 @@ static void addPGOAndCoverageFlags(Compilation &C, const Driver &D,
     if (PGOGenerateArg->getOption().matches(
             options::OPT_fprofile_generate_EQ)) {
       SmallString<128> Path(PGOGenerateArg->getValue());
-      llvm::sys::path::append(Path, "default.profraw");
+      llvm::sys::path::append(Path, "default_%m.profraw");
       CmdArgs.push_back(
           Args.MakeArgString(Twine("-fprofile-instrument-path=") + Path));
     }

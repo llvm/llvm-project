@@ -139,7 +139,6 @@ public:
   static bool classofKind(Kind K) { return K == AccessSpec; }
 };
 
-
 /// \brief Represents a base class of a C++ class.
 ///
 /// Each CXXBaseSpecifier represents a single, direct base class (or
@@ -536,11 +535,10 @@ class CXXRecordDecl : public RecordDecl {
         MethodTyInfo(Info) {
       IsLambda = true;
 
-      // C++11 [expr.prim.lambda]p3:
-      //   This class type is neither an aggregate nor a literal type.
+      // C++1z [expr.prim.lambda]p4:
+      //   This class type is not an aggregate type.
       Aggregate = false;
       PlainOldData = false;
-      HasNonLiteralTypeFieldsOrBases = true;
     }
 
     /// \brief Whether this lambda is known to be dependent, even if its
@@ -1339,11 +1337,15 @@ public:
   ///
   /// We resolve DR1361 by ignoring the second bullet. We resolve DR1452 by
   /// treating types with trivial default constructors as literal types.
+  ///
+  /// Only in C++1z and beyond, are lambdas literal types.
   bool isLiteral() const {
     return hasTrivialDestructor() &&
-           (isAggregate() || hasConstexprNonCopyMoveConstructor() ||
-            hasTrivialDefaultConstructor()) &&
-           !hasNonLiteralTypeFieldsOrBases();
+           (!isLambda() || getASTContext().getLangOpts().CPlusPlus1z) &&
+           !hasNonLiteralTypeFieldsOrBases() &&
+           (isAggregate() || isLambda() ||
+            hasConstexprNonCopyMoveConstructor() ||
+            hasTrivialDefaultConstructor());
   }
 
   /// \brief If this record is an instantiation of a member class,
@@ -3364,6 +3366,95 @@ public:
   static bool classofKind(Kind K) { return K == StaticAssert; }
 
   friend class ASTDeclReader;
+};
+
+/// A binding in a decomposition declaration. For instance, given:
+///
+///   int n[3];
+///   auto &[a, b, c] = n;
+///
+/// a, b, and c are BindingDecls, whose bindings are the expressions
+/// x[0], x[1], and x[2] respectively, where x is the implicit
+/// DecompositionDecl of type 'int (&)[3]'.
+class BindingDecl : public ValueDecl {
+  void anchor() override;
+
+  /// The binding represented by this declaration. References to this
+  /// declaration are effectively equivalent to this expression (except
+  /// that it is only evaluated once at the point of declaration of the
+  /// binding).
+  Expr *Binding;
+
+  BindingDecl(DeclContext *DC, SourceLocation IdLoc, IdentifierInfo *Id)
+      : ValueDecl(Decl::Binding, DC, IdLoc, Id, QualType()), Binding(nullptr) {}
+
+public:
+  static BindingDecl *Create(ASTContext &C, DeclContext *DC,
+                             SourceLocation IdLoc, IdentifierInfo *Id);
+  static BindingDecl *CreateDeserialized(ASTContext &C, unsigned ID);
+
+  /// Get the expression to which this declaration is bound. This may be null
+  /// in two different cases: while parsing the initializer for the
+  /// decomposition declaration, and when the initializer is type-dependent.
+  Expr *getBinding() const { return Binding; }
+
+  /// Set the binding for this BindingDecl, along with its declared type (which
+  /// should be a possibly-cv-qualified form of the type of the binding, or a
+  /// reference to such a type).
+  void setBinding(QualType DeclaredType, Expr *Binding) {
+    setType(DeclaredType);
+    this->Binding = Binding;
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Decl::Binding; }
+};
+
+/// A decomposition declaration. For instance, given:
+///
+///   int n[3];
+///   auto &[a, b, c] = n;
+///
+/// the second line declares a DecompositionDecl of type 'int (&)[3]', and
+/// three BindingDecls (named a, b, and c). An instance of this class is always
+/// unnamed, but behaves in almost all other respects like a VarDecl.
+class DecompositionDecl final
+    : public VarDecl,
+      private llvm::TrailingObjects<DecompositionDecl, BindingDecl *> {
+  void anchor() override;
+
+  /// The number of BindingDecl*s following this object.
+  unsigned NumBindings;
+
+  DecompositionDecl(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
+                    SourceLocation LSquareLoc, QualType T,
+                    TypeSourceInfo *TInfo, StorageClass SC,
+                    ArrayRef<BindingDecl *> Bindings)
+      : VarDecl(Decomposition, C, DC, StartLoc, LSquareLoc, nullptr, T, TInfo,
+                SC),
+        NumBindings(Bindings.size()) {
+    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
+                            getTrailingObjects<BindingDecl *>());
+  }
+
+public:
+  static DecompositionDecl *Create(ASTContext &C, DeclContext *DC,
+                                   SourceLocation StartLoc,
+                                   SourceLocation LSquareLoc,
+                                   QualType T, TypeSourceInfo *TInfo,
+                                   StorageClass S,
+                                   ArrayRef<BindingDecl *> Bindings);
+  static DecompositionDecl *CreateDeserialized(ASTContext &C, unsigned ID,
+                                               unsigned NumBindings);
+
+  ArrayRef<BindingDecl *> bindings() const {
+    return llvm::makeArrayRef(getTrailingObjects<BindingDecl *>(), NumBindings);
+  }
+
+  static bool classof(const Decl *D) { return classofKind(D->getKind()); }
+  static bool classofKind(Kind K) { return K == Decomposition; }
+
+  friend TrailingObjects;
 };
 
 /// An instance of this class represents the declaration of a property

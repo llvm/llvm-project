@@ -1,8 +1,8 @@
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks %s
 // RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing %s 
-// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fms-extensions %s 
-// RUN: %clang_cc1 -std=c++1z -verify -fsyntax-only -fblocks -fdelayed-template-parsing -fms-extensions %s 
+// RUN: %clang_cc1 -std=c++14 -verify -fsyntax-only -fblocks %s -DCPP14_AND_EARLIER
 
+#ifndef CPP14_AND_EARLIER
 namespace test_constexpr_checking {
 
 namespace ns1 {
@@ -34,3 +34,15 @@ namespace ns3 {
 } 
 
 } // end ns test_constexpr_call
+
+#endif
+
+namespace test_lambda_is_literal {
+#ifdef CPP14_AND_EARLIER
+//expected-error@+4{{not a literal type}}
+//expected-note@+2{{not an aggregate and has no constexpr constructors}}
+#endif
+auto L = [] { };
+constexpr int foo(decltype(L) l) { return 0; }
+
+}

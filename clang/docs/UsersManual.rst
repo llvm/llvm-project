@@ -1546,27 +1546,31 @@ profile creation and use.
   The ``-fprofile-generate`` and ``-fprofile-generate=`` flags will use
   an alterantive instrumentation method for profile generation. When
   given a directory name, it generates the profile file
-  ``default.profraw`` in the directory named ``dirname``. If ``dirname``
-  does not exist, it will be created at runtime. The environment variable
-  ``LLVM_PROFILE_FILE`` can be used to override the directory and
-  filename for the profile file at runtime. For example,
+  ``default_%m.profraw`` in the directory named ``dirname`` if specified.
+  If ``dirname`` does not exist, it will be created at runtime. ``%m`` specifier
+  will be substibuted with a unique id documented in step 2 above. In other words,
+  with ``-fprofile-generate[=<dirname>]`` option, the "raw" profile data automatic
+  merging is turned on by default, so there will no longer any risk of profile
+  clobbering from different running processes.  For example,
 
   .. code-block:: console
 
     $ clang++ -O2 -fprofile-generate=yyy/zzz code.cc -o code
 
   When ``code`` is executed, the profile will be written to the file
-  ``yyy/zzz/default.profraw``. This can be altered at runtime via the
-  ``LLVM_PROFILE_FILE`` environment variable:
+  ``yyy/zzz/default_xxxx.profraw``.
 
-  .. code-block:: console
+  To generate the profile data file with the compiler readable format, the 
+  ``llvm-profdata`` tool can be used with the profile directory as the input:
 
-    $ LLVM_PROFILE_FILE=/tmp/myprofile/code.profraw ./code
+   .. code-block:: console
 
-  The above invocation will produce the profile file
-  ``/tmp/myprofile/code.profraw`` instead of ``yyy/zzz/default.profraw``.
-  Notice that ``LLVM_PROFILE_FILE`` overrides the directory *and* the file
-  name for the profile file.
+     $ llvm-profdata merge -output=code.profdata yyy/zzz/
+
+ If the user wants to turn off the auto-merging feature, or simply override the
+ the profile dumping path specified at command line, the environment variable
+ ``LLVM_PROFILE_FILE`` can still be used to override
+ the directory and filename for the profile file at runtime.
 
 .. option:: -fprofile-use[=<pathname>]
 
