@@ -1003,6 +1003,7 @@ Optional<unsigned> Parser::ParseLambdaIntroducer(LambdaIntroducer &Intro,
     //          return y;
     //     }
     //   };
+    // }
     // If x was not const, the second use would require 'L' to capture, and
     // that would be an error.
 

@@ -220,11 +220,11 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     // parameter list there (in an effort to avoid new/delete traffic).  If it
     // is already used (consider a function returning a function pointer) or too
     // small (function with too many parameters), go to the heap.
-    if (!TheDeclarator.InlineParamsUsed &&
+    if (!TheDeclarator.InlineStorageUsed &&
         NumParams <= llvm::array_lengthof(TheDeclarator.InlineParams)) {
       I.Fun.Params = TheDeclarator.InlineParams;
       I.Fun.DeleteParams = false;
-      TheDeclarator.InlineParamsUsed = true;
+      TheDeclarator.InlineStorageUsed = true;
     } else {
       I.Fun.Params = new DeclaratorChunk::ParamInfo[NumParams];
       I.Fun.DeleteParams = true;
@@ -256,6 +256,38 @@ DeclaratorChunk DeclaratorChunk::getFunction(bool hasProto,
     break;
   }
   return I;
+}
+
+void Declarator::setDecompositionBindings(
+    SourceLocation LSquareLoc,
+    ArrayRef<DecompositionDeclarator::Binding> Bindings,
+    SourceLocation RSquareLoc) {
+  assert(!hasName() && "declarator given multiple names!");
+
+  BindingGroup.LSquareLoc = LSquareLoc;
+  BindingGroup.RSquareLoc = RSquareLoc;
+  BindingGroup.NumBindings = Bindings.size();
+  Range.setEnd(RSquareLoc);
+
+  // We're now past the identifier.
+  SetIdentifier(nullptr, LSquareLoc);
+  Name.EndLocation = RSquareLoc;
+
+  // Allocate storage for bindings and stash them away.
+  if (Bindings.size()) {
+    if (!InlineStorageUsed &&
+        Bindings.size() <= llvm::array_lengthof(InlineBindings)) {
+      BindingGroup.Bindings = InlineBindings;
+      BindingGroup.DeleteBindings = false;
+      InlineStorageUsed = true;
+    } else {
+      BindingGroup.Bindings =
+          new DecompositionDeclarator::Binding[Bindings.size()];
+      BindingGroup.DeleteBindings = true;
+    }
+    std::uninitialized_copy(Bindings.begin(), Bindings.end(),
+                            BindingGroup.Bindings);
+  }
 }
 
 bool Declarator::isDeclarationOfFunction() const {

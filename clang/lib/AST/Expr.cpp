@@ -3395,8 +3395,11 @@ bool ExtVectorElementExpr::containsDuplicateElements() const {
 void ExtVectorElementExpr::getEncodedElementAccess(
     SmallVectorImpl<uint32_t> &Elts) const {
   StringRef Comp = Accessor->getName();
-  if (Comp[0] == 's' || Comp[0] == 'S')
+  bool isNumericAccessor = false;
+  if (Comp[0] == 's' || Comp[0] == 'S') {
     Comp = Comp.substr(1);
+    isNumericAccessor = true;
+  }
 
   bool isHi =   Comp == "hi";
   bool isLo =   Comp == "lo";
@@ -3415,7 +3418,7 @@ void ExtVectorElementExpr::getEncodedElementAccess(
     else if (isOdd)
       Index = 2 * i + 1;
     else
-      Index = ExtVectorType::getAccessorIdx(Comp[i]);
+      Index = ExtVectorType::getAccessorIdx(Comp[i], isNumericAccessor);
 
     Elts.push_back(Index);
   }

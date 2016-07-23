@@ -30,6 +30,9 @@
 #ifndef CONCEPTS_KEYWORD
 #define CONCEPTS_KEYWORD(X) KEYWORD(X,KEYCONCEPTS)
 #endif
+#ifndef MODULES_KEYWORD
+#define MODULES_KEYWORD(X) KEYWORD(X,KEYMODULES)
+#endif
 #ifndef TYPE_TRAIT
 #define TYPE_TRAIT(N,I,K) KEYWORD(I,K)
 #endif
@@ -235,6 +238,8 @@ PUNCTUATOR(caretcaret,            "^^")
 //   KEYCXX11 - This is a C++ keyword introduced to C++ in C++11
 //   KEYCONCEPTS - This is a keyword if the C++ extensions for concepts
 //                 are enabled.
+//   KEYMODULES - This is a keyword if the C++ extensions for modules
+//                are enabled.
 //   KEYGNU   - This is a keyword if GNU extensions are enabled
 //   KEYMS    - This is a keyword if Microsoft extensions are enabled
 //   KEYNOMS18 - This is a keyword that must never be enabled under
@@ -365,6 +370,10 @@ CONCEPTS_KEYWORD(requires)
 KEYWORD(co_await                    , KEYCOROUTINES)
 KEYWORD(co_return                   , KEYCOROUTINES)
 KEYWORD(co_yield                    , KEYCOROUTINES)
+
+// C++ modules TS keywords
+MODULES_KEYWORD(module)
+MODULES_KEYWORD(import)
 
 // GNU Extensions (in impl-reserved namespace)
 KEYWORD(_Decimal32                  , KEYALL)
