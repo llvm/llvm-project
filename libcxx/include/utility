@@ -171,6 +171,20 @@ template<class... T>
 
 template<class T, class U=T>
     T exchange(T& obj, U&& new_value);
+
+// 20.2.7, in-place construction // C++17
+struct in_place_tag { in_place_tag() = delete; }; // C++17
+using in_place_t = in_place_tag(&)(unspecified );
+template <class T>
+    using in_place_type_t = in_place_tag(&)(unspecified <T>);
+template <size_t I>
+    using in_place_index_t = in_place_tag(&)(unspecified <I>);
+in_place_tag in_place(unspecified );
+template <class T>
+    in_place_tag in_place(unspecified <T>);
+template <size_t I>
+    in_place_tag in_place(unspecified <I>);
+
 }  // std
 
 */
@@ -179,6 +193,7 @@ template<class T, class U=T>
 #include <__tuple>
 #include <type_traits>
 #include <initializer_list>
+#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -781,6 +796,49 @@ _T1 exchange(_T1& __obj, _T2 && __new_value)
     return __old_value;
 }
 #endif  // _LIBCPP_STD_VER > 11
+
+#if _LIBCPP_STD_VER > 14
+
+struct _LIBCPP_TYPE_VIS_ONLY __in_place_tag {};
+template <class> struct _LIBCPP_TYPE_VIS_ONLY __in_place_type_tag {};
+template <size_t> struct _LIBCPP_TYPE_VIS_ONLY __in_place_index_tag {};
+
+struct _LIBCPP_TYPE_VIS_ONLY in_place_tag;
+
+using in_place_t = in_place_tag(&)(__in_place_tag);
+template <class _Tp>
+using in_place_type_t = in_place_tag(&)(__in_place_type_tag<_Tp>);
+template <size_t _Nx>
+using in_place_index_t = in_place_tag(&)(__in_place_index_tag<_Nx>);
+
+struct in_place_tag {
+  in_place_tag() = delete;
+private:
+  explicit in_place_tag(__in_place_tag) {}
+
+  friend inline in_place_tag in_place(__in_place_tag __t);
+  template <class _Tp>
+  friend inline in_place_tag in_place(__in_place_type_tag<_Tp>);
+  template <size_t _Nx>
+  friend inline in_place_tag in_place(__in_place_index_tag<_Nx>);
+};
+
+inline in_place_tag in_place(__in_place_tag __t) {
+    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
+    return in_place_tag(__t);
+}
+template <class _Tp>
+inline in_place_tag in_place(__in_place_type_tag<_Tp>) {
+    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
+    return in_place_tag(__in_place_tag{});
+}
+template <size_t _Nx>
+inline in_place_tag in_place(__in_place_index_tag<_Nx>) {
+    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
+    return in_place_tag(__in_place_tag{});
+}
+
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 
