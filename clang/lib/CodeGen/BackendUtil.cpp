@@ -477,6 +477,7 @@ void EmitAssemblyHelper::CreatePasses(legacy::PassManager &MPM,
     MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (CodeGenOpts.hasProfileIRInstr()) {
+    PMBuilder.EnablePGOInstrGen = true;
     if (!CodeGenOpts.InstrProfileOutput.empty())
       PMBuilder.PGOInstrGen = CodeGenOpts.InstrProfileOutput;
     else

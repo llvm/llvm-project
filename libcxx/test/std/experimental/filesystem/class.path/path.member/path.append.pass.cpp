@@ -24,6 +24,7 @@
 
 #include <experimental/filesystem>
 #include <type_traits>
+#include <string_view>
 #include <cassert>
 
 #include "test_macros.h"
@@ -77,6 +78,7 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
   using namespace fs;
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
+  using StrView = std::basic_string_view<CharT>;
   using InputIter = input_iterator<Ptr>;
 
   const Ptr L = TC.lhs;
@@ -93,6 +95,16 @@ void doAppendSourceAllocTest(AppendOperatorTestcase const& TC)
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     Str  RHS(R);
+    {
+      DisableAllocationGuard g;
+      LHS /= RHS;
+    }
+    assert(LHS == E);
+  }
+  // basic_string_view
+  {
+    path LHS(L); PathReserve(LHS, ReserveSize);
+    StrView  RHS(R);
     {
       DisableAllocationGuard g;
       LHS /= RHS;
@@ -153,6 +165,7 @@ void doAppendSourceTest(AppendOperatorTestcase const& TC)
   using namespace fs;
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
+  using StrView = std::basic_string_view<CharT>;
   using InputIter = input_iterator<Ptr>;
   const Ptr L = TC.lhs;
   const Ptr R = TC.rhs;
@@ -168,6 +181,21 @@ void doAppendSourceTest(AppendOperatorTestcase const& TC)
   {
     path LHS(L);
     Str RHS(R);
+    path& Ref = LHS.append(RHS);
+    assert(LHS == E);
+    assert(&Ref == &LHS);
+  }
+  // basic_string_view
+  {
+    path LHS(L);
+    StrView RHS(R);
+    path& Ref = (LHS /= RHS);
+    assert(LHS == E);
+    assert(&Ref == &LHS);
+  }
+  {
+    path LHS(L);
+    StrView RHS(R);
     path& Ref = LHS.append(RHS);
     assert(LHS == E);
     assert(&Ref == &LHS);

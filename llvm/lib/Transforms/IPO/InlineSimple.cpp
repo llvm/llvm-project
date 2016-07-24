@@ -61,7 +61,12 @@ public:
   InlineCost getInlineCost(CallSite CS) override {
     Function *Callee = CS.getCalledFunction();
     TargetTransformInfo &TTI = TTIWP->getTTI(*Callee);
-    return llvm::getInlineCost(CS, DefaultThreshold, TTI, ACT, PSI);
+    std::function<AssumptionCache &(Function &)> GetAssumptionCache = [&](
+        Function &F) -> AssumptionCache & {
+      return ACT->getAssumptionCache(F);
+    };
+    return llvm::getInlineCost(CS, DefaultThreshold, TTI, GetAssumptionCache,
+                               PSI);
   }
 
   bool runOnSCC(CallGraphSCC &SCC) override;
