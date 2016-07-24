@@ -261,15 +261,26 @@ std::vector<OutputSectionBase<ELFT> *>
 LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   typedef const std::unique_ptr<ObjectFile<ELFT>> ObjectFile;
   std::vector<OutputSectionBase<ELFT> *> Result;
+  DenseSet<OutputSectionBase<ELFT> *> Removed;
 
   // Add input section to output section. If there is no output section yet,
   // then create it and add to output section list.
-  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name) {
+  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name,
+                         ConstraintKind Constraint) {
     OutputSectionBase<ELFT> *Sec;
     bool IsNew;
     std::tie(Sec, IsNew) = Factory.create(C, Name);
     if (IsNew)
       Result.push_back(Sec);
+    if ((!(C->getSectionHdr()->sh_flags & SHF_WRITE)) &&
+        Constraint == ReadWrite) {
+      Removed.insert(Sec);
+      return;
+    }
+    if ((C->getSectionHdr()->sh_flags & SHF_WRITE) && Constraint == ReadOnly) {
+      Removed.insert(Sec);
+      return;
+    }
     Sec->addSection(C);
   };
 
@@ -295,7 +306,7 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
             if (OutCmd->Name == "/DISCARD/")
               S->Live = false;
             else
-              AddInputSec(S, OutCmd->Name);
+              AddInputSec(S, OutCmd->Name, OutCmd->Constraint);
           }
         }
       }
@@ -307,46 +318,18 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
     for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (!isDiscarded(S)) {
         if (!S->OutSec)
-          AddInputSec(S, getOutputSectionName(S));
+          AddInputSec(S, getOutputSectionName(S), NoConstraint);
       } else
         reportDiscarded(S, F);
     }
 
-  // Remove from the output all the sections which did not meet
-  // the optional constraints.
-  return filter(Result);
-}
-
-// Process ONLY_IF_RO and ONLY_IF_RW.
-template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *>
-LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
-  // Sections and OutputSectionCommands are parallel arrays.
-  // In this loop, we remove output sections if they don't satisfy
-  // requested properties.
-  auto It = Sections.begin();
-  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
-    auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
-    if (!Cmd)
-      continue;
-
-    if (Cmd->Constraint == ConstraintKind::NoConstraint) {
-      ++It;
-      continue;
-    }
-
-    OutputSectionBase<ELFT> *Sec = *It;
-    bool Writable = (Sec->getFlags() & SHF_WRITE);
-    bool RO = (Cmd->Constraint == ConstraintKind::ReadOnly);
-    bool RW = (Cmd->Constraint == ConstraintKind::ReadWrite);
-
-    if ((RO && Writable) || (RW && !Writable)) {
-      Sections.erase(It);
-      continue;
-    }
-    ++It;
-  }
-  return Sections;
+  // Remove from the output all the sections which did not met the constraints.
+  Result.erase(std::remove_if(Result.begin(), Result.end(),
+                              [&](OutputSectionBase<ELFT> *Sec) {
+                                return Removed.count(Sec);
+                              }),
+               Result.end());
+  return Result;
 }
 
 template <class ELFT>

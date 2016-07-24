@@ -13,7 +13,7 @@
 
 // template <class T1, class T2> struct pair
 
-// pair& operator=(pair&& p);
+// pair& operator=(pair const& p);
 
 #include <utility>
 #include <memory>
@@ -26,6 +26,7 @@ struct NonAssignable {
 };
 struct CopyAssignable {
   CopyAssignable() = default;
+  CopyAssignable(CopyAssignable const&) = default;
   CopyAssignable& operator=(CopyAssignable const&) = default;
   CopyAssignable& operator=(CopyAssignable&&) = delete;
 };
@@ -34,6 +35,7 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable const&) = delete;
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
+
 
 struct CountAssign {
   static int copied;
@@ -49,11 +51,10 @@ int CountAssign::moved = 0;
 int main()
 {
     {
-        typedef std::pair<std::unique_ptr<int>, short> P;
-        P p1(std::unique_ptr<int>(new int(3)), 4);
+        typedef std::pair<CopyAssignable, short> P;
+        const P p1(CopyAssignable(), 4);
         P p2;
-        p2 = std::move(p1);
-        assert(*p2.first == 3);
+        p2 = p1;
         assert(p2.second == 4);
     }
     {
@@ -64,33 +65,26 @@ int main()
         int y2 = 300;
         P p1(x, std::move(y));
         P p2(x2, std::move(y2));
-        p1 = std::move(p2);
+        p1 = p2;
         assert(p1.first == x2);
         assert(p1.second == y2);
     }
     {
         using P = std::pair<int, NonAssignable>;
-        static_assert(!std::is_move_assignable<P>::value, "");
+        static_assert(!std::is_copy_assignable<P>::value, "");
     }
     {
-        // The move decays to the copy constructor
         CountAssign::reset();
         using P = std::pair<CountAssign, CopyAssignable>;
-        static_assert(std::is_move_assignable<P>::value, "");
+        static_assert(std::is_copy_assignable<P>::value, "");
         P p;
         P p2;
-        p = std::move(p2);
-        assert(CountAssign::moved == 0);
+        p = p2;
         assert(CountAssign::copied == 1);
+        assert(CountAssign::moved == 0);
     }
     {
-        CountAssign::reset();
-        using P = std::pair<CountAssign, MoveAssignable>;
-        static_assert(std::is_move_assignable<P>::value, "");
-        P p;
-        P p2;
-        p = std::move(p2);
-        assert(CountAssign::moved == 1);
-        assert(CountAssign::copied == 0);
+        using P = std::pair<int, MoveAssignable>;
+        static_assert(!std::is_copy_assignable<P>::value, "");
     }
 }

@@ -1961,7 +1961,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                                       __constrain_hash(__nd->__hash(), __bc) == __chash;
+                (__nd->__hash() == __hash || __constrain_hash(__nd->__hash(), __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
                 if (key_eq()(__nd->__upcast()->__value_, __k))
