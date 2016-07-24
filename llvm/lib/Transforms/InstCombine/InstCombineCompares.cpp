@@ -2355,37 +2355,35 @@ Instruction *InstCombiner::foldICmpEqualityWithConstant(ICmpInst &ICI,
   return nullptr;
 }
 
-Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &ICI,
-                                                         Instruction *LHSI,
-                                                         ConstantInt *RHS) {
-  IntrinsicInst *II = dyn_cast<IntrinsicInst>(LHSI);
-  if (!II || !ICI.isEquality())
+Instruction *InstCombiner::foldICmpIntrinsicWithConstant(ICmpInst &ICI) {
+  IntrinsicInst *II = dyn_cast<IntrinsicInst>(ICI.getOperand(0));
+  const APInt *Op1C;
+  if (!II || !ICI.isEquality() || !match(ICI.getOperand(1), m_APInt(Op1C)))
     return nullptr;
 
   // Handle icmp {eq|ne} <intrinsic>, intcst.
-  const APInt &RHSV = RHS->getValue();
   switch (II->getIntrinsicID()) {
   case Intrinsic::bswap:
     Worklist.Add(II);
     ICI.setOperand(0, II->getArgOperand(0));
-    ICI.setOperand(1, Builder->getInt(RHSV.byteSwap()));
+    ICI.setOperand(1, Builder->getInt(Op1C->byteSwap()));
     return &ICI;
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
     // ctz(A) == bitwidth(a)  ->  A == 0 and likewise for !=
-    if (RHSV == RHS->getType()->getBitWidth()) {
+    if (*Op1C == Op1C->getBitWidth()) {
       Worklist.Add(II);
       ICI.setOperand(0, II->getArgOperand(0));
-      ICI.setOperand(1, ConstantInt::get(RHS->getType(), 0));
+      ICI.setOperand(1, ConstantInt::getNullValue(II->getType()));
       return &ICI;
     }
     break;
   case Intrinsic::ctpop:
     // popcount(A) == 0  ->  A == 0 and likewise for !=
-    if (RHS->isZero()) {
+    if (*Op1C == 0) {
       Worklist.Add(II);
       ICI.setOperand(0, II->getArgOperand(0));
-      ICI.setOperand(1, RHS);
+      ICI.setOperand(1, ConstantInt::getNullValue(II->getType()));
       return &ICI;
     }
     break;
@@ -3641,6 +3639,10 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
 
   // See if we are doing a comparison between a constant and an instruction that
   // can be folded into the comparison.
+
+  // FIXME: Use m_APInt instead of dyn_cast<ConstantInt> to allow these
+  // transforms for vectors.
+
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Op1)) {
     // Since the RHS is a ConstantInt (CI), if the left hand side is an
     // instruction, see if that instruction also has constants so that the
@@ -3650,10 +3652,11 @@ Instruction *InstCombiner::visitICmpInst(ICmpInst &I) {
         return Res;
       if (Instruction *Res = foldICmpEqualityWithConstant(I, LHSI, CI))
         return Res;
-      if (Instruction *Res = foldICmpIntrinsicWithConstant(I, LHSI, CI))
-        return Res;
     }
   }
+
+  if (Instruction *Res = foldICmpIntrinsicWithConstant(I))
+    return Res;
 
   // Handle icmp with constant (but not simple integer constant) RHS
   if (Constant *RHSC = dyn_cast<Constant>(Op1)) {

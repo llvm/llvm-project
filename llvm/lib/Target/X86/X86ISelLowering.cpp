@@ -24257,102 +24257,102 @@ X86TargetLowering::emitFMA3Instr(MachineInstr &MI,
       // Found a matching instruction.
       unsigned NewFMAOpc = 0;
       switch (MI.getOpcode()) {
-      case X86::VFMADDPDr213r:
-        NewFMAOpc = X86::VFMADDPDr231r;
+      case X86::VFMADD213PDr:
+        NewFMAOpc = X86::VFMADD231PDr;
         break;
-      case X86::VFMADDPSr213r:
-        NewFMAOpc = X86::VFMADDPSr231r;
+      case X86::VFMADD213PSr:
+        NewFMAOpc = X86::VFMADD231PSr;
         break;
-      case X86::VFMADDSDr213r:
-        NewFMAOpc = X86::VFMADDSDr231r;
+      case X86::VFMADD213SDr:
+        NewFMAOpc = X86::VFMADD231SDr;
         break;
-      case X86::VFMADDSSr213r:
-        NewFMAOpc = X86::VFMADDSSr231r;
+      case X86::VFMADD213SSr:
+        NewFMAOpc = X86::VFMADD231SSr;
         break;
-      case X86::VFMSUBPDr213r:
-        NewFMAOpc = X86::VFMSUBPDr231r;
+      case X86::VFMSUB213PDr:
+        NewFMAOpc = X86::VFMSUB231PDr;
         break;
-      case X86::VFMSUBPSr213r:
-        NewFMAOpc = X86::VFMSUBPSr231r;
+      case X86::VFMSUB213PSr:
+        NewFMAOpc = X86::VFMSUB231PSr;
         break;
-      case X86::VFMSUBSDr213r:
-        NewFMAOpc = X86::VFMSUBSDr231r;
+      case X86::VFMSUB213SDr:
+        NewFMAOpc = X86::VFMSUB231SDr;
         break;
-      case X86::VFMSUBSSr213r:
-        NewFMAOpc = X86::VFMSUBSSr231r;
+      case X86::VFMSUB213SSr:
+        NewFMAOpc = X86::VFMSUB231SSr;
         break;
-      case X86::VFNMADDPDr213r:
-        NewFMAOpc = X86::VFNMADDPDr231r;
+      case X86::VFNMADD213PDr:
+        NewFMAOpc = X86::VFNMADD231PDr;
         break;
-      case X86::VFNMADDPSr213r:
-        NewFMAOpc = X86::VFNMADDPSr231r;
+      case X86::VFNMADD213PSr:
+        NewFMAOpc = X86::VFNMADD231PSr;
         break;
-      case X86::VFNMADDSDr213r:
-        NewFMAOpc = X86::VFNMADDSDr231r;
+      case X86::VFNMADD213SDr:
+        NewFMAOpc = X86::VFNMADD231SDr;
         break;
-      case X86::VFNMADDSSr213r:
-        NewFMAOpc = X86::VFNMADDSSr231r;
+      case X86::VFNMADD213SSr:
+        NewFMAOpc = X86::VFNMADD231SSr;
         break;
-      case X86::VFNMSUBPDr213r:
-        NewFMAOpc = X86::VFNMSUBPDr231r;
+      case X86::VFNMSUB213PDr:
+        NewFMAOpc = X86::VFNMSUB231PDr;
         break;
-      case X86::VFNMSUBPSr213r:
-        NewFMAOpc = X86::VFNMSUBPSr231r;
+      case X86::VFNMSUB213PSr:
+        NewFMAOpc = X86::VFNMSUB231PSr;
         break;
-      case X86::VFNMSUBSDr213r:
-        NewFMAOpc = X86::VFNMSUBSDr231r;
+      case X86::VFNMSUB213SDr:
+        NewFMAOpc = X86::VFNMSUB231SDr;
         break;
-      case X86::VFNMSUBSSr213r:
-        NewFMAOpc = X86::VFNMSUBSSr231r;
+      case X86::VFNMSUB213SSr:
+        NewFMAOpc = X86::VFNMSUB231SSr;
         break;
-      case X86::VFMADDSUBPDr213r:
-        NewFMAOpc = X86::VFMADDSUBPDr231r;
+      case X86::VFMADDSUB213PDr:
+        NewFMAOpc = X86::VFMADDSUB231PDr;
         break;
-      case X86::VFMADDSUBPSr213r:
-        NewFMAOpc = X86::VFMADDSUBPSr231r;
+      case X86::VFMADDSUB213PSr:
+        NewFMAOpc = X86::VFMADDSUB231PSr;
         break;
-      case X86::VFMSUBADDPDr213r:
-        NewFMAOpc = X86::VFMSUBADDPDr231r;
+      case X86::VFMSUBADD213PDr:
+        NewFMAOpc = X86::VFMSUBADD231PDr;
         break;
-      case X86::VFMSUBADDPSr213r:
-        NewFMAOpc = X86::VFMSUBADDPSr231r;
+      case X86::VFMSUBADD213PSr:
+        NewFMAOpc = X86::VFMSUBADD231PSr;
         break;
 
-      case X86::VFMADDPDr213rY:
-        NewFMAOpc = X86::VFMADDPDr231rY;
+      case X86::VFMADD213PDYr:
+        NewFMAOpc = X86::VFMADD231PDYr;
         break;
-      case X86::VFMADDPSr213rY:
-        NewFMAOpc = X86::VFMADDPSr231rY;
+      case X86::VFMADD213PSYr:
+        NewFMAOpc = X86::VFMADD231PSYr;
         break;
-      case X86::VFMSUBPDr213rY:
-        NewFMAOpc = X86::VFMSUBPDr231rY;
+      case X86::VFMSUB213PDYr:
+        NewFMAOpc = X86::VFMSUB231PDYr;
         break;
-      case X86::VFMSUBPSr213rY:
-        NewFMAOpc = X86::VFMSUBPSr231rY;
+      case X86::VFMSUB213PSYr:
+        NewFMAOpc = X86::VFMSUB231PSYr;
         break;
-      case X86::VFNMADDPDr213rY:
-        NewFMAOpc = X86::VFNMADDPDr231rY;
+      case X86::VFNMADD213PDYr:
+        NewFMAOpc = X86::VFNMADD231PDYr;
         break;
-      case X86::VFNMADDPSr213rY:
-        NewFMAOpc = X86::VFNMADDPSr231rY;
+      case X86::VFNMADD213PSYr:
+        NewFMAOpc = X86::VFNMADD231PSYr;
         break;
-      case X86::VFNMSUBPDr213rY:
-        NewFMAOpc = X86::VFNMSUBPDr231rY;
+      case X86::VFNMSUB213PDYr:
+        NewFMAOpc = X86::VFNMSUB231PDYr;
         break;
-      case X86::VFNMSUBPSr213rY:
-        NewFMAOpc = X86::VFNMSUBPSr231rY;
+      case X86::VFNMSUB213PSYr:
+        NewFMAOpc = X86::VFNMSUB231PSYr;
         break;
-      case X86::VFMADDSUBPDr213rY:
-        NewFMAOpc = X86::VFMADDSUBPDr231rY;
+      case X86::VFMADDSUB213PDYr:
+        NewFMAOpc = X86::VFMADDSUB231PDYr;
         break;
-      case X86::VFMADDSUBPSr213rY:
-        NewFMAOpc = X86::VFMADDSUBPSr231rY;
+      case X86::VFMADDSUB213PSYr:
+        NewFMAOpc = X86::VFMADDSUB231PSYr;
         break;
-      case X86::VFMSUBADDPDr213rY:
-        NewFMAOpc = X86::VFMSUBADDPDr231rY;
+      case X86::VFMSUBADD213PDYr:
+        NewFMAOpc = X86::VFMSUBADD231PDYr;
         break;
-      case X86::VFMSUBADDPSr213rY:
-        NewFMAOpc = X86::VFMSUBADDPSr231rY;
+      case X86::VFMSUBADD213PSYr:
+        NewFMAOpc = X86::VFMSUBADD231PSYr;
         break;
       default:
         llvm_unreachable("Unrecognized FMA variant.");
@@ -24595,38 +24595,38 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
 
-  case X86::VFMADDPDr213r:
-  case X86::VFMADDPSr213r:
-  case X86::VFMADDSDr213r:
-  case X86::VFMADDSSr213r:
-  case X86::VFMSUBPDr213r:
-  case X86::VFMSUBPSr213r:
-  case X86::VFMSUBSDr213r:
-  case X86::VFMSUBSSr213r:
-  case X86::VFNMADDPDr213r:
-  case X86::VFNMADDPSr213r:
-  case X86::VFNMADDSDr213r:
-  case X86::VFNMADDSSr213r:
-  case X86::VFNMSUBPDr213r:
-  case X86::VFNMSUBPSr213r:
-  case X86::VFNMSUBSDr213r:
-  case X86::VFNMSUBSSr213r:
-  case X86::VFMADDSUBPDr213r:
-  case X86::VFMADDSUBPSr213r:
-  case X86::VFMSUBADDPDr213r:
-  case X86::VFMSUBADDPSr213r:
-  case X86::VFMADDPDr213rY:
-  case X86::VFMADDPSr213rY:
-  case X86::VFMSUBPDr213rY:
-  case X86::VFMSUBPSr213rY:
-  case X86::VFNMADDPDr213rY:
-  case X86::VFNMADDPSr213rY:
-  case X86::VFNMSUBPDr213rY:
-  case X86::VFNMSUBPSr213rY:
-  case X86::VFMADDSUBPDr213rY:
-  case X86::VFMADDSUBPSr213rY:
-  case X86::VFMSUBADDPDr213rY:
-  case X86::VFMSUBADDPSr213rY:
+  case X86::VFMADD213PDr:
+  case X86::VFMADD213PSr:
+  case X86::VFMADD213SDr:
+  case X86::VFMADD213SSr:
+  case X86::VFMSUB213PDr:
+  case X86::VFMSUB213PSr:
+  case X86::VFMSUB213SDr:
+  case X86::VFMSUB213SSr:
+  case X86::VFNMADD213PDr:
+  case X86::VFNMADD213PSr:
+  case X86::VFNMADD213SDr:
+  case X86::VFNMADD213SSr:
+  case X86::VFNMSUB213PDr:
+  case X86::VFNMSUB213PSr:
+  case X86::VFNMSUB213SDr:
+  case X86::VFNMSUB213SSr:
+  case X86::VFMADDSUB213PDr:
+  case X86::VFMADDSUB213PSr:
+  case X86::VFMSUBADD213PDr:
+  case X86::VFMSUBADD213PSr:
+  case X86::VFMADD213PDYr:
+  case X86::VFMADD213PSYr:
+  case X86::VFMSUB213PDYr:
+  case X86::VFMSUB213PSYr:
+  case X86::VFNMADD213PDYr:
+  case X86::VFNMADD213PSYr:
+  case X86::VFNMSUB213PDYr:
+  case X86::VFNMSUB213PSYr:
+  case X86::VFMADDSUB213PDYr:
+  case X86::VFMADDSUB213PSYr:
+  case X86::VFMSUBADD213PDYr:
+  case X86::VFMSUBADD213PSYr:
     return emitFMA3Instr(MI, BB);
   case X86::LCMPXCHG8B_SAVE_EBX:
   case X86::LCMPXCHG16B_SAVE_RBX: {
