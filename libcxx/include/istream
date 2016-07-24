@@ -1481,9 +1481,9 @@ ws(basic_istream<_CharT, _Traits>& __is)
 template <class _CharT, class _Traits, class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>&& __is, _Tp& __x)
+operator>>(basic_istream<_CharT, _Traits>&& __is, _Tp&& __x)
 {
-    __is >> __x;
+    __is >> _VSTD::forward<_Tp>(__x);
     return __is;
 }
 
