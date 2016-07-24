@@ -1076,12 +1076,12 @@ entry:
 ; 32-CMP-DAG:    bnezc    $[[T4]],
 
 ; 64-C-DAG:      add.s    $[[T0:f[0-9]+]], $f13, $f12
-; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %got_ofst($CPI32_0)(
+; 64-C-DAG:      lwc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI32_0)(
 ; 64-C-DAG:      c.ole.s  $[[T0]], $[[T1]]
 ; 64-C-DAG:      bc1t
 
 ; 64-CMP-DAG:    add.s    $[[T0:f[0-9]+]], $f13, $f12
-; 64-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %got_ofst($CPI32_0)(
+; 64-CMP-DAG:    lwc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI32_0)(
 ; 64-CMP-DAG:    cmp.le.s $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
 ; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
@@ -1106,8 +1106,8 @@ entry:
 ; MM64R6-DAG:    daddu    $[[T1:[0-9]+]], $[[T0]], $25
 ; MM64R6-DAG:    daddiu   $[[T2:[0-9]+]], $[[T1]], %lo(%neg(%gp_rel(bug1_f32)))
 ; MM64R6-DAG:    add.s    $[[T3:f[0-9]+]], $f13, $f12
-; MM64R6-DAG:    ld       $[[T4:[0-9]+]], %got_page($CPI32_0)($[[T2]])
-; MM64R6-DAG:    lwc1     $[[T5:f[0-9]+]], %got_ofst($CPI32_0)($[[T4]])
+; MM64R6-DAG:    ld       $[[T4:[0-9]+]], %got_page(.LCPI32_0)($[[T2]])
+; MM64R6-DAG:    lwc1     $[[T5:f[0-9]+]], %got_ofst(.LCPI32_0)($[[T4]])
 ; MM64R6-DAG:    cmp.le.s $[[T6:f[0-9]+]], $[[T3]], $[[T5]]
 ; MM64R6-DAG:    mfc1     $[[T7:[0-9]+]], $[[T6]]
 ; MM64R6-DAG:    andi16   $[[T8:[0-9]+]], $[[T7]], 1
@@ -1145,12 +1145,12 @@ entry:
 ; 32-CMP-DAG:    bnezc    $[[T4]],
 
 ; 64-C-DAG:      add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %got_ofst($CPI33_0)(
+; 64-C-DAG:      ldc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI33_0)(
 ; 64-C-DAG:      c.ole.d  $[[T0]], $[[T1]]
 ; 64-C-DAG:      bc1t
 
 ; 64-CMP-DAG:    add.d    $[[T0:f[0-9]+]], $f13, $f12
-; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %got_ofst($CPI33_0)(
+; 64-CMP-DAG:    ldc1     $[[T1:f[0-9]+]], %got_ofst(.LCPI33_0)(
 ; 64-CMP-DAG:    cmp.le.d $[[T2:f[0-9]+]], $[[T0]], $[[T1]]
 ; 64-CMP-DAG:    mfc1     $[[T3:[0-9]+]], $[[T2]]
 ; FIXME: This instruction is redundant.
@@ -1175,8 +1175,8 @@ entry:
 ; MM64R6-DAG:    daddu    $[[T1:[0-9]+]], $[[T0]], $25
 ; MM64R6-DAG:    daddiu   $[[T2:[0-9]+]], $[[T1]], %lo(%neg(%gp_rel(bug1_f64)))
 ; MM64R6-DAG:    add.d    $[[T3:f[0-9]+]], $f13, $f12
-; MM64R6-DAG:    ld       $[[T4:[0-9]+]], %got_page($CPI33_0)($[[T2]])
-; MM64R6-DAG:    ldc1     $[[T5:f[0-9]+]], %got_ofst($CPI33_0)($[[T4]])
+; MM64R6-DAG:    ld       $[[T4:[0-9]+]], %got_page(.LCPI33_0)($[[T2]])
+; MM64R6-DAG:    ldc1     $[[T5:f[0-9]+]], %got_ofst(.LCPI33_0)($[[T4]])
 ; MM64R6-DAG:    cmp.le.d $[[T6:f[0-9]+]], $[[T3]], $[[T5]]
 ; MM64R6-DAG:    mfc1     $[[T7:[0-9]+]], $[[T6]]
 ; MM64R6-DAG:    andi16   $[[T8:[0-9]+]], $[[T7]], 1

@@ -23,8 +23,8 @@ define void @const_v4f32() nounwind {
 
   store volatile <4 x float> <float 1.0, float 1.0, float 1.0, float 31.0>, <4 x float>*@v4f32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <4 x float> <float 65537.0, float 65537.0, float 65537.0, float 65537.0>, <4 x float>*@v4f32
@@ -34,14 +34,14 @@ define void @const_v4f32() nounwind {
 
   store volatile <4 x float> <float 1.0, float 2.0, float 1.0, float 2.0>, <4 x float>*@v4f32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <4 x float> <float 3.0, float 4.0, float 5.0, float 6.0>, <4 x float>*@v4f32
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.w  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   ret void
@@ -55,38 +55,38 @@ define void @const_v2f64() nounwind {
 
   store volatile <2 x double> <double 72340172838076673.0, double 72340172838076673.0>, <2 x double>*@v2f64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <2 x double> <double 281479271743489.0, double 281479271743489.0>, <2 x double>*@v2f64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <2 x double> <double 4294967297.0, double 4294967297.0>, <2 x double>*@v2f64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <2 x double> <double 1.0, double 1.0>, <2 x double>*@v2f64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <2 x double> <double 1.0, double 31.0>, <2 x double>*@v2f64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   store volatile <2 x double> <double 3.0, double 4.0>, <2 x double>*@v2f64
   ; O32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %lo($
-  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
-  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst($
+  ; N32: addiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
+  ; N64: daddiu [[G_PTR:\$[0-9]+]], {{.*}}, %got_ofst(.L
   ; ALL: ld.d  [[R1:\$w[0-9]+]], 0([[G_PTR]])
 
   ret void
