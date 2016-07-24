@@ -237,8 +237,7 @@ uint64_t ExprParser::parseExpr1(uint64_t Lhs, int MinPrec) {
 // Reads and evaluates an arithmetic expression.
 uint64_t ExprParser::parseExpr() { return parseExpr1(parsePrimary(), 0); }
 
-template <class ELFT>
-bool LinkerScript<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) {
+template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
   return !S || !S->Live;
 }
 
@@ -262,26 +261,15 @@ std::vector<OutputSectionBase<ELFT> *>
 LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
   typedef const std::unique_ptr<ObjectFile<ELFT>> ObjectFile;
   std::vector<OutputSectionBase<ELFT> *> Result;
-  DenseSet<OutputSectionBase<ELFT> *> Removed;
 
   // Add input section to output section. If there is no output section yet,
   // then create it and add to output section list.
-  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name,
-                         ConstraintKind Constraint) {
+  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name) {
     OutputSectionBase<ELFT> *Sec;
     bool IsNew;
     std::tie(Sec, IsNew) = Factory.create(C, Name);
     if (IsNew)
       Result.push_back(Sec);
-    if ((!(C->getSectionHdr()->sh_flags & SHF_WRITE)) &&
-        Constraint == ReadWrite) {
-      Removed.insert(Sec);
-      return;
-    }
-    if ((C->getSectionHdr()->sh_flags & SHF_WRITE) && Constraint == ReadOnly) {
-      Removed.insert(Sec);
-      return;
-    }
     Sec->addSection(C);
   };
 
@@ -307,7 +295,7 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
             if (OutCmd->Name == "/DISCARD/")
               S->Live = false;
             else
-              AddInputSec(S, OutCmd->Name, OutCmd->Constraint);
+              AddInputSec(S, OutCmd->Name);
           }
         }
       }
@@ -319,18 +307,46 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
     for (InputSectionBase<ELFT> *S : F->getSections()) {
       if (!isDiscarded(S)) {
         if (!S->OutSec)
-          AddInputSec(S, getOutputSectionName(S), NoConstraint);
+          AddInputSec(S, getOutputSectionName(S));
       } else
         reportDiscarded(S, F);
     }
 
-  // Remove from the output all the sections which did not met the constraints.
-  Result.erase(std::remove_if(Result.begin(), Result.end(),
-                              [&](OutputSectionBase<ELFT> *Sec) {
-                                return Removed.count(Sec);
-                              }),
-               Result.end());
-  return Result;
+  // Remove from the output all the sections which did not meet
+  // the optional constraints.
+  return filter(Result);
+}
+
+// Process ONLY_IF_RO and ONLY_IF_RW.
+template <class ELFT>
+std::vector<OutputSectionBase<ELFT> *>
+LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
+  // Sections and OutputSectionCommands are parallel arrays.
+  // In this loop, we remove output sections if they don't satisfy
+  // requested properties.
+  auto It = Sections.begin();
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
+    if (!Cmd)
+      continue;
+
+    if (Cmd->Constraint == ConstraintKind::NoConstraint) {
+      ++It;
+      continue;
+    }
+
+    OutputSectionBase<ELFT> *Sec = *It;
+    bool Writable = (Sec->getFlags() & SHF_WRITE);
+    bool RO = (Cmd->Constraint == ConstraintKind::ReadOnly);
+    bool RW = (Cmd->Constraint == ConstraintKind::ReadWrite);
+
+    if ((RO && Writable) || (RW && !Writable)) {
+      Sections.erase(It);
+      continue;
+    }
+    ++It;
+  }
+  return Sections;
 }
 
 template <class ELFT>
@@ -410,28 +426,28 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
   int TlsNum = -1;
   int NoteNum = -1;
   int RelroNum = -1;
-  Phdr *Load = nullptr;
+  PhdrEntry<ELFT> *Load = nullptr;
   uintX_t Flags = PF_R;
-  std::vector<Phdr> Phdrs;
+  std::vector<PhdrEntry<ELFT>> Phdrs;
 
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     Phdrs.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
-    Phdr &Added = Phdrs.back();
+    PhdrEntry<ELFT> &Phdr = Phdrs.back();
 
     if (Cmd.HasFilehdr)
-      Added.add(Out<ELFT>::ElfHeader);
+      Phdr.add(Out<ELFT>::ElfHeader);
     if (Cmd.HasPhdrs)
-      Added.add(Out<ELFT>::ProgramHeaders);
+      Phdr.add(Out<ELFT>::ProgramHeaders);
 
     switch (Cmd.Type) {
     case PT_INTERP:
       if (Out<ELFT>::Interp)
-        Added.add(Out<ELFT>::Interp);
+        Phdr.add(Out<ELFT>::Interp);
       break;
     case PT_DYNAMIC:
       if (isOutputDynamic<ELFT>()) {
-        Added.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
-        Added.add(Out<ELFT>::Dynamic);
+        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
+        Phdr.add(Out<ELFT>::Dynamic);
       }
       break;
     case PT_TLS:
@@ -445,8 +461,8 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       break;
     case PT_GNU_EH_FRAME:
       if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
-        Added.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
-        Added.add(Out<ELFT>::EhFrameHdr);
+        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
+        Phdr.add(Out<ELFT>::EhFrameHdr);
       }
       break;
     }
@@ -533,7 +549,8 @@ template <class ELFT> void LinkerScript<ELFT>::addScriptedSymbols() {
     if (!Cmd || Cmd->Name == ".")
       continue;
 
-    if (Symtab<ELFT>::X->find(Cmd->Name) == nullptr)
+    SymbolBody *B = Symtab<ELFT>::X->find(Cmd->Name);
+    if (!B || B->isUndefined())
       Symtab<ELFT>::X->addAbsolute(Cmd->Name,
                                    Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
     else

@@ -59,9 +59,38 @@ size_t __next_prime(size_t __n);
 template <class _NodePtr>
 struct __hash_node_base
 {
+    typedef typename pointer_traits<_NodePtr>::element_type __node_type;
     typedef __hash_node_base __first_node;
+    typedef typename __rebind_pointer<_NodePtr, __first_node>::type __node_base_pointer;
+    typedef _NodePtr __node_pointer;
 
-    _NodePtr    __next_;
+#if defined(_LIBCPP_ABI_FIX_UNORDERED_NODE_POINTER_UB)
+  typedef __node_base_pointer __next_pointer;
+#else
+  typedef typename conditional<
+      is_pointer<__node_pointer>::value,
+      __node_base_pointer,
+      __node_pointer>::type   __next_pointer;
+#endif
+
+    __next_pointer    __next_;
+
+    _LIBCPP_INLINE_VISIBILITY
+    __next_pointer __ptr() _NOEXCEPT {
+        return static_cast<__next_pointer>(
+            pointer_traits<__node_base_pointer>::pointer_to(*this));
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    __node_pointer __upcast() _NOEXCEPT {
+        return static_cast<__node_pointer>(
+            pointer_traits<__node_base_pointer>::pointer_to(*this));
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    size_t __hash() const _NOEXCEPT {
+        return static_cast<__node_type const&>(*this).__hash_;
+    }
 
     _LIBCPP_INLINE_VISIBILITY __hash_node_base() _NOEXCEPT : __next_(nullptr) {}
 };
@@ -75,7 +104,7 @@ struct __hash_node
 {
     typedef _Tp __node_value_type;
 
-    size_t     __hash_;
+    size_t            __hash_;
     __node_value_type __value_;
 };
 
@@ -219,11 +248,14 @@ public:
   typedef typename __rebind_pointer<_NodePtr, __node_base_type>::type
                                                              __node_base_pointer;
 
+  typedef typename __node_base_type::__next_pointer          __next_pointer;
+
   typedef _Tp                                                 __node_value_type;
   typedef typename __rebind_pointer<_VoidPtr, __node_value_type>::type
                                                       __node_value_type_pointer;
   typedef typename __rebind_pointer<_VoidPtr, const __node_value_type>::type
                                                 __const_node_value_type_pointer;
+
 private:
     static_assert(!is_const<__node_type>::value,
                 "_NodePtr should never be a pointer to const");
@@ -232,8 +264,6 @@ private:
     static_assert((is_same<typename __rebind_pointer<_VoidPtr, __node_type>::type,
                           _NodePtr>::value), "_VoidPtr does not rebind to _NodePtr.");
 };
-
-
 
 template <class _HashIterator>
 struct __hash_node_types_from_iterator;
@@ -258,9 +288,10 @@ template <class _NodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_iterator
 {
     typedef __hash_node_types<_NodePtr> _NodeTypes;
-    typedef _NodePtr                    __node_pointer;
+    typedef _NodePtr                            __node_pointer;
+    typedef typename _NodeTypes::__next_pointer __next_pointer;
 
-    __node_pointer            __node_;
+    __next_pointer            __node_;
 
 public:
     typedef forward_iterator_tag                           iterator_category;
@@ -269,18 +300,11 @@ public:
     typedef value_type&                                    reference;
     typedef typename _NodeTypes::__node_value_type_pointer pointer;
 
-    _LIBCPP_INLINE_VISIBILITY __hash_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER > 11
-    : __node_(nullptr)
-#endif
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __get_db()->__insert_i(this);
-#endif
+    _LIBCPP_INLINE_VISIBILITY __hash_iterator() _NOEXCEPT : __node_(nullptr) {
+        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
     }
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
-
     _LIBCPP_INLINE_VISIBILITY
     __hash_iterator(const __hash_iterator& __i)
         : __node_(__i.__node_)
@@ -304,35 +328,26 @@ public:
         }
         return *this;
     }
-
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
     _LIBCPP_INLINE_VISIBILITY
-        reference operator*() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                           "Attempted to dereference a non-dereferenceable unordered container iterator");
-#endif
-            return __node_->__value_;
-        }
-    _LIBCPP_INLINE_VISIBILITY
-        pointer operator->() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                           "Attempted to dereference a non-dereferenceable unordered container iterator");
-#endif
-            return pointer_traits<pointer>::pointer_to(__node_->__value_);
-        }
+    reference operator*() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                             "Attempted to dereference a non-dereferenceable unordered container iterator");
+        return __node_->__upcast()->__value_;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
-    __hash_iterator& operator++()
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    pointer operator->() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                           "Attempted to dereference a non-dereferenceable unordered container iterator");
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_iterator& operator++() {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to increment non-incrementable unordered container iterator");
-#endif
         __node_ = __node_->__next_;
         return *this;
     }
@@ -357,18 +372,17 @@ public:
 private:
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_iterator(__node_pointer __node, const void* __c) _NOEXCEPT
+    __hash_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
         : __node_(__node)
         {
             __get_db()->__insert_ic(this, __c);
         }
 #else
     _LIBCPP_INLINE_VISIBILITY
-    __hash_iterator(__node_pointer __node) _NOEXCEPT
+    __hash_iterator(__next_pointer __node) _NOEXCEPT
         : __node_(__node)
         {}
 #endif
-
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator;
     template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_map_iterator;
@@ -381,9 +395,10 @@ class _LIBCPP_TYPE_VIS_ONLY __hash_const_iterator
 {
     static_assert(!is_const<typename pointer_traits<_NodePtr>::element_type>::value, "");
     typedef __hash_node_types<_NodePtr> _NodeTypes;
-    typedef _NodePtr __node_pointer;
+    typedef _NodePtr                            __node_pointer;
+    typedef typename _NodeTypes::__next_pointer __next_pointer;
 
-    __node_pointer __node_;
+    __next_pointer __node_;
 
 public:
     typedef __hash_iterator<_NodePtr> __non_const_iterator;
@@ -395,26 +410,18 @@ public:
     typedef typename _NodeTypes::__const_node_value_type_pointer pointer;
 
 
-    _LIBCPP_INLINE_VISIBILITY __hash_const_iterator() _NOEXCEPT
-#if _LIBCPP_STD_VER > 11
-    : __node_(nullptr)
-#endif
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __get_db()->__insert_i(this);
-#endif
+    _LIBCPP_INLINE_VISIBILITY __hash_const_iterator() _NOEXCEPT : __node_(nullptr) {
+        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
     }
+
     _LIBCPP_INLINE_VISIBILITY 
     __hash_const_iterator(const __non_const_iterator& __x) _NOEXCEPT
         : __node_(__x.__node_)
     {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __get_db()->__iterator_copy(this, &__x);
-#endif
+        _LIBCPP_DEBUG_MODE(__get_db()->__iterator_copy(this, &__x));
     }
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
-
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_iterator(const __hash_const_iterator& __i)
         : __node_(__i.__node_)
@@ -438,35 +445,25 @@ public:
         }
         return *this;
     }
-
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
     _LIBCPP_INLINE_VISIBILITY
-        reference operator*() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    reference operator*() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                            "Attempted to dereference a non-dereferenceable unordered container const_iterator");
-#endif
-            return __node_->__value_;
-        }
+        return __node_->__upcast()->__value_;
+    }
     _LIBCPP_INLINE_VISIBILITY
-        pointer operator->() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    pointer operator->() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                            "Attempted to dereference a non-dereferenceable unordered container const_iterator");
-#endif
-            return pointer_traits<pointer>::pointer_to(__node_->__value_);
-        }
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
+    }
 
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_iterator& operator++()
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                       "Attempted to increment non-incrementable unordered container const_iterator");
-#endif
+    __hash_const_iterator& operator++() {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                             "Attempted to increment non-incrementable unordered container const_iterator");
         __node_ = __node_->__next_;
         return *this;
     }
@@ -491,18 +488,17 @@ public:
 private:
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_iterator(__node_pointer __node, const void* __c) _NOEXCEPT
+    __hash_const_iterator(__next_pointer __node, const void* __c) _NOEXCEPT
         : __node_(__node)
         {
             __get_db()->__insert_ic(this, __c);
         }
 #else
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_iterator(__node_pointer __node) _NOEXCEPT
+    __hash_const_iterator(__next_pointer __node) _NOEXCEPT
         : __node_(__node)
         {}
 #endif
-
     template <class, class, class, class> friend class __hash_table;
     template <class> friend class _LIBCPP_TYPE_VIS_ONLY __hash_map_const_iterator;
     template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_map;
@@ -513,9 +509,10 @@ template <class _NodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_local_iterator
 {
     typedef __hash_node_types<_NodePtr> _NodeTypes;
-    typedef _NodePtr                    __node_pointer;
+    typedef _NodePtr                            __node_pointer;
+    typedef typename _NodeTypes::__next_pointer __next_pointer;
 
-    __node_pointer         __node_;
+    __next_pointer         __node_;
     size_t                 __bucket_;
     size_t                 __bucket_count_;
 
@@ -526,15 +523,11 @@ public:
     typedef value_type&                                         reference;
     typedef typename _NodeTypes::__node_value_type_pointer      pointer;
 
-    _LIBCPP_INLINE_VISIBILITY __hash_local_iterator() _NOEXCEPT
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __get_db()->__insert_i(this);
-#endif
+    _LIBCPP_INLINE_VISIBILITY __hash_local_iterator() _NOEXCEPT : __node_(nullptr) {
+        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
     }
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
-
     _LIBCPP_INLINE_VISIBILITY
     __hash_local_iterator(const __hash_local_iterator& __i)
         : __node_(__i.__node_),
@@ -562,37 +555,28 @@ public:
         }
         return *this;
     }
-
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
     _LIBCPP_INLINE_VISIBILITY
-        reference operator*() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    reference operator*() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                            "Attempted to dereference a non-dereferenceable unordered container local_iterator");
-#endif
-            return __node_->__value_;
-        }
-    _LIBCPP_INLINE_VISIBILITY
-        pointer operator->() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                           "Attempted to dereference a non-dereferenceable unordered container local_iterator");
-#endif
-            return pointer_traits<pointer>::pointer_to(__node_->__value_);
-        }
+        return __node_->__upcast()->__value_;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
-    __hash_local_iterator& operator++()
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    pointer operator->() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                             "Attempted to dereference a non-dereferenceable unordered container local_iterator");
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_local_iterator& operator++() {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to increment non-incrementable unordered container local_iterator");
-#endif
         __node_ = __node_->__next_;
-        if (__node_ != nullptr && __constrain_hash(__node_->__hash_, __bucket_count_) != __bucket_)
+        if (__node_ != nullptr && __constrain_hash(__node_->__hash(), __bucket_count_) != __bucket_)
             __node_ = nullptr;
         return *this;
     }
@@ -617,7 +601,7 @@ public:
 private:
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_local_iterator(__node_pointer __node, size_t __bucket,
+    __hash_local_iterator(__next_pointer __node, size_t __bucket,
                           size_t __bucket_count, const void* __c) _NOEXCEPT
         : __node_(__node),
           __bucket_(__bucket),
@@ -629,7 +613,7 @@ private:
         }
 #else
     _LIBCPP_INLINE_VISIBILITY
-    __hash_local_iterator(__node_pointer __node, size_t __bucket,
+    __hash_local_iterator(__next_pointer __node, size_t __bucket,
                           size_t __bucket_count) _NOEXCEPT
         : __node_(__node),
           __bucket_(__bucket),
@@ -648,9 +632,10 @@ template <class _ConstNodePtr>
 class _LIBCPP_TYPE_VIS_ONLY __hash_const_local_iterator
 {
     typedef __hash_node_types<_ConstNodePtr> _NodeTypes;
-    typedef _ConstNodePtr                    __node_pointer;
+    typedef _ConstNodePtr                       __node_pointer;
+    typedef typename _NodeTypes::__next_pointer __next_pointer;
 
-    __node_pointer         __node_;
+    __next_pointer         __node_;
     size_t                 __bucket_;
     size_t                 __bucket_count_;
 
@@ -670,11 +655,8 @@ public:
     typedef typename _NodeTypes::__const_node_value_type_pointer pointer;
 
 
-    _LIBCPP_INLINE_VISIBILITY __hash_const_local_iterator() _NOEXCEPT
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __get_db()->__insert_i(this);
-#endif
+    _LIBCPP_INLINE_VISIBILITY __hash_const_local_iterator() _NOEXCEPT : __node_(nullptr) {
+        _LIBCPP_DEBUG_MODE(__get_db()->__insert_i(this));
     }
 
     _LIBCPP_INLINE_VISIBILITY
@@ -683,13 +665,10 @@ public:
           __bucket_(__x.__bucket_),
           __bucket_count_(__x.__bucket_count_)
     {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        __get_db()->__iterator_copy(this, &__x);
-#endif
+        _LIBCPP_DEBUG_MODE(__get_db()->__iterator_copy(this, &__x));
     }
 
 #if _LIBCPP_DEBUG_LEVEL >= 2
-
     _LIBCPP_INLINE_VISIBILITY
     __hash_const_local_iterator(const __hash_const_local_iterator& __i)
         : __node_(__i.__node_),
@@ -717,37 +696,28 @@ public:
         }
         return *this;
     }
-
 #endif  // _LIBCPP_DEBUG_LEVEL >= 2
 
     _LIBCPP_INLINE_VISIBILITY
-        reference operator*() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    reference operator*() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                            "Attempted to dereference a non-dereferenceable unordered container const_local_iterator");
-#endif
-            return __node_->__value_;
-        }
-    _LIBCPP_INLINE_VISIBILITY
-        pointer operator->() const
-        {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-            _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
-                           "Attempted to dereference a non-dereferenceable unordered container const_local_iterator");
-#endif
-            return pointer_traits<pointer>::pointer_to(__node_->__value_);
-        }
+        return __node_->__upcast()->__value_;
+    }
 
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator& operator++()
-    {
-#if _LIBCPP_DEBUG_LEVEL >= 2
-        _LIBCPP_ASSERT(__get_const_db()->__dereferenceable(this),
+    pointer operator->() const {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
+                           "Attempted to dereference a non-dereferenceable unordered container const_local_iterator");
+        return pointer_traits<pointer>::pointer_to(__node_->__upcast()->__value_);
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    __hash_const_local_iterator& operator++() {
+        _LIBCPP_DEBUG_ASSERT(__get_const_db()->__dereferenceable(this),
                        "Attempted to increment non-incrementable unordered container const_local_iterator");
-#endif
         __node_ = __node_->__next_;
-        if (__node_ != nullptr && __constrain_hash(__node_->__hash_, __bucket_count_) != __bucket_)
+        if (__node_ != nullptr && __constrain_hash(__node_->__hash(), __bucket_count_) != __bucket_)
             __node_ = nullptr;
         return *this;
     }
@@ -772,7 +742,7 @@ public:
 private:
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator(__node_pointer __node, size_t __bucket,
+    __hash_const_local_iterator(__next_pointer __node, size_t __bucket,
                                 size_t __bucket_count, const void* __c) _NOEXCEPT
         : __node_(__node),
           __bucket_(__bucket),
@@ -784,7 +754,7 @@ private:
         }
 #else
     _LIBCPP_INLINE_VISIBILITY
-    __hash_const_local_iterator(__node_pointer __node, size_t __bucket,
+    __hash_const_local_iterator(__next_pointer __node, size_t __bucket,
                                 size_t __bucket_count) _NOEXCEPT
         : __node_(__node),
           __bucket_(__bucket),
@@ -927,6 +897,7 @@ public:
     typedef typename _NodeTypes::__node_pointer      __node_const_pointer;
     typedef typename _NodeTypes::__node_base_type    __first_node;
     typedef typename _NodeTypes::__node_base_pointer __node_base_pointer;
+    typedef typename _NodeTypes::__next_pointer      __next_pointer;
 
 private:
     // check for sane allocator pointer rebinding semantics. Rebinding the
@@ -942,11 +913,11 @@ private:
 
 private:
 
-    typedef typename __rebind_alloc_helper<__node_traits, __node_pointer>::type __pointer_allocator;
+    typedef typename __rebind_alloc_helper<__node_traits, __next_pointer>::type __pointer_allocator;
     typedef __bucket_list_deallocator<__pointer_allocator> __bucket_list_deleter;
-    typedef unique_ptr<__node_pointer[], __bucket_list_deleter> __bucket_list;
+    typedef unique_ptr<__next_pointer[], __bucket_list_deleter> __bucket_list;
     typedef allocator_traits<__pointer_allocator>          __pointer_alloc_traits;
-    typedef typename __bucket_list_deleter::pointer __node_pointer_pointer;
+    typedef typename __bucket_list_deleter::pointer       __node_pointer_pointer;
 
     // --- Member data begin ---
     __bucket_list                                         __bucket_list_;
@@ -1347,8 +1318,8 @@ private:
         void __move_assign_alloc(__hash_table&, false_type) _NOEXCEPT {}
 #endif // _LIBCPP_CXX03_LANG
 
-    void __deallocate(__node_pointer __np) _NOEXCEPT;
-    __node_pointer __detach() _NOEXCEPT;
+    void __deallocate(__next_pointer __np) _NOEXCEPT;
+    __next_pointer __detach() _NOEXCEPT;
 
     template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_map;
     template <class, class, class, class, class> friend class _LIBCPP_TYPE_VIS_ONLY unordered_multimap;
@@ -1439,8 +1410,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u)
 {
     if (size() > 0)
     {
-        __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash_, bucket_count())] =
-            static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()));
+        __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash(), bucket_count())] =
+            __p1_.first().__ptr();
         __u.__p1_.first().__next_ = nullptr;
         __u.size() = 0;
     }
@@ -1463,8 +1434,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__hash_table(__hash_table&& __u,
         {
             __p1_.first().__next_ = __u.__p1_.first().__next_;
             __u.__p1_.first().__next_ = nullptr;
-            __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash_, bucket_count())] =
-                static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()));
+            __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash(), bucket_count())] =
+                __p1_.first().__ptr();
             size() = __u.size();
             __u.size() = 0;
         }
@@ -1518,13 +1489,13 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::operator=(const __hash_table& __u)
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 void
-__hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate(__node_pointer __np)
+__hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate(__next_pointer __np)
     _NOEXCEPT
 {
     __node_allocator& __na = __node_alloc();
     while (__np != nullptr)
     {
-        __node_pointer __next = __np->__next_;
+        __next_pointer __next = __np->__next_;
 #if _LIBCPP_DEBUG_LEVEL >= 2
         __c_node* __c = __get_db()->__find_c_and_lock(this);
         for (__i_node** __p = __c->end_; __p != __c->beg_; )
@@ -1540,21 +1511,22 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__deallocate(__node_pointer __np)
         }
         __get_db()->unlock();
 #endif
-        __node_traits::destroy(__na, _NodeTypes::__get_ptr(__np->__value_));
-        __node_traits::deallocate(__na, __np, 1);
+        __node_pointer __real_np = __np->__upcast();
+        __node_traits::destroy(__na, _NodeTypes::__get_ptr(__real_np->__value_));
+        __node_traits::deallocate(__na, __real_np, 1);
         __np = __next;
     }
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
-typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_pointer
+typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__next_pointer
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::__detach() _NOEXCEPT
 {
     size_type __bc = bucket_count();
     for (size_type __i = 0; __i < __bc; ++__i)
         __bucket_list_[__i] = nullptr;
     size() = 0;
-    __node_pointer __cache = __p1_.first().__next_;
+    __next_pointer __cache = __p1_.first().__next_;
     __p1_.first().__next_ = nullptr;
     return __cache;
 }
@@ -1582,8 +1554,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
     __p1_.first().__next_ = __u.__p1_.first().__next_;
     if (size() > 0)
     {
-        __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash_, bucket_count())] =
-            static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()));
+        __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash(), bucket_count())] =
+            __p1_.first().__ptr();
         __u.__p1_.first().__next_ = nullptr;
         __u.size() = 0;
     }
@@ -1606,7 +1578,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
         max_load_factor() = __u.max_load_factor();
         if (bucket_count() != 0)
         {
-            __node_pointer __cache = __detach();
+            __next_pointer __cache = __detach();
 #ifndef _LIBCPP_NO_EXCEPTIONS
             try
             {
@@ -1614,9 +1586,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__move_assign(
                 const_iterator __i = __u.begin();
                 while (__cache != nullptr && __u.size() != 0)
                 {
-                    __cache->__value_ = _VSTD::move(__u.remove(__i++)->__value_);
-                    __node_pointer __next = __cache->__next_;
-                    __node_insert_multi(__cache);
+                    __cache->__upcast()->__value_ =
+                        _VSTD::move(__u.remove(__i++)->__value_);
+                    __next_pointer __next = __cache->__next_;
+                    __node_insert_multi(__cache->__upcast());
                     __cache = __next;
                 }
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -1669,16 +1642,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_unique(_InputIterator __first
 
     if (bucket_count() != 0)
     {
-        __node_pointer __cache = __detach();
+        __next_pointer __cache = __detach();
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
-                __cache->__value_ = *__first;
-                __node_pointer __next = __cache->__next_;
-                __node_insert_unique(__cache);
+                __cache->__upcast()->__value_ = *__first;
+                __next_pointer __next = __cache->__next_;
+                __node_insert_unique(__cache->__upcast());
                 __cache = __next;
             }
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -1709,16 +1682,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__assign_multi(_InputIterator __first,
                   " or the nodes value type");
     if (bucket_count() != 0)
     {
-        __node_pointer __cache = __detach();
+        __next_pointer __cache = __detach();
 #ifndef _LIBCPP_NO_EXCEPTIONS
         try
         {
 #endif  // _LIBCPP_NO_EXCEPTIONS
             for (; __cache != nullptr && __first != __last; ++__first)
             {
-                __cache->__value_ = *__first;
-                __node_pointer __next = __cache->__next_;
-                __node_insert_multi(__cache);
+                __cache->__upcast()->__value_ = *__first;
+                __next_pointer __next = __cache->__next_;
+                __node_insert_multi(__cache->__upcast());
                 __cache = __next;
             }
 #ifndef _LIBCPP_NO_EXCEPTIONS
@@ -1805,7 +1778,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
     __nd->__hash_ = hash_function()(__nd->__value_);
     size_type __bc = bucket_count();
     bool __inserted = false;
-    __node_pointer __ndptr;
+    __next_pointer __ndptr;
     size_t __chash;
     if (__bc != 0)
     {
@@ -1814,10 +1787,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
         if (__ndptr != nullptr)
         {
             for (__ndptr = __ndptr->__next_; __ndptr != nullptr &&
-                                             __constrain_hash(__ndptr->__hash_, __bc) == __chash;
+                                             __constrain_hash(__ndptr->__hash(), __bc) == __chash;
                                                      __ndptr = __ndptr->__next_)
             {
-                if (key_eq()(__ndptr->__value_, __nd->__value_))
+                if (key_eq()(__ndptr->__upcast()->__value_, __nd->__value_))
                     goto __done;
             }
         }
@@ -1831,23 +1804,23 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_unique(__node_pointer __
             __chash = __constrain_hash(__nd->__hash_, __bc);
         }
         // insert_after __bucket_list_[__chash], or __first_node if bucket is null
-        __node_pointer __pn = __bucket_list_[__chash];
+        __next_pointer __pn = __bucket_list_[__chash];
         if (__pn == nullptr)
         {
-            __pn = static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()));
+            __pn =__p1_.first().__ptr();
             __nd->__next_ = __pn->__next_;
-            __pn->__next_ = __nd;
+            __pn->__next_ = __nd->__ptr();
             // fix up __bucket_list_
             __bucket_list_[__chash] = __pn;
             if (__nd->__next_ != nullptr)
-                __bucket_list_[__constrain_hash(__nd->__next_->__hash_, __bc)] = __nd;
+                __bucket_list_[__constrain_hash(__nd->__next_->__hash(), __bc)] = __nd->__ptr();
         }
         else
         {
             __nd->__next_ = __pn->__next_;
-            __pn->__next_ = __nd;
+            __pn->__next_ = __nd->__ptr();
         }
-        __ndptr = __nd;
+        __ndptr = __nd->__ptr();
         // increment size
         ++size();
         __inserted = true;
@@ -1873,21 +1846,22 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
         __bc = bucket_count();
     }
     size_t __chash = __constrain_hash(__cp->__hash_, __bc);
-    __node_pointer __pn = __bucket_list_[__chash];
+    __next_pointer __pn = __bucket_list_[__chash];
     if (__pn == nullptr)
     {
-        __pn = static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()));
+        __pn =__p1_.first().__ptr();
         __cp->__next_ = __pn->__next_;
-        __pn->__next_ = __cp;
+        __pn->__next_ = __cp->__ptr();
         // fix up __bucket_list_
         __bucket_list_[__chash] = __pn;
         if (__cp->__next_ != nullptr)
-            __bucket_list_[__constrain_hash(__cp->__next_->__hash_, __bc)] = __cp;
+            __bucket_list_[__constrain_hash(__cp->__next_->__hash(), __bc)]
+                = __cp->__ptr();
     }
     else
     {
         for (bool __found = false; __pn->__next_ != nullptr &&
-                                   __constrain_hash(__pn->__next_->__hash_, __bc) == __chash;
+                                   __constrain_hash(__pn->__next_->__hash(), __bc) == __chash;
                                                            __pn = __pn->__next_)
         {
             //      __found    key_eq()     action
@@ -1895,8 +1869,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
             //      true        true        loop
             //      false       true        set __found to true
             //      true        false       break
-            if (__found != (__pn->__next_->__hash_ == __cp->__hash_ &&
-                            key_eq()(__pn->__next_->__value_, __cp->__value_)))
+            if (__found != (__pn->__next_->__hash() == __cp->__hash_ &&
+                            key_eq()(__pn->__next_->__upcast()->__value_, __cp->__value_)))
             {
                 if (!__found)
                     __found = true;
@@ -1905,19 +1879,19 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(__node_pointer __c
             }
         }
         __cp->__next_ = __pn->__next_;
-        __pn->__next_ = __cp;
+        __pn->__next_ = __cp->__ptr();
         if (__cp->__next_ != nullptr)
         {
-            size_t __nhash = __constrain_hash(__cp->__next_->__hash_, __bc);
+            size_t __nhash = __constrain_hash(__cp->__next_->__hash(), __bc);
             if (__nhash != __chash)
-                __bucket_list_[__nhash] = __cp;
+                __bucket_list_[__nhash] = __cp->__ptr();
         }
     }
     ++size();
 #if _LIBCPP_DEBUG_LEVEL >= 2
-    return iterator(__cp, this);
+    return iterator(__cp->__ptr(), this);
 #else
-    return iterator(__cp);
+    return iterator(__cp->__ptr());
 #endif
 }
 
@@ -1933,8 +1907,8 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
 #endif
     if (__p != end() && key_eq()(*__p, __cp->__value_))
     {
-        __node_pointer __np = __p.__node_;
-        __cp->__hash_ = __np->__hash_;
+        __next_pointer __np = __p.__node_;
+        __cp->__hash_ = __np->__hash();
         size_type __bc = bucket_count();
         if (size()+1 > __bc * max_load_factor() || __bc == 0)
         {
@@ -1943,16 +1917,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_insert_multi(
             __bc = bucket_count();
         }
         size_t __chash = __constrain_hash(__cp->__hash_, __bc);
-        __node_pointer __pp = __bucket_list_[__chash];
+        __next_pointer __pp = __bucket_list_[__chash];
         while (__pp->__next_ != __np)
             __pp = __pp->__next_;
         __cp->__next_ = __np;
-        __pp->__next_ = __cp;
+        __pp->__next_ = static_cast<__next_pointer>(__cp);
         ++size();
 #if _LIBCPP_DEBUG_LEVEL >= 2
-        return iterator(__cp, this);
+        return iterator(static_cast<__next_pointer>(__cp), this);
 #else
-        return iterator(__cp);
+        return iterator(static_cast<__next_pointer>(__cp));
 #endif
     }
     return __node_insert_multi(__cp);
@@ -1978,7 +1952,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
     size_t __hash = hash_function()(__k);
     size_type __bc = bucket_count();
     bool __inserted = false;
-    __node_pointer __nd;
+    __next_pointer __nd;
     size_t __chash;
     if (__bc != 0)
     {
@@ -1987,10 +1961,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                                       __constrain_hash(__nd->__hash_, __bc) == __chash;
+                                       __constrain_hash(__nd->__hash(), __bc) == __chash;
                                                            __nd = __nd->__next_)
             {
-                if (key_eq()(__nd->__value_, __k))
+                if (key_eq()(__nd->__upcast()->__value_, __k))
                     goto __done;
             }
         }
@@ -2009,23 +1983,24 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__emplace_unique_key_args(_Key const& 
             __chash = __constrain_hash(__hash, __bc);
         }
         // insert_after __bucket_list_[__chash], or __first_node if bucket is null
-        __node_pointer __pn = __bucket_list_[__chash];
+        __next_pointer __pn = __bucket_list_[__chash];
         if (__pn == nullptr)
         {
-            __pn = static_cast<__node_pointer>(static_cast<__void_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first())));
+            __pn = __p1_.first().__ptr();
             __h->__next_ = __pn->__next_;
-            __pn->__next_ = __h.get();
+            __pn->__next_ = __h.get()->__ptr();
             // fix up __bucket_list_
             __bucket_list_[__chash] = __pn;
             if (__h->__next_ != nullptr)
-                __bucket_list_[__constrain_hash(__h->__next_->__hash_, __bc)] = __h.get();
+                __bucket_list_[__constrain_hash(__h->__next_->__hash(), __bc)]
+                    = __h.get()->__ptr();
         }
         else
         {
             __h->__next_ = __pn->__next_;
-            __pn->__next_ = __h.get();
+            __pn->__next_ = static_cast<__next_pointer>(__h.get());
         }
-        __nd = __h.release();
+        __nd = static_cast<__next_pointer>(__h.release());
         // increment size
         ++size();
         __inserted = true;
@@ -2149,17 +2124,17 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
     {
         for (size_type __i = 0; __i < __nbc; ++__i)
             __bucket_list_[__i] = nullptr;
-        __node_pointer __pp(static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first())));
-        __node_pointer __cp = __pp->__next_;
+        __next_pointer __pp = __p1_.first().__ptr();
+        __next_pointer __cp = __pp->__next_;
         if (__cp != nullptr)
         {
-            size_type __chash = __constrain_hash(__cp->__hash_, __nbc);
+            size_type __chash = __constrain_hash(__cp->__hash(), __nbc);
             __bucket_list_[__chash] = __pp;
             size_type __phash = __chash;
             for (__pp = __cp, __cp = __cp->__next_; __cp != nullptr;
                                                            __cp = __pp->__next_)
             {
-                __chash = __constrain_hash(__cp->__hash_, __nbc);
+                __chash = __constrain_hash(__cp->__hash(), __nbc);
                 if (__chash == __phash)
                     __pp = __cp;
                 else
@@ -2172,9 +2147,10 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::__rehash(size_type __nbc)
                     }
                     else
                     {
-                        __node_pointer __np = __cp;
+                        __next_pointer __np = __cp;
                         for (; __np->__next_ != nullptr &&
-                               key_eq()(__cp->__value_, __np->__next_->__value_);
+                               key_eq()(__cp->__upcast()->__value_,
+                                        __np->__next_->__upcast()->__value_);
                                                            __np = __np->__next_)
                             ;
                         __pp->__next_ = __np->__next_;
@@ -2198,15 +2174,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k)
     if (__bc != 0)
     {
         size_t __chash = __constrain_hash(__hash, __bc);
-        __node_pointer __nd = __bucket_list_[__chash];
+        __next_pointer __nd = __bucket_list_[__chash];
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                (__nd->__hash_ == __hash
-                  || __constrain_hash(__nd->__hash_, __bc) == __chash);
+                (__nd->__hash() == __hash
+                  || __constrain_hash(__nd->__hash(), __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
-                if ((__nd->__hash_ == __hash) && key_eq()(__nd->__value_, __k))
+                if ((__nd->__hash() == __hash)
+                    && key_eq()(__nd->__upcast()->__value_, __k))
 #if _LIBCPP_DEBUG_LEVEL >= 2
                     return iterator(__nd, this);
 #else
@@ -2228,14 +2205,16 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::find(const _Key& __k) const
     if (__bc != 0)
     {
         size_t __chash = __constrain_hash(__hash, __bc);
-        __node_const_pointer __nd = __bucket_list_[__chash];
+        __next_pointer __nd = __bucket_list_[__chash];
         if (__nd != nullptr)
         {
             for (__nd = __nd->__next_; __nd != nullptr &&
-                (__hash == __nd->__hash_ || __constrain_hash(__nd->__hash_, __bc) == __chash);
+                (__hash == __nd->__hash()
+                    || __constrain_hash(__nd->__hash(), __bc) == __chash);
                                                            __nd = __nd->__next_)
             {
-                if ((__nd->__hash_ == __hash) && key_eq()(__nd->__value_, __k))
+                if ((__nd->__hash() == __hash)
+                    && key_eq()(__nd->__upcast()->__value_, __k))
 #if _LIBCPP_DEBUG_LEVEL >= 2
                     return const_iterator(__nd, this);
 #else
@@ -2320,7 +2299,7 @@ template <class _Tp, class _Hash, class _Equal, class _Alloc>
 typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::iterator
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __p)
 {
-    __node_pointer __np = __p.__node_;
+    __next_pointer __np = __p.__node_;
 #if _LIBCPP_DEBUG_LEVEL >= 2
     _LIBCPP_ASSERT(__get_const_db()->__find_c_from_i(&__p) == this,
         "unordered container erase(iterator) called with an iterator not"
@@ -2354,7 +2333,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::erase(const_iterator __first,
         ++__first;
         erase(__p);
     }
-    __node_pointer __np = __last.__node_;
+    __next_pointer __np = __last.__node_;
 #if _LIBCPP_DEBUG_LEVEL >= 2
     return iterator (__np, this);
 #else
@@ -2398,26 +2377,27 @@ typename __hash_table<_Tp, _Hash, _Equal, _Alloc>::__node_holder
 __hash_table<_Tp, _Hash, _Equal, _Alloc>::remove(const_iterator __p) _NOEXCEPT
 {
     // current node
-    __node_pointer __cn = __p.__node_;
+    __next_pointer __cn = __p.__node_;
     size_type __bc = bucket_count();
-    size_t __chash = __constrain_hash(__cn->__hash_, __bc);
+    size_t __chash = __constrain_hash(__cn->__hash(), __bc);
     // find previous node
-    __node_pointer __pn = __bucket_list_[__chash];
+    __next_pointer __pn = __bucket_list_[__chash];
     for (; __pn->__next_ != __cn; __pn = __pn->__next_)
         ;
     // Fix up __bucket_list_
         // if __pn is not in same bucket (before begin is not in same bucket) &&
         //    if __cn->__next_ is not in same bucket (nullptr is not in same bucket)
-    if (__pn == static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()))
-                            || __constrain_hash(__pn->__hash_, __bc) != __chash)
+    if (__pn == __p1_.first().__ptr()
+            || __constrain_hash(__pn->__hash(), __bc) != __chash)
     {
-        if (__cn->__next_ == nullptr || __constrain_hash(__cn->__next_->__hash_, __bc) != __chash)
+        if (__cn->__next_ == nullptr
+            || __constrain_hash(__cn->__next_->__hash(), __bc) != __chash)
             __bucket_list_[__chash] = nullptr;
     }
         // if __cn->__next_ is not in same bucket (nullptr is in same bucket)
     if (__cn->__next_ != nullptr)
     {
-        size_t __nhash = __constrain_hash(__cn->__next_->__hash_, __bc);
+        size_t __nhash = __constrain_hash(__cn->__next_->__hash(), __bc);
         if (__nhash != __chash)
             __bucket_list_[__nhash] = __pn;
     }
@@ -2440,7 +2420,7 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::remove(const_iterator __p) _NOEXCEPT
     }
     __get_db()->unlock();
 #endif
-    return __node_holder(__cn, _Dp(__node_alloc(), true));
+    return __node_holder(__cn->__upcast(), _Dp(__node_alloc(), true));
 }
 
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
@@ -2567,11 +2547,11 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::swap(__hash_table& __u)
     __p2_.swap(__u.__p2_);
     __p3_.swap(__u.__p3_);
     if (size() > 0)
-        __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash_, bucket_count())] =
-            static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__p1_.first()));
+        __bucket_list_[__constrain_hash(__p1_.first().__next_->__hash(), bucket_count())] =
+            __p1_.first().__ptr();
     if (__u.size() > 0)
-        __u.__bucket_list_[__constrain_hash(__u.__p1_.first().__next_->__hash_, __u.bucket_count())] =
-            static_cast<__node_pointer>(pointer_traits<__node_base_pointer>::pointer_to(__u.__p1_.first()));
+        __u.__bucket_list_[__constrain_hash(__u.__p1_.first().__next_->__hash(), __u.bucket_count())] =
+            __u.__p1_.first().__ptr();
 #if _LIBCPP_DEBUG_LEVEL >= 2
     __get_db()->swap(this, &__u);
 #endif
@@ -2583,13 +2563,13 @@ __hash_table<_Tp, _Hash, _Equal, _Alloc>::bucket_size(size_type __n) const
 {
     _LIBCPP_ASSERT(__n < bucket_count(),
         "unordered container::bucket_size(n) called with n >= bucket_count()");
-    __node_const_pointer __np = __bucket_list_[__n];
+    __next_pointer __np = __bucket_list_[__n];
     size_type __bc = bucket_count();
     size_type __r = 0;
     if (__np != nullptr)
     {
         for (__np = __np->__next_; __np != nullptr &&
-                                   __constrain_hash(__np->__hash_, __bc) == __n;
+                                   __constrain_hash(__np->__hash(), __bc) == __n;
                                                     __np = __np->__next_, ++__r)
             ;
     }
