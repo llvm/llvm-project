@@ -1078,7 +1078,7 @@ static void AddAlignmentAssumptions(CallSite CS, InlineFunctionInfo &IFI) {
       // caller, then don't bother inserting the assumption.
       Value *Arg = CS.getArgument(I->getArgNo());
       if (getKnownAlignment(Arg, DL, CS.getInstruction(),
-                            &IFI.ACT->getAssumptionCache(*CS.getCaller()),
+                            &(*IFI.GetAssumptionCache)(*CS.getCaller()),
                             &DT) >= Align)
         continue;
 
@@ -1199,7 +1199,7 @@ static Value *HandleByValArgument(Value *Arg, Instruction *TheCall,
     // If the pointer is already known to be sufficiently aligned, or if we can
     // round it up to a larger alignment, then we don't need a temporary.
     if (getOrEnforceKnownAlignment(Arg, ByValAlignment, DL, TheCall,
-                                   &IFI.ACT->getAssumptionCache(*Caller)) >=
+                                   &(*IFI.GetAssumptionCache)(*Caller)) >=
         ByValAlignment)
       return Arg;
     
@@ -1604,8 +1604,8 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
 
     // FIXME: We could register any cloned assumptions instead of clearing the
     // whole function's cache.
-    if (IFI.ACT)
-      IFI.ACT->getAssumptionCache(*Caller).clear();
+    if (IFI.GetAssumptionCache)
+      (*IFI.GetAssumptionCache)(*Caller).clear();
   }
 
   // If there are any alloca instructions in the block that used to be the entry
@@ -2125,7 +2125,7 @@ bool llvm::InlineFunction(CallSite CS, InlineFunctionInfo &IFI,
   if (PHI) {
     auto &DL = Caller->getParent()->getDataLayout();
     if (Value *V = SimplifyInstruction(PHI, DL, nullptr, nullptr,
-                                       &IFI.ACT->getAssumptionCache(*Caller))) {
+                                       &(*IFI.GetAssumptionCache)(*Caller))) {
       PHI->replaceAllUsesWith(V);
       PHI->eraseFromParent();
     }

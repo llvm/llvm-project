@@ -535,11 +535,10 @@ class CXXRecordDecl : public RecordDecl {
         MethodTyInfo(Info) {
       IsLambda = true;
 
-      // C++11 [expr.prim.lambda]p3:
-      //   This class type is neither an aggregate nor a literal type.
+      // C++1z [expr.prim.lambda]p4:
+      //   This class type is not an aggregate type.
       Aggregate = false;
       PlainOldData = false;
-      HasNonLiteralTypeFieldsOrBases = true;
     }
 
     /// \brief Whether this lambda is known to be dependent, even if its
@@ -1338,11 +1337,15 @@ public:
   ///
   /// We resolve DR1361 by ignoring the second bullet. We resolve DR1452 by
   /// treating types with trivial default constructors as literal types.
+  ///
+  /// Only in C++1z and beyond, are lambdas literal types.
   bool isLiteral() const {
     return hasTrivialDestructor() &&
-           (isAggregate() || hasConstexprNonCopyMoveConstructor() ||
-            hasTrivialDefaultConstructor()) &&
-           !hasNonLiteralTypeFieldsOrBases();
+           (!isLambda() || getASTContext().getLangOpts().CPlusPlus1z) &&
+           !hasNonLiteralTypeFieldsOrBases() &&
+           (isAggregate() || isLambda() ||
+            hasConstexprNonCopyMoveConstructor() ||
+            hasTrivialDefaultConstructor());
   }
 
   /// \brief If this record is an instantiation of a member class,

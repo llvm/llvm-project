@@ -434,7 +434,7 @@ LEB128 is an unsigned integer value that is encoded using DWARF's LEB128
 encoding, optimizing for the case where values are small
 (1 byte for values less than 128).
 
-.. _Strings:
+.. _CoverageStrings:
 
 Strings
 ^^^^^^^

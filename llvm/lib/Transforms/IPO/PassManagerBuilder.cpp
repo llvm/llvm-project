@@ -111,10 +111,13 @@ static cl::opt<bool> EnableLoopLoadElim(
     "enable-loop-load-elim", cl::init(true), cl::Hidden,
     cl::desc("Enable the LoopLoadElimination Pass"));
 
-static cl::opt<std::string> RunPGOInstrGen(
-    "profile-generate", cl::init(""), cl::Hidden,
-    cl::desc("Enable generation phase of PGO instrumentation and specify the "
-             "path of profile data file"));
+static cl::opt<bool> RunPGOInstrGen(
+    "profile-generate", cl::init(false), cl::Hidden,
+    cl::desc("Enable PGO instrumentation."));
+
+static cl::opt<std::string>
+    PGOOutputFile("profile-generate-file", cl::init(""), cl::Hidden,
+                      cl::desc("Specify the path of profile data file."));
 
 static cl::opt<std::string> RunPGOInstrUse(
     "profile-use", cl::init(""), cl::Hidden, cl::value_desc("filename"),
@@ -156,7 +159,8 @@ PassManagerBuilder::PassManagerBuilder() {
     VerifyOutput = false;
     MergeFunctions = false;
     PrepareForLTO = false;
-    PGOInstrGen = RunPGOInstrGen;
+    EnablePGOInstrGen = RunPGOInstrGen;
+    PGOInstrGen = PGOOutputFile;
     PGOInstrUse = RunPGOInstrUse;
     PrepareForThinLTO = false;
     PerformThinLTO = false;
@@ -243,7 +247,7 @@ void PassManagerBuilder::populateFunctionPassManager(
 
 // Do PGO instrumentation generation or use pass as the option specified.
 void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
-  if (PGOInstrGen.empty() && PGOInstrUse.empty())
+  if (!EnablePGOInstrGen && PGOInstrUse.empty())
     return;
   // Perform the preinline and cleanup passes for O1 and above.
   // And avoid doing them if optimizing for size.
@@ -256,11 +260,12 @@ void PassManagerBuilder::addPGOInstrPasses(legacy::PassManagerBase &MPM) {
     MPM.add(createInstructionCombiningPass()); // Combine silly seq's
     addExtensionsToPM(EP_Peephole, MPM);
   }
-  if (!PGOInstrGen.empty()) {
+  if (EnablePGOInstrGen) {
     MPM.add(createPGOInstrumentationGenLegacyPass());
     // Add the profile lowering pass.
     InstrProfOptions Options;
-    Options.InstrProfileOutput = PGOInstrGen;
+    if (!PGOInstrGen.empty())
+      Options.InstrProfileOutput = PGOInstrGen;
     MPM.add(createInstrProfilingLegacyPass(Options));
   }
   if (!PGOInstrUse.empty())

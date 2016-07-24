@@ -585,8 +585,7 @@ private:
                                     ConstantInt *RHS);
   Instruction *foldICmpEqualityWithConstant(ICmpInst &ICI, Instruction *LHS,
                                             ConstantInt *RHS);
-  Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI, Instruction *LHS,
-                                             ConstantInt *RHS);
+  Instruction *foldICmpIntrinsicWithConstant(ICmpInst &ICI);
 
   Instruction *OptAndOp(Instruction *Op, ConstantInt *OpRHS,
                         ConstantInt *AndRHS, BinaryOperator &TheAnd);

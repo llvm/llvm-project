@@ -368,7 +368,6 @@ class ClobberWalker {
   /// keep track of this information for us, and allow us O(1) lookups of this
   /// info.
   MemoryAccess *getWalkTarget(const MemoryPhi *From) {
-    assert(!MSSA.isLiveOnEntryDef(From) && "liveOnEntry has no target.");
     assert(From->getNumOperands() && "Phi with no operands?");
 
     BasicBlock *BB = From->getBlock();

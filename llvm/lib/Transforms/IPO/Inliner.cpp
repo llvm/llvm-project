@@ -75,19 +75,15 @@ InlinedArrayAllocasTy;
 /// available from other functions inlined into the caller.  If we are able to
 /// inline this call site we attempt to reuse already available allocas or add
 /// any new allocas to the set if not possible.
-static bool InlineCallIfPossible(Pass &P, CallSite CS, InlineFunctionInfo &IFI,
-                                 InlinedArrayAllocasTy &InlinedArrayAllocas,
-                                 int InlineHistory, bool InsertLifetime) {
+static bool
+InlineCallIfPossible(CallSite CS, InlineFunctionInfo &IFI,
+                     InlinedArrayAllocasTy &InlinedArrayAllocas,
+                     int InlineHistory, bool InsertLifetime,
+                     std::function<AAResults &(Function &)> &AARGetter) {
   Function *Callee = CS.getCalledFunction();
   Function *Caller = CS.getCaller();
 
-  // We need to manually construct BasicAA directly in order to disable
-  // its use of other function analyses.
-  BasicAAResult BAR(createLegacyPMBasicAAResult(P, *Callee));
-
-  // Construct our own AA results for this function. We do this manually to
-  // work around the limitations of the legacy pass manager.
-  AAResults AAR(createLegacyPMAAResults(P, *Callee, BAR));
+  AAResults &AAR = AARGetter(*Callee);
 
   // Try to inline the function.  Get the list of static allocas that were
   // inlined.
@@ -229,8 +225,15 @@ static void emitAnalysis(CallSite CS, const Twine &Msg) {
   emitOptimizationRemarkAnalysis(Ctx, DEBUG_TYPE, *Caller, DLoc, Msg);
 }
 
-bool Inliner::shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
-                               int &TotalSecondaryCost) {
+/// Return true if inlining of CS can block the caller from being
+/// inlined which is proved to be more beneficial. \p IC is the
+/// estimated inline cost associated with callsite \p CS.
+/// \p TotalAltCost will be set to the estimated cost of inlining the caller
+/// if \p CS is suppressed for inlining.
+static bool
+shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
+                 int &TotalSecondaryCost,
+                 std::function<InlineCost(CallSite CS)> &GetInlineCost) {
 
   // For now we only handle local or inline functions.
   if (!Caller->hasLocalLinkage() && !Caller->hasLinkOnceODRLinkage())
@@ -269,7 +272,7 @@ bool Inliner::shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
       continue;
     }
 
-    InlineCost IC2 = getInlineCost(CS2);
+    InlineCost IC2 = GetInlineCost(CS2);
     ++NumCallerCallersAnalyzed;
     if (!IC2) {
       callerWillBeRemoved = false;
@@ -300,8 +303,9 @@ bool Inliner::shouldBeDeferred(Function *Caller, CallSite CS, InlineCost IC,
 }
 
 /// Return true if the inliner should attempt to inline at the given CallSite.
-bool Inliner::shouldInline(CallSite CS) {
-  InlineCost IC = getInlineCost(CS);
+static bool shouldInline(CallSite CS,
+                         std::function<InlineCost(CallSite CS)> GetInlineCost) {
+  InlineCost IC = GetInlineCost(CS);
   
   if (IC.isAlways()) {
     DEBUG(dbgs() << "    Inlining: cost=always"
@@ -332,7 +336,7 @@ bool Inliner::shouldInline(CallSite CS) {
   }
 
   int TotalSecondaryCost = 0;
-  if (shouldBeDeferred(Caller, CS, IC, TotalSecondaryCost)) {
+  if (shouldBeDeferred(Caller, CS, IC, TotalSecondaryCost, GetInlineCost)) {
     DEBUG(dbgs() << "    NOT Inlining: " << *CS.getInstruction()
           << " Cost = " << IC.getCost()
           << ", outer Cost = " << TotalSecondaryCost << '\n');
@@ -370,15 +374,17 @@ static bool InlineHistoryIncludes(Function *F, int InlineHistoryID,
 bool Inliner::runOnSCC(CallGraphSCC &SCC) {
   if (skipSCC(SCC))
     return false;
+
   return inlineCalls(SCC);
 }
 
-bool Inliner::inlineCalls(CallGraphSCC &SCC) {
-  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
-  ACT = &getAnalysis<AssumptionCacheTracker>();
-  PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI(CG.getModule());
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
-
+static bool
+inlineCallsImpl(CallGraphSCC &SCC, CallGraph &CG,
+                std::function<AssumptionCache &(Function &)> GetAssumptionCache,
+                ProfileSummaryInfo *PSI, TargetLibraryInfo &TLI,
+                bool InsertLifetime,
+                std::function<InlineCost(CallSite CS)> GetInlineCost,
+                std::function<AAResults &(Function &)> AARGetter) {
   SmallPtrSet<Function*, 8> SCCFunctions;
   DEBUG(dbgs() << "Inliner visiting SCC:");
   for (CallGraphNode *Node : SCC) {
@@ -437,7 +443,7 @@ bool Inliner::inlineCalls(CallGraphSCC &SCC) {
 
   
   InlinedArrayAllocasTy InlinedArrayAllocas;
-  InlineFunctionInfo InlineInfo(&CG, ACT);
+  InlineFunctionInfo InlineInfo(&CG, &GetAssumptionCache);
 
   // Now that we have all of the call sites, loop over them and inline them if
   // it looks profitable to do so.
@@ -486,7 +492,7 @@ bool Inliner::inlineCalls(CallGraphSCC &SCC) {
 
         // If the policy determines that we should inline this function,
         // try to do so.
-        if (!shouldInline(CS)) {
+        if (!shouldInline(CS, GetInlineCost)) {
           emitOptimizationRemarkMissed(CallerCtx, DEBUG_TYPE, *Caller, DLoc,
                                        Twine(Callee->getName() +
                                              " will not be inlined into " +
@@ -495,8 +501,8 @@ bool Inliner::inlineCalls(CallGraphSCC &SCC) {
         }
 
         // Attempt to inline the function.
-        if (!InlineCallIfPossible(*this, CS, InlineInfo, InlinedArrayAllocas,
-                                  InlineHistoryID, InsertLifetime)) {
+        if (!InlineCallIfPossible(CS, InlineInfo, InlinedArrayAllocas,
+                                  InlineHistoryID, InsertLifetime, AARGetter)) {
           emitOptimizationRemarkMissed(CallerCtx, DEBUG_TYPE, *Caller, DLoc,
                                        Twine(Callee->getName() +
                                              " will not be inlined into " +
@@ -563,6 +569,29 @@ bool Inliner::inlineCalls(CallGraphSCC &SCC) {
   } while (LocalChange);
 
   return Changed;
+}
+
+bool Inliner::inlineCalls(CallGraphSCC &SCC) {
+  CallGraph &CG = getAnalysis<CallGraphWrapperPass>().getCallGraph();
+  ACT = &getAnalysis<AssumptionCacheTracker>();
+  PSI = getAnalysis<ProfileSummaryInfoWrapperPass>().getPSI(CG.getModule());
+  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  // We compute dedicated AA results for each function in the SCC as needed. We
+  // use a lambda referencing external objects so that they live long enough to
+  // be queried, but we re-use them each time.
+  Optional<BasicAAResult> BAR;
+  Optional<AAResults> AAR;
+  auto AARGetter = [&](Function &F) -> AAResults & {
+    BAR.emplace(createLegacyPMBasicAAResult(*this, F));
+    AAR.emplace(createLegacyPMAAResults(*this, F, *BAR));
+    return *AAR;
+  };
+  auto GetAssumptionCache = [&](Function &F) -> AssumptionCache & {
+    return ACT->getAssumptionCache(F);
+  };
+  return inlineCallsImpl(SCC, CG, GetAssumptionCache, PSI, TLI, InsertLifetime,
+                         [this](CallSite CS) { return getInlineCost(CS); },
+                         AARGetter);
 }
 
 /// Remove now-dead linkonce functions at the end of
