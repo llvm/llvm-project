@@ -316,12 +316,9 @@ entry:
 ; CHECK-NEXT: store volatile i1 %pop.cmp, i1* %c
 }
 
-; FIXME: Vectors should get the same folds as scalars.
-
 define <2 x i1> @ctlz_cmp_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @ctlz_cmp_vec(
-; CHECK-NEXT:    [[X:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) #0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X]], <i32 32, i32 32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %a, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
@@ -331,8 +328,7 @@ define <2 x i1> @ctlz_cmp_vec(<2 x i32> %a) {
 
 define <2 x i1> @cttz_cmp_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @cttz_cmp_vec(
-; CHECK-NEXT:    [[X:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) #0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> [[X]], <i32 32, i32 32>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i32> %a, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> %a, i1 false) nounwind readnone
@@ -342,8 +338,7 @@ define <2 x i1> @cttz_cmp_vec(<2 x i32> %a) {
 
 define <2 x i1> @ctpop_cmp_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @ctpop_cmp_vec(
-; CHECK-NEXT:    [[X:%.*]] = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) #0
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> [[X]], zeroinitializer
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i32> %a, zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %x = tail call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> %a) nounwind readnone

@@ -402,7 +402,10 @@ protected:
 
   /// This function adds (StartIdx, StartIdx + Step, StartIdx + 2*Step, ...)
   /// to each vector element of Val. The sequence starts at StartIndex.
-  virtual Value *getStepVector(Value *Val, int StartIdx, Value *Step);
+  /// \p Opcode is relevant for FP induction variable.
+  virtual Value *getStepVector(Value *Val, int StartIdx, Value *Step,
+                               Instruction::BinaryOps Opcode =
+                               Instruction::BinaryOpsEnd);
 
   /// Compute scalar induction steps. \p ScalarIV is the scalar induction
   /// variable on which to base the steps, \p Step is the size of the step, and
@@ -625,7 +628,9 @@ private:
                             bool IfPredicateStore = false) override;
   void vectorizeMemoryInstruction(Instruction *Instr) override;
   Value *getBroadcastInstrs(Value *V) override;
-  Value *getStepVector(Value *Val, int StartIdx, Value *Step) override;
+  Value *getStepVector(Value *Val, int StartIdx, Value *Step,
+                       Instruction::BinaryOps Opcode =
+                       Instruction::BinaryOpsEnd) override;
   Value *reverseVector(Value *Vec) override;
 };
 
@@ -2000,32 +2005,60 @@ void InnerLoopVectorizer::widenIntInduction(PHINode *IV, VectorParts &Entry,
   }
 }
 
-Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx,
-                                          Value *Step) {
+Value *InnerLoopVectorizer::getStepVector(Value *Val, int StartIdx, Value *Step,
+                                          Instruction::BinaryOps BinOp) {
+  // Create and check the types.
   assert(Val->getType()->isVectorTy() && "Must be a vector");
-  assert(Val->getType()->getScalarType()->isIntegerTy() &&
-         "Elem must be an integer");
-  assert(Step->getType() == Val->getType()->getScalarType() &&
-         "Step has wrong type");
-  // Create the types.
-  Type *ITy = Val->getType()->getScalarType();
-  VectorType *Ty = cast<VectorType>(Val->getType());
-  int VLen = Ty->getNumElements();
+  int VLen = Val->getType()->getVectorNumElements();
+
+  Type *STy = Val->getType()->getScalarType();
+  assert((STy->isIntegerTy() || STy->isFloatingPointTy()) &&
+         "Induction Step must be an integer or FP");
+  assert(Step->getType() == STy && "Step has wrong type");
+
   SmallVector<Constant *, 8> Indices;
 
+  if (STy->isIntegerTy()) {
+    // Create a vector of consecutive numbers from zero to VF.
+    for (int i = 0; i < VLen; ++i)
+      Indices.push_back(ConstantInt::get(STy, StartIdx + i));
+
+    // Add the consecutive indices to the vector value.
+    Constant *Cv = ConstantVector::get(Indices);
+    assert(Cv->getType() == Val->getType() && "Invalid consecutive vec");
+    Step = Builder.CreateVectorSplat(VLen, Step);
+    assert(Step->getType() == Val->getType() && "Invalid step vec");
+    // FIXME: The newly created binary instructions should contain nsw/nuw flags,
+    // which can be found from the original scalar operations.
+    Step = Builder.CreateMul(Cv, Step);
+    return Builder.CreateAdd(Val, Step, "induction");
+  }
+
+  // Floating point induction.
+  assert((BinOp == Instruction::FAdd || BinOp == Instruction::FSub) &&
+         "Binary Opcode should be specified for FP induction");
   // Create a vector of consecutive numbers from zero to VF.
   for (int i = 0; i < VLen; ++i)
-    Indices.push_back(ConstantInt::get(ITy, StartIdx + i));
+    Indices.push_back(ConstantFP::get(STy, (double)(StartIdx + i)));
 
   // Add the consecutive indices to the vector value.
   Constant *Cv = ConstantVector::get(Indices);
-  assert(Cv->getType() == Val->getType() && "Invalid consecutive vec");
+
   Step = Builder.CreateVectorSplat(VLen, Step);
-  assert(Step->getType() == Val->getType() && "Invalid step vec");
-  // FIXME: The newly created binary instructions should contain nsw/nuw flags,
-  // which can be found from the original scalar operations.
-  Step = Builder.CreateMul(Cv, Step);
-  return Builder.CreateAdd(Val, Step, "induction");
+
+  // Floating point operations had to be 'fast' to enable the induction.
+  FastMathFlags Flags;
+  Flags.setUnsafeAlgebra();
+
+  Value *MulOp = Builder.CreateFMul(Cv, Step);
+  if (isa<Instruction>(MulOp))
+    // Have to check, MulOp may be a constant
+    cast<Instruction>(MulOp)->setFastMathFlags(Flags);
+
+  Value *BOp = Builder.CreateBinOp(BinOp, Val, MulOp, "induction");
+  if (isa<Instruction>(BOp))
+    cast<Instruction>(BOp)->setFastMathFlags(Flags);
+  return BOp;
 }
 
 void InnerLoopVectorizer::buildScalarSteps(Value *ScalarIV, Value *Step,
@@ -3099,8 +3132,10 @@ void InnerLoopVectorizer::createEmptyLoop() {
       EndValue = CountRoundDown;
     } else {
       IRBuilder<> B(LoopBypassBlocks.back()->getTerminator());
-      Value *CRD = B.CreateSExtOrTrunc(CountRoundDown,
-                                       II.getStep()->getType(), "cast.crd");
+      Type *StepType = II.getStep()->getType();
+      Instruction::CastOps CastOp = 
+        CastInst::getCastOpcode(CountRoundDown, true, StepType, true);
+      Value *CRD = B.CreateCast(CastOp, CountRoundDown, StepType, "cast.crd");
       const DataLayout &DL = OrigLoop->getHeader()->getModule()->getDataLayout();
       EndValue = II.transform(B, CRD, PSE.getSE(), DL);
       EndValue->setName("ind.end");
@@ -4047,7 +4082,7 @@ void InnerLoopVectorizer::widenPHIInstruction(
     llvm_unreachable("Unknown induction");
   case InductionDescriptor::IK_IntInduction:
     return widenIntInduction(P, Entry);
-  case InductionDescriptor::IK_PtrInduction:
+  case InductionDescriptor::IK_PtrInduction: {
     // Handle the pointer induction variable case.
     assert(P->getType()->isPointerTy() && "Unexpected type.");
     // This is the normalized GEP that starts counting at zero.
@@ -4079,6 +4114,29 @@ void InnerLoopVectorizer::widenPHIInstruction(
       Entry[part] = VecVal;
     }
     return;
+  }
+  case InductionDescriptor::IK_FpInduction: {
+    assert(P->getType() == II.getStartValue()->getType() &&
+           "Types must match");
+    // Handle other induction variables that are now based on the
+    // canonical one.
+    assert(P != OldInduction && "Primary induction can be integer only");
+
+    Value *V = Builder.CreateCast(Instruction::SIToFP, Induction, P->getType());
+    V = II.transform(Builder, V, PSE.getSE(), DL);
+    V->setName("fp.offset.idx");
+
+    // Now we have scalar op: %fp.offset.idx = StartVal +/- Induction*StepVal
+
+    Value *Broadcasted = getBroadcastInstrs(V);
+    // After broadcasting the induction variable we need to make the vector
+    // consecutive by adding StepVal*0, StepVal*1, StepVal*2, etc.
+    Value *StepVal = cast<SCEVUnknown>(II.getStep())->getValue();
+    for (unsigned part = 0; part < UF; ++part)
+      Entry[part] = getStepVector(Broadcasted, VF * part, StepVal,
+                                  II.getInductionOpcode());
+    return;
+  }
   }
 }
 
@@ -4565,10 +4623,12 @@ void LoopVectorizationLegality::addInductionPhi(
   const DataLayout &DL = Phi->getModule()->getDataLayout();
 
   // Get the widest type.
-  if (!WidestIndTy)
-    WidestIndTy = convertPointerToIntegerType(DL, PhiTy);
-  else
-    WidestIndTy = getWiderType(DL, PhiTy, WidestIndTy);
+  if (!PhiTy->isFloatingPointTy()) {
+    if (!WidestIndTy)
+      WidestIndTy = convertPointerToIntegerType(DL, PhiTy);
+    else
+      WidestIndTy = getWiderType(DL, PhiTy, WidestIndTy);
+  }
 
   // Int inductions are special because we only allow one IV.
   if (ID.getKind() == InductionDescriptor::IK_IntInduction &&
@@ -4649,8 +4709,10 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
         }
 
         InductionDescriptor ID;
-        if (InductionDescriptor::isInductionPHI(Phi, PSE, ID)) {
+        if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID)) {
           addInductionPhi(Phi, ID, AllowedExit);
+          if (ID.hasUnsafeAlgebra() && !HasFunNoNaNAttr)
+            Requirements->addUnsafeAlgebraInst(ID.getUnsafeAlgebraInst());
           continue;
         }
 
@@ -4661,7 +4723,7 @@ bool LoopVectorizationLegality::canVectorizeInstrs() {
 
         // As a last resort, coerce the PHI to a AddRec expression
         // and re-try classifying it a an induction PHI.
-        if (InductionDescriptor::isInductionPHI(Phi, PSE, ID, true)) {
+        if (InductionDescriptor::isInductionPHI(Phi, TheLoop, PSE, ID, true)) {
           addInductionPhi(Phi, ID, AllowedExit);
           continue;
         }
@@ -6348,11 +6410,20 @@ Value *InnerLoopUnroller::reverseVector(Value *Vec) { return Vec; }
 
 Value *InnerLoopUnroller::getBroadcastInstrs(Value *V) { return V; }
 
-Value *InnerLoopUnroller::getStepVector(Value *Val, int StartIdx, Value *Step) {
+Value *InnerLoopUnroller::getStepVector(Value *Val, int StartIdx, Value *Step,
+                                        Instruction::BinaryOps BinOp) {
   // When unrolling and the VF is 1, we only need to add a simple scalar.
-  Type *ITy = Val->getType();
-  assert(!ITy->isVectorTy() && "Val must be a scalar");
-  Constant *C = ConstantInt::get(ITy, StartIdx);
+  Type *Ty = Val->getType();
+  assert(!Ty->isVectorTy() && "Val must be a scalar");
+
+  if (Ty->isFloatingPointTy()) {
+    Constant *C = ConstantFP::get(Ty, (double)StartIdx);
+
+    // Floating point operations had to be 'fast' to enable the unrolling.
+    Value *MulOp = addFastMathFlag(Builder.CreateFMul(C, Step));
+    return addFastMathFlag(Builder.CreateBinOp(BinOp, Val, MulOp));
+  }
+  Constant *C = ConstantInt::get(Ty, StartIdx);
   return Builder.CreateAdd(Val, Builder.CreateMul(C, Step), "induction");
 }
 

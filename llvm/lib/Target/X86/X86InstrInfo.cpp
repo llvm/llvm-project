@@ -1559,8 +1559,6 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VPSRAWYrr,         X86::VPSRAWYrm,          0 },
     { X86::VPSRAVDrr,         X86::VPSRAVDrm,          0 },
     { X86::VPSRAVDYrr,        X86::VPSRAVDYrm,         0 },
-    { X86::VPSRAVD_Intrr,     X86::VPSRAVD_Intrm,      0 },
-    { X86::VPSRAVD_IntYrr,    X86::VPSRAVD_IntYrm,     0 },
     { X86::VPSRLDYrr,         X86::VPSRLDYrm,          0 },
     { X86::VPSRLQYrr,         X86::VPSRLQYrm,          0 },
     { X86::VPSRLWYrr,         X86::VPSRLWYrm,          0 },
@@ -1591,34 +1589,34 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
     { X86::VFMADDSD4rr,       X86::VFMADDSD4mr,        TB_ALIGN_NONE },
     { X86::VFMADDPS4rr,       X86::VFMADDPS4mr,        TB_ALIGN_NONE },
     { X86::VFMADDPD4rr,       X86::VFMADDPD4mr,        TB_ALIGN_NONE },
-    { X86::VFMADDPS4rrY,      X86::VFMADDPS4mrY,       TB_ALIGN_NONE },
-    { X86::VFMADDPD4rrY,      X86::VFMADDPD4mrY,       TB_ALIGN_NONE },
+    { X86::VFMADDPS4Yrr,      X86::VFMADDPS4Ymr,       TB_ALIGN_NONE },
+    { X86::VFMADDPD4Yrr,      X86::VFMADDPD4Ymr,       TB_ALIGN_NONE },
     { X86::VFNMADDSS4rr,      X86::VFNMADDSS4mr,       TB_ALIGN_NONE },
     { X86::VFNMADDSD4rr,      X86::VFNMADDSD4mr,       TB_ALIGN_NONE },
     { X86::VFNMADDPS4rr,      X86::VFNMADDPS4mr,       TB_ALIGN_NONE },
     { X86::VFNMADDPD4rr,      X86::VFNMADDPD4mr,       TB_ALIGN_NONE },
-    { X86::VFNMADDPS4rrY,     X86::VFNMADDPS4mrY,      TB_ALIGN_NONE },
-    { X86::VFNMADDPD4rrY,     X86::VFNMADDPD4mrY,      TB_ALIGN_NONE },
+    { X86::VFNMADDPS4Yrr,     X86::VFNMADDPS4Ymr,      TB_ALIGN_NONE },
+    { X86::VFNMADDPD4Yrr,     X86::VFNMADDPD4Ymr,      TB_ALIGN_NONE },
     { X86::VFMSUBSS4rr,       X86::VFMSUBSS4mr,        TB_ALIGN_NONE },
     { X86::VFMSUBSD4rr,       X86::VFMSUBSD4mr,        TB_ALIGN_NONE },
     { X86::VFMSUBPS4rr,       X86::VFMSUBPS4mr,        TB_ALIGN_NONE },
     { X86::VFMSUBPD4rr,       X86::VFMSUBPD4mr,        TB_ALIGN_NONE },
-    { X86::VFMSUBPS4rrY,      X86::VFMSUBPS4mrY,       TB_ALIGN_NONE },
-    { X86::VFMSUBPD4rrY,      X86::VFMSUBPD4mrY,       TB_ALIGN_NONE },
+    { X86::VFMSUBPS4Yrr,      X86::VFMSUBPS4Ymr,       TB_ALIGN_NONE },
+    { X86::VFMSUBPD4Yrr,      X86::VFMSUBPD4Ymr,       TB_ALIGN_NONE },
     { X86::VFNMSUBSS4rr,      X86::VFNMSUBSS4mr,       TB_ALIGN_NONE },
     { X86::VFNMSUBSD4rr,      X86::VFNMSUBSD4mr,       TB_ALIGN_NONE },
     { X86::VFNMSUBPS4rr,      X86::VFNMSUBPS4mr,       TB_ALIGN_NONE },
     { X86::VFNMSUBPD4rr,      X86::VFNMSUBPD4mr,       TB_ALIGN_NONE },
-    { X86::VFNMSUBPS4rrY,     X86::VFNMSUBPS4mrY,      TB_ALIGN_NONE },
-    { X86::VFNMSUBPD4rrY,     X86::VFNMSUBPD4mrY,      TB_ALIGN_NONE },
+    { X86::VFNMSUBPS4Yrr,     X86::VFNMSUBPS4Ymr,      TB_ALIGN_NONE },
+    { X86::VFNMSUBPD4Yrr,     X86::VFNMSUBPD4Ymr,      TB_ALIGN_NONE },
     { X86::VFMADDSUBPS4rr,    X86::VFMADDSUBPS4mr,     TB_ALIGN_NONE },
     { X86::VFMADDSUBPD4rr,    X86::VFMADDSUBPD4mr,     TB_ALIGN_NONE },
-    { X86::VFMADDSUBPS4rrY,   X86::VFMADDSUBPS4mrY,    TB_ALIGN_NONE },
-    { X86::VFMADDSUBPD4rrY,   X86::VFMADDSUBPD4mrY,    TB_ALIGN_NONE },
+    { X86::VFMADDSUBPS4Yrr,   X86::VFMADDSUBPS4Ymr,    TB_ALIGN_NONE },
+    { X86::VFMADDSUBPD4Yrr,   X86::VFMADDSUBPD4Ymr,    TB_ALIGN_NONE },
     { X86::VFMSUBADDPS4rr,    X86::VFMSUBADDPS4mr,     TB_ALIGN_NONE },
     { X86::VFMSUBADDPD4rr,    X86::VFMSUBADDPD4mr,     TB_ALIGN_NONE },
-    { X86::VFMSUBADDPS4rrY,   X86::VFMSUBADDPS4mrY,    TB_ALIGN_NONE },
-    { X86::VFMSUBADDPD4rrY,   X86::VFMSUBADDPD4mrY,    TB_ALIGN_NONE },
+    { X86::VFMSUBADDPS4Yrr,   X86::VFMSUBADDPS4Ymr,    TB_ALIGN_NONE },
+    { X86::VFMSUBADDPD4Yrr,   X86::VFMSUBADDPD4Ymr,    TB_ALIGN_NONE },
 
     // XOP foldable instructions
     { X86::VPCMOVrrr,         X86::VPCMOVrmr,           0 },
@@ -1810,169 +1808,169 @@ X86InstrInfo::X86InstrInfo(X86Subtarget &STI)
 
   static const X86MemoryFoldTableEntry MemoryFoldTable3[] = {
     // FMA foldable instructions
-    { X86::VFMADDSSr231r,         X86::VFMADDSSr231m,         TB_ALIGN_NONE },
-    { X86::VFMADDSSr231r_Int,     X86::VFMADDSSr231m_Int,     TB_ALIGN_NONE },
-    { X86::VFMADDSDr231r,         X86::VFMADDSDr231m,         TB_ALIGN_NONE },
-    { X86::VFMADDSDr231r_Int,     X86::VFMADDSDr231m_Int,     TB_ALIGN_NONE },
-    { X86::VFMADDSSr132r,         X86::VFMADDSSr132m,         TB_ALIGN_NONE },
-    { X86::VFMADDSSr132r_Int,     X86::VFMADDSSr132m_Int,     TB_ALIGN_NONE },
-    { X86::VFMADDSDr132r,         X86::VFMADDSDr132m,         TB_ALIGN_NONE },
-    { X86::VFMADDSDr132r_Int,     X86::VFMADDSDr132m_Int,     TB_ALIGN_NONE },
-    { X86::VFMADDSSr213r,         X86::VFMADDSSr213m,         TB_ALIGN_NONE },
-    { X86::VFMADDSSr213r_Int,     X86::VFMADDSSr213m_Int,     TB_ALIGN_NONE },
-    { X86::VFMADDSDr213r,         X86::VFMADDSDr213m,         TB_ALIGN_NONE },
-    { X86::VFMADDSDr213r_Int,     X86::VFMADDSDr213m_Int,     TB_ALIGN_NONE },
+    { X86::VFMADD231SSr,          X86::VFMADD231SSm,          TB_ALIGN_NONE },
+    { X86::VFMADD231SSr_Int,      X86::VFMADD231SSm_Int,      TB_ALIGN_NONE },
+    { X86::VFMADD231SDr,          X86::VFMADD231SDm,          TB_ALIGN_NONE },
+    { X86::VFMADD231SDr_Int,      X86::VFMADD231SDm_Int,      TB_ALIGN_NONE },
+    { X86::VFMADD132SSr,          X86::VFMADD132SSm,          TB_ALIGN_NONE },
+    { X86::VFMADD132SSr_Int,      X86::VFMADD132SSm_Int,      TB_ALIGN_NONE },
+    { X86::VFMADD132SDr,          X86::VFMADD132SDm,          TB_ALIGN_NONE },
+    { X86::VFMADD132SDr_Int,      X86::VFMADD132SDm_Int,      TB_ALIGN_NONE },
+    { X86::VFMADD213SSr,          X86::VFMADD213SSm,          TB_ALIGN_NONE },
+    { X86::VFMADD213SSr_Int,      X86::VFMADD213SSm_Int,      TB_ALIGN_NONE },
+    { X86::VFMADD213SDr,          X86::VFMADD213SDm,          TB_ALIGN_NONE },
+    { X86::VFMADD213SDr_Int,      X86::VFMADD213SDm_Int,      TB_ALIGN_NONE },
 
-    { X86::VFMADDPSr231r,         X86::VFMADDPSr231m,         TB_ALIGN_NONE },
-    { X86::VFMADDPDr231r,         X86::VFMADDPDr231m,         TB_ALIGN_NONE },
-    { X86::VFMADDPSr132r,         X86::VFMADDPSr132m,         TB_ALIGN_NONE },
-    { X86::VFMADDPDr132r,         X86::VFMADDPDr132m,         TB_ALIGN_NONE },
-    { X86::VFMADDPSr213r,         X86::VFMADDPSr213m,         TB_ALIGN_NONE },
-    { X86::VFMADDPDr213r,         X86::VFMADDPDr213m,         TB_ALIGN_NONE },
-    { X86::VFMADDPSr231rY,        X86::VFMADDPSr231mY,        TB_ALIGN_NONE },
-    { X86::VFMADDPDr231rY,        X86::VFMADDPDr231mY,        TB_ALIGN_NONE },
-    { X86::VFMADDPSr132rY,        X86::VFMADDPSr132mY,        TB_ALIGN_NONE },
-    { X86::VFMADDPDr132rY,        X86::VFMADDPDr132mY,        TB_ALIGN_NONE },
-    { X86::VFMADDPSr213rY,        X86::VFMADDPSr213mY,        TB_ALIGN_NONE },
-    { X86::VFMADDPDr213rY,        X86::VFMADDPDr213mY,        TB_ALIGN_NONE },
+    { X86::VFMADD231PSr,          X86::VFMADD231PSm,          TB_ALIGN_NONE },
+    { X86::VFMADD231PDr,          X86::VFMADD231PDm,          TB_ALIGN_NONE },
+    { X86::VFMADD132PSr,          X86::VFMADD132PSm,          TB_ALIGN_NONE },
+    { X86::VFMADD132PDr,          X86::VFMADD132PDm,          TB_ALIGN_NONE },
+    { X86::VFMADD213PSr,          X86::VFMADD213PSm,          TB_ALIGN_NONE },
+    { X86::VFMADD213PDr,          X86::VFMADD213PDm,          TB_ALIGN_NONE },
+    { X86::VFMADD231PSYr,         X86::VFMADD231PSYm,         TB_ALIGN_NONE },
+    { X86::VFMADD231PDYr,         X86::VFMADD231PDYm,         TB_ALIGN_NONE },
+    { X86::VFMADD132PSYr,         X86::VFMADD132PSYm,         TB_ALIGN_NONE },
+    { X86::VFMADD132PDYr,         X86::VFMADD132PDYm,         TB_ALIGN_NONE },
+    { X86::VFMADD213PSYr,         X86::VFMADD213PSYm,         TB_ALIGN_NONE },
+    { X86::VFMADD213PDYr,         X86::VFMADD213PDYm,         TB_ALIGN_NONE },
 
-    { X86::VFNMADDSSr231r,        X86::VFNMADDSSr231m,        TB_ALIGN_NONE },
-    { X86::VFNMADDSSr231r_Int,    X86::VFNMADDSSr231m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADDSDr231r,        X86::VFNMADDSDr231m,        TB_ALIGN_NONE },
-    { X86::VFNMADDSDr231r_Int,    X86::VFNMADDSDr231m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADDSSr132r,        X86::VFNMADDSSr132m,        TB_ALIGN_NONE },
-    { X86::VFNMADDSSr132r_Int,    X86::VFNMADDSSr132m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADDSDr132r,        X86::VFNMADDSDr132m,        TB_ALIGN_NONE },
-    { X86::VFNMADDSDr132r_Int,    X86::VFNMADDSDr132m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADDSSr213r,        X86::VFNMADDSSr213m,        TB_ALIGN_NONE },
-    { X86::VFNMADDSSr213r_Int,    X86::VFNMADDSSr213m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMADDSDr213r,        X86::VFNMADDSDr213m,        TB_ALIGN_NONE },
-    { X86::VFNMADDSDr213r_Int,    X86::VFNMADDSDr213m_Int,    TB_ALIGN_NONE },
+    { X86::VFNMADD231SSr,         X86::VFNMADD231SSm,         TB_ALIGN_NONE },
+    { X86::VFNMADD231SSr_Int,     X86::VFNMADD231SSm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMADD231SDr,         X86::VFNMADD231SDm,         TB_ALIGN_NONE },
+    { X86::VFNMADD231SDr_Int,     X86::VFNMADD231SDm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMADD132SSr,         X86::VFNMADD132SSm,         TB_ALIGN_NONE },
+    { X86::VFNMADD132SSr_Int,     X86::VFNMADD132SSm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMADD132SDr,         X86::VFNMADD132SDm,         TB_ALIGN_NONE },
+    { X86::VFNMADD132SDr_Int,     X86::VFNMADD132SDm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMADD213SSr,         X86::VFNMADD213SSm,         TB_ALIGN_NONE },
+    { X86::VFNMADD213SSr_Int,     X86::VFNMADD213SSm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMADD213SDr,         X86::VFNMADD213SDm,         TB_ALIGN_NONE },
+    { X86::VFNMADD213SDr_Int,     X86::VFNMADD213SDm_Int,     TB_ALIGN_NONE },
 
-    { X86::VFNMADDPSr231r,        X86::VFNMADDPSr231m,        TB_ALIGN_NONE },
-    { X86::VFNMADDPDr231r,        X86::VFNMADDPDr231m,        TB_ALIGN_NONE },
-    { X86::VFNMADDPSr132r,        X86::VFNMADDPSr132m,        TB_ALIGN_NONE },
-    { X86::VFNMADDPDr132r,        X86::VFNMADDPDr132m,        TB_ALIGN_NONE },
-    { X86::VFNMADDPSr213r,        X86::VFNMADDPSr213m,        TB_ALIGN_NONE },
-    { X86::VFNMADDPDr213r,        X86::VFNMADDPDr213m,        TB_ALIGN_NONE },
-    { X86::VFNMADDPSr231rY,       X86::VFNMADDPSr231mY,       TB_ALIGN_NONE },
-    { X86::VFNMADDPDr231rY,       X86::VFNMADDPDr231mY,       TB_ALIGN_NONE },
-    { X86::VFNMADDPSr132rY,       X86::VFNMADDPSr132mY,       TB_ALIGN_NONE },
-    { X86::VFNMADDPDr132rY,       X86::VFNMADDPDr132mY,       TB_ALIGN_NONE },
-    { X86::VFNMADDPSr213rY,       X86::VFNMADDPSr213mY,       TB_ALIGN_NONE },
-    { X86::VFNMADDPDr213rY,       X86::VFNMADDPDr213mY,       TB_ALIGN_NONE },
+    { X86::VFNMADD231PSr,         X86::VFNMADD231PSm,         TB_ALIGN_NONE },
+    { X86::VFNMADD231PDr,         X86::VFNMADD231PDm,         TB_ALIGN_NONE },
+    { X86::VFNMADD132PSr,         X86::VFNMADD132PSm,         TB_ALIGN_NONE },
+    { X86::VFNMADD132PDr,         X86::VFNMADD132PDm,         TB_ALIGN_NONE },
+    { X86::VFNMADD213PSr,         X86::VFNMADD213PSm,         TB_ALIGN_NONE },
+    { X86::VFNMADD213PDr,         X86::VFNMADD213PDm,         TB_ALIGN_NONE },
+    { X86::VFNMADD231PSYr,        X86::VFNMADD231PSYm,        TB_ALIGN_NONE },
+    { X86::VFNMADD231PDYr,        X86::VFNMADD231PDYm,        TB_ALIGN_NONE },
+    { X86::VFNMADD132PSYr,        X86::VFNMADD132PSYm,        TB_ALIGN_NONE },
+    { X86::VFNMADD132PDYr,        X86::VFNMADD132PDYm,        TB_ALIGN_NONE },
+    { X86::VFNMADD213PSYr,        X86::VFNMADD213PSYm,        TB_ALIGN_NONE },
+    { X86::VFNMADD213PDYr,        X86::VFNMADD213PDYm,        TB_ALIGN_NONE },
 
-    { X86::VFMSUBSSr231r,         X86::VFMSUBSSr231m,         TB_ALIGN_NONE },
-    { X86::VFMSUBSSr231r_Int,     X86::VFMSUBSSr231m_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUBSDr231r,         X86::VFMSUBSDr231m,         TB_ALIGN_NONE },
-    { X86::VFMSUBSDr231r_Int,     X86::VFMSUBSDr231m_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUBSSr132r,         X86::VFMSUBSSr132m,         TB_ALIGN_NONE },
-    { X86::VFMSUBSSr132r_Int,     X86::VFMSUBSSr132m_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUBSDr132r,         X86::VFMSUBSDr132m,         TB_ALIGN_NONE },
-    { X86::VFMSUBSDr132r_Int,     X86::VFMSUBSDr132m_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUBSSr213r,         X86::VFMSUBSSr213m,         TB_ALIGN_NONE },
-    { X86::VFMSUBSSr213r_Int,     X86::VFMSUBSSr213m_Int,     TB_ALIGN_NONE },
-    { X86::VFMSUBSDr213r,         X86::VFMSUBSDr213m,         TB_ALIGN_NONE },
-    { X86::VFMSUBSDr213r_Int,     X86::VFMSUBSDr213m_Int,     TB_ALIGN_NONE },
+    { X86::VFMSUB231SSr,          X86::VFMSUB231SSm,          TB_ALIGN_NONE },
+    { X86::VFMSUB231SSr_Int,      X86::VFMSUB231SSm_Int,      TB_ALIGN_NONE },
+    { X86::VFMSUB231SDr,          X86::VFMSUB231SDm,          TB_ALIGN_NONE },
+    { X86::VFMSUB231SDr_Int,      X86::VFMSUB231SDm_Int,      TB_ALIGN_NONE },
+    { X86::VFMSUB132SSr,          X86::VFMSUB132SSm,          TB_ALIGN_NONE },
+    { X86::VFMSUB132SSr_Int,      X86::VFMSUB132SSm_Int,      TB_ALIGN_NONE },
+    { X86::VFMSUB132SDr,          X86::VFMSUB132SDm,          TB_ALIGN_NONE },
+    { X86::VFMSUB132SDr_Int,      X86::VFMSUB132SDm_Int,      TB_ALIGN_NONE },
+    { X86::VFMSUB213SSr,          X86::VFMSUB213SSm,          TB_ALIGN_NONE },
+    { X86::VFMSUB213SSr_Int,      X86::VFMSUB213SSm_Int,      TB_ALIGN_NONE },
+    { X86::VFMSUB213SDr,          X86::VFMSUB213SDm,          TB_ALIGN_NONE },
+    { X86::VFMSUB213SDr_Int,      X86::VFMSUB213SDm_Int,      TB_ALIGN_NONE },
 
-    { X86::VFMSUBPSr231r,         X86::VFMSUBPSr231m,         TB_ALIGN_NONE },
-    { X86::VFMSUBPDr231r,         X86::VFMSUBPDr231m,         TB_ALIGN_NONE },
-    { X86::VFMSUBPSr132r,         X86::VFMSUBPSr132m,         TB_ALIGN_NONE },
-    { X86::VFMSUBPDr132r,         X86::VFMSUBPDr132m,         TB_ALIGN_NONE },
-    { X86::VFMSUBPSr213r,         X86::VFMSUBPSr213m,         TB_ALIGN_NONE },
-    { X86::VFMSUBPDr213r,         X86::VFMSUBPDr213m,         TB_ALIGN_NONE },
-    { X86::VFMSUBPSr231rY,        X86::VFMSUBPSr231mY,        TB_ALIGN_NONE },
-    { X86::VFMSUBPDr231rY,        X86::VFMSUBPDr231mY,        TB_ALIGN_NONE },
-    { X86::VFMSUBPSr132rY,        X86::VFMSUBPSr132mY,        TB_ALIGN_NONE },
-    { X86::VFMSUBPDr132rY,        X86::VFMSUBPDr132mY,        TB_ALIGN_NONE },
-    { X86::VFMSUBPSr213rY,        X86::VFMSUBPSr213mY,        TB_ALIGN_NONE },
-    { X86::VFMSUBPDr213rY,        X86::VFMSUBPDr213mY,        TB_ALIGN_NONE },
+    { X86::VFMSUB231PSr,          X86::VFMSUB231PSm,          TB_ALIGN_NONE },
+    { X86::VFMSUB231PDr,          X86::VFMSUB231PDm,          TB_ALIGN_NONE },
+    { X86::VFMSUB132PSr,          X86::VFMSUB132PSm,          TB_ALIGN_NONE },
+    { X86::VFMSUB132PDr,          X86::VFMSUB132PDm,          TB_ALIGN_NONE },
+    { X86::VFMSUB213PSr,          X86::VFMSUB213PSm,          TB_ALIGN_NONE },
+    { X86::VFMSUB213PDr,          X86::VFMSUB213PDm,          TB_ALIGN_NONE },
+    { X86::VFMSUB231PSYr,         X86::VFMSUB231PSYm,         TB_ALIGN_NONE },
+    { X86::VFMSUB231PDYr,         X86::VFMSUB231PDYm,         TB_ALIGN_NONE },
+    { X86::VFMSUB132PSYr,         X86::VFMSUB132PSYm,         TB_ALIGN_NONE },
+    { X86::VFMSUB132PDYr,         X86::VFMSUB132PDYm,         TB_ALIGN_NONE },
+    { X86::VFMSUB213PSYr,         X86::VFMSUB213PSYm,         TB_ALIGN_NONE },
+    { X86::VFMSUB213PDYr,         X86::VFMSUB213PDYm,         TB_ALIGN_NONE },
 
-    { X86::VFNMSUBSSr231r,        X86::VFNMSUBSSr231m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBSSr231r_Int,    X86::VFNMSUBSSr231m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMSUBSDr231r,        X86::VFNMSUBSDr231m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBSDr231r_Int,    X86::VFNMSUBSDr231m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMSUBSSr132r,        X86::VFNMSUBSSr132m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBSSr132r_Int,    X86::VFNMSUBSSr132m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMSUBSDr132r,        X86::VFNMSUBSDr132m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBSDr132r_Int,    X86::VFNMSUBSDr132m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMSUBSSr213r,        X86::VFNMSUBSSr213m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBSSr213r_Int,    X86::VFNMSUBSSr213m_Int,    TB_ALIGN_NONE },
-    { X86::VFNMSUBSDr213r,        X86::VFNMSUBSDr213m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBSDr213r_Int,    X86::VFNMSUBSDr213m_Int,    TB_ALIGN_NONE },
+    { X86::VFNMSUB231SSr,         X86::VFNMSUB231SSm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB231SSr_Int,     X86::VFNMSUB231SSm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMSUB231SDr,         X86::VFNMSUB231SDm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB231SDr_Int,     X86::VFNMSUB231SDm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMSUB132SSr,         X86::VFNMSUB132SSm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB132SSr_Int,     X86::VFNMSUB132SSm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMSUB132SDr,         X86::VFNMSUB132SDm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB132SDr_Int,     X86::VFNMSUB132SDm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMSUB213SSr,         X86::VFNMSUB213SSm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB213SSr_Int,     X86::VFNMSUB213SSm_Int,     TB_ALIGN_NONE },
+    { X86::VFNMSUB213SDr,         X86::VFNMSUB213SDm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB213SDr_Int,     X86::VFNMSUB213SDm_Int,     TB_ALIGN_NONE },
 
-    { X86::VFNMSUBPSr231r,        X86::VFNMSUBPSr231m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBPDr231r,        X86::VFNMSUBPDr231m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBPSr132r,        X86::VFNMSUBPSr132m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBPDr132r,        X86::VFNMSUBPDr132m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBPSr213r,        X86::VFNMSUBPSr213m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBPDr213r,        X86::VFNMSUBPDr213m,        TB_ALIGN_NONE },
-    { X86::VFNMSUBPSr231rY,       X86::VFNMSUBPSr231mY,       TB_ALIGN_NONE },
-    { X86::VFNMSUBPDr231rY,       X86::VFNMSUBPDr231mY,       TB_ALIGN_NONE },
-    { X86::VFNMSUBPSr132rY,       X86::VFNMSUBPSr132mY,       TB_ALIGN_NONE },
-    { X86::VFNMSUBPDr132rY,       X86::VFNMSUBPDr132mY,       TB_ALIGN_NONE },
-    { X86::VFNMSUBPSr213rY,       X86::VFNMSUBPSr213mY,       TB_ALIGN_NONE },
-    { X86::VFNMSUBPDr213rY,       X86::VFNMSUBPDr213mY,       TB_ALIGN_NONE },
+    { X86::VFNMSUB231PSr,         X86::VFNMSUB231PSm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB231PDr,         X86::VFNMSUB231PDm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB132PSr,         X86::VFNMSUB132PSm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB132PDr,         X86::VFNMSUB132PDm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB213PSr,         X86::VFNMSUB213PSm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB213PDr,         X86::VFNMSUB213PDm,         TB_ALIGN_NONE },
+    { X86::VFNMSUB231PSYr,        X86::VFNMSUB231PSYm,        TB_ALIGN_NONE },
+    { X86::VFNMSUB231PDYr,        X86::VFNMSUB231PDYm,        TB_ALIGN_NONE },
+    { X86::VFNMSUB132PSYr,        X86::VFNMSUB132PSYm,        TB_ALIGN_NONE },
+    { X86::VFNMSUB132PDYr,        X86::VFNMSUB132PDYm,        TB_ALIGN_NONE },
+    { X86::VFNMSUB213PSYr,        X86::VFNMSUB213PSYm,        TB_ALIGN_NONE },
+    { X86::VFNMSUB213PDYr,        X86::VFNMSUB213PDYm,        TB_ALIGN_NONE },
 
-    { X86::VFMADDSUBPSr231r,      X86::VFMADDSUBPSr231m,      TB_ALIGN_NONE },
-    { X86::VFMADDSUBPDr231r,      X86::VFMADDSUBPDr231m,      TB_ALIGN_NONE },
-    { X86::VFMADDSUBPSr132r,      X86::VFMADDSUBPSr132m,      TB_ALIGN_NONE },
-    { X86::VFMADDSUBPDr132r,      X86::VFMADDSUBPDr132m,      TB_ALIGN_NONE },
-    { X86::VFMADDSUBPSr213r,      X86::VFMADDSUBPSr213m,      TB_ALIGN_NONE },
-    { X86::VFMADDSUBPDr213r,      X86::VFMADDSUBPDr213m,      TB_ALIGN_NONE },
-    { X86::VFMADDSUBPSr231rY,     X86::VFMADDSUBPSr231mY,     TB_ALIGN_NONE },
-    { X86::VFMADDSUBPDr231rY,     X86::VFMADDSUBPDr231mY,     TB_ALIGN_NONE },
-    { X86::VFMADDSUBPSr132rY,     X86::VFMADDSUBPSr132mY,     TB_ALIGN_NONE },
-    { X86::VFMADDSUBPDr132rY,     X86::VFMADDSUBPDr132mY,     TB_ALIGN_NONE },
-    { X86::VFMADDSUBPSr213rY,     X86::VFMADDSUBPSr213mY,     TB_ALIGN_NONE },
-    { X86::VFMADDSUBPDr213rY,     X86::VFMADDSUBPDr213mY,     TB_ALIGN_NONE },
+    { X86::VFMADDSUB231PSr,       X86::VFMADDSUB231PSm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUB231PDr,       X86::VFMADDSUB231PDm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUB132PSr,       X86::VFMADDSUB132PSm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUB132PDr,       X86::VFMADDSUB132PDm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUB213PSr,       X86::VFMADDSUB213PSm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUB213PDr,       X86::VFMADDSUB213PDm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUB231PSYr,      X86::VFMADDSUB231PSYm,      TB_ALIGN_NONE },
+    { X86::VFMADDSUB231PDYr,      X86::VFMADDSUB231PDYm,      TB_ALIGN_NONE },
+    { X86::VFMADDSUB132PSYr,      X86::VFMADDSUB132PSYm,      TB_ALIGN_NONE },
+    { X86::VFMADDSUB132PDYr,      X86::VFMADDSUB132PDYm,      TB_ALIGN_NONE },
+    { X86::VFMADDSUB213PSYr,      X86::VFMADDSUB213PSYm,      TB_ALIGN_NONE },
+    { X86::VFMADDSUB213PDYr,      X86::VFMADDSUB213PDYm,      TB_ALIGN_NONE },
 
-    { X86::VFMSUBADDPSr231r,      X86::VFMSUBADDPSr231m,      TB_ALIGN_NONE },
-    { X86::VFMSUBADDPDr231r,      X86::VFMSUBADDPDr231m,      TB_ALIGN_NONE },
-    { X86::VFMSUBADDPSr132r,      X86::VFMSUBADDPSr132m,      TB_ALIGN_NONE },
-    { X86::VFMSUBADDPDr132r,      X86::VFMSUBADDPDr132m,      TB_ALIGN_NONE },
-    { X86::VFMSUBADDPSr213r,      X86::VFMSUBADDPSr213m,      TB_ALIGN_NONE },
-    { X86::VFMSUBADDPDr213r,      X86::VFMSUBADDPDr213m,      TB_ALIGN_NONE },
-    { X86::VFMSUBADDPSr231rY,     X86::VFMSUBADDPSr231mY,     TB_ALIGN_NONE },
-    { X86::VFMSUBADDPDr231rY,     X86::VFMSUBADDPDr231mY,     TB_ALIGN_NONE },
-    { X86::VFMSUBADDPSr132rY,     X86::VFMSUBADDPSr132mY,     TB_ALIGN_NONE },
-    { X86::VFMSUBADDPDr132rY,     X86::VFMSUBADDPDr132mY,     TB_ALIGN_NONE },
-    { X86::VFMSUBADDPSr213rY,     X86::VFMSUBADDPSr213mY,     TB_ALIGN_NONE },
-    { X86::VFMSUBADDPDr213rY,     X86::VFMSUBADDPDr213mY,     TB_ALIGN_NONE },
+    { X86::VFMSUBADD231PSr,       X86::VFMSUBADD231PSm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADD231PDr,       X86::VFMSUBADD231PDm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADD132PSr,       X86::VFMSUBADD132PSm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADD132PDr,       X86::VFMSUBADD132PDm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADD213PSr,       X86::VFMSUBADD213PSm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADD213PDr,       X86::VFMSUBADD213PDm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADD231PSYr,      X86::VFMSUBADD231PSYm,      TB_ALIGN_NONE },
+    { X86::VFMSUBADD231PDYr,      X86::VFMSUBADD231PDYm,      TB_ALIGN_NONE },
+    { X86::VFMSUBADD132PSYr,      X86::VFMSUBADD132PSYm,      TB_ALIGN_NONE },
+    { X86::VFMSUBADD132PDYr,      X86::VFMSUBADD132PDYm,      TB_ALIGN_NONE },
+    { X86::VFMSUBADD213PSYr,      X86::VFMSUBADD213PSYm,      TB_ALIGN_NONE },
+    { X86::VFMSUBADD213PDYr,      X86::VFMSUBADD213PDYm,      TB_ALIGN_NONE },
 
     // FMA4 foldable patterns
     { X86::VFMADDSS4rr,           X86::VFMADDSS4rm,           TB_ALIGN_NONE },
     { X86::VFMADDSD4rr,           X86::VFMADDSD4rm,           TB_ALIGN_NONE },
     { X86::VFMADDPS4rr,           X86::VFMADDPS4rm,           TB_ALIGN_NONE },
     { X86::VFMADDPD4rr,           X86::VFMADDPD4rm,           TB_ALIGN_NONE },
-    { X86::VFMADDPS4rrY,          X86::VFMADDPS4rmY,          TB_ALIGN_NONE },
-    { X86::VFMADDPD4rrY,          X86::VFMADDPD4rmY,          TB_ALIGN_NONE },
+    { X86::VFMADDPS4Yrr,          X86::VFMADDPS4Yrm,          TB_ALIGN_NONE },
+    { X86::VFMADDPD4Yrr,          X86::VFMADDPD4Yrm,          TB_ALIGN_NONE },
     { X86::VFNMADDSS4rr,          X86::VFNMADDSS4rm,          TB_ALIGN_NONE },
     { X86::VFNMADDSD4rr,          X86::VFNMADDSD4rm,          TB_ALIGN_NONE },
     { X86::VFNMADDPS4rr,          X86::VFNMADDPS4rm,          TB_ALIGN_NONE },
     { X86::VFNMADDPD4rr,          X86::VFNMADDPD4rm,          TB_ALIGN_NONE },
-    { X86::VFNMADDPS4rrY,         X86::VFNMADDPS4rmY,         TB_ALIGN_NONE },
-    { X86::VFNMADDPD4rrY,         X86::VFNMADDPD4rmY,         TB_ALIGN_NONE },
+    { X86::VFNMADDPS4Yrr,         X86::VFNMADDPS4Yrm,         TB_ALIGN_NONE },
+    { X86::VFNMADDPD4Yrr,         X86::VFNMADDPD4Yrm,         TB_ALIGN_NONE },
     { X86::VFMSUBSS4rr,           X86::VFMSUBSS4rm,           TB_ALIGN_NONE },
     { X86::VFMSUBSD4rr,           X86::VFMSUBSD4rm,           TB_ALIGN_NONE },
     { X86::VFMSUBPS4rr,           X86::VFMSUBPS4rm,           TB_ALIGN_NONE },
     { X86::VFMSUBPD4rr,           X86::VFMSUBPD4rm,           TB_ALIGN_NONE },
-    { X86::VFMSUBPS4rrY,          X86::VFMSUBPS4rmY,          TB_ALIGN_NONE },
-    { X86::VFMSUBPD4rrY,          X86::VFMSUBPD4rmY,          TB_ALIGN_NONE },
+    { X86::VFMSUBPS4Yrr,          X86::VFMSUBPS4Yrm,          TB_ALIGN_NONE },
+    { X86::VFMSUBPD4Yrr,          X86::VFMSUBPD4Yrm,          TB_ALIGN_NONE },
     { X86::VFNMSUBSS4rr,          X86::VFNMSUBSS4rm,          TB_ALIGN_NONE },
     { X86::VFNMSUBSD4rr,          X86::VFNMSUBSD4rm,          TB_ALIGN_NONE },
     { X86::VFNMSUBPS4rr,          X86::VFNMSUBPS4rm,          TB_ALIGN_NONE },
     { X86::VFNMSUBPD4rr,          X86::VFNMSUBPD4rm,          TB_ALIGN_NONE },
-    { X86::VFNMSUBPS4rrY,         X86::VFNMSUBPS4rmY,         TB_ALIGN_NONE },
-    { X86::VFNMSUBPD4rrY,         X86::VFNMSUBPD4rmY,         TB_ALIGN_NONE },
+    { X86::VFNMSUBPS4Yrr,         X86::VFNMSUBPS4Yrm,         TB_ALIGN_NONE },
+    { X86::VFNMSUBPD4Yrr,         X86::VFNMSUBPD4Yrm,         TB_ALIGN_NONE },
     { X86::VFMADDSUBPS4rr,        X86::VFMADDSUBPS4rm,        TB_ALIGN_NONE },
     { X86::VFMADDSUBPD4rr,        X86::VFMADDSUBPD4rm,        TB_ALIGN_NONE },
-    { X86::VFMADDSUBPS4rrY,       X86::VFMADDSUBPS4rmY,       TB_ALIGN_NONE },
-    { X86::VFMADDSUBPD4rrY,       X86::VFMADDSUBPD4rmY,       TB_ALIGN_NONE },
+    { X86::VFMADDSUBPS4Yrr,       X86::VFMADDSUBPS4Yrm,       TB_ALIGN_NONE },
+    { X86::VFMADDSUBPD4Yrr,       X86::VFMADDSUBPD4Yrm,       TB_ALIGN_NONE },
     { X86::VFMSUBADDPS4rr,        X86::VFMSUBADDPS4rm,        TB_ALIGN_NONE },
     { X86::VFMSUBADDPD4rr,        X86::VFMSUBADDPD4rm,        TB_ALIGN_NONE },
-    { X86::VFMSUBADDPS4rrY,       X86::VFMSUBADDPS4rmY,       TB_ALIGN_NONE },
-    { X86::VFMSUBADDPD4rrY,       X86::VFMSUBADDPD4rmY,       TB_ALIGN_NONE },
+    { X86::VFMSUBADDPS4Yrr,       X86::VFMSUBADDPS4Yrm,       TB_ALIGN_NONE },
+    { X86::VFMSUBADDPD4Yrr,       X86::VFMSUBADDPD4Yrm,       TB_ALIGN_NONE },
 
     // XOP foldable instructions
     { X86::VPCMOVrrr,             X86::VPCMOVrrm,             0 },
@@ -3160,71 +3158,55 @@ static bool isFMA3(unsigned Opcode, bool &IsIntrinsic) {
 #define FMA3_CASE(Name, Modifier) \
 case X86::Name##r##Modifier: case X86::Name##m##Modifier:
 
-#define FMA3_SCALAR_PAIR(Name, Form, Modifier) \
-  FMA3_CASE(Name##SD##Form, Modifier) \
-  FMA3_CASE(Name##SS##Form, Modifier)
+#define FMA3_SCALAR_PAIR(Name, Size, Modifier) \
+  FMA3_CASE(Name##SD##Size, Modifier) \
+  FMA3_CASE(Name##SS##Size, Modifier)
 
-#define FMA3_PACKED_PAIR(Name, Form, Modifier) \
-  FMA3_CASE(Name##PD##Form, Modifier) \
-  FMA3_CASE(Name##PS##Form, Modifier)
-
-#define FMA3_PACKED_SET(Form, Modifier) \
-  FMA3_PACKED_PAIR(VFMADD,    Form, Modifier) \
-  FMA3_PACKED_PAIR(VFMSUB,    Form, Modifier) \
-  FMA3_PACKED_PAIR(VFNMADD,   Form, Modifier) \
-  FMA3_PACKED_PAIR(VFNMSUB,   Form, Modifier) \
-  FMA3_PACKED_PAIR(VFMADDSUB, Form, Modifier) \
-  FMA3_PACKED_PAIR(VFMSUBADD, Form, Modifier)
-
-#define FMA3_CASES(Form) \
-  FMA3_SCALAR_PAIR(VFMADD,  Form, ) \
-  FMA3_SCALAR_PAIR(VFMSUB,  Form, ) \
-  FMA3_SCALAR_PAIR(VFNMADD, Form, ) \
-  FMA3_SCALAR_PAIR(VFNMSUB, Form, ) \
-  FMA3_PACKED_SET(Form, ) \
-  FMA3_PACKED_SET(Form, Y) \
-
-#define FMA3_SCALAR_PAIR_AVX512(Name, Modifier) \
-  FMA3_CASE(Name##SD, Modifier) \
-  FMA3_CASE(Name##SS, Modifier)
-
-#define FMA3_PACKED_PAIR_AVX512(Name, Size) \
+#define FMA3_PACKED_PAIR(Name, Size) \
   FMA3_CASE(Name##PD##Size, ) \
   FMA3_CASE(Name##PS##Size, )
 
-#define FMA3_PACKED_SET_AVX512(Form, Size) \
-  FMA3_PACKED_PAIR_AVX512(VFMADD##Form, Size) \
-  FMA3_PACKED_PAIR_AVX512(VFMSUB##Form, Size) \
-  FMA3_PACKED_PAIR_AVX512(VFNMADD##Form, Size) \
-  FMA3_PACKED_PAIR_AVX512(VFNMSUB##Form, Size) \
-  FMA3_PACKED_PAIR_AVX512(VFMADDSUB##Form, Size) \
-  FMA3_PACKED_PAIR_AVX512(VFMSUBADD##Form, Size)
+#define FMA3_PACKED_SET(Form, Size) \
+  FMA3_PACKED_PAIR(VFMADD##Form, Size) \
+  FMA3_PACKED_PAIR(VFMSUB##Form, Size) \
+  FMA3_PACKED_PAIR(VFNMADD##Form, Size) \
+  FMA3_PACKED_PAIR(VFNMSUB##Form, Size) \
+  FMA3_PACKED_PAIR(VFMADDSUB##Form, Size) \
+  FMA3_PACKED_PAIR(VFMSUBADD##Form, Size)
+
+#define FMA3_CASES(Form) \
+  FMA3_SCALAR_PAIR(VFMADD##Form, ,) \
+  FMA3_SCALAR_PAIR(VFMSUB##Form, ,) \
+  FMA3_SCALAR_PAIR(VFNMADD##Form, ,) \
+  FMA3_SCALAR_PAIR(VFNMSUB##Form, ,) \
+  FMA3_PACKED_SET(Form, ) \
+  FMA3_PACKED_SET(Form, Y) \
 
 #define FMA3_CASES_AVX512(Form) \
-  FMA3_SCALAR_PAIR_AVX512(VFMADD##Form, ) \
-  FMA3_SCALAR_PAIR_AVX512(VFMSUB##Form, ) \
-  FMA3_SCALAR_PAIR_AVX512(VFNMADD##Form, ) \
-  FMA3_SCALAR_PAIR_AVX512(VFNMSUB##Form, ) \
-  FMA3_PACKED_SET_AVX512(Form, Z128) \
-  FMA3_PACKED_SET_AVX512(Form, Z256) \
-  FMA3_PACKED_SET_AVX512(Form, Z)
+  FMA3_SCALAR_PAIR(VFMADD##Form, Z, ) \
+  FMA3_SCALAR_PAIR(VFMSUB##Form, Z, ) \
+  FMA3_SCALAR_PAIR(VFNMADD##Form, Z, ) \
+  FMA3_SCALAR_PAIR(VFNMSUB##Form, Z, ) \
+  FMA3_PACKED_SET(Form, Z128) \
+  FMA3_PACKED_SET(Form, Z256) \
+  FMA3_PACKED_SET(Form, Z)
 
 #define FMA3_CASES_SCALAR_INT(Form) \
-  FMA3_SCALAR_PAIR(VFMADD,  Form, _Int) \
-  FMA3_SCALAR_PAIR(VFMSUB,  Form, _Int) \
-  FMA3_SCALAR_PAIR(VFNMADD, Form, _Int) \
-  FMA3_SCALAR_PAIR(VFNMSUB, Form, _Int)
+  FMA3_SCALAR_PAIR(VFMADD##Form, , _Int) \
+  FMA3_SCALAR_PAIR(VFMSUB##Form, , _Int) \
+  FMA3_SCALAR_PAIR(VFNMADD##Form, , _Int) \
+  FMA3_SCALAR_PAIR(VFNMSUB##Form, , _Int)
 
 #define FMA3_CASES_SCALAR_INT_AVX512(Form) \
-  FMA3_SCALAR_PAIR_AVX512(VFMADD##Form, _Int) \
-  FMA3_SCALAR_PAIR_AVX512(VFMSUB##Form, _Int) \
-  FMA3_SCALAR_PAIR_AVX512(VFNMADD##Form, _Int) \
-  FMA3_SCALAR_PAIR_AVX512(VFNMSUB##Form, _Int)
+  FMA3_SCALAR_PAIR(VFMADD##Form, Z, _Int) \
+  FMA3_SCALAR_PAIR(VFMSUB##Form, Z, _Int) \
+  FMA3_SCALAR_PAIR(VFNMADD##Form, Z, _Int) \
+  FMA3_SCALAR_PAIR(VFNMSUB##Form, Z, _Int)
 
   switch (Opcode) {
-  FMA3_CASES(r132)
-  FMA3_CASES(r213)
-  FMA3_CASES(r231)
+  FMA3_CASES(132)
+  FMA3_CASES(213)
+  FMA3_CASES(231)
 
   // AVX-512 instructions
   FMA3_CASES_AVX512(132)
@@ -3232,9 +3214,9 @@ case X86::Name##r##Modifier: case X86::Name##m##Modifier:
   FMA3_CASES_AVX512(231)
     return true;
 
-  FMA3_CASES_SCALAR_INT(r132)
-  FMA3_CASES_SCALAR_INT(r213)
-  FMA3_CASES_SCALAR_INT(r231)
+  FMA3_CASES_SCALAR_INT(132)
+  FMA3_CASES_SCALAR_INT(213)
+  FMA3_CASES_SCALAR_INT(231)
 
   // AVX-512 instructions
   FMA3_CASES_SCALAR_INT_AVX512(132)
@@ -3252,9 +3234,6 @@ case X86::Name##r##Modifier: case X86::Name##m##Modifier:
 #undef FMA3_PACKED_PAIR
 #undef FMA3_PACKED_SET
 #undef FMA3_CASES
-#undef FMA3_SCALAR_PAIR_AVX512
-#undef FMA3_PACKED_PAIR_AVX512
-#undef FMA3_PACKED_SET_AVX512
 #undef FMA3_CASES_AVX512
 #undef FMA3_CASES_SCALAR_INT
 #undef FMA3_CASES_SCALAR_INT_AVX512
@@ -3278,16 +3257,16 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
   { X86::Name##132##Suffix, X86::Name##213##Suffix, X86::Name##231##Suffix },
 
 #define FMA3_SCALAR_PAIR(Name, Suffix) \
-  FMA3_ENTRY(Name##SSr, Suffix) \
-  FMA3_ENTRY(Name##SDr, Suffix)
+  FMA3_ENTRY(Name, SS##Suffix) \
+  FMA3_ENTRY(Name, SD##Suffix)
 
 #define FMA3_PACKED_PAIR(Name, Suffix) \
-  FMA3_ENTRY(Name##PSr, Suffix) \
-  FMA3_ENTRY(Name##PDr, Suffix)
+  FMA3_ENTRY(Name, PS##Suffix) \
+  FMA3_ENTRY(Name, PD##Suffix)
 
 #define FMA3_PACKED_SIZES(Name, Suffix) \
   FMA3_PACKED_PAIR(Name, Suffix) \
-  FMA3_PACKED_PAIR(Name, Suffix##Y)
+  FMA3_PACKED_PAIR(Name, Y##Suffix)
 
 #define FMA3_TABLE_ALL(Name) \
   FMA3_SCALAR_PAIR(Name, r) \
@@ -3303,23 +3282,15 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
   FMA3_SCALAR_PAIR(Name, r_Int) \
   FMA3_SCALAR_PAIR(Name, m_Int)
 
-#define FMA3_SCALAR_PAIR_AVX512(Name, Suffix) \
-  FMA3_ENTRY(Name, SS##Suffix) \
-  FMA3_ENTRY(Name, SD##Suffix)
-
-#define FMA3_PACKED_PAIR_AVX512(Name, Suffix) \
-  FMA3_ENTRY(Name, PS##Suffix) \
-  FMA3_ENTRY(Name, PD##Suffix)
-
 #define FMA3_PACKED_SIZES_AVX512(Name, Suffix) \
-  FMA3_PACKED_PAIR_AVX512(Name, Z128##Suffix) \
-  FMA3_PACKED_PAIR_AVX512(Name, Z256##Suffix) \
-  FMA3_PACKED_PAIR_AVX512(Name, Z##Suffix)
+  FMA3_PACKED_PAIR(Name, Z128##Suffix) \
+  FMA3_PACKED_PAIR(Name, Z256##Suffix) \
+  FMA3_PACKED_PAIR(Name, Z##Suffix)
 
 #define FMA3_TABLE_ALL_AVX512(Name) \
-  FMA3_SCALAR_PAIR_AVX512(Name, r) \
+  FMA3_SCALAR_PAIR(Name, Zr) \
   FMA3_PACKED_SIZES_AVX512(Name, r) \
-  FMA3_SCALAR_PAIR_AVX512(Name, m) \
+  FMA3_SCALAR_PAIR(Name, Zm) \
   FMA3_PACKED_SIZES_AVX512(Name, m)
 
 #define FMA3_TABLE_PACKED_AVX512(Name) \
@@ -3327,8 +3298,8 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
   FMA3_PACKED_SIZES_AVX512(Name, m)
 
 #define FMA3_TABLE_SCALAR_INT_AVX512(Name) \
-  FMA3_SCALAR_PAIR_AVX512(Name, r_Int) \
-  FMA3_SCALAR_PAIR_AVX512(Name, m_Int)
+  FMA3_SCALAR_PAIR(Name, Zr_Int) \
+  FMA3_SCALAR_PAIR(Name, Zm_Int)
 
   // Define the array that holds FMA opcodes in groups
   // of 3 opcodes(132, 213, 231) in each group.
@@ -3357,7 +3328,7 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
     FMA3_TABLE_SCALAR_INT(VFNMADD)
     FMA3_TABLE_SCALAR_INT(VFNMSUB)
 
-    // AVX-512 instructio
+    // AVX-512 instructions
     FMA3_TABLE_SCALAR_INT_AVX512(VFMADD)
     FMA3_TABLE_SCALAR_INT_AVX512(VFMSUB)
     FMA3_TABLE_SCALAR_INT_AVX512(VFNMADD)
@@ -3372,7 +3343,6 @@ static unsigned getFMA3OpcodeToCommuteOperands(unsigned Opc,
 #undef FMA3_TABLE_PACKED
 #undef FMA3_TABLE_SCALAR_INT
 #undef FMA3_SCALAR_PAIR_AVX512
-#undef FMA3_PACKED_PAIR_AVX512
 #undef FMA3_PACKED_SIZES_AVX512
 #undef FMA3_TABLE_ALL_AVX512
 #undef FMA3_TABLE_PACKED_AVX512
@@ -6297,12 +6267,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::DIVSSrr_Int: case X86::VDIVSSrr_Int: case X86::VDIVSSZrr_Int:
     case X86::MULSSrr_Int: case X86::VMULSSrr_Int: case X86::VMULSSZrr_Int:
     case X86::SUBSSrr_Int: case X86::VSUBSSrr_Int: case X86::VSUBSSZrr_Int:
-    case X86::VFMADDSSr132r_Int: case X86::VFNMADDSSr132r_Int:
-    case X86::VFMADDSSr213r_Int: case X86::VFNMADDSSr213r_Int:
-    case X86::VFMADDSSr231r_Int: case X86::VFNMADDSSr231r_Int:
-    case X86::VFMSUBSSr132r_Int: case X86::VFNMSUBSSr132r_Int:
-    case X86::VFMSUBSSr213r_Int: case X86::VFNMSUBSSr213r_Int:
-    case X86::VFMSUBSSr231r_Int: case X86::VFNMSUBSSr231r_Int:
+    case X86::VFMADD132SSr_Int: case X86::VFNMADD132SSr_Int:
+    case X86::VFMADD213SSr_Int: case X86::VFNMADD213SSr_Int:
+    case X86::VFMADD231SSr_Int: case X86::VFNMADD231SSr_Int:
+    case X86::VFMSUB132SSr_Int: case X86::VFNMSUB132SSr_Int:
+    case X86::VFMSUB213SSr_Int: case X86::VFNMSUB213SSr_Int:
+    case X86::VFMSUB231SSr_Int: case X86::VFNMSUB231SSr_Int:
       return false;
     default:
       return true;
@@ -6319,12 +6289,12 @@ static bool isNonFoldablePartialRegisterLoad(const MachineInstr &LoadMI,
     case X86::DIVSDrr_Int: case X86::VDIVSDrr_Int: case X86::VDIVSDZrr_Int:
     case X86::MULSDrr_Int: case X86::VMULSDrr_Int: case X86::VMULSDZrr_Int:
     case X86::SUBSDrr_Int: case X86::VSUBSDrr_Int: case X86::VSUBSDZrr_Int:
-    case X86::VFMADDSDr132r_Int: case X86::VFNMADDSDr132r_Int:
-    case X86::VFMADDSDr213r_Int: case X86::VFNMADDSDr213r_Int:
-    case X86::VFMADDSDr231r_Int: case X86::VFNMADDSDr231r_Int:
-    case X86::VFMSUBSDr132r_Int: case X86::VFNMSUBSDr132r_Int:
-    case X86::VFMSUBSDr213r_Int: case X86::VFNMSUBSDr213r_Int:
-    case X86::VFMSUBSDr231r_Int: case X86::VFNMSUBSDr231r_Int:
+    case X86::VFMADD132SDr_Int: case X86::VFNMADD132SDr_Int:
+    case X86::VFMADD213SDr_Int: case X86::VFNMADD213SDr_Int:
+    case X86::VFMADD231SDr_Int: case X86::VFNMADD231SDr_Int:
+    case X86::VFMSUB132SDr_Int: case X86::VFNMSUB132SDr_Int:
+    case X86::VFMSUB213SDr_Int: case X86::VFNMSUB213SDr_Int:
+    case X86::VFMSUB231SDr_Int: case X86::VFNMSUB231SDr_Int:
       return false;
     default:
       return true;

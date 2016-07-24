@@ -4398,15 +4398,82 @@ defm VPSLLV : avx512_var_shift_types<0x47, "vpsllv", shl>,
 defm VPSRAV : avx512_var_shift_types<0x46, "vpsrav", sra>,
               avx512_var_shift_w<0x11, "vpsravw", sra>,
               avx512_var_shift_w_lowering<avx512vl_i16_info, sra>;
-let isCodeGenOnly = 1 in
-  defm VPSRAV_Int : avx512_var_shift_types<0x46, "vpsrav", X86vsrav>,
-                    avx512_var_shift_w<0x11, "vpsravw", X86vsrav>;
 
 defm VPSRLV : avx512_var_shift_types<0x45, "vpsrlv", srl>,
               avx512_var_shift_w<0x10, "vpsrlvw", srl>,
               avx512_var_shift_w_lowering<avx512vl_i16_info, srl>;
 defm VPRORV : avx512_var_shift_types<0x14, "vprorv", rotr>;
 defm VPROLV : avx512_var_shift_types<0x15, "vprolv", rotl>;
+
+// Special handing for handling VPSRAV intrinsics.
+multiclass avx512_var_shift_int_lowering<string InstrStr, X86VectorVTInfo _,
+                                         list<Predicate> p> {
+  let Predicates = p in {
+    def : Pat<(_.VT (X86vsrav _.RC:$src1, _.RC:$src2)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix#rr) _.RC:$src1,
+               _.RC:$src2)>;
+    def : Pat<(_.VT (X86vsrav _.RC:$src1, (bitconvert (_.LdFrag addr:$src2)))),
+              (!cast<Instruction>(InstrStr#_.ZSuffix##rm)
+               _.RC:$src1, addr:$src2)>;
+    let AddedComplexity = 20 in {
+    def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                     (X86vsrav _.RC:$src1, _.RC:$src2), _.RC:$src0)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix#rrk) _.RC:$src0,
+               _.KRC:$mask, _.RC:$src1, _.RC:$src2)>;
+    def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                     (X86vsrav _.RC:$src1, (bitconvert (_.LdFrag addr:$src2))),
+                     _.RC:$src0)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix##rmk) _.RC:$src0,
+               _.KRC:$mask, _.RC:$src1, addr:$src2)>;
+    }
+    let AddedComplexity = 30 in {
+    def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                     (X86vsrav _.RC:$src1, _.RC:$src2), _.ImmAllZerosV)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix#rrkz) _.KRC:$mask,
+               _.RC:$src1, _.RC:$src2)>;
+    def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                     (X86vsrav _.RC:$src1, (bitconvert (_.LdFrag addr:$src2))),
+                     _.ImmAllZerosV)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix##rmkz) _.KRC:$mask,
+               _.RC:$src1, addr:$src2)>;
+    }
+  }
+}
+
+multiclass avx512_var_shift_int_lowering_mb<string InstrStr, X86VectorVTInfo _,
+                                         list<Predicate> p> :
+           avx512_var_shift_int_lowering<InstrStr, _, p> {
+  let Predicates = p in {
+    def : Pat<(_.VT (X86vsrav _.RC:$src1,
+                     (X86VBroadcast (_.ScalarLdFrag addr:$src2)))),
+              (!cast<Instruction>(InstrStr#_.ZSuffix##rmb)
+               _.RC:$src1, addr:$src2)>;
+    let AddedComplexity = 20 in
+    def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                     (X86vsrav _.RC:$src1,
+                      (X86VBroadcast (_.ScalarLdFrag addr:$src2))),
+                     _.RC:$src0)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix##rmbk) _.RC:$src0,
+               _.KRC:$mask, _.RC:$src1, addr:$src2)>;
+    let AddedComplexity = 30 in
+    def : Pat<(_.VT (vselect _.KRCWM:$mask,
+                     (X86vsrav _.RC:$src1,
+                      (X86VBroadcast (_.ScalarLdFrag addr:$src2))),
+                     _.ImmAllZerosV)),
+              (!cast<Instruction>(InstrStr#_.ZSuffix##rmbkz) _.KRC:$mask,
+               _.RC:$src1, addr:$src2)>;
+  }
+}
+
+defm : avx512_var_shift_int_lowering<"VPSRAVW", v8i16x_info, [HasVLX, HasBWI]>;
+defm : avx512_var_shift_int_lowering<"VPSRAVW", v16i16x_info, [HasVLX, HasBWI]>;
+defm : avx512_var_shift_int_lowering<"VPSRAVW", v32i16_info, [HasBWI]>;
+defm : avx512_var_shift_int_lowering_mb<"VPSRAVD", v4i32x_info, [HasVLX]>;
+defm : avx512_var_shift_int_lowering_mb<"VPSRAVD", v8i32x_info, [HasVLX]>;
+defm : avx512_var_shift_int_lowering_mb<"VPSRAVD", v16i32_info, [HasAVX512]>;
+defm : avx512_var_shift_int_lowering_mb<"VPSRAVQ", v2i64x_info, [HasVLX]>;
+defm : avx512_var_shift_int_lowering_mb<"VPSRAVQ", v4i64x_info, [HasVLX]>;
+defm : avx512_var_shift_int_lowering_mb<"VPSRAVQ", v8i64_info, [HasAVX512]>;
 
 //===-------------------------------------------------------------------===//
 // 1-src variable permutation VPERMW/D/Q
@@ -4928,7 +4995,7 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
          string OpcodeStr, SDNode OpNode, SDNode OpNodeRnd, X86VectorVTInfo _ ,
                                                                   string SUFF> {
 
-  defm NAME#213#SUFF: avx512_fma3s_common<opc213, OpcodeStr#"213"#_.Suffix , _ ,
+  defm NAME#213#SUFF#Z: avx512_fma3s_common<opc213, OpcodeStr#"213"#_.Suffix , _ ,
                 (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src1, _.RC:$src3, (i32 FROUND_CURRENT))),
                 (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src1,
                          (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))), (i32 FROUND_CURRENT))),
@@ -4939,7 +5006,7 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2, _.FRC:$src1,
                          (_.ScalarLdFrag addr:$src3))))>;
 
-  defm NAME#231#SUFF: avx512_fma3s_common<opc231, OpcodeStr#"231"#_.Suffix , _ ,
+  defm NAME#231#SUFF#Z: avx512_fma3s_common<opc231, OpcodeStr#"231"#_.Suffix , _ ,
                 (_.VT (OpNodeRnd _.RC:$src2, _.RC:$src3, _.RC:$src1, (i32 FROUND_CURRENT))),
                 (_.VT (OpNodeRnd _.RC:$src2,
                        (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))),
@@ -4951,7 +5018,7 @@ multiclass avx512_fma3s_all<bits<8> opc213, bits<8> opc231, bits<8> opc132,
                 (set _.FRC:$dst, (_.EltVT (OpNode _.FRC:$src2,
                             (_.ScalarLdFrag addr:$src3), _.FRC:$src1)))>;
 
-  defm NAME#132#SUFF: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix , _ ,
+  defm NAME#132#SUFF#Z: avx512_fma3s_common<opc132, OpcodeStr#"132"#_.Suffix , _ ,
                 (_.VT (OpNodeRnd _.RC:$src1, _.RC:$src3, _.RC:$src2, (i32 FROUND_CURRENT))),
                 (_.VT (OpNodeRnd _.RC:$src1,
                        (_.VT (scalar_to_vector(_.ScalarLdFrag addr:$src3))),
