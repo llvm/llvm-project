@@ -46,7 +46,7 @@
 # CHECK-NEXT:     Other: 0
 # CHECK-NEXT:     Section: .text (0x4)
 # CHECK-NEXT:   }
-# CHECK-NEXT: ] 
+# CHECK-NEXT: ]
 
 
 ## Now export all the foo1, foo2, and foo31 symbols
@@ -91,7 +91,7 @@
 # CHECK2-NEXT:     Other: 0
 # CHECK2-NEXT:     Section: .text (0x4)
 # CHECK2-NEXT:   }
-# CHECK2-NEXT: ] 
+# CHECK2-NEXT: ]
 
 .globl foo1
 foo1:

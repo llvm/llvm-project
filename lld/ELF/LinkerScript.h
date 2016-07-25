@@ -65,7 +65,7 @@ struct SymbolAssignment : BaseCommand {
 // read-only
 // or all of its input sections are read-write by using the keyword ONLY_IF_RO
 // and ONLY_IF_RW respectively.
-enum ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
+enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
@@ -76,7 +76,7 @@ struct OutputSectionCommand : BaseCommand {
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
-  ConstraintKind Constraint = NoConstraint;
+  ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
 struct InputSectionDescription : BaseCommand {
@@ -131,8 +131,16 @@ public:
   bool hasPhdrsCommands();
 
 private:
+  std::vector<std::pair<StringRef, ArrayRef<StringRef>>> getSectionMap();
+
+  std::vector<InputSectionBase<ELFT> *>
+  getInputSections(ArrayRef<StringRef> Patterns);
+
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
+
+  std::vector<OutputSectionBase<ELFT> *>
+  filter(std::vector<OutputSectionBase<ELFT> *> &Sections);
 
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);

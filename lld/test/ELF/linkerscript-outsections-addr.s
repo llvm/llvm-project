@@ -103,7 +103,7 @@
 #CHECK:    AddressAlignment: 16
 #CHECK:    EntrySize: 0
 #CHECK:  }
-  
+
 .globl _start
 _start:
 nop
