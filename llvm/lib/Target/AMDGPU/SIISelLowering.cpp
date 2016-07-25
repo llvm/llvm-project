@@ -1134,9 +1134,9 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MachineFunction *MF = BB->getParent();
     SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
     DebugLoc DL = MI.getDebugLoc();
-    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOVK_I32))
-        .addOperand(MI.getOperand(0))
-        .addImm(MFI->LDSSize);
+    BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
+      .addOperand(MI.getOperand(0))
+      .addImm(MFI->LDSSize);
     MI.eraseFromParent();
     return BB;
   }
