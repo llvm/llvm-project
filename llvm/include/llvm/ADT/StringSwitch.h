@@ -55,9 +55,17 @@ public:
 
   // StringSwitch is not copyable.
   StringSwitch(const StringSwitch &) = delete;
-  StringSwitch(StringSwitch &&) = default;
   void operator=(const StringSwitch &) = delete;
-  StringSwitch &operator=(StringSwitch &&) = default;
+
+  StringSwitch(StringSwitch &&other) {
+    *this = std::move(other);
+  }
+  StringSwitch &operator=(StringSwitch &&other) {
+    Str = other.Str;
+    Result = other.Result;
+    return *this;
+  }
+
   ~StringSwitch() = default;
 
   template<unsigned N>
