@@ -2014,6 +2014,9 @@ void LLVMAddFunctionAttr(LLVMValueRef Fn, LLVMAttribute PA);
 
 void LLVMAddAttributeAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
                              LLVMAttributeRef A);
+unsigned LLVMGetAttributeCountAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx);
+void LLVMGetAttributesAtIndex(LLVMValueRef F, LLVMAttributeIndex Idx,
+                              LLVMAttributeRef *Attrs);
 LLVMAttributeRef LLVMGetEnumAttributeAtIndex(LLVMValueRef F,
                                              LLVMAttributeIndex Idx,
                                              unsigned KindID);
@@ -2600,6 +2603,9 @@ void LLVMSetInstrParamAlignment(LLVMValueRef Instr, unsigned index,
 
 void LLVMAddCallSiteAttribute(LLVMValueRef C, LLVMAttributeIndex Idx,
                               LLVMAttributeRef A);
+unsigned LLVMGetCallSiteAttributeCount(LLVMValueRef C, LLVMAttributeIndex Idx);
+void LLVMGetCallSiteAttributes(LLVMValueRef C, LLVMAttributeIndex Idx,
+                               LLVMAttributeRef *Attrs);
 LLVMAttributeRef LLVMGetCallSiteEnumAttribute(LLVMValueRef C,
                                               LLVMAttributeIndex Idx,
                                               unsigned KindID);
