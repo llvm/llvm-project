@@ -21,6 +21,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class C>
@@ -85,16 +86,16 @@ int main()
         assert(c.bucket_count() >= 7);
         c.rehash(3);
         rehash_postcondition(c, 3);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         test(c);
         c.max_load_factor(2);
         c.rehash(3);
         rehash_postcondition(c, 3);
-        assert(c.bucket_count() == 3);
+        LIBCPP_ASSERT(c.bucket_count() == 3);
         test(c);
         c.rehash(31);
         rehash_postcondition(c, 31);
-        assert(c.bucket_count() == 31);
+        LIBCPP_ASSERT(c.bucket_count() == 31);
         test(c);
     }
 #if TEST_STD_VER >= 11
@@ -116,16 +117,16 @@ int main()
         assert(c.bucket_count() >= 7);
         c.rehash(3);
         rehash_postcondition(c, 3);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         test(c);
         c.max_load_factor(2);
         c.rehash(3);
         rehash_postcondition(c, 3);
-        assert(c.bucket_count() == 3);
+        LIBCPP_ASSERT(c.bucket_count() == 3);
         test(c);
         c.rehash(31);
         rehash_postcondition(c, 31);
-        assert(c.bucket_count() == 31);
+        LIBCPP_ASSERT(c.bucket_count() == 31);
         test(c);
     }
 #endif

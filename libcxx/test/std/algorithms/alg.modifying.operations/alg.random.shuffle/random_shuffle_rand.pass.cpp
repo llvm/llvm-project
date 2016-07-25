@@ -18,6 +18,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include "test_macros.h"
+
 struct gen
 {
     int operator()(int n)
@@ -33,5 +35,6 @@ int main()
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     gen r;
     std::random_shuffle(ia, ia+sa, r);
-    assert(std::equal(ia, ia+sa, ia1));
+    LIBCPP_ASSERT(std::equal(ia, ia+sa, ia1));
+    assert(std::is_permutation(ia, ia+sa, ia1));
 }

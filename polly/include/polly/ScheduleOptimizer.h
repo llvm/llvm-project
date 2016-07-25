@@ -20,6 +20,16 @@ struct isl_schedule;
 struct isl_schedule_node;
 struct isl_union_map;
 
+/// @brief Parameters of the micro kernel.
+///
+/// Parameters, which determine sizes of rank-1 (i.e., outer product) update
+/// used in the optimized matrix multiplication.
+///
+struct MicroKernelParamsTy {
+  int Mr;
+  int Nr;
+};
+
 namespace polly {
 extern bool DisablePollyTiling;
 class Scop;
@@ -232,6 +242,21 @@ private:
   ///
   /// @param Node The node to check.
   static bool isMatrMultPattern(__isl_keep isl_schedule_node *Node);
+
+  /// @brief Create the BLIS macro-kernel.
+  ///
+  /// We create the BLIS macro-kernel by applying a combination of tiling
+  /// of dimensions of the band node and interchanging of two innermost
+  /// modified dimensions. The values passed in MicroKernelParam are used
+  /// as tile sizes.
+  ///
+  /// @param Node The schedule node to be modified.
+  /// @param MicroKernelParams Parameters of the micro kernel
+  ///                          to be used as tile sizes.
+  /// @see MicroKernelParamsTy
+  static __isl_give isl_schedule_node *
+  createMicroKernel(__isl_take isl_schedule_node *Node,
+                    MicroKernelParamsTy MicroKernelParams);
 };
 
 #endif

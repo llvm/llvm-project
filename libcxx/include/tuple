@@ -150,27 +150,6 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
 
-// tuple_size
-
-template <class ..._Tp>
-class _LIBCPP_TYPE_VIS_ONLY tuple_size<tuple<_Tp...> >
-    : public integral_constant<size_t, sizeof...(_Tp)>
-{
-};
-
-// tuple_element
-
-template <size_t _Ip, class ..._Tp>
-class _LIBCPP_TYPE_VIS_ONLY tuple_element<_Ip, tuple<_Tp...> >
-{
-public:
-    typedef typename tuple_element<_Ip, __tuple_types<_Tp...> >::type type;
-};
-
-#if _LIBCPP_STD_VER > 11
-template <size_t _Ip, class ..._Tp>
-using tuple_element_t = typename tuple_element <_Ip, _Tp...>::type;
-#endif
 
 // __tuple_leaf
 
@@ -489,27 +468,7 @@ struct __tuple_impl<__tuple_indices<_Indx...>, _Tp...>
     }
 };
 
-template <bool _IsTuple, class _SizeTrait, size_t _Expected>
-struct __tuple_like_with_size_imp : false_type {};
 
-template <class _SizeTrait, size_t _Expected>
-struct __tuple_like_with_size_imp<true, _SizeTrait, _Expected>
-    : integral_constant<bool, _SizeTrait::value == _Expected> {};
-
-template <class _Tuple, size_t _ExpectedSize,
-          class _RawTuple = typename __uncvref<_Tuple>::type>
-using __tuple_like_with_size = __tuple_like_with_size_imp<
-                                   __tuple_like<_RawTuple>::value,
-                                   tuple_size<_RawTuple>, _ExpectedSize
-                              >;
-
-
-struct _LIBCPP_TYPE_VIS __check_tuple_constructor_fail {
-    template <class ...>
-    static constexpr bool __enable_explicit() { return false; }
-    template <class ...>
-    static constexpr bool __enable_implicit() { return false; }
-};
 
 template <class ..._Tp>
 class _LIBCPP_TYPE_VIS_ONLY tuple
@@ -531,6 +490,11 @@ class _LIBCPP_TYPE_VIS_ONLY tuple
     template <class _Dummy>
     struct _CheckArgsConstructor<true, _Dummy>
     {
+        template <class ..._Args>
+        static constexpr bool __enable_default() {
+            return __all<is_default_constructible<_Args>::value...>::value;
+        }
+
         template <class ..._Args>
         static constexpr bool __enable_explicit() {
             return
@@ -641,7 +605,7 @@ class _LIBCPP_TYPE_VIS_ONLY tuple
 public:
 
     template <bool _Dummy = true, class = typename enable_if<
-        __all<__dependent_type<is_default_constructible<_Tp>, _Dummy>::value...>::value
+        _CheckArgsConstructor<_Dummy>::template __enable_default<_Tp...>()
     >::type>
     _LIBCPP_INLINE_VISIBILITY
     _LIBCPP_CONSTEXPR tuple()
@@ -1362,6 +1326,9 @@ template <class ..._Tp, class _Alloc>
 struct _LIBCPP_TYPE_VIS_ONLY uses_allocator<tuple<_Tp...>, _Alloc>
     : true_type {};
 
+#endif // _LIBCPP_HAS_NO_VARIADICS
+
+#ifndef _LIBCPP_CXX03_LANG
 template <class _T1, class _T2>
 template <class... _Args1, class... _Args2, size_t ..._I1, size_t ..._I2>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -1372,8 +1339,7 @@ pair<_T1, _T2>::pair(piecewise_construct_t,
       second(_VSTD::forward<_Args2>(_VSTD::get<_I2>(__second_args))...)
 {
 }
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
+#endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER > 14
 template <class _Tp>
