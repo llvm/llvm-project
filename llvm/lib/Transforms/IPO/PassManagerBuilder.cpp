@@ -134,6 +134,10 @@ static cl::opt<int> PreInlineThreshold(
     cl::desc("Control the amount of inlining in pre-instrumentation inliner "
              "(default = 75)"));
 
+static cl::opt<bool> EnableGVNHoist(
+    "enable-gvn-hoist", cl::init(false), cl::Hidden,
+    cl::desc("Enable the experimental GVN Hoisting pass"));
+
 PassManagerBuilder::PassManagerBuilder() {
     OptLevel = 2;
     SizeLevel = 0;
@@ -232,7 +236,8 @@ void PassManagerBuilder::populateFunctionPassManager(
   FPM.add(createCFGSimplificationPass());
   FPM.add(createSROAPass());
   FPM.add(createEarlyCSEPass());
-  FPM.add(createGVNHoistPass());
+  if(EnableGVNHoist)
+    FPM.add(createGVNHoistPass());
   FPM.add(createLowerExpectIntrinsicPass());
 }
 
