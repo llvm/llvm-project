@@ -9,17 +9,17 @@
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=SIMPLE %s
 # SIMPLE: 0000000000000121         *ABS*    00000000 text_end
 
-# Provide new symbol. The value should be 1, like set in PROVIDE()
+# The symbol is not referenced. Don't provide it.
 # RUN: echo "SECTIONS { PROVIDE(newsym = 1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=PROVIDE1 %s
-# PROVIDE1: 0000000000000001         *ABS*    00000000 newsym
+# PROVIDE1-NOT: 0000000000000001         *ABS*    00000000 newsym
 
-# Provide new symbol (hidden). The value should be 1
+# The symbol is not referenced. Don't provide it.
 # RUN: echo "SECTIONS { PROVIDE_HIDDEN(newsym = 1);}" > %t.script
 # RUN: ld.lld -o %t1 --script %t.script %t
 # RUN: llvm-objdump -t %t1 | FileCheck --check-prefix=HIDDEN1 %s
-# HIDDEN1: 0000000000000001         *ABS*    00000000 .hidden newsym
+# HIDDEN1-NOT: 0000000000000001         *ABS*    00000000 .hidden newsym
 
 # Provide existing symbol. The value should be 0, even though we 
 # have value of 1 in PROVIDE()

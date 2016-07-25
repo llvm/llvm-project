@@ -193,11 +193,11 @@ set(ENABLE_X86_RELAX_RELOCATIONS OFF CACHE BOOL
     "enable x86 relax relocations by default")
 
 set(CLANG_DEFAULT_CXX_STDLIB "" CACHE STRING
-  "Default C++ stdlib to use (empty for architecture default, \"libstdc++\" or \"libc++\"")
+  "Default C++ stdlib to use (empty for platform default, \"libstdc++\" or \"libc++\"")
 if (NOT(CLANG_DEFAULT_CXX_STDLIB STREQUAL "" OR
         CLANG_DEFAULT_CXX_STDLIB STREQUAL "libstdc++" OR
         CLANG_DEFAULT_CXX_STDLIB STREQUAL "libc++"))
-  message(WARNING "Resetting default C++ stdlib to use architecture default")
+  message(WARNING "Resetting default C++ stdlib to use platform default")
   set(CLANG_DEFAULT_CXX_STDLIB "")
 endif()
 

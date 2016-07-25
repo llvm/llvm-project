@@ -51,8 +51,8 @@ struct AtomicBoolMember {
 };
 
 // CHECK-LABEL: define void @_ZN16AtomicBoolMemberC2Eb
-// CHECK: {{zext i1.*to i8}}
-// CHECK-NEXT: store i8
+// CHECK: zext i1 {{.*}} to i8
+// CHECK: store i8
 // CHECK-NEXT: ret void
 AtomicBoolMember::AtomicBoolMember(bool b) : ab(b) { }
 

@@ -19,6 +19,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "min_allocator.h"
 
 template <class C>
@@ -66,11 +67,11 @@ int main()
         test(c);
         assert(c.bucket_count() >= 7);
         c.reserve(3);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         test(c);
         c.max_load_factor(2);
         c.reserve(3);
-        assert(c.bucket_count() == 3);
+        LIBCPP_ASSERT(c.bucket_count() == 3);
         test(c);
         c.reserve(31);
         assert(c.bucket_count() >= 16);
@@ -94,11 +95,11 @@ int main()
         test(c);
         assert(c.bucket_count() >= 7);
         c.reserve(3);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         test(c);
         c.max_load_factor(2);
         c.reserve(3);
-        assert(c.bucket_count() == 3);
+        LIBCPP_ASSERT(c.bucket_count() == 3);
         test(c);
         c.reserve(31);
         assert(c.bucket_count() >= 16);

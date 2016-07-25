@@ -42,7 +42,9 @@ int main()
     assert(A::count == 0);
 
     { // LWG#2520 says that nullptr is a valid input as well as null
+#ifdef _LIBCPP_VERSION
     std::unique_ptr<A[], Deleter<A[]> > s1(NULL, Deleter<A[]>());
+#endif
     std::unique_ptr<A[], Deleter<A[]> > s2(nullptr, Deleter<A[]>());
     }
     assert(A::count == 0);

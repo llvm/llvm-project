@@ -17,6 +17,8 @@
 #include <random>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     int ia[] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
@@ -25,7 +27,9 @@ int main()
     const unsigned sa = sizeof(ia)/sizeof(ia[0]);
     std::minstd_rand g;
     std::shuffle(ia, ia+sa, g);
-    assert(std::equal(ia, ia+sa, ia1));
+    LIBCPP_ASSERT(std::equal(ia, ia+sa, ia1));
+    assert(std::is_permutation(ia, ia+sa, ia1));
     std::shuffle(ia, ia+sa, g);
-    assert(std::equal(ia, ia+sa, ia2));
+    LIBCPP_ASSERT(std::equal(ia, ia+sa, ia2));
+    assert(std::is_permutation(ia, ia+sa, ia2));
 }

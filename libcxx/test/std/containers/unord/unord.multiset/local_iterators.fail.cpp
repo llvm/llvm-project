@@ -23,6 +23,8 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
+
 int main()
 {
     {
@@ -39,7 +41,7 @@ int main()
             P(2)
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         C::size_type b = c.bucket(0);
         I i = c.begin(b);
         I j = c.end(b);
@@ -98,7 +100,7 @@ int main()
             P(2)
         };
         const C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         C::size_type b = c.bucket(0);
         I i = c.begin(b);
         I j = c.end(b);
@@ -156,7 +158,7 @@ int main()
             P(2)
         };
         C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         C::size_type b = c.bucket(0);
         I i = c.cbegin(b);
         I j = c.cend(b);
@@ -214,7 +216,7 @@ int main()
             P(2)
         };
         const C c(a, a + sizeof(a)/sizeof(a[0]));
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         C::size_type b = c.bucket(0);
         I i = c.cbegin(b);
         I j = c.cend(b);

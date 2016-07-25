@@ -22,6 +22,7 @@
 // This tests a conforming extension
 
 #include <set>
+#include <utility>
 #include <cassert>
 
 #include "test_macros.h"
@@ -95,51 +96,42 @@ int main()
 {
     {
         typedef std::set<MoveOnly> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        static_assert(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::set<MoveOnly, std::less<MoveOnly>, test_allocator<MoveOnly>> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::set<MoveOnly, std::less<MoveOnly>, other_allocator<MoveOnly>> C;
-        C c1, c2;
-        static_assert(noexcept(swap(c1, c2)), "");
+        LIBCPP_STATIC_ASSERT(noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     {
         typedef std::set<MoveOnly, some_comp<MoveOnly>> C;
-        C c1, c2;
-        static_assert(!noexcept(swap(c1, c2)), "");
+        static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 
 #if TEST_STD_VER >= 14
     { // POCS allocator, throwable swap for comp
     typedef std::set<MoveOnly, some_comp <MoveOnly>, some_alloc <MoveOnly>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // always equal allocator, throwable swap for comp
     typedef std::set<MoveOnly, some_comp <MoveOnly>, some_alloc2<MoveOnly>> C;
-    C c1, c2;
-    static_assert(!noexcept(swap(c1, c2)), "");
+    static_assert(!noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // POCS allocator, nothrow swap for comp
     typedef std::set<MoveOnly, some_comp2<MoveOnly>, some_alloc <MoveOnly>> C;
-    C c1, c2;
-    static_assert( noexcept(swap(c1, c2)), "");
+    static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
     { // always equal allocator, nothrow swap for comp
     typedef std::set<MoveOnly, some_comp2<MoveOnly>, some_alloc2<MoveOnly>> C;
-    C c1, c2;
-    static_assert( noexcept(swap(c1, c2)), "");
+    static_assert( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 
     { // NOT always equal allocator, nothrow swap for comp
     typedef std::set<MoveOnly, some_comp2<MoveOnly>, some_alloc3<MoveOnly>> C;
-    C c1, c2;
-    static_assert( noexcept(swap(c1, c2)), "");
+    LIBCPP_STATIC_ASSERT( noexcept(swap(std::declval<C&>(), std::declval<C&>())), "");
     }
 #endif
 

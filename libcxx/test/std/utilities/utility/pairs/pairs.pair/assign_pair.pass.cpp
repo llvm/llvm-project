@@ -36,7 +36,6 @@ struct MoveAssignable {
   MoveAssignable& operator=(MoveAssignable&&) = default;
 };
 
-
 struct CountAssign {
   static int copied;
   static int moved;
@@ -47,6 +46,9 @@ struct CountAssign {
 };
 int CountAssign::copied = 0;
 int CountAssign::moved = 0;
+
+struct Incomplete;
+extern Incomplete inc_obj;
 
 int main()
 {
@@ -87,4 +89,13 @@ int main()
         using P = std::pair<int, MoveAssignable>;
         static_assert(!std::is_copy_assignable<P>::value, "");
     }
+    {
+        using P = std::pair<int, Incomplete&>;
+        static_assert(!std::is_copy_assignable<P>::value, "");
+        P p(42, inc_obj);
+        assert(&p.second == &inc_obj);
+    }
 }
+
+struct Incomplete {};
+Incomplete inc_obj;

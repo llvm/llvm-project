@@ -493,10 +493,27 @@ static __isl_give isl_map *circularShiftOutputDims(__isl_take isl_map *IslMap) {
   return isl_map_set_tuple_id(IslMap, isl_dim_in, InputDimsId);
 }
 
-__isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
-    __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI) {
+__isl_give isl_schedule_node *ScheduleTreeOptimizer::createMicroKernel(
+    __isl_take isl_schedule_node *Node, MicroKernelParamsTy MicroKernelParams) {
+  return applyRegisterTiling(Node, {MicroKernelParams.Mr, MicroKernelParams.Nr},
+                             1);
+}
+
+/// Get parameters of the BLIS micro kernel.
+///
+/// We choose the Mr and Nr parameters of the micro kernel to be large enough
+/// such that no stalls caused by the combination of latencies and dependencies
+/// are introduced during the updates of the resulting matrix of the matrix
+/// multiplication. However, they should also be as small as possible to
+/// release more registers for entries of multiplied matrices.
+///
+/// @param TTI Target Transform Info.
+/// @return The structure of type MicroKernelParamsTy.
+/// @see MicroKernelParamsTy
+static struct MicroKernelParamsTy
+getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
   assert(TTI && "The target transform info should be provided.");
-  // Get a micro-kernel.
+
   // Nvec - Number of double-precision floating-point numbers that can be hold
   // by a vector register. Use 2 by default.
   auto Nvec = TTI->getRegisterBitWidth(true) / 64;
@@ -505,8 +522,14 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
   int Nr =
       ceil(sqrt(Nvec * LatencyVectorFma * ThrougputVectorFma) / Nvec) * Nvec;
   int Mr = ceil(Nvec * LatencyVectorFma * ThrougputVectorFma / Nr);
-  std::vector<int> MicroKernelParams{Mr, Nr};
-  Node = applyRegisterTiling(Node, MicroKernelParams, 1);
+  return {Mr, Nr};
+}
+
+__isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
+    __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI) {
+  assert(TTI && "The target transform info should be provided.");
+  auto MicroKernelParams = getMicroKernelParams(TTI);
+  Node = createMicroKernel(Node, MicroKernelParams);
   return Node;
 }
 

@@ -18,6 +18,7 @@
 #include <unordered_set>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -33,7 +34,7 @@ int main()
                                    test_allocator<NotConstructible>
                                    > C;
         C c;
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() == (test_allocator<NotConstructible>()));
@@ -51,7 +52,7 @@ int main()
                                    min_allocator<NotConstructible>
                                    > C;
         C c;
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.hash_function() == test_hash<std::hash<NotConstructible> >());
         assert(c.key_eq() == test_compare<std::equal_to<NotConstructible> >());
         assert(c.get_allocator() == (min_allocator<NotConstructible>()));
@@ -63,7 +64,7 @@ int main()
     }
     {
         std::unordered_multiset<int> c = {};
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
         assert(c.size() == 0);
         assert(c.empty());
         assert(std::distance(c.begin(), c.end()) == 0);
