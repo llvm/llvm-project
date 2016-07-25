@@ -64,6 +64,7 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
                                     DominatorTree &DT, LoopInfo &LI) {
   SmallVector<Use *, 16> UsesToRewrite;
   SmallVector<BasicBlock *, 8> ExitBlocks;
+  SmallSetVector<PHINode *, 16> PHIsToRemove;
   PredIteratorCache PredCache;
   bool Changed = false;
 
@@ -115,7 +116,8 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SmallVector<PHINode *, 16> AddedPHIs;
     SmallVector<PHINode *, 8> PostProcessPHIs;
 
-    SSAUpdater SSAUpdate;
+    SmallVector<PHINode *, 4> InsertedPHIs;
+    SSAUpdater SSAUpdate(&InsertedPHIs);
     SSAUpdate.Initialize(I->getType(), I->getName());
 
     // Insert the LCSSA phi's into all of the exit blocks dominated by the
@@ -184,6 +186,14 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
 
       // Otherwise, do full PHI insertion.
       SSAUpdate.RewriteUse(*UseToRewrite);
+
+      // SSAUpdater might have inserted phi-nodes inside other loops. We'll need
+      // to post-process them to keep LCSSA form.
+      for (PHINode *InsertedPN : InsertedPHIs) {
+        if (auto *OtherLoop = LI.getLoopFor(InsertedPN->getParent()))
+          if (!L->contains(OtherLoop))
+            PostProcessPHIs.push_back(InsertedPN);
+      }
     }
 
     // Post process PHI instructions that were inserted into another disjoint
@@ -196,12 +206,18 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       Worklist.push_back(PostProcessPN);
     }
 
-    // Remove PHI nodes that did not have any uses rewritten.
+    // Keep track of PHI nodes that we want to remove because they did not have
+    // any uses rewritten.
     for (PHINode *PN : AddedPHIs)
       if (PN->use_empty())
-        PN->eraseFromParent();
+        PHIsToRemove.insert(PN);
 
     Changed = true;
+  }
+  // Remove PHI nodes that did not have any uses rewritten.
+  for (PHINode *PN : PHIsToRemove) {
+    assert (PN->use_empty() && "Trying to remove a phi with uses.");
+    PN->eraseFromParent();
   }
   return Changed;
 }

@@ -327,6 +327,8 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     else
       NewOuter->addChildLoop(L->removeChildLoop(SubLoops.begin() + I));
 
+  SmallVector<BasicBlock *, 8> OuterLoopBlocks;
+  OuterLoopBlocks.push_back(NewBB);
   // Now that we know which blocks are in L and which need to be moved to
   // OuterLoop, move any blocks that need it.
   for (unsigned i = 0; i != L->getBlocks().size(); ++i) {
@@ -334,10 +336,51 @@ static Loop *separateNestedLoop(Loop *L, BasicBlock *Preheader,
     if (!BlocksInL.count(BB)) {
       // Move this block to the parent, updating the exit blocks sets
       L->removeBlockFromLoop(BB);
-      if ((*LI)[BB] == L)
+      if ((*LI)[BB] == L) {
         LI->changeLoopFor(BB, NewOuter);
+        OuterLoopBlocks.push_back(BB);
+      }
       --i;
     }
+  }
+
+  // Split edges to exit blocks from the inner loop, if they emerged in the
+  // process of separating the outer one.
+  SmallVector<BasicBlock *, 8> ExitBlocks;
+  L->getExitBlocks(ExitBlocks);
+  SmallSetVector<BasicBlock *, 8> ExitBlockSet(ExitBlocks.begin(),
+                                               ExitBlocks.end());
+  for (BasicBlock *ExitBlock : ExitBlockSet) {
+    if (any_of(predecessors(ExitBlock),
+               [L](BasicBlock *BB) { return !L->contains(BB); })) {
+      rewriteLoopExitBlock(L, ExitBlock, DT, LI, PreserveLCSSA);
+    }
+  }
+
+  if (PreserveLCSSA) {
+    // Fix LCSSA form for L. Some values, which previously were only used inside
+    // L, can now be used in NewOuter loop. We need to insert phi-nodes for them
+    // in corresponding exit blocks.
+
+    // Go through all instructions in OuterLoopBlocks and check if they are
+    // using operands from the inner loop. In this case we'll need to fix LCSSA
+    // for these instructions.
+    SmallSetVector<Instruction *, 8> WorklistSet;
+    for (BasicBlock *OuterBB: OuterLoopBlocks) {
+      for (Instruction &I : *OuterBB) {
+        for (Value *Op : I.operands()) {
+          Instruction *OpI = dyn_cast<Instruction>(Op);
+          if (!OpI || !L->contains(OpI))
+            continue;
+          WorklistSet.insert(OpI);
+        }
+      }
+    }
+    SmallVector<Instruction *, 8> Worklist(WorklistSet.begin(),
+                                           WorklistSet.end());
+    formLCSSAForInstructions(Worklist, *DT, *LI);
+    assert(NewOuter->isRecursivelyLCSSAForm(*DT) &&
+           "LCSSA is broken after separating nested loops!");
   }
 
   return NewOuter;
@@ -541,17 +584,12 @@ ReprocessLoop:
   SmallSetVector<BasicBlock *, 8> ExitBlockSet(ExitBlocks.begin(),
                                                ExitBlocks.end());
   for (BasicBlock *ExitBlock : ExitBlockSet) {
-    for (pred_iterator PI = pred_begin(ExitBlock), PE = pred_end(ExitBlock);
-         PI != PE; ++PI)
-      // Must be exactly this loop: no subloops, parent loops, or non-loop preds
-      // allowed.
-      if (!L->contains(*PI)) {
-        if (rewriteLoopExitBlock(L, ExitBlock, DT, LI, PreserveLCSSA)) {
-          ++NumInserted;
-          Changed = true;
-        }
-        break;
-      }
+    if (any_of(predecessors(ExitBlock),
+               [L](BasicBlock *BB) { return !L->contains(BB); })) {
+      rewriteLoopExitBlock(L, ExitBlock, DT, LI, PreserveLCSSA);
+      ++NumInserted;
+      Changed = true;
+    }
   }
 
   // If the header has more than two predecessors at this point (from the
