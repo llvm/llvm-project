@@ -16,6 +16,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -44,6 +45,6 @@ int main()
     }
     {
         typedef std::map<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;
-        static_assert(!std::is_nothrow_destructible<C>::value, "");
+        LIBCPP_STATIC_ASSERT(!std::is_nothrow_destructible<C>::value, "");
     }
 }

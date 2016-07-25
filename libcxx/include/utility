@@ -348,8 +348,23 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
   // Use the implicitly declared copy constructor in C++03
 #endif
 
+#if !defined(_LIBCPP_CXX03_LANG)
+    typedef typename conditional<
+           is_copy_assignable<_T1>::value
+        && is_copy_assignable<_T2>::value,
+        pair, __nat
+    >::type _CopyAssignT;
+    typedef typename conditional<
+           is_move_assignable<_T1>::value
+        && is_move_assignable<_T2>::value,
+        pair, __nat
+    >::type _MoveAssignT;
+#else
+    typedef pair _CopyAssignT;
+#endif
+
     _LIBCPP_INLINE_VISIBILITY
-    pair& operator=(const pair& __p)
+    pair& operator=(_CopyAssignT const& __p)
         _NOEXCEPT_(is_nothrow_copy_assignable<first_type>::value &&
                    is_nothrow_copy_assignable<second_type>::value)
     {
@@ -357,6 +372,18 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
         second = __p.second;
         return *this;
     }
+
+#ifndef _LIBCPP_CXX03_LANG
+    _LIBCPP_INLINE_VISIBILITY
+    pair& operator=(_MoveAssignT&& __p)
+        _NOEXCEPT_(is_nothrow_move_assignable<first_type>::value &&
+                   is_nothrow_move_assignable<second_type>::value)
+    {
+        first = _VSTD::forward<first_type>(__p.first);
+        second = _VSTD::forward<second_type>(__p.second);
+        return *this;
+    }
+#endif
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
@@ -377,18 +404,9 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
             : first(_VSTD::forward<_U1>(__p.first)),
               second(_VSTD::forward<_U2>(__p.second)) {}
 
-    _LIBCPP_INLINE_VISIBILITY
-    pair&
-    operator=(pair&& __p) _NOEXCEPT_(is_nothrow_move_assignable<first_type>::value &&
-                                     is_nothrow_move_assignable<second_type>::value)
-    {
-        first = _VSTD::forward<first_type>(__p.first);
-        second = _VSTD::forward<second_type>(__p.second);
-        return *this;
-    }
+
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
-
     template<class _Tuple,
              class = typename enable_if<__tuple_convertible<_Tuple, pair>::value>::type>
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -411,7 +429,7 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
             {}
 
     template <class _Tuple,
-              class = typename enable_if<__tuple_assignable<_Tuple, pair>::value>::type>
+              class = typename enable_if<!is_same<typename decay<_Tuple>::type, pair>::value && __tuple_assignable<_Tuple, pair>::value>::type>
         _LIBCPP_INLINE_VISIBILITY
         pair&
         operator=(_Tuple&& __p)
@@ -837,6 +855,11 @@ inline in_place_tag in_place(__in_place_index_tag<_Nx>) {
     _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
     return in_place_tag(__in_place_tag{});
 }
+
+template <class _Tp>   struct __is_inplace_type : false_type {};
+template <>            struct __is_inplace_type<in_place_t> : true_type {};
+template <class _Tp>   struct __is_inplace_type<in_place_type_t<_Tp>> : true_type {};
+template <size_t _Idx> struct __is_inplace_type<in_place_index_t<_Idx>> : true_type {};
 
 #endif // _LIBCPP_STD_VER > 14
 

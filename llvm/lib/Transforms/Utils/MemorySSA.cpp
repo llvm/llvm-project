@@ -236,9 +236,6 @@ checkClobberSanity(MemoryAccess *Start, MemoryAccess *ClobberAt,
     return;
   }
 
-  assert((isa<MemoryPhi>(Start) || Start != ClobberAt) &&
-         "Start can't clobber itself!");
-
   bool FoundClobber = false;
   DenseSet<MemoryAccessPair> VisitedPhis;
   SmallVector<MemoryAccessPair, 8> Worklist;
@@ -818,22 +815,23 @@ public:
     // Fast path for the overly-common case (no crazy phi optimization
     // necessary)
     UpwardsWalkResult WalkResult = walkToPhiOrClobber(FirstDesc);
+    MemoryAccess *Result;
     if (WalkResult.IsKnownClobber) {
       cacheDefPath(FirstDesc, WalkResult.Result);
-      return WalkResult.Result;
+      Result = WalkResult.Result;
+    } else {
+      OptznResult OptRes = tryOptimizePhi(cast<MemoryPhi>(FirstDesc.Last),
+                                          Current, Q.StartingLoc);
+      verifyOptResult(OptRes);
+      cacheOptResult(OptRes);
+      resetPhiOptznState();
+      Result = OptRes.PrimaryClobber.Clobber;
     }
 
-    OptznResult OptRes =
-        tryOptimizePhi(cast<MemoryPhi>(FirstDesc.Last), Current, Q.StartingLoc);
-    verifyOptResult(OptRes);
-    cacheOptResult(OptRes);
-    resetPhiOptznState();
-
 #ifdef EXPENSIVE_CHECKS
-    checkClobberSanity(Current, OptRes.PrimaryClobber.Clobber, Q.StartingLoc,
-                       MSSA, Q, AA);
+    checkClobberSanity(Current, Result, Q.StartingLoc, MSSA, Q, AA);
 #endif
-    return OptRes.PrimaryClobber.Clobber;
+    return Result;
   }
 };
 

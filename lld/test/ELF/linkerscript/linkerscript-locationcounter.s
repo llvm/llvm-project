@@ -311,7 +311,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR %s
-# BRACKETERR: unexpected EOF
+# BRACKETERR: ) expected, but got ;
 
 ## Missing opening bracket.
 # RUN: echo "SECTIONS { \
@@ -319,7 +319,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=BRACKETERR2 %s
-# BRACKETERR2: expected, but got *
+# BRACKETERR2: ; expected, but got )
 
 ## Empty expression.
 # RUN: echo "SECTIONS { \
@@ -327,7 +327,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=ERREXPR %s
-# ERREXPR: error in location counter expression
+# ERREXPR: malformed number: ;
 
 ## Div by zero error.
 # RUN: echo "SECTIONS { \
@@ -343,7 +343,7 @@
 # RUN: }" > %t.script
 # RUN: not ld.lld %t --script %t.script -o %t2 2>&1 | \
 # RUN:  FileCheck --check-prefix=TERNERR %s
-# TERNERR: unexpected EOF
+# TERNERR: : expected, but got ;
 
 .globl _start
 _start:

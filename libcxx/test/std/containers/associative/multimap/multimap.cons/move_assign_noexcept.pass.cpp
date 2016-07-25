@@ -22,6 +22,7 @@
 #include <map>
 #include <cassert>
 
+#include "test_macros.h"
 #include "MoveOnly.h"
 #include "test_allocator.h"
 
@@ -46,7 +47,7 @@ int main()
     }
     {
         typedef std::multimap<MoveOnly, MoveOnly, std::less<MoveOnly>, other_allocator<V>> C;
-        static_assert(std::is_nothrow_move_assignable<C>::value, "");
+        LIBCPP_STATIC_ASSERT(std::is_nothrow_move_assignable<C>::value, "");
     }
     {
         typedef std::multimap<MoveOnly, MoveOnly, some_comp<MoveOnly>> C;

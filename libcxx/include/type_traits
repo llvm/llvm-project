@@ -2036,26 +2036,15 @@ template<typename, typename _Tp> struct __select_2nd { typedef _Tp type; };
 
 template <class _Tp, class _Arg>
 typename __select_2nd<decltype((_VSTD::declval<_Tp>() = _VSTD::declval<_Arg>())), true_type>::type
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-__is_assignable_test(_Tp&&, _Arg&&);
-#else
-__is_assignable_test(_Tp, _Arg&);
-#endif
+__is_assignable_test(int);
 
-template <class _Arg>
-false_type
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-__is_assignable_test(__any, _Arg&&);
-#else
-__is_assignable_test(__any, _Arg&);
-#endif
+template <class, class>
+false_type __is_assignable_test(...);
+
 
 template <class _Tp, class _Arg, bool = is_void<_Tp>::value || is_void<_Arg>::value>
 struct __is_assignable_imp
-    : public common_type
-        <
-            decltype(_VSTD::__is_assignable_test(declval<_Tp>(), declval<_Arg>()))
-        >::type {};
+    : public decltype((_VSTD::__is_assignable_test<_Tp, _Arg>(0))) {};
 
 template <class _Tp, class _Arg>
 struct __is_assignable_imp<_Tp, _Arg, true>

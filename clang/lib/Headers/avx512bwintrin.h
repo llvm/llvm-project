@@ -2099,7 +2099,6 @@ _mm512_maskz_mov_epi8 (__mmask64 __U, __m512i __A)
                 (__v64qi) _mm512_setzero_hi ());
 }
 
-#ifdef __x86_64__
 static __inline__ __m512i __DEFAULT_FN_ATTRS
 _mm512_mask_set1_epi8 (__m512i __O, __mmask64 __M, char __A)
 {
@@ -2116,7 +2115,6 @@ _mm512_maskz_set1_epi8 (__mmask64 __M, char __A)
                  _mm512_setzero_qi(),
                  __M);
 }
-#endif
 
 static __inline__ __mmask64 __DEFAULT_FN_ATTRS
 _mm512_kunpackd (__mmask64 __A, __mmask64 __B)

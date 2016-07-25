@@ -71,3 +71,28 @@ if.end:                                           ; preds = %if.else, %if.then
 !4 = !{!"Simple C++ TBAA"}
 !5 = !{!6, !6, i64 0}
 !6 = !{!"_ZTS1e", !3, i64 0}
+
+define i32 @test4(i1 %b, i32* %y) {
+entry:
+  br i1 %b, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %0 = load i32, i32* %y, align 4, !range !7
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %1 = load i32, i32* %y, align 4, !range !8
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  %retval.0 = phi i32 [ %0, %if.then ], [ %1, %if.end ]
+  ret i32 %retval.0
+}
+; CHECK-LABEL: define i32 @test4(
+; CHECK: %[[load:.*]] = load i32, i32* %y, align 4, !range ![[range_md:.*]]
+; CHECK: %[[phi:.*]] = phi i32 [ %[[load]], %{{.*}} ], [ %[[load]], %{{.*}} ]
+; CHECK: ret i32 %[[phi]]
+
+!7 = !{i32 0, i32 2}
+!8 = !{i32 3, i32 4}
+; CHECK: ![[range_md]] = !{i32 0, i32 2, i32 3, i32 4}

@@ -647,6 +647,9 @@ public:
     _LIBCPP_CONSTEXPR tuple()
         _NOEXCEPT_(__all<is_nothrow_default_constructible<_Tp>::value...>::value) {}
 
+    tuple(tuple const&) = default;
+    tuple(tuple&&) = default;
+
     template <class _AllocArgT, class _Alloc, bool _Dummy = true, class = typename enable_if<
         __lazy_and<
             is_same<allocator_arg_t, _AllocArgT>,
@@ -884,6 +887,25 @@ public:
         explicit
         tuple(allocator_arg_t, const _Alloc& __a, _Tuple&& __t)
             : base_(allocator_arg_t(), __a, _VSTD::forward<_Tuple>(__t)) {}
+
+    using _CanCopyAssign = __all<is_copy_assignable<_Tp>::value...>;
+    using _CanMoveAssign = __all<is_move_assignable<_Tp>::value...>;
+
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(typename conditional<_CanCopyAssign::value, tuple, __nat>::type const& __t)
+        _NOEXCEPT_((__all<is_nothrow_copy_assignable<_Tp>::value...>::value))
+    {
+        base_.operator=(__t.base_);
+        return *this;
+    }
+
+    _LIBCPP_INLINE_VISIBILITY
+    tuple& operator=(typename conditional<_CanMoveAssign::value, tuple, __nat>::type&& __t)
+        _NOEXCEPT_((__all<is_nothrow_move_assignable<_Tp>::value...>::value))
+    {
+        base_.operator=(static_cast<base&&>(__t.base_));
+        return *this;
+    }
 
     template <class _Tuple,
               class = typename enable_if

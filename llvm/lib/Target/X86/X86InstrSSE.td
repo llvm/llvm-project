@@ -8584,9 +8584,21 @@ let Predicates = [HasAVX2, NoVLX] in {
   defm VPSRLVD : avx2_var_shift<0x45, "vpsrlvd", srl, v4i32, v8i32>;
   defm VPSRLVQ : avx2_var_shift<0x45, "vpsrlvq", srl, v2i64, v4i64>, VEX_W;
   defm VPSRAVD : avx2_var_shift<0x46, "vpsravd", sra, v4i32, v8i32>;
-  let isCodeGenOnly = 1 in
-    defm VPSRAVD_Int : avx2_var_shift<0x46, "vpsravd", X86vsrav, v4i32, v8i32>;
+
+  def : Pat<(v4i32 (X86vsrav VR128:$src1, VR128:$src2)),
+            (VPSRAVDrr VR128:$src1, VR128:$src2)>;
+  def : Pat<(v4i32 (X86vsrav VR128:$src1,
+                    (bitconvert (loadv2i64 addr:$src2)))),
+            (VPSRAVDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(v8i32 (X86vsrav VR256:$src1, VR256:$src2)),
+            (VPSRAVDYrr VR256:$src1, VR256:$src2)>;
+  def : Pat<(v8i32 (X86vsrav VR256:$src1,
+                    (bitconvert (loadv4i64 addr:$src2)))),
+            (VPSRAVDYrm VR256:$src1, addr:$src2)>;
 }
+
+
+
 //===----------------------------------------------------------------------===//
 // VGATHER - GATHER Operations
 multiclass avx2_gather<bits<8> opc, string OpcodeStr, RegisterClass RC256,

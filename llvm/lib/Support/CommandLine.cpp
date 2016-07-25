@@ -20,6 +20,7 @@
 #include "llvm-c/Support.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Support/StringSaver.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
@@ -951,28 +953,9 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
   assert(envVar && "Environment variable name missing");
 
   // Get the environment variable they want us to parse options out of.
-#ifdef _WIN32
-  std::wstring wenvVar;
-  if (!llvm::ConvertUTF8toWide(envVar, wenvVar)) {
-    assert(false &&
-           "Unicode conversion of environment variable name failed");
-    return;
-  }
-  const wchar_t *wenvValue = _wgetenv(wenvVar.c_str());
-  if (!wenvValue)
-    return;
-  std::string envValueBuffer;
-  if (!llvm::convertWideToUTF8(wenvValue, envValueBuffer)) {
-    assert(false &&
-           "Unicode conversion of environment variable value failed");
-    return;
-  }
-  const char *envValue = envValueBuffer.c_str();
-#else
-  const char *envValue = getenv(envVar);
+  llvm::Optional<std::string> envValue = sys::Process::GetEnv(envVar);
   if (!envValue)
     return;
-#endif
 
   // Get program's "name", which we wouldn't know without the caller
   // telling us.
@@ -983,7 +966,7 @@ void cl::ParseEnvironmentOptions(const char *progName, const char *envVar,
 
   // Parse the value of the environment variable into a "command line"
   // and hand it off to ParseCommandLineOptions().
-  TokenizeGNUCommandLine(envValue, Saver, newArgv);
+  TokenizeGNUCommandLine(*envValue, Saver, newArgv);
   int newArgc = static_cast<int>(newArgv.size());
   ParseCommandLineOptions(newArgc, &newArgv[0], Overview);
 }

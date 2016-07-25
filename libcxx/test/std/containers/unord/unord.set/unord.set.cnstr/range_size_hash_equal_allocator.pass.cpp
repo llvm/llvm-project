@@ -23,6 +23,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
@@ -53,7 +54,7 @@ int main()
             test_compare<std::equal_to<int> >(9),
             test_allocator<int>(10)
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.count(1) == 1);
         assert(c.count(2) == 1);
@@ -91,7 +92,7 @@ int main()
             test_compare<std::equal_to<int> >(9),
             min_allocator<int>()
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.count(1) == 1);
         assert(c.count(2) == 1);

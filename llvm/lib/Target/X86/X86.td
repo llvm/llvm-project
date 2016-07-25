@@ -729,6 +729,7 @@ def : Proc<"bdver4", [
   FeatureTBM,
   FeatureFMA,
   FeatureXSAVEOPT,
+  FeatureSlowSHLD,
   FeatureFSGSBase,
   FeatureLAHFSAHF,
   FeatureMWAITX

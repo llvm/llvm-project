@@ -16,12 +16,15 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <functional>
 
 namespace lld {
 namespace elf {
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
+
+typedef std::function<uint64_t(uint64_t)> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
@@ -46,11 +49,11 @@ struct BaseCommand {
 };
 
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, std::vector<StringRef> &Expr)
-      : BaseCommand(AssignmentKind), Name(Name), Expr(std::move(Expr)) {}
+  SymbolAssignment(StringRef Name, Expr E)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
   static bool classof(const BaseCommand *C);
   StringRef Name;
-  std::vector<StringRef> Expr;
+  Expr Expression;
   bool Provide = false;
   // Hidden and Ignore can be true, only if Provide is true
   bool Hidden = false;
@@ -130,11 +133,8 @@ private:
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
 
-  std::vector<OutputSectionBase<ELFT> *>
-  filter(std::vector<OutputSectionBase<ELFT> *> &Sections);
-
   int getSectionIndex(StringRef Name);
-  std::vector<size_t> getPhdrIndicesForSection(StringRef Name);
+  std::vector<size_t> getPhdrIndices(StringRef SectionName);
   void dispatchAssignment(SymbolAssignment *Cmd);
 
   uintX_t Dot;

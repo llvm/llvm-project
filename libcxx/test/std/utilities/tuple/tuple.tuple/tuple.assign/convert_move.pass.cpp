@@ -39,7 +39,7 @@ struct D
 
 struct E {
   E() = default;
-  E& operator=(int val) {
+  E& operator=(int) {
       return *this;
   }
 };

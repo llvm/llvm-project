@@ -1144,14 +1144,16 @@ void Sema::ActOnLambdaError(SourceLocation StartLoc, Scope *CurScope,
 
 /// \brief Add a lambda's conversion to function pointer, as described in
 /// C++11 [expr.prim.lambda]p6.
-static void addFunctionPointerConversion(Sema &S, 
+static void addFunctionPointerConversion(Sema &S,
                                          SourceRange IntroducerRange,
                                          CXXRecordDecl *Class,
                                          CXXMethodDecl *CallOperator) {
   // This conversion is explicitly disabled if the lambda's function has
   // pass_object_size attributes on any of its parameters.
-  if (llvm::any_of(CallOperator->parameters(),
-                   std::mem_fn(&ParmVarDecl::hasAttr<PassObjectSizeAttr>)))
+  auto HasPassObjectSizeAttr = [](const ParmVarDecl *P) {
+    return P->hasAttr<PassObjectSizeAttr>();
+  };
+  if (llvm::any_of(CallOperator->parameters(), HasPassObjectSizeAttr))
     return;
 
   // Add the conversion to function pointer.

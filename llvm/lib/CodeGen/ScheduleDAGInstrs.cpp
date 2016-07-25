@@ -622,7 +622,7 @@ static bool MIsNeedChainEdge(AliasAnalysis *AA, const MachineFrameInfo *MFI,
 void ScheduleDAGInstrs::addChainDependency (SUnit *SUa, SUnit *SUb,
                                             unsigned Latency) {
   if (MIsNeedChainEdge(AAForDep, MFI, MF.getDataLayout(), SUa->getInstr(),
-		       SUb->getInstr())) {
+                       SUb->getInstr())) {
     SDep Dep(SUa, SDep::MayAliasMem);
     Dep.setLatency(Latency);
     SUb->addPred(Dep);

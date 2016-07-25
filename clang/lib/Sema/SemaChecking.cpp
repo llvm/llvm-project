@@ -1620,9 +1620,9 @@ bool Sema::CheckX86BuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
   case X86::BI__builtin_ia32_rdgsbase64:
   case X86::BI__builtin_ia32_wrfsbase64:
   case X86::BI__builtin_ia32_wrgsbase64:
-  case X86::BI__builtin_ia32_pbroadcastb512_gpr_mask:
-  case X86::BI__builtin_ia32_pbroadcastb256_gpr_mask:
-  case X86::BI__builtin_ia32_pbroadcastb128_gpr_mask:
+  case X86::BI__builtin_ia32_pbroadcastq512_gpr_mask:
+  case X86::BI__builtin_ia32_pbroadcastq256_gpr_mask:
+  case X86::BI__builtin_ia32_pbroadcastq128_gpr_mask:
   case X86::BI__builtin_ia32_vcvtsd2si64:
   case X86::BI__builtin_ia32_vcvtsd2usi64:
   case X86::BI__builtin_ia32_vcvtss2si64:
