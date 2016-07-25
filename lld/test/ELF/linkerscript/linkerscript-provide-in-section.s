@@ -14,7 +14,7 @@
 # RUN: llvm-objdump -t %t2 | FileCheck %s --check-prefix=HIDDEN
 # HIDDEN: 00000000000003e8         *ABS*           00000000 .hidden foo
 
-.section blah
+.section .blah
 .globl patatino
 patatino:
   movl $foo, %edx

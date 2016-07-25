@@ -17,6 +17,7 @@
 #include <dlfcn.h>
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
 static int DebugMode;
 
@@ -36,12 +37,9 @@ struct PollyGPUContextT {
   CUcontext Cuda;
 };
 
-struct PollyGPUModuleT {
-  CUmodule Cuda;
-};
-
 struct PollyGPUFunctionT {
   CUfunction Cuda;
+  CUmodule CudaModule;
 };
 
 struct PollyGPUDevicePtrT {
@@ -101,6 +99,10 @@ typedef CUresult CUDAAPI CuModuleLoadDataExFcnTy(CUmodule *, const void *,
                                                  void **);
 static CuModuleLoadDataExFcnTy *CuModuleLoadDataExFcnPtr;
 
+typedef CUresult CUDAAPI CuModuleLoadDataFcnTy(CUmodule *module,
+                                               const void *image);
+static CuModuleLoadDataFcnTy *CuModuleLoadDataFcnPtr;
+
 typedef CUresult CUDAAPI CuModuleGetFunctionFcnTy(CUfunction *, CUmodule,
                                                   const char *);
 static CuModuleGetFunctionFcnTy *CuModuleGetFunctionFcnPtr;
@@ -110,6 +112,27 @@ static CuDeviceComputeCapabilityFcnTy *CuDeviceComputeCapabilityFcnPtr;
 
 typedef CUresult CUDAAPI CuDeviceGetNameFcnTy(char *, int, CUdevice);
 static CuDeviceGetNameFcnTy *CuDeviceGetNameFcnPtr;
+
+typedef CUresult CUDAAPI CuLinkAddDataFcnTy(CUlinkState state,
+                                            CUjitInputType type, void *data,
+                                            size_t size, const char *name,
+                                            unsigned int numOptions,
+                                            CUjit_option *options,
+                                            void **optionValues);
+static CuLinkAddDataFcnTy *CuLinkAddDataFcnPtr;
+
+typedef CUresult CUDAAPI CuLinkCreateFcnTy(unsigned int numOptions,
+                                           CUjit_option *options,
+                                           void **optionValues,
+                                           CUlinkState *stateOut);
+static CuLinkCreateFcnTy *CuLinkCreateFcnPtr;
+
+typedef CUresult CUDAAPI CuLinkCompleteFcnTy(CUlinkState state, void **cubinOut,
+                                             size_t *sizeOut);
+static CuLinkCompleteFcnTy *CuLinkCompleteFcnPtr;
+
+typedef CUresult CUDAAPI CuLinkDestroyFcnTy(CUlinkState state);
+static CuLinkDestroyFcnTy *CuLinkDestroyFcnPtr;
 
 /* Type-defines of function pointer ot CUDA runtime APIs. */
 typedef cudaError_t CUDARTAPI CudaThreadSynchronizeFcnTy(void);
@@ -198,6 +221,9 @@ static int initialDeviceAPIs() {
   CuModuleLoadDataExFcnPtr =
       (CuModuleLoadDataExFcnTy *)getAPIHandle(HandleCuda, "cuModuleLoadDataEx");
 
+  CuModuleLoadDataFcnPtr =
+      (CuModuleLoadDataFcnTy *)getAPIHandle(HandleCuda, "cuModuleLoadData");
+
   CuModuleGetFunctionFcnPtr = (CuModuleGetFunctionFcnTy *)getAPIHandle(
       HandleCuda, "cuModuleGetFunction");
 
@@ -207,6 +233,18 @@ static int initialDeviceAPIs() {
 
   CuDeviceGetNameFcnPtr =
       (CuDeviceGetNameFcnTy *)getAPIHandle(HandleCuda, "cuDeviceGetName");
+
+  CuLinkAddDataFcnPtr =
+      (CuLinkAddDataFcnTy *)getAPIHandle(HandleCuda, "cuLinkAddData");
+
+  CuLinkCreateFcnPtr =
+      (CuLinkCreateFcnTy *)getAPIHandle(HandleCuda, "cuLinkCreate");
+
+  CuLinkCompleteFcnPtr =
+      (CuLinkCompleteFcnTy *)getAPIHandle(HandleCuda, "cuLinkComplete");
+
+  CuLinkDestroyFcnPtr =
+      (CuLinkDestroyFcnTy *)getAPIHandle(HandleCuda, "cuLinkDestroy");
 
   /* Get function pointer to CUDA Runtime APIs. */
   CudaThreadSynchronizeFcnPtr = (CudaThreadSynchronizeFcnTy *)getAPIHandle(
@@ -262,50 +300,105 @@ PollyGPUContext *polly_initContext() {
   return Context;
 }
 
-void polly_getPTXModule(void *PTXBuffer, PollyGPUModule **Module) {
+PollyGPUFunction *polly_getKernel(const char *PTXBuffer,
+                                  const char *KernelName) {
   dump_function();
 
-  *Module = malloc(sizeof(PollyGPUModule));
-  if (*Module == 0) {
-    fprintf(stdout, "Allocate memory for Polly GPU module failed.\n");
+  PollyGPUFunction *Function = malloc(sizeof(PollyGPUFunction));
+
+  if (Function == 0) {
+    fprintf(stdout, "Allocate memory for Polly GPU function failed.\n");
     exit(-1);
   }
 
-  if (CuModuleLoadDataExFcnPtr(&((*Module)->Cuda), PTXBuffer, 0, 0, 0) !=
-      CUDA_SUCCESS) {
+  CUresult Res;
+  CUlinkState LState;
+  CUjit_option Options[6];
+  void *OptionVals[6];
+  float Walltime = 0;
+  unsigned long LogSize = 8192;
+  char ErrorLog[8192], InfoLog[8192];
+  void *CuOut;
+  size_t OutSize;
+
+  // Setup linker options
+  // Return walltime from JIT compilation
+  Options[0] = CU_JIT_WALL_TIME;
+  OptionVals[0] = (void *)&Walltime;
+  // Pass a buffer for info messages
+  Options[1] = CU_JIT_INFO_LOG_BUFFER;
+  OptionVals[1] = (void *)InfoLog;
+  // Pass the size of the info buffer
+  Options[2] = CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES;
+  OptionVals[2] = (void *)LogSize;
+  // Pass a buffer for error message
+  Options[3] = CU_JIT_ERROR_LOG_BUFFER;
+  OptionVals[3] = (void *)ErrorLog;
+  // Pass the size of the error buffer
+  Options[4] = CU_JIT_ERROR_LOG_BUFFER_SIZE_BYTES;
+  OptionVals[4] = (void *)LogSize;
+  // Make the linker verbose
+  Options[5] = CU_JIT_LOG_VERBOSE;
+  OptionVals[5] = (void *)1;
+
+  memset(ErrorLog, 0, sizeof(ErrorLog));
+
+  CuLinkCreateFcnPtr(6, Options, OptionVals, &LState);
+  Res = CuLinkAddDataFcnPtr(LState, CU_JIT_INPUT_PTX, (void *)PTXBuffer,
+                            strlen(PTXBuffer) + 1, 0, 0, 0, 0);
+  if (Res != CUDA_SUCCESS) {
+    fprintf(stdout, "PTX Linker Error:\n%s\n%s", ErrorLog, InfoLog);
+    exit(-1);
+  }
+
+  Res = CuLinkCompleteFcnPtr(LState, &CuOut, &OutSize);
+  if (Res != CUDA_SUCCESS) {
+    fprintf(stdout, "Complete ptx linker step failed.\n");
+    fprintf(stdout, "\n%s\n", ErrorLog);
+    exit(-1);
+  }
+
+  debug_print("CUDA Link Completed in %fms. Linker Output:\n%s\n", Walltime,
+              InfoLog);
+
+  Res = CuModuleLoadDataFcnPtr(&(Function->CudaModule), CuOut);
+  if (Res != CUDA_SUCCESS) {
     fprintf(stdout, "Loading ptx assembly text failed.\n");
     exit(-1);
   }
-}
 
-void polly_getPTXKernelEntry(const char *KernelName, PollyGPUModule *Module,
-                             PollyGPUFunction **Kernel) {
-  dump_function();
-
-  *Kernel = malloc(sizeof(PollyGPUFunction));
-  if (*Kernel == 0) {
-    fprintf(stdout, "Allocate memory for Polly GPU kernel failed.\n");
-    exit(-1);
-  }
-
-  /* Locate the kernel entry point. */
-  if (CuModuleGetFunctionFcnPtr(&((*Kernel)->Cuda), Module->Cuda, KernelName) !=
-      CUDA_SUCCESS) {
+  Res = CuModuleGetFunctionFcnPtr(&(Function->Cuda), Function->CudaModule,
+                                  KernelName);
+  if (Res != CUDA_SUCCESS) {
     fprintf(stdout, "Loading kernel function failed.\n");
     exit(-1);
   }
+
+  CuLinkDestroyFcnPtr(LState);
+
+  return Function;
 }
 
-void polly_copyFromHostToDevice(PollyGPUDevicePtr *DevData, void *HostData,
-                                int MemSize) {
+void polly_freeKernel(PollyGPUFunction *Kernel) {
+  dump_function();
+
+  if (Kernel->CudaModule)
+    CuModuleUnloadFcnPtr(Kernel->CudaModule);
+
+  if (Kernel)
+    free(Kernel);
+}
+
+void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
+                                long MemSize) {
   dump_function();
 
   CUdeviceptr CuDevData = DevData->Cuda;
   CuMemcpyHtoDFcnPtr(CuDevData, HostData, MemSize);
 }
 
-void polly_copyFromDeviceToHost(void *HostData, PollyGPUDevicePtr *DevData,
-                                int MemSize) {
+void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
+                                long MemSize) {
   dump_function();
 
   if (CuMemcpyDtoHFcnPtr(HostData, DevData->Cuda, MemSize) != CUDA_SUCCESS) {
@@ -339,31 +432,34 @@ void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
   debug_print("CUDA kernel launched.\n");
 }
 
-void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
-                                 PollyGPUModule *Module,
-                                 PollyGPUFunction *Kernel) {
+void polly_freeDeviceMemory(PollyGPUDevicePtr *Allocation) {
+  dump_function();
+  CuMemFreeFcnPtr((CUdeviceptr)Allocation->Cuda);
+  free(Allocation);
+}
+
+PollyGPUDevicePtr *polly_allocateMemoryForDevice(long MemSize) {
   dump_function();
 
-  if (HostData) {
-    free(HostData);
-    HostData = 0;
+  PollyGPUDevicePtr *DevData = malloc(sizeof(PollyGPUDevicePtr));
+
+  if (DevData == 0) {
+    fprintf(stdout, "Allocate memory for GPU device memory pointer failed.\n");
+    exit(-1);
   }
 
-  if (DevData->Cuda) {
-    CuMemFreeFcnPtr(DevData->Cuda);
-    free(DevData);
+  CUresult Res = CuMemAllocFcnPtr(&(DevData->Cuda), MemSize);
+
+  if (Res != CUDA_SUCCESS) {
+    fprintf(stdout, "Allocate memory for GPU device memory pointer failed.\n");
+    exit(-1);
   }
 
-  if (Module->Cuda) {
-    CuModuleUnloadFcnPtr(Module->Cuda);
-    free(Module);
-  }
-  if (Kernel) {
-    free(Kernel);
-  }
+  return DevData;
 }
 
 void polly_freeContext(PollyGPUContext *Context) {
+  dump_function();
 
   if (Context->Cuda) {
     CuCtxDestroyFcnPtr(Context->Cuda);

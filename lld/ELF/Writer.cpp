@@ -99,13 +99,11 @@ StringRef elf::getOutputSectionName(InputSectionBase<ELFT> *S) {
   return Name;
 }
 
-template <class ELFT>
-void elf::reportDiscarded(InputSectionBase<ELFT> *IS,
-                          const std::unique_ptr<elf::ObjectFile<ELFT>> &File) {
+template <class ELFT> void elf::reportDiscarded(InputSectionBase<ELFT> *IS) {
   if (!Config->PrintGcSections || !IS || IS->Live)
     return;
   errs() << "removing unused section from '" << IS->getSectionName()
-         << "' in file '" << File->getName() << "'\n";
+         << "' in file '" << IS->getFile()->getName() << "'\n";
 }
 
 template <class ELFT> static bool needsInterpSection() {
@@ -668,7 +666,7 @@ std::vector<OutputSectionBase<ELFT> *> Writer<ELFT>::createSections() {
        Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
       if (isDiscarded(C)) {
-        reportDiscarded(C, F);
+        reportDiscarded(C);
         continue;
       }
       OutputSectionBase<ELFT> *Sec;
@@ -1350,15 +1348,7 @@ template StringRef elf::getOutputSectionName<ELF32BE>(InputSectionBase<ELF32BE> 
 template StringRef elf::getOutputSectionName<ELF64LE>(InputSectionBase<ELF64LE> *);
 template StringRef elf::getOutputSectionName<ELF64BE>(InputSectionBase<ELF64BE> *);
 
-template void elf::reportDiscarded<ELF32LE>(
-    InputSectionBase<ELF32LE> *,
-    const std::unique_ptr<elf::ObjectFile<ELF32LE>> &);
-template void elf::reportDiscarded<ELF32BE>(
-    InputSectionBase<ELF32BE> *,
-    const std::unique_ptr<elf::ObjectFile<ELF32BE>> &);
-template void elf::reportDiscarded<ELF64LE>(
-    InputSectionBase<ELF64LE> *,
-    const std::unique_ptr<elf::ObjectFile<ELF64LE>> &);
-template void elf::reportDiscarded<ELF64BE>(
-    InputSectionBase<ELF64BE> *,
-    const std::unique_ptr<elf::ObjectFile<ELF64BE>> &);
+template void elf::reportDiscarded<ELF32LE>(InputSectionBase<ELF32LE> *);
+template void elf::reportDiscarded<ELF32BE>(InputSectionBase<ELF32BE> *);
+template void elf::reportDiscarded<ELF64LE>(InputSectionBase<ELF64LE> *);
+template void elf::reportDiscarded<ELF64BE>(InputSectionBase<ELF64BE> *);

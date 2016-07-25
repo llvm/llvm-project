@@ -88,7 +88,7 @@ _start:
  .word 0x6666
  rex64
  call __tls_get_addr@plt
- 
+
  // LD to LE
 _DTPOFF64_1:
  .quad tls0@DTPOFF

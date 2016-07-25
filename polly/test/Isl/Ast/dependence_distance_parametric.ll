@@ -1,11 +1,14 @@
 ; RUN: opt %loadPolly -polly-ast -polly-ast-detect-parallel -analyze < %s | FileCheck %s
+; RUN: opt %loadPolly -polyhedral-info -polly-check-parallel -analyze < %s | FileCheck %s -check-prefix=PINFO
 ;
 ;        void f(int *A, int N, int c) {
 ; CHECK:   #pragma minimal dependence distance: 1
+; PINFO:   for.cond: Loop is not parallel.
 ;          for (int j = 0; j < N; j++)
-; CHECK:     #pragma minimal dependence distance: max(-c, c)
-;            for (int i = 0; i < N; i++)
-;              A[i + c] = A[i] + 1;
+; CHECK:      #pragma minimal dependence distance: max(-c, c)
+; PINFO-NEXT: for.cond1: Loop is not parallel.
+;             for (int i = 0; i < N; i++)
+;               A[i + c] = A[i] + 1;
 ;        }
 ;
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"

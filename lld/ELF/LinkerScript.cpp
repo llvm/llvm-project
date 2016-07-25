@@ -67,87 +67,115 @@ bool LinkerScript<ELFT>::shouldKeep(InputSectionBase<ELFT> *S) {
   return false;
 }
 
-static bool match(StringRef Pattern, ArrayRef<StringRef> Arr) {
-  for (StringRef S : Arr)
-    if (globMatch(S, Pattern))
+static bool match(ArrayRef<StringRef> Patterns, StringRef S) {
+  for (StringRef Pat : Patterns)
+    if (globMatch(Pat, S))
       return true;
   return false;
+}
+
+// Create a vector of (<output section name>, <input section name patterns>).
+// For example, if a returned vector contains (".text" (".foo.*" ".bar.*")),
+// input sections start with ".foo." or ".bar." should be added to
+// ".text" section.
+template <class ELFT>
+std::vector<std::pair<StringRef, ArrayRef<StringRef>>>
+LinkerScript<ELFT>::getSectionMap() {
+  std::vector<std::pair<StringRef, ArrayRef<StringRef>>> Ret;
+
+  for (const std::unique_ptr<BaseCommand> &Base1 : Opt.Commands)
+    if (auto *Cmd1 = dyn_cast<OutputSectionCommand>(Base1.get()))
+      for (const std::unique_ptr<BaseCommand> &Base2 : Cmd1->Commands)
+        if (auto *Cmd2 = dyn_cast<InputSectionDescription>(Base2.get()))
+          Ret.emplace_back(Cmd1->Name, Cmd2->Patterns);
+
+  return Ret;
+}
+
+// Returns input sections filtered by given glob patterns.
+template <class ELFT>
+std::vector<InputSectionBase<ELFT> *>
+LinkerScript<ELFT>::getInputSections(ArrayRef<StringRef> Patterns) {
+  std::vector<InputSectionBase<ELFT> *> Ret;
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
+       Symtab<ELFT>::X->getObjectFiles())
+    for (InputSectionBase<ELFT> *S : F->getSections())
+      if (!isDiscarded(S) && !S->OutSec && match(Patterns, S->getSectionName()))
+        Ret.push_back(S);
+  return Ret;
 }
 
 template <class ELFT>
 std::vector<OutputSectionBase<ELFT> *>
 LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
-  typedef const std::unique_ptr<ObjectFile<ELFT>> ObjectFile;
-  std::vector<OutputSectionBase<ELFT> *> Result;
-  DenseSet<OutputSectionBase<ELFT> *> Removed;
+  std::vector<OutputSectionBase<ELFT> *> Ret;
 
   // Add input section to output section. If there is no output section yet,
   // then create it and add to output section list.
-  auto AddInputSec = [&](InputSectionBase<ELFT> *C, StringRef Name,
-                         ConstraintKind Constraint) {
+  auto Add = [&](InputSectionBase<ELFT> *C, StringRef Name) {
     OutputSectionBase<ELFT> *Sec;
     bool IsNew;
     std::tie(Sec, IsNew) = Factory.create(C, Name);
     if (IsNew)
-      Result.push_back(Sec);
-    if ((!(C->getSectionHdr()->sh_flags & SHF_WRITE)) &&
-        Constraint == ReadWrite) {
-      Removed.insert(Sec);
-      return;
-    }
-    if ((C->getSectionHdr()->sh_flags & SHF_WRITE) && Constraint == ReadOnly) {
-      Removed.insert(Sec);
-      return;
-    }
+      Ret.push_back(Sec);
     Sec->addSection(C);
   };
 
-  // Select input sections matching rule and add them to corresponding
-  // output section. Section rules are processed in order they're listed
-  // in script, so correct input section order is maintained by design.
-  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
-    auto *OutCmd = dyn_cast<OutputSectionCommand>(Base.get());
-    if (!OutCmd)
-      continue;
-
-    for (const std::unique_ptr<BaseCommand> &Cmd : OutCmd->Commands) {
-      auto *InCmd = dyn_cast<InputSectionDescription>(Cmd.get());
-      if (!InCmd)
+  for (auto &P : getSectionMap()) {
+    StringRef OutputName = P.first;
+    ArrayRef<StringRef> InputPatterns = P.second;
+    for (InputSectionBase<ELFT> *S : getInputSections(InputPatterns)) {
+      if (OutputName == "/DISCARD/") {
+        S->Live = false;
+        reportDiscarded(S);
         continue;
-
-      for (ObjectFile &F : Symtab<ELFT>::X->getObjectFiles()) {
-        for (InputSectionBase<ELFT> *S : F->getSections()) {
-          if (isDiscarded(S) || S->OutSec)
-            continue;
-
-          if (match(S->getSectionName(), InCmd->Patterns)) {
-            if (OutCmd->Name == "/DISCARD/")
-              S->Live = false;
-            else
-              AddInputSec(S, OutCmd->Name, OutCmd->Constraint);
-          }
-        }
       }
+      Add(S, OutputName);
     }
   }
 
   // Add all other input sections, which are not listed in script.
-  for (ObjectFile &F : Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *S : F->getSections()) {
-      if (!isDiscarded(S)) {
-        if (!S->OutSec)
-          AddInputSec(S, getOutputSectionName(S), NoConstraint);
-      } else
-        reportDiscarded(S, F);
+  for (const std::unique_ptr<ObjectFile<ELFT>> &F :
+       Symtab<ELFT>::X->getObjectFiles())
+    for (InputSectionBase<ELFT> *S : F->getSections())
+      if (!isDiscarded(S) && !S->OutSec)
+        Add(S, getOutputSectionName(S));
+
+  // Remove from the output all the sections which did not meet
+  // the optional constraints.
+  return filter(Ret);
+}
+
+// Process ONLY_IF_RO and ONLY_IF_RW.
+template <class ELFT>
+std::vector<OutputSectionBase<ELFT> *>
+LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
+  // Sections and OutputSectionCommands are parallel arrays.
+  // In this loop, we remove output sections if they don't satisfy
+  // requested properties.
+  auto It = Sections.begin();
+  for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
+    if (!Cmd || Cmd->Name == "/DISCARD/")
+      continue;
+
+    if (Cmd->Constraint == ConstraintKind::NoConstraint) {
+      ++It;
+      continue;
     }
 
-  // Remove from the output all the sections which did not met the constraints.
-  Result.erase(std::remove_if(Result.begin(), Result.end(),
-                              [&](OutputSectionBase<ELFT> *Sec) {
-                                return Removed.count(Sec);
-                              }),
-               Result.end());
-  return Result;
+    OutputSectionBase<ELFT> *Sec = *It;
+    bool Writable = (Sec->getFlags() & SHF_WRITE);
+    bool RO = (Cmd->Constraint == ConstraintKind::ReadOnly);
+    bool RW = (Cmd->Constraint == ConstraintKind::ReadWrite);
+
+    if ((RO && Writable) || (RW && !Writable)) {
+      Sections.erase(It);
+      continue;
+    }
+    ++It;
+  }
+  return Sections;
 }
 
 template <class ELFT>
@@ -409,6 +437,7 @@ private:
   void readEntry();
   void readExtern();
   void readGroup();
+  void readKeep(OutputSectionCommand *Cmd);
   void readInclude();
   void readNothing() {}
   void readOutput();
@@ -648,6 +677,19 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
+void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
+  expect("(");
+  expect("*");
+  expect("(");
+  auto *InCmd = new InputSectionDescription();
+  Cmd->Commands.emplace_back(InCmd);
+  while (!Error && !skip(")")) {
+    Opt.KeptSections.push_back(peek());
+    InCmd->Patterns.push_back(next());
+  }
+  expect(")");
+}
+
 void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
   Opt.Commands.emplace_back(Cmd);
@@ -661,9 +703,9 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   // Parse constraints.
   if (skip("ONLY_IF_RO"))
-    Cmd->Constraint = ReadOnly;
+    Cmd->Constraint = ConstraintKind::ReadOnly;
   if (skip("ONLY_IF_RW"))
-    Cmd->Constraint = ReadWrite;
+    Cmd->Constraint = ConstraintKind::ReadWrite;
   expect("{");
 
   while (!Error && !skip("}")) {
@@ -675,16 +717,7 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       while (!Error && !skip(")"))
         InCmd->Patterns.push_back(next());
     } else if (Tok == "KEEP") {
-      expect("(");
-      expect("*");
-      expect("(");
-      auto *InCmd = new InputSectionDescription();
-      Cmd->Commands.emplace_back(InCmd);
-      while (!Error && !skip(")")) {
-        Opt.KeptSections.push_back(peek());
-        InCmd->Patterns.push_back(next());
-      }
-      expect(")");
+      readKeep(Cmd);
     } else if (Tok == "PROVIDE") {
       readProvide(false);
     } else if (Tok == "PROVIDE_HIDDEN") {

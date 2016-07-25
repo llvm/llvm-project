@@ -30,6 +30,8 @@
 
 ; IR-LABEL: polly.loop_header:                                ; preds = %polly.loop_header, %polly.loop_preheader
 ; IR-NEXT:   %polly.indvar = phi i64 [ 0, %polly.loop_preheader ], [ %polly.indvar_next, %polly.loop_header ]
+; IR-NEXT: call i8* @polly_getKernel
+; IR-NEXT: call void @polly_freeKernel
 ; IR-NEXT:   %polly.indvar_next = add nsw i64 %polly.indvar, 1
 ; IR-NEXT:   %polly.loop_cond = icmp sle i64 %polly.indvar, 98
 ; IR-NEXT:   br i1 %polly.loop_cond, label %polly.loop_header, label %polly.loop_exit

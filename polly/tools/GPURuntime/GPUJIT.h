@@ -44,10 +44,9 @@
  * const char *Entry = "_Z8myKernelPi";
  *
  * int main() {
- *   PollyGPUModule *Module;
  *   PollyGPUFunction *Kernel;
  *   PollyGPUContext *Context;
- *   PollyGPUDevicePtr *PtrDevData;
+ *   PollyGPUDevicePtr *DevArray;
  *   int *HostData;
  *   int MemSize;
  *   int BlockWidth = 16;
@@ -57,36 +56,34 @@
  *
  *   MemSize = 256*64*sizeof(int);
  *   Context = polly_initContext();
- *   polly_getPTXModule(KernelString, &Module);
- *   polly_getPTXKernelEntry(Entry, Module, &Kernel);
+ *   DevArray = polly_allocateMemoryForDevice(MemSize);
+ *   Kernel = polly_getKernel(KernelString, KernelName);
  *   polly_setKernelParameters(Kernel, BlockWidth, BlockHeight, DevData);
  *   polly_launchKernel(Kernel, GridWidth, GridHeight);
  *   polly_copyFromDeviceToHost(HostData, DevData, MemSize);
- *   polly_cleanupGPGPUResources(HostData, DevData, Module, Kernel);
+ *   polly_freeKernel(Kernel);
+ *   polly_freeDeviceMemory(DevArray);
  *   polly_freeContext(Context);
  * }
  *
  */
 
 typedef struct PollyGPUContextT PollyGPUContext;
-typedef struct PollyGPUModuleT PollyGPUModule;
 typedef struct PollyGPUFunctionT PollyGPUFunction;
 typedef struct PollyGPUDevicePtrT PollyGPUDevicePtr;
 
 PollyGPUContext *polly_initContext();
-void polly_getPTXModule(void *PTXBuffer, PollyGPUModule **Module);
-void polly_getPTXKernelEntry(const char *KernelName, PollyGPUModule *Module,
-                             PollyGPUFunction **Kernel);
-void polly_copyFromHostToDevice(PollyGPUDevicePtr *DevData, void *HostData,
-                                int MemSize);
-void polly_copyFromDeviceToHost(void *HostData, PollyGPUDevicePtr *DevData,
-                                int MemSize);
+PollyGPUFunction *polly_getKernel(const char *PTXBuffer,
+                                  const char *KernelName);
+void polly_freeKernel(PollyGPUFunction *Kernel);
+void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
+                                long MemSize);
+void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
+                                long MemSize);
 void polly_setKernelParameters(PollyGPUFunction *Kernel, int BlockWidth,
                                int BlockHeight, PollyGPUDevicePtr *DevData);
 void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
                         int GridHeight);
-void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
-                                 PollyGPUModule *Module,
-                                 PollyGPUFunction *Kernel);
-void free_Context(PollyGPUContext *Context);
+void polly_freeDeviceMemory(PollyGPUDevicePtr *Allocation);
+void polly_freeContext(PollyGPUContext *Context);
 #endif /* GPUJIT_H_ */
