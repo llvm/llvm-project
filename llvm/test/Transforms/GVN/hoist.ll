@@ -689,3 +689,24 @@ if.else:                                          ; preds = %entry
 if.end:                                           ; preds = %if.else, %if.then
   ret void
 }
+
+define i32 @mergeAlignments(i1 %b, i32* %y) {
+entry:
+  br i1 %b, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %l1 = load i32, i32* %y, align 4
+  br label %return
+
+if.end:                                           ; preds = %entry
+  %l2 = load i32, i32* %y, align 1
+  br label %return
+
+return:                                           ; preds = %if.end, %if.then
+  %retval.0 = phi i32 [ %l1, %if.then ], [ %l2, %if.end ]
+  ret i32 %retval.0
+}
+; CHECK-LABEL: define i32 @mergeAlignments(
+; CHECK: %[[load:.*]] = load i32, i32* %y, align 1
+; CHECK: %[[phi:.*]] = phi i32 [ %[[load]], %{{.*}} ], [ %[[load]], %{{.*}} ]
+; CHECK: i32 %[[phi]]

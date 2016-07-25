@@ -194,6 +194,9 @@ void LinkerScript<ELFT>::assignAddresses(
       if (Sec->getName() != Cmd->Name)
         continue;
 
+      if (Cmd->AddrExpr)
+        Dot = Cmd->AddrExpr(Dot);
+
       if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
         uintX_t TVA = Dot + ThreadBssOffset;
         TVA = alignTo(TVA, Sec->getAlignment());
@@ -648,6 +651,12 @@ static int precedence(StringRef Op) {
 void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
   Opt.Commands.emplace_back(Cmd);
+
+  // Read an address expression.
+  // https://sourceware.org/binutils/docs/ld/Output-Section-Address.html#Output-Section-Address
+  if (peek() != ":")
+    Cmd->AddrExpr = readExpr();
+
   expect(":");
 
   // Parse constraints.

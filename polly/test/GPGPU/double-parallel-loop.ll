@@ -92,6 +92,9 @@
 ; IR-NEXT:    br i1 true, label %polly.start, label %bb2
 
 ; IR: polly.start:
+; IR-NEXT:    [[GPUContext:%.*]] = call i8* @polly_initContext()
+; IR-NEXT:    %p_devptr_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 4194304)
+; IR-NEXT:    call void @polly_freeContext(i8* [[GPUContext]])
 ; IR-NEXT:    br label %polly.exiting
 
 ; IR: polly.exiting:

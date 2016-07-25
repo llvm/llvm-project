@@ -61,6 +61,6 @@
 # RUN: echo "boom .temp : { *(.temp) } }" >> %t.script
 # RUN: not ld.lld -shared %t -o %t1 --script %t.script > %t.log 2>&1
 # RUN: FileCheck -check-prefix=ERR7 %s < %t.log
-# ERR7:      line 4: : expected, but got .temp
+# ERR7:      line 4: malformed number: .temp
 # ERR7-NEXT: boom .temp : { *(.temp) } }
 # RUN: grep '^     ^' %t.log
