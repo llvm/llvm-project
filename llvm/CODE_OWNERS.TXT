@@ -50,6 +50,10 @@ N: Quentin Colombet
 E: qcolombet@apple.com
 D: Register allocators
 
+N: Simon Dardis
+E: simon.dardis@imgtec.com
+D: MIPS Backend (lib/Target/Mips/*)
+
 N: Duncan P. N. Exon Smith
 E: dexonsmith@apple.com
 D: Branch weights and BlockFrequencyInfo
@@ -154,10 +158,6 @@ D: Fast-Isel
 N: Nadav Rotem
 E: nadav.rotem@me.com
 D: X86 Backend, Loop Vectorizer
-
-N: Daniel Sanders
-E: daniel.sanders@imgtec.com
-D: MIPS Backend (lib/Target/Mips/*)
 
 N: Duncan Sands
 E: baldrick@free.fr

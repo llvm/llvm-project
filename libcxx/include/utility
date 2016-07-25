@@ -171,6 +171,20 @@ template<class... T>
 
 template<class T, class U=T>
     T exchange(T& obj, U&& new_value);
+
+// 20.2.7, in-place construction // C++17
+struct in_place_tag { in_place_tag() = delete; }; // C++17
+using in_place_t = in_place_tag(&)(unspecified );
+template <class T>
+    using in_place_type_t = in_place_tag(&)(unspecified <T>);
+template <size_t I>
+    using in_place_index_t = in_place_tag(&)(unspecified <I>);
+in_place_tag in_place(unspecified );
+template <class T>
+    in_place_tag in_place(unspecified <T>);
+template <size_t I>
+    in_place_tag in_place(unspecified <I>);
+
 }  // std
 
 */
@@ -179,6 +193,7 @@ template<class T, class U=T>
 #include <__tuple>
 #include <type_traits>
 #include <initializer_list>
+#include <__debug>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #pragma GCC system_header
@@ -333,8 +348,15 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
   // Use the implicitly declared copy constructor in C++03
 #endif
 
+    typedef typename remove_reference<_T1>::type _T1Unref;
+    typedef typename remove_reference<_T2>::type _T2Unref;
+
+    typedef integral_constant<bool,
+           is_copy_assignable<_T1>::value
+        && is_copy_assignable<_T2>::value> _CanCopyAssign;
+
     _LIBCPP_INLINE_VISIBILITY
-    pair& operator=(const pair& __p)
+    pair& operator=(typename conditional<_CanCopyAssign::value, pair, __nat>::type const& __p)
         _NOEXCEPT_(is_nothrow_copy_assignable<first_type>::value &&
                    is_nothrow_copy_assignable<second_type>::value)
     {
@@ -362,10 +384,15 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
             : first(_VSTD::forward<_U1>(__p.first)),
               second(_VSTD::forward<_U2>(__p.second)) {}
 
+    typedef integral_constant<bool,
+           is_move_assignable<_T1>::value
+        && is_move_assignable<_T2>::value> _CanMoveAssign;
+
     _LIBCPP_INLINE_VISIBILITY
     pair&
-    operator=(pair&& __p) _NOEXCEPT_(is_nothrow_move_assignable<first_type>::value &&
-                                     is_nothrow_move_assignable<second_type>::value)
+    operator=(typename conditional<_CanMoveAssign::value, pair, __nat>::type&& __p)
+        _NOEXCEPT_(is_nothrow_move_assignable<first_type>::value &&
+                   is_nothrow_move_assignable<second_type>::value)
     {
         first = _VSTD::forward<first_type>(__p.first);
         second = _VSTD::forward<second_type>(__p.second);
@@ -373,7 +400,6 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
     }
 
 #ifndef _LIBCPP_HAS_NO_VARIADICS
-
     template<class _Tuple,
              class = typename enable_if<__tuple_convertible<_Tuple, pair>::value>::type>
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
@@ -396,7 +422,7 @@ struct _LIBCPP_TYPE_VIS_ONLY pair
             {}
 
     template <class _Tuple,
-              class = typename enable_if<__tuple_assignable<_Tuple, pair>::value>::type>
+              class = typename enable_if<!is_same<typename decay<_Tuple>::type, pair>::value && __tuple_assignable<_Tuple, pair>::value>::type>
         _LIBCPP_INLINE_VISIBILITY
         pair&
         operator=(_Tuple&& __p)
@@ -781,6 +807,54 @@ _T1 exchange(_T1& __obj, _T2 && __new_value)
     return __old_value;
 }
 #endif  // _LIBCPP_STD_VER > 11
+
+#if _LIBCPP_STD_VER > 14
+
+struct _LIBCPP_TYPE_VIS_ONLY __in_place_tag {};
+template <class> struct _LIBCPP_TYPE_VIS_ONLY __in_place_type_tag {};
+template <size_t> struct _LIBCPP_TYPE_VIS_ONLY __in_place_index_tag {};
+
+struct _LIBCPP_TYPE_VIS_ONLY in_place_tag;
+
+using in_place_t = in_place_tag(&)(__in_place_tag);
+template <class _Tp>
+using in_place_type_t = in_place_tag(&)(__in_place_type_tag<_Tp>);
+template <size_t _Nx>
+using in_place_index_t = in_place_tag(&)(__in_place_index_tag<_Nx>);
+
+struct in_place_tag {
+  in_place_tag() = delete;
+private:
+  explicit in_place_tag(__in_place_tag) {}
+
+  friend inline in_place_tag in_place(__in_place_tag __t);
+  template <class _Tp>
+  friend inline in_place_tag in_place(__in_place_type_tag<_Tp>);
+  template <size_t _Nx>
+  friend inline in_place_tag in_place(__in_place_index_tag<_Nx>);
+};
+
+inline in_place_tag in_place(__in_place_tag __t) {
+    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
+    return in_place_tag(__t);
+}
+template <class _Tp>
+inline in_place_tag in_place(__in_place_type_tag<_Tp>) {
+    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
+    return in_place_tag(__in_place_tag{});
+}
+template <size_t _Nx>
+inline in_place_tag in_place(__in_place_index_tag<_Nx>) {
+    _LIBCPP_ASSERT(false, "The in_place function cannot be invoked");
+    return in_place_tag(__in_place_tag{});
+}
+
+template <class _Tp>   struct __is_inplace_type : false_type {};
+template <>            struct __is_inplace_type<in_place_t> : true_type {};
+template <class _Tp>   struct __is_inplace_type<in_place_type_t<_Tp>> : true_type {};
+template <size_t _Idx> struct __is_inplace_type<in_place_index_t<_Idx>> : true_type {};
+
+#endif // _LIBCPP_STD_VER > 14
 
 _LIBCPP_END_NAMESPACE_STD
 

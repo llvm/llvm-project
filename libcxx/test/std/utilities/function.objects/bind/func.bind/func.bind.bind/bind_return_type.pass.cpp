@@ -24,6 +24,8 @@
 #include <type_traits>
 #include <cassert>
 
+#include "test_macros.h"
+
 int dummy = 42;
 
 int return_value(int) { return dummy; }
@@ -81,10 +83,10 @@ void do_test(Fn* func) {
     // Check that the call operator SFINAE's away when too few arguments
     // are provided but is well-formed otherwise.
     {
-        static_assert(!CheckCall<Bind>(), "");
+        LIBCPP_STATIC_ASSERT(!CheckCall<Bind>(), "");
         static_assert(CheckCall<Bind, int>(), "");
         static_assert(CheckCall<Bind, int, int>(), "");
-        static_assert(!CheckCall<BindR>(), "");
+        LIBCPP_STATIC_ASSERT(!CheckCall<BindR>(), "");
         static_assert(CheckCall<BindR, int>(), "");
         static_assert(CheckCall<BindR, int, int>(), "");
     }
@@ -108,7 +110,7 @@ void do_test_r(Fn* func) {
     // Check that the call operator SFINAE's away when too few arguments
     // are provided but is well-formed otherwise.
     {
-        static_assert(!CheckCall<Bind>(), "");
+        LIBCPP_STATIC_ASSERT(!CheckCall<Bind>(), "");
         static_assert(CheckCall<Bind, int>(), "");
         static_assert(CheckCall<Bind, int, int>(), "");
     }

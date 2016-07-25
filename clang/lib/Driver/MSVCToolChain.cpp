@@ -513,9 +513,9 @@ VersionTuple MSVCToolChain::getMSVCVersionFromExe() const {
 // Get Visual Studio installation directory.
 bool MSVCToolChain::getVisualStudioInstallDir(std::string &path) const {
   // First check the environment variables that vsvars32.bat sets.
-  const char *vcinstalldir = getenv("VCINSTALLDIR");
-  if (vcinstalldir) {
-    path = vcinstalldir;
+  if (llvm::Optional<std::string> VcInstallDir =
+          llvm::sys::Process::GetEnv("VCINSTALLDIR")) {
+    path = std::move(*VcInstallDir);
     path = path.substr(0, path.find("\\VC"));
     return true;
   }
@@ -541,26 +541,26 @@ bool MSVCToolChain::getVisualStudioInstallDir(std::string &path) const {
   }
 
   // Try the environment.
-  const char *vs120comntools = getenv("VS120COMNTOOLS");
-  const char *vs100comntools = getenv("VS100COMNTOOLS");
-  const char *vs90comntools = getenv("VS90COMNTOOLS");
-  const char *vs80comntools = getenv("VS80COMNTOOLS");
+  std::string vcomntools;
+  if (llvm::Optional<std::string> vs120comntools =
+          llvm::sys::Process::GetEnv("VS120COMNTOOLS"))
+    vcomntools = std::move(*vs120comntools);
+  else if (llvm::Optional<std::string> vs100comntools =
+               llvm::sys::Process::GetEnv("VS100COMNTOOLS"))
+    vcomntools = std::move(*vs100comntools);
+  else if (llvm::Optional<std::string> vs90comntools =
+               llvm::sys::Process::GetEnv("VS90COMNTOOLS"))
+    vcomntools = std::move(*vs90comntools);
+  else if (llvm::Optional<std::string> vs80comntools =
+               llvm::sys::Process::GetEnv("VS80COMNTOOLS"))
+    vcomntools = std::move(*vs80comntools);
 
-  const char *vscomntools = nullptr;
-
-  // Find any version we can
-  if (vs120comntools)
-    vscomntools = vs120comntools;
-  else if (vs100comntools)
-    vscomntools = vs100comntools;
-  else if (vs90comntools)
-    vscomntools = vs90comntools;
-  else if (vs80comntools)
-    vscomntools = vs80comntools;
-
-  if (vscomntools && *vscomntools) {
-    const char *p = strstr(vscomntools, "\\Common7\\Tools");
-    path = p ? std::string(vscomntools, p) : vscomntools;
+  // Find any version we can.
+  if (!vcomntools.empty()) {
+    size_t p = vcomntools.find("\\Common7\\Tools");
+    if (p != std::string::npos)
+      vcomntools.resize(p);
+    path = std::move(vcomntools);
     return true;
   }
   return false;
@@ -593,9 +593,10 @@ void MSVCToolChain::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
     return;
 
   // Honor %INCLUDE%. It should know essential search paths with vcvarsall.bat.
-  if (const char *cl_include_dir = getenv("INCLUDE")) {
+  if (llvm::Optional<std::string> cl_include_dir =
+          llvm::sys::Process::GetEnv("INCLUDE")) {
     SmallVector<StringRef, 8> Dirs;
-    StringRef(cl_include_dir)
+    StringRef(*cl_include_dir)
         .split(Dirs, ";", /*MaxSplit=*/-1, /*KeepEmpty=*/false);
     for (StringRef Dir : Dirs)
       addSystemInclude(DriverArgs, CC1Args, Dir);

@@ -89,7 +89,7 @@ and 6 after which the coroutine will be destroyed.
 
 The LLVM IR for this coroutine looks like this:
 
-.. code-block:: llvm
+.. code-block:: none
 
   define i8* @f(i32 %n) {
   entry:
@@ -152,7 +152,7 @@ We also store addresses of the resume and destroy functions so that the
 when its identity cannot be determined statically at compile time. For our 
 example, the coroutine frame will be:
 
-.. code-block:: llvm
+.. code-block:: text
 
   %f.frame = type { void (%f.frame*)*, void (%f.frame*)*, i32 }
 
@@ -288,7 +288,7 @@ Let's consider the coroutine that has more than one suspend point:
 Matching LLVM code would look like (with the rest of the code remaining the same
 as the code in the previous section):
 
-.. code-block:: llvm
+.. code-block:: text
 
   loop:
     %n.addr = phi i32 [ %n, %entry ], [ %inc, %loop.resume ]
@@ -362,7 +362,7 @@ by completions of asynchronous operations `async_op1` and `async_op2` which get
 a coroutine handle as a parameter and resume the coroutine once async
 operation is finished.
 
-.. code-block:: llvm
+.. code-block:: text
 
   void g() {
      for (;;)
@@ -385,7 +385,7 @@ point when coroutine should be ready for resumption (namely, when a resume index
 should be stored in the coroutine frame, so that it can be resumed at the 
 correct resume point):
 
-.. code-block:: llvm
+.. code-block:: text
 
   if.true:
     %save1 = call token @llvm.coro.save(i8* %hdl)
@@ -413,7 +413,7 @@ intrinsic.
 The following coroutine designates a 32 bit integer `promise` and uses it to
 store the current value produced by a coroutine.
 
-.. code-block:: llvm
+.. code-block:: text
 
   define i8* @f(i32 %n) {
   entry:
@@ -987,7 +987,7 @@ basic blocks.
 Example (normal suspend point):
 """""""""""""""""""""""""""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
     %0 = call i8 @llvm.coro.suspend(token none, i1 false)
     switch i8 %0, label %suspend [i8 0, label %resume
@@ -996,7 +996,7 @@ Example (normal suspend point):
 Example (final suspend point):
 """"""""""""""""""""""""""""""
 
-.. code-block:: llvm
+.. code-block:: text
 
   while.end:
     %s.final = call i8 @llvm.coro.suspend(token none, i1 true)
@@ -1057,7 +1057,7 @@ In such a case, a coroutine should be ready for resumption prior to a call to
 a different thread possibly prior to `async_op` call returning control back
 to the coroutine:
 
-.. code-block:: llvm
+.. code-block:: text
 
     %save1 = call token @llvm.coro.save(i8* %hdl)
     call void async_op1(i8* %hdl)
@@ -1128,7 +1128,7 @@ after suspend.
 
 A frontend can create parameter copies for `a` and `b` as follows:
 
-.. code-block:: C++
+.. code-block:: text
 
   task<int> f(A a', A b') {
     a = alloca A;

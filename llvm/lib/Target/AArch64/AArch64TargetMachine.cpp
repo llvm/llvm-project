@@ -198,13 +198,13 @@ AArch64TargetMachine::~AArch64TargetMachine() {}
 namespace {
 struct AArch64GISelActualAccessor : public GISelAccessor {
   std::unique_ptr<CallLowering> CallLoweringInfo;
-  std::unique_ptr<MachineLegalizer> MachineLegalizer;
+  std::unique_ptr<MachineLegalizer> Legalizer;
   std::unique_ptr<RegisterBankInfo> RegBankInfo;
   const CallLowering *getCallLowering() const override {
     return CallLoweringInfo.get();
   }
   const class MachineLegalizer *getMachineLegalizer() const override {
-    return MachineLegalizer.get();
+    return Legalizer.get();
   }
   const RegisterBankInfo *getRegBankInfo() const override {
     return RegBankInfo.get();
@@ -240,7 +240,7 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
         new AArch64GISelActualAccessor();
     GISel->CallLoweringInfo.reset(
         new AArch64CallLowering(*I->getTargetLowering()));
-    GISel->MachineLegalizer.reset(new AArch64MachineLegalizer());
+    GISel->Legalizer.reset(new AArch64MachineLegalizer());
     GISel->RegBankInfo.reset(
         new AArch64RegisterBankInfo(*I->getRegisterInfo()));
 #endif

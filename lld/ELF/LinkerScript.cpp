@@ -55,190 +55,7 @@ bool InputSectionDescription::classof(const BaseCommand *C) {
   return C->Kind == InputSectionKind;
 }
 
-// This is an operator-precedence parser to parse and evaluate
-// a linker script expression. For each linker script arithmetic
-// expression (e.g. ". = . + 0x1000"), a new instance of ExprParser
-// is created and ran.
-namespace {
-class ExprParser : public ScriptParserBase {
-public:
-  ExprParser(std::vector<StringRef> &Tokens, uint64_t Dot)
-      : ScriptParserBase(Tokens), Dot(Dot) {}
-
-  uint64_t run();
-
-private:
-  uint64_t parsePrimary();
-  uint64_t parseTernary(uint64_t Cond);
-  uint64_t apply(StringRef Op, uint64_t L, uint64_t R);
-  uint64_t parseExpr1(uint64_t Lhs, int MinPrec);
-  uint64_t parseExpr();
-
-  uint64_t Dot;
-};
-}
-
-static int precedence(StringRef Op) {
-  return StringSwitch<int>(Op)
-      .Case("*", 4)
-      .Case("/", 4)
-      .Case("+", 3)
-      .Case("-", 3)
-      .Case("<", 2)
-      .Case(">", 2)
-      .Case(">=", 2)
-      .Case("<=", 2)
-      .Case("==", 2)
-      .Case("!=", 2)
-      .Case("&", 1)
-      .Default(-1);
-}
-
-static uint64_t evalExpr(std::vector<StringRef> &Tokens, uint64_t Dot) {
-  return ExprParser(Tokens, Dot).run();
-}
-
-uint64_t ExprParser::run() {
-  uint64_t V = parseExpr();
-  if (!atEOF() && !Error)
-    setError("stray token: " + peek());
-  return V;
-}
-
-uint64_t static getConstantValue(StringRef C) {
-  if (C == "COMMONPAGESIZE" || C == "MAXPAGESIZE")
-    return Target->PageSize;
-  error("unknown constant: " + C);
-  return 0;
-}
-
-// This is a part of the operator-precedence parser to evaluate
-// arithmetic expressions in SECTIONS command. This function evaluates an
-// integer literal, a parenthesized expression, the ALIGN function,
-// or the special variable ".".
-uint64_t ExprParser::parsePrimary() {
-  StringRef Tok = next();
-  if (Tok == ".")
-    return Dot;
-  if (Tok == "(") {
-    uint64_t V = parseExpr();
-    expect(")");
-    return V;
-  }
-  if (Tok == "ALIGN") {
-    expect("(");
-    uint64_t V = parseExpr();
-    expect(")");
-    return alignTo(Dot, V);
-  }
-  if (Tok == "CONSTANT") {
-    expect("(");
-    uint64_t V = getConstantValue(next());
-    expect(")");
-    return V;
-  }
-  // Documentations says there are two ways to compute
-  // the value of DATA_SEGMENT_ALIGN command, depending on whether the second
-  // uses fewer COMMONPAGESIZE sized pages for the data segment(area between the
-  // result of this expression and `DATA_SEGMENT_END') than the first or not.
-  // That is possible optimization, that we do not support, so we compute that
-  // function always as (ALIGN(MAXPAGESIZE) + (. & (MAXPAGESIZE - 1))) now.
-  if (Tok == "DATA_SEGMENT_ALIGN") {
-    expect("(");
-    uint64_t L = parseExpr();
-    expect(",");
-    parseExpr();
-    expect(")");
-    return alignTo(Dot, L) + (Dot & (L - 1));
-  }
-  // Since we do not support the optimization from comment above,
-  // we can just ignore that command.
-  if (Tok == "DATA_SEGMENT_END") {
-    expect("(");
-    expect(".");
-    expect(")");
-    return Dot;
-  }
-  uint64_t V = 0;
-  if (Tok.getAsInteger(0, V))
-    setError("malformed number: " + Tok);
-  return V;
-}
-
-uint64_t ExprParser::parseTernary(uint64_t Cond) {
-  next();
-  uint64_t V = parseExpr();
-  expect(":");
-  uint64_t W = parseExpr();
-  return Cond ? V : W;
-}
-
-uint64_t ExprParser::apply(StringRef Op, uint64_t L, uint64_t R) {
-  if (Op == "*")
-    return L * R;
-  if (Op == "/") {
-    if (R == 0) {
-      error("division by zero");
-      return 0;
-    }
-    return L / R;
-  }
-  if (Op == "+")
-    return L + R;
-  if (Op == "-")
-    return L - R;
-  if (Op == "<")
-    return L < R;
-  if (Op == ">")
-    return L > R;
-  if (Op == ">=")
-    return L >= R;
-  if (Op == "<=")
-    return L <= R;
-  if (Op == "==")
-    return L == R;
-  if (Op == "!=")
-    return L != R;
-  if (Op == "&")
-    return L & R;
-  llvm_unreachable("invalid operator");
-}
-
-// This is a part of the operator-precedence parser.
-// This function assumes that the remaining token stream starts
-// with an operator.
-uint64_t ExprParser::parseExpr1(uint64_t Lhs, int MinPrec) {
-  while (!atEOF()) {
-    // Read an operator and an expression.
-    StringRef Op1 = peek();
-    if (Op1 == "?")
-      return parseTernary(Lhs);
-    if (precedence(Op1) < MinPrec)
-      return Lhs;
-    next();
-    uint64_t Rhs = parsePrimary();
-
-    // Evaluate the remaining part of the expression first if the
-    // next operator has greater precedence than the previous one.
-    // For example, if we have read "+" and "3", and if the next
-    // operator is "*", then we'll evaluate 3 * ... part first.
-    while (!atEOF()) {
-      StringRef Op2 = peek();
-      if (precedence(Op2) <= precedence(Op1))
-        break;
-      Rhs = parseExpr1(Rhs, precedence(Op2));
-    }
-
-    Lhs = apply(Op1, Lhs, Rhs);
-  }
-  return Lhs;
-}
-
-// Reads and evaluates an arithmetic expression.
-uint64_t ExprParser::parseExpr() { return parseExpr1(parsePrimary(), 0); }
-
-template <class ELFT>
-bool LinkerScript<ELFT>::isDiscarded(InputSectionBase<ELFT> *S) {
+template <class ELFT> static bool isDiscarded(InputSectionBase<ELFT> *S) {
   return !S || !S->Live;
 }
 
@@ -335,7 +152,7 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
 
 template <class ELFT>
 void LinkerScript<ELFT>::dispatchAssignment(SymbolAssignment *Cmd) {
-  uint64_t Val = evalExpr(Cmd->Expr, Dot);
+  uint64_t Val = Cmd->Expression(Dot);
   if (Cmd->Name == ".") {
     Dot = Val;
   } else if (!Cmd->Ignore) {
@@ -410,28 +227,28 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
   int TlsNum = -1;
   int NoteNum = -1;
   int RelroNum = -1;
-  Phdr *Load = nullptr;
+  PhdrEntry<ELFT> *Load = nullptr;
   uintX_t Flags = PF_R;
-  std::vector<Phdr> Phdrs;
+  std::vector<PhdrEntry<ELFT>> Phdrs;
 
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     Phdrs.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
-    Phdr &Added = Phdrs.back();
+    PhdrEntry<ELFT> &Phdr = Phdrs.back();
 
     if (Cmd.HasFilehdr)
-      Added.add(Out<ELFT>::ElfHeader);
+      Phdr.add(Out<ELFT>::ElfHeader);
     if (Cmd.HasPhdrs)
-      Added.add(Out<ELFT>::ProgramHeaders);
+      Phdr.add(Out<ELFT>::ProgramHeaders);
 
     switch (Cmd.Type) {
     case PT_INTERP:
       if (Out<ELFT>::Interp)
-        Added.add(Out<ELFT>::Interp);
+        Phdr.add(Out<ELFT>::Interp);
       break;
     case PT_DYNAMIC:
       if (isOutputDynamic<ELFT>()) {
-        Added.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
-        Added.add(Out<ELFT>::Dynamic);
+        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
+        Phdr.add(Out<ELFT>::Dynamic);
       }
       break;
     case PT_TLS:
@@ -445,8 +262,8 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       break;
     case PT_GNU_EH_FRAME:
       if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
-        Added.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
-        Added.add(Out<ELFT>::EhFrameHdr);
+        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
+        Phdr.add(Out<ELFT>::EhFrameHdr);
       }
       break;
     }
@@ -533,7 +350,8 @@ template <class ELFT> void LinkerScript<ELFT>::addScriptedSymbols() {
     if (!Cmd || Cmd->Name == ".")
       continue;
 
-    if (Symtab<ELFT>::X->find(Cmd->Name) == nullptr)
+    SymbolBody *B = Symtab<ELFT>::X->find(Cmd->Name);
+    if (!B || B->isUndefined())
       Symtab<ELFT>::X->addAbsolute(Cmd->Name,
                                    Cmd->Hidden ? STV_HIDDEN : STV_DEFAULT);
     else
@@ -597,13 +415,17 @@ private:
   void readSearchDir();
   void readSections();
 
-  void readLocationCounterValue();
+  SymbolAssignment *readAssignment(StringRef Name);
   void readOutputSectionDescription(StringRef OutSec);
   std::vector<StringRef> readOutputSectionPhdrs();
   unsigned readPhdrType();
   void readProvide(bool Hidden);
-  SymbolAssignment *readSymbolAssignment(StringRef Name);
-  std::vector<StringRef> readSectionsCommandExpr();
+
+  Expr readExpr();
+  Expr readExpr1(Expr Lhs, int MinPrec);
+  Expr readPrimary();
+  Expr readTernary(Expr Cond);
+  Expr combine(StringRef Op, Expr Lhs, Expr Rhs);
 
   const static StringMap<Handler> Cmd;
   ScriptConfiguration &Opt = *ScriptConfig;
@@ -793,31 +615,34 @@ void ScriptParser::readSections() {
   Opt.DoLayout = true;
   expect("{");
   while (!Error && !skip("}")) {
-    StringRef Tok = peek();
-    if (Tok == ".") {
-      readLocationCounterValue();
-      continue;
-    }
-    next();
-    if (Tok == "PROVIDE")
+    StringRef Tok = next();
+    if (peek() == "=") {
+      readAssignment(Tok);
+      expect(";");
+    } else if (Tok == "PROVIDE") {
       readProvide(false);
-    else if (Tok == "PROVIDE_HIDDEN")
+    } else if (Tok == "PROVIDE_HIDDEN") {
       readProvide(true);
-    else if (peek() == "=")
-      readSymbolAssignment(Tok);
-    else
+    } else {
       readOutputSectionDescription(Tok);
+    }
   }
 }
 
-void ScriptParser::readLocationCounterValue() {
-  expect(".");
-  expect("=");
-  std::vector<StringRef> Expr = readSectionsCommandExpr();
-  if (Expr.empty())
-    error("error in location counter expression");
-  else
-    Opt.Commands.push_back(llvm::make_unique<SymbolAssignment>(".", Expr));
+static int precedence(StringRef Op) {
+  return StringSwitch<int>(Op)
+      .Case("*", 4)
+      .Case("/", 4)
+      .Case("+", 3)
+      .Case("-", 3)
+      .Case("<", 2)
+      .Case(">", 2)
+      .Case(">=", 2)
+      .Case("<=", 2)
+      .Case("==", 2)
+      .Case("!=", 2)
+      .Case("&", 1)
+      .Default(-1);
 }
 
 void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
@@ -871,7 +696,7 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
 void ScriptParser::readProvide(bool Hidden) {
   expect("(");
-  if (SymbolAssignment *Assignment = readSymbolAssignment(next())) {
+  if (SymbolAssignment *Assignment = readAssignment(next())) {
     Assignment->Provide = true;
     Assignment->Hidden = Hidden;
   }
@@ -879,37 +704,145 @@ void ScriptParser::readProvide(bool Hidden) {
   expect(";");
 }
 
-SymbolAssignment *ScriptParser::readSymbolAssignment(StringRef Name) {
+SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   expect("=");
-  std::vector<StringRef> Expr = readSectionsCommandExpr();
-  if (Expr.empty()) {
-    error("error in symbol assignment expression");
-  } else {
-    Opt.Commands.push_back(llvm::make_unique<SymbolAssignment>(Name, Expr));
-    return static_cast<SymbolAssignment *>(Opt.Commands.back().get());
-  }
-  return nullptr;
+  Expr E = readExpr();
+  auto *Cmd = new SymbolAssignment(Name, E);
+  Opt.Commands.emplace_back(Cmd);
+  return Cmd;
 }
 
-// This function reads balanced expression until semicolon is seen.
-std::vector<StringRef> ScriptParser::readSectionsCommandExpr() {
-  int Braces = 0;
-  std::vector<StringRef> Expr;
-  while (!Error) {
-    StringRef Tok = peek();
+// This is an operator-precedence parser to parse a linker
+// script expression.
+Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
 
-    if (Tok == "(")
-      Braces++;
-    else if (Tok == ")")
-      if (--Braces < 0)
-        break;
-
-    next();
-    if (Tok == ";")
+// This is a part of the operator-precedence parser. This function
+// assumes that the remaining token stream starts with an operator.
+Expr ScriptParser::readExpr1(Expr Lhs, int MinPrec) {
+  while (!atEOF() && !Error) {
+    // Read an operator and an expression.
+    StringRef Op1 = peek();
+    if (Op1 == "?")
+      return readTernary(Lhs);
+    if (precedence(Op1) < MinPrec)
       break;
-    Expr.push_back(Tok);
+    next();
+    Expr Rhs = readPrimary();
+
+    // Evaluate the remaining part of the expression first if the
+    // next operator has greater precedence than the previous one.
+    // For example, if we have read "+" and "3", and if the next
+    // operator is "*", then we'll evaluate 3 * ... part first.
+    while (!atEOF()) {
+      StringRef Op2 = peek();
+      if (precedence(Op2) <= precedence(Op1))
+        break;
+      Rhs = readExpr1(Rhs, precedence(Op2));
+    }
+
+    Lhs = combine(Op1, Lhs, Rhs);
   }
-  return Expr;
+  return Lhs;
+}
+
+uint64_t static getConstant(StringRef S) {
+  if (S == "COMMONPAGESIZE" || S == "MAXPAGESIZE")
+    return Target->PageSize;
+  error("unknown constant: " + S);
+  return 0;
+}
+
+Expr ScriptParser::readPrimary() {
+  StringRef Tok = next();
+
+  if (Tok == ".")
+    return [](uint64_t Dot) { return Dot; };
+
+  if (Tok == "(") {
+    Expr E = readExpr();
+    expect(")");
+    return E;
+  }
+
+  // Built-in functions are parsed here.
+  // https://sourceware.org/binutils/docs/ld/Builtin-Functions.html.
+  if (Tok == "ALIGN") {
+    expect("(");
+    Expr E = readExpr();
+    expect(")");
+    return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
+  }
+  if (Tok == "CONSTANT") {
+    expect("(");
+    StringRef Tok = next();
+    expect(")");
+    return [=](uint64_t Dot) { return getConstant(Tok); };
+  }
+  if (Tok == "DATA_SEGMENT_ALIGN") {
+    expect("(");
+    Expr E = readExpr();
+    expect(",");
+    readExpr();
+    expect(")");
+    return [=](uint64_t Dot) -> uint64_t {
+      uint64_t Val = E(Dot);
+      return alignTo(Dot, Val) + (Dot & (Val - 1));
+    };
+  }
+  if (Tok == "DATA_SEGMENT_END") {
+    expect("(");
+    expect(".");
+    expect(")");
+    return [](uint64_t Dot) { return Dot; };
+  }
+
+  // Parse a number literal
+  uint64_t V = 0;
+  if (Tok.getAsInteger(0, V))
+    setError("malformed number: " + Tok);
+  return [=](uint64_t Dot) { return V; };
+}
+
+Expr ScriptParser::readTernary(Expr Cond) {
+  next();
+  Expr L = readExpr();
+  expect(":");
+  Expr R = readExpr();
+  return [=](uint64_t Dot) { return Cond(Dot) ? L(Dot) : R(Dot); };
+}
+
+Expr ScriptParser::combine(StringRef Op, Expr L, Expr R) {
+  if (Op == "*")
+    return [=](uint64_t Dot) { return L(Dot) * R(Dot); };
+  if (Op == "/") {
+    return [=](uint64_t Dot) -> uint64_t {
+      uint64_t RHS = R(Dot);
+      if (RHS == 0) {
+        error("division by zero");
+        return 0;
+      }
+      return L(Dot) / RHS;
+    };
+  }
+  if (Op == "+")
+    return [=](uint64_t Dot) { return L(Dot) + R(Dot); };
+  if (Op == "-")
+    return [=](uint64_t Dot) { return L(Dot) - R(Dot); };
+  if (Op == "<")
+    return [=](uint64_t Dot) { return L(Dot) < R(Dot); };
+  if (Op == ">")
+    return [=](uint64_t Dot) { return L(Dot) > R(Dot); };
+  if (Op == ">=")
+    return [=](uint64_t Dot) { return L(Dot) >= R(Dot); };
+  if (Op == "<=")
+    return [=](uint64_t Dot) { return L(Dot) <= R(Dot); };
+  if (Op == "==")
+    return [=](uint64_t Dot) { return L(Dot) == R(Dot); };
+  if (Op == "!=")
+    return [=](uint64_t Dot) { return L(Dot) != R(Dot); };
+  if (Op == "&")
+    return [=](uint64_t Dot) { return L(Dot) & R(Dot); };
+  llvm_unreachable("invalid operator");
 }
 
 std::vector<StringRef> ScriptParser::readOutputSectionPhdrs() {

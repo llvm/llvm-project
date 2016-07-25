@@ -16,12 +16,15 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <functional>
 
 namespace lld {
 namespace elf {
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
+
+typedef std::function<uint64_t(uint64_t)> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
@@ -46,11 +49,11 @@ struct BaseCommand {
 };
 
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, std::vector<StringRef> &Expr)
-      : BaseCommand(AssignmentKind), Name(Name), Expr(std::move(Expr)) {}
+  SymbolAssignment(StringRef Name, Expr E)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
   static bool classof(const BaseCommand *C);
   StringRef Name;
-  std::vector<StringRef> Expr;
+  Expr Expression;
   bool Provide = false;
   // Hidden and Ignore can be true, only if Provide is true
   bool Hidden = false;
@@ -113,18 +116,17 @@ template <class ELFT> class LinkerScript {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  typedef PhdrEntry<ELFT> Phdr;
-
   std::vector<OutputSectionBase<ELFT> *>
   createSections(OutputSectionFactory<ELFT> &Factory);
 
+  std::vector<PhdrEntry<ELFT>>
+  createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
+
   ArrayRef<uint8_t> getFiller(StringRef Name);
-  bool isDiscarded(InputSectionBase<ELFT> *S);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignAddresses(ArrayRef<OutputSectionBase<ELFT> *> S);
   int compareSections(StringRef A, StringRef B);
   void addScriptedSymbols();
-  std::vector<Phdr> createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
   bool hasPhdrsCommands();
 
 private:
