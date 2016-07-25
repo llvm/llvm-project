@@ -15,6 +15,8 @@
 ; RUN: llc < %s -march=x86-64 -mcpu=btver2 | FileCheck %s
 ; RUN: llc < %s -march=x86-64 -mcpu=bdver1 | FileCheck %s
 ; RUN: llc < %s -march=x86-64 -mcpu=bdver2 | FileCheck %s
+; RUN: llc < %s -march=x86-64 -mcpu=bdver3 | FileCheck %s
+; RUN: llc < %s -march=x86-64 -mcpu=bdver4 | FileCheck %s
 
 ; Verify that for the X86_64 processors that are known to have poor latency 
 ; double precision shift instructions we do not generate 'shld' or 'shrd'

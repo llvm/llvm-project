@@ -135,12 +135,21 @@ public:
     getExprBuilder().setIDToSAI(&IDToSAI);
   }
 
+  /// Create after-run-time-check initialization code.
+  void initializeAfterRTH();
+
+  /// Finalize the generated scop.
+  virtual void finalize();
+
 private:
   /// A vector of array base pointers for which a new ScopArrayInfo was created.
   ///
   /// This vector is used to delete the ScopArrayInfo when it is not needed any
   /// more.
   std::vector<Value *> LocalArrays;
+
+  /// The current GPU context.
+  Value *GPUContext;
 
   /// A module containing GPU code.
   ///
@@ -256,7 +265,112 @@ private:
   /// Free the LLVM-IR module corresponding to the kernel and -- if requested --
   /// dump its IR to stderr.
   void finalizeKernelFunction();
+
+  void allocateDeviceArrays();
+
+  /// Create a call to initialize the GPU context.
+  ///
+  /// @returns A pointer to the newly initialized context.
+  Value *createCallInitContext();
+
+  /// Create a call to free the GPU context.
+  ///
+  /// @param Context A pointer to an initialized GPU context.
+  void createCallFreeContext(Value *Context);
+
+  Value *createCallAllocateMemoryForDevice(Value *Size);
 };
+
+void GPUNodeBuilder::initializeAfterRTH() {
+  GPUContext = createCallInitContext();
+  allocateDeviceArrays();
+}
+
+void GPUNodeBuilder::finalize() {
+  createCallFreeContext(GPUContext);
+  IslNodeBuilder::finalize();
+}
+
+void GPUNodeBuilder::allocateDeviceArrays() {
+  isl_ast_build *Build = isl_ast_build_from_context(S.getContext());
+
+  for (int i = 0; i < Prog->n_array; ++i) {
+    gpu_array_info *Array = &Prog->array[i];
+    std::string DevPtrName("p_devptr_");
+    DevPtrName.append(Array->name);
+
+    Value *ArraySize = ConstantInt::get(Builder.getInt64Ty(), Array->size);
+
+    if (!gpu_array_is_scalar(Array)) {
+      auto OffsetDimZero = isl_pw_aff_copy(Array->bound[0]);
+      isl_ast_expr *Res = isl_ast_build_expr_from_pw_aff(Build, OffsetDimZero);
+
+      for (unsigned int i = 1; i < Array->n_index; i++) {
+        isl_pw_aff *Bound_I = isl_pw_aff_copy(Array->bound[i]);
+        isl_ast_expr *Expr = isl_ast_build_expr_from_pw_aff(Build, Bound_I);
+        Res = isl_ast_expr_mul(Res, Expr);
+      }
+
+      Value *NumElements = ExprBuilder.create(Res);
+      ArraySize = Builder.CreateMul(ArraySize, NumElements);
+    }
+
+    Value *DevPtr = createCallAllocateMemoryForDevice(ArraySize);
+    DevPtr->setName(DevPtrName);
+  }
+
+  isl_ast_build_free(Build);
+}
+
+Value *GPUNodeBuilder::createCallAllocateMemoryForDevice(Value *Size) {
+  const char *Name = "polly_allocateMemoryForDevice";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt64Ty());
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {Size});
+}
+
+Value *GPUNodeBuilder::createCallInitContext() {
+  const char *Name = "polly_initContext";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {});
+}
+
+void GPUNodeBuilder::createCallFreeContext(Value *Context) {
+  const char *Name = "polly_freeContext";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {Context});
+}
 
 /// Check if one string is a prefix of another.
 ///
@@ -1325,8 +1439,10 @@ public:
     Builder.SetInsertPoint(SplitBlock->getTerminator());
     NodeBuilder.addParameters(S->getContext());
     Builder.SetInsertPoint(&*StartBlock->begin());
+
+    NodeBuilder.initializeAfterRTH();
     NodeBuilder.create(Root);
-    NodeBuilder.finalizeSCoP(*S);
+    NodeBuilder.finalize();
   }
 
   bool runOnScop(Scop &CurrentScop) override {

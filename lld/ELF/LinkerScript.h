@@ -72,6 +72,7 @@ struct OutputSectionCommand : BaseCommand {
       : BaseCommand(OutputSectionKind), Name(Name) {}
   static bool classof(const BaseCommand *C);
   StringRef Name;
+  Expr AddrExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;

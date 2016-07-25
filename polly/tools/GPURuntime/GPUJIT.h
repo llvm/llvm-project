@@ -44,10 +44,9 @@
  * const char *Entry = "_Z8myKernelPi";
  *
  * int main() {
- *   PollyGPUContext *Context;
  *   PollyGPUModule *Module;
  *   PollyGPUFunction *Kernel;
- *   PollyGPUDevice *Device;
+ *   PollyGPUContext *Context;
  *   PollyGPUDevicePtr *PtrDevData;
  *   int *HostData;
  *   int MemSize;
@@ -57,13 +56,14 @@
  *   int GridHeight = 8;
  *
  *   MemSize = 256*64*sizeof(int);
- *   polly_initDevice(&Context, &Device);
+ *   Context = polly_initContext();
  *   polly_getPTXModule(KernelString, &Module);
  *   polly_getPTXKernelEntry(Entry, Module, &Kernel);
  *   polly_setKernelParameters(Kernel, BlockWidth, BlockHeight, DevData);
  *   polly_launchKernel(Kernel, GridWidth, GridHeight);
  *   polly_copyFromDeviceToHost(HostData, DevData, MemSize);
- *   polly_cleanupGPGPUResources(HostData, DevData, Module, Context, Kernel);
+ *   polly_cleanupGPGPUResources(HostData, DevData, Module, Kernel);
+ *   polly_freeContext(Context);
  * }
  *
  */
@@ -71,10 +71,9 @@
 typedef struct PollyGPUContextT PollyGPUContext;
 typedef struct PollyGPUModuleT PollyGPUModule;
 typedef struct PollyGPUFunctionT PollyGPUFunction;
-typedef struct PollyGPUDeviceT PollyGPUDevice;
 typedef struct PollyGPUDevicePtrT PollyGPUDevicePtr;
 
-void polly_initDevice(PollyGPUContext **Context, PollyGPUDevice **Device);
+PollyGPUContext *polly_initContext();
 void polly_getPTXModule(void *PTXBuffer, PollyGPUModule **Module);
 void polly_getPTXKernelEntry(const char *KernelName, PollyGPUModule *Module,
                              PollyGPUFunction **Kernel);
@@ -88,6 +87,6 @@ void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
                         int GridHeight);
 void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
                                  PollyGPUModule *Module,
-                                 PollyGPUContext *Context,
                                  PollyGPUFunction *Kernel);
+void free_Context(PollyGPUContext *Context);
 #endif /* GPUJIT_H_ */

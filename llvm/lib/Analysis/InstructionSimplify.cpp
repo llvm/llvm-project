@@ -3790,8 +3790,14 @@ static Value *SimplifyPHINode(PHINode *PN, const Query &Q) {
 }
 
 static Value *SimplifyTruncInst(Value *Op, Type *Ty, const Query &Q, unsigned) {
-  if (Constant *C = dyn_cast<Constant>(Op))
+  if (auto *C = dyn_cast<Constant>(Op))
     return ConstantFoldCastOperand(Instruction::Trunc, C, Ty, Q.DL);
+
+  // trunc([zs]ext(x)) -> x if the trunc undoes the work of the [zs]ext.
+  if (auto *CI = dyn_cast<CastInst>(Op))
+    if (isa<ZExtInst>(CI) || isa<SExtInst>(CI))
+      if (CI->getOperand(0)->getType() == Ty)
+        return CI->getOperand(0);
 
   return nullptr;
 }

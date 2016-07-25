@@ -1586,10 +1586,10 @@ void llvm::combineMetadata(Instruction *K, const Instruction *J,
   SmallVector<std::pair<unsigned, MDNode *>, 4> Metadata;
   K->dropUnknownNonDebugMetadata(KnownIDs);
   K->getAllMetadataOtherThanDebugLoc(Metadata);
-  for (unsigned i = 0, n = Metadata.size(); i < n; ++i) {
-    unsigned Kind = Metadata[i].first;
+  for (const auto &MD : Metadata) {
+    unsigned Kind = MD.first;
     MDNode *JMD = J->getMetadata(Kind);
-    MDNode *KMD = Metadata[i].second;
+    MDNode *KMD = MD.second;
 
     switch (Kind) {
       default:

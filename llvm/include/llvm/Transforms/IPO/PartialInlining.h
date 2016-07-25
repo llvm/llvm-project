@@ -24,9 +24,6 @@ namespace llvm {
 class PartialInlinerPass : public PassInfoMixin<PartialInlinerPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &);
-
-private:
-  Function *unswitchFunction(Function *F);
 };
 }
 #endif // LLVM_TRANSFORMS_IPO_PARTIALINLINING_H

@@ -44,10 +44,6 @@ struct PollyGPUFunctionT {
   CUfunction Cuda;
 };
 
-struct PollyGPUDeviceT {
-  CUdevice Cuda;
-};
-
 struct PollyGPUDevicePtrT {
   CUdeviceptr Cuda;
 };
@@ -219,8 +215,12 @@ static int initialDeviceAPIs() {
   return 1;
 }
 
-void polly_initDevice(PollyGPUContext **Context, PollyGPUDevice **Device) {
+PollyGPUContext *polly_initContext() {
+  DebugMode = getenv("POLLY_DEBUG") != 0;
+
   dump_function();
+  PollyGPUContext *Context;
+  CUdevice Device;
 
   int Major = 0, Minor = 0, DeviceID = 0;
   char DeviceName[256];
@@ -244,28 +244,22 @@ void polly_initDevice(PollyGPUContext **Context, PollyGPUDevice **Device) {
     exit(-1);
   }
 
-  /* We select the 1st device as default. */
-  *Device = malloc(sizeof(PollyGPUDevice));
-  if (*Device == 0) {
-    fprintf(stdout, "Allocate memory for Polly GPU device failed.\n");
-    exit(-1);
-  }
-  CuDeviceGetFcnPtr(&((*Device)->Cuda), 0);
+  CuDeviceGetFcnPtr(&Device, 0);
 
   /* Get compute capabilities and the device name. */
-  CuDeviceComputeCapabilityFcnPtr(&Major, &Minor, (*Device)->Cuda);
-  CuDeviceGetNameFcnPtr(DeviceName, 256, (*Device)->Cuda);
+  CuDeviceComputeCapabilityFcnPtr(&Major, &Minor, Device);
+  CuDeviceGetNameFcnPtr(DeviceName, 256, Device);
   debug_print("> Running on GPU device %d : %s.\n", DeviceID, DeviceName);
 
   /* Create context on the device. */
-  *Context = malloc(sizeof(PollyGPUContext));
-  if (*Context == 0) {
+  Context = (PollyGPUContext *)malloc(sizeof(PollyGPUContext));
+  if (Context == 0) {
     fprintf(stdout, "Allocate memory for Polly GPU context failed.\n");
     exit(-1);
   }
-  CuCtxCreateFcnPtr(&((*Context)->Cuda), 0, (*Device)->Cuda);
+  CuCtxCreateFcnPtr(&(Context->Cuda), 0, Device);
 
-  DebugMode = getenv("POLLY_DEBUG") != 0;
+  return Context;
 }
 
 void polly_getPTXModule(void *PTXBuffer, PollyGPUModule **Module) {
@@ -347,7 +341,6 @@ void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
 
 void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
                                  PollyGPUModule *Module,
-                                 PollyGPUContext *Context,
                                  PollyGPUFunction *Kernel) {
   dump_function();
 
@@ -365,14 +358,16 @@ void polly_cleanupGPGPUResources(void *HostData, PollyGPUDevicePtr *DevData,
     CuModuleUnloadFcnPtr(Module->Cuda);
     free(Module);
   }
+  if (Kernel) {
+    free(Kernel);
+  }
+}
+
+void polly_freeContext(PollyGPUContext *Context) {
 
   if (Context->Cuda) {
     CuCtxDestroyFcnPtr(Context->Cuda);
     free(Context);
-  }
-
-  if (Kernel) {
-    free(Kernel);
   }
 
   dlclose(HandleCuda);

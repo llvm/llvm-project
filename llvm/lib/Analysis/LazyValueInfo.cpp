@@ -610,7 +610,7 @@ static LVILatticeVal getFromRangeMetadata(Instruction *BBI) {
   case Instruction::Load:
   case Instruction::Call:
   case Instruction::Invoke:
-    if (MDNode *Ranges = BBI->getMetadata(LLVMContext::MD_range)) 
+    if (MDNode *Ranges = BBI->getMetadata(LLVMContext::MD_range))
       if (isa<IntegerType>(BBI->getType())) {
         return LVILatticeVal::getRange(getConstantRangeFromMetadata(*Ranges));
       }
@@ -684,7 +684,7 @@ bool LazyValueInfoCache::solveBlockValue(Value *Val, BasicBlock *BB) {
       return true;
     }
     BinaryOperator *BO = dyn_cast<BinaryOperator>(BBI);
-    if (BO && isa<ConstantInt>(BO->getOperand(1))) { 
+    if (BO && isa<ConstantInt>(BO->getOperand(1))) {
       if (!solveBlockValueBinaryOp(Res, BBI, BB))
         return false;
       insertResult(Val, BB, Res);
@@ -1320,7 +1320,7 @@ LVILatticeVal LazyValueInfoCache::getValueInBlock(Value *V, BasicBlock *BB,
 
   assert(BlockValueStack.empty() && BlockValueSet.empty());
   if (!hasBlockValue(V, BB)) {
-    pushBlockValue(std::make_pair(BB, V)); 
+    pushBlockValue(std::make_pair(BB, V));
     solve();
   }
   LVILatticeVal Result = getBlockValue(V, BB);
@@ -1673,7 +1673,7 @@ LazyValueInfo::getPredicateAt(unsigned Pred, Value *V, Constant *C,
         }
         if (Baseline != Unknown)
           return Baseline;
-      }    
+      }
 
     // For a comparison where the V is outside this block, it's possible
     // that we've branched on it before. Look to see if the value is known

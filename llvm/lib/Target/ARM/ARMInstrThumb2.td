@@ -2604,12 +2604,11 @@ class T2FourRegSMMLA<bits<3> op22_20, bits<4> op7_4, string opc,
   let Inst{7-4} = op7_4;
 }
 
-def t2SMMLA : T2FourRegSMMLA<0b101, 0b0000, "smmla",
+def t2SMMLA :   T2FourRegSMMLA<0b101, 0b0000, "smmla",
                 [(set rGPR:$Rd, (add (mulhs rGPR:$Rm, rGPR:$Rn), rGPR:$Ra))]>;
-def t2SMMLAR: T2FourRegSMMLA<0b101, 0b0001, "smmlar", []>;
-def t2SMMLS: T2FourRegSMMLA<0b110, 0b0000, "smmls",
-                [(set rGPR:$Rd, (sub rGPR:$Ra, (mulhs rGPR:$Rn, rGPR:$Rm)))]>;
-def t2SMMLSR:T2FourRegSMMLA<0b110, 0b0001, "smmlsr", []>;
+def t2SMMLAR:   T2FourRegSMMLA<0b101, 0b0001, "smmlar", []>;
+def t2SMMLS:    T2FourRegSMMLA<0b110, 0b0000, "smmls", []>;
+def t2SMMLSR:   T2FourRegSMMLA<0b110, 0b0001, "smmlsr", []>;
 
 class T2ThreeRegSMUL<bits<3> op22_20, bits<2> op5_4, string opc,
                      list<dag> pattern>
@@ -2639,36 +2638,32 @@ def t2SMULTT : T2ThreeRegSMUL<0b001, 0b11, "smultt",
 def t2SMULWB : T2ThreeRegSMUL<0b011, 0b00, "smulwb", []>;
 def t2SMULWT : T2ThreeRegSMUL<0b011, 0b01, "smulwt", []>;
 
-class T2FourRegSMLA<bits<2> op5_4, string opc, list<dag> pattern>
+class T2FourRegSMLA<bits<3> op22_20, bits<2> op5_4, string opc, list<dag> pattern>
   : T2FourReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm, rGPR:$Ra), IIC_iMUL16,
                opc, "\t$Rd, $Rn, $Rm, $Ra", pattern>,
     Requires<[IsThumb2, HasDSP, UseMulOps]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0110;
-    let Inst{22-20} = 0b001;
+    let Inst{22-20} = op22_20;
     let Inst{7-6} = 0b00;
     let Inst{5-4} = op5_4;
 }
 
-def t2SMLABB : T2FourRegSMLA<0b00, "smlabb",
+def t2SMLABB : T2FourRegSMLA<0b001, 0b00, "smlabb",
              [(set rGPR:$Rd, (add rGPR:$Ra,
                                (mul (sext_inreg rGPR:$Rn, i16),
                                      (sext_inreg rGPR:$Rm, i16))))]>;
-def t2SMLABT : T2FourRegSMLA<0b01, "smlabt",
+def t2SMLABT : T2FourRegSMLA<0b001, 0b01, "smlabt",
              [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sext_inreg rGPR:$Rn, i16),
                                                  (sra rGPR:$Rm, (i32 16)))))]>;
-def t2SMLATB : T2FourRegSMLA<0b10, "smlatb",
+def t2SMLATB : T2FourRegSMLA<0b001, 0b10, "smlatb",
              [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sra rGPR:$Rn, (i32 16)),
                                                 (sext_inreg rGPR:$Rm, i16))))]>;
-def t2SMLATT : T2FourRegSMLA<0b11, "smlatt",
+def t2SMLATT : T2FourRegSMLA<0b001, 0b11, "smlatt",
              [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sra rGPR:$Rn, (i32 16)),
                                                  (sra rGPR:$Rm, (i32 16)))))]>;
-def t2SMLAWB : T2FourRegSMLA<0b00, "smlawb", []> {
-  let Inst{22-20} = 0b011;
-}
-def t2SMLAWT : T2FourRegSMLA<0b01, "smlawt", []> {
-  let Inst{22-20} = 0b011;
-}
+def t2SMLAWB : T2FourRegSMLA<0b011, 0b00, "smlawb", []>;
+def t2SMLAWT : T2FourRegSMLA<0b011, 0b01, "smlawt", []>;
 
 class T2SMLAL<bits<3> op22_20, bits<4> op7_4, string opc, list<dag> pattern>
   : T2FourReg_mac<1, op22_20, op7_4,
