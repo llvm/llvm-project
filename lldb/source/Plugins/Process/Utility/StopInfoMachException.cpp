@@ -450,7 +450,8 @@ StopInfoMachException::CreateStopReasonWithMachException
                     if (exc_code == 1 && exc_sub_code == 0) // EXC_ARM_BREAKPOINT
                     {
                         // This is hit when we single instruction step aka MDSCR_EL1 SS bit 0 is set
-                        return StopInfo::CreateStopReasonToTrace(thread);
+                        is_actual_breakpoint = false;
+                        is_trace_if_actual_breakpoint_missing = true;
                     }
                     if (exc_code == 0x102) // EXC_ARM_DA_DEBUG
                     {
