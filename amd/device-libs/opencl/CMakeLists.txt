@@ -47,6 +47,7 @@ file(GLOB sources
   ${CMAKE_CURRENT_SOURCE_DIR}/src/image/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/integer/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/math/*.cl
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/media/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/misc/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/relational/*.cl
   ${CMAKE_CURRENT_SOURCE_DIR}/src/subgroup/*.cl
