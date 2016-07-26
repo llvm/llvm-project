@@ -44,8 +44,10 @@
 #include <clc/math/atan2pi.h>
 #include <clc/math/atanh.h>
 #include <clc/math/atanpi.h>
+#include <clc/math/cbrt.h>
 #include <clc/math/copysign.h>
 #include <clc/math/cos.h>
+#include <clc/math/cosh.h>
 #include <clc/math/cospi.h>
 #include <clc/math/ceil.h>
 #include <clc/math/erf.h>

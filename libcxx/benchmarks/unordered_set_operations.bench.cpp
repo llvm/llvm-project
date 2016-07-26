@@ -265,4 +265,42 @@ BENCHMARK_CAPTURE(BM_FindRehash,
     std::unordered_set<std::string>{},
     getRandomStringInputs)->Arg(TestNumInputs);
 
+///////////////////////////////////////////////////////////////////////////////
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_int,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_string,
+    std::unordered_set<std::string>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_int,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_string,
+    std::unordered_set<std::string>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_int_insert_arg,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<int>)->Arg(TestNumInputs);
+BENCHMARK_CAPTURE(BM_InsertDuplicate,
+    unordered_set_string_insert_arg,
+    std::unordered_set<std::string>{},
+    getRandomStringInputs)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_int_insert_arg,
+    std::unordered_set<int>{},
+    getRandomIntegerInputs<unsigned>)->Arg(TestNumInputs);
+
+BENCHMARK_CAPTURE(BM_EmplaceDuplicate,
+    unordered_set_string_arg,
+    std::unordered_set<std::string>{},
+    getRandomCStringInputs)->Arg(TestNumInputs);
+
 BENCHMARK_MAIN()

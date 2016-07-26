@@ -46,9 +46,7 @@ struct PhdrEntry {
 template <class ELFT>
 llvm::StringRef getOutputSectionName(InputSectionBase<ELFT> *S);
 
-template <class ELFT>
-void reportDiscarded(InputSectionBase<ELFT> *IS,
-                     const std::unique_ptr<elf::ObjectFile<ELFT>> &File);
+template <class ELFT> void reportDiscarded(InputSectionBase<ELFT> *IS);
 }
 }
 

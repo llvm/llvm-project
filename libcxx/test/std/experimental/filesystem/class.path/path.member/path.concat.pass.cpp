@@ -14,8 +14,9 @@
 // class path
 
 // path& operator+=(const path& x);
-// path& operator+=(const string_type& x); // Implemented as Source template
-// path& operator+=(const value_type* x);  // Implemented as Source template
+// path& operator+=(const string_type& x);
+// path& operator+=(string_view x);
+// path& operator+=(const value_type* x);
 // path& operator+=(value_type x);
 // template <class Source>
 //   path& operator+=(const Source& x);
@@ -29,6 +30,8 @@
 
 #include <experimental/filesystem>
 #include <type_traits>
+#include <string>
+#include <string_view>
 #include <cassert>
 
 #include "test_macros.h"
@@ -82,6 +85,7 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
   using namespace fs;
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
+  using StrView = std::basic_string_view<CharT>;
   using InputIter = input_iterator<Ptr>;
 
   const Ptr L = TC.lhs;
@@ -92,6 +96,16 @@ void doConcatSourceAllocTest(ConcatOperatorTestcase const& TC)
   {
     path LHS(L); PathReserve(LHS, ReserveSize);
     Str  RHS(R);
+    {
+      DisableAllocationGuard g;
+      LHS += RHS;
+    }
+    assert(LHS == E);
+  }
+  // basic_string_view
+  {
+    path LHS(L); PathReserve(LHS, ReserveSize);
+    StrView  RHS(R);
     {
       DisableAllocationGuard g;
       LHS += RHS;
@@ -152,6 +166,7 @@ void doConcatSourceTest(ConcatOperatorTestcase const& TC)
   using namespace fs;
   using Ptr = CharT const*;
   using Str = std::basic_string<CharT>;
+  using StrView = std::basic_string_view<CharT>;
   using InputIter = input_iterator<Ptr>;
   const Ptr L = TC.lhs;
   const Ptr R = TC.rhs;
@@ -167,6 +182,21 @@ void doConcatSourceTest(ConcatOperatorTestcase const& TC)
   {
     path LHS(L);
     Str RHS(R);
+    path& Ref = LHS.concat(RHS);
+    assert(LHS == E);
+    assert(&Ref == &LHS);
+  }
+  // basic_string_view
+  {
+    path LHS(L);
+    StrView RHS(R);
+    path& Ref = (LHS += RHS);
+    assert(LHS == E);
+    assert(&Ref == &LHS);
+  }
+  {
+    path LHS(L);
+    StrView RHS(R);
     path& Ref = LHS.concat(RHS);
     assert(LHS == E);
     assert(&Ref == &LHS);
@@ -246,6 +276,13 @@ int main()
       assert(LHS == (const char*)TC.expect);
       assert(&Ref == &LHS);
     }
+    {
+      path LHS((const char*)TC.lhs);
+      std::string_view RHS((const char*)TC.rhs);
+      path& Ref = (LHS += RHS);
+      assert(LHS == (const char*)TC.expect);
+      assert(&Ref == &LHS);
+    }
     doConcatSourceTest<char>    (TC);
     doConcatSourceTest<wchar_t> (TC);
     doConcatSourceTest<char16_t>(TC);
@@ -256,6 +293,18 @@ int main()
     {
       path LHS((const char*)TC.lhs);
       path RHS((const char*)TC.rhs);
+      const char* E = TC.expect;
+      PathReserve(LHS, StrLen(E) + 5);
+      {
+        DisableAllocationGuard g;
+        path& Ref = (LHS += RHS);
+        assert(&Ref == &LHS);
+      }
+      assert(LHS == E);
+    }
+    {
+      path LHS((const char*)TC.lhs);
+      std::string_view RHS((const char*)TC.rhs);
       const char* E = TC.expect;
       PathReserve(LHS, StrLen(E) + 5);
       {

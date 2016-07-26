@@ -23,6 +23,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
@@ -53,7 +54,7 @@ int main()
             test_hash<std::hash<int> >(8),
             test_compare<std::equal_to<int> >(9)
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");
@@ -91,7 +92,7 @@ int main()
             test_hash<std::hash<int> >(8),
             test_compare<std::equal_to<int> >(9)
            );
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");

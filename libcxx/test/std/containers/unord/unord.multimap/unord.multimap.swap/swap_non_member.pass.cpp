@@ -19,6 +19,7 @@
 #include <string>
 #include <cassert>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -37,7 +38,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() == 0);
+        LIBCPP_ASSERT(c1.bucket_count() == 0);
         assert(c1.size() == 0);
         assert(c1.hash_function() == Hash(2));
         assert(c1.key_eq() == Compare(2));
@@ -46,7 +47,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() == 0);
+        LIBCPP_ASSERT(c2.bucket_count() == 0);
         assert(c2.size() == 0);
         assert(c2.hash_function() == Hash(1));
         assert(c2.key_eq() == Compare(1));
@@ -94,7 +95,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() == 0);
+        LIBCPP_ASSERT(c2.bucket_count() == 0);
         assert(c2.size() == 0);
         assert(c2.hash_function() == Hash(1));
         assert(c2.key_eq() == Compare(1));
@@ -123,7 +124,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() == 0);
+        LIBCPP_ASSERT(c1.bucket_count() == 0);
         assert(c1.size() == 0);
         assert(c1.hash_function() == Hash(2));
         assert(c1.key_eq() == Compare(2));
@@ -222,7 +223,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() == 0);
+        LIBCPP_ASSERT(c1.bucket_count() == 0);
         assert(c1.size() == 0);
         assert(c1.hash_function() == Hash(2));
         assert(c1.key_eq() == Compare(2));
@@ -231,7 +232,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() == 0);
+        LIBCPP_ASSERT(c2.bucket_count() == 0);
         assert(c2.size() == 0);
         assert(c2.hash_function() == Hash(1));
         assert(c2.key_eq() == Compare(1));
@@ -279,7 +280,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() == 0);
+        LIBCPP_ASSERT(c2.bucket_count() == 0);
         assert(c2.size() == 0);
         assert(c2.hash_function() == Hash(1));
         assert(c2.key_eq() == Compare(1));
@@ -308,7 +309,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() == 0);
+        LIBCPP_ASSERT(c1.bucket_count() == 0);
         assert(c1.size() == 0);
         assert(c1.hash_function() == Hash(2));
         assert(c1.key_eq() == Compare(2));
@@ -407,7 +408,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() == 0);
+        LIBCPP_ASSERT(c1.bucket_count() == 0);
         assert(c1.size() == 0);
         assert(c1.hash_function() == Hash(2));
         assert(c1.key_eq() == Compare(2));
@@ -416,7 +417,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() == 0);
+        LIBCPP_ASSERT(c2.bucket_count() == 0);
         assert(c2.size() == 0);
         assert(c2.hash_function() == Hash(1));
         assert(c2.key_eq() == Compare(1));
@@ -464,7 +465,7 @@ int main()
         assert(std::distance(c1.cbegin(), c1.cend()) == c1.size());
         assert(c1.max_load_factor() == 2);
 
-        assert(c2.bucket_count() == 0);
+        LIBCPP_ASSERT(c2.bucket_count() == 0);
         assert(c2.size() == 0);
         assert(c2.hash_function() == Hash(1));
         assert(c2.key_eq() == Compare(1));
@@ -493,7 +494,7 @@ int main()
         c2.max_load_factor(2);
         swap(c1, c2);
 
-        assert(c1.bucket_count() == 0);
+        LIBCPP_ASSERT(c1.bucket_count() == 0);
         assert(c1.size() == 0);
         assert(c1.hash_function() == Hash(2));
         assert(c1.key_eq() == Compare(2));

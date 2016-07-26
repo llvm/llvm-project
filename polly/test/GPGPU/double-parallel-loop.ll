@@ -92,6 +92,16 @@
 ; IR-NEXT:    br i1 true, label %polly.start, label %bb2
 
 ; IR: polly.start:
+; IR-NEXT:    [[GPUContext:%.*]] = call i8* @polly_initContext()
+; IR-NEXT:    %p_dev_array_MemRef_A = call i8* @polly_allocateMemoryForDevice(i64 4194304)
+; IR-NEXT:    [[HostPtr:%.*]] = bitcast [1024 x float]* %A to i8*
+; IR-NEXT:    call void @polly_copyFromHostToDevice(i8* [[HostPtr]], i8* %p_dev_array_MemRef_A, i64 4194304)
+; IR-NEXT:    call i8* @polly_getKernel
+; IR-NEXT:    call void @polly_freeKernel
+; IR-NEXT:    [[HostPtr2:%.*]] = bitcast [1024 x float]* %A to i8*
+; IR-NEXT:    call void @polly_copyFromDeviceToHost(i8* %p_dev_array_MemRef_A, i8* [[HostPtr2]], i64 4194304)
+; IR-NEXT:    call void @polly_freeDeviceMemory(i8* %p_dev_array_MemRef_A)
+; IR-NEXT:    call void @polly_freeContext(i8* [[GPUContext]])
 ; IR-NEXT:    br label %polly.exiting
 
 ; IR: polly.exiting:

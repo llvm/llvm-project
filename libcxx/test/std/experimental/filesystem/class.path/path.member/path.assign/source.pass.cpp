@@ -23,6 +23,7 @@
 
 #include <experimental/filesystem>
 #include <type_traits>
+#include <string_view>
 #include <cassert>
 
 #include "test_macros.h"
@@ -59,6 +60,32 @@ void RunTestCase(MultiStringType const& MS) {
   }
   {
     const std::basic_string<CharT> S(TestPath);
+    path p; PathReserve(p, S.length() + 1);
+    {
+      DisableAllocationGuard g;
+      path& pref = p.assign(S);
+      assert(&pref == &p);
+    }
+    assert(p.native() == Expect);
+    assert(p.string<CharT>() == TestPath);
+    assert(p.string<CharT>() == S);
+  }
+  // basic_string<Char, Traits, Alloc>
+  {
+    const std::basic_string_view<CharT> S(TestPath);
+    path p; PathReserve(p, S.length() + 1);
+    {
+      // string provides a contigious iterator. No allocation needed.
+      DisableAllocationGuard g;
+      path& pref = (p = S);
+      assert(&pref == &p);
+    }
+    assert(p.native() == Expect);
+    assert(p.string<CharT>() == TestPath);
+    assert(p.string<CharT>() == S);
+  }
+  {
+    const std::basic_string_view<CharT> S(TestPath);
     path p; PathReserve(p, S.length() + 1);
     {
       DisableAllocationGuard g;

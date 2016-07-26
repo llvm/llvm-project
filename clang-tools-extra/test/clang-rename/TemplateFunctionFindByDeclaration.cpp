@@ -1,12 +1,9 @@
 // RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=241 -new-name=bar %t.cpp -i --
+// RUN: clang-rename -offset=154 -new-name=bar %t.cpp -i --
 // RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 
-// FIXME: clang-rename should be able to rename functions with templates.
-// XFAIL: *
-
 template <typename T>
-T foo(T value) {    // CHECK: T boo(T value) {
+T foo(T value) {    // CHECK: T bar(T value) {
   return value;
 }
 

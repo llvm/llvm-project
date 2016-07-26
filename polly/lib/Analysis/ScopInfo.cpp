@@ -4273,8 +4273,11 @@ bool ScopInfoWrapperPass::runOnFunction(Function &F) {
       continue;
 
     ScopBuilder SB(R, AC, AA, DL, DT, LI, SD, SE);
+    std::unique_ptr<Scop> S = SB.getScop();
+    if (!S)
+      continue;
     bool Inserted =
-        RegionToScopMap.insert(std::make_pair(R, SB.getScop())).second;
+        RegionToScopMap.insert(std::make_pair(R, std::move(S))).second;
     assert(Inserted && "Building Scop for the same region twice!");
     (void)Inserted;
   }

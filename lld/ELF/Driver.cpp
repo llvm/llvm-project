@@ -269,11 +269,14 @@ void LinkerDriver::main(ArrayRef<const char *> ArgsArr) {
   if (const char *Path = getReproduceOption(Args)) {
     // Note that --reproduce is a debug option so you can ignore it
     // if you are trying to understand the whole picture of the code.
-    Cpio.reset(CpioFile::create(Path));
-    if (Cpio) {
+    ErrorOr<CpioFile *> F = CpioFile::create(Path);
+    if (F) {
+      Cpio.reset(*F);
       Cpio->append("response.txt", createResponseFile(Args));
       Cpio->append("version.txt", getVersionString());
-    }
+    } else
+      error(F.getError(),
+            Twine("--reproduce: failed to open ") + Path + ".cpio");
   }
 
   readConfigs(Args);

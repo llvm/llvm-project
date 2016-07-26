@@ -16,12 +16,15 @@
 #include "llvm/ADT/MapVector.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <functional>
 
 namespace lld {
 namespace elf {
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
+
+typedef std::function<uint64_t(uint64_t)> Expr;
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
@@ -46,11 +49,11 @@ struct BaseCommand {
 };
 
 struct SymbolAssignment : BaseCommand {
-  SymbolAssignment(StringRef Name, std::vector<StringRef> &Expr)
-      : BaseCommand(AssignmentKind), Name(Name), Expr(std::move(Expr)) {}
+  SymbolAssignment(StringRef Name, Expr E)
+      : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
   static bool classof(const BaseCommand *C);
   StringRef Name;
-  std::vector<StringRef> Expr;
+  Expr Expression;
   bool Provide = false;
   // Hidden and Ignore can be true, only if Provide is true
   bool Hidden = false;
@@ -62,17 +65,18 @@ struct SymbolAssignment : BaseCommand {
 // read-only
 // or all of its input sections are read-write by using the keyword ONLY_IF_RO
 // and ONLY_IF_RW respectively.
-enum ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
+enum class ConstraintKind { NoConstraint, ReadOnly, ReadWrite };
 
 struct OutputSectionCommand : BaseCommand {
   OutputSectionCommand(StringRef Name)
       : BaseCommand(OutputSectionKind), Name(Name) {}
   static bool classof(const BaseCommand *C);
   StringRef Name;
+  Expr AddrExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
-  ConstraintKind Constraint = NoConstraint;
+  ConstraintKind Constraint = ConstraintKind::NoConstraint;
 };
 
 struct InputSectionDescription : BaseCommand {
@@ -113,26 +117,34 @@ template <class ELFT> class LinkerScript {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  typedef PhdrEntry<ELFT> Phdr;
-
   std::vector<OutputSectionBase<ELFT> *>
   createSections(OutputSectionFactory<ELFT> &Factory);
 
+  std::vector<PhdrEntry<ELFT>>
+  createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
+
   ArrayRef<uint8_t> getFiller(StringRef Name);
-  bool isDiscarded(InputSectionBase<ELFT> *S);
   bool shouldKeep(InputSectionBase<ELFT> *S);
   void assignAddresses(ArrayRef<OutputSectionBase<ELFT> *> S);
   int compareSections(StringRef A, StringRef B);
   void addScriptedSymbols();
-  std::vector<Phdr> createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
   bool hasPhdrsCommands();
 
 private:
+  std::vector<std::pair<StringRef, ArrayRef<StringRef>>> getSectionMap();
+
+  std::vector<InputSectionBase<ELFT> *>
+  getInputSections(ArrayRef<StringRef> Patterns);
+
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
 
+  std::vector<OutputSectionBase<ELFT> *>
+  filter(std::vector<OutputSectionBase<ELFT> *> &Sections);
+
   int getSectionIndex(StringRef Name);
-  std::vector<size_t> getPhdrIndicesForSection(StringRef Name);
+  std::vector<size_t> getPhdrIndices(StringRef SectionName);
+  size_t getPhdrIndex(StringRef PhdrName);
   void dispatchAssignment(SymbolAssignment *Cmd);
 
   uintX_t Dot;

@@ -7,6 +7,18 @@
 
 namespace ContainerBenchmarks {
 
+
+template <class Container, class GenInputs>
+void BM_ConstructIterIter(benchmark::State& st, Container, GenInputs gen) {
+    auto in = gen(st.range_x());
+    const auto end = in.end();
+    benchmark::DoNotOptimize(&in);
+    while (st.KeepRunning()) {
+        Container c(in.begin(), in.end());
+        benchmark::DoNotOptimize(c.data());
+    }
+}
+
 template <class Container, class GenInputs>
 void BM_InsertValue(benchmark::State& st, Container c, GenInputs gen) {
     auto in = gen(st.range_x());
@@ -29,6 +41,38 @@ void BM_InsertValueRehash(benchmark::State& st, Container c, GenInputs gen) {
         c.rehash(16);
         for (auto it = in.begin(); it != end; ++it) {
             benchmark::DoNotOptimize(&(*c.insert(*it).first));
+        }
+        benchmark::ClobberMemory();
+    }
+}
+
+
+template <class Container, class GenInputs>
+void BM_InsertDuplicate(benchmark::State& st, Container c, GenInputs gen) {
+    auto in = gen(st.range_x());
+    const auto end = in.end();
+    c.insert(in.begin(), in.end());
+    benchmark::DoNotOptimize(&c);
+    benchmark::DoNotOptimize(&in);
+    while (st.KeepRunning()) {
+        for (auto it = in.begin(); it != end; ++it) {
+            benchmark::DoNotOptimize(&(*c.insert(*it).first));
+        }
+        benchmark::ClobberMemory();
+    }
+}
+
+
+template <class Container, class GenInputs>
+void BM_EmplaceDuplicate(benchmark::State& st, Container c, GenInputs gen) {
+    auto in = gen(st.range_x());
+    const auto end = in.end();
+    c.insert(in.begin(), in.end());
+    benchmark::DoNotOptimize(&c);
+    benchmark::DoNotOptimize(&in);
+    while (st.KeepRunning()) {
+        for (auto it = in.begin(); it != end; ++it) {
+            benchmark::DoNotOptimize(&(*c.emplace(*it).first));
         }
         benchmark::ClobberMemory();
     }
@@ -61,7 +105,6 @@ static void BM_FindRehash(benchmark::State& st, Container c, GenInputs gen) {
         }
         benchmark::ClobberMemory();
     }
-
 }
 
 } // end namespace ContainerBenchmarks

@@ -16,6 +16,7 @@
 #include <functional>
 #include <cassert>
 
+#include "test_macros.h"
 #include "count_new.hpp"
 
 class A
@@ -48,6 +49,17 @@ public:
 int A::count = 0;
 
 int g(int) {return 0;}
+
+#if TEST_STD_VER >= 11
+struct RValueCallable {
+    template <class ...Args>
+    void operator()(Args&&...) && {}
+};
+struct LValueCallable {
+    template <class ...Args>
+    void operator()(Args&&...) & {}
+};
+#endif
 
 int main()
 {
@@ -91,4 +103,13 @@ int main()
         std::function <void()> f(static_cast<void (*)()>(0));
         assert(!f);
     }
+#if TEST_STD_VER >= 11
+    {
+        using Fn = std::function<void(int, int, int)>;
+        static_assert(std::is_constructible<Fn, LValueCallable&>::value, "");
+        static_assert(std::is_constructible<Fn, LValueCallable>::value, "");
+        static_assert(!std::is_constructible<Fn, RValueCallable&>::value, "");
+        static_assert(!std::is_constructible<Fn, RValueCallable>::value, "");
+    }
+#endif
 }

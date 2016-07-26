@@ -28,6 +28,7 @@ endif ()
 
 add_polly_library(Polly
   Analysis/DependenceInfo.cpp
+  Analysis/PolyhedralInfo.cpp
   Analysis/ScopDetection.cpp
   Analysis/ScopDetectionDiagnostic.cpp
   Analysis/ScopInfo.cpp

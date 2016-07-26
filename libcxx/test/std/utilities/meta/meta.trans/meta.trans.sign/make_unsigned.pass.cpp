@@ -13,9 +13,15 @@
 
 #include <type_traits>
 
+#include "test_macros.h"
+
 enum Enum {zero, one_};
 
+#if TEST_STD_VER >= 11
+enum BigEnum : unsigned long long // MSVC's ABI doesn't follow the Standard
+#else
 enum BigEnum
+#endif
 {
     bigzero,
     big = 0xFFFFFFFFFFFFFFFFULL

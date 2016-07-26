@@ -27,7 +27,7 @@ int main()
     {
         typedef std::unordered_map<int, std::string> C;
         const C c;
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
     }
     {
         typedef std::unordered_map<int, std::string> C;
@@ -44,14 +44,14 @@ int main()
             P(80, "eighty"),
         };
         const C c(std::begin(a), std::end(a));
-        assert(c.bucket_count() >= 11);
+        assert(c.bucket_count() >= 8);
     }
 #if TEST_STD_VER >= 11
     {
         typedef std::unordered_map<int, std::string, std::hash<int>, std::equal_to<int>,
                             min_allocator<std::pair<const int, std::string>>> C;
         const C c;
-        assert(c.bucket_count() == 0);
+        LIBCPP_ASSERT(c.bucket_count() == 0);
     }
     {
         typedef std::unordered_map<int, std::string, std::hash<int>, std::equal_to<int>,
@@ -69,7 +69,7 @@ int main()
             P(80, "eighty"),
         };
         const C c(std::begin(a), std::end(a));
-        assert(c.bucket_count() >= 11);
+        assert(c.bucket_count() >= 8);
     }
 #endif
 }

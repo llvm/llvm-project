@@ -22,6 +22,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "test_iterators.h"
 #include "../../../NotConstructible.h"
 #include "../../../test_compare.h"
@@ -50,7 +51,7 @@ int main()
         C c(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             10
            );
-        assert(c.bucket_count() == 11);
+        LIBCPP_ASSERT(c.bucket_count() == 11);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");
@@ -86,7 +87,7 @@ int main()
         C c(input_iterator<P*>(a), input_iterator<P*>(a + sizeof(a)/sizeof(a[0])),
             10
            );
-        assert(c.bucket_count() == 11);
+        LIBCPP_ASSERT(c.bucket_count() == 11);
         assert(c.size() == 4);
         assert(c.at(1) == "one");
         assert(c.at(2) == "two");
