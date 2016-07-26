@@ -62,6 +62,26 @@
 #define DECL_PURE_OCKL_BINARY_U64(N) _DECL_X_OCKL_BINARY_U64(pure, N)
 #define DECL_CONST_OCKL_BINARY_U64(N) _DECL_X_OCKL_BINARY_U64(const, N)
 
+#define DECL_OCKL_TERNARY_I32(N) extern int OCKL_MANGLE_I32(N)(int,int,int);
+#define _DECL_X_OCKL_TERNARY_I32(A,N) extern __attribute__((A)) int OCKL_MANGLE_I32(N)(int,int,int);
+#define DECL_PURE_OCKL_TERNARY_I32(N) _DECL_X_OCKL_TERNARY_I32(pure, N)
+#define DECL_CONST_OCKL_TERNARY_I32(N) _DECL_X_OCKL_TERNARY_I32(const, N)
+
+#define DECL_OCKL_TERNARY_I64(N) extern long OCKL_MANGLE_I64(N)(long,long,long);
+#define _DECL_X_OCKL_TERNARY_I64(A,N) extern __attribute__((A)) long OCKL_MANGLE_I64(N)(long,long,long);
+#define DECL_PURE_OCKL_TERNARY_I64(N) _DECL_X_OCKL_TERNARY_I64(pure, N)
+#define DECL_CONST_OCKL_TERNARY_I64(N) _DECL_X_OCKL_TERNARY_I64(const, N)
+
+#define DECL_OCKL_TERNARY_U32(N) extern uint OCKL_MANGLE_U32(N)(uint,uint,uint);
+#define _DECL_X_OCKL_TERNARY_U32(A,N) extern __attribute__((A)) uint OCKL_MANGLE_U32(N)(uint,uint,uint);
+#define DECL_PURE_OCKL_TERNARY_U32(N) _DECL_X_OCKL_TERNARY_U32(pure, N)
+#define DECL_CONST_OCKL_TERNARY_U32(N) _DECL_X_OCKL_TERNARY_U32(const, N)
+
+#define DECL_OCKL_TERNARY_U64(N) extern ulong OCKL_MANGLE_U64(N)(ulong,ulong,ulong);
+#define _DECL_X_OCKL_TERNARY_U64(A,N) extern __attribute__((A)) ulong OCKL_MANGLE_U64(N)(ulong,ulong,ulong);
+#define DECL_PURE_OCKL_TERNARY_U64(N) _DECL_X_OCKL_TERNARY_U64(pure, N)
+#define DECL_CONST_OCKL_TERNARY_U64(N) _DECL_X_OCKL_TERNARY_U64(const, N)
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
 DECL_CONST_OCKL_UNARY_U32(clz)
@@ -87,6 +107,8 @@ DECL_CONST_OCKL_BINARY_I32(mul24)
 DECL_CONST_OCKL_BINARY_U32(mul24)
 
 DECL_OCKL_NULLARY_U32(activelane)
+
+DECL_CONST_OCKL_TERNARY_U32(lerp)
 
 extern half OCKL_MANGLE_T(wfred_add,f16)(half x);
 extern float OCKL_MANGLE_T(wfred_add,f32)(float x);

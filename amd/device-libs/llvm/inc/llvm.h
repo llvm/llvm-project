@@ -175,6 +175,7 @@ extern ulong __llvm_amdgcn_read_exec(void);
 extern uint __llvm_amdgcn_read_exec_lo(void);
 extern uint __llvm_amdgcn_read_exec_hi(void);
 
+extern __attribute__((const)) uint __llvm_amdgcn_lerp(uint, uint, uint) __asm("llvm.amdgcn.lerp");
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H
