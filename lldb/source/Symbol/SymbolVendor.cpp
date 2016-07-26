@@ -218,7 +218,7 @@ SymbolVendor::ParseCompileUnitIsOptimized(const SymbolContext &sc)
     ModuleSP module_sp(GetModule());
     if (module_sp)
     {
-        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+        lldb_private::Mutex::Locker locker(module_sp->GetMutex());
         if (m_sym_file_ap.get())
             return m_sym_file_ap->ParseCompileUnitIsOptimized(sc);
     }
