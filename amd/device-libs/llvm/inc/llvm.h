@@ -161,7 +161,7 @@ extern uint __llvm_amdgcn_ds_swizzle(uint, uint) __asm("llvm.amdgcn.ds.swizzle")
 extern uint __llvm_amdgcn_mov_dpp_i32(uint, uint, uint, uint, bool) __asm("llvm.amdgcn.mov.dpp.i32");
 
 // Operand bits: [0..3]=VM_CNT, [4..6]=EXP_CNT (Export), [8..11]=LGKM_CNT (LDS, GDS, Konstant, Message)
-extern void __llvm_amdgcn_s_waitcount(int) __asm("llvm.amdgcn.s.waitcount");
+extern void __llvm_amdgcn_s_waitcnt(int) __asm("llvm.amdgcn.s.waitcnt");
 
 extern void __llvm_amdgcn_s_dcache_inv_vol(void) __asm("llvm.amdgcn.s.dcache.inv.vol");
 extern void __llvm_amdgcn_s_dcache_wb(void) __asm("llvm.amdgcn.s.dcache.wb");
