@@ -351,6 +351,9 @@ struct EmptyCoverageMappingBuilder : public CoverageMappingBuilder {
     gatherFileIDs(FileIDMapping);
     emitSourceRegions();
 
+    if (MappingRegions.empty())
+      return;
+
     CoverageMappingWriter Writer(FileIDMapping, None, MappingRegions);
     Writer.write(OS);
   }
@@ -604,6 +607,9 @@ struct CounterCoverageMappingBuilder
     emitExpansionRegions();
     gatherSkippedRegions();
 
+    if (MappingRegions.empty())
+      return;
+
     CoverageMappingWriter Writer(VirtualFileMapping, Builder.getExpressions(),
                                  MappingRegions);
     Writer.write(OS);
@@ -620,6 +626,11 @@ struct CounterCoverageMappingBuilder
 
   void VisitDecl(const Decl *D) {
     Stmt *Body = D->getBody();
+
+    // Do not propagate region counts into system headers.
+    if (Body && SM.isInSystemHeader(SM.getSpellingLoc(getStart(Body))))
+      return;
+
     propagateCounts(getRegionCounter(Body), Body);
   }
 
