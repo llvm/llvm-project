@@ -655,6 +655,7 @@ lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider (ValueOb
                 stream.Printf("CGFloat(%f)", payload);
                 return true;
             }
+            break;
         }
         case 6: // Bool
         {
