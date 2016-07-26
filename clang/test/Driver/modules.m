@@ -33,6 +33,12 @@
 // RUN: %clang -fmodules-validate-system-headers -### %s 2>&1 | FileCheck -check-prefix=MODULES_VALIDATE_SYSTEM_HEADERS %s
 // MODULES_VALIDATE_SYSTEM_HEADERS: -fmodules-validate-system-headers
 
+// RUN: %clang -### %s 2>&1 | FileCheck -check-prefix=MODULES_DISABLE_DIAGNOSTIC_VALIDATION_DEFAULT %s
+// MODULES_DISABLE_DIAGNOSTIC_VALIDATION_DEFAULT-NOT: -fmodules-disable-diagnostic-validation
+
+// RUN: %clang -fmodules-disable-diagnostic-validation -### %s 2>&1 | FileCheck -check-prefix=MODULES_DISABLE_DIAGNOSTIC_VALIDATION %s
+// MODULES_DISABLE_DIAGNOSTIC_VALIDATION: -fmodules-disable-diagnostic-validation
+
 // RUN: %clang -fmodules -fmodule-map-file=foo.map -fmodule-map-file=bar.map -### %s 2>&1 | FileCheck -check-prefix=CHECK-MODULE-MAP-FILES %s
 // CHECK-MODULE-MAP-FILES: "-fmodules"
 // CHECK-MODULE-MAP-FILES: "-fmodule-map-file=foo.map"
