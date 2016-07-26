@@ -267,16 +267,6 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints (Process *process)
         {
             return addr;
         }
-        addr = process->ReadUnsignedIntegerFromMemory (0xfffffff000002010ULL, 8, LLDB_INVALID_ADDRESS, read_err);
-        if (CheckForKernelImageAtAddress (addr, process).IsValid())
-        {
-            return addr;
-        }
-        addr = process->ReadUnsignedIntegerFromMemory (0xfffffff000004010ULL, 8, LLDB_INVALID_ADDRESS, read_err);
-        if (CheckForKernelImageAtAddress (addr, process).IsValid())
-        {
-            return addr;
-        }
     }
 
     for (size_t i = 0; kernel_addresses_32[i] != LLDB_INVALID_ADDRESS; i++)
