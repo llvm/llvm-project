@@ -610,15 +610,11 @@ void DumpModuleInfoAction::ExecuteAction() {
   llvm::raw_ostream &Out = OutFile.get()? *OutFile.get() : llvm::outs();
 
   Out << "Information for module file '" << getCurrentFile() << "':\n";
-  Preprocessor &PP = getCompilerInstance().getPreprocessor();
   DumpModuleInfoListener Listener(Out);
-  HeaderSearchOptions &HSOpts =
-      PP.getHeaderSearchInfo().getHeaderSearchOpts();
   ASTReader::readASTFileControlBlock(
       getCurrentFile(), getCompilerInstance().getFileManager(),
       getCompilerInstance().getPCHContainerReader(),
-      /*FindModuleFileExtensions=*/true, Listener,
-      HSOpts.ModulesValidateDiagnosticOptions);
+      /*FindModuleFileExtensions=*/true, Listener);
 }
 
 //===----------------------------------------------------------------------===//
