@@ -42,7 +42,7 @@
 
 cmake_minimum_required(VERSION 2.6)
 
-project(ROCm-OpenCL-Lib)
+project(ROCm-Device-Libs)
 
 if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
   set(CMAKE_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/dist CACHE INTERNAL "Prefix prepended to install directories")
@@ -82,13 +82,15 @@ add_subdirectory(test/opencl)
 add_subdirectory(test/opencl_conformance)
 
 ## CPack standard variables
-set ( CPACK_PACKAGE_NAME "ocml-bc" )
+set ( CPACK_PACKAGE_NAME "rocm-device-libs" )
 set ( CPACK_PACKAGE_VERSION_MAJOR "0" )
 set ( CPACK_PACKAGE_VERSION_MINOR "0" )
 set ( CPACK_PACKAGE_VERSION_PATCH "1" )
 set ( CPACK_PACKAGE_CONTACT "" )
-set ( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Radeon Open Compute Runtime - OCML LLVM bitcode libraries" )
-set ( CPACK_PACKAGE_DESCRIPTION "This package includes OCML bitcode libraries." )
+set ( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Radeon Open Compute - device libraries" )
+set ( CPACK_PACKAGE_DESCRIPTION "This package includes LLVM bitcode libraries." )
+set ( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-Device-Libs" )
+
 
 ## Debian package values
 set ( CPACK_GENERATOR "DEB" )
