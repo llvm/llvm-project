@@ -593,17 +593,19 @@ lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider (ValueOb
         return false;
     
     uint32_t ptr_size = process_sp->GetAddressByteSize();
+    const uint32_t size_of_tag = 4;
+    const uint32_t size_of_payload = 8;
     
     lldb::addr_t addr_of_tag = ptr_value + ptr_size;
-    lldb::addr_t addr_of_payload = addr_of_tag + 4;
+    lldb::addr_t addr_of_payload = addr_of_tag + size_of_tag;
     
     Error read_error;
-    uint64_t tag = process_sp->ReadUnsignedIntegerFromMemory(addr_of_tag, 4, 0, read_error);
+    uint64_t tag = process_sp->ReadUnsignedIntegerFromMemory(addr_of_tag, size_of_tag, 0, read_error);
     if (read_error.Fail() || tag == 0 || tag > 6)
         return false;
     
-    DataBufferSP buffer_sp(new DataBufferHeap(8,0));
-    process_sp->ReadMemoryFromInferior(addr_of_payload, buffer_sp->GetBytes(), 8, read_error);
+    DataBufferSP buffer_sp(new DataBufferHeap(size_of_payload,0));
+    process_sp->ReadMemoryFromInferior(addr_of_payload, buffer_sp->GetBytes(), size_of_payload, read_error);
     if (read_error.Fail())
         return false;
     
@@ -612,28 +614,28 @@ lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider (ValueOb
         case 1: // Int
         {
             uint64_t payload = 0;
-            memcpy(&payload, buffer_sp->GetBytes(), 8);
+            memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
             stream.Printf("Int(%" PRId64 ")", payload);
             return true;
         }
         case 2: // UInt
         {
             uint64_t payload = 0;
-            memcpy(&payload, buffer_sp->GetBytes(), 8);
+            memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
             stream.Printf("UInt(%" PRIu64 ")", payload);
             return true;
         }
         case 3: // Float
         {
             float payload = 0;
-            memcpy(&payload, buffer_sp->GetBytes(), 8);
+            memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
             stream.Printf("Float(%f)", payload);
             return true;
         }
         case 4: // Double
         {
             double payload = 0;
-            memcpy(&payload, buffer_sp->GetBytes(), 8);
+            memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
             stream.Printf("Double(%f)", payload);
             return true;
         }
@@ -642,14 +644,14 @@ lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider (ValueOb
             if (ptr_size == 4)
             {
                 float payload = 0;
-                memcpy(&payload, buffer_sp->GetBytes(), 8);
+                memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
                 stream.Printf("CGFloat(%f)", payload);
                 return true;
             }
             else if (ptr_size == 8)
             {
                 double payload = 0;
-                memcpy(&payload, buffer_sp->GetBytes(), 8);
+                memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
                 stream.Printf("CGFloat(%f)", payload);
                 return true;
             }
@@ -657,8 +659,8 @@ lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider (ValueOb
         case 6: // Bool
         {
             bool payload = 0;
-            memcpy(&payload, buffer_sp->GetBytes(), 8);
-            stream.Printf("%s", payload ? "true" : "false");
+            memcpy(&payload, buffer_sp->GetBytes(), sizeof(payload));
+            stream.PutCString(payload ? "true" : "false");
             return true;
         }
         default:
