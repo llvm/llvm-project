@@ -23,11 +23,7 @@ uint64x2_t test_vceqq_p64(poly64x2_t a, poly64x2_t b) {
 }
 
 // CHECK-LABEL: define <1 x i64> @test_vtst_p64(<1 x i64> %a, <1 x i64> %b) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
-// CHECK:   [[TMP2:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[TMP3:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[TMP4:%.*]] = and <1 x i64> [[TMP2]], [[TMP3]]
+// CHECK:   [[TMP4:%.*]] = and <1 x i64> %a, %b
 // CHECK:   [[TMP5:%.*]] = icmp ne <1 x i64> [[TMP4]], zeroinitializer
 // CHECK:   [[VTST_I:%.*]] = sext <1 x i1> [[TMP5]] to <1 x i64>
 // CHECK:   ret <1 x i64> [[VTST_I]]
@@ -36,11 +32,7 @@ uint64x1_t test_vtst_p64(poly64x1_t a, poly64x1_t b) {
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vtstq_p64(<2 x i64> %a, <2 x i64> %b) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
-// CHECK:   [[TMP2:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[TMP3:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[TMP4:%.*]] = and <2 x i64> [[TMP2]], [[TMP3]]
+// CHECK:   [[TMP4:%.*]] = and <2 x i64> %a, %b
 // CHECK:   [[TMP5:%.*]] = icmp ne <2 x i64> [[TMP4]], zeroinitializer
 // CHECK:   [[VTST_I:%.*]] = sext <2 x i1> [[TMP5]] to <2 x i64>
 // CHECK:   ret <2 x i64> [[VTST_I]]
@@ -49,15 +41,9 @@ uint64x2_t test_vtstq_p64(poly64x2_t a, poly64x2_t b) {
 }
 
 // CHECK-LABEL: define <1 x i64> @test_vbsl_p64(<1 x i64> %a, <1 x i64> %b, <1 x i64> %c) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
-// CHECK:   [[TMP2:%.*]] = bitcast <1 x i64> %c to <8 x i8>
-// CHECK:   [[VBSL_I:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x i64>
-// CHECK:   [[VBSL1_I:%.*]] = bitcast <8 x i8> [[TMP1]] to <1 x i64>
-// CHECK:   [[VBSL2_I:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x i64>
-// CHECK:   [[VBSL3_I:%.*]] = and <1 x i64> [[VBSL_I]], [[VBSL1_I]]
-// CHECK:   [[TMP3:%.*]] = xor <1 x i64> [[VBSL_I]], <i64 -1>
-// CHECK:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], [[VBSL2_I]]
+// CHECK:   [[VBSL3_I:%.*]] = and <1 x i64> %a, %b
+// CHECK:   [[TMP3:%.*]] = xor <1 x i64> %a, <i64 -1>
+// CHECK:   [[VBSL4_I:%.*]] = and <1 x i64> [[TMP3]], %c
 // CHECK:   [[VBSL5_I:%.*]] = or <1 x i64> [[VBSL3_I]], [[VBSL4_I]]
 // CHECK:   ret <1 x i64> [[VBSL5_I]]
 poly64x1_t test_vbsl_p64(poly64x1_t a, poly64x1_t b, poly64x1_t c) {
@@ -65,15 +51,9 @@ poly64x1_t test_vbsl_p64(poly64x1_t a, poly64x1_t b, poly64x1_t c) {
 }
 
 // CHECK-LABEL: define <2 x i64> @test_vbslq_p64(<2 x i64> %a, <2 x i64> %b, <2 x i64> %c) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <2 x i64> %a to <16 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <2 x i64> %b to <16 x i8>
-// CHECK:   [[TMP2:%.*]] = bitcast <2 x i64> %c to <16 x i8>
-// CHECK:   [[VBSL_I:%.*]] = bitcast <16 x i8> [[TMP0]] to <2 x i64>
-// CHECK:   [[VBSL1_I:%.*]] = bitcast <16 x i8> [[TMP1]] to <2 x i64>
-// CHECK:   [[VBSL2_I:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
-// CHECK:   [[VBSL3_I:%.*]] = and <2 x i64> [[VBSL_I]], [[VBSL1_I]]
-// CHECK:   [[TMP3:%.*]] = xor <2 x i64> [[VBSL_I]], <i64 -1, i64 -1>
-// CHECK:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], [[VBSL2_I]]
+// CHECK:   [[VBSL3_I:%.*]] = and <2 x i64> %a, %b
+// CHECK:   [[TMP3:%.*]] = xor <2 x i64> %a, <i64 -1, i64 -1>
+// CHECK:   [[VBSL4_I:%.*]] = and <2 x i64> [[TMP3]], %c
 // CHECK:   [[VBSL5_I:%.*]] = or <2 x i64> [[VBSL3_I]], [[VBSL4_I]]
 // CHECK:   ret <2 x i64> [[VBSL5_I]]
 poly64x2_t test_vbslq_p64(poly64x2_t a, poly64x2_t b, poly64x2_t c) {

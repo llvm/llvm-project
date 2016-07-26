@@ -13,6 +13,7 @@
 #include "Config.h"
 #include "SymbolTable.h"
 #include "lld/Core/LLVM.h"
+#include "lld/Core/Reproduce.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/COFF.h"
@@ -68,6 +69,8 @@ public:
 
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(StringRef S);
+
+  std::unique_ptr<CpioFile> Cpio; // for /linkrepro
 
 private:
   llvm::BumpPtrAllocator AllocAux;
