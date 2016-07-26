@@ -5,16 +5,28 @@
 # RUN:   %p/Inputs/libbogus1.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus1 %s 
 
-# bogus1: libbogus1.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '10%')
+# bogus1: libbogus1.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '10%' for archive member header at offset 8)
 
 # RUN: not llvm-objdump -macho -archive-headers \
 # RUN:   %p/Inputs/libbogus2.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus2 %s 
 
-# bogus2: libbogus2.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '1%')
+# bogus2: libbogus2.a': truncated or malformed archive (characters in size field in archive header are not all decimal numbers: '1%' for archive member header at offset 170)
 
 # RUN: not llvm-objdump -macho -archive-headers \
 # RUN:   %p/Inputs/libbogus3.a \
 # RUN:   2>&1 | FileCheck -check-prefix=bogus3 %s 
 
-# bogus3: libbogus3.a': truncated or malformed archive (offset to next archive member past the end of the archive)
+# bogus3: libbogus3.a': truncated or malformed archive (offset to next archive member past the end of the archive after member foo.c)
+
+# RUN: not llvm-objdump -macho -archive-headers \
+# RUN:   %p/Inputs/libbogus4.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus4 %s 
+
+# bogus4: libbogus4.a': truncated or malformed archive (remaining size of archive too small for next archive member header at offset 170)
+
+# RUN: not llvm-objdump -macho -archive-headers \
+# RUN:   %p/Inputs/libbogus5.a \
+# RUN:   2>&1 | FileCheck -check-prefix=bogus5 %s 
+
+# bogus5: libbogus5.a': truncated or malformed archive (terminator characters in archive member "@\n" not the correct "`\n" values for the archive member header at offset 8)

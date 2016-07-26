@@ -44,14 +44,17 @@ SDValue HexagonSelectionDAGInfo::EmitTargetCodeForMemcpy(
 
   const char *SpecialMemcpyName =
       "__hexagon_memcpy_likely_aligned_min32bytes_mult8bytes";
+  const MachineFunction &MF = DAG.getMachineFunction();
+  bool LongCalls = MF.getSubtarget<HexagonSubtarget>().useLongCalls();
+  unsigned Flags = LongCalls ? HexagonII::HMOTF_ConstExtended : 0;
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(Chain)
       .setCallee(TLI.getLibcallCallingConv(RTLIB::MEMCPY),
                  Type::getVoidTy(*DAG.getContext()),
-                 DAG.getTargetExternalSymbol(
-                     SpecialMemcpyName, TLI.getPointerTy(DAG.getDataLayout())),
+                 DAG.getTargetExternalSymbol(SpecialMemcpyName,
+                      TLI.getPointerTy(DAG.getDataLayout()), Flags),
                  std::move(Args))
       .setDiscardResult();
 

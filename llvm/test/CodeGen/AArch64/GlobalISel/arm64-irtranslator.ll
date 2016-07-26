@@ -6,7 +6,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-apple-ios"
 
 ; Tests for add.
-; CHECK: name: addi64
+; CHECK-LABEL: name: addi64
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
 ; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_ADD { s64 } [[ARG1]], [[ARG2]]
@@ -18,7 +18,7 @@ define i64 @addi64(i64 %arg1, i64 %arg2) {
 }
 
 ; Tests for alloca
-; CHECK: name: allocai64
+; CHECK-LABEL: name: allocai64
 ; CHECK: stack:
 ; CHECK-NEXT:   - { id: 0, name: ptr1, offset: 0, size: 8, alignment: 8 }
 ; CHECK-NEXT:   - { id: 1, name: ptr2, offset: 0, size: 8, alignment: 1 }
@@ -34,7 +34,7 @@ define void @allocai64() {
 }
 
 ; Tests for br.
-; CHECK: name: uncondbr
+; CHECK-LABEL: name: uncondbr
 ; CHECK: body:
 ;
 ; Entry basic block.
@@ -56,7 +56,7 @@ end:
 }
 
 ; Tests for or.
-; CHECK: name: ori64
+; CHECK-LABEL: name: ori64
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
 ; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_OR { s64 } [[ARG1]], [[ARG2]]
@@ -67,7 +67,7 @@ define i64 @ori64(i64 %arg1, i64 %arg2) {
   ret i64 %res
 }
 
-; CHECK: name: ori32
+; CHECK-LABEL: name: ori32
 ; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
 ; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_OR { s32 } [[ARG1]], [[ARG2]]
@@ -79,7 +79,7 @@ define i32 @ori32(i32 %arg1, i32 %arg2) {
 }
 
 ; Tests for and.
-; CHECK: name: andi64
+; CHECK-LABEL: name: andi64
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
 ; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_AND { s64 } [[ARG1]], [[ARG2]]
@@ -90,7 +90,7 @@ define i64 @andi64(i64 %arg1, i64 %arg2) {
   ret i64 %res
 }
 
-; CHECK: name: andi32
+; CHECK-LABEL: name: andi32
 ; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
 ; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_AND { s32 } [[ARG1]], [[ARG2]]
@@ -102,7 +102,7 @@ define i32 @andi32(i32 %arg1, i32 %arg2) {
 }
 
 ; Tests for sub.
-; CHECK: name: subi64
+; CHECK-LABEL: name: subi64
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
 ; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_SUB { s64 } [[ARG1]], [[ARG2]]
@@ -113,7 +113,7 @@ define i64 @subi64(i64 %arg1, i64 %arg2) {
   ret i64 %res
 }
 
-; CHECK: name: subi32
+; CHECK-LABEL: name: subi32
 ; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
 ; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
 ; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_SUB { s32 } [[ARG1]], [[ARG2]]
@@ -122,4 +122,46 @@ define i64 @subi64(i64 %arg1, i64 %arg2) {
 define i32 @subi32(i32 %arg1, i32 %arg2) {
   %res = sub i32 %arg1, %arg2
   ret i32 %res
+}
+
+; CHECK-LABEL: name: ptrtoint
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK: [[RES:%[0-9]+]](64) = G_PTRTOINT { s64, p0 } [[ARG1]]
+; CHECK: %x0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit %x0
+define i64 @ptrtoint(i64* %a) {
+  %val = ptrtoint i64* %a to i64
+  ret i64 %val
+}
+
+; CHECK-LABEL: name: inttoptr
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK: [[RES:%[0-9]+]](64) = G_INTTOPTR { p0, s64 } [[ARG1]]
+; CHECK: %x0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit %x0
+define i64* @inttoptr(i64 %a) {
+  %val = inttoptr i64 %a to i64*
+  ret i64* %val
+}
+
+; CHECK-LABEL: name: trivial_bitcast
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK: [[RES:%[0-9]+]](64) = COPY [[ARG1]]
+; CHECK: %x0 = COPY [[RES]]
+; CHECK: RET_ReallyLR implicit %x0
+define i64* @trivial_bitcast(i8* %a) {
+  %val = bitcast i8* %a to i64*
+  ret i64* %val
+}
+
+; CHECK-LABEL: name: bitcast
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK: [[RES1:%[0-9]+]](64) = G_BITCAST { <2 x s32>, s64 } [[ARG1]]
+; CHECK: [[RES2:%[0-9]+]](64) = G_BITCAST { s64, <2 x s32> } [[RES1]]
+; CHECK: %x0 = COPY [[RES2]]
+; CHECK: RET_ReallyLR implicit %x0
+define i64 @bitcast(i64 %a) {
+  %res1 = bitcast i64 %a to <2 x i32>
+  %res2 = bitcast <2 x i32> %res1 to i64
+  ret i64 %res2
 }

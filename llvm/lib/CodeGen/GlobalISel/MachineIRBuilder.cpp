@@ -85,6 +85,18 @@ MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty,
   return NewMI;
 }
 
+MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, ArrayRef<LLT> Tys,
+                                           unsigned Res, unsigned Op0) {
+  MachineInstr *NewMI = buildInstr(Opcode, Tys[0]);
+  for (unsigned i = 1; i < Tys.size(); ++i)
+    NewMI->setType(Tys[i], i);
+
+  MachineInstrBuilder(getMF(), NewMI)
+      .addReg(Res, RegState::Define)
+      .addReg(Op0);
+  return NewMI;
+}
+
 MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, unsigned Res,
                                            unsigned Op0) {
   MachineInstr *NewMI = buildInstr(Opcode, LLT{});

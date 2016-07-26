@@ -13,10 +13,10 @@ $foo3 = comdat any
 define void @foo() {
 entry:
 ; GEN: entry:
-; GEN-NEXT: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 12884901887, i32 1, i32 0)
+; GEN-NEXT: call void @llvm.instrprof.increment(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 [[FOO_HASH:[0-9]+]], i32 1, i32 0)
   %tmp = load void ()*, void ()** @bar, align 8
 ; GEN: [[ICALL_TARGET:%[0-9]+]] = ptrtoint void ()* %tmp to i64
-; GEN-NEXT: call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 12884901887, i64 [[ICALL_TARGET]], i32 0, i32 0)
+; GEN-NEXT: call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([3 x i8], [3 x i8]* @__profn_foo, i32 0, i32 0), i64 [[FOO_HASH]], i64 [[ICALL_TARGET]], i32 0, i32 0)
   call void %tmp()
   ret void
 }
@@ -30,7 +30,7 @@ bb:
   invoke void %tmp2()
           to label %bb10 unwind label %bb2
 ; GEN: [[ICALL_TARGET2:%[0-9]+]] = ptrtoint void ()* %tmp2 to i64
-; GEN-NEXT: call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @__profn_foo2, i32 0, i32 0), i64 38432627612, i64 [[ICALL_TARGET2]], i32 0, i32 0)
+; GEN-NEXT: call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @__profn_foo2, i32 0, i32 0), i64 [[FOO2_HASH:[0-9]+]], i64 [[ICALL_TARGET2]], i32 0, i32 0)
 
 bb2:                                              ; preds = %bb
   %tmp3 = landingpad { i8*, i32 }
@@ -54,7 +54,7 @@ bb11:                                             ; preds = %bb2
 }
 
 ; Test that comdat function's address is recorded.
-; LOWER: @__profd_foo3 = linkonce_odr{{.*}}@foo3
+; LOWER: @__profd_foo3.[[FOO3_HASH:[0-9]+]] = linkonce_odr{{.*}}@foo3.[[FOO3_HASH]]
 ; Function Attrs: nounwind uwtable
 define linkonce_odr i32 @foo3()  comdat  {
   ret i32 1

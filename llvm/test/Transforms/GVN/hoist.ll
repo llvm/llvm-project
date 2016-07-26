@@ -631,17 +631,18 @@ if.end:
 ; should be hoisted.
 ; CHECK-LABEL: @hoistStores
 ; CHECK: zext
-; CHECK: trunc
-; CHECK: getelementptr
-; CHECK: load
-; CHECK: getelementptr
-; CHECK: store
-; CHECK: load
-; CHECK: load
-; CHECK: zext
-; CHECK: add
-; CHECK: store
-; CHECK: br
+; CHECK-NEXT: trunc
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: load
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: getelementptr
+; CHECK-NEXT: store
+; CHECK-NEXT: load
+; CHECK-NEXT: load
+; CHECK-NEXT: zext
+; CHECK-NEXT: add
+; CHECK-NEXT: store
+; CHECK-NEXT: br
 ; CHECK: if.then
 ; CHECK: br
 

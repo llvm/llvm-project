@@ -1039,6 +1039,8 @@ private:
           LiveRange::iterator Prev = std::prev(NewIdxIn);
           Prev->end = NewIdx.getRegSlot();
         }
+        // Extend OldIdxIn.
+        OldIdxIn->end = Next->start;
         return;
       }
 

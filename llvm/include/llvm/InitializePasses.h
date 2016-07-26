@@ -288,7 +288,7 @@ void initializeRegisterCoalescerPass(PassRegistry&);
 void initializeRenameIndependentSubregsPass(PassRegistry&);
 void initializeReversePostOrderFunctionAttrsLegacyPassPass(PassRegistry&);
 void initializeRewriteStatepointsForGCPass(PassRegistry&);
-void initializeRewriteSymbolsPass(PassRegistry&);
+void initializeRewriteSymbolsLegacyPassPass(PassRegistry&);
 void initializeSCCPLegacyPassPass(PassRegistry &);
 void initializeSCEVAAWrapperPassPass(PassRegistry&);
 void initializeSLPVectorizerPass(PassRegistry&);

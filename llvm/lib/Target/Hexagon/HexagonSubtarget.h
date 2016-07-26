@@ -34,6 +34,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   virtual void anchor();
 
   bool UseMemOps, UseHVXOps, UseHVXDblOps;
+  bool UseLongCalls;
   bool ModeIEEERndNear;
 
 public:
@@ -101,6 +102,7 @@ public:
   bool useHVXOps() const { return UseHVXOps; }
   bool useHVXDblOps() const { return UseHVXOps && UseHVXDblOps; }
   bool useHVXSglOps() const { return UseHVXOps && !UseHVXDblOps; }
+  bool useLongCalls() const { return UseLongCalls; }
 
   bool useBSBScheduling() const { return UseBSBScheduling; }
   bool enableMachineScheduler() const override;

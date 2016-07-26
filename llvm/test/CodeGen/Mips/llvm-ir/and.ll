@@ -155,7 +155,7 @@ entry:
 
   ; GP64:         addiu   $2, $zero, 0
 
-  ; MM:           lui     $2, 0
+  ; MM:           li16     $2, 0
 
   %r = and i1 4, %b
   ret i1 %r
@@ -213,7 +213,7 @@ entry:
   ; GP64:         andi    $2, $4, 4
 
   ; MM32:         andi16  $3, $5, 4
-  ; MM32:         lui     $2, 0
+  ; MM32:         li16     $2, 0
 
   ; MM64:         andi    $2, $4, 4
 
@@ -234,9 +234,9 @@ entry:
   ; GP64:         daddiu  $2, $zero, 0
 
   ; MM32:         andi16  $5, $7, 4
-  ; MM32:         lui     $2, 0
-  ; MM32:         lui     $3, 0
-  ; MM32:         lui     $4, 0
+  ; MM32:         li16    $2, 0
+  ; MM32:         li16    $3, 0
+  ; MM32:         li16    $4, 0
 
   ; MM64:         andi    $3, $5, 4
   ; MM64:         daddiu  $2, $zero, 0
@@ -307,7 +307,7 @@ entry:
   ; GP64:         andi    $2, $4, 31
 
   ; MM32:         andi16  $3, $5, 31
-  ; MM32:         lui     $2, 0
+  ; MM32:         li16    $2, 0
 
   ; MM64:         andi    $2, $4, 31
 
@@ -328,9 +328,9 @@ entry:
   ; GP64:         daddiu  $2, $zero, 0
 
   ; MM32:         andi16  $5, $7, 31
-  ; MM32:         lui     $2, 0
-  ; MM32:         lui     $3, 0
-  ; MM32:         lui     $4, 0
+  ; MM32:         li16    $2, 0
+  ; MM32:         li16    $3, 0
+  ; MM32:         li16    $4, 0
 
   ; MM64:         andi    $3, $5, 31
   ; MM64:         daddiu  $2, $zero, 0
@@ -397,7 +397,7 @@ entry:
   ; GP64:         andi    $2, $4, 255
 
   ; MM32:         andi16  $3, $5, 255
-  ; MM32:         lui     $2, 0
+  ; MM32:         li16    $2, 0
 
   ; MM64:         andi    $2, $4, 255
 
@@ -418,9 +418,9 @@ entry:
   ; GP64:         daddiu  $2, $zero, 0
 
   ; MM32:         andi16  $5, $7, 255
-  ; MM32:         lui     $2, 0
-  ; MM32:         lui     $3, 0
-  ; MM32:         lui     $4, 0
+  ; MM32:         li16    $2, 0
+  ; MM32:         li16    $3, 0
+  ; MM32:         li16    $4, 0
 
   ; MM64:         andi    $3, $5, 255
   ; MM64:         daddiu  $2, $zero, 0
@@ -437,7 +437,7 @@ entry:
 
   ; GP64:         addiu  $2, $zero, 0
 
-  ; MM:           lui    $2, 0
+  ; MM:           li16   $2, 0
 
   %r = and i1 32768, %b
   ret i1 %r
@@ -451,7 +451,7 @@ entry:
 
   ; GP64:         addiu  $2, $zero, 0
 
-  ; MM:           lui    $2, 0
+  ; MM:           li16   $2, 0
 
   %r = and i8 32768, %b
   ret i8 %r
@@ -498,7 +498,7 @@ entry:
   ; GP64:         andi    $2, $4, 32768
 
   ; MM32:         andi16  $3, $5, 32768
-  ; MM32:         lui     $2, 0
+  ; MM32:         li16    $2, 0
 
   ; MM64:         andi    $2, $4, 32768
 
@@ -519,9 +519,9 @@ entry:
   ; GP64:         daddiu  $2, $zero, 0
 
   ; MM32:         andi16  $5, $7, 32768
-  ; MM32:         lui     $2, 0
-  ; MM32:         lui     $3, 0
-  ; MM32:         lui     $4, 0
+  ; MM32:         li16    $2, 0
+  ; MM32:         li16    $3, 0
+  ; MM32:         li16    $4, 0
 
   ; MM64:         andi    $3, $5, 32768
   ; MM64:         daddiu  $2, $zero, 0
@@ -579,8 +579,8 @@ entry:
 
   ; GP64:         andi    $2, $4, 65
 
-  ; MM32:         andi    $3, $5, 65
-  ; MM32:         lui     $2, 0
+  ; MM32-DAG:     andi    $3, $5, 65
+  ; MM32-DAG:     li16    $2, 0
 
   ; MM64:         andi    $2, $4, 65
 
@@ -600,10 +600,10 @@ entry:
   ; GP64:         andi    $3, $5, 65
   ; GP64:         daddiu  $2, $zero, 0
 
-  ; MM32:         andi    $5, $7, 65
-  ; MM32:         lui     $2, 0
-  ; MM32:         lui     $3, 0
-  ; MM32:         lui     $4, 0
+  ; MM32-DAG:     andi    $5, $7, 65
+  ; MM32-DAG:     li16    $2, 0
+  ; MM32-DAG:     li16    $3, 0
+  ; MM32-DAG:     li16    $4, 0
 
   ; MM64:         andi    $3, $5, 65
   ; MM64:         daddiu  $2, $zero, 0
@@ -620,7 +620,7 @@ entry:
 
   ; GP64:         addiu   $2, $zero, 0
 
-  ; MM:           lui     $2, 0
+  ; MM:           li16    $2, 0
 
   %r = and i1 256, %b
   ret i1 %r
@@ -634,7 +634,7 @@ entry:
 
   ; GP64:         addiu   $2, $zero, 0
 
-  ; MM:           lui     $2, 0
+  ; MM:           li16    $2, 0
 
   %r = and i8 256, %b
   ret i8 %r
@@ -669,8 +669,8 @@ entry:
 
   ; GP64:         andi    $2, $4, 256
 
-  ; MM32:         andi    $3, $5, 256
-  ; MM32:         lui     $2, 0
+  ; MM32-DAG:     andi    $3, $5, 256
+  ; MM32-DAG:     li16    $2, 0
 
   ; MM64:         andi    $2, $4, 256
 
@@ -690,10 +690,10 @@ entry:
   ; GP64:         andi    $3, $5, 256
   ; GP64:         daddiu  $2, $zero, 0
 
-  ; MM32:         andi    $5, $7, 256
-  ; MM32:         lui     $2, 0
-  ; MM32:         lui     $3, 0
-  ; MM32:         lui     $4, 0
+  ; MM32-DAG:     andi    $5, $7, 256
+  ; MM32-DAG:     li16    $2, 0
+  ; MM32-DAG:     li16    $3, 0
+  ; MM32-DAG:     li16    $4, 0
 
   ; MM64:         andi    $3, $5, 256
   ; MM64:         daddiu  $2, $zero, 0

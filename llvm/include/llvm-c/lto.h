@@ -145,10 +145,10 @@ extern lto_bool_t
 lto_module_has_objc_category(const void *mem, size_t length);
 
 /**
-* Checks if a buffer is a loadable object file.
-*
-* \since prior to LTO_API_VERSION=3
-*/
+ * Checks if a buffer is a loadable object file.
+ *
+ * \since prior to LTO_API_VERSION=3
+ */
 extern lto_bool_t lto_module_is_object_file_in_memory(const void *mem,
                                                       size_t length);
 

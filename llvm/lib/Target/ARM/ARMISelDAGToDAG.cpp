@@ -2612,6 +2612,10 @@ static bool SearchSignedMulLong(SDValue OR, unsigned *Opc, SDValue &Src0,
 }
 
 bool ARMDAGToDAGISel::trySMLAWSMULW(SDNode *N) {
+  if (!Subtarget->hasV6Ops() ||
+      (Subtarget->isThumb() && !Subtarget->hasThumb2()))
+    return false;
+
   SDLoc dl(N);
   SDValue Src0 = N->getOperand(0);
   SDValue Src1 = N->getOperand(1);

@@ -328,8 +328,6 @@ public:
   short getTexVTXClauseSize() const {
     return TexVTXClauseSize;
   }
-
-  unsigned getStackEntrySize() const;
 };
 
 class SISubtarget final : public AMDGPUSubtarget {
@@ -377,10 +375,6 @@ public:
                            unsigned NumRegionInstrs) const override;
 
   bool isVGPRSpillingEnabled(const Function& F) const;
-
-  unsigned getAmdKernelCodeChipID() const;
-
-  AMDGPU::IsaVersion getIsaVersion() const;
 
   unsigned getMaxNumUserSGPRs() const {
     return 16;
