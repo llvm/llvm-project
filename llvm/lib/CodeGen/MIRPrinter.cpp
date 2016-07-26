@@ -568,7 +568,7 @@ void MIPrinter::print(const MachineInstr &MI) {
     assert(MI.getType().isValid() && "Generic instructions must have a type");
     OS << " { ";
     for (unsigned i = 0; i < MI.getNumTypes(); ++i) {
-      MI.getType().print(OS);
+      MI.getType(i).print(OS);
       if (i + 1 != MI.getNumTypes())
         OS <<  ", ";
     }

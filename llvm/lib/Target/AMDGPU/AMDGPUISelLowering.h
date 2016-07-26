@@ -75,7 +75,6 @@ protected:
   SDValue performSelectCombine(SDNode *N, DAGCombinerInfo &DCI) const;
 
   static EVT getEquivalentMemType(LLVMContext &Context, EVT VT);
-  static EVT getEquivalentBitType(LLVMContext &Context, EVT VT);
 
   virtual SDValue LowerGlobalAddress(AMDGPUMachineFunction *MFI, SDValue Op,
                                      SelectionDAG &DAG) const;

@@ -42,7 +42,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_END(RegBankSelect, "regbankselect",
                     "Assign register bank of generic virtual registers", false,
-                    false);
+                    false)
 
 RegBankSelect::RegBankSelect(Mode RunningMode)
     : MachineFunctionPass(ID), RBI(nullptr), MRI(nullptr), TRI(nullptr),

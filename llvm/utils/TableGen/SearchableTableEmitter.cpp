@@ -193,7 +193,7 @@ void SearchableTableEmitter::emitLookupFunction(StringRef Name, StringRef Field,
   } else {
     // Make sure the result is null terminated because it's going via "char *".
     OS << "  std::string CanonicalVal = " << Field << ".upper();\n";
-    OS << "  " << PairType << " Val = {CanonicalVal.data(), 0};\n";
+    OS << "  " << PairType << " Val = {CanonicalVal.c_str(), 0};\n";
   }
 
   OS << "  ArrayRef<" << PairType << "> Table(" << Name << "sBy" << Field
@@ -206,7 +206,7 @@ void SearchableTableEmitter::emitLookupFunction(StringRef Name, StringRef Field,
     OS << ",\n                              ";
     OS << "[](const " << PairType << " &LHS, const " << PairType
        << " &RHS) {\n";
-    OS << "    return StringRef(LHS.first) < StringRef(RHS.first);\n";
+    OS << "    return std::strcmp(LHS.first, RHS.first) < 0;\n";
     OS << "  });\n\n";
   }
 

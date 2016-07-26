@@ -23,6 +23,7 @@ class CCIfBigEndian<CCAction A> :
 //===----------------------------------------------------------------------===//
 
 def CC_AArch64_AAPCS : CallingConv<[
+  CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
 
@@ -86,6 +87,7 @@ def CC_AArch64_AAPCS : CallingConv<[
 ]>;
 
 def RetCC_AArch64_AAPCS : CallingConv<[
+  CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32], CCBitConvertToType<v2i64>>,
 
@@ -121,6 +123,7 @@ def RetCC_AArch64_AAPCS : CallingConv<[
 //     + i128s (i.e. split i64s) don't need even registers.
 //     + Stack slots are sized as needed rather than being at least 64-bit.
 def CC_AArch64_DarwinPCS : CallingConv<[
+  CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
 
@@ -176,6 +179,7 @@ def CC_AArch64_DarwinPCS : CallingConv<[
 ]>;
 
 def CC_AArch64_DarwinPCS_VarArg : CallingConv<[
+  CCIfType<[iPTR], CCBitConvertToType<i64>>,
   CCIfType<[v2f32], CCBitConvertToType<v2i32>>,
   CCIfType<[v2f64, v4f32, f128], CCBitConvertToType<v2i64>>,
 
@@ -243,6 +247,8 @@ def RetCC_AArch64_WebKit_JS : CallingConv<[
 // register mapping".
 
 def CC_AArch64_GHC : CallingConv<[
+  CCIfType<[iPTR], CCBitConvertToType<i64>>,
+
   // Handle all vector types as either f64 or v2f64.
   CCIfType<[v1i64, v2i32, v4i16, v8i8, v2f32], CCBitConvertToType<f64>>,
   CCIfType<[v2i64, v4i32, v8i16, v16i8, v4f32, f128], CCBitConvertToType<v2f64>>,

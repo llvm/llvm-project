@@ -29,7 +29,7 @@ using namespace llvm;
 
 char IRTranslator::ID = 0;
 INITIALIZE_PASS(IRTranslator, "irtranslator", "IRTranslator LLVM IR -> MI",
-                false, false);
+                false, false)
 
 IRTranslator::IRTranslator() : MachineFunctionPass(ID), MRI(nullptr) {
   initializeIRTranslatorPass(*PassRegistry::getPassRegistry());
@@ -100,6 +100,23 @@ bool IRTranslator::translateBr(const Instruction &Inst) {
   return true;
 }
 
+bool IRTranslator::translateBitCast(const CastInst &CI) {
+  if (LLT{*CI.getDestTy()} == LLT{*CI.getSrcTy()}) {
+    MIRBuilder.buildInstr(TargetOpcode::COPY, getOrCreateVReg(CI),
+                          getOrCreateVReg(*CI.getOperand(0)));
+    return true;
+  }
+  return translateCast(TargetOpcode::G_BITCAST, CI);
+}
+
+bool IRTranslator::translateCast(unsigned Opcode, const CastInst &CI) {
+  unsigned Op = getOrCreateVReg(*CI.getOperand(0));
+  unsigned Res = getOrCreateVReg(CI);
+  MIRBuilder.buildInstr(Opcode, {LLT{*CI.getDestTy()}, LLT{*CI.getSrcTy()}},
+                        Res, Op);
+  return true;
+}
+
 bool IRTranslator::translateStaticAlloca(const AllocaInst &AI) {
   assert(AI.isStaticAlloca() && "only handle static allocas now");
   MachineFunction &MF = MIRBuilder.getMF();
@@ -137,6 +154,14 @@ bool IRTranslator::translate(const Instruction &Inst) {
     return translateBr(Inst);
   case Instruction::Ret:
     return translateReturn(Inst);
+
+  // Casts
+  case Instruction::BitCast:
+    return translateBitCast(cast<CastInst>(Inst));
+  case Instruction::IntToPtr:
+    return translateCast(TargetOpcode::G_INTTOPTR, cast<CastInst>(Inst));
+  case Instruction::PtrToInt:
+    return translateCast(TargetOpcode::G_PTRTOINT, cast<CastInst>(Inst));
 
   case Instruction::Alloca:
     return translateStaticAlloca(cast<AllocaInst>(Inst));

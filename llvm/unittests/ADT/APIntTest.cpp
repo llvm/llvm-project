@@ -47,9 +47,6 @@ TEST(APIntTest, i128_NegativeCount) {
   EXPECT_EQ(-1, Minus1.getSExtValue());
 }
 
-// XFAIL this test on FreeBSD where the system gcc-4.2.1 seems to miscompile it.
-#if defined(__llvm__) || !defined(__FreeBSD__)
-
 TEST(APIntTest, i33_Count) {
   APInt i33minus2(33, static_cast<uint64_t>(-2), true);
   EXPECT_EQ(0u, i33minus2.countLeadingZeros());
@@ -60,8 +57,6 @@ TEST(APIntTest, i33_Count) {
   EXPECT_EQ(-2, i33minus2.getSExtValue());
   EXPECT_EQ(((uint64_t)-2)&((1ull<<33) -1), i33minus2.getZExtValue());
 }
-
-#endif
 
 TEST(APIntTest, i65_Count) {
   APInt i65(65, 0, true);

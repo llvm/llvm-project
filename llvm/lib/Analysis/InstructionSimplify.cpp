@@ -70,6 +70,7 @@ static Value *SimplifyCmpInst(unsigned, Value *, Value *, const Query &,
 static Value *SimplifyOrInst(Value *, Value *, const Query &, unsigned);
 static Value *SimplifyXorInst(Value *, Value *, const Query &, unsigned);
 static Value *SimplifyTruncInst(Value *, Type *, const Query &, unsigned);
+static Value *SimplifyBitCastInst(Value *, Type *, const Query &, unsigned);
 
 /// For a boolean type, or a vector of boolean type, return false, or
 /// a vector with every element false, as appropriate for the type.
@@ -3810,6 +3811,30 @@ Value *llvm::SimplifyTruncInst(Value *Op, Type *Ty, const DataLayout &DL,
                              RecursionLimit);
 }
 
+static Value *SimplifyBitCastInst(Value *Op, Type *Ty, const Query &Q, unsigned) {
+  if (auto *C = dyn_cast<Constant>(Op))
+    return ConstantFoldCastOperand(Instruction::BitCast, C, Ty, Q.DL);
+
+  // bitcast x -> x
+  if (Op->getType() == Ty)
+    return Op;
+
+  // bitcast(bitcast x) -> x
+  if (auto *BC = dyn_cast<BitCastInst>(Op))
+    if (BC->getOperand(0)->getType() == Ty)
+      return BC->getOperand(0);
+
+  return nullptr;
+}
+
+Value *llvm::SimplifyBitCastInst(Value *Op, Type *Ty, const DataLayout &DL,
+                               const TargetLibraryInfo *TLI,
+                               const DominatorTree *DT, AssumptionCache *AC,
+                               const Instruction *CxtI) {
+  return ::SimplifyBitCastInst(Op, Ty, Query(DL, TLI, DT, AC, CxtI),
+                               RecursionLimit);
+}
+
 //=== Helper functions for higher up the class hierarchy.
 
 /// Given operands for a BinaryOperator, see if we can fold the result.
@@ -4279,6 +4304,10 @@ Value *llvm::SimplifyInstruction(Instruction *I, const DataLayout &DL,
   case Instruction::Trunc:
     Result =
         SimplifyTruncInst(I->getOperand(0), I->getType(), DL, TLI, DT, AC, I);
+    break;
+  case Instruction::BitCast:
+    Result =
+        SimplifyBitCastInst(I->getOperand(0), I->getType(), DL, TLI, DT, AC, I);
     break;
   }
 

@@ -414,6 +414,9 @@ let DecoderNamespace = "MicroMipsR6" in {
                      ISA_MICROMIPS64R6;
 }
 
+let AdditionalPredicates = [InMicroMips] in
+defm : MaterializeImms<i64, ZERO_64, DADDIU_MM64R6, LUi64, ORi64>;
+
 //===----------------------------------------------------------------------===//
 //
 // Arbitrary patterns that map to one or more instructions
@@ -503,11 +506,11 @@ def : MipsInstAlias<"dneg $rt, $rs",
                     (DSUB_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
                     ISA_MICROMIPS64R6;
 def : MipsInstAlias<"dneg $rt",
-                    (DSUB_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 0>,
+                    (DSUB_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 1>,
                     ISA_MICROMIPS64R6;
 def : MipsInstAlias<"dnegu $rt, $rs",
                     (DSUBU_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rs), 1>,
                     ISA_MICROMIPS64R6;
 def : MipsInstAlias<"dnegu $rt",
-                    (DSUBU_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 0>,
+                    (DSUBU_MM64R6 GPR64Opnd:$rt, ZERO_64, GPR64Opnd:$rt), 1>,
                     ISA_MICROMIPS64R6;

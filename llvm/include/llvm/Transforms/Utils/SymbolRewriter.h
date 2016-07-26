@@ -30,12 +30,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_UTILS_SYMBOL_REWRITER_H
-#define LLVM_TRANSFORMS_UTILS_SYMBOL_REWRITER_H
+#ifndef LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
+#define LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H
 
-#include "llvm/ADT/ilist.h"
-#include "llvm/ADT/ilist_node.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/PassManager.h"
+#include <list>
 
 namespace llvm {
 class MemoryBuffer;
@@ -59,7 +59,7 @@ namespace SymbolRewriter {
 /// be rewritten or providing a (posix compatible) regular expression that will
 /// select the symbols to rewrite.  This descriptor list is passed to the
 /// SymbolRewriter pass.
-class RewriteDescriptor : public ilist_node<RewriteDescriptor> {
+class RewriteDescriptor {
   RewriteDescriptor(const RewriteDescriptor &) = delete;
 
   const RewriteDescriptor &
@@ -86,7 +86,7 @@ private:
   const Type Kind;
 };
 
-typedef iplist<RewriteDescriptor> RewriteDescriptorList;
+typedef std::list<std::unique_ptr<RewriteDescriptor>> RewriteDescriptorList;
 
 class RewriteMapParser {
 public:
@@ -110,43 +110,29 @@ private:
 };
 }
 
-template <>
-struct ilist_traits<SymbolRewriter::RewriteDescriptor>
-    : public ilist_default_traits<SymbolRewriter::RewriteDescriptor> {
-  mutable ilist_half_node<SymbolRewriter::RewriteDescriptor> Sentinel;
-
-public:
-  // createSentinel is used to get a reference to a node marking the end of
-  // the list.  Because the sentinel is relative to this instance, use a
-  // non-static method.
-  SymbolRewriter::RewriteDescriptor *createSentinel() const {
-    // since i[p] lists always publicly derive from the corresponding
-    // traits, placing a data member in this class will augment the
-    // i[p]list.  Since the NodeTy is expected to publicly derive from
-    // ilist_node<NodeTy>, there is a legal viable downcast from it to
-    // NodeTy.  We use this trick to superpose i[p]list with a "ghostly"
-    // NodeTy, which becomes the sentinel.  Dereferencing the sentinel is
-    // forbidden (save the ilist_node<NodeTy>) so no one will ever notice
-    // the superposition.
-    return static_cast<SymbolRewriter::RewriteDescriptor *>(&Sentinel);
-  }
-  void destroySentinel(SymbolRewriter::RewriteDescriptor *) {}
-
-  SymbolRewriter::RewriteDescriptor *provideInitialHead() const {
-    return createSentinel();
-  }
-
-  SymbolRewriter::RewriteDescriptor *
-  ensureHead(SymbolRewriter::RewriteDescriptor *&) const {
-    return createSentinel();
-  }
-
-  static void noteHead(SymbolRewriter::RewriteDescriptor *,
-                       SymbolRewriter::RewriteDescriptor *) {}
-};
-
 ModulePass *createRewriteSymbolsPass();
 ModulePass *createRewriteSymbolsPass(SymbolRewriter::RewriteDescriptorList &);
+
+class RewriteSymbolPass : public PassInfoMixin<RewriteSymbolPass> {
+public:
+  RewriteSymbolPass() { loadAndParseMapFiles(); }
+  RewriteSymbolPass(SymbolRewriter::RewriteDescriptorList &DL) {
+    Descriptors.splice(Descriptors.begin(), DL);
+  }
+
+  RewriteSymbolPass(RewriteSymbolPass &&Other)
+      : Descriptors(std::move(Other.Descriptors)) {}
+
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+
+  // Glue for old PM
+  bool runImpl(Module &M);
+
+private:
+  void loadAndParseMapFiles();
+
+  SymbolRewriter::RewriteDescriptorList Descriptors;  
+};
 }
 
-#endif
+#endif //LLVM_TRANSFORMS_UTILS_SYMBOLREWRITER_H

@@ -116,6 +116,15 @@ public:
   MachineInstr *buildInstr(unsigned Opcode, LLT Ty, unsigned Res,
                            unsigned Op0, unsigned Op1);
 
+  /// Build and insert \p Res<def> = \p Opcode {[\p Tys]} \p Op0, \p Op1.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  /// \pre Tys empty or isPreISelGenericOpcode(Opcode)
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildInstr(unsigned Opcode, ArrayRef<LLT> Tys, unsigned Res,
+                           unsigned Op0);
+
   /// Build and insert \p Res<def> = \p Opcode \p Op0, \p Op1.
   /// I.e., instruction with a non-generic opcode.
   ///

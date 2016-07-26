@@ -213,7 +213,7 @@ namespace {
     void report(const char *msg, const MachineOperand *MO, unsigned MONum);
 
     void report_context(const LiveInterval &LI) const;
-    void report_context(const LiveRange &LR, unsigned Reg,
+    void report_context(const LiveRange &LR, unsigned VRegUnit,
                         LaneBitmask LaneMask) const;
     void report_context(const LiveRange::Segment &S) const;
     void report_context(const VNInfo &VNI) const;
@@ -474,10 +474,10 @@ void MachineVerifier::report_context(const LiveInterval &LI) const {
   errs() << "- interval:    " << LI << '\n';
 }
 
-void MachineVerifier::report_context(const LiveRange &LR, unsigned Reg,
+void MachineVerifier::report_context(const LiveRange &LR, unsigned VRegUnit,
                                      LaneBitmask LaneMask) const {
   report_context_liverange(LR);
-  errs() << "- register:    " << PrintReg(Reg, TRI) << '\n';
+  report_context_vreg_regunit(VRegUnit);
   if (LaneMask != 0)
     report_context_lanemask(LaneMask);
 }

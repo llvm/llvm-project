@@ -180,6 +180,16 @@ HANDLE_TARGET_OPCODE(G_EXTRACT)
 /// larger register.
 HANDLE_TARGET_OPCODE(G_SEQUENCE)
 
+/// Generic pointer to int conversion.
+HANDLE_TARGET_OPCODE(G_PTRTOINT)
+
+/// Generic int to pointer conversion.
+HANDLE_TARGET_OPCODE(G_INTTOPTR)
+
+/// Generic bitcast. The source and destination types must be different, or a
+/// COPY is the relevant instruction.
+HANDLE_TARGET_OPCODE(G_BITCAST)
+
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)
 

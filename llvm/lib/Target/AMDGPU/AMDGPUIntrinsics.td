@@ -31,9 +31,6 @@ let TargetPrefix = "AMDGPU", isTarget = 1 in {
   def int_AMDGPU_rsq : Intrinsic<
     [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem]
   >;
-
-  // Deprecated in favor of llvm.amdgcn.read.workdim
-  def int_AMDGPU_read_workdim : Intrinsic<[llvm_i32_ty], [], [IntrNoMem]>;
 }
 
 include "SIIntrinsics.td"

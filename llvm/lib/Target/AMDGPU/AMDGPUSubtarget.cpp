@@ -193,19 +193,6 @@ SISubtarget::SISubtarget(const Triple &TT, StringRef GPU, StringRef FS,
   TLInfo(TM, *this),
   GISel() {}
 
-unsigned R600Subtarget::getStackEntrySize() const {
-  switch (getWavefrontSize()) {
-  case 16:
-    return 8;
-  case 32:
-    return hasCaymanISA() ? 4 : 8;
-  case 64:
-    return 4;
-  default:
-    llvm_unreachable("Illegal wavefront size.");
-  }
-}
-
 void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
                                       unsigned NumRegionInstrs) const {
   // Track register pressure so the scheduler can try to decrease
@@ -225,17 +212,4 @@ void SISubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
 
 bool SISubtarget::isVGPRSpillingEnabled(const Function& F) const {
   return EnableVGPRSpilling || !AMDGPU::isShader(F.getCallingConv());
-}
-
-unsigned SISubtarget::getAmdKernelCodeChipID() const {
-  switch (getGeneration()) {
-  case SEA_ISLANDS:
-    return 12;
-  default:
-    llvm_unreachable("ChipID unknown");
-  }
-}
-
-AMDGPU::IsaVersion SISubtarget::getIsaVersion() const {
-  return AMDGPU::getIsaVersion(getFeatureBits());
 }

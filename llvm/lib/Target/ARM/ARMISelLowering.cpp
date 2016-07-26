@@ -3850,7 +3850,8 @@ SDValue ARMTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // Try to convert two saturating conditional selects into a single SSAT
   SDValue SatValue;
   uint64_t SatConstant;
-  if (isSaturatingConditional(Op, SatValue, SatConstant))
+  if (Subtarget->hasDSP() &&
+      isSaturatingConditional(Op, SatValue, SatConstant))
     return DAG.getNode(ARMISD::SSAT, dl, VT, SatValue,
                        DAG.getConstant(countTrailingOnes(SatConstant), dl, VT));
 
@@ -8954,7 +8955,8 @@ static SDValue AddCombineTo64bitUMAAL(SDNode *AddcNode,
   // be combined into a UMLAL. The other pattern is AddcNode being combined
   // into an UMLAL and then using another addc is handled in ISelDAGToDAG.
 
-  if (!Subtarget->hasV6Ops())
+  if (!Subtarget->hasV6Ops() ||
+      (Subtarget->isThumb() && !Subtarget->hasThumb2()))
     return AddCombineTo64bitMLAL(AddcNode, DCI, Subtarget);
 
   SDNode *PrevAddc = nullptr;

@@ -66,12 +66,16 @@ using namespace llvm;
 
 namespace {
 
+static cl::opt<unsigned> SkipThresholdFlag(
+  "amdgpu-skip-threshold",
+  cl::desc("Number of instructions before jumping over divergent control flow"),
+  cl::init(12), cl::Hidden);
+
 class SILowerControlFlow : public MachineFunctionPass {
 private:
-  static const unsigned SkipThreshold = 12;
-
   const SIRegisterInfo *TRI;
   const SIInstrInfo *TII;
+  unsigned SkipThreshold;
 
   bool shouldSkip(MachineBasicBlock *From, MachineBasicBlock *To);
 
@@ -95,7 +99,7 @@ public:
   static char ID;
 
   SILowerControlFlow() :
-    MachineFunctionPass(ID), TRI(nullptr), TII(nullptr) { }
+    MachineFunctionPass(ID), TRI(nullptr), TII(nullptr), SkipThreshold(0) { }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -405,6 +409,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
   const SISubtarget &ST = MF.getSubtarget<SISubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  SkipThreshold = SkipThresholdFlag;
 
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 

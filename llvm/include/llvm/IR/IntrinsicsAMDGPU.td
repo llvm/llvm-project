@@ -41,8 +41,6 @@ defm int_r600_read_tgid : AMDGPUReadPreloadRegisterIntrinsic_xyz_named
 defm int_r600_read_local_size : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 defm int_r600_read_tidig : AMDGPUReadPreloadRegisterIntrinsic_xyz;
 
-def int_r600_read_workdim : AMDGPUReadPreloadRegisterIntrinsic;
-
 def int_r600_group_barrier : GCCBuiltin<"__builtin_r600_group_barrier">,
   Intrinsic<[], [], [IntrConvergent]>;
 
@@ -334,9 +332,6 @@ def int_amdgcn_buffer_atomic_cmpswap : Intrinsic<
    llvm_i32_ty,       // offset(SGPR/VGPR/imm)
    llvm_i1_ty],       // slc(imm)
   []>;
-
-def int_amdgcn_read_workdim : AMDGPUReadPreloadRegisterIntrinsic;
-
 
 def int_amdgcn_buffer_wbinvl1_sc :
   GCCBuiltin<"__builtin_amdgcn_buffer_wbinvl1_sc">,

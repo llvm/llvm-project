@@ -256,9 +256,6 @@ template <class ELFT>
 std::vector<PhdrEntry<ELFT>>
 LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
   std::vector<PhdrEntry<ELFT>> Ret;
-  PhdrEntry<ELFT> *TlsPhdr = nullptr;
-  PhdrEntry<ELFT> *NotePhdr = nullptr;
-  PhdrEntry<ELFT> *RelroPhdr = nullptr;
 
   for (const PhdrsCommand &Cmd : Opt.PhdrsCommands) {
     Ret.emplace_back(Cmd.Type, Cmd.Flags == UINT_MAX ? PF_R : Cmd.Flags);
@@ -280,15 +277,6 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
         Phdr.add(Out<ELFT>::Dynamic);
       }
       break;
-    case PT_TLS:
-      TlsPhdr = &Phdr;
-      break;
-    case PT_NOTE:
-      NotePhdr = &Phdr;
-      break;
-    case PT_GNU_RELRO:
-      RelroPhdr = &Phdr;
-      break;
     case PT_GNU_EH_FRAME:
       if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
         Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
@@ -303,12 +291,6 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
   for (OutputSectionBase<ELFT> *Sec : Sections) {
     if (!(Sec->getFlags() & SHF_ALLOC))
       break;
-
-    if (TlsPhdr && (Sec->getFlags() & SHF_TLS))
-      TlsPhdr->add(Sec);
-
-    if (!needsPtLoad<ELFT>(Sec))
-      continue;
 
     std::vector<size_t> PhdrIds = getPhdrIndices(Sec->getName());
     if (!PhdrIds.empty()) {
@@ -328,11 +310,6 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       }
       Load->add(Sec);
     }
-
-    if (RelroPhdr && isRelroSection(Sec))
-      RelroPhdr->add(Sec);
-    if (NotePhdr && Sec->getType() == SHT_NOTE)
-      NotePhdr->add(Sec);
   }
   return Ret;
 }

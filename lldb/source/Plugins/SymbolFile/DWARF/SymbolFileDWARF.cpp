@@ -4292,7 +4292,7 @@ SymbolFileDWARF::ParseVariableDIE
                         {
                             location_is_const_value_data = false;
                             has_explicit_location = true;
-                            if (form_value.BlockData())
+                            if (DWARFFormValue::IsBlockForm(form_value.Form()))
                             {
                                 const DWARFDataExtractor& debug_info_data = get_debug_info_data();
 

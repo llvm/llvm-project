@@ -230,7 +230,8 @@ namespace {
 
 MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
-                                        const Triple &TT, StringRef CPU) {
+                                        const Triple &TT, StringRef CPU,
+                                        const MCTargetOptions &Options) {
   if (TT.isOSDarwin())
     return new DarwinPPCAsmBackend(T);
 

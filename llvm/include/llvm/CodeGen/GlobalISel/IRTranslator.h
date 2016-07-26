@@ -93,6 +93,14 @@ private:
   /// \return true if the translation succeeded.
   bool translate(const Instruction &Inst);
 
+  /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
+  /// emitted.
+  bool translateBitCast(const CastInst &CI);
+
+  /// Translate one of LLVM's cast instructions into MachineInstrs, with the
+  /// given generic Opcode.
+  bool translateCast(unsigned Opcode, const CastInst &CI);
+
   /// Translate alloca instruction (i.e. one of constant size and in the first
   /// basic block).
   bool translateStaticAlloca(const AllocaInst &Inst);

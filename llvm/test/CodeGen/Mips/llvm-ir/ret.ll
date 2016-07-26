@@ -113,7 +113,7 @@ define i64 @ret_i64_65537() {
 ; GPR32-DAG:     ori $3, $[[T0]], 1
 ; GPR32-DAG:     addiu $2, $zero, 0
 
-; GPR64-DAG:     daddiu $2, $[[T0]], 1
+; GPR64-DAG:     ori $2, $[[T0]], 1
 
 ; NOT-R6-DAG:    jr $ra # <MCInst #{{[0-9]+}} JR
 ; R6-DAG:        jr $ra # <MCInst #{{[0-9]+}} JALR

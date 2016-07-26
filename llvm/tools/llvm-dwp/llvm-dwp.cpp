@@ -643,7 +643,8 @@ int main(int argc, char **argv) {
   MCContext MC(MAI.get(), MRI.get(), &MOFI);
   MOFI.InitMCObjectFileInfo(TheTriple, /*PIC*/ false, CodeModel::Default, MC);
 
-  auto MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "");
+  MCTargetOptions Options;
+  auto MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", Options);
   if (!MAB)
     return error("no asm backend for target " + TripleName, Context);
 

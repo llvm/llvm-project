@@ -112,7 +112,8 @@ bool SystemZMCAsmBackend::writeNopData(uint64_t Count,
 
 MCAsmBackend *llvm::createSystemZMCAsmBackend(const Target &T,
                                               const MCRegisterInfo &MRI,
-                                              const Triple &TT, StringRef CPU) {
+                                              const Triple &TT, StringRef CPU,
+                                              const MCTargetOptions &Options) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return new SystemZMCAsmBackend(OSABI);
 }

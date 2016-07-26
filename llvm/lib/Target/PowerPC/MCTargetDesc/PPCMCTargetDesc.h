@@ -28,6 +28,7 @@ class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
 class Target;
 class Triple;
 class StringRef;
@@ -43,7 +44,8 @@ MCCodeEmitter *createPPCMCCodeEmitter(const MCInstrInfo &MCII,
                                       MCContext &Ctx);
 
 MCAsmBackend *createPPCAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU);
+                                  const Triple &TT, StringRef CPU,
+                                  const MCTargetOptions &Options);
 
 /// Construct an PPC ELF object writer.
 MCObjectWriter *createPPCELFObjectWriter(raw_pwrite_stream &OS, bool Is64Bit,
