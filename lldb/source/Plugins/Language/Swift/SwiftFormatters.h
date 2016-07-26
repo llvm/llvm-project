@@ -90,6 +90,9 @@ namespace lldb_private {
             bool
             ObjC_Selector_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
             
+            bool
+            TypePreservingNSNumber_SummaryProvider (ValueObject& valobj, Stream& stream, const TypeSummaryOptions& options);
+            
             SyntheticChildrenFrontEnd* EnumSyntheticFrontEndCreator (CXXSyntheticChildren*, lldb::ValueObjectSP);
         }
     }

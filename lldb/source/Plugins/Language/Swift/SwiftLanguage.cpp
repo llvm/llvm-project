@@ -257,6 +257,7 @@ LoadSwiftFormatters (lldb::TypeCategoryImplSP swift_category_sp)
     synth_flags.SetSkipPointers(true);
     
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Bool_SummaryProvider, "Swift.Bool summary provider", ConstString("Swift.Bool"), summary_flags);
+    AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::TypePreservingNSNumber_SummaryProvider, "_SwiftTypePreservingNSNumber summary provider", ConstString("_SwiftTypePreservingNSNumber"), summary_flags);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::DarwinBoolean_SummaryProvider, "DarwinBoolean summary provider", ConstString("DarwinBoolean"), summary_flags);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::UnicodeScalar_SummaryProvider, "Swift.UnicodeScalar summary provider", ConstString("Swift.UnicodeScalar"), summary_flags);
     AddCXXSummary(swift_category_sp, lldb_private::formatters::swift::Character_SummaryProvider, "Swift.Character summary provider", ConstString("Swift.Character"), summary_flags);
