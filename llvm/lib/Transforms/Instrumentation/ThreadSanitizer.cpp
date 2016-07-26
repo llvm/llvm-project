@@ -259,8 +259,9 @@ bool shouldInstrumentReadWriteFromAddress(Value *Addr) {
         return false;
     }
 
-    // Check if the global is in a GCOV counter array.
-    if (GV->getName().startswith("__llvm_gcov_ctr"))
+    // Check if the global is private gcov data.
+    if (GV->getName().startswith("__llvm_gcov") ||
+        GV->getName().startswith("__llvm_gcda"))
       return false;
   }
   return true;
