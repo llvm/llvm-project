@@ -27,6 +27,7 @@ def failifmismatch : P<"failifmismatch", "">;
 def heap    : P<"heap", "Size of the heap">;
 def implib  : P<"implib", "Import library name">;
 def libpath : P<"libpath", "Additional library search path">;
+def linkrepro : P<"linkrepro", "Dump linker invocation and input files for debugging">;
 def machine : P<"machine", "Specify target platform">;
 def merge   : P<"merge", "Combine sections">;
 def mllvm   : P<"mllvm", "Options to pass to LLVM">;

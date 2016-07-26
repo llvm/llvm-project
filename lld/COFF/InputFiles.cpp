@@ -9,6 +9,7 @@
 
 #include "Chunks.h"
 #include "Config.h"
+#include "Driver.h"
 #include "Error.h"
 #include "InputFiles.h"
 #include "Symbols.h"
@@ -93,9 +94,16 @@ MemoryBufferRef ArchiveFile::getMember(const Archive::Symbol *Sym) {
   // Return an empty buffer if we have already returned the same buffer.
   if (Seen[C.getChildOffset()].test_and_set())
     return MemoryBufferRef();
-  return check(C.getMemoryBufferRef(),
-               "could not get the buffer for the member defining symbol " +
-                   Sym->getName());
+
+  MemoryBufferRef MB =
+      check(C.getMemoryBufferRef(),
+            "could not get the buffer for the member defining symbol " +
+                Sym->getName());
+  if (C.getParent()->isThin() && Driver->Cpio)
+    Driver->Cpio->append(relativeToRoot(check(C.getFullName())),
+                         MB.getBuffer());
+
+  return MB;
 }
 
 void ObjectFile::parse() {

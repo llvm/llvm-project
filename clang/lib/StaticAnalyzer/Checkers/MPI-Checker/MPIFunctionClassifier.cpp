@@ -12,7 +12,7 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "MPIFunctionClassifier.h"
+#include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
 #include "llvm/ADT/STLExtras.h"
 
 namespace clang {

@@ -351,16 +351,14 @@ ArrayRef<uint8_t> LinkerScript<ELFT>::getFiller(StringRef Name) {
 // were in the script. If a given name did not appear in the script,
 // it returns INT_MAX, so that it will be laid out at end of file.
 template <class ELFT> int LinkerScript<ELFT>::getSectionIndex(StringRef Name) {
-  auto Begin = Opt.Commands.begin();
-  auto End = Opt.Commands.end();
-  auto I =
-      std::find_if(Begin, End, [&](const std::unique_ptr<BaseCommand> &Base) {
-        if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
-          if (Cmd->Name == Name)
-            return true;
-        return false;
-      });
-  return I == End ? INT_MAX : (I - Begin);
+  int I = 0;
+  for (std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
+    if (auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get()))
+      if (Cmd->Name == Name)
+        return I;
+    ++I;
+  }
+  return INT_MAX;
 }
 
 // A compartor to sort output sections. Returns -1 or 1 if
@@ -407,19 +405,24 @@ std::vector<size_t> LinkerScript<ELFT>::getPhdrIndices(StringRef SectionName) {
     if (!Cmd || Cmd->Name != SectionName)
       continue;
 
-    std::vector<size_t> Indices;
-    for (StringRef PhdrName : Cmd->Phdrs) {
-      auto ItPhdr =
-          std::find_if(Opt.PhdrsCommands.rbegin(), Opt.PhdrsCommands.rend(),
-                       [&](PhdrsCommand &P) { return P.Name == PhdrName; });
-      if (ItPhdr == Opt.PhdrsCommands.rend())
-        error("section header '" + PhdrName + "' is not listed in PHDRS");
-      else
-        Indices.push_back(std::distance(ItPhdr, Opt.PhdrsCommands.rend()) - 1);
-    }
-    return Indices;
+    std::vector<size_t> Ret;
+    for (StringRef PhdrName : Cmd->Phdrs)
+      Ret.push_back(getPhdrIndex(PhdrName));
+    return Ret;
   }
   return {};
+}
+
+template <class ELFT>
+size_t LinkerScript<ELFT>::getPhdrIndex(StringRef PhdrName) {
+  size_t I = 0;
+  for (PhdrsCommand &Cmd : Opt.PhdrsCommands) {
+    if (Cmd.Name == PhdrName)
+      return I;
+    ++I;
+  }
+  error("section header '" + PhdrName + "' is not listed in PHDRS");
+  return 0;
 }
 
 class elf::ScriptParser : public ScriptParserBase {

@@ -7016,7 +7016,7 @@ static void DiagnoseConditionalPrecedence(Sema &Self,
 static QualType computeConditionalNullability(QualType ResTy, bool IsBin,
                                               QualType LHSTy, QualType RHSTy,
                                               ASTContext &Ctx) {
-  if (!ResTy->isPointerType())
+  if (!ResTy->isAnyPointerType())
     return ResTy;
 
   auto GetNullability = [&Ctx](QualType Ty) {
