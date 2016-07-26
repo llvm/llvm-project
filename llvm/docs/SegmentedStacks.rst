@@ -33,7 +33,7 @@ current stack limit (minus the amount of space needed to allocate a new block) -
 this slot's offset is again dictated by ``libgcc``. The generated
 assembly looks like this on x86-64:
 
-.. code-block:: nasm
+.. code-block:: text
 
     leaq     -8(%rsp), %r10
     cmpq     %fs:112,  %r10

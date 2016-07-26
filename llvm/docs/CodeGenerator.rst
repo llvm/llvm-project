@@ -436,7 +436,7 @@ For example, consider this simple LLVM example:
 The X86 instruction selector might produce this machine code for the ``div`` and
 ``ret``:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;; Start of div
   %EAX = mov %reg1024           ;; Copy X (in reg1024) into EAX
@@ -453,7 +453,7 @@ By the end of code generation, the register allocator would coalesce the
 registers and delete the resultant identity moves producing the following
 code:
 
-.. code-block:: llvm
+.. code-block:: text
 
   ;; X is in EAX, Y is in ECX
   mov %EAX, %EDX
@@ -965,7 +965,7 @@ target code.  For example, consider the following LLVM fragment:
 
 This LLVM code corresponds to a SelectionDAG that looks basically like this:
 
-.. code-block:: llvm
+.. code-block:: text
 
   (fadd:f32 (fmul:f32 (fadd:f32 W, X), Y), Z)
 
