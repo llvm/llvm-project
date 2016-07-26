@@ -73,6 +73,7 @@ struct OutputSectionCommand : BaseCommand {
   static bool classof(const BaseCommand *C);
   StringRef Name;
   Expr AddrExpr;
+  Expr AlignExpr;
   std::vector<std::unique_ptr<BaseCommand>> Commands;
   std::vector<StringRef> Phdrs;
   std::vector<uint8_t> Filler;
