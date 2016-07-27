@@ -318,4 +318,29 @@ void test_builtin_os_log(void *buf, int i, const char *data) {
   __builtin_os_log_format(buf, "%d %{public}s %{private}.16P", i, data, data);
 }
 
+// Check that the %% which does not consume any argument is correctly handled
+void test_builtin_os_log_percent(void *buf, const char *data) {
+  volatile int len;
+  // CHECK: store i8* [[BUF]], i8** [[BUF_ADDR:%.*]], align 8
+  // CHECK: store i8* [[DATA]], i8** [[DATA_ADDR:%.*]], align 8
+  // CHECK: store volatile i32 12
+  len = __builtin_os_log_format_buffer_size("%s %%", data);
+
+  // CHECK: [[BUF2:%.*]] = load i8*, i8** [[BUF_ADDR]]
+  // CHECK: [[SUMMARY:%.*]] = getelementptr i8, i8* [[BUF2]], i64 0
+  // CHECK: store i8 2, i8* [[SUMMARY]]
+  // CHECK: [[NUM_ARGS:%.*]] = getelementptr i8, i8* [[BUF2]], i64 1
+  // CHECK: store i8 1, i8* [[NUM_ARGS]]
+  //
+  // CHECK: [[ARG1_DESC:%.*]] = getelementptr i8, i8* [[BUF2]], i64 2
+  // CHECK: store i8 32, i8* [[ARG1_DESC]]
+  // CHECK: [[ARG1_SIZE:%.*]] = getelementptr i8, i8* [[BUF2]], i64 3
+  // CHECK: store i8 8, i8* [[ARG1_SIZE]]
+  // CHECK: [[ARG1:%.*]] = getelementptr i8, i8* [[BUF2]], i64 4
+  // CHECK: [[ARG1_PTR:%.*]] = bitcast i8* [[ARG1]] to i8**
+  // CHECK: [[DATA2:%.*]] = load i8*, i8** [[DATA_ADDR]]
+  // CHECK: store i8* [[DATA2]], i8** [[ARG1_PTR]]
+  __builtin_os_log_format(buf, "%s %%", data);
+}
+
 #endif
