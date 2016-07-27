@@ -1153,7 +1153,7 @@ private:
   static ASTReadResult ReadOptionsBlock(
       llvm::BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
       bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-      std::string &SuggestedPredefines);
+      std::string &SuggestedPredefines, bool ValidateDiagnosticOptions);
   ASTReadResult ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities);
   ASTReadResult ReadExtensionBlock(ModuleFile &F);
   bool ParseLineTable(ModuleFile &F, const RecordData &Record);
@@ -1516,7 +1516,8 @@ public:
   readASTFileControlBlock(StringRef Filename, FileManager &FileMgr,
                           const PCHContainerReader &PCHContainerRdr,
                           bool FindModuleFileExtensions,
-                          ASTReaderListener &Listener);
+                          ASTReaderListener &Listener,
+                          bool ValidateDiagnosticOptions);
 
   /// \brief Determine whether the given AST file is acceptable to load into a
   /// translation unit with the given language and target options.

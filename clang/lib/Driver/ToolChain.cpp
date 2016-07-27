@@ -534,15 +534,19 @@ void ToolChain::addProfileRTLibs(const llvm::Triple &EffectiveTriple,
 
 ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
     const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value == "compiler-rt")
-      return ToolChain::RLT_CompilerRT;
-    if (Value == "libgcc")
-      return ToolChain::RLT_Libgcc;
-    getDriver().Diag(diag::err_drv_invalid_rtlib_name)
-      << A->getAsString(Args);
-  }
+  const Arg* A = Args.getLastArg(options::OPT_rtlib_EQ);
+  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_RTLIB;
+
+  // "platform" is only used in tests to override CLANG_DEFAULT_RTLIB
+  if (LibName == "compiler-rt")
+    return ToolChain::RLT_CompilerRT;
+  else if (LibName == "libgcc")
+    return ToolChain::RLT_Libgcc;
+  else if (LibName == "platform")
+    return GetDefaultRuntimeLibType();
+
+  if (A)
+    getDriver().Diag(diag::err_drv_invalid_rtlib_name) << A->getAsString(Args);
 
   return GetDefaultRuntimeLibType();
 }

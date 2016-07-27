@@ -11,6 +11,9 @@
 /* Default C++ stdlib to use. */
 #define CLANG_DEFAULT_CXX_STDLIB "${CLANG_DEFAULT_CXX_STDLIB}"
 
+/* Default runtime library to use. */
+#define CLANG_DEFAULT_RTLIB "${CLANG_DEFAULT_RTLIB}"
+
 /* Default OpenMP runtime used by -fopenmp. */
 #define CLANG_DEFAULT_OPENMP_RUNTIME "${CLANG_DEFAULT_OPENMP_RUNTIME}"
 

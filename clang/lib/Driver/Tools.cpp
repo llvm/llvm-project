@@ -2882,6 +2882,27 @@ static void CollectArgsForIntegratedAssembler(Compilation &C,
                    DefaultIncrementalLinkerCompatible))
     CmdArgs.push_back("-mincremental-linker-compatible");
 
+  switch (C.getDefaultToolChain().getArch()) {
+  case llvm::Triple::arm:
+  case llvm::Triple::armeb:
+  case llvm::Triple::thumb:
+  case llvm::Triple::thumbeb:
+    if (Arg *A = Args.getLastArg(options::OPT_mimplicit_it_EQ)) {
+      StringRef Value = A->getValue();
+      if (Value == "always" || Value == "never" || Value == "arm" ||
+          Value == "thumb") {
+        CmdArgs.push_back("-mllvm");
+        CmdArgs.push_back(Args.MakeArgString("-arm-implicit-it=" + Value));
+      } else {
+        D.Diag(diag::err_drv_unsupported_option_argument)
+            << A->getOption().getName() << Value;
+      }
+    }
+    break;
+  default:
+    break;
+  }
+
   // When passing -I arguments to the assembler we sometimes need to
   // unconditionally take the next argument.  For example, when parsing
   // '-Wa,-I -Wa,foo' we need to accept the -Wa,foo arg after seeing the
@@ -3819,13 +3840,13 @@ ParsePICArgs(const ToolChain &ToolChain, const llvm::Triple &Triple,
     // match that of llvm-gcc and Apple GCC before that.
     PIC = ToolChain.isPICDefault() && ToolChain.isPICDefaultForced();
 
-    return std::make_tuple(llvm::Reloc::DynamicNoPIC, PIC ? 2 : 0, false);
+    return std::make_tuple(llvm::Reloc::DynamicNoPIC, PIC ? 2U : 0U, false);
   }
 
   if (PIC)
-    return std::make_tuple(llvm::Reloc::PIC_, IsPICLevelTwo ? 2 : 1, PIE);
+    return std::make_tuple(llvm::Reloc::PIC_, IsPICLevelTwo ? 2U : 1U, PIE);
 
-  return std::make_tuple(llvm::Reloc::Static, 0, false);
+  return std::make_tuple(llvm::Reloc::Static, 0U, false);
 }
 
 static const char *RelocationModelName(llvm::Reloc::Model Model) {
@@ -5472,6 +5493,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   Args.AddLastArg(CmdArgs, options::OPT_fmodules_validate_system_headers);
+  Args.AddLastArg(CmdArgs, options::OPT_fmodules_disable_diagnostic_validation);
 
   // -faccess-control is default.
   if (Args.hasFlag(options::OPT_fno_access_control,

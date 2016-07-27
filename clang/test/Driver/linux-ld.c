@@ -16,7 +16,7 @@
 // CHECK-LD-32: "-L[[SYSROOT]]/usr/lib"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64 %s
@@ -36,7 +36,7 @@
 // CHECK-LD-64: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux-gnux32 \
+// RUN:     --target=x86_64-unknown-linux-gnux32 -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X32 %s
@@ -86,7 +86,7 @@
 // CHECK-LD-RT-ANDROID: libclang_rt.builtins-arm-android.a"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:     --rtlib=libgcc \
@@ -107,7 +107,7 @@
 // CHECK-LD-GCC: "-lgcc" "--as-needed" "-lgcc_s" "--no-as-needed"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     -static-libgcc \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -128,7 +128,7 @@
 // CHECK-LD-64-STATIC-LIBGCC: "-lgcc" "-lgcc_eh"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     -static \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -149,7 +149,7 @@
 //
 // Check that flags can be combined. The -static dominates.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-unknown-linux \
+// RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     -static-libgcc -static \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -1004,42 +1004,42 @@
 //
 // Test linker invocation on Android.
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android \
+// RUN:     --target=arm-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android \
+// RUN:     --target=aarch64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android \
+// RUN:     --target=arm64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android \
+// RUN:     --target=mipsel-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android \
+// RUN:     --target=mips64el-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android \
+// RUN:     --target=i686-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android \
+// RUN:     --target=x86_64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID %s
@@ -1052,48 +1052,48 @@
 // CHECK-ANDROID-NOT: "gcc_s"
 // CHECK-ANDROID: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android \
+// RUN:     --target=arm-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android \
+// RUN:     --target=aarch64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android \
+// RUN:     --target=arm64-linux-android -rtlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android \
+// RUN:     --target=mipsel-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android \
+// RUN:     --target=mips64el-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android \
+// RUN:     --target=i686-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-SO %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android \
+// RUN:     --target=x86_64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -shared \
@@ -1108,47 +1108,47 @@
 // CHECK-ANDROID-SO-NOT: "gcc_s"
 // CHECK-ANDROID-SO: "{{.*}}{{/|\\\\}}crtend_so.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android \
+// RUN:     --target=arm-linux-android -rtlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android \
+// RUN:     --target=aarch64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android \
+// RUN:     --target=arm64-linux-android -rtlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android \
+// RUN:     --target=mipsel-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android \
+// RUN:     --target=mips64el-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android \
+// RUN:     --target=i686-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-STATIC %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android \
+// RUN:     --target=x86_64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -static \
@@ -1162,49 +1162,49 @@
 // CHECK-ANDROID-STATIC-NOT: "gcc_s"
 // CHECK-ANDROID-STATIC: "{{.*}}{{/|\\\\}}crtend_android.o"
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-androideabi \
+// RUN:     --target=arm-linux-androideabi -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot  \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm-linux-android \
+// RUN:     --target=arm-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=aarch64-linux-android \
+// RUN:     --target=aarch64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot  \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=arm64-linux-android \
+// RUN:     --target=arm64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot  \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mipsel-linux-android \
+// RUN:     --target=mipsel-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=mips64el-linux-android \
+// RUN:     --target=mips64el-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=i686-linux-android \
+// RUN:     --target=i686-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PIE %s
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     --target=x86_64-linux-android \
+// RUN:     --target=x86_64-linux-android -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \
 // RUN:     -pie \
