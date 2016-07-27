@@ -737,6 +737,8 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     eatToEndOfStatement();
   }
 
+  getTargetParser().flushPendingInstructions(getStreamer());
+
   if (TheCondState.TheCond != StartingCondState.TheCond ||
       TheCondState.Ignore != StartingCondState.Ignore)
     return TokError("unmatched .ifs or .elses");
@@ -1589,6 +1591,8 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     //    all the directives that behave in a target and platform independent
     //    manner, or at least have a default behavior that's shared between
     //    all targets and platforms.
+
+    getTargetParser().flushPendingInstructions(getStreamer());
 
     // First query the target-specific parser. It will return 'true' if it
     // isn't interested in this directive.

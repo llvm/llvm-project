@@ -17,7 +17,7 @@
 #ifndef LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_MPICHECKER_MPITYPES_H
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_MPICHECKER_MPITYPES_H
 
-#include "MPIFunctionClassifier.h"
+#include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "llvm/ADT/SmallSet.h"
 
@@ -52,7 +52,6 @@ typedef llvm::ImmutableMap<const clang::ento::MemRegion *,
     RequestMapImpl;
 
 } // end of namespace: mpi
-
 
 template <>
 struct ProgramStateTrait<mpi::RequestMap>

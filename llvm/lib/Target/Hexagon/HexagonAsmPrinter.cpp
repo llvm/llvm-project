@@ -81,7 +81,7 @@ HexagonAsmPrinter::HexagonAsmPrinter(TargetMachine &TM,
     : AsmPrinter(TM, std::move(Streamer)), Subtarget(nullptr) {}
 
 void HexagonAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
-                                    raw_ostream &O) {
+                                     raw_ostream &O) {
   const MachineOperand &MO = MI->getOperand(OpNo);
 
   switch (MO.getType()) {
@@ -141,14 +141,22 @@ bool HexagonAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       // Hexagon never has a prefix.
       printOperand(MI, OpNo, OS);
       return false;
-    case 'L': // Write second word of DImode reference.
-      // Verify that this operand has two consecutive registers.
-      if (!MI->getOperand(OpNo).isReg() ||
-          OpNo+1 == MI->getNumOperands() ||
-          !MI->getOperand(OpNo+1).isReg())
+    case 'L':
+    case 'H': { // The highest-numbered register of a pair.
+      const MachineOperand &MO = MI->getOperand(OpNo);
+      const MachineFunction &MF = *MI->getParent()->getParent();
+      const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
+      if (!MO.isReg())
         return true;
-      ++OpNo;   // Return the high-part.
-      break;
+      unsigned RegNumber = MO.getReg();
+      // This should be an assert in the frontend.
+      if (Hexagon::DoubleRegsRegClass.contains(RegNumber))
+        RegNumber = TRI->getSubReg(RegNumber, ExtraCode[0] == 'L' ?
+                                              Hexagon::subreg_loreg :
+                                              Hexagon::subreg_hireg);
+      OS << HexagonInstPrinter::getRegisterName(RegNumber);
+      return false;
+    }
     case 'I':
       // Write 'i' if an integer constant, otherwise nothing.  Used to print
       // addi vs add, etc.

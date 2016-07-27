@@ -21,6 +21,7 @@
 #include <cfloat>
 #include <cmath>
 
+#include "test_macros.h"
 #include "../../../test_compare.h"
 #include "../../../test_hash.h"
 #include "test_allocator.h"
@@ -51,7 +52,7 @@ int main()
             test_allocator<std::pair<const int, std::string> >(10)
            );
         C c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 0);
         assert(c.hash_function() == test_hash<std::hash<int> >(8));
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
@@ -88,7 +89,7 @@ int main()
             test_allocator<std::pair<const int, std::string> >(10)
            );
         C c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
         Eq eq = c.equal_range(1);
@@ -151,7 +152,7 @@ int main()
             min_allocator<std::pair<const int, std::string> >()
            );
         C c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 0);
         assert(c.hash_function() == test_hash<std::hash<int> >(8));
         assert(c.key_eq() == test_compare<std::equal_to<int> >(9));
@@ -188,7 +189,7 @@ int main()
             min_allocator<std::pair<const int, std::string> >()
            );
         C c = std::move(c0);
-        assert(c.bucket_count() == 7);
+        LIBCPP_ASSERT(c.bucket_count() == 7);
         assert(c.size() == 6);
         typedef std::pair<C::const_iterator, C::const_iterator> Eq;
         Eq eq = c.equal_range(1);

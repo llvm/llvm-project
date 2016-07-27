@@ -217,8 +217,7 @@ define <16 x float> @test_16f32_fmadd_load(<16 x float>* %a0, <16 x float> %a1, 
 ;
 ; AVX512-LABEL: test_16f32_fmadd_load:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovaps (%rdi), %zmm2
-; AVX512-NEXT:    vfmadd213ps %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    vfmadd132ps (%rdi), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %x = load <16 x float>, <16 x float>* %a0
   %y = fmul <16 x float> %x, %a1
@@ -241,8 +240,7 @@ define <8 x double> @test_8f64_fmsub_load(<8 x double>* %a0, <8 x double> %a1, <
 ;
 ; AVX512-LABEL: test_8f64_fmsub_load:
 ; AVX512:       # BB#0:
-; AVX512-NEXT:    vmovapd (%rdi), %zmm2
-; AVX512-NEXT:    vfmsub213pd %zmm1, %zmm2, %zmm0
+; AVX512-NEXT:    vfmsub132pd (%rdi), %zmm1, %zmm0
 ; AVX512-NEXT:    retq
   %x = load <8 x double>, <8 x double>* %a0
   %y = fmul <8 x double> %x, %a1

@@ -1007,8 +1007,12 @@ Constant *llvm::ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
   for (const Use &OpU : I->operands()) {
     auto *Op = cast<Constant>(&OpU);
     // Fold the Instruction's operands.
-    if (auto *NewCE = dyn_cast<ConstantExpr>(Op))
-      Op = ConstantFoldConstantExpression(NewCE, DL, TLI);
+    if (auto *NewCE = dyn_cast<ConstantExpr>(Op)) {
+      auto *FoldedOp = ConstantFoldConstantExpression(NewCE, DL, TLI);
+      if (!FoldedOp)
+        return nullptr;
+      Op = FoldedOp;
+    }
 
     Ops.push_back(Op);
   }
@@ -1048,8 +1052,13 @@ ConstantFoldConstantExpressionImpl(const ConstantExpr *CE, const DataLayout &DL,
     // Recursively fold the ConstantExpr's operands. If we have already folded
     // a ConstantExpr, we don't have to process it again.
     if (auto *NewCE = dyn_cast<ConstantExpr>(NewC)) {
-      if (FoldedOps.insert(NewCE).second)
-        NewC = ConstantFoldConstantExpressionImpl(NewCE, DL, TLI, FoldedOps);
+      if (FoldedOps.insert(NewCE).second){
+        auto *FoldedC =
+            ConstantFoldConstantExpressionImpl(NewCE, DL, TLI, FoldedOps);
+        if (!FoldedC)
+          return nullptr;
+        NewC = FoldedC;
+      }
     }
     Ops.push_back(NewC);
   }

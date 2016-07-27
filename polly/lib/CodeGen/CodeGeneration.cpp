@@ -203,8 +203,7 @@ public:
       Builder.SetInsertPoint(&StartBlock->front());
 
       NodeBuilder.create(AstRoot);
-
-      NodeBuilder.finalizeSCoP(S);
+      NodeBuilder.finalize();
       fixRegionInfo(EnteringBB->getParent(), R->getParent());
     }
 

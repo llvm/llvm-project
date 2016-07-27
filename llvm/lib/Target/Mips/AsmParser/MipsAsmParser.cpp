@@ -3720,7 +3720,14 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case Mips::BLTZC:
   case Mips::BEQZC:
   case Mips::BNEZC:
-    if (Inst.getOperand(0).getReg() == Mips::ZERO)
+  case Mips::BLEZC64:
+  case Mips::BGEZC64:
+  case Mips::BGTZC64:
+  case Mips::BLTZC64:
+  case Mips::BEQZC64:
+  case Mips::BNEZC64:
+    if (Inst.getOperand(0).getReg() == Mips::ZERO ||
+        Inst.getOperand(0).getReg() == Mips::ZERO_64)
       return Match_RequiresNoZeroRegister;
     return Match_Success;
   case Mips::BGEC:
@@ -3729,9 +3736,17 @@ unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   case Mips::BLTUC:
   case Mips::BEQC:
   case Mips::BNEC:
-    if (Inst.getOperand(0).getReg() == Mips::ZERO)
+  case Mips::BGEC64:
+  case Mips::BLTC64:
+  case Mips::BGEUC64:
+  case Mips::BLTUC64:
+  case Mips::BEQC64:
+  case Mips::BNEC64:
+    if (Inst.getOperand(0).getReg() == Mips::ZERO ||
+        Inst.getOperand(0).getReg() == Mips::ZERO_64)
       return Match_RequiresNoZeroRegister;
-    if (Inst.getOperand(1).getReg() == Mips::ZERO)
+    if (Inst.getOperand(1).getReg() == Mips::ZERO ||
+        Inst.getOperand(1).getReg() == Mips::ZERO_64)
       return Match_RequiresNoZeroRegister;
     if (Inst.getOperand(0).getReg() == Inst.getOperand(1).getReg())
       return Match_RequiresDifferentOperands;

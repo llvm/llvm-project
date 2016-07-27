@@ -842,14 +842,17 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     InFlag = SDValue();
   }
 
+  bool LongCalls = MF.getSubtarget<HexagonSubtarget>().useLongCalls();
+  unsigned Flags = LongCalls ? HexagonII::HMOTF_ConstExtended : 0;
+
   // If the callee is a GlobalAddress/ExternalSymbol node (quite common, every
   // direct call is) turn it into a TargetGlobalAddress/TargetExternalSymbol
   // node so that legalize doesn't hack it.
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, PtrVT);
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl, PtrVT, 0, Flags);
   } else if (ExternalSymbolSDNode *S =
              dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT);
+    Callee = DAG.getTargetExternalSymbol(S->getSymbol(), PtrVT, Flags);
   }
 
   // Returns a chain & a flag for retval copy to use.
@@ -2052,13 +2055,20 @@ HexagonTargetLowering::HexagonTargetLowering(const TargetMachine &TM,
 
   // Handling of indexed loads/stores: default is "expand".
   //
-  for (MVT LSXTy : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
-    setIndexedLoadAction(ISD::POST_INC, LSXTy, Legal);
-    setIndexedStoreAction(ISD::POST_INC, LSXTy, Legal);
+  for (MVT VT : {MVT::i8, MVT::i16, MVT::i32, MVT::i64}) {
+    setIndexedLoadAction(ISD::POST_INC, VT, Legal);
+    setIndexedStoreAction(ISD::POST_INC, VT, Legal);
   }
 
-  if (UseHVXDbl) {
-    for (MVT VT : {MVT::v128i8, MVT::v64i16, MVT::v32i32, MVT::v16i64}) {
+  if (UseHVXSgl) {
+    for (MVT VT : {MVT::v64i8,  MVT::v32i16, MVT::v16i32, MVT::v8i64,
+                   MVT::v128i8, MVT::v64i16, MVT::v32i32, MVT::v16i64}) {
+      setIndexedLoadAction(ISD::POST_INC, VT, Legal);
+      setIndexedStoreAction(ISD::POST_INC, VT, Legal);
+    }
+  } else if (UseHVXDbl) {
+    for (MVT VT : {MVT::v128i8, MVT::v64i16,  MVT::v32i32, MVT::v16i64,
+                   MVT::v256i8, MVT::v128i16, MVT::v64i32, MVT::v32i64}) {
       setIndexedLoadAction(ISD::POST_INC, VT, Legal);
       setIndexedStoreAction(ISD::POST_INC, VT, Legal);
     }

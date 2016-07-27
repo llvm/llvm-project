@@ -126,6 +126,10 @@ a:
         maddf.d $f2,$f3,$f4      # CHECK: maddf.d $f2, $f3, $f4  # encoding: [0x46,0x24,0x18,0x98]
         msubf.s $f2,$f3,$f4      # CHECK: msubf.s $f2, $f3, $f4  # encoding: [0x46,0x04,0x18,0x99]
         msubf.d $f2,$f3,$f4      # CHECK: msubf.d $f2, $f3, $f4  # encoding: [0x46,0x24,0x18,0x99]
+        neg       $2             # CHECK: neg  $2, $2            # encoding: [0x00,0x02,0x10,0x22]
+        neg       $2, $3         # CHECK: neg  $2, $3            # encoding: [0x00,0x03,0x10,0x22]
+        negu      $2             # CHECK: negu $2, $2            # encoding: [0x00,0x02,0x10,0x23]
+        negu      $2,$3          # CHECK: negu $2, $3            # encoding: [0x00,0x03,0x10,0x23]
         pref    1, 8($5)         # CHECK: pref 1, 8($5)          # encoding: [0x7c,0xa1,0x04,0x35]
         # FIXME: Use the code generator in order to print the .set directives
         #        instead of the instruction printer.
@@ -177,6 +181,13 @@ a:
         sc      $15,-40($s3)     # CHECK: sc $15, -40($19)       # encoding: [0x7e,0x6f,0xec,0x26]
         clo     $11,$a1          # CHECK: clo $11, $5            # encoding: [0x00,0xa0,0x58,0x51]
         clz     $sp,$gp          # CHECK: clz $sp, $gp           # encoding: [0x03,0x80,0xe8,0x50]
+        sgt     $4, $5           # CHECK: slt $4, $5, $4         # encoding: [0x00,0xa4,0x20,0x2a]
+        sgt     $4, $5, $6       # CHECK: slt $4, $6, $5         # encoding: [0x00,0xc5,0x20,0x2a]
+        sgtu    $4, $5           # CHECK: sltu $4, $5, $4        # encoding: [0x00,0xa4,0x20,0x2b]
+        sgtu    $4, $5, $6       # CHECK: sltu $4, $6, $5        # encoding: [0x00,0xc5,0x20,0x2b]
+        sll     $4, $5           # CHECK: sllv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x04]
+        sra     $4, $5           # CHECK: srav $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x07]
+        srl     $4, $5           # CHECK: srlv $4, $4, $5        # encoding: [0x00,0xa4,0x20,0x06]
         ssnop                    # WARNING: [[@LINE]]:9: warning: ssnop is deprecated for MIPS32r6 and is equivalent to a nop instruction
         ssnop                    # CHECK: ssnop                  # encoding: [0x00,0x00,0x00,0x40]
         sdbbp                    # CHECK: sdbbp                  # encoding: [0x00,0x00,0x00,0x0e]

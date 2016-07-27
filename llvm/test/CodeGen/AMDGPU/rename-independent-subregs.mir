@@ -7,12 +7,12 @@
 # can be moved to a new virtual register. The third def of sub1 however is used
 # in combination with sub0 and needs to stay with the original vreg.
 # CHECK-LABEL: name: test0
-# CHECK: S_NOP 0, implicit-def undef %0:sub0
-# CHECK: S_NOP 0, implicit-def undef %2:sub1
-# CHECK: S_NOP 0, implicit %2:sub1
-# CHECK: S_NOP 0, implicit-def undef %1:sub1
-# CHECK: S_NOP 0, implicit %1:sub1
-# CHECK: S_NOP 0, implicit-def %0:sub1
+# CHECK: S_NOP 0, implicit-def undef %0.sub0
+# CHECK: S_NOP 0, implicit-def undef %2.sub1
+# CHECK: S_NOP 0, implicit %2.sub1
+# CHECK: S_NOP 0, implicit-def undef %1.sub1
+# CHECK: S_NOP 0, implicit %1.sub1
+# CHECK: S_NOP 0, implicit-def %0.sub1
 # CHECK: S_NOP 0, implicit %0
 name: test0
 isSSA: true
@@ -20,11 +20,11 @@ registers:
   - { id: 0, class: sreg_128 }
 body: |
   bb.0:
-    S_NOP 0, implicit-def undef %0:sub0
-    S_NOP 0, implicit-def %0:sub1
-    S_NOP 0, implicit %0:sub1
-    S_NOP 0, implicit-def %0:sub1
-    S_NOP 0, implicit %0:sub1
-    S_NOP 0, implicit-def %0:sub1
+    S_NOP 0, implicit-def undef %0.sub0
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit %0.sub1
+    S_NOP 0, implicit-def %0.sub1
+    S_NOP 0, implicit %0.sub1
+    S_NOP 0, implicit-def %0.sub1
     S_NOP 0, implicit %0
 ...

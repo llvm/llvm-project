@@ -2241,7 +2241,8 @@ class T2SatI<dag oops, dag iops, InstrItinClass itin,
 def t2SSAT: T2SatI<
               (outs rGPR:$Rd),
               (ins imm1_32:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
-              NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []> {
+              NoItinerary, "ssat", "\t$Rd, $sat_imm, $Rn$sh", []>,
+              Requires<[IsThumb2, HasDSP]> {
   let Inst{31-27} = 0b11110;
   let Inst{25-22} = 0b1100;
   let Inst{20} = 0;
@@ -2252,7 +2253,7 @@ def t2SSAT: T2SatI<
 def t2SSAT16: T2SatI<
                 (outs rGPR:$Rd), (ins imm1_16:$sat_imm, rGPR:$Rn), NoItinerary,
                 "ssat16", "\t$Rd, $sat_imm, $Rn", []>,
-          Requires<[IsThumb2, HasDSP]> {
+                Requires<[IsThumb2, HasDSP]> {
   let Inst{31-27} = 0b11110;
   let Inst{25-22} = 0b1100;
   let Inst{20} = 0;
@@ -2266,7 +2267,8 @@ def t2SSAT16: T2SatI<
 def t2USAT: T2SatI<
                (outs rGPR:$Rd),
                (ins imm0_31:$sat_imm, rGPR:$Rn, t2_shift_imm:$sh),
-                NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []> {
+                NoItinerary, "usat", "\t$Rd, $sat_imm, $Rn$sh", []>,
+                Requires<[IsThumb2, HasDSP]> {
   let Inst{31-27} = 0b11110;
   let Inst{25-22} = 0b1110;
   let Inst{20} = 0;
@@ -2276,7 +2278,7 @@ def t2USAT: T2SatI<
 def t2USAT16: T2SatI<(outs rGPR:$Rd), (ins imm0_15:$sat_imm, rGPR:$Rn),
                      NoItinerary,
                      "usat16", "\t$Rd, $sat_imm, $Rn", []>,
-          Requires<[IsThumb2, HasDSP]> {
+                     Requires<[IsThumb2, HasDSP]> {
   let Inst{31-22} = 0b1111001110;
   let Inst{20} = 0;
   let Inst{15} = 0;
@@ -2604,12 +2606,11 @@ class T2FourRegSMMLA<bits<3> op22_20, bits<4> op7_4, string opc,
   let Inst{7-4} = op7_4;
 }
 
-def t2SMMLA : T2FourRegSMMLA<0b101, 0b0000, "smmla",
+def t2SMMLA :   T2FourRegSMMLA<0b101, 0b0000, "smmla",
                 [(set rGPR:$Rd, (add (mulhs rGPR:$Rm, rGPR:$Rn), rGPR:$Ra))]>;
-def t2SMMLAR: T2FourRegSMMLA<0b101, 0b0001, "smmlar", []>;
-def t2SMMLS: T2FourRegSMMLA<0b110, 0b0000, "smmls",
-                [(set rGPR:$Rd, (sub rGPR:$Ra, (mulhs rGPR:$Rn, rGPR:$Rm)))]>;
-def t2SMMLSR:T2FourRegSMMLA<0b110, 0b0001, "smmlsr", []>;
+def t2SMMLAR:   T2FourRegSMMLA<0b101, 0b0001, "smmlar", []>;
+def t2SMMLS:    T2FourRegSMMLA<0b110, 0b0000, "smmls", []>;
+def t2SMMLSR:   T2FourRegSMMLA<0b110, 0b0001, "smmlsr", []>;
 
 class T2ThreeRegSMUL<bits<3> op22_20, bits<2> op5_4, string opc,
                      list<dag> pattern>
@@ -2639,36 +2640,32 @@ def t2SMULTT : T2ThreeRegSMUL<0b001, 0b11, "smultt",
 def t2SMULWB : T2ThreeRegSMUL<0b011, 0b00, "smulwb", []>;
 def t2SMULWT : T2ThreeRegSMUL<0b011, 0b01, "smulwt", []>;
 
-class T2FourRegSMLA<bits<2> op5_4, string opc, list<dag> pattern>
+class T2FourRegSMLA<bits<3> op22_20, bits<2> op5_4, string opc, list<dag> pattern>
   : T2FourReg<(outs rGPR:$Rd), (ins rGPR:$Rn, rGPR:$Rm, rGPR:$Ra), IIC_iMUL16,
                opc, "\t$Rd, $Rn, $Rm, $Ra", pattern>,
     Requires<[IsThumb2, HasDSP, UseMulOps]> {
     let Inst{31-27} = 0b11111;
     let Inst{26-23} = 0b0110;
-    let Inst{22-20} = 0b001;
+    let Inst{22-20} = op22_20;
     let Inst{7-6} = 0b00;
     let Inst{5-4} = op5_4;
 }
 
-def t2SMLABB : T2FourRegSMLA<0b00, "smlabb",
+def t2SMLABB : T2FourRegSMLA<0b001, 0b00, "smlabb",
              [(set rGPR:$Rd, (add rGPR:$Ra,
                                (mul (sext_inreg rGPR:$Rn, i16),
                                      (sext_inreg rGPR:$Rm, i16))))]>;
-def t2SMLABT : T2FourRegSMLA<0b01, "smlabt",
+def t2SMLABT : T2FourRegSMLA<0b001, 0b01, "smlabt",
              [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sext_inreg rGPR:$Rn, i16),
                                                  (sra rGPR:$Rm, (i32 16)))))]>;
-def t2SMLATB : T2FourRegSMLA<0b10, "smlatb",
+def t2SMLATB : T2FourRegSMLA<0b001, 0b10, "smlatb",
              [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sra rGPR:$Rn, (i32 16)),
                                                 (sext_inreg rGPR:$Rm, i16))))]>;
-def t2SMLATT : T2FourRegSMLA<0b11, "smlatt",
+def t2SMLATT : T2FourRegSMLA<0b001, 0b11, "smlatt",
              [(set rGPR:$Rd, (add rGPR:$Ra, (mul (sra rGPR:$Rn, (i32 16)),
                                                  (sra rGPR:$Rm, (i32 16)))))]>;
-def t2SMLAWB : T2FourRegSMLA<0b00, "smlawb", []> {
-  let Inst{22-20} = 0b011;
-}
-def t2SMLAWT : T2FourRegSMLA<0b01, "smlawt", []> {
-  let Inst{22-20} = 0b011;
-}
+def t2SMLAWB : T2FourRegSMLA<0b011, 0b00, "smlawb", []>;
+def t2SMLAWT : T2FourRegSMLA<0b011, 0b01, "smlawt", []>;
 
 class T2SMLAL<bits<3> op22_20, bits<4> op7_4, string opc, list<dag> pattern>
   : T2FourReg_mac<1, op22_20, op7_4,
@@ -3459,6 +3456,7 @@ def t2IT : Thumb2XI<(outs), (ins it_pred:$cc, it_mask:$mask),
 
 // Branch and Exchange Jazelle -- for disassembly only
 // Rm = Inst{19-16}
+let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in
 def t2BXJ : T2I<(outs), (ins GPRnopc:$func), NoItinerary, "bxj", "\t$func", []>,
     Sched<[WriteBr]>, Requires<[IsThumb2, IsNotMClass]> {
   bits<4> func;
@@ -3567,6 +3565,7 @@ def t2DBG : T2I<(outs), (ins imm0_15:$opt), NoItinerary, "dbg", "\t$opt",
 
 // Secure Monitor Call is a system instruction.
 // Option = Inst{19-16}
+let isCall = 1, Uses = [SP] in
 def t2SMC : T2I<(outs), (ins imm0_15:$opt), NoItinerary, "smc", "\t$opt",
                 []>, Requires<[IsThumb2, HasTrustZone]> {
   let Inst{31-27} = 0b11110;
@@ -3623,6 +3622,7 @@ def : t2InstAlias<"srsia${p} $mode", (t2SRSIA imm0_31:$mode, pred:$p)>;
 def : t2InstAlias<"srsia${p} $mode!", (t2SRSIA_UPD imm0_31:$mode, pred:$p)>;
 
 // Return From Exception is a system instruction.
+let isReturn = 1, isBarrier = 1, isTerminator = 1, Defs = [PC] in
 class T2RFE<bits<12> op31_20, dag oops, dag iops, InstrItinClass itin,
           string opc, string asm, list<dag> pattern>
   : T2I<oops, iops, itin, opc, asm, pattern>,

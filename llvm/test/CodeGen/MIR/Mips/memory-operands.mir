@@ -44,8 +44,8 @@ body:             |
     liveins: %a0, %ra
 
     Save16 %ra, 24, implicit-def %sp, implicit %sp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 24
-    CFI_INSTRUCTION .cfi_offset %ra_64, -4
+    CFI_INSTRUCTION def_cfa_offset 24
+    CFI_INSTRUCTION offset %ra_64, -4
     %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
     %v0 = SllX16 killed %v0, 16
     %v0 = AdduRxRyRz16 killed %v1, killed %v0
@@ -80,10 +80,10 @@ body:             |
     liveins: %ra, %s2, %s0, %ra, %s2, %s0
 
     SaveX16 %s0, %ra, %s2, 32, implicit-def %sp, implicit %sp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 32
-    CFI_INSTRUCTION .cfi_offset %ra_64, -4
-    CFI_INSTRUCTION .cfi_offset %s2_64, -8
-    CFI_INSTRUCTION .cfi_offset %s0_64, -12
+    CFI_INSTRUCTION def_cfa_offset 32
+    CFI_INSTRUCTION offset %ra_64, -4
+    CFI_INSTRUCTION offset %s2_64, -8
+    CFI_INSTRUCTION offset %s0_64, -12
     %v0, %v1 = GotPrologue16 $_gp_disp, $_gp_disp
     %v0 = SllX16 killed %v0, 16
     %s0 = AdduRxRyRz16 killed %v1, killed %v0

@@ -129,7 +129,8 @@ void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
   unsigned Reg0 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp0);
   unsigned Reg1 =  Ctx.getRegisterInfo()->getEncodingValue(RegOp1);
 
-  if (Inst.getOpcode() == Mips::BNEC || Inst.getOpcode() == Mips::BEQC) {
+  if (Inst.getOpcode() == Mips::BNEC || Inst.getOpcode() == Mips::BEQC ||
+      Inst.getOpcode() == Mips::BNEC64 || Inst.getOpcode() == Mips::BEQC64) {
     assert(Reg0 != Reg1 && "Instruction has bad operands ($rs == $rt)!");
     if (Reg0 < Reg1)
       return;
@@ -141,7 +142,7 @@ void MipsMCCodeEmitter::LowerCompactBranch(MCInst& Inst) const {
     if (Reg1 >= Reg0)
       return;
   } else
-   llvm_unreachable("Cannot rewrite unknown branch!");
+    llvm_unreachable("Cannot rewrite unknown branch!");
 
   Inst.getOperand(0).setReg(RegOp1);
   Inst.getOperand(1).setReg(RegOp0);
@@ -210,6 +211,8 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // Compact branches, enforce encoding restrictions.
   case Mips::BEQC:
   case Mips::BNEC:
+  case Mips::BEQC64:
+  case Mips::BNEC64:
   case Mips::BOVC:
   case Mips::BOVC_MMR6:
   case Mips::BNVC:

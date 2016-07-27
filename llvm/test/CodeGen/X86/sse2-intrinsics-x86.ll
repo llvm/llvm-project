@@ -274,6 +274,43 @@ define <4 x float> @test_x86_sse2_cvtsd2ss(<4 x float> %a0, <2 x double> %a1) {
 declare <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float>, <2 x double>) nounwind readnone
 
 
+define <4 x float> @test_x86_sse2_cvtsd2ss_load(<4 x float> %a0, <2 x double>* %p1) {
+; SSE-LABEL: test_x86_sse2_cvtsd2ss_load:
+; SSE:       ## BB#0:
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    movaps (%eax), %xmm1
+; SSE-NEXT:    cvtsd2ss %xmm1, %xmm0
+; SSE-NEXT:    retl
+;
+; KNL-LABEL: test_x86_sse2_cvtsd2ss_load:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0
+; KNL-NEXT:    retl
+  %a1 = load <2 x double>, <2 x double>* %p1
+  %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+
+
+define <4 x float> @test_x86_sse2_cvtsd2ss_load_optsize(<4 x float> %a0, <2 x double>* %p1) optsize {
+; SSE-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
+; SSE:       ## BB#0:
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    cvtsd2ss (%eax), %xmm0
+; SSE-NEXT:    retl
+;
+; KNL-LABEL: test_x86_sse2_cvtsd2ss_load_optsize:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL-NEXT:    vcvtsd2ss (%eax), %xmm0, %xmm0
+; KNL-NEXT:    retl
+  %a1 = load <2 x double>, <2 x double>* %p1
+  %res = call <4 x float> @llvm.x86.sse2.cvtsd2ss(<4 x float> %a0, <2 x double> %a1) ; <<4 x float>> [#uses=1]
+  ret <4 x float> %res
+}
+
+
 define <2 x double> @test_x86_sse2_cvtsi2sd(<2 x double> %a0, i32 %a1) {
 ; SSE-LABEL: test_x86_sse2_cvtsi2sd:
 ; SSE:       ## BB#0:
@@ -304,6 +341,43 @@ define <2 x double> @test_x86_sse2_cvtss2sd(<2 x double> %a0, <4 x float> %a1) {
   ret <2 x double> %res
 }
 declare <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double>, <4 x float>) nounwind readnone
+
+
+define <2 x double> @test_x86_sse2_cvtss2sd_load(<2 x double> %a0, <4 x float>* %p1) {
+; SSE-LABEL: test_x86_sse2_cvtss2sd_load:
+; SSE:       ## BB#0:
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    movaps (%eax), %xmm1
+; SSE-NEXT:    cvtss2sd %xmm1, %xmm0
+; SSE-NEXT:    retl
+;
+; KNL-LABEL: test_x86_sse2_cvtss2sd_load:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL-NEXT:    vcvtss2sd (%eax), %xmm0, %xmm0
+; KNL-NEXT:    retl
+  %a1 = load <4 x float>, <4 x float>* %p1
+  %res = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> %a0, <4 x float> %a1) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
+
+
+define <2 x double> @test_x86_sse2_cvtss2sd_load_optsize(<2 x double> %a0, <4 x float>* %p1) optsize {
+; SSE-LABEL: test_x86_sse2_cvtss2sd_load_optsize:
+; SSE:       ## BB#0:
+; SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE-NEXT:    cvtss2sd (%eax), %xmm0
+; SSE-NEXT:    retl
+;
+; KNL-LABEL: test_x86_sse2_cvtss2sd_load_optsize:
+; KNL:       ## BB#0:
+; KNL-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; KNL-NEXT:    vcvtss2sd (%eax), %xmm0, %xmm0
+; KNL-NEXT:    retl
+  %a1 = load <4 x float>, <4 x float>* %p1
+  %res = call <2 x double> @llvm.x86.sse2.cvtss2sd(<2 x double> %a0, <4 x float> %a1) ; <<2 x double>> [#uses=1]
+  ret <2 x double> %res
+}
 
 
 define <4 x i32> @test_x86_sse2_cvttpd2dq(<2 x double> %a0) {

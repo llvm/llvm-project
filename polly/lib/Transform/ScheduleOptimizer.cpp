@@ -134,6 +134,17 @@ static cl::opt<int> ThrougputVectorFma(
              "instructions per clock cycle."),
     cl::Hidden, cl::init(1), cl::ZeroOrMore, cl::cat(PollyCategory));
 
+static cl::list<int>
+    CacheLevelAssociativity("polly-target-cache-level-associativity",
+                            cl::desc("The associativity of each cache level."),
+                            cl::Hidden, cl::ZeroOrMore, cl::CommaSeparated,
+                            cl::cat(PollyCategory));
+
+static cl::list<int> CacheLevelSizes(
+    "polly-target-cache-level-sizes",
+    cl::desc("The size of each cache level specified in bytes."), cl::Hidden,
+    cl::ZeroOrMore, cl::CommaSeparated, cl::cat(PollyCategory));
+
 static cl::opt<int> FirstLevelDefaultTileSize(
     "polly-default-tile-size",
     cl::desc("The default tile size (if not enough were provided by"
@@ -493,10 +504,67 @@ static __isl_give isl_map *circularShiftOutputDims(__isl_take isl_map *IslMap) {
   return isl_map_set_tuple_id(IslMap, isl_dim_in, InputDimsId);
 }
 
-__isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
-    __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI) {
+/// @brief Permute two dimensions of the band node.
+///
+/// Permute FirstDim and SecondDim dimensions of the Node.
+///
+/// @param Node The band node to be modified.
+/// @param FirstDim The first dimension to be permuted.
+/// @param SecondDim The second dimension to be permuted.
+static __isl_give isl_schedule_node *
+permuteBandNodeDimensions(__isl_take isl_schedule_node *Node, unsigned FirstDim,
+                          unsigned SecondDim) {
+  assert(isl_schedule_node_get_type(Node) == isl_schedule_node_band &&
+         isl_schedule_node_band_n_member(Node) > std::max(FirstDim, SecondDim));
+  auto PartialSchedule = isl_schedule_node_band_get_partial_schedule(Node);
+  auto PartialScheduleFirstDim =
+      isl_multi_union_pw_aff_get_union_pw_aff(PartialSchedule, FirstDim);
+  auto PartialScheduleSecondDim =
+      isl_multi_union_pw_aff_get_union_pw_aff(PartialSchedule, SecondDim);
+  PartialSchedule = isl_multi_union_pw_aff_set_union_pw_aff(
+      PartialSchedule, SecondDim, PartialScheduleFirstDim);
+  PartialSchedule = isl_multi_union_pw_aff_set_union_pw_aff(
+      PartialSchedule, FirstDim, PartialScheduleSecondDim);
+  Node = isl_schedule_node_delete(Node);
+  Node = isl_schedule_node_insert_partial_schedule(Node, PartialSchedule);
+  return Node;
+}
+
+__isl_give isl_schedule_node *ScheduleTreeOptimizer::createMicroKernel(
+    __isl_take isl_schedule_node *Node, MicroKernelParamsTy MicroKernelParams) {
+  return applyRegisterTiling(Node, {MicroKernelParams.Mr, MicroKernelParams.Nr},
+                             1);
+}
+
+__isl_give isl_schedule_node *ScheduleTreeOptimizer::createMacroKernel(
+    __isl_take isl_schedule_node *Node, MacroKernelParamsTy MacroKernelParams) {
+  assert(isl_schedule_node_get_type(Node) == isl_schedule_node_band);
+  if (MacroKernelParams.Mc == 1 && MacroKernelParams.Nc == 1 &&
+      MacroKernelParams.Kc == 1)
+    return Node;
+  Node = tileNode(
+      Node, "1st level tiling",
+      {MacroKernelParams.Mc, MacroKernelParams.Nc, MacroKernelParams.Kc}, 1);
+  Node = isl_schedule_node_parent(isl_schedule_node_parent(Node));
+  Node = permuteBandNodeDimensions(Node, 1, 2);
+  return isl_schedule_node_child(isl_schedule_node_child(Node, 0), 0);
+}
+
+/// Get parameters of the BLIS micro kernel.
+///
+/// We choose the Mr and Nr parameters of the micro kernel to be large enough
+/// such that no stalls caused by the combination of latencies and dependencies
+/// are introduced during the updates of the resulting matrix of the matrix
+/// multiplication. However, they should also be as small as possible to
+/// release more registers for entries of multiplied matrices.
+///
+/// @param TTI Target Transform Info.
+/// @return The structure of type MicroKernelParamsTy.
+/// @see MicroKernelParamsTy
+static struct MicroKernelParamsTy
+getMicroKernelParams(const llvm::TargetTransformInfo *TTI) {
   assert(TTI && "The target transform info should be provided.");
-  // Get a micro-kernel.
+
   // Nvec - Number of double-precision floating-point numbers that can be hold
   // by a vector register. Use 2 by default.
   auto Nvec = TTI->getRegisterBitWidth(true) / 64;
@@ -505,8 +573,58 @@ __isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
   int Nr =
       ceil(sqrt(Nvec * LatencyVectorFma * ThrougputVectorFma) / Nvec) * Nvec;
   int Mr = ceil(Nvec * LatencyVectorFma * ThrougputVectorFma / Nr);
-  std::vector<int> MicroKernelParams{Mr, Nr};
-  Node = applyRegisterTiling(Node, MicroKernelParams, 1);
+  return {Mr, Nr};
+}
+
+/// Get parameters of the BLIS macro kernel.
+///
+/// During the computation of matrix multiplication, blocks of partitioned
+/// matrices are mapped to different layers of the memory hierarchy.
+/// To optimize data reuse, blocks should be ideally kept in cache between
+/// iterations. Since parameters of the macro kernel determine sizes of these
+/// blocks, there are upper and lower bounds on these parameters.
+///
+/// @param MicroKernelParams Parameters of the micro-kernel
+///                          to be taken into account.
+/// @return The structure of type MacroKernelParamsTy.
+/// @see MacroKernelParamsTy
+/// @see MicroKernelParamsTy
+static struct MacroKernelParamsTy
+getMacroKernelParams(const MicroKernelParamsTy &MicroKernelParams) {
+  // According to www.cs.utexas.edu/users/flame/pubs/TOMS-BLIS-Analytical.pdf,
+  // it requires information about the first two levels of a cache to determine
+  // all the parameters of a macro-kernel. It also checks that an associativity
+  // degree of a cache level is greater than two. Otherwise, another algorithm
+  // for determination of the parameters should be used.
+  if (!(MicroKernelParams.Mr > 0 && MicroKernelParams.Nr > 0 &&
+        CacheLevelSizes.size() >= 2 && CacheLevelAssociativity.size() >= 2 &&
+        CacheLevelSizes[0] > 0 && CacheLevelSizes[1] > 0 &&
+        CacheLevelAssociativity[0] > 2 && CacheLevelAssociativity[1] > 2))
+    return {1, 1, 1};
+  int Cbr = floor(
+      (CacheLevelAssociativity[0] - 1) /
+      (1 + static_cast<double>(MicroKernelParams.Mr) / MicroKernelParams.Nr));
+  int Kc = (Cbr * CacheLevelSizes[0]) /
+           (MicroKernelParams.Nr * CacheLevelAssociativity[0] * 8);
+  double Cac = static_cast<double>(MicroKernelParams.Mr * Kc * 8 *
+                                   CacheLevelAssociativity[1]) /
+               CacheLevelSizes[1];
+  double Cbc = static_cast<double>(MicroKernelParams.Nr * Kc * 8 *
+                                   CacheLevelAssociativity[1]) /
+               CacheLevelSizes[1];
+  int Mc = floor(MicroKernelParams.Mr / Cac);
+  int Nc =
+      floor((MicroKernelParams.Nr * (CacheLevelAssociativity[1] - 2)) / Cbc);
+  return {Mc, Nc, Kc};
+}
+
+__isl_give isl_schedule_node *ScheduleTreeOptimizer::optimizeMatMulPattern(
+    __isl_take isl_schedule_node *Node, const llvm::TargetTransformInfo *TTI) {
+  assert(TTI && "The target transform info should be provided.");
+  auto MicroKernelParams = getMicroKernelParams(TTI);
+  auto MacroKernelParams = getMacroKernelParams(MicroKernelParams);
+  Node = createMacroKernel(Node, MacroKernelParams);
+  Node = createMicroKernel(Node, MicroKernelParams);
   return Node;
 }
 

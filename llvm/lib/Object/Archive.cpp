@@ -34,44 +34,90 @@ malformedError(Twine Msg) {
                                         object_error::parse_failed);
 }
 
+ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
+                                         const char *RawHeaderPtr,
+                                         uint64_t Size, Error *Err)
+    : Parent(Parent),
+      ArMemHdr(reinterpret_cast<const ArMemHdrType *>(RawHeaderPtr)) {
+  if (RawHeaderPtr == nullptr)
+    return;
+  ErrorAsOutParameter ErrAsOutParam(Err);
+
+  // TODO: For errors messages with the ArchiveMemberHeader class use the
+  // archive member name instead of the the offset to the archive member header.
+  // When there is also error getting the member name then use the offset to
+  // the member in the message.
+
+  if (Size < sizeof(ArMemHdrType)) {
+    if (Err) {
+      uint64_t Offset = RawHeaderPtr - Parent->getData().data();
+      *Err = malformedError("remaining size of archive too small for next "
+                            "archive member header at offset " +
+                            Twine(Offset));
+    }
+    return;
+  }
+  if (ArMemHdr->Terminator[0] != '`' || ArMemHdr->Terminator[1] != '\n') {
+    if (Err) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      OS.write_escaped(llvm::StringRef(ArMemHdr->Terminator,
+                                       sizeof(ArMemHdr->Terminator)));
+      OS.flush();
+      uint64_t Offset = RawHeaderPtr - Parent->getData().data();
+      *Err = malformedError("terminator characters in archive member \"" + Buf +
+                            "\" not the correct \"`\\n\" values for the "
+                            "archive member header at offset " + Twine(Offset));
+    }
+    return;
+  }
+}
+
 StringRef ArchiveMemberHeader::getName() const {
   char EndCond;
-  if (Name[0] == '/' || Name[0] == '#')
+  if (ArMemHdr->Name[0] == '/' || ArMemHdr->Name[0] == '#')
     EndCond = ' ';
   else
     EndCond = '/';
   llvm::StringRef::size_type end =
-      llvm::StringRef(Name, sizeof(Name)).find(EndCond);
+      llvm::StringRef(ArMemHdr->Name, sizeof(ArMemHdr->Name)).find(EndCond);
   if (end == llvm::StringRef::npos)
-    end = sizeof(Name);
-  assert(end <= sizeof(Name) && end > 0);
+    end = sizeof(ArMemHdr->Name);
+  assert(end <= sizeof(ArMemHdr->Name) && end > 0);
   // Don't include the EndCond if there is one.
-  return llvm::StringRef(Name, end);
+  return llvm::StringRef(ArMemHdr->Name, end);
 }
 
 Expected<uint32_t> ArchiveMemberHeader::getSize() const {
   uint32_t Ret;
-  if (llvm::StringRef(Size, sizeof(Size)).rtrim(" ").getAsInteger(10, Ret)) {
+  if (llvm::StringRef(ArMemHdr->Size,
+        sizeof(ArMemHdr->Size)).rtrim(" ").getAsInteger(10, Ret)) {
     std::string Buf;
     raw_string_ostream OS(Buf);
-    OS.write_escaped(llvm::StringRef(Size, sizeof(Size)).rtrim(" "));
+    OS.write_escaped(llvm::StringRef(ArMemHdr->Size,
+                                     sizeof(ArMemHdr->Size)).rtrim(" "));
     OS.flush();
+    uint64_t Offset = reinterpret_cast<const char *>(ArMemHdr) -
+                      Parent->getData().data();
     return malformedError("characters in size field in archive header are not "
-                          "all decimal numbers: '" + Buf + "'");
+                          "all decimal numbers: '" + Buf + "' for archive "
+                          "member header at offset " + Twine(Offset));
   }
   return Ret;
 }
 
 sys::fs::perms ArchiveMemberHeader::getAccessMode() const {
   unsigned Ret;
-  if (StringRef(AccessMode, sizeof(AccessMode)).rtrim(' ').getAsInteger(8, Ret))
+  if (StringRef(ArMemHdr->AccessMode,
+                sizeof(ArMemHdr->AccessMode)).rtrim(' ').getAsInteger(8, Ret))
     llvm_unreachable("Access mode is not an octal number.");
   return static_cast<sys::fs::perms>(Ret);
 }
 
 sys::TimeValue ArchiveMemberHeader::getLastModified() const {
   unsigned Seconds;
-  if (StringRef(LastModified, sizeof(LastModified)).rtrim(' ')
+  if (StringRef(ArMemHdr->LastModified,
+                sizeof(ArMemHdr->LastModified)).rtrim(' ')
           .getAsInteger(10, Seconds))
     llvm_unreachable("Last modified time not a decimal number.");
 
@@ -82,7 +128,7 @@ sys::TimeValue ArchiveMemberHeader::getLastModified() const {
 
 unsigned ArchiveMemberHeader::getUID() const {
   unsigned Ret;
-  StringRef User = StringRef(UID, sizeof(UID)).rtrim(' ');
+  StringRef User = StringRef(ArMemHdr->UID, sizeof(ArMemHdr->UID)).rtrim(' ');
   if (User.empty())
     return 0;
   if (User.getAsInteger(10, Ret))
@@ -92,7 +138,7 @@ unsigned ArchiveMemberHeader::getUID() const {
 
 unsigned ArchiveMemberHeader::getGID() const {
   unsigned Ret;
-  StringRef Group = StringRef(GID, sizeof(GID)).rtrim(' ');
+  StringRef Group = StringRef(ArMemHdr->GID, sizeof(ArMemHdr->GID)).rtrim(' ');
   if (Group.empty())
     return 0;
   if (Group.getAsInteger(10, Ret))
@@ -102,15 +148,23 @@ unsigned ArchiveMemberHeader::getGID() const {
 
 Archive::Child::Child(const Archive *Parent, StringRef Data,
                       uint16_t StartOfFile)
-    : Parent(Parent), Data(Data), StartOfFile(StartOfFile) {}
+    : Parent(Parent), Header(Parent, Data.data(), Data.size(), nullptr),
+      Data(Data), StartOfFile(StartOfFile) {
+}
 
 Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
-    : Parent(Parent) {
+    : Parent(Parent), Header(Parent, Start, Parent->getData().size() -
+                             (Start - Parent->getData().data()), Err) {
   if (!Start)
     return;
   ErrorAsOutParameter ErrAsOutParam(Err);
 
-  uint64_t Size = sizeof(ArchiveMemberHeader);
+  // If there was an error in the construction of the Header and we were passed
+  // Err that is not nullptr then just return with the error now set.
+  if (Err && *Err)
+    return;
+
+  uint64_t Size = Header.getSizeOf();
   Data = StringRef(Start, Size);
   if (!isThinMember()) {
     Expected<uint64_t> MemberSize = getRawSize();
@@ -124,7 +178,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   }
 
   // Setup StartOfFile and PaddingBytes.
-  StartOfFile = sizeof(ArchiveMemberHeader);
+  StartOfFile = Header.getSizeOf();
   // Don't include attached name.
   StringRef Name = getRawName();
   if (Name.startswith("#1/")) {
@@ -137,7 +191,7 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
 
 Expected<uint64_t> Archive::Child::getSize() const {
   if (Parent->IsThin) {
-    Expected<uint32_t> Size = getHeader()->getSize();
+    Expected<uint32_t> Size = Header.getSize();
     if (!Size)
       return Size.takeError();
     return Size.get();
@@ -146,11 +200,11 @@ Expected<uint64_t> Archive::Child::getSize() const {
 }
 
 Expected<uint64_t> Archive::Child::getRawSize() const {
-  return getHeader()->getSize();
+  return Header.getSize();
 }
 
 bool Archive::Child::isThinMember() const {
-  StringRef Name = getHeader()->getName();
+  StringRef Name = Header.getName();
   return Parent->IsThin && Name != "/" && Name != "//";
 }
 
@@ -200,9 +254,16 @@ Expected<Archive::Child> Archive::Child::getNext() const {
     return Child(Parent, nullptr, nullptr);
 
   // Check to see if this is past the end of the archive.
-  if (NextLoc > Parent->Data.getBufferEnd())
-    return malformedError("offset to next archive member past the end of the "
-                          "archive");
+  if (NextLoc > Parent->Data.getBufferEnd()) {
+    Twine Msg("offset to next archive member past the end of the archive after "
+              "member ");
+    ErrorOr<StringRef> NameOrErr = getName();
+    if (NameOrErr.getError()) {
+      uint64_t Offset = Data.data() - Parent->getData().data();
+      return malformedError(Msg + "at offset " + Twine(Offset));
+    } else
+      return malformedError(Msg + Twine(NameOrErr.get()));
+  }
 
   Error Err;
   Child Ret(Parent, NextLoc, &Err);
@@ -247,7 +308,7 @@ ErrorOr<StringRef> Archive::Child::getName() const {
     uint64_t name_size;
     if (name.substr(3).rtrim(' ').getAsInteger(10, name_size))
       llvm_unreachable("Long name length is not an ingeter");
-    return Data.substr(sizeof(ArchiveMemberHeader), name_size).rtrim('\0');
+    return Data.substr(Header.getSizeOf(), name_size).rtrim('\0');
   } else {
     // It is not a long name so trim the blanks at the end of the name.
     if (name[name.size() - 1] != '/') {

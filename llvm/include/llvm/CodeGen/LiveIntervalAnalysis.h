@@ -253,8 +253,8 @@ extern cl::opt<bool> UseSegmentSetForPhysRegs;
       Indexes->removeMachineInstrFromMaps(MI);
     }
 
-    void ReplaceMachineInstrInMaps(MachineInstr &MI, MachineInstr &NewMI) {
-      Indexes->replaceMachineInstrInMaps(MI, NewMI);
+    SlotIndex ReplaceMachineInstrInMaps(MachineInstr &MI, MachineInstr &NewMI) {
+      return Indexes->replaceMachineInstrInMaps(MI, NewMI);
     }
 
     VNInfo::Allocator& getVNInfoAllocator() { return VNInfoAllocator; }

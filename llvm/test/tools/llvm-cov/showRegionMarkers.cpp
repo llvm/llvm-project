@@ -23,3 +23,5 @@ int main() {                      // CHECK: Marker at [[@LINE]]:12 = 1.11M
 }
 
 // RUN: llvm-cov show %S/Inputs/regionMarkers.covmapping -instr-profile %t.profdata -show-regions -dump -filename-equivalence %s 2>&1 | FileCheck %s
+
+// RUN: llvm-cov export %S/Inputs/regionMarkers.covmapping -instr-profile %t.profdata 2>&1 | FileCheck %S/Inputs/regionMarkers.json

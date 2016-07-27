@@ -1402,7 +1402,8 @@ defm V_MOV_FED_B32 : VOP1InstSI <vop1<0x9>, "v_mov_fed_b32", VOP_I32_I32>;
 defm V_LOG_CLAMP_F32 : VOP1InstSI <vop1<0x26>, "v_log_clamp_f32",
   VOP_F32_F32, int_amdgcn_log_clamp>;
 defm V_RCP_CLAMP_F32 : VOP1InstSI <vop1<0x28>, "v_rcp_clamp_f32", VOP_F32_F32>;
-defm V_RCP_LEGACY_F32 : VOP1InstSI <vop1<0x29>, "v_rcp_legacy_f32", VOP_F32_F32>;
+defm V_RCP_LEGACY_F32 : VOP1InstSI <vop1<0x29>, "v_rcp_legacy_f32",
+  VOP_F32_F32, AMDGPUrcp_legacy>;
 defm V_RSQ_CLAMP_F32 : VOP1InstSI <vop1<0x2c>, "v_rsq_clamp_f32",
   VOP_F32_F32, AMDGPUrsq_clamp
 >;
@@ -1496,7 +1497,7 @@ defm V_SUBREV_F32 : VOP2Inst <vop2<0x5, 0x3>, "v_subrev_f32",
 let isCommutable = 1 in {
 
 defm V_MUL_LEGACY_F32 : VOP2Inst <vop2<0x7, 0x4>, "v_mul_legacy_f32",
-  VOP_F32_F32_F32
+  VOP_F32_F32_F32, AMDGPUfmul_legacy
 >;
 
 defm V_MUL_F32 : VOP2Inst <vop2<0x8, 0x5>, "v_mul_f32",
@@ -3361,9 +3362,14 @@ def : Pat <
   (S_BFE_I64 i64:$src, 0x200000) // 0 | 32 << 16
 >;
 
-class ZExt_i64_i32_Pat <SDNode ext> : Pat <
-  (i64 (ext i32:$src)),
+def : Pat <
+  (i64 (zext i32:$src)),
   (REG_SEQUENCE SReg_64, $src, sub0, (S_MOV_B32 0), sub1)
+>;
+
+def : Pat <
+  (i64 (anyext i32:$src)),
+  (REG_SEQUENCE SReg_64, $src, sub0, (i32 (IMPLICIT_DEF)), sub1)
 >;
 
 class ZExt_i64_i1_Pat <SDNode ext> : Pat <
@@ -3374,8 +3380,6 @@ class ZExt_i64_i1_Pat <SDNode ext> : Pat <
 >;
 
 
-def : ZExt_i64_i32_Pat<zext>;
-def : ZExt_i64_i32_Pat<anyext>;
 def : ZExt_i64_i1_Pat<zext>;
 def : ZExt_i64_i1_Pat<anyext>;
 

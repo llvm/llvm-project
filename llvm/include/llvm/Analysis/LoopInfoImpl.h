@@ -252,6 +252,8 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
         HasInsideLoopSuccs = true;
         break;
       }
+    assert(HasInsideLoopSuccs && "Loop block has no in-loop successors!");
+
     typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
     for (typename InvBlockTraits::ChildIteratorType PI =
            InvBlockTraits::child_begin(BB), PE = InvBlockTraits::child_end(BB);
@@ -262,6 +264,7 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
       else
         OutsideLoopPreds.push_back(N);
     }
+    assert(HasInsideLoopPreds && "Loop block has no in-loop predecessors!");
 
     if (BB == getHeader()) {
         assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
@@ -275,8 +278,6 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
           assert(CB != OutsideLoopPreds[i] &&
                  "Loop has multiple entry points!");
     }
-    assert(HasInsideLoopPreds && "Loop block has no in-loop predecessors!");
-    assert(HasInsideLoopSuccs && "Loop block has no in-loop successors!");
     assert(BB != &getHeader()->getParent()->front() &&
            "Loop contains function entry block!");
 

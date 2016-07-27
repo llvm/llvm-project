@@ -50,17 +50,41 @@ project(LLVM
   ${cmake_3_0_LANGUAGES}
   C CXX ASM)
 
-if(APPLE)
-  if(NOT CMAKE_LIBTOOL)
+# This should only apply if you are both on an Apple host, and targeting Apple.
+if(CMAKE_HOST_APPLE AND APPLE)
+  if(NOT CMAKE_XCRUN)
+    find_program(CMAKE_XCRUN NAMES xcrun)
+  endif()
+  if(CMAKE_XCRUN)
+    execute_process(COMMAND ${CMAKE_XCRUN} -find libtool
+      OUTPUT_VARIABLE CMAKE_LIBTOOL
+      OUTPUT_STRIP_TRAILING_WHITESPACE)
+  endif()
+
+  if(NOT CMAKE_LIBTOOL OR NOT EXISTS CMAKE_LIBTOOL)
     find_program(CMAKE_LIBTOOL NAMES libtool)
   endif()
+
+  get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
   if(CMAKE_LIBTOOL)
     set(CMAKE_LIBTOOL ${CMAKE_LIBTOOL} CACHE PATH "libtool executable")
     message(STATUS "Found libtool - ${CMAKE_LIBTOOL}")
-    get_property(languages GLOBAL PROPERTY ENABLED_LANGUAGES)
     foreach(lang ${languages})
       set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
         "${CMAKE_LIBTOOL} -static -o <TARGET> <LINK_FLAGS> <OBJECTS> ")
+    endforeach()
+  endif()
+
+  # If DYLD_LIBRARY_PATH is set we need to set it on archiver commands
+  if(DYLD_LIBRARY_PATH)
+    set(dyld_envar "DYLD_LIBRARY_PATH=${DYLD_LIBRARY_PATH}")
+    foreach(lang ${languages})
+      foreach(cmd ${CMAKE_${lang}_CREATE_STATIC_LIBRARY})
+        list(APPEND CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW
+             "${dyld_envar} ${cmd}")
+      endforeach()
+      set(CMAKE_${lang}_CREATE_STATIC_LIBRARY
+        ${CMAKE_${lang}_CREATE_STATIC_LIBRARY_NEW})
     endforeach()
   endif()
 endif()

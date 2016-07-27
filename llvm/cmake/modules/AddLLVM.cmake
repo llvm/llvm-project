@@ -997,7 +997,7 @@ function(llvm_add_go_executable binary pkgpath)
     endforeach(d)
     set(ldflags "${CMAKE_EXE_LINKER_FLAGS}")
     add_custom_command(OUTPUT ${binpath}
-      COMMAND ${CMAKE_BINARY_DIR}/bin/llvm-go "go=${GO_EXECUTABLE}" "cc=${cc}" "cxx=${cxx}" "cppflags=${cppflags}" "ldflags=${ldflags}"
+      COMMAND ${CMAKE_BINARY_DIR}/bin/llvm-go "go=${GO_EXECUTABLE}" "cc=${cc}" "cxx=${cxx}" "cppflags=${cppflags}" "ldflags=${ldflags}" "packages=${LLVM_GO_PACKAGES}"
               ${ARG_GOFLAGS} build -o ${binpath} ${pkgpath}
       DEPENDS llvm-config ${CMAKE_BINARY_DIR}/bin/llvm-go${CMAKE_EXECUTABLE_SUFFIX}
               ${llvmlibs} ${ARG_DEPENDS}
@@ -1138,7 +1138,8 @@ function(add_lit_testsuites project directory)
         continue()
       endif()
       string(FIND ${lit_suite} Inputs is_inputs)
-      if (NOT is_inputs EQUAL -1)
+      string(FIND ${lit_suite} Output is_output)
+      if (NOT (is_inputs EQUAL -1 AND is_output EQUAL -1))
         continue()
       endif()
 

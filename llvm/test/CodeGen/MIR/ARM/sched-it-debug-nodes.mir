@@ -145,9 +145,9 @@ body:             |
     DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
     tBX_RET 3, %cpsr, implicit %r0, debug-location !34
     %sp = frame-setup t2STMDB_UPD %sp, 14, _, killed %r7, killed %lr
-    frame-setup CFI_INSTRUCTION .cfi_def_cfa_offset 8
-    frame-setup CFI_INSTRUCTION .cfi_offset %lr, -4
-    frame-setup CFI_INSTRUCTION .cfi_offset %r7, -8
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset %lr, -4
+    frame-setup CFI_INSTRUCTION offset %r7, -8
     DBG_VALUE debug-use %r0, debug-use _, !18, !27, debug-location !28
     DBG_VALUE debug-use %r1, debug-use _, !19, !27, debug-location !28
     DBG_VALUE debug-use %r2, debug-use _, !20, !27, debug-location !28

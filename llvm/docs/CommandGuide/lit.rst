@@ -324,6 +324,9 @@ executed, two important global variables are predefined:
  on the pipe fail. If this is not desired, setting this variable to false
  makes the test fail only if the last command in the pipe fails.
 
+ **available_features** A set of features that can be used in `XFAIL`,
+ `REQUIRES`, and `UNSUPPORTED` directives.
+
 TEST DISCOVERY
 ~~~~~~~~~~~~~~
 

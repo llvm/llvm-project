@@ -34,6 +34,9 @@
 #else
 #include <sys/mman.h>
 #include <sys/file.h>
+#ifndef MAP_FILE
+#define MAP_FILE 0
+#endif
 #endif
 
 #if defined(__FreeBSD__) && defined(__i386__)

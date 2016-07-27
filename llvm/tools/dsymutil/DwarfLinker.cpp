@@ -597,7 +597,8 @@ bool DwarfStreamer::init(Triple TheTriple, StringRef OutputFilename) {
   MC.reset(new MCContext(MAI.get(), MRI.get(), MOFI.get()));
   MOFI->InitMCObjectFileInfo(TheTriple, /*PIC*/ false, CodeModel::Default, *MC);
 
-  MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "");
+  MCTargetOptions Options;
+  MAB = TheTarget->createMCAsmBackend(*MRI, TripleName, "", Options);
   if (!MAB)
     return error("no asm backend for target " + TripleName, Context);
 

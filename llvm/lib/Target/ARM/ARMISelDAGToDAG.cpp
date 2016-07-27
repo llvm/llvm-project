@@ -2612,6 +2612,10 @@ static bool SearchSignedMulLong(SDValue OR, unsigned *Opc, SDValue &Src0,
 }
 
 bool ARMDAGToDAGISel::trySMLAWSMULW(SDNode *N) {
+  if (!Subtarget->hasV6Ops() ||
+      (Subtarget->isThumb() && !Subtarget->hasThumb2()))
+    return false;
+
   SDLoc dl(N);
   SDValue Src0 = N->getOperand(0);
   SDValue Src1 = N->getOperand(1);
@@ -3036,6 +3040,36 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
                          MVT::i32, MVT::i32, Ops));
       return;
     }
+  }
+  case ARMISD::SUBE: {
+    if (!Subtarget->hasV6Ops())
+      break;
+    // Look for a pattern to match SMMLS
+    // (sube a, (smul_loHi a, b), (subc 0, (smul_LOhi(a, b))))
+    if (N->getOperand(1).getOpcode() != ISD::SMUL_LOHI ||
+        N->getOperand(2).getOpcode() != ARMISD::SUBC)
+      break;
+
+    if (Subtarget->isThumb())
+      assert(Subtarget->hasThumb2() &&
+             "This pattern should not be generated for Thumb");
+
+    SDValue SmulLoHi = N->getOperand(1);
+    SDValue Subc = N->getOperand(2);
+    auto *Zero = dyn_cast<ConstantSDNode>(Subc.getOperand(0));
+
+    if (!Zero || Zero->getZExtValue() != 0 ||
+        Subc.getOperand(1) != SmulLoHi.getValue(0) ||
+        N->getOperand(1) != SmulLoHi.getValue(1) ||
+        N->getOperand(2) != Subc.getValue(1))
+      break;
+
+    unsigned Opc = Subtarget->isThumb2() ? ARM::t2SMMLS : ARM::SMMLS;
+    SDValue Ops[] = { SmulLoHi.getOperand(0), SmulLoHi.getOperand(1),
+                      N->getOperand(0), getAL(CurDAG, dl),
+                      CurDAG->getRegister(0, MVT::i32) };
+    ReplaceNode(N, CurDAG->getMachineNode(Opc, dl, MVT::i32, Ops));
+    return;
   }
   case ISD::LOAD: {
     if (Subtarget->isThumb() && Subtarget->hasThumb2()) {

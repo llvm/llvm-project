@@ -3172,6 +3172,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
     auto OffendingRegion = ParentRegion;
     bool NestingProhibited = false;
     bool CloseNesting = true;
+    bool OrphanSeen = false; 
     enum {
       NoRecommend,
       ShouldBeInParallelRegion,
@@ -3213,9 +3214,10 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       }
       return false;
     }
-    // Allow some constructs to be orphaned (they could be used in functions,
-    // called from OpenMP regions with the required preconditions).
-    if (ParentRegion == OMPD_unknown)
+    // Allow some constructs (except teams) to be orphaned (they could be
+    // used in functions, called from OpenMP regions with the required 
+    // preconditions).
+    if (ParentRegion == OMPD_unknown && !isOpenMPTeamsDirective(CurrentRegion))
       return false;
     if (CurrentRegion == OMPD_cancellation_point ||
         CurrentRegion == OMPD_cancel) {
@@ -3315,6 +3317,7 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       // If specified, a teams construct must be contained within a target
       // construct.
       NestingProhibited = ParentRegion != OMPD_target;
+      OrphanSeen = ParentRegion == OMPD_unknown;
       Recommend = ShouldBeInTargetRegion;
       Stack->setParentTeamsRegionLoc(Stack->getConstructLoc());
     }
@@ -3354,9 +3357,14 @@ static bool CheckNestingOfRegions(Sema &SemaRef, DSAStackTy *Stack,
       CloseNesting = false;
     }
     if (NestingProhibited) {
-      SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
-          << CloseNesting << getOpenMPDirectiveName(OffendingRegion)
-          << Recommend << getOpenMPDirectiveName(CurrentRegion);
+      if (OrphanSeen) {
+        SemaRef.Diag(StartLoc, diag::err_omp_orphaned_device_directive)
+            << getOpenMPDirectiveName(CurrentRegion) << Recommend;
+      } else {
+        SemaRef.Diag(StartLoc, diag::err_omp_prohibited_region)
+            << CloseNesting << getOpenMPDirectiveName(OffendingRegion)
+            << Recommend << getOpenMPDirectiveName(CurrentRegion);
+      }
       return true;
     }
   }

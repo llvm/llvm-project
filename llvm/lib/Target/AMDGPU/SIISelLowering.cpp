@@ -770,7 +770,7 @@ SDValue SITargetLowering::LowerFormalArguments(
       }
 
       InVals.push_back(Arg);
-      Info->ABIArgOffset = Offset + MemVT.getStoreSize();
+      Info->setABIArgOffset(Offset + MemVT.getStoreSize());
       continue;
     }
     assert(VA.isRegLoc() && "Parameter must be in a register!");
@@ -1435,7 +1435,7 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     DebugLoc DL = MI.getDebugLoc();
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
       .addOperand(MI.getOperand(0))
-      .addImm(MFI->LDSSize);
+      .addImm(MFI->getLDSSize());
     MI.eraseFromParent();
     return BB;
   }
@@ -1996,6 +1996,11 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return DAG.getNode(AMDGPUISD::RSQ_LEGACY, DL, VT, Op.getOperand(1));
   }
+  case Intrinsic::amdgcn_rcp_legacy: {
+    if (Subtarget->getGeneration() >= SISubtarget::VOLCANIC_ISLANDS)
+      return emitRemovedIntrinsicError(DAG, DL, VT);
+    return DAG.getNode(AMDGPUISD::RCP_LEGACY, DL, VT, Op.getOperand(1));
+  }
   case Intrinsic::amdgcn_rsq_clamp: {
     if (Subtarget->getGeneration() < SISubtarget::VOLCANIC_ISLANDS)
       return DAG.getNode(AMDGPUISD::RSQ_CLAMP, DL, VT, Op.getOperand(1));
@@ -2064,11 +2069,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return lowerImplicitZextParam(DAG, Op, MVT::i16,
                                   SI::KernelInputOffsets::LOCAL_SIZE_Z);
-  case Intrinsic::amdgcn_read_workdim:
-  case AMDGPUIntrinsic::AMDGPU_read_workdim: // Legacy name.
-    // Really only 2 bits.
-    return lowerImplicitZextParam(DAG, Op, MVT::i8,
-                                  getImplicitParameterOffset(MFI, GRID_DIM));
   case Intrinsic::amdgcn_workgroup_id_x:
   case Intrinsic::r600_read_tgid_x:
     return CreateLiveInRegister(DAG, &AMDGPU::SReg_32RegClass,
@@ -2213,6 +2213,9 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::DIV_SCALE, DL, Op->getVTList(), Src0,
                        Denominator, Numerator);
   }
+  case Intrinsic::amdgcn_fmul_legacy:
+    return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT,
+                       Op.getOperand(1), Op.getOperand(2));
   case Intrinsic::amdgcn_sffbh:
   case AMDGPUIntrinsic::AMDGPU_flbit_i32: // Legacy name.
     return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
@@ -3361,6 +3364,7 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   case AMDGPUISD::FRACT:
   case AMDGPUISD::RCP:
   case AMDGPUISD::RSQ:
+  case AMDGPUISD::RCP_LEGACY:
   case AMDGPUISD::RSQ_LEGACY:
   case AMDGPUISD::RSQ_CLAMP:
   case AMDGPUISD::LDEXP: {

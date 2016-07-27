@@ -193,8 +193,8 @@ body:             |
     liveins: %edi, %rsi, %rbx
   
     frame-setup PUSH64r killed %rbx, implicit-def %rsp, implicit %rsp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 16
-    CFI_INSTRUCTION .cfi_offset %rbx, -16
+    CFI_INSTRUCTION def_cfa_offset 16
+    CFI_INSTRUCTION offset %rbx, -16
     DBG_VALUE debug-use %edi, debug-use _, !12, !20, debug-location !21
     DBG_VALUE debug-use %rsi, debug-use _, !13, !20, debug-location !22
     %eax = MOV32rr %edi

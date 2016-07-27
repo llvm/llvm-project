@@ -16,6 +16,7 @@
 #include "Symbols.h"
 
 #include "lld/Core/LLVM.h"
+#include "lld/Core/Reproduce.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/IR/Comdat.h"

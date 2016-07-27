@@ -577,6 +577,8 @@ ToolChain::CXXStdlibType ToolChain::GetCXXStdlibType(const ArgList &Args) const{
         << A->getAsString(Args);
   }
 
+  // If no argument was provided or its value was invalid, look for the
+  // default unless forced or configured to take the platform default.
   if (!HasValidType && (ForcePlatformDefault ||
       !ParseCXXStdlibType(CLANG_DEFAULT_CXX_STDLIB, Type)))
     Type = GetDefaultCXXStdlibType();

@@ -149,6 +149,10 @@ static cl::opt<unsigned> ShrinkLimit("shrink-frame-limit", cl::init(UINT_MAX),
     cl::Hidden, cl::ZeroOrMore, cl::desc("Max count of stack frame "
     "shrink-wraps"));
 
+static cl::opt<bool> EnableSaveRestoreLong("enable-save-restore-long",
+    cl::Hidden, cl::desc("Enable long calls for save-restore stubs."),
+    cl::init(false), cl::ZeroOrMore);
+
 static cl::opt<bool> UseAllocframe("use-allocframe", cl::init(true),
     cl::Hidden, cl::desc("Use allocframe more conservatively"));
 
@@ -342,7 +346,7 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
     ShrinkCounter++;
   }
 
-  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HRI = *HST.getRegisterInfo();
 
   MachineDominatorTree MDT;
@@ -440,7 +444,7 @@ void HexagonFrameLowering::findShrunkPrologEpilog(MachineFunction &MF,
 /// in one place allows shrink-wrapping of the stack frame.
 void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
-  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HRI = *HST.getRegisterInfo();
 
   MachineFrameInfo *MFI = MF.getFrameInfo();
@@ -581,7 +585,7 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   if (!hasFP(MF))
     return;
 
-  auto &HST = static_cast<const HexagonSubtarget&>(MF.getSubtarget());
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
   auto &HII = *HST.getInstrInfo();
   auto &HRI = *HST.getRegisterInfo();
   unsigned SP = HRI.getStackRegister();
@@ -1049,7 +1053,8 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
   MachineBasicBlock::iterator MI = MBB.begin();
   PrologueStubs = false;
   MachineFunction &MF = *MBB.getParent();
-  auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &HII = *HST.getInstrInfo();
 
   if (useSpillFunction(MF, CSI)) {
     PrologueStubs = true;
@@ -1059,20 +1064,31 @@ bool HexagonFrameLowering::insertCSRSpillsInBlock(MachineBasicBlock &MBB,
                                                StkOvrFlowEnabled);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
+    bool LongCalls = HST.useLongCalls() || EnableSaveRestoreLong;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc() : DebugLoc();
     unsigned SpillOpc;
-    if (StkOvrFlowEnabled)
-      SpillOpc = IsPIC ? Hexagon::SAVE_REGISTERS_CALL_V4STK_PIC
-                       : Hexagon::SAVE_REGISTERS_CALL_V4STK;
-    else
-      SpillOpc = IsPIC ? Hexagon::SAVE_REGISTERS_CALL_V4_PIC
-                       : Hexagon::SAVE_REGISTERS_CALL_V4;
+    if (StkOvrFlowEnabled) {
+      if (LongCalls)
+        SpillOpc = IsPIC ? Hexagon::SAVE_REGISTERS_CALL_V4STK_EXT_PIC
+                         : Hexagon::SAVE_REGISTERS_CALL_V4STK_EXT;
+      else
+        SpillOpc = IsPIC ? Hexagon::SAVE_REGISTERS_CALL_V4STK_PIC
+                         : Hexagon::SAVE_REGISTERS_CALL_V4STK;
+    } else {
+      if (LongCalls)
+        SpillOpc = IsPIC ? Hexagon::SAVE_REGISTERS_CALL_V4_EXT_PIC
+                         : Hexagon::SAVE_REGISTERS_CALL_V4_EXT;
+      else
+        SpillOpc = IsPIC ? Hexagon::SAVE_REGISTERS_CALL_V4_PIC
+                         : Hexagon::SAVE_REGISTERS_CALL_V4;
+    }
 
     MachineInstr *SaveRegsCall =
         BuildMI(MBB, MI, DL, HII.get(SpillOpc))
           .addExternalSymbol(SpillFun);
+
     // Add callee-saved registers as use.
     addCalleeSaveRegistersAsImpOperand(SaveRegsCall, CSI, false, true);
     // Add live in registers.
@@ -1104,7 +1120,8 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
 
   MachineBasicBlock::iterator MI = MBB.getFirstTerminator();
   MachineFunction &MF = *MBB.getParent();
-  auto &HII = *MF.getSubtarget<HexagonSubtarget>().getInstrInfo();
+  auto &HST = MF.getSubtarget<HexagonSubtarget>();
+  auto &HII = *HST.getInstrInfo();
 
   if (useRestoreFunction(MF, CSI)) {
     bool HasTC = hasTailCall(MBB) || !hasReturn(MBB);
@@ -1113,6 +1130,7 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     const char *RestoreFn = getSpillFunctionFor(MaxR, Kind);
     auto &HTM = static_cast<const HexagonTargetMachine&>(MF.getTarget());
     bool IsPIC = HTM.isPositionIndependent();
+    bool LongCalls = HST.useLongCalls() || EnableSaveRestoreLong;
 
     // Call spill function.
     DebugLoc DL = MI != MBB.end() ? MI->getDebugLoc()
@@ -1120,17 +1138,27 @@ bool HexagonFrameLowering::insertCSRRestoresInBlock(MachineBasicBlock &MBB,
     MachineInstr *DeallocCall = nullptr;
 
     if (HasTC) {
-      unsigned ROpc = IsPIC ? Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC
-                            : Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4;
-      DeallocCall = BuildMI(MBB, MI, DL, HII.get(ROpc))
+      unsigned RetOpc;
+      if (LongCalls)
+        RetOpc = IsPIC ? Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC
+                       : Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT;
+      else
+        RetOpc = IsPIC ? Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC
+                       : Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4;
+      DeallocCall = BuildMI(MBB, MI, DL, HII.get(RetOpc))
           .addExternalSymbol(RestoreFn);
     } else {
       // The block has a return.
       MachineBasicBlock::iterator It = MBB.getFirstTerminator();
       assert(It->isReturn() && std::next(It) == MBB.end());
-      unsigned ROpc = IsPIC ? Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC
-                            : Hexagon::RESTORE_DEALLOC_RET_JMP_V4;
-      DeallocCall = BuildMI(MBB, It, DL, HII.get(ROpc))
+      unsigned RetOpc;
+      if (LongCalls)
+        RetOpc = IsPIC ? Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT_PIC
+                       : Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT;
+      else
+        RetOpc = IsPIC ? Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC
+                       : Hexagon::RESTORE_DEALLOC_RET_JMP_V4;
+      DeallocCall = BuildMI(MBB, It, DL, HII.get(RetOpc))
           .addExternalSymbol(RestoreFn);
       // Transfer the function live-out registers.
       DeallocCall->copyImplicitOps(MF, *It);

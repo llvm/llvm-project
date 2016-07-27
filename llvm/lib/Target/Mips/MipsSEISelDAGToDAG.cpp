@@ -771,13 +771,13 @@ bool MipsSEDAGToDAGISel::trySelect(SDNode *Node) {
 
   case ISD::Constant: {
     const ConstantSDNode *CN = dyn_cast<ConstantSDNode>(Node);
+    int64_t Imm = CN->getSExtValue();
     unsigned Size = CN->getValueSizeInBits(0);
 
-    if (Size == 32)
+    if (isInt<32>(Imm))
       break;
 
     MipsAnalyzeImmediate AnalyzeImm;
-    int64_t Imm = CN->getSExtValue();
 
     const MipsAnalyzeImmediate::InstSeq &Seq =
       AnalyzeImm.Analyze(Imm, Size, false);

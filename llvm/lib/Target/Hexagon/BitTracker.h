@@ -49,6 +49,7 @@ struct BitTracker {
   void put(RegisterRef RR, const RegisterCell &RC);
   void subst(RegisterRef OldRR, RegisterRef NewRR);
   bool reached(const MachineBasicBlock *B) const;
+  void visit(const MachineInstr &MI);
 
 private:
   void visitPHI(const MachineInstr &PI);

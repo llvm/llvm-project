@@ -27,7 +27,7 @@ using namespace llvm;
 char MachineLegalizePass::ID = 0;
 INITIALIZE_PASS(MachineLegalizePass, DEBUG_TYPE,
                 "Legalize the Machine IR a function's Machine IR", false,
-                false);
+                false)
 
 MachineLegalizePass::MachineLegalizePass() : MachineFunctionPass(ID) {
   initializeMachineLegalizePassPass(*PassRegistry::getPassRegistry());

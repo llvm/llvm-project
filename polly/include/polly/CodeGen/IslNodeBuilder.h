@@ -58,10 +58,10 @@ public:
   /// @brief Preload all memory loads that are invariant.
   bool preloadInvariantLoads();
 
-  /// @brief Finalize code generation for the SCoP @p S.
+  /// @brief Finalize code generation.
   ///
   /// @see BlockGenerator::finalizeSCoP(Scop &S)
-  void finalizeSCoP(Scop &S) { BlockGen.finalizeSCoP(S); }
+  virtual void finalize() { BlockGen.finalizeSCoP(S); }
 
   IslExprBuilder &getExprBuilder() { return ExprBuilder; }
 

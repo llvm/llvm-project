@@ -35,7 +35,6 @@ type pkg struct {
 
 var packages = []pkg{
 	{"bindings/go/llvm", "llvm.org/llvm/bindings/go/llvm"},
-	{"tools/llgo", "llvm.org/llgo"},
 }
 
 type compilerFlags struct {
@@ -145,7 +144,7 @@ type (run_build_sh int)
 `, flags.cpp, flags.cxx, flags.ld)
 }
 
-func runGoWithLLVMEnv(args []string, cc, cxx, gocmd, llgo, cppflags, cxxflags, ldflags string) {
+func runGoWithLLVMEnv(args []string, cc, cxx, gocmd, llgo, cppflags, cxxflags, ldflags string, packages []pkg) {
 	args = addTag(args, "byollvm")
 
 	srcdir := llvmConfig("--src-root")
@@ -162,7 +161,12 @@ func runGoWithLLVMEnv(args []string, cc, cxx, gocmd, llgo, cppflags, cxxflags, l
 			panic(err.Error())
 		}
 
-		err = os.Symlink(filepath.Join(srcdir, p.llvmpath), path)
+		abspath := p.llvmpath
+		if !filepath.IsAbs(abspath) {
+			abspath = filepath.Join(srcdir, abspath)
+		}
+
+		err = os.Symlink(abspath, path)
 		if err != nil {
 			panic(err.Error())
 		}
@@ -242,6 +246,7 @@ func main() {
 	ldflags := os.Getenv("CGO_LDFLAGS")
 	gocmd := "go"
 	llgo := ""
+	packagesString := ""
 
 	flags := []struct {
 		name string
@@ -253,6 +258,7 @@ func main() {
 		{"llgo", &llgo},
 		{"cppflags", &cppflags},
 		{"ldflags", &ldflags},
+		{"packages", &packagesString},
 	}
 
 	args := os.Args[1:]
@@ -271,9 +277,24 @@ LOOP:
 		break
 	}
 
+	packages := packages
+	if packagesString != "" {
+		for _, field := range strings.Fields(packagesString) {
+			pos := strings.IndexRune(field, '=')
+			if pos == -1 {
+				fmt.Fprintf(os.Stderr, "invalid packages value %q, expected 'pkgpath=llvmpath [pkgpath=llvmpath ...]'\n", packagesString)
+				os.Exit(1)
+			}
+			packages = append(packages, pkg{
+				pkgpath:  field[:pos],
+				llvmpath: field[pos+1:],
+			})
+		}
+	}
+
 	switch args[0] {
 	case "build", "get", "install", "run", "test":
-		runGoWithLLVMEnv(args, cc, cxx, gocmd, llgo, cppflags, cxxflags, ldflags)
+		runGoWithLLVMEnv(args, cc, cxx, gocmd, llgo, cppflags, cxxflags, ldflags, packages)
 	case "print-components":
 		printComponents()
 	case "print-config":

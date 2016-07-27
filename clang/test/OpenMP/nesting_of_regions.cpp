@@ -3693,6 +3693,8 @@ void foo() {
   }    
 
 // TEAMS DIRECTIVE
+#pragma omp teams // expected-error {{orphaned 'omp teams' directives are prohibited; perhaps you forget to enclose the directive into a target region?}}
+  bar();
 #pragma omp target
 #pragma omp teams
 #pragma omp parallel

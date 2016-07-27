@@ -745,7 +745,8 @@ public:
 namespace llvm {
 MCAsmBackend *createHexagonAsmBackend(Target const &T,
                                       MCRegisterInfo const & /*MRI*/,
-                                      const Triple &TT, StringRef CPU) {
+                                      const Triple &TT, StringRef CPU,
+                                      const MCTargetOptions &Options) {
   uint8_t OSABI = MCELFObjectTargetWriter::getOSABI(TT.getOS());
   return new HexagonAsmBackend(T, OSABI, CPU);
 }

@@ -19,8 +19,8 @@
 #define LLVM_CLANG_LIB_STATICANALYZER_CHECKERS_MPICHECKER_MPICHECKER_H
 
 #include "MPIBugReporter.h"
-#include "MPIFunctionClassifier.h"
 #include "MPITypes.h"
+#include "clang/StaticAnalyzer/Checkers/MPIFunctionClassifier.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
@@ -30,7 +30,7 @@ namespace mpi {
 
 class MPIChecker : public Checker<check::PreCall, check::DeadSymbols> {
 public:
-  MPIChecker() : BReporter(*this) { }
+  MPIChecker() : BReporter(*this) {}
 
   // path-sensitive callbacks
   void checkPreCall(const CallEvent &CE, CheckerContext &Ctx) const {
@@ -49,7 +49,6 @@ public:
       return;
     const_cast<std::unique_ptr<MPIFunctionClassifier> &>(FuncClassifier)
         .reset(new MPIFunctionClassifier{Ctx.getASTContext()});
-
   }
 
   /// Checks if a request is used by nonblocking calls multiple times

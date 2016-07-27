@@ -224,7 +224,8 @@ bool LLVMTargetMachine::addPassesToEmitFile(
       MCE = getTarget().createMCCodeEmitter(MII, MRI, *Context);
 
     MCAsmBackend *MAB =
-        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU);
+        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
+                                       Options.MCOptions);
     auto FOut = llvm::make_unique<formatted_raw_ostream>(Out);
     MCStreamer *S = getTarget().createAsmStreamer(
         *Context, std::move(FOut), Options.MCOptions.AsmVerbose,
@@ -238,7 +239,8 @@ bool LLVMTargetMachine::addPassesToEmitFile(
     // emission fails.
     MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(MII, MRI, *Context);
     MCAsmBackend *MAB =
-        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU);
+        getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
+                                       Options.MCOptions);
     if (!MCE || !MAB)
       return true;
 
@@ -293,7 +295,8 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   MCCodeEmitter *MCE =
       getTarget().createMCCodeEmitter(*getMCInstrInfo(), MRI, *Ctx);
   MCAsmBackend *MAB =
-      getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU);
+      getTarget().createMCAsmBackend(MRI, getTargetTriple().str(), TargetCPU,
+                                     Options.MCOptions);
   if (!MCE || !MAB)
     return true;
 

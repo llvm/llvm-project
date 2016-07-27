@@ -84,6 +84,13 @@ module LLVM_DebugInfo_PDB_DIA {
   module * { export * }
 }
 
+module LLVM_DebugInfo_Msf {
+  requires cplusplus
+  
+  umbrella "DebugInfo/Msf"
+  module * { export * }
+}
+
 module LLVM_DebugInfo_CodeView {
   requires cplusplus
 

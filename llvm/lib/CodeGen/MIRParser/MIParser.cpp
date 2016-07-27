@@ -598,14 +598,20 @@ bool MIParser::parse(MachineInstr *&MI) {
   SmallVector<LLT, 1> Tys;
   if (isPreISelGenericOpcode(OpCode)) {
     // For generic opcode, at least one type is mandatory.
-    expectAndConsume(MIToken::lbrace);
+    auto Loc = Token.location();
+    bool ManyTypes = Token.is(MIToken::lbrace);
+    if (ManyTypes)
+      lex();
+
+    // Now actually parse the type(s).
     do {
-      auto Loc = Token.location();
       Tys.resize(Tys.size() + 1);
       if (parseLowLevelType(Loc, Tys[Tys.size() - 1]))
         return true;
-    } while (consumeIfPresent(MIToken::comma));
-    expectAndConsume(MIToken::rbrace);
+    } while (ManyTypes && consumeIfPresent(MIToken::comma));
+
+    if (ManyTypes)
+      expectAndConsume(MIToken::rbrace);
   }
 
   // Parse the remaining machine operands.
@@ -876,10 +882,10 @@ bool MIParser::parseRegisterFlag(unsigned &Flags) {
 }
 
 bool MIParser::parseSubRegisterIndex(unsigned &SubReg) {
-  assert(Token.is(MIToken::colon));
+  assert(Token.is(MIToken::dot));
   lex();
   if (Token.isNot(MIToken::Identifier))
-    return error("expected a subregister index after ':'");
+    return error("expected a subregister index after '.'");
   auto Name = Token.stringValue();
   SubReg = getSubRegIndex(Name);
   if (!SubReg)
@@ -964,7 +970,7 @@ bool MIParser::parseRegisterOperand(MachineOperand &Dest,
     return true;
   lex();
   unsigned SubReg = 0;
-  if (Token.is(MIToken::colon)) {
+  if (Token.is(MIToken::dot)) {
     if (parseSubRegisterIndex(SubReg))
       return true;
     if (!TargetRegisterInfo::isVirtualRegister(Reg))
