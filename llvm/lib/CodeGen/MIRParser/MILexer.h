@@ -38,6 +38,7 @@ struct MIToken {
     underscore,
     colon,
     coloncolon,
+    dot,
     exclaim,
     lparen,
     rparen,

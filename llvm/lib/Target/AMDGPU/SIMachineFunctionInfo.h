@@ -28,7 +28,6 @@ class MachineRegisterInfo;
 class SIMachineFunctionInfo final : public AMDGPUMachineFunction {
   // FIXME: This should be removed and getPreloadedValue moved here.
   friend struct SIRegisterInfo;
-  void anchor() override;
 
   unsigned TIDReg;
 

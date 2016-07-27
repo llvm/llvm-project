@@ -34,7 +34,7 @@ Itanium (ia64)
 MIPS
 ----
 
-* `MIPS Processor Architecture <http://imgtec.com/mips/mips-architectures.asp>`_
+* `MIPS Processor Architecture <https://imgtec.com/mips/architectures/>`_
 
 * `MIPS 64-bit ELF Object File Specification <http://techpubs.sgi.com/library/manuals/4000/007-4658-001/pdf/007-4658-001.pdf>`_
 
@@ -101,6 +101,11 @@ XCore
 
 * `The XMOS XS1 Architecture (ISA) <https://www.xmos.com/en/download/public/The-XMOS-XS1-Architecture%28X7879A%29.pdf>`_
 * `Tools Development Guide (includes ABI) <https://www.xmos.com/download/public/Tools-Development-Guide%28X9114A%29.pdf>`_
+
+Hexagon
+-------
+
+* `Hexagon Programmer's Reference Manuals and Hexagon ABI Specification (registration required, free sign-up) <https://developer.qualcomm.com/software/hexagon-dsp-sdk/tools>`_
 
 Other relevant lists
 --------------------

@@ -763,24 +763,8 @@ SDValue AMDGPUTargetLowering::LowerGlobalAddress(AMDGPUMachineFunction* MFI,
     if (hasDefinedInitializer(GV))
       break;
 
-    unsigned Offset;
-    if (MFI->LocalMemoryObjects.count(GV) == 0) {
-      unsigned Align = GV->getAlignment();
-      if (Align == 0)
-        Align = DL.getABITypeAlignment(GV->getValueType());
-
-      /// TODO: We should sort these to minimize wasted space due to alignment
-      /// padding. Currently the padding is decided by the first encountered use
-      /// during lowering.
-      Offset = MFI->LDSSize = alignTo(MFI->LDSSize, Align);
-      MFI->LocalMemoryObjects[GV] = Offset;
-      MFI->LDSSize += DL.getTypeAllocSize(GV->getValueType());
-    } else {
-      Offset = MFI->LocalMemoryObjects[GV];
-    }
-
-    return DAG.getConstant(Offset, SDLoc(Op),
-                           getPointerTy(DL, AMDGPUAS::LOCAL_ADDRESS));
+    unsigned Offset = MFI->allocateLDSGlobal(DL, *GV);
+    return DAG.getConstant(Offset, SDLoc(Op), Op.getValueType());
   }
   }
 
@@ -2653,7 +2637,7 @@ SDValue AMDGPUTargetLowering::CreateLiveInRegister(SelectionDAG &DAG,
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(
     const AMDGPUMachineFunction *MFI, const ImplicitParameter Param) const {
-  uint64_t ArgOffset = MFI->ABIArgOffset;
+  uint64_t ArgOffset = MFI->getABIArgOffset();
   switch (Param) {
   case GRID_DIM:
     return ArgOffset;
@@ -2699,7 +2683,9 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(TRIG_PREOP)
   NODE_NAME_CASE(RCP)
   NODE_NAME_CASE(RSQ)
+  NODE_NAME_CASE(RCP_LEGACY)
   NODE_NAME_CASE(RSQ_LEGACY)
+  NODE_NAME_CASE(FMUL_LEGACY)
   NODE_NAME_CASE(RSQ_CLAMP)
   NODE_NAME_CASE(LDEXP)
   NODE_NAME_CASE(FP_CLASS)

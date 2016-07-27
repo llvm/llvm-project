@@ -516,7 +516,7 @@ bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {
     }
   }
 
-  if (NeedFlat && MFI->IsKernel) {
+  if (NeedFlat && MFI->isKernel()) {
     // TODO: What to use with function calls?
     // We will need to Initialize the flat scratch register pair.
     if (NeedFlat)

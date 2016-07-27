@@ -24,9 +24,7 @@ entry:
 
 ; CHECK: ld.param.u64 %rd[[A_REG:[0-9]+]], [kernel_func_param_0]
 ; CHECK: cvta.to.global.u64 %rd[[A1_REG:[0-9]+]], %rd[[A_REG]]
-; FIXME: casting A1_REG to A2_REG is unnecessary; A2_REG is essentially A_REG
-; CHECK: cvta.global.u64 %rd[[A2_REG:[0-9]+]], %rd[[A1_REG]]
-; CHECK: cvta.local.u64 %rd[[SP_REG:[0-9]+]]
+; CHECK: add.u64 %rd[[SP_REG:[0-9]+]], %SP, 0
 ; CHECK: ld.global.f32 %f[[A0_REG:[0-9]+]], [%rd[[A1_REG]]]
 ; CHECK: st.local.f32 [{{%rd[0-9]+}}], %f[[A0_REG]]
 
@@ -50,7 +48,7 @@ entry:
   store float %6, float* %7, align 4
 
 ; CHECK:        .param .b64 param0;
-; CHECK-NEXT:   st.param.b64  [param0+0], %rd[[A2_REG]]
+; CHECK-NEXT:   st.param.b64  [param0+0], %rd[[A_REG]]
 ; CHECK-NEXT:   .param .b64 param1;
 ; CHECK-NEXT:   st.param.b64  [param1+0], %rd[[SP_REG]]
 ; CHECK-NEXT:   call.uni

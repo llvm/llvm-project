@@ -367,11 +367,11 @@ TEST(LiveIntervalTest, SubRegMoveDown) {
 "    S_BRANCH %bb.1\n"
 "  bb.2:\n"
 "    successors: %bb.1\n"
-"    S_NOP 0, implicit %0:sub0\n"
-"    S_NOP 0, implicit %0:sub1\n"
+"    S_NOP 0, implicit %0.sub0\n"
+"    S_NOP 0, implicit %0.sub1\n"
 "    S_NOP 0\n"
-"    undef %0:sub0 = IMPLICIT_DEF\n"
-"    %0:sub1 = IMPLICIT_DEF\n"
+"    undef %0.sub0 = IMPLICIT_DEF\n"
+"    %0.sub1 = IMPLICIT_DEF\n"
 "  bb.1:\n"
 "    S_NOP 0, implicit %0\n",
   [](MachineFunction &MF, LiveIntervals &LIS) {

@@ -74,7 +74,7 @@ public:
 
     unsigned ADFS = DFSNumber.lookup(A);
     unsigned BDFS = DFSNumber.lookup(B);
-    assert (ADFS && ADFS);
+    assert (ADFS && BDFS);
     return ADFS < BDFS;
   }
 };
@@ -186,7 +186,8 @@ class GVNHoist {
 public:
   GVNHoist(DominatorTree *Dt, AliasAnalysis *Aa, MemoryDependenceResults *Md,
            bool OptForMinSize)
-      : DT(Dt), AA(Aa), MD(Md), OptForMinSize(OptForMinSize), HoistedCtr(0) {}
+      : DT(Dt), AA(Aa), MD(Md), OptForMinSize(OptForMinSize),
+        HoistingGeps(OptForMinSize), HoistedCtr(0) {}
   bool run(Function &F) {
     VN.setDomTree(DT);
     VN.setAliasAnalysis(AA);
@@ -230,6 +231,7 @@ private:
   AliasAnalysis *AA;
   MemoryDependenceResults *MD;
   const bool OptForMinSize;
+  const bool HoistingGeps;
   DenseMap<const Value *, unsigned> DFSNumber;
   BBSideEffectsSet BBSideEffects;
   MemorySSA *MSSA;
@@ -609,28 +611,86 @@ private:
     return true;
   }
 
-  Instruction *firstOfTwo(Instruction *I, Instruction *J) const {
-    for (Instruction &I1 : *I->getParent())
-      if (&I1 == I || &I1 == J)
-        return &I1;
-    llvm_unreachable("Both I and J must be from same BB");
+  // Same as allOperandsAvailable with recursive check for GEP operands.
+  bool allGepOperandsAvailable(const Instruction *I,
+                               const BasicBlock *HoistPt) const {
+    for (const Use &Op : I->operands())
+      if (const auto *Inst = dyn_cast<Instruction>(&Op))
+        if (!DT->dominates(Inst->getParent(), HoistPt)) {
+          if (const GetElementPtrInst *GepOp = dyn_cast<GetElementPtrInst>(Inst)) {
+            if (!allGepOperandsAvailable(GepOp, HoistPt))
+              return false;
+            // Gep is available if all operands of GepOp are available.
+          } else {
+            // Gep is not available if it has operands other than GEPs that are
+            // defined in blocks not dominating HoistPt.
+            return false;
+          }
+        }
+    return true;
   }
 
-  bool makeOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt,
-                             const SmallVecInsn &InstructionsToHoist) const {
+  // Make all operands of the GEP available.
+  void makeGepsAvailable(Instruction *Repl, BasicBlock *HoistPt,
+                         const SmallVecInsn &InstructionsToHoist,
+                         Instruction *Gep) const {
+    assert(allGepOperandsAvailable(Gep, HoistPt) && "GEP operands not available");
+
+    Instruction *ClonedGep = Gep->clone();
+    for (unsigned i = 0, e = Gep->getNumOperands(); i != e; ++i)
+      if (Instruction *Op = dyn_cast<Instruction>(Gep->getOperand(i))) {
+
+        // Check whether the operand is already available.
+        if (DT->dominates(Op->getParent(), HoistPt))
+          continue;
+
+        // As a GEP can refer to other GEPs, recursively make all the operands
+        // of this GEP available at HoistPt.
+        if (GetElementPtrInst *GepOp = dyn_cast<GetElementPtrInst>(Op))
+          makeGepsAvailable(ClonedGep, HoistPt, InstructionsToHoist, GepOp);
+      }
+
+    // Copy Gep and replace its uses in Repl with ClonedGep.
+    ClonedGep->insertBefore(HoistPt->getTerminator());
+
+    // Conservatively discard any optimization hints, they may differ on the
+    // other paths.
+    ClonedGep->dropUnknownNonDebugMetadata();
+
+    // If we have optimization hints which agree with each other along different
+    // paths, preserve them.
+    for (const Instruction *OtherInst : InstructionsToHoist) {
+      const GetElementPtrInst *OtherGep;
+      if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
+        OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
+      else
+        OtherGep = cast<GetElementPtrInst>(
+            cast<StoreInst>(OtherInst)->getPointerOperand());
+      ClonedGep->intersectOptionalDataWith(OtherGep);
+    }
+
+    // Replace uses of Gep with ClonedGep in Repl.
+    Repl->replaceUsesOfWith(Gep, ClonedGep);
+  }
+
+  // In the case Repl is a load or a store, we make all their GEPs
+  // available: GEPs are not hoisted by default to avoid the address
+  // computations to be hoisted without the associated load or store.
+  bool makeGepOperandsAvailable(Instruction *Repl, BasicBlock *HoistPt,
+                                const SmallVecInsn &InstructionsToHoist) const {
     // Check whether the GEP of a ld/st can be synthesized at HoistPt.
     GetElementPtrInst *Gep = nullptr;
     Instruction *Val = nullptr;
-    if (auto *Ld = dyn_cast<LoadInst>(Repl))
+    if (auto *Ld = dyn_cast<LoadInst>(Repl)) {
       Gep = dyn_cast<GetElementPtrInst>(Ld->getPointerOperand());
-    if (auto *St = dyn_cast<StoreInst>(Repl)) {
+    } else if (auto *St = dyn_cast<StoreInst>(Repl)) {
       Gep = dyn_cast<GetElementPtrInst>(St->getPointerOperand());
       Val = dyn_cast<Instruction>(St->getValueOperand());
       // Check that the stored value is available.
       if (Val) {
         if (isa<GetElementPtrInst>(Val)) {
           // Check whether we can compute the GEP at HoistPt.
-          if (!allOperandsAvailable(Val, HoistPt))
+          if (!allGepOperandsAvailable(Val, HoistPt))
             return false;
         } else if (!DT->dominates(Val->getParent(), HoistPt))
           return false;
@@ -638,40 +698,13 @@ private:
     }
 
     // Check whether we can compute the Gep at HoistPt.
-    if (!Gep || !allOperandsAvailable(Gep, HoistPt))
+    if (!Gep || !allGepOperandsAvailable(Gep, HoistPt))
       return false;
 
-    // Copy the gep before moving the ld/st.
-    Instruction *ClonedGep = Gep->clone();
-    ClonedGep->insertBefore(HoistPt->getTerminator());
-    // Conservatively discard any optimization hints, they may differ on the
-    // other paths.
-    for (Instruction *OtherInst : InstructionsToHoist) {
-      GetElementPtrInst *OtherGep;
-      if (auto *OtherLd = dyn_cast<LoadInst>(OtherInst))
-        OtherGep = cast<GetElementPtrInst>(OtherLd->getPointerOperand());
-      else
-        OtherGep = cast<GetElementPtrInst>(
-            cast<StoreInst>(OtherInst)->getPointerOperand());
-      ClonedGep->intersectOptionalDataWith(OtherGep);
-      combineKnownMetadata(ClonedGep, OtherGep);
-    }
-    Repl->replaceUsesOfWith(Gep, ClonedGep);
+    makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Gep);
 
-    // Also copy Val when it is a GEP.
-    if (Val && isa<GetElementPtrInst>(Val)) {
-      Instruction *ClonedVal = Val->clone();
-      ClonedVal->insertBefore(HoistPt->getTerminator());
-      // Conservatively discard any optimization hints, they may differ on the
-      // other paths.
-      for (Instruction *OtherInst : InstructionsToHoist) {
-        auto *OtherVal =
-            cast<Instruction>(cast<StoreInst>(OtherInst)->getValueOperand());
-        ClonedVal->intersectOptionalDataWith(OtherVal);
-        combineKnownMetadata(ClonedVal, OtherVal);
-      }
-      Repl->replaceUsesOfWith(Val, ClonedVal);
-    }
+    if (Val && isa<GetElementPtrInst>(Val))
+      makeGepsAvailable(Repl, HoistPt, InstructionsToHoist, Val);
 
     return true;
   }
@@ -685,12 +718,12 @@ private:
       const SmallVecInsn &InstructionsToHoist = HP.second;
       Instruction *Repl = nullptr;
       for (Instruction *I : InstructionsToHoist)
-        if (I->getParent() == HoistPt) {
+        if (I->getParent() == HoistPt)
           // If there are two instructions in HoistPt to be hoisted in place:
           // update Repl to be the first one, such that we can rename the uses
           // of the second based on the first.
-          Repl = !Repl ? I : firstOfTwo(Repl, I);
-        }
+          if (!Repl || firstInBB(I, Repl))
+            Repl = I;
 
       if (Repl) {
         // Repl is already in HoistPt: it remains in place.
@@ -702,14 +735,14 @@ private:
         Repl = InstructionsToHoist.front();
 
         // We can move Repl in HoistPt only when all operands are available.
+        // When not HoistingGeps we need to copy the GEPs now.
         // The order in which hoistings are done may influence the availability
         // of operands.
-        if (!allOperandsAvailable(Repl, HoistPt) &&
-            !makeOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
+        if (!allOperandsAvailable(Repl, HoistPt) && !HoistingGeps &&
+            !makeGepOperandsAvailable(Repl, HoistPt, InstructionsToHoist))
           continue;
+
         Repl->moveBefore(HoistPt->getTerminator());
-        // TBAA may differ on one of the other paths, we need to get rid of
-        // anything which might conflict.
       }
 
       if (isa<LoadInst>(Repl))
@@ -790,7 +823,7 @@ private:
               break;
           }
           CI.insert(Call, VN);
-        } else if (OptForMinSize || !isa<GetElementPtrInst>(&I1))
+        } else if (HoistingGeps || !isa<GetElementPtrInst>(&I1))
           // Do not hoist scalars past calls that may write to memory because
           // that could result in spills later. geps are handled separately.
           // TODO: We can relax this for targets like AArch64 as they have more

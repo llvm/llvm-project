@@ -807,7 +807,7 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
   }
 
   // Add FrameIndex to LDS offset
-  unsigned LDSOffset = MFI->LDSSize + (FrameOffset * WorkGroupSize);
+  unsigned LDSOffset = MFI->getLDSSize() + (FrameOffset * WorkGroupSize);
   BuildMI(MBB, MI, DL, get(AMDGPU::V_ADD_I32_e32), TmpReg)
           .addImm(LDSOffset)
           .addReg(TIDReg);

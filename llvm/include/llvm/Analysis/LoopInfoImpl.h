@@ -240,28 +240,23 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
   // Check the individual blocks.
   for ( ; BI != BE; ++BI) {
     BlockT *BB = *BI;
-    bool HasInsideLoopSuccs = false;
-    bool HasInsideLoopPreds = false;
-    SmallVector<BlockT *, 2> OutsideLoopPreds;
 
-    typedef GraphTraits<BlockT*> BlockTraits;
-    for (typename BlockTraits::ChildIteratorType SI =
-           BlockTraits::child_begin(BB), SE = BlockTraits::child_end(BB);
-         SI != SE; ++SI)
-      if (contains(*SI)) {
-        HasInsideLoopSuccs = true;
-        break;
-      }
-    typedef GraphTraits<Inverse<BlockT*> > InvBlockTraits;
-    for (typename InvBlockTraits::ChildIteratorType PI =
-           InvBlockTraits::child_begin(BB), PE = InvBlockTraits::child_end(BB);
-         PI != PE; ++PI) {
-      BlockT *N = *PI;
-      if (contains(N))
-        HasInsideLoopPreds = true;
-      else
-        OutsideLoopPreds.push_back(N);
-    }
+    assert(std::any_of(GraphTraits<BlockT*>::child_begin(BB),
+                       GraphTraits<BlockT*>::child_end(BB),
+                       [&](BlockT *B){return contains(B);}) &&
+           "Loop block has no in-loop successors!");
+
+    assert(std::any_of(GraphTraits<Inverse<BlockT*> >::child_begin(BB),
+                       GraphTraits<Inverse<BlockT*> >::child_end(BB),
+                       [&](BlockT *B){return contains(B);}) &&
+           "Loop block has no in-loop predecessors!");
+
+    SmallVector<BlockT *, 2> OutsideLoopPreds;
+    std::for_each(GraphTraits<Inverse<BlockT*> >::child_begin(BB),
+                  GraphTraits<Inverse<BlockT*> >::child_end(BB),
+                  [&](BlockT *B){if (!contains(B))
+                      OutsideLoopPreds.push_back(B);
+                  });
 
     if (BB == getHeader()) {
         assert(!OutsideLoopPreds.empty() && "Loop is unreachable!");
@@ -275,8 +270,6 @@ void LoopBase<BlockT, LoopT>::verifyLoop() const {
           assert(CB != OutsideLoopPreds[i] &&
                  "Loop has multiple entry points!");
     }
-    assert(HasInsideLoopPreds && "Loop block has no in-loop predecessors!");
-    assert(HasInsideLoopSuccs && "Loop block has no in-loop successors!");
     assert(BB != &getHeader()->getParent()->front() &&
            "Loop contains function entry block!");
 
@@ -316,17 +309,24 @@ void LoopBase<BlockT, LoopT>::verifyLoopNest(
 }
 
 template<class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth) const {
+void LoopBase<BlockT, LoopT>::print(raw_ostream &OS, unsigned Depth,
+                                    bool Verbose) const {
   OS.indent(Depth*2) << "Loop at depth " << getLoopDepth()
        << " containing: ";
 
+  BlockT *H = getHeader();
   for (unsigned i = 0; i < getBlocks().size(); ++i) {
-    if (i) OS << ",";
     BlockT *BB = getBlocks()[i];
-    BB->printAsOperand(OS, false);
-    if (BB == getHeader())    OS << "<header>";
-    if (BB == getLoopLatch()) OS << "<latch>";
-    if (isLoopExiting(BB))    OS << "<exiting>";
+    if (!Verbose) {
+      if (i) OS << ",";
+      BB->printAsOperand(OS, false);
+    } else OS << "\n";
+
+    if (BB == H) OS << "<header>";
+    if (isLoopLatch(BB)) OS << "<latch>";
+    if (isLoopExiting(BB)) OS << "<exiting>";
+    if (Verbose)
+      BB->print(OS);
   }
   OS << "\n";
 

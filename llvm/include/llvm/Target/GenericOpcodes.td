@@ -40,10 +40,10 @@ def G_BITCAST : Instruction {
   let hasSideEffects = 0;
 }
 
-
 //------------------------------------------------------------------------------
 // Binary ops.
 //------------------------------------------------------------------------------
+
 // Generic addition.
 def G_ADD : Instruction {
   let OutOperandList = (outs unknown:$dst);
@@ -74,6 +74,26 @@ def G_OR : Instruction {
   let InOperandList = (ins unknown:$src1, unknown:$src2);
   let hasSideEffects = 0;
   let isCommutable = 1;
+}
+
+//------------------------------------------------------------------------------
+// Memory ops
+//------------------------------------------------------------------------------
+
+// Generic load. Expects a MachineMemOperand in addition to explicit operands.
+def G_LOAD : Instruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$addr);
+  let hasSideEffects = 0;
+  let mayLoad = 1;
+}
+
+// Generic store. Expects a MachineMemOperand in addition to explicit operands.
+def G_STORE : Instruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins unknown:$src, unknown:$addr);
+  let hasSideEffects = 0;
+  let mayStore = 1;
 }
 
 //------------------------------------------------------------------------------

@@ -1,0 +1,51 @@
+// Metadata section
+// CHECK: {"version":"1.0.0","type":"llvm.coverage.json.export","data":[
+
+// Open Export
+// CHECK-SAME: {"object":"{{[^"]+}}","files":[
+
+// File Object
+// CHECK-SAME: {"filename":"{{[^"]+}}showExpansions.cpp",
+// CHECK-SAME: "segments":[
+// CHECK-SAME: {{(\[[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+\],?)+}}],
+// CHECK-SAME: "expansions":[
+// CHECK-SAME: {"source_region":[24,5,24,17,100,0,1,1],
+// CHECK-SAME: "target_regions":[
+// CHECK-SAME: {{(\[[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+\],?)+}}
+// CHECK-SAME: ],
+
+// Yes, 4 of the same filename in a row
+// CHECK-SAME: "filenames":[
+// CHECK-SAME: "{{[^"]+}}showExpansions.cpp","{{[^"]+}}showExpansions.cpp",
+// CHECK-SAME: "{{[^"]+}}showExpansions.cpp","{{[^"]+}}showExpansions.cpp"]
+// CHECK-SAME: }],
+
+// Verify the Summary Section for the first file
+// CHECK-SAME: "summary":{
+// CHECK-SAME: "lines":{"count":17,"covered":15,"percent":88,"noncode":0},
+// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "regions":{"count":13,"covered":12,"notcovered":1,"percent":92}}
+
+// Close Files Array
+// CHECK-SAME: ],
+
+// Functions List
+// CHECK-SAME: "functions":[
+// CHECK-SAME: {"name":"main","count":1,"regions":[
+// CHECK-SAME: {{(\[[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+,[0-9]+\],?)+}}
+// CHECK-SAME: ],
+// CHECK-SAME: "filenames":[
+// CHECK-SAME: "{{[^"]+}}showExpansions.cpp",
+// CHECK-SAME: "{{[^"]+}}showExpansions.cpp",
+// CHECK-SAME: "{{[^"]+}}showExpansions.cpp",
+// CHECK-SAME: "{{[^"]+}}showExpansions.cpp"]
+// CHECK-SAME: }],
+
+// Full Export Summary
+// CHECK-SAME: "totals":{
+// CHECK-SAME: "lines":{"count":17,"covered":15,"percent":88,"noncode":0},
+// CHECK-SAME: "functions":{"count":1,"covered":1,"percent":100},
+// CHECK-SAME: "regions":{"count":13,"covered":12,"notcovered":1,"percent":92}}
+
+// Close the export object, data array, and root object
+// CHECK-SAME: }]}
