@@ -43,3 +43,5 @@ int main() {
   func2(9);
   return 0;
 }
+
+// RUN: llvm-cov export %S/Inputs/highlightedRanges.covmapping -instr-profile %S/Inputs/highlightedRanges.profdata 2>&1 | FileCheck %S/Inputs/highlightedRanges.json

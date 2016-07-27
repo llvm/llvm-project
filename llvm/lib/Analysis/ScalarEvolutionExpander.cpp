@@ -1626,10 +1626,9 @@ Value *SCEVExpander::expandCodeFor(const SCEV *SH, Type *Ty) {
   return V;
 }
 
-ScalarEvolution::ValueOffsetPair
-SCEVExpander::FindValueInExprValueMap(const SCEV *S,
-                                      const Instruction *InsertPt) {
-  SetVector<ScalarEvolution::ValueOffsetPair> *Set = SE.getSCEVValues(S);
+Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
+                                             const Instruction *InsertPt) {
+  SetVector<Value *> *Set = SE.getSCEVValues(S);
   // If the expansion is not in CanonicalMode, and the SCEV contains any
   // sub scAddRecExpr type SCEV, it is required to expand the SCEV literally.
   if (CanonicalMode || !SE.containsAddRecurrence(S)) {
@@ -1638,21 +1637,21 @@ SCEVExpander::FindValueInExprValueMap(const SCEV *S,
       // Choose a Value from the set which dominates the insertPt.
       // insertPt should be inside the Value's parent loop so as not to break
       // the LCSSA form.
-      for (auto const &VOPair : *Set) {
-        Value *V = VOPair.first;
-        ConstantInt *Offset = VOPair.second;
+      for (auto const &Ent : *Set) {
         Instruction *EntInst = nullptr;
-        if (V && isa<Instruction>(V) && (EntInst = cast<Instruction>(V)) &&
-            S->getType() == V->getType() &&
+        if (Ent && isa<Instruction>(Ent) &&
+            (EntInst = cast<Instruction>(Ent)) &&
+            S->getType() == Ent->getType() &&
             EntInst->getFunction() == InsertPt->getFunction() &&
             SE.DT.dominates(EntInst, InsertPt) &&
             (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
-          return {V, Offset};
+             SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt))) {
+          return Ent;
+        }
       }
     }
   }
-  return {nullptr, nullptr};
+  return nullptr;
 }
 
 // The expansion of SCEV will either reuse a previous Value in ExprValueMap,
@@ -1700,14 +1699,10 @@ Value *SCEVExpander::expand(const SCEV *S) {
   Builder.SetInsertPoint(InsertPt);
 
   // Expand the expression into instructions.
-  ScalarEvolution::ValueOffsetPair VO = FindValueInExprValueMap(S, InsertPt);
-  Value *V = VO.first;
+  Value *V = FindValueInExprValueMap(S, InsertPt);
 
   if (!V)
     V = visit(S);
-  else if (VO.second) {
-    V = Builder.CreateSub(V, VO.second);
-  }
 
   // Remember the expanded value for this SCEV at this location.
   //
@@ -1920,7 +1915,7 @@ Value *SCEVExpander::findExistingExpansion(const SCEV *S,
 
   // Use expand's logic which is used for reusing a previous Value in
   // ExprValueMap.
-  if (Value *Val = FindValueInExprValueMap(S, At).first)
+  if (Value *Val = FindValueInExprValueMap(S, At))
     return Val;
 
   // There is potential to make this significantly smarter, but this simple

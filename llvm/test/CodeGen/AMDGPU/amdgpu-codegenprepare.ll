@@ -45,6 +45,7 @@ define void @fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #1 {
 
 ; CHECK-LABEL: @rcp_fdiv_fpmath(
 ; CHECK: %no.md = fdiv float 1.000000e+00, %x{{$}}
+; CHECK: %md.25ulp = fdiv float 1.000000e+00, %x, !fpmath !0
 ; CHECK: %md.half.ulp = fdiv float 1.000000e+00, %x, !fpmath !1
 ; CHECK: %arcp.no.md = fdiv arcp float 1.000000e+00, %x{{$}}
 ; CHECK: %arcp.25ulp = fdiv arcp float 1.000000e+00, %x, !fpmath !0
@@ -53,6 +54,9 @@ define void @fdiv_fpmath(float addrspace(1)* %out, float %a, float %b) #1 {
 define void @rcp_fdiv_fpmath(float addrspace(1)* %out, float %x) #1 {
   %no.md = fdiv float 1.0, %x
   store volatile float %no.md, float addrspace(1)* %out
+
+  %md.25ulp = fdiv float 1.0, %x, !fpmath !0
+  store volatile float %md.25ulp, float addrspace(1)* %out
 
   %md.half.ulp = fdiv float 1.0, %x, !fpmath !1
   store volatile float %md.half.ulp, float addrspace(1)* %out
@@ -146,13 +150,13 @@ define void @rcp_fdiv_fpmath_vector(<2 x float> addrspace(1)* %out, <2 x float> 
 ; CHECK: %[[X0:[0-9]+]] = extractelement <2 x float> %x, i64 0
 ; CHECK: fdiv arcp float 1.000000e+00, %[[X0]], !fpmath !0
 ; CHECK: %[[X1:[0-9]+]] = extractelement <2 x float> %x, i64 1
-; CHECK: call arcp float @llvm.amdgcn.fdiv.fast(float 2.000000e+00, float %[[X1]]), !fpmath !0
+; CHECK: fdiv arcp float 2.000000e+00, %[[X1]], !fpmath !0
 ; CHECK: store volatile <2 x float> %arcp.25ulp
 
 ; CHECK: %[[X0:[0-9]+]] = extractelement <2 x float> %x, i64 0
 ; CHECK: fdiv fast float 1.000000e+00, %[[X0]], !fpmath !0
 ; CHECK: %[[X1:[0-9]+]] = extractelement <2 x float> %x, i64 1
-; CHECK: call fast float @llvm.amdgcn.fdiv.fast(float 2.000000e+00, float %[[X1]]), !fpmath !0
+; CHECK: fdiv fast float 2.000000e+00, %[[X1]], !fpmath !0
 ; CHECK: store volatile <2 x float> %fast.25ulp
 define void @rcp_fdiv_fpmath_vector_nonsplat(<2 x float> addrspace(1)* %out, <2 x float> %x) #1 {
   %no.md = fdiv <2 x float> <float 1.0, float 2.0>, %x

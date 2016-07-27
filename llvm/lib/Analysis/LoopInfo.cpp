@@ -387,6 +387,10 @@ BasicBlock *Loop::getUniqueExitBlock() const {
 LLVM_DUMP_METHOD void Loop::dump() const {
   print(dbgs());
 }
+
+LLVM_DUMP_METHOD void Loop::dumpVerbose() const {
+  print(dbgs(), /*Depth=*/ 0, /*Verbose=*/ true);
+}
 #endif
 
 //===----------------------------------------------------------------------===//

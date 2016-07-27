@@ -40,6 +40,7 @@
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ARMEHABI.h"
 #include "llvm/Support/COFF.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ELF.h"
 #include "llvm/Support/MathExtras.h"
@@ -51,6 +52,21 @@
 using namespace llvm;
 
 namespace {
+
+enum class ImplicitItModeTy { Always, Never, ARMOnly, ThumbOnly };
+
+static cl::opt<ImplicitItModeTy> ImplicitItMode(
+    "arm-implicit-it", cl::init(ImplicitItModeTy::ARMOnly),
+    cl::desc("Allow conditional instructions outdside of an IT block"),
+    cl::values(clEnumValN(ImplicitItModeTy::Always, "always",
+                          "Accept in both ISAs, emit implicit ITs in Thumb"),
+               clEnumValN(ImplicitItModeTy::Never, "never",
+                          "Warn in ARM, reject in Thumb"),
+               clEnumValN(ImplicitItModeTy::ARMOnly, "arm",
+                          "Accept in ARM, reject in Thumb"),
+               clEnumValN(ImplicitItModeTy::ThumbOnly, "thumb",
+                          "Warn in ARM, emit implicit ITs in Thumb"),
+               clEnumValEnd));
 
 class ARMOperand;
 
@@ -145,6 +161,16 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   bool NextSymbolIsThumb;
 
+  bool useImplicitITThumb() const {
+    return ImplicitItMode == ImplicitItModeTy::Always ||
+           ImplicitItMode == ImplicitItModeTy::ThumbOnly;
+  }
+
+  bool useImplicitITARM() const {
+    return ImplicitItMode == ImplicitItModeTy::Always ||
+           ImplicitItMode == ImplicitItModeTy::ARMOnly;
+  }
+
   struct {
     ARMCC::CondCodes Cond;    // Condition for IT block.
     unsigned Mask:4;          // Condition mask for instructions.
@@ -153,28 +179,164 @@ class ARMAsmParser : public MCTargetAsmParser {
                               //   '0'  inverse of condition (else).
                               // Count of instructions in IT block is
                               // 4 - trailingzeroes(mask)
-
-    bool FirstCond;           // Explicit flag for when we're parsing the
-                              // First instruction in the IT block. It's
-                              // implied in the mask, so needs special
-                              // handling.
+                              // Note that this does not have the same encoding
+                              // as in the IT instruction, which also depends
+                              // on the low bit of the condition code.
 
     unsigned CurPosition;     // Current position in parsing of IT
-                              // block. In range [0,3]. Initialized
-                              // according to count of instructions in block.
-                              // ~0U if no active IT block.
+                              // block. In range [0,4], with 0 being the IT
+                              // instruction itself. Initialized according to
+                              // count of instructions in block.  ~0U if no
+                              // active IT block.
+
+    bool IsExplicit;          // true  - The IT instruction was present in the
+                              //         input, we should not modify it.
+                              // false - The IT instruction was added
+                              //         implicitly, we can extend it if that
+                              //         would be legal.
   } ITState;
+
+  llvm::SmallVector<MCInst, 4> PendingConditionalInsts;
+
+  void flushPendingInstructions(MCStreamer &Out) override {
+    if (!inImplicitITBlock()) {
+      assert(PendingConditionalInsts.size() == 0);
+      return;
+    }
+
+    // Emit the IT instruction
+    unsigned Mask = getITMaskEncoding();
+    MCInst ITInst;
+    ITInst.setOpcode(ARM::t2IT);
+    ITInst.addOperand(MCOperand::createImm(ITState.Cond));
+    ITInst.addOperand(MCOperand::createImm(Mask));
+    Out.EmitInstruction(ITInst, getSTI());
+
+    // Emit the conditonal instructions
+    assert(PendingConditionalInsts.size() <= 4);
+    for (MCInst Inst : PendingConditionalInsts) {
+      Out.EmitInstruction(Inst, getSTI());
+    }
+    PendingConditionalInsts.clear();
+
+    // Clear the IT state
+    ITState.Mask = 0;
+    ITState.CurPosition = ~0U;
+  }
+
   bool inITBlock() { return ITState.CurPosition != ~0U; }
+  bool inExplicitITBlock() { return inITBlock() && ITState.IsExplicit; }
+  bool inImplicitITBlock() { return inITBlock() && !ITState.IsExplicit; }
   bool lastInITBlock() {
     return ITState.CurPosition == 4 - countTrailingZeros(ITState.Mask);
   }
   void forwardITPosition() {
     if (!inITBlock()) return;
     // Move to the next instruction in the IT block, if there is one. If not,
-    // mark the block as done.
+    // mark the block as done, except for implicit IT blocks, which we leave
+    // open until we find an instruction that can't be added to it.
     unsigned TZ = countTrailingZeros(ITState.Mask);
-    if (++ITState.CurPosition == 5 - TZ)
+    if (++ITState.CurPosition == 5 - TZ && ITState.IsExplicit)
       ITState.CurPosition = ~0U; // Done with the IT block after this.
+  }
+
+  // Rewind the state of the current IT block, removing the last slot from it.
+  void rewindImplicitITPosition() {
+    assert(inImplicitITBlock());
+    assert(ITState.CurPosition > 1);
+    ITState.CurPosition--;
+    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned NewMask = 0;
+    NewMask |= ITState.Mask & (0xC << TZ);
+    NewMask |= 0x2 << TZ;
+    ITState.Mask = NewMask;
+  }
+
+  // Rewind the state of the current IT block, removing the last slot from it.
+  // If we were at the first slot, this closes the IT block.
+  void discardImplicitITBlock() {
+    assert(inImplicitITBlock());
+    assert(ITState.CurPosition == 1);
+    ITState.CurPosition = ~0U;
+    return;
+  }
+
+  // Get the encoding of the IT mask, as it will appear in an IT instruction.
+  unsigned getITMaskEncoding() {
+    assert(inITBlock());
+    unsigned Mask = ITState.Mask;
+    unsigned TZ = countTrailingZeros(Mask);
+    if ((ITState.Cond & 1) == 0) {
+      assert(Mask && TZ <= 3 && "illegal IT mask value!");
+      Mask ^= (0xE << TZ) & 0xF;
+    }
+    return Mask;
+  }
+
+  // Get the condition code corresponding to the current IT block slot.
+  ARMCC::CondCodes currentITCond() {
+    unsigned MaskBit;
+    if (ITState.CurPosition == 1)
+      MaskBit = 1;
+    else
+      MaskBit = (ITState.Mask >> (5 - ITState.CurPosition)) & 1;
+
+    return MaskBit ? ITState.Cond : ARMCC::getOppositeCondition(ITState.Cond);
+  }
+
+  // Invert the condition of the current IT block slot without changing any
+  // other slots in the same block.
+  void invertCurrentITCondition() {
+    if (ITState.CurPosition == 1) {
+      ITState.Cond = ARMCC::getOppositeCondition(ITState.Cond);
+    } else {
+      ITState.Mask ^= 1 << (5 - ITState.CurPosition);
+    }
+  }
+
+  // Returns true if the current IT block is full (all 4 slots used).
+  bool isITBlockFull() {
+    return inITBlock() && (ITState.Mask & 1);
+  }
+
+  // Extend the current implicit IT block to have one more slot with the given
+  // condition code.
+  void extendImplicitITBlock(ARMCC::CondCodes Cond) {
+    assert(inImplicitITBlock());
+    assert(!isITBlockFull());
+    assert(Cond == ITState.Cond ||
+           Cond == ARMCC::getOppositeCondition(ITState.Cond));
+    unsigned TZ = countTrailingZeros(ITState.Mask);
+    unsigned NewMask = 0;
+    // Keep any existing condition bits.
+    NewMask |= ITState.Mask & (0xE << TZ);
+    // Insert the new condition bit.
+    NewMask |= (Cond == ITState.Cond) << TZ;
+    // Move the trailing 1 down one bit.
+    NewMask |= 1 << (TZ - 1);
+    ITState.Mask = NewMask;
+  }
+
+  // Create a new implicit IT block with a dummy condition code.
+  void startImplicitITBlock() {
+    assert(!inITBlock());
+    ITState.Cond = ARMCC::AL;
+    ITState.Mask = 8;
+    ITState.CurPosition = 1;
+    ITState.IsExplicit = false;
+    return;
+  }
+
+  // Create a new explicit IT block with the given condition and mask. The mask
+  // should be in the parsed format, with a 1 implying 't', regardless of the
+  // low bit of the condition.
+  void startExplicitITBlock(ARMCC::CondCodes Cond, unsigned Mask) {
+    assert(!inITBlock());
+    ITState.Cond = Cond;
+    ITState.Mask = Mask;
+    ITState.CurPosition = 0;
+    ITState.IsExplicit = true;
+    return;
   }
 
   void Note(SMLoc L, const Twine &Msg, ArrayRef<SMRange> Ranges = None) {
@@ -355,6 +517,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   bool processInstruction(MCInst &Inst, const OperandVector &Ops, MCStreamer &Out);
   bool shouldOmitCCOutOperand(StringRef Mnemonic, OperandVector &Operands);
   bool shouldOmitPredicateOperand(StringRef Mnemonic, OperandVector &Operands);
+  bool isITBlockTerminator(MCInst &Inst) const;
 
 public:
   enum ARMMatchResultTy {
@@ -399,6 +562,9 @@ public:
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
+  unsigned MatchInstruction(OperandVector &Operands, MCInst &Inst,
+                            uint64_t &ErrorInfo, bool MatchingInlineAsm,
+                            bool &EmitInITBlock, MCStreamer &Out);
   void onLabelParsed(MCSymbol *Symbol) override;
 };
 } // end anonymous namespace
@@ -6188,18 +6354,11 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
   // NOTE: BKPT and HLT instructions have the interesting property of being
   // allowed in IT blocks, but not being predicable. They just always execute.
   if (inITBlock() && !instIsBreakpoint(Inst)) {
-    unsigned Bit = 1;
-    if (ITState.FirstCond)
-      ITState.FirstCond = false;
-    else
-      Bit = (ITState.Mask >> (5 - ITState.CurPosition)) & 1;
     // The instruction must be predicable.
     if (!MCID.isPredicable())
       return Error(Loc, "instructions in IT block must be predicable");
     unsigned Cond = Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm();
-    unsigned ITCond = Bit ? ITState.Cond :
-      ARMCC::getOppositeCondition(ITState.Cond);
-    if (Cond != ITCond) {
+    if (Cond != currentITCond()) {
       // Find the condition code Operand to get its SMLoc information.
       SMLoc CondLoc;
       for (unsigned I = 1; I < Operands.size(); ++I)
@@ -6208,14 +6367,19 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error(CondLoc, "incorrect condition in IT block; got '" +
                    StringRef(ARMCondCodeToString(ARMCC::CondCodes(Cond))) +
                    "', but expected '" +
-                   ARMCondCodeToString(ARMCC::CondCodes(ITCond)) + "'");
+                   ARMCondCodeToString(ARMCC::CondCodes(currentITCond())) + "'");
     }
   // Check for non-'al' condition codes outside of the IT block.
   } else if (isThumbTwo() && MCID.isPredicable() &&
              Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm() !=
              ARMCC::AL && Inst.getOpcode() != ARM::tBcc &&
-             Inst.getOpcode() != ARM::t2Bcc)
+             Inst.getOpcode() != ARM::t2Bcc) {
     return Error(Loc, "predicated instructions must be in IT block");
+  } else if (!isThumb() && !useImplicitITARM() && MCID.isPredicable() &&
+             Inst.getOperand(MCID.findFirstPredOperandIdx()).getImm() !=
+                 ARMCC::AL) {
+    return Warning(Loc, "predicated instructions should be in IT block");
+  }
 
   const unsigned Opcode = Inst.getOpcode();
   switch (Opcode) {
@@ -8636,27 +8800,15 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
   }
   case ARM::ITasm:
   case ARM::t2IT: {
-    // The mask bits for all but the first condition are represented as
-    // the low bit of the condition code value implies 't'. We currently
-    // always have 1 implies 't', so XOR toggle the bits if the low bit
-    // of the condition code is zero. 
     MCOperand &MO = Inst.getOperand(1);
     unsigned Mask = MO.getImm();
-    unsigned OrigMask = Mask;
-    unsigned TZ = countTrailingZeros(Mask);
-    if ((Inst.getOperand(0).getImm() & 1) == 0) {
-      assert(Mask && TZ <= 3 && "illegal IT mask value!");
-      Mask ^= (0xE << TZ) & 0xF;
-    }
-    MO.setImm(Mask);
+    ARMCC::CondCodes Cond = ARMCC::CondCodes(Inst.getOperand(0).getImm());
 
     // Set up the IT block state according to the IT instruction we just
     // matched.
     assert(!inITBlock() && "nested IT blocks?!");
-    ITState.Cond = ARMCC::CondCodes(Inst.getOperand(0).getImm());
-    ITState.Mask = OrigMask; // Use the original mask, not the updated one.
-    ITState.CurPosition = 0;
-    ITState.FirstCond = true;
+    startExplicitITBlock(Cond, Mask);
+    MO.setImm(getITMaskEncoding());
     break;
   }
   case ARM::t2LSLrr:
@@ -8804,6 +8956,132 @@ template <> inline bool IsCPSRDead<MCInst>(MCInst *Instr) {
 }
 }
 
+// Returns true if Inst is unpredictable if it is in and IT block, but is not
+// the last instruction in the block.
+bool ARMAsmParser::isITBlockTerminator(MCInst &Inst) const {
+  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+
+  // All branch & call instructions terminate IT blocks.
+  if (MCID.isTerminator() || MCID.isCall() || MCID.isReturn() ||
+      MCID.isBranch() || MCID.isIndirectBranch())
+    return true;
+
+  // Any arithmetic instruction which writes to the PC also terminates the IT
+  // block.
+  for (unsigned OpIdx = 0; OpIdx < MCID.getNumDefs(); ++OpIdx) {
+    MCOperand &Op = Inst.getOperand(OpIdx);
+    if (Op.isReg() && Op.getReg() == ARM::PC)
+      return true;
+  }
+
+  if (MCID.hasImplicitDefOfPhysReg(ARM::PC, MRI))
+    return true;
+
+  // Instructions with variable operand lists, which write to the variable
+  // operands. We only care about Thumb instructions here, as ARM instructions
+  // obviously can't be in an IT block.
+  switch (Inst.getOpcode()) {
+  case ARM::t2LDMIA:
+  case ARM::t2LDMIA_UPD:
+  case ARM::t2LDMDB:
+  case ARM::t2LDMDB_UPD:
+    if (listContainsReg(Inst, 3, ARM::PC))
+      return true;
+    break;
+  case ARM::tPOP:
+    if (listContainsReg(Inst, 2, ARM::PC))
+      return true;
+    break;
+  }
+
+  return false;
+}
+
+unsigned ARMAsmParser::MatchInstruction(OperandVector &Operands, MCInst &Inst,
+                                          uint64_t &ErrorInfo,
+                                          bool MatchingInlineAsm,
+                                          bool &EmitInITBlock,
+                                          MCStreamer &Out) {
+  // If we can't use an implicit IT block here, just match as normal.
+  if (inExplicitITBlock() || !isThumbTwo() || !useImplicitITThumb())
+    return MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
+
+  // Try to match the instruction in an extension of the current IT block (if
+  // there is one).
+  if (inImplicitITBlock()) {
+    extendImplicitITBlock(ITState.Cond);
+    if (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm) ==
+            Match_Success) {
+      // The match succeded, but we still have to check that the instruction is
+      // valid in this implicit IT block.
+      const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+      if (MCID.isPredicable()) {
+        ARMCC::CondCodes InstCond =
+            (ARMCC::CondCodes)Inst.getOperand(MCID.findFirstPredOperandIdx())
+                .getImm();
+        ARMCC::CondCodes ITCond = currentITCond();
+        if (InstCond == ITCond) {
+          EmitInITBlock = true;
+          return Match_Success;
+        } else if (InstCond == ARMCC::getOppositeCondition(ITCond)) {
+          invertCurrentITCondition();
+          EmitInITBlock = true;
+          return Match_Success;
+        }
+      }
+    }
+    rewindImplicitITPosition();
+  }
+
+  // Finish the current IT block, and try to match outside any IT block.
+  flushPendingInstructions(Out);
+  unsigned PlainMatchResult =
+      MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm);
+  if (PlainMatchResult == Match_Success) {
+    const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+    if (MCID.isPredicable()) {
+      ARMCC::CondCodes InstCond =
+          (ARMCC::CondCodes)Inst.getOperand(MCID.findFirstPredOperandIdx())
+              .getImm();
+      // Some forms of the branch instruction have their own condition code
+      // fields, so can be conditionally executed without an IT block.
+      if (Inst.getOpcode() == ARM::tBcc || Inst.getOpcode() == ARM::t2Bcc) {
+        EmitInITBlock = false;
+        return Match_Success;
+      }
+      if (InstCond == ARMCC::AL) {
+        EmitInITBlock = false;
+        return Match_Success;
+      }
+    } else {
+      EmitInITBlock = false;
+      return Match_Success;
+    }
+  }
+
+  // Try to match in a new IT block. The matcher doesn't check the actual
+  // condition, so we create an IT block with a dummy condition, and fix it up
+  // once we know the actual condition.
+  startImplicitITBlock();
+  if (MatchInstructionImpl(Operands, Inst, ErrorInfo, MatchingInlineAsm) ==
+      Match_Success) {
+    const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+    if (MCID.isPredicable()) {
+      ITState.Cond =
+          (ARMCC::CondCodes)Inst.getOperand(MCID.findFirstPredOperandIdx())
+              .getImm();
+      EmitInITBlock = true;
+      return Match_Success;
+    }
+  }
+  discardImplicitITBlock();
+
+  // If none of these succeed, return the error we got when trying to match
+  // outside any IT blocks.
+  EmitInITBlock = false;
+  return PlainMatchResult;
+}
+
 static const char *getSubtargetFeatureName(uint64_t Val);
 bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            OperandVector &Operands,
@@ -8811,9 +9089,11 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                            bool MatchingInlineAsm) {
   MCInst Inst;
   unsigned MatchResult;
+  bool PendConditionalInstruction = false;
 
-  MatchResult = MatchInstructionImpl(Operands, Inst, ErrorInfo,
-                                     MatchingInlineAsm);
+  MatchResult = MatchInstruction(Operands, Inst, ErrorInfo, MatchingInlineAsm,
+                                 PendConditionalInstruction, Out);
+
   switch (MatchResult) {
   case Match_Success:
     // Context sensitive operand constraints aren't handled by the matcher,
@@ -8853,7 +9133,13 @@ bool ARMAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
       return false;
 
     Inst.setLoc(IDLoc);
-    Out.EmitInstruction(Inst, getSTI());
+    if (PendConditionalInstruction) {
+      PendingConditionalInsts.push_back(Inst);
+      if (isITBlockFull() || isITBlockTerminator(Inst))
+        flushPendingInstructions(Out);
+    } else {
+      Out.EmitInstruction(Inst, getSTI());
+    }
     return false;
   case Match_MissingFeature: {
     assert(ErrorInfo && "Unknown missing feature!");
@@ -9106,6 +9392,9 @@ bool ARMAsmParser::parseDirectiveARM(SMLoc L) {
 }
 
 void ARMAsmParser::onLabelParsed(MCSymbol *Symbol) {
+  // We need to flush the current implicit IT block on a label, because it is
+  // not legal to branch into an IT block.
+  flushPendingInstructions(getStreamer());
   if (NextSymbolIsThumb) {
     getParser().getStreamer().EmitThumbFunc(Symbol);
     NextSymbolIsThumb = false;
@@ -10216,7 +10505,7 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
   MCAsmParser &Parser = getParser();
 
   if (getLexer().isNot(AsmToken::Identifier)) {
-    Error(getLexer().getLoc(), "unexpected token");
+    Error(getLexer().getLoc(), "expected architecture extension name");
     Parser.eatToEndOfStatement();
     return false;
   }
@@ -10231,15 +10520,19 @@ bool ARMAsmParser::parseDirectiveArchExtension(SMLoc L) {
     Name = Name.substr(2);
   }
   unsigned FeatureKind = ARM::parseArchExt(Name);
-  if (FeatureKind == ARM::AEK_INVALID)
+  if (FeatureKind == ARM::AEK_INVALID) {
     Error(ExtLoc, "unknown architectural extension: " + Name);
+    return false;
+  }
 
   for (const auto &Extension : Extensions) {
     if (Extension.Kind != FeatureKind)
       continue;
 
-    if (Extension.Features.none())
-      report_fatal_error("unsupported architectural extension: " + Name);
+    if (Extension.Features.none()) {
+      Error(ExtLoc, "unsupported architectural extension: " + Name);
+      return false;
+    }
 
     if ((getAvailableFeatures() & Extension.ArchCheck) != Extension.ArchCheck) {
       Error(ExtLoc, "architectural extension '" + Name + "' is not "

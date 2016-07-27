@@ -94,9 +94,11 @@ protected:
   bool canPromoteToNewValueStore(const MachineInstr* MI,
                                  const MachineInstr* PacketMI, unsigned DepReg);
   bool demoteToDotOld(MachineInstr* MI);
+  bool useCallersSP(MachineInstr *MI);
+  void useCalleesSP(MachineInstr *MI);
   bool arePredicatesComplements(MachineInstr &MI1, MachineInstr &MI2);
   bool restrictingDepExistInPacket(MachineInstr*, unsigned);
-  bool isNewifiable(const MachineInstr *MI);
+  bool isNewifiable(const MachineInstr *MI, const TargetRegisterClass *NewRC);
   bool isCurifiable(MachineInstr* MI);
   bool cannotCoexist(const MachineInstr *MI, const MachineInstr *MJ);
   inline bool isPromotedToDotNew() const {

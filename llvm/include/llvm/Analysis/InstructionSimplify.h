@@ -238,19 +238,13 @@ namespace llvm {
                                     AssumptionCache *AC = nullptr,
                                     const Instruction *CxtI = nullptr);
 
-  /// Given operands for an TruncInst, fold the result or return null.
-  Value *SimplifyTruncInst(Value *Op, Type *Ty, const DataLayout &DL,
-                           const TargetLibraryInfo *TLI = nullptr,
-                           const DominatorTree *DT = nullptr,
-                           AssumptionCache *AC = nullptr,
-                           const Instruction *CxtI = nullptr);
-
-  /// Given operands for an BitCastInst, fold the result or return null.
-  Value *SimplifyBitCastInst(Value *Op, Type *Ty, const DataLayout &DL,
-                             const TargetLibraryInfo *TLI = nullptr,
-                             const DominatorTree *DT = nullptr,
-                             AssumptionCache *AC = nullptr,
-                             const Instruction *CxtI = nullptr);
+  /// Given operands for a CastInst, fold the result or return null.
+  Value *SimplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
+                          const DataLayout &DL,
+                          const TargetLibraryInfo *TLI = nullptr,
+                          const DominatorTree *DT = nullptr,
+                          AssumptionCache *AC = nullptr,
+                          const Instruction *CxtI = nullptr);
 
   //=== Helper functions for higher up the class hierarchy.
 

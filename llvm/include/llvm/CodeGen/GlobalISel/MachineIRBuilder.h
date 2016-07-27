@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/GlobalISel/Types.h"
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/IR/DebugLoc.h"
 
@@ -50,6 +51,16 @@ class MachineIRBuilder {
     assert(TII && "TargetInstrInfo is not set");
     return *TII;
   }
+
+  static void addRegs(MachineInstrBuilder &MIB) {}
+
+  template <typename... MoreRegs>
+  static void addRegs(MachineInstrBuilder &MIB, unsigned Reg,
+                      MoreRegs... Regs) {
+    MIB.addReg(Reg);
+    addRegs(MIB, Regs...);
+  }
+
 
 public:
   /// Getter for the function we currently build.
@@ -86,62 +97,40 @@ public:
   /// Set the debug location to \p DL for all the next build instructions.
   void setDebugLoc(const DebugLoc &DL) { this->DL = DL; }
 
-  /// Build and insert <empty> = \p Opcode [\p Ty] <empty>.
+  /// Build and insert <empty> = \p Opcode [ { \p Tys } ] <empty>.
   /// \p Ty is the type of the instruction if \p Opcode describes
-  /// a generic machine instruction. \p Ty must be nullptr if \p Opcode
+  /// a generic machine instruction. \p Ty must be LLT{} if \p Opcode
   /// does not describe a generic instruction.
   /// The insertion point is the one set by the last call of either
   /// setBasicBlock or setMI.
   ///
   /// \pre setBasicBlock or setMI must have been called.
-  /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
+  /// \pre Ty == LLT{} or isPreISelGenericOpcode(Opcode)
   ///
   /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, LLT Ty);
+  MachineInstr *buildInstr(unsigned Opcode, ArrayRef<LLT> Tys);
 
-  /// Build and insert <empty> = \p Opcode [\p Ty] \p BB.
+  /// Build and insert \p Res = \p Opcode [\p Ty] \p Uses....
+  /// \p Ty is the type of the instruction if \p Opcode describes
+  /// a generic machine instruction. \p Ty must be LLT{} if \p Opcode
+  /// does not describe a generic instruction.
+  /// The insertion point is the one set by the last call of either
+  /// setBasicBlock or setMI.
   ///
   /// \pre setBasicBlock or setMI must have been called.
-  /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
+  /// \pre Ty == LLT{} or isPreISelGenericOpcode(Opcode)
   ///
   /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, LLT Ty, MachineBasicBlock &BB);
-
-  /// Build and insert \p Res<def> = \p Opcode [\p Ty] \p Op0, \p Op1.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre Ty == nullptr or isPreISelGenericOpcode(Opcode)
-  ///
-  /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, LLT Ty, unsigned Res,
-                           unsigned Op0, unsigned Op1);
-
-  /// Build and insert \p Res<def> = \p Opcode {[\p Tys]} \p Op0, \p Op1.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre Tys empty or isPreISelGenericOpcode(Opcode)
-  ///
-  /// \return The newly created instruction.
+  template <typename... MoreRegs>
   MachineInstr *buildInstr(unsigned Opcode, ArrayRef<LLT> Tys, unsigned Res,
-                           unsigned Op0);
+                           MoreRegs... Uses) {
+    MachineInstr *NewMI = buildInstr(Opcode, Tys);
+    MachineInstrBuilder MIB{getMF(), NewMI};
+    MIB.addReg(Res, RegState::Define);
+    addRegs(MIB, Uses...);
 
-  /// Build and insert \p Res<def> = \p Opcode \p Op0, \p Op1.
-  /// I.e., instruction with a non-generic opcode.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre not isPreISelGenericOpcode(\p Opcode)
-  ///
-  /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, unsigned Res, unsigned Op0,
-                           unsigned Op1);
-
-  /// Build and insert \p Res<def> = \p Opcode \p Op0.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre not isPreISelGenericOpcode(\p Opcode)
-  ///
-  /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode, unsigned Res, unsigned Op0);
+    return NewMI;
+  }
 
   /// Build and insert <empty> = \p Opcode <empty>.
   ///
@@ -149,7 +138,21 @@ public:
   /// \pre not isPreISelGenericOpcode(\p Opcode)
   ///
   /// \return The newly created instruction.
-  MachineInstr *buildInstr(unsigned Opcode);
+  MachineInstr *buildInstr(unsigned Opcode) {
+    return buildInstr(Opcode, ArrayRef<LLT>());
+  }
+
+  /// Build and insert \p Res = \p Opcode \p Uses....
+  /// The insertion point is the one set by the last call of either
+  /// setBasicBlock or setMI.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  template <typename... MoreRegs>
+  MachineInstr *buildInstr(unsigned Opcode, unsigned Res, MoreRegs... Uses) {
+    return buildInstr(Opcode, ArrayRef<LLT>(), Res, Uses...);
+  }
 
   /// Build and insert \p Res<def> = G_FRAME_INDEX \p Ty \p Idx
   ///
@@ -170,6 +173,46 @@ public:
   ///
   /// \return The newly created instruction.
   MachineInstr *buildAdd(LLT Ty, unsigned Res, unsigned Op0, unsigned Op1);
+
+  /// Build and insert G_BR unsized \p Dest
+  ///
+  /// G_BR is an unconditional branch to \p Dest.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildBr(MachineBasicBlock &BB);
+
+  /// Build and insert \p Res<def> = COPY Op
+  ///
+  /// Register-to-register COPY sets \p Res to \p Op.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildCopy(unsigned Res, unsigned Op);
+
+  /// Build and insert `Res<def> = G_LOAD { VTy, PTy } Addr, MMO`.
+  ///
+  /// Loads the value of (sized) type \p VTy stored at \p Addr (in address space
+  /// given by \p PTy). Puts the result in Res.
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildLoad(LLT VTy, LLT PTy, unsigned Res, unsigned Addr,
+                          MachineMemOperand &MMO);
+
+  /// Build and insert `G_STORE { VTy, PTy } Val, Addr, MMO`.
+  ///
+  /// Stores the value \p Val of (sized) \p VTy to \p Addr (in address space
+  /// given by \p PTy).
+  ///
+  /// \pre setBasicBlock or setMI must have been called.
+  ///
+  /// \return The newly created instruction.
+  MachineInstr *buildStore(LLT VTy, LLT PTy, unsigned Val, unsigned Addr,
+                          MachineMemOperand &MMO);
 
   /// Build and insert `Res0<def>, ... = G_EXTRACT Ty Src, Idx0, ...`.
   ///

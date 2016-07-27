@@ -3378,28 +3378,8 @@ bool ScalarEvolution::containsAddRecurrence(const SCEV *S) {
   return F.FoundOne;
 }
 
-/// Try to split a SCEVAddExpr into a pair of {SCEV, ConstantInt}.
-/// If \p S is a SCEVAddExpr and is composed of a sub SCEV S' and an
-/// offset I, then return {S', I}, else return {\p S, nullptr}.
-static std::pair<const SCEV *, ConstantInt *> splitAddExpr(const SCEV *S) {
-  const auto *Add = dyn_cast<SCEVAddExpr>(S);
-  if (!Add)
-    return {S, nullptr};
-
-  if (Add->getNumOperands() != 2)
-    return {S, nullptr};
-
-  auto *ConstOp = dyn_cast<SCEVConstant>(Add->getOperand(0));
-  if (!ConstOp)
-    return {S, nullptr};
-
-  return {Add->getOperand(1), ConstOp->getValue()};
-}
-
-/// Return the ValueOffsetPair set for \p S. \p S can be represented
-/// by the value and offset from any ValueOffsetPair in the set.
-SetVector<ScalarEvolution::ValueOffsetPair> *
-ScalarEvolution::getSCEVValues(const SCEV *S) {
+/// Return the Value set from S.
+SetVector<Value *> *ScalarEvolution::getSCEVValues(const SCEV *S) {
   ExprValueMapType::iterator SI = ExprValueMap.find_as(S);
   if (SI == ExprValueMap.end())
     return nullptr;
@@ -3407,31 +3387,24 @@ ScalarEvolution::getSCEVValues(const SCEV *S) {
   if (VerifySCEVMap) {
     // Check there is no dangling Value in the set returned.
     for (const auto &VE : SI->second)
-      assert(ValueExprMap.count(VE.first));
+      assert(ValueExprMap.count(VE));
   }
 #endif
   return &SI->second;
 }
 
-/// Erase Value from ValueExprMap and ExprValueMap. ValueExprMap.erase(V)
-/// cannot be used separately. eraseValueFromMap should be used to remove
-/// V from ValueExprMap and ExprValueMap at the same time.
+/// Erase Value from ValueExprMap and ExprValueMap.  If ValueExprMap.erase(V) is
+/// not used together with forgetMemoizedResults(S), eraseValueFromMap should be
+/// used instead to ensure whenever V->S is removed from ValueExprMap, V is also
+/// removed from the set of ExprValueMap[S].
 void ScalarEvolution::eraseValueFromMap(Value *V) {
   ValueExprMapType::iterator I = ValueExprMap.find_as(V);
   if (I != ValueExprMap.end()) {
     const SCEV *S = I->second;
-    // Remove {V, 0} from the set of ExprValueMap[S]
-    if (SetVector<ValueOffsetPair> *SV = getSCEVValues(S))
-      SV->remove({V, nullptr});
-
-    // Remove {V, Offset} from the set of ExprValueMap[Stripped]
-    const SCEV *Stripped;
-    ConstantInt *Offset;
-    std::tie(Stripped, Offset) = splitAddExpr(S);
-    if (Offset != nullptr) {
-      if (SetVector<ValueOffsetPair> *SV = getSCEVValues(Stripped))
-        SV->remove({V, Offset});
-    }
+    SetVector<Value *> *SV = getSCEVValues(S);
+    // Remove V from the set of ExprValueMap[S]
+    if (SV)
+      SV->remove(V);
     ValueExprMap.erase(V);
   }
 }
@@ -3446,26 +3419,11 @@ const SCEV *ScalarEvolution::getSCEV(Value *V) {
     S = createSCEV(V);
     // During PHI resolution, it is possible to create two SCEVs for the same
     // V, so it is needed to double check whether V->S is inserted into
-    // ValueExprMap before insert S->{V, 0} into ExprValueMap.
+    // ValueExprMap before insert S->V into ExprValueMap.
     std::pair<ValueExprMapType::iterator, bool> Pair =
         ValueExprMap.insert({SCEVCallbackVH(V, this), S});
-    if (Pair.second) {
-      ExprValueMap[S].insert({V, nullptr});
-
-      // If S == Stripped + Offset, add Stripped -> {V, Offset} into
-      // ExprValueMap.
-      const SCEV *Stripped = S;
-      ConstantInt *Offset = nullptr;
-      std::tie(Stripped, Offset) = splitAddExpr(S);
-      // If stripped is SCEVUnknown, don't bother to save
-      // Stripped -> {V, offset}. It doesn't simplify and sometimes even
-      // increase the complexity of the expansion code.
-      // If V is GetElementPtrInst, don't save Stripped -> {V, offset}
-      // because it may generate add/sub instead of GEP in SCEV expansion.
-      if (Offset != nullptr && !isa<SCEVUnknown>(Stripped) &&
-          !isa<GetElementPtrInst>(V))
-        ExprValueMap[Stripped].insert({V, Offset});
-    }
+    if (Pair.second)
+      ExprValueMap[S].insert(V);
   }
   return S;
 }
@@ -3478,8 +3436,8 @@ const SCEV *ScalarEvolution::getExistingSCEV(Value *V) {
     const SCEV *S = I->second;
     if (checkValidity(S))
       return S;
-    eraseValueFromMap(V);
     forgetMemoizedResults(S);
+    ValueExprMap.erase(I);
   }
   return nullptr;
 }
@@ -3717,8 +3675,8 @@ void ScalarEvolution::forgetSymbolicName(Instruction *PN, const SCEV *SymName) {
       if (!isa<PHINode>(I) ||
           !isa<SCEVUnknown>(Old) ||
           (I != PN && Old == SymName)) {
-        eraseValueFromMap(It->first);
         forgetMemoizedResults(Old);
+        ValueExprMap.erase(It);
       }
     }
 
@@ -4097,7 +4055,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
     // to create an AddRecExpr for this PHI node. We can not keep this temporary
     // as it will prevent later (possibly simpler) SCEV expressions to be added
     // to the ValueExprMap.
-    eraseValueFromMap(PN);
+    ValueExprMap.erase(PN);
   }
 
   return nullptr;
@@ -5473,8 +5431,8 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
         // case, createNodeForPHI will perform the necessary updates on its
         // own when it gets to that point.
         if (!isa<PHINode>(I) || !isa<SCEVUnknown>(Old)) {
-          eraseValueFromMap(It->first);
           forgetMemoizedResults(Old);
+          ValueExprMap.erase(It);
         }
         if (PHINode *PN = dyn_cast<PHINode>(I))
           ConstantEvolutionLoopExitValue.erase(PN);
@@ -5519,8 +5477,8 @@ void ScalarEvolution::forgetLoop(const Loop *L) {
     ValueExprMapType::iterator It =
       ValueExprMap.find_as(static_cast<Value *>(I));
     if (It != ValueExprMap.end()) {
-      eraseValueFromMap(It->first);
       forgetMemoizedResults(It->second);
+      ValueExprMap.erase(It);
       if (PHINode *PN = dyn_cast<PHINode>(I))
         ConstantEvolutionLoopExitValue.erase(PN);
     }
@@ -5553,8 +5511,8 @@ void ScalarEvolution::forgetValue(Value *V) {
     ValueExprMapType::iterator It =
       ValueExprMap.find_as(static_cast<Value *>(I));
     if (It != ValueExprMap.end()) {
-      eraseValueFromMap(It->first);
       forgetMemoizedResults(It->second);
+      ValueExprMap.erase(It);
       if (PHINode *PN = dyn_cast<PHINode>(I))
         ConstantEvolutionLoopExitValue.erase(PN);
     }

@@ -49,7 +49,7 @@ AggregateArgsOpt("aggregate-extracted-args", cl::Hidden,
                  cl::desc("Aggregate arguments to code-extracted functions"));
 
 /// \brief Test whether a block is valid for extraction.
-static bool isBlockValidForExtraction(const BasicBlock &BB) {
+bool CodeExtractor::isBlockValidForExtraction(const BasicBlock &BB) {
   // Landing pads must be in the function where they were inserted for cleanup.
   if (BB.isEHPad())
     return false;
@@ -81,7 +81,7 @@ static SetVector<BasicBlock *> buildExtractionBlockSet(IteratorT BBBegin,
     if (!Result.insert(*BBBegin))
       llvm_unreachable("Repeated basic blocks in extraction input");
 
-    if (!isBlockValidForExtraction(**BBBegin)) {
+    if (!CodeExtractor::isBlockValidForExtraction(**BBBegin)) {
       Result.clear();
       return Result;
     }

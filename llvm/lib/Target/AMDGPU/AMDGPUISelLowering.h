@@ -249,7 +249,9 @@ enum NodeType : unsigned {
   //            For f64, max error 2^29 ULP, handles denormals.
   RCP,
   RSQ,
+  RCP_LEGACY,
   RSQ_LEGACY,
+  FMUL_LEGACY,
   RSQ_CLAMP,
   LDEXP,
   FP_CLASS,

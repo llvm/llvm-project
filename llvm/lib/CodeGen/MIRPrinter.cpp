@@ -566,13 +566,14 @@ void MIPrinter::print(const MachineInstr &MI) {
   OS << TII->getName(MI.getOpcode());
   if (isPreISelGenericOpcode(MI.getOpcode())) {
     assert(MI.getType().isValid() && "Generic instructions must have a type");
-    OS << " { ";
-    for (unsigned i = 0; i < MI.getNumTypes(); ++i) {
+    unsigned NumTypes = MI.getNumTypes();
+    OS << (NumTypes > 1 ? " {" : "") << ' ';
+    for (unsigned i = 0; i < NumTypes; ++i) {
       MI.getType(i).print(OS);
-      if (i + 1 != MI.getNumTypes())
+      if (i + 1 != NumTypes)
         OS <<  ", ";
     }
-    OS << " } ";
+    OS << (NumTypes > 1 ? " }" : "") << ' ';
   }
   if (I < E)
     OS << ' ';
@@ -778,7 +779,7 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
     printReg(Op.getReg(), OS, TRI);
     // Print the sub register.
     if (Op.getSubReg() != 0)
-      OS << ':' << TRI->getSubRegIndexName(Op.getSubReg());
+      OS << '.' << TRI->getSubRegIndexName(Op.getSubReg());
     if (ShouldPrintRegisterTies && Op.isTied() && !Op.isDef())
       OS << "(tied-def " << Op.getParent()->findTiedOperandIdx(I) << ")";
     assert((!IsDef || MRI) && "for IsDef, MRI must be provided");
@@ -961,32 +962,32 @@ void MIPrinter::print(const MCCFIInstruction &CFI,
                       const TargetRegisterInfo *TRI) {
   switch (CFI.getOperation()) {
   case MCCFIInstruction::OpSameValue:
-    OS << ".cfi_same_value ";
+    OS << "same_value ";
     if (CFI.getLabel())
       OS << "<mcsymbol> ";
     printCFIRegister(CFI.getRegister(), OS, TRI);
     break;
   case MCCFIInstruction::OpOffset:
-    OS << ".cfi_offset ";
+    OS << "offset ";
     if (CFI.getLabel())
       OS << "<mcsymbol> ";
     printCFIRegister(CFI.getRegister(), OS, TRI);
     OS << ", " << CFI.getOffset();
     break;
   case MCCFIInstruction::OpDefCfaRegister:
-    OS << ".cfi_def_cfa_register ";
+    OS << "def_cfa_register ";
     if (CFI.getLabel())
       OS << "<mcsymbol> ";
     printCFIRegister(CFI.getRegister(), OS, TRI);
     break;
   case MCCFIInstruction::OpDefCfaOffset:
-    OS << ".cfi_def_cfa_offset ";
+    OS << "def_cfa_offset ";
     if (CFI.getLabel())
       OS << "<mcsymbol> ";
     OS << CFI.getOffset();
     break;
   case MCCFIInstruction::OpDefCfa:
-    OS << ".cfi_def_cfa ";
+    OS << "def_cfa ";
     if (CFI.getLabel())
       OS << "<mcsymbol> ";
     printCFIRegister(CFI.getRegister(), OS, TRI);

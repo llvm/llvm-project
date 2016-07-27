@@ -73,7 +73,7 @@ Coroutine Representation
 Let's look at an example of an LLVM coroutine with the behavior sketched
 by the following pseudo-code.
 
-.. code-block:: C++
+.. code-block:: c++
 
   void *f(int n) {
      for(;;) {
@@ -166,7 +166,7 @@ execution of the coroutine until a suspend point is reached:
   entry:
     %alloc = call noalias i8* @malloc(i32 24)
     %0 = call noalias i8* @llvm.coro.begin(i8* %alloc, i32 0, i8* null, i8* null)
-    %frame = bitcast i8* %frame to %f.frame*
+    %frame = bitcast i8* %0 to %f.frame*
     %1 = getelementptr %f.frame, %f.frame* %frame, i32 0, i32 0
     store void (%f.frame*)* @f.resume, void (%f.frame*)** %1
     %2 = getelementptr %f.frame, %f.frame* %frame, i32 0, i32 1
@@ -215,15 +215,9 @@ RAII idiom and is suitable for allocation elision optimization which avoid
 dynamic allocation by storing the coroutine frame as a static `alloca` in its 
 caller.
 
-If a coroutine uses allocation and deallocation functions that are known to
-LLVM, unused calls to `malloc` and calls to `free` with `null` argument will be
-removed as dead code. However, if custom allocation functions are used, the
-`coro.alloc` and `coro.free` intrinsics can be used to enable removal of custom
-allocation and deallocation code when coroutine does not require dynamic
-allocation of the coroutine frame.
-
 In the entry block, we will call `coro.alloc`_ intrinsic that will return `null`
-when dynamic allocation is required, and non-null otherwise:
+when dynamic allocation is required, and an address of an alloca on the caller's
+frame where coroutine frame can be stored if dynamic allocation is elided.
 
 .. code-block:: llvm
 
@@ -256,8 +250,7 @@ thus skipping the deallocation code:
     ...
 
 With allocations and deallocations represented as described as above, after
-coroutine heap allocation elision optimization, the resulting main will end up 
-looking just like it was when we used `malloc` and `free`:
+coroutine heap allocation elision optimization, the resulting main will be:
 
 .. code-block:: llvm
 
@@ -274,7 +267,7 @@ Multiple Suspend Points
 
 Let's consider the coroutine that has more than one suspend point:
 
-.. code-block:: C++
+.. code-block:: c++
 
   void *f(int n) {
      for(;;) {
@@ -419,12 +412,19 @@ store the current value produced by a coroutine.
   entry:
     %promise = alloca i32
     %pv = bitcast i32* %promise to i8*
+    %elide = call i8* @llvm.coro.alloc()
+    %need.dyn.alloc = icmp ne i8* %elide, null
+    br i1 %need.dyn.alloc, label %coro.begin, label %dyn.alloc
+  dyn.alloc:
     %size = call i32 @llvm.coro.size.i32()
     %alloc = call i8* @malloc(i32 %size)
-    %hdl = call noalias i8* @llvm.coro.begin(i8* %alloc, i32 0, i8* %pv, i8* null)
+    br label %coro.begin
+  coro.begin:
+    %phi = phi i8* [ %elide, %entry ], [ %alloc, %dyn.alloc ]
+    %hdl = call noalias i8* @llvm.coro.begin(i8* %phi, i32 0, i8* %pv, i8* null)
     br label %loop
   loop:
-    %n.val = phi i32 [ %n, %entry ], [ %inc, %loop ]
+    %n.val = phi i32 [ %n, %coro.begin ], [ %inc, %loop ]
     %inc = add nsw i32 %n.val, 1
     store i32 %n.val, i32* %promise
     %0 = call i8 @llvm.coro.suspend(token none, i1 false)
@@ -461,8 +461,7 @@ coroutine promise.
     ret i32 0
   }
 
-After example in this section is compiled, result of the compilation will 
-exactly like the result of the very first example:
+After example in this section is compiled, result of the compilation will be:
 
 .. code-block:: llvm
 
@@ -528,7 +527,7 @@ For example, for a Python generator that has only one suspend point:
 Python frontend would inject two more suspend points, so that the actual code
 looks like this:
 
-.. code-block:: C
+.. code-block:: c
 
   void* coroutine(int n) {
     int current_value; 
@@ -542,7 +541,7 @@ looks like this:
 
 and python iterator `__next__` would look like:
 
-.. code-block:: C++
+.. code-block:: c++
 
   int __next__(void* hdl) {
     coro.resume(hdl);
@@ -758,14 +757,13 @@ the coroutine frame.
 Overview:
 """""""""
 
-The '``llvm.coro.begin``' intrinsic returns an address of the 
-coroutine frame.
+The '``llvm.coro.begin``' intrinsic returns an address of the coroutine frame.
 
 Arguments:
 """"""""""
 
-The first argument is a pointer to a block of memory in which coroutine frame
-may use if memory for the coroutine frame needs to be allocated dynamically. 
+The first argument is a pointer to a block of memory where coroutine frame
+will be stored.
 
 The second argument provides information on the alignment of the memory returned 
 by the allocation function and given to `coro.begin` by the first argument. If 
@@ -788,7 +786,7 @@ may be at offset to the `%mem` argument. (This could be beneficial if
 instructions that express relative access to data can be more compactly encoded 
 with small positive and negative offsets).
 
-Frontend should emit exactly one `coro.begin` intrinsic per coroutine.
+A frontend should emit exactly one `coro.begin` intrinsic per coroutine.
 
 .. _coro.free:
 
@@ -861,10 +859,8 @@ Semantics:
 
 If the coroutine is eligible for heap elision, this intrinsic is lowered to an 
 alloca storing the coroutine frame. Otherwise, it is lowered to constant `null`.
-This intrinsic only needs to be used if a custom allocation function is used
-(i.e. a function not recognized by LLVM as a memory allocation function) and the
-language rules allow for custom allocation / deallocation to be elided when not
-needed.
+
+A frontend should emit at most one `coro.alloc` intrinsic per coroutine.
 
 Example:
 """"""""
@@ -1076,7 +1072,7 @@ to the coroutine:
 Overview:
 """""""""
 
-The '``llvm.coro.param``' is used by the frontend to mark up the code used to
+The '``llvm.coro.param``' is used by a frontend to mark up the code used to
 construct and destruct copies of the parameters. If the optimizer discovers that
 a particular parameter copy is not used after any suspends, it can remove the
 construction and destruction of the copy by replacing corresponding coro.param
@@ -1109,7 +1105,7 @@ Example:
 Consider the following example. A coroutine takes two parameters `a` and `b`
 that has a destructor and a move constructor.
 
-.. code-block:: C++
+.. code-block:: c++
 
   struct A { ~A(); A(A&&); bool foo(); void bar(); };
 
@@ -1180,8 +1176,8 @@ earlier passes.
 
 Upstreaming sequence (rough plan)
 =================================
-#. Add documentation. <= we are here
-#. Add coroutine intrinsics.
+#. Add documentation.
+#. Add coroutine intrinsics.  <= we are here
 #. Add empty coroutine passes.
 #. Add coroutine devirtualization + tests.
 #. Add CGSCC restart trigger + tests.

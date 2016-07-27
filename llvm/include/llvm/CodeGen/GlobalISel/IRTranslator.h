@@ -97,6 +97,12 @@ private:
   /// emitted.
   bool translateBitCast(const CastInst &CI);
 
+  /// Translate an LLVM load instruction into generic IR.
+  bool translateLoad(const LoadInst &LI);
+
+  /// Translate an LLVM store instruction into generic IR.
+  bool translateStore(const StoreInst &SI);
+
   /// Translate one of LLVM's cast instructions into MachineInstrs, with the
   /// given generic Opcode.
   bool translateCast(unsigned Opcode, const CastInst &CI);
@@ -141,9 +147,15 @@ private:
   /// If such VReg does not exist, it is created.
   unsigned getOrCreateVReg(const Value &Val);
 
+  /// Get the alignment of the given memory operation instruction. This will
+  /// either be the explicitly specified value or the ABI-required alignment for
+  /// the type being accessed (according to the Module's DataLayout).
+  unsigned getMemOpAlignment(const Instruction &I);
+
   /// Get the MachineBasicBlock that represents \p BB.
   /// If such basic block does not exist, it is created.
   MachineBasicBlock &getOrCreateBB(const BasicBlock &BB);
+
 
 public:
   // Ctor, nothing fancy.

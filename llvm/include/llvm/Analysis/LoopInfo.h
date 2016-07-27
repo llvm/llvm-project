@@ -168,6 +168,19 @@ public:
     return false;
   }
 
+  /// Returns true if \p BB is a loop-latch.
+  /// A latch block is a block that contains a branch back to the header.
+  /// This function is useful when there are multiple latches in a loop
+  /// because \fn getLoopLatch will return nullptr in that case.
+  bool isLoopLatch(const BlockT *BB) const {
+    assert(contains(BB) && "block does not belong to the loop");
+
+    BlockT *Header = getHeader();
+    auto PredBegin = GraphTraits<Inverse<BlockT*> >::child_begin(Header);
+    auto PredEnd = GraphTraits<Inverse<BlockT*> >::child_end(Header);
+    return std::find(PredBegin, PredEnd, BB) != PredEnd;
+  }
+
   /// Calculate the number of back edges to the loop header.
   unsigned getNumBackEdges() const {
     unsigned NumBackEdges = 0;
@@ -329,7 +342,10 @@ public:
   /// Verify loop structure of this loop and all nested loops.
   void verifyLoopNest(DenseSet<const LoopT*> *Loops) const;
 
-  void print(raw_ostream &OS, unsigned Depth = 0) const;
+  void print(raw_ostream &OS, unsigned Depth = 0, bool Verbose = false) const;
+
+  /// Print loop with all the BBs inside it.
+  void printVerbose(raw_ostream &OS, unsigned Depth = 0) const;
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;
@@ -451,6 +467,7 @@ public:
   BasicBlock *getUniqueExitBlock() const;
 
   void dump() const;
+  void dumpVerbose() const;
 
   /// Return the debug location of the start of this loop.
   /// This looks for a BB terminating instruction with a known debug

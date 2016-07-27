@@ -56,12 +56,14 @@ MachineBasicBlock::iterator MachineIRBuilder::getInsertPt() {
 //------------------------------------------------------------------------------
 // Build instruction variants.
 //------------------------------------------------------------------------------
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty) {
+
+MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, ArrayRef<LLT> Tys) {
   MachineInstr *NewMI = BuildMI(getMF(), DL, getTII().get(Opcode));
-  if (Ty.isValid()) {
+  if (Tys.size() > 0) {
     assert(isPreISelGenericOpcode(Opcode) &&
            "Only generic instruction can have a type");
-    NewMI->setType(Ty);
+    for (unsigned i = 0; i < Tys.size(); ++i)
+      NewMI->setType(Tys[i], i);
   } else
     assert(!isPreISelGenericOpcode(Opcode) &&
            "Generic instruction must have a type");
@@ -69,63 +71,44 @@ MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty) {
   return NewMI;
 }
 
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, unsigned Res,
-                                           unsigned Op0, unsigned Op1) {
-  return buildInstr(Opcode, LLT{}, Res, Op0, Op1);
-}
-
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty,
-                                           unsigned Res, unsigned Op0,
-                                           unsigned Op1) {
-  MachineInstr *NewMI = buildInstr(Opcode, Ty);
-  MachineInstrBuilder(getMF(), NewMI)
-      .addReg(Res, RegState::Define)
-      .addReg(Op0)
-      .addReg(Op1);
-  return NewMI;
-}
-
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, ArrayRef<LLT> Tys,
-                                           unsigned Res, unsigned Op0) {
-  MachineInstr *NewMI = buildInstr(Opcode, Tys[0]);
-  for (unsigned i = 1; i < Tys.size(); ++i)
-    NewMI->setType(Tys[i], i);
-
-  MachineInstrBuilder(getMF(), NewMI)
-      .addReg(Res, RegState::Define)
-      .addReg(Op0);
-  return NewMI;
-}
-
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, unsigned Res,
-                                           unsigned Op0) {
-  MachineInstr *NewMI = buildInstr(Opcode, LLT{});
-  MachineInstrBuilder(getMF(), NewMI).addReg(Res, RegState::Define).addReg(Op0);
-  return NewMI;
-}
-
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode) {
-  return buildInstr(Opcode, LLT{});
-}
-
-MachineInstr *MachineIRBuilder::buildInstr(unsigned Opcode, LLT Ty,
-                                           MachineBasicBlock &BB) {
-  MachineInstr *NewMI = buildInstr(Opcode, Ty);
-  MachineInstrBuilder(getMF(), NewMI).addMBB(&BB);
-  return NewMI;
-}
-
 MachineInstr *MachineIRBuilder::buildFrameIndex(LLT Ty, unsigned Res, int Idx) {
   MachineInstr *NewMI = buildInstr(TargetOpcode::G_FRAME_INDEX, Ty);
   auto MIB = MachineInstrBuilder(getMF(), NewMI);
   MIB.addReg(Res, RegState::Define);
-  MIB.addImm(Idx);
+  MIB.addFrameIndex(Idx);
   return NewMI;
 }
 
 MachineInstr *MachineIRBuilder::buildAdd(LLT Ty, unsigned Res, unsigned Op0,
                                          unsigned Op1) {
   return buildInstr(TargetOpcode::G_ADD, Ty, Res, Op0, Op1);
+}
+
+MachineInstr *MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
+  MachineInstr *NewMI = buildInstr(TargetOpcode::G_BR, LLT::unsized());
+  MachineInstrBuilder(getMF(), NewMI).addMBB(&Dest);
+  return NewMI;
+}
+
+MachineInstr *MachineIRBuilder::buildCopy(unsigned Res, unsigned Op) {
+  return buildInstr(TargetOpcode::COPY, Res, Op);
+}
+
+MachineInstr *MachineIRBuilder::buildLoad(LLT VTy, LLT PTy, unsigned Res,
+                                          unsigned Addr,
+                                          MachineMemOperand &MMO) {
+  MachineInstr *NewMI = buildInstr(TargetOpcode::G_LOAD, {VTy, PTy}, Res, Addr);
+  NewMI->addMemOperand(getMF(), &MMO);
+  return NewMI;
+}
+
+MachineInstr *MachineIRBuilder::buildStore(LLT VTy, LLT PTy, unsigned Val,
+                                           unsigned Addr,
+                                           MachineMemOperand &MMO) {
+  MachineInstr *NewMI = buildInstr(TargetOpcode::G_STORE, {VTy, PTy});
+  NewMI->addMemOperand(getMF(), &MMO);
+  MachineInstrBuilder(getMF(), NewMI).addReg(Val).addReg(Addr);
+  return NewMI;
 }
 
 MachineInstr *MachineIRBuilder::buildExtract(LLT Ty, ArrayRef<unsigned> Results,
