@@ -403,18 +403,23 @@ void DarwinClang::AddLinkSanitizerLibArgs(const ArgList &Args,
       /*AddRPath*/ true);
 }
 
+ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
+    const ArgList &Args) const {
+  if (Arg* A = Args.getLastArg(options::OPT_rtlib_EQ)) {
+    StringRef Value = A->getValue();
+    if (Value != "compiler-rt")
+      getDriver().Diag(diag::err_drv_unsupported_rtlib_for_platform)
+          << Value << "darwin";
+  }
+
+  return ToolChain::RLT_CompilerRT;
+}
+
 void DarwinClang::AddLinkRuntimeLibArgs(const llvm::Triple &EffectiveTriple,
                                         const ArgList &Args,
                                         ArgStringList &CmdArgs) const {
-  // Darwin only supports the compiler-rt based runtime libraries.
-  switch (GetRuntimeLibType(Args)) {
-  case ToolChain::RLT_CompilerRT:
-    break;
-  default:
-    getDriver().Diag(diag::err_drv_unsupported_rtlib_for_platform)
-        << Args.getLastArg(options::OPT_rtlib_EQ)->getValue() << "darwin";
-    return;
-  }
+  // Call once to ensure diagnostic is printed if wrong value was specified
+  GetRuntimeLibType(Args);
 
   // Darwin doesn't support real static executables, don't link any runtime
   // libraries with -static.

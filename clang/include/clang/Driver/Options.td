@@ -865,6 +865,9 @@ def fmodules_validate_once_per_build_session : Flag<["-"], "fmodules-validate-on
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Don't verify input files for the modules if the module has been "
            "successfully validated or loaded during this build session">;
+def fmodules_disable_diagnostic_validation : Flag<["-"], "fmodules-disable-diagnostic-validation">,
+  Group<i_Group>, Flags<[CC1Option]>,
+  HelpText<"Disable validation of the diagnostic options when loading the module">;
 def fmodules_validate_system_headers : Flag<["-"], "fmodules-validate-system-headers">,
   Group<i_Group>, Flags<[CC1Option]>,
   HelpText<"Validate the system headers that a module depends on when loading the module">;
@@ -1384,6 +1387,7 @@ def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[DriverOption]>;
 def mcmodel_EQ : Joined<["-"], "mcmodel=">, Group<m_Group>;
+def mimplicit_it_EQ : Joined<["-"], "mimplicit-it=">, Group<m_Group>;
 def mconstant_cfstrings : Flag<["-"], "mconstant-cfstrings">, Group<clang_ignored_m_Group>;
 def mconsole : Joined<["-"], "mconsole">, Group<m_Group>, Flags<[DriverOption]>;
 def mwindows : Joined<["-"], "mwindows">, Group<m_Group>, Flags<[DriverOption]>;

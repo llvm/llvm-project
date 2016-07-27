@@ -575,6 +575,8 @@ public:
   /// @name Apple ToolChain Implementation
   /// {
 
+  RuntimeLibType GetRuntimeLibType(const llvm::opt::ArgList &Args) const override;
+
   void AddLinkRuntimeLibArgs(const llvm::Triple &EffectiveTriple,
                              const llvm::opt::ArgList &Args,
                              llvm::opt::ArgStringList &CmdArgs) const override;
