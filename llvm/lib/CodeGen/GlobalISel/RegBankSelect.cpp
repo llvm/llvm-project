@@ -42,7 +42,7 @@ INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
 INITIALIZE_PASS_DEPENDENCY(MachineBranchProbabilityInfo)
 INITIALIZE_PASS_END(RegBankSelect, "regbankselect",
                     "Assign register bank of generic virtual registers", false,
-                    false);
+                    false)
 
 RegBankSelect::RegBankSelect(Mode RunningMode)
     : MachineFunctionPass(ID), RBI(nullptr), MRI(nullptr), TRI(nullptr),
@@ -126,7 +126,7 @@ void RegBankSelect::repairReg(
          "We are about to create several defs for Dst");
 
   // Build the instruction used to repair, then clone it at the right places.
-  MachineInstr *MI = MIRBuilder.buildInstr(TargetOpcode::COPY, Dst, Src);
+  MachineInstr *MI = MIRBuilder.buildCopy(Dst, Src);
   MI->removeFromParent();
   DEBUG(dbgs() << "Copy: " << PrintReg(Src) << " to: " << PrintReg(Dst)
                << '\n');

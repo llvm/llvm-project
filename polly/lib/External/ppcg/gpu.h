@@ -54,6 +54,8 @@ struct gpu_array_info {
 	 * It is set to NULL otherwise.
 	 */
 	isl_union_map *dep_order;
+
+        void *user;
 };
 
 /* Represents an outer array accessed by a ppcg_kernel, localized

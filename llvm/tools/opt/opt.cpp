@@ -361,7 +361,7 @@ int main(int argc, char **argv) {
   // supported.
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
-  initializeRewriteSymbolsPass(Registry);
+  initializeRewriteSymbolsLegacyPassPass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeDwarfEHPreparePass(Registry);
   initializeSafeStackPass(Registry);

@@ -254,8 +254,9 @@ DynamicLoaderDarwinKernel::SearchForKernelWithDebugHints (Process *process)
 
     Error read_err;
     addr_t addr = LLDB_INVALID_ADDRESS;
-    addr_t kernel_addresses_64[] = { 0xffffff8000002010ULL, 0xffffff8000004010ULL, 
-                                     0xfffffff000002010ULL, 0xfffffff000004010ULL, 
+    addr_t kernel_addresses_64[] = { 0xfffffff000004010ULL,   // newest arm64 devices
+                                     0xffffff8000004010ULL,   // 2014-2015-ish arm64 devices
+                                     0xffffff8000002010ULL,   // oldest arm64 devices
                                      LLDB_INVALID_ADDRESS };
     addr_t kernel_addresses_32[] = { 0xffff0110,
                                      LLDB_INVALID_ADDRESS };

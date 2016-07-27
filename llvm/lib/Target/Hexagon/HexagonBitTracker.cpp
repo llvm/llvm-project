@@ -138,8 +138,21 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
   if (NumDefs == 0)
     return false;
 
-  if (MI.mayLoad())
-    return evaluateLoad(MI, Inputs, Outputs);
+  using namespace Hexagon;
+  unsigned Opc = MI.getOpcode();
+
+  if (MI.mayLoad()) {
+    switch (Opc) {
+      // These instructions may be marked as mayLoad, but they are generating
+      // immediate values, so skip them.
+      case CONST32:
+      case CONST32_Int_Real:
+      case CONST64_Int_Real:
+        break;
+      default:
+        return evaluateLoad(MI, Inputs, Outputs);
+    }
+  }
 
   // Check COPY instructions that copy formal parameters into virtual
   // registers. Such parameters can be sign- or zero-extended at the
@@ -174,8 +187,6 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
   }
 
   RegisterRefs Reg(MI);
-  unsigned Opc = MI.getOpcode();
-  using namespace Hexagon;
 #define op(i) MI.getOperand(i)
 #define rc(i) RegisterCell::ref(getCell(Reg[i], Inputs))
 #define im(i) MI.getOperand(i).getImm()
@@ -246,9 +257,7 @@ bool HexagonEvaluator::evaluate(const MachineInstr &MI,
     case A2_tfrsi:
     case A2_tfrpi:
     case CONST32:
-    case CONST32_Float_Real:
     case CONST32_Int_Real:
-    case CONST64_Float_Real:
     case CONST64_Int_Real:
       return rr0(eIMM(im(1), W0), Outputs);
     case TFR_PdFalse:

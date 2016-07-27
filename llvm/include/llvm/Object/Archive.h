@@ -25,14 +25,15 @@
 
 namespace llvm {
 namespace object {
-struct ArchiveMemberHeader {
-  char Name[16];
-  char LastModified[12];
-  char UID[6];
-  char GID[6];
-  char AccessMode[8];
-  char Size[10]; ///< Size of data, not including header or padding.
-  char Terminator[2];
+
+class Archive;
+
+class ArchiveMemberHeader {
+public:
+  friend class Archive;
+  ArchiveMemberHeader(Archive const *Parent, const char *RawHeaderPtr,
+                      uint64_t Size, Error *Err);
+  // ArchiveMemberHeader() = default;
 
   /// Get the name without looking up long names.
   llvm::StringRef getName() const;
@@ -43,10 +44,29 @@ struct ArchiveMemberHeader {
   sys::fs::perms getAccessMode() const;
   sys::TimeValue getLastModified() const;
   llvm::StringRef getRawLastModified() const {
-    return StringRef(LastModified, sizeof(LastModified)).rtrim(' ');
+    return StringRef(ArMemHdr->LastModified,
+                     sizeof(ArMemHdr->LastModified)).rtrim(' ');
   }
   unsigned getUID() const;
   unsigned getGID() const;
+
+  // This returns the size of the private struct ArMemHdrType
+  uint64_t getSizeOf() const {
+    return sizeof(ArMemHdrType);
+  }
+
+private:
+  struct ArMemHdrType {
+    char Name[16];
+    char LastModified[12];
+    char UID[6];
+    char GID[6];
+    char AccessMode[8];
+    char Size[10]; ///< Size of data, not including header or padding.
+    char Terminator[2];
+  };
+  Archive const *Parent;
+  ArMemHdrType const *ArMemHdr;
 };
 
 class Archive : public Binary {
@@ -55,14 +75,12 @@ public:
   class Child {
     friend Archive;
     const Archive *Parent;
+    friend ArchiveMemberHeader;
+    ArchiveMemberHeader Header;
     /// \brief Includes header but not padding byte.
     StringRef Data;
     /// \brief Offset from Data to the start of the file.
     uint16_t StartOfFile;
-
-    const ArchiveMemberHeader *getHeader() const {
-      return reinterpret_cast<const ArchiveMemberHeader *>(Data.data());
-    }
 
     bool isThinMember() const;
 
@@ -80,17 +98,17 @@ public:
 
     ErrorOr<StringRef> getName() const;
     ErrorOr<std::string> getFullName() const;
-    StringRef getRawName() const { return getHeader()->getName(); }
+    StringRef getRawName() const { return Header.getName(); }
     sys::TimeValue getLastModified() const {
-      return getHeader()->getLastModified();
+      return Header.getLastModified();
     }
     StringRef getRawLastModified() const {
-      return getHeader()->getRawLastModified();
+      return Header.getRawLastModified();
     }
-    unsigned getUID() const { return getHeader()->getUID(); }
-    unsigned getGID() const { return getHeader()->getGID(); }
+    unsigned getUID() const { return Header.getUID(); }
+    unsigned getGID() const { return Header.getGID(); }
     sys::fs::perms getAccessMode() const {
-      return getHeader()->getAccessMode();
+      return Header.getAccessMode();
     }
     /// \return the size of the archive member without the header or padding.
     Expected<uint64_t> getSize() const;

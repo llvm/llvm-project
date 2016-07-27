@@ -8389,6 +8389,9 @@ def err_omp_argument_type_isdeviceptr : Error <
 def warn_omp_nesting_simd : Warning<
   "OpenMP only allows an ordered construct with the simd clause nested in a simd construct">,
   InGroup<SourceUsesOpenMP>;
+def err_omp_orphaned_device_directive : Error<
+  "orphaned 'omp %0' directives are prohibited"
+  "; perhaps you forget to enclose the directive into a %select{|||target |teams }1region?">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

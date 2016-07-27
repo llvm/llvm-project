@@ -9,6 +9,7 @@ add_clang_library(clangAnalysis
   CFGReachabilityAnalysis.cpp
   CFGStmtMap.cpp
   CallGraph.cpp
+  CloneDetection.cpp
   CocoaConventions.cpp
   Consumed.cpp
   CodeInjector.cpp

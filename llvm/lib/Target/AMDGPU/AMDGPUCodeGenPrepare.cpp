@@ -76,7 +76,7 @@ static bool shouldKeepFDivF32(Value *Num, bool UnsafeDiv) {
     return false;
 
   // Reciprocal f32 is handled separately without denormals.
-  return UnsafeDiv && CNum->isExactlyValue(+1.0);
+  return UnsafeDiv || CNum->isExactlyValue(+1.0);
 }
 
 // Insert an intrinsic for fast fdiv for safe math situations where we can

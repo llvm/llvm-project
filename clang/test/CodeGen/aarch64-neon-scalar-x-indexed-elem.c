@@ -47,9 +47,7 @@ float64_t test_vmuld_laneq_f64(float64_t a, float64x2_t b) {
 }
 
 // CHECK-LABEL: define <1 x double> @test_vmul_n_f64(<1 x double> %a, double %b) #0 {
-// CHECK:   [[TMP0:%.*]] = bitcast <1 x double> %a to <8 x i8>
-// CHECK:   [[TMP1:%.*]] = bitcast <8 x i8> [[TMP0]] to <1 x double>
-// CHECK:   [[TMP2:%.*]] = bitcast <1 x double> [[TMP1]] to double
+// CHECK:   [[TMP2:%.*]] = bitcast <1 x double> %a to double
 // CHECK:   [[TMP3:%.*]] = fmul double [[TMP2]], %b
 // CHECK:   [[TMP4:%.*]] = bitcast double [[TMP3]] to <1 x double>
 // CHECK:   ret <1 x double> [[TMP4]]

@@ -32,6 +32,12 @@ template <class T> T check(Expected<T> E, const Twine &Prefix) {
   return std::move(*E);
 }
 
+template <class T> T check(ErrorOr<T> EO) {
+  if (!EO)
+    fatal(EO.getError().message());
+  return std::move(*EO);
+}
+
 } // namespace coff
 } // namespace lld
 

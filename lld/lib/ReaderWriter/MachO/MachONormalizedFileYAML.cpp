@@ -234,6 +234,8 @@ struct ScalarBitSetTraits<SectionAttr> {
                           llvm::MachO::S_ATTR_EXT_RELOC);
     io.bitSetCase(value, "S_ATTR_LOC_RELOC",
                           llvm::MachO::S_ATTR_LOC_RELOC);
+    io.bitSetCase(value, "S_ATTR_DEBUG",
+                         llvm::MachO::S_ATTR_DEBUG);
   }
 };
 

@@ -67,6 +67,7 @@ def AMDGPUrcp : SDNode<"AMDGPUISD::RCP", SDTFPUnaryOp>;
 def AMDGPUrsq : SDNode<"AMDGPUISD::RSQ", SDTFPUnaryOp>;
 
 // out = 1.0 / sqrt(a)
+def AMDGPUrcp_legacy : SDNode<"AMDGPUISD::RCP_LEGACY", SDTFPUnaryOp>;
 def AMDGPUrsq_legacy : SDNode<"AMDGPUISD::RSQ_LEGACY", SDTFPUnaryOp>;
 
 // out = 1.0 / sqrt(a) result clamped to +/- max_float.
@@ -82,6 +83,10 @@ def AMDGPUfp_class : SDNode<"AMDGPUISD::FP_CLASS", AMDGPUFPClassOp>;
 //   nan < x ? nan : x -> x
 def AMDGPUfmax_legacy : SDNode<"AMDGPUISD::FMAX_LEGACY", SDTFPBinOp,
   []
+>;
+
+def AMDGPUfmul_legacy : SDNode<"AMDGPUISD::FMUL_LEGACY", SDTFPBinOp,
+  [SDNPCommutative, SDNPAssociative]
 >;
 
 def AMDGPUclamp : SDNode<"AMDGPUISD::CLAMP", SDTFPTernaryOp, []>;

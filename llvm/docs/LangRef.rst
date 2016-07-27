@@ -4889,6 +4889,10 @@ Examples:
    !0 = !{!"magic ptr"}
    !1 = !{!"other ptr"}
 
+'``type``' Metadata
+^^^^^^^^^^^^^^^^^^^
+
+See :doc:`TypeMetadata`.
 
 
 Module Flags Metadata

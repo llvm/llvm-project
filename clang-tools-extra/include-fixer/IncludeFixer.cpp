@@ -73,6 +73,7 @@ public:
         T.getUnqualifiedType().getAsString(context.getPrintingPolicy());
     DEBUG(llvm::dbgs() << "Query missing complete type '" << QueryString
                        << "'");
+    // Pass an empty range here since we don't add qualifier in this case.
     query(QueryString, "", tooling::Range());
     return false;
   }
@@ -360,9 +361,11 @@ llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
 
   if (AddQualifiers) {
     for (const auto &Info : Context.getQuerySymbolInfos()) {
-      CleanReplaces->insert({FilePath, Info.Range.getOffset(),
-                             Info.Range.getLength(),
-                             Context.getHeaderInfos().front().QualifiedName});
+      // Ignore the empty range.
+      if (Info.Range.getLength() > 0)
+        CleanReplaces->insert({FilePath, Info.Range.getOffset(),
+                               Info.Range.getLength(),
+                               Context.getHeaderInfos().front().QualifiedName});
     }
   }
   return formatReplacements(Code, *CleanReplaces, Style);

@@ -1111,6 +1111,7 @@ static MachO::CPUSubTypeARM getMachOSubTypeFromArch(StringRef Arch) {
 MCAsmBackend *llvm::createARMAsmBackend(const Target &T,
                                         const MCRegisterInfo &MRI,
                                         const Triple &TheTriple, StringRef CPU,
+                                        const MCTargetOptions &Options,
                                         bool isLittle) {
   switch (TheTriple.getObjectFormat()) {
   default:
@@ -1131,24 +1132,28 @@ MCAsmBackend *llvm::createARMAsmBackend(const Target &T,
 
 MCAsmBackend *llvm::createARMLEAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU) {
-  return createARMAsmBackend(T, MRI, TT, CPU, true);
+                                          const Triple &TT, StringRef CPU,
+                                          const MCTargetOptions &Options) {
+  return createARMAsmBackend(T, MRI, TT, CPU, Options, true);
 }
 
 MCAsmBackend *llvm::createARMBEAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU) {
-  return createARMAsmBackend(T, MRI, TT, CPU, false);
+                                          const Triple &TT, StringRef CPU,
+                                          const MCTargetOptions &Options) {
+  return createARMAsmBackend(T, MRI, TT, CPU, Options, false);
 }
 
 MCAsmBackend *llvm::createThumbLEAsmBackend(const Target &T,
                                             const MCRegisterInfo &MRI,
-                                            const Triple &TT, StringRef CPU) {
-  return createARMAsmBackend(T, MRI, TT, CPU, true);
+                                            const Triple &TT, StringRef CPU,
+                                            const MCTargetOptions &Options) {
+  return createARMAsmBackend(T, MRI, TT, CPU, Options, true);
 }
 
 MCAsmBackend *llvm::createThumbBEAsmBackend(const Target &T,
                                             const MCRegisterInfo &MRI,
-                                            const Triple &TT, StringRef CPU) {
-  return createARMAsmBackend(T, MRI, TT, CPU, false);
+                                            const Triple &TT, StringRef CPU,
+                                            const MCTargetOptions &Options) {
+  return createARMAsmBackend(T, MRI, TT, CPU, Options, false);
 }

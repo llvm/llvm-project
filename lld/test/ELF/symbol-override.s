@@ -37,7 +37,7 @@
 .text
 .globl foo
 .type foo,@function
-foo:  
+foo:
 nop
 
 .text

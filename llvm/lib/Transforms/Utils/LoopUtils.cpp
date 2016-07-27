@@ -11,14 +11,16 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
+#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
@@ -26,7 +28,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Utils/LoopUtils.h"
 
 using namespace llvm;
 using namespace llvm::PatternMatch;

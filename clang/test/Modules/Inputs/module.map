@@ -418,3 +418,7 @@ module Empty {}
 module MacroFabs1 {
   header "MacroFabs1.h"
 }
+
+module DiagOutOfDate {
+  header "DiagOutOfDate.h"
+}

@@ -981,6 +981,12 @@ let DecoderNamespace = "MicroMips" in {
 // MicroMips arbitrary patterns that map to one or more instructions
 //===----------------------------------------------------------------------===//
 
+def : MipsPat<(i32 immLi16:$imm),
+              (LI16_MM immLi16:$imm)>;
+
+let AdditionalPredicates = [InMicroMips] in
+defm :  MaterializeImms<i32, ZERO, ADDiu_MM, LUi_MM, ORi_MM>;
+
 let Predicates = [InMicroMips] in {
   def : MipsPat<(i32 immLi16:$imm),
                 (LI16_MM immLi16:$imm)>;
@@ -1089,6 +1095,18 @@ let Predicates = [InMicroMips] in {
                       (TLTU_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
   def : MipsInstAlias<"tne $rs, $rt",
                       (TNE_MM GPR32Opnd:$rs, GPR32Opnd:$rt, 0), 1>;
+  def : MipsInstAlias<
+          "sgt $rd, $rs, $rt",
+          (SLT_MM GPR32Opnd:$rd, GPR32Opnd:$rt, GPR32Opnd:$rs), 0>;
+  def : MipsInstAlias<
+          "sgt $rs, $rt",
+          (SLT_MM GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rs), 0>;
+  def : MipsInstAlias<
+          "sgtu $rd, $rs, $rt",
+          (SLTu_MM GPR32Opnd:$rd, GPR32Opnd:$rt, GPR32Opnd:$rs), 0>;
+  def : MipsInstAlias<
+          "sgtu $rs, $rt",
+          (SLTu_MM GPR32Opnd:$rs, GPR32Opnd:$rt, GPR32Opnd:$rs), 0>;
   def : MipsInstAlias<"slt $rs, $rt, $imm",
                       (SLTi_MM GPR32Opnd:$rs, GPR32Opnd:$rt,
                                simm32_relaxed:$imm), 0>;

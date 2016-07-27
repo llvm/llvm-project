@@ -212,6 +212,8 @@ a:
         mult      $sp,$v0
         multu     $gp,$k0
         multu     $9,$s2
+        neg       $2                   # CHECK: neg  $2, $2            # encoding: [0x00,0x02,0x10,0x22]
+        neg       $2, $3               # CHECK: neg  $2, $3            # encoding: [0x00,0x03,0x10,0x22]
         negu      $2                   # CHECK: negu $2, $2            # encoding: [0x00,0x02,0x10,0x23]
         negu      $2,$3                # CHECK: negu $2, $3            # encoding: [0x00,0x03,0x10,0x23]
         neg.d     $f27,$f18

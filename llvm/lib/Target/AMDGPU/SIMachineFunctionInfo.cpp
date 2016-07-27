@@ -26,9 +26,6 @@ static cl::opt<bool> EnableSpillSGPRToVGPR(
   cl::ReallyHidden,
   cl::init(true));
 
-// Pin the vtable to this file.
-void SIMachineFunctionInfo::anchor() {}
-
 SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
   : AMDGPUMachineFunction(MF),
     TIDReg(AMDGPU::NoRegister),

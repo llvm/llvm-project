@@ -78,22 +78,6 @@ define void @test_implicit_dyn(i32 addrspace(1)* %out, i32 %in) #1 {
   ret void
 }
 
-
-
-; DEPRECATED but R600 only
-
-; FUNC-LABEL: {{^}}workdim:
-; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV {{\*? *}}[[VAL]], KC0[2].Z
-define void @workdim (i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.r600.read.workdim() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
-declare i32 @llvm.r600.read.workdim() #0
-
 declare i8 addrspace(7)* @llvm.r600.implicitarg.ptr() #0
 
 declare i32 @llvm.r600.read.tgid.x() #0

@@ -101,7 +101,6 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(HexagonPacketizer, "packets", "Hexagon Packetizer",
                     false, false)
 
-
 HexagonPacketizerList::HexagonPacketizerList(MachineFunction &MF,
       MachineLoopInfo &MLI, AliasAnalysis *AA,
       const MachineBranchProbabilityInfo *MBPI)
@@ -327,7 +326,13 @@ static bool doesModifyCalleeSavedReg(const MachineInstr *MI,
 // TODO: MI->isIndirectBranch() and IsRegisterJump(MI)
 // Returns true if an instruction can be promoted to .new predicate or
 // new-value store.
-bool HexagonPacketizerList::isNewifiable(const MachineInstr* MI) {
+bool HexagonPacketizerList::isNewifiable(const MachineInstr* MI,
+      const TargetRegisterClass *NewRC) {
+  // Vector stores can be predicated, and can be new-value stores, but
+  // they cannot be predicated on a .new predicate value.
+  if (NewRC == &Hexagon::PredRegsRegClass)
+    if (HII->isV60VectorInstruction(MI) && MI->mayStore())
+      return false;
   return HII->isCondInst(MI) || MI->isReturn() || HII->mayBeNewStore(MI);
 }
 
@@ -434,6 +439,43 @@ bool HexagonPacketizerList::demoteToDotOld(MachineInstr* MI) {
   int NewOpcode = HII->getDotOldOp(MI->getOpcode());
   MI->setDesc(HII->get(NewOpcode));
   return true;
+}
+
+bool HexagonPacketizerList::useCallersSP(MachineInstr *MI) {
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
+    case Hexagon::S2_storerd_io:
+    case Hexagon::S2_storeri_io:
+    case Hexagon::S2_storerh_io:
+    case Hexagon::S2_storerb_io:
+      break;
+    default:
+      llvm_unreachable("Unexpected instruction");
+  }
+  unsigned FrameSize = MF.getFrameInfo()->getStackSize();
+  MachineOperand &Off = MI->getOperand(1);
+  int64_t NewOff = Off.getImm() - (FrameSize + HEXAGON_LRFP_SIZE);
+  if (HII->isValidOffset(Opc, NewOff)) {
+    Off.setImm(NewOff);
+    return true;
+  }
+  return false;
+}
+
+void HexagonPacketizerList::useCalleesSP(MachineInstr *MI) {
+  unsigned Opc = MI->getOpcode();
+  switch (Opc) {
+    case Hexagon::S2_storerd_io:
+    case Hexagon::S2_storeri_io:
+    case Hexagon::S2_storerh_io:
+    case Hexagon::S2_storerb_io:
+      break;
+    default:
+      llvm_unreachable("Unexpected instruction");
+  }
+  unsigned FrameSize = MF.getFrameInfo()->getStackSize();
+  MachineOperand &Off = MI->getOperand(1);
+  Off.setImm(Off.getImm() + FrameSize + HEXAGON_LRFP_SIZE);
 }
 
 enum PredicateKind {
@@ -731,7 +773,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr *MI,
   if (HII->isDotNewInst(MI) && !HII->mayBeNewStore(MI))
     return false;
 
-  if (!isNewifiable(MI))
+  if (!isNewifiable(MI, RC))
     return false;
 
   const MachineInstr *PI = PacketSU->getInstr();
@@ -1144,7 +1186,6 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
     IgnoreDepMIs.clear();
 
   MachineBasicBlock::iterator II = I;
-  const unsigned FrameSize = MF.getFrameInfo()->getStackSize();
 
   // Solo instructions cannot go in the packet.
   assert(!isSoloInstruction(*I) && "Unexpected solo instr!");
@@ -1391,17 +1432,13 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
         case Hexagon::S2_storerh_io:
         case Hexagon::S2_storerb_io:
           if (I->getOperand(0).getReg() == HRI->getStackRegister()) {
-            int64_t Imm = I->getOperand(1).getImm();
-            int64_t NewOff = Imm - (FrameSize + HEXAGON_LRFP_SIZE);
-            if (HII->isValidOffset(Opc, NewOff)) {
-              GlueAllocframeStore = true;
-              // Since this store is to be glued with allocframe in the same
-              // packet, it will use SP of the previous stack frame, i.e.
-              // caller's SP. Therefore, we need to recalculate offset
-              // according to this change.
-              I->getOperand(1).setImm(NewOff);
+            // Since this store is to be glued with allocframe in the same
+            // packet, it will use SP of the previous stack frame, i.e.
+            // caller's SP. Therefore, we need to recalculate offset
+            // according to this change.
+            GlueAllocframeStore = useCallersSP(I);
+            if (GlueAllocframeStore)
               continue;
-            }
           }
         default:
           break;
@@ -1467,9 +1504,8 @@ bool HexagonPacketizerList::isLegalToPruneDependencies(SUnit *SUI, SUnit *SUJ) {
   // instruction. If so, restore its offset to its original value, i.e. use
   // current SP instead of caller's SP.
   if (GlueAllocframeStore) {
-    unsigned FrameSize = MF.getFrameInfo()->getStackSize();
-    MachineOperand &MOff = I->getOperand(1);
-    MOff.setImm(MOff.getImm() + FrameSize + HEXAGON_LRFP_SIZE);
+    useCalleesSP(I);
+    GlueAllocframeStore = false;
   }
   return false;
 }
@@ -1536,6 +1572,10 @@ HexagonPacketizerList::addToPacket(MachineInstr &MI) {
     endPacket(MBB, MI);
     if (PromotedToDotNew)
       demoteToDotOld(&MI);
+    if (GlueAllocframeStore) {
+      useCalleesSP(&MI);
+      GlueAllocframeStore = false;
+    }
     ResourceTracker->reserveResources(MI);
     reserveResourcesForConstExt();
   }

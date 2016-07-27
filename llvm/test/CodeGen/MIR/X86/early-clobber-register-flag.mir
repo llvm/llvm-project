@@ -33,7 +33,7 @@ body: |
     liveins: %edi, %esi
 
     frame-setup PUSH64r undef %rax, implicit-def %rsp, implicit %rsp
-    CFI_INSTRUCTION .cfi_def_cfa_offset 16
+    CFI_INSTRUCTION def_cfa_offset 16
     %ecx = COPY %edi
     %ecx = ADD32rr killed %ecx, killed %esi, implicit-def dead %eflags
   ; CHECK: INLINEASM $nop, 1, 12, implicit-def dead early-clobber %ax, 12, implicit-def dead early-clobber %di

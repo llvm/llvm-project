@@ -1362,6 +1362,8 @@ static void ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args) {
   Opts.ModuleCachePath = Args.getLastArgValue(OPT_fmodules_cache_path);
   Opts.ModuleUserBuildPath = Args.getLastArgValue(OPT_fmodules_user_build_path);
   Opts.DisableModuleHash = Args.hasArg(OPT_fdisable_module_hash);
+  Opts.ModulesValidateDiagnosticOptions =
+      !Args.hasArg(OPT_fmodules_disable_diagnostic_validation);
   Opts.ImplicitModuleMaps = Args.hasArg(OPT_fimplicit_module_maps);
   Opts.ModuleMapFileHomeIsCwd = Args.hasArg(OPT_fmodule_map_file_home_is_cwd);
   Opts.ModuleCachePruneInterval =
@@ -2457,7 +2459,8 @@ std::string CompilerInvocation::getModuleHash() const {
                       hsOpts.UseBuiltinIncludes,
                       hsOpts.UseStandardSystemIncludes,
                       hsOpts.UseStandardCXXIncludes,
-                      hsOpts.UseLibcxx);
+                      hsOpts.UseLibcxx,
+                      hsOpts.ModulesValidateDiagnosticOptions);
   code = hash_combine(code, hsOpts.ResourceDir);
 
   // Extend the signature with the user build path.

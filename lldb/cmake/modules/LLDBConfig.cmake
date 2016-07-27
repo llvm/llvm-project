@@ -167,12 +167,6 @@ function(find_python_libs_windows)
 endfunction(find_python_libs_windows)
 
 if (NOT LLDB_DISABLE_PYTHON)
-  if(UNIX)
-    # This is necessary for crosscompile on Ubuntu 14.04 64bit. Need a proper fix.
-    if(CMAKE_SIZEOF_VOID_P EQUAL 8)
-      set(CMAKE_LIBRARY_ARCHITECTURE "x86_64-linux-gnu")
-    endif()
-  endif()
 
   if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
     find_python_libs_windows()

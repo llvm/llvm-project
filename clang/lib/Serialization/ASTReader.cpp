@@ -2084,7 +2084,7 @@ static bool isDiagnosedResult(ASTReader::ASTReadResult ARR, unsigned Caps) {
 ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
     BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
     bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
-    std::string &SuggestedPredefines) {
+    std::string &SuggestedPredefines, bool ValidateDiagnosticOptions) {
   if (Stream.EnterSubBlock(OPTIONS_BLOCK_ID))
     return Failure;
 
@@ -2128,7 +2128,8 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
 
     case DIAGNOSTIC_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_OutOfDate) == 0;
-      if (!AllowCompatibleConfigurationMismatch &&
+      if (ValidateDiagnosticOptions &&
+          !AllowCompatibleConfigurationMismatch &&
           ParseDiagnosticOptions(Record, Complain, Listener))
         return OutOfDate;
       break;
@@ -2255,10 +2256,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           // FIXME: Allow this for files explicitly specified with -include-pch.
           bool AllowCompatibleConfigurationMismatch =
               F.Kind == MK_ExplicitModule;
+          const HeaderSearchOptions &HSOpts =
+              PP.getHeaderSearchInfo().getHeaderSearchOpts();
 
           Result = ReadOptionsBlock(Stream, ClientLoadCapabilities,
                                     AllowCompatibleConfigurationMismatch,
-                                    *Listener, SuggestedPredefines);
+                                    *Listener, SuggestedPredefines,
+                                    HSOpts.ModulesValidateDiagnosticOptions);
           if (Result == Failure) {
             Error("malformed block record in AST file");
             return Result;
@@ -4195,7 +4199,7 @@ bool ASTReader::readASTFileControlBlock(
     StringRef Filename, FileManager &FileMgr,
     const PCHContainerReader &PCHContainerRdr,
     bool FindModuleFileExtensions,
-    ASTReaderListener &Listener) {
+    ASTReaderListener &Listener, bool ValidateDiagnosticOptions) {
   // Open the AST file.
   // FIXME: This allows use of the VFS; we do not allow use of the
   // VFS when actually loading a module.
@@ -4235,7 +4239,8 @@ bool ASTReader::readASTFileControlBlock(
         std::string IgnoredSuggestedPredefines;
         if (ReadOptionsBlock(Stream, ARR_ConfigurationMismatch | ARR_OutOfDate,
                              /*AllowCompatibleConfigurationMismatch*/ false,
-                             Listener, IgnoredSuggestedPredefines) != Success)
+                             Listener, IgnoredSuggestedPredefines,
+                             ValidateDiagnosticOptions) != Success)
           return true;
         break;
       }
@@ -4408,7 +4413,8 @@ bool ASTReader::isAcceptableASTFile(
                                ExistingModuleCachePath, FileMgr);
   return !readASTFileControlBlock(Filename, FileMgr, PCHContainerRdr,
                                   /*FindModuleFileExtensions=*/false,
-                                  validator);
+                                  validator,
+                                  /*ValidateDiagnosticOptions=*/true);
 }
 
 ASTReader::ASTReadResult

@@ -4,21 +4,6 @@
 
 ; Legacy intrinsics that just read implicit parameters
 
-; FUNC-LABEL: {{^}}workdim_legacy:
-; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0xb
-; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x2c
-; GCN-NOHSA: v_mov_b32_e32 [[VVAL:v[0-9]+]], [[VAL]]
-; GCN-NOHSA: buffer_store_dword [[VVAL]]
-
-; EG: MEM_RAT_CACHELESS STORE_RAW [[VAL:T[0-9]+\.X]]
-; EG: MOV {{\*? *}}[[VAL]], KC0[2].Z
-define void @workdim_legacy (i32 addrspace(1)* %out) {
-entry:
-  %0 = call i32 @llvm.AMDGPU.read.workdim() #0
-  store i32 %0, i32 addrspace(1)* %out
-  ret void
-}
-
 ; FUNC-LABEL: {{^}}ngroups_x:
 ; SI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x0
 ; VI-NOHSA: s_load_dword [[VAL:s[0-9]+]], s[0:1], 0x0
@@ -262,7 +247,5 @@ declare i32 @llvm.r600.read.tgid.z() #0
 declare i32 @llvm.r600.read.tidig.x() #0
 declare i32 @llvm.r600.read.tidig.y() #0
 declare i32 @llvm.r600.read.tidig.z() #0
-
-declare i32 @llvm.AMDGPU.read.workdim() #0
 
 attributes #0 = { readnone }

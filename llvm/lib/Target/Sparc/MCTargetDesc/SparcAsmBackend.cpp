@@ -300,6 +300,7 @@ namespace {
 
 MCAsmBackend *llvm::createSparcAsmBackend(const Target &T,
                                           const MCRegisterInfo &MRI,
-                                          const Triple &TT, StringRef CPU) {
+                                          const Triple &TT, StringRef CPU,
+                                          const MCTargetOptions &Options) {
   return new ELFSparcAsmBackend(T, TT.getOS());
 }

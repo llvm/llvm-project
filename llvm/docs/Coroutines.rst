@@ -73,7 +73,7 @@ Coroutine Representation
 Let's look at an example of an LLVM coroutine with the behavior sketched
 by the following pseudo-code.
 
-.. code-block:: C++
+.. code-block:: c++
 
   void *f(int n) {
      for(;;) {
@@ -274,7 +274,7 @@ Multiple Suspend Points
 
 Let's consider the coroutine that has more than one suspend point:
 
-.. code-block:: C++
+.. code-block:: c++
 
   void *f(int n) {
      for(;;) {
@@ -528,7 +528,7 @@ For example, for a Python generator that has only one suspend point:
 Python frontend would inject two more suspend points, so that the actual code
 looks like this:
 
-.. code-block:: C
+.. code-block:: c
 
   void* coroutine(int n) {
     int current_value; 
@@ -542,7 +542,7 @@ looks like this:
 
 and python iterator `__next__` would look like:
 
-.. code-block:: C++
+.. code-block:: c++
 
   int __next__(void* hdl) {
     coro.resume(hdl);
@@ -1109,7 +1109,7 @@ Example:
 Consider the following example. A coroutine takes two parameters `a` and `b`
 that has a destructor and a move constructor.
 
-.. code-block:: C++
+.. code-block:: c++
 
   struct A { ~A(); A(A&&); bool foo(); void bar(); };
 

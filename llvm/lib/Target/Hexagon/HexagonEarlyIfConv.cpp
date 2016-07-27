@@ -134,7 +134,7 @@ namespace {
   public:
     static char ID;
     HexagonEarlyIfConversion() : MachineFunctionPass(ID),
-        TII(0), TRI(0), MFN(0), MRI(0), MDT(0), MLI(0) {
+        HII(0), TRI(0), MFN(0), MRI(0), MDT(0), MLI(0) {
       initializeHexagonEarlyIfConversionPass(*PassRegistry::getPassRegistry());
     }
     const char *getPassName() const override {
@@ -185,7 +185,7 @@ namespace {
     void mergeBlocks(MachineBasicBlock *PredB, MachineBasicBlock *SuccB);
     void simplifyFlowGraph(const FlowPattern &FP);
 
-    const TargetInstrInfo *TII;
+    const HexagonInstrInfo *HII;
     const TargetRegisterInfo *TRI;
     MachineFunction *MFN;
     MachineRegisterInfo *MRI;
@@ -443,7 +443,7 @@ unsigned HexagonEarlyIfConversion::computePhiCost(MachineBasicBlock *B) const {
     }
     MachineInstr *Def1 = MRI->getVRegDef(RO1.getReg());
     MachineInstr *Def3 = MRI->getVRegDef(RO3.getReg());
-    if (!TII->isPredicable(*Def1) || !TII->isPredicable(*Def3))
+    if (!HII->isPredicable(*Def1) || !HII->isPredicable(*Def3))
       Cost++;
   }
   return Cost;
@@ -612,29 +612,26 @@ bool HexagonEarlyIfConversion::visitLoop(MachineLoop *L) {
 
 bool HexagonEarlyIfConversion::isPredicableStore(const MachineInstr *MI)
       const {
-  // Exclude post-increment stores. Those return a value, so we cannot
-  // predicate them.
+  // HexagonInstrInfo::isPredicable will consider these stores are non-
+  // -predicable if the offset would become constant-extended after
+  // predication.
   unsigned Opc = MI->getOpcode();
-  using namespace Hexagon;
   switch (Opc) {
-    // Store byte:
-    case S2_storerb_io: case S4_storerb_rr:
-    case S2_storerbabs: case S4_storeirb_io:  case S2_storerbgp:
-    // Store halfword:
-    case S2_storerh_io: case S4_storerh_rr:
-    case S2_storerhabs: case S4_storeirh_io:  case S2_storerhgp:
-    // Store upper halfword:
-    case S2_storerf_io: case S4_storerf_rr:
-    case S2_storerfabs: case S2_storerfgp:
-    // Store word:
-    case S2_storeri_io: case S4_storeri_rr:
-    case S2_storeriabs: case S4_storeiri_io:  case S2_storerigp:
-    // Store doubleword:
-    case S2_storerd_io: case S4_storerd_rr:
-    case S2_storerdabs: case S2_storerdgp:
+    case Hexagon::S2_storerb_io:
+    case Hexagon::S2_storerbnew_io:
+    case Hexagon::S2_storerh_io:
+    case Hexagon::S2_storerhnew_io:
+    case Hexagon::S2_storeri_io:
+    case Hexagon::S2_storerinew_io:
+    case Hexagon::S2_storerd_io:
+    case Hexagon::S4_storeirb_io:
+    case Hexagon::S4_storeirh_io:
+    case Hexagon::S4_storeiri_io:
       return true;
   }
-  return false;
+
+  // TargetInstrInfo::isPredicable takes a non-const pointer.
+  return MI->mayStore() && HII->isPredicable(const_cast<MachineInstr&>(*MI));
 }
 
 
@@ -653,53 +650,7 @@ bool HexagonEarlyIfConversion::isSafeToSpeculate(const MachineInstr *MI)
 
 unsigned HexagonEarlyIfConversion::getCondStoreOpcode(unsigned Opc,
       bool IfTrue) const {
-  // Exclude post-increment stores.
-  using namespace Hexagon;
-  switch (Opc) {
-    case S2_storerb_io:
-      return IfTrue ? S2_pstorerbt_io : S2_pstorerbf_io;
-    case S4_storerb_rr:
-      return IfTrue ? S4_pstorerbt_rr : S4_pstorerbf_rr;
-    case S2_storerbabs:
-    case S2_storerbgp:
-      return IfTrue ? S4_pstorerbt_abs : S4_pstorerbf_abs;
-    case S4_storeirb_io:
-      return IfTrue ? S4_storeirbt_io : S4_storeirbf_io;
-    case S2_storerh_io:
-      return IfTrue ? S2_pstorerht_io : S2_pstorerhf_io;
-    case S4_storerh_rr:
-      return IfTrue ? S4_pstorerht_rr : S4_pstorerhf_rr;
-    case S2_storerhabs:
-    case S2_storerhgp:
-      return IfTrue ? S4_pstorerht_abs : S4_pstorerhf_abs;
-    case S2_storerf_io:
-      return IfTrue ? S2_pstorerft_io : S2_pstorerff_io;
-    case S4_storerf_rr:
-      return IfTrue ? S4_pstorerft_rr : S4_pstorerff_rr;
-    case S2_storerfabs:
-    case S2_storerfgp:
-      return IfTrue ? S4_pstorerft_abs : S4_pstorerff_abs;
-    case S4_storeirh_io:
-      return IfTrue ? S4_storeirht_io : S4_storeirhf_io;
-    case S2_storeri_io:
-      return IfTrue ? S2_pstorerit_io : S2_pstorerif_io;
-    case S4_storeri_rr:
-      return IfTrue ? S4_pstorerit_rr : S4_pstorerif_rr;
-    case S2_storeriabs:
-    case S2_storerigp:
-      return IfTrue ? S4_pstorerit_abs : S4_pstorerif_abs;
-    case S4_storeiri_io:
-      return IfTrue ? S4_storeirit_io : S4_storeirif_io;
-    case S2_storerd_io:
-      return IfTrue ? S2_pstorerdt_io : S2_pstorerdf_io;
-    case S4_storerd_rr:
-      return IfTrue ? S4_pstorerdt_rr : S4_pstorerdf_rr;
-    case S2_storerdabs:
-    case S2_storerdgp:
-      return IfTrue ? S4_pstorerdt_abs : S4_pstorerdf_abs;
-  }
-  llvm_unreachable("Unexpected opcode");
-  return 0;
+  return HII->getCondOpcode(Opc, !IfTrue);
 }
 
 
@@ -717,9 +668,14 @@ void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
   if (isPredicableStore(MI)) {
     unsigned COpc = getCondStoreOpcode(Opc, IfTrue);
     assert(COpc);
-    MachineInstrBuilder MIB = BuildMI(*ToB, At, DL, TII->get(COpc))
-      .addReg(PredR);
-    for (MIOperands MO(*MI); MO.isValid(); ++MO)
+    MachineInstrBuilder MIB = BuildMI(*ToB, At, DL, HII->get(COpc));
+    MIOperands MO(*MI);
+    if (HII->isPostIncrement(MI)) {
+      MIB.addOperand(*MO);
+      ++MO;
+    }
+    MIB.addReg(PredR);
+    for (; MO.isValid(); ++MO)
       MIB.addOperand(*MO);
 
     // Set memory references.
@@ -733,7 +689,7 @@ void HexagonEarlyIfConversion::predicateInstr(MachineBasicBlock *ToB,
 
   if (Opc == Hexagon::J2_jump) {
     MachineBasicBlock *TB = MI->getOperand(0).getMBB();
-    const MCInstrDesc &D = TII->get(IfTrue ? Hexagon::J2_jumpt
+    const MCInstrDesc &D = HII->get(IfTrue ? Hexagon::J2_jumpt
                                            : Hexagon::J2_jumpf);
     BuildMI(*ToB, At, DL, D)
       .addReg(PredR)
@@ -801,8 +757,22 @@ void HexagonEarlyIfConversion::updatePhiNodes(MachineBasicBlock *WhereB,
     using namespace Hexagon;
     unsigned DR = PN->getOperand(0).getReg();
     const TargetRegisterClass *RC = MRI->getRegClass(DR);
-    const MCInstrDesc &D = RC == &IntRegsRegClass ? TII->get(C2_mux)
-                                                  : TII->get(MUX64_rr);
+    unsigned Opc = 0;
+    if (RC == &IntRegsRegClass)
+      Opc = C2_mux;
+    else if (RC == &DoubleRegsRegClass)
+      Opc = MUX64_rr;
+    else if (RC == &VectorRegsRegClass)
+      Opc = VSelectPseudo_V6;
+    else if (RC == &VecDblRegsRegClass)
+      Opc = VSelectDblPseudo_V6;
+    else if (RC == &VectorRegs128BRegClass)
+      Opc = VSelectPseudo_V6_128B;
+    else if (RC == &VecDblRegs128BRegClass)
+      Opc = VSelectDblPseudo_V6_128B;
+    else
+      llvm_unreachable("unexpected register type");
+    const MCInstrDesc &D = HII->get(Opc);
 
     MachineBasicBlock::iterator MuxAt = FP.SplitB->getFirstTerminator();
     DebugLoc DL;
@@ -870,21 +840,21 @@ void HexagonEarlyIfConversion::convert(const FlowPattern &FP) {
   // generated.
   if (FP.JoinB) {
     assert(!SSB || SSB == FP.JoinB);
-    BuildMI(*FP.SplitB, FP.SplitB->end(), DL, TII->get(Hexagon::J2_jump))
+    BuildMI(*FP.SplitB, FP.SplitB->end(), DL, HII->get(Hexagon::J2_jump))
       .addMBB(FP.JoinB);
     FP.SplitB->addSuccessor(FP.JoinB);
   } else {
     bool HasBranch = false;
     if (TSB) {
-      BuildMI(*FP.SplitB, FP.SplitB->end(), DL, TII->get(Hexagon::J2_jumpt))
+      BuildMI(*FP.SplitB, FP.SplitB->end(), DL, HII->get(Hexagon::J2_jumpt))
         .addReg(FP.PredR)
         .addMBB(TSB);
       FP.SplitB->addSuccessor(TSB);
       HasBranch = true;
     }
     if (FSB) {
-      const MCInstrDesc &D = HasBranch ? TII->get(Hexagon::J2_jump)
-                                       : TII->get(Hexagon::J2_jumpf);
+      const MCInstrDesc &D = HasBranch ? HII->get(Hexagon::J2_jump)
+                                       : HII->get(Hexagon::J2_jumpf);
       MachineInstrBuilder MIB = BuildMI(*FP.SplitB, FP.SplitB->end(), DL, D);
       if (!HasBranch)
         MIB.addReg(FP.PredR);
@@ -896,7 +866,7 @@ void HexagonEarlyIfConversion::convert(const FlowPattern &FP) {
       // successor blocks of the TrueB and FalseB (or null of the TrueB
       // or FalseB block is null). SSB is the potential successor block
       // of the SplitB that is neither TrueB nor FalseB.
-      BuildMI(*FP.SplitB, FP.SplitB->end(), DL, TII->get(Hexagon::J2_jump))
+      BuildMI(*FP.SplitB, FP.SplitB->end(), DL, HII->get(Hexagon::J2_jump))
         .addMBB(SSB);
       FP.SplitB->addSuccessor(SSB);
     }
@@ -963,7 +933,7 @@ void HexagonEarlyIfConversion::eliminatePhis(MachineBasicBlock *B) {
       const DebugLoc &DL = PN->getDebugLoc();
       const TargetRegisterClass *RC = MRI->getRegClass(DefR);
       NewR = MRI->createVirtualRegister(RC);
-      NonPHI = BuildMI(*B, NonPHI, DL, TII->get(TargetOpcode::COPY), NewR)
+      NonPHI = BuildMI(*B, NonPHI, DL, HII->get(TargetOpcode::COPY), NewR)
         .addReg(UseR, 0, UseSR);
     }
     MRI->replaceRegWith(DefR, NewR);
@@ -993,7 +963,7 @@ void HexagonEarlyIfConversion::mergeBlocks(MachineBasicBlock *PredB,
                << PrintMB(SuccB) << "\n");
   bool TermOk = hasUncondBranch(SuccB);
   eliminatePhis(SuccB);
-  TII->RemoveBranch(*PredB);
+  HII->RemoveBranch(*PredB);
   PredB->removeSuccessor(SuccB);
   PredB->splice(PredB->end(), SuccB, SuccB->begin(), SuccB->end());
   MachineBasicBlock::succ_iterator I, E = SuccB->succ_end();
@@ -1035,8 +1005,8 @@ bool HexagonEarlyIfConversion::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(*MF.getFunction()))
     return false;
 
-  auto &ST = MF.getSubtarget();
-  TII = ST.getInstrInfo();
+  auto &ST = MF.getSubtarget<HexagonSubtarget>();
+  HII = ST.getInstrInfo();
   TRI = ST.getRegisterInfo();
   MFN = &MF;
   MRI = &MF.getRegInfo();

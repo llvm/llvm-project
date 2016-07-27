@@ -379,7 +379,8 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     MCAsmBackend *MAB = nullptr;
     if (Opts.ShowEncoding) {
       CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
-      MAB = TheTarget->createMCAsmBackend(*MRI, Opts.Triple, Opts.CPU);
+      MCTargetOptions Options;
+      MAB = TheTarget->createMCAsmBackend(*MRI, Opts.Triple, Opts.CPU, Options);
     }
     auto FOut = llvm::make_unique<formatted_raw_ostream>(*Out);
     Str.reset(TheTarget->createAsmStreamer(
@@ -396,8 +397,9 @@ static bool ExecuteAssembler(AssemblerInvocation &Opts,
     }
 
     MCCodeEmitter *CE = TheTarget->createMCCodeEmitter(*MCII, *MRI, Ctx);
+    MCTargetOptions Options;
     MCAsmBackend *MAB = TheTarget->createMCAsmBackend(*MRI, Opts.Triple,
-                                                      Opts.CPU);
+                                                      Opts.CPU, Options);
     Triple T(Opts.Triple);
     Str.reset(TheTarget->createMCObjectStreamer(
         T, Ctx, *MAB, *Out, CE, *STI, Opts.RelaxAll,

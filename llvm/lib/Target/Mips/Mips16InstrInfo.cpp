@@ -172,7 +172,7 @@ static void addSaveRestoreRegs(MachineInstrBuilder &MIB,
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     // Add the callee-saved register as live-in. Do not add if the register is
     // RA and return address is taken, because it has already been added in
-    // method MipsTargetLowering::LowerRETURNADDR.
+    // method MipsTargetLowering::lowerRETURNADDR.
     // It's killed at the spill, unless the register is RA and return address
     // is taken.
     unsigned Reg = CSI[e-i-1].getReg();

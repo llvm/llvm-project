@@ -335,6 +335,11 @@ namespace c {
   EXPECT_EQ(ExpectedCode, runIncludeFixer(TestCode));
 }
 
+TEST(IncludeFixer, DontAddQualifiersForMissingCompleteType) {
+  EXPECT_EQ("#include \"bar.h\"\nclass bar;\nvoid f() {\nbar* b;\nb->f();\n}",
+            runIncludeFixer("class bar;\nvoid f() {\nbar* b;\nb->f();\n}"));
+}
+
 } // namespace
 } // namespace include_fixer
 } // namespace clang

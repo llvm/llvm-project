@@ -30,6 +30,9 @@ int showMain(int argc, const char *argv[]);
 /// \brief The main entry point for the 'report' subcommand.
 int reportMain(int argc, const char *argv[]);
 
+/// \brief The main entry point for the 'export' subcommand.
+int exportMain(int argc, const char *argv[]);
+
 /// \brief The main entry point for the 'convert-for-testing' subcommand.
 int convertForTestingMain(int argc, const char *argv[]);
 
@@ -38,12 +41,14 @@ int gcovMain(int argc, const char *argv[]);
 
 /// \brief Top level help.
 static int helpMain(int argc, const char *argv[]) {
-  errs() << "Usage: llvm-cov {gcov|report|show} [OPTION]...\n\n"
+  errs() << "Usage: llvm-cov {export|gcov|report|show} [OPTION]...\n\n"
          << "Shows code coverage information.\n\n"
          << "Subcommands:\n"
+         << "  export: Export instrprof file to structured format.\n"
          << "  gcov:   Work with the gcov format.\n"
-         << "  show:   Annotate source files using instrprof style coverage.\n"
-         << "  report: Summarize instrprof style coverage information.\n";
+         << "  report: Summarize instrprof style coverage information.\n"
+         << "  show:   Annotate source files using instrprof style coverage.\n";
+
   return 0;
 }
 
@@ -68,6 +73,7 @@ int main(int argc, const char **argv) {
     typedef int (*MainFunction)(int, const char *[]);
     MainFunction Func = StringSwitch<MainFunction>(argv[1])
                             .Case("convert-for-testing", convertForTestingMain)
+                            .Case("export", exportMain)
                             .Case("gcov", gcovMain)
                             .Case("report", reportMain)
                             .Case("show", showMain)

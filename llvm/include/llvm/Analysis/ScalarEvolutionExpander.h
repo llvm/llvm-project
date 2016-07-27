@@ -309,8 +309,7 @@ namespace llvm {
                           PointerType *PTy, Type *Ty, Value *V);
 
     /// \brief Find a previous Value in ExprValueMap for expand.
-    ScalarEvolution::ValueOffsetPair
-    FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
+    Value *FindValueInExprValueMap(const SCEV *S, const Instruction *InsertPt);
 
     Value *expand(const SCEV *S);
 

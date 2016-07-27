@@ -25,6 +25,7 @@ class MCInstrInfo;
 class MCObjectWriter;
 class MCRegisterInfo;
 class MCSubtargetInfo;
+class MCTargetOptions;
 class StringRef;
 class Target;
 class Triple;
@@ -43,9 +44,11 @@ MCCodeEmitter *createBPFbeMCCodeEmitter(const MCInstrInfo &MCII,
                                         MCContext &Ctx);
 
 MCAsmBackend *createBPFAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                  const Triple &TT, StringRef CPU);
+                                  const Triple &TT, StringRef CPU,
+                                  const MCTargetOptions &Options);
 MCAsmBackend *createBPFbeAsmBackend(const Target &T, const MCRegisterInfo &MRI,
-                                    const Triple &TT, StringRef CPU);
+                                    const Triple &TT, StringRef CPU,
+                                    const MCTargetOptions &Options);
 
 MCObjectWriter *createBPFELFObjectWriter(raw_pwrite_stream &OS,
                                          uint8_t OSABI, bool IsLittleEndian);

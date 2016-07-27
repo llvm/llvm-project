@@ -219,6 +219,8 @@ let isNVStorable = 1 in {
   def V6_vS32b_npred_ai_128B   : T_vstore_pred_ai_128B <"vmem", "vS32b_ai", 1>,
                                  V6_vS32b_npred_ai_128B_enc;
 }
+
+
 let isNVStorable = 1, isNonTemporal = 1 in {
   def V6_vS32b_nt_pred_ai  : T_vstore_pred_ai_64B <"vmem", "vS32b_ai", 0, 1>,
                              V6_vS32b_nt_pred_ai_enc;
@@ -1031,27 +1033,29 @@ class VSELInst<dag outs, dag ins, string asmstr, list<dag> pattern = [],
               IType type = TypeCVI_VA_DV>
   : InstHexagon<outs, ins, asmstr, pattern, cstr, itin, type>;
 
-let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
-def VSelectPseudo_V6 : VSELInst<(outs VectorRegs:$dst),
-            (ins PredRegs:$src1, VectorRegs:$src2, VectorRegs:$src3),
-            ".error \"should not emit\" ",
-            []>,
-            Requires<[HasV60T,UseHVXSgl]>;
-def VSelectDblPseudo_V6 : VSELInst<(outs VecDblRegs:$dst),
-               (ins PredRegs:$src1, VecDblRegs:$src2, VecDblRegs:$src3),
-               ".error \"should not emit\" ",
-               []>,
-               Requires<[HasV60T,UseHVXSgl]>;
+multiclass VSelect<RegisterClass RC, ValueType V> {
+  let isCodeGenOnly = 1, isPseudo = 1, hasSideEffects = 0 in {
+    def NAME : VSELInst<(outs RC:$dst),
+                        (ins PredRegs:$src1, RC:$src2, RC:$src3),
+                        ".error \"should not emit\" ",
+                        []>;
+  }
+
+  def : Pat <(V (selectcc (i32 IntRegs:$lhs), (i32 IntRegs:$rhs), (V RC:$tval),
+                          (V RC:$fval), SETEQ)),
+             (V (!cast<Instruction>(NAME) (i32 (C2_cmpeq (i32 IntRegs:$lhs),
+                                               (i32 IntRegs:$rhs))),
+                                          (V RC:$tval), (V RC:$fval)))>;
 }
 
-def : Pat <(v16i32 (selectcc (i32 IntRegs:$lhs), (i32 IntRegs:$rhs),
-                             (v16i32 VectorRegs:$tval),
-                             (v16i32 VectorRegs:$fval), SETEQ)),
-      (v16i32 (VSelectPseudo_V6 (i32 (C2_cmpeq (i32 IntRegs:$lhs),
-                                (i32 IntRegs:$rhs))),
-                                (v16i32 VectorRegs:$tval),
-                                (v16i32 VectorRegs:$fval)))>;
-
+defm VSelectPseudo_V6 : VSelect<VectorRegs, v16i32>,
+                        Requires<[HasV60T,UseHVXSgl]>;
+defm VSelectDblPseudo_V6 : VSelect<VecDblRegs, v32i32>,
+                           Requires<[HasV60T,UseHVXSgl]>;
+defm VSelectPseudo_V6_128B : VSelect<VectorRegs128B, v32i32>,
+                             Requires<[HasV60T,UseHVXDbl]>;
+defm VSelectDblPseudo_V6_128B : VSelect<VecDblRegs128B, v64i32>,
+                                Requires<[HasV60T,UseHVXDbl]>;
 
 let hasNewValue = 1 in
 class T_vmpy <string asmString, RegisterClass RCout, RegisterClass RCin>

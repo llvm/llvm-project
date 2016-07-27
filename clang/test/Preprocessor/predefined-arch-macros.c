@@ -1921,6 +1921,8 @@
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_MYRIAD2-1 -check-prefix=CHECK_SPARCEL
 // RUN: %clang -E -dM %s -o - -target sparcel-myriad -mcpu=myriad2.2 2>&1 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_MYRIAD2-2 -check-prefix=CHECK_SPARCEL
+// RUN: %clang -E -dM %s -o - -target sparcel-myriad -mcpu=ma2450 2>&1 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_MYRIAD2-2 -check-prefix=CHECK_SPARCEL
 // CHECK_SPARCEL: #define __LITTLE_ENDIAN__ 1
 // CHECK_MYRIAD2-1: #define __myriad2 1
 // CHECK_MYRIAD2-1: #define __myriad2__ 1
@@ -1928,6 +1930,7 @@
 // CHECK_MYRIAD2-2: #define __myriad2__ 2
 // CHECK_SPARCEL: #define __sparc 1
 // CHECK_SPARCEL: #define __sparc__ 1
+// CHECK_MYRIAD2-1: #define __sparc_v8__ 1
 // CHECK_SPARCEL: #define __sparcv8 1
 //
 // RUN: %clang -E -dM %s -o - 2>&1 \
