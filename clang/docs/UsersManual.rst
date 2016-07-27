@@ -2082,16 +2082,26 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /fp:fast
       /fp:precise
       /fp:strict
+      /Fp<filename>          Set pch filename (with /Yc and /Yu)
       /GA                    Assume thread-local variables are defined in the executable
+      /Gd                    Set __cdecl as a default calling convention
       /GF-                   Disable string pooling
       /GR-                   Disable emission of RTTI data
       /GR                    Enable emission of RTTI data
+      /Gr                    Set __fastcall as a default calling convention
+      /GS-                   Disable buffer security check
+      /GS                    Enable buffer security check
       /Gs<value>             Set stack probe size
+      /Gv                    Set __vectorcall as a default calling convention
       /Gw-                   Don't put each data item in its own section
       /Gw                    Put each data item in its own section
+      /GX-                   Enable exception handling
+      /GX                    Enable exception handling
       /Gy-                   Don't put each function in its own section
       /Gy                    Put each function in its own section
+      /Gz                    Set __stdcall as a default calling convention
       /help                  Display available options
+      /imsvc <dir>           Add directory to system include search path, as if part of %INCLUDE%
       /I <dir>               Add directory to include search path
       /J                     Make char type unsigned
       /LDd                   Create debug DLL
@@ -2101,7 +2111,6 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /MD                    Use DLL run-time
       /MTd                   Use static debug run-time
       /MT                    Use static run-time
-      /Ob0                   Disable inlining
       /Od                    Disable optimization
       /Oi-                   Disable use of builtin functions
       /Oi                    Enable use of builtin functions
@@ -2113,6 +2122,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Qvec-                 Disable the loop vectorization passes
       /Qvec                  Enable the loop vectorization passes
       /showIncludes          Print info about included files to stderr
+      /std:<value>           Language standard to compile for
       /TC                    Treat all source files as C
       /Tc <filename>         Specify a C source file
       /TP                    Treat all source files as C++
@@ -2135,6 +2145,9 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /WX-                   Do not treat warnings as errors
       /WX                    Treat warnings as errors
       /w                     Disable all warnings
+      /Y-                    Disable precompiled headers, overrides /Yc and /Yu
+      /Yc<filename>          Generate a pch file for all code up to and including <filename>
+      /Yu<filename>          Load a pch file and use it instead of all code up to and including <filename>
       /Z7                    Enable CodeView debug information in object files
       /Zc:sizedDealloc-      Disable C++14 sized global deallocation functions
       /Zc:sizedDealloc       Enable C++14 sized global deallocation functions
@@ -2143,6 +2156,7 @@ Execute ``clang-cl /?`` to see a list of supported options:
       /Zc:threadSafeInit     Enable thread-safe initialization of static variables
       /Zc:trigraphs-         Disable trigraphs (default)
       /Zc:trigraphs          Enable trigraphs
+      /Zd                    Emit debug line number tables only
       /Zi                    Alias for /Z7. Does not produce PDBs.
       /Zl                    Don't mention any default libraries in the object file
       /Zp                    Set the default maximum struct packing alignment to 1
@@ -2179,6 +2193,8 @@ Execute ``clang-cl /?`` to see a list of supported options:
       -fsanitize=<check>      Turn on runtime checks for various forms of undefined or suspicious
                               behavior. See user manual for available checks
       -gcodeview              Generate CodeView debug information
+      -gline-tables-only      Emit debug line number tables only
+      -miamcu                 Use Intel MCU ABI
       -mllvm <value>          Additional arguments to forward to LLVM's option processing
       -Qunused-arguments      Don't emit warning for unused driver arguments
       -R<remark>              Enable the specified remark
