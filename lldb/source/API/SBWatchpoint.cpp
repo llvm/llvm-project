@@ -159,7 +159,7 @@ SBWatchpoint::SetEnabled (bool enabled)
     if (watchpoint_sp)
     {
         Mutex::Locker api_locker (watchpoint_sp->GetTarget().GetAPIMutex());
-        watchpoint_sp->GetTarget().DisableWatchpointByID(watchpoint_sp->GetID());
+        watchpoint_sp->SetEnabled(enabled);
     }
 }
 
