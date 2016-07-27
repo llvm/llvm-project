@@ -801,8 +801,9 @@ bool ThreadLister::GetDirectoryEntries() {
 
 uptr GetPageSize() {
 // Android post-M sysconf(_SC_PAGESIZE) crashes if called from .preinit_array.
-#if (SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))) || \
-    SANITIZER_ANDROID
+#if SANITIZER_ANDROID
+  return 4096;
+#elif SANITIZER_LINUX && (defined(__x86_64__) || defined(__i386__))
   return EXEC_PAGESIZE;
 #else
   return sysconf(_SC_PAGESIZE);  // EXEC_PAGESIZE may not be trustworthy.
@@ -1291,10 +1292,6 @@ SignalContext::WriteFlag SignalContext::GetWriteFlag(void *context) {
 #elif defined(__arm__)
   static const uptr FSR_WRITE = 1U << 11;
   uptr fsr = ucontext->uc_mcontext.error_code;
-  // FSR bits 5:0 describe the abort type, and are never 0 (or so it seems).
-  // Zero FSR indicates an older kernel that does not pass this information to
-  // the userspace.
-  if (fsr == 0) return UNKNOWN;
   return fsr & FSR_WRITE ? WRITE : READ;
 #elif defined(__aarch64__)
   static const u64 ESR_ELx_WNR = 1U << 6;

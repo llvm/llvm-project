@@ -26,6 +26,39 @@ namespace __xray {
 // This is the function to call when we encounter the entry or exit sleds.
 std::atomic<void (*)(int32_t, XRayEntryType)> XRayPatchedFunction{nullptr};
 
+// MProtectHelper is an RAII wrapper for calls to mprotect(...) that will undo
+// any successful mprotect(...) changes. This is used to make a page writeable
+// and executable, and upon destruction if it was successful in doing so returns
+// the page into a read-only and executable page.
+//
+// This is only used specifically for runtime-patching of the XRay
+// instrumentation points. This assumes that the executable pages are originally
+// read-and-execute only.
+class MProtectHelper {
+  void *PageAlignedAddr;
+  std::size_t MProtectLen;
+  bool MustCleanup;
+
+public:
+  explicit MProtectHelper(void *PageAlignedAddr, std::size_t MProtectLen)
+      : PageAlignedAddr(PageAlignedAddr), MProtectLen(MProtectLen),
+        MustCleanup(false) {}
+
+  int MakeWriteable() {
+    auto R = mprotect(PageAlignedAddr, MProtectLen,
+                      PROT_READ | PROT_WRITE | PROT_EXEC);
+    if (R != -1)
+      MustCleanup = true;
+    return R;
+  }
+
+  ~MProtectHelper() {
+    if (MustCleanup) {
+      mprotect(PageAlignedAddr, MProtectLen, PROT_READ | PROT_EXEC);
+    }
+  }
+};
+
 } // namespace __xray
 
 extern "C" {
@@ -48,6 +81,8 @@ int __xray_set_handler(void (*entry)(int32_t, XRayEntryType)) {
 
 std::atomic<bool> XRayPatching{false};
 
+using namespace __xray;
+
 XRayPatchingStatus __xray_patch() {
   // FIXME: Make this happen asynchronously. For now just do this sequentially.
   if (!XRayInitialized.load(std::memory_order_acquire))
@@ -62,7 +97,7 @@ XRayPatchingStatus __xray_patch() {
 
   // Step 1: Compute the function id, as a unique identifier per function in the
   // instrumentation map.
-  __xray::XRaySledMap InstrMap = XRayInstrMap.load(std::memory_order_acquire);
+  XRaySledMap InstrMap = XRayInstrMap.load(std::memory_order_acquire);
   if (InstrMap.Entries == 0)
     return XRayPatchingStatus::NOT_INITIALIZED;
 
@@ -87,8 +122,8 @@ XRayPatchingStatus __xray_patch() {
         reinterpret_cast<void *>(Sled.Address & ~((2 << 16) - 1));
     std::size_t MProtectLen =
         (Sled.Address + 12) - reinterpret_cast<uint64_t>(PageAlignedAddr);
-    if (mprotect(PageAlignedAddr, MProtectLen,
-                 PROT_READ | PROT_WRITE | PROT_EXEC) == -1) {
+    MProtectHelper Protector(PageAlignedAddr, MProtectLen);
+    if (Protector.MakeWriteable() == -1) {
       printf("Failed mprotect: %d\n", errno);
       return XRayPatchingStatus::FAILED;
     }
@@ -167,11 +202,6 @@ XRayPatchingStatus __xray_patch() {
       std::atomic_store_explicit(
           reinterpret_cast<std::atomic<uint16_t> *>(Sled.Address), MovR10Seq,
           std::memory_order_release);
-    }
-
-    if (mprotect(PageAlignedAddr, MProtectLen, PROT_READ | PROT_EXEC) == -1) {
-      printf("Failed mprotect: %d\n", errno);
-      return XRayPatchingStatus::FAILED;
     }
   }
   XRayPatching.store(false, std::memory_order_release);

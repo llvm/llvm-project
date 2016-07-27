@@ -3634,7 +3634,10 @@ Error
 Process::StopForDestroyOrDetach(lldb::EventSP &exit_event_sp)
 {
     Error error;
-    if (m_public_state.GetValue() == eStateRunning)
+    
+    // Check both the public & private states here.  If we're hung evaluating an expression, for instance, then
+    // the public state will be stopped, but we still need to interrupt.
+    if (m_public_state.GetValue() == eStateRunning || m_private_state.GetValue() == eStateRunning)
     {
         Log *log(lldb_private::GetLogIfAllCategoriesSet (LIBLLDB_LOG_PROCESS));
         if (log)

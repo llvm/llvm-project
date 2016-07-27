@@ -392,8 +392,10 @@ TEST(SanitizerCommon, LargeMmapAllocator) {
   }
   CHECK_EQ(a.TotalMemoryUsed(), 0);
 
-  // Test alignments.
-  uptr max_alignment = SANITIZER_WORDSIZE == 64 ? (1 << 28) : (1 << 24);
+  // Test alignments. Test with 512MB alignment on x64 non-Windows machines.
+  // Windows doesn't overcommit, and many machines do not have 51.2GB of swap.
+  uptr max_alignment =
+      (SANITIZER_WORDSIZE == 64 && !SANITIZER_WINDOWS) ? (1 << 28) : (1 << 24);
   for (uptr alignment = 8; alignment <= max_alignment; alignment *= 2) {
     const uptr kNumAlignedAllocs = 100;
     for (uptr i = 0; i < kNumAlignedAllocs; i++) {

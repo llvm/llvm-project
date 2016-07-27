@@ -79,15 +79,15 @@ static bool match(ArrayRef<StringRef> Patterns, StringRef S) {
 // input sections start with ".foo." or ".bar." should be added to
 // ".text" section.
 template <class ELFT>
-std::vector<std::pair<StringRef, ArrayRef<StringRef>>>
+std::vector<std::pair<StringRef, const InputSectionDescription *>>
 LinkerScript<ELFT>::getSectionMap() {
-  std::vector<std::pair<StringRef, ArrayRef<StringRef>>> Ret;
+  std::vector<std::pair<StringRef, const InputSectionDescription *>> Ret;
 
   for (const std::unique_ptr<BaseCommand> &Base1 : Opt.Commands)
     if (auto *Cmd1 = dyn_cast<OutputSectionCommand>(Base1.get()))
       for (const std::unique_ptr<BaseCommand> &Base2 : Cmd1->Commands)
         if (auto *Cmd2 = dyn_cast<InputSectionDescription>(Base2.get()))
-          Ret.emplace_back(Cmd1->Name, Cmd2->Patterns);
+          Ret.emplace_back(Cmd1->Name, Cmd2);
 
   return Ret;
 }
@@ -95,13 +95,17 @@ LinkerScript<ELFT>::getSectionMap() {
 // Returns input sections filtered by given glob patterns.
 template <class ELFT>
 std::vector<InputSectionBase<ELFT> *>
-LinkerScript<ELFT>::getInputSections(ArrayRef<StringRef> Patterns) {
+LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
+  ArrayRef<StringRef> Patterns = I->Patterns;
+  ArrayRef<StringRef> ExcludedFiles = I->ExcludedFiles;
   std::vector<InputSectionBase<ELFT> *> Ret;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F :
        Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec && match(Patterns, S->getSectionName()))
-        Ret.push_back(S);
+        if (ExcludedFiles.empty() ||
+            !match(ExcludedFiles, sys::path::filename(F->getName())))
+          Ret.push_back(S);
   return Ret;
 }
 
@@ -123,8 +127,8 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
 
   for (auto &P : getSectionMap()) {
     StringRef OutputName = P.first;
-    ArrayRef<StringRef> InputPatterns = P.second;
-    for (InputSectionBase<ELFT> *S : getInputSections(InputPatterns)) {
+    const InputSectionDescription *I = P.second;
+    for (InputSectionBase<ELFT> *S : getInputSections(I)) {
       if (OutputName == "/DISCARD/") {
         S->Live = false;
         reportDiscarded(S);
@@ -150,19 +154,21 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
 template <class ELFT>
 std::vector<OutputSectionBase<ELFT> *>
 LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
-  // Sections and OutputSectionCommands are parallel arrays.
   // In this loop, we remove output sections if they don't satisfy
   // requested properties.
-  auto It = Sections.begin();
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
     auto *Cmd = dyn_cast<OutputSectionCommand>(Base.get());
     if (!Cmd || Cmd->Name == "/DISCARD/")
       continue;
 
-    if (Cmd->Constraint == ConstraintKind::NoConstraint) {
-      ++It;
+    if (Cmd->Constraint == ConstraintKind::NoConstraint)
       continue;
-    }
+
+    auto It = llvm::find_if(Sections, [&](OutputSectionBase<ELFT> *S) {
+      return S->getName() == Cmd->Name;
+    });
+    if (It == Sections.end())
+      continue;
 
     OutputSectionBase<ELFT> *Sec = *It;
     bool Writable = (Sec->getFlags() & SHF_WRITE);
@@ -173,7 +179,6 @@ LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
       Sections.erase(It);
       continue;
     }
-    ++It;
   }
   return Sections;
 }
@@ -224,6 +229,9 @@ void LinkerScript<ELFT>::assignAddresses(
 
       if (Cmd->AddrExpr)
         Dot = Cmd->AddrExpr(Dot);
+
+      if (Cmd->AlignExpr)
+        Sec->updateAlignment(Cmd->AlignExpr(Dot));
 
       if ((Sec->getFlags() & SHF_TLS) && Sec->getType() == SHT_NOBITS) {
         uintX_t TVA = Dot + ThreadBssOffset;
@@ -416,6 +424,7 @@ private:
   void readAsNeeded();
   void readEntry();
   void readExtern();
+  std::unique_ptr<InputSectionDescription> readFilePattern();
   void readGroup();
   void readKeep(OutputSectionCommand *Cmd);
   void readInclude();
@@ -432,6 +441,7 @@ private:
   std::vector<StringRef> readOutputSectionPhdrs();
   unsigned readPhdrType();
   void readProvide(bool Hidden);
+  void readAlign(OutputSectionCommand *Cmd);
 
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
@@ -657,16 +667,37 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
-  expect("(");
+std::unique_ptr<InputSectionDescription> ScriptParser::readFilePattern() {
   expect("*");
   expect("(");
-  auto *InCmd = new InputSectionDescription();
-  Cmd->Commands.emplace_back(InCmd);
-  while (!Error && !skip(")")) {
-    Opt.KeptSections.push_back(peek());
+
+  auto InCmd = llvm::make_unique<InputSectionDescription>();
+
+  if (skip("EXCLUDE_FILE")) {
+    expect("(");
+    while (!Error && !skip(")"))
+      InCmd->ExcludedFiles.push_back(next());
     InCmd->Patterns.push_back(next());
+    expect(")");
+  } else {
+    while (!Error && !skip(")"))
+      InCmd->Patterns.push_back(next());
   }
+  return InCmd;
+}
+
+void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
+  expect("(");
+  std::unique_ptr<InputSectionDescription> InCmd = readFilePattern();
+  Opt.KeptSections.insert(Opt.KeptSections.end(), InCmd->Patterns.begin(),
+                          InCmd->Patterns.end());
+  Cmd->Commands.push_back(std::move(InCmd));
+  expect(")");
+}
+
+void ScriptParser::readAlign(OutputSectionCommand *Cmd) {
+  expect("(");
+  Cmd->AlignExpr = readExpr();
   expect(")");
 }
 
@@ -680,6 +711,9 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
     Cmd->AddrExpr = readExpr();
 
   expect(":");
+
+  if (skip("ALIGN"))
+    readAlign(Cmd);
 
   // Parse constraints.
   if (skip("ONLY_IF_RO"))
@@ -741,6 +775,31 @@ SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
 // This is an operator-precedence parser to parse a linker
 // script expression.
 Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
+
+static uint64_t getSymbolValue(StringRef S) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    if (SymbolBody *B = Symtab<ELF32LE>::X->find(S))
+      return B->getVA<ELF32LE>();
+    break;
+  case ELF32BEKind:
+    if (SymbolBody *B = Symtab<ELF32BE>::X->find(S))
+      return B->getVA<ELF32BE>();
+    break;
+  case ELF64LEKind:
+    if (SymbolBody *B = Symtab<ELF64LE>::X->find(S))
+      return B->getVA<ELF64LE>();
+    break;
+  case ELF64BEKind:
+    if (SymbolBody *B = Symtab<ELF64BE>::X->find(S))
+      return B->getVA<ELF64BE>();
+    break;
+  default:
+    llvm_unreachable("unsupported target");
+  }
+  error("symbol not found: " + S);
+  return 0;
+}
 
 // This is a part of the operator-precedence parser. This function
 // assumes that the remaining token stream starts with an operator.
@@ -810,10 +869,7 @@ Expr ScriptParser::readPrimary() {
     expect(",");
     readExpr();
     expect(")");
-    return [=](uint64_t Dot) -> uint64_t {
-      uint64_t Val = E(Dot);
-      return alignTo(Dot, Val) + (Dot & (Val - 1));
-    };
+    return [=](uint64_t Dot) { return alignTo(Dot, E(Dot)); };
   }
   if (Tok == "DATA_SEGMENT_END") {
     expect("(");
@@ -821,11 +877,25 @@ Expr ScriptParser::readPrimary() {
     expect(")");
     return [](uint64_t Dot) { return Dot; };
   }
+  // GNU linkers implements more complicated logic to handle
+  // DATA_SEGMENT_RELRO_END. We instead ignore the arguments and just align to
+  // the next page boundary for simplicity.
+  if (Tok == "DATA_SEGMENT_RELRO_END") {
+    expect("(");
+    next();
+    expect(",");
+    readExpr();
+    expect(")");
+    return [](uint64_t Dot) { return alignTo(Dot, Target->PageSize); };
+  }
 
-  // Parse a number literal
+  // Parse a symbol name or a number literal.
   uint64_t V = 0;
-  if (Tok.getAsInteger(0, V))
-    setError("malformed number: " + Tok);
+  if (Tok.getAsInteger(0, V)) {
+    if (!isValidCIdentifier(Tok))
+      setError("malformed number: " + Tok);
+    return [=](uint64_t Dot) { return getSymbolValue(Tok); };
+  }
   return [=](uint64_t Dot) { return V; };
 }
 
