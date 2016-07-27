@@ -183,6 +183,10 @@ extern long OCKL_MANGLE_T(wfscan_xor,i64)(long x, bool inclusive);
 extern uint OCKL_MANGLE_T(wfscan_xor,u32)(uint x, bool inclusive);
 extern ulong OCKL_MANGLE_T(wfscan_xor,u64)(ulong x, bool inclusive);
 
+extern __attribute__((const)) bool OCKL_MANGLE_I32(wfany)(int e);
+extern __attribute__((const)) bool OCKL_MANGLE_I32(wfall)(int e);
+extern __attribute__((const)) bool OCKL_MANGLE_I32(wfsame)(int e);
+
 #define SSHARP __constant uint *
 #define TSHARP __constant uint *
 

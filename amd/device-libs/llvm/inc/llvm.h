@@ -183,5 +183,10 @@ extern uint __llvm_amdgcn_read_exec_hi(void);
 
 extern __attribute__((const)) uint __llvm_amdgcn_lerp(uint, uint, uint) __asm("llvm.amdgcn.lerp");
 
+extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i32(uint, uint, uint) __asm("llvm.amdgcn.icmp.i32");
+extern __attribute__((const)) ulong __llvm_amdgcn_icmp_i64(ulong, ulong, uint) __asm("llvm.amdgcn.icmp.i64");
+extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f32(float, float, uint) __asm("llvm.amdgcn.fcmp.f32");
+extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.f64");
+
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
 #endif // LLVM_H

@@ -5,6 +5,9 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
+#ifndef OCLC_H
+#define OCLC_H
+
 // These functions are used to control behavior of the libraries which
 // call them.
 //
@@ -51,3 +54,4 @@ extern __attribute__((const)) int __oclc_amd_opt(void);
 extern __attribute__((const)) int __oclc_correctly_rounded_sqrt32(void);
 extern __attribute__((const)) int __oclc_ISA_version(void);
 
+#endif // OCLC_H
