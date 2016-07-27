@@ -56,9 +56,9 @@ set ( CPACK_PACKAGE_DESCRIPTION_SUMMARY "Radeon Open Compute - device libraries"
 set ( CPACK_PACKAGE_DESCRIPTION "This package includes LLVM bitcode libraries." )
 set ( CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/RadeonOpenCompute/ROCm-Device-Libs" )
 
+set ( CPACK_GENERATOR DEB RPM )
 
 ## Debian package values
-set ( CPACK_GENERATOR "DEB" )
 set ( CPACK_DEBIAN_PACKAGE_MAINTAINER "AMD" )
 set ( CPACK_PACKAGING_INSTALL_PREFIX "/opt/rocm" )
 set ( CPACK_DEBIAN_PACKAGE_DEPENDS "" )
