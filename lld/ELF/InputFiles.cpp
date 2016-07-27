@@ -252,6 +252,14 @@ void elf::ObjectFile<ELFT>::initializeSections(
       // they can be used to reason about object compatibility.
       Sections[I] = &InputSection<ELFT>::Discarded;
       break;
+    case SHT_MIPS_REGINFO:
+      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
+      Sections[I] = MipsReginfo.get();
+      break;
+    case SHT_MIPS_OPTIONS:
+      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
+      Sections[I] = MipsOptions.get();
+      break;
     default:
       Sections[I] = createInputSection(Sec);
     }
@@ -297,19 +305,6 @@ elf::ObjectFile<ELFT>::createInputSection(const Elf_Shdr &Sec) {
 
   if (Config->StripDebug && Name.startswith(".debug"))
     return &InputSection<ELFT>::Discarded;
-
-  // A MIPS object file has a special sections that contain register
-  // usage info, which need to be handled by the linker specially.
-  if (Config->EMachine == EM_MIPS) {
-    if (Name == ".reginfo") {
-      MipsReginfo.reset(new MipsReginfoInputSection<ELFT>(this, &Sec));
-      return MipsReginfo.get();
-    }
-    if (Name == ".MIPS.options") {
-      MipsOptions.reset(new MipsOptionsInputSection<ELFT>(this, &Sec));
-      return MipsOptions.get();
-    }
-  }
 
   // The linker merges EH (exception handling) frames and creates a
   // .eh_frame_hdr section for runtime. So we handle them with a special

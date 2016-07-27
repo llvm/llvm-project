@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=148 -new-name=Bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=87 -new-name=Bar %s -- | FileCheck %s
 
 namespace A {
 int Foo;                // CHECK: int Bar;
@@ -23,5 +21,5 @@ void fun() {
   Foo = b.Foo;          // Foo = b.Foo;
 }
 
-// Use grep -FUbo 'Foo' <file> to get the correct offset of foo when changing
+// Use grep -FUbo 'Foo' <file> to get the correct offset of Foo when changing
 // this file.

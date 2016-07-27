@@ -555,7 +555,7 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
 // The linker is expected to define some symbols depending on
 // the linking result. This function defines such symbols.
 template <class ELFT> void Writer<ELFT>::addReservedSymbols() {
-  if (Config->EMachine == EM_MIPS) {
+  if (Config->EMachine == EM_MIPS && !Config->Relocatable) {
     // Define _gp for MIPS. st_value of _gp symbol will be updated by Writer
     // so that it points to an absolute address which is relative to GOT.
     // See "Global Data Symbols" in Chapter 6 in the following document:
@@ -816,7 +816,7 @@ template <class ELFT> bool Writer<ELFT>::needsGot() {
 
   // We add the .got section to the result for dynamic MIPS target because
   // its address and properties are mentioned in the .dynamic section.
-  if (Config->EMachine == EM_MIPS)
+  if (Config->EMachine == EM_MIPS && !Config->Relocatable)
     return true;
 
   // If we have a relocation that is relative to GOT (such as GOTOFFREL),
@@ -930,7 +930,7 @@ void Writer<ELFT>::addStartStopSymbols(OutputSectionBase<ELFT> *Sec) {
       Symtab.addSynthetic(Stop, Sec, DefinedSynthetic<ELFT>::SectionEnd);
 }
 
-template <class ELFT> bool elf::needsPtLoad(OutputSectionBase<ELFT> *Sec) {
+template <class ELFT> static bool needsPtLoad(OutputSectionBase<ELFT> *Sec) {
   if (!(Sec->getFlags() & SHF_ALLOC))
     return false;
 
@@ -982,7 +982,7 @@ std::vector<PhdrEntry<ELFT>> Writer<ELFT>::createPhdrs() {
     if (Sec->getFlags() & SHF_TLS)
       TlsHdr.add(Sec);
 
-    if (!needsPtLoad<ELFT>(Sec))
+    if (!needsPtLoad(Sec))
       continue;
 
     // If flags changed then we want new load segment.
@@ -1077,7 +1077,7 @@ template <class ELFT> void Writer<ELFT>::assignAddresses() {
       Alignment = std::max<uintX_t>(Alignment, Target->PageSize);
 
     // We only assign VAs to allocated sections.
-    if (needsPtLoad<ELFT>(Sec)) {
+    if (needsPtLoad(Sec)) {
       VA = alignTo(VA, Alignment);
       Sec->setVA(VA);
       VA += Sec->getSize();
@@ -1337,11 +1337,6 @@ template bool elf::isRelroSection<ELF32LE>(OutputSectionBase<ELF32LE> *);
 template bool elf::isRelroSection<ELF32BE>(OutputSectionBase<ELF32BE> *);
 template bool elf::isRelroSection<ELF64LE>(OutputSectionBase<ELF64LE> *);
 template bool elf::isRelroSection<ELF64BE>(OutputSectionBase<ELF64BE> *);
-
-template bool elf::needsPtLoad<ELF32LE>(OutputSectionBase<ELF32LE> *);
-template bool elf::needsPtLoad<ELF32BE>(OutputSectionBase<ELF32BE> *);
-template bool elf::needsPtLoad<ELF64LE>(OutputSectionBase<ELF64LE> *);
-template bool elf::needsPtLoad<ELF64BE>(OutputSectionBase<ELF64BE> *);
 
 template StringRef elf::getOutputSectionName<ELF32LE>(InputSectionBase<ELF32LE> *);
 template StringRef elf::getOutputSectionName<ELF32BE>(InputSectionBase<ELF32BE> *);

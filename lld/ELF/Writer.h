@@ -27,7 +27,6 @@ template <class ELFT> void writeResult(SymbolTable<ELFT> *Symtab);
 template <class ELFT> void markLive();
 template <class ELFT> bool isOutputDynamic();
 template <class ELFT> bool isRelroSection(OutputSectionBase<ELFT> *Sec);
-template <class ELFT> bool needsPtLoad(OutputSectionBase<ELFT> *Sec);
 uint32_t toPhdrFlags(uint64_t Flags);
 
 // This describes a program header entry.

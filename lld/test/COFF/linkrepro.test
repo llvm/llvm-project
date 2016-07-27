@@ -1,3 +1,6 @@
+# cpio fails on windows with "Function not implemented".
+# REQUIRES: shell
+
 # RUN: rm -rf %t.dir
 # RUN: mkdir -p %t.dir/build1 %t.dir/build2 %t.dir/build3
 # RUN: yaml2obj < %p/Inputs/hello32.yaml > %t.obj

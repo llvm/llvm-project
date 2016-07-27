@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=199 -new-name=macro_function %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=138 -new-name=macro_function %s -- | FileCheck %s
 
 #define moo foo // CHECK: #define moo macro_function
 
@@ -17,5 +15,5 @@ void qoo() {
   boo(moo());
 }
 
-// Use grep -FUbo 'foo;' <file> to get the correct offset of foo when changing
+// Use grep -FUbo 'foo' <file> to get the correct offset of foo when changing
 // this file.
