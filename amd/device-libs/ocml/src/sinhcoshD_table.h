@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 // Lead and tail tabulated values of sinh(i) and cosh(i) 
 // for i = 0,...,36. The lead part has 26 leading bits.

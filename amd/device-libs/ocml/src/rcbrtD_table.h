@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 DECLARE_TABLE(double2, M64_RCBRT, 257)
     (double2)(0x1.0000000000000p+0, 0x0.0000000000000p+0),

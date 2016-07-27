@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 DECLARE_TABLE(uint, M64_PIBITS, 37)
     0xa2f9836e, 0x4e441529, 0xfc2757d1, 0xf534ddc0,

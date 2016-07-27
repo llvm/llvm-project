@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 #define _C(X,Y) X##Y
 #define C(X,Y) _C(X,Y)

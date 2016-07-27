@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 #define IATTR __attribute__((always_inline, overloadable))
 #define CATTR __attribute__((always_inline, overloadable, const))

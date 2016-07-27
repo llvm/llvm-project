@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 DECLARE_TABLE(float, M32_RSQRT, 64)
     0x1.000000p+0, // rsqrt(0x1.000000p+0)

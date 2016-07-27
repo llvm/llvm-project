@@ -1,3 +1,10 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
+
 #include "test_opencl.h"
 
 TEST_KERNEL_FUNC(acos, float, float)

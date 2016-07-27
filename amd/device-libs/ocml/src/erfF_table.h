@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 DECLARE_TABLE(float, M32_ERF, 55)
     0x1.f7b72ep-27f, -0x1.5f1f06p-23f, 0x1.b9df2ap-20f, -0x1.f4d1e4p-17f,

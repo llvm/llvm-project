@@ -1,3 +1,10 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
+
 /**
  * OpenCL as_type operators
  * Reinterprets a data type as another data type of the same size

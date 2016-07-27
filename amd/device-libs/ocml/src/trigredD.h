@@ -1,3 +1,9 @@
+/*===--------------------------------------------------------------------------
+ *                   ROCm Device Libraries
+ *
+ * This file is distributed under the University of Illinois Open Source
+ * License. See LICENSE.TXT for details.
+ *===------------------------------------------------------------------------*/
 
 extern int MATH_PRIVATE(trigredsmall)(__private double *r, __private double *rr, double x);
 extern int MATH_PRIVATE(trigredlarge)(__private double *r, __private double *rr, double x);
