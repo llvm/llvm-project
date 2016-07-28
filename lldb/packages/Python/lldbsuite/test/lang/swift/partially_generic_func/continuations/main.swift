@@ -15,9 +15,9 @@ public final class PerformanceMetric {
 
 public struct Continuation<A> {
    private let magicToken = "Hello World"
-   private let f: (() -> A)?
-   private let failable: (() -> Continuation<A>?)?
-   private var perfMetric: PerformanceMetric?
+   fileprivate let f: (() -> A)?
+   fileprivate let failable: (() -> Continuation<A>?)?
+   fileprivate var perfMetric: PerformanceMetric?
 
    public func run() -> A? {
        if let ff = f {

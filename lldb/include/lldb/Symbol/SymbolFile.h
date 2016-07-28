@@ -127,6 +127,11 @@ public:
     virtual bool            ParseCompileUnitLineTable (const SymbolContext& sc) = 0;
     virtual bool            ParseCompileUnitDebugMacros (const SymbolContext& sc) = 0;
     virtual bool            ParseCompileUnitSupportFiles (const SymbolContext& sc, FileSpecList& support_files) = 0;
+    virtual bool
+    ParseCompileUnitIsOptimized(const lldb_private::SymbolContext &sc)
+    {
+        return false;
+    }
     virtual bool            ParseImportedModules (const SymbolContext &sc, std::vector<ConstString> &imported_modules) = 0;
     virtual size_t          ParseFunctionBlocks (const SymbolContext& sc) = 0;
     virtual size_t          ParseTypes (const SymbolContext& sc) = 0;

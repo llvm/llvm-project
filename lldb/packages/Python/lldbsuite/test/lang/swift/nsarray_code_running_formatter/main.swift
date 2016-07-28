@@ -13,8 +13,8 @@ import Foundation
 
 class Test: NSArray { 
     override var count: Int { return 1 } 
-    override func object(at index: Int) -> AnyObject { return "abc" } 
-    override func copy(with: NSZone?) -> AnyObject { return self } 
+    override func object(at index: Int) -> Any { return "abc" } 
+    override func copy(with: NSZone?) -> Any { return self } 
 }
 
 func main() {

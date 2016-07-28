@@ -10,14 +10,14 @@
 //
 // -----------------------------------------------------------------------------
 public struct MyStruct {
-    private typealias IntegerType = Int
+    fileprivate typealias IntegerType = Int
     private var m_integer = IntegerType(345)
-    private func Foo(_ i : IntegerType)
+    fileprivate func Foo(_ i : IntegerType)
     {
         print("i = \(i)") // breakpoint 1
     }
     
-    private func Bar()
+    fileprivate func Bar()
     {
         let a : Dictionary<String, IntegerType> = [ "hello" : 234 ]
         print("a = \(a)") // breakpoint 2

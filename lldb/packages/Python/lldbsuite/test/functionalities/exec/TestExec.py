@@ -26,6 +26,7 @@ class ExecTestCase(TestBase):
     mydir = TestBase.compute_mydir(__file__)
 
     @skipUnlessDarwin
+    @expectedFailureDarwin("rdar://27548663")
     def test(self):
         if self.getArchitecture() == 'x86_64':
             source = os.path.join (os.getcwd(), "main.cpp")

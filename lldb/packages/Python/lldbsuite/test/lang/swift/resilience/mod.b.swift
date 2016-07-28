@@ -11,7 +11,7 @@
 // -----------------------------------------------------------------------------
 
 public struct S {
-  private var b = 2
+  fileprivate var b = 2
   public var a = 1
   
   public init() {}

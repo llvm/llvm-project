@@ -25,6 +25,7 @@ class TestIndirectEnumVariables(TestBase):
     mydir = TestBase.compute_mydir(__file__)
     
     @decorators.swiftTest
+    @decorators.skipIf(bugnumber='rdar://27568868', oslist=['linux'])
     def test_indirect_enum_variables(self):
         """Tests that indirect Enum variables display correctly"""
         self.build()
