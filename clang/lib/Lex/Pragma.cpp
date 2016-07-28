@@ -354,7 +354,9 @@ void Preprocessor::HandleMicrosoft__pragma(Token &Tok) {
 /// HandlePragmaOnce - Handle \#pragma once.  OnceTok is the 'once'.
 ///
 void Preprocessor::HandlePragmaOnce(Token &OnceTok) {
-  if (isInPrimaryFile()) {
+  // Don't honor the 'once' when handling the primary source file, unless
+  // this is a prefix to a TU, which indicates we're generating a PCH file.
+  if (isInPrimaryFile() && TUKind != TU_Prefix) {
     Diag(OnceTok, diag::pp_pragma_once_in_main_file);
     return;
   }
