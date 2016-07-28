@@ -1,7 +1,8 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefix=SI %s
 ; RUN: llc -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck -check-prefix=CI -check-prefix=FUNC %s
 
-declare i32 @llvm.amdgcn.workitem.id.x() nounwind readnone
+declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare double @llvm.fabs.f64(double) #1
 
 ; SI-LABEL: {{^}}fp_to_uint_i32_f64:
 ; SI: v_cvt_u32_f64_e32
@@ -68,3 +69,23 @@ define void @fp_to_uint_v4i64_v4f64(<4 x i64> addrspace(1)* %out, <4 x double> %
   store <4 x i64> %cast, <4 x i64> addrspace(1)* %out, align 32
   ret void
 }
+
+; FUNC-LABEL: {{^}}fp_to_uint_f64_to_i1:
+; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, s{{\[[0-9]+:[0-9]+\]}}
+define void @fp_to_uint_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
+  %conv = fptoui double %in to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
+
+; FUNC-LABEL: {{^}}fp_to_uint_fabs_f64_to_i1:
+; SI: v_cmp_eq_f64_e64 s{{\[[0-9]+:[0-9]+\]}}, 1.0, |s{{\[[0-9]+:[0-9]+\]}}|
+define void @fp_to_uint_fabs_f64_to_i1(i1 addrspace(1)* %out, double %in) #0 {
+  %in.fabs = call double @llvm.fabs.f64(double %in)
+  %conv = fptoui double %in.fabs to i1
+  store i1 %conv, i1 addrspace(1)* %out
+  ret void
+}
+
+attributes #0 = { nounwind }
+attributes #1 = { nounwind readnone }
