@@ -663,12 +663,16 @@ INTERCEPTOR(void*, memchr, const void *s, int c, SIZE_T n) {
     return internal_memchr(s, c, n);
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, memchr, s, c, n);
+#if SANITIZER_WINDOWS
   void *res;
   if (REAL(memchr)) {
     res = REAL(memchr)(s, c, n);
   } else {
     res = internal_memchr(s, c, n);
   }
+#else
+  void *res = REAL(memchr)(s, c, n);
+#endif
   uptr len = res ? (char *)res - (const char *)s + 1 : n;
   COMMON_INTERCEPTOR_READ_RANGE(ctx, s, len);
   return res;

@@ -789,8 +789,8 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
     st->cmd     = LC_SYMTAB;
     st->cmdsize = sizeof(symtab_command);
     st->symoff  = _startOfSymbols;
-    st->nsyms   = _file.localSymbols.size() + _file.globalSymbols.size()
-                                            + _file.undefinedSymbols.size();
+    st->nsyms   = _file.stabsSymbols.size() + _file.localSymbols.size() +
+                  _file.globalSymbols.size() + _file.undefinedSymbols.size();
     st->stroff  = _startOfSymbolStrings;
     st->strsize = _endOfSymbolStrings - _startOfSymbolStrings;
     if (_swap)
@@ -876,8 +876,8 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
     st->cmd     = LC_SYMTAB;
     st->cmdsize = sizeof(symtab_command);
     st->symoff  = _startOfSymbols;
-    st->nsyms   = _file.localSymbols.size() + _file.globalSymbols.size()
-                                            + _file.undefinedSymbols.size();
+    st->nsyms   = _file.stabsSymbols.size() + _file.localSymbols.size() +
+                  _file.globalSymbols.size() + _file.undefinedSymbols.size();
     st->stroff  = _startOfSymbolStrings;
     st->strsize = _endOfSymbolStrings - _startOfSymbolStrings;
     if (_swap)
@@ -890,7 +890,8 @@ llvm::Error MachOFileLayout::writeLoadCommands() {
       dst->cmd            = LC_DYSYMTAB;
       dst->cmdsize        = sizeof(dysymtab_command);
       dst->ilocalsym      = _symbolTableLocalsStartIndex;
-      dst->nlocalsym      = _file.localSymbols.size();
+      dst->nlocalsym      = _file.stabsSymbols.size() +
+                            _file.localSymbols.size();
       dst->iextdefsym     = _symbolTableGlobalsStartIndex;
       dst->nextdefsym     = _file.globalSymbols.size();
       dst->iundefsym      = _symbolTableUndefinesStartIndex;
@@ -1102,6 +1103,7 @@ void MachOFileLayout::writeSymbolTable() {
   uint32_t symOffset = _startOfSymbols;
   uint32_t strOffset = _startOfSymbolStrings;
   _buffer[strOffset++] = '\0'; // Reserve n_strx offset of zero to mean no name.
+  appendSymbols(_file.stabsSymbols, symOffset, strOffset);
   appendSymbols(_file.localSymbols, symOffset, strOffset);
   appendSymbols(_file.globalSymbols, symOffset, strOffset);
   appendSymbols(_file.undefinedSymbols, symOffset, strOffset);
@@ -1414,10 +1416,14 @@ void MachOFileLayout::buildExportTrie() {
 void MachOFileLayout::computeSymbolTableSizes() {
   // MachO symbol tables have three ranges: locals, globals, and undefines
   const size_t nlistSize = (_is64 ? sizeof(nlist_64) : sizeof(nlist));
-  _symbolTableSize = nlistSize * (_file.localSymbols.size()
+  _symbolTableSize = nlistSize * (_file.stabsSymbols.size()
+                                + _file.localSymbols.size()
                                 + _file.globalSymbols.size()
                                 + _file.undefinedSymbols.size());
   _symbolStringPoolSize = 1; // Always reserve 1-byte for the empty string.
+  for (const Symbol &sym : _file.stabsSymbols) {
+    _symbolStringPoolSize += (sym.name.size()+1);
+  }
   for (const Symbol &sym : _file.localSymbols) {
     _symbolStringPoolSize += (sym.name.size()+1);
   }
@@ -1428,7 +1434,8 @@ void MachOFileLayout::computeSymbolTableSizes() {
     _symbolStringPoolSize += (sym.name.size()+1);
   }
   _symbolTableLocalsStartIndex = 0;
-  _symbolTableGlobalsStartIndex = _file.localSymbols.size();
+  _symbolTableGlobalsStartIndex = _file.stabsSymbols.size() +
+                                  _file.localSymbols.size();
   _symbolTableUndefinesStartIndex = _symbolTableGlobalsStartIndex
                                     + _file.globalSymbols.size();
 
