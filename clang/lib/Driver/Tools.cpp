@@ -5020,9 +5020,13 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_fdiagnostics_show_template_tree);
   Args.AddLastArg(CmdArgs, options::OPT_fno_elide_type);
 
-  // Forward flags for OpenMP
+  // Forward flags for OpenMP. We don't do this if the current action is an
+  // device offloading action.
+  //
+  // TODO: Allow OpenMP offload actions when they become available.
   if (Args.hasFlag(options::OPT_fopenmp, options::OPT_fopenmp_EQ,
-                   options::OPT_fno_openmp, false)) {
+                   options::OPT_fno_openmp, false) &&
+      JA.isDeviceOffloading(Action::OFK_None)) {
     switch (getOpenMPRuntime(getToolChain(), Args)) {
     case OMPRT_OMP:
     case OMPRT_IOMP5:
