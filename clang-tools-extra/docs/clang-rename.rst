@@ -92,8 +92,11 @@ You can call :program:`clang-rename` directly from Vim! To set up
 `clang-rename/tool/clang-rename.py
 <http://reviews.llvm.org/diffusion/L/browse/clang-tools-extra/trunk/clang-rename/tool/clang-rename.py>`_.
 
-Once installed, you can point your cursor to the symbols you want to rename,
-press `,cr` and print new desired name.
-
 Please note that **you have to save all buffers, in which the replacement will
 happen before running the tool**.
+
+Once installed, you can point your cursor to symbols you want to rename, press
+``<leader>cr`` and print new desired name. The
+[``<leader> key``](http://vim.wikia.com/wiki/Mapping_keys_in_Vim_-_Tutorial_(Part_3)#Map_leader)
+is a reference to a specific key defined by the mapleader variable and is bound
+to backslash by default.

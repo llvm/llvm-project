@@ -949,10 +949,14 @@ void WinEHPrepare::removeImplausibleInstructions(Function &F) {
           continue;
 
         // Skip call sites which are nounwind intrinsics or inline asm.
+        //
+        // FIXME: Should this check isIntrinsic() instead of
+        // hasLLVMReservedName?  The latter is conservative.
         auto *CalledFn =
             dyn_cast<Function>(CS.getCalledValue()->stripPointerCasts());
-        if (CalledFn && ((CalledFn->isIntrinsic() && CS.doesNotThrow()) ||
-                         CS.isInlineAsm()))
+        if (CalledFn &&
+            ((CalledFn->hasLLVMReservedName() && CS.doesNotThrow()) ||
+             CS.isInlineAsm()))
           continue;
 
         // This call site was not part of this funclet, remove it.

@@ -59,6 +59,7 @@
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/MC/MCAsmInfo.h"
 
 using namespace llvm;
 

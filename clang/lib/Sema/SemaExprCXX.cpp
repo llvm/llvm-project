@@ -961,32 +961,26 @@ static QualType adjustCVQualifiersForCXXThisWithinLambda(
 QualType Sema::getCurrentThisType() {
   DeclContext *DC = getFunctionLevelDeclContext();
   QualType ThisTy = CXXThisTypeOverride;
+
   if (CXXMethodDecl *method = dyn_cast<CXXMethodDecl>(DC)) {
     if (method && method->isInstance())
       ThisTy = method->getThisType(Context);
   }
-  if (ThisTy.isNull()) {
-    if (isGenericLambdaCallOperatorSpecialization(CurContext) &&
-        CurContext->getParent()->getParent()->isRecord()) {
-      // This is a generic lambda call operator that is being instantiated
-      // within a default initializer - so use the enclosing class as 'this'.
-      // There is no enclosing member function to retrieve the 'this' pointer
-      // from.
 
-      // FIXME: This looks wrong. If we're in a lambda within a lambda within a
-      // default member initializer, we need to recurse up more parents to find
-      // the right context. Looks like we should be walking up to the parent of
-      // the closure type, checking whether that is itself a lambda, and if so,
-      // recursing, until we reach a class or a function that isn't a lambda
-      // call operator. And we should accumulate the constness of *this on the
-      // way.
+  if (ThisTy.isNull() && isLambdaCallOperator(CurContext) &&
+      !ActiveTemplateInstantiations.empty()) {
 
-      QualType ClassTy = Context.getTypeDeclType(
-          cast<CXXRecordDecl>(CurContext->getParent()->getParent()));
-      // There are no cv-qualifiers for 'this' within default initializers, 
-      // per [expr.prim.general]p4.
-      ThisTy = Context.getPointerType(ClassTy);
-    }
+    assert(isa<CXXRecordDecl>(DC) &&
+           "Trying to get 'this' type from static method?");
+
+    // This is a lambda call operator that is being instantiated as a default
+    // initializer. DC must point to the enclosing class type, so we can recover
+    // the 'this' type from it.
+
+    QualType ClassTy = Context.getTypeDeclType(cast<CXXRecordDecl>(DC));
+    // There are no cv-qualifiers for 'this' within default initializers,
+    // per [expr.prim.general]p4.
+    ThisTy = Context.getPointerType(ClassTy);
   }
 
   // If we are within a lambda's call operator, the cv-qualifiers of 'this'

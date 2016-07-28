@@ -16,6 +16,12 @@ define i32* @return_deref_arg_callee(i32** %arg1) {
 ; CHECK: NoAlias: i32* %b, i32* %lp
 ; CHECK: NoAlias: i32* %lp, i32** %p
 ; CHECK: MayAlias: i32* %c, i32* %lp
+
+; CHECK: NoModRef: Ptr: i32* %a <-> %c = call i32* @return_deref_arg_callee(i32** %p)
+; CHECK: NoModRef: Ptr: i32* %b <-> %c = call i32* @return_deref_arg_callee(i32** %p)
+; CHECK: Just Ref: Ptr: i32** %p <-> %c = call i32* @return_deref_arg_callee(i32** %p)
+; CHECK: NoModRef: Ptr: i32* %c <-> %c = call i32* @return_deref_arg_callee(i32** %p)
+; CHECK: NoModRef: Ptr: i32* %lp <-> %c = call i32* @return_deref_arg_callee(i32** %p)
 define void @test_return_deref_arg() {
   %a = alloca i32, align 4
   %b = alloca i32, align 4

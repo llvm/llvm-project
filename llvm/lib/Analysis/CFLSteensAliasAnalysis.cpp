@@ -344,6 +344,9 @@ AliasResult CFLSteensAAResult::query(const MemoryLocation &LocA,
 ModRefInfo CFLSteensAAResult::getArgModRefInfo(ImmutableCallSite CS,
                                                unsigned ArgIdx) {
   if (auto CalledFunc = CS.getCalledFunction()) {
+    if (!CalledFunc->hasExactDefinition())
+      return MRI_ModRef;
+
     auto &MaybeInfo = ensureCached(const_cast<Function *>(CalledFunc));
     if (!MaybeInfo.hasValue())
       return MRI_ModRef;
@@ -382,6 +385,10 @@ CFLSteensAAResult::getModRefBehavior(ImmutableCallSite CS) {
 FunctionModRefBehavior CFLSteensAAResult::getModRefBehavior(const Function *F) {
   assert(F != nullptr);
 
+  // We cannot process external functions
+  if (!F->hasExactDefinition())
+    return FMRB_UnknownModRefBehavior;
+
   // TODO: Remove the const_cast
   auto &MaybeInfo = ensureCached(const_cast<Function *>(F));
   if (!MaybeInfo.hasValue())
@@ -397,18 +404,21 @@ FunctionModRefBehavior CFLSteensAAResult::getModRefBehavior(const Function *F) {
   // Currently we don't (and can't) distinguish reads from writes in
   // RetParamRelations. All we can say is whether there may be memory access or
   // not.
-  if (RetParamRelations.empty())
+  bool AccessNoMemory =
+      all_of(RetParamRelations, [](const ExternalRelation &ExtRelation) {
+        return ExtRelation.From.DerefLevel == 0 &&
+               ExtRelation.To.DerefLevel == 0;
+      });
+  if (AccessNoMemory)
     return FMRB_DoesNotAccessMemory;
 
   // Check if something beyond argmem gets touched.
   bool AccessArgMemoryOnly =
-      std::all_of(RetParamRelations.begin(), RetParamRelations.end(),
-                  [](const ExternalRelation &ExtRelation) {
-                    // Both DerefLevels has to be 0, since we don't know which
-                    // one is a read and which is a write.
-                    return ExtRelation.From.DerefLevel == 0 &&
-                           ExtRelation.To.DerefLevel == 0;
-                  });
+      all_of(RetParamRelations, [](const ExternalRelation &ExtRelation) {
+        return ExtRelation.From.Index > 0 && ExtRelation.To.Index > 0 &&
+               ExtRelation.From.DerefLevel <= 1 &&
+               ExtRelation.To.DerefLevel <= 1;
+      });
   return AccessArgMemoryOnly ? FMRB_OnlyAccessesArgumentPointees
                              : FMRB_UnknownModRefBehavior;
 }

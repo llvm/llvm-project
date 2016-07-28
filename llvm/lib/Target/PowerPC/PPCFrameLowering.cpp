@@ -253,8 +253,8 @@ const PPCFrameLowering::SpillSlot *PPCFrameLowering::getCalleeSavedSpillSlots(
 /// contents is spilled and reloaded around the call.  Without the prolog code,
 /// the spill instruction refers to an undefined register.  This code needs
 /// to account for all uses of that GPR.
-static void RemoveVRSaveCode(MachineInstr *MI) {
-  MachineBasicBlock *Entry = MI->getParent();
+static void RemoveVRSaveCode(MachineInstr &MI) {
+  MachineBasicBlock *Entry = MI.getParent();
   MachineFunction *MF = Entry->getParent();
 
   // We know that the MTVRSAVE instruction immediately follows MI.  Remove it.
@@ -293,16 +293,16 @@ static void RemoveVRSaveCode(MachineInstr *MI) {
   }
 
   // Finally, nuke the UPDATE_VRSAVE.
-  MI->eraseFromParent();
+  MI.eraseFromParent();
 }
 
 // HandleVRSaveUpdate - MI is the UPDATE_VRSAVE instruction introduced by the
 // instruction selector.  Based on the vector registers that have been used,
 // transform this into the appropriate ORI instruction.
-static void HandleVRSaveUpdate(MachineInstr *MI, const TargetInstrInfo &TII) {
-  MachineFunction *MF = MI->getParent()->getParent();
+static void HandleVRSaveUpdate(MachineInstr &MI, const TargetInstrInfo &TII) {
+  MachineFunction *MF = MI.getParent()->getParent();
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  DebugLoc dl = MI->getDebugLoc();
+  DebugLoc dl = MI.getDebugLoc();
 
   const MachineRegisterInfo &MRI = MF->getRegInfo();
   unsigned UsedRegMask = 0;
@@ -343,44 +343,44 @@ static void HandleVRSaveUpdate(MachineInstr *MI, const TargetInstrInfo &TII) {
     return;
   }
 
-  unsigned SrcReg = MI->getOperand(1).getReg();
-  unsigned DstReg = MI->getOperand(0).getReg();
+  unsigned SrcReg = MI.getOperand(1).getReg();
+  unsigned DstReg = MI.getOperand(0).getReg();
 
   if ((UsedRegMask & 0xFFFF) == UsedRegMask) {
     if (DstReg != SrcReg)
-      BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
-        .addReg(SrcReg)
-        .addImm(UsedRegMask);
+      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
+          .addReg(SrcReg)
+          .addImm(UsedRegMask);
     else
-      BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
-        .addReg(SrcReg, RegState::Kill)
-        .addImm(UsedRegMask);
+      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(UsedRegMask);
   } else if ((UsedRegMask & 0xFFFF0000) == UsedRegMask) {
     if (DstReg != SrcReg)
-      BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-        .addReg(SrcReg)
-        .addImm(UsedRegMask >> 16);
+      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
+          .addReg(SrcReg)
+          .addImm(UsedRegMask >> 16);
     else
-      BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-        .addReg(SrcReg, RegState::Kill)
-        .addImm(UsedRegMask >> 16);
+      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(UsedRegMask >> 16);
   } else {
     if (DstReg != SrcReg)
-      BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-        .addReg(SrcReg)
-        .addImm(UsedRegMask >> 16);
+      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
+          .addReg(SrcReg)
+          .addImm(UsedRegMask >> 16);
     else
-      BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
-        .addReg(SrcReg, RegState::Kill)
-        .addImm(UsedRegMask >> 16);
+      BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORIS), DstReg)
+          .addReg(SrcReg, RegState::Kill)
+          .addImm(UsedRegMask >> 16);
 
-    BuildMI(*MI->getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
-      .addReg(DstReg, RegState::Kill)
-      .addImm(UsedRegMask & 0xFFFF);
+    BuildMI(*MI.getParent(), MI, dl, TII.get(PPC::ORI), DstReg)
+        .addReg(DstReg, RegState::Kill)
+        .addImm(UsedRegMask & 0xFFFF);
   }
 
   // Remove the old UPDATE_VRSAVE instruction.
-  MI->eraseFromParent();
+  MI.eraseFromParent();
 }
 
 static bool spillsCR(const MachineFunction &MF) {
@@ -718,7 +718,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   if (!isSVR4ABI)
     for (unsigned i = 0; MBBI != MBB.end(); ++i, ++MBBI) {
       if (MBBI->getOpcode() == PPC::UPDATE_VRSAVE) {
-        HandleVRSaveUpdate(MBBI, TII);
+        HandleVRSaveUpdate(*MBBI, TII);
         break;
       }
     }
@@ -1827,8 +1827,7 @@ eliminateCallFramePseudoInstr(MachineFunction &MF, MachineBasicBlock &MBB,
       unsigned ADDInstr = is64Bit ? PPC::ADD8 : PPC::ADD4;
       unsigned LISInstr = is64Bit ? PPC::LIS8 : PPC::LIS;
       unsigned ORIInstr = is64Bit ? PPC::ORI8 : PPC::ORI;
-      MachineInstr *MI = I;
-      const DebugLoc &dl = MI->getDebugLoc();
+      const DebugLoc &dl = I->getDebugLoc();
 
       if (isInt<16>(CalleeAmt)) {
         BuildMI(MBB, I, dl, TII.get(ADDIInstr), StackReg)

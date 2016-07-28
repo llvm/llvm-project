@@ -104,7 +104,7 @@ def G_STORE : Instruction {
 // indexes. This will almost certainly be mapped to sub-register COPYs after
 // register banks have been selected.
 def G_EXTRACT : Instruction {
-  let OutOperandList = (outs variable_ops);
+  let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let hasSideEffects = 0;
 }

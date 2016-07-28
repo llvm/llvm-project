@@ -4,42 +4,42 @@
 // FIXME: Replace DEFAULT_OPENMP_LIB below with the value chosen at configure time.
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp -target i386-unknown-linux \
+// RUN:     -fopenmp -target i386-unknown-linux -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-32 %s
 // CHECK-LD-32: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-32: "-l[[DEFAULT_OPENMP_LIB:[^"]*]]" "-lgcc"
 // CHECK-LD-32: "-lpthread" "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp -target x86_64-unknown-linux \
+// RUN:     -fopenmp -target x86_64-unknown-linux -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-64 %s
 // CHECK-LD-64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-64: "-l[[DEFAULT_OPENMP_LIB:[^"]*]]" "-lgcc"
 // CHECK-LD-64: "-lpthread" "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp=libgomp -target i386-unknown-linux \
+// RUN:     -fopenmp=libgomp -target i386-unknown-linux -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-GOMP-LD-32 %s
 // CHECK-GOMP-LD-32: "{{.*}}ld{{(.exe)?}}"
 // CHECK-GOMP-LD-32: "-lgomp" "-lrt" "-lgcc"
 // CHECK-GOMP-LD-32: "-lpthread" "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp=libgomp -target x86_64-unknown-linux \
+// RUN:     -fopenmp=libgomp -target x86_64-unknown-linux -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-GOMP-LD-64 %s
 // CHECK-GOMP-LD-64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-GOMP-LD-64: "-lgomp" "-lrt" "-lgcc"
 // CHECK-GOMP-LD-64: "-lpthread" "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp -target i386-unknown-linux \
+// RUN:     -fopenmp -target i386-unknown-linux -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-IOMP5-LD-32 %s
 // CHECK-IOMP5-LD-32: "{{.*}}ld{{(.exe)?}}"
 // CHECK-IOMP5-LD-32: "-l[[DEFAULT_OPENMP_LIB:[^"]*]]" "-lgcc"
 // CHECK-IOMP5-LD-32: "-lpthread" "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp -target x86_64-unknown-linux \
+// RUN:     -fopenmp -target x86_64-unknown-linux -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-IOMP5-LD-64 %s
 // CHECK-IOMP5-LD-64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-IOMP5-LD-64: "-l[[DEFAULT_OPENMP_LIB:[^"]*]]" "-lgcc"
@@ -57,6 +57,7 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp -fopenmp=libgomp -target i386-unknown-linux \
+// RUN:     -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-OVERRIDE-32 %s
 // CHECK-LD-OVERRIDE-32: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-OVERRIDE-32: "-lgomp" "-lrt" "-lgcc"
@@ -64,13 +65,14 @@
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp -fopenmp=libgomp -target x86_64-unknown-linux \
+// RUN:     -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-OVERRIDE-64 %s
 // CHECK-LD-OVERRIDE-64: "{{.*}}ld{{(.exe)?}}"
 // CHECK-LD-OVERRIDE-64: "-lgomp" "-lrt" "-lgcc"
 // CHECK-LD-OVERRIDE-64: "-lpthread" "-lc"
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp=libomp -target x86_64-msvc-win32 \
+// RUN:     -fopenmp=libomp -target x86_64-msvc-win32 -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-MSVC-LINK-64 %s
 // CHECK-MSVC-LINK-64: link.exe
 // CHECK-MSVC-LINK-64-SAME: -nodefaultlib:vcomp.lib
@@ -79,7 +81,7 @@
 // CHECK-MSVC-LINK-64-SAME: -defaultlib:libomp.lib
 //
 // RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
-// RUN:     -fopenmp=libiomp5 -target x86_64-msvc-win32 \
+// RUN:     -fopenmp=libiomp5 -target x86_64-msvc-win32 -rtlib=platform \
 // RUN:   | FileCheck --check-prefix=CHECK-MSVC-ILINK-64 %s
 // CHECK-MSVC-ILINK-64: link.exe
 // CHECK-MSVC-ILINK-64-SAME: -nodefaultlib:vcomp.lib

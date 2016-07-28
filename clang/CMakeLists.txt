@@ -193,12 +193,23 @@ set(ENABLE_X86_RELAX_RELOCATIONS OFF CACHE BOOL
     "enable x86 relax relocations by default")
 
 set(CLANG_DEFAULT_CXX_STDLIB "" CACHE STRING
-  "Default C++ stdlib to use (empty for platform default, \"libstdc++\" or \"libc++\"")
+  "Default C++ stdlib to use (\"libstdc++\" or \"libc++\", empty for platform default")
 if (NOT(CLANG_DEFAULT_CXX_STDLIB STREQUAL "" OR
         CLANG_DEFAULT_CXX_STDLIB STREQUAL "libstdc++" OR
         CLANG_DEFAULT_CXX_STDLIB STREQUAL "libc++"))
   message(WARNING "Resetting default C++ stdlib to use platform default")
-  set(CLANG_DEFAULT_CXX_STDLIB "")
+  set(CLANG_DEFAULT_CXX_STDLIB "" CACHE STRING
+    "Default C++ stdlib to use (\"libstdc++\" or \"libc++\", empty for platform default" FORCE)
+endif()
+
+set(CLANG_DEFAULT_RTLIB "" CACHE STRING
+  "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)")
+if (NOT(CLANG_DEFAULT_RTLIB STREQUAL "" OR
+        CLANG_DEFAULT_RTLIB STREQUAL "libgcc" OR
+        CLANG_DEFAULT_RTLIB STREQUAL "compiler-rt"))
+  message(WARNING "Resetting default rtlib to use platform default")
+  set(CLANG_DEFAULT_RTLIB "" CACHE STRING
+    "Default runtime library to use (\"libgcc\" or \"compiler-rt\", empty for platform default)" FORCE)
 endif()
 
 set(CLANG_DEFAULT_OPENMP_RUNTIME "libomp" CACHE STRING

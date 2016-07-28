@@ -86,7 +86,16 @@ class CoverageExporterJson {
   void emitSerialized(const int64_t Value) { OS << Value; }
 
   /// \brief Emit a serialized string.
-  void emitSerialized(const std::string &Value) { OS << "\"" << Value << "\""; }
+  void emitSerialized(const std::string &Value) {
+    OS << "\"";
+    for (char C : Value) {
+      if (C != '\\')
+        OS << C;
+      else
+        OS << "\\\\";
+    }
+    OS << "\"";
+  }
 
   /// \brief Emit a comma if there is a previous element to delimit.
   void emitComma() {
@@ -109,7 +118,8 @@ class CoverageExporterJson {
   /// \brief Emit a dictionary/object key but no value.
   void emitDictKey(const std::string &Key) {
     emitComma();
-    OS << "\"" << Key << "\":";
+    emitSerialized(Key);
+    OS << ":";
     State.pop();
     assert((State.size() >= 1) && "Closed too many JSON elements");
 

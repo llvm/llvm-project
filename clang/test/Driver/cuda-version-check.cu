@@ -39,6 +39,15 @@
 // RUN:    --no-cuda-version-check %s | \
 // RUN:    FileCheck %s --check-prefix=OK
 
+// We need to make sure the version check is done only for the device toolchain,
+// therefore we should not get an error in host-only mode. We use the -S here
+// to avoid the error being produced in case by the assembler tool, which does
+// the same check.
+// RUN: %clang -v -### --cuda-gpu-arch=sm_60 --cuda-host-only --sysroot=%S/Inputs/CUDA -S 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=OK
+// RUN: %clang -v -### --cuda-gpu-arch=sm_60 --cuda-device-only --sysroot=%S/Inputs/CUDA -S 2>&1 %s | \
+// RUN:    FileCheck %s --check-prefix=ERR_SM60
+
 // OK-NOT: error: GPU arch
 
 // OK_SM35-NOT: error: GPU arch sm_35

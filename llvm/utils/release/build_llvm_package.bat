@@ -55,8 +55,8 @@ mkdir build32_stage0
 cd build32_stage0
 cmake -GNinja %cmake_flags% ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 cd..
 
 mkdir build32
@@ -65,8 +65,8 @@ set CC=..\build32_stage0\bin\clang-cl
 set CXX=..\build32_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% -DBUILD_CLANG_FORMAT_VS_PLUGIN=ON ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 copy ..\llvm\tools\clang\tools\clang-format-vs\ClangFormat\bin\Release\ClangFormat.vsix ClangFormat-r%revision%.vsix
 ninja package || exit /b
 cd ..
@@ -79,8 +79,8 @@ mkdir build64_stage0
 cd build64_stage0
 cmake -GNinja %cmake_flags%  ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 cd..
 
 mkdir build64
@@ -89,7 +89,7 @@ set CC=..\build64_stage0\bin\clang-cl
 set CXX=..\build64_stage0\bin\clang-cl
 cmake -GNinja %cmake_flags% ..\llvm || exit /b
 ninja all || exit /b
-ninja check || exit /b
-ninja check-clang || exit /b
+ninja check || ninja check || ninja check || exit /b
+ninja check-clang || ninja check-clang || ninja check-clang ||  exit /b
 ninja package || exit /b
 cd ..

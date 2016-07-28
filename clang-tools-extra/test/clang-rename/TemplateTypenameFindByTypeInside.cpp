@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=350 -new-name=U %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=289 -new-name=U %s -- | FileCheck %s
 
 // Currently unsupported test.
 // FIXME: clang-rename should be able to rename template parameters correctly.

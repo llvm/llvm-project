@@ -698,14 +698,11 @@ private:
   std::unique_ptr<X86Operand> ParseIntelOperator(unsigned OpKind);
   std::unique_ptr<X86Operand>
   ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start, unsigned Size);
-  std::unique_ptr<X86Operand>
-  ParseIntelMemOperand(int64_t ImmDisp, SMLoc StartLoc, unsigned Size);
   std::unique_ptr<X86Operand> ParseRoundingModeOp(SMLoc Start, SMLoc End);
   bool ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End);
-  std::unique_ptr<X86Operand> ParseIntelBracExpression(unsigned SegReg,
-                                                       SMLoc Start,
-                                                       int64_t ImmDisp,
-                                                       unsigned Size);
+  std::unique_ptr<X86Operand>
+  ParseIntelBracExpression(unsigned SegReg, SMLoc Start, int64_t ImmDisp,
+                           bool isSymbol, unsigned Size);
   bool ParseIntelIdentifier(const MCExpr *&Val, StringRef &Identifier,
                             InlineAsmIdentifierInfo &Info,
                             bool IsUnevaluatedOperand, SMLoc &End);
@@ -1386,7 +1383,8 @@ bool X86AsmParser::ParseIntelExpression(IntelExprStateMachine &SM, SMLoc &End) {
 
 std::unique_ptr<X86Operand>
 X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
-                                       int64_t ImmDisp, unsigned Size) {
+                                       int64_t ImmDisp, bool isSymbol,
+                                       unsigned Size) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc BracLoc = Tok.getLoc(), End = Tok.getEndLoc();
@@ -1434,6 +1432,21 @@ X86AsmParser::ParseIntelBracExpression(unsigned SegReg, SMLoc Start,
     End = Tok.getEndLoc();
     Parser.Lex();  // Eat the field.
     Disp = NewDisp;
+  }
+
+  if (isSymbol) {
+    if (SM.getSym()) {
+      Error(Start, "cannot use more than one symbol in memory operand");
+      return nullptr;
+    }
+    if (SM.getBaseReg()) {
+      Error(Start, "cannot use base register with variable reference");
+      return nullptr;
+    }
+    if (SM.getIndexReg()) {
+      Error(Start, "cannot use index register with variable reference");
+      return nullptr;
+    }
   }
 
   int BaseReg = SM.getBaseReg();
@@ -1541,7 +1554,7 @@ X86AsmParser::ParseIntelSegmentOverride(unsigned SegReg, SMLoc Start,
   }
 
   if (getLexer().is(AsmToken::LBrac))
-    return ParseIntelBracExpression(SegReg, Start, ImmDisp, Size);
+    return ParseIntelBracExpression(SegReg, Start, ImmDisp, false, Size);
 
   const MCExpr *Val;
   SMLoc End;
@@ -1597,66 +1610,6 @@ X86AsmParser::ParseRoundingModeOp(SMLoc Start, SMLoc End) {
     return X86Operand::CreateToken("{sae}", consumedToken);
   }
   return ErrorOperand(Tok.getLoc(), "unknown token in expression");
-}
-/// ParseIntelMemOperand - Parse intel style memory operand.
-std::unique_ptr<X86Operand> X86AsmParser::ParseIntelMemOperand(int64_t ImmDisp,
-                                                               SMLoc Start,
-                                                               unsigned Size) {
-  MCAsmParser &Parser = getParser();
-  const AsmToken &Tok = Parser.getTok();
-  SMLoc End;
-
-  // Parse ImmDisp [ BaseReg + Scale*IndexReg + Disp ].
-  if (getLexer().is(AsmToken::LBrac))
-    return ParseIntelBracExpression(/*SegReg=*/0, Start, ImmDisp, Size);
-  assert(ImmDisp == 0);
-
-  const MCExpr *Val;
-  if (!isParsingInlineAsm()) {
-    if (getParser().parsePrimaryExpr(Val, End))
-      return ErrorOperand(Tok.getLoc(), "unknown token in expression");
-
-    return X86Operand::CreateMem(getPointerWidth(), Val, Start, End, Size);
-  }
-
-  InlineAsmIdentifierInfo Info;
-  StringRef Identifier = Tok.getString();
-  if (ParseIntelIdentifier(Val, Identifier, Info,
-                           /*Unevaluated=*/false, End))
-    return nullptr;
-
-  if (!getLexer().is(AsmToken::LBrac))
-    return CreateMemForInlineAsm(/*SegReg=*/0, Val, /*BaseReg=*/0, /*IndexReg=*/0,
-                                 /*Scale=*/1, Start, End, Size, Identifier, Info);
-
-  Parser.Lex(); // Eat '['
-
-  // Parse Identifier [ ImmDisp ]
-  IntelExprStateMachine SM(/*ImmDisp=*/0, /*StopOnLBrac=*/true,
-                           /*AddImmPrefix=*/false);
-  if (ParseIntelExpression(SM, End))
-    return nullptr;
-
-  if (SM.getSym()) {
-    Error(Start, "cannot use more than one symbol in memory operand");
-    return nullptr;
-  }
-  if (SM.getBaseReg()) {
-    Error(Start, "cannot use base register with variable reference");
-    return nullptr;
-  }
-  if (SM.getIndexReg()) {
-    Error(Start, "cannot use index register with variable reference");
-    return nullptr;
-  }
-
-  const MCExpr *Disp = MCConstantExpr::create(SM.getImm(), getContext());
-  // BaseReg is non-zero to avoid assertions.  In the context of inline asm,
-  // we're pointing to a local variable in memory, so the base register is
-  // really the frame or stack pointer.
-  return X86Operand::CreateMem(getPointerWidth(), /*SegReg=*/0, Disp,
-                               /*BaseReg=*/1, /*IndexReg=*/0, /*Scale=*/1,
-                               Start, End, Size, Identifier, Info.OpDecl);
 }
 
 /// Parse the '.' operator.
@@ -1804,49 +1757,8 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
     Parser.Lex(); // Eat ptr.
     PtrInOperand = true;
   }
+
   Start = Tok.getLoc();
-
-  // Immediate.
-  if (getLexer().is(AsmToken::Integer) || getLexer().is(AsmToken::Minus) ||
-      getLexer().is(AsmToken::Tilde) || getLexer().is(AsmToken::LParen)) {
-    AsmToken StartTok = Tok;
-    IntelExprStateMachine SM(/*Imm=*/0, /*StopOnLBrac=*/true,
-                             /*AddImmPrefix=*/false);
-    if (ParseIntelExpression(SM, End))
-      return nullptr;
-
-    int64_t Imm = SM.getImm();
-    if (isParsingInlineAsm()) {
-      unsigned Len = Tok.getLoc().getPointer() - Start.getPointer();
-      if (StartTok.getString().size() == Len)
-        // Just add a prefix if this wasn't a complex immediate expression.
-        InstInfo->AsmRewrites->emplace_back(AOK_ImmPrefix, Start);
-      else
-        // Otherwise, rewrite the complex expression as a single immediate.
-        InstInfo->AsmRewrites->emplace_back(AOK_Imm, Start, Len, Imm);
-    }
-
-    if (getLexer().isNot(AsmToken::LBrac)) {
-      // If a directional label (ie. 1f or 2b) was parsed above from
-      // ParseIntelExpression() then SM.getSym() was set to a pointer to
-      // to the MCExpr with the directional local symbol and this is a
-      // memory operand not an immediate operand.
-      if (SM.getSym())
-        return X86Operand::CreateMem(getPointerWidth(), SM.getSym(), Start, End,
-                                     Size);
-
-      const MCExpr *ImmExpr = MCConstantExpr::create(Imm, getContext());
-      return X86Operand::CreateImm(ImmExpr, Start, End);
-    }
-
-    // Only positive immediates are valid.
-    if (Imm < 0)
-      return ErrorOperand(Start, "expected a positive immediate displacement "
-                          "before bracketed expr.");
-
-    // Parse ImmDisp [ BaseReg + Scale*IndexReg + Disp ].
-    return ParseIntelMemOperand(Imm, Start, Size);
-  }
 
   // rounding mode token
   if (getSTI().getFeatureBits()[X86::FeatureAVX512] &&
@@ -1855,7 +1767,8 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
 
   // Register.
   unsigned RegNo = 0;
-  if (!ParseRegister(RegNo, Start, End)) {
+  if (getLexer().is(AsmToken::Identifier) &&
+      !ParseRegister(RegNo, Start, End)) {
     // If this is a segment register followed by a ':', then this is the start
     // of a segment override, otherwise this is a normal register reference.
     // In case it is a normal register and there is ptr in the operand this 
@@ -1867,12 +1780,63 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseIntelOperand() {
       }
       return X86Operand::CreateReg(RegNo, Start, End);
     }
-    
     return ParseIntelSegmentOverride(/*SegReg=*/RegNo, Start, Size);
   }
 
-  // Memory operand.
-  return ParseIntelMemOperand(/*Disp=*/0, Start, Size);
+  // Immediates and Memory
+
+  // Parse [ BaseReg + Scale*IndexReg + Disp ].
+  if (getLexer().is(AsmToken::LBrac))
+    return ParseIntelBracExpression(/*SegReg=*/0, Start, /*ImmDisp=*/0, false,
+                                    Size);
+
+  AsmToken StartTok = Tok;
+  IntelExprStateMachine SM(/*Imm=*/0, /*StopOnLBrac=*/true,
+                           /*AddImmPrefix=*/false);
+  if (ParseIntelExpression(SM, End))
+    return nullptr;
+
+  bool isSymbol = SM.getSym() && SM.getSym()->getKind() != MCExpr::Constant;
+  int64_t Imm = SM.getImm();
+  if (SM.getSym() && SM.getSym()->getKind() == MCExpr::Constant)
+    SM.getSym()->evaluateAsAbsolute(Imm);
+
+  if (StartTok.isNot(AsmToken::Identifier) &&
+      StartTok.isNot(AsmToken::String) && isParsingInlineAsm()) {
+    unsigned Len = Tok.getLoc().getPointer() - Start.getPointer();
+    if (StartTok.getString().size() == Len)
+      // Just add a prefix if this wasn't a complex immediate expression.
+      InstInfo->AsmRewrites->emplace_back(AOK_ImmPrefix, Start);
+    else
+      // Otherwise, rewrite the complex expression as a single immediate.
+      InstInfo->AsmRewrites->emplace_back(AOK_Imm, Start, Len, Imm);
+  }
+
+  if (getLexer().isNot(AsmToken::LBrac)) {
+    // If a directional label (ie. 1f or 2b) was parsed above from
+    // ParseIntelExpression() then SM.getSym() was set to a pointer to
+    // to the MCExpr with the directional local symbol and this is a
+    // memory operand not an immediate operand.
+    if (isSymbol) {
+      if (isParsingInlineAsm())
+        return CreateMemForInlineAsm(/*SegReg=*/0, SM.getSym(), /*BaseReg=*/0,
+                                     /*IndexReg=*/0,
+                                     /*Scale=*/1, Start, End, Size,
+                                     SM.getSymName(), SM.getIdentifierInfo());
+      return X86Operand::CreateMem(getPointerWidth(), SM.getSym(), Start, End,
+                                   Size);
+    }
+
+    const MCExpr *ImmExpr = MCConstantExpr::create(Imm, getContext());
+    return X86Operand::CreateImm(ImmExpr, Start, End);
+  }
+
+  // Only positive immediates are valid.
+  if (Imm < 0)
+    return ErrorOperand(Start, "expected a positive immediate displacement "
+                               "before bracketed expr.");
+
+  return ParseIntelBracExpression(/*SegReg=*/0, Start, Imm, isSymbol, Size);
 }
 
 std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
@@ -1916,7 +1880,7 @@ std::unique_ptr<X86Operand> X86AsmParser::ParseATTOperand() {
     SMLoc Start = Parser.getTok().getLoc(), End;
     if (getSTI().getFeatureBits()[X86::FeatureAVX512])
       return ParseRoundingModeOp(Start, End);
-    return ErrorOperand(Start, "unknown token in expression");
+    return ErrorOperand(Start, "Unexpected '{' in expression");
   }
   }
 }

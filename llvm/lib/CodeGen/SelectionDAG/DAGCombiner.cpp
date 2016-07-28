@@ -4634,8 +4634,8 @@ SDValue DAGCombiner::visitSRA(SDNode *N) {
   // fold (sra -1, x) -> -1
   if (isAllOnesConstant(N0))
     return N0;
-  // fold (sra x, (setge c, size(x))) -> undef
-  if (N1C && N1C->getZExtValue() >= OpSizeInBits)
+  // fold (sra x, c >= size(x)) -> undef
+  if (N1C && N1C->getAPIntValue().uge(OpSizeInBits))
     return DAG.getUNDEF(VT);
   // fold (sra x, 0) -> x
   if (N1C && N1C->isNullValue())
@@ -4778,7 +4778,7 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
   if (isNullConstant(N0))
     return N0;
   // fold (srl x, c >= size(x)) -> undef
-  if (N1C && N1C->getZExtValue() >= OpSizeInBits)
+  if (N1C && N1C->getAPIntValue().uge(OpSizeInBits))
     return DAG.getUNDEF(VT);
   // fold (srl x, 0) -> x
   if (N1C && N1C->isNullValue())

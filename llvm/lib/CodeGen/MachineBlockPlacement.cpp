@@ -78,10 +78,14 @@ static cl::opt<unsigned> ExitBlockBias(
              "over the original exit to be considered the new exit."),
     cl::init(0), cl::Hidden);
 
+// Definition:
+// - Outlining: placement of a basic block outside the chain or hot path.
+
 static cl::opt<bool> OutlineOptionalBranches(
     "outline-optional-branches",
-    cl::desc("Put completely optional branches, i.e. branches with a common "
-             "post dominator, out of line."),
+    cl::desc("Outlining optional branches will place blocks that are optional "
+              "branches, i.e. branches with a common post dominator, outside "
+              "the hot path or chain"),
     cl::init(false), cl::Hidden);
 
 static cl::opt<unsigned> OutlineOptionalThreshold(
@@ -632,8 +636,10 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
 
   // Forward checking. For case 2, SuccProb will be 1.
   if (SuccProb < HotProb) {
-    DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
-                 << " (prob) (CFG conflict)\n");
+    DEBUG(dbgs() << "    Not a candidate: " << getBlockName(Succ) << " "
+                 << "Respecting topological ordering because "
+                 << "probability is less than prob treshold: "
+                 << SuccProb << "\n");
     return true;
   }
 
@@ -669,7 +675,7 @@ bool MachineBlockPlacement::hasBetterLayoutPredecessor(
   }
 
   if (BadCFGConflict) {
-    DEBUG(dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
+    DEBUG(dbgs() << "    Not a candidate: " << getBlockName(Succ) << " -> " << SuccProb
                  << " (prob) (non-cold CFG conflict)\n");
     return true;
   }
@@ -699,7 +705,7 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
   auto AdjustedSumProb =
       collectViableSuccessors(BB, Chain, BlockFilter, Successors);
 
-  DEBUG(dbgs() << "Attempting merge from: " << getBlockName(BB) << "\n");
+  DEBUG(dbgs() << "Selecting best successor for: " << getBlockName(BB) << "\n");
   for (MachineBasicBlock *Succ : Successors) {
     auto RealSuccProb = MBPI->getEdgeProbability(BB, Succ);
     BranchProbability SuccProb =
@@ -718,15 +724,23 @@ MachineBlockPlacement::selectBestSuccessor(MachineBasicBlock *BB,
       continue;
 
     DEBUG(
-        dbgs() << "    " << getBlockName(Succ) << " -> " << SuccProb
-               << " (prob)"
+        dbgs() << "    Candidate: " << getBlockName(Succ) << ", probability: "
+               << SuccProb
                << (SuccChain.UnscheduledPredecessors != 0 ? " (CFG break)" : "")
                << "\n");
-    if (BestSucc && BestProb >= SuccProb)
+
+    if (BestSucc && BestProb >= SuccProb) {
+      DEBUG(dbgs() << "    Not the best candidate, continuing\n");
       continue;
+    }
+
+    DEBUG(dbgs() << "    Setting it as best candidate\n");
     BestSucc = Succ;
     BestProb = SuccProb;
   }
+  if (BestSucc)
+    DEBUG(dbgs() << "    Selected: " << getBlockName(BestSucc) << "\n");
+
   return BestSucc;
 }
 
@@ -937,7 +951,7 @@ MachineBlockPlacement::findBestLoopTop(MachineLoop &L,
   for (MachineBasicBlock *Pred : L.getHeader()->predecessors()) {
     if (!LoopBlockSet.count(Pred))
       continue;
-    DEBUG(dbgs() << "    header pred: " << getBlockName(Pred) << ", "
+    DEBUG(dbgs() << "    header pred: " << getBlockName(Pred) << ", has "
                  << Pred->succ_size() << " successors, ";
           MBFI->printBlockFreq(dbgs(), Pred) << " freq\n");
     if (Pred->succ_size() > 1)
@@ -1066,8 +1080,14 @@ MachineBlockPlacement::findBestLoopExit(MachineLoop &L,
   }
   // Without a candidate exiting block or with only a single block in the
   // loop, just use the loop header to layout the loop.
-  if (!ExitingBB || L.getNumBlocks() == 1)
+  if (!ExitingBB) {
+    DEBUG(dbgs() << "    No other candidate exit blocks, using loop header\n");
     return nullptr;
+  }
+  if (L.getNumBlocks() == 1) {
+    DEBUG(dbgs() << "    Loop has 1 block, using loop header as exit\n");
+    return nullptr;
+  }
 
   // Also, if we have exit blocks which lead to outer loops but didn't select
   // one of them as the exiting block we are rotating toward, disable loop

@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/Msf/ByteStream.h"
 #include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"

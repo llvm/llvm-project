@@ -597,7 +597,47 @@ def int_experimental_gc_relocate : Intrinsic<[llvm_any_ty],
                                 [llvm_token_ty, llvm_i32_ty, llvm_i32_ty],
                                 [IntrReadMem]>;
 
-//===-------------------------- Other Intrinsics --------------------------===//
+//===------------------------ Coroutine Intrinsics ---------------===//
+// These are documented in docs/Coroutines.rst
+
+// Coroutine Structure Intrinsics.
+
+def int_coro_alloc : Intrinsic<[llvm_ptr_ty], [], []>;
+def int_coro_begin : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i32_ty,
+                                llvm_ptr_ty, llvm_ptr_ty],
+                               [WriteOnly<0>, ReadNone<2>, ReadOnly<3>,
+                                NoCapture<3>]>;
+
+def int_coro_free : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty],
+                              [IntrArgMemOnly, ReadOnly<0>, NoCapture<0>]>;
+def int_coro_end : Intrinsic<[], [llvm_ptr_ty, llvm_i1_ty], []>;
+
+def int_coro_frame : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+def int_coro_size : Intrinsic<[llvm_anyint_ty], [], [IntrNoMem]>;
+
+def int_coro_save : Intrinsic<[llvm_token_ty], [llvm_ptr_ty], []>;
+def int_coro_suspend : Intrinsic<[llvm_i8_ty], [llvm_token_ty, llvm_i1_ty], []>;
+
+def int_coro_param : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty, llvm_ptr_ty],
+                               [IntrNoMem, ReadNone<0>, ReadNone<1>]>;
+
+// Coroutine Manipulation Intrinsics.
+
+def int_coro_resume : Intrinsic<[], [llvm_ptr_ty], [Throws]>;
+def int_coro_destroy : Intrinsic<[], [llvm_ptr_ty], [Throws]>;
+def int_coro_done : Intrinsic<[llvm_i1_ty], [llvm_ptr_ty],
+                              [IntrArgMemOnly, ReadOnly<0>, NoCapture<0>]>;
+def int_coro_promise : Intrinsic<[llvm_ptr_ty],
+                                 [llvm_ptr_ty, llvm_i32_ty, llvm_i1_ty],
+                                 [IntrNoMem, NoCapture<0>]>;
+
+// Coroutine Lowering Intrinsics. Used internally by coroutine passes.
+
+def int_coro_subfn_addr : Intrinsic<[llvm_ptr_ty], [llvm_ptr_ty, llvm_i8_ty],
+                                    [IntrArgMemOnly, ReadOnly<0>,
+                                     NoCapture<0>]>;
+
+///===-------------------------- Other Intrinsics --------------------------===//
 //
 def int_flt_rounds : Intrinsic<[llvm_i32_ty]>,
                      GCCBuiltin<"__builtin_flt_rounds">;

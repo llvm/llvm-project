@@ -64,17 +64,23 @@ class TestWatchpointEvents (TestBase):
         if not error.Success():
             self.fail ("Failed to make watchpoint for local_var: %s"%(error.GetCString()))
 
-        self.GetWatchpointEvent (lldb.eWatchpointEventTypeAdded)
+        self.GetWatchpointEvent(lldb.eWatchpointEventTypeAdded)
         # Now change some of the features of this watchpoint and make sure we get events:
         local_watch.SetEnabled(False)
-        self.GetWatchpointEvent (lldb.eWatchpointEventTypeDisabled)
+        self.GetWatchpointEvent(lldb.eWatchpointEventTypeDisabled)
+
+        local_watch.SetEnabled(True)
+        self.GetWatchpointEvent(lldb.eWatchpointEventTypeEnabled)
 
         local_watch.SetIgnoreCount(10)
-        self.GetWatchpointEvent (lldb.eWatchpointEventTypeIgnoreChanged)
+        self.GetWatchpointEvent(lldb.eWatchpointEventTypeIgnoreChanged)
 
-        local_watch.SetCondition ("1 == 2")
-        self.GetWatchpointEvent (lldb.eWatchpointEventTypeConditionChanged)
+        condition = "1 == 2"
+        local_watch.SetCondition(condition)
+        self.GetWatchpointEvent(lldb.eWatchpointEventTypeConditionChanged)
 
+        self.assertTrue(local_watch.GetCondition() == condition, 'make sure watchpoint condition is "' + condition + '"');
+        
     def GetWatchpointEvent (self, event_type):
         # We added a watchpoint so we should get a watchpoint added event.
         event = lldb.SBEvent()
