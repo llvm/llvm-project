@@ -13,16 +13,10 @@
 //
 // The current list of controls is as follows:
 //
-//    int __oclc_have_fast_fma32(void)
-//        - fma on float arguments is faster than separate multiply then add
-//
-//    int __oclc_have_fast_fma64(void)
-//        - fma on double arguments is faster than separate multiply then add
-//
 //    int __oclc_finite_only_opt(void)
 //        - the application will only pass finite arguments and expects only finite results
 //
-//    int __oclc_fast_relaxed_opt(void)
+//    int __oclc_unsafe_math_opt(void)
 //        - the aopplication accepts optimizations that may lower the accuracy of the results
 //
 //    int __oclc_daz_opt(void)
@@ -45,10 +39,8 @@
 // allowing them and any control flow associated with them to be optimized away
 
 
-extern __attribute__((const)) int __oclc_have_fast_fma32(void);
-extern __attribute__((const)) int __oclc_have_fast_fma64(void);
 extern __attribute__((const)) int __oclc_finite_only_opt(void);
-extern __attribute__((const)) int __oclc_fast_relaxed_opt(void);
+extern __attribute__((const)) int __oclc_unsafe_math_opt(void);
 extern __attribute__((const)) int __oclc_daz_opt(void);
 extern __attribute__((const)) int __oclc_amd_opt(void);
 extern __attribute__((const)) int __oclc_correctly_rounded_sqrt32(void);

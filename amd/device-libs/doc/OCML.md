@@ -47,10 +47,8 @@ taken with no control flow overhead.  These functions all have the form (in C)
     { return 1; } // or 0 to disable
 
 The currently supported control are
-  * `have_fast_fma32` - device performs float fma as fast as float multiply
-  * `have_fast_fma64` - device performs double fma as fast as double multiply
   * `finite_only_opt` - floating point Inf and NaN are never expected to be consumed or produced
-  * `fast_relaxed_opt` - lower accuracy results may be produced with higher performance
+  * `unsafe_math_opt` - lower accuracy results may be produced with higher performance
   * `daz_opt` - subnormal values consumed and produced may be flushed to zero
   * `correctly_rounded_sqrt32` - float square root must be correctly rounded
   * `amd_opt` - use AMD device specific instructions

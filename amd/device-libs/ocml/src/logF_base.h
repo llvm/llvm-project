@@ -73,7 +73,7 @@ MATH_MANGLE(log)(float x)
 {
     if (AMD_OPT()) {
         if (DAZ_OPT()) {
-            if (FAST_RELAXED_OPT()) {
+            if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_LOG2
                 return BUILTIN_LOG2_F32(x);
 #elif defined COMPILING_LOG10
@@ -117,7 +117,7 @@ MATH_MANGLE(log)(float x)
             }
         } else {
             // not DAZ
-            if (FAST_RELAXED_OPT()) {
+            if (UNSAFE_MATH_OPT()) {
                 bool s = BUILTIN_CLASS_F32(x, CLASS_NSUB|CLASS_PSUB);
                 x *= s ? 0x1.0p+32f : 1.0f;
 #if defined COMPILING_LOG2

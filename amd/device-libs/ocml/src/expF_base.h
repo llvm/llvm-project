@@ -43,7 +43,7 @@ MATH_MANGLE(exp)(float x)
 {
     if (AMD_OPT()) {
         if (DAZ_OPT()) {
-            if (FAST_RELAXED_OPT()) {
+            if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_EXP2
                 return BUILTIN_EXP2_F32(x);
 #elif defined COMPILING_EXP10
@@ -94,7 +94,7 @@ MATH_MANGLE(exp)(float x)
 #endif
             }
         } else {
-            if (FAST_RELAXED_OPT()) {
+            if (UNSAFE_MATH_OPT()) {
 #if defined COMPILING_EXP2
                 bool s = x < -0x1.f80000p+6f;
                 return BUILTIN_EXP2_F32(x + (s ? 0x1.0p+6f : 0.0f)) * (s ? 0x1.0p-64f : 1.0f);
