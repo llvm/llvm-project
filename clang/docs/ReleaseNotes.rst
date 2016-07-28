@@ -92,6 +92,9 @@ Clang's support for building native Windows programs ...
 
 TLS is enabled for Cygwin defaults to -femulated-tls.
 
+Proper support, including correct mangling and overloading, added for
+MS-specific "__unaligned" type qualifier.
+
 
 C Language Changes in Clang
 ---------------------------
