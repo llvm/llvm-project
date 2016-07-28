@@ -203,7 +203,8 @@ SIMachineFunctionInfo::SpilledReg SIMachineFunctionInfo::getSpilledReg (
   Spill.Lane = Lane;
 
   if (!LaneVGPRs.count(LaneVGPRIdx)) {
-    unsigned LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass);
+    unsigned LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass,
+                                                *MF);
 
     if (LaneVGPR == AMDGPU::NoRegister)
       // We have no VGPRs left for spilling SGPRs.

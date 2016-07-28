@@ -738,7 +738,8 @@ unsigned SIInstrInfo::calculateLDSSpillAddress(
     MachineBasicBlock::iterator Insert = Entry.front();
     DebugLoc DL = Insert->getDebugLoc();
 
-    TIDReg = RI.findUnusedRegister(MF->getRegInfo(), &AMDGPU::VGPR_32RegClass);
+    TIDReg = RI.findUnusedRegister(MF->getRegInfo(), &AMDGPU::VGPR_32RegClass,
+                                   *MF);
     if (TIDReg == AMDGPU::NoRegister)
       return TIDReg;
 

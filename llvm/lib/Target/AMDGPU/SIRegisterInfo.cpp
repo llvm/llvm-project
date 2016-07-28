@@ -957,10 +957,13 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
 /// \brief Returns a register that is not used at any point in the function.
 ///        If all registers are used, then this function will return
 //         AMDGPU::NoRegister.
-unsigned SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
-                                           const TargetRegisterClass *RC) const {
+unsigned
+SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
+                                   const TargetRegisterClass *RC,
+                                   const MachineFunction &MF) const {
+
   for (unsigned Reg : *RC)
-    if (!MRI.isPhysRegUsed(Reg))
+    if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg))
       return Reg;
   return AMDGPU::NoRegister;
 }
