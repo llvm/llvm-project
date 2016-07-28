@@ -15,3 +15,5 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 clang_opencl_bc_builtins_lib(ocml ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
+
+install(FILES inc/ocml.h DESTINATION include COMPONENT OpenCL)

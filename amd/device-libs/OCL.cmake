@@ -80,7 +80,7 @@ endmacro(prepare_builtins)
 macro(clang_opencl_bc_builtins_lib name dir)
   clang_opencl_bc_lib(${name} ${dir} ${ARGN})
   prepare_builtins(${name})
-  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.bc DESTINATION lib COMPONENT OpenCL-Lib-lib)
+  install (FILES ${CMAKE_CURRENT_BINARY_DIR}/${name}.bc DESTINATION lib)
 endmacro(clang_opencl_bc_builtins_lib)
 
 macro(clang_opencl_code name dir)
