@@ -348,9 +348,6 @@ static VectorType *arrayTypeToVecType(Type *ArrayTy) {
 static Value *
 calculateVectorIndex(Value *Ptr,
                      const std::map<GetElementPtrInst *, Value *> &GEPIdx) {
-  if (isa<AllocaInst>(Ptr))
-    return Constant::getNullValue(Type::getInt32Ty(Ptr->getContext()));
-
   GetElementPtrInst *GEP = cast<GetElementPtrInst>(Ptr);
 
   auto I = GEPIdx.find(GEP);
@@ -360,11 +357,11 @@ calculateVectorIndex(Value *Ptr,
 static Value* GEPToVectorIndex(GetElementPtrInst *GEP) {
   // FIXME we only support simple cases
   if (GEP->getNumOperands() != 3)
-    return NULL;
+    return nullptr;
 
   ConstantInt *I0 = dyn_cast<ConstantInt>(GEP->getOperand(1));
   if (!I0 || !I0->isZero())
-    return NULL;
+    return nullptr;
 
   return GEP->getOperand(2);
 }
@@ -398,7 +395,8 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
   // are just being conservative for now.
   if (!AllocaTy ||
       AllocaTy->getElementType()->isVectorTy() ||
-      AllocaTy->getNumElements() > 4) {
+      AllocaTy->getNumElements() > 4 ||
+      AllocaTy->getNumElements() < 2) {
     DEBUG(dbgs() << "  Cannot convert type to vector\n");
     return false;
   }
@@ -443,9 +441,11 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
     IRBuilder<> Builder(Inst);
     switch (Inst->getOpcode()) {
     case Instruction::Load: {
+      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
       Value *Ptr = Inst->getOperand(0);
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
-      Value *BitCast = Builder.CreateBitCast(Alloca, VectorTy->getPointerTo(0));
+
+      Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(BitCast);
       Value *ExtractElement = Builder.CreateExtractElement(VecValue, Index);
       Inst->replaceAllUsesWith(ExtractElement);
@@ -453,9 +453,11 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       break;
     }
     case Instruction::Store: {
+      Type *VecPtrTy = VectorTy->getPointerTo(AMDGPUAS::PRIVATE_ADDRESS);
+
       Value *Ptr = Inst->getOperand(1);
       Value *Index = calculateVectorIndex(Ptr, GEPVectorIdx);
-      Value *BitCast = Builder.CreateBitCast(Alloca, VectorTy->getPointerTo(0));
+      Value *BitCast = Builder.CreateBitCast(Alloca, VecPtrTy);
       Value *VecValue = Builder.CreateLoad(BitCast);
       Value *NewVecValue = Builder.CreateInsertElement(VecValue,
                                                        Inst->getOperand(0),
@@ -469,7 +471,6 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
       break;
 
     default:
-      Inst->dump();
       llvm_unreachable("Inconsistency in instructions promotable to vector");
     }
   }
