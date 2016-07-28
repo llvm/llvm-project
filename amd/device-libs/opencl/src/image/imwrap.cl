@@ -54,6 +54,36 @@ static __constant int channel_data_type_map[32] = {
 };
 
 
+#if defined NO_ASTYPE_WORAROUND
+#define lower_sampler(S) __builtin_astype(S, SSHARP)
+
+#define lower_ro_1D(I) __builtin_astype(I, TSHARP)
+#define lower_ro_1Da(I) __builtin_astype(I, TSHARP)
+#define lower_ro_1Db(I) __builtin_astype(I, TSHARP)
+#define lower_ro_2D(I) __builtin_astype(I, TSHARP)
+#define lower_ro_2Da(I) __builtin_astype(I, TSHARP)
+#define lower_ro_2Dd(I) __builtin_astype(I, TSHARP)
+#define lower_ro_2Dad(I) __builtin_astype(I, TSHARP)
+#define lower_ro_3D(I) __builtin_astype(I, TSHARP)
+
+#define lower_wo_1D(I) __builtin_astype(I, TSHARP)
+#define lower_wo_1Da(I) __builtin_astype(I, TSHARP)
+#define lower_wo_1Db(I) __builtin_astype(I, TSHARP)
+#define lower_wo_2D(I) __builtin_astype(I, TSHARP)
+#define lower_wo_2Da(I) __builtin_astype(I, TSHARP)
+#define lower_wo_2Dd(I) __builtin_astype(I, TSHARP)
+#define lower_wo_2Dad(I) __builtin_astype(I, TSHARP)
+#define lower_wo_3D(I) __builtin_astype(I, TSHARP)
+
+#define lower_rw_1D(I) __builtin_astype(I, TSHARP)
+#define lower_rw_1Da(I) __builtin_astype(I, TSHARP)
+#define lower_rw_1Db(I) __builtin_astype(I, TSHARP)
+#define lower_rw_2D(I) __builtin_astype(I, TSHARP)
+#define lower_rw_2Da(I) __builtin_astype(I, TSHARP)
+#define lower_rw_2Dd(I) __builtin_astype(I, TSHARP)
+#define lower_rw_2Dad(I) __builtin_astype(I, TSHARP)
+#define lower_rw_3D(I) __builtin_astype(I, TSHARP)
+#else
 extern __attribute__((const)) SSHARP __lower_sampler(sampler_t s);
 
 extern __attribute__((const)) TSHARP __lower_ro_1D(read_only image1d_t i);
@@ -82,6 +112,7 @@ extern __attribute__((const)) TSHARP __lower_rw_2Da(read_write image2d_array_t i
 extern __attribute__((const)) TSHARP __lower_rw_2Dd(read_write image2d_depth_t i);
 extern __attribute__((const)) TSHARP __lower_rw_2Dad(read_write image2d_array_depth_t i);
 extern __attribute__((const)) TSHARP __lower_rw_3D(read_write image3d_t i);
+#endif
 
 #define _C(X,Y) X ## Y
 #define C(X,Y) _C(X,Y)
