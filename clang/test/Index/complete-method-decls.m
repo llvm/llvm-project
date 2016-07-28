@@ -195,7 +195,7 @@ typedef A *MyObjectRef;
 // CHECK-CCG: NotImplemented:{TypedText void} (50)
 // CHECK-CCG: NotImplemented:{TypedText volatile} (50)
 // RUN: c-index-test -code-completion-at=%s:60:24 %s | FileCheck -check-prefix=CHECK-CCF %s
-// RUN: c-index-test -code-completion-at=%s:60:26 %s | FileCheck -check-prefix=CHECK-CCH %s
+// RUN: c-index-test -code-completion-at=%s:60:27 %s | FileCheck -check-prefix=CHECK-CCH %s
 // CHECK-CCH: ObjCInterfaceDecl:{TypedText A} (50)
 // CHECK-CCH: ObjCInterfaceDecl:{TypedText B} (50)
 // CHECK-CCH: NotImplemented:{TypedText bycopy} (40)

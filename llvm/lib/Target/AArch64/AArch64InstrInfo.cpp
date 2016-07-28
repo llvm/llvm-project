@@ -49,7 +49,7 @@ unsigned AArch64InstrInfo::GetInstSizeInBytes(const MachineInstr &MI) const {
   const MCInstrDesc &Desc = MI.getDesc();
   switch (Desc.getOpcode()) {
   default:
-    // Anything not explicitly designated otherwise is a nomal 4-byte insn.
+    // Anything not explicitly designated otherwise is a normal 4-byte insn.
     return 4;
   case TargetOpcode::DBG_VALUE:
   case TargetOpcode::EH_LABEL:

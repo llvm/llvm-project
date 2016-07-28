@@ -281,13 +281,13 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       break;
     case PT_DYNAMIC:
       if (isOutputDynamic<ELFT>()) {
-        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
+        Phdr.H.p_flags = Out<ELFT>::Dynamic->getPhdrFlags();
         Phdr.add(Out<ELFT>::Dynamic);
       }
       break;
     case PT_GNU_EH_FRAME:
       if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
-        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
+        Phdr.H.p_flags = Out<ELFT>::EhFrameHdr->getPhdrFlags();
         Phdr.add(Out<ELFT>::EhFrameHdr);
       }
       break;
@@ -306,12 +306,12 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       for (size_t Id : PhdrIds) {
         Ret[Id].add(Sec);
         if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
-          Ret[Id].H.p_flags |= toPhdrFlags(Sec->getFlags());
+          Ret[Id].H.p_flags |= Sec->getPhdrFlags();
       }
     } else {
       // If we have no load segment or flags've changed then we want new load
       // segment.
-      uintX_t NewFlags = toPhdrFlags(Sec->getFlags());
+      uintX_t NewFlags = Sec->getPhdrFlags();
       if (Load == nullptr || Flags != NewFlags) {
         Load = &*Ret.emplace(Ret.end(), PT_LOAD, NewFlags);
         Flags = NewFlags;

@@ -68,7 +68,8 @@ static ToolChain::RTTIMode CalculateRTTIMode(const ArgList &Args,
 ToolChain::ToolChain(const Driver &D, const llvm::Triple &T,
                      const ArgList &Args)
     : D(D), Triple(T), Args(Args), CachedRTTIArg(GetRTTIArgument(Args)),
-      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)) {
+      CachedRTTIMode(CalculateRTTIMode(Args, Triple, CachedRTTIArg)),
+      EffectiveTriple() {
   if (Arg *A = Args.getLastArg(options::OPT_mthread_model))
     if (!isThreadModelSupported(A->getValue()))
       D.Diag(diag::err_drv_invalid_thread_model_for_target)
@@ -267,52 +268,46 @@ Tool *ToolChain::getTool(Action::ActionClass AC) const {
   llvm_unreachable("Invalid tool kind.");
 }
 
-static StringRef
-getArchNameForCompilerRTLib(const ToolChain &TC,
-                            const llvm::Triple &EffectiveTriple,
-                            const ArgList &Args) {
-  bool IsWindows = EffectiveTriple.isOSWindows();
+static StringRef getArchNameForCompilerRTLib(const ToolChain &TC,
+                                             const ArgList &Args) {
+  const llvm::Triple &Triple = TC.getTriple();
+  bool IsWindows = Triple.isOSWindows();
 
-  if (EffectiveTriple.isWindowsMSVCEnvironment() &&
-      TC.getArch() == llvm::Triple::x86)
+  if (Triple.isWindowsMSVCEnvironment() && TC.getArch() == llvm::Triple::x86)
     return "i386";
 
   if (TC.getArch() == llvm::Triple::arm || TC.getArch() == llvm::Triple::armeb)
-    return (arm::getARMFloatABI(TC, EffectiveTriple, Args) ==
-                arm::FloatABI::Hard &&
-            !IsWindows)
+    return (arm::getARMFloatABI(TC, Args) == arm::FloatABI::Hard && !IsWindows)
                ? "armhf"
                : "arm";
 
   return TC.getArchName();
 }
 
-std::string ToolChain::getCompilerRT(const llvm::Triple &EffectiveTriple,
-                                     const ArgList &Args, StringRef Component,
+std::string ToolChain::getCompilerRT(const ArgList &Args, StringRef Component,
                                      bool Shared) const {
-  const char *Env = EffectiveTriple.isAndroid() ? "-android" : "";
-  bool IsITANMSVCWindows = EffectiveTriple.isWindowsMSVCEnvironment() ||
-                           EffectiveTriple.isWindowsItaniumEnvironment();
+  const llvm::Triple &TT = getTriple();
+  const char *Env = TT.isAndroid() ? "-android" : "";
+  bool IsITANMSVCWindows =
+      TT.isWindowsMSVCEnvironment() || TT.isWindowsItaniumEnvironment();
 
-  StringRef Arch = getArchNameForCompilerRTLib(*this, EffectiveTriple, Args);
+  StringRef Arch = getArchNameForCompilerRTLib(*this, Args);
   const char *Prefix = IsITANMSVCWindows ? "" : "lib";
-  const char *Suffix = Shared ? (EffectiveTriple.isOSWindows() ? ".dll" : ".so")
+  const char *Suffix = Shared ? (Triple.isOSWindows() ? ".dll" : ".so")
                               : (IsITANMSVCWindows ? ".lib" : ".a");
 
   SmallString<128> Path(getDriver().ResourceDir);
-  StringRef OSLibName = EffectiveTriple.isOSFreeBSD() ? "freebsd" : getOS();
+  StringRef OSLibName = Triple.isOSFreeBSD() ? "freebsd" : getOS();
   llvm::sys::path::append(Path, "lib", OSLibName);
   llvm::sys::path::append(Path, Prefix + Twine("clang_rt.") + Component + "-" +
                                     Arch + Env + Suffix);
   return Path.str();
 }
 
-const char *
-ToolChain::getCompilerRTArgString(const llvm::Triple &EffectiveTriple,
-                                  const llvm::opt::ArgList &Args,
-                                  StringRef Component, bool Shared) const {
-  return Args.MakeArgString(
-      getCompilerRT(EffectiveTriple, Args, Component, Shared));
+const char *ToolChain::getCompilerRTArgString(const llvm::opt::ArgList &Args,
+                                              StringRef Component,
+                                              bool Shared) const {
+  return Args.MakeArgString(getCompilerRT(Args, Component, Shared));
 }
 
 bool ToolChain::needsProfileRT(const ArgList &Args) {
@@ -493,8 +488,10 @@ std::string ToolChain::ComputeLLVMTriple(const ArgList &Args,
       ArchName = "arm";
 
     // Assembly files should start in ARM mode, unless arch is M-profile.
+    // Windows is always thumb.
     if ((InputType != types::TY_PP_Asm && Args.hasFlag(options::OPT_mthumb,
-         options::OPT_mno_thumb, ThumbDefault)) || IsMProfile) {
+         options::OPT_mno_thumb, ThumbDefault)) || IsMProfile ||
+         getTriple().isOSWindows()) {
       if (IsBigEndian)
         ArchName = "thumbeb";
       else
@@ -523,26 +520,28 @@ void ToolChain::addClangTargetOptions(const ArgList &DriverArgs,
 
 void ToolChain::addClangWarningOptions(ArgStringList &CC1Args) const {}
 
-void ToolChain::addProfileRTLibs(const llvm::Triple &EffectiveTriple,
-                                 const llvm::opt::ArgList &Args,
+void ToolChain::addProfileRTLibs(const llvm::opt::ArgList &Args,
                                  llvm::opt::ArgStringList &CmdArgs) const {
-  if (!needsProfileRT(Args))
-    return;
+  if (!needsProfileRT(Args)) return;
 
-  CmdArgs.push_back(getCompilerRTArgString(EffectiveTriple, Args, "profile"));
+  CmdArgs.push_back(getCompilerRTArgString(Args, "profile"));
 }
 
 ToolChain::RuntimeLibType ToolChain::GetRuntimeLibType(
     const ArgList &Args) const {
-  if (Arg *A = Args.getLastArg(options::OPT_rtlib_EQ)) {
-    StringRef Value = A->getValue();
-    if (Value == "compiler-rt")
-      return ToolChain::RLT_CompilerRT;
-    if (Value == "libgcc")
-      return ToolChain::RLT_Libgcc;
-    getDriver().Diag(diag::err_drv_invalid_rtlib_name)
-      << A->getAsString(Args);
-  }
+  const Arg* A = Args.getLastArg(options::OPT_rtlib_EQ);
+  StringRef LibName = A ? A->getValue() : CLANG_DEFAULT_RTLIB;
+
+  // "platform" is only used in tests to override CLANG_DEFAULT_RTLIB
+  if (LibName == "compiler-rt")
+    return ToolChain::RLT_CompilerRT;
+  else if (LibName == "libgcc")
+    return ToolChain::RLT_Libgcc;
+  else if (LibName == "platform")
+    return GetDefaultRuntimeLibType();
+
+  if (A)
+    getDriver().Diag(diag::err_drv_invalid_rtlib_name) << A->getAsString(Args);
 
   return GetDefaultRuntimeLibType();
 }

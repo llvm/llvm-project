@@ -283,57 +283,58 @@ tail:
 ;   }
 ; }
 ;
-; CHECK-LABEL: test2:     # @test2
-; CHECK-NEXT: [[test2_begin:.*func_begin.*]]:
 define void @test2() personality i8* bitcast (void ()* @ProcessCLRException to i8*) {
 entry:
-; CHECK: .seh_endprologue
-; CHECK: [[test2_before_f1:.+]]:
-; CHECK-NEXT: movl $1, %ecx
-; CHECK-NEXT: callq f
-; CHECK-NEXT: [[test2_after_f1:.+]]:
   invoke void @f(i32 1)
     to label %exit unwind label %fault
 fault:
-; CHECK: .seh_proc [[test2_fault:[^ ]+]]
   %fault.pad = cleanuppad within none [i32 undef]
-; CHECK: .seh_endprologue
-; CHECK: [[test2_before_f2:.+]]:
-; CHECK-NEXT: movl $2, %ecx
-; CHECK-NEXT: callq f
-; CHECK-NEXT: [[test2_after_f2:.+]]:
   invoke void @f(i32 2) ["funclet"(token %fault.pad)]
     to label %unreachable unwind label %exn.dispatch.inner
 exn.dispatch.inner:
   %catchswitch.inner = catchswitch within %fault.pad [label %catch1] unwind label %exn.dispatch.outer
 catch1:
   %catch.pad1 = catchpad within %catchswitch.inner [i32 1]
-; CHECK: .seh_proc [[test2_catch1:[^ ]+]]
   catchret from %catch.pad1 to label %unreachable
 exn.dispatch.outer:
   %catchswitch.outer = catchswitch within none [label %catch2] unwind to caller
 catch2:
   %catch.pad2 = catchpad within %catchswitch.outer [i32 2]
-; CHECK: .seh_proc [[test2_catch2:[^ ]+]]
   catchret from %catch.pad2 to label %exit
 exit:
   ret void
 unreachable:
   unreachable
-; CHECK: [[test2_end:.*func_end.*]]:
 }
+; CHECK-LABEL: test2:     # @test2
+; CHECK-NEXT: [[test2_begin:.*func_begin.*]]:
+; CHECK: .seh_endprologue
+; CHECK: [[test2_before_f1:.+]]:
+; CHECK-NEXT: movl $1, %ecx
+; CHECK-NEXT: callq f
+; CHECK-NEXT: [[test2_after_f1:.+]]:
+; CHECK: .seh_proc [[test2_catch1:[^ ]+]]
+; CHECK: .seh_proc [[test2_catch2:[^ ]+]]
+; CHECK: .seh_proc [[test2_fault:[^ ]+]]
+; CHECK: .seh_endprologue
+; CHECK: [[test2_before_f2:.+]]:
+; CHECK-NEXT: movl $2, %ecx
+; CHECK-NEXT: callq f
+; CHECK-NEXT: [[test2_after_f2:.+]]:
+; CHECK: [[test2_end:.*func_end.*]]:
+
 
 ; Now check for EH table in xdata (following standard xdata)
 ; CHECK-LABEL: .section .xdata
 ; standard xdata comes here
 ; CHECK:      .long 3{{$}}
 ;                   ^ number of funclets
-; CHECK-NEXT: .long [[test2_fault]]-[[test2_begin]]
-;                   ^ offset from L_begin to start of 1st funclet
 ; CHECK-NEXT: .long [[test2_catch1]]-[[test2_begin]]
 ;                   ^ offset from L_begin to start of 2nd funclet
 ; CHECK-NEXT: .long [[test2_catch2]]-[[test2_begin]]
 ;                   ^ offset from L_begin to start of 3rd funclet
+; CHECK-NEXT: .long [[test2_fault]]-[[test2_begin]]
+;                   ^ offset from L_begin to start of 1st funclet
 ; CHECK-NEXT: .long [[test2_end]]-[[test2_begin]]
 ;                   ^ offset from L_begin to end of last funclet
 ; CHECK-NEXT: .long 4
@@ -347,7 +348,7 @@ unreachable:
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_fault]]-[[test2_begin]]
 ;                   ^ offset of start of handler
-; CHECK-NEXT: .long [[test2_catch1]]-[[test2_begin]]
+; CHECK-NEXT: .long [[test2_end]]-[[test2_begin]]
 ;                   ^ offset of end of handler
 ; CHECK-NEXT: .long 0
 ;                   ^ type token slot (null for fault)
@@ -360,7 +361,7 @@ unreachable:
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_catch2]]-[[test2_begin]]
 ;                   ^ offset of start of handler
-; CHECK-NEXT: .long [[test2_end]]-[[test2_begin]]
+; CHECK-NEXT: .long [[test2_fault]]-[[test2_begin]]
 ;                   ^ offset of end of handler
 ; CHECK-NEXT: .long 2
 ;                   ^ type token of catch (from catchpad)
@@ -389,7 +390,7 @@ unreachable:
 ;                   ^ offset of end of clause
 ; CHECK-NEXT: .long [[test2_catch2]]-[[test2_begin]]
 ;                   ^ offset of start of handler
-; CHECK-NEXT: .long [[test2_end]]-[[test2_begin]]
+; CHECK-NEXT: .long [[test2_fault]]-[[test2_begin]]
 ;                   ^ offset of end of handler
 ; CHECK-NEXT: .long 2
 ;                   ^ type token of catch (from catchpad)

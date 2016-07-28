@@ -2,10 +2,10 @@
 # - Change 'binary' if clang-include-fixer is not on the path (see below).
 # - Add to your .vimrc:
 #
-#   map ,cf :pyf path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/clang-include-fixer.py<cr>
+#   noremap <leader>cf :pyf path/to/llvm/source/tools/clang/tools/extra/include-fixer/tool/clang-include-fixer.py<cr>
 #
-# This enables clang-include-fixer for NORMAL and VISUAL mode. Change ",cf" to
-# another binding if you need clang-include-fixer on a different key.
+# This enables clang-include-fixer for NORMAL and VISUAL mode. Change "<leader>cf"
+# to another binding if you need clang-include-fixer on a different key.
 #
 # To set up clang-include-fixer, see http://clang.llvm.org/extra/include-fixer.html
 #

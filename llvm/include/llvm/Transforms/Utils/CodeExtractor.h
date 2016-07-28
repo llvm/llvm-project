@@ -54,6 +54,12 @@ template <typename T> class ArrayRef;
     Type *RetTy;
 
   public:
+
+    /// \brief Check to see if a block is valid for extraction.
+    ///
+    /// Blocks containing EHPads, allocas, invokes, or vastarts are not valid.
+    static bool isBlockValidForExtraction(const BasicBlock &BB);
+
     /// \brief Create a code extractor for a single basic block.
     ///
     /// In this formation, we don't require a dominator tree. The given basic

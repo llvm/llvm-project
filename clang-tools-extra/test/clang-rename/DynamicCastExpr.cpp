@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=195 -new-name=Bar %t.cpp -i -- -frtti
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=134 -new-name=Bar %s -- -frtti | FileCheck %s
 
 class Baz {
   virtual int getValue() const = 0;
@@ -22,5 +20,5 @@ int main() {
   dynamic_cast<const Foo *>(Pointer)->getValue();  // CHECK: dynamic_cast<const Bar *>(Pointer)->getValue();
 }
 
-// Use grep -FUbo 'Foo' <file> to get the correct offset of foo when changing
+// Use grep -FUbo 'Foo' <file> to get the correct offset of Foo when changing
 // this file.

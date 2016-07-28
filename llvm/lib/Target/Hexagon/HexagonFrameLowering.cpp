@@ -159,6 +159,12 @@ static cl::opt<bool> UseAllocframe("use-allocframe", cl::init(true),
 static cl::opt<bool> OptimizeSpillSlots("hexagon-opt-spill", cl::Hidden,
     cl::init(true), cl::desc("Optimize spill slots"));
 
+#ifndef NDEBUG
+static cl::opt<unsigned> SpillOptMax("spill-opt-max", cl::Hidden,
+    cl::init(UINT_MAX));
+static unsigned SpillOptCount = 0;
+#endif
+
 
 namespace llvm {
   void initializeHexagonCallFrameInformationPass(PassRegistry&);
@@ -309,6 +315,10 @@ namespace {
     switch (Opc) {
       case Hexagon::RESTORE_DEALLOC_RET_JMP_V4:
       case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC:
+      case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT:
+      case Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT_PIC:
+      case Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT:
+      case Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC:
       case Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4:
       case Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC:
         return true;
@@ -457,6 +467,7 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
   bool PrologueStubs = false;
   insertCSRSpillsInBlock(*PrologB, CSI, HRI, PrologueStubs);
   insertPrologueInBlock(*PrologB, PrologueStubs);
+  updateEntryPaths(MF, *PrologB);
 
   if (EpilogB) {
     insertCSRRestoresInBlock(*EpilogB, CSI, HRI);
@@ -485,12 +496,9 @@ void HexagonFrameLowering::emitPrologue(MachineFunction &MF,
     // If there is an epilog block, it may not have a return instruction.
     // In such case, we need to add the callee-saved registers as live-ins
     // in all blocks on all paths from the epilog to any return block.
-    unsigned MaxBN = 0;
-    for (auto &B : MF)
-      if (B.getNumber() >= 0)
-        MaxBN = std::max(MaxBN, unsigned(B.getNumber()));
+    unsigned MaxBN = MF.getNumBlockIDs();
     BitVector DoneT(MaxBN+1), DoneF(MaxBN+1), Path(MaxBN+1);
-    updateExitPaths(*EpilogB, EpilogB, DoneT, DoneF, Path);
+    updateExitPaths(*EpilogB, *EpilogB, DoneT, DoneF, Path);
   }
 }
 
@@ -612,7 +620,9 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   // Check for RESTORE_DEALLOC_RET* tail call. Don't emit an extra dealloc-
   // frame instruction if we encounter it.
   if (RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4 ||
-      RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC) {
+      RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_PIC ||
+      RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT ||
+      RetOpc == Hexagon::RESTORE_DEALLOC_RET_JMP_V4_EXT_PIC) {
     MachineBasicBlock::iterator It = RetI;
     ++It;
     // Delete all instructions after the RESTORE (except labels).
@@ -633,7 +643,10 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
     MachineBasicBlock::iterator PrevIt = std::prev(InsertPt);
     unsigned COpc = PrevIt->getOpcode();
     if (COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4 ||
-        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC)
+        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_PIC ||
+        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT ||
+        COpc == Hexagon::RESTORE_DEALLOC_BEFORE_TAILCALL_V4_EXT_PIC ||
+        COpc == Hexagon::CALLv3nr || COpc == Hexagon::CALLRv3nr)
       NeedsDeallocframe = false;
   }
 
@@ -653,9 +666,30 @@ void HexagonFrameLowering::insertEpilogueInBlock(MachineBasicBlock &MBB) const {
   MBB.erase(RetI);
 }
 
+void HexagonFrameLowering::updateEntryPaths(MachineFunction &MF,
+      MachineBasicBlock &SaveB) const {
+  SetVector<unsigned> Worklist;
+
+  MachineBasicBlock &EntryB = MF.front();
+  Worklist.insert(EntryB.getNumber());
+
+  unsigned SaveN = SaveB.getNumber();
+  auto &CSI = MF.getFrameInfo()->getCalleeSavedInfo();
+
+  for (unsigned i = 0; i < Worklist.size(); ++i) {
+    unsigned BN = Worklist[i];
+    MachineBasicBlock &MBB = *MF.getBlockNumbered(BN);
+    for (auto &R : CSI)
+      if (!MBB.isLiveIn(R.getReg()))
+        MBB.addLiveIn(R.getReg());
+    if (BN != SaveN)
+      for (auto &SB : MBB.successors())
+        Worklist.insert(SB->getNumber());
+  }
+}
 
 bool HexagonFrameLowering::updateExitPaths(MachineBasicBlock &MBB,
-      MachineBasicBlock *RestoreB, BitVector &DoneT, BitVector &DoneF,
+      MachineBasicBlock &RestoreB, BitVector &DoneT, BitVector &DoneF,
       BitVector &Path) const {
   assert(MBB.getNumber() >= 0);
   unsigned BN = MBB.getNumber();
@@ -685,7 +719,7 @@ bool HexagonFrameLowering::updateExitPaths(MachineBasicBlock &MBB,
   // We don't want to add unnecessary live-ins to the restore block: since
   // the callee-saved registers are being defined in it, the entry of the
   // restore block cannot be on the path from the definitions to any exit.
-  if (ReachedExit && &MBB != RestoreB) {
+  if (ReachedExit && &MBB != &RestoreB) {
     for (auto &R : CSI)
       if (!MBB.isLiveIn(R.getReg()))
         MBB.addLiveIn(R.getReg());
@@ -1399,7 +1433,6 @@ bool HexagonFrameLowering::assignCalleeSavedSpillSlots(MachineFunction &MF,
   return true;
 }
 
-
 bool HexagonFrameLowering::expandCopy(MachineBasicBlock &B,
       MachineBasicBlock::iterator It, MachineRegisterInfo &MRI,
       const HexagonInstrInfo &HII, SmallVectorImpl<unsigned> &NewRegs) const {
@@ -1910,19 +1943,6 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
   SmallSet<int,4> BadFIs;
   std::map<int,SlotInfo> FIRangeMap;
 
-  auto getRegClass = [&MRI,&HRI] (HexagonBlockRanges::RegisterRef R)
-        -> const TargetRegisterClass* {
-    if (TargetRegisterInfo::isPhysicalRegister(R.Reg))
-      assert(R.Sub == 0);
-    if (TargetRegisterInfo::isVirtualRegister(R.Reg)) {
-      auto *RCR = MRI.getRegClass(R.Reg);
-      if (R.Sub == 0)
-        return RCR;
-      unsigned PR = *RCR->begin();
-      R.Reg = HRI.getSubReg(PR, R.Sub);
-    }
-    return HRI.getMinimalPhysRegClass(R.Reg);
-  };
   // Accumulate register classes: get a common class for a pre-existing
   // class HaveRC and a new class NewRC. Return nullptr if a common class
   // cannot be found, otherwise return the resulting class. If HaveRC is
@@ -1975,14 +1995,8 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         bool Bad = (AM != HexagonII::BaseImmOffset);
         if (!Bad) {
           // If the addressing mode is ok, check the register class.
-          const TargetRegisterClass *RC = nullptr;
-          if (Load) {
-            MachineOperand &DataOp = In.getOperand(0);
-            RC = getRegClass({DataOp.getReg(), DataOp.getSubReg()});
-          } else {
-            MachineOperand &DataOp = In.getOperand(2);
-            RC = getRegClass({DataOp.getReg(), DataOp.getSubReg()});
-          }
+          unsigned OpNum = Load ? 0 : 2;
+          auto *RC = HII.getRegClass(In.getDesc(), OpNum, &HRI, MF);
           RC = getCommonRC(SI.RC, RC);
           if (RC == nullptr)
             Bad = true;
@@ -1996,6 +2010,14 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
             Bad = true;
           else
             SI.Size = S;
+        }
+        if (!Bad) {
+          for (auto *Mo : In.memoperands()) {
+            if (!Mo->isVolatile())
+              continue;
+            Bad = true;
+            break;
+          }
         }
         if (Bad)
           BadFIs.insert(TFI);
@@ -2109,6 +2131,10 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
     }
   });
 
+#ifndef NDEBUG
+  bool HasOptLimit = SpillOptMax.getPosition();
+#endif
+
   // eliminate loads, when all loads eliminated, eliminate all stores.
   for (auto &B : MF) {
     auto F = BlockIndexes.find(&B);
@@ -2137,12 +2163,19 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
 
         HexagonBlockRanges::RegisterRef SrcRR = { SrcOp.getReg(),
                                                   SrcOp.getSubReg() };
-        auto *RC = getRegClass({SrcOp.getReg(), SrcOp.getSubReg()});
+        auto *RC = HII.getRegClass(SI->getDesc(), 2, &HRI, MF);
         // The this-> is needed to unconfuse MSVC.
         unsigned FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
         DEBUG(dbgs() << "Replacement reg:" << PrintReg(FoundR, &HRI) << '\n');
         if (FoundR == 0)
           continue;
+#ifndef NDEBUG
+        if (HasOptLimit) {
+          if (SpillOptCount >= SpillOptMax)
+            return;
+          SpillOptCount++;
+        }
+#endif
 
         // Generate the copy-in: "FoundR = COPY SrcR" at the store location.
         MachineBasicBlock::iterator StartIt = SI, NextIt;
@@ -2203,7 +2236,6 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
     }
   }
 }
-
 
 void HexagonFrameLowering::expandAlloca(MachineInstr *AI,
       const HexagonInstrInfo &HII, unsigned SP, unsigned CF) const {

@@ -3377,34 +3377,6 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
   return AMDGPUTargetLowering::PerformDAGCombine(N, DCI);
 }
 
-/// \brief Analyze the possible immediate value Op
-///
-/// Returns -1 if it isn't an immediate, 0 if it's and inline immediate
-/// and the immediate value if it's a literal immediate
-int32_t SITargetLowering::analyzeImmediate(const SDNode *N) const {
-  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-
-  if (const ConstantSDNode *Node = dyn_cast<ConstantSDNode>(N)) {
-    if (TII->isInlineConstant(Node->getAPIntValue()))
-      return 0;
-
-    uint64_t Val = Node->getZExtValue();
-    return isUInt<32>(Val) ? Val : -1;
-  }
-
-  if (const ConstantFPSDNode *Node = dyn_cast<ConstantFPSDNode>(N)) {
-    if (TII->isInlineConstant(Node->getValueAPF().bitcastToAPInt()))
-      return 0;
-
-    if (Node->getValueType(0) == MVT::f32)
-      return FloatToBits(Node->getValueAPF().convertToFloat());
-
-    return -1;
-  }
-
-  return -1;
-}
-
 /// \brief Helper function for adjustWritemask
 static unsigned SubIdx2Lane(unsigned Idx) {
   switch (Idx) {

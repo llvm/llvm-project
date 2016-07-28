@@ -204,6 +204,29 @@ private:
   /// @returns A set of values referenced by the kernel.
   SetVector<Value *> getReferencesInKernel(ppcg_kernel *Kernel);
 
+  /// Compute the sizes of the execution grid for a given kernel.
+  ///
+  /// @param Kernel The kernel to compute grid sizes for.
+  ///
+  /// @returns A tuple with grid sizes for X and Y dimension
+  std::tuple<Value *, Value *> getGridSizes(ppcg_kernel *Kernel);
+
+  /// Compute the sizes of the thread blocks for a given kernel.
+  ///
+  /// @param Kernel The kernel to compute thread block sizes for.
+  ///
+  /// @returns A tuple with thread block sizes for X, Y, and Z dimensions.
+  std::tuple<Value *, Value *, Value *> getBlockSizes(ppcg_kernel *Kernel);
+
+  /// Create kernel launch parameters.
+  ///
+  /// @param Kernel The kernel to create parameters for.
+  /// @param F      The kernel function that has been created.
+  ///
+  /// @returns A stack allocated array with pointers to the parameter
+  ///          values that are passed to the kernel.
+  Value *createLaunchParameters(ppcg_kernel *Kernel, Function *F);
+
   /// Create GPU kernel.
   ///
   /// Code generate the kernel described by @p KernelStmt.
@@ -296,6 +319,13 @@ private:
   /// @returns A pointer to the newly initialized context.
   Value *createCallInitContext();
 
+  /// Create a call to get the device pointer for a kernel allocation.
+  ///
+  /// @param Allocation The Polly GPU allocation
+  ///
+  /// @returns The device parameter corresponding to this allocation.
+  Value *createCallGetDevicePtr(Value *Allocation);
+
   /// Create a call to free the GPU context.
   ///
   /// @param Context A pointer to an initialized GPU context.
@@ -339,6 +369,21 @@ private:
   ///
   /// @param GPUKernel THe kernel to free.
   void createCallFreeKernel(Value *GPUKernel);
+
+  /// Create a call to launch a GPU kernel.
+  ///
+  /// @param GPUKernel  The kernel to launch.
+  /// @param GridDimX   The size of the first grid dimension.
+  /// @param GridDimY   The size of the second grid dimension.
+  /// @param GridBlockX The size of the first block dimension.
+  /// @param GridBlockY The size of the second block dimension.
+  /// @param GridBlockZ The size of the third block dimension.
+  /// @param Paramters  A pointer to an array that contains itself pointers to
+  ///                   the parameter values passed for each kernel argument.
+  void createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
+                              Value *GridDimY, Value *BlockDimX,
+                              Value *BlockDimY, Value *BlockDimZ,
+                              Value *Parameters);
 };
 
 void GPUNodeBuilder::initializeAfterRTH() {
@@ -391,6 +436,50 @@ Value *GPUNodeBuilder::createCallGetKernel(Value *Buffer, Value *Entry) {
   }
 
   return Builder.CreateCall(F, {Buffer, Entry});
+}
+
+Value *GPUNodeBuilder::createCallGetDevicePtr(Value *Allocation) {
+  const char *Name = "polly_getDevicePtr";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getInt8PtrTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  return Builder.CreateCall(F, {Allocation});
+}
+
+void GPUNodeBuilder::createCallLaunchKernel(Value *GPUKernel, Value *GridDimX,
+                                            Value *GridDimY, Value *BlockDimX,
+                                            Value *BlockDimY, Value *BlockDimZ,
+                                            Value *Parameters) {
+  const char *Name = "polly_launchKernel";
+  Module *M = Builder.GetInsertBlock()->getParent()->getParent();
+  Function *F = M->getFunction(Name);
+
+  // If F is not available, declare it.
+  if (!F) {
+    GlobalValue::LinkageTypes Linkage = Function::ExternalLinkage;
+    std::vector<Type *> Args;
+    Args.push_back(Builder.getInt8PtrTy());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt32Ty());
+    Args.push_back(Builder.getInt8PtrTy());
+    FunctionType *Ty = FunctionType::get(Builder.getVoidTy(), Args, false);
+    F = Function::Create(Ty, Linkage, Name, M);
+  }
+
+  Builder.CreateCall(F, {GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
+                         BlockDimZ, Parameters});
 }
 
 void GPUNodeBuilder::createCallFreeKernel(Value *GPUKernel) {
@@ -755,6 +844,77 @@ void GPUNodeBuilder::clearLoops(Function *F) {
   }
 }
 
+std::tuple<Value *, Value *> GPUNodeBuilder::getGridSizes(ppcg_kernel *Kernel) {
+  std::vector<Value *> Sizes;
+  isl_ast_build *Context = isl_ast_build_from_context(S.getContext());
+
+  for (long i = 0; i < Kernel->n_grid; i++) {
+    isl_pw_aff *Size = isl_multi_pw_aff_get_pw_aff(Kernel->grid_size, i);
+    isl_ast_expr *GridSize = isl_ast_build_expr_from_pw_aff(Context, Size);
+    Value *Res = ExprBuilder.create(GridSize);
+    Res = Builder.CreateTrunc(Res, Builder.getInt32Ty());
+    Sizes.push_back(Res);
+  }
+  isl_ast_build_free(Context);
+
+  for (long i = Kernel->n_grid; i < 3; i++)
+    Sizes.push_back(ConstantInt::get(Builder.getInt32Ty(), 1));
+
+  return std::make_tuple(Sizes[0], Sizes[1]);
+}
+
+std::tuple<Value *, Value *, Value *>
+GPUNodeBuilder::getBlockSizes(ppcg_kernel *Kernel) {
+  std::vector<Value *> Sizes;
+
+  for (long i = 0; i < Kernel->n_block; i++) {
+    Value *Res = ConstantInt::get(Builder.getInt32Ty(), Kernel->block_dim[i]);
+    Sizes.push_back(Res);
+  }
+
+  for (long i = Kernel->n_block; i < 3; i++)
+    Sizes.push_back(ConstantInt::get(Builder.getInt32Ty(), 1));
+
+  return std::make_tuple(Sizes[0], Sizes[1], Sizes[2]);
+}
+
+Value *GPUNodeBuilder::createLaunchParameters(ppcg_kernel *Kernel,
+                                              Function *F) {
+  Type *ArrayTy = ArrayType::get(Builder.getInt8PtrTy(), F->getNumOperands());
+
+  BasicBlock *EntryBlock =
+      &Builder.GetInsertBlock()->getParent()->getEntryBlock();
+  std::string Launch = "polly_launch_" + std::to_string(Kernel->id);
+  Instruction *Parameters =
+      new AllocaInst(ArrayTy, Launch + "_params", EntryBlock->getTerminator());
+
+  int Index = 0;
+  for (long i = 0; i < Prog->n_array; i++) {
+    if (!ppcg_kernel_requires_array_argument(Kernel, i))
+      continue;
+
+    isl_id *Id = isl_space_get_tuple_id(Prog->array[i].space, isl_dim_set);
+    const ScopArrayInfo *SAI = ScopArrayInfo::getFromId(Id);
+
+    Value *DevArray = DeviceAllocations[(ScopArrayInfo *)SAI];
+    DevArray = createCallGetDevicePtr(DevArray);
+    Instruction *Param = new AllocaInst(
+        Builder.getInt8PtrTy(), Launch + "_param_" + std::to_string(Index),
+        EntryBlock->getTerminator());
+    Builder.CreateStore(DevArray, Param);
+    Value *Slot = Builder.CreateGEP(Parameters,
+                                    {Builder.getInt64(0), Builder.getInt64(i)});
+    Value *ParamTyped =
+        Builder.CreatePointerCast(Param, Builder.getInt8PtrTy());
+    Builder.CreateStore(ParamTyped, Slot);
+    Index++;
+  }
+
+  auto Location = EntryBlock->getTerminator();
+  return new BitCastInst(Parameters, Builder.getInt8PtrTy(),
+                         Launch + "_params_i8ptr", Location);
+}
+
 void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
   isl_id *Id = isl_ast_node_get_annotation(KernelStmt);
   ppcg_kernel *Kernel = (ppcg_kernel *)isl_id_get_user(Id);
@@ -805,11 +965,22 @@ void GPUNodeBuilder::createKernel(__isl_take isl_ast_node *KernelStmt) {
     S.invalidateScopArrayInfo(BasePtr, ScopArrayInfo::MK_Array);
   LocalArrays.clear();
 
+  Value *Parameters = createLaunchParameters(Kernel, F);
+
   std::string ASMString = finalizeKernelFunction();
   std::string Name = "kernel_" + std::to_string(Kernel->id);
   Value *KernelString = Builder.CreateGlobalStringPtr(ASMString, Name);
   Value *NameString = Builder.CreateGlobalStringPtr(Name, Name + "_name");
   Value *GPUKernel = createCallGetKernel(KernelString, NameString);
+
+  Value *GridDimX, *GridDimY;
+  std::tie(GridDimX, GridDimY) = getGridSizes(Kernel);
+
+  Value *BlockDimX, *BlockDimY, *BlockDimZ;
+  std::tie(BlockDimX, BlockDimY, BlockDimZ) = getBlockSizes(Kernel);
+
+  createCallLaunchKernel(GPUKernel, GridDimX, GridDimY, BlockDimX, BlockDimY,
+                         BlockDimZ, Parameters);
   createCallFreeKernel(GPUKernel);
 }
 

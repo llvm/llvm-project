@@ -49,17 +49,25 @@
  *   PollyGPUDevicePtr *DevArray;
  *   int *HostData;
  *   int MemSize;
- *   int BlockWidth = 16;
- *   int BlockHeight = 16;
- *   int GridWidth = 8;
- *   int GridHeight = 8;
+ *
+ *   int GridX = 8;
+ *   int GridY = 8;
+ *
+ *   int BlockX = 16;
+ *   int BlockY = 16;
+ *   int BlockZ = 1;
  *
  *   MemSize = 256*64*sizeof(int);
  *   Context = polly_initContext();
  *   DevArray = polly_allocateMemoryForDevice(MemSize);
  *   Kernel = polly_getKernel(KernelString, KernelName);
- *   polly_setKernelParameters(Kernel, BlockWidth, BlockHeight, DevData);
- *   polly_launchKernel(Kernel, GridWidth, GridHeight);
+ *
+ *   void *Params[1];
+ *   void *DevPtr = polly_getDevicePtr(DevArray)
+ *   Params[0] = &DevPtr;
+ *
+ *   polly_launchKernel(Kernel, GridX, GridY, BlockX, BlockY, BlockZ, Params);
+ *
  *   polly_copyFromDeviceToHost(HostData, DevData, MemSize);
  *   polly_freeKernel(Kernel);
  *   polly_freeDeviceMemory(DevArray);
@@ -80,10 +88,10 @@ void polly_copyFromHostToDevice(void *HostData, PollyGPUDevicePtr *DevData,
                                 long MemSize);
 void polly_copyFromDeviceToHost(PollyGPUDevicePtr *DevData, void *HostData,
                                 long MemSize);
-void polly_setKernelParameters(PollyGPUFunction *Kernel, int BlockWidth,
-                               int BlockHeight, PollyGPUDevicePtr *DevData);
-void polly_launchKernel(PollyGPUFunction *Kernel, int GridWidth,
-                        int GridHeight);
+void polly_launchKernel(PollyGPUFunction *Kernel, unsigned int GridDimX,
+                        unsigned int GridDimY, unsigned int BlockSizeX,
+                        unsigned int BlockSizeY, unsigned int BlockSizeZ,
+                        void **Parameters);
 void polly_freeDeviceMemory(PollyGPUDevicePtr *Allocation);
 void polly_freeContext(PollyGPUContext *Context);
 #endif /* GPUJIT_H_ */

@@ -343,7 +343,7 @@
 
 // CFI by itself does not link runtime libraries.
 // RUN: %clang -fsanitize=cfi %s -### -o %t.o 2>&1 \
-// RUN:     -target x86_64-unknown-linux \
+// RUN:     -target x86_64-unknown-linux -rtlib=platform \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-CFI-LINUX %s
 // CHECK-CFI-LINUX: "{{.*}}ld{{(.exe)?}}"

@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=233 -new-name=bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=172 -new-name=bar %s -- | FileCheck %s
 
 template <typename T>
 T foo(T value) {    // CHECK: T bar(T value) {

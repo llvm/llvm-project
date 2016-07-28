@@ -70,4 +70,6 @@ int main() {                              // TEXT:   161| [[@LINE]]|int main(
 // HTML-WHOLE-FILE: <td class='uncovered-line'></td><td class='line-number'><a name='L[[@LINE-44]]'><pre>[[@LINE-44]]</pre></a></td><td class='code'><pre>// after
 // HTML-FILTER-NOT: <td class='uncovered-line'></td><td class='line-number'><a name='L[[@LINE-45]]'><pre>[[@LINE-45]]</pre></a></td><td class='code'><pre>// after
 
-// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -name=main 2>/dev/null | FileCheck %S/Inputs/lineExecutionCounts.json
+// RUN: llvm-cov export %S/Inputs/lineExecutionCounts.covmapping -instr-profile %t.profdata -name=main 2>/dev/null > %t.export.json
+// RUN: FileCheck -input-file %t.export.json %S/Inputs/lineExecutionCounts.json
+// RUN: cat %t.export.json | %python -c "import json, sys; json.loads(sys.stdin.read())"

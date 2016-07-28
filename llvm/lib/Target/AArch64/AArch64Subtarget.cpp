@@ -98,6 +98,11 @@ const CallLowering *AArch64Subtarget::getCallLowering() const {
   return GISel->getCallLowering();
 }
 
+const InstructionSelector *AArch64Subtarget::getInstructionSelector() const {
+  assert(GISel && "Access to GlobalISel APIs not set");
+  return GISel->getInstructionSelector();
+}
+
 const MachineLegalizer *AArch64Subtarget::getMachineLegalizer() const {
   assert(GISel && "Access to GlobalISel APIs not set");
   return GISel->getMachineLegalizer();

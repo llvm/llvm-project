@@ -158,10 +158,12 @@ const interpose_substitution substitution_##func_name[] \
     namespace __interception { \
       extern FUNC_TYPE(func) PTR_TO_REAL(func); \
     }
+# define ASSIGN_REAL(dst, src) REAL(dst) = REAL(src)
 #else  // __APPLE__
 # define REAL(x) x
 # define DECLARE_REAL(ret_type, func, ...) \
     extern "C" ret_type func(__VA_ARGS__);
+# define ASSIGN_REAL(x, y)
 #endif  // __APPLE__
 
 #define DECLARE_REAL_AND_INTERCEPTOR(ret_type, func, ...) \

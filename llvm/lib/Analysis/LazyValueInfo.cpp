@@ -366,6 +366,9 @@ namespace {
   /// A callback value handle updates the cache when values are erased.
   class LazyValueInfoCache;
   struct LVIValueHandle final : public CallbackVH {
+    // Needs to access getValPtr(), which is protected.
+    friend struct DenseMapInfo<LVIValueHandle>;
+
     LazyValueInfoCache *Parent;
 
     LVIValueHandle(Value *V, LazyValueInfoCache *P)
@@ -376,7 +379,7 @@ namespace {
       deleted();
     }
   };
-}
+} // end anonymous namespace
 
 namespace {
   /// This is the cache kept by LazyValueInfo which
@@ -387,12 +390,15 @@ namespace {
     /// entries, allowing us to do a lookup with a binary search.
     /// Over-defined lattice values are recorded in OverDefinedCache to reduce
     /// memory overhead.
-    typedef SmallDenseMap<AssertingVH<BasicBlock>, LVILatticeVal, 4>
-        ValueCacheEntryTy;
+    struct ValueCacheEntryTy {
+      ValueCacheEntryTy(Value *V, LazyValueInfoCache *P) : Handle(V, P) {}
+      LVIValueHandle Handle;
+      SmallDenseMap<AssertingVH<BasicBlock>, LVILatticeVal, 4> BlockVals;
+    };
 
     /// This is all of the cached information for all values,
     /// mapped from Value* to key information.
-    std::map<LVIValueHandle, ValueCacheEntryTy> ValueCache;
+    DenseMap<Value *, std::unique_ptr<ValueCacheEntryTy>> ValueCache;
 
     /// This tracks, on a per-block basis, the set of values that are
     /// over-defined at the end of that block.
@@ -437,8 +443,15 @@ namespace {
       // overhead.
       if (Result.isOverdefined())
         OverDefinedCache[BB].insert(Val);
-      else
-        lookup(Val)[BB] = Result;
+      else {
+        auto It = ValueCache.find_as(Val);
+        if (It == ValueCache.end()) {
+          ValueCache[Val] = make_unique<ValueCacheEntryTy>(Val, this);
+          It = ValueCache.find_as(Val);
+          assert(It != ValueCache.end() && "Val was just added to the map!");
+        }
+        It->second->BlockVals[BB] = Result;
+      }
     }
 
   LVILatticeVal getBlockValue(Value *Val, BasicBlock *BB);
@@ -463,10 +476,6 @@ namespace {
 
   void solve();
 
-  ValueCacheEntryTy &lookup(Value *V) {
-    return ValueCache[LVIValueHandle(V, this)];
-  }
-
     bool isOverdefined(Value *V, BasicBlock *BB) const {
       auto ODI = OverDefinedCache.find(BB);
 
@@ -480,19 +489,24 @@ namespace {
       if (isOverdefined(V, BB))
         return true;
 
-      LVIValueHandle ValHandle(V, this);
-      auto I = ValueCache.find(ValHandle);
+      auto I = ValueCache.find_as(V);
       if (I == ValueCache.end())
         return false;
 
-      return I->second.count(BB);
+      return I->second->BlockVals.count(BB);
     }
 
     LVILatticeVal getCachedValueInfo(Value *V, BasicBlock *BB) {
       if (isOverdefined(V, BB))
         return LVILatticeVal::getOverdefined();
 
-      return lookup(V)[BB];
+      auto I = ValueCache.find_as(V);
+      if (I == ValueCache.end())
+        return LVILatticeVal();
+      auto BBI = I->second->BlockVals.find(BB);
+      if (BBI == I->second->BlockVals.end())
+        return LVILatticeVal();
+      return BBI->second;
     }
 
   public:
@@ -561,7 +575,7 @@ void LazyValueInfoCache::eraseBlock(BasicBlock *BB) {
     OverDefinedCache.erase(ODI);
 
   for (auto &I : ValueCache)
-    I.second.erase(BB);
+    I.second->BlockVals.erase(BB);
 }
 
 void LazyValueInfoCache::solve() {

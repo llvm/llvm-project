@@ -23,7 +23,7 @@ namespace llvm {
 
 /// AArch64FunctionInfo - This class is derived from MachineFunctionInfo and
 /// contains private AArch64-specific information for each MachineFunction.
-class AArch64FunctionInfo : public MachineFunctionInfo {
+class AArch64FunctionInfo final : public MachineFunctionInfo {
 
   /// Number of bytes of arguments this function has on the stack. If the callee
   /// is expected to restore the argument stack this should be a multiple of 16,

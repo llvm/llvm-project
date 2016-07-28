@@ -658,6 +658,10 @@ public:
   /// \pre Size > 0.
   unsigned createGenericVirtualRegister(unsigned Size);
 
+  /// Remove all sizes associated to virtual registers (after instruction
+  /// selection and constraining of all generic virtual registers).
+  void clearVirtRegSizes();
+
   /// getNumVirtRegs - Return the number of virtual registers created.
   ///
   unsigned getNumVirtRegs() const { return VRegInfo.size(); }

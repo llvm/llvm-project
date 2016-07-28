@@ -54,7 +54,7 @@ void t12() {
   __asm jmp label // expected-error {{use of undeclared label 'label'}}
 }
 void t13() {
-  __asm m{o}v eax, ebx // expected-error {{expected identifier}} expected-error {{use of undeclared label '{o}v eax, ebx'}}
+  __asm m{o}v eax, ebx // expected-error {{unknown token in expression}}
 }
 
 int t_fail() { // expected-note {{to match this}}
