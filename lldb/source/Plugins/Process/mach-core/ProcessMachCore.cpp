@@ -418,6 +418,23 @@ ProcessMachCore::DoLoadCore ()
         }
     }
 
+    if (m_dyld_plugin_name != DynamicLoaderMacOSXDYLD::GetPluginNameStatic())
+    {
+        // For non-user process core files, the permissions on the core file segments are usually
+        // meaningless, they may be just "read", because we're dealing with kernel coredumps or
+        // early startup coredumps and the dumper is grabbing pages of memory without knowing
+        // what they are.  If they aren't marked as "exeuctable", that can break the unwinder
+        // which will check a pc value to see if it is in an executable segment and stop the
+        // backtrace early if it is not ("executable" and "unknown" would both be fine, but 
+        // "not executable" will break the unwinder).
+        size_t core_range_infos_size = m_core_range_infos.GetSize();
+        for (size_t i = 0; i < core_range_infos_size; i++)
+        {
+            VMRangeToPermissions::Entry *ent = m_core_range_infos.GetMutableEntryAtIndex (i);
+            ent->data = lldb::ePermissionsReadable | lldb::ePermissionsExecutable;
+        }
+    }
+
     // Even if the architecture is set in the target, we need to override
     // it to match the core file which is always single arch.
     ArchSpec arch (m_core_module_sp->GetArchitecture());
