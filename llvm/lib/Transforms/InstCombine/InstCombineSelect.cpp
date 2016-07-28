@@ -553,8 +553,11 @@ Instruction *InstCombiner::visitSelectInstWithICmp(SelectInst &SI,
     }
   }
 
+  // FIXME: This code is nearly duplicated in InstSimplify. Using/refactoring
+  // decomposeBitTestICmp() might help.
   {
-    unsigned BitWidth = DL.getTypeSizeInBits(TrueVal->getType());
+    unsigned BitWidth =
+        DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
     APInt MinSignedValue = APInt::getSignBit(BitWidth);
     Value *X;
     const APInt *Y, *C;

@@ -3400,7 +3400,10 @@ static Value *SimplifySelectInst(Value *CondVal, Value *TrueVal,
     return TrueVal;
 
   if (const auto *ICI = dyn_cast<ICmpInst>(CondVal)) {
-    unsigned BitWidth = Q.DL.getTypeSizeInBits(TrueVal->getType());
+    // FIXME: This code is nearly duplicated in InstCombine. Using/refactoring
+    // decomposeBitTestICmp() might help.
+    unsigned BitWidth =
+        Q.DL.getTypeSizeInBits(TrueVal->getType()->getScalarType());
     ICmpInst::Predicate Pred = ICI->getPredicate();
     Value *CmpLHS = ICI->getOperand(0);
     Value *CmpRHS = ICI->getOperand(1);

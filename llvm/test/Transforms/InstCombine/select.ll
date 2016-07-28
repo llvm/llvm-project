@@ -1737,3 +1737,26 @@ define i32 @PR27137(i32 %a) {
   %s1 = select i1 %c1, i32 %s0, i32 -1
   ret i32 %s1
 }
+
+define i32 @select_icmp_slt0_xor(i32 %x) {
+; CHECK-LABEL: @select_icmp_slt0_xor(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i32 %x, -2147483648
+; CHECK-NEXT:    ret i32 [[TMP1]]
+;
+  %cmp = icmp slt i32 %x, zeroinitializer
+  %xor = xor i32 %x, 2147483648
+  %x.xor = select i1 %cmp, i32 %x, i32 %xor
+  ret i32 %x.xor
+}
+
+define <2 x i32> @select_icmp_slt0_xor_vec(<2 x i32> %x) {
+; CHECK-LABEL: @select_icmp_slt0_xor_vec(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> %x, <i32 -2147483648, i32 -2147483648>
+; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+;
+  %cmp = icmp slt <2 x i32> %x, zeroinitializer
+  %xor = xor <2 x i32> %x, <i32 2147483648, i32 2147483648>
+  %x.xor = select <2 x i1> %cmp, <2 x i32> %x, <2 x i32> %xor
+  ret <2 x i32> %x.xor
+}
+
