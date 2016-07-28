@@ -7,6 +7,8 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/cmd/gllgo/config.h)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/cmd/gllgo)
 
+list(APPEND LLVM_GO_PACKAGES "llvm.org/llgo=${CMAKE_CURRENT_SOURCE_DIR}")
+
 llvm_add_go_executable(llgo llvm.org/llgo/cmd/gllgo ALL DEPENDS
   build/context.go
   cmd/gllgo/gllgo.go

@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=136 -new-name=Bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=74 -new-name=Bar %s -- | FileCheck %s
 
 class Foo {};       // CHECK: class Bar
 
@@ -9,5 +7,5 @@ int main() {
   return 0;
 }
 
-// Use grep -FUbo 'Foo' <file> to get the correct offset of Cla when changing
+// Use grep -FUbo 'Foo' <file> to get the correct offset of Foo when changing
 // this file.

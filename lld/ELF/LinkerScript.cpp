@@ -79,15 +79,15 @@ static bool match(ArrayRef<StringRef> Patterns, StringRef S) {
 // input sections start with ".foo." or ".bar." should be added to
 // ".text" section.
 template <class ELFT>
-std::vector<std::pair<StringRef, ArrayRef<StringRef>>>
+std::vector<std::pair<StringRef, const InputSectionDescription *>>
 LinkerScript<ELFT>::getSectionMap() {
-  std::vector<std::pair<StringRef, ArrayRef<StringRef>>> Ret;
+  std::vector<std::pair<StringRef, const InputSectionDescription *>> Ret;
 
   for (const std::unique_ptr<BaseCommand> &Base1 : Opt.Commands)
     if (auto *Cmd1 = dyn_cast<OutputSectionCommand>(Base1.get()))
       for (const std::unique_ptr<BaseCommand> &Base2 : Cmd1->Commands)
         if (auto *Cmd2 = dyn_cast<InputSectionDescription>(Base2.get()))
-          Ret.emplace_back(Cmd1->Name, Cmd2->Patterns);
+          Ret.emplace_back(Cmd1->Name, Cmd2);
 
   return Ret;
 }
@@ -95,13 +95,17 @@ LinkerScript<ELFT>::getSectionMap() {
 // Returns input sections filtered by given glob patterns.
 template <class ELFT>
 std::vector<InputSectionBase<ELFT> *>
-LinkerScript<ELFT>::getInputSections(ArrayRef<StringRef> Patterns) {
+LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
+  ArrayRef<StringRef> Patterns = I->Patterns;
+  ArrayRef<StringRef> ExcludedFiles = I->ExcludedFiles;
   std::vector<InputSectionBase<ELFT> *> Ret;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F :
        Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec && match(Patterns, S->getSectionName()))
-        Ret.push_back(S);
+        if (ExcludedFiles.empty() ||
+            !match(ExcludedFiles, sys::path::filename(F->getName())))
+          Ret.push_back(S);
   return Ret;
 }
 
@@ -123,8 +127,8 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
 
   for (auto &P : getSectionMap()) {
     StringRef OutputName = P.first;
-    ArrayRef<StringRef> InputPatterns = P.second;
-    for (InputSectionBase<ELFT> *S : getInputSections(InputPatterns)) {
+    const InputSectionDescription *I = P.second;
+    for (InputSectionBase<ELFT> *S : getInputSections(I)) {
       if (OutputName == "/DISCARD/") {
         S->Live = false;
         reportDiscarded(S);
@@ -277,13 +281,13 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       break;
     case PT_DYNAMIC:
       if (isOutputDynamic<ELFT>()) {
-        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::Dynamic->getFlags());
+        Phdr.H.p_flags = Out<ELFT>::Dynamic->getPhdrFlags();
         Phdr.add(Out<ELFT>::Dynamic);
       }
       break;
     case PT_GNU_EH_FRAME:
       if (!Out<ELFT>::EhFrame->empty() && Out<ELFT>::EhFrameHdr) {
-        Phdr.H.p_flags = toPhdrFlags(Out<ELFT>::EhFrameHdr->getFlags());
+        Phdr.H.p_flags = Out<ELFT>::EhFrameHdr->getPhdrFlags();
         Phdr.add(Out<ELFT>::EhFrameHdr);
       }
       break;
@@ -302,12 +306,12 @@ LinkerScript<ELFT>::createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> Sections) {
       for (size_t Id : PhdrIds) {
         Ret[Id].add(Sec);
         if (Opt.PhdrsCommands[Id].Flags == UINT_MAX)
-          Ret[Id].H.p_flags |= toPhdrFlags(Sec->getFlags());
+          Ret[Id].H.p_flags |= Sec->getPhdrFlags();
       }
     } else {
       // If we have no load segment or flags've changed then we want new load
       // segment.
-      uintX_t NewFlags = toPhdrFlags(Sec->getFlags());
+      uintX_t NewFlags = Sec->getPhdrFlags();
       if (Load == nullptr || Flags != NewFlags) {
         Load = &*Ret.emplace(Ret.end(), PT_LOAD, NewFlags);
         Flags = NewFlags;
@@ -420,6 +424,7 @@ private:
   void readAsNeeded();
   void readEntry();
   void readExtern();
+  std::unique_ptr<InputSectionDescription> readFilePattern();
   void readGroup();
   void readKeep(OutputSectionCommand *Cmd);
   void readInclude();
@@ -662,16 +667,31 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
-  expect("(");
+std::unique_ptr<InputSectionDescription> ScriptParser::readFilePattern() {
   expect("*");
   expect("(");
-  auto *InCmd = new InputSectionDescription();
-  Cmd->Commands.emplace_back(InCmd);
-  while (!Error && !skip(")")) {
-    Opt.KeptSections.push_back(peek());
+
+  auto InCmd = llvm::make_unique<InputSectionDescription>();
+
+  if (skip("EXCLUDE_FILE")) {
+    expect("(");
+    while (!Error && !skip(")"))
+      InCmd->ExcludedFiles.push_back(next());
     InCmd->Patterns.push_back(next());
+    expect(")");
+  } else {
+    while (!Error && !skip(")"))
+      InCmd->Patterns.push_back(next());
   }
+  return InCmd;
+}
+
+void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
+  expect("(");
+  std::unique_ptr<InputSectionDescription> InCmd = readFilePattern();
+  Opt.KeptSections.insert(Opt.KeptSections.end(), InCmd->Patterns.begin(),
+                          InCmd->Patterns.end());
+  Cmd->Commands.push_back(std::move(InCmd));
   expect(")");
 }
 

@@ -1,6 +1,4 @@
-// RUN: cat %s > %t.cpp
-// RUN: clang-rename -offset=156 -new-name=Bar %t.cpp -i --
-// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
+// RUN: clang-rename -offset=95 -new-name=Bar %s -- | FileCheck %s
 
 class Baz {
 public:

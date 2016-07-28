@@ -83,6 +83,7 @@ struct OutputSectionCommand : BaseCommand {
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription() : BaseCommand(InputSectionKind) {}
   static bool classof(const BaseCommand *C);
+  std::vector<StringRef> ExcludedFiles;
   std::vector<StringRef> Patterns;
 };
 
@@ -132,10 +133,11 @@ public:
   bool hasPhdrsCommands();
 
 private:
-  std::vector<std::pair<StringRef, ArrayRef<StringRef>>> getSectionMap();
+  std::vector<std::pair<StringRef, const InputSectionDescription *>>
+  getSectionMap();
 
   std::vector<InputSectionBase<ELFT> *>
-  getInputSections(ArrayRef<StringRef> Patterns);
+  getInputSections(const InputSectionDescription *);
 
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;

@@ -1,12 +1,10 @@
-// Currently unsupported test.
-// RUN: cat %s > %t.cpp
-// FIXME: clang-rename should handle conversions from a class type to another
-// type.
+// RUN: clang-rename -offset=143 -new-name=Bar %s -- | FileCheck %s
 
 class Foo {};             // CHECK: class Bar {};
 
-class Baz {               // CHECK: class Bar {
+class Baz {
   operator Foo() const {  // CHECK: operator Bar() const {
+// offset  ^
     Foo foo;              // CHECK: Bar foo;
     return foo;
   }

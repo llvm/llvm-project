@@ -774,6 +774,9 @@ DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule (Process *p
     // have the correct segment load addresses.
     if (!ReadMemoryModule (process))
     {
+        Log *log(GetLogIfAnyCategoriesSet (LIBLLDB_LOG_DYNAMIC_LOADER));
+        if (log)
+            log->Printf("Unable to read '%s' from memory at address 0x%" PRIx64 " to get the segment load addresses.", m_name.c_str(), m_load_address);
         return false;
     }
 
