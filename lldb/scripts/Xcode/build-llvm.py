@@ -19,11 +19,11 @@ def LLVM_HASH_INCLUDES_DIFFS ():
 # it with regexps.  Only change how this works if you know what you are doing.
 
 def LLVM_REF ():
-    llvm_ref = "master"
+    llvm_ref = "release_39"
     return llvm_ref
 
 def CLANG_REF ():
-    clang_ref = "master"
+    clang_ref = "release_39"
     return clang_ref
 
 # For use with Xcode-style builds
