@@ -177,6 +177,11 @@ addPassesToGenerateCode(LLVMTargetMachine *TM, PassManagerBase &PM,
     if (PassConfig->addRegBankSelect())
       return nullptr;
 
+    PassConfig->addPreGlobalInstructionSelect();
+
+    if (PassConfig->addGlobalInstructionSelect())
+      return nullptr;
+
   } else if (PassConfig->addInstSelector())
     return nullptr;
 

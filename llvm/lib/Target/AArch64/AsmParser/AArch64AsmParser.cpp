@@ -4212,7 +4212,7 @@ bool AArch64AsmParser::parseDirectiveArch(SMLoc L) {
       getParser().parseStringToEndOfStatement().trim().split('+');
 
   unsigned ID = AArch64::parseArch(Arch);
-  if (ID == ARM::AK_INVALID) {
+  if (ID == static_cast<unsigned>(AArch64::ArchKind::AK_INVALID)) {
     Error(ArchLoc, "unknown arch name");
     return false;
   }

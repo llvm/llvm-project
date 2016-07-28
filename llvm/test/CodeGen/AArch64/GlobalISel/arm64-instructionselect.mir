@@ -1,0 +1,118 @@
+# RUN: llc -O0 -run-pass=instruction-select -global-isel %s -o - | FileCheck %s
+# REQUIRES: global-isel
+
+# Test the instruction selector.
+# As we support more instructions, we need to split this up.
+
+--- |
+  target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
+  target triple = "aarch64-apple-ios"
+
+  define void @add_s32_gpr() { ret void }
+  define void @add_s64_gpr() { ret void }
+
+  define void @or_s32_gpr() { ret void }
+  define void @or_s64_gpr() { ret void }
+
+...
+
+---
+# Check that we select a 32-bit GPR G_ADD into ADDWrr on GPR32.
+# Also check that we constrain the register class of the COPY to GPR32.
+# CHECK-LABEL: name: add_s32_gpr
+name:            add_s32_gpr
+alignment:       2
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = ADDWrr %0, %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(32) = COPY %w0
+    %1(32) = G_ADD s32 %0, %0
+...
+
+---
+# Same as add_s32_gpr, for 64-bit operations.
+# CHECK-LABEL: name: add_s64_gpr
+name:            add_s64_gpr
+alignment:       2
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = ADDXrr %0, %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(64) = G_ADD s64 %0, %0
+...
+
+---
+# Same as add_s32_gpr, for G_OR operations.
+# CHECK-LABEL: name: or_s32_gpr
+name:            or_s32_gpr
+alignment:       2
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = ORRWrr %0, %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(32) = COPY %w0
+    %1(32) = G_OR s32 %0, %0
+...
+
+---
+# Same as add_s64_gpr, for G_OR operations.
+# CHECK-LABEL: name: or_s64_gpr
+name:            or_s64_gpr
+alignment:       2
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = ORRXrr %0, %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(64) = G_OR s64 %0, %0
+...

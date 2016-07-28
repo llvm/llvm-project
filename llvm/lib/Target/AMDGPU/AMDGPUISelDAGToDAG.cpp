@@ -67,7 +67,7 @@ public:
   void PostprocessISelDAG() override;
 
 private:
-  bool isInlineImmediate(SDNode *N) const;
+  bool isInlineImmediate(const SDNode *N) const;
   bool FoldOperand(SDValue &Src, SDValue &Sel, SDValue &Neg, SDValue &Abs,
                    const R600InstrInfo *TII);
   bool FoldOperands(unsigned, const R600InstrInfo *, std::vector<SDValue> &);
@@ -175,10 +175,17 @@ bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
 AMDGPUDAGToDAGISel::~AMDGPUDAGToDAGISel() {
 }
 
-bool AMDGPUDAGToDAGISel::isInlineImmediate(SDNode *N) const {
-  const SITargetLowering *TL
-      = static_cast<const SITargetLowering *>(getTargetLowering());
-  return TL->analyzeImmediate(N) == 0;
+bool AMDGPUDAGToDAGISel::isInlineImmediate(const SDNode *N) const {
+  const SIInstrInfo *TII
+    = static_cast<const SISubtarget *>(Subtarget)->getInstrInfo();
+
+  if (const ConstantSDNode *C = dyn_cast<ConstantSDNode>(N))
+    return TII->isInlineConstant(C->getAPIntValue());
+
+  if (const ConstantFPSDNode *C = dyn_cast<ConstantFPSDNode>(N))
+    return TII->isInlineConstant(C->getValueAPF().bitcastToAPInt());
+
+  return false;
 }
 
 /// \brief Determine the register class for \p OpNo

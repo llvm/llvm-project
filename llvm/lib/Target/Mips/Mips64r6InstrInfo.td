@@ -49,7 +49,7 @@ class SCD_R6_ENC : SPECIAL3_LL_SC_FM<OPCODE6_SCD>;
 class AHI_ATI_DESC_BASE<string instr_asm, RegisterOperand GPROpnd, InstrItinClass itin> {
   dag OutOperandList = (outs GPROpnd:$rs);
   dag InOperandList = (ins GPROpnd:$rt, simm16_relaxed:$imm);
-  string AsmString = !strconcat(instr_asm, "\t$rt, $imm");
+  string AsmString = !strconcat(instr_asm, "\t$rt, $rs, $imm");
   string Constraints = "$rs = $rt";
   InstrItinClass Itinerary = itin;
 }

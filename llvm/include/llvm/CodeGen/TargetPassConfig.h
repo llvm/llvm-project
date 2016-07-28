@@ -234,6 +234,16 @@ public:
   /// class or register banks.
   virtual bool addRegBankSelect() { return true; }
 
+  /// This method may be implemented by targets that want to run passes
+  /// immediately before the (global) instruction selection.
+  virtual void addPreGlobalInstructionSelect() {}
+
+  /// This method should install a (global) instruction selector pass, which
+  /// converts possibly generic instructions to fully target-specific
+  /// instructions, thereby constraining all generic virtual registers to
+  /// register classes.
+  virtual bool addGlobalInstructionSelect() { return true; }
+
   /// Add the complete, standard set of LLVM CodeGen passes.
   /// Fully developed targets will not generally override this.
   virtual void addMachinePasses();

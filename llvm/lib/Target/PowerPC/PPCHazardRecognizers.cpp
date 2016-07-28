@@ -226,7 +226,7 @@ void PPCDispatchGroupSBHazardRecognizer::EmitNoop() {
   // group-terminating nop, the group is complete.
   // FIXME: the same for P9 as previous gen until POWER9 scheduling is ready
   if (Directive == PPC::DIR_PWR6 || Directive == PPC::DIR_PWR7 ||
-      Directive == PPC::DIR_PWR8 || Directive == PPC::DIR_PWR8 ||
+      Directive == PPC::DIR_PWR8 || Directive == PPC::DIR_PWR9 ||
       CurSlots == 6) {
     CurGroup.clear();
     CurSlots = CurBranches = 0;

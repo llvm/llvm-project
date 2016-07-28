@@ -14,6 +14,14 @@
 
 namespace llvm {
 
+enum class ExceptionHandling {
+  None,     /// No exception support
+  DwarfCFI, /// DWARF-like instruction based exceptions
+  SjLj,     /// setjmp/longjmp based exceptions
+  ARM,      /// ARM EHABI
+  WinEH,    /// Windows Exception Handling
+};
+
 class StringRef;
 
 class MCTargetOptions {

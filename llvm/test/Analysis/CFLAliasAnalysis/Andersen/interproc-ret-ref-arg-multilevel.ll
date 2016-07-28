@@ -30,6 +30,9 @@ define i32*** @return_ref_arg_multilevel_callee(i32* %arg1) {
 ; CHECK: MayAlias: i32* %lb_deref, i32* %lp
 ; CHECK: NoAlias: i32* %lp, i32** %lpp
 ; CHECK: MayAlias: i32* %lp, i32* %lpp_deref
+
+; CHECK: Just Mod: Ptr: i32*** %b <-> %b = call i32*** @return_ref_arg_multilevel_callee(i32* %a)
+; CHECK: Just Mod: Ptr: i32** %lb <-> %b = call i32*** @return_ref_arg_multilevel_callee(i32* %a)
 define void @test_return_ref_arg_multilevel() {
   %a = alloca i32, align 4
   %p = alloca i32*, align 8

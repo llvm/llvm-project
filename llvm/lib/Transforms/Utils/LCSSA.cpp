@@ -315,6 +315,11 @@ struct LCSSAWrapperPass : public FunctionPass {
   ScalarEvolution *SE;
 
   bool runOnFunction(Function &F) override;
+  void verifyAnalysis() const override {
+    assert(
+        all_of(*LI, [&](Loop *L) { return L->isRecursivelyLCSSAForm(*DT); }) &&
+        "LCSSA form is broken!");
+  };
 
   /// This transformation requires natural loop information & requires that
   /// loop preheaders be inserted into the CFG.  It maintains both of these,

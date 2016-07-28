@@ -196,6 +196,13 @@ public:
     return Match_InvalidOperand;
   }
 
+  /// Validate the instruction match against any complex target predicates
+  /// before rendering any operands to it.
+  virtual unsigned
+  checkEarlyTargetMatchPredicate(MCInst &Inst, const OperandVector &Operands) {
+    return Match_Success;
+  }
+
   /// checkTargetMatchPredicate - Validate the instruction match against
   /// any complex target predicates not expressible via match classes.
   virtual unsigned checkTargetMatchPredicate(MCInst &Inst) {

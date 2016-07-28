@@ -329,10 +329,9 @@ typename Tr::RegionNodeT *RegionBase<Tr>::getBBNode(BlockT *BB) const {
 
   if (at == BBNodeMap.end()) {
     auto Deconst = const_cast<RegionBase<Tr> *>(this);
-    at = BBNodeMap
-             .emplace(BB, make_unique<RegionNodeT>(
-                              static_cast<RegionT *>(Deconst), BB))
-             .first;
+    typename BBNodeMapT::value_type V = {
+        BB, make_unique<RegionNodeT>(static_cast<RegionT *>(Deconst), BB)};
+    at = BBNodeMap.insert(std::move(V)).first;
   }
   return at->second.get();
 }

@@ -618,9 +618,9 @@ bool PPCCTRLoops::convertToCTRLoop(Loop *L) {
 }
 
 #ifndef NDEBUG
-static bool clobbersCTR(const MachineInstr *MI) {
-  for (unsigned i = 0, e = MI->getNumOperands(); i != e; ++i) {
-    const MachineOperand &MO = MI->getOperand(i);
+static bool clobbersCTR(const MachineInstr &MI) {
+  for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
+    const MachineOperand &MO = MI.getOperand(i);
     if (MO.isReg()) {
       if (MO.isDef() && (MO.getReg() == PPC::CTR || MO.getReg() == PPC::CTR8))
         return true;
@@ -659,7 +659,7 @@ check_block:
       break;
     }
 
-    if (I != BI && clobbersCTR(I)) {
+    if (I != BI && clobbersCTR(*I)) {
       DEBUG(dbgs() << "BB#" << MBB->getNumber() << " (" <<
                       MBB->getFullName() << ") instruction " << *I <<
                       " clobbers CTR, invalidating " << "BB#" <<

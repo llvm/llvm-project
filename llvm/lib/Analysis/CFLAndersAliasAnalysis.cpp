@@ -859,6 +859,112 @@ AliasResult CFLAndersAAResult::alias(const MemoryLocation &LocA,
   return QueryResult;
 }
 
+ModRefInfo CFLAndersAAResult::getArgModRefInfo(ImmutableCallSite CS,
+                                               unsigned ArgIdx) {
+  if (auto CalledFunc = CS.getCalledFunction()) {
+    if (!CalledFunc->hasExactDefinition())
+      return MRI_ModRef;
+
+    auto &MaybeInfo = ensureCached(*CalledFunc);
+    if (!MaybeInfo.hasValue())
+      return MRI_ModRef;
+    auto &RetParamAttributes = MaybeInfo->getAliasSummary().RetParamAttributes;
+    auto &RetParamRelations = MaybeInfo->getAliasSummary().RetParamRelations;
+
+    bool ArgAttributeIsWritten =
+        any_of(RetParamAttributes, [ArgIdx](const ExternalAttribute &ExtAttr) {
+          return ExtAttr.IValue.Index == ArgIdx + 1;
+        });
+
+    // If the argument is unknown, escaped, or alias global, be conservative.
+    // FIXME: Do we really need to be conservative for AttrGlobal?
+    if (ArgAttributeIsWritten)
+      return MRI_ModRef;
+
+    bool ArgIsRead = any_of(RetParamRelations,
+                            [ArgIdx](const ExternalRelation &ExtRelation) {
+                              return ExtRelation.From.Index == ArgIdx + 1;
+                            });
+
+    bool ArgIsWritten = any_of(RetParamRelations,
+                               [ArgIdx](const ExternalRelation &ExtRelation) {
+                                 return ExtRelation.To.Index == ArgIdx + 1;
+                               });
+
+    if (ArgIsRead)
+      return ArgIsWritten ? MRI_ModRef : MRI_Ref;
+    return ArgIsWritten ? MRI_Mod : MRI_NoModRef;
+  }
+
+  return MRI_ModRef;
+}
+
+FunctionModRefBehavior
+CFLAndersAAResult::getModRefBehavior(ImmutableCallSite CS) {
+  // If we know the callee, try analyzing it
+  if (auto CalledFunc = CS.getCalledFunction())
+    return getModRefBehavior(CalledFunc);
+
+  // Otherwise, be conservative
+  return FMRB_UnknownModRefBehavior;
+}
+
+FunctionModRefBehavior CFLAndersAAResult::getModRefBehavior(const Function *F) {
+  assert(F != nullptr);
+
+  // We cannot process external functions
+  if (!F->hasExactDefinition())
+    return FMRB_UnknownModRefBehavior;
+
+  auto &MaybeInfo = ensureCached(*F);
+  if (!MaybeInfo.hasValue())
+    return FMRB_UnknownModRefBehavior;
+  auto &RetParamAttributes = MaybeInfo->getAliasSummary().RetParamAttributes;
+  auto &RetParamRelations = MaybeInfo->getAliasSummary().RetParamRelations;
+
+  // First, if any argument is marked Escpaed, Unknown or Global, anything may
+  // happen to them and thus we can't draw any conclusion.
+  // FIXME: Do we really need to be conservative for AttrGlobal?
+  if (!RetParamAttributes.empty())
+    return FMRB_UnknownModRefBehavior;
+
+  // Check if memory gets touched.
+  bool MemIsRead =
+      any_of(RetParamRelations, [](const ExternalRelation &ExtRelation) {
+        return ExtRelation.From.DerefLevel > 0;
+      });
+  bool MemIsWritten =
+      any_of(RetParamRelations, [](const ExternalRelation &ExtRelation) {
+        return ExtRelation.To.DerefLevel > 0;
+      });
+  if (!MemIsRead && !MemIsWritten)
+    return FMRB_DoesNotAccessMemory;
+
+  // Check if only argmem gets touched.
+  bool ArgMemIsAccessed =
+      all_of(RetParamRelations, [](const ExternalRelation &ExtRelation) {
+        return ExtRelation.From.Index > 0 && ExtRelation.From.DerefLevel <= 1 &&
+               ExtRelation.To.Index > 0 && ExtRelation.To.DerefLevel <= 1;
+      });
+  if (ArgMemIsAccessed)
+    return FMRB_OnlyAccessesArgumentPointees;
+
+  if (!MemIsWritten) {
+    // Check if something beyond argmem gets read.
+    bool ArgMemReadOnly =
+        all_of(RetParamRelations, [](const ExternalRelation &ExtRelation) {
+          return ExtRelation.From.Index > 0 && ExtRelation.From.DerefLevel <= 1;
+        });
+    return ArgMemReadOnly ? FMRB_OnlyReadsArgumentPointees
+                          : FMRB_OnlyReadsMemory;
+  }
+
+  if (!MemIsRead)
+    return FMRB_DoesNotReadMemory;
+
+  return FMRB_UnknownModRefBehavior;
+}
+
 char CFLAndersAA::PassID;
 
 CFLAndersAAResult CFLAndersAA::run(Function &F, AnalysisManager<Function> &AM) {

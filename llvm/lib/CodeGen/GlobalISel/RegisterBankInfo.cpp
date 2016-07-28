@@ -189,6 +189,25 @@ const RegisterBank *RegisterBankInfo::getRegBankFromConstraints(
   return &RegBank;
 }
 
+const TargetRegisterClass *RegisterBankInfo::constrainGenericRegister(
+    unsigned Reg, const TargetRegisterClass &RC, MachineRegisterInfo &MRI) {
+
+  // If the register already has a class, fallback to MRI::constrainRegClass.
+  auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+  if (RegClassOrBank.is<const TargetRegisterClass *>())
+    return MRI.constrainRegClass(Reg, &RC);
+
+  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  assert(RB && "Generic register does not have a register bank");
+
+  // Otherwise, all we can do is ensure the bank covers the class, and set it.
+  if (!RB->covers(RC))
+    return nullptr;
+
+  MRI.setRegClass(Reg, &RC);
+  return &RC;
+}
+
 RegisterBankInfo::InstructionMapping
 RegisterBankInfo::getInstrMappingImpl(const MachineInstr &MI) const {
   RegisterBankInfo::InstructionMapping Mapping(DefaultMappingID, /*Cost*/ 1,

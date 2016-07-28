@@ -20,6 +20,8 @@ define i32** @return_ref_arg_callee(i32* %arg1) {
 ; CHECK: NoAlias: i32* %lp, i32** %p
 ; CHECK: NoAlias: i32* %lp, i32** %b
 ; CHECK: MayAlias: i32* %lb, i32* %lp
+
+; CHECK: Just Mod: Ptr: i32** %b <-> %b = call i32** @return_ref_arg_callee(i32* %a)
 define void @test_return_ref_arg() {
   %a = alloca i32, align 4
   %p = alloca i32*, align 8

@@ -91,7 +91,8 @@ private:
       const HexagonRegisterInfo &HRI, bool &PrologueStubs) const;
   bool insertCSRRestoresInBlock(MachineBasicBlock &MBB, const CSIVect &CSI,
       const HexagonRegisterInfo &HRI) const;
-  bool updateExitPaths(MachineBasicBlock &MBB, MachineBasicBlock *RestoreB,
+  void updateEntryPaths(MachineFunction &MF, MachineBasicBlock &SaveB) const;
+  bool updateExitPaths(MachineBasicBlock &MBB, MachineBasicBlock &RestoreB,
       BitVector &DoneT, BitVector &DoneF, BitVector &Path) const;
   void insertCFIInstructionsAt(MachineBasicBlock &MBB,
       MachineBasicBlock::iterator At) const;

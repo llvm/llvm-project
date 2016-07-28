@@ -50,8 +50,8 @@ public:
   Ty &operator*() const { return *MII; }
   Ty *operator->() const { return &operator*(); }
 
-  // FIXME: This conversion should be explicit.
-  operator Ty *() const { return MII.getNodePtrUnchecked(); }
+  // FIXME: This should be implemented as "return &operator*()" (or removed).
+  explicit operator Ty *() const { return MII.getNodePtrUnchecked(); }
 
   bool operator==(const MachineInstrBundleIterator &X) const {
     return MII == X.MII;

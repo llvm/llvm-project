@@ -933,7 +933,7 @@ static bool removePartiallyOverlappedStores(AliasAnalysis *AA,
     int64_t EarlierSize = int64_t(Loc.Size);
     GetPointerBaseWithConstantOffset(Ptr, EarlierStart, DL);
     OverlapIntervalsTy &IntervalMap = OI.second;
-    Changed =
+    Changed |=
         tryToShortenEnd(EarlierWrite, IntervalMap, EarlierStart, EarlierSize);
     if (IntervalMap.empty())
       continue;
@@ -1079,7 +1079,7 @@ static bool eliminateDeadStores(BasicBlock &BB, AliasAnalysis *AA,
           int64_t EarlierSize = DepLoc.Size;
           int64_t LaterSize = Loc.Size;
           bool IsOverwriteEnd = (OR == OverwriteEnd);
-          MadeChange = tryToShorten(DepWrite, DepWriteOffset, EarlierSize,
+          MadeChange |= tryToShorten(DepWrite, DepWriteOffset, EarlierSize,
                                     InstWriteOffset, LaterSize, IsOverwriteEnd);
         }
       }

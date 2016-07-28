@@ -442,6 +442,7 @@ private:
   unsigned readPhdrType();
   void readProvide(bool Hidden);
   void readAlign(OutputSectionCommand *Cmd);
+  void readSort();
 
   Expr readExpr();
   Expr readExpr1(Expr Lhs, int MinPrec);
@@ -701,6 +702,12 @@ void ScriptParser::readAlign(OutputSectionCommand *Cmd) {
   expect(")");
 }
 
+void ScriptParser::readSort() {
+  expect("(");
+  expect("CONSTRUCTORS");
+  expect(")");
+}
+
 void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   OutputSectionCommand *Cmd = new OutputSectionCommand(OutSec);
   Opt.Commands.emplace_back(Cmd);
@@ -736,6 +743,8 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       readProvide(false);
     } else if (Tok == "PROVIDE_HIDDEN") {
       readProvide(true);
+    } else if (Tok == "SORT") {
+      readSort();
     } else {
       setError("unknown command " + Tok);
     }
