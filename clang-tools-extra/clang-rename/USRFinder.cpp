@@ -42,8 +42,9 @@ public:
   // \brief Finds the NamedDecl for a name in the source.
   // \param Name the fully qualified name.
   explicit NamedDeclFindingASTVisitor(const SourceManager &SourceMgr,
-                                      const std::string &Name)
-      : Result(nullptr), SourceMgr(SourceMgr), Name(Name) {}
+                                      const std::string &Name,
+                                      const ASTContext *Context)
+      : Result(nullptr), SourceMgr(SourceMgr), Name(Name), Context(Context) {}
 
   // Declaration visitors:
 
@@ -52,8 +53,8 @@ public:
   // checking if the point lies within the length of the name of the declaration
   // and the start location is sufficient.
   bool VisitNamedDecl(const NamedDecl *Decl) {
-    return setResult(Decl, Decl->getLocation(),
-                     Decl->getNameAsString().length());
+    return dyn_cast<CXXConversionDecl>(Decl) ? true :
+        setResult(Decl, Decl->getLocation(), Decl->getNameAsString().length());
   }
 
   // Expression visitors:
@@ -75,9 +76,10 @@ public:
   bool VisitTypeLoc(const TypeLoc Loc) {
     const auto TypeBeginLoc = Loc.getBeginLoc();
     const auto TypeEndLoc = Lexer::getLocForEndOfToken(
-                   TypeBeginLoc, 0, SourceMgr, Context->getLangOpts());
-    return setResult(Loc.getType()->getAsCXXRecordDecl(), TypeBeginLoc,
-                     TypeEndLoc);
+        TypeBeginLoc, 0, SourceMgr, Context->getLangOpts());
+    if (auto *RD = Loc.getType()->getAsCXXRecordDecl())
+      return setResult(RD, TypeBeginLoc, TypeEndLoc);
+    return true;
   }
 
   // Other:
@@ -170,7 +172,7 @@ const NamedDecl *getNamedDeclAt(const ASTContext &Context,
 const NamedDecl *getNamedDeclFor(const ASTContext &Context,
                                  const std::string &Name) {
   const auto &SourceMgr = Context.getSourceManager();
-  NamedDeclFindingASTVisitor Visitor(SourceMgr, Name);
+  NamedDeclFindingASTVisitor Visitor(SourceMgr, Name, &Context);
   Visitor.TraverseDecl(Context.getTranslationUnitDecl());
 
   return Visitor.getNamedDecl();

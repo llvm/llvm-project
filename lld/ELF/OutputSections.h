@@ -65,6 +65,7 @@ public:
   uintX_t getSize() const { return Header.sh_size; }
   void setSize(uintX_t Val) { Header.sh_size = Val; }
   uintX_t getFlags() const { return Header.sh_flags; }
+  uint32_t getPhdrFlags() const;
   uintX_t getFileOff() const { return Header.sh_offset; }
   uintX_t getAlignment() const { return Header.sh_addralign; }
   uint32_t getType() const { return Header.sh_type; }
