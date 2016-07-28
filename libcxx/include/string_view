@@ -356,7 +356,7 @@ public:
 	}
 
 	_LIBCPP_CONSTEXPR_AFTER_CXX11 _LIBCPP_INLINE_VISIBILITY
-	int compare(const _CharT* __s) const
+	int compare(const _CharT* __s) const _NOEXCEPT
 	{
 		return compare(basic_string_view(__s));
 	}

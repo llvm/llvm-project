@@ -1934,6 +1934,10 @@ TEST_F(FormatTest, UnderstandsAccessSpecifiers) {
   verifyFormat("{\n"
                "  signals.set(); // This needs indentation.\n"
                "}");
+  verifyFormat("void f() {\n"
+               "label:\n"
+               "  signals.baz();\n"
+               "}");
 }
 
 TEST_F(FormatTest, SeparatesLogicalBlocks) {

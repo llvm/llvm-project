@@ -264,7 +264,17 @@ CodeGenFunction::GenerateOpenMPCapturedStmtFunction(const CapturedStmt &S) {
     // If we are capturing a pointer by copy we don't need to do anything, just
     // use the value that we get from the arguments.
     if (I->capturesVariableByCopy() && FD->getType()->isAnyPointerType()) {
-      setAddrOfLocalVar(I->getCapturedVar(), GetAddrOfLocalVar(Args[Cnt]));
+      const VarDecl *CurVD = I->getCapturedVar();
+      Address LocalAddr = GetAddrOfLocalVar(Args[Cnt]);
+      // If the variable is a reference we need to materialize it here.
+      if (CurVD->getType()->isReferenceType()) {
+        Address RefAddr = CreateMemTemp(CurVD->getType(), getPointerAlign(),
+                                        ".materialized_ref");
+        EmitStoreOfScalar(LocalAddr.getPointer(), RefAddr, /*Volatile=*/false,
+                          CurVD->getType());
+        LocalAddr = RefAddr;
+      }
+      setAddrOfLocalVar(CurVD, LocalAddr);
       ++Cnt;
       ++I;
       continue;

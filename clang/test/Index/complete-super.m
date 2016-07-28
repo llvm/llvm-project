@@ -60,7 +60,7 @@ typedef int Bool;
 // RUN: c-index-test -code-completion-at=%s:20:16 %s | FileCheck -check-prefix=CHECK-ADD-TO %s
 // CHECK-ADD-TO: ObjCInstanceMethodDecl:{ResultType void}{Informative add:}{TypedText to:}{Placeholder b} (20)
 
-// RUN: c-index-test -code-completion-at=%s:24:28 %s | FileCheck -check-prefix=CHECK-SELECTOR-FIRST %s
+// RUN: c-index-test -code-completion-at=%s:24:29 %s | FileCheck -check-prefix=CHECK-SELECTOR-FIRST %s
 // CHECK-SELECTOR-FIRST: ObjCClassMethodDecl:{ResultType void}{Informative select:}{TypedText first:}{Placeholder a}{HorizontalSpace  }{Text second:}{Placeholder b} (20)
 
 // Check "super" completion at the third identifier
@@ -69,7 +69,7 @@ typedef int Bool;
 
 // Check "super" completion with missing '['.
 // RUN: c-index-test -code-completion-at=%s:25:10 %s | FileCheck -check-prefix=CHECK-SELECTOR-SELECTOR %s
-// RUN: c-index-test -code-completion-at=%s:25:28 %s | FileCheck -check-prefix=CHECK-SELECTOR-FIRST %s
+// RUN: c-index-test -code-completion-at=%s:25:29 %s | FileCheck -check-prefix=CHECK-SELECTOR-FIRST %s
 // RUN: c-index-test -code-completion-at=%s:25:37 %s | FileCheck -check-prefix=CHECK-SELECTOR-SECOND %s
 
 // Check "super" completion for a method declared in a category.
