@@ -2117,7 +2117,7 @@ _mm256_cvtps_pd(__m128 __a)
 static __inline __m128i __DEFAULT_FN_ATTRS
 _mm256_cvttpd_epi32(__m256d __a)
 {
-  return (__m128i)__builtin_convertvector((__v4df) __a, __v4si);
+  return (__m128i)__builtin_ia32_cvttpd2dq256((__v4df) __a);
 }
 
 static __inline __m128i __DEFAULT_FN_ATTRS
@@ -2129,7 +2129,7 @@ _mm256_cvtpd_epi32(__m256d __a)
 static __inline __m256i __DEFAULT_FN_ATTRS
 _mm256_cvttps_epi32(__m256 __a)
 {
-  return (__m256i)__builtin_convertvector((__v8sf) __a, __v8si);
+  return (__m256i)__builtin_ia32_cvttps2dq256((__v8sf) __a);
 }
 
 static __inline double __DEFAULT_FN_ATTRS

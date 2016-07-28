@@ -286,13 +286,13 @@ __m256d test_mm256_cvtps_pd(__m128 A) {
 
 __m128i test_mm256_cvttpd_epi32(__m256d A) {
   // CHECK-LABEL: test_mm256_cvttpd_epi32
-  // CHECK: fptosi <4 x double> %{{.*}} to <4 x i32>
+  // CHECK: call <4 x i32> @llvm.x86.avx.cvtt.pd2dq.256(<4 x double> %{{.*}})
   return _mm256_cvttpd_epi32(A);
 }
 
 __m256i test_mm256_cvttps_epi32(__m256 A) {
   // CHECK-LABEL: test_mm256_cvttps_epi32
-  // CHECK: fptosi <8 x float> %{{.*}} to <8 x i32>
+  // CHECK: call <8 x i32> @llvm.x86.avx.cvtt.ps2dq.256(<8 x float> %{{.*}})
   return _mm256_cvttps_epi32(A);
 }
 

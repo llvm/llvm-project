@@ -1350,7 +1350,7 @@ _mm_cvt_ps2pi(__m128 __a)
 static __inline__ int __DEFAULT_FN_ATTRS
 _mm_cvttss_si32(__m128 __a)
 {
-  return __a[0];
+  return __builtin_ia32_cvttss2si((__v4sf)__a);
 }
 
 /// \brief Converts a float value contained in the lower 32 bits of a vector of
@@ -1386,7 +1386,7 @@ _mm_cvtt_ss2si(__m128 __a)
 static __inline__ long long __DEFAULT_FN_ATTRS
 _mm_cvttss_si64(__m128 __a)
 {
-  return __a[0];
+  return __builtin_ia32_cvttss2si64((__v4sf)__a);
 }
 
 /// \brief Converts two low-order float values in a 128-bit vector of
