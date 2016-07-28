@@ -101,8 +101,7 @@ endmacro(clang_opencl_code)
 enable_testing()
 
 macro(clang_opencl_test name dir)
-  #clang_opencl_code(${dir} ${name} llvm ocml opencl)
-  clang_opencl_code(${name} ${dir} opencl ocml ockl oclc llvm)
+  clang_opencl_code(${name} ${dir} opencl ocml ockl oclc irif)
   add_test(
     NAME ${name}:llvm-objdump
     COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji $<TARGET_FILE:${name}_code>

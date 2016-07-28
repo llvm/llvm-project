@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "llvm.h"
+#include "irif.h"
 #include "ockl.h"
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable

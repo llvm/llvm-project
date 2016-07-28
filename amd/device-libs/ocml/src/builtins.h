@@ -33,7 +33,7 @@
 #define CLASS_PNOR 0x100
 #define CLASS_PINF 0x200
 
-#include "llvm.h"
+#include "irif.h"
 
 #define BUILTIN_ABS_F32 __llvm_fabs_f32
 #define BUILTIN_ABS_F64 __llvm_fabs_f64

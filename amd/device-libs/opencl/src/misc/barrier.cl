@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "llvm.h"
+#include "irif.h"
 
 __attribute__((always_inline, overloadable)) void
 barrier(cl_mem_fence_flags flags)

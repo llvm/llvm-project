@@ -6,9 +6,9 @@ This repository contains the following libraries:
 
 | **Name** | **Comments** | **Dependencies** |
 | --- | --- | --- |
-| llvm | Utility functions | |
-| ocml | Open Compute Math library ([documentation](doc/OCML.md)) | llvm |
-| ockl | Open Compute Kernel library. | llvm |
+| irif | Interface to LLVM IR | |
+| ocml | Open Compute Math library ([documentation](doc/OCML.md)) | irif |
+| ockl | Open Compute Kernel library. | irif |
 | opencl | OpenCL built-in library | ocml, ockl |
 
 All libraries are compiled to LLVM Bitcode which can be linked. Note that libraries use specific AMDGPU intrinsics.

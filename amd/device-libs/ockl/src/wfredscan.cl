@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "llvm.h"
+#include "irif.h"
 extern uint __llvm_readlane(uint, int); // FIXME
 #include "ockl.h"
 #include "oclc.h"

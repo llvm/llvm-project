@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "llvm.h"
+#include "irif.h"
 
 // Value of log2(10)
 #define M_LOG2_10_F 0x1.a934f0p+1f

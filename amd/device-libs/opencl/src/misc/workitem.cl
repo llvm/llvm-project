@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "llvm.h"
+#include "irif.h"
 #include "device_amd_hsa.h"
 
 #define ATTR __attribute__((always_inline, overloadable, const))

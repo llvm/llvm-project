@@ -5,7 +5,7 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "llvm.h"
+#include "irif.h"
 #include "ockl.h"
 
 #define ATTR __attribute__((always_inline, const))

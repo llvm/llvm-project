@@ -5,8 +5,8 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#ifndef LLVM_H
-#define LLVM_H
+#ifndef IRIF_H
+#define IRIF_H
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
@@ -189,4 +189,4 @@ extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f32(float, float, uint) _
 extern __attribute__((const)) ulong __llvm_amdgcn_fcmp_f64(double, double, uint) __asm("llvm.amdgcn.fcmp.f64");
 
 #pragma OPENCL EXTENSION cl_khr_fp16 : disable
-#endif // LLVM_H
+#endif // IRIF_H
