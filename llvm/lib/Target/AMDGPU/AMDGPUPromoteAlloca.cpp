@@ -477,11 +477,6 @@ static bool tryPromoteAllocaToVector(AllocaInst *Alloca) {
 }
 
 static bool isCallPromotable(CallInst *CI) {
-  // TODO: We might be able to handle some cases where the callee is a
-  // constantexpr bitcast of a function.
-  if (!CI->getCalledFunction())
-    return false;
-
   IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI);
   if (!II)
     return false;
@@ -773,28 +768,7 @@ void AMDGPUPromoteAlloca::handleAlloca(AllocaInst &I) {
       continue;
     }
 
-    IntrinsicInst *Intr = dyn_cast<IntrinsicInst>(Call);
-    if (!Intr) {
-      // FIXME: What is this for? It doesn't make sense to promote arbitrary
-      // function calls. If the call is to a defined function that can also be
-      // promoted, we should be able to do this once that function is also
-      // rewritten.
-
-      std::vector<Type*> ArgTypes;
-      for (unsigned ArgIdx = 0, ArgEnd = Call->getNumArgOperands();
-                                ArgIdx != ArgEnd; ++ArgIdx) {
-        ArgTypes.push_back(Call->getArgOperand(ArgIdx)->getType());
-      }
-      Function *F = Call->getCalledFunction();
-      FunctionType *NewType = FunctionType::get(Call->getType(), ArgTypes,
-                                                F->isVarArg());
-      Constant *C = Mod->getOrInsertFunction((F->getName() + ".local").str(),
-                                             NewType, F->getAttributes());
-      Function *NewF = cast<Function>(C);
-      Call->setCalledFunction(NewF);
-      continue;
-    }
-
+    IntrinsicInst *Intr = cast<IntrinsicInst>(Call);
     Builder.SetInsertPoint(Intr);
     switch (Intr->getIntrinsicID()) {
     case Intrinsic::lifetime_start:
