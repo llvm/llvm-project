@@ -25,6 +25,7 @@ namespace llvm {
 
 class CallLowering;
 class DataLayout;
+class InstructionSelector;
 class MachineFunction;
 class MachineInstr;
 class MachineLegalizer;
@@ -89,6 +90,15 @@ public:
     return nullptr;
   }
   virtual const CallLowering *getCallLowering() const { return nullptr; }
+
+  // FIXME: This lets targets specialize the selector by subtarget (which lets
+  // us do things like a dedicated avx512 selector).  However, we might want
+  // to also specialize selectors by MachineFunction, which would let us be
+  // aware of optsize/optnone and such.
+  virtual const InstructionSelector *getInstructionSelector() const {
+    return nullptr;
+  }
+
   /// Target can subclass this hook to select a different DAG scheduler.
   virtual RegisterScheduler::FunctionPassCtor
       getDAGScheduler(CodeGenOpt::Level) const {

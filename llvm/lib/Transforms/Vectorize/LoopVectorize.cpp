@@ -4859,7 +4859,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
   // out of scope. It ensures a uniform instruction will only be used
   // by uniform instructions or out of scope instructions.
   unsigned idx = 0;
-  do {
+  while (idx != Worklist.size()) {
     Instruction *I = Worklist[idx++];
 
     for (auto OV : I->operand_values()) {
@@ -4873,7 +4873,7 @@ void LoopVectorizationLegality::collectLoopUniforms() {
         DEBUG(dbgs() << "LV: Found uniform instruction: " << *OI << "\n");
       }
     }
-  } while (idx != Worklist.size());
+  }
 
   // For an instruction to be added into Worklist above, all its users inside
   // the current loop should be already added into Worklist. This condition

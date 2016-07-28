@@ -30,7 +30,7 @@ enum {
 } // End AArch64 namespace.
 
 /// This class provides the information for the target register banks.
-class AArch64RegisterBankInfo : public RegisterBankInfo {
+class AArch64RegisterBankInfo final : public RegisterBankInfo {
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 

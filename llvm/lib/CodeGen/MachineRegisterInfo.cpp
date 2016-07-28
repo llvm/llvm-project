@@ -136,6 +136,20 @@ MachineRegisterInfo::createGenericVirtualRegister(unsigned Size) {
   return Reg;
 }
 
+void MachineRegisterInfo::clearVirtRegSizes() {
+#ifndef NDEBUG
+  // Verify that the size of the now-constrained vreg is unchanged.
+  for (auto &VRegToSize : getVRegToSize()) {
+    auto *RC = getRegClass(VRegToSize.first);
+    if (VRegToSize.second != (RC->getSize() * 8))
+      llvm_unreachable(
+          "Virtual register has explicit size different from its class size");
+  }
+#endif
+
+  getVRegToSize().clear();
+}
+
 /// clearVirtRegs - Remove all virtual registers (after physreg assignment).
 void MachineRegisterInfo::clearVirtRegs() {
 #ifndef NDEBUG

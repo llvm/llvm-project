@@ -32,7 +32,7 @@ class GlobalValue;
 class StringRef;
 class Triple;
 
-class AArch64Subtarget : public AArch64GenSubtargetInfo {
+class AArch64Subtarget final : public AArch64GenSubtargetInfo {
 public:
   enum ARMProcFamilyEnum : uint8_t {
     Others,
@@ -147,6 +147,7 @@ public:
     return &getInstrInfo()->getRegisterInfo();
   }
   const CallLowering *getCallLowering() const override;
+  const InstructionSelector *getInstructionSelector() const override;
   const MachineLegalizer *getMachineLegalizer() const override;
   const RegisterBankInfo *getRegBankInfo() const override;
   const Triple &getTargetTriple() const { return TargetTriple; }

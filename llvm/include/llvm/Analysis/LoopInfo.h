@@ -342,10 +342,8 @@ public:
   /// Verify loop structure of this loop and all nested loops.
   void verifyLoopNest(DenseSet<const LoopT*> *Loops) const;
 
-  void print(raw_ostream &OS, unsigned Depth = 0, bool Verbose = false) const;
-
   /// Print loop with all the BBs inside it.
-  void printVerbose(raw_ostream &OS, unsigned Depth = 0) const;
+  void print(raw_ostream &OS, unsigned Depth = 0, bool Verbose = false) const;
 
 protected:
   friend class LoopInfoBase<BlockT, LoopT>;

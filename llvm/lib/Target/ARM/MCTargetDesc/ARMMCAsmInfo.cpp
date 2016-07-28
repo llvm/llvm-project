@@ -90,6 +90,7 @@ ARMCOFFMCAsmInfoMicrosoft::ARMCOFFMCAsmInfoMicrosoft() {
 
   PrivateGlobalPrefix = "$M";
   PrivateLabelPrefix = "$M";
+  CommentString = ";";
 }
 
 void ARMCOFFMCAsmInfoGNU::anchor() { }

@@ -10,5 +10,4 @@ entry:
 }
 
 ; CHECK-LABEL: @test1(
-; CHECK: %[[ie:.*]] = insertelement <2 x i16> <i16 undef, i16 0>, i16 extractvalue (%S select (i1 icmp eq (i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), i16 0), %S zeroinitializer, %S { i16 0, i32 1 }), 0), i32 0
-; CHECK: ret <2 x i16> %[[ie]]
+; CHECK: ret <2 x i16> <i16 extractvalue (%S select (i1 icmp eq (i16 extractelement (<2 x i16> bitcast (<1 x i32> <i32 1> to <2 x i16>), i32 0), i16 0), %S zeroinitializer, %S { i16 0, i32 1 }), 0), i16 0>

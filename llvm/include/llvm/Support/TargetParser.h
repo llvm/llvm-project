@@ -145,6 +145,13 @@ unsigned parseArchVersion(StringRef Arch);
 // FIXME:This should be made into class design,to avoid dupplication. 
 namespace AArch64 {
 
+// Arch names.
+enum class ArchKind {
+#define AARCH64_ARCH(NAME, ID, CPU_ATTR, SUB_ARCH, ARCH_ATTR, ARCH_FPU, ARCH_BASE_EXT) ID,
+#include "AArch64TargetParser.def"
+  AK_LAST
+};
+
 // Arch extension modifiers for CPUs.
 enum ArchExtKind : unsigned {
   AEK_INVALID = 0x0,

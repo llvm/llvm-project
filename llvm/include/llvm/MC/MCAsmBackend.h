@@ -13,7 +13,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/MC/MCDirectives.h"
-#include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCFixup.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -21,6 +20,7 @@
 namespace llvm {
 class MCAsmLayout;
 class MCAssembler;
+class MCCFIInstruction;
 class MCELFObjectTargetWriter;
 struct MCFixupKindInfo;
 class MCFragment;
@@ -28,6 +28,7 @@ class MCInst;
 class MCRelaxableFragment;
 class MCObjectWriter;
 class MCSection;
+class MCSubtargetInfo;
 class MCValue;
 class raw_pwrite_stream;
 

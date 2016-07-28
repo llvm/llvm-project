@@ -3647,7 +3647,7 @@ void Verifier::visitInstruction(Instruction &I) {
       // Check to make sure that the "address of" an intrinsic function is never
       // taken.
       Assert(
-          !F->isIntrinsic() ||
+          !F->hasLLVMReservedName() ||
               i == (isa<CallInst>(I) ? e - 1 : isa<InvokeInst>(I) ? e - 3 : 0),
           "Cannot take the address of an intrinsic!", &I);
       Assert(

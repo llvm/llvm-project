@@ -25,6 +25,7 @@
 #include "llvm/DebugInfo/Msf/ByteStream.h"
 #include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCSectionCOFF.h"
 #include "llvm/MC/MCSymbol.h"
@@ -216,10 +217,7 @@ TypeIndex CodeViewDebug::getScopeIndex(const DIScope *Scope) {
 }
 
 TypeIndex CodeViewDebug::getFuncIdForSubprogram(const DISubprogram *SP) {
-  // It's possible to ask for the FuncId of a function which doesn't have a
-  // subprogram: inlining a function with debug info into a function with none.
-  if (!SP)
-    return TypeIndex::None();
+  assert(SP);
 
   // Check if we've already translated this subprogram.
   auto I = TypeIndices.find({SP, nullptr});
@@ -623,11 +621,12 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
 
   std::string FuncName;
   auto *SP = GV->getSubprogram();
+  assert(SP);
   setCurrentSubprogram(SP);
 
   // If we have a display name, build the fully qualified name by walking the
   // chain of scopes.
-  if (SP != nullptr && !SP->getDisplayName().empty())
+  if (!SP->getDisplayName().empty())
     FuncName =
         getFullyQualifiedName(SP->getScope().resolve(), SP->getDisplayName());
 
@@ -866,7 +865,7 @@ void CodeViewDebug::collectVariableInfo(const DISubprogram *SP) {
 void CodeViewDebug::beginFunction(const MachineFunction *MF) {
   assert(!CurFn && "Can't process two functions at once!");
 
-  if (!Asm || !MMI->hasDebugInfo())
+  if (!Asm || !MMI->hasDebugInfo() || !MF->getFunction()->getSubprogram())
     return;
 
   DebugHandlerBase::beginFunction(MF);
@@ -1941,7 +1940,8 @@ void CodeViewDebug::beginInstruction(const MachineInstr *MI) {
   DebugHandlerBase::beginInstruction(MI);
 
   // Ignore DBG_VALUE locations and function prologue.
-  if (!Asm || MI->isDebugValue() || MI->getFlag(MachineInstr::FrameSetup))
+  if (!Asm || !CurFn || MI->isDebugValue() ||
+      MI->getFlag(MachineInstr::FrameSetup))
     return;
   DebugLoc DL = MI->getDebugLoc();
   if (DL == PrevInstLoc || !DL)

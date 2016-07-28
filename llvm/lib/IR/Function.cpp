@@ -488,9 +488,7 @@ static ArrayRef<const char *> findTargetSubtable(StringRef Name) {
 
 /// \brief This does the actual lookup of an intrinsic ID which
 /// matches the given function name.
-static Intrinsic::ID lookupIntrinsicID(const ValueName *ValName) {
-  StringRef Name = ValName->getKey();
-
+static Intrinsic::ID lookupIntrinsicID(StringRef Name) {
   ArrayRef<const char *> NameTable = findTargetSubtable(Name);
   int Idx = Intrinsic::lookupLLVMIntrinsicByName(NameTable, Name);
   if (Idx == -1)
@@ -508,12 +506,11 @@ static Intrinsic::ID lookupIntrinsicID(const ValueName *ValName) {
 }
 
 void Function::recalculateIntrinsicID() {
-  const ValueName *ValName = this->getValueName();
-  if (!ValName || !isIntrinsic()) {
+  if (!hasLLVMReservedName()) {
     IntID = Intrinsic::not_intrinsic;
     return;
   }
-  IntID = lookupIntrinsicID(ValName);
+  IntID = lookupIntrinsicID(getName());
 }
 
 /// Returns a stable mangling for the type specified for use in the name
