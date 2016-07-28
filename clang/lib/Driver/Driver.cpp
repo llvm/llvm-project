@@ -2247,6 +2247,19 @@ InputInfo Driver::BuildJobsForActionNoCache(
     InputInfos.append(OffloadDependencesInputInfo.begin(),
                       OffloadDependencesInputInfo.end());
 
+  // Set the effective triple of the toolchain for the duration of this job.
+  llvm::Triple EffectiveTriple;
+  const ToolChain &ToolTC = T->getToolChain();
+  const ArgList &Args = C.getArgsForToolChain(TC, BoundArch);
+  if (InputInfos.size() != 1) {
+    EffectiveTriple = llvm::Triple(ToolTC.ComputeEffectiveClangTriple(Args));
+  } else {
+    // Pass along the input type if it can be unambiguously determined.
+    EffectiveTriple = llvm::Triple(
+        ToolTC.ComputeEffectiveClangTriple(Args, InputInfos[0].getType()));
+  }
+  RegisterEffectiveTriple TripleRAII(ToolTC, EffectiveTriple);
+
   // Determine the place to write output to, if any.
   InputInfo Result;
   if (JA->getType() == types::TY_Nothing)
@@ -2257,21 +2270,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
                                              TC->getTriple().normalize()),
                        BaseInput);
 
-  llvm::Triple EffectiveTriple;
-  const ArgList &Args = C.getArgsForToolChain(TC, BoundArch);
-  if (InputInfos.size() != 1) {
-    EffectiveTriple = llvm::Triple(
-        T->getToolChain().ComputeEffectiveClangTriple(Args));
-  } else {
-    // Pass along the input type if it can be unambiguously determined.
-    EffectiveTriple =
-        llvm::Triple(T->getToolChain().ComputeEffectiveClangTriple(
-            Args, InputInfos[0].getType()));
-  }
-
   if (CCCPrintBindings && !CCGenDiagnostics) {
-    // FIXME: We should be able to use the effective triple here, but doing so
-    // breaks some multi-arch tests.
     llvm::errs() << "# \"" << T->getToolChain().getTripleString() << '"'
                  << " - \"" << T->getName() << "\", inputs: [";
     for (unsigned i = 0, e = InputInfos.size(); i != e; ++i) {
@@ -2281,7 +2280,7 @@ InputInfo Driver::BuildJobsForActionNoCache(
     }
     llvm::errs() << "], output: " << Result.getAsString() << "\n";
   } else {
-    T->ConstructJob(C, *JA, Result, InputInfos, EffectiveTriple,
+    T->ConstructJob(C, *JA, Result, InputInfos,
                     C.getArgsForToolChain(TC, BoundArch), LinkingOutput);
   }
   return Result;

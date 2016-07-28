@@ -1417,6 +1417,10 @@ llvm::Value *MicrosoftCXXABI::adjustThisParameterInVirtualFunctionPrologue(
 }
 
 void MicrosoftCXXABI::EmitInstanceFunctionProlog(CodeGenFunction &CGF) {
+  // Naked functions have no prolog.
+  if (CGF.CurFuncDecl && CGF.CurFuncDecl->hasAttr<NakedAttr>())
+    return;
+
   EmitThisParam(CGF);
 
   /// If this is a function that the ABI specifies returns 'this', initialize

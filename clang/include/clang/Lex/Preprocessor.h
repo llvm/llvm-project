@@ -265,6 +265,10 @@ class Preprocessor : public RefCountedBase<Preprocessor> {
   /// \brief True if we hit the code-completion point.
   bool CodeCompletionReached;
 
+  /// \brief The code completion token containing the information
+  /// on the stem that is to be code completed.
+  IdentifierInfo *CodeCompletionII;
+
   /// \brief The directory that the main file should be considered to occupy,
   /// if it does not correspond to a real file (as happens when building a
   /// module).
@@ -983,6 +987,18 @@ public:
   /// \brief Hook used by the lexer to invoke the "natural language" code
   /// completion point.
   void CodeCompleteNaturalLanguage();
+
+  /// \brief Set the code completion token for filtering purposes.
+  void setCodeCompletionIdentifierInfo(IdentifierInfo *Filter) {
+    CodeCompletionII = Filter;
+  }
+
+  /// \brief Get the code completion token for filtering purposes.
+  StringRef getCodeCompletionFilter() {
+    if (CodeCompletionII)
+      return CodeCompletionII->getName();
+    return {};
+  }
 
   /// \brief Retrieve the preprocessing record, or NULL if there is no
   /// preprocessing record.

@@ -5726,16 +5726,9 @@ public:
   }
 
   bool setCPU(const std::string &Name) override {
-    bool CPUKnown = llvm::StringSwitch<bool>(Name)
-                        .Case("generic", true)
-                        .Cases("cortex-a53", "cortex-a57", "cortex-a72",
-                               "cortex-a35", "exynos-m1", true)
-                        .Case("cortex-a73", true)
-                        .Case("cyclone", true)
-                        .Case("kryo", true)
-                        .Case("vulcan", true)
-                        .Default(false);
-    return CPUKnown;
+    return Name == "generic" ||
+           llvm::AArch64::parseCPUArch(Name) !=
+           static_cast<unsigned>(llvm::AArch64::ArchKind::AK_INVALID);
   }
 
   void getTargetDefines(const LangOptions &Opts,
@@ -8113,6 +8106,7 @@ public:
                                      Triple.getOSName(),
                                      Triple.getEnvironmentName()),
                         Opts) {
+    IsRenderScriptTarget = true;
     LongWidth = LongAlign = 64;
   }
   void getTargetDefines(const LangOptions &Opts,
@@ -8130,7 +8124,9 @@ public:
       : AArch64leTargetInfo(llvm::Triple("aarch64", Triple.getVendorName(),
                                          Triple.getOSName(),
                                          Triple.getEnvironmentName()),
-                            Opts) {}
+                            Opts) {
+    IsRenderScriptTarget = true;
+  }
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override {

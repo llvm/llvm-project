@@ -26,7 +26,7 @@
 // Test case for fix committed in r145441.
 // RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:9:20 %s -fms-compatibility | FileCheck -check-prefix=CHECK-CC1 %s
 
-// RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:10:24 %s | FileCheck -check-prefix=CHECK-CC2 %s
+// RUN: env CINDEXTEST_CODE_COMPLETE_PATTERNS=1 c-index-test -code-completion-at=%s:10:25 %s | FileCheck -check-prefix=CHECK-CC2 %s
 // CHECK-CC2: NotImplemented:{ResultType char[]}{TypedText @encode}{LeftParen (}{Placeholder type-name}{RightParen )}
 // CHECK-CC2: NotImplemented:{TypedText _Bool}
 // CHECK-CC2: VarDecl:{ResultType A *}{TypedText a}

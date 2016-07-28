@@ -40,6 +40,7 @@ namespace driver {
   class Compilation;
   class Driver;
   class JobAction;
+  class RegisterEffectiveTriple;
   class SanitizerArgs;
   class Tool;
 
@@ -91,6 +92,14 @@ private:
 
   mutable std::unique_ptr<SanitizerArgs> SanitizerArguments;
 
+  /// The effective clang triple for the current Job.
+  mutable llvm::Triple EffectiveTriple;
+
+  /// Set the toolchain's effective clang triple.
+  void setEffectiveTriple(llvm::Triple ET) const { EffectiveTriple = ET; }
+
+  friend class RegisterEffectiveTriple;
+
 protected:
   MultilibSet Multilibs;
   const char *DefaultLinker = "ld";
@@ -139,6 +148,12 @@ public:
 
   std::string getTripleString() const {
     return Triple.getTriple();
+  }
+
+  /// Get the toolchain's effective clang triple.
+  const llvm::Triple &getEffectiveTriple() const {
+    assert(!EffectiveTriple.getTriple().empty() && "No effective triple");
+    return EffectiveTriple;
   }
 
   path_list &getFilePaths() { return FilePaths; }
@@ -260,13 +275,11 @@ public:
     return ToolChain::CST_Libstdcxx;
   }
 
-  virtual std::string getCompilerRT(const llvm::Triple &EffectiveTriple,
-                                    const llvm::opt::ArgList &Args,
+  virtual std::string getCompilerRT(const llvm::opt::ArgList &Args,
                                     StringRef Component,
                                     bool Shared = false) const;
 
-  const char *getCompilerRTArgString(const llvm::Triple &EffectiveTriple,
-                                     const llvm::opt::ArgList &Args,
+  const char *getCompilerRTArgString(const llvm::opt::ArgList &Args,
                                      StringRef Component,
                                      bool Shared = false) const;
   /// needsProfileRT - returns true if instrumentation profile is on.
@@ -412,8 +425,7 @@ public:
       const llvm::opt::ArgList &Args, llvm::opt::ArgStringList &CmdArgs) const;
   /// addProfileRTLibs - When -fprofile-instr-profile is specified, try to pass
   /// a suitable profile runtime library to the linker.
-  virtual void addProfileRTLibs(const llvm::Triple &EffectiveTriple,
-                                const llvm::opt::ArgList &Args,
+  virtual void addProfileRTLibs(const llvm::opt::ArgList &Args,
                                 llvm::opt::ArgStringList &CmdArgs) const;
 
   /// \brief Add arguments to use system-specific CUDA includes.
@@ -433,6 +445,19 @@ public:
   /// \brief On Windows, returns the version of cl.exe.  On other platforms,
   /// returns an empty VersionTuple.
   virtual VersionTuple getMSVCVersionFromExe() const { return VersionTuple(); }
+};
+
+/// Set a ToolChain's effective triple. Reset it when the registration object
+/// is destroyed.
+class RegisterEffectiveTriple {
+  const ToolChain &TC;
+
+public:
+  RegisterEffectiveTriple(const ToolChain &TC, llvm::Triple T) : TC(TC) {
+    TC.setEffectiveTriple(T);
+  }
+
+  ~RegisterEffectiveTriple() { TC.setEffectiveTriple(llvm::Triple()); }
 };
 
 } // end namespace driver

@@ -1533,7 +1533,15 @@ FinishIdentifier:
     // preprocessor, which may macro expand it or something.
     if (II->isHandleIdentifierCase())
       return PP->HandleIdentifier(Result);
-    
+
+    if (II->getTokenID() == tok::identifier && isCodeCompletionPoint(CurPtr)
+        && II->getPPKeywordID() == tok::pp_not_keyword
+        && II->getObjCKeywordID() == tok::objc_not_keyword) {
+      // Return the code-completion token.
+      Result.setKind(tok::code_completion);
+      cutOffLexing();
+      return true;
+    }
     return true;
   }
 

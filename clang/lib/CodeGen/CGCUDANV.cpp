@@ -118,37 +118,28 @@ void CGNVCUDARuntime::emitDeviceStub(CodeGenFunction &CGF,
 
 void CGNVCUDARuntime::emitDeviceStubBody(CodeGenFunction &CGF,
                                          FunctionArgList &Args) {
-  // Build the argument value list and the argument stack struct type.
-  SmallVector<llvm::Value *, 16> ArgValues;
-  std::vector<llvm::Type *> ArgTypes;
-  for (FunctionArgList::const_iterator I = Args.begin(), E = Args.end();
-       I != E; ++I) {
-    llvm::Value *V = CGF.GetAddrOfLocalVar(*I).getPointer();
-    ArgValues.push_back(V);
-    assert(isa<llvm::PointerType>(V->getType()) && "Arg type not PointerType");
-    ArgTypes.push_back(cast<llvm::PointerType>(V->getType())->getElementType());
-  }
-  llvm::StructType *ArgStackTy = llvm::StructType::get(Context, ArgTypes);
-
-  llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
-
-  // Emit the calls to cudaSetupArgument
+  // Emit a call to cudaSetupArgument for each arg in Args.
   llvm::Constant *cudaSetupArgFn = getSetupArgumentFn();
-  for (unsigned I = 0, E = Args.size(); I != E; ++I) {
-    llvm::Value *Args[3];
-    llvm::BasicBlock *NextBlock = CGF.createBasicBlock("setup.next");
-    Args[0] = CGF.Builder.CreatePointerCast(ArgValues[I], VoidPtrTy);
-    Args[1] = CGF.Builder.CreateIntCast(
-        llvm::ConstantExpr::getSizeOf(ArgTypes[I]),
-        SizeTy, false);
-    Args[2] = CGF.Builder.CreateIntCast(
-        llvm::ConstantExpr::getOffsetOf(ArgStackTy, I),
-        SizeTy, false);
+  llvm::BasicBlock *EndBlock = CGF.createBasicBlock("setup.end");
+  CharUnits Offset = CharUnits::Zero();
+  for (const VarDecl *A : Args) {
+    CharUnits TyWidth, TyAlign;
+    std::tie(TyWidth, TyAlign) =
+        CGM.getContext().getTypeInfoInChars(A->getType());
+    Offset = Offset.alignTo(TyAlign);
+    llvm::Value *Args[] = {
+        CGF.Builder.CreatePointerCast(CGF.GetAddrOfLocalVar(A).getPointer(),
+                                      VoidPtrTy),
+        llvm::ConstantInt::get(SizeTy, TyWidth.getQuantity()),
+        llvm::ConstantInt::get(SizeTy, Offset.getQuantity()),
+    };
     llvm::CallSite CS = CGF.EmitRuntimeCallOrInvoke(cudaSetupArgFn, Args);
     llvm::Constant *Zero = llvm::ConstantInt::get(IntTy, 0);
     llvm::Value *CSZero = CGF.Builder.CreateICmpEQ(CS.getInstruction(), Zero);
+    llvm::BasicBlock *NextBlock = CGF.createBasicBlock("setup.next");
     CGF.Builder.CreateCondBr(CSZero, NextBlock, EndBlock);
     CGF.EmitBlock(NextBlock);
+    Offset += TyWidth;
   }
 
   // Emit the call to cudaLaunch

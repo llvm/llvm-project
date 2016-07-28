@@ -92,6 +92,8 @@ protected:
 
   unsigned HasBuiltinMSVaList : 1;
 
+  unsigned IsRenderScriptTarget : 1;
+
   // TargetInfo Constructor.  Default initializes all fields.
   TargetInfo(const llvm::Triple &T);
 
@@ -564,6 +566,9 @@ public:
   /// Returns whether or not type \c __builtin_ms_va_list type is
   /// available on this target.
   bool hasBuiltinMSVaList() const { return HasBuiltinMSVaList; }
+
+  /// Returns true for RenderScript.
+  bool isRenderScriptTarget() const { return IsRenderScriptTarget; }
 
   /// \brief Returns whether the passed in string is a valid clobber in an
   /// inline asm statement.

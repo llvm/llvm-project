@@ -14,7 +14,6 @@
 #include "llvm/Support/Program.h"
 
 namespace llvm {
-class Triple;
 namespace opt {
   class ArgList;
 }
@@ -128,7 +127,6 @@ public:
   virtual void ConstructJob(Compilation &C, const JobAction &JA,
                             const InputInfo &Output,
                             const InputInfoList &Inputs,
-                            const llvm::Triple &EffectiveTriple,
                             const llvm::opt::ArgList &TCArgs,
                             const char *LinkingOutput) const = 0;
 };

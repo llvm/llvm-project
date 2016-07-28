@@ -59,8 +59,7 @@ private:
                                const InputInfo &Output,
                                const InputInfoList &Inputs) const;
 
-  void AddAArch64TargetArgs(const llvm::Triple &EffectiveTriple,
-                            const llvm::opt::ArgList &Args,
+  void AddAArch64TargetArgs(const llvm::opt::ArgList &Args,
                             llvm::opt::ArgStringList &CmdArgs) const;
   void AddARMTargetArgs(const llvm::Triple &Triple,
                         const llvm::opt::ArgList &Args,
@@ -115,7 +114,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -135,7 +133,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -163,7 +160,6 @@ public:
   bool hasIntegratedAssembler() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 
@@ -223,7 +219,6 @@ public:
                            llvm::opt::ArgStringList &CmdArgs) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -239,7 +234,6 @@ public:
                                    llvm::opt::ArgStringList &CmdArgs) const;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -254,7 +248,6 @@ public:
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -270,7 +263,6 @@ public:
   bool hasIntegratedCPP() const override;
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -332,7 +324,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -372,7 +363,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -393,7 +383,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -406,7 +395,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -421,7 +409,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -435,7 +422,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -452,7 +438,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -466,7 +451,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -483,7 +467,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -497,7 +480,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -514,7 +496,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -528,7 +509,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -545,7 +525,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -559,7 +538,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -575,7 +553,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -589,7 +566,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -602,7 +578,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -616,7 +591,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -633,7 +607,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -647,7 +620,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -664,7 +636,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -678,7 +649,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -695,7 +665,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -709,7 +678,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -732,7 +700,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -749,7 +716,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 
@@ -771,7 +737,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -785,13 +750,11 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 
 private:
-  void AddLibGCC(const llvm::Triple &EffectiveTriple,
-                 const llvm::opt::ArgList &Args, ArgStringList &CmdArgs) const;
+  void AddLibGCC(const llvm::opt::ArgList &Args, ArgStringList &CmdArgs) const;
 };
 } // end namespace MinGW
 
@@ -803,9 +766,7 @@ enum class FloatABI {
   Hard,
 };
 
-FloatABI getARMFloatABI(const ToolChain &TC,
-                        const llvm::Triple &EffectiveTriple,
-                        const llvm::opt::ArgList &Args);
+FloatABI getARMFloatABI(const ToolChain &TC, const llvm::opt::ArgList &Args);
 } // end namespace arm
 
 namespace ppc {
@@ -839,7 +800,6 @@ public:
   bool hasIntegratedCPP() const override { return false; }
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -852,7 +812,6 @@ public:
   bool isLinkJob() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -867,7 +826,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -882,7 +840,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -898,7 +855,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -911,7 +867,6 @@ public:
 
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -929,7 +884,6 @@ public:
   bool isLinkJob() const override { return true; }
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -944,8 +898,8 @@ public:
   bool hasIntegratedCPP() const override { return false; }
 
   void ConstructJob(Compilation &C, const JobAction &JA,
-                    const InputInfo &Output, const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
+                    const InputInfo &Output,
+                    const InputInfoList &Inputs,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -960,7 +914,6 @@ public:
   void ConstructJob(Compilation &C, const JobAction &JA,
                     const InputInfo &Output,
                     const InputInfoList &Inputs,
-                    const llvm::Triple &EffectiveTriple,
                     const llvm::opt::ArgList &TCArgs,
                     const char *LinkingOutput) const override;
 };
@@ -979,7 +932,6 @@ class LLVM_LIBRARY_VISIBILITY Assembler : public Tool {
 
    void ConstructJob(Compilation &C, const JobAction &JA,
                      const InputInfo &Output, const InputInfoList &Inputs,
-                     const llvm::Triple &EffectiveTriple,
                      const llvm::opt::ArgList &TCArgs,
                      const char *LinkingOutput) const override;
 };
@@ -996,7 +948,6 @@ class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 
    void ConstructJob(Compilation &C, const JobAction &JA,
                      const InputInfo &Output, const InputInfoList &Inputs,
-                     const llvm::Triple &EffectiveTriple,
                      const llvm::opt::ArgList &TCArgs,
                      const char *LinkingOutput) const override;
 };

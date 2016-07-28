@@ -121,8 +121,7 @@ These are major API changes that have happened since the 3.8 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
-- Classes which inherit from ``driver::Tool`` must be updated to use effective
-  target triples when constructing jobs.
+-  ...
 
 AST Matchers
 ------------
