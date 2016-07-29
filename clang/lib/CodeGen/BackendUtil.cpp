@@ -263,6 +263,9 @@ static TargetLibraryInfoImpl *createTLII(llvm::Triple &TargetTriple,
   case CodeGenOptions::Accelerate:
     TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::Accelerate);
     break;
+  case CodeGenOptions::SVML:
+    TLII->addVectorizableFunctionsFromVecLib(TargetLibraryInfoImpl::SVML);
+    break;
   default:
     break;
   }

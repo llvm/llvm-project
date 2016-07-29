@@ -91,6 +91,7 @@ struct InputSectionDescription : BaseCommand {
   InputSectionDescription() : BaseCommand(InputSectionKind) {}
   static bool classof(const BaseCommand *C);
   StringRef FilePattern;
+  bool Sort = false;
   std::vector<StringRef> ExcludedFiles;
   std::vector<StringRef> SectionPatterns;
 };
@@ -127,8 +128,8 @@ template <class ELFT> class LinkerScript {
   typedef typename ELFT::uint uintX_t;
 
 public:
-  std::vector<OutputSectionBase<ELFT> *>
-  createSections(OutputSectionFactory<ELFT> &Factory);
+  void createSections(std::vector<OutputSectionBase<ELFT> *> *Out,
+                      OutputSectionFactory<ELFT> &Factory);
 
   std::vector<PhdrEntry<ELFT>>
   createPhdrs(ArrayRef<OutputSectionBase<ELFT> *> S);
@@ -139,6 +140,7 @@ public:
   int compareSections(StringRef A, StringRef B);
   void addScriptedSymbols();
   bool hasPhdrsCommands();
+  uintX_t getOutputSectionSize(StringRef Name);
 
 private:
   std::vector<std::pair<StringRef, const InputSectionDescription *>>
@@ -150,14 +152,13 @@ private:
   // "ScriptConfig" is a bit too long, so define a short name for it.
   ScriptConfiguration &Opt = *ScriptConfig;
 
-  std::vector<OutputSectionBase<ELFT> *>
-  filter(std::vector<OutputSectionBase<ELFT> *> &Sections);
+  void filter();
 
   int getSectionIndex(StringRef Name);
   std::vector<size_t> getPhdrIndices(StringRef SectionName);
   size_t getPhdrIndex(StringRef PhdrName);
-  void dispatchAssignment(SymbolAssignment *Cmd);
 
+  std::vector<OutputSectionBase<ELFT> *> *OutputSections;
   uintX_t Dot;
 };
 

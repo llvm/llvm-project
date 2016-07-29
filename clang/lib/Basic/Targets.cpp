@@ -2126,6 +2126,7 @@ public:
       Opts.cl_khr_fp16 = 1;
       Opts.cl_khr_int64_base_atomics = 1;
       Opts.cl_khr_int64_extended_atomics = 1;
+      Opts.cl_khr_mipmap_image = 1;
       Opts.cl_khr_3d_image_writes = 1;
     }
   }

@@ -604,11 +604,12 @@ public:
   /// AR_Available, will be set to a (possibly empty) message
   /// describing why the declaration has not been introduced, is
   /// deprecated, or is unavailable.
-  /// \param Version The version of the target OS to determine availability for.
-  /// If \c None, uses the version specified in the ASTContext's target info.
+  ///
+  /// \param EnclosingVersion The version to compare with. If empty, assume the
+  /// deployment target version.
   AvailabilityResult
   getAvailability(std::string *Message = nullptr,
-                  Optional<VersionTuple> Version = None) const;
+                  VersionTuple EnclosingVersion = VersionTuple()) const;
 
   /// \brief Determine whether this declaration is marked 'deprecated'.
   ///

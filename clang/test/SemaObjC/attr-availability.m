@@ -294,3 +294,34 @@ __attribute__((objc_root_class))
   [obj method]; // expected-error{{'method' is unavailable}}
 }
 @end
+
+#if defined(WARN_PARTIAL)
+
+int fn_10_7() __attribute__((availability(macosx, introduced=10.7))); // expected-note{{marked partial here}}
+int fn_10_8() __attribute__((availability(macosx, introduced=10.8))) { // expected-note{{marked partial here}}
+  return fn_10_7();
+}
+
+__attribute__((objc_root_class))
+@interface LookupAvailabilityBase
+-(void) method1;
+@end
+
+@implementation LookupAvailabilityBase
+-(void)method1 { fn_10_7(); } // expected-warning{{partial}} expected-note{{explicitly redeclare}}
+@end
+
+__attribute__((availability(macosx, introduced=10.7)))
+@interface LookupAvailability : LookupAvailabilityBase
+- (void)method2;
+- (void)method3;
+- (void)method4 __attribute__((availability(macosx, introduced=10.8)));
+@end
+
+@implementation LookupAvailability
+-(void)method2 { fn_10_7(); }
+-(void)method3 { fn_10_8(); } // expected-warning{{partial}} expected-note{{explicitly redeclare}}
+-(void)method4 { fn_10_8(); }
+@end
+
+#endif
