@@ -4332,7 +4332,8 @@ RenderScriptRuntime::RenderScriptRuntime(Process *process)
     : lldb_private::CPPLanguageRuntime(process),
       m_initiated(false),
       m_debuggerPresentFlagged(false),
-      m_breakAllKernels(false)
+      m_breakAllKernels(false),
+      m_ir_passes(nullptr)
 {
     ModulesDidLoad(process->GetTarget().GetImages());
 }

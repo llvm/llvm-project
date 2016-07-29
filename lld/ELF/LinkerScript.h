@@ -20,9 +20,11 @@
 
 namespace lld {
 namespace elf {
+class SymbolBody;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
+template <class ELFT> class DefinedCommon;
 
 typedef std::function<uint64_t(uint64_t)> Expr;
 
@@ -52,12 +54,17 @@ struct SymbolAssignment : BaseCommand {
   SymbolAssignment(StringRef Name, Expr E)
       : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
   static bool classof(const BaseCommand *C);
+
+  // The LHS of an expression. Name is either a symbol name or ".".
   StringRef Name;
+  SymbolBody *Sym = nullptr;
+
+  // The RHS of an expression.
   Expr Expression;
+
+  // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
-  // Hidden and Ignore can be true, only if Provide is true
   bool Hidden = false;
-  bool Ignore = false;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
@@ -83,8 +90,9 @@ struct OutputSectionCommand : BaseCommand {
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription() : BaseCommand(InputSectionKind) {}
   static bool classof(const BaseCommand *C);
+  StringRef FilePattern;
   std::vector<StringRef> ExcludedFiles;
-  std::vector<StringRef> Patterns;
+  std::vector<StringRef> SectionPatterns;
 };
 
 struct PhdrsCommand {
@@ -103,7 +111,7 @@ struct ScriptConfiguration {
   // Used to assign sections to headers.
   std::vector<PhdrsCommand> PhdrsCommands;
 
-  bool DoLayout = false;
+  bool HasContents = false;
 
   llvm::BumpPtrAllocator Alloc;
 

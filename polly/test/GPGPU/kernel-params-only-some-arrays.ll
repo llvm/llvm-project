@@ -1,7 +1,11 @@
 ; RUN: opt %loadPolly -polly-codegen-ppcg -polly-acc-dump-kernel-ir \
 ; RUN: -disable-output < %s | \
 ; RUN: FileCheck -check-prefix=KERNEL %s
-;
+
+; RUN: opt %loadPolly -polly-codegen-ppcg \
+; RUN: -S < %s | \
+; RUN: FileCheck -check-prefix=IR %s
+
 ; REQUIRES: pollyacc
 ;
 ;    void kernel_params_only_some_arrays(float A[], float B[]) {
@@ -41,6 +45,15 @@
 
 ; KERNEL:     ret void
 ; KERNEL-NEXT: }
+
+
+; IR:       [[SLOT:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_0_params, i64 0, i64 0
+; IR-NEXT:  [[DATA:%.*]] = bitcast i8** %polly_launch_0_param_0 to i8*
+; IR-NEXT:  store i8* [[DATA]], i8** [[SLOT]]
+
+; IR:       [[SLOT:%.*]] = getelementptr [1 x i8*], [1 x i8*]* %polly_launch_1_params, i64 0, i64 0
+; IR-NEXT:  [[DATA:%.*]] = bitcast i8** %polly_launch_1_param_0 to i8*
+; IR-NEXT:  store i8* [[DATA]], i8** [[SLOT]]
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

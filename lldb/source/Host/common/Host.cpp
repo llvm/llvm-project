@@ -620,14 +620,8 @@ Host::RunShellCommand(const Args &args,
     
     if (error.Success())
     {
-        TimeValue *timeout_ptr = nullptr;
-        TimeValue timeout_time(TimeValue::Now());
-        if (timeout_sec > 0) {
-            timeout_time.OffsetWithSeconds(timeout_sec);
-            timeout_ptr = &timeout_time;
-        }
         bool timed_out = false;
-        shell_info_sp->process_reaped.WaitForValueEqualTo(true, timeout_ptr, &timed_out);
+        shell_info_sp->process_reaped.WaitForValueEqualTo(true, std::chrono::seconds(timeout_sec), &timed_out);
         if (timed_out)
         {
             error.SetErrorString("timed out waiting for shell command to complete");
@@ -635,10 +629,8 @@ Host::RunShellCommand(const Args &args,
             // Kill the process since it didn't complete within the timeout specified
             Kill (pid, SIGKILL);
             // Wait for the monitor callback to get the message
-            timeout_time = TimeValue::Now();
-            timeout_time.OffsetWithSeconds(1);
             timed_out = false;
-            shell_info_sp->process_reaped.WaitForValueEqualTo(true, &timeout_time, &timed_out);
+            shell_info_sp->process_reaped.WaitForValueEqualTo(true, std::chrono::seconds(1), &timed_out);
         }
         else
         {

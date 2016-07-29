@@ -877,11 +877,7 @@ ConnectionFileDescriptor::GetListeningPort(uint32_t timeout_sec)
     if (timeout_sec == UINT32_MAX)
         m_port_predicate.WaitForValueNotEqualTo(0, bound_port);
     else
-    {
-        TimeValue timeout = TimeValue::Now();
-        timeout.OffsetWithSeconds(timeout_sec);
-        m_port_predicate.WaitForValueNotEqualTo(0, bound_port, &timeout);
-    }
+        m_port_predicate.WaitForValueNotEqualTo(0, bound_port, std::chrono::seconds(timeout_sec));
     return bound_port;
 }
 

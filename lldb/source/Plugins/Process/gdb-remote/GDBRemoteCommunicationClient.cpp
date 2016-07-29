@@ -720,9 +720,10 @@ GDBRemoteCommunicationClient::SendPacketsAndConcatenateResponses
     std::string &response_string
 )
 {
-    Mutex::Locker locker;
-    if (!GetSequenceMutex(locker,
-                          "ProcessGDBRemote::SendPacketsAndConcatenateResponses() failed due to not getting the sequence mutex"))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (!GetSequenceMutex(
+            lock,
+            "ProcessGDBRemote::SendPacketsAndConcatenateResponses() failed due to not getting the sequence mutex"))
     {
         Log *log (ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet (GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
         if (log)
@@ -821,7 +822,7 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
 )
 {
     PacketResult packet_result = PacketResult::ErrorSendFailed;
-    Mutex::Locker locker;
+    std::unique_lock<std::recursive_mutex> lock;
     Log *log (ProcessGDBRemoteLog::GetLogIfAllCategoriesSet (GDBR_LOG_PROCESS));
 
     // In order to stop async notifications from being processed in the middle of the
@@ -829,7 +830,7 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
     static ListenerSP hijack_listener_sp(Listener::MakeListener("lldb.NotifyHijacker"));
     HijackBroadcaster(hijack_listener_sp, eBroadcastBitGdbReadThreadGotNotify);
 
-    if (GetSequenceMutex (locker))
+    if (GetSequenceMutex(lock))
     {
         packet_result = SendPacketAndWaitForResponseNoLock (payload, payload_length, response);
     }
@@ -848,19 +849,22 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
                     log->Printf ("async: async packet = %s", m_async_packet.c_str());
 
                 bool timed_out = false;
-                if (SendInterrupt(locker, 2, timed_out))
+                if (SendInterrupt(lock, 2, timed_out))
                 {
                     if (m_interrupt_sent)
                     {
                         m_interrupt_sent = false;
-                        TimeValue timeout_time;
-                        timeout_time = TimeValue::Now();
-                        timeout_time.OffsetWithSeconds (m_packet_timeout);
+
+                        std::chrono::time_point<std::chrono::system_clock> until;
+                        until = std::chrono::system_clock::now() + std::chrono::seconds(m_packet_timeout);
 
                         if (log) 
                             log->Printf ("async: sent interrupt");
 
-                        if (m_async_packet_predicate.WaitForValueEqualTo (false, &timeout_time, &timed_out))
+                        if (m_async_packet_predicate.WaitForValueEqualTo(
+                                false, std::chrono::duration_cast<std::chrono::microseconds>(
+                                           until - std::chrono::system_clock::now()),
+                                &timed_out))
                         {
                             if (log) 
                                 log->Printf ("async: got response");
@@ -876,7 +880,10 @@ GDBRemoteCommunicationClient::SendPacketAndWaitForResponse
                         }
                         
                         // Make sure we wait until the continue packet has been sent again...
-                        if (m_private_is_running.WaitForValueEqualTo (true, &timeout_time, &timed_out))
+                        if (m_private_is_running.WaitForValueEqualTo(
+                                true, std::chrono::duration_cast<std::chrono::microseconds>(
+                                          until - std::chrono::system_clock::now()),
+                                &timed_out))
                         {
                             if (log)
                             {
@@ -1045,7 +1052,7 @@ GDBRemoteCommunicationClient::SendvContPacket
         log->Printf("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
 
     // we want to lock down packet sending while we continue
-    Mutex::Locker locker(m_sequence_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
 
     // here we broadcast this before we even send the packet!!
     // this signals doContinue() to exit
@@ -1094,7 +1101,7 @@ GDBRemoteCommunicationClient::SendContinuePacketAndWaitForResponse
     if (log)
         log->Printf ("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
 
-    Mutex::Locker locker(m_sequence_mutex);
+    std::lock_guard<std::recursive_mutex> guard(m_sequence_mutex);
     StateType state = eStateRunning;
 
     m_public_is_running.SetValue (true, eBroadcastNever);
@@ -1394,8 +1401,8 @@ GDBRemoteCommunicationClient::SendAsyncSignal (int signo)
     std::lock_guard<std::recursive_mutex> guard(m_async_mutex);
     m_async_signal = signo;
     bool timed_out = false;
-    Mutex::Locker locker;
-    if (SendInterrupt (locker, 1, timed_out))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (SendInterrupt(lock, 1, timed_out))
         return true;
     m_async_signal = -1;
     return false;
@@ -1412,12 +1419,8 @@ GDBRemoteCommunicationClient::SendAsyncSignal (int signo)
 // (gdb remote protocol requires this), and do what we need to do, then resume.
 
 bool
-GDBRemoteCommunicationClient::SendInterrupt
-(
-    Mutex::Locker& locker, 
-    uint32_t seconds_to_wait_for_stop,             
-    bool &timed_out
-)
+GDBRemoteCommunicationClient::SendInterrupt(std::unique_lock<std::recursive_mutex> &lock,
+                                            uint32_t seconds_to_wait_for_stop, bool &timed_out)
 {
     timed_out = false;
     Log *log (ProcessGDBRemoteLog::GetLogIfAnyCategoryIsSet (GDBR_LOG_PROCESS | GDBR_LOG_PACKETS));
@@ -1425,7 +1428,7 @@ GDBRemoteCommunicationClient::SendInterrupt
     if (IsRunning())
     {
         // Only send an interrupt if our debugserver is running...
-        if (GetSequenceMutex (locker))
+        if (GetSequenceMutex(lock))
         {
             if (log)
                 log->Printf ("SendInterrupt () - got sequence mutex without having to interrupt");
@@ -1444,13 +1447,8 @@ GDBRemoteCommunicationClient::SendInterrupt
                 m_interrupt_sent = true;
                 if (seconds_to_wait_for_stop)
                 {
-                    TimeValue timeout;
-                    if (seconds_to_wait_for_stop)
-                    {
-                        timeout = TimeValue::Now();
-                        timeout.OffsetWithSeconds (seconds_to_wait_for_stop);
-                    }
-                    if (m_private_is_running.WaitForValueEqualTo (false, &timeout, &timed_out))
+                    if (m_private_is_running.WaitForValueEqualTo(false, std::chrono::seconds(seconds_to_wait_for_stop),
+                                                                 &timed_out))
                     {
                         if (log)
                             log->PutCString ("SendInterrupt () - sent interrupt, private state stopped");
@@ -3653,10 +3651,10 @@ size_t
 GDBRemoteCommunicationClient::GetCurrentThreadIDs (std::vector<lldb::tid_t> &thread_ids, 
                                                    bool &sequence_mutex_unavailable)
 {
-    Mutex::Locker locker;
+    std::unique_lock<std::recursive_mutex> lock;
     thread_ids.clear();
-    
-    if (GetSequenceMutex (locker, "ProcessGDBRemote::UpdateThreadList() failed due to not getting the sequence mutex"))
+
+    if (GetSequenceMutex(lock, "ProcessGDBRemote::UpdateThreadList() failed due to not getting the sequence mutex"))
     {
         sequence_mutex_unavailable = false;
         StringExtractorGDBRemote response;
@@ -4203,8 +4201,8 @@ GDBRemoteCommunicationClient::AvoidGPackets (ProcessGDBRemote *process)
 bool
 GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, StringExtractorGDBRemote &response)
 {
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for p packet."))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (GetSequenceMutex(lock, "Didn't get sequence mutex for p packet."))
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
         
@@ -4228,8 +4226,8 @@ GDBRemoteCommunicationClient::ReadRegister(lldb::tid_t tid, uint32_t reg, String
 bool
 GDBRemoteCommunicationClient::ReadAllRegisters (lldb::tid_t tid, StringExtractorGDBRemote &response)
 {
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for g packet."))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (GetSequenceMutex(lock, "Didn't get sequence mutex for g packet."))
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
 
@@ -4256,8 +4254,8 @@ GDBRemoteCommunicationClient::SaveRegisterState (lldb::tid_t tid, uint32_t &save
         return false;
     
     m_supports_QSaveRegisterState = eLazyBoolYes;
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for QSaveRegisterState."))
+    std::unique_lock<std::recursive_mutex> lock;
+    if (GetSequenceMutex(lock, "Didn't get sequence mutex for QSaveRegisterState."))
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
         if (thread_suffix_supported || SetCurrentThread(tid))
@@ -4298,9 +4296,9 @@ GDBRemoteCommunicationClient::RestoreRegisterState (lldb::tid_t tid, uint32_t sa
     // order to be useful
     if (m_supports_QSaveRegisterState == eLazyBoolNo)
         return false;
-    
-    Mutex::Locker locker;
-    if (GetSequenceMutex (locker, "Didn't get sequence mutex for QRestoreRegisterState."))
+
+    std::unique_lock<std::recursive_mutex> lock;
+    if (GetSequenceMutex(lock, "Didn't get sequence mutex for QRestoreRegisterState."))
     {
         const bool thread_suffix_supported = GetThreadSuffixSupported();
         if (thread_suffix_supported || SetCurrentThread(tid))
@@ -4530,8 +4528,10 @@ GDBRemoteCommunicationClient::ServeSymbolLookups(lldb_private::Process *process)
 
     if (m_supports_qSymbol && m_qSymbol_requests_done == false)
     {
-        Mutex::Locker locker;
-        if (GetSequenceMutex(locker, "GDBRemoteCommunicationClient::ServeSymbolLookups() failed due to not getting the sequence mutex"))
+        std::unique_lock<std::recursive_mutex> lock;
+        if (GetSequenceMutex(
+                lock,
+                "GDBRemoteCommunicationClient::ServeSymbolLookups() failed due to not getting the sequence mutex"))
         {
             StreamString packet;
             packet.PutCString ("qSymbol::");

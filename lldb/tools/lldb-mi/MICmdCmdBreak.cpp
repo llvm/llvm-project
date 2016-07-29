@@ -100,7 +100,7 @@ CMICmdCmdBreakInsert::ParseArgs()
         new CMICmdArgValOptionShort(m_constStrArgNamedInoreCnt, false, true, CMICmdArgValListBase::eArgValType_Number, 1));
     m_setCmdArgs.Add(new CMICmdArgValOptionShort(m_constStrArgNamedRestrictBrkPtToThreadId, false, true,
                                                    CMICmdArgValListBase::eArgValType_Number, 1));
-    m_setCmdArgs.Add(new CMICmdArgValString(m_constStrArgNamedLocation, false, true));
+    m_setCmdArgs.Add(new CMICmdArgValString(m_constStrArgNamedLocation, false, true, false, false, true));
     return ParseValidateCmdOptions();
 }
 

@@ -1608,7 +1608,7 @@ Debugger::DefaultEventHandler()
     while (!done)
     {
         EventSP event_sp;
-        if (listener_sp->WaitForEvent(nullptr, event_sp))
+        if (listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp))
         {
             if (event_sp)
             {
@@ -1705,7 +1705,7 @@ Debugger::StartEventHandlerThread()
         // eBroadcastBitEventThreadIsListening so we don't need to check the event, we just need
         // to wait an infinite amount of time for it (nullptr timeout as the first parameter)
         lldb::EventSP event_sp;
-        listener_sp->WaitForEvent(nullptr, event_sp);
+        listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp);
     }
     return m_event_handler_thread.IsJoinable();
 }
