@@ -48,7 +48,7 @@ private:
 
   void copyLocalSymbols();
   void addReservedSymbols();
-  std::vector<OutputSectionBase<ELFT> *> createSections();
+  void createSections();
   void forEachRelSec(
       std::function<void(InputSectionBase<ELFT> &, const typename ELFT::Shdr &)>
           Fn);
@@ -233,9 +233,11 @@ template <class ELFT> void Writer<ELFT>::run() {
   CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
   CommonInputSection<ELFT>::X = &Common;
 
-  OutputSections = ScriptConfig->HasContents
-                       ? Script<ELFT>::X->createSections(Factory)
-                       : createSections();
+  if (ScriptConfig->HasContents)
+    Script<ELFT>::X->createSections(&OutputSections, Factory);
+  else
+    createSections();
+
   finalizeSections();
   if (HasError)
     return;
@@ -635,10 +637,7 @@ void Writer<ELFT>::forEachRelSec(
   }
 }
 
-template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *> Writer<ELFT>::createSections() {
-  std::vector<OutputSectionBase<ELFT> *> Result;
-
+template <class ELFT> void Writer<ELFT>::createSections() {
   for (const std::unique_ptr<elf::ObjectFile<ELFT>> &F :
        Symtab.getObjectFiles()) {
     for (InputSectionBase<ELFT> *C : F->getSections()) {
@@ -650,11 +649,10 @@ std::vector<OutputSectionBase<ELFT> *> Writer<ELFT>::createSections() {
       bool IsNew;
       std::tie(Sec, IsNew) = Factory.create(C, getOutputSectionName(C));
       if (IsNew)
-        Result.push_back(Sec);
+        OutputSections.push_back(Sec);
       Sec->addSection(C);
     }
   }
-  return Result;
 }
 
 // Create output section objects and add them to OutputSections.

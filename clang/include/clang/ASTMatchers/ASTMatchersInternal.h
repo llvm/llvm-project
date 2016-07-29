@@ -1638,6 +1638,13 @@ getTemplateSpecializationArgs(const TemplateSpecializationType &T) {
   return llvm::makeArrayRef(T.getArgs(), T.getNumArgs());
 }
 
+inline ArrayRef<TemplateArgument>
+getTemplateSpecializationArgs(const FunctionDecl &FD) {
+  if (const auto* TemplateArgs = FD.getTemplateSpecializationArgs())
+    return TemplateArgs->asArray();
+  return ArrayRef<TemplateArgument>();
+}
+
 struct NotEqualsBoundNodePredicate {
   bool operator()(const internal::BoundNodesMap &Nodes) const {
     return Nodes.getNode(ID) != Node;

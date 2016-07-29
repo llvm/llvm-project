@@ -25,7 +25,6 @@ class LinuxCoreTestCase(TestBase):
     _x86_64_regions = 5
     _s390x_regions  = 2
 
-    @skipIf(bugnumber="llvm.org/pr26947")
     def test_i386(self):
         """Test that lldb can read the process information from an i386 linux core file."""
         self.do_test("i386", self._i386_pid, self._i386_regions)

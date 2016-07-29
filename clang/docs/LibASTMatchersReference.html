@@ -1318,6 +1318,17 @@ templateArgument()
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateName.html">TemplateName</a>&gt;</td><td class="name" onclick="toggle('templateName0')"><a name="templateName0Anchor">templateName</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateName.html">TemplateName</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="templateName0"><pre>Matches template name.
+
+Given
+  template &lt;typename T&gt; class X { };
+  X&lt;int&gt; xi;
+templateName()
+  matches 'X' in X&lt;int&gt;.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;</td><td class="name" onclick="toggle('typeLoc0')"><a name="typeLoc0Anchor">typeLoc</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TypeLoc.html">TypeLoc</a>&gt;...</td></tr>
 <tr><td colspan="4" class="doc" id="typeLoc0"><pre>Matches TypeLocs in the clang AST.
 </pre></td></tr>
@@ -4240,30 +4251,44 @@ caseStmt(hasCaseConstant(integerLiteral()))
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument0')"><a name="hasAnyTemplateArgument0Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument0"><pre>Matches classTemplateSpecializations that have at least one
-TemplateArgument matching the given InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument0"><pre>Matches classTemplateSpecializations, templateSpecializationType and
+functionDecl that have at least one TemplateArgument matching the given
+InnerMatcher.
 
 Given
   template&lt;typename T&gt; class A {};
   template&lt;&gt; class A&lt;double&gt; {};
   A&lt;int&gt; a;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(hasAnyTemplateArgument(
     refersToType(asString("int"))))
   matches the specialization A&lt;int&gt;
+
+functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
 </pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument0')"><a name="hasTemplateArgument0Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgument0"><pre>Matches classTemplateSpecializations where the n'th TemplateArgument
-matches the given InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasTemplateArgument0"><pre>Matches classTemplateSpecializations, templateSpecializationType and
+functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
   A&lt;bool, int&gt; b;
   A&lt;int, bool&gt; c;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
 classTemplateSpecializationDecl(hasTemplateArgument(
     1, refersToType(asString("int"))))
   matches the specialization A&lt;bool, int&gt;
+
+functionDecl(hasTemplateArgument(0, refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
 </pre></td></tr>
 
 
@@ -4679,6 +4704,28 @@ with hasAnyParameter(...)
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument2')"><a name="hasAnyTemplateArgument2Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument2"><pre>Matches classTemplateSpecializations, templateSpecializationType and
+functionDecl that have at least one TemplateArgument matching the given
+InnerMatcher.
+
+Given
+  template&lt;typename T&gt; class A {};
+  template&lt;&gt; class A&lt;double&gt; {};
+  A&lt;int&gt; a;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
+
+classTemplateSpecializationDecl(hasAnyTemplateArgument(
+    refersToType(asString("int"))))
+  matches the specialization A&lt;int&gt;
+
+functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasBody4')"><a name="hasBody4Anchor">hasBody</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasBody4"><pre>Matches a 'for', 'while', 'do while' statement or a function
 definition that has a given body.
@@ -4701,6 +4748,26 @@ cxxMethodDecl(hasParameter(0, hasType(varDecl())))
   matches f(int x) {}
 with hasParameter(...)
   matching int x
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument2')"><a name="hasTemplateArgument2Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="hasTemplateArgument2"><pre>Matches classTemplateSpecializations, templateSpecializationType and
+functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
+
+Given
+  template&lt;typename T, typename U&gt; class A {};
+  A&lt;bool, int&gt; b;
+  A&lt;int, bool&gt; c;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
+classTemplateSpecializationDecl(hasTemplateArgument(
+    1, refersToType(asString("int"))))
+  matches the specialization A&lt;bool, int&gt;
+
+functionDecl(hasTemplateArgument(0, refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
 </pre></td></tr>
 
 
@@ -5297,6 +5364,19 @@ classTemplateSpecializationDecl(
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt;</td><td class="name" onclick="toggle('refersToTemplate0')"><a name="refersToTemplate0Anchor">refersToTemplate</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateName.html">TemplateName</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="refersToTemplate0"><pre>Matches a TemplateArgument that refers to a certain template.
+
+Given
+  template&lt;template &lt;typename&gt; class S&gt; class X {};
+  template&lt;typename T&gt; class Y {};"
+  X&lt;Y&gt; xi;
+classTemplateSpecializationDecl(hasAnyTemplateArgument(
+    refersToTemplate(templateName())))
+  matches the specialization X&lt;Y&gt;
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt;</td><td class="name" onclick="toggle('refersToType0')"><a name="refersToType0Anchor">refersToType</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="refersToType0"><pre>Matches a TemplateArgument that refers to a certain type.
 
@@ -5311,16 +5391,24 @@ classTemplateSpecializationDecl(hasAnyTemplateArgument(
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument1')"><a name="hasAnyTemplateArgument1Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument1"><pre>Matches classTemplateSpecializations that have at least one
-TemplateArgument matching the given InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasAnyTemplateArgument1"><pre>Matches classTemplateSpecializations, templateSpecializationType and
+functionDecl that have at least one TemplateArgument matching the given
+InnerMatcher.
 
 Given
   template&lt;typename T&gt; class A {};
   template&lt;&gt; class A&lt;double&gt; {};
   A&lt;int&gt; a;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
+
 classTemplateSpecializationDecl(hasAnyTemplateArgument(
     refersToType(asString("int"))))
   matches the specialization A&lt;int&gt;
+
+functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
 </pre></td></tr>
 
 
@@ -5347,16 +5435,22 @@ Usable as: Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1CallE
 
 
 <tr><td>Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('hasTemplateArgument1')"><a name="hasTemplateArgument1Anchor">hasTemplateArgument</a></td><td>unsigned N, Matcher&lt;<a href="http://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasTemplateArgument1"><pre>Matches classTemplateSpecializations where the n'th TemplateArgument
-matches the given InnerMatcher.
+<tr><td colspan="4" class="doc" id="hasTemplateArgument1"><pre>Matches classTemplateSpecializations, templateSpecializationType and
+functionDecl where the n'th TemplateArgument matches the given InnerMatcher.
 
 Given
   template&lt;typename T, typename U&gt; class A {};
   A&lt;bool, int&gt; b;
   A&lt;int, bool&gt; c;
+
+  template&lt;typename T&gt; f() {};
+  void func() { f&lt;int&gt;(); };
 classTemplateSpecializationDecl(hasTemplateArgument(
     1, refersToType(asString("int"))))
   matches the specialization A&lt;bool, int&gt;
+
+functionDecl(hasTemplateArgument(0, refersToType(asString("int"))))
+  matches the specialization f&lt;int&gt;
 </pre></td></tr>
 
 

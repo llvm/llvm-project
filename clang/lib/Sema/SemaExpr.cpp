@@ -107,9 +107,14 @@ static AvailabilityResult
 DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
                            const ObjCInterfaceDecl *UnknownObjCClass,
                            bool ObjCPropertyAccess) {
-  // See if this declaration is unavailable or deprecated.
+  VersionTuple ContextVersion;
+  if (const DeclContext *DC = S.getCurObjCLexicalContext())
+    ContextVersion = S.getVersionForDecl(cast<Decl>(DC));
+
+  // See if this declaration is unavailable, deprecated, or partial in the
+  // current context.
   std::string Message;
-  AvailabilityResult Result = D->getAvailability(&Message);
+  AvailabilityResult Result = D->getAvailability(&Message, ContextVersion);
 
   // For typedefs, if the typedef declaration appears available look
   // to the underlying type to see if it is more restrictive.
@@ -117,7 +122,7 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     if (Result == AR_Available) {
       if (const TagType *TT = TD->getUnderlyingType()->getAs<TagType>()) {
         D = TT->getDecl();
-        Result = D->getAvailability(&Message);
+        Result = D->getAvailability(&Message, ContextVersion);
         continue;
       }
     }
@@ -128,7 +133,7 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
   if (ObjCInterfaceDecl *IDecl = dyn_cast<ObjCInterfaceDecl>(D)) {
     if (IDecl->getDefinition()) {
       D = IDecl->getDefinition();
-      Result = D->getAvailability(&Message);
+      Result = D->getAvailability(&Message, ContextVersion);
     }
   }
 
@@ -136,7 +141,7 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
     if (Result == AR_Available) {
       const DeclContext *DC = ECD->getDeclContext();
       if (const EnumDecl *TheEnumDecl = dyn_cast<EnumDecl>(DC))
-        Result = TheEnumDecl->getAvailability(&Message);
+        Result = TheEnumDecl->getAvailability(&Message, ContextVersion);
     }
 
   const ObjCPropertyDecl *ObjCPDecl = nullptr;
@@ -144,7 +149,8 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
       Result == AR_NotYetIntroduced) {
     if (const ObjCMethodDecl *MD = dyn_cast<ObjCMethodDecl>(D)) {
       if (const ObjCPropertyDecl *PD = MD->findPropertyDecl()) {
-        AvailabilityResult PDeclResult = PD->getAvailability(nullptr);
+        AvailabilityResult PDeclResult =
+            PD->getAvailability(nullptr, ContextVersion);
         if (PDeclResult == Result)
           ObjCPDecl = PD;
       }
@@ -198,7 +204,7 @@ DiagnoseAvailabilityOfDecl(Sema &S, NamedDecl *D, SourceLocation Loc,
       break;
 
     }
-    return Result;
+  return Result;
 }
 
 /// \brief Emit a note explaining that this function is deleted.

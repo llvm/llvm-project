@@ -8743,4 +8743,8 @@ def warn_block_literal_qualifiers_on_omitted_return_type : Warning<
   "'%0' qualifier on omitted return type %1 has no effect">,
   InGroup<IgnoredQualifiers>;
 
+def ext_warn_gnu_final : ExtWarn<
+  "__final is a GNU extension, consider using C++11 final">,
+  InGroup<GccCompat>;
+
 } // end of sema component.
