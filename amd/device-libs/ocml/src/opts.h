@@ -13,5 +13,5 @@
 #define UNSAFE_MATH_OPT() __oclc_unsafe_math_opt()
 #define DAZ_OPT() __oclc_daz_opt()
 #define CORRECTLY_ROUNDED_SQRT32() __oclc_correctly_rounded_sqrt32()
-#define AMD_OPT() __oclc_amd_opt()
+#define AMD_OPT() 1
 
