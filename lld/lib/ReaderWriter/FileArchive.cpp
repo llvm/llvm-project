@@ -132,9 +132,9 @@ protected:
 private:
   std::error_code instantiateMember(Archive::Child member,
                                     std::unique_ptr<File> &result) const {
-    ErrorOr<llvm::MemoryBufferRef> mbOrErr = member.getMemoryBufferRef();
-    if (std::error_code ec = mbOrErr.getError())
-      return ec;
+    Expected<llvm::MemoryBufferRef> mbOrErr = member.getMemoryBufferRef();
+    if (!mbOrErr)
+      return errorToErrorCode(mbOrErr.takeError());
     llvm::MemoryBufferRef mb = mbOrErr.get();
     std::string memberPath = (_archive->getFileName() + "("
                            + mb.getBufferIdentifier() + ")").str();

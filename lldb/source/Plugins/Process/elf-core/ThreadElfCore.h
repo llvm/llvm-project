@@ -26,8 +26,10 @@ struct compat_timeval
 };
 
 // PRSTATUS structure's size differs based on architecture.
-// Currently parsing done only for x86-64 architecture by
-// simply reading data from the buffer.
+// This is the layout in the x86-64 arch.
+// In the i386 case we parse it manually and fill it again
+// in the same structure
+// The gp registers are also a part of this struct, but they are handled separately
 
 #undef si_signo
 #undef si_code
@@ -56,9 +58,13 @@ struct ELFLinuxPrStatus
 
     ELFLinuxPrStatus();
 
-    bool
+    lldb_private::Error
     Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
 
+    // Return the bytesize of the structure
+    // 64 bit - just sizeof
+    // 32 bit - hardcoded because we are reusing the struct, but some of the members are smaller -
+    // so the layout is not the same
     static size_t
     GetSize(lldb_private::ArchSpec &arch)
     {
@@ -67,6 +73,9 @@ struct ELFLinuxPrStatus
             case lldb_private::ArchSpec::eCore_s390x_generic:
             case lldb_private::ArchSpec::eCore_x86_64_x86_64:
                 return sizeof(ELFLinuxPrStatus);
+            case lldb_private::ArchSpec::eCore_x86_32_i386:
+            case lldb_private::ArchSpec::eCore_x86_32_i486:
+                return 72;
             default:
                 return 0;
         }
@@ -75,6 +84,10 @@ struct ELFLinuxPrStatus
 
 static_assert(sizeof(ELFLinuxPrStatus) == 112, "sizeof ELFLinuxPrStatus is not correct!");
 
+// PRPSINFO structure's size differs based on architecture.
+// This is the layout in the x86-64 arch case.
+// In the i386 case we parse it manually and fill it again
+// in the same structure
 struct ELFLinuxPrPsInfo
 {
     char pr_state;
@@ -93,9 +106,13 @@ struct ELFLinuxPrPsInfo
 
     ELFLinuxPrPsInfo();
 
-    bool
+    lldb_private::Error
     Parse(lldb_private::DataExtractor &data, lldb_private::ArchSpec &arch);
 
+    // Return the bytesize of the structure
+    // 64 bit - just sizeof
+    // 32 bit - hardcoded because we are reusing the struct, but some of the members are smaller -
+    // so the layout is not the same
     static size_t
     GetSize(lldb_private::ArchSpec &arch)
     {
@@ -104,6 +121,9 @@ struct ELFLinuxPrPsInfo
             case lldb_private::ArchSpec::eCore_s390x_generic:
             case lldb_private::ArchSpec::eCore_x86_64_x86_64:
                 return sizeof(ELFLinuxPrPsInfo);
+            case lldb_private::ArchSpec::eCore_x86_32_i386:
+            case lldb_private::ArchSpec::eCore_x86_32_i486:
+                return 124;
             default:
                 return 0;
         }

@@ -1022,7 +1022,7 @@ Process::WaitForProcessToStop(const std::chrono::microseconds &timeout, EventSP 
     while (state != eStateInvalid)
     {
         EventSP event_sp;
-        state = WaitForStateChangedEvents(std::chrono::milliseconds(0), event_sp, hijack_listener_sp);
+        state = WaitForStateChangedEvents(timeout, event_sp, hijack_listener_sp);
         if (event_sp_ptr && event_sp)
             *event_sp_ptr = event_sp;
 

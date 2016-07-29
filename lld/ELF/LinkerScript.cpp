@@ -74,10 +74,7 @@ static bool match(ArrayRef<StringRef> Patterns, StringRef S) {
   return false;
 }
 
-// Create a vector of (<output section name>, <input section name patterns>).
-// For example, if a returned vector contains (".text" (".foo.*" ".bar.*")),
-// input sections start with ".foo." or ".bar." should be added to
-// ".text" section.
+// Create a vector of (<output section name>, <input section description>).
 template <class ELFT>
 std::vector<std::pair<StringRef, const InputSectionDescription *>>
 LinkerScript<ELFT>::getSectionMap() {
@@ -120,23 +117,34 @@ LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
   return Ret;
 }
 
+// Add input section to output section. If there is no output section yet,
+// then create it and add to output section list.
 template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *>
-LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
-  std::vector<OutputSectionBase<ELFT> *> Ret;
+static void addSection(OutputSectionFactory<ELFT> &Factory,
+                       std::vector<OutputSectionBase<ELFT> *> &Out,
+                       InputSectionBase<ELFT> *C, StringRef Name) {
+  OutputSectionBase<ELFT> *Sec;
+  bool IsNew;
+  std::tie(Sec, IsNew) = Factory.create(C, Name);
+  if (IsNew)
+    Out.push_back(Sec);
+  Sec->addSection(C);
+}
 
-  // Add input section to output section. If there is no output section yet,
-  // then create it and add to output section list.
-  auto Add = [&](InputSectionBase<ELFT> *C, StringRef Name) {
-    OutputSectionBase<ELFT> *Sec;
-    bool IsNew;
-    std::tie(Sec, IsNew) = Factory.create(C, Name);
-    if (IsNew)
-      Ret.push_back(Sec);
-    Sec->addSection(C);
-  };
+template <class ELFT>
+static bool compareByName(InputSectionBase<ELFT> *A,
+                          InputSectionBase<ELFT> *B) {
+  return A->getSectionName() < B->getSectionName();
+}
+
+template <class ELFT>
+void LinkerScript<ELFT>::createSections(
+    std::vector<OutputSectionBase<ELFT> *> *Out,
+    OutputSectionFactory<ELFT> &Factory) {
+  OutputSections = Out;
 
   for (auto &P : getSectionMap()) {
+    std::vector<InputSectionBase<ELFT> *> Sections;
     StringRef OutputName = P.first;
     const InputSectionDescription *I = P.second;
     for (InputSectionBase<ELFT> *S : getInputSections(I)) {
@@ -145,8 +153,12 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
         reportDiscarded(S);
         continue;
       }
-      Add(S, OutputName);
+      Sections.push_back(S);
     }
+    if (I->Sort)
+      std::stable_sort(Sections.begin(), Sections.end(), compareByName<ELFT>);
+    for (InputSectionBase<ELFT> *S : Sections)
+      addSection(Factory, *Out, S, OutputName);
   }
 
   // Add all other input sections, which are not listed in script.
@@ -154,17 +166,15 @@ LinkerScript<ELFT>::createSections(OutputSectionFactory<ELFT> &Factory) {
        Symtab<ELFT>::X->getObjectFiles())
     for (InputSectionBase<ELFT> *S : F->getSections())
       if (!isDiscarded(S) && !S->OutSec)
-        Add(S, getOutputSectionName(S));
+        addSection(Factory, *Out, S, getOutputSectionName(S));
 
   // Remove from the output all the sections which did not meet
   // the optional constraints.
-  return filter(Ret);
+  filter();
 }
 
 // Process ONLY_IF_RO and ONLY_IF_RW.
-template <class ELFT>
-std::vector<OutputSectionBase<ELFT> *>
-LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
+template <class ELFT> void LinkerScript<ELFT>::filter() {
   // In this loop, we remove output sections if they don't satisfy
   // requested properties.
   for (const std::unique_ptr<BaseCommand> &Base : Opt.Commands) {
@@ -175,10 +185,10 @@ LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
     if (Cmd->Constraint == ConstraintKind::NoConstraint)
       continue;
 
-    auto It = llvm::find_if(Sections, [&](OutputSectionBase<ELFT> *S) {
+    auto It = llvm::find_if(*OutputSections, [&](OutputSectionBase<ELFT> *S) {
       return S->getName() == Cmd->Name;
     });
-    if (It == Sections.end())
+    if (It == OutputSections->end())
       continue;
 
     OutputSectionBase<ELFT> *Sec = *It;
@@ -187,9 +197,8 @@ LinkerScript<ELFT>::filter(std::vector<OutputSectionBase<ELFT> *> &Sections) {
     bool RW = (Cmd->Constraint == ConstraintKind::ReadWrite);
 
     if ((RO && Writable) || (RW && !Writable))
-      Sections.erase(It);
+      OutputSections->erase(It);
   }
-  return Sections;
 }
 
 template <class ELFT>
@@ -385,6 +394,15 @@ template <class ELFT> bool LinkerScript<ELFT>::hasPhdrsCommands() {
   return !Opt.PhdrsCommands.empty();
 }
 
+template <class ELFT>
+typename ELFT::uint LinkerScript<ELFT>::getOutputSectionSize(StringRef Name) {
+  for (OutputSectionBase<ELFT> *Sec : *OutputSections)
+    if (Sec->getName() == Name)
+      return Sec->getSize();
+  error("undefined section " + Name);
+  return 0;
+}
+
 // Returns indices of ELF headers containing specific section, identified
 // by Name. Each index is a zero based number of ELF header listed within
 // PHDRS {} script block.
@@ -444,6 +462,7 @@ private:
   std::vector<uint8_t> readOutputSectionFiller();
   std::vector<StringRef> readOutputSectionPhdrs();
   std::unique_ptr<InputSectionDescription> readInputSectionDescription();
+  void readInputFilePattern(InputSectionDescription *InCmd, bool Keep);
   void readInputSectionRules(InputSectionDescription *InCmd, bool Keep);
   unsigned readPhdrType();
   void readProvide(bool Hidden);
@@ -674,7 +693,17 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd, bool Keep) {
+void ScriptParser::readInputFilePattern(InputSectionDescription *InCmd,
+                                        bool Keep) {
+  while (!Error && !skip(")")) {
+    if (Keep)
+      Opt.KeptSections.push_back(peek());
+    InCmd->SectionPatterns.push_back(next());
+  }
+}
+
+void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd,
+                                         bool Keep) {
   InCmd->FilePattern = next();
   expect("(");
 
@@ -684,11 +713,15 @@ void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd, bool Ke
       InCmd->ExcludedFiles.push_back(next());
   }
 
-  while (!Error && !skip(")")) {
-    if (Keep)
-      Opt.KeptSections.push_back(peek());
-    InCmd->SectionPatterns.push_back(next());
+  if (skip("SORT")) {
+    expect("(");
+    InCmd->Sort = true;
+    readInputFilePattern(InCmd, Keep);
+    expect(")");
+    return;
   }
+
+  readInputFilePattern(InCmd, Keep);
 }
 
 std::unique_ptr<InputSectionDescription>
@@ -812,6 +845,22 @@ static uint64_t getSymbolValue(StringRef S, uint64_t Dot) {
   return 0;
 }
 
+static uint64_t getSectionSize(StringRef Name) {
+  switch (Config->EKind) {
+  case ELF32LEKind:
+    return Script<ELF32LE>::X->getOutputSectionSize(Name);
+  case ELF32BEKind:
+    return Script<ELF32BE>::X->getOutputSectionSize(Name);
+  case ELF64LEKind:
+    return Script<ELF64LE>::X->getOutputSectionSize(Name);
+  case ELF64BEKind:
+    return Script<ELF64BE>::X->getOutputSectionSize(Name);
+  default:
+    llvm_unreachable("unsupported target");
+  }
+  return 0;
+}
+
 SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
   StringRef Op = next();
   assert(Op == "=" || Op == "+=");
@@ -919,6 +968,12 @@ Expr ScriptParser::readPrimary() {
     readExpr();
     expect(")");
     return [](uint64_t Dot) { return alignTo(Dot, Target->PageSize); };
+  }
+  if (Tok == "SIZEOF") {
+    expect("(");
+    StringRef Name = next();
+    expect(")");
+    return [=](uint64_t Dot) { return getSectionSize(Name); };
   }
 
   // Parse a symbol name or a number literal.
