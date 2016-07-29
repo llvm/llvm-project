@@ -41,26 +41,18 @@ extern int __xray_remove_handler();
 
 enum XRayPatchingStatus {
   NOT_INITIALIZED = 0,
-  NOTIFIED = 1,
+  SUCCESS = 1,
   ONGOING = 2,
-  FAILED = 3
+  FAILED = 3,
 };
 
-// This tells XRay to patch the instrumentation points. This is an asynchronous
-// process, and returns the following status in specific cases:
-//
-//   - 0 : XRay is not initialized.
-//   - 1 : We've done the notification.
-//   - 2 : Patching / un-patching is on-going.
+// This tells XRay to patch the instrumentation points. See XRayPatchingStatus
+// for possible result values.
 extern XRayPatchingStatus __xray_patch();
 
-// Reverses the effect of __xray_patch(). This is an asynchronous process, and
-// returns the following status in specific cases.
-//
-//   - 0 : XRay is not initialized.
-//   - 1 : We've done the notification.
-//   - 2 : Patching / un-patching is on-going.
-extern int __xray_unpatch();
+// Reverses the effect of __xray_patch(). See XRayPatchingStatus for possible
+// result values.
+extern XRayPatchingStatus __xray_unpatch();
 }
 
 #endif

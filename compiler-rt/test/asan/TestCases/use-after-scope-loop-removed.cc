@@ -1,9 +1,5 @@
 // RUN: %clangxx_asan -O1 -fsanitize-address-use-after-scope %s -o %t && \
 // RUN:     not %run %t 2>&1 | FileCheck %s
-//
-// FIXME: Compiler removes for-loop but keeps x variable. For unknown reason
-// @llvm.lifetime.* are not emitted for x.
-// XFAIL: *
 
 #include <stdlib.h>
 
@@ -14,6 +10,9 @@ int main() {
     int x;
     p = &x;
   }
-  return **p;  // BOOM
+  return *p;  // BOOM
   // CHECK: ERROR: AddressSanitizer: stack-use-after-scope
+  // CHECK:  #0 0x{{.*}} in main {{.*}}use-after-scope-loop-removed.cc:[[@LINE-2]]
+  // CHECK: Address 0x{{.*}} is located in stack of thread T{{.*}} at offset [[OFFSET:[^ ]+]] in frame
+  // {{\[}}[[OFFSET]], {{[0-9]+}}) 'x'
 }

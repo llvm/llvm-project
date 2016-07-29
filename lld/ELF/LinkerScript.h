@@ -20,6 +20,7 @@
 
 namespace lld {
 namespace elf {
+class SymbolBody;
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
@@ -53,12 +54,17 @@ struct SymbolAssignment : BaseCommand {
   SymbolAssignment(StringRef Name, Expr E)
       : BaseCommand(AssignmentKind), Name(Name), Expression(E) {}
   static bool classof(const BaseCommand *C);
+
+  // The LHS of an expression. Name is either a symbol name or ".".
   StringRef Name;
+  SymbolBody *Sym = nullptr;
+
+  // The RHS of an expression.
   Expr Expression;
+
+  // Command attributes for PROVIDE, HIDDEN and PROVIDE_HIDDEN.
   bool Provide = false;
-  // Hidden and Ignore can be true, only if Provide is true
   bool Hidden = false;
-  bool Ignore = false;
 };
 
 // Linker scripts allow additional constraints to be put on ouput sections.
