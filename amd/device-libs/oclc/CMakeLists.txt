@@ -11,4 +11,9 @@ file(GLOB sources
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/inc)
 
-clang_opencl_bc_builtins_lib(oclc ${CMAKE_CURRENT_SOURCE_DIR} ${sources})
+foreach (file ${sources})
+  get_filename_component(dir ${file} DIRECTORY)
+  get_filename_component(name ${file} NAME_WE)
+  get_filename_component(ext ${file} EXT)
+  clang_opencl_bc_builtins_lib(oclc_${name} ${CMAKE_CURRENT_SOURCE_DIR} ${file})
+endforeach()
