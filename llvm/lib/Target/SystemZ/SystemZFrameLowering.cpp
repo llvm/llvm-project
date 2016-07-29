@@ -67,7 +67,7 @@ void SystemZFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                                 RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  MachineFrameInfo *MFFrame = MF.getFrameInfo();
+  MachineFrameInfo &MFFrame = MF.getFrameInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   bool HasFP = hasFP(MF);
   SystemZMachineFunctionInfo *MFI = MF.getInfo<SystemZMachineFunctionInfo>();
@@ -94,7 +94,7 @@ void SystemZFrameLowering::determineCalleeSaves(MachineFunction &MF,
 
   // If the function calls other functions, record that the return
   // address register will be clobbered.
-  if (MFFrame->hasCalls())
+  if (MFFrame.hasCalls())
     SavedRegs.set(SystemZ::R14D);
 
   // If we are saving GPRs other than the stack pointer, we might as well
@@ -276,16 +276,16 @@ restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 void SystemZFrameLowering::
 processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                     RegScavenger *RS) const {
-  MachineFrameInfo *MFFrame = MF.getFrameInfo();
-  uint64_t MaxReach = (MFFrame->estimateStackSize(MF) +
+  MachineFrameInfo &MFFrame = MF.getFrameInfo();
+  uint64_t MaxReach = (MFFrame.estimateStackSize(MF) +
                        SystemZMC::CallFrameSize * 2);
   if (!isUInt<12>(MaxReach)) {
     // We may need register scavenging slots if some parts of the frame
     // are outside the reach of an unsigned 12-bit displacement.
     // Create 2 for the case where both addresses in an MVC are
     // out of range.
-    RS->addScavengingFrameIndex(MFFrame->CreateStackObject(8, 8, false));
-    RS->addScavengingFrameIndex(MFFrame->CreateStackObject(8, 8, false));
+    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, 8, false));
+    RS->addScavengingFrameIndex(MFFrame.CreateStackObject(8, 8, false));
   }
 }
 
@@ -321,14 +321,14 @@ static void emitIncrement(MachineBasicBlock &MBB,
 void SystemZFrameLowering::emitPrologue(MachineFunction &MF,
                                         MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
-  MachineFrameInfo *MFFrame = MF.getFrameInfo();
+  MachineFrameInfo &MFFrame = MF.getFrameInfo();
   auto *ZII =
       static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
   SystemZMachineFunctionInfo *ZFI = MF.getInfo<SystemZMachineFunctionInfo>();
   MachineBasicBlock::iterator MBBI = MBB.begin();
   MachineModuleInfo &MMI = MF.getMMI();
   const MCRegisterInfo *MRI = MMI.getContext().getRegisterInfo();
-  const std::vector<CalleeSavedInfo> &CSI = MFFrame->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFFrame.getCalleeSavedInfo();
   bool HasFP = hasFP(MF);
 
   // Debug location must be unknown since the first debug location is used
@@ -478,14 +478,14 @@ void SystemZFrameLowering::emitEpilogue(MachineFunction &MF,
 
 bool SystemZFrameLowering::hasFP(const MachineFunction &MF) const {
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo()->hasVarSizedObjects() ||
+          MF.getFrameInfo().hasVarSizedObjects() ||
           MF.getInfo<SystemZMachineFunctionInfo>()->getManipulatesSP());
 }
 
 int SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                  int FI,
                                                  unsigned &FrameReg) const {
-  const MachineFrameInfo *MFFrame = MF.getFrameInfo();
+  const MachineFrameInfo &MFFrame = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
 
   // Fill in FrameReg output argument.
@@ -494,8 +494,8 @@ int SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // Start with the offset of FI from the top of the caller-allocated frame
   // (i.e. the top of the 160 bytes allocated by the caller).  This initial
   // offset is therefore negative.
-  int64_t Offset = (MFFrame->getObjectOffset(FI) +
-                    MFFrame->getOffsetAdjustment());
+  int64_t Offset = (MFFrame.getObjectOffset(FI) +
+                    MFFrame.getOffsetAdjustment());
 
   // Make the offset relative to the incoming stack pointer.
   Offset -= getOffsetOfLocalArea();
@@ -508,15 +508,15 @@ int SystemZFrameLowering::getFrameIndexReference(const MachineFunction &MF,
 
 uint64_t SystemZFrameLowering::
 getAllocatedStackSize(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFFrame = MF.getFrameInfo();
+  const MachineFrameInfo &MFFrame = MF.getFrameInfo();
 
   // Start with the size of the local variables and spill slots.
-  uint64_t StackSize = MFFrame->getStackSize();
+  uint64_t StackSize = MFFrame.getStackSize();
 
   // We need to allocate the ABI-defined 160-byte base area whenever
   // we allocate stack space for our own use and whenever we call another
   // function.
-  if (StackSize || MFFrame->hasVarSizedObjects() || MFFrame->hasCalls())
+  if (StackSize || MFFrame.hasVarSizedObjects() || MFFrame.hasCalls())
     StackSize += SystemZMC::CallFrameSize;
 
   return StackSize;

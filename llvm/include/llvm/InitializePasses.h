@@ -46,6 +46,9 @@ void initializeInstrumentation(PassRegistry&);
 /// Initialize all passes linked into the Analysis library.
 void initializeAnalysis(PassRegistry&);
 
+/// Initialize all passes linked into the Coroutines library.
+void initializeCoroutines(PassRegistry&);
+
 /// Initialize all passes linked into the CodeGen library.
 void initializeCodeGen(PassRegistry&);
 
@@ -162,6 +165,7 @@ void initializeIntervalPartitionPass(PassRegistry&);
 void initializeJumpThreadingPass(PassRegistry&);
 void initializeLCSSAWrapperPassPass(PassRegistry &);
 void initializeLegacyLICMPassPass(PassRegistry&);
+void initializeLazyBranchProbabilityInfoPassPass(PassRegistry&);
 void initializeLazyBlockFrequencyInfoPassPass(PassRegistry&);
 void initializeLazyValueInfoWrapperPassPass(PassRegistry&);
 void initializeLintPass(PassRegistry&);
@@ -199,7 +203,7 @@ void initializeLoopVersioningPassPass(PassRegistry &);
 void initializeLowerAtomicLegacyPassPass(PassRegistry &);
 void initializeLowerEmuTLSPass(PassRegistry&);
 void initializeLowerExpectIntrinsicPass(PassRegistry&);
-void initializeLowerGuardIntrinsicPass(PassRegistry&);
+void initializeLowerGuardIntrinsicLegacyPassPass(PassRegistry&);
 void initializeLowerIntrinsicsPass(PassRegistry&);
 void initializeLowerInvokePass(PassRegistry&);
 void initializeLowerSwitchPass(PassRegistry&);

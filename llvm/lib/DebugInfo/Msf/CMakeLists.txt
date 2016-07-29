@@ -1,6 +1,4 @@
 add_llvm_library(LLVMDebugInfoMsf
-  ByteStream.cpp
-  IndexedStreamData.cpp
   MappedBlockStream.cpp
   MsfBuilder.cpp
   MsfCommon.cpp

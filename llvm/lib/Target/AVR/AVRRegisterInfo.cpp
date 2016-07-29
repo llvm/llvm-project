@@ -129,13 +129,13 @@ void AVRRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   const MachineFunction &MF = *MBB.getParent();
   const AVRTargetMachine &TM = (const AVRTargetMachine &)MF.getTarget();
   const TargetInstrInfo &TII = *TM.getSubtargetImpl()->getInstrInfo();
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFI = TM.getSubtargetImpl()->getFrameLowering();
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MFI->getObjectOffset(FrameIndex);
+  int Offset = MFI.getObjectOffset(FrameIndex);
 
   // Add one to the offset because SP points to an empty slot.
-  Offset += MFI->getStackSize() - TFI->getOffsetOfLocalArea() + 1;
+  Offset += MFI.getStackSize() - TFI->getOffsetOfLocalArea() + 1;
   // Fold incoming offset.
   Offset += MI.getOperand(FIOperandNum + 1).getImm();
 

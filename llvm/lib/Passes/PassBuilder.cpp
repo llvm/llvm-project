@@ -102,6 +102,7 @@
 #include "llvm/Transforms/Scalar/LoopUnrollPass.h"
 #include "llvm/Transforms/Scalar/LowerAtomic.h"
 #include "llvm/Transforms/Scalar/LowerExpectIntrinsic.h"
+#include "llvm/Transforms/Scalar/LowerGuardIntrinsic.h"
 #include "llvm/Transforms/Scalar/MemCpyOptimizer.h"
 #include "llvm/Transforms/Scalar/MergedLoadStoreMotion.h"
 #include "llvm/Transforms/Scalar/NaryReassociate.h"

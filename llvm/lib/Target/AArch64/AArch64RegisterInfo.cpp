@@ -183,7 +183,7 @@ AArch64RegisterInfo::getCrossCopyRegClass(const TargetRegisterClass *RC) const {
 unsigned AArch64RegisterInfo::getBaseRegister() const { return AArch64::X19; }
 
 bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // In the presence of variable sized objects, if the fixed stack size is
   // large enough that referencing from the FP won't result in things being
@@ -192,7 +192,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // Furthermore, if both variable sized objects are present, and the
   // stack needs to be dynamically re-aligned, the base pointer is the only
   // reliable way to reference the locals.
-  if (MFI->hasVarSizedObjects()) {
+  if (MFI.hasVarSizedObjects()) {
     if (needsStackRealignment(MF))
       return true;
     // Conservatively estimate whether the negative offset from the frame
@@ -202,7 +202,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
     // If it's wrong, we'll materialize the constant and still get to the
     // object; it's just suboptimal. Negative offsets use the unscaled
     // load/store instructions, which have a 9-bit signed immediate.
-    return MFI->getLocalFrameSize() >= 256;
+    return MFI.getLocalFrameSize() >= 256;
   }
 
   return false;
@@ -226,11 +226,11 @@ bool AArch64RegisterInfo::requiresVirtualBaseRegisters(
 
 bool
 AArch64RegisterInfo::useFPForScavengingIndex(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   // AArch64FrameLowering::resolveFrameIndexReference() can always fall back
   // to the stack pointer, so only put the emergency spill slot next to the
   // FP when there's no better way to access it (SP or base pointer).
-  return MFI->hasVarSizedObjects() && !hasBasePointer(MF);
+  return MFI.hasVarSizedObjects() && !hasBasePointer(MF);
 }
 
 bool AArch64RegisterInfo::requiresFrameIndexScavenging(
@@ -240,10 +240,10 @@ bool AArch64RegisterInfo::requiresFrameIndexScavenging(
 
 bool
 AArch64RegisterInfo::cannotEliminateFrame(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI->adjustsStack())
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
     return true;
-  return MFI->hasVarSizedObjects() || MFI->isFrameAddressTaken();
+  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken();
 }
 
 /// needsFrameBaseReg - Returns true if the instruction's frame index
@@ -275,7 +275,7 @@ bool AArch64RegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   // so it'll be negative.
   MachineFunction &MF = *MI->getParent()->getParent();
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Estimate an offset from the frame pointer.
   // Conservatively assume all GPR callee-saved registers get pushed.
@@ -285,7 +285,7 @@ bool AArch64RegisterInfo::needsFrameBaseReg(MachineInstr *MI,
   // The incoming offset is relating to the SP at the start of the function,
   // but when we access the local it'll be relative to the SP after local
   // allocation, so adjust our SP-relative offset by that allocation size.
-  Offset += MFI->getLocalFrameSize();
+  Offset += MFI.getLocalFrameSize();
   // Assume that we'll have at least some spill slots allocated.
   // FIXME: This is a total SWAG number. We should run some statistics
   //        and pick a real one.

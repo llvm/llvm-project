@@ -29,7 +29,6 @@ public:
   NameMap();
 
   Error load(msf::StreamReader &Stream);
-  Error commit(msf::StreamWriter &Writer);
 
   bool tryGetValue(StringRef Name, uint32_t &Value) const;
 

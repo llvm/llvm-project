@@ -1178,8 +1178,8 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
         }
         // If there's dynamic realignment, adjust for it.
         if (RI.needsStackRealignment(MF)) {
-          MachineFrameInfo  *MFI = MF.getFrameInfo();
-          unsigned MaxAlign = MFI->getMaxAlignment();
+          MachineFrameInfo &MFI = MF.getFrameInfo();
+          unsigned MaxAlign = MFI.getMaxAlignment();
           assert (!AFI->isThumb1OnlyFunction());
           // Emit bic r6, r6, MaxAlign
           assert(MaxAlign <= 256 && "The BIC instruction cannot encode "

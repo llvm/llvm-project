@@ -12,9 +12,10 @@
 
 #include "llvm/Config/llvm-config.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include <functional>
+#include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include <cstdint>
 #include <cstring>
+#include <functional>
 
 namespace llvm {
 namespace pdb {
@@ -71,13 +72,6 @@ class PDBSymbolUnknown;
 enum class PDB_ReaderType {
   DIA = 0,
   Raw = 1,
-};
-
-/// Defines a 128-bit unique identifier.  This maps to a GUID on Windows, but
-/// is abstracted here for the purposes of non-Windows platforms that don't have
-/// the GUID structure defined.
-struct PDB_UniqueId {
-  char Guid[16];
 };
 
 /// An enumeration indicating the type of data contained in this table.

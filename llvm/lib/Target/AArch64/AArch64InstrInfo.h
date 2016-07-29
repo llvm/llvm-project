@@ -39,7 +39,7 @@ public:
   /// always be able to get register info as well (through this method).
   const AArch64RegisterInfo &getRegisterInfo() const { return RI; }
 
-  unsigned GetInstSizeInBytes(const MachineInstr &MI) const;
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   bool isAsCheapAsAMove(const MachineInstr &MI) const override;
 

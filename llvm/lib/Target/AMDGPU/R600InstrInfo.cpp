@@ -1160,10 +1160,10 @@ MachineInstrBuilder R600InstrInfo::buildIndirectRead(MachineBasicBlock *MBB,
 
 int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   int Offset = -1;
 
-  if (MFI->getNumObjects() == 0) {
+  if (MFI.getNumObjects() == 0) {
     return -1;
   }
 
@@ -1195,14 +1195,14 @@ int R600InstrInfo::getIndirectIndexBegin(const MachineFunction &MF) const {
 
 int R600InstrInfo::getIndirectIndexEnd(const MachineFunction &MF) const {
   int Offset = 0;
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Variable sized objects are not supported
-  if (MFI->hasVarSizedObjects()) {
+  if (MFI.hasVarSizedObjects()) {
     return -1;
   }
 
-  if (MFI->getNumObjects() == 0) {
+  if (MFI.getNumObjects() == 0) {
     return -1;
   }
 

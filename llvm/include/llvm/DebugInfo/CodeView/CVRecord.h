@@ -32,7 +32,7 @@ namespace msf {
 
 template <typename Kind>
 struct VarStreamArrayExtractor<codeview::CVRecord<Kind>> {
-  Error operator()(StreamRef Stream, uint32_t &Len,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
                    codeview::CVRecord<Kind> &Item) const {
     using namespace codeview;
     const RecordPrefix *Prefix = nullptr;

@@ -5413,7 +5413,7 @@ define <2 x double>@test_int_x86_avx512_mask_move_sd_rrk(<2 x double> %x0, <2 x 
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    kmovw %edi, %k1
 ; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm2 {%k1}
-; CHECK-NEXT:    vmovaps %zmm2, %zmm0
+; CHECK-NEXT:    vmovapd %zmm2, %zmm0
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.move.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> %x2, i8 %x3)
   ret <2 x double> %res

@@ -20,6 +20,7 @@
 #include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/Transforms/Utils/ImportedFunctionsInliningStatistics.h"
 
 namespace llvm {
 class AssumptionCacheTracker;
@@ -40,6 +41,8 @@ struct Inliner : public CallGraphSCCPass {
   /// the call graph.  If the derived class implements this method, it should
   /// always explicitly call the implementation here.
   void getAnalysisUsage(AnalysisUsage &Info) const override;
+
+  bool doInitialization(CallGraph &CG) override;
 
   // Main run interface method, this implements the interface required by the
   // Pass class.
@@ -78,6 +81,7 @@ private:
 protected:
   AssumptionCacheTracker *ACT;
   ProfileSummaryInfo *PSI;
+  ImportedFunctionsInliningStatistics ImportedFunctionsStats;
 };
 
 } // End llvm namespace

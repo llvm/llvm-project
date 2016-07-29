@@ -21,6 +21,7 @@ add_llvm_target(HexagonCodeGen
   HexagonBranchRelaxation.cpp
   HexagonCFGOptimizer.cpp
   HexagonCommonGEP.cpp
+  HexagonConstPropagation.cpp
   HexagonCopyToCombine.cpp
   HexagonEarlyIfConv.cpp
   HexagonExpandCondsets.cpp

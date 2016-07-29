@@ -3366,8 +3366,8 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
   default: return false;
   case Intrinsic::frameaddress: {
-    MachineFrameInfo *MFI = FuncInfo.MF->getFrameInfo();
-    MFI->setFrameAddressIsTaken(true);
+    MachineFrameInfo &MFI = FuncInfo.MF->getFrameInfo();
+    MFI.setFrameAddressIsTaken(true);
 
     const AArch64RegisterInfo *RegInfo =
         static_cast<const AArch64RegisterInfo *>(Subtarget->getRegisterInfo());

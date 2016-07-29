@@ -2409,6 +2409,11 @@ void Verifier::visitPtrToIntInst(PtrToIntInst &I) {
 
   Assert(SrcTy->getScalarType()->isPointerTy(),
          "PtrToInt source must be pointer", &I);
+
+  if (auto *PTy = dyn_cast<PointerType>(SrcTy->getScalarType()))
+    Assert(!M->getDataLayout().isNonIntegralPointerType(PTy),
+           "ptrtoint not supported for non-integral pointers");
+
   Assert(DestTy->getScalarType()->isIntegerTy(),
          "PtrToInt result must be integral", &I);
   Assert(SrcTy->isVectorTy() == DestTy->isVectorTy(), "PtrToInt type mismatch",
@@ -2433,6 +2438,11 @@ void Verifier::visitIntToPtrInst(IntToPtrInst &I) {
          "IntToPtr source must be an integral", &I);
   Assert(DestTy->getScalarType()->isPointerTy(),
          "IntToPtr result must be a pointer", &I);
+
+  if (auto *PTy = dyn_cast<PointerType>(DestTy->getScalarType()))
+    Assert(!M->getDataLayout().isNonIntegralPointerType(PTy),
+           "inttoptr not supported for non-integral pointers");
+
   Assert(SrcTy->isVectorTy() == DestTy->isVectorTy(), "IntToPtr type mismatch",
          &I);
   if (SrcTy->isVectorTy()) {
@@ -3647,7 +3657,7 @@ void Verifier::visitInstruction(Instruction &I) {
       // Check to make sure that the "address of" an intrinsic function is never
       // taken.
       Assert(
-          !F->hasLLVMReservedName() ||
+          !F->isIntrinsic() ||
               i == (isa<CallInst>(I) ? e - 1 : isa<InvokeInst>(I) ? e - 3 : 0),
           "Cannot take the address of an intrinsic!", &I);
       Assert(

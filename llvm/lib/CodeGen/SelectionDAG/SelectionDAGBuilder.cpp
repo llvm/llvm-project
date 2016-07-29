@@ -833,8 +833,7 @@ void RegsForValue::AddInlineAsmOperands(unsigned Code, bool HasMatching,
 
       if (TheReg == SP && Code == InlineAsm::Kind_Clobber) {
         // If we clobbered the stack pointer, MFI should know about it.
-        assert(DAG.getMachineFunction().getFrameInfo()->
-            hasOpaqueSPAdjustment());
+        assert(DAG.getMachineFunction().getFrameInfo().hasOpaqueSPAdjustment());
       }
     }
   }
@@ -2033,8 +2032,8 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
 
-  MachineFrameInfo *MFI = ParentBB->getParent()->getFrameInfo();
-  int FI = MFI->getStackProtectorIndex();
+  MachineFrameInfo &MFI = ParentBB->getParent()->getFrameInfo();
+  int FI = MFI.getStackProtectorIndex();
 
   SDValue Guard;
   SDLoc dl = getCurSDLoc();
@@ -3433,7 +3432,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   setValue(&I, DSA);
   DAG.setRoot(DSA.getValue(1));
 
-  assert(FuncInfo.MF->getFrameInfo()->hasVarSizedObjects());
+  assert(FuncInfo.MF->getFrameInfo().hasVarSizedObjects());
 }
 
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
@@ -5024,11 +5023,11 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   }
   case Intrinsic::eh_sjlj_functioncontext: {
     // Get and store the index of the function context.
-    MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     AllocaInst *FnCtx =
       cast<AllocaInst>(I.getArgOperand(0)->stripPointerCasts());
     int FI = FuncInfo.StaticAllocaMap[FnCtx];
-    MFI->setFunctionContextIndex(FI);
+    MFI.setFunctionContextIndex(FI);
     return nullptr;
   }
   case Intrinsic::eh_sjlj_setjmp: {
@@ -5377,7 +5376,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
   case Intrinsic::stackprotector: {
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
-    MachineFrameInfo *MFI = MF.getFrameInfo();
+    MachineFrameInfo &MFI = MF.getFrameInfo();
     EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
     SDValue Src, Chain = getRoot();
 
@@ -5389,7 +5388,7 @@ SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I, unsigned Intrinsic) {
     AllocaInst *Slot = cast<AllocaInst>(I.getArgOperand(1));
 
     int FI = FuncInfo.StaticAllocaMap[Slot];
-    MFI->setStackProtectorIndex(FI);
+    MFI.setStackProtectorIndex(FI);
 
     SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
 
@@ -6723,7 +6722,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
         uint64_t TySize = DL.getTypeAllocSize(Ty);
         unsigned Align = DL.getPrefTypeAlignment(Ty);
         MachineFunction &MF = DAG.getMachineFunction();
-        int SSFI = MF.getFrameInfo()->CreateStackObject(TySize, Align, false);
+        int SSFI = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
         SDValue StackSlot =
             DAG.getFrameIndex(SSFI, TLI.getPointerTy(DAG.getDataLayout()));
         Chain = DAG.getStore(
@@ -7308,7 +7307,7 @@ void SelectionDAGBuilder::visitStackmap(const CallInst &CI) {
   DAG.setRoot(Chain);
 
   // Inform the Frame Information that we have a stackmap in this function.
-  FuncInfo.MF->getFrameInfo()->setHasStackMap();
+  FuncInfo.MF->getFrameInfo().setHasStackMap();
 }
 
 /// \brief Lower llvm.experimental.patchpoint directly to its target opcode.
@@ -7459,7 +7458,7 @@ void SelectionDAGBuilder::visitPatchpoint(ImmutableCallSite CS,
   DAG.DeleteNode(Call);
 
   // Inform the Frame Information that we have a patchpoint in this function.
-  FuncInfo.MF->getFrameInfo()->setHasPatchPoint();
+  FuncInfo.MF->getFrameInfo().setHasPatchPoint();
 }
 
 /// Returns an AttributeSet representing the attributes applied to the return
@@ -7507,7 +7506,7 @@ TargetLowering::LowerCallTo(TargetLowering::CallLoweringInfo &CLI) const {
     uint64_t TySize = DL.getTypeAllocSize(CLI.RetTy);
     unsigned Align = DL.getPrefTypeAlignment(CLI.RetTy);
     MachineFunction &MF = CLI.DAG.getMachineFunction();
-    DemoteStackIdx = MF.getFrameInfo()->CreateStackObject(TySize, Align, false);
+    DemoteStackIdx = MF.getFrameInfo().CreateStackObject(TySize, Align, false);
     Type *StackSlotPtrType = PointerType::getUnqual(CLI.RetTy);
 
     DemoteStackSlot = CLI.DAG.getFrameIndex(DemoteStackIdx, getPointerTy(DL));

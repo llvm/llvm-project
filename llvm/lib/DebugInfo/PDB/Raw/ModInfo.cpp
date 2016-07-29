@@ -27,7 +27,7 @@ ModInfo::ModInfo(const ModInfo &Info)
 
 ModInfo::~ModInfo() {}
 
-Error ModInfo::initialize(StreamRef Stream, ModInfo &Info) {
+Error ModInfo::initialize(ReadableStreamRef Stream, ModInfo &Info) {
   StreamReader Reader(Stream);
   if (auto EC = Reader.readObject(Info.Layout))
     return EC;

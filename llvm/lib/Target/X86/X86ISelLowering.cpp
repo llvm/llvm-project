@@ -2445,7 +2445,7 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
                                     const SmallVectorImpl<ISD::InputArg> &Ins,
                                     const SDLoc &dl, SelectionDAG &DAG,
                                     const CCValAssign &VA,
-                                    MachineFrameInfo *MFI, unsigned i) const {
+                                    MachineFrameInfo &MFI, unsigned i) const {
   // Create the nodes corresponding to a load from this parameter slot.
   ISD::ArgFlagsTy Flags = Ins[i].Flags;
   bool AlwaysUseMutable = shouldGuaranteeTCO(
@@ -2483,26 +2483,26 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
   if (Flags.isByVal()) {
     unsigned Bytes = Flags.getByValSize();
     if (Bytes == 0) Bytes = 1; // Don't create zero-sized stack objects.
-    int FI = MFI->CreateFixedObject(Bytes, VA.getLocMemOffset(), isImmutable);
+    int FI = MFI.CreateFixedObject(Bytes, VA.getLocMemOffset(), isImmutable);
     // Adjust SP offset of interrupt parameter.
     if (CallConv == CallingConv::X86_INTR) {
-      MFI->setObjectOffset(FI, Offset);
+      MFI.setObjectOffset(FI, Offset);
     }
     return DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
   } else {
-    int FI = MFI->CreateFixedObject(ValVT.getSizeInBits()/8,
-                                    VA.getLocMemOffset(), isImmutable);
+    int FI = MFI.CreateFixedObject(ValVT.getSizeInBits()/8,
+                                   VA.getLocMemOffset(), isImmutable);
 
     // Set SExt or ZExt flag.
     if (VA.getLocInfo() == CCValAssign::ZExt) {
-      MFI->setObjectZExt(FI, true);
+      MFI.setObjectZExt(FI, true);
     } else if (VA.getLocInfo() == CCValAssign::SExt) {
-      MFI->setObjectSExt(FI, true);
+      MFI.setObjectSExt(FI, true);
     }
 
     // Adjust SP offset of interrupt parameter.
     if (CallConv == CallingConv::X86_INTR) {
-      MFI->setObjectOffset(FI, Offset);
+      MFI.setObjectOffset(FI, Offset);
     }
 
     SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
@@ -2576,7 +2576,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       Fn->getName() == "main")
     FuncInfo->setForceFramePointer(true);
 
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   bool Is64Bit = Subtarget.is64Bit();
   bool IsWin64 = Subtarget.isCallingConvWin64(CallConv);
 
@@ -2713,11 +2713,10 @@ SDValue X86TargetLowering::LowerFormalArguments(
   // If the function takes variable number of arguments, make a frame index for
   // the start of the first vararg value... for expansion of llvm.va_start. We
   // can skip this if there are no va_start calls.
-  if (MFI->hasVAStart() &&
+  if (MFI.hasVAStart() &&
       (Is64Bit || (CallConv != CallingConv::X86_FastCall &&
                    CallConv != CallingConv::X86_ThisCall))) {
-    FuncInfo->setVarArgsFrameIndex(
-        MFI->CreateFixedObject(1, StackSize, true));
+    FuncInfo->setVarArgsFrameIndex(MFI.CreateFixedObject(1, StackSize, true));
   }
 
   // Figure out if XMM registers are in use.
@@ -2727,7 +2726,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
 
   // 64-bit calling conventions support varargs and register parameters, so we
   // have to do extra work to spill them in the prologue.
-  if (Is64Bit && isVarArg && MFI->hasVAStart()) {
+  if (Is64Bit && isVarArg && MFI.hasVAStart()) {
     // Find the first unallocated argument registers.
     ArrayRef<MCPhysReg> ArgGPRs = get64BitArgumentGPRs(CallConv, Subtarget);
     ArrayRef<MCPhysReg> ArgXMMs = get64BitArgumentXMMs(MF, CallConv, Subtarget);
@@ -2760,7 +2759,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       // for the return address.
       int HomeOffset = TFI.getOffsetOfLocalArea() + 8;
       FuncInfo->setRegSaveFrameIndex(
-          MFI->CreateFixedObject(1, NumIntRegs * 8 + HomeOffset, false));
+          MFI.CreateFixedObject(1, NumIntRegs * 8 + HomeOffset, false));
       // Fixup to set vararg frame on shadow area (4 x i64).
       if (NumIntRegs < 4)
         FuncInfo->setVarArgsFrameIndex(FuncInfo->getRegSaveFrameIndex());
@@ -2770,7 +2769,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       // they may be loaded by dereferencing the result of va_next.
       FuncInfo->setVarArgsGPOffset(NumIntRegs * 8);
       FuncInfo->setVarArgsFPOffset(ArgGPRs.size() * 8 + NumXMMRegs * 16);
-      FuncInfo->setRegSaveFrameIndex(MFI->CreateStackObject(
+      FuncInfo->setRegSaveFrameIndex(MFI.CreateStackObject(
           ArgGPRs.size() * 8 + ArgXMMs.size() * 16, 16, false));
     }
 
@@ -2810,7 +2809,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other, MemOps);
   }
 
-  if (isVarArg && MFI->hasMustTailInVarArgFunc()) {
+  if (isVarArg && MFI.hasMustTailInVarArgFunc()) {
     // Find the largest legal vector type.
     MVT VecVT = MVT::Other;
     // FIXME: Only some x86_32 calling conventions support AVX512.
@@ -2889,7 +2888,7 @@ SDValue X86TargetLowering::LowerFormalArguments(
       // same, so the size of funclets' (mostly empty) frames is dictated by
       // how far this slot is from the bottom (since they allocate just enough
       // space to accommodate holding this slot at the correct offset).
-      int PSPSymFI = MFI->CreateStackObject(8, 8, /*isSS=*/false);
+      int PSPSymFI = MFI.CreateStackObject(8, 8, /*isSS=*/false);
       EHInfo->PSPSymFrameIdx = PSPSymFI;
     }
   }
@@ -2938,7 +2937,7 @@ static SDValue EmitTailCallStoreRetAddr(SelectionDAG &DAG, MachineFunction &MF,
   if (!FPDiff) return Chain;
   // Calculate the new stack slot for the return address.
   int NewReturnAddrFI =
-    MF.getFrameInfo()->CreateFixedObject(SlotSize, (int64_t)FPDiff - SlotSize,
+    MF.getFrameInfo().CreateFixedObject(SlotSize, (int64_t)FPDiff - SlotSize,
                                          false);
   SDValue NewRetAddrFrIdx = DAG.getFrameIndex(NewReturnAddrFI, PtrVT);
   Chain = DAG.getStore(Chain, dl, RetAddrFrIdx, NewRetAddrFrIdx,
@@ -3252,7 +3251,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       // Create frame index.
       int32_t Offset = VA.getLocMemOffset()+FPDiff;
       uint32_t OpSize = (VA.getLocVT().getSizeInBits()+7)/8;
-      FI = MF.getFrameInfo()->CreateFixedObject(OpSize, Offset, true);
+      FI = MF.getFrameInfo().CreateFixedObject(OpSize, Offset, true);
       FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
 
       if (Flags.isByVal()) {
@@ -3391,7 +3390,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // This isn't right, although it's probably harmless on x86; liveouts
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
-    MF.getFrameInfo()->setHasTailCall();
+    MF.getFrameInfo().setHasTailCall();
     return DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
   }
 
@@ -3493,7 +3492,7 @@ X86TargetLowering::GetAlignedArgumentStackSize(unsigned StackSize,
 /// same position (relatively) of the caller's incoming argument stack.
 static
 bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
-                         MachineFrameInfo *MFI, const MachineRegisterInfo *MRI,
+                         MachineFrameInfo &MFI, const MachineRegisterInfo *MRI,
                          const X86InstrInfo *TII, const CCValAssign &VA) {
   unsigned Bytes = Arg.getValueType().getSizeInBits() / 8;
 
@@ -3558,22 +3557,22 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
     return false;
 
   assert(FI != INT_MAX);
-  if (!MFI->isFixedObjectIndex(FI))
+  if (!MFI.isFixedObjectIndex(FI))
     return false;
 
-  if (Offset != MFI->getObjectOffset(FI))
+  if (Offset != MFI.getObjectOffset(FI))
     return false;
 
   if (VA.getLocVT().getSizeInBits() > Arg.getValueType().getSizeInBits()) {
     // If the argument location is wider than the argument type, check that any
     // extension flags match.
-    if (Flags.isZExt() != MFI->isObjectZExt(FI) ||
-        Flags.isSExt() != MFI->isObjectSExt(FI)) {
+    if (Flags.isZExt() != MFI.isObjectZExt(FI) ||
+        Flags.isSExt() != MFI.isObjectSExt(FI)) {
       return false;
     }
   }
 
-  return Bytes == MFI->getObjectSize(FI);
+  return Bytes == MFI.getObjectSize(FI);
 }
 
 /// Check whether the call is eligible for tail call optimization. Targets
@@ -3700,7 +3699,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     if (CCInfo.getNextStackOffset()) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
-      MachineFrameInfo *MFI = MF.getFrameInfo();
+      MachineFrameInfo &MFI = MF.getFrameInfo();
       const MachineRegisterInfo *MRI = &MF.getRegInfo();
       const X86InstrInfo *TII = Subtarget.getInstrInfo();
       for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
@@ -3884,9 +3883,9 @@ SDValue X86TargetLowering::getReturnAddressFrameIndex(SelectionDAG &DAG) const {
   if (ReturnAddrIndex == 0) {
     // Set up a frame object for the return address.
     unsigned SlotSize = RegInfo->getSlotSize();
-    ReturnAddrIndex = MF.getFrameInfo()->CreateFixedObject(SlotSize,
-                                                           -(int64_t)SlotSize,
-                                                           false);
+    ReturnAddrIndex = MF.getFrameInfo().CreateFixedObject(SlotSize,
+                                                          -(int64_t)SlotSize,
+                                                          false);
     FuncInfo->setRAIndex(ReturnAddrIndex);
   }
 
@@ -5531,15 +5530,15 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
     unsigned RequiredAlign = VT.getSizeInBits()/8;
     SDValue Chain = LD->getChain();
     // Make sure the stack object alignment is at least 16 or 32.
-    MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     if (DAG.InferPtrAlignment(Ptr) < RequiredAlign) {
-      if (MFI->isFixedObjectIndex(FI)) {
+      if (MFI.isFixedObjectIndex(FI)) {
         // Can't change the alignment. FIXME: It's possible to compute
         // the exact stack offset and reference FI + adjust offset instead.
         // If someone *really* cares about this. That's the way to implement it.
         return SDValue();
       } else {
-        MFI->setObjectAlignment(FI, RequiredAlign);
+        MFI.setObjectAlignment(FI, RequiredAlign);
       }
     }
 
@@ -13037,7 +13036,7 @@ static SDValue
 GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
            SDValue *InFlag, const EVT PtrVT, unsigned ReturnReg,
            unsigned char OperandFlags, bool LocalDynamic = false) {
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl,
@@ -13057,8 +13056,8 @@ GetTLSADDR(SelectionDAG &DAG, SDValue Chain, GlobalAddressSDNode *GA,
   }
 
   // TLSADDR will be codegen'ed as call. Inform MFI that function has calls.
-  MFI->setAdjustsStack(true);
-  MFI->setHasCalls(true);
+  MFI.setAdjustsStack(true);
+  MFI.setHasCalls(true);
 
   SDValue Flag = Chain.getValue(1);
   return DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Flag);
@@ -13093,7 +13092,7 @@ static SDValue LowerToTLSLocalDynamicModel(GlobalAddressSDNode *GA,
   SDLoc dl(GA);
 
   // Get the start address of the TLS block for this module.
-  X86MachineFunctionInfo* MFI = DAG.getMachineFunction()
+  X86MachineFunctionInfo *MFI = DAG.getMachineFunction()
       .getInfo<X86MachineFunctionInfo>();
   MFI->incNumLocalDynamicTLSAccesses();
 
@@ -13247,8 +13246,8 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
                                Chain.getValue(1), DL);
 
     // TLSCALL will be codegen'ed as call. Inform MFI that function has calls.
-    MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-    MFI->setAdjustsStack(true);
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+    MFI.setAdjustsStack(true);
 
     // And our return value (tls address) is in the standard call return value
     // location.
@@ -13429,7 +13428,7 @@ SDValue X86TargetLowering::LowerSINT_TO_FP(SDValue Op,
   unsigned Size = SrcVT.getSizeInBits()/8;
   MachineFunction &MF = DAG.getMachineFunction();
   auto PtrVT = getPointerTy(MF.getDataLayout());
-  int SSFI = MF.getFrameInfo()->CreateStackObject(Size, Size, false);
+  int SSFI = MF.getFrameInfo().CreateStackObject(Size, Size, false);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
   SDValue Chain = DAG.getStore(
       DAG.getEntryNode(), dl, ValueToStore, StackSlot,
@@ -13476,7 +13475,7 @@ SDValue X86TargetLowering::BuildFILD(SDValue Op, EVT SrcVT, SDValue Chain,
     // multiple blocks. When stackifier is fixed, they can be uncoupled.
     MachineFunction &MF = DAG.getMachineFunction();
     unsigned SSFISize = Op.getValueType().getSizeInBits()/8;
-    int SSFI = MF.getFrameInfo()->CreateStackObject(SSFISize, SSFISize, false);
+    int SSFI = MF.getFrameInfo().CreateStackObject(SSFISize, SSFISize, false);
     auto PtrVT = getPointerTy(MF.getDataLayout());
     SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
     Tys = DAG.getVTList(MVT::Other);
@@ -13899,7 +13898,7 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
   // stack slot.
   MachineFunction &MF = DAG.getMachineFunction();
   unsigned MemSize = DstTy.getSizeInBits()/8;
-  int SSFI = MF.getFrameInfo()->CreateStackObject(MemSize, MemSize, false);
+  int SSFI = MF.getFrameInfo().CreateStackObject(MemSize, MemSize, false);
   SDValue StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
 
   unsigned Opc;
@@ -13977,7 +13976,7 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
                                 MachineMemOperand::MOLoad, MemSize, MemSize);
     Value = DAG.getMemIntrinsicNode(X86ISD::FLD, DL, Tys, Ops, DstTy, MMO);
     Chain = Value.getValue(1);
-    SSFI = MF.getFrameInfo()->CreateStackObject(MemSize, MemSize, false);
+    SSFI = MF.getFrameInfo().CreateStackObject(MemSize, MemSize, false);
     StackSlot = DAG.getFrameIndex(SSFI, PtrVT);
   }
 
@@ -18455,8 +18454,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
         IntNo == llvm::Intrinsic::x86_flags_write_u64) {
       // We need a frame pointer because this will get lowered to a PUSH/POP
       // sequence.
-      MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-      MFI->setHasCopyImplyingStackAdjustment(true);
+      MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+      MFI.setHasCopyImplyingStackAdjustment(true);
       // Don't do anything here, we will expand these intrinsics out later
       // during ExpandISelPseudos in EmitInstrWithCustomInserter.
       return SDValue();
@@ -18631,8 +18630,8 @@ static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
 
 SDValue X86TargetLowering::LowerRETURNADDR(SDValue Op,
                                            SelectionDAG &DAG) const {
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI->setReturnAddressIsTaken(true);
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setReturnAddressIsTaken(true);
 
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
@@ -18658,12 +18657,12 @@ SDValue X86TargetLowering::LowerRETURNADDR(SDValue Op,
 
 SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   X86MachineFunctionInfo *FuncInfo = MF.getInfo<X86MachineFunctionInfo>();
   const X86RegisterInfo *RegInfo = Subtarget.getRegisterInfo();
   EVT VT = Op.getValueType();
 
-  MFI->setFrameAddressIsTaken(true);
+  MFI.setFrameAddressIsTaken(true);
 
   if (MF.getTarget().getMCAsmInfo()->usesWindowsCFI()) {
     // Depth > 0 makes no sense on targets which use Windows unwind codes.  It
@@ -18673,7 +18672,7 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
     if (!FrameAddrIndex) {
       // Set up a frame object for the return address.
       unsigned SlotSize = RegInfo->getSlotSize();
-      FrameAddrIndex = MF.getFrameInfo()->CreateFixedObject(
+      FrameAddrIndex = MF.getFrameInfo().CreateFixedObject(
           SlotSize, /*Offset=*/0, /*IsImmutable=*/false);
       FuncInfo->setFAIndex(FrameAddrIndex);
     }
@@ -18991,7 +18990,7 @@ SDValue X86TargetLowering::LowerFLT_ROUNDS_(SDValue Op,
   SDLoc DL(Op);
 
   // Save FP Control Word to stack slot
-  int SSFI = MF.getFrameInfo()->CreateStackObject(2, StackAlignment, false);
+  int SSFI = MF.getFrameInfo().CreateStackObject(2, StackAlignment, false);
   SDValue StackSlot =
       DAG.getFrameIndex(SSFI, getPointerTy(DAG.getDataLayout()));
 
@@ -24060,10 +24059,10 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   DebugLoc DL = MI.getDebugLoc();
   MachineFunction *MF = BB->getParent();
   MachineModuleInfo *MMI = &MF->getMMI();
-  MachineFrameInfo *MFI = MF->getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-  int FI = MFI->getFunctionContextIndex();
+  int FI = MFI.getFunctionContextIndex();
 
   // Get a mapping of the call site numbers to all of the landing pads they're
   // associated with.
@@ -24236,164 +24235,6 @@ X86TargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   return BB;
 }
 
-// Replace 213-type (isel default) FMA3 instructions with 231-type for
-// accumulator loops. Writing back to the accumulator allows the coalescer
-// to remove extra copies in the loop.
-// FIXME: Do this on AVX512.  We don't support 231 variants yet (PR23937).
-MachineBasicBlock *
-X86TargetLowering::emitFMA3Instr(MachineInstr &MI,
-                                 MachineBasicBlock *MBB) const {
-  MachineOperand &AddendOp = MI.getOperand(3);
-
-  // Bail out early if the addend isn't a register - we can't switch these.
-  if (!AddendOp.isReg())
-    return MBB;
-
-  MachineFunction &MF = *MBB->getParent();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-
-  // Check whether the addend is defined by a PHI:
-  assert(MRI.hasOneDef(AddendOp.getReg()) && "Multiple defs in SSA?");
-  MachineInstr &AddendDef = *MRI.def_instr_begin(AddendOp.getReg());
-  if (!AddendDef.isPHI())
-    return MBB;
-
-  // Look for the following pattern:
-  // loop:
-  //   %addend = phi [%entry, 0], [%loop, %result]
-  //   ...
-  //   %result<tied1> = FMA213 %m2<tied0>, %m1, %addend
-
-  // Replace with:
-  //   loop:
-  //   %addend = phi [%entry, 0], [%loop, %result]
-  //   ...
-  //   %result<tied1> = FMA231 %addend<tied0>, %m1, %m2
-
-  for (unsigned i = 1, e = AddendDef.getNumOperands(); i < e; i += 2) {
-    assert(AddendDef.getOperand(i).isReg());
-    MachineOperand PHISrcOp = AddendDef.getOperand(i);
-    MachineInstr &PHISrcInst = *MRI.def_instr_begin(PHISrcOp.getReg());
-    if (&PHISrcInst == &MI) {
-      // Found a matching instruction.
-      unsigned NewFMAOpc = 0;
-      switch (MI.getOpcode()) {
-      case X86::VFMADD213PDr:
-        NewFMAOpc = X86::VFMADD231PDr;
-        break;
-      case X86::VFMADD213PSr:
-        NewFMAOpc = X86::VFMADD231PSr;
-        break;
-      case X86::VFMADD213SDr:
-        NewFMAOpc = X86::VFMADD231SDr;
-        break;
-      case X86::VFMADD213SSr:
-        NewFMAOpc = X86::VFMADD231SSr;
-        break;
-      case X86::VFMSUB213PDr:
-        NewFMAOpc = X86::VFMSUB231PDr;
-        break;
-      case X86::VFMSUB213PSr:
-        NewFMAOpc = X86::VFMSUB231PSr;
-        break;
-      case X86::VFMSUB213SDr:
-        NewFMAOpc = X86::VFMSUB231SDr;
-        break;
-      case X86::VFMSUB213SSr:
-        NewFMAOpc = X86::VFMSUB231SSr;
-        break;
-      case X86::VFNMADD213PDr:
-        NewFMAOpc = X86::VFNMADD231PDr;
-        break;
-      case X86::VFNMADD213PSr:
-        NewFMAOpc = X86::VFNMADD231PSr;
-        break;
-      case X86::VFNMADD213SDr:
-        NewFMAOpc = X86::VFNMADD231SDr;
-        break;
-      case X86::VFNMADD213SSr:
-        NewFMAOpc = X86::VFNMADD231SSr;
-        break;
-      case X86::VFNMSUB213PDr:
-        NewFMAOpc = X86::VFNMSUB231PDr;
-        break;
-      case X86::VFNMSUB213PSr:
-        NewFMAOpc = X86::VFNMSUB231PSr;
-        break;
-      case X86::VFNMSUB213SDr:
-        NewFMAOpc = X86::VFNMSUB231SDr;
-        break;
-      case X86::VFNMSUB213SSr:
-        NewFMAOpc = X86::VFNMSUB231SSr;
-        break;
-      case X86::VFMADDSUB213PDr:
-        NewFMAOpc = X86::VFMADDSUB231PDr;
-        break;
-      case X86::VFMADDSUB213PSr:
-        NewFMAOpc = X86::VFMADDSUB231PSr;
-        break;
-      case X86::VFMSUBADD213PDr:
-        NewFMAOpc = X86::VFMSUBADD231PDr;
-        break;
-      case X86::VFMSUBADD213PSr:
-        NewFMAOpc = X86::VFMSUBADD231PSr;
-        break;
-
-      case X86::VFMADD213PDYr:
-        NewFMAOpc = X86::VFMADD231PDYr;
-        break;
-      case X86::VFMADD213PSYr:
-        NewFMAOpc = X86::VFMADD231PSYr;
-        break;
-      case X86::VFMSUB213PDYr:
-        NewFMAOpc = X86::VFMSUB231PDYr;
-        break;
-      case X86::VFMSUB213PSYr:
-        NewFMAOpc = X86::VFMSUB231PSYr;
-        break;
-      case X86::VFNMADD213PDYr:
-        NewFMAOpc = X86::VFNMADD231PDYr;
-        break;
-      case X86::VFNMADD213PSYr:
-        NewFMAOpc = X86::VFNMADD231PSYr;
-        break;
-      case X86::VFNMSUB213PDYr:
-        NewFMAOpc = X86::VFNMSUB231PDYr;
-        break;
-      case X86::VFNMSUB213PSYr:
-        NewFMAOpc = X86::VFNMSUB231PSYr;
-        break;
-      case X86::VFMADDSUB213PDYr:
-        NewFMAOpc = X86::VFMADDSUB231PDYr;
-        break;
-      case X86::VFMADDSUB213PSYr:
-        NewFMAOpc = X86::VFMADDSUB231PSYr;
-        break;
-      case X86::VFMSUBADD213PDYr:
-        NewFMAOpc = X86::VFMSUBADD231PDYr;
-        break;
-      case X86::VFMSUBADD213PSYr:
-        NewFMAOpc = X86::VFMSUBADD231PSYr;
-        break;
-      default:
-        llvm_unreachable("Unrecognized FMA variant.");
-      }
-
-      const TargetInstrInfo &TII = *Subtarget.getInstrInfo();
-      MachineInstrBuilder MIB =
-          BuildMI(MF, MI.getDebugLoc(), TII.get(NewFMAOpc))
-              .addOperand(MI.getOperand(0))
-              .addOperand(MI.getOperand(3))
-              .addOperand(MI.getOperand(2))
-              .addOperand(MI.getOperand(1));
-      MBB->insert(MachineBasicBlock::iterator(MI), MIB);
-      MI.eraseFromParent();
-    }
-  }
-
-  return MBB;
-}
-
 MachineBasicBlock *
 X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                MachineBasicBlock *BB) const {
@@ -24502,7 +24343,7 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Change the floating point control register to use "round towards zero"
     // mode when truncating to an integer value.
-    int CWFrameIdx = F->getFrameInfo()->CreateStackObject(2, 2, false);
+    int CWFrameIdx = F->getFrameInfo().CreateStackObject(2, 2, false);
     addFrameReference(BuildMI(*BB, MI, DL,
                               TII->get(X86::FNSTCW16m)), CWFrameIdx);
 
@@ -24616,39 +24457,6 @@ X86TargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   case TargetOpcode::PATCHPOINT:
     return emitPatchPoint(MI, BB);
 
-  case X86::VFMADD213PDr:
-  case X86::VFMADD213PSr:
-  case X86::VFMADD213SDr:
-  case X86::VFMADD213SSr:
-  case X86::VFMSUB213PDr:
-  case X86::VFMSUB213PSr:
-  case X86::VFMSUB213SDr:
-  case X86::VFMSUB213SSr:
-  case X86::VFNMADD213PDr:
-  case X86::VFNMADD213PSr:
-  case X86::VFNMADD213SDr:
-  case X86::VFNMADD213SSr:
-  case X86::VFNMSUB213PDr:
-  case X86::VFNMSUB213PSr:
-  case X86::VFNMSUB213SDr:
-  case X86::VFNMSUB213SSr:
-  case X86::VFMADDSUB213PDr:
-  case X86::VFMADDSUB213PSr:
-  case X86::VFMSUBADD213PDr:
-  case X86::VFMSUBADD213PSr:
-  case X86::VFMADD213PDYr:
-  case X86::VFMADD213PSYr:
-  case X86::VFMSUB213PDYr:
-  case X86::VFMSUB213PSYr:
-  case X86::VFNMADD213PDYr:
-  case X86::VFNMADD213PSYr:
-  case X86::VFNMSUB213PDYr:
-  case X86::VFNMSUB213PSYr:
-  case X86::VFMADDSUB213PDYr:
-  case X86::VFMADDSUB213PSYr:
-  case X86::VFMSUBADD213PDYr:
-  case X86::VFMSUBADD213PSYr:
-    return emitFMA3Instr(MI, BB);
   case X86::LCMPXCHG8B_SAVE_EBX:
   case X86::LCMPXCHG16B_SAVE_RBX: {
     unsigned BasePtr =

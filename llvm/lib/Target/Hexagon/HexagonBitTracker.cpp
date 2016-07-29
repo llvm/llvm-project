@@ -26,7 +26,7 @@ HexagonEvaluator::HexagonEvaluator(const HexagonRegisterInfo &tri,
                                    MachineRegisterInfo &mri,
                                    const HexagonInstrInfo &tii,
                                    MachineFunction &mf)
-    : MachineEvaluator(tri, mri), MF(mf), MFI(*mf.getFrameInfo()), TII(tii) {
+    : MachineEvaluator(tri, mri), MF(mf), MFI(mf.getFrameInfo()), TII(tii) {
   // Populate the VRX map (VR to extension-type).
   // Go over all the formal parameters of the function. If a given parameter
   // P is sign- or zero-extended, locate the virtual register holding that

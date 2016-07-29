@@ -48,8 +48,8 @@ struct SuperBlock {
   support::ulittle32_t BlockMapAddr;
 };
 
-struct Layout {
-  Layout() : SB(nullptr) {}
+struct MsfLayout {
+  MsfLayout() : SB(nullptr) {}
   const SuperBlock *SB;
   ArrayRef<support::ulittle32_t> DirectoryBlocks;
   ArrayRef<support::ulittle32_t> StreamSizes;

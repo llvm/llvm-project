@@ -22,7 +22,7 @@ using namespace llvm;
 
 
 static bool hasOnlySGPRSpills(const SIMachineFunctionInfo *FuncInfo,
-                              const MachineFrameInfo *FrameInfo) {
+                              const MachineFrameInfo &MFI) {
   return FuncInfo->hasSpilledSGPRs() &&
     (!FuncInfo->hasSpilledVGPRs() && !FuncInfo->hasNonSpillStackObjects());
 }
@@ -45,7 +45,7 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
   if (ST.debuggerEmitPrologue())
     emitDebuggerPrologue(MF, MBB);
 
-  if (!MF.getFrameInfo()->hasStackObjects())
+  if (!MF.getFrameInfo().hasStackObjects())
     return;
 
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
@@ -279,18 +279,18 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineFunction &MF,
   RegScavenger *RS) const {
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  if (!MFI->hasStackObjects())
+  if (!MFI.hasStackObjects())
     return;
 
-  bool MayNeedScavengingEmergencySlot = MFI->hasStackObjects();
+  bool MayNeedScavengingEmergencySlot = MFI.hasStackObjects();
 
   assert((RS || !MayNeedScavengingEmergencySlot) &&
          "RegScavenger required if spilling");
 
   if (MayNeedScavengingEmergencySlot) {
-    int ScavengeFI = MFI->CreateSpillStackObject(
+    int ScavengeFI = MFI.CreateSpillStackObject(
       AMDGPU::SGPR_32RegClass.getSize(),
       AMDGPU::SGPR_32RegClass.getAlignment());
     RS->addScavengingFrameIndex(ScavengeFI);

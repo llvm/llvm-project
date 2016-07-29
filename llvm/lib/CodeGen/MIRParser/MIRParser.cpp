@@ -449,7 +449,7 @@ void MIRParserImpl::inferRegisterInfo(const PerFunctionMIParsingState &PFS,
 bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
                                         const yaml::MachineFunction &YamlMF) {
   MachineFunction &MF = PFS.MF;
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const Function &F = *MF.getFunction();
   const yaml::MachineFrameInfo &YamlMFI = YamlMF.FrameInfo;
   MFI.setFrameAddressIsTaken(YamlMFI.IsFrameAddressTaken);

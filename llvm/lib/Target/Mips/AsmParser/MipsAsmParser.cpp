@@ -3718,10 +3718,10 @@ MipsAsmParser::checkEarlyTargetMatchPredicate(MCInst &Inst,
     return Match_Success;
   case Mips::DATI:
   case Mips::DAHI:
-    return static_cast<MipsOperand &>(*Operands[1])
-                   .isValidForTie(static_cast<MipsOperand &>(*Operands[2]))
-               ? Match_Success
-               : Match_RequiresSameSrcAndDst;
+    if (static_cast<MipsOperand &>(*Operands[1])
+            .isValidForTie(static_cast<MipsOperand &>(*Operands[2])))
+      return Match_Success;
+    return Match_RequiresSameSrcAndDst;
   }
 }
 unsigned MipsAsmParser::checkTargetMatchPredicate(MCInst &Inst) {

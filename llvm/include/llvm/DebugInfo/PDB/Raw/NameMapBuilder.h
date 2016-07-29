@@ -17,6 +17,9 @@
 #include <memory>
 
 namespace llvm {
+namespace msf {
+class StreamWriter;
+}
 namespace pdb {
 class NameMap;
 
@@ -27,6 +30,7 @@ public:
   void addMapping(StringRef Name, uint32_t Mapping);
 
   Expected<std::unique_ptr<NameMap>> build();
+  Error commit(msf::StreamWriter &Writer) const;
 
   uint32_t calculateSerializedLength() const;
 

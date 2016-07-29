@@ -14757,9 +14757,9 @@ bool DAGCombiner::isAlias(LSBaseSDNode *Op0, LSBaseSDNode *Op1) const {
   // To catch this case, look up the actual index of frame indices to compute
   // the real alias relationship.
   if (isFrameIndex1 && isFrameIndex2) {
-    MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-    Offset1 += MFI->getObjectOffset(cast<FrameIndexSDNode>(Base1)->getIndex());
-    Offset2 += MFI->getObjectOffset(cast<FrameIndexSDNode>(Base2)->getIndex());
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+    Offset1 += MFI.getObjectOffset(cast<FrameIndexSDNode>(Base1)->getIndex());
+    Offset2 += MFI.getObjectOffset(cast<FrameIndexSDNode>(Base2)->getIndex());
     return !((Offset1 + (Op0->getMemoryVT().getSizeInBits() >> 3)) <= Offset2 ||
              (Offset2 + (Op1->getMemoryVT().getSizeInBits() >> 3)) <= Offset1);
   }

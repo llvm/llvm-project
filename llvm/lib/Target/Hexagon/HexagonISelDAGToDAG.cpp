@@ -1138,11 +1138,11 @@ void HexagonDAGToDAGISel::SelectBitOp(SDNode *N) {
 
 
 void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
-  MachineFrameInfo *MFI = MF->getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   const HexagonFrameLowering *HFI = HST->getFrameLowering();
   int FX = cast<FrameIndexSDNode>(N)->getIndex();
   unsigned StkA = HFI->getStackAlignment();
-  unsigned MaxA = MFI->getMaxAlignment();
+  unsigned MaxA = MFI.getMaxAlignment();
   SDValue FI = CurDAG->getTargetFrameIndex(FX, MVT::i32);
   SDLoc DL(N);
   SDValue Zero = CurDAG->getTargetConstant(0, DL, MVT::i32);
@@ -1153,7 +1153,7 @@ void HexagonDAGToDAGISel::SelectFrameIndex(SDNode *N) {
   // - there are no objects with higher-than-default alignment, or
   // - there are no dynamically allocated objects.
   // Otherwise, use TFR_FIA.
-  if (FX < 0 || MaxA <= StkA || !MFI->hasVarSizedObjects()) {
+  if (FX < 0 || MaxA <= StkA || !MFI.hasVarSizedObjects()) {
     R = CurDAG->getMachineNode(Hexagon::TFR_FI, DL, MVT::i32, FI, Zero);
   } else {
     auto &HMFI = *MF->getInfo<HexagonMachineFunctionInfo>();
@@ -1381,10 +1381,10 @@ void HexagonDAGToDAGISel::EmitFunctionEntryCode() {
   if (!HFI.needsAligna(*MF))
     return;
 
-  MachineFrameInfo *MFI = MF->getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   MachineBasicBlock *EntryBB = &MF->front();
   unsigned AR = FuncInfo->CreateReg(MVT::i32);
-  unsigned MaxA = MFI->getMaxAlignment();
+  unsigned MaxA = MFI.getMaxAlignment();
   BuildMI(EntryBB, DebugLoc(), HII->get(Hexagon::ALIGNA), AR)
       .addImm(MaxA);
   MF->getInfo<HexagonMachineFunctionInfo>()->setStackAlignBaseVReg(AR);
@@ -1395,9 +1395,9 @@ bool HexagonDAGToDAGISel::SelectAddrFI(SDValue& N, SDValue &R) {
   if (N.getOpcode() != ISD::FrameIndex)
     return false;
   auto &HFI = *HST->getFrameLowering();
-  MachineFrameInfo *MFI = MF->getFrameInfo();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
   int FX = cast<FrameIndexSDNode>(N)->getIndex();
-  if (!MFI->isFixedObjectIndex(FX) && HFI.needsAligna(*MF))
+  if (!MFI.isFixedObjectIndex(FX) && HFI.needsAligna(*MF))
     return false;
   R = CurDAG->getTargetFrameIndex(FX, MVT::i32);
   return true;
@@ -1526,8 +1526,8 @@ bool HexagonDAGToDAGISel::orIsAdd(const SDNode *N) const {
 
   // Detect when "or" is used to add an offset to a stack object.
   if (auto *FN = dyn_cast<FrameIndexSDNode>(N->getOperand(0))) {
-    MachineFrameInfo *MFI = MF->getFrameInfo();
-    unsigned A = MFI->getObjectAlignment(FN->getIndex());
+    MachineFrameInfo &MFI = MF->getFrameInfo();
+    unsigned A = MFI.getObjectAlignment(FN->getIndex());
     assert(isPowerOf2_32(A));
     int32_t Off = C->getSExtValue();
     // If the alleged offset fits in the zero bits guaranteed by

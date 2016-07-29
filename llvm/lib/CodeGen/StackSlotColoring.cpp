@@ -428,7 +428,7 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
              << "********** Function: " << MF.getName() << '\n';
     });
 
-  MFI = MF.getFrameInfo();
+  MFI = &MF.getFrameInfo();
   TII = MF.getSubtarget().getInstrInfo();
   LS = &getAnalysis<LiveStacks>();
   MBFI = &getAnalysis<MachineBlockFrequencyInfo>();

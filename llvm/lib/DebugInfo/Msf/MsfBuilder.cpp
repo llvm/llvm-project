@@ -1,4 +1,3 @@
-//===- MSFBuilder.cpp - MSF Directory & Metadata Builder --------*- C++ -*-===//
 //
 //                     The LLVM Compiler Infrastructure
 //
@@ -218,9 +217,9 @@ uint32_t MsfBuilder::computeDirectoryByteSize() const {
   return Size;
 }
 
-Expected<Layout> MsfBuilder::build() {
+Expected<MsfLayout> MsfBuilder::build() {
   SuperBlock *SB = Allocator.Allocate<SuperBlock>();
-  Layout L;
+  MsfLayout L;
   L.SB = SB;
 
   std::memcpy(SB->MagicBytes, Magic, sizeof(Magic));

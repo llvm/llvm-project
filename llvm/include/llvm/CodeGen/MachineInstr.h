@@ -190,6 +190,7 @@ public:
   void setType(LLT Ty, unsigned Idx = 0);
   LLT getType(int unsigned = 0) const;
   unsigned getNumTypes() const;
+  void removeTypes();
 
   /// Return true if MI is in a bundle (but not the first MI in a bundle).
   ///

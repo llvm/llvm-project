@@ -27,21 +27,21 @@
 using namespace llvm;
 
 bool MSP430FrameLowering::hasFP(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   return (MF.getTarget().Options.DisableFramePointerElim(MF) ||
-          MF.getFrameInfo()->hasVarSizedObjects() ||
-          MFI->isFrameAddressTaken());
+          MF.getFrameInfo().hasVarSizedObjects() ||
+          MFI.isFrameAddressTaken());
 }
 
 bool MSP430FrameLowering::hasReservedCallFrame(const MachineFunction &MF) const {
-  return !MF.getFrameInfo()->hasVarSizedObjects();
+  return !MF.getFrameInfo().hasVarSizedObjects();
 }
 
 void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MSP430MachineFunctionInfo *MSP430FI = MF.getInfo<MSP430MachineFunctionInfo>();
   const MSP430InstrInfo &TII =
       *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
@@ -50,7 +50,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Get the number of bytes to allocate from the FrameInfo.
-  uint64_t StackSize = MFI->getStackSize();
+  uint64_t StackSize = MFI.getStackSize();
 
   uint64_t NumBytes = 0;
   if (hasFP(MF)) {
@@ -61,7 +61,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
     // Get the offset of the stack slot for the EBP register... which is
     // guaranteed to be the last slot by processFunctionBeforeFrameFinalized.
     // Update the frame offset adjustment.
-    MFI->setOffsetAdjustment(-NumBytes);
+    MFI.setOffsetAdjustment(-NumBytes);
 
     // Save FP into the appropriate stack slot...
     BuildMI(MBB, MBBI, DL, TII.get(MSP430::PUSH16r))
@@ -106,7 +106,7 @@ void MSP430FrameLowering::emitPrologue(MachineFunction &MF,
 
 void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
                                        MachineBasicBlock &MBB) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   MSP430MachineFunctionInfo *MSP430FI = MF.getInfo<MSP430MachineFunctionInfo>();
   const MSP430InstrInfo &TII =
       *static_cast<const MSP430InstrInfo *>(MF.getSubtarget().getInstrInfo());
@@ -123,7 +123,7 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
   }
 
   // Get the number of bytes to allocate from the FrameInfo
-  uint64_t StackSize = MFI->getStackSize();
+  uint64_t StackSize = MFI.getStackSize();
   unsigned CSSize = MSP430FI->getCalleeSavedFrameSize();
   uint64_t NumBytes = 0;
 
@@ -150,10 +150,10 @@ void MSP430FrameLowering::emitEpilogue(MachineFunction &MF,
 
   // If there is an ADD16ri or SUB16ri of SP immediately before this
   // instruction, merge the two instructions.
-  //if (NumBytes || MFI->hasVarSizedObjects())
+  //if (NumBytes || MFI.hasVarSizedObjects())
   //  mergeSPUpdatesUp(MBB, MBBI, StackPtr, &NumBytes);
 
-  if (MFI->hasVarSizedObjects()) {
+  if (MFI.hasVarSizedObjects()) {
     BuildMI(MBB, MBBI, DL,
             TII.get(MSP430::MOV16rr), MSP430::SP).addReg(MSP430::FP);
     if (CSSize) {
@@ -293,9 +293,9 @@ MSP430FrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                                          RegScavenger *) const {
   // Create a frame entry for the FP register that must be saved.
   if (hasFP(MF)) {
-    int FrameIdx = MF.getFrameInfo()->CreateFixedObject(2, -4, true);
+    int FrameIdx = MF.getFrameInfo().CreateFixedObject(2, -4, true);
     (void)FrameIdx;
-    assert(FrameIdx == MF.getFrameInfo()->getObjectIndexBegin() &&
+    assert(FrameIdx == MF.getFrameInfo().getObjectIndexBegin() &&
            "Slot for FP register must be last in order to be found!");
   }
 }

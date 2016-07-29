@@ -26,36 +26,36 @@ using namespace llvm;
 
 // Determines the size of the frame and maximum call frame size.
 void LanaiFrameLowering::determineFrameLayout(MachineFunction &MF) const {
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const LanaiRegisterInfo *LRI = STI.getRegisterInfo();
 
   // Get the number of bytes to allocate from the FrameInfo.
-  unsigned FrameSize = MFI->getStackSize();
+  unsigned FrameSize = MFI.getStackSize();
 
   // Get the alignment.
-  unsigned StackAlign = LRI->needsStackRealignment(MF) ? MFI->getMaxAlignment()
+  unsigned StackAlign = LRI->needsStackRealignment(MF) ? MFI.getMaxAlignment()
                                                        : getStackAlignment();
 
   // Get the maximum call frame size of all the calls.
-  unsigned MaxCallFrameSize = MFI->getMaxCallFrameSize();
+  unsigned MaxCallFrameSize = MFI.getMaxCallFrameSize();
 
   // If we have dynamic alloca then MaxCallFrameSize needs to be aligned so
   // that allocations will be aligned.
-  if (MFI->hasVarSizedObjects())
+  if (MFI.hasVarSizedObjects())
     MaxCallFrameSize = alignTo(MaxCallFrameSize, StackAlign);
 
   // Update maximum call frame size.
-  MFI->setMaxCallFrameSize(MaxCallFrameSize);
+  MFI.setMaxCallFrameSize(MaxCallFrameSize);
 
   // Include call frame size in total.
-  if (!(hasReservedCallFrame(MF) && MFI->adjustsStack()))
+  if (!(hasReservedCallFrame(MF) && MFI.adjustsStack()))
     FrameSize += MaxCallFrameSize;
 
   // Make sure the frame is aligned.
   FrameSize = alignTo(FrameSize, StackAlign);
 
   // Update frame info.
-  MFI->setStackSize(FrameSize);
+  MFI.setStackSize(FrameSize);
 }
 
 // Iterates through each basic block in a machine function and replaces
@@ -64,7 +64,7 @@ void LanaiFrameLowering::determineFrameLayout(MachineFunction &MF) const {
 void LanaiFrameLowering::replaceAdjDynAllocPseudo(MachineFunction &MF) const {
   const LanaiInstrInfo &LII =
       *static_cast<const LanaiInstrInfo *>(STI.getInstrInfo());
-  unsigned MaxCallFrameSize = MF.getFrameInfo()->getMaxCallFrameSize();
+  unsigned MaxCallFrameSize = MF.getFrameInfo().getMaxCallFrameSize();
 
   for (MachineFunction::iterator MBB = MF.begin(), E = MF.end(); MBB != E;
        ++MBB) {
@@ -93,7 +93,7 @@ void LanaiFrameLowering::emitPrologue(MachineFunction &MF,
                                       MachineBasicBlock &MBB) const {
   assert(&MF.front() == &MBB && "Shrink-wrapping not yet supported");
 
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const LanaiInstrInfo &LII =
       *static_cast<const LanaiInstrInfo *>(STI.getInstrInfo());
   MachineBasicBlock::iterator MBBI = MBB.begin();
@@ -107,7 +107,7 @@ void LanaiFrameLowering::emitPrologue(MachineFunction &MF,
 
   // FIXME: This appears to be overallocating.  Needs investigation.
   // Get the number of bytes to allocate from the FrameInfo.
-  unsigned StackSize = MFI->getStackSize();
+  unsigned StackSize = MFI.getStackSize();
 
   // Push old FP
   // st %fp,-4[*%sp]
@@ -135,7 +135,7 @@ void LanaiFrameLowering::emitPrologue(MachineFunction &MF,
   }
 
   // Replace ADJDYNANALLOC
-  if (MFI->hasVarSizedObjects())
+  if (MFI.hasVarSizedObjects())
     replaceAdjDynAllocPseudo(MF);
 }
 
@@ -200,21 +200,21 @@ void LanaiFrameLowering::determineCalleeSaves(MachineFunction &MF,
                                               RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
 
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const LanaiRegisterInfo *LRI =
       static_cast<const LanaiRegisterInfo *>(STI.getRegisterInfo());
   int Offset = -4;
 
   // Reserve 4 bytes for the saved RCA
-  MFI->CreateFixedObject(4, Offset, true);
+  MFI.CreateFixedObject(4, Offset, true);
   Offset -= 4;
 
   // Reserve 4 bytes for the saved FP
-  MFI->CreateFixedObject(4, Offset, true);
+  MFI.CreateFixedObject(4, Offset, true);
   Offset -= 4;
 
   if (LRI->hasBasePointer(MF)) {
-    MFI->CreateFixedObject(4, Offset, true);
+    MFI.CreateFixedObject(4, Offset, true);
     SavedRegs.reset(LRI->getBaseRegister());
   }
 }

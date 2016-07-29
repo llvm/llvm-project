@@ -52,7 +52,7 @@ define double @select03(double %a, double %b, double %c, double %eps) {
 ; CHECK:       ## BB#0:
 ; CHECK-NEXT:    vcmplesd %xmm0, %xmm3, %k1
 ; CHECK-NEXT:    vmovsd %xmm2, %xmm0, %xmm1 {%k1}
-; CHECK-NEXT:    vmovaps %zmm1, %zmm0
+; CHECK-NEXT:    vmovapd %zmm1, %zmm0
 ; CHECK-NEXT:    retq
   %cmp = fcmp oge double %a, %eps
   %cond = select i1 %cmp, double %c, double %b

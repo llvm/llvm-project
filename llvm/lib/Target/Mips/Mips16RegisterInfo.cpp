@@ -79,9 +79,9 @@ void Mips16RegisterInfo::eliminateFI(MachineBasicBlock::iterator II,
                                      int64_t SPOffset) const {
   MachineInstr &MI = *II;
   MachineFunction &MF = *MI.getParent()->getParent();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   int MinCSFI = 0;
   int MaxCSFI = -1;
 

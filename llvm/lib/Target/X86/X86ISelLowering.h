@@ -1032,7 +1032,7 @@ namespace llvm {
     SDValue LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
                              const SmallVectorImpl<ISD::InputArg> &ArgInfo,
                              const SDLoc &dl, SelectionDAG &DAG,
-                             const CCValAssign &VA, MachineFrameInfo *MFI,
+                             const CCValAssign &VA, MachineFrameInfo &MFI,
                              unsigned i) const;
     SDValue LowerMemOpCallTo(SDValue Chain, SDValue StackPtr, SDValue Arg,
                              const SDLoc &dl, SelectionDAG &DAG,

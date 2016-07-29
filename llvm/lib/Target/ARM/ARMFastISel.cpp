@@ -2481,8 +2481,8 @@ bool ARMFastISel::SelectIntrinsicCall(const IntrinsicInst &I) {
   switch (I.getIntrinsicID()) {
   default: return false;
   case Intrinsic::frameaddress: {
-    MachineFrameInfo *MFI = FuncInfo.MF->getFrameInfo();
-    MFI->setFrameAddressIsTaken(true);
+    MachineFrameInfo &MFI = FuncInfo.MF->getFrameInfo();
+    MFI.setFrameAddressIsTaken(true);
 
     unsigned LdrOpc = isThumb2 ? ARM::t2LDRi12 : ARM::LDRi12;
     const TargetRegisterClass *RC = isThumb2 ? &ARM::tGPRRegClass

@@ -174,6 +174,11 @@ Additionally, each repository will have the following server hooks:
 Essentially, we're adding Git RW access in addition to the already existing
 structure, with all the additional benefits of it being in GitHub.
 
+Example of a working version:
+
+* Repository: https://github.com/llvm-beanz/llvm-submodules
+* Update bot: http://beanz-bot.com:8180/jenkins/job/submodule-update/
+
 What will *not* be changed
 --------------------------
 

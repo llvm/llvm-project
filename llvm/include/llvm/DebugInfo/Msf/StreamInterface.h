@@ -17,16 +17,9 @@
 namespace llvm {
 namespace msf {
 
-/// StreamInterface abstracts the notion of a data stream.  This way, an
-/// implementation could implement trivial reading from a contiguous memory
-/// buffer or, as in the case of PDB files, reading from a set of possibly
-/// discontiguous blocks.  The implementation is required to return references
-/// to stable memory, so if this is not possible (for example in the case of
-/// a PDB file with discontiguous blocks, it must keep its own pool of temp
-/// storage.
-class StreamInterface {
+class ReadableStream {
 public:
-  virtual ~StreamInterface() {}
+  virtual ~ReadableStream() {}
 
   // Given an offset into the stream and a number of bytes, attempt to read
   // the bytes and set the output ArrayRef to point to a reference into the
@@ -39,12 +32,17 @@ public:
   virtual Error readLongestContiguousChunk(uint32_t Offset,
                                            ArrayRef<uint8_t> &Buffer) const = 0;
 
+  virtual uint32_t getLength() const = 0;
+};
+
+class WritableStream : public ReadableStream {
+public:
+  virtual ~WritableStream() {}
+
   // Attempt to write the given bytes into the stream at the desired offset.
   // This will always necessitate a copy.  Cannot shrink or grow the stream,
   // only writes into existing allocated space.
   virtual Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> Data) const = 0;
-
-  virtual uint32_t getLength() const = 0;
 
   virtual Error commit() const = 0;
 };

@@ -1,18 +1,24 @@
 ; Check that BFI is not computed when -pass-remarks-with-hotness is off
 
 ; RUN: opt -loop-distribute -S -pass-remarks-missed=loop-distribute \
-; RUN:     -debug-only=block-freq -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
+; RUN:     -debug-only=block-freq,branch-prob -pass-remarks-with-hotness \
+; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
 ; RUN: opt -loop-distribute -S -pass-remarks-missed=loop-distribute \
-; RUN:     -debug-only=block-freq                            < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
+; RUN:     -debug-only=block-freq,branch-prob \
+; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 
 ; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
-; RUN:     -debug-only=block-freq -pass-remarks-with-hotness < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
+; RUN:     -debug-only=block-freq,branch-prob -pass-remarks-with-hotness \
+; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=HOTNESS
 ; RUN: opt -passes='require<aa>,loop-distribute' -S -pass-remarks-missed=loop-distribute \
-; RUN:     -debug-only=block-freq                            < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
+; RUN:     -debug-only=block-freq,branch-prob \
+; RUN:     < %s 2>&1 | FileCheck %s --check-prefix=NO_HOTNESS
 
 ; REQUIRES: asserts
 
+; HOTNESS: Branch Probability Info : forced
 ; HOTNESS: block-frequency: forced
+; NO_HOTNESS-NOT: Branch Probability Info : forced
 ; NO_HOTNESS-NOT: block-frequency: forced
 
 ; This is the input program:

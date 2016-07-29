@@ -231,12 +231,12 @@ unsigned SIRegisterInfo::getRegPressureSetLimit(const MachineFunction &MF,
 }
 
 bool SIRegisterInfo::requiresRegisterScavenging(const MachineFunction &Fn) const {
-  return Fn.getFrameInfo()->hasStackObjects();
+  return Fn.getFrameInfo().hasStackObjects();
 }
 
 bool
 SIRegisterInfo::requiresFrameIndexScavenging(const MachineFunction &MF) const {
-  return MF.getFrameInfo()->hasStackObjects();
+  return MF.getFrameInfo().hasStackObjects();
 }
 
 bool SIRegisterInfo::requiresVirtualBaseRegisters(
@@ -499,7 +499,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   MachineRegisterInfo &MRI = MF->getRegInfo();
   MachineBasicBlock *MBB = MI->getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-  MachineFrameInfo *FrameInfo = MF->getFrameInfo();
+  MachineFrameInfo &FrameInfo = MF->getFrameInfo();
   const SISubtarget &ST =  MF->getSubtarget<SISubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   DebugLoc DL = MI->getDebugLoc();
@@ -556,8 +556,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             Mov.addReg(SuperReg, RegState::Implicit | SuperKillState);
           }
 
-          unsigned Size = FrameInfo->getObjectSize(Index);
-          unsigned Align = FrameInfo->getObjectAlignment(Index);
+          unsigned Size = FrameInfo.getObjectSize(Index);
+          unsigned Align = FrameInfo.getObjectAlignment(Index);
           MachinePointerInfo PtrInfo
               = MachinePointerInfo::getFixedStack(*MF, Index);
           MachineMemOperand *MMO
@@ -603,8 +603,8 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           // Restore SGPR from a stack slot.
           // FIXME: We should use S_LOAD_DWORD here for VI.
 
-          unsigned Align = FrameInfo->getObjectAlignment(Index);
-          unsigned Size = FrameInfo->getObjectSize(Index);
+          unsigned Align = FrameInfo.getObjectAlignment(Index);
+          unsigned Size = FrameInfo.getObjectSize(Index);
 
           MachinePointerInfo PtrInfo
               = MachinePointerInfo::getFixedStack(*MF, Index);
@@ -640,7 +640,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             TII->getNamedOperand(*MI, AMDGPU::OpName::src),
             TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_rsrc)->getReg(),
             TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_offset)->getReg(),
-            FrameInfo->getObjectOffset(Index) +
+            FrameInfo.getObjectOffset(Index) +
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), RS);
       MI->eraseFromParent();
       MFI->addToSpilledVGPRs(getNumSubRegsForSpillOp(MI->getOpcode()));
@@ -655,14 +655,14 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
             TII->getNamedOperand(*MI, AMDGPU::OpName::dst),
             TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_rsrc)->getReg(),
             TII->getNamedOperand(*MI, AMDGPU::OpName::scratch_offset)->getReg(),
-            FrameInfo->getObjectOffset(Index) +
+            FrameInfo.getObjectOffset(Index) +
             TII->getNamedOperand(*MI, AMDGPU::OpName::offset)->getImm(), RS);
       MI->eraseFromParent();
       break;
     }
 
     default: {
-      int64_t Offset = FrameInfo->getObjectOffset(Index);
+      int64_t Offset = FrameInfo.getObjectOffset(Index);
       FIOp.ChangeToImmediate(Offset);
       if (!TII->isImmOperandLegal(*MI, FIOperandNum, FIOp)) {
         unsigned TmpReg = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
@@ -958,10 +958,13 @@ unsigned SIRegisterInfo::getPreloadedValue(const MachineFunction &MF,
 /// \brief Returns a register that is not used at any point in the function.
 ///        If all registers are used, then this function will return
 //         AMDGPU::NoRegister.
-unsigned SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
-                                           const TargetRegisterClass *RC) const {
+unsigned
+SIRegisterInfo::findUnusedRegister(const MachineRegisterInfo &MRI,
+                                   const TargetRegisterClass *RC,
+                                   const MachineFunction &MF) const {
+
   for (unsigned Reg : *RC)
-    if (!MRI.isPhysRegUsed(Reg))
+    if (MRI.isAllocatable(Reg) && !MRI.isPhysRegUsed(Reg))
       return Reg;
   return AMDGPU::NoRegister;
 }

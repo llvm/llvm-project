@@ -59,15 +59,15 @@ struct ColumnNumberEntry {
 class ModuleSubstream {
 public:
   ModuleSubstream();
-  ModuleSubstream(ModuleSubstreamKind Kind, msf::StreamRef Data);
-  static Error initialize(msf::StreamRef Stream, ModuleSubstream &Info);
+  ModuleSubstream(ModuleSubstreamKind Kind, msf::ReadableStreamRef Data);
+  static Error initialize(msf::ReadableStreamRef Stream, ModuleSubstream &Info);
   uint32_t getRecordLength() const;
   ModuleSubstreamKind getSubstreamKind() const;
-  msf::StreamRef getRecordData() const;
+  msf::ReadableStreamRef getRecordData() const;
 
 private:
   ModuleSubstreamKind Kind;
-  msf::StreamRef Data;
+  msf::ReadableStreamRef Data;
 };
 
 typedef msf::VarStreamArray<ModuleSubstream> ModuleSubstreamArray;
@@ -75,7 +75,7 @@ typedef msf::VarStreamArray<ModuleSubstream> ModuleSubstreamArray;
 
 namespace msf {
 template <> struct VarStreamArrayExtractor<codeview::ModuleSubstream> {
-  Error operator()(StreamRef Stream, uint32_t &Length,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Length,
                    codeview::ModuleSubstream &Info) const {
     if (auto EC = codeview::ModuleSubstream::initialize(Stream, Info))
       return EC;

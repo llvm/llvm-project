@@ -1260,7 +1260,7 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   XCoreFunctionInfo *XFI = MF.getInfo<XCoreFunctionInfo>();
 
@@ -1324,9 +1324,9 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
                << "\n";
       }
       // Create the frame index object for this incoming parameter...
-      int FI = MFI->CreateFixedObject(ObjSize,
-                                      LRSaveSize + VA.getLocMemOffset(),
-                                      true);
+      int FI = MFI.CreateFixedObject(ObjSize,
+                                     LRSaveSize + VA.getLocMemOffset(),
+                                     true);
 
       // Create the SelectionDAG nodes corresponding to a load
       //from this parameter
@@ -1352,7 +1352,7 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
       // address
       for (int i = array_lengthof(ArgRegs) - 1; i >= (int)FirstVAReg; --i) {
         // Create a stack slot
-        int FI = MFI->CreateFixedObject(4, offset, true);
+        int FI = MFI.CreateFixedObject(4, offset, true);
         if (i == (int)FirstVAReg) {
           XFI->setVarArgsFrameIndex(FI);
         }
@@ -1371,8 +1371,8 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
     } else {
       // This will point to the next argument passed via stack.
       XFI->setVarArgsFrameIndex(
-        MFI->CreateFixedObject(4, LRSaveSize + CCInfo.getNextStackOffset(),
-                               true));
+        MFI.CreateFixedObject(4, LRSaveSize + CCInfo.getNextStackOffset(),
+                              true));
     }
   }
 
@@ -1391,7 +1391,7 @@ SDValue XCoreTargetLowering::LowerCCCArguments(
       unsigned Size = ArgDI->Flags.getByValSize();
       unsigned Align = std::max(StackSlotSize, ArgDI->Flags.getByValAlign());
       // Create a new object on the stack and copy the pointee into it.
-      int FI = MFI->CreateStackObject(Size, Align, false);
+      int FI = MFI.CreateStackObject(Size, Align, false);
       SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
       InVals.push_back(FIN);
       MemOps.push_back(DAG.getMemcpy(Chain, dl, FIN, ArgDI->SDV,
@@ -1440,7 +1440,7 @@ XCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   XCoreFunctionInfo *XFI =
     DAG.getMachineFunction().getInfo<XCoreFunctionInfo>();
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
 
   // CCValAssign - represent the assignment of
   // the return value to a location
@@ -1476,7 +1476,7 @@ XCoreTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     int Offset = VA.getLocMemOffset();
     unsigned ObjSize = VA.getLocVT().getSizeInBits() / 8;
     // Create the frame index object for the memory location.
-    int FI = MFI->CreateFixedObject(ObjSize, Offset, false);
+    int FI = MFI.CreateFixedObject(ObjSize, Offset, false);
 
     // Create a SelectionDAG node corresponding to a store
     // to this memory location.

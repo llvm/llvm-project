@@ -1970,7 +1970,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   if (isTailCall) {
-    MF.getFrameInfo()->setHasTailCall();
+    MF.getFrameInfo().setHasTailCall();
     return DAG.getNode(ARMISD::TC_RETURN, dl, NodeTys, Ops);
   }
 
@@ -2053,7 +2053,7 @@ void ARMTargetLowering::HandleByVal(CCState *State, unsigned &Size,
 /// incoming argument stack.
 static
 bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
-                         MachineFrameInfo *MFI, const MachineRegisterInfo *MRI,
+                         MachineFrameInfo &MFI, const MachineRegisterInfo *MRI,
                          const TargetInstrInfo *TII) {
   unsigned Bytes = Arg.getValueType().getSizeInBits() / 8;
   int FI = INT_MAX;
@@ -2087,9 +2087,9 @@ bool MatchingStackOffset(SDValue Arg, unsigned Offset, ISD::ArgFlagsTy Flags,
     return false;
 
   assert(FI != INT_MAX);
-  if (!MFI->isFixedObjectIndex(FI))
+  if (!MFI.isFixedObjectIndex(FI))
     return false;
-  return Offset == MFI->getObjectOffset(FI) && Bytes == MFI->getObjectSize(FI);
+  return Offset == MFI.getObjectOffset(FI) && Bytes == MFI.getObjectSize(FI);
 }
 
 /// IsEligibleForTailCallOptimization - Check whether the call is eligible
@@ -2179,7 +2179,7 @@ ARMTargetLowering::IsEligibleForTailCallOptimization(SDValue Callee,
     if (CCInfo.getNextStackOffset()) {
       // Check if the arguments are already laid out in the right way as
       // the caller's fixed stack objects.
-      MachineFrameInfo *MFI = MF.getFrameInfo();
+      MachineFrameInfo &MFI = MF.getFrameInfo();
       const MachineRegisterInfo *MRI = &MF.getRegInfo();
       const TargetInstrInfo *TII = Subtarget->getInstrInfo();
       for (unsigned i = 0, realArgIdx = 0, e = ArgLocs.size();
@@ -2596,8 +2596,8 @@ ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
   Chain = FuncTLVGet.getValue(1);
 
   MachineFunction &F = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = F.getFrameInfo();
-  MFI->setAdjustsStack(true);
+  MachineFrameInfo &MFI = F.getFrameInfo();
+  MFI.setAdjustsStack(true);
 
   // TLS calls preserve all registers except those that absolutely must be
   // trashed: R0 (it takes an argument), LR (it's a call) and CPSR (let's not be
@@ -3090,8 +3090,8 @@ SDValue ARMTargetLowering::GetF64FormalArgument(CCValAssign &VA,
 
   SDValue ArgValue2;
   if (NextVA.isMemLoc()) {
-    MachineFrameInfo *MFI = MF.getFrameInfo();
-    int FI = MFI->CreateFixedObject(4, NextVA.getLocMemOffset(), true);
+    MachineFrameInfo &MFI = MF.getFrameInfo();
+    int FI = MFI.CreateFixedObject(4, NextVA.getLocMemOffset(), true);
 
     // Create load node to retrieve arguments from the stack.
     SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
@@ -3132,7 +3132,7 @@ int ARMTargetLowering::StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG,
   //          initialize stack frame.
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   unsigned RBegin, REnd;
   if (InRegsParamRecordIdx < CCInfo.getInRegsParamsCount()) {
@@ -3147,7 +3147,7 @@ int ARMTargetLowering::StoreByValRegs(CCState &CCInfo, SelectionDAG &DAG,
     ArgOffset = -4 * (ARM::R4 - RBegin);
 
   auto PtrVT = getPointerTy(DAG.getDataLayout());
-  int FrameIndex = MFI->CreateFixedObject(ArgSize, ArgOffset, false);
+  int FrameIndex = MFI.CreateFixedObject(ArgSize, ArgOffset, false);
   SDValue FIN = DAG.getFrameIndex(FrameIndex, PtrVT);
 
   SmallVector<SDValue, 4> MemOps;
@@ -3193,7 +3193,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &dl,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
 
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
@@ -3241,7 +3241,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   CCInfo.rewindByValRegsInfo();
 
   int lastInsIndex = -1;
-  if (isVarArg && MFI->hasVAStart()) {
+  if (isVarArg && MFI.hasVAStart()) {
     unsigned RegIdx = CCInfo.getFirstUnallocated(GPRArgRegs);
     if (RegIdx != array_lengthof(GPRArgRegs))
       ArgRegBegin = std::min(ArgRegBegin, (unsigned)GPRArgRegs[RegIdx]);
@@ -3271,7 +3271,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
           VA = ArgLocs[++i]; // skip ahead to next loc
           SDValue ArgValue2;
           if (VA.isMemLoc()) {
-            int FI = MFI->CreateFixedObject(8, VA.getLocMemOffset(), true);
+            int FI = MFI.CreateFixedObject(8, VA.getLocMemOffset(), true);
             SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
             ArgValue2 = DAG.getLoad(MVT::f64, dl, Chain, FIN,
                                     MachinePointerInfo::getFixedStack(
@@ -3363,8 +3363,8 @@ SDValue ARMTargetLowering::LowerFormalArguments(
             CCInfo.nextInRegsParam();
           } else {
             unsigned FIOffset = VA.getLocMemOffset();
-            int FI = MFI->CreateFixedObject(VA.getLocVT().getSizeInBits()/8,
-                                            FIOffset, true);
+            int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits()/8,
+                                           FIOffset, true);
 
             // Create load nodes to retrieve arguments from the stack.
             SDValue FIN = DAG.getFrameIndex(FI, PtrVT);
@@ -3378,7 +3378,7 @@ SDValue ARMTargetLowering::LowerFormalArguments(
   }
 
   // varargs
-  if (isVarArg && MFI->hasVAStart())
+  if (isVarArg && MFI.hasVAStart())
     VarArgStyleRegisters(CCInfo, DAG, dl, Chain,
                          CCInfo.getNextStackOffset(),
                          TotalArgRegsSaveSize);
@@ -4313,8 +4313,8 @@ SDValue ARMTargetLowering::LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
 
 SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setReturnAddressIsTaken(true);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setReturnAddressIsTaken(true);
 
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
     return SDValue();
@@ -4339,8 +4339,8 @@ SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   const ARMBaseRegisterInfo &ARI =
     *static_cast<const ARMBaseRegisterInfo*>(RegInfo);
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setFrameAddressIsTaken(true);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);  // FIXME probably not meaningful
@@ -6908,7 +6908,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
   Type *ArgTy = ArgVT.getTypeForEVT(*DAG.getContext());
   auto PtrVT = getPointerTy(DAG.getDataLayout());
 
-  MachineFrameInfo *FrameInfo = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Pair of floats / doubles used to pass the result.
@@ -6922,7 +6922,7 @@ SDValue ARMTargetLowering::LowerFSINCOS(SDValue Op, SelectionDAG &DAG) const {
     // Create stack object for sret.
     const uint64_t ByteSize = DL.getTypeAllocSize(RetTy);
     const unsigned StackAlign = DL.getPrefTypeAlignment(RetTy);
-    int FrameIdx = FrameInfo->CreateStackObject(ByteSize, StackAlign, false);
+    int FrameIdx = MFI.CreateStackObject(ByteSize, StackAlign, false);
     SRet = DAG.getFrameIndex(FrameIdx, TLI.getPointerTy(DL));
 
     ArgListEntry Entry;
@@ -7389,8 +7389,8 @@ void ARMTargetLowering::EmitSjLjDispatchBlock(MachineInstr &MI,
   DebugLoc dl = MI.getDebugLoc();
   MachineFunction *MF = MBB->getParent();
   MachineRegisterInfo *MRI = &MF->getRegInfo();
-  MachineFrameInfo *MFI = MF->getFrameInfo();
-  int FI = MFI->getFunctionContextIndex();
+  MachineFrameInfo &MFI = MF->getFrameInfo();
+  int FI = MFI.getFunctionContextIndex();
 
   const TargetRegisterClass *TRC = Subtarget->isThumb() ? &ARM::tGPRRegClass
                                                         : &ARM::GPRnopcRegClass;
@@ -7904,6 +7904,7 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
 
   bool IsThumb1 = Subtarget->isThumb1Only();
   bool IsThumb2 = Subtarget->isThumb2();
+  bool IsThumb = Subtarget->isThumb();
 
   if (Align & 1) {
     UnitSize = 1;
@@ -7925,7 +7926,7 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
 
   // Select the correct opcode and register class for unit size load/store
   bool IsNeon = UnitSize >= 8;
-  TRC = (IsThumb1 || IsThumb2) ? &ARM::tGPRRegClass : &ARM::GPRRegClass;
+  TRC = IsThumb ? &ARM::tGPRRegClass : &ARM::GPRRegClass;
   if (IsNeon)
     VecTRC = UnitSize == 16 ? &ARM::DPairRegClass
                             : UnitSize == 8 ? &ARM::DPRRegClass
@@ -8007,12 +8008,12 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
     if ((LoopSize & 0xFFFF0000) != 0)
       Vtmp = MRI.createVirtualRegister(TRC);
     AddDefaultPred(BuildMI(BB, dl,
-                           TII->get(IsThumb2 ? ARM::t2MOVi16 : ARM::MOVi16),
+                           TII->get(IsThumb ? ARM::t2MOVi16 : ARM::MOVi16),
                            Vtmp).addImm(LoopSize & 0xFFFF));
 
     if ((LoopSize & 0xFFFF0000) != 0)
       AddDefaultPred(BuildMI(BB, dl,
-                             TII->get(IsThumb2 ? ARM::t2MOVTi16 : ARM::MOVTi16),
+                             TII->get(IsThumb ? ARM::t2MOVTi16 : ARM::MOVTi16),
                              varEnd)
                          .addReg(Vtmp)
                          .addImm(LoopSize >> 16));
@@ -8027,7 +8028,7 @@ ARMTargetLowering::EmitStructByval(MachineInstr &MI,
       Align = MF->getDataLayout().getTypeAllocSize(C->getType());
     unsigned Idx = ConstantPool->getConstantPoolIndex(C, Align);
 
-    if (IsThumb1)
+    if (IsThumb)
       AddDefaultPred(BuildMI(*BB, MI, dl, TII->get(ARM::tLDRpci)).addReg(
           varEnd, RegState::Define).addConstantPoolIndex(Idx));
     else

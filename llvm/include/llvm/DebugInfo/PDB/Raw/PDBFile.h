@@ -26,7 +26,7 @@ namespace llvm {
 
 namespace msf {
 class MappedBlockStream;
-class StreamInterface;
+class WritableStream;
 }
 
 namespace pdb {
@@ -42,7 +42,7 @@ class PDBFile : public msf::IMsfFile {
   friend PDBFileBuilder;
 
 public:
-  PDBFile(std::unique_ptr<msf::StreamInterface> PdbFileBuffer,
+  PDBFile(std::unique_ptr<msf::ReadableStream> PdbFileBuffer,
           BumpPtrAllocator &Allocator);
   ~PDBFile() override;
 
@@ -68,11 +68,14 @@ public:
                      ArrayRef<uint8_t> Data) const override;
 
   ArrayRef<support::ulittle32_t> getStreamSizes() const {
-    return MsfLayout.StreamSizes;
+    return ContainerLayout.StreamSizes;
   }
   ArrayRef<ArrayRef<support::ulittle32_t>> getStreamMap() const {
-    return MsfLayout.StreamMap;
+    return ContainerLayout.StreamMap;
   }
+
+  const msf::MsfLayout &getMsfLayout() const { return ContainerLayout; }
+  const msf::ReadableStream &getMsfBuffer() const { return *Buffer; }
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
@@ -87,14 +90,12 @@ public:
   Expected<SymbolStream &> getPDBSymbolStream();
   Expected<NameHashTable &> getStringTable();
 
-  Error commit();
-
 private:
   BumpPtrAllocator &Allocator;
 
-  std::unique_ptr<msf::StreamInterface> Buffer;
+  std::unique_ptr<msf::ReadableStream> Buffer;
 
-  msf::Layout MsfLayout;
+  msf::MsfLayout ContainerLayout;
 
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;

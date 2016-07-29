@@ -41,7 +41,7 @@ public:
   msf::FixedStreamArray<support::ulittle32_t> name_ids() const;
 
 private:
-  msf::StreamRef NamesBuffer;
+  msf::ReadableStreamRef NamesBuffer;
   msf::FixedStreamArray<support::ulittle32_t> IDs;
   uint32_t Signature;
   uint32_t HashVersion;

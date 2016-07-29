@@ -69,27 +69,6 @@ using namespace llvm::codeview;
 using namespace llvm::msf;
 using namespace llvm::pdb;
 
-namespace {
-// A simple adapter that acts like a ByteStream but holds ownership over
-// and underlying FileOutputBuffer.
-class FileBufferByteStream : public ByteStream<true> {
-public:
-  FileBufferByteStream(std::unique_ptr<FileOutputBuffer> Buffer)
-      : ByteStream(MutableArrayRef<uint8_t>(Buffer->getBufferStart(),
-                                            Buffer->getBufferEnd())),
-        FileBuffer(std::move(Buffer)) {}
-
-  Error commit() const override {
-    if (FileBuffer->commit())
-      return llvm::make_error<RawError>(raw_error_code::not_writable);
-    return Error::success();
-  }
-
-private:
-  std::unique_ptr<FileOutputBuffer> FileBuffer;
-};
-}
-
 namespace opts {
 
 cl::SubCommand RawSubcommand("raw", "Dump raw structure of the PDB file");
@@ -395,11 +374,7 @@ static void yamlToPdb(StringRef Path) {
     }
   }
 
-  auto Pdb = Builder.build(std::move(FileByteStream));
-  ExitOnErr(Pdb.takeError());
-
-  auto &PdbFile = *Pdb;
-  ExitOnErr(PdbFile->commit());
+  ExitOnErr(Builder.commit(*FileByteStream));
 }
 
 static void pdb2Yaml(StringRef Path) {

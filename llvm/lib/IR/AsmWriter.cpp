@@ -905,7 +905,7 @@ void SlotTracker::processInstructionMetadata(const Instruction &I) {
   // Process metadata used directly by intrinsics.
   if (const CallInst *CI = dyn_cast<CallInst>(&I))
     if (Function *F = CI->getCalledFunction())
-      if (F->hasLLVMReservedName())
+      if (F->isIntrinsic())
         for (auto &Op : I.operands())
           if (auto *V = dyn_cast_or_null<MetadataAsValue>(Op))
             if (MDNode *N = dyn_cast<MDNode>(V->getMetadata()))
@@ -3378,7 +3378,7 @@ void Type::print(raw_ostream &OS, bool /*IsForDebug*/, bool NoDetails) const {
 static bool isReferencingMDNode(const Instruction &I) {
   if (const auto *CI = dyn_cast<CallInst>(&I))
     if (Function *F = CI->getCalledFunction())
-      if (F->hasLLVMReservedName())
+      if (F->isIntrinsic())
         for (auto &Op : I.operands())
           if (auto *V = dyn_cast_or_null<MetadataAsValue>(Op))
             if (isa<MDNode>(V->getMetadata()))

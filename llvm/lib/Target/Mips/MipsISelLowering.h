@@ -471,7 +471,7 @@ namespace llvm {
     void passByValArg(SDValue Chain, const SDLoc &DL,
                       std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
                       SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
-                      MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg,
+                      MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg,
                       unsigned FirstReg, unsigned LastReg,
                       const ISD::ArgFlagsTy &Flags, bool isLittle,
                       const CCValAssign &VA) const;

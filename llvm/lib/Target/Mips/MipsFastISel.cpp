@@ -762,7 +762,7 @@ bool MipsFastISel::emitLoad(MVT VT, unsigned &ResultReg, Address &Addr,
     unsigned FI = Addr.getFI();
     unsigned Align = 4;
     unsigned Offset = Addr.getOffset();
-    MachineFrameInfo &MFI = *MF->getFrameInfo();
+    MachineFrameInfo &MFI = MF->getFrameInfo();
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOLoad,
         MFI.getObjectSize(FI), Align);
@@ -813,7 +813,7 @@ bool MipsFastISel::emitStore(MVT VT, unsigned SrcReg, Address &Addr,
     unsigned FI = Addr.getFI();
     unsigned Align = 4;
     unsigned Offset = Addr.getOffset();
-    MachineFrameInfo &MFI = *MF->getFrameInfo();
+    MachineFrameInfo &MFI = MF->getFrameInfo();
     MachineMemOperand *MMO = MF->getMachineMemOperand(
         MachinePointerInfo::getFixedStack(*MF, FI), MachineMemOperand::MOStore,
         MFI.getObjectSize(FI), Align);

@@ -527,7 +527,7 @@ public:
     return get(pseudoToMCOpcode(Opcode));
   }
 
-  unsigned getInstSizeInBytes(const MachineInstr &MI) const;
+  unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
   ArrayRef<std::pair<int, const char *>>
   getSerializableTargetIndices() const override;

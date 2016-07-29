@@ -58,7 +58,7 @@ MachineMemOperand *
 MipsInstrInfo::GetMemOperand(MachineBasicBlock &MBB, int FI,
                              MachineMemOperand::Flags Flags) const {
   MachineFunction &MF = *MBB.getParent();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned Align = MFI.getObjectAlignment(FI);
 
   return MF.getMachineMemOperand(MachinePointerInfo::getFixedStack(MF, FI),
@@ -398,7 +398,7 @@ bool MipsInstrInfo::HasForbiddenSlot(const MachineInstr &MI) const {
 }
 
 /// Return the number of bytes of code the specified instruction may be.
-unsigned MipsInstrInfo::GetInstSizeInBytes(const MachineInstr &MI) const {
+unsigned MipsInstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     return MI.getDesc().getSize();
