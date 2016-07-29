@@ -177,6 +177,14 @@ protected:
     void
     SearchSDKsForKextDirectories (std::vector<lldb_private::FileSpec> sdk_dirs, std::vector<lldb_private::FileSpec> &kext_dirs);
 
+    // Returns true if there is a .dSYM bundle next to the kext, or next to the binary inside the kext.
+    bool
+    KextHasdSYMSibling (const lldb_private::FileSpec &kext_bundle_filepath);
+
+    // Returns true if there is a .dSYM bundle next to the kernel
+    bool
+    KernelHasdSYMSibling (const lldb_private::FileSpec &kext_bundle_filepath);
+
     // Search through all of the directories passed in, find all .kext bundles in those directories,
     // get the CFBundleIDs out of the Info.plists and add the bundle ID and kext path to m_name_to_kext_path_map.
     void
@@ -198,9 +206,11 @@ protected:
 
 private:
 
-    BundleIDToKextMap             m_name_to_kext_path_map; // multimap of CFBundleID to FileSpec on local filesystem
+    BundleIDToKextMap             m_name_to_kext_path_map_with_dsyms; // multimap of CFBundleID to FileSpec on local filesystem, kexts with dSYMs next to them
+    BundleIDToKextMap             m_name_to_kext_path_map_without_dsyms;   // multimap of CFBundleID to FileSpec on local filesystem, kexts without dSYMs next to them
     DirectoriesSearchedCollection m_search_directories;    // list of directories we search for kexts/kernels
-    KernelBinaryCollection        m_kernel_binaries;       // list of kernel binaries we found on local filesystem
+    KernelBinaryCollection        m_kernel_binaries_with_dsyms;    // list of kernel binaries we found on local filesystem, without dSYMs next to them
+    KernelBinaryCollection        m_kernel_binaries_without_dsyms; // list of kernel binaries we found on local filesystem, with dSYMs next to them
     lldb_private::LazyBool        m_ios_debug_session;
 
     DISALLOW_COPY_AND_ASSIGN (PlatformDarwinKernel);
