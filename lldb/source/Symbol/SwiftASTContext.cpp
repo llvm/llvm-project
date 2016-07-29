@@ -1786,7 +1786,7 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
                         StreamString ss;
                         module_sp->GetDescription(&ss, eDescriptionLevelBrief);
                         target->GetDebugger().GetErrorFile()->Printf("warning: Swift error in module %s"/*": \n    %s\n"*/
-                                                                     "Debug info from this module will be unavailable in the debugger.\n\n",
+                                                                     ".\nDebug info from this module will be unavailable in the debugger.\n\n",
                                                                      ss.GetData());
                     }
                     
@@ -2043,11 +2043,19 @@ SwiftASTContext::CreateInstance (lldb::LanguageType language, Module *module, Ta
             if (swift_ast_sp->HasFatalErrors())
             {
                 swift_ast_sp->m_error.SetErrorStringWithFormat("Error creating target Swift AST context: %s", swift_ast_sp->GetFatalErrors().AsCString());
+                return lldb::TypeSystemSP();
             }
-            else
+            
             {
-                return swift_ast_sp;
+                const bool can_create = true;
+                if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create))
+                {
+                    // We need to be able to load the standard library!
+                    return lldb::TypeSystemSP();
+                }
             }
+            
+            return swift_ast_sp;
         }
     }
     return lldb::TypeSystemSP();

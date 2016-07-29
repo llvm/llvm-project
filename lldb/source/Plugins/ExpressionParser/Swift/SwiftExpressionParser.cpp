@@ -138,7 +138,7 @@ SwiftExpressionParser::SwiftExpressionParser (ExecutionContextScope *exe_scope,
     
     if (target_sp)
     {
-        m_swift_ast_context = llvm::cast<SwiftASTContext>(target_sp->GetScratchTypeSystemForLanguage(nullptr, lldb::eLanguageTypeSwift));
+        m_swift_ast_context = llvm::cast_or_null<SwiftASTContext>(target_sp->GetScratchTypeSystemForLanguage(nullptr, lldb::eLanguageTypeSwift));
     }
 }
 
