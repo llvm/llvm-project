@@ -521,9 +521,9 @@ bool ShrinkWrap::runOnMachineFunction(MachineFunction &MF) {
                << ' ' << Save->getName() << "\nRestore: "
                << Restore->getNumber() << ' ' << Restore->getName() << '\n');
 
-  MachineFrameInfo *MFI = MF.getFrameInfo();
-  MFI->setSavePoint(Save);
-  MFI->setRestorePoint(Restore);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setSavePoint(Save);
+  MFI.setRestorePoint(Restore);
   ++NumCandidates;
   return false;
 }

@@ -15,7 +15,7 @@
 using namespace llvm;
 using namespace llvm::msf;
 
-StreamReader::StreamReader(StreamRef S) : Stream(S), Offset(0) {}
+StreamReader::StreamReader(ReadableStreamRef S) : Stream(S), Offset(0) {}
 
 Error StreamReader::readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer) {
   if (auto EC = Stream.readLongestContiguousChunk(Offset, Buffer))
@@ -80,11 +80,11 @@ Error StreamReader::readFixedString(StringRef &Dest, uint32_t Length) {
   return Error::success();
 }
 
-Error StreamReader::readStreamRef(StreamRef &Ref) {
+Error StreamReader::readStreamRef(ReadableStreamRef &Ref) {
   return readStreamRef(Ref, bytesRemaining());
 }
 
-Error StreamReader::readStreamRef(StreamRef &Ref, uint32_t Length) {
+Error StreamReader::readStreamRef(ReadableStreamRef &Ref, uint32_t Length) {
   if (bytesRemaining() < Length)
     return make_error<MsfError>(msf_error_code::insufficient_buffer);
   Ref = Stream.slice(Offset, Length);

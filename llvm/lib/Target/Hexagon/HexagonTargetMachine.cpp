@@ -42,6 +42,9 @@ static cl::opt<bool> DisableHexagonCFGOpt("disable-hexagon-cfgopt",
   cl::Hidden, cl::ZeroOrMore, cl::init(false),
   cl::desc("Disable Hexagon CFG Optimization"));
 
+static cl::opt<bool> DisableHCP("disable-hcp", cl::init(false), cl::Hidden,
+  cl::ZeroOrMore, cl::desc("Disable Hexagon constant propagation"));
+
 static cl::opt<bool> DisableStoreWidening("disable-store-widen",
   cl::Hidden, cl::init(false), cl::desc("Disable store widening"));
 
@@ -111,6 +114,7 @@ namespace llvm {
   FunctionPass *createHexagonCallFrameInformation();
   FunctionPass *createHexagonCFGOptimizer();
   FunctionPass *createHexagonCommonGEP();
+  FunctionPass *createHexagonConstPropagationPass();
   FunctionPass *createHexagonCopyToCombine();
   FunctionPass *createHexagonEarlyIfConversion();
   FunctionPass *createHexagonExpandCondsets();
@@ -263,6 +267,11 @@ bool HexagonPassConfig::addInstSelector() {
       addPass(createHexagonBitSimplify(), false);
     addPass(createHexagonPeephole());
     printAndVerify("After hexagon peephole pass");
+    // Constant propagation.
+    if (!DisableHCP) {
+      addPass(createHexagonConstPropagationPass(), false);
+      addPass(&UnreachableMachineBlockElimID, false);
+    }
     if (EnableGenInsert)
       addPass(createHexagonGenInsert(), false);
     if (EnableEarlyIf)

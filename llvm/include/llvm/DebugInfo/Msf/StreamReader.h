@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/Msf/MsfError.h"
 #include "llvm/DebugInfo/Msf/StreamArray.h"
 #include "llvm/DebugInfo/Msf/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -22,11 +23,9 @@
 namespace llvm {
 namespace msf {
 
-class StreamRef;
-
 class StreamReader {
 public:
-  StreamReader(StreamRef Stream);
+  StreamReader(ReadableStreamRef Stream);
 
   Error readLongestContiguousChunk(ArrayRef<uint8_t> &Buffer);
   Error readBytes(ArrayRef<uint8_t> &Buffer, uint32_t Size);
@@ -34,8 +33,8 @@ public:
   Error readInteger(uint32_t &Dest);
   Error readZeroString(StringRef &Dest);
   Error readFixedString(StringRef &Dest, uint32_t Length);
-  Error readStreamRef(StreamRef &Ref);
-  Error readStreamRef(StreamRef &Ref, uint32_t Length);
+  Error readStreamRef(ReadableStreamRef &Ref);
+  Error readStreamRef(ReadableStreamRef &Ref, uint32_t Length);
 
   template <typename T> Error readEnum(T &Dest) {
     typename std::underlying_type<T>::type N;
@@ -72,7 +71,7 @@ public:
 
   template <typename T, typename U>
   Error readArray(VarStreamArray<T, U> &Array, uint32_t Size) {
-    StreamRef S;
+    ReadableStreamRef S;
     if (auto EC = readStreamRef(S, Size))
       return EC;
     Array = VarStreamArray<T, U>(S, Array.getExtractor());
@@ -90,7 +89,7 @@ public:
       return make_error<MsfError>(msf_error_code::invalid_format);
     if (Offset + Length > Stream.getLength())
       return make_error<MsfError>(msf_error_code::insufficient_buffer);
-    StreamRef View = Stream.slice(Offset, Length);
+    ReadableStreamRef View = Stream.slice(Offset, Length);
     Array = FixedStreamArray<T>(View);
     Offset += Length;
     return Error::success();
@@ -102,7 +101,7 @@ public:
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
 
 private:
-  StreamRef Stream;
+  ReadableStreamRef Stream;
   uint32_t Offset;
 };
 } // namespace msf

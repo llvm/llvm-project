@@ -319,10 +319,10 @@ SDValue WebAssemblyTargetLowering::LowerCall(
     if (Out.Flags.isInConsecutiveRegsLast())
       fail(DL, DAG, "WebAssembly hasn't implemented cons regs last arguments");
     if (Out.Flags.isByVal() && Out.Flags.getByValSize() != 0) {
-      auto *MFI = MF.getFrameInfo();
-      int FI = MFI->CreateStackObject(Out.Flags.getByValSize(),
-                                      Out.Flags.getByValAlign(),
-                                      /*isSS=*/false);
+      auto &MFI = MF.getFrameInfo();
+      int FI = MFI.CreateStackObject(Out.Flags.getByValSize(),
+                                     Out.Flags.getByValAlign(),
+                                     /*isSS=*/false);
       SDValue SizeNode =
           DAG.getConstant(Out.Flags.getByValSize(), DL, MVT::i32);
       SDValue FINode = DAG.getFrameIndex(FI, getPointerTy(Layout));
@@ -365,9 +365,9 @@ SDValue WebAssemblyTargetLowering::LowerCall(
   if (IsVarArg && NumBytes) {
     // For non-fixed arguments, next emit stores to store the argument values
     // to the stack buffer at the offsets computed above.
-    int FI = MF.getFrameInfo()->CreateStackObject(NumBytes,
-                                                  Layout.getStackAlignment(),
-                                                  /*isSS=*/false);
+    int FI = MF.getFrameInfo().CreateStackObject(NumBytes,
+                                                 Layout.getStackAlignment(),
+                                                 /*isSS=*/false);
     unsigned ValNo = 0;
     SmallVector<SDValue, 8> Chains;
     for (SDValue Arg :
@@ -597,7 +597,7 @@ SDValue WebAssemblyTargetLowering::LowerFRAMEADDR(SDValue Op,
   if (Op.getConstantOperandVal(0) > 0)
     return SDValue();
 
-  DAG.getMachineFunction().getFrameInfo()->setFrameAddressIsTaken(true);
+  DAG.getMachineFunction().getFrameInfo().setFrameAddressIsTaken(true);
   EVT VT = Op.getValueType();
   unsigned FP =
       Subtarget->getRegisterInfo()->getFrameRegister(DAG.getMachineFunction());

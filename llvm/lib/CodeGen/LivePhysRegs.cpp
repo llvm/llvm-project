@@ -165,7 +165,7 @@ void LivePhysRegs::addLiveOutsNoPristines(const MachineBasicBlock &MBB) {
 
 void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = *MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (MFI.isCalleeSavedInfoValid()) {
     if (MBB.isReturnBlock()) {
       // The return block has no successors whose live-ins we could merge
@@ -182,7 +182,7 @@ void LivePhysRegs::addLiveOuts(const MachineBasicBlock &MBB) {
 
 void LivePhysRegs::addLiveIns(const MachineBasicBlock &MBB) {
   const MachineFunction &MF = *MBB.getParent();
-  const MachineFrameInfo &MFI = *MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (MFI.isCalleeSavedInfoValid())
     addPristines(*this, MF, MFI, *TRI);
   ::addLiveIns(*this, MBB);

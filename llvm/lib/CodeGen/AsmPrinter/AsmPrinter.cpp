@@ -632,26 +632,26 @@ static void emitComments(const MachineInstr &MI, raw_ostream &CommentOS) {
   // Check for spills and reloads
   int FI;
 
-  const MachineFrameInfo *FrameInfo = MF->getFrameInfo();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
 
   // We assume a single instruction only has a spill or reload, not
   // both.
   const MachineMemOperand *MMO;
   if (TII->isLoadFromStackSlotPostFE(MI, FI)) {
-    if (FrameInfo->isSpillSlotObjectIndex(FI)) {
+    if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
       CommentOS << MMO->getSize() << "-byte Reload\n";
     }
   } else if (TII->hasLoadFromStackSlot(MI, MMO, FI)) {
-    if (FrameInfo->isSpillSlotObjectIndex(FI))
+    if (MFI.isSpillSlotObjectIndex(FI))
       CommentOS << MMO->getSize() << "-byte Folded Reload\n";
   } else if (TII->isStoreToStackSlotPostFE(MI, FI)) {
-    if (FrameInfo->isSpillSlotObjectIndex(FI)) {
+    if (MFI.isSpillSlotObjectIndex(FI)) {
       MMO = *MI.memoperands_begin();
       CommentOS << MMO->getSize() << "-byte Spill\n";
     }
   } else if (TII->hasStoreToStackSlot(MI, MMO, FI)) {
-    if (FrameInfo->isSpillSlotObjectIndex(FI))
+    if (MFI.isSpillSlotObjectIndex(FI))
       CommentOS << MMO->getSize() << "-byte Folded Spill\n";
   }
 
@@ -1764,7 +1764,7 @@ const MCExpr *AsmPrinter::lowerConstant(const Constant *CV) {
     // If the code isn't optimized, there may be outstanding folding
     // opportunities. Attempt to fold the expression using DataLayout as a
     // last resort before giving up.
-    if (Constant *C = ConstantFoldConstantExpression(CE, getDataLayout()))
+    if (Constant *C = ConstantFoldConstant(CE, getDataLayout()))
       if (C != CE)
         return lowerConstant(C);
 
@@ -2299,7 +2299,7 @@ static void emitGlobalConstantImpl(const DataLayout &DL, const Constant *CV,
       // If the constant expression's size is greater than 64-bits, then we have
       // to emit the value in chunks. Try to constant fold the value and emit it
       // that way.
-      Constant *New = ConstantFoldConstantExpression(CE, DL);
+      Constant *New = ConstantFoldConstant(CE, DL);
       if (New && New != CE)
         return emitGlobalConstantImpl(DL, New, AP);
     }

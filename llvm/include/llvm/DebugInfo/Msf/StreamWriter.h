@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/Msf/MsfError.h"
 #include "llvm/DebugInfo/Msf/StreamArray.h"
 #include "llvm/DebugInfo/Msf/StreamInterface.h"
+#include "llvm/DebugInfo/Msf/StreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 
@@ -22,19 +23,17 @@
 namespace llvm {
 namespace msf {
 
-class StreamRef;
-
 class StreamWriter {
 public:
-  StreamWriter(StreamRef Stream);
+  StreamWriter(WritableStreamRef Stream);
 
   Error writeBytes(ArrayRef<uint8_t> Buffer);
   Error writeInteger(uint16_t Dest);
   Error writeInteger(uint32_t Dest);
   Error writeZeroString(StringRef Str);
   Error writeFixedString(StringRef Str);
-  Error writeStreamRef(StreamRef Ref);
-  Error writeStreamRef(StreamRef Ref, uint32_t Size);
+  Error writeStreamRef(ReadableStreamRef Ref);
+  Error writeStreamRef(ReadableStreamRef Ref, uint32_t Size);
 
   template <typename T> Error writeEnum(T Num) {
     return writeInteger(
@@ -77,7 +76,7 @@ public:
   uint32_t bytesRemaining() const { return getLength() - getOffset(); }
 
 private:
-  StreamRef Stream;
+  WritableStreamRef Stream;
   uint32_t Offset;
 };
 } // namespace msf

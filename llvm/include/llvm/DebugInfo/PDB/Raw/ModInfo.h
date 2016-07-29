@@ -29,7 +29,7 @@ public:
   ModInfo(const ModInfo &Info);
   ~ModInfo();
 
-  static Error initialize(msf::StreamRef Stream, ModInfo &Info);
+  static Error initialize(msf::ReadableStreamRef Stream, ModInfo &Info);
 
   bool hasECInfo() const;
   uint16_t getTypeServerIndex() const;
@@ -65,7 +65,7 @@ struct ModuleInfoEx {
 
 namespace msf {
 template <> struct VarStreamArrayExtractor<pdb::ModInfo> {
-  Error operator()(StreamRef Stream, uint32_t &Length,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Length,
                    pdb::ModInfo &Info) const {
     if (auto EC = pdb::ModInfo::initialize(Stream, Info))
       return EC;

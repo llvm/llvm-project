@@ -97,7 +97,7 @@ void NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
 
   MachineFunction &MF = *MI.getParent()->getParent();
-  int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex) +
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
                MI.getOperand(FIOperandNum + 1).getImm();
 
   // Using I0 as the frame pointer

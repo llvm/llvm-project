@@ -250,9 +250,9 @@ void MipsAsmPrinter::printSavedRegsBitmask() {
   int CPUTopSavedRegOff, FPUTopSavedRegOff;
 
   // Set the CPU and FPU Bitmasks
-  const MachineFrameInfo *MFI = MF->getFrameInfo();
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
   const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-  const std::vector<CalleeSavedInfo> &CSI = MFI->getCalleeSavedInfo();
+  const std::vector<CalleeSavedInfo> &CSI = MFI.getCalleeSavedInfo();
   // size of stack area to which FP callee-saved regs are saved.
   unsigned CPURegSize = Mips::GPR32RegClass.getSize();
   unsigned FGR32RegSize = Mips::FGR32RegClass.getSize();
@@ -302,7 +302,7 @@ void MipsAsmPrinter::emitFrameDirective() {
 
   unsigned stackReg  = RI.getFrameRegister(*MF);
   unsigned returnReg = RI.getRARegister();
-  unsigned stackSize = MF->getFrameInfo()->getStackSize();
+  unsigned stackSize = MF->getFrameInfo().getStackSize();
 
   getTargetStreamer().emitFrame(stackReg, stackSize, returnReg);
 }

@@ -9,7 +9,6 @@
 
 #include "llvm/DebugInfo/PDB/Raw/ModStream.h"
 
-#include "llvm/DebugInfo/Msf/IndexedStreamData.h"
 #include "llvm/DebugInfo/Msf/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
@@ -37,7 +36,7 @@ Error ModStream::reload() {
     return llvm::make_error<RawError>(raw_error_code::corrupt_file,
                                       "Module has both C11 and C13 line info");
 
-  StreamRef S;
+  ReadableStreamRef S;
 
   uint32_t SymbolSubstreamSig = 0;
   if (auto EC = Reader.readInteger(SymbolSubstreamSig))

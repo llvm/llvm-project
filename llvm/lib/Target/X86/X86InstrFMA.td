@@ -39,7 +39,6 @@ multiclass fma3p_rm<bits<8> opc, string OpcodeStr,
                     PatFrag MemFrag128, PatFrag MemFrag256,
                     ValueType OpVT128, ValueType OpVT256,
                     SDPatternOperator Op = null_frag> {
-  let usesCustomInserter = 1 in
   def r     : FMA3<opc, MRMSrcReg, (outs VR128:$dst),
                    (ins VR128:$src1, VR128:$src2, VR128:$src3),
                    !strconcat(OpcodeStr,
@@ -55,7 +54,6 @@ multiclass fma3p_rm<bits<8> opc, string OpcodeStr,
                    [(set VR128:$dst, (OpVT128 (Op VR128:$src2, VR128:$src1,
                                                (MemFrag128 addr:$src3))))]>;
 
-  let usesCustomInserter = 1 in
   def Yr    : FMA3<opc, MRMSrcReg, (outs VR256:$dst),
                    (ins VR256:$src1, VR256:$src2, VR256:$src3),
                    !strconcat(OpcodeStr,
@@ -144,7 +142,6 @@ let Constraints = "$src1 = $dst", isCommutable = 1, hasSideEffects = 0 in
 multiclass fma3s_rm<bits<8> opc, string OpcodeStr,
                     X86MemOperand x86memop, RegisterClass RC,
                     SDPatternOperator OpNode = null_frag> {
-  let usesCustomInserter = 1 in
   def r     : FMA3<opc, MRMSrcReg, (outs RC:$dst),
                    (ins RC:$src1, RC:$src2, RC:$src3),
                    !strconcat(OpcodeStr,

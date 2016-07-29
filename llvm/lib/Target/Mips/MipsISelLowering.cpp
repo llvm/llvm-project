@@ -2099,8 +2099,8 @@ lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   assert((cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue() == 0) &&
          "Frame address can only be determined for current frame.");
 
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  MFI->setFrameAddressIsTaken(true);
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
   EVT VT = Op.getValueType();
   SDLoc DL(Op);
   SDValue FrameAddr = DAG.getCopyFromReg(
@@ -2118,10 +2118,10 @@ SDValue MipsTargetLowering::lowerRETURNADDR(SDValue Op,
          "Return address can be determined only for current frame.");
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MVT VT = Op.getSimpleValueType();
   unsigned RA = ABI.IsN64() ? Mips::RA_64 : Mips::RA;
-  MFI->setReturnAddressIsTaken(true);
+  MFI.setReturnAddressIsTaken(true);
 
   // Return RA, which contains the return address. Mark it an implicit live-in.
   unsigned Reg = MF.addLiveIn(RA, getRegClassFor(VT));
@@ -2406,9 +2406,9 @@ SDValue MipsTargetLowering::lowerADD(SDValue Op, SelectionDAG &DAG) const {
   //   (add FrameObject, 0)
   // where FrameObject is a fixed StackObject with offset 0 which points to
   // the old stack pointer.
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   EVT ValTy = Op->getValueType(0);
-  int FI = MFI->CreateFixedObject(Op.getValueSizeInBits() / 8, 0, false);
+  int FI = MFI.CreateFixedObject(Op.getValueSizeInBits() / 8, 0, false);
   SDValue InArgsAddr = DAG.getFrameIndex(FI, ValTy);
   SDLoc DL(Op);
   return DAG.getNode(ISD::ADD, DL, ValTy, InArgsAddr,
@@ -2574,8 +2574,8 @@ SDValue MipsTargetLowering::passArgOnStack(SDValue StackPtr, unsigned Offset,
     return DAG.getStore(Chain, DL, Arg, PtrOff, MachinePointerInfo());
   }
 
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
-  int FI = MFI->CreateFixedObject(Arg.getValueSizeInBits() / 8, Offset, false);
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
+  int FI = MFI.CreateFixedObject(Arg.getValueSizeInBits() / 8, Offset, false);
   SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
   return DAG.getStore(Chain, DL, Arg, FIN, MachinePointerInfo(),
                       /* Alignment = */ 0, MachineMemOperand::MOVolatile);
@@ -2658,7 +2658,7 @@ MipsTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool IsVarArg                         = CLI.IsVarArg;
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetFrameLowering *TFL = Subtarget.getFrameLowering();
   MipsFunctionInfo *FuncInfo = MF.getInfo<MipsFunctionInfo>();
   bool IsPIC = isPositionIndependent();
@@ -3017,7 +3017,7 @@ SDValue MipsTargetLowering::LowerFormalArguments(
     const SmallVectorImpl<ISD::InputArg> &Ins, const SDLoc &DL,
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
   MipsFI->setVarArgsFrameIndex(0);
@@ -3116,8 +3116,8 @@ SDValue MipsTargetLowering::LowerFormalArguments(
       assert(VA.isMemLoc());
 
       // The stack pointer offset is relative to the caller stack frame.
-      int FI = MFI->CreateFixedObject(LocVT.getSizeInBits() / 8,
-                                      VA.getLocMemOffset(), true);
+      int FI = MFI.CreateFixedObject(LocVT.getSizeInBits() / 8,
+                                     VA.getLocMemOffset(), true);
 
       // Create load nodes to retrieve arguments from the stack
       SDValue FIN = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
@@ -3717,7 +3717,7 @@ void MipsTargetLowering::copyByValRegs(
     unsigned FirstReg, unsigned LastReg, const CCValAssign &VA,
     MipsCCState &State) const {
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   unsigned GPRSizeInBytes = Subtarget.getGPRSizeInBytes();
   unsigned NumRegs = LastReg - FirstReg;
   unsigned RegAreaSize = NumRegs * GPRSizeInBytes;
@@ -3734,7 +3734,7 @@ void MipsTargetLowering::copyByValRegs(
 
   // Create frame object.
   EVT PtrTy = getPointerTy(DAG.getDataLayout());
-  int FI = MFI->CreateFixedObject(FrameObjSize, FrameObjOffset, true);
+  int FI = MFI.CreateFixedObject(FrameObjSize, FrameObjOffset, true);
   SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
   InVals.push_back(FIN);
 
@@ -3762,7 +3762,7 @@ void MipsTargetLowering::passByValArg(
     SDValue Chain, const SDLoc &DL,
     std::deque<std::pair<unsigned, SDValue>> &RegsToPass,
     SmallVectorImpl<SDValue> &MemOpChains, SDValue StackPtr,
-    MachineFrameInfo *MFI, SelectionDAG &DAG, SDValue Arg, unsigned FirstReg,
+    MachineFrameInfo &MFI, SelectionDAG &DAG, SDValue Arg, unsigned FirstReg,
     unsigned LastReg, const ISD::ArgFlagsTy &Flags, bool isLittle,
     const CCValAssign &VA) const {
   unsigned ByValSizeInBytes = Flags.getByValSize();
@@ -3864,7 +3864,7 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
   MVT RegTy = MVT::getIntegerVT(RegSizeInBytes * 8);
   const TargetRegisterClass *RC = getRegClassFor(RegTy);
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MipsFunctionInfo *MipsFI = MF.getInfo<MipsFunctionInfo>();
 
   // Offset of the first variable argument from stack pointer.
@@ -3880,7 +3880,7 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
 
   // Record the frame index of the first variable argument
   // which is a value necessary to VASTART.
-  int FI = MFI->CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
+  int FI = MFI.CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
   MipsFI->setVarArgsFrameIndex(FI);
 
   // Copy the integer registers that have not been used for argument passing
@@ -3891,7 +3891,7 @@ void MipsTargetLowering::writeVarArgRegs(std::vector<SDValue> &OutChains,
        ++I, VaArgOffset += RegSizeInBytes) {
     unsigned Reg = addLiveIn(MF, ArgRegs[I], RC);
     SDValue ArgValue = DAG.getCopyFromReg(Chain, DL, Reg, RegTy);
-    FI = MFI->CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
+    FI = MFI.CreateFixedObject(RegSizeInBytes, VaArgOffset, true);
     SDValue PtrOff = DAG.getFrameIndex(FI, getPointerTy(DAG.getDataLayout()));
     SDValue Store =
         DAG.getStore(Chain, DL, ArgValue, PtrOff, MachinePointerInfo());

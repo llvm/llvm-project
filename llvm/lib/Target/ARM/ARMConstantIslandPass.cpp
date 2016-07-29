@@ -823,7 +823,7 @@ unsigned ARMConstantIslands::getOffsetOf(MachineInstr *MI) const {
   // Sum instructions before MI in MBB.
   for (MachineBasicBlock::iterator I = MBB->begin(); &*I != MI; ++I) {
     assert(I != MBB->end() && "Didn't find MI in its own basic block?");
-    Offset += TII->GetInstSizeInBytes(*I);
+    Offset += TII->getInstSizeInBytes(*I);
   }
   return Offset;
 }
@@ -1331,7 +1331,7 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     // iterates at least once.
     BaseInsertOffset =
         std::max(UserBBI.postOffset() - UPad - 8,
-                 UserOffset + TII->GetInstSizeInBytes(*UserMI) + 1);
+                 UserOffset + TII->getInstSizeInBytes(*UserMI) + 1);
     DEBUG(dbgs() << format("Move inside block: %#x\n", BaseInsertOffset));
   }
   unsigned EndInsertOffset = BaseInsertOffset + 4 + UPad +
@@ -1341,9 +1341,9 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   unsigned CPUIndex = CPUserIndex+1;
   unsigned NumCPUsers = CPUsers.size();
   MachineInstr *LastIT = nullptr;
-  for (unsigned Offset = UserOffset + TII->GetInstSizeInBytes(*UserMI);
+  for (unsigned Offset = UserOffset + TII->getInstSizeInBytes(*UserMI);
        Offset < BaseInsertOffset;
-       Offset += TII->GetInstSizeInBytes(*MI), MI = std::next(MI)) {
+       Offset += TII->getInstSizeInBytes(*MI), MI = std::next(MI)) {
     assert(MI != UserMBB->end() && "Fell off end of block");
     if (CPUIndex < NumCPUsers && CPUsers[CPUIndex].MI == &*MI) {
       CPUser &U = CPUsers[CPUIndex];
@@ -1644,7 +1644,7 @@ ARMConstantIslands::fixupConditionalBr(ImmBranch &Br) {
     splitBlockBeforeInstr(MI);
     // No need for the branch to the next block. We're adding an unconditional
     // branch to the destination.
-    int delta = TII->GetInstSizeInBytes(MBB->back());
+    int delta = TII->getInstSizeInBytes(MBB->back());
     BBInfo[MBB->getNumber()].Size -= delta;
     MBB->back().eraseFromParent();
     // BBInfo[SplitBB].Offset is wrong temporarily, fixed below
@@ -1660,18 +1660,18 @@ ARMConstantIslands::fixupConditionalBr(ImmBranch &Br) {
   BuildMI(MBB, DebugLoc(), TII->get(MI->getOpcode()))
     .addMBB(NextBB).addImm(CC).addReg(CCReg);
   Br.MI = &MBB->back();
-  BBInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(MBB->back());
+  BBInfo[MBB->getNumber()].Size += TII->getInstSizeInBytes(MBB->back());
   if (isThumb)
     BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr)).addMBB(DestBB)
             .addImm(ARMCC::AL).addReg(0);
   else
     BuildMI(MBB, DebugLoc(), TII->get(Br.UncondBr)).addMBB(DestBB);
-  BBInfo[MBB->getNumber()].Size += TII->GetInstSizeInBytes(MBB->back());
+  BBInfo[MBB->getNumber()].Size += TII->getInstSizeInBytes(MBB->back());
   unsigned MaxDisp = getUnconditionalBrDisp(Br.UncondBr);
   ImmBranches.push_back(ImmBranch(&MBB->back(), MaxDisp, false, Br.UncondBr));
 
   // Remove the old conditional branch.  It may or may not still be in MBB.
-  BBInfo[MI->getParent()->getNumber()].Size -= TII->GetInstSizeInBytes(*MI);
+  BBInfo[MI->getParent()->getNumber()].Size -= TII->getInstSizeInBytes(*MI);
   MI->eraseFromParent();
   adjustBBOffsetsAfter(MBB);
   return true;
@@ -2084,8 +2084,8 @@ bool ARMConstantIslands::optimizeThumb2JumpTables() {
       }
     }
 
-    unsigned NewSize = TII->GetInstSizeInBytes(*NewJTMI);
-    unsigned OrigSize = TII->GetInstSizeInBytes(*MI);
+    unsigned NewSize = TII->getInstSizeInBytes(*NewJTMI);
+    unsigned OrigSize = TII->getInstSizeInBytes(*MI);
     MI->eraseFromParent();
 
     int Delta = OrigSize - NewSize + DeadSize;

@@ -16,7 +16,7 @@
 using namespace llvm;
 using namespace llvm::msf;
 
-StreamWriter::StreamWriter(StreamRef S) : Stream(S), Offset(0) {}
+StreamWriter::StreamWriter(WritableStreamRef S) : Stream(S), Offset(0) {}
 
 Error StreamWriter::writeBytes(ArrayRef<uint8_t> Buffer) {
   if (auto EC = Stream.writeBytes(Offset, Buffer))
@@ -51,7 +51,7 @@ Error StreamWriter::writeFixedString(StringRef Str) {
   return Error::success();
 }
 
-Error StreamWriter::writeStreamRef(StreamRef Ref) {
+Error StreamWriter::writeStreamRef(ReadableStreamRef Ref) {
   if (auto EC = writeStreamRef(Ref, Ref.getLength()))
     return EC;
   // Don't increment Offset here, it is done by the overloaded call to
@@ -59,7 +59,7 @@ Error StreamWriter::writeStreamRef(StreamRef Ref) {
   return Error::success();
 }
 
-Error StreamWriter::writeStreamRef(StreamRef Ref, uint32_t Length) {
+Error StreamWriter::writeStreamRef(ReadableStreamRef Ref, uint32_t Length) {
   Ref = Ref.slice(0, Length);
 
   StreamReader SrcReader(Ref);

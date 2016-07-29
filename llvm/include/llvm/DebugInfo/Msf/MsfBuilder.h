@@ -111,7 +111,7 @@ public:
 
   /// Finalize the layout and build the headers and structures that describe the
   /// MSF layout and can be written directly to the MSF file.
-  Expected<Layout> build();
+  Expected<MsfLayout> build();
 
 private:
   MsfBuilder(uint32_t BlockSize, uint32_t MinBlockCount, bool CanGrow,

@@ -179,8 +179,8 @@ void MIRPrinter::print(const MachineFunction &MF) {
   convert(YamlMF, MF.getRegInfo(), MF.getSubtarget().getRegisterInfo());
   ModuleSlotTracker MST(MF.getFunction()->getParent());
   MST.incorporateFunction(*MF.getFunction());
-  convert(MST, YamlMF.FrameInfo, *MF.getFrameInfo());
-  convertStackObjects(YamlMF, *MF.getFrameInfo(), MF.getMMI(), MST,
+  convert(MST, YamlMF.FrameInfo, MF.getFrameInfo());
+  convertStackObjects(YamlMF, MF.getFrameInfo(), MF.getMMI(), MST,
                       MF.getSubtarget().getRegisterInfo());
   if (const auto *ConstantPool = MF.getConstantPool())
     convert(YamlMF, *ConstantPool);

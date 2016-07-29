@@ -423,7 +423,7 @@ public:
 
   void ensureMaxAlignment(unsigned Align) {
     if (!AnalyzingMustTailForwardedRegs)
-      MF.getFrameInfo()->ensureMaxAlignment(Align);
+      MF.getFrameInfo().ensureMaxAlignment(Align);
   }
 
   /// Version of AllocateStack with extra register to be shadowed.

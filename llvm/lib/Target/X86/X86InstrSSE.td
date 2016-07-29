@@ -3147,7 +3147,7 @@ multiclass scalar_math_f32_patterns<SDNode Op, string OpcPrefix> {
 
   // Repeat everything for AVX, except for the movss + scalar combo...
   // because that one shouldn't occur with AVX codegen?
-  let Predicates = [HasAVX] in {
+  let Predicates = [UseAVX] in {
     // extracted scalar math op with insert via blend
     def : Pat<(v4f32 (X86Blendi (v4f32 VR128:$dst), (v4f32 (scalar_to_vector
           (Op (f32 (extractelt (v4f32 VR128:$dst), (iPTR 0))),
@@ -3203,7 +3203,7 @@ multiclass scalar_math_f64_patterns<SDNode Op, string OpcPrefix> {
   }
 
   // Repeat everything for AVX.
-  let Predicates = [HasAVX] in {
+  let Predicates = [UseAVX] in {
     // extracted scalar math op with insert via movsd
     def : Pat<(v2f64 (X86Movsd (v2f64 VR128:$dst), (v2f64 (scalar_to_vector
           (Op (f64 (extractelt (v2f64 VR128:$dst), (iPTR 0))),

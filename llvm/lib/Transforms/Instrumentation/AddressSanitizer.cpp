@@ -460,20 +460,20 @@ struct AddressSanitizer : public FunctionPass {
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetLibraryInfoWrapperPass>();
   }
-  uint64_t getAllocaSizeInBytes(AllocaInst *AI) const {
+  uint64_t getAllocaSizeInBytes(const AllocaInst &AI) const {
     uint64_t ArraySize = 1;
-    if (AI->isArrayAllocation()) {
-      ConstantInt *CI = dyn_cast<ConstantInt>(AI->getArraySize());
+    if (AI.isArrayAllocation()) {
+      const ConstantInt *CI = dyn_cast<ConstantInt>(AI.getArraySize());
       assert(CI && "non-constant array size");
       ArraySize = CI->getZExtValue();
     }
-    Type *Ty = AI->getAllocatedType();
+    Type *Ty = AI.getAllocatedType();
     uint64_t SizeInBytes =
-        AI->getModule()->getDataLayout().getTypeAllocSize(Ty);
+        AI.getModule()->getDataLayout().getTypeAllocSize(Ty);
     return SizeInBytes * ArraySize;
   }
   /// Check if we want (and can) handle this alloca.
-  bool isInterestingAlloca(AllocaInst &AI);
+  bool isInterestingAlloca(const AllocaInst &AI);
 
   /// If it is an interesting memory access, return the PointerOperand
   /// and set IsWrite/Alignment. Otherwise return nullptr.
@@ -545,7 +545,7 @@ struct AddressSanitizer : public FunctionPass {
   Function *AsanMemmove, *AsanMemcpy, *AsanMemset;
   InlineAsm *EmptyAsm;
   GlobalsMetadata GlobalsMD;
-  DenseMap<AllocaInst *, bool> ProcessedAllocas;
+  DenseMap<const AllocaInst *, bool> ProcessedAllocas;
 
   friend struct FunctionStackPoisoner;
 };
@@ -917,7 +917,7 @@ void AddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
 }
 
 /// Check if we want (and can) handle this alloca.
-bool AddressSanitizer::isInterestingAlloca(AllocaInst &AI) {
+bool AddressSanitizer::isInterestingAlloca(const AllocaInst &AI) {
   auto PreviouslySeenAllocaInfo = ProcessedAllocas.find(&AI);
 
   if (PreviouslySeenAllocaInfo != ProcessedAllocas.end())
@@ -926,7 +926,7 @@ bool AddressSanitizer::isInterestingAlloca(AllocaInst &AI) {
   bool IsInteresting =
       (AI.getAllocatedType()->isSized() &&
        // alloca() may be called with 0 size, ignore it.
-       ((!AI.isStaticAlloca()) || getAllocaSizeInBytes(&AI) > 0) &&
+       ((!AI.isStaticAlloca()) || getAllocaSizeInBytes(AI) > 0) &&
        // We are only interested in allocas not promotable to registers.
        // Promotable allocas are common under -O0.
        (!ClSkipPromotableAllocas || !isAllocaPromotable(&AI)) &&
@@ -2078,7 +2078,7 @@ void FunctionStackPoisoner::poisonStack() {
   SVD.reserve(AllocaVec.size());
   for (AllocaInst *AI : AllocaVec) {
     ASanStackVariableDescription D = {AI->getName().data(),
-                                      ASan.getAllocaSizeInBytes(AI),
+                                      ASan.getAllocaSizeInBytes(*AI),
                                       AI->getAlignment(), AI, 0};
     SVD.push_back(D);
   }

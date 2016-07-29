@@ -40,7 +40,7 @@ bool TargetFrameLowering::noFramePointerElim(const MachineFunction &MF) const {
 /// is overridden for some targets.
 int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                              int FI, unsigned &FrameReg) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const TargetRegisterInfo *RI = MF.getSubtarget().getRegisterInfo();
 
   // By default, assume all frame indices are referenced via whatever
@@ -48,13 +48,13 @@ int TargetFrameLowering::getFrameIndexReference(const MachineFunction &MF,
   // something different.
   FrameReg = RI->getFrameRegister(MF);
 
-  return MFI->getObjectOffset(FI) + MFI->getStackSize() -
-         getOffsetOfLocalArea() + MFI->getOffsetAdjustment();
+  return MFI.getObjectOffset(FI) + MFI.getStackSize() -
+         getOffsetOfLocalArea() + MFI.getOffsetAdjustment();
 }
 
 bool TargetFrameLowering::needsFrameIndexResolution(
     const MachineFunction &MF) const {
-  return MF.getFrameInfo()->hasStackObjects();
+  return MF.getFrameInfo().hasStackObjects();
 }
 
 void TargetFrameLowering::determineCalleeSaves(MachineFunction &MF,

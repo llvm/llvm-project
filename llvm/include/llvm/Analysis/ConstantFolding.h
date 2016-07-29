@@ -25,6 +25,7 @@ class APInt;
 template <typename T> class ArrayRef;
 class Constant;
 class ConstantExpr;
+class ConstantVector;
 class DataLayout;
 class Function;
 class GlobalValue;
@@ -45,11 +46,11 @@ bool IsConstantOffsetFromGlobal(Constant *C, GlobalValue *&GV, APInt &Offset,
 Constant *ConstantFoldInstruction(Instruction *I, const DataLayout &DL,
                                   const TargetLibraryInfo *TLI = nullptr);
 
-/// ConstantFoldConstantExpression - Attempt to fold the constant expression
-/// using the specified DataLayout.  If successful, the constant result is
-/// result is returned, if not, null is returned.
-Constant *
-ConstantFoldConstantExpression(const ConstantExpr *CE, const DataLayout &DL,
+/// ConstantFoldConstant - Attempt to fold the constant using the
+/// specified DataLayout.
+/// If successful, the constant result is result is returned, if not,
+/// null is returned.
+Constant *ConstantFoldConstant(const Constant *C, const DataLayout &DL,
                                const TargetLibraryInfo *TLI = nullptr);
 
 /// ConstantFoldInstOperands - Attempt to constant fold an instruction with the
@@ -59,19 +60,6 @@ ConstantFoldConstantExpression(const ConstantExpr *CE, const DataLayout &DL,
 /// form.
 ///
 Constant *ConstantFoldInstOperands(Instruction *I, ArrayRef<Constant *> Ops,
-                                   const DataLayout &DL,
-                                   const TargetLibraryInfo *TLI = nullptr);
-
-/// ConstantFoldInstOperands - Attempt to constant fold an instruction with the
-/// specified operands.  If successful, the constant result is returned, if not,
-/// null is returned.  Note that this function can fail when attempting to
-/// fold instructions like loads and stores, which have no constant expression
-/// form.
-///
-/// This function doesn't work for compares (use ConstantFoldCompareInstOperands
-/// for this) and GEPs.
-Constant *ConstantFoldInstOperands(unsigned Opcode, Type *DestTy,
-                                   ArrayRef<Constant *> Ops,
                                    const DataLayout &DL,
                                    const TargetLibraryInfo *TLI = nullptr);
 

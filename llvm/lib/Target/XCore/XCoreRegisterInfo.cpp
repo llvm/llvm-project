@@ -271,8 +271,8 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       *static_cast<const XCoreInstrInfo *>(MF.getSubtarget().getInstrInfo());
 
   const XCoreFrameLowering *TFI = getFrameLowering(MF);
-  int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex);
-  int StackSize = MF.getFrameInfo()->getStackSize();
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+  int StackSize = MF.getFrameInfo().getStackSize();
 
   #ifndef NDEBUG
   DEBUG(errs() << "\nFunction         : " 

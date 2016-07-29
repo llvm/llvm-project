@@ -511,10 +511,10 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned FrameReg = ARM::SP;
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  int Offset = MF.getFrameInfo()->getObjectOffset(FrameIndex) +
-               MF.getFrameInfo()->getStackSize() + SPAdj;
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
+               MF.getFrameInfo().getStackSize() + SPAdj;
 
-  if (MF.getFrameInfo()->hasVarSizedObjects()) {
+  if (MF.getFrameInfo().hasVarSizedObjects()) {
     assert(SPAdj == 0 && STI.getFrameLowering()->hasFP(MF) && "Unexpected");
     // There are alloca()'s in this function, must reference off the frame
     // pointer or base pointer instead.
@@ -534,7 +534,7 @@ void ThumbRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(STI.getFrameLowering()->hasReservedCallFrame(MF) &&
            "Cannot use SP to access the emergency spill slot in "
            "functions without a reserved call frame");
-    assert(!MF.getFrameInfo()->hasVarSizedObjects() &&
+    assert(!MF.getFrameInfo().hasVarSizedObjects() &&
            "Cannot use SP to access the emergency spill slot in "
            "functions with variable sized frame objects");
   }

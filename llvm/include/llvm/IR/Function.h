@@ -137,13 +137,7 @@ public:
   /// The particular intrinsic functions which correspond to this value are
   /// defined in llvm/Intrinsics.h.
   Intrinsic::ID getIntrinsicID() const LLVM_READONLY { return IntID; }
-  bool isIntrinsic() const {
-    // Intrinsic::not_intrinsic must be 0.
-    return IntID != 0;
-  }
-  /// Return true if the function's name starts with "llvm.".  All intrinsics
-  /// have this prefix.
-  bool hasLLVMReservedName() const { return getName().startswith("llvm."); }
+  bool isIntrinsic() const { return getName().startswith("llvm."); }
 
   /// \brief Recalculate the ID for this function if it is an Intrinsic defined
   /// in llvm/Intrinsics.h.  Sets the intrinsic ID to Intrinsic::not_intrinsic

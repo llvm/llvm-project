@@ -334,7 +334,8 @@ template <typename CFLAA> class CFLGraphBuilder {
       // For now, we'll handle this like a landingpad instruction (by placing
       // the
       // result in its own group, and having that group alias externals).
-      addNode(&Inst, getAttrUnknown());
+      if (Inst.getType()->isPointerTy())
+        addNode(&Inst, getAttrUnknown());
     }
 
     static bool isFunctionExternal(Function *Fn) {
@@ -457,7 +458,8 @@ template <typename CFLAA> class CFLGraphBuilder {
       // Exceptions come from "nowhere", from our analysis' perspective.
       // So we place the instruction its own group, noting that said group may
       // alias externals
-      addNode(&Inst, getAttrUnknown());
+      if (Inst.getType()->isPointerTy())
+        addNode(&Inst, getAttrUnknown());
     }
 
     void visitInsertValueInst(InsertValueInst &Inst) {

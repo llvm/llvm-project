@@ -2243,6 +2243,11 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
     break;
   }
   case Intrinsic::lifetime_start:
+    // Asan needs to poison memory to detect invalid access which is possible
+    // even for empty lifetime range.
+    if (II->getFunction()->hasFnAttribute(Attribute::SanitizeAddress))
+      break;
+
     if (removeTriviallyEmptyRange(*II, Intrinsic::lifetime_start,
                                   Intrinsic::lifetime_end, *this))
       return nullptr;

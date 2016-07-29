@@ -716,6 +716,8 @@ void MachineInstr::setType(LLT Ty, unsigned Idx) {}
 
 LLT MachineInstr::getType(unsigned Idx) const { return LLT{}; }
 
+void MachineInstr::removeTypes() {}
+
 #else
 unsigned MachineInstr::getNumTypes() const { return Tys.size(); }
 
@@ -728,6 +730,10 @@ void MachineInstr::setType(LLT Ty, unsigned Idx) {
 }
 
 LLT MachineInstr::getType(unsigned Idx) const { return Tys[Idx]; }
+
+void MachineInstr::removeTypes() {
+  Tys.clear();
+}
 #endif // LLVM_BUILD_GLOBAL_ISEL
 
 /// RemoveRegOperandsFromUseLists - Unlink all of the register operands in
@@ -1585,7 +1591,7 @@ bool MachineInstr::isInvariantLoad(AliasAnalysis *AA) const {
   if (memoperands_empty())
     return false;
 
-  const MachineFrameInfo *MFI = getParent()->getParent()->getFrameInfo();
+  const MachineFrameInfo &MFI = getParent()->getParent()->getFrameInfo();
 
   for (MachineMemOperand *MMO : memoperands()) {
     if (MMO->isVolatile()) return false;
@@ -1594,7 +1600,7 @@ bool MachineInstr::isInvariantLoad(AliasAnalysis *AA) const {
 
     // A load from a constant PseudoSourceValue is invariant.
     if (const PseudoSourceValue *PSV = MMO->getPseudoValue())
-      if (PSV->isConstant(MFI))
+      if (PSV->isConstant(&MFI))
         continue;
 
     if (const Value *V = MMO->getValue()) {

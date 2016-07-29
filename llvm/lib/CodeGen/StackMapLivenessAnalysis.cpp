@@ -113,7 +113,7 @@ bool StackMapLiveness::runOnMachineFunction(MachineFunction &MF) {
   ++NumStackMapFuncVisited;
 
   // Skip this function if there are no patchpoints to process.
-  if (!MF.getFrameInfo()->hasPatchPoint()) {
+  if (!MF.getFrameInfo().hasPatchPoint()) {
     ++NumStackMapFuncSkipped;
     return false;
   }

@@ -452,7 +452,7 @@ bool HexagonPacketizerList::useCallersSP(MachineInstr *MI) {
     default:
       llvm_unreachable("Unexpected instruction");
   }
-  unsigned FrameSize = MF.getFrameInfo()->getStackSize();
+  unsigned FrameSize = MF.getFrameInfo().getStackSize();
   MachineOperand &Off = MI->getOperand(1);
   int64_t NewOff = Off.getImm() - (FrameSize + HEXAGON_LRFP_SIZE);
   if (HII->isValidOffset(Opc, NewOff)) {
@@ -473,7 +473,7 @@ void HexagonPacketizerList::useCalleesSP(MachineInstr *MI) {
     default:
       llvm_unreachable("Unexpected instruction");
   }
-  unsigned FrameSize = MF.getFrameInfo()->getStackSize();
+  unsigned FrameSize = MF.getFrameInfo().getStackSize();
   MachineOperand &Off = MI->getOperand(1);
   Off.setImm(Off.getImm() + FrameSize + HEXAGON_LRFP_SIZE);
 }

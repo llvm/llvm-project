@@ -182,6 +182,7 @@ void DataLayout::reset(StringRef Desc) {
   BigEndian = false;
   StackNaturalAlign = 0;
   ManglingMode = MM_None;
+  NonIntegralAddressSpaces.clear();
 
   // Default alignments
   for (const LayoutAlignElem &E : DefaultAlignments) {
@@ -233,6 +234,19 @@ void DataLayout::parseSpecifier(StringRef Desc) {
     // Aliases used below.
     StringRef &Tok  = Split.first;  // Current token.
     StringRef &Rest = Split.second; // The rest of the string.
+
+    if (Tok == "ni") {
+      do {
+        Split = split(Rest, ':');
+        Rest = Split.second;
+        unsigned AS = getInt(Split.first);
+        if (AS == 0)
+          report_fatal_error("Address space 0 can never be non-integral");
+        NonIntegralAddressSpaces.push_back(AS);
+      } while (!Rest.empty());
+
+      continue;
+    }
 
     char Specifier = Tok.front();
     Tok = Tok.substr(1);

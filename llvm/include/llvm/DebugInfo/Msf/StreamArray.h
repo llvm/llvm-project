@@ -34,7 +34,8 @@ namespace msf {
 template <typename T> struct VarStreamArrayExtractor {
   // Method intentionally deleted.  You must provide an explicit specialization
   // with the following method implemented.
-  Error operator()(StreamRef Stream, uint32_t &Len, T &Item) const = delete;
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
+                   T &Item) const = delete;
 };
 
 /// VarStreamArray represents an array of variable length records backed by a
@@ -83,8 +84,9 @@ public:
   VarStreamArray() {}
   explicit VarStreamArray(const Extractor &E) : E(E) {}
 
-  explicit VarStreamArray(StreamRef Stream) : Stream(Stream) {}
-  VarStreamArray(StreamRef Stream, const Extractor &E) : Stream(Stream), E(E) {}
+  explicit VarStreamArray(ReadableStreamRef Stream) : Stream(Stream) {}
+  VarStreamArray(ReadableStreamRef Stream, const Extractor &E)
+      : Stream(Stream), E(E) {}
 
   VarStreamArray(const VarStreamArray<ValueType, Extractor> &Other)
       : Stream(Other.Stream), E(Other.E) {}
@@ -97,10 +99,10 @@ public:
 
   const Extractor &getExtractor() const { return E; }
 
-  StreamRef getUnderlyingStream() const { return Stream; }
+  ReadableStreamRef getUnderlyingStream() const { return Stream; }
 
 private:
-  StreamRef Stream;
+  ReadableStreamRef Stream;
   Extractor E;
 };
 
@@ -189,7 +191,7 @@ private:
   }
 
   ValueType ThisValue;
-  StreamRef IterRef;
+  ReadableStreamRef IterRef;
   const ArrayType *Array{nullptr};
   uint32_t ThisLen{0};
   bool HasError{false};
@@ -204,7 +206,7 @@ template <typename T> class FixedStreamArray {
 
 public:
   FixedStreamArray() : Stream() {}
-  FixedStreamArray(StreamRef Stream) : Stream(Stream) {
+  FixedStreamArray(ReadableStreamRef Stream) : Stream(Stream) {
     assert(Stream.getLength() % sizeof(T) == 0);
   }
 
@@ -230,10 +232,10 @@ public:
     return FixedStreamArrayIterator<T>(*this, size());
   }
 
-  StreamRef getUnderlyingStream() const { return Stream; }
+  ReadableStreamRef getUnderlyingStream() const { return Stream; }
 
 private:
-  StreamRef Stream;
+  ReadableStreamRef Stream;
 };
 
 template <typename T> class FixedStreamArrayIterator {

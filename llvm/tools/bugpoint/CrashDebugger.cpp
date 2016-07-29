@@ -14,6 +14,7 @@
 #include "BugDriver.h"
 #include "ListReducer.h"
 #include "ToolRunner.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/IR/CFG.h"
@@ -320,8 +321,46 @@ bool ReduceCrashingFunctions::TestFuncs(std::vector<Function*> &Funcs) {
   return false;
 }
 
-
 namespace {
+/// Simplify the CFG without completely destroying it.
+/// This is not well defined, but basically comes down to "try to eliminate
+/// unreachable blocks and constant fold terminators without deciding that
+/// certain undefined behavior cuts off the program at the legs".
+void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
+  if (F.empty())
+    return;
+
+  for (auto *BB : BBs) {
+    ConstantFoldTerminator(BB);
+    MergeBlockIntoPredecessor(BB);
+  }
+
+  // Remove unreachable blocks
+  // removeUnreachableBlocks can't be used here, it will turn various
+  // undefined behavior into unreachables, but bugpoint was the thing that
+  // generated the undefined behavior, and we don't want it to kill the entire
+  // program.
+  SmallPtrSet<BasicBlock *, 16> Visited;
+  for (auto *BB : depth_first(&F.getEntryBlock()))
+    Visited.insert(BB);
+
+  SmallVector<BasicBlock *, 16> Unreachable;
+  for (auto &BB : F)
+    if (!Visited.count(&BB))
+      Unreachable.push_back(&BB);
+
+  // The dead BB's may be in a dead cycle or otherwise have references to each
+  // other.  Because of this, we have to drop all references first, then delete
+  // them all at once.
+  for (auto *BB : Unreachable)  {
+    for (BasicBlock *Successor : successors(&*BB))
+      if (Visited.count(Successor))
+        Successor->removePredecessor(&*BB);
+    BB->dropAllReferences();
+  }
+  for (auto *BB : Unreachable)
+    BB->eraseFromParent();
+}
   /// ReduceCrashingBlocks reducer - This works by setting the terminators of
   /// all terminators except the specified basic blocks to a 'ret' instruction,
   /// then running the simplify-cfg pass.  This has the effect of chopping up
@@ -331,9 +370,9 @@ namespace {
     BugDriver &BD;
     bool (*TestFn)(const BugDriver &, Module *);
   public:
-    ReduceCrashingBlocks(BugDriver &bd,
+    ReduceCrashingBlocks(BugDriver &BD,
                          bool (*testFn)(const BugDriver &, Module *))
-      : BD(bd), TestFn(testFn) {}
+      : BD(BD), TestFn(testFn) {}
 
     TestResult doTest(std::vector<const BasicBlock*> &Prefix,
                       std::vector<const BasicBlock*> &Kept,
@@ -398,19 +437,26 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock*> &BBs) {
 
   for (BasicBlock *BB : Blocks)
     BlockInfo.emplace_back(BB->getParent()->getName(), BB->getName());
-
-  // Now run the CFG simplify pass on the function...
+  
+  SmallVector<BasicBlock *, 16> ToProcess;
+  for (auto &F :*M) {
+    for (auto &BB : F)
+      if (!Blocks.count(&BB))
+        ToProcess.push_back(&BB);
+    simpleSimplifyCfg(F, ToProcess);
+    ToProcess.clear();
+  }
+  // Verify we didn't break anything
   std::vector<std::string> Passes;
-  Passes.push_back("simplifycfg");
   Passes.push_back("verify");
   std::unique_ptr<Module> New = BD.runPassesOn(M, Passes);
   delete M;
   if (!New) {
-    errs() << "simplifycfg failed!\n";
+    errs() << "verify failed!\n";
     exit(1);
   }
   M = New.release();
-
+  
   // Try running on the hacked up program...
   if (TestFn(BD, M)) {
     BD.setNewProgram(M);      // It crashed, keep the trimmed version...
@@ -433,46 +479,6 @@ bool ReduceCrashingBlocks::TestBlocks(std::vector<const BasicBlock*> &BBs) {
 }
 
 namespace {
-/// Simplify the CFG without completely destroying it.
-/// This is not well defined, but basically comes down to "try to eliminate
-/// unreachable blocks and constant fold terminators without deciding that
-/// certain undefined behavior cuts off the program at the legs".
-void simpleSimplifyCfg(Function &F, SmallVectorImpl<BasicBlock *> &BBs) {
-  if (F.empty())
-    return;
-
-  for (auto *BB : BBs) {
-    ConstantFoldTerminator(BB);
-    MergeBlockIntoPredecessor(BB);
-  }
-
-  // Remove unreachable blocks
-  // removeUnreachableBlocks can't be used here, it will turn various
-  // undefined behavior into unreachables, but bugpoint was the thing that
-  // generated the undefined behavior, and we don't want it to kill the entire
-  // program.
-  SmallPtrSet<BasicBlock *, 16> Visited;
-  for (auto *BB : depth_first(&F.getEntryBlock()))
-    Visited.insert(BB);
-
-  SmallVector<BasicBlock *, 16> Unreachable;
-  for (auto &BB : F)
-    if (!Visited.count(&BB))
-      Unreachable.push_back(&BB);
-
-  // The dead BB's may be in a dead cycle or otherwise have references to each
-  // other.  Because of this, we have to drop all references first, then delete
-  // them all at once.
-  for (auto *BB : Unreachable)  {
-    for (BasicBlock *Successor : successors(&*BB))
-      if (Visited.count(Successor))
-        Successor->removePredecessor(&*BB);
-    BB->dropAllReferences();
-  }
-  for (auto *BB : Unreachable)
-    BB->eraseFromParent();
-}
-
 /// ReduceCrashingConditionals reducer - This works by changing
 /// conditional branches to unconditional ones, then simplifying the CFG
 /// This has the effect of chopping up the CFG really fast which can reduce
@@ -572,6 +578,105 @@ bool ReduceCrashingConditionals::TestBlocks(
     BBs.clear();
     const ValueSymbolTable &GST = M->getValueSymbolTable();
     for (auto &BI : BlockInfo) {
+      auto *F = cast<Function>(GST.lookup(BI.first));
+      ValueSymbolTable &ST = F->getValueSymbolTable();
+      Value *V = ST.lookup(BI.second);
+      if (V && V->getType() == Type::getLabelTy(V->getContext()))
+        BBs.push_back(cast<BasicBlock>(V));
+    }
+    return true;
+  }
+  delete M; // It didn't crash, try something else.
+  return false;
+}
+
+namespace {
+/// SimplifyCFG reducer - This works by calling SimplifyCFG on each basic block
+/// in the program.
+
+class ReduceSimplifyCFG : public ListReducer<const BasicBlock *> {
+  BugDriver &BD;
+  bool (*TestFn)(const BugDriver &, Module *);
+  TargetTransformInfo TTI;
+  
+public:
+  ReduceSimplifyCFG(BugDriver &bd,
+                    bool (*testFn)(const BugDriver &, Module *))
+      : BD(bd), TestFn(testFn), TTI(bd.getProgram()->getDataLayout())
+  {}
+
+  TestResult doTest(std::vector<const BasicBlock *> &Prefix,
+                    std::vector<const BasicBlock *> &Kept,
+                    std::string &Error) override {
+    if (!Kept.empty() && TestBlocks(Kept))
+      return KeepSuffix;
+    if (!Prefix.empty() && TestBlocks(Prefix))
+      return KeepPrefix;
+    return NoFailure;
+  }
+
+  bool TestBlocks(std::vector<const BasicBlock *> &Prefix);
+};
+}
+
+bool ReduceSimplifyCFG::TestBlocks(
+    std::vector<const BasicBlock *> &BBs) {
+  // Clone the program to try hacking it apart...
+  ValueToValueMapTy VMap;
+  Module *M = CloneModule(BD.getProgram(), VMap).release();
+
+  // Convert list to set for fast lookup...
+  SmallPtrSet<const BasicBlock *, 8> Blocks;
+  for (const auto *BB: BBs)
+    Blocks.insert(cast<BasicBlock>(VMap[BB]));
+
+  outs() << "Checking for crash with CFG simplifying:";
+  unsigned NumPrint = Blocks.size();
+  if (NumPrint > 10)
+    NumPrint = 10;
+  for (unsigned i = 0, e = NumPrint; i != e; ++i)
+    outs() << " " << BBs[i]->getName();
+  if (NumPrint < Blocks.size())
+    outs() << "... <" << Blocks.size() << " total>";
+  outs() << ": ";
+
+    // The following may destroy some blocks, so we save them first
+  std::vector<std::pair<std::string, std::string>> BlockInfo;
+
+  for (const BasicBlock *BB : Blocks)
+    BlockInfo.emplace_back(BB->getParent()->getName(), BB->getName());
+
+
+  // Loop over and delete any hack up any blocks that are not listed...
+  for (auto &F: *M) 
+     // Loop over all of the basic blocks and remove them if they are unneeded.
+     for (Function::iterator BBIt = F.begin(); BBIt != F.end(); ) {
+       if (!Blocks.count(&*BBIt)) {
+         ++BBIt;
+         continue;
+       }
+       SimplifyCFG(&*BBIt++, TTI, 1);
+     }
+  // Verify we didn't break anything
+  std::vector<std::string> Passes;
+  Passes.push_back("verify");
+  std::unique_ptr<Module> New = BD.runPassesOn(M, Passes);
+  delete M;
+  if (!New) {
+    errs() << "verify failed!\n";
+    exit(1);
+  }
+  M = New.release();
+
+  // Try running on the hacked up program...
+  if (TestFn(BD, M)) {
+    BD.setNewProgram(M); // It crashed, keep the trimmed version...
+
+    // Make sure to use basic block pointers that point into the now-current
+    // module, and that they don't include any deleted blocks.
+    BBs.clear();
+    const ValueSymbolTable &GST = M->getValueSymbolTable();
+    for (auto &BI : BlockInfo){
       auto *F = cast<Function>(GST.lookup(BI.first));
       ValueSymbolTable &ST = F->getValueSymbolTable();
       Value *V = ST.lookup(BI.second);
@@ -997,6 +1102,17 @@ static bool DebugACrash(BugDriver &BD,
       BD.EmitProgressBitcode(BD.getProgram(), "reduced-blocks");
   }
 
+  if (!DisableSimplifyCFG & !BugpointIsInterrupted) {
+    std::vector<const BasicBlock*> Blocks;
+    for (Function &F : *BD.getProgram())
+      for (BasicBlock &BB : F)
+        Blocks.push_back(&BB);
+    unsigned OldSize = Blocks.size();
+    ReduceSimplifyCFG(BD, TestFn).reduceList(Blocks, Error);
+    if (Blocks.size() < OldSize)
+      BD.EmitProgressBitcode(BD.getProgram(), "reduced-simplifycfg");
+  }
+  
   // Attempt to delete instructions using bisection. This should help out nasty
   // cases with large basic blocks where the problem is at one end.
   if (!BugpointIsInterrupted)

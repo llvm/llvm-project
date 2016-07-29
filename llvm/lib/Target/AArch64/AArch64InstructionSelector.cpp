@@ -52,8 +52,12 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       switch (GenericOpc) {
       case TargetOpcode::G_OR:
         return AArch64::ORRWrr;
+      case TargetOpcode::G_AND:
+        return AArch64::ANDWrr;
       case TargetOpcode::G_ADD:
         return AArch64::ADDWrr;
+      case TargetOpcode::G_SUB:
+        return AArch64::SUBWrr;
       default:
         return GenericOpc;
       }
@@ -61,8 +65,12 @@ static unsigned selectBinaryOp(unsigned GenericOpc, unsigned RegBankID,
       switch (GenericOpc) {
       case TargetOpcode::G_OR:
         return AArch64::ORRXrr;
+      case TargetOpcode::G_AND:
+        return AArch64::ANDXrr;
       case TargetOpcode::G_ADD:
         return AArch64::ADDXrr;
+      case TargetOpcode::G_SUB:
+        return AArch64::SUBXrr;
       default:
         return GenericOpc;
       }
@@ -94,19 +102,26 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
   LLT Ty = I.getType();
   assert(Ty.isValid() && "Generic instruction doesn't have a type");
 
-  // FIXME: Support unsized instructions (e.g., G_BR).
-  if (!Ty.isSized()) {
-    DEBUG(dbgs() << "Unsized generic instructions are unsupported\n");
-    return false;
+  switch (I.getOpcode()) {
+  case TargetOpcode::G_BR: {
+    I.setDesc(TII.get(AArch64::B));
+    I.removeTypes();
+    return true;
   }
 
-  // The size (in bits) of the operation, or 0 for the label type.
-  const unsigned OpSize = Ty.getSizeInBits();
-
-  switch (I.getOpcode()) {
   case TargetOpcode::G_OR:
-  case TargetOpcode::G_ADD: {
+  case TargetOpcode::G_AND:
+  case TargetOpcode::G_ADD:
+  case TargetOpcode::G_SUB: {
     DEBUG(dbgs() << "AArch64: Selecting: binop\n");
+
+    if (!Ty.isSized()) {
+      DEBUG(dbgs() << "Generic binop should be sized\n");
+      return false;
+    }
+
+    // The size (in bits) of the operation, or 0 for the label type.
+    const unsigned OpSize = Ty.getSizeInBits();
 
     // Reject the various things we don't support yet.
     {
@@ -150,7 +165,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) const {
 
     I.setDesc(TII.get(NewOpc));
     // FIXME: Should the type be always reset in setDesc?
-    I.setType(LLT());
+    I.removeTypes();
 
     // Now that we selected an opcode, we need to constrain the register
     // operands to use appropriate classes.

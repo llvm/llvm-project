@@ -1,4 +1,4 @@
-# RUN: llc -O0 -run-pass=instruction-select -global-isel %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s
 # REQUIRES: global-isel
 
 # Test the instruction selector.
@@ -6,13 +6,21 @@
 
 --- |
   target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
-  target triple = "aarch64-apple-ios"
+  target triple = "aarch64--"
 
   define void @add_s32_gpr() { ret void }
   define void @add_s64_gpr() { ret void }
 
+  define void @sub_s32_gpr() { ret void }
+  define void @sub_s64_gpr() { ret void }
+
   define void @or_s32_gpr() { ret void }
   define void @or_s64_gpr() { ret void }
+
+  define void @and_s32_gpr() { ret void }
+  define void @and_s64_gpr() { ret void }
+
+  define void @unconditional_br() { ret void }
 
 ...
 
@@ -21,7 +29,6 @@
 # Also check that we constrain the register class of the COPY to GPR32.
 # CHECK-LABEL: name: add_s32_gpr
 name:            add_s32_gpr
-alignment:       2
 isSSA:           true
 
 # CHECK:      registers:
@@ -46,7 +53,6 @@ body:             |
 # Same as add_s32_gpr, for 64-bit operations.
 # CHECK-LABEL: name: add_s64_gpr
 name:            add_s64_gpr
-alignment:       2
 isSSA:           true
 
 # CHECK:      registers:
@@ -68,10 +74,57 @@ body:             |
 ...
 
 ---
+# Same as add_s32_gpr, for G_SUB operations.
+# CHECK-LABEL: name: sub_s32_gpr
+name:            sub_s32_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = SUBWrr %0, %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(32) = COPY %w0
+    %1(32) = G_SUB s32 %0, %0
+...
+
+---
+# Same as add_s64_gpr, for G_SUB operations.
+# CHECK-LABEL: name: sub_s64_gpr
+name:            sub_s64_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = SUBXrr %0, %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(64) = G_SUB s64 %0, %0
+...
+
+---
 # Same as add_s32_gpr, for G_OR operations.
 # CHECK-LABEL: name: or_s32_gpr
 name:            or_s32_gpr
-alignment:       2
 isSSA:           true
 
 # CHECK:      registers:
@@ -96,7 +149,6 @@ body:             |
 # Same as add_s64_gpr, for G_OR operations.
 # CHECK-LABEL: name: or_s64_gpr
 name:            or_s64_gpr
-alignment:       2
 isSSA:           true
 
 # CHECK:      registers:
@@ -115,4 +167,68 @@ body:             |
 
     %0(64) = COPY %x0
     %1(64) = G_OR s64 %0, %0
+...
+
+---
+# Same as add_s32_gpr, for G_AND operations.
+# CHECK-LABEL: name: and_s32_gpr
+name:            and_s32_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = ANDWrr %0, %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(32) = COPY %w0
+    %1(32) = G_AND s32 %0, %0
+...
+
+---
+# Same as add_s64_gpr, for G_AND operations.
+# CHECK-LABEL: name: and_s64_gpr
+name:            and_s64_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = ANDXrr %0, %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(64) = G_AND s64 %0, %0
+...
+
+---
+# CHECK-LABEL: name: unconditional_br
+name:            unconditional_br
+isSSA:           true
+
+# CHECK:  body:
+# CHECK:   bb.0:
+# CHECK:    successors: %bb.0
+# CHECK:    B %bb.0
+body:             |
+  bb.0:
+    successors: %bb.0
+
+    G_BR unsized %bb.0
 ...

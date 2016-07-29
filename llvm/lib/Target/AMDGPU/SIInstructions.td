@@ -1952,8 +1952,7 @@ def SI_IF: PseudoInstSI <
 }
 
 def SI_ELSE : PseudoInstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target),
-  [(set i64:$dst, (int_amdgcn_else i64:$src, bb:$target))]> {
+  (outs SReg_64:$dst), (ins SReg_64:$src, brtarget:$target, i1imm:$execfix)> {
   let Constraints = "$src = $dst";
 }
 
@@ -2131,6 +2130,11 @@ def SI_PC_ADD_REL_OFFSET : PseudoInstSI <
 } // End SubtargetPredicate = isGCN
 
 let Predicates = [isGCN] in {
+
+def : Pat<
+  (int_amdgcn_else i64:$src, bb:$target),
+  (SI_ELSE $src, $target, 0)
+>;
 
 def : Pat <
   (int_AMDGPU_kilp),
@@ -2360,6 +2364,71 @@ def : Pat <
   (int_amdgcn_ds_swizzle i32:$src, imm:$offset16),
   (DS_SWIZZLE_B32 $src, (as_i16imm $offset16), (i1 0))
 >;
+
+//===----------------------------------------------------------------------===//
+// V_ICMPIntrinsic Pattern.
+//===----------------------------------------------------------------------===//
+class ICMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> : Pat <
+  (AMDGPUsetcc vt:$src0, vt:$src1, cond),
+  (inst $src0, $src1)
+>;
+
+def : ICMP_Pattern <COND_EQ, V_CMP_EQ_I32_e64, i32>;
+def : ICMP_Pattern <COND_NE, V_CMP_NE_I32_e64, i32>;
+def : ICMP_Pattern <COND_UGT, V_CMP_GT_U32_e64, i32>;
+def : ICMP_Pattern <COND_UGE, V_CMP_GE_U32_e64, i32>;
+def : ICMP_Pattern <COND_ULT, V_CMP_LT_U32_e64, i32>;
+def : ICMP_Pattern <COND_ULE, V_CMP_LE_U32_e64, i32>;
+def : ICMP_Pattern <COND_SGT, V_CMP_GT_I32_e64, i32>;
+def : ICMP_Pattern <COND_SGE, V_CMP_GE_I32_e64, i32>;
+def : ICMP_Pattern <COND_SLT, V_CMP_LT_I32_e64, i32>;
+def : ICMP_Pattern <COND_SLE, V_CMP_LE_I32_e64, i32>;
+
+def : ICMP_Pattern <COND_EQ, V_CMP_EQ_I64_e64, i64>;
+def : ICMP_Pattern <COND_NE, V_CMP_NE_I64_e64, i64>;
+def : ICMP_Pattern <COND_UGT, V_CMP_GT_U64_e64, i64>;
+def : ICMP_Pattern <COND_UGE, V_CMP_GE_U64_e64, i64>;
+def : ICMP_Pattern <COND_ULT, V_CMP_LT_U64_e64, i64>;
+def : ICMP_Pattern <COND_ULE, V_CMP_LE_U64_e64, i64>;
+def : ICMP_Pattern <COND_SGT, V_CMP_GT_I64_e64, i64>;
+def : ICMP_Pattern <COND_SGE, V_CMP_GE_I64_e64, i64>;
+def : ICMP_Pattern <COND_SLT, V_CMP_LT_I64_e64, i64>;
+def : ICMP_Pattern <COND_SLE, V_CMP_LE_I64_e64, i64>;
+
+class FCMP_Pattern <PatLeaf cond, Instruction inst, ValueType vt> : Pat <
+  (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+                   (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
+  (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+        DSTCLAMP.NONE, DSTOMOD.NONE)
+>;
+
+def : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F32_e64, f32>;
+def : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F32_e64, f32>;
+def : FCMP_Pattern <COND_OGT, V_CMP_GT_F32_e64, f32>;
+def : FCMP_Pattern <COND_OGE, V_CMP_GE_F32_e64, f32>;
+def : FCMP_Pattern <COND_OLT, V_CMP_LT_F32_e64, f32>;
+def : FCMP_Pattern <COND_OLE, V_CMP_LE_F32_e64, f32>;
+
+def : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F64_e64, f64>;
+def : FCMP_Pattern <COND_ONE, V_CMP_NEQ_F64_e64, f64>;
+def : FCMP_Pattern <COND_OGT, V_CMP_GT_F64_e64, f64>;
+def : FCMP_Pattern <COND_OGE, V_CMP_GE_F64_e64, f64>;
+def : FCMP_Pattern <COND_OLT, V_CMP_LT_F64_e64, f64>;
+def : FCMP_Pattern <COND_OLE, V_CMP_LE_F64_e64, f64>;
+
+def : FCMP_Pattern <COND_UEQ, V_CMP_NLG_F32_e64, f32>;
+def : FCMP_Pattern <COND_UNE, V_CMP_NEQ_F32_e64, f32>;
+def : FCMP_Pattern <COND_UGT, V_CMP_NLE_F32_e64, f32>;
+def : FCMP_Pattern <COND_UGE, V_CMP_NLT_F32_e64, f32>;
+def : FCMP_Pattern <COND_ULT, V_CMP_NGE_F32_e64, f32>;
+def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F32_e64, f32>;
+
+def : FCMP_Pattern <COND_UEQ, V_CMP_NLG_F64_e64, f64>;
+def : FCMP_Pattern <COND_UNE, V_CMP_NEQ_F64_e64, f64>;
+def : FCMP_Pattern <COND_UGT, V_CMP_NLE_F64_e64, f64>;
+def : FCMP_Pattern <COND_UGE, V_CMP_NLT_F64_e64, f64>;
+def : FCMP_Pattern <COND_ULT, V_CMP_NGE_F64_e64, f64>;
+def : FCMP_Pattern <COND_ULE, V_CMP_NGT_F64_e64, f64>;
 
 //===----------------------------------------------------------------------===//
 // SMRD Patterns

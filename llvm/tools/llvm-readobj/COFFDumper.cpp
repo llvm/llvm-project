@@ -954,7 +954,7 @@ void COFFDumper::printCodeViewSymbolsSubsection(StringRef Subsection,
                                                         SectionContents);
 
   CVSymbolDumper CVSD(W, CVTD, std::move(CODD), opts::CodeViewSubsectionBytes);
-  ByteStream<> Stream(BinaryData);
+  ByteStream Stream(BinaryData);
   CVSymbolArray Symbols;
   StreamReader Reader(Stream);
   if (auto EC = Reader.readArray(Symbols, Reader.getLength())) {
@@ -1062,7 +1062,7 @@ void COFFDumper::mergeCodeViewTypes(MemoryTypeTableBuilder &CVTypes) {
         error(object_error::parse_failed);
       ArrayRef<uint8_t> Bytes(reinterpret_cast<const uint8_t *>(Data.data()),
                               Data.size());
-      ByteStream<> Stream(Bytes);
+      ByteStream Stream(Bytes);
       CVTypeArray Types;
       StreamReader Reader(Stream);
       if (auto EC = Reader.readArray(Types, Reader.getLength())) {

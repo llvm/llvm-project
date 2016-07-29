@@ -792,14 +792,14 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   if (NeedsArgAlign && Subtarget.hasV60TOps()) {
     DEBUG(dbgs() << "Function needs byte stack align due to call args\n");
-    MachineFrameInfo* MFI = DAG.getMachineFunction().getFrameInfo();
+    MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
     // V6 vectors passed by value have 64 or 128 byte alignment depending
     // on whether we are 64 byte vector mode or 128 byte.
     bool UseHVXDbl = Subtarget.useHVXDblOps();
     assert(Subtarget.useHVXOps());
     const unsigned ObjAlign = UseHVXDbl ? 128 : 64;
     LargestAlignSeen = std::max(LargestAlignSeen, ObjAlign);
-    MFI->ensureMaxAlignment(LargestAlignSeen);
+    MFI.ensureMaxAlignment(LargestAlignSeen);
   }
   // Transform all store nodes into one single node because all store
   // nodes are independent of each other.
@@ -872,7 +872,7 @@ HexagonTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Ops.push_back(InFlag);
 
   if (isTailCall) {
-    MF.getFrameInfo()->setHasTailCall();
+    MF.getFrameInfo().setHasTailCall();
     return DAG.getNode(HexagonISD::TC_RETURN, dl, NodeTys, Ops);
   }
 
@@ -1076,7 +1076,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
     SelectionDAG &DAG, SmallVectorImpl<SDValue> &InVals) const {
 
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MachineRegisterInfo &RegInfo = MF.getRegInfo();
   auto &FuncInfo = *MF.getInfo<HexagonMachineFunctionInfo>();
 
@@ -1176,7 +1176,7 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
       StackLocation = HEXAGON_LRFP_SIZE + VA.getLocMemOffset();
       // Create the frame index object for this incoming parameter...
-      FI = MFI->CreateFixedObject(ObjSize, StackLocation, true);
+      FI = MFI.CreateFixedObject(ObjSize, StackLocation, true);
 
       // Create the SelectionDAG nodes cordl, responding to a load
       // from this parameter.
@@ -1199,10 +1199,10 @@ SDValue HexagonTargetLowering::LowerFormalArguments(
 
   if (isVarArg) {
     // This will point to the next argument passed via stack.
-    int FrameIndex = MFI->CreateFixedObject(Hexagon_PointerSize,
-                                            HEXAGON_LRFP_SIZE +
-                                            CCInfo.getNextStackOffset(),
-                                            true);
+    int FrameIndex = MFI.CreateFixedObject(Hexagon_PointerSize,
+                                           HEXAGON_LRFP_SIZE +
+                                           CCInfo.getNextStackOffset(),
+                                           true);
     FuncInfo.setVarArgsFrameIndex(FrameIndex);
   }
 
@@ -1431,7 +1431,7 @@ SDValue
 HexagonTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
   MachineFunction &MF = DAG.getMachineFunction();
-  MachineFrameInfo &MFI = *MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   MFI.setReturnAddressIsTaken(true);
 
   if (verifyReturnAddressArgumentIsConstant(Op, DAG))
@@ -1456,7 +1456,7 @@ HexagonTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
 SDValue
 HexagonTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
-  MachineFrameInfo &MFI = *DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   MFI.setFrameAddressIsTaken(true);
 
   EVT VT = Op.getValueType();
@@ -1539,7 +1539,7 @@ SDValue
 HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
       GlobalAddressSDNode *GA, SDValue *InFlag, EVT PtrVT, unsigned ReturnReg,
       unsigned char OperandFlags) const {
-  MachineFrameInfo *MFI = DAG.getMachineFunction().getFrameInfo();
+  MachineFrameInfo &MFI = DAG.getMachineFunction().getFrameInfo();
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SDLoc dl(GA);
   SDValue TGA = DAG.getTargetGlobalAddress(GA->getGlobal(), dl,
@@ -1564,7 +1564,7 @@ HexagonTargetLowering::GetDynamicTLSAddr(SelectionDAG &DAG, SDValue Chain,
   }
 
   // Inform MFI that function has calls.
-  MFI->setAdjustsStack(true);
+  MFI.setAdjustsStack(true);
 
   SDValue Flag = Chain.getValue(1);
   return DAG.getCopyFromReg(Chain, dl, ReturnReg, PtrVT, Flag);

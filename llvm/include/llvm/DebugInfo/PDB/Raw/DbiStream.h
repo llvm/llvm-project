@@ -77,8 +77,6 @@ public:
   msf::FixedStreamArray<SecMapEntry> getSectionMap() const;
   void visitSectionContributions(ISectionContribVisitor &Visitor) const;
 
-  Error commit();
-
 private:
   Error initializeModInfoArray();
   Error initializeSectionContributionData();
@@ -93,14 +91,14 @@ private:
   std::vector<ModuleInfoEx> ModuleInfos;
   NameHashTable ECNames;
 
-  msf::StreamRef ModInfoSubstream;
-  msf::StreamRef SecContrSubstream;
-  msf::StreamRef SecMapSubstream;
-  msf::StreamRef FileInfoSubstream;
-  msf::StreamRef TypeServerMapSubstream;
-  msf::StreamRef ECSubstream;
+  msf::ReadableStreamRef ModInfoSubstream;
+  msf::ReadableStreamRef SecContrSubstream;
+  msf::ReadableStreamRef SecMapSubstream;
+  msf::ReadableStreamRef FileInfoSubstream;
+  msf::ReadableStreamRef TypeServerMapSubstream;
+  msf::ReadableStreamRef ECSubstream;
 
-  msf::StreamRef NamesBuffer;
+  msf::ReadableStreamRef NamesBuffer;
 
   msf::FixedStreamArray<support::ulittle16_t> DbgStreams;
 

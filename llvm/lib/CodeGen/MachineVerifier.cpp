@@ -757,9 +757,8 @@ MachineVerifier::visitMachineBasicBlockBefore(const MachineBasicBlock *MBB) {
   }
   regsLiveInButUnused = regsLive;
 
-  const MachineFrameInfo *MFI = MF->getFrameInfo();
-  assert(MFI && "Function has no frame info");
-  BitVector PR = MFI->getPristineRegs(*MF);
+  const MachineFrameInfo &MFI = MF->getFrameInfo();
+  BitVector PR = MFI.getPristineRegs(*MF);
   for (int I = PR.find_first(); I>0; I = PR.find_next(I)) {
     for (MCSubRegIterator SubRegs(I, TRI, /*IncludeSelf=*/true);
          SubRegs.isValid(); ++SubRegs)
@@ -877,6 +876,16 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
       if (!mapped)
         report("Missing slot index", MI);
     }
+  }
+
+  // Check types.
+  const unsigned NumTypes = MI->getNumTypes();
+  if (isPreISelGenericOpcode(MCID.getOpcode())) {
+    if (NumTypes == 0)
+      report("Generic instruction must have a type", MI);
+  } else {
+    if (NumTypes != 0)
+      report("Non-generic instruction cannot have a type", MI);
   }
 
   StringRef ErrorInfo;

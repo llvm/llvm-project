@@ -38,23 +38,24 @@ class IModuleSubstreamVisitor {
 public:
   virtual ~IModuleSubstreamVisitor() {}
 
-  virtual Error visitUnknown(ModuleSubstreamKind Kind, msf::StreamRef Data) = 0;
-  virtual Error visitSymbols(msf::StreamRef Data);
-  virtual Error visitLines(msf::StreamRef Data,
+  virtual Error visitUnknown(ModuleSubstreamKind Kind,
+                             msf::ReadableStreamRef Data) = 0;
+  virtual Error visitSymbols(msf::ReadableStreamRef Data);
+  virtual Error visitLines(msf::ReadableStreamRef Data,
                            const LineSubstreamHeader *Header,
                            const LineInfoArray &Lines);
-  virtual Error visitStringTable(msf::StreamRef Data);
-  virtual Error visitFileChecksums(msf::StreamRef Data,
+  virtual Error visitStringTable(msf::ReadableStreamRef Data);
+  virtual Error visitFileChecksums(msf::ReadableStreamRef Data,
                                    const FileChecksumArray &Checksums);
-  virtual Error visitFrameData(msf::StreamRef Data);
-  virtual Error visitInlineeLines(msf::StreamRef Data);
-  virtual Error visitCrossScopeImports(msf::StreamRef Data);
-  virtual Error visitCrossScopeExports(msf::StreamRef Data);
-  virtual Error visitILLines(msf::StreamRef Data);
-  virtual Error visitFuncMDTokenMap(msf::StreamRef Data);
-  virtual Error visitTypeMDTokenMap(msf::StreamRef Data);
-  virtual Error visitMergedAssemblyInput(msf::StreamRef Data);
-  virtual Error visitCoffSymbolRVA(msf::StreamRef Data);
+  virtual Error visitFrameData(msf::ReadableStreamRef Data);
+  virtual Error visitInlineeLines(msf::ReadableStreamRef Data);
+  virtual Error visitCrossScopeImports(msf::ReadableStreamRef Data);
+  virtual Error visitCrossScopeExports(msf::ReadableStreamRef Data);
+  virtual Error visitILLines(msf::ReadableStreamRef Data);
+  virtual Error visitFuncMDTokenMap(msf::ReadableStreamRef Data);
+  virtual Error visitTypeMDTokenMap(msf::ReadableStreamRef Data);
+  virtual Error visitMergedAssemblyInput(msf::ReadableStreamRef Data);
+  virtual Error visitCoffSymbolRVA(msf::ReadableStreamRef Data);
 };
 
 Error visitModuleSubstream(const ModuleSubstream &R,
@@ -67,7 +68,7 @@ public:
   VarStreamArrayExtractor(const codeview::LineSubstreamHeader *Header)
       : Header(Header) {}
 
-  Error operator()(StreamRef Stream, uint32_t &Len,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
                    codeview::LineColumnEntry &Item) const {
     using namespace codeview;
     const LineFileBlockHeader *BlockHeader;
@@ -104,7 +105,7 @@ private:
 
 template <> class VarStreamArrayExtractor<codeview::FileChecksumEntry> {
 public:
-  Error operator()(StreamRef Stream, uint32_t &Len,
+  Error operator()(ReadableStreamRef Stream, uint32_t &Len,
                    codeview::FileChecksumEntry &Item) const {
     using namespace codeview;
     const FileChecksum *Header;

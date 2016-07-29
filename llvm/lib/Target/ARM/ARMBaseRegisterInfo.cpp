@@ -332,7 +332,7 @@ ARMBaseRegisterInfo::updateRegAllocHint(unsigned Reg, unsigned NewReg,
 }
 
 bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
@@ -347,14 +347,14 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   // It's going to be better to use the SP or Base Pointer instead. When there
   // are variable sized objects, we can't reference off of the SP, so we
   // reserve a Base Pointer.
-  if (AFI->isThumbFunction() && MFI->hasVarSizedObjects()) {
+  if (AFI->isThumbFunction() && MFI.hasVarSizedObjects()) {
     // Conservatively estimate whether the negative offset from the frame
     // pointer will be sufficient to reach. If a function has a smallish
     // frame, it's less likely to have lots of spills and callee saved
     // space, so it's all more likely to be within range of the frame pointer.
     // If it's wrong, the scavenger will still enable access to work, it just
     // won't be optimal.
-    if (AFI->isThumb2Function() && MFI->getLocalFrameSize() < 128)
+    if (AFI->isThumb2Function() && MFI.getLocalFrameSize() < 128)
       return false;
     return true;
   }
@@ -389,10 +389,10 @@ bool ARMBaseRegisterInfo::canRealignStack(const MachineFunction &MF) const {
 
 bool ARMBaseRegisterInfo::
 cannotEliminateFrame(const MachineFunction &MF) const {
-  const MachineFrameInfo *MFI = MF.getFrameInfo();
-  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI->adjustsStack())
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  if (MF.getTarget().Options.DisableFramePointerElim(MF) && MFI.adjustsStack())
     return true;
-  return MFI->hasVarSizedObjects() || MFI->isFrameAddressTaken()
+  return MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken()
     || needsStackRealignment(MF);
 }
 
@@ -536,7 +536,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // so it'll be negative.
   MachineFunction &MF = *MI->getParent()->getParent();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
-  MachineFrameInfo *MFI = MF.getFrameInfo();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
   ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
 
   // Estimate an offset from the frame pointer.
@@ -551,7 +551,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // The incoming offset is relating to the SP at the start of the function,
   // but when we access the local it'll be relative to the SP after local
   // allocation, so adjust our SP-relative offset by that allocation size.
-  Offset += MFI->getLocalFrameSize();
+  Offset += MFI.getLocalFrameSize();
   // Assume that we'll have at least some spill slots allocated.
   // FIXME: This is a total SWAG number. We should run some statistics
   //        and pick a real one.
@@ -563,7 +563,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   // on whether there are any local variables that would trigger it.
   unsigned StackAlign = TFI->getStackAlignment();
   if (TFI->hasFP(MF) && 
-      !((MFI->getLocalFrameMaxAlign() > StackAlign) && canRealignStack(MF))) {
+      !((MFI.getLocalFrameMaxAlign() > StackAlign) && canRealignStack(MF))) {
     if (isFrameOffsetLegal(MI, getFrameRegister(MF), FPOffset))
       return false;
   }
@@ -572,7 +572,7 @@ needsFrameBaseReg(MachineInstr *MI, int64_t Offset) const {
   //        to only disallow SP relative references in the live range of
   //        the VLA(s). In practice, it's unclear how much difference that
   //        would make, but it may be worth doing.
-  if (!MFI->hasVarSizedObjects() && isFrameOffsetLegal(MI, ARM::SP, Offset))
+  if (!MFI.hasVarSizedObjects() && isFrameOffsetLegal(MI, ARM::SP, Offset))
     return false;
 
   // The offset likely isn't legal, we want to allocate a virtual base register.
@@ -730,7 +730,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(TFI->hasReservedCallFrame(MF) &&
            "Cannot use SP to access the emergency spill slot in "
            "functions without a reserved call frame");
-    assert(!MF.getFrameInfo()->hasVarSizedObjects() &&
+    assert(!MF.getFrameInfo().hasVarSizedObjects() &&
            "Cannot use SP to access the emergency spill slot in "
            "functions with variable sized frame objects");
   }

@@ -175,7 +175,7 @@ bool X86CallFrameOptimization::isProfitable(MachineFunction &MF,
   // This transformation is always a win when we do not expect to have
   // a reserved call frame. Under other circumstances, it may be either
   // a win or a loss, and requires a heuristic.
-  bool CannotReserveFrame = MF.getFrameInfo()->hasVarSizedObjects();
+  bool CannotReserveFrame = MF.getFrameInfo().hasVarSizedObjects();
   if (CannotReserveFrame)
     return true;
 
