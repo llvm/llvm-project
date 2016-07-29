@@ -37,6 +37,9 @@
 # RUN:  . = DATA_SEGMENT_ALIGN (CONSTANT (MAXPAGESIZE), CONSTANT (COMMONPAGESIZE)); \
 # RUN:  .datasegmentalign : { *(.datasegmentalign) } \
 # RUN:  . = DATA_SEGMENT_END (.); \
+# RUN:  . = 0x27000; \
+# RUN:  . += 0x1000; \
+# RUN:  .plusassign : { *(.plusassign) } \
 # RUN: }" > %t.script
 # RUN: ld.lld %t --script %t.script -o %t2
 # RUN: llvm-readobj -s %t2 | FileCheck %s
@@ -296,6 +299,21 @@
 # CHECK-NEXT:   AddressAlignment:
 # CHECK-NEXT:   EntrySize:
 # CHECK-NEXT: }
+# CHECK-NEXT: Section {
+# CHECK-NEXT:   Index:
+# CHECK-NEXT:   Name: .plusassign
+# CHECK-NEXT:   Type: SHT_PROGBITS
+# CHECK-NEXT:   Flags [
+# CHECK-NEXT:     SHF_ALLOC
+# CHECK-NEXT:   ]
+# CHECK-NEXT:   Address: 0x28000
+# CHECK-NEXT:   Offset:
+# CHECK-NEXT:   Size:
+# CHECK-NEXT:   Link:
+# CHECK-NEXT:   Info:
+# CHECK-NEXT:   AddressAlignment:
+# CHECK-NEXT:   EntrySize:
+# CHECK-NEXT: }
 
 ## Mailformed number error.
 # RUN: echo "SECTIONS { \
@@ -398,4 +416,7 @@ nop
 .quad 0
 
 .section .datasegmentalign, "a"
+.quad 0
+
+.section .plusassign, "a"
 .quad 0
