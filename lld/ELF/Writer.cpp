@@ -68,8 +68,6 @@ private:
   void writeSections();
   void writeBuildId();
 
-  void addCommonSymbols(std::vector<DefinedCommon *> &Syms);
-
   std::unique_ptr<FileOutputBuffer> Buffer;
 
   BumpPtrAllocator Alloc;
@@ -217,13 +215,25 @@ template <class ELFT> void elf::writeResult(SymbolTable<ELFT> *Symtab) {
   Writer<ELFT>(*Symtab).run();
 }
 
+template <class ELFT>
+static std::vector<DefinedCommon<ELFT> *> getCommonSymbols() {
+  std::vector<DefinedCommon<ELFT> *> V;
+  for (Symbol *S : Symtab<ELFT>::X->getSymbols())
+    if (auto *B = dyn_cast<DefinedCommon<ELFT>>(S->body()))
+      V.push_back(B);
+  return V;
+}
+
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
   if (!Config->DiscardAll)
     copyLocalSymbols();
   addReservedSymbols();
 
-  OutputSections = ScriptConfig->DoLayout
+  CommonInputSection<ELFT> Common(getCommonSymbols<ELFT>());
+  CommonInputSection<ELFT>::X = &Common;
+
+  OutputSections = ScriptConfig->HasContents
                        ? Script<ELFT>::X->createSections(Factory)
                        : createSections();
   finalizeSections();
@@ -237,7 +247,7 @@ template <class ELFT> void Writer<ELFT>::run() {
                 ? Script<ELFT>::X->createPhdrs(OutputSections)
                 : createPhdrs();
     fixHeaders();
-    if (ScriptConfig->DoLayout) {
+    if (ScriptConfig->HasContents) {
       Script<ELFT>::X->assignAddresses(OutputSections);
     } else {
       fixSectionAlignments();
@@ -490,30 +500,6 @@ void PhdrEntry<ELFT>::add(OutputSectionBase<ELFT> *Sec) {
   H.p_align = std::max<typename ELFT::uint>(H.p_align, Sec->getAlignment());
 }
 
-// Until this function is called, common symbols do not belong to any section.
-// This function adds them to end of BSS section.
-template <class ELFT>
-void Writer<ELFT>::addCommonSymbols(std::vector<DefinedCommon *> &Syms) {
-  if (Syms.empty())
-    return;
-
-  // Sort the common symbols by alignment as an heuristic to pack them better.
-  std::stable_sort(Syms.begin(), Syms.end(),
-                   [](const DefinedCommon *A, const DefinedCommon *B) {
-                     return A->Alignment > B->Alignment;
-                   });
-
-  uintX_t Off = Out<ELFT>::Bss->getSize();
-  for (DefinedCommon *C : Syms) {
-    Off = alignTo(Off, C->Alignment);
-    Out<ELFT>::Bss->updateAlignment(C->Alignment);
-    C->OffsetInBss = Off;
-    Off += C->Size;
-  }
-
-  Out<ELFT>::Bss->setSize(Off);
-}
-
 template <class ELFT>
 static Symbol *addOptionalSynthetic(SymbolTable<ELFT> &Table, StringRef Name,
                                     OutputSectionBase<ELFT> *Sec,
@@ -734,7 +720,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Now that we have defined all possible symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
-  std::vector<DefinedCommon *> CommonSymbols;
   for (Symbol *S : Symtab.getSymbols()) {
     SymbolBody *Body = S->body();
 
@@ -742,9 +727,6 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // will accept an undefined reference in bitcode if it can be optimized out.
     if (S->IsUsedInRegularObj && Body->isUndefined() && !S->isWeak())
       reportUndefined<ELFT>(Symtab, Body);
-
-    if (auto *C = dyn_cast<DefinedCommon>(Body))
-      CommonSymbols.push_back(C);
 
     if (!includeInSymtab<ELFT>(*Body))
       continue;
@@ -763,7 +745,12 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   if (HasError)
     return;
 
-  addCommonSymbols(CommonSymbols);
+  // If linker script processor hasn't added common symbol section yet,
+  // then add it to .bss now.
+  if (!CommonInputSection<ELFT>::X->OutSec) {
+    Out<ELFT>::Bss->addSection(CommonInputSection<ELFT>::X);
+    Out<ELFT>::Bss->assignOffsets();
+  }
 
   // So far we have added sections from input object files.
   // This function adds linker-created Out<ELFT>::* sections.
@@ -1048,7 +1035,7 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
 // sections. These are special, we do not include them into output sections
 // list, but have them to simplify the code.
 template <class ELFT> void Writer<ELFT>::fixHeaders() {
-  uintX_t BaseVA = ScriptConfig->DoLayout ? 0 : Config->ImageBase;
+  uintX_t BaseVA = ScriptConfig->HasContents ? 0 : Config->ImageBase;
   Out<ELFT>::ElfHeader->setVA(BaseVA);
   uintX_t Off = Out<ELFT>::ElfHeader->getSize();
   Out<ELFT>::ProgramHeaders->setVA(Off + BaseVA);

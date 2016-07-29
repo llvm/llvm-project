@@ -95,22 +95,6 @@ public:
     return true;
   }
 
-  bool VisitCXXStaticCastExpr(clang::CXXStaticCastExpr *Expr) {
-    return handleCXXNamedCastExpr(Expr);
-  }
-
-  bool VisitCXXDynamicCastExpr(clang::CXXDynamicCastExpr *Expr) {
-    return handleCXXNamedCastExpr(Expr);
-  }
-
-  bool VisitCXXReinterpretCastExpr(clang::CXXReinterpretCastExpr *Expr) {
-    return handleCXXNamedCastExpr(Expr);
-  }
-
-  bool VisitCXXConstCastExpr(clang::CXXConstCastExpr *Expr) {
-    return handleCXXNamedCastExpr(Expr);
-  }
-
   // Other visitors:
 
   bool VisitTypeLoc(const TypeLoc Loc) {
@@ -137,24 +121,6 @@ public:
       }
       NameLoc = NameLoc.getPrefix();
     }
-  }
-
-  bool handleCXXNamedCastExpr(clang::CXXNamedCastExpr *Expr) {
-    clang::QualType Type = Expr->getType();
-    // See if this a cast of a pointer.
-    const RecordDecl *Decl = Type->getPointeeCXXRecordDecl();
-    if (!Decl) {
-      // See if this is a cast of a reference.
-      Decl = Type->getAsCXXRecordDecl();
-    }
-
-    if (Decl && getUSRForDecl(Decl) == USR) {
-      SourceLocation Location =
-          Expr->getTypeInfoAsWritten()->getTypeLoc().getBeginLoc();
-      checkAndAddLocation(Location);
-    }
-
-    return true;
   }
 
 private:

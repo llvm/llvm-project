@@ -1590,9 +1590,6 @@ ProcessGDBRemote::DoResume ()
         else
         {
             EventSP event_sp;
-            TimeValue timeout;
-            timeout = TimeValue::Now();
-            timeout.OffsetWithSeconds (5);
             if (!m_async_thread.IsJoinable())
             {
                 error.SetErrorString ("Trying to resume but the async thread is dead.");
@@ -1603,7 +1600,7 @@ ProcessGDBRemote::DoResume ()
 
             m_async_broadcaster.BroadcastEvent (eBroadcastBitAsyncContinue, new EventDataBytes (continue_packet.GetData(), continue_packet.GetSize()));
 
-            if (listener_sp->WaitForEvent (&timeout, event_sp) == false)
+            if (listener_sp->WaitForEvent(std::chrono::seconds(5), event_sp) == false)
             {
                 error.SetErrorString("Resume timed out.");
                 if (log)
@@ -2717,7 +2714,7 @@ ProcessGDBRemote::DoHalt (bool &caused_stop)
     Error error;
 
     bool timed_out = false;
-    Mutex::Locker locker;
+    std::unique_lock<std::recursive_mutex> lock;
 
     if (m_public_state.GetValue() == eStateAttaching)
     {
@@ -2727,7 +2724,7 @@ ProcessGDBRemote::DoHalt (bool &caused_stop)
     }
     else
     {
-        if (!m_gdb_comm.SendInterrupt (locker, 2, timed_out))
+        if (!m_gdb_comm.SendInterrupt(lock, 2, timed_out))
         {
             if (timed_out)
                 error.SetErrorString("timed out sending interrupt packet");
@@ -3860,7 +3857,7 @@ ProcessGDBRemote::AsyncThread (void *arg)
     {
         if (log)
             log->Printf ("ProcessGDBRemote::%s (arg = %p, pid = %" PRIu64 ") listener.WaitForEvent (NULL, event_sp)...", __FUNCTION__, arg, process->GetID());
-        if (process->m_async_listener_sp->WaitForEvent (NULL, event_sp))
+        if (process->m_async_listener_sp->WaitForEvent(std::chrono::microseconds(0), event_sp))
         {
             const uint32_t event_type = event_sp->GetType();
             if (event_sp->BroadcasterIs (&process->m_async_broadcaster))

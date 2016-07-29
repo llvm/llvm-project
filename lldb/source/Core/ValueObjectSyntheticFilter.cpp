@@ -271,12 +271,11 @@ ValueObjectSynthetic::GetChildAtIndex (size_t idx, bool can_create)
                             idx);
 
             lldb::ValueObjectSP synth_guy = m_synth_filter_ap->GetChildAtIndex (idx);
-            
+
             if (log)
-                log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu created as %p (is synthetic: %s)",
-                            GetName().AsCString(),
-                            idx,
-                            synth_guy.get(),
+                log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu created as %p (is "
+                            "synthetic: %s)",
+                            GetName().AsCString(), idx, static_cast<void *>(synth_guy.get()),
                             synth_guy.get() ? (synth_guy->IsSyntheticChildrenGenerated() ? "yes" : "no") : "no");
 
             if (!synth_guy)
@@ -291,11 +290,10 @@ ValueObjectSynthetic::GetChildAtIndex (size_t idx, bool can_create)
         else
         {
             if (log)
-                log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu not cached and cannot be created (can_create = %s, synth_filter = %p)",
-                            GetName().AsCString(),
-                            idx,
-                            can_create ? "yes" : "no",
-                            m_synth_filter_ap.get());
+                log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu not cached and cannot "
+                            "be created (can_create = %s, synth_filter = %p)",
+                            GetName().AsCString(), idx, can_create ? "yes" : "no",
+                            static_cast<void *>(m_synth_filter_ap.get()));
 
             return lldb::ValueObjectSP();
         }
@@ -304,9 +302,7 @@ ValueObjectSynthetic::GetChildAtIndex (size_t idx, bool can_create)
     {
         if (log)
             log->Printf("[ValueObjectSynthetic::GetChildAtIndex] name=%s, child at index %zu cached as %p",
-                        GetName().AsCString(),
-                        idx,
-                        valobj);
+                        GetName().AsCString(), idx, static_cast<void *>(valobj));
 
         return valobj->GetSP();
     }

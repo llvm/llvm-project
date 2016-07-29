@@ -789,7 +789,7 @@ public:
 
 protected:
   // A pointer union of Stmt * and EvaluatedStmt *. When an EvaluatedStmt, we
-  // have allocated the auxilliary struct of information there.
+  // have allocated the auxiliary struct of information there.
   //
   // TODO: It is a bit unfortunate to use a PointerUnion inside the VarDecl for
   // this as *many* VarDecls are ParmVarDecls that don't have default

@@ -12,6 +12,7 @@
 
 // C Includes
 // C++ Includes
+#include <chrono>
 #include <memory>
 #include <string>
 
@@ -141,7 +142,8 @@ public:
     }
 
     bool
-    WaitForEventReceived (const TimeValue *abstime = nullptr, bool *timed_out = nullptr)
+    WaitForEventReceived(const std::chrono::microseconds &abstime = std::chrono::microseconds(0),
+                         bool *timed_out = nullptr)
     {
         return m_predicate.WaitForValueEqualTo(true, abstime, timed_out);
     }

@@ -23,6 +23,7 @@ namespace elf {
 template <class ELFT> class InputSectionBase;
 template <class ELFT> class OutputSectionBase;
 template <class ELFT> class OutputSectionFactory;
+template <class ELFT> class DefinedCommon;
 
 typedef std::function<uint64_t(uint64_t)> Expr;
 
@@ -83,8 +84,9 @@ struct OutputSectionCommand : BaseCommand {
 struct InputSectionDescription : BaseCommand {
   InputSectionDescription() : BaseCommand(InputSectionKind) {}
   static bool classof(const BaseCommand *C);
+  StringRef FilePattern;
   std::vector<StringRef> ExcludedFiles;
-  std::vector<StringRef> Patterns;
+  std::vector<StringRef> SectionPatterns;
 };
 
 struct PhdrsCommand {
@@ -103,7 +105,7 @@ struct ScriptConfiguration {
   // Used to assign sections to headers.
   std::vector<PhdrsCommand> PhdrsCommands;
 
-  bool DoLayout = false;
+  bool HasContents = false;
 
   llvm::BumpPtrAllocator Alloc;
 

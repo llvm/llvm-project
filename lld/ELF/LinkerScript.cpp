@@ -92,20 +92,31 @@ LinkerScript<ELFT>::getSectionMap() {
   return Ret;
 }
 
+static bool fileMatches(const InputSectionDescription *Desc,
+                        StringRef Filename) {
+  if (!globMatch(Desc->FilePattern, Filename))
+    return false;
+  return Desc->ExcludedFiles.empty() || !match(Desc->ExcludedFiles, Filename);
+}
+
 // Returns input sections filtered by given glob patterns.
 template <class ELFT>
 std::vector<InputSectionBase<ELFT> *>
 LinkerScript<ELFT>::getInputSections(const InputSectionDescription *I) {
-  ArrayRef<StringRef> Patterns = I->Patterns;
-  ArrayRef<StringRef> ExcludedFiles = I->ExcludedFiles;
+  ArrayRef<StringRef> Patterns = I->SectionPatterns;
   std::vector<InputSectionBase<ELFT> *> Ret;
   for (const std::unique_ptr<ObjectFile<ELFT>> &F :
-       Symtab<ELFT>::X->getObjectFiles())
-    for (InputSectionBase<ELFT> *S : F->getSections())
-      if (!isDiscarded(S) && !S->OutSec && match(Patterns, S->getSectionName()))
-        if (ExcludedFiles.empty() ||
-            !match(ExcludedFiles, sys::path::filename(F->getName())))
+       Symtab<ELFT>::X->getObjectFiles()) {
+    if (fileMatches(I, sys::path::filename(F->getName())))
+      for (InputSectionBase<ELFT> *S : F->getSections())
+        if (!isDiscarded(S) && !S->OutSec &&
+            match(Patterns, S->getSectionName()))
           Ret.push_back(S);
+  }
+
+  if ((llvm::find(Patterns, "COMMON") != Patterns.end()))
+    Ret.push_back(CommonInputSection<ELFT>::X);
+
   return Ret;
 }
 
@@ -424,9 +435,7 @@ private:
   void readAsNeeded();
   void readEntry();
   void readExtern();
-  std::unique_ptr<InputSectionDescription> readFilePattern();
   void readGroup();
-  void readKeep(OutputSectionCommand *Cmd);
   void readInclude();
   void readNothing() {}
   void readOutput();
@@ -439,6 +448,8 @@ private:
   SymbolAssignment *readAssignment(StringRef Name);
   void readOutputSectionDescription(StringRef OutSec);
   std::vector<StringRef> readOutputSectionPhdrs();
+  std::unique_ptr<InputSectionDescription> readInputSectionDescription();
+  void readInputSectionRules(InputSectionDescription *InCmd, bool Keep);
   unsigned readPhdrType();
   void readProvide(bool Hidden);
   void readAlign(OutputSectionCommand *Cmd);
@@ -635,11 +646,11 @@ void ScriptParser::readSearchDir() {
 }
 
 void ScriptParser::readSections() {
-  Opt.DoLayout = true;
+  Opt.HasContents = true;
   expect("{");
   while (!Error && !skip("}")) {
     StringRef Tok = next();
-    if (peek() == "=") {
+    if (peek() == "=" || peek() == "+=") {
       readAssignment(Tok);
       expect(";");
     } else if (Tok == "PROVIDE") {
@@ -668,32 +679,38 @@ static int precedence(StringRef Op) {
       .Default(-1);
 }
 
-std::unique_ptr<InputSectionDescription> ScriptParser::readFilePattern() {
-  expect("*");
+void ScriptParser::readInputSectionRules(InputSectionDescription *InCmd, bool Keep) {
+  InCmd->FilePattern = next();
   expect("(");
-
-  auto InCmd = llvm::make_unique<InputSectionDescription>();
 
   if (skip("EXCLUDE_FILE")) {
     expect("(");
     while (!Error && !skip(")"))
       InCmd->ExcludedFiles.push_back(next());
-    InCmd->Patterns.push_back(next());
-    expect(")");
-  } else {
-    while (!Error && !skip(")"))
-      InCmd->Patterns.push_back(next());
   }
-  return InCmd;
+
+  while (!Error && !skip(")")) {
+    if (Keep)
+      Opt.KeptSections.push_back(peek());
+    InCmd->SectionPatterns.push_back(next());
+  }
 }
 
-void ScriptParser::readKeep(OutputSectionCommand *Cmd) {
-  expect("(");
-  std::unique_ptr<InputSectionDescription> InCmd = readFilePattern();
-  Opt.KeptSections.insert(Opt.KeptSections.end(), InCmd->Patterns.begin(),
-                          InCmd->Patterns.end());
-  Cmd->Commands.push_back(std::move(InCmd));
-  expect(")");
+std::unique_ptr<InputSectionDescription>
+ScriptParser::readInputSectionDescription() {
+  auto InCmd = llvm::make_unique<InputSectionDescription>();
+
+  // Input section wildcard can be surrounded by KEEP.
+  // https://sourceware.org/binutils/docs/ld/Input-Section-Keep.html#Input-Section-Keep
+  if (skip("KEEP")) {
+    expect("(");
+    readInputSectionRules(InCmd.get(), true);
+    expect(")");
+  } else {
+    readInputSectionRules(InCmd.get(), false);
+  }
+
+  return InCmd;
 }
 
 void ScriptParser::readAlign(OutputSectionCommand *Cmd) {
@@ -730,16 +747,13 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   expect("{");
 
   while (!Error && !skip("}")) {
+    if (peek().startswith("*") || peek() == "KEEP") {
+      Cmd->Commands.push_back(readInputSectionDescription());
+      continue;
+    }
+
     StringRef Tok = next();
-    if (Tok == "*") {
-      auto *InCmd = new InputSectionDescription();
-      Cmd->Commands.emplace_back(InCmd);
-      expect("(");
-      while (!Error && !skip(")"))
-        InCmd->Patterns.push_back(next());
-    } else if (Tok == "KEEP") {
-      readKeep(Cmd);
-    } else if (Tok == "PROVIDE") {
+    if (Tok == "PROVIDE") {
       readProvide(false);
     } else if (Tok == "PROVIDE_HIDDEN") {
       readProvide(true);
@@ -765,27 +779,17 @@ void ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
 void ScriptParser::readProvide(bool Hidden) {
   expect("(");
-  if (SymbolAssignment *Assignment = readAssignment(next())) {
-    Assignment->Provide = true;
-    Assignment->Hidden = Hidden;
-  }
+  SymbolAssignment *Cmd = readAssignment(next());
+  Cmd->Provide = true;
+  Cmd->Hidden = Hidden;
   expect(")");
   expect(";");
 }
 
-SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
-  expect("=");
-  Expr E = readExpr();
-  auto *Cmd = new SymbolAssignment(Name, E);
-  Opt.Commands.emplace_back(Cmd);
-  return Cmd;
-}
+static uint64_t getSymbolValue(StringRef S, uint64_t Dot) {
+  if (S == ".")
+    return Dot;
 
-// This is an operator-precedence parser to parse a linker
-// script expression.
-Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
-
-static uint64_t getSymbolValue(StringRef S) {
   switch (Config->EKind) {
   case ELF32LEKind:
     if (SymbolBody *B = Symtab<ELF32LE>::X->find(S))
@@ -809,6 +813,21 @@ static uint64_t getSymbolValue(StringRef S) {
   error("symbol not found: " + S);
   return 0;
 }
+
+SymbolAssignment *ScriptParser::readAssignment(StringRef Name) {
+  StringRef Op = next();
+  assert(Op == "=" || Op == "+=");
+  Expr E = readExpr();
+  if (Op == "+=")
+    E = [=](uint64_t Dot) { return getSymbolValue(Name, Dot) + E(Dot); };
+  auto *Cmd = new SymbolAssignment(Name, E);
+  Opt.Commands.emplace_back(Cmd);
+  return Cmd;
+}
+
+// This is an operator-precedence parser to parse a linker
+// script expression.
+Expr ScriptParser::readExpr() { return readExpr1(readPrimary(), 0); }
 
 // This is a part of the operator-precedence parser. This function
 // assumes that the remaining token stream starts with an operator.
@@ -849,9 +868,6 @@ uint64_t static getConstant(StringRef S) {
 Expr ScriptParser::readPrimary() {
   StringRef Tok = next();
 
-  if (Tok == ".")
-    return [](uint64_t Dot) { return Dot; };
-
   if (Tok == "(") {
     Expr E = readExpr();
     expect(")");
@@ -871,6 +887,15 @@ Expr ScriptParser::readPrimary() {
     StringRef Tok = next();
     expect(")");
     return [=](uint64_t Dot) { return getConstant(Tok); };
+  }
+  if (Tok == "SEGMENT_START") {
+    expect("(");
+    next();
+    expect(",");
+    uint64_t Val;
+    next().getAsInteger(0, Val);
+    expect(")");
+    return [=](uint64_t Dot) { return Val; };
   }
   if (Tok == "DATA_SEGMENT_ALIGN") {
     expect("(");
@@ -901,9 +926,9 @@ Expr ScriptParser::readPrimary() {
   // Parse a symbol name or a number literal.
   uint64_t V = 0;
   if (Tok.getAsInteger(0, V)) {
-    if (!isValidCIdentifier(Tok))
+    if (Tok != "." && !isValidCIdentifier(Tok))
       setError("malformed number: " + Tok);
-    return [=](uint64_t Dot) { return getSymbolValue(Tok); };
+    return [=](uint64_t Dot) { return getSymbolValue(Tok, Dot); };
   }
   return [=](uint64_t Dot) { return V; };
 }

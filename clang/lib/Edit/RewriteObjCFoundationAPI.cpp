@@ -1076,6 +1076,7 @@ static bool rewriteToNumericBoxedExpression(const ObjCMessageExpr *Msg,
     case CK_CopyAndAutoreleaseBlockObject:
     case CK_BuiltinFnToFnPtr:
     case CK_ZeroToOCLEvent:
+    case CK_IntToOCLSampler:
       return false;
 
     case CK_BooleanToSignedIntegral:
