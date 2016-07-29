@@ -34,9 +34,11 @@ namespace {
 class USRLocFindingASTVisitor
     : public clang::RecursiveASTVisitor<USRLocFindingASTVisitor> {
 public:
-  explicit USRLocFindingASTVisitor(StringRef USR, StringRef PrevName,
+  explicit USRLocFindingASTVisitor(const std::vector<std::string> &USRs,
+                                   StringRef PrevName,
                                    const ASTContext &Context)
-      : USR(USR), PrevName(PrevName), Context(Context) {}
+      : USRSet(USRs.begin(), USRs.end()), PrevName(PrevName), Context(Context) {
+  }
 
   // Declaration visitors:
 
@@ -47,7 +49,7 @@ public:
         continue;
       }
       if (const clang::FieldDecl *FieldDecl = Initializer->getAnyMember()) {
-        if (getUSRForDecl(FieldDecl) == USR) {
+        if (USRSet.find(getUSRForDecl(FieldDecl)) != USRSet.end()) {
           // The initializer refers to a field that is to be renamed.
           SourceLocation Location = Initializer->getSourceLocation();
           StringRef TokenName = Lexer::getSourceText(
@@ -65,7 +67,7 @@ public:
   }
 
   bool VisitNamedDecl(const NamedDecl *Decl) {
-    if (getUSRForDecl(Decl) == USR) {
+    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
       checkAndAddLocation(Decl->getLocation());
     }
     return true;
@@ -76,7 +78,7 @@ public:
   bool VisitDeclRefExpr(const DeclRefExpr *Expr) {
     const auto *Decl = Expr->getFoundDecl();
 
-    if (getUSRForDecl(Decl) == USR) {
+    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
       const SourceManager &Manager = Decl->getASTContext().getSourceManager();
       SourceLocation Location = Manager.getSpellingLoc(Expr->getLocation());
       checkAndAddLocation(Location);
@@ -87,7 +89,7 @@ public:
 
   bool VisitMemberExpr(const MemberExpr *Expr) {
     const auto *Decl = Expr->getFoundDecl().getDecl();
-    if (getUSRForDecl(Decl) == USR) {
+    if (USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
       const SourceManager &Manager = Decl->getASTContext().getSourceManager();
       SourceLocation Location = Manager.getSpellingLoc(Expr->getMemberLoc());
       checkAndAddLocation(Location);
@@ -98,7 +100,8 @@ public:
   // Other visitors:
 
   bool VisitTypeLoc(const TypeLoc Loc) {
-    if (getUSRForDecl(Loc.getType()->getAsCXXRecordDecl()) == USR) {
+    if (USRSet.find(getUSRForDecl(Loc.getType()->getAsCXXRecordDecl())) !=
+        USRSet.end()) {
       checkAndAddLocation(Loc.getBeginLoc());
     }
     return true;
@@ -116,7 +119,7 @@ public:
   void handleNestedNameSpecifierLoc(NestedNameSpecifierLoc NameLoc) {
     while (NameLoc) {
       const auto *Decl = NameLoc.getNestedNameSpecifier()->getAsNamespace();
-      if (Decl && getUSRForDecl(Decl) == USR) {
+      if (Decl && USRSet.find(getUSRForDecl(Decl)) != USRSet.end()) {
         checkAndAddLocation(NameLoc.getLocalBeginLoc());
       }
       NameLoc = NameLoc.getPrefix();
@@ -127,8 +130,7 @@ private:
   void checkAndAddLocation(SourceLocation Loc) {
     const auto BeginLoc = Loc;
     const auto EndLoc = Lexer::getLocForEndOfToken(
-                                   BeginLoc, 0, Context.getSourceManager(),
-                                   Context.getLangOpts());
+        BeginLoc, 0, Context.getSourceManager(), Context.getLangOpts());
     StringRef TokenName =
         Lexer::getSourceText(CharSourceRange::getTokenRange(BeginLoc, EndLoc),
                              Context.getSourceManager(), Context.getLangOpts());
@@ -140,18 +142,17 @@ private:
     }
   }
 
-  // All the locations of the USR were found.
-  const std::string USR;
-  // Old name that is renamed.
+  const std::set<std::string> USRSet;
   const std::string PrevName;
   std::vector<clang::SourceLocation> LocationsFound;
   const ASTContext &Context;
 };
 } // namespace
 
-std::vector<SourceLocation> getLocationsOfUSR(StringRef USR, StringRef PrevName,
-                                              Decl *Decl) {
-  USRLocFindingASTVisitor Visitor(USR, PrevName, Decl->getASTContext());
+std::vector<SourceLocation>
+getLocationsOfUSRs(const std::vector<std::string> &USRs, StringRef PrevName,
+                   Decl *Decl) {
+  USRLocFindingASTVisitor Visitor(USRs, PrevName, Decl->getASTContext());
   Visitor.TraverseDecl(Decl);
   NestedNameSpecifierLocFinder Finder(Decl->getASTContext());
   for (const auto &Location : Finder.getNestedNameSpecifierLocations()) {

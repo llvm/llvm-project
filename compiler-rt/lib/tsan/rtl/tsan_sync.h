@@ -50,16 +50,16 @@ struct SyncVar {
   void Reset(Processor *proc);
 
   u64 GetId() const {
-    // 47 lsb is addr, then 14 bits is low part of uid, then 3 zero bits.
-    return GetLsb((u64)addr | (uid << 47), 61);
+    // 48 lsb is addr, then 14 bits is low part of uid, then 2 zero bits.
+    return GetLsb((u64)addr | (uid << 48), 60);
   }
   bool CheckId(u64 uid) const {
     CHECK_EQ(uid, GetLsb(uid, 14));
     return GetLsb(this->uid, 14) == uid;
   }
   static uptr SplitId(u64 id, u64 *uid) {
-    *uid = id >> 47;
-    return (uptr)GetLsb(id, 47);
+    *uid = id >> 48;
+    return (uptr)GetLsb(id, 48);
   }
 };
 

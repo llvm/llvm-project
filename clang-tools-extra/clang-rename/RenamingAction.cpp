@@ -34,27 +34,21 @@ namespace rename {
 
 class RenamingASTConsumer : public ASTConsumer {
 public:
-  RenamingASTConsumer(const std::string &NewName,
-                      const std::string &PrevName,
+  RenamingASTConsumer(const std::string &NewName, const std::string &PrevName,
                       const std::vector<std::string> &USRs,
-                      tooling::Replacements &Replaces,
-                      bool PrintLocations)
+                      tooling::Replacements &Replaces, bool PrintLocations)
       : NewName(NewName), PrevName(PrevName), USRs(USRs), Replaces(Replaces),
-        PrintLocations(PrintLocations) {
-  }
+        PrintLocations(PrintLocations) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     const auto &SourceMgr = Context.getSourceManager();
     std::vector<SourceLocation> RenamingCandidates;
     std::vector<SourceLocation> NewCandidates;
 
-    for (const auto &USR : USRs) {
-      NewCandidates = getLocationsOfUSR(USR, PrevName,
-                                        Context.getTranslationUnitDecl());
-      RenamingCandidates.insert(RenamingCandidates.end(), NewCandidates.begin(),
-                                NewCandidates.end());
-      NewCandidates.clear();
-    }
+    NewCandidates =
+        getLocationsOfUSRs(USRs, PrevName, Context.getTranslationUnitDecl());
+    RenamingCandidates.insert(RenamingCandidates.end(), NewCandidates.begin(),
+                              NewCandidates.end());
 
     auto PrevNameLen = PrevName.length();
     for (const auto &Loc : RenamingCandidates) {
@@ -64,8 +58,8 @@ public:
                << ":" << FullLoc.getSpellingLineNumber() << ":"
                << FullLoc.getSpellingColumnNumber() << "\n";
       }
-      Replaces.insert(tooling::Replacement(SourceMgr, Loc, PrevNameLen,
-                                           NewName));
+      Replaces.insert(
+          tooling::Replacement(SourceMgr, Loc, PrevNameLen, NewName));
     }
   }
 
