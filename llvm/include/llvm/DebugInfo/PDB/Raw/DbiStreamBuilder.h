@@ -14,8 +14,8 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
 
-#include "llvm/DebugInfo/Msf/ByteStream.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
@@ -48,7 +48,7 @@ public:
 
   Expected<std::unique_ptr<DbiStream>> build(PDBFile &File,
                                              const msf::WritableStream &Buffer);
-  Error commit(const msf::MsfLayout &Layout,
+  Error commit(const msf::MSFLayout &Layout,
                const msf::WritableStream &Buffer) const;
 
 private:

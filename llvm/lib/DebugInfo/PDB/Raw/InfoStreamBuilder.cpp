@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/InfoStreamBuilder.h"
 
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
@@ -55,7 +55,7 @@ InfoStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
   return std::move(Info);
 }
 
-Error InfoStreamBuilder::commit(const msf::MsfLayout &Layout,
+Error InfoStreamBuilder::commit(const msf::MSFLayout &Layout,
                                 const msf::WritableStream &Buffer) const {
   auto InfoS =
       WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamPDB);

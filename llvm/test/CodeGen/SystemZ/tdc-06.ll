@@ -14,14 +14,14 @@ entry:
 ; CHECK: ltdbr %f0, %f0
 ; CHECK: je [[RET:.L.*]]
   %testeq = fcmp oeq double %x, 0.000000e+00
-  br i1 %testeq, label %ret, label %nonzero
+  br i1 %testeq, label %ret, label %nonzero, !prof !1
 
 nonzero:
 ; CHECK: lhi %r2, 1
 ; CHECK: cdbr %f0, %f0
 ; CHECK: jo [[RET]]
   %testnan = fcmp uno double %x, 0.000000e+00
-  br i1 %testnan, label %ret, label %nonzeroord
+  br i1 %testnan, label %ret, label %nonzeroord, !prof !1
 
 nonzeroord:
 ; CHECK: lhi %r2, 2
@@ -29,7 +29,7 @@ nonzeroord:
 ; CHECK: jl [[RET]]
   %abs = tail call double @llvm.fabs.f64(double %x)
   %testinf = fcmp oeq double %abs, 0x7FF0000000000000
-  br i1 %testinf, label %ret, label %finite
+  br i1 %testinf, label %ret, label %finite, !prof !1
 
 finite:
 ; CHECK: lhi %r2, 3
@@ -46,3 +46,5 @@ ret:
   %res = phi i32 [ 5, %entry ], [ 1, %nonzero ], [ 2, %nonzeroord ], [ %finres, %finite ]
   ret i32 %res
 }
+
+!1 = !{!"branch_weights", i32 1, i32 1}

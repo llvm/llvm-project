@@ -250,6 +250,7 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     Changed |= setDoesNotCapture(F, 2);
     return Changed;
   case LibFunc::memcpy:
+  case LibFunc::mempcpy:
   case LibFunc::memccpy:
   case LibFunc::memmove:
     Changed |= setDoesNotThrow(F);

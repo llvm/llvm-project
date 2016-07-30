@@ -103,6 +103,10 @@ private:
   /// Translate an LLVM store instruction into generic IR.
   bool translateStore(const StoreInst &SI);
 
+  /// Translate call instruction.
+  /// \pre \p Inst is a branch instruction.
+  bool translateCall(const CallInst &Inst);
+
   /// Translate one of LLVM's cast instructions into MachineInstrs, with the
   /// given generic Opcode.
   bool translateCast(unsigned Opcode, const CastInst &CI);
@@ -113,17 +117,18 @@ private:
 
   /// Translate \p Inst into a binary operation \p Opcode.
   /// \pre \p Inst is a binary operation.
-  bool translateBinaryOp(unsigned Opcode, const Instruction &Inst);
+  bool translateBinaryOp(unsigned Opcode, const BinaryOperator &Inst);
 
   /// Translate branch (br) instruction.
   /// \pre \p Inst is a branch instruction.
-  bool translateBr(const Instruction &Inst);
+  bool translateBr(const BranchInst &Inst);
+
 
   /// Translate return (ret) instruction.
   /// The target needs to implement CallLowering::lowerReturn for
   /// this to succeed.
   /// \pre \p Inst is a return instruction.
-  bool translateReturn(const Instruction &Inst);
+  bool translateReturn(const ReturnInst &Inst);
   /// @}
 
   // Builder for machine instruction a la IRBuilder.

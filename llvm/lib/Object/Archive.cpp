@@ -43,17 +43,17 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
     return;
   ErrorAsOutParameter ErrAsOutParam(Err);
 
-  // TODO: For errors messages with the ArchiveMemberHeader class use the
-  // archive member name instead of the the offset to the archive member header.
-  // When there is also error getting the member name then use the offset to
-  // the member in the message.
-
   if (Size < sizeof(ArMemHdrType)) {
     if (Err) {
-      uint64_t Offset = RawHeaderPtr - Parent->getData().data();
-      *Err = malformedError("remaining size of archive too small for next "
-                            "archive member header at offset " +
-                            Twine(Offset));
+      std::string Msg("remaining size of archive too small for next archive "
+                      "member header ");
+      Expected<StringRef> NameOrErr = getName(Size);
+      if (!NameOrErr) {
+        consumeError(NameOrErr.takeError());
+        uint64_t Offset = RawHeaderPtr - Parent->getData().data();
+        *Err = malformedError(Msg + "at offset " + Twine(Offset));
+      } else
+        *Err = malformedError(Msg + "for " + NameOrErr.get());
     }
     return;
   }
@@ -64,18 +64,36 @@ ArchiveMemberHeader::ArchiveMemberHeader(const Archive *Parent,
       OS.write_escaped(llvm::StringRef(ArMemHdr->Terminator,
                                        sizeof(ArMemHdr->Terminator)));
       OS.flush();
-      uint64_t Offset = RawHeaderPtr - Parent->getData().data();
-      *Err = malformedError("terminator characters in archive member \"" + Buf +
-                            "\" not the correct \"`\\n\" values for the "
-                            "archive member header at offset " + Twine(Offset));
+      std::string Msg("terminator characters in archive member \"" + Buf +
+                      "\" not the correct \"`\\n\" values for the archive "
+                      "member header ");
+      Expected<StringRef> NameOrErr = getName(Size);
+      if (!NameOrErr) {
+        consumeError(NameOrErr.takeError());
+        uint64_t Offset = RawHeaderPtr - Parent->getData().data();
+        *Err = malformedError(Msg + "at offset " + Twine(Offset));
+      } else
+        *Err = malformedError(Msg + "for " + NameOrErr.get());
     }
     return;
   }
 }
 
-StringRef ArchiveMemberHeader::getName() const {
+// This gets the raw name from the ArMemHdr->Name field and checks that it is
+// valid for the kind of archive.  If it is not valid it returns an Error.
+Expected<StringRef> ArchiveMemberHeader::getRawName() const {
   char EndCond;
-  if (ArMemHdr->Name[0] == '/' || ArMemHdr->Name[0] == '#')
+  auto Kind = Parent->kind();
+  if (Kind == Archive::K_BSD || Kind == Archive::K_DARWIN64) {
+    if (ArMemHdr->Name[0] == ' ') {
+      uint64_t Offset = reinterpret_cast<const char *>(ArMemHdr) -
+                        Parent->getData().data();
+      return malformedError("name contains a leading space for archive member "
+                            "header at offset " + Twine(Offset));
+    }
+    EndCond = ' ';
+  }
+  else if (ArMemHdr->Name[0] == '/' || ArMemHdr->Name[0] == '#')
     EndCond = ' ';
   else
     EndCond = '/';
@@ -86,6 +104,103 @@ StringRef ArchiveMemberHeader::getName() const {
   assert(end <= sizeof(ArMemHdr->Name) && end > 0);
   // Don't include the EndCond if there is one.
   return llvm::StringRef(ArMemHdr->Name, end);
+}
+
+// This gets the name looking up long names. Size is the size of the archive
+// member including the header, so the size of any name following the header
+// is checked to make sure it does not overflow.
+Expected<StringRef> ArchiveMemberHeader::getName(uint64_t Size) const {
+
+  // This can be called from the ArchiveMemberHeader constructor when the
+  // archive header is truncated to produce an error message with the name.
+  // Make sure the name field is not truncated.
+  if (Size < offsetof(ArMemHdrType, Name) + sizeof(ArMemHdr->Name)) {
+    uint64_t ArchiveOffset = reinterpret_cast<const char *>(ArMemHdr) -
+                      Parent->getData().data();
+    return malformedError("archive header truncated before the name field "
+                          "for archive member header at offset " +
+                          Twine(ArchiveOffset));
+  }
+
+  // The raw name itself can be invalid.
+  Expected<StringRef> NameOrErr = getRawName();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  StringRef Name = NameOrErr.get();
+
+  // Check if it's a special name.
+  if (Name[0] == '/') {
+    if (Name.size() == 1) // Linker member.
+      return Name;
+    if (Name.size() == 2 && Name[1] == '/') // String table.
+      return Name;
+    // It's a long name.
+    // Get the string table offset.
+    std::size_t StringOffset;
+    if (Name.substr(1).rtrim(' ').getAsInteger(10, StringOffset)) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      OS.write_escaped(Name.substr(1).rtrim(' '));
+      OS.flush();
+      uint64_t ArchiveOffset = reinterpret_cast<const char *>(ArMemHdr) -
+                               Parent->getData().data();
+      return malformedError("long name offset characters after the '/' are "
+                            "not all decimal numbers: '" + Buf + "' for "
+                            "archive member header at offset " +
+                            Twine(ArchiveOffset));
+    }
+
+    // Verify it.
+    if (StringOffset >= Parent->getStringTable().size()) {
+      uint64_t ArchiveOffset = reinterpret_cast<const char *>(ArMemHdr) -
+                               Parent->getData().data();
+      return malformedError("long name offset " + Twine(StringOffset) + " past "
+                            "the end of the string table for archive member "
+                            "header at offset " + Twine(ArchiveOffset));
+    }
+    const char *addr = Parent->getStringTable().begin() + StringOffset;
+
+    // GNU long file names end with a "/\n".
+    if (Parent->kind() == Archive::K_GNU ||
+        Parent->kind() == Archive::K_MIPS64) {
+      StringRef::size_type End = StringRef(addr).find('\n');
+      return StringRef(addr, End - 1);
+    }
+    return StringRef(addr);
+  } else if (Name.startswith("#1/")) {
+    uint64_t NameLength;
+    if (Name.substr(3).rtrim(' ').getAsInteger(10, NameLength)) {
+      std::string Buf;
+      raw_string_ostream OS(Buf);
+      OS.write_escaped(Name.substr(3).rtrim(' '));
+      OS.flush();
+      uint64_t ArchiveOffset = reinterpret_cast<const char *>(ArMemHdr) -
+                        Parent->getData().data();
+      return malformedError("long name length characters after the #1/ are "
+                            "not all decimal numbers: '" + Buf + "' for "
+                            "archive member header at offset " +
+                            Twine(ArchiveOffset));
+    }
+    if (getSizeOf() + NameLength > Size) {
+      uint64_t ArchiveOffset = reinterpret_cast<const char *>(ArMemHdr) -
+                        Parent->getData().data();
+      return malformedError("long name length: " + Twine(NameLength) +
+                            " extends past the end of the member or archive "
+                            "for archive member header at offset " +
+                            Twine(ArchiveOffset));
+    }
+    return StringRef(reinterpret_cast<const char *>(ArMemHdr) + getSizeOf(),
+                     NameLength).rtrim('\0');
+  } else {
+    // It is not a long name so trim the blanks at the end of the name.
+    if (Name[Name.size() - 1] != '/') {
+      return Name.rtrim(' ');
+    }
+  }
+  // It's a simple name.
+  if (Name[Name.size() - 1] == '/')
+    return Name.substr(0, Name.size() - 1);
+  return Name;
 }
 
 Expected<uint32_t> ArchiveMemberHeader::getSize() const {
@@ -166,7 +281,14 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
 
   uint64_t Size = Header.getSizeOf();
   Data = StringRef(Start, Size);
-  if (!isThinMember()) {
+  Expected<bool> isThinOrErr = isThinMember();
+  if (!isThinOrErr) {
+    if (Err)
+      *Err = isThinOrErr.takeError();
+    return;
+  }
+  bool isThin = isThinOrErr.get();
+  if (!isThin) {
     Expected<uint64_t> MemberSize = getRawSize();
     if (!MemberSize) {
       if (Err)
@@ -180,11 +302,29 @@ Archive::Child::Child(const Archive *Parent, const char *Start, Error *Err)
   // Setup StartOfFile and PaddingBytes.
   StartOfFile = Header.getSizeOf();
   // Don't include attached name.
-  StringRef Name = getRawName();
+  Expected<StringRef> NameOrErr = getRawName();
+  if (!NameOrErr){
+    if (Err)
+      *Err = NameOrErr.takeError();
+    return;
+  }
+  StringRef Name = NameOrErr.get();
   if (Name.startswith("#1/")) {
     uint64_t NameSize;
-    if (Name.substr(3).rtrim(' ').getAsInteger(10, NameSize))
-      llvm_unreachable("Long name length is not an integer");
+    if (Name.substr(3).rtrim(' ').getAsInteger(10, NameSize)) {
+      if (Err) {
+        std::string Buf;
+        raw_string_ostream OS(Buf);
+        OS.write_escaped(Name.substr(3).rtrim(' '));
+        OS.flush();
+        uint64_t Offset = Start - Parent->getData().data();
+        *Err = malformedError("long name length characters after the #1/ are "
+                              "not all decimal numbers: '" + Buf + "' for "
+                              "archive member header at offset " +
+                              Twine(Offset));
+        return;
+      }
+    }
     StartOfFile += NameSize;
   }
 }
@@ -203,16 +343,22 @@ Expected<uint64_t> Archive::Child::getRawSize() const {
   return Header.getSize();
 }
 
-bool Archive::Child::isThinMember() const {
-  StringRef Name = Header.getName();
+Expected<bool> Archive::Child::isThinMember() const {
+  Expected<StringRef> NameOrErr = Header.getRawName();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  StringRef Name = NameOrErr.get();
   return Parent->IsThin && Name != "/" && Name != "//";
 }
 
 ErrorOr<std::string> Archive::Child::getFullName() const {
-  assert(isThinMember());
-  ErrorOr<StringRef> NameOrErr = getName();
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
+  Expected<bool> isThin = isThinMember();
+  if (!isThin)
+    return errorToErrorCode(isThin.takeError());
+  assert(isThin.get());
+  Expected<StringRef> NameOrErr = getName();
+  if (!NameOrErr)
+    return errorToErrorCode(NameOrErr.takeError());
   StringRef Name = *NameOrErr;
   if (sys::path::is_absolute(Name))
     return Name;
@@ -224,7 +370,11 @@ ErrorOr<std::string> Archive::Child::getFullName() const {
 }
 
 ErrorOr<StringRef> Archive::Child::getBuffer() const {
-  if (!isThinMember()) {
+  Expected<bool> isThinOrErr = isThinMember();
+  if (!isThinOrErr)
+    return errorToErrorCode(isThinOrErr.takeError());
+  bool isThin = isThinOrErr.get();
+  if (!isThin) {
     Expected<uint32_t> Size = getSize();
     if (!Size)
       return errorToErrorCode(Size.takeError());
@@ -255,14 +405,15 @@ Expected<Archive::Child> Archive::Child::getNext() const {
 
   // Check to see if this is past the end of the archive.
   if (NextLoc > Parent->Data.getBufferEnd()) {
-    Twine Msg("offset to next archive member past the end of the archive after "
-              "member ");
-    ErrorOr<StringRef> NameOrErr = getName();
-    if (NameOrErr.getError()) {
+    std::string Msg("offset to next archive member past the end of the archive "
+                    "after member ");
+    Expected<StringRef> NameOrErr = getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
       uint64_t Offset = Data.data() - Parent->getData().data();
       return malformedError(Msg + "at offset " + Twine(Offset));
     } else
-      return malformedError(Msg + Twine(NameOrErr.get()));
+      return malformedError(Msg + NameOrErr.get());
   }
 
   Error Err;
@@ -279,64 +430,34 @@ uint64_t Archive::Child::getChildOffset() const {
   return offset;
 }
 
-ErrorOr<StringRef> Archive::Child::getName() const {
-  StringRef name = getRawName();
-  // Check if it's a special name.
-  if (name[0] == '/') {
-    if (name.size() == 1) // Linker member.
-      return name;
-    if (name.size() == 2 && name[1] == '/') // String table.
-      return name;
-    // It's a long name.
-    // Get the offset.
-    std::size_t offset;
-    if (name.substr(1).rtrim(' ').getAsInteger(10, offset))
-      llvm_unreachable("Long name offset is not an integer");
-
-    // Verify it.
-    if (offset >= Parent->StringTable.size())
-      return object_error::parse_failed;
-    const char *addr = Parent->StringTable.begin() + offset;
-
-    // GNU long file names end with a "/\n".
-    if (Parent->kind() == K_GNU || Parent->kind() == K_MIPS64) {
-      StringRef::size_type End = StringRef(addr).find('\n');
-      return StringRef(addr, End - 1);
-    }
-    return StringRef(addr);
-  } else if (name.startswith("#1/")) {
-    uint64_t name_size;
-    if (name.substr(3).rtrim(' ').getAsInteger(10, name_size))
-      llvm_unreachable("Long name length is not an ingeter");
-    return Data.substr(Header.getSizeOf(), name_size).rtrim('\0');
-  } else {
-    // It is not a long name so trim the blanks at the end of the name.
-    if (name[name.size() - 1] != '/') {
-      return name.rtrim(' ');
-    }
-  }
-  // It's a simple name.
-  if (name[name.size() - 1] == '/')
-    return name.substr(0, name.size() - 1);
-  return name;
+Expected<StringRef> Archive::Child::getName() const {
+  Expected<uint64_t> RawSizeOrErr = getRawSize();
+  if (!RawSizeOrErr)
+    return RawSizeOrErr.takeError();
+  uint64_t RawSize = RawSizeOrErr.get();
+  Expected<StringRef> NameOrErr = Header.getName(Header.getSizeOf() + RawSize);
+  if (!NameOrErr)
+    return NameOrErr.takeError();
+  StringRef Name = NameOrErr.get();
+  return Name;
 }
 
-ErrorOr<MemoryBufferRef> Archive::Child::getMemoryBufferRef() const {
-  ErrorOr<StringRef> NameOrErr = getName();
-  if (std::error_code EC = NameOrErr.getError())
-    return EC;
+Expected<MemoryBufferRef> Archive::Child::getMemoryBufferRef() const {
+  Expected<StringRef> NameOrErr = getName();
+  if (!NameOrErr)
+    return NameOrErr.takeError();
   StringRef Name = NameOrErr.get();
   ErrorOr<StringRef> Buf = getBuffer();
   if (std::error_code EC = Buf.getError())
-    return EC;
+    return errorCodeToError(EC);
   return MemoryBufferRef(*Buf, Name);
 }
 
 Expected<std::unique_ptr<Binary>>
 Archive::Child::getAsBinary(LLVMContext *Context) const {
-  ErrorOr<MemoryBufferRef> BuffOrErr = getMemoryBufferRef();
-  if (std::error_code EC = BuffOrErr.getError())
-    return errorCodeToError(EC);
+  Expected<MemoryBufferRef> BuffOrErr = getMemoryBufferRef();
+  if (!BuffOrErr)
+    return BuffOrErr.takeError();
 
   auto BinaryOrErr = createBinary(BuffOrErr.get(), Context);
   if (BinaryOrErr)
@@ -372,17 +493,20 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     return;
   }
 
+  // Make sure Format is initialized before any call to
+  // ArchiveMemberHeader::getName() is made.  This could be a valid empty
+  // archive which is the same in all formats.  So claiming it to be gnu to is
+  // fine if not totally correct before we look for a string table or table of
+  // contents.
+  Format = K_GNU;
+
   // Get the special members.
   child_iterator I = child_begin(Err, false);
   if (Err)
     return;
   child_iterator E = child_end();
 
-  // This is at least a valid empty archive. Since an empty archive is the
-  // same in all formats, just claim it to be gnu to make sure Format is
-  // initialized.
-  Format = K_GNU;
-
+  // See if this is a valid empty archive and if so return.
   if (I == E) {
     Err = Error::success();
     return;
@@ -397,7 +521,12 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     return false;
   };
 
-  StringRef Name = C->getRawName();
+  Expected<StringRef> NameOrErr = C->getRawName();
+  if (!NameOrErr) {
+    Err = NameOrErr.takeError();
+    return;
+  }
+  StringRef Name = NameOrErr.get();
 
   // Below is the pattern that is used to figure out the archive format
   // GNU archive format
@@ -437,9 +566,9 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
   if (Name.startswith("#1/")) {
     Format = K_BSD;
     // We know this is BSD, so getName will work since there is no string table.
-    ErrorOr<StringRef> NameOrErr = C->getName();
-    if (auto ec = NameOrErr.getError()) {
-      Err = errorCodeToError(ec);
+    Expected<StringRef> NameOrErr = C->getName();
+    if (!NameOrErr) {
+      Err = NameOrErr.takeError();
       return;
     }
     Name = NameOrErr.get();
@@ -481,7 +610,12 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
       Err = Error::success();
       return;
     }
-    Name = C->getRawName();
+    Expected<StringRef> NameOrErr = C->getRawName();
+    if (!NameOrErr) {
+      Err = NameOrErr.takeError();
+      return;
+    }
+    Name = NameOrErr.get();
   }
 
   if (Name == "//") {
@@ -522,7 +656,12 @@ Archive::Archive(MemoryBufferRef Source, Error &Err)
     return;
   }
 
-  Name = C->getRawName();
+  NameOrErr = C->getRawName();
+  if (!NameOrErr) {
+    Err = NameOrErr.takeError();
+    return;
+  }
+  Name = NameOrErr.get();
 
   if (Name == "//") {
     // The string table is never an external member, so we just assert on the

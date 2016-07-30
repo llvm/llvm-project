@@ -17,10 +17,19 @@
   define void @or_s32_gpr() { ret void }
   define void @or_s64_gpr() { ret void }
 
+  define void @xor_s32_gpr() { ret void }
+  define void @xor_s64_gpr() { ret void }
+
   define void @and_s32_gpr() { ret void }
   define void @and_s64_gpr() { ret void }
 
   define void @unconditional_br() { ret void }
+
+  define void @load_s64_gpr(i64* %addr) { ret void }
+  define void @load_s32_gpr(i32* %addr) { ret void }
+
+  define void @store_s64_gpr(i64* %addr) { ret void }
+  define void @store_s32_gpr(i32* %addr) { ret void }
 
 ...
 
@@ -170,6 +179,54 @@ body:             |
 ...
 
 ---
+# Same as add_s32_gpr, for G_XOR operations.
+# CHECK-LABEL: name: xor_s32_gpr
+name:            xor_s32_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr32 }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %w0
+# CHECK:    %1 = EORWrr %0, %0
+body:             |
+  bb.0:
+    liveins: %w0
+
+    %0(32) = COPY %w0
+    %1(32) = G_XOR s32 %0, %0
+...
+
+---
+# Same as add_s64_gpr, for G_XOR operations.
+# CHECK-LABEL: name: xor_s64_gpr
+name:            xor_s64_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64 }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK:    %0 = COPY %x0
+# CHECK:    %1 = EORXrr %0, %0
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(64) = G_XOR s64 %0, %0
+...
+
+---
 # Same as add_s32_gpr, for G_AND operations.
 # CHECK-LABEL: name: and_s32_gpr
 name:            and_s32_gpr
@@ -231,4 +288,104 @@ body:             |
     successors: %bb.0
 
     G_BR unsized %bb.0
+...
+
+---
+# CHECK-LABEL: name: load_s64_gpr
+name:            load_s64_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = LDRXui %0, 0 :: (load 8 from %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(64) = G_LOAD { s64, p0 }  %0 :: (load 8 from %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: load_s32_gpr
+name:            load_s32_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = LDRWui %0, 0 :: (load 4 from %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0
+
+    %0(64) = COPY %x0
+    %1(32) = G_LOAD { s32, p0 }  %0 :: (load 4 from %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s64_gpr
+name:            store_s64_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr64 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %x1
+# CHECK: STRXui %1, %0, 0 :: (store 8 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %x1
+
+    %0(64) = COPY %x0
+    %1(64) = COPY %x1
+    G_STORE { s64, p0 }  %1, %0 :: (store 8 into %ir.addr)
+
+...
+
+---
+# CHECK-LABEL: name: store_s32_gpr
+name:            store_s32_gpr
+isSSA:           true
+
+# CHECK:      registers:
+# CHECK-NEXT:  - { id: 0, class: gpr64sp }
+# CHECK-NEXT:  - { id: 1, class: gpr32 }
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0 = COPY %x0
+# CHECK: %1 = COPY %w1
+# CHECK: STRWui %1, %0, 0 :: (store 4 into %ir.addr)
+body:             |
+  bb.0:
+    liveins: %x0, %w1
+
+    %0(64) = COPY %x0
+    %1(32) = COPY %w1
+    G_STORE { s32, p0 }  %1, %0 :: (store 4 into %ir.addr)
+
 ...

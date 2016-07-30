@@ -702,10 +702,10 @@ static const Atom* findDefinedAtomByName(MachOFile &file, Twine name) {
 }
 
 static StringRef copyDebugString(StringRef str, BumpPtrAllocator &alloc) {
-  std::string *strCopy = alloc.Allocate<std::string>();
-  new (strCopy) std::string();
-  *strCopy = str;
-  return *strCopy;
+  char *strCopy = alloc.Allocate<char>(str.size() + 1);
+  memcpy(strCopy, str.data(), str.size());
+  strCopy[str.size()] = '\0';
+  return strCopy;
 }
 
 llvm::Error parseStabs(MachOFile &file,

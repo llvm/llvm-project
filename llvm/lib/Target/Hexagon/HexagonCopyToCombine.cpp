@@ -385,7 +385,7 @@ HexagonCopyToCombine::findPotentialNewifiableTFRs(MachineBasicBlock &BB) {
       continue;
 
     // Mark TFRs that feed a potential new value store as such.
-    if (TII->mayBeNewStore(&MI)) {
+    if (TII->mayBeNewStore(MI)) {
       // Look for uses of TFR instructions.
       for (unsigned OpdIdx = 0, OpdE = MI.getNumOperands(); OpdIdx != OpdE;
            ++OpdIdx) {

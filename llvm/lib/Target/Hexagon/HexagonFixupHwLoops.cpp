@@ -125,7 +125,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
 
     BlockToInstOffset[&MBB] = InstOffset;
     for (const MachineInstr &MI : MBB)
-      InstOffset += HII->getSize(&MI);
+      InstOffset += HII->getSize(MI);
   }
 
   // Second pass - check each loop instruction to see if it needs to be
@@ -138,7 +138,7 @@ bool HexagonFixupHwLoops::fixupLoopInstrs(MachineFunction &MF) {
     MachineBasicBlock::iterator MII = MBB.begin();
     MachineBasicBlock::iterator MIE = MBB.end();
     while (MII != MIE) {
-      InstOffset += HII->getSize(&*MII);
+      InstOffset += HII->getSize(*MII);
       if (MII->isDebugValue()) {
         ++MII;
         continue;

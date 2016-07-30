@@ -1386,3 +1386,10 @@ define i32 @test89() {
 ; CHECK-NEXT:    ret i32 393216
   ret i32 bitcast (<2 x i16> <i16 6, i16 undef> to i32)
 }
+
+define <2 x i32> @test90() {
+; CHECK-LABEL: @test90(
+; CHECK: ret <2 x i32> <i32 0, i32 15360>
+  %tmp6 = bitcast <4 x half> <half undef, half undef, half undef, half 0xH3C00> to <2 x i32>
+  ret <2 x i32> %tmp6
+}

@@ -187,7 +187,7 @@ Constant *FoldBitCast(Constant *C, Type *DestTy, const DataLayout &DL) {
       for (unsigned j = 0; j != Ratio; ++j) {
         Constant *Src = C->getAggregateElement(SrcElt++);
         if (Src && isa<UndefValue>(Src))
-          Src = Constant::getNullValue(SrcEltTy);
+          Src = Constant::getNullValue(C->getType()->getVectorElementType());
         else
           Src = dyn_cast_or_null<ConstantInt>(Src);
         if (!Src)  // Reject constantexpr elements.

@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
@@ -248,7 +248,7 @@ DbiStreamBuilder::build(PDBFile &File, const msf::WritableStream &Buffer) {
   return std::move(Dbi);
 }
 
-Error DbiStreamBuilder::commit(const msf::MsfLayout &Layout,
+Error DbiStreamBuilder::commit(const msf::MSFLayout &Layout,
                                const msf::WritableStream &Buffer) const {
   auto InfoS =
       WritableMappedBlockStream::createIndexedStream(Layout, Buffer, StreamDBI);

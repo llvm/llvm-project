@@ -21,11 +21,11 @@
 #include "llvm/Analysis/LoopPass.h"
 #include "llvm/Analysis/LoopPassManager.h"
 #include "llvm/Analysis/LoopUnrollAnalyzer.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -693,8 +693,10 @@ static bool canUnrollCompletely(Loop *L, unsigned Threshold,
 // Calculates unroll count and writes it to UP.Count.
 static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                                DominatorTree &DT, LoopInfo *LI,
-                               ScalarEvolution *SE, unsigned TripCount,
-                               unsigned TripMultiple, unsigned LoopSize,
+                               ScalarEvolution *SE,
+                               OptimizationRemarkEmitter *ORE,
+                               unsigned TripCount, unsigned TripMultiple,
+                               unsigned LoopSize,
                                TargetTransformInfo::UnrollingPreferences &UP) {
   // BEInsns represents number of instructions optimized when "back edge"
   // becomes "fall through" in unrolled loop.
@@ -736,9 +738,6 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                         PragmaEnableUnroll || UserUnrollCount;
 
   uint64_t UnrolledSize;
-  DebugLoc LoopLoc = L->getStartLoc();
-  Function *F = L->getHeader()->getParent();
-  LLVMContext &Ctx = F->getContext();
 
   if (ExplicitUnroll && TripCount != 0) {
     // If the loop has an unrolling pragma, we want to be more aggressive with
@@ -813,8 +812,8 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
       }
       if (UP.Count < 2) {
         if (PragmaEnableUnroll)
-          emitOptimizationRemarkMissed(
-              Ctx, DEBUG_TYPE, *F, LoopLoc,
+          ORE->emitOptimizationRemarkMissed(
+              DEBUG_TYPE, L,
               "Unable to unroll loop as directed by unroll(enable) pragma "
               "because unrolled size is too large.");
         UP.Count = 0;
@@ -824,8 +823,8 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
     }
     if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
         UP.Count != TripCount)
-      emitOptimizationRemarkMissed(
-          Ctx, DEBUG_TYPE, *F, LoopLoc,
+      ORE->emitOptimizationRemarkMissed(
+          DEBUG_TYPE, L,
           "Unable to fully unroll loop as directed by unroll pragma because "
           "unrolled size is too large.");
     return ExplicitUnroll;
@@ -833,8 +832,8 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
   assert(TripCount == 0 &&
          "All cases when TripCount is constant should be covered here.");
   if (PragmaFullUnroll)
-    emitOptimizationRemarkMissed(
-        Ctx, DEBUG_TYPE, *F, LoopLoc,
+    ORE->emitOptimizationRemarkMissed(
+        DEBUG_TYPE, L,
         "Unable to fully unroll loop as directed by unroll(full) pragma "
         "because loop has a runtime trip count.");
 
@@ -877,8 +876,8 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
                  << TripMultiple << ".  Reducing unroll count from "
                  << OrigCount << " to " << UP.Count << ".\n");
     if (PragmaCount > 0 && !UP.AllowRemainder)
-      emitOptimizationRemarkMissed(
-          Ctx, DEBUG_TYPE, *F, LoopLoc,
+      ORE->emitOptimizationRemarkMissed(
+          DEBUG_TYPE, L,
           Twine("Unable to unroll loop the number of times directed by "
                 "unroll_count pragma because remainder loop is restricted "
                 "(that could architecture specific or because the loop "
@@ -898,7 +897,8 @@ static bool computeUnrollCount(Loop *L, const TargetTransformInfo &TTI,
 
 static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
                             ScalarEvolution *SE, const TargetTransformInfo &TTI,
-                            AssumptionCache &AC, bool PreserveLCSSA,
+                            AssumptionCache &AC, OptimizationRemarkEmitter &ORE,
+                            bool PreserveLCSSA,
                             Optional<unsigned> ProvidedCount,
                             Optional<unsigned> ProvidedThreshold,
                             Optional<bool> ProvidedAllowPartial,
@@ -963,8 +963,8 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   if (Convergent)
     UP.AllowRemainder = false;
 
-  bool IsCountSetExplicitly = computeUnrollCount(L, TTI, DT, LI, SE, TripCount,
-                                                 TripMultiple, LoopSize, UP);
+  bool IsCountSetExplicitly = computeUnrollCount(
+      L, TTI, DT, LI, SE, &ORE, TripCount, TripMultiple, LoopSize, UP);
   if (!UP.Count)
     return false;
   // Unroll factor (Count) must be less or equal to TripCount.
@@ -974,7 +974,7 @@ static bool tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI,
   // Unroll the loop.
   if (!UnrollLoop(L, UP.Count, TripCount, UP.Force, UP.Runtime,
                   UP.AllowExpensiveTripCount, TripMultiple, LI, SE, &DT, &AC,
-                  PreserveLCSSA))
+                  &ORE, PreserveLCSSA))
     return false;
 
   // If loop has an unroll count pragma or unrolled by explicitly set count
@@ -1014,11 +1014,12 @@ public:
     const TargetTransformInfo &TTI =
         getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
     auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
+    auto &ORE = getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
     bool PreserveLCSSA = mustPreserveAnalysisID(LCSSAID);
 
-    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, PreserveLCSSA, ProvidedCount,
-                           ProvidedThreshold, ProvidedAllowPartial,
-                           ProvidedRuntime);
+    return tryToUnrollLoop(L, DT, LI, SE, TTI, AC, ORE, PreserveLCSSA,
+                           ProvidedCount, ProvidedThreshold,
+                           ProvidedAllowPartial, ProvidedRuntime);
   }
 
   /// This transformation requires natural loop information & requires that
@@ -1068,6 +1069,7 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, AnalysisManager<Loop> &AM) {
   ScalarEvolution *SE = FAM.getCachedResult<ScalarEvolutionAnalysis>(*F);
   auto *TTI = FAM.getCachedResult<TargetIRAnalysis>(*F);
   auto *AC = FAM.getCachedResult<AssumptionAnalysis>(*F);
+  auto *ORE = FAM.getCachedResult<OptimizationRemarkEmitterAnalysis>(*F);
   if (!DT)
     report_fatal_error("LoopUnrollPass: DominatorTreeAnalysis not cached at a higher level");
   if (!LI)
@@ -1078,9 +1080,12 @@ PreservedAnalyses LoopUnrollPass::run(Loop &L, AnalysisManager<Loop> &AM) {
     report_fatal_error("LoopUnrollPass: TargetIRAnalysis not cached at a higher level");
   if (!AC)
     report_fatal_error("LoopUnrollPass: AssumptionAnalysis not cached at a higher level");
+  if (!ORE)
+    report_fatal_error("LoopUnrollPass: OptimizationRemarkEmitterAnalysis not "
+                       "cached at a higher level");
 
   bool Changed = tryToUnrollLoop(
-      &L, *DT, LI, SE, *TTI, *AC, /*PreserveLCSSA*/ true, ProvidedCount,
+      &L, *DT, LI, SE, *TTI, *AC, *ORE, /*PreserveLCSSA*/ true, ProvidedCount,
       ProvidedThreshold, ProvidedAllowPartial, ProvidedRuntime);
 
   if (!Changed)

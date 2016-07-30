@@ -58,6 +58,37 @@ end:
   ret void
 }
 
+; Tests for conditional br.
+; CHECK-LABEL: name: condbr
+; CHECK: body:
+;
+; Entry basic block.
+; CHECK: {{[0-9a-zA-Z._-]+}}:
+;
+; Make sure we have two successors
+; CHECK-NEXT: successors: %[[TRUE:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 50.00%),
+; CHECK:                  %[[FALSE:[0-9a-zA-Z._-]+]]({{0x[a-f0-9]+ / 0x[a-f0-9]+}} = 50.00%)
+;
+; Check that we emit the correct branch.
+; CHECK: [[ADDR:%.*]](64) = COPY %x0
+; CHECK: [[TST:%.*]](1) = G_LOAD { s1, p0 } [[ADDR]]
+; CHECK: G_BRCOND s1 [[TST]], %[[TRUE]]
+; CHECK: G_BR unsized %[[FALSE]]
+;
+; Check that each successor contains the return instruction.
+; CHECK: [[TRUE]]:
+; CHECK-NEXT: RET_ReallyLR
+; CHECK: [[FALSE]]:
+; CHECK-NEXT: RET_ReallyLR
+define void @condbr(i1* %tstaddr) {
+  %tst = load i1, i1* %tstaddr
+  br i1 %tst, label %true, label %false
+true:
+  ret void
+false:
+  ret void
+}
+
 ; Tests for or.
 ; CHECK-LABEL: name: ori64
 ; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
@@ -78,6 +109,29 @@ define i64 @ori64(i64 %arg1, i64 %arg2) {
 ; CHECK-NEXT: RET_ReallyLR implicit %w0
 define i32 @ori32(i32 %arg1, i32 %arg2) {
   %res = or i32 %arg1, %arg2
+  ret i32 %res
+}
+
+; Tests for xor.
+; CHECK-LABEL: name: xori64
+; CHECK: [[ARG1:%[0-9]+]](64) = COPY %x0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](64) = COPY %x1
+; CHECK-NEXT: [[RES:%[0-9]+]](64) = G_XOR s64 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %x0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %x0
+define i64 @xori64(i64 %arg1, i64 %arg2) {
+  %res = xor i64 %arg1, %arg2
+  ret i64 %res
+}
+
+; CHECK-LABEL: name: xori32
+; CHECK: [[ARG1:%[0-9]+]](32) = COPY %w0
+; CHECK-NEXT: [[ARG2:%[0-9]+]](32) = COPY %w1
+; CHECK-NEXT: [[RES:%[0-9]+]](32) = G_XOR s32 [[ARG1]], [[ARG2]]
+; CHECK-NEXT: %w0 = COPY [[RES]]
+; CHECK-NEXT: RET_ReallyLR implicit %w0
+define i32 @xori32(i32 %arg1, i32 %arg2) {
+  %res = xor i32 %arg1, %arg2
   ret i32 %res
 }
 
@@ -197,4 +251,33 @@ define void @store(i64* %addr, i64 addrspace(42)* %addr42, i64 %val1, i64 %val2)
   store i64 %val2, i64 addrspace(42)* %addr42
   %sum = add i64 %val1, %val2
   ret void
+}
+
+; CHECK-LABEL: name: intrinsics
+; CHECK: [[CUR:%[0-9]+]](32) = COPY %w0
+; CHECK: [[BITS:%[0-9]+]](32) = COPY %w1
+; CHECK: [[PTR:%[0-9]+]](64) = G_INTRINSIC { p0, s32 } intrinsic(@llvm.returnaddress), 0
+; CHECK: [[PTR_VEC:%[0-9]+]](64) = G_FRAME_INDEX p0 %stack.0.ptr.vec
+; CHECK: [[VEC:%[0-9]+]](64) = G_LOAD { <8 x s8>, p0 } [[PTR_VEC]]
+; CHECK: G_INTRINSIC_W_SIDE_EFFECTS { unsized, <8 x s8>, <8 x s8>, p0 } intrinsic(@llvm.aarch64.neon.st2), [[VEC]], [[VEC]], [[PTR]]
+; CHECK: RET_ReallyLR
+declare i8* @llvm.returnaddress(i32)
+declare void @llvm.aarch64.neon.st2.v8i8.p0i8(<8 x i8>, <8 x i8>, i8*)
+declare { <8 x i8>, <8 x i8> } @llvm.aarch64.neon.ld2.v8i8.p0v8i8(<8 x i8>*)
+define void @intrinsics(i32 %cur, i32 %bits) {
+  %ptr = call i8* @llvm.returnaddress(i32 0)
+  %ptr.vec = alloca <8 x i8>
+  %vec = load <8 x i8>, <8 x i8>* %ptr.vec
+  call void @llvm.aarch64.neon.st2.v8i8.p0i8(<8 x i8> %vec, <8 x i8> %vec, i8* %ptr)
+  ret void
+}
+
+
+; CHECK-LABEL: name: unreachable
+; CHECK: G_ADD
+; CHECK-NEXT: {{^$}}
+; CHECK-NEXT: ...
+define void @unreachable(i32 %a) {
+  %sum = add i32 %a, %a
+  unreachable
 }

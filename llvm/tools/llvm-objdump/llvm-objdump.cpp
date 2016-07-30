@@ -312,13 +312,14 @@ LLVM_ATTRIBUTE_NORETURN void llvm::report_error(StringRef ArchiveName,
                                                 const object::Archive::Child &C,
                                                 llvm::Error E,
                                                 StringRef ArchitectureName) {
-  ErrorOr<StringRef> NameOrErr = C.getName();
+  Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
   // the index of which archive member this is and or its offset in the
   // archive instead of "???" as the name.
-  if (NameOrErr.getError())
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
     llvm::report_error(ArchiveName, "???", std::move(E), ArchitectureName);
-  else
+  } else
     llvm::report_error(ArchiveName, NameOrErr.get(), std::move(E),
                        ArchitectureName);
 }

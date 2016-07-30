@@ -198,13 +198,14 @@ static void error(llvm::Error E, StringRef FileName, const Archive::Child &C,
   HadError = true;
   errs() << ToolName << ": " << FileName;
 
-  ErrorOr<StringRef> NameOrErr = C.getName();
+  Expected<StringRef> NameOrErr = C.getName();
   // TODO: if we have a error getting the name then it would be nice to print
   // the index of which archive member this is and or its offset in the
   // archive instead of "???" as the name.
-  if (NameOrErr.getError())
+  if (!NameOrErr) {
+    consumeError(NameOrErr.takeError());
     errs() << "(" << "???" << ")";
-  else
+  } else
     errs() << "(" << NameOrErr.get() << ")";
 
   if (!ArchitectureName.empty())
@@ -1099,9 +1100,11 @@ static void dumpSymbolNamesFromFile(std::string &Filename) {
           ErrorOr<Archive::Child> C = I->getMember();
           if (error(C.getError()))
             return;
-          ErrorOr<StringRef> FileNameOrErr = C->getName();
-          if (error(FileNameOrErr.getError()))
+          Expected<StringRef> FileNameOrErr = C->getName();
+          if (!FileNameOrErr) {
+            error(FileNameOrErr.takeError(), Filename);
             return;
+          }
           StringRef SymName = I->getName();
           outs() << SymName << " in " << FileNameOrErr.get() << "\n";
         }

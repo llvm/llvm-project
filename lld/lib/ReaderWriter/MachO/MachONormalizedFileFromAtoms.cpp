@@ -870,10 +870,12 @@ llvm::Error Util::synthesizeDebugNotes(NormalizedFile &file) {
 
       // If newDirPath doesn't end with a '/' we need to add one:
       if (newDirPath.back() != '/') {
-        std::string *p = file.ownedAllocations.Allocate<std::string>();
-        new (p) std::string();
-        *p = (newDirPath + "/").str();
-        newDirPath = *p;
+        char *p =
+          file.ownedAllocations.Allocate<char>(newDirPath.size() + 2);
+        memcpy(p, newDirPath.data(), newDirPath.size());
+        p[newDirPath.size()] = '/';
+        p[newDirPath.size() + 1] = '\0';
+        newDirPath = p;
       }
 
       // New translation unit, emit start SOs:
@@ -881,24 +883,24 @@ llvm::Error Util::synthesizeDebugNotes(NormalizedFile &file) {
       _stabs.push_back(mach_o::Stab(nullptr, N_SO, 0, 0, 0, newFileName));
 
       // Synthesize OSO for start of file.
-      std::string *fullPath = file.ownedAllocations.Allocate<std::string>();
-      new (fullPath) std::string();
+      char *fullPath = nullptr;
       {
         SmallString<1024> pathBuf(atomFile.path());
         if (auto EC = llvm::sys::fs::make_absolute(pathBuf))
           return llvm::errorCodeToError(EC);
-        *fullPath = pathBuf.str();
+        fullPath = file.ownedAllocations.Allocate<char>(pathBuf.size() + 1);
+        memcpy(fullPath, pathBuf.c_str(), pathBuf.size() + 1);
       }
 
       // Get mod time.
       uint32_t modTime = 0;
       llvm::sys::fs::file_status stat;
-      if (!llvm::sys::fs::status(*fullPath, stat))
+      if (!llvm::sys::fs::status(fullPath, stat))
         if (llvm::sys::fs::exists(stat))
           modTime = stat.getLastModificationTime().toEpochTime();
 
       _stabs.push_back(mach_o::Stab(nullptr, N_OSO, _ctx.getCPUSubType(), 1,
-                                    modTime, *fullPath));
+                                    modTime, fullPath));
       // <rdar://problem/6337329> linker should put cpusubtype in n_sect field
       // of nlist entry for N_OSO debug note entries.
       wroteStartSO = true;

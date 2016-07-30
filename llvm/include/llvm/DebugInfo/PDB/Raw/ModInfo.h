@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_PDB_RAW_MODINFO_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamRef.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"
 #include "llvm/Support/Endian.h"
 #include <cstdint>

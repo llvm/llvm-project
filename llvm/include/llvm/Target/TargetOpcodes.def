@@ -168,6 +168,9 @@ HANDLE_TARGET_OPCODE(G_AND)
 /// Generic Bitwise-OR instruction.
 HANDLE_TARGET_OPCODE(G_OR)
 
+/// Generic Bitwise-OR instruction.
+HANDLE_TARGET_OPCODE(G_XOR)
+
 /// Generic instruction to materialize the address of an alloca or other
 /// stack-based object.
 HANDLE_TARGET_OPCODE(G_FRAME_INDEX)
@@ -195,6 +198,15 @@ HANDLE_TARGET_OPCODE(G_LOAD)
 
 /// Generic store.
 HANDLE_TARGET_OPCODE(G_STORE)
+
+/// Generic conditional branch instruction.
+HANDLE_TARGET_OPCODE(G_BRCOND)
+
+/// Generic intrinsic use (without side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC)
+
+/// Generic intrinsic use (with side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC_W_SIDE_EFFECTS)
 
 /// Generic BRANCH instruction. This is an unconditional branch.
 HANDLE_TARGET_OPCODE(G_BR)

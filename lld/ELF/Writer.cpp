@@ -1132,7 +1132,8 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
     // so round up the size to make sure the offsets are correct.
     if (H.p_type == PT_TLS) {
       Out<ELFT>::TlsPhdr = &H;
-      H.p_memsz = alignTo(H.p_memsz, H.p_align);
+      if (H.p_memsz)
+        H.p_memsz = alignTo(H.p_memsz, H.p_align);
     }
   }
 }

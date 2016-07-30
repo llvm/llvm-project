@@ -302,7 +302,7 @@ namespace llvm {
       N_EXT  = 0x01
     };
 
-    enum NListType {
+    enum NListType : uint8_t {
       // Constants for the "n_type & N_TYPE" llvm::MachO::nlist and
       // llvm::MachO::nlist_64
       N_UNDF = 0x0u,

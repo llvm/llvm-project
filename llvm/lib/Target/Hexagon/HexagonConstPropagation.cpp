@@ -2062,7 +2062,7 @@ bool HexagonConstEvaluator::evaluate(const MachineInstr &MI,
     {
       int64_t B = MI.getOperand(2).getImm();
       assert(B >=0 && B < 32);
-      APInt A(32, (1 << B), false);
+      APInt A(32, (1ull << B), false);
       Register R(MI.getOperand(1));
       LatticeCell RC = Outputs.get(DefR.Reg);
       bool Eval = evaluateORri(R, A, Inputs, RC);

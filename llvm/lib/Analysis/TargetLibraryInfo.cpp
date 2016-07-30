@@ -23,8 +23,9 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                           "No vector functions library"),
                clEnumValN(TargetLibraryInfoImpl::Accelerate, "Accelerate",
                           "Accelerate framework"),
+               clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
+                          "Intel SVML library"),
                clEnumValEnd));
-
 
 const char *const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] = {
 #define TLI_DEFINE_STRING
@@ -643,6 +644,7 @@ bool TargetLibraryInfoImpl::isValidProtoForLibFunc(const FunctionType &FTy,
       return false;
   // fallthrough
   case LibFunc::memcpy:
+  case LibFunc::mempcpy:
   case LibFunc::memmove:
     return (NumParams == 3 && FTy.getReturnType() == FTy.getParamType(0) &&
             FTy.getParamType(0)->isPointerTy() &&
@@ -1071,6 +1073,75 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
         {"asinhf", "vasinhf", 4},
         {"acoshf", "vacoshf", 4},
         {"atanhf", "vatanhf", 4},
+    };
+    addVectorizableFunctions(VecFuncs);
+    break;
+  }
+  case SVML: {
+    const VecDesc VecFuncs[] = {
+        {"sin", "__svml_sin2", 2},
+        {"sin", "__svml_sin4", 4},
+        {"sin", "__svml_sin8", 8},
+
+        {"sinf", "__svml_sinf4", 4},
+        {"sinf", "__svml_sinf8", 8},
+        {"sinf", "__svml_sinf16", 16},
+
+        {"cos", "__svml_cos2", 2},
+        {"cos", "__svml_cos4", 4},
+        {"cos", "__svml_cos8", 8},
+
+        {"cosf", "__svml_cosf4", 4},
+        {"cosf", "__svml_cosf8", 8},
+        {"cosf", "__svml_cosf16", 16},
+
+        {"pow", "__svml_pow2", 2},
+        {"pow", "__svml_pow4", 4},
+        {"pow", "__svml_pow8", 8},
+
+        {"powf", "__svml_powf4", 4},
+        {"powf", "__svml_powf8", 8},
+        {"powf", "__svml_powf16", 16},
+
+        {"llvm.pow.f64", "__svml_pow2", 2},
+        {"llvm.pow.f64", "__svml_pow4", 4},
+        {"llvm.pow.f64", "__svml_pow8", 8},
+
+        {"llvm.pow.f32", "__svml_powf4", 4},
+        {"llvm.pow.f32", "__svml_powf8", 8},
+        {"llvm.pow.f32", "__svml_powf16", 16},
+
+        {"exp", "__svml_exp2", 2},
+        {"exp", "__svml_exp4", 4},
+        {"exp", "__svml_exp8", 8},
+
+        {"expf", "__svml_expf4", 4},
+        {"expf", "__svml_expf8", 8},
+        {"expf", "__svml_expf16", 16},
+
+        {"llvm.exp.f64", "__svml_exp2", 2},
+        {"llvm.exp.f64", "__svml_exp4", 4},
+        {"llvm.exp.f64", "__svml_exp8", 8},
+
+        {"llvm.exp.f32", "__svml_expf4", 4},
+        {"llvm.exp.f32", "__svml_expf8", 8},
+        {"llvm.exp.f32", "__svml_expf16", 16},
+
+        {"log", "__svml_log2", 2},
+        {"log", "__svml_log4", 4},
+        {"log", "__svml_log8", 8},
+
+        {"logf", "__svml_logf4", 4},
+        {"logf", "__svml_logf8", 8},
+        {"logf", "__svml_logf16", 16},
+
+        {"llvm.log.f64", "__svml_log2", 2},
+        {"llvm.log.f64", "__svml_log4", 4},
+        {"llvm.log.f64", "__svml_log8", 8},
+
+        {"llvm.log.f32", "__svml_logf4", 4},
+        {"llvm.log.f32", "__svml_logf8", 8},
+        {"llvm.log.f32", "__svml_logf16", 16},
     };
     addVectorizableFunctions(VecFuncs);
     break;

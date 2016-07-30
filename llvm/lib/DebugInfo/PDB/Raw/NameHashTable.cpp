@@ -10,7 +10,7 @@
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 #include "llvm/DebugInfo/PDB/Raw/Hash.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 #include "llvm/Support/Endian.h"

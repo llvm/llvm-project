@@ -123,6 +123,16 @@ public:
 
   LogicalDylibResources& getDylibResources() { return DylibResources; }
 
+  LogicalModuleResources*
+  getLogicalModuleResourcesForSymbol(const std::string &Name,
+                                     bool ExportedSymbolsOnly) {
+    for (auto LMI = LogicalModules.begin(), LME = LogicalModules.end();
+         LMI != LME; ++LMI)
+      if (auto Sym = LMI->Resources.findSymbol(Name, ExportedSymbolsOnly))
+        return &LMI->Resources;
+    return nullptr;
+  }
+
 protected:
   BaseLayerT BaseLayer;
   LogicalModuleList LogicalModules;

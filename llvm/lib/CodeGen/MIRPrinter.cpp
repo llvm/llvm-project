@@ -27,6 +27,7 @@
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/MC/MCSymbol.h"
@@ -34,6 +35,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Target/TargetIntrinsicInfo.h"
 #include "llvm/Target/TargetSubtargetInfo.h"
 
 using namespace llvm;
@@ -869,6 +871,17 @@ void MIPrinter::print(const MachineOperand &Op, const TargetRegisterInfo *TRI,
   case MachineOperand::MO_CFIIndex: {
     const auto &MMI = Op.getParent()->getParent()->getParent()->getMMI();
     print(MMI.getFrameInstructions()[Op.getCFIIndex()], TRI);
+    break;
+  }
+  case MachineOperand::MO_IntrinsicID: {
+    Intrinsic::ID ID = Op.getIntrinsicID();
+    if (ID < Intrinsic::num_intrinsics)
+      OS << "intrinsic(@" << Intrinsic::getName(ID) << ')';
+    else {
+      const MachineFunction &MF = *Op.getParent()->getParent()->getParent();
+      const TargetIntrinsicInfo *TII = MF.getTarget().getIntrinsicInfo();
+      OS << "intrinsic(@" << TII->getName(ID) << ')';
+    }
     break;
   }
   }

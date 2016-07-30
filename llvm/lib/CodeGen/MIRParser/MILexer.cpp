@@ -211,6 +211,7 @@ static MIToken::TokenKind getIdentifierKind(StringRef Identifier) {
       .Case("def_cfa_offset", MIToken::kw_cfi_def_cfa_offset)
       .Case("def_cfa", MIToken::kw_cfi_def_cfa)
       .Case("blockaddress", MIToken::kw_blockaddress)
+      .Case("intrinsic", MIToken::kw_intrinsic)
       .Case("target-index", MIToken::kw_target_index)
       .Case("half", MIToken::kw_half)
       .Case("float", MIToken::kw_float)

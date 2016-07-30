@@ -2001,7 +2001,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
       // this restriction.
       if (Load || Store) {
         int TFI = Load ? LFI : SFI;
-        unsigned AM = HII.getAddrMode(&In);
+        unsigned AM = HII.getAddrMode(In);
         SlotInfo &SI = FIRangeMap[TFI];
         bool Bad = (AM != HexagonII::BaseImmOffset);
         if (!Bad) {
@@ -2016,7 +2016,7 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         }
         if (!Bad) {
           // Check sizes.
-          unsigned S = (1U << (HII.getMemAccessSize(&In) - 1));
+          unsigned S = (1U << (HII.getMemAccessSize(In) - 1));
           if (SI.Size != 0 && SI.Size != S)
             Bad = true;
           else
@@ -2166,15 +2166,15 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
         if (!IndexType::isInstr(Range.start()) ||
             !IndexType::isInstr(Range.end()))
           continue;
-        MachineInstr *SI = IM.getInstr(Range.start());
-        MachineInstr *EI = IM.getInstr(Range.end());
-        assert(SI->mayStore() && "Unexpected start instruction");
-        assert(EI->mayLoad() && "Unexpected end instruction");
-        MachineOperand &SrcOp = SI->getOperand(2);
+        MachineInstr &SI = *IM.getInstr(Range.start());
+        MachineInstr &EI = *IM.getInstr(Range.end());
+        assert(SI.mayStore() && "Unexpected start instruction");
+        assert(EI.mayLoad() && "Unexpected end instruction");
+        MachineOperand &SrcOp = SI.getOperand(2);
 
         HexagonBlockRanges::RegisterRef SrcRR = { SrcOp.getReg(),
                                                   SrcOp.getSubReg() };
-        auto *RC = HII.getRegClass(SI->getDesc(), 2, &HRI, MF);
+        auto *RC = HII.getRegClass(SI.getDesc(), 2, &HRI, MF);
         // The this-> is needed to unconfuse MSVC.
         unsigned FoundR = this->findPhysReg(MF, Range, IM, DM, RC);
         DEBUG(dbgs() << "Replacement reg:" << PrintReg(FoundR, &HRI) << '\n');
@@ -2189,10 +2189,10 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
 #endif
 
         // Generate the copy-in: "FoundR = COPY SrcR" at the store location.
-        MachineBasicBlock::iterator StartIt = SI, NextIt;
+        MachineBasicBlock::iterator StartIt = SI.getIterator(), NextIt;
         MachineInstr *CopyIn = nullptr;
         if (SrcRR.Reg != FoundR || SrcRR.Sub != 0) {
-          const DebugLoc &DL = SI->getDebugLoc();
+          const DebugLoc &DL = SI.getDebugLoc();
           CopyIn = BuildMI(B, StartIt, DL, HII.get(TargetOpcode::COPY), FoundR)
                       .addOperand(SrcOp);
         }
@@ -2209,33 +2209,33 @@ void HexagonFrameLowering::optimizeSpillSlots(MachineFunction &MF,
           // We are keeping this register live.
           SrcOp.setIsKill(false);
         } else {
-          B.erase(SI);
-          IM.replaceInstr(SI, CopyIn);
+          B.erase(&SI);
+          IM.replaceInstr(&SI, CopyIn);
         }
 
-        auto EndIt = std::next(MachineBasicBlock::iterator(EI));
+        auto EndIt = std::next(EI.getIterator());
         for (auto It = StartIt; It != EndIt; It = NextIt) {
-          MachineInstr *MI = &*It;
+          MachineInstr &MI = *It;
           NextIt = std::next(It);
           int TFI;
-          if (!HII.isLoadFromStackSlot(*MI, TFI) || TFI != FI)
+          if (!HII.isLoadFromStackSlot(MI, TFI) || TFI != FI)
             continue;
-          unsigned DstR = MI->getOperand(0).getReg();
-          assert(MI->getOperand(0).getSubReg() == 0);
+          unsigned DstR = MI.getOperand(0).getReg();
+          assert(MI.getOperand(0).getSubReg() == 0);
           MachineInstr *CopyOut = nullptr;
           if (DstR != FoundR) {
-            DebugLoc DL = MI->getDebugLoc();
+            DebugLoc DL = MI.getDebugLoc();
             unsigned MemSize = (1U << (HII.getMemAccessSize(MI) - 1));
             assert(HII.getAddrMode(MI) == HexagonII::BaseImmOffset);
             unsigned CopyOpc = TargetOpcode::COPY;
-            if (HII.isSignExtendingLoad(*MI))
+            if (HII.isSignExtendingLoad(MI))
               CopyOpc = (MemSize == 1) ? Hexagon::A2_sxtb : Hexagon::A2_sxth;
-            else if (HII.isZeroExtendingLoad(*MI))
+            else if (HII.isZeroExtendingLoad(MI))
               CopyOpc = (MemSize == 1) ? Hexagon::A2_zxtb : Hexagon::A2_zxth;
             CopyOut = BuildMI(B, It, DL, HII.get(CopyOpc), DstR)
-                        .addReg(FoundR, getKillRegState(MI == EI));
+                        .addReg(FoundR, getKillRegState(&MI == &EI));
           }
-          IM.replaceInstr(MI, CopyOut);
+          IM.replaceInstr(&MI, CopyOut);
           B.erase(It);
         }
 

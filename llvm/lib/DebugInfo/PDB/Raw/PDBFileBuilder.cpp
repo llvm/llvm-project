@@ -11,9 +11,9 @@
 
 #include "llvm/ADT/BitVector.h"
 
-#include "llvm/DebugInfo/Msf/MsfBuilder.h"
-#include "llvm/DebugInfo/Msf/StreamInterface.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/MSFBuilder.h"
+#include "llvm/DebugInfo/MSF/StreamInterface.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStreamBuilder.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
@@ -31,20 +31,20 @@ PDBFileBuilder::PDBFileBuilder(BumpPtrAllocator &Allocator)
 
 Error PDBFileBuilder::initialize(const msf::SuperBlock &Super) {
   auto ExpectedMsf =
-      MsfBuilder::create(Allocator, Super.BlockSize, Super.NumBlocks);
+      MSFBuilder::create(Allocator, Super.BlockSize, Super.NumBlocks);
   if (!ExpectedMsf)
     return ExpectedMsf.takeError();
 
   auto &MsfResult = *ExpectedMsf;
   if (auto EC = MsfResult.setBlockMapAddr(Super.BlockMapAddr))
     return EC;
-  Msf = llvm::make_unique<MsfBuilder>(std::move(MsfResult));
+  Msf = llvm::make_unique<MSFBuilder>(std::move(MsfResult));
   Msf->setFreePageMap(Super.FreeBlockMapBlock);
   Msf->setUnknown1(Super.Unknown1);
   return Error::success();
 }
 
-MsfBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
+MSFBuilder &PDBFileBuilder::getMsfBuilder() { return *Msf; }
 
 InfoStreamBuilder &PDBFileBuilder::getInfoBuilder() {
   if (!Info)
@@ -58,7 +58,7 @@ DbiStreamBuilder &PDBFileBuilder::getDbiBuilder() {
   return *Dbi;
 }
 
-Expected<msf::MsfLayout> PDBFileBuilder::finalizeMsfLayout() const {
+Expected<msf::MSFLayout> PDBFileBuilder::finalizeMsfLayout() const {
   if (Info) {
     uint32_t Length = Info->calculateSerializedLength();
     if (auto EC = Msf->setStreamSize(StreamPDB, Length))

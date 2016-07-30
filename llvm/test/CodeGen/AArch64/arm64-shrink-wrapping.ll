@@ -508,8 +508,7 @@ declare i32 @someVariadicFunc(i32, ...)
 ; CHECK-LABEL: noreturn:
 ; DISABLE: stp
 ;
-; CHECK: and [[TEST:w[0-9]+]], w0, #0xff
-; CHECK-NEXT: cbnz [[TEST]], [[ABORT:LBB[0-9_]+]]
+; CHECK: cbnz w0, [[ABORT:LBB[0-9_]+]]
 ;
 ; CHECK: mov w0, #42
 ;
