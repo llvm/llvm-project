@@ -3209,7 +3209,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
 
   // The struct.
   C = llvm::ConstantStruct::get(STy, Fields);
-  GV = new llvm::GlobalVariable(getModule(), C->getType(), true,
+  GV = new llvm::GlobalVariable(getModule(), C->getType(), /*isConstant=*/false,
                                 llvm::GlobalVariable::PrivateLinkage, C,
                                 "_unnamed_cfstring_");
   GV->setAlignment(Alignment.getQuantity());
