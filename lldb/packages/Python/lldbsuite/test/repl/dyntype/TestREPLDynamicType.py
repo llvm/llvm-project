@@ -21,4 +21,4 @@ class REPLDynamicTypeTestCase (REPLTest):
     mydir = REPLTest.compute_mydir(__file__)
 
     def doTest(self):
-        self.command('(1).dynamicType', patterns=['\\$R0: Int.Type = Int'])
+        self.command('type(of: 1)', patterns=['\\$R0: Int.Type = Int'])
