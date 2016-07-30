@@ -23,6 +23,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/raw_ostream.h"
 #include "isl/constraint.h"
 #include "isl/map.h"
 #include "isl/printer.h"
@@ -96,6 +97,14 @@ struct JSONImporter : public ScopPass {
   /// @returns True if the import succeeded, otherwise False.
   bool importSchedule(Scop &S, Json::Value &JScop, const Dependences &D);
 
+  /// Import new arrays from JScop.
+  ///
+  /// @param S The scop to update.
+  /// @param JScop The JScop file describing new arrays.
+  ///
+  /// @returns True if the import succeeded, otherwise False.
+  bool importArrays(Scop &S, Json::Value &JScop);
+
   /// Import new memory accesses from JScop.
   ///
   /// @param S The scop to update.
@@ -127,6 +136,35 @@ std::string JSONExporter::getFileName(Scop &S) const {
 
 void JSONExporter::printScop(raw_ostream &OS, Scop &S) const { S.print(OS); }
 
+/// Export all arrays from the Scop.
+///
+/// @param S The Scop containing the arrays.
+///
+/// @returns Json::Value containing the arrays.
+Json::Value exportArrays(const Scop &S) {
+  Json::Value Arrays;
+  std::string Buffer;
+  llvm::raw_string_ostream RawStringOstream(Buffer);
+
+  for (auto &SAI : S.arrays()) {
+    if (!SAI->isArrayKind())
+      continue;
+
+    Json::Value Array;
+    Array["name"] = SAI->getName();
+    for (unsigned i = 1; i < SAI->getNumberOfDimensions(); i++) {
+      SAI->getDimensionSize(i)->print(RawStringOstream);
+      Array["sizes"].append(RawStringOstream.str());
+      Buffer.clear();
+    }
+    SAI->getElementType()->print(RawStringOstream);
+    Array["type"] = RawStringOstream.str();
+    Buffer.clear();
+    Arrays.append(Array);
+  }
+  return Arrays;
+}
+
 Json::Value JSONExporter::getJSON(Scop &S) const {
   Json::Value root;
   unsigned LineBegin, LineEnd;
@@ -142,6 +180,9 @@ Json::Value JSONExporter::getJSON(Scop &S) const {
   root["context"] = S.getContextStr();
   if (LineBegin != (unsigned)-1)
     root["location"] = Location;
+
+  root["arrays"] = exportArrays(S);
+
   root["statements"];
 
   for (ScopStmt &Stmt : S) {
@@ -305,8 +346,28 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
         return false;
       }
 
-      isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
-      NewAccessMap = isl_map_set_tuple_id(NewAccessMap, isl_dim_out, OutId);
+      isl_id *NewOutId;
+
+      if (MA->isArrayKind()) {
+        NewOutId = isl_map_get_tuple_id(NewAccessMap, isl_dim_out);
+        auto *SAI = S.getArrayInfoByName(isl_id_get_name(NewOutId));
+        isl_id *OutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
+        auto *OutSAI = ScopArrayInfo::getFromId(OutId);
+        if (!SAI || SAI->getElementType() != OutSAI->getElementType()) {
+          errs() << "JScop file contains access function with undeclared "
+                    "ScopArrayInfo\n";
+          isl_map_free(CurrentAccessMap);
+          isl_map_free(NewAccessMap);
+          isl_id_free(NewOutId);
+          return false;
+        }
+        isl_id_free(NewOutId);
+        NewOutId = SAI->getBasePtrId();
+      } else {
+        NewOutId = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_out);
+      }
+
+      NewAccessMap = isl_map_set_tuple_id(NewAccessMap, isl_dim_out, NewOutId);
 
       if (MA->isArrayKind()) {
         // We keep the old alignment, thus we cannot allow accesses to memory
@@ -354,16 +415,18 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       isl_id *Id = isl_map_get_tuple_id(CurrentAccessMap, isl_dim_in);
       NewAccessMap = isl_map_set_tuple_id(NewAccessMap, isl_dim_in, Id);
 
-      if (!isl_map_has_equal_space(CurrentAccessMap, NewAccessMap)) {
+      auto NewAccessDomain = isl_map_domain(isl_map_copy(NewAccessMap));
+      auto CurrentAccessDomain = isl_map_domain(isl_map_copy(CurrentAccessMap));
+
+      if (!isl_set_has_equal_space(NewAccessDomain, CurrentAccessDomain)) {
         errs() << "JScop file contains access function with incompatible "
                << "dimensions\n";
         isl_map_free(CurrentAccessMap);
         isl_map_free(NewAccessMap);
+        isl_set_free(NewAccessDomain);
+        isl_set_free(CurrentAccessDomain);
         return false;
       }
-
-      auto NewAccessDomain = isl_map_domain(isl_map_copy(NewAccessMap));
-      auto CurrentAccessDomain = isl_map_domain(isl_map_copy(CurrentAccessMap));
 
       NewAccessDomain =
           isl_set_intersect_params(NewAccessDomain, S.getContext());
@@ -395,6 +458,95 @@ bool JSONImporter::importAccesses(Scop &S, Json::Value &JScop,
       MemoryAccessIdx++;
     }
     StatementIdx++;
+  }
+
+  return true;
+}
+
+/// @brief Check whether @p SAI and @p Array represent the same array.
+bool areArraysEqual(ScopArrayInfo *SAI, Json::Value Array) {
+  std::string Buffer;
+  llvm::raw_string_ostream RawStringOstream(Buffer);
+
+  if (SAI->getName() != Array["name"].asCString())
+    return false;
+
+  if (SAI->getNumberOfDimensions() != Array["sizes"].size() + 1)
+    return false;
+
+  for (unsigned i = 0; i < Array["sizes"].size(); i++) {
+    SAI->getDimensionSize(i + 1)->print(RawStringOstream);
+    if (RawStringOstream.str() != Array["sizes"][i].asCString())
+      return false;
+    Buffer.clear();
+  }
+
+  SAI->getElementType()->print(RawStringOstream);
+  if (RawStringOstream.str() != Array["type"].asCString())
+    return false;
+
+  return true;
+}
+
+/// @brief Get the accepted primitive type from its textual representation
+///        @p TypeTextRepresentation.
+///
+/// @param TypeTextRepresentation The textual representation of the type.
+/// @return The pointer to the primitive type, if this type is accepted
+///         or nullptr otherwise.
+Type *parseTextType(const std::string &TypeTextRepresentation,
+                    LLVMContext &LLVMContext) {
+  std::map<std::string, Type *> MapStrToType = {
+      {"void", Type::getVoidTy(LLVMContext)},
+      {"half", Type::getHalfTy(LLVMContext)},
+      {"float", Type::getFloatTy(LLVMContext)},
+      {"double", Type::getDoubleTy(LLVMContext)},
+      {"x86_fp80", Type::getX86_FP80Ty(LLVMContext)},
+      {"fp128", Type::getFP128Ty(LLVMContext)},
+      {"ppc_fp128", Type::getPPC_FP128Ty(LLVMContext)},
+      {"i1", Type::getInt1Ty(LLVMContext)},
+      {"i8", Type::getInt8Ty(LLVMContext)},
+      {"i16", Type::getInt16Ty(LLVMContext)},
+      {"i32", Type::getInt32Ty(LLVMContext)},
+      {"i64", Type::getInt64Ty(LLVMContext)},
+      {"i128", Type::getInt128Ty(LLVMContext)}};
+
+  auto It = MapStrToType.find(TypeTextRepresentation);
+  if (It != MapStrToType.end())
+    return It->second;
+
+  errs() << "Textual representation can not be parsed: "
+         << TypeTextRepresentation << "\n";
+  return nullptr;
+}
+
+bool JSONImporter::importArrays(Scop &S, Json::Value &JScop) {
+  Json::Value Arrays = JScop["arrays"];
+
+  if (Arrays.size() == 0)
+    return true;
+
+  unsigned ArrayIdx = 0;
+  for (auto &SAI : S.arrays()) {
+    if (!SAI->isArrayKind())
+      continue;
+    if (ArrayIdx + 1 > Arrays.size())
+      return false;
+    if (!areArraysEqual(SAI, Arrays[ArrayIdx]))
+      return false;
+    ArrayIdx++;
+  }
+
+  for (; ArrayIdx < Arrays.size(); ArrayIdx++) {
+    auto *ElementType = parseTextType(Arrays[ArrayIdx]["type"].asCString(),
+                                      S.getSE()->getContext());
+    if (!ElementType)
+      return false;
+    std::vector<unsigned> DimSizes;
+    for (unsigned i = 0; i < Arrays[ArrayIdx]["sizes"].size(); i++)
+      DimSizes.push_back(std::stoi(Arrays[ArrayIdx]["sizes"][i].asCString()));
+    S.createScopArrayInfo(ElementType, Arrays[ArrayIdx]["name"].asCString(),
+                          DimSizes);
   }
 
   return true;
@@ -435,6 +587,11 @@ bool JSONImporter::runOnScop(Scop &S) {
     return false;
 
   Success = importSchedule(S, jscop, D);
+
+  if (!Success)
+    return false;
+
+  Success = importArrays(S, jscop);
 
   if (!Success)
     return false;

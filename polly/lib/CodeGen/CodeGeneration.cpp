@@ -189,6 +189,7 @@ public:
 
       isl_ast_node_free(AstRoot);
     } else {
+      NodeBuilder.allocateNewArrays();
 
       NodeBuilder.addParameters(S.getContext());
 

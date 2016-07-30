@@ -1157,6 +1157,32 @@ bool IslNodeBuilder::preloadInvariantEquivClass(
   return true;
 }
 
+void IslNodeBuilder::allocateNewArrays() {
+  for (auto &SAI : S.arrays()) {
+    if (SAI->getBasePtr())
+      continue;
+
+    Type *NewArrayType = nullptr;
+    for (unsigned i = SAI->getNumberOfDimensions() - 1; i >= 1; i--) {
+      auto *DimSize = SAI->getDimensionSize(i);
+      unsigned UnsignedDimSize = static_cast<const SCEVConstant *>(DimSize)
+                                     ->getAPInt()
+                                     .getLimitedValue();
+
+      if (!NewArrayType)
+        NewArrayType = SAI->getElementType();
+
+      NewArrayType = ArrayType::get(NewArrayType, UnsignedDimSize);
+    }
+
+    auto InstIt =
+        Builder.GetInsertBlock()->getParent()->getEntryBlock().getTerminator();
+    Value *CreatedArray =
+        new AllocaInst(NewArrayType, SAI->getName(), &*InstIt);
+    SAI->setBasePtr(CreatedArray);
+  }
+}
+
 bool IslNodeBuilder::preloadInvariantLoads() {
 
   auto &InvariantEquivClasses = S.getInvariantAccesses();
