@@ -11,7 +11,7 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBTPISTREAM_H
 
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/RawConstants.h"
 #include "llvm/DebugInfo/PDB/Raw/RawTypes.h"

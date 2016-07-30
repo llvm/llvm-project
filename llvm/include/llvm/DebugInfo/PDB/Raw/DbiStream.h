@@ -11,9 +11,9 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBDBISTREAM_H
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamRef.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/DebugInfo/PDB/PDBTypes.h"
 #include "llvm/DebugInfo/PDB/Raw/ModInfo.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"

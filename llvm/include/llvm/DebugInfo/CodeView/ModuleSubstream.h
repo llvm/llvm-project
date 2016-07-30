@@ -11,8 +11,8 @@
 #define LLVM_DEBUGINFO_CODEVIEW_MODULESUBSTREAM_H
 
 #include "llvm/DebugInfo/CodeView/CodeView.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamRef.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 

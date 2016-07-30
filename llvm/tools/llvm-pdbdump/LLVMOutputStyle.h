@@ -26,6 +26,7 @@ public:
 private:
   Error dumpFileHeaders();
   Error dumpStreamSummary();
+  Error dumpFreePageMap();
   Error dumpStreamBlocks();
   Error dumpStreamData();
   Error dumpInfoStream();

@@ -409,8 +409,8 @@ static void performReadOperation(ArchiveOperation Operation,
   {
     Error Err;
     for (auto &C : OldArchive->children(Err)) {
-      ErrorOr<StringRef> NameOrErr = C.getName();
-      failIfError(NameOrErr.getError());
+      Expected<StringRef> NameOrErr = C.getName();
+      failIfError(NameOrErr.takeError());
       StringRef Name = NameOrErr.get();
 
       if (Filter) {
@@ -537,8 +537,8 @@ computeNewArchiveMembers(ArchiveOperation Operation,
     Error Err;
     for (auto &Child : OldArchive->children(Err)) {
       int Pos = Ret.size();
-      ErrorOr<StringRef> NameOrErr = Child.getName();
-      failIfError(NameOrErr.getError());
+      Expected<StringRef> NameOrErr = Child.getName();
+      failIfError(NameOrErr.takeError());
       StringRef Name = NameOrErr.get();
       if (Name == PosName) {
         assert(AddAfter || AddBefore);

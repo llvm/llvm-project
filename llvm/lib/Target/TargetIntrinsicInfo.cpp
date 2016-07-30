@@ -22,7 +22,7 @@ TargetIntrinsicInfo::TargetIntrinsicInfo() {
 TargetIntrinsicInfo::~TargetIntrinsicInfo() {
 }
 
-unsigned TargetIntrinsicInfo::getIntrinsicID(Function *F) const {
+unsigned TargetIntrinsicInfo::getIntrinsicID(const Function *F) const {
   const ValueName *ValName = F->getValueName();
   if (!ValName)
     return 0;

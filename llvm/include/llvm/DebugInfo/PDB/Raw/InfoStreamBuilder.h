@@ -43,7 +43,7 @@ public:
   Expected<std::unique_ptr<InfoStream>>
   build(PDBFile &File, const msf::WritableStream &Buffer);
 
-  Error commit(const msf::MsfLayout &Layout,
+  Error commit(const msf::MSFLayout &Layout,
                const msf::WritableStream &Buffer) const;
 
 private:

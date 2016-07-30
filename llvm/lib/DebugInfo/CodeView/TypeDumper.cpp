@@ -12,7 +12,7 @@
 #include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
-#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/Support/ScopedPrinter.h"
 
 using namespace llvm;

@@ -10,10 +10,10 @@
 #include "llvm/DebugInfo/PDB/Raw/PDBFile.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamInterface.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamInterface.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Raw/InfoStream.h"
 #include "llvm/DebugInfo/PDB/Raw/NameHashTable.h"
@@ -104,6 +104,7 @@ Error PDBFile::setBlockData(uint32_t BlockIndex, uint32_t Offset,
 Error PDBFile::parseFileHeaders() {
   StreamReader Reader(*Buffer);
 
+  // Initialize SB.
   const msf::SuperBlock *SB = nullptr;
   if (auto EC = Reader.readObject(SB)) {
     consumeError(std::move(EC));
@@ -118,6 +119,16 @@ Error PDBFile::parseFileHeaders() {
     return make_error<RawError>(raw_error_code::corrupt_file,
                                 "File size is not a multiple of block size");
   ContainerLayout.SB = SB;
+
+  // Initialize Free Page Map.
+  ContainerLayout.FreePageMap.resize(getBlockSize() * 8);
+  uint64_t FPMOffset = SB->FreeBlockMapBlock * getBlockSize();
+  ArrayRef<uint8_t> FPMBlock;
+  if (auto EC = Buffer->readBytes(FPMOffset, getBlockSize(), FPMBlock))
+    return EC;
+  for (uint32_t I = 0, E = getBlockSize() * 8; I != E; ++I)
+    if (FPMBlock[I / 8] & (1 << (I % 8)))
+      ContainerLayout.FreePageMap[I] = true;
 
   Reader.setOffset(getBlockMapOffset());
   if (auto EC = Reader.readArray(ContainerLayout.DirectoryBlocks,

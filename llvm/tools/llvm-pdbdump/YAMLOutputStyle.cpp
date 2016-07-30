@@ -53,7 +53,7 @@ Error YAMLOutputStyle::dumpFileHeaders() {
   if (opts::pdb2yaml::NoFileHeaders)
     return Error::success();
 
-  yaml::MsfHeaders Headers;
+  yaml::MSFHeaders Headers;
   Obj.Headers.emplace();
   Obj.Headers->SuperBlock.NumBlocks = File.getBlockCount();
   Obj.Headers->SuperBlock.BlockMapAddr = File.getBlockMapIndex();

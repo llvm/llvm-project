@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/PDB/Raw/NameMapBuilder.h"
 
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/Support/Endian.h"
 

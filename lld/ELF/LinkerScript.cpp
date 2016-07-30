@@ -799,13 +799,19 @@ std::vector<uint8_t> ScriptParser::readOutputSectionFiller() {
   StringRef Tok = peek();
   if (!Tok.startswith("="))
     return {};
-  if (!Tok.startswith("=0x")) {
-    setError("filler should be a hexadecimal value");
+  next();
+  if (Tok.startswith("=0x"))
+    return parseHex(Tok.substr(3));
+
+  // This must be a decimal.
+  unsigned int Value;
+  if (Tok.substr(1).getAsInteger(10, Value)) {
+    setError("filler should be a decimal/hexadecimal value");
     return {};
   }
-  Tok = Tok.substr(3);
-  next();
-  return parseHex(Tok);
+  if (Value > 255)
+    setError("only single bytes decimal are supported for the filler now");
+  return {static_cast<unsigned char>(Value)};
 }
 
 void ScriptParser::readProvide(bool Hidden) {

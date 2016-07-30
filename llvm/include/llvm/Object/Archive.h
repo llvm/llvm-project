@@ -36,7 +36,10 @@ public:
   // ArchiveMemberHeader() = default;
 
   /// Get the name without looking up long names.
-  llvm::StringRef getName() const;
+  Expected<llvm::StringRef> getRawName() const;
+
+  /// Get the name looking up long names.
+  Expected<llvm::StringRef> getName(uint64_t Size) const;
 
   /// Members are not larger than 4GB.
   Expected<uint32_t> getSize() const;
@@ -82,7 +85,7 @@ public:
     /// \brief Offset from Data to the start of the file.
     uint16_t StartOfFile;
 
-    bool isThinMember() const;
+    Expected<bool> isThinMember() const;
 
   public:
     Child(const Archive *Parent, const char *Start, Error *Err);
@@ -96,9 +99,9 @@ public:
     const Archive *getParent() const { return Parent; }
     Expected<Child> getNext() const;
 
-    ErrorOr<StringRef> getName() const;
+    Expected<StringRef> getName() const;
     ErrorOr<std::string> getFullName() const;
-    StringRef getRawName() const { return Header.getName(); }
+    Expected<StringRef> getRawName() const { return Header.getRawName(); }
     sys::TimeValue getLastModified() const {
       return Header.getLastModified();
     }
@@ -118,7 +121,7 @@ public:
     ErrorOr<StringRef> getBuffer() const;
     uint64_t getChildOffset() const;
 
-    ErrorOr<MemoryBufferRef> getMemoryBufferRef() const;
+    Expected<MemoryBufferRef> getMemoryBufferRef() const;
 
     Expected<std::unique_ptr<Binary>>
     getAsBinary(LLVMContext *Context = nullptr) const;
@@ -238,6 +241,7 @@ public:
 
   bool hasSymbolTable() const;
   StringRef getSymbolTable() const { return SymbolTable; }
+  StringRef getStringTable() const { return StringTable; }
   uint32_t getNumberOfSymbols() const;
 
   std::vector<std::unique_ptr<MemoryBuffer>> takeThinBuffers() {

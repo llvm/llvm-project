@@ -535,8 +535,8 @@ SITargetLowering::getPreferredVectorAction(EVT VT) const {
 
 bool SITargetLowering::shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                                          Type *Ty) const {
-  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
-  return TII->isInlineConstant(Imm);
+  // FIXME: Could be smarter if called for vector constants.
+  return true;
 }
 
 bool SITargetLowering::isTypeDesirableForOp(unsigned Op, EVT VT) const {

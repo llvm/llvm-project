@@ -155,19 +155,19 @@ void HexagonSubtarget::HexagonDAGMutation::apply(ScheduleDAGInstrs *DAG) {
     // Update the latency of chain edges between v60 vector load or store
     // instructions to be 1. These instructions cannot be scheduled in the
     // same packet.
-    MachineInstr *MI1 = SU.getInstr();
+    MachineInstr &MI1 = *SU.getInstr();
     auto *QII = static_cast<const HexagonInstrInfo*>(DAG->TII);
-    bool IsStoreMI1 = MI1->mayStore();
-    bool IsLoadMI1 = MI1->mayLoad();
+    bool IsStoreMI1 = MI1.mayStore();
+    bool IsLoadMI1 = MI1.mayLoad();
     if (!QII->isV60VectorInstruction(MI1) || !(IsStoreMI1 || IsLoadMI1))
       continue;
     for (auto &SI : SU.Succs) {
       if (SI.getKind() != SDep::Order || SI.getLatency() != 0)
         continue;
-      MachineInstr *MI2 = SI.getSUnit()->getInstr();
+      MachineInstr &MI2 = *SI.getSUnit()->getInstr();
       if (!QII->isV60VectorInstruction(MI2))
         continue;
-      if ((IsStoreMI1 && MI2->mayStore()) || (IsLoadMI1 && MI2->mayLoad())) {
+      if ((IsStoreMI1 && MI2.mayStore()) || (IsLoadMI1 && MI2.mayLoad())) {
         SI.setLatency(1);
         SU.setHeightDirty();
         // Change the dependence in the opposite direction too.
@@ -203,8 +203,8 @@ bool HexagonSubtarget::enableSubRegLiveness() const {
 }
 
 // This helper function is responsible for increasing the latency only.
-void HexagonSubtarget::updateLatency(MachineInstr *SrcInst,
-      MachineInstr *DstInst, SDep &Dep) const {
+void HexagonSubtarget::updateLatency(MachineInstr &SrcInst,
+      MachineInstr &DstInst, SDep &Dep) const {
   if (!hasV60TOps())
     return;
 
@@ -238,19 +238,19 @@ static SUnit *getZeroLatency(SUnit *N, SmallVector<SDep, 4> &Deps) {
 /// Change the latency between the two SUnits.
 void HexagonSubtarget::changeLatency(SUnit *Src, SmallVector<SDep, 4> &Deps,
       SUnit *Dst, unsigned Lat) const {
-  MachineInstr *SrcI = Src->getInstr();
+  MachineInstr &SrcI = *Src->getInstr();
   for (auto &I : Deps) {
     if (I.getSUnit() != Dst)
       continue;
     I.setLatency(Lat);
     SUnit *UpdateDst = I.getSUnit();
-    updateLatency(SrcI, UpdateDst->getInstr(), I);
+    updateLatency(SrcI, *UpdateDst->getInstr(), I);
     // Update the latency of opposite edge too.
     for (auto &PI : UpdateDst->Preds) {
       if (PI.getSUnit() != Src || !PI.isAssignedRegDep())
         continue;
       PI.setLatency(Lat);
-      updateLatency(SrcI, UpdateDst->getInstr(), PI);
+      updateLatency(SrcI, *UpdateDst->getInstr(), PI);
     }
   }
 }
@@ -261,10 +261,10 @@ void HexagonSubtarget::changeLatency(SUnit *Src, SmallVector<SDep, 4> &Deps,
 // ther others, if needed.
 bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
       const HexagonInstrInfo *TII) const {
-  MachineInstr *SrcInst = Src->getInstr();
-  MachineInstr *DstInst = Dst->getInstr();
+  MachineInstr &SrcInst = *Src->getInstr();
+  MachineInstr &DstInst = *Dst->getInstr();
 
-  if (SrcInst->isPHI() || DstInst->isPHI())
+  if (SrcInst.isPHI() || DstInst.isPHI())
     return false;
 
   // Check if the Dst instruction is the best candidate first.
@@ -301,9 +301,9 @@ bool HexagonSubtarget::isBestZeroLatency(SUnit *Src, SUnit *Dst,
 
 // Update the latency of a Phi when the Phi bridges two instructions that
 // require a multi-cycle latency.
-void HexagonSubtarget::changePhiLatency(MachineInstr *SrcInst, SUnit *Dst,
+void HexagonSubtarget::changePhiLatency(MachineInstr &SrcInst, SUnit *Dst,
       SDep &Dep) const {
-  if (!SrcInst->isPHI() || Dst->NumPreds == 0 || Dep.getLatency() != 0)
+  if (!SrcInst.isPHI() || Dst->NumPreds == 0 || Dep.getLatency() != 0)
     return;
 
   for (const SDep &PI : Dst->Preds) {
@@ -326,7 +326,7 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
   const HexagonInstrInfo *QII = static_cast<const HexagonInstrInfo *>(getInstrInfo());
 
   // Instructions with .new operands have zero latency.
-  if (QII->canExecuteInBundle(SrcInst, DstInst) &&
+  if (QII->canExecuteInBundle(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII)) {
     Dep.setLatency(0);
     return;
@@ -355,7 +355,7 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
 
   // Check if we need to change any the latency values when Phis are added.
   if (useBSBScheduling() && SrcInst->isPHI()) {
-    changePhiLatency(SrcInst, Dst, Dep);
+    changePhiLatency(*SrcInst, Dst, Dep);
     return;
   }
 
@@ -365,13 +365,13 @@ void HexagonSubtarget::adjustSchedDependency(SUnit *Src, SUnit *Dst,
     DstInst = Dst->Succs[0].getSUnit()->getInstr();
 
   // Try to schedule uses near definitions to generate .cur.
-  if (EnableDotCurSched && QII->isToBeScheduledASAP(SrcInst, DstInst) &&
+  if (EnableDotCurSched && QII->isToBeScheduledASAP(*SrcInst, *DstInst) &&
       isBestZeroLatency(Src, Dst, QII)) {
     Dep.setLatency(0);
     return;
   }
 
-  updateLatency(SrcInst, DstInst, Dep);
+  updateLatency(*SrcInst, *DstInst, Dep);
 }
 
 unsigned HexagonSubtarget::getL1CacheLineSize() const {

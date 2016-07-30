@@ -31,6 +31,9 @@
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Target/TargetInstrInfo.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "mips-fastisel"
 
 using namespace llvm;
 
@@ -95,6 +98,7 @@ class MipsFastISel final : public FastISel {
   // Convenience variables to avoid some queries.
   LLVMContext *Context;
 
+  bool fastLowerArguments() override;
   bool fastLowerCall(CallLoweringInfo &CLI) override;
   bool fastLowerIntrinsicCall(const IntrinsicInst *II) override;
 
@@ -195,6 +199,9 @@ private:
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
                        unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, MVT RetVT, unsigned NumBytes);
+  const MipsABIInfo &getABI() const {
+    return static_cast<const MipsTargetMachine &>(TM).getABI();
+  }
 
 public:
   // Backend specific FastISel code.
@@ -208,8 +215,7 @@ public:
     bool ISASupported = !Subtarget->hasMips32r6() &&
                         !Subtarget->inMicroMipsMode() && Subtarget->hasMips32();
     TargetSupported =
-        ISASupported && TM.isPositionIndependent() &&
-        (static_cast<const MipsTargetMachine &>(TM).getABI().IsO32());
+        ISASupported && TM.isPositionIndependent() && getABI().IsO32();
     UnsupportedFPMode = Subtarget->isFP64bit();
   }
 
@@ -1246,6 +1252,156 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     CLI.ResultReg = ResultReg;
     CLI.NumResultRegs = 1;
   }
+  return true;
+}
+
+bool MipsFastISel::fastLowerArguments() {
+  DEBUG(dbgs() << "fastLowerArguments\n");
+
+  if (!FuncInfo.CanLowerReturn) {
+    DEBUG(dbgs() << ".. gave up (!CanLowerReturn)\n");
+    return false;
+  }
+
+  const Function *F = FuncInfo.Fn;
+  if (F->isVarArg()) {
+    DEBUG(dbgs() << ".. gave up (varargs)\n");
+    return false;
+  }
+
+  CallingConv::ID CC = F->getCallingConv();
+  if (CC != CallingConv::C) {
+    DEBUG(dbgs() << ".. gave up (calling convention is not C)\n");
+    return false;
+  }
+
+  static const MCPhysReg GPR32ArgRegs[] = {Mips::A0, Mips::A1, Mips::A2,
+                                           Mips::A3};
+  static const MCPhysReg FGR32ArgRegs[] = {Mips::F12, Mips::F14};
+  static const MCPhysReg AFGR64ArgRegs[] = {Mips::D6, Mips::D7};
+
+  struct AllocatedReg {
+    const TargetRegisterClass *RC;
+    unsigned Reg;
+    AllocatedReg(const TargetRegisterClass *RC, unsigned Reg)
+        : RC(RC), Reg(Reg) {}
+  };
+
+  // Only handle simple cases. i.e. Up to four integer arguments.
+  // Supporting floating point significantly complicates things so we leave
+  // that out for now.
+  SmallVector<AllocatedReg, 4> Allocation;
+  unsigned Idx = 1;
+  bool HasAllocatedNonFGR = false;
+  for (const auto &FormalArg : F->args()) {
+    if (Idx > 4) {
+      DEBUG(dbgs() << ".. gave up (too many arguments)\n");
+      return false;
+    }
+
+    if (F->getAttributes().hasAttribute(Idx, Attribute::InReg) ||
+        F->getAttributes().hasAttribute(Idx, Attribute::StructRet) ||
+        F->getAttributes().hasAttribute(Idx, Attribute::ByVal)) {
+      DEBUG(dbgs() << ".. gave up (inreg, structret, byval)\n");
+      return false;
+    }
+
+    Type *ArgTy = FormalArg.getType();
+    if (ArgTy->isStructTy() || ArgTy->isArrayTy() || ArgTy->isVectorTy()) {
+      DEBUG(dbgs() << ".. gave up (struct, array, or vector)\n");
+      return false;
+    }
+
+    EVT ArgVT = TLI.getValueType(DL, ArgTy);
+    DEBUG(dbgs() << ".. " << (Idx - 1) << ": " << ArgVT.getEVTString() << "\n");
+    if (!ArgVT.isSimple()) {
+      DEBUG(dbgs() << ".. .. gave up (not a simple type)\n");
+      return false;
+    }
+
+    switch (ArgVT.getSimpleVT().SimpleTy) {
+    case MVT::i1:
+    case MVT::i8:
+    case MVT::i16:
+      if (!F->getAttributes().hasAttribute(Idx, Attribute::SExt) &&
+          !F->getAttributes().hasAttribute(Idx, Attribute::ZExt)) {
+        // It must be any extend, this shouldn't happen for clang-generated IR
+        // so just fall back on SelectionDAG.
+        DEBUG(dbgs() << ".. .. gave up (i8/i16 arg is not extended)\n");
+        return false;
+      }
+      DEBUG(dbgs() << ".. .. GPR32(" << GPR32ArgRegs[Idx - 1] << ")\n");
+      Allocation.emplace_back(&Mips::GPR32RegClass, GPR32ArgRegs[Idx - 1]);
+      HasAllocatedNonFGR = true;
+      break;
+
+    case MVT::i32:
+      if (F->getAttributes().hasAttribute(Idx, Attribute::ZExt)) {
+        // The O32 ABI does not permit a zero-extended i32.
+        DEBUG(dbgs() << ".. .. gave up (i32 arg is zero extended)\n");
+        return false;
+      }
+      DEBUG(dbgs() << ".. .. GPR32(" << GPR32ArgRegs[Idx - 1] << ")\n");
+      Allocation.emplace_back(&Mips::GPR32RegClass, GPR32ArgRegs[Idx - 1]);
+      HasAllocatedNonFGR = true;
+      break;
+
+    case MVT::f32:
+      if (Idx > 2 || HasAllocatedNonFGR) {
+        DEBUG(dbgs() << ".. .. gave up (f32 arg needed i32)\n");
+        return false;
+      } else {
+        DEBUG(dbgs() << ".. .. FGR32(" << FGR32ArgRegs[Idx - 1] << ")\n");
+        Allocation.emplace_back(&Mips::FGR32RegClass, FGR32ArgRegs[Idx - 1]);
+      }
+      break;
+
+    case MVT::f64:
+      if (Idx > 2 || HasAllocatedNonFGR) {
+        DEBUG(dbgs() << ".. .. gave up (f64 arg needed 2xi32)\n");
+        return false;
+      } else {
+        DEBUG(dbgs() << ".. .. AFGR64(" << AFGR64ArgRegs[Idx - 1] << ")\n");
+        Allocation.emplace_back(&Mips::AFGR64RegClass, AFGR64ArgRegs[Idx - 1]);
+      }
+      break;
+
+    default:
+      DEBUG(dbgs() << ".. .. gave up (unknown type)\n");
+      return false;
+    }
+
+    ++Idx;
+  }
+
+  Idx = 0;
+  for (const auto &FormalArg : F->args()) {
+    unsigned SrcReg = Allocation[Idx].Reg;
+    unsigned DstReg = FuncInfo.MF->addLiveIn(SrcReg, Allocation[Idx].RC);
+    // FIXME: Unfortunately it's necessary to emit a copy from the livein copy.
+    // Without this, EmitLiveInCopies may eliminate the livein if its only
+    // use is a bitcast (which isn't turned into an instruction).
+    unsigned ResultReg = createResultReg(Allocation[Idx].RC);
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc,
+            TII.get(TargetOpcode::COPY), ResultReg)
+        .addReg(DstReg, getKillRegState(true));
+    updateValueMap(&FormalArg, ResultReg);
+    ++Idx;
+  }
+
+  // Calculate the size of the incoming arguments area.
+  // We currently reject all the cases where this would be non-zero.
+  unsigned IncomingArgSizeInBytes = 0;
+
+  // Account for the reserved argument area on ABI's that have one (O32).
+  // It seems strange to do this on the caller side but it's necessary in
+  // SelectionDAG's implementation.
+  IncomingArgSizeInBytes = std::min(getABI().GetCalleeAllocdArgSizeInBytes(CC),
+                                    IncomingArgSizeInBytes);
+
+  MF->getInfo<MipsFunctionInfo>()->setFormalArgInfo(IncomingArgSizeInBytes,
+                                                    false);
+
   return true;
 }
 

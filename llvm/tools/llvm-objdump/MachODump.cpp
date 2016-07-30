@@ -1521,16 +1521,23 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C,
   }
 
   if (verbose) {
-    ErrorOr<StringRef> NameOrErr = C.getName();
-    if (NameOrErr.getError()) {
-      StringRef RawName = C.getRawName();
+    Expected<StringRef> NameOrErr = C.getName();
+    if (!NameOrErr) {
+      consumeError(NameOrErr.takeError());
+      Expected<StringRef> NameOrErr = C.getRawName();
+      if (!NameOrErr)
+        report_error(Filename, C, NameOrErr.takeError(), ArchitectureName);
+      StringRef RawName = NameOrErr.get();
       outs() << RawName << "\n";
     } else {
       StringRef Name = NameOrErr.get();
       outs() << Name << "\n";
     }
   } else {
-    StringRef RawName = C.getRawName();
+    Expected<StringRef> NameOrErr = C.getRawName();
+    if (!NameOrErr)
+      report_error(Filename, C, NameOrErr.takeError(), ArchitectureName);
+    StringRef RawName = NameOrErr.get();
     outs() << RawName << "\n";
   }
 }

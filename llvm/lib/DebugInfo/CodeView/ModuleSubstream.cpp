@@ -9,7 +9,7 @@
 
 #include "llvm/DebugInfo/CodeView/ModuleSubstream.h"
 
-#include "llvm/DebugInfo/Msf/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
 
 using namespace llvm;
 using namespace llvm::codeview;

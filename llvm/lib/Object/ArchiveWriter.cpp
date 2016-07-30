@@ -40,9 +40,9 @@ NewArchiveMember::NewArchiveMember(MemoryBufferRef BufRef)
 Expected<NewArchiveMember>
 NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,
                                bool Deterministic) {
-  ErrorOr<llvm::MemoryBufferRef> BufOrErr = OldMember.getMemoryBufferRef();
+  Expected<llvm::MemoryBufferRef> BufOrErr = OldMember.getMemoryBufferRef();
   if (!BufOrErr)
-    return errorCodeToError(BufOrErr.getError());
+    return BufOrErr.takeError();
 
   NewArchiveMember M;
   M.Buf = MemoryBuffer::getMemBuffer(*BufOrErr, false);

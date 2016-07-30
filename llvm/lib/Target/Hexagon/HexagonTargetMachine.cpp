@@ -27,7 +27,6 @@
 
 using namespace llvm;
 
-
 static cl::opt<bool> EnableRDFOpt("rdf-opt", cl::Hidden, cl::ZeroOrMore,
   cl::init(true), cl::desc("Enable RDF-based optimizations"));
 
@@ -292,6 +291,8 @@ void HexagonPassConfig::addPreRegAlloc() {
     if (!DisableHardwareLoops)
       addPass(createHexagonHardwareLoops(), false);
   }
+  if (TM->getOptLevel() >= CodeGenOpt::Default)
+    addPass(&MachinePipelinerID);
 }
 
 void HexagonPassConfig::addPostRegAlloc() {

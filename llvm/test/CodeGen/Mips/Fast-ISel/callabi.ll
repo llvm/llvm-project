@@ -1,8 +1,8 @@
 ; RUN: llc -march=mipsel -mcpu=mips32 -O0 -relocation-model=pic \
-; RUN:     -fast-isel-abort=1 -verify-machineinstrs < %s | \
+; RUN:     -fast-isel-abort=3 -verify-machineinstrs < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,32R1
 ; RUN: llc -march=mipsel -mcpu=mips32r2 -O0 -relocation-model=pic \
-; RUN:     -fast-isel-abort=1 -verify-machineinstrs < %s | \
+; RUN:     -fast-isel-abort=3 -verify-machineinstrs < %s | \
 ; RUN:     FileCheck %s -check-prefixes=ALL,32R2
 
 declare void @xb(i8)

@@ -23,10 +23,10 @@
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/LoopPass.h"
+#include "llvm/Analysis/OptimizationDiagnosticInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Support/Debug.h"
@@ -204,7 +204,7 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
                       bool AllowRuntime, bool AllowExpensiveTripCount,
                       unsigned TripMultiple, LoopInfo *LI, ScalarEvolution *SE,
                       DominatorTree *DT, AssumptionCache *AC,
-                      bool PreserveLCSSA) {
+                      OptimizationRemarkEmitter *ORE, bool PreserveLCSSA) {
   BasicBlock *Preheader = L->getLoopPreheader();
   if (!Preheader) {
     DEBUG(dbgs() << "  Can't unroll; loop preheader-insertion failed.\n");
@@ -323,21 +323,16 @@ bool llvm::UnrollLoop(Loop *L, unsigned Count, unsigned TripCount, bool Force,
   }
 
   // Report the unrolling decision.
-  DebugLoc LoopLoc = L->getStartLoc();
-  Function *F = Header->getParent();
-  LLVMContext &Ctx = F->getContext();
-
   if (CompletelyUnroll) {
     DEBUG(dbgs() << "COMPLETELY UNROLLING loop %" << Header->getName()
           << " with trip count " << TripCount << "!\n");
-    emitOptimizationRemark(Ctx, DEBUG_TYPE, *F, LoopLoc,
-                           Twine("completely unrolled loop with ") +
-                               Twine(TripCount) + " iterations");
+    ORE->emitOptimizationRemark(DEBUG_TYPE, L,
+                                Twine("completely unrolled loop with ") +
+                                    Twine(TripCount) + " iterations");
   } else {
     auto EmitDiag = [&](const Twine &T) {
-      emitOptimizationRemark(Ctx, DEBUG_TYPE, *F, LoopLoc,
-                             "unrolled loop by a factor of " + Twine(Count) +
-                                 T);
+      ORE->emitOptimizationRemark(
+          DEBUG_TYPE, L, "unrolled loop by a factor of " + Twine(Count) + T);
     };
 
     DEBUG(dbgs() << "UNROLLING loop %" << Header->getName()

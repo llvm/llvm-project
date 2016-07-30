@@ -79,6 +79,7 @@ bool isPositiveHalfWord(SDNode *N);
       EXTRACTU,
       EXTRACTURP,
       VCOMBINE,
+      VPACK,
       TC_RETURN,
       EH_RETURN,
       DCFETCH,
@@ -124,7 +125,10 @@ bool isPositiveHalfWord(SDNode *N);
     const char *getTargetNodeName(unsigned Opcode) const override;
     SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerEXTRACT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerEXTRACT_SUBVECTOR_HVX(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINSERT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerVECTOR_SHIFT(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const;

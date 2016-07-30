@@ -501,9 +501,13 @@ declare i32 @someVariadicFunc(i32, ...)
 ;
 ; CHECK-LABEL: noreturn:
 ; DISABLE: push
-;
-; CHECK: tst{{(\.w)?}}  r0, #255
-; CHECK-NEXT: bne      [[ABORT:LBB[0-9_]+]]
+; ARM-ENABLE: cmp r0, #0
+; ARM-DISABLE: cmp r0, #0
+; ARM-ENABLE: bne [[ABORT:LBB[0-9_]+]]
+; ARM-DISABLE: bne [[ABORT:LBB[0-9_]+]]
+; THUMB-ENABLE: cbnz r0,  [[ABORT:LBB[0-9_]+]]
+; THUMB-DISABLE: cbnz r0,  [[ABORT:LBB[0-9_]+]]
+
 ;
 ; CHECK: mov{{s?}} r0, #42
 ;

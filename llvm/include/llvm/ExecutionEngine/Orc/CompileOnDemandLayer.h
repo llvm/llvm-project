@@ -236,6 +236,32 @@ public:
     return H->findSymbol(Name, ExportedSymbolsOnly);
   }
 
+  /// @brief Update the stub for the given function to point at FnBodyAddr.
+  /// This can be used to support re-optimization.
+  /// @return true if the function exists and the stub is updated, false
+  ///         otherwise.
+  //
+  // FIXME: We should track and free associated resources (unused compile
+  //        callbacks, uncompiled IR, and no-longer-needed/reachable function
+  //        implementations).
+  // FIXME: Return Error once the JIT APIs are Errorized.
+  bool updatePointer(std::string FuncName, TargetAddress FnBodyAddr) {
+    //Find out which logical dylib contains our symbol
+    auto LDI = LogicalDylibs.begin();
+    for (auto LDE = LogicalDylibs.end(); LDI != LDE; ++LDI) {
+      if (auto LMResources = LDI->getLogicalModuleResourcesForSymbol(FuncName, false)) {
+        Module &SrcM = LMResources->SourceModule->getResource();
+        std::string CalledFnName = mangle(FuncName, SrcM.getDataLayout());
+        if (auto EC = LMResources->StubsMgr->updatePointer(CalledFnName, FnBodyAddr)) {
+          return false;
+        }
+        else
+          return true;
+      }
+    }
+    return false;
+  }
+
 private:
 
   template <typename ModulePtrT>

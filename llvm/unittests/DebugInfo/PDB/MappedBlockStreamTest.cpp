@@ -9,13 +9,13 @@
 
 #include "ErrorChecking.h"
 
-#include "llvm/DebugInfo/Msf/ByteStream.h"
-#include "llvm/DebugInfo/Msf/IMsfFile.h"
-#include "llvm/DebugInfo/Msf/MappedBlockStream.h"
-#include "llvm/DebugInfo/Msf/MsfStreamLayout.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
-#include "llvm/DebugInfo/Msf/StreamRef.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
+#include "llvm/DebugInfo/MSF/IMSFFile.h"
+#include "llvm/DebugInfo/MSF/MappedBlockStream.h"
+#include "llvm/DebugInfo/MSF/MSFStreamLayout.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamRef.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "gtest/gtest.h"
 
 #include <unordered_map>
@@ -39,7 +39,7 @@ public:
   Error readBytes(uint32_t Offset, uint32_t Size,
                   ArrayRef<uint8_t> &Buffer) const override {
     if (Offset + Size > Data.size())
-      return make_error<MsfError>(msf_error_code::insufficient_buffer);
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     Buffer = Data.slice(Offset, Size);
     return Error::success();
   }
@@ -47,7 +47,7 @@ public:
   Error readLongestContiguousChunk(uint32_t Offset,
                                    ArrayRef<uint8_t> &Buffer) const override {
     if (Offset >= Data.size())
-      return make_error<MsfError>(msf_error_code::insufficient_buffer);
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     Buffer = Data.drop_front(Offset);
     return Error::success();
   }
@@ -56,14 +56,14 @@ public:
 
   Error writeBytes(uint32_t Offset, ArrayRef<uint8_t> SrcData) const override {
     if (Offset + SrcData.size() > Data.size())
-      return make_error<MsfError>(msf_error_code::insufficient_buffer);
+      return make_error<MSFError>(msf_error_code::insufficient_buffer);
     ::memcpy(&Data[Offset], SrcData.data(), SrcData.size());
     return Error::success();
   }
   Error commit() const override { return Error::success(); }
 
-  MsfStreamLayout layout() const {
-    return MsfStreamLayout{static_cast<uint32_t>(Data.size()), Blocks};
+  MSFStreamLayout layout() const {
+    return MSFStreamLayout{static_cast<uint32_t>(Data.size()), Blocks};
   }
 
 private:

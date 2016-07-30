@@ -33,7 +33,7 @@
 #include "llvm/DebugInfo/CodeView/TypeIndex.h"
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeStreamMerger.h"
-#include "llvm/DebugInfo/Msf/ByteStream.h"
+#include "llvm/DebugInfo/MSF/ByteStream.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/COFF.h"

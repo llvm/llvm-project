@@ -946,14 +946,16 @@ void DAGTypeLegalizer::PromoteSetCCOperands(SDValue &NewLHS,SDValue &NewRHS,
     SDValue OpL = GetPromotedInteger(NewLHS);
     SDValue OpR = GetPromotedInteger(NewRHS);
 
-    // We would prefer to promote the comparison operand with sign extension,
-    // if we find the operand is actually to truncate an AssertSext. With this
-    // optimization, we can avoid inserting real truncate instruction, which
-    // is redudant eventually.
-    if (OpL->getOpcode() == ISD::AssertSext &&
-        cast<VTSDNode>(OpL->getOperand(1))->getVT() == NewLHS.getValueType() &&
-        OpR->getOpcode() == ISD::AssertSext &&
-        cast<VTSDNode>(OpR->getOperand(1))->getVT() == NewRHS.getValueType()) {
+    // We would prefer to promote the comparison operand with sign extension.
+    // If the width of OpL/OpR excluding the duplicated sign bits is no greater
+    // than the width of NewLHS/NewRH, we can avoid inserting real truncate
+    // instruction, which is redudant eventually.
+    unsigned OpLEffectiveBits =
+        OpL.getValueType().getSizeInBits() - DAG.ComputeNumSignBits(OpL) + 1;
+    unsigned OpREffectiveBits =
+        OpR.getValueType().getSizeInBits() - DAG.ComputeNumSignBits(OpR) + 1;
+    if (OpLEffectiveBits <= NewLHS.getValueType().getSizeInBits() &&
+        OpREffectiveBits <= NewRHS.getValueType().getSizeInBits()) {
       NewLHS = OpL;
       NewRHS = OpR;
     } else {

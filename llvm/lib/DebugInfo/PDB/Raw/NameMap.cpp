@@ -9,8 +9,8 @@
 
 #include "llvm/DebugInfo/PDB/Raw/NameMap.h"
 #include "llvm/ADT/SparseBitVector.h"
-#include "llvm/DebugInfo/Msf/StreamReader.h"
-#include "llvm/DebugInfo/Msf/StreamWriter.h"
+#include "llvm/DebugInfo/MSF/StreamReader.h"
+#include "llvm/DebugInfo/MSF/StreamWriter.h"
 #include "llvm/DebugInfo/PDB/Raw/RawError.h"
 
 using namespace llvm;

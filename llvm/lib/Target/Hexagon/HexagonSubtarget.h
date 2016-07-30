@@ -139,13 +139,13 @@ public:
 
 private:
   // Helper function responsible for increasing the latency only.
-  void updateLatency(MachineInstr *SrcInst, MachineInstr *DstInst, SDep &Dep)
+  void updateLatency(MachineInstr &SrcInst, MachineInstr &DstInst, SDep &Dep)
       const;
   void changeLatency(SUnit *Src, SmallVector<SDep, 4> &Deps, SUnit *Dst,
       unsigned Lat) const;
   bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII)
       const;
-  void changePhiLatency(MachineInstr *SrcInst, SUnit *Dst, SDep &Dep) const;
+  void changePhiLatency(MachineInstr &SrcInst, SUnit *Dst, SDep &Dep) const;
 };
 
 } // end namespace llvm

@@ -13,7 +13,7 @@ entry:
 if.end:                                           ; preds = %entry
   %and.i.i.i = and i32 %int1, 4
   %tobool.i.i.i = icmp eq i32 %and.i.i.i, 0
-  br i1 %tobool.i.i.i, label %if.end12, label %land.rhs.i
+  br i1 %tobool.i.i.i, label %if.end12, label %land.rhs.i, !prof !1
 
 land.rhs.i:                                       ; preds = %if.end
   %cmp.i.i.i = icmp eq i8* %str12, %str13
@@ -36,7 +36,7 @@ if.then3:                                         ; preds = %_ZNK7WebCore4Node10
 if.end5:                                          ; preds = %_ZNK7WebCore4Node10hasTagNameERKNS_13QualifiedNameE.exit, %lor.rhs.i.i.i
 ; CHECK: %if.end5
 ; CHECK: tbz
-  br i1 %tobool.i.i.i, label %if.end12, label %land.rhs.i19
+  br i1 %tobool.i.i.i, label %if.end12, label %land.rhs.i19, !prof !1
 
 land.rhs.i19:                                     ; preds = %if.end5
   %cmp.i.i.i18 = icmp eq i8* %str6, %str7
@@ -69,3 +69,4 @@ return:                                           ; preds = %if.end12, %if.then9
 }
 
 attributes #0 = { nounwind ssp }
+!1 = !{!"branch_weights", i32 3, i32 5}

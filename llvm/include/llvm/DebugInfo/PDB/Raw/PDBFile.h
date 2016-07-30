@@ -11,10 +11,10 @@
 #define LLVM_DEBUGINFO_PDB_RAW_PDBFILE_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/DebugInfo/Msf/IMsfFile.h"
-#include "llvm/DebugInfo/Msf/MsfCommon.h"
-#include "llvm/DebugInfo/Msf/StreamArray.h"
-#include "llvm/DebugInfo/Msf/StreamInterface.h"
+#include "llvm/DebugInfo/MSF/IMSFFile.h"
+#include "llvm/DebugInfo/MSF/MSFCommon.h"
+#include "llvm/DebugInfo/MSF/StreamArray.h"
+#include "llvm/DebugInfo/MSF/StreamInterface.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
@@ -38,7 +38,7 @@ class PublicsStream;
 class SymbolStream;
 class TpiStream;
 
-class PDBFile : public msf::IMsfFile {
+class PDBFile : public msf::IMSFFile {
   friend PDBFileBuilder;
 
 public:
@@ -74,7 +74,7 @@ public:
     return ContainerLayout.StreamMap;
   }
 
-  const msf::MsfLayout &getMsfLayout() const { return ContainerLayout; }
+  const msf::MSFLayout &getMsfLayout() const { return ContainerLayout; }
   const msf::ReadableStream &getMsfBuffer() const { return *Buffer; }
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
@@ -95,7 +95,7 @@ private:
 
   std::unique_ptr<msf::ReadableStream> Buffer;
 
-  msf::MsfLayout ContainerLayout;
+  msf::MSFLayout ContainerLayout;
 
   std::unique_ptr<InfoStream> Info;
   std::unique_ptr<DbiStream> Dbi;

@@ -115,8 +115,8 @@ BinaryHolder::GetArchiveMemberBuffers(StringRef Filename,
           if (Verbose)
             outs() << "\tfound member in current archive.\n";
           auto ErrOrMem = Child.getMemoryBufferRef();
-          if (auto Err = ErrOrMem.getError())
-            return Err;
+          if (!ErrOrMem)
+            return errorToErrorCode(ErrOrMem.takeError());
           Buffers.push_back(*ErrOrMem);
         }
       }

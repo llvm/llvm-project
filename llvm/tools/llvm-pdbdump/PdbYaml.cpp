@@ -113,7 +113,7 @@ void MappingTraits<PdbObject>::mapping(IO &IO, PdbObject &Obj) {
   IO.mapOptional("DbiStream", Obj.DbiStream);
 }
 
-void MappingTraits<MsfHeaders>::mapping(IO &IO, MsfHeaders &Obj) {
+void MappingTraits<MSFHeaders>::mapping(IO &IO, MSFHeaders &Obj) {
   IO.mapRequired("SuperBlock", Obj.SuperBlock);
   IO.mapRequired("NumDirectoryBlocks", Obj.NumDirectoryBlocks);
   IO.mapRequired("DirectoryBlocks", Obj.DirectoryBlocks);
