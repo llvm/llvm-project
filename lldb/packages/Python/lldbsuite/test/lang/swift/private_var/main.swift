@@ -13,7 +13,7 @@
 private var a = 1
 
 func doSomething(b: Int) {
-	a += strideof(b.dynamicType) //% self.expect("expr a", substrs=['Int', '= 1'])
+	a += b //% self.expect("expr a", substrs=['Int', '= 1'])
 }
 
 doSomething(b:2)
