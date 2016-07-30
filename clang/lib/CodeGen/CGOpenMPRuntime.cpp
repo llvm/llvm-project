@@ -5456,9 +5456,13 @@ public:
         RPK_MemberReference,
       };
       OMPClauseMappableExprCommon::MappableExprComponentListRef Components;
-      OpenMPMapClauseKind MapType = OMPC_MAP_unknown;
-      OpenMPMapClauseKind MapTypeModifier = OMPC_MAP_unknown;
-      ReturnPointerKind ReturnDevicePointer = RPK_None;
+      OpenMPMapClauseKind MapType;
+      OpenMPMapClauseKind MapTypeModifier;
+      ReturnPointerKind ReturnDevicePointer;
+
+      MapInfo()
+          : MapType(OMPC_MAP_unknown), MapTypeModifier(OMPC_MAP_unknown),
+            ReturnDevicePointer(RPK_None) {}
       MapInfo(
           OMPClauseMappableExprCommon::MappableExprComponentListRef Components,
           OpenMPMapClauseKind MapType, OpenMPMapClauseKind MapTypeModifier,
@@ -5485,15 +5489,15 @@ public:
       Info[VD].push_back({L, MapType, MapModifier, ReturnDevicePointer});
     };
 
-    for (auto *C : CurDir.getClausesOfKind<OMPMapClause>())
+    for (auto *C : this->CurDir.getClausesOfKind<OMPMapClause>())
       for (auto L : C->component_lists())
         InfoGen(L.first, L.second, C->getMapType(), C->getMapTypeModifier(),
                 MapInfo::RPK_None);
-    for (auto *C : CurDir.getClausesOfKind<OMPToClause>())
+    for (auto *C : this->CurDir.getClausesOfKind<OMPToClause>())
       for (auto L : C->component_lists())
         InfoGen(L.first, L.second, OMPC_MAP_to, OMPC_MAP_unknown,
                 MapInfo::RPK_None);
-    for (auto *C : CurDir.getClausesOfKind<OMPFromClause>())
+    for (auto *C : this->CurDir.getClausesOfKind<OMPFromClause>())
       for (auto L : C->component_lists())
         InfoGen(L.first, L.second, OMPC_MAP_from, OMPC_MAP_unknown,
                 MapInfo::RPK_None);
@@ -5502,7 +5506,7 @@ public:
     // entries as such. If there is no map information for an entry in the
     // use_device_ptr list, we create one with map type 'alloc' and zero size
     // section. It is the user fault if that was not mapped before.
-    for (auto *C : CurDir.getClausesOfKind<OMPUseDevicePtrClause>())
+    for (auto *C : this->CurDir.getClausesOfKind<OMPUseDevicePtrClause>())
       for (auto L : C->component_lists()) {
         assert(!L.second.empty() && "Not expecting empty list of components!");
         const ValueDecl *VD = L.second.back().getAssociatedDeclaration();
@@ -5535,11 +5539,12 @@ public:
         // We didn't find any match in our map information - generate a zero
         // size array section.
         llvm::Value *Ptr =
-            CGF.EmitLoadOfLValue(CGF.EmitLValue(IE), SourceLocation())
+            this->CGF
+                .EmitLoadOfLValue(this->CGF.EmitLValue(IE), SourceLocation())
                 .getScalarVal();
         BasePointers.push_back({Ptr, VD});
         Pointers.push_back(Ptr);
-        Sizes.push_back(llvm::Constant::getNullValue(CGF.SizeTy));
+        Sizes.push_back(llvm::Constant::getNullValue(this->CGF.SizeTy));
         Types.push_back(OMP_MAP_RETURN_PTR | OMP_MAP_FIRST_REF);
       }
 
@@ -5553,9 +5558,9 @@ public:
 
         // Remember the current base pointer index.
         unsigned CurrentBasePointersIdx = BasePointers.size();
-        generateInfoForComponentList(L.MapType, L.MapTypeModifier, L.Components,
-                                     BasePointers, Pointers, Sizes, Types,
-                                     IsFirstComponentList);
+        this->generateInfoForComponentList(L.MapType, L.MapTypeModifier,
+                                           L.Components, BasePointers, Pointers,
+                                           Sizes, Types, IsFirstComponentList);
 
         // If this entry relates with a device pointer, set the relevant
         // declaration and add the 'return pointer' flag.
@@ -5632,7 +5637,7 @@ public:
       return;
     }
 
-    for (auto *C : CurDir.getClausesOfKind<OMPMapClause>())
+    for (auto *C : this->CurDir.getClausesOfKind<OMPMapClause>())
       for (auto L : C->decl_component_lists(VD)) {
         assert(L.first == VD &&
                "We got information for the wrong declaration??");

@@ -838,8 +838,11 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
 
       if (Cursor.kind == CXCursor_FunctionDecl) {
         /* Collect the template parameter kinds from the base template. */
-        unsigned NumTemplateArgs = clang_Cursor_getNumTemplateArguments(Cursor);
-        unsigned I;
+        int NumTemplateArgs = clang_Cursor_getNumTemplateArguments(Cursor);
+        int I;
+        if (NumTemplateArgs < 0) {
+          printf(" [no template arg info]");
+        }
         for (I = 0; I < NumTemplateArgs; I++) {
           enum CXTemplateArgumentKind TAK =
               clang_Cursor_getTemplateArgumentKind(Cursor, I);
