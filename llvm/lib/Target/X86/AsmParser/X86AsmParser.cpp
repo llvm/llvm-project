@@ -2685,8 +2685,8 @@ bool X86AsmParser::MatchAndEmitATTInstruction(SMLoc IDLoc, unsigned &Opcode,
   // mnemonic was invalid.
   if (std::count(std::begin(Match), std::end(Match), Match_MnemonicFail) == 4) {
     if (!WasOriginallyInvalidOperand) {
-      ArrayRef<SMRange> Ranges =
-          MatchingInlineAsm ? EmptyRanges : Op.getLocRange();
+      SMRange OpRange = Op.getLocRange();
+      ArrayRef<SMRange> Ranges = MatchingInlineAsm ? EmptyRanges : OpRange;
       return Error(IDLoc, "invalid instruction mnemonic '" + Base + "'",
                    Ranges, MatchingInlineAsm);
     }
@@ -2839,8 +2839,8 @@ bool X86AsmParser::MatchAndEmitIntelInstruction(SMLoc IDLoc, unsigned &Opcode,
   } else if (NumSuccessfulMatches > 1) {
     assert(UnsizedMemOp &&
            "multiple matches only possible with unsized memory operands");
-    ArrayRef<SMRange> Ranges =
-        MatchingInlineAsm ? EmptyRanges : UnsizedMemOp->getLocRange();
+    SMRange OpRange = UnsizedMemOp->getLocRange();
+    ArrayRef<SMRange> Ranges = MatchingInlineAsm ? EmptyRanges : OpRange;
     return Error(UnsizedMemOp->getStartLoc(),
                  "ambiguous operand size for instruction '" + Mnemonic + "\'",
                  Ranges, MatchingInlineAsm);

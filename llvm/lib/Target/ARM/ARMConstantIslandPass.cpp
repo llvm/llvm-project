@@ -235,7 +235,6 @@ namespace {
     bool fixupConditionalBr(ImmBranch &Br);
     bool fixupUnconditionalBr(ImmBranch &Br);
     bool undoLRSpillRestore();
-    bool mayOptimizeThumb2Instruction(const MachineInstr *MI) const;
     bool optimizeThumb2Instructions();
     bool optimizeThumb2Branches();
     bool reorderThumb2JumpTables();
@@ -1697,25 +1696,6 @@ bool ARMConstantIslands::undoLRSpillRestore() {
     }
   }
   return MadeChange;
-}
-
-// mayOptimizeThumb2Instruction - Returns true if optimizeThumb2Instructions
-// below may shrink MI.
-bool
-ARMConstantIslands::mayOptimizeThumb2Instruction(const MachineInstr *MI) const {
-  switch(MI->getOpcode()) {
-    // optimizeThumb2Instructions.
-    case ARM::t2LEApcrel:
-    case ARM::t2LDRpci:
-    // optimizeThumb2Branches.
-    case ARM::t2B:
-    case ARM::t2Bcc:
-    case ARM::tBcc:
-    // optimizeThumb2JumpTables.
-    case ARM::t2BR_JT:
-      return true;
-  }
-  return false;
 }
 
 bool ARMConstantIslands::optimizeThumb2Instructions() {

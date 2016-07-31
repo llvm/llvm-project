@@ -320,12 +320,12 @@ R600InstrInfo::ExtractSrcs(MachineInstr &MI,
                            const DenseMap<unsigned, unsigned> &PV,
                            unsigned &ConstCount) const {
   ConstCount = 0;
-  ArrayRef<std::pair<MachineOperand *, int64_t>> Srcs = getSrcs(MI);
   const std::pair<int, unsigned> DummyPair(-1, 0);
   std::vector<std::pair<int, unsigned> > Result;
   unsigned i = 0;
-  for (unsigned n = Srcs.size(); i < n; ++i) {
-    unsigned Reg = Srcs[i].first->getReg();
+  for (const auto &Src : getSrcs(MI)) {
+    ++i;
+    unsigned Reg = Src.first->getReg();
     int Index = RI.getEncodingValue(Reg) & 0xff;
     if (Reg == AMDGPU::OQAP) {
       Result.push_back(std::make_pair(Index, 0U));
@@ -592,9 +592,7 @@ R600InstrInfo::fitsConstReadLimitations(const std::vector<MachineInstr *> &MIs)
     if (!isALUInstr(MI.getOpcode()))
       continue;
 
-    ArrayRef<std::pair<MachineOperand *, int64_t>> Srcs = getSrcs(MI);
-
-    for (const auto &Src:Srcs) {
+    for (const auto &Src : getSrcs(MI)) {
       if (Src.first->getReg() == AMDGPU::ALU_LITERAL_X)
         Literals.insert(Src.second);
       if (Literals.size() > 4)
