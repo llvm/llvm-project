@@ -2126,12 +2126,26 @@ def assertzext_i1 : PatFrag<(ops node:$src), (assertzext node:$src), [{
   return cast<VTSDNode>(N->getOperand(1))->getVT() == MVT::i1;
 }]>;
 
+def trunc_setcc : PatFrag<(ops node:$src), (trunc node:$src), [{
+  return (N->getOperand(0)->getOpcode() == X86ISD::SETCC);
+}]>;
+
+def trunc_mask_1 : PatFrag<(ops node:$src), (trunc node:$src), [{
+  return (N->getOperand(0)->getOpcode() == ISD::AND &&
+          isa<ConstantSDNode>(N->getOperand(0)->getOperand(1)) &&
+          N->getOperand(0)->getConstantOperandVal(1) == 1);
+}]>;
+
+
 let Predicates = [HasAVX512] in {
   def : Pat<(i1 (trunc (i64 GR64:$src))),
             (COPY_TO_REGCLASS (i16 (EXTRACT_SUBREG (AND64ri8 $src, (i64 1)),
                                     sub_16bit)), VK1)>;
 
   def : Pat<(i1 (trunc (i64 (assertzext_i1 GR64:$src)))),
+            (COPY_TO_REGCLASS (i16 (EXTRACT_SUBREG $src, sub_16bit)), VK1)>;
+
+  def : Pat<(i1 (trunc_mask_1 GR64:$src)),
             (COPY_TO_REGCLASS (i16 (EXTRACT_SUBREG $src, sub_16bit)), VK1)>;
 
   def : Pat<(i1 (trunc (i32 GR32:$src))),
@@ -2141,6 +2155,9 @@ let Predicates = [HasAVX512] in {
   def : Pat<(i1 (trunc (i32 (assertzext_i1 GR32:$src)))),
             (COPY_TO_REGCLASS (i16 (EXTRACT_SUBREG $src, sub_16bit)), VK1)>;
 
+  def : Pat<(i1 (trunc_mask_1 GR32:$src)),
+            (COPY_TO_REGCLASS (i16 (EXTRACT_SUBREG $src, sub_16bit)), VK1)>;
+
   def : Pat<(i1 (trunc (i8 GR8:$src))),
             (COPY_TO_REGCLASS (i16 (SUBREG_TO_REG (i64 0), (AND8ri $src, (i8 1)),
                                     sub_8bit)), VK1)>;
@@ -2148,10 +2165,19 @@ let Predicates = [HasAVX512] in {
   def : Pat<(i1 (trunc (i8 (assertzext_i1 GR8:$src)))),
             (COPY_TO_REGCLASS (i16 (SUBREG_TO_REG (i64 0), $src, sub_8bit)), VK1)>;
 
+  def : Pat<(i1 (trunc_setcc GR8:$src)),
+            (COPY_TO_REGCLASS (i16 (SUBREG_TO_REG (i64 0), $src, sub_8bit)), VK1)>;
+
+  def : Pat<(i1 (trunc_mask_1 GR8:$src)),
+            (COPY_TO_REGCLASS (i16 (SUBREG_TO_REG (i64 0), $src, sub_8bit)), VK1)>;
+
   def : Pat<(i1 (trunc (i16 GR16:$src))),
             (COPY_TO_REGCLASS (AND16ri GR16:$src, (i16 1)), VK1)>;
 
   def : Pat<(i1 (trunc (i16 (assertzext_i1 GR16:$src)))),
+            (COPY_TO_REGCLASS $src, VK1)>;
+
+  def : Pat<(i1 (trunc_mask_1 GR16:$src)),
             (COPY_TO_REGCLASS $src, VK1)>;
 
   def : Pat<(i32 (zext VK1:$src)),

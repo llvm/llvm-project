@@ -1331,7 +1331,6 @@ namespace {
     bool processBlock(MachineBasicBlock &B, const RegisterSet &AVs) override;
     static bool isTfrConst(const MachineInstr &MI);
   private:
-    bool isConst(unsigned R, int64_t &V) const;
     unsigned genTfrConst(const TargetRegisterClass *RC, int64_t C,
         MachineBasicBlock &B, MachineBasicBlock::iterator At, DebugLoc &DL);
 
@@ -1339,23 +1338,6 @@ namespace {
     MachineRegisterInfo &MRI;
     BitTracker &BT;
   };
-}
-
-bool ConstGeneration::isConst(unsigned R, int64_t &C) const {
-  if (!BT.has(R))
-    return false;
-  const BitTracker::RegisterCell &RC = BT.lookup(R);
-  int64_t T = 0;
-  for (unsigned i = RC.width(); i > 0; --i) {
-    const BitTracker::BitValue &V = RC[i-1];
-    T <<= 1;
-    if (V.is(1))
-      T |= 1;
-    else if (!V.is(0))
-      return false;
-  }
-  C = T;
-  return true;
 }
 
 bool ConstGeneration::isTfrConst(const MachineInstr &MI) {
