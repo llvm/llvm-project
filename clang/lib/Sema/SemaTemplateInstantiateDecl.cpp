@@ -2932,10 +2932,14 @@ TemplateDeclInstantiator::SubstTemplateParams(TemplateParameterList *L) {
   if (Invalid)
     return nullptr;
 
+  // Note: we substitute into associated constraints later
+  Expr *const UninstantiatedRequiresClause = L->getRequiresClause();
+
   TemplateParameterList *InstL
     = TemplateParameterList::Create(SemaRef.Context, L->getTemplateLoc(),
                                     L->getLAngleLoc(), Params,
-                                    L->getRAngleLoc());
+                                    L->getRAngleLoc(),
+                                    UninstantiatedRequiresClause);
   return InstL;
 }
 
