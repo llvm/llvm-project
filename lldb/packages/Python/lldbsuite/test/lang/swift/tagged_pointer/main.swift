@@ -12,8 +12,8 @@
 import Foundation
 
 func main() {
-  var a: NSObject = 3
-  var b: AnyObject = 3
+  var a: NSObject = 3 as NSNumber
+  var b: AnyObject = 3 as NSNumber
   print("break here") //% self.expect('frame variable -d run -- a', substrs=['Int64(3)'])
    //% self.expect('frame variable -d run -- b', substrs=['Int64(3)'])
     //% self.expect('expr -d run -- a', substrs=['Int64(3)'])

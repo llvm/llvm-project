@@ -13,7 +13,10 @@ import Foundation
 
 func main() {
   var d1: Dictionary<Int,Int> = [1:1,2:2,3:3,4:4]
-  var d2: Dictionary<NSObject,AnyObject> = [1:1,2:2,3:3,4:4]
+  var d2: Dictionary<NSObject,AnyObject> = [1 as NSNumber : 1 as NSNumber,
+                                            2 as NSNumber : 2 as NSNumber,
+                                            3 as NSNumber : 3 as NSNumber,
+                                            4 as NSNumber : 4 as NSNumber]
   print("break here")
 }
 

@@ -22,7 +22,7 @@ func main() {
   var any: Any = 1234 //% self.expect("po nsobject", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
   //% self.expect("script lldb.frame.FindVariable('nsobject').GetObjectDescription()", substrs = ['<NSObject: 0x']) # may change depending on OS/platform
   var anyobject: AnyObject = 1234 as NSNumber //% self.expect("po any", substrs = ['1234'])
-  var notification = NSNotification(name: "JustANotification" as NSNotification.Name, object: nil)
+  var notification = Notification(name: Notification.Name(rawValue: "JustANotification"), object: nil)
   print("yay I am done!") //% self.expect("po notification", substrs=['JustANotification'])
    //% self.expect("po notification", matching=False, substrs=['super'])
 }

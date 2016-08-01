@@ -12,7 +12,7 @@
 import Foundation
 
 func main() {
-  var notification = Notification(name: "MyNotification" as Notification.Name, object: nil, userInfo: [:])
+  var notification = Notification(name: Notification.Name(rawValue: "MyNotification"), object: nil, userInfo: [:])
   print("done!") //% self.expect("frame variable notification", substrs=['name = "MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
    //% self.expect("expression -d run -- notification", substrs=['name = "MyNotification"', 'object = nil', 'userInfo = 0 key/value pairs'])
 }

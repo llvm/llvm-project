@@ -12,10 +12,10 @@
 import Foundation
 
 func main() {
-    var a: [String: AnyObject] = [
+    var a: [String: Any] = [
         "Key1" : "Value1",
         "Key2" : [1234,5678],
-        "Key3" : ["Object" as NSString, NSDictionary(dictionary: ["WAHHH": 2467])] as NSArray
+        "Key3" : ["Object" as NSString, ["WAHHH" as NSString: 2467 as AnyObject] as NSDictionary] as NSArray
     ]
     
     print(a) //%self.expect('po a', substrs=['Key1','Value1','Key2','1234','5678','Object','WAHHH','2467'])
