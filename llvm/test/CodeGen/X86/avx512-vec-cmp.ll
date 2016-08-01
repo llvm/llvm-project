@@ -79,7 +79,7 @@ define <4 x float> @test7(<4 x float> %a, <4 x float> %b) {
 ;
 ; SKX-LABEL: test7:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vcmpltps %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vblendmps %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq
@@ -99,7 +99,7 @@ define <2 x double> @test8(<2 x double> %a, <2 x double> %b) {
 ;
 ; SKX-LABEL: test8:
 ; SKX:       ## BB#0:
-; SKX-NEXT:    vpxord %xmm2, %xmm2, %xmm2
+; SKX-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; SKX-NEXT:    vcmpltpd %xmm2, %xmm0, %k1
 ; SKX-NEXT:    vblendmpd %xmm0, %xmm1, %xmm0 {%k1}
 ; SKX-NEXT:    retq

@@ -7008,20 +7008,20 @@ define <32 x i1> @test_cmp_v32f64(<32 x double> %a0, <32 x double> %a1) nounwind
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm4[0],xmm2[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm1
-; AVX512-NEXT:    vextractf32x4 $3, %zmm7, %xmm0
+; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512-NEXT:    vextractf32x4 $3, %zmm7, %xmm1
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm3, %xmm2
-; AVX512-NEXT:    vucomisd %xmm0, %xmm2
+; AVX512-NEXT:    vucomisd %xmm1, %xmm2
 ; AVX512-NEXT:    movl $0, %edx
 ; AVX512-NEXT:    cmovaq %rcx, %rdx
 ; AVX512-NEXT:    vmovq %rdx, %xmm4
-; AVX512-NEXT:    vpermilpd {{.*#+}} xmm0 = xmm0[1,0]
+; AVX512-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm1[1,0]
 ; AVX512-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm2[1,0]
-; AVX512-NEXT:    vucomisd %xmm0, %xmm2
+; AVX512-NEXT:    vucomisd %xmm1, %xmm2
 ; AVX512-NEXT:    movl $0, %edx
 ; AVX512-NEXT:    cmovaq %rcx, %rdx
-; AVX512-NEXT:    vmovq %rdx, %xmm0
-; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm4[0],xmm0[0]
+; AVX512-NEXT:    vmovq %rdx, %xmm1
+; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm4[0],xmm1[0]
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm7, %xmm2
 ; AVX512-NEXT:    vextractf32x4 $2, %zmm3, %xmm4
 ; AVX512-NEXT:    vucomisd %xmm2, %xmm4
@@ -7035,7 +7035,7 @@ define <32 x i1> @test_cmp_v32f64(<32 x double> %a0, <32 x double> %a1) nounwind
 ; AVX512-NEXT:    cmovaq %rcx, %rdx
 ; AVX512-NEXT:    vmovq %rdx, %xmm2
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm2 = xmm5[0],xmm2[0]
-; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm2, %ymm0
+; AVX512-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
 ; AVX512-NEXT:    vextractf32x4 $1, %zmm7, %xmm2
 ; AVX512-NEXT:    vextractf32x4 $1, %zmm3, %xmm4
 ; AVX512-NEXT:    vucomisd %xmm2, %xmm4
@@ -7060,9 +7060,9 @@ define <32 x i1> @test_cmp_v32f64(<32 x double> %a0, <32 x double> %a1) nounwind
 ; AVX512-NEXT:    vmovq %rax, %xmm3
 ; AVX512-NEXT:    vpunpcklqdq {{.*#+}} xmm3 = xmm4[0],xmm3[0]
 ; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm2, %zmm0
-; AVX512-NEXT:    vpmovqd %zmm0, %ymm0
-; AVX512-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm2, %zmm1
+; AVX512-NEXT:    vpmovqd %zmm1, %ymm1
+; AVX512-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovdb %zmm0, %xmm0
 ; AVX512-NEXT:    vinserti128 $1, %xmm0, %ymm8, %ymm0
 ; AVX512-NEXT:    retq

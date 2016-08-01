@@ -25,6 +25,8 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-stp-suppress"
 
+#define STPSUPPRESS_PASS_NAME "AArch64 Store Pair Suppression"
+
 namespace {
 class AArch64StorePairSuppress : public MachineFunctionPass {
   const AArch64InstrInfo *TII;
@@ -36,11 +38,11 @@ class AArch64StorePairSuppress : public MachineFunctionPass {
 
 public:
   static char ID;
-  AArch64StorePairSuppress() : MachineFunctionPass(ID) {}
-
-  const char *getPassName() const override {
-    return "AArch64 Store Pair Suppression";
+  AArch64StorePairSuppress() : MachineFunctionPass(ID) {
+    initializeAArch64StorePairSuppressPass(*PassRegistry::getPassRegistry());
   }
+
+  const char *getPassName() const override { return STPSUPPRESS_PASS_NAME; }
 
   bool runOnMachineFunction(MachineFunction &F) override;
 
@@ -58,6 +60,9 @@ private:
 };
 char AArch64StorePairSuppress::ID = 0;
 } // anonymous
+
+INITIALIZE_PASS(AArch64StorePairSuppress, "aarch64-stp-suppress",
+                STPSUPPRESS_PASS_NAME, false, false)
 
 FunctionPass *llvm::createAArch64StorePairSuppressPass() {
   return new AArch64StorePairSuppress();

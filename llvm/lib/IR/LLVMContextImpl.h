@@ -928,7 +928,7 @@ template <> struct MDNodeKeyImpl<DIMacroFile> {
 
   bool isKeyOf(const DIMacroFile *RHS) const {
     return MIType == RHS->getMacinfoType() && Line == RHS->getLine() &&
-           File == RHS->getRawFile() && File == RHS->getRawElements();
+           File == RHS->getRawFile() && Elements == RHS->getRawElements();
   }
   unsigned getHashValue() const {
     return hash_combine(MIType, Line, File, Elements);

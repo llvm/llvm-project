@@ -101,7 +101,9 @@ public:
   };
 
   static char ID;
-  AArch64PromoteConstant() : ModulePass(ID) {}
+  AArch64PromoteConstant() : ModulePass(ID) {
+    initializeAArch64PromoteConstantPass(*PassRegistry::getPassRegistry());
+  }
 
   const char *getPassName() const override { return "AArch64 Promote Constant"; }
 
@@ -213,10 +215,6 @@ private:
 } // end anonymous namespace
 
 char AArch64PromoteConstant::ID = 0;
-
-namespace llvm {
-void initializeAArch64PromoteConstantPass(PassRegistry &);
-}
 
 INITIALIZE_PASS_BEGIN(AArch64PromoteConstant, "aarch64-promote-const",
                       "AArch64 Promote Constant Pass", false, false)

@@ -164,10 +164,6 @@ STATISTIC(NumTooCplxLvl2, "Number of too complex case of level 2");
 STATISTIC(NumADRSimpleCandidate, "Number of simplifiable ADRP + ADD");
 STATISTIC(NumADRComplexCandidate, "Number of too complex ADRP + ADD");
 
-namespace llvm {
-void initializeAArch64CollectLOHPass(PassRegistry &);
-}
-
 #define AARCH64_COLLECT_LOH_NAME "AArch64 Collect Linker Optimization Hint (LOH)"
 
 namespace {

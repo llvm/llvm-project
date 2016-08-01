@@ -46,8 +46,21 @@ FunctionPass *createAArch64CleanupLocalDynamicTLSPass();
 
 FunctionPass *createAArch64CollectLOHPass();
 
+void initializeAArch64A53Fix835769Pass(PassRegistry&);
+void initializeAArch64A57FPLoadBalancingPass(PassRegistry&);
+void initializeAArch64AddressTypePromotionPass(PassRegistry&);
+void initializeAArch64AdvSIMDScalarPass(PassRegistry&);
+void initializeAArch64BranchRelaxationPass(PassRegistry&);
+void initializeAArch64CollectLOHPass(PassRegistry&);
+void initializeAArch64ConditionalComparesPass(PassRegistry&);
+void initializeAArch64ConditionOptimizerPass(PassRegistry&);
+void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry&);
 void initializeAArch64ExpandPseudoPass(PassRegistry&);
 void initializeAArch64LoadStoreOptPass(PassRegistry&);
+void initializeAArch64PromoteConstantPass(PassRegistry&);
+void initializeAArch64RedundantCopyEliminationPass(PassRegistry&);
+void initializeAArch64StorePairSuppressPass(PassRegistry&);
+void initializeLDTLSCleanupPass(PassRegistry&);
 } // end namespace llvm
 
 #endif

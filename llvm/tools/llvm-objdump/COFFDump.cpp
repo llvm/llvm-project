@@ -353,7 +353,7 @@ static void printImportTables(const COFFObjectFile *Obj) {
     return;
   outs() << "The Import Tables:\n";
   for (const ImportDirectoryEntryRef &DirRef : Obj->import_directories()) {
-    const import_directory_table_entry *Dir;
+    const coff_import_directory_table_entry *Dir;
     StringRef Name;
     if (DirRef.getImportTableEntry(Dir)) return;
     if (DirRef.getName(Name)) return;

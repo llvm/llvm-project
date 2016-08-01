@@ -26,10 +26,6 @@ using namespace llvm;
 
 STATISTIC(NumDeadDefsReplaced, "Number of dead definitions replaced");
 
-namespace llvm {
-void initializeAArch64DeadRegisterDefinitionsPass(PassRegistry &);
-}
-
 #define AARCH64_DEAD_REG_DEF_NAME "AArch64 Dead register definitions"
 
 namespace {

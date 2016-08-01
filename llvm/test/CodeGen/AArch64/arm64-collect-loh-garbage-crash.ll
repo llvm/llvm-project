@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-apple-ios -O3 -aarch64-collect-loh -aarch64-collect-loh-bb-only=true -aarch64-collect-loh-pre-collect-register=false < %s -o - | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-ios -O3 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=true -aarch64-collect-loh-pre-collect-register=false < %s -o - | FileCheck %s
 ; Check that the LOH analysis does not crash when the analysed chained
 ; contains instructions that are filtered out.
 ;

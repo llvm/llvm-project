@@ -1,4 +1,4 @@
-; RUN: llc -verify-machineinstrs %s -o - -mtriple=aarch64-linux-gnu -aarch64-atomic-cfg-tidy=0 | FileCheck %s
+; RUN: llc -verify-machineinstrs %s -o - -mtriple=aarch64-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 | FileCheck %s
 
 @var8 = global i8 0
 @var16 = global i16 0

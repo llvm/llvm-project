@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple=arm64-apple-ios3.0.0 -aarch64-collect-loh=false | FileCheck %s
+; RUN: llc < %s -mtriple=arm64-apple-ios3.0.0 -aarch64-enable-collect-loh=false | FileCheck %s
 ; rdar://13452552
 ; Disable the collecting of LOH so that the labels do not get in the
 ; way of the NEXT patterns.

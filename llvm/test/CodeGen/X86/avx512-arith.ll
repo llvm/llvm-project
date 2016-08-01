@@ -603,10 +603,30 @@ define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
 }
 
 define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
-; CHECK-LABEL: andd512fold:
-; CHECK:       ## BB#0: ## %entry
-; CHECK-NEXT:    vpandd (%rdi), %zmm0, %zmm0
-; CHECK-NEXT:    retq
+; AVX512F-LABEL: andd512fold:
+; AVX512F:       ## BB#0: ## %entry
+; AVX512F-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: andd512fold:
+; AVX512VL:       ## BB#0: ## %entry
+; AVX512VL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: andd512fold:
+; AVX512BW:       ## BB#0: ## %entry
+; AVX512BW-NEXT:    vpandd (%rdi), %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: andd512fold:
+; AVX512DQ:       ## BB#0: ## %entry
+; AVX512DQ-NEXT:    vandps (%rdi), %zmm0, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: andd512fold:
+; SKX:       ## BB#0: ## %entry
+; SKX-NEXT:    vandps (%rdi), %zmm0, %zmm0
+; SKX-NEXT:    retq
 entry:
   %a = load <16 x i32>, <16 x i32>* %x, align 4
   %b = and <16 x i32> %y, %a
@@ -962,10 +982,30 @@ define <8 x float>  @test_fxor_8f32(<8 x float> %a) {
 }
 
 define <8 x double> @fabs_v8f64(<8 x double> %p)
-; CHECK-LABEL: fabs_v8f64:
-; CHECK:       ## BB#0:
-; CHECK-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
-; CHECK-NEXT:    retq
+; AVX512F-LABEL: fabs_v8f64:
+; AVX512F:       ## BB#0:
+; AVX512F-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fabs_v8f64:
+; AVX512VL:       ## BB#0:
+; AVX512VL-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512BW-LABEL: fabs_v8f64:
+; AVX512BW:       ## BB#0:
+; AVX512BW-NEXT:    vpandq {{.*}}(%rip), %zmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: fabs_v8f64:
+; AVX512DQ:       ## BB#0:
+; AVX512DQ-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; SKX-LABEL: fabs_v8f64:
+; SKX:       ## BB#0:
+; SKX-NEXT:    vandps {{.*}}(%rip), %zmm0, %zmm0
+; SKX-NEXT:    retq
 {
   %t = call <8 x double> @llvm.fabs.v8f64(<8 x double> %p)
   ret <8 x double> %t

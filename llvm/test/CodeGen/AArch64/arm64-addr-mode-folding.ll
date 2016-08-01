@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple arm64-apple-ios3 -aarch64-gep-opt=false %s -o - | FileCheck %s
+; RUN: llc -O3 -mtriple arm64-apple-ios3 -aarch64-enable-gep-opt=false %s -o - | FileCheck %s
 ; <rdar://problem/13621857>
 
 @block = common global i8* null, align 8

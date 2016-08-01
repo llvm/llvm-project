@@ -26,10 +26,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "aarch64-branch-relax"
 
-static cl::opt<bool>
-BranchRelaxation("aarch64-branch-relax", cl::Hidden, cl::init(true),
-                 cl::desc("Relax out of range conditional branches"));
-
 static cl::opt<unsigned>
 TBZDisplacementBits("aarch64-tbz-offset-bits", cl::Hidden, cl::init(14),
                     cl::desc("Restrict range of TB[N]Z instructions (DEBUG)"));
@@ -479,10 +475,6 @@ bool AArch64BranchRelaxation::relaxBranchInstructions() {
 
 bool AArch64BranchRelaxation::runOnMachineFunction(MachineFunction &mf) {
   MF = &mf;
-
-  // If the pass is disabled, just bail early.
-  if (!BranchRelaxation)
-    return false;
 
   DEBUG(dbgs() << "***** AArch64BranchRelaxation *****\n");
 

@@ -4,7 +4,7 @@
 define <8 x i32> @test_256_1(i8 * %addr) {
 ; CHECK-LABEL: test_256_1:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu32 (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7e,0x28,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <8 x i32>*
   %res = load <8 x i32>, <8 x i32>* %vaddr, align 1
@@ -14,7 +14,7 @@ define <8 x i32> @test_256_1(i8 * %addr) {
 define <8 x i32> @test_256_2(i8 * %addr) {
 ; CHECK-LABEL: test_256_2:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa32 (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7d,0x28,0x6f,0x07]
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <8 x i32>*
   %res = load <8 x i32>, <8 x i32>* %vaddr, align 32
@@ -24,7 +24,7 @@ define <8 x i32> @test_256_2(i8 * %addr) {
 define void @test_256_3(i8 * %addr, <4 x i64> %data) {
 ; CHECK-LABEL: test_256_3:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa64 %ymm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x28,0x7f,0x07]
+; CHECK-NEXT:    vmovaps %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x28,0x29,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i64>*
   store <4 x i64>%data, <4 x i64>* %vaddr, align 32
@@ -34,7 +34,7 @@ define void @test_256_3(i8 * %addr, <4 x i64> %data) {
 define void @test_256_4(i8 * %addr, <8 x i32> %data) {
 ; CHECK-LABEL: test_256_4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7e,0x28,0x7f,0x07]
+; CHECK-NEXT:    vmovups %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x28,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <8 x i32>*
   store <8 x i32>%data, <8 x i32>* %vaddr, align 1
@@ -44,7 +44,7 @@ define void @test_256_4(i8 * %addr, <8 x i32> %data) {
 define void @test_256_5(i8 * %addr, <8 x i32> %data) {
 ; CHECK-LABEL: test_256_5:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa32 %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7d,0x28,0x7f,0x07]
+; CHECK-NEXT:    vmovaps %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x28,0x29,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <8 x i32>*
   store <8 x i32>%data, <8 x i32>* %vaddr, align 32
@@ -54,7 +54,7 @@ define void @test_256_5(i8 * %addr, <8 x i32> %data) {
 define  <4 x i64> @test_256_6(i8 * %addr) {
 ; CHECK-LABEL: test_256_6:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x6f,0x07]
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i64>*
   %res = load <4 x i64>, <4 x i64>* %vaddr, align 32
@@ -64,7 +64,7 @@ define  <4 x i64> @test_256_6(i8 * %addr) {
 define void @test_256_7(i8 * %addr, <4 x i64> %data) {
 ; CHECK-LABEL: test_256_7:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu64 %ymm0, (%rdi) ## encoding: [0x62,0xf1,0xfe,0x28,0x7f,0x07]
+; CHECK-NEXT:    vmovups %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x28,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i64>*
   store <4 x i64>%data, <4 x i64>* %vaddr, align 1
@@ -74,7 +74,7 @@ define void @test_256_7(i8 * %addr, <4 x i64> %data) {
 define <4 x i64> @test_256_8(i8 * %addr) {
 ; CHECK-LABEL: test_256_8:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu64 (%rdi), %ymm0 ## encoding: [0x62,0xf1,0xfe,0x28,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i64>*
   %res = load <4 x i64>, <4 x i64>* %vaddr, align 1
@@ -84,7 +84,7 @@ define <4 x i64> @test_256_8(i8 * %addr) {
 define void @test_256_9(i8 * %addr, <4 x double> %data) {
 ; CHECK-LABEL: test_256_9:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovapd %ymm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x28,0x29,0x07]
+; CHECK-NEXT:    vmovaps %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x28,0x29,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x double>*
   store <4 x double>%data, <4 x double>* %vaddr, align 32
@@ -94,7 +94,7 @@ define void @test_256_9(i8 * %addr, <4 x double> %data) {
 define <4 x double> @test_256_10(i8 * %addr) {
 ; CHECK-LABEL: test_256_10:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovapd (%rdi), %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x28,0x07]
+; CHECK-NEXT:    vmovaps (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x double>*
   %res = load <4 x double>, <4 x double>* %vaddr, align 32
@@ -124,7 +124,7 @@ define <8 x float> @test_256_12(i8 * %addr) {
 define void @test_256_13(i8 * %addr, <4 x double> %data) {
 ; CHECK-LABEL: test_256_13:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovupd %ymm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x28,0x11,0x07]
+; CHECK-NEXT:    vmovups %ymm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x28,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x double>*
   store <4 x double>%data, <4 x double>* %vaddr, align 1
@@ -134,7 +134,7 @@ define void @test_256_13(i8 * %addr, <4 x double> %data) {
 define <4 x double> @test_256_14(i8 * %addr) {
 ; CHECK-LABEL: test_256_14:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovupd (%rdi), %ymm0 ## encoding: [0x62,0xf1,0xfd,0x28,0x10,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %ymm0 ## encoding: [0x62,0xf1,0x7c,0x28,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x double>*
   %res = load <4 x double>, <4 x double>* %vaddr, align 1
@@ -392,7 +392,7 @@ define <4 x double> @test_256_32(i8 * %addr, <4 x i64> %mask1) {
 define <4 x i32> @test_128_1(i8 * %addr) {
 ; CHECK-LABEL: test_128_1:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu32 (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7e,0x08,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i32>*
   %res = load <4 x i32>, <4 x i32>* %vaddr, align 1
@@ -402,7 +402,7 @@ define <4 x i32> @test_128_1(i8 * %addr) {
 define <4 x i32> @test_128_2(i8 * %addr) {
 ; CHECK-LABEL: test_128_2:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa32 (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7d,0x08,0x6f,0x07]
+; CHECK-NEXT:    vmovaps (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i32>*
   %res = load <4 x i32>, <4 x i32>* %vaddr, align 16
@@ -412,7 +412,7 @@ define <4 x i32> @test_128_2(i8 * %addr) {
 define void @test_128_3(i8 * %addr, <2 x i64> %data) {
 ; CHECK-LABEL: test_128_3:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa64 %xmm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x08,0x7f,0x07]
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x08,0x29,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x i64>*
   store <2 x i64>%data, <2 x i64>* %vaddr, align 16
@@ -422,7 +422,7 @@ define void @test_128_3(i8 * %addr, <2 x i64> %data) {
 define void @test_128_4(i8 * %addr, <4 x i32> %data) {
 ; CHECK-LABEL: test_128_4:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu32 %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7e,0x08,0x7f,0x07]
+; CHECK-NEXT:    vmovups %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x08,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i32>*
   store <4 x i32>%data, <4 x i32>* %vaddr, align 1
@@ -432,7 +432,7 @@ define void @test_128_4(i8 * %addr, <4 x i32> %data) {
 define void @test_128_5(i8 * %addr, <4 x i32> %data) {
 ; CHECK-LABEL: test_128_5:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa32 %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7d,0x08,0x7f,0x07]
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x08,0x29,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <4 x i32>*
   store <4 x i32>%data, <4 x i32>* %vaddr, align 16
@@ -442,7 +442,7 @@ define void @test_128_5(i8 * %addr, <4 x i32> %data) {
 define  <2 x i64> @test_128_6(i8 * %addr) {
 ; CHECK-LABEL: test_128_6:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqa64 (%rdi), %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x6f,0x07]
+; CHECK-NEXT:    vmovaps (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x i64>*
   %res = load <2 x i64>, <2 x i64>* %vaddr, align 16
@@ -452,7 +452,7 @@ define  <2 x i64> @test_128_6(i8 * %addr) {
 define void @test_128_7(i8 * %addr, <2 x i64> %data) {
 ; CHECK-LABEL: test_128_7:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu64 %xmm0, (%rdi) ## encoding: [0x62,0xf1,0xfe,0x08,0x7f,0x07]
+; CHECK-NEXT:    vmovups %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x08,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x i64>*
   store <2 x i64>%data, <2 x i64>* %vaddr, align 1
@@ -462,7 +462,7 @@ define void @test_128_7(i8 * %addr, <2 x i64> %data) {
 define <2 x i64> @test_128_8(i8 * %addr) {
 ; CHECK-LABEL: test_128_8:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovdqu64 (%rdi), %xmm0 ## encoding: [0x62,0xf1,0xfe,0x08,0x6f,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x i64>*
   %res = load <2 x i64>, <2 x i64>* %vaddr, align 1
@@ -472,7 +472,7 @@ define <2 x i64> @test_128_8(i8 * %addr) {
 define void @test_128_9(i8 * %addr, <2 x double> %data) {
 ; CHECK-LABEL: test_128_9:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovapd %xmm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x08,0x29,0x07]
+; CHECK-NEXT:    vmovaps %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x08,0x29,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x double>*
   store <2 x double>%data, <2 x double>* %vaddr, align 16
@@ -482,7 +482,7 @@ define void @test_128_9(i8 * %addr, <2 x double> %data) {
 define <2 x double> @test_128_10(i8 * %addr) {
 ; CHECK-LABEL: test_128_10:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovapd (%rdi), %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x28,0x07]
+; CHECK-NEXT:    vmovaps (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x28,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x double>*
   %res = load <2 x double>, <2 x double>* %vaddr, align 16
@@ -512,7 +512,7 @@ define <4 x float> @test_128_12(i8 * %addr) {
 define void @test_128_13(i8 * %addr, <2 x double> %data) {
 ; CHECK-LABEL: test_128_13:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovupd %xmm0, (%rdi) ## encoding: [0x62,0xf1,0xfd,0x08,0x11,0x07]
+; CHECK-NEXT:    vmovups %xmm0, (%rdi) ## encoding: [0x62,0xf1,0x7c,0x08,0x11,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x double>*
   store <2 x double>%data, <2 x double>* %vaddr, align 1
@@ -522,7 +522,7 @@ define void @test_128_13(i8 * %addr, <2 x double> %data) {
 define <2 x double> @test_128_14(i8 * %addr) {
 ; CHECK-LABEL: test_128_14:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovupd (%rdi), %xmm0 ## encoding: [0x62,0xf1,0xfd,0x08,0x10,0x07]
+; CHECK-NEXT:    vmovups (%rdi), %xmm0 ## encoding: [0x62,0xf1,0x7c,0x08,0x10,0x07]
 ; CHECK-NEXT:    retq ## encoding: [0xc3]
   %vaddr = bitcast i8* %addr to <2 x double>*
   %res = load <2 x double>, <2 x double>* %vaddr, align 1

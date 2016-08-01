@@ -5380,7 +5380,7 @@ define <4 x float>@test_int_x86_avx512_mask_move_ss_rrkz(<4 x float> %x0, <4 x f
 define <4 x float>@test_int_x86_avx512_mask_move_ss_rr(<4 x float> %x0, <4 x float> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_move_ss_rr:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovss %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; CHECK-NEXT:    retq
   %res = call <4 x float> @llvm.x86.avx512.mask.move.ss(<4 x float> %x0, <4 x float> %x1, <4 x float> zeroinitializer, i8 -1)
   ret <4 x float> %res
@@ -5390,7 +5390,7 @@ declare <2 x double> @llvm.x86.avx512.mask.move.sd(<2 x double>, <2 x double>, <
 define <2 x double>@test_int_x86_avx512_mask_move_sd_rr(<2 x double> %x0, <2 x double> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_move_sd_rr:
 ; CHECK:       ## BB#0:
-; CHECK-NEXT:    vmovsd %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; CHECK-NEXT:    retq
   %res = call <2 x double> @llvm.x86.avx512.mask.move.sd(<2 x double> %x0, <2 x double> %x1, <2 x double> zeroinitializer, i8 -1)
   ret <2 x double> %res
