@@ -534,7 +534,9 @@ public:
     return It == PerBlockAccesses.end() ? nullptr : It->second.get();
   }
 
-  /// \brief Create an empty MemoryPhi in MemorySSA
+  /// \brief Create an empty MemoryPhi in MemorySSA for a given basic block.
+  /// Only one MemoryPhi for a block exists at a time, so this function will
+  /// assert if you try to create one where it already exists.
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
 
   enum InsertionPlace { Beginning, End };
@@ -550,6 +552,8 @@ public:
   /// will be placed. The caller is expected to keep ordering the same as
   /// instructions.
   /// It will return the new MemoryAccess.
+  /// Note: If a MemoryAccess already exists for I, this function will make it
+  /// inaccessible and it *must* have removeMemoryAccess called on it.
   MemoryAccess *createMemoryAccessInBB(Instruction *I, MemoryAccess *Definition,
                                        const BasicBlock *BB,
                                        InsertionPlace Point);
@@ -561,6 +565,8 @@ public:
   /// used to replace an existing memory instruction. It will *not* create PHI
   /// nodes, or verify the clobbering definition.  The clobbering definition
   /// must be non-null.
+  /// Note: If a MemoryAccess already exists for I, this function will make it
+  /// inaccessible and it *must* have removeMemoryAccess called on it.
   MemoryAccess *createMemoryAccessBefore(Instruction *I,
                                          MemoryAccess *Definition,
                                          MemoryAccess *InsertPt);

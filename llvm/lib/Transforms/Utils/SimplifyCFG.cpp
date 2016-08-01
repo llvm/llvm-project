@@ -5038,6 +5038,110 @@ static bool SwitchToLookupTable(SwitchInst *SI, IRBuilder<> &Builder,
   return true;
 }
 
+static bool isSwitchDense(ArrayRef<int64_t> Values) {
+  // See also SelectionDAGBuilder::isDense(), which this function was based on.
+  uint64_t Diff = (uint64_t)Values.back() - (uint64_t)Values.front();
+  uint64_t Range = Diff + 1;
+  uint64_t NumCases = Values.size();
+  // 40% is the default density for building a jump table in optsize/minsize mode.
+  uint64_t MinDensity = 40;
+  
+  return NumCases * 100 >= Range * MinDensity;
+}
+
+// Try and transform a switch that has "holes" in it to a contiguous sequence
+// of cases.
+//
+// A switch such as: switch(i) {case 5: case 9: case 13: case 17:} can be
+// range-reduced to: switch ((i-5) / 4) {case 0: case 1: case 2: case 3:}.
+//
+// This converts a sparse switch into a dense switch which allows better
+// lowering and could also allow transforming into a lookup table.
+static bool ReduceSwitchRange(SwitchInst *SI, IRBuilder<> &Builder,
+                              const DataLayout &DL,
+                              const TargetTransformInfo &TTI) {
+  auto *CondTy = cast<IntegerType>(SI->getCondition()->getType());
+  if (CondTy->getIntegerBitWidth() > 64 ||
+      !DL.fitsInLegalInteger(CondTy->getIntegerBitWidth()))
+    return false;
+  // Only bother with this optimization if there are more than 3 switch cases;
+  // SDAG will only bother creating jump tables for 4 or more cases.
+  if (SI->getNumCases() < 4)
+    return false;
+
+  // This transform is agnostic to the signedness of the input or case values. We
+  // can treat the case values as signed or unsigned. We can optimize more common
+  // cases such as a sequence crossing zero {-4,0,4,8} if we interpret case values
+  // as signed.
+  SmallVector<int64_t,4> Values;
+  for (auto &C : SI->cases())
+    Values.push_back(C.getCaseValue()->getValue().getSExtValue());
+  std::sort(Values.begin(), Values.end());
+
+  // If the switch is already dense, there's nothing useful to do here.
+  if (isSwitchDense(Values))
+    return false;
+
+  // First, transform the values such that they start at zero and ascend.
+  int64_t Base = Values[0];
+  for (auto &V : Values)
+    V -= Base;
+
+  // Now we have signed numbers that have been shifted so that, given enough
+  // precision, there are no negative values. Since the rest of the transform
+  // is bitwise only, we switch now to an unsigned representation.
+  uint64_t GCD = 0;
+  for (auto &V : Values)
+    GCD = llvm::GreatestCommonDivisor64(GCD, (uint64_t)V);
+
+  // This transform can be done speculatively because it is so cheap - it results
+  // in a single rotate operation being inserted. This can only happen if the
+  // factor extracted is a power of 2.
+  // FIXME: If the GCD is an odd number we can multiply by the multiplicative
+  // inverse of GCD and then perform this transform.
+  // FIXME: It's possible that optimizing a switch on powers of two might also
+  // be beneficial - flag values are often powers of two and we could use a CLZ
+  // as the key function.
+  if (GCD <= 1 || !llvm::isPowerOf2_64(GCD))
+    // No common divisor found or too expensive to compute key function.
+    return false;
+
+  unsigned Shift = llvm::Log2_64(GCD);
+  for (auto &V : Values)
+    V = (int64_t)((uint64_t)V >> Shift);
+
+  if (!isSwitchDense(Values))
+    // Transform didn't create a dense switch.
+    return false;
+
+  // The obvious transform is to shift the switch condition right and emit a
+  // check that the condition actually cleanly divided by GCD, i.e.
+  //   C & (1 << Shift - 1) == 0
+  // inserting a new CFG edge to handle the case where it didn't divide cleanly.
+  //
+  // A cheaper way of doing this is a simple ROTR(C, Shift). This performs the
+  // shift and puts the shifted-off bits in the uppermost bits. If any of these
+  // are nonzero then the switch condition will be very large and will hit the
+  // default case.
+  
+  auto *Ty = cast<IntegerType>(SI->getCondition()->getType());
+  Builder.SetInsertPoint(SI);
+  auto *ShiftC = ConstantInt::get(Ty, Shift);
+  auto *Sub = Builder.CreateSub(SI->getCondition(), ConstantInt::get(Ty, Base));
+  auto *Rot = Builder.CreateOr(Builder.CreateLShr(Sub, ShiftC),
+                               Builder.CreateShl(Sub, Ty->getBitWidth() - Shift));
+  SI->replaceUsesOfWith(SI->getCondition(), Rot);
+
+  for (SwitchInst::CaseIt C = SI->case_begin(), E = SI->case_end(); C != E;
+       ++C) {
+    auto *Orig = C.getCaseValue();
+    auto Sub = Orig->getValue() - APInt(Ty->getBitWidth(), Base);
+    C.setValue(
+        cast<ConstantInt>(ConstantInt::get(Ty, Sub.lshr(ShiftC->getValue()))));
+  }
+  return true;
+}
+
 bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
   BasicBlock *BB = SI->getParent();
 
@@ -5079,6 +5183,9 @@ bool SimplifyCFGOpt::SimplifySwitch(SwitchInst *SI, IRBuilder<> &Builder) {
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
   if (SwitchToLookupTable(SI, Builder, DL, TTI))
+    return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
+
+  if (ReduceSwitchRange(SI, Builder, DL, TTI))
     return SimplifyCFG(BB, TTI, BonusInstThreshold, AC) | true;
 
   return false;

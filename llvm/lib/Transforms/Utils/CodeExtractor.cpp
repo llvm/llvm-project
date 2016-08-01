@@ -339,7 +339,22 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
   // If the old function is no-throw, so is the new one.
   if (oldFunction->doesNotThrow())
     newFunction->setDoesNotThrow();
-  
+
+  // Inherit the uwtable attribute if we need to.
+  if (oldFunction->hasUWTable())
+    newFunction->setHasUWTable();
+
+  // Inherit all of the target dependent attributes.
+  //  (e.g. If the extracted region contains a call to an x86.sse
+  //  instruction we need to make sure that the extracted region has the
+  //  "target-features" attribute allowing it to be lowered.
+  // FIXME: This should be changed to check to see if a specific
+  //           attribute can not be inherited.
+  AttributeSet OldFnAttrs = oldFunction->getAttributes().getFnAttributes();
+  AttrBuilder AB(OldFnAttrs, AttributeSet::FunctionIndex);
+  for (auto Attr : AB.td_attrs())
+    newFunction->addFnAttr(Attr.first, Attr.second);
+
   newFunction->getBasicBlockList().push_back(newRootNode);
 
   // Create an iterator to name all of the arguments we inserted.

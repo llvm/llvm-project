@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
+; RUN: llc -mtriple=arm64-apple-ios -O2 -aarch64-enable-collect-loh -aarch64-collect-loh-bb-only=false < %s -o - | FileCheck %s
 ; Test case for <rdar://problem/15942912>.
 ; AdrpAddStr cannot be used when the store uses same
 ; register as address and value. Indeed, the related

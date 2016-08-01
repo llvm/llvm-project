@@ -62,11 +62,11 @@ define <16 x float> @testf16_regs(<16 x float> %a, <16 x float> %b) nounwind {
 
 ; test calling conventions - prolog and epilog
 ; WIN64-LABEL: test_prolog_epilog
-; WIN64: vmovups %zmm21, {{.*(%rbp).*}}     # 64-byte Spill
-; WIN64: vmovups %zmm6, {{.*(%rbp).*}}     # 64-byte Spill
+; WIN64: vmovaps %zmm21, {{.*(%rbp).*}}     # 64-byte Spill
+; WIN64: vmovaps %zmm6, {{.*(%rbp).*}}     # 64-byte Spill
 ; WIN64: call
-; WIN64: vmovups {{.*(%rbp).*}}, %zmm6      # 64-byte Reload
-; WIN64: vmovups {{.*(%rbp).*}}, %zmm21     # 64-byte Reload
+; WIN64: vmovaps {{.*(%rbp).*}}, %zmm6      # 64-byte Reload
+; WIN64: vmovaps {{.*(%rbp).*}}, %zmm21     # 64-byte Reload
 
 ; X64-LABEL: test_prolog_epilog
 ; X64:  kmovq   %k7, {{.*}}(%rsp)         ## 8-byte Spill

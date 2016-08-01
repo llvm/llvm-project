@@ -32,14 +32,14 @@ define <8 x i64> @test_broadcast_4i64_8i64(<4 x i64> *%p) nounwind {
 define <16 x float> @test_broadcast_8f32_16f32(<8 x float> *%p) nounwind {
 ; X64-AVX512VL-LABEL: test_broadcast_8f32_16f32:
 ; X64-AVX512VL:       ## BB#0:
-; X64-AVX512VL-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX512VL-NEXT:    vmovapd (%rdi), %ymm0
 ; X64-AVX512VL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    vaddps {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512VL-NEXT:    retq
 ;
 ; X64-AVX512BWVL-LABEL: test_broadcast_8f32_16f32:
 ; X64-AVX512BWVL:       ## BB#0:
-; X64-AVX512BWVL-NEXT:    vmovaps (%rdi), %ymm0
+; X64-AVX512BWVL-NEXT:    vmovapd (%rdi), %ymm0
 ; X64-AVX512BWVL-NEXT:    vinsertf64x4 $1, %ymm0, %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    vaddps {{.*}}(%rip), %zmm0, %zmm0
 ; X64-AVX512BWVL-NEXT:    retq

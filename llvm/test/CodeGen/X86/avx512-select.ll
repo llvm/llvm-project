@@ -8,7 +8,7 @@ define <16 x i32> @select00(i32 %a, <16 x i32> %b) nounwind {
 ; CHECK-NEXT:    cmpl $255, %edi
 ; CHECK-NEXT:    je LBB0_2
 ; CHECK-NEXT:  ## BB#1:
-; CHECK-NEXT:    vmovaps %zmm0, %zmm1
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; CHECK-NEXT:  LBB0_2:
 ; CHECK-NEXT:    vpxord %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
@@ -25,9 +25,9 @@ define <8 x i64> @select01(i32 %a, <8 x i64> %b) nounwind {
 ; CHECK-NEXT:    cmpl $255, %edi
 ; CHECK-NEXT:    je LBB1_2
 ; CHECK-NEXT:  ## BB#1:
-; CHECK-NEXT:    vmovaps %zmm0, %zmm1
+; CHECK-NEXT:    vmovdqa64 %zmm0, %zmm1
 ; CHECK-NEXT:  LBB1_2:
-; CHECK-NEXT:    vxorps %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpxorq %zmm1, %zmm0, %zmm0
 ; CHECK-NEXT:    retq
   %cmpres = icmp eq i32 %a, 255
   %selres = select i1 %cmpres, <8 x i64> zeroinitializer, <8 x i64> %b

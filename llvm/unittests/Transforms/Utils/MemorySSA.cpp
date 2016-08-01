@@ -67,7 +67,7 @@ public:
 
 TEST_F(MemorySSATest, CreateALoadAndPhi) {
   // We create a diamond where there is a store on one side, and then after
-  // running memory ssa, create a load after the merge point, and use it to test
+  // building MemorySSA, create a load after the merge point, and use it to test
   // updating by creating an access for the load and a memoryphi.
   F = Function::Create(
       FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
@@ -103,6 +103,42 @@ TEST_F(MemorySSATest, CreateALoadAndPhi) {
       MSSA.createMemoryAccessInBB(LoadInst, MP, Merge, MemorySSA::Beginning));
   MemoryAccess *DefiningAccess = LoadAccess->getDefiningAccess();
   EXPECT_TRUE(isa<MemoryPhi>(DefiningAccess));
+  MSSA.verifyMemorySSA();
+}
+
+TEST_F(MemorySSATest, MoveAStore) {
+  // We create a diamond where there is a in the entry, a store on one side, and
+  // a load at the end.  After building MemorySSA, we test updating by moving
+  // the store from the side block to the entry block.
+  F = Function::Create(
+      FunctionType::get(B.getVoidTy(), {B.getInt8PtrTy()}, false),
+      GlobalValue::ExternalLinkage, "F", &M);
+  BasicBlock *Entry(BasicBlock::Create(C, "", F));
+  BasicBlock *Left(BasicBlock::Create(C, "", F));
+  BasicBlock *Right(BasicBlock::Create(C, "", F));
+  BasicBlock *Merge(BasicBlock::Create(C, "", F));
+  B.SetInsertPoint(Entry);
+  Argument *PointerArg = &*F->arg_begin();
+  StoreInst *EntryStore = B.CreateStore(B.getInt8(16), PointerArg);
+  B.CreateCondBr(B.getTrue(), Left, Right);
+  B.SetInsertPoint(Left);
+  StoreInst *SideStore = B.CreateStore(B.getInt8(16), PointerArg);
+  BranchInst::Create(Merge, Left);
+  BranchInst::Create(Merge, Right);
+  B.SetInsertPoint(Merge);
+  B.CreateLoad(PointerArg);
+  setupAnalyses();
+  MemorySSA &MSSA = Analyses->MSSA;
+
+  // Move the store
+  SideStore->moveBefore(Entry->getTerminator());
+  MemoryAccess *EntryStoreAccess = MSSA.getMemoryAccess(EntryStore);
+  MemoryAccess *SideStoreAccess = MSSA.getMemoryAccess(SideStore);
+  MemoryAccess *NewStoreAccess = MSSA.createMemoryAccessAfter(SideStore,
+                                                         EntryStoreAccess,
+                                                         EntryStoreAccess);
+  EntryStoreAccess->replaceAllUsesWith(NewStoreAccess);
+  MSSA.removeMemoryAccess(SideStoreAccess);
   MSSA.verifyMemorySSA();
 }
 

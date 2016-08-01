@@ -1098,7 +1098,13 @@ def addrRegImm :
 def addrDefault :
   ComplexPattern<iPTR, 2, "selectAddrDefault", [frameindex]>;
 
-def addrimm10 : ComplexPattern<iPTR, 2, "selectIntAddrMSA", [frameindex]>;
+def addrimm10 : ComplexPattern<iPTR, 2, "selectIntAddrSImm10", [frameindex]>;
+def addrimm10lsl1 : ComplexPattern<iPTR, 2, "selectIntAddrSImm10Lsl1",
+                                   [frameindex]>;
+def addrimm10lsl2 : ComplexPattern<iPTR, 2, "selectIntAddrSImm10Lsl2",
+                                   [frameindex]>;
+def addrimm10lsl3 : ComplexPattern<iPTR, 2, "selectIntAddrSImm10Lsl3",
+                                   [frameindex]>;
 
 //===----------------------------------------------------------------------===//
 // Instructions specific format

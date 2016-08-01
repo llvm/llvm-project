@@ -1147,7 +1147,7 @@ void MemorySSA::buildMemorySSA() {
     // Insert phi node
     AccessList *Accesses = getOrCreateAccessList(BB);
     MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
-    ValueToMemoryAccess.insert(std::make_pair(BB, Phi));
+    ValueToMemoryAccess[BB] = Phi;
     // Phi's always are placed at the front of the block.
     Accesses->push_front(Phi);
   }
@@ -1204,7 +1204,7 @@ MemoryPhi *MemorySSA::createMemoryPhi(BasicBlock *BB) {
   assert(!getMemoryAccess(BB) && "MemoryPhi already exists for this BB");
   AccessList *Accesses = getOrCreateAccessList(BB);
   MemoryPhi *Phi = new MemoryPhi(BB->getContext(), BB, NextID++);
-  ValueToMemoryAccess.insert(std::make_pair(BB, Phi));
+  ValueToMemoryAccess[BB] = Phi;
   // Phi's always are placed at the front of the block.
   Accesses->push_front(Phi);
   BlockNumberingValid.erase(BB);
@@ -1293,7 +1293,7 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I) {
     MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
   else
     MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
-  ValueToMemoryAccess.insert(std::make_pair(I, MUD));
+  ValueToMemoryAccess[I] = MUD;
   return MUD;
 }
 
@@ -1376,7 +1376,9 @@ void MemorySSA::removeFromLookups(MemoryAccess *MA) {
   } else {
     MemoryInst = MA->getBlock();
   }
-  ValueToMemoryAccess.erase(MemoryInst);
+  auto VMA = ValueToMemoryAccess.find(MemoryInst);
+  if (VMA->second == MA)
+    ValueToMemoryAccess.erase(VMA);
 
   auto AccessIt = PerBlockAccesses.find(MA->getBlock());
   std::unique_ptr<AccessList> &Accesses = AccessIt->second;

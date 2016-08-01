@@ -484,8 +484,10 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && X86ScalarSSEf64) {
     // f32 and f64 use SSE.
     // Set up the FP register classes.
-    addRegisterClass(MVT::f32, &X86::FR32RegClass);
-    addRegisterClass(MVT::f64, &X86::FR64RegClass);
+    addRegisterClass(MVT::f32, Subtarget.hasAVX512() ? &X86::FR32XRegClass
+                                                     : &X86::FR32RegClass);
+    addRegisterClass(MVT::f64, Subtarget.hasAVX512() ? &X86::FR64XRegClass
+                                                     : &X86::FR64RegClass);
 
     for (auto VT : { MVT::f32, MVT::f64 }) {
       // Use ANDPD to simulate FABS.
@@ -514,7 +516,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   } else if (UseX87 && X86ScalarSSEf32) {
     // Use SSE for f32, x87 for f64.
     // Set up the FP register classes.
-    addRegisterClass(MVT::f32, &X86::FR32RegClass);
+    addRegisterClass(MVT::f32, Subtarget.hasAVX512() ? &X86::FR32XRegClass
+                                                     : &X86::FR32RegClass);
     addRegisterClass(MVT::f64, &X86::RFP64RegClass);
 
     // Use ANDPS to simulate FABS.
@@ -717,7 +720,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE1()) {
-    addRegisterClass(MVT::v4f32, &X86::VR128RegClass);
+    addRegisterClass(MVT::v4f32, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                    : &X86::VR128RegClass);
 
     setOperationAction(ISD::FNEG,               MVT::v4f32, Custom);
     setOperationAction(ISD::FABS,               MVT::v4f32, Custom);
@@ -730,14 +734,19 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   }
 
   if (!Subtarget.useSoftFloat() && Subtarget.hasSSE2()) {
-    addRegisterClass(MVT::v2f64, &X86::VR128RegClass);
+    addRegisterClass(MVT::v2f64, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                    : &X86::VR128RegClass);
 
     // FIXME: Unfortunately, -soft-float and -no-implicit-float mean XMM
     // registers cannot be used even for integer operations.
-    addRegisterClass(MVT::v16i8, &X86::VR128RegClass);
-    addRegisterClass(MVT::v8i16, &X86::VR128RegClass);
-    addRegisterClass(MVT::v4i32, &X86::VR128RegClass);
-    addRegisterClass(MVT::v2i64, &X86::VR128RegClass);
+    addRegisterClass(MVT::v16i8, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                    : &X86::VR128RegClass);
+    addRegisterClass(MVT::v8i16, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                    : &X86::VR128RegClass);
+    addRegisterClass(MVT::v4i32, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                    : &X86::VR128RegClass);
+    addRegisterClass(MVT::v2i64, Subtarget.hasVLX() ? &X86::VR128XRegClass
+                                                    : &X86::VR128RegClass);
 
     setOperationAction(ISD::MUL,                MVT::v16i8, Custom);
     setOperationAction(ISD::MUL,                MVT::v4i32, Custom);
@@ -945,12 +954,18 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   if (!Subtarget.useSoftFloat() && Subtarget.hasFp256()) {
     bool HasInt256 = Subtarget.hasInt256();
 
-    addRegisterClass(MVT::v32i8,  &X86::VR256RegClass);
-    addRegisterClass(MVT::v16i16, &X86::VR256RegClass);
-    addRegisterClass(MVT::v8i32,  &X86::VR256RegClass);
-    addRegisterClass(MVT::v8f32,  &X86::VR256RegClass);
-    addRegisterClass(MVT::v4i64,  &X86::VR256RegClass);
-    addRegisterClass(MVT::v4f64,  &X86::VR256RegClass);
+    addRegisterClass(MVT::v32i8,  Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                     : &X86::VR256RegClass);
+    addRegisterClass(MVT::v16i16, Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                     : &X86::VR256RegClass);
+    addRegisterClass(MVT::v8i32,  Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                     : &X86::VR256RegClass);
+    addRegisterClass(MVT::v8f32,  Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                     : &X86::VR256RegClass);
+    addRegisterClass(MVT::v4i64,  Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                     : &X86::VR256RegClass);
+    addRegisterClass(MVT::v4f64,  Subtarget.hasVLX() ? &X86::VR256XRegClass
+                                                     : &X86::VR256RegClass);
 
     for (auto VT : { MVT::v8f32, MVT::v4f64 }) {
       setOperationAction(ISD::FFLOOR,     VT, Legal);
@@ -28631,18 +28646,23 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
   unsigned Opc = X86ISD::SHLD;
   SDValue Op0 = N0.getOperand(0);
   SDValue Op1 = N1.getOperand(0);
-  if (ShAmt0.getOpcode() == ISD::SUB) {
+  if (ShAmt0.getOpcode() == ISD::SUB ||
+      ShAmt0.getOpcode() == ISD::XOR) {
     Opc = X86ISD::SHRD;
     std::swap(Op0, Op1);
     std::swap(ShAmt0, ShAmt1);
   }
 
+  // OR( SHL( X, C ), SRL( Y, 32 - C ) ) -> SHLD( X, Y, C )
+  // OR( SRL( X, C ), SHL( Y, 32 - C ) ) -> SHRD( X, Y, C )
+  // OR( SHL( X, C ), SRL( SRL( Y, 1 ), XOR( C, 31 ) ) ) -> SHLD( X, Y, C )
+  // OR( SRL( X, C ), SHL( SHL( Y, 1 ), XOR( C, 31 ) ) ) -> SHRD( X, Y, C )
   unsigned Bits = VT.getSizeInBits();
   if (ShAmt1.getOpcode() == ISD::SUB) {
     SDValue Sum = ShAmt1.getOperand(0);
     if (ConstantSDNode *SumC = dyn_cast<ConstantSDNode>(Sum)) {
       SDValue ShAmt1Op1 = ShAmt1.getOperand(1);
-      if (ShAmt1Op1.getNode()->getOpcode() == ISD::TRUNCATE)
+      if (ShAmt1Op1.getOpcode() == ISD::TRUNCATE)
         ShAmt1Op1 = ShAmt1Op1.getOperand(0);
       if (SumC->getSExtValue() == Bits && ShAmt1Op1 == ShAmt0)
         return DAG.getNode(Opc, DL, VT,
@@ -28652,12 +28672,33 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     }
   } else if (ConstantSDNode *ShAmt1C = dyn_cast<ConstantSDNode>(ShAmt1)) {
     ConstantSDNode *ShAmt0C = dyn_cast<ConstantSDNode>(ShAmt0);
-    if (ShAmt0C &&
-        ShAmt0C->getSExtValue() + ShAmt1C->getSExtValue() == Bits)
+    if (ShAmt0C && (ShAmt0C->getSExtValue() + ShAmt1C->getSExtValue()) == Bits)
       return DAG.getNode(Opc, DL, VT,
                          N0.getOperand(0), N1.getOperand(0),
                          DAG.getNode(ISD::TRUNCATE, DL,
                                        MVT::i8, ShAmt0));
+  } else if (ShAmt1.getOpcode() == ISD::XOR) {
+    SDValue Mask = ShAmt1.getOperand(1);
+    if (ConstantSDNode *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+      unsigned InnerShift = (X86ISD::SHLD == Opc ? ISD::SRL : ISD::SHL);
+      SDValue ShAmt1Op0 = ShAmt1.getOperand(0);
+      if (ShAmt1Op0.getOpcode() == ISD::TRUNCATE)
+        ShAmt1Op0 = ShAmt1Op0.getOperand(0);
+      if (MaskC->getSExtValue() == (Bits - 1) && ShAmt1Op0 == ShAmt0) {
+        if (Op1.getOpcode() == InnerShift &&
+            isa<ConstantSDNode>(Op1.getOperand(1)) &&
+            Op1.getConstantOperandVal(1) == 1) {
+          return DAG.getNode(Opc, DL, VT, Op0, Op1.getOperand(0),
+                             DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, ShAmt0));
+        }
+        // Test for ADD( Y, Y ) as an equivalent to SHL( Y, 1 ).
+        if (InnerShift == ISD::SHL && Op1.getOpcode() == ISD::ADD &&
+            Op1.getOperand(0) == Op1.getOperand(1)) {
+          return DAG.getNode(Opc, DL, VT, Op0, Op1.getOperand(0),
+                     DAG.getNode(ISD::TRUNCATE, DL, MVT::i8, ShAmt0));
+        }
+      }
+    }
   }
 
   return SDValue();
@@ -31701,60 +31742,21 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
 /// Check if \p RC is a general purpose register class.
 /// I.e., GR* or one of their variant.
 static bool isGRClass(const TargetRegisterClass &RC) {
-  switch (RC.getID()) {
-  case X86::GR8RegClassID:
-  case X86::GR8_ABCD_LRegClassID:
-  case X86::GR8_ABCD_HRegClassID:
-  case X86::GR8_NOREXRegClassID:
-  case X86::GR16RegClassID:
-  case X86::GR16_ABCDRegClassID:
-  case X86::GR16_NOREXRegClassID:
-  case X86::GR32RegClassID:
-  case X86::GR32_ABCDRegClassID:
-  case X86::GR32_TCRegClassID:
-  case X86::GR32_NOREXRegClassID:
-  case X86::GR32_NOAXRegClassID:
-  case X86::GR32_NOSPRegClassID:
-  case X86::GR32_NOREX_NOSPRegClassID:
-  case X86::GR32_ADRegClassID:
-  case X86::GR64RegClassID:
-  case X86::GR64_ABCDRegClassID:
-  case X86::GR64_TCRegClassID:
-  case X86::GR64_TCW64RegClassID:
-  case X86::GR64_NOREXRegClassID:
-  case X86::GR64_NOSPRegClassID:
-  case X86::GR64_NOREX_NOSPRegClassID:
-  case X86::LOW32_ADDR_ACCESSRegClassID:
-  case X86::LOW32_ADDR_ACCESS_RBPRegClassID:
-    return true;
-  default:
-    return false;
-  }
+  return RC.hasSuperClassEq(&X86::GR8RegClass) ||
+         RC.hasSuperClassEq(&X86::GR16RegClass) ||
+         RC.hasSuperClassEq(&X86::GR32RegClass) ||
+         RC.hasSuperClassEq(&X86::GR64RegClass) ||
+         RC.hasSuperClassEq(&X86::LOW32_ADDR_ACCESS_RBPRegClass);
 }
 
 /// Check if \p RC is a vector register class.
 /// I.e., FR* / VR* or one of their variant.
 static bool isFRClass(const TargetRegisterClass &RC) {
-  switch (RC.getID()) {
-  case X86::FR32RegClassID:
-  case X86::FR32XRegClassID:
-  case X86::FR64RegClassID:
-  case X86::FR64XRegClassID:
-  case X86::FR128RegClassID:
-  case X86::VR64RegClassID:
-  case X86::VR128RegClassID:
-  case X86::VR128LRegClassID:
-  case X86::VR128HRegClassID:
-  case X86::VR128XRegClassID:
-  case X86::VR256RegClassID:
-  case X86::VR256LRegClassID:
-  case X86::VR256HRegClassID:
-  case X86::VR256XRegClassID:
-  case X86::VR512RegClassID:
-    return true;
-  default:
-    return false;
-  }
+  return RC.hasSuperClassEq(&X86::FR32XRegClass) ||
+         RC.hasSuperClassEq(&X86::FR64XRegClass) ||
+         RC.hasSuperClassEq(&X86::VR128XRegClass) ||
+         RC.hasSuperClassEq(&X86::VR256XRegClass) ||
+         RC.hasSuperClassEq(&X86::VR512RegClass);
 }
 
 std::pair<unsigned, const TargetRegisterClass *>

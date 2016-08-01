@@ -161,14 +161,6 @@ struct data_directory {
   support::ulittle32_t Size;
 };
 
-struct import_directory_table_entry {
-  support::ulittle32_t ImportLookupTableRVA;
-  support::ulittle32_t TimeDateStamp;
-  support::ulittle32_t ForwarderChain;
-  support::ulittle32_t NameRVA;
-  support::ulittle32_t ImportAddressTableRVA;
-};
-
 struct debug_directory {
   support::ulittle32_t Characteristics;
   support::ulittle32_t TimeDateStamp;
@@ -534,6 +526,10 @@ struct coff_import_directory_table_entry {
   support::ulittle32_t ForwarderChain;
   support::ulittle32_t NameRVA;
   support::ulittle32_t ImportAddressTableRVA;
+  bool isNull() const {
+    return ImportLookupTableRVA == 0 && TimeDateStamp == 0 &&
+           ForwarderChain == 0 && NameRVA == 0 && ImportAddressTableRVA == 0;
+  }
 };
 
 template <typename IntTy>
@@ -633,7 +629,7 @@ private:
   const coff_symbol32 *SymbolTable32;
   const char *StringTable;
   uint32_t StringTableSize;
-  const import_directory_table_entry *ImportDirectory;
+  const coff_import_directory_table_entry *ImportDirectory;
   const delay_import_directory_table_entry *DelayImportDirectory;
   uint32_t NumberOfDelayImportDirectory;
   const export_directory_table_entry *ExportDirectory;
@@ -892,8 +888,8 @@ public:
 class ImportDirectoryEntryRef {
 public:
   ImportDirectoryEntryRef() : OwningObject(nullptr) {}
-  ImportDirectoryEntryRef(const import_directory_table_entry *Table, uint32_t I,
-                          const COFFObjectFile *Owner)
+  ImportDirectoryEntryRef(const coff_import_directory_table_entry *Table,
+                          uint32_t I, const COFFObjectFile *Owner)
       : ImportTable(Table), Index(I), OwningObject(Owner) {}
 
   bool operator==(const ImportDirectoryEntryRef &Other) const;
@@ -903,15 +899,19 @@ public:
   imported_symbol_iterator imported_symbol_end() const;
   iterator_range<imported_symbol_iterator> imported_symbols() const;
 
+  imported_symbol_iterator lookup_table_begin() const;
+  imported_symbol_iterator lookup_table_end() const;
+  iterator_range<imported_symbol_iterator> lookup_table_symbols() const;
+
   std::error_code getName(StringRef &Result) const;
   std::error_code getImportLookupTableRVA(uint32_t &Result) const;
   std::error_code getImportAddressTableRVA(uint32_t &Result) const;
 
   std::error_code
-  getImportTableEntry(const import_directory_table_entry *&Result) const;
+  getImportTableEntry(const coff_import_directory_table_entry *&Result) const;
 
 private:
-  const import_directory_table_entry *ImportTable;
+  const coff_import_directory_table_entry *ImportTable;
   uint32_t Index;
   const COFFObjectFile *OwningObject;
 };

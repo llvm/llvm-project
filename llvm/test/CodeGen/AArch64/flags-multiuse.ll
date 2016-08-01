@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-atomic-cfg-tidy=0 -verify-machineinstrs -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-none-linux-gnu -aarch64-enable-atomic-cfg-tidy=0 -verify-machineinstrs -o - %s | FileCheck %s
 
 ; LLVM should be able to cope with multiple uses of the same flag-setting
 ; instruction at different points of a routine. Either by rematerializing the

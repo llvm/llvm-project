@@ -75,6 +75,10 @@ OptLevelO2("O2",
            cl::desc("Optimization level 2. Identical to 'opt -O2'"));
 
 static cl::opt<bool>
+OptLevelOs("Os",
+           cl::desc("Like -O2 with extra optimizations for size. Similar to clang -Os"));
+
+static cl::opt<bool>
 OptLevelO3("O3",
            cl::desc("Optimization level 3. Identical to 'opt -O3'"));
 
@@ -176,8 +180,8 @@ int main(int argc, char **argv) {
     PassManagerBuilder Builder;
     if (OptLevelO1)
       Builder.Inliner = createAlwaysInlinerPass();
-    else if (OptLevelO2)
-      Builder.Inliner = createFunctionInliningPass(225);
+    else if (OptLevelOs || OptLevelO2)
+      Builder.Inliner = createFunctionInliningPass(2, OptLevelOs ? 1 : 0);
     else
       Builder.Inliner = createFunctionInliningPass(275);
     Builder.populateFunctionPassManager(PM);

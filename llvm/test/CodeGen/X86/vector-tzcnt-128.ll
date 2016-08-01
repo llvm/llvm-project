@@ -1435,25 +1435,10 @@ define <4 x i32> @foldv4i32() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,32,0]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: foldv4i32:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: foldv4i32:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
-; AVX2-NEXT:    retq
-;
-; AVX512CDVL-LABEL: foldv4i32:
-; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vmovdqa32 {{.*#+}} xmm0 = [8,0,32,0]
-; AVX512CDVL-NEXT:    retq
-;
-; AVX512CD-LABEL: foldv4i32:
-; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
-; AVX512CD-NEXT:    retq
+; AVX-LABEL: foldv4i32:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
+; AVX-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv4i32:
 ; X32-SSE:       # BB#0:
@@ -1469,25 +1454,10 @@ define <4 x i32> @foldv4i32u() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,32,0]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: foldv4i32u:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: foldv4i32u:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
-; AVX2-NEXT:    retq
-;
-; AVX512CDVL-LABEL: foldv4i32u:
-; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vmovdqa32 {{.*#+}} xmm0 = [8,0,32,0]
-; AVX512CDVL-NEXT:    retq
-;
-; AVX512CD-LABEL: foldv4i32u:
-; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
-; AVX512CD-NEXT:    retq
+; AVX-LABEL: foldv4i32u:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,32,0]
+; AVX-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv4i32u:
 ; X32-SSE:       # BB#0:
@@ -1503,25 +1473,10 @@ define <8 x i16> @foldv8i16() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: foldv8i16:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: foldv8i16:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX2-NEXT:    retq
-;
-; AVX512CDVL-LABEL: foldv8i16:
-; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX512CDVL-NEXT:    retq
-;
-; AVX512CD-LABEL: foldv8i16:
-; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX512CD-NEXT:    retq
+; AVX-LABEL: foldv8i16:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
+; AVX-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv8i16:
 ; X32-SSE:       # BB#0:
@@ -1537,25 +1492,10 @@ define <8 x i16> @foldv8i16u() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: foldv8i16u:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: foldv8i16u:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX2-NEXT:    retq
-;
-; AVX512CDVL-LABEL: foldv8i16u:
-; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX512CDVL-NEXT:    retq
-;
-; AVX512CD-LABEL: foldv8i16u:
-; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
-; AVX512CD-NEXT:    retq
+; AVX-LABEL: foldv8i16u:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,16,0,16,0,3,3]
+; AVX-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv8i16u:
 ; X32-SSE:       # BB#0:
@@ -1571,25 +1511,10 @@ define <16 x i8> @foldv16i8() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: foldv16i8:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: foldv16i8:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX2-NEXT:    retq
-;
-; AVX512CDVL-LABEL: foldv16i8:
-; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX512CDVL-NEXT:    retq
-;
-; AVX512CD-LABEL: foldv16i8:
-; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX512CD-NEXT:    retq
+; AVX-LABEL: foldv16i8:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
+; AVX-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv16i8:
 ; X32-SSE:       # BB#0:
@@ -1605,25 +1530,10 @@ define <16 x i8> @foldv16i8u() nounwind {
 ; SSE-NEXT:    movaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
 ; SSE-NEXT:    retq
 ;
-; AVX1-LABEL: foldv16i8u:
-; AVX1:       # BB#0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: foldv16i8u:
-; AVX2:       # BB#0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX2-NEXT:    retq
-;
-; AVX512CDVL-LABEL: foldv16i8u:
-; AVX512CDVL:       # BB#0:
-; AVX512CDVL-NEXT:    vmovdqa64 {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX512CDVL-NEXT:    retq
-;
-; AVX512CD-LABEL: foldv16i8u:
-; AVX512CD:       # BB#0:
-; AVX512CD-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
-; AVX512CD-NEXT:    retq
+; AVX-LABEL: foldv16i8u:
+; AVX:       # BB#0:
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [8,0,8,0,8,0,3,3,1,1,0,1,2,3,4,5]
+; AVX-NEXT:    retq
 ;
 ; X32-SSE-LABEL: foldv16i8u:
 ; X32-SSE:       # BB#0:
