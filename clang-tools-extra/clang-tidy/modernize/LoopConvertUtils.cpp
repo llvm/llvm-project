@@ -805,6 +805,18 @@ bool ForLoopIndexUseVisitor::VisitDeclStmt(DeclStmt *S) {
 }
 
 bool ForLoopIndexUseVisitor::TraverseStmt(Stmt *S) {
+  // If this is an initialization expression for a lambda capture, prune the
+  // traversal so that we don't end up diagnosing the contained DeclRefExpr as
+  // inconsistent usage. No need to record the usage here -- this is done in
+  // TraverseLambdaCapture().
+  if (const auto *LE = dyn_cast_or_null<LambdaExpr>(NextStmtParent)) {
+    // Any child of a LambdaExpr that isn't the body is an initialization
+    // expression.
+    if (S != LE->getBody()) {
+      return true;
+    }
+  }
+
   // All this pointer swapping is a mechanism for tracking immediate parentage
   // of Stmts.
   const Stmt *OldNextParent = NextStmtParent;

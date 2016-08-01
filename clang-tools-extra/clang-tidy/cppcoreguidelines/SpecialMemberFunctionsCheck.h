@@ -30,7 +30,7 @@ public:
   void registerMatchers(ast_matchers::MatchFinder *Finder) override;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
   void onEndOfTranslationUnit() override;
-  
+
   enum class SpecialMemberFunctionKind {
     Destructor,
     CopyConstructor,
@@ -44,12 +44,12 @@ public:
   using ClassDefiningSpecialMembersMap = llvm::DenseMap<ClassDefId, llvm::SmallVector<SpecialMemberFunctionKind, 5>>;
 
 private:
-  
+
   static llvm::StringRef toString(SpecialMemberFunctionKind K);
 
   static std::string join(llvm::ArrayRef<SpecialMemberFunctionKind> SMFS,
                           llvm::StringRef AndOr);
-  
+
   ClassDefiningSpecialMembersMap ClassWithSpecialMembers;
 };
 
@@ -60,7 +60,7 @@ private:
 namespace llvm {
 /// Specialisation of DenseMapInfo to allow ClassDefId objects in DenseMaps
 /// FIXME: Move this to the corresponding cpp file as is done for
-/// clang-tidy/readability/IdentifierNamingCheck.cpp. 
+/// clang-tidy/readability/IdentifierNamingCheck.cpp.
 template <>
 struct DenseMapInfo<
     clang::tidy::cppcoreguidelines::SpecialMemberFunctionsCheck::ClassDefId> {

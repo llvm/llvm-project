@@ -146,6 +146,10 @@ def strip_debug: F<"strip-debug">, HelpText<"Strip debugging information">;
 
 def sysroot: J<"sysroot=">, HelpText<"Set the system root">;
 
+def target1_rel: F<"target1-rel">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_REL32">;
+
+def target1_abs: F<"target1-abs">, HelpText<"Interpret R_ARM_TARGET1 as R_ARM_ABS32">;
+
 def threads: F<"threads">, HelpText<"Enable use of threads">;
 
 def trace: F<"trace">, HelpText<"Print the names of the input files">;

@@ -352,23 +352,36 @@ llvm::Expected<tooling::Replacements> createIncludeFixerReplacements(
   std::string IncludeName =
       "#include " + Context.getHeaderInfos().front().Header + "\n";
   // Create replacements for the new header.
-  clang::tooling::Replacements Insertions = {
-      tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName)};
+  clang::tooling::Replacements Insertions;
+  auto Err =
+      Insertions.add(tooling::Replacement(FilePath, UINT_MAX, 0, IncludeName));
+  if (Err)
+    return std::move(Err);
 
   auto CleanReplaces = cleanupAroundReplacements(Code, Insertions, Style);
   if (!CleanReplaces)
     return CleanReplaces;
 
+  auto Replaces = std::move(*CleanReplaces);
   if (AddQualifiers) {
     for (const auto &Info : Context.getQuerySymbolInfos()) {
       // Ignore the empty range.
-      if (Info.Range.getLength() > 0)
-        CleanReplaces->insert({FilePath, Info.Range.getOffset(),
-                               Info.Range.getLength(),
-                               Context.getHeaderInfos().front().QualifiedName});
+      if (Info.Range.getLength() > 0) {
+        auto R = tooling::Replacement(
+            {FilePath, Info.Range.getOffset(), Info.Range.getLength(),
+             Context.getHeaderInfos().front().QualifiedName});
+        auto Err = Replaces.add(R);
+        if (Err) {
+          llvm::consumeError(std::move(Err));
+          R = tooling::Replacement(
+              R.getFilePath(), Replaces.getShiftedCodePosition(R.getOffset()),
+              R.getLength(), R.getReplacementText());
+          Replaces = Replaces.merge(tooling::Replacements(R));
+        }
+      }
     }
   }
-  return formatReplacements(Code, *CleanReplaces, Style);
+  return formatReplacements(Code, Replaces, Style);
 }
 
 } // namespace include_fixer

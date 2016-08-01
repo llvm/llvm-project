@@ -2346,8 +2346,7 @@ LValue ItaniumCXXABI::EmitThreadLocalVarDeclLValue(CodeGenFunction &CGF,
   llvm::Function *Wrapper = getOrCreateThreadLocalWrapper(VD, Val);
 
   llvm::CallInst *CallVal = CGF.Builder.CreateCall(Wrapper);
-  if (isThreadWrapperReplaceable(VD, CGF.CGM))
-    CallVal->setCallingConv(llvm::CallingConv::CXX_FAST_TLS);
+  CallVal->setCallingConv(Wrapper->getCallingConv());
 
   LValue LV;
   if (VD->getType()->isReferenceType())

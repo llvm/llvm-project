@@ -502,8 +502,13 @@ void WhitespaceManager::storeReplacement(SourceRange Range,
   if (StringRef(SourceMgr.getCharacterData(Range.getBegin()),
                 WhitespaceLength) == Text)
     return;
-  Replaces.insert(tooling::Replacement(
+  auto Err = Replaces.add(tooling::Replacement(
       SourceMgr, CharSourceRange::getCharRange(Range), Text));
+  // FIXME: better error handling. For now, just print an error message in the
+  // release version.
+  if (Err)
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+  assert(!Err);
 }
 
 void WhitespaceManager::appendNewlineText(std::string &Text,

@@ -350,8 +350,8 @@ int includeFixerMain(int argc, const char **argv) {
   }
 
   if (!Quiet)
-    errs() << "Added #include " << Context.getHeaderInfos().front().Header
-           << '\n';
+    llvm::errs() << "Added #include " << Context.getHeaderInfos().front().Header
+                 << "\n";
 
   // Set up a new source manager for applying the resulting replacements.
   IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts(new DiagnosticOptions);
