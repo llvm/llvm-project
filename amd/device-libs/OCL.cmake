@@ -100,8 +100,16 @@ endmacro(clang_opencl_code)
 
 enable_testing()
 
+set (oclc_default_libs
+  oclc_correctly_rounded_sqrt_off
+  oclc_daz_opt_off
+  oclc_finite_only_off
+  oclc_isa_version_803
+  oclc_unsafe_math_off
+)
+
 macro(clang_opencl_test name dir)
-  clang_opencl_code(${name} ${dir} opencl ocml ockl oclc irif)
+  clang_opencl_code(${name} ${dir} opencl ocml ockl ${oclc_default_libs} irif)
   add_test(
     NAME ${name}:llvm-objdump
     COMMAND ${LLVM_OBJDUMP} -disassemble -mcpu=fiji $<TARGET_FILE:${name}_code>
