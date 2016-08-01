@@ -167,6 +167,21 @@ static uptr RoundUpTo(uptr size, uptr boundary) {
 // FIXME: internal_str* and internal_mem* functions should be moved from the
 // ASan sources into interception/.
 
+static size_t _strlen(const char *str) {
+  const char* p = str;
+  while (*p != '\0') ++p;
+  return p - str;
+}
+
+static char* _strchr(char* str, char c) {
+  while (*str) {
+    if (*str == c)
+      return str;
+    ++str;
+  }
+  return nullptr;
+}
+
 static void _memset(void *p, int value, size_t sz) {
   for (size_t i = 0; i < sz; ++i)
     ((char*)p)[i] = (char)value;
@@ -857,6 +872,32 @@ uptr InternalGetProcAddress(void *module, const char *func_name) {
     if (!strcmp(func_name, name)) {
       DWORD index = ordinals[i];
       RVAPtr<char> func(module, functions[index]);
+
+      // Handle forwarded functions.
+      DWORD offset = functions[index];
+      if (offset >= export_directory->VirtualAddress &&
+          offset < export_directory->VirtualAddress + export_directory->Size) {
+        // An entry for a forwarded function is a string with the following
+        // format: "<module> . <function_name>" that is stored into the
+        // exported directory.
+        char function_name[256];
+        size_t funtion_name_length = _strlen(func);
+        if (funtion_name_length >= sizeof(function_name) - 1)
+          InterceptionFailed();
+
+        _memcpy(function_name, func, funtion_name_length);
+        function_name[funtion_name_length] = '\0';
+        char* separator = _strchr(function_name, '.');
+        if (!separator)
+          InterceptionFailed();
+        *separator = '\0';
+
+        void* redirected_module = GetModuleHandleA(function_name);
+        if (!redirected_module)
+          InterceptionFailed();
+        return InternalGetProcAddress(redirected_module, separator + 1);
+      }
+
       return (uptr)(char *)func;
     }
   }
