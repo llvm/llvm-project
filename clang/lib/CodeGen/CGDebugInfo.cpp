@@ -1092,6 +1092,9 @@ void CGDebugInfo::CollectRecordNormalField(
 void CGDebugInfo::CollectRecordNestedRecord(
     const RecordDecl *RD, SmallVectorImpl<llvm::Metadata *> &elements) {
   QualType Ty = CGM.getContext().getTypeDeclType(RD);
+  // Injected class names are not considered nested records.
+  if (isa<InjectedClassNameType>(Ty))
+    return;
   SourceLocation Loc = RD->getLocation();
   llvm::DIType *nestedType = getOrCreateType(Ty, getOrCreateFile(Loc));
   elements.push_back(nestedType);

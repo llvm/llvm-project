@@ -99,7 +99,7 @@ void SuspiciousMissingCommaCheck::check(
   const auto *ConcatenatedLiteral =
       Result.Nodes.getNodeAs<StringLiteral>("str");
   assert(InitializerList && ConcatenatedLiteral);
-  
+
   // Skip small arrays as they often generate false-positive.
   unsigned int Size = InitializerList->getNumInits();
   if (Size < SizeThreshold) return;

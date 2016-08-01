@@ -89,7 +89,15 @@ GDBRemoteRegisterContext::GetRegisterCount ()
 const RegisterInfo *
 GDBRemoteRegisterContext::GetRegisterInfoAtIndex (size_t reg)
 {
-    return m_reg_info.GetRegisterInfoAtIndex (reg);
+    RegisterInfo* reg_info = m_reg_info.GetRegisterInfoAtIndex (reg);
+
+    if (reg_info && reg_info->dynamic_size_dwarf_expr_bytes)
+    {
+        const ArchSpec &arch = m_thread.GetProcess ()->GetTarget ().GetArchitecture ();
+        uint8_t reg_size = UpdateDynamicRegisterSize (arch, reg_info);
+        reg_info->byte_size = reg_size;
+    }
+    return reg_info;
 }
 
 size_t

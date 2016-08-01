@@ -854,8 +854,13 @@ private:
         SourceLocation Start = FormatTok->Tok.getLocation();
         auto Replace = [&](SourceLocation Start, unsigned Length,
                            StringRef ReplacementText) {
-          Result.insert(tooling::Replacement(Env.getSourceManager(), Start,
-                                             Length, ReplacementText));
+          auto Err = Result.add(tooling::Replacement(
+              Env.getSourceManager(), Start, Length, ReplacementText));
+          // FIXME: handle error. For now, print error message and skip the
+          // replacement for release version.
+          if (Err)
+            llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+          assert(!Err);
         };
         Replace(Start, 1, IsSingle ? "'" : "\"");
         Replace(FormatTok->Tok.getEndLoc().getLocWithOffset(-1), 1,
@@ -1163,7 +1168,13 @@ private:
       }
       auto SR = CharSourceRange::getCharRange(Tokens[St]->Tok.getLocation(),
                                               Tokens[End]->Tok.getEndLoc());
-      Fixes.insert(tooling::Replacement(Env.getSourceManager(), SR, ""));
+      auto Err =
+          Fixes.add(tooling::Replacement(Env.getSourceManager(), SR, ""));
+      // FIXME: better error handling. for now just print error message and skip
+      // for the release version.
+      if (Err)
+        llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+      assert(!Err && "Fixes must not conflict!");
       Idx = End + 1;
     }
 
@@ -1256,8 +1267,13 @@ static void sortCppIncludes(const FormatStyle &Style,
          Includes.back().Offset + Includes.back().Text.size() -
              Includes.front().Offset);
 
-  Replaces.insert(tooling::Replacement(FileName, Includes.front().Offset,
-                                       result.size(), result));
+  auto Err = Replaces.add(tooling::Replacement(
+      FileName, Includes.front().Offset, result.size(), result));
+  // FIXME: better error handling. For now, just skip the replacement for the
+  // release version.
+  if (Err)
+    llvm::errs() << llvm::toString(std::move(Err)) << "\n";
+  assert(!Err);
 }
 
 namespace {
@@ -1402,14 +1418,13 @@ processReplacements(T ProcessFunc, StringRef Code,
   auto NewCode = applyAllReplacements(Code, Replaces);
   if (!NewCode)
     return NewCode.takeError();
-  std::vector<tooling::Range> ChangedRanges =
-      tooling::calculateChangedRanges(Replaces);
+  std::vector<tooling::Range> ChangedRanges = Replaces.getAffectedRanges();
   StringRef FileName = Replaces.begin()->getFilePath();
 
   tooling::Replacements FormatReplaces =
       ProcessFunc(Style, *NewCode, ChangedRanges, FileName);
 
-  return mergeReplacements(Replaces, FormatReplaces);
+  return Replaces.merge(FormatReplaces);
 }
 
 llvm::Expected<tooling::Replacements>
@@ -1497,20 +1512,22 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     return Replaces;
 
   tooling::Replacements HeaderInsertions;
+  tooling::Replacements Result;
   for (const auto &R : Replaces) {
-    if (isHeaderInsertion(R))
-      HeaderInsertions.insert(R);
-    else if (R.getOffset() == UINT_MAX)
+    if (isHeaderInsertion(R)) {
+      // Replacements from \p Replaces must be conflict-free already, so we can
+      // simply consume the error.
+      llvm::consumeError(HeaderInsertions.add(R));
+    } else if (R.getOffset() == UINT_MAX) {
       llvm::errs() << "Insertions other than header #include insertion are "
                       "not supported! "
                    << R.getReplacementText() << "\n";
+    } else {
+      llvm::consumeError(Result.add(R));
+    }
   }
   if (HeaderInsertions.empty())
     return Replaces;
-  tooling::Replacements Result;
-  std::set_difference(Replaces.begin(), Replaces.end(),
-                      HeaderInsertions.begin(), HeaderInsertions.end(),
-                      std::inserter(Result, Result.begin()));
 
   llvm::Regex IncludeRegex(IncludeRegexPattern);
   llvm::Regex DefineRegex(R"(^[\t\ ]*#[\t\ ]*define[\t\ ]*[^\\]*$)");
@@ -1587,7 +1604,12 @@ fixCppIncludeInsertions(StringRef Code, const tooling::Replacements &Replaces,
     std::string NewInclude = !IncludeDirective.endswith("\n")
                                  ? (IncludeDirective + "\n").str()
                                  : IncludeDirective.str();
-    Result.insert(tooling::Replacement(FileName, Offset, 0, NewInclude));
+    auto NewReplace = tooling::Replacement(FileName, Offset, 0, NewInclude);
+    auto Err = Result.add(NewReplace);
+    if (Err) {
+      llvm::consumeError(std::move(Err));
+      Result = Result.merge(tooling::Replacements(NewReplace));
+    }
   }
   return Result;
 }

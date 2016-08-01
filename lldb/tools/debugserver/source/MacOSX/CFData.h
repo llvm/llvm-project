@@ -24,7 +24,6 @@ public:
     //------------------------------------------------------------------
     CFData(CFDataRef data = NULL);
     CFData(const CFData& rhs);
-    CFData& operator=(const CFData& rhs);
     virtual ~CFData();
 
         CFDataRef Serialize(CFPropertyListRef plist, CFPropertyListFormat format);

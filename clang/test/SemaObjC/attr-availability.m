@@ -297,6 +297,7 @@ __attribute__((objc_root_class))
 
 #if defined(WARN_PARTIAL)
 
+int fn_10_5() __attribute__((availability(macosx, introduced=10.5)));
 int fn_10_7() __attribute__((availability(macosx, introduced=10.7))); // expected-note{{marked partial here}}
 int fn_10_8() __attribute__((availability(macosx, introduced=10.8))) { // expected-note{{marked partial here}}
   return fn_10_7();
@@ -323,5 +324,9 @@ __attribute__((availability(macosx, introduced=10.7)))
 -(void)method3 { fn_10_8(); } // expected-warning{{partial}} expected-note{{explicitly redeclare}}
 -(void)method4 { fn_10_8(); }
 @end
+
+int old_func() __attribute__((availability(macos, introduced=10.4))) {
+  fn_10_5();
+}
 
 #endif

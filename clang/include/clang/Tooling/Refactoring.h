@@ -21,6 +21,7 @@
 
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Tooling.h"
+#include <map>
 #include <string>
 
 namespace clang {
@@ -42,9 +43,9 @@ public:
                   std::shared_ptr<PCHContainerOperations> PCHContainerOps =
                       std::make_shared<PCHContainerOperations>());
 
-  /// \brief Returns the set of replacements to which replacements should
-  /// be added during the run of the tool.
-  Replacements &getReplacements();
+  /// \brief Returns the file path to replacements map to which replacements
+  /// should be added during the run of the tool.
+  std::map<std::string, Replacements> &getReplacements();
 
   /// \brief Call run(), apply all generated replacements, and immediately save
   /// the results to disk.
@@ -65,7 +66,7 @@ private:
   int saveRewrittenFiles(Rewriter &Rewrite);
 
 private:
-  Replacements Replace;
+  std::map<std::string, Replacements> FileToReplaces;
 };
 
 /// \brief Groups \p Replaces by the file path and applies each group of
@@ -77,14 +78,15 @@ private:
 /// Replacement applications happen independently of the success of other
 /// applications.
 ///
-/// \param[in] Replaces Replacements to apply.
+/// \param[in] FileToReplaces Replacements (grouped by files) to apply.
 /// \param[in] Rewrite The `Rewritter` to apply replacements on.
 /// \param[in] Style The style name used for reformatting. See ```getStyle``` in
 /// "include/clang/Format/Format.h" for all possible style forms.
 ///
 /// \returns true if all replacements applied and formatted. false otherwise.
-bool formatAndApplyAllReplacements(const Replacements &Replaces,
-                                   Rewriter &Rewrite, StringRef Style = "file");
+bool formatAndApplyAllReplacements(
+    const std::map<std::string, Replacements> &FileToReplaces,
+    Rewriter &Rewrite, StringRef Style = "file");
 
 } // end namespace tooling
 } // end namespace clang

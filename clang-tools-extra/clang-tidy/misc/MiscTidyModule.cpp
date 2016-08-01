@@ -120,7 +120,7 @@ public:
     CheckFactories.registerCheck<SuspiciousSemicolonCheck>(
         "misc-suspicious-semicolon");
     CheckFactories.registerCheck<SuspiciousStringCompareCheck>(
-        "misc-suspicious-string-compare");    
+        "misc-suspicious-string-compare");
     CheckFactories.registerCheck<SwappedArgumentsCheck>(
         "misc-swapped-arguments");
     CheckFactories.registerCheck<ThrowByValueCatchByReferenceCheck>(

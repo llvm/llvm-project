@@ -1,4 +1,6 @@
-// RUN: clang-rename -offset=147 -new-name=Z %s -- | FileCheck %s
+// RUN: cat %s > %t.cpp
+// RUN: clang-rename -offset=208 -new-name=Z %t.cpp -i --
+// RUN: sed 's,//.*,,' %t.cpp | FileCheck %s
 
 #define Y X // CHECK: #define Y Z
 
@@ -12,5 +14,5 @@ void macro() {
   foo(Y);
 }
 
-// Use grep -FUbo 'X' <file> to get the correct offset of X when changing
+// Use grep -FUbo 'foo;' <file> to get the correct offset of foo when changing
 // this file.

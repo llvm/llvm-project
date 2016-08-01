@@ -51,7 +51,7 @@ using namespace lldb_private;
 #define EXC_OFFSET_NAME(reg) (LLVM_EXTENSION offsetof (RegisterContextDarwin_arm64::EXC, reg) + sizeof (RegisterContextDarwin_arm64::GPR) + sizeof (RegisterContextDarwin_arm64::FPU))
 #define DBG_OFFSET_NAME(reg) (LLVM_EXTENSION offsetof (RegisterContextDarwin_arm64::DBG, reg) + sizeof (RegisterContextDarwin_arm64::GPR) + sizeof (RegisterContextDarwin_arm64::FPU) + sizeof (RegisterContextDarwin_arm64::EXC))
 
-#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextDarwin_arm64::DBG *)NULL)->reg[i]), DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, NULL, NULL
+#define DEFINE_DBG(reg, i)  #reg, NULL, sizeof(((RegisterContextDarwin_arm64::DBG *)NULL)->reg[i]), DBG_OFFSET_NAME(reg[i]), eEncodingUint, eFormatHex, { LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM, LLDB_INVALID_REGNUM }, NULL, NULL, NULL, 0
 #define REG_CONTEXT_SIZE (sizeof (RegisterContextDarwin_arm64::GPR) + sizeof (RegisterContextDarwin_arm64::FPU) + sizeof (RegisterContextDarwin_arm64::EXC))
 
 //-----------------------------------------------------------------------------

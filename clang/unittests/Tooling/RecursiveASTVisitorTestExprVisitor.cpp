@@ -191,6 +191,14 @@ TEST(RecursiveASTVisitor, VisitsCallExpr) {
     "void x(); void y() { x(); }"));
 }
 
+TEST(RecursiveASTVisitor, VisitsLambdaCaptureInit) {
+  DeclRefExprVisitor Visitor;
+  Visitor.ExpectMatch("i", 1, 20);
+  EXPECT_TRUE(Visitor.runOver(
+    "void f() { int i; [i]{}; };",
+    DeclRefExprVisitor::Lang_CXX11));
+}
+
 /* FIXME: According to Richard Smith this is a bug in the AST.
 TEST(RecursiveASTVisitor, VisitsBaseClassTemplateArgumentsInInstantiation) {
   DeclRefExprVisitor Visitor;

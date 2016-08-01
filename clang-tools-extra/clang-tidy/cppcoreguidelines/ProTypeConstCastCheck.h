@@ -15,7 +15,7 @@
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
-	
+
 /// This check flags all instances of const_cast
 ///
 /// For the user-facing documentation see:

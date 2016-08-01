@@ -15,7 +15,7 @@
 namespace clang {
 namespace tidy {
 namespace cppcoreguidelines {
-	
+
 /// This check flags all array to pointer decays
 ///
 /// For the user-facing documentation see:

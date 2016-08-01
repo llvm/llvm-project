@@ -34,11 +34,13 @@ namespace rename {
 
 class RenamingASTConsumer : public ASTConsumer {
 public:
-  RenamingASTConsumer(const std::string &NewName, const std::string &PrevName,
-                      const std::vector<std::string> &USRs,
-                      tooling::Replacements &Replaces, bool PrintLocations)
-      : NewName(NewName), PrevName(PrevName), USRs(USRs), Replaces(Replaces),
-        PrintLocations(PrintLocations) {}
+  RenamingASTConsumer(
+      const std::string &NewName, const std::string &PrevName,
+      const std::vector<std::string> &USRs,
+      std::map<std::string, tooling::Replacements> &FileToReplaces,
+      bool PrintLocations)
+      : NewName(NewName), PrevName(PrevName), USRs(USRs),
+        FileToReplaces(FileToReplaces), PrintLocations(PrintLocations) {}
 
   void HandleTranslationUnit(ASTContext &Context) override {
     const auto &SourceMgr = Context.getSourceManager();
@@ -58,21 +60,25 @@ public:
                << ":" << FullLoc.getSpellingLineNumber() << ":"
                << FullLoc.getSpellingColumnNumber() << "\n";
       }
-      Replaces.insert(
-          tooling::Replacement(SourceMgr, Loc, PrevNameLen, NewName));
+      // FIXME: better error handling.
+      auto Replace = tooling::Replacement(SourceMgr, Loc, PrevNameLen, NewName);
+      auto Err = FileToReplaces[Replace.getFilePath()].add(Replace);
+      if (Err)
+        llvm::errs() << "Renaming failed in " << Replace.getFilePath() << "! "
+                     << llvm::toString(std::move(Err)) << "\n";
     }
   }
 
 private:
   const std::string &NewName, &PrevName;
   const std::vector<std::string> &USRs;
-  tooling::Replacements &Replaces;
+  std::map<std::string, tooling::Replacements> &FileToReplaces;
   bool PrintLocations;
 };
 
 std::unique_ptr<ASTConsumer> RenamingAction::newASTConsumer() {
   return llvm::make_unique<RenamingASTConsumer>(NewName, PrevName, USRs,
-                                                Replaces, PrintLocations);
+                                                FileToReplaces, PrintLocations);
 }
 
 } // namespace rename
